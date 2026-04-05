@@ -17,8 +17,27 @@
 
 #include "Keys.h"
 
+#include <unordered_map>
+#include "Convert.h"
+
 namespace AIS
 {
+	Keys lookupSettingKey(const std::string &option)
+	{
+		static std::unordered_map<std::string, Keys> map;
+		if (map.empty())
+		{
+			for (int i = KEY_SETTING_ABOUT; i <= KEY_SETTING_ZONE; i++)
+			{
+				std::string s = KeyMap[i][JSON_DICT_SETTING];
+				Util::Convert::toUpper(s);
+				map[s] = (Keys)i;
+			}
+		}
+
+		auto it = map.find(option);
+		return it != map.end() ? it->second : (Keys)-1;
+	}
 
 	const std::vector<std::vector<std::string>> KeyMap = {
 		{"class", "class", "class", "", "", ""},				   // KEY_CLASS
@@ -51,6 +70,7 @@ namespace AIS
 		{"", "", "", "", "airspyhf", ""},												// KEY_SETTING_AIRSPYHF
 		{"", "", "", "", "allow_type", ""},												// KEY_SETTING_ALLOW_TYPE
 		{"", "", "", "", "antenna", ""},												// KEY_SETTING_ANTENNA
+		{"", "", "", "", "aton", ""},													// KEY_SETTING_ATON
 		{"", "", "", "", "author", ""},													// KEY_SETTING_AUTHOR
 		{"", "", "", "", "backup", ""},													// KEY_SETTING_BACKUP
 		{"", "", "", "", "bandwidth", ""},												// KEY_SETTING_BANDWIDTH
@@ -59,33 +79,43 @@ namespace AIS
 		{"", "", "", "", "binary", ""},													// KEY_SETTING_BINARY
 		{"", "", "", "", "block_type", ""},												// KEY_SETTING_BLOCK_TYPE
 		{"", "", "", "", "broadcast", ""},												// KEY_SETTING_BROADCAST
+		{"", "", "", "", "bs", ""},														// KEY_SETTING_BS
 		{"", "", "", "", "buffer_count", ""},											// KEY_SETTING_BUFFER_COUNT
 		{"", "", "", "", "callsign", ""},												// KEY_SETTING_CALLSIGN
 		{"", "", "", "", "cdn", ""},													// KEY_SETTING_CDN
+		{"", "", "", "", "ch", ""},														// KEY_SETTING_CH
 		{"", "", "", "", "channel", ""},												// KEY_SETTING_CHANNEL
 		{"", "", "", "", "client_id", ""},												// KEY_SETTING_CLIENT_ID
 		{"", "", "", "", "config", ""},													// KEY_SETTING_CONFIG
 		{"", "", "", "", "context", ""},												// KEY_SETTING_CONTEXT
+		{"", "", "", "", "conn_str", ""},												// KEY_SETTING_CONN_STR
 		{"", "", "", "", "crc_check", ""},												// KEY_SETTING_CRC_CHECK
 		{"", "", "", "", "cutoff", ""},													// KEY_SETTING_CUTOFF
 		{"", "", "", "", "decoder", ""},												// KEY_SETTING_DECODER
 		{"", "", "", "", "description", ""},											// KEY_SETTING_DESCRIPTION
 		{"", "", "", "", "device", ""},													// KEY_SETTING_DEVICE
+		{"", "", "", "", "device_setting", ""},											// KEY_SETTING_DEVICE_SETTING
+		{"", "", "", "", "disable_xonxoff", ""},										// KEY_SETTING_DISABLE_XONXOFF
 		{"", "", "", "", "droop", ""},													// KEY_SETTING_DROOP
 		{"", "", "", "", "dump", ""},													// KEY_SETTING_DUMP
 		{"", "", "", "", "dump_file", ""},												// KEY_SETTING_DUMP_FILE
+		{"", "", "", "", "dsk", ""},														// KEY_SETTING_DSK
 		{"", "", "", "", "endpoint", ""},												// KEY_SETTING_ENDPOINT
 		{"", "", "", "", "file", ""},													// KEY_SETTING_FILE
 		{"", "", "", "", "filter", ""},													// KEY_SETTING_FILTER
+		{"", "", "", "", "flowcontrol", ""},											// KEY_SETTING_FLOWCONTROL
 		{"", "", "", "", "own_interval", ""},											// KEY_SETTING_OWN_INTERVAL
 		{"", "", "", "", "position_interval", ""},										// KEY_SETTING_POSITION_INTERVAL
 		{"", "", "", "", "unique", ""},													// KEY_SETTING_UNIQUE
 		{"", "", "", "", "format", ""},													// KEY_SETTING_FORMAT
 		{"", "", "", "", "fp_ds", ""},													// KEY_SETTING_FP_DS
 		{"", "", "", "", "freqoffset", ""},												// KEY_SETTING_FREQOFFSET
+		{"", "", "", "", "fsoverlay", ""},												// KEY_SETTING_FSOVERLAY
+		{"", "", "", "", "fstiles", ""},												// KEY_SETTING_FSTILES
 		{"", "", "", "", "gain", ""},													// KEY_SETTING_GAIN
 		{"", "", "", "", "gain_mode", ""},												// KEY_SETTING_GAIN_MODE
 		{"", "", "", "", "geojson", ""},												// KEY_SETTING_GEOJSON
+		{"", "", "", "", "gps", ""},													// KEY_SETTING_GPS
 		{"", "", "", "", "grdb", ""},													// KEY_SETTING_GRDB
 		{"", "", "", "", "groups_in", ""},												// KEY_SETTING_GROUPS_IN
 		{"", "", "", "", "gzip", ""},													// KEY_SETTING_GZIP
@@ -95,29 +125,38 @@ namespace AIS
 		{"", "", "", "", "http", ""},													// KEY_SETTING_HTTP
 		{"", "", "", "", "hydrasdr", ""},												// KEY_SETTING_HYDRASDR
 		{"", "", "", "", "id", ""},														// KEY_SETTING_ID
+		{"", "", "", "", "include_sample_start", ""},								// KEY_SETTING_INCLUDE_SAMPLE_START
 		{"", "", "", "", "input", ""},													// KEY_SETTING_INPUT
 		{"", "", "", "", "interface", ""},												// KEY_SETTING_INTERFACE
+		{"", "", "", "", "ip_bind", ""},												// KEY_SETTING_IP_BIND
 		{"", "", "", "", "interval", ""},												// KEY_SETTING_INTERVAL
 		{"", "", "", "", "json", ""},													// KEY_SETTING_JSON
 		{"", "", "", "", "json_full", ""},												// KEY_SETTING_JSON_FULL
 		{"", "", "", "", "keep_alive", ""},												// KEY_SETTING_KEEP_ALIVE
 		{"", "", "", "", "kml", ""},													// KEY_SETTING_KML
 		{"", "", "", "", "lat", ""},													// KEY_SETTING_LAT
+		{"", "", "", "", "level", ""},													// KEY_SETTING_LEVEL
 		{"", "", "", "", "linearity", ""},												// KEY_SETTING_LINEARITY
 		{"", "", "", "", "lna", ""},													// KEY_SETTING_LNA
 		{"", "", "", "", "lnastate", ""},												// KEY_SETTING_LNASTATE
 		{"", "", "", "", "lon", ""},													// KEY_SETTING_LON
 		{"", "", "", "", "log", ""},													// KEY_SETTING_LOG
+		{"", "", "", "", "loop", ""},													// KEY_SETTING_LOOP
+		{"", "", "", "", "ma", ""},														// KEY_SETTING_MA
+		{"", "", "", "", "max_fails", ""},												// KEY_SETTING_MAX_FAILS
 		{"", "", "", "", "mbtiles", ""},												// KEY_SETTING_MBTILES
 		{"", "", "", "", "mboverlay", ""},												// KEY_SETTING_MBOVERLAY
 		{"", "", "", "", "meta", ""},													// KEY_SETTING_META
 		{"", "", "", "", "mixer", ""},													// KEY_SETTING_MIXER
 		{"", "", "", "", "mode", ""},													// KEY_SETTING_MODE
 		{"", "", "", "", "model", ""},													// KEY_SETTING_MODEL
+		{"", "", "", "", "model_setting", ""},											// KEY_SETTING_MODEL_SETTING
 		{"", "", "", "", "msg", ""},													// KEY_SETTING_MSG
 		{"", "", "", "", "msgformat", ""},												// KEY_SETTING_MSGFORMAT
 		{"", "", "", "", "msg_output", ""},												// KEY_SETTING_MSG_OUTPUT
+		{"", "", "", "", "msgs", ""},													// KEY_SETTING_MSGS
 		{"", "", "", "", "mqtt", ""},													// KEY_SETTING_MQTT
+		{"", "", "", "", "nmea", ""},													// KEY_SETTING_NMEA
 		{"", "", "", "", "nmea2000", ""},												// KEY_SETTING_NMEA2000
 		{"", "", "", "", "nmea_refresh", ""},											// KEY_SETTING_NMEA_REFRESH
 		{"", "", "", "", "origin", ""},													// KEY_SETTING_ORIGIN
@@ -131,13 +170,18 @@ namespace AIS
 		{"", "", "", "", "port_min", ""},												// KEY_SETTING_PORT_MIN
 		{"", "", "", "", "port_max", ""},												// KEY_SETTING_PORT_MAX
 		{"", "", "", "", "preamp", ""},													// KEY_SETTING_PREAMP
+		{"", "", "", "", "print", ""},													// KEY_SETTING_PRINT
+		{"", "", "", "", "probe", ""},													// KEY_SETTING_PROBE
 		{"", "", "", "", "program", ""},												// KEY_SETTING_PROGRAM
 		{"", "", "", "", "prome", ""},													// KEY_SETTING_PROME
 		{"", "", "", "", "protocol", ""},												// KEY_SETTING_PROTOCOL
+		{"", "", "", "", "product", ""},												// KEY_SETTING_PRODUCT
 		{"", "", "", "", "protocols", ""},												// KEY_SETTING_PROTOCOLS
 		{"", "", "", "", "ps_ema", ""},													// KEY_SETTING_PS_EMA
+		{"", "", "", "", "real_mode", ""},												// KEY_SETTING_REAL_MODE
 		{"", "", "", "", "realtime", ""},												// KEY_SETTING_REALTIME
 		{"", "", "", "", "receiver", ""},												// KEY_SETTING_RECEIVER
+		{"", "", "", "", "remove_empty", ""},											// KEY_SETTING_REMOVE_EMPTY
 		{"", "", "", "", "reset", ""},													// KEY_SETTING_RESET
 		{"", "", "", "", "response", ""},												// KEY_SETTING_RESPONSE
 		{"", "", "", "", "reuse_port", ""},												// KEY_SETTING_REUSE_PORT
@@ -145,6 +189,7 @@ namespace AIS
 		{"", "", "", "", "rtlsdr", ""},													// KEY_SETTING_RTLSDR
 		{"", "", "", "", "rtltcp", ""},													// KEY_SETTING_RTLTCP
 		{"", "", "", "", "sample_rate", ""},											// KEY_SETTING_SAMPLE_RATE
+		{"", "", "", "", "sar", ""},														// KEY_SETTING_SAR
 		{"", "", "", "", "screen", ""},													// KEY_SETTING_SCREEN
 		{"", "", "", "", "sdrplay", ""},												// KEY_SETTING_SDRPLAY
 		{"", "", "", "", "sensitivity", ""},											// KEY_SETTING_SENSITIVITY
@@ -152,6 +197,8 @@ namespace AIS
 		{"", "", "", "", "init_seq", ""},												// KEY_SETTING_SERIAL_INIT_SEQUENCE
 		{"", "", "", "", "serialport", ""},												// KEY_SETTING_SERIALPORT
 		{"", "", "", "", "server", ""},													// KEY_SETTING_SERVER
+		{"", "", "", "", "server_mode", ""},											// KEY_SETTING_SERVER_MODE
+		{"", "", "", "", "setting", ""},												// KEY_SETTING_SETTING
 		{"", "", "", "", "share_loc", ""},												// KEY_SETTING_SHARE_LOC
 		{"", "", "", "", "sharing", ""},												// KEY_SETTING_SHARING
 		{"", "", "", "", "sharing_key", ""},											// KEY_SETTING_SHARING_KEY
@@ -162,8 +209,11 @@ namespace AIS
 		{"", "", "", "", "src", ""},													// KEY_SETTING_SRC
 		{"", "", "", "", "station", ""},												// KEY_SETTING_STATION
 		{"", "", "", "", "station_link", ""},											// KEY_SETTING_STATION_LINK
+		{"", "", "", "", "stamp", ""},													// KEY_SETTING_STAMP
+		{"", "", "", "", "station_id", ""},												// KEY_SETTING_STATION_ID
 		{"", "", "", "", "stream", ""},													// KEY_SETTING_STREAM
 		{"", "", "", "", "style", ""},													// KEY_SETTING_STYLE
+		{"", "", "", "", "system", ""},													// KEY_SETTING_SYSTEM
 		{"", "", "", "", "tcp", ""},													// KEY_SETTING_TCP
 		{"", "", "", "", "tcp_listener", ""},											// KEY_SETTING_TCP_LISTENER
 		{"", "", "", "", "test", ""},													// KEY_SETTING_TEST
@@ -172,21 +222,40 @@ namespace AIS
 		{"", "", "", "", "threshold", ""},												// KEY_SETTING_THRESHOLD
 		{"", "", "", "", "topic", ""},													// KEY_SETTING_TOPIC
 		{"", "", "", "", "tuner", ""},													// KEY_SETTING_TUNER
+		{"", "", "", "", "txt_block_size", ""},											// KEY_SETTING_TXT_BLOCK_SIZE
 		{"", "", "", "", "udp", ""},													// KEY_SETTING_UDP
 		{"", "", "", "", "udpserver", ""},												// KEY_SETTING_UDPSERVER
 		{"", "", "", "", "url", ""},													// KEY_SETTING_URL
+		{"", "", "", "", "use_gps", ""},												// KEY_SETTING_USE_GPS
 		{"", "", "", "", "username", ""},												// KEY_SETTING_USERNAME
 		{"", "", "", "", "userpwd", ""},												// KEY_SETTING_USERPWD
 		{"", "", "", "", "uuid", ""},													// KEY_SETTING_UUID
+		{"", "", "", "", "v", ""},														// KEY_SETTING_V
+		{"", "", "", "", "vdo", ""},														// KEY_SETTING_VDO
 		{"", "", "", "", "verbose", ""},												// KEY_SETTING_VERBOSE
+		{"", "", "", "", "vendor", ""},													// KEY_SETTING_VENDOR
 		{"", "", "", "", "verbose_time", ""},											// KEY_SETTING_VERBOSE_TIME
 		{"", "", "", "", "version", ""},												// KEY_SETTING_VERSION
 		{"", "", "", "", "vga", ""},													// KEY_SETTING_VGA
+		{"", "", "", "", "vp", ""},														// KEY_SETTING_VP
+		{"", "", "", "", "vs", ""},														// KEY_SETTING_VS
+		{"", "", "", "", "warnings", ""},												// KEY_SETTING_WARNINGS
 		{"", "", "", "", "wavfile", ""},												// KEY_SETTING_WAVFILE
 		{"", "", "", "", "webcontrol_http", ""},										// KEY_SETTING_WEBCONTROL_HTTP
 		{"", "", "", "", "qos", ""},													// KEY_SETTING_QOS
 		{"", "", "", "", "zlib", ""},													// KEY_SETTING_ZLIB
 		{"", "", "", "", "zmq", ""},													// KEY_SETTING_ZMQ
+		{"", "", "", "", "ais", ""},														// KEY_SETTING_AIS
+		{"", "", "", "", "allow_channel", ""},											// KEY_SETTING_ALLOW_CHANNEL
+		{"", "", "", "", "allow_mmsi", ""},												// KEY_SETTING_ALLOW_MMSI
+		{"", "", "", "", "allow_repeat", ""},											// KEY_SETTING_ALLOW_REPEAT
+		{"", "", "", "", "block_mmsi", ""},												// KEY_SETTING_BLOCK_MMSI
+		{"", "", "", "", "block_repeat", ""},											// KEY_SETTING_BLOCK_REPEAT
+		{"", "", "", "", "downsample", ""},												// KEY_SETTING_DOWNSAMPLE
+		{"", "", "", "", "select_channel", ""},											// KEY_SETTING_SELECT_CHANNEL
+		{"", "", "", "", "select_id", ""},												// KEY_SETTING_SELECT_ID
+		{"", "", "", "", "select_mmsi", ""},												// KEY_SETTING_SELECT_MMSI
+		{"", "", "", "", "select_repeat", ""},											// KEY_SETTING_SELECT_REPEAT
 		{"", "", "", "", "zone", ""},													// KEY_SETTING_ZONE
 		{"accuracy", "", "accuracy", "", "", ""},										// KEY_ACCURACY
 		{"ack_required", "", "ack_required", "", "", ""},								// KEY_ACK_REQUIRED
@@ -749,6 +818,7 @@ namespace AIS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_AIRSPYHF
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_ALLOW_TYPE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_ANTENNA
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_ATON
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_AUTHOR
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_BACKUP
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_BANDWIDTH
@@ -757,33 +827,43 @@ namespace AIS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_BINARY
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_BLOCK_TYPE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_BROADCAST
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_BS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_BUFFER_COUNT
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_CALLSIGN
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_CDN
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_CH
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_CHANNEL
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_CLIENT_ID
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_CONFIG
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_CONTEXT
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_CONN_STR
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_CRC_CHECK
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_CUTOFF
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_DECODER
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_DESCRIPTION
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_DEVICE
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_DEVICE_SETTING
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_DISABLE_XONXOFF
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_DROOP
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_DUMP
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_DUMP_FILE
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_DSK
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_ENDPOINT
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_FILE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_FILTER
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_FLOWCONTROL
 		KeyInfo("seconds", "Minimum interval for own vessel messages", nullptr),											// KEY_SETTING_OWN_INTERVAL
 		KeyInfo("seconds", "Minimum interval for position messages per MMSI", nullptr),										// KEY_SETTING_POSITION_INTERVAL
 		KeyInfo("seconds", "Filter duplicate messages within interval", nullptr),											// KEY_SETTING_UNIQUE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_FORMAT
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_FP_DS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_FREQOFFSET
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_FSOVERLAY
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_FSTILES
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_GAIN
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_GAIN_MODE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_GEOJSON
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_GPS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_GRDB
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_GROUPS_IN
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_GZIP
@@ -793,29 +873,38 @@ namespace AIS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_HTTP
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_HYDRASDR
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_ID
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_INCLUDE_SAMPLE_START
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_INPUT
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_INTERFACE
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_IP_BIND
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_INTERVAL
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_JSON
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_JSON_FULL
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_KEEP_ALIVE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_KML
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_LAT
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_LEVEL
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_LINEARITY
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_LNA
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_LNASTATE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_LON
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_LOG
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_LOOP
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_MA
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_MAX_FAILS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_MBTILES
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_MBOVERLAY
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_META
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_MIXER
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_MODE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_MODEL
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_MODEL_SETTING
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_MSG
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_MSGFORMAT
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_MSG_OUTPUT
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_MSGS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_MQTT
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_NMEA
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_NMEA2000
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_NMEA_REFRESH
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_ORIGIN
@@ -829,13 +918,18 @@ namespace AIS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_PORT_MIN
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_PORT_MAX
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_PREAMP
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_PRINT
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_PROBE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_PROGRAM
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_PROME
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_PROTOCOL
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_PRODUCT
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_PROTOCOLS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_PS_EMA
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_REAL_MODE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_REALTIME
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_RECEIVER
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_REMOVE_EMPTY
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_RESET
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_RESPONSE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_REUSE_PORT
@@ -843,6 +937,7 @@ namespace AIS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_RTLSDR
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_RTLTCP
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SAMPLE_RATE
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_SAR
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SCREEN
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SDRPLAY
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SENSITIVITY
@@ -850,6 +945,8 @@ namespace AIS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SERIAL_INIT_SEQUENCE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SERIALPORT
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SERVER
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_SERVER_MODE
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_SETTING
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SHARE_LOC
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SHARING
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SHARING_KEY
@@ -860,8 +957,11 @@ namespace AIS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_SRC
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_STATION
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_STATION_LINK
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_STAMP
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_STATION_ID
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_STREAM
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_STYLE
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_SYSTEM
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_TCP
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_TCP_LISTENER
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_TEST
@@ -870,21 +970,40 @@ namespace AIS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_THRESHOLD
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_TOPIC
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_TUNER
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_TXT_BLOCK_SIZE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_UDP
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_UDPSERVER
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_URL
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_USE_GPS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_USERNAME
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_USERPWD
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_UUID
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_V
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_VDO
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_VERBOSE
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_VENDOR
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_VERBOSE_TIME
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_VERSION
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_VGA
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_VP
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_VS
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_WARNINGS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_WAVFILE
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_WEBCONTROL_HTTP
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_QOS
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_ZLIB
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_ZMQ
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_AIS
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_ALLOW_CHANNEL
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_ALLOW_MMSI
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_ALLOW_REPEAT
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_BLOCK_MMSI
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_BLOCK_REPEAT
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_DOWNSAMPLE
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_SELECT_CHANNEL
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_SELECT_ID
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_SELECT_MMSI
+		KeyInfo("", "", nullptr),																							// KEY_SETTING_SELECT_REPEAT
 		KeyInfo("", "", nullptr),																							// KEY_SETTING_ZONE
 		KeyInfo("", "Position Accuracy; 1 indicates DGPS-quality (< 10m), 0 indicates unaugmented GNSS (> 10m).", nullptr), // KEY_ACCURACY
 		KeyInfo("", "", nullptr),																							// KEY_ACK_REQUIRED

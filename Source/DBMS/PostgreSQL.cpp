@@ -527,40 +527,53 @@ namespace IO
 	}
 #endif
 
-	Setting &PostgreSQL::Set(std::string option, std::string arg)
+	Setting &PostgreSQL::SetKey(AIS::Keys key, const std::string &arg)
 	{
-
-		Util::Convert::toUpper(option);
-
-		if (option == "CONN_STR")
-			conn_string = arg;
-		else if (option == "GROUPS_IN")
-			StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));
-		else if (option == "STATION_ID")
-			station_id = Util::Parse::Integer(arg);
-		else if (option == "INTERVAL")
-			INTERVAL = Util::Parse::Integer(arg, 5, 1800);
-		else if (option == "MAX_FAILS")
-			MAX_FAILS = Util::Parse::Integer(arg);
-		else if (option == "NMEA")
-			NMEA = Util::Parse::Switch(arg);
-		else if (option == "VP")
-			VP = Util::Parse::Switch(arg);
-		else if (option == "V")
-			VD = Util::Parse::Switch(arg);
-		else if (option == "VS")
-			VS = Util::Parse::Switch(arg);
-		else if (option == "MSGS")
-			MSGS = Util::Parse::Switch(arg);
-		else if (option == "BS")
-			BS = Util::Parse::Switch(arg);
-		else if (option == "ATON")
-			ATON = Util::Parse::Switch(arg);
-		else if (option == "SAR")
-			SAR = Util::Parse::Switch(arg);
-		else if(!setOption(option, arg) && !filter.SetOption(option, arg))
+		switch (key)
 		{
-			throw std::runtime_error("DBMS: unknown option \"" + option + "\"");
+		case AIS::KEY_SETTING_CONN_STR:
+			conn_string = arg;
+			break;
+		case AIS::KEY_SETTING_GROUPS_IN:
+			StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));
+			break;
+		case AIS::KEY_SETTING_STATION_ID:
+			station_id = Util::Parse::Integer(arg);
+			break;
+		case AIS::KEY_SETTING_INTERVAL:
+			INTERVAL = Util::Parse::Integer(arg, 5, 1800);
+			break;
+		case AIS::KEY_SETTING_MAX_FAILS:
+			MAX_FAILS = Util::Parse::Integer(arg);
+			break;
+		case AIS::KEY_SETTING_NMEA:
+			NMEA = Util::Parse::Switch(arg);
+			break;
+		case AIS::KEY_SETTING_MSGS:
+			MSGS = Util::Parse::Switch(arg);
+			break;
+		case AIS::KEY_SETTING_VP:
+			VP = Util::Parse::Switch(arg);
+			break;
+		case AIS::KEY_SETTING_V:
+			VD = Util::Parse::Switch(arg);
+			break;
+		case AIS::KEY_SETTING_VS:
+			VS = Util::Parse::Switch(arg);
+			break;
+		case AIS::KEY_SETTING_BS:
+			BS = Util::Parse::Switch(arg);
+			break;
+		case AIS::KEY_SETTING_ATON:
+			ATON = Util::Parse::Switch(arg);
+			break;
+		case AIS::KEY_SETTING_SAR:
+			SAR = Util::Parse::Switch(arg);
+			break;
+		default:
+			if (!setOptionKey(key, arg) && !filter.SetOptionKey(key, arg))
+				throw std::runtime_error("DBMS: unknown option.");
+			break;
 		}
 		return *this;
 	}

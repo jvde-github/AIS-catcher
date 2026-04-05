@@ -64,7 +64,7 @@ namespace Device {
 		void applySettings();
 
 	public:
-		UDP() : Device(Format::TXT, 0, Type::UDP) {};
+		UDP() : Device(Format::TXT, 0, Type::UDP, "UDP") {};
 		~UDP() {};
 
 		// Control
@@ -78,7 +78,7 @@ namespace Device {
 		std::string getRateDescription() { return "N/A"; }
 
 		// Settings
-		Setting& Set(std::string option, std::string arg);
+		Setting& SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 
 		std::string getProduct() { return "UDP"; }

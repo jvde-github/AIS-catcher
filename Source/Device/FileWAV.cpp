@@ -116,14 +116,15 @@ namespace Device {
 		return true;
 	}
 
-	Setting& WAVFile::Set(std::string option, std::string arg) {
-		Util::Convert::toUpper(option);
-
-		if (option == "FILE")
+	Setting& WAVFile::SetKey(AIS::Keys key, const std::string &arg) {
+		switch (key) {
+		case AIS::KEY_SETTING_FILE:
 			filename = arg;
-		else
-			Device::Set(option, arg);
-
+			break;
+		default:
+			Device::SetKey(key, arg);
+			break;
+		}
 		return *this;
 	}
 

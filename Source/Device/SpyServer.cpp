@@ -440,39 +440,40 @@ namespace Device
 		DeviceList.push_back(Description("SPYSERVER", "SPYSERVER", "SPYSERVER", (uint64_t)0, Type::SPYSERVER));
 	}
 
-	Setting &SpyServer::Set(std::string option, std::string arg)
+	Setting &SpyServer::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		client.setValue(option, arg);
-
-		if (option == "URL")
+		switch (key)
 		{
-			std::string prot, host, port, path, username, password;
-			Util::Parse::URL(arg, prot, username, password, host, port, path);
+		case AIS::KEY_SETTING_URL:
+		{
+			std::string prot, h, p, path, username, password;
+			Util::Parse::URL(arg, prot, username, password, h, p, path);
 
-			if (!host.empty())
-				Set("HOST", host);
-			if (!port.empty())
-				Set("PORT", port);
+			if (!h.empty())
+				SetKey(AIS::KEY_SETTING_HOST, h);
+			if (!p.empty())
+				SetKey(AIS::KEY_SETTING_PORT, p);
 			if (!prot.empty() && prot != "sdr")
 				throw std::runtime_error("SPYSERVER: protocol not supported.");
+			client.setValue("URL", arg);
+			break;
 		}
-		else if (option == "GAIN")
-		{
+		case AIS::KEY_SETTING_GAIN:
 			tuner_gain = Util::Parse::Float(arg, 0, 50);
-		}
-		else if (option == "HOST")
-		{
+			client.setValue("GAIN", arg);
+			break;
+		case AIS::KEY_SETTING_HOST:
 			host = arg;
-		}
-		else if (option == "PORT")
-		{
+			client.setValue("HOST", arg);
+			break;
+		case AIS::KEY_SETTING_PORT:
 			port = arg;
+			client.setValue("PORT", arg);
+			break;
+		default:
+			Device::SetKey(key, arg);
+			break;
 		}
-		else
-			Device::Set(option, arg);
-
 		return *this;
 	}
 

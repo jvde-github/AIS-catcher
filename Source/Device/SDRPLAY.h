@@ -80,7 +80,7 @@ namespace Device {
 		void setFormat(Format f) {}
 #endif
 		// Settings
-		Setting& Set(std::string option, std::string arg);
+		Setting& SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 }

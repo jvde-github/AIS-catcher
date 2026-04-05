@@ -78,7 +78,7 @@ namespace IO
 		void post();
 #endif
 	public:
-		PostgreSQL() : builder(&AIS::KeyMap, JSON_DICT_FULL) { fmt = MessageFormat::JSON_FULL; }
+		PostgreSQL() : OutputMessage("PostgreSQL"), builder(&AIS::KeyMap, JSON_DICT_FULL) { fmt = MessageFormat::JSON_FULL; }
 		~PostgreSQL();
 
 #ifdef HASPSQL
@@ -99,6 +99,6 @@ namespace IO
 		void Start() { setup(); }
 		void setMap(int m) { builder.setMap(m); }
 
-		Setting &Set(std::string option, std::string arg);
+		Setting &SetKey(AIS::Keys key, const std::string &arg);
 	};
 }

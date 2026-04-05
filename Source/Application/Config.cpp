@@ -50,18 +50,18 @@ void Config::setSettingsFromJSON(const JSON::Value &pd, Setting &s)
 				std::string joined;
 				for (const auto &v : p.Get().getArray())
 					joined += (joined.empty() ? "" : ",") + v.to_string();
-				s.Set(AIS::KeyMap[p.Key()][JSON_DICT_SETTING], joined);
+				s.SetKey((AIS::Keys)p.Key(), joined);
 			}
 			else if (p.Get().isArrayString())
 			{
 				std::string joined;
 				for (const auto &v : p.Get().getStringArray())
 					joined += (joined.empty() ? "" : ",") + v;
-				s.Set(AIS::KeyMap[p.Key()][JSON_DICT_SETTING], joined);
+				s.SetKey((AIS::Keys)p.Key(), joined);
 			}
 			else
 			{
-				s.Set(AIS::KeyMap[p.Key()][JSON_DICT_SETTING], p.Get().to_string());
+				s.SetKey((AIS::Keys)p.Key(), p.Get().to_string());
 			}
 		}
 	}
@@ -172,7 +172,7 @@ void Config::setTCPListenerfromJSON(const JSON::Property &pd)
 
 		_state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPlistenerStreamer()));
 		IO::OutputMessage &tcp = *_state.msg.back();
-		tcp.Set("TIMEOUT", "0");
+		tcp.SetKey(AIS::KEY_SETTING_TIMEOUT, "0");
 		setSettingsFromJSON(v, tcp);
 	}
 }
@@ -391,10 +391,10 @@ void Config::setSharing(const std::vector<JSON::Property> &props)
 		_state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
 		comm_feed = _state.msg.back().get();
 
-		comm_feed->Set("HOST", AISCATCHER_URL).Set("PORT", AISCATCHER_PORT).Set("DESC","Community Feed").Set("MSGFORMAT", "COMMUNITY_HUB").Set("FILTER", "on").Set("GPS", "off").Set("REMOVE_EMPTY", "on").Set("KEEP_ALIVE", "on").Set("OWN_INTERVAL", "10").Set("INCLUDE_SAMPLE_START", "on");
+		comm_feed->SetKey(AIS::KEY_SETTING_HOST, AISCATCHER_URL).SetKey(AIS::KEY_SETTING_PORT, AISCATCHER_PORT).SetKey(AIS::KEY_SETTING_DESCRIPTION, "Community Feed").SetKey(AIS::KEY_SETTING_MSGFORMAT, "COMMUNITY_HUB").SetKey(AIS::KEY_SETTING_FILTER, "on").SetKey(AIS::KEY_SETTING_GPS, "off").SetKey(AIS::KEY_SETTING_REMOVE_EMPTY, "on").SetKey(AIS::KEY_SETTING_KEEP_ALIVE, "on").SetKey(AIS::KEY_SETTING_OWN_INTERVAL, "10").SetKey(AIS::KEY_SETTING_INCLUDE_SAMPLE_START, "on");
 	}
 	if (!uuid.empty() && comm_feed)
-		comm_feed->Set("UUID", uuid);
+		comm_feed->SetKey(AIS::KEY_SETTING_UUID, uuid);
 	if (!zones.empty() && comm_feed)
 		comm_feed->zones = zones;
 }

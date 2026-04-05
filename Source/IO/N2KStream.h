@@ -64,11 +64,11 @@ namespace IO
 		void sendType24(const AIS::Message &ais, const JSON::JSON *data);
 
 		void Receive(const JSON::JSON *data, int ln, TAG &tag);
-		Setting &Set(std::string option, std::string arg);
+		Setting &SetKey(AIS::Keys key, const std::string &arg);
 #else
 	public:
 		void Start() { std::cout << "NMEA2000 support not included in this build." << std::endl; }
-		Setting &Set(std::string option, std::string arg)
+		Setting &SetKey(AIS::Keys key, const std::string &arg)
 		{
 			std::cout << "NMEA2000 support not included in this build." << std::endl;
 			return *this;

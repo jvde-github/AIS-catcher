@@ -164,25 +164,23 @@ namespace Device
 		}
 	}
 
-	Setting &RAWFile::Set(std::string option, std::string arg)
+	Setting &RAWFile::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		if (option == "FILE")
+		switch (key)
 		{
+		case AIS::KEY_SETTING_FILE:
 			filename = arg;
-		}
-		else if (option == "LOOP")
-		{
+			break;
+		case AIS::KEY_SETTING_LOOP:
 			loop = Util::Parse::Switch(arg);
-		}
-		else if (option == "TXT_BLOCK_SIZE")
-		{
+			break;
+		case AIS::KEY_SETTING_TXT_BLOCK_SIZE:
 			TXT_BLOCK_SIZE = Util::Parse::Integer(arg, 1, 16384);
+			break;
+		default:
+			Device::SetKey(key, arg);
+			break;
 		}
-		else
-			Device::Set(option, arg);
-
 		return *this;
 	}
 

@@ -30,7 +30,7 @@ namespace Device {
 
 	int SDRPLAY::API_count = 0;
 
-	SDRPLAY::SDRPLAY() : Device(Format::CF32, 2304000, Type::SDRPLAY) {
+	SDRPLAY::SDRPLAY() : Device(Format::CF32, 2304000, Type::SDRPLAY, "SDRPLAY") {
 		float version = 0.0;
 
 		if (API_count++ == 0 && sdrplay_api_Open() != sdrplay_api_Success) {
@@ -217,28 +217,28 @@ namespace Device {
 	}
 
 #endif
-	Setting& SDRPLAY::Set(std::string option, std::string arg) {
-		Util::Convert::toUpper(option);
-
-		if (option == "AGC") {
+	Setting& SDRPLAY::SetKey(AIS::Keys key, const std::string &arg) {
+		switch (key) {
+		case AIS::KEY_SETTING_AGC:
 			AGC = Util::Parse::Switch(arg);
-		}
-		else if (option == "LNASTATE") {
+			break;
+		case AIS::KEY_SETTING_LNASTATE:
 			LNAstate = Util::Parse::Integer(arg, 0, 9);
-		}
-		else if (option == "GRDB") {
+			break;
+		case AIS::KEY_SETTING_GRDB:
 			gRdB = Util::Parse::Integer(arg, 0, 59);
-		}
-		else if (option == "ANTENNA") {
+			break;
+		case AIS::KEY_SETTING_ANTENNA:
 			if (antenna == 'A' || antenna == 'B') {
 				antenna = arg[0];
 			}
 			else
 				throw std::runtime_error("SDRPLAY: invalid antenna.");
+			break;
+		default:
+			Device::SetKey(key, arg);
+			break;
 		}
-		else
-			Device::Set(option, arg);
-
 		return *this;
 	}
 

@@ -28,6 +28,7 @@
 #include <iostream>
 
 #include "Convert.h"
+#include "Keys.h"
 #include "MessageHistory.h"
 
 namespace AIS
@@ -264,7 +265,7 @@ namespace AIS
 
 	public:
 		virtual ~Filter() {}
-		bool SetOption(std::string option, std::string arg);
+		bool SetOptionKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 		bool isOn() { return on; }
 		bool hasIDFilter() const { return !ID_allowed.empty() || !MMSI_allowed.empty(); }

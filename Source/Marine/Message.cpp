@@ -556,16 +556,15 @@ namespace AIS
 		}
 	}
 
-	bool Filter::SetOption(std::string option, std::string arg)
+	bool Filter::SetOptionKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		if (option == "ALLOW_TYPE")
+		switch (key)
+		{
+		case AIS::KEY_SETTING_ALLOW_TYPE:
 		{
 			std::stringstream ss(arg);
 			std::string type_str;
 			allow = 0;
-
 			while (getline(ss, type_str, ','))
 			{
 				unsigned type = Util::Parse::Integer(type_str, 1, 27);
@@ -573,7 +572,8 @@ namespace AIS
 			}
 			return true;
 		}
-		else if (option == "ALLOW_REPEAT" || option == "SELECT_REPEAT")
+		case AIS::KEY_SETTING_SELECT_REPEAT:
+		case AIS::KEY_SETTING_ALLOW_REPEAT:
 		{
 			std::stringstream ss(arg);
 			std::string type_str;
@@ -585,9 +585,8 @@ namespace AIS
 			}
 			return true;
 		}
-		else if (option == "BLOCK_TYPE")
+		case AIS::KEY_SETTING_BLOCK_TYPE:
 		{
-
 			std::stringstream ss(arg);
 			std::string type_str;
 			unsigned block = 0;
@@ -599,9 +598,8 @@ namespace AIS
 			allow = ~block & all;
 			return true;
 		}
-		else if (option == "BLOCK_REPEAT")
+		case AIS::KEY_SETTING_BLOCK_REPEAT:
 		{
-
 			std::stringstream ss(arg);
 			std::string type_str;
 			unsigned block = 0;
@@ -613,51 +611,30 @@ namespace AIS
 			allow_repeat = ~block & all;
 			return true;
 		}
-		else if (option == "FILTER")
-		{
-			Util::Convert::toUpper(arg);
+		case AIS::KEY_SETTING_FILTER:
 			on = Util::Parse::Switch(arg);
 			return true;
-		}
-		else if (option == "UNIQUE")
-		{
-			Util::Convert::toUpper(arg);
+		case AIS::KEY_SETTING_UNIQUE:
 			unique_interval = Util::Parse::Switch(arg) ? 3 : 0;
-
 			return true;
-		}
-		else if (option == "POSITION_INTERVAL")
-		{
+		case AIS::KEY_SETTING_POSITION_INTERVAL:
 			Util::Parse::OptionalInteger(arg, 0, 3600, position_interval);
 			return true;
-		}
-		else if (option == "OWN_INTERVAL")
-		{
+		case AIS::KEY_SETTING_OWN_INTERVAL:
 			Util::Parse::OptionalInteger(arg, 0, 3600, own_interval);
 			return true;
-		}
-		else if (option == "DOWNSAMPLE")
-		{
+		case AIS::KEY_SETTING_DOWNSAMPLE:
 			Error() << "Option 'DOWNSAMPLE' is deprecated, please use 'OWN_INTERVAL' instead.";
-
-			Util::Convert::toUpper(arg);
 			own_interval = Util::Parse::Switch(arg) ? 10 : 0;
-
 			return true;
-		}
-		else if (option == "GPS")
-		{
-			Util::Convert::toUpper(arg);
+		case AIS::KEY_SETTING_GPS:
 			GPS = Util::Parse::Switch(arg);
 			return true;
-		}
-		else if (option == "AIS")
-		{
-			Util::Convert::toUpper(arg);
+		case AIS::KEY_SETTING_AIS:
 			AIS = Util::Parse::Switch(arg);
 			return true;
-		}
-		else if (option == "ID" || option == "SELECT_ID")
+		case AIS::KEY_SETTING_SELECT_ID:
+		case AIS::KEY_SETTING_ID:
 		{
 			std::stringstream ss(arg);
 			std::string id_str;
@@ -667,15 +644,15 @@ namespace AIS
 			}
 			return true;
 		}
-		else if (option == "ALLOW_CHANNEL" || option == "SELECT_CHANNEL")
+		case AIS::KEY_SETTING_SELECT_CHANNEL:
+		case AIS::KEY_SETTING_ALLOW_CHANNEL:
 		{
-
 			allowed_channels = arg;
 			Util::Convert::toUpper(allowed_channels);
-
 			return true;
 		}
-		else if (option == "ALLOW_MMSI" || option == "SELECT_MMSI")
+		case AIS::KEY_SETTING_SELECT_MMSI:
+		case AIS::KEY_SETTING_ALLOW_MMSI:
 		{
 			std::stringstream ss(arg);
 			std::string mmsi_str;
@@ -685,7 +662,7 @@ namespace AIS
 			}
 			return true;
 		}
-		else if (option == "BLOCK_MMSI")
+		case AIS::KEY_SETTING_BLOCK_MMSI:
 		{
 			std::stringstream ss(arg);
 			std::string mmsi_str;
@@ -695,13 +672,12 @@ namespace AIS
 			}
 			return true;
 		}
-		else if (option == "REMOVE_EMPTY")
-		{
-			Util::Convert::toUpper(arg);
+		case AIS::KEY_SETTING_REMOVE_EMPTY:
 			remove_empty = Util::Parse::Switch(arg);
 			return true;
+		default:
+			return false;
 		}
-		return false;
 	}
 
 	std::string Filter::getAllowed()

@@ -259,7 +259,7 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 	}
 }
 
-WebViewer::WebViewer()
+WebViewer::WebViewer() : Setting("WebViewer")
 {
 	os = JSON::StringBuilder::stringify(Util::Helper::getOS());
 	hardware = JSON::StringBuilder::stringify(Util::Helper::getHardware());
@@ -417,7 +417,8 @@ void BackupManager::run()
 	while (running)
 	{
 		std::unique_lock<std::mutex> lock(mtx);
-		cv.wait_for(lock, std::chrono::minutes(interval), [this] { return !running.load(); });
+		cv.wait_for(lock, std::chrono::minutes(interval), [this]
+					{ return !running.load(); });
 
 		if (running && !save())
 			Error() << "Server: failed to write backup: " << filename;
@@ -717,7 +718,7 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 						per->setDevice(device);
 
 					states[0]->appendDevice(device, newline);
-				rec_details = true;
+					rec_details = true;
 				}
 
 				states[0]->model_name += r.Model(j)->getName() + newline;
@@ -741,6 +742,7 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 	for (auto &s : states)
 		s->applyConfig(tracking, filter);
 
+	raw_counter.setFilter(filter);
 }
 
 void WebViewer::connect(AIS::Model &m, Connection<JSON::JSON> &json, Device::Device &device)
@@ -953,93 +955,125 @@ std::string WebViewer::buildMultiPathJSON(ReceiverTracker *s, const std::string 
 const WebViewer::Route WebViewer::routes[] = {
 	// JSON API routes (application/json)
 	{"/api/ships.json", nullptr, "application/json",
-		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getShipsJSON() : std::string("{}"); }},
+	 [](WebViewer *, ReceiverTracker *s, const std::string &)
+	 { return s ? s->getShipsJSON() : std::string("{}"); }},
 	{"/ships.json", nullptr, "application/json",
-		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getShipsJSON() : std::string("{}"); }},
+	 [](WebViewer *, ReceiverTracker *s, const std::string &)
+	 { return s ? s->getShipsJSON() : std::string("{}"); }},
 	{"/api/ships_full.json", nullptr, "application/json",
-		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getShipsJSON(true) : std::string("{}"); }},
+	 [](WebViewer *, ReceiverTracker *s, const std::string &)
+	 { return s ? s->getShipsJSON(true) : std::string("{}"); }},
 	{"/api/ships_array.json", nullptr, "application/json",
-		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getShipsJSONcompact() : std::string("{}"); }},
+	 [](WebViewer *, ReceiverTracker *s, const std::string &)
+	 { return s ? s->getShipsJSONcompact() : std::string("{}"); }},
 	{"/api/planes_array.json", nullptr, "application/json",
-		[](WebViewer *w, ReceiverTracker *, const std::string &) { return w->planes.getCompactArray(); }},
+	 [](WebViewer *w, ReceiverTracker *, const std::string &)
+	 { return w->planes.getCompactArray(); }},
 	{"/api/binmsgs.json", nullptr, "application/json",
-		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getBinaryMessagesJSON() : std::string("[]"); }},
+	 [](WebViewer *, ReceiverTracker *s, const std::string &)
+	 { return s ? s->getBinaryMessagesJSON() : std::string("[]"); }},
 	{"/api/history_full.json", nullptr, "application/json",
-		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->toHistoryJSON() : std::string("{}"); }},
+	 [](WebViewer *, ReceiverTracker *s, const std::string &)
+	 { return s ? s->toHistoryJSON() : std::string("{}"); }},
 	{"/api/stat.json", nullptr, "application/json",
-		[](WebViewer *w, ReceiverTracker *s, const std::string &) { return s ? w->buildStatJSON(s) : std::string("{}"); }},
+	 [](WebViewer *w, ReceiverTracker *s, const std::string &)
+	 { return s ? w->buildStatJSON(s) : std::string("{}"); }},
 	{"/stat.json", nullptr, "application/json",
-		[](WebViewer *w, ReceiverTracker *s, const std::string &) { return s ? w->buildStatJSON(s) : std::string("{}"); }},
+	 [](WebViewer *w, ReceiverTracker *s, const std::string &)
+	 { return s ? w->buildStatJSON(s) : std::string("{}"); }},
 	{"/api/path.json", nullptr, "application/json",
-		[](WebViewer *w, ReceiverTracker *s, const std::string &a) { return w->buildMultiPathJSON(s, a); }},
+	 [](WebViewer *w, ReceiverTracker *s, const std::string &a)
+	 { return w->buildMultiPathJSON(s, a); }},
 	{"/api/allpath.json", nullptr, "application/json",
-		[](WebViewer *w, ReceiverTracker *s, const std::string &a) {
-			if (!s) return std::string("{}");
-			std::time_t since = w->parseSinceParam(a);
-			return since > 0 ? s->getAllPathJSONSince(since) : s->getAllPathJSON();
-		}},
+	 [](WebViewer *w, ReceiverTracker *s, const std::string &a)
+	 {
+		 if (!s)
+			 return std::string("{}");
+		 std::time_t since = w->parseSinceParam(a);
+		 return since > 0 ? s->getAllPathJSONSince(since) : s->getAllPathJSON();
+	 }},
 	{"/api/path.geojson", nullptr, "application/json",
-		[](WebViewer *, ReceiverTracker *s, const std::string &a) {
-			if (!s) return std::string("{}");
-			int mmsi = parseMMSI(a);
-			return mmsi > 0 ? s->getPathGeoJSON(mmsi) : std::string("{}");
-		}},
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 {
+		 if (!s)
+			 return std::string("{}");
+		 int mmsi = parseMMSI(a);
+		 return mmsi > 0 ? s->getPathGeoJSON(mmsi) : std::string("{}");
+	 }},
 	{"/api/allpath.geojson", nullptr, "application/json",
-		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getAllPathGeoJSON() : std::string("{}"); }},
+	 [](WebViewer *, ReceiverTracker *s, const std::string &)
+	 { return s ? s->getAllPathGeoJSON() : std::string("{}"); }},
 	{"/api/message", nullptr, "application/json",
-		[](WebViewer *, ReceiverTracker *s, const std::string &a) {
-			if (!s) return std::string("{\"error\":\"No data available\"}");
-			int mmsi = parseMMSI(a);
-			if (mmsi <= 0) return std::string("{\"error\":\"Invalid MMSI\"}");
-			std::string msg = s->getMessage(mmsi);
-			return msg.empty() ? std::string("{\"error\":\"Message not found\"}") : msg;
-		}},
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 {
+		 if (!s)
+			 return std::string("{\"error\":\"No data available\"}");
+		 int mmsi = parseMMSI(a);
+		 if (mmsi <= 0)
+			 return std::string("{\"error\":\"Invalid MMSI\"}");
+		 std::string msg = s->getMessage(mmsi);
+		 return msg.empty() ? std::string("{\"error\":\"Message not found\"}") : msg;
+	 }},
 	{"/api/vessel", nullptr, "application/json",
-		[](WebViewer *, ReceiverTracker *s, const std::string &a) {
-			if (!s) return std::string("{\"error\":\"No data available\"}");
-			int mmsi = parseMMSI(a);
-			if (mmsi <= 0) return std::string("{\"error\":\"Invalid MMSI\"}");
-			std::string vessel = s->getShipJSON(mmsi);
-			return vessel == "{}" ? std::string("{\"error\":\"Vessel not found\"}") : vessel;
-		}},
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 {
+		 if (!s)
+			 return std::string("{\"error\":\"No data available\"}");
+		 int mmsi = parseMMSI(a);
+		 if (mmsi <= 0)
+			 return std::string("{\"error\":\"Invalid MMSI\"}");
+		 std::string vessel = s->getShipJSON(mmsi);
+		 return vessel == "{}" ? std::string("{\"error\":\"Vessel not found\"}") : vessel;
+	 }},
 	{"/api/decode", &WebViewer::showdecoder, "application/json",
-		[](WebViewer *, ReceiverTracker *, const std::string &a) {
-			try {
-				if (a.empty() || a.size() > 1024) return std::string("{\"error\":\"Input size limit exceeded\"}");
-				std::string result = decodeNMEAtoJSON(a, true);
-				return result == "[]" ? std::string("{\"error\":\"No valid AIS messages decoded\"}") : result;
-			} catch (const std::exception &e) {
-				Error() << "Decoder error: " << e.what();
-				return std::string("{\"error\":\"Decoding failed\"}");
-			}
-		}},
+	 [](WebViewer *, ReceiverTracker *, const std::string &a)
+	 {
+		 try
+		 {
+			 if (a.empty() || a.size() > 1024)
+				 return std::string("{\"error\":\"Input size limit exceeded\"}");
+			 std::string result = decodeNMEAtoJSON(a, true);
+			 return result == "[]" ? std::string("{\"error\":\"No valid AIS messages decoded\"}") : result;
+		 }
+		 catch (const std::exception &e)
+		 {
+			 Error() << "Decoder error: " << e.what();
+			 return std::string("{\"error\":\"Decoding failed\"}");
+		 }
+	 }},
 
 	// Conditional GeoJSON/KML routes
 	{"/geojson", &WebViewer::GeoJSON, "application/json",
-		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getGeoJSON() : std::string("{}"); }},
+	 [](WebViewer *, ReceiverTracker *s, const std::string &)
+	 { return s ? s->getGeoJSON() : std::string("{}"); }},
 	{"/allpath.geojson", &WebViewer::GeoJSON, "application/json",
-		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getAllPathGeoJSON() : std::string("{}"); }},
+	 [](WebViewer *, ReceiverTracker *s, const std::string &)
+	 { return s ? s->getAllPathGeoJSON() : std::string("{}"); }},
 	{"/kml", &WebViewer::KML, "application/vnd.google-earth.kml+xml",
-		[](WebViewer *, ReceiverTracker *s, const std::string &) { return s ? s->getKML() : std::string(); }},
+	 [](WebViewer *, ReceiverTracker *s, const std::string &)
+	 { return s ? s->getKML() : std::string(); }},
 
 	// Prometheus metrics
 	{"/metrics", &WebViewer::supportPrometheus, "text/plain",
-		[](WebViewer *w, ReceiverTracker *, const std::string &) {
-			std::string r = w->dataPrometheus.toPrometheus();
-			w->dataPrometheus.Reset();
-			return r;
-		}},
+	 [](WebViewer *w, ReceiverTracker *, const std::string &)
+	 {
+		 std::string r = w->dataPrometheus.toPrometheus();
+		 w->dataPrometheus.Reset();
+		 return r;
+	 }},
 
 	// Frontend assets
 	{"/custom/plugins.js", nullptr, "application/javascript",
-		[](WebViewer *w, ReceiverTracker *, const std::string &) { return w->pluginManager.render(comm_feed != nullptr); }},
+	 [](WebViewer *w, ReceiverTracker *, const std::string &)
+	 { return w->pluginManager.render(comm_feed != nullptr); }},
 	{"/custom/config.css", nullptr, "text/css",
-		[](WebViewer *w, ReceiverTracker *, const std::string &) { return w->pluginManager.getStylesheets(); }},
+	 [](WebViewer *w, ReceiverTracker *, const std::string &)
+	 { return w->pluginManager.getStylesheets(); }},
 	{"/about.md", nullptr, "text/markdown",
-		[](WebViewer *w, ReceiverTracker *, const std::string &) { return w->pluginManager.getAbout(); }},
+	 [](WebViewer *w, ReceiverTracker *, const std::string &)
+	 { return w->pluginManager.getAbout(); }},
 
-	{nullptr, nullptr, nullptr, nullptr}
-};
+	{nullptr, nullptr, nullptr, nullptr}};
 
 void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response, bool gzip)
 {
@@ -1138,183 +1172,142 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 }
 
-Setting &WebViewer::Set(std::string option, std::string arg)
+Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 {
-	Util::Convert::toUpper(option);
-
-	if (option == "PORT")
+	switch (key)
 	{
+	case AIS::KEY_SETTING_PORT:
 		port_set = true;
-		firstport = lastport = Util::Parse::Integer(arg, 1, 65535, option);
-	}
-	else if (option == "SERVER_MODE")
-	{
+		firstport = lastport = Util::Parse::Integer(arg, 1, 65535);
+		break;
+	case AIS::KEY_SETTING_SERVER_MODE:
 		tracking.server_mode = Util::Parse::Switch(arg);
-	}
-	else if (option == "ZLIB")
-	{
+		break;
+	case AIS::KEY_SETTING_ZLIB:
 		use_zlib = Util::Parse::Switch(arg);
-	}
-	else if (option == "GROUPS_IN")
-	{
+		break;
+	case AIS::KEY_SETTING_GROUPS_IN:
 		groups_in = Util::Parse::Integer(arg);
-	}
-	else if (option == "ZONE")
-	{
+		break;
+	case AIS::KEY_SETTING_ZONE:
 		Util::Parse::Split(arg, ',', zones);
-	}
-	else if (option == "PORT_MIN")
-	{
+		break;
+	case AIS::KEY_SETTING_PORT_MIN:
 		port_set = true;
-		firstport = Util::Parse::Integer(arg, 1, 65535, option);
+		firstport = Util::Parse::Integer(arg, 1, 65535);
 		lastport = MAX(firstport, lastport);
-	}
-	else if (option == "PORT_MAX")
-	{
+		break;
+	case AIS::KEY_SETTING_PORT_MAX:
 		port_set = true;
-		lastport = Util::Parse::Integer(arg, 1, 65535, option);
+		lastport = Util::Parse::Integer(arg, 1, 65535);
 		firstport = MIN(firstport, lastport);
-	}
-	else if (option == "STATION")
-	{
+		break;
+	case AIS::KEY_SETTING_STATION:
 		station = JSON::StringBuilder::stringify(arg);
-	}
-	else if (option == "STATION_LINK")
-	{
+		break;
+	case AIS::KEY_SETTING_STATION_LINK:
 		station_link = JSON::StringBuilder::stringify(arg);
-	}
-	else if (option == "WEBCONTROL_HTTP")
-	{
+		break;
+	case AIS::KEY_SETTING_WEBCONTROL_HTTP:
 		pluginManager.setWebControl(arg);
-	}
-	else if (option == "LAT")
-	{
+		break;
+	case AIS::KEY_SETTING_LAT:
 		tracking.lat = Util::Parse::Float(arg);
 		planes.setLat(tracking.lat);
-	}
-	else if (option == "CUTOFF")
-	{
-		tracking.cutoff = Util::Parse::Integer(arg, 0, 10000, option);
+		break;
+	case AIS::KEY_SETTING_CUTOFF:
+		tracking.cutoff = Util::Parse::Integer(arg, 0, 10000);
 		dataPrometheus.setCutOff(tracking.cutoff);
-	}
-	else if (option == "SHARE_LOC")
-	{
+		break;
+	case AIS::KEY_SETTING_SHARE_LOC:
 		tracking.latlon_share = Util::Parse::Switch(arg);
 		pluginManager.setShareLoc(tracking.latlon_share);
-	}
-	else if (option == "IP_BIND")
-	{
+		break;
+	case AIS::KEY_SETTING_IP_BIND:
 		setIP(arg);
-	}
-	else if (option == "CONTEXT")
-	{
+		break;
+	case AIS::KEY_SETTING_CONTEXT:
 		pluginManager.setContext(arg);
-	}
-	else if (option == "MESSAGE" || option == "MSG")
-	{
+		break;
+	case AIS::KEY_SETTING_MSG:
 		tracking.msg_save = Util::Parse::Switch(arg);
 		pluginManager.setMsgSave(tracking.msg_save);
-	}
-	else if (option == "LON")
-	{
+		break;
+	case AIS::KEY_SETTING_LON:
 		tracking.lon = Util::Parse::Float(arg);
 		planes.setLon(tracking.lon);
-	}
-	else if (option == "USE_GPS")
-	{
+		break;
+	case AIS::KEY_SETTING_USE_GPS:
 		tracking.use_GPS = Util::Parse::Switch(arg);
-	}
-	else if (option == "KML")
-	{
+		break;
+	case AIS::KEY_SETTING_KML:
 		KML = Util::Parse::Switch(arg);
-	}
-	else if (option == "GEOJSON")
-	{
+		break;
+	case AIS::KEY_SETTING_GEOJSON:
 		GeoJSON = Util::Parse::Switch(arg);
-	}
-	else if (option == "OWN_MMSI")
-	{
-		tracking.own_mmsi = Util::Parse::Integer(arg, 0, 999999999, option);
-	}
-	else if (option == "HISTORY")
-	{
-		tracking.time_history = Util::Parse::Integer(arg, 5, 12 * 3600, option);
-	}
-	else if (option == "FILE")
-	{
+		break;
+	case AIS::KEY_SETTING_OWN_MMSI:
+		tracking.own_mmsi = Util::Parse::Integer(arg, 0, 999999999);
+		break;
+	case AIS::KEY_SETTING_HISTORY:
+		tracking.time_history = Util::Parse::Integer(arg, 5, 12 * 3600);
+		break;
+	case AIS::KEY_SETTING_FILE:
 		backup.setFilename(arg);
-	}
-	else if (option == "CDN")
-	{
+		break;
+	case AIS::KEY_SETTING_CDN:
 		Warning() << "CDN option is no longer supported — web libraries are now bundled. Ignoring.";
-	}
-	else if (option == "MBTILES")
-	{
+		break;
+	case AIS::KEY_SETTING_MBTILES:
 		addMBTilesSource(arg, false);
-	}
-	else if (option == "MBOVERLAY")
-	{
+		break;
+	case AIS::KEY_SETTING_MBOVERLAY:
 		addMBTilesSource(arg, true);
-	}
-	else if (option == "FSTILES")
-	{
+		break;
+	case AIS::KEY_SETTING_FSTILES:
 		addFileSystemTilesSource(arg, false);
-	}
-	else if (option == "FSOVERLAY")
-	{
+		break;
+	case AIS::KEY_SETTING_FSOVERLAY:
 		addFileSystemTilesSource(arg, true);
-	}
-	else if (option == "BACKUP")
-	{
-		backup.setInterval(Util::Parse::Integer(arg, 5, 2 * 24 * 60, option));
-	}
-	else if (option == "REALTIME")
-	{
+		break;
+	case AIS::KEY_SETTING_BACKUP:
+		backup.setInterval(Util::Parse::Integer(arg, 5, 2 * 24 * 60));
+		break;
+	case AIS::KEY_SETTING_REALTIME:
 		realtime = Util::Parse::Switch(arg);
 		pluginManager.setRealtime(realtime);
-	}
-	else if (option == "LOG")
-	{
+		break;
+	case AIS::KEY_SETTING_LOG:
 		showlog = Util::Parse::Switch(arg);
 		pluginManager.setLog(showlog);
-	}
-	else if (option == "DECODER")
-	{
+		break;
+	case AIS::KEY_SETTING_DECODER:
 		showdecoder = Util::Parse::Switch(arg);
 		pluginManager.setDecoder(showdecoder);
 		sse_streamer.setObfuscate(!showdecoder);
-	}
-	else if (option == "PLUGIN")
-	{
+		break;
+	case AIS::KEY_SETTING_PLUGIN:
 		pluginManager.addPlugin(arg);
-	}
-	else if (option == "STYLE")
-	{
+		break;
+	case AIS::KEY_SETTING_STYLE:
 		pluginManager.addStyle(arg);
-	}
-	else if (option == "PLUGIN_DIR")
-	{
+		break;
+	case AIS::KEY_SETTING_PLUGIN_DIR:
 		pluginManager.addPluginDir(arg);
-	}
-	else if (option == "ABOUT")
-	{
+		break;
+	case AIS::KEY_SETTING_ABOUT:
 		pluginManager.setAbout(arg);
-	}
-	else if (option == "PROME")
-	{
+		break;
+	case AIS::KEY_SETTING_PROME:
 		supportPrometheus = Util::Parse::Switch(arg);
-	}
-	else if (option == "REUSE_PORT")
-	{
+		break;
+	case AIS::KEY_SETTING_REUSE_PORT:
 		setReusePort(Util::Parse::Switch(arg));
-	}
-	else if (!filter.SetOption(option, arg))
-	{
-		throw std::runtime_error("unrecognized setting for HTML service: " + option + " " + arg);
-	}
-	else
-	{
-		raw_counter.setFilterOption(option, arg);
+		break;
+	default:
+		if (!filter.SetOptionKey(key, arg))
+			throw std::runtime_error("unrecognized setting for HTML service: " + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
+		break;
 	}
 
 	return *this;

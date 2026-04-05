@@ -119,25 +119,23 @@ namespace Device
 	}
 #endif
 
-	Setting &HACKRF::Set(std::string option, std::string arg)
+	Setting &HACKRF::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		if (option == "LNA")
+		switch (key)
 		{
+		case AIS::KEY_SETTING_LNA:
 			LNA_Gain = ((Util::Parse::Integer(arg, 0, 40) + 4) / 8) * 8;
-		}
-		else if (option == "VGA")
-		{
+			break;
+		case AIS::KEY_SETTING_VGA:
 			VGA_Gain = ((Util::Parse::Integer(arg, 0, 62) + 1) / 2) * 2;
-		}
-		else if (option == "PREAMP")
-		{
+			break;
+		case AIS::KEY_SETTING_PREAMP:
 			preamp = Util::Parse::Switch(arg);
+			break;
+		default:
+			Device::SetKey(key, arg);
+			break;
 		}
-		else
-			Device::Set(option, arg);
-
 		return *this;
 	}
 

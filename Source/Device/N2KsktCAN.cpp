@@ -116,17 +116,17 @@ namespace Device
 
 namespace Device
 {
-	Setting &N2KSCAN::Set(std::string option, std::string arg)
+	Setting &N2KSCAN::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		if (option == "INTERFACE")
+		switch (key)
 		{
+		case AIS::KEY_SETTING_INTERFACE:
 			_iface = arg;
+			break;
+		default:
+			Device::SetKey(key, arg);
+			break;
 		}
-		else
-			Device::Set(option, arg);
-
 		return *this;
 	}
 

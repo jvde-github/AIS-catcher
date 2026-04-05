@@ -72,13 +72,13 @@ namespace Device
 #endif
 
 	public:
-		AIRSPYHF() : Device(Format::CF32, 0, Type::AIRSPYHF) {}
+		AIRSPYHF() : Device(Format::CF32, 0, Type::AIRSPYHF, "AIRSPYHF") {}
 
 		std::string getProduct() { return "AIRSPYHF"; }
 		std::string getVendor() { return "AIRSPY"; }
 
 		// Settings (always available)
-		Setting &Set(std::string option, std::string arg);
+		Setting &SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 }

@@ -103,16 +103,15 @@ namespace Device {
 		DeviceList.push_back(Description("ZMQ", "ZMQ", "ZMQ", (uint64_t)0, Type::ZMQ));
 	}
 
-	Setting& ZMQ::Set(std::string option, std::string arg) {
-		Util::Convert::toUpper(option);
-
-		if (option == "ENDPOINT") {
+	Setting& ZMQ::SetKey(AIS::Keys key, const std::string &arg) {
+		switch (key) {
+		case AIS::KEY_SETTING_ENDPOINT:
 			endpoint = arg;
-			return *this;
+			break;
+		default:
+			Device::SetKey(key, arg);
+			break;
 		}
-
-		Device::Set(option, arg);
-
 		return *this;
 	}
 

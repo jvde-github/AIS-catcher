@@ -163,7 +163,7 @@ public:
 
 	void setServerMode(bool b) { server_mode = b; }
 	void setMsgSave(bool b) { msg_save = b; }
-	void setFilterOption(std::string &opt, std::string &arg) { filter.SetOption(opt, arg); }
+	void setOptionKey(AIS::Keys key, const std::string &arg) { filter.SetOptionKey(key, arg); }
 	void setFilter(const AIS::Filter &f) { filter = f; }
 
 	std::string getBinaryMessagesJSON() const;

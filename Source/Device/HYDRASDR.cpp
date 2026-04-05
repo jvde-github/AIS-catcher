@@ -260,70 +260,64 @@ namespace Device
 	}
 #endif
 
-	Setting &HYDRASDR::Set(std::string option, std::string arg)
+	Setting &HYDRASDR::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		if (option == "SENSITIVITY")
+		switch (key)
 		{
+		case AIS::KEY_SETTING_SENSITIVITY:
 			if (!explicit_gain)
 				mode = HYDRASDRGainMode::Sensitivity;
 			gain = Util::Parse::Integer(arg, 0, 21);
-		}
-		else if (option == "LINEARITY")
-		{
+			break;
+		case AIS::KEY_SETTING_LINEARITY:
 			if (!explicit_gain)
 				mode = HYDRASDRGainMode::Linearity;
 			gain = Util::Parse::Integer(arg, 0, 21);
-		}
-		else if (option == "VGA")
-		{
+			break;
+		case AIS::KEY_SETTING_VGA:
 			if (!explicit_gain)
 				mode = HYDRASDRGainMode::Free;
 			VGA_Gain = Util::Parse::Integer(arg, 0, 14);
-		}
-		else if (option == "MIXER")
-		{
+			break;
+		case AIS::KEY_SETTING_MIXER:
 			if (!explicit_gain)
 				mode = HYDRASDRGainMode::Free;
 			mixer_AGC = Util::Parse::AutoInteger(arg, 0, 14, mixer_Gain);
-		}
-		else if (option == "LNA")
-		{
+			break;
+		case AIS::KEY_SETTING_LNA:
 			if (!explicit_gain)
 				mode = HYDRASDRGainMode::Free;
 			LNA_AGC = Util::Parse::AutoInteger(arg, 0, 14, LNA_Gain);
-		}
-		else if (option == "BIASTEE")
-		{
+			break;
+		case AIS::KEY_SETTING_BIASTEE:
 			bias_tee = Util::Parse::Switch(arg);
-		}
-		else if (option == "REAL_MODE")
-		{
+			break;
+		case AIS::KEY_SETTING_REAL_MODE:
 			real_mode = Util::Parse::Switch(arg);
-
 			if (real_mode)
 				format = Format::F32_FS4;
 			else
 				format = Format::CF32;
-		}
-		else if (option == "GAIN_MODE")
+			break;
+		case AIS::KEY_SETTING_GAIN_MODE:
 		{
-			Util::Convert::toUpper(arg);
+			std::string a = arg;
+			Util::Convert::toUpper(a);
 			explicit_gain = true;
-
-			if (arg == "SENSITIVITY")
+			if (a == "SENSITIVITY")
 				mode = HYDRASDRGainMode::Sensitivity;
-			else if (arg == "LINEARITY")
+			else if (a == "LINEARITY")
 				mode = HYDRASDRGainMode::Linearity;
-			else if (arg == "FREE")
+			else if (a == "FREE")
 				mode = HYDRASDRGainMode::Free;
 			else
 				throw std::runtime_error("HYDRASDR: invalid gain mode.");
+			break;
 		}
-		else
-			Device::Set(option, arg);
-
+		default:
+			Device::SetKey(key, arg);
+			break;
+		}
 		return *this;
 	}
 

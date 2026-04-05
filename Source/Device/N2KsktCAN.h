@@ -44,7 +44,7 @@ namespace Device
 		std::vector<std::string> available_intefaces;
 
 	public:
-		N2KSCAN() : Device(Format::N2K, 288000, Type::N2K) {};
+		N2KSCAN() : Device(Format::N2K, 288000, Type::N2K, "N2K") {};
 		~N2KSCAN();
 
 		std::string getRateDescription() { return "N/A"; }
@@ -76,7 +76,7 @@ namespace Device
 
 	public:
 		// Settings (always available)
-		Setting &Set(std::string option, std::string arg);
+		Setting &SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 }

@@ -409,62 +409,61 @@ namespace Device
 			dump_stream.close();
 	}
 
-	Setting &SerialPort::Set(std::string option, std::string arg)
+	Setting &SerialPort::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		if (option == "BAUDRATE")
+		switch (key)
 		{
+		case AIS::KEY_SETTING_BAUDRATE:
 			baudrate = Util::Parse::Integer(arg);
-		}
-		else if (option == "PORT")
+			break;
+		case AIS::KEY_SETTING_PORT:
 		{
+			std::string p = arg;
 #ifdef _WIN32
-			if (arg.size() == 5 && std::toupper(arg[0]) == 'C' && std::toupper(arg[1]) == 'O' && std::toupper(arg[2]) == 'M' && std::isdigit(arg[3]) && std::isdigit(arg[4]))
+			if (p.size() == 5 && std::toupper(p[0]) == 'C' && std::toupper(p[1]) == 'O' && std::toupper(p[2]) == 'M' && std::isdigit(p[3]) && std::isdigit(p[4]))
 			{
-				arg = "\\\\.\\" + arg; // Windows COM port format
-				Warning() << "Serial: using Windows COM port format: " << arg;
+				p = "\\\\.\\" + p;
+				Warning() << "Serial: using Windows COM port format: " << p;
 			}
 #endif
-			port = arg;
+			port = p;
+			break;
 		}
-		else if (option == "PRINT")
-		{
+		case AIS::KEY_SETTING_PRINT:
 			Warning() << "PRINT option is deprecated and will be removed in a future release. Use DUMP instead.";
 			dump = Util::Parse::Switch(arg);
-		}
-		else if (option == "DUMP")
-		{
+			break;
+		case AIS::KEY_SETTING_DUMP:
 			dump = Util::Parse::Switch(arg);
-		}
-		else if (option == "DUMP_FILE")
-		{
+			break;
+		case AIS::KEY_SETTING_DUMP_FILE:
 			dump_file = arg;
 			dump = true;
-		}
-		else if (option == "INIT_SEQ")
-		{
+			break;
+		case AIS::KEY_SETTING_SERIAL_INIT_SEQUENCE:
 			init_sequence = arg;
-		}
-		else if (option == "DISABLE_XONXOFF")
-		{
+			break;
+		case AIS::KEY_SETTING_DISABLE_XONXOFF:
 			throw std::runtime_error("Serial: DISABLE_XONXOFF option is deprecated. Use FLOWCONTROL instead.");
-		}
-		else if (option == "FLOWCONTROL")
+			break;
+		case AIS::KEY_SETTING_FLOWCONTROL:
 		{
-			Util::Convert::toUpper(arg);
-			if (arg == "NONE")
+			std::string a = arg;
+			Util::Convert::toUpper(a);
+			if (a == "NONE")
 				flowcontrol = FlowControl::NONE;
-			else if (arg == "HARDWARE")
+			else if (a == "HARDWARE")
 				flowcontrol = FlowControl::HARDWARE;
-			else if (arg == "SOFTWARE")
+			else if (a == "SOFTWARE")
 				flowcontrol = FlowControl::SOFTWARE;
 			else
 				throw std::runtime_error("Serial: invalid flowcontrol option: \"" + arg + "\". Valid options are NONE, HARDWARE, SOFTWARE.");
+			break;
 		}
-		else
-			Device::Set(option, arg);
-
+		default:
+			Device::SetKey(key, arg);
+			break;
+		}
 		return *this;
 	}
 

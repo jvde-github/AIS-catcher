@@ -155,9 +155,9 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 	if (sample_rate)
 		device->setSampleRate(sample_rate);
 	if (ppm)
-		device->Set("FREQOFFSET", std::to_string(ppm));
+		device->SetKey(AIS::KEY_SETTING_FREQOFFSET, std::to_string(ppm));
 	if (bandwidth)
-		device->Set("BW", std::to_string(bandwidth));
+		device->SetKey(AIS::KEY_SETTING_BANDWIDTH, std::to_string(bandwidth));
 
 	tag.hardware = device->getProduct();
 	tag.driver = device->getDriver();

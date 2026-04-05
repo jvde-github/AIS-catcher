@@ -240,42 +240,42 @@ namespace Device {
 
 #endif
 
-	Setting& SOAPYSDR::Set(std::string option, std::string arg) {
-		Util::Convert::toUpper(option);
-
-		if (option == "DEVICE") {
+	Setting& SOAPYSDR::SetKey(AIS::Keys key, const std::string &arg) {
+		switch (key) {
+		case AIS::KEY_SETTING_DEVICE:
 			device_args = arg;
-		}
-		else if (option == "GAIN") {
+			break;
+		case AIS::KEY_SETTING_GAIN:
 #ifdef HASSOAPYSDR
 			gains_args = SoapySDR::KwargsFromString(arg);
 #endif
-		}
-		else if (option == "STREAM") {
+			break;
+		case AIS::KEY_SETTING_STREAM:
 #ifdef HASSOAPYSDR
 			stream_args = SoapySDR::KwargsFromString(arg);
 #endif
-		}
-		else if (option == "SETTING") {
+			break;
+		case AIS::KEY_SETTING_SETTING:
 #ifdef HASSOAPYSDR
 			setting_args = SoapySDR::KwargsFromString(arg);
 #endif
-		}
-		else if (option == "ANTENNA") {
+			break;
+		case AIS::KEY_SETTING_ANTENNA:
 			antenna = arg;
-		}
-		else if (option == "AGC") {
+			break;
+		case AIS::KEY_SETTING_AGC:
 			AGC = Util::Parse::Switch(arg);
-		}
-		else if (option == "PROBE") {
+			break;
+		case AIS::KEY_SETTING_PROBE:
 			print = Util::Parse::Switch(arg);
-		}
-		else if (option == "CH") {
+			break;
+		case AIS::KEY_SETTING_CH:
 			channel = Util::Parse::Integer(arg, 0, 32);
+			break;
+		default:
+			Device::SetKey(key, arg);
+			break;
 		}
-		else
-			Device::Set(option, arg);
-
 		return *this;
 	}
 

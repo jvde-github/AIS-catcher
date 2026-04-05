@@ -807,17 +807,17 @@ namespace IO
 		}
 	}
 
-	Setting &N2KStreamer::Set(std::string option, std::string arg)
+	Setting &N2KStreamer::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		if (option == "DEVICE")
+		switch (key)
 		{
+		case AIS::KEY_SETTING_DEVICE:
 			dev = arg;
-		}
-		else if (!setOption(option, arg) && !filter.SetOption(option, arg))
-		{
-			throw std::runtime_error("JSON output - unknown option: " + option);
+			break;
+		default:
+			if (!setOptionKey(key, arg) && !filter.SetOptionKey(key, arg))
+				throw std::runtime_error("N2K output - unknown option.");
+			break;
 		}
 		return *this;
 	}

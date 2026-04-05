@@ -69,7 +69,7 @@ namespace Device {
 	public:
 		// DeviceBase
 		Device() {}
-		Device(Format f, uint32_t s, Type t) : format(f), sample_rate(s), DeviceType(t) {}
+		Device(Format f, uint32_t s, Type t, const std::string &name = "Device") : Setting(name), format(f), sample_rate(s), DeviceType(t) {}
 		virtual ~Device() {}
 
 		virtual void Open(uint64_t) {}
@@ -92,28 +92,28 @@ namespace Device {
 		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }
 		virtual void getDeviceList(std::vector<Description>& DeviceList) {}
 
-		virtual Setting& Set(std::string option, std::string arg) {
-			Util::Convert::toUpper(option);
-
-			if (option == "RATE" || option == "SAMPLE_RATE") {
+		virtual Setting& SetKey(AIS::Keys key, const std::string& arg) {
+			switch (key) {
+			case AIS::KEY_SETTING_SAMPLE_RATE:
 				setSampleRate((Util::Parse::Integer(arg, 0, 20000000)));
-			}
-			else if (option == "BW" || option == "BANDWIDTH") {
+				break;
+			case AIS::KEY_SETTING_BANDWIDTH:
 				tuner_bandwidth = Util::Parse::Integer(arg, 0, 1000000);
-			}
-			else if (option == "FREQOFFSET") {
+				break;
+			case AIS::KEY_SETTING_FREQOFFSET:
 				freq_offset = Util::Parse::Float(arg, -150, 150);
-			}
-			else if (option == "FORMAT") {
+				break;
+			case AIS::KEY_SETTING_FORMAT: {
 				Format f;
 				if (!Util::Parse::StreamFormat(arg, f))
 					throw std::runtime_error("Unknown file format specification.");
 				else
 					setFormat(f);
+				break;
 			}
-			else
-				throw std::runtime_error("Invalid Device setting: \"" + option + "\"");
-
+			default:
+				throw std::runtime_error(getName() + ": unknown setting \"" + AIS::KeyMap[key][JSON_DICT_SETTING] + "\"");
+			}
 			return *this;
 		}
 

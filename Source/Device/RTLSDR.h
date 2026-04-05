@@ -98,11 +98,19 @@ namespace Device
 #endif
 
 	public:
-		RTLSDR() : Device(Format::CU8, 1536000, Type::RTLSDR) {}
+		RTLSDR() : Device(Format::CU8, 1536000, Type::RTLSDR, "RTLSDR") {}
 		~RTLSDR() { Close(); }
 
 		// Settings (always available)
-		Setting &Set(std::string option, std::string arg);
+		Setting &SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
+
+		const std::vector<AIS::Keys> &getAcceptedKeys() const override
+		{
+			static const std::vector<AIS::Keys> keys = {
+				AIS::KEY_SETTING_TUNER, AIS::KEY_SETTING_BUFFER_COUNT, AIS::KEY_SETTING_RTLAGC, AIS::KEY_SETTING_BIASTEE,
+				AIS::KEY_SETTING_SAMPLE_RATE, AIS::KEY_SETTING_BANDWIDTH, AIS::KEY_SETTING_FREQOFFSET, AIS::KEY_SETTING_FORMAT};
+			return keys;
+		}
 	};
 }

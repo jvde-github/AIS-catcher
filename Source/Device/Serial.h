@@ -93,14 +93,14 @@ namespace Device
 		void Dump(RAW &r);
 
 	public:
-		SerialPort() : Device(Format::TXT, 288000, Type::SERIALPORT), port(""), baudrate(38400) {};
+		SerialPort() : Device(Format::TXT, 288000, Type::SERIALPORT, "Serial"), port(""), baudrate(38400) {};
 		~SerialPort();
 
 		void Open(uint64_t handle) override;
 		std::string getRateDescription() override { return std::to_string(baudrate) + " baud"; }
 		bool isStreaming() override { return Device::isStreaming() && !lost; }
 		bool isCallback() override { return true; }
-		Setting &Set(std::string option, std::string arg) override;
+		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 		std::string Get() override;
 		std::string getProduct() override { return "Serial Port"; }
 		std::string getVendor() override { return "Unknown"; }

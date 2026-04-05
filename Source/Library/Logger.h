@@ -75,7 +75,7 @@ public:
     void setMinLevel(LogLevel level) { min_level_ = level; }
     LogLevel getMinLevel() const { return min_level_; }
 
-    Setting &Set(std::string option, std::string arg);
+    Setting &SetKey(AIS::Keys key, const std::string &arg);
 
 private:
     struct LogListener
@@ -83,6 +83,8 @@ private:
         int id;
         LogCallback callback;
     };
+
+    Logger() : Setting("Logger") {}
 
     std::string getCurrentTime();
 

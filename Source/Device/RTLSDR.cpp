@@ -254,31 +254,30 @@ namespace Device
 
 #endif
 
-	Setting &RTLSDR::Set(std::string option, std::string arg)
+	Setting &RTLSDR::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		if (option == "TUNER")
+		switch (key)
+		{
+		case AIS::KEY_SETTING_TUNER:
 		{
 			double temp;
 			tuner_AGC = Util::Parse::AutoFloat(arg, 0, 50, temp);
 			tuner_Gain = (FLOAT32)temp;
+			break;
 		}
-		else if (option == "BUFFER_COUNT")
-		{
+		case AIS::KEY_SETTING_BUFFER_COUNT:
 			BUFFER_COUNT = Util::Parse::Integer(arg, 1, 100);
-		}
-		else if (option == "RTLAGC")
-		{
+			break;
+		case AIS::KEY_SETTING_RTLAGC:
 			RTL_AGC = Util::Parse::Switch(arg);
-		}
-		else if (option == "BIASTEE")
-		{
+			break;
+		case AIS::KEY_SETTING_BIASTEE:
 			bias_tee = Util::Parse::Switch(arg);
+			break;
+		default:
+			Device::SetKey(key, arg);
+			break;
 		}
-		else
-			Device::Set(option, arg);
-
 		return *this;
 	}
 

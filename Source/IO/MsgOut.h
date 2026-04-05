@@ -75,50 +75,37 @@ namespace IO
 		}
 
 		OutputMessage() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
-		OutputMessage(const std::string &d) : builder(&AIS::KeyMap, JSON_DICT_FULL), type(d) {}
+		OutputMessage(const std::string &d) : Setting(d), builder(&AIS::KeyMap, JSON_DICT_FULL), type(d) {}
 
 		virtual ~OutputMessage() { Stop(); }
 
-		bool setOption(std::string option, std::string arg)
+		bool setOptionKey(AIS::Keys key, const std::string &arg)
 		{
-			if (option == "JSON_FULL")
+			switch (key)
 			{
+			case AIS::KEY_SETTING_JSON_FULL:
 				Warning() << "JSON_FULL option is deprecated and will be removed in a future release. Use MSGFORMAT instead.";
 				if (Util::Parse::Switch(arg))
 					fmt = MessageFormat::JSON_FULL;
-
 				return true;
-			}
-			else if (option == "JSON")
-			{
+			case AIS::KEY_SETTING_JSON:
 				Warning() << "JSON option is deprecated and will be removed in a future release. Use MSGFORMAT instead.";
 				if (Util::Parse::Switch(arg))
-				{
 					fmt = MessageFormat::JSON_NMEA;
-				}
 				return true;
-			}
-			else if (option == "MSGFORMAT")
-			{
+			case AIS::KEY_SETTING_MSGFORMAT:
 				if (!Util::Parse::OutputFormat(arg, fmt))
 					throw std::runtime_error("Uknown message format: " + arg);
-
 				if (fmt == MessageFormat::JSON_ANNOTATED)
 					builder.setStringifyEnhanced(true);
-
 				return true;
-			}
-			else if (option == "DESCRIPTION" || option == "DESC")
-			{
+			case AIS::KEY_SETTING_DESCRIPTION:
 				description = arg;
 				return true;
-			}
-			else if (option == "ZONE")
-			{
+			case AIS::KEY_SETTING_ZONE:
 				Util::Parse::Split(arg, ',', zones);
 				return true;
-			}
-			else if (option == "GROUPS_IN")
+			case AIS::KEY_SETTING_GROUPS_IN:
 			{
 				uint64_t g = Util::Parse::Integer(arg);
 				StreamIn<AIS::Message>::setGroupsIn(g);
@@ -126,7 +113,9 @@ namespace IO
 				StreamIn<AIS::GPS>::setGroupsIn(g);
 				return true;
 			}
-			return filter.SetOption(option, arg);
+			default:
+				return filter.SetOptionKey(key, arg);
+			}
 		}
 	};
 }

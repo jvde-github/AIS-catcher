@@ -29,31 +29,30 @@ namespace IO
 
 	public:
 		int verboseUpdateTime = 3;
-		ScreenOutput() : OutputMessage() { fmt = MessageFormat::FULL; }
+		ScreenOutput() : OutputMessage("Screen") { fmt = MessageFormat::FULL; }
 		virtual ~ScreenOutput() {}
 		
 		void setScreen(const std::string &str)
 		{
-            setOption("MSGFORMAT", str);			
+            setOptionKey(AIS::KEY_SETTING_MSGFORMAT, str);
 		}
 
 		void Receive(const AIS::Message *data, int len, TAG &tag);
 		void Receive(const JSON::JSON *data, int len, TAG &tag);
 		void Receive(const AIS::GPS *data, int len, TAG &tag);
 
-		Setting &Set(std::string option, std::string arg)
+		Setting &SetKey(AIS::Keys key, const std::string &arg)
 		{
-			Util::Convert::toUpper(option);
-
-			if (option == "INCLUDE_SAMPLE_START")
+			switch (key)
 			{
+			case AIS::KEY_SETTING_INCLUDE_SAMPLE_START:
 				include_sample_start = Util::Parse::Switch(arg);
+				break;
+			default:
+				if (!setOptionKey(key, arg) && !filter.SetOptionKey(key, arg))
+					throw std::runtime_error("Screen output - unknown option.");
+				break;
 			}
-			else if (!OutputMessage::setOption(option, arg))
-			{
-				throw std::runtime_error("Screen output - unknown option: " + option);
-			}
-
 			return *this;
 		}
 	};

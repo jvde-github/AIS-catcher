@@ -220,7 +220,7 @@ namespace Device {
 		void printDevice();
 
 	public:
-		SpyServer() : Device(Format::UNKNOWN, 288000, Type::SPYSERVER) {}
+		SpyServer() : Device(Format::UNKNOWN, 288000, Type::SPYSERVER, "SpyServer") {}
 
 		void OpenWithFileDescriptor(int) { Open(0); }
 
@@ -236,7 +236,7 @@ namespace Device {
 		void getDeviceList(std::vector<Description>& DeviceList);
 
 		// Settings
-		Setting& Set(std::string option, std::string arg);
+		Setting& SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 
 		std::string getProduct() { return "SPYSERVER"; }

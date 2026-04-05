@@ -96,12 +96,12 @@ namespace Device {
 #endif
 
 	public:
-		SOAPYSDR() : Device(Format::CF32, 0,Type::SOAPYSDR) {}
+		SOAPYSDR() : Device(Format::CF32, 0, Type::SOAPYSDR, "SoapySDR") {}
 
 		std::string getProduct() { return "SOAPYSDR"; }
 
 		// Settings (always available)
-		Setting& Set(std::string option, std::string arg);
+		Setting& SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 }

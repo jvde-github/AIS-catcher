@@ -195,92 +195,79 @@ namespace IO
 		}
 	}
 
-	Setting &HTTPStreamer::Set(std::string option, std::string arg)
+	Setting &HTTPStreamer::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		if (option == "URL")
+		switch (key)
 		{
+		case AIS::KEY_SETTING_URL:
 			url = arg;
 			url_json = JSON::StringBuilder::stringify(arg);
 			http.setURL(url);
-		}
-		else if (option == "USERPWD")
-		{
+			break;
+		case AIS::KEY_SETTING_USERPWD:
 			http.setUserPwd(arg);
 			userpwd = arg;
-		}
-		else if (option == "STATIONID" || option == "ID" || option == "CALLSIGN")
-		{
+			break;
+		case AIS::KEY_SETTING_ID:
+		case AIS::KEY_SETTING_CALLSIGN:
 			stationid = JSON::StringBuilder::stringify(arg);
-		}
-		else if (option == "INTERVAL")
-		{
-			INTERVAL = Util::Parse::Integer(arg, 1, 60 * 60 * 24, option);
-		}
-		else if (option == "TIMEOUT")
-		{
-			TIMEOUT = Util::Parse::Integer(arg, 1, 30, option);
-		}
-		else if (option == "MODEL")
-		{
+			break;
+		case AIS::KEY_SETTING_INTERVAL:
+			INTERVAL = Util::Parse::Integer(arg, 1, 60 * 60 * 24);
+			break;
+		case AIS::KEY_SETTING_TIMEOUT:
+			TIMEOUT = Util::Parse::Integer(arg, 1, 30);
+			break;
+		case AIS::KEY_SETTING_MODEL:
 			model = JSON::StringBuilder::stringify(arg);
-		}
-		else if (option == "MODEL_SETTING")
-		{
+			break;
+		case AIS::KEY_SETTING_MODEL_SETTING:
 			model_setting = JSON::StringBuilder::stringify(arg);
-		}
-		else if (option == "PRODUCT")
-		{
+			break;
+		case AIS::KEY_SETTING_PRODUCT:
 			product = JSON::StringBuilder::stringify(arg);
-		}
-		else if (option == "VENDOR")
-		{
+			break;
+		case AIS::KEY_SETTING_VENDOR:
 			vendor = JSON::StringBuilder::stringify(arg);
-		}
-		else if (option == "SERIAL")
-		{
+			break;
+		case AIS::KEY_SETTING_SERIAL:
 			serial = JSON::StringBuilder::stringify(arg);
-		}
-		else if (option == "LAT")
-		{
+			break;
+		case AIS::KEY_SETTING_LAT:
 			lat = std::to_string(Util::Parse::Float(arg));
-		}
-		else if (option == "LON")
-		{
+			break;
+		case AIS::KEY_SETTING_LON:
 			lon = std::to_string(Util::Parse::Float(arg));
-		}
-		else if (option == "DEVICE_SETTING")
-		{
+			break;
+		case AIS::KEY_SETTING_DEVICE_SETTING:
 			device_setting = JSON::StringBuilder::stringify(arg);
-		}
-		else if (option == "GZIP")
-		{
+			break;
+		case AIS::KEY_SETTING_GZIP:
 			gzip = Util::Parse::Switch(arg);
 			if (gzip && !zip.installed())
 				throw std::runtime_error("HTTP: ZLIB not installed");
-		}
-		else if (option == "RESPONSE")
-		{
+			break;
+		case AIS::KEY_SETTING_RESPONSE:
 			show_response = Util::Parse::Switch(arg);
-		}
-		else if (option == "PROTOCOL")
+			break;
+		case AIS::KEY_SETTING_PROTOCOL:
 		{
-			Util::Convert::toUpper(arg);
+			std::string a = arg;
+			Util::Convert::toUpper(a);
 
-			if (arg == "AISCATCHER")
+			if (a == "AISCATCHER")
 			{
 				builder.setMap(JSON_DICT_FULL);
 				protocol_string = "jsonaiscatcher";
 				protocol = PROTOCOL::AISCATCHER;
 			}
-			else if (arg == "MINIMAL")
+			else if (a == "MINIMAL")
 			{
 				builder.setMap(JSON_DICT_MINIMAL);
 				protocol_string = "jsonaiscatcher";
 				protocol = PROTOCOL::AISCATCHER;
 			}
-			else if (arg == "AIRFRAMES")
+			else if (a == "AIRFRAMES")
 			{
 				builder.setMap(JSON_DICT_MINIMAL);
 				protocol_string = "airframes";
@@ -288,28 +275,29 @@ namespace IO
 				gzip = zip.installed();
 				INTERVAL = 30;
 			}
-			else if (arg == "LIST")
+			else if (a == "LIST")
 			{
 				builder.setMap(JSON_DICT_FULL);
 				protocol = PROTOCOL::LIST;
 			}
-			else if (arg == "NMEA")
+			else if (a == "NMEA")
 			{
 				protocol = PROTOCOL::NMEA;
 			}
-			else if (arg == "APRS")
+			else if (a == "APRS")
 			{
 				builder.setMap(JSON_DICT_APRS);
 				protocol = PROTOCOL::APRS;
 			}
 			else
 				throw std::runtime_error("HTTP: error - unknown protocol");
+			break;
 		}
-		else if (!setOption(option, arg) && !filter.SetOption(option, arg))
-		{
-			throw std::runtime_error("HTTP output - unknown option: " + option);
+		default:
+			if (!setOptionKey(key, arg))
+				throw std::runtime_error("HTTP output - unknown option: " + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
+			break;
 		}
-
 		return *this;
 	}
 
@@ -520,42 +508,36 @@ namespace IO
 		}
 	}
 
-	Setting &UDPStreamer::Set(std::string option, std::string arg)
+	Setting &UDPStreamer::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		if (option == "HOST")
+		switch (key)
 		{
+		case AIS::KEY_SETTING_HOST:
 			host = arg;
-		}
-		else if (option == "PORT")
-		{
+			break;
+		case AIS::KEY_SETTING_PORT:
 			port = arg;
-		}
-		else if (option == "BROADCAST")
-		{
+			break;
+		case AIS::KEY_SETTING_BROADCAST:
 			broadcast = Util::Parse::Switch(arg);
-		}
-		else if (option == "RESET")
-		{
-			reset = Util::Parse::Integer(arg, 1, 24 * 60, option);
-		}
-		else if (option == "UUID")
-		{
+			break;
+		case AIS::KEY_SETTING_RESET:
+			reset = Util::Parse::Integer(arg, 1, 24 * 60);
+			break;
+		case AIS::KEY_SETTING_UUID:
 			if (Util::Helper::isUUID(arg))
 				uuid = arg;
 			else
 				throw std::runtime_error("UDP: invalid UUID: " + arg);
-		}
-		else if (option == "INCLUDE_SAMPLE_START")
-		{
+			break;
+		case AIS::KEY_SETTING_INCLUDE_SAMPLE_START:
 			include_sample_start = Util::Parse::Switch(arg);
+			break;
+		default:
+			if (!setOptionKey(key, arg))
+				throw std::runtime_error("UDP output - unknown option: " + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
+			break;
 		}
-		else if (!OutputMessage::setOption(option, arg))
-		{
-			throw std::runtime_error("UDP output - unknown option: " + option);
-		}
-
 		return *this;
 	}
 
@@ -744,40 +726,35 @@ namespace IO
 			connection->disconnect();
 	}
 
-	Setting &TCPClientStreamer::Set(std::string option, std::string arg)
+	Setting &TCPClientStreamer::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		if (option == "HOST")
+		switch (key)
 		{
+		case AIS::KEY_SETTING_HOST:
 			host = arg;
-		}
-		else if (option == "PORT")
-		{
+			break;
+		case AIS::KEY_SETTING_PORT:
 			port = arg;
-		}
-		else if (option == "KEEP_ALIVE")
-		{
+			break;
+		case AIS::KEY_SETTING_KEEP_ALIVE:
 			keep_alive = Util::Parse::Switch(arg);
-		}
-		else if (option == "PERSIST")
-		{
+			break;
+		case AIS::KEY_SETTING_PERSIST:
 			persistent = Util::Parse::Switch(arg);
-		}
-		else if (option == "UUID")
-		{
+			break;
+		case AIS::KEY_SETTING_UUID:
 			if (Util::Helper::isUUID(arg))
 				uuid = arg;
 			else
 				throw std::runtime_error("TCP client: invalid UUID: " + arg);
-		}
-		else if (option == "INCLUDE_SAMPLE_START")
-		{
+			break;
+		case AIS::KEY_SETTING_INCLUDE_SAMPLE_START:
 			include_sample_start = Util::Parse::Switch(arg);
-		}
-		else if (!OutputMessage::setOption(option, arg))
-		{
-			throw std::runtime_error("TCP client - unknown option: " + option);
+			break;
+		default:
+			if (!setOptionKey(key, arg))
+				throw std::runtime_error("TCP client - unknown option: " + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
+			break;
 		}
 		return *this;
 	}
@@ -801,27 +778,24 @@ namespace IO
 		}
 	}
 
-	Setting &TCPlistenerStreamer::Set(std::string option, std::string arg)
+	Setting &TCPlistenerStreamer::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		if (option == "PORT")
+		switch (key)
 		{
-			port = Util::Parse::Integer(arg, 0, 0xFFFF, option);
-		}
-		else if (option == "TIMEOUT")
-		{
+		case AIS::KEY_SETTING_PORT:
+			port = Util::Parse::Integer(arg, 0, 0xFFFF);
+			break;
+		case AIS::KEY_SETTING_TIMEOUT:
 			timeout = Util::Parse::Integer(arg);
-		}
-		else if (option == "INCLUDE_SAMPLE_START")
-		{
+			break;
+		case AIS::KEY_SETTING_INCLUDE_SAMPLE_START:
 			include_sample_start = Util::Parse::Switch(arg);
+			break;
+		default:
+			if (!setOptionKey(key, arg))
+				throw std::runtime_error("TCP listener - unknown option: " + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
+			break;
 		}
-		else if (!OutputMessage::setOption(option, arg))
-		{
-			throw std::runtime_error("TCP listener - unknown option: " + option);
-		}
-
 		return *this;
 	}
 
@@ -1012,29 +986,31 @@ namespace IO
 		session->read(nullptr, 0, 0, false);
 	}
 
-	Setting &MQTTStreamer::Set(std::string option, std::string arg)
+	Setting &MQTTStreamer::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		if (option == "URL")
+		switch (key)
+		{
+		case AIS::KEY_SETTING_URL:
 		{
 			std::string prot, host, port, path, username, password;
 			Util::Parse::URL(arg, prot, username, password, host, port, path);
 
 			if (!host.empty())
-				Set("HOST", host);
+				SetKey(AIS::KEY_SETTING_HOST, host);
 			if (!port.empty())
-				Set("PORT", port);
+				SetKey(AIS::KEY_SETTING_PORT, port);
 			if (!prot.empty())
-				Set("PROTOCOL", prot);
+				SetKey(AIS::KEY_SETTING_PROTOCOL, prot);
 			if (!username.empty())
-				Set("USERNAME", username);
+				SetKey(AIS::KEY_SETTING_USERNAME, username);
 			if (!password.empty())
-				Set("PASSWORD", password);
+				SetKey(AIS::KEY_SETTING_PASSWORD, password);
+			break;
 		}
-		else if (option == "PROTOCOL")
+		case AIS::KEY_SETTING_PROTOCOL:
 		{
-			if (!Util::Parse().Protocol(arg, Protocol))
+			std::string a = arg;
+			if (!Util::Parse().Protocol(a, Protocol))
 				throw std::runtime_error("TCP output: unknown protocol: " + arg);
 
 			switch (Protocol)
@@ -1052,17 +1028,21 @@ namespace IO
 			default:
 				throw std::runtime_error("TCO output: unsupported protocol: " + arg);
 			}
+			break;
 		}
-		else if (option == "TOPIC")
-		{
+		case AIS::KEY_SETTING_TOPIC:
 			mqtt.setValue("TOPIC", arg);
 			topic_template.set(arg);
-		}
-		else if (!tcp.setValue(option, arg) && !mqtt.setValue(option, arg) && !ws.setValue(option, arg) && !OutputMessage::setOption(option, arg))
+			break;
+		default:
 		{
-			throw std::runtime_error("MQTT output - unknown option: " + option);
+			std::string opt = AIS::KeyMap[key][JSON_DICT_SETTING];
+			Util::Convert::toUpper(opt);
+			if (!tcp.setValue(opt, arg) && !mqtt.setValue(opt, arg) && !ws.setValue(opt, arg) && !setOptionKey(key, arg))
+				throw std::runtime_error("MQTT output - unknown option: " + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
+			break;
 		}
-
+		}
 		return *this;
 	}
 }

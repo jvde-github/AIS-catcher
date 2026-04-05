@@ -167,24 +167,20 @@ namespace Device
 	}
 #endif
 
-	Setting &AIRSPYHF::Set(std::string option, std::string arg)
+	Setting &AIRSPYHF::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		if (option == "PREAMP")
+		switch (key)
 		{
+		case AIS::KEY_SETTING_PREAMP:
 			preamp = Util::Parse::Switch(arg);
-		}
-		else if (option == "TRESHOLD" || option == "THRESHOLD")
-		{
+			break;
+		case AIS::KEY_SETTING_THRESHOLD:
 			threshold_high = Util::Parse::Switch(arg, "HIGH", "LOW");
-
-			if (option == "TRESHOLD")
-				Warning() << "AIRSPYHF: TRESHOLD setting depreciated, use THRESHOLD instead\n";
+			break;
+		default:
+			Device::SetKey(key, arg);
+			break;
 		}
-		else
-			Device::Set(option, arg);
-
 		return *this;
 	}
 

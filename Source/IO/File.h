@@ -30,7 +30,7 @@ namespace IO
 		bool append_mode = true;
 
 	public:
-		FileOutput() : OutputMessage() { fmt = MessageFormat::NMEA; }
+		FileOutput() : OutputMessage("File") { fmt = MessageFormat::NMEA; }
 
 		~FileOutput()
 		{
@@ -125,26 +125,26 @@ namespace IO
 			}
 		}
 
-		Setting &Set(std::string option, std::string arg)
+		Setting &SetKey(AIS::Keys key, const std::string &arg)
 		{
-			Util::Convert::toUpper(option);
-
-			if (option == "FILE")
+			switch (key)
 			{
+			case AIS::KEY_SETTING_FILE:
 				filename = arg;
-			}
-			else if (option == "MODE")
+				break;
+			case AIS::KEY_SETTING_MODE:
 			{
-				Util::Convert::toUpper(arg);
-
-				if (arg != "APPEND" && arg != "APP" && arg != "OUT")
+				std::string a = arg;
+				Util::Convert::toUpper(a);
+				if (a != "APPEND" && a != "APP" && a != "OUT")
 					throw std::runtime_error("File output - unknown mode: " + arg);
-
-				append_mode = arg == "APPEND" || arg == "APP";
+				append_mode = a == "APPEND" || a == "APP";
+				break;
 			}
-			else if (!OutputMessage::setOption(option, arg))
-			{
-				throw std::runtime_error("File output - unknown option: " + option);
+			default:
+				if (!setOptionKey(key, arg) && !filter.SetOptionKey(key, arg))
+					throw std::runtime_error("File output - unknown option.");
+				break;
 			}
 			return *this;
 		}

@@ -31,7 +31,7 @@ namespace Device
 		const int buffer_size = 16 * 16384;
 
 	public:
-		WAVFile() : Device(Format::CU8, 1536000, Type::WAVFILE) {}
+		WAVFile() : Device(Format::CU8, 1536000, Type::WAVFILE, "WAV File") {}
 
 		// Control
 		void Close();
@@ -40,7 +40,7 @@ namespace Device
 		bool isStreaming();
 
 		// Settings
-		Setting &Set(std::string option, std::string arg);
+		Setting &SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 
 		std::string getProduct() { return "File (WAV)"; }

@@ -63,7 +63,7 @@ namespace Device
 #endif
 
 	public:
-		HACKRF() : Device(Format::CS8, 6144000, Type::HACKRF)
+		HACKRF() : Device(Format::CS8, 6144000, Type::HACKRF, "HACKRF")
 		{
 #ifdef HASHACKRF
 			if (hackrf_init() != HACKRF_SUCCESS)
@@ -86,7 +86,7 @@ namespace Device
 		std::string getVendor() { return "Great Scott Gadgets"; }
 
 		// Settings (always available)
-		Setting &Set(std::string option, std::string arg);
+		Setting &SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 }

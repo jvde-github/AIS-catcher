@@ -164,29 +164,29 @@ namespace Device
 		DeviceList.push_back(Description("RTLTCP", "RTLTCP", "RTLTCP", (uint64_t)0, Type::RTLTCP));
 	}
 
-	Setting &RTLTCP::Set(std::string option, std::string arg)
+	Setting &RTLTCP::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		if (option == "URL")
+		switch (key)
+		{
+		case AIS::KEY_SETTING_URL:
 		{
 			std::string prot, host, port, path, username, password;
 			Util::Parse::URL(arg, prot, username, password, host, port, path);
 
 			if (!host.empty())
-				Set("HOST", host);
+				SetKey(AIS::KEY_SETTING_HOST, host);
 			if (!port.empty())
-				Set("PORT", port);
+				SetKey(AIS::KEY_SETTING_PORT, port);
 			if (!prot.empty())
-				Set("PROTOCOL", prot);
+				SetKey(AIS::KEY_SETTING_PROTOCOL, prot);
 			if (!username.empty())
-				Set("USERNAME", username);
+				SetKey(AIS::KEY_SETTING_USERNAME, username);
 			if (!password.empty())
-				Set("PASSWORD", password);
+				SetKey(AIS::KEY_SETTING_PASSWORD, password);
+			break;
 		}
-		else if (option == "PROTOCOL")
+		case AIS::KEY_SETTING_PROTOCOL:
 		{
-
 			if (!Util::Parse().Protocol(arg, Protocol))
 				throw std::runtime_error("RTLTCP: unknown protocol: " + arg);
 
@@ -199,17 +199,9 @@ namespace Device
 				setFormat(Format::CU8);
 				break;
 			case PROTOCOL::GPSD:
-				setFormat(Format::TXT);
-				break;
 			case PROTOCOL::MQTT:
-				setFormat(Format::TXT);
-				break;
 			case PROTOCOL::WS:
-				setFormat(Format::TXT);
-				break;
 			case PROTOCOL::WSMQTT:
-				setFormat(Format::TXT);
-				break;
 			case PROTOCOL::TXT:
 				setFormat(Format::TXT);
 				break;
@@ -225,13 +217,17 @@ namespace Device
 			default:
 				throw std::runtime_error("RTLTCP: unsupported protocol: " + arg);
 			}
+			break;
 		}
-		else
+		default:
 		{
+			std::string option = AIS::KeyMap[key][JSON_DICT_SETTING];
+			Util::Convert::toUpper(option);
 			if (!tcp.setValue(option, arg) && !mqtt.setValue(option, arg) && !gpsd.setValue(option, arg) && !rtltcp.setValue(option, arg) && !ws.setValue(option, arg))
-				Device::Set(option, arg);
+				Device::SetKey(key, arg);
+			break;
 		}
-
+		}
 		return *this;
 	}
 

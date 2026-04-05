@@ -158,25 +158,23 @@ namespace Device
 		DeviceList.push_back(Description("UDP", "UDP", "UDP", (uint64_t)0, Type::UDP));
 	}
 
-	Setting &UDP::Set(std::string option, std::string arg)
+	Setting &UDP::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		if (option == "PORT")
+		switch (key)
 		{
+		case AIS::KEY_SETTING_PORT:
 			port = arg;
-		}
-		else if (option == "SERVER")
-		{
+			break;
+		case AIS::KEY_SETTING_SERVER:
 			server = arg;
-		}
-		else if (option == "FORMAT")
-		{
+			break;
+		case AIS::KEY_SETTING_FORMAT:
 			throw std::runtime_error("UDP: format cannot be changed and need to be TXT.");
+			break;
+		default:
+			Device::SetKey(key, arg);
+			break;
 		}
-		else
-			Device::Set(option, arg);
-
 		return *this;
 	}
 

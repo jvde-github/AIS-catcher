@@ -56,7 +56,7 @@ namespace Device
 		void sendProtocol();
 
 	public:
-		RTLTCP() : Device(Format::CU8, 288000, Type::RTLTCP) {}
+		RTLTCP() : Device(Format::CU8, 288000, Type::RTLTCP, "RTLTCP") {}
 
 		void OpenWithFileDescriptor(int) { Open(0); }
 		// Control
@@ -78,7 +78,7 @@ namespace Device
 		}
 
 		// Settings
-		Setting &Set(std::string option, std::string arg);
+		Setting &SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 
 		std::string getProduct() { return "RTLTCP"; }

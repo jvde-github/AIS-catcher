@@ -135,33 +135,33 @@ Logger &Logger::getInstance()
 	return *instance_;
 }
 
-Setting &Logger::Set(std::string option, std::string arg)
+Setting &Logger::SetKey(AIS::Keys key, const std::string &arg)
 {
-	Util::Convert::toUpper(option);
-
-	if (option == "SYSTEM")
+	switch (key)
 	{
+	case AIS::KEY_SETTING_SYSTEM:
 		setLogToSystem("aiscatcher");
-	}
-	else if (option == "LEVEL")
+		break;
+	case AIS::KEY_SETTING_LEVEL:
 	{
-		Util::Convert::toUpper(arg);
-		if (arg == "DEBUG")
+		std::string a = arg;
+		Util::Convert::toUpper(a);
+		if (a == "DEBUG")
 			min_level_ = LogLevel::__DEBUG;
-		else if (arg == "INFO")
+		else if (a == "INFO")
 			min_level_ = LogLevel::__INFO;
-		else if (arg == "WARNING")
+		else if (a == "WARNING")
 			min_level_ = LogLevel::__WARNING;
-		else if (arg == "ERROR")
+		else if (a == "ERROR")
 			min_level_ = LogLevel::__ERROR;
-		else if (arg == "CRITICAL")
+		else if (a == "CRITICAL")
 			min_level_ = LogLevel::__CRITICAL;
 		else
 			throw std::runtime_error("Invalid log level: " + arg + ". Valid values: DEBUG, INFO, WARNING, ERROR, CRITICAL");
+		break;
 	}
-	else
-	{
-		throw std::runtime_error("Unknown option: " + option);
+	default:
+		throw std::runtime_error("Unknown option.");
 	}
 	return *this;
 }

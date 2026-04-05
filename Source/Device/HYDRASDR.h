@@ -100,13 +100,13 @@ namespace Device
 #endif
 
 	public:
-		HYDRASDR() : Device(Format::CF32, 0, Type::HYDRASDR) {}
+		HYDRASDR() : Device(Format::CF32, 0, Type::HYDRASDR, "HYDRASDR") {}
 
 		std::string getProduct() { return "HYDRASDR"; }
 		std::string getVendor() { return "HYDRASDR"; }
 
 		// Settings (always available)
-		Setting &Set(std::string option, std::string arg);
+		Setting &SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 }

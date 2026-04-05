@@ -99,7 +99,7 @@ namespace IO
 		~HTTPStreamer() { Stop(); }
 		HTTPStreamer() : OutputMessage("HTTP"), builder(&AIS::KeyMap, JSON_DICT_FULL), url("http://127.0.0.1"), userpwd("") { fmt = MessageFormat::JSON_FULL; }
 
-		Setting &Set(std::string option, std::string arg);
+		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 
 		void Start();
 		void Stop();
@@ -145,7 +145,17 @@ namespace IO
 			fmt = MessageFormat::NMEA;
 		}
 
-		Setting &Set(std::string option, std::string arg);
+		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
+
+		const std::vector<AIS::Keys> &getAcceptedKeys() const override
+		{
+			static const std::vector<AIS::Keys> keys = {
+				AIS::KEY_SETTING_HOST, AIS::KEY_SETTING_PORT, AIS::KEY_SETTING_BROADCAST, AIS::KEY_SETTING_RESET,
+				AIS::KEY_SETTING_UUID, AIS::KEY_SETTING_INCLUDE_SAMPLE_START,
+				AIS::KEY_SETTING_MSGFORMAT, AIS::KEY_SETTING_GROUPS_IN, AIS::KEY_SETTING_FILTER,
+				AIS::KEY_SETTING_DESCRIPTION, AIS::KEY_SETTING_ZONE};
+			return keys;
+		}
 
 		void Receive(const AIS::Message *data, int len, TAG &tag);
 		void Receive(const JSON::JSON *data, int len, TAG &tag);
@@ -181,7 +191,7 @@ namespace IO
 	public:
 		TCPClientStreamer() : OutputMessage("TCP Client") { fmt = MessageFormat::NMEA; }
 
-		Setting &Set(std::string option, std::string arg);
+		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 
 		void Receive(const AIS::Message *data, int len, TAG &tag);
 		void Receive(const JSON::JSON *data, int len, TAG &tag);
@@ -227,7 +237,7 @@ namespace IO
 
 		virtual ~TCPlistenerStreamer() {};
 
-		Setting &Set(std::string option, std::string arg);
+		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 
 		void Receive(const AIS::Message *data, int len, TAG &tag);
 		void Receive(const JSON::JSON *data, int len, TAG &tag);
@@ -263,6 +273,6 @@ namespace IO
 		void Receive(const AIS::Message *data, int len, TAG &tag);
 		void Receive(const JSON::JSON *data, int len, TAG &tag);
 
-		Setting &Set(std::string option, std::string arg);
+		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 	};
 }

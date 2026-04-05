@@ -357,57 +357,49 @@ namespace AIS
 		return;
 	}
 
-	Setting &ModelFrontend::Set(std::string option, std::string arg)
+	Setting &ModelFrontend::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-		Util::Convert::toUpper(arg);
-
-		if (option == "FP_DS")
+		switch (key)
 		{
+		case AIS::KEY_SETTING_FP_DS:
 			fixedpointDS = Util::Parse::Switch(arg);
 			MA_DS = false;
-		}
-		else if (option == "SOXR")
-		{
+			break;
+		case AIS::KEY_SETTING_SOXR:
 			SOXR_DS = Util::Parse::Switch(arg);
 			SAMPLERATE_DS = false;
 			MA_DS = false;
-		}
-		else if (option == "SRC")
-		{
+			break;
+		case AIS::KEY_SETTING_SRC:
 			SAMPLERATE_DS = Util::Parse::Switch(arg);
 			SOXR_DS = false;
 			MA_DS = false;
-		}
-		else if (option == "MA")
-		{
+			break;
+		case AIS::KEY_SETTING_MA:
 			MA_DS = Util::Parse::Switch(arg);
 			SAMPLERATE_DS = false;
 			SOXR_DS = false;
-		}
-		else if (option == "DSK")
-		{
+			break;
+		case AIS::KEY_SETTING_DSK:
 			allowDSK = Util::Parse::Switch(arg);
-		}
-		else if (option == "DROOP")
-		{
+			break;
+		case AIS::KEY_SETTING_DROOP:
 			droop_compensation = Util::Parse::Switch(arg);
-		}
-		else if (option == "STATION_ID")
-		{
+			break;
+		case AIS::KEY_SETTING_STATION_ID:
 			station = Util::Parse::Integer(arg);
-		}
-		else if (option == "DUMP")
-		{
+			break;
+		case AIS::KEY_SETTING_DUMP:
 			wavA.setValue("FILE", arg + "_A.wav");
 			wavB.setValue("FILE", arg + "_B.wav");
 			wavA.setValue("RATE", "48000");
 			wavB.setValue("RATE", "48000");
 			dump = true;
+			break;
+		default:
+			Model::SetKey(key, arg);
+			break;
 		}
-		else
-			Model::Set(option, arg);
-
 		return *this;
 	}
 
@@ -562,22 +554,20 @@ namespace AIS
 		return;
 	}
 
-	Setting &ModelDefault::Set(std::string option, std::string arg)
+	Setting &ModelDefault::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-		Util::Convert::toUpper(arg);
-
-		if (option == "PS_EMA")
+		switch (key)
 		{
+		case AIS::KEY_SETTING_PS_EMA:
 			PS_EMA = Util::Parse::Switch(arg);
-		}
-		else if (option == "AFC_WIDE")
-		{
+			break;
+		case AIS::KEY_SETTING_AFC_WIDE:
 			CGF_wide = Util::Parse::Switch(arg);
+			break;
+		default:
+			ModelFrontend::SetKey(key, arg);
+			break;
 		}
-		else
-			ModelFrontend::Set(option, arg);
-
 		return *this;
 	}
 
@@ -674,22 +664,20 @@ namespace AIS
 		return;
 	}
 
-	Setting &ModelChallenger::Set(std::string option, std::string arg)
+	Setting &ModelChallenger::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-		Util::Convert::toUpper(arg);
-
-		if (option == "PS_EMA")
+		switch (key)
 		{
+		case AIS::KEY_SETTING_PS_EMA:
 			PS_EMA = Util::Parse::Switch(arg);
-		}
-		else if (option == "AFC_WIDE")
-		{
+			break;
+		case AIS::KEY_SETTING_AFC_WIDE:
 			CGF_wide = Util::Parse::Switch(arg);
+			break;
+		default:
+			ModelFrontend::SetKey(key, arg);
+			break;
 		}
-		else
-			ModelFrontend::Set(option, arg);
-
 		return *this;
 	}
 
@@ -768,42 +756,35 @@ namespace AIS
 		nmea.setOwnMMSI(own_mmsi);
 	}
 
-	Setting &ModelNMEA::Set(std::string option, std::string arg)
+	Setting &ModelNMEA::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-		// Util::Convert::toUpper(arg);
-
-		if (option == "NMEA_REFRESH")
+		switch (key)
 		{
+		case AIS::KEY_SETTING_NMEA_REFRESH:
 			nmea.setRegenerate(Util::Parse::Switch(arg));
-		}
-		else if (option == "STAMP")
-		{
+			break;
+		case AIS::KEY_SETTING_STAMP:
 			nmea.setStamp(Util::Parse::Switch(arg));
-		}
-		else if (option == "CRC_CHECK")
-		{
+			break;
+		case AIS::KEY_SETTING_CRC_CHECK:
 			nmea.setCRCcheck(Util::Parse::Switch(arg));
-		}
-		else if (option == "VDO")
-		{
+			break;
+		case AIS::KEY_SETTING_VDO:
 			nmea.setVDO(Util::Parse::Switch(arg));
-		}
-		else if (option == "UUID")
-		{
+			break;
+		case AIS::KEY_SETTING_UUID:
 			nmea.setUUID(arg);
-		}
-		else if (option == "WARNINGS")
-		{
+			break;
+		case AIS::KEY_SETTING_WARNINGS:
 			nmea.setWarnings(Util::Parse::Switch(arg));
-		}
-		else if (option == "GPS")
-		{
+			break;
+		case AIS::KEY_SETTING_GPS:
 			nmea.setGPS(Util::Parse::Switch(arg));
+			break;
+		default:
+			Model::SetKey(key, arg);
+			break;
 		}
-		else
-			Model::Set(option, arg);
-
 		return *this;
 	}
 
@@ -829,12 +810,9 @@ namespace AIS
 		physical >> n2k >> output;
 	}
 
-	Setting &ModelN2K::Set(std::string option, std::string arg)
+	Setting &ModelN2K::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		Model::Set(option, arg);
-		return *this;
+		return Model::SetKey(key, arg);
 	}
 
 	std::string ModelN2K::Get()
@@ -850,13 +828,9 @@ namespace AIS
 		physical >> model >> outputADSB;
 	}
 
-	Setting &ModelBaseStation::Set(std::string option, std::string arg)
+	Setting &ModelBaseStation::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		Model::Set(option, arg);
-
-		return *this;
+		return Model::SetKey(key, arg);
 	}
 
 	std::string ModelBaseStation::Get()
@@ -872,13 +846,9 @@ namespace AIS
 		physical >> model >> outputADSB;
 	}
 
-	Setting &ModelBeast::Set(std::string option, std::string arg)
+	Setting &ModelBeast::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		Model::Set(option, arg);
-
-		return *this;
+		return Model::SetKey(key, arg);
 	}
 
 	std::string ModelBeast::Get()
@@ -894,13 +864,9 @@ namespace AIS
 		physical >> model >> outputADSB;
 	}
 
-	Setting &ModelRAW1090::Set(std::string option, std::string arg)
+	Setting &ModelRAW1090::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		Util::Convert::toUpper(option);
-
-		Model::Set(option, arg);
-
-		return *this;
+		return Model::SetKey(key, arg);
 	}
 
 	std::string ModelRAW1090::Get()
@@ -908,12 +874,9 @@ namespace AIS
 		return Model::Get();
 	}
 
-	Setting &ModelExport::Set(std::string option, std::string arg)
+	Setting &ModelExport::SetKey(AIS::Keys key, const std::string &arg)
 	{
-		if (!wav.setValue(option, arg))
-			Model::Set(option, arg);
-
-		return *this;
+		return Model::SetKey(key, arg);
 	}
 
 	std::string ModelExport::Get()

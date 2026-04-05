@@ -49,7 +49,7 @@ namespace Device {
 		int timeout = 100;
 
 	public:
-		ZMQ() : Device(Format::CU8, 288000, Type::ZMQ) {}
+		ZMQ() : Device(Format::CU8, 288000, Type::ZMQ, "ZMQ") {}
 		// Control
 		void Open(uint64_t h);
 		void Close();
@@ -61,7 +61,7 @@ namespace Device {
 		void getDeviceList(std::vector<Description>& DeviceList);
 
 		// Settings
-		Setting& Set(std::string option, std::string arg);
+		Setting& SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 
 		std::string getProduct() { return "ZMQ"; }
