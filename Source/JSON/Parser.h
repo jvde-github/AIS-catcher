@@ -20,7 +20,6 @@
 #include <vector>
 #include <iostream>
 #include <memory>
-#include <unordered_map>
 #include <cstring>
 
 #include "JSON.h"
@@ -28,6 +27,53 @@
 
 namespace JSON
 {
+	// Open-addressing hash table for key lookup: no heap allocation, no pointer chasing.
+	// Power-of-2 sized, linear probing. Built once per dict, shared across all Parsers.
+	struct KeyHashTable
+	{
+		static const int CAPACITY = 1024; // must be power of 2
+		static const int MASK = CAPACITY - 1;
+
+		struct Slot
+		{
+			size_t hash;
+			int value; // Keys enum value, or -1 if empty
+		};
+
+		Slot slots[CAPACITY];
+		bool built;
+
+		KeyHashTable() : built(false)
+		{
+			for (int i = 0; i < CAPACITY; i++)
+				slots[i].value = -1;
+		}
+
+		void insert(size_t h, int value)
+		{
+			int idx = (int)(h & MASK);
+			while (slots[idx].value != -1)
+			{
+				if (slots[idx].hash == h)
+					throw std::runtime_error("JSON Parser: hash collision in key lookup");
+				idx = (idx + 1) & MASK;
+			}
+			slots[idx].hash = h;
+			slots[idx].value = value;
+		}
+
+		int find(size_t h) const
+		{
+			int idx = (int)(h & MASK);
+			while (slots[idx].value != -1)
+			{
+				if (slots[idx].hash == h)
+					return slots[idx].value;
+				idx = (idx + 1) & MASK;
+			}
+			return -1;
+		}
+	};
 
 	class Parser
 	{
@@ -85,26 +131,22 @@ namespace JSON
 		void parse_into_core(JSON *o);
 		Value parse_value(JSON *);
 
-		static std::unordered_map<size_t, int> keyLookups[5];
-		static bool keyLookupsBuilt[5];
+		static KeyHashTable keyLookups[5];
 
 	public:
 		static void buildKeyLookup(int dict)
 		{
-			if (dict < 0 || dict >= 5 || keyLookupsBuilt[dict])
+			if (dict < 0 || dict >= 5 || keyLookups[dict].built)
 				return;
 
 			for (int i = 0; i < AIS::KEY_COUNT; i++)
 				if (AIS::KeyMap[i][dict][0] != '\0')
 				{
 					const char* key = AIS::KeyMap[i][dict];
-					size_t h = hashRange(key, strlen(key));
-					if (keyLookups[dict].count(h))
-						throw std::runtime_error(std::string("JSON Parser: hash collision for key \"") + key + "\"");
-					keyLookups[dict][h] = i;
+					keyLookups[dict].insert(hashRange(key, strlen(key)), i);
 				}
 
-			keyLookupsBuilt[dict] = true;
+			keyLookups[dict].built = true;
 		}
 
 		Parser(int d = JSON_DICT_FULL) : dict(d) { buildKeyLookup(dict); }
@@ -112,7 +154,6 @@ namespace JSON
 		std::shared_ptr<JSON> parse(const std::string &j);
 		void parse_into(JSON &target, const std::string &j);
 		void setSkipUnknown(bool b) { skipUnknownKeys = b; }
-		// dictionary to use
 		void setMap(int d)
 		{
 			dict = d;

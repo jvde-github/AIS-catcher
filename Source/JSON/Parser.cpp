@@ -23,8 +23,7 @@
 
 namespace JSON
 {
-	std::unordered_map<size_t, int> Parser::keyLookups[5];
-	bool Parser::keyLookupsBuilt[5] = {false, false, false, false, false};
+	KeyHashTable Parser::keyLookups[5];
 
 	// Parser -- Build JSON object from String
 
@@ -283,8 +282,7 @@ namespace JSON
 		else
 			h = hashRange(json.data() + tokenStart, tokenEnd - tokenStart);
 
-		auto it = keyLookups[dict].find(h);
-		return it != keyLookups[dict].end() ? it->second : -1;
+		return keyLookups[dict].find(h);
 	}
 
 	Value Parser::parse_value(JSON *o)
