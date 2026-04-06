@@ -25,12 +25,7 @@
 
 #include "Common.h"
 #include "JSON.h"
-
-namespace AIS
-{
-	struct KeyInfo;
-	extern const std::vector<KeyInfo> KeyInfoMap;
-}
+#include "Keys.h"
 
 namespace JSON
 {
@@ -38,13 +33,11 @@ namespace JSON
 	class StringBuilder
 	{
 	private:
-		const std::vector<std::vector<std::string>> *keymap = nullptr;
 		int dict = 0;
 		bool stringify_enhanced = false;
 
 	public:
-		StringBuilder(const std::vector<std::vector<std::string>> *map, int d) : keymap(map), dict(d) {}
-		StringBuilder(const std::vector<std::vector<std::string>> *map) : keymap(map) {}
+		StringBuilder(int d = JSON_DICT_FULL) : dict(d) {}
 
 		void to_string(std::string &json, const Value &v);
 		void to_string_enhanced(std::string &json, const Value &v, int key_index);
@@ -69,7 +62,6 @@ namespace JSON
 	class StringBuilderArray
 	{
 	private:
-		const std::vector<std::vector<std::string>> *keymap = nullptr;
 		int dict = 0;
 
 		char *buf = nullptr;
@@ -247,11 +239,11 @@ namespace JSON
 			append('{');
 			for (const Property &p : object.getProperties())
 			{
-				if (p.Key() < 0 || p.Key() >= (int)keymap->size())
+				if (p.Key() < 0 || p.Key() >= AIS::KEY_COUNT)
 					continue;
 
-				const std::string &key = (*keymap)[p.Key()][dict];
-				if (key.empty())
+				const char* key = AIS::KeyMap[p.Key()][dict];
+				if (key[0] == '\0')
 					continue;
 
 				if (!first)
@@ -267,8 +259,7 @@ namespace JSON
 		}
 
 	public:
-		StringBuilderArray(const std::vector<std::vector<std::string>> *map, int d) : keymap(map), dict(d) {}
-		StringBuilderArray(const std::vector<std::vector<std::string>> *map) : keymap(map) {}
+		StringBuilderArray(int d = JSON_DICT_FULL) : dict(d) {}
 
 		int stringify(const JSON &object, char *buffer, int length, const char *suffix = nullptr)
 		{

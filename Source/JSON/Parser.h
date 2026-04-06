@@ -21,8 +21,10 @@
 #include <iostream>
 #include <memory>
 #include <unordered_map>
+#include <cstring>
 
 #include "JSON.h"
+#include "Keys.h"
 
 namespace JSON
 {
@@ -30,7 +32,6 @@ namespace JSON
 	class Parser
 	{
 	private:
-		const std::vector<std::vector<std::string>> *keymap = nullptr;
 		int dict = 0;
 		bool skipUnknownKeys = false;
 
@@ -88,27 +89,25 @@ namespace JSON
 		static bool keyLookupsBuilt[5];
 
 	public:
-		static void buildKeyLookup(const std::vector<std::vector<std::string>> *keymap, int dict)
+		static void buildKeyLookup(int dict)
 		{
 			if (dict < 0 || dict >= 5 || keyLookupsBuilt[dict])
 				return;
-			if (keymap)
-			{
-				for (int i = 0; i < (int)keymap->size(); i++)
-					if (dict < (int)(*keymap)[i].size() && !(*keymap)[i][dict].empty())
-					{
-						const std::string &key = (*keymap)[i][dict];
-						size_t h = hashRange(key.data(), key.size());
-						if (keyLookups[dict].count(h))
-							throw std::runtime_error("JSON Parser: hash collision for key \"" + key + "\"");
-						keyLookups[dict][h] = i;
-					}
-			}
+
+			for (int i = 0; i < AIS::KEY_COUNT; i++)
+				if (AIS::KeyMap[i][dict][0] != '\0')
+				{
+					const char* key = AIS::KeyMap[i][dict];
+					size_t h = hashRange(key, strlen(key));
+					if (keyLookups[dict].count(h))
+						throw std::runtime_error(std::string("JSON Parser: hash collision for key \"") + key + "\"");
+					keyLookups[dict][h] = i;
+				}
+
 			keyLookupsBuilt[dict] = true;
 		}
 
-		Parser(const std::vector<std::vector<std::string>> *map, int d) : keymap(map), dict(d) { buildKeyLookup(keymap, dict); }
-		Parser(const std::vector<std::vector<std::string>> *map) : keymap(map) { buildKeyLookup(keymap, dict); }
+		Parser(int d = JSON_DICT_FULL) : dict(d) { buildKeyLookup(dict); }
 
 		std::shared_ptr<JSON> parse(const std::string &j);
 		void parse_into(JSON &target, const std::string &j);
@@ -117,7 +116,7 @@ namespace JSON
 		void setMap(int d)
 		{
 			dict = d;
-			buildKeyLookup(keymap, dict);
+			buildKeyLookup(dict);
 		}
 	};
 }

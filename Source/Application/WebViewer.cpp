@@ -101,7 +101,7 @@ void PluginManager::addPlugin(const std::string &arg)
 	{
 		std::string s = Util::Helper::readFile(arg);
 
-		JSON::Parser parser(&AIS::KeyMap, JSON_DICT_SETTING);
+		JSON::Parser parser(JSON_DICT_SETTING);
 		std::string firstline = s.substr(0, s.find('\n'));
 		if (firstline.length() > 2 && firstline[0] == '/' && firstline[1] == '/')
 			firstline = firstline.substr(2);
@@ -314,7 +314,7 @@ std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input, bool enha
 		}
 	};
 
-	JSON::StringBuilder builder(&AIS::KeyMap, JSON_DICT_FULL);
+	JSON::StringBuilder builder(JSON_DICT_FULL);
 	builder.setStringifyEnhanced(enhanced);
 	NMEADecoder decoder(&builder);
 	return decoder.decode(nmea_input);
@@ -1306,7 +1306,7 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 		break;
 	default:
 		if (!filter.SetOptionKey(key, arg))
-			throw std::runtime_error("unrecognized setting for HTML service: " + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
+			throw std::runtime_error(std::string("unrecognized setting for HTML service: ") + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
 		break;
 	}
 

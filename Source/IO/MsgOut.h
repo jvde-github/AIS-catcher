@@ -41,7 +41,7 @@ namespace IO
 		char jsonBuf[4096];
 		AIS::Filter filter;
 		JSON::StringBuilder builder;
-		JSON::StringBuilderArray fastBuilder{&AIS::KeyMap, JSON_DICT_FULL};
+		JSON::StringBuilderArray fastBuilder{JSON_DICT_FULL};
 
 		OutputStats stats;
 		std::string description, type;
@@ -78,8 +78,8 @@ namespace IO
 			return "sources: " + s;
 		}
 
-		OutputMessage() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
-		OutputMessage(const std::string &d) : Setting(d), builder(&AIS::KeyMap, JSON_DICT_FULL), type(d) {}
+		OutputMessage() : builder(JSON_DICT_FULL) {}
+		OutputMessage(const std::string &d) : Setting(d), builder(JSON_DICT_FULL), type(d) {}
 
 		virtual ~OutputMessage() { Stop(); }
 

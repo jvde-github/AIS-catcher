@@ -294,7 +294,7 @@ namespace IO
 		}
 		default:
 			if (!setOptionKey(key, arg))
-				throw std::runtime_error("HTTP output - unknown option: " + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
+				throw std::runtime_error(std::string("HTTP output - unknown option: ") + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
 			break;
 		}
 		return *this;
@@ -538,7 +538,7 @@ namespace IO
 			break;
 		default:
 			if (!setOptionKey(key, arg))
-				throw std::runtime_error("UDP output - unknown option: " + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
+				throw std::runtime_error(std::string("UDP output - unknown option: ") + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
 			break;
 		}
 		return *this;
@@ -757,7 +757,7 @@ namespace IO
 			break;
 		default:
 			if (!setOptionKey(key, arg))
-				throw std::runtime_error("TCP client - unknown option: " + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
+				throw std::runtime_error(std::string("TCP client - unknown option: ") + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
 			break;
 		}
 		return *this;
@@ -797,7 +797,7 @@ namespace IO
 			break;
 		default:
 			if (!setOptionKey(key, arg))
-				throw std::runtime_error("TCP listener - unknown option: " + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
+				throw std::runtime_error(std::string("TCP listener - unknown option: ") + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
 			break;
 		}
 		return *this;
@@ -1043,7 +1043,7 @@ namespace IO
 			std::string opt = AIS::KeyMap[key][JSON_DICT_SETTING];
 			Util::Convert::toUpper(opt);
 			if (!tcp.setValue(opt, arg) && !mqtt.setValue(opt, arg) && !ws.setValue(opt, arg) && !setOptionKey(key, arg))
-				throw std::runtime_error("MQTT output - unknown option: " + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
+				throw std::runtime_error(std::string("MQTT output - unknown option: ") + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
 			break;
 		}
 		}

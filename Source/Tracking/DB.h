@@ -113,7 +113,7 @@ class DB : public StreamIn<JSON::JSON>,
 	void processBinaryMessage(const JSON::JSON &data, Ship &ship, bool &position_updated);
 
 public:
-	DB() : builder(&AIS::KeyMap, JSON_DICT_FULL) {}
+	DB() : builder(JSON_DICT_FULL) {}
 
 	std::mutex mtx;
 

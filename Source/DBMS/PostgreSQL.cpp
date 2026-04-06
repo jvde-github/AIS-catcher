@@ -110,7 +110,7 @@ namespace IO
 	{
 #ifdef HASPSQL
 
-		db_keys.resize(AIS::KeyMap.size(), -1);
+		db_keys.resize(AIS::KEY_COUNT, -1);
 		Debug() << "Connecting to ProgreSQL database: \"" + conn_string + "\"\n";
 		con = PQconnectdb(conn_string.c_str());
 
@@ -189,7 +189,7 @@ namespace IO
 
 		for (const auto &p : data[0].getProperties())
 		{
-			if (p.Key() < 0 || p.Key() >= AIS::KeyMap.size())
+			if (p.Key() < 0 || p.Key() >= AIS::KEY_COUNT)
 				continue;
 
 			switch (p.Key())
@@ -202,7 +202,7 @@ namespace IO
 			case AIS::KEY_HEADING:
 			case AIS::KEY_COURSE:
 			case AIS::KEY_SPEED:
-				keys += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
+				keys += std::string(AIS::KeyMap[p.Key()][JSON_DICT_FULL]) + ",";
 				builder.to_string(values, p.Get());
 				values += ",";
 				break;
@@ -226,7 +226,7 @@ namespace IO
 
 		for (const auto &p : data[0].getProperties())
 		{
-			if (p.Key() < 0 || p.Key() >= AIS::KeyMap.size())
+			if (p.Key() < 0 || p.Key() >= AIS::KEY_COUNT)
 				continue;
 
 			switch (p.Key())
@@ -254,8 +254,8 @@ namespace IO
 			case AIS::KEY_AID_TYPE:
 			case AIS::KEY_COURSE:
 			case AIS::KEY_SPEED:
-				keys += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
-				set += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + "=EXCLUDED." + AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
+				keys += std::string(AIS::KeyMap[p.Key()][JSON_DICT_FULL]) + ",";
+				set += std::string(AIS::KeyMap[p.Key()][JSON_DICT_FULL]) + "=EXCLUDED." + AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
 
 				if (p.Get().isString())
 				{
@@ -291,7 +291,7 @@ namespace IO
 
 		for (const auto &p : data[0].getProperties())
 		{
-			if (p.Key() < 0 || p.Key() >= AIS::KeyMap.size())
+			if (p.Key() < 0 || p.Key() >= AIS::KEY_COUNT)
 				continue;
 			switch (p.Key())
 			{
@@ -307,7 +307,7 @@ namespace IO
 			case AIS::KEY_SHIPTYPE:
 			case AIS::KEY_DESTINATION:
 			case AIS::KEY_ETA:
-				keys += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
+				keys += std::string(AIS::KeyMap[p.Key()][JSON_DICT_FULL]) + ",";
 				if (p.Get().isString())
 				{
 					values += "\'" + escape(p.Get().getString()) + "\'";
@@ -335,14 +335,14 @@ namespace IO
 
 		for (const auto &p : data[0].getProperties())
 		{
-			if (p.Key() < 0 || p.Key() >= AIS::KeyMap.size())
+			if (p.Key() < 0 || p.Key() >= AIS::KEY_COUNT)
 				continue;
 			switch (p.Key())
 			{
 			case AIS::KEY_LAT:
 			case AIS::KEY_LON:
 			case AIS::KEY_MMSI:
-				keys += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
+				keys += std::string(AIS::KeyMap[p.Key()][JSON_DICT_FULL]) + ",";
 				builder.to_string(values, p.Get());
 				values += ",";
 				break;
@@ -365,7 +365,7 @@ namespace IO
 
 		for (const auto &p : data[0].getProperties())
 		{
-			if (p.Key() < 0 || p.Key() >= AIS::KeyMap.size())
+			if (p.Key() < 0 || p.Key() >= AIS::KEY_COUNT)
 				continue;
 			switch (p.Key())
 			{
@@ -375,7 +375,7 @@ namespace IO
 			case AIS::KEY_COURSE:
 			case AIS::KEY_MMSI:
 			case AIS::KEY_SPEED:
-				keys += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
+				keys += std::string(AIS::KeyMap[p.Key()][JSON_DICT_FULL]) + ",";
 				builder.to_string(values, p.Get());
 				values += ",";
 				break;
@@ -398,7 +398,7 @@ namespace IO
 
 		for (const auto &p : data[0].getProperties())
 		{
-			if (p.Key() < 0 || p.Key() >= AIS::KeyMap.size())
+			if (p.Key() < 0 || p.Key() >= AIS::KEY_COUNT)
 				continue;
 			switch (p.Key())
 			{
@@ -411,7 +411,7 @@ namespace IO
 			case AIS::KEY_TO_PORT:
 			case AIS::KEY_AID_TYPE:
 			case AIS::KEY_MMSI:
-				keys += AIS::KeyMap[p.Key()][JSON_DICT_FULL] + ",";
+				keys += std::string(AIS::KeyMap[p.Key()][JSON_DICT_FULL]) + ",";
 				if (p.Get().isString())
 				{
 					values += "\'" + escape(p.Get().getString()) + "\'";

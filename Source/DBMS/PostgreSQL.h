@@ -78,7 +78,7 @@ namespace IO
 		void post();
 #endif
 	public:
-		PostgreSQL() : OutputMessage("PostgreSQL"), builder(&AIS::KeyMap, JSON_DICT_FULL) { fmt = MessageFormat::JSON_FULL; }
+		PostgreSQL() : OutputMessage("PostgreSQL"), builder(JSON_DICT_FULL) { fmt = MessageFormat::JSON_FULL; }
 		~PostgreSQL();
 
 #ifdef HASPSQL

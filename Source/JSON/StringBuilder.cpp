@@ -56,7 +56,7 @@ namespace JSON {
 		to_string(json, v);
 		
 		// Add metadata if available
-		if (key_index >= 0 && key_index < AIS::KeyInfoMap.size()) {
+		if (key_index >= 0 && key_index < AIS::KEY_COUNT) {
 			const AIS::KeyInfo& info = AIS::KeyInfoMap[key_index];
 			
 			// Add unit if not empty
@@ -135,18 +135,19 @@ namespace JSON {
 		json += '{';
 		for (const Property& p : object.getProperties()) {
 
-			// Skip invalid keys to avoid out-of-bounds access
-			if (p.Key() < 0 || p.Key() >= keymap->size()) continue;
+			if (p.Key() < 0 || p.Key() >= AIS::KEY_COUNT) continue;
 
-			const std::string& key = (*keymap)[p.Key()][dict];
+			const char* key = AIS::KeyMap[p.Key()][dict];
 
-			if (!key.empty()) {
+			if (key[0] != '\0') {
 
 				if (!first) json += ',';
 				first = false;
 
-				json += "\"" + key + "\":";
-				
+				json += '"';
+				json += key;
+				json += "\":";
+
 				if (stringify_enhanced) {
 					to_string_enhanced(json, p.Get(), p.Key());
 				} else {

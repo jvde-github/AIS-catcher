@@ -40,7 +40,7 @@ void Config::setSettingsFromJSON(const JSON::Value &pd, Setting &s)
 
 	for (const JSON::Property &p : pd.getObject().getProperties())
 	{
-		if (p.Key() < 0 || p.Key() >= AIS::KeyMap.size())
+		if (p.Key() < 0 || p.Key() >= AIS::KEY_COUNT)
 			continue;
 
 		if (p.Key() != AIS::KEY_SETTING_ACTIVE)
@@ -395,7 +395,7 @@ void Config::set(const std::string &str)
 	std::string config, serial, input;
 	int version = 0;
 
-	JSON::Parser parser(&AIS::KeyMap, JSON_DICT_SETTING);
+	JSON::Parser parser(JSON_DICT_SETTING);
 	std::shared_ptr<JSON::JSON> json = parser.parse(str);
 
 	// loop over all properties
@@ -502,8 +502,8 @@ void Config::set(const std::string &str)
 			_state.screen.verboseUpdateTime = Util::Parse::Integer(p.Get().to_string(), 1, 300);
 			break;
 		default:
-			if (p.Key() >= 0 && p.Key() < AIS::KeyMap.size())
-				throw std::runtime_error("Config file: field \"" + AIS::KeyMap[p.Key()][JSON_DICT_SETTING] + "\" in main section is not allowed.");
+			if (p.Key() >= 0 && p.Key() < AIS::KEY_COUNT)
+				throw std::runtime_error(std::string("Config file: field \"") + AIS::KeyMap[p.Key()][JSON_DICT_SETTING] + "\" in main section is not allowed.");
 			else
 				throw std::runtime_error("Config file: unknown field in main section is not allowed.");
 		}

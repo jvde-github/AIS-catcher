@@ -89,20 +89,20 @@ namespace IO
 		void post();
 		void process();
 
-		void Receive(const JSON::JSON *data, int len, TAG &tag);
-		void Receive(const AIS::GPS *data, int len, TAG &tag);
+		void Receive(const JSON::JSON *data, int len, TAG &tag) override;
+		void Receive(const AIS::GPS *data, int len, TAG &tag) override;
 
 		std::list<std::string> msg_list;
 		std::mutex msg_list_mutex;
 
 	public:
 		~HTTPStreamer() { Stop(); }
-		HTTPStreamer() : OutputMessage("HTTP"), builder(&AIS::KeyMap, JSON_DICT_FULL), url("http://127.0.0.1"), userpwd("") { fmt = MessageFormat::JSON_FULL; }
+		HTTPStreamer() : OutputMessage("HTTP"), builder(JSON_DICT_FULL), url("http://127.0.0.1"), userpwd("") { fmt = MessageFormat::JSON_FULL; }
 
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 
-		void Start();
-		void Stop();
+		void Start() override;
+		void Stop() override;
 	};
 
 	class UDPEndPoint
@@ -157,18 +157,18 @@ namespace IO
 			return keys;
 		}
 
-		void Receive(const AIS::Message *data, int len, TAG &tag);
-		void Receive(const JSON::JSON *data, int len, TAG &tag);
-		void Receive(const AIS::GPS *data, int len, TAG &tag);
+		void Receive(const AIS::Message *data, int len, TAG &tag) override;
+		void Receive(const JSON::JSON *data, int len, TAG &tag) override;
+		void Receive(const AIS::GPS *data, int len, TAG &tag) override;
 
-		void Start();
+		void Start() override;
 		void Start(UDPEndPoint &u)
 		{
 			host = u.address;
 			port = u.port;
 			Start();
 		}
-		void Stop();
+		void Stop() override;
 		void SendTo(std::string str)
 		{
 			stats.bytes_out += str.length();
@@ -198,12 +198,12 @@ namespace IO
 
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 
-		void Receive(const AIS::Message *data, int len, TAG &tag);
-		void Receive(const JSON::JSON *data, int len, TAG &tag);
-		void Receive(const AIS::GPS *data, int len, TAG &tag);
+		void Receive(const AIS::Message *data, int len, TAG &tag) override;
+		void Receive(const JSON::JSON *data, int len, TAG &tag) override;
+		void Receive(const AIS::GPS *data, int len, TAG &tag) override;
 
-		void Start();
-		void Stop();
+		void Start() override;
+		void Stop() override;
 
 		int SendTo(std::string str)
 		{
@@ -254,12 +254,12 @@ namespace IO
 
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 
-		void Receive(const AIS::Message *data, int len, TAG &tag);
-		void Receive(const JSON::JSON *data, int len, TAG &tag);
-		void Receive(const AIS::GPS *data, int len, TAG &tag);
+		void Receive(const AIS::Message *data, int len, TAG &tag) override;
+		void Receive(const JSON::JSON *data, int len, TAG &tag) override;
+		void Receive(const AIS::GPS *data, int len, TAG &tag) override;
 
-		void Start();
-		void Stop() {}
+		void Start() override;
+		void Stop() override {}
 	};
 
 	class MQTTStreamer : public OutputMessage
@@ -282,11 +282,11 @@ namespace IO
 			fmt = MessageFormat::JSON_FULL;
 		}
 
-		void Start();
-		void Stop();
+		void Start() override;
+		void Stop() override;
 
-		void Receive(const AIS::Message *data, int len, TAG &tag);
-		void Receive(const JSON::JSON *data, int len, TAG &tag);
+		void Receive(const AIS::Message *data, int len, TAG &tag) override;
+		void Receive(const JSON::JSON *data, int len, TAG &tag) override;
 
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 	};
