@@ -17,6 +17,9 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
+      with:
+        ref: main
+        fetch-depth: 0
 
     - name: Set run number for downstream jobs
       id: set_run_number
@@ -39,6 +42,7 @@ jobs:
         ./scripts/build-html.sh 
         
     - name: Commit and push changes
+      if: github.event_name == 'push'
       run: |
         git add -A
         if git diff --cached --quiet; then
