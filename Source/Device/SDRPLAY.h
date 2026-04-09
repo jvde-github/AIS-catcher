@@ -35,7 +35,7 @@ namespace Device {
 
 #ifdef HASSDRPLAY
 
-		// Data is processed in seperate thread
+		// Data is processed in separate thread
 		std::thread run_thread;
 		void Run();
 

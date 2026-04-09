@@ -248,19 +248,19 @@ namespace Plane
                 {
                     if (ST == 1 || ST == 2)
                     {
-                        int Vew = getBits(46, 10);
-                        int Vns = getBits(57, 10);
+                        int ewVelocity = getBits(46, 10);
+                        int nsVelocity = getBits(57, 10);
 
-                        if (Vew && Vns)
+                        if (ewVelocity && nsVelocity)
                         {
                             bool Dew = getBits(45, 1);
                             bool Dns = getBits(56, 1);
 
-                            Vew = Dew ? -(Vew - 1) : (Vew - 1);
-                            Vns = Dns ? -(Vns - 1) : (Vns - 1);
+                            ewVelocity = Dew ? -(ewVelocity - 1) : (ewVelocity - 1);
+                            nsVelocity = Dns ? -(nsVelocity - 1) : (nsVelocity - 1);
 
-                            speed = sqrt(Vns * Vns + Vew * Vew);
-                            heading = atan2(Vew, Vns) * 360.0 / (2 * PI);
+                            speed = sqrt(nsVelocity * nsVelocity + ewVelocity * ewVelocity);
+                            heading = atan2(ewVelocity, nsVelocity) * 360.0 / (2 * PI);
                             if (heading < 0)
                                 heading += 360;
 
@@ -494,6 +494,7 @@ namespace Plane
         std::string isoCountry;
     };
 
+    // spellchecker:off
     static std::vector<RangeInfo> rangeInfo = {
         {0x003FFF, "  "},
         {0x0043FF, "ZW"}, // Zimbabwe
@@ -692,6 +693,7 @@ namespace Plane
         {0xE90FFF, "UY"}, // Uruguay
         {0xE94FFF, "BO"}  // Bolivia
     };
+    // spellchecker:on
 
     void ADSB::setCountryCode()
     {

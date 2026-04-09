@@ -218,7 +218,7 @@ void Receiver::setupModel(int &group, int idx)
 	jsonais.clear();
 	jsonais.resize(models.size());
 
-	// assign the output of each individual model to a seperate group
+	// assign the output of each individual model to a separate group
 	if (group + (int)models.size() >= 32)
 		throw std::runtime_error("Receiver: too many models/receivers, group bit limit exceeded.");
 

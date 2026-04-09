@@ -101,7 +101,7 @@ namespace IO
 			else if (option == "MSGFORMAT")
 			{
 				if (!Util::Parse::OutputFormat(arg, fmt))
-					throw std::runtime_error("Uknown message format: " + arg);
+					throw std::runtime_error("Unknown message format: " + arg);
 
 				if (fmt == MessageFormat::JSON_ANNOTATED)
 					builder.setStringifyEnhanced(true);

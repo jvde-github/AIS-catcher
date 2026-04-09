@@ -939,7 +939,7 @@ namespace AIS
 		KeyInfo("", "", nullptr),																							// KEY_DEST1
 		KeyInfo("", "", nullptr),																							// KEY_DEST2
 		KeyInfo("", "Destination", nullptr),																				// KEY_DESTINATION
-		KeyInfo("celcius", "Dew Point", nullptr),																			// KEY_DEWPOINT
+		KeyInfo("celsius", "Dew Point", nullptr),																			// KEY_DEWPOINT
 		KeyInfo("", "Display flag (0=No display, 1=Has display).", nullptr),												// KEY_DISPLAY
 		KeyInfo("meters", "Draught", nullptr),																				// KEY_DRAUGHT
 		KeyInfo("", "DSC Flag (1 = attached to VHF voice radio with DSC).", nullptr),										// KEY_DSC
@@ -1069,7 +1069,7 @@ namespace AIS
 		KeyInfo("meter", "Swell height", nullptr),																			// KEY_SWELLHEIGHT
 		KeyInfo("seconds", "Swell period", nullptr),																		// KEY_SWELLPERIOD
 		KeyInfo("", "", nullptr),																							// KEY_SYNC_STATE
-		KeyInfo("", "Tekst description", nullptr),																			// KEY_TEXT
+		KeyInfo("", "Text description", nullptr),																			// KEY_TEXT
 		KeyInfo("", "", nullptr),																							// KEY_TEXT_SEQUENCE
 		KeyInfo("", "", nullptr),																							// KEY_TIMEOUT1
 		KeyInfo("", "", nullptr),																							// KEY_TIMEOUT2

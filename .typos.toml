@@ -1,0 +1,25 @@
+[default.extend-words]
+SART = "SART"
+
+[default.extend-identifiers]
+SerNo = "SerNo"             # coming from SDRPlay API
+
+[default]
+locale = "en"
+extend-ignore-identifiers-re = []
+
+extend-ignore-re = [
+    # Ignore lines that end with `# spellchecker:disable-line`
+    "(?Rm)^.*(#|//)\\s*spellchecker:disable-line$",
+    # Ignore the line after `# spellchecker:ignore-next-line`:
+    "(#|//)\\s*spellchecker:ignore-next-line\\n.*",
+    # Ignore blocks between `# spellchecker:off` and `# spellchecker:on`
+    "(?s)(#|//)\\s*spellchecker:off.*?\\n\\s*(#|//)\\s*spellchecker:on",
+]
+
+[files]
+extend-exclude = [
+     "/build/*",
+     "/msvc/*",
+     "/Source/Application/WebDB.cpp"
+]

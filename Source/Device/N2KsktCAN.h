@@ -41,7 +41,7 @@ namespace Device
 
 #ifdef HASNMEA2000
 		bool lost = false;
-		std::vector<std::string> available_intefaces;
+		std::vector<std::string> available_interfaces;
 
 	public:
 		N2KSCAN() : Device(Format::N2K, 288000, Type::N2K) {};

@@ -175,12 +175,12 @@ namespace Device
 		{
 			preamp = Util::Parse::Switch(arg);
 		}
-		else if (option == "TRESHOLD" || option == "THRESHOLD")
+		else if (option == "TRESHOLD" || option == "THRESHOLD") // spellchecker:disable-line
 		{
 			threshold_high = Util::Parse::Switch(arg, "HIGH", "LOW");
 
-			if (option == "TRESHOLD")
-				Warning() << "AIRSPYHF: TRESHOLD setting depreciated, use THRESHOLD instead\n";
+			if (option == "TRESHOLD") // spellchecker:disable-line
+				Warning() << "AIRSPYHF: TRESHOLD setting depreciated, use THRESHOLD instead\n"; // spellchecker:disable-line
 		}
 		else
 			Device::Set(option, arg);

@@ -55,12 +55,24 @@ jobs:
         git commit -m "Bake HTML files in WebDB.cpp"
         git push origin main
 
-  build_debian:
+  pre_build_checks:
+    name: Pre-Build Checks
     needs: bakeHTML
+    runs-on: ubuntu-latest
+    outputs:
+      run_number: ${{ needs.bakeHTML.outputs.run_number }}
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+    - name: Spell Check with Typos
+      uses: crate-ci/typos@v1.45.0
+
+  build_debian:
+    needs: pre_build_checks
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      RUN_NUMBER: ${{ needs.bakeHTML.outputs.run_number }}
+      RUN_NUMBER: ${{ needs.pre_build_checks.outputs.run_number }}
     strategy:
       matrix:
         distro: ['debian']
@@ -113,11 +125,11 @@ jobs:
         path: ${{ env.filename }}
 
   build_ubuntu:
-    needs: bakeHTML
+    needs: pre_build_checks
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      RUN_NUMBER: ${{ needs.bakeHTML.outputs.run_number }}
+      RUN_NUMBER: ${{ needs.pre_build_checks.outputs.run_number }}
     strategy:
       matrix:
         distro: ['ubuntu']
@@ -274,9 +286,9 @@ jobs:
 
   Windows:
     runs-on: windows-2022
-    needs: bakeHTML
+    needs: pre_build_checks
     env:
-      RUN_NUMBER: ${{ needs.bakeHTML.outputs.run_number }}
+      RUN_NUMBER: ${{ needs.pre_build_checks.outputs.run_number }}
     strategy:
       matrix:
         platform: [x86, x64]

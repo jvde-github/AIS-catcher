@@ -551,7 +551,7 @@
 						class="directions_boat_icon"></i>Show
 					Plane Card</li>
 				<li class="divider ship-map plane-map"></li>
-				<li class="ship" onclick="openAIScatcherSite(context_mmsi)"><i class="directions_boat_icon"></i>View on
+				<li class="ship" onclick="openAISCatcherSite(context_mmsi)"><i class="directions_boat_icon"></i>View on
 					www.aiscatcher.org
 				</li>
 				<li class="ship" onclick="showVesselDetail(context_mmsi)"><i class="dns_icon"></i>Show Vessel Database
@@ -563,13 +563,13 @@
 				</li>
 				<li class="ship" onclick="copyText(context_mmsi)"><i class="content_copy_icon noandroid"></i>Copy MMSI
 				</li>
-				<li class="plane" onclick="copyText(getICAOfromHexIdent(context_mmsi))"><i
+				<li class="plane" onclick="copyText(getICAOFromHexIdent(context_mmsi))"><i
 						class="content_copy_icon noandroid"></i>Copy ICAO
 				</li>
 				<li class="ship" onclick="copyCoordinates(context_mmsi)"><i
 						class="content_paste_icon noandroid"></i>Copy Coordinates</li>
 				<li class="divider ship plane"></li>
-				<li class="plane noandroid" onclick="openGoogleSearch(getICAOfromHexIdent(context_mmsi))"><i
+				<li class="plane noandroid" onclick="openGoogleSearch(getICAOFromHexIdent(context_mmsi))"><i
 						class="search_icon"></i>Search on
 					Google</li>
 				<li class="ship noandroid" onclick="openGoogleSearch(context_mmsi)"><i class="search_icon"></i>Search on
@@ -1267,7 +1267,7 @@
 							onclick="openRealtimeForMMSI(card_mmsi)" data-context-type="ship"><i
 								class="comment_icon"></i><span>Track NMEA</span>
 						</div>
-						<div title="Lookup on commuinity site" onclick="openAIScatcherSite(card_mmsi)"
+						<div title="Lookup on commuinity site" onclick="openAISCatcherSite(card_mmsi)"
 							data-context-type="ship" class="noandroid"><i
 								class="info_icon"></i><span>www.aiscatcher.org</span></div>
 						<div id="shipcard_track_option" title="Track of current vessel" data-context-type="ship"

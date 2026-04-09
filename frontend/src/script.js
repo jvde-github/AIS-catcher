@@ -397,8 +397,8 @@ var getLonValFormat = (ship) => {
 var getEtaVal = (ship) => ("0" + ship.eta_month).slice(-2) + "-" + ("0" + ship.eta_day).slice(-2) + " " + ("0" + ship.eta_hour).slice(-2) + ":" + ("0" + ship.eta_minute).slice(-2);
 var getShipName = (ship) => ship.shipname;
 var getCallSign = (ship) => ship.callsign;
-var getICAOfromHexIdent = (h) => h.toString(16).toUpperCase().padStart(6, '0')
-var getICAO = (plane) => getICAOfromHexIdent(plane.hexident)
+var getICAOFromHexIdent = (h) => h.toString(16).toUpperCase().padStart(6, '0')
+var getICAO = (plane) => getICAOFromHexIdent(plane.hexident)
 var includeShip = (ship) => true;
 
 const getDeltaTimeVal = (s) => {
@@ -1107,7 +1107,7 @@ function openGoogleSearch(m) {
     window.open("https://www.google.com/search?q=" + m);
 }
 
-function openAIScatcherSite(m) {
+function openAISCatcherSite(m) {
     window.open("https://www.aiscatcher.org/ship/details/" + m);
 }
 
@@ -1128,15 +1128,15 @@ function openAISHub(m) {
 }
 
 function openPlaneSpotters(m) {
-    window.open("https://www.planespotters.net/hex/" + getICAOfromHexIdent(m));
+    window.open("https://www.planespotters.net/hex/" + getICAOFromHexIdent(m));
 }
 
 function openADSBExchange(m) {
-    window.open("https://globe.adsbexchange.com/?icao=" + getICAOfromHexIdent(m));
+    window.open("https://globe.adsbexchange.com/?icao=" + getICAOFromHexIdent(m));
 }
 
 function openFlightAware(m) {
-    window.open("https://flightaware.com/live/modes/" + getICAOfromHexIdent(m) + "/redirect");
+    window.open("https://flightaware.com/live/modes/" + getICAOFromHexIdent(m) + "/redirect");
 }
 
 const mapMenu = document.getElementById("map-menu");
@@ -1338,7 +1338,7 @@ function getStatusVal(ship) {
         "Under way using engine",
         "At anchor",
         "Not under command",
-        "Restricted manoeuverability",
+        "Restricted maneuverability",
         "Constrained",
         "Moored",
         "Aground",
@@ -1448,7 +1448,7 @@ function getShipTypeVal(s) {
             case 8270:
                 return "Pushtow (seven cargo barges)";
             case 8280:
-                return "Pushtow (eigth cargo barges)";
+                return "Pushtow (eight cargo barges)";
             case 8290:
                 return "Pushtow (nine or more barges)";
             case 8310:
@@ -1490,7 +1490,7 @@ function getShipTypeVal(s) {
             case 8450:
                 return "Service, Police or Port Service";
             case 8460:
-                return "Maintainance Craft";
+                return "Maintenance Craft";
             case 8470:
                 return "Object (towed)";
             case 8480:
@@ -6048,7 +6048,7 @@ function getPlaneSprite(plane) {
         sprite = shippingMappings[ShippingClass.HELICOPTER];
     }
 
-    plane.scaling = 0.75; // Default scalin
+    plane.scaling = 0.75; // Default scaling
 
     // Set scaling based on wake vortex category
     if (plane.category) {

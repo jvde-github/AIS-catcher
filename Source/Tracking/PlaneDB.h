@@ -350,19 +350,19 @@ public:
             {
                 // check for consistency with independent position
                 int prev = (plane.CPR_history_idx + 2) % 3;
-                int indepedent = (plane.CPR_history_idx + 1) % 3;
+                int independent = (plane.CPR_history_idx + 1) % 3;
 
                 if (plane.CPR_history[prev].cpr.Valid() && plane.CPR_history[plane.CPR_history_idx].cpr.Valid() && plane.CPR_history[plane.CPR_history_idx].even != plane.CPR_history[prev].even)
                 {
-                    if (plane.CPR_history[indepedent].cpr.Valid())
+                    if (plane.CPR_history[independent].cpr.Valid())
                     {
                         // check against last independent position, i.e. with different CPR pair for both legs
-                        double deltat = 1 - plane.CPR_history[indepedent].cpr.timestamp + plane.CPR_history[plane.CPR_history_idx].cpr.timestamp;
+                        double deltat = 1 - plane.CPR_history[independent].cpr.timestamp + plane.CPR_history[plane.CPR_history_idx].cpr.timestamp;
                         if (deltat < 15 * 60)
                         {
                             FLOAT32 distance = DISTANCE_UNDEFINED;
                             int angle = ANGLE_UNDEFINED;
-                            getDistanceAndBearing(plane.CPR_history[indepedent].lat, plane.CPR_history[indepedent].lon, lat_new, lon_new, distance, angle);
+                            getDistanceAndBearing(plane.CPR_history[independent].lat, plane.CPR_history[independent].lon, lat_new, lon_new, distance, angle);
 
                             double speed = plane.speed == SPEED_UNDEFINED ? 1000 : plane.speed * 1.5;
                             double max_distance = deltat * speed / 3600.0;

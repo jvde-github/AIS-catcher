@@ -41,7 +41,7 @@ namespace FFT {
 			x >>= 4;
 		}
 
-		// remaning bits
+		// remaining bits
 		for (int i = j << 2; i < logN; i++) {
 			y <<= 1;
 			y |= (x & 1);

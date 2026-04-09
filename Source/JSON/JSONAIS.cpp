@@ -166,7 +166,7 @@ namespace AIS
 		json.Add(p, &str);
 	}
 
-	// Refernce: https://www.itu.int/dms_pubrec/itu-r/rec/m/R-REC-M.585-9-202205-I!!PDF-E.pdf
+	// Reference: https://www.itu.int/dms_pubrec/itu-r/rec/m/R-REC-M.585-9-202205-I!!PDF-E.pdf
 	void JSONAIS::COUNTRY(const AIS::Message &msg)
 	{
 
@@ -1424,6 +1424,7 @@ namespace AIS
 		"Light Vessel / LANBY / Rigs"};
 
 	// Source: https://help.marinetraffic.com/hc/en-us/articles/360018392858-How-does-MarineTraffic-identify-a-vessel-s-country-and-flag-
+	// spellchecker:off
 	const std::vector<COUNTRY> JSON_MAP_MID = {
 		{201, "Albania", "AL"},
 		{202, "Andorra", "AD"},
@@ -1715,4 +1716,5 @@ namespace AIS
 		{765, "Suriname", "SR"},
 		{770, "Uruguay", "UY"},
 		{775, "Venezuela", "VE"}};
+	// spellchecker:on
 }

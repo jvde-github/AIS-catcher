@@ -44,12 +44,12 @@ namespace Device
 	{
 		if (_iface.empty())
 		{
-			if (h < available_intefaces.size())
-				_iface = available_intefaces[h];
+			if (h < available_interfaces.size())
+				_iface = available_interfaces[h];
 			else
 			{
 				Error() << "Requested interface #" << h << " is not available";
-				for (auto i : available_intefaces)
+				for (auto i : available_interfaces)
 					Error() << "Available interface: " << i;
 				throw std::runtime_error("NMEA2000: No available interfaces.");
 			}
@@ -94,7 +94,7 @@ namespace Device
 				if (is_can_by_name || is_vcan)
 				{
 					DeviceList.push_back(Description("NMEA2000", "CANbus", ifa->ifa_name, i++, Type::N2K));
-					available_intefaces.push_back(ifa->ifa_name);
+					available_interfaces.push_back(ifa->ifa_name);
 				}
 				continue;
 			}
@@ -103,7 +103,7 @@ namespace Device
 			if (ifa->ifa_addr->sa_family == AF_CAN)
 			{
 				DeviceList.push_back(Description("NMEA2000", "CANbus", ifa->ifa_name, i++, Type::N2K));
-				available_intefaces.push_back(ifa->ifa_name);
+				available_interfaces.push_back(ifa->ifa_name);
 			}
 		}
 
