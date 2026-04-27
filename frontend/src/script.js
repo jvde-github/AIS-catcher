@@ -13,6 +13,9 @@ var interval,
     shipsLastCleanup = 0,
     binaryDB = {},
     planesDB = {},
+    planesSince = 0,
+    planesTimeout = 300,
+    planesLastCleanup = 0,
     fetch_binary = false,
     hover_feature = undefined,
     show_all_tracks = false,
@@ -2824,18 +2827,17 @@ async function fetchPlanes() {
 
     let planes = {};
 
-    let response;
     try {
-        response = await fetch("api/planes_array.json");
+        const response = await fetch("api/planes_array.json" + (planesSince > 0 ? "?since=" + planesSince : ""));
+        if (!response.ok) {
+            console.log("failed loading planes: HTTP " + response.status);
+            return false;
+        }
+        planes = await response.json();
     } catch (error) {
-
         console.log("failed loading planes: " + error);
         return false;
-    } finally {
     }
-
-    planes = await response.json();
-
 
     const keys = [
         "hexident",
@@ -2861,22 +2863,38 @@ async function fetchPlanes() {
         "bearing"
     ];
 
-    planesDB = {};
+    const serverTime = planes.time || 0;
+    const isIncremental = planesSince > 0;
 
-    planes.values.forEach((v) => {
-        const p = Object.fromEntries(keys.map((k, i) => [k, v[i]]));
+    if (!isIncremental) planesDB = {};
 
-        p.shipclass = ShippingClass.PLANE;
+    if (planes.values) {
+        planes.values.forEach((v) => {
+            const p = Object.fromEntries(keys.map((k, i) => [k, v[i]]));
 
-        p.validated = 1;
-        p.name = p.callsign || p.hexident;
+            p.shipclass = ShippingClass.PLANE;
+            p.validated = 1;
+            p.name = p.callsign || p.hexident;
 
-        // Store in database 
-        const entry = {};
-        entry.raw = p;
-        planesDB[p.hexident] = entry;
-    });
+            const hex = p.hexident;
+            if (hex in planesDB) {
+                Object.assign(planesDB[hex].raw, p);
+            } else {
+                planesDB[hex] = { raw: p };
+            }
+        });
+    }
 
+    planesSince = serverTime;
+
+    // Periodically expire planes silently dropped by the server's activity filter.
+    if (isIncremental && serverTime - planesLastCleanup > planesTimeout / 2) {
+        for (const hex in planesDB) {
+            if (serverTime - planesDB[hex].raw.last_signal > planesTimeout)
+                delete planesDB[hex];
+        }
+        planesLastCleanup = serverTime;
+    }
 
     return true;
 }
@@ -4375,7 +4393,7 @@ function getTooltipContentPlane(plane) {
         getFlagStyled(plane.country, "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%") +
         '<div>' +
         (plane.callsign || plane.hexident) + ' at ' + altitude + '/' + speed + ' kts<br>' +
-        'Received ' + getDeltaTimeVal(plane.last_signal) + ' ago' +
+        'Received ' + getDeltaTimeVal(planesSince - plane.last_signal) + ' ago' +
         '</div>' +
         '</div>';
 }
@@ -5562,7 +5580,7 @@ function populatePlanecard() {
     document.getElementById("shipcard_plane_lat").innerHTML = plane.lat ? getLatValFormat(plane) : null;
     document.getElementById("shipcard_plane_lon").innerHTML = plane.lon ? getLonValFormat(plane) : null;
     document.getElementById("shipcard_plane_vertrate").textContent = plane.vertrate ? `${plane.vertrate} ft/min` : "-";
-    document.getElementById("shipcard_plane_last_signal").textContent = getDeltaTimeVal(plane.last_signal);;
+    document.getElementById("shipcard_plane_last_signal").textContent = getDeltaTimeVal(planesSince - plane.last_signal);
     document.getElementById("shipcard_plane_messages").textContent = plane.nMessages || "-";
     document.getElementById("shipcard_plane_downlink").textContent = getStringfromMsgType(plane.message_types);
     document.getElementById("shipcard_plane_TC").textContent = getStringfromMsgType(plane.message_subtypes);

@@ -436,15 +436,15 @@ public:
         }
     }
 
-    std::string getCompactArray(bool include_inactive = false)
+    std::string getCompactArray(bool include_inactive = false, std::time_t since = 0)
     {
         std::lock_guard<std::mutex> lock(mtx);
 
         std::string content;
         JSON::Writer w(content, 4096);
-        w.beginObject().kv("count", count).key("values").beginArray();
-
         std::time_t now = std::time(nullptr);
+        w.beginObject().kv("count", count).kv("time", (long long)now).key("values").beginArray();
+
         int ptr = first;
 
         while (ptr != -1)
@@ -461,6 +461,12 @@ public:
                     break;
                 }
 
+                // Incremental: stop once we hit planes older than `since`
+                if (since > 0 && (std::time_t)plane.getRxTimeUnix() < since)
+                {
+                    break;
+                }
+
                 if (time_since_update <= 60 || (time_since_update <= 300 && plane.airborne == 0))
                 {
                     w.beginArray().val(plane.hexident)
@@ -468,7 +474,7 @@ public:
                         .val_unless(plane.altitude, ALTITUDE_UNDEFINED).val_unless(plane.speed, SPEED_UNDEFINED)
                         .val_unless(plane.heading, HEADING_UNDEFINED).val_unless(plane.vertrate, VERT_RATE_UNDEFINED)
                         .val_unless(plane.squawk, SQUAWK_UNDEFINED)
-                        .val(plane.callsign).val(plane.airborne).val(plane.nMessages).val((long long)time_since_update)
+                        .val(plane.callsign).val(plane.airborne).val(plane.nMessages).val((long long)plane.getRxTimeUnix())
                         .val_unless(plane.category, CATEGORY_UNDEFINED).val_unless(plane.signalLevel, LEVEL_UNDEFINED);
                     if (plane.country_code[0] != ' ')
                         w.val({plane.country_code, 2});
