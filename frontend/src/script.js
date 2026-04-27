@@ -7693,19 +7693,12 @@ let rainviewerRadar = new ol.layer.Tile({
     opacity: 0.7,
 });
 
-let rainviewerClouds = new ol.layer.Tile({
-    name: 'rainviewer_clouds',
-    title: 'RainViewer Clouds',
-    type: 'overlay',
-});
-
 async function refreshRainviewerLayers() {
+    if (document.hidden) return false;
     try {
-        // Get latest timestamps from RainViewer API
         const response = await fetch("https://api.rainviewer.com/public/weather-maps.json?_=" + Date.now());
         const data = await response.json();
 
-        // Update radar layer
         const latestRadar = data.radar.past[data.radar.past.length - 1];
         rainviewerRadar.setSource(new ol.source.XYZ({
             url: `https://tilecache.rainviewer.com${latestRadar.path}/512/{z}/{x}/{y}/6/1_1.png`,
@@ -7713,17 +7706,6 @@ async function refreshRainviewerLayers() {
             crossOrigin: 'anonymous',
             maxZoom: 7,
         }));
-
-        // Update clouds layer
-        const latestClouds = data.satellite?.infrared?.[data.satellite.infrared.length - 1];
-        if (latestClouds) {
-            rainviewerClouds.setSource(new ol.source.XYZ({
-                url: `https://tilecache.rainviewer.com/${latestClouds.path}/512/{z}/{x}/{y}/0/0_0.png`,
-                attributions: '<a href="https://www.rainviewer.com/api.html" target="_blank">RainViewer.com</a>',
-                crossOrigin: 'anonymous',
-                maxZoom: 7,
-            }));
-        }
         return true;
 
     } catch (error) {
@@ -7733,16 +7715,14 @@ async function refreshRainviewerLayers() {
 }
 
 addOverlayLayer("RainViewer Radar", rainviewerRadar);
-addOverlayLayer("RainViewer Clouds", rainviewerClouds);
 
 let rainviewerIntervalId = null;
 
 function onRainviewerVisibilityChange() {
-    const anyVisible = rainviewerRadar.getVisible() || rainviewerClouds.getVisible();
-    if (anyVisible) {
+    if (rainviewerRadar.getVisible()) {
         refreshRainviewerLayers();
         if (rainviewerIntervalId === null) {
-            rainviewerIntervalId = window.setInterval(refreshRainviewerLayers, 2 * 60 * 1000);
+            rainviewerIntervalId = window.setInterval(refreshRainviewerLayers, 10 * 60 * 1000);
         }
     } else {
         if (rainviewerIntervalId !== null) {
@@ -7753,7 +7733,12 @@ function onRainviewerVisibilityChange() {
 }
 
 rainviewerRadar.on('change:visible', onRainviewerVisibilityChange);
-rainviewerClouds.on('change:visible', onRainviewerVisibilityChange);
+
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && rainviewerRadar.getVisible()) {
+        refreshRainviewerLayers();
+    }
+});
 
 function makeDraggable(dragHandle, dragTarget) {
     const moveThreshold = 15;
