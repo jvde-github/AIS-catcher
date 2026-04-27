@@ -5178,19 +5178,29 @@ async function fetchTracks() {
             paths = newPaths;
         } else {
             for (const mmsi in newPaths) {
+                const newer = newPaths[mmsi];
                 if (!paths[mmsi]) {
-                    paths[mmsi] = newPaths[mmsi];
-                } else {
-                    for (const pt of newPaths[mmsi]) {
-                        const ts_start = pt[2];
-                        const idx = paths[mmsi].findIndex(p => p[2] === ts_start);
-                        if (idx >= 0) {
-                            paths[mmsi][idx][3] = pt[3];
-                        } else {
-                            paths[mmsi].unshift(pt);
-                        }
+                    paths[mmsi] = newer;
+                    continue;
+                }
+                const older = paths[mmsi];
+                const merged = [];
+                let i = 0, j = 0;
+                while (i < newer.length && j < older.length) {
+                    const a = newer[i], b = older[j];
+                    if (a[2] === b[2]) {
+                        b[0] = a[0]; b[1] = a[1]; b[3] = a[3];
+                        merged.push(b);
+                        i++; j++;
+                    } else if (a[2] > b[2]) {
+                        merged.push(a); i++;
+                    } else {
+                        merged.push(b); j++;
                     }
                 }
+                while (i < newer.length) merged.push(newer[i++]);
+                while (j < older.length) merged.push(older[j++]);
+                paths[mmsi] = merged;
             }
             for (const mmsi in paths) {
                 if (!(mmsi in shipsDB)) delete paths[mmsi];
@@ -5204,14 +5214,6 @@ async function fetchTracks() {
         return false;
     }
 
-    for (var mmsi in paths) {
-        if (paths.hasOwnProperty(mmsi)) {
-            if (mmsi in shipsDB && paths[mmsi].length > 0) {
-                shipsDB[mmsi].raw.lat = paths[mmsi][0][0];
-                shipsDB[mmsi].raw.lon = paths[mmsi][0][1];
-            }
-        }
-    }
     return true;
 }
 
