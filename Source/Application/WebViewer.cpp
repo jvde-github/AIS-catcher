@@ -991,8 +991,9 @@ const WebViewer::Route WebViewer::routes[] = {
 	 { std::time_t since = w->parseSinceParam(a);
 	   return w->planes.getCompactArray(false, since); }},
 	{"/api/binmsgs.json", nullptr, "application/json",
-	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->getBinaryMessagesJSON() : std::string("[]"); }},
+	 [](WebViewer *w, ReceiverTracker *s, const std::string &a)
+	 { std::time_t since = w->parseSinceParam(a);
+	   return s ? s->getBinaryMessagesJSON(since) : std::string("{}"); }},
 	{"/api/history_full.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
 	 { return s ? s->toHistoryJSON() : std::string("{}"); }},

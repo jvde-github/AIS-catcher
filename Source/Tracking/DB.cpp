@@ -1044,28 +1044,35 @@ void DB::processBinaryMessage(const JSON::JSON &data, Ship &ship, bool &position
 	}
 }
 
-std::string DB::getBinaryMessagesJSON()
+std::string DB::getBinaryMessagesJSON(std::time_t since)
 {
 	std::lock_guard<std::mutex> lock(mtx);
 	content.clear();
 	{
 		JSON::Writer w(content, 4096);
-		w.beginArray();
+		std::time_t tm = time(nullptr);
+
+		w.beginObject().kv("time", tm).kv("timeout", TIME_HISTORY).key("messages").beginArray();
 
 		int startIndex = (binaryMsgIndex + MAX_BINARY_MESSAGES - 1) % MAX_BINARY_MESSAGES;
-		std::time_t tm = time(nullptr);
 
 		for (int i = 0; i < MAX_BINARY_MESSAGES; i++)
 		{
 			int idx = (startIndex - i + MAX_BINARY_MESSAGES) % MAX_BINARY_MESSAGES;
 			const BinaryMessage &msg = binaryMessages[idx];
 
-			if (!msg.used || (long int)tm - (long int)msg.timestamp > TIME_HISTORY)
+			if (!msg.used)
 				continue;
+
+			if ((long int)tm - (long int)msg.timestamp > TIME_HISTORY)
+				break;
+
+			if (since > 0 && msg.timestamp < since)
+				break;
 
 			w.beginObject().kv("type", msg.type).kv("dac", msg.dac).kv("fi", msg.fi).kv("timestamp", msg.timestamp).kv_raw("message", msg.json).endObject();
 		}
-		w.endArray();
+		w.endArray().endObject();
 	}
 	return content;
 }

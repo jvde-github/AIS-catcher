@@ -184,7 +184,7 @@ public:
 	void setOptionKey(AIS::Keys key, const std::string &arg) { filter.SetOptionKey(key, arg); }
 	void setFilter(const AIS::Filter &f) { filter = f; }
 
-	std::string getBinaryMessagesJSON();
+	std::string getBinaryMessagesJSON(std::time_t since = 0);
 
 	// Persistence functions for ship database
 	bool Save(std::ofstream &file);

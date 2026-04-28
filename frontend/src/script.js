@@ -12,6 +12,8 @@ var interval,
     shipsTimeout = 1800,
     shipsLastCleanup = 0,
     binaryDB = {},
+    binarySince = 0,
+    binaryTimeout = 1800,
     planesDB = {},
     planesSince = 0,
     planesTimeout = 300,
@@ -2651,40 +2653,56 @@ function formatTime(timestamp) {
 }
 
 async function fetchBinary() {
-    var standaloneBinaryMessages;
-    binaryDB = {};
-    standaloneBinaryMessages = []; // For messages not at ship locations
+    const isIncremental = binarySince > 0;
+
+    if (!isIncremental) binaryDB = {};
 
     let response;
     try {
-        response = await fetch("api/binmsgs.json?receiver=" + activeReceiver);
-        const messages = await response.json();
+        response = await fetch("api/binmsgs.json?receiver=" + activeReceiver + (isIncremental ? "&since=" + binarySince : ""));
+        const data = await response.json();
 
-        // Group messages by MMSI
-        messages.forEach((msg, index) => {
+        const messages = data.messages || [];
+        const serverTime = data.time || 0;
+        if (data.timeout) binaryTimeout = data.timeout;
+
+        messages.forEach((msg) => {
             if (msg.message && msg.message.mmsi && msg.message.lat && msg.message.lon) {
                 const mmsi = msg.message.mmsi;
 
                 if (!binaryDB[mmsi]) {
                     binaryDB[mmsi] = {
-                        ship_messages: [], // Messages to show at ship location
-                        standalone_messages: [] // Messages to show at their own locations
+                        ship_messages: [],
+                        standalone_messages: []
                     };
                 }
 
-                msg.formattedTime = formatTime(msg.timestamp);
-                msg.index = index + 1;
+                const exists = binaryDB[mmsi].ship_messages.some(m =>
+                    m.timestamp === msg.timestamp && m.dac === msg.dac && m.fi === msg.fi);
+                if (exists) return;
 
-                // Store the message's own coordinates 
+                msg.formattedTime = formatTime(msg.timestamp);
                 msg.message_lat = msg.message.lat;
                 msg.message_lon = msg.message.lon;
 
-                // We'll categorize messages later when drawing them
                 binaryDB[mmsi].ship_messages.push(msg);
             }
         });
 
-    
+        if (serverTime > 0) {
+            binarySince = serverTime;
+            const cutoff = serverTime - binaryTimeout;
+            for (const mmsi in binaryDB) {
+                binaryDB[mmsi].ship_messages = binaryDB[mmsi].ship_messages.filter(m => m.timestamp > cutoff);
+                if (binaryDB[mmsi].ship_messages.length === 0) delete binaryDB[mmsi];
+            }
+        }
+
+        let idx = 0;
+        for (const mmsi in binaryDB) {
+            binaryDB[mmsi].ship_messages.forEach(m => { m.index = ++idx; });
+        }
+
         return true;
     } catch (error) {
 
@@ -3626,6 +3644,7 @@ function closeReceiverDropdown() {
 function onReceiverChange(idx) {
     activeReceiver = parseInt(idx, 10) || 0;
     shipsSince = 0;
+    binarySince = 0;
     const btn = document.getElementById("receiver-btn");
     if (btn) btn.classList.toggle("active", activeReceiver !== 0);
     refresh_data();
@@ -4580,8 +4599,8 @@ function toggleAttribution() {
 function getTooltipContentBinary(mmsiOrBinary) {
     if (typeof mmsiOrBinary === 'number' || typeof mmsiOrBinary === 'string') {
         const mmsi = Number(mmsiOrBinary);
-        if (mmsi in binaryDB && binaryDB[mmsi].length > 0) {
-            const meteoMessages = binaryDB[mmsi].filter(msg =>
+        if (mmsi in binaryDB && binaryDB[mmsi].ship_messages && binaryDB[mmsi].ship_messages.length > 0) {
+            const meteoMessages = binaryDB[mmsi].ship_messages.filter(msg =>
                 msg.message &&
                 msg.message.dac == 1 &&
                 (msg.message.fid == 31 || msg.message.fi == 31)
