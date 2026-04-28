@@ -7705,8 +7705,8 @@ addTileLayer("Satellite", new ol.layer.Tile({
 
 addOverlayLayer("OpenSeaMap", new ol.layer.Tile({
     source: new ol.source.XYZ({
-        url: 'http://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
-        attributions: 'Map data: &copy; <a href="http://www.openseamap.org">OpenSeaMap</a>'
+        url: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
+        attributions: 'Map data: &copy; <a href="https://www.openseamap.org">OpenSeaMap</a>'
     })
 }));
 
