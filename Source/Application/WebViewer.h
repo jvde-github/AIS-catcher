@@ -327,7 +327,6 @@ public:
 
 	bool &active() { return run; }
 	void connect(const std::vector<std::unique_ptr<Receiver>> &receivers);
-	void connect(AIS::Model &model, Connection<JSON::JSON> &json, Device::Device &device);
 	void start();
 	void close();
 	void Reset();

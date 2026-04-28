@@ -389,7 +389,7 @@ void Config::setSharing(const std::vector<JSON::Member> &members)
 
 void Config::set(const std::string &str)
 {
-	std::string config, serial, input;
+	std::string config;
 	int version = 0;
 
 	JSON::Parser parser(JSON_DICT_SETTING);

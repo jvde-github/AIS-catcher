@@ -232,7 +232,7 @@ static void expandResponseFiles(int argc, char *argv[],
 	for (int i = 0; i < argc; i++)
 	{
 		const char *s = argv[i];
-		if (!s) continue;
+		if (!s || s[0] == '\0') continue;
 		if (s[0] != '@')
 		{
 			out.emplace_back(s);
@@ -315,7 +315,7 @@ static void parseSettings(Setting &s, char *argv[], int ptr, int argc)
 
 static bool isOption(const std::string &s)
 {
-	return s.length() >= 2 && s[0] == '-' && std::isalpha(s[1]);
+	return s.length() >= 2 && s[0] == '-' && std::isalpha((unsigned char)s[1]);
 }
 
 static void Assert(bool b, std::string &context, const std::string &msg = "")
@@ -830,7 +830,7 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 			state.receivers.back()->getDeviceManager().SerialPort().SetKey(AIS::KEY_SETTING_BAUDRATE, arg1).SetKey(AIS::KEY_SETTING_PORT, arg2);
 			break;
 		case 'l':
-			Assert(count == 0 || count == 2, param, MSG_NO_PARAMETER);
+			Assert(count == 0 || count == 2, param, "takes no parameters or [JSON on/off].");
 			if (count == 2)
 			{
 				Assert(arg1 == "JSON", param, "requires JSON on/off");
@@ -848,10 +848,10 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 			}
 
-			if (param.length() == 4 && param[2] == ':')
+			if (param.length() >= 4 && param[2] == ':')
 			{
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				int n = param[3] - '0';
+				int n = (int)Util::Parse::Integer(param.substr(3));
 				state.receivers.back()->getDeviceManager().selectDeviceByIndex(n);
 			}
 			else
@@ -900,12 +900,17 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 			{
 				state.xshare_defined = true;
 
-				if (count == 1 && (arg1 == "OFF" || arg1 == "off"))
+				std::string xarg_upper = arg1;
+				Util::Convert::toUpper(xarg_upper);
+
+				if (count == 1 && xarg_upper == "OFF")
 				{
-					// Explicitly disable sharing if "OFF" is provided as second parameter
+					// Explicitly disable sharing if "off" is provided as second parameter
 					Info() << "Community feed sharing disabled.";
 					break;
 				}
+
+				bool xarg_is_on = (count == 1 && xarg_upper == "ON");
 
 				if (!comm_feed)
 				{
@@ -915,7 +920,7 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 					comm_feed->SetKey(AIS::KEY_SETTING_MSGFORMAT, "COMMUNITY_HUB");
 				}
 
-				if (count >= 1 && comm_feed)
+				if (count >= 1 && !xarg_is_on && comm_feed)
 					comm_feed->SetKey(AIS::KEY_SETTING_UUID, arg1);
 			}
 			break;

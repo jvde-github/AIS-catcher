@@ -780,28 +780,6 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 	raw_counter.setFilter(filter);
 }
 
-void WebViewer::connect(AIS::Model &m, Connection<JSON::JSON> &json, Device::Device &device)
-{
-	if (m.Output().out.canConnect(groups_in))
-	{
-		if (states.empty())
-		{
-			states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker()));
-			states[0]->label = "All";
-			states[0]->applyConfig(tracking, filter);
-		}
-
-		states[0]->connectJSON(json);
-		device >> raw_counter;
-
-		states[0]->sample_rate = device.getRateDescription();
-		states[0]->product = device.getProduct();
-		states[0]->vendor = device.getVendor().empty() ? "-" : device.getVendor();
-		states[0]->serial = device.getSerial().empty() ? "-" : device.getSerial();
-		states[0]->model_name = m.getName();
-	}
-}
-
 void WebViewer::Reset()
 {
 	for (auto &s : states)
