@@ -95,8 +95,9 @@ export TEMP_FILE
 BASE_DIR=$(cd "$BASE_DIR" && pwd)
 echo "Using base directory: $BASE_DIR"
 
-# Find all files recursively (excluding the lib/ build directory) and process them
-find "$BASE_DIR" -type f -not -path "*/lib/*" -exec bash -c 'process_file "$0"' {} \;
+# Find all files recursively (excluding the lib/ build directory) and process them.
+# Sort for reproducible byte-identical output across runs (find traversal order is filesystem-dependent).
+find "$BASE_DIR" -type f -not -path "*/lib/*" | LC_ALL=C sort | while read -r f; do process_file "$f"; done
 
 # Remove temporary file
 rm -f "$TEMP_FILE"
@@ -107,8 +108,8 @@ cat >> "$OUTPUT_FILE" << 'EOF'
 void initialize() {
 EOF
 
-# Add each file to the map
-find "$BASE_DIR" -type f -not -path "*/lib/*" | while read -r file; do
+# Add each file to the map (sorted for reproducible output)
+find "$BASE_DIR" -type f -not -path "*/lib/*" | LC_ALL=C sort | while read -r file; do
     relative_path="${file#$BASE_DIR/}"
     # Skip files outside BASE_DIR
     if [ "$relative_path" = "$file" ]; then
