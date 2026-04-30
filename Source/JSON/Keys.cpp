@@ -113,6 +113,34 @@ namespace AIS
 		"Reserved",
 	};
 
+	// ITU-R M.1371-6 Table 84 (msg 28), 2-bit Restricted Use Indicator.
+	const std::vector<std::string> LookupTable_aton_restricted_use = {
+		"Unrestricted use",
+		"Restricted to territorial waters of flag state",
+		"Restricted to Exclusive Economic Zone of flag state",
+		"Restricted as defined by flag state",
+	};
+
+	// ITU-R M.1371-6 Table 84 (msg 28), 4-bit AtoN Dimensions Type.
+	const std::vector<std::string> LookupTable_aton_dim_type = {
+		"Default (msg 21 dimensions)",
+		"AtoN Height and Structural Area",
+		"AtoN Swing Circle",
+		"Mobile AtoN Vector",
+		"AtoN Area-Polygon",
+		"AtoN Area-Circle",
+		"AtoN Boundary Line 1",
+		"AtoN Area-Sector",
+		"AtoN Boundary Line 2",
+		"AtoN Area-Quadrilateral",
+		"AtoN Large Boundary Line 1",
+		"AtoN Large Area-Sector",
+		"AtoN Large Boundary Line 2",
+		"AtoN Large Area-Quadrilateral",
+		"Reserved",
+		"Reserved",
+	};
+
 	// ITU-R M.1371-6 Table 77 (msg 24B), 2-bit VDES capabilities.
 	const std::vector<std::string> LookupTable_vdes_capabilities = {
 		"AIS only",
