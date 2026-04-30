@@ -1008,9 +1008,10 @@ namespace AIS
 			U(msg, AIS::KEY_TO_STARBOARD, 295, 6);
 			E(msg, AIS::KEY_EPFD, 301, 4, AIS::KEY_EPFD_TEXT);
 			B(msg, AIS::KEY_ACCURACY, 56, 1);
-			U(msg, AIS::KEY_RESERVED, 38, 8);
+			X(msg, AIS::KEY_SPARE, 38, 8);
 			U(msg, AIS::KEY_SECOND, 133, 6);
-			U(msg, AIS::KEY_REGIONAL, 139, 4);
+			// M.1371-6 Table 69: bits 139-142 are spare (pre-M.1371-6 was 4-bit regional reserved).
+			X(msg, AIS::KEY_SPARE, 139, 4);
 			B(msg, AIS::KEY_RAIM, 305, 1);
 			B(msg, AIS::KEY_DTE, 306, 1);
 			B(msg, AIS::KEY_ASSIGNED, 307, 1);
