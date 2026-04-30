@@ -44,6 +44,9 @@ namespace AIS
 	extern const std::string KeyMap[][JSON_DICT_COLUMNS];
 	extern const KeyInfo KeyInfoMap[];
 	extern const std::vector<std::string> LookupTable_aid_types;
+	extern const std::vector<std::string> LookupTable_aton_station_types;
+	extern const std::vector<std::string> LookupTable_aton_on_station_status;
+	extern const std::vector<std::string> LookupTable_vdes_capabilities;
 	extern const std::vector<std::string> LookupTable_dte_types;
 	extern const std::vector<std::string> LookupTable_epfd_types;
 	extern const std::vector<std::string> LookupTable_interval_types;

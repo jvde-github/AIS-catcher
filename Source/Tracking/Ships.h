@@ -34,7 +34,7 @@ const int CLASS_B_STATIC_MASK = 1 << 24;
 
 const int BASESTATION_MASK = (1 << 4) | (1 << 16) | (1 << 17) | (1 << 20) | (1 << 22) | (1 << 23);
 const int SAR_MASK = 1 << 9;
-const int ATON_MASK = 1 << 21;
+const int ATON_MASK = (1 << 21) | (1 << 28);
 
 struct ShipLL
 {

@@ -29,7 +29,7 @@ class PrometheusCounter : public StreamIn<JSON::JSON> {
 	int _LONG_RANGE_CUTOFF = 2500;
 
 	unsigned int _count;
-	unsigned int _msg[27];
+	unsigned int _msg[28];
 	unsigned int _channel[4];
 
 	float _distance;

@@ -346,9 +346,9 @@ namespace AIS
 		if (getLength() == 0)
 			return true;
 
-		const int ml[27] = {149, 149, 149, 168, 418, 88, 72, 56, 168, 70, 168, 72, 40, 40, 88, 92, 80, 168, 312, 70, 271, 145, 154, 160, 72, 60, 96};
+		const int ml[28] = {149, 149, 149, 168, 418, 88, 72, 56, 168, 70, 168, 72, 40, 40, 88, 92, 80, 168, 312, 70, 271, 145, 154, 160, 72, 60, 96, 168};
 
-		if (type() < 1 || type() > 27)
+		if (type() < 1 || type() > 28)
 			return false;
 		if (getLength() < ml[type() - 1])
 			return false;
@@ -805,7 +805,7 @@ namespace AIS
 			allow = 0;
 			while (getline(ss, type_str, ','))
 			{
-				unsigned type = Util::Parse::Integer(type_str, 1, 27);
+				unsigned type = Util::Parse::Integer(type_str, 1, 28);
 				allow |= 1U << type;
 			}
 			return true;
@@ -830,7 +830,7 @@ namespace AIS
 			unsigned block = 0;
 			while (getline(ss, type_str, ','))
 			{
-				unsigned type = Util::Parse::Integer(type_str, 1, 27);
+				unsigned type = Util::Parse::Integer(type_str, 1, 28);
 				block |= 1U << type;
 			}
 			allow = ~block & all;
@@ -925,7 +925,7 @@ namespace AIS
 			return std::string("ALL");
 
 		std::string ret;
-		for (unsigned i = 1; i <= 27; i++)
+		for (unsigned i = 1; i <= 28; i++)
 		{
 			if ((allow & (1U << i)) > 0)
 				ret += (!ret.empty() ? std::string(",") : std::string("")) + std::to_string(i);

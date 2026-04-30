@@ -120,7 +120,7 @@ namespace AIS
 		switch (len)
 		{
 		case 6 + END:
-			return t > 27 || t == 0;
+			return t > 28 || t == 0;
 		case 8 + 30 + END:
 			return msg.mmsi() > 999999999;
 		case 72 + END:
@@ -130,7 +130,7 @@ namespace AIS
 		case 160 + END:
 			return t == 15 || t == 20 || t == 23;
 		case 168 + END:
-			return t == 1 || t == 2 || t == 3 || t == 4 || t == 7 || t == 9 || t == 11 || t == 18 || t == 22 || t == 24 || t == 25 || t == 27;
+			return t == 1 || t == 2 || t == 3 || t == 4 || t == 7 || t == 9 || t == 11 || t == 18 || t == 22 || t == 24 || t == 25 || t == 27 || t == 28;
 		case 312 + END:
 			return t == 19;
 		case 361 + END:

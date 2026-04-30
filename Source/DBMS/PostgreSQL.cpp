@@ -174,6 +174,7 @@ namespace IO
 						ok = execTableInsert("ais_vessel_static", entry, keys_vessel_static, sizeof(keys_vessel_static) / sizeof(int), msg_id_ptr);
 					break;
 				case 21:
+				case 28:
 					if (ATON)
 						ok = execTableInsert("ais_aton", entry, keys_aton, sizeof(keys_aton) / sizeof(int), msg_id_ptr);
 					break;

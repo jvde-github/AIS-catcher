@@ -3707,7 +3707,7 @@ function updateStat(stat, tf) {
     document.getElementById("stat_" + tf + "_msg24").innerText = stat[tf].msg[23].toLocaleString();
     document.getElementById("stat_" + tf + "_msg4").innerText = stat[tf].msg[3].toLocaleString();
     document.getElementById("stat_" + tf + "_msg9").innerText = stat[tf].msg[8].toLocaleString();
-    document.getElementById("stat_" + tf + "_msg21").innerText = stat[tf].msg[20].toLocaleString();
+    document.getElementById("stat_" + tf + "_msg21").innerText = (stat[tf].msg[20] + (stat[tf].msg[27] || 0)).toLocaleString();
     document.getElementById("stat_" + tf + "_msg27").innerText = stat[tf].msg[26].toLocaleString();
 
     var count_other = 0;
@@ -5287,7 +5287,7 @@ function isShipcardMax() {
 function getStringfromMsgType(m) {
     let s = "";
     let delim = "";
-    for (let i = 1; i <= 27; i++)
+    for (let i = 1; i <= 28; i++)
         if ((m & (1 << i)) != 0) {
             s += delim + Number(i).toFixed(0);
             delim = ", ";

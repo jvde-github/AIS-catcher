@@ -36,13 +36,13 @@ class MessageStatistics {
 	std::mutex mtx;
 
 	static const int _MAGIC = 0x4f82b;
-	static const int _VERSION = 2;
+	static const int _VERSION = 3;
 	static const int _RADAR_BUCKETS = 18;
 
 	int _LONG_RANGE_CUTOFF = 2500;
 
 	int _count, _exclude, _vessels;
-	int _msg[27];
+	int _msg[28];
 	int _channel[4];
 
 	float _level_min, _level_max, _ppm, _distance;
@@ -74,7 +74,7 @@ public:
 
 		std::lock_guard<std::mutex> l{ this->mtx };
 
-		if (m.type() > 27 || m.type() < 1) return;
+		if (m.type() > 28 || m.type() < 1) return;
 
 		_count++;
 		if (new_vessel) _vessels++;
@@ -91,7 +91,7 @@ public:
 		}
 
 		// for range we ignore atons
-		if (m.type() == 21) return;
+		if (m.type() == 21 || m.type() == 28) return;
 
 		if (!tag.validated || tag.distance > _LONG_RANGE_CUTOFF || (m.repeat() > 0 && m.type() != 27))
 			return;
@@ -152,7 +152,7 @@ public:
 		w.endArray();
 
 		w.key("msg").beginArray();
-		for (int i = 0; i < 27; i++) w.val(empty ? 0 : _msg[i]);
+		for (int i = 0; i < 28; i++) w.val(empty ? 0 : _msg[i]);
 		w.endArray();
 
 		w.endObject();
@@ -177,13 +177,21 @@ public:
 		std::lock_guard<std::mutex> l{ this->mtx };
 
 		int magic = 0, version = 0;
-		bool ok = R(magic) && R(version) && R(_count)
-			&& (version != _VERSION || R(_vessels))
-			&& R(_msg) && R(_channel)
-			&& R(_level_min) && R(_level_max) && R(_ppm) && R(_distance)
-			&& R(_radarA) && R(_radarB);
+		if (!(R(magic) && R(version) && R(_count))) return false;
+		if (magic != _MAGIC) return false;
+		if (version != 1 && version != 2 && version != _VERSION) return false;
 
-		return ok && magic == _MAGIC && (version == _VERSION || version == 1);
+		if (version >= 2 && !R(_vessels)) return false;
+		if (version < 2) _vessels = 0;
+
+		// v3 grew _msg from 27 to 28 entries to include type 28 (AtoN single-slot report).
+		int n = (version >= 3) ? 28 : 27;
+		if (!file.read((char *)_msg, n * sizeof(int))) return false;
+		if (version < 3) _msg[27] = 0;
+
+		return (bool)(R(_channel)
+			&& R(_level_min) && R(_level_max) && R(_ppm) && R(_distance)
+			&& R(_radarA) && R(_radarB));
 	}
 
 #undef W

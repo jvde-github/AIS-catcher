@@ -56,7 +56,7 @@ void PrometheusCounter::Clear()
 void PrometheusCounter::Add(const AIS::Message &m, const TAG &tag, bool new_vessel)
 {
 
-	if (m.type() > 27 || m.type() < 1)
+	if (m.type() > 28 || m.type() < 1)
 		return;
 	if (tag.shipclass < 0 || tag.shipclass > 13)
 		return;
@@ -135,7 +135,7 @@ std::string PrometheusCounter::toPrometheus()
 		element += "ais_stat_count_channel_" + ch + " " + std::to_string(_channel[i]) + "\n";
 	}
 
-	for (int i = 0; i < 27; i++)
+	for (int i = 0; i < 28; i++)
 	{
 		std::string type = std::to_string(i + 1);
 		element += "# HELP ais_stat_count_type_" + type + " Total number of messages of type " + type + "\n";
