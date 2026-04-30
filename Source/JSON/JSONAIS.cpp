@@ -1127,45 +1127,40 @@ namespace AIS
 			}
 			break;
 		case 25:
-		{
-			// Table 79: Single-slot binary message
-			B(msg, AIS::KEY_ADDRESSED, 38, 1);
-			B(msg, AIS::KEY_AI_AVAILABLE, 39, 1);
-			int p = 40;
-			if (msg.getUint(38, 1))
-			{
-				U(msg, AIS::KEY_DEST_MMSI, 40, 30);
-				X(msg, AIS::KEY_SPARE, 70, 2);
-				p = 72;
-			}
-			if (msg.getUint(39, 1))
-			{
-				U(msg, AIS::KEY_DAC, p, 10);
-				U(msg, AIS::KEY_FID, p + 10, 6);
-			}
-			break;
-		}
 		case 26:
 		{
-			// Table 81: Multi-slot binary message with comm state
+			// Tables 79/81: structurally identical envelope (msg 26 has trailing 20-bit comm state).
+			// When binary_data_flag=1, the DAC/FID layout matches msg 6 (addressed) or msg 8 (broadcast).
 			B(msg, AIS::KEY_ADDRESSED, 38, 1);
 			B(msg, AIS::KEY_AI_AVAILABLE, 39, 1);
-			int p = 40;
-			if (msg.getUint(38, 1))
+			bool addressed = msg.getUint(38, 1);
+			bool structured = msg.getUint(39, 1);
+			if (addressed)
 			{
 				U(msg, AIS::KEY_DEST_MMSI, 40, 30);
 				X(msg, AIS::KEY_SPARE, 70, 2);
-				p = 72;
 			}
-			if (msg.getUint(39, 1))
+			if (structured)
 			{
-				U(msg, AIS::KEY_DAC, p, 10);
-				U(msg, AIS::KEY_FID, p + 10, 6);
+				if (addressed)
+				{
+					U(msg, AIS::KEY_DAC, 72, 10);
+					U(msg, AIS::KEY_FID, 82, 6);
+					ProcessMsg6Data(msg);
+				}
+				else
+				{
+					U(msg, AIS::KEY_DAC, 40, 10);
+					U(msg, AIS::KEY_FID, 50, 6);
+					ProcessMsg8Data(msg);
+				}
 			}
-			// Trailing 19-bit communication state preceded by 1-bit selector flag and 4-bit spare.
-			int comm_start = msg.getLength() - 20;
-			if (comm_start >= 40)
-				ProcessRadio(msg, comm_start, 20);
+			if (msg.type() == 26)
+			{
+				int comm_start = msg.getLength() - 20;
+				if (comm_start >= 40)
+					ProcessRadio(msg, comm_start, 20);
+			}
 			break;
 		}
 		case 27:
