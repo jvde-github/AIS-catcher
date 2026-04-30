@@ -1087,7 +1087,7 @@ namespace AIS
 			SL(msg, AIS::KEY_SW_LON, 75, 18, 1.0 / 600.0f, 0);
 			SL(msg, AIS::KEY_SW_LAT, 93, 17, 1.0 / 600.0f, 0);
 			E(msg, AIS::KEY_STATION_TYPE, 110, 4);
-			E(msg, AIS::KEY_SHIP_TYPE, 114, 8);
+			E(msg, AIS::KEY_SHIPTYPE, 114, 8, AIS::KEY_SHIPTYPE_TEXT);
 			U(msg, AIS::KEY_TXRX, 144, 2);
 			E(msg, AIS::KEY_INTERVAL, 146, 4);
 			U(msg, AIS::KEY_QUIET, 150, 4);
@@ -1125,6 +1125,48 @@ namespace AIS
 				}
 			}
 			break;
+		case 25:
+		{
+			// Table 79: Single-slot binary message
+			B(msg, AIS::KEY_ADDRESSED, 38, 1);
+			B(msg, AIS::KEY_AI_AVAILABLE, 39, 1);
+			int p = 40;
+			if (msg.getUint(38, 1))
+			{
+				U(msg, AIS::KEY_DEST_MMSI, 40, 30);
+				X(msg, AIS::KEY_SPARE, 70, 2);
+				p = 72;
+			}
+			if (msg.getUint(39, 1))
+			{
+				U(msg, AIS::KEY_DAC, p, 10);
+				U(msg, AIS::KEY_FID, p + 10, 6);
+			}
+			break;
+		}
+		case 26:
+		{
+			// Table 81: Multi-slot binary message with comm state
+			B(msg, AIS::KEY_ADDRESSED, 38, 1);
+			B(msg, AIS::KEY_AI_AVAILABLE, 39, 1);
+			int p = 40;
+			if (msg.getUint(38, 1))
+			{
+				U(msg, AIS::KEY_DEST_MMSI, 40, 30);
+				X(msg, AIS::KEY_SPARE, 70, 2);
+				p = 72;
+			}
+			if (msg.getUint(39, 1))
+			{
+				U(msg, AIS::KEY_DAC, p, 10);
+				U(msg, AIS::KEY_FID, p + 10, 6);
+			}
+			// Trailing 19-bit communication state preceded by 1-bit selector flag and 4-bit spare.
+			int comm_start = msg.getLength() - 20;
+			if (comm_start >= 40)
+				ProcessRadio(msg, comm_start, 20);
+			break;
+		}
 		case 27:
 			U(msg, AIS::KEY_ACCURACY, 38, 1);
 			U(msg, AIS::KEY_RAIM, 39, 1);

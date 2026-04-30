@@ -374,18 +374,19 @@ namespace AIS
 		"Other Type - no additional information",
 	};
 
+	// ITU-R M.1371-6 Table 74 (msg 23 station_type, 4-bit).
 	const std::vector<std::string> LookupTable_station_types = {
 		"All types of mobiles (default)",
-		"Reserved for future use",
+		"Class A AIS stations only",
 		"All types of Class B mobile stations",
 		"SAR airborne mobile station",
-		"Aid to Navigation station",
-		"Class B shipborne mobile station (IEC62287 only)",
-		"Regional use and inland waterways",
-		"Regional use and inland waterways",
-		"Regional use and inland waterways",
-		"Regional use and inland waterways",
-		"Reserved for future use",
+		"Class B \"SO\" mobile stations only",
+		"Class B \"CS\" AIS stations only",
+		"Inland waterways",
+		"Regional use",
+		"Regional use",
+		"Regional use",
+		"Base station coverage area",
 		"Reserved for future use",
 		"Reserved for future use",
 		"Reserved for future use",
