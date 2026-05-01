@@ -680,7 +680,7 @@ namespace AIS
 		else if (dac == 1 && (fid == 16 || fid == 40))         asm_imo_fid16_persons(msg, start);
 		else if (dac == 1 && fid == 30)                        asm_imo_fid30_text_addressed(msg, start);
 		else if (dac == 200 && fid == 55)                      asm_inland_fid55_persons(msg, start);
-		else if ((dac == 235 || dac == 250) && fid == 10)      asm_uk_fid10_aton_monitor(msg, start);
+		else if ((dac == 235 || dac == 250 || dac == 366) && fid == 10)      asm_uk_fid10_aton_monitor(msg, start);
 		else if (dac == 235 && fid == 20)                      asm_uk_fid20_buoy_position(msg, start);
 		else if ((dac == 316 || dac == 366) && fid == 1)       asm_usa_fid1_sls_meteo(msg, start);
 		else if ((dac == 316 || dac == 366) && fid == 2)       asm_usa_fid2_sls_lock(msg, start);
@@ -704,6 +704,7 @@ namespace AIS
 		else if (dac == 1 && fid == 27)                        asm_imo_fid27_route(msg, start);
 		else if (dac == 1 && fid == 26)                        asm_imo_fid26_environmental(msg, start);
 		else if (dac == 1 && fid == 11)                        asm_imo_fid11_meteo_hydro_legacy(msg, start);
+		else if ((dac == 235 || dac == 250 || dac == 366) && fid == 10)      asm_uk_fid10_aton_monitor(msg, start);
 		else if ((dac == 316 || dac == 366) && fid == 1)       asm_usa_fid1_sls_meteo(msg, start);
 		else if ((dac == 316 || dac == 366) && fid == 2)       asm_usa_fid2_sls_lock(msg, start);
 		else if ((dac == 316 || dac == 366) && fid == 32)      asm_usa_fid32_sls_specific(msg, start);
