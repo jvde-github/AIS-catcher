@@ -56,10 +56,6 @@ FILES = [
     "Utilities/PackedInt.h",
     "Utilities/Parse.h",
     "Utilities/Parse.cpp",
-    "Utilities/StreamHelpers.h",
-    "Utilities/StreamHelpers.cpp",
-    "Utilities/TemplateString.h",
-    "Utilities/TemplateString.cpp",
 ]
 
 

@@ -36,8 +36,6 @@ set(AIS_SOURCES
     ${SRC}/Utilities/Convert.cpp
     ${SRC}/Utilities/Helper.cpp
     ${SRC}/Utilities/Parse.cpp
-    ${SRC}/Utilities/StreamHelpers.cpp
-    ${SRC}/Utilities/TemplateString.cpp
 )
 
 python_add_library(_core MODULE

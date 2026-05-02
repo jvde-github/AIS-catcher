@@ -3,7 +3,7 @@
 from ._core import Decoder
 from .types import AISMessage
 
-__version__ = "0.68.0a5"
+__version__ = "0.68.0a6"
 __all__ = ["Decoder", "iter_decode", "AISMessage"]
 
 

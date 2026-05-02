@@ -15,9 +15,6 @@
 #include "JSON/JSON.h"
 #include "JSON/Keys.h"
 
-// Stub — Common.h declares this; Main.cpp normally provides it.
-void StopRequest() {}
-
 // Cache of interned PyUnicode keys, indexed by AIS::Keys enum.
 static PyObject **g_keys = nullptr;
 
