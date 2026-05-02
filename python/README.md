@@ -43,7 +43,7 @@ print(dec.next())
 
 aiscat sits within 1% of the native AIS-catcher CLI despite producing rich Python `dict` objects (the CLI just stringifies JSON to stdout). It's **3× faster than `gpsdecode`**, **5× faster than libais**, and **21× faster than pyais**.
 
-The full benchmark — including the test-fixture generator — is in [benchmarks/](benchmarks/). Types 1–4 (single-line position reports / base station reports) are used because libais's stream API does not reassemble multi-part AIVDM groups; on a mixed corpus including type 5 (multi-part static data), libais silently drops every type-5 message. AIS-catcher, gpsdecode, and pyais handle multi-part correctly.
+Types 1–4 (single-line position reports / base station reports) are used because libais's stream API does not reassemble multi-part AIVDM groups; on a mixed corpus including type 5 (multi-part static data), libais silently drops every type-5 message. AIS-catcher, gpsdecode, and pyais handle multi-part correctly.
 
 For perspective: a busy AIS shore station produces ~50 msg/s. Throughput matters when you're replaying recordings or aggregating dozens of receivers, not for live decode of a single antenna.
 
