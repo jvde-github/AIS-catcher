@@ -29,3 +29,17 @@ Issues = "https://github.com/jvde-github/AIS-catcher/issues"
 minimum-version = "0.5"
 cmake.version = ">=3.15"
 wheel.packages = ["src/aiscat"]
+
+[tool.cibuildwheel]
+build = "cp39-* cp310-* cp311-* cp312-* cp313-*"
+skip = "*-win32 *-manylinux_i686 *-musllinux_i686 pp*"
+test-command = 'python -c "import aiscat; d = aiscat.Decoder(); d.feed(b\"!AIVDM,1,1,,A,15MgK45P3@G?fl0E\\x60JbR0OwT0@MS,0*4E\\r\\n\"); m = d.next(); assert m and m[\"mmsi\"] == 366730000, m"'
+
+[tool.cibuildwheel.linux]
+archs = ["auto64"]
+
+[tool.cibuildwheel.macos]
+archs = ["auto"]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
