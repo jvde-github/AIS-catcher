@@ -4,16 +4,13 @@ A fast, complete Python library for decoding AIS NMEA into structured dicts. Bui
 
 ## Why
 
-Python has two established AIS decoders: [pyais](https://pypi.org/project/pyais/) (pure-Python, MIT) and [libais](https://pypi.org/project/libais/) (C extension, Apache 2.0). Both have gaps:
+aiscat is built for fast, complete decoding of AIS NMEA from Python. Output dicts match the [AIS-catcher JSON format](https://jvde-github.github.io/AIS-catcher-docs/references/JSON-decoding/) field-for-field, so anything you've built around AIS-catcher's documented JSON output works the same when the source becomes a Python iterator.
 
-- **pyais** is ~20× slower than what's achievable in C.
-- **libais**'s stream layer does not reassemble multi-part AIVDM — it silently drops every type-5 message (and other multi-part types).
+Coverage is meant to be exhaustive: all standard message types (1–28), multi-part AIVDM reassembly, country-code resolution from MMSI prefix, lookup-table text fields (`status_text`, `shiptype_text`, …) populated from the same tables AIS-catcher uses, and **decoding of binary application messages** — type 6 and 8 ASMs across IMO, IALA, USA, and inland-waterway DAC/FID payloads (AtoN monitoring, meteo/hydro, route info, persons-on-board, and others).
 
-aiscat closes both gaps by exposing AIS-catcher's mature decoder as a Python extension: full multi-part handling, lookup-table text fields (`status_text`, `shiptype_text`, …), country-code resolution, message 6/8 ASMs — everything AIS-catcher decodes — at C++ speed, in a `dict` shape that matches what AIS-catcher itself emits.
+For live decode of a single station (~50 msg/s) any decent AIS library is fast enough. aiscat earns its keep when throughput matters: replay of historical recordings, multi-receiver fan-in, batch analysis, and research workloads on millions to billions of messages.
 
-For live decode of a single station (~50 msg/s) any of these libraries is fast enough. aiscat earns its keep when throughput matters: replay of historical recordings, multi-receiver fan-in, batch analysis, and research workloads on millions to billions of messages.
-
-**Tradeoffs.** aiscat is a C++ extension, so `pip install` either picks up a pre-built wheel for your platform or falls back to a source build that needs CMake and a C++11 compiler. The API is deliberately small — feed bytes, get dicts — without the configuration knobs, custom output formats, or filter chains pyais offers. And the licence is GPLv3 (inherited from AIS-catcher), so linking aiscat into a closed-source application makes that application GPL too. If any of those matter more to you than throughput, pyais is the right choice; aiscat is the right choice when you want the AIS-catcher JSON format produced quickly and reliably from Python.
+**Tradeoffs.** aiscat is a C++ extension, so `pip install` either picks up a pre-built wheel for your platform or falls back to a source build that needs CMake and a C++11 compiler. The API is deliberately small — feed bytes, get dicts — without configuration knobs or custom output formats. And the licence is GPLv3 (inherited from AIS-catcher), so linking aiscat into a closed-source application makes that application GPL too; see the Licence section below for permissive alternatives.
 
 ## Quickstart
 
