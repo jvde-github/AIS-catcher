@@ -1,0 +1,17 @@
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.so
+*.pyd
+
+# Virtualenvs
+.venv/
+venv/
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Benchmark fixtures (regenerable)
+benchmarks/*.nmea

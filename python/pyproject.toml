@@ -1,0 +1,31 @@
+[build-system]
+requires = ["scikit-build-core>=0.5"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "aiscat"
+version = "0.68.0"
+description = "Fast Python bindings for AIS-catcher's NMEA-to-JSON AIS decoder"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.9"
+authors = [{name = "jvde-github", email = "jvde.github@gmail.com"}]
+keywords = ["ais", "nmea", "maritime", "ship-tracking", "sdr", "aivdm"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Communications :: Ham Radio",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+]
+
+[project.urls]
+Repository = "https://github.com/jvde-github/AIS-catcher"
+Issues = "https://github.com/jvde-github/AIS-catcher/issues"
+
+[tool.scikit-build]
+minimum-version = "0.5"
+cmake.version = ">=3.15"
+wheel.packages = ["src/aiscat"]
