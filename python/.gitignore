@@ -15,3 +15,6 @@ __pycache__/
 
 # Benchmark fixtures (regenerable)
 benchmarks/*.nmea
+
+# Vendored upstream Source/ — populated by scripts/prepare_sdist.py for sdist builds
+Source/

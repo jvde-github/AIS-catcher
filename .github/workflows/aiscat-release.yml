@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.21
+        uses: pypa/cibuildwheel@v3.4.1
         with:
           package-dir: python
 
@@ -45,6 +45,10 @@ jobs:
 
       - name: Install build
         run: python -m pip install build
+
+      - name: Vendor upstream Source/ into python/
+        working-directory: python
+        run: python scripts/prepare_sdist.py
 
       - name: Build sdist
         working-directory: python

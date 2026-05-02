@@ -11,8 +11,17 @@ endif()
 
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 
-set(AIS_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
-set(SRC ${AIS_ROOT}/Source)
+# Locate upstream Source/. Two valid layouts:
+#   - git checkout: python/ is a sibling of Source/  -> use ../Source
+#   - sdist:        Source/ has been vendored inside python/ by scripts/prepare_sdist.py
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/Source/Marine/NMEA.cpp)
+    set(SRC ${CMAKE_CURRENT_SOURCE_DIR}/Source)
+elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../Source/Marine/NMEA.cpp)
+    set(SRC ${CMAKE_CURRENT_SOURCE_DIR}/../Source)
+else()
+    message(FATAL_ERROR "Cannot find upstream Source/ — looked in ./Source and ../Source")
+endif()
+message(STATUS "Using upstream Source from ${SRC}")
 
 set(AIS_SOURCES
     ${SRC}/Marine/AIS.cpp

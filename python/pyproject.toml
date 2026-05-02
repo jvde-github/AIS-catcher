@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "aiscat"
-version = "0.68.0a4"
+version = "0.68.0a5"
 description = "Fast Python bindings for AIS-catcher's NMEA-to-JSON AIS decoder"
 readme = "README.md"
 license = "GPL-3.0-or-later"
@@ -29,9 +29,14 @@ Issues = "https://github.com/jvde-github/AIS-catcher/issues"
 minimum-version = "0.5"
 cmake.version = ">=3.15"
 wheel.packages = ["src/aiscat"]
+# Vendored upstream Source/ files (populated by scripts/prepare_sdist.py).
+sdist.include = [
+    "Source/**/*.h",
+    "Source/**/*.cpp",
+]
 
 [tool.cibuildwheel]
-build = "cp39-* cp310-* cp311-* cp312-* cp313-*"
+build = "cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
 skip = "*-win32 *-manylinux_i686 *-musllinux_i686 pp*"
 test-command = "python {project}/python/tests/test_decode.py"
 
