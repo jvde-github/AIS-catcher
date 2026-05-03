@@ -49,18 +49,21 @@ For perspective: a busy AIS shore station produces ~50 msg/s. Throughput matters
 
 ```python
 class Decoder:
-    def __init__(self, *, annotated: bool = False) -> None: ...
+    def __init__(self, *, annotated: bool = False, country: bool = False) -> None: ...
     def feed(self, data: bytes | bytearray | str) -> int: ...
     def next(self) -> dict | None: ...
     def pending(self) -> int: ...
 
-def iter_decode(chunks: Iterable[bytes | str], *, annotated: bool = False) -> Iterator[dict]: ...
+def iter_decode(
+    chunks: Iterable[bytes | str], *, annotated: bool = False, country: bool = False
+) -> Iterator[dict]: ...
 ```
 
 - `feed(data)` parses NMEA AIVDM/AIVDO sentences out of the buffer. Multipart messages are reassembled internally; partial chunks are buffered until completed. Returns the number of decoded messages waiting.
 - `next()` pops one decoded message as a `dict`, or `None` if the queue is empty. Pop in a loop after each `feed()`.
 - The queue is unbounded — drain it after each feed, or memory grows.
 - `annotated=True` wraps every scalar as `{"value": x, "unit": ..., "description": ..., "text": ...}` (the latter three included only when defined for that key) — useful for self-describing displays and field reference. See [Annotated mode](#annotated-mode) below.
+- `country=True` adds `country` and `country_code` to every message, derived from the MMSI prefix (ITU-R M.585 MID table).
 
 ```python
 # Streaming pattern

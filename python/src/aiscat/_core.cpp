@@ -177,9 +177,9 @@ typedef struct {
 } DecoderObject;
 
 static int Decoder_init(DecoderObject *self, PyObject *args, PyObject *kwds) {
-    static const char *kwlist[] = {"annotated", nullptr};
-    int annotated = 0;
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|p", (char **)kwlist, &annotated))
+    static const char *kwlist[] = {"annotated", "country", nullptr};
+    int annotated = 0, country = 0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|pp", (char **)kwlist, &annotated, &country))
         return -1;
 
     self->nmea = new AIS::NMEA();
@@ -188,6 +188,7 @@ static int Decoder_init(DecoderObject *self, PyObject *args, PyObject *kwds) {
     self->sink->annotated = (annotated != 0);
     self->tag = new TAG();
     self->tag->clear();
+    if (country) self->tag->mode |= 4;  // enables JSONAIS::COUNTRY (MMSI prefix → country, country_code)
     self->nmea->out.Connect(self->jsonais);
     self->jsonais->out.Connect(self->sink);
     return 0;
