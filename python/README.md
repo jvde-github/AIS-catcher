@@ -108,11 +108,13 @@ Message 1 — Position report
 
 Field          Value                                     Unit                Description
 -------------  ----------------------------------------  ------------------  -------------------------------------------------------------------------
-rxuxtime       1777804294.817 (2026-05-03 10:31:34 UTC)                      Host receive time (Unix epoch s).
+rxuxtime       1777805849.119 (2026-05-03 10:57:29 UTC)                      Host receive time (Unix epoch s).
 channel        B                                                             VHF channel (A or B).
 type           1 (Position report)                                           Message Type
 repeat         0                                                             Repeat indicator (0..3; 3=do not repeat).
 mmsi           244009864                                                     MMSI
+country        Netherlands                                                   Flag country name derived from MMSI MID.
+country_code   NL                                                            ISO-3166 alpha-2 country code derived from MMSI MID.
 status         0 (Under way using engine)                                    Navigation Status
 status_text    Under way using engine                                        Navigation status text.
 turn_unscaled  0                                                             Raw ROT field (-128..127; 128=N/A).

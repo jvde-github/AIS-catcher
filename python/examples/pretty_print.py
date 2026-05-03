@@ -80,7 +80,7 @@ def main():
 
     # Feed line-by-line so we can attribute fragments to each emitted message.
     # AIVDM multipart sentences span N lines but only the final fragment yields a message.
-    dec = aiscat.Decoder(annotated=True)
+    dec = aiscat.Decoder(annotated=True, country=True)
     pending = []
     first = True
     for line in lines:
