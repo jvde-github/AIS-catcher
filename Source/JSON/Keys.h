@@ -70,6 +70,7 @@ namespace AIS
 	extern const std::vector<std::string> LookupTable_ais_version;
 	extern const std::vector<std::string> LookupTable_vts_target_id_type;
 	extern const std::vector<std::string> LookupTable_health;
+	extern const std::vector<std::string> LookupTable_message_types;
 
 	// JSON keys - generated from KeyDefs.h
 	enum Keys

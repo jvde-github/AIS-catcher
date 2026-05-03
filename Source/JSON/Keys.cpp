@@ -504,6 +504,39 @@ namespace AIS
 		"Alarm",
 	};
 
+	// Indexed by ITU-R M.1371 message type (1..28). Slot 0 is unused (type=0 is invalid).
+	const std::vector<std::string> LookupTable_message_types = {
+		"Reserved",
+		"Position report",
+		"Position report (assigned schedule)",
+		"Position report (response to interrogation)",
+		"Base station report",
+		"Static and voyage related data",
+		"Binary addressed message",
+		"Binary acknowledge",
+		"Binary broadcast message",
+		"Standard SAR aircraft position report",
+		"UTC and date inquiry",
+		"UTC and date response",
+		"Addressed safety related message",
+		"Safety related acknowledgement",
+		"Safety related broadcast message",
+		"Interrogation",
+		"Assignment mode command",
+		"DGNSS binary broadcast message",
+		"Standard Class B CS position report",
+		"Extended Class B equipment position report",
+		"Data link management",
+		"Aid-to-navigation report",
+		"Channel management",
+		"Group assignment command",
+		"Static data report",
+		"Single slot binary message",
+		"Multiple slot binary message",
+		"Long-range position report",
+		"Aid-to-navigation report (single-slot)",
+	};
+
 	const std::vector<std::string> LookupTable_pressuretend_wmo = {
 		"Increasing, then decreasing; now same or higher than 3 h ago",
 		"Increasing, then steady; or rising, then rising more slowly",

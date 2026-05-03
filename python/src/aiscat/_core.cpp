@@ -34,9 +34,45 @@ static constexpr uint64_t kSkipMask =
     (1ULL << AIS::KEY_RXTIME)       |
     (1ULL << AIS::KEY_NMEA);
 
-static PyObject *convert_value(const JSON::Value &v);
+// Interned keys for annotated-mode wrapper dicts.
+static PyObject *g_key_value, *g_key_unit, *g_key_description, *g_key_text;
 
-static PyObject *convert_object(const JSON::JSON &obj) {
+// Per-key cached PyUnicode for unit and description strings (annotated mode).
+// Indexed by AIS::Keys; entries are nullptr when the corresponding KeyInfo field is empty.
+static PyObject **g_unit_strs = nullptr;
+static PyObject **g_desc_strs = nullptr;
+
+static PyObject *convert_value(const JSON::Value &v, bool annotated);
+static PyObject *convert_object(const JSON::JSON &obj, bool annotated);
+
+// In annotated mode each scalar becomes {"value": x, "unit": ..., "description": ..., "text": ...}.
+// Non-scalars (objects, arrays) recurse but are not wrapped themselves.
+static PyObject *wrap_annotated(PyObject *val, int key_index) {
+    if (key_index < 0 || key_index >= (int)AIS::KEY_COUNT) return val;
+    const AIS::KeyInfo &info = AIS::KeyInfoMap[key_index];
+    PyObject *d = _PyDict_NewPresized(4);
+    if (!d) { Py_DECREF(val); return nullptr; }
+    if (PyDict_SetItem(d, g_key_value, val) < 0) { Py_DECREF(val); Py_DECREF(d); return nullptr; }
+    if (g_unit_strs[key_index]) {
+        if (PyDict_SetItem(d, g_key_unit, g_unit_strs[key_index]) < 0) { Py_DECREF(val); Py_DECREF(d); return nullptr; }
+    }
+    if (g_desc_strs[key_index]) {
+        if (PyDict_SetItem(d, g_key_description, g_desc_strs[key_index]) < 0) { Py_DECREF(val); Py_DECREF(d); return nullptr; }
+    }
+    if (info.lookup_table && (PyLong_Check(val) || PyFloat_Check(val))) {
+        long nv = PyLong_Check(val) ? PyLong_AsLong(val) : (long)PyFloat_AsDouble(val);
+        if (nv >= 0 && nv < (long)info.lookup_table->size()) {
+            const std::string &s = (*info.lookup_table)[(size_t)nv];
+            PyObject *t = PyUnicode_FromStringAndSize(s.data(), (Py_ssize_t)s.size());
+            if (!t || PyDict_SetItem(d, g_key_text, t) < 0) { Py_XDECREF(t); Py_DECREF(val); Py_DECREF(d); return nullptr; }
+            Py_DECREF(t);
+        }
+    }
+    Py_DECREF(val);
+    return d;
+}
+
+static PyObject *convert_object(const JSON::JSON &obj, bool annotated) {
     const auto &members = obj.getMembers();
     PyObject *d = _PyDict_NewPresized((Py_ssize_t)members.size());
     if (!d) return nullptr;
@@ -51,8 +87,17 @@ static PyObject *convert_object(const JSON::JSON &obj) {
             key = PyUnicode_FromFormat("key_%d", k);
             if (!key) { Py_DECREF(d); return nullptr; }
         }
-        PyObject *val = convert_value(m.Get());
+        PyObject *val = convert_value(m.Get(), annotated);
         if (!val) { Py_DECREF(key); Py_DECREF(d); return nullptr; }
+        // Wrap scalars only — leave nested objects/arrays alone (they recurse internally).
+        if (annotated) {
+            using T = JSON::Value::Type;
+            T t = m.Get().getType();
+            if (t == T::BOOL || t == T::INT || t == T::FLOAT || t == T::STRING) {
+                val = wrap_annotated(val, k);
+                if (!val) { Py_DECREF(key); Py_DECREF(d); return nullptr; }
+            }
+        }
         if (PyDict_SetItem(d, key, val) < 0) {
             Py_DECREF(key); Py_DECREF(val); Py_DECREF(d); return nullptr;
         }
@@ -62,7 +107,7 @@ static PyObject *convert_object(const JSON::JSON &obj) {
     return d;
 }
 
-static PyObject *convert_value(const JSON::Value &v) {
+static PyObject *convert_value(const JSON::Value &v, bool annotated) {
     using T = JSON::Value::Type;
     switch (v.getType()) {
         case T::BOOL:
@@ -76,13 +121,13 @@ static PyObject *convert_value(const JSON::Value &v) {
             return PyUnicode_FromStringAndSize(s.data(), (Py_ssize_t)s.size());
         }
         case T::OBJECT:
-            return convert_object(v.getObject());
+            return convert_object(v.getObject(), annotated);
         case T::ARRAY: {
             const auto &a = v.getArray();
             PyObject *L = PyList_New((Py_ssize_t)a.size());
             if (!L) return nullptr;
             for (Py_ssize_t i = 0; i < (Py_ssize_t)a.size(); ++i) {
-                PyObject *item = convert_value(a[(size_t)i]);
+                PyObject *item = convert_value(a[(size_t)i], annotated);
                 if (!item) { Py_DECREF(L); return nullptr; }
                 PyList_SET_ITEM(L, i, item);
             }
@@ -109,10 +154,11 @@ static PyObject *convert_value(const JSON::Value &v) {
 class PySink : public StreamIn<JSON::JSON> {
 public:
     std::deque<PyObject *> queue;
+    bool annotated = false;
 
     void Receive(const JSON::JSON *data, int len, TAG &tag) override {
         for (int i = 0; i < len; ++i) {
-            PyObject *d = convert_object(data[i]);
+            PyObject *d = convert_object(data[i], annotated);
             if (d) queue.push_back(d);
         }
     }
@@ -131,9 +177,15 @@ typedef struct {
 } DecoderObject;
 
 static int Decoder_init(DecoderObject *self, PyObject *args, PyObject *kwds) {
+    static const char *kwlist[] = {"annotated", nullptr};
+    int annotated = 0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|p", (char **)kwlist, &annotated))
+        return -1;
+
     self->nmea = new AIS::NMEA();
     self->jsonais = new AIS::JSONAIS();
     self->sink = new PySink();
+    self->sink->annotated = (annotated != 0);
     self->tag = new TAG();
     self->tag->clear();
     self->nmea->out.Connect(self->jsonais);
@@ -225,6 +277,25 @@ PyMODINIT_FUNC PyInit__core(void) {
     for (int i = 0; i < (int)AIS::KEY_COUNT; ++i) {
         const std::string &name = AIS::KeyMap[i][JSON_DICT_FULL];
         g_keys[i] = PyUnicode_InternFromString(name.c_str());
+    }
+
+    g_key_value       = PyUnicode_InternFromString("value");
+    g_key_unit        = PyUnicode_InternFromString("unit");
+    g_key_description = PyUnicode_InternFromString("description");
+    g_key_text        = PyUnicode_InternFromString("text");
+    if (!g_key_value || !g_key_unit || !g_key_description || !g_key_text) {
+        Py_DECREF(m); return nullptr;
+    }
+
+    g_unit_strs = (PyObject **)PyMem_Calloc((size_t)AIS::KEY_COUNT, sizeof(PyObject *));
+    g_desc_strs = (PyObject **)PyMem_Calloc((size_t)AIS::KEY_COUNT, sizeof(PyObject *));
+    if (!g_unit_strs || !g_desc_strs) { Py_DECREF(m); return nullptr; }
+    for (int i = 0; i < (int)AIS::KEY_COUNT; ++i) {
+        const AIS::KeyInfo &info = AIS::KeyInfoMap[i];
+        if (info.unit && info.unit[0])
+            g_unit_strs[i] = PyUnicode_InternFromString(info.unit);
+        if (info.description && info.description[0])
+            g_desc_strs[i] = PyUnicode_InternFromString(info.description);
     }
 
     Py_INCREF(&DecoderType);

@@ -457,7 +457,7 @@ X(KEY_TO_STERN, "to_stern", "", "to_stern", "", "", "", "meter", "Dimension to S
 X(KEY_TURN, "turn", "", "turn", "", "", "", "degrees per minute", "Rate of Turn (ROT)", nullptr)
 X(KEY_TURN_UNSCALED, "turn_unscaled", "", "turn_unscaled", "", "", "", "", "Raw ROT field (-128..127; 128=N/A).", nullptr)
 X(KEY_TXRX, "txrx", "", "", "", "", "", "", "Transmit/Receive mode.", &LookupTable_txrx_types)
-X(KEY_TYPE, "type", "", "", "msgtype", "", "", "", "Message Type", nullptr)
+X(KEY_TYPE, "type", "", "", "msgtype", "", "", "", "Message Type", &LookupTable_message_types)
 X(KEY_TYPE1_1, "type1_1", "", "", "", "", "", "", "First requested message type from station 1 (type 15 interrogation).", nullptr)
 X(KEY_TYPE1_2, "type1_2", "", "", "", "", "", "", "Second requested message type from station 1 (type 15 interrogation).", nullptr)
 X(KEY_TYPE2_1, "type2_1", "", "", "", "", "", "", "First requested message type from station 2 (type 15 interrogation).", nullptr)
