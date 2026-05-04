@@ -4,6 +4,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include <cstring>
 #include <deque>
 #include <string>
 
@@ -14,6 +15,29 @@
 #include "JSON/JSONAIS.h"
 #include "JSON/JSON.h"
 #include "JSON/Keys.h"
+#include "JSON/StringBuilder.h"
+
+enum class OutFormat {
+    DICTIONARY = 0,  // Python dict, full decoded fields (default)
+    ANNOTATED  = 1,  // Python dict, scalars wrapped {value, unit, description, text}
+    JSON       = 2,  // bytes — JSON_FULL serialized (-o 5)
+    JSON_NMEA  = 3,  // bytes — JSON envelope wrapping the NMEA (-o 3)
+    NMEA       = 4,  // bytes — bare NMEA AIVDM/AIVDO lines (-n / -o 1)
+    NMEA_TAG   = 5,  // bytes — NMEA + IEC 61162-450 tag block prefix
+    BINARY     = 6,  // bytes — AIS-catcher 0xac binary packet
+};
+
+static bool parse_format(const char *s, OutFormat &out) {
+    if (!s) { out = OutFormat::DICTIONARY; return true; }
+    if (!std::strcmp(s, "dictionary")) { out = OutFormat::DICTIONARY; return true; }
+    if (!std::strcmp(s, "annotated"))  { out = OutFormat::ANNOTATED;  return true; }
+    if (!std::strcmp(s, "json"))       { out = OutFormat::JSON;       return true; }
+    if (!std::strcmp(s, "json_nmea"))  { out = OutFormat::JSON_NMEA;  return true; }
+    if (!std::strcmp(s, "nmea"))       { out = OutFormat::NMEA;       return true; }
+    if (!std::strcmp(s, "nmea_tag"))   { out = OutFormat::NMEA_TAG;   return true; }
+    if (!std::strcmp(s, "binary"))     { out = OutFormat::BINARY;     return true; }
+    return false;
+}
 
 // Cache of interned PyUnicode keys, indexed by AIS::Keys enum.
 static PyObject **g_keys = nullptr;
@@ -154,11 +178,63 @@ static PyObject *convert_value(const JSON::Value &v, bool annotated) {
 class PySink : public StreamIn<JSON::JSON> {
 public:
     std::deque<PyObject *> queue;
-    bool annotated = false;
+    OutFormat format = OutFormat::DICTIONARY;
+    JSON::Serializer serializer;
+    std::string scratch;  // reusable buffer for bytes-format serialization
 
     void Receive(const JSON::JSON *data, int len, TAG &tag) override {
         for (int i = 0; i < len; ++i) {
-            PyObject *d = convert_object(data[i], annotated);
+            PyObject *d = nullptr;
+            switch (format) {
+                case OutFormat::DICTIONARY:
+                    d = convert_object(data[i], false);
+                    break;
+                case OutFormat::ANNOTATED:
+                    d = convert_object(data[i], true);
+                    break;
+                case OutFormat::JSON: {
+                    scratch.clear();
+                    serializer.stringify(data[i], scratch);
+                    d = PyBytes_FromStringAndSize(scratch.data(), (Py_ssize_t)scratch.size());
+                    break;
+                }
+                case OutFormat::JSON_NMEA: {
+                    auto *msg = static_cast<const AIS::Message *>(data[i].binary);
+                    if (!msg) break;
+                    scratch.clear();
+                    msg->getNMEAJSON(scratch, tag);
+                    d = PyBytes_FromStringAndSize(scratch.data(), (Py_ssize_t)scratch.size());
+                    break;
+                }
+                case OutFormat::NMEA: {
+                    auto *msg = static_cast<const AIS::Message *>(data[i].binary);
+                    if (!msg) break;
+                    scratch.clear();
+                    auto sentences = msg->sentences();
+                    for (size_t j = 0; j < sentences.size(); ++j) {
+                        scratch.append(sentences[j]);
+                        scratch.push_back('\n');
+                    }
+                    d = PyBytes_FromStringAndSize(scratch.data(), (Py_ssize_t)scratch.size());
+                    break;
+                }
+                case OutFormat::NMEA_TAG: {
+                    auto *msg = static_cast<const AIS::Message *>(data[i].binary);
+                    if (!msg) break;
+                    scratch.clear();
+                    msg->getNMEATagBlock(scratch);
+                    d = PyBytes_FromStringAndSize(scratch.data(), (Py_ssize_t)scratch.size());
+                    break;
+                }
+                case OutFormat::BINARY: {
+                    auto *msg = static_cast<const AIS::Message *>(data[i].binary);
+                    if (!msg) break;
+                    scratch.clear();
+                    msg->getBinaryNMEA(scratch, tag);
+                    d = PyBytes_FromStringAndSize(scratch.data(), (Py_ssize_t)scratch.size());
+                    break;
+                }
+            }
             if (d) queue.push_back(d);
         }
     }
@@ -177,18 +253,29 @@ typedef struct {
 } DecoderObject;
 
 static int Decoder_init(DecoderObject *self, PyObject *args, PyObject *kwds) {
-    static const char *kwlist[] = {"annotated", "country", nullptr};
-    int annotated = 0, country = 0;
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|pp", (char **)kwlist, &annotated, &country))
+    static const char *kwlist[] = {"format", "country", "stamp", nullptr};
+    const char *format_str = nullptr;
+    int country = 0, stamp = 0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|spp", (char **)kwlist, &format_str, &country, &stamp))
         return -1;
+
+    OutFormat fmt;
+    if (!parse_format(format_str, fmt)) {
+        PyErr_Format(PyExc_ValueError,
+            "format must be one of 'dictionary', 'annotated', 'json', 'json_nmea', 'nmea', 'nmea_tag', 'binary'; got %s",
+            format_str);
+        return -1;
+    }
 
     self->nmea = new AIS::NMEA();
     self->jsonais = new AIS::JSONAIS();
     self->sink = new PySink();
-    self->sink->annotated = (annotated != 0);
+    self->sink->format = fmt;
     self->tag = new TAG();
     self->tag->clear();
     if (country) self->tag->mode |= 4;  // enables JSONAIS::COUNTRY (MMSI prefix → country, country_code)
+    // stamp=False (default) honors NMEA tag-block c:<unix> timestamps; stamp=True always overwrites with current time.
+    self->nmea->setStamp(stamp != 0);
     self->nmea->out.Connect(self->jsonais);
     self->jsonais->out.Connect(self->sink);
     return 0;

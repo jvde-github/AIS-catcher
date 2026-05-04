@@ -3,21 +3,26 @@
 from ._core import Decoder
 from .types import AISMessage
 
-__version__ = "0.68.4"
+__version__ = "0.68.5"
 __all__ = ["Decoder", "iter_decode", "AISMessage"]
 
 
-def iter_decode(chunks, *, annotated=False, country=False):
-    """Yield decoded AIS messages (as dicts) from an iterable of bytes/str chunks.
+def iter_decode(chunks, *, format="dictionary", country=False, stamp=False):
+    """Yield decoded AIS messages from an iterable of bytes/str chunks.
 
-    If ``annotated`` is True, every scalar value is wrapped as
-    ``{"value": x, "unit": ..., "description": ..., "text": ...}`` (the latter
-    three fields included only when defined for that key).
+    ``format`` selects the output shape:
 
-    If ``country`` is True, every message gets ``country`` and ``country_code``
-    fields derived from the MMSI prefix.
+    - ``"dictionary"`` (default) — yield Python ``dict`` with full decoded fields
+    - ``"annotated"`` — Python ``dict`` with each scalar wrapped as ``{value, unit, description, text}``
+    - ``"json"`` — ``bytes``, full JSON serialization (AIS-catcher ``-o 5``)
+    - ``"json_nmea"`` — ``bytes``, JSON envelope wrapping the NMEA (``-o 3``)
+    - ``"nmea"`` — ``bytes``, the bare AIVDM/AIVDO line(s)
+    - ``"nmea_tag"`` — ``bytes``, NMEA prefixed with an IEC 61162-450 tag block
+    - ``"binary"`` — ``bytes``, AIS-catcher 0xac binary packet
+
+    See ``Decoder`` for ``country`` and ``stamp``.
     """
-    dec = Decoder(annotated=annotated, country=country)
+    dec = Decoder(format=format, country=country, stamp=stamp)
     for chunk in chunks:
         dec.feed(chunk)
         msg = dec.next()

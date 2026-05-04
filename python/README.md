@@ -8,9 +8,7 @@ aiscat is built for fast, complete decoding of AIS NMEA from Python. Output dict
 
 Coverage is meant to be exhaustive: all standard message types (1–28), multi-part AIVDM reassembly, country-code resolution from MMSI prefix, lookup-table text fields (`status_text`, `shiptype_text`, …) populated from the same tables AIS-catcher uses, and **decoding of binary application messages** — type 6 and 8 ASMs across IMO, IALA, USA, and inland-waterway DAC/FID payloads (AtoN monitoring, meteo/hydro, route info, persons-on-board, and others).
 
-For live decode of a single station (~50 msg/s) any decent AIS library is fast enough. aiscat earns its keep when throughput matters: replay of historical recordings, multi-receiver fan-in, batch analysis, and research workloads on millions to billions of messages.
-
-**Tradeoffs.** aiscat is a C++ extension, so `pip install` either picks up a pre-built wheel for your platform or falls back to a source build that needs CMake and a C++11 compiler. The API is deliberately small — feed bytes, get dicts — without configuration knobs or custom output formats. And the licence is GPLv3 (inherited from AIS-catcher), so linking aiscat into a closed-source application makes that application GPL too; see the Licence section below for permissive alternatives.
+`aiscat` ingests raw NMEA AIVDM/AIVDO (with or without IEC 61162-450 tag blocks), AIS-catcher's JSON envelopes, and the binary packet format emitted by dAISy-catcher and AIS-catcher — all auto-detected from the byte stream. For live decode of a single station (~50 msg/s) any decent AIS library is fast enough; aiscat earns its keep when throughput matters: historical replay, multi-receiver aggregation, batch analysis, and research workloads on millions to billions of messages.
 
 ## Quickstart
 
@@ -49,21 +47,59 @@ For perspective: a busy AIS shore station produces ~50 msg/s. Throughput matters
 
 ```python
 class Decoder:
-    def __init__(self, *, annotated: bool = False, country: bool = False) -> None: ...
+    def __init__(
+        self,
+        *,
+        format: str = "dictionary",
+        country: bool = False,
+        stamp: bool = False,
+    ) -> None: ...
     def feed(self, data: bytes | bytearray | str) -> int: ...
-    def next(self) -> dict | None: ...
+    def next(self) -> dict | bytes | None: ...
     def pending(self) -> int: ...
 
 def iter_decode(
-    chunks: Iterable[bytes | str], *, annotated: bool = False, country: bool = False
-) -> Iterator[dict]: ...
+    chunks: Iterable[bytes | str],
+    *,
+    format: str = "dictionary",
+    country: bool = False,
+    stamp: bool = False,
+) -> Iterator[dict | bytes]: ...
 ```
 
-- `feed(data)` parses NMEA AIVDM/AIVDO sentences out of the buffer. Multipart messages are reassembled internally; partial chunks are buffered until completed. Returns the number of decoded messages waiting.
-- `next()` pops one decoded message as a `dict`, or `None` if the queue is empty. Pop in a loop after each `feed()`.
-- The queue is unbounded — drain it after each feed, or memory grows.
-- `annotated=True` wraps every scalar as `{"value": x, "unit": ..., "description": ..., "text": ...}` (the latter three included only when defined for that key) — useful for self-describing displays and field reference. See [Annotated mode](#annotated-mode) below.
-- `country=True` adds `country` and `country_code` to every message, derived from the MMSI prefix (ITU-R M.585 MID table).
+### Decoder options
+
+| Option | Default | Effect |
+|---|---|---|
+| `format` | `"dictionary"` | Output shape (see table below). |
+| `country` | `False` | Adds `country` and `country_code` to every message, derived from the MMSI prefix (ITU-R M.585 MID table). Only meaningful for the `dictionary` and `annotated` formats. |
+| `stamp` | `False` | If `True`, always sets `rxuxtime` to the current time. The default honors NMEA tag-block `c:<unix>` timestamps and JSON-input `rxuxtime`/`toa` fields when present, falling back to the current time if neither is provided. |
+
+### Output formats
+
+`format=` selects what `next()` returns. Dict-shaped formats are convenient for in-Python consumption; bytes-shaped formats skip the PyDict allocation and are several times faster — useful when you're forwarding the data to a file, socket, database, or another AIS-catcher instance.
+
+| Format | Returns | Throughput¹ | Equivalent to | Notes |
+|---|---|---:|---|---|
+| `"dictionary"` *(default)* | `dict` | 1.83M msg/s | AIS-catcher `-o 5` (parsed) | Full decoded fields. |
+| `"annotated"` | `dict` | 0.52M msg/s | AIS-catcher `-o 6` (parsed) | Each scalar wrapped as `{value, unit, description, text}`. See [Annotated mode](#annotated-mode). |
+| `"json"` | `bytes` | 1.90M msg/s | AIS-catcher `-o 5` | Full decoded JSON, ready to write/send. |
+| `"json_nmea"` | `bytes` | 4.08M msg/s | AIS-catcher `-o 3` | Slim JSON envelope wrapping the original NMEA — the relay/passthrough format. |
+| `"nmea"` | `bytes` | 5.37M msg/s | AIS-catcher `-n` / `-o 1` | The raw AIVDM/AIVDO line(s). |
+| `"nmea_tag"` | `bytes` | 4.39M msg/s | — | NMEA prefixed with an IEC 61162-450 tag block carrying source + timestamp. |
+| `"binary"` | `bytes` | 3.85M msg/s | — | AIS-catcher's native 0xac binary packet format (compact, suitable for inter-process transport between AIS-catcher / aiscat instances). |
+
+¹ Apple M-series, single thread, 2M mixed type 1–4 messages.
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `feed(data)` | `int` | Parses NMEA AIVDM/AIVDO sentences, AIS-catcher JSON envelopes, or 0xac binary packets out of the buffer (auto-detected). Multipart messages are reassembled internally; partial chunks are buffered until completed. Returns the number of decoded messages now waiting. |
+| `next()` | `dict \| bytes \| None` | Pops one decoded message — `dict` for `dictionary`/`annotated` modes, `bytes` for the others, `None` if the queue is empty. Drain in a loop after each `feed()`. |
+| `pending()` | `int` | Number of decoded messages currently in the queue. |
+
+The queue is unbounded — drain it after each feed, or memory grows.
 
 ```python
 # Streaming pattern
@@ -76,30 +112,80 @@ with open("session.nmea", "rb") as f:
             handle(msg)
 ```
 
-## Output format
+## Format examples
 
-Each decoded message is a `dict` containing the AIS protocol fields plus a small reception envelope. AIS-catcher's internal "meta" fields that don't apply to a Python decoder (SDR signal levels, decoder version, the original NMEA echo, etc.) are suppressed.
+The same NMEA sentence — `!AIVDM,1,1,,B,13`e;R001`PNcD2MH48KQq>P0@;5,0*63` — through each format. Lookup-table fields (`status_text`, `shiptype_text`, `aid_type_text`, etc.) are populated from the same tables AIS-catcher's CLI uses. Full field reference: [AIS-catcher JSON decoding docs](https://jvde-github.github.io/AIS-catcher-docs/references/JSON-decoding/).
 
-Lookup-table values are decoded for you — `status` comes through as both the raw integer and `status_text` (`"Moored"`, `"Under way using engine"`, …); same for `shiptype_text`, `aid_type_text`, etc.
-
-For the full field reference — every key, its unit, and the lookup tables — see the [AIS-catcher JSON decoding documentation](https://jvde-github.github.io/AIS-catcher-docs/references/JSON-decoding/).
-
-## Annotated mode
-
-`Decoder(annotated=True)` returns each scalar wrapped with its unit, description, and (where applicable) the human-readable text from the lookup table. Mirrors AIS-catcher's `MSGFORMAT JSON_ANNOTATED` (`-o 6`) output:
+### `format="dictionary"` (default) — Python `dict`
 
 ```python
-dec = aiscat.Decoder(annotated=True)
-dec.feed(b"!AIVDM,1,1,,B,13`e;R001`PNcD2MH48KQq>P0@;5,0*63\n")
-m = dec.next()
-m["type"]    # {'value': 1, 'description': 'Message Type', 'text': 'Position report'}
-m["status"]  # {'value': 0, 'description': 'Navigation Status', 'text': 'Under way using engine'}
-m["speed"]   # {'value': 10.4, 'unit': 'knots', 'description': 'Speed over Ground (SOG)'}
+{'rxuxtime': 1777908449.348, 'channel': 'B', 'type': 1, 'repeat': 0,
+ 'mmsi': 244009864, 'status': 0, 'status_text': 'Under way using engine',
+ 'turn_unscaled': 0, 'turn': 0, 'speed': 10.4, 'accuracy': True,
+ 'lon': 6.701442, 'lat': 51.338295, 'course': 295.1, 'heading': 295,
+ 'second': 16, 'maneuver': 0, 'power': False, 'raim': False,
+ 'radio': 66245, 'sync_state': 0, 'slot_timeout': 4, 'slot_number': 709}
 ```
 
-The 28 message-type names, status enums, ship types, AtoN types, and other lookups all come from the same tables AIS-catcher uses, so what you see matches the C++ output exactly.
+AIS-catcher's internal meta fields (SDR signal levels, decoder version, the original NMEA echo, etc.) are suppressed since they don't apply to a Python decoder.
 
-See [`examples/pretty_print.py`](examples/pretty_print.py) for a complete consumer that turns annotated output into a readable table:
+### `format="annotated"` — Python `dict` with units, descriptions, lookup text
+
+Each scalar becomes `{value, unit?, description?, text?}` (the optional fields included only when defined for that key):
+
+```python
+{'type':   {'value': 1,    'description': 'Message Type', 'text': 'Position report'},
+ 'status': {'value': 0,    'description': 'Navigation Status', 'text': 'Under way using engine'},
+ 'speed':  {'value': 10.4, 'unit': 'knots', 'description': 'Speed over Ground (SOG)'},
+ 'lon':    {'value': 6.701442, 'unit': 'degrees', 'description': 'Longitude'},
+ ...}
+```
+
+### `format="json"` — full JSON, ready to write/send
+
+```text
+b'{"class":"AIS","device":"AIS-catcher","version":68,...,"channel":"B",
+   "nmea":["!AIVDM,1,1,,B,13`e;R001`PNcD2MH48KQq>P0@;5,0*63"],...,
+   "type":1,"repeat":0,"mmsi":244009864,"status":0,
+   "status_text":"Under way using engine",...,"speed":10.400001,...,
+   "lon":6.701442,"lat":51.338295,...}'
+```
+
+### `format="json_nmea"` — slim JSON envelope wrapping the NMEA
+
+The "passthrough" / relay format — small envelope, the rest is the original NMEA you can hand to another decoder:
+
+```text
+b'{"class":"AIS","device":"AIS-catcher","version":68,"channel":"B",
+   "repeat":0,"rxuxtime":1777908449.351,"mmsi":244009864,"type":1,
+   "nmea":["!AIVDM,1,1,,B,13`e;R001`PNcD2MH48KQq>P0@;5,0*63"]}'
+```
+
+### `format="nmea"` — bare AIVDM line(s)
+
+```text
+b'!AIVDM,1,1,,B,13`e;R001`PNcD2MH48KQq>P0@;5,0*63\n'
+```
+
+For multipart messages, all reassembled fragments are concatenated (each terminated with `\n`).
+
+### `format="nmea_tag"` — NMEA prefixed with an IEC 61162-450 tag block
+
+```text
+b'\\s:s0,c:1777908449.352*53\\!AIVDM,1,1,,B,13`e;R001`PNcD2MH48KQq>P0@;5,0*63\r\n'
+```
+
+### `format="binary"` — AIS-catcher native 0xac packet
+
+37-byte compact binary frame, suitable for inter-process transport between AIS-catcher / aiscat instances:
+
+```text
+b'\xac\x00\x00\x00\x06\x50\xff\x91\x91\x18\x11\x42\x00\xa8\x04\x3a\x2d\x2e\x20\x00\x06\x88\x1e\xad\xad\x40\x9d\x60\x42\x1b\x87\x93\xa0\x01\x02\xc5\x0a'
+```
+
+## Pretty-printed output
+
+See [`examples/pretty_print.py`](examples/pretty_print.py) for a complete consumer that uses `format="annotated"` to render a readable table:
 
 ```text
 $ python examples/pretty_print.py '!AIVDM,1,1,,B,13`e;R001`PNcD2MH48KQq>P0@;5,0*63'
@@ -152,13 +238,6 @@ def handle(msg: AISMessage) -> None:
 
 **GPLv3**, inherited from AIS-catcher. Linking aiscat into a closed-source application makes that application GPLv3.
 
-If you need a permissive licence (BSD/MIT/Apache), use one of:
-
-- [pyais](https://pypi.org/project/pyais/) — pure-Python, MIT, the de facto standard for Python AIS work
-- [libais](https://pypi.org/project/libais/) — older C extension, Apache 2.0
-
-aiscat exists for users who *want* AIS-catcher's decoding (multipart handling, lookup tables, channel A/B disambiguation, country tables, message-type 6/8 ASMs) and can live with the licence.
-
 ## Building from source
 
 Requires CMake ≥ 3.15, a C++11 compiler, and Python ≥ 3.9 with development headers.
@@ -173,6 +252,6 @@ The build pulls a curated subset of AIS-catcher's source (`Marine/`, `JSON/`, `L
 
 ## Status
 
-Pre-1.0. The decoder itself is mature — it's the AIS-catcher decoder, battle-tested in shore-station and SDR deployments. The Python surface is new and may evolve — feedback welcome.
+ The decoder itself is mature — it's the AIS-catcher decoder, battle-tested in shore-station and SDR deployments. The Python surface is new and may evolve — feedback welcome.
 
 Versioning tracks AIS-catcher's: `0.68.x` uses AIS-catcher v0.68's decoder. Patch releases bump independently for binding-only changes.
