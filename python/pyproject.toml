@@ -4,8 +4,8 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "aiscat"
-version = "0.68.6"
-description = "Fast Python bindings for AIS-catcher's NMEA-to-JSON AIS decoder"
+version = "0.68.7"
+description = "Fast, complete AIS NMEA decoder for Python"
 readme = "README.md"
 license = "GPL-3.0-or-later"
 requires-python = ">=3.9"

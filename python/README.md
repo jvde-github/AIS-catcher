@@ -102,7 +102,7 @@ def iter_decode(
 The queue is unbounded — drain it after each feed, or memory grows.
 
 ```python
-# Streaming pattern
+# Manual streaming pattern (for total control)
 import aiscat
 dec = aiscat.Decoder()
 with open("session.nmea", "rb") as f:
@@ -111,6 +111,46 @@ with open("session.nmea", "rb") as f:
         while (msg := dec.next()) is not None:
             handle(msg)
 ```
+
+## Streams
+
+For the common cases (file / stdin / TCP / UDP), aiscat ships generator helpers that wire up the I/O loop, drain the queue, and yield decoded messages. They take the same `format` / `country` / `stamp` kwargs as `Decoder`.
+
+```python
+import aiscat
+
+# File on disk (or any open binary handle: stdin, gzip, ssl-wrapped socket, …)
+for msg in aiscat.from_file("session.nmea"):
+    print(msg["mmsi"], msg["lat"], msg["lon"])
+
+# stdin
+for msg in aiscat.from_stdin(format="json"):
+    sys.stdout.buffer.write(msg)
+
+# TCP — connect to a NMEA-over-TCP feed
+for msg in aiscat.from_tcp("ais.example.com", 4001):
+    print(msg["mmsi"])
+
+# UDP — listen for inbound NMEA datagrams
+for msg in aiscat.from_udp(port=4001, format="json_nmea"):
+    queue.publish(msg)
+```
+
+### Reconnect, retry, errors
+
+Reconnect logic is intentionally not built in — too many policy choices (backoff, max retries, jitter). Compose:
+
+```python
+import time
+while True:
+    try:
+        for msg in aiscat.from_tcp(host, port):
+            handle(msg)
+    except (ConnectionError, OSError):
+        time.sleep(5)
+```
+
+For `from_udp`, the generator runs until you break out of the loop or the program exits.
 
 ## Format examples
 
