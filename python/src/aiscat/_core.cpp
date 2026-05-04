@@ -44,6 +44,8 @@ static PyObject **g_keys = nullptr;
 
 // Bitmask of meta/envelope fields to suppress (AIS-catcher infra, not AIS protocol).
 // Every key here lives in the first 64 enum slots; checked by static_assert below.
+// signalpower/ppm are kept when present — they're useful reception-quality info from
+// the SDR or upstream JSON; JSONAIS already omits them when undefined.
 static_assert(AIS::KEY_VERSION < 64,
     "kSkipMask assumes all suppressed keys fit in the first 64 AIS::Keys");
 static constexpr uint64_t kSkipMask =
@@ -52,8 +54,6 @@ static constexpr uint64_t kSkipMask =
     (1ULL << AIS::KEY_DRIVER)       |
     (1ULL << AIS::KEY_HARDWARE)     |
     (1ULL << AIS::KEY_SCALED)       |
-    (1ULL << AIS::KEY_SIGNAL_POWER) |
-    (1ULL << AIS::KEY_PPM)          |
     (1ULL << AIS::KEY_VERSION)      |
     (1ULL << AIS::KEY_RXTIME)       |
     (1ULL << AIS::KEY_NMEA);

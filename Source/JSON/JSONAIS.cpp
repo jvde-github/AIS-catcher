@@ -799,8 +799,8 @@ namespace AIS
 
 		if (tag.mode & 1)
 		{
-			json.Add(AIS::KEY_SIGNAL_POWER, tag.level);
-			json.Add(AIS::KEY_PPM, tag.ppm);
+			if (tag.level != LEVEL_UNDEFINED) json.Add(AIS::KEY_SIGNAL_POWER, tag.level);
+			if (tag.ppm != PPM_UNDEFINED) json.Add(AIS::KEY_PPM, tag.ppm);
 		}
 
 		if (msg.getStation())
