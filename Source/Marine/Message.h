@@ -113,7 +113,7 @@ namespace AIS
 
 		int getNMEAJSON(std::string &out, const TAG &tag, bool include_ss = false, const std::string &uid = "", const char *suffix = nullptr) const;
 		int getNMEATagBlock(std::string &out, const char *suffix = nullptr) const;
-		int getBinaryNMEA(std::string &out, const TAG &tag, bool crc = false, const char *suffix = nullptr) const;
+		int getBinaryNMEA(std::string &out, const TAG &tag, bool crc = false) const;
 
 		std::string getRxTime() const
 		{

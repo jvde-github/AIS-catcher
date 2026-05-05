@@ -264,81 +264,113 @@ namespace AIS
 		return w.finish();
 	}
 
-	int Message::getBinaryNMEA(std::string &out, const TAG &tag, bool crc, const char *suffix) const
+	int Message::getBinaryNMEA(std::string &out, const TAG &tag, bool crc) const
 	{
 		if (length < 0 || length > MAX_AIS_LENGTH)
 			return 0;
 
-		JSON::Writer w(out);
+		int numBytes = (length + 7) / 8;
 
-		auto push_escaped = [&](unsigned char byte)
+		// Reserve worst case directly in `out`: header (≤17) + payload (numBytes)
+		// + optional CRC (2), each byte possibly doubled by escaping, plus the
+		// literal trailing '\n' framing terminator.
+		size_t base = out.size();
+		size_t worst = (17 + (size_t)numBytes + 2) * 2 + 1;
+		AISC_STRING_RESIZE_UNINIT(out, base + worst);
+
+		char *const p0 = &out[base];
+		char *p = p0;
+
+		auto put = [&](unsigned char b)
 		{
-			if (byte == '\n')
-			{
-				w.append((char)0xad);
-				w.append((char)0xae);
-			}
-			else if (byte == '\r')
-			{
-				w.append((char)0xad);
-				w.append((char)0xaf);
-			}
-			else if (byte == 0xad)
-			{
-				w.append((char)0xad);
-				w.append((char)0xad);
-			}
-			else
-			{
-				w.append((char)byte);
-			}
+			if (b == '\n')      { *p++ = (char)0xad; *p++ = (char)0xae; }
+			else if (b == '\r') { *p++ = (char)0xad; *p++ = (char)0xaf; }
+			else if (b == 0xad) { *p++ = (char)0xad; *p++ = (char)0xad; }
+			else                { *p++ = (char)b; }
 		};
 
-		push_escaped(0xac);
-		push_escaped(0x00);
+		// Scan-and-copy in 8-byte chunks. Clean chunk: store all 8 bytes,
+		// advance. Trigger hit: store the bytes before it, emit the 2-byte
+		// escape, advance past the triggering byte. The <8-byte tail goes
+		// through `put` byte-by-byte (which handles its own escape).
+		auto put_seq = [&](const unsigned char *src, size_t len)
+		{
+			const unsigned char *s = src;
+			const unsigned char *sEnd = src + len;
+
+			constexpr size_t m_lf = SWAR::mask('\n');
+			constexpr size_t m_cr = SWAR::mask('\r');
+			constexpr size_t m_ad = SWAR::mask((char)0xad);
+
+			while (s + sizeof(size_t) <= sEnd)
+			{
+				size_t word;
+				std::memcpy(&word, s, sizeof(word));
+				std::memcpy(p, s, sizeof(word));
+				size_t hit = SWAR::has_byte(word, m_lf)
+						   | SWAR::has_byte(word, m_cr)
+						   | SWAR::has_byte(word, m_ad);
+				if (!hit)
+				{
+					p += sizeof(word);
+					s += sizeof(word);
+					continue;
+				}
+				size_t pos = SWAR::first_byte_pos(hit);
+				p += pos;
+				unsigned char c = s[pos];
+				*p++ = (char)0xad;
+				*p++ = (c == '\n') ? (char)0xae : (c == '\r') ? (char)0xaf : (char)0xad;
+				s += pos + 1;
+			}
+
+			while (s < sEnd) put(*s++);
+		};
+
+		*p++ = (char)0xac;
+		*p++ = (char)0x00;
 
 		unsigned char flags = 0;
 		if (tag.level != LEVEL_UNDEFINED && tag.ppm != PPM_UNDEFINED)
 			flags |= 0x01;
 		flags |= crc ? 0x02 : 0x00;
-		push_escaped(flags);
+		*p++ = (char)flags;
 
-		long long ts = (long long)rxtime;
-		for (int i = 7; i >= 0; i--)
-			push_escaped((ts >> (i * 8)) & 0xFF);
+		// 8-byte timestamp (big-endian) as one bulk-escaped sequence.
+		unsigned char ts_buf[8];
+		{
+			long long ts = (long long)rxtime;
+			for (int i = 0; i < 8; i++)
+				ts_buf[i] = (unsigned char)((ts >> ((7 - i) * 8)) & 0xFF);
+		}
+		put_seq(ts_buf, 8);
 
 		if (flags & 0x01)
 		{
 			int signal_tenths = (int)(tag.level * 10.0f);
-			push_escaped((signal_tenths >> 8) & 0xFF);
-			push_escaped(signal_tenths & 0xFF);
-
+			put((unsigned char)((signal_tenths >> 8) & 0xFF));
+			put((unsigned char)(signal_tenths & 0xFF));
 			int ppm_tenths = (int)(tag.ppm * 10.0f);
-			push_escaped((unsigned char)(int8_t)ppm_tenths);
+			put((unsigned char)(int8_t)ppm_tenths);
 		}
 
-		push_escaped((unsigned char)channel);
-		push_escaped((length >> 8) & 0xFF);
-		push_escaped(length & 0xFF);
+		*p++ = (char)channel;
+		*p++ = (char)((length >> 8) & 0xFF);
+		put((unsigned char)(length & 0xFF));
 
-		int numBytes = (length + 7) / 8;
-		for (int i = 0; i < numBytes; i++)
-			push_escaped(data[i]);
+		put_seq(data, (size_t)numBytes);
 
 		if (crc)
 		{
-			// Re-derive base pointer here: buffer may have grown during writes.
-			uint16_t crc_value = Util::Helper::CRC16((const uint8_t *)w.buffer_start(), w.written());
-			push_escaped((crc_value >> 8) & 0xFF);
-			push_escaped(crc_value & 0xFF);
+			uint16_t crc_value = Util::Helper::CRC16((const uint8_t *)p0, (size_t)(p - p0));
+			put((unsigned char)((crc_value >> 8) & 0xFF));
+			put((unsigned char)(crc_value & 0xFF));
 		}
 
-		if (suffix)
-			w.append_lit(suffix);
-		else
-			w.append('\n');
+		*p++ = '\n';
+		out.resize(base + (size_t)(p - p0));
 
-		return w.finish();
+		return (int)(out.size() - base);
 	}
 
 	bool Message::validate()

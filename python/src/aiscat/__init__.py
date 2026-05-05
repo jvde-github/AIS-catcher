@@ -7,7 +7,7 @@ import sys
 from ._core import Decoder
 from .types import AISMessage
 
-__version__ = "0.68.7"
+__version__ = "0.68.8"
 __all__ = [
     "Decoder",
     "iter_decode",
