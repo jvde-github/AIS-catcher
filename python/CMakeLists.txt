@@ -56,7 +56,7 @@ target_include_directories(_core PRIVATE
 if(MSVC)
     target_compile_options(_core PRIVATE /W3 /wd4996)
 else()
-    target_compile_options(_core PRIVATE -Wno-unused-parameter -Wno-sign-compare)
+    target_compile_options(_core PRIVATE -Wno-unused-parameter -Wno-sign-compare -Wno-psabi)
 endif()
 
 install(TARGETS _core DESTINATION aiscat)

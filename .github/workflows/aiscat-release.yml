@@ -27,11 +27,11 @@ jobs:
           - { os: windows-latest,   archs: AMD64 }
           - { os: windows-11-arm,   archs: ARM64 }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up QEMU
         if: matrix.qemu
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: ${{ matrix.qemu }}
 
@@ -42,7 +42,7 @@ jobs:
         with:
           package-dir: python
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wheels-${{ matrix.os }}-${{ matrix.archs }}
           path: ./wheelhouse/*.whl
@@ -51,9 +51,9 @@ jobs:
     name: Build sdist
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -68,7 +68,7 @@ jobs:
         working-directory: python
         run: python -m build --sdist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sdist
           path: python/dist/*.tar.gz
@@ -83,7 +83,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
