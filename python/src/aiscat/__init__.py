@@ -7,9 +7,10 @@ import sys
 from ._core import Decoder
 from .types import AISMessage
 
-__version__ = "0.68.8"
+__version__ = "0.68.9"
 __all__ = [
     "Decoder",
+    "decode",
     "iter_decode",
     "from_file",
     "from_stdin",
@@ -17,6 +18,32 @@ __all__ = [
     "from_udp",
     "AISMessage",
 ]
+
+
+def decode(*parts, format="dictionary", country=False, stamp=False):
+    """Decode one or more NMEA fragments into a single AIS message.
+
+    For ad-hoc decoding of one logical message — a single complete sentence
+    or all fragments of a multipart message. For multiple messages or
+    streaming, use ``iter_decode`` or ``Decoder`` directly.
+
+    >>> aiscat.decode("!AIVDM,1,1,,B,15MgK45P3@G?fl0E`JbR0OwT0@MS,0*4E")
+    {'type': 1, 'mmsi': 366730000, ...}
+
+    Raises ``ValueError`` if no message — or more than one — is produced.
+    """
+    if not parts:
+        raise ValueError("decode() requires at least one NMEA fragment")
+    dec = Decoder(format=format, country=country, stamp=stamp)
+    for p in parts:
+        dec.feed(p)
+        dec.feed(b"\n" if isinstance(p, (bytes, bytearray)) else "\n")
+    msg = dec.next()
+    if msg is None:
+        raise ValueError("incomplete or invalid NMEA fragment(s)")
+    if dec.next() is not None:
+        raise ValueError("decode() expects one message; use iter_decode() for streams")
+    return msg
 
 
 def iter_decode(chunks, *, format="dictionary", country=False, stamp=False):

@@ -14,23 +14,37 @@ on:
 
 jobs:
   build_wheels:
-    name: Build wheels (${{ matrix.os }})
+    name: Build wheels (${{ matrix.os }} ${{ matrix.archs }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-14, windows-latest]
+        include:
+          - { os: ubuntu-latest,    archs: x86_64 }
+          - { os: ubuntu-latest,    archs: armv7l,  qemu: arm }
+          - { os: ubuntu-24.04-arm, archs: aarch64 }
+          - { os: macos-14,         archs: auto }
+          - { os: windows-latest,   archs: AMD64 }
+          - { os: windows-11-arm,   archs: ARM64 }
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up QEMU
+        if: matrix.qemu
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: ${{ matrix.qemu }}
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.4.1
+        env:
+          CIBW_ARCHS: ${{ matrix.archs }}
         with:
           package-dir: python
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ matrix.os }}
+          name: wheels-${{ matrix.os }}-${{ matrix.archs }}
           path: ./wheelhouse/*.whl
 
   build_sdist:

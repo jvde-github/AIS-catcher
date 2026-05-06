@@ -19,13 +19,13 @@ pip install aiscat
 ```python
 import aiscat
 
-dec = aiscat.Decoder()
-dec.feed(b"!AIVDM,1,1,,A,15MgK45P3@G?fl0E`JbR0OwT0@MS,0*4E\r\n")
-print(dec.next())
+aiscat.decode("!AIVDM,1,1,,A,15MgK45P3@G?fl0E`JbR0OwT0@MS,0*4E")
 # {'type': 1, 'mmsi': 366730000, 'channel': 'A', 'rxuxtime': 1777739134.027,
 #  'lat': 37.803802, 'lon': -122.392532, 'speed': 20.8, 'course': 51.3,
 #  'status': 5, 'status_text': 'Moored', ...}
 ```
+
+`decode()` is for ad-hoc one-shot decoding. For files, sockets, or any stream, use the [stream helpers](#streams) (`from_file`, `from_tcp`, …) or [`Decoder`](#api) directly.
 
 ## Benchmark
 
@@ -58,6 +58,13 @@ class Decoder:
     def next(self) -> dict | bytes | None: ...
     def pending(self) -> int: ...
 
+def decode(
+    *parts: bytes | str,
+    format: str = "dictionary",
+    country: bool = False,
+    stamp: bool = False,
+) -> dict | bytes: ...
+
 def iter_decode(
     chunks: Iterable[bytes | str],
     *,
@@ -66,6 +73,8 @@ def iter_decode(
     stamp: bool = False,
 ) -> Iterator[dict | bytes]: ...
 ```
+
+`decode()` is a one-shot helper for a single logical message — pass either one complete sentence or all fragments of a multipart message. It raises `ValueError` if zero or more than one message would be produced; for streams use `iter_decode` or `Decoder`.
 
 ### Decoder options
 
@@ -95,6 +104,7 @@ def iter_decode(
 
 | Method | Returns | Description |
 |---|---|---|
+| `aiscat.decode(*parts)` | `dict \| bytes` | One-shot helper. Pass a single complete sentence or all fragments of a multipart message; returns the decoded message. Raises `ValueError` if the input doesn't yield exactly one message. |
 | `feed(data)` | `int` | Parses NMEA AIVDM/AIVDO sentences, AIS-catcher JSON envelopes, or 0xac binary packets out of the buffer (auto-detected). Multipart messages are reassembled internally; partial chunks are buffered until completed. Returns the number of decoded messages now waiting. |
 | `next()` | `dict \| bytes \| None` | Pops one decoded message — `dict` for `dictionary`/`annotated` modes, `bytes` for the others, `None` if the queue is empty. Drain in a loop after each `feed()`. |
 | `pending()` | `int` | Number of decoded messages currently in the queue. |
@@ -151,6 +161,20 @@ while True:
 ```
 
 For `from_udp`, the generator runs until you break out of the loop or the program exits.
+
+## Examples
+
+The [`examples/`](examples/) directory has runnable scripts for the common patterns:
+
+| File | What it does |
+|---|---|
+| [`decode.py`](examples/decode.py) | Single-shot decoding via `aiscat.decode()` — single, multipart, bytes, annotated, country |
+| [`from_norway.py`](examples/from_norway.py) | Live decode of the Norwegian Coastal Administration's public AIS feed |
+| [`pretty_print.py`](examples/pretty_print.py) | Render an `annotated`-format message as a labelled table |
+| [`to_csv.py`](examples/to_csv.py) | Batch decode an NMEA file to CSV (position reports only) |
+| [`to_mqtt.py`](examples/to_mqtt.py) | Forward a TCP feed to MQTT, one topic per MMSI |
+| [`to_kafka.py`](examples/to_kafka.py) | Forward to a Kafka topic, MMSI-keyed |
+| [`relay_binary.py`](examples/relay_binary.py) | TCP→TCP relay using the compact 0xac binary format |
 
 ## Format examples
 
