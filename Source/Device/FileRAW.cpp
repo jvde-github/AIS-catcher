@@ -219,6 +219,6 @@ namespace Device
 
 	std::string RAWFile::Get()
 	{
-		return Device::Get() + " file " + filename + " loop " + Util::Convert::toString(loop);
+		return Device::Get() + " file " + filename + " loop " + Util::Convert::toString(loop) + " lossless " + Util::Convert::toString(lossless);
 	}
 }

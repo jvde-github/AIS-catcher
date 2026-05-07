@@ -44,6 +44,7 @@ namespace Device
 		std::vector<char> buffer;
 
 		bool lost = false;
+		bool lossless = false;
 
 		std::thread async_thread;
 		std::thread run_thread;

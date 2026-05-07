@@ -220,7 +220,8 @@ namespace Device
 			break;
 		}
 		case AIS::KEY_SETTING_LOSSLESS:
-			fifo.setWait(Util::Parse::Switch(arg));
+			lossless = Util::Parse::Switch(arg);
+			fifo.setWait(lossless);
 			break;
 		default:
 			if (!tcp.setOptionKey(key, arg) && !mqtt.setOptionKey(key, arg) && !gpsd.setOptionKey(key, arg) && !rtltcp.setOptionKey(key, arg) && !ws.setOptionKey(key, arg))
@@ -233,7 +234,7 @@ namespace Device
 	std::string RTLTCP::Get()
 	{
 		Protocol::ProtocolBase *p = session;
-		std::string str = "protocol " + Util::Convert::toString(Protocol) + " " + Device::Get() + "\n";
+		std::string str = "protocol " + Util::Convert::toString(Protocol) + " lossless " + Util::Convert::toString(lossless) + " " + Device::Get() + "\n";
 		while (p)
 		{
 			str += "  " + p->getLayer() + ": " + p->getValues() + "\n";
