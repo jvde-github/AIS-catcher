@@ -388,30 +388,6 @@ namespace AIS
 		return true;
 	}
 
-	unsigned Message::getUint(int start, int len) const
-	{
-		if (start < 0 || start + len > MAX_AIS_LENGTH)
-			return 0;
-
-		// Branchless: 5-byte big-endian load covers any len<=32 with y<=7 (max 39 bits).
-		// data[] has +4 padding so data[x+4] is always in-bounds here.
-		const int x = start >> 3;
-		const int y = start & 7;
-
-		uint32_t hi;
-		std::memcpy(&hi, data + x, 4);
-#if defined(__GNUC__) || defined(__clang__)
-		hi = __builtin_bswap32(hi);
-#else
-		hi = ((hi & 0xFFu) << 24) | ((hi & 0xFF00u) << 8) | ((hi & 0xFF0000u) >> 8) | ((hi & 0xFF000000u) >> 24);
-#endif
-		const uint64_t w = ((uint64_t)hi << 8) | (uint64_t)data[x + 4]; // bottom 40 bits = 5 source bytes BE
-
-		const unsigned shift = 40u - (unsigned)y - (unsigned)len;
-		const uint32_t mask = (len >= 32) ? 0xFFFFFFFFu : ((1u << len) - 1u);
-		return (unsigned)((w >> shift) & mask);
-	}
-
 	bool Message::setUint(int start, int len, unsigned val)
 	{
 		const int end = start + len;
@@ -447,18 +423,6 @@ namespace AIS
 			data[x] = (data[x] & ~bitmask) | ((val << (8 - remaining)) & bitmask);
 		}
 		return true;
-	}
-
-	int Message::getInt(int start, int len) const
-	{
-		const unsigned ones = ~0;
-		unsigned u = getUint(start, len);
-
-		// extend sign bit for the full bit
-		if (u & (1 << (len - 1)))
-			u |= ones << len;
-
-		return (int)u;
 	}
 
 	bool Message::setInt(int start, int len, int val)

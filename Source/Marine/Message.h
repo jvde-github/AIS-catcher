@@ -188,8 +188,40 @@ namespace AIS
 			return (data[1] << 22) | (data[2] << 14) | (data[3] << 6) | (data[4] >> 2);
 		}
 
-		unsigned getUint(int start, int len) const;
-		int getInt(int start, int len) const;
+		// Raw payload bytes; for hot decoders that bulk-load multiple fields.
+		// Buffer is MAX_AIS_BYTES + 4 bytes (zero-padded by clear()).
+		const uint8_t* raw() const { return data; }
+
+		unsigned getUint(int start, int len) const
+		{
+			if (start < 0 || start + len > MAX_AIS_LENGTH)
+				return 0;
+
+			// Branchless: 5-byte big-endian load covers any len<=32 with y<=7 (max 39 bits).
+			// data[] has +4 padding so data[x+4] is always in-bounds here.
+			const int x = start >> 3;
+			const int y = start & 7;
+
+			uint32_t hi;
+			std::memcpy(&hi, data + x, 4);
+			// Compiles to bswap/rev on every modern compiler (clang/gcc/MSVC).
+			hi = ((hi & 0xFFu) << 24) | ((hi & 0xFF00u) << 8) | ((hi & 0xFF0000u) >> 8) | ((hi & 0xFF000000u) >> 24);
+			const uint64_t w = ((uint64_t)hi << 8) | (uint64_t)data[x + 4];
+
+			const unsigned shift = 40u - (unsigned)y - (unsigned)len;
+			const uint32_t mask = (len >= 32) ? 0xFFFFFFFFu : ((1u << len) - 1u);
+			return (unsigned)((w >> shift) & mask);
+		}
+
+		int getInt(int start, int len) const
+		{
+			const unsigned ones = ~0u;
+			unsigned u = getUint(start, len);
+			if (u & (1u << (len - 1)))
+				u |= ones << len;
+			return (int)u;
+		}
+
 		void getText(int start, int len, std::string &str) const;
 		void setText(int start, int len, const char *str);
 
