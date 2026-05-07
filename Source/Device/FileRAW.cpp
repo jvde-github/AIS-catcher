@@ -44,7 +44,7 @@ namespace Device
 					ssize_t bytesRead = ::read(STDIN_FILENO, buffer.data(), buffer.size());
 					if (bytesRead <= 0) break;
 
-					fifo.Push(buffer.data(), (int)bytesRead, true);
+					fifo.Push(buffer.data(), (int)bytesRead);
 				}
 			}
 			else
@@ -61,7 +61,7 @@ namespace Device
 						if(bytesRead < buffer.size())
 							std::memset(buffer.data() + bytesRead, 0, buffer.size() - bytesRead);
 
-						fifo.Push(buffer.data(), buffer.size(), true);
+						fifo.Push(buffer.data(), buffer.size());
 					}
 				}
 				else
@@ -141,6 +141,7 @@ namespace Device
 			else
 				buffer.resize(BUFFER_SIZE);
 		}
+		fifo.setWait(lossless);
 
 		if (is_stdin)
 		{
@@ -205,6 +206,9 @@ namespace Device
 			break;
 		case AIS::KEY_SETTING_TXT_BLOCK_SIZE:
 			TXT_BLOCK_SIZE = Util::Parse::Integer(arg, 1, 16384);
+			break;
+		case AIS::KEY_SETTING_LOSSLESS:
+			lossless = Util::Parse::Switch(arg);
 			break;
 		default:
 			Device::SetKey(key, arg);

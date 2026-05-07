@@ -43,6 +43,8 @@ class FIFO
 	int BLOCK_SIZE = 16 * 16384;
 	int N_BLOCKS = 2;
 
+	bool default_wait = false;
+
 	const static int timeout = 1500;
 
 public:
@@ -129,7 +131,11 @@ public:
 		return blocks_filled == N_BLOCKS;
 	}
 
-	bool Push(char *data, int sz, bool wait = false)
+	void setWait(bool b) { default_wait = b; }
+
+	bool Push(char *data, int sz) { return Push(data, sz, default_wait); }
+
+	bool Push(char *data, int sz, bool wait)
 	{
 		std::unique_lock<std::mutex> lock(fifo_mutex);
 

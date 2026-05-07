@@ -34,6 +34,7 @@ namespace Device {
 		bool done = false;
 		bool loop = false;
 		bool use_raw_stdin = false;
+		bool lossless = true;
 
 		FIFO fifo;
 

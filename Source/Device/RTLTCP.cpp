@@ -219,6 +219,9 @@ namespace Device
 			}
 			break;
 		}
+		case AIS::KEY_SETTING_LOSSLESS:
+			fifo.setWait(Util::Parse::Switch(arg));
+			break;
 		default:
 			if (!tcp.setOptionKey(key, arg) && !mqtt.setOptionKey(key, arg) && !gpsd.setOptionKey(key, arg) && !rtltcp.setOptionKey(key, arg) && !ws.setOptionKey(key, arg))
 				Device::SetKey(key, arg);
