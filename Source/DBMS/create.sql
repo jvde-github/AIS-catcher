@@ -44,10 +44,10 @@ CREATE TABLE ais_sar_position (
     station_id smallint,
     msg_id integer references ais_message(id) ON DELETE SET NULL,
     alt smallint,
-    speed smallint,
+    speed real,
     lat real,
     lon real,
-    course smallint
+    course real
 );
 
 CREATE TABLE ais_aton (
