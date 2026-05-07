@@ -736,7 +736,7 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 			receiver.removeTags("DT");
 			break;
 		case 't':
-			Assert(count <= 3, param, "requires one parameter [url], or two or three parameters [[protocol]] [host] [port].");
+			Assert(count > 0, param, "requires one parameter [url], or two or three parameters [[protocol]] [host] [port].");
 			if (++state.nrec > 1)
 			{
 				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
@@ -744,19 +744,24 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 			state.receivers.back()->getDeviceManager().InputType() = Type::RTLTCP;
 			if (count == 1)
 				state.receivers.back()->getDeviceManager().RTLTCP().SetKey(AIS::KEY_SETTING_URL, arg1);
-			if (count == 2)
+			else if ((count & 1) == 0)
 				state.receivers.back()->getDeviceManager().RTLTCP().SetKey(AIS::KEY_SETTING_PORT, arg2).SetKey(AIS::KEY_SETTING_HOST, arg1);
-			if (count == 3)
+			else if ((count & 1) == 1)
 				state.receivers.back()->getDeviceManager().RTLTCP().SetKey(AIS::KEY_SETTING_PORT, arg3).SetKey(AIS::KEY_SETTING_HOST, arg2).SetKey(AIS::KEY_SETTING_PROTOCOL, arg1);
+
+			if (count >= 4 )
+				parseSettings(state.receivers.back()->getDeviceManager().RTLTCP(), argv, ptr + 2 + (count & 1), argc);
 			break;
 		case 'x':
-			Assert(count == 2, param, "requires two parameters [server] [port].");
+			Assert(count >= 2 && (count & 1) == 0, param, "requires two parameters [server] [port] (optionally followed by key value pairs).");
 			if (++state.nrec > 1)
 			{
 				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 			}
 			state.receivers.back()->getDeviceManager().InputType() = Type::UDP;
 			state.receivers.back()->getDeviceManager().UDP().SetKey(AIS::KEY_SETTING_PORT, arg2).SetKey(AIS::KEY_SETTING_SERVER, arg1);
+			if (count >= 4)
+				parseSettings(state.receivers.back()->getDeviceManager().UDP(), argv, ptr + 2, argc);
 			break;
 		case 'D':
 		{
@@ -789,62 +794,74 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 				state.receivers.back()->getDeviceManager().SpyServer().SetKey(AIS::KEY_SETTING_PORT, arg2).SetKey(AIS::KEY_SETTING_HOST, arg1);
 			break;
 		case 'z':
-			Assert(count <= 2, param, "requires at most two parameters [[format]] [endpoint].");
+			Assert(count > 0, param, "requires one parameter [endpoint] or two parameters [[format]] [endpoint].");
 			if (++state.nrec > 1)
 			{
 				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 			}
 			state.receivers.back()->getDeviceManager().InputType() = Type::ZMQ;
-			if (count == 1)
+			if ((count & 1) == 1)
 				state.receivers.back()->getDeviceManager().ZMQ().SetKey(AIS::KEY_SETTING_ENDPOINT, arg1);
-			if (count == 2)
+			else if ((count & 1) == 0)
 				state.receivers.back()->getDeviceManager().ZMQ().SetKey(AIS::KEY_SETTING_FORMAT, arg1).SetKey(AIS::KEY_SETTING_ENDPOINT, arg2);
+
+			if (count >= 3)
+				parseSettings(state.receivers.back()->getDeviceManager().ZMQ(), argv, ptr + 2 - (count & 1), argc);
 			break;
 		case 'b':
 			Assert(count == 0, param, MSG_NO_PARAMETER);
 			receiver.Timing() = true;
 			break;
 		case 'i':
-			Assert(count <= 1, param, "requires at most one option parameter.");
 			if (++state.nrec > 1)
 			{
 				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 			}
 			state.receivers.back()->getDeviceManager().InputType() = Type::N2K;
-			if (count == 1)
+			if ((count & 1) == 1)
 				state.receivers.back()->getDeviceManager().N2KSCAN().SetKey(AIS::KEY_SETTING_INTERFACE, arg1);
+
+			if (count >= 2)
+				parseSettings(state.receivers.back()->getDeviceManager().N2KSCAN(), argv, ptr + (count & 1), argc);
 			break;
 
 		case 'w':
-			Assert(count <= 1, param);
 			if (++state.nrec > 1)
 			{
 				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 			}
 			state.receivers.back()->getDeviceManager().InputType() = Type::WAVFILE;
-			if (count == 1)
+			if ((count & 1) == 1)
 				state.receivers.back()->getDeviceManager().WAV().SetKey(AIS::KEY_SETTING_FILE, arg1);
+
+			if (count >= 2)
+				parseSettings(state.receivers.back()->getDeviceManager().WAV(), argv, ptr + (count & 1), argc);
 			break;
 		case 'r':
-			Assert(count <= 2, param, "requires at most two parameters [[format]] [filename].");
+			Assert(count > 0, param, "requires one parameter [filename] or two parameters [[format]] [filename].");
 			if (++state.nrec > 1)
 			{
 				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 			}
 			state.receivers.back()->getDeviceManager().InputType() = Type::RAWFILE;
-			if (count == 1)
+			if ((count & 1) == 1)
 				state.receivers.back()->getDeviceManager().RAW().SetKey(AIS::KEY_SETTING_FILE, arg1);
-			if (count == 2)
+			else if ((count & 1) == 0)
 				state.receivers.back()->getDeviceManager().RAW().SetKey(AIS::KEY_SETTING_FORMAT, arg1).SetKey(AIS::KEY_SETTING_FILE, arg2);
+
+			if (count >= 3)
+				parseSettings(state.receivers.back()->getDeviceManager().RAW(), argv, ptr + 2 - (count & 1), argc);
 			break;
 		case 'e':
-			Assert(count == 2, param, "requires two parameters [baudrate] [portname].");
+			Assert(count >= 2 && (count & 1) == 0, param, "requires two parameters [baudrate] [portname] (optionally followed by key value pairs).");
 			if (++state.nrec > 1)
 			{
 				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 			}
 			state.receivers.back()->getDeviceManager().InputType() = Type::SERIALPORT;
 			state.receivers.back()->getDeviceManager().SerialPort().SetKey(AIS::KEY_SETTING_BAUDRATE, arg1).SetKey(AIS::KEY_SETTING_PORT, arg2);
+			if (count >= 4)
+				parseSettings(state.receivers.back()->getDeviceManager().SerialPort(), argv, ptr + 2, argc);
 			break;
 		case 'l':
 			Assert(count == 0 || count == 2, param, "takes no parameters or [JSON on/off].");
