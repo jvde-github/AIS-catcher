@@ -62,8 +62,13 @@ option(PSQL "Include PSQL support" ON)
 option(SQLITE "Include SQLITE support" ON)
 option(OPENSSL "Include OPENSSL support" ON)
 option(NMEA2000 "Include NMEA2000 support" ON)
+option(WEBVIEWER "Include the embedded web UI (WebDB blob + HTTP server)" ON)
 option(ARMV6 "Compile for Raspberry Pi Zero" OFF)
 option(RBIT "Use ARM RBIT instruction for bit reversal" OFF)
+
+if(WEBVIEWER)
+    add_definitions(-DHASWEBVIEWER)
+endif()
 
 if(RBIT)
     add_definitions(-DHASRBIT)
@@ -227,8 +232,6 @@ set(CPP
     Source/Application/MapTiles.cpp
     Source/Application/Prometheus.cpp
     Source/Application/Receiver.cpp
-    Source/Application/WebDB.cpp
-    Source/Application/WebViewer.cpp
     Source/DBMS/PostgreSQL.cpp
     Source/Device/AIRSPY.cpp
     Source/Device/AIRSPYHF.cpp
@@ -249,7 +252,6 @@ set(CPP
     Source/DSP/DSP.cpp
     Source/DSP/Model.cpp
     Source/IO/HTTPClient.cpp
-    Source/IO/HTTPServer.cpp
     Source/IO/MsgOut.cpp
     Source/IO/Screen.cpp
     Source/IO/N2KInterface.cpp
@@ -278,6 +280,13 @@ set(CPP
     Source/Utilities/TemplateString.cpp
     Source/Utilities/StreamHelpers.cpp
 )
+
+if(WEBVIEWER)
+    list(APPEND CPP
+        Source/Application/WebDB.cpp
+        Source/Application/WebViewer.cpp
+        Source/IO/HTTPServer.cpp)
+endif()
 
 set(HEADER
     Source/Application/AIS-catcher.h Source/Application/Prometheus.h Source/Application/Config.h Source/Application/DeviceManager.h Source/Application/WebDB.h Source/Library/Logger.h Source/Application/WebViewer.h Source/Application/Receiver.h Source/Tracking/Ships.h Source/Tracking/DB.h Source/DBMS/PostgreSQL.h Source/IO/HTTPClient.h Source/Application/MapTiles.h Source/Aviation/Beast.h

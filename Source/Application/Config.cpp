@@ -64,6 +64,7 @@ void Config::setSettingsFromJSON(const JSON::Value &m, Setting &s)
 	}
 }
 
+#ifdef HASWEBVIEWER
 void Config::setServerfromJSON(const JSON::Value &m)
 {
 
@@ -88,6 +89,7 @@ void Config::setServerfromJSON(const JSON::Value &m)
 		_state.servers.back()->active() = true;
 	}
 }
+#endif
 
 void Config::setHTTPfromJSON(const JSON::Member &m)
 {
@@ -468,7 +470,11 @@ void Config::set(const std::string &str)
 			setTCPListenerfromJSON(m);
 			break;
 		case AIS::KEY_SETTING_SERVER:
+#ifdef HASWEBVIEWER
 			setServerfromJSON(m.Get());
+#else
+			Warning() << "Config 'server' key ignored: WebViewer not compiled in.";
+#endif
 			break;
 		case AIS::KEY_SETTING_HTTP:
 			setHTTPfromJSON(m);

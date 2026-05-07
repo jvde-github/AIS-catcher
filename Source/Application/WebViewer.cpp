@@ -21,7 +21,7 @@
 #include "JSONAIS.h"
 #include "Helper.h"
 
-IO::OutputMessage *comm_feed = nullptr;
+extern IO::OutputMessage *comm_feed;
 
 // --- PluginManager ---
 

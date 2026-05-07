@@ -20,13 +20,17 @@
 #include <vector>
 
 #include "Receiver.h"
+#ifdef HASWEBVIEWER
 #include "WebViewer.h"
+#endif
 #include "Screen.h"
 
 struct RunState {
 	// Receivers and outputs
 	std::vector<std::unique_ptr<Receiver>> receivers;
+#ifdef HASWEBVIEWER
 	std::vector<std::unique_ptr<WebViewer>> servers;
+#endif
 	std::vector<std::unique_ptr<IO::OutputMessage>> msg;
 
 	// Screen and statistics

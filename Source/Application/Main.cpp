@@ -26,7 +26,9 @@
 #include "AIS-catcher.h"
 
 #include "Receiver.h"
+#ifdef HASWEBVIEWER
 #include "WebViewer.h"
+#endif
 #include "RunState.h"
 #include "Config.h"
 #include "JSON.h"
@@ -38,6 +40,8 @@
 #include "File.h"
 
 static std::atomic<bool> stop;
+
+IO::OutputMessage *comm_feed = nullptr;
 
 void StopRequest()
 {
@@ -333,7 +337,11 @@ static void run(RunState &state)
 	state.stat.resize(state.receivers.size());
 	state.msg_count.resize(state.receivers.size(), 0);
 
+#ifdef HASWEBVIEWER
 	bool has_server = !state.servers.empty() && state.servers[0]->active();
+#else
+	bool has_server = false;
+#endif
 	bool has_http = false;
 	for (auto &o : state.msg)
 		if (dynamic_cast<IO::HTTPStreamer *>(o.get())) { has_http = true; break; }
@@ -396,6 +404,7 @@ static void run(RunState &state)
 		o->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(mask));
 	}
 
+#ifdef HASWEBVIEWER
 	for (auto &s : state.servers)
 	{
 		if (s->zones.empty()) continue;
@@ -404,6 +413,7 @@ static void run(RunState &state)
 			Warning() << "Server has zone filter but no matching receivers — will receive nothing";
 		s->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(mask));
 	}
+#endif
 
 	for (int i = 0; i < (int)state.receivers.size(); i++)
 	{
@@ -430,13 +440,16 @@ static void run(RunState &state)
 		Debug() << "Mutex: single receiver, all sinks lock-free";
 	}
 
+#ifdef HASWEBVIEWER
 	for (auto &s : state.servers)
 		if (s->active())
 			s->connect(state.receivers);
+#endif
 
 	for (auto &o : state.msg)
 		o->Start();
 
+#ifdef HASWEBVIEWER
 	for (auto &s : state.servers)
 		if (s->active())
 		{
@@ -449,6 +462,7 @@ static void run(RunState &state)
 			}
 			s->start();
 		}
+#endif
 
 	Debug() << "Starting statistics";
 	for (auto &s : state.stat)
@@ -560,8 +574,10 @@ static void run(RunState &state)
 		Info() << ss.str();
 	}
 
+#ifdef HASWEBVIEWER
 	for (auto &s : state.servers)
 		s->close();
+#endif
 }
 
 static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb)
@@ -631,6 +647,7 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 			}
 			break;
 		case 'N':
+#ifdef HASWEBVIEWER
 			Assert(count > 0, param, "requires at least one parameter");
 			if (state.servers.size() == 0)
 				state.servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
@@ -644,6 +661,9 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 			}
 			state.servers.back()->active() = true;
 			parseSettings(*state.servers.back(), argv, ptr + (count % 2), argc);
+#else
+			throw std::runtime_error("WebViewer support not compiled in.");
+#endif
 			break;
 		case 'S':
 			Assert(count >= 1 && count % 2 == 1, param, "requires at least one parameter [port].");
@@ -1051,7 +1071,11 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 	if (state.show_copyright)
 		printVersion();
 
-	if ((!state.xshare_defined && !c.isSharingDefined()) && (state.msg.size() > 0 || state.servers.size() > 0))
+	if ((!state.xshare_defined && !c.isSharingDefined()) && (state.msg.size() > 0
+#ifdef HASWEBVIEWER
+		|| state.servers.size() > 0
+#endif
+	))
 	{
 		Warning() << "Hint: Use '-X on' to share with aiscatcher.org community (enables community overlay) or '-X off' to disable. Currently ON by default.";
 

@@ -55,7 +55,9 @@ class Config
 	void setMQTTfromJSON(const JSON::Member &m);
 	void setTCPListenerfromJSON(const JSON::Member &m);
 	void setModelfromJSON(const JSON::Member &m);
+#ifdef HASWEBVIEWER
 	void setServerfromJSON(const JSON::Value &m);
+#endif
 	void setReceiverfromJSON(const std::vector<JSON::Member> &m, bool unspecAllowed);
 	void setReceiverFromArray(const JSON::Member &m);
 	void setSharing(const std::vector<JSON::Member> &members);
