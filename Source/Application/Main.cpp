@@ -189,9 +189,6 @@ static void printBuildConfiguration()
 #ifdef HASNMEA2000
 	other_support << "NMEA2000 ";
 #endif
-#ifdef HASCURL
-	other_support << "CURL ";
-#endif
 #ifdef HASOPENSSL
 	other_support << "SSL ";
 #endif
