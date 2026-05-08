@@ -766,7 +766,7 @@ namespace AIS
 		int station = nmea.getStation();
 		if (station != 0)
 			result += " ID " + std::to_string(station);
-		result += " stamp " + Util::Convert::toString(nmea.getStamp()) + " crc_check " + Util::Convert::toString(nmea.getCRCcheck()) + " VDO " + Util::Convert::toString(nmea.getVDO()) + Model::Get();
+		result += " crc_check " + Util::Convert::toString(nmea.getCRCcheck()) + " VDO " + Util::Convert::toString(nmea.getVDO()) + Model::Get();
 		return result;
 	}
 

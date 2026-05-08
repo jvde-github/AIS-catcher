@@ -52,19 +52,24 @@ namespace AIS
 		return 0;
 	}
 
-	void NMEA::initMsg(char channel, int src, int64_t rxtime_us, int64_t toa, long start_idx, long end_idx)
+	void NMEA::initMsg(char channel, int src, int64_t toa, long start_idx, long end_idx)
 	{
 		msg.clear();
-
-		if (cfg_stamp || rxtime_us == 0)
-			msg.Stamp();
-		else
-			msg.setRxTimeMicros(rxtime_us);
-
+		msg.Stamp();
 		msg.setTOA(toa);
 		msg.setOrigin(channel, src, own_mmsi);
 		msg.setStartIdx(start_idx);
 		msg.setEndIdx(end_idx);
+	}
+
+	void NMEA::setStamp(bool)
+	{
+		static bool warned = false;
+		if (!warned)
+		{
+			Warning() << "NMEA: 'stamp' setting is deprecated and ignored — rxtime is always stamped on receive; upstream time is captured in 'toa'";
+			warned = true;
+		}
 	}
 
 	void NMEA::assembleAIS(TAG &tag)
@@ -88,7 +93,7 @@ namespace AIS
 			return;
 
 		// All parts collected — assemble and send
-		initMsg(aivdm.channel(), src, mctx.rxtime, mctx.toa);
+		initMsg(aivdm.channel(), src, mctx.toa);
 
 		msg.beginNMEA();
 		for (auto &it : queue)
@@ -422,7 +427,7 @@ namespace AIS
 		{
 			tag.error = message_error;
 
-			initMsg(channel_ch, src, mctx.rxtime, mctx.toa, mctx.ssc, mctx.ssc + mctx.sl);
+			initMsg(channel_ch, src, mctx.toa, mctx.ssc, mctx.ssc + mctx.sl);
 			msg.appendPayload(q, (int)(payload_end - q));
 			msg.reduceLength(fillbits);
 
@@ -497,6 +502,7 @@ namespace AIS
 			const JSON::Value *nmea_array = nullptr;
 			float tpv_lat = 0, tpv_lon = 0;
 			bool has_tpv_coords = false;
+			bool saw_toa = false;
 
 			for (const auto &p : jsonDoc.getMembers())
 			{
@@ -538,10 +544,12 @@ namespace AIS
 					tag.ppm = p.Get().getFloat(PPM_UNDEFINED);
 					break;
 				case AIS::KEY_RXUXTIME:
-					mctx.rxtime = (int64_t)std::llround(p.Get().getFloat() * 1000000.0);
+					if (!saw_toa)
+						mctx.toa = (int64_t)std::llround(p.Get().getFloat() * 1000000.0);
 					break;
 				case AIS::KEY_TOA:
 					mctx.toa = (int64_t)std::llround(p.Get().getFloat() * 1000000.0);
+					saw_toa = true;
 					break;
 				case AIS::KEY_STATION_ID:
 					mctx.station = p.Get().getInt();
@@ -586,9 +594,6 @@ namespace AIS
 
 			if (cls == CLS_AIS && known_dev && uuid_match && nmea_array)
 			{
-				if (dev == DEV_DAISY_CATCHER && mctx.toa != 0 && !cfg_stamp)
-					mctx.rxtime = mctx.toa;
-
 				mctx.groupId = 0;
 				queue.clear();
 				for (const auto &v : nmea_array->getArray())
@@ -866,7 +871,7 @@ namespace AIS
 						char *end;
 						double ts = strtod(val, &end);
 						if (end > val)
-							mctx.rxtime = (int64_t)std::llround(ts * 1000000.0);
+							mctx.toa = (int64_t)std::llround(ts * 1000000.0);
 					}
 					else
 					{
@@ -876,7 +881,7 @@ namespace AIS
 						{
 							if (neg)
 								raw = -raw;
-							mctx.rxtime = (raw > 100000000000LL || raw < -100000000000LL) ? raw : (raw * 1000000);
+							mctx.toa = (raw > 100000000000LL || raw < -100000000000LL) ? raw : (raw * 1000000);
 						}
 					}
 					break;

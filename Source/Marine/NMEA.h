@@ -106,14 +106,13 @@ namespace AIS
 		int pos = 0;
 		// Per-message context — set by scanners/process functions, read by dispatch
 		struct MsgCtx {
-			int64_t rxtime = 0;
 			int station = -1;
 			int groupId = 0;
 			uint64_t ssc = 0;
 			uint16_t sl = 0;
 			int64_t toa = 0;
 
-			void reset() { rxtime = 0; station = -1; groupId = 0; ssc = 0; sl = 0; toa = 0; }
+			void reset() { station = -1; groupId = 0; ssc = 0; sl = 0; toa = 0; }
 		} mctx;
 
 		void findStart();
@@ -126,7 +125,7 @@ namespace AIS
 
 		std::vector<AIVDM> queue;
 
-		void initMsg(char channel, int src, int64_t rxtime_us, int64_t toa = 0, long start_idx = 0, long end_idx = 0);
+		void initMsg(char channel, int src, int64_t toa = 0, long start_idx = 0, long end_idx = 0);
 		void assembleAIS(TAG &tag);
 		void addline(const AIVDM &a);
 		void reset();
@@ -139,7 +138,6 @@ namespace AIS
 		float GpsToDecimal(const char *, int len, char, bool &error);
 
 		bool cfg_regenerate = false;
-		bool cfg_stamp = true;
 		bool cfg_crc_check = false;
 		bool cfg_JSON_input = false;
 		bool cfg_VDO = true;
@@ -203,8 +201,7 @@ namespace AIS
 		void setCRCcheck(bool b) { cfg_crc_check = b; }
 		bool getCRCcheck() { return cfg_crc_check; }
 		void setJSON(bool b) { cfg_JSON_input = b; }
-		void setStamp(bool b) { cfg_stamp = b; }
-		bool getStamp() { return cfg_stamp; }
+		void setStamp(bool b);
 		void setOwnMMSI(int m) { own_mmsi = m; }
 
 		Connection<GPS> outGPS;

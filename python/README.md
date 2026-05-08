@@ -52,7 +52,6 @@ class Decoder:
         *,
         format: str = "dictionary",
         country: bool = False,
-        stamp: bool = False,
     ) -> None: ...
     def feed(self, data: bytes | bytearray | str) -> int: ...
     def next(self) -> dict | bytes | None: ...
@@ -62,7 +61,6 @@ def decode(
     *parts: bytes | str,
     format: str = "dictionary",
     country: bool = False,
-    stamp: bool = False,
 ) -> dict | bytes: ...
 
 def iter_decode(
@@ -70,7 +68,6 @@ def iter_decode(
     *,
     format: str = "dictionary",
     country: bool = False,
-    stamp: bool = False,
 ) -> Iterator[dict | bytes]: ...
 ```
 
@@ -82,7 +79,13 @@ def iter_decode(
 |---|---|---|
 | `format` | `"dictionary"` | Output shape (see table below). |
 | `country` | `False` | Adds `country` and `country_code` to every message, derived from the MMSI prefix (ITU-R M.585 MID table). Only meaningful for the `dictionary` and `annotated` formats. |
-| `stamp` | `False` | If `True`, always sets `rxuxtime` to the current time. The default honors NMEA tag-block `c:<unix>` timestamps and JSON-input `rxuxtime`/`toa` fields when present, falling back to the current time if neither is provided. |
+
+#### Timestamps
+
+Each decoded message carries two timestamps:
+
+- **`rxuxtime`** — the time aiscat decoded the message (i.e. now).
+- **`toa`** — the time (if any) carried in the input. For JSON input that's the `toa` or `rxuxtime` field (`toa` wins if both are present); for NMEA it's the tag-block `c:` field. Omitted from the output if the input had none.
 
 ### Output formats
 
@@ -124,7 +127,7 @@ with open("session.nmea", "rb") as f:
 
 ## Streams
 
-For the common cases (file / stdin / TCP / UDP), aiscat ships generator helpers that wire up the I/O loop, drain the queue, and yield decoded messages. They take the same `format` / `country` / `stamp` kwargs as `Decoder`.
+For the common cases (file / stdin / TCP / UDP), aiscat ships generator helpers that wire up the I/O loop, drain the queue, and yield decoded messages. They take the same `format` / `country` kwargs as `Decoder`.
 
 ```python
 import aiscat

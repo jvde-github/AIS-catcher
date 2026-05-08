@@ -253,10 +253,10 @@ typedef struct {
 } DecoderObject;
 
 static int Decoder_init(DecoderObject *self, PyObject *args, PyObject *kwds) {
-    static const char *kwlist[] = {"format", "country", "stamp", nullptr};
+    static const char *kwlist[] = {"format", "country", nullptr};
     const char *format_str = nullptr;
-    int country = 0, stamp = 0;
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|spp", (char **)kwlist, &format_str, &country, &stamp))
+    int country = 0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|sp", (char **)kwlist, &format_str, &country))
         return -1;
 
     OutFormat fmt;
@@ -274,8 +274,6 @@ static int Decoder_init(DecoderObject *self, PyObject *args, PyObject *kwds) {
     self->tag = new TAG();
     self->tag->clear();
     if (country) self->tag->mode |= 4;  // enables JSONAIS::COUNTRY (MMSI prefix → country, country_code)
-    // stamp=False (default) honors NMEA tag-block c:<unix> timestamps; stamp=True always overwrites with current time.
-    self->nmea->setStamp(stamp != 0);
     self->nmea->out.Connect(self->jsonais);
     self->jsonais->out.Connect(self->sink);
     return 0;
