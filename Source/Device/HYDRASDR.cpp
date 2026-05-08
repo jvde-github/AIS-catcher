@@ -258,8 +258,6 @@ namespace Device
 		if (hydrasdr_set_freq(dev, getCorrectedFrequency()) != HYDRASDR_SUCCESS)
 			throw std::runtime_error("HYDRASDR: cannot set frequency.");
 	}
-#endif
-
 	Setting &HYDRASDR::SetKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
@@ -341,4 +339,5 @@ namespace Device
 
 		return Device::Get() + str + " biastee " + Util::Convert::toString(bias_tee) + " real_mode " + Util::Convert::toString(real_mode) + " ";
 	}
+#endif
 }

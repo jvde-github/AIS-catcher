@@ -21,7 +21,6 @@
 
 #ifdef HASHACKRF
 #include <hackrf.h>
-#endif
 
 namespace Device
 {
@@ -29,12 +28,9 @@ namespace Device
 	class HACKRF : public Device
 	{
 
-		// Device settings (always available)
 		int LNA_Gain = 8;
 		int VGA_Gain = 20;
 		bool preamp = false;
-
-#ifdef HASHACKRF
 
 		hackrf_device *device = nullptr;
 		static hackrf_device_list_t *list;
@@ -46,7 +42,21 @@ namespace Device
 		void applySettings();
 
 	public:
-		// Control
+		HACKRF() : Device(Format::CS8, 6144000, Type::HACKRF, "HACKRF")
+		{
+			if (hackrf_init() != HACKRF_SUCCESS)
+				throw std::runtime_error("HACKRF: Cannot open hackrf library");
+		}
+		~HACKRF()
+		{
+			if (list)
+			{
+				hackrf_device_list_free(list);
+				list = NULL;
+			}
+			hackrf_exit();
+		}
+
 		void Open(uint64_t h);
 		void Close();
 		void Play();
@@ -57,36 +67,26 @@ namespace Device
 
 		void getDeviceList(std::vector<Description> &DeviceList);
 
+		std::string getProduct() { return "HACKRF"; }
+		std::string getVendor() { return "Great Scott Gadgets"; }
 		std::string getSerial() { return serial; }
 
 		void setFormat(Format f) {}
-#endif
 
-	public:
-		HACKRF() : Device(Format::CS8, 6144000, Type::HACKRF, "HACKRF")
-		{
-#ifdef HASHACKRF
-			if (hackrf_init() != HACKRF_SUCCESS)
-				throw std::runtime_error("HACKRF: Cannot open hackrf library");
-#endif
-		}
-		~HACKRF()
-		{
-#ifdef HASHACKRF
-			if (list)
-			{
-				hackrf_device_list_free(list);
-				list = NULL;
-			}
-			hackrf_exit();
-#endif
-		}
-
-		std::string getProduct() { return "HACKRF"; }
-		std::string getVendor() { return "Great Scott Gadgets"; }
-
-		// Settings (always available)
 		Setting &SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 }
+
+#else // HASHACKRF
+
+namespace Device
+{
+	class HACKRF : public Unavailable
+	{
+	public:
+		HACKRF() : Unavailable("HACKRF", "HASHACKRF", Type::HACKRF) {}
+	};
+}
+
+#endif // HASHACKRF

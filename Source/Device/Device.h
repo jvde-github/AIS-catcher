@@ -152,4 +152,25 @@ namespace Device {
 		virtual Format getFormat() { return format; }
 		Type getDriver() { return DeviceType; }
 	};
+
+	// Stub base for devices whose backing library is not compiled into this build.
+	// Configuration is silently accepted (so shared configs don't break across builds);
+	// any attempt to actually start the device fails fast with a build-flag hint.
+	class Unavailable : public Device {
+		std::string device_name;
+		std::string build_flag;
+
+	public:
+		Unavailable(const std::string &n, const std::string &f, Type t = Type::NONE)
+			: Device(Format::UNKNOWN, 0, t, n), device_name(n), build_flag(f) {}
+
+		void Open(uint64_t) override {
+			throw std::runtime_error(device_name + " support not compiled in. Rebuild with -D" + build_flag + "=ON.");
+		}
+		void Play() override { Open(0); }
+		void getDeviceList(std::vector<Description> &) override {}
+		Setting &SetKey(AIS::Keys, const std::string &) override { return *this; }
+		std::string Get() override { return "(not compiled in: rebuild with -D" + build_flag + "=ON)"; }
+		std::string getProduct() override { return device_name + " [not compiled in]"; }
+	};
 }

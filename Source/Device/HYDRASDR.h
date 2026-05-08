@@ -23,7 +23,6 @@
 
 #ifdef HASHYDRASDR
 #include <hydrasdr.h>
-#endif
 
 namespace Device
 {
@@ -31,7 +30,6 @@ namespace Device
 	class HYDRASDR : public Device
 	{
 
-		// Device settings (always available)
 		enum class HYDRASDRGainMode
 		{
 			Free,
@@ -50,8 +48,6 @@ namespace Device
 
 		bool bias_tee = false;
 		bool real_mode = false;
-
-#ifdef HASHYDRASDR
 
 		struct hydrasdr_device *dev = nullptr;
 		bool lost = false;
@@ -78,7 +74,8 @@ namespace Device
 		void setDefaultRate();
 
 	public:
-		// Control
+		HYDRASDR() : Device(Format::CF32, 0, Type::HYDRASDR, "HYDRASDR") {}
+
 		void Open(uint64_t h);
 
 #ifdef HASHYDRASDR_ANDROID
@@ -94,19 +91,26 @@ namespace Device
 
 		void getDeviceList(std::vector<Description> &DeviceList);
 
+		std::string getProduct() { return "HYDRASDR"; }
+		std::string getVendor() { return "HYDRASDR"; }
 		std::string getSerial() { return Util::Convert::toHexString(serial); }
 
 		void setFormat(Format f) {}
-#endif
 
-	public:
-		HYDRASDR() : Device(Format::CF32, 0, Type::HYDRASDR, "HYDRASDR") {}
-
-		std::string getProduct() { return "HYDRASDR"; }
-		std::string getVendor() { return "HYDRASDR"; }
-
-		// Settings (always available)
 		Setting &SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 }
+
+#else // HASHYDRASDR
+
+namespace Device
+{
+	class HYDRASDR : public Unavailable
+	{
+	public:
+		HYDRASDR() : Unavailable("HYDRASDR", "HASHYDRASDR", Type::HYDRASDR) {}
+	};
+}
+
+#endif // HASHYDRASDR

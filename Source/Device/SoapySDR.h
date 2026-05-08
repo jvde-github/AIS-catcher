@@ -24,7 +24,6 @@
 #include <SoapySDR/Modules.hpp>
 #include <SoapySDR/Registry.hpp>
 #include <SoapySDR/Device.hpp>
-#endif
 
 namespace Device
 {
@@ -46,14 +45,11 @@ namespace Device
 	class SOAPYSDR : public Device
 	{
 
-		// Device settings (always available)
 		std::string device_args;
 		std::string antenna = "";
 		int channel = 0;
 		bool AGC = true;
 		bool print = false;
-
-#ifdef HASSOAPYSDR
 
 		std::vector<SoapyDevice> dev_list;
 		SoapySDR::Device *dev = NULL;
@@ -71,7 +67,6 @@ namespace Device
 
 		bool lost = true;
 
-		// FIFO
 		FIFO fifo;
 
 		void RunAsync();
@@ -83,7 +78,8 @@ namespace Device
 		int findRate(const std::vector<double> &);
 
 	public:
-		// Control
+		SOAPYSDR() : Device(Format::CF32, 0, Type::SOAPYSDR, "SoapySDR") {}
+
 		void Open(uint64_t h);
 		void Play();
 		void Stop();
@@ -94,16 +90,24 @@ namespace Device
 
 		void getDeviceList(std::vector<Description> &DeviceList);
 
-		void setFormat(Format f) {}
-#endif
-
-	public:
-		SOAPYSDR() : Device(Format::CF32, 0, Type::SOAPYSDR, "SoapySDR") {}
-
 		std::string getProduct() { return "SOAPYSDR"; }
 
-		// Settings (always available)
+		void setFormat(Format f) {}
+
 		Setting &SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 }
+
+#else // HASSOAPYSDR
+
+namespace Device
+{
+	class SOAPYSDR : public Unavailable
+	{
+	public:
+		SOAPYSDR() : Unavailable("SOAPYSDR", "HASSOAPYSDR", Type::SOAPYSDR) {}
+	};
+}
+
+#endif // HASSOAPYSDR

@@ -21,7 +21,6 @@
 
 #ifdef HASRTLSDR
 #include <rtl-sdr.h>
-#endif
 
 namespace Device
 {
@@ -31,19 +30,14 @@ namespace Device
 		Default
 	};
 
-	// to be expanded with device specific parameters and allowable parameters (e.g. sample rate, gain modes, etc)
-
 	class RTLSDR : public Device
 	{
 
-		// Device settings (always available)
 		bool tuner_AGC = true;
 		bool RTL_AGC = true;
 		FLOAT32 tuner_Gain = 33.0;
 		bool bias_tee = false;
 		uint32_t BUFFER_COUNT = 24;
-
-#ifdef HASRTLSDR
 
 		rtlsdr_dev_t *dev = nullptr;
 
@@ -54,10 +48,8 @@ namespace Device
 
 		bool lost = true;
 
-		// FIFO
 		FIFO fifo;
 
-		// callbacks
 		static void callback_static(CU8 *buf, uint32_t len, void *ctx);
 		void callback(CU8 *buf, int len);
 
@@ -76,7 +68,12 @@ namespace Device
 		void applySettings();
 
 	public:
-		// Control
+		RTLSDR() : Device(Format::CU8, 1536000, Type::RTLSDR, "RTLSDR") {}
+		~RTLSDR()
+		{
+			try { Close(); } catch (...) {}
+		}
+
 		void Open(uint64_t h) override;
 #ifdef HASRTL_ANDROID
 		void OpenWithFileDescriptor(int);
@@ -95,23 +92,21 @@ namespace Device
 		std::string getSerial() override { return serial; }
 
 		void setFormat(Format f) override {}
-#endif
 
-	public:
-		RTLSDR() : Device(Format::CU8, 1536000, Type::RTLSDR, "RTLSDR") {}
-		~RTLSDR()
-		{
-			try
-			{
-				Close();
-			}
-			catch (...)
-			{
-			}
-		}
-
-		// Settings (always available)
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 		std::string Get() override;
 	};
 }
+
+#else // HASRTLSDR
+
+namespace Device
+{
+	class RTLSDR : public Unavailable
+	{
+	public:
+		RTLSDR() : Unavailable("RTLSDR", "HASRTLSDR", Type::RTLSDR) {}
+	};
+}
+
+#endif // HASRTLSDR

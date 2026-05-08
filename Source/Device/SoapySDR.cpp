@@ -250,27 +250,19 @@ namespace Device {
 				  << std::endl;
 	}
 
-#endif
-
 	Setting& SOAPYSDR::SetKey(AIS::Keys key, const std::string &arg) {
 		switch (key) {
 		case AIS::KEY_SETTING_DEVICE:
 			device_args = arg;
 			break;
 		case AIS::KEY_SETTING_GAIN:
-#ifdef HASSOAPYSDR
 			gains_args = SoapySDR::KwargsFromString(arg);
-#endif
 			break;
 		case AIS::KEY_SETTING_STREAM:
-#ifdef HASSOAPYSDR
 			stream_args = SoapySDR::KwargsFromString(arg);
-#endif
 			break;
 		case AIS::KEY_SETTING_SETTING:
-#ifdef HASSOAPYSDR
 			setting_args = SoapySDR::KwargsFromString(arg);
-#endif
 			break;
 		case AIS::KEY_SETTING_ANTENNA:
 			antenna = arg;
@@ -294,14 +286,11 @@ namespace Device {
 	std::string SOAPYSDR::Get() {
 		std::string str;
 
-#ifdef HASSOAPYSDR
 		str += " device \"" + device_args + "\" gain \"" + SoapySDR::KwargsToString(gains_args) + "\"";
 		str += " stream \"" + SoapySDR::KwargsToString(stream_args) + "\" setting \"" + SoapySDR::KwargsToString(setting_args) + "\"";
-#else
-		str += " device \"" + device_args + "\"";
-#endif
 		str += " channel \"" + std::to_string(channel) + "\" agc " + Util::Convert::toString(AGC) + " antenna \"" + antenna + "\"";
 
 		return Device::Get() + str;
 	}
+#endif
 }

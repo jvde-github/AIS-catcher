@@ -252,8 +252,6 @@ namespace Device
 		}
 	}
 
-#endif
-
 	Setting &RTLSDR::SetKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
@@ -289,4 +287,6 @@ namespace Device
 
 		return Device::Get() + str;
 	}
+
+#endif
 }

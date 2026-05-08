@@ -112,8 +112,6 @@ namespace Device
 
 }
 
-#endif
-
 namespace Device
 {
 	Setting &N2KSCAN::SetKey(AIS::Keys key, const std::string &arg)
@@ -135,3 +133,4 @@ namespace Device
 		return Device::Get() + " network " + _iface;
 	}
 }
+#endif

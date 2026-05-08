@@ -21,7 +21,6 @@
 
 #ifdef HASSDRPLAY
 #include <sdrplay_api.h>
-#endif
 
 namespace Device {
 
@@ -33,16 +32,12 @@ namespace Device {
 		bool AGC = false;
 		char antenna = 'A';
 
-#ifdef HASSDRPLAY
-
-		// Data is processed in separate thread
 		std::thread run_thread;
 		void Run();
 
 		FIFO fifo;
 		std::vector<CFLOAT32> output;
 
-		// SDRPLAY specific
 		static int API_count;
 
 		sdrplay_api_DeviceT device;
@@ -60,7 +55,9 @@ namespace Device {
 		std::string getHardwareDescription(unsigned char);
 
 	public:
-		// Control
+		SDRPLAY();
+		~SDRPLAY();
+
 		void Open(uint64_t h);
 		void Play();
 		void Stop();
@@ -70,17 +67,24 @@ namespace Device {
 
 		void getDeviceList(std::vector<Description>& DeviceList);
 
-		SDRPLAY();
-		~SDRPLAY();
-
 		std::string getProduct() { return getHardwareDescription(device.hwVer); }
 		std::string getVendor() { return "SDRPLAY"; }
 		std::string getSerial() { return device.SerNo; }
 
 		void setFormat(Format f) {}
-#endif
-		// Settings
+
 		Setting& SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 }
+
+#else // HASSDRPLAY
+
+namespace Device {
+	class SDRPLAY : public Unavailable {
+	public:
+		SDRPLAY() : Unavailable("SDRPLAY", "HASSDRPLAY", Type::SDRPLAY) {}
+	};
+}
+
+#endif // HASSDRPLAY

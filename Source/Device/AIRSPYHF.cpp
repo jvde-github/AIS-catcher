@@ -170,8 +170,6 @@ namespace Device
 		if (airspyhf_set_freq(dev, getCorrectedFrequency()) != AIRSPYHF_SUCCESS)
 			throw std::runtime_error("AIRSPYHF: cannot set frequency.");
 	}
-#endif
-
 	Setting &AIRSPYHF::SetKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
@@ -193,4 +191,5 @@ namespace Device
 	{
 		return Device::Get() + " preamp " + Util::Convert::toString(preamp) + " threshold " + (threshold_high ? std::string("HIGH") : std::string("LOW")) + " ";
 	}
+#endif
 }

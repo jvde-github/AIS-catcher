@@ -22,7 +22,6 @@
 
 #ifdef HASAIRSPY
 #include <airspy.h>
-#endif
 
 namespace Device
 {
@@ -30,7 +29,6 @@ namespace Device
 	class AIRSPY : public Device
 	{
 
-		// Device settings (always available)
 		enum class AIRSPYGainMode
 		{
 			Free,
@@ -49,8 +47,6 @@ namespace Device
 		int VGA_Gain = 10;
 
 		bool bias_tee = false;
-
-#ifdef HASAIRSPY
 
 		struct airspy_device *dev = nullptr;
 		bool lost = false;
@@ -77,7 +73,8 @@ namespace Device
 		void setDefaultRate();
 
 	public:
-		// Control
+		AIRSPY() : Device(Format::CF32, 0, Type::AIRSPY, "AIRSPY") {}
+
 		void Open(uint64_t h);
 
 #ifdef HASAIRSPY_ANDROID
@@ -93,19 +90,26 @@ namespace Device
 
 		void getDeviceList(std::vector<Description> &DeviceList);
 
+		std::string getProduct() { return "AIRSPY"; }
+		std::string getVendor() { return "AIRSPY"; }
 		std::string getSerial() { return Util::Convert::toHexString(serial); }
 
 		void setFormat(Format f) {}
-#endif
 
-	public:
-		AIRSPY() : Device(Format::CF32, 0, Type::AIRSPY, "AIRSPY") {}
-
-		std::string getProduct() { return "AIRSPY"; }
-		std::string getVendor() { return "AIRSPY"; }
-
-		// Settings (always available)
 		Setting &SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 }
+
+#else // HASAIRSPY
+
+namespace Device
+{
+	class AIRSPY : public Unavailable
+	{
+	public:
+		AIRSPY() : Unavailable("AIRSPY", "HASAIRSPY", Type::AIRSPY) {}
+	};
+}
+
+#endif // HASAIRSPY

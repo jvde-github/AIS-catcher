@@ -24,19 +24,16 @@
 
 #ifdef HASZMQ
 #include <zmq.h>
-#endif
 
 namespace Device {
 
 	class ZMQ : public Device {
-#ifdef HASZMQ
 
 		void* context = nullptr;
 		void* subscriber = nullptr;
 
 		std::string endpoint;
 
-		// output vector
 		static const int BUFFER_SIZE = 16 * 16384;
 
 		std::thread async_thread;
@@ -50,7 +47,7 @@ namespace Device {
 
 	public:
 		ZMQ() : Device(Format::CU8, 288000, Type::ZMQ, "ZMQ") {}
-		// Control
+
 		void Open(uint64_t h);
 		void Close();
 		void Play();
@@ -60,11 +57,20 @@ namespace Device {
 
 		void getDeviceList(std::vector<Description>& DeviceList);
 
-		// Settings
 		Setting& SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 
 		std::string getProduct() { return "ZMQ"; }
-#endif
 	};
 }
+
+#else // HASZMQ
+
+namespace Device {
+	class ZMQ : public Unavailable {
+	public:
+		ZMQ() : Unavailable("ZMQ", "HASZMQ", Type::ZMQ) {}
+	};
+}
+
+#endif // HASZMQ

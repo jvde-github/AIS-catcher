@@ -22,6 +22,8 @@
 #include <vector>
 #include <string>
 
+#ifdef HASNMEA2000
+
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -36,10 +38,8 @@ namespace Device
 	class N2KSCAN : public Device, public Callback<tN2kMsg>
 	{
 
-		// Device settings (always available)
 		std::string _iface = "";
 
-#ifdef HASNMEA2000
 		bool lost = false;
 		std::vector<std::string> available_interfaces;
 
@@ -64,7 +64,6 @@ namespace Device
 			Send(&r, 1, tag);
 		}
 
-		// Control
 		void Open(uint64_t h);
 		void Close();
 		void Play();
@@ -72,11 +71,20 @@ namespace Device
 
 		virtual void getDeviceList(std::vector<Description> &DeviceList);
 
-#endif
-
-	public:
-		// Settings (always available)
 		Setting &SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 }
+
+#else // HASNMEA2000
+
+namespace Device
+{
+	class N2KSCAN : public Unavailable
+	{
+	public:
+		N2KSCAN() : Unavailable("N2K", "HASNMEA2000", Type::N2K) {}
+	};
+}
+
+#endif // HASNMEA2000

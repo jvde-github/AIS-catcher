@@ -117,8 +117,6 @@ namespace Device
 			}
 		}
 	}
-#endif
-
 	Setting &HACKRF::SetKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
@@ -144,4 +142,5 @@ namespace Device
 
 		return Device::Get() + " lna " + std::to_string(LNA_Gain) + " vga " + std::to_string(VGA_Gain) + " preamp " + Util::Convert::toString(preamp);
 	}
+#endif
 }

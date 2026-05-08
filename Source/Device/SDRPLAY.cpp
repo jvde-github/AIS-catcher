@@ -216,7 +216,6 @@ namespace Device {
 		return "UNKNOWN";
 	}
 
-#endif
 	Setting& SDRPLAY::SetKey(AIS::Keys key, const std::string &arg) {
 		switch (key) {
 		case AIS::KEY_SETTING_AGC:
@@ -246,4 +245,5 @@ namespace Device {
 		return Device::Get() + " agc " + Util::Convert::toString(AGC) + " lnastate " + std::to_string(LNAstate) + " grdb " + std::to_string(gRdB) + " ANTENNA " + antenna + " ";
 	}
 
+#endif
 }
