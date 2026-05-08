@@ -23,9 +23,10 @@
 // 	https://github.com/canboat/canboat
 // 	https://github.com/ttlappalainen/NMEA2000
 
+#ifdef HASNMEA2000
+
 #include <cstring>
 
-#ifdef HASNMEA2000
 #include "JSONAIS.h"
 #include "N2KStream.h"
 #include "N2KInterface.h"

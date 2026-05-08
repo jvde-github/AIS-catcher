@@ -232,30 +232,18 @@ set(CPP
     Source/Application/MapTiles.cpp
     Source/Application/Prometheus.cpp
     Source/Application/Receiver.cpp
-    Source/DBMS/PostgreSQL.cpp
-    Source/Device/AIRSPY.cpp
-    Source/Device/AIRSPYHF.cpp
     Source/Device/FileRAW.cpp
     Source/Device/FileWAV.cpp
-    Source/Device/HACKRF.cpp
-    Source/Device/HYDRASDR.cpp
-    Source/Device/N2KsktCAN.cpp
-    Source/Device/RTLSDR.cpp
     Source/Device/RTLTCP.cpp
-    Source/Device/SDRPLAY.cpp
     Source/Device/Serial.cpp
-    Source/Device/SoapySDR.cpp
     Source/Device/SpyServer.cpp
     Source/Device/UDP.cpp
-    Source/Device/ZMQ.cpp
     Source/DSP/Demod.cpp
     Source/DSP/DSP.cpp
     Source/DSP/Model.cpp
     Source/IO/HTTPClient.cpp
     Source/IO/MsgOut.cpp
     Source/IO/Screen.cpp
-    Source/IO/N2KInterface.cpp
-    Source/IO/N2KStream.cpp
     Source/IO/Network.cpp
     Source/IO/Protocol.cpp
     Source/JSON/JSON.cpp
@@ -268,7 +256,6 @@ set(CPP
     Source/Aviation/Beast.cpp
     Source/Marine/AIS.cpp
     Source/Marine/Message.cpp
-    Source/Marine/N2K.cpp
     Source/Marine/NMEA.cpp
     Source/Library/Logger.cpp
     Source/IO/TCPServer.cpp
@@ -280,6 +267,43 @@ set(CPP
     Source/Utilities/TemplateString.cpp
     Source/Utilities/StreamHelpers.cpp
 )
+
+# Optional device sources: only compile when their backing library was found.
+# Same condition that defines HAS<NAME> in cmake/dependencies/<NAME>.cmake.
+if(RTLSDR_LIBRARIES)
+    list(APPEND CPP Source/Device/RTLSDR.cpp)
+endif()
+if(AIRSPY_LIBRARIES)
+    list(APPEND CPP Source/Device/AIRSPY.cpp)
+endif()
+if(AIRSPYHF_LIBRARIES)
+    list(APPEND CPP Source/Device/AIRSPYHF.cpp)
+endif()
+if(HACKRF_LIBRARIES)
+    list(APPEND CPP Source/Device/HACKRF.cpp)
+endif()
+if(HYDRASDR_LIBRARIES)
+    list(APPEND CPP Source/Device/HYDRASDR.cpp)
+endif()
+if(SDRPLAY_LIBRARIES)
+    list(APPEND CPP Source/Device/SDRPLAY.cpp)
+endif()
+if(SOAPYSDR_LIBRARIES)
+    list(APPEND CPP Source/Device/SoapySDR.cpp)
+endif()
+if(ZMQ_LIBRARIES)
+    list(APPEND CPP Source/Device/ZMQ.cpp)
+endif()
+if(NMEA2000_LIBRARIES)
+    list(APPEND CPP
+        Source/Device/N2KsktCAN.cpp
+        Source/IO/N2KInterface.cpp
+        Source/IO/N2KStream.cpp
+        Source/Marine/N2K.cpp)
+endif()
+if(PQ_LIBRARIES)
+    list(APPEND CPP Source/DBMS/PostgreSQL.cpp)
+endif()
 
 if(WEBVIEWER)
     list(APPEND CPP

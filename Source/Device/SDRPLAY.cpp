@@ -15,6 +15,8 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifdef HASSDRPLAY
+
 #include <cstring>
 
 #include "SDRPLAY.h"
@@ -22,8 +24,6 @@
 namespace Device {
 
 	// API described here: https://www.sdrplay.com/docs/SDRplay_API_Specification_v3.01.pdf
-
-#ifdef HASSDRPLAY
 
 	//---------------------------------------
 	// Device SDRPLAY
@@ -244,6 +244,6 @@ namespace Device {
 	std::string SDRPLAY::Get() {
 		return Device::Get() + " agc " + Util::Convert::toString(AGC) + " lnastate " + std::to_string(LNAstate) + " grdb " + std::to_string(gRdB) + " ANTENNA " + antenna + " ";
 	}
+}
 
 #endif
-}

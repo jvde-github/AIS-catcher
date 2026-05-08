@@ -15,6 +15,8 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifdef HASRTLSDR
+
 #include <cstring>
 
 #include "RTLSDR.h"
@@ -24,8 +26,6 @@ namespace Device
 
 	//---------------------------------------
 	// Device RTLSDR
-
-#ifdef HASRTLSDR
 
 	void RTLSDR::Open(uint64_t h)
 	{
@@ -287,6 +287,6 @@ namespace Device
 
 		return Device::Get() + str;
 	}
+}
 
 #endif
-}

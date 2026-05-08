@@ -15,6 +15,8 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifdef HASAIRSPYHF
+
 #include <cstring>
 #include <iomanip>
 
@@ -25,8 +27,6 @@ namespace Device
 
 	//---------------------------------------
 	// Device AIRSPYHF
-
-#ifdef HASAIRSPYHF
 
 	void AIRSPYHF::Open(uint64_t h)
 	{
@@ -191,5 +191,6 @@ namespace Device
 	{
 		return Device::Get() + " preamp " + Util::Convert::toString(preamp) + " threshold " + (threshold_high ? std::string("HIGH") : std::string("LOW")) + " ";
 	}
-#endif
 }
+
+#endif

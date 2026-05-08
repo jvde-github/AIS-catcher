@@ -15,13 +15,14 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "AIS-catcher.h"
+#ifdef HASPSQL
+
 #include "DBMS/PostgreSQL.h"
+
+#include "AIS-catcher.h"
 
 namespace IO
 {
-
-#ifdef HASPSQL
 
 	// Key sets for each table
 	static const int keys_vessel_pos[] = {AIS::KEY_LAT, AIS::KEY_LON, AIS::KEY_MMSI, AIS::KEY_STATUS, AIS::KEY_TURN, AIS::KEY_HEADING, AIS::KEY_COURSE, AIS::KEY_SPEED};
@@ -289,7 +290,7 @@ namespace IO
 					}
 					first = false;
 
-					const std::string &name = AIS::KeyMap[kv.key][JSON_DICT_FULL];
+					std::string name(AIS::KeyMap[kv.key][JSON_DICT_FULL].p, AIS::KeyMap[kv.key][JSON_DICT_FULL].n);
 					cols += name;
 					placeholders += "$" + std::to_string(idx++);
 					on_conflict += name + "=EXCLUDED." + name;
@@ -336,10 +337,9 @@ namespace IO
 		PQclear(res);
 		return success;
 	}
-#endif
+
 	PostgreSQL::~PostgreSQL()
 	{
-#ifdef HASPSQL
 		if (running)
 		{
 
@@ -351,10 +351,7 @@ namespace IO
 		}
 		if (con != nullptr)
 			PQfinish(con);
-#endif
 	}
-
-#ifdef HASPSQL
 
 	void PostgreSQL::process()
 	{
@@ -378,12 +375,9 @@ namespace IO
 			}
 		}
 	}
-#endif
 
 	void PostgreSQL::setup()
 	{
-#ifdef HASPSQL
-
 		db_keys.resize(AIS::KEY_COUNT, -1);
 		Debug() << "Connecting to ProgreSQL database: \"" + conn_string + "\"\n";
 		con = PQconnectdb(conn_string.c_str());
@@ -412,7 +406,8 @@ namespace IO
 			bool found = false;
 			for (int i = 0; i < db_keys.size(); i++)
 			{
-				if (AIS::KeyMap[i][JSON_DICT_FULL] == name)
+				if (AIS::KeyMap[i][JSON_DICT_FULL].n == name.size() &&
+					memcmp(AIS::KeyMap[i][JSON_DICT_FULL].p, name.data(), name.size()) == 0)
 				{
 					db_keys[i] = id;
 					found = true;
@@ -452,12 +447,7 @@ namespace IO
 					<< ", ATON " << Util::Convert::toString(ATON)
 					<< ", NMEA " << Util::Convert::toString(NMEA);
 		}
-#else
-		throw std::runtime_error("DBMS: no support for PostgeSQL build in.");
-#endif
 	}
-
-#ifdef HASPSQL
 
 	static std::string valueToParam(const JSON::Value &v)
 	{
@@ -541,7 +531,6 @@ namespace IO
 
 		message_queue.push_back(std::move(entry));
 	}
-#endif
 
 	Setting &PostgreSQL::SetKey(AIS::Keys key, const std::string &arg)
 	{
@@ -594,3 +583,5 @@ namespace IO
 		return *this;
 	}
 }
+
+#endif

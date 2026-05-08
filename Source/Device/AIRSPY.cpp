@@ -16,6 +16,8 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifdef HASAIRSPY
+
 #include <cstring>
 #include <iomanip>
 
@@ -26,8 +28,6 @@ namespace Device
 
 	//----------------------------------------
 	// Device AIRSPY
-
-#ifdef HASAIRSPY
 
 	void AIRSPY::Open(uint64_t h)
 	{
@@ -333,5 +333,6 @@ namespace Device
 
 		return Device::Get() + str + " biastee " + Util::Convert::toString(bias_tee) + " ";
 	}
-#endif
 }
+
+#endif

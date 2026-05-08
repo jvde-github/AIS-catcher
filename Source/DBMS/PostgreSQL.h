@@ -16,22 +16,24 @@
 */
 
 #pragma once
+
+#include "MsgOut.h"
+
+#ifdef HASPSQL
+
 #include <fstream>
 #include <iostream>
 #include <thread>
 #include <mutex>
 #include <vector>
 
-#ifdef HASPSQL
 #include <libpq-fe.h>
-#endif
 
 #include "Stream.h"
 #include "Keys.h"
 #include "AIS.h"
 #include "JSON/JSON.h"
 #include "JSON/StringBuilder.h"
-#include "MsgOut.h"
 
 namespace IO
 {
@@ -39,12 +41,9 @@ namespace IO
 	class PostgreSQL : public OutputMessage
 	{
 		int station_id = 0;
-#ifdef HASPSQL
 		int conn_fails = 0;
-#endif
 		int MAX_FAILS = 10;
 
-#ifdef HASPSQL
 		PGconn *con = nullptr;
 		std::vector<int> db_keys;
 		bool terminate = false, running = false;
@@ -70,7 +69,6 @@ namespace IO
 
 		std::vector<QueuedEntry> message_queue;
 		static const size_t MAX_QUEUE_SIZE = 2048;
-#endif
 
 		bool MSGS = false, NMEA = false, VP = false, VS = false, BS = false, ATON = false, SAR = false, VD = true;
 		std::string conn_string = "dbname=ais";
@@ -79,22 +77,20 @@ namespace IO
 		std::mutex queue_mutex;
 
 		int INTERVAL = 10;
-#ifdef HASPSQL
+
 		void post();
 		bool execTableInsert(const char *table, const QueuedEntry &entry, const int *keys, int nkeys, const char *msg_id);
 		bool execVessel(const QueuedEntry &entry, const char *msg_id);
-#endif
+
 	public:
 		PostgreSQL() : OutputMessage("PostgreSQL") { fmt = MessageFormat::JSON_FULL; }
 		~PostgreSQL();
 
-#ifdef HASPSQL
 		void process();
 		using StreamIn<AIS::Message>::Receive;
 		using StreamIn<AIS::GPS>::Receive;
 		using StreamIn<JSON::JSON>::Receive;
 		void Receive(const JSON::JSON *data, int len, TAG &tag);
-#endif
 
 		void setup();
 
@@ -103,3 +99,16 @@ namespace IO
 		Setting &SetKey(AIS::Keys key, const std::string &arg);
 	};
 }
+
+#else // HASPSQL
+
+namespace IO
+{
+	class PostgreSQL : public OutputUnavailable
+	{
+	public:
+		PostgreSQL() : OutputUnavailable("PostgreSQL", "HASPSQL") {}
+	};
+}
+
+#endif // HASPSQL

@@ -162,4 +162,22 @@ namespace IO
 			}
 		}
 	};
+
+	// Stub base for output channels whose backing library is not compiled into this build.
+	// Configuration is silently accepted (so shared configs don't break across builds);
+	// any attempt to actually start the channel fails fast with a build-flag hint.
+	class OutputUnavailable : public OutputMessage
+	{
+		std::string build_flag;
+
+	public:
+		OutputUnavailable(const std::string &n, const std::string &f)
+			: OutputMessage(n), build_flag(f) {}
+
+		void Start() override
+		{
+			throw std::runtime_error(type + " support not compiled in. Rebuild with -D" + build_flag + "=ON.");
+		}
+		Setting &SetKey(AIS::Keys, const std::string &) override { return *this; }
+	};
 }

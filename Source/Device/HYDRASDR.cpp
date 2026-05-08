@@ -17,6 +17,8 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifdef HASHYDRASDR
+
 #include <cstring>
 #include <iomanip>
 
@@ -24,11 +26,8 @@
 
 namespace Device
 {
-
 	//----------------------------------------
 	// Device HYDRASDR
-
-#ifdef HASHYDRASDR
 
 	void HYDRASDR::Open(uint64_t h)
 	{
@@ -339,5 +338,6 @@ namespace Device
 
 		return Device::Get() + str + " biastee " + Util::Convert::toString(bias_tee) + " real_mode " + Util::Convert::toString(real_mode) + " ";
 	}
-#endif
 }
+
+#endif

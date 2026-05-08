@@ -16,6 +16,12 @@
 */
 
 #pragma once
+
+#include "MsgOut.h"
+#include "AIS.h"
+
+#ifdef HASNMEA2000
+
 #include <fstream>
 #include <iostream>
 #include <iomanip>
@@ -26,12 +32,7 @@
 #include <chrono>
 #include <condition_variable>
 
-#ifdef HASNMEA2000
 #include <N2kMessages.h>
-#endif
-
-#include "MsgOut.h"
-#include "AIS.h"
 
 namespace IO
 {
@@ -39,8 +40,6 @@ namespace IO
 	class N2KStreamer : public IO::OutputMessage
 	{
 		std::string dev = "can0";
-
-#ifdef HASNMEA2000
 
 	public:
 		N2KStreamer() : OutputMessage("NMEA2000") { fmt = MessageFormat::JSON_FULL; }
@@ -64,14 +63,18 @@ namespace IO
 
 		void Receive(const JSON::JSON *data, int ln, TAG &tag);
 		Setting &SetKey(AIS::Keys key, const std::string &arg);
-#else
-	public:
-		void Start() { std::cout << "NMEA2000 support not included in this build." << std::endl; }
-		Setting &SetKey(AIS::Keys key, const std::string &arg)
-		{
-			std::cout << "NMEA2000 support not included in this build." << std::endl;
-			return *this;
-		}
-#endif
 	};
 }
+
+#else // HASNMEA2000
+
+namespace IO
+{
+	class N2KStreamer : public IO::OutputUnavailable
+	{
+	public:
+		N2KStreamer() : OutputUnavailable("NMEA2000", "HASNMEA2000") {}
+	};
+}
+
+#endif // HASNMEA2000

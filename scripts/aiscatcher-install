@@ -11,6 +11,7 @@
 #
 # Options:
 #   -p, --package    Install from pre-built package (faster, recommended)
+#   -i, --interactive Source build with interactive feature selection
 #   --no-systemd     Skip systemd service installation (useful for containers)
 #   -h, --help       Display this help message
 #
@@ -34,6 +35,7 @@ Usage: sudo $0 [OPTIONS]
 
 Options:
   -p, --package              Install from pre-built package (faster, recommended)
+  -i, --interactive          Source build with interactive feature selection (forces source path)
   -b, --branch               Specify git branch to clone (default: main)
   --no-systemd               Skip systemd service installation (useful for containers)
   --no-user                  Skip user creation and run as root (useful for containers)
@@ -46,6 +48,7 @@ Options:
 Examples:
   sudo $0 --package                    # Install from pre-built package
   sudo $0                              # Build and install from source (main branch)
+  sudo $0 -i                           # Source build, asks per-feature what to include
   sudo $0 -b develop                   # Build from develop branch
   sudo $0 --no-systemd --no-user       # Docker/container installation
   sudo $SCRIPT_NAME --set-reboot-on-failure      # Enable reboot watchdog (no reinstall needed)
@@ -94,6 +97,7 @@ readonly REBOOT_INTERVAL_DEFAULT=1800
 
 # Global variables
 INSTALL_PACKAGE=false
+INTERACTIVE=false
 SKIP_SYSTEMD=false
 SKIP_USER=false
 BRANCH="main"
@@ -103,6 +107,23 @@ REBOOT_BURST="${REBOOT_BURST_DEFAULT}"
 REBOOT_INTERVAL="${REBOOT_INTERVAL_DEFAULT}"
 SET_AUTO_RESTART=""
 INSTALL_REQUESTED=false
+
+# User-facing CMake feature toggles (defaults mirror CMakeLists.txt option() lines).
+# Infrastructure libs (SOXR, SAMPLERATE, ZLIB, OPENSSL) and link-style toggles
+# (RTLSDR_STATIC, HYDRASDR_STATIC, ARMV6, RBIT) are intentionally not exposed
+# interactively — they stay at their CMake defaults.
+FEATURE_RTLSDR=ON
+FEATURE_AIRSPY=ON
+FEATURE_AIRSPYHF=ON
+FEATURE_HACKRF=ON
+FEATURE_HYDRASDR=ON
+FEATURE_SDRPLAY=ON
+FEATURE_SOAPYSDR=OFF
+FEATURE_ZMQ=ON
+FEATURE_NMEA2000=ON
+FEATURE_PSQL=ON
+FEATURE_SQLITE=ON
+FEATURE_WEBVIEWER=ON
 
 # Color constants (using ANSI escape codes)
 if [[ -t 1 ]]; then
@@ -174,6 +195,72 @@ error_exit() {
 cleanup() {
     log "INFO" "Cleaning up temporary directory ${TMP_DIR}"
     rm -rf "$TMP_DIR"
+}
+
+# Prompt for a yes/no answer with a default; echoes ON or OFF.
+# Args: $1 label, $2 default (ON|OFF)
+prompt_yes_no() {
+    local label="$1" default="$2"
+    local suffix
+    if [[ "$default" == "ON" ]]; then suffix="[Y/n]"; else suffix="[y/N]"; fi
+    while true; do
+        local answer
+        read -r -p "$(printf "${COLOR_BOLD}%s${COLOR_RESET} %s: " "$label" "$suffix")" answer
+        # shellcheck disable=SC2155  # locale lowercasing needs ${var,,}
+        local lower="${answer,,}"
+        case "${lower:-${default,,}}" in
+            on|y|yes|true|1)  echo "ON"; return 0 ;;
+            off|n|no|false|0) echo "OFF"; return 0 ;;
+            *) echo "Please answer y or n." >&2 ;;
+        esac
+    done
+}
+
+# Walk the user through per-feature toggles.
+# Sets the FEATURE_* globals from current defaults, and aborts if the user
+# rejects the summary. Requires a TTY.
+interactive_feature_select() {
+    [[ -t 0 ]] || error_exit "Interactive mode requires a TTY (stdin is not a terminal)"
+
+    echo
+    echo -e "${COLOR_BOLD_BLUE}Interactive feature selection${COLOR_RESET}"
+    echo -e "Press Enter to accept the default shown in capitals."
+    echo
+
+    echo -e "${COLOR_BOLD}SDR hardware${COLOR_RESET}"
+    FEATURE_RTLSDR=$(prompt_yes_no   "  RTL-SDR (RTL2832-based dongles)"      "$FEATURE_RTLSDR")
+    FEATURE_AIRSPY=$(prompt_yes_no   "  Airspy"                               "$FEATURE_AIRSPY")
+    FEATURE_AIRSPYHF=$(prompt_yes_no "  Airspy HF+"                           "$FEATURE_AIRSPYHF")
+    FEATURE_HACKRF=$(prompt_yes_no   "  HackRF"                               "$FEATURE_HACKRF")
+    FEATURE_HYDRASDR=$(prompt_yes_no "  HydraSDR"                             "$FEATURE_HYDRASDR")
+    FEATURE_SDRPLAY=$(prompt_yes_no  "  SDRplay (proprietary SDK required)"   "$FEATURE_SDRPLAY")
+    FEATURE_SOAPYSDR=$(prompt_yes_no "  SoapySDR"                             "$FEATURE_SOAPYSDR")
+
+    echo
+    echo -e "${COLOR_BOLD}Inputs / outputs${COLOR_RESET}"
+    FEATURE_ZMQ=$(prompt_yes_no      "  ZMQ (-z input / ZMQ output)"          "$FEATURE_ZMQ")
+    FEATURE_NMEA2000=$(prompt_yes_no "  NMEA2000 socketCAN (-i / -I)"         "$FEATURE_NMEA2000")
+    FEATURE_PSQL=$(prompt_yes_no     "  PostgreSQL output (-D)"               "$FEATURE_PSQL")
+    FEATURE_SQLITE=$(prompt_yes_no   "  SQLite"                               "$FEATURE_SQLITE")
+
+    echo
+    echo -e "${COLOR_BOLD}Other${COLOR_RESET}"
+    FEATURE_WEBVIEWER=$(prompt_yes_no "  Embedded web UI (-N)"                "$FEATURE_WEBVIEWER")
+
+    echo
+    echo -e "${COLOR_BOLD_BLUE}Selected features:${COLOR_RESET}"
+    local f val
+    for f in RTLSDR AIRSPY AIRSPYHF HACKRF HYDRASDR SDRPLAY SOAPYSDR ZMQ NMEA2000 PSQL SQLITE WEBVIEWER; do
+        val=$(eval "echo \$FEATURE_$f")
+        printf "  %-12s %s\n" "$f" "$val"
+    done
+    echo
+    local confirm
+    read -r -p "Proceed with these settings? [Y/n]: " confirm
+    if [[ "${confirm,,}" =~ ^(n|no)$ ]]; then
+        log "INFO" "Installation aborted by user"
+        exit 0
+    fi
 }
 
 # Cancel any pending reboot and stop the watchdog service.
@@ -310,22 +397,35 @@ get_system_info() {
 # SOURCE INSTALLATION FUNCTIONS
 ################################################################################
 
-# Install build dependencies for source compilation
+# Install build dependencies for source compilation.
+# OpenSSL/zlib stay required (always-on infrastructure features). Per-feature
+# optional packages are only installed when the matching FEATURE_* is ON.
 install_source_build_dependencies() {
     local required_deps="git cmake build-essential pkg-config libssl-dev zlib1g-dev libusb-1.0-0-dev curl"
-    local optional_deps="libzmq3-dev libpq-dev libsqlite3-dev libairspy-dev libairspyhf-dev libhackrf-dev"
-    
+    local optional_deps=""
+    [[ "$FEATURE_ZMQ"      == "ON" ]] && optional_deps+=" libzmq3-dev"
+    [[ "$FEATURE_PSQL"     == "ON" ]] && optional_deps+=" libpq-dev"
+    [[ "$FEATURE_SQLITE"   == "ON" ]] && optional_deps+=" libsqlite3-dev"
+    [[ "$FEATURE_AIRSPY"   == "ON" ]] && optional_deps+=" libairspy-dev"
+    [[ "$FEATURE_AIRSPYHF" == "ON" ]] && optional_deps+=" libairspyhf-dev"
+    [[ "$FEATURE_HACKRF"   == "ON" ]] && optional_deps+=" libhackrf-dev"
+    [[ "$FEATURE_SOAPYSDR" == "ON" ]] && optional_deps+=" libsoapysdr-dev"
+
     log "INFO" "Installing required build dependencies: $required_deps"
     apt-get install -y $required_deps || error_exit "Failed to install required dependencies"
-    
-    log "INFO" "Installing optional dependencies (failures allowed): $optional_deps"
-    for pkg in $optional_deps; do
-        if apt-get install -y "$pkg"; then
-            log "INFO" "Installed $pkg"
-        else
-            log "WARN" "Could not install $pkg - corresponding feature may be unavailable"
-        fi
-    done
+
+    if [[ -n "$optional_deps" ]]; then
+        log "INFO" "Installing optional dependencies (failures allowed):$optional_deps"
+        for pkg in $optional_deps; do
+            if apt-get install -y "$pkg"; then
+                log "INFO" "Installed $pkg"
+            else
+                log "WARN" "Could not install $pkg - corresponding feature may be unavailable"
+            fi
+        done
+    else
+        log "INFO" "No optional dependencies needed for the selected feature set"
+    fi
 }
 
 # Install librtlsdr from source
@@ -368,17 +468,19 @@ install_nmea2000_from_source() {
     cd ../.. || error_exit "Failed to return to parent directory"
 }
 
-# Install SDR libraries from source (only for source build)
+# Install SDR libraries from source (only for source build).
+# Each step is gated on its FEATURE_* flag so users disabling a feature
+# don't pay the clone+build cost or pollute ${LIB_DIR}.
 install_sdr_libraries_from_source() {
     # Create library directory
     mkdir -p "${LIB_DIR}" || error_exit "Failed to create library directory"
-    
-    # Install rtlsdr and hydrasdr from source (need custom cmake flags for udev rules)
-    install_librtlsdr_from_source
-    install_libhydrasdr_from_source
-    
-    # Install NMEA2000 library
-    install_nmea2000_from_source
+
+    # rtlsdr and hydrasdr from source (need custom cmake flags for udev rules)
+    [[ "$FEATURE_RTLSDR"   == "ON" ]] && install_librtlsdr_from_source
+    [[ "$FEATURE_HYDRASDR" == "ON" ]] && install_libhydrasdr_from_source
+
+    # NMEA2000 library (built only if the feature is enabled)
+    [[ "$FEATURE_NMEA2000" == "ON" ]] && install_nmea2000_from_source
 }
 
 # Build AIS-catcher from source
@@ -394,11 +496,29 @@ build_ais_catcher_from_source() {
     
     # Build with rpath to custom library directory
     mkdir -p build && cd build
-    cmake .. -DCMAKE_BUILD_TYPE=Release \
-             -DCMAKE_INSTALL_RPATH="${LIB_DIR}/lib;${LIB_DIR}" \
-             -DCMAKE_BUILD_RPATH="${LIB_DIR}/lib;${LIB_DIR}" \
-             -DNMEA2000_INCLUDE="${TMP_DIR}/NMEA2000/src" \
-             -DNMEA2000_LIB="${TMP_DIR}/NMEA2000/src/libnmea2000.a" || error_exit "Failed to run cmake"
+
+    local cmake_args=(
+        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_INSTALL_RPATH="${LIB_DIR}/lib;${LIB_DIR}"
+        -DCMAKE_BUILD_RPATH="${LIB_DIR}/lib;${LIB_DIR}"
+    )
+
+    # Only point at the source-built NMEA2000 archive when that feature is enabled.
+    if [[ "$FEATURE_NMEA2000" == "ON" ]]; then
+        cmake_args+=(
+            -DNMEA2000_INCLUDE="${TMP_DIR}/NMEA2000/src"
+            -DNMEA2000_LIB="${TMP_DIR}/NMEA2000/src/libnmea2000.a"
+        )
+    fi
+
+    # Per-feature toggles (mirror CMakeLists.txt option() names).
+    local f val
+    for f in RTLSDR AIRSPY AIRSPYHF HACKRF HYDRASDR SDRPLAY SOAPYSDR ZMQ NMEA2000 PSQL SQLITE WEBVIEWER; do
+        val=$(eval "echo \$FEATURE_$f")
+        cmake_args+=("-D${f}=${val}")
+    done
+
+    cmake .. "${cmake_args[@]}" || error_exit "Failed to run cmake"
     make -j"$(nproc)" || error_exit "Failed to build AIS-catcher"
     
     cd ../..
@@ -830,6 +950,12 @@ parse_arguments() {
                 INSTALL_REQUESTED=true
                 shift
                 ;;
+            -i|--interactive)
+                log "INFO" "Interactive feature selection requested (forces source build)"
+                INTERACTIVE=true
+                INSTALL_REQUESTED=true
+                shift
+                ;;
             -b|--branch)
                 if [[ -n "${2:-}" && "${2:0:1}" != "-" ]]; then
                     BRANCH="$2"
@@ -888,6 +1014,12 @@ parse_arguments() {
     # Warn if --branch is ignored because --package was also specified
     if [[ "$INSTALL_PACKAGE" == true && "$BRANCH" != "main" ]]; then
         log "WARN" "--branch is ignored when --package is used (pre-built packages are always Edge)"
+    fi
+
+    # --interactive only makes sense for source builds; the .deb is pre-baked.
+    if [[ "$INTERACTIVE" == true && "$INSTALL_PACKAGE" == true ]]; then
+        log "WARN" "--interactive overrides --package (pre-built packages can't be customised)"
+        INSTALL_PACKAGE=false
     fi
 }
 
@@ -957,6 +1089,11 @@ main() {
     if [[ -n "$SET_AUTO_RESTART" && "$INSTALL_REQUESTED" == "false" ]]; then
         handle_auto_restart_setting
         exit 0
+    fi
+
+    # Phase 4b: Interactive feature selection (drives apt deps, source-lib clones, cmake flags)
+    if [[ "$INTERACTIVE" == true ]]; then
+        interactive_feature_select
     fi
 
     # Phase 5: Pre-flight checks (only reached for actual installations)

@@ -15,6 +15,8 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifdef HASHACKRF
+
 #include <cstring>
 
 #include "HACKRF.h"
@@ -24,8 +26,6 @@ namespace Device
 
 	//---------------------------------------
 	// Device HACKRF
-
-#ifdef HASHACKRF
 
 	hackrf_device_list_t *HACKRF::list = nullptr;
 
@@ -142,5 +142,6 @@ namespace Device
 
 		return Device::Get() + " lna " + std::to_string(LNA_Gain) + " vga " + std::to_string(VGA_Gain) + " preamp " + Util::Convert::toString(preamp);
 	}
-#endif
 }
+
+#endif

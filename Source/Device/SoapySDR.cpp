@@ -15,6 +15,8 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifdef HASSOAPYSDR
+
 #include <cstring>
 
 #include "SoapySDR.h"
@@ -23,8 +25,6 @@ namespace Device {
 
 	//---------------------------------------
 	// Device SOAPYSDR
-
-#ifdef HASSOAPYSDR
 
 	void SOAPYSDR::Open(uint64_t h) {
 		Device::Open(h);
@@ -292,5 +292,6 @@ namespace Device {
 
 		return Device::Get() + str;
 	}
-#endif
 }
+
+#endif

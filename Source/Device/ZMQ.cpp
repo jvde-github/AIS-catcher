@@ -15,6 +15,8 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifdef HASZMQ
+
 #include <cstring>
 
 #include "ZMQ.h"
@@ -23,8 +25,6 @@ namespace Device {
 
 	//---------------------------------------
 	// Device ZMQ
-
-#ifdef HASZMQ
 
 	void ZMQ::Open(uint64_t handle) {
 		context = zmq_ctx_new();
@@ -134,5 +134,6 @@ namespace Device {
 	std::string ZMQ::Get() {
 		return Device::Get() + " endpoint " + endpoint;
 	}
-#endif
 }
+
+#endif
