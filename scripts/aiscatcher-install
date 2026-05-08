@@ -481,6 +481,12 @@ install_sdr_libraries_from_source() {
 
     # NMEA2000 library (built only if the feature is enabled)
     [[ "$FEATURE_NMEA2000" == "ON" ]] && install_nmea2000_from_source
+
+    # Explicit success: under `set -e`, a trailing `[[ ]] && fn` whose test is
+    # false makes the whole function return 1 (the && short-circuits, leaving
+    # the test's exit code as the function's last status). That silently kills
+    # the script before build_ais_catcher_from_source ever runs.
+    return 0
 }
 
 # Build AIS-catcher from source
