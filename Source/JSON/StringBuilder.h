@@ -75,17 +75,11 @@ namespace JSON
 		};
 
 		// Key reference — captures pointer + length at the call site.
-		// Literal keys deduce length at compile time via the array ctor,
-		// eliminating runtime strlen on the hot serializer path.
-		struct KeyRef
-		{
-			const char *p;
-			size_t n;
-			KeyRef(const char *s) : p(s), n(strlen(s)) {}
-			template <size_t N>
-			KeyRef(const char (&s)[N]) : p(s), n(N - 1) {}
-			KeyRef(const std::string &s) : p(s.data()), n(s.size()) {}
-		};
+		// Key parameter type. Aliases AIS::KeyStr (defined in Keys.h) so the
+		// same {ptr, length} struct serves both the static KeyMap table and
+		// the Writer's key/kv API. Literal keys deduce length at compile
+		// time via KeyStr's array ctor — no runtime strlen on the hot path.
+		typedef AIS::KeyStr KeyRef;
 
 	private:
 		std::string *target;
@@ -842,7 +836,7 @@ namespace JSON
 			{
 				if (p.Key() < 0 || p.Key() >= AIS::KEY_COUNT)
 					continue;
-				const std::string &key = AIS::KeyMap[p.Key()][dict];
+				const AIS::KeyStr &key = AIS::KeyMap[p.Key()][dict];
 				if (key.empty())
 					continue;
 

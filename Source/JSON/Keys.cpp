@@ -23,8 +23,10 @@
 namespace AIS
 {
 	// Generated from KeyDefs.h
-	const std::string KeyMap[][JSON_DICT_COLUMNS] = {
-#define X(name, full, minimal, sparse, aprs, setting, input, unit, desc, lookup) {full, minimal, sparse, aprs, setting, input},
+	const KeyStr KeyMap[][JSON_DICT_COLUMNS] = {
+#define X(name, full, minimal, sparse, aprs, setting, input, unit, desc, lookup) \
+	{{full, sizeof(full)-1}, {minimal, sizeof(minimal)-1}, {sparse, sizeof(sparse)-1}, \
+	 {aprs, sizeof(aprs)-1}, {setting, sizeof(setting)-1}, {input, sizeof(input)-1}},
 #include "KeyDefs.h"
 #undef X
 	};
@@ -36,7 +38,7 @@ namespace AIS
 		{
 			for (int i = KEY_SETTING_ABOUT; i <= KEY_SETTING_ZONE; i++)
 			{
-				std::string s = KeyMap[i][JSON_DICT_SETTING];
+				std::string s(KeyMap[i][JSON_DICT_SETTING].p, KeyMap[i][JSON_DICT_SETTING].n);
 				Util::Convert::toUpper(s);
 				map[s] = (Keys)i;
 			}

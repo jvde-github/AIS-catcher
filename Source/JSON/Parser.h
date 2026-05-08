@@ -96,8 +96,8 @@ namespace JSON
 
 			for (int i = 0; i < AIS::KEY_COUNT; i++)
 			{
-				const std::string &key = AIS::KeyMap[i][dict];
-				if (!key.empty() && (int)key.size() == slen && memcmp(key.data(), str, slen) == 0)
+				const AIS::KeyStr &key = AIS::KeyMap[i][dict];
+				if (!key.empty() && (int)key.n == slen && memcmp(key.p, str, slen) == 0)
 					return i;
 			}
 			return -1;

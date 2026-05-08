@@ -19,6 +19,9 @@
 
 #include <vector>
 #include <string>
+#include <cstdint>
+#include <cstddef>
+#include <cstring>
 
 #define JSON_DICT_FULL 0
 #define JSON_DICT_MINIMAL 1
@@ -41,7 +44,49 @@ namespace AIS
 			: unit(u), description(d), lookup_table(lt) {}
 	};
 
-	extern const std::string KeyMap[][JSON_DICT_COLUMNS];
+	// Lightweight string-view-like cell for KeyMap, also used as the parameter
+	// type for the JSON Writer's key/kv methods (replaces the older KeyRef).
+	// {ptr, length} pair: cell values are resolved at compile time via the
+	// X-macro; call sites passing literals deduce length via the array
+	// constructor (no runtime strlen). uint16_t length is ample for AIS keys
+	// (typically <30 chars; 64KB ceiling is hard to hit in practice).
+	struct KeyStr
+	{
+		const char *p;
+		uint16_t n;
+
+		KeyStr() : p(""), n(0) {}
+		KeyStr(const char *s, size_t l) : p(s), n(static_cast<uint16_t>(l)) {}
+		KeyStr(const char *s) : p(s), n(static_cast<uint16_t>(strlen(s))) {}
+		template <size_t N>
+		KeyStr(const char (&s)[N]) : p(s), n(N - 1) {}
+		KeyStr(const std::string &s) : p(s.data()), n(static_cast<uint16_t>(s.size())) {}
+
+		bool empty() const { return n == 0; }
+		const char *data() const { return p; }
+		size_t size() const { return n; }
+		operator const char *() const { return p; }
+	};
+
+	inline std::string operator+(const std::string &lhs, const KeyStr &rhs)
+	{
+		std::string r(lhs);
+		r.append(rhs.p, rhs.n);
+		return r;
+	}
+	inline std::string operator+(const char *lhs, const KeyStr &rhs)
+	{
+		std::string r(lhs);
+		r.append(rhs.p, rhs.n);
+		return r;
+	}
+	inline std::string &operator+=(std::string &lhs, const KeyStr &rhs)
+	{
+		lhs.append(rhs.p, rhs.n);
+		return lhs;
+	}
+
+	extern const KeyStr KeyMap[][JSON_DICT_COLUMNS];
 	extern const KeyInfo KeyInfoMap[];
 	extern const std::vector<std::string> LookupTable_aid_types;
 	extern const std::vector<std::string> LookupTable_aton_station_types;

@@ -20,11 +20,11 @@
 #include "Device.h"
 
 #ifdef HASHACKRF
+
 #include <hackrf.h>
 
 namespace Device
 {
-
 	class HACKRF : public Device
 	{
 
