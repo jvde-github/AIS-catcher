@@ -363,8 +363,8 @@ PyMODINIT_FUNC PyInit__core(void) {
     g_keys = (PyObject **)PyMem_Calloc((size_t)AIS::KEY_COUNT, sizeof(PyObject *));
     if (!g_keys) { Py_DECREF(m); return nullptr; }
     for (int i = 0; i < (int)AIS::KEY_COUNT; ++i) {
-        const std::string &name = AIS::KeyMap[i][JSON_DICT_FULL];
-        g_keys[i] = PyUnicode_InternFromString(name.c_str());
+        const AIS::KeyStr &name = AIS::KeyMap[i][JSON_DICT_FULL];
+        g_keys[i] = PyUnicode_InternFromString(name.data());
     }
 
     g_key_value       = PyUnicode_InternFromString("value");

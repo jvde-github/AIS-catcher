@@ -33,13 +33,13 @@ aiscat.decode("!AIVDM,1,1,,A,15MgK45P3@G?fl0E`JbR0OwT0@MS,0*4E")
 
 | Tool | Time | msg/s | µs/msg | vs fastest |
 |---|---:|---:|---:|---:|
-| AIS-catcher CLI (`-r txt -o 5`) | 0.94s | 2,139,000 | 0.47 | 1.00× |
-| **aiscat** (this library) | **1.06s** | **1,890,000** | **0.53** | **1.13×** |
-| `gpsdecode` (gpsd, BSD-2) — CLI | 3.15s | 635,000 | 1.58 | 3.37× |
-| [libais 0.17](https://pypi.org/project/libais/) (C, Apache 2.0) | 5.29s | 378,000 | 2.65 | 5.66× |
-| [pyais 3.0.0](https://pypi.org/project/pyais/) (pure Python, MIT) | 22.13s | 90,000 | 11.06 | 23.67× |
+| AIS-catcher CLI (`-r txt -o 5`) | 0.95s | 2,115,000 | 0.47 | 1.00× |
+| **aiscat** (this library) | **1.04s** | **1,917,000** | **0.52** | **1.10×** |
+| `gpsdecode` (gpsd, BSD-2) — CLI | 3.17s | 632,000 | 1.58 | 3.35× |
+| [libais 0.17](https://pypi.org/project/libais/) (C, Apache 2.0) | 5.41s | 369,000 | 2.71 | 5.73× |
+| [pyais 3.0.0](https://pypi.org/project/pyais/) (pure Python, MIT) | 22.36s | 89,000 | 11.18 | 23.66× |
 
-aiscat tracks the native AIS-catcher CLI within ~13% despite producing rich Python `dict` objects (the CLI just stringifies JSON to stdout). It's **3× faster than `gpsdecode`**, **5× faster than libais**, and **21× faster than pyais**.
+aiscat tracks the native AIS-catcher CLI within ~10% despite producing rich Python `dict` objects (the CLI just stringifies JSON to stdout). It's **3× faster than `gpsdecode`**, **5× faster than libais**, and **21× faster than pyais**.
 
 For perspective: a busy AIS shore station produces ~50 msg/s. Throughput matters when you're replaying recordings or aggregating dozens of receivers, not for live decode of a single antenna.
 
@@ -90,13 +90,13 @@ def iter_decode(
 
 | Format | Returns | Throughput¹ | Equivalent to | Notes |
 |---|---|---:|---|---|
-| `"dictionary"` *(default)* | `dict` | 1.83M msg/s | AIS-catcher `-o 5` (parsed) | Full decoded fields. |
-| `"annotated"` | `dict` | 0.44M msg/s | AIS-catcher `-o 6` (parsed) | Each scalar wrapped as `{value, unit, description, text}`. See [Annotated mode](#annotated-mode). |
-| `"json"` | `bytes` | 2.08M msg/s | AIS-catcher `-o 5` | Full decoded JSON, ready to write/send. |
-| `"json_nmea"` | `bytes` | 4.68M msg/s | AIS-catcher `-o 3` | Slim JSON envelope wrapping the original NMEA — the relay/passthrough format. |
-| `"nmea"` | `bytes` | 6.29M msg/s | AIS-catcher `-n` / `-o 1` | The raw AIVDM/AIVDO line(s). |
-| `"nmea_tag"` | `bytes` | 5.02M msg/s | — | NMEA prefixed with an IEC 61162-450 tag block carrying source + timestamp. |
-| `"binary"` | `bytes` | 6.09M msg/s | — | AIS-catcher's native 0xac binary packet format (compact, suitable for inter-process transport between AIS-catcher / aiscat instances). |
+| `"dictionary"` *(default)* | `dict` | 1.76M msg/s | AIS-catcher `-o 5` (parsed) | Full decoded fields. |
+| `"annotated"` | `dict` | 0.50M msg/s | AIS-catcher `-o 6` (parsed) | Each scalar wrapped as `{value, unit, description, text}`. See [Annotated mode](#annotated-mode). |
+| `"json"` | `bytes` | 1.96M msg/s | AIS-catcher `-o 5` | Full decoded JSON, ready to write/send. |
+| `"json_nmea"` | `bytes` | 4.13M msg/s | AIS-catcher `-o 3` | Slim JSON envelope wrapping the original NMEA — the relay/passthrough format. |
+| `"nmea"` | `bytes` | 5.51M msg/s | AIS-catcher `-n` / `-o 1` | The raw AIVDM/AIVDO line(s). |
+| `"nmea_tag"` | `bytes` | 4.52M msg/s | — | NMEA prefixed with an IEC 61162-450 tag block carrying source + timestamp. |
+| `"binary"` | `bytes` | 5.32M msg/s | — | AIS-catcher's native 0xac binary packet format (compact, suitable for inter-process transport between AIS-catcher / aiscat instances). |
 
 ¹ Apple M-series, single thread, 2M mixed type 1–4 messages.
 
