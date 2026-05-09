@@ -134,8 +134,13 @@ void PluginManager::addPlugin(const std::string &arg)
 			}
 		}
 		Info() << "Adding plugin (" + arg + "). Description: \"" << description << "\", Author: \"" << author << "\", version " << version;
-		if (version != 3)
-			throw std::runtime_error("Version not supported, expected 3, got " + std::to_string(version));
+		// v3: pre-CSP plugin contract (inline-string handlers).
+		// v4: post-CSP contract — plugins must pass functions, not eval-strings,
+		//     to addShipcardItem and similar APIs. See PLUGIN_API_VERSION in script.js.
+		if (version != 3 && version != 4)
+			throw std::runtime_error("Version not supported, expected 3 or 4, got " + std::to_string(version));
+		if (version == 3)
+			Warning() << "Plugin \"" << arg << "\" declares version 3 (pre-CSP). It may render but inline-string handlers will not run under strict CSP. Consider updating to version 4.";
 		plugin_code += "\ntry{\n" + s + "\n} catch (error) {\nshowDialog(\"Error in Plugin \" + " + safe_arg + ", \"Plugins contain error: \" + error + \"</br>Consider updating plugins or disabling them.\"); }\n";
 	}
 	catch (const std::exception &e)

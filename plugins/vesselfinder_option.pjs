@@ -1,3 +1,7 @@
-// {"author":"jvde-github","description":"add option to look up vessel details in VesselFinder", "version": 3}
+// {"author":"jvde-github","description":"add option to look up vessel details in VesselFinder", "version": 4}
 
-addShipcardItem('search','VesselFinder','Lookup vessel on VesselFinder',' window.open("https://www.vesselfinder.com/vessels/details/" + card_mmsi)');
+if (typeof PLUGIN_API_VERSION !== 'undefined' && PLUGIN_API_VERSION >= 4) {
+    addShipcardItem('search', 'VesselFinder', 'Lookup vessel on VesselFinder', () => {
+        window.open('https://www.vesselfinder.com/vessels/details/' + card_mmsi);
+    });
+}

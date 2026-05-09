@@ -1,5 +1,10 @@
-// {"author":"jvde-github","description":"add option to look up location in Google Maps", "version": 3}
+// {"author":"jvde-github","description":"add option to look up location in Google Maps", "version": 4}
 
-addShipcardItem('search', 'Google', 'Lookup vessel coordinates on Google maps', 
-    "card_mmsi in shipsDB && window.open('https://www.google.com/maps/search/?api=1&query=' + shipsDB[card_mmsi].raw.lat + ',' + shipsDB[card_mmsi].raw.lon);"
-);
+if (typeof PLUGIN_API_VERSION !== 'undefined' && PLUGIN_API_VERSION >= 4) {
+    addShipcardItem('search', 'Google', 'Lookup vessel coordinates on Google maps', () => {
+        if (card_mmsi in shipsDB) {
+            const ship = shipsDB[card_mmsi].raw;
+            window.open('https://www.google.com/maps/search/?api=1&query=' + ship.lat + ',' + ship.lon);
+        }
+    });
+}

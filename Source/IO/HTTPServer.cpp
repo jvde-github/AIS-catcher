@@ -214,6 +214,22 @@ namespace IO
 	{
 
 		std::string header = "HTTP/1.1 200 OK\r\nServer: AIS-catcher\r\nContent-Type: " + type;
+
+		// Security headers. CSP is set strict on script-src ('self' only, no inline)
+		// since the frontend uses a delegated dispatcher for all event handlers.
+		// style-src keeps 'unsafe-inline' for HTML style="" attributes; img/connect-src
+		// stay permissive because tile providers and plugin endpoints are configured at runtime.
+		header += "\r\nContent-Security-Policy: default-src 'self'; "
+			"script-src 'self'; "
+			"style-src 'self' 'unsafe-inline'; "
+			"img-src 'self' data: blob: https:; "
+			"connect-src 'self' https:; "
+			"font-src 'self' data:; "
+			"frame-ancestors 'self'; "
+			"base-uri 'self'";
+		header += "\r\nX-Content-Type-Options: nosniff";
+		header += "\r\nReferrer-Policy: strict-origin-when-cross-origin";
+
 		if (gzip)
 			header += "\r\nContent-Encoding: gzip";
 

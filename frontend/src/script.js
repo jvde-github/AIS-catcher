@@ -1,4 +1,169 @@
 
+// Plugin contract version. Bumped when the plugin-facing API changes shape.
+//   v4: addShipcardItem() requires a function (or registered ACTIONS key) for
+//       the action argument. Inline JS expression strings no longer work
+//       (strict CSP forbids them). Plugins should guard with
+//       `if (typeof PLUGIN_API_VERSION !== 'undefined' && PLUGIN_API_VERSION >= 4) { ... }`
+//       so they fail gracefully on older AIS-catcher builds.
+const PLUGIN_API_VERSION = 4;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Inline-handler migration: actions registry + delegated dispatcher.
+// HTML uses data-action="name" (click), or data-on-change / data-on-input /
+// data-on-contextmenu="name" for other event types. Handlers receive
+// (event, dataset, element).
+//
+// NOTE: declared near the top of the file because plugins (called from
+// loadPlugins() further down) need ACTIONS to be initialized — `const` is in
+// the temporal dead zone until reached. The arrow-function bodies below
+// reference function declarations elsewhere in the file; those hoist, so they
+// resolve correctly at call time.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ACTIONS = {
+    // header bar
+    toggleMenu: () => toggleMenu(),
+    headerClick: () => headerClick(),
+    activateTab: (e, d) => activateTab(e, d.tab),
+    openWebControl: () => openWebControl(),
+    toggleInfoPanel: () => toggleInfoPanel(),
+    headerSettings: (e) => showContextMenu(e, '', '', ['settings', 'center']),
+    toggleScreenSize: () => toggleScreenSize(),
+    toggleReceiverDropdown: (e) => toggleReceiverDropdown(e),
+
+    // tableside / generic close buttons / dialog
+    hideTablecard: () => hideTablecard(),
+    updateTableSort: (e) => updateTableSort(e),
+    closeSettings: () => closeSettings(),
+    closeDialog: () => closeDialog(),
+
+    // settings dialog: simple wrappers
+    applyDefaultSettings: () => applyDefaultSettings(),
+    setDarkMode: (e, d, el) => setDarkMode(el.checked),
+    showPlugins: () => showPlugins(),
+    setCoordinateFormat: (e, d, el) => setCoordinateFormat(el.value),
+    setMetrics: (e, d, el) => setMetrics(el.value),
+    setTableIcon: (e, d, el) => setTableIcon(el.checked),
+    setFading: (e, d, el) => setFading(el.checked),
+    setRangeSwitch: (e, d, el) => setRangeSwitch(el.checked),
+    setRangeTimePeriod: (e, d, el) => setRangeTimePeriod(el.value),
+    setKiosk: (e, d, el) => setKiosk(el.checked),
+    setKioskRotationSpeed: (e, d, el) => setKioskRotationSpeed(el.value),
+    setKioskPanMap: (e, d, el) => setKioskPanMap(el.checked),
+    setGraphVisibility: (e, d, el) => setGraphVisibility(d.graph, el.checked),
+    setMapSetting: (e, d, el) => setMapSetting(d.key, el.type === 'checkbox' ? el.checked : el.value),
+    setRangeColor: (e, d, el) => setRangeColor(el.value, d.field),
+    setMapSettingDistanceColor: (e, d, el) => { removeDistanceCircles(); setMapSetting('distance_circle_color', el.value); },
+    setShowTrackOnSelect: (e, d, el) => { settings.show_track_on_select = el.checked; saveSettings(); },
+    setShowTrackOnHover: (e, d, el) => { settings.show_track_on_hover = el.checked; saveSettings(); },
+    applyColorToAllTracks: (e, d, el) => applyColorToAllTracks(el.value),
+    resetTrackColorsToDefault: () => resetTrackColorsToDefault(),
+    setTrackClassColor: (e, d, el) => setTrackClassColor(d.shipclass, el.value),
+
+    // settings: range/icon-scale/opacity sliders (oninput = display only, onchange = persist)
+    setIconScale: (e, d, el) => { settings.icon_scale = el.value; redrawMap(); saveSettings(); },
+    updateIconScaleDisplay: (e, d, el) => updateIconScaleDisplay(el.value),
+    setMapOpacity: (e, d, el) => { settings.map_opacity = el.value; setMapOpacity(); saveSettings(); },
+    updateMapOpacityDisplay: (e, d, el) => updateMapOpacityDisplay(el.value),
+    updateCircleScaleDisplay: (e, d, el) => updateCircleScaleDisplay(el.value),
+    updateTooltipFontSizeDisplay: (e, d, el) => updateTooltipFontSizeDisplay(el.value),
+    updateShipoutlineOpacityDisplay: (e, d, el) => updateShipoutlineOpacityDisplay(el.value),
+    updateTrackWeightDisplay: (e, d, el) => updateTrackWeightDisplay(el.value),
+    updateTrackTrashThresholdDisplay: (e, d, el) => updateTrackTrashThresholdDisplay(el.value),
+    updateKioskSpeedDisplay: (e, d, el) => updateKioskSpeedDisplay(el.value),
+
+    // context menu (depends on global context_mmsi/card_mmsi)
+    toggleShipcardPin: () => toggleShipcardPin(),
+    pinStation: () => pinStation(),
+    copyTextCtx: () => copyText(context_mmsi),
+    copyTextICAO: () => copyText(getICAOFromHexIdent(context_mmsi)),
+    downloadCSV: () => downloadCSV(),
+    unpinCenter: () => unpinCenter(),
+    showAllTracks: () => showAllTracks(),
+    deleteAllTracks: () => deleteAllTracks(),
+    ToggleFireworks: () => ToggleFireworks(),
+    toggleLabel: () => toggleLabel(),
+    toggleKioskMode: () => toggleKioskMode(),
+    toggleFading: () => toggleFading(),
+    toggleRange: () => toggleRange(),
+    toggleTrackCtx: () => toggleTrack(context_mmsi),
+    pinVesselCtx: () => pinVessel(context_mmsi),
+    mapResetViewZoomCtx: () => mapResetViewZoom(13, context_mmsi),
+    showShipcardCtx: (e, d) => showShipcard(d.kind, context_mmsi),
+    openAISCatcherSiteCtx: () => openAISCatcherSite(context_mmsi),
+    showVesselDetailCtx: () => showVesselDetail(context_mmsi),
+    showNMEACtx: () => showNMEA(context_mmsi),
+    openRealtimeForMMSICtx: () => openRealtimeForMMSI(context_mmsi),
+    copyCoordinatesCtx: () => copyCoordinates(context_mmsi),
+    openGoogleSearchCtx: (e, d) => openGoogleSearch(d.icao ? getICAOFromHexIdent(context_mmsi) : context_mmsi),
+    openVesselFinderCtx: () => openVesselFinder(context_mmsi),
+    openAISHubCtx: () => openAISHub(context_mmsi),
+    showServerErrors: () => showServerErrors(),
+    openSettings: () => openSettings(),
+    toggleDarkMode: () => toggleDarkMode(),
+    toggleGraphVisibility: (e, d) => toggleGraphVisibility(d.graph),
+
+    // realtime / decoder controls
+    promptFilterMMSI: () => promptFilterMMSI(),
+    toggleBackgroundStreaming: () => toggleBackgroundStreaming(),
+    toggleRealtimePause: () => toggleRealtimePause(),
+    clearRealtimeTable: () => clearRealtimeTable(),
+    decodeNMEA: () => decodeNMEA(),
+    clearDecoder: () => clearDecoder(),
+
+    // map tab buttons
+    setMeasureMode: () => { setMeasureMode(); showNotification('Shift+click on start point/object'); },
+    toggleMeasurecard: () => toggleMeasurecard(),
+    toggleShipcardSize: () => toggleShipcardSize(),
+    shipcardSelectSelf: (e, d, el) => shipcardselect(el),
+    shipcardContextMenu: (e) => showContextMenu(e, card_mmsi, card_type, ['object', 'object-map', 'ctx-shipcard']),
+    showShipcardClose: () => showShipcard(null, null),
+    showBinaryMessageDialogCard: () => showBinaryMessageDialog(card_mmsi),
+    openRealtimeForMMSICard: () => openRealtimeForMMSI(card_mmsi),
+    openAISCatcherSiteCard: () => openAISCatcherSite(card_mmsi),
+    toggleTrackCard: () => toggleTrack(card_mmsi),
+    openFlightAwareCard: () => openFlightAware(card_mmsi),
+    openPlaneSpottersCard: () => openPlaneSpotters(card_mmsi),
+    openADSBExchangeCard: () => openADSBExchange(card_mmsi),
+    toggleStatcard: () => toggleStatcard(),
+    toggleTablecard: () => toggleTablecard(),
+    mapSettingsContextMenu: (e) => showContextMenu(e, '', '', ['settings', 'center', 'ctx-map']),
+    showCommunity: () => showCommunity(),
+    showMapMenu: (e) => showMapMenu(e),
+    mainspaceContextMenu: (e) => showContextMenu(e, 0, '', ['settings']),
+    plotsContextMenu: (e) => showContextMenu(e, '', 'charts', ['settings', 'ctx-charts']),
+
+    // info panel
+    showAboutFromInfoPanel: () => { toggleInfoPanel(); showAboutDialog(); },
+
+    // dynamically-rendered shipcard items
+    rotateShipcardIcons: () => rotateShipcardIcons(),
+    techInfo: (e) => { e.stopPropagation(); toggleTechPopover(); },
+    showNMEAContextCopy: (e, d) => showContextMenu(e, d.copy || '', 'ship', ['settings', 'copy-text']),
+    removeRealtimeFilterMMSI: (e, d) => removeRealtimeFilterMMSI(d.mmsi),
+};
+
+// Bind delegated listeners on first DOM-ready (script tag is at end of body
+// in some configurations, but plugin loaders may pull script.js earlier).
+function _bindDelegatedActions() {
+    const handlers = [
+        ['click',       '[data-action]',         'action'],
+        ['change',      '[data-on-change]',      'onChange'],
+        ['input',       '[data-on-input]',       'onInput'],
+        ['contextmenu', '[data-on-contextmenu]', 'onContextmenu'],
+    ];
+    for (const [evt, sel, key] of handlers) {
+        document.body.addEventListener(evt, (e) => {
+            const el = e.target.closest(sel);
+            if (!el) return;
+            const fn = ACTIONS[el.dataset[key]];
+            if (fn) fn(e, el.dataset, el);
+        });
+    }
+}
+if (document.body) _bindDelegatedActions();
+else document.addEventListener('DOMContentLoaded', _bindDelegatedActions);
+
 var interval,
     activeReceiver = 0,
     lastPathFetch = 0,
@@ -998,10 +1163,11 @@ async function showNMEA(m) {
         let tableHtml = '<table class="mytable">';
         for (let key in obj) {
             let value = obj[key];
-            if (Array.isArray(value)) {
-                value = JSON.stringify(value).replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/'/g, "\\'").replace(/"/g, '\\"');
-            }
-            tableHtml += "<tr><td>" + key + "</td><td oncontextmenu='showContextMenu(event,\"" + value + ' ","ship",["settings","copy-text"])\'>' + value + "</td></tr>";
+            if (Array.isArray(value) || (value !== null && typeof value === 'object')) value = JSON.stringify(value);
+            if (value == null) value = '';
+            const safeKey = sanitizeString(String(key));
+            const safeVal = sanitizeString(String(value));
+            tableHtml += `<tr><td>${safeKey}</td><td data-on-contextmenu="showNMEAContextCopy" data-copy="${safeVal}">${safeVal}</td></tr>`;
         }
         tableHtml += "</table>";
 
@@ -2931,15 +3097,35 @@ function toggleScreenSize() {
     }
 }
 
-function addShipcardItem(icon, txt, title, onclick, contextType = 'ship') {
+// Plugin API. `action` is either a function (preferred, CSP-clean) or the name
+// of an entry in ACTIONS. Inline JS expression strings (the pre-CSP plugin
+// style) no longer work — strict CSP forbids them; convert plugins to pass a
+// function instead.
+function addShipcardItem(icon, txt, title, action, contextType = 'ship') {
     const div = document.createElement("div");
     div.title = title;
     div.setAttribute("data-context-type", contextType);
     if (icon.startsWith("fa")) {
         icon = "question_mark";
     }
-    div.innerHTML = '<i class="' + icon + '_icon"></i><span>' + txt + "</span>";
-    div.setAttribute("onclick", onclick);
+    const i = document.createElement("i");
+    i.className = icon + "_icon";
+    const span = document.createElement("span");
+    span.textContent = txt;
+    div.appendChild(i);
+    div.appendChild(span);
+
+    let name;
+    if (typeof action === 'function') {
+        name = '_plugin_' + (addShipcardItem._counter = (addShipcardItem._counter || 0) + 1);
+        ACTIONS[name] = action;
+    } else if (typeof action === 'string' && ACTIONS[action]) {
+        name = action;
+    } else {
+        console.warn('addShipcardItem: action must be a function or a registered ACTIONS key. Got:', action);
+        return;
+    }
+    div.dataset.action = name;
     document.getElementById("shipcard_footer").appendChild(div);
 }
 
@@ -5342,7 +5528,7 @@ function setShipcardValidation(v) {
 }
 
 function updateMessageButton() {
-    const messageButton = document.querySelector('#shipcard_footer [onclick="showBinaryMessageDialog(card_mmsi)"]');
+    const messageButton = document.querySelector('#shipcard_footer [data-action="showBinaryMessageDialogCard"]');
     if (!messageButton) return;
 
     const iconElement = messageButton.querySelector('i.mail_icon');
@@ -5416,7 +5602,7 @@ function populateShipcard() {
     document.getElementById("shipcard_sources").innerHTML = getStringfromGroup(ship.group_mask);
 
     document.getElementById("shipcard_channels").innerHTML = getStringfromChannels(ship.channels);
-    document.getElementById("shipcard_type").innerHTML = getTypeVal(ship) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_tech_info" onclick="event.stopPropagation(); toggleTechPopover()" title="Technical details"></i>';
+    document.getElementById("shipcard_type").innerHTML = getTypeVal(ship) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_tech_info" data-action="techInfo" title="Technical details"></i>';
     document.getElementById("shipcard_shiptype").innerHTML = getShipTypeVal(ship.shiptype);
     document.getElementById("shipcard_status").innerHTML = getStatusVal(ship);
     document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(shipsSince - ship.last_signal);
@@ -5920,10 +6106,10 @@ function prepareShipcard() {
 
     // Add More button for each context if needed
     if (shipcardIconCount.ship > shipcardIconMax) {
-        addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons()', 'ship');
+        addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons', 'ship');
     }
     if (shipcardIconCount.plane > shipcardIconMax) {
-        addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons()', 'plane');
+        addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons', 'plane');
     }
 
     displayShipcardIcons('ship');
@@ -7124,17 +7310,24 @@ function updateFilterDisplay() {
 
     if (filterDisplay && filterChips) {
         if (realtimeViewer.filterMMSIs.length > 0) {
-            // Clear and rebuild chips
-            filterChips.innerHTML = '';
+            filterChips.textContent = '';
             realtimeViewer.filterMMSIs.forEach(mmsi => {
                 const chip = document.createElement('div');
                 chip.className = 'filter-chip';
-                chip.innerHTML = `
-                    <span>${mmsi}</span>
-                    <button onclick="removeRealtimeFilterMMSI('${mmsi}')" title="Remove filter">
-                        <i class="close_icon"></i>
-                    </button>
-                `;
+
+                const label = document.createElement('span');
+                label.textContent = mmsi;
+
+                const btn = document.createElement('button');
+                btn.title = 'Remove filter';
+                btn.dataset.action = 'removeRealtimeFilterMMSI';
+                btn.dataset.mmsi = mmsi;
+                const icon = document.createElement('i');
+                icon.className = 'close_icon';
+                btn.appendChild(icon);
+
+                chip.appendChild(label);
+                chip.appendChild(btn);
                 filterChips.appendChild(chip);
             });
             filterDisplay.style.display = 'flex';
