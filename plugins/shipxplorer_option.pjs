@@ -1,7 +1,7 @@
 // {"author":"jvde-github","description":"add option to look up vessel details in ShipXplorer", "version": 4}
 
-if (typeof PLUGIN_API_VERSION !== 'undefined' && PLUGIN_API_VERSION >= 4) {
-    addShipcardItem('search', 'ShipXplorer', 'Lookup vessel on ShipXplorer', () => {
-        window.open('https://www.shipxplorer.com/data/vessels/IMO-MMSI-' + card_mmsi);
+if (typeof AISCatcher !== 'undefined' && AISCatcher.PLUGIN_API_VERSION >= 4) {
+    AISCatcher.addShipcardItem('search', 'ShipXplorer', 'Lookup vessel on ShipXplorer', () => {
+        window.open('https://www.shipxplorer.com/data/vessels/IMO-MMSI-' + AISCatcher.card_mmsi);
     });
 }

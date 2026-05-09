@@ -1,11 +1,90 @@
+import { settings } from './core/state.js';
+import { ShippingClass } from './core/constants.js';
+import { init as initRainRadar } from './overlays/rainradar.js';
+import {
+    getDistanceVal, getDistanceUnit,
+    getSpeedVal, getSpeedUnit,
+    getDimVal, getDimUnit, getShipDimension,
+    getLatValFormat, getLonValFormat,
+    getEtaVal, getDeltaTimeVal,
+    getShipName, getCallSign, setShipNameProvider, setCallSignProvider,
+    getCountryName, getFlagStyled,
+    getStatusVal, getTypeVal,
+    getStringfromMsgType, getStringfromGroup, getStringfromChannels,
+} from './core/format.js';
+
+// Named imports (instead of `import * as ...`) so Vite tree-shakes everything
+// outside this list. Plugins relying on other OL classes via window.ol will
+// need to be updated; the contract is "what script.js + bundled plugins use".
+import OlMap from 'ol/Map';
+import OlView from 'ol/View';
+import OlFeature from 'ol/Feature';
+import TileLayer from 'ol/layer/Tile';
+import VectorLayer from 'ol/layer/Vector';
+import OSMSource from 'ol/source/OSM';
+import XYZSource from 'ol/source/XYZ';
+import TileWMSSource from 'ol/source/TileWMS';
+import VectorSource from 'ol/source/Vector';
+import Point from 'ol/geom/Point';
+import LineString from 'ol/geom/LineString';
+import Polygon from 'ol/geom/Polygon';
+import CircleGeom from 'ol/geom/Circle';
+import Style from 'ol/style/Style';
+import Stroke from 'ol/style/Stroke';
+import Fill from 'ol/style/Fill';
+import Icon from 'ol/style/Icon';
+import CircleStyle from 'ol/style/Circle';
+import Text from 'ol/style/Text';
+import { fromLonLat, toLonLat, transformExtent } from 'ol/proj';
+import { getLength } from 'ol/sphere';
+import { containsCoordinate, getWidth } from 'ol/extent';
+import 'ol/ol.css';
+
+const ol = {
+    Map: OlMap,
+    View: OlView,
+    Feature: OlFeature,
+    layer: { Tile: TileLayer, Vector: VectorLayer },
+    source: { OSM: OSMSource, XYZ: XYZSource, TileWMS: TileWMSSource, Vector: VectorSource },
+    geom: { Point, LineString, Polygon, Circle: CircleGeom },
+    style: { Style, Stroke, Fill, Icon, Circle: CircleStyle, Text },
+    proj: { fromLonLat, toLonLat, transformExtent },
+    sphere: { getLength },
+    extent: { containsCoordinate, getWidth },
+};
+window.ol = ol;
+
+// window.__SERVER_CONFIG__ is set by /custom/plugins.js (emitted by the C++
+// side). Defaulted here so the frontend works standalone (e.g. Vite dev).
+const config = window.__SERVER_CONFIG__ || {
+    build: { version: 'unknown', describe: 'unknown' },
+    context: 'aiscatcher',
+    station: '',
+    webcontrol_http: '',
+    features: {
+        share_location: false, save_messages: false,
+        realtime: false, log: false, decoder: false,
+        community_feed: false, about_md: false,
+    },
+    receivers: [],
+    plugins: { loaded: [], errors: [] }, // loaded: [{ name, version }, ...]
+};
+
+let plotsModule = null;
+let shipTableModule = null;
+let decoderModule = null;
+let realtimeModule = null;
 
 // Plugin contract version. Bumped when the plugin-facing API changes shape.
-//   v4: addShipcardItem() requires a function (or registered ACTIONS key) for
-//       the action argument. Inline JS expression strings no longer work
-//       (strict CSP forbids them). Plugins should guard with
-//       `if (typeof PLUGIN_API_VERSION !== 'undefined' && PLUGIN_API_VERSION >= 4) { ... }`
-//       so they fail gracefully on older AIS-catcher builds.
-const PLUGIN_API_VERSION = 4;
+// Plugins guard with `if (typeof AISCatcher !== 'undefined' &&
+// AISCatcher.PLUGIN_API_VERSION >= N)`. Public surface is window.AISCatcher
+// (defined below). Bare-global aliases mirror AISCatcher for back-compat but
+// are deprecated.
+//   v4: addShipcardItem() requires a function callback (CSP-clean).
+//   v5: script.js is an ES module; override hooks (setShipFilter,
+//       setRefreshInterval, setShipNameProvider, setCallSignProvider) and
+//       map helpers (addTileLayer, removeTileLayerAll, ...) are on AISCatcher.
+const PLUGIN_API_VERSION = 5;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Inline-handler migration: actions registry + delegated dispatcher.
@@ -77,7 +156,7 @@ const ACTIONS = {
     pinStation: () => pinStation(),
     copyTextCtx: () => copyText(context_mmsi),
     copyTextICAO: () => copyText(getICAOFromHexIdent(context_mmsi)),
-    downloadCSV: () => downloadCSV(),
+    downloadCSV: () => shipTableModule?.downloadCSV(),
     unpinCenter: () => unpinCenter(),
     showAllTracks: () => showAllTracks(),
     deleteAllTracks: () => deleteAllTracks(),
@@ -93,7 +172,10 @@ const ACTIONS = {
     openAISCatcherSiteCtx: () => openAISCatcherSite(context_mmsi),
     showVesselDetailCtx: () => showVesselDetail(context_mmsi),
     showNMEACtx: () => showNMEA(context_mmsi),
-    openRealtimeForMMSICtx: () => openRealtimeForMMSI(context_mmsi),
+    openRealtimeForMMSICtx: async () => {
+        if (!realtimeModule) realtimeModule = await import('./tabs/realtime.js');
+        realtimeModule.openForMMSI(context_mmsi);
+    },
     copyCoordinatesCtx: () => copyCoordinates(context_mmsi),
     openGoogleSearchCtx: (e, d) => openGoogleSearch(d.icao ? getICAOFromHexIdent(context_mmsi) : context_mmsi),
     openVesselFinderCtx: () => openVesselFinder(context_mmsi),
@@ -104,12 +186,18 @@ const ACTIONS = {
     toggleGraphVisibility: (e, d) => toggleGraphVisibility(d.graph),
 
     // realtime / decoder controls
-    promptFilterMMSI: () => promptFilterMMSI(),
-    toggleBackgroundStreaming: () => toggleBackgroundStreaming(),
-    toggleRealtimePause: () => toggleRealtimePause(),
-    clearRealtimeTable: () => clearRealtimeTable(),
-    decodeNMEA: () => decodeNMEA(),
-    clearDecoder: () => clearDecoder(),
+    promptFilterMMSI: () => realtimeModule?.promptFilter(),
+    toggleBackgroundStreaming: () => realtimeModule?.toggleBackgroundStreaming(),
+    toggleRealtimePause: () => realtimeModule?.togglePause(),
+    clearRealtimeTable: () => realtimeModule?.clear(),
+    decodeNMEA: async () => {
+        if (!decoderModule) decoderModule = await import('./tabs/decoder.js');
+        decoderModule.decode();
+    },
+    clearDecoder: async () => {
+        if (!decoderModule) decoderModule = await import('./tabs/decoder.js');
+        decoderModule.clear();
+    },
 
     // map tab buttons
     setMeasureMode: () => { setMeasureMode(); showNotification('Shift+click on start point/object'); },
@@ -119,7 +207,10 @@ const ACTIONS = {
     shipcardContextMenu: (e) => showContextMenu(e, card_mmsi, card_type, ['object', 'object-map', 'ctx-shipcard']),
     showShipcardClose: () => showShipcard(null, null),
     showBinaryMessageDialogCard: () => showBinaryMessageDialog(card_mmsi),
-    openRealtimeForMMSICard: () => openRealtimeForMMSI(card_mmsi),
+    openRealtimeForMMSICard: async () => {
+        if (!realtimeModule) realtimeModule = await import('./tabs/realtime.js');
+        realtimeModule.openForMMSI(card_mmsi);
+    },
     openAISCatcherSiteCard: () => openAISCatcherSite(card_mmsi),
     toggleTrackCard: () => toggleTrack(card_mmsi),
     openFlightAwareCard: () => openFlightAware(card_mmsi),
@@ -140,11 +231,76 @@ const ACTIONS = {
     rotateShipcardIcons: () => rotateShipcardIcons(),
     techInfo: (e) => { e.stopPropagation(); toggleTechPopover(); },
     showNMEAContextCopy: (e, d) => showContextMenu(e, d.copy || '', 'ship', ['settings', 'copy-text']),
-    removeRealtimeFilterMMSI: (e, d) => removeRealtimeFilterMMSI(d.mmsi),
+    removeRealtimeFilterMMSI: (e, d) => realtimeModule?.removeFilter(d.mmsi),
 };
 
-// Bind delegated listeners on first DOM-ready (script tag is at end of body
-// in some configurations, but plugin loaders may pull script.js earlier).
+// Public plugin API. Mutable state uses getters so plugins always see the
+// live value rather than a snapshot taken at namespace-build time.
+window.AISCatcher = {
+    PLUGIN_API_VERSION,
+
+    addShipcardItem,
+    ACTIONS,
+
+    showDialog,
+    closeDialog,
+    showNotification,
+    showShipcard,
+    showContextMenu,
+    openFocus,
+
+    addTileLayer,
+    removeTileLayer,
+    removeTileLayerAll,
+    addOverlayLayer,
+    removeOverlayLayer,
+    removeOverlayLayerAll,
+
+    setShipFilter(fn) { shipFilterOverride = fn; },
+    setRefreshInterval(ms) {
+        refreshIntervalMs = ms;
+        if (interval) {
+            clearInterval(interval);
+            interval = setInterval(refresh_data, refreshIntervalMs);
+        }
+    },
+    setShipNameProvider,
+    setCallSignProvider,
+
+    get config() { return config; },
+    get settings() { return settings; },
+    get station() { return station; },
+    get shipsDB() { return shipsDB; },
+    get planesDB() { return planesDB; },
+    get card_mmsi() { return card_mmsi; },
+    get card_type() { return card_type; },
+    get context_mmsi() { return context_mmsi; },
+    get context_type() { return context_type; },
+};
+
+// Mirror AISCatcher keys onto window so legacy plugins using bare globals
+// (addShipcardItem, card_mmsi, ...) still resolve. Module top-level no
+// longer leaks to window since script.js is an ES module.
+for (const k of Object.keys(window.AISCatcher)) {
+    if (k in window) continue;
+    const desc = Object.getOwnPropertyDescriptor(window.AISCatcher, k);
+    if (desc.get) {
+        Object.defineProperty(window, k, { get: desc.get, configurable: true });
+    } else {
+        window[k] = desc.value;
+    }
+}
+
+window.__app__ = {
+    get activeReceiver() { return activeReceiver; },
+    get getTableShiptype() { return getTableShiptype; }, // sprite-coupled, can't move
+    get tableRowClick() { return tableRowClick; },
+    get selectMapTab() { return selectMapTab; },
+    get saveSettings() { return saveSettings; },
+    get fetchShips() { return fetchShips; },
+    get shipsSince() { return shipsSince; },
+};
+
 function _bindDelegatedActions() {
     const handlers = [
         ['click',       '[data-action]',         'action'],
@@ -183,33 +339,29 @@ var interval,
     planesSince = 0,
     planesTimeout = 300,
     planesLastCleanup = 0,
-    fetch_binary = false,
     hover_feature = undefined,
     show_all_tracks = false,
     evtSourceMap = null,
     logViewer = null,
-    realtimeViewer = null,
     range_outline = undefined,
     range_outline_short = undefined,
-    tab_title_station = (typeof tab_title_station !== 'undefined') ? tab_title_station : "",
+    tab_title_station = config.station,
     tab_title_count = null,
     context_mmsi = null,
     context_type = null,
-    aboutContentLoaded = false,
     tab_title = "AIS-catcher";
 
 const baseMapSelector = document.getElementById("baseMapSelector");
 
-var rtCount = 0;
 var shipcardIconCount = undefined;
 var shipcardIconMax = 3;
 var shipcardIconOffset = 0;
 var plugins_main = [];
 var card_mmsi = null,
-    card_type = null,
-    hover_mmsi = null,
-    build_string = "unknown";
-var refreshIntervalMs = 2500;
+    card_type = null;
+// `let` so AISCatcher.setRefreshInterval can mutate.
+let refreshIntervalMs = 2500;
+let shipFilterOverride = null;
 var range_update_time = null;
 let updateInProgress = false;
 let activeTileLayer = undefined;
@@ -217,20 +369,16 @@ var hover_enabled_track = false,
     select_enabled_track = false,
     marker_tracks = new Set();
 
-var communityFeed, aboutMDpresent, context, center, shipcard;
+var center, shipcard;
+const context = config.context;
 if (typeof window.loadPlugins === 'undefined') {
     window.loadPlugins = function () { };
-    communityFeed = false;
-    aboutMDpresent = false;
-    context = "aiscatcher";
 }
 
 const hover_info = document.getElementById('hover-info');
 
 let measures = [];
 
-// default settings
-var settings = {};
 let isFetchingShips = false;
 
 function getDefaultTrackColors() {
@@ -260,7 +408,9 @@ function resetTrackColorsToDefault() {
 }
 
 function restoreDefaultSettings() {
-    settings = {
+    // In-place mutation: `settings` is imported, the binding is read-only here.
+    for (const k of Object.keys(settings)) delete settings[k];
+    Object.assign(settings, {
         counter: true,
         fading: false,
         android: false,
@@ -324,7 +474,7 @@ function restoreDefaultSettings() {
         shiptable_columns: ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"],
         realtime_background_streaming: false,
         realtime_filter_mmsis: []
-    };
+    });
 
     // Set default track colors
     settings.track_class_colors = getDefaultTrackColors();
@@ -332,105 +482,6 @@ function restoreDefaultSettings() {
 
 
 // NMEA Decoder Functions
-function decodeNMEA() {
-    const input = document.getElementById('decoder_input').value.trim();
-    const statusEl = document.getElementById('decoder_status');
-    const outputEl = document.getElementById('decoder_output');
-
-    if (!input) {
-        statusEl.innerHTML = '<span class="decoder-error">Please enter NMEA sentences to decode.</span>';
-        return;
-    }
-
-    statusEl.innerHTML = '<span class="decoder-info">Decoding...</span>';
-    outputEl.innerHTML = '';
-
-    fetch('api/decode', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'text/plain'
-        },
-        body: input
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                statusEl.innerHTML = `<span class="decoder-error">Error: ${data.error}</span>`;
-                return;
-            }
-
-            if (Array.isArray(data) && data.length === 0) {
-                statusEl.innerHTML = '<span class="decoder-warning">No valid AIS messages found in input.</span>';
-                return;
-            }
-
-            statusEl.innerHTML = `<span class="decoder-success">Successfully decoded ${data.length} message(s)</span>`;
-
-            // Display decoded messages
-            let html = '';
-            data.forEach((msg, index) => {
-                html += `<div class="decoder-message">`;
-                html += `<h4>Message ${index + 1}</h4>`;
-                html += '<table class="decoder-table">';
-
-                // Fields to exclude from display
-                const excludeFields = ['class', 'device', 'driver', 'hardware', 'version', 'scaled', 'signalpower', 'ppm', 'rxtime'];
-
-                // Use natural ordering from JSON
-                Object.keys(msg).forEach(key => {
-                    // Skip excluded fields
-                    if (excludeFields.includes(key)) {
-                        return;
-                    }
-
-                    const field = msg[key];
-                    if (typeof field === 'object' && field !== null) {
-                        const value = field.value !== undefined ? field.value : '';
-                        const unit = field.unit || '';
-                        const description = field.description || '';
-                        const text = field.text || '';
-
-                        // Column 1: Key with unit if available
-                        let keyCol = key;
-                        if (unit) {
-                            keyCol += ` (${unit})`;
-                        }
-
-                        // Column 2: Value with text in parentheses if available
-                        let valueCol = value;
-                        if (text) {
-                            valueCol += ` (${text})`;
-                        }
-
-                        // Column 3: Description
-                        const descCol = description || '';
-
-                        html += '<tr>';
-                        html += `<td class="decoder-field-key">${keyCol}</td>`;
-                        html += `<td class="decoder-field-value">${valueCol}</td>`;
-                        html += `<td class="decoder-field-description">${descCol}</td>`;
-                        html += '</tr>';
-                    }
-                });
-
-                html += '</table>';
-                html += '</div>';
-            });
-
-            outputEl.innerHTML = html;
-        })
-        .catch(error => {
-            statusEl.innerHTML = `<span class="decoder-error">Network error: ${error.message}</span>`;
-            console.error('Decode error:', error);
-        });
-}
-
-function clearDecoder() {
-    document.getElementById('decoder_input').value = '';
-    document.getElementById('decoder_output').innerHTML = '';
-    document.getElementById('decoder_status').innerHTML = '';
-}
-
 function toggleInfoPanel() {
     const overlay = document.querySelector('.overlay');
     const infoPanel = document.querySelector('.info-panel');
@@ -492,102 +543,9 @@ function addControlToMap(c) {
     c.addTo(map);
 }
 
-function decimalToDMS(l, isLatitude) {
-    var degrees = Math.floor(Math.abs(l));
-    var minutes = Math.floor((Math.abs(l) - degrees) * 60);
-    var seconds = Number(((Math.abs(l) - degrees) * 60 - minutes) * 60).toFixed(1);
-    var direction = isLatitude ? (l > 0 ? "N" : "S") : l > 0 ? "E" : "W";
-    return degrees + "&deg" + minutes + "'" + seconds + '"' + direction;
-}
-
-function decimalToDDM(l, isLatitude) {
-    var degrees = Math.floor(Math.abs(l));
-    var minutes = ((Math.abs(l) - degrees) * 60).toFixed(2);
-    var direction = isLatitude ? (l > 0 ? "N" : "S") : l > 0 ? "E" : "W";
-    return degrees + "&deg;" + minutes + "'" + direction;
-}
-
-// transformations - for overwrite
-var getDimVal = (c) => {
-    return settings.metric === "DEFAULT" || settings.metric === "SI" ? Number(c).toFixed(0) : Number(c * 3.2808399).toFixed(0);
-};
-
-var getDimUnit = () => {
-    return settings.metric === "DEFAULT" || settings.metric === "SI" ? "m" : "ft";
-};
-
-var getDistanceConversion = (c) => (settings.metric === "DEFAULT" ? c : settings.metric === "SI" ? c * 1.852 : c * 1.15078);
-var getDistanceVal = (c) => Number(getDistanceConversion(c)).toFixed(1).toLocaleString();
-var getDistanceUnit = () => (settings.metric === "DEFAULT" ? "nmi" : settings.metric === "SI" ? "km" : "mi");
-var getSpeedVal = (c) => (settings.metric === "DEFAULT" ? Number(c).toFixed(1) : settings.metric === "SI" ? Number(c * 1.852).toFixed(1) : Number(c * 1.151).toFixed(1));
-var getSpeedUnit = () => (settings.metric === "DEFAULT" ? "kts" : settings.metric === "SI" ? "km/h" : "mph");
-var getShipDimension = (ship) => ship.to_bow != null && ship.to_stern != null && ship.to_port != null && ship.to_starboard != null
-    ? getDimVal(ship.to_bow + ship.to_stern) + " " + getDimUnit() + " x " + getDimVal(ship.to_port + ship.to_starboard) + " " + getDimUnit()
-    : null
-
-
-
-var getLatValFormat = (ship) => {
-    const prefix = ship.approx ? "<i>" : "";
-    const suffix = ship.approx ? "</i>" : "";
-    let content = "";
-
-    switch (settings.coordinate_format) {
-        case "dms":
-            content = decimalToDMS(ship.lat, true);
-            break;
-        case "ddm":
-            content = decimalToDDM(ship.lat, true);
-            break;
-        default: // decimal
-            content = Number(ship.lat).toFixed(5);
-            break;
-    }
-
-    return prefix + content + suffix;
-};
-
-var getLonValFormat = (ship) => {
-    const prefix = ship.approx ? "<i>" : "";
-    const suffix = ship.approx ? "</i>" : "";
-    let content = "";
-
-    switch (settings.coordinate_format) {
-        case "dms":
-            content = decimalToDMS(ship.lon, false);
-            break;
-        case "ddm":
-            content = decimalToDDM(ship.lon, false);
-            break;
-        default: // decimal
-            content = Number(ship.lon).toFixed(5);
-            break;
-    }
-
-    return prefix + content + suffix;
-};
-
-var getEtaVal = (ship) => ("0" + ship.eta_month).slice(-2) + "-" + ("0" + ship.eta_day).slice(-2) + " " + ("0" + ship.eta_hour).slice(-2) + ":" + ("0" + ship.eta_minute).slice(-2);
-var getShipName = (ship) => ship.shipname;
-var getCallSign = (ship) => ship.callsign;
 var getICAOFromHexIdent = (h) => h.toString(16).toUpperCase().padStart(6, '0')
 var getICAO = (plane) => getICAOFromHexIdent(plane.hexident)
 var includeShip = (ship) => true;
-
-const getDeltaTimeVal = (s) => {
-    const days = Math.floor(s / (24 * 3600));
-    const hours = Math.floor((s % (24 * 3600)) / 3600);
-    const minutes = Math.floor((s % 3600) / 60);
-    const seconds = s % 60;
-
-    let result = '';
-    if (days > 0) result += `${days}d `;
-    if (hours > 0 || days > 0) result += `${hours}h `;
-    if (minutes > 0 || hours > 0 || days > 0) result += `${minutes}m `;
-    if (seconds > 0 || (days === 0 && hours === 0 && minutes === 0)) result += `${seconds}s`;
-
-    return result.trim();
-};
 
 const notificationContainer = document.getElementById("notification-container");
 
@@ -645,7 +603,7 @@ function setCoordinateFormat(format) {
     saveSettings();
 
     refresh_data();
-    if (table != null) table = null;
+    shipTableModule?.reset();
 }
 
 
@@ -692,23 +650,6 @@ var shapeStyleFunction = function (feature) {
     });
 }
 
-const ShippingClass = {
-    OTHER: 0,
-    UNKNOWN: 1,
-    CARGO: 2,
-    B: 3,
-    PASSENGER: 4,
-    SPECIAL: 5,
-    TANKER: 6,
-    HIGHSPEED: 7,
-    FISHING: 8,
-    PLANE: 9,
-    HELICOPTER: 10,
-    STATION: 11,
-    ATON: 12,
-    SARTEPIRB: 13,
-};
-
 var trackStyleFunction = function (feature) {
     var w = Number(settings.track_weight);
     var c = '#12a5ed'; // Default fallback color
@@ -753,20 +694,6 @@ var markerStyle = function (feature) {
     });
 };
 
-
-var planeStyleOld = function (feature) {
-
-    return new ol.style.Style({
-        image: new ol.style.Icon({
-            src: SpritesAll,
-            rotation: feature.plane.rot,
-            offset: [feature.plane.cx, feature.plane.cy],
-            size: [feature.plane.imgSize, feature.plane.imgSize],
-            scale: settings.icon_scale * feature.plane.scaling,
-            opacity: 1
-        })
-    });
-};
 
 var planeStyle = function (feature) {
     const altitude = feature.plane.altitude || 0;
@@ -1097,11 +1024,9 @@ function measureStyleFunction(feature) {
 
 let shapeFeatures = {};
 let markerFeatures = {};
-let planeFeatures = {};
 
 let stationFeature = undefined;
 let hoverCircleFeature = undefined;
-let measureCircleFeature = undefined;
 let selectCircleFeature = undefined;
 
 
@@ -1149,14 +1074,13 @@ function createShipOutlineGeometry(ship) {
 }
 
 function showCommunity() {
-    if (!communityFeed) {
+    if (!config.features.community_feed) {
         showDialog("Community feed is not available", "Enable by running with -X which will send your AIS data to www.aiscatcher.org and enable the options</br>Thank you for supporting AIS-catcher");
-        return;
     }
 }
 
 async function showNMEA(m) {
-    if (typeof message_save !== "undefined" && message_save) {
+    if (config.features.save_messages) {
         const s = await fetchJSON("api/message", m);
         const obj = JSON.parse(s);
 
@@ -1386,7 +1310,7 @@ function showContextMenu(event, mmsi, type, context) {
     });
 
     // Hide realtime menu items if realtime is disabled
-    if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
+    if (!config.features.realtime) {
         document.querySelectorAll('.ctx-realtime').forEach((element) => {
             element.style.display = "none";
         });
@@ -1460,6 +1384,7 @@ function closeDialog() {
 }
 
 function showNotification(message) {
+    console.log("[notification] " + message);
     const notificationElement = document.createElement("div");
     notificationElement.classList.add("notification");
     notificationElement.textContent = message;
@@ -1475,8 +1400,9 @@ function showNotification(message) {
 }
 
 function checkLatestVersion() {
-    if (typeof build_version === 'undefined' || build_version === 'unknown') {
-        console.log('AIS-catcher: build_version not available, skipping version check');
+    const buildVersion = config.build.version;
+    if (!buildVersion || buildVersion === 'unknown') {
+        console.log('AIS-catcher: build version not available, skipping version check');
         return;
     }
 
@@ -1489,45 +1415,22 @@ function checkLatestVersion() {
         })
         .then(data => {
             const latestVersion = data.tag_name;
-            if (latestVersion && latestVersion !== build_version) {
-                console.log('AIS-catcher: New version available! Current: ' + build_version + ', Latest: ' + latestVersion);
+            if (latestVersion && latestVersion !== buildVersion) {
+                console.log('AIS-catcher: New version available! Current: ' + buildVersion + ', Latest: ' + latestVersion);
                 showDialog('Update Available',
                     'A new version of AIS-catcher is available!<br><br>' +
-                    'Current version: <b>' + build_version + '</b><br>' +
+                    'Current version: <b>' + buildVersion + '</b><br>' +
                     'Latest version: <b>' + latestVersion + '</b><br><br>' +
                     'Updating ensures you have the latest features and security updates.<br><br>' +
                     'Please visit <a href="https://docs.aiscatcher.org" target="_blank">docs.aiscatcher.org</a> for installation instructions or ' +
                     '<a href="https://github.com/jvde-github/AIS-catcher/releases/latest" target="_blank">GitHub Releases</a> to download the latest version.');
             } else {
-                console.log('AIS-catcher: You are running the latest version (' + build_version + ')');
+                console.log('AIS-catcher: You are running the latest version (' + buildVersion + ')');
             }
         })
         .catch(error => {
             console.log('AIS-catcher: Could not check for updates - ' + error.message);
         });
-}
-
-function getStatusVal(ship) {
-    const StringFromStatus = [
-        "Under way using engine",
-        "At anchor",
-        "Not under command",
-        "Restricted maneuverability",
-        "Constrained",
-        "Moored",
-        "Aground",
-        "Engaged in Fishing",
-        "Under way sailing",
-        "Reserved for HSC",
-        "Reserved for WIG",
-        "Reserved",
-        "Reserved",
-        "Reserved",
-        "AIS-SART is active",
-        "Not available",
-    ];
-
-    return StringFromStatus[Math.min(ship.status, 15)];
 }
 
 function getShipTypeVal(s) {
@@ -1698,22 +1601,13 @@ function getShipTypeVal(s) {
     return "Unknown (" + s + ")";
 }
 
-// MMSI types from AIS-catcher
-const OTHER = 0;
-const CLASS_A = 1;
-const CLASS_B = 2;
-const BASESTATION = 3;
-const SAR = 4;
-const SARTEPIRB = 5;
-const ATON = 6;
-
 function headerClick() {
     window.open("https://www.aiscatcher.org");
 }
 
 function openWebControl() {
-    if (typeof webcontrol_http !== "undefined" && webcontrol_http) {
-        window.open(webcontrol_http, '_blank');
+    if (config.webcontrol_http) {
+        window.open(config.webcontrol_http, '_blank');
     }
 }
 
@@ -2044,8 +1938,6 @@ function initMap() {
     map.on('moveend', function (evt) {
         debouncedSaveSettings();
         debouncedDrawMap();
-        if (communityFeed)
-            debounceUpdateCommunityFeed();
     });
 
     map.on('pointermove', function (evt) {
@@ -2149,7 +2041,7 @@ function setMetrics(s) {
     saveSettings();
 
     refresh_data();
-    if (table != null) table = null;
+    shipTableModule?.reset();
 }
 
 function setTableIcon(s) {
@@ -2157,7 +2049,7 @@ function setTableIcon(s) {
     saveSettings();
 
     refresh_data();
-    if (table != null) table = null;
+    shipTableModule?.reset();
 }
 
 function getMetrics() {
@@ -2207,7 +2099,7 @@ function ToggleFireworks() {
 
 function StartFireworks() {
     if (evtSourceMap == null) {
-        if (typeof realtime_enabled === "undefined" || !realtime_enabled) {
+        if (!config.features.realtime) {
             showDialog("Error", "Cannot run Firework Mode. Please ensure that AIS-catcher is running with -N REALTIME on.");
             return;
         }
@@ -2219,7 +2111,7 @@ function StartFireworks() {
             function (e) {
                 var jsonData = JSON.parse(e.data);
 
-                if (jsonData.hasOwnProperty("channel") && jsonData.hasOwnProperty("lat") && jsonData.hasOwnProperty("lon")) {
+                if (Object.hasOwn(jsonData, "channel") && Object.hasOwn(jsonData, "lat") && Object.hasOwn(jsonData, "lon")) {
                     addMarker(jsonData.lat, jsonData.lon, jsonData.channel);
                 }
             },
@@ -2505,9 +2397,9 @@ function setRangeTimePeriod(v) {
 }
 
 async function toggleRange() {
-    const isSationSet = station && station.hasOwnProperty("lat") && station.hasOwnProperty("lon") && !(station.lat == 0 && station.lon == 0);
+    const isSationSet = station && Object.hasOwn(station, "lat") && Object.hasOwn(station, "lon") && !(station.lat == 0 && station.lon == 0);
 
-    if (!(typeof param_share_loc != "undefined" && param_share_loc) || !isSationSet) {
+    if (!config.features.share_location || !isSationSet) {
         showDialog("Error", "Unable to show range as station location not available");
         settings.show_range = false;
     } else settings.show_range = !settings.show_range;
@@ -2560,26 +2452,19 @@ function toggleGraphVisibility(type) {
 }
 
 function showPlugins() {
-    showDialog("Plugins", "<pre>Loaded plugins:\n" + plugins + "</pre>");
+    const list = config.plugins.loaded.length
+        ? config.plugins.loaded.map((p) => p.version > 0 ? `${p.name} (v${p.version})` : p.name).join('\n')
+        : '(none)';
+    showDialog("Plugins", "<pre>Loaded plugins:\n" + list + "</pre>");
 }
 
 function showServerErrors() {
-    showDialog("Server Errors", server_message == "" ? "None" : ("<pre>" + server_message + "</pre>"));
-}
-
-async function fetchAbout() {
-    let response;
-    try {
-        response = await fetch("about.md");
-    } catch (error) {
-        return;
-    }
-    let aboutmd = await response.text();
-    return aboutmd;
+    const errs = config.plugins.errors;
+    showDialog("Server Errors", errs.length === 0 ? "None" : ("<pre>" + errs.join('\n') + "</pre>"));
 }
 
 async function fetchRange(forcefetch = false) {
-    const isSationSet = station && station.hasOwnProperty("lat") && station.hasOwnProperty("lon") && !(station.lat == 0 && station.lon == 0);
+    const isSationSet = station && Object.hasOwn(station, "lat") && Object.hasOwn(station, "lon") && !(station.lat == 0 && station.lon == 0);
 
     if (!isSationSet || !settings.show_range) {
         settings.show_range = false;
@@ -2974,7 +2859,7 @@ async function fetchShips(noDoubleFetch = true) {
 
     // Filter ships after merge
     for (const mmsi in shipsDB) {
-        if (!includeShip(shipsDB[mmsi].raw)) {
+        if (!(shipFilterOverride ?? includeShip)(shipsDB[mmsi].raw)) {
             delete shipsDB[mmsi];
         }
     }
@@ -2991,7 +2876,7 @@ async function fetchShips(noDoubleFetch = true) {
         shipsLastCleanup = serverTime;
     }
 
-    if (ships.hasOwnProperty("station")) station = ships.station;
+    if (Object.hasOwn(ships, "station")) station = ships.station;
 
     center = {};
     if (String(settings.center_point).toUpperCase() == "STATION") {
@@ -3237,503 +3122,6 @@ function updateTrackColorInputs() {
     document.getElementById("settings_track_unknown_color").value = settings.track_class_colors[ShippingClass.UNKNOWN];
 }
 
-function average(d) {
-    const b = d.chart.data.datasets[0].data;
-    if (b.length == 1) return b[0].y;
-
-    let start = 0;
-    if (d.chart.data.datasets.length > 1) start = 1;
-
-    var c = 0;
-
-    for (var a = 0; a < b.length; a++) {
-        if (b[a].x != 0) {
-            for (var i = start; i < d.chart.data.datasets.length; i++) {
-                if (!d.chart.getDatasetMeta(i).hidden) {
-                    c += d.chart.data.datasets[i].data[a].y;
-                }
-            }
-        }
-    }
-
-    return c / (b.length - 1);
-}
-
-
-const graph_annotation = {
-    type: "line",
-    borderColor: "rgba(12,118,170)",
-    borderDash: [6, 6],
-    borderDashOffset: 0,
-    borderWidth: 3,
-    scaleID: "y",
-    value: (a) => average(a),
-};
-
-const graph_options_count = {
-    responsive: true,
-    plugins: {
-        legend: {
-            display: true,
-        },
-        annotation: {
-            annotations: {
-                graph_annotation,
-            },
-        },
-    },
-    elements: {
-        point: {
-            radius: 1,
-        },
-    },
-    animation: false,
-    tooltips: {
-        mode: "index",
-        intersect: false,
-    },
-    hover: {
-        mode: "index",
-        intersect: false,
-    },
-    scales: {
-        y: {
-            stacked: true,
-            beginAtZero: true,
-            ticks: {
-                display: true,
-                align: 'center'  // Aligns tick labels
-            },
-            grid: {
-                display: true,  // Only the primary axis should display grid lines
-            },
-            title: {
-                display: true,
-                text: 'Message Count',
-                font: {
-                    size: 12
-                },
-                color: '#666'
-            }
-        },
-        y_right: {
-            stacked: true,
-            beginAtZero: true,
-            ticks: {
-                display: true,
-                align: 'center'  // Aligns tick labels
-            },
-            grid: {
-                display: false,  // Disable grid lines on the secondary axis
-            },
-            position: 'right',
-            title: {
-                display: true,
-                text: 'Vessel Count',
-                font: {
-                    size: 12
-                },
-                color: '#666'
-            }
-        },
-        x: {
-            ticks: {
-                display: true
-            },
-            title: {
-                display: true,
-                text: 'Time',
-                font: {
-                    size: 16
-                },
-                color: '#666'
-            }
-        },
-    }
-
-};
-
-const graph_options_single = {
-    responsive: true,
-    plugins: {
-        legend: {
-            display: false,
-        },
-        annotation: {
-            annotations: {
-                graph_annotation,
-            },
-        },
-    },
-    elements: {
-        point: {
-            radius: 1,
-        },
-    },
-    animation: false,
-    tooltips: {
-        mode: "index",
-        intersect: false,
-    },
-    hover: {
-        mode: "index",
-        intersect: false,
-    },
-    scales: {
-        y: {
-            stacked: true,
-            beginAtZero: true,
-            ticks: {
-                display: true,
-            },
-        },
-        x: {
-            ticks: {
-                display: true,
-            },
-        },
-    },
-};
-
-const graph_options_level = {
-    responsive: true,
-    plugins: {
-        legend: {
-            display: false,
-        },
-    },
-    elements: {
-        point: {
-            radius: 1,
-        },
-    },
-    animation: false,
-    tooltips: {
-        mode: "index",
-        intersect: false,
-    },
-    hover: {
-        mode: "index",
-        intersect: false,
-    },
-    scales: {
-        y: {
-            beginAtZero: false,
-            ticks: {
-                display: true,
-            },
-        },
-        x: {
-            ticks: {
-                display: true,
-            },
-        },
-    },
-};
-
-const graph_options_distance = {
-    responsive: true,
-    plugins: {
-        legend: {
-            display: true,
-        },
-    },
-    elements: {
-        point: {
-            radius: 1,
-        },
-    },
-    animation: false,
-    tooltips: {
-        mode: "index",
-        intersect: false,
-    },
-    hover: {
-        mode: "index",
-        intersect: false,
-    },
-    scales: {
-        y: {
-            type: 'logarithmic',
-            beginAtZero: false,
-            ticks: {
-                display: true,
-            },
-        },
-        x: {
-            ticks: {
-                display: true,
-            },
-        },
-    },
-};
-
-var plot_count = {
-    type: "scatter",
-    data: {
-        datasets: [
-            {
-                label: "Vessel Count",
-                data: [],
-                type: "line",
-                showLine: true,
-                fill: false,
-                pointStyle: false,
-                borderWidth: 2,
-                yAxisID: 'y_right', // correctly reference the right y-axis
-            },
-            {
-                label: "Class A",
-                data: [],
-                showLine: true,
-                fill: "origin",
-                borderWidth: 2,
-                pointStyle: false,
-            },
-            {
-                label: "Class B",
-                data: [],
-                showLine: true,
-                fill: "-1",
-                borderWidth: 2,
-                pointStyle: false,
-            },
-            {
-                label: "Base Station",
-                data: [],
-                showLine: true,
-                fill: "-1",
-                borderWidth: 2,
-                pointStyle: false,
-            },
-            {
-                label: "Other",
-                data: [],
-                showLine: true,
-                fill: "-1",
-                borderWidth: 2,
-                pointStyle: false,
-            },
-        ],
-    },
-    options: graph_options_count,
-};
-
-var plot_distance = {
-    type: "scatter",
-    data: {
-        datasets: [
-            {
-                label: "NE",
-                data: [],
-                showLine: true,
-                pointStyle: false,
-                borderWidth: 2,
-            },
-            {
-                label: "SE",
-                data: [],
-                showLine: true,
-                pointStyle: false,
-                borderWidth: 2,
-            },
-            {
-                label: "SW",
-                data: [],
-                showLine: true,
-                pointStyle: false,
-                borderWidth: 2,
-            },
-            {
-                label: "NW",
-                data: [],
-                showLine: true,
-                pointStyle: false,
-                borderWidth: 2,
-            },
-            {
-                label: "Max",
-                data: [],
-                showLine: true,
-                backgroundColor: "rgb(211,211,211,0.9)",
-                fill: true,
-                pointStyle: false,
-                borderWidth: 0,
-            },
-        ],
-    },
-    options: graph_options_distance,
-};
-
-var plot_single = {
-    type: "scatter",
-    data: {
-        datasets: [
-            {
-                label: "Data",
-                data: [],
-                showLine: true,
-                pointStyle: false,
-                borderWidth: 2,
-            },
-        ],
-    },
-    options: graph_options_single,
-};
-
-var plot_level = {
-    type: "scatter",
-    data: {
-        datasets: [
-            {
-                label: "Max",
-                data: [],
-                showLine: true,
-                pointStyle: false,
-                borderWidth: 1,
-            },
-            {
-                label: "Min",
-                data: [],
-                showLine: true,
-                pointStyle: false,
-                borderWidth: 1,
-                fill: "-1",
-            },
-        ],
-    },
-    options: graph_options_level,
-};
-
-var plot_radar = {
-    type: "polarArea",
-    animation: false,
-    responsive: true,
-    plugins: {
-        legend: {
-            display: true,
-        },
-    },
-    data: {
-        datasets: [
-            {
-                label: "Class B",
-                borderWidth: 1,
-            },
-            {
-                label: "Class A",
-                borderWidth: 1,
-            },
-        ],
-    },
-    options: {
-        legend: {
-            display: false,
-        },
-        scale: {
-            ticks: {
-                min: 0,
-            },
-        },
-    },
-};
-
-function cssvar(name) {
-    // Read from documentElement (html) instead of body for better iframe compatibility
-    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    // Fallback to body if empty
-    return value || getComputedStyle(document.body).getPropertyValue(name).trim();
-}
-
-function updateChartColors(c, colorVariables) {
-    c.data.datasets.forEach((dataset, index) => {
-        const color = cssvar(colorVariables[index]);
-
-        dataset.backgroundColor = color;
-        dataset.borderColor = color;
-    });
-
-    c.options.scales.x.ticks.color = cssvar("--chart-color");
-    c.options.scales.x.grid.color = cssvar("--chart-grid-color");
-
-    c.options.scales.y.ticks.color = cssvar("--chart-color");
-    c.options.scales.y.grid.color = cssvar("--chart-grid-color");
-
-    c.options.plugins.legend.labels.color = cssvar("--chart-color");
-}
-
-function updateColorMulti(c) {
-    const colorVariables = ["--chart4-color", "--chart1-color", "--chart2-color", "--chart5-color", "--chart6-color"];
-    updateChartColors(c, colorVariables);
-}
-
-function updateColorSingle(c) {
-    const colorVariables = ["--chart4-color", "--chart1-color", "--chart2-color", "--chart5-color", "--chart6-color"];
-    updateChartColors(c, colorVariables);
-}
-
-function updateColorRadar(c) {
-    const colorVariables = ["--chart2-color", "--chart4-color", "--chart2-color", "--chart5-color", "--chart4-color"];
-    c.data.datasets.forEach((dataset, index) => {
-        const color = cssvar(colorVariables[index]);
-
-        dataset.backgroundColor = color;
-        dataset.borderColor = color;
-    });
-
-    c.options.scales.r.grid.color = cssvar("--chart-grid-color");
-    c.options.scales.r.ticks.color = cssvar("--chart-color");
-    c.options.scales.r.ticks.backdropColor = cssvar("--panel-color");
-}
-
-function cloneChartConfig(config) {
-    const clone = JSON.parse(JSON.stringify(config));
-
-    if (clone.options?.plugins?.annotation?.annotations?.graph_annotation) {
-        clone.options.plugins.annotation.annotations.graph_annotation.value =
-            (a) => average(a);
-    }
-    return clone;
-}
-
-function initPlots() {
-    if (typeof Chart === "undefined") return;
-
-    const chartConfigs = [
-        { varName: "chart_radar_hour", id: "chart-radar-hour", ctx: "2d", config: plot_radar, clone: true },
-        { varName: "chart_radar_day", id: "chart-radar-day", ctx: "2d", config: plot_radar, clone: true },
-        { varName: "chart_seconds", id: "chart-seconds", config: plot_count, clone: true },
-        { varName: "chart_minutes", id: "chart-minutes", config: plot_count, clone: true },
-        { varName: "chart_hours", id: "chart-hours", config: plot_count, clone: true },
-        { varName: "chart_days", id: "chart-days", config: plot_count, clone: true },
-        { varName: "chart_ppm", id: "chart-ppm", config: plot_single, clone: true },
-        { varName: "chart_ppm_minute", id: "chart-ppm-minute", config: plot_single, clone: true },
-        { varName: "chart_distance_hour", id: "chart-distance-hour", config: plot_distance, clone: false },
-        { varName: "chart_distance_day", id: "chart-distance-day", config: plot_distance, clone: false },
-        { varName: "chart_minute_vessel", id: "chart-vessels-minute", config: plot_single, clone: false },
-        { varName: "chart_hour_vessel", id: "chart-vessels-hour", config: plot_single, clone: false },
-        { varName: "chart_day_vessel", id: "chart-vessels-day", config: plot_single, clone: false }
-    ];
-
-    for (const { varName, id, ctx, config, clone } of chartConfigs) {
-        try {
-            const canvas = document.getElementById(id);
-            if (!canvas) {
-                console.warn(`Canvas element not found: ${id}`);
-                continue;
-            }
-
-            const context = ctx === "2d" ? canvas.getContext("2d") : canvas;
-            const chartConfig = clone ? cloneChartConfig(config) : config;
-
-            window[varName] = new Chart(context, chartConfig);
-        } catch (error) {
-            console.error(`Failed to initialize chart ${id}:`, error);
-        }
-    }
-    window.chart_level = new Chart(document.getElementById("chart-level"), cloneChartConfig(plot_level));
-    window.chart_level_hour = new Chart(document.getElementById("chart-level-hour"), cloneChartConfig(plot_level));
-}
 
 function shipcardismax() {
     return document.getElementById("shipcard").classList.contains("shipcard-ismax");
@@ -3837,32 +3225,6 @@ function onReceiverChange(idx) {
 }
 
 
-
-let displayNames;
-function getCountryName(isoCode) {
-    if (!displayNames && typeof Intl !== "undefined" && typeof Intl.DisplayNames === "function") {
-        displayNames = new Intl.DisplayNames(["en"], { type: "region" });
-    }
-
-    if (displayNames) {
-        try {
-            const countryName = displayNames.of(isoCode);
-            return countryName ? countryName : "";
-        } catch (error) {
-            return isoCode;
-        }
-    } else {
-        return isoCode;
-    }
-}
-
-function getFlag(country) {
-    return country ? `<span style="padding-right: 10px" title="` + getCountryName(country) + `" class="fi fi-${country.toLowerCase()}"></span> ` : "<span></span>";
-}
-
-function getFlagStyled(country, style) {
-    return country ? `<span style="` + style + `" title="` + getCountryName(country) + `" class="fi fi-${country.toLowerCase()}"></span> ` : "<span></span>";
-}
 
 // fetches main statistics from the server
 async function fetchStatistics() {
@@ -3975,175 +3337,6 @@ async function updateStatistics() {
     }
 }
 
-function updateChartMulti(b, f, c) {
-    if (b.hasOwnProperty(f)) {
-        var hA = [];
-        var hB = [];
-        var hT = [];
-        var hS = [];
-        var hV = [];
-
-
-        const source = b[f];
-        for (let i = 0; i < source.time.length; i++) {
-            let cA = source.stat[i].msg[0] + source.stat[i].msg[1] + source.stat[i].msg[2] + source.stat[i].msg[4];
-            hA.push({ x: source.time[i], y: cA });
-            let cB = source.stat[i].msg[17] + source.stat[i].msg[18] + source.stat[i].msg[23];
-            hB.push({ x: source.time[i], y: cB });
-            let cS = source.stat[i].msg[3];
-            hS.push({ x: source.time[i], y: cS });
-            let cT = source.stat[i].count - cA - cB - cS;
-            hT.push({ x: source.time[i], y: cT });
-            let cV = source.stat[i].vessels;
-            hV.push({ x: source.time[i], y: cV });
-        }
-
-        c.data.datasets[0].data = hV;
-        c.data.datasets[1].data = hA;
-        c.data.datasets[2].data = hB;
-        c.data.datasets[3].data = hS;
-        c.data.datasets[4].data = hT;
-
-        c.update();
-    }
-}
-
-function updateChartDistance(b, f, c) {
-    if (b.hasOwnProperty(f)) {
-        var hNE = [];
-        var hSE = [];
-        var hSW = [];
-        var hNW = [];
-        var hM = [];
-
-        let source = b[f];
-
-        if (source.stat[0].radar_a.length == 0) return;
-        let N = source.stat[0].radar_a.length;
-        let N4 = N / 4;
-        for (let i = 0; i < source.time.length; i++) {
-            let count = [0, 0, 0, 0];
-            for (let j = 0; j < N; j++) count[Math.floor(j / N4)] = Math.max(count[Math.floor(j / N4)], source.stat[i].radar_a[j]);
-
-            hNE.push({ x: source.time[i], y: getDistanceConversion(count[0]) }); // source.stat[i].radar[0]
-            hSE.push({ x: source.time[i], y: getDistanceConversion(count[1]) });
-            hSW.push({ x: source.time[i], y: getDistanceConversion(count[2]) });
-            hNW.push({ x: source.time[i], y: getDistanceConversion(count[3]) });
-            hM.push({ x: source.time[i], y: getDistanceConversion(source.stat[i].dist) });
-        }
-        c.data.datasets[0].data = hNE;
-        c.data.datasets[1].data = hSE;
-        c.data.datasets[2].data = hSW;
-        c.data.datasets[3].data = hNW;
-        c.data.datasets[4].data = hM;
-
-        c.update();
-    }
-}
-
-function updateChartSingle(b, f1, f2, c) {
-    if (b.hasOwnProperty(f1)) {
-        var h = [];
-
-        const source = b[f1];
-        for (let i = 0; i < source.time.length; i++) {
-            h.push({ x: source.time[i], y: source.stat[i][f2] });
-        }
-        c.data.datasets[0].data = h;
-        c.update();
-    }
-}
-
-function updateChartLevel(chartData, timeframe, chartName, chart) {
-    if (!chartData?.hasOwnProperty(timeframe)) {
-        return;
-    }
-
-    const timeSeriesData = chartData[timeframe];
-
-    const minLevelData = [];
-    for (let i = 0; i < timeSeriesData.time.length; i++) {
-        minLevelData.push({
-            x: timeSeriesData.time[i],
-            y: timeSeriesData.stat[i].level_min == null ? null : timeSeriesData.stat[i].level_min
-        });
-    }
-    chart.data.datasets[1].data = minLevelData;
-
-    const maxLevelData = [];
-    for (let i = 0; i < timeSeriesData.time.length; i++) {
-        maxLevelData.push({
-            x: timeSeriesData.time[i],
-            y: timeSeriesData.stat[i].level_max == null ? null : timeSeriesData.stat[i].level_max
-        });
-    }
-    chart.data.datasets[0].data = maxLevelData;
-
-    chart.update();
-}
-
-function updateRadar(b, f, c) {
-    if (b.hasOwnProperty(f)) {
-        var data_a = [],
-            data_b = [];
-        let idx = 0;
-        if (b[f].stat.length > 1) idx = 1;
-        let N = b[f].stat[idx].radar_a.length;
-        for (var i = 0; i < N; i++) {
-            data_a.push({
-                r: getDistanceConversion(b[f].stat[idx].radar_a[i]),
-                theta: (i * 360) / N,
-            });
-            data_b.push({
-                r: getDistanceConversion(b[f].stat[idx].radar_b[i]),
-                theta: (i * 360) / N,
-            });
-        }
-        c.data.datasets[0].data = data_b;
-        c.data.datasets[1].data = data_a;
-        c.update();
-    }
-}
-
-async function updatePlots() {
-    const unit = getDistanceUnit().toUpperCase();
-    document.querySelectorAll(".distunit").forEach((u) => {
-        u.textContent = unit;
-    });
-
-    let response, b;
-    if (true) {
-        try {
-            response = await fetch("api/history_full.json?receiver=" + activeReceiver);
-        } catch (error) {
-    
-        }
-        b = await response.json();
-    } else {
-        b = JSON.parse(chart_json);
-    }
-
-
-    updateChartMulti(b, "second", chart_seconds);
-    updateChartMulti(b, "minute", chart_minutes);
-    updateChartMulti(b, "hour", chart_hours);
-    updateChartMulti(b, "day", chart_days);
-
-    updateChartSingle(b, "minute", "ppm", chart_ppm_minute);
-    updateChartSingle(b, "hour", "ppm", chart_ppm);
-    updateChartLevel(b, "minute", "level", chart_level);
-    updateChartLevel(b, "hour", "level", chart_level_hour);
-    updateChartSingle(b, "minute", "vessels", chart_minute_vessel);
-    updateChartSingle(b, "hour", "vessels", chart_hour_vessel);
-    updateChartSingle(b, "day", "vessels", chart_day_vessel);
-    //plot_radar.options.ticks.scale.max = 200;
-    updateChartDistance(b, "hour", chart_distance_hour);
-    updateChartDistance(b, "day", chart_distance_day);
-
-    updateRadar(b, "hour", chart_radar_hour);
-    updateRadar(b, "day", chart_radar_day);
-}
-
 function tableRowClick(m) {
     let ship = shipsDB[m].raw;
     if (ship.lat == null || ship.lon == null) return;
@@ -4151,419 +3344,12 @@ function tableRowClick(m) {
     selectMapTab(m);
 }
 
-var table = null;
-
-function downloadCSV() {
-    if (table) table.download("csv", "data.csv");
-}
-
-document.getElementById("shipSearch").addEventListener("input", function (e) {
-    const query = e.target.value;
-    searchShips(query);
-});
-
-function searchShips(query) {
-    if (table) {
-        table.setFilter(customShipFilter, { query: query });
-    }
-}
-
-function customShipFilter(data, filterParams) {
-    const query = filterParams.query.toLowerCase();
-    return data.shipname.toLowerCase().includes(query) ||
-        data.mmsi.toString().includes(query) ||
-        data.callsign.toLowerCase().includes(query) ||
-        data.shipclass.toString().includes(query) ||
-        (data.last_signal != null && getDeltaTimeVal(shipsSince - data.last_signal).includes(query)) ||
-        (data.count != null && data.count.toString().includes(query)) ||
-        (data.ppm != null && data.ppm.toString().includes(query)) ||
-        (data.level != null && data.level.toString().includes(query)) ||
-        (data.distance != null && getDistanceVal(data.distance).includes(query)) ||
-        (data.bearing != null && data.bearing.toString().includes(query)) ||
-        (data.lat != null && getLatValFormat(data).includes(query)) ||
-        (data.lon != null && getLonValFormat(data).includes(query)) ||
-        (data.speed != null && getSpeedVal(data.speed).toString().includes(query)) ||
-        (data.validated != null && (data.validated == 1 ? "yes" : data.validated == -1 ? "no" : "pending").includes(query)) ||
-        (data.channels != null && getStringfromChannels(data.channels).includes(query)) ||
-        (data.group_mask != null && getStringfromGroup(data.group_mask).includes(query));
-}
-
-let tableFirstTime = true;
-
-async function updateShipTable() {
-    const ok = await fetchShips();
-    if (!ok) return;
-
-    const data = Object.values(shipsDB).map((ship) => ship.raw);
-
-    if (table == null) {
-        table = new Tabulator("#shipTable", {
-            index: "mmsi",
-            rowFormatter: function (row) {
-                const ship = row.getData();
-                const borderColor = ship.validated == 1 ? "#7CFC00" : ship.validated == -1 ? "red" : "lightgrey";
-                row.getElement().style.borderLeft = `10px solid ${borderColor}`;
-            },
-            data: data,
-            layout: "fitDataTable",
-            persistence: { sort: true },
-            pagination: "local",
-            paginationSize: 50,
-            rowHeight: 37,
-            paginationSizeSelector: [20, 50, 100],
-            columns: [
-                {
-                    title: "Shipname",
-                    field: "shipname",
-                    sorter: "string",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return getFlag(ship.country) + (getShipName(ship) || ship.mmsi);
-                    },
-                },
-                { title: "MMSI", field: "mmsi", sorter: "number" },
-                { title: "IMO", field: "imo", sorter: "number", formatter: function(cell) { var v = cell.getValue(); return v != null ? v : ""; } },
-                { title: "Dest", field: "destination", sorter: "string", formatter: function(cell) { var v = cell.getValue(); return v != null ? v : ""; } },
-                {
-                    title: "ETA",
-                    field: "eta",
-                    sorter: "string",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
-                    },
-                },
-                {
-                    title: "Callsign",
-                    field: "callsign",
-                    sorter: "string",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return ship != null ? getCallSign(ship) : "";
-                    },
-                },
-                {
-                    title: "Flag",
-                    field: "country",
-                    sorter: "string",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return ship != null ? getCountryName(ship.country) : "";
-                    },
-                },
-                {
-                    title: "Status",
-                    field: "status",
-                    sorter: "string",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return ship != null ? getStatusVal(ship) : "";
-                    },
-                },
-                {
-                    title: "Type",
-                    field: "shipclass",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return getTableShiptype(ship);
-                    },
-                },
-                {
-                    title: "Class",
-                    field: "class",
-                    sorter: "string",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return getTypeVal(ship);
-                    },
-                },
-                {
-                    title: "Dim",
-                    field: "dimension",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return ship ? getShipDimension(ship) || "" : "";
-                    },
-                },
-                {
-                    title: "Draught",
-                    field: "draught",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return ship.draught ? getDimVal(ship.draught) + " " + getDimUnit() : null;
-                    },
-                },
-                {
-                    title: "Last",
-                    field: "last_signal",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value != null ? getDeltaTimeVal(shipsSince - value) : "";
-                    },
-                },
-                { title: "Count", field: "count", sorter: "number" },
-                {
-                    title: "PPM",
-                    field: "ppm",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value != null ? Number(value).toFixed(1) : "";
-                    },
-                },
-                {
-                    title: "RSSI",
-                    field: "level",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value != null ? Number(value).toFixed(1) : "";
-                    },
-                },
-                {
-                    title: "Dist",
-                    field: "distance",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        return (ship != null && ship.distance != null)
-                            ? getDistanceVal(ship.distance) + (ship.repeat > 0 ? " (R)" : "")
-                            : "";
-                    },
-                },
-                {
-                    title: "Brg",
-                    field: "bearing",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value != null ? Number(value).toFixed(0) + "&deg;" : "";
-                    },
-                },
-                {
-                    title: "Lat",
-                    field: "lat",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        const color = ship.validated == 1 ? "green" : ship.validated == -1 ? "red" : "inherited";
-                        return "<div style='color:" + color + "'>" + (ship.lat != null ? getLatValFormat(ship) : "") + "</div>";
-                    },
-                },
-                {
-                    title: "Lon",
-                    field: "lon",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const ship = cell.getRow().getData();
-                        const color = ship.validated == 1 ? "green" : ship.validated == -1 ? "red" : "inherited";
-                        return "<div style='color:" + color + "'>" + (ship.lon != null ? getLonValFormat(ship) : "") + "</div>";
-                    },
-                },
-                {
-                    title: "Spd",
-                    field: "speed",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value ? getSpeedVal(value) + " " + getSpeedUnit() : null;
-                    },
-                },
-                {
-                    title: "Valid",
-                    field: "validated",
-                    sorter: "string",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        const txt = value == 1 ? "Yes" : value == -1 ? "No" : "Pending";
-                        return txt;
-                    },
-                },
-                {
-                    title: "Repeated",
-                    field: "repeat",
-                    sorter: "string",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value == 1 ? "Yes" : "No";
-                    },
-                },
-                {
-                    title: "Ch",
-                    field: "channels",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return getStringfromChannels(value);
-                    },
-                },
-                {
-                    title: "Msg Type",
-                    field: "msg_type",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return getStringfromMsgType(value);
-                    },
-                },
-                {
-                    title: "MSG6",
-                    field: "MSG6",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value & (1 << 6) ? "Yes" : "No";
-                    },
-                },
-                {
-                    title: "MSG8",
-                    field: "MSG8",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value & (1 << 8) ? "Yes" : "No";
-                    },
-                },
-                {
-                    title: "MSG27",
-                    field: "MSG27",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return value & (1 << 27) ? "Yes" : "No";
-                    },
-                },
-                {
-                    title: "Src",
-                    field: "group_mask",
-                    sorter: "number",
-                    formatter: function (cell) {
-                        const value = cell.getValue();
-                        return getStringfromGroup(value);
-                    },
-                },
-            ],
-        });
-        table.on("rowContext", function (e, row) {
-            showContextMenu(e, row.getData().mmsi, "ship", ["settings", "ship", "table-menu"]);
-        });
-        table.on("rowClick", function (e, row) {
-            tableRowClick(row.getData().mmsi);
-        });
-        table.on("tableBuilt", function () {
-            if (tableFirstTime) {
-                setShipTableColumns();
-                tableFirstTime = false;
-            }
-        });
-    } else {
-        var sorters = table.getSorters();
-        table.replaceData(data);
-        table.setSort(sorters);
-    }
-}
-
-function populateShipTableColumnVisibilityMenu() {
-    const shipTableColumnVisibilityMenu = document.getElementById("shipTableColumnVisibilityMenu");
-    shipTableColumnVisibilityMenu.innerHTML = "";
-
-    table.getColumns().forEach((column) => {
-        const checkboxId = `checkbox-${column.getField()}`;
-        const checkboxLabel = column.getDefinition().title;
-
-        const checkboxItem = document.createElement("div");
-        checkboxItem.classList.add("ship-table-column-dropdown-item");
-
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.id = checkboxId;
-        checkbox.value = column.getField();
-        checkbox.checked = column.isVisible();
-        checkbox.addEventListener("change", updateShipTableColumnVisibility);
-
-        const label = document.createElement("label");
-        label.setAttribute("for", checkboxId);
-        label.textContent = checkboxLabel;
-
-        checkboxItem.appendChild(checkbox);
-        checkboxItem.appendChild(label);
-
-        shipTableColumnVisibilityMenu.appendChild(checkboxItem);
-    });
-}
-
-function updateShipTableColumnVisibility() {
-    const checkboxes = document.querySelectorAll("#shipTableColumnVisibilityMenu input[type='checkbox']");
-
-    settings.shiptable_columns = Array.from(checkboxes)
-        .filter((checkbox) => checkbox.checked)
-        .map((checkbox) => checkbox.value);
-
-    setShipTableColumns();
-}
-
-function resetShipTableColumns() {
-    settings.shiptable_columns = ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"];
-    setShipTableColumns();
-}
-
-function setShipTableColumns() {
-
-    saveSettings();
-
-    const allColumns = table.getColumns();
-
-    const updatedColumns = allColumns.map(column => {
-        const field = column.getField();
-        return {
-            ...column.getDefinition(),
-            visible: settings.shiptable_columns.includes(field)
-        };
-    });
-
-    table.setColumns(updatedColumns);
-    populateShipTableColumnVisibilityMenu();
-}
-
-const dropdownToggle = document.getElementById('shipTableColumnDropdownToggle');
-const dropdownMenu = document.getElementById('shipTableColumnVisibilityMenu');
-document.body.appendChild(dropdownMenu);
-
-function toggleDropdown() {
-    const isOpen = dropdownMenu.style.display === 'block';
-    if (isOpen) {
-        dropdownMenu.style.display = 'none';
-        return;
-    }
-    if (table) populateShipTableColumnVisibilityMenu();
-    const rect = dropdownToggle.getBoundingClientRect();
-    dropdownMenu.style.top = (rect.bottom + window.scrollY) + 'px';
-    dropdownMenu.style.right = (window.innerWidth - rect.right) + 'px';
-    dropdownMenu.style.display = 'block';
-}
-
-dropdownToggle.addEventListener('click', function (event) {
-    event.stopPropagation();
-    toggleDropdown();
-});
-
+// Receiver-dropdown close-on-outside-click.
 document.addEventListener('click', function (event) {
-    if (!dropdownMenu.contains(event.target) && event.target !== dropdownToggle) {
-        dropdownMenu.style.display = 'none';
-    }
     const wrap = document.getElementById('receiver-btn-wrap');
     if (wrap && !wrap.contains(event.target)) {
         closeReceiverDropdown();
     }
-});
-
-const resetButton = document.getElementById('shipTableColumnReset');
-resetButton.addEventListener('click', function (event) {
-    resetShipTableColumns();
 });
 
 function getTooltipContent(ship) {
@@ -4601,27 +3387,6 @@ function getTooltipContentPlane(plane) {
         'Received ' + getDeltaTimeVal(planesSince - plane.last_signal) + ' ago' +
         '</div>' +
         '</div>';
-}
-
-function getTypeVal(ship) {
-    switch (ship.mmsi_type) {
-        case CLASS_A:
-            return "Class A";
-        case CLASS_B:
-            let classB = "Class B";
-            if (ship.cs_unit === 1) classB += " (SO)"; // SOTDMA - 5 watts
-            else if (ship.cs_unit === 2) classB += " (CS)"; // CSTDMA - 2 watts
-            return classB;
-        case BASESTATION:
-            return "Base Station";
-        case SAR:
-            return "SAR aircraft";
-        case SARTEPIRB:
-            return "AIS SART/EPIRB";
-        case ATON:
-            return "AtoN";
-    }
-    return "Unknown";
 }
 
 function getShipOpacity(ship) {
@@ -4739,8 +3504,6 @@ const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
 const stopHover = function () {
 
     if (!hoverMMSI) return;
-
-    let hover_mmsi = hoverMMSI;
 
     debounceShowHoverTrack.cancel();
 
@@ -4911,7 +3674,7 @@ function getBinaryMessageContent(binary) {
 
 const startHover = function (type, mmsi, pixel, feature) {
 
-    if (type != 'ship' && type != 'tooltip' && type != 'plane' && type != 'binary') return;
+    if (type != 'ship' && type != 'tooltip' && type != 'plane' && type != 'binary' && type != 'community') return;
 
     if (mmsi !== hoverMMSI || hoverType !== type) {
         stopHover();
@@ -4932,6 +3695,9 @@ const startHover = function (type, mmsi, pixel, feature) {
             trackLayer.changed();
         } else if (type == 'plane' && (mmsi in planesDB && planesDB[mmsi].raw.lon && planesDB[mmsi].raw.lat)) {
             showTooltipShip(hover_info, planesDB[mmsi]?.raw ? getTooltipContentPlane(planesDB[mmsi].raw) : mmsi, pixel, 15, planesDB[mmsi].raw.heading);
+        }
+        else if (type == 'community') {
+            showTooltipShip(hover_info, '<div class="tooltip-card">Community feed</div>', pixel, 15);
         }
         else {
             showTooltipShip(hover_info, hoverMMSI, pixel, 0);
@@ -4957,6 +3723,10 @@ function updateHoverMarker() {
             hoverCircleFeature.setGeometry(new ol.geom.Point(center));
             return;
         }
+        else if (hoverType == 'community' && hover_feature) {
+            hoverCircleFeature.setGeometry(new ol.geom.Point(hover_feature.getGeometry().getCoordinates()));
+            return;
+        }
         else {
             extraVector.removeFeature(hoverCircleFeature);
             hoverCircleFeature = undefined;
@@ -4979,6 +3749,11 @@ function updateHoverMarker() {
         hoverCircleFeature = new ol.Feature(new ol.geom.Point(center));
         hoverCircleFeature.setStyle(hoverCircleStyleFunction);
         hoverCircleFeature.mmsi = hoverMMSI;
+        extraVector.addFeature(hoverCircleFeature);
+    }
+    else if (hoverType == 'community' && hover_feature) {
+        hoverCircleFeature = new ol.Feature(new ol.geom.Point(hover_feature.getGeometry().getCoordinates()));
+        hoverCircleFeature.setStyle(hoverCircleStyleFunction);
         extraVector.addFeature(hoverCircleFeature);
     }
 }
@@ -5023,6 +3798,10 @@ const handlePointerMove = function (pixel, target) {
     if (feature && 'ship' in feature && feature.ship.mmsi in shipsDB) {
         const mmsi = feature.ship.mmsi;
         startHover('ship', mmsi, pixel, feature);
+    }
+    else if (feature && feature.community === true) {
+        const id = `c:${feature.ship.lat},${feature.ship.lon}`;
+        startHover('community', id, pixel, feature);
     }
     else if (feature && 'plane' in feature && feature.plane.hexident in planesDB) {
         const hexident = feature.plane.hexident;
@@ -5148,11 +3927,10 @@ function saveSettings() {
     settings.shipcard_rows = selectedRows;
     settings.activeReceiver = activeReceiver;
 
-    // Save realtime filter MMSIs and background streaming state
-    if (realtimeViewer) {
-        settings.realtime_filter_mmsis = realtimeViewer.filterMMSIs;
-        settings.realtime_background_streaming = realtimeViewer.backgroundStreaming;
-    }
+    const filters = realtimeModule?.getFilterMMSIs();
+    if (filters !== null && filters !== undefined) settings.realtime_filter_mmsis = filters;
+    const bg = realtimeModule?.getBackgroundStreaming();
+    if (bg !== null && bg !== undefined) settings.realtime_background_streaming = bg;
 
     localStorage[context] = JSON.stringify(settings);
 
@@ -5184,7 +3962,7 @@ function loadSettings() {
             const localStorageSettings = localStorage.getItem(context);
             if (localStorageSettings !== null) {
                 const ls = JSON.parse(localStorageSettings);
-                settings = { ...settings, ...ls };
+                Object.assign(settings, ls);
             }
         } catch (error) {
             console.log(error);
@@ -5223,7 +4001,7 @@ function convertStringBooleansToActual() {
     ];
 
     booleanSettings.forEach(key => {
-        if (settings.hasOwnProperty(key)) {
+        if (Object.hasOwn(settings, key)) {
             if (typeof settings[key] === 'string') {
                 settings[key] = settings[key] === "true";
             }
@@ -5233,7 +4011,7 @@ function convertStringBooleansToActual() {
 
 function loadSettingsFromURL() {
     for (const [key, value] of urlParams.entries()) {
-        if (settings.hasOwnProperty(key)) {
+        if (Object.hasOwn(settings, key)) {
             if (key === 'map_overlay') {
                 if (!Array.isArray(settings[key])) settings[key] = [];
                 settings[key].push(value);
@@ -5468,48 +4246,6 @@ function updateShipcardTrackOption() {
 function isShipcardMax() {
     var e = document.getElementById("shipcard").classList;
     return e.contains("shipcard-ismax");
-}
-
-function getStringfromMsgType(m) {
-    let s = "";
-    let delim = "";
-    for (let i = 1; i <= 28; i++)
-        if ((m & (1 << i)) != 0) {
-            s += delim + Number(i).toFixed(0);
-            delim = ", ";
-        }
-    return s;
-}
-
-function getStringfromGroup(m) {
-    let s = "";
-    let delim = "";
-    let count = 0;
-
-    for (let i = 0; i < 32; i++) {
-        let mask = 1 << i;
-        if ((m & mask) !== 0) {
-            if (count == 4) {
-                s += delim + "...";
-                break;
-            }
-            s += delim + Number(i + 1).toFixed(0);
-            delim = ", ";
-            count++;
-        }
-    }
-    return s;
-}
-
-function getStringfromChannels(m) {
-    let s = "";
-    let delim = "";
-    for (let i = 0; i <= 3; i++)
-        if ((m & (1 << i)) != 0) {
-            s += delim + String.fromCharCode(65 + i);
-            delim = ", ";
-        }
-    return s;
 }
 
 function setShipcardValidation(v) {
@@ -5810,7 +4546,7 @@ function shipcardMinIfMaxonMobile() {
 }
 
 function drawStation() {
-    const hasNoStation = settings.show_station == false || station == null || !station.hasOwnProperty("lat") || !station.hasOwnProperty("lon");
+    const hasNoStation = settings.show_station == false || station == null || !Object.hasOwn(station, "lat") || !Object.hasOwn(station, "lon");
     const hasMMSIcenter = settings.center_point && settings.center_point != "STATION" && settings.center_point in shipsDB;
 
     if (stationFeature) {
@@ -5872,7 +4608,7 @@ function drawStation() {
         }
     }
 
-    if (settings.fix_center && center != null && center.hasOwnProperty("lat") && center.hasOwnProperty("lon")) {
+    if (settings.fix_center && center != null && Object.hasOwn(center, "lat") && Object.hasOwn(center, "lon")) {
 
         let view = map.getView();
         view.setCenter(ol.proj.fromLonLat([center.lon, center.lat]));
@@ -6063,7 +4799,7 @@ function displayShipcardIcons(type) {
         }
 
         // Check if realtime option should be hidden
-        const isRealtimeDisabled = icon.id === 'shipcard_realtime_option' && (typeof realtime_enabled === "undefined" || realtime_enabled === false);
+        const isRealtimeDisabled = icon.id === 'shipcard_realtime_option' && !config.features.realtime;
 
         if (isRealtimeDisabled) {
             icon.style.display = "none";
@@ -6097,7 +4833,7 @@ function prepareShipcard() {
     shipcardIconCount.plane = document.querySelectorAll('#shipcard_footer > div[data-context-type="plane"]').length;
 
     // Adjust count if realtime is disabled (exclude realtime option from count)
-    if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
+    if (!config.features.realtime) {
         const realtimeOption = document.getElementById('shipcard_realtime_option');
         if (realtimeOption && realtimeOption.dataset.contextType === 'ship') {
             shipcardIconCount.ship--;
@@ -6352,7 +5088,7 @@ async function updateMap() {
     }
 
     if (settings.setcoord == "true" || settings.setcoord == true) {
-        if (station != null && station.hasOwnProperty("lat") && station.hasOwnProperty("lon")) {
+        if (station != null && Object.hasOwn(station, "lat") && Object.hasOwn(station, "lon")) {
             settings.setcoord = false;
             let view = map.getView();
             view.setCenter(ol.proj.fromLonLat([station.lon, station.lat]));
@@ -6581,7 +5317,7 @@ function redrawMap() {
                 const lat = plane.lat
 
                 const point = new ol.geom.Point(ol.proj.fromLonLat([lon, lat]))
-                var feature = new ol.Feature({
+                const feature = new ol.Feature({
                     geometry: point
                 })
 
@@ -6665,45 +5401,10 @@ function redrawMap() {
     updateDistanceCircles();
 
 }
-function updateAllChartColors() {
-    const chartsToUpdateMulti = [chart_minutes, chart_hours, chart_days, chart_seconds];
-    const chartsToUpdateLevel = [chart_level, chart_level_hour];
-    const chartsToUpdateSingle = [chart_distance_day, chart_distance_hour, chart_ppm, chart_minute_vessel, chart_ppm_minute, chart_hour_vessel, chart_day_vessel];
-    const chartsToUpdateRadar = [chart_radar_day, chart_radar_hour];
-
-    chartsToUpdateMulti.forEach((chart) => {
-        if (chart) {
-            updateColorMulti(chart);
-            chart.update();
-        }
-    });
-
-    chartsToUpdateSingle.forEach((chart) => {
-        if (chart) {
-            updateColorSingle(chart);
-            chart.update();
-        }
-    });
-
-    chartsToUpdateLevel.forEach((chart) => {
-        if (chart) {
-            const colorVariables = ["--chart1-color", "--chart1-color", "--chart1-color"];
-            updateChartColors(chart, colorVariables);
-            chart.update();
-        }
-    });
-
-    chartsToUpdateRadar.forEach((chart) => {
-        if (chart) {
-            updateColorRadar(chart);
-            chart.update();
-        }
-    });
-}
 
 function updateDarkMode() {
     document.documentElement.classList.toggle("dark", settings.dark_mode);
-    updateAllChartColors();
+    plotsModule?.updateColors();
     updateMapLayer();
     redrawMap();
 }
@@ -6745,9 +5446,11 @@ function refresh_data() {
                 } else if (settings.tab === "stat") {
                     await updateStatistics();
                 } else if (settings.tab === "plots") {
-                    await updatePlots();
+                    if (!plotsModule) plotsModule = await import('./tabs/plots.js');
+                    await plotsModule.update();
                 } else if (settings.tab === "ships") {
-                    await updateShipTable();
+                    if (!shipTableModule) shipTableModule = await import('./tabs/shiptable.js');
+                    await shipTableModule.update();
                 }
             } catch (error) {
                 console.error("Error updating data:", error);
@@ -6841,561 +5544,10 @@ function updateSettingsTab() {
     updateTrackColorInputs();
 }
 
-class RealtimeViewer {
-    constructor(filterMMSI = null) {
-        this.nmeaContent = document.getElementById('realtime_nmea_content');
-        this.eventSource = null;
-        this.nmeaCount = 0;
-        this.maxLines = 100;
-        this.isPaused = false;
-        this.filterMMSIs = filterMMSI ? [filterMMSI] : [];
-
-        // Track which sub-tab is currently selected ('nmea' or 'signals')
-        this.activeMode = 'nmea';
-
-        // Load background streaming preference from settings (default: false)
-        this.backgroundStreaming = settings.realtime_background_streaming === true;
-
-        // Initialize checkbox state
-        const checkbox = document.getElementById('realtime_background_streaming');
-        if (checkbox) {
-            checkbox.checked = this.backgroundStreaming;
-        }
-
-        // Bind visibility handler to handle browser minimization/tab switching
-        this.boundVisibilityHandler = this.handleVisibilityChange.bind(this);
-        document.addEventListener('visibilitychange', this.boundVisibilityHandler);
-    }
-
-    handleVisibilityChange() {
-        if (document.hidden) {
-            // Browser tab is hidden: Disconnect unless background streaming is enabled and playing
-            if (this.isPaused || !this.backgroundStreaming) {
-                this.disconnectStreams();
-            }
-            // If playing and background streaming enabled, keep streams running
-        } else {
-            // Browser tab is visible: Reconnect only if we're disconnected
-            const isConnected = this.eventSource &&
-                (this.eventSource.readyState === EventSource.OPEN ||
-                    this.eventSource.readyState === EventSource.CONNECTING);
-
-            if (!isConnected && !this.isPaused) {
-                // Reconnect if we were paused and disconnected
-                this.connectNmea();
-            }
-
-            // Sync button icon with current pause state
-            const button = document.getElementById('realtime_pause_button');
-            if (button) {
-                const icon = button.querySelector('span');
-                if (icon) {
-                    icon.className = this.isPaused ? 'play_arrow_icon' : 'pause_icon';
-                    button.title = this.isPaused ? 'Resume stream' : 'Pause stream';
-                }
-            }
-        }
-    }
-
-    connectNmea() {
-        // Don't connect if hidden
-        if (document.hidden) return;
-
-        // Don't connect if already connected or connecting
-        if (this.eventSource && (this.eventSource.readyState === EventSource.OPEN || this.eventSource.readyState === EventSource.CONNECTING)) {
-            return;
-        }
-
-        // Ensure stream is disconnected first
-        this.disconnectNmea();
-
-        // Connect to NMEA stream
-        this.eventSource = new EventSource("api/sse");
-
-        this.eventSource.addEventListener('open', (event) => {
-            // Add pulsating class when stream opens
-            document.getElementById("realtime_tab_mini").classList.add('pulsating');
-        });
-
-        this.eventSource.addEventListener('nmea', (event) => {
-            try {
-                if (!this.isPaused) {
-                    const data = JSON.parse(event.data);
-                    this.addNmeaMessage(data);
-                }
-            } catch (error) {
-                console.error('Error parsing NMEA data:', error);
-            }
-        });
-
-        this.eventSource.addEventListener('error', (e) => {
-            if (this.nmeaContent && !document.hidden) {
-                this.nmeaContent.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">Connection error. Reconnecting...</td></tr>';
-            }
-            // Auto-reconnect after 3 seconds if not paused and (tab visible or background streaming enabled)
-            if (!this.isPaused && (!document.hidden || this.backgroundStreaming)) {
-                if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
-                this.reconnectTimeout = setTimeout(() => {
-                    if (!this.isPaused) {
-                        this.disconnectNmea();
-                        this.connectNmea();
-                    }
-                }, 3000);
-            }
-        });
-    }
-
-    // Helper to close stream stream
-    disconnectNmea() {
-        if (this.eventSource) {
-            this.eventSource.close();
-            this.eventSource = null;
-        }
-        // Remove pulsating class when disconnecting
-        document.getElementById("realtime_tab_mini").classList.remove('pulsating');
-    }
-
-    // Closes stream but keeps visibility listener (for browser minimization)
-    disconnectStreams() {
-        if (this.reconnectTimeout) {
-            clearTimeout(this.reconnectTimeout);
-            this.reconnectTimeout = null;
-        }
-        this.disconnectNmea();
-    }
-
-    // Fully destructs the viewer (called when switching main App tabs)
-    disconnect() {
-        document.removeEventListener('visibilitychange', this.boundVisibilityHandler);
-        this.disconnectStreams();
-    }
-
-    addNmeaMessage(data) {
-        // Filter by MMSI array if set
-        if (this.filterMMSIs.length > 0 && !this.filterMMSIs.includes(data.mmsi.toString())) return;
-
-        if (this.nmeaCount > this.maxLines) {
-            const rows = this.nmeaContent.getElementsByTagName('tr');
-            if (rows.length > 0) {
-                this.nmeaContent.removeChild(rows[rows.length - 1]);
-            }
-        }
-
-        const row = document.createElement('tr');
-        const time = new Date(data.timestamp * 1000).toLocaleTimeString();
-
-        // Create channel indicator boxes
-        const channelIndicator = document.createElement('div');
-        channelIndicator.className = 'channel-indicator';
-        ['A', 'B', 'C', 'D'].forEach(ch => {
-            const box = document.createElement('span');
-            box.className = 'channel-box' + (data.channel === ch ? ' active' : '');
-            box.textContent = ch;
-            channelIndicator.appendChild(box);
-        });
-
-        const channelCell = document.createElement('td');
-        channelCell.appendChild(channelIndicator);
-
-        const timeCell = document.createElement('td');
-        timeCell.textContent = time;
-        timeCell.style.fontSize = '0.85em';
-
-        const mmsiCell = document.createElement('td');
-
-        const nmeaCell = document.createElement('td');
-        const nmeaArray = Array.isArray(data.nmea) ? data.nmea : [data.nmea];
-        const nmeaText = nmeaArray.join('\n');
-
-        // Create wrapper for decoder icon and NMEA text
-        const nmeaCellContent = document.createElement('div');
-        nmeaCellContent.className = 'nmea-cell-content';
-
-        // Add decoder icon if decoder is enabled
-        if (typeof decoder_enabled !== 'undefined' && decoder_enabled) {
-            const decoderIcon = document.createElement('span');
-            decoderIcon.className = 'nmea-decoder-icon';
-            decoderIcon.innerHTML = '<i class="decode_icon"></i>';
-            decoderIcon.title = 'Decode NMEA';
-            decoderIcon.addEventListener('click', function (e) {
-                e.stopPropagation();
-                document.getElementById('decoder_input').value = nmeaText;
-                document.getElementById('decoder_tab').click();
-                decodeNMEA();
-            });
-            nmeaCellContent.appendChild(decoderIcon);
-        }
-
-        // Add NMEA text
-        const nmeaTextSpan = document.createElement('span');
-        nmeaTextSpan.className = 'nmea-text';
-        nmeaTextSpan.textContent = nmeaText;
-        nmeaCellContent.appendChild(nmeaTextSpan);
-
-        nmeaCell.appendChild(nmeaCellContent);
-
-        const mmsi = data.mmsi;
-        const mmsiSpan = document.createElement('span');
-
-        // Show shipname if available and not empty, otherwise show MMSI
-        const hasShipname = data.shipname && data.shipname.trim() !== '';
-        if (hasShipname) {
-            mmsiSpan.textContent = data.shipname;
-            mmsiSpan.title = 'MMSI: ' + data.mmsi;
-        } else {
-            mmsiSpan.textContent = data.mmsi;
-        }
-
-        mmsiSpan.style.border = '1px solid #d0d0d0';
-        mmsiSpan.style.padding = '2px 6px';
-        mmsiSpan.style.borderRadius = '3px';
-        mmsiSpan.style.display = 'inline-block';
-        mmsiSpan.style.cursor = 'pointer';
-        mmsiSpan.style.fontSize = '0.85em';
-        mmsiCell.appendChild(mmsiSpan);
-
-        mmsiSpan.addEventListener('click', function (e) {
-            e.stopPropagation();
-            selectMapTab(mmsi);
-        });
-
-        mmsiSpan.addEventListener('contextmenu', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            showContextMenu(e, mmsi, 'ship', ['ship']);
-        });
-
-        const typeCell = document.createElement('td');
-        typeCell.textContent = data.type || '-';
-        typeCell.style.fontSize = '0.85em';
-
-        row.appendChild(channelCell);
-        row.appendChild(typeCell);
-        row.appendChild(timeCell);
-        row.appendChild(mmsiCell);
-        row.appendChild(nmeaCell);
-
-        // Add click handler to row for pause/resume (MMSI and decoder clicks will stopPropagation)
-        row.style.cursor = 'pointer';
-        row.addEventListener('click', (e) => {
-            toggleRealtimePause(true);
-        });
-
-        this.nmeaContent.insertBefore(row, this.nmeaContent.firstChild);
-        this.nmeaCount++;
-    }
-
-    pause() {
-        this.isPaused = true;
-    }
-
-    resume() {
-        this.isPaused = false;
-        // Ensure we're connected when resuming
-        this.connectNmea();
-    }
-
-    addFilterMMSI(mmsi) {
-        const mmsiStr = mmsi.toString();
-        if (!this.filterMMSIs.includes(mmsiStr)) {
-            this.filterMMSIs.push(mmsiStr);
-        }
-    }
-
-    removeFilterMMSI(mmsi) {
-        const mmsiStr = mmsi.toString();
-        this.filterMMSIs = this.filterMMSIs.filter(m => m !== mmsiStr);
-    }
-
-    clearFilters() {
-        this.filterMMSIs = [];
-    }
-
-    // Legacy method for compatibility
-    setFilterMMSI(mmsi) {
-        if (mmsi) {
-            this.filterMMSIs = [mmsi.toString()];
-        } else {
-            this.filterMMSIs = [];
-        }
-    }
-}
-
-class LogViewer {
-    constructor() {
-        this.logState = document.getElementById('log_state');
-        this.logScroll = document.getElementById('log_scroll');
-        this.logContent = document.getElementById('log_content');
-        this.eventSource = null;
-    }
-
-    connect() {
-        if (this.eventSource) return;
-        this.eventSource = new EventSource("api/log");
-
-        this.eventSource.addEventListener('log', (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                this.appendFormattedLog(data);
-                this.scrollToBottom();
-            } catch (error) {
-                console.error('Error handling log event:', error);
-                this.appendRawLog(event.data);
-            }
-        });
-
-        this.eventSource.addEventListener('open', () => {
-            this.updateConnectionState(true);
-        });
-
-        this.eventSource.addEventListener('error', () => {
-            this.updateConnectionState(false);
-        });
-
-        this.logContent.innerHTML = '';
-    }
-
-    appendFormattedLog(data) {
-        const logEntry = document.createElement('div');
-        logEntry.className = 'log-entry ' + (data.level || 'info');
-
-        const icon = document.createElement('span');
-        switch (data.level) {
-            case 'error':
-                icon.className = 'error_od_icon';
-                break;
-            case 'warning':
-                icon.className = 'warning_od_icon';
-                break;
-            default:
-                icon.className = '';
-        }
-        icon.style.flexShrink = '0';
-        icon.style.marginTop = '0.2rem';
-        icon.style.width = '1.2em';
-        icon.style.height = '1.2em';
-
-        const content = document.createElement('div');
-        content.style.flex = '1';
-
-        const timestamp = document.createElement('div');
-        timestamp.className = 'timestamp';
-        timestamp.textContent = data.time;
-        timestamp.style.fontSize = '0.75rem';
-        timestamp.style.marginBottom = '0.05rem';
-
-        const message = document.createElement('div');
-        message.textContent = data.message.replace(/^"|"$/g, '');
-
-        content.appendChild(timestamp);
-        content.appendChild(message);
-        logEntry.appendChild(icon);
-        logEntry.appendChild(content);
-
-        this.logContent.appendChild(logEntry);
-    }
-
-    appendRawLog(message) {
-        const logEntry = document.createElement('div');
-        logEntry.textContent = message + '\n';
-        this.logContent.appendChild(logEntry);
-    }
-
-    disconnect() {
-        if (this.eventSource) {
-            this.eventSource.close();
-            this.eventSource = null;
-        }
-        this.updateConnectionState(false);
-    }
-
-    scrollToBottom() {
-        requestAnimationFrame(() => {
-            this.logScroll.scrollTop = this.logScroll.scrollHeight;
-        });
-    }
-
-    updateConnectionState(connected) {
-        const stateIcon = document.createElement('span');
-        stateIcon.className = connected ? 'info_od_icon' : 'error_od_icon';
-        stateIcon.style.display = 'inline-block';
-        stateIcon.style.verticalAlign = 'middle';
-        stateIcon.style.marginRight = '0.5em';
-        stateIcon.style.width = '1em';
-        stateIcon.style.height = '1em';
-
-        const status = connected ? 'Connected' : 'Disconnected';
-        this.logState.innerHTML = '';
-        this.logState.display = 'none';
-        if (!connected) {
-            this.logState.appendChild(stateIcon);
-            this.logState.appendChild(document.createTextNode(`Status: ${status}`));
-        }
-    }
-}
-
-function toggleRealtimePause(showMessage = false) {
-    if (!realtimeViewer) return;
-
-    const button = document.getElementById('realtime_pause_button');
-    const icon = button?.querySelector('span');
-
-    if (realtimeViewer.isPaused) {
-        realtimeViewer.resume();
-        if (showMessage) showNotification("Streaming resumed");
-        if (icon) {
-            icon.className = 'pause_icon';
-            button.title = 'Pause stream';
-        }
-    } else {
-        realtimeViewer.pause();
-        if (showMessage) showNotification("Streaming paused");
-        if (icon) {
-            icon.className = 'play_arrow_icon';
-            button.title = 'Resume stream';
-        }
-    }
-}
-
-function toggleBackgroundStreaming() {
-    const checkbox = document.getElementById('realtime_background_streaming');
-    if (checkbox && realtimeViewer) {
-        realtimeViewer.backgroundStreaming = checkbox.checked;
-        settings.realtime_background_streaming = checkbox.checked;
-        saveSettings();
-    }
-}
-
-function clearRealtimeTable() {
-    if (realtimeViewer && realtimeViewer.nmeaContent) {
-        realtimeViewer.nmeaContent.innerHTML = '';
-        realtimeViewer.nmeaCount = 0;
-    }
-}
-
-function promptFilterMMSI() {
-    const mmsiInput = prompt('Enter MMSI to filter:');
-    if (mmsiInput) {
-        const mmsi = parseInt(mmsiInput.trim(), 10);
-        if (!isNaN(mmsi) && mmsi > 0) {
-            addRealtimeFilterMMSI(mmsi);
-        } else {
-            alert('Please enter a valid MMSI number.');
-        }
-    }
-}
-
-function addRealtimeFilterMMSI(mmsi) {
-    if (!realtimeViewer) return;
-    const filterValue = mmsi ? mmsi.toString().trim() : '';
-    if (!filterValue) return;
-
-    realtimeViewer.addFilterMMSI(filterValue);
-    updateFilterDisplay();
-    saveSettings();
-}
-
-function removeRealtimeFilterMMSI(mmsi) {
-    if (!realtimeViewer) return;
-    realtimeViewer.removeFilterMMSI(mmsi);
-    updateFilterDisplay();
-    saveSettings();
-}
-
-function updateFilterDisplay() {
-    if (!realtimeViewer) return;
-
-    const filterDisplay = document.getElementById('realtime_filter_display');
-    const filterChips = document.getElementById('realtime_mmsi_filters');
-
-    if (filterDisplay && filterChips) {
-        if (realtimeViewer.filterMMSIs.length > 0) {
-            filterChips.textContent = '';
-            realtimeViewer.filterMMSIs.forEach(mmsi => {
-                const chip = document.createElement('div');
-                chip.className = 'filter-chip';
-
-                const label = document.createElement('span');
-                label.textContent = mmsi;
-
-                const btn = document.createElement('button');
-                btn.title = 'Remove filter';
-                btn.dataset.action = 'removeRealtimeFilterMMSI';
-                btn.dataset.mmsi = mmsi;
-                const icon = document.createElement('i');
-                icon.className = 'close_icon';
-                btn.appendChild(icon);
-
-                chip.appendChild(label);
-                chip.appendChild(btn);
-                filterChips.appendChild(chip);
-            });
-            filterDisplay.style.display = 'flex';
-        } else {
-            filterDisplay.style.display = 'none';
-        }
-    }
-}
-
-// Legacy function for compatibility
-function filterRealtimeByMMSI(mmsi) {
-    if (!realtimeViewer) return;
-    const filterValue = mmsi ? mmsi.toString().trim() : '';
-    realtimeViewer.setFilterMMSI(filterValue || null);
-    updateFilterDisplay();
-}
-
-function clearAllRealtimeFilters() {
-    if (!realtimeViewer) return;
-    realtimeViewer.clearFilters();
-    updateFilterDisplay();
-    saveSettings();
-}
-
-// Legacy function
-function clearRealtimeFilter() {
-    clearAllRealtimeFilters();
-}
-
-function openRealtimeForMMSI(mmsi) {
-    // Check if realtime is enabled
-    if (!realtime_enabled) {
-        return;
-    }
-
-    // If already on realtime tab and viewer exists, just add the filter
-    if (realtimeViewer && document.getElementById('realtime').style.display === 'block') {
-        addRealtimeFilterMMSI(mmsi);
-        return;
-    }
-
-    // Preserve existing filters if viewer exists
-    const existingFilters = realtimeViewer ? [...realtimeViewer.filterMMSIs] : [];
-
-    // Disconnect existing viewer if any
-    if (realtimeViewer) {
-        realtimeViewer.disconnect();
-        realtimeViewer = null;
-    }
-
-    // Clear saved state to ensure fresh start (not paused)
-    window.realtimeViewerState = null;
-
-    // Switch to realtime tab (this will create a new viewer)
-    document.getElementById('realtime_tab').click();
-
-    // Apply the filters after viewer is created
-    setTimeout(() => {
-        // Restore previous filters
-        existingFilters.forEach(filter => addRealtimeFilterMMSI(filter));
-        // Add the new filter
-        addRealtimeFilterMMSI(mmsi);
-    }, 50);
-}
 
 function activateTab(b, a) {
     // Block decoder tab if decoder is disabled
-    if (a === "decoder" && (typeof decoder_enabled === "undefined" || !decoder_enabled)) {
+    if (a === "decoder" && !config.features.decoder) {
         return;
     }
 
@@ -7421,8 +5573,6 @@ function activateTab(b, a) {
     saveSettings();
 
     clearInterval(interval);
-    //refresh_data();
-    //interval = setInterval(refresh_data, refreshIntervalMs);
 
     refresh_data().then(() => {
         interval = setInterval(refresh_data, refreshIntervalMs);
@@ -7432,94 +5582,33 @@ function activateTab(b, a) {
     if (a == "settings") updateSettingsTab();
 
     if (a == "log") {
-
-        logViewer = new LogViewer();
-        logViewer.connect();
+        import('./tabs/log.js').then(({ LogViewer }) => {
+            if (settings.tab !== 'log' || logViewer) return;
+            logViewer = new LogViewer();
+            logViewer.connect();
+        }).catch((err) => console.error('Failed to load log tab module:', err));
     }
     if (a != 'log' && logViewer) {
         logViewer.disconnect();
         logViewer = null;
     }
 
-    if (a == "realtime") {
-        // Only initialize realtime viewer if realtime is enabled
-        if (realtime_enabled) {
-            // Only create a new viewer if one doesn't exist
-            if (!realtimeViewer) {
-                // Restore saved state if available
-                const savedState = window.realtimeViewerState;
-                const filterMMSI = savedState ? savedState.filterMMSI : null;
-
-                realtimeViewer = new RealtimeViewer(filterMMSI);
-
-                // Restore filters from settings
-                if (settings.realtime_filter_mmsis && Array.isArray(settings.realtime_filter_mmsis)) {
-                    realtimeViewer.filterMMSIs = [...settings.realtime_filter_mmsis];
-                }
-
-                // Restore pause state
-                if (savedState && savedState.isPaused) {
-                    realtimeViewer.isPaused = true;
-                }
-
-                // Connect to NMEA stream
-                realtimeViewer.connectNmea();
-            } else {
-                // Viewer already exists
-                if (realtimeViewer.eventSource && realtimeViewer.eventSource.readyState === EventSource.OPEN) {
-                    // Stream is already open, add pulsating class
-                    document.getElementById("realtime_tab_mini").classList.add('pulsating');
-                } else if (!realtimeViewer.isPaused) {
-                    // Try to reconnect if not paused
-                    realtimeViewer.connectNmea();
-                }
-            }
-
-            // Update filter display
-            updateFilterDisplay();
-
-            // Sync button icon with viewer state
-            const button = document.getElementById('realtime_pause_button');
-            if (button) {
-                const icon = button.querySelector('span');
-                if (icon) {
-                    icon.className = realtimeViewer.isPaused ? 'play_arrow_icon' : 'pause_icon';
-                    button.title = realtimeViewer.isPaused ? 'Resume stream' : 'Pause stream';
-                }
-            }
-        }
-    }
-    if (a != 'realtime' && realtimeViewer) {
-        // Save state before potentially destroying viewer
-        window.realtimeViewerState = {
-            isPaused: realtimeViewer.isPaused
-        };
-        saveSettings(); // Save filters to settings
-
-        // Only disconnect if paused or background streaming is disabled
-        if (realtimeViewer.isPaused || !realtimeViewer.backgroundStreaming) {
-            realtimeViewer.disconnect();
-            realtimeViewer = null;
-        }
-        // else: keep viewer alive and streaming in background
+    if (a == "realtime" && config.features.realtime) {
+        import('./tabs/realtime.js').then((m) => {
+            realtimeModule = m;
+            m.activate();
+        }).catch((err) => console.error('Failed to load realtime tab module:', err));
+    } else if (a != 'realtime') {
+        realtimeModule?.deactivate();
     }
     if (a === "about") {
-        setupAbout();
+        import('./tabs/about.js').then(({ setup }) => setup())
+            .catch((err) => console.error('Failed to load about tab module:', err));
     }
-
-    // Add keyboard event listener for realtime tab
-    if (a == "realtime") {
-        document.addEventListener('keydown', handleRealtimeKeydown);
-    } else {
-        document.removeEventListener('keydown', handleRealtimeKeydown);
-    }
-}
-
-function handleRealtimeKeydown(event) {
-    // Toggle pause/play with space bar, but not if user is typing in an input field
-    if (event.code === 'Space' && !['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
-        event.preventDefault();
-        toggleRealtimePause(true);
+    if (a === "decoder" && !decoderModule) {
+        // Preload so Decode/Clear button clicks resolve from cache.
+        import('./tabs/decoder.js').then((m) => { decoderModule = m; })
+            .catch((err) => console.error('Failed to load decoder tab module:', err));
     }
 }
 
@@ -7532,13 +5621,13 @@ function selectTab() {
     if (settings.tab == "settings") settings.tab = "stat";
 
     // Check if requested tab is disabled and redirect to map
-    if (settings.tab == "realtime" && !realtime_enabled) {
+    if (settings.tab == "realtime" && !config.features.realtime) {
         settings.tab = "map";
     }
-    if (settings.tab == "log" && (typeof log_enabled === "undefined" || log_enabled === false)) {
+    if (settings.tab == "log" && !config.features.log) {
         settings.tab = "map";
     }
-    if (settings.tab == "decoder" && (typeof decoder_enabled === "undefined" || decoder_enabled === false)) {
+    if (settings.tab == "decoder" && !config.features.decoder) {
         settings.tab = "map";
     }
 
@@ -7551,17 +5640,10 @@ function selectTab() {
 }
 
 function updateAndroid() {
-    if (isAndroid()) {
-        var elements = document.querySelectorAll(".noandroid");
-        for (var i = 0; i < elements.length; i++) {
-            elements[i].style.setProperty("display", "none", "important");
-        }
-    } else {
-        var elements = document.querySelectorAll(".android");
-        for (var i = 0; i < elements.length; i++) {
-            elements[i].style.setProperty("display", "none", "important");
-        }
-    }
+    const sel = isAndroid() ? ".noandroid" : ".android";
+    document.querySelectorAll(sel).forEach((el) => {
+        el.style.setProperty("display", "none", "important");
+    });
 }
 
 var originalDisplayValues = new Map();
@@ -7638,33 +5720,14 @@ function updateCircleScaleDisplay(value) {
 }
 
 function updateKiosk() {
-    if (isKiosk()) {
-        startKioskAnimation();
+    const kiosk = isKiosk();
+    if (kiosk) startKioskAnimation();
+    else stopKioskAnimation();
 
-        var nokioskElements = document.querySelectorAll(".nokiosk");
-        var kioskElements = document.querySelectorAll(".kiosk");
-
-        for (var i = 0; i < nokioskElements.length; i++) {
-            clearAndHide(nokioskElements[i]);
-        }
-
-        for (var i = 0; i < kioskElements.length; i++) {
-            restoreOriginalDisplay(kioskElements[i]);
-        }
-    } else {
-        stopKioskAnimation();
-
-        var kioskElements = document.querySelectorAll(".kiosk");
-        var nokioskElements = document.querySelectorAll(".nokiosk");
-
-        for (var i = 0; i < kioskElements.length; i++) {
-            clearAndHide(kioskElements[i]);
-        }
-
-        for (var i = 0; i < nokioskElements.length; i++) {
-            restoreOriginalDisplay(nokioskElements[i]);
-        }
-    }
+    const toHide = document.querySelectorAll(kiosk ? ".nokiosk" : ".kiosk");
+    const toShow = document.querySelectorAll(kiosk ? ".kiosk" : ".nokiosk");
+    toHide.forEach(clearAndHide);
+    toShow.forEach(restoreOriginalDisplay);
 }
 
 var kioskAnimationInterval = null;
@@ -7818,23 +5881,6 @@ function main() {
     });
 }
 
-function setupAbout() {
-
-    if (aboutContentLoaded) {
-        return;
-    }
-
-    fetchAbout()
-        .then((s) => {
-            document.getElementById("about_content").innerHTML = marked.parse(s);
-            aboutContentLoaded = true;
-        })
-        .catch((error) => {
-            alert("Error loading about.md: " + error);
-            aboutMDpresent = false;
-        });
-}
-
 addTileLayer("OpenStreetMap", new ol.layer.Tile({
     source: new ol.source.OSM({ maxZoom: 19 })
 }));
@@ -7916,59 +5962,7 @@ addOverlayLayer("NOAA", new ol.layer.Tile({
     })
 }));
 
-let rainviewerRadar = new ol.layer.Tile({
-    name: 'rainviewer_radar',
-    title: 'RainViewer Radar',
-    type: 'overlay',
-    opacity: 0.7,
-});
-
-async function refreshRainviewerLayers() {
-    if (document.hidden) return false;
-    try {
-        const response = await fetch("https://api.rainviewer.com/public/weather-maps.json?_=" + Date.now());
-        const data = await response.json();
-
-        const latestRadar = data.radar.past[data.radar.past.length - 1];
-        rainviewerRadar.setSource(new ol.source.XYZ({
-            url: `https://tilecache.rainviewer.com${latestRadar.path}/512/{z}/{x}/{y}/6/1_1.png`,
-            attributions: '<a href="https://www.rainviewer.com/api.html" target="_blank">RainViewer.com</a>',
-            crossOrigin: 'anonymous',
-            maxZoom: 7,
-        }));
-        return true;
-
-    } catch (error) {
-        console.error("Error refreshing RainViewer layers:", error);
-        return false;
-    }
-}
-
-addOverlayLayer("RainViewer Radar", rainviewerRadar);
-
-let rainviewerIntervalId = null;
-
-function onRainviewerVisibilityChange() {
-    if (rainviewerRadar.getVisible()) {
-        refreshRainviewerLayers();
-        if (rainviewerIntervalId === null) {
-            rainviewerIntervalId = window.setInterval(refreshRainviewerLayers, 10 * 60 * 1000);
-        }
-    } else {
-        if (rainviewerIntervalId !== null) {
-            window.clearInterval(rainviewerIntervalId);
-            rainviewerIntervalId = null;
-        }
-    }
-}
-
-rainviewerRadar.on('change:visible', onRainviewerVisibilityChange);
-
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && rainviewerRadar.getVisible()) {
-        refreshRainviewerLayers();
-    }
-});
+initRainRadar(addOverlayLayer);
 
 function makeDraggable(dragHandle, dragTarget) {
     const moveThreshold = 15;
@@ -8046,159 +6040,20 @@ else {
 addOverlayLayer("Aircraft", planeLayer);
 
 
-let mdabout = "This content can be defined by the owner of the station";
-
 console.log("Starting plugin code");
 
 
-loadPlugins && loadPlugins();
+window.loadPlugins && window.loadPlugins();
 
-var button = document.getElementById('xchange'); // Get the button by its ID
-
-
-if (communityFeed) {
-    button.classList.remove('fill-red');
-    button.classList.add('fill-green');
-
-    var feedVector = new ol.source.Vector({ features: [] });
-
-    // Simple style: grey dot for ships, teal for AtoN/base, orange for SAR/heli/plane.
-    // Moving ships with a known direction get a small directional triangle.
-    // type: 0=moving, 1=stationary, 2=AtoN/base, 3=SAR/heli/plane
-    // Derive sprite coordinates from the compact binary flags.
-    // Sprite sheet columns (cx, cy=0 moving / cy=20 stationary, imgSize=20):
-    //   cx=0  → generic ship (first column — no specific type known)
-    //   cx=20 → Class B
-    //   cx=0, cy=40 → AtoN
-    //   cx=20,cy=40 → base station
-    //   cx=0, cy=60, imgSize=25 → SAR / heli / plane
-    function getFeedSprite(ship) {
-        const type = ship.type;      // 0=moving, 1=stationary, 2=AtoN/base, 3=SAR/heli/plane
-        const classB = ship.class_b; // 1 = Class B transponder
-        const dir = ship.direction;  // degrees or null
-
-        switch (type) {
-            case 2: // AtoN / base station
-                return { cx: 0, cy: 40, imgSize: 20, rot: 0 };
-            case 3: // SAR / helicopter / plane
-                return { cx: 0, cy: 60, imgSize: 25, rot: dir != null ? dir * Math.PI / 180 : 0 };
-            default: { // 0 = moving, 1 = stationary
-                const cx = classB ? 20 : 0;
-                const isMoving = type === 0 && dir != null;
-                const cy = isMoving ? 0 : 20;
-                const rot = isMoving ? dir * Math.PI / 180 : 0;
-                return { cx, cy, imgSize: 20, rot };
-            }
-        }
-    }
-
-    var feederStyle = function (feature) {
-        const sp = getFeedSprite(feature.ship);
-        return new ol.style.Style({
-            image: new ol.style.Icon({
-                src: "https://api.aiscatcher.org/community/v1/sprites.png",
-                offset: [sp.cx, sp.cy],
-                size: [sp.imgSize, sp.imgSize],
-                rotation: sp.rot,
-                scale: settings.icon_scale * 0.8,
-                opacity: 0.85
-            })
-        });
-    };
-
-    var feedLayer = new ol.layer.Vector({
-        source: feedVector,
-        style: feederStyle
-    });
-
-    // Decode the compact binary format (big-endian, 12-byte header + 11 bytes/ship)
-    function decodeCompactShips(buffer) {
-        const view = new DataView(buffer);
-        let offset = 0;
-
-        if (view.byteLength < 12) return [];
-
-        // Header: uint64 timestamp (skip) + int32 count
-        offset += 8; // skip timestamp
-        const count = view.getInt32(offset, false); offset += 4;
-
-        const ships = [];
-        for (let i = 0; i < count; i++) {
-            if (offset + 11 > view.byteLength) break;
-
-            const latRaw = view.getInt32(offset, false);  offset += 4;
-            const lonRaw = view.getInt32(offset, false);  offset += 4;
-            const flags  = view.getUint8(offset);         offset += 1;
-            const dirRaw = view.getUint16(offset, false); offset += 2;
-
-            const lat = (latRaw === 0x7FFFFFFF) ? null : latRaw / 600000.0;
-            const lon = (lonRaw === 0x7FFFFFFF) ? null : lonRaw / 600000.0;
-
-            if (lat === null || lon === null) continue;
-
-            ships.push({
-                lat,
-                lon,
-                type:      flags & 0x03,
-                approx:   (flags >> 2) & 1,
-                class_b:  (flags >> 3) & 1,
-                direction: (dirRaw === 0xFFFF) ? null : dirRaw / 10.0
-            });
-        }
-        return ships;
-    }
-
-    function redrawCommunityFeed() {
-        feedVector.clear();
-        for (const ship of communityShips) {
-            const feature = new ol.Feature({
-                geometry: new ol.geom.Point(ol.proj.fromLonLat([ship.lon, ship.lat]))
-            });
-            feature.ship = ship;
-            feature.link = `https://www.aiscatcher.org/livemap?lat=${ship.lat}&lon=${ship.lon}&zoom=16.00`;
-            feedVector.addFeature(feature);
-        }
-    }
-
-    let communityShips = [];
-
-    async function fetchCommunityShips() {
-        try {
-            const extent = map.getView().calculateExtent(map.getSize());
-            const extentInLatLon = ol.proj.transformExtent(extent, 'EPSG:3857', 'EPSG:4326');
-
-            const minLon = extentInLatLon[0] - 0.0045;
-            const minLat = extentInLatLon[1] - 0.0045;
-            const maxLon = extentInLatLon[2] + 0.0045;
-            const maxLat = extentInLatLon[3] + 0.0045;
-            const zoom   = map.getView().getZoom();
-
-            const url = `https://api.aiscatcher.org/community/v1/ships?${zoom},${minLat},${minLon},${maxLat},${maxLon}`;
-            const response = await fetch(url);
-            const buffer = await response.arrayBuffer();
-            communityShips = decodeCompactShips(buffer);
-            return true;
-        } catch (error) {
-            console.log("Failed loading community ships: " + error);
-            return false;
-        }
-    }
-
-    var debounceUpdateCommunityFeed = debounce(updateCommunityFeed, 250);
-
-    feedLayer.on('change:visible', function () {
-        if (feedLayer.getVisible()) {
-            debounceUpdateCommunityFeed();
-        }
-    });
-
-    function updateCommunityFeed() {
-        if (!feedLayer.isVisible()) return;
-        fetchCommunityShips().then((ok) => {
-            if (ok) redrawCommunityFeed();
-        });
-    }
-    addOverlayLayer("Community Feed", feedLayer);
+// Only flag v3 — its inline-string addShipcardItem handlers don't run under
+// strict CSP. v4+ plugins still work; declaring v4 doesn't mean "outdated",
+// it means "uses the v4 contract", which is fine.
+const outdated = config.plugins.loaded
+    .filter((p) => p.version > 0 && p.version < 4)
+    .map((p) => p.name);
+if (outdated.length > 0) {
+    const names = outdated.length <= 3 ? outdated.join(', ') : `${outdated.slice(0, 3).join(', ')} (+${outdated.length - 3} more)`;
+    showNotification(`Plugins using deprecated v3 contract: ${names}. Update from AIS-Catcher-PLUGINS.`);
 }
 
 let urlParams = new URLSearchParams(window.location.search);
@@ -8208,7 +6063,7 @@ console.log("Plugin loading completed");
 
 console.log("Load settings");
 loadSettings();
-if (typeof server_receivers !== 'undefined') updateReceiverSelect(server_receivers);
+updateReceiverSelect(config.receivers);
 
 console.log("Load settings from URL parameters");
 
@@ -8219,10 +6074,13 @@ applyDynamicStyling();
 
 console.log("Setup tabs");
 initFullScreen();
-initPlots();
-updateAllChartColors();
-
 initMap();
+
+if (config.features.community_feed) {
+    import('./overlays/community.js')
+        .then((m) => m.init(map, addOverlayLayer, debounce, markerLayer))
+        .catch((err) => console.error('Failed to load community feed module:', err));
+}
 
 updateDarkMode();
 
@@ -8234,12 +6092,12 @@ updateSortMarkers();
 saveSettings();
 prepareShipcard();
 
-if (aboutMDpresent == false) {
+if (!config.features.about_md) {
     document.getElementById("about_tab").style.display = "none";
     document.getElementById("about_tab_mini").style.display = "none";
 }
 
-if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
+if (!config.features.realtime) {
     document.getElementById("realtime_tab").style.display = "none";
     document.getElementById("realtime_tab_mini").style.display = "none";
 
@@ -8256,17 +6114,17 @@ if (typeof realtime_enabled === "undefined" || realtime_enabled === false) {
     }
 }
 
-if (typeof log_enabled === "undefined" || log_enabled === false) {
+if (!config.features.log) {
     document.getElementById("log_tab").style.display = "none";
     document.getElementById("log_tab_mini").style.display = "none";
 }
 
-if (typeof decoder_enabled === "undefined" || decoder_enabled === false) {
+if (!config.features.decoder) {
     document.getElementById("decoder_tab").style.display = "none";
     document.getElementById("decoder_tab_mini").style.display = "none";
 }
 
-if (typeof webcontrol_http === "undefined" || !webcontrol_http) {
+if (!config.webcontrol_http) {
     document.getElementById("webcontrol_tab").style.display = "none";
     document.getElementById("webcontrol_tab_mini").style.display = "none";
 }
@@ -8280,12 +6138,11 @@ if (isAndroid()) showMenu();
 
 main();
 
-// Ensure chart colors are applied after all stylesheets are loaded and charts are fully rendered (fixes Firefox iframe issue)
+// Re-apply chart colors after all stylesheets load (Firefox iframe quirk).
 window.addEventListener('load', () => {
-    // Use requestAnimationFrame to ensure charts have completed their initial render
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-            updateAllChartColors();
+            plotsModule?.updateColors();
         });
     });
 });

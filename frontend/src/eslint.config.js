@@ -7,59 +7,23 @@ export default [
   },
   js.configs.recommended,
   {
-    files: ['index.js'],
+    files: ['script.js', 'core/**/*.js', 'tabs/**/*.js', 'overlays/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
-      globals: { ...globals.browser },
-    },
-  },
-  {
-    files: ['script.js'],
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: 'script',
       globals: {
         ...globals.browser,
 
-        // bundled by index.js → window
-        marked: 'readonly',
-        Chart: 'readonly',
-        Tabulator: 'readonly',
-        ol: 'readonly',
-
         // server-injected (Source/Application/WebViewer.cpp)
-        build_string: 'readonly',
-        build_version: 'readonly',
-        context: 'writable',
-        plugins: 'readonly',
-        server_message: 'writable',
-        webcontrol_http: 'readonly',
-        param_share_loc: 'readonly',
-        message_save: 'readonly',
-        realtime_enabled: 'readonly',
-        log_enabled: 'readonly',
-        decoder_enabled: 'readonly',
-        server_receivers: 'readonly',
+        // window.__SERVER_CONFIG__ is the single source of truth; read via the
+        // top-of-file `config` const. Listed here so eslint accepts the raw
+        // window property reference.
+        __SERVER_CONFIG__: 'readonly',
 
-        // assigned via window[varName] = ... (initPlots) or window.loadPlugins
-        chart_seconds: 'writable',
-        chart_minutes: 'writable',
-        chart_hours: 'writable',
-        chart_days: 'writable',
-        chart_ppm: 'writable',
-        chart_ppm_minute: 'writable',
-        chart_distance_hour: 'writable',
-        chart_distance_day: 'writable',
-        chart_minute_vessel: 'writable',
-        chart_hour_vessel: 'writable',
-        chart_day_vessel: 'writable',
-        chart_radar_hour: 'writable',
-        chart_radar_day: 'writable',
-        chart_level: 'writable',
-        chart_level_hour: 'writable',
+        // dead code (the JSON.parse(chart_json) branch in updatePlots is in an
+        // `if (true) {} else { ... }` and never runs); kept here so lint stays
+        // quiet until the dead branch is removed.
         chart_json: 'readonly',
-        loadPlugins: 'writable',
       },
     },
     rules: {

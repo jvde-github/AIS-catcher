@@ -26,81 +26,44 @@ extern IO::OutputMessage *comm_feed;
 // --- PluginManager ---
 
 PluginManager::PluginManager()
-	: params("build_string = '" + std::string(VERSION_DESCRIBE) + "';\nbuild_version = '" + std::string(VERSION) + "';\ncontext='settings';\n\n"),
-	  plugin_code("\n\nfunction loadPlugins() {\n"),
-	  plugin_preamble("let plugins = '';\nlet server_message = '';\n")
+	: plugin_code("\n\nfunction loadPlugins() {\n")
 {
+	config.build_version = VERSION;
+	config.build_describe = VERSION_DESCRIBE;
 }
 
-void PluginManager::setContext(const std::string &ctx)
-{
-	plugin_preamble += "context=" + JSON::stringify(ctx) + ";\n";
-}
-
-void PluginManager::setWebControl(const std::string &url)
-{
-	plugin_preamble += "webcontrol_http = " + JSON::stringify(url) + ";\n";
-}
-
-void PluginManager::setShareLoc(bool b)
-{
-	plugin_preamble += "param_share_loc=" + std::string(b ? "true" : "false") + ";\n";
-}
-
-void PluginManager::setMsgSave(bool b)
-{
-	plugin_preamble += "message_save=" + std::string(b ? "true" : "false") + ";\n";
-}
-
-void PluginManager::setRealtime(bool b)
-{
-	plugin_preamble += "realtime_enabled = " + std::string(b ? "true" : "false") + ";\n";
-}
-
-void PluginManager::setLog(bool b)
-{
-	plugin_preamble += "log_enabled = " + std::string(b ? "true" : "false") + ";\n";
-}
-
-void PluginManager::setDecoder(bool b)
-{
-	plugin_preamble += "decoder_enabled = " + std::string(b ? "true" : "false") + ";\n";
-}
+void PluginManager::setContext(const std::string &ctx) { config.context = ctx; }
+void PluginManager::setWebControl(const std::string &url) { config.webcontrol_http = url; }
+void PluginManager::setShareLoc(bool b) { config.share_location = b; }
+void PluginManager::setMsgSave(bool b) { config.save_messages = b; }
+void PluginManager::setRealtime(bool b) { config.realtime = b; }
+void PluginManager::setLog(bool b) { config.log_enabled = b; }
+void PluginManager::setDecoder(bool b) { config.decoder = b; }
 
 void PluginManager::setStation(const std::string &name)
 {
-	plugin_preamble += "tab_title_station = " + name + ";\n";
+	// Caller passes an already-JSON-quoted string ("\"MyStation\""); strip
+	// quotes for storage so the JSON writer at render time can re-quote.
+	if (name.length() >= 2 && name.front() == '"' && name.back() == '"')
+		config.station = name.substr(1, name.length() - 2);
+	else
+		config.station = name;
 }
 
 void PluginManager::setReceivers(const std::vector<std::unique_ptr<ReceiverTracker>> &states)
 {
+	config.receivers.clear();
 	if (states.size() > 1)
-	{
-		params += "var server_receivers = ";
-		{
-			JSON::Writer w(params);
-			w.beginArray();
-			for (int i = 0; i < (int)states.size(); i++)
-				w.beginObject().kv("idx", i).kv("label", states[i]->label).endObject();
-			w.endArray();
-		}
-		params += ";\n";
-	}
-	else
-	{
-		params += "var server_receivers = null;\n";
-	}
+		for (int i = 0; i < (int)states.size(); i++)
+			config.receivers.emplace_back(i, states[i]->label);
 }
 
 void PluginManager::addPlugin(const std::string &arg)
 {
 	int version = 0;
 	std::string author, description;
-	std::string safe_arg = JSON::stringify(arg);
 
-	plugin_preamble += "console.log('plugin:' + " + safe_arg + ");";
-	plugin_preamble += "plugins += 'JS: ' + " + safe_arg + " + '\\n';";
-	plugin_preamble += "\n\n//=============\n//" + arg + "\n\n";
+	plugin_code += "\n//=============\n//" + arg + "\n\n";
 	try
 	{
 		std::string s = Util::Helper::readFile(arg);
@@ -134,20 +97,21 @@ void PluginManager::addPlugin(const std::string &arg)
 			}
 		}
 		Info() << "Adding plugin (" + arg + "). Description: \"" << description << "\", Author: \"" << author << "\", version " << version;
-		// v3: pre-CSP plugin contract (inline-string handlers).
-		// v4: post-CSP contract — plugins must pass functions, not eval-strings,
-		//     to addShipcardItem and similar APIs. See PLUGIN_API_VERSION in script.js.
-		if (version != 3 && version != 4)
-			throw std::runtime_error("Version not supported, expected 3 or 4, got " + std::to_string(version));
+		// v3: pre-CSP (inline-string handlers, no longer run under strict CSP).
+		// v4: function-callback contract for addShipcardItem etc.
+		// v5: ES-module script.js — overrides go through AISCatcher hooks.
+		if (version < 3 || version > 5)
+			throw std::runtime_error("Version not supported, expected 3..5, got " + std::to_string(version));
 		if (version == 3)
-			Warning() << "Plugin \"" << arg << "\" declares version 3 (pre-CSP). It may render but inline-string handlers will not run under strict CSP. Consider updating to version 4.";
+			Warning() << "Plugin \"" << arg << "\" declares version 3 (pre-CSP). It may render but inline-string handlers will not run under strict CSP. Consider updating to version 5.";
+		config.plugins_loaded.emplace_back(arg, version);
+		std::string safe_arg = JSON::stringify(arg);
 		plugin_code += "\ntry{\n" + s + "\n} catch (error) {\nshowDialog(\"Error in Plugin \" + " + safe_arg + ", \"Plugins contain error: \" + error + \"</br>Consider updating plugins or disabling them.\"); }\n";
 	}
 	catch (const std::exception &e)
 	{
-		plugin_preamble += "// FAILED\n";
 		Warning() << "Server: Plugin \"" + arg + "\" ignored - JS plugin error : " << e.what();
-		plugin_preamble += "server_message += 'Plugin error: ' + " + safe_arg + " + ': ' + " + JSON::stringify(std::string(e.what())) + " + '\\n';\n";
+		config.plugin_errors.push_back(arg + ": " + e.what());
 	}
 }
 
@@ -159,9 +123,7 @@ void PluginManager::addPluginCode(const std::string &code)
 void PluginManager::addStyle(const std::string &arg)
 {
 	Info() << "Server: adding plugin (CSS): " << arg;
-	std::string safe_arg = JSON::stringify(arg);
-	plugin_preamble += "console.log('css:' + " + safe_arg + ");";
-	plugin_preamble += "plugins += 'CSS: ' + " + safe_arg + " + '\\n';";
+	config.plugins_loaded.emplace_back("CSS: " + arg, 0);
 
 	stylesheets += "/* ================ */\n";
 	stylesheets += "/* CSS plugin: " + arg + "*/\n";
@@ -173,7 +135,7 @@ void PluginManager::addStyle(const std::string &arg)
 	{
 		stylesheets += "/* FAILED */\r\n";
 		Warning() << "Server: style plugin error - " << e.what();
-		plugin_preamble += "server_message += 'Plugin error: ' + " + safe_arg + " + ': ' + " + JSON::stringify(std::string(e.what())) + " + '\\n';\n";
+		config.plugin_errors.push_back(arg + ": " + e.what());
 	}
 }
 
@@ -200,9 +162,55 @@ void PluginManager::setAbout(const std::string &path)
 
 std::string PluginManager::render(bool communityFeed) const
 {
-	return params + plugin_preamble + plugin_code + "}\nserver_version = false;\naboutMDpresent = " +
-		   (aboutPresent ? "true" : "false") + ";\ncommunityFeed = " +
-		   (communityFeed ? "true" : "false") + ";\n";
+	std::string out;
+
+	// 1. Emit the structured config blob. Single source of truth for all
+	//    server-side state the frontend needs at startup.
+	out += "window.__SERVER_CONFIG__ = ";
+	{
+		JSON::Writer w(out);
+		w.beginObject()
+			.key("build")
+			.beginObject()
+			.kv("version", config.build_version)
+			.kv("describe", config.build_describe)
+			.endObject()
+			.kv("context", config.context)
+			.kv("station", config.station)
+			.kv("webcontrol_http", config.webcontrol_http)
+			.key("features")
+			.beginObject()
+			.kv("share_location", config.share_location)
+			.kv("save_messages", config.save_messages)
+			.kv("realtime", config.realtime)
+			.kv("log", config.log_enabled)
+			.kv("decoder", config.decoder)
+			.kv("community_feed", communityFeed)
+			.kv("about_md", aboutPresent)
+			.endObject()
+			.key("receivers")
+			.beginArray();
+		for (const auto &r : config.receivers)
+			w.beginObject().kv("idx", r.first).kv("label", r.second).endObject();
+		w.endArray()
+			.key("plugins")
+			.beginObject()
+			.key("loaded")
+			.beginArray();
+		for (const auto &p : config.plugins_loaded)
+			w.beginObject().kv("name", p.first).kv("version", p.second).endObject();
+		w.endArray().key("errors").beginArray();
+		for (const auto &e : config.plugin_errors)
+			w.val(e);
+		w.endArray().endObject().endObject();
+		w.finish();
+	}
+	out += ";\n";
+
+	// 2. Plugin function body and trailing
+	out += plugin_code + "}\n";
+
+	return out;
 }
 
 // --- SSEStreamer ---
@@ -1193,7 +1201,8 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 		}
 		else
 		{
-			Error() << "File not found: " << filename << std::endl;
+			// 404 silently — browsers probe /.well-known/, favicon variants,
+			// /robots.txt etc. and would flood the log.
 			HTTPServer::Request(c, r, false);
 		}
 	}

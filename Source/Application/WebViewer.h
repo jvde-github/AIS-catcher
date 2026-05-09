@@ -178,9 +178,30 @@ public:
 // Manages JS/CSS plugin content and frontend configuration variables.
 class PluginManager
 {
-	std::string params;
+	// Server config emitted as a single JSON blob at render time. The frontend
+	// reads it via window.__SERVER_CONFIG__; render() also emits a thin compat
+	// shim that re-exposes the individual globals so existing code/plugins that
+	// reference realtime_enabled, decoder_enabled, build_version etc. keep
+	// working without changes.
+	struct Config
+	{
+		std::string build_version;
+		std::string build_describe;
+		std::string context = "settings";
+		std::string station; // already JSON-quoted (legacy: Receiver.cpp passes a stringified value)
+		std::string webcontrol_http;
+		bool share_location = false;
+		bool save_messages = false;
+		bool realtime = false;
+		bool log_enabled = false;
+		bool decoder = false;
+		std::vector<std::pair<int, std::string>> receivers;
+		// version 0 means "no declared version" (CSS plugins).
+		std::vector<std::pair<std::string, int>> plugins_loaded;
+		std::vector<std::string> plugin_errors;
+	} config;
+
 	std::string plugin_code;
-	std::string plugin_preamble;
 	std::string stylesheets;
 	std::string about = "This content can be set by the station owner";
 	bool aboutPresent = false;
