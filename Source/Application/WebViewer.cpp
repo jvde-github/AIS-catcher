@@ -1248,6 +1248,9 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 	case AIS::KEY_SETTING_WEBCONTROL_HTTP:
 		pluginManager.setWebControl(arg);
 		break;
+	case AIS::KEY_SETTING_FRAME_ANCESTORS:
+		setFrameAncestors(arg);
+		break;
 	case AIS::KEY_SETTING_LAT:
 		tracking.lat = Util::Parse::Float(arg);
 		planes.setLat(tracking.lat);

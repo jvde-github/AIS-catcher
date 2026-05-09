@@ -150,8 +150,15 @@ class SSEConnection
 			cleanupSSE_locked();
 		}
 
+		void setFrameAncestors(const std::string &v) { frame_ancestors = v; }
+
 	private:
 		std::string ret, header;
+		// Default `*` permits any embedding — AIS-catcher is typically
+		// self-hosted on a LAN and is commonly iframed by a control app on a
+		// different port. Tighten with the `frame_ancestors` setting if the
+		// instance is exposed beyond a trusted network.
+		std::string frame_ancestors = "*";
 		std::list<IO::SSEConnection> sse;
 		std::mutex sse_mtx;
 

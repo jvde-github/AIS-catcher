@@ -225,7 +225,7 @@ namespace IO
 			"img-src 'self' data: blob: https:; "
 			"connect-src 'self' https:; "
 			"font-src 'self' data:; "
-			"frame-ancestors 'self'; "
+			"frame-ancestors " + frame_ancestors + "; "
 			"base-uri 'self'";
 		header += "\r\nX-Content-Type-Options: nosniff";
 		header += "\r\nReferrer-Policy: strict-origin-when-cross-origin";
