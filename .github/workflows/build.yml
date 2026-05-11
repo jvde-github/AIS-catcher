@@ -407,7 +407,25 @@ jobs:
         cp LICENSE output\Licenses\AIS-catcher
 
     - name: Prepare output
-      run: cp build\*.dll output; cp build\Release\*.exe output; cp plugins\* output\plugins; cp README.md output; 
+      run: cp build\*.dll output; cp build\Release\*.exe output; cp plugins\* output\plugins; cp README.md output;
+
+    - name: Smoke test artifact (x64 clean build)
+      if: matrix.platform == 'x64'
+      shell: pwsh
+      run: |
+        $dest = Join-Path $env:RUNNER_TEMP "smoke-${{matrix.platform}}"
+        Remove-Item -Recurse -Force $dest -ErrorAction SilentlyContinue
+        Copy-Item -Recurse output $dest
+        Add-Type -MemberDefinition '[System.Runtime.InteropServices.DllImport("kernel32.dll")] public static extern uint SetErrorMode(uint mode);' -Name S -Namespace N -PassThru | Out-Null
+        [N.S]::SetErrorMode(0x8003) | Out-Null
+        Push-Location $dest
+        & .\AIS-catcher.exe -h BUILD
+        $exit = $LASTEXITCODE
+        Pop-Location
+        if ($exit -ne 0) {
+          throw "Smoke test failed: AIS-catcher.exe -h BUILD exited with $exit (missing DLL or runtime error)"
+        }
+        Write-Host "Smoke test PASSED"
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v7
@@ -450,7 +468,7 @@ jobs:
         cp LICENSE output\Licenses\AIS-catcher
 
     - name: Prepare output SDRPLAY
-      run: cp build\*.dll output; cp build\Release\*.exe output; cp plugins\* output\plugins; cp README.md output; 
+      run: cp build\*.dll output; cp build\Release\*.exe output; cp plugins\* output\plugins; cp README.md output;
 
     - name: Upload Artifacts SDRPLAY
       uses: actions/upload-artifact@v7

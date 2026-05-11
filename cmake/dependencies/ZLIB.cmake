@@ -2,10 +2,15 @@
 if(ZLIB)
     if(MSVC)
         find_path(ZLIB_INCLUDE_DIR zlib.h HINTS ${POTHOSSDR_INCLUDE_DIR})
-        find_library(ZLIB_LIBRARY zlib.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
-        find_file(ZLIB_DLL zlib1.dll HINTS ${POTHOSSDR_BINARY_DIR})
+        # vcpkg zlib 1.3.2 dropped the legacy zlib.lib name; cover both
+        find_library(ZLIB_LIBRARY NAMES zlib zlibstatic zlib1 HINTS ${POTHOSSDR_LIBRARY_DIR})
+        # Pin to POTHOSSDR_BINARY_DIR; find_file's default search picks up unrelated zlib1.dll
+        # copies on the runner (e.g. Microsoft Service Fabric) and silently breaks the DLL copy.
+        if(EXISTS "${POTHOSSDR_BINARY_DIR}/zlib1.dll")
+            set(ZLIB_DLL "${POTHOSSDR_BINARY_DIR}/zlib1.dll")
+        endif()
 
-        if(ZLIB_INCLUDE_DIR AND ZLIB_LIBRARY AND ZLIB_DLL)
+        if(ZLIB_INCLUDE_DIR AND ZLIB_DLL)
             Message(STATUS "ZLIB: found (PothosSDR) - " ${ZLIB_INCLUDE_DIR}, ${ZLIB_LIBRARY}, ${ZLIB_DLL})
             set(COPY_ZLIB_DLL TRUE)
             add_definitions(-DHASZLIB)
