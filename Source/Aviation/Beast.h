@@ -17,8 +17,8 @@
 
 #pragma once
 
-#include <vector>
 #include <ctime>
+#include <cstdint>
 
 #include "Common.h"
 #include "Stream.h"
@@ -26,45 +26,36 @@
 
 class RAW1090 : public SimpleStreamInOut<RAW, Plane::ADSB>
 {
+    static constexpr int MAX_MSG_NIBBLES = Plane::ADSB::MAX_BYTES * 2;
+
+    enum class State { WAIT_START, ACCUMULATE };
+
     Plane::ADSB msg;
-    static constexpr size_t MAX_MSG_LEN = 14;
-    enum class State
-    {
-        WAIT_START, // Waiting for '*'
-        READ_MSG,   // Reading message content
-    };
     State state = State::WAIT_START;
-    uint8_t nibbles = 0;
+    std::time_t rxtime_cache = 0;
+    // During ACCUMULATE, msg.len holds the nibble count (halved on dispatch).
+    // msg.len & 1 == 0 → next char is the high nibble of a new byte.
 
 public:
     virtual ~RAW1090() {}
 
-    void ProcessByte(uint8_t byte, TAG &tag);
     void Receive(const RAW *data, int len, TAG &tag);
 };
 
 class Beast : public SimpleStreamInOut<RAW, Plane::ADSB>
 {
-    static constexpr size_t MAX_MESSAGE_SIZE = 1024;
+    enum BeastConstants { BEAST_ESCAPE = 0x1A };
 
-    enum BeastConstants
-    {
-        BEAST_ESCAPE = 0x1A
-    };
-
-    enum class State
-    {
-        WAIT_ESCAPE,
-        WAIT_TYPE,
-        READ_TIMESTAMP,
-        READ_SIGNAL,
-        READ_PAYLOAD,
-    };
+    enum class State { WAIT_START, WAIT_TYPE, ACCUMULATE, ACCUMULATE_ESC };
 
     Plane::ADSB msg;
-    std::vector<uint8_t> buffer;
-    State state = State::WAIT_ESCAPE;
-    int bytes_read = 0;
+    // frame_buf layout: [0] type, [1..6] BE timestamp, [7] sig, [8..21] payload.
+    // Sized 24 so process_frame's fixed 14-byte payload memcpy is in-bounds.
+    uint8_t frame_buf[24];
+    int frame_pos = 0;
+    int frame_total = 0;
+    State state = State::WAIT_START;
+    std::time_t rxtime_cache = 0;
 
 public:
     virtual ~Beast() {}
@@ -72,10 +63,5 @@ public:
     void Receive(const RAW *data, int len, TAG &tag);
 
 private:
-    bool inEscape = false;
-
-    void Clear();
-    void ProcessByte(uint8_t byte, TAG &tag);
-    uint64_t ParseTimestamp() const;
-    int GetExpectedLength() const;
+    void process_frame(TAG &tag);
 };

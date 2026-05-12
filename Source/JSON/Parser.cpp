@@ -24,6 +24,7 @@
 #include "Parser.h"
 #include "Keys.h"
 #include "SWAR.h"
+#include "Convert.h"
 
 // Verification mode: also run the authoritative linear search and assert the
 // fast path returns the same value. Turn off for production after validation.
@@ -280,15 +281,8 @@ namespace JSON
 					int cp = 0;
 					for (int i = 1; i <= 4; i++)
 					{
-						char h = p[i];
-						int d;
-						if (h >= '0' && h <= '9')
-							d = h - '0';
-						else if (h >= 'a' && h <= 'f')
-							d = h - 'a' + 10;
-						else if (h >= 'A' && h <= 'F')
-							d = h - 'A' + 10;
-						else
+						int d = Util::Convert::hexValue(p[i]);
+						if (d < 0)
 							error("illegal unicode escape sequence", (int)(p - p_start));
 						cp = (cp << 4) | d;
 					}

@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <cstring>
 #include <string>
 #include <time.h>
 #include <vector>
@@ -33,8 +34,6 @@ namespace Plane
     static constexpr int NZ = 15;                    // Number of geographic latitude zones
     static constexpr double AirDlat0 = 360.0 / 60;   // Even message latitude zone size
     static constexpr double AirDlat1 = 360.0 / 59;   // Odd message latitude zone size
-
-    extern uint32_t crc_table[112];
 
     enum class ValueStatus
     {
@@ -83,7 +82,8 @@ namespace Plane
 
         int CPR_history_idx = 0;
 
-        uint8_t msg[14]; // Raw message
+        static constexpr int MAX_BYTES = 14; // Mode-S long frame; covers DF 16/17/18/20/21.
+        uint8_t msg[MAX_BYTES + 4];          // +4 padding so the 5-byte read in getUint is always in-bounds.
         int df;          // Downlink format
         int msgtype;     // Message type
         int len;         // Length of message
@@ -173,6 +173,12 @@ namespace Plane
             group_mask = 0;
         }
 
+        inline void reset(std::time_t rx)
+        {
+            clear();
+            rxtime = rx;
+        }
+
         std::string getRaw() const
         {
             std::stringstream ss;
@@ -184,19 +190,24 @@ namespace Plane
             return ss.str();
         }
 
-        uint32_t getBits(int startBit, int bitLen) const
+        // SWAR getUint: 5-byte big-endian load + shift + mask. msg[]'s +4 padding
+        // keeps the read in-bounds for any valid (startBit, bitLen).
+        uint32_t getUint(int startBit, int bitLen) const
         {
-            uint32_t result = 0;
-            for (int i = 0; i < bitLen; i++)
-            {
-                int byteIdx = (startBit + i) / 8;
-                int bitIdx = 7 - ((startBit + i) % 8);
-                if (byteIdx >= 0 && byteIdx < this->len && (msg[byteIdx] & (1 << bitIdx)))
-                {
-                    result |= (1U << (bitLen - 1 - i));
-                }
-            }
-            return result;
+            if (startBit < 0 || startBit + bitLen > this->len * 8)
+                return 0;
+
+            const int x = startBit >> 3;
+            const int y = startBit & 7;
+
+            uint32_t hi;
+            std::memcpy(&hi, msg + x, 4);
+            hi = ((hi & 0xFFu) << 24) | ((hi & 0xFF00u) << 8) | ((hi & 0xFF0000u) >> 8) | ((hi & 0xFF000000u) >> 24);
+            const uint64_t w = ((uint64_t)hi << 8) | (uint64_t)msg[x + 4];
+
+            const unsigned shift = 40u - (unsigned)y - (unsigned)bitLen;
+            const uint32_t mask = (bitLen >= 32) ? 0xFFFFFFFFu : ((1u << bitLen) - 1u);
+            return (uint32_t)((w >> shift) & mask);
         }
 
         int getMessageLength(int df)
@@ -255,9 +266,7 @@ namespace Plane
 
         bool decodeCPR(FLOAT32 ref_lat, FLOAT32 ref_lon, bool is_even, bool &, FLOAT32 &lt, FLOAT32 &ln);
         bool decodeCPR_airborne(bool is_even, bool &, FLOAT32 &lt, FLOAT32 &ln);
-        bool decodeCPR_airborne_reference(bool is_even, FLOAT32, FLOAT32, bool &, FLOAT32 &lt, FLOAT32 &ln);
         bool decodeCPR_surface(FLOAT32, FLOAT32, bool, bool &, FLOAT32 &lt, FLOAT32 &ln);
-        bool decodeCPR_surface_reference(bool, FLOAT32, FLOAT32, bool &, FLOAT32 &lt, FLOAT32 &ln);
 
         void setCountryCode();
     };

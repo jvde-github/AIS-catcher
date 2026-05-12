@@ -208,6 +208,7 @@ const int STATUS_ERROR = 1;
 
 const int HEXINDENT_DIRECT = 1;
 const int HEXINDENT_IMPLIED_FROM_CRC = 2;
+const int HEXINDENT_NON_ICAO = 3; // e.g. dump1090 '~' prefix: address received but not ICAO-assigned // e.g. dump1090 '~' prefix: address received but not ICAO-assigned
 
 const int MSG_TYPE_UNDEFINED = -1;
 const int DF_UNDEFINED = -1;

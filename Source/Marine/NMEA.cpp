@@ -55,7 +55,7 @@ namespace AIS
 	void NMEA::initMsg(char channel, int src, int64_t toa, long start_idx, long end_idx)
 	{
 		msg.clear();
-		msg.Stamp();
+		msg.setRxTimeUnix(rxtime_cache);
 		msg.setTOA(toa);
 		msg.setOrigin(channel, src, own_mmsi);
 		msg.setStartIdx(start_idx);
@@ -1108,6 +1108,8 @@ namespace AIS
 
 	void NMEA::Receive(const RAW *data, int len, TAG &tag)
 	{
+		std::time(&rxtime_cache);
+
 		for (int j = 0; j < len; j++)
 		{
 			buf = (const char *)data[j].data;

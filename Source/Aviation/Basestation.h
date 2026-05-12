@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <ctime>
 #include <iomanip>
 #include <sstream>
 #include <vector>
@@ -29,11 +30,13 @@
 
 class Basestation : public SimpleStreamInOut<RAW, Plane::ADSB>
 {
-    std::string line;
-    bool dropping = false;
-    const int MAX_BASESTATION_LINE_LEN = 8192;
+    static const int MAX_BASESTATION_LINE_LEN = 8192;
 
-    void processLine();
+    std::string line;       // pre-sized to MAX_BASESTATION_LINE_LEN on first use
+    size_t line_end = 0;    // write cursor into line
+    bool dropping = false;
+
+    void processLine(const char *data, size_t size, std::time_t rxtime);
 
 public:
     virtual ~Basestation() {}

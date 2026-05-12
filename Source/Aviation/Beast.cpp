@@ -19,227 +19,229 @@
 
 #include "Beast.h"
 #include "Logger.h"
+#include "SWAR.h"
+#include "Convert.h"
 
-// RAW1090 implementation
-void RAW1090::ProcessByte(uint8_t byte, TAG &tag)
+namespace
 {
-    if (byte == '\r' || byte == '\n')
-    {
-        state = State::WAIT_START;
-        return;
-    }
-    switch (state)
-    {
-    case State::WAIT_START:
-        if (byte == '*')
-        {
-            msg.clear();
-            msg.Stamp();
-            state = State::READ_MSG;
-            nibbles = 0;
-        }
-        break;
-    case State::READ_MSG:
-        if (byte == ';')
-        {
-            if (msg.len > 0)
-            {
-                msg.Decode();
-                Send(&msg, 1, tag);
-            }
-            state = State::WAIT_START;
-            return;
-        }
-
-        if (msg.len >= MAX_MSG_LEN)
-        {
-            state = State::WAIT_START;
-            return;
-        }
-
-        uint8_t val = (byte | 0x20) - '0';
-        if (val > 9)
-            val -= ('a' - '0' - 10);
-        if (val > 15)
-        {
-            state = State::WAIT_START;
-            return;
-        }
-
-        if (nibbles % 2 == 0)
-            msg.msg[msg.len] = val << 4; // High nibble
-        else
-        {
-            msg.msg[msg.len] |= val; // Low nibble
-            msg.len++;
-        }
-        nibbles++;
-        break;
-    }
+	struct SignalLevelTable
+	{
+		float v[256];
+		SignalLevelTable()
+		{
+			v[0] = LEVEL_UNDEFINED;
+			for (int i = 1; i < 256; i++)
+				v[i] = 20.0f * std::log10((float)i / 255.0f);
+		}
+	};
+	static const SignalLevelTable signal_db;
 }
 
+// RAW1090 — AVR text format: *<hex chars>;
+// During ACCUMULATE, msg.len counts nibbles; halved at dispatch.
 void RAW1090::Receive(const RAW *data, int len, TAG &tag)
 {
+    std::time(&rxtime_cache);
+
     for (int j = 0; j < len; j++)
     {
-        for (int i = 0; i < data[j].size; i++)
+        const uint8_t *src = (const uint8_t *)data[j].data;
+        const uint8_t *const end = src + data[j].size;
+
+        while (src < end)
         {
-            uint8_t c = ((uint8_t *)(data[j].data))[i];
-            ProcessByte(c, tag);
+            if (state == State::WAIT_START)
+            {
+                const uint8_t *p = (const uint8_t *)std::memchr(src, '*', end - src);
+                if (!p) break;
+                src = p + 1;
+                msg.reset(rxtime_cache);
+                msg.len = 0;
+                state = State::ACCUMULATE;
+            }
+
+            while (src + 1 < end && (msg.len & 1) == 0)
+            {
+                int v1 = Util::Convert::hexValue(src[0]);
+                int v2 = Util::Convert::hexValue(src[1]);
+                if ((v1 | v2) < 0 || msg.len >= MAX_MSG_NIBBLES) break;
+                msg.msg[msg.len >> 1] = (uint8_t)((v1 << 4) | v2);
+                msg.len += 2;
+                src += 2;
+            }
+
+            if (src >= end) continue;
+            uint8_t b = *src++;
+            switch (b)
+            {
+            case ';':
+                msg.len >>= 1; // nibbles → bytes
+                if (msg.len > 0)
+                {
+                    msg.Decode();
+                    Send(&msg, 1, tag);
+                }
+                state = State::WAIT_START;
+                continue;
+            case '*':
+                msg.reset(rxtime_cache);
+                msg.len = 0;
+                continue;
+            case '\r':
+            case '\n':
+                state = State::WAIT_START;
+                continue;
+            default:
+                break;
+            }
+
+            int v = Util::Convert::hexValue(b);
+            if (v < 0 || msg.len >= MAX_MSG_NIBBLES)
+            {
+                state = State::WAIT_START;
+                continue;
+            }
+            if ((msg.len & 1) == 0)
+                msg.msg[msg.len >> 1] = (uint8_t)(v << 4);
+            else
+                msg.msg[msg.len >> 1] |= (uint8_t)v;
+            msg.len++;
         }
     }
 }
 
-// Beast implementation
+static inline int frame_size_for(uint8_t type)
+{
+    return 8 + ((type == '3') ? 14 : (type == '2') ? 7 : 2);
+}
+
+void Beast::process_frame(TAG &tag)
+{
+    msg.reset(rxtime_cache);
+    msg.msgtype = frame_buf[0];
+    msg.timestamp =
+        ((uint64_t)frame_buf[1] << 40) |
+        ((uint64_t)frame_buf[2] << 32) |
+        ((uint64_t)frame_buf[3] << 24) |
+        ((uint64_t)frame_buf[4] << 16) |
+        ((uint64_t)frame_buf[5] <<  8) |
+        ((uint64_t)frame_buf[6]);
+    msg.signalLevel = signal_db.v[frame_buf[7]];
+    // Fixed 14-byte memcpy: bytes past msg.len are invisible to Decode
+    // (getUint bounds reads by msg.len * 8).
+    std::memcpy(msg.msg, &frame_buf[8], 14);
+    msg.len = frame_total - 8;
+
+    if (msg.msgtype == '2' || msg.msgtype == '3')
+        msg.Decode();
+    Send(&msg, 1, tag);
+}
+
 void Beast::Receive(const RAW *data, int len, TAG &tag)
 {
+    std::time(&rxtime_cache);
+
     for (int j = 0; j < len; j++)
     {
-        for (int i = 0; i < data[j].size; i++)
+        const uint8_t *src = (const uint8_t *)data[j].data;
+        const uint8_t *const end = src + data[j].size;
+
+        while (src < end)
         {
-            uint8_t c = ((uint8_t *)(data[j].data))[i];
-            ProcessByte(c, tag);
-        }
-    }
-}
-
-void Beast::Clear()
-{
-    state = State::WAIT_ESCAPE;
-    buffer.clear();
-    msg.clear();
-    bytes_read = 0;
-    inEscape = false;
-}
-
-void Beast::ProcessByte(uint8_t byte, TAG &tag)
-{
-    if (buffer.size() >= MAX_MESSAGE_SIZE)
-    {
-        Clear();
-        return;
-    }
-
-    if (byte == BEAST_ESCAPE)
-    {
-        if (state == State::WAIT_ESCAPE)
-        {
-            state = State::WAIT_TYPE;
-            buffer.clear();
-            return;
-        }
-        else if (inEscape)
-        {
-            inEscape = false;
-        }
-        else
-        {
-            inEscape = true;
-            return;
-        }
-    }
-
-    switch (state)
-    {
-    case State::WAIT_ESCAPE:
-        break;
-    case State::WAIT_TYPE:
-        if (byte >= 0x31 && byte <= 0x33)
-        { // Valid types: '1', '2', '3'
-            msg.clear();
-            msg.Stamp();
-            msg.msgtype = byte;
-
-            state = State::READ_TIMESTAMP;
-            bytes_read = 0;
-            buffer.clear();
-        }
-        else
-        {
-            state = State::WAIT_ESCAPE;
-        }
-        break;
-
-    case State::READ_TIMESTAMP:
-        buffer.push_back(byte);
-        bytes_read++;
-
-        if (bytes_read == 6)
-        { // 6-byte timestamp
-            msg.timestamp = ParseTimestamp();
-            buffer.clear();
-            state = State::READ_SIGNAL;
-            bytes_read = 0;
-        }
-        break;
-
-    case State::READ_SIGNAL:
-        if (byte == 0)
-        {
-            msg.signalLevel = LEVEL_UNDEFINED;
-        }
-        else
-        {
-            msg.signalLevel = byte / 255.0f;
-            msg.signalLevel = 20.0f * std::log10(msg.signalLevel);
-        }
-        state = State::READ_PAYLOAD;
-        bytes_read = 0;
-        break;
-
-    case State::READ_PAYLOAD:
-    {
-        buffer.push_back(byte);
-        msg.msg[bytes_read] = byte;
-        bytes_read++;
-        msg.len = bytes_read;
-
-        int expected_len = GetExpectedLength();
-
-        if (bytes_read == expected_len)
-        {
-            if (msg.msgtype == '2' || msg.msgtype == '3')
+            if (state == State::WAIT_START)
             {
-                msg.Decode();
+                const uint8_t *p = (const uint8_t *)std::memchr(src, BEAST_ESCAPE, end - src);
+                if (!p) break;
+                src = p + 1;
+                state = State::WAIT_TYPE;
             }
-            else if (msg.msgtype != '1')
+
+            if (state == State::WAIT_TYPE)
             {
-                Error() << "Unknown message type: " << msg.msgtype;
+                if (src >= end) break;
+                uint8_t type = *src++;
+                if (type >= 0x31 && type <= 0x33)
+                {
+                    frame_buf[0] = type;
+                    frame_pos = 1;
+                    frame_total = frame_size_for(type);
+                    state = State::ACCUMULATE;
+                }
+                else
+                {
+                    // 0x1A 0x1A → stay in WAIT_TYPE; anything else resyncs.
+                    if (type != BEAST_ESCAPE) state = State::WAIT_START;
+                    continue;
+                }
             }
-            Send(&msg, 1, tag);
 
-            state = State::WAIT_ESCAPE;
-            buffer.clear();
+            if (state == State::ACCUMULATE)
+            {
+                int need = frame_total - frame_pos;
+                int have = (int)(end - src);
+                int chunk = need < have ? need : have;
+
+                constexpr size_t mask = SWAR::mask((char)BEAST_ESCAPE);
+                uint8_t *dst = &frame_buf[frame_pos];
+                const uint8_t *const s_stop = src + chunk;
+
+                while (src + sizeof(size_t) <= s_stop)
+                {
+                    size_t word;
+                    std::memcpy(&word, src, sizeof(word));
+                    std::memcpy(dst, src, sizeof(word));
+                    size_t hit = SWAR::has_byte(word, mask);
+                    if (hit)
+                    {
+                        size_t pos = SWAR::first_byte_pos(hit);
+                        src += pos;
+                        dst += pos;
+                        break;
+                    }
+                    src += sizeof(word);
+                    dst += sizeof(word);
+                }
+                while (src < s_stop && *src != BEAST_ESCAPE)
+                    *dst++ = *src++;
+
+                frame_pos = (int)(dst - &frame_buf[0]);
+
+                if (frame_pos == frame_total)
+                {
+                    process_frame(tag);
+                    state = State::WAIT_START;
+                    continue;
+                }
+                if (src >= end) break;
+                // Hit a 0x1A; consume it and fall through to ACCUMULATE_ESC.
+                src++;
+                state = State::ACCUMULATE_ESC;
+            }
+
+            if (src >= end) break;
+            uint8_t b = *src++;
+            if (b == BEAST_ESCAPE)
+            {
+                frame_buf[frame_pos++] = BEAST_ESCAPE;
+                state = State::ACCUMULATE;
+                if (frame_pos == frame_total)
+                {
+                    process_frame(tag);
+                    state = State::WAIT_START;
+                }
+            }
+            else if (b >= 0x31 && b <= 0x33)
+            {
+                // 0x1A <type>: a new frame starts here.
+                frame_buf[0] = b;
+                frame_pos = 1;
+                frame_total = frame_size_for(b);
+                state = State::ACCUMULATE;
+            }
+            else
+            {
+                state = State::WAIT_START;
+            }
         }
-    }
-    break;
-    }
-}
-
-uint64_t Beast::ParseTimestamp() const
-{
-    if (buffer.size() < 6)
-        return 0;
-
-    uint64_t ts = 0;
-    for (int i = 0; i < 6; i++)
-    {
-        ts = (ts << 8) | buffer[i];
-    }
-    return ts;
-}
-
-int Beast::GetExpectedLength() const
-{
-    switch (msg.msgtype)
-    {
-    case '1':
-        return 2; // Mode AC
-    case '2':
-        return 7; // Mode S short
-    case '3':
-        return 14; // Mode S long
-    default:
-        return 0;
     }
 }

@@ -20,6 +20,7 @@
 #include <iomanip>
 #include <cstdint>
 
+#include "Convert.h"
 #include "Message.h"
 #include "Stream.h"
 
@@ -104,6 +105,8 @@ namespace AIS
 		const char *buf = nullptr;
 		int bufsize = 0;
 		int pos = 0;
+		// rxtime stamp shared by every msg from one Receive() call.
+		std::time_t rxtime_cache = 0;
 		// Per-message context — set by scanners/process functions, read by dispatch
 		struct MsgCtx {
 			int station = -1;
@@ -132,8 +135,8 @@ namespace AIS
 		void clean(const AIVDM &ref);
 		int search();
 
-		static bool isHexDigit(char c) { unsigned u = (unsigned char)c; return (u - '0' < 10u) | ((u | 0x20) - 'a' < 6u); }
-		static int hexDigitValue(char c) { unsigned u = (unsigned char)c, d = u - '0'; return d < 10u ? d : (int)((u | 0x20) - 'a' + 10); }
+		static bool isHexDigit(char c) { return Util::Convert::isHexDigit(c); }
+		static int hexDigitValue(char c) { return Util::Convert::hexDigitValue(c); }
 
 		float GpsToDecimal(const char *, int len, char, bool &error);
 

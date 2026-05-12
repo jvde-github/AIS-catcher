@@ -160,7 +160,7 @@ public:
         first = ptr;
     }
 
-    int create(int hexident)
+    int create(int hexident, int hexident_status = HEXINDENT_DIRECT)
     {
         int ptr = last;
 
@@ -193,8 +193,10 @@ public:
         count = MIN(count + 1, N);
         items[ptr].clear();
         items[ptr].hexident = hexident;
+        items[ptr].hexident_status = hexident_status;
 
-        items[ptr].setCountryCode();
+        if (hexident_status == HEXINDENT_DIRECT)
+            items[ptr].setCountryCode();
 
         return ptr;
     }
@@ -257,7 +259,7 @@ public:
             if (msg->hexident_status == HEXINDENT_IMPLIED_FROM_CRC)
                 return;
 
-            ptr = create(msg->hexident);
+            ptr = create(msg->hexident, msg->hexident_status);
         }
 
         // Move to front and update data

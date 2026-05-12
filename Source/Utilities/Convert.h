@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <time.h>
 
@@ -30,6 +31,35 @@ namespace Util
 		static std::string toTimeStr(const std::time_t &t);
 		static std::string toTimestampStr(const std::time_t &t);
 		static std::string toHexString(uint64_t l);
+
+		// Days from civil 1970-01-01 to y-m-d (proleptic Gregorian).
+		// https://howardhinnant.github.io/date_algorithms.html#days_from_civil
+		static inline int64_t daysFromEpoch(int y, unsigned m, unsigned d)
+		{
+			y -= m <= 2;
+			const int era = (y >= 0 ? y : y - 399) / 400;
+			const unsigned yoe = (unsigned)(y - era * 400);
+			const unsigned doy = (153 * (m + (m > 2 ? -3u : 9u)) + 2) / 5 + d - 1;
+			const unsigned doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+			return (int64_t)era * 146097 + (int64_t)doe - 719468;
+		}
+
+		// Hex char ↔ nibble. `hexDigitValue` is the branchless fast path —
+		// caller must `isHexDigit` first; `hexValue` returns -1 for non-hex.
+		static inline bool isHexDigit(char c)
+		{
+			unsigned u = (unsigned char)c;
+			return (u - '0' < 10u) | ((u | 0x20) - 'a' < 6u);
+		}
+		static inline int hexDigitValue(char c)
+		{
+			unsigned u = (unsigned char)c, d = u - '0';
+			return d < 10u ? (int)d : (int)((u | 0x20) - 'a' + 10);
+		}
+		static inline int hexValue(char c)
+		{
+			return isHexDigit(c) ? hexDigitValue(c) : -1;
+		}
 		static std::string toString(Format format);
 		static std::string toString(bool b) { return b ? std::string("ON") : std::string("OFF"); }
 		static std::string toString(bool b, FLOAT32 v) { return b ? std::string("AUTO") : std::to_string(v); }
