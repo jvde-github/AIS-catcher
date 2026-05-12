@@ -21,6 +21,9 @@
 #include "JSONAIS.h"
 #include "Helper.h"
 
+#include <cstdio>
+#include <cerrno>
+
 extern IO::OutputMessage *comm_feed;
 
 // --- PluginManager ---
@@ -257,7 +260,7 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 					for (int i = 0; i < 3; i++)
 					{
 						idx = (idx + 1) % field_len;
-						nmea[MIN(start + 1 + idx, nmea.length() - 1)] = '*';
+						nmea[start + 1 + idx] = '*';
 					}
 				}
 
@@ -480,39 +483,60 @@ bool BackupManager::save()
 	if (filename.empty() || !tracker)
 		return false;
 
+	const std::string tmp = filename + ".tmp";
+
 	try
 	{
-		std::ofstream outfile(filename, std::ios::binary);
+		std::ofstream outfile(tmp, std::ios::binary | std::ios::trunc);
 
 		if (!outfile.is_open())
 		{
 			Error() << "Server: cannot open backup file for writing: "
-					<< filename << " (" << std::strerror(errno) << ")";
+					<< tmp << " (" << std::strerror(errno) << ")";
 			return false;
 		}
 
 		outfile.exceptions(std::ios::failbit | std::ios::badbit);
 
 		if (!tracker->save(outfile))
+		{
+			outfile.close();
+			std::remove(tmp.c_str());
 			return false;
+		}
 
 		outfile.close();
 	}
 	catch (const std::ios_base::failure &e)
 	{
-		Error() << "Server: write error on " << filename << " (" << std::strerror(errno) << ")";
+		Error() << "Server: write error on " << tmp << " (" << std::strerror(errno) << ")";
+		std::remove(tmp.c_str());
 		return false;
 	}
 	catch (const std::exception &e)
 	{
 		Error() << e.what();
+		std::remove(tmp.c_str());
 		return false;
 	}
 	catch (...)
 	{
-		Error() << "Server: unknown error writing " << filename;
+		Error() << "Server: unknown error writing " << tmp;
+		std::remove(tmp.c_str());
 		return false;
 	}
+
+#ifdef _WIN32
+	std::remove(filename.c_str());
+#endif
+	if (std::rename(tmp.c_str(), filename.c_str()) != 0)
+	{
+		Error() << "Server: cannot rename " << tmp << " -> " << filename
+				<< " (" << std::strerror(errno) << ")";
+		std::remove(tmp.c_str());
+		return false;
+	}
+
 	return true;
 }
 
@@ -1155,8 +1179,9 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	else if (r == "/api/log" && showlog)
 	{
 		IO::SSEConnection *s = upgradeSSE(c, 3);
-		for (auto &m : Logger::getInstance().getLastMessages(25))
-			s->SendEvent("log", m.toJSON());
+		if (s)
+			for (auto &m : Logger::getInstance().getLastMessages(25))
+				s->SendEvent("log", m.toJSON());
 	}
 	// Prefix-match routes
 	else if (r.substr(0, 6) == "/tiles")

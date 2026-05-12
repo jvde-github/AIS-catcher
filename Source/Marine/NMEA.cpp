@@ -34,7 +34,7 @@ namespace AIS
 	void NMEA::clean(const AIVDM &ref)
 	{
 		auto i = queue.begin();
-		uint64_t now = time(nullptr);
+		uint64_t now = (uint64_t)rxtime_cache;
 		while (i != queue.end())
 		{
 			if ((ref.match_key & 0xFFFFFF00) == (i->match_key & 0xFFFFFF00) || (i->timestamp + 3 < now))
@@ -448,7 +448,7 @@ namespace AIS
 		}
 
 		// Multi-part: construct aivdm and hand off to fragment assembler
-		aivdm.reset();
+		aivdm.reset(rxtime_cache);
 		aivdm.count = p[7] - '0';
 		aivdm.number = p[9] - '0';
 		uint8_t id = id_ch ? (id_ch - '0') : 0;
@@ -631,96 +631,67 @@ namespace AIS
 		size_t idx = 0;
 		size_t plen = line.length();
 
-		auto getByte = [&](uint8_t &out) -> bool
+		// Returns 0..255 on success, -1 on EOF, -2 on bad 0xad escape.
+		auto getByte = [&]() -> int
 		{
 			if (idx >= plen)
-				return false;
+				return -1;
 			uint8_t byte = line[idx++];
-			if (byte == 0xad)
+			if (byte != 0xad)
+				return byte;
+			if (idx >= plen)
+				return -1;
+			switch ((uint8_t)line[idx++])
 			{
-				if (idx >= plen)
-					return false;
-				uint8_t next = line[idx++];
-				if (next == 0xae)
-				{
-					out = '\n';
-					return true;
-				}
-				if (next == 0xaf)
-				{
-					out = '\r';
-					return true;
-				}
-				if (next == 0xad)
-				{
-					out = 0xad;
-					return true;
-				}
-				return false;
+			case 0xae: return '\n';
+			case 0xaf: return '\r';
+			case 0xad: return 0xad;
+			default:   return -2;
 			}
-			out = byte;
-			return true;
 		};
 
-		bool too_short = false;
-		auto readByte = [&](uint8_t &out) -> bool
-		{
-			if (getByte(out))
-				return true;
-			too_short = true;
-			return false;
-		};
-
-		uint8_t b;
-		if (!readByte(b) || b != 0xac || !readByte(b) || b != 0x00)
+		auto warnFail = [&](int v, const char *ctx)
 		{
 			if (shouldWarn(WARN_BINARY_SHORT))
-				Warning() << "binary: " << (too_short ? "packet too short" : "invalid header");
+				Warning() << "binary: " << (v == -1 ? "packet too short" : "bad escape") << ctx;
+		};
+
+		int v;
+		if ((v = getByte()) != 0xac)
+		{
+			if (v < 0) warnFail(v, "");
+			else if (shouldWarn(WARN_BINARY_SHORT)) Warning() << "binary: invalid header";
+			return false;
+		}
+		if ((v = getByte()) != 0x00)
+		{
+			if (v < 0) warnFail(v, "");
+			else if (shouldWarn(WARN_BINARY_SHORT)) Warning() << "binary: invalid header";
 			return false;
 		}
 
-		uint8_t flags;
-		if (!readByte(flags))
-		{
-			if (shouldWarn(WARN_BINARY_SHORT))
-				Warning() << "binary: packet too short";
-			return false;
-		}
+		v = getByte();
+		if (v < 0) { warnFail(v, " in flags"); return false; }
+		uint8_t flags = (uint8_t)v;
 
 		long long timestamp = 0;
 		for (int i = 0; i < 8; i++)
 		{
-			if (!readByte(b))
-				break;
-			timestamp = (timestamp << 8) | b;
-		}
-		if (too_short)
-		{
-			if (shouldWarn(WARN_BINARY_SHORT))
-				Warning() << "binary: packet too short";
-			return false;
+			v = getByte();
+			if (v < 0) { warnFail(v, " in timestamp"); return false; }
+			timestamp = (timestamp << 8) | v;
 		}
 
 		if (flags & 0x01)
 		{
-			uint8_t h, l, p;
-			if (!readByte(h) || !readByte(l) || !readByte(p))
-			{
-				if (shouldWarn(WARN_BINARY_SHORT))
-					Warning() << "binary: packet too short";
-				return false;
-			}
+			int h = getByte(), l = getByte(), p = getByte();
+			if ((h | l | p) < 0) { warnFail(h < 0 ? h : (l < 0 ? l : p), " in signal info"); return false; }
 			tag.level = (int16_t)((h << 8) | l) / 10.0f;
 			tag.ppm = (int8_t)p / 10.0f;
 		}
 
-		uint8_t ch, lh, ll;
-		if (!readByte(ch) || !readByte(lh) || !readByte(ll))
-		{
-			if (shouldWarn(WARN_BINARY_SHORT))
-				Warning() << "binary: packet too short";
-			return false;
-		}
+		int ch = getByte(), lh = getByte(), ll = getByte();
+		if ((ch | lh | ll) < 0) { warnFail(ch < 0 ? ch : (lh < 0 ? lh : ll), " in header"); return false; }
 		int length_bits = (lh << 8) | ll;
 
 		if (length_bits < 0 || length_bits > MAX_AIS_LENGTH)
@@ -730,32 +701,21 @@ namespace AIS
 			return false;
 		}
 
-		initMsg(ch, station, (int64_t)timestamp * 1000000);
+		initMsg((char)ch, station, (int64_t)timestamp * 1000000);
 
 		for (int i = 0; i < (length_bits + 7) / 8; i++)
 		{
-			if (!readByte(b))
-				break;
-			msg.setUint(i * 8, 8, b);
-		}
-		if (too_short)
-		{
-			if (shouldWarn(WARN_BINARY_SHORT))
-				Warning() << "binary: packet too short";
-			return false;
+			v = getByte();
+			if (v < 0) { warnFail(v, " in payload"); return false; }
+			msg.setUint(i * 8, 8, (uint8_t)v);
 		}
 		msg.setLength(length_bits);
 
 		if (flags & 0x02)
 		{
 			uint16_t calc_crc = Util::Helper::CRC16((const uint8_t *)line.data(), idx);
-			uint8_t ch2, cl2;
-			if (!readByte(ch2) || !readByte(cl2))
-			{
-				if (shouldWarn(WARN_BINARY_SHORT))
-					Warning() << "binary: packet too short for CRC";
-				return false;
-			}
+			int ch2 = getByte(), cl2 = getByte();
+			if ((ch2 | cl2) < 0) { warnFail(ch2 < 0 ? ch2 : cl2, " in CRC"); return false; }
 			uint16_t recv_crc = (ch2 << 8) | cl2;
 			if (recv_crc != calc_crc)
 			{

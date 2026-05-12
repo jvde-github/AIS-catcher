@@ -40,11 +40,6 @@ namespace Util
 			value = (value & ~(((1 << size) - 1) << position)) | ((fieldValue & ((1 << size) - 1)) << position);
 		}
 
-		inline void andOp(int position, int size, int fieldValue)
-		{
-			value &= ((fieldValue & ((1 << size) - 1)) << position);
-		}
-
 		inline void orOp(int position, int size, int fieldValue)
 		{
 			value |= ((fieldValue & ((1 << size) - 1)) << position);

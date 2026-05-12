@@ -41,6 +41,7 @@ namespace IO
 		using StreamIn<JSON::JSON>::Receive;
 		using StreamIn<AIS::GPS>::Receive;
 
+		void Connect(Receiver &r);
 		void Receive(const AIS::Message *data, int len, TAG &tag);
 		void Receive(const JSON::JSON *data, int len, TAG &tag);
 		void Receive(const AIS::GPS *data, int len, TAG &tag);

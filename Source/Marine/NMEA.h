@@ -60,10 +60,10 @@ namespace AIS
 			uint8_t number = 0;
 			uint8_t fillbits = 0;
 
-			void reset()
+			void reset(std::time_t rx)
 			{
 				sentence.clear();
-				timestamp = time(nullptr);
+				timestamp = (uint64_t)rx;
 				match_key = 0;
 				message_error = 0;
 				data_offset = 0;

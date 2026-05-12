@@ -27,6 +27,7 @@ namespace Util
 	{
 		// Fast UTC breakdown without gmtime/strftime (avoids TZ locks)
 		int64_t s = static_cast<int64_t>(t);
+		if (s < 0) s = 0;
 		int sec = s % 60; s /= 60;
 		int min = s % 60; s /= 60;
 		int hour = s % 24; s /= 24;
@@ -59,6 +60,7 @@ namespace Util
 	std::string Convert::toTimestampStr(const std::time_t &t)
 	{
 		int64_t s = static_cast<int64_t>(t);
+		if (s < 0) s = 0;
 		int sec = s % 60; s /= 60;
 		int min = s % 60; s /= 60;
 		int hour = s % 24; s /= 24;

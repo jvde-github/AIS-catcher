@@ -723,12 +723,9 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 			state.screen.setScreen("1");
 			break;
 		case 'o':
-			Assert(count >= 1 && count % 2 == 1, param, "requires at least one parameter.");
-			state.screen.setScreen(arg1);
-			if (count > 1)
-			{
-				parseSettings(state.screen, argv, ptr + 1, argc);
-			}
+			if (count % 2 == 1)
+				state.screen.setScreen(arg1);
+			parseSettings(state.screen, argv, ptr + (count % 2), argc);
 			break;
 		case 'F':
 			Assert(count == 0, param, MSG_NO_PARAMETER);

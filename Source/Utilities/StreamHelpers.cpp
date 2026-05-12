@@ -104,6 +104,7 @@ namespace Util
 
 		case Format::F32_FS4:
 			size = raw->size / sizeof(FLOAT32);
+			size -= size & 3;
 			if (output.size() < size)
 				output.resize(size);
 

@@ -16,9 +16,36 @@
 */
 
 #include "Screen.h"
+#include "Logger.h"
+#include "Convert.h"
+
+#include <cstdio>
+
+#ifdef _WIN32
+#include <io.h>
+#define AISC_ISATTY(fd) _isatty(fd)
+#define AISC_FILENO(f)  _fileno(f)
+#else
+#include <unistd.h>
+#define AISC_ISATTY(fd) isatty(fd)
+#define AISC_FILENO(f)  fileno(f)
+#endif
 
 namespace IO
 {
+	void ScreenOutput::Connect(Receiver &r)
+	{
+		if ((fmt == MessageFormat::BINARY_NMEA || fmt == MessageFormat::COMMUNITY_HUB)
+		    && AISC_ISATTY(AISC_FILENO(stdout)))
+		{
+			Error() << "Screen: refusing " << Util::Convert::toString(fmt)
+			        << " output to terminal (would emit raw binary). "
+			           "Redirect stdout (e.g. ' > out.bin') or use a file/network output.";
+			fmt = MessageFormat::SILENT;
+		}
+		OutputMessage::Connect(r);
+	}
+
 	void ScreenOutput::Receive(const AIS::GPS *data, int len, TAG &tag)
 	{
 		if (fmt == MessageFormat::SILENT)
@@ -56,20 +83,10 @@ namespace IO
 		{
 			if (!filter.include(data[i]))
 				continue;
-			buf.clear();
-			switch (fmt)
+
+			if (fmt == MessageFormat::FULL)
 			{
-			case MessageFormat::NMEA:
-				for (const auto &s : data[i].sentences())
-				{
-					buf += s;
-					buf += '\n';
-				}
-				break;
-			case MessageFormat::NMEA_TAG:
-				data[i].getNMEATagBlock(buf);
-				break;
-			case MessageFormat::FULL:
+				buf.clear();
 				for (const auto &s : data[i].sentences())
 				{
 					buf += s;
@@ -105,14 +122,13 @@ namespace IO
 					}
 					buf += ")\n";
 				}
-				break;
-			case MessageFormat::JSON_NMEA:
-				data[i].getNMEAJSON(buf, tag, include_sample_start, "", "\n");
-				break;
-			default:
-				continue;
+				std::cout.write(buf.data(), buf.size());
 			}
-			std::cout.write(buf.data(), buf.size());
+			else
+			{
+				formatInto(data[i], tag, include_sample_start, "", "\n");
+				std::cout.write(json.data(), json.size());
+			}
 		}
 	}
 
