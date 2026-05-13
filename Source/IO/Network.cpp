@@ -844,7 +844,8 @@ namespace IO
 				continue;
 
 			formatInto(data[i], tag, false, "", "\r\n");
-			((Protocol::MQTT *)session)->send(json.data(), (int)json.size(), topic_template.get(tag, data[0]));
+			topic_template.write(tag, data[0], topic_buf);
+			((Protocol::MQTT *)session)->send(json.data(), (int)json.size(), topic_buf);
 		}
 
 		session->read(nullptr, 0, 0, false);
@@ -858,7 +859,8 @@ namespace IO
 			{
 				json.clear();
 				builder.stringify(data[i], json, "\r\n");
-				((Protocol::MQTT *)session)->send(json.data(), (int)json.size(), topic_template.get(tag, *((AIS::Message *)data[0].binary)));
+				topic_template.write(tag, *((AIS::Message *)data[0].binary), topic_buf);
+				((Protocol::MQTT *)session)->send(json.data(), (int)json.size(), topic_buf);
 			}
 		}
 

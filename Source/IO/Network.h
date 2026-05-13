@@ -261,6 +261,7 @@ namespace IO
 		Protocol::ProtocolBase *session = &tcp;
 
 		Util::TemplateString topic_template;
+		std::string topic_buf;
 
 	public:
 		MQTTStreamer() : OutputMessage("MQTT"), topic_template("ais/data")
