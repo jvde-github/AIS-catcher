@@ -691,6 +691,48 @@ std::string ReceiverTracker::toCountersJSON()
 	return s;
 }
 
+void ReceiverTracker::writeSummary(std::ostream &out)
+{
+	auto tidy = [](std::string s) -> std::string {
+		size_t pos;
+		while ((pos = s.find("<br>")) != std::string::npos)  s.replace(pos, 4, ", ");
+		while ((pos = s.find("<br/>")) != std::string::npos) s.replace(pos, 5, ", ");
+		while (!s.empty() && (s.back() == ' ' || s.back() == ',' ||
+		                       s.back() == '\n' || s.back() == '\r'))
+			s.pop_back();
+		while (!s.empty() && (s.front() == ' ' || s.front() == ','))
+			s.erase(s.begin());
+		return s;
+	};
+
+	out << "=== state: " << (label.empty() ? "(unnamed)" : label) << " ===\n";
+
+	std::string p = tidy(product), v = tidy(vendor), sn = tidy(serial), sr = tidy(sample_rate);
+	if (!p.empty())
+	{
+		out << "  device:   " << p;
+		bool has_extra = (!v.empty() && v != "-") || (!sn.empty() && sn != "-") || !sr.empty();
+		if (has_extra)
+		{
+			out << " [";
+			bool first = true;
+			auto sep = [&]() { if (!first) out << ", "; first = false; };
+			if (!v.empty() && v != "-")  { sep(); out << v; }
+			if (!sn.empty() && sn != "-") { sep(); out << "sn=" << sn; }
+			if (!sr.empty())              { sep(); out << "rate=" << sr; }
+			out << "]";
+		}
+		out << "\n";
+	}
+	std::string mn = tidy(model_name);
+	if (!mn.empty())
+		out << "  model:    " << mn << "\n";
+
+	out << "  vessels:  " << ships.getCount()
+	    << "   msg/s: " << hist_second.getAverage() << "\n";
+	counter_session.print(out, "  ");
+}
+
 void ReceiverTracker::setDevice(Device::Device *device)
 {
 	product = device->getProduct();
@@ -895,6 +937,18 @@ void WebViewer::close()
 	if (!backup.getFilename().empty() && !backup.save())
 	{
 		Error() << "Statistics - cannot write file: " << backup.getFilename();
+	}
+
+	if (stats_on_close && !states.empty())
+	{
+		std::ostringstream ss;
+		ss << "\n";
+		for (auto &s : states)
+		{
+			s->writeSummary(ss);
+			ss << "\n";
+		}
+		Info() << ss.str();
 	}
 }
 
@@ -1266,6 +1320,9 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 	case AIS::KEY_SETTING_STATION:
 		station = JSON::stringify(arg);
 		pluginManager.setStation(station);
+		break;
+	case AIS::KEY_SETTING_STATS_ON_CLOSE:
+		stats_on_close = Util::Parse::Switch(arg);
 		break;
 	case AIS::KEY_SETTING_STATION_LINK:
 		station_link = JSON::stringify(arg);

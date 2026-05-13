@@ -46,6 +46,8 @@ class MessageStatistics {
 	int _channel[4];
 
 	float _level_min, _level_max, _ppm, _distance;
+	double _distance_sum;
+	int _distance_count;
 	float _radarA[_RADAR_BUCKETS];
 	float _radarB[_RADAR_BUCKETS];
 
@@ -66,6 +68,8 @@ public:
 
 		_count = _vessels = _exclude = 0;
 		_distance = _ppm = 0;
+		_distance_sum = 0.0;
+		_distance_count = 0;
 		_level_min = 1e6;
 		_level_max = -1e6;
 	}
@@ -99,6 +103,8 @@ public:
 		if (tag.distance > _distance) {
 			_distance = tag.distance;
 		}
+		_distance_sum += tag.distance;
+		_distance_count++;
 
 		if (m.type() == 18 || m.type() == 19 || m.type() == 24) {
 			if (tag.angle >= 0 && tag.angle < 360) {
@@ -158,6 +164,40 @@ public:
 		w.endObject();
 	}
 
+	void print(std::ostream &out, const char *indent = "") {
+		std::lock_guard<std::mutex> l{ this->mtx };
+
+		int c = _count - _exclude;
+		bool has_level = c > 0 && _level_min <= _level_max;
+
+		out << indent << "messages: " << _count << "\n";
+		if (_distance_count > 0) {
+			out << indent << "distance: max=" << _distance
+				<< " avg=" << (_distance_sum / _distance_count)
+				<< " (n=" << _distance_count << ")\n";
+		}
+		if (has_level) {
+			out << indent << "signal:   min=" << _level_min
+				<< " max=" << _level_max
+				<< " ppm=" << (_ppm / c) << "\n";
+		}
+		out << indent << "channel:  A=" << _channel[0] << " B=" << _channel[1];
+		if (_channel[2]) out << " C=" << _channel[2];
+		if (_channel[3]) out << " D=" << _channel[3];
+		out << "\n";
+
+		bool any_type = false;
+		for (int i = 0; i < 28; i++)
+			if (_msg[i] > 0) { any_type = true; break; }
+		if (any_type) {
+			out << indent << "by type: ";
+			for (int i = 0; i < 28; i++)
+				if (_msg[i] > 0)
+					out << " " << (i + 1) << "=" << _msg[i];
+			out << "\n";
+		}
+	}
+
 #define W(x) file.write((const char*)&(x), sizeof(x))
 #define R(x) file.read((char*)&(x), sizeof(x))
 
@@ -211,6 +251,8 @@ public:
 	void Receive(const JSON::JSON* msg, int len, TAG& tag) { stat.Add(*((AIS::Message*)msg[0].binary), tag); }
 
 	void writeJSON(JSON::Writer &w, bool empty = false) { stat.writeJSON(w, empty); }
+
+	void print(std::ostream &out, const char *indent = "") { stat.print(out, indent); }
 };
 
 struct ByteCounter : public StreamIn<RAW> {

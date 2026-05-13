@@ -70,7 +70,6 @@ namespace Util
 				continue;
 			}
 
-			// t[i] == '%' — look for the closing '%'
 			size_t end = t.find('%', i + 1);
 			if (end == std::string::npos)
 			{
@@ -133,7 +132,7 @@ namespace Util
 					break;
 				}
 			}
-		} // Writer dtor calls finish(), trimming `out` to written length
+		}
 	}
 
 	std::string TemplateString::get(const TAG &tag, const AIS::Message &msg) const

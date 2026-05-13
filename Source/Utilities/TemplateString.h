@@ -29,10 +29,6 @@ namespace AIS
 
 namespace Util
 {
-	// Template strings of the form "ais/%mmsi%/%type%" are compiled in set()
-	// into a flat segment list. get() walks the segments and writes via
-	// JSON::Writer's primitives (table-based decimal, bulk memcpy, single
-	// buffer-grow), avoiding per-call substr/to_string allocations.
 	class TemplateString
 	{
 	public:
@@ -42,9 +38,6 @@ namespace Util
 		void set(const std::string &t);
 		std::string get(const TAG &tag, const AIS::Message &msg) const;
 
-		// Sink variant: writes into a caller-owned buffer. Reusing the same
-		// `out` across calls amortizes the result-string heap allocation away,
-		// which dominates the per-call cost for short outputs.
 		void write(const TAG &tag, const AIS::Message &msg, std::string &out) const;
 
 		const std::string &getTemplate() const { return tpl; }
@@ -55,7 +48,7 @@ namespace Util
 		{
 			enum Kind : uint8_t { LITERAL, MMSI, PPM, STATION, TYPE, REPEAT, CHANNEL, RXTIMEUX };
 			Kind kind;
-			std::string literal; // populated only when kind == LITERAL
+			std::string literal;
 		};
 
 		std::string tpl;

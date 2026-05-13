@@ -156,6 +156,8 @@ public:
 	std::string toHistoryJSON();
 	std::string toCountersJSON();
 
+	void writeSummary(std::ostream &out);
+
 	// Ship data queries
 	int getCount() { return ships.getCount(); }
 	int getMaxCount() { return ships.getMaxCount(); }
@@ -277,6 +279,7 @@ private:
 	bool KML = false;
 	bool GeoJSON = false;
 	bool supportPrometheus = false;
+	bool stats_on_close = false;
 
 	std::vector<std::shared_ptr<MapTiles>> mapSources;
 
