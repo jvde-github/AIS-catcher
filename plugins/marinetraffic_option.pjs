@@ -1,0 +1,5 @@
+// {"author":"jvde-github","description":"MarineTraffic lookup (disabled — MarineTraffic blocks external linking)", "version": 4}
+
+// Stub. MarineTraffic blocks external linking by MMSI, so this plugin no
+// longer registers a shipcard item. Kept so installs carrying the old v3
+// version can be overwritten cleanly without the deprecation warning.

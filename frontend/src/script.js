@@ -2460,7 +2460,22 @@ function showPlugins() {
 
 function showServerErrors() {
     const errs = config.plugins.errors;
-    showDialog("Server Errors", errs.length === 0 ? "None" : ("<pre>" + errs.join('\n') + "</pre>"));
+    // Only v3 is flagged — its inline-string handlers don't run under strict
+    // CSP. v4+ plugins still work; declaring v4 doesn't mean "outdated."
+    const outdated = config.plugins.loaded
+        .filter((p) => p.version > 0 && p.version < 4)
+        .map((p) => p.name);
+
+    const sections = [];
+    if (outdated.length > 0) {
+        sections.push(
+            "Warning: deprecated v3 plugins (inline-string handlers don't run under strict CSP). Update from AIS-Catcher-PLUGINS:\n  " +
+            outdated.join('\n  ')
+        );
+    }
+    if (errs.length > 0) sections.push(errs.join('\n'));
+
+    showDialog("Server Errors", sections.length === 0 ? "None" : ("<pre>" + sections.join('\n\n') + "</pre>"));
 }
 
 async function fetchRange(forcefetch = false) {
@@ -6044,17 +6059,6 @@ console.log("Starting plugin code");
 
 
 window.loadPlugins && window.loadPlugins();
-
-// Only flag v3 — its inline-string addShipcardItem handlers don't run under
-// strict CSP. v4+ plugins still work; declaring v4 doesn't mean "outdated",
-// it means "uses the v4 contract", which is fine.
-const outdated = config.plugins.loaded
-    .filter((p) => p.version > 0 && p.version < 4)
-    .map((p) => p.name);
-if (outdated.length > 0) {
-    const names = outdated.length <= 3 ? outdated.join(', ') : `${outdated.slice(0, 3).join(', ')} (+${outdated.length - 3} more)`;
-    showNotification(`Plugins using deprecated v3 contract: ${names}. Update from AIS-Catcher-PLUGINS.`);
-}
 
 let urlParams = new URLSearchParams(window.location.search);
 restoreDefaultSettings();
