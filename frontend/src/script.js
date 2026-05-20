@@ -320,7 +320,7 @@ function _bindDelegatedActions() {
 if (document.body) _bindDelegatedActions();
 else document.addEventListener('DOMContentLoaded', _bindDelegatedActions);
 
-var interval,
+let interval,
     activeReceiver = 0,
     lastPathFetch = 0,
     paths = {},
@@ -353,23 +353,23 @@ var interval,
 
 const baseMapSelector = document.getElementById("baseMapSelector");
 
-var shipcardIconCount = undefined;
-var shipcardIconMax = 3;
-var shipcardIconOffset = 0;
-var plugins_main = [];
-var card_mmsi = null,
+let shipcardIconCount = undefined;
+const shipcardIconMax = 3;
+let shipcardIconOffset = 0;
+const plugins_main = [];
+let card_mmsi = null,
     card_type = null;
 // `let` so AISCatcher.setRefreshInterval can mutate.
 let refreshIntervalMs = 2500;
 let shipFilterOverride = null;
-var range_update_time = null;
+let range_update_time = null;
 let updateInProgress = false;
 let activeTileLayer = undefined;
-var hover_enabled_track = false,
+let hover_enabled_track = false,
     select_enabled_track = false,
     marker_tracks = new Set();
 
-var center, shipcard;
+let center, shipcard;
 const context = config.context;
 if (typeof window.loadPlugins === 'undefined') {
     window.loadPlugins = function () { };
@@ -583,9 +583,9 @@ function addControlToMap(c) {
     c.addTo(map);
 }
 
-var getICAOFromHexIdent = (h) => h.toString(16).toUpperCase().padStart(6, '0')
-var getICAO = (plane) => getICAOFromHexIdent(plane.hexident)
-var includeShip = (ship) => true;
+const getICAOFromHexIdent = (h) => h.toString(16).toUpperCase().padStart(6, '0')
+const getICAO = (plane) => getICAOFromHexIdent(plane.hexident)
+const includeShip = (ship) => true;
 
 const notificationContainer = document.getElementById("notification-container");
 
@@ -656,7 +656,7 @@ function copyCoordinates(m) {
 let hoverMMSI = undefined;
 let hoverType = undefined;
 
-var rangeStyleFunction = function (feature) {
+const rangeStyleFunction = function (feature) {
     let clr = undefined;
 
     if (feature.short) {
@@ -673,7 +673,7 @@ var rangeStyleFunction = function (feature) {
     });
 }
 
-var shapeStyleFunction = function (feature) {
+const shapeStyleFunction = function (feature) {
 
     const c = settings.shipoutline_inner;
     const o = settings.shipoutline_opacity;
@@ -689,9 +689,9 @@ var shapeStyleFunction = function (feature) {
     });
 }
 
-var trackStyleFunction = function (feature) {
-    var w = Number(settings.track_weight);
-    var c = '#12a5ed'; // Default fallback color
+const trackStyleFunction = function (feature) {
+    let w = Number(settings.track_weight);
+    let c = '#12a5ed'; // Default fallback color
 
     // Use shipping class color if available
     if (feature.shipclass && settings.track_class_colors[feature.shipclass]) {
@@ -716,10 +716,10 @@ var trackStyleFunction = function (feature) {
     });
 }
 
-var markerStyle = function (feature) {
+const markerStyle = function (feature) {
 
-    var length = (feature.ship.to_bow || 0) + (feature.ship.to_stern || 0);
-    var mult = length >= 100 && length <= 200 ? 0.9 : length > 200 ? 1.1 : 0.75;
+    const length = (feature.ship.to_bow || 0) + (feature.ship.to_stern || 0);
+    const mult = length >= 100 && length <= 200 ? 0.9 : length > 200 ? 1.1 : 0.75;
 
     return new ol.style.Style({
         image: new ol.style.Icon({
@@ -734,7 +734,7 @@ var markerStyle = function (feature) {
 };
 
 
-var planeStyle = function (feature) {
+const planeStyle = function (feature) {
     const altitude = feature.plane.altitude || 0;
     const shadowScale = Math.min(Math.max(altitude / 40000, 0.1), 1); // 0.1-1 scale based on height up to 40000ft
 
@@ -770,7 +770,7 @@ function decodeHTMLEntities(text) {
     return textArea.value;
 }
 
-var labelStyle = function (feature) {
+const labelStyle = function (feature) {
     const font = settings.tooltipLabelFontSize + "px Arial";
     return new ol.style.Style({
         text: new ol.style.Text({
@@ -792,7 +792,7 @@ var labelStyle = function (feature) {
     });
 };
 
-var hoverCircleStyleFunction = function (feature) {
+const hoverCircleStyleFunction = function (feature) {
     const iconScale = settings.icon_scale || 1.0;
     const circleScale = settings.circle_scale || 6.0;
     const radiusScale = 1 + (circleScale - 2.0) * 0.08; // Scale radius slightly with line width
@@ -807,7 +807,7 @@ var hoverCircleStyleFunction = function (feature) {
     });
 }
 
-var selectCircleStyleFunction = function (feature) {
+const selectCircleStyleFunction = function (feature) {
     const iconScale = settings.icon_scale || 1.0;
     const circleScale = settings.circle_scale || 6.0;
     const radiusScale = 1 + (circleScale - 2.0) * 0.08; // Scale radius slightly with line width
@@ -882,75 +882,75 @@ const binaryStyle = function (feature) {
 };
 
 
-var markerVector = new ol.source.Vector({
+const markerVector = new ol.source.Vector({
     features: []
 })
 
-var binaryVector = new ol.source.Vector({
+const binaryVector = new ol.source.Vector({
     features: []
 })
 
 
-var rangeVector = new ol.source.Vector({
+const rangeVector = new ol.source.Vector({
     features: []
 })
 
-var shapeVector = new ol.source.Vector({
+const shapeVector = new ol.source.Vector({
     features: []
 });
 
-var extraVector = new ol.source.Vector({
+const extraVector = new ol.source.Vector({
     features: []
 });
 
-var trackVector = new ol.source.Vector({
+const trackVector = new ol.source.Vector({
     features: []
 });
 
-var labelVector = new ol.source.Vector({
+const labelVector = new ol.source.Vector({
     features: []
 });
 
-var planeVector = new ol.source.Vector({
+const planeVector = new ol.source.Vector({
     features: []
 });
 
-var markerLayer = new ol.layer.Vector({
+const markerLayer = new ol.layer.Vector({
     source: markerVector,
     style: markerStyle
 })
 
-var binaryLayer = new ol.layer.Vector({
+const binaryLayer = new ol.layer.Vector({
     source: binaryVector,
     style: binaryStyle
 })
 
-var planeLayer = new ol.layer.Vector({
+const planeLayer = new ol.layer.Vector({
     source: planeVector,
     style: planeStyle,
     visible: false
 })
 
-var shapeLayer = new ol.layer.Vector({
+const shapeLayer = new ol.layer.Vector({
     source: shapeVector,
     style: shapeStyleFunction
 });
 
-var extraLayer = new ol.layer.Vector({
+const extraLayer = new ol.layer.Vector({
     source: extraVector
 });
 
-var trackLayer = new ol.layer.Vector({
+const trackLayer = new ol.layer.Vector({
     source: trackVector,
     style: trackStyleFunction
 });
 
-var rangeLayer = new ol.layer.Vector({
+const rangeLayer = new ol.layer.Vector({
     source: rangeVector,
     style: rangeStyleFunction
 });
 
-var labelLayer = new ol.layer.Vector({
+const labelLayer = new ol.layer.Vector({
     source: labelVector,
     style: labelStyle,
     declutter: settings.labels_declutter || true
@@ -1342,15 +1342,15 @@ function showContextMenu(event, mmsi, type, context) {
         contextMenu.style.top = event.pageY + 5 + "px";
         contextMenu.style.transform = "none";
 
-        var contextMenuRect = contextMenu.getBoundingClientRect();
-        var viewportWidth = window.innerWidth && window.outerWidth ? Math.min(window.innerWidth, window.outerWidth) : document.documentElement.clientWidth;
-        var viewportHeight = window.innerHeight && window.outerHeight ? Math.min(window.innerHeight, window.outerHeight) : document.documentElement.clientHeight;
+        const contextMenuRect = contextMenu.getBoundingClientRect();
+        let viewportWidth = window.innerWidth && window.outerWidth ? Math.min(window.innerWidth, window.outerWidth) : document.documentElement.clientWidth;
+        let viewportHeight = window.innerHeight && window.outerHeight ? Math.min(window.innerHeight, window.outerHeight) : document.documentElement.clientHeight;
 
-        var maxX = viewportWidth - contextMenuRect.width;
-        var maxY = viewportHeight - contextMenuRect.height;
+        const maxX = viewportWidth - contextMenuRect.width;
+        const maxY = viewportHeight - contextMenuRect.height;
 
-        var adjustedX = Math.max(0, Math.min(event.pageX + 5, maxX));
-        var adjustedY = Math.max(0, Math.min(event.pageY + 5, maxY));
+        const adjustedX = Math.max(0, Math.min(event.pageX + 5, maxX));
+        const adjustedY = Math.max(0, Math.min(event.pageY + 5, maxY));
 
         contextMenu.style.left = adjustedX + "px";
         contextMenu.style.top = adjustedY + "px";
@@ -1360,9 +1360,9 @@ function showContextMenu(event, mmsi, type, context) {
 }
 
 function showDialog(title, message) {
-    var dialogBox = document.getElementById("dialog-box");
-    var dialogTitle = dialogBox.querySelector(".dialog-title");
-    var dialogMessage = dialogBox.querySelector(".dialog-message");
+    let dialogBox = document.getElementById("dialog-box");
+    const dialogTitle = dialogBox.querySelector(".dialog-title");
+    const dialogMessage = dialogBox.querySelector(".dialog-message");
 
     dialogTitle.innerText = title;
     dialogMessage.innerHTML = message;
@@ -1370,7 +1370,7 @@ function showDialog(title, message) {
 }
 
 function closeDialog() {
-    var dialogBox = document.getElementById("dialog-box");
+    let dialogBox = document.getElementById("dialog-box");
     dialogBox.classList.add("hidden");
     dialogBox.style.maxWidth = "";
 }
@@ -1607,7 +1607,7 @@ function updateMapLayer() {
 
     if (activeTileLayer) {
 
-        var overlays = JSON.parse(JSON.stringify(settings.map_overlay));
+        const overlays = JSON.parse(JSON.stringify(settings.map_overlay));
         settings.map_overlay = JSON.parse(JSON.stringify(overlays));
 
         setMapOpacity();
@@ -1646,10 +1646,10 @@ function triggerMapLayer() {
         }
     }
 
-    var attributions = activeTileLayer.getSource().getAttributions();
-    var mapAttributions = document.getElementById("map_attributions");
+    const attributions = activeTileLayer.getSource().getAttributions();
+    const mapAttributions = document.getElementById("map_attributions");
     if (typeof attributions === 'function') {
-        var currentAttributions = attributions();
+        const currentAttributions = attributions();
         mapAttributions.innerHTML = currentAttributions.join(', ');
     } else if (Array.isArray(attributions)) {
         mapAttributions.innerHTML = attributions.join(', ');
@@ -1657,7 +1657,7 @@ function triggerMapLayer() {
 
 }
 
-var dynamicStyle = document.createElement("style");
+const dynamicStyle = document.createElement("style");
 document.head.appendChild(dynamicStyle);
 
 function applyDynamicStyling() {
@@ -1695,7 +1695,7 @@ function setMapOpacity() {
     }
 }
 
-var clickTimeout = undefined;
+let clickTimeout = undefined;
 let isMeasuring = false;
 let measureMode = false;
 
@@ -2018,13 +2018,13 @@ function getMetrics() {
 }
 
 function addMarker(lat, lon, ch) {
-    var latlon = ol.proj.fromLonLat([lon, lat]);
-    var color = 'grey'; // Default color
+    const latlon = ol.proj.fromLonLat([lon, lat]);
+    let color = 'grey'; // Default color
 
     if (ch === "A") color = 'blue';
     if (ch === "B") color = 'red';
 
-    var style = new ol.style.Style({
+    let style = new ol.style.Style({
         image: new ol.style.Circle({
             radius: 30,
             stroke: new ol.style.Stroke({
@@ -2037,7 +2037,7 @@ function addMarker(lat, lon, ch) {
         })
     });
 
-    var marker = new ol.Feature({
+    const marker = new ol.Feature({
         geometry: new ol.geom.Point(latlon),
     });
 
@@ -2067,7 +2067,7 @@ function StartFireworks() {
         evtSourceMap.addEventListener(
             "nmea",
             function (e) {
-                var jsonData = JSON.parse(e.data);
+                const jsonData = JSON.parse(e.data);
 
                 if (Object.hasOwn(jsonData, "channel") && Object.hasOwn(jsonData, "lat") && Object.hasOwn(jsonData, "lon")) {
                     addMarker(jsonData.lat, jsonData.lon, jsonData.channel);
@@ -2143,14 +2143,21 @@ function updateMarkerCountTooltip() {
             }
     }
 
-    flashNumber("statcard_stationary", cStationary);
-    flashNumber("statcard_moving", cMoving);
-    flashNumber("statcard_station", cStation);
-    flashNumber("statcard_aton", cAton);
-    flashNumber("statcard_heli", cHeli);
-    flashNumber("statcard_sarte", cSarte);
-    flashNumber("statcard_class_b_stationary", cClassBstationary);
-    flashNumber("statcard_class_b_moving", cClassBmoving);
+    const counts = {
+        statcard_moving: cMoving,
+        statcard_stationary: cStationary,
+        statcard_class_b_moving: cClassBmoving,
+        statcard_class_b_stationary: cClassBstationary,
+        statcard_aton: cAton,
+        statcard_station: cStation,
+        statcard_sarte: cSarte,
+        statcard_heli: cHeli,
+    };
+    for (const [id, v] of Object.entries(counts)) {
+        flashNumber(id, v);
+        const item = document.getElementById(id)?.closest('.stat-item');
+        if (item) item.dataset.zero = v === 0 ? 'true' : 'false';
+    }
 }
 
 function updateTableSort(event) {
@@ -2202,7 +2209,7 @@ document.getElementById('shipSearchSide').addEventListener('input', updateTablec
 function updateTablecard() {
     if (!document.getElementById("tableside").classList.contains("active")) return;
 
-    var tableBody = document.getElementById("tablecardBody");
+    const tableBody = document.getElementById("tablecardBody");
     tableBody.innerHTML = "";
 
     if (shipsDB == null) return;
@@ -2228,7 +2235,7 @@ function updateTablecard() {
         });
     }
 
-    var filter = document.getElementById('shipSearchSide').value.toLowerCase();
+    const filter = document.getElementById('shipSearchSide').value.toLowerCase();
 
     const rows = [];
     let addedRows = 0;
@@ -2323,7 +2330,7 @@ function toggleTablecard() {
     }
 
     document.getElementById("tableside").classList.toggle("active");
-    var elements = document.querySelectorAll(".map-button-box");
+    let elements = document.querySelectorAll(".map-button-box");
     elements.forEach(function (element) {
         element.classList.toggle("active");
     });
@@ -2563,10 +2570,10 @@ function drawRange() {
     }
 }
 
-var distanceFeatures = undefined;
-var distanceLat = undefined;
-var distanceLon = undefined;
-var distanceMetric = undefined;
+let distanceFeatures = undefined;
+let distanceLat = undefined;
+let distanceLon = undefined;
+let distanceMetric = undefined;
 
 function removeDistanceCircles() {
     if (distanceFeatures) {
@@ -2942,11 +2949,11 @@ async function fetchPlanes() {
 }
 
 function toggleScreenSize() {
-    var doc = window.document;
-    var docEl = doc.documentElement;
+    const doc = window.document;
+    const docEl = doc.documentElement;
 
-    var requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen || docEl.webkitEnterFullscreen;
-    var cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen || doc.webkitExitFullscreen;
+    const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen || docEl.webkitEnterFullscreen;
+    const cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen || doc.webkitExitFullscreen;
 
     if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
         requestFullScreen.call(docEl);
@@ -3008,7 +3015,7 @@ function toggleMenu() {
     document.getElementById("menubar_mini").classList.toggle("showflex");
     document.getElementById("menubar_mini").classList.toggle("hide");
 
-    var menuButton = document.getElementById("header_menu_button");
+    const menuButton = document.getElementById("header_menu_button");
     menuButton.classList.toggle("menu_icon");
     menuButton.classList.toggle("close_icon");
 }
@@ -3021,7 +3028,7 @@ function initFullScreen() {
 }
 
 function handleFullScreenChange() {
-    var icon = document.getElementById("screentoggle-id");
+    let icon = document.getElementById("screentoggle-id");
     if (document.fullscreenElement) {
         icon.innerHTML = "fullscreen_exit";
     } else {
@@ -3117,7 +3124,7 @@ function toggleShipcardSize() {
     document.getElementById("shipcard_minmax_button").classList.toggle("keyboard_arrow_down_icon");
     document.getElementById("shipcard_minmax_button").classList.toggle("keyboard_arrow_up_icon");
 
-    var e = document.getElementById("shipcard_content").children;
+    let e = document.getElementById("shipcard_content").children;
 
     if (shipcardismax()) {
         for (let i = 0; i < e.length; i++) {
@@ -3231,7 +3238,7 @@ function updateStat(stat, tf) {
     document.getElementById("stat_" + tf + "_msg21").innerText = (stat[tf].msg[20] + (stat[tf].msg[27] || 0)).toLocaleString();
     document.getElementById("stat_" + tf + "_msg27").innerText = stat[tf].msg[26].toLocaleString();
 
-    var count_other = 0;
+    let count_other = 0;
     [7, 10, 11, 13, 15, 16, 17, 20, 22, 23, 25, 26].forEach((i) => (count_other += stat[tf].msg[i - 1]));
     document.getElementById("stat_" + tf + "_msgother").innerText = count_other.toLocaleString();
 }
@@ -3244,7 +3251,7 @@ function formatBytes(b) {
 }
 
 async function updateStatistics() {
-    var stat = await fetchStatistics();
+    const stat = await fetchStatistics();
 
     if (stat) {
         // in bulk....
@@ -3254,14 +3261,14 @@ async function updateStatistics() {
 
         if (stat.station_link != "") document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
 
-        var statSharingElement = document.getElementById("stat_sharing");
+        const statSharingElement = document.getElementById("stat_sharing");
 
         statSharingElement.innerHTML = `<a href="${stat.sharing_link}" target="_blank">${stat.sharing ? 'Yes' : 'No'}</a>`;
         statSharingElement.style.color = stat.sharing ? "green" : "red";
 
 
         document.getElementById("stat_update_time").textContent = Number(refreshIntervalMs / 1000).toFixed(1) + " s";
-        var title = document.getElementById("stat_station").textContent;
+        let title = document.getElementById("stat_station").textContent;
         if (title != "" && title != null) {
             tab_title_station = title;
             updateTitle();
@@ -3875,8 +3882,8 @@ function updateMapURL() {
 
 function saveSettings() {
     if (map !== undefined) {
-        var view = map.getView();
-        var center = ol.proj.toLonLat(view.getCenter()); // Convert the center coordinate to longitude and latitude
+        let view = map.getView();
+        let center = ol.proj.toLonLat(view.getCenter()); // Convert the center coordinate to longitude and latitude
         settings.lat = center[1]; // Latitude
         settings.lon = center[0]; // Longitude
         settings.zoom = view.getZoom(); // Zoom level
@@ -4131,7 +4138,7 @@ async function fetchTracks() {
                     ToggleTrackOnMap(mmsi);
                 }
             }
-            var mmsi_str = Array.from(marker_tracks).join(",");
+            const mmsi_str = Array.from(marker_tracks).join(",");
             a = await fetch("api/path.json?" + mmsi_str + "&receiver=" + activeReceiver);
         }
 
@@ -4212,7 +4219,7 @@ function updateShipcardTrackOption() {
 }
 
 function isShipcardMax() {
-    var e = document.getElementById("shipcard").classList;
+    let e = document.getElementById("shipcard").classList;
     return e.contains("shipcard-ismax");
 }
 
@@ -5034,26 +5041,18 @@ function getPlaneSprite(plane) {
     return sprite;
 }
 
-var SpritesAll = 'icons.png'
+const SpritesAll = 'icons.png'
 
 async function updateMap() {
-    let ok = false;
-
-    ok = await fetchShips();
+    const ok = await fetchShips();
     if (!ok) return;
 
-    ok = await fetchTracks();
-    if (!ok) return;
-
-    if (planeLayer.isVisible()) {
-        ok = await fetchPlanes();
-        if (!ok) return;
-    }
-
-    if (binaryLayer.isVisible()) {
-        ok = await fetchBinary();
-        if (!ok) return;
-    }
+    await Promise.all([
+        fetchTracks(),
+        planeLayer.isVisible() ? fetchPlanes() : Promise.resolve(true),
+        binaryLayer.isVisible() ? fetchBinary() : Promise.resolve(true),
+        fetchRange(),
+    ]);
 
     if (settings.setcoord == "true" || settings.setcoord == true) {
         if (station != null && Object.hasOwn(station, "lat") && Object.hasOwn(station, "lon")) {
@@ -5072,8 +5071,6 @@ async function updateMap() {
     }
 
     updateMarkerCount();
-    await fetchRange();
-
     redrawMap();
 }
 
@@ -5249,7 +5246,7 @@ function redrawMap() {
             const lat = ship.lat
 
             const point = new ol.geom.Point(ol.proj.fromLonLat([lon, lat]))
-            var feature = new ol.Feature({
+            let feature = new ol.Feature({
                 geometry: point
             })
 
@@ -5262,7 +5259,7 @@ function redrawMap() {
                 labelVector.addFeature(feature)
 
             if (showShapeOutlines && (ship.heading != null || settings.show_circle_outline)) {
-                var shapeFeature = new ol.Feature({
+                const shapeFeature = new ol.Feature({
                     geometry: createShipOutlineGeometry(ship)
                 })
                 shapeFeature.ship = ship
@@ -5381,14 +5378,14 @@ function updateDarkMode() {
 
 
 document.getElementById('zoom-in').addEventListener('click', function () {
-    var view = map.getView();
-    var zoom = view.getZoom();
+    let view = map.getView();
+    let zoom = view.getZoom();
     view.setZoom(zoom + 1);
 });
 
 document.getElementById('zoom-out').addEventListener('click', function () {
-    var view = map.getView();
-    var zoom = view.getZoom();
+    let view = map.getView();
+    let zoom = view.getZoom();
     view.setZoom(zoom - 1);
 });
 
@@ -5526,7 +5523,7 @@ function activateTab(b, a) {
     Array.from(document.getElementById("menubar").children).forEach((e) => (e.className = e.className.replace(" active", "")));
     Array.from(document.getElementById("menubar_mini").children).forEach((e) => (e.className = e.className.replace(" active", "")));
 
-    var tabcontent = document.getElementsByClassName("tabcontent");
+    const tabcontent = document.getElementsByClassName("tabcontent");
 
     for (var i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
 
@@ -5616,22 +5613,20 @@ function updateAndroid() {
     });
 }
 
-var originalDisplayValues = new Map();
+const originalDisplayValues = new Map();
 
 function clearAndHide(element) {
     if (!originalDisplayValues.has(element)) {
-        // Get computed style to handle cases where display isn't explicitly set
-        var computedStyle = window.getComputedStyle(element);
-        originalDisplayValues.set(element, computedStyle.display);
+        originalDisplayValues.set(element, element.style.display);
     }
     element.style.display = "none";
 }
 
 function restoreOriginalDisplay(element) {
-    if (originalDisplayValues.has(element)) {
-        element.style.display = originalDisplayValues.get(element);
+    const saved = originalDisplayValues.get(element);
+    if (saved) {
+        element.style.display = saved;
     } else {
-        // Fallback: remove the style property to use CSS default
         element.style.removeProperty('display');
     }
 }
@@ -5700,7 +5695,7 @@ function updateKiosk() {
     toShow.forEach(restoreOriginalDisplay);
 }
 
-var kioskAnimationInterval = null;
+let kioskAnimationInterval = null;
 
 function selectRandomShipForKiosk() {
 

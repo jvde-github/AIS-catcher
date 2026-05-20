@@ -268,8 +268,8 @@ a:focus {
 
 .receiver-dropdown {
     position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
+    top: calc(100% + 10px);
+    right: 8px;
     background: var(--menu-background-color);
     border: 1px solid var(--menu-divider-color);
     border-radius: 8px;
@@ -281,13 +281,17 @@ a:focus {
 }
 
 .receiver-dropdown-item {
-    padding: 8px 16px;
+    padding: 5px 14px;
     font-size: 13px;
     color: var(--menu-font-color);
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.receiver-dropdown-item + .receiver-dropdown-item {
+    border-top: 1px solid var(--menu-divider-color);
 }
 
 .receiver-dropdown-item:hover {
@@ -772,28 +776,51 @@ td {
 
 #statcard {
     top: 10px;
-    left: calc(100% - 50px - 200px);
+    left: auto;
+    right: 60px;
     display: none;
-    flex-direction: column;
-    justify-content: stretch;
     z-index: 999;
     position: absolute;
+    max-width: calc(100vw - 80px);
     background: var(--menu-background-color);
     color: var(--menu-font-color);
     cursor: auto;
-    border-radius: 5px;
-    border: 2px solid var(--menu-border-color);
-    padding: 0px;
+    border-radius: 6px;
+    border: 1px solid var(--menu-border-color);
+    padding: 4px 6px;
 }
 
 .statcard_inner {
-    position: relative;
-    font-size: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 11px;
+    gap: 0;
+    column-gap: 2px;
+    row-gap: 0;
 }
 
-.statcard_inner table {
-    margin: 0px;
-    padding: 0px;
+.stat-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    padding: 1px 4px;
+}
+
+.stat-item[data-zero="true"] {
+    display: none;
+}
+
+.stat-item + .stat-item {
+    border-left: 1px solid var(--menu-border-color);
+    padding-left: 6px;
+}
+
+.stat-item .shipicon,
+.stat-item .staticon,
+.stat-item .helicoptericon {
+    flex-shrink: 0;
+    margin: -4px;
 }
 
 .tablecard_inner table {
