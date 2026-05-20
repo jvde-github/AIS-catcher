@@ -169,7 +169,7 @@ const ACTIONS = {
     pinVesselCtx: () => pinVessel(context_mmsi),
     mapResetViewZoomCtx: () => mapResetViewZoom(13, context_mmsi),
     showShipcardCtx: (e, d) => showShipcard(d.kind, context_mmsi),
-    openAISCatcherSiteCtx: () => openAISCatcherSite(context_mmsi),
+    openAISCatcherSiteCtx: () => openExt('aiscatcher', context_mmsi),
     showVesselDetailCtx: () => showVesselDetail(context_mmsi),
     showNMEACtx: () => showNMEA(context_mmsi),
     openRealtimeForMMSICtx: async () => {
@@ -177,9 +177,9 @@ const ACTIONS = {
         realtimeModule.openForMMSI(context_mmsi);
     },
     copyCoordinatesCtx: () => copyCoordinates(context_mmsi),
-    openGoogleSearchCtx: (e, d) => openGoogleSearch(d.icao ? getICAOFromHexIdent(context_mmsi) : context_mmsi),
-    openVesselFinderCtx: () => openVesselFinder(context_mmsi),
-    openAISHubCtx: () => openAISHub(context_mmsi),
+    openGoogleSearchCtx: (e, d) => openExt('google', d.icao ? getICAOFromHexIdent(context_mmsi) : context_mmsi),
+    openVesselFinderCtx: () => openExt('vesselfinder', context_mmsi),
+    openAISHubCtx: () => openExt('aishub', context_mmsi),
     showServerErrors: () => showServerErrors(),
     openSettings: () => openSettings(),
     toggleDarkMode: () => toggleDarkMode(),
@@ -211,11 +211,11 @@ const ACTIONS = {
         if (!realtimeModule) realtimeModule = await import('./tabs/realtime.js');
         realtimeModule.openForMMSI(card_mmsi);
     },
-    openAISCatcherSiteCard: () => openAISCatcherSite(card_mmsi),
+    openAISCatcherSiteCard: () => openExt('aiscatcher', card_mmsi),
     toggleTrackCard: () => toggleTrack(card_mmsi),
-    openFlightAwareCard: () => openFlightAware(card_mmsi),
-    openPlaneSpottersCard: () => openPlaneSpotters(card_mmsi),
-    openADSBExchangeCard: () => openADSBExchange(card_mmsi),
+    openFlightAwareCard: () => openExt('flightaware', card_mmsi),
+    openPlaneSpottersCard: () => openExt('planespotters', card_mmsi),
+    openADSBExchangeCard: () => openExt('adsbexchange', card_mmsi),
     toggleStatcard: () => toggleStatcard(),
     toggleTablecard: () => toggleTablecard(),
     mapSettingsContextMenu: (e) => showContextMenu(e, '', '', ['settings', 'center', 'ctx-map']),
@@ -648,9 +648,8 @@ function setCoordinateFormat(format) {
 
 
 function copyCoordinates(m) {
-    let coords = "not found";
-
-    if (m in shipsDB) coords = shipsDB[m].raw.lat + "," + shipsDB[m].raw.lon;
+    const raw = shipsDB[m]?.raw;
+    const coords = raw ? raw.lat + "," + raw.lon : "not found";
     if (copyClipboard(coords)) showNotification("Coordinates copied to clipboard");
 }
 
@@ -823,85 +822,63 @@ var selectCircleStyleFunction = function (feature) {
     });
 }
 
+const binaryAssociatedOutline = new ol.style.Style({
+    image: new ol.style.Circle({
+        radius: 12,
+        fill: new ol.style.Fill({ color: 'rgba(255, 255, 255, 0)' }),
+        stroke: new ol.style.Stroke({ color: 'white', width: 2 })
+    }),
+    zIndex: 200
+});
+const binaryStyleCache = new Map();
 const binaryStyle = function (feature) {
     const count = feature.get('binary_count') || feature.binary_count || 1;
     const isAssociated = feature.get('is_associated') || feature.is_associated;
+    const key = (isAssociated ? 'a:' : 'n:') + count;
 
-    const zIndex = isAssociated ? 200 : 100;
+    let cached = binaryStyleCache.get(key);
+    if (cached) return cached;
 
     if (isAssociated) {
-        // Style for binary features at ship locations (badge style)
-        const outlineStyle = new ol.style.Style({
-            image: new ol.style.Circle({
-                radius: 12,
-                fill: new ol.style.Fill({
-                    color: 'rgba(255, 255, 255, 0)'
-                }),
-                stroke: new ol.style.Stroke({
-                    color: 'white',
-                    width: 2
-                })
-            }),
-            zIndex: zIndex
-        });
-
-        const badgeStyle = new ol.style.Style({
-            geometry: function (feature) {
-                const center = feature.getGeometry().getCoordinates();
-                return new ol.geom.Point(center);
-            },
+        const badge = new ol.style.Style({
             image: new ol.style.Circle({
                 radius: 8,
-                fill: new ol.style.Fill({
-                    color: 'rgba(220, 0, 0, 0.9)'
-                }),
-                stroke: new ol.style.Stroke({
-                    color: 'white',
-                    width: 1
-                }),
+                fill: new ol.style.Fill({ color: 'rgba(220, 0, 0, 0.9)' }),
+                stroke: new ol.style.Stroke({ color: 'white', width: 1 }),
                 displacement: [10, 10]
             }),
             text: new ol.style.Text({
                 text: count.toString(),
                 font: 'bold 9px Arial',
-                fill: new ol.style.Fill({
-                    color: 'white'
-                }),
+                fill: new ol.style.Fill({ color: 'white' }),
                 offsetX: 10,
                 offsetY: -10,
                 textAlign: 'center',
                 textBaseline: 'middle'
             }),
-            zIndex: zIndex + 1
+            zIndex: 201
         });
-
-        return [outlineStyle, badgeStyle];
+        cached = [binaryAssociatedOutline, badge];
     } else {
-        const circleStyle = new ol.style.Style({
+        const circle = new ol.style.Style({
             image: new ol.style.Circle({
                 radius: 10,
-                fill: new ol.style.Fill({
-                    color: 'rgba(220, 0, 0, 0.9)'
-                }),
-                stroke: new ol.style.Stroke({
-                    color: 'white',
-                    width: 1.5
-                })
+                fill: new ol.style.Fill({ color: 'rgba(220, 0, 0, 0.9)' }),
+                stroke: new ol.style.Stroke({ color: 'white', width: 1.5 })
             }),
             text: new ol.style.Text({
                 text: count.toString(),
-                font: 'bold 9px Arial', // Reduced from 10px
-                fill: new ol.style.Fill({
-                    color: 'white'
-                }),
+                font: 'bold 9px Arial',
+                fill: new ol.style.Fill({ color: 'white' }),
                 textAlign: 'center',
                 textBaseline: 'middle'
             }),
-            zIndex: zIndex // Same z-index for the entire standalone badge
+            zIndex: 100
         });
-
-        return [circleStyle];
+        cached = [circle];
     }
+    binaryStyleCache.set(key, cached);
+    return cached;
 };
 
 
@@ -1174,7 +1151,7 @@ function showBinaryMessageDialog(featureOrMmsi) {
             return;
         }
 
-        const shipName = mmsi in shipsDB ? (shipsDB[mmsi].raw.shipname || `MMSI ${mmsi}`) : `MMSI ${mmsi}`;
+        const shipName = shipsDB[mmsi]?.raw?.shipname || `MMSI ${mmsi}`;
         title = `Binary Messages for ${shipName}`;
         content = getBinaryMessageList(binaryDB[mmsi].ship_messages);
     }
@@ -1241,41 +1218,16 @@ function copyText(m) {
     if (copyClipboard(m)) showNotification("Content copied to clipboard");
 }
 
-function openGoogleSearch(m) {
-    window.open("https://www.google.com/search?q=" + m);
-}
-
-function openAISCatcherSite(m) {
-    window.open("https://www.aiscatcher.org/ship/details/" + m);
-}
-
-function openMarineTraffic(m) {
-    window.open(" https://www.marinetraffic.com/en/ais/details/ships/mmsi:" + m);
-}
-
-function openShipXplorer(m) {
-    window.open("https://www.shipxplorer.com/data/vessels/IMO-MMSI-" + m);
-}
-
-function openVesselFinder(m) {
-    window.open("https://www.vesselfinder.com/vessels/details/" + m);
-}
-
-function openAISHub(m) {
-    window.open("https://www.aishub.net/vessels?Ship[mmsi]=" + m);
-}
-
-function openPlaneSpotters(m) {
-    window.open("https://www.planespotters.net/hex/" + getICAOFromHexIdent(m));
-}
-
-function openADSBExchange(m) {
-    window.open("https://globe.adsbexchange.com/?icao=" + getICAOFromHexIdent(m));
-}
-
-function openFlightAware(m) {
-    window.open("https://flightaware.com/live/modes/" + getICAOFromHexIdent(m) + "/redirect");
-}
+const EXT_LINKS = {
+    aiscatcher:    id => `https://www.aiscatcher.org/ship/details/${id}`,
+    google:        id => `https://www.google.com/search?q=${id}`,
+    vesselfinder:  id => `https://www.vesselfinder.com/vessels/details/${id}`,
+    aishub:        id => `https://www.aishub.net/vessels?Ship[mmsi]=${id}`,
+    planespotters: id => `https://www.planespotters.net/hex/${getICAOFromHexIdent(id)}`,
+    adsbexchange:  id => `https://globe.adsbexchange.com/?icao=${getICAOFromHexIdent(id)}`,
+    flightaware:   id => `https://flightaware.com/live/modes/${getICAOFromHexIdent(id)}/redirect`,
+};
+function openExt(key, id) { window.open(EXT_LINKS[key](id)); }
 
 const mapMenu = document.getElementById("map-menu");
 
@@ -1769,7 +1721,7 @@ function refreshMeasures() {
             from = "point";
         } else {
             ss = shipsDB[measure.start_value].raw;
-            sc = ol.proj.fromLonLat([shipsDB[measure.start_value].raw.lon, shipsDB[measure.start_value].raw.lat]);
+            sc = ol.proj.fromLonLat([ss.lon, ss.lat]);
             from = ss.shipname || ss.mmsi;
         }
 
@@ -1780,7 +1732,7 @@ function refreshMeasures() {
                 to = "point";
             } else {
                 es = shipsDB[measure.end_value].raw;
-                ec = ol.proj.fromLonLat([shipsDB[measure.end_value].raw.lon, shipsDB[measure.end_value].raw.lat]);
+                ec = ol.proj.fromLonLat([es.lon, es.lat]);
                 to = es.shipname || es.mmsi;
             }
         }
@@ -3448,15 +3400,16 @@ function notImplemented() {
 
 
 function updateFocusMarker() {
+    const shipRaw = card_type == 'ship' ? shipsDB[card_mmsi]?.raw : null;
+    const planeRaw = card_type == 'plane' ? planesDB[card_mmsi]?.raw : null;
+
     if (selectCircleFeature) {
-        if (card_type == 'ship' && card_mmsi in shipsDB && shipsDB[card_mmsi].raw.lon && shipsDB[card_mmsi].raw.lat) {
-            const center = ol.proj.fromLonLat([shipsDB[card_mmsi].raw.lon, shipsDB[card_mmsi].raw.lat]);
-            selectCircleFeature.setGeometry(new ol.geom.Point(center));
+        if (shipRaw && shipRaw.lon && shipRaw.lat) {
+            selectCircleFeature.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([shipRaw.lon, shipRaw.lat])));
             return;
         }
-        else if (card_type == 'plane' && card_mmsi in planesDB && planesDB[card_mmsi].raw.lon && planesDB[card_mmsi].raw.lat) {
-            const center = ol.proj.fromLonLat([planesDB[card_mmsi].raw.lon, planesDB[card_mmsi].raw.lat]);
-            selectCircleFeature.setGeometry(new ol.geom.Point(center));
+        else if (planeRaw && planeRaw.lon && planeRaw.lat) {
+            selectCircleFeature.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([planeRaw.lon, planeRaw.lat])));
             return;
         }
         else {
@@ -3466,18 +3419,14 @@ function updateFocusMarker() {
         }
     }
 
-    if (card_type == 'ship' && card_mmsi in shipsDB && shipsDB[card_mmsi].raw.lon && shipsDB[card_mmsi].raw.lat) {
-
-        const center = ol.proj.fromLonLat([shipsDB[card_mmsi].raw.lon, shipsDB[card_mmsi].raw.lat]);
-        selectCircleFeature = new ol.Feature(new ol.geom.Point(center));
+    if (shipRaw && shipRaw.lon && shipRaw.lat) {
+        selectCircleFeature = new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat([shipRaw.lon, shipRaw.lat])));
         selectCircleFeature.setStyle(selectCircleStyleFunction);
         selectCircleFeature.mmsi = card_mmsi;
         extraVector.addFeature(selectCircleFeature);
     }
-    else if (card_type == 'plane' && card_mmsi in planesDB && planesDB[card_mmsi].raw.lon && planesDB[card_mmsi].raw.lat) {
-
-        const center = ol.proj.fromLonLat([planesDB[card_mmsi].raw.lon, planesDB[card_mmsi].raw.lat]);
-        selectCircleFeature = new ol.Feature(new ol.geom.Point(center));
+    else if (planeRaw && planeRaw.lon && planeRaw.lat) {
+        selectCircleFeature = new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat([planeRaw.lon, planeRaw.lat])));
         selectCircleFeature.setStyle(selectCircleStyleFunction);
         selectCircleFeature.mmsi = card_mmsi;
         extraVector.addFeature(selectCircleFeature);
@@ -3704,9 +3653,10 @@ const startHover = function (type, mmsi, pixel, feature) {
         hoverType = type;
         hover_feature = feature;
 
-        if (type == 'ship' && (mmsi in shipsDB && shipsDB[mmsi].raw.lon && shipsDB[mmsi].raw.lat)) {
-            let tooltip = shipsDB[mmsi]?.raw ? getTooltipContent(shipsDB[mmsi].raw) : mmsi;
-            showTooltipShip(hover_info, tooltip, pixel, 15, shipsDB[mmsi].raw.cog);
+        const shipRaw = type == 'ship' ? shipsDB[mmsi]?.raw : null;
+        const planeRaw = type == 'plane' ? planesDB[mmsi]?.raw : null;
+        if (shipRaw && shipRaw.lon && shipRaw.lat) {
+            showTooltipShip(hover_info, getTooltipContent(shipRaw), pixel, 15, shipRaw.cog);
             if (settings.show_track_on_hover && pixel) {
                 debounceShowHoverTrack(mmsi);
             }
@@ -3714,8 +3664,8 @@ const startHover = function (type, mmsi, pixel, feature) {
                 shapeFeatures[mmsi].changed();
             }
             trackLayer.changed();
-        } else if (type == 'plane' && (mmsi in planesDB && planesDB[mmsi].raw.lon && planesDB[mmsi].raw.lat)) {
-            showTooltipShip(hover_info, planesDB[mmsi]?.raw ? getTooltipContentPlane(planesDB[mmsi].raw) : mmsi, pixel, 15, planesDB[mmsi].raw.heading);
+        } else if (planeRaw && planeRaw.lon && planeRaw.lat) {
+            showTooltipShip(hover_info, getTooltipContentPlane(planeRaw), pixel, 15, planeRaw.heading);
         }
         else if (type == 'community') {
             showTooltipShip(hover_info, '<div class="tooltip-card">Community feed</div>', pixel, 15);
@@ -3733,15 +3683,16 @@ const startHover = function (type, mmsi, pixel, feature) {
 
 function updateHoverMarker() {
 
+    const shipRaw = hoverType == 'ship' ? shipsDB[hoverMMSI]?.raw : null;
+    const planeRaw = hoverType == 'plane' ? planesDB[hoverMMSI]?.raw : null;
+
     if (hoverCircleFeature) {
-        if (hoverType == 'ship' && hoverMMSI in shipsDB && shipsDB[hoverMMSI].raw.lon && shipsDB[hoverMMSI].raw.lat) {
-            const center = ol.proj.fromLonLat([shipsDB[hoverMMSI].raw.lon, shipsDB[hoverMMSI].raw.lat]);
-            hoverCircleFeature.setGeometry(new ol.geom.Point(center));
+        if (shipRaw && shipRaw.lon && shipRaw.lat) {
+            hoverCircleFeature.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([shipRaw.lon, shipRaw.lat])));
             return;
         }
-        else if (hoverType == 'plane' && hoverMMSI in planesDB && planesDB[hoverMMSI].raw.lon && planesDB[hoverMMSI].raw.lat) {
-            const center = ol.proj.fromLonLat([planesDB[hoverMMSI].raw.lon, planesDB[hoverMMSI].raw.lat]);
-            hoverCircleFeature.setGeometry(new ol.geom.Point(center));
+        else if (planeRaw && planeRaw.lon && planeRaw.lat) {
+            hoverCircleFeature.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([planeRaw.lon, planeRaw.lat])));
             return;
         }
         else if (hoverType == 'community' && hover_feature) {
@@ -3757,17 +3708,14 @@ function updateHoverMarker() {
         }
     }
 
-    if (hoverType == 'ship' && hoverMMSI in shipsDB && shipsDB[hoverMMSI].raw.lon && shipsDB[hoverMMSI].raw.lat) {
-
-        const center = ol.proj.fromLonLat([shipsDB[hoverMMSI].raw.lon, shipsDB[hoverMMSI].raw.lat]);
-        hoverCircleFeature = new ol.Feature(new ol.geom.Point(center));
+    if (shipRaw && shipRaw.lon && shipRaw.lat) {
+        hoverCircleFeature = new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat([shipRaw.lon, shipRaw.lat])));
         hoverCircleFeature.setStyle(hoverCircleStyleFunction);
         hoverCircleFeature.mmsi = hoverMMSI;
         extraVector.addFeature(hoverCircleFeature);
     }
-    else if (hoverType == 'plane' && hoverMMSI in planesDB && planesDB[hoverMMSI].raw.lon && planesDB[hoverMMSI].raw.lat) {
-        const center = ol.proj.fromLonLat([planesDB[hoverMMSI].raw.lon, planesDB[hoverMMSI].raw.lat]);
-        hoverCircleFeature = new ol.Feature(new ol.geom.Point(center));
+    else if (planeRaw && planeRaw.lon && planeRaw.lat) {
+        hoverCircleFeature = new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat([planeRaw.lon, planeRaw.lat])));
         hoverCircleFeature.setStyle(hoverCircleStyleFunction);
         hoverCircleFeature.mmsi = hoverMMSI;
         extraVector.addFeature(hoverCircleFeature);
@@ -3844,8 +3792,7 @@ const handlePointerMove = function (pixel, target) {
                 if (mmsiEntries.length > 0) {
                     tooltipContent += '<div style="margin-top: 5px; font-size: 0.9em;">From: ';
                     mmsiEntries.slice(0, 3).forEach(([mmsi, count], index) => {
-                        const shipName = (mmsi in shipsDB && shipsDB[mmsi].raw.shipname) ?
-                            shipsDB[mmsi].raw.shipname : `MMSI ${mmsi}`;
+                        const shipName = shipsDB[mmsi]?.raw?.shipname || `MMSI ${mmsi}`;
                         tooltipContent += `${index > 0 ? ', ' : ''}${shipName} (${count})`;
                     });
                     if (mmsiEntries.length > 3) {
@@ -5289,7 +5236,9 @@ function redrawMap() {
 
     labelLayer.declutter_ = settings.labels_declutter;
 
-    const includeLabels = (settings.show_labels === "dynamic" && (map.getView().getZoom() > 11.5)) || settings.show_labels === "always";
+    const zoom = map.getView().getZoom();
+    const showShapeOutlines = zoom > 11.5;
+    const includeLabels = (settings.show_labels === "dynamic" && showShapeOutlines) || settings.show_labels === "always";
 
     for (let [mmsi, entry] of Object.entries(shipsDB)) {
         let ship = entry.raw;
@@ -5312,7 +5261,7 @@ function redrawMap() {
             if (includeLabels)
                 labelVector.addFeature(feature)
 
-            if (map.getView().getZoom() > 11.5 && (ship.heading != null || settings.show_circle_outline)) {
+            if (showShapeOutlines && (ship.heading != null || settings.show_circle_outline)) {
                 var shapeFeature = new ol.Feature({
                     geometry: createShipOutlineGeometry(ship)
                 })
@@ -5322,8 +5271,8 @@ function redrawMap() {
                 shapeVector.addFeature(shapeFeature)
             }
         }
-        refreshMeasures();
     }
+    refreshMeasures();
 
     redrawBinaryMessages();
 
