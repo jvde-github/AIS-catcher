@@ -116,14 +116,11 @@ export function init(map, addOverlayLayer, debounce, markerLayer) {
 
     addOverlayLayer("Community Feed", feedLayer);
 
-    // initMap() already processed overlapmaps; insert before markerLayer so
-    // community dots stay under ship markers.
     const layers = map.getLayers();
+    layers.remove(feedLayer);
     const idx = markerLayer ? layers.getArray().indexOf(markerLayer) : layers.getLength();
     layers.insertAt(idx >= 0 ? idx : layers.getLength(), feedLayer);
 
-    const visible = Array.isArray(settings.map_overlay) && settings.map_overlay.includes("Community Feed");
-    feedLayer.setVisible(visible);
-    if (visible) update();
+    if (feedLayer.getVisible()) update();
 }
 

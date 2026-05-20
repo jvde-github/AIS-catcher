@@ -532,6 +532,46 @@ function removeTileLayerAll() {
 }
 function addOverlayLayer(title, layer) {
     overlapmaps[title] = layer;
+    if (typeof map !== 'undefined' && map && document.getElementById('overlayContainer')) {
+        map.addLayer(layer);
+        layer.setVisible(false);
+        const visible = Array.isArray(settings.map_overlay) && settings.map_overlay.includes(title);
+        layer.setVisible(visible);
+        if (typeof settings.map_opacity !== 'undefined') {
+            layer.setOpacity(Number(settings.map_opacity));
+        }
+        addOverlayCheckbox(title);
+    }
+}
+function addOverlayCheckbox(title) {
+    const overlayContainer = document.getElementById('overlayContainer');
+    if (!overlayContainer || overlayContainer.querySelector(`#${CSS.escape(title)}`)) return;
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = title;
+    checkbox.name = title;
+    checkbox.checked = settings.map_overlay.includes(title);
+
+    const label = document.createElement('label');
+    label.setAttribute('for', title);
+    label.textContent = title;
+
+    overlayContainer.appendChild(checkbox);
+    overlayContainer.appendChild(label);
+    overlayContainer.appendChild(document.createElement('br'));
+
+    checkbox.addEventListener('change', function () {
+        overlapmaps[title].setVisible(this.checked);
+        if (this.checked) {
+            if (!settings.map_overlay.includes(title)) settings.map_overlay.push(title);
+        } else {
+            const i = settings.map_overlay.indexOf(title);
+            if (i > -1) settings.map_overlay.splice(i, 1);
+        }
+        saveSettings();
+        redrawMap();
+    });
 }
 function removeOverlayLayer(title) {
     delete overlapmaps[title];
@@ -1982,41 +2022,7 @@ function initMap() {
 
     baseMapSelector.addEventListener('change', function () { setMap(this.value); });
 
-    const overlayContainer = document.getElementById('overlayContainer');
-
-    Object.keys(overlapmaps).forEach(key => {
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.id = key;
-        checkbox.name = key;
-        checkbox.checked = settings.map_overlay.includes(key);
-
-        const label = document.createElement('label');
-        label.setAttribute('for', key);
-        label.textContent = key;
-
-        overlayContainer.appendChild(checkbox);
-        overlayContainer.appendChild(label);
-
-        overlayContainer.appendChild(document.createElement('br'));
-
-        checkbox.addEventListener('change', function () {
-            overlapmaps[key].setVisible(this.checked);
-
-            if (this.checked) {
-                if (!settings.map_overlay.includes(key)) {
-                    settings.map_overlay.push(key);
-                }
-            } else {
-                const index = settings.map_overlay.indexOf(key);
-                if (index > -1) {
-                    settings.map_overlay.splice(index, 1);
-                }
-            }
-            saveSettings();
-            redrawMap();
-        });
-    });
+    Object.keys(overlapmaps).forEach(addOverlayCheckbox);
 
     setMapOpacity();
 }
@@ -6084,6 +6090,10 @@ if (config.features.community_feed) {
     import('./overlays/community.js')
         .then((m) => m.init(map, addOverlayLayer, debounce, markerLayer))
         .catch((err) => console.error('Failed to load community feed module:', err));
+
+    import('./overlays/ducting.js')
+        .then((m) => m.init(addOverlayLayer))
+        .catch((err) => console.error('Failed to load ducting module:', err));
 }
 
 updateDarkMode();
