@@ -457,8 +457,9 @@ function restoreDefaultSettings() {
         metric: "DEFAULT",
         setcoord: true,
         tab: "map",
-        show_labels: "never",
+        show_labels: "dynamic",
         labels_declutter: true,
+        label_class_background: true,
         eri: true,
         loadURL: true,
         map_opacity: 0.5,
@@ -770,26 +771,51 @@ function decodeHTMLEntities(text) {
     return textArea.value;
 }
 
+function hexToRgb(hex) {
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
+    return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [18, 165, 237];
+}
+
+// Derive a readable label background from a (often bright) track color:
+// boost saturation by pushing channels away from luma, then darken.
+function deriveLabelBackground(hex) {
+    let [r, g, b] = hexToRgb(hex);
+    const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    const saturate = 1.35, darken = 0.6;
+    const adjust = (c) => Math.max(0, Math.min(255, Math.round((luma + (c - luma) * saturate) * darken)));
+    return `rgba(${adjust(r)}, ${adjust(g)}, ${adjust(b)}, 0.88)`;
+}
+
 const labelStyle = function (feature) {
     const font = settings.tooltipLabelFontSize + "px Arial";
-    return new ol.style.Style({
-        text: new ol.style.Text({
-            text: decodeHTMLEntities('ship' in feature ?
-                (feature.ship.shipname || feature.ship.mmsi.toString()) :
-                (feature.plane.callsign || getICAO(feature.plane))),
-            overflow: true,
-            offsetY: 25,
-            offsetX: 25,
-            fill: new ol.style.Fill({
-                color: settings.dark_mode ? settings.tooltipLabelColorDark : settings.tooltipLabelColor
-            }),
-            stroke: new ol.style.Stroke({
-                color: settings.dark_mode ? settings.tooltipLabelShadowColorDark : settings.tooltipLabelShadowColor,
-                width: 5
-            }),
-            font: font
-        })
+    const text = new ol.style.Text({
+        text: decodeHTMLEntities('ship' in feature ?
+            (feature.ship.shipname || feature.ship.mmsi.toString()) :
+            (feature.plane.callsign || getICAO(feature.plane))),
+        overflow: true,
+        offsetY: 25,
+        offsetX: 25,
+        font: font
     });
+
+    if (settings.label_class_background) {
+        const obj = 'ship' in feature ? feature.ship : feature.plane;
+        const base = (obj && settings.track_class_colors[obj.shipclass]) || '#12a5ed';
+        text.setFill(new ol.style.Fill({ color: '#ffffff' }));
+        text.setBackgroundFill(new ol.style.Fill({ color: deriveLabelBackground(base) }));
+        text.setBackgroundStroke(new ol.style.Stroke({ color: 'rgba(0, 0, 0, 0.35)', width: 1 }));
+        text.setPadding([2, 4, 2, 4]);
+    } else {
+        text.setFill(new ol.style.Fill({
+            color: settings.dark_mode ? settings.tooltipLabelColorDark : settings.tooltipLabelColor
+        }));
+        text.setStroke(new ol.style.Stroke({
+            color: settings.dark_mode ? settings.tooltipLabelShadowColorDark : settings.tooltipLabelShadowColor,
+            width: 5
+        }));
+    }
+
+    return new ol.style.Style({ text: text });
 };
 
 const hoverCircleStyleFunction = function (feature) {
@@ -3976,7 +4002,7 @@ function convertStringBooleansToActual() {
         'counter', 'fading', 'android', 'kiosk', 'welcome', 'show_range',
         'distance_circles', 'table_shiptype_use_icon', 'fix_center',
         'show_circle_outline', 'dark_mode', 'setcoord', 'eri', 'loadURL',
-        'show_station', 'labels_declutter', 'show_track_on_hover',
+        'show_station', 'labels_declutter', 'label_class_background', 'show_track_on_hover',
         'show_track_on_select', 'shipcard_max', 'kiosk_pan_map',
         'show_signal_graphs', 'show_ppm_graphs'
     ];
@@ -5468,6 +5494,7 @@ function updateSettingsTab() {
     document.getElementById("settings_distance_circle_color").value = settings.distance_circle_color;
 
     document.getElementById("settings_labels_declutter").checked = settings.labels_declutter;
+    document.getElementById("settings_label_class_background").checked = settings.label_class_background;
     document.getElementById("settings_tooltipLabelFontsize").value = settings.tooltipLabelFontSize;
 
     document.getElementById("settings_show_labels").value = settings.show_labels.toLowerCase();
