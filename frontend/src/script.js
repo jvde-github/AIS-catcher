@@ -3201,6 +3201,12 @@ function onReceiverChange(idx) {
     binarySince = 0;
     const btn = document.getElementById("receiver-btn");
     if (btn) btn.classList.toggle("active", activeReceiver !== 0);
+    const dd = document.getElementById("receiver-dropdown");
+    if (dd) {
+        for (const item of dd.children) {
+            item.classList.toggle("active", parseInt(item.dataset.idx) === activeReceiver);
+        }
+    }
     refresh_data();
 }
 
