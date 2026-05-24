@@ -28,7 +28,7 @@
 #include "Keys.h"
 #include "OutputStats.h"
 #include "JSON/JSON.h"
-#include "JSON/StringBuilder.h"
+#include "JSON/Writer.h"
 
 class Receiver;
 

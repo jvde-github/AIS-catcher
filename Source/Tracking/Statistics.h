@@ -26,7 +26,7 @@
 #include "JSONAIS.h"
 #include "Convert.h"
 #include "Message.h"
-#include "StringBuilder.h"
+#include "Writer.h"
 
 // ----------------------------
 // Class to log message count stat

@@ -26,7 +26,7 @@
 
 #include "JSON/JSON.h"
 #include "Parser.h"
-#include "StringBuilder.h"
+#include "Writer.h"
 #include "Keys.h"
 
 namespace AIS

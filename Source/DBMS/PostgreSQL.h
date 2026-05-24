@@ -33,7 +33,7 @@
 #include "Keys.h"
 #include "AIS.h"
 #include "JSON/JSON.h"
-#include "JSON/StringBuilder.h"
+#include "JSON/Writer.h"
 
 namespace IO
 {

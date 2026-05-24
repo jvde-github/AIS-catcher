@@ -58,7 +58,6 @@
     <ClCompile Include="..\Source\JSON\JSONAIS.cpp" />
     <ClCompile Include="..\Source\JSON\Keys.cpp" />
     <ClCompile Include="..\Source\JSON\Parser.cpp" />
-    <ClCompile Include="..\Source\JSON\StringBuilder.cpp" />
     <ClCompile Include="..\Source\Aviation\ADSB.cpp" />
     <ClCompile Include="..\Source\Aviation\Basestation.cpp" />
     <ClCompile Include="..\Source\Aviation\Beast.cpp" />
@@ -122,7 +121,7 @@
     <ClInclude Include="..\Source\Library\Stream.h" />
     <ClInclude Include="..\Source\Device\SpyServer.h" />
     <ClInclude Include="..\Source\JSON\Keys.h" />
-    <ClInclude Include="..\Source\JSON\StringBuilder.h" />
+    <ClInclude Include="..\Source\JSON\Writer.h" />
     <ClInclude Include="..\Source\JSON\Parser.h" />
     <ClInclude Include="..\Source\Tracking\PlaneDB.h" />
     <ClInclude Include="..\Source\Device\Serial.h" />

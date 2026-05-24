@@ -46,7 +46,7 @@
 #include "Protocol.h"
 
 #include "JSON/JSON.h"
-#include "JSON/StringBuilder.h"
+#include "JSON/Writer.h"
 #include "MsgOut.h"
 
 namespace IO

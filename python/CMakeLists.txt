@@ -31,7 +31,6 @@ set(AIS_SOURCES
     ${SRC}/JSON/JSONAIS.cpp
     ${SRC}/JSON/Keys.cpp
     ${SRC}/JSON/Parser.cpp
-    ${SRC}/JSON/StringBuilder.cpp
     ${SRC}/Library/Logger.cpp
     ${SRC}/Utilities/Convert.cpp
     ${SRC}/Utilities/Helper.cpp

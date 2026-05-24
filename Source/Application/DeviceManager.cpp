@@ -20,7 +20,7 @@
 #include "DeviceManager.h"
 #include "Logger.h"
 #include "Parse.h"
-#include "StringBuilder.h"
+#include "Writer.h"
 
 std::vector<Device::Description> DeviceManager::device_list;
 

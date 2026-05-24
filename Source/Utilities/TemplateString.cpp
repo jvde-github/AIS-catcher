@@ -19,7 +19,7 @@
 
 #include "TemplateString.h"
 #include "Message.h"
-#include "../JSON/StringBuilder.h"
+#include "../JSON/Writer.h"
 
 namespace Util
 {

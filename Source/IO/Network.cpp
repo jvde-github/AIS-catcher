@@ -210,7 +210,7 @@ namespace IO
 		{
 		case AIS::KEY_SETTING_URL:
 			url = arg;
-			url_json = JSON::stringify(arg);
+			url_json = JSON::Writer::escape(arg);
 			http.setURL(url);
 			break;
 		case AIS::KEY_SETTING_USERPWD:
@@ -228,7 +228,7 @@ namespace IO
 		case AIS::KEY_SETTING_ID:
 		case AIS::KEY_SETTING_CALLSIGN:
 		case AIS::KEY_SETTING_STATIONID:
-			stationid = JSON::stringify(arg);
+			stationid = JSON::Writer::escape(arg);
 			break;
 		case AIS::KEY_SETTING_INTERVAL:
 			INTERVAL = Util::Parse::Integer(arg, 1, 60 * 60 * 24);
@@ -237,19 +237,19 @@ namespace IO
 			TIMEOUT = Util::Parse::Integer(arg, 1, 30);
 			break;
 		case AIS::KEY_SETTING_MODEL:
-			model = JSON::stringify(arg);
+			model = JSON::Writer::escape(arg);
 			break;
 		case AIS::KEY_SETTING_MODEL_SETTING:
-			model_setting = JSON::stringify(arg);
+			model_setting = JSON::Writer::escape(arg);
 			break;
 		case AIS::KEY_SETTING_PRODUCT:
-			product = JSON::stringify(arg);
+			product = JSON::Writer::escape(arg);
 			break;
 		case AIS::KEY_SETTING_VENDOR:
-			vendor = JSON::stringify(arg);
+			vendor = JSON::Writer::escape(arg);
 			break;
 		case AIS::KEY_SETTING_SERIAL:
-			serial = JSON::stringify(arg);
+			serial = JSON::Writer::escape(arg);
 			break;
 		case AIS::KEY_SETTING_LAT:
 			lat = std::to_string(Util::Parse::Float(arg));
@@ -258,7 +258,7 @@ namespace IO
 			lon = std::to_string(Util::Parse::Float(arg));
 			break;
 		case AIS::KEY_SETTING_DEVICE_SETTING:
-			device_setting = JSON::stringify(arg);
+			device_setting = JSON::Writer::escape(arg);
 			break;
 		case AIS::KEY_SETTING_GZIP:
 			gzip = Util::Parse::Switch(arg);

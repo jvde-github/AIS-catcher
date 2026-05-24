@@ -15,7 +15,7 @@
 #include "JSON/JSONAIS.h"
 #include "JSON/JSON.h"
 #include "JSON/Keys.h"
-#include "JSON/StringBuilder.h"
+#include "JSON/Writer.h"
 
 enum class OutFormat {
     DICTIONARY = 0,  // Python dict, full decoded fields (default)

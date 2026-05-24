@@ -20,7 +20,7 @@
 
 #include "AIS-catcher.h"
 #include "Ships.h"
-#include "StringBuilder.h"
+#include "Writer.h"
 
 void Ship::reset()
 {

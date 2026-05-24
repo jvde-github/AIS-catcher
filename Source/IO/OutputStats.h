@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "JSON/StringBuilder.h"
+#include "JSON/Writer.h"
 
 namespace IO
 {

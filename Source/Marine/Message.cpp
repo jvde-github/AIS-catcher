@@ -18,7 +18,7 @@
 #include "Message.h"
 #include "Parse.h"
 #include "Helper.h"
-#include "JSON/StringBuilder.h"
+#include "JSON/Writer.h"
 #include "Library/SWAR.h"
 
 namespace AIS

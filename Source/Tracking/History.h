@@ -22,7 +22,7 @@
 #include <memory>
 
 #include "Statistics.h"
-#include "StringBuilder.h"
+#include "Writer.h"
 
 template <int N, int INTERVAL>
 class History : public StreamIn<JSON::JSON> {

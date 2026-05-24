@@ -108,7 +108,7 @@ void PluginManager::addPlugin(const std::string &arg)
 		if (version == 3)
 			Warning() << "Plugin \"" << arg << "\" declares version 3 (pre-CSP). It may render but inline-string handlers will not run under strict CSP. Consider updating to version 5.";
 		config.plugins_loaded.emplace_back(arg, version);
-		std::string safe_arg = JSON::stringify(arg);
+		std::string safe_arg = JSON::Writer::escape(arg);
 		plugin_code += "\ntry{\n" + s + "\n} catch (error) {\nshowDialog(\"Error in Plugin \" + " + safe_arg + ", \"Plugins contain error: \" + error + \"</br>Consider updating plugins or disabling them.\"); }\n";
 	}
 	catch (const std::exception &e)
@@ -289,8 +289,8 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 }
 
 WebViewer::WebViewer() : Setting("WebViewer"),
-	os(JSON::stringify(Util::Helper::getOS())),
-	hardware(JSON::stringify(Util::Helper::getHardware()))
+	os(JSON::Writer::escape(Util::Helper::getOS())),
+	hardware(JSON::Writer::escape(Util::Helper::getHardware()))
 {
 }
 
@@ -1318,14 +1318,14 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 		firstport = MIN(firstport, lastport);
 		break;
 	case AIS::KEY_SETTING_STATION:
-		station = JSON::stringify(arg);
+		station = JSON::Writer::escape(arg);
 		pluginManager.setStation(station);
 		break;
 	case AIS::KEY_SETTING_STATS_ON_CLOSE:
 		stats_on_close = Util::Parse::Switch(arg);
 		break;
 	case AIS::KEY_SETTING_STATION_LINK:
-		station_link = JSON::stringify(arg);
+		station_link = JSON::Writer::escape(arg);
 		break;
 	case AIS::KEY_SETTING_WEBCONTROL_HTTP:
 		pluginManager.setWebControl(arg);

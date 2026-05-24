@@ -32,20 +32,6 @@
 namespace JSON
 {
 
-	void stringify(const char *str, size_t len, std::string &json, bool esc = true);
-
-	inline void stringify(const std::string &str, std::string &json, bool esc = true)
-	{
-		stringify(str.data(), str.size(), json, esc);
-	}
-
-	inline std::string stringify(const std::string &str, bool esc = true)
-	{
-		std::string s;
-		stringify(str.data(), str.size(), s, esc);
-		return s;
-	}
-
 	// Fast writer that owns raw ptr/end cursors into a std::string sink and
 	// grows the backing string on demand. Hot path is a single-branch byte
 	// write — same speed as a fixed char buffer, but with no truncation risk.
@@ -383,6 +369,18 @@ namespace JSON
 		}
 
 		~Writer() { finish(); }
+
+		// Convenience: produce a JSON-escaped, quoted string ("...") from a
+		// single value. Builds a one-shot Writer over a fresh std::string for
+		// callers that don't have a sink. For larger JSON, construct a Writer
+		// directly and call val(s).
+		static std::string escape(StringRef s)
+		{
+			std::string out;
+			Writer w(out, s.n + 16);
+			w.val(s);
+			return out;
+		}
 
 		// Trim backing string down to written content. Idempotent.
 		// Returns total bytes written since construction.

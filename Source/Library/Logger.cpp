@@ -36,7 +36,7 @@
 
 #include "Logger.h"
 #include "Convert.h"
-#include "StringBuilder.h"
+#include "Writer.h"
 
 
 #ifdef HASSYSLOG
@@ -122,8 +122,7 @@ std::string LogMessage::levelToString() const
 
 std::string LogMessage::toJSON() const
 {
-	std::string msg;
-	JSON::stringify(message, msg);
+	std::string msg = JSON::Writer::escape(message);
 
 	return "{\"level\":\"" + levelToString() + "\",\"message\":" + msg + ",\"time\":\"" + time + "\"}";
 }
