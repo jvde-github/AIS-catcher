@@ -27,10 +27,33 @@ namespace Device
 	//---------------------------------------
 	// Device RTLSDR
 
+	static const char *libusbErrorName(int rc)
+	{
+		switch (rc)
+		{
+		case 0:    return "success";
+		case -1:   return "I/O error";
+		case -2:   return "invalid parameter";
+		case -3:   return "access denied";
+		case -4:   return "no such device";
+		case -5:   return "not found / no compatible driver";
+		case -6:   return "resource busy";
+		case -7:   return "timeout";
+		case -8:   return "overflow";
+		case -9:   return "pipe error";
+		case -10:  return "interrupted";
+		case -11:  return "out of memory";
+		case -12:  return "not supported";
+		case -99:  return "other error";
+		default:   return "unknown";
+		}
+	}
+
 	void RTLSDR::Open(uint64_t h)
 	{
-		if (rtlsdr_open(&dev, (uint32_t)h) != 0)
-			throw std::runtime_error("RTLSDR: cannot open device.");
+		int rc = rtlsdr_open(&dev, (uint32_t)h);
+		if (rc != 0)
+			throw std::runtime_error("RTLSDR: cannot open device (error " + std::to_string(rc) + ": " + libusbErrorName(rc) + ").");
 
 		Device::Open(h);
 
@@ -45,8 +68,9 @@ namespace Device
 #ifdef HASRTL_ANDROID
 	void RTLSDR::OpenWithFileDescriptor(int f)
 	{
-		if (rtlsdr_open_file_descriptor(&dev, f) != 0)
-			throw std::runtime_error("RTLSDR: cannot open device.");
+		int rc = rtlsdr_open_file_descriptor(&dev, f);
+		if (rc != 0)
+			throw std::runtime_error("RTLSDR: cannot open device (error " + std::to_string(rc) + ": " + libusbErrorName(rc) + ").");
 
 		Device::Open(f);
 
@@ -248,7 +272,8 @@ namespace Device
 			char v[256] = {0}, p[256] = {0}, s[256] = {0};
 			int rc = rtlsdr_get_device_usb_strings(i, v, p, s);
 			if (rc != 0)
-				Warning() << "RTLSDR: cannot read USB strings for device " << i << ", error code = " << rc << ".";
+				Warning() << "RTLSDR: cannot read USB strings for device " << i
+						  << " (error " << rc << ": " << libusbErrorName(rc) << ").";
 			DeviceList.push_back(Description(v, p, s, (uint64_t)i, Type::RTLSDR));
 		}
 	}
