@@ -34,7 +34,7 @@ namespace Device
 
 		Device::Open(h);
 
-		char v[256], p[256], s[256];
+		char v[256] = {0}, p[256] = {0}, s[256] = {0};
 		rtlsdr_get_usb_strings(dev, v, p, s);
 
 		product = std::string(p);
@@ -50,7 +50,7 @@ namespace Device
 
 		Device::Open(f);
 
-		char v[256], p[256], s[256];
+		char v[256] = {0}, p[256] = {0}, s[256] = {0};
 		rtlsdr_get_usb_strings(dev, v, p, s);
 
 		product = std::string(p);
@@ -241,13 +241,14 @@ namespace Device
 
 	void RTLSDR::getDeviceList(std::vector<Description> &DeviceList)
 	{
-		char v[256], p[256], s[256];
-
 		int DeviceCount = rtlsdr_get_device_count();
 
 		for (int i = 0; i < DeviceCount; i++)
 		{
-			rtlsdr_get_device_usb_strings(i, v, p, s);
+			char v[256] = {0}, p[256] = {0}, s[256] = {0};
+			int rc = rtlsdr_get_device_usb_strings(i, v, p, s);
+			if (rc != 0)
+				Warning() << "RTLSDR: cannot read USB strings for device " << i << ", error code = " << rc << ".";
 			DeviceList.push_back(Description(v, p, s, (uint64_t)i, Type::RTLSDR));
 		}
 	}
