@@ -163,7 +163,7 @@ void PluginManager::setAbout(const std::string &path)
 	aboutPresent = true;
 }
 
-std::string PluginManager::render(bool communityFeed) const
+std::string PluginManager::render() const
 {
 	std::string out;
 
@@ -188,7 +188,6 @@ std::string PluginManager::render(bool communityFeed) const
 			.kv("realtime", config.realtime)
 			.kv("log", config.log_enabled)
 			.kv("decoder", config.decoder)
-			.kv("community_feed", communityFeed)
 			.kv("about_md", aboutPresent)
 			.endObject()
 			.key("receivers")
@@ -1178,7 +1177,7 @@ const WebViewer::Route WebViewer::routes[] = {
 	// Frontend assets
 	{"/custom/plugins.js", nullptr, "application/javascript",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &)
-	 { return w->pluginManager.render(comm_feed != nullptr); }},
+	 { return w->pluginManager.render(); }},
 	{"/custom/config.css", nullptr, "text/css",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &)
 	 { return w->pluginManager.getStylesheets(); }},

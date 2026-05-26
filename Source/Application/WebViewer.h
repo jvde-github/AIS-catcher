@@ -230,7 +230,7 @@ public:
 	const std::string &getAbout() const { return about; }
 	const std::string &getStylesheets() const { return stylesheets; }
 
-	std::string render(bool communityFeed) const;
+	std::string render() const;
 };
 
 class BackupManager

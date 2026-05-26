@@ -64,7 +64,7 @@ const config = window.__SERVER_CONFIG__ || {
     features: {
         share_location: false, save_messages: false,
         realtime: false, log: false, decoder: false,
-        community_feed: false, about_md: false,
+        about_md: false,
     },
     receivers: [],
     plugins: { loaded: [], errors: [] }, // loaded: [{ name, version }, ...]
@@ -219,7 +219,7 @@ const ACTIONS = {
     toggleStatcard: () => toggleStatcard(),
     toggleTablecard: () => toggleTablecard(),
     mapSettingsContextMenu: (e) => showContextMenu(e, '', '', ['settings', 'center', 'ctx-map']),
-    showCommunity: () => showCommunity(),
+    toggleCommunityPane: () => toggleCommunityPane(),
     showMapMenu: (e) => showMapMenu(e),
     mainspaceContextMenu: (e) => showContextMenu(e, 0, '', ['settings']),
     plotsContextMenu: (e) => showContextMenu(e, '', 'charts', ['settings', 'ctx-charts']),
@@ -1116,10 +1116,84 @@ function createShipOutlineGeometry(ship) {
     return new ol.geom.Polygon([shipOutlineCoords]);
 }
 
-function showCommunity() {
-    if (!config.features.community_feed) {
-        showDialog("Community feed is not available", "Enable by running with -X which will send your AIS data to www.aiscatcher.org and enable the options</br>Thank you for supporting AIS-catcher");
+let communityPopup = null;
+let communityLastApplied = null;
+const COMMUNITY_NS = 'aiscatcher-mapsync';
+const COMMUNITY_ORIGIN = 'https://www.aiscatcher.org';
+const COMMUNITY_EPS_LATLON = 1e-4;
+const COMMUNITY_EPS_ZOOM = 0.01;
+
+function communityViewNear(a, b) {
+    return a && b
+        && Math.abs(a.lat  - b.lat)  < COMMUNITY_EPS_LATLON
+        && Math.abs(a.lon  - b.lon)  < COMMUNITY_EPS_LATLON
+        && Math.abs(a.zoom - b.zoom) < COMMUNITY_EPS_ZOOM;
+}
+
+function communityViewSane(v) {
+    return Number.isFinite(v.lat)  && v.lat  >= -90  && v.lat  <= 90
+        && Number.isFinite(v.lon)  && v.lon  >= -180 && v.lon  <= 180
+        && Number.isFinite(v.zoom) && v.zoom >= 0    && v.zoom <= 28;
+}
+
+function toggleCommunityPane() {
+    if (communityPopup && !communityPopup.closed) {
+        communityPopup.close();
+        communityPopup = null;
+        return;
     }
+    const view = map.getView();
+    const [lon, lat] = ol.proj.toLonLat(view.getCenter());
+    const zoom = view.getZoom();
+    const url = `${COMMUNITY_ORIGIN}/livemap?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}&zoom=${zoom.toFixed(2)}`;
+    const w = Math.floor(screen.availWidth / 2);
+    const h = screen.availHeight;
+    communityPopup = window.open(url, 'aiscatcher-community',
+        `popup=yes,width=${w},height=${h},left=${w},top=0`);
+    if (communityPopup) {
+        communityPopup.focus();
+        communityLastApplied = { lat, lon, zoom };
+    }
+}
+
+function notifyCommunityPopupView() {
+    if (!communityPopup || communityPopup.closed) return;
+    const v = { lat: settings.lat, lon: settings.lon, zoom: settings.zoom };
+    if (communityViewNear(v, communityLastApplied)) return;
+    communityPopup.postMessage({
+        ns: COMMUNITY_NS, v: 1, type: 'view',
+        lat: v.lat, lon: v.lon, zoom: v.zoom
+    }, COMMUNITY_ORIGIN);
+}
+
+window.addEventListener('message', (ev) => {
+    if (!communityPopup || ev.source !== communityPopup) return;
+    if (ev.origin !== COMMUNITY_ORIGIN) return;
+    const m = ev.data;
+    if (!m || m.ns !== COMMUNITY_NS || m.type !== 'view') return;
+    const v = { lat: +m.lat, lon: +m.lon, zoom: +m.zoom };
+    if (!communityViewSane(v)) return;
+    if (communityViewNear(v, communityLastApplied)) return;
+    const view = map.getView();
+    view.setCenter(ol.proj.fromLonLat([v.lon, v.lat]));
+    view.setZoom(v.zoom);
+    communityLastApplied = v;
+});
+
+function pushVesselsToCommunityPopup(dynamic) {
+    if (!communityPopup || communityPopup.closed) return;
+    if (!Array.isArray(dynamic) || dynamic.length === 0) return;
+    const updates = [];
+    for (const v of dynamic) {
+        const mmsi = v[0], lat = v[1], lon = v[2];
+        if (mmsi == null || lat == null || lon == null) continue;
+        updates.push([mmsi, lat, lon]);
+    }
+    if (updates.length === 0) return;
+    communityPopup.postMessage(
+        { ns: COMMUNITY_NS, v: 1, type: 'stations-vessels', updates },
+        COMMUNITY_ORIGIN
+    );
 }
 
 async function showNMEA(m) {
@@ -2895,6 +2969,8 @@ async function fetchShips(noDoubleFetch = true) {
     tab_title_count = Object.keys(shipsDB).length;
     updateTitle();
 
+    pushVesselsToCommunityPopup(ships.dynamic);
+
     return true;
 }
 
@@ -3683,7 +3759,7 @@ function getBinaryMessageContent(binary) {
 
 const startHover = function (type, mmsi, pixel, feature) {
 
-    if (type != 'ship' && type != 'tooltip' && type != 'plane' && type != 'binary' && type != 'community') return;
+    if (type != 'ship' && type != 'tooltip' && type != 'plane' && type != 'binary') return;
 
     if (mmsi !== hoverMMSI || hoverType !== type) {
         stopHover();
@@ -3705,9 +3781,6 @@ const startHover = function (type, mmsi, pixel, feature) {
             trackLayer.changed();
         } else if (planeRaw && planeRaw.lon && planeRaw.lat) {
             showTooltipShip(hover_info, getTooltipContentPlane(planeRaw), pixel, 15, planeRaw.heading);
-        }
-        else if (type == 'community') {
-            showTooltipShip(hover_info, '<div class="tooltip-card">Community feed</div>', pixel, 15);
         }
         else {
             showTooltipShip(hover_info, hoverMMSI, pixel, 0);
@@ -3734,10 +3807,6 @@ function updateHoverMarker() {
             hoverCircleFeature.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([planeRaw.lon, planeRaw.lat])));
             return;
         }
-        else if (hoverType == 'community' && hover_feature) {
-            hoverCircleFeature.setGeometry(new ol.geom.Point(hover_feature.getGeometry().getCoordinates()));
-            return;
-        }
         else {
             extraVector.removeFeature(hoverCircleFeature);
             hoverCircleFeature = undefined;
@@ -3757,11 +3826,6 @@ function updateHoverMarker() {
         hoverCircleFeature = new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat([planeRaw.lon, planeRaw.lat])));
         hoverCircleFeature.setStyle(hoverCircleStyleFunction);
         hoverCircleFeature.mmsi = hoverMMSI;
-        extraVector.addFeature(hoverCircleFeature);
-    }
-    else if (hoverType == 'community' && hover_feature) {
-        hoverCircleFeature = new ol.Feature(new ol.geom.Point(hover_feature.getGeometry().getCoordinates()));
-        hoverCircleFeature.setStyle(hoverCircleStyleFunction);
         extraVector.addFeature(hoverCircleFeature);
     }
 }
@@ -3806,10 +3870,6 @@ const handlePointerMove = function (pixel, target) {
     if (feature && 'ship' in feature && feature.ship.mmsi in shipsDB) {
         const mmsi = feature.ship.mmsi;
         startHover('ship', mmsi, pixel, feature);
-    }
-    else if (feature && feature.community === true) {
-        const id = `c:${feature.ship.lat},${feature.ship.lon}`;
-        startHover('community', id, pixel, feature);
     }
     else if (feature && 'plane' in feature && feature.plane.hexident in planesDB) {
         const hexident = feature.plane.hexident;
@@ -3941,6 +4001,7 @@ function saveSettings() {
 
     localStorage[context] = JSON.stringify(settings);
 
+    notifyCommunityPopupView();
     updateMapURL();
     updateSettingsTab();
 
@@ -3959,6 +4020,12 @@ function updateForLegacySettings() {
     if (!("showPlanesAtFirst" in settings)) {
         settings.showPlanesAtFirst = true;
         settings.map_overlay.push("Aircraft");
+    }
+
+    if (Array.isArray(settings.map_overlay) && settings.map_overlay.includes("Community Feed")) {
+        settings.map_overlay = settings.map_overlay.filter(t => t !== "Community Feed");
+        queueMicrotask(() => showDialog("Community feed has moved",
+            "The on-map Community Feed overlay has been replaced by a new <b>Community Pane</b> that opens the full aiscatcher.org map in a popup window.<br><br>Right-click the map and choose <b>Toggle Community Pane</b>, or use the network button in the map controls."));
     }
 }
 
@@ -6063,15 +6130,9 @@ console.log("Setup tabs");
 initFullScreen();
 initMap();
 
-if (config.features.community_feed) {
-    import('./overlays/community.js')
-        .then((m) => m.init(map, addOverlayLayer, debounce, markerLayer))
-        .catch((err) => console.error('Failed to load community feed module:', err));
-
-    import('./overlays/ducting.js')
-        .then((m) => m.init(addOverlayLayer))
-        .catch((err) => console.error('Failed to load ducting module:', err));
-}
+import('./overlays/ducting.js')
+    .then((m) => m.init(addOverlayLayer))
+    .catch((err) => console.error('Failed to load ducting module:', err));
 
 updateDarkMode();
 
