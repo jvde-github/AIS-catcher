@@ -1065,37 +1065,37 @@ const WebViewer::Route WebViewer::routes[] = {
 	// JSON API routes (application/json)
 	{"/api/ships.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->getShipsJSON() : std::string("{}"); }},
+	 { return s ? s->getShipsJSON() : std::string("{}"); }, true},
 	{"/ships.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->getShipsJSON() : std::string("{}"); }},
+	 { return s ? s->getShipsJSON() : std::string("{}"); }, true},
 	{"/api/ships_full.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->getShipsJSON(true) : std::string("{}"); }},
+	 { return s ? s->getShipsJSON(true) : std::string("{}"); }, true},
 	{"/api/ships_array.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *s, const std::string &a)
 	 { std::time_t since = w->parseSinceParam(a);
-	   return s ? s->getShipsJSONcompact(since) : std::string("{}"); }},
+	   return s ? s->getShipsJSONcompact(since) : std::string("{}"); }, true},
 	{"/api/planes_array.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &a)
 	 { std::time_t since = w->parseSinceParam(a);
-	   return w->planes.getCompactArray(false, since); }},
+	   return w->planes.getCompactArray(false, since); }, true},
 	{"/api/binmsgs.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *s, const std::string &a)
 	 { std::time_t since = w->parseSinceParam(a);
-	   return s ? s->getBinaryMessagesJSON(since) : std::string("{}"); }},
+	   return s ? s->getBinaryMessagesJSON(since) : std::string("{}"); }, true},
 	{"/api/history_full.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->toHistoryJSON() : std::string("{}"); }},
+	 { return s ? s->toHistoryJSON() : std::string("{}"); }, true},
 	{"/api/stat.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *s, const std::string &)
-	 { return s ? w->buildStatJSON(s) : std::string("{}"); }},
+	 { return s ? w->buildStatJSON(s) : std::string("{}"); }, true},
 	{"/stat.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *s, const std::string &)
-	 { return s ? w->buildStatJSON(s) : std::string("{}"); }},
+	 { return s ? w->buildStatJSON(s) : std::string("{}"); }, true},
 	{"/api/path.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *s, const std::string &a)
-	 { return w->buildMultiPathJSON(s, a); }},
+	 { return w->buildMultiPathJSON(s, a); }, true},
 	{"/api/allpath.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *s, const std::string &a)
 	 {
@@ -1103,7 +1103,7 @@ const WebViewer::Route WebViewer::routes[] = {
 			 return std::string("{}");
 		 std::time_t since = w->parseSinceParam(a);
 		 return since > 0 ? s->getAllPathJSONSince(since) : s->getAllPathJSON();
-	 }},
+	 }, true},
 	{"/api/path.geojson", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 {
@@ -1111,10 +1111,10 @@ const WebViewer::Route WebViewer::routes[] = {
 			 return std::string("{}");
 		 int mmsi = parseMMSI(a);
 		 return mmsi > 0 ? s->getPathGeoJSON(mmsi) : std::string("{}");
-	 }},
+	 }, true},
 	{"/api/allpath.geojson", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->getAllPathGeoJSON() : std::string("{}"); }},
+	 { return s ? s->getAllPathGeoJSON() : std::string("{}"); }, true},
 	{"/api/message", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 {
@@ -1125,7 +1125,7 @@ const WebViewer::Route WebViewer::routes[] = {
 			 return std::string("{\"error\":\"Invalid MMSI\"}");
 		 std::string msg = s->getMessage(mmsi);
 		 return msg.empty() ? std::string("{\"error\":\"Message not found\"}") : msg;
-	 }},
+	 }, true},
 	{"/api/vessel", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 {
@@ -1136,7 +1136,7 @@ const WebViewer::Route WebViewer::routes[] = {
 			 return std::string("{\"error\":\"Invalid MMSI\"}");
 		 std::string vessel = s->getShipJSON(mmsi);
 		 return vessel == "{}" ? std::string("{\"error\":\"Vessel not found\"}") : vessel;
-	 }},
+	 }, true},
 	{"/api/decode", &WebViewer::showdecoder, "application/json",
 	 [](WebViewer *, ReceiverTracker *, const std::string &a)
 	 {
@@ -1152,18 +1152,18 @@ const WebViewer::Route WebViewer::routes[] = {
 			 Error() << "Decoder error: " << e.what();
 			 return std::string("{\"error\":\"Decoding failed\"}");
 		 }
-	 }},
+	 }, true},
 
 	// Conditional GeoJSON/KML routes
 	{"/geojson", &WebViewer::GeoJSON, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->getGeoJSON() : std::string("{}"); }},
+	 { return s ? s->getGeoJSON() : std::string("{}"); }, true},
 	{"/allpath.geojson", &WebViewer::GeoJSON, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->getAllPathGeoJSON() : std::string("{}"); }},
+	 { return s ? s->getAllPathGeoJSON() : std::string("{}"); }, true},
 	{"/kml", &WebViewer::KML, "application/vnd.google-earth.kml+xml",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->getKML() : std::string(); }},
+	 { return s ? s->getKML() : std::string(); }, true},
 
 	// Prometheus metrics
 	{"/metrics", &WebViewer::supportPrometheus, "text/plain",
@@ -1172,20 +1172,20 @@ const WebViewer::Route WebViewer::routes[] = {
 		 std::string r = w->dataPrometheus.toPrometheus();
 		 w->dataPrometheus.Reset();
 		 return r;
-	 }},
+	 }, true},
 
 	// Frontend assets
 	{"/custom/plugins.js", nullptr, "application/javascript",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &)
-	 { return w->pluginManager.render(); }},
+	 { return w->pluginManager.render(); }, false},
 	{"/custom/config.css", nullptr, "text/css",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &)
-	 { return w->pluginManager.getStylesheets(); }},
+	 { return w->pluginManager.getStylesheets(); }, false},
 	{"/about.md", nullptr, "text/markdown",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &)
-	 { return w->pluginManager.getAbout(); }},
+	 { return w->pluginManager.getAbout(); }, false},
 
-	{nullptr, nullptr, nullptr, nullptr}};
+	{nullptr, nullptr, nullptr, nullptr, false}};
 
 void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response, bool gzip)
 {
@@ -1216,7 +1216,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 			continue;
 
 		ReceiverTracker *s = getState(parseReceiver(a));
-		Response(c, rt->content_type, rt->handler(this, s, a), use_zlib & gzip);
+		Response(c, rt->content_type, rt->handler(this, s, a), use_zlib & gzip, false, rt->cors);
 		return;
 	}
 

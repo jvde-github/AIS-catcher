@@ -319,6 +319,7 @@ private:
 		bool WebViewer::*flag;
 		const char *content_type;
 		RouteHandler handler;
+		bool cors;
 	};
 
 	static const Route routes[];

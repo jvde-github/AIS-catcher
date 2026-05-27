@@ -182,35 +182,35 @@ namespace IO
 		}
 	}
 
-	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip, bool cache)
+	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip, bool cache, bool cors)
 	{
 #ifdef HASZLIB
 		if (gzip)
 		{
 			zip.zip(content);
-			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache);
+			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache, cors);
 			return;
 		}
 #endif
 
-		ResponseRaw(c, type, content.c_str(), content.size(), false, cache);
+		ResponseRaw(c, type, content.c_str(), content.size(), false, cache, cors);
 	}
 
-	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache)
+	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache, bool cors)
 	{
 #ifdef HASZLIB
 		if (gzip)
 		{
 			zip.zip(data, len);
-			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache);
+			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache, cors);
 			return;
 		}
 #endif
 
-		ResponseRaw(c, type, data, len, false, cache);
+		ResponseRaw(c, type, data, len, false, cache, cors);
 	}
 
-	void HTTPServer::ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache)
+	void HTTPServer::ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache, bool cors)
 	{
 
 		std::string header = "HTTP/1.1 200 OK\r\nServer: AIS-catcher\r\nContent-Type: " + type;
@@ -225,6 +225,9 @@ namespace IO
 			"base-uri 'self'";
 		header += "\r\nX-Content-Type-Options: nosniff";
 		header += "\r\nReferrer-Policy: strict-origin-when-cross-origin";
+
+		if (cors)
+			header += "\r\nAccess-Control-Allow-Origin: *";
 
 		if (gzip)
 			header += "\r\nContent-Encoding: gzip";
