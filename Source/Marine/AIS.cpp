@@ -88,7 +88,7 @@ namespace AIS
 				Send(&msg, 1, tag);
 			}
 			else
-				Warning() << "AIS: invalid message of type " << msg.type() << " and length " << msg.getLength();
+				Debug() << "AIS: invalid message of type " << msg.type() << " and length " << msg.getLength();
 
 			return true;
 		}
