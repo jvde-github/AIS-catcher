@@ -197,6 +197,8 @@ class PluginManager
 		bool realtime = false;
 		bool log_enabled = false;
 		bool decoder = false;
+		bool sharing = false;
+		bool sharing_uuid = false;
 		std::vector<std::pair<int, std::string>> receivers;
 		// version 0 means "no declared version" (CSS plugins).
 		std::vector<std::pair<std::string, int>> plugins_loaded;
@@ -218,6 +220,7 @@ public:
 	void setRealtime(bool b);
 	void setLog(bool b);
 	void setDecoder(bool b);
+	void setSharing(bool sharing, bool sharing_uuid);
 	void setStation(const std::string &name);
 	void setReceivers(const std::vector<std::unique_ptr<ReceiverTracker>> &states);
 	void addPlugin(const std::string &path);

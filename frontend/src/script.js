@@ -1136,6 +1136,25 @@ function communityViewSane(v) {
         && Number.isFinite(v.zoom) && v.zoom >= 0    && v.zoom <= 28;
 }
 
+function sharingDisplay() {
+    const f = config.features || {};
+    if (!f.sharing)        return ["No", "red"];
+    if (!f.sharing_uuid)   return ["Yes (anonymous)", "orange"];
+    return ["Yes", "green"];
+}
+
+function applySharingState() {
+    const f = config.features || {};
+    const cls = !f.sharing ? "fill-red"
+              : !f.sharing_uuid ? "fill-orange"
+              : "fill-green";
+    const btn = document.getElementById("xchange");
+    if (btn) {
+        btn.classList.remove("fill-red", "fill-orange", "fill-green");
+        btn.classList.add(cls);
+    }
+}
+
 function toggleCommunityPane() {
     if (communityPopup && !communityPopup.closed) {
         communityPopup.close();
@@ -3370,9 +3389,8 @@ async function updateStatistics() {
         if (stat.station_link != "") document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
 
         const statSharingElement = document.getElementById("stat_sharing");
-
-        statSharingElement.innerHTML = `<a href="${stat.sharing_link}" target="_blank">${stat.sharing ? 'Yes' : 'No'}</a>`;
-        statSharingElement.style.color = stat.sharing ? "green" : "red";
+        const [sharingText, sharingColor] = sharingDisplay();
+        statSharingElement.innerHTML = `<a href="${stat.sharing_link}" target="_blank" style="color: ${sharingColor}">${sharingText}</a>`;
 
 
         document.getElementById("stat_update_time").textContent = Number(refreshIntervalMs / 1000).toFixed(1) + " s";
@@ -6125,6 +6143,7 @@ loadSettingsFromURL();
 updateForLegacySettings();
 
 applyDynamicStyling();
+applySharingState();
 
 console.log("Setup tabs");
 initFullScreen();

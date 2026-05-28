@@ -89,6 +89,7 @@ namespace IO
 
 		virtual void Start() {}
 		virtual void Stop() {}
+		virtual bool hasUUID() const { return false; }
 		void Connect(Receiver &r);
 
 		void writeJSON(JSON::Writer &w) const

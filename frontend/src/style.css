@@ -709,6 +709,10 @@ td {
     fill: green !important;
 }
 
+.fill-orange {
+    fill: #ff9900 !important;
+}
+
 
 
 #hover-info {

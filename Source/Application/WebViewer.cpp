@@ -42,6 +42,11 @@ void PluginManager::setMsgSave(bool b) { config.save_messages = b; }
 void PluginManager::setRealtime(bool b) { config.realtime = b; }
 void PluginManager::setLog(bool b) { config.log_enabled = b; }
 void PluginManager::setDecoder(bool b) { config.decoder = b; }
+void PluginManager::setSharing(bool sharing, bool sharing_uuid)
+{
+	config.sharing = sharing;
+	config.sharing_uuid = sharing_uuid;
+}
 
 void PluginManager::setStation(const std::string &name)
 {
@@ -189,6 +194,8 @@ std::string PluginManager::render() const
 			.kv("log", config.log_enabled)
 			.kv("decoder", config.decoder)
 			.kv("about_md", aboutPresent)
+			.kv("sharing", config.sharing)
+			.kv("sharing_uuid", config.sharing_uuid)
 			.endObject()
 			.key("receivers")
 			.beginArray();
@@ -872,6 +879,9 @@ void WebViewer::start()
 {
 	for (auto &s : states)
 		s->setup();
+
+	pluginManager.setSharing(comm_feed != nullptr,
+							  comm_feed && comm_feed->hasUUID());
 
 	backup.setTracker(states[0].get());
 

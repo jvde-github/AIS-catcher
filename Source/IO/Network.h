@@ -190,6 +190,8 @@ namespace IO
 	public:
 		TCPClientStreamer() : OutputMessage("TCP Client") { fmt = MessageFormat::NMEA; }
 
+		bool hasUUID() const override { return !uuid.empty(); }
+
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 
 		using StreamIn<AIS::Message>::Receive;
