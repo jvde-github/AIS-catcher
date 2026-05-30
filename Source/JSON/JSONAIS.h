@@ -59,7 +59,13 @@ namespace AIS {
 		void asm_imo_fid3_interrogation_ext(const AIS::Message& msg, int start);
 		void asm_imo_fid4_capability_reply(const AIS::Message& msg, int start);
 		void asm_imo_fid16_persons(const AIS::Message& msg, int start);
+		void asm_imo_fid20_berthing_data(const AIS::Message& msg, int start);
+		void asm_imo_fid23_area_notice(const AIS::Message& msg, int start);
+		void asm_imo_fid25_dangerous_cargo(const AIS::Message& msg, int start);
 		void asm_imo_fid30_text_addressed(const AIS::Message& msg, int start);
+		void asm_inland_fid8_static_data(const AIS::Message& msg, int start);
+		void asm_inland_fid23_emma_warning(const AIS::Message& msg, int start);
+		void asm_inland_fid24_water_level(const AIS::Message& msg, int start);
 		void asm_inland_fid55_persons(const AIS::Message& msg, int start);
 		void asm_uk_fid10_aton_monitor(const AIS::Message& msg, int start);
 		void asm_uk_fid20_buoy_position(const AIS::Message& msg, int start);
