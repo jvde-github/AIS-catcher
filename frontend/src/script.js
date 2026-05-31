@@ -3788,64 +3788,41 @@ function getBinaryMessageContent(binary) {
     return content;
 }
 
-const INLAND_FIDS = [10, 55];
-
 function isInlandMessage(msg) {
     if (!msg.message) return false;
     const fi = msg.message.fid != null ? msg.message.fid : msg.message.fi;
-    return msg.message.dac == 200 && INLAND_FIDS.includes(fi);
+    return msg.message.dac == 200 && fi == 55;
 }
 
 function getInlandMessageContent(binary) {
     const messages = Array.isArray(binary) ? binary : [binary];
     if (messages.length === 0) return '';
 
-    const titles = { 10: 'Inland Static/Voyage', 55: 'Persons on Board' };
-
-    // Keep only the latest message per FID type
-    const latestByFi = {};
+    // Keep only the latest persons-on-board message
+    let entry = null;
     messages.forEach(m => {
-        const fi = m.message.fid != null ? m.message.fid : m.message.fi;
-        if (!latestByFi[fi] || m.timestamp > latestByFi[fi].timestamp) latestByFi[fi] = m;
+        if (!isInlandMessage(m)) return;
+        if (!entry || m.timestamp > entry.timestamp) entry = m;
     });
+    if (!entry) return '';
+
+    const msg = entry.message;
 
     const row = (label, value) =>
         `<div style="display: flex; justify-content: space-between; padding: 1px 0; white-space: nowrap;">` +
         `<span style="font-size: 11px; opacity: 0.6; margin-right: 12px;">${label}</span>` +
         `<span style="font-size: 11px; font-weight: bold;">${value}</span></div>`;
 
-    // hazard (blue cones): 0=none/na, 1/2/3=cones, 4=B-flag, 5=unknown
-    const hazardText = h => (h >= 1 && h <= 3) ? `${h} blue cone${h > 1 ? 's' : ''}` : (h == 4 ? 'B-flag' : null);
-    // loaded: 1=Loaded, 2=Unloaded (0=not available)
-    const loadedText = l => l == 1 ? 'Loaded' : (l == 2 ? 'Unloaded' : null);
+    let content = '<div class="meteo-tooltip">';
+    content += `<div style="font-size: 11px; color: #FFA500; padding: 4px 0 3px; margin-bottom: 2px;">`;
+    content += `<span style="font-size: 11px;">${entry.formattedTime} - Persons on Board</span>`;
+    content += '</div>';
 
-    let content = '';
-    Object.keys(latestByFi).sort((a, b) => a - b).forEach(fi => {
-        const entry = latestByFi[fi];
-        const msg = entry.message;
+    if (msg.crew_count != null) content += row('Crew', msg.crew_count);
+    if (msg.passenger_count != null) content += row('Passengers', msg.passenger_count);
+    if (msg.shipboard_personnel_count != null) content += row('Personnel', msg.shipboard_personnel_count);
 
-        content += '<div class="meteo-tooltip">';
-        content += `<div style="font-size: 11px; color: #FFA500; padding: 4px 0 3px; margin-bottom: 2px;">`;
-        content += `<span style="font-size: 11px;">${entry.formattedTime} - ${titles[fi] || 'Inland AIS'}</span>`;
-        content += '</div>';
-
-        if (fi == 55) {
-            if (msg.crew_count != null) content += row('Crew', msg.crew_count);
-            if (msg.passenger_count != null) content += row('Passengers', msg.passenger_count);
-            if (msg.shipboard_personnel_count != null) content += row('Personnel', msg.shipboard_personnel_count);
-        } else if (fi == 10) {
-            if (msg.vin) content += row('ENI', msg.vin);
-            if (msg.length && msg.beam) content += row('Size', `${msg.length} &times; ${msg.beam} m`);
-            if (msg.draught) content += row('Draught', msg.draught + ' m');
-            const hz = hazardText(msg.hazard);
-            if (hz) content += row('Hazard', hz);
-            const ld = loadedText(msg.loaded);
-            if (ld) content += row('Cargo', ld);
-        }
-
-        content += '</div>';
-    });
-
+    content += '</div>';
     return content;
 }
 
