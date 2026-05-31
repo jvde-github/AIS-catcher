@@ -1312,6 +1312,8 @@ function getBinaryMessageList(messages) {
 
         if (msg.message && msg.message.dac == 1 && (msg.message.fid == 31 || msg.message.fi == 31)) {
             content += getBinaryMessageContent(msg, false);
+        } else if (isInlandMessage(msg)) {
+            content += getInlandMessageContent(msg);
         } else {
             content += '<div class="binary-message-details">';
             content += `<div><strong>Message Type:</strong> ${msg.message ? `DAC ${msg.message.dac}, FI ${msg.message.fid || msg.message.fi}` : 'Unknown'}</div>`;
@@ -2817,7 +2819,8 @@ async function fetchBinary() {
         if (data.timeout) binaryTimeout = data.timeout;
 
         messages.forEach((msg) => {
-            if (msg.message && msg.message.mmsi && msg.message.lat && msg.message.lon) {
+            const hasLocation = msg.message && msg.message.lat && msg.message.lon;
+            if (msg.message && msg.message.mmsi && (hasLocation || isInlandMessage(msg))) {
                 const mmsi = msg.message.mmsi;
 
                 if (!binaryDB[mmsi]) {
@@ -2832,8 +2835,10 @@ async function fetchBinary() {
                 if (exists) return;
 
                 msg.formattedTime = formatTime(msg.timestamp);
-                msg.message_lat = msg.message.lat;
-                msg.message_lon = msg.message.lon;
+                if (hasLocation) {
+                    msg.message_lat = msg.message.lat;
+                    msg.message_lon = msg.message.lon;
+                }
 
                 binaryDB[mmsi].ship_messages.push(msg);
             }
@@ -3470,13 +3475,21 @@ function getTooltipContent(ship) {
     if (ship.mmsi in binaryDB && binaryDB[ship.mmsi].ship_messages &&
         binaryDB[ship.mmsi].ship_messages.length > 0) {
 
-        const meteoMessages = binaryDB[ship.mmsi].ship_messages.filter(msg =>
+        const messages = binaryDB[ship.mmsi].ship_messages;
+
+        const meteoMessages = messages.filter(msg =>
             msg.message && msg.message.dac == 1 &&
             (msg.message.fid == 31 || msg.message.fi == 31)
         );
 
         if (meteoMessages.length > 0) {
             content += getBinaryMessageContent(meteoMessages);
+        }
+
+        const inlandMessages = messages.filter(msg => isInlandMessage(msg));
+
+        if (inlandMessages.length > 0) {
+            content += getInlandMessageContent(inlandMessages);
         }
     }
 
@@ -3775,6 +3788,67 @@ function getBinaryMessageContent(binary) {
     return content;
 }
 
+const INLAND_FIDS = [10, 55];
+
+function isInlandMessage(msg) {
+    if (!msg.message) return false;
+    const fi = msg.message.fid != null ? msg.message.fid : msg.message.fi;
+    return msg.message.dac == 200 && INLAND_FIDS.includes(fi);
+}
+
+function getInlandMessageContent(binary) {
+    const messages = Array.isArray(binary) ? binary : [binary];
+    if (messages.length === 0) return '';
+
+    const titles = { 10: 'Inland Static/Voyage', 55: 'Persons on Board' };
+
+    // Keep only the latest message per FID type
+    const latestByFi = {};
+    messages.forEach(m => {
+        const fi = m.message.fid != null ? m.message.fid : m.message.fi;
+        if (!latestByFi[fi] || m.timestamp > latestByFi[fi].timestamp) latestByFi[fi] = m;
+    });
+
+    const row = (label, value) =>
+        `<div style="display: flex; justify-content: space-between; padding: 1px 0; white-space: nowrap;">` +
+        `<span style="font-size: 11px; opacity: 0.6; margin-right: 12px;">${label}</span>` +
+        `<span style="font-size: 11px; font-weight: bold;">${value}</span></div>`;
+
+    // hazard (blue cones): 0=none/na, 1/2/3=cones, 4=B-flag, 5=unknown
+    const hazardText = h => (h >= 1 && h <= 3) ? `${h} blue cone${h > 1 ? 's' : ''}` : (h == 4 ? 'B-flag' : null);
+    // loaded: 1=Loaded, 2=Unloaded (0=not available)
+    const loadedText = l => l == 1 ? 'Loaded' : (l == 2 ? 'Unloaded' : null);
+
+    let content = '';
+    Object.keys(latestByFi).sort((a, b) => a - b).forEach(fi => {
+        const entry = latestByFi[fi];
+        const msg = entry.message;
+
+        content += '<div class="meteo-tooltip">';
+        content += `<div style="font-size: 11px; color: #FFA500; padding: 4px 0 3px; margin-bottom: 2px;">`;
+        content += `<span style="font-size: 11px;">${entry.formattedTime} - ${titles[fi] || 'Inland AIS'}</span>`;
+        content += '</div>';
+
+        if (fi == 55) {
+            if (msg.crew_count != null) content += row('Crew', msg.crew_count);
+            if (msg.passenger_count != null) content += row('Passengers', msg.passenger_count);
+            if (msg.shipboard_personnel_count != null) content += row('Personnel', msg.shipboard_personnel_count);
+        } else if (fi == 10) {
+            if (msg.vin) content += row('ENI', msg.vin);
+            if (msg.length && msg.beam) content += row('Size', `${msg.length} &times; ${msg.beam} m`);
+            if (msg.draught) content += row('Draught', msg.draught + ' m');
+            const hz = hazardText(msg.hazard);
+            if (hz) content += row('Hazard', hz);
+            const ld = loadedText(msg.loaded);
+            if (ld) content += row('Cargo', ld);
+        }
+
+        content += '</div>';
+    });
+
+    return content;
+}
+
 const startHover = function (type, mmsi, pixel, feature) {
 
     if (type != 'ship' && type != 'tooltip' && type != 'plane' && type != 'binary') return;
@@ -3928,6 +4002,13 @@ const handlePointerMove = function (pixel, target) {
 
             if (meteoMessages.length > 0) {
                 tooltipContent += getBinaryMessageContent(meteoMessages);
+            }
+
+            // Add inland data if available
+            const inlandMessages = feature.binary_messages.filter(msg => isInlandMessage(msg));
+
+            if (inlandMessages.length > 0) {
+                tooltipContent += getInlandMessageContent(inlandMessages);
             }
 
             startHover('tooltip', tooltipContent, pixel, feature);
@@ -4443,6 +4524,7 @@ function populateShipcard() {
     document.getElementById("shipcard_distance").innerHTML = ship.distance ? (getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "")) : null;
     document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDimVal(ship.draught) + " " + getDimUnit() : null;
     document.getElementById("shipcard_dimension").innerHTML = getShipDimension(ship);
+    document.getElementById("shipcard_bluesign").innerHTML = ship.maneuver === 2 ? "Set" : (ship.maneuver === 1 ? "Not set" : null);
 
     updateShipcardTrackOption(card_mmsi);
     updateMessageButton();
@@ -5225,7 +5307,11 @@ function redrawBinaryMessages() {
 
             // Sort messages by proximity to the ship
             allMessages.forEach(msg => {
-                if (!msg.message_lat || !msg.message_lon) return;
+                // Messages without their own location (e.g. inland FID 10/55) badge on the ship
+                if (!msg.message_lat || !msg.message_lon) {
+                    shipMessages.push(msg);
+                    return;
+                }
 
                 const msgLat = msg.message_lat;
                 const msgLon = msg.message_lon;

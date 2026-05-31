@@ -838,6 +838,7 @@ namespace AIS
 		else if (dac == 200 && fid == 10)                      asm_inland_fid10_eri_static(msg, start);
 		else if (dac == 200 && fid == 23)                      asm_inland_fid23_emma_warning(msg, start);
 		else if (dac == 200 && fid == 24)                      asm_inland_fid24_water_level(msg, start);
+		else if (dac == 200 && fid == 55)                      asm_inland_fid55_persons(msg, start);
 		else if (dac == 1 && fid == 31)                        asm_imo_fid31_meteo_hydro(msg, start);
 		else if (dac == 200 && fid == 25)                      asm_inland_fid25_bridge_clearance(msg, start);
 		else if (dac == 1 && fid == 21)                        asm_imo_fid21_weather_ship(msg, start);
