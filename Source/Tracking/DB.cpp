@@ -908,9 +908,14 @@ bool DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &v, b
 	case AIS::KEY_VIN:
 	{
 		const std::string &s = p.Get().getString();
-		size_t n = MIN(s.size(), sizeof(v.vin) - 1);
-		std::memcpy(v.vin, s.data(), n);
-		v.vin[n] = '\0';
+		if (s.size() < sizeof(v.vin)) // worst case (no spaces stripped) still fits
+		{
+			size_t n = 0;
+			for (char c : s)
+				if (c != ' ')
+					v.vin[n++] = c;
+			v.vin[n] = '\0';
+		}
 		staticUpdated = true;
 		break;
 	}
