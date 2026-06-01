@@ -35,6 +35,7 @@
 
 #ifdef __APPLE__
 #include <sys/sysctl.h>
+#include <mach/mach.h>
 #endif
 
 #include "Helper.h"
@@ -91,13 +92,20 @@ namespace Util
 
 	long Helper::getMemoryConsumption()
 	{
-		int memory = 0;
+		long memory = 0;
 #ifdef _WIN32
 		HANDLE hProcess = GetCurrentProcess();
 		PROCESS_MEMORY_COUNTERS_EX pmc;
 		if (GetProcessMemoryInfo(hProcess, reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&pmc), sizeof(pmc)))
 		{
 			memory = pmc.WorkingSetSize;
+		}
+#elif defined(__APPLE__)
+		mach_task_basic_info info;
+		mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
+		if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count) == KERN_SUCCESS)
+		{
+			memory = info.resident_size;
 		}
 #else
 		std::ifstream statm("/proc/self/statm");
