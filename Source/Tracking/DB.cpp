@@ -184,6 +184,7 @@ std::string DB::getJSONcompact(bool full, std::time_t since)
 						.val_unless((int)ship.day, ETA_DAY_UNDEFINED)
 						.val_unless((int)ship.hour, ETA_HOUR_UNDEFINED)
 						.val_unless((int)ship.minute, ETA_MINUTE_UNDEFINED)
+						.val(ship.vin)
 						.endArray();
 				}
 			}
@@ -246,6 +247,7 @@ void DB::getShipJSON(const Ship &ship, JSON::Writer &w, long int delta_time)
 		w.kv("shipname", ship.shipname);
 
 	w.kv("destination", ship.destination)
+		.kv("eni", ship.vin)
 		.kv("repeat", ship.getRepeat())
 		.kv("last_signal", delta_time)
 		.endObject();
@@ -900,6 +902,15 @@ bool DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &v, b
 		size_t n = MIN(s.size(), sizeof(v.destination) - 1);
 		std::memcpy(v.destination, s.data(), n);
 		v.destination[n] = '\0';
+		staticUpdated = true;
+		break;
+	}
+	case AIS::KEY_VIN:
+	{
+		const std::string &s = p.Get().getString();
+		size_t n = MIN(s.size(), sizeof(v.vin) - 1);
+		std::memcpy(v.vin, s.data(), n);
+		v.vin[n] = '\0';
 		staticUpdated = true;
 		break;
 	}

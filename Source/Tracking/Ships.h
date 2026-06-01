@@ -51,7 +51,7 @@ struct Ship
     char month, day, hour, minute;
     float lat, lon, ppm, level, speed, cog, draught, distance;
     std::time_t last_signal, last_direct_signal, last_static_signal;
-    char shipname[21], destination[21], callsign[8], country_code[3];
+    char shipname[21], destination[21], callsign[8], country_code[3], vin[9];
     std::string msg;
     uint64_t last_group, group_mask;
     Util::PackedInt flags;
@@ -70,7 +70,7 @@ struct Ship
 
 private:
     static const int _SHIP_MAGIC = 0x53484950; // "SHIP" in hex
-    static const int _SHIP_VERSION = 1;
+    static const int _SHIP_VERSION = 2;
 
 public:
     // Setters for PackedInt fields

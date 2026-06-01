@@ -2901,7 +2901,8 @@ async function fetchShips(noDoubleFetch = true) {
         "mmsi", "shipname", "callsign", "destination",
         "shiptype", "imo",
         "to_bow", "to_stern", "to_port", "to_starboard",
-        "draught", "eta_month", "eta_day", "eta_hour", "eta_minute"
+        "draught", "eta_month", "eta_day", "eta_hour", "eta_minute",
+        "eni"
     ];
 
     const serverTime = ships.time || 0;
@@ -2918,6 +2919,7 @@ async function fetchShips(noDoubleFetch = true) {
             const s = Object.fromEntries(staticKeys.map((k, i) => [k, v[i]]));
             s.shipname = sanitizeString(s.shipname);
             s.callsign = sanitizeString(s.callsign);
+            s.eni = sanitizeString(s.eni || "");
             const mmsi = s.mmsi;
             if (mmsi in shipsDB) {
                 Object.assign(shipsDB[mmsi].raw, s);
@@ -4469,7 +4471,16 @@ function populateShipcard() {
     setShipcardValidation(ship.validated);
 
     // verbatim copies
-    ["destination", "mmsi", "count", "imo", "received_stations"].forEach((e) => (document.getElementById("shipcard_" + e).innerHTML = ship[e] != null ? ship[e] : "-"));
+    ["destination", "mmsi", "count", "received_stations"].forEach((e) => (document.getElementById("shipcard_" + e).innerHTML = ship[e] != null ? ship[e] : "-"));
+
+    // IMO row doubles as ENI (inland) when no IMO is available
+    if (ship.imo != null) {
+        document.getElementById("shipcard_imo_label").innerHTML = "IMO";
+        document.getElementById("shipcard_imo").innerHTML = ship.imo;
+    } else {
+        document.getElementById("shipcard_imo_label").innerHTML = ship.eni ? "ENI" : "IMO";
+        document.getElementById("shipcard_imo").innerHTML = ship.eni || "-";
+    }
 
     // round and add units
     [

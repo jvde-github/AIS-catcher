@@ -60,6 +60,7 @@ void Ship::reset()
 	memset(destination, 0, sizeof(destination));
 	memset(callsign, 0, sizeof(callsign));
 	memset(country_code, 0, sizeof(country_code));
+	memset(vin, 0, sizeof(vin));
 	last_group = GROUP_OUT_UNDEFINED;
 
 	msg.clear();
@@ -354,7 +355,7 @@ bool Ship::Save(std::ofstream &file) const
 		&& W(distance) && W(draught) && W(speed) && W(cog)
 		&& W(last_signal) && W(last_direct_signal)
 		&& W(shipclass) && W(mmsi_type)
-		&& W(shipname) && W(destination) && W(callsign) && W(country_code)
+		&& W(shipname) && W(destination) && W(callsign) && W(country_code) && W(vin)
 		&& W(last_group)
 		&& W(incoming.next) && W(incoming.prev) && W(path_ptr));
 }
@@ -375,7 +376,7 @@ bool Ship::Load(std::ifstream &file)
 		&& R(distance) && R(draught) && R(speed) && R(cog)
 		&& R(last_signal) && R(last_direct_signal)
 		&& R(shipclass) && R(mmsi_type)
-		&& R(shipname) && R(destination) && R(callsign) && R(country_code)
+		&& R(shipname) && R(destination) && R(callsign) && R(country_code) && R(vin)
 		&& R(last_group)
 		&& R(incoming.next) && R(incoming.prev) && R(path_ptr));
 
