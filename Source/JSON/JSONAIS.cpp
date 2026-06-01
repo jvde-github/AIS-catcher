@@ -285,6 +285,48 @@ namespace AIS
 		U(msg, AIS::KEY_PERSONS, start, 13, 8191);
 	}
 
+	// ITU-R M.1371-5 — berthing data / port operations (DAC=1, FID=20).
+	void JSONAIS::asm_imo_fid20_berthing_data(const AIS::Message &msg, int start)
+	{
+		U(msg, AIS::KEY_BERTH_TYPE, start, 4);
+		U(msg, AIS::KEY_BERTH_NUMBER, start + 4, 10, 0);
+		T(msg, AIS::KEY_BERTH_NAME, start + 14, 84, name);
+		U(msg, AIS::KEY_BERTH_ARRIVAL_TIME, start + 98, 20, 0);
+		U(msg, AIS::KEY_BERTH_DEPARTURE_TIME, start + 118, 20, 0);
+		SL(msg, AIS::KEY_BERTH_LON, start + 138, 25, 1 / 600000.0f, 0);
+		SL(msg, AIS::KEY_BERTH_LAT, start + 163, 24, 1 / 600000.0f, 0);
+		X(msg, AIS::KEY_SPARE, start + 187, 1);
+	}
+
+	// ITU-R M.1371-5 — area notice / navigation safety (DAC=1, FID=23).
+	void JSONAIS::asm_imo_fid23_area_notice(const AIS::Message &msg, int start)
+	{
+		U(msg, AIS::KEY_AREA_NOTICE_TYPE, start, 7);
+		U(msg, AIS::KEY_AREA_NOTICE_DURATION, start + 7, 13, 0);
+		B(msg, AIS::KEY_AREA_NOTICE_PRIORITY, start + 20, 1);
+		SL(msg, AIS::KEY_AREA_NOTICE_LON1, start + 21, 25, 1 / 600000.0f, 0);
+		SL(msg, AIS::KEY_AREA_NOTICE_LAT1, start + 46, 24, 1 / 600000.0f, 0);
+		SL(msg, AIS::KEY_AREA_NOTICE_LON2, start + 70, 25, 1 / 600000.0f, 0);
+		SL(msg, AIS::KEY_AREA_NOTICE_LAT2, start + 95, 24, 1 / 600000.0f, 0);
+		int text_len = msg.getLength() - (start + 119);
+		if (text_len < 6) text_len = 0;
+		if (text_len > 360) text_len = 360;
+		text_len -= text_len % 6;
+		if (text_len > 0)
+			T(msg, AIS::KEY_AREA_NOTICE_NAME, start + 119, text_len, name);
+	}
+
+	// ITU-R M.1371-5 — dangerous cargo / IMDG (DAC=1, FID=25).
+	void JSONAIS::asm_imo_fid25_dangerous_cargo(const AIS::Message &msg, int start)
+	{
+		U(msg, AIS::KEY_CARGO_HAZARD_REPORT_TYPE, start, 8);
+		U(msg, AIS::KEY_CARGO_HAZARD_CLASS, start + 8, 4);
+		U(msg, AIS::KEY_CARGO_HAZARD_CATEGORY, start + 12, 4);
+		U(msg, AIS::KEY_CARGO_HAZARD_ID, start + 16, 13, 0);
+		UL(msg, AIS::KEY_CARGO_HAZARD_QUANTITY, start + 29, 10, 0.1f, 0);
+		X(msg, AIS::KEY_SPARE, start + 39, 1);
+	}
+
 	// IMO SN.1/Circ.289 Annex §14 Table 14.3 — text description, addressed (DAC=1, FID=30).
 	void JSONAIS::asm_imo_fid30_text_addressed(const AIS::Message &msg, int start)
 	{
@@ -664,6 +706,95 @@ namespace AIS
 		}
 	}
 
+	// UNECE ECE/TRANS/SC.3/176 Rev.2 — Inland ship static and voyage data (DAC=200, FID=8).
+	void JSONAIS::asm_inland_fid8_static_data(const AIS::Message &msg, int start)
+	{
+		T(msg, AIS::KEY_INLAND_LOCODE, start + 0, 48, text);
+		E(msg, AIS::KEY_INLAND_SHIPTYPE, start + 48, 8, 0);
+		UL(msg, AIS::KEY_INLAND_DRAUGHT, start + 56, 8, 0.1f, 0);
+		U(msg, AIS::KEY_INLAND_LENGTH, start + 64, 8);
+		U(msg, AIS::KEY_INLAND_BEAM, start + 72, 8);
+		T(msg, AIS::KEY_DESTINATION, start + 80, 96, destination);
+	}
+
+	// UNECE ECE/TRANS/SC.3/176 Rev.2 — EMMA safety warning, broadcast (DAC=200, FID=23).
+	void JSONAIS::asm_inland_fid23_emma_warning(const AIS::Message &msg, int start)
+	{
+		unsigned start_year = msg.getUint(start + 0, 14);
+		unsigned start_month = msg.getUint(start + 14, 4);
+		unsigned start_day = msg.getUint(start + 18, 5);
+		unsigned end_year = msg.getUint(start + 23, 14);
+		unsigned end_month = msg.getUint(start + 37, 4);
+		unsigned end_day = msg.getUint(start + 41, 5);
+
+		char buf[16];
+		if (start_year > 0 && start_month > 0 && start_day > 0) {
+			snprintf(buf, sizeof(buf), "%04u%02u%02u", start_year, start_month, start_day);
+			json.Add(AIS::KEY_START_DATE, buf);
+		}
+		if (end_year > 0 && end_month > 0 && end_day > 0) {
+			snprintf(buf, sizeof(buf), "%04u%02u%02u", end_year, end_month, end_day);
+			json.Add(AIS::KEY_END_DATE, buf);
+		}
+
+		unsigned start_hour = msg.getUint(start + 46, 5);
+		unsigned start_min = msg.getUint(start + 51, 6);
+		unsigned end_hour = msg.getUint(start + 57, 5);
+		unsigned end_min = msg.getUint(start + 62, 6);
+
+		if (start_hour < 24 && start_min < 60) {
+			snprintf(buf, sizeof(buf), "%02u%02u", start_hour, start_min);
+			json.Add(AIS::KEY_START_TIME, buf);
+		}
+		if (end_hour < 24 && end_min < 60) {
+			snprintf(buf, sizeof(buf), "%02u%02u", end_hour, end_min);
+			json.Add(AIS::KEY_END_TIME, buf);
+		}
+
+		SL(msg, AIS::KEY_START_LON, start + 68, 28, 1 / 600000.0f, 0);
+		SL(msg, AIS::KEY_START_LAT, start + 96, 27, 1 / 600000.0f, 0);
+		SL(msg, AIS::KEY_END_LON, start + 123, 28, 1 / 600000.0f, 0);
+		SL(msg, AIS::KEY_END_LAT, start + 151, 27, 1 / 600000.0f, 0);
+
+		E(msg, AIS::KEY_EMMA_WARNING_TYPE, start + 178, 4, 0);
+		U(msg, AIS::KEY_MIN_VALUE, start + 182, 9);
+		U(msg, AIS::KEY_MAX_VALUE, start + 191, 9);
+		E(msg, AIS::KEY_EMMA_SEVERITY, start + 200, 2, 0);
+		U(msg, AIS::KEY_WIND_DIRECTION, start + 202, 4);
+		T(msg, AIS::KEY_EMMA_DESCRIPTION, start + 206, 168, text);
+	}
+
+	// UNECE ECE/TRANS/SC.3/176 Rev.2 — Water level data (DAC=200, FID=24).
+	void JSONAIS::asm_inland_fid24_water_level(const AIS::Message &msg, int start)
+	{
+		for (int i = 0; i < 4; i++) {
+			int offset = start + (i * 25);
+			unsigned station_id = msg.getUint(offset, 11);
+			int water_level = msg.getInt(offset + 11, 14);
+
+			if (station_id != 0 && water_level != -8192) {
+				switch (i) {
+				case 0:
+					json.Add(AIS::KEY_GAUGE1_ID, (int)station_id);
+					json.Add(AIS::KEY_GAUGE1_LEVEL, water_level);
+					break;
+				case 1:
+					json.Add(AIS::KEY_GAUGE2_ID, (int)station_id);
+					json.Add(AIS::KEY_GAUGE2_LEVEL, water_level);
+					break;
+				case 2:
+					json.Add(AIS::KEY_GAUGE3_ID, (int)station_id);
+					json.Add(AIS::KEY_GAUGE3_LEVEL, water_level);
+					break;
+				case 3:
+					json.Add(AIS::KEY_GAUGE4_ID, (int)station_id);
+					json.Add(AIS::KEY_GAUGE4_LEVEL, water_level);
+					break;
+				}
+			}
+		}
+	}
+
 	// ---------- Dispatchers ----------
 
 	void JSONAIS::ProcessMsg6Data(const AIS::Message &msg)
@@ -678,7 +809,11 @@ namespace AIS
 		else if (dac == 1 && fid == 3)                         asm_imo_fid3_interrogation_ext(msg, start);
 		else if (dac == 1 && fid == 4)                         asm_imo_fid4_capability_reply(msg, start);
 		else if (dac == 1 && (fid == 16 || fid == 40))         asm_imo_fid16_persons(msg, start);
+		else if (dac == 1 && fid == 20)                        asm_imo_fid20_berthing_data(msg, start);
+		else if (dac == 1 && fid == 23)                        asm_imo_fid23_area_notice(msg, start);
+		else if (dac == 1 && fid == 25)                        asm_imo_fid25_dangerous_cargo(msg, start);
 		else if (dac == 1 && fid == 30)                        asm_imo_fid30_text_addressed(msg, start);
+		else if (dac == 200 && fid == 8)                       asm_inland_fid8_static_data(msg, start);
 		else if (dac == 200 && fid == 55)                      asm_inland_fid55_persons(msg, start);
 		else if ((dac == 235 || dac == 250 || dac == 366) && fid == 10)      asm_uk_fid10_aton_monitor(msg, start);
 		else if (dac == 235 && fid == 20)                      asm_uk_fid20_buoy_position(msg, start);
@@ -696,7 +831,14 @@ namespace AIS
 
 		if (dac == 1 && fid == 0)                              asm_imo_fid0_text(msg, start);
 		else if (dac == 1 && fid == 16)                        asm_imo_fid16_vts_targets(msg, start);
+		else if (dac == 1 && fid == 20)                        asm_imo_fid20_berthing_data(msg, start);
+		else if (dac == 1 && fid == 23)                        asm_imo_fid23_area_notice(msg, start);
+		else if (dac == 1 && fid == 25)                        asm_imo_fid25_dangerous_cargo(msg, start);
+		else if (dac == 200 && fid == 8)                       asm_inland_fid8_static_data(msg, start);
 		else if (dac == 200 && fid == 10)                      asm_inland_fid10_eri_static(msg, start);
+		else if (dac == 200 && fid == 23)                      asm_inland_fid23_emma_warning(msg, start);
+		else if (dac == 200 && fid == 24)                      asm_inland_fid24_water_level(msg, start);
+		else if (dac == 200 && fid == 55)                      asm_inland_fid55_persons(msg, start);
 		else if (dac == 1 && fid == 31)                        asm_imo_fid31_meteo_hydro(msg, start);
 		else if (dac == 200 && fid == 25)                      asm_inland_fid25_bridge_clearance(msg, start);
 		else if (dac == 1 && fid == 21)                        asm_imo_fid21_weather_ship(msg, start);

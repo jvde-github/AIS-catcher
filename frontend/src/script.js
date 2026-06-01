@@ -1312,6 +1312,8 @@ function getBinaryMessageList(messages) {
 
         if (msg.message && msg.message.dac == 1 && (msg.message.fid == 31 || msg.message.fi == 31)) {
             content += getBinaryMessageContent(msg, false);
+        } else if (isInlandMessage(msg)) {
+            content += getInlandMessageContent(msg);
         } else {
             content += '<div class="binary-message-details">';
             content += `<div><strong>Message Type:</strong> ${msg.message ? `DAC ${msg.message.dac}, FI ${msg.message.fid || msg.message.fi}` : 'Unknown'}</div>`;
@@ -1578,9 +1580,9 @@ function getShipTypeVal(s) {
             case 8020:
                 return "Motor Tanker";
             case 8021:
-                return "Motor Tanker (liquid)";
+                return "Motor Tanker (liquid, type N)";
             case 8022:
-                return "Motor Tanker (liquid)";
+                return "Motor Tanker (liquid, type C)";
             case 8023:
                 return "Motor Tanker (dry)";
             case 8030:
@@ -1598,7 +1600,7 @@ function getShipTypeVal(s) {
             case 8090:
                 return "Motor Freighter (pushing)";
             case 8100:
-                return "Motor Freighter (pushing)";
+                return "Motor Freighter (pushing tanker)";
             case 8110:
                 return "Tug, Freighter";
             case 8120:
@@ -1612,9 +1614,9 @@ function getShipTypeVal(s) {
             case 8160:
                 return "Tankbarge";
             case 8161:
-                return "Tankbarge (liquid)";
+                return "Tankbarge (liquid, type N)";
             case 8162:
-                return "Tankbarge (liquid)";
+                return "Tankbarge (liquid, type C)";
             case 8163:
                 return "Tankbarge (dry)";
             case 8170:
@@ -1638,25 +1640,25 @@ function getShipTypeVal(s) {
             case 8280:
                 return "Pushtow (eight cargo barges)";
             case 8290:
-                return "Pushtow (nine or more barges)";
+                return "Pushtow (nine or more cargo barges)";
             case 8310:
                 return "Pushtow (one tank/gas barge)";
             case 8320:
-                return "Pushtow (two barges)";
+                return "Pushtow (two tank/gas barges)";
             case 8330:
-                return "Pushtow (three barges)";
+                return "Pushtow (three tank/gas barges)";
             case 8340:
-                return "Pushtow (four barges)";
+                return "Pushtow (four tank/gas barges)";
             case 8350:
-                return "Pushtow (five barges)";
+                return "Pushtow (five tank/gas barges)";
             case 8360:
-                return "Pushtow (six barges)";
+                return "Pushtow (six tank/gas barges)";
             case 8370:
-                return "Pushtow (seven barges)";
+                return "Pushtow (seven tank/gas barges)";
             case 8380:
-                return "Pushtow (eight barges)";
+                return "Pushtow (eight tank/gas barges)";
             case 8390:
-                return "Pushtow (nine or more barges)";
+                return "Pushtow (nine or more tank/gas barges)";
             case 8400:
                 return "Tug (single)";
             case 8410:
@@ -1674,7 +1676,7 @@ function getShipTypeVal(s) {
             case 8443:
                 return "Cruise";
             case 8444:
-                return "Passenger";
+                return "Passenger (no accommodation)";
             case 8450:
                 return "Service, Police or Port Service";
             case 8460:
@@ -1694,13 +1696,13 @@ function getShipTypeVal(s) {
             case 1510:
                 return "Unit Carrier Maritime";
             case 1520:
-                return "bulk Carrier Maritime";
+                return "Bulk Carrier Maritime";
             case 1530:
                 return "Tanker";
             case 1540:
-                return "Liquified Gas Tanker";
+                return "Liquefied Gas Tanker";
             case 1850:
-                return "Pleasure";
+                return "Pleasure craft (> 20 m)";
             case 1900:
                 return "Fast Ship";
             case 1910:
@@ -2817,7 +2819,8 @@ async function fetchBinary() {
         if (data.timeout) binaryTimeout = data.timeout;
 
         messages.forEach((msg) => {
-            if (msg.message && msg.message.mmsi && msg.message.lat && msg.message.lon) {
+            const hasLocation = msg.message && msg.message.lat && msg.message.lon;
+            if (msg.message && msg.message.mmsi && (hasLocation || isInlandMessage(msg))) {
                 const mmsi = msg.message.mmsi;
 
                 if (!binaryDB[mmsi]) {
@@ -2832,8 +2835,10 @@ async function fetchBinary() {
                 if (exists) return;
 
                 msg.formattedTime = formatTime(msg.timestamp);
-                msg.message_lat = msg.message.lat;
-                msg.message_lon = msg.message.lon;
+                if (hasLocation) {
+                    msg.message_lat = msg.message.lat;
+                    msg.message_lon = msg.message.lon;
+                }
 
                 binaryDB[mmsi].ship_messages.push(msg);
             }
@@ -2896,7 +2901,8 @@ async function fetchShips(noDoubleFetch = true) {
         "mmsi", "shipname", "callsign", "destination",
         "shiptype", "imo",
         "to_bow", "to_stern", "to_port", "to_starboard",
-        "draught", "eta_month", "eta_day", "eta_hour", "eta_minute"
+        "draught", "eta_month", "eta_day", "eta_hour", "eta_minute",
+        "eni"
     ];
 
     const serverTime = ships.time || 0;
@@ -2913,6 +2919,7 @@ async function fetchShips(noDoubleFetch = true) {
             const s = Object.fromEntries(staticKeys.map((k, i) => [k, v[i]]));
             s.shipname = sanitizeString(s.shipname);
             s.callsign = sanitizeString(s.callsign);
+            s.eni = sanitizeString(s.eni || "");
             const mmsi = s.mmsi;
             if (mmsi in shipsDB) {
                 Object.assign(shipsDB[mmsi].raw, s);
@@ -3470,13 +3477,21 @@ function getTooltipContent(ship) {
     if (ship.mmsi in binaryDB && binaryDB[ship.mmsi].ship_messages &&
         binaryDB[ship.mmsi].ship_messages.length > 0) {
 
-        const meteoMessages = binaryDB[ship.mmsi].ship_messages.filter(msg =>
+        const messages = binaryDB[ship.mmsi].ship_messages;
+
+        const meteoMessages = messages.filter(msg =>
             msg.message && msg.message.dac == 1 &&
             (msg.message.fid == 31 || msg.message.fi == 31)
         );
 
         if (meteoMessages.length > 0) {
             content += getBinaryMessageContent(meteoMessages);
+        }
+
+        const inlandMessages = messages.filter(msg => isInlandMessage(msg));
+
+        if (inlandMessages.length > 0) {
+            content += getInlandMessageContent(inlandMessages);
         }
     }
 
@@ -3775,6 +3790,44 @@ function getBinaryMessageContent(binary) {
     return content;
 }
 
+function isInlandMessage(msg) {
+    if (!msg.message) return false;
+    const fi = msg.message.fid != null ? msg.message.fid : msg.message.fi;
+    return msg.message.dac == 200 && fi == 55;
+}
+
+function getInlandMessageContent(binary) {
+    const messages = Array.isArray(binary) ? binary : [binary];
+    if (messages.length === 0) return '';
+
+    // Keep only the latest persons-on-board message
+    let entry = null;
+    messages.forEach(m => {
+        if (!isInlandMessage(m)) return;
+        if (!entry || m.timestamp > entry.timestamp) entry = m;
+    });
+    if (!entry) return '';
+
+    const msg = entry.message;
+
+    const row = (label, value) =>
+        `<div style="display: flex; justify-content: space-between; padding: 1px 0; white-space: nowrap;">` +
+        `<span style="font-size: 11px; opacity: 0.6; margin-right: 12px;">${label}</span>` +
+        `<span style="font-size: 11px; font-weight: bold;">${value}</span></div>`;
+
+    let content = '<div class="meteo-tooltip">';
+    content += `<div style="font-size: 11px; color: #FFA500; padding: 4px 0 3px; margin-bottom: 2px;">`;
+    content += `<span style="font-size: 11px;">${entry.formattedTime} - Persons on Board</span>`;
+    content += '</div>';
+
+    if (msg.crew_count != null) content += row('Crew', msg.crew_count);
+    if (msg.passenger_count != null) content += row('Passengers', msg.passenger_count);
+    if (msg.shipboard_personnel_count != null) content += row('Personnel', msg.shipboard_personnel_count);
+
+    content += '</div>';
+    return content;
+}
+
 const startHover = function (type, mmsi, pixel, feature) {
 
     if (type != 'ship' && type != 'tooltip' && type != 'plane' && type != 'binary') return;
@@ -3928,6 +3981,13 @@ const handlePointerMove = function (pixel, target) {
 
             if (meteoMessages.length > 0) {
                 tooltipContent += getBinaryMessageContent(meteoMessages);
+            }
+
+            // Add inland data if available
+            const inlandMessages = feature.binary_messages.filter(msg => isInlandMessage(msg));
+
+            if (inlandMessages.length > 0) {
+                tooltipContent += getInlandMessageContent(inlandMessages);
             }
 
             startHover('tooltip', tooltipContent, pixel, feature);
@@ -4411,7 +4471,16 @@ function populateShipcard() {
     setShipcardValidation(ship.validated);
 
     // verbatim copies
-    ["destination", "mmsi", "count", "imo", "received_stations"].forEach((e) => (document.getElementById("shipcard_" + e).innerHTML = ship[e] != null ? ship[e] : "-"));
+    ["destination", "mmsi", "count", "received_stations"].forEach((e) => (document.getElementById("shipcard_" + e).innerHTML = ship[e] != null ? ship[e] : "-"));
+
+    // IMO row doubles as ENI (inland) when no IMO is available
+    if (ship.imo != null) {
+        document.getElementById("shipcard_imo_label").innerHTML = "IMO";
+        document.getElementById("shipcard_imo").innerHTML = ship.imo;
+    } else {
+        document.getElementById("shipcard_imo_label").innerHTML = ship.eni ? "ENI" : "IMO";
+        document.getElementById("shipcard_imo").innerHTML = ship.eni || "-";
+    }
 
     // round and add units
     [
@@ -4443,6 +4512,7 @@ function populateShipcard() {
     document.getElementById("shipcard_distance").innerHTML = ship.distance ? (getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "")) : null;
     document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDimVal(ship.draught) + " " + getDimUnit() : null;
     document.getElementById("shipcard_dimension").innerHTML = getShipDimension(ship);
+    document.getElementById("shipcard_bluesign").innerHTML = ship.maneuver === 2 ? "Set" : (ship.maneuver === 1 ? "Not set" : null);
 
     updateShipcardTrackOption(card_mmsi);
     updateMessageButton();
@@ -5225,7 +5295,11 @@ function redrawBinaryMessages() {
 
             // Sort messages by proximity to the ship
             allMessages.forEach(msg => {
-                if (!msg.message_lat || !msg.message_lon) return;
+                // Messages without their own location (e.g. inland FID 10/55) badge on the ship
+                if (!msg.message_lat || !msg.message_lon) {
+                    shipMessages.push(msg);
+                    return;
+                }
 
                 const msgLat = msg.message_lat;
                 const msgLon = msg.message_lon;

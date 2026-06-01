@@ -558,6 +558,43 @@ namespace AIS
 		"N/A (default)",
 	};
 
+	const std::vector<std::string> LookupTable_emma_warning_types = {
+		"Unknown/Default",
+		"Wind",
+		"Rain",
+		"Snow/Ice",
+		"Thunderstorm",
+		"Fog",
+		"Low Temperature",
+		"High Temperature",
+		"Flood",
+		"Forest Fire",
+	};
+
+	const std::vector<std::string> LookupTable_emma_severity = {
+		"Low",
+		"Medium",
+		"High",
+		"Severe",
+	};
+
+	const std::vector<std::string> LookupTable_inland_ship_types = {
+		"Reserved",
+		"Dry cargo vessel",
+		"Tanker",
+		"Dry cargo barge",
+		"Tanker barge",
+		"Tug",
+		"Pusher",
+		"Tug+Barge",
+		"Pushboat",
+		"Passenger vessel",
+		"Vessel for special purpose",
+		"Pleasure boat",
+		"Reserved",
+		"Unknown",
+	};
+
 	// Generated from KeyDefs.h
 	const KeyInfo KeyInfoMap[] = {
 #define X(name, full, minimal, sparse, aprs, setting, input, unit, desc, lookup) {unit, desc, lookup},

@@ -68,7 +68,8 @@ namespace IO
 
 					for (const auto &s : data[i].sentences())
 					{
-						file << s << std::endl;
+						file.write(s.data(), s.size());
+						file.put('\n');
 					}
 				}
 			}
@@ -109,6 +110,8 @@ namespace IO
 				}
 			}
 
+			file.flush();
+
 			if (file.fail())
 			{
 				Error() << "File: cannot write to file.";
@@ -127,6 +130,8 @@ namespace IO
 					file.write(json.data(), json.size());
 				}
 			}
+			file.flush();
+
 			if (file.fail())
 			{
 				Error() << "File: cannot write to file.";
