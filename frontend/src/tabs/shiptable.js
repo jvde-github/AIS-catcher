@@ -47,6 +47,12 @@ function customShipFilter(data, filterParams) {
         (data.group_mask != null && getStringfromGroup(data.group_mask).includes(query));
 }
 
+// ENI is canonically 8 digits; transmitters often drop a leading zero.
+// Left-pad numeric values so they display and sort consistently.
+function padEni(v) {
+    return /^\d{1,7}$/.test(v) ? v.padStart(8, "0") : (v || "");
+}
+
 function buildColumns() {
     return [
         {
@@ -58,7 +64,7 @@ function buildColumns() {
         },
         { title: "MMSI", field: "mmsi", sorter: "number" },
         { title: "IMO", field: "imo", sorter: "number", formatter: (cell) => { const v = cell.getValue(); return v != null ? v : ""; } },
-        { title: "ENI", field: "eni", sorter: "string", formatter: (cell) => { const v = cell.getValue(); return /^\d{1,7}$/.test(v) ? v.padStart(8, "0") : (v || ""); } },
+        { title: "ENI", field: "eni", sorter: (a, b) => padEni(a).localeCompare(padEni(b)), formatter: (cell) => padEni(cell.getValue()) },
         { title: "Dest", field: "destination", sorter: "string", formatter: (cell) => { const v = cell.getValue(); return v != null ? v : ""; } },
         {
             title: "ETA", field: "eta", sorter: "string",
