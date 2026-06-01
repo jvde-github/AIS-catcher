@@ -58,6 +58,7 @@ function buildColumns() {
         },
         { title: "MMSI", field: "mmsi", sorter: "number" },
         { title: "IMO", field: "imo", sorter: "number", formatter: (cell) => { const v = cell.getValue(); return v != null ? v : ""; } },
+        { title: "ENI", field: "eni", sorter: "string", formatter: (cell) => { const v = cell.getValue(); return v ? v : ""; } },
         { title: "Dest", field: "destination", sorter: "string", formatter: (cell) => { const v = cell.getValue(); return v != null ? v : ""; } },
         {
             title: "ETA", field: "eta", sorter: "string",
