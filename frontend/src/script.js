@@ -1580,9 +1580,9 @@ function getShipTypeVal(s) {
             case 8020:
                 return "Motor Tanker";
             case 8021:
-                return "Motor Tanker (liquid)";
+                return "Motor Tanker (liquid, type N)";
             case 8022:
-                return "Motor Tanker (liquid)";
+                return "Motor Tanker (liquid, type C)";
             case 8023:
                 return "Motor Tanker (dry)";
             case 8030:
@@ -1600,7 +1600,7 @@ function getShipTypeVal(s) {
             case 8090:
                 return "Motor Freighter (pushing)";
             case 8100:
-                return "Motor Freighter (pushing)";
+                return "Motor Freighter (pushing tanker)";
             case 8110:
                 return "Tug, Freighter";
             case 8120:
@@ -1614,9 +1614,9 @@ function getShipTypeVal(s) {
             case 8160:
                 return "Tankbarge";
             case 8161:
-                return "Tankbarge (liquid)";
+                return "Tankbarge (liquid, type N)";
             case 8162:
-                return "Tankbarge (liquid)";
+                return "Tankbarge (liquid, type C)";
             case 8163:
                 return "Tankbarge (dry)";
             case 8170:
@@ -1640,25 +1640,25 @@ function getShipTypeVal(s) {
             case 8280:
                 return "Pushtow (eight cargo barges)";
             case 8290:
-                return "Pushtow (nine or more barges)";
+                return "Pushtow (nine or more cargo barges)";
             case 8310:
                 return "Pushtow (one tank/gas barge)";
             case 8320:
-                return "Pushtow (two barges)";
+                return "Pushtow (two tank/gas barges)";
             case 8330:
-                return "Pushtow (three barges)";
+                return "Pushtow (three tank/gas barges)";
             case 8340:
-                return "Pushtow (four barges)";
+                return "Pushtow (four tank/gas barges)";
             case 8350:
-                return "Pushtow (five barges)";
+                return "Pushtow (five tank/gas barges)";
             case 8360:
-                return "Pushtow (six barges)";
+                return "Pushtow (six tank/gas barges)";
             case 8370:
-                return "Pushtow (seven barges)";
+                return "Pushtow (seven tank/gas barges)";
             case 8380:
-                return "Pushtow (eight barges)";
+                return "Pushtow (eight tank/gas barges)";
             case 8390:
-                return "Pushtow (nine or more barges)";
+                return "Pushtow (nine or more tank/gas barges)";
             case 8400:
                 return "Tug (single)";
             case 8410:
@@ -1676,7 +1676,7 @@ function getShipTypeVal(s) {
             case 8443:
                 return "Cruise";
             case 8444:
-                return "Passenger";
+                return "Passenger (no accommodation)";
             case 8450:
                 return "Service, Police or Port Service";
             case 8460:
@@ -1696,13 +1696,13 @@ function getShipTypeVal(s) {
             case 1510:
                 return "Unit Carrier Maritime";
             case 1520:
-                return "bulk Carrier Maritime";
+                return "Bulk Carrier Maritime";
             case 1530:
                 return "Tanker";
             case 1540:
-                return "Liquified Gas Tanker";
+                return "Liquefied Gas Tanker";
             case 1850:
-                return "Pleasure";
+                return "Pleasure craft (> 20 m)";
             case 1900:
                 return "Fast Ship";
             case 1910:
