@@ -29,9 +29,9 @@ let tableFirstTime = true;
 function customShipFilter(data, filterParams) {
     const { shipsSince } = window.__app__;
     const query = filterParams.query.toLowerCase();
-    return data.shipname.toLowerCase().includes(query) ||
+    return (data.shipname || "").toLowerCase().includes(query) ||
         data.mmsi.toString().includes(query) ||
-        data.callsign.toLowerCase().includes(query) ||
+        (data.callsign || "").toLowerCase().includes(query) ||
         data.shipclass.toString().includes(query) ||
         (data.last_signal != null && getDeltaTimeVal(shipsSince - data.last_signal).includes(query)) ||
         (data.count != null && data.count.toString().includes(query)) ||
@@ -47,10 +47,12 @@ function customShipFilter(data, filterParams) {
         (data.group_mask != null && getStringfromGroup(data.group_mask).includes(query));
 }
 
-// ENI is canonically 8 digits; transmitters often drop a leading zero.
-// Left-pad numeric values so they display and sort consistently.
+// ENI is canonically 8 digits; transmitters pad the 6-bit text field with
+// spaces and may drop a leading zero. Trim the padding, then left-pad numeric
+// values to 8 so they display and sort consistently.
 function padEni(v) {
-    return /^\d{1,7}$/.test(v) ? v.padStart(8, "0") : (v || "");
+    v = (v || "").trim();
+    return /^\d{1,7}$/.test(v) ? v.padStart(8, "0") : v;
 }
 
 function buildColumns() {
