@@ -4383,8 +4383,6 @@ function toggleShipcardPopover(popoverId, iconId) {
     const popover = document.getElementById(popoverId);
     const icon = document.getElementById(iconId);
 
-    // Any click outside the popover closes it (including the icon, which stops
-    // propagation so the action handler doesn't immediately reopen). Self-removes.
     const onOutsideClick = (event) => {
         if (popover.contains(event.target)) return;
         event.stopPropagation();

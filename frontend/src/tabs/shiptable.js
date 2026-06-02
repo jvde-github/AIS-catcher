@@ -94,7 +94,7 @@ function buildColumns() {
             },
         },
         {
-            title: "Type", field: "shipclass", sorter: "number",
+            title: "Type", field: "shipclass", sorter: "number", hozAlign: "center",
             formatter: (cell) => window.__app__.getTableShiptype(cell.getRow().getData()),
         },
         {
