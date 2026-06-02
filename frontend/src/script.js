@@ -230,6 +230,7 @@ const ACTIONS = {
     // dynamically-rendered shipcard items
     rotateShipcardIcons: () => rotateShipcardIcons(),
     techInfo: (e) => { e.stopPropagation(); toggleTechPopover(); },
+    shiptypeInfo: (e) => { e.stopPropagation(); toggleShiptypePopover(); },
     showNMEAContextCopy: (e, d) => showContextMenu(e, d.copy || '', 'ship', ['settings', 'copy-text']),
     removeRealtimeFilterMMSI: (e, d) => realtimeModule?.removeFilter(d.mmsi),
 };
@@ -1650,15 +1651,6 @@ const SHIP_TYPE_TEXT = [
     "Other Type - Reserved",
     "Other Type - no additional information",
 ];
-
-// Two-line "code\nITU description" for the ship type info tooltip (title
-// attributes render \n as a line break). Inland AIS codes (1500+/8000+) fall
-// back to the short label from getShipTypeVal().
-function getShipTypeFull(s) {
-    if (s >= 0 && s < SHIP_TYPE_TEXT.length)
-        return "Type " + s + "\n" + SHIP_TYPE_TEXT[s];
-    return getShipTypeVal(s);
-}
 
 // Terse maritime labels (codes 0-99). Short forms of the ITU-R M.1371-6
 // Table 51 entries in SHIP_TYPE_TEXT; the info tooltip carries the full text.
@@ -4621,8 +4613,12 @@ function populateShipcard() {
     document.getElementById("shipcard_channels").innerHTML = getStringfromChannels(ship.channels);
     document.getElementById("shipcard_type").innerHTML = getTypeVal(ship) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_tech_info" data-action="techInfo" title="Technical details"></i>';
     document.getElementById("shipcard_shiptype").innerHTML = ship.shiptype != null
-        ? getShipTypeVal(ship.shiptype) + ' <i class="info_icon shipcard-tech-icon" title="' + sanitizeString(getShipTypeFull(ship.shiptype)) + '"></i>'
+        ? getShipTypeVal(ship.shiptype) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_shiptype_info" data-action="shiptypeInfo" title="Ship type details"></i>'
         : getShipTypeVal(ship.shiptype);
+    document.getElementById("shiptype_code").textContent = ship.shiptype != null ? ship.shiptype : "-";
+    document.getElementById("shiptype_desc").textContent = ship.shiptype != null
+        ? (ship.shiptype < SHIP_TYPE_TEXT.length ? SHIP_TYPE_TEXT[ship.shiptype] : getShipTypeVal(ship.shiptype))
+        : "-";
     document.getElementById("shipcard_status").innerHTML = getStatusVal(ship);
     document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(shipsSince - ship.last_signal);
     document.getElementById("shipcard_eta").innerHTML = ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
@@ -4735,6 +4731,54 @@ function closeTechPopover(event) {
     if (!popover.contains(event.target) && event.target !== icon && !icon?.contains(event.target)) {
         popover.style.display = "none";
         document.removeEventListener("click", closeTechPopover, true);
+    }
+}
+
+function toggleShiptypePopover() {
+    const popover = document.getElementById("shiptype_popover");
+    const icon = document.getElementById("shipcard_shiptype_info");
+
+    if (popover.style.display === "none" || !popover.style.display) {
+        const iconRect = icon.getBoundingClientRect();
+        const shipcardRect = document.getElementById("shipcard").getBoundingClientRect();
+
+        popover.style.display = "block";
+
+        let left = iconRect.left - shipcardRect.left + 20;
+        let top = iconRect.bottom - shipcardRect.top + 5;
+
+        const popoverRect = popover.getBoundingClientRect();
+
+        if (iconRect.left + popoverRect.width + 20 > window.innerWidth)
+            left = Math.max(5, iconRect.right - shipcardRect.left - popoverRect.width - 5);
+        if (iconRect.bottom + popoverRect.height + 5 > window.innerHeight)
+            top = Math.max(5, iconRect.top - shipcardRect.top - popoverRect.height - 5);
+
+        left = Math.max(5, Math.min(left, shipcardRect.width - popoverRect.width - 5));
+        top = Math.max(5, top);
+
+        popover.style.left = left + "px";
+        popover.style.top = top + "px";
+
+        setTimeout(() => {
+            document.addEventListener("click", closeShiptypePopover, true);
+        }, 0);
+    } else {
+        popover.style.display = "none";
+        document.removeEventListener("click", closeShiptypePopover, true);
+    }
+}
+
+function closeShiptypePopover(event) {
+    const popover = document.getElementById("shiptype_popover");
+    const icon = document.getElementById("shipcard_shiptype_info");
+
+    event.stopPropagation();
+    event.preventDefault();
+
+    if (!popover.contains(event.target) && event.target !== icon && !icon?.contains(event.target)) {
+        popover.style.display = "none";
+        document.removeEventListener("click", closeShiptypePopover, true);
     }
 }
 
