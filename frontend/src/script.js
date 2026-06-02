@@ -1546,26 +1546,146 @@ function checkLatestVersion() {
         });
 }
 
+// ITU-R M.1371-6 Table 51, indexed by ship type code 0..99.
+// Mirror of LookupTable_ship_types in Source/JSON/Keys.cpp — keep in sync.
+const SHIP_TYPE_TEXT = [
+    "Not available",
+    "Science / Research vessel",
+    "Training vessel",
+    "Ship owned or operated by a government",
+    "Ice breaker",
+    "Buoy (Aids to Navigation) tender",
+    "Cable layer",
+    "Pipe layer",
+    "Reserved",
+    "Special purpose ship, no additional information",
+    "Reserved",
+    "FPSO (Floating, Production, Storage, Offloading) vessel",
+    "Fish factory ship",
+    "Fish farm support vessel",
+    "Offshore support vessel",
+    "Reserved",
+    "Reserved",
+    "Construction vessel",
+    "Crew boat",
+    "Support vessel, no additional information",
+    "Wing in ground (WIG) - all ships of this type",
+    "Wing in ground (WIG) - Hazardous category X",
+    "Wing in ground (WIG) - Hazardous category Y",
+    "Wing in ground (WIG) - Hazardous category Z",
+    "Wing in ground (WIG) - Hazardous category OS",
+    "Wing in ground (WIG) - Reserved",
+    "Wing in ground (WIG) - Reserved",
+    "Wing in ground (WIG) - Reserved",
+    "Wing in ground (WIG) - Reserved",
+    "Wing in ground (WIG) - No additional information",
+    "Fishing",
+    "Towing",
+    "Towing: length exceeds 200m or breadth exceeds 25m",
+    "Dredging or underwater ops",
+    "Diving ops",
+    "Military ops",
+    "Sailing",
+    "Pleasure Craft",
+    "Trawler",
+    "Patrol vessel",
+    "High speed craft (HSC) - all ships of this type",
+    "High speed craft (HSC) - Hazardous category X",
+    "High speed craft (HSC) - Hazardous category Y",
+    "High speed craft (HSC) - Hazardous category Z",
+    "High speed craft (HSC) - Hazardous category OS",
+    "High speed craft (HSC) - Reserved",
+    "High speed craft (HSC) - Reserved",
+    "High speed craft (HSC) - Reserved",
+    "High speed craft (HSC) - Reserved",
+    "High speed craft (HSC) - No additional information",
+    "Pilot Vessel",
+    "Search and Rescue vessel",
+    "Tug",
+    "Port Tender",
+    "Anti-pollution equipment",
+    "Law Enforcement",
+    "Spare - Local Vessel",
+    "Spare - Local Vessel",
+    "Medical Transport",
+    "Ships of States not parties to an armed conflict",
+    "Passenger ships - all ships of this type",
+    "Passenger ships - Hazardous category X",
+    "Passenger ships - Hazardous category Y",
+    "Passenger ships - Hazardous category Z",
+    "Passenger ships - Hazardous category OS",
+    "Passenger (cruise) ship",
+    "Passenger (ferry) ship",
+    "Passenger (excursion) ship",
+    "Reserved",
+    "Passenger ships - No additional information",
+    "Cargo ships - all ships of this type",
+    "Cargo ships - Hazardous category X",
+    "Cargo ships - Hazardous category Y",
+    "Cargo ships - Hazardous category Z",
+    "Cargo ships - Hazardous category OS",
+    "Cargo ship, bulk carrier",
+    "Cargo ship, container ship",
+    "Cargo ship, roll-on-roll-off carrier",
+    "Cargo ship, landing craft",
+    "Cargo ships - No additional information",
+    "Tanker(s) - all ships of this type",
+    "Tanker(s) - Hazardous category X",
+    "Tanker(s) - Hazardous category Y",
+    "Tanker(s) - Hazardous category Z",
+    "Tanker(s) - Hazardous category OS",
+    "Tanker(s) - non-hazardous or non-pollutant carrier",
+    "Integrated / articulated tug and tank barge",
+    "Tanker(s) - Reserved",
+    "Tanker(s) - Reserved",
+    "Tanker(s) - No additional information",
+    "Other Type - all ships of this type",
+    "Other Type - Hazardous category X",
+    "Other Type - Hazardous category Y",
+    "Other Type - Hazardous category Z",
+    "Other Type - Hazardous category OS",
+    "Other Type - Reserved",
+    "Other Type - Reserved",
+    "Other Type - Reserved",
+    "Other Type - Reserved",
+    "Other Type - no additional information",
+];
+
+// Two-line "code\nITU description" for the ship type info tooltip (title
+// attributes render \n as a line break). Inland AIS codes (1500+/8000+) fall
+// back to the short label from getShipTypeVal().
+function getShipTypeFull(s) {
+    if (s >= 0 && s < SHIP_TYPE_TEXT.length)
+        return "Type " + s + "\n" + SHIP_TYPE_TEXT[s];
+    return getShipTypeVal(s);
+}
+
+// Terse maritime labels (codes 0-99). Short forms of the ITU-R M.1371-6
+// Table 51 entries in SHIP_TYPE_TEXT; the info tooltip carries the full text.
+const SHIP_TYPE_SHORT = {
+    1: "Research", 2: "Training", 3: "Government", 4: "Ice breaker",
+    5: "Buoy tender", 6: "Cable layer", 7: "Pipe layer", 9: "Special purpose",
+    11: "FPSO", 12: "Fish factory", 13: "Fish farm support", 14: "Offshore support",
+    17: "Construction", 18: "Crew boat", 19: "Support vessel",
+    30: "Fishing", 31: "Towing", 32: "Towing (large)",
+    33: "Dredging", 34: "Diving ops", 35: "Military", 36: "Sailing",
+    37: "Pleasure Craft", 38: "Trawler", 39: "Patrol vessel",
+    50: "Pilot", 51: "Search And Rescue", 52: "Tug", 53: "Port tender",
+    54: "Anti-pollution equipment", 55: "Law Enforcement",
+    56: "Local Vessel", 57: "Local Vessel", 58: "Medical Transport",
+    59: "Noncombatant ship",
+    65: "Passenger (cruise)", 66: "Passenger (ferry)", 67: "Passenger (excursion)",
+    75: "Cargo (bulk)", 76: "Cargo (container)", 77: "Cargo (ro-ro)", 78: "Cargo (landing craft)",
+    85: "Tanker", 86: "Tug & tank barge",
+};
+
 function getShipTypeVal(s) {
-    if (s < 20) return "Not available";
+    if (s < 20 && SHIP_TYPE_SHORT[s]) return SHIP_TYPE_SHORT[s];
+    if (s < 20) return s == 8 || s == 10 || s == 15 || s == 16 ? "Reserved" : "Not available";
     if (s <= 29) return "WIG";
-    if (s <= 30) return "Fishing";
-    if (s <= 32) return "Towing";
-    if (s <= 34) return "Dredging/Diving ops";
-    if (s <= 35) return "Military";
-    if (s <= 36) return "Sailing";
-    if (s <= 37) return "Pleasure Craft";
+    if (SHIP_TYPE_SHORT[s]) return SHIP_TYPE_SHORT[s];
     if (s <= 39) return "Reserved";
     if (s <= 49) return "High Speed Craft";
-    if (s <= 50) return "Pilot";
-    if (s <= 51) return "Search And Rescue";
-    if (s <= 52) return "Tug";
-    if (s <= 53) return "Port tender";
-    if (s <= 54) return "Anti-pollution equipment";
-    if (s <= 55) return "Law Enforcement";
-    if (s <= 57) return "Local Vessel";
-    if (s <= 58) return "Medical Transport";
-    if (s <= 59) return "Noncombatant ship";
     if (s <= 69) return "Passenger";
     if (s <= 79) return "Cargo";
     if (s <= 89) return "Tanker";
@@ -4500,7 +4620,9 @@ function populateShipcard() {
 
     document.getElementById("shipcard_channels").innerHTML = getStringfromChannels(ship.channels);
     document.getElementById("shipcard_type").innerHTML = getTypeVal(ship) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_tech_info" data-action="techInfo" title="Technical details"></i>';
-    document.getElementById("shipcard_shiptype").innerHTML = getShipTypeVal(ship.shiptype);
+    document.getElementById("shipcard_shiptype").innerHTML = ship.shiptype != null
+        ? getShipTypeVal(ship.shiptype) + ' <i class="info_icon shipcard-tech-icon" title="' + sanitizeString(getShipTypeFull(ship.shiptype)) + '"></i>'
+        : getShipTypeVal(ship.shiptype);
     document.getElementById("shipcard_status").innerHTML = getStatusVal(ship);
     document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(shipsSince - ship.last_signal);
     document.getElementById("shipcard_eta").innerHTML = ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
