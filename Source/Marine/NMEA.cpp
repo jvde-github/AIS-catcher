@@ -95,6 +95,7 @@ namespace AIS
 		// All parts collected — assemble and send
 		initMsg(aivdm.channel(), src, mctx.toa);
 
+		int parts = 0;
 		msg.beginNMEA();
 		for (auto &it : queue)
 		{
@@ -104,10 +105,11 @@ namespace AIS
 				addline(it);
 				if (!cfg_regenerate)
 					msg.pushNMEA(it.sentence);
+				parts++;
 			}
 		}
 
-		if (msg.validate())
+		if (parts == aivdm.count && msg.validate())
 		{
 			if (cfg_regenerate)
 				msg.buildNMEA(tag, aivdm.match_key & 0x0F);
