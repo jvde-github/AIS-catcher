@@ -777,6 +777,16 @@ td {
     display: inline-block;
 }
 
+/* Ship-type sprite in the table Type column: centered and slightly smaller. */
+.table-shiptype-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    transform: scale(0.8);
+}
+
 
 #statcard {
     top: 10px;
@@ -955,6 +965,20 @@ td {
 
 .measurecard-width {
     width: 450px;
+}
+
+/* Measure card: more rounded + floating, with a slimmer header.
+   Reset to the shared defaults on mobile (see max-width: 500px below). */
+#measurecard {
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    top: 16px;
+    left: 16px;
+}
+
+#measurecard .mapcard_header {
+    flex-basis: 28px;
+    font-size: 13px;
 }
 
 .mapcard.visible {
@@ -1231,6 +1255,19 @@ td {
     }
 
     .mapcard header {
+        font-size: 14px;
+    }
+
+    /* On mobile the measure card uses the shared full-bleed defaults. */
+    #measurecard {
+        border-radius: 0px;
+        box-shadow: none;
+        top: 0;
+        left: 0;
+    }
+
+    #measurecard .mapcard_header {
+        flex-basis: 35px;
         font-size: 14px;
     }
 

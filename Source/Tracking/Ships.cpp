@@ -228,6 +228,9 @@ int Ship::getShipTypeClassEri()
 	case 8150:
 	case 8170:
 	case 8410:
+	case 1500:
+	case 1510:
+	case 1520:
 		return CLASS_CARGO;
 	// Tanker cases
 	case 8020:
@@ -257,6 +260,10 @@ int Ship::getShipTypeClassEri()
 	case 8420:
 	case 8430:
 	case 8450:
+	case 8451:
+	case 8452:
+	case 8453:
+	case 8454:
 	case 8460:
 	case 8470:
 	case 8510:
@@ -267,6 +274,10 @@ int Ship::getShipTypeClassEri()
 	case 8442:
 	case 8443:
 	case 8444:
+	case 8445:
+	case 8446:
+	case 8447:
+	case 8448:
 		return CLASS_PASSENGER;
 	// Other cases
 	case 8480:

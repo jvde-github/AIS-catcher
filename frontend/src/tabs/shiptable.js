@@ -15,7 +15,7 @@ Tabulator.registerModule([
 ]);
 import {
     getFlag, getShipName, getCallSign, getCountryName,
-    getStatusVal, getTypeVal,
+    getStatusVal, getMmsiTypeVal,
     getShipDimension, getDimVal, getDimUnit,
     getDeltaTimeVal, getEtaVal,
     getDistanceVal, getLatValFormat, getLonValFormat,
@@ -47,9 +47,6 @@ function customShipFilter(data, filterParams) {
         (data.group_mask != null && getStringfromGroup(data.group_mask).includes(query));
 }
 
-// ENI is canonically 8 digits; transmitters pad the 6-bit text field with
-// spaces and may drop a leading zero. Trim the padding, then left-pad numeric
-// values to 8 so they display and sort consistently.
 function padEni(v) {
     v = (v || "").trim();
     return /^\d{1,7}$/.test(v) ? v.padStart(8, "0") : v;
@@ -102,7 +99,7 @@ function buildColumns() {
         },
         {
             title: "Class", field: "class", sorter: "string",
-            formatter: (cell) => getTypeVal(cell.getRow().getData()),
+            formatter: (cell) => getMmsiTypeVal(cell.getRow().getData()),
         },
         {
             title: "Dim", field: "dimension", sorter: "number",

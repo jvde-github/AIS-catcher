@@ -9,8 +9,10 @@ import {
     getEtaVal, getDeltaTimeVal,
     getShipName, getCallSign, setShipNameProvider, setCallSignProvider,
     getCountryName, getFlagStyled,
-    getStatusVal, getTypeVal,
+    getStatusVal, getMmsiTypeVal,
     getStringfromMsgType, getStringfromGroup, getStringfromChannels,
+    getShipTypeShort, getShipTypeFull,
+    sanitizeString, formatBytes,
 } from './core/format.js';
 
 // Named imports (instead of `import * as ...`) so Vite tree-shakes everything
@@ -229,8 +231,8 @@ const ACTIONS = {
 
     // dynamically-rendered shipcard items
     rotateShipcardIcons: () => rotateShipcardIcons(),
-    techInfo: (e) => { e.stopPropagation(); toggleTechPopover(); },
-    shiptypeInfo: (e) => { e.stopPropagation(); toggleShiptypePopover(); },
+    techInfo: (e) => { e.stopPropagation(); toggleShipcardPopover("tech_popover", "shipcard_tech_info"); },
+    shiptypeInfo: (e) => { e.stopPropagation(); toggleShipcardPopover("shiptype_popover", "shipcard_shiptype_info"); },
     showNMEAContextCopy: (e, d) => showContextMenu(e, d.copy || '', 'ship', ['settings', 'copy-text']),
     removeRealtimeFilterMMSI: (e, d) => realtimeModule?.removeFilter(d.mmsi),
 };
@@ -1547,285 +1549,6 @@ function checkLatestVersion() {
         });
 }
 
-// ITU-R M.1371-6 Table 51, indexed by ship type code 0..99.
-// Mirror of LookupTable_ship_types in Source/JSON/Keys.cpp — keep in sync.
-const SHIP_TYPE_TEXT = [
-    "Not available",
-    "Science / Research vessel",
-    "Training vessel",
-    "Ship owned or operated by a government",
-    "Ice breaker",
-    "Buoy (Aids to Navigation) tender",
-    "Cable layer",
-    "Pipe layer",
-    "Reserved",
-    "Special purpose ship, no additional information",
-    "Reserved",
-    "FPSO (Floating, Production, Storage, Offloading) vessel",
-    "Fish factory ship",
-    "Fish farm support vessel",
-    "Offshore support vessel",
-    "Reserved",
-    "Reserved",
-    "Construction vessel",
-    "Crew boat",
-    "Support vessel, no additional information",
-    "Wing in ground (WIG) - all ships of this type",
-    "Wing in ground (WIG) - Hazardous category X",
-    "Wing in ground (WIG) - Hazardous category Y",
-    "Wing in ground (WIG) - Hazardous category Z",
-    "Wing in ground (WIG) - Hazardous category OS",
-    "Wing in ground (WIG) - Reserved",
-    "Wing in ground (WIG) - Reserved",
-    "Wing in ground (WIG) - Reserved",
-    "Wing in ground (WIG) - Reserved",
-    "Wing in ground (WIG) - No additional information",
-    "Fishing",
-    "Towing",
-    "Towing: length exceeds 200m or breadth exceeds 25m",
-    "Dredging or underwater ops",
-    "Diving ops",
-    "Military ops",
-    "Sailing",
-    "Pleasure Craft",
-    "Trawler",
-    "Patrol vessel",
-    "High speed craft (HSC) - all ships of this type",
-    "High speed craft (HSC) - Hazardous category X",
-    "High speed craft (HSC) - Hazardous category Y",
-    "High speed craft (HSC) - Hazardous category Z",
-    "High speed craft (HSC) - Hazardous category OS",
-    "High speed craft (HSC) - Reserved",
-    "High speed craft (HSC) - Reserved",
-    "High speed craft (HSC) - Reserved",
-    "High speed craft (HSC) - Reserved",
-    "High speed craft (HSC) - No additional information",
-    "Pilot Vessel",
-    "Search and Rescue vessel",
-    "Tug",
-    "Port Tender",
-    "Anti-pollution equipment",
-    "Law Enforcement",
-    "Spare - Local Vessel",
-    "Spare - Local Vessel",
-    "Medical Transport",
-    "Ships of States not parties to an armed conflict",
-    "Passenger ships - all ships of this type",
-    "Passenger ships - Hazardous category X",
-    "Passenger ships - Hazardous category Y",
-    "Passenger ships - Hazardous category Z",
-    "Passenger ships - Hazardous category OS",
-    "Passenger (cruise) ship",
-    "Passenger (ferry) ship",
-    "Passenger (excursion) ship",
-    "Reserved",
-    "Passenger ships - No additional information",
-    "Cargo ships - all ships of this type",
-    "Cargo ships - Hazardous category X",
-    "Cargo ships - Hazardous category Y",
-    "Cargo ships - Hazardous category Z",
-    "Cargo ships - Hazardous category OS",
-    "Cargo ship, bulk carrier",
-    "Cargo ship, container ship",
-    "Cargo ship, roll-on-roll-off carrier",
-    "Cargo ship, landing craft",
-    "Cargo ships - No additional information",
-    "Tanker(s) - all ships of this type",
-    "Tanker(s) - Hazardous category X",
-    "Tanker(s) - Hazardous category Y",
-    "Tanker(s) - Hazardous category Z",
-    "Tanker(s) - Hazardous category OS",
-    "Tanker(s) - non-hazardous or non-pollutant carrier",
-    "Integrated / articulated tug and tank barge",
-    "Tanker(s) - Reserved",
-    "Tanker(s) - Reserved",
-    "Tanker(s) - No additional information",
-    "Other Type - all ships of this type",
-    "Other Type - Hazardous category X",
-    "Other Type - Hazardous category Y",
-    "Other Type - Hazardous category Z",
-    "Other Type - Hazardous category OS",
-    "Other Type - Reserved",
-    "Other Type - Reserved",
-    "Other Type - Reserved",
-    "Other Type - Reserved",
-    "Other Type - no additional information",
-];
-
-// Terse maritime labels (codes 0-99). Short forms of the ITU-R M.1371-6
-// Table 51 entries in SHIP_TYPE_TEXT; the info tooltip carries the full text.
-const SHIP_TYPE_SHORT = {
-    1: "Research", 2: "Training", 3: "Government", 4: "Ice breaker",
-    5: "Buoy tender", 6: "Cable layer", 7: "Pipe layer", 9: "Special purpose",
-    11: "FPSO", 12: "Fish factory", 13: "Fish farm support", 14: "Offshore support",
-    17: "Construction", 18: "Crew boat", 19: "Support vessel",
-    30: "Fishing", 31: "Towing", 32: "Towing (large)",
-    33: "Dredging", 34: "Diving ops", 35: "Military", 36: "Sailing",
-    37: "Pleasure Craft", 38: "Trawler", 39: "Patrol vessel",
-    50: "Pilot", 51: "Search And Rescue", 52: "Tug", 53: "Port tender",
-    54: "Anti-pollution equipment", 55: "Law Enforcement",
-    56: "Local Vessel", 57: "Local Vessel", 58: "Medical Transport",
-    59: "Noncombatant ship",
-    65: "Passenger (cruise)", 66: "Passenger (ferry)", 67: "Passenger (excursion)",
-    75: "Cargo (bulk)", 76: "Cargo (container)", 77: "Cargo (ro-ro)", 78: "Cargo (landing craft)",
-    85: "Tanker", 86: "Tug & tank barge",
-};
-
-function getShipTypeVal(s) {
-    if (s < 20 && SHIP_TYPE_SHORT[s]) return SHIP_TYPE_SHORT[s];
-    if (s < 20) return s == 8 || s == 10 || s == 15 || s == 16 ? "Reserved" : "Not available";
-    if (s <= 29) return "WIG";
-    if (SHIP_TYPE_SHORT[s]) return SHIP_TYPE_SHORT[s];
-    if (s <= 39) return "Reserved";
-    if (s <= 49) return "High Speed Craft";
-    if (s <= 69) return "Passenger";
-    if (s <= 79) return "Cargo";
-    if (s <= 89) return "Tanker";
-    if (s <= 99) return "Other";
-
-    if ((s >= 1500 && s <= 1920) || (s >= 8000 && s <= 8510)) {
-        switch (s) {
-            case 8000:
-                return "Unknown (inland AIS)";
-            case 8010:
-                return "Motor Freighter";
-            case 8020:
-                return "Motor Tanker";
-            case 8021:
-                return "Motor Tanker (liquid, type N)";
-            case 8022:
-                return "Motor Tanker (liquid, type C)";
-            case 8023:
-                return "Motor Tanker (dry)";
-            case 8030:
-                return "Container";
-            case 8040:
-                return "Gas Tanker";
-            case 8050:
-                return "Motor Freighter (tug)";
-            case 8060:
-                return "Motor Tanker (tug)";
-            case 8070:
-                return "Motor Freighter (alongside)";
-            case 8080:
-                return "Motor Freighter (with tanker)";
-            case 8090:
-                return "Motor Freighter (pushing)";
-            case 8100:
-                return "Motor Freighter (pushing tanker)";
-            case 8110:
-                return "Tug, Freighter";
-            case 8120:
-                return "Tug, Tanker";
-            case 8130:
-                return "Tug Freighter (coupled)";
-            case 8140:
-                return "Tug, freighter/tanker";
-            case 8150:
-                return "Freightbarge";
-            case 8160:
-                return "Tankbarge";
-            case 8161:
-                return "Tankbarge (liquid, type N)";
-            case 8162:
-                return "Tankbarge (liquid, type C)";
-            case 8163:
-                return "Tankbarge (dry)";
-            case 8170:
-                return "Freightbarge (with containers)";
-            case 8180:
-                return "Tankbarge (gas)";
-            case 8210:
-                return "Pushtow (one cargo barge)";
-            case 8220:
-                return "Pushtow (two cargo barges)";
-            case 8230:
-                return "Pushtow, (three cargo barges)";
-            case 8240:
-                return "Pushtow (four cargo barges)";
-            case 8250:
-                return "Pushtow (five cargo barges)";
-            case 8260:
-                return "Pushtow (six cargo barges)";
-            case 8270:
-                return "Pushtow (seven cargo barges)";
-            case 8280:
-                return "Pushtow (eight cargo barges)";
-            case 8290:
-                return "Pushtow (nine or more cargo barges)";
-            case 8310:
-                return "Pushtow (one tank/gas barge)";
-            case 8320:
-                return "Pushtow (two tank/gas barges)";
-            case 8330:
-                return "Pushtow (three tank/gas barges)";
-            case 8340:
-                return "Pushtow (four tank/gas barges)";
-            case 8350:
-                return "Pushtow (five tank/gas barges)";
-            case 8360:
-                return "Pushtow (six tank/gas barges)";
-            case 8370:
-                return "Pushtow (seven tank/gas barges)";
-            case 8380:
-                return "Pushtow (eight tank/gas barges)";
-            case 8390:
-                return "Pushtow (nine or more tank/gas barges)";
-            case 8400:
-                return "Tug (single)";
-            case 8410:
-                return "Tug (one or more tows)";
-            case 8420:
-                return "Tug (assisting)";
-            case 8430:
-                return "Pushboat (single)";
-            case 8440:
-                return "Passenger";
-            case 8441:
-                return "Ferry";
-            case 8442:
-                return "Red Cross";
-            case 8443:
-                return "Cruise";
-            case 8444:
-                return "Passenger (no accommodation)";
-            case 8450:
-                return "Service, Police or Port Service";
-            case 8460:
-                return "Maintenance Craft";
-            case 8470:
-                return "Object (towed)";
-            case 8480:
-                return "Fishing";
-            case 8490:
-                return "Bunkership";
-            case 8500:
-                return "Barge, Tanker, Chemical";
-            case 8510:
-                return "Object";
-            case 1500:
-                return "General";
-            case 1510:
-                return "Unit Carrier Maritime";
-            case 1520:
-                return "Bulk Carrier Maritime";
-            case 1530:
-                return "Tanker";
-            case 1540:
-                return "Liquefied Gas Tanker";
-            case 1850:
-                return "Pleasure craft (> 20 m)";
-            case 1900:
-                return "Fast Ship";
-            case 1910:
-                return "Hydrofoil";
-            case 1920:
-                return "Catamaran Fast";
-        }
-    }
-    return "Unknown (" + s + ")";
-}
-
 function headerClick() {
     window.open("https://www.aiscatcher.org");
 }
@@ -2897,20 +2620,6 @@ function updateDistanceCircles() {
     }
 }
 
-function sanitizeString(input) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;',
-        '`': '&#96;'
-    };
-    return input.replace(/[&<>"'`]/g, function (match) {
-        return map[match];
-    });
-}
-
 function formatTime(timestamp) {
     const date = new Date(timestamp * 1000);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -3489,13 +3198,6 @@ function updateStat(stat, tf) {
     document.getElementById("stat_" + tf + "_msgother").innerText = count_other.toLocaleString();
 }
 
-function formatBytes(b) {
-    if (b >= 1e9) return (b / 1e9).toFixed(1) + " GB";
-    if (b >= 1e6) return (b / 1e6).toFixed(1) + " MB";
-    if (b >= 1e3) return (b / 1e3).toFixed(1) + " KB";
-    return b + " B";
-}
-
 async function updateStatistics() {
     const stat = await fetchStatistics();
 
@@ -3649,7 +3351,9 @@ function getTableShiptype(ship, opacity = 1) {
     if (ship == null) return "";
 
     const { class: classValue, style, hint } = getShipCSSClassAndStyle(ship, opacity);
-    return settings.table_shiptype_use_icon ? `<span class="${classValue}" style="${style}" title="${hint}"></span>` : hint;
+    return settings.table_shiptype_use_icon
+        ? `<span class="table-shiptype-icon"><span class="${classValue}" style="${style}" title="${hint}"></span></span>`
+        : hint;
 }
 
 
@@ -4585,7 +4289,6 @@ function populateShipcard() {
     // verbatim copies
     ["destination", "mmsi", "count", "received_stations"].forEach((e) => (document.getElementById("shipcard_" + e).innerHTML = ship[e] != null ? ship[e] : "-"));
 
-    // IMO row doubles as ENI (inland) when no IMO is available
     if (ship.imo != null) {
         document.getElementById("shipcard_imo_label").innerHTML = "IMO";
         document.getElementById("shipcard_imo").innerHTML = ship.imo;
@@ -4611,13 +4314,13 @@ function populateShipcard() {
     document.getElementById("shipcard_sources").innerHTML = getStringfromGroup(ship.group_mask);
 
     document.getElementById("shipcard_channels").innerHTML = getStringfromChannels(ship.channels);
-    document.getElementById("shipcard_type").innerHTML = getTypeVal(ship) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_tech_info" data-action="techInfo" title="Technical details"></i>';
+    document.getElementById("shipcard_type").innerHTML = getMmsiTypeVal(ship) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_tech_info" data-action="techInfo" title="Technical details"></i>';
     document.getElementById("shipcard_shiptype").innerHTML = ship.shiptype != null
-        ? getShipTypeVal(ship.shiptype) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_shiptype_info" data-action="shiptypeInfo" title="Ship type details"></i>'
-        : getShipTypeVal(ship.shiptype);
+        ? getShipTypeShort(ship.shiptype) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_shiptype_info" data-action="shiptypeInfo" title="Ship type details"></i>'
+        : getShipTypeShort(ship.shiptype);
     document.getElementById("shiptype_code").textContent = ship.shiptype != null ? ship.shiptype : "-";
     document.getElementById("shiptype_desc").textContent = ship.shiptype != null
-        ? (ship.shiptype < SHIP_TYPE_TEXT.length ? SHIP_TYPE_TEXT[ship.shiptype] : getShipTypeVal(ship.shiptype))
+        ? getShipTypeFull(ship.shiptype)
         : "-";
     document.getElementById("shipcard_status").innerHTML = getStatusVal(ship);
     document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(shipsSince - ship.last_signal);
@@ -4676,110 +4379,42 @@ function updateTechDetails(ship) {
     document.getElementById("tech_maneuver").textContent = maneuverText;
 }
 
-function toggleTechPopover() {
-    const popover = document.getElementById("tech_popover");
-    const icon = document.getElementById("shipcard_tech_info");
+function toggleShipcardPopover(popoverId, iconId) {
+    const popover = document.getElementById(popoverId);
+    const icon = document.getElementById(iconId);
 
-    if (popover.style.display === "none" || !popover.style.display) {
-
-        const iconRect = icon.getBoundingClientRect();
-        const shipcardRect = document.getElementById("shipcard").getBoundingClientRect();
-
-        popover.style.display = "block";
-
-        let left = iconRect.left - shipcardRect.left + 20;
-        let top = iconRect.bottom - shipcardRect.top + 5;
-
-        const popoverRect = popover.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-
-        if (iconRect.left + popoverRect.width + 20 > viewportWidth) {
-            // Position to the left of the icon instead
-            left = Math.max(5, iconRect.right - shipcardRect.left - popoverRect.width - 5);
-        }
-
-        if (iconRect.bottom + popoverRect.height + 5 > viewportHeight) {
-            // Position above the icon instead
-            top = Math.max(5, iconRect.top - shipcardRect.top - popoverRect.height - 5);
-        }
-
-        left = Math.max(5, Math.min(left, shipcardRect.width - popoverRect.width - 5));
-        top = Math.max(5, top);
-
-        popover.style.left = left + "px";
-        popover.style.top = top + "px";
-
-        setTimeout(() => {
-            document.addEventListener("click", closeTechPopover, true);
-        }, 0);
-    } else {
+    // Any click outside the popover closes it (including the icon, which stops
+    // propagation so the action handler doesn't immediately reopen). Self-removes.
+    const onOutsideClick = (event) => {
+        if (popover.contains(event.target)) return;
+        event.stopPropagation();
+        event.preventDefault();
         popover.style.display = "none";
-        document.removeEventListener("click", closeTechPopover, true);
-    }
-}
+        document.removeEventListener("click", onOutsideClick, true);
+    };
 
-function closeTechPopover(event) {
-    const popover = document.getElementById("tech_popover");
-    const icon = document.getElementById("shipcard_tech_info");
+    const iconRect = icon.getBoundingClientRect();
+    const shipcardRect = document.getElementById("shipcard").getBoundingClientRect();
 
-    // Always stop propagation when popover is open to prevent other handlers
-    event.stopPropagation();
-    event.preventDefault();
+    popover.style.display = "block";
 
-    // Close if clicking outside the popover and not on the icon
-    if (!popover.contains(event.target) && event.target !== icon && !icon?.contains(event.target)) {
-        popover.style.display = "none";
-        document.removeEventListener("click", closeTechPopover, true);
-    }
-}
+    let left = iconRect.left - shipcardRect.left + 20;
+    let top = iconRect.bottom - shipcardRect.top + 5;
 
-function toggleShiptypePopover() {
-    const popover = document.getElementById("shiptype_popover");
-    const icon = document.getElementById("shipcard_shiptype_info");
+    const popoverRect = popover.getBoundingClientRect();
 
-    if (popover.style.display === "none" || !popover.style.display) {
-        const iconRect = icon.getBoundingClientRect();
-        const shipcardRect = document.getElementById("shipcard").getBoundingClientRect();
+    if (iconRect.left + popoverRect.width + 20 > window.innerWidth)
+        left = Math.max(5, iconRect.right - shipcardRect.left - popoverRect.width - 5);
+    if (iconRect.bottom + popoverRect.height + 5 > window.innerHeight)
+        top = Math.max(5, iconRect.top - shipcardRect.top - popoverRect.height - 5);
 
-        popover.style.display = "block";
+    left = Math.max(5, Math.min(left, shipcardRect.width - popoverRect.width - 5));
+    top = Math.max(5, top);
 
-        let left = iconRect.left - shipcardRect.left + 20;
-        let top = iconRect.bottom - shipcardRect.top + 5;
+    popover.style.left = left + "px";
+    popover.style.top = top + "px";
 
-        const popoverRect = popover.getBoundingClientRect();
-
-        if (iconRect.left + popoverRect.width + 20 > window.innerWidth)
-            left = Math.max(5, iconRect.right - shipcardRect.left - popoverRect.width - 5);
-        if (iconRect.bottom + popoverRect.height + 5 > window.innerHeight)
-            top = Math.max(5, iconRect.top - shipcardRect.top - popoverRect.height - 5);
-
-        left = Math.max(5, Math.min(left, shipcardRect.width - popoverRect.width - 5));
-        top = Math.max(5, top);
-
-        popover.style.left = left + "px";
-        popover.style.top = top + "px";
-
-        setTimeout(() => {
-            document.addEventListener("click", closeShiptypePopover, true);
-        }, 0);
-    } else {
-        popover.style.display = "none";
-        document.removeEventListener("click", closeShiptypePopover, true);
-    }
-}
-
-function closeShiptypePopover(event) {
-    const popover = document.getElementById("shiptype_popover");
-    const icon = document.getElementById("shipcard_shiptype_info");
-
-    event.stopPropagation();
-    event.preventDefault();
-
-    if (!popover.contains(event.target) && event.target !== icon && !icon?.contains(event.target)) {
-        popover.style.display = "none";
-        document.removeEventListener("click", closeShiptypePopover, true);
-    }
+    setTimeout(() => document.addEventListener("click", onOutsideClick, true), 0);
 }
 
 function getCategory(plane) {
