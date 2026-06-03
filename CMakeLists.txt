@@ -3,6 +3,10 @@
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "4.0")
     cmake_minimum_required(VERSION 4.0)
     message(STATUS "Using CMake ${CMAKE_VERSION} with 4.0+ features")
+elseif(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.10")
+    # 3.10 is the lowest minimum that newer CMake accepts without a deprecation warning.
+    cmake_minimum_required(VERSION 3.10)
+    message(STATUS "Using CMake ${CMAKE_VERSION} with 3.10+ features")
 elseif(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.02")
     cmake_minimum_required(VERSION 3.02)
     message(STATUS "Using CMake ${CMAKE_VERSION} with 3.02+ features")
