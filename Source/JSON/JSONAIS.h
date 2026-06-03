@@ -40,6 +40,7 @@ namespace AIS {
 
 		std::string channel, timestamp, datastring, rxtime;
 		std::string eta, text, callsign, shipname, destination, name, vendorid;
+		std::string start_date, end_date, start_time, end_time;
 
 	protected:
 		void ProcessMsg8Data(const AIS::Message& msg);

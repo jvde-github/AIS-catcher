@@ -730,11 +730,13 @@ namespace AIS
 		char buf[16];
 		if (start_year > 0 && start_month > 0 && start_day > 0) {
 			snprintf(buf, sizeof(buf), "%04u%02u%02u", start_year, start_month, start_day);
-			json.Add(AIS::KEY_START_DATE, buf);
+			start_date.assign(buf);
+			json.Add(AIS::KEY_START_DATE, &start_date);
 		}
 		if (end_year > 0 && end_month > 0 && end_day > 0) {
 			snprintf(buf, sizeof(buf), "%04u%02u%02u", end_year, end_month, end_day);
-			json.Add(AIS::KEY_END_DATE, buf);
+			end_date.assign(buf);
+			json.Add(AIS::KEY_END_DATE, &end_date);
 		}
 
 		unsigned start_hour = msg.getUint(start + 46, 5);
@@ -744,11 +746,13 @@ namespace AIS
 
 		if (start_hour < 24 && start_min < 60) {
 			snprintf(buf, sizeof(buf), "%02u%02u", start_hour, start_min);
-			json.Add(AIS::KEY_START_TIME, buf);
+			start_time.assign(buf);
+			json.Add(AIS::KEY_START_TIME, &start_time);
 		}
 		if (end_hour < 24 && end_min < 60) {
 			snprintf(buf, sizeof(buf), "%02u%02u", end_hour, end_min);
-			json.Add(AIS::KEY_END_TIME, buf);
+			end_time.assign(buf);
+			json.Add(AIS::KEY_END_TIME, &end_time);
 		}
 
 		SL(msg, AIS::KEY_START_LON, start + 68, 28, 1 / 600000.0f, 0);
