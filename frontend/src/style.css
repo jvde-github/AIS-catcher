@@ -973,8 +973,11 @@ td {
 }
 
 #measurecard .mapcard_header {
-    flex-basis: 28px;
+    flex-basis: 24px;
     font-size: 13px;
+    margin-top: 5px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--table-border-color);
 }
 
 .mapcard.visible {
@@ -1130,16 +1133,14 @@ td {
 
 .mapcard-table th,
 .mapcard-table td {
-    line-height: 20px;
-    font-size: 14px;
+    line-height: 14px;
+    font-size: 10px;
     text-align: left;
-    padding: 5px;
+    padding: 2px 5px;
 }
 
 .mapcard-table th {
     color: rgb(111, 128, 124);
-    font-size: 10px;
-    line-height: 14px;
 }
 
 .mapcard-content-row {
@@ -1908,6 +1909,19 @@ td {
     mask-repeat: no-repeat;
     -webkit-mask-size: 100% 100%;
     mask-size: 100% 100%;
+}
+
+/* Outlined ("open") Material Symbols variants for the measure-card row icons. */
+#measurecardInner .visibility_icon {
+    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M480-320q75 0 127.5-52.5T660-500q0-75-52.5-127.5T480-680q-75 0-127.5 52.5T300-500q0 75 52.5 127.5T480-320Zm0-72q-45 0-76.5-31.5T372-500q0-45 31.5-76.5T480-608q45 0 76.5 31.5T588-500q0 45-31.5 76.5T480-392Zm0 192q-146 0-266-81.5T40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200Zm0-300Zm0 220q113 0 207.5-59.5T832-500q-50-101-144.5-160.5T480-720q-113 0-207.5 59.5T128-500q50 101 144.5 160.5T480-280Z"/%3E%3C/svg%3E');
+}
+
+#measurecardInner .visibility_off_icon {
+    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="m637-425-62-62q4-38-23-65.5T487-576l-62-62q13-5 27-7.5t28-2.5q70 0 119 49t49 119q0 14-2.5 28t-9.5 27Zm133 133-52-52q36-28 65.5-61.5T882-480q-50-111-150-175.5T480-720q-25 0-47.5 3T387-708l-56-56q35-15 72-23t77-8q140 0 257.5 79.5T898-498q5 11 5 22t-5 22q-23 58-58.5 108.5T770-292ZM480-280q-140 0-256-78T48-562q-5-11-5.5-22.5T48-607q23-57 58-107t82-90L80-913l51-51 736 736-51 51-130-130q-35 13-71.5 20t-74.5 7ZM222-708q-37 27-71 64t-57 84q50 111 150.5 175.5T480-320q14 0 27.5-1t27.5-3l-42-42q-8 2-15.5 3t-15.5 1q-70 0-119-49t-49-119q0-8 1-15.5t3-15.5l-86-86Zm259 116Zm-101 44Z"/%3E%3C/svg%3E');
+}
+
+#measurecardInner .delete_icon {
+    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/%3E%3C/svg%3E');
 }
 
 .explosion_icon {

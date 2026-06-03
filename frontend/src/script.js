@@ -1714,7 +1714,7 @@ function refreshMeasures() {
         }
         let icon = measure.visible ? 'visibility' : 'visibility_off';
 
-        content += `<tr data-index="${measures.indexOf(measure)}"><td style="padding: 2px;"><i style="padding-left:2px; font-size: 18px;" class="${icon}_icon visibility_icon"></i></td><td style="padding: 0px;"><i style="font-size: 18px;" class="delete_icon"></i></td><td>${from}</td><td>${to}</td><td title="${distance} ${getDistanceUnit()}">${distance}</td><td title="${bearing} degrees">${bearing}</td></tr>`;
+        content += `<tr data-index="${measures.indexOf(measure)}"><td style="padding: 2px;"><i style="padding-left:2px; font-size: 15px;" class="${icon}_icon visibility_icon"></i></td><td style="padding: 0px;"><i style="font-size: 15px;" class="delete_icon"></i></td><td>${from}</td><td>${to}</td><td title="${distance} ${getDistanceUnit()}">${distance}</td><td title="${bearing} degrees">${bearing}</td></tr>`;
 
         return true;
     });
