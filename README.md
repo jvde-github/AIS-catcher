@@ -21,6 +21,10 @@ It is your responsibility to determine whether or not your local administration 
 It is specifically forbidden to use this software for any illegal purpose whatsoever. 
 Only use this software in regions where such use is permitted.
 
+## Plug-and-play solution
+
+Prefer a traditional AIS receiver over an SDR but want the same advantages? We recommend the **dAISy-catcher**, a dual-channel receiver developed with [Wegmatt](https://shop.wegmatt.com/products/daisy-catcher-high-performance-ais-receiver) that combines the benefits of SDR receivers with a dedicated hardware solution: plug-and-play operation, low power consumption, and precise signal processing. It connects directly to AIS-catcher over serial, as a USB device or Raspberry Pi HAT. See the [product page](https://shop.wegmatt.com/products/daisy-catcher-high-performance-ais-receiver) and [manual (PDF)](https://wegmatt.com/files/dAISy-catcher%20AIS%20Receiver%20Manual.pdf).
+
 ## Feature overview: Input -> Output
 
 ![image](https://github.com/user-attachments/assets/6677b833-bd2c-4338-babe-3817d6a7c3ea)
