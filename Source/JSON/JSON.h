@@ -70,7 +70,11 @@ namespace JSON
 			static const std::string empty;
 			return isString() ? *data.s : empty;
 		}
-		const std::string &getStringRef() const { return *data.s; }
+		const std::string &getStringRef() const
+		{
+			static const std::string empty;
+			return isString() ? *data.s : empty;
+		}
 		const JSON &getObject() const { return *data.o; }
 
 		Type getType() const { return type; }

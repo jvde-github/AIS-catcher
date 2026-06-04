@@ -432,7 +432,7 @@ namespace AIS
 
 	void Message::getText(int start, int len, std::string &str) const
 	{
-		if (start < 0 || start + len > MAX_AIS_LENGTH)
+		if (start < 0 || len <= 0 || start + len > MAX_AIS_LENGTH)
 		{
 			str.resize(0);
 			return;
