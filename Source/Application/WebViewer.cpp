@@ -645,7 +645,13 @@ bool ReceiverTracker::save(std::ofstream &f)
 
 bool ReceiverTracker::load(std::ifstream &f)
 {
-	return counter.Load(f) && hist_second.Load(f) && hist_minute.Load(f) && hist_hour.Load(f) && hist_day.Load(f) && (f.peek() == EOF || ships.Load(f));
+	if (!counter.Load(f) || !hist_second.Load(f) || !hist_minute.Load(f) || !hist_hour.Load(f) || !hist_day.Load(f))
+		return false;
+
+	if (f.peek() != EOF && !ships.Load(f))
+		Warning() << "Backup: ship positions could not be restored from backup (format change?).";
+
+	return true;
 }
 
 void ReceiverTracker::writeHistoryJSON(JSON::Writer &w)
