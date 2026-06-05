@@ -178,11 +178,10 @@ void Config::setTCPListenerfromJSON(const JSON::Member &m)
 
 void Config::setModelfromJSON(const JSON::Member &m)
 {
-
 	if (!isActiveObject(m.Get()))
 		return;
 
-	_state.receivers.back()->addModel(2);
+	_state.receivers.back()->addModel(_state.receivers.back()->getDeviceManager().isTXTformatSet() ? 5 : 2);
 	setSettingsFromJSON(m.Get(), *_state.receivers.back()->Model(_state.receivers.back()->Count() - 1));
 }
 
@@ -252,6 +251,7 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members, bool 
 		case AIS::KEY_SETTING_VERBOSE:
 		case AIS::KEY_SETTING_CHANNEL:
 		case AIS::KEY_SETTING_META:
+		case AIS::KEY_SETTING_SENSITIVITY_HIGH:
 			_state.receivers.back()->SetKey((AIS::Keys)m.Key(), m.Get().to_string());
 			break;
 		case AIS::KEY_SETTING_MODEL:

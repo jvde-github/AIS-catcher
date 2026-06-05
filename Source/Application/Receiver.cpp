@@ -191,7 +191,7 @@ void Receiver::setupModel(int &group, int idx)
 			addModel(10);
 			break;
 		default:
-			addModel(2);
+			addModel(high_sensitivity ? 4 : 2);
 			break;
 		}
 	}

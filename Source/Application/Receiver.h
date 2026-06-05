@@ -52,6 +52,7 @@ class Receiver : public Setting
 {
 
 	bool timing = false;
+	bool high_sensitivity = false;
 
 	int sample_rate = 0, bandwidth = 0, ppm = 0, own_mmsi = -1;
 	int receiver_index = -1;
@@ -88,6 +89,9 @@ public:
 		{
 		case AIS::KEY_SETTING_VERBOSE:
 			verbose = Util::Parse::Switch(arg);
+			break;
+		case AIS::KEY_SETTING_SENSITIVITY_HIGH:
+			high_sensitivity = Util::Parse::Switch(arg);
 			break;
 		case AIS::KEY_SETTING_CHANNEL:
 			setChannel(arg, "");
