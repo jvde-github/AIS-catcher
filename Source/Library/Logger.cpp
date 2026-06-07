@@ -60,16 +60,16 @@ public:
 		int priority;
 		switch (msg.level)
 		{
-		case LogLevel::__DEBUG:
+		case LogLevel::DEBUG:
 			priority = LOG_DEBUG;
 			break;
-		case LogLevel::__ERROR:
+		case LogLevel::ERROR:
 			priority = LOG_ERR;
 			break;
-		case LogLevel::__WARNING:
+		case LogLevel::WARNING:
 			priority = LOG_WARNING;
 			break;
-		case LogLevel::__CRITICAL:
+		case LogLevel::CRITICAL:
 			priority = LOG_CRIT;
 			break;
 		default:
@@ -104,17 +104,17 @@ std::string LogMessage::levelToString() const
 {
 	switch (level)
 	{
-	case LogLevel::__DEBUG:
+	case LogLevel::DEBUG:
 		return "debug";
-	case LogLevel::__INFO:
+	case LogLevel::INFO:
 		return "info";
-	case LogLevel::__WARNING:
+	case LogLevel::WARNING:
 		return "warning";
-	case LogLevel::__ERROR:
+	case LogLevel::ERROR:
 		return "error";
-	case LogLevel::__CRITICAL:
+	case LogLevel::CRITICAL:
 		return "critical";
-	case LogLevel::__EMPTY:
+	case LogLevel::EMPTY:
 		return "empty";
 	}
 	return "unknown";
@@ -145,15 +145,15 @@ Setting &Logger::SetKey(AIS::Keys key, const std::string &arg)
 		std::string a = arg;
 		Util::Convert::toUpper(a);
 		if (a == "DEBUG")
-			min_level_ = LogLevel::__DEBUG;
+			min_level_ = LogLevel::DEBUG;
 		else if (a == "INFO")
-			min_level_ = LogLevel::__INFO;
+			min_level_ = LogLevel::INFO;
 		else if (a == "WARNING")
-			min_level_ = LogLevel::__WARNING;
+			min_level_ = LogLevel::WARNING;
 		else if (a == "ERROR")
-			min_level_ = LogLevel::__ERROR;
+			min_level_ = LogLevel::ERROR;
 		else if (a == "CRITICAL")
-			min_level_ = LogLevel::__CRITICAL;
+			min_level_ = LogLevel::CRITICAL;
 		else
 			throw std::runtime_error("Invalid log level: " + arg + ". Valid values: DEBUG, INFO, WARNING, ERROR, CRITICAL");
 		break;
@@ -219,7 +219,7 @@ std::vector<LogMessage> Logger::getLastMessages(int n)
 
 	while (ptr != buffer_position_)
 	{
-		if (message_buffer_[ptr].level != LogLevel::__EMPTY)
+		if (message_buffer_[ptr].level != LogLevel::EMPTY)
 		{
 			result.push_back(message_buffer_[ptr]);
 		}
@@ -310,25 +310,25 @@ LogStream::~LogStream()
 // Convenience functions
 LogStream Debug()
 {
-	return LogStream(LogLevel::__DEBUG);
+	return LogStream(LogLevel::DEBUG);
 }
 
 LogStream Info()
 {
-	return LogStream(LogLevel::__INFO);
+	return LogStream(LogLevel::INFO);
 }
 
 LogStream Warning()
 {
-	return LogStream(LogLevel::__WARNING);
+	return LogStream(LogLevel::WARNING);
 }
 
 LogStream Error()
 {
-	return LogStream(LogLevel::__ERROR);
+	return LogStream(LogLevel::ERROR);
 }
 
 LogStream Critical()
 {
-	return LogStream(LogLevel::__CRITICAL);
+	return LogStream(LogLevel::CRITICAL);
 }

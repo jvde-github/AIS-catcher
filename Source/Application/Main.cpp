@@ -614,7 +614,7 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 				Logger::getInstance().removeLogListener(cb);
 				cb = -1;
 				// Enable DEBUG level when switching to system logging for journalctl filtering
-				Logger::getInstance().setMinLevel(LogLevel::__DEBUG);
+				Logger::getInstance().setMinLevel(LogLevel::DEBUG);
 			}
 			parseSettings(Logger::getInstance(), argv, ptr, argc);
 			break;

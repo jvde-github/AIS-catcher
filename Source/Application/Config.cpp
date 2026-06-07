@@ -201,7 +201,7 @@ void Config::setReceiverFromArray(const JSON::Member &m)
 
 void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members, bool unspecAllowed)
 {
-	std::string config, serial, input;
+	std::string serial, input;
 	// pass 1
 	for (const auto &m : members)
 	{
