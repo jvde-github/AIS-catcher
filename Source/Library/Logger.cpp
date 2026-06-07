@@ -63,7 +63,7 @@ public:
 		case LogLevel::DEBUG:
 			priority = LOG_DEBUG;
 			break;
-		case LogLevel::ERROR:
+		case LogLevel::ERR:
 			priority = LOG_ERR;
 			break;
 		case LogLevel::WARNING:
@@ -110,7 +110,7 @@ std::string LogMessage::levelToString() const
 		return "info";
 	case LogLevel::WARNING:
 		return "warning";
-	case LogLevel::ERROR:
+	case LogLevel::ERR:
 		return "error";
 	case LogLevel::CRITICAL:
 		return "critical";
@@ -151,7 +151,7 @@ Setting &Logger::SetKey(AIS::Keys key, const std::string &arg)
 		else if (a == "WARNING")
 			min_level_ = LogLevel::WARNING;
 		else if (a == "ERROR")
-			min_level_ = LogLevel::ERROR;
+			min_level_ = LogLevel::ERR;
 		else if (a == "CRITICAL")
 			min_level_ = LogLevel::CRITICAL;
 		else
@@ -325,7 +325,7 @@ LogStream Warning()
 
 LogStream Error()
 {
-	return LogStream(LogLevel::ERROR);
+	return LogStream(LogLevel::ERR);
 }
 
 LogStream Critical()

@@ -31,7 +31,7 @@ enum class LogLevel
     DEBUG,
     INFO,
     WARNING,
-    ERROR,
+    ERR,
     CRITICAL,
     EMPTY
 };
