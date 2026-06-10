@@ -59,7 +59,7 @@ namespace IO
 
 		std::string post_body;
 		std::thread run_thread;
-		bool terminate = false, running = false;
+		std::atomic<bool> terminate{false}, running{false};
 
 		ZIP zip;
 
@@ -137,6 +137,7 @@ namespace IO
 		bool include_sample_start = false;
 
 		void ResetIfNeeded();
+		bool applySocketOptions();
 
 	public:
 		~UDPStreamer();
@@ -165,13 +166,13 @@ namespace IO
 		void Stop() override;
 		void SendTo(const std::string &str)
 		{
-			stats.bytes_out += str.length();
-			sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen);
+			if (sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen) > 0)
+				stats.bytes_out += str.length();
 		}
 		void SendTo(const char *data, int len)
 		{
-			stats.bytes_out += len;
-			sendto(sock, data, len, 0, address->ai_addr, (int)address->ai_addrlen);
+			if (sendto(sock, data, len, 0, address->ai_addr, (int)address->ai_addrlen) > 0)
+				stats.bytes_out += len;
 		}
 	};
 

@@ -102,22 +102,24 @@ namespace IO
 
 	void HTTPStreamer::Receive(const AIS::GPS *data, int len, TAG &tag)
 	{
-		lat = std::to_string(data->getLat());
-		lon = std::to_string(data->getLon());
+		if (!filter.includeGPS() || len <= 0) return;
+		const std::lock_guard<std::mutex> lock(msg_list_mutex);
+		lat = std::to_string(data[len - 1].getLat());
+		lon = std::to_string(data[len - 1].getLon());
 	}
 
 	void HTTPStreamer::post()
 	{
-		/*
-		if (!msg_list.size())
-			return;
-		*/
-
+		// Post even when send_list is empty: the station heartbeat (lat/lon,
+		// receiver info) keeps aggregators alive between message bursts.
 		std::list<std::string> send_list;
+		std::string lat_snap, lon_snap;
 
 		{
 			const std::lock_guard<std::mutex> lock(msg_list_mutex);
 			send_list.splice(send_list.begin(), msg_list);
+			lat_snap = lat;
+			lon_snap = lon;
 		}
 
 		post_body.clear();
@@ -132,8 +134,8 @@ namespace IO
 				.kv("protocol", protocol_string)
 				.kv("encodetime", now)
 				.kv_raw("stationid", stationid)
-				.kv_raw("station_lat", lat)
-				.kv_raw("station_lon", lon)
+				.kv_raw("station_lat", lat_snap)
+				.kv_raw("station_lon", lon_snap)
 				.key("receiver")
 				.beginObject()
 				.kv("description", "AIS-catcher " VERSION)
@@ -189,19 +191,13 @@ namespace IO
 
 	void HTTPStreamer::process()
 	{
-
-		while (!terminate)
+		do
 		{
-
-			for (int i = 0; i < INTERVAL; i++)
-			{
+			for (int i = 0; i < INTERVAL && !terminate; i++)
 				SleepSystem(1000);
-				if (terminate)
-					break;
-			}
 			if (!url.empty())
 				post();
-		}
+		} while (!terminate);
 	}
 
 	Setting &HTTPStreamer::SetKey(AIS::Keys key, const std::string &arg)
@@ -322,6 +318,25 @@ namespace IO
 		Stop();
 	}
 
+	bool UDPStreamer::applySocketOptions()
+	{
+#ifndef _WIN32
+		int r = fcntl(sock, F_GETFL, 0);
+		if (r < 0) return false;
+		if (fcntl(sock, F_SETFL, r | O_NONBLOCK) < 0) return false;
+		if (broadcast)
+		{
+			int broadcastEnable = 1;
+			if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (char *)&broadcastEnable, sizeof(broadcastEnable)) < 0)
+				return false;
+		}
+#else
+		u_long mode = 1;
+		if (ioctlsocket(sock, FIONBIO, &mode) != 0) return false;
+#endif
+		return true;
+	}
+
 	void UDPStreamer::ResetIfNeeded()
 	{
 		if (reset > 0)
@@ -329,16 +344,18 @@ namespace IO
 			long now = (long)std::time(nullptr);
 			if ((now - last_reconnect) > 60 * reset)
 			{
-
 				Info() << "UDP: recreate socket (" << host << ":" << port << ")";
 
 				closesocket(sock);
 				sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
 
-				if (sock == -1)
+				if (sock == -1 || !applySocketOptions())
 				{
-					Critical() << "UDP: cannot recreate socket. Requesting termination.";
+					Critical() << "UDP: cannot recreate socket (" << host << ":" << port << "). Requesting termination.";
+					closesocket(sock);
+					sock = -1;
 					StopRequest();
+					return;
 				}
 				last_reconnect = now;
 			}
@@ -449,29 +466,8 @@ namespace IO
 			throw std::runtime_error("cannot create socket for UDP " + host + " port " + port);
 		}
 
-#ifndef _WIN32
-		int r = fcntl(sock, F_GETFL, 0);
-		if (r < 0)
-			throw std::runtime_error("cannot get UDP socket flags for " + host + " port " + port);
-
-		r = fcntl(sock, F_SETFL, r | O_NONBLOCK);
-		if (r < 0)
-			throw std::runtime_error("cannot make UDP socket non-blocking for " + host + " port " + port);
-#else
-		u_long mode = 1;
-		ioctlsocket(sock, FIONBIO, &mode);
-#endif
-
-#ifndef _WIN32
-		if (broadcast)
-		{
-			int broadcastEnable = 1;
-			if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (char *)&broadcastEnable, sizeof(broadcastEnable)) < 0)
-			{
-				throw std::runtime_error("UDP: cannot set broadcast option for socket.");
-			}
-		}
-#endif
+		if (!applySocketOptions())
+			throw std::runtime_error("cannot configure UDP socket for " + host + " port " + port);
 
 		if (reset > 0)
 			last_reconnect = (long)std::time(nullptr);
@@ -844,7 +840,7 @@ namespace IO
 				continue;
 
 			formatInto(data[i], tag, false, "", "\r\n");
-			topic_template.write(tag, data[0], topic_buf);
+			topic_template.write(tag, data[i], topic_buf);
 			((Protocol::MQTT *)session)->send(json.data(), (int)json.size(), topic_buf);
 		}
 
@@ -859,7 +855,7 @@ namespace IO
 			{
 				json.clear();
 				builder.stringify(data[i], json, "\r\n");
-				topic_template.write(tag, *((AIS::Message *)data[0].binary), topic_buf);
+				topic_template.write(tag, *((AIS::Message *)data[i].binary), topic_buf);
 				((Protocol::MQTT *)session)->send(json.data(), (int)json.size(), topic_buf);
 			}
 		}
@@ -892,7 +888,7 @@ namespace IO
 		{
 			std::string a = arg;
 			if (!Util::Parse().Protocol(a, Protocol))
-				throw std::runtime_error("TCP output: unknown protocol: " + arg);
+				throw std::runtime_error("MQTT output: unknown protocol: " + arg);
 
 			switch (Protocol)
 			{
@@ -907,7 +903,7 @@ namespace IO
 			case PROTOCOL::MQTTS:
 				break;
 			default:
-				throw std::runtime_error("TCO output: unsupported protocol: " + arg);
+				throw std::runtime_error("MQTT output: unsupported protocol: " + arg);
 			}
 			break;
 		}

@@ -80,11 +80,11 @@ namespace IO
 		// multipart
 		if (multipart)
 		{
-			message = "--" + boundary + "\n";
-			message += "Content-Disposition: form-data; name=\"" + copyname + "\"\n";
-			message += "Content-Type: application/json\n\n";
+			message = "--" + boundary + "\r\n";
+			message += "Content-Disposition: form-data; name=\"" + copyname + "\"\r\n";
+			message += "Content-Type: application/json\r\n\r\n";
 			message += msg;
-			message += "\n--" + boundary + "--\n";
+			message += "\r\n--" + boundary + "--\r\n";
 			return;
 		}
 		// plain & zipped
@@ -101,7 +101,7 @@ namespace IO
 	void HTTPClient::createHeader(bool gzip, bool multipart)
 	{
 
-		header = "POST " + path + " HTTP/1.1\r\nHost: " + host + ":" + port + "\r\nAccept: */*\r\n";
+		header = "POST " + path + " HTTP/1.1\r\nHost: " + host + ":" + port + "\r\nAccept: */*\r\nConnection: close\r\n";
 		if (!userpwd.empty())
 		{
 			header += "Authorization: Basic " + Util::Convert::BASE64toString(userpwd) + "\r\n";
@@ -123,6 +123,7 @@ namespace IO
 
 	int HTTPClient::Post(const std::string &msg, bool gzip, bool multipart, const std::string &copyname)
 	{
+		if (multipart) gzip = false;
 		createMessageBody(msg, gzip, multipart, copyname);
 		createHeader(gzip, multipart);
 
