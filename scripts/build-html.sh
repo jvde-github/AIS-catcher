@@ -52,7 +52,7 @@ mkdir -p "$DIST/flags/4x3"
     fi
 done
 
-# Rasterize emblem-heavy flags to small PNGs and point their .fi-xx CSS at them.
+# Rasterize emblem-heavy flags to small PNG files and point their .fi-xx CSS at them.
 node "$SRC/tools/optimize-flags.mjs" "$DIST/flags/4x3" | while read -r code; do
     echo ".fi-$code{background-image:url(flags/4x3/$code.png)}" >> "$DIST/flag-icons.css"
 done
