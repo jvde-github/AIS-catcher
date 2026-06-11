@@ -173,7 +173,7 @@ namespace AIS
 		bool processGPS(const std::string &s, TAG &tag, const char *name,
 						int min_fields, int max_fields,
 						int lat_idx, int ns_idx, int lon_idx, int ew_idx,
-						int fix_idx = -1);
+						int fix_idx = -1, int status_idx = -1);
 		bool processBinaryPacket(TAG &tag);
 		bool parseTagBlock(const std::string &s, std::string &nmea);
 		bool processTagBlock(const std::string &s, TAG &tag);

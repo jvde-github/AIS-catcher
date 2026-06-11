@@ -257,7 +257,7 @@ namespace AIS
 	bool NMEA::processGPS(const std::string &s, TAG &tag, const char *name,
 						  int min_fields, int max_fields,
 						  int lat_idx, int ns_idx, int lon_idx, int ew_idx,
-						  int fix_idx)
+						  int fix_idx, int status_idx)
 	{
 		if (!cfg_GPS)
 			return true;
@@ -287,6 +287,11 @@ namespace AIS
 			if (fix != 1 && fix != 2)
 				return false;
 		}
+
+		// A/V status flag (RMC/GLL): a GNSS without a fix still outputs its
+		// last stored position flagged 'V' — must not be applied.
+		if (status_idx >= 0 && (partEmpty(status_idx) || partAt(status_idx, 0) != 'A'))
+			return false;
 
 		if (partEmpty(ns_idx) || partEmpty(ew_idx))
 			return false;
@@ -886,9 +891,9 @@ namespace AIS
 		if (memcmp(id, "GGA", 3) == 0)
 			return processGPS(s, tag, "GGA", 15, 15, 2, 3, 4, 5, 6);
 		if (memcmp(id, "RMC", 3) == 0)
-			return processGPS(s, tag, "RMC", 12, 14, 3, 4, 5, 6);
+			return processGPS(s, tag, "RMC", 12, 14, 3, 4, 5, 6, -1, 2);
 		if (memcmp(id, "GLL", 3) == 0)
-			return processGPS(s, tag, "GLL", 8, 8, 1, 2, 3, 4);
+			return processGPS(s, tag, "GLL", 8, 8, 1, 2, 3, 4, -1, 6);
 
 		return true;
 	}
