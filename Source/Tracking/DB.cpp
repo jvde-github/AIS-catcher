@@ -185,6 +185,9 @@ std::string DB::getJSONcompact(bool full, std::time_t since)
 						.val_unless((int)ship.hour, ETA_HOUR_UNDEFINED)
 						.val_unless((int)ship.minute, ETA_MINUTE_UNDEFINED)
 						.val(ship.vin)
+						.val(ship.vendorid)
+						.val_unless(ship.unit_model, -1)
+						.val_unless(ship.unit_serial, -1)
 						.endArray();
 				}
 			}
@@ -248,6 +251,9 @@ void DB::getShipJSON(const Ship &ship, JSON::Writer &w, long int delta_time)
 
 	w.kv("destination", ship.destination)
 		.kv("eni", ship.vin)
+		.kv("vendorid", ship.vendorid)
+		.kv_unless("model", ship.unit_model, -1)
+		.kv_unless("serial", ship.unit_serial, -1)
 		.kv("repeat", ship.getRepeat())
 		.kv("last_signal", delta_time)
 		.endObject();
@@ -888,6 +894,23 @@ bool DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &v, b
 		staticUpdated = true;
 		break;
 	}
+	case AIS::KEY_VENDORID:
+	{
+		const std::string &s = p.Get().getString();
+		size_t n = MIN(s.size(), sizeof(v.vendorid) - 1);
+		std::memcpy(v.vendorid, s.data(), n);
+		v.vendorid[n] = '\0';
+		staticUpdated = true;
+		break;
+	}
+	case AIS::KEY_MODEL:
+		v.unit_model = p.Get().getInt();
+		staticUpdated = true;
+		break;
+	case AIS::KEY_SERIAL:
+		v.unit_serial = p.Get().getInt();
+		staticUpdated = true;
+		break;
 	case AIS::KEY_COUNTRY_CODE:
 	{
 		const std::string &s = p.Get().getString();

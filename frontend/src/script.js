@@ -2221,7 +2221,7 @@ async function fetchShips(noDoubleFetch = true) {
         "shiptype", "imo",
         "to_bow", "to_stern", "to_port", "to_starboard",
         "draught", "eta_month", "eta_day", "eta_hour", "eta_minute",
-        "eni"
+        "eni", "vendorid", "model", "serial"
     ];
 
     const serverTime = ships.time || 0;
@@ -2239,6 +2239,7 @@ async function fetchShips(noDoubleFetch = true) {
             s.shipname = sanitizeString(s.shipname);
             s.callsign = sanitizeString(s.callsign);
             s.eni = sanitizeString(s.eni || "");
+            s.vendorid = sanitizeString(s.vendorid || "");
             const mmsi = s.mmsi;
             if (mmsi in shipsDB) {
                 Object.assign(shipsDB[mmsi].raw, s);
@@ -3883,6 +3884,11 @@ function updateTechDetails(ship) {
     // Update Maneuver
     const maneuverText = ship.maneuver === 0 ? "-" : ship.maneuver === 1 ? "None" : "Special";
     document.getElementById("tech_maneuver").textContent = maneuverText;
+
+    // Transponder vendor info (type 24 part B)
+    document.getElementById("tech_vendor").textContent = ship.vendorid || "-";
+    document.getElementById("tech_model").textContent = ship.model != null ? ship.model : "-";
+    document.getElementById("tech_serial").textContent = ship.serial != null ? ship.serial : "-";
 }
 
 function toggleShipcardPopover(popoverId, iconId) {
