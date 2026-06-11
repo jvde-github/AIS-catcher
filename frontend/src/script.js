@@ -7,6 +7,7 @@ import * as fireworks from './overlays/fireworks.js';
 import * as community from './overlays/community.js';
 import * as kiosk from './features/kiosk.js';
 import * as measure from './features/measure.js';
+import * as boxselect from './features/boxselect.js';
 import {
     getDistanceVal, getDistanceUnit,
     getSpeedVal, getSpeedUnit,
@@ -168,6 +169,7 @@ const ACTIONS = {
     unpinCenter: () => unpinCenter(),
     showAllTracks: () => showAllTracks(),
     deleteAllTracks: () => deleteAllTracks(),
+    startBoxSelect: () => { boxselect.start(); showNotification('Drag a rectangle to enable tracks (Esc to cancel)'); },
     ToggleFireworks: () => fireworks.toggle(),
     toggleLabel: () => toggleLabel(),
     toggleKioskMode: () => kiosk.toggleKioskMode(),
@@ -3601,6 +3603,23 @@ async function showAllTracks() {
     updateShipcardTrackOption()
 }
 
+async function showTracksForMMSIs(mmsis) {
+    let added = 0;
+    for (const m of mmsis) {
+        if (!marker_tracks.has(Number(m))) {
+            marker_tracks.add(Number(m));
+            added++;
+        }
+    }
+    if (added > 0) {
+        lastPathFetch = 0;
+        await fetchTracks();
+        redrawMap();
+        updateShipcardTrackOption();
+    }
+    return mmsis.length;
+}
+
 function deleteAllTracks() {
     show_all_tracks = false;
     lastPathFetch = 0;
@@ -5375,6 +5394,12 @@ measure.init({
     getShipsDB: () => shipsDB,
     showNotification,
     ensureMeasurecardVisible: () => { if (!measurecardVisible()) toggleMeasurecard(); },
+});
+boxselect.init({
+    getMap: () => map,
+    getShipsDB: () => shipsDB,
+    showTracks: showTracksForMMSIs,
+    showNotification,
 });
 
 console.log("Plugin loading completed");
