@@ -95,7 +95,7 @@ std::string DB::getJSONcompact(bool full, std::time_t since)
 
 		w.beginObject().kv("count", count).kv("time", tm).kv("timeout", TIME_HISTORY);
 		if (latlon_share && isValidCoord(lat, lon))
-			w.key("station").beginObject().kv("lat", lat).kv("lon", lon).kv("mmsi", own_mmsi).endObject();
+			w.key("station").beginObject().kv("lat", lat).kv("lon", lon).kv("mmsi", own_mmsi).kv("gps", gps_position).endObject();
 
 		// --- Pass 1: dynamic array ---
 		w.key("dynamic").beginArray();
@@ -268,7 +268,7 @@ std::string DB::getJSON(bool full)
 		JSON::Writer w(content, 65536);
 		w.beginObject().kv("count", count);
 		if (latlon_share)
-			w.key("station").beginObject().kv("lat", lat).kv("lon", lon).kv("mmsi", own_mmsi).endObject();
+			w.key("station").beginObject().kv("lat", lat).kv("lon", lon).kv("mmsi", own_mmsi).kv("gps", gps_position).endObject();
 		w.key("ships").beginArray();
 
 		std::time_t tm = time(nullptr);

@@ -4045,7 +4045,7 @@ function drawStation() {
         image: new ol.style.Circle({
             radius: radius,
             stroke: new ol.style.Stroke({
-                color: 'white',
+                color: station.gps ? '#2e86ff' : 'white',
                 width: 3
             }),
             fill: new ol.style.Fill({
@@ -4059,7 +4059,7 @@ function drawStation() {
     });
 
     stationFeature.setStyle([CircleStyle, svgIconStyle]);
-    stationFeature.tooltip = "Receiving Station";
+    stationFeature.tooltip = station.gps ? "Receiving Station (GPS)" : "Receiving Station";
     stationFeature.station = true;
     extraVector.addFeature(stationFeature);
 

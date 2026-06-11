@@ -74,6 +74,7 @@ class DB : public StreamIn<JSON::JSON>,
 	bool server_mode = false;
 	bool msg_save = false;
 	bool use_GPS = true;
+	bool gps_position = false;
 	uint32_t own_mmsi = 0;
 
 	int Nships = 4096;
@@ -141,9 +142,10 @@ public:
 	{
 		this->lat = lat;
 		this->lon = lon;
+		gps_position = false;
 	}
-	void setLat(float lat) { this->lat = lat; }
-	void setLon(float lon) { this->lon = lon; }
+	void setLat(float lat) { this->lat = lat; gps_position = false; }
+	void setLon(float lon) { this->lon = lon; gps_position = false; }
 
 	float getLat() { return lat; }
 	float getLon() { return lon; }
@@ -161,6 +163,7 @@ public:
 			std::lock_guard<std::mutex> lock(mtx);
 			lat = data[0].getLat();
 			lon = data[0].getLon();
+			gps_position = true;
 		}
 	}
 
