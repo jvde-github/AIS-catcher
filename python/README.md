@@ -20,9 +20,9 @@ pip install aiscat
 import aiscat
 
 aiscat.decode("!AIVDM,1,1,,A,15MgK45P3@G?fl0E`JbR0OwT0@MS,0*4E")
-# {'type': 1, 'mmsi': 366730000, 'channel': 'A', 'rxuxtime': 1777739134.027,
+# {'channel': 'A', 'type': 1, 'mmsi': 366730000,
 #  'lat': 37.803802, 'lon': -122.392532, 'speed': 20.8, 'course': 51.3,
-#  'status': 5, 'status_text': 'Moored', ...}
+#  'status': 5, 'status_text': 'Moored', ..., 'rxuxtime': 1777739134.027}
 ```
 
 `decode()` is for ad-hoc one-shot decoding. For files, sockets, or any stream, use the [stream helpers](#streams) (`from_file`, `from_tcp`, …) or [`Decoder`](#api) directly.
@@ -33,13 +33,13 @@ aiscat.decode("!AIVDM,1,1,,A,15MgK45P3@G?fl0E`JbR0OwT0@MS,0*4E")
 
 | Tool | Time | msg/s | µs/msg | vs fastest |
 |---|---:|---:|---:|---:|
-| AIS-catcher CLI (`-r txt -o 5`) | 0.95s | 2,115,000 | 0.47 | 1.00× |
-| **aiscat** (this library) | **1.04s** | **1,917,000** | **0.52** | **1.10×** |
-| `gpsdecode` (gpsd, BSD-2) — CLI | 3.17s | 632,000 | 1.58 | 3.35× |
-| [libais 0.17](https://pypi.org/project/libais/) (C, Apache 2.0) | 5.41s | 369,000 | 2.71 | 5.73× |
-| [pyais 3.0.0](https://pypi.org/project/pyais/) (pure Python, MIT) | 22.36s | 89,000 | 11.18 | 23.66× |
+| **aiscat** (this library) | **1.20s** | **1,665,000** | **0.60** | **1.00×** |
+| AIS-catcher CLI (`-r txt -o 5`) | 1.79s | 1,120,000 | 0.89 | 1.49× |
+| `gpsdecode` (gpsd, BSD-2) — CLI | 3.57s | 561,000 | 1.78 | 2.98× |
+| [libais 0.17](https://pypi.org/project/libais/) (C, Apache 2.0) | 5.80s | 345,000 | 2.90 | 4.83× |
+| [pyais 3.1.0](https://pypi.org/project/pyais/) (pure Python, MIT) | 17.18s | 116,000 | 8.59 | 14.32× |
 
-aiscat tracks the native AIS-catcher CLI within ~10% despite producing rich Python `dict` objects (the CLI just stringifies JSON to stdout). It's **3× faster than `gpsdecode`**, **5× faster than libais**, and **21× faster than pyais**.
+aiscat outpaces the native AIS-catcher CLI: building Python `dict` objects directly turns out cheaper than the CLI's stringify-JSON-to-stdout path. It's **3× faster than `gpsdecode`**, **~5× faster than libais**, and **14× faster than pyais**.
 
 For perspective: a busy AIS shore station produces ~50 msg/s. Throughput matters when you're replaying recordings or aggregating dozens of receivers, not for live decode of a single antenna.
 
@@ -93,13 +93,13 @@ Each decoded message carries two timestamps:
 
 | Format | Returns | Throughput¹ | Equivalent to | Notes |
 |---|---|---:|---|---|
-| `"dictionary"` *(default)* | `dict` | 1.76M msg/s | AIS-catcher `-o 5` (parsed) | Full decoded fields. |
-| `"annotated"` | `dict` | 0.50M msg/s | AIS-catcher `-o 6` (parsed) | Each scalar wrapped as `{value, unit, description, text}`. See [Annotated mode](#annotated-mode). |
-| `"json"` | `bytes` | 1.96M msg/s | AIS-catcher `-o 5` | Full decoded JSON, ready to write/send. |
-| `"json_nmea"` | `bytes` | 4.13M msg/s | AIS-catcher `-o 3` | Slim JSON envelope wrapping the original NMEA — the relay/passthrough format. |
-| `"nmea"` | `bytes` | 5.51M msg/s | AIS-catcher `-n` / `-o 1` | The raw AIVDM/AIVDO line(s). |
-| `"nmea_tag"` | `bytes` | 4.52M msg/s | — | NMEA prefixed with an IEC 61162-450 tag block carrying source + timestamp. |
-| `"binary"` | `bytes` | 5.32M msg/s | — | AIS-catcher's native 0xac binary packet format (compact, suitable for inter-process transport between AIS-catcher / aiscat instances). |
+| `"dictionary"` *(default)* | `dict` | 1.67M msg/s | AIS-catcher `-o 5` (parsed) | Full decoded fields. |
+| `"annotated"` | `dict` | 0.40M msg/s | AIS-catcher `-o 6` (parsed) | Each scalar wrapped as `{value, unit, description, text}`. See [Annotated mode](#annotated-mode). |
+| `"json"` | `bytes` | 2.01M msg/s | AIS-catcher `-o 5` | Full decoded JSON, ready to write/send. |
+| `"json_nmea"` | `bytes` | 4.24M msg/s | AIS-catcher `-o 3` | Slim JSON envelope wrapping the original NMEA — the relay/passthrough format. |
+| `"nmea"` | `bytes` | 5.97M msg/s | AIS-catcher `-n` / `-o 1` | The raw AIVDM/AIVDO line(s). |
+| `"nmea_tag"` | `bytes` | 4.85M msg/s | — | NMEA prefixed with an IEC 61162-450 tag block carrying source + timestamp. |
+| `"binary"` | `bytes` | 5.70M msg/s | — | AIS-catcher's native 0xac binary packet format (compact, suitable for inter-process transport between AIS-catcher / aiscat instances). |
 
 ¹ Apple M-series, single thread, 2M mixed type 1–4 messages.
 
@@ -186,12 +186,13 @@ The same NMEA sentence — `!AIVDM,1,1,,B,13`e;R001`PNcD2MH48KQq>P0@;5,0*63` —
 ### `format="dictionary"` (default) — Python `dict`
 
 ```python
-{'rxuxtime': 1777908449.348, 'channel': 'B', 'type': 1, 'repeat': 0,
+{'channel': 'B', 'type': 1, 'repeat': 0,
  'mmsi': 244009864, 'status': 0, 'status_text': 'Under way using engine',
  'turn_unscaled': 0, 'turn': 0, 'speed': 10.4, 'accuracy': True,
  'lon': 6.701442, 'lat': 51.338295, 'course': 295.1, 'heading': 295,
  'second': 16, 'maneuver': 0, 'power': False, 'raim': False,
- 'radio': 66245, 'sync_state': 0, 'slot_timeout': 4, 'slot_number': 709}
+ 'radio': 66245, 'sync_state': 0, 'slot_timeout': 4, 'slot_number': 709,
+ 'rxuxtime': 1777908449.348}
 ```
 
 AIS-catcher's internal meta fields (SDR signal levels, decoder version, the original NMEA echo, etc.) are suppressed since they don't apply to a Python decoder.
@@ -261,7 +262,6 @@ Message 1 — Position report
 
 Field          Value                                     Unit                Description
 -------------  ----------------------------------------  ------------------  -------------------------------------------------------------------------
-rxuxtime       1777805849.119 (2026-05-03 10:57:29 UTC)                      Host receive time (Unix epoch s).
 channel        B                                                             VHF channel (A or B).
 type           1 (Position report)                                           Message Type
 repeat         0                                                             Repeat indicator (0..3; 3=do not repeat).
@@ -286,6 +286,7 @@ radio          66245                                                         Rad
 sync_state     0 (UTC direct)                                                TDMA sync state.
 slot_timeout   4                                                             Frames until new slot (0=next).
 slot_number    709                                                           TDMA slot number used.
+rxuxtime       1777805849.119 (2026-05-03 10:57:29 UTC)                      Host receive time (Unix epoch s).
 ```
 
 ## Type hints

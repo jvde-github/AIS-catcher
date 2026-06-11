@@ -91,7 +91,14 @@ namespace Util
 			else if (eq("repeat", 6))    push_sub(Segment::REPEAT, 1);
 			else if (eq("channel", 7))   push_sub(Segment::CHANNEL, 1);
 			else if (eq("rxtimeux", 8))  push_sub(Segment::RXTIMEUX, 11);
-			else                          push_literal(t.data() + i, end - i + 1);
+			else
+			{
+				// Unknown token: emit this '%' and rescan, so a stray literal
+				// '%' cannot consume the opener of the next substitution.
+				push_literal(t.data() + i, 1);
+				i++;
+				continue;
+			}
 
 			i = end + 1;
 		}
@@ -113,7 +120,8 @@ namespace Util
 					w.append_int((long long)msg.mmsi());
 					break;
 				case Segment::PPM:
-					w.append_float((double)tag.ppm);
+					if (tag.ppm != PPM_UNDEFINED)
+						w.append_float((double)tag.ppm);
 					break;
 				case Segment::STATION:
 					w.append_int((long long)msg.getStation());

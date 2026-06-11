@@ -41,8 +41,6 @@
 
 static std::atomic<bool> stop;
 
-IO::OutputMessage *comm_feed = nullptr;
-
 void StopRequest()
 {
 	stop = true;
@@ -329,18 +327,16 @@ static void Assert(bool b, std::string &context, const std::string &msg = "")
 
 static void run(RunState &state)
 {
-	extern IO::OutputMessage *comm_feed;
-
 	// -------------
 	// set up the receiver and open the device
 
 	state.stat.resize(state.receivers.size());
 	state.msg_count.resize(state.receivers.size(), 0);
 
-#ifdef HASWEBVIEWER
-	bool has_server = !state.servers.empty() && state.servers[0]->active();
-#else
 	bool has_server = false;
+#ifdef HASWEBVIEWER
+	for (auto &s : state.servers)
+		has_server |= s->active();
 #endif
 	bool has_http = false;
 	for (auto &o : state.msg)
@@ -363,7 +359,7 @@ static void run(RunState &state)
 	}
 
 	// for community feed, restrict to local SDR hardware only
-	if (comm_feed && !state.xshare_defined)
+	if (state.comm_feed && !state.xshare_defined)
 	{
 		uint64_t live_groups = 0;
 		for (const auto &r : state.receivers)
@@ -375,7 +371,7 @@ static void run(RunState &state)
 				live_groups |= r->getGroupMask();
 		}
 
-		comm_feed->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(live_groups));
+		state.comm_feed->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(live_groups));
 	}
 
 	// Resolve zone-based output filtering: compute GROUPS_IN from zone overlap
@@ -454,6 +450,7 @@ static void run(RunState &state)
 		if (s->active())
 		{
 			s->setOutputChannels(state.msg);
+			s->setCommFeed(state.comm_feed);
 
 			if (state.own_mmsi != -1)
 			{
@@ -491,7 +488,9 @@ static void run(RunState &state)
 		for (auto &r : state.receivers)
 			stop = stop || !(r->getDeviceManager().getDevice()->isStreaming());
 
-		if (iscallback) // don't go to sleep in case we are reading from a file
+		// for non-callback devices (WAV file), the isStreaming() poll above pumps
+		// the data, so the loop must run unthrottled
+		if (iscallback)
 			std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP));
 
 		if (!oneverbose && !state.timeout)
@@ -519,16 +518,21 @@ static void run(RunState &state)
 			}
 		}
 
+		// watchdog: stop when any receiver went without messages for the timeout period
 		if (state.timeout && state.timeout_nomsg)
 		{
 			bool one_stale = false;
 
 			for (int i = 0; i < (int)state.receivers.size(); i++)
 			{
-				if (state.stat[i].statistics[0]->getCount() == state.msg_count[i])
+				uint64_t count = 0;
+				for (auto &s : state.stat[i].statistics)
+					count += s->getCount();
+
+				if (count == state.msg_count[i])
 					one_stale = true;
 
-				state.msg_count[i] = state.stat[i].statistics[0]->getCount();
+				state.msg_count[i] = count;
 			}
 
 			if (!one_stale)
@@ -539,7 +543,7 @@ static void run(RunState &state)
 		{
 			stop = true;
 			if (state.timeout_nomsg)
-				Warning() << "Stop triggered, no messages were received for " << state.timeout << " seconds.";
+				Warning() << "Watchdog: a receiver had no messages for " << state.timeout << " seconds, stopping.";
 			else
 			{
 				state.exit_code = -2;
@@ -548,12 +552,12 @@ static void run(RunState &state)
 		}
 	}
 
-	std::stringstream ss;
 	for (int i = 0; i < (int)state.receivers.size(); i++)
 	{
 		Receiver &r = *state.receivers[i];
 		r.stop();
 
+		std::stringstream ss;
 		if (r.verbose)
 		{
 			ss << "----------------------\n";
@@ -571,7 +575,8 @@ static void run(RunState &state)
 				std::string name = r.Model(j)->getName();
 				ss << "[" << r.Model(j)->getName() << "]: " << std::string(name.length() < 37 ? 37 - name.length() : 0, ' ') << r.Model(j)->getTotalTiming() << " ms" << "\n";
 			}
-		Info() << ss.str();
+		if (!ss.str().empty())
+			Info() << ss.str();
 	}
 
 #ifdef HASWEBVIEWER
@@ -582,8 +587,6 @@ static void run(RunState &state)
 
 static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb)
 {
-	extern IO::OutputMessage *comm_feed;
-
 	const std::string MSG_NO_PARAMETER = "does not allow additional parameter.";
 	int ptr = 1;
 
@@ -733,33 +736,31 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 			receiver.removeTags("DT");
 			break;
 		case 't':
+		{
 			Assert(count > 0, param, "requires one parameter [url], or two or three parameters [[protocol]] [host] [port].");
-			if (++state.nrec > 1)
-			{
-				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-			}
-			state.receivers.back()->getDeviceManager().InputType() = Type::RTLTCP;
+			DeviceManager &dm = state.newReceiver().getDeviceManager();
+			dm.InputType() = Type::RTLTCP;
 			if (count == 1)
-				state.receivers.back()->getDeviceManager().RTLTCP().SetKey(AIS::KEY_SETTING_URL, arg1);
+				dm.RTLTCP().SetKey(AIS::KEY_SETTING_URL, arg1);
 			else if ((count & 1) == 0)
-				state.receivers.back()->getDeviceManager().RTLTCP().SetKey(AIS::KEY_SETTING_PORT, arg2).SetKey(AIS::KEY_SETTING_HOST, arg1);
+				dm.RTLTCP().SetKey(AIS::KEY_SETTING_PORT, arg2).SetKey(AIS::KEY_SETTING_HOST, arg1);
 			else if ((count & 1) == 1)
-				state.receivers.back()->getDeviceManager().RTLTCP().SetKey(AIS::KEY_SETTING_PORT, arg3).SetKey(AIS::KEY_SETTING_HOST, arg2).SetKey(AIS::KEY_SETTING_PROTOCOL, arg1);
+				dm.RTLTCP().SetKey(AIS::KEY_SETTING_PORT, arg3).SetKey(AIS::KEY_SETTING_HOST, arg2).SetKey(AIS::KEY_SETTING_PROTOCOL, arg1);
 
-			if (count >= 4 )
-				parseSettings(state.receivers.back()->getDeviceManager().RTLTCP(), argv, ptr + 2 + (count & 1), argc);
-			break;
-		case 'x':
-			Assert(count >= 2 && (count & 1) == 0, param, "requires two parameters [server] [port] (optionally followed by key value pairs).");
-			if (++state.nrec > 1)
-			{
-				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-			}
-			state.receivers.back()->getDeviceManager().InputType() = Type::UDP;
-			state.receivers.back()->getDeviceManager().UDP().SetKey(AIS::KEY_SETTING_PORT, arg2).SetKey(AIS::KEY_SETTING_SERVER, arg1);
 			if (count >= 4)
-				parseSettings(state.receivers.back()->getDeviceManager().UDP(), argv, ptr + 2, argc);
-			break;
+				parseSettings(dm.RTLTCP(), argv, ptr + 2 + (count & 1), argc);
+		}
+		break;
+		case 'x':
+		{
+			Assert(count >= 2 && (count & 1) == 0, param, "requires two parameters [server] [port] (optionally followed by key value pairs).");
+			DeviceManager &dm = state.newReceiver().getDeviceManager();
+			dm.InputType() = Type::UDP;
+			dm.UDP().SetKey(AIS::KEY_SETTING_PORT, arg2).SetKey(AIS::KEY_SETTING_SERVER, arg1);
+			if (count >= 4)
+				parseSettings(dm.UDP(), argv, ptr + 2, argc);
+		}
+		break;
 		case 'D':
 		{
 			state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::PostgreSQL()));
@@ -779,87 +780,81 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 		}
 		break;
 		case 'y':
+		{
 			Assert(count <= 2, param, "requires one or two parameters [url] or [host] [port].");
-			if (++state.nrec > 1)
-			{
-				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-			}
-			state.receivers.back()->getDeviceManager().InputType() = Type::SPYSERVER;
+			DeviceManager &dm = state.newReceiver().getDeviceManager();
+			dm.InputType() = Type::SPYSERVER;
 			if (count == 1)
-				state.receivers.back()->getDeviceManager().SpyServer().SetKey(AIS::KEY_SETTING_URL, arg1);
+				dm.SpyServer().SetKey(AIS::KEY_SETTING_URL, arg1);
 			else if (count == 2)
-				state.receivers.back()->getDeviceManager().SpyServer().SetKey(AIS::KEY_SETTING_PORT, arg2).SetKey(AIS::KEY_SETTING_HOST, arg1);
-			break;
+				dm.SpyServer().SetKey(AIS::KEY_SETTING_PORT, arg2).SetKey(AIS::KEY_SETTING_HOST, arg1);
+		}
+		break;
 		case 'z':
+		{
 			Assert(count > 0, param, "requires one parameter [endpoint] or two parameters [[format]] [endpoint].");
-			if (++state.nrec > 1)
-			{
-				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-			}
-			state.receivers.back()->getDeviceManager().InputType() = Type::ZMQ;
+			DeviceManager &dm = state.newReceiver().getDeviceManager();
+			dm.InputType() = Type::ZMQ;
 			if ((count & 1) == 1)
-				state.receivers.back()->getDeviceManager().ZMQ().SetKey(AIS::KEY_SETTING_ENDPOINT, arg1);
+				dm.ZMQ().SetKey(AIS::KEY_SETTING_ENDPOINT, arg1);
 			else if ((count & 1) == 0)
-				state.receivers.back()->getDeviceManager().ZMQ().SetKey(AIS::KEY_SETTING_FORMAT, arg1).SetKey(AIS::KEY_SETTING_ENDPOINT, arg2);
+				dm.ZMQ().SetKey(AIS::KEY_SETTING_FORMAT, arg1).SetKey(AIS::KEY_SETTING_ENDPOINT, arg2);
 
 			if (count >= 3)
-				parseSettings(state.receivers.back()->getDeviceManager().ZMQ(), argv, ptr + 2 - (count & 1), argc);
-			break;
+				parseSettings(dm.ZMQ(), argv, ptr + 2 - (count & 1), argc);
+		}
+		break;
 		case 'b':
 			Assert(count == 0, param, MSG_NO_PARAMETER);
 			receiver.Timing() = true;
 			break;
 		case 'i':
-			if (++state.nrec > 1)
-			{
-				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-			}
-			state.receivers.back()->getDeviceManager().InputType() = Type::N2K;
+		{
+			DeviceManager &dm = state.newReceiver().getDeviceManager();
+			dm.InputType() = Type::N2K;
 			if ((count & 1) == 1)
-				state.receivers.back()->getDeviceManager().N2KSCAN().SetKey(AIS::KEY_SETTING_INTERFACE, arg1);
+				dm.N2KSCAN().SetKey(AIS::KEY_SETTING_INTERFACE, arg1);
 
 			if (count >= 2)
-				parseSettings(state.receivers.back()->getDeviceManager().N2KSCAN(), argv, ptr + (count & 1), argc);
-			break;
+				parseSettings(dm.N2KSCAN(), argv, ptr + (count & 1), argc);
+		}
+		break;
 
 		case 'w':
-			if (++state.nrec > 1)
-			{
-				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-			}
-			state.receivers.back()->getDeviceManager().InputType() = Type::WAVFILE;
+		{
+			DeviceManager &dm = state.newReceiver().getDeviceManager();
+			dm.InputType() = Type::WAVFILE;
 			if ((count & 1) == 1)
-				state.receivers.back()->getDeviceManager().WAV().SetKey(AIS::KEY_SETTING_FILE, arg1);
+				dm.WAV().SetKey(AIS::KEY_SETTING_FILE, arg1);
 
 			if (count >= 2)
-				parseSettings(state.receivers.back()->getDeviceManager().WAV(), argv, ptr + (count & 1), argc);
-			break;
+				parseSettings(dm.WAV(), argv, ptr + (count & 1), argc);
+		}
+		break;
 		case 'r':
+		{
 			Assert(count > 0, param, "requires one parameter [filename] or two parameters [[format]] [filename].");
-			if (++state.nrec > 1)
-			{
-				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-			}
-			state.receivers.back()->getDeviceManager().InputType() = Type::RAWFILE;
+			DeviceManager &dm = state.newReceiver().getDeviceManager();
+			dm.InputType() = Type::RAWFILE;
 			if ((count & 1) == 1)
-				state.receivers.back()->getDeviceManager().RAW().SetKey(AIS::KEY_SETTING_FILE, arg1);
+				dm.RAW().SetKey(AIS::KEY_SETTING_FILE, arg1);
 			else if ((count & 1) == 0)
-				state.receivers.back()->getDeviceManager().RAW().SetKey(AIS::KEY_SETTING_FORMAT, arg1).SetKey(AIS::KEY_SETTING_FILE, arg2);
+				dm.RAW().SetKey(AIS::KEY_SETTING_FORMAT, arg1).SetKey(AIS::KEY_SETTING_FILE, arg2);
 
 			if (count >= 3)
-				parseSettings(state.receivers.back()->getDeviceManager().RAW(), argv, ptr + 2 - (count & 1), argc);
-			break;
+				parseSettings(dm.RAW(), argv, ptr + 2 - (count & 1), argc);
+		}
+		break;
 		case 'e':
+		{
 			Assert(count >= 2 && (count & 1) == 0, param, "requires two parameters [baudrate] [portname] (optionally followed by key value pairs).");
-			if (++state.nrec > 1)
-			{
-				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-			}
-			state.receivers.back()->getDeviceManager().InputType() = Type::SERIALPORT;
-			state.receivers.back()->getDeviceManager().SerialPort().SetKey(AIS::KEY_SETTING_BAUDRATE, arg1).SetKey(AIS::KEY_SETTING_PORT, arg2);
+			DeviceManager &dm = state.newReceiver().getDeviceManager();
+			dm.InputType() = Type::SERIALPORT;
+			dm.SerialPort().SetKey(AIS::KEY_SETTING_BAUDRATE, arg1).SetKey(AIS::KEY_SETTING_PORT, arg2);
 			if (count >= 4)
-				parseSettings(state.receivers.back()->getDeviceManager().SerialPort(), argv, ptr + 2, argc);
-			break;
+				parseSettings(dm.SerialPort(), argv, ptr + 2, argc);
+		}
+		break;
 		case 'l':
 			Assert(count == 0 || count == 2, param, "takes no parameters or [JSON on/off].");
 			if (count == 2)
@@ -874,24 +869,23 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 			state.list_support = true;
 			break;
 		case 'd':
-			if (++state.nrec > 1)
-			{
-				state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-			}
+		{
+			DeviceManager &dm = state.newReceiver().getDeviceManager();
 
 			if (param.length() >= 4 && param[2] == ':')
 			{
 				Assert(count == 0, param, MSG_NO_PARAMETER);
 				int n = (int)Util::Parse::Integer(param.substr(3));
-				state.receivers.back()->getDeviceManager().selectDeviceByIndex(n);
+				dm.selectDeviceByIndex(n);
 			}
 			else
 			{
 				Assert(param.length() == 2, param, "syntax error in device setting");
 				Assert(count == 1, param, "device setting requires one parameter [serial number]");
-				state.receivers.back()->getDeviceManager().SerialNumber() = arg1;
+				dm.SerialNumber() = arg1;
 			}
-			break;
+		}
+		break;
 		case 'u':
 			Assert(count >= 2 && count % 2 == 0, param, "requires at least two parameters [address] [port].");
 			{
@@ -943,16 +937,11 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 
 				bool xarg_is_on = (count == 1 && xarg_upper == "ON");
 
-				if (!comm_feed)
-				{
-					state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
-					comm_feed = state.msg.back().get();
-					comm_feed->SetKey(AIS::KEY_SETTING_HOST, AISCATCHER_URL).SetKey(AIS::KEY_SETTING_PORT, AISCATCHER_PORT).SetKey(AIS::KEY_SETTING_DESCRIPTION, "Community Feed").SetKey(AIS::KEY_SETTING_FILTER, "on").SetKey(AIS::KEY_SETTING_GPS, "off").SetKey(AIS::KEY_SETTING_REMOVE_EMPTY, "on").SetKey(AIS::KEY_SETTING_KEEP_ALIVE, "on").SetKey(AIS::KEY_SETTING_OWN_INTERVAL, "10").SetKey(AIS::KEY_SETTING_INCLUDE_SAMPLE_START, "on");
-					comm_feed->SetKey(AIS::KEY_SETTING_MSGFORMAT, "COMMUNITY_HUB");
-				}
+				if (!state.comm_feed)
+					state.createCommunityFeed();
 
-				if (count >= 1 && !xarg_is_on && comm_feed)
-					comm_feed->SetKey(AIS::KEY_SETTING_UUID, arg1);
+				if (count >= 1 && !xarg_is_on)
+					state.comm_feed->SetKey(AIS::KEY_SETTING_UUID, arg1);
 			}
 			break;
 		case 'H':
@@ -989,7 +978,7 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 		}
 		break;
 		case 'h':
-			Assert(count == 0 || count == 1, param, MSG_NO_PARAMETER);
+			Assert(count == 0 || count == 1, param, "takes no parameters or one parameter [JSON/BUILD].");
 			if (count == 1)
 			{
 				Util::Convert::toUpper(arg1);
@@ -1093,13 +1082,8 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 	{
 		Warning() << "Hint: Use '-X on' to share with aiscatcher.org community (enables community overlay) or '-X off' to disable. Currently ON by default.";
 
-		if (!comm_feed)
-		{
-			state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
-			comm_feed = state.msg.back().get();
-			comm_feed->SetKey(AIS::KEY_SETTING_HOST, AISCATCHER_URL).SetKey(AIS::KEY_SETTING_PORT, AISCATCHER_PORT).SetKey(AIS::KEY_SETTING_DESCRIPTION, "Community Feed").SetKey(AIS::KEY_SETTING_FILTER, "on").SetKey(AIS::KEY_SETTING_GPS, "off").SetKey(AIS::KEY_SETTING_REMOVE_EMPTY, "on").SetKey(AIS::KEY_SETTING_KEEP_ALIVE, "on").SetKey(AIS::KEY_SETTING_OWN_INTERVAL, "10").SetKey(AIS::KEY_SETTING_INCLUDE_SAMPLE_START, "on");
-			comm_feed->SetKey(AIS::KEY_SETTING_MSGFORMAT, "COMMUNITY_HUB");
-		}
+		if (!state.comm_feed)
+			state.createCommunityFeed();
 	}
 
 	if (state.list_devices)

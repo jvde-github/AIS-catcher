@@ -74,7 +74,7 @@ namespace Util
 		static std::string toString(PROTOCOL protocol);
 		static std::string toString(MessageFormat out);
 
-		static std::string BASE64toString(const std::string &s);
+		static std::string toBase64(const std::string &s);
 		static std::string IPV4toString(uint32_t ipv4)
 		{
 			return std::to_string((ipv4 >> 24) & 0xFF) + "." +

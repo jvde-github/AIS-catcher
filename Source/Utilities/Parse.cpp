@@ -134,42 +134,33 @@ namespace Util
 
 	void Parse::HTTP_URL(const std::string &url, std::string &protocol, std::string &host, std::string &port, std::string &path)
 	{
+		protocol.clear();
+		host.clear();
+		port.clear();
+		path = "/";
 
 		std::string::size_type idx = url.find("://");
-		if (idx != std::string::npos)
+		if (idx == std::string::npos)
+			return;
+
+		protocol = url.substr(0, idx);
+		idx += 3;
+
+		// Split authority from path first: a ':' in the path is not a port.
+		std::string::size_type pathStart = url.find('/', idx);
+		std::string authority = url.substr(idx, (pathStart != std::string::npos ? pathStart : url.length()) - idx);
+		if (pathStart != std::string::npos)
+			path = url.substr(pathStart);
+
+		std::string::size_type colon = authority.find(':');
+		if (colon != std::string::npos)
 		{
-
-			protocol = url.substr(0, idx);
-			path = "/";
-
-			idx += 3;
-			std::string::size_type hostEnd = url.find(':', idx);
-			if (hostEnd == std::string::npos)
-			{
-				hostEnd = url.find('/', idx);
-			}
-
-			if (hostEnd == std::string::npos)
-			{
-				host = url.substr(idx, url.length() - idx);
-			}
-			else
-			{
-				host = url.substr(idx, hostEnd - idx);
-
-				std::string::size_type portStart = url.find(':', hostEnd);
-				if (portStart != std::string::npos)
-				{
-					std::string::size_type portEnd = url.find('/', portStart);
-					port = url.substr(portStart + 1, (portEnd != std::string::npos ? portEnd : url.length()) - portStart - 1);
-				}
-
-				std::string::size_type pathStart = url.find('/', hostEnd);
-				if (pathStart != std::string::npos)
-				{
-					path = url.substr(pathStart);
-				}
-			}
+			host = authority.substr(0, colon);
+			port = authority.substr(colon + 1);
+		}
+		else
+		{
+			host = authority;
 		}
 	}
 

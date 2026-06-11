@@ -337,6 +337,9 @@ private:
 
 	const std::vector<std::unique_ptr<IO::OutputMessage>> *msg_channels = nullptr;
 
+	// Community feed output (not owned), used to report sharing status
+	IO::OutputMessage *comm_feed = nullptr;
+
 	// Parse ?receiver=N from query string; returns 0 on missing/invalid.
 	int parseReceiver(const std::string &query);
 	// Parse ?since=T from query string; returns 0 on missing/invalid.
@@ -363,6 +366,8 @@ public:
 	{
 		msg_channels = &msg;
 	}
+
+	void setCommFeed(IO::OutputMessage *f) { comm_feed = f; }
 
 	bool isPortSet() { return port_set; }
 	// HTTP callbacks

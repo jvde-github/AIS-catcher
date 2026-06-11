@@ -91,88 +91,28 @@ void Config::setServerfromJSON(const JSON::Value &m)
 }
 #endif
 
-void Config::setHTTPfromJSON(const JSON::Member &m)
+Setting *Config::getDeviceSetting(AIS::Keys key)
 {
+	DeviceManager &dm = _state.receivers.back()->getDeviceManager();
 
-	if (!m.Get().isArray())
-		throw std::runtime_error("HTTP settings need to be an \"array\" of \"objects\". in config file");
-
-	for (const auto &v : m.Get().getArray())
+	switch (key)
 	{
-		if (!isActiveObject(v))
-			continue;
-
-		_state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::HTTPStreamer()));
-		IO::OutputMessage &h = *_state.msg.back();
-
-		setSettingsFromJSON(v, h);
-	}
-}
-
-void Config::setUDPfromJSON(const JSON::Member &m)
-{
-
-	if (!m.Get().isArray())
-		throw std::runtime_error("UDP settings need to be an \"array\" of \"objects\" in config file.");
-
-	for (const auto &v : m.Get().getArray())
-	{
-		if (!isActiveObject(v))
-			continue;
-
-		_state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::UDPStreamer()));
-		IO::OutputMessage &o = *_state.msg.back();
-		setSettingsFromJSON(v, o);
-	}
-}
-
-void Config::setTCPfromJSON(const JSON::Member &m)
-{
-
-	if (!m.Get().isArray())
-		throw std::runtime_error("TCP settings need to be an \"array\" of \"objects\" in config file.");
-
-	for (const auto &v : m.Get().getArray())
-	{
-		if (!isActiveObject(v))
-			continue;
-
-		_state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
-		IO::OutputMessage &tcp = *_state.msg.back();
-		setSettingsFromJSON(v, tcp);
-	}
-}
-
-void Config::setMQTTfromJSON(const JSON::Member &m)
-{
-	if (!m.Get().isArray())
-		throw std::runtime_error("MQTT settings need to be an \"array\" of \"objects\" in config file.");
-
-	for (const auto &v : m.Get().getArray())
-	{
-		if (!isActiveObject(v))
-			continue;
-
-		_state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::MQTTStreamer()));
-		IO::OutputMessage &mqtt = *_state.msg.back();
-		setSettingsFromJSON(v, mqtt);
-	}
-}
-void Config::setTCPListenerfromJSON(const JSON::Member &m)
-{
-
-	if (!m.Get().isArray())
-		throw std::runtime_error("TCP Listener settings need to be an \"array\" of \"objects\" in config file.");
-
-	for (const auto &v : m.Get().getArray())
-	{
-		if (!isActiveObject(v))
-			continue;
-
-		_state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPlistenerStreamer()));
-		IO::OutputMessage &tcp = *_state.msg.back();
-		tcp.SetKey(AIS::KEY_SETTING_TIMEOUT, "0");
-		setSettingsFromJSON(v, tcp);
+	case AIS::KEY_SETTING_RTLSDR: return &dm.RTLSDR();
+	case AIS::KEY_SETTING_RTLTCP: return &dm.RTLTCP();
+	case AIS::KEY_SETTING_AIRSPY: return &dm.AIRSPY();
+	case AIS::KEY_SETTING_AIRSPYHF: return &dm.AIRSPYHF();
+	case AIS::KEY_SETTING_SDRPLAY: return &dm.SDRPLAY();
+	case AIS::KEY_SETTING_WAVFILE: return &dm.WAV();
+	case AIS::KEY_SETTING_SERIALPORT: return &dm.SerialPort();
+	case AIS::KEY_SETTING_HACKRF: return &dm.HACKRF();
+	case AIS::KEY_SETTING_HYDRASDR: return &dm.HYDRASDR();
+	case AIS::KEY_SETTING_UDPSERVER: return &dm.UDP();
+	case AIS::KEY_SETTING_SOAPYSDR: return &dm.SOAPYSDR();
+	case AIS::KEY_SETTING_NMEA2000: return &dm.N2KSCAN();
+	case AIS::KEY_SETTING_FILE: return &dm.RAW();
+	case AIS::KEY_SETTING_ZMQ: return &dm.ZMQ();
+	case AIS::KEY_SETTING_SPYSERVER: return &dm.SpyServer();
+	default: return nullptr;
 	}
 }
 
@@ -228,8 +168,7 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members, bool 
 
 	if ((!serial.empty() || !input.empty()))
 	{
-		if (++_state.nrec > 1)
-			_state.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+		_state.newReceiver();
 
 		if (!serial.empty())
 			_state.receivers.back()->SetKey(AIS::KEY_SETTING_SERIAL, serial);
@@ -260,83 +199,13 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members, bool 
 		case AIS::KEY_SETTING_OWN_MMSI:
 			_state.own_mmsi = m.Get().getInt();
 			break;
-		case AIS::KEY_SETTING_RTLSDR:
-			if (!isActiveObject(m.Get()))
-				continue;
-			setSettingsFromJSON(m.Get(), _state.receivers.back()->getDeviceManager().RTLSDR());
-			break;
-		case AIS::KEY_SETTING_RTLTCP:
-			if (!isActiveObject(m.Get()))
-				continue;
-			setSettingsFromJSON(m.Get(), _state.receivers.back()->getDeviceManager().RTLTCP());
-			break;
-		case AIS::KEY_SETTING_AIRSPY:
-			if (!isActiveObject(m.Get()))
-				continue;
-			setSettingsFromJSON(m.Get(), _state.receivers.back()->getDeviceManager().AIRSPY());
-			break;
-		case AIS::KEY_SETTING_AIRSPYHF:
-			if (!isActiveObject(m.Get()))
-				continue;
-			setSettingsFromJSON(m.Get(), _state.receivers.back()->getDeviceManager().AIRSPYHF());
-			break;
-		case AIS::KEY_SETTING_SDRPLAY:
-			if (!isActiveObject(m.Get()))
-				continue;
-			setSettingsFromJSON(m.Get(), _state.receivers.back()->getDeviceManager().SDRPLAY());
-			break;
-		case AIS::KEY_SETTING_WAVFILE:
-			if (!isActiveObject(m.Get()))
-				continue;
-			setSettingsFromJSON(m.Get(), _state.receivers.back()->getDeviceManager().WAV());
-			break;
-		case AIS::KEY_SETTING_SERIALPORT:
-			if (!isActiveObject(m.Get()))
-				continue;
-			setSettingsFromJSON(m.Get(), _state.receivers.back()->getDeviceManager().SerialPort());
-			break;
-		case AIS::KEY_SETTING_HACKRF:
-			if (!isActiveObject(m.Get()))
-				continue;
-			setSettingsFromJSON(m.Get(), _state.receivers.back()->getDeviceManager().HACKRF());
-			break;
-		case AIS::KEY_SETTING_HYDRASDR:
-			if (!isActiveObject(m.Get()))
-				continue;
-			setSettingsFromJSON(m.Get(), _state.receivers.back()->getDeviceManager().HYDRASDR());
-			break;
-		case AIS::KEY_SETTING_UDPSERVER:
-			if (!isActiveObject(m.Get()))
-				continue;
-			setSettingsFromJSON(m.Get(), _state.receivers.back()->getDeviceManager().UDP());
-			break;
-		case AIS::KEY_SETTING_SOAPYSDR:
-			if (!isActiveObject(m.Get()))
-				continue;
-			setSettingsFromJSON(m.Get(), _state.receivers.back()->getDeviceManager().SOAPYSDR());
-			break;
-		case AIS::KEY_SETTING_NMEA2000:
-			if (!isActiveObject(m.Get()))
-				continue;
-			setSettingsFromJSON(m.Get(), _state.receivers.back()->getDeviceManager().N2KSCAN());
-			break;
-		case AIS::KEY_SETTING_FILE:
-			if (!isActiveObject(m.Get()))
-				continue;
-			setSettingsFromJSON(m.Get(), _state.receivers.back()->getDeviceManager().RAW());
-			break;
-		case AIS::KEY_SETTING_ZMQ:
-			if (!isActiveObject(m.Get()))
-				continue;
-			setSettingsFromJSON(m.Get(), _state.receivers.back()->getDeviceManager().ZMQ());
-			break;
-		case AIS::KEY_SETTING_SPYSERVER:
-			if (!isActiveObject(m.Get()))
-				continue;
-			setSettingsFromJSON(m.Get(), _state.receivers.back()->getDeviceManager().SpyServer());
-			break;
 		default:
+		{
+			Setting *device = getDeviceSetting((AIS::Keys)m.Key());
+			if (device && isActiveObject(m.Get()))
+				setSettingsFromJSON(m.Get(), *device);
 			break;
+		}
 		}
 	}
 }
@@ -355,7 +224,6 @@ void Config::setSharing(const std::vector<JSON::Member> &members)
 	bool xchange = false;
 	std::string uuid;
 	std::vector<std::string> zones;
-	extern IO::OutputMessage *comm_feed;
 
 	for (const JSON::Member &m : members)
 	{
@@ -375,18 +243,14 @@ void Config::setSharing(const std::vector<JSON::Member> &members)
 		}
 	}
 
-	if (xchange && !comm_feed)
-	{
-		_state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
-		comm_feed = _state.msg.back().get();
+	if (xchange && !_state.comm_feed)
+		_state.createCommunityFeed();
 
-		comm_feed->SetKey(AIS::KEY_SETTING_HOST, AISCATCHER_URL).SetKey(AIS::KEY_SETTING_PORT, AISCATCHER_PORT).SetKey(AIS::KEY_SETTING_DESCRIPTION, "Community Feed").SetKey(AIS::KEY_SETTING_MSGFORMAT, "COMMUNITY_HUB").SetKey(AIS::KEY_SETTING_FILTER, "on").SetKey(AIS::KEY_SETTING_GPS, "off").SetKey(AIS::KEY_SETTING_REMOVE_EMPTY, "on").SetKey(AIS::KEY_SETTING_KEEP_ALIVE, "on").SetKey(AIS::KEY_SETTING_OWN_INTERVAL, "10").SetKey(AIS::KEY_SETTING_INCLUDE_SAMPLE_START, "on");
-	}
-	if (!uuid.empty() && comm_feed)
-		comm_feed->SetKey(AIS::KEY_SETTING_UUID, uuid);
+	if (!uuid.empty() && _state.comm_feed)
+		_state.comm_feed->SetKey(AIS::KEY_SETTING_UUID, uuid);
 
-	if (!zones.empty() && comm_feed)
-		comm_feed->zones = zones;
+	if (!zones.empty() && _state.comm_feed)
+		_state.comm_feed->zones = zones;
 }
 
 void Config::set(const std::string &str)
@@ -458,16 +322,16 @@ void Config::set(const std::string &str)
 		case AIS::KEY_SETTING_SHARING_ZONE:
 			break;
 		case AIS::KEY_SETTING_UDP:
-			setUDPfromJSON(m);
+			addOutputsFromJSON<IO::UDPStreamer>(m, "UDP");
 			break;
 		case AIS::KEY_SETTING_TCP:
-			setTCPfromJSON(m);
+			addOutputsFromJSON<IO::TCPClientStreamer>(m, "TCP");
 			break;
 		case AIS::KEY_SETTING_MQTT:
-			setMQTTfromJSON(m);
+			addOutputsFromJSON<IO::MQTTStreamer>(m, "MQTT");
 			break;
 		case AIS::KEY_SETTING_TCP_LISTENER:
-			setTCPListenerfromJSON(m);
+			addOutputsFromJSON<IO::TCPlistenerStreamer>(m, "TCP Listener", "0");
 			break;
 		case AIS::KEY_SETTING_SERVER:
 #ifdef HASWEBVIEWER
@@ -477,7 +341,7 @@ void Config::set(const std::string &str)
 #endif
 			break;
 		case AIS::KEY_SETTING_HTTP:
-			setHTTPfromJSON(m);
+			addOutputsFromJSON<IO::HTTPStreamer>(m, "HTTP");
 			break;
 		case AIS::KEY_SETTING_RECEIVER: // handled in pass 1.5
 			break;

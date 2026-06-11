@@ -34,10 +34,28 @@ sed 's|url(\.\./flags/|url(flags/|g' \
     "$SRC/node_modules/flag-icons/css/flag-icons.min.css" \
     > "$DIST/flag-icons.css"
 
-# Copy 4x3 flag SVGs into dist for WebDB embedding
+# Copy only the 4x3 flag SVGs for country codes the app can emit (AIS MID
+# table + ADS-B ICAO range table).
 rm -rf "$DIST/flags"
-mkdir "$DIST/flags"
-cp -r "$SRC/node_modules/flag-icons/flags/4x3" "$DIST/flags/4x3"
+mkdir -p "$DIST/flags/4x3"
+{
+    grep -oE '\{[0-9]+, "[^"]+", "[A-Za-z]{2}"\}' Source/JSON/JSONAIS.cpp \
+        | sed -E 's/.*"([A-Za-z]{2})"\}/\1/'
+    grep -oE "\{'[A-Z]', *'[A-Z]'\}" Source/Aviation/ADSB.cpp \
+        | sed -E "s/\{'([A-Z])', *'([A-Z])'\}/\1\2/"
+} | tr '[:upper:]' '[:lower:]' | sort -u | while read -r code; do
+    svg="$SRC/node_modules/flag-icons/flags/4x3/$code.svg"
+    if [ -f "$svg" ]; then
+        cp "$svg" "$DIST/flags/4x3/"
+    else
+        echo "WARNING: no flag SVG for country code '$code'" >&2
+    fi
+done
+
+# Rasterize emblem-heavy flags to small PNGs and point their .fi-xx CSS at them.
+node "$SRC/tools/optimize-flags.mjs" "$DIST/flags/4x3" | while read -r code; do
+    echo ".fi-$code{background-image:url(flags/4x3/$code.png)}" >> "$DIST/flag-icons.css"
+done
 
 # Generate hashes from dist file content
 if [[ "$OSTYPE" == "darwin"* ]]; then

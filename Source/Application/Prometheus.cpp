@@ -43,17 +43,17 @@ PrometheusCounter::PrometheusCounter()
 void PrometheusCounter::Clear()
 {
 
-	m.lock();
+	mtx.lock();
 	std::memset(_msg, 0, sizeof(_msg));
 	std::memset(_channel, 0, sizeof(_channel));
 
 	_count = 0;
 	_distance = 0;
 
-	m.unlock();
+	mtx.unlock();
 }
 
-void PrometheusCounter::Add(const AIS::Message &m, const TAG &tag, bool new_vessel)
+void PrometheusCounter::Add(const AIS::Message &m, const TAG &tag)
 {
 
 	if (m.type() > 28 || m.type() < 1)
@@ -98,25 +98,25 @@ void PrometheusCounter::Receive(const JSON::JSON *json, int len, TAG &tag)
 {
 	AIS::Message &data = *((AIS::Message *)json[0].binary);
 
-	m.lock();
+	mtx.lock();
 
 	if (ppm.size() <= 32768 && level.size() <= 32768)
 		Add(data, tag);
 
-	m.unlock();
+	mtx.unlock();
 }
 
 void PrometheusCounter::Reset()
 {
-	m.lock();
+	mtx.lock();
 	ppm = "# HELP ais_msg_ppm\n# TYPE ais_msg_ppm gauge\n";
 	level = "# HELP ais_msg_level\n# TYPE ais_msg_level gauge\n";
-	m.unlock();
+	mtx.unlock();
 }
 
 std::string PrometheusCounter::toPrometheus()
 {
-	m.lock();
+	mtx.lock();
 	std::string element;
 
 	element += "# HELP ais_stat_count Total number of messages\n";
@@ -144,6 +144,6 @@ std::string PrometheusCounter::toPrometheus()
 	}
 
 	element += ppm + level;
-	m.unlock();
+	mtx.unlock();
 	return element;
 }

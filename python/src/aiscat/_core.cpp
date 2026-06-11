@@ -93,6 +93,7 @@ static PyObject *wrap_annotated(PyObject *val, int key_index) {
         }
     }
     Py_DECREF(val);
+    if (PyObject_GC_IsTracked(d)) PyObject_GC_UnTrack(d);
     return d;
 }
 
@@ -100,6 +101,7 @@ static PyObject *convert_object(const JSON::JSON &obj, bool annotated) {
     const auto &members = obj.getMembers();
     PyObject *d = _PyDict_NewPresized((Py_ssize_t)members.size());
     if (!d) return nullptr;
+    bool has_container = false;
     for (const auto &m : members) {
         int k = m.Key();
         if ((unsigned)k < 64 && (kSkipMask & (1ULL << k))) continue;
@@ -111,23 +113,29 @@ static PyObject *convert_object(const JSON::JSON &obj, bool annotated) {
             key = PyUnicode_FromFormat("key_%d", k);
             if (!key) { Py_DECREF(d); return nullptr; }
         }
+        using T = JSON::Value::Type;
+        T t = m.Get().getType();
         PyObject *val = convert_value(m.Get(), annotated);
         if (!val) { Py_DECREF(key); Py_DECREF(d); return nullptr; }
         // Wrap scalars only — leave nested objects/arrays alone (they recurse internally).
         if (annotated) {
-            using T = JSON::Value::Type;
-            T t = m.Get().getType();
             if (t == T::BOOL || t == T::INT || t == T::FLOAT || t == T::STRING) {
                 val = wrap_annotated(val, k);
                 if (!val) { Py_DECREF(key); Py_DECREF(d); return nullptr; }
             }
         }
+        if (annotated || t == T::OBJECT || t == T::ARRAY || t == T::ARRAY_STRING)
+            has_container = true;
         if (PyDict_SetItem(d, key, val) < 0) {
             Py_DECREF(key); Py_DECREF(val); Py_DECREF(d); return nullptr;
         }
         Py_DECREF(key);
         Py_DECREF(val);
     }
+    // Exempting all-scalar dicts from cyclic GC is safe: CPython re-tracks a
+    // dict when a trackable value is stored in it, so user-made cycles remain
+    // collectable.
+    if (!has_container && PyObject_GC_IsTracked(d)) PyObject_GC_UnTrack(d);
     return d;
 }
 
@@ -187,11 +195,21 @@ public:
             PyObject *d = nullptr;
             switch (format) {
                 case OutFormat::DICTIONARY:
-                    d = convert_object(data[i], false);
+                case OutFormat::ANNOTATED: {
+                    d = convert_object(data[i], format == OutFormat::ANNOTATED);
+                    auto *msg = static_cast<const AIS::Message *>(data[i].binary);
+                    if (d && msg) {
+                        PyObject *f = PyFloat_FromDouble((double)msg->getRxTimeMicros() / 1000000.0);
+                        if (f && format == OutFormat::ANNOTATED)
+                            f = wrap_annotated(f, AIS::KEY_RXUXTIME);
+                        if (!f || PyDict_SetItem(d, g_keys[AIS::KEY_RXUXTIME], f) < 0) {
+                            Py_XDECREF(f); Py_DECREF(d); d = nullptr;
+                        } else {
+                            Py_DECREF(f);
+                        }
+                    }
                     break;
-                case OutFormat::ANNOTATED:
-                    d = convert_object(data[i], true);
-                    break;
+                }
                 case OutFormat::JSON: {
                     scratch.clear();
                     serializer.stringify(data[i], scratch);
@@ -274,6 +292,10 @@ static int Decoder_init(DecoderObject *self, PyObject *args, PyObject *kwds) {
     self->tag = new TAG();
     self->tag->clear();
     if (country) self->tag->mode |= 4;  // enables JSONAIS::COUNTRY (MMSI prefix → country, country_code)
+    // Clearing mode bit 2 skips the rxtime string the dict formats would only
+    // discard (kSkipMask); PySink::Receive adds rxuxtime from the message.
+    if (fmt == OutFormat::DICTIONARY || fmt == OutFormat::ANNOTATED)
+        self->tag->mode &= ~2u;
     self->nmea->out.Connect(self->jsonais);
     self->jsonais->out.Connect(self->sink);
     return 0;

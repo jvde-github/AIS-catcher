@@ -169,6 +169,8 @@ namespace Util
 
 			// Write the header
 			file.write(reinterpret_cast<const char *>(&header), sizeof(header));
+			if (!file.good())
+				throw std::runtime_error("Write error on WAV file \"" + filename + "\"");
 		}
 		catch (const std::exception &e)
 		{
@@ -215,15 +217,13 @@ namespace Util
 		if (!file.is_open() || stopping)
 			return;
 
-		// Write the data directly
-		try
+		// ofstream only throws if exceptions() is enabled; check the state.
+		file.write(reinterpret_cast<const char *>(raw->data), raw->size);
+		if (!file.good())
 		{
-			file.write(reinterpret_cast<const char *>(raw->data), raw->size);
-		}
-		catch (const std::exception &e)
-		{
-			Error() << "WAV out: " << e.what() << std::endl;
+			Error() << "WAV out: write failed (disk full?) on \"" << filename << "\"" << std::endl;
 			stopping = true;
+			file.close();
 			StopRequest();
 		}
 	}

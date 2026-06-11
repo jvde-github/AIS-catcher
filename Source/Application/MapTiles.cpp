@@ -95,8 +95,14 @@ void MBTilesSupport::loadMetadata()
 
     while (sqlite3_step(stmt) == SQLITE_ROW)
     {
-        std::string key = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
-        std::string value = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+        const char *key_text = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+        const char *value_text = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+
+        if (!key_text || !value_text)
+            continue;
+
+        std::string key = key_text;
+        std::string value = value_text;
 
         if (key == "name")
             name = value;

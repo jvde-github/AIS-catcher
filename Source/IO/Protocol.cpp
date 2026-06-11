@@ -1369,7 +1369,7 @@ namespace Protocol
 			key[i] = (char)dis(gen);
 		}
 #endif
-		std::string secWebSocketKey = Util::Convert::BASE64toString(key);
+		std::string secWebSocketKey = Util::Convert::toBase64(key);
 
 		// Build the handshake request
 		std::ostringstream request;
@@ -1488,7 +1488,7 @@ namespace Protocol
 		}
 
 		// Compute the expected accept key
-		std::string expected_accept_key = Util::Convert::BASE64toString(sha1Hash(secWebSocketKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"));
+		std::string expected_accept_key = Util::Convert::toBase64(sha1Hash(secWebSocketKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"));
 
 		accept_key.erase(std::remove_if(accept_key.begin(), accept_key.end(), ::isspace), accept_key.end());
 		expected_accept_key.erase(std::remove_if(expected_accept_key.begin(), expected_accept_key.end(), ::isspace), expected_accept_key.end());

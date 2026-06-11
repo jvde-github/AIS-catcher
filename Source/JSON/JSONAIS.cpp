@@ -907,7 +907,6 @@ namespace AIS
 	void JSONAIS::ProcessMsg(const AIS::Message &msg, TAG &tag)
 	{
 
-		rxtime = msg.getRxTime();
 		channel = std::string(1, msg.getChannel());
 
 		json.Add(AIS::KEY_CLASS, &class_str);
@@ -918,6 +917,7 @@ namespace AIS
 
 		if (tag.mode & 2)
 		{
+			rxtime = msg.getRxTime();
 			json.Add(AIS::KEY_RXTIME, &rxtime);
 			json.Add(AIS::KEY_RXUXTIME, (double)msg.getRxTimeMicros() / 1000000.0);
 		}
@@ -1632,7 +1632,7 @@ namespace AIS
 		{725, "Chile", "CL"},
 		{730, "Colombia", "CO"},
 		{735, "Ecuador", "EC"},
-		{740, "UK", "UK"},
+		{740, "Falkland Islands", "FK"},
 		{745, "Guiana", "GF"},
 		{750, "Guyana", "GY"},
 		{755, "Paraguay", "PY"},

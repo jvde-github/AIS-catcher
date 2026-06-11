@@ -33,6 +33,19 @@ namespace AIS {
 
 #ifdef HASNMEA2000
 
+	   // Position cluster shared by most AIS PGNs: lon, lat and the accuracy/raim/second flag byte
+	   struct PosFix {
+		   int lon, lat, accuracy, raim, second;
+	   };
+
+	   // Reads type/repeat/mmsi from the PGN and writes the common AIS header (bits 0-37) into a cleared msg
+	   void startMessage(const tN2kMsg& n2, int& idx);
+	   PosFix readPosFix(const tN2kMsg& n2, int& idx);
+	   void readCogSog(const tN2kMsg& n2, int& idx, int& cog, int& sog);
+	   // Reads the 3-byte radio status block; returns radio, sets channel
+	   int readRadioChannel(const tN2kMsg& n2, int& idx, int& channel);
+	   void finalize(char channel, TAG& tag);
+
        // Handler for PGN 129038: AIS Type 1, 2, 3 (Position Report).
 	   void onMsg129038(const tN2kMsg& n2, TAG& t);
 

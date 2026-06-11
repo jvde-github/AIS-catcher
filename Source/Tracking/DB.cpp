@@ -1042,8 +1042,8 @@ void DB::processBinaryMessage(const JSON::JSON &data, Ship &ship, bool &position
 		}
 	}
 
-	// if (binmsg.dac != -1 && binmsg.fi != -1)
-	if ((binmsg.dac == 1 && binmsg.fi == 31) || (binmsg.dac == 200 && binmsg.fi == 55))
+	const bool is_text = binmsg.dac == 1 && (binmsg.fi == 0 || binmsg.fi == 29 || binmsg.fi == 30);
+	if (is_text || (binmsg.dac == 1 && binmsg.fi == 31) || (binmsg.dac == 200 && binmsg.fi == 55))
 	{
 		binmsg.json.clear();
 		builder.stringify(data, binmsg.json);

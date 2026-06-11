@@ -1,6 +1,12 @@
-import { settings } from './core/state.js';
+import { settings, isAndroid } from './core/state.js';
 import { ShippingClass } from './core/constants.js';
+import { debounce, decodeHTMLEntities, deriveLabelBackground, copyToClipboard } from './core/util.js';
+import { calcOffset1M, createShipOutlineGeometry, createDistanceGeometry } from './core/geo.js';
 import { init as initRainRadar } from './overlays/rainradar.js';
+import * as fireworks from './overlays/fireworks.js';
+import * as community from './overlays/community.js';
+import * as kiosk from './features/kiosk.js';
+import * as measure from './features/measure.js';
 import {
     getDistanceVal, getDistanceUnit,
     getSpeedVal, getSpeedUnit,
@@ -128,9 +134,9 @@ const ACTIONS = {
     setFading: (e, d, el) => setFading(el.checked),
     setRangeSwitch: (e, d, el) => setRangeSwitch(el.checked),
     setRangeTimePeriod: (e, d, el) => setRangeTimePeriod(el.value),
-    setKiosk: (e, d, el) => setKiosk(el.checked),
-    setKioskRotationSpeed: (e, d, el) => setKioskRotationSpeed(el.value),
-    setKioskPanMap: (e, d, el) => setKioskPanMap(el.checked),
+    setKiosk: (e, d, el) => kiosk.setKiosk(el.checked),
+    setKioskRotationSpeed: (e, d, el) => kiosk.setKioskRotationSpeed(el.value),
+    setKioskPanMap: (e, d, el) => kiosk.setKioskPanMap(el.checked),
     setGraphVisibility: (e, d, el) => setGraphVisibility(d.graph, el.checked),
     setMapSetting: (e, d, el) => setMapSetting(d.key, el.type === 'checkbox' ? el.checked : el.value),
     setRangeColor: (e, d, el) => setRangeColor(el.value, d.field),
@@ -162,9 +168,9 @@ const ACTIONS = {
     unpinCenter: () => unpinCenter(),
     showAllTracks: () => showAllTracks(),
     deleteAllTracks: () => deleteAllTracks(),
-    ToggleFireworks: () => ToggleFireworks(),
+    ToggleFireworks: () => fireworks.toggle(),
     toggleLabel: () => toggleLabel(),
-    toggleKioskMode: () => toggleKioskMode(),
+    toggleKioskMode: () => kiosk.toggleKioskMode(),
     toggleFading: () => toggleFading(),
     toggleRange: () => toggleRange(),
     toggleTrackCtx: () => toggleTrack(context_mmsi),
@@ -202,7 +208,7 @@ const ACTIONS = {
     },
 
     // map tab buttons
-    setMeasureMode: () => { setMeasureMode(); showNotification('Shift+click on start point/object'); },
+    setMeasureMode: () => { measure.setMeasureMode(); showNotification('Shift+click on start point/object'); },
     toggleMeasurecard: () => toggleMeasurecard(),
     toggleShipcardSize: () => toggleShipcardSize(),
     shipcardSelectSelf: (e, d, el) => shipcardselect(el),
@@ -221,7 +227,7 @@ const ACTIONS = {
     toggleStatcard: () => toggleStatcard(),
     toggleTablecard: () => toggleTablecard(),
     mapSettingsContextMenu: (e) => showContextMenu(e, '', '', ['settings', 'center', 'ctx-map']),
-    toggleCommunityPane: () => toggleCommunityPane(),
+    toggleCommunityPane: () => community.toggleCommunityPane(),
     showMapMenu: (e) => showMapMenu(e),
     mainspaceContextMenu: (e) => showContextMenu(e, 0, '', ['settings']),
     plotsContextMenu: (e) => showContextMenu(e, '', 'charts', ['settings', 'ctx-charts']),
@@ -344,7 +350,6 @@ let interval,
     planesLastCleanup = 0,
     hover_feature = undefined,
     show_all_tracks = false,
-    evtSourceMap = null,
     logViewer = null,
     range_outline = undefined,
     range_outline_short = undefined,
@@ -379,8 +384,6 @@ if (typeof window.loadPlugins === 'undefined') {
 }
 
 const hover_info = document.getElementById('hover-info');
-
-let measures = [];
 
 let isFetchingShips = false;
 
@@ -604,32 +607,6 @@ async function copyClipboard(t) {
     return true;
 }
 
-async function copyToClipboard(textToCopy) {
-    // Navigator clipboard api needs a secure context (https)
-    if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(textToCopy);
-    } else {
-        // Use the 'out of viewport hidden text area' trick
-        const textArea = document.createElement("textarea");
-        textArea.value = textToCopy;
-
-        // Move textarea out of the viewport so it's not visible
-        textArea.style.position = "absolute";
-        textArea.style.left = "-999999px";
-
-        document.body.prepend(textArea);
-        textArea.select();
-
-        try {
-            document.execCommand("copy");
-        } catch (error) {
-            console.error(error);
-        } finally {
-            textArea.remove();
-        }
-    }
-}
-
 function openSettings() {
     document.querySelector(".settings_window").classList.add("active");
 }
@@ -767,27 +744,6 @@ const planeStyle = function (feature) {
         })
     ];
 };
-
-function decodeHTMLEntities(text) {
-    const textArea = document.createElement('textarea');
-    textArea.innerHTML = text;
-    return textArea.value;
-}
-
-function hexToRgb(hex) {
-    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
-    return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [18, 165, 237];
-}
-
-// Derive a readable label background from a (often bright) track color:
-// boost saturation by pushing channels away from luma, then darken.
-function deriveLabelBackground(hex) {
-    let [r, g, b] = hexToRgb(hex);
-    const luma = 0.299 * r + 0.587 * g + 0.114 * b;
-    const saturate = 1.35, darken = 0.6;
-    const adjust = (c) => Math.max(0, Math.min(255, Math.round((luma + (c - luma) * saturate) * darken)));
-    return `rgba(${adjust(r)}, ${adjust(g)}, ${adjust(b)}, 0.88)`;
-}
 
 const labelStyle = function (feature) {
     const font = settings.tooltipLabelFontSize + "px Arial";
@@ -985,88 +941,6 @@ const labelLayer = new ol.layer.Vector({
     declutter: settings.labels_declutter || true
 });
 
-const measureSource = new ol.source.Vector();
-
-const measureStyle = new ol.style.Style({
-    stroke: new ol.style.Stroke({
-        color: 'green',
-        lineDash: [20, 20],
-        width: 2,
-    })
-});
-
-const measureStyleWhite = new ol.style.Style({
-    stroke: new ol.style.Stroke({
-        color: 'white',
-        lineDash: [20, 20],
-        lineDashOffset: 20,
-        width: 2,
-    })
-});
-
-// label for the measure line
-const measureLabelStyle = new ol.style.Style({
-    text: new ol.style.Text({
-        font: '14px Calibri,sans-serif',
-        fill: new ol.style.Fill({
-            color: 'rgba(255, 255, 255, 1)',
-        }),
-        backgroundFill: new ol.style.Fill({
-            color: 'green',
-        }),
-        padding: [3, 3, 3, 3],
-        textBaseline: 'bottom',
-        offsetY: -15,
-    }),
-});
-
-const calculateBearing = function (start, end) {
-    const startLat = toRadians(start[1]);
-    const startLon = toRadians(start[0]);
-    const endLat = toRadians(end[1]);
-    const endLon = toRadians(end[0]);
-
-    const dLon = endLon - startLon;
-    const y = Math.sin(dLon) * Math.cos(endLat);
-    const x = Math.cos(startLat) * Math.sin(endLat) - Math.sin(startLat) * Math.cos(endLat) * Math.cos(dLon);
-
-    const bearing = toDegrees(Math.atan2(y, x));
-    return (bearing + 360) % 360; // Normalize to 0-360
-};
-
-const toRadians = function (degrees) {
-    return degrees * Math.PI / 180;
-};
-
-const toDegrees = function (radians) {
-    return radians * 180 / Math.PI;
-};
-
-const measureVector = new ol.layer.Vector({
-    source: measureSource,
-    style: function (feature) {
-        return measureStyleFunction(feature);
-    },
-});
-
-function measureStyleFunction(feature) {
-    const styles = [];
-    const geometry = feature.getGeometry();
-    const type = geometry.getType();
-    let point, label;
-    if (type === 'LineString') {
-        point = new ol.geom.Point(geometry.getLastCoordinate());
-        label = `${feature.measureDistance} ${getDistanceUnit()}, ${feature.measureBearing} degrees`;
-    }
-    styles.push(measureStyle);
-    styles.push(measureStyleWhite);
-    if (label) {
-        measureLabelStyle.setGeometry(point);
-        measureLabelStyle.getText().setText(label);
-        styles.push(measureLabelStyle);
-    }
-    return styles;
-}
 
 let shapeFeatures = {};
 let markerFeatures = {};
@@ -1086,137 +960,6 @@ async function fetchJSON(l, m) {
     return response.text();
 }
 
-
-// Function to create ship outline geometry in OpenLayers
-function createShipOutlineGeometry(ship) {
-    if (!ship) return null;
-    const coordinate = [ship.lon, ship.lat];
-
-    let heading = ship.heading;
-    let { to_bow, to_stern, to_port, to_starboard } = ship;
-
-    if (to_bow == null || to_stern == null || to_port == null || to_starboard == null) return null;
-
-    if (heading == null) {
-        if (ship.cog != null && ship.speed > 1) heading = ship.cog;
-        else return new ol.geom.Circle(ol.proj.fromLonLat(coordinate), Math.max(to_bow, to_stern));
-    }
-
-    const deltaBow = calcOffset1M(coordinate, heading % 360);
-    const deltaStarboard = calcOffset1M(coordinate, (heading + 90) % 360);
-
-    const bow = calcMove(coordinate, deltaBow, to_bow);
-    const stern = calcMove(coordinate, deltaBow, -to_stern);
-
-    const A = calcMove(stern, deltaStarboard, to_starboard);
-    const B = calcMove(stern, deltaStarboard, -to_port);
-    const C = calcMove(B, deltaBow, 0.8 * (to_bow + to_stern));
-    const Dmid = calcMove(C, deltaStarboard, 0.5 * (to_starboard + to_port));
-    const D = calcMove(Dmid, deltaBow, 0.2 * (to_bow + to_stern));
-    const E = calcMove(C, deltaStarboard, to_starboard + to_port);
-
-    let shipOutlineCoords = [A, B, C, D, E, A].map(coord => ol.proj.fromLonLat(coord));
-    return new ol.geom.Polygon([shipOutlineCoords]);
-}
-
-let communityPopup = null;
-let communityLastApplied = null;
-const COMMUNITY_NS = 'aiscatcher-mapsync';
-const COMMUNITY_ORIGIN = 'https://www.aiscatcher.org';
-const COMMUNITY_EPS_LATLON = 1e-4;
-const COMMUNITY_EPS_ZOOM = 0.01;
-
-function communityViewNear(a, b) {
-    return a && b
-        && Math.abs(a.lat  - b.lat)  < COMMUNITY_EPS_LATLON
-        && Math.abs(a.lon  - b.lon)  < COMMUNITY_EPS_LATLON
-        && Math.abs(a.zoom - b.zoom) < COMMUNITY_EPS_ZOOM;
-}
-
-function communityViewSane(v) {
-    return Number.isFinite(v.lat)  && v.lat  >= -90  && v.lat  <= 90
-        && Number.isFinite(v.lon)  && v.lon  >= -180 && v.lon  <= 180
-        && Number.isFinite(v.zoom) && v.zoom >= 0    && v.zoom <= 28;
-}
-
-function sharingDisplay() {
-    const f = config.features || {};
-    if (!f.sharing)        return ["No", "red"];
-    if (!f.sharing_uuid)   return ["Yes (anonymous)", "orange"];
-    return ["Yes", "green"];
-}
-
-function applySharingState() {
-    const f = config.features || {};
-    const cls = !f.sharing ? "fill-red"
-              : !f.sharing_uuid ? "fill-orange"
-              : "fill-green";
-    const btn = document.getElementById("xchange");
-    if (btn) {
-        btn.classList.remove("fill-red", "fill-orange", "fill-green");
-        btn.classList.add(cls);
-    }
-}
-
-function toggleCommunityPane() {
-    if (communityPopup && !communityPopup.closed) {
-        communityPopup.close();
-        communityPopup = null;
-        return;
-    }
-    const view = map.getView();
-    const [lon, lat] = ol.proj.toLonLat(view.getCenter());
-    const zoom = view.getZoom();
-    const url = `${COMMUNITY_ORIGIN}/livemap?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}&zoom=${zoom.toFixed(2)}`;
-    const w = Math.floor(screen.availWidth / 2);
-    const h = screen.availHeight;
-    communityPopup = window.open(url, 'aiscatcher-community',
-        `popup=yes,width=${w},height=${h},left=${w},top=0`);
-    if (communityPopup) {
-        communityPopup.focus();
-        communityLastApplied = { lat, lon, zoom };
-    }
-}
-
-function notifyCommunityPopupView() {
-    if (!communityPopup || communityPopup.closed) return;
-    const v = { lat: settings.lat, lon: settings.lon, zoom: settings.zoom };
-    if (communityViewNear(v, communityLastApplied)) return;
-    communityPopup.postMessage({
-        ns: COMMUNITY_NS, v: 1, type: 'view',
-        lat: v.lat, lon: v.lon, zoom: v.zoom
-    }, COMMUNITY_ORIGIN);
-}
-
-window.addEventListener('message', (ev) => {
-    if (!communityPopup || ev.source !== communityPopup) return;
-    if (ev.origin !== COMMUNITY_ORIGIN) return;
-    const m = ev.data;
-    if (!m || m.ns !== COMMUNITY_NS || m.type !== 'view') return;
-    const v = { lat: +m.lat, lon: +m.lon, zoom: +m.zoom };
-    if (!communityViewSane(v)) return;
-    if (communityViewNear(v, communityLastApplied)) return;
-    const view = map.getView();
-    view.setCenter(ol.proj.fromLonLat([v.lon, v.lat]));
-    view.setZoom(v.zoom);
-    communityLastApplied = v;
-});
-
-function pushVesselsToCommunityPopup(dynamic) {
-    if (!communityPopup || communityPopup.closed) return;
-    if (!Array.isArray(dynamic) || dynamic.length === 0) return;
-    const updates = [];
-    for (const v of dynamic) {
-        const mmsi = v[0], lat = v[1], lon = v[2];
-        if (mmsi == null || lat == null || lon == null) continue;
-        updates.push([mmsi, lat, lon]);
-    }
-    if (updates.length === 0) return;
-    communityPopup.postMessage(
-        { ns: COMMUNITY_NS, v: 1, type: 'stations-vessels', updates },
-        COMMUNITY_ORIGIN
-    );
-}
 
 async function showNMEA(m) {
     if (config.features.save_messages) {
@@ -1314,9 +1057,11 @@ function getBinaryMessageList(messages) {
         content += '</div>';
 
         if (msg.message && msg.message.dac == 1 && (msg.message.fid == 31 || msg.message.fi == 31)) {
-            content += getBinaryMessageContent(msg, false);
+            content += getBinaryMessageContent(msg, true);
         } else if (isInlandMessage(msg)) {
             content += getInlandMessageContent(msg);
+        } else if (isTextMessage(msg)) {
+            content += getTextMessageContent(msg);
         } else {
             content += '<div class="binary-message-details">';
             content += `<div><strong>Message Type:</strong> ${msg.message ? `DAC ${msg.message.dac}, FI ${msg.message.fid || msg.message.fi}` : 'Unknown'}</div>`;
@@ -1401,7 +1146,7 @@ function showContextMenu(event, mmsi, type, context) {
     document.getElementById("ctx_labelswitch").textContent = settings.show_labels != "never" ? "Hide ship labels" : "Show ship labels";
     document.getElementById("ctx_range").textContent = settings.show_range ? "Hide station range" : "Show station range";
     document.getElementById("ctx_fading").textContent = settings.fading ? "Show icons without fading" : "Show icons with fading";
-    document.getElementById("ctx_fireworks").textContent = evtSourceMap == null ? "Start Fireworks Mode" : "Stop Fireworks Mode";
+    document.getElementById("ctx_fireworks").textContent = fireworks.isRunning() ? "Stop Fireworks Mode" : "Start Fireworks Mode";
     document.getElementById("ctx_label_shipcard_pin").textContent = settings.shipcard_pinned ? "Unpin Shipcard position" : "Pin Shipcard position";
     document.getElementById("ctx_signal_graphs").textContent = settings.show_signal_graphs ? "Hide signal level graphs" : "Show signal level graphs";
     document.getElementById("ctx_ppm_graphs").textContent = settings.show_ppm_graphs ? "Hide frequency shift graphs" : "Show frequency shift graphs";
@@ -1434,7 +1179,7 @@ function showContextMenu(event, mmsi, type, context) {
 
     // we might have made non-android items visible in the context menu, so hide non-android items if needed
     updateAndroid();
-    updateKiosk();
+    kiosk.updateKiosk();
 
     if (show_all_tracks) {
         document.querySelectorAll(".ctx-noalltracks").forEach(function (element) {
@@ -1652,138 +1397,6 @@ function setMapOpacity() {
 }
 
 let clickTimeout = undefined;
-let isMeasuring = false;
-let measureMode = false;
-
-function refreshMeasures() {
-    measureSource.clear();
-
-    const mapcardContent = document.getElementById('measurecardInner');
-    mapcardContent.innerHTML = '';
-
-    let content = '';
-
-    measures = measures.filter(measure => {
-
-
-        if ((measure.start_type == 'ship' && !(measure.start_value in shipsDB))) {
-            showNotification('Ship out of range for measurement.');
-            return false;
-        }
-
-        let sc = undefined, ss = undefined, from = undefined;
-        if (measure.start_type == 'point') {
-            sc = ol.proj.fromLonLat(measure.start_value);
-            from = "point";
-        } else {
-            ss = shipsDB[measure.start_value].raw;
-            sc = ol.proj.fromLonLat([ss.lon, ss.lat]);
-            from = ss.shipname || ss.mmsi;
-        }
-
-        let ec = undefined, es = undefined, to = "";
-        if ('end_type' in measure) {
-            if (measure.end_type == 'point') {
-                ec = ol.proj.fromLonLat(measure.end_value);
-                to = "point";
-            } else {
-                es = shipsDB[measure.end_value].raw;
-                ec = ol.proj.fromLonLat([es.lon, es.lat]);
-                to = es.shipname || es.mmsi;
-            }
-        }
-
-        let distance = 0, bearing = 0;
-
-        if (sc && ec) {
-            const geometry = new ol.geom.LineString([sc, ec]);
-
-            const length = ol.sphere.getLength(geometry);
-            distance = getDistanceVal(length / 1852);
-            const coordinates = geometry.getCoordinates();
-            const start = ol.proj.toLonLat(coordinates[0]);
-            const end = ol.proj.toLonLat(coordinates[coordinates.length - 1]);
-            bearing = calculateBearing(start, end).toFixed(0);
-
-            if (measure.visible) {
-                const feature = new ol.Feature(geometry);
-                measureSource.addFeature(feature);
-                feature.measureDistance = distance;
-                feature.measureBearing = bearing;
-            }
-        }
-        let icon = measure.visible ? 'visibility' : 'visibility_off';
-
-        content += `<tr data-index="${measures.indexOf(measure)}"><td style="padding: 2px;"><i style="padding-left:2px; font-size: 15px;" class="${icon}_icon visibility_icon"></i></td><td style="padding: 0px;"><i style="font-size: 15px;" class="delete_icon"></i></td><td>${from}</td><td>${to}</td><td title="${distance} ${getDistanceUnit()}">${distance}</td><td title="${bearing} degrees">${bearing}</td></tr>`;
-
-        return true;
-    });
-
-    mapcardContent.innerHTML = content;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const mapcardContent = document.getElementById('measurecardInner');
-
-    mapcardContent.addEventListener('click', (event) => {
-        const row = event.target.closest('tr');
-        if (row) {
-            const measureIndex = row.getAttribute('data-index');
-            if (event.target.classList.contains('visibility_icon')) {
-                measures[measureIndex].visible = !measures[measureIndex].visible;
-                refreshMeasures();
-            } else if (event.target.classList.contains('delete_icon')) {
-                measures.splice(measureIndex, 1);
-                refreshMeasures();
-            }
-        }
-    });
-
-    refreshMeasures();
-});
-
-function startMeasurementAtPoint(t, v) {
-    isMeasuring = true;
-    measures.push({ start_value: v, start_type: t, visible: true });
-    if (!measurecardVisible()) toggleMeasurecard();
-    showNotification('Select end point or object');
-    refreshMeasures();
-    startMeasureMode();
-}
-
-function endMeasurement(t, v) {
-    if (isMeasuring) {
-
-        const lastMeasureIndex = measures.length - 1;
-        measures[lastMeasureIndex] = {
-            ...measures[lastMeasureIndex],
-            end_value: v,
-            end_type: t
-        };
-
-        isMeasuring = false;
-
-        showNotification('Measurement added.');
-        refreshMeasures();
-        clearMeasureMode();
-    }
-}
-
-function startMeasureMode() {
-    measureMode = true;
-    document.getElementById('map').classList.add('crosshair_cursor');
-}
-
-function clearMeasureMode() {
-    measureMode = false;
-    document.getElementById('map').classList.remove('crosshair_cursor');
-}
-
-function setMeasureMode() {
-    measureMode = true;
-    document.getElementById('map').classList.add('crosshair_cursor');
-}
-
 const handleClick = function (pixel, target, event) {
     if (clickTimeout) {
         clearTimeout(clickTimeout);
@@ -1797,27 +1410,9 @@ const handleClick = function (pixel, target, event) {
     let included = feature && 'ship' in feature && feature.ship.mmsi in shipsDB;
     let included_plane = feature && 'plane' in feature && feature.plane.hexident in planesDB;
 
-    if (event.originalEvent.shiftKey || measureMode || isMeasuring) {
-        measureMode = false;
-
-        if (isMeasuring) {
-            if (feature && 'ship' in feature && feature.ship.mmsi in shipsDB) {
-                endMeasurement("ship", feature.ship.mmsi);
-            }
-            else {
-                endMeasurement("point", ol.proj.toLonLat(map.getCoordinateFromPixel(pixel)));
-            }
-            return;
-        }
-
-        if (feature && 'ship' in feature && feature.ship.mmsi in shipsDB) {
-            startMeasurementAtPoint("ship", feature.ship.mmsi);
-            return;
-        }
-        else {
-            startMeasurementAtPoint("point", ol.proj.toLonLat(map.getCoordinateFromPixel(pixel)));
-        }
-
+    if (event.originalEvent.shiftKey || measure.isActive()) {
+        const shipMmsi = (feature && 'ship' in feature && feature.ship.mmsi in shipsDB) ? feature.ship.mmsi : null;
+        measure.handleMapClick(shipMmsi, () => ol.proj.toLonLat(map.getCoordinateFromPixel(pixel)));
         return;
     }
 
@@ -1873,7 +1468,7 @@ function initMap() {
         value.setVisible(false);
     }
 
-    [rangeLayer, shapeLayer, trackLayer, markerLayer, labelLayer, extraLayer, binaryLayer, measureVector].forEach(layer => {
+    [rangeLayer, shapeLayer, trackLayer, markerLayer, labelLayer, extraLayer, binaryLayer, measure.measureVector].forEach(layer => {
         map.addLayer(layer);
     });
 
@@ -1971,85 +1566,6 @@ function getMetrics() {
     if (settings.metric == "SI") return "Metric";
     if (settings.metric == "IMPERIAL") return "Imperial";
     return "Default";
-}
-
-function addMarker(lat, lon, ch) {
-    const latlon = ol.proj.fromLonLat([lon, lat]);
-    let color = 'grey'; // Default color
-
-    if (ch === "A") color = 'blue';
-    if (ch === "B") color = 'red';
-
-    let style = new ol.style.Style({
-        image: new ol.style.Circle({
-            radius: 30,
-            stroke: new ol.style.Stroke({
-                color: color,
-                width: 10
-            }),
-            fill: new ol.style.Fill({
-                color: 'rgba(0,0,0,0)'
-            })
-        })
-    });
-
-    const marker = new ol.Feature({
-        geometry: new ol.geom.Point(latlon),
-    });
-
-    marker.setStyle(style);
-    extraVector.addFeature(marker);
-
-    setTimeout(function () {
-        extraVector.removeFeature(marker);
-    }, 1000);
-
-}
-
-function ToggleFireworks() {
-    if (evtSourceMap == null) StartFireworks();
-    else StopFireworks();
-}
-
-function StartFireworks() {
-    if (evtSourceMap == null) {
-        if (!config.features.realtime) {
-            showDialog("Error", "Cannot run Firework Mode. Please ensure that AIS-catcher is running with -N REALTIME on.");
-            return;
-        }
-
-        evtSourceMap = new EventSource("api/signal");
-
-        evtSourceMap.addEventListener(
-            "nmea",
-            function (e) {
-                const jsonData = JSON.parse(e.data);
-
-                if (Object.hasOwn(jsonData, "channel") && Object.hasOwn(jsonData, "lat") && Object.hasOwn(jsonData, "lon")) {
-                    addMarker(jsonData.lat, jsonData.lon, jsonData.channel);
-                }
-            },
-            false,
-        );
-
-        evtSourceMap.onerror = function (event) {
-            StopFireworks();
-            showDialog("Error", "Problem running Firework Mode, cannot reach server. Please ensure that AIS-catcher is running with -N REALTIME on.");
-        };
-
-        evtSourceMap.onopen = function (event) {
-            showNotification("Fireworks Mode started");
-            console.log("Fireworks connected");
-        };
-    }
-}
-
-function StopFireworks() {
-    if (evtSourceMap != null) {
-        showNotification("Fireworks Mode stopped");
-        evtSourceMap.close();
-        evtSourceMap = null;
-    }
 }
 
 function updateMarkerCountTooltip() {
@@ -2562,24 +2078,6 @@ function distanceCircleStyleFunction(feature) {
 }
 
 
-function createDistanceGeometry(lat, lon, radius) {
-
-    const deltaNorth = calcOffset1M([station.lon, station.lat], 0)[0];
-    const deltaEast = calcOffset1M([station.lon, station.lat], 90)[1];
-    const N = 50;
-
-    let outline = [];
-    for (let i = 0; i < N; i++) {
-        outline.push([
-            station.lon + ((radius * deltaEast)) * Math.sin(((i * 2) / N) * Math.PI),
-            station.lat + ((radius * deltaNorth)) * Math.cos(((i * 2) / N) * Math.PI),
-        ]);
-    }
-
-    outline = outline.map(point => ol.proj.fromLonLat(point));
-    return new ol.geom.Polygon([outline]);
-}
-
 function updateDistanceCircles() {
     const lat = station.lat;
     const lon = station.lon;
@@ -2641,7 +2139,7 @@ async function fetchBinary() {
 
         messages.forEach((msg) => {
             const hasLocation = msg.message && msg.message.lat && msg.message.lon;
-            if (msg.message && msg.message.mmsi && (hasLocation || isInlandMessage(msg))) {
+            if (msg.message && msg.message.mmsi && (hasLocation || isInlandMessage(msg) || isTextMessage(msg))) {
                 const mmsi = msg.message.mmsi;
 
                 if (!binaryDB[mmsi]) {
@@ -2816,7 +2314,7 @@ async function fetchShips(noDoubleFetch = true) {
     tab_title_count = Object.keys(shipsDB).length;
     updateTitle();
 
-    pushVesselsToCommunityPopup(ships.dynamic);
+    community.pushVesselsToCommunityPopup(ships.dynamic);
 
     return true;
 }
@@ -2987,29 +2485,6 @@ function handleFullScreenChange() {
 
 // we calculate the lat/lon for 1m move in direction of heading
 // underlying calculation uses an offset of 100m and then scales down to 1.
-
-const cos100R = 0.9999999998770914; // cos(100m / R);
-const sin100R = 1.567855942823164e-5; // sin(100m / R)
-const rad = Math.PI / 180;
-const radInv = 180 / Math.PI;
-
-
-function calcOffset1M(coordinate, heading) {
-    const lat = coordinate[1] * rad;
-    const rheading = ((heading + 360) % 360) * rad;
-    const sinLat = Math.sin(lat);
-    const cosLat = Math.cos(lat);
-
-    let sinLat2 = sinLat * cos100R + cosLat * sin100R * Math.cos(rheading);
-    let lat2 = Math.asin(sinLat2);
-    let deltaLon = Math.atan2(Math.sin(rheading) * sin100R * cosLat, cos100R - sinLat * sinLat2);
-
-    return [(lat2 * radInv - coordinate[1]) / 100, (deltaLon * radInv) / 100];
-}
-
-function calcMove(coordinate, delta, distance) {
-    return [coordinate[0] + delta[1] * distance, coordinate[1] + delta[0] * distance];
-}
 
 function setMapSetting(a, v) {
     settings[a] = v;
@@ -3210,7 +2685,7 @@ async function updateStatistics() {
         if (stat.station_link != "") document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
 
         const statSharingElement = document.getElementById("stat_sharing");
-        const [sharingText, sharingColor] = sharingDisplay();
+        const [sharingText, sharingColor] = community.sharingDisplay();
         statSharingElement.innerHTML = `<a href="${stat.sharing_link}" target="_blank" style="color: ${sharingColor}">${sharingText}</a>`;
 
 
@@ -3307,8 +2782,30 @@ function getTooltipContent(ship) {
         if (inlandMessages.length > 0) {
             content += getInlandMessageContent(inlandMessages);
         }
+
+        const textMessages = messages.filter(msg => isTextMessage(msg));
+
+        if (textMessages.length > 0) {
+            content += getTextMessageTooltip(textMessages);
+        }
     }
 
+    return content;
+}
+
+function getTextMessageTooltip(messages) {
+    const sorted = [...messages].sort((a, b) => b.timestamp - a.timestamp);
+    const m = sorted[0];
+
+    let content = '<div class="meteo-tooltip">';
+    content += `<div style="font-size: 11px; color: #FFA500; padding: 4px 0 3px; margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center;">`;
+    content += `<span style="font-size: 11px;">${m.formattedTime} - Text Message</span>`;
+    if (sorted.length > 1) {
+        content += `<span style="font-size: 10px; opacity: 0.5; font-style: italic;">+${sorted.length - 1} more</span>`;
+    }
+    content += '</div>';
+    content += `<div style="font-size: 11px; font-weight: bold; white-space: pre-wrap;">${sanitizeString(m.message.text || '')}</div>`;
+    content += '</div>';
     return content;
 }
 
@@ -3512,7 +3009,7 @@ function getTooltipContentBinary(mmsiOrBinary) {
     return getBinaryMessageContent(mmsiOrBinary);
 }
 
-function getBinaryMessageContent(binary) {
+function getBinaryMessageContent(binary, includeRaw = false) {
     const messages = Array.isArray(binary) ? binary : [binary];
 
     if (messages.length === 0) return '';
@@ -3602,6 +3099,13 @@ function getBinaryMessageContent(binary) {
         content += row('Visibility', msg.visibility.toFixed(1) + ' nm');
     }
 
+    if (includeRaw) {
+        content += `<details class="binary-raw-data">
+                      <summary>Show Raw Data</summary>
+                      <pre>${sanitizeString(JSON.stringify(msg, null, 2))}</pre>
+                    </details>`;
+    }
+
     content += '</div>';
     return content;
 }
@@ -3610,6 +3114,37 @@ function isInlandMessage(msg) {
     if (!msg.message) return false;
     const fi = msg.message.fid != null ? msg.message.fid : msg.message.fi;
     return msg.message.dac == 200 && fi == 55;
+}
+
+function isTextMessage(msg) {
+    if (!msg.message) return false;
+    const fi = msg.message.fid != null ? msg.message.fid : msg.message.fi;
+    return msg.message.dac == 1 && (fi == 0 || fi == 29 || fi == 30);
+}
+
+function getTextMessageContent(msg) {
+    const m = msg.message;
+    const fi = m.fid != null ? m.fid : m.fi;
+    const kind = m.type == 6 || fi == 30 ? "Text message (addressed)" : "Text message (broadcast)";
+
+    let content = '<div class="binary-message-details">';
+    content += `<div><strong>${kind}</strong></div>`;
+    content += `<div style="font-size: 1.1em; margin: 6px 0; white-space: pre-wrap;">${sanitizeString(m.text || '')}</div>`;
+
+    if (m.dest_mmsi) {
+        const destName = m.dest_mmsi in shipsDB ?
+            (shipsDB[m.dest_mmsi].raw.shipname || `MMSI ${m.dest_mmsi}`) :
+            `MMSI ${m.dest_mmsi}`;
+        content += `<div><strong>To:</strong> ${sanitizeString(String(destName))}</div>`;
+    }
+    if (m.ack_required) content += '<div>Acknowledgement requested</div>';
+
+    content += `<details class="binary-raw-data">
+                  <summary>Show Raw Data</summary>
+                  <pre>${sanitizeString(JSON.stringify(m, null, 2))}</pre>
+                </details>`;
+    content += '</div>';
+    return content;
 }
 
 function getInlandMessageContent(binary) {
@@ -3817,39 +3352,10 @@ const handlePointerMove = function (pixel, target) {
         stopHover();
     }
 
-    if (isMeasuring) {
-        const lastMeasureIndex = measures.length - 1;
-
-        if (feature && 'ship' in feature) {
-            measures[lastMeasureIndex] = {
-                ...measures[lastMeasureIndex],
-                end_value: feature.ship.mmsi,
-                end_type: "ship"
-            };
-        }
-        else {
-            measures[lastMeasureIndex] = {
-                ...measures[lastMeasureIndex],
-                end_value: ol.proj.toLonLat(map.getCoordinateFromPixel(pixel)),
-                end_type: "point"
-            };
-        }
-
-        refreshMeasures();
-    }
+    measure.updateMeasureEnd(
+        feature && 'ship' in feature ? feature.ship.mmsi : null,
+        () => ol.proj.toLonLat(map.getCoordinateFromPixel(pixel)));
 };
-
-function debounce(func, wait) {
-    let timeout;
-    function debounced(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
-    }
-    debounced.cancel = function () {
-        clearTimeout(timeout);
-    };
-    return debounced;
-}
 
 const debouncedSaveSettings = debounce(saveSettings, 250);
 const debouncedDrawMap = debounce(redrawMap, 250);
@@ -3895,7 +3401,7 @@ function saveSettings() {
 
     localStorage[context] = JSON.stringify(settings);
 
-    notifyCommunityPopupView();
+    community.notifyCommunityPopupView();
     updateMapURL();
     updateSettingsTab();
 
@@ -5259,7 +4765,7 @@ function redrawMap() {
             }
         }
     }
-    refreshMeasures();
+    measure.refreshMeasures();
 
     redrawBinaryMessages();
 
@@ -5536,7 +5042,7 @@ function activateTab(b, a) {
         interval = setInterval(refresh_data, refreshIntervalMs);
     });
 
-    if (a != "map") StopFireworks();
+    if (a != "map") fireworks.stop();
     if (a == "settings") updateSettingsTab();
 
     if (a == "log") {
@@ -5604,44 +5110,6 @@ function updateAndroid() {
     });
 }
 
-const originalDisplayValues = new Map();
-
-function clearAndHide(element) {
-    if (!originalDisplayValues.has(element)) {
-        originalDisplayValues.set(element, element.style.display);
-    }
-    element.style.display = "none";
-}
-
-function restoreOriginalDisplay(element) {
-    const saved = originalDisplayValues.get(element);
-    if (saved) {
-        element.style.display = saved;
-    } else {
-        element.style.removeProperty('display');
-    }
-}
-function setKiosk(enabled) {
-    settings.kiosk = enabled;
-    updateKiosk();
-    saveSettings();
-}
-
-function setKioskRotationSpeed(speed) {
-    settings.kiosk_rotation_speed = parseInt(speed);
-    saveSettings();
-
-
-    if (isKiosk() && kioskAnimationInterval) {
-        startKioskAnimation();
-    }
-}
-
-function setKioskPanMap(enabled) {
-    settings.kiosk_pan_map = enabled;
-    saveSettings();
-}
-
 function updateKioskSpeedDisplay(value) {
     document.getElementById("kiosk_rotation_speed_label").textContent = `Rotation Speed (${value}s)`;
 }
@@ -5673,116 +5141,6 @@ function updateShipoutlineOpacityDisplay(value) {
 
 function updateCircleScaleDisplay(value) {
     document.getElementById("circle_scale_label").textContent = `Selector line width (${parseFloat(value).toFixed(1)})`;
-}
-
-function updateKiosk() {
-    const kiosk = isKiosk();
-    if (kiosk) startKioskAnimation();
-    else stopKioskAnimation();
-
-    const toHide = document.querySelectorAll(kiosk ? ".nokiosk" : ".kiosk");
-    const toShow = document.querySelectorAll(kiosk ? ".kiosk" : ".nokiosk");
-    toHide.forEach(clearAndHide);
-    toShow.forEach(restoreOriginalDisplay);
-}
-
-let kioskAnimationInterval = null;
-
-function selectRandomShipForKiosk() {
-
-    const mapExtent = map.getView().calculateExtent(map.getSize());
-    const visibleShips = Object.keys(shipsDB).filter(mmsi => {
-        const ship = shipsDB[mmsi].raw;
-        if (!ship.lat || !ship.lon || ship.lat === 0 || ship.lon === 0) {
-            return false;
-        }
-
-        const shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
-        return ol.extent.containsCoordinate(mapExtent, shipCoords);
-    });
-
-    if (visibleShips.length === 0) {
-        return null;
-    }
-
-    const candidates = visibleShips.filter(mmsi =>
-        mmsi != card_mmsi && mmsi != hoverMMSI
-    );
-
-    const finalCandidates = candidates.length > 0 ? candidates : visibleShips;
-
-    const weights = finalCandidates.map(mmsi => {
-        const ship = shipsDB[mmsi].raw;
-        const timeSinceUpdate = (shipsSince - ship.last_signal) || 3600;
-
-        // Higher weight for more recently updated ships
-        if (timeSinceUpdate < 60) return 10;
-        if (timeSinceUpdate < 300) return 5;
-        if (timeSinceUpdate < 900) return 2;
-        return 1;
-    });
-
-    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-    let random = Math.random() * totalWeight;
-
-    for (let i = 0; i < finalCandidates.length; i++) {
-        random -= weights[i];
-        if (random <= 0) {
-            return finalCandidates[i];
-        }
-    }
-
-    return finalCandidates[0];
-}
-
-function showKioskShip(mmsi) {
-    if (!mmsi || !(mmsi in shipsDB)) {
-        console.log("Invalid MMSI or ship not found:", mmsi);
-        return;
-    }
-
-    const ship = shipsDB[mmsi].raw;
-    if (!ship.lat || !ship.lon) {
-        console.log("Ship has no valid coordinates:", mmsi);
-        return;
-    }
-
-    const shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
-    const pixel = map.getPixelFromCoordinate(shipCoords);
-    //    startHover('ship', mmsi, pixel);
-    showShipcard('ship', mmsi, pixel);
-
-}
-
-function showRandomKioskShip() {
-    const selectedMMSI = selectRandomShipForKiosk();
-    if (selectedMMSI) {
-        showKioskShip(selectedMMSI);
-    }
-}
-
-function startKioskAnimation() {
-    if (kioskAnimationInterval) {
-        clearInterval(kioskAnimationInterval);
-    }
-
-    showRandomKioskShip();
-    kioskAnimationInterval = setInterval(function () {
-        showRandomKioskShip();
-    }, settings.kiosk_rotation_speed * 1000);
-}
-
-function stopKioskAnimation() {
-    if (kioskAnimationInterval) {
-        clearInterval(kioskAnimationInterval);
-        kioskAnimationInterval = null;
-        console.log("Kiosk animation stopped");
-    }
-}
-
-function toggleKioskMode() {
-    settings.kiosk = !settings.kiosk;
-    updateKiosk();
 }
 
 function showAboutDialog() {
@@ -5820,14 +5178,6 @@ function showWelcome() {
 
     settings.welcome = false;
     saveSettings();
-}
-
-function isAndroid() {
-    return settings.android === true || settings.android === "true";
-}
-
-function isKiosk() {
-    return settings.kiosk === true || settings.kiosk === "true";
 }
 
 // for overwrite and insert code where needed
@@ -6004,6 +5354,23 @@ window.loadPlugins && window.loadPlugins();
 let urlParams = new URLSearchParams(window.location.search);
 restoreDefaultSettings();
 
+community.init({ config, getMap: () => map });
+fireworks.init({ config, extraVector, showDialog, showNotification });
+kiosk.init({
+    getMap: () => map,
+    getShipsDB: () => shipsDB,
+    getShipsSince: () => shipsSince,
+    getCardMmsi: () => card_mmsi,
+    getHoverMmsi: () => hoverMMSI,
+    showShipcard,
+    saveSettings,
+});
+measure.init({
+    getShipsDB: () => shipsDB,
+    showNotification,
+    ensureMeasurecardVisible: () => { if (!measurecardVisible()) toggleMeasurecard(); },
+});
+
 console.log("Plugin loading completed");
 
 console.log("Load settings");
@@ -6016,7 +5383,7 @@ loadSettingsFromURL();
 updateForLegacySettings();
 
 applyDynamicStyling();
-applySharingState();
+community.applySharingState();
 
 console.log("Setup tabs");
 initFullScreen();
@@ -6074,7 +5441,7 @@ if (!config.webcontrol_http) {
 }
 
 showWelcome();
-updateKiosk();
+kiosk.updateKiosk();
 applyShipcardPinStyling()
 updateAndroid();
 

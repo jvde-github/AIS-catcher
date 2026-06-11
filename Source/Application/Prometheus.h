@@ -24,7 +24,7 @@
 #include "JSONAIS.h"
 
 class PrometheusCounter : public StreamIn<JSON::JSON> {
-	std::mutex m;
+	std::mutex mtx;
 
 	int _LONG_RANGE_CUTOFF = 2500;
 
@@ -37,7 +37,7 @@ class PrometheusCounter : public StreamIn<JSON::JSON> {
 	std::string ppm;
 	std::string level;
 
-	void Add(const AIS::Message& m, const TAG& tag, bool new_vessel = false);
+	void Add(const AIS::Message& m, const TAG& tag);
 	void Clear();
 
 public:

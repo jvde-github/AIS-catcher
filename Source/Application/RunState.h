@@ -33,10 +33,13 @@ struct RunState {
 #endif
 	std::vector<std::unique_ptr<IO::OutputMessage>> msg;
 
+	// Community feed output, owned by msg; set up at most once
+	IO::OutputMessage *comm_feed = nullptr;
+
 	// Screen and statistics
 	IO::ScreenOutput screen;
 	std::vector<OutputStatistics> stat;
-	std::vector<int> msg_count;
+	std::vector<uint64_t> msg_count;
 
 	// Configuration flags set during arg parsing / config reading
 	int own_mmsi = -1;
@@ -61,4 +64,27 @@ struct RunState {
 		receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 	}
 
+	// Each device option on the command line / in config defines a new receiver,
+	// except the first which reuses the default-constructed one.
+	Receiver &newReceiver() {
+		if (++nrec > 1)
+			receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
+		return *receivers.back();
+	}
+
+	IO::OutputMessage &createCommunityFeed() {
+		msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
+		comm_feed = msg.back().get();
+		comm_feed->SetKey(AIS::KEY_SETTING_HOST, AISCATCHER_URL)
+			.SetKey(AIS::KEY_SETTING_PORT, AISCATCHER_PORT)
+			.SetKey(AIS::KEY_SETTING_DESCRIPTION, "Community Feed")
+			.SetKey(AIS::KEY_SETTING_MSGFORMAT, "COMMUNITY_HUB")
+			.SetKey(AIS::KEY_SETTING_FILTER, "on")
+			.SetKey(AIS::KEY_SETTING_GPS, "off")
+			.SetKey(AIS::KEY_SETTING_REMOVE_EMPTY, "on")
+			.SetKey(AIS::KEY_SETTING_KEEP_ALIVE, "on")
+			.SetKey(AIS::KEY_SETTING_OWN_INTERVAL, "10")
+			.SetKey(AIS::KEY_SETTING_INCLUDE_SAMPLE_START, "on");
+		return *comm_feed;
+	}
 };

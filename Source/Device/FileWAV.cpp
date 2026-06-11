@@ -102,6 +102,8 @@ namespace Device {
 		file.close();
 	}
 
+	// Unlike other devices, WAVFile has no read thread (isCallback() is false):
+	// each isStreaming() poll from the main loop reads and pushes the next block.
 	bool WAVFile::isStreaming() {
 		if (file.eof() || !Device::isStreaming()) return false;
 

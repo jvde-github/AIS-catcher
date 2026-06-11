@@ -24,8 +24,6 @@
 #include <cstdio>
 #include <cerrno>
 
-extern IO::OutputMessage *comm_feed;
-
 // --- PluginManager ---
 
 PluginManager::PluginManager()
@@ -477,7 +475,12 @@ void BackupManager::stop()
 {
 	if (running.load())
 	{
-		running = false;
+		{
+			// must hold mtx so the store cannot slip between the run thread's
+			// predicate check and its wait, which would stall join() a full interval
+			std::lock_guard<std::mutex> lock(mtx);
+			running = false;
+		}
 		cv.notify_all();
 		if (thread.joinable())
 			thread.join();

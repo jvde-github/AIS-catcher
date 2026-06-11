@@ -559,7 +559,7 @@ namespace Plane
         {0x4A8000, 0x4AFFFF, {'S','E'}}, // Sweden
         {0x4B0000, 0x4B7FFF, {'C','H'}}, // Switzerland
         {0x4B8000, 0x4BFFFF, {'T','R'}}, // Turkey
-        {0x4C0000, 0x4C7FFF, {'Y','U'}}, // Yugoslavia
+        {0x4C0000, 0x4C7FFF, {'R','S'}}, // Serbia
         {0x4C8000, 0x4C83FF, {'C','Y'}}, // Cyprus
         {0x4CA000, 0x4CAFFF, {'I','E'}}, // Ireland
         {0x4CC000, 0x4CCFFF, {'I','S'}}, // Iceland

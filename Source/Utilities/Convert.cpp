@@ -197,7 +197,7 @@ namespace Util
 		return "";
 	}
 
-	std::string Convert::BASE64toString(const std::string &in)
+	std::string Convert::toBase64(const std::string &in)
 	{
 		const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 

@@ -96,7 +96,7 @@ public:
 		connections.push_back(s);
 	}
 
-	void setGroupOut(uint32_t g) { groups = g; }
+	void setGroupOut(uint64_t g) { groups = g; }
 	uint64_t getGroupOut() const { return groups; }
 	bool canConnect(uint64_t m) { return (groups & m) > 0; }
 	bool isConnected() { return connections.size() > 0; }

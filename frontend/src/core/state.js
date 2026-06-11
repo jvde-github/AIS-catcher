@@ -3,3 +3,12 @@
 // imported binding.
 
 export let settings = {};
+
+// URL parameters can leave these settings as the string "true".
+export function isAndroid() {
+    return settings.android === true || settings.android === "true";
+}
+
+export function isKiosk() {
+    return settings.kiosk === true || settings.kiosk === "true";
+}

@@ -7,7 +7,7 @@ export default [
   },
   js.configs.recommended,
   {
-    files: ['script.js', 'core/**/*.js', 'tabs/**/*.js', 'overlays/**/*.js'],
+    files: ['script.js', 'core/**/*.js', 'tabs/**/*.js', 'overlays/**/*.js', 'features/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',

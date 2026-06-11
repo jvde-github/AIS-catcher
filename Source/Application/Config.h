@@ -49,12 +49,30 @@ class Config
 
 	bool isActiveObject(const JSON::Value &m);
 	void setSettingsFromJSON(const JSON::Value &m, Setting &s);
-	void setHTTPfromJSON(const JSON::Member &m);
-	void setUDPfromJSON(const JSON::Member &m);
-	void setTCPfromJSON(const JSON::Member &m);
-	void setMQTTfromJSON(const JSON::Member &m);
-	void setTCPListenerfromJSON(const JSON::Member &m);
 	void setModelfromJSON(const JSON::Member &m);
+
+	// Device settings (RTLSDR, AIRSPY, ...) of the current receiver, nullptr if key is not a device
+	Setting *getDeviceSetting(AIS::Keys key);
+
+	// Create one output of type T per active object in the array, with settings applied
+	template <typename T>
+	void addOutputsFromJSON(const JSON::Member &m, const std::string &label, const char *default_timeout = nullptr)
+	{
+		if (!m.Get().isArray())
+			throw std::runtime_error(label + " settings need to be an \"array\" of \"objects\" in config file.");
+
+		for (const auto &v : m.Get().getArray())
+		{
+			if (!isActiveObject(v))
+				continue;
+
+			_state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new T()));
+			IO::OutputMessage &o = *_state.msg.back();
+			if (default_timeout)
+				o.SetKey(AIS::KEY_SETTING_TIMEOUT, default_timeout);
+			setSettingsFromJSON(v, o);
+		}
+	}
 #ifdef HASWEBVIEWER
 	void setServerfromJSON(const JSON::Value &m);
 #endif
