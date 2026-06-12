@@ -39,6 +39,7 @@ class PrometheusCounter : public StreamIn<JSON::JSON> {
 
 	void Add(const AIS::Message& m, const TAG& tag);
 	void Clear();
+	void resetSamples(); // caller must hold mtx
 
 public:
 	void setCutOff(int c) { _LONG_RANGE_CUTOFF = c; }

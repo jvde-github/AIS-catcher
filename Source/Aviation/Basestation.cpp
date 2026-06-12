@@ -78,7 +78,7 @@ namespace
 			return false;
 		bool neg = (p[0] == '-');
 		int i = (neg || p[0] == '+') ? 1 : 0;
-		if (i >= len)
+		if (i >= len || len - i > 9) // >9 digits cannot be a valid SBS field and would overflow
 			return false;
 		int64_t v = 0;
 		for (; i < len; i++)

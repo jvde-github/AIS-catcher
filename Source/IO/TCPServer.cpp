@@ -247,24 +247,42 @@ namespace IO
 		}
 
 		if (bytes < length)
+		{
+			// A client this far behind (e.g. a stalled SSE consumer) will not
+			// recover; close instead of growing the buffer without bound.
+			if (out.size() + (length - bytes) > MAX_BUFFER_SIZE)
+			{
+				if (verbose)
+					Error() << "TCP Connection: send buffer limit exceeded, closing connection.";
+
+				CloseUnsafe();
+				return false;
+			}
 			out.insert(out.end(), data + bytes, data + length);
+		}
 
 		return true;
 	}
 
 	// TCP Server
 
-	TCPServer::~TCPServer()
+	void TCPServer::stopThread()
 	{
 		stop = true;
+
+		if (run_thread.joinable())
+			run_thread.join();
+	}
+
+	TCPServer::~TCPServer()
+	{
+		stopThread();
 
 		for (auto &c : client)
 		{
 			c.Close();
 		}
 
-		if (run_thread.joinable())
-			run_thread.join();
 		if (sock != -1)
 			closesocket(sock);
 

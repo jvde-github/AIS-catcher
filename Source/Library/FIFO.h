@@ -165,6 +165,11 @@ public:
 			}
 		}
 
+		// Halt() may be what ended the wait; writing now would overwrite the
+		// -1 sentinel via blocks_filled += and un-halt the FIFO.
+		if (blocks_filled == -1)
+			return false;
+
 		if (wrap <= 0)
 		{
 			std::memcpy(_data.data() + tail, data, sz);

@@ -59,7 +59,12 @@ namespace Device
 		uint32_t distance = device_info.MaximumSampleRate;
 		uint32_t new_rate = 0;
 
-		for (int i = device_info.MinimumIQDecimation; i <= device_info.DecimationStageCount; i++)
+		// Both bounds come from the server; clamp to keep the shift below
+		// defined (UB for shifts >= 32) and the loop finite on corrupt input.
+		int dec_min = device_info.MinimumIQDecimation > 31 ? 31 : (int)device_info.MinimumIQDecimation;
+		int dec_max = device_info.DecimationStageCount > 31 ? 31 : (int)device_info.DecimationStageCount;
+
+		for (int i = dec_min; i <= dec_max; i++)
 		{
 			int rate = device_info.MaximumSampleRate >> i;
 			int d = abs((int)rate - (int)sample_rate);
@@ -78,7 +83,7 @@ namespace Device
 		{
 			client.disconnect();
 			throw std::runtime_error("SPYSERVER: no sample rate > 96Khz available. Highest sample rate = " +
-									 std::to_string(device_info.MaximumSampleRate >> device_info.MinimumIQDecimation) + " Hz.");
+									 std::to_string(device_info.MaximumSampleRate >> dec_min) + " Hz.");
 		}
 		sample_rate = new_rate;
 	}

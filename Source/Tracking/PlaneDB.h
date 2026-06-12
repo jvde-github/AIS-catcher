@@ -216,7 +216,7 @@ public:
         return -1;
     }
 
-    bool checkInCPRCache(const Plane::CPR &cpr, bool even, FLOAT32 &lat)
+    bool checkInCPRCache(const Plane::CPR &cpr, bool even)
     {
         bool duplicate = false;
         int &idx = even ? CPR_cache_even_idx : CPR_cache_odd_idx;
@@ -240,11 +240,10 @@ public:
         return duplicate;
     }
 
-    void Receive(const Plane::ADSB *msg, int len, TAG &tag)
+    // Process a single decoded message; caller must hold mtx.
+    void update(const Plane::ADSB *msg, TAG &tag)
     {
         bool position_updated = false;
-
-        std::lock_guard<std::mutex> lock(mtx);
 
         // Skip invalid messages
         if (msg->hexident == HEXIDENT_UNDEFINED || msg->status == STATUS_ERROR)
@@ -299,7 +298,7 @@ public:
         
         if (msg->even.Valid())
         {
-            if (!checkInCPRCache(msg->even, true, lat_new))
+            if (!checkInCPRCache(msg->even, true))
             {
                 plane.even.lat = msg->even.lat;
                 plane.even.lon = msg->even.lon;
@@ -316,7 +315,7 @@ public:
 
         if (msg->odd.Valid())
         {
-            if (!checkInCPRCache(msg->odd, false, lat_new))
+            if (!checkInCPRCache(msg->odd, false))
             {
                 plane.odd.lat = msg->odd.lat;
                 plane.odd.lon = msg->odd.lon;
@@ -436,6 +435,19 @@ public:
         {
             plane.airborne = msg->airborne;
         }
+
+        if (msg->signalLevel != LEVEL_UNDEFINED)
+        {
+            plane.signalLevel = msg->signalLevel;
+        }
+    }
+
+    void Receive(const Plane::ADSB *msg, int len, TAG &tag)
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+
+        for (int i = 0; i < len; i++)
+            update(&msg[i], tag);
     }
 
     std::string getCompactArray(bool include_inactive = false, std::time_t since = 0)

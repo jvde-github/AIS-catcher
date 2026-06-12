@@ -82,17 +82,17 @@ namespace Plane
     void ADSB::Callsign()
     {
         static const char *cs_table = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ##### ###############0123456789######";
-        int len = 0;
+        int n = 0;
 
         for (int i = 0; i < 8; i++)
         {
             uint32_t c = getUint(40 + (i * 6), 6);
             if (cs_table[c] != '#')
             {
-                callsign[len++] = cs_table[c];
+                callsign[n++] = cs_table[c];
             }
         }
-        callsign[len] = 0;
+        callsign[n] = 0;
     }
 
     // Decode 13 bit AC altitude field (in DF 20 and others)
@@ -216,11 +216,22 @@ namespace Plane
 
             break;
         }
-        case 18: // Extended Squitter/Supplementary
-            break;
+        case 18: // Extended Squitter/Supplementary (TIS-B / ADS-R)
         case 17: // Extended Squitter
+        {
+            if (df == 18)
+            {
+                // Only CF 0 (ADS-B, ICAO address), 1 (ADS-B, non-ICAO),
+                // 2 (TIS-B fine) and 6 (ADS-R) carry a DF17-style ME field.
+                int cf = getUint(5, 3);
+                if (cf != 0 && cf != 1 && cf != 2 && cf != 6)
+                    break;
+                hexident_status = (cf == 1) ? HEXINDENT_NON_ICAO : HEXINDENT_DIRECT;
+            }
+            else
+                hexident_status = HEXINDENT_DIRECT;
+
             hexident = getUint(8, 24);
-            hexident_status = HEXINDENT_DIRECT;
 
             if (!verifyCRC())
             {
@@ -303,7 +314,7 @@ namespace Plane
             }
             break;
 
-            case 9: // Airborne Position
+            case 9: // Airborne Position (barometric altitude)
             case 10:
             case 11:
             case 12:
@@ -313,6 +324,9 @@ namespace Plane
             case 16:
             case 17:
             case 18:
+            case 20: // Airborne Position (GNSS height instead of barometric)
+            case 21:
+            case 22:
             {
                 altitude = decodeAC12Field();
                 airborne = 1;
@@ -327,6 +341,7 @@ namespace Plane
             break;
             }
             break;
+        }
         }
     }
 
@@ -350,6 +365,9 @@ namespace Plane
             return 1;
 
         double tmp = 1 - (1 - cos(PI / (2.0 * 15.0))) / pow(cos(PI / 180.0 * lat), 2);
+        // Near zone boundaries float rounding can push tmp just below -1,
+        // making acos return NaN and the int conversion undefined.
+        tmp = MAX(tmp, -1.0);
         return std::floor(2 * PI / acos(tmp));
     }
 
@@ -358,7 +376,8 @@ namespace Plane
         if (!even.Valid() || !odd.Valid() || (even.airborne != odd.airborne))
             return false;
 
-        if (std::abs(std::difftime(even.timestamp, odd.timestamp)) > CPR_MAX_TIMEDIFF)
+        double max_dt = even.airborne ? CPR_MAX_TIMEDIFF : CPR_MAX_TIMEDIFF_SURFACE;
+        if (std::abs(std::difftime(even.timestamp, odd.timestamp)) > max_dt)
             return false;
 
         if (even.airborne)

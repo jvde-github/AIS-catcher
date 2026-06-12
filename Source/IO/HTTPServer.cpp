@@ -182,38 +182,51 @@ namespace IO
 		}
 	}
 
-	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip, bool cache, bool cors)
+	static const char *statusText(int status)
+	{
+		switch (status)
+		{
+		case 400:
+			return "Bad Request";
+		case 404:
+			return "Not Found";
+		default:
+			return "OK";
+		}
+	}
+
+	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip, bool cache, bool cors, int status)
 	{
 #ifdef HASZLIB
 		if (gzip)
 		{
 			zip.zip(content);
-			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache, cors);
+			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache, cors, status);
 			return;
 		}
 #endif
 
-		ResponseRaw(c, type, content.c_str(), content.size(), false, cache, cors);
+		ResponseRaw(c, type, content.c_str(), content.size(), false, cache, cors, status);
 	}
 
-	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache, bool cors)
+	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache, bool cors, int status)
 	{
 #ifdef HASZLIB
 		if (gzip)
 		{
 			zip.zip(data, len);
-			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache, cors);
+			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache, cors, status);
 			return;
 		}
 #endif
 
-		ResponseRaw(c, type, data, len, false, cache, cors);
+		ResponseRaw(c, type, data, len, false, cache, cors, status);
 	}
 
-	void HTTPServer::ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache, bool cors)
+	void HTTPServer::ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache, bool cors, int status)
 	{
 
-		std::string header = "HTTP/1.1 200 OK\r\nServer: AIS-catcher\r\nContent-Type: " + type;
+		std::string header = "HTTP/1.1 " + std::to_string(status) + " " + statusText(status) + "\r\nServer: AIS-catcher\r\nContent-Type: " + type;
 
 		header += "\r\nContent-Security-Policy: default-src 'self'; "
 			"script-src 'self'; "

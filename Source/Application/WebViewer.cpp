@@ -224,10 +224,14 @@ std::string PluginManager::render() const
 
 void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 {
-	if (server)
+	if (!server)
+		return;
+
+	std::time_t now = std::time(nullptr);
+
+	for (int j = 0; j < len; j++)
 	{
-		AIS::Message *m = (AIS::Message *)data[0].binary;
-		std::time_t now = std::time(nullptr);
+		AIS::Message *m = (AIS::Message *)data[j].binary;
 		char channel = m->getChannel();
 
 		if (!m->sentences().empty())
@@ -347,6 +351,28 @@ std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input, bool enha
 	w.endArray();
 	w.finish();
 	return result;
+}
+
+// Raw NMEA never contains '%' or '+', so decoding is safe whether or not
+// the client percent-encoded its input.
+static std::string urlDecode(const std::string &in)
+{
+	std::string out;
+	out.reserve(in.size());
+
+	for (std::size_t i = 0; i < in.size(); i++)
+	{
+		if (in[i] == '+')
+			out += ' ';
+		else if (in[i] == '%' && i + 2 < in.size() && Util::Convert::isHexDigit(in[i + 1]) && Util::Convert::isHexDigit(in[i + 2]))
+		{
+			out += (char)((Util::Convert::hexDigitValue(in[i + 1]) << 4) | Util::Convert::hexDigitValue(in[i + 2]));
+			i += 2;
+		}
+		else
+			out += in[i];
+	}
+	return out;
 }
 
 std::vector<std::string> WebViewer::parsePath(const std::string &url)
@@ -949,6 +975,9 @@ void WebViewer::start()
 
 void WebViewer::close()
 {
+	stopThread();
+	logger.Stop();
+
 	run = false;
 	backup.stop();
 
@@ -1163,7 +1192,7 @@ const WebViewer::Route WebViewer::routes[] = {
 		 {
 			 if (a.empty() || a.size() > 1024)
 				 return std::string("{\"error\":\"Input size limit exceeded\"}");
-			 std::string result = decodeNMEAtoJSON(a, true);
+			 std::string result = decodeNMEAtoJSON(urlDecode(a), true);
 			 return result == "[]" ? std::string("{\"error\":\"No valid AIS messages decoded\"}") : result;
 		 }
 		 catch (const std::exception &e)
@@ -1187,11 +1216,7 @@ const WebViewer::Route WebViewer::routes[] = {
 	// Prometheus metrics
 	{"/metrics", &WebViewer::supportPrometheus, "text/plain",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &)
-	 {
-		 std::string r = w->dataPrometheus.toPrometheus();
-		 w->dataPrometheus.Reset();
-		 return r;
-	 }, true},
+	 { return w->dataPrometheus.toPrometheus(); }, true},
 
 	// Frontend assets
 	{"/custom/plugins.js", nullptr, "application/javascript",
@@ -1235,7 +1260,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 			continue;
 
 		ReceiverTracker *s = getState(parseReceiver(a));
-		Response(c, rt->content_type, rt->handler(this, s, a), use_zlib & gzip, false, rt->cors);
+		Response(c, rt->content_type, rt->handler(this, s, a), use_zlib && gzip, false, rt->cors);
 		return;
 	}
 
@@ -1274,15 +1299,15 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 
 					if (!data.empty())
 					{
-						Response(c, contentType, (char *)data.data(), data.size(), use_zlib & gzip, true);
+						Response(c, contentType, (char *)data.data(), data.size(), use_zlib && gzip, true);
 						return;
 					}
 				}
 			}
-			Response(c, "text/plain", std::string("Tile not found"), false, true);
+			Response(c, "text/plain", std::string("Tile not found"), false, false, false, 404);
 			return;
 		}
-		Response(c, "text/plain", std::string("Invalid Tile Request"), false, true);
+		Response(c, "text/plain", std::string("Invalid Tile Request"), false, false, false, 400);
 		return;
 	}
 	// Static files

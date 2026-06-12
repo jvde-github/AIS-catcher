@@ -281,10 +281,13 @@ namespace AIS
 				return false;
 		}
 
+		// GGA fix quality: accept 1 (GPS), 2 (DGPS), 3 (PPS), 4 (RTK fixed),
+		// 5 (RTK float); reject 0 (invalid), 6 (dead reckoning), 7 (manual),
+		// 8 (simulation) — those are not measured positions.
 		if (fix_idx >= 0)
 		{
 			int fix = partInt(fix_idx);
-			if (fix != 1 && fix != 2)
+			if (fix < 1 || fix > 5)
 				return false;
 		}
 

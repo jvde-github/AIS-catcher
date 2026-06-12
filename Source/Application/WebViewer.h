@@ -84,7 +84,9 @@ public:
 		}
 	}
 
-	virtual ~WebViewerLogger() = default;
+	// The Logger singleton outlives this object; the listener must be
+	// removed here or it keeps invoking a callback into freed memory.
+	virtual ~WebViewerLogger() { Stop(); }
 
 	void setSSE(IO::HTTPServer *s)
 	{
@@ -352,8 +354,8 @@ public:
 
 	~WebViewer()
 	{
-		if (showlog)
-			logger.Stop();
+		// ~TCPServer joins the server thread only after members are destroyed
+		stopThread();
 	}
 
 	bool &active() { return run; }

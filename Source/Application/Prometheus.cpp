@@ -106,11 +106,16 @@ void PrometheusCounter::Receive(const JSON::JSON *json, int len, TAG &tag)
 	mtx.unlock();
 }
 
+void PrometheusCounter::resetSamples()
+{
+	ppm = "# HELP ais_msg_ppm\n# TYPE ais_msg_ppm gauge\n";
+	level = "# HELP ais_msg_level\n# TYPE ais_msg_level gauge\n";
+}
+
 void PrometheusCounter::Reset()
 {
 	mtx.lock();
-	ppm = "# HELP ais_msg_ppm\n# TYPE ais_msg_ppm gauge\n";
-	level = "# HELP ais_msg_level\n# TYPE ais_msg_level gauge\n";
+	resetSamples();
 	mtx.unlock();
 }
 
@@ -143,7 +148,9 @@ std::string PrometheusCounter::toPrometheus()
 		element += "ais_stat_count_type_" + type + " " + std::to_string(_msg[i]) + "\n";
 	}
 
+	// drain must share the lock with the read or samples in between are lost
 	element += ppm + level;
+	resetSamples();
 	mtx.unlock();
 	return element;
 }

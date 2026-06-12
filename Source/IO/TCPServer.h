@@ -99,6 +99,10 @@ namespace IO
 		virtual ~TCPServer();
 
 		bool start(int port);
+		// Stop and join the server thread. Call before destroying any state the
+		// request handlers touch — the base-class destructor runs too late for
+		// members of derived classes.
+		void stopThread();
 		bool SendAll(const std::string &m);
 		bool SendAllDirect(const std::string &m);
 		bool SendAllDirect(const char *data, int len);

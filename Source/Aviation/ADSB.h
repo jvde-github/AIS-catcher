@@ -21,8 +21,6 @@
 #include <string>
 #include <time.h>
 #include <vector>
-#include <iomanip>
-#include <sstream>
 
 #include "Common.h"
 
@@ -30,7 +28,8 @@ namespace Plane
 {
     static constexpr double BEAST_CLOCK_MHZ = 12.0;
     // CPR position update related constants
-    static constexpr double CPR_MAX_TIMEDIFF = 10.0; // Maximum time difference between even/odd messages
+    static constexpr double CPR_MAX_TIMEDIFF = 10.0;         // Maximum time difference between even/odd messages (airborne)
+    static constexpr double CPR_MAX_TIMEDIFF_SURFACE = 50.0; // Surface positions are transmitted far less often
     static constexpr int NZ = 15;                    // Number of geographic latitude zones
     static constexpr double AirDlat0 = 360.0 / 60;   // Even message latitude zone size
     static constexpr double AirDlat1 = 360.0 / 59;   // Odd message latitude zone size
@@ -177,17 +176,6 @@ namespace Plane
         {
             clear();
             rxtime = rx;
-        }
-
-        std::string getRaw() const
-        {
-            std::stringstream ss;
-            ss << std::hex << std::setfill('0');
-            for (const auto &byte : msg)
-            {
-                ss << std::setw(2) << static_cast<int>(byte);
-            }
-            return ss.str();
         }
 
         // SWAR getUint: 5-byte big-endian load + shift + mask. msg[]'s +4 padding

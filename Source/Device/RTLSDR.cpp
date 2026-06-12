@@ -215,7 +215,7 @@ namespace Device
 
 	void RTLSDR::setTuner_Gain(FLOAT32 a)
 	{
-		int g = (int)a * 10;
+		int g = (int)(a * 10);
 
 		if (rtlsdr_set_tuner_gain_mode(dev, 1) != 0)
 			throw std::runtime_error("RTLSDR: cannot set gain mode.");
