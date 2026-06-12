@@ -345,9 +345,11 @@ static PyObject *Decoder_pending(DecoderObject *self, PyObject *Py_UNUSED(ignore
 
 static PyMethodDef Decoder_methods[] = {
     {"feed", (PyCFunction)Decoder_feed, METH_O,
-     "Feed bytes/bytearray/str to the decoder. Returns number of pending messages."},
+     "Feed bytes/bytearray/str to the decoder. Returns number of pending messages. "
+     "Do not call concurrently on the same Decoder."},
     {"next", (PyCFunction)Decoder_next, METH_NOARGS,
-     "Pop the next decoded message as a dict, or None if the queue is empty."},
+     "Pop the next decoded message as a dict, or None if the queue is empty. "
+     "Do not call concurrently on the same Decoder."},
     {"pending", (PyCFunction)Decoder_pending, METH_NOARGS,
      "Number of decoded messages waiting in the queue."},
     {nullptr, nullptr, 0, nullptr}
@@ -379,6 +381,10 @@ PyMODINIT_FUNC PyInit__core(void) {
 
     PyObject *m = PyModule_Create(&coremodule);
     if (!m) return nullptr;
+
+#ifdef Py_GIL_DISABLED
+    PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
+#endif
 
     g_keys = (PyObject **)PyMem_Calloc((size_t)AIS::KEY_COUNT, sizeof(PyObject *));
     if (!g_keys) { Py_DECREF(m); return nullptr; }
