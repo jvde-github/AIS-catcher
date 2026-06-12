@@ -161,6 +161,9 @@ namespace DSP {
 
 		int nt = (int)taps.size();
 
+		// tail copy below reads data[len - nt + 1 ...]
+		if (len < nt - 1) return;
+
 		if (output.size() < outputSize) output.resize(outputSize);
 		if (buffer.size() < len + nt) buffer.resize((int)(len + nt), 0.0f);
 
@@ -323,6 +326,7 @@ namespace DSP {
 
 		if (error) {
 			soxr_delete(m_soxr);
+			m_soxr = nullptr;
 			throw std::runtime_error("Model: error opening SOX");
 		}
 
@@ -335,6 +339,8 @@ namespace DSP {
 	// Downsample using libsoxr
 	void SOXR::Receive(const CFLOAT32* data, int len, TAG& tag) {
 #ifdef HASSOXR
+		if (!m_soxr) return;
+
 		if (out_soxr.size() < len) out_soxr.resize(len);
 
 		size_t sz = 0;
@@ -342,7 +348,9 @@ namespace DSP {
 
 		if (error) {
 			soxr_delete(m_soxr);
+			m_soxr = nullptr;
 			Error() << "SOX processing returns error." << std::endl;
+			return;
 		}
 
 		for (int i = 0; i < sz; i++) {

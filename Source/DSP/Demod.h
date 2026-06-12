@@ -45,8 +45,8 @@ namespace Demod {
 		static const int maxHistory = 14;
 		static const int nSearch = 2;
 
-		FLOAT32 memory[nPhases][maxHistory];
-		uint8_t bits[nPhases];
+		FLOAT32 memory[nPhases][maxHistory] = { { 0 } };
+		uint8_t bits[nPhases] = { 0 };
 
 		int max_idx = 0;
 		int rot = 0;
@@ -58,8 +58,8 @@ namespace Demod {
 		void Receive(const CFLOAT32* data, int len, TAG& tag);
 
 		void setParams(int h, int d) {
-			assert(nHistory <= maxHistory);
-			assert(nDelay <= nHistory);
+			if (h < 1 || h > maxHistory || d < 0 || d > h)
+				throw std::runtime_error("PhaseSearch: invalid history/delay parameters.");
 			nHistory = h;
 			nDelay = d;
 		}

@@ -320,7 +320,7 @@ namespace DSP
 	class SOXR : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
 	{
 #ifdef HASSOXR
-		soxr_t m_soxr;
+		soxr_t m_soxr = nullptr;
 
 		std::vector<CFLOAT32> output;
 		std::vector<CFLOAT32> out_soxr;
@@ -329,7 +329,15 @@ namespace DSP
 		const int N = 16384;
 #endif
 	public:
+#ifdef HASSOXR
+		virtual ~SOXR()
+		{
+			if (m_soxr)
+				soxr_delete(m_soxr);
+		}
+#else
 		virtual ~SOXR() {}
+#endif
 		void setParams(int sample_rate, int out_rate);
 		virtual void Receive(const CFLOAT32 *data, int len, TAG &tag);
 	};

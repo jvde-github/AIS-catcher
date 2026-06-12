@@ -683,8 +683,8 @@ namespace AIS
 		{
 			US.setParams(sample_rate, 48000);
 			physical >> convert >> US;
-			convert >> RP >> FR_a;
-			convert >> IP >> FR_b;
+			US >> RP >> FR_a;
+			US >> IP >> FR_b;
 		}
 		else
 			throw std::runtime_error("Internal error: sample rate not supported in FM discriminator model.");
