@@ -346,6 +346,7 @@ let interval,
     binaryDB = {},
     binarySince = 0,
     binaryTimeout = 1800,
+    binaryMaxPerShip = 50,
     planesDB = {},
     planesSince = 0,
     planesTimeout = 300,
@@ -2169,8 +2170,13 @@ async function fetchBinary() {
             binarySince = serverTime;
             const cutoff = serverTime - binaryTimeout;
             for (const mmsi in binaryDB) {
-                binaryDB[mmsi].ship_messages = binaryDB[mmsi].ship_messages.filter(m => m.timestamp > cutoff);
-                if (binaryDB[mmsi].ship_messages.length === 0) delete binaryDB[mmsi];
+                let msgs = binaryDB[mmsi].ship_messages.filter(m => m.timestamp > cutoff);
+                if (msgs.length > binaryMaxPerShip) {
+                    msgs.sort((a, b) => b.timestamp - a.timestamp);
+                    msgs.length = binaryMaxPerShip;
+                }
+                if (msgs.length === 0) delete binaryDB[mmsi];
+                else binaryDB[mmsi].ship_messages = msgs;
             }
         }
 
