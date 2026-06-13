@@ -170,7 +170,7 @@ namespace AIS
 			nmea_count = 0;
 			start_idx = 0;
 			end_idx = 0;
-			std::memset(data, 0, 128);
+			std::memset(data, 0, sizeof(data));
 		}
 
 		bool validate();
