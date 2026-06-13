@@ -253,7 +253,11 @@ public:
                     break;
                 }
             }
-            if (d) queue.push_back(d);
+            if (!d) {
+                if (PyErr_Occurred()) break;  // conversion failed; Decoder_feed propagates
+                continue;                      // no message for this item (null binary)
+            }
+            queue.push_back(d);
         }
     }
 
@@ -285,19 +289,27 @@ static int Decoder_init(DecoderObject *self, PyObject *args, PyObject *kwds) {
         return -1;
     }
 
-    self->nmea = new AIS::NMEA();
-    self->jsonais = new AIS::JSONAIS();
-    self->sink = new PySink();
-    self->sink->format = fmt;
-    self->tag = new TAG();
-    self->tag->clear();
-    if (country) self->tag->mode |= 4;  // enables JSONAIS::COUNTRY (MMSI prefix → country, country_code)
-    // Clearing mode bit 2 skips the rxtime string the dict formats would only
-    // discard (kSkipMask); PySink::Receive adds rxuxtime from the message.
-    if (fmt == OutFormat::DICTIONARY || fmt == OutFormat::ANNOTATED)
-        self->tag->mode &= ~2u;
-    self->nmea->out.Connect(self->jsonais);
-    self->jsonais->out.Connect(self->sink);
+    try {
+        self->nmea = new AIS::NMEA();
+        self->jsonais = new AIS::JSONAIS();
+        self->sink = new PySink();
+        self->sink->format = fmt;
+        self->tag = new TAG();
+        self->tag->clear();
+        if (country) self->tag->mode |= 4;  // enables JSONAIS::COUNTRY (MMSI prefix → country, country_code)
+        // Clearing mode bit 2 skips the rxtime string the dict formats would only
+        // discard (kSkipMask); PySink::Receive adds rxuxtime from the message.
+        if (fmt == OutFormat::DICTIONARY || fmt == OutFormat::ANNOTATED)
+            self->tag->mode &= ~2u;
+        self->nmea->out.Connect(self->jsonais);
+        self->jsonais->out.Connect(self->sink);
+    } catch (const std::exception &e) {
+        PyErr_SetString(PyExc_RuntimeError, e.what());
+        return -1;
+    } catch (...) {
+        PyErr_SetString(PyExc_RuntimeError, "aiscat: unknown error");
+        return -1;
+    }
     return 0;
 }
 
@@ -328,7 +340,16 @@ static PyObject *Decoder_feed(DecoderObject *self, PyObject *arg) {
     }
 
     RAW r{Format::TXT, (void *)data, (int)size};
-    self->nmea->Receive(&r, 1, *self->tag);
+    try {
+        self->nmea->Receive(&r, 1, *self->tag);
+    } catch (const std::exception &e) {
+        PyErr_SetString(PyExc_RuntimeError, e.what());
+        return nullptr;
+    } catch (...) {
+        PyErr_SetString(PyExc_RuntimeError, "aiscat: unknown error");
+        return nullptr;
+    }
+    if (PyErr_Occurred()) return nullptr;  // a sink conversion failed
     return PyLong_FromSsize_t((Py_ssize_t)self->sink->queue.size());
 }
 

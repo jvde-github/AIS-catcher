@@ -169,6 +169,7 @@ const ACTIONS = {
     unpinCenter: () => unpinCenter(),
     showAllTracks: () => showAllTracks(),
     deleteAllTracks: () => deleteAllTracks(),
+    resetTracksFromNow: () => resetTracksFromNow(),
     startBoxSelect: () => { boxselect.start(); showNotification('Drag a rectangle to enable tracks (Esc to cancel)'); },
     ToggleFireworks: () => fireworks.toggle(),
     toggleLabel: () => toggleLabel(),
@@ -335,6 +336,7 @@ let interval,
     activeReceiver = 0,
     lastPathFetch = 0,
     paths = {},
+    trackCutoff = 0,  // when >0, hide track points older than this server time
     map,
     basemaps = {},
     overlapmaps = {},
@@ -3602,6 +3604,7 @@ function unpinCenter() {
 
 async function showAllTracks() {
     show_all_tracks = true;
+    trackCutoff = 0;
     lastPathFetch = 0;
     select_enabled_track = hover_enabled_track = false;
     await fetchTracks();
@@ -3628,6 +3631,7 @@ async function showTracksForMMSIs(mmsis) {
 
 function deleteAllTracks() {
     show_all_tracks = false;
+    trackCutoff = 0;
     lastPathFetch = 0;
     marker_tracks = new Set();
     let p = {};
@@ -3644,6 +3648,18 @@ function deleteAllTracks() {
     paths = p;
 
     redrawMap(); updateShipcardTrackOption();
+}
+
+async function resetTracksFromNow() {
+    // Keep the current selection but drop accumulated history; tracks rebuild
+    // from now forward. Server keeps its history — this only affects this view.
+    trackCutoff = shipsSince || Math.floor(Date.now() / 1000);
+    paths = {};
+    lastPathFetch = 0;
+    await fetchTracks();
+    redrawMap();
+    updateShipcardTrackOption();
+    showNotification("Tracks reset — showing from now");
 }
 
 
@@ -3713,6 +3729,11 @@ async function fetchTracks() {
         if (!isDelta) paths = {};
         lastPathFetch = 0;
         return false;
+    }
+
+    if (trackCutoff > 0) {
+        for (const mmsi in paths)
+            paths[mmsi] = paths[mmsi].filter(pt => pt[3] >= trackCutoff);
     }
 
     return true;
