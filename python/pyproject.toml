@@ -36,9 +36,9 @@ sdist.include = [
 ]
 
 [tool.cibuildwheel]
-build = "cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
+build = "cp39-* cp310-* cp311-* cp312-* cp313-* cp314-* cp314t-*"
 skip = "*-win32 *-manylinux_i686 *-musllinux_i686 pp*"
-test-command = "python {project}/python/tests/test_decode.py"
+test-command = "python {project}/python/tests/test_decode.py && python {project}/python/tests/test_free_threading.py"
 
 [tool.cibuildwheel.linux]
 archs = ["auto64"]

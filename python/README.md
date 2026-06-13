@@ -114,6 +114,18 @@ Each decoded message carries two timestamps:
 
 The queue is unbounded — drain it after each feed, or memory grows.
 
+### Free-threaded Python and thread safety
+
+aiscat supports free-threaded CPython builds. Independent `Decoder` instances
+can be used from different Python threads, which lets no-GIL Python decode in
+parallel.
+
+A single `Decoder` instance is stateful and is not safe for concurrent method
+calls. Do not call `feed()`, `next()`, or `pending()` on the same `Decoder` from
+multiple threads at the same time. Create one `Decoder` per worker thread
+instead. Also avoid mutating a `bytearray` in another thread while passing it to
+`feed()`.
+
 ```python
 # Manual streaming pattern (for total control)
 import aiscat

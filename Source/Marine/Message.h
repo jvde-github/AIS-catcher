@@ -19,6 +19,7 @@
 
 #include <string>
 #include <time.h>
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <vector>
@@ -59,7 +60,8 @@ namespace AIS
 	{
 	protected:
 		const int MAX_NMEA_CHARS = 56;
-		static int ID;
+		static std::atomic<int> ID;
+		static int nextSeqId();
 
 		uint8_t data[MAX_AIS_BYTES + 4]; // +4 padding so 5-byte reads in getText/getUint never go out of bounds
 		int64_t rxtime; // microseconds since epoch
