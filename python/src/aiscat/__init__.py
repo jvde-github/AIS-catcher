@@ -3,11 +3,15 @@
 import os
 import socket
 import sys
+from importlib.metadata import PackageNotFoundError, version as _pkg_version
 
 from ._core import Decoder
 from .types import AISMessage
 
-__version__ = "0.68.12"
+try:
+    __version__ = _pkg_version("aiscat")  # single source of truth: pyproject.toml
+except PackageNotFoundError:
+    __version__ = "0.0.0+unknown"  # running from a source tree, not installed
 __all__ = [
     "Decoder",
     "decode",
