@@ -228,6 +228,18 @@ namespace AIS
 		bool setUint(int start, int len, unsigned val);
 		bool setInt(int start, int len, int val);
 
+		void setByteRaw(int i, uint8_t b)
+		{
+			if (i >= 0 && i < MAX_AIS_BYTES)
+				data[i] = b;
+		}
+		void setBytes(const uint8_t *src, int nbytes)
+		{
+			if (nbytes > MAX_AIS_BYTES)
+				nbytes = MAX_AIS_BYTES;
+			std::memcpy(data, src, nbytes);
+		}
+
 		void setBit(int i, bool b)
 		{
 			if (i >= MAX_AIS_LENGTH || i < 0)

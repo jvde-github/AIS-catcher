@@ -686,6 +686,9 @@ namespace AIS
 		if (endBits > MAX_AIS_LENGTH)
 			count = (MAX_AIS_LENGTH - pos * 6) / 6;
 
+		if (count < 0)
+			return;
+
 		const uint8_t *usrc = (const uint8_t *)src;
 		int i = 0;
 

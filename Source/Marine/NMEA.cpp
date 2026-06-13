@@ -116,7 +116,7 @@ namespace AIS
 			Send(&msg, 1, tag);
 		}
 		else
-			warnAIS(WARN_INVALID_MSG, "invalid message", aivdm.sentence);
+			warnAIS(WARN_INVALID_MSG, "invalid message", aivdm.sentence.data(), (int)aivdm.sentence.size());
 
 		clean(aivdm);
 	}
@@ -315,13 +315,12 @@ namespace AIS
 		return true;
 	}
 
-	bool NMEA::processAIS(const std::string &str, TAG &tag)
+	bool NMEA::processAIS(const char *data, int len, TAG &tag)
 	{
-		if (str.size() < 18 || (str[0] != '$' && str[0] != '!'))
+		if (len < 18 || (data[0] != '$' && data[0] != '!'))
 			return false;
 
-		const char *p = str.data();
-		const int len = (int)str.size();
+		const char *p = data;
 
 		if (memcmp(p + 3, "VDM", 3) != 0 && memcmp(p + 3, "VDO", 3) != 0)
 			return true;
@@ -329,13 +328,13 @@ namespace AIS
 		char t1 = p[1], t2 = p[2];
 		if (!(t1 >= 'A' && t1 <= 'Z') || (!(t2 >= 'A' && t2 <= 'Z') && !(t2 >= '0' && t2 <= '9')))
 		{
-			warnAIS(WARN_AIS_TALKER, "invalid talker ID", str);
+			warnAIS(WARN_AIS_TALKER, "invalid talker ID", data, len);
 			return false;
 		}
 
 		if (p[6] != ',' || p[8] != ',' || p[10] != ',' || p[7] < '1' || p[7] > '9' || p[9] < '1' || p[9] > '9')
 		{
-			warnAIS(WARN_AIS_HEADER, "malformed header", str);
+			warnAIS(WARN_AIS_HEADER, "malformed header", data, len);
 			return false;
 		}
 
@@ -343,14 +342,14 @@ namespace AIS
 		const char *end = p + len;
 		if (!isHexDigit(end[-1]) || !isHexDigit(end[-2]) || end[-3] != '*' || end[-5] != ',')
 		{
-			warnAIS(WARN_AIS_TAIL, "malformed tail", str);
+			warnAIS(WARN_AIS_TAIL, "malformed tail", data, len);
 			return false;
 		}
 		int checksum = (hexDigitValue(end[-2]) << 4) | hexDigitValue(end[-1]);
 		char fillbits_ch = end[-4];
 		if (fillbits_ch < '0' || fillbits_ch > '5')
 		{
-			warnAIS(WARN_AIS_FILLBITS, "invalid fillbits", str);
+			warnAIS(WARN_AIS_FILLBITS, "invalid fillbits", data, len);
 			return false;
 		}
 
@@ -361,7 +360,7 @@ namespace AIS
 			id_ch = *q++;
 		if (*q != ',')
 		{
-			warnAIS(WARN_AIS_ID, "invalid ID field", str);
+			warnAIS(WARN_AIS_ID, "invalid ID field", data, len);
 			return false;
 		}
 		q++;
@@ -369,9 +368,13 @@ namespace AIS
 		char channel_ch = '?';
 		if (*q != ',')
 			channel_ch = *q++;
+
+		if (!isalnum((unsigned char)channel_ch))
+			channel_ch = '?';
+
 		if (*q != ',')
 		{
-			warnAIS(WARN_AIS_CHANNEL, "invalid channel field", str);
+			warnAIS(WARN_AIS_CHANNEL, "invalid channel field", data, len);
 			return false;
 		}
 		q++;
@@ -379,7 +382,7 @@ namespace AIS
 		const char *payload_end = end - 5;
 		if (q > payload_end)
 		{
-			warnAIS(WARN_AIS_PAYLOAD, "empty payload", str);
+			warnAIS(WARN_AIS_PAYLOAD, "empty payload", data, len);
 			return false;
 		}
 
@@ -392,9 +395,9 @@ namespace AIS
 			if (!ok)
 			{
 				if (c == ',')
-					warnAIS(WARN_AIS_PAYLOAD, "too many parts", str);
+					warnAIS(WARN_AIS_PAYLOAD, "too many parts", data, len);
 				else
-					warnAIS(WARN_AIS_PAYLOAD, "invalid payload character", str);
+					warnAIS(WARN_AIS_PAYLOAD, "invalid payload character", data, len);
 				return false;
 			}
 		}
@@ -426,7 +429,7 @@ namespace AIS
 
 		if (checksum != cs)
 		{
-			warnAIS(WARN_NMEA_CHECKSUM, "checksum mismatch", str);
+			warnAIS(WARN_NMEA_CHECKSUM, "checksum mismatch", data, len);
 			if (cfg_crc_check)
 				return true;
 			message_error = MESSAGE_ERROR_NMEA_CHECKSUM;
@@ -448,12 +451,12 @@ namespace AIS
 				else
 				{
 					msg.beginNMEA();
-					msg.pushNMEA(str);
+					msg.pushNMEA(data, len);
 				}
 				Send(&msg, 1, tag);
 			}
 			else
-				warnAIS(WARN_INVALID_MSG, "invalid message", str);
+				warnAIS(WARN_INVALID_MSG, "invalid message", data, len);
 			return true;
 		}
 
@@ -468,13 +471,13 @@ namespace AIS
 		else
 			aivdm.match_key = ((uint32_t)(uint8_t)t1 << 24) | ((uint32_t)(uint8_t)t2 << 16) | ((uint32_t)(uint8_t)channel_ch << 8) | ((uint32_t)aivdm.count << 4) | id;
 
-		aivdm.data_offset = (int)(q - str.data());
+		aivdm.data_offset = (int)(q - data);
 		aivdm.data_len = (int)(payload_end - q);
 		aivdm.fillbits = fillbits;
 		aivdm.message_error = message_error;
 
 		splitChecksum = cs;
-		aivdm.sentence = str;
+		aivdm.sentence.assign(data, len);
 
 		assembleAIS(tag);
 		return true;
@@ -607,7 +610,10 @@ namespace AIS
 				mctx.groupId = 0;
 				queue.clear();
 				for (const auto &v : nmea_array->getArray())
-					processAIS(v.getString(), tag);
+				{
+					const std::string &vs = v.getStringRef();
+					processAIS(vs.data(), (int)vs.size(), tag);
+				}
 			}
 
 			if (known_dev && message && !message->empty())
@@ -713,11 +719,22 @@ namespace AIS
 
 		initMsg((char)ch, station, (int64_t)timestamp * 1000000);
 
-		for (int i = 0; i < (length_bits + 7) / 8; i++)
+		int nbytes = (length_bits + 7) / 8;
+
+		// No 0xad in the region means the next nbytes bytes are the literal payload.
+		if (idx + (size_t)nbytes <= plen && !std::memchr(line.data() + idx, 0xad, nbytes))
 		{
-			v = getByte();
-			if (v < 0) { warnFail(v, " in payload"); return false; }
-			msg.setUint(i * 8, 8, (uint8_t)v);
+			msg.setBytes((const uint8_t *)line.data() + idx, nbytes);
+			idx += nbytes;
+		}
+		else
+		{
+			for (int i = 0; i < nbytes; i++)
+			{
+				v = getByte();
+				if (v < 0) { warnFail(v, " in payload"); return false; }
+				msg.setByteRaw(i, (uint8_t)v);
+			}
 		}
 		msg.setLength(length_bits);
 
@@ -747,7 +764,7 @@ namespace AIS
 		return true;
 	}
 
-	bool NMEA::parseTagBlock(const std::string &s, std::string &nmea)
+	bool NMEA::parseTagBlock(const std::string &s, int &nmeaStart)
 	{
 		// Format: \s:source,c:timestamp,g:seq-total-id*checksum\!AIVDM,...
 		const char *data = s.data();
@@ -763,8 +780,8 @@ namespace AIS
 			return false;
 		}
 
-		nmea = s.substr(tagEnd + 1);
-		if (nmea.empty())
+		nmeaStart = tagEnd + 1;
+		if (nmeaStart >= len)
 		{
 			if (shouldWarn(WARN_TAG_NO_NMEA))
 				Warning() << "tag block: no NMEA sentence after tag block";
@@ -880,23 +897,32 @@ namespace AIS
 		return true;
 	}
 
-	bool NMEA::processNMEAline(const std::string &s, TAG &tag)
+	bool NMEA::processNMEAline(const char *data, int len, TAG &tag)
 	{
-		if (s.size() <= 5)
+		if (len <= 5)
 			return true;
 
-		const char *id = s.data() + 3;
+		const char *id = data + 3;
 
 		if (memcmp(id, "VDM", 3) == 0)
-			return processAIS(s, tag);
+			return processAIS(data, len, tag);
 		if (memcmp(id, "VDO", 3) == 0 && cfg_VDO)
-			return processAIS(s, tag);
+			return processAIS(data, len, tag);
 		if (memcmp(id, "GGA", 3) == 0)
-			return processGPS(s, tag, "GGA", 15, 15, 2, 3, 4, 5, 6);
+		{
+			gps_line.assign(data, len);
+			return processGPS(gps_line, tag, "GGA", 15, 15, 2, 3, 4, 5, 6);
+		}
 		if (memcmp(id, "RMC", 3) == 0)
-			return processGPS(s, tag, "RMC", 12, 14, 3, 4, 5, 6, -1, 2);
+		{
+			gps_line.assign(data, len);
+			return processGPS(gps_line, tag, "RMC", 12, 14, 3, 4, 5, 6, -1, 2);
+		}
 		if (memcmp(id, "GLL", 3) == 0)
-			return processGPS(s, tag, "GLL", 8, 8, 1, 2, 3, 4, -1, 6);
+		{
+			gps_line.assign(data, len);
+			return processGPS(gps_line, tag, "GLL", 8, 8, 1, 2, 3, 4, -1, 6);
+		}
 
 		return true;
 	}
@@ -906,12 +932,12 @@ namespace AIS
 		tag.clear();
 		mctx.reset();
 
-		std::string nmea;
+		int nmeaStart;
 
-		if (!parseTagBlock(s, nmea))
+		if (!parseTagBlock(s, nmeaStart))
 			return false;
 
-		return processNMEAline(nmea, tag);
+		return processNMEAline(s.data() + nmeaStart, (int)s.size() - nmeaStart, tag);
 	}
 
 	void NMEA::findStart()
@@ -967,7 +993,7 @@ namespace AIS
 			{
 				tag.clear();
 				mctx.reset();
-				processNMEAline(line, tag);
+				processNMEAline(line.data(), (int)line.size(), tag);
 			}
 			else
 			{
@@ -984,10 +1010,10 @@ namespace AIS
 		}
 	}
 
-	AISC_COLD_NOINLINE void NMEA::warnAIS(int bit, const char *msg, const std::string &ctx)
+	AISC_COLD_NOINLINE void NMEA::warnAIS(int bit, const char *msg, const char *ctx, int ctxlen)
 	{
 		if (shouldWarn(bit))
-			Warning() << "AIS: " << msg << " [" << ctx << "]";
+			Warning() << "AIS: " << msg << " [" << std::string(ctx, ctxlen) << "]";
 	}
 
 	AISC_COLD_NOINLINE void NMEA::warnJSONControlChar(char c, const std::string &partial)

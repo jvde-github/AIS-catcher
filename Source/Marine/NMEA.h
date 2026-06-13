@@ -99,6 +99,7 @@ namespace AIS
 
 		ParseState state = ParseState::FIND_START;
 		std::string line;
+		std::string gps_line; // reused buffer: GPS needs a std::string (split + source ref)
 		int count = 0;
 
 		// Scan context — set by Receive(), used by scanners
@@ -123,7 +124,7 @@ namespace AIS
 		void scanJSON(TAG &tag);
 		void scanBinary(TAG &tag);
 		void warnJSONControlChar(char c, const std::string &partial);
-		void warnAIS(int bit, const char *msg, const std::string &ctx);
+		void warnAIS(int bit, const char *msg, const char *ctx, int ctxlen);
 		int own_mmsi = -1;
 
 		std::vector<AIVDM> queue;
@@ -169,15 +170,15 @@ namespace AIS
 
 		void split(const std::string &, size_t offset = 0);
 		void processJSONsentence(TAG &tag);
-		bool processAIS(const std::string &s, TAG &tag);
+		bool processAIS(const char *data, int len, TAG &tag);
 		bool processGPS(const std::string &s, TAG &tag, const char *name,
 						int min_fields, int max_fields,
 						int lat_idx, int ns_idx, int lon_idx, int ew_idx,
 						int fix_idx = -1, int status_idx = -1);
 		bool processBinaryPacket(TAG &tag);
-		bool parseTagBlock(const std::string &s, std::string &nmea);
+		bool parseTagBlock(const std::string &s, int &nmeaStart);
 		bool processTagBlock(const std::string &s, TAG &tag);
-		bool processNMEAline(const std::string &s, TAG &tag);
+		bool processNMEAline(const char *data, int len, TAG &tag);
 
 	public:
 		NMEA() : parser(JSON_DICT_INPUT)

@@ -1231,7 +1231,7 @@ namespace Protocol
 
 				// Validate topic_len to prevent integer underflow
 				int header_size = 2 + topic_len + (q > 0 ? 2 : 0);
-				if (header_size > length || topic_len < 0)
+				if (header_size > length)
 				{
 					Error() << "MQTT: Invalid topic length in PUBLISH packet";
 					disconnect();
@@ -1613,7 +1613,7 @@ namespace Protocol
 				return 0;
 
 			bool mask = buffer[1] & 0x80;
-			int length = buffer[1] & 0x7F;
+			int64_t length = buffer[1] & 0x7F;
 			int ptr = 2;
 
 			if (length == 126)
@@ -1629,19 +1629,17 @@ namespace Protocol
 				if (buffer_ptr < ptr + 8)
 					return 0;
 
-				uint64_t length64 = 0;
+				length = 0;
 				for (int i = 0; i < 8; ++i)
-					length64 = (length64 << 8) | buffer[ptr + i];
+					length = (length << 8) | buffer[ptr + i];
 
 				ptr += 8;
+			}
 
-				if (length64 > MAX_PACKET_SIZE)
-				{
-					Warning() << "WebSocket: message too long, skipped";
-					return -1;
-				}
-
-				length = (int)length64;
+			if (length < 0 || length > MAX_PACKET_SIZE)
+			{
+				Warning() << "WebSocket: message too long, skipped";
+				return -1;
 			}
 
 			uint8_t masking_key[4] = {0};
