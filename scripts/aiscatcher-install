@@ -206,7 +206,9 @@ error_exit() {
 cleanup() {
     log "INFO" "Cleaning up temporary directory ${TMP_DIR}"
     rm -rf "$TMP_DIR"
-    [[ -n "$DEB_TMP_DIR" ]] && rm -rf "$DEB_TMP_DIR"
+    if [[ -n "$DEB_TMP_DIR" ]]; then
+        rm -rf "$DEB_TMP_DIR"
+    fi
 }
 
 # Prompt for a yes/no answer with a default; echoes ON or OFF.
