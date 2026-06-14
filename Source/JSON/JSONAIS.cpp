@@ -879,6 +879,50 @@ namespace AIS
 		json.Add(AIS::KEY_WAYPOINTS, &datastring);
 	}
 
+	// IMO SN.1/Circ.289 Annex §4 Table 4.1 — extended ship static and voyage-related data (DAC=1, FID=24).
+	// SOLAS equipment status (52 bits) is not decoded.
+	void JSONAIS::asm_imo_fid24_ext_static(const AIS::Message &msg, int start)
+	{
+		U(msg, AIS::KEY_LINKAGE_ID, start + 0, 10, 0);
+		UL(msg, AIS::KEY_AIR_DRAUGHT, start + 10, 13, 0.1f, 0, 0);
+		T(msg, AIS::KEY_LAST_PORT, start + 23, 30, text);
+		T(msg, AIS::KEY_NEXT_PORT, start + 53, 30, name);
+		T(msg, AIS::KEY_SECOND_PORT, start + 83, 30, shipname);
+	}
+
+	// IMO SN.1/Circ.289 Annex §3 — tidal window (DAC=1, FID=32). 350-bit, 3 slots, msg 6.
+	// Three current-prediction points; per the spec bit total point #2 carries no "to" time (asymmetric offsets).
+	void JSONAIS::asm_imo_fid32_tidal_window(const AIS::Message &msg, int start)
+	{
+		U(msg, AIS::KEY_MONTH, start + 0, 4, 0);
+		U(msg, AIS::KEY_DAY, start + 4, 5, 0);
+
+		const int lon_b[3] = {start + 9, start + 97, start + 174};
+		const int lat_b[3] = {start + 34, start + 122, start + 199};
+		const int dir_b[3] = {start + 80, start + 157, start + 245};
+		const int spd_b[3] = {start + 89, start + 166, start + 254};
+
+		datastring.clear();
+		for (int i = 0; i < 3; i++)
+		{
+			int lon_raw = msg.getInt(lon_b[i], 25);
+			int lat_raw = msg.getInt(lat_b[i], 24);
+			if (lon_raw > 10800000 || lon_raw < -10800000 || lat_raw > 5400000 || lat_raw < -5400000)
+				continue;
+			unsigned dir = msg.getUint(dir_b[i], 9);
+			unsigned spd = msg.getUint(spd_b[i], 8);
+			char buf[64];
+			snprintf(buf, sizeof(buf), "%s%.5f,%.5f,%d,%.1f",
+					 datastring.empty() ? "" : ";",
+					 lat_raw / 60000.0, lon_raw / 60000.0,
+					 dir == 360 ? -1 : (int)dir,
+					 spd == 255 ? -1.0 : spd * 0.1);
+			datastring += buf;
+		}
+		if (!datastring.empty())
+			json.Add(AIS::KEY_TIDAL, &datastring);
+	}
+
 	// ---------- Dispatchers ----------
 
 	void JSONAIS::ProcessMsg6Data(const AIS::Message &msg)
@@ -896,7 +940,10 @@ namespace AIS
 		else if (dac == 1 && fid == 20)                        asm_imo_fid20_berthing_data(msg, start);
 		else if (dac == 1 && fid == 23)                        asm_imo_fid23_area_notice(msg, start);
 		else if (dac == 1 && fid == 25)                        asm_imo_fid25_dangerous_cargo(msg, start);
+		else if (dac == 1 && fid == 28)                        asm_imo_fid27_route(msg, start);
+		else if (dac == 1 && fid == 32)                        asm_imo_fid32_tidal_window(msg, start);
 		else if (dac == 1 && fid == 30)                        asm_imo_fid30_text_addressed(msg, start);
+		else if ((dac == 210 || dac == 248 || dac == 353) && fid == 0) asm_imo_fid0_text(msg, start);
 		else if (dac == 200 && fid == 21)                      asm_inland_fid21_eta(msg, start);
 		else if (dac == 200 && fid == 22)                      asm_inland_fid22_rta(msg, start);
 		else if (dac == 200 && fid == 55)                      asm_inland_fid55_persons(msg, start);
@@ -917,8 +964,11 @@ namespace AIS
 		if (dac == 1 && fid == 0)                              asm_imo_fid0_text(msg, start);
 		else if (dac == 1 && fid == 16)                        asm_imo_fid16_vts_targets(msg, start);
 		else if (dac == 1 && fid == 20)                        asm_imo_fid20_berthing_data(msg, start);
+		else if (dac == 1 && fid == 22)                        asm_imo_fid23_area_notice(msg, start);
 		else if (dac == 1 && fid == 23)                        asm_imo_fid23_area_notice(msg, start);
+		else if (dac == 1 && fid == 24)                        asm_imo_fid24_ext_static(msg, start);
 		else if (dac == 1 && fid == 25)                        asm_imo_fid25_dangerous_cargo(msg, start);
+		else if ((dac == 210 || dac == 248 || dac == 353) && fid == 0) asm_imo_fid0_text(msg, start);
 		else if (dac == 200 && fid == 10)                      asm_inland_fid10_eri_static(msg, start);
 		else if (dac == 200 && fid == 23)                      asm_inland_fid23_emma_warning(msg, start);
 		else if (dac == 200 && fid == 24)                      asm_inland_fid24_water_level(msg, start);
