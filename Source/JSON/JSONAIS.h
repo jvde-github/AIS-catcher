@@ -64,7 +64,8 @@ namespace AIS {
 		void asm_imo_fid23_area_notice(const AIS::Message& msg, int start);
 		void asm_imo_fid25_dangerous_cargo(const AIS::Message& msg, int start);
 		void asm_imo_fid30_text_addressed(const AIS::Message& msg, int start);
-		void asm_inland_fid8_static_data(const AIS::Message& msg, int start);
+		void asm_inland_fid21_eta(const AIS::Message& msg, int start);
+		void asm_inland_fid22_rta(const AIS::Message& msg, int start);
 		void asm_inland_fid23_emma_warning(const AIS::Message& msg, int start);
 		void asm_inland_fid24_water_level(const AIS::Message& msg, int start);
 		void asm_inland_fid55_persons(const AIS::Message& msg, int start);
@@ -76,6 +77,7 @@ namespace AIS {
 		void asm_inland_fid10_eri_static(const AIS::Message& msg, int start);
 		void asm_imo_fid31_meteo_hydro(const AIS::Message& msg, int start);
 		void asm_inland_fid25_bridge_clearance(const AIS::Message& msg, int start);
+		void asm_inland_fid40_signal_status(const AIS::Message& msg, int start);
 		void asm_imo_fid21_weather_ship(const AIS::Message& msg, int start);
 		void asm_imo_fid29_text_description(const AIS::Message& msg, int start);
 		void asm_imo_fid27_route(const AIS::Message& msg, int start);

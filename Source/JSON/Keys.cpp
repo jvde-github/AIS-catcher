@@ -572,27 +572,10 @@ namespace AIS
 	};
 
 	const std::vector<std::string> LookupTable_emma_severity = {
-		"Low",
-		"Medium",
-		"High",
-		"Severe",
-	};
-
-	const std::vector<std::string> LookupTable_inland_ship_types = {
-		"Reserved",
-		"Dry cargo vessel",
-		"Tanker",
-		"Dry cargo barge",
-		"Tanker barge",
-		"Tug",
-		"Pusher",
-		"Tug+Barge",
-		"Pushboat",
-		"Passenger vessel",
-		"Vessel for special purpose",
-		"Pleasure boat",
-		"Reserved",
 		"Unknown",
+		"Slight",
+		"Medium",
+		"Strong/Heavy",
 	};
 
 	// Generated from KeyDefs.h

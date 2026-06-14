@@ -339,7 +339,7 @@ namespace AIS
 			T(msg, AIS::KEY_TEXT, start + 10, text_len, text);
 	}
 
-	// Inland ECE/TRANS/SC.3/176 — number of persons on board, detailed (DAC=200, FID=55).
+	// CCNR VTT 1.2 Table 2.10 — number of persons on board (DAC=200, FID=55).
 	void JSONAIS::asm_inland_fid55_persons(const AIS::Message &msg, int start)
 	{
 		U(msg, AIS::KEY_CREW_COUNT, start, 8, 255);
@@ -459,7 +459,10 @@ namespace AIS
 		U(msg, AIS::KEY_VTS_TARGET_SOG, start + 112, 8, 255);
 	}
 
-	// Inland ECE/TRANS/SC.3/176 — ERI ship static voyage data (DAC=200, FID=10).
+	// Inland AIS DAC=200 messages follow the CCNR/UNECE Vessel Tracking and Tracing
+	// Standard for Inland Navigation, Edition 1.2:
+	// https://www.ccr-zkr.org/files/documents/ris/vtt12_nl.pdf
+	// CCNR VTT 1.2 Table 2.7 — Inland ship static and voyage related data (DAC=200, FID=10).
 	void JSONAIS::asm_inland_fid10_eri_static(const AIS::Message &msg, int start)
 	{
 		T(msg, AIS::KEY_VIN, start, 48, text);
@@ -710,43 +713,57 @@ namespace AIS
 		}
 	}
 
-	// UNECE ECE/TRANS/SC.3/176 Rev.2 — Inland ship static and voyage data (DAC=200, FID=8).
-	void JSONAIS::asm_inland_fid8_static_data(const AIS::Message &msg, int start)
+	// CCNR VTT 1.2 Table 2.8 — ETA at lock/bridge/terminal (DAC=200, FID=21). 248-bit, msg 6.
+	void JSONAIS::asm_inland_fid21_eta(const AIS::Message &msg, int start)
 	{
-		T(msg, AIS::KEY_INLAND_LOCODE, start + 0, 48, text);
-		E(msg, AIS::KEY_INLAND_SHIPTYPE, start + 48, 8, 0);
-		UL(msg, AIS::KEY_INLAND_DRAUGHT, start + 56, 8, 0.1f, 0);
-		U(msg, AIS::KEY_INLAND_LENGTH, start + 64, 8);
-		U(msg, AIS::KEY_INLAND_BEAM, start + 72, 8);
-		T(msg, AIS::KEY_DESTINATION, start + 80, 96, destination);
+		T(msg, AIS::KEY_UN_COUNTRY, start + 0, 12, text);
+		T(msg, AIS::KEY_UN_LOCODE, start + 12, 18, name);
+		T(msg, AIS::KEY_FAIRWAY_SECTION, start + 30, 30, shipname);
+		T(msg, AIS::KEY_TERMINAL_CODE, start + 60, 30, callsign);
+		T(msg, AIS::KEY_FAIRWAY_HECTOMETRE, start + 90, 30, destination);
+		ETA(msg, AIS::KEY_ETA, start + 120, 20, eta);
+		U(msg, AIS::KEY_TUGBOATS, start + 140, 3, 7);
+		UL(msg, AIS::KEY_AIR_DRAUGHT, start + 143, 12, 0.01f, 0, 0);
 	}
 
-	// UNECE ECE/TRANS/SC.3/176 Rev.2 — EMMA safety warning, broadcast (DAC=200, FID=23).
+	// CCNR VTT 1.2 Table 2.9 — RTA at lock/bridge/terminal (DAC=200, FID=22). 232-bit, msg 6.
+	void JSONAIS::asm_inland_fid22_rta(const AIS::Message &msg, int start)
+	{
+		T(msg, AIS::KEY_UN_COUNTRY, start + 0, 12, text);
+		T(msg, AIS::KEY_UN_LOCODE, start + 12, 18, name);
+		T(msg, AIS::KEY_FAIRWAY_SECTION, start + 30, 30, shipname);
+		T(msg, AIS::KEY_TERMINAL_CODE, start + 60, 30, callsign);
+		T(msg, AIS::KEY_FAIRWAY_HECTOMETRE, start + 90, 30, destination);
+		ETA(msg, AIS::KEY_RTA, start + 120, 20, eta);
+		U(msg, AIS::KEY_LOCK_STATUS, start + 140, 2, 3);
+	}
+
+	// CCNR VTT 1.2 Table 2.11 — EMMA safety warning, broadcast (DAC=200, FID=23). 256-bit, 2 slots.
 	void JSONAIS::asm_inland_fid23_emma_warning(const AIS::Message &msg, int start)
 	{
-		unsigned start_year = msg.getUint(start + 0, 14);
-		unsigned start_month = msg.getUint(start + 14, 4);
-		unsigned start_day = msg.getUint(start + 18, 5);
-		unsigned end_year = msg.getUint(start + 23, 14);
-		unsigned end_month = msg.getUint(start + 37, 4);
-		unsigned end_day = msg.getUint(start + 41, 5);
+		unsigned start_year = msg.getUint(start + 0, 8);
+		unsigned start_month = msg.getUint(start + 8, 4);
+		unsigned start_day = msg.getUint(start + 12, 5);
+		unsigned end_year = msg.getUint(start + 17, 8);
+		unsigned end_month = msg.getUint(start + 25, 4);
+		unsigned end_day = msg.getUint(start + 29, 5);
 
 		char buf[16];
 		if (start_year > 0 && start_month > 0 && start_day > 0) {
-			snprintf(buf, sizeof(buf), "%04u%02u%02u", start_year, start_month, start_day);
+			snprintf(buf, sizeof(buf), "%04u%02u%02u", 2000 + start_year, start_month, start_day);
 			start_date.assign(buf);
 			json.Add(AIS::KEY_START_DATE, &start_date);
 		}
 		if (end_year > 0 && end_month > 0 && end_day > 0) {
-			snprintf(buf, sizeof(buf), "%04u%02u%02u", end_year, end_month, end_day);
+			snprintf(buf, sizeof(buf), "%04u%02u%02u", 2000 + end_year, end_month, end_day);
 			end_date.assign(buf);
 			json.Add(AIS::KEY_END_DATE, &end_date);
 		}
 
-		unsigned start_hour = msg.getUint(start + 46, 5);
-		unsigned start_min = msg.getUint(start + 51, 6);
-		unsigned end_hour = msg.getUint(start + 57, 5);
-		unsigned end_min = msg.getUint(start + 62, 6);
+		unsigned start_hour = msg.getUint(start + 34, 5);
+		unsigned start_min = msg.getUint(start + 39, 6);
+		unsigned end_hour = msg.getUint(start + 45, 5);
+		unsigned end_min = msg.getUint(start + 50, 6);
 
 		if (start_hour < 24 && start_min < 60) {
 			snprintf(buf, sizeof(buf), "%02u%02u", start_hour, start_min);
@@ -759,28 +776,35 @@ namespace AIS
 			json.Add(AIS::KEY_END_TIME, &end_time);
 		}
 
-		SL(msg, AIS::KEY_START_LON, start + 68, 28, 1 / 600000.0f, 0);
-		SL(msg, AIS::KEY_START_LAT, start + 96, 27, 1 / 600000.0f, 0);
-		SL(msg, AIS::KEY_END_LON, start + 123, 28, 1 / 600000.0f, 0);
-		SL(msg, AIS::KEY_END_LAT, start + 151, 27, 1 / 600000.0f, 0);
+		SL(msg, AIS::KEY_START_LON, start + 56, 28, 1 / 600000.0f, 0);
+		SL(msg, AIS::KEY_START_LAT, start + 84, 27, 1 / 600000.0f, 0);
+		SL(msg, AIS::KEY_END_LON, start + 111, 28, 1 / 600000.0f, 0);
+		SL(msg, AIS::KEY_END_LAT, start + 139, 27, 1 / 600000.0f, 0);
 
-		E(msg, AIS::KEY_EMMA_WARNING_TYPE, start + 178, 4, 0);
-		U(msg, AIS::KEY_MIN_VALUE, start + 182, 9);
-		U(msg, AIS::KEY_MAX_VALUE, start + 191, 9);
-		E(msg, AIS::KEY_EMMA_SEVERITY, start + 200, 2, 0);
-		U(msg, AIS::KEY_WIND_DIRECTION, start + 202, 4);
-		T(msg, AIS::KEY_EMMA_DESCRIPTION, start + 206, 168, text);
+		E(msg, AIS::KEY_EMMA_WARNING_TYPE, start + 166, 4, 0);
+
+		unsigned min_mag = msg.getUint(start + 171, 8);
+		if (min_mag != 255)
+			json.Add(AIS::KEY_MIN_VALUE, msg.getUint(start + 170, 1) ? -(int)min_mag : (int)min_mag);
+		unsigned max_mag = msg.getUint(start + 180, 8);
+		if (max_mag != 255)
+			json.Add(AIS::KEY_MAX_VALUE, msg.getUint(start + 179, 1) ? -(int)max_mag : (int)max_mag);
+
+		E(msg, AIS::KEY_EMMA_SEVERITY, start + 188, 2, 0);
+		U(msg, AIS::KEY_WIND_DIRECTION, start + 190, 4);
 	}
 
-	// UNECE ECE/TRANS/SC.3/176 Rev.2 — Water level data (DAC=200, FID=24).
+	// CCNR VTT 1.2 Table 2.15 — water level data (DAC=200, FID=24). 168-bit, 1 slot.
 	void JSONAIS::asm_inland_fid24_water_level(const AIS::Message &msg, int start)
 	{
+		T(msg, AIS::KEY_UN_COUNTRY, start + 0, 12, text);
 		for (int i = 0; i < 4; i++) {
-			int offset = start + (i * 25);
+			int offset = start + 12 + (i * 25);
 			unsigned station_id = msg.getUint(offset, 11);
-			int water_level = msg.getInt(offset + 11, 14);
+			int sign = msg.getUint(offset + 11, 1) ? 1 : -1;
+			int water_level = sign * (int)msg.getUint(offset + 12, 13);
 
-			if (station_id != 0 && water_level != -8192) {
+			if (station_id != 0) {
 				switch (i) {
 				case 0:
 					json.Add(AIS::KEY_GAUGE1_ID, (int)station_id);
@@ -803,6 +827,17 @@ namespace AIS
 		}
 	}
 
+	// CCNR VTT 1.2 Table 2.16 — signal station status (DAC=200, FID=40). 168-bit, 1 slot.
+	void JSONAIS::asm_inland_fid40_signal_status(const AIS::Message &msg, int start)
+	{
+		SL(msg, AIS::KEY_LON, start + 0, 28, 1 / 600000.0f, 0);
+		SL(msg, AIS::KEY_LAT, start + 28, 27, 1 / 600000.0f, 0);
+		U(msg, AIS::KEY_SIGNAL_FORM, start + 55, 4);
+		U(msg, AIS::KEY_SIGNAL_ORIENTATION, start + 59, 9);
+		U(msg, AIS::KEY_SIGNAL_IMPACT, start + 68, 3);
+		U(msg, AIS::KEY_SIGNAL_STATUS, start + 71, 30);
+	}
+
 	// ---------- Dispatchers ----------
 
 	void JSONAIS::ProcessMsg6Data(const AIS::Message &msg)
@@ -821,7 +856,8 @@ namespace AIS
 		else if (dac == 1 && fid == 23)                        asm_imo_fid23_area_notice(msg, start);
 		else if (dac == 1 && fid == 25)                        asm_imo_fid25_dangerous_cargo(msg, start);
 		else if (dac == 1 && fid == 30)                        asm_imo_fid30_text_addressed(msg, start);
-		else if (dac == 200 && fid == 8)                       asm_inland_fid8_static_data(msg, start);
+		else if (dac == 200 && fid == 21)                      asm_inland_fid21_eta(msg, start);
+		else if (dac == 200 && fid == 22)                      asm_inland_fid22_rta(msg, start);
 		else if (dac == 200 && fid == 55)                      asm_inland_fid55_persons(msg, start);
 		else if ((dac == 235 || dac == 250 || dac == 366) && fid == 10)      asm_uk_fid10_aton_monitor(msg, start);
 		else if (dac == 235 && fid == 20)                      asm_uk_fid20_buoy_position(msg, start);
@@ -842,10 +878,10 @@ namespace AIS
 		else if (dac == 1 && fid == 20)                        asm_imo_fid20_berthing_data(msg, start);
 		else if (dac == 1 && fid == 23)                        asm_imo_fid23_area_notice(msg, start);
 		else if (dac == 1 && fid == 25)                        asm_imo_fid25_dangerous_cargo(msg, start);
-		else if (dac == 200 && fid == 8)                       asm_inland_fid8_static_data(msg, start);
 		else if (dac == 200 && fid == 10)                      asm_inland_fid10_eri_static(msg, start);
 		else if (dac == 200 && fid == 23)                      asm_inland_fid23_emma_warning(msg, start);
 		else if (dac == 200 && fid == 24)                      asm_inland_fid24_water_level(msg, start);
+		else if (dac == 200 && fid == 40)                      asm_inland_fid40_signal_status(msg, start);
 		else if (dac == 200 && fid == 55)                      asm_inland_fid55_persons(msg, start);
 		else if (dac == 1 && fid == 31)                        asm_imo_fid31_meteo_hydro(msg, start);
 		else if (dac == 200 && fid == 25)                      asm_inland_fid25_bridge_clearance(msg, start);
