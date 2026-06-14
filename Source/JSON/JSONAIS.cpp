@@ -838,6 +838,47 @@ namespace AIS
 		U(msg, AIS::KEY_SIGNAL_STATUS, start + 71, 30);
 	}
 
+	// IALA ASM registry — Sea Traffic Management (STM) route message, Sweden (DAC=265, FID=1).
+	// Broadcast msg 8, up to 3 slots: first waypoint, 0-6 delta-encoded legs, then an absolute final leg.
+	// https://www.e-navigation.nl/content/route-message-0
+	void JSONAIS::asm_swe_fid1_route(const AIS::Message &msg, int start)
+	{
+		const int len = msg.getLength();
+		if (len - start < 56)
+			return; // no active route (header-only / cancellation)
+
+		double lon = msg.getInt(start + 1, 28) / 600000.0;
+		double lat = msg.getInt(start + 29, 27) / 600000.0;
+
+		char buf[48];
+		datastring.clear();
+		snprintf(buf, sizeof(buf), "%.6f,%.6f", lat, lon);
+		datastring += buf;
+
+		int p = start + 56;
+		int nlegs = (len - p - 72) / 64;
+		if (nlegs < 0) nlegs = 0;
+		if (nlegs > 6) nlegs = 6;
+		for (int i = 0; i < nlegs; i++)
+		{
+			lon += msg.getInt(p + 20, 22) / 600000.0;
+			lat += msg.getInt(p + 42, 22) / 600000.0;
+			snprintf(buf, sizeof(buf), ";%.6f,%.6f", lat, lon);
+			datastring += buf;
+			p += 64;
+		}
+		if (len - p >= 72)
+		{
+			lon = msg.getInt(p + 11, 28) / 600000.0;
+			lat = msg.getInt(p + 39, 27) / 600000.0;
+			snprintf(buf, sizeof(buf), ";%.6f,%.6f", lat, lon);
+			datastring += buf;
+			UL(msg, AIS::KEY_PLANNED_SPEED, p + 1, 10, 0.1f, 0, 0);
+			U(msg, AIS::KEY_STEERING_MODE, p + 66, 2);
+		}
+		json.Add(AIS::KEY_WAYPOINTS, &datastring);
+	}
+
 	// ---------- Dispatchers ----------
 
 	void JSONAIS::ProcessMsg6Data(const AIS::Message &msg)
@@ -895,6 +936,7 @@ namespace AIS
 		else if ((dac == 316 || dac == 366) && fid == 2)       asm_usa_fid2_sls_lock(msg, start);
 		else if ((dac == 316 || dac == 366) && fid == 32)      asm_usa_fid32_sls_specific(msg, start);
 		else if (dac == 367 && fid == 33)                      asm_usa_fid33_environmental(msg, start);
+		else if (dac == 265 && fid == 1)                       asm_swe_fid1_route(msg, start);
 		else                                                   D(msg, AIS::KEY_DATA, start, MIN(952, msg.getLength() - start), datastring);
 	}
 

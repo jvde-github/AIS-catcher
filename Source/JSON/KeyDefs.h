@@ -554,6 +554,8 @@ X(KEY_ROUTE_TYPE, "route_type", "", "", "", "", "", "", "Route type (IMO Circ.28
 X(KEY_DURATION_MINUTES, "duration_minutes", "", "", "", "", "", "minutes", "Route validity duration", nullptr)
 X(KEY_WAYPOINT_COUNT, "waypoint_count", "", "", "", "", "", "", "Number of waypoints", nullptr)
 X(KEY_WAYPOINTS, "waypoints", "", "", "", "", "", "", "Waypoints list (lat,lon;...)", nullptr)
+X(KEY_PLANNED_SPEED, "planned_speed", "", "", "", "", "", "kn", "Planned speed for the final route leg (STM route; DAC 265 FID 1).", nullptr)
+X(KEY_STEERING_MODE, "steering_mode", "", "", "", "", "", "", "Steering mode (STM route; DAC 265 FID 1; 0=manual, 1=heading, 2=track).", nullptr)
 X(KEY_SENSOR_REPORT_TYPE, "sensor_report_type", "", "", "", "", "", "", "Sensor report type (IMO Circ.289 Table 12.4)", nullptr)
 X(KEY_ALT_UNIT, "altitude_unit", "altitude_unit", "altitude_unit", "", "", "", "", "", nullptr)
 X(KEY_VELOCITY_TYPE, "velocity_type", "velocity_type", "velocity_type", "", "", "", "", "", nullptr)

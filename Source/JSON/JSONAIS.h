@@ -78,6 +78,7 @@ namespace AIS {
 		void asm_imo_fid31_meteo_hydro(const AIS::Message& msg, int start);
 		void asm_inland_fid25_bridge_clearance(const AIS::Message& msg, int start);
 		void asm_inland_fid40_signal_status(const AIS::Message& msg, int start);
+		void asm_swe_fid1_route(const AIS::Message& msg, int start);
 		void asm_imo_fid21_weather_ship(const AIS::Message& msg, int start);
 		void asm_imo_fid29_text_description(const AIS::Message& msg, int start);
 		void asm_imo_fid27_route(const AIS::Message& msg, int start);
