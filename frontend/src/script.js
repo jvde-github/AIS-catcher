@@ -336,7 +336,7 @@ let interval,
     activeReceiver = 0,
     lastPathFetch = 0,
     paths = {},
-    trackCutoff = 0,  // when >0, hide track points older than this server time
+    trackCutoff = 0,
     map,
     basemaps = {},
     overlapmaps = {},
@@ -1161,13 +1161,14 @@ function showContextMenu(event, mmsi, type, context) {
 
     const classList = ["station", "settings", "plane-map", "ship-map", "plane", "ship", "ctx-map", "copy-text", "table-menu", "ctx-shipcard", "ctx-charts"];
 
+    if (context.includes('object')) {
+        context.push(type);
+    }
+    if (context.includes('object-map')) {
+        context.push(type + "-map");
+    }
+
     classList.forEach((className) => {
-        if (context.includes('object')) {
-            context.push(type);
-        }
-        if (context.includes('object-map')) {
-            context.push(type + "-map");
-        }
         const shouldDisplay = context.includes(className);
         const elements = document.querySelectorAll("." + className);
         elements.forEach((element) => {
@@ -3651,8 +3652,6 @@ function deleteAllTracks() {
 }
 
 async function resetTracksFromNow() {
-    // Keep the current selection but drop accumulated history; tracks rebuild
-    // from now forward. Server keeps its history — this only affects this view.
     trackCutoff = shipsSince || Math.floor(Date.now() / 1000);
     paths = {};
     lastPathFetch = 0;
@@ -3732,8 +3731,12 @@ async function fetchTracks() {
     }
 
     if (trackCutoff > 0) {
-        for (const mmsi in paths)
-            paths[mmsi] = paths[mmsi].filter(pt => pt[3] >= trackCutoff);
+        for (const mmsi in paths) {
+            const arr = paths[mmsi];
+            let k = 0;
+            while (k < arr.length && arr[k][3] >= trackCutoff) k++;
+            paths[mmsi] = arr.slice(0, k + 1);
+        }
     }
 
     return true;
@@ -4982,7 +4985,7 @@ async function openFocus(m, z) {
 
     selectMapTab(m);
 
-    let ship = shipsDB[m].raw;
+    let ship = shipsDB[m] && shipsDB[m].raw;
     if (ship && ship.lon && ship.lat) {
         let shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
         let view = map.getView();

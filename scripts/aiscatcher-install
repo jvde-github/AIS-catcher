@@ -62,25 +62,26 @@ EOF
 }
 
 # Check if running as root
-if [ "$EUID" -ne 0 ]; then
-    _hint_args=$(printf '%q ' "$@")
-    if [[ -t 1 ]]; then
-        echo -e "\033[1;31mError: This script must be run as root\033[0m" >&2
-        echo -e "\033[1;33mPlease run: sudo $0 ${_hint_args% }\033[0m" >&2
-    else
-        echo "Error: This script must be run as root" >&2
-        echo "Please run: sudo $0 ${_hint_args% }" >&2
+require_root() {
+    if [ "$EUID" -ne 0 ]; then
+        local hint_args
+        hint_args=$(printf '%q ' "$@")
+        if [[ -t 1 ]]; then
+            echo -e "\033[1;31mError: This script must be run as root\033[0m" >&2
+            echo -e "\033[1;33mPlease run: sudo $0 ${hint_args% }\033[0m" >&2
+        else
+            echo "Error: This script must be run as root" >&2
+            echo "Please run: sudo $0 ${hint_args% }" >&2
+        fi
+        exit 1
     fi
-    exit 1
-fi
+}
 
 # Constants
 SCRIPT_NAME=$(basename "$0")
 readonly SCRIPT_NAME
 LOG_FILE="/var/log/${SCRIPT_NAME%.*}.log"
 readonly LOG_FILE
-TMP_DIR=$(mktemp -d -t AIS-catcher-XXXXXX)
-readonly TMP_DIR
 readonly CONFIG_DIR="/etc/AIS-catcher"
 readonly PLUGIN_DIR="${CONFIG_DIR}/plugins"
 readonly DBMS_DIR="${CONFIG_DIR}/DBMS"
@@ -95,6 +96,12 @@ readonly REBOOT_SERVICE_FILE="/etc/systemd/system/${REBOOT_SERVICE_NAME}"
 readonly REBOOT_BURST_DEFAULT=3
 readonly REBOOT_INTERVAL_DEFAULT=1800
 
+MAKE_JOBS=$(nproc)
+_mem_gb=$(awk '/MemTotal/ {print int($2 / 1024 / 1024)}' /proc/meminfo 2>/dev/null || echo 1)
+[[ "$_mem_gb" -lt 1 ]] && _mem_gb=1
+[[ "$_mem_gb" -lt "$MAKE_JOBS" ]] && MAKE_JOBS="$_mem_gb"
+readonly MAKE_JOBS
+
 # Global variables
 INSTALL_PACKAGE=false
 INTERACTIVE=false
@@ -107,6 +114,8 @@ REBOOT_BURST="${REBOOT_BURST_DEFAULT}"
 REBOOT_INTERVAL="${REBOOT_INTERVAL_DEFAULT}"
 SET_AUTO_RESTART=""
 INSTALL_REQUESTED=false
+TMP_DIR=""
+DEB_TMP_DIR=""
 
 # User-facing CMake feature toggles (defaults mirror CMakeLists.txt option() lines).
 # Infrastructure libs (SOXR, SAMPLERATE, ZLIB, OPENSSL) and link-style toggles
@@ -124,6 +133,8 @@ FEATURE_NMEA2000=ON
 FEATURE_PSQL=ON
 FEATURE_SQLITE=ON
 FEATURE_WEBVIEWER=ON
+
+readonly FEATURES=(RTLSDR AIRSPY AIRSPYHF HACKRF HYDRASDR SDRPLAY SOAPYSDR ZMQ NMEA2000 PSQL SQLITE WEBVIEWER)
 
 # Color constants (using ANSI escape codes)
 if [[ -t 1 ]]; then
@@ -195,6 +206,7 @@ error_exit() {
 cleanup() {
     log "INFO" "Cleaning up temporary directory ${TMP_DIR}"
     rm -rf "$TMP_DIR"
+    [[ -n "$DEB_TMP_DIR" ]] && rm -rf "$DEB_TMP_DIR"
 }
 
 # Prompt for a yes/no answer with a default; echoes ON or OFF.
@@ -249,10 +261,10 @@ interactive_feature_select() {
 
     echo
     echo -e "${COLOR_BOLD_BLUE}Selected features:${COLOR_RESET}"
-    local f val
-    for f in RTLSDR AIRSPY AIRSPYHF HACKRF HYDRASDR SDRPLAY SOAPYSDR ZMQ NMEA2000 PSQL SQLITE WEBVIEWER; do
-        val=$(eval "echo \$FEATURE_$f")
-        printf "  %-12s %s\n" "$f" "$val"
+    local f vname
+    for f in "${FEATURES[@]}"; do
+        vname="FEATURE_$f"
+        printf "  %-12s %s\n" "$f" "${!vname}"
     done
     echo
     local confirm
@@ -435,7 +447,7 @@ install_librtlsdr_from_source() {
     cd rtl-sdr || error_exit "Failed to change directory to rtl-sdr"
     mkdir build && cd build || error_exit "Failed to create and enter build directory"
     cmake ../ -DCMAKE_INSTALL_PREFIX="${LIB_DIR}" -DDETACH_KERNEL_DRIVER=ON -DINSTALL_UDEV_RULES=ON || error_exit "Failed to run cmake"
-    make -j"$(nproc)" || error_exit "Failed to build rtl-sdr"
+    make -j"$MAKE_JOBS" || error_exit "Failed to build rtl-sdr"
     make install || error_exit "Failed to install rtl-sdr"
     # ldconfig not needed: libraries are in a custom prefix and the RPATH in the AIS-catcher
     # binary points directly to ${LIB_DIR}/lib, so the dynamic linker finds them without it.
@@ -449,7 +461,7 @@ install_libhydrasdr_from_source() {
     cd rfone_host/libhydrasdr || error_exit "Failed to change directory to rfone_host/libhydrasdr"
     mkdir build && cd build || error_exit "Failed to create and enter build directory"
     cmake .. -DCMAKE_INSTALL_PREFIX="${LIB_DIR}" -DINSTALL_UDEV_RULES=ON || error_exit "Failed to run cmake"
-    make -j"$(nproc)" || error_exit "Failed to build libhydrasdr"
+    make -j"$MAKE_JOBS" || error_exit "Failed to build libhydrasdr"
     make install || error_exit "Failed to install libhydrasdr"
     cd ../../.. || error_exit "Failed to return to parent directory"
 }
@@ -518,14 +530,14 @@ build_ais_catcher_from_source() {
     fi
 
     # Per-feature toggles (mirror CMakeLists.txt option() names).
-    local f val
-    for f in RTLSDR AIRSPY AIRSPYHF HACKRF HYDRASDR SDRPLAY SOAPYSDR ZMQ NMEA2000 PSQL SQLITE WEBVIEWER; do
-        val=$(eval "echo \$FEATURE_$f")
-        cmake_args+=("-D${f}=${val}")
+    local f vname
+    for f in "${FEATURES[@]}"; do
+        vname="FEATURE_$f"
+        cmake_args+=("-D${f}=${!vname}")
     done
 
     cmake .. "${cmake_args[@]}" || error_exit "Failed to run cmake"
-    make -j"$(nproc)" || error_exit "Failed to build AIS-catcher"
+    make -j"$MAKE_JOBS" || error_exit "Failed to build AIS-catcher"
     
     cd ../..
     install -m 755 AIS-catcher/build/AIS-catcher /usr/bin/AIS-catcher || error_exit "Failed to install AIS-catcher executable"
@@ -612,37 +624,38 @@ download_and_install_deb() {
    
     log "INFO" "Installing AIS-catcher from package: $package"
 
-    # Create a temporary directory with appropriate permissions
-    local temp_dir=$(mktemp -d)
-    chmod 755 "$temp_dir"
+    # chmod 755 so apt's _apt sandbox user can read the .deb; global so the EXIT trap cleans it.
+    DEB_TMP_DIR=$(mktemp -d)
+    chmod 755 "$DEB_TMP_DIR"
 
     # Download the package
     log "INFO" "Downloading package..."
-    if ! curl -fsL -o "$temp_dir/$(basename "$download_url")" "$download_url"; then
-        rm -rf "$temp_dir"
+    if ! curl -fsL -o "$DEB_TMP_DIR/$(basename "$download_url")" "$download_url"; then
+        rm -rf "$DEB_TMP_DIR"; DEB_TMP_DIR=""
         log "WARN" "Failed to download package"
         return 1
     fi
 
     # Ensure the downloaded file has correct permissions
-    chmod 644 "$temp_dir/$package"
+    chmod 644 "$DEB_TMP_DIR/$package"
 
     # Use --allow-downgrades to handle version conflicts and better error handling
     log "INFO" "Installing package and dependencies..."
     local install_success=false
-    if apt-get install -y --allow-downgrades "$temp_dir/$package"; then
+    if apt-get install -y --allow-downgrades "$DEB_TMP_DIR/$package"; then
         install_success=true
         log "INFO" "Package installed successfully"
     else
         log "WARN" "Standard package installation failed, trying with additional flags..."
-        if apt-get install -y --allow-downgrades --allow-change-held-packages "$temp_dir/$package"; then
+        if apt-get install -y --allow-downgrades --allow-change-held-packages "$DEB_TMP_DIR/$package"; then
             install_success=true
             log "INFO" "Package installed successfully with additional flags"
         fi
     fi
 
     # Clean up temporary directory
-    rm -rf "$temp_dir" || log "WARN" "Failed to remove temporary directory: $temp_dir"
+    rm -rf "$DEB_TMP_DIR" || log "WARN" "Failed to remove temporary directory: $DEB_TMP_DIR"
+    DEB_TMP_DIR=""
 
     if [[ "$install_success" != true ]]; then
         log "WARN" "Failed to install package after all attempts"
@@ -1068,75 +1081,6 @@ configure_installation() {
     fi
 }
 
-# Main function
-main() {
-    # Phase 1: Logging and cleanup trap (TMP_DIR is created at script startup)
-    log "INFO" "Starting AIS-catcher installation script"
-    trap cleanup EXIT
-
-    # Phase 2: Parse arguments first — ensures --help exits cleanly and standalone
-    # toggle flags don't hit the installation pre-flight checks unnecessarily.
-    parse_arguments "$@"
-
-    # Phase 3: Cancel any pending watchdog — must happen before any service state change,
-    # whether we're on the standalone-toggle path or the full-install path.
-    if [ "$SKIP_SYSTEMD" = false ]; then
-        cancel_reboot_watchdog
-    fi
-
-    # Phase 4: Handle standalone toggles (no reinstall needed).
-    # If -p or -b was also passed (INSTALL_REQUESTED=true), skip early-exit and let
-    # setup_systemd_service() apply the overrides inline during the installation instead.
-    if [[ -n "$SET_REBOOT" && "$INSTALL_REQUESTED" == "false" ]]; then
-        handle_reboot_setting
-        exit 0
-    fi
-
-    if [[ -n "$SET_AUTO_RESTART" && "$INSTALL_REQUESTED" == "false" ]]; then
-        handle_auto_restart_setting
-        exit 0
-    fi
-
-    # Phase 4b: Interactive feature selection (drives apt deps, source-lib clones, cmake flags)
-    if [[ "$INTERACTIVE" == true ]]; then
-        interactive_feature_select
-    fi
-
-    # Phase 5: Pre-flight checks (only reached for actual installations)
-    check_existing_service
-
-    # Phase 6: System preparation
-    apt-get update || error_exit "Failed to update package lists"
-
-    # Phase 7: Stop existing service if needed
-    if [ "$SKIP_SYSTEMD" = false ]; then
-        stop_disable_and_save_service_state
-    fi
-
-    # Phase 8: Install binary (package or source)
-    install_binary
-    [[ -x /usr/bin/AIS-catcher ]] || error_exit "AIS-catcher binary not found after installation"
-
-    # Phase 9: Post-install configuration
-    configure_installation
-
-    # Phase 10: Setup and start service
-    if [ "$SKIP_SYSTEMD" = false ]; then
-        setup_systemd_service
-
-        if ! restore_service_state; then
-            log "ERROR" "Failed to restore service state"
-            exit 1
-        fi
-    else
-        log "INFO" "Skipping systemd service installation (--no-systemd flag specified)"
-    fi
-
-    # Phase 11: Installation complete
-    log "INFO" "AIS-catcher installation completed successfully"
-    display_installation_summary
-}
-
 # Display installation summary with useful information
 display_installation_summary() {
     local divider="═══════════════════════════════════════════════════════════════════════════════"
@@ -1246,6 +1190,79 @@ display_installation_summary() {
     echo ""
     
     echo -e "${COLOR_BOLD_BLUE}${divider}${COLOR_RESET}\n"
+}
+
+# Main function
+main() {
+    require_root "$@"
+
+    # Phase 1: Logging, temp dir, and cleanup trap
+    log "INFO" "Starting AIS-catcher installation script"
+    TMP_DIR=$(mktemp -d -t AIS-catcher-XXXXXX)
+    readonly TMP_DIR
+    trap cleanup EXIT
+
+    # Phase 2: Parse arguments first — ensures --help exits cleanly and standalone
+    # toggle flags don't hit the installation pre-flight checks unnecessarily.
+    parse_arguments "$@"
+
+    # Phase 3: Cancel any pending watchdog — must happen before any service state change,
+    # whether we're on the standalone-toggle path or the full-install path.
+    if [ "$SKIP_SYSTEMD" = false ]; then
+        cancel_reboot_watchdog
+    fi
+
+    # Phase 4: Handle standalone toggles (no reinstall needed).
+    # If -p or -b was also passed (INSTALL_REQUESTED=true), skip early-exit and let
+    # setup_systemd_service() apply the overrides inline during the installation instead.
+    if [[ -n "$SET_REBOOT" && "$INSTALL_REQUESTED" == "false" ]]; then
+        handle_reboot_setting
+        exit 0
+    fi
+
+    if [[ -n "$SET_AUTO_RESTART" && "$INSTALL_REQUESTED" == "false" ]]; then
+        handle_auto_restart_setting
+        exit 0
+    fi
+
+    # Phase 4b: Interactive feature selection (drives apt deps, source-lib clones, cmake flags)
+    if [[ "$INTERACTIVE" == true ]]; then
+        interactive_feature_select
+    fi
+
+    # Phase 5: Pre-flight checks (only reached for actual installations)
+    check_existing_service
+
+    # Phase 6: System preparation
+    apt-get update || error_exit "Failed to update package lists"
+
+    # Phase 7: Stop existing service if needed
+    if [ "$SKIP_SYSTEMD" = false ]; then
+        stop_disable_and_save_service_state
+    fi
+
+    # Phase 8: Install binary (package or source)
+    install_binary
+    [[ -x /usr/bin/AIS-catcher ]] || error_exit "AIS-catcher binary not found after installation"
+
+    # Phase 9: Post-install configuration
+    configure_installation
+
+    # Phase 10: Setup and start service
+    if [ "$SKIP_SYSTEMD" = false ]; then
+        setup_systemd_service
+
+        if ! restore_service_state; then
+            log "ERROR" "Failed to restore service state"
+            exit 1
+        fi
+    else
+        log "INFO" "Skipping systemd service installation (--no-systemd flag specified)"
+    fi
+
+    # Phase 11: Installation complete
+    log "INFO" "AIS-catcher installation completed successfully"
+    display_installation_summary
 }
 
 # Run the script
