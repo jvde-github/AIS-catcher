@@ -82,6 +82,8 @@ namespace AIS {
 		void asm_imo_fid21_weather_ship(const AIS::Message& msg, int start);
 		void asm_imo_fid24_ext_static(const AIS::Message& msg, int start);
 		void asm_imo_fid32_tidal_window(const AIS::Message& msg, int start);
+		void asm_imo_fid19_traffic_signal(const AIS::Message& msg, int start);
+		void asm_imo_fid17_vts_targets(const AIS::Message& msg, int start);
 		void asm_imo_fid29_text_description(const AIS::Message& msg, int start);
 		void asm_imo_fid27_route(const AIS::Message& msg, int start);
 		void asm_imo_fid26_environmental(const AIS::Message& msg, int start);

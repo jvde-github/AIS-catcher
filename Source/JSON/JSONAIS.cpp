@@ -923,6 +923,53 @@ namespace AIS
 			json.Add(AIS::KEY_TIDAL, &datastring);
 	}
 
+	// IMO SN.1/Circ.289 Annex §8 Table 8.1 — marine traffic signal (DAC=1, FID=19). msg 8.
+	void JSONAIS::asm_imo_fid19_traffic_signal(const AIS::Message &msg, int start)
+	{
+		U(msg, AIS::KEY_LINKAGE_ID, start + 0, 10, 0);
+		T(msg, AIS::KEY_STATION_NAME, start + 10, 120, text);
+		SL(msg, AIS::KEY_LON, start + 130, 25, 1 / 60000.0f, 0);
+		SL(msg, AIS::KEY_LAT, start + 155, 24, 1 / 60000.0f, 0);
+		U(msg, AIS::KEY_TRAFFIC_SIGNAL, start + 181, 5);
+		U(msg, AIS::KEY_HOUR, start + 186, 5, 24);
+		U(msg, AIS::KEY_MINUTE, start + 191, 6, 60);
+		U(msg, AIS::KEY_NEXT_SIGNAL, start + 197, 5);
+	}
+
+	// IMO SN.1/Circ.289 Annex §6 Table 6.1/6.2 — VTS-generated/synthetic targets (DAC=1, FID=17). msg 8.
+	// Variable length: 1-4 targets of 120 bits each (type, identifier, lat, lon, COG, timestamp, SOG).
+	void JSONAIS::asm_imo_fid17_vts_targets(const AIS::Message &msg, int start)
+	{
+		int n = (msg.getLength() - start) / 120;
+		if (n > 4)
+			n = 4;
+		datastring.clear();
+		for (int i = 0; i < n; i++)
+		{
+			int base = start + i * 120;
+			char id[8];
+			for (int k = 0; k < 7; k++)
+			{
+				unsigned c = msg.getUint(base + 2 + k * 6, 6);
+				id[k] = (char)(c < 32 ? c + 64 : c);
+			}
+			id[7] = 0;
+			int e = 7;
+			while (e > 0 && (id[e - 1] == '@' || id[e - 1] == ' '))
+				id[--e] = 0;
+			double lat = msg.getInt(base + 48, 24) / 60000.0;
+			double lon = msg.getInt(base + 72, 25) / 60000.0;
+			unsigned cog = msg.getUint(base + 97, 9);
+			unsigned sog = msg.getUint(base + 112, 8);
+			char buf[80];
+			snprintf(buf, sizeof(buf), "%s%s,%.5f,%.5f,%u,%u",
+					 datastring.empty() ? "" : ";", id, lat, lon, cog, sog);
+			datastring += buf;
+		}
+		if (!datastring.empty())
+			json.Add(AIS::KEY_TARGETS, &datastring);
+	}
+
 	// ---------- Dispatchers ----------
 
 	void JSONAIS::ProcessMsg6Data(const AIS::Message &msg)
@@ -979,6 +1026,8 @@ namespace AIS
 		else if (dac == 1 && fid == 21)                        asm_imo_fid21_weather_ship(msg, start);
 		else if (dac == 1 && fid == 29)                        asm_imo_fid29_text_description(msg, start);
 		else if (dac == 1 && fid == 27)                        asm_imo_fid27_route(msg, start);
+		else if (dac == 1 && fid == 19)                        asm_imo_fid19_traffic_signal(msg, start);
+		else if (dac == 1 && fid == 17)                        asm_imo_fid17_vts_targets(msg, start);
 		else if (dac == 1 && fid == 26)                        asm_imo_fid26_environmental(msg, start);
 		else if (dac == 1 && fid == 11)                        asm_imo_fid11_meteo_hydro_legacy(msg, start);
 		else if ((dac == 235 || dac == 250 || dac == 366) && fid == 10)      asm_uk_fid10_aton_monitor(msg, start);
