@@ -1485,15 +1485,17 @@ namespace AIS
 			}
 			if (msg.type() == 26)
 			{
+				// Trailing 20-bit comm state: bit 0 is the comm-state selector,
+				// bits 1-19 are the 19-bit SOTDMA/ITDMA state decoded by ProcessRadio.
 				int comm_start = msg.getLength() - 20;
 				if (comm_start >= 40)
-					ProcessRadio(msg, comm_start, 20);
+					ProcessRadio(msg, comm_start + 1, 19);
 			}
 			break;
 		}
 		case 27:
-			U(msg, AIS::KEY_ACCURACY, 38, 1);
-			U(msg, AIS::KEY_RAIM, 39, 1);
+			B(msg, AIS::KEY_ACCURACY, 38, 1);
+			B(msg, AIS::KEY_RAIM, 39, 1);
 			E(msg, AIS::KEY_STATUS, 40, 4, AIS::KEY_STATUS_TEXT);
 			SL(msg, AIS::KEY_LON, 44, 18, 1 / 600.0f, 0);
 			SL(msg, AIS::KEY_LAT, 62, 17, 1 / 600.0f, 0);
