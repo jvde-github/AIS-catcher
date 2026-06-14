@@ -510,10 +510,14 @@ namespace AIS
 		UL(msg, AIS::KEY_SWELLHEIGHT, start + 243, 8, 0.1f, 0, 255);
 		U(msg, AIS::KEY_SWELLPERIOD, start + 251, 6, 63);
 		U(msg, AIS::KEY_SWELLDIR, start + 257, 9, 360);
-		U(msg, AIS::KEY_SEASTATE, start + 266, 4);
+		U(msg, AIS::KEY_SEASTATE, start + 266, 4, 13);
 		SL(msg, AIS::KEY_WATERTEMP, start + 270, 10, 0.1, 0, 501);
 		U(msg, AIS::KEY_PRECIPTYPE, start + 280, 3, 7);
-		U(msg, AIS::KEY_SALINITY, start + 283, 9, 510);
+		{
+			unsigned salinity = msg.getUint(start + 283, 9);
+			if (salinity < 510)
+				json.Add(AIS::KEY_SALINITY, salinity * 0.1f);
+		}
 		U(msg, AIS::KEY_ICE, start + 292, 2, 3);
 	}
 

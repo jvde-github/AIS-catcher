@@ -3063,7 +3063,7 @@ function getBinaryMessageContent(binary, includeRaw = false) {
     }
 
     // Pressure
-    if ('pressure' in msg && msg.pressure != null) {
+    if ('pressure' in msg && msg.pressure != null && msg.pressure > 799) {
         let val = msg.pressure.toFixed(1) + ' hPa';
         if ('pressuretend' in msg && msg.pressuretend != null) {
             val += ' (' + ['steady', 'decreasing', 'increasing'][msg.pressuretend] + ')';
