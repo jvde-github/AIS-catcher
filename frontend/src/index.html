@@ -306,6 +306,27 @@
 						</span>
 					</div>
 				</section>
+				<header>Binary Messages</header>
+				<section>
+					<div>
+						<span>Show on map</span><span>
+							<select id="settings_binary_messages" data-on-change="setBinaryDisplay">
+								<option value="off">Off</option>
+								<option value="badge">Badge</option>
+								<option value="highlight">Badge + highlight</option>
+							</select>
+						</span>
+					</div>
+					<div>
+						<span>Categories</span><span>
+							<select id="settings_binary_categories" multiple size="3" data-on-change="setBinaryCategories">
+								<option value="data">Meteo &amp; sensors</option>
+								<option value="inland">Inland AIS</option>
+								<option value="text">Text messages</option>
+							</select>
+						</span>
+					</div>
+				</section>
 				<header>Station Range</header>
 				<section>
 					<div>

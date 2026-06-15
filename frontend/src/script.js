@@ -140,6 +140,8 @@ const ACTIONS = {
     setKioskPanMap: (e, d, el) => kiosk.setKioskPanMap(el.checked),
     setGraphVisibility: (e, d, el) => setGraphVisibility(d.graph, el.checked),
     setMapSetting: (e, d, el) => setMapSetting(d.key, el.type === 'checkbox' ? el.checked : el.value),
+    setBinaryDisplay: (e, d, el) => setBinaryDisplay(el.value),
+    setBinaryCategories: (e, d, el) => setBinaryCategories(Array.from(el.selectedOptions).map(o => o.value)),
     setRangeColor: (e, d, el) => setRangeColor(el.value, d.field),
     setMapSettingDistanceColor: (e, d, el) => { removeDistanceCircles(); setMapSetting('distance_circle_color', el.value); },
     setShowTrackOnSelect: (e, d, el) => { settings.show_track_on_select = el.checked; saveSettings(); },
@@ -485,7 +487,9 @@ function restoreDefaultSettings() {
         kiosk_pan_map: true,
         shiptable_columns: ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"],
         realtime_background_streaming: false,
-        realtime_filter_mmsis: []
+        realtime_filter_mmsis: [],
+        binary_messages: "highlight",
+        binary_exclude: []
     });
 
     // Set default track colors
@@ -824,7 +828,8 @@ const binaryStyleCache = new Map();
 const binaryStyle = function (feature) {
     const count = feature.get('binary_count') || feature.binary_count || 1;
     const isAssociated = feature.get('is_associated') || feature.is_associated;
-    const key = (isAssociated ? 'a:' : 'n:') + count;
+    const highlight = settings.binary_messages === 'highlight';
+    const key = (isAssociated ? 'a:' : 'n:') + (highlight ? 'h:' : 'b:') + count;
 
     let cached = binaryStyleCache.get(key);
     if (cached) return cached;
@@ -848,7 +853,7 @@ const binaryStyle = function (feature) {
             }),
             zIndex: 201
         });
-        cached = [binaryAssociatedOutline, badge];
+        cached = highlight ? [binaryAssociatedOutline, badge] : [badge];
     } else {
         const circle = new ol.style.Style({
             image: new ol.style.Circle({
@@ -2145,7 +2150,7 @@ async function fetchBinary() {
 
         messages.forEach((msg) => {
             const hasLocation = msg.message && msg.message.lat && msg.message.lon;
-            if (msg.message && msg.message.mmsi && (hasLocation || isInlandMessage(msg) || isTextMessage(msg))) {
+            if (msg.message && msg.message.mmsi && binaryIncluded(msg)) {
                 const mmsi = msg.message.mmsi;
 
                 if (!binaryDB[mmsi]) {
@@ -2502,6 +2507,26 @@ function setMapSetting(a, v) {
     settings[a] = v;
     saveSettings();
     redrawMap();
+}
+
+function setBinaryDisplay(v) {
+    settings.binary_messages = v;
+    binaryStyleCache.clear();
+    saveSettings();
+    redrawMap();
+}
+
+function setBinaryCategories(shown) {
+    settings.binary_exclude = BINARY_CATEGORIES.filter(c => !shown.includes(c));
+    saveSettings();
+
+    binarySince = 0;
+    if (binaryLayer.isVisible() && binaryAnyShown()) {
+        fetchBinary().then(() => redrawMap());
+    } else {
+        binaryDB = {};
+        redrawMap();
+    }
 }
 
 function setTrackClassColor(shipClass, color) {
@@ -3132,6 +3157,20 @@ function isTextMessage(msg) {
     if (!msg.message) return false;
     const fi = msg.message.fid != null ? msg.message.fid : msg.message.fi;
     return msg.message.dac == 1 && (fi == 0 || fi == 29 || fi == 30);
+}
+
+const BINARY_CATEGORIES = ['data', 'inland', 'text'];
+
+function binaryIncluded(msg) {
+    const ex = settings.binary_exclude;
+    if (isTextMessage(msg)) return !ex.includes('text');
+    if (isInlandMessage(msg)) return !ex.includes('inland');
+    const hasLocation = msg.message && msg.message.lat && msg.message.lon;
+    return hasLocation && !ex.includes('data');
+}
+
+function binaryAnyShown() {
+    return BINARY_CATEGORIES.some(c => !settings.binary_exclude.includes(c));
 }
 
 function getTextMessageContent(msg) {
@@ -4597,7 +4636,7 @@ async function updateMap() {
     await Promise.all([
         fetchTracks(),
         planeLayer.isVisible() ? fetchPlanes() : Promise.resolve(true),
-        binaryLayer.isVisible() ? fetchBinary() : Promise.resolve(true),
+        (binaryLayer.isVisible() && binaryAnyShown()) ? fetchBinary() : Promise.resolve(true),
         fetchRange(),
     ]);
 
@@ -4623,6 +4662,8 @@ async function updateMap() {
 
 function redrawBinaryMessages() {
     binaryVector.clear();
+
+    if (settings.binary_messages === 'off') return;
 
     const gridCells = {}; // For clustering standalone messages
     const gridSize = 0.01; // Grid size in degrees (approx. 1km)
@@ -5017,6 +5058,10 @@ function updateSettingsTab() {
     document.getElementById("settings_tooltipLabelFontsize").value = settings.tooltipLabelFontSize;
 
     document.getElementById("settings_show_labels").value = settings.show_labels.toLowerCase();
+
+    document.getElementById("settings_binary_messages").value = settings.binary_messages;
+    Array.from(document.getElementById("settings_binary_categories").options).forEach(
+        o => { o.selected = !settings.binary_exclude.includes(o.value); });
 
     document.getElementById("settings_shipoutline_border").value = settings.shipoutline_border;
     document.getElementById("settings_shipoutline_inner").value = settings.shipoutline_inner;
