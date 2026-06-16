@@ -88,6 +88,7 @@ namespace Device {
 
 		virtual bool isCallback() { return true; }
 		virtual bool isStreaming() { return streaming; }
+		virtual bool isReplay() { return false; }
 
 		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }
 		virtual void getDeviceList(std::vector<Description>& DeviceList) {}

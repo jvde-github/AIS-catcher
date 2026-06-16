@@ -38,6 +38,7 @@ namespace Device
 		void Open(uint64_t);
 		bool isCallback() { return false; }
 		bool isStreaming();
+		bool isReplay() { return true; }
 
 		// Settings
 		Setting &SetKey(AIS::Keys key, const std::string &arg);

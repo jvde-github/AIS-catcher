@@ -161,6 +161,7 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 
 	tag.hardware = device->getProduct();
 	tag.driver = device->getDriver();
+	tag.replay = device->isReplay();
 
 	device->setTag(tag);
 	return true;

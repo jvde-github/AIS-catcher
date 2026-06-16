@@ -253,6 +253,7 @@ struct TAG
 	long msg_idx_start, msg_idx_end;
 	uint32_t ipv4 = 0;
 	uint32_t error = MESSAGE_ERROR_NONE;
+	bool replay = false;
 
 	void clear()
 	{

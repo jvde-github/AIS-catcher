@@ -19,10 +19,12 @@
 
 #include "Device.h"
 
-namespace Device {
+namespace Device
+{
 
-	class RAWFile : public Device {
-		std::istream* file = NULL;
+	class RAWFile : public Device
+	{
+		std::istream *file = NULL;
 
 		std::string filename;
 		std::vector<char> buffer;
@@ -38,7 +40,8 @@ namespace Device {
 
 		FIFO fifo;
 
-		static const uint32_t BUFFER_SIZE = 24 * 16 * 16384;
+		static const uint32_t BUFFER_SIZE_IQ = 24 * 16 * 16384;
+		static const uint32_t BUFFER_SIZE_TXT = 8192;
 		uint32_t BUFFER_COUNT = 2;
 		int TXT_BLOCK_SIZE = 1;
 
@@ -54,9 +57,10 @@ namespace Device {
 
 		bool isCallback() { return true; }
 		bool isStreaming() { return Device::isStreaming() && !done; }
+		bool isReplay();
 
 		// Settings
-		Setting& SetKey(AIS::Keys key, const std::string &arg);
+		Setting &SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 		std::string getProduct() { return "File (RAW)"; }
 		std::string getVendor() { return "File"; }

@@ -71,7 +71,7 @@ namespace IO
 			buf += '\n';
 			std::cout.write(buf.data(), buf.size());
 		}
-		std::cout.flush();
+		flushOut(tag.replay);
 	}
 
 	void ScreenOutput::Receive(const AIS::Message *data, int len, TAG &tag)
@@ -131,7 +131,7 @@ namespace IO
 				std::cout.write(json.data(), json.size());
 			}
 		}
-		std::cout.flush();
+		flushOut(tag.replay);
 	}
 
 	void ScreenOutput::Receive(const JSON::JSON *data, int len, TAG &tag)
@@ -145,6 +145,6 @@ namespace IO
 			builder.stringify(data[i], buf, "\n");
 			std::cout.write(buf.data(), buf.size());
 		}
-		std::cout.flush();
+		flushOut(tag.replay);
 	}
 }
