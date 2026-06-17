@@ -313,7 +313,10 @@ namespace Protocol
 		State state = DISCONNECTED;
 		time_t stamp = 0;
 
+		long reset_interval = 0; // jittered reset deadline in seconds, measured from stamp
+
 		void updateState();
+		void randomizeResetInterval();
 		bool isConnected(int t);
 		bool connectAddress(struct addrinfo *p);
 

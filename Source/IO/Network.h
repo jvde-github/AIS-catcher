@@ -184,6 +184,7 @@ namespace IO
 		std::string port = "10110";
 		bool keep_alive = false;
 		bool persistent = true;
+		int reset = -1;
 		std::string uuid;
 		bool include_sample_start = false;
 		bool stop_requested = false;

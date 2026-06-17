@@ -131,7 +131,8 @@ namespace Protocol
 	// Returns false if this address failed — sock is closed and reset to -1 so the caller can try the next.
 	bool TCP::connectAddress(struct addrinfo *p)
 	{
-		auto fail = [this]() -> bool {
+		auto fail = [this]() -> bool
+		{
 			if (sock != -1)
 			{
 				closesocket(sock);
@@ -188,6 +189,17 @@ namespace Protocol
 				setsockopt(sock, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)))
 				return fail();
 #endif
+
+			// Error a wedged (half-open / zero-window) socket instead of hanging forever.
+			const int user_timeout_ms = (idle + 5 * 2) * 1000;
+#if defined(TCP_USER_TIMEOUT)
+			if (setsockopt(sock, IPPROTO_TCP, TCP_USER_TIMEOUT, (const char *)&user_timeout_ms, sizeof(user_timeout_ms)))
+				Debug() << "TCP (" << host << ":" << port << "): TCP_USER_TIMEOUT not applied: " << strerror(errno);
+#elif defined(_WIN32) && defined(TCP_MAXRT)
+			DWORD maxrt_secs = (DWORD)(user_timeout_ms / 1000);
+			if (setsockopt(sock, IPPROTO_TCP, TCP_MAXRT, (const char *)&maxrt_secs, sizeof(maxrt_secs)))
+				Debug() << "TCP (" << host << ":" << port << "): TCP_MAXRT not applied. Error code: " << WSAGetLastError();
+#endif
 		}
 
 		if (persistent)
@@ -226,7 +238,7 @@ namespace Protocol
 				setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv_ms, sizeof(tv_ms)))
 				return fail();
 #else
-			struct timeval tv = { timeout, 0 };
+			struct timeval tv = {timeout, 0};
 			if (setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) ||
 				setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)))
 				return fail();
@@ -239,6 +251,7 @@ namespace Protocol
 		if (r != -1)
 		{
 			state = READY;
+			randomizeResetInterval();
 
 			Debug() << "TCP (" << host << ":" << port << "): connected.";
 
@@ -316,6 +329,7 @@ namespace Protocol
 			}
 
 			state = READY;
+			randomizeResetInterval();
 
 			Debug() << "TCP (" << host << ":" << port << "): connected.";
 
@@ -333,9 +347,24 @@ namespace Protocol
 		return false;
 	}
 
+	void TCP::randomizeResetInterval()
+	{
+		if (reset_time <= 0)
+			return;
+
+		long base = (long)reset_time * 60;
+		long span = base / 10; // ±10%
+
+		static thread_local std::mt19937 gen(std::random_device{}());
+		std::uniform_int_distribution<long> dist(-span, span);
+
+		reset_interval = base + dist(gen);
+		Debug() << "TCP (" << host << ":" << port << "): reset in " << reset_interval << "s.";
+	}
+
 	void TCP::updateState()
 	{
-		if (state == READY && reset_time > 0 && std::difftime(time(nullptr), stamp) > reset_time * 60)
+		if (state == READY && reset_time > 0 && std::difftime(time(nullptr), stamp) > reset_interval)
 		{
 			Warning() << "TCP (" << host << ":" << port << "): connection expired, reconnect.";
 			reconnect();

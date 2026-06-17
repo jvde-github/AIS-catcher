@@ -610,6 +610,8 @@ namespace IO
 		ss << "TCP feed: open socket for host: " << host << ", port: " << port;
 		ss << ", persist: " << Util::Convert::toString(persistent);
 		ss << ", keep_alive: " << Util::Convert::toString(keep_alive);
+		if (reset > 0)
+			ss << ", reset: " << reset;
 		if (!uuid.empty())
 			ss << ", uuid: " << uuid;
 
@@ -627,6 +629,8 @@ namespace IO
 		tcp.setOptionKey(AIS::KEY_SETTING_PERSIST, Util::Convert::toString(persistent));
 		tcp.setOptionKey(AIS::KEY_SETTING_TIMEOUT, "0");
 		tcp.setOptionKey(AIS::KEY_SETTING_KEEP_ALIVE, Util::Convert::toString(keep_alive));
+		if (reset > 0)
+			tcp.setOptionKey(AIS::KEY_SETTING_RESET, std::to_string(reset));
 
 		connection = &tcp;
 
@@ -667,6 +671,9 @@ namespace IO
 			break;
 		case AIS::KEY_SETTING_PERSIST:
 			persistent = Util::Parse::Switch(arg);
+			break;
+		case AIS::KEY_SETTING_RESET:
+			reset = Util::Parse::Integer(arg, 0, 3600);
 			break;
 		case AIS::KEY_SETTING_UUID:
 			if (Util::Helper::isUUID(arg))

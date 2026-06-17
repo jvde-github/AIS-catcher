@@ -83,6 +83,7 @@ struct RunState {
 			.SetKey(AIS::KEY_SETTING_GPS, "off")
 			.SetKey(AIS::KEY_SETTING_REMOVE_EMPTY, "on")
 			.SetKey(AIS::KEY_SETTING_KEEP_ALIVE, "on")
+			.SetKey(AIS::KEY_SETTING_RESET, "180")
 			.SetKey(AIS::KEY_SETTING_OWN_INTERVAL, "10")
 			.SetKey(AIS::KEY_SETTING_INCLUDE_SAMPLE_START, "on");
 		return *comm_feed;
