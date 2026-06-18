@@ -20,6 +20,8 @@
 #ifndef _WIN32
 #include <unistd.h>
 #include <sys/stat.h>
+#include <poll.h>
+#include <cerrno>
 #endif
 
 #include "FileRAW.h"
@@ -38,10 +40,22 @@ namespace Device
 #ifndef _WIN32
 			if (use_raw_stdin)
 			{
-				// Use POSIX read() for stdin: returns as soon as data is available,
-				// avoiding iostream overhead and istream::read blocking for full buffer
 				while (Device::isStreaming())
 				{
+					struct pollfd pfd;
+					pfd.fd = STDIN_FILENO;
+					pfd.events = POLLIN;
+					pfd.revents = 0;
+
+					int pr = poll(&pfd, 1, 250);
+					if (pr <= 0)
+					{
+						// timeout or EINTR: re-check isStreaming(); real error: stop
+						if (pr < 0 && errno != EINTR)
+							break;
+						continue;
+					}
+
 					ssize_t bytesRead = ::read(STDIN_FILENO, buffer.data(), buffer.size());
 					if (bytesRead <= 0)
 						break;
