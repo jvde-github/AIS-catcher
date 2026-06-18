@@ -530,37 +530,15 @@ namespace IO
 		if (!filter.includeGPS())
 			return;
 
-		if (fmt == MessageFormat::NMEA)
+		for (int i = 0; i < len; i++)
 		{
+			const std::string line = (fmt == MessageFormat::NMEA ? data[i].getNMEA() : data[i].getJSON()) + "\r\n";
 
-			for (int i = 0; i < len; i++)
+			if (SendTo(line.c_str()) < 0 && !persistent && !stop_requested)
 			{
-
-				if (SendTo((data[i].getNMEA() + "\r\n").c_str()) < 0)
-				{
-					if (!persistent && !stop_requested)
-					{
-						Error() << "TCP feed: requesting termination.";
-						stop_requested = true;
-						StopRequest();
-					}
-				}
-			}
-		}
-		else
-		{
-			for (int i = 0; i < len; i++)
-			{
-
-				if (SendTo((data[i].getJSON() + "\r\n").c_str()) < 0)
-				{
-					if (!persistent && !stop_requested)
-					{
-						Error() << "TCP feed: requesting termination.";
-						stop_requested = true;
-						StopRequest();
-					}
-				}
+				Critical() << "TCP feed: requesting termination.";
+				stop_requested = true;
+				StopRequest();
 			}
 		}
 	}
@@ -576,7 +554,7 @@ namespace IO
 
 			if (SendTo(json.data(), (int)json.size()) < 0 && !persistent && !stop_requested)
 			{
-				Error() << "TCP feed: requesting termination.";
+				Critical() << "TCP feed: requesting termination.";
 				stop_requested = true;
 				StopRequest();
 			}
@@ -737,20 +715,8 @@ namespace IO
 		if (!filter.includeGPS())
 			return;
 
-		if (fmt == MessageFormat::NMEA)
-		{
-			for (int i = 0; i < len; i++)
-			{
-				SendAllDirect(data[i].getNMEA() + "\r\n");
-			}
-		}
-		else
-		{
-			for (int i = 0; i < len; i++)
-			{
-				SendAllDirect((data[i].getJSON() + "\r\n").c_str());
-			}
-		}
+		for (int i = 0; i < len; i++)
+			SendAllDirect((fmt == MessageFormat::NMEA ? data[i].getNMEA() : data[i].getJSON()) + "\r\n");
 	}
 
 	void TCPlistenerStreamer::Receive(const AIS::Message *data, int len, TAG &tag)
