@@ -20,36 +20,12 @@
 #include <sys/types.h>
 
 #ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
 #include <mstcpip.h>
-
-#elif defined(__APPLE__)
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <fcntl.h>
-#include <netdb.h>
-#include <unistd.h>
-
-#elif defined(__ANDROID__)
-
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <fcntl.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <android/log.h>
 #else
-
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <fcntl.h>
-#include <netdb.h>
-#include <unistd.h>
-
+#ifdef __ANDROID__
+#include <android/log.h>
+#endif
 #endif
 
 #include <errno.h>
@@ -76,7 +52,7 @@ namespace Protocol
 				stats->connected = false;
 
 			onDisconnect();
-			closesocket(sock);
+			Net::closeSocket(sock);
 		}
 
 		if (state == READY)
@@ -135,7 +111,7 @@ namespace Protocol
 		{
 			if (sock != -1)
 			{
-				closesocket(sock);
+				Net::closeSocket(sock);
 				sock = -1;
 			}
 			return false;
@@ -204,27 +180,11 @@ namespace Protocol
 
 		if (persistent)
 		{
-#ifndef _WIN32
-			int fl = fcntl(sock, F_GETFL, 0);
-			if (fl == -1)
+			if (!Net::setNonBlocking(sock))
 			{
-				Error() << "TCP (" << host << ":" << port << "): fcntl F_GETFL failed: " << strerror(errno);
+				Error() << "TCP (" << host << ":" << port << "): failed to set non-blocking: " << Net::errorString(Net::lastError());
 				return fail();
 			}
-
-			if (fcntl(sock, F_SETFL, fl | O_NONBLOCK) == -1)
-			{
-				Error() << "TCP (" << host << ":" << port << "): fcntl F_SETFL failed: " << strerror(errno);
-				return fail();
-			}
-#else
-			u_long mode = 1;
-			if (ioctlsocket(sock, FIONBIO, &mode) != 0)
-			{
-				Error() << "TCP (" << host << ":" << port << "): ioctlsocket failed. Error code: " << WSAGetLastError();
-				return fail();
-			}
-#endif
 		}
 		else if (timeout > 0)
 		{
@@ -268,13 +228,8 @@ namespace Protocol
 
 			return true;
 		}
-#ifndef _WIN32
-		if (errno != EINPROGRESS)
+		if (!Net::connectInProgress(Net::lastError()))
 			return fail();
-#else
-		if (WSAGetLastError() != WSAEWOULDBLOCK)
-			return fail();
-#endif
 
 		// Non-blocking connect in progress.
 		if (isConnected(timeout))
@@ -405,15 +360,9 @@ namespace Protocol
 		int sent = ::send(sock, (char *)data, length, 0);
 		if (sent < 0)
 		{
-#ifdef _WIN32
-			int error_code = WSAGetLastError();
-			bool would_block = (error_code == WSAEWOULDBLOCK);
-#else
-			int error_code = errno;
-			bool would_block = (error_code == EAGAIN || error_code == EWOULDBLOCK);
-#endif
+			int error_code = Net::lastError();
 
-			if (would_block)
+			if (Net::wouldBlock(error_code))
 				return 0;
 
 			return handleNetworkError("send", error_code, 0);
@@ -467,7 +416,7 @@ namespace Protocol
 
 			if (select_result < 0)
 			{
-				int error_code = errno;
+				int error_code = Net::lastError();
 				if (error_code == EINTR)
 					break;
 
@@ -484,15 +433,9 @@ namespace Protocol
 
 			if (received < 0)
 			{
-#ifdef _WIN32
-				int error_code = WSAGetLastError();
-				bool would_block = (error_code == WSAEWOULDBLOCK);
-#else
-				int error_code = errno;
-				bool would_block = (error_code == EAGAIN || error_code == EWOULDBLOCK);
-#endif
+				int error_code = Net::lastError();
 
-				if (would_block)
+				if (Net::wouldBlock(error_code))
 				{
 					if (timeout)
 						continue;

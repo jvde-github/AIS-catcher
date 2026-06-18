@@ -20,39 +20,18 @@
 #include <fstream>
 #include <iostream>
 
-#ifdef _WIN32
-
-#include <winsock2.h>
-#include <ws2tcpip.h>
-
-#else
-
-#include <fcntl.h>
-#include <unistd.h>
-#include <netdb.h>
-#include <sys/socket.h>
-
-#define SOCKET		 int
-#define SOCKADDR	 struct sockaddr
-#define SOCKET_ERROR -1
-
-#define closesocket close
-
-#endif
-
-#ifdef __ANDROID__
-#include <netinet/in.h>
-#endif
-
+#include "SocketUtil.h"
 #include "Device.h"
 
-namespace Device {
+namespace Device
+{
 
-	class UDP : public Device {
+	class UDP : public Device
+	{
 		std::string port;
 		std::string server;
 
-		struct addrinfo* address = nullptr;
+		struct addrinfo *address = nullptr;
 		SOCKET sock = -1;
 		bool lost = false;
 
@@ -74,11 +53,11 @@ namespace Device {
 
 		bool isStreaming() { return Device::isStreaming() && !lost; }
 		bool isCallback() { return true; }
-		void getDeviceList(std::vector<Description>& DeviceList);
+		void getDeviceList(std::vector<Description> &DeviceList);
 		std::string getRateDescription() { return "N/A"; }
 
 		// Settings
-		Setting& SetKey(AIS::Keys key, const std::string &arg);
+		Setting &SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 
 		std::string getProduct() { return "UDP"; }

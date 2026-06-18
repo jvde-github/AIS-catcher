@@ -22,7 +22,6 @@
 #include "Convert.h"
 #include "Parse.h"
 #include "Helper.h"
-#include "Receiver.h"
 
 namespace IO
 {
@@ -102,7 +101,8 @@ namespace IO
 
 	void HTTPStreamer::Receive(const AIS::GPS *data, int len, TAG &tag)
 	{
-		if (!filter.includeGPS() || len <= 0) return;
+		if (!filter.includeGPS() || len <= 0)
+			return;
 		const std::lock_guard<std::mutex> lock(msg_list_mutex);
 		lat = std::to_string(data[len - 1].getLat());
 		lon = std::to_string(data[len - 1].getLon());
@@ -320,19 +320,15 @@ namespace IO
 
 	bool UDPStreamer::applySocketOptions()
 	{
+		if (!Net::setNonBlocking(sock))
+			return false;
 #ifndef _WIN32
-		int r = fcntl(sock, F_GETFL, 0);
-		if (r < 0) return false;
-		if (fcntl(sock, F_SETFL, r | O_NONBLOCK) < 0) return false;
 		if (broadcast)
 		{
 			int broadcastEnable = 1;
 			if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (char *)&broadcastEnable, sizeof(broadcastEnable)) < 0)
 				return false;
 		}
-#else
-		u_long mode = 1;
-		if (ioctlsocket(sock, FIONBIO, &mode) != 0) return false;
 #endif
 		return true;
 	}
@@ -346,13 +342,13 @@ namespace IO
 			{
 				Info() << "UDP: recreate socket (" << host << ":" << port << ")";
 
-				closesocket(sock);
+				Net::closeSocket(sock);
 				sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
 
 				if (sock == -1 || !applySocketOptions())
 				{
 					Critical() << "UDP: cannot recreate socket (" << host << ":" << port << "). Requesting termination.";
-					closesocket(sock);
+					Net::closeSocket(sock);
 					sock = -1;
 					StopRequest();
 					return;
@@ -479,7 +475,7 @@ namespace IO
 
 		if (sock != -1)
 		{
-			closesocket(sock);
+			Net::closeSocket(sock);
 			sock = -1;
 		}
 		if (address != NULL)

@@ -2769,6 +2769,8 @@ async function updateStatistics() {
                     html += `<div><span>Connect ok / fail</span><span>${s.connect_ok} / ${s.connect_fail}</span></div>`;
                 if (s.reconnects > 0)
                     html += `<div><span>Reconnects</span><span>${s.reconnects}</span></div>`;
+                if (s.dropped > 0)
+                    html += `<div><span>Dropped</span><span>${s.dropped}</span></div>`;
                 html += "</section>";
             }
             outputSection.innerHTML = html;
@@ -5399,6 +5401,9 @@ function makeDraggable(dragHandle, dragTarget) {
                 const newX = e.clientX - offsetX;
                 const newY = e.clientY - offsetY;
 
+                // clear right/bottom anchor so a right-anchored element moves instead of stretching
+                dragTarget.style.right = 'auto';
+                dragTarget.style.bottom = 'auto';
                 dragTarget.style.left = `${newX}px`;
                 dragTarget.style.top = `${newY}px`;
 

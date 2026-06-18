@@ -21,19 +21,7 @@
 #include <mutex>
 #include <time.h>
 
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
-#include <sys/socket.h>
-#include <netdb.h>
-#define SOCKET int
-#define closesocket close
-#endif
-
-#ifdef __ANDROID__
-#include <netinet/in.h>
-#endif
+#include "SocketUtil.h"
 
 #include "Stream.h"
 #include "Common.h"
@@ -45,7 +33,7 @@
 namespace IO
 {
 
-class SSEConnection
+	class SSEConnection
 	{
 	protected:
 		bool running = false;

@@ -18,44 +18,18 @@
 #include <cstring>
 #include <string>
 
-#ifndef _WIN32
-#include <arpa/inet.h> // For inet_addr() and INADDR_ANY
-#endif
+#include "TCPServer.h"
 
 #ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
 #include <mstcpip.h>
-
-#elif defined(__APPLE__)
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <fcntl.h>
-#include <netdb.h>
-#include <unistd.h>
-
-#elif defined(__ANDROID__)
-
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <fcntl.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <android/log.h>
 #else
-
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include <arpa/inet.h> // For inet_addr() and INADDR_ANY
 #include <netinet/tcp.h>
-#include <fcntl.h>
-#include <netdb.h>
-#include <unistd.h>
-
+#include <poll.h>
+#ifdef __ANDROID__
+#include <android/log.h>
 #endif
-
-#include "TCPServer.h"
+#endif
 
 namespace IO
 {
@@ -83,17 +57,19 @@ namespace IO
 	{
 		if (sock != -1)
 		{
-			closesocket(sock);
+			Net::closeSocket(sock);
 			sock = -1;
 		}
 		msg.clear();
 		out.clear();
+		out_pos = 0;
 	}
 
 	void TCPServerConnection::Start(SOCKET s)
 	{
 		msg.clear();
 		out.clear();
+		out_pos = 0;
 		stamp = std::time(nullptr);
 		sock = s;
 	}
@@ -113,17 +89,11 @@ namespace IO
 		{
 
 			int nread = recv(sock, buffer, sizeof(buffer), 0);
-#ifdef _WIN32
-			if (nread == 0 || (nread < 0 && WSAGetLastError() != WSAEWOULDBLOCK))
+			int e = Net::lastError();
+			if (nread == 0 || (nread < 0 && !Net::wouldBlock(e)))
 			{
-				int e = WSAGetLastError();
-#else
-			if (nread == 0 || (nread < 0 && errno != EWOULDBLOCK && errno != EAGAIN))
-			{
-				int e = errno;
-#endif
 				if (nread < 0 && verbose)
-					Error() << "Socket: connection closed by error: " << strerror(e) << ", sock = " << sock;
+					Error() << "Socket: connection closed by error: " << Net::errorString(e) << ", sock = " << sock;
 
 				CloseUnsafe();
 			}
@@ -149,27 +119,28 @@ namespace IO
 		if (isConnected() && hasSendBuffer())
 		{
 
-			int bytes = ::send(sock, out.data(), out.size(), 0);
+			int bytes = ::send(sock, out.data() + out_pos, pending(), 0);
 
 			if (bytes < 0)
 			{
-#ifdef _WIN32
-				if (WSAGetLastError() != WSAEWOULDBLOCK)
+				int e = Net::lastError();
+				if (!Net::wouldBlock(e))
 				{
-#else
-				if (errno != EWOULDBLOCK && errno != EAGAIN)
-				{
-#endif
 					if (verbose)
-						Error() << "TCP Connection: error message to client: " << strerror(errno);
+						Error() << "TCP Connection: error message to client: " << Net::errorString(e);
 
 					CloseUnsafe();
 				}
 			}
-			else if (bytes < out.size())
-				out.erase(out.begin(), out.begin() + bytes);
 			else
-				out.clear();
+			{
+				out_pos += bytes;
+				if (out_pos == out.size())
+				{
+					out.clear();
+					out_pos = 0;
+				}
+			}
 		}
 	}
 	bool TCPServerConnection::Send(const char *data, int length)
@@ -179,7 +150,10 @@ namespace IO
 		if (!isConnected())
 			return false;
 
-		if (out.size() + length > MAX_BUFFER_SIZE)
+		if (out_pos >= OUT_COMPACT_THRESHOLD)
+			compact();
+
+		if (pending() + length > MAX_BUFFER_SIZE)
 			return false;
 
 		out.insert(out.end(), data, data + length);
@@ -197,15 +171,11 @@ namespace IO
 
 		if (bytes < 0)
 		{
-#ifdef _WIN32
-			if (WSAGetLastError() != WSAEWOULDBLOCK)
+			int e = Net::lastError();
+			if (!Net::wouldBlock(e))
 			{
-#else
-			if (errno != EWOULDBLOCK && errno != EAGAIN)
-			{
-#endif
 				if (verbose)
-					Error() << "TCP Connection: error message to client: " << strerror(errno);
+					Error() << "TCP Connection: error message to client: " << Net::errorString(e);
 
 				CloseUnsafe();
 				return false;
@@ -229,15 +199,11 @@ namespace IO
 
 			if (bytes < 0)
 			{
-#ifdef _WIN32
-				if (WSAGetLastError() != WSAEWOULDBLOCK)
+				int e = Net::lastError();
+				if (!Net::wouldBlock(e))
 				{
-#else
-				if (errno != EWOULDBLOCK && errno != EAGAIN)
-				{
-#endif
 					if (verbose)
-						Error() << "TCP Connection: error message to client: " << strerror(errno);
+						Error() << "TCP Connection: error message to client: " << Net::errorString(e);
 
 					CloseUnsafe();
 					return false;
@@ -250,7 +216,10 @@ namespace IO
 		{
 			// A client this far behind (e.g. a stalled SSE consumer) will not
 			// recover; close instead of growing the buffer without bound.
-			if (out.size() + (length - bytes) > MAX_BUFFER_SIZE)
+			if (out_pos >= OUT_COMPACT_THRESHOLD)
+				compact();
+
+			if (pending() + (length - bytes) > MAX_BUFFER_SIZE)
 			{
 				if (verbose)
 					Error() << "TCP Connection: send buffer limit exceeded, closing connection.";
@@ -284,7 +253,7 @@ namespace IO
 		}
 
 		if (sock != -1)
-			closesocket(sock);
+			Net::closeSocket(sock);
 
 		// Remove port from active_ports
 		if (listening_port != -1)
@@ -325,26 +294,22 @@ namespace IO
 		conn_socket = accept(sock, (SOCKADDR *)&service, (socklen_t *)&addrlen);
 #ifdef _WIN32
 		if (conn_socket == SOCKET_ERROR)
-		{
-			if (WSAGetLastError() != WSAEWOULDBLOCK)
-				Error() << "TCP listener: error accepting connection. Error code: " << WSAGetLastError();
-			return;
-		}
 #else
 		if (conn_socket == -1)
+#endif
 		{
-			if (errno != EWOULDBLOCK && errno != EAGAIN)
-				Error() << "TCP Server: error accepting connection. " << strerror(errno);
+			int e = Net::lastError();
+			if (!Net::wouldBlock(e))
+				Error() << "TCP Server: error accepting connection: " << Net::errorString(e);
 			return;
 		}
-#endif
-		else
+
 		{
 			int ptr = findFreeClient();
 			if (ptr == -1)
 			{
 				Error() << "TCP Server: max connections reached (" << MAX_CONN << ", closing socket.";
-				closesocket(conn_socket);
+				Net::closeSocket(conn_socket);
 			}
 			else
 			{
@@ -435,33 +400,36 @@ namespace IO
 
 	void TCPServer::SleepAndWait()
 	{
-		struct timeval tv;
-		fd_set fds, fdw;
+		// poll() rather than select(): keyed on fd values with no FD_SETSIZE ceiling,
+		// so a high-numbered socket in a busy process can't overflow an fd_set. The
+		// result is unused — this only blocks until something is ready or 1s elapses.
+		std::vector<pollfd> pfds;
+		pfds.reserve(MAX_CONN + 1);
 
-		FD_ZERO(&fds);
-		FD_SET(sock, &fds);
-
-		FD_ZERO(&fdw);
-
-		int maxfds = sock;
+		pollfd pfd;
+		pfd.fd = sock;
+		pfd.events = POLLIN;
+		pfd.revents = 0;
+		pfds.push_back(pfd);
 
 		for (auto &c : client)
 		{
-			if (c.isConnected())
-			{
-				FD_SET(c.sock, &fds);
-				if (c.sock > maxfds)
-					maxfds = c.sock;
+			if (!c.isConnected())
+				continue;
 
-				if (c.hasSendBuffer())
-				{
-					FD_SET(c.sock, &fdw);
-				}
-			}
+			pfd.fd = c.sock;
+			pfd.events = POLLIN;
+			if (c.hasSendBuffer())
+				pfd.events |= POLLOUT;
+			pfd.revents = 0;
+			pfds.push_back(pfd);
 		}
 
-		tv = {1, 0};
-		select(maxfds + 1, &fds, &fdw, NULL, &tv);
+#ifdef _WIN32
+		WSAPoll(pfds.data(), (ULONG)pfds.size(), 1000);
+#else
+		poll(pfds.data(), (nfds_t)pfds.size(), 1000);
+#endif
 	}
 
 	bool TCPServer::SendAll(const std::string &m)
@@ -475,6 +443,8 @@ namespace IO
 				{
 					c.Close();
 					Error() << "TCP listener: client not reading, close connection.";
+					if (pstats)
+						pstats->dropped++;
 					success = false;
 				}
 				else if (pstats)
@@ -511,20 +481,7 @@ namespace IO
 
 	bool TCPServer::setNonBlock(SOCKET s)
 	{
-
-#ifndef _WIN32
-		int r = fcntl(s, F_GETFL, 0);
-		if (r == -1)
-			return false;
-
-		r = fcntl(s, F_SETFL, r | O_NONBLOCK);
-		if (r == -1)
-			return false;
-#else
-		u_long mode = 1;
-		ioctlsocket(s, FIONBIO, &mode);
-#endif
-		return true;
+		return Net::setNonBlocking(s);
 	}
 
 	bool TCPServer::start(int port)
@@ -568,14 +525,14 @@ namespace IO
 		int r = bind(sock, (SOCKADDR *)&service, sizeof(service));
 		if (r == SOCKET_ERROR)
 		{
-			closesocket(sock);
+			Net::closeSocket(sock);
 			sock = -1;
 			return false;
 		}
 
 		if (listen(sock, 511) < 0)
 		{
-			closesocket(sock);
+			Net::closeSocket(sock);
 			sock = -1;
 			return false;
 		}

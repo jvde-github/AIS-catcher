@@ -142,6 +142,7 @@
     <ClInclude Include="..\Source\Utilities\StreamHelpers.h" />
     <ClInclude Include="..\Source\IO\TCPServer.h" />
     <ClInclude Include="..\Source\IO\Protocol.h" />
+    <ClInclude Include="..\Source\IO\SocketUtil.h" />
     <ClInclude Include="..\Source\Utilities\Parse.h" />
     <ClInclude Include="..\Source\Utilities\Convert.h" />
     <ClInclude Include="..\Source\Utilities\Helper.h" />

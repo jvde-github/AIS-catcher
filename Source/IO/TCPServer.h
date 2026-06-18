@@ -25,29 +25,7 @@
 #include <vector>
 #include <functional>
 
-#ifdef _WIN32
-
-#include <winsock2.h>
-#include <ws2tcpip.h>
-
-#else
-
-#include <fcntl.h>
-#include <unistd.h>
-#include <netdb.h>
-#include <sys/socket.h>
-
-#define SOCKET int
-#define SOCKADDR struct sockaddr
-#define SOCKET_ERROR -1
-
-#define closesocket close
-
-#endif
-
-#ifdef __ANDROID__
-#include <netinet/in.h>
-#endif
+#include "SocketUtil.h"
 
 #include "Common.h"
 #include "OutputStats.h"
@@ -61,7 +39,19 @@ namespace IO
 		std::mutex mtx;
 		void CloseUnsafe();
 		const static int MAX_BUFFER_SIZE = 1024 * 1024 * 8;
+		// Reclaim the already-sent prefix only once it grows past this, so the
+		// memmove is amortized across many sends instead of paid on every drain.
+		const static size_t OUT_COMPACT_THRESHOLD = 64 * 1024;
 		bool verbose = true;
+
+		size_t pending() const { return out.size() - out_pos; }
+		void compact()
+		{
+			if (out_pos == 0)
+				return;
+			out.erase(out.begin(), out.begin() + out_pos);
+			out_pos = 0;
+		}
 
 	public:
 		~TCPServerConnection() { Close(); }
@@ -70,6 +60,7 @@ namespace IO
 
 		std::string msg;
 		std::vector<char> out;
+		size_t out_pos = 0; // read cursor into out; [out_pos, out.size()) is unsent
 		std::time_t stamp;
 		bool is_locked = false;
 
@@ -84,7 +75,7 @@ namespace IO
 		void Start(SOCKET s);
 		int Inactive(std::time_t now);
 		bool isConnected() { return sock != -1; }
-		bool hasSendBuffer() { return !out.empty(); }
+		bool hasSendBuffer() { return out_pos < out.size(); }
 		void SendBuffer();
 		bool Send(const char *buffer, int length);
 		bool SendDirect(const char *buffer, int length);
@@ -120,7 +111,7 @@ namespace IO
 
 		static std::vector<int> active_ports;
 
-		const static int MAX_CONN = 16;
+		const static int MAX_CONN = 128;
 		std::array<TCPServerConnection, MAX_CONN> client;
 
 		std::thread run_thread;

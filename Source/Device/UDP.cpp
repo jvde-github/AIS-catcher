@@ -28,7 +28,7 @@ namespace Device
 	{
 		if (sock != -1)
 		{
-			closesocket(sock);
+			Net::closeSocket(sock);
 			sock = -1;
 		}
 
@@ -69,17 +69,13 @@ namespace Device
 			StopServer();
 			throw std::runtime_error("UDP: cannot set socket option.");
 		}
+#endif
 
-		int flags = fcntl(sock, F_GETFL, 0);
-		if (flags == -1 || fcntl(sock, F_SETFL, flags | O_NONBLOCK) == -1)
+		if (!Net::setNonBlocking(sock))
 		{
 			StopServer();
 			throw std::runtime_error("UDP: cannot make the socket non-blocking.");
 		}
-#else
-		u_long mode = 1; // 1 to enable non-blocking socket
-		ioctlsocket(sock, FIONBIO, &mode);
-#endif
 
 		if (bind(sock, address->ai_addr, address->ai_addrlen) != 0)
 		{

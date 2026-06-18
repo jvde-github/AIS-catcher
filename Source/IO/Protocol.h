@@ -27,28 +27,7 @@
 #include <cstring>
 #include <iomanip>
 
-#ifdef _WIN32
-
-#include <winsock2.h>
-#include <ws2tcpip.h>
-
-#else
-
-#include <fcntl.h>
-#include <unistd.h>
-#include <netdb.h>
-#include <sys/socket.h>
-
-#define SOCKET int
-#define SOCKADDR struct sockaddr
-#define SOCKET_ERROR -1
-
-#define closesocket close
-#endif
-
-#ifdef __ANDROID__
-#include <netinet/in.h>
-#endif
+#include "SocketUtil.h"
 
 #ifdef HASOPENSSL
 #include <openssl/ssl.h>
@@ -333,7 +312,7 @@ namespace Protocol
 		int handleNetworkError(const char *operation, int error_code, int partial_bytes_processed)
 		{
 			Error() << "TCP (" << host << ":" << port << "): " << operation << " error " << error_code
-					<< " (" << strerror(error_code) << ")." << (persistent ? " Reconnecting." : " Failed.");
+					<< " (" << Net::errorString(error_code) << ")." << (persistent ? " Reconnecting." : " Failed.");
 
 			if (persistent)
 				reconnect();
@@ -393,6 +372,7 @@ namespace Protocol
 
 		void setStats(IO::OutputStats *s) { stats = s; }
 		void setVerifyCertificates(bool v) { verify_certificates = v; }
+
 	private:
 		bool performHandshake();
 		std::string getSSLErrorString(int error);

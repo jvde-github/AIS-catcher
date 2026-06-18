@@ -23,19 +23,7 @@
 
 #include "TemplateString.h"
 
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
-#include <sys/socket.h>
-#include <netdb.h>
-#define SOCKET int
-#define closesocket close
-#endif
-
-#ifdef __ANDROID__
-#include <netinet/in.h>
-#endif
+#include "SocketUtil.h"
 
 #include "Stream.h"
 #include "Common.h"
@@ -102,7 +90,10 @@ namespace IO
 		void enqueue(std::string s)
 		{
 			if (msg_list.size() >= MSG_LIST_MAX)
+			{
 				msg_list.pop_front();
+				stats.dropped++;
+			}
 			msg_list.push_back(std::move(s));
 		}
 
@@ -178,11 +169,15 @@ namespace IO
 		{
 			if (sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen) > 0)
 				stats.bytes_out += str.length();
+			else
+				stats.dropped++;
 		}
 		void SendTo(const char *data, int len)
 		{
 			if (sendto(sock, data, len, 0, address->ai_addr, (int)address->ai_addrlen) > 0)
 				stats.bytes_out += len;
+			else
+				stats.dropped++;
 		}
 	};
 
@@ -217,25 +212,21 @@ namespace IO
 		void Start() override;
 		void Stop() override;
 
-		int SendTo(const std::string &str)
-		{
-			if (connection)
-				return connection->send(str.c_str(), (int)str.length());
-			return -1;
-		}
+		int SendTo(const std::string &str) { return SendTo(str.c_str(), (int)str.length()); }
 
-		int SendTo(const char *str)
-		{
-			if (connection)
-				return connection->send(str, strlen(str));
-			return -1;
-		}
+		int SendTo(const char *str) { return SendTo(str, (int)strlen(str)); }
 
 		int SendTo(const char *data, int len)
 		{
-			if (connection)
-				return connection->send(data, len);
-			return -1;
+			if (!connection)
+				return -1;
+
+			int r = connection->send(data, len);
+			// send() returns 0 when the message could not be sent (socket would block
+			// or persistent reconnect in progress); there is no queue, so it is dropped.
+			if (r == 0 && len > 0)
+				stats.dropped++;
+			return r;
 		}
 	};
 
