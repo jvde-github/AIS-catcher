@@ -3,7 +3,7 @@ OBJ = Config.o DeviceManager.o Main.o MapTiles.o Prometheus.o Receiver.o WebDB.o
 INCLUDE = -I. -ISource -ISource/JSON/ -ISource/DBMS/ -ISource/Tracking/ -ISource/Library/ -ISource/Marine/ -ISource/Aviation/ -ISource/DSP/ -ISource/Application/ -ISource/IO/ -ISource/Utilities/ 
 CC = clang
 
-override CFLAGS +=  -Ofast -std=c++11 -g -pg -Wno-sign-compare $(INCLUDE)
+override CFLAGS +=  -O3 -ffast-math -std=c++11 -g -pg -Wno-sign-compare $(INCLUDE)
 override LFLAGS += -lstdc++ -lpthread -g -pg -lm  -o AIS-catcher
 
 CFLAGS_RTL = -DHASRTLSDR $(shell pkg-config --cflags librtlsdr)

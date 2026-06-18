@@ -51,11 +51,11 @@ namespace IO
 		using StreamIn<AIS::GPS>::Receive;
 
 		void Connect(Receiver &r);
-		void Receive(const AIS::Message *data, int len, TAG &tag);
-		void Receive(const JSON::JSON *data, int len, TAG &tag);
-		void Receive(const AIS::GPS *data, int len, TAG &tag);
+		void Receive(const AIS::Message *data, int len, TAG &tag) override;
+		void Receive(const JSON::JSON *data, int len, TAG &tag) override;
+		void Receive(const AIS::GPS *data, int len, TAG &tag) override;
 
-		Setting &SetKey(AIS::Keys key, const std::string &arg)
+		Setting &SetKey(AIS::Keys key, const std::string &arg) override
 		{
 			switch (key)
 			{

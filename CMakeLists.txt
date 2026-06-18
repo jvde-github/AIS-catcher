@@ -104,7 +104,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"
         add_compile_options(-fsanitize=thread -fno-omit-frame-pointer)
         add_link_options(-fsanitize=thread)
     else()
-        set(OPTIMIZATION_FLAGS "-Ofast")
+        set(OPTIMIZATION_FLAGS "-O3 -ffast-math")
     endif()
     add_compile_options("-Wall")
     add_compile_options("-Wno-psabi")
