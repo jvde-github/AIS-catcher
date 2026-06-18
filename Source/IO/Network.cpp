@@ -84,7 +84,7 @@ namespace IO
 
 					for (size_t j = 0; j < nmea.size(); j++)
 					{
-						msg_list.push_back(nmea[j]);
+						enqueue(nmea[j]);
 					}
 				}
 				else
@@ -93,7 +93,7 @@ namespace IO
 					builder.stringify(data[i], s);
 					{
 						const std::lock_guard<std::mutex> lock(msg_list_mutex);
-						msg_list.push_back(std::move(s));
+						enqueue(std::move(s));
 					}
 				}
 			}

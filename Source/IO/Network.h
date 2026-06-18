@@ -96,6 +96,16 @@ namespace IO
 		std::list<std::string> msg_list;
 		std::mutex msg_list_mutex;
 
+		static const size_t MSG_LIST_MAX = 100000;
+
+		// caller holds msg_list_mutex
+		void enqueue(std::string s)
+		{
+			if (msg_list.size() >= MSG_LIST_MAX)
+				msg_list.pop_front();
+			msg_list.push_back(std::move(s));
+		}
+
 	public:
 		~HTTPStreamer() { Stop(); }
 		HTTPStreamer() : OutputMessage("HTTP"), url("http://127.0.0.1"), userpwd("") { fmt = MessageFormat::JSON_FULL; }
