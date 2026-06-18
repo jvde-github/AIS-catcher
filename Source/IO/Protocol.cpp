@@ -428,8 +428,17 @@ namespace Protocol
 
 			int received = recv(sock, buffer + total_received, remaining_length, 0);
 
-			if (received == 0)
-				return handleNetworkError("recv()", 0, total_received);
+			if (received == 0) // peer performed orderly shutdown (EOF), not an error
+			{
+				if (persistent)
+				{
+					Debug() << "TCP (" << host << ":" << port << "): connection closed by peer, reconnecting.";
+					reconnect();
+				}
+				else
+					disconnect();
+				break;
+			}
 
 			if (received < 0)
 			{
