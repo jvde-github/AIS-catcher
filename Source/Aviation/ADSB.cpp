@@ -93,6 +93,9 @@ namespace Plane
             }
         }
         callsign[n] = 0;
+
+        while (n > 0 && callsign[n - 1] == ' ')
+            callsign[--n] = 0;
     }
 
     // Decode 13 bit AC altitude field (in DF 20 and others)
