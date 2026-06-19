@@ -6,8 +6,17 @@ on:
       - 'main'
     tags-ignore:
       - 'aiscat-*'
+  release:
+    types: [published]
   pull_request:
   workflow_dispatch:
+
+env:
+  # Where build outputs are attached: the published GitHub Release on a `release` event,
+  # otherwise the rolling `Edge` pre-release on pushes to main.
+  RELEASE_TARGET: ${{ github.event_name == 'release' && github.event.release.tag_name || 'Edge' }}
+  # Build the tagged commit on a release, otherwise the tip of main.
+  CHECKOUT_REF: ${{ github.event_name == 'release' && github.event.release.tag_name || 'main' }}
 
 jobs:
   bakeHTML:
@@ -18,7 +27,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v6
       with:
-        ref: main
+        ref: ${{ env.CHECKOUT_REF }}
         fetch-depth: 0
 
     - name: Set run number for downstream jobs
@@ -86,7 +95,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v6
       with:
-        ref: main
+        ref: ${{ env.CHECKOUT_REF }}
         fetch-depth: 0
 
     - name: Set filename
@@ -120,8 +129,8 @@ jobs:
         mv output/ais-catcher.deb ${{ env.filename }}
 
     - name: Upload to release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      run: gh release upload 'Edge' ${{ env.filename }} --repo ${{ github.repository }} --clobber
+      if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'release'
+      run: gh release upload "${{ env.RELEASE_TARGET }}" ${{ env.filename }} --repo ${{ github.repository }} --clobber
 
     - name: Upload artifact
       uses: actions/upload-artifact@v7
@@ -147,7 +156,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v6
       with:
-        ref: main
+        ref: ${{ env.CHECKOUT_REF }}
         fetch-depth: 0
 
     - name: Set filename
@@ -181,8 +190,8 @@ jobs:
         mv output/ais-catcher.deb ${{ env.filename }}
 
     - name: Upload to release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      run: gh release upload 'Edge' ${{ env.filename }} --repo ${{ github.repository }} --clobber
+      if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'release'
+      run: gh release upload "${{ env.RELEASE_TARGET }}" ${{ env.filename }} --repo ${{ github.repository }} --clobber
 
     - name: Upload artifact
       uses: actions/upload-artifact@v7
@@ -252,7 +261,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v6
         with:
-          ref: main
+          ref: ${{ env.CHECKOUT_REF }}
           fetch-depth: 0
 
       - name: Calculate Container Metadata
@@ -301,7 +310,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
       with:
-        ref: main
+        ref: ${{ env.CHECKOUT_REF }}
         fetch-depth: 0
     
     - name: Add MSBuild to PATH
@@ -434,12 +443,12 @@ jobs:
         path: output
 
     - name: Compress, upload, and delete ZIP file
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'release'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher ${{matrix.platform}}.zip"
-        bash -c "gh release upload 'Edge' './output/AIS-catcher ${{matrix.platform}}.zip' --repo ${{ github.repository }} --clobber"
+        bash -c "gh release upload '${{ env.RELEASE_TARGET }}' './output/AIS-catcher ${{matrix.platform}}.zip' --repo ${{ github.repository }} --clobber"
         del "output\AIS-catcher ${{matrix.platform}}.zip"
 
     - name: Download SDRPlay API
@@ -477,10 +486,10 @@ jobs:
         path: output
 
     - name: Compress, upload, and delete ZIP file
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'release'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
-        bash -c "gh release upload 'Edge' './output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip' --repo ${{ github.repository }} --clobber"
+        bash -c "gh release upload '${{ env.RELEASE_TARGET }}' './output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip' --repo ${{ github.repository }} --clobber"
         del "output\AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
