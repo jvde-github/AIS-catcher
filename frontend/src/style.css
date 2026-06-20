@@ -519,23 +519,35 @@ a:focus {
 }
 
 .tabulator .tabulator-cell {
-    border: dashed thin;
-    border-color: var(--table-border-color);
-    padding: 10px 15px;
-    font-size: 0.9em;
+    border: none;
+    border-bottom: 1px solid var(--table-border-color);
+    padding: 6px 14px;
+    /* fixed rowHeight is 37px; line-height fills it so single-line content
+       is vertically centered (cells are inline-block, so text would otherwise
+       sit at the top) */
+    line-height: 24px;
+    font-size: 12px;
+    vertical-align: middle;
     color: var(--main-font-color);
 }
 
+/* keep inline icons (flags, ship-type markers) centered with the text */
+.tabulator .tabulator-cell img,
+.tabulator .tabulator-cell svg,
+.tabulator .tabulator-cell span {
+    vertical-align: middle;
+}
+
 .tabulator .tabulator-header {
-    border-left: 10px solid var(--table-header-background-color);
+    border: none;
 }
 
 .tabulator .tabulator-header .tabulator-col {
     background-color: var(--table-header-background-color);
-    font-size: 1em;
+    font-size: 12px;
     color: white;
     border: none;
-    padding: 25px 15px;
+    padding: 8px 14px;
     border-collapse: collapse;
 }
 
@@ -574,6 +586,9 @@ a:focus {
 /* other tables */
 .mytable {
     height: 100%;
+    width: 100%;
+    table-layout: fixed;
+    box-sizing: border-box;
     overflow: auto;
     border-collapse: collapse;
 }
@@ -585,7 +600,7 @@ a:focus {
 }
 
 .mytable thead>tr>th {
-    padding: 25px 15px;
+    padding: 10px 15px;
     border-collapse: collapse;
 }
 
@@ -593,6 +608,10 @@ a:focus {
 td {
     border: none;
     padding: 10px 15px;
+}
+
+.mytable>tbody>tr>td {
+    padding: 5px 4px;
 }
 
 .mytable>tbody>tr:nth-child(even) {
@@ -632,12 +651,12 @@ td {
 }
 
 .map-button-box.active {
-    transform: translateX(-555px);
+    transform: translateX(-425px);
 }
 
 .map-button {
-    width: 30px !important;
-    height: 30px !important;
+    width: 26px !important;
+    height: 26px !important;
     border: none !important;
     margin: 0px !important;
     background-color: var(--menu-background-color) !important;
@@ -648,6 +667,11 @@ td {
 
 .map-button:focus {
     outline: none !important;
+}
+
+.map-button svg {
+    width: 14px !important;
+    height: 14px !important;
 }
 
 #tableselection {}
@@ -837,7 +861,7 @@ td {
 
 .tablecard_inner table {
     font-size: 10px;
-    margin: 5px;
+    margin: 5px 0;
     color: var(--menu-font-color);
     border: 1px solid var(--settings-header-bg-color);
 }
@@ -849,7 +873,7 @@ td {
 
 .tablecard_inner table thead>tr>th {
     text-align: left;
-    padding: 10px 10px;
+    padding: 10px 4px;
     border-collapse: collapse;
 }
 
@@ -871,7 +895,7 @@ td {
 .tablecard_inner table th:nth-child(1),
 .tablecard_inner table td:nth-child(1) {
     /* Flag */
-    width: 20px;
+    width: 28px;
 }
 
 .tablecard_inner table td:nth-child(1) {
@@ -882,19 +906,22 @@ td {
 .tablecard_inner table th:nth-child(2),
 .tablecard_inner table td:nth-child(2) {
     /* Name */
-    width: 260px;
+    /* no width: Name flexes to absorb slack so other columns hold exact px */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .tablecard_inner table th:nth-child(3),
 .tablecard_inner table td:nth-child(3) {
     /* Distance */
-    width: 70px;
+    width: 46px;
 }
 
 .tablecard_inner table th:nth-child(4),
 .tablecard_inner table td:nth-child(4) {
     /* Speed */
-    width: 70px;
+    width: 46px;
 }
 
 .tablecard_inner table th:nth-child(5),
@@ -906,7 +933,7 @@ td {
 .tablecard_inner table th:nth-child(6),
 .tablecard_inner table td:nth-child(6) {
     /* Last */
-    width: 80px;
+    width: 70px;
 }
 
 .sort-icon::after {
@@ -1517,6 +1544,59 @@ td {
     margin-right: 8px;
     font-size: 16px;
     width: 16px;
+}
+
+/* Map & overlays selection dialog */
+#map-menu {
+    width: 300px;
+    padding: 16px 18px;
+}
+
+#map-menu table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#map-menu td {
+    padding: 6px 0;
+    vertical-align: top;
+}
+
+#map-menu td:first-child {
+    white-space: nowrap;
+    padding-right: 16px;
+    padding-top: 9px;
+    font-weight: 500;
+    opacity: 0.7;
+}
+
+#baseMapSelector {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid var(--menu-border-color);
+    border-radius: 6px;
+    background-color: var(--menu-background-color);
+    color: var(--menu-font-color);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+#overlayContainer input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0 9px 0 0;
+    vertical-align: -3px;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+}
+
+#overlayContainer label {
+    cursor: pointer;
+    line-height: 1.9;
+}
+
+#overlayContainer label:hover {
+    color: var(--primary-color);
 }
 
 .marker {
@@ -2529,7 +2609,7 @@ td {
     display: flex;
     flex-direction: column;
     background-color: var(--settings-bg-color);
-    width: 560px;
+    width: 430px;
     height: calc(100% - 55px);
     top: 55px;
     right: 0px;
@@ -2538,7 +2618,7 @@ td {
     border: 1px solid var(--settings-header-bg-color);
     padding: 0px;
     margin: 0px;
-    transform: translateX(562px);
+    transform: translateX(432px);
     transition: transform 0.3s ease-out;
     filter: box-shadow(-10px 0 15px -5px var(--shadow-color));
 
@@ -2584,7 +2664,7 @@ td {
 }
 
 .settings_header {
-    flex: 0 0 40px;
+    flex: 0 0 52px;
     background-color: var(--settings-bg-color);
     color: var(--menu-font-color);
     border-bottom: solid 1px var(--shadow-color-light);
@@ -2610,16 +2690,23 @@ td {
 }
 
 .settings_header .search-box {
-    font-size: 12px;
-    height: auto;
-    padding: 5px 10px;
+    font-size: 14px;
+    height: 38px;
+    padding: 6px 14px 6px 40px;
     margin: 0;
 }
 
 .settings_header div:nth-child(n + 3) {
-    flex: 0 0 40px;
-    transform: scale(1.15) translateX(1px) translateY(8px);
+    flex: 0 0 auto;
+    align-self: center;
+    margin-right: 14px;
+    font-size: 22px;
     cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.settings_header div:nth-child(n + 3):hover {
+    opacity: 0.65;
 }
 
 .settings_header div:last-child {
@@ -2642,45 +2729,60 @@ td {
 
 .search-box {
     width: 100%;
-    height: 28px;
-    padding: 5px 10px;
+    height: 38px;
+    padding: 6px 14px 6px 40px;
     margin: 2px;
-    border-radius: 15px;
-    border: solid 1px var(--menu-font-color);
+    border-radius: 8px;
+    border: solid 1px var(--menu-border-color);
     color: var(--menu-font-color);
-    background-color: transparent;
+    background-color: var(--menu-background-color);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 14px center;
+    background-size: 16px;
     max-width: 500px;
+    font-size: 14px;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.search-box::placeholder {
+    color: #9aa0a6;
 }
 
 .search-box:focus {
     outline: none;
-}
-
-.ship-table-column-controls {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    border: 1px solid var(--menu-border-color);
-    border-radius: 6px;
-    overflow: hidden;
-    margin-left: 8px;
-    flex-shrink: 0;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.18);
 }
 
 .ship-table-column-dropdown {
     position: relative;
+    flex-shrink: 0;
+    margin-left: 8px;
 }
 
-.ship-table-column-dropdown-toggle {
-    padding: 4px 6px;
-    font-size: 16px;
-    color: var(--menu-font-color);
-    background-color: var(--menu-background-color);
-    cursor: pointer;
-    border: none;
-    border-right: 1px solid var(--menu-border-color);
-    display: flex;
+.ship-table-columns-btn {
+    display: inline-flex;
     align-items: center;
+    gap: 7px;
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid var(--menu-border-color);
+    border-radius: 8px;
+    background-color: var(--menu-background-color);
+    color: var(--menu-font-color);
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ship-table-columns-btn:hover {
+    border-color: var(--primary-color);
+}
+
+.ship-table-columns-btn .chevron {
+    opacity: 0.55;
 }
 
 .ship-table-column-dropdown-menu {
@@ -2688,18 +2790,37 @@ td {
     position: fixed;
     background-color: var(--menu-background-color);
     color: var(--menu-font-color);
-    font-size: 0.8em;
-    min-width: 200px;
-    max-height: 300px;
-    overflow-y: auto;
-    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
-    padding: 12px;
+    font-size: 13px;
+    min-width: 220px;
+    border: 1px solid var(--menu-border-color);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
     z-index: 9999;
 }
 
+.column-menu-header {
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.55;
+    border-bottom: 1px solid var(--menu-border-color);
+}
+
+.column-menu-list {
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 6px;
+}
+
 .ship-table-column-dropdown-item {
-    display: block;
-    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 6px;
     cursor: pointer;
 }
 
@@ -2708,18 +2829,35 @@ td {
 }
 
 .ship-table-column-dropdown-item input {
-    margin-right: 20px;
+    margin: 0;
+    width: 15px;
+    height: 15px;
+    accent-color: var(--primary-color);
+    cursor: pointer;
 }
 
-.ship-table-column-reset {
-    padding: 4px 6px;
-    font-size: 16px;
-    color: var(--menu-font-color);
-    background-color: var(--menu-background-color);
-    cursor: pointer;
-    border: none;
+.column-menu-footer {
+    border-top: 1px solid var(--menu-border-color);
+    padding: 8px;
+}
+
+.column-menu-reset {
     display: flex;
     align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--menu-font-color);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.column-menu-reset:hover {
+    background-color: var(--menu-background-hover-color);
+    color: var(--primary-color);
 }
 
 .info-panel {

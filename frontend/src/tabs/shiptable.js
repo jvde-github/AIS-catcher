@@ -218,10 +218,18 @@ function populateColumnVisibilityMenu() {
     const menu = document.getElementById("shipTableColumnVisibilityMenu");
     menu.innerHTML = "";
 
+    const header = document.createElement("div");
+    header.className = "column-menu-header";
+    header.textContent = "Show columns";
+    menu.appendChild(header);
+
+    const list = document.createElement("div");
+    list.className = "column-menu-list";
     table.getColumns().forEach((column) => {
         const checkboxId = `checkbox-${column.getField()}`;
-        const item = document.createElement("div");
+        const item = document.createElement("label");
         item.classList.add("ship-table-column-dropdown-item");
+        item.setAttribute("for", checkboxId);
 
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
@@ -230,14 +238,25 @@ function populateColumnVisibilityMenu() {
         checkbox.checked = column.isVisible();
         checkbox.addEventListener("change", updateColumnVisibility);
 
-        const label = document.createElement("label");
-        label.setAttribute("for", checkboxId);
-        label.textContent = column.getDefinition().title;
+        const text = document.createElement("span");
+        text.textContent = column.getDefinition().title;
 
         item.appendChild(checkbox);
-        item.appendChild(label);
-        menu.appendChild(item);
+        item.appendChild(text);
+        list.appendChild(item);
     });
+    menu.appendChild(list);
+
+    const footer = document.createElement("div");
+    footer.className = "column-menu-footer";
+    const resetBtn = document.createElement("button");
+    resetBtn.type = "button";
+    resetBtn.className = "column-menu-reset";
+    resetBtn.innerHTML =
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span>Reset to default</span>';
+    resetBtn.addEventListener("click", () => resetColumns());
+    footer.appendChild(resetBtn);
+    menu.appendChild(footer);
 }
 
 function updateColumnVisibility() {
@@ -307,10 +326,6 @@ function wireUIEvents() {
         });
     }
 
-    const resetButton = document.getElementById('shipTableColumnReset');
-    if (resetButton) {
-        resetButton.addEventListener('click', () => resetColumns());
-    }
 }
 
 export async function update() {
