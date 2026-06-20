@@ -33,18 +33,16 @@ namespace Device {
 	SDRPLAY::SDRPLAY() : Device(Format::CF32, 2304000, Type::SDRPLAY, "SDRPLAY") {
 		float version = 0.0;
 
-		if (API_count++ == 0 && sdrplay_api_Open() != sdrplay_api_Success) {
-			running = false;
+		if (API_count == 0 && sdrplay_api_Open() != sdrplay_api_Success)
 			return;
-		}
-		if (sdrplay_api_ApiVersion(&version) != sdrplay_api_Success) {
-			running = false;
+
+		API_count++;
+
+		if (sdrplay_api_ApiVersion(&version) != sdrplay_api_Success)
 			return;
-		}
-		if ((int)version != 3) {
-			running = false;
+
+		if ((int)version != 3)
 			return;
-		}
 
 		running = true;
 	}
@@ -54,6 +52,8 @@ namespace Device {
 	}
 
 	void SDRPLAY::Open(uint64_t h) {
+		if (!running) throw std::runtime_error("SDRPLAY: API v3.x not running");
+
 		sdrplay_api_ErrT err;
 		unsigned int DeviceCount;
 
@@ -189,7 +189,10 @@ namespace Device {
 
 	void SDRPLAY::getDeviceList(std::vector<Description>& DeviceList) {
 		unsigned int DeviceCount;
-		if (!running) throw std::runtime_error("SDRPLAY: API v3.x not running");
+		if (!running) {
+			Warning() << "SDRPLAY: API v3.x not running, skipping SDRplay device detection.";
+			return;
+		}
 
 		sdrplay_api_LockDeviceApi();
 		sdrplay_api_DeviceT devices[SDRPLAY_MAX_DEVICES];
