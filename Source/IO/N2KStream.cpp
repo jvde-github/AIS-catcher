@@ -210,9 +210,9 @@ namespace IO
 		int ais_version = 0, IMO = 0, shiptype = 0, to_bow = 0, to_stern = 0, to_starboard = 0, to_port = 0, month = 0, day = 0, hour = 0;
 		int minute = 0, epfd = 0, dte = 0, nDays = 0;
 		char callsign[7], shipname[20], destination[20];
-		std::memset(callsign, ' ', sizeof(callsign));
-		std::memset(shipname, ' ', sizeof(shipname));
-		std::memset(destination, ' ', sizeof(destination));
+		std::memset(callsign, 0, sizeof(callsign));
+		std::memset(shipname, 0, sizeof(shipname));
+		std::memset(destination, 0, sizeof(destination));
 		float draught = 0;
 
 		for (const JSON::Member &p : data[0].getMembers())
@@ -303,8 +303,8 @@ namespace IO
 		N2kMsg.AddByte((ais.repeat() & 0x03) << 6 | (ais.type() & 0x3f));
 		N2kMsg.Add4ByteUInt(ais.mmsi());
 		N2kMsg.Add4ByteUInt(IMO);
-		N2kMsg.AddStr(callsign, 7);
-		N2kMsg.AddStr(shipname, 20);
+		N2kMsg.AddAISStr(callsign, 7);
+		N2kMsg.AddAISStr(shipname, 20);
 		N2kMsg.AddByte(shiptype);
 		N2kMsg.Add2ByteDouble(to_bow + to_stern, 0.1);
 		N2kMsg.Add2ByteDouble(to_port + to_starboard, 0.1);
@@ -313,7 +313,7 @@ namespace IO
 		N2kMsg.Add2ByteUInt(nDays);
 		N2kMsg.Add4ByteUInt((hour * 3600 + minute * 60) * 10000);
 		N2kMsg.Add2ByteDouble(draught, 0.01);
-		N2kMsg.AddStr(destination, 20);
+		N2kMsg.AddAISStr(destination, 20);
 		N2kMsg.AddByte((dte & 0x01) << 6 | (epfd & 0x0f) << 2 | (ais_version & 0x03));
 		N2kMsg.AddByte(0xe0 | (ais.getChannel() == 'A' ? 0 : 1));
 		N2kMsg.AddByte(0xff);
@@ -414,7 +414,7 @@ namespace IO
 		N2kMsg.AddByte((ais.repeat() & 0x03) << 6 | ais.type());
 		N2kMsg.Add4ByteUInt(ais.mmsi());
 		N2kMsg.AddByte(0xe0 | (ais.getChannel() == 'A' ? 0 : 1));
-		N2kMsg.AddStr(text.c_str(), text.size());
+		N2kMsg.AddVarStr(text.c_str(), 163, tN2kMsg::vss_ForceASCII); // safety text is STRING_LAU (max 163)
 
 		N2K::N2KInterface.sendMsg(N2kMsg);
 	}
@@ -505,7 +505,7 @@ namespace IO
 		double lat = LAT_UNDEFINED, lon = LON_UNDEFINED, cog = COG_UNDEFINED, speed = SPEED_UNDEFINED;
 		int heading = HEADING_UNDEFINED, shiptype = 0, to_bow = 0, to_stern = 0, second = 0, to_port = 0, to_starboard = 0, epfd = 0, accuracy = 0, raim = 0, dte = 0, assigned = 0;
 		char shipname[20];
-		std::memset(shipname, ' ', sizeof(shipname));
+		std::memset(shipname, 0, sizeof(shipname));
 
 		for (const JSON::Member &p : data[0].getMembers())
 		{
@@ -588,7 +588,7 @@ namespace IO
 		N2kMsg.Add2ByteDouble(to_port + to_starboard, 0.1);
 		N2kMsg.Add2ByteDouble(to_starboard, 0.1);
 		N2kMsg.Add2ByteDouble(to_bow, 0.1);
-		N2kMsg.AddStr(shipname, 20);
+		N2kMsg.AddAISStr(shipname, 20);
 		N2kMsg.AddByte(dte | assigned << 1);
 		N2kMsg.AddByte(0x00);
 		N2kMsg.AddByte(0xff);
@@ -603,19 +603,15 @@ namespace IO
 		int off_position = 0, regional = 0, raim = 0, virtual_aid = 0, assigned = 0;
 		double lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 
-		char name[20];
-		std::memset(name, ' ', sizeof(name));
+		std::string name;
 
 		for (const JSON::Member &p : data[0].getMembers())
 		{
 			switch (p.Key())
 			{
 			case AIS::KEY_NAME:
-			{
-				const std::string &s = p.Get().getString();
-				std::memcpy(name, s.c_str(), std::min(sizeof(name), s.size()));
-			}
-			break;
+				name = p.Get().getString();
+				break;
 			case AIS::KEY_AID_TYPE:
 				aid_type = p.Get().getInt();
 				break;
@@ -678,7 +674,7 @@ namespace IO
 		N2kMsg.AddByte(epfd << 1);
 		N2kMsg.AddByte(regional);
 		N2kMsg.AddByte((ais.getChannel() == 'A' ? 1 : 0) | 0xe0);
-		N2kMsg.AddVarStr(name);
+		N2kMsg.AddVarStr(name.c_str(), 34, tN2kMsg::vss_ForceASCII); // AtoN name is STRING_LAU (max 34)
 
 		N2K::N2KInterface.sendMsg(N2kMsg);
 	}
@@ -688,9 +684,9 @@ namespace IO
 
 		int shiptype = 0, to_bow = 0, to_stern = 0, to_starboard = 0, to_port = 0, mothership_mmsi = 0, partno = 0;
 		char shipname[20], callsign[7], vendorid[7];
-		std::memset(shipname, ' ', sizeof(shipname));
-		std::memset(callsign, ' ', sizeof(callsign));
-		std::memset(vendorid, ' ', sizeof(vendorid));
+		std::memset(shipname, 0, sizeof(shipname));
+		std::memset(callsign, 0, sizeof(callsign));
+		std::memset(vendorid, 0, sizeof(vendorid));
 
 		for (const JSON::Member &p : data[0].getMembers())
 		{
@@ -746,7 +742,7 @@ namespace IO
 			N2kMsg.Priority = 6;
 			N2kMsg.AddByte(ais.repeat() << 6 | ais.type());
 			N2kMsg.Add4ByteUInt(ais.mmsi());
-			N2kMsg.AddStr(shipname, 20);
+			N2kMsg.AddAISStr(shipname, 20);
 		}
 		else
 		{
@@ -755,8 +751,8 @@ namespace IO
 			N2kMsg.AddByte(ais.repeat() << 6 | ais.type());
 			N2kMsg.Add4ByteUInt(ais.mmsi());
 			N2kMsg.AddByte(shiptype);
-			N2kMsg.AddStr(vendorid, 7);
-			N2kMsg.AddStr(callsign, 7);
+			N2kMsg.AddAISStr(vendorid, 7);
+			N2kMsg.AddAISStr(callsign, 7);
 			N2kMsg.Add2ByteUDouble(to_bow + to_stern, 0.1);
 			N2kMsg.Add2ByteUDouble(to_port + to_starboard, 0.1);
 			N2kMsg.Add2ByteUDouble(to_starboard, 0.1);
