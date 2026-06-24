@@ -22,6 +22,7 @@
 #include <fstream>
 #include <vector>
 #include <thread>
+#include <atomic>
 #include <string>
 
 #ifdef _WIN32
@@ -78,7 +79,7 @@ namespace Device
 		
 		std::thread read_thread;
 
-		bool lost = false;
+		std::atomic<bool> lost{false};
 		bool dump = false;
 		std::string dump_file;
 		std::ofstream dump_stream;

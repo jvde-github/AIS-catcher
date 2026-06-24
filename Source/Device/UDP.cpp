@@ -89,6 +89,7 @@ namespace Device
 	void UDP::Close()
 	{
 		Device::Close();
+		Stop();
 		StopServer();
 	}
 
@@ -119,7 +120,7 @@ namespace Device
 
 	void UDP::Run()
 	{
-		Debug() << "UDP: starting thread.\n";
+		Debug() << "UDP: starting thread.";
 		char buffer[16384];
 		RAW r = {getFormat(), buffer, 0};
 		int nread;
@@ -134,7 +135,12 @@ namespace Device
 					r.size = nread;
 					Send(&r, 1, tag);
 				}
-			} while (nread > 0);
+				else if (nread < 0 && !Net::wouldBlock(Net::lastError()))
+				{
+					Error() << "UDP: receive error: " << Net::errorString(Net::lastError());
+					lost = true;
+				}
+			} while (nread > 0 && isStreaming());
 
 			struct timeval tv;
 			fd_set fds;
@@ -145,7 +151,7 @@ namespace Device
 			tv = {1, 0};
 			select(sock + 1, &fds, nullptr, nullptr, &tv);
 		}
-		Debug() << "UDP: ending thread.\n";
+		Debug() << "UDP: ending thread.";
 	}
 
 	void UDP::applySettings()

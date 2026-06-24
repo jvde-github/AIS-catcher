@@ -379,7 +379,7 @@ namespace IO
 	void PostgreSQL::setup()
 	{
 		db_keys.resize(AIS::KEY_COUNT, -1);
-		Debug() << "Connecting to ProgreSQL database: \"" + conn_string + "\"\n";
+		Debug() << "Connecting to ProgreSQL database: \"" + conn_string + "\"";
 		con = PQconnectdb(conn_string.c_str());
 
 		if (con == nullptr || PQstatus(con) != CONNECTION_OK)

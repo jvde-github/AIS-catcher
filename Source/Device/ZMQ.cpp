@@ -110,7 +110,7 @@ namespace Device {
 				fifo.Pop();
 			}
 			else {
-				Error() << "ZMQ: no signal." << std::endl;
+				Error() << "ZMQ: no signal.";
 			}
 		}
 	}

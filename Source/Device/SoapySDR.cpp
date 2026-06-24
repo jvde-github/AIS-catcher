@@ -43,10 +43,10 @@ namespace Device {
 	void SOAPYSDR::Close() {
 		Device::Close();
 
-		if (dev != NULL && !skip_unmake) {
+		if (dev != nullptr && !skip_unmake) {
 			SoapySDR::Device::unmake(dev);
 		}
-		dev = NULL;
+		dev = nullptr;
 	}
 
 	void SOAPYSDR::Play() {
@@ -81,9 +81,9 @@ namespace Device {
 			if (run_thread.joinable()) run_thread.join();
 		}
 
-		if (dev != NULL && !skip_unmake) {
+		if (dev != nullptr && !skip_unmake) {
 			SoapySDR::Device::unmake(dev);
-			dev = NULL;
+			dev = nullptr;
 		}
 	}
 
@@ -96,7 +96,7 @@ namespace Device {
 			stream = dev->setupStream(SOAPY_SDR_RX, "CF32", channels, stream_args);
 		}
 		catch (std::exception& e) {
-			Error()  << "SOAPYSDR: " << e.what() << std::endl;
+			Error()  << "SOAPYSDR: " << e.what();
 			lost = true;
 			return;
 		}
@@ -118,17 +118,17 @@ namespace Device {
 				int ret = dev->readStream(stream, buffers, mtu, flags, timeNs, timeout_us);
 
 				if (ret < 0) {
-					Error()  << "SOAPYSDR: error reading stream: " << SoapySDR_errToStr(ret) << std::endl;
+					Error()  << "SOAPYSDR: error reading stream: " << SoapySDR_errToStr(ret);
 					lost = true;
 					skip_unmake = true;
 					break;
 				}
 				if (ret > 0 && isStreaming() && !fifo.Push((char*)input.data(), ret * sizeof(CFLOAT32)))
-					Error()  << "SOAPYSDR: buffer overrun." << std::endl;
+					Error()  << "SOAPYSDR: buffer overrun.";
 			}
 		}
 		catch (std::exception& e) {
-			Error()  << "SOAPYSDR: exception " << e.what() << std::endl;
+			Error()  << "SOAPYSDR: exception " << e.what();
 			lost = true;
 		}
 		if (activated) {
@@ -150,7 +150,7 @@ namespace Device {
 				fifo.Pop();
 			}
 			else {
-				if (isStreaming()) Error()  << "SOAPYSDR: timeout." << std::endl;
+				if (isStreaming()) Error()  << "SOAPYSDR: timeout.";
 			}
 		}
 	}
@@ -197,8 +197,9 @@ namespace Device {
 
 			std::string dev_str = "driver=" + d["driver"] + ",serial=" + d["serial"];
 
+			SoapySDR::Device* device = nullptr;
 			try {
-				auto device = SoapySDR::Device::make(dev_str);
+				device = SoapySDR::Device::make(dev_str);
 				int nChannels = device->getNumChannels(SOAPY_SDR_RX);
 				for (int c = 0; c < nChannels; c++) {
 					std::string serial_str = "SCH" + std::to_string(c) + "-" + d["driver"];
@@ -207,11 +208,13 @@ namespace Device {
 					DeviceList.push_back(Description("SOAPYSDR", dev_str, serial_str, (uint64_t)cnt, Type::SOAPYSDR));
 					cnt++;
 				}
-				SoapySDR::Device::unmake(device);
 			}
 			catch (const std::exception& ex) {
 				Warning() << "SOAPYSDR: skipping device: " << ex.what();
 			}
+
+			if (device != nullptr)
+				SoapySDR::Device::unmake(device);
 		}
 	}
 

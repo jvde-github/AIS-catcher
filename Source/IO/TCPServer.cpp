@@ -395,7 +395,7 @@ namespace IO
 				SleepAndWait();
 		}
 
-		Debug() << "TCP Server: thread ending.\n";
+		Debug() << "TCP Server: thread ending.";
 	}
 
 	void TCPServer::SleepAndWait()
@@ -545,7 +545,7 @@ namespace IO
 
 		if (!setNonBlock(sock))
 		{
-			Error() << "TCP Server: cannot set socket to non-blocking\n";
+			Error() << "TCP Server: cannot set socket to non-blocking";
 		}
 		stop = false;
 

@@ -349,7 +349,7 @@ namespace DSP {
 		if (error) {
 			soxr_delete(m_soxr);
 			m_soxr = nullptr;
-			Error() << "SOX processing returns error." << std::endl;
+			Error() << "SOX processing returns error.";
 			return;
 		}
 

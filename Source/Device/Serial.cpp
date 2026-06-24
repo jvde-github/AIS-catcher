@@ -68,7 +68,7 @@ namespace Device
 		RAW r = {getFormat(), buffer, 0};
 
 #ifdef _WIN32
-		Debug() << "Serial: starting thread" << std::endl;
+		Debug() << "Serial: starting thread";
 		DWORD bytesRead;
 
 		while (isStreaming())
@@ -89,7 +89,7 @@ namespace Device
 			else
 			{
 				DWORD error = GetLastError();
-				Error() << "Serial read error: " << error << std::endl;
+				Error() << "Serial read error: " << error;
 				lost = true;
 				break;
 			}
@@ -119,18 +119,18 @@ namespace Device
 				{
 					if (nread == 0)
 					{
-						Error() << "Serial read encountered an error: unexpected end." << std::endl;
+						Error() << "Serial read encountered an error: unexpected end.";
 					}
 					else
 					{
-						Error() << "Serial read encountered an error: " << strerror(errno) << std::endl;
+						Error() << "Serial read encountered an error: " << strerror(errno);
 					}
 					lost = true;
 				}
 			}
 			else if (rslt < 0)
 			{
-				Error() << "Serial read encountered an error: " << strerror(errno) << std::endl;
+				Error() << "Serial read encountered an error: " << strerror(errno);
 				lost = true;
 			}
 		}
@@ -211,6 +211,18 @@ namespace Device
 		}
 
 #ifdef _WIN32
+		switch (baudrate)
+		{
+		case 9600:
+		case 19200:
+		case 38400:
+		case 57600:
+		case 115200:
+			break;
+		default:
+			throw std::runtime_error("Serial: unsupported baudrate.");
+		}
+
 		serial_handle = CreateFileA(port.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
 		if (serial_handle == INVALID_HANDLE_VALUE)
 		{
@@ -339,7 +351,7 @@ namespace Device
 		if (flowcontrol == FlowControl::HARDWARE)
 		{
 			tty.c_cflag |= CRTSCTS;
-			Info() << "Serial: hardware flow control enabled" << std::endl;
+			Info() << "Serial: hardware flow control enabled";
 		}
 		else
 		{
@@ -385,7 +397,7 @@ namespace Device
 				if (!cmd.empty())
 				{
 					SleepSystem(250);
-					Info() << "Serial: init command sent \"" << cmd << "\"" << std::endl;
+					Info() << "Serial: init command sent \"" << cmd << "\"";
 					WriteSerialCommand(serial_fd, cmd);
 				}
 			}
@@ -494,7 +506,21 @@ namespace Device
 	{
 		device_list.clear();
 
-#ifndef _WIN32
+#if defined(__APPLE__)
+		// macOS exposes serial ports as /dev/cu.*
+		std::vector<std::string> dev_files = Util::Helper::getFilesInDirectory("/dev");
+		for (const auto &name : dev_files)
+		{
+			if (name.compare(0, 3, "cu.") != 0 || name.find("Bluetooth") != std::string::npos)
+				continue;
+
+			std::string device_path = "/dev/" + name;
+
+			uint64_t handle = device_list.size();
+			device_list.push_back(device_path);
+			DeviceList.push_back(Description("Serial", "USB Serial", name, handle, Type::SERIALPORT));
+		}
+#elif !defined(_WIN32)
 		// Scan /dev/serial/by-id for persistent device names (symlinks)
 		std::vector<std::string> by_id_files = Util::Helper::getFilesInDirectory("/dev/serial/by-id");
 		for (const auto &name : by_id_files)

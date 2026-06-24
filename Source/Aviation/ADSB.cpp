@@ -436,7 +436,7 @@ namespace Plane
         {
             if (!warning_given)
             {
-                Error() << "ADSB: Reference position is not available. Cannot determine location of onground planes. Provide receiver location with -Z lat lon." << std::endl;
+                Error() << "ADSB: Reference position is not available. Cannot determine location of onground planes. Provide receiver location with -Z lat lon.";
                 warning_given = true;
             }
             return false;

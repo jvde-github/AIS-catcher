@@ -174,7 +174,7 @@ namespace Util
 		}
 		catch (const std::exception &e)
 		{
-			Error() << "WAV out: " << e.what() << std::endl;
+			Error() << "WAV out: " << e.what();
 			stopping = true;
 			StopRequest();
 		}
@@ -221,7 +221,7 @@ namespace Util
 		file.write(reinterpret_cast<const char *>(raw->data), raw->size);
 		if (!file.good())
 		{
-			Error() << "WAV out: write failed (disk full?) on \"" << filename << "\"" << std::endl;
+			Error() << "WAV out: write failed (disk full?) on \"" << filename << "\"";
 			stopping = true;
 			file.close();
 			StopRequest();

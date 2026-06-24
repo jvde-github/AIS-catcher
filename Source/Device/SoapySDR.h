@@ -52,7 +52,7 @@ namespace Device
 		bool print = false;
 
 		std::vector<SoapyDevice> dev_list;
-		SoapySDR::Device *dev = NULL;
+		SoapySDR::Device *dev = nullptr;
 
 		SoapySDR::Kwargs stream_args;
 		SoapySDR::Kwargs setting_args;
@@ -75,7 +75,6 @@ namespace Device
 		static const uint32_t BUFFER_SIZE = 16 * 16384;
 
 		void applySettings();
-		int findRate(const std::vector<double> &);
 
 	public:
 		SOAPYSDR() : Device(Format::CF32, 0, Type::SOAPYSDR, "SoapySDR") {}
