@@ -231,9 +231,10 @@ const ACTIONS = {
     openADSBExchangeCard: () => openExt('adsbexchange', card_mmsi),
     toggleStatcard: () => toggleStatcard(),
     toggleTablecard: () => toggleTablecard(),
-    mapSettingsContextMenu: (e) => showContextMenu(e, '', '', ['settings', 'center', 'ctx-map']),
+    mapSettingsContextMenu: (e, d, el) => showContextMenu(e, '', '', ['settings', 'ctx-map'], el),
     toggleCommunityPane: () => community.toggleCommunityPane(),
     showMapMenu: (e) => showMapMenu(e),
+    toggleAttribution: () => toggleAttribution(),
     mainspaceContextMenu: (e) => showContextMenu(e, 0, '', ['settings']),
     plotsContextMenu: (e) => showContextMenu(e, '', 'charts', ['settings', 'ctx-charts']),
 
@@ -1144,7 +1145,7 @@ function hideContextMenu(event) {
     document.removeEventListener("click", hideContextMenu);
 }
 
-function showContextMenu(event, mmsi, type, context) {
+function showContextMenu(event, mmsi, type, context, anchorEl) {
 
     if (event && event.preventDefault) {
         event.preventDefault();
@@ -1213,7 +1214,18 @@ function showContextMenu(event, mmsi, type, context) {
 
     contextMenu.style.display = "block";
 
-    if (context.includes("center")) {
+    if (anchorEl) {
+        // Anchor above the control button (it sits near the bottom edge), so the
+        // menu unfurls upward instead of running off-screen.
+        contextMenu.style.transform = "none";
+        const btn = anchorEl.getBoundingClientRect();
+        const rect = contextMenu.getBoundingClientRect();
+        let left = Math.max(8, btn.right - rect.width);
+        let top = btn.top - rect.height - 8;
+        if (top < 8) top = Math.min(btn.bottom + 8, window.innerHeight - rect.height - 8);
+        contextMenu.style.left = left + "px";
+        contextMenu.style.top = top + "px";
+    } else if (context.includes("center")) {
         contextMenu.style.left = "50%";
         contextMenu.style.top = "50%";
         contextMenu.style.transform = "translate(-50%, -50%)";
@@ -3010,9 +3022,9 @@ function showHoverTrack(mmsi) {
 }
 
 function toggleAttribution() {
-    const attribution = document.getElementById('map_attributions');
-    const currentDisplay = attribution.style.display;
-    attribution.style.display = currentDisplay === 'none' ? 'block' : 'none';
+    const foldout = document.getElementById('map-attribution-foldout');
+    if (!foldout) return;
+    foldout.style.display = foldout.style.display === 'block' ? 'none' : 'block';
 }
 
 function getTooltipContentBinary(mmsiOrBinary) {

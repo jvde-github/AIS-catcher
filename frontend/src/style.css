@@ -639,15 +639,24 @@ td {
 }
 
 .map-button-box {
-    border: 2px solid var(--menu-border-color);
-    border-radius: 5px;
     position: absolute;
     right: 10px;
     z-index: 1004;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 2px solid var(--menu-border-color);
+    border-radius: 9px;
     background-color: var(--menu-background-color);
     fill: var(--menu-font-color);
     color: var(--menu-font-color);
+    box-shadow: 0 2px 8px var(--shadow-color);
     transition: transform 0.3s ease-out;
+}
+
+/* Pill-shaped group (capsule ends) for the top "more tools" controls */
+.map-button-box.map-pill {
+    border-radius: 22px;
 }
 
 .map-button-box.active {
@@ -655,14 +664,27 @@ td {
 }
 
 .map-button {
-    width: 26px !important;
-    height: 26px !important;
+    width: 34px !important;
+    height: 34px !important;
     border: none !important;
     margin: 0px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     background-color: var(--menu-background-color) !important;
     fill: var(--menu-font-color) !important;
     color: var(--menu-font-color) !important;
-    border-radius: inherit !important;
+    border-radius: 0 !important;
+}
+
+/* Thin divider between stacked buttons within a group */
+.map-button+.map-button {
+    border-top: 1px solid var(--menu-border-color) !important;
+}
+
+.map-button:hover {
+    background-color: var(--menu-border-color) !important;
 }
 
 .map-button:focus {
@@ -670,8 +692,36 @@ td {
 }
 
 .map-button svg {
-    width: 12px !important;
-    height: 12px !important;
+    width: 19px !important;
+    height: 19px !important;
+}
+
+/* Top pill holds denser glyphs (ship/ruler) — render them a touch smaller
+   so they don't look heavier than the bottom group's line icons */
+.map-pill .map-button svg {
+    width: 15px !important;
+    height: 15px !important;
+}
+
+/* Attribution fold-out, opened from the (i) button in the bottom control group */
+.map-attribution-foldout {
+    position: absolute;
+    right: 54px;
+    bottom: 30px;
+    max-width: 260px;
+    z-index: 1004;
+    padding: 6px 10px;
+    border: 1px solid var(--menu-border-color);
+    border-radius: 8px;
+    background-color: var(--menu-background-color);
+    color: var(--menu-font-color);
+    box-shadow: 0 2px 8px var(--shadow-color);
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+.map-attribution-foldout a {
+    color: inherit;
 }
 
 #tableselection {}
