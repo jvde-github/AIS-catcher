@@ -784,7 +784,13 @@ const labelStyle = function (feature) {
         }));
     }
 
-    return new ol.style.Style({ text: text });
+    const isSelected = ('ship' in feature && feature.ship.mmsi == card_mmsi) ||
+                       ('plane' in feature && getICAO(feature.plane) == card_mmsi);
+
+    return new ol.style.Style({
+        text: text,
+        zIndex: isSelected ? 1000 : 0
+    });
 };
 
 const hoverCircleStyleFunction = function (feature) {
@@ -949,7 +955,18 @@ const rangeLayer = new ol.layer.Vector({
 const labelLayer = new ol.layer.Vector({
     source: labelVector,
     style: labelStyle,
-    declutter: settings.labels_declutter || true
+    declutter: settings.labels_declutter || true,
+    renderOrder: function(a, b) {
+        const aSelected = ('ship' in a && a.ship.mmsi == card_mmsi) || ('plane' in a && getICAO(a.plane) == card_mmsi);
+        const bSelected = ('ship' in b && b.ship.mmsi == card_mmsi) || ('plane' in b && getICAO(b.plane) == card_mmsi);
+        if (aSelected && !bSelected) {
+            return -1;
+        }
+        if (!aSelected && bSelected) {
+            return 1;
+        }
+        return 0;
+    }
 });
 
 
@@ -4499,6 +4516,7 @@ function showShipcard(type, m, pixel = undefined) {
     }
 
     trackLayer.changed();
+    labelLayer.changed();
     updateFocusMarker();
 }
 
