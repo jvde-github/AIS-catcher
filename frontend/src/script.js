@@ -784,7 +784,10 @@ const labelStyle = function (feature) {
         }));
     }
 
-    return new ol.style.Style({ text: text });
+    const isSelected = (card_type === 'ship' && 'ship' in feature && feature.ship.mmsi == card_mmsi) ||
+                       (card_type === 'plane' && 'plane' in feature && feature.plane.hexident == card_mmsi);
+
+    return new ol.style.Style({ text: text, zIndex: isSelected ? 1000 : 0 });
 };
 
 const hoverCircleStyleFunction = function (feature) {
@@ -949,7 +952,7 @@ const rangeLayer = new ol.layer.Vector({
 const labelLayer = new ol.layer.Vector({
     source: labelVector,
     style: labelStyle,
-    declutter: settings.labels_declutter || true
+    declutter: settings.labels_declutter ?? true
 });
 
 
@@ -4499,6 +4502,7 @@ function showShipcard(type, m, pixel = undefined) {
     }
 
     trackLayer.changed();
+    labelLayer.changed();
     updateFocusMarker();
 }
 
