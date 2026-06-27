@@ -1038,6 +1038,11 @@ td {
     width: 400px;
 }
 
+.mapcard.floating {
+    border-radius: 9px;
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
 .measurecard-width {
     width: 450px;
 }

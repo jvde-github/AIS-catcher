@@ -474,6 +474,7 @@ function restoreDefaultSettings() {
         show_labels: "dynamic",
         labels_declutter: true,
         labels_prioritize_active: true,
+        labels_active_only: false,
         label_class_background: true,
         eri: true,
         loadURL: true,
@@ -481,6 +482,7 @@ function restoreDefaultSettings() {
         show_track_on_hover: false,
         show_track_on_select: false,
         shipcard_pinned: false,
+        shipcard_top_left: false,
         show_signal_graphs: true,
         show_ppm_graphs: true,
         shipcard_pinned_x: null,
@@ -757,6 +759,11 @@ const planeStyle = function (feature) {
 };
 
 const labelStyle = function (feature) {
+    const isActive = (card_type === 'ship' && 'ship' in feature && feature.ship.mmsi == card_mmsi) ||
+                     (card_type === 'plane' && 'plane' in feature && feature.plane.hexident == card_mmsi);
+
+    if (settings.labels_active_only && !isActive) return new ol.style.Style({});
+
     const font = settings.tooltipLabelFontSize + "px Arial";
     const text = new ol.style.Text({
         text: decodeHTMLEntities('ship' in feature ?
@@ -785,9 +792,7 @@ const labelStyle = function (feature) {
         }));
     }
 
-    const isSelected = (settings.labels_prioritize_active ?? true) &&
-                       ((card_type === 'ship' && 'ship' in feature && feature.ship.mmsi == card_mmsi) ||
-                        (card_type === 'plane' && 'plane' in feature && feature.plane.hexident == card_mmsi));
+    const isSelected = (settings.labels_prioritize_active ?? true) && isActive;
 
     return new ol.style.Style({ text: text, zIndex: isSelected ? 1000 : 0 });
 };
@@ -811,7 +816,7 @@ const selectCircleStyleFunction = function (feature) {
     const iconScale = settings.icon_scale || 1.0;
     const circleScale = settings.circle_scale || 6.0;
     const radiusScale = 1 + (circleScale - 2.0) * 0.08; // Scale radius slightly with line width
-    return new ol.style.Style({
+    const styles = [new ol.style.Style({
         image: new ol.style.Circle({
             radius: 13 * iconScale * radiusScale,
             stroke: new ol.style.Stroke({
@@ -819,7 +824,17 @@ const selectCircleStyleFunction = function (feature) {
                 width: circleScale * iconScale
             })
         })
-    });
+    })];
+
+    if (card_type === 'ship') {
+        const ship = shipsDB[card_mmsi]?.raw;
+        if (ship && ship.imgSize) styles.push(markerStyle({ ship }));
+    } else if (card_type === 'plane') {
+        const plane = planesDB[card_mmsi]?.raw;
+        if (plane && plane.imgSize) styles.push(...planeStyle({ plane }));
+    }
+
+    return styles;
 }
 
 const binaryAssociatedOutline = new ol.style.Style({
@@ -3539,8 +3554,8 @@ function convertStringBooleansToActual() {
         'counter', 'fading', 'android', 'kiosk', 'welcome', 'show_range',
         'distance_circles', 'table_shiptype_use_icon', 'fix_center',
         'show_circle_outline', 'dark_mode', 'setcoord', 'eri', 'loadURL',
-        'show_station', 'labels_declutter', 'labels_prioritize_active', 'label_class_background', 'show_track_on_hover',
-        'show_track_on_select', 'shipcard_max', 'kiosk_pan_map',
+        'show_station', 'labels_declutter', 'labels_prioritize_active', 'labels_active_only', 'label_class_background', 'show_track_on_hover',
+        'show_track_on_select', 'shipcard_max', 'shipcard_top_left', 'kiosk_pan_map',
         'show_signal_graphs', 'show_ppm_graphs'
     ];
 
@@ -4311,6 +4326,16 @@ function toggleShipcardPin() {
     }
 }
 
+function placeTopLeft(aside) {
+    const mapSize = map.getSize();
+    const rect = aside.getBoundingClientRect();
+    if (mapSize && mapSize[0] >= rect.width + 20 && mapSize[1] >= rect.height + 20) {
+        aside.style.left = "10px";
+        aside.style.top = "10px";
+        aside.classList.add("floating");
+    }
+}
+
 function positionAside(pixel, aside) {
 
     stopHover();
@@ -4324,11 +4349,21 @@ function positionAside(pixel, aside) {
     if (settings.shipcard_pinned && settings.shipcard_pinned_x !== null && settings.shipcard_pinned_y !== null) {
         aside.style.left = `${settings.shipcard_pinned_x}px`;
         aside.style.top = `${settings.shipcard_pinned_y}px`;
+        aside.classList.add("floating");
         return;
     }
 
     aside.style.left = "";
     aside.style.top = "";
+    aside.classList.remove("floating");
+
+    if (settings.shipcard_top_left) {
+        placeTopLeft(aside);
+        adjustMapForShipcard(pixel);
+        return;
+    }
+
+    let placed = false;
 
     if (pixel) {
         const margin = 35;
@@ -4355,7 +4390,14 @@ function positionAside(pixel, aside) {
             } else {
                 aside.style.left = `${(mapSize[0] - shipCardWidth) / 2}px`;
             }
+
+            aside.classList.add("floating");
+            placed = true;
         }
+    }
+
+    if (!placed) {
+        placeTopLeft(aside);
     }
     adjustMapForShipcard(pixel);
 }
@@ -5075,6 +5117,7 @@ function updateSettingsTab() {
 
     document.getElementById("settings_labels_declutter").checked = settings.labels_declutter;
     document.getElementById("settings_labels_prioritize_active").checked = settings.labels_prioritize_active;
+    document.getElementById("settings_labels_active_only").checked = settings.labels_active_only;
     document.getElementById("settings_label_class_background").checked = settings.label_class_background;
     document.getElementById("settings_tooltipLabelFontsize").value = settings.tooltipLabelFontSize;
 
@@ -5118,6 +5161,7 @@ function updateSettingsTab() {
     document.getElementById("settings_table_shiptype_use_icon").checked = settings.table_shiptype_use_icon;
     document.getElementById("settings_show_track_on_hover").checked = settings.show_track_on_hover;
     document.getElementById("settings_show_track_on_select").checked = settings.show_track_on_select;
+    document.getElementById("settings_shipcard_top_left").checked = settings.shipcard_top_left;
 
     document.getElementById("settings_kiosk_mode").checked = settings.kiosk;
     document.getElementById("settings_kiosk_rotation_speed").value = settings.kiosk_rotation_speed;
