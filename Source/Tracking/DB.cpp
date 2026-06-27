@@ -1129,6 +1129,12 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 	if (type < 1 || type > 28 || msg->mmsi() == 0)
 		return;
 
+	if (lat == LAT_UNDEFINED && tag.station_lat != LAT_UNDEFINED && tag.station_lon != LON_UNDEFINED)
+	{
+		lat = tag.station_lat;
+		lon = tag.station_lon;
+	}
+
 	// setup/find ship in database
 	int hash = Hash(msg->mmsi());
 	int ptr = findShip(msg->mmsi());
