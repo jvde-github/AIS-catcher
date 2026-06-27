@@ -473,6 +473,7 @@ function restoreDefaultSettings() {
         tab: "map",
         show_labels: "dynamic",
         labels_declutter: true,
+        labels_prioritize_active: true,
         label_class_background: true,
         eri: true,
         loadURL: true,
@@ -784,8 +785,9 @@ const labelStyle = function (feature) {
         }));
     }
 
-    const isSelected = (card_type === 'ship' && 'ship' in feature && feature.ship.mmsi == card_mmsi) ||
-                       (card_type === 'plane' && 'plane' in feature && feature.plane.hexident == card_mmsi);
+    const isSelected = (settings.labels_prioritize_active ?? true) &&
+                       ((card_type === 'ship' && 'ship' in feature && feature.ship.mmsi == card_mmsi) ||
+                        (card_type === 'plane' && 'plane' in feature && feature.plane.hexident == card_mmsi));
 
     return new ol.style.Style({ text: text, zIndex: isSelected ? 1000 : 0 });
 };
@@ -3537,7 +3539,7 @@ function convertStringBooleansToActual() {
         'counter', 'fading', 'android', 'kiosk', 'welcome', 'show_range',
         'distance_circles', 'table_shiptype_use_icon', 'fix_center',
         'show_circle_outline', 'dark_mode', 'setcoord', 'eri', 'loadURL',
-        'show_station', 'labels_declutter', 'label_class_background', 'show_track_on_hover',
+        'show_station', 'labels_declutter', 'labels_prioritize_active', 'label_class_background', 'show_track_on_hover',
         'show_track_on_select', 'shipcard_max', 'kiosk_pan_map',
         'show_signal_graphs', 'show_ppm_graphs'
     ];
@@ -5072,6 +5074,7 @@ function updateSettingsTab() {
     document.getElementById("settings_distance_circle_color").value = settings.distance_circle_color;
 
     document.getElementById("settings_labels_declutter").checked = settings.labels_declutter;
+    document.getElementById("settings_labels_prioritize_active").checked = settings.labels_prioritize_active;
     document.getElementById("settings_label_class_background").checked = settings.label_class_background;
     document.getElementById("settings_tooltipLabelFontsize").value = settings.tooltipLabelFontSize;
 
