@@ -900,6 +900,47 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 	raw_counter.setFilter(filter);
 }
 
+void WebViewer::setDeviceDescription(const std::string &product, const std::string &vendor, const std::string &serial)
+{
+	pending_product = product;
+	pending_vendor = vendor;
+	pending_serial = serial;
+
+	if (!states.empty())
+	{
+		if (!product.empty())
+			states[0]->product = product;
+		if (!vendor.empty())
+			states[0]->vendor = vendor;
+		if (!serial.empty())
+			states[0]->serial = serial;
+	}
+}
+
+void WebViewer::connect(AIS::Model &model, Connection<JSON::JSON> &json, Device::Device &device)
+{
+	if (states.empty())
+		states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker()));
+
+	states[0]->label = "All";
+	states[0]->appendDevice(&device, "<br>");
+	states[0]->model_name += model.getName() + "<br>";
+
+	// Android supplies USB product/vendor/serial out-of-band via setDeviceDescription().
+	if (!pending_product.empty())
+		states[0]->product = pending_product;
+	if (!pending_vendor.empty())
+		states[0]->vendor = pending_vendor;
+	if (!pending_serial.empty())
+		states[0]->serial = pending_serial;
+
+	states[0]->connectJSON(json);
+	device >> raw_counter;
+
+	states[0]->applyConfig(tracking, filter);
+	raw_counter.setFilter(filter);
+}
+
 void WebViewer::Reset()
 {
 	for (auto &s : states)

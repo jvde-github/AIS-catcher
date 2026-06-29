@@ -311,6 +311,8 @@ private:
 
 	AIS::Filter filter;
 
+	std::string pending_product, pending_vendor, pending_serial;
+
 	std::vector<std::string> parsePath(const std::string &url);
 	bool parseMBTilesURL(const std::string &url, std::string &layerID, int &z, int &x, int &y);
 	void addMBTilesSource(const std::string &filepath, bool overlay);
@@ -360,6 +362,8 @@ public:
 
 	bool &active() { return run; }
 	void connect(const std::vector<std::unique_ptr<Receiver>> &receivers);
+	void connect(AIS::Model &model, Connection<JSON::JSON> &json, Device::Device &device);
+	void setDeviceDescription(const std::string &product, const std::string &vendor, const std::string &serial);
 	void start();
 	void close();
 	void Reset();
