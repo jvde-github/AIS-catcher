@@ -5268,11 +5268,12 @@ function selectTab() {
     //document.getElementById(settings.tab + "_tab").click();
 }
 
+const androidStyle = document.createElement("style");
+document.head.appendChild(androidStyle);
+
 function updateAndroid() {
     const sel = isAndroid() ? ".noandroid" : ".android";
-    document.querySelectorAll(sel).forEach((el) => {
-        el.style.setProperty("display", "none", "important");
-    });
+    androidStyle.textContent = sel + " { display: none !important; }";
 }
 
 function updateKioskSpeedDisplay(value) {
