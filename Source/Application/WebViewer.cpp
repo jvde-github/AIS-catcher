@@ -922,9 +922,9 @@ void WebViewer::connect(AIS::Model &model, Connection<JSON::JSON> &json, Device:
 	if (states.empty())
 		states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker()));
 
+	states[0]->setDevice(&device);
 	states[0]->label = "All";
-	states[0]->appendDevice(&device, "<br>");
-	states[0]->model_name += model.getName() + "<br>";
+	states[0]->model_name = model.getName();
 
 	// Android supplies USB product/vendor/serial out-of-band via setDeviceDescription().
 	if (!pending_product.empty())
