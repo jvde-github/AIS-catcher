@@ -953,6 +953,12 @@ void WebViewer::Reset()
 
 void WebViewer::start()
 {
+	if (states.empty())
+	{
+		states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker()));
+		states[0]->label = "All";
+	}
+
 	for (auto &s : states)
 		s->setup();
 
