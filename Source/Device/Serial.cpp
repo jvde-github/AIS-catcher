@@ -17,6 +17,9 @@
 
 #include <cstring>
 
+#include "Serial.h"
+#include "Helper.h"
+
 #ifndef _WIN32
 #include <sys/select.h>
 #include <sys/stat.h>
@@ -24,9 +27,6 @@
 #include <fcntl.h>
 #include <limits.h>
 #endif
-
-#include "Serial.h"
-#include "Helper.h"
 
 namespace
 {
