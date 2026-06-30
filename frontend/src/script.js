@@ -121,7 +121,7 @@ const ACTIONS = {
 
     // tableside / generic close buttons / dialog
     hideTablecard: () => hideTablecard(),
-    updateTableSort: (e) => updateTableSort(e),
+    updateTableSort: (e, dataset, el) => updateTableSort(e, dataset, el),
     closeSettings: () => closeSettings(),
     closeDialog: () => closeDialog(),
 
@@ -1675,9 +1675,7 @@ function updateMarkerCountTooltip() {
     }
 }
 
-function updateTableSort(event) {
-    const header = event.currentTarget;
-
+function updateTableSort(event, dataset, header) {
     const column = header.getAttribute("data-column");
     const currentOrder = header.classList.contains("ascending") ? "ascending" : "descending";
 

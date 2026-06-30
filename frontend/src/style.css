@@ -988,8 +988,9 @@ td {
 
 .sort-icon::after {
     content: "\25B2";
-    font-size: 12px;
-    margin-left: 5px;
+    font-size: 8px;
+    margin-left: 2px;
+    vertical-align: middle;
     color: transparent;
 }
 
