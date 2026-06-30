@@ -300,6 +300,7 @@ WebViewer::WebViewer() : Setting("WebViewer"),
 	os(JSON::Writer::escape(Util::Helper::getOS())),
 	hardware(JSON::Writer::escape(Util::Helper::getHardware()))
 {
+	states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker("All")));
 }
 
 std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced)
@@ -458,8 +459,6 @@ void WebViewer::addFileSystemTilesSource(const std::string &directoryPath, bool 
 
 void WebViewer::Clear()
 {
-	if (states.empty())
-		return;
 	states[0]->clear();
 }
 
@@ -831,8 +830,6 @@ std::time_t WebViewer::parseSinceParam(const std::string &query)
 
 ReceiverTracker *WebViewer::getState(int idx)
 {
-	if (states.empty())
-		return nullptr;
 	if (idx < 0 || idx >= (int)states.size())
 		return states[0].get();
 	return states[idx].get();
@@ -844,19 +841,10 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 
 	bool multi = receivers.size() > 1 && !filter.hasIDFilter() && groups_in == 0xFFFFFFFFFFFFFFFF;
 
-	states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker()));
-	states[0]->label = "All";
-
 	for (int k = 0; k < (int)receivers.size(); k++)
 	{
 		Receiver &r = *receivers[k];
 		ReceiverTracker *per = nullptr;
-
-		if (multi)
-		{
-			states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker()));
-			per = states.back().get();
-		}
 
 		bool rec_details = false;
 		for (int j = 0; j < r.Count(); j++)
@@ -867,8 +855,12 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 				{
 					auto *device = r.getDeviceManager().getDevice();
 
-					if (per)
+					if (multi)
+					{
+						states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker()));
+						per = states.back().get();
 						per->setDevice(device);
+					}
 
 					states[0]->appendDevice(device, newline);
 					rec_details = true;
@@ -906,22 +898,16 @@ void WebViewer::setDeviceDescription(const std::string &product, const std::stri
 	pending_vendor = vendor;
 	pending_serial = serial;
 
-	if (!states.empty())
-	{
-		if (!product.empty())
-			states[0]->product = product;
-		if (!vendor.empty())
-			states[0]->vendor = vendor;
-		if (!serial.empty())
-			states[0]->serial = serial;
-	}
+	if (!product.empty())
+		states[0]->product = product;
+	if (!vendor.empty())
+		states[0]->vendor = vendor;
+	if (!serial.empty())
+		states[0]->serial = serial;
 }
 
 void WebViewer::connect(AIS::Model &model, Connection<JSON::JSON> &json, Device::Device &device)
 {
-	if (states.empty())
-		states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker()));
-
 	states[0]->setDevice(&device);
 	states[0]->label = "All";
 	states[0]->model_name = model.getName();
@@ -953,12 +939,6 @@ void WebViewer::Reset()
 
 void WebViewer::start()
 {
-	if (states.empty())
-	{
-		states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker()));
-		states[0]->label = "All";
-	}
-
 	for (auto &s : states)
 		s->setup();
 
@@ -977,8 +957,7 @@ void WebViewer::start()
 
 	if (realtime)
 	{
-		if (!states.empty())
-			states[0]->connectSink(sse_streamer);
+		states[0]->connectSink(sse_streamer);
 		sse_streamer.setSSE(this);
 	}
 
@@ -993,7 +972,7 @@ void WebViewer::start()
 		s->wireStreams();
 	}
 
-	if (supportPrometheus && !states.empty())
+	if (supportPrometheus)
 		states[0]->connectSink(dataPrometheus);
 
 	if (firstport && lastport)
@@ -1033,7 +1012,7 @@ void WebViewer::close()
 		Error() << "Statistics - cannot write file: " << backup.getFilename();
 	}
 
-	if (stats_on_close && !states.empty())
+	if (stats_on_close)
 	{
 		std::ostringstream ss;
 		ss << "\n";

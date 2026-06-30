@@ -123,6 +123,8 @@ public:
 	std::string label;
 	std::string product, vendor, serial, model_name, sample_rate;
 
+	ReceiverTracker(const std::string &label = "") : label(label) {}
+
 	// Device metadata
 	void setDevice(Device::Device *device);
 	void appendDevice(Device::Device *device, const std::string &newline);

@@ -206,7 +206,7 @@ namespace Device
 	void RTLSDR::setBandwidth(int a)
 	{
 #ifndef HASRTLSDR_TUNERBW
-		throw std::runtime_error("RTLSDR: setting of bandwidth not supported in this version of librtlsdr.");
+		Warning() << "RTLSDR: setting of bandwidth not supported in this version of librtlsdr, ignoring.";
 #else
 		if (rtlsdr_set_tuner_bandwidth(dev, a) != 0)
 			throw std::runtime_error("RTLSDR: cannot set bandwidth.");
