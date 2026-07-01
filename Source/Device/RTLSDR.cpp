@@ -68,7 +68,7 @@ namespace Device
 #ifdef HASRTL_ANDROID
 	void RTLSDR::OpenWithFileDescriptor(int f)
 	{
-		int rc = rtlsdr_open_file_descriptor(&dev, f);
+		int rc = rtlsdr_open_android(&dev, f);
 		if (rc != 0)
 			throw std::runtime_error("RTLSDR: cannot open device (error " + std::to_string(rc) + ": " + libusbErrorName(rc) + ").");
 
