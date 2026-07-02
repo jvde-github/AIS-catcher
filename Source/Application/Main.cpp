@@ -632,6 +632,8 @@ static std::unique_ptr<WebViewer> startManagedViewer(const std::string &config_f
 
 	viewer->active() = true;
 	viewer->SetKey(AIS::KEY_SETTING_PORT, "8100");
+	viewer->SetKey(AIS::KEY_SETTING_REALTIME, "on");
+	viewer->SetKey(AIS::KEY_SETTING_LOG, "on");
 
 	try
 	{
