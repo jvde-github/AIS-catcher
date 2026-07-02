@@ -381,6 +381,13 @@ public:
 
 	bool isPortSet() { return port_set; }
 	int getBoundPort() { return bound_port; }
+
+	// managed mode: let the OS pick a free port at start()
+	void setEphemeralPort()
+	{
+		port_set = true;
+		firstport = lastport = 0;
+	}
 	// HTTP callbacks
 	void Request(IO::TCPServerConnection &c, const std::string &r, bool gzip) override;
 

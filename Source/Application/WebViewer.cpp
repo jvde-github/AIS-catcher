@@ -1023,10 +1023,19 @@ void WebViewer::start()
 			throw std::runtime_error("Cannot open port in range [" + std::to_string(firstport) + "," + std::to_string(lastport) + "]");
 
 		bound_port = port;
-		Info() << "HTML Server running at port " << std::to_string(port);
+	}
+	else if (port_set)
+	{
+		// port 0: OS assigns a free port, actual port in listening_port
+		if (!HTTPServer::start(0))
+			throw std::runtime_error("Cannot open OS-assigned port");
+
+		bound_port = listening_port;
 	}
 	else
 		throw std::runtime_error("HTML server ports not specified");
+
+	Info() << "HTML Server running at port " << std::to_string(bound_port);
 
 	time_start = time(nullptr);
 

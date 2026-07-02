@@ -624,14 +624,15 @@ static void run(RunState &state)
 // The persistent viewer lives as long as the process, so the hub UI keeps its
 // map, ship history and SSE connections across engine restarts. It is part of
 // the control apparatus, separate from the config's server section (which
-// keeps its normal per-run meaning): defaults to port 8100, configurable via
-// a "viewer" object inside the control section.
+// keeps its normal per-run meaning): the OS assigns it a free port (the hub
+// learns it via /api/status), overridable via a "viewer" object inside the
+// control section.
 static std::unique_ptr<WebViewer> startManagedViewer(const std::string &config_file, ControlCore &core)
 {
 	std::unique_ptr<WebViewer> viewer(new WebViewer());
 
 	viewer->active() = true;
-	viewer->SetKey(AIS::KEY_SETTING_PORT, "8100");
+	viewer->setEphemeralPort();
 	viewer->SetKey(AIS::KEY_SETTING_REALTIME, "on");
 	viewer->SetKey(AIS::KEY_SETTING_LOG, "on");
 
@@ -674,6 +675,10 @@ static int runManaged(const std::string &config_file, int port)
 {
 	ControlCore core(config_file, port);
 	ControlServer server(core);
+
+	// managed mode is driven from the log page, so include DEBUG detail
+	// (device open/close, stream wiring) that a CLI user would not want
+	Logger::getInstance().setMinLevel(LogLevel::DEBUG);
 
 	Info() << "Control: managed mode, config file \"" << config_file << "\"";
 	server.start();
