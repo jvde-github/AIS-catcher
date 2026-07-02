@@ -31,6 +31,7 @@
 #endif
 #include "RunState.h"
 #include "Config.h"
+#include "ControlCore.h"
 #include "JSON.h"
 #include "JSON/Parser.h"
 #include "N2KStream.h"
@@ -39,7 +40,10 @@
 #include "Screen.h"
 #include "File.h"
 
+// stop ends the current run (device end, timeout, engine stop); stop_process
+// additionally ends the managed-mode supervisor loop (signals only)
 static std::atomic<bool> stop;
+static std::atomic<bool> stop_process;
 
 void StopRequest()
 {
@@ -50,7 +54,10 @@ void StopRequest()
 BOOL WINAPI consoleHandler(DWORD signal)
 {
 	if (signal == CTRL_C_EVENT)
+	{
 		stop = true;
+		stop_process = true;
+	}
 	return TRUE;
 }
 #else
@@ -65,6 +72,7 @@ static void consoleHandler(int signal)
 		std::cerr << "Termination request: " << signal;
 
 	stop = true;
+	stop_process = true;
 }
 #endif
 
@@ -86,6 +94,7 @@ static void Usage()
 	Info() << "\t[-C [filename] - read configuration settings from file]";
 	Info() << "\t[-D [connection string] - write messages to PostgreSQL database]";
 	Info() << "\t[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]";
+	Info() << "\t[-E [filename] [port] - managed mode: run engine from config file with control server, must be only option (default port: 8110)]";
 	Info() << "\t[-f [filename] write NMEA lines to file]";
 	Info() << "\t[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]";
 	Info() << "\t[-G [LEVEL level] [SYSTEM on] - control logging (levels: DEBUG, INFO, WARNING, ERROR, CRITICAL) or enable system logging]";
@@ -585,6 +594,50 @@ static void run(RunState &state)
 #endif
 }
 
+// Managed mode (-E): supervisor loop that builds a fresh RunState from the
+// config file for every engine start and tears it down on stop/restart. The
+// process survives a broken config; the user fixes it via the control API.
+static int runManaged(const std::string &config_file, int port)
+{
+	ControlCore core(config_file, port);
+
+	Info() << "Control: managed mode, config file \"" << config_file << "\", control port " << core.getControlPort();
+
+	while (!stop_process)
+	{
+		if (core.engineDesired())
+		{
+			stop = false;
+
+			RunState state;
+			Config c(state);
+
+			try
+			{
+				state.receivers.back()->getDeviceManager().refreshDevices();
+				c.read(config_file);
+				core.reportRunning();
+				Info() << "Control: engine started";
+				run(state);
+			}
+			catch (std::exception const &e)
+			{
+				Error() << "Control: engine failed: " << e.what();
+				for (auto &r : state.receivers)
+					r->stop();
+				core.engineFailed();
+			}
+			core.reportStopped();
+			Info() << "Control: engine stopped";
+		}
+		else
+		{
+			core.waitForCommand();
+		}
+	}
+	return 0;
+}
+
 static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb)
 {
 	const std::string MSG_NO_PARAMETER = "does not allow additional parameter.";
@@ -959,8 +1012,10 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 			receiver.SetKey(AIS::KEY_SETTING_LAT, arg1).SetKey(AIS::KEY_SETTING_LON, arg2);
 			break;
 		case 'A':
+			throw std::runtime_error("Option -A is obsolete. Please use -I instead.");
+			break;
 		case 'E':
-			throw std::runtime_error("Option -" + std::string(1, param[1]) + " is obsolete. Please use -I instead.");
+			throw std::runtime_error("Option -E (managed mode) must be the only option: AIS-catcher -E <config file> [port].");
 			break;
 		case 'I':
 		{
@@ -1120,6 +1175,35 @@ int main(int argc, char *argv[])
 
 		std::vector<std::string> expanded;
 		expandResponseFiles(argc, argv, expanded);
+
+		bool managed = false;
+		for (const auto &a : expanded)
+			managed |= (a == "-E");
+
+		if (managed)
+		{
+			if (expanded.size() < 3 || expanded.size() > 4 || expanded[1] != "-E")
+				throw std::runtime_error("in managed mode all settings live in the config file: AIS-catcher -E <config file> [port]");
+
+			std::string file;
+			int port = 0;
+
+			for (std::size_t i = 2; i < expanded.size(); i++)
+			{
+				const std::string &a = expanded[i];
+				if (!a.empty() && a.find_first_not_of("0123456789") == std::string::npos)
+					port = Util::Parse::Integer(a, 1, 65535);
+				else if (file.empty())
+					file = a;
+				else
+					throw std::runtime_error("managed mode takes one config file and optionally one port: AIS-catcher -E <config file> [port]");
+			}
+
+			if (file.empty())
+				throw std::runtime_error("managed mode requires a config file: AIS-catcher -E <config file> [port]");
+
+			return runManaged(file, port);
+		}
 
 		std::vector<char *> argv_expanded;
 		argv_expanded.reserve(expanded.size() + 1);

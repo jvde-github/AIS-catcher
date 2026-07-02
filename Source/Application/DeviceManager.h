@@ -97,5 +97,6 @@ public:
 
     bool openDevice(int sample_rate, int bandwidth, int ppm, int frequency, TAG &tag);
     void printAvailableDevices(bool JSON = false);
+    static std::string getDeviceListJSON();
     void selectDeviceByIndex(int index);
 };

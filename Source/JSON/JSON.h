@@ -233,6 +233,7 @@ namespace JSON
 		}
 
 		void Add(int p, const std::string &v, Pool &pool);
+		void Set(int p, const std::string &v, Pool &pool);
 
 		void Add(int p)
 		{
@@ -314,6 +315,18 @@ namespace JSON
 
 	inline void JSON::Add(int p, const std::string &v, Pool &pool)
 	{
+		members.emplace_back(p, pool.addString(v));
+	}
+
+	// Replaces the value of an existing member, or appends the member if absent
+	inline void JSON::Set(int p, const std::string &v, Pool &pool)
+	{
+		for (auto &o : members)
+			if (o.Key() == p)
+			{
+				o = Member(p, pool.addString(v));
+				return;
+			}
 		members.emplace_back(p, pool.addString(v));
 	}
 

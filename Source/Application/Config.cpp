@@ -345,6 +345,9 @@ void Config::set(const std::string &str)
 			break;
 		case AIS::KEY_SETTING_RECEIVER: // handled in pass 1.5
 			break;
+		case AIS::KEY_SETTING_CONTROL: // managed mode (-E) fields, consumed by ControlCore
+		case AIS::KEY_SETTING_ENGINE:
+			break;
 		case AIS::KEY_SETTING_SCREEN:
 			_state.screen.setScreen(m.Get().to_string());
 			break;

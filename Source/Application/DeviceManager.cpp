@@ -180,22 +180,27 @@ void DeviceManager::printAvailableDevices(bool JSON)
 	}
 	else
 	{
-		std::string s;
-		JSON::Writer w(s);
-		w.beginObject().key("devices").beginArray();
-		for (int i = 0; i < device_list.size(); i++)
-		{
-			std::string type = Util::Parse::DeviceTypeString(device_list[i].getType());
-			std::string serial = device_list[i].getSerial();
-			w.beginObject()
-				.kv("input", type)
-				.kv("serial", serial)
-				.kv("name", type + " [" + serial + "]")
-				.endObject();
-		}
-		w.endArray().endObject().finish();
-		std::cout << s << "\n";
+		std::cout << getDeviceListJSON() << "\n";
 	}
+}
+
+std::string DeviceManager::getDeviceListJSON()
+{
+	std::string s;
+	JSON::Writer w(s);
+	w.beginObject().key("devices").beginArray();
+	for (int i = 0; i < device_list.size(); i++)
+	{
+		std::string type = Util::Parse::DeviceTypeString(device_list[i].getType());
+		std::string serial = device_list[i].getSerial();
+		w.beginObject()
+			.kv("input", type)
+			.kv("serial", serial)
+			.kv("name", type + " [" + serial + "]")
+			.endObject();
+	}
+	w.endArray().endObject().finish();
+	return s;
 }
 
 void DeviceManager::selectDeviceByIndex(int index)
