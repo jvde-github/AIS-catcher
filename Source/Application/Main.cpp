@@ -32,6 +32,7 @@
 #include "RunState.h"
 #include "Config.h"
 #include "ControlCore.h"
+#include "ControlServer.h"
 #include "JSON.h"
 #include "JSON/Parser.h"
 #include "N2KStream.h"
@@ -600,8 +601,10 @@ static void run(RunState &state)
 static int runManaged(const std::string &config_file, int port)
 {
 	ControlCore core(config_file, port);
+	ControlServer server(core);
 
-	Info() << "Control: managed mode, config file \"" << config_file << "\", control port " << core.getControlPort();
+	Info() << "Control: managed mode, config file \"" << config_file << "\"";
+	server.start();
 
 	while (!stop_process)
 	{

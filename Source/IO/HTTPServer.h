@@ -99,12 +99,37 @@ namespace IO
 		}
 	};
 
+	// Parsed HTTP request; target is the raw request target including the
+	// query string
+	struct HTTPRequest
+	{
+		std::string method;
+		std::string target;
+		std::string body;
+		std::string cookie;
+
+		std::string path() const
+		{
+			std::string::size_type pos = target.find('?');
+			return pos == std::string::npos ? target : target.substr(0, pos);
+		}
+
+		std::string query() const
+		{
+			std::string::size_type pos = target.find('?');
+			return pos == std::string::npos ? "" : target.substr(pos + 1);
+		}
+	};
+
 	class HTTPServer : public IO::TCPServer
 	{
 		std::array<std::string, 4> sse_topic = {"aiscatcher", "nmea", "nmea", "log"};
 
 	public:
 		virtual void Request(IO::TCPServerConnection &c, const std::string &msg, bool accept_gzip);
+		// Default implementation folds the request into the legacy string form
+		// (POST body appended as query string) and calls the overload above
+		virtual void Request(IO::TCPServerConnection &c, const HTTPRequest &r, bool accept_gzip);
 
 		void Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip = false, bool cache = false, bool cors = false, int status = 200);
 		void Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip = false, bool cache = false, bool cors = false, int status = 200);
@@ -140,6 +165,9 @@ namespace IO
 
 		void setFrameAncestors(const std::string &v) { frame_ancestors = v; }
 
+		// one-shot header (e.g. Set-Cookie) included in the next response only
+		void setExtraHeader(const std::string &h) { extra_header = h; }
+
 	private:
 		std::string ret, header;
 		// Default `*` permits any embedding — AIS-catcher is typically
@@ -147,6 +175,7 @@ namespace IO
 		// different port. Tighten with the `frame_ancestors` setting if the
 		// instance is exposed beyond a trusted network.
 		std::string frame_ancestors = "*";
+		std::string extra_header;
 		std::list<IO::SSEConnection> sse;
 		std::mutex sse_mtx;
 
@@ -166,7 +195,7 @@ namespace IO
 			}
 		}
 
-		void Parse(const std::string &s, std::string &get, bool &accept_gzip);
+		void Parse(const std::string &s, HTTPRequest &r, bool &accept_gzip);
 		void processClients();
 
 		ZIP zip;

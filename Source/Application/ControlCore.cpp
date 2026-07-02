@@ -18,8 +18,10 @@
 #include <fstream>
 #include <cstdio>
 #include <chrono>
+#include <random>
 
 #include "ControlCore.h"
+#include "SHA256.h"
 #include "Common.h"
 #include "Logger.h"
 #include "Helper.h"
@@ -151,19 +153,14 @@ ControlCore::EngineState ControlCore::getEngineState()
 	return state;
 }
 
-std::string ControlCore::getStatusJSON()
+long long ControlCore::getUptime()
 {
 	std::lock_guard<std::mutex> lock(mtx);
 
-	bool running = (state == EngineState::Running);
-	std::string s;
-	JSON::Writer w(s);
-	w.beginObject()
-		.kv("engine", running ? "running" : "stopped")
-		.kv("uptime", running ? (long long)(std::time(nullptr) - engine_start_time) : 0LL)
-		.endObject()
-		.finish();
-	return s;
+	if (state != EngineState::Running)
+		return 0;
+
+	return (long long)(std::time(nullptr) - engine_start_time);
 }
 
 std::string ControlCore::getConfig()
@@ -188,7 +185,121 @@ bool ControlCore::setConfig(const std::string &json, std::string &error)
 	{
 	}
 
-	return writeFileAtomic(config_file, json, error);
+	if (!writeFileAtomic(config_file, json, error))
+		return false;
+
+	refreshAuthFields(json);
+	return true;
+}
+
+// keeps in-memory credentials in sync when a config edit changes the control
+// section; port and engine intent deliberately stay untouched (a save is not
+// an apply)
+void ControlCore::refreshAuthFields(const std::string &json)
+{
+	try
+	{
+		JSON::Parser parser(JSON_DICT_SETTING);
+		JSON::Document doc = parser.parse(json);
+
+		const JSON::Value *v = doc.root[AIS::KEY_SETTING_CONTROL];
+		if (v && v->isObject())
+		{
+			std::lock_guard<std::mutex> lock(mtx);
+			for (const auto &c : v->getObject().getMembers())
+			{
+				if (c.Key() == AIS::KEY_SETTING_PASSWORD)
+					password_hash = c.Get().to_string();
+				else if (c.Key() == AIS::KEY_SETTING_SALT)
+					password_salt = c.Get().to_string();
+			}
+		}
+	}
+	catch (const std::exception &)
+	{
+	}
+}
+
+bool ControlCore::hasPassword()
+{
+	std::lock_guard<std::mutex> lock(mtx);
+	return !password_hash.empty();
+}
+
+bool ControlCore::verifyPassword(const std::string &password)
+{
+	std::lock_guard<std::mutex> lock(mtx);
+
+	if (password_hash.empty())
+		return false;
+
+	return Util::SHA256::hex(password_salt + password) == password_hash;
+}
+
+void ControlCore::setPassword(const std::string &password)
+{
+	static const char *digits = "0123456789abcdef";
+
+	std::random_device rd;
+	std::string salt;
+	while (salt.size() < 32)
+	{
+		uint32_t r = rd();
+		for (int j = 28; j >= 0; j -= 4)
+			salt += digits[(r >> j) & 0xF];
+	}
+
+	std::string hash = Util::SHA256::hex(salt + password);
+
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		password_salt = salt;
+		password_hash = hash;
+	}
+
+	persistControlAuth(hash, salt);
+}
+
+void ControlCore::persistControlAuth(const std::string &hash, const std::string &salt)
+{
+	std::lock_guard<std::mutex> lock(file_mtx);
+
+	try
+	{
+		JSON::Parser parser(JSON_DICT_SETTING);
+		JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
+
+		const JSON::Value *v = doc.root[AIS::KEY_SETTING_CONTROL];
+		if (v && v->isObject())
+		{
+			JSON::Value control = *v;
+			control.getObject().Set(AIS::KEY_SETTING_PASSWORD, hash, doc.pool);
+			control.getObject().Set(AIS::KEY_SETTING_SALT, salt, doc.pool);
+		}
+		else
+		{
+			JSON::JSON *control = doc.pool.addObject();
+			control->Add(AIS::KEY_SETTING_PORT, control_port);
+			control->Add(AIS::KEY_SETTING_PASSWORD, hash, doc.pool);
+			control->Add(AIS::KEY_SETTING_SALT, salt, doc.pool);
+
+			JSON::Value nv;
+			nv.setObject(control);
+			doc.root.Set(AIS::KEY_SETTING_CONTROL, nv);
+		}
+
+		std::string out;
+		JSON::Serializer serializer(JSON_DICT_SETTING);
+		serializer.stringify(doc.root, out);
+
+		std::string error;
+		if (!writeFileAtomic(config_file, out, error))
+			Error() << "Control: cannot persist password: " << error;
+	}
+	catch (const std::exception &e)
+	{
+		Error() << "Control: cannot persist password: " << e.what();
+	}
 }
 
 std::string ControlCore::getDeviceListJSON()

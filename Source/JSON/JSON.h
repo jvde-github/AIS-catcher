@@ -76,6 +76,7 @@ namespace JSON
 			return isString() ? *data.s : empty;
 		}
 		const JSON &getObject() const { return *data.o; }
+		JSON &getObject() { return *data.o; }
 
 		Type getType() const { return type; }
 		const bool isObject() const { return type == Type::OBJECT; }
@@ -234,6 +235,17 @@ namespace JSON
 
 		void Add(int p, const std::string &v, Pool &pool);
 		void Set(int p, const std::string &v, Pool &pool);
+
+		void Set(int p, Value v)
+		{
+			for (auto &o : members)
+				if (o.Key() == p)
+				{
+					o = Member(p, v);
+					return;
+				}
+			members.emplace_back(p, v);
+		}
 
 		void Add(int p)
 		{

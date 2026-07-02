@@ -44,7 +44,7 @@ public:
 	void restartEngine();
 
 	EngineState getEngineState();
-	std::string getStatusJSON();
+	long long getUptime();
 
 	std::string getConfig();
 	bool setConfig(const std::string &json, std::string &error);
@@ -52,8 +52,10 @@ public:
 
 	int getControlPort() const { return control_port; }
 	const std::string &getConfigFile() const { return config_file; }
-	const std::string &getPasswordHash() const { return password_hash; }
-	const std::string &getPasswordSalt() const { return password_salt; }
+
+	bool hasPassword();
+	bool verifyPassword(const std::string &password);
+	void setPassword(const std::string &password);
 
 	// supervisor interface (managed-mode loop in Main.cpp)
 	bool engineDesired();
@@ -79,7 +81,9 @@ private:
 
 	void createDefaultConfig();
 	void readManagedFields(int port_override);
+	void refreshAuthFields(const std::string &json);
 	bool validate(const std::string &json, std::string &error);
 	bool writeFileAtomic(const std::string &path, const std::string &content, std::string &error);
 	void persistEngineField(bool on);
+	void persistControlAuth(const std::string &hash, const std::string &salt);
 };

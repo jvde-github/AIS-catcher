@@ -80,11 +80,11 @@ namespace IO
 						break;
 					}
 
-					std::string request;
+					HTTPRequest request;
 					bool gzip;
 					// Pass the entire message including body to Parse
 					Parse(c.msg.substr(0, required_length), request, gzip);
-					if (!request.empty())
+					if (!request.target.empty())
 						Request(c, request, gzip);
 
 					c.msg.erase(0, required_length);
@@ -108,17 +108,25 @@ namespace IO
 		c.Close();
 	}
 
-	void HTTPServer::Parse(const std::string &s, std::string &get, bool &accept_gzip)
+	void HTTPServer::Request(IO::TCPServerConnection &c, const HTTPRequest &r, bool accept_gzip)
+	{
+		std::string msg = r.target;
+		if (r.method == "POST" && !r.body.empty())
+			msg += "?" + r.body;
+
+		Request(c, msg, accept_gzip);
+	}
+
+	void HTTPServer::Parse(const std::string &s, HTTPRequest &r, bool &accept_gzip)
 	{
 
-		get.clear();
+		r = HTTPRequest();
 		accept_gzip = false;
 
 		std::istringstream iss(s);
 		std::string line;
-		bool is_post = false;
 		std::size_t content_length = 0;
-		std::string url;
+		bool first_line = true;
 
 		while (std::getline(iss, line))
 		{
@@ -132,21 +140,22 @@ namespace IO
 			std::getline(line_stream, key, ' ');
 			Util::Convert::toUpper(key);
 
-			if (key == "GET")
+			if (first_line && (key == "GET" || key == "POST"))
 			{
+				r.method = key;
 				std::getline(line_stream, value, ' ');
-				get = value;
-			}
-			else if (key == "POST")
-			{
-				std::getline(line_stream, value, ' ');
-				url = value;
-				is_post = true;
+				r.target = value;
 			}
 			else if (key == "ACCEPT-ENCODING:")
 			{
 				std::getline(line_stream, value);
 				accept_gzip = value.find("gzip") != std::string::npos;
+			}
+			else if (key == "COOKIE:")
+			{
+				std::getline(line_stream, value);
+				value.erase(0, value.find_first_not_of(" \t"));
+				r.cookie = value;
 			}
 			else if (key == "CONTENT-LENGTH:")
 			{
@@ -164,21 +173,15 @@ namespace IO
 					content_length = 0;
 				}
 			}
+
+			first_line = false;
 		}
 
-		if (is_post && content_length > 0)
+		if (!r.method.empty() && content_length > 0)
 		{
 			size_t body_start = s.find("\r\n\r\n");
 			if (body_start != std::string::npos)
-			{
-				body_start += 4;
-				std::string body = s.substr(body_start, content_length);
-				get = url + "?" + body;
-			}
-			else
-			{
-				get = url;
-			}
+				r.body = s.substr(body_start + 4, content_length);
 		}
 	}
 
@@ -188,8 +191,16 @@ namespace IO
 		{
 		case 400:
 			return "Bad Request";
+		case 401:
+			return "Unauthorized";
+		case 403:
+			return "Forbidden";
 		case 404:
 			return "Not Found";
+		case 429:
+			return "Too Many Requests";
+		case 500:
+			return "Internal Server Error";
 		default:
 			return "OK";
 		}
@@ -238,6 +249,12 @@ namespace IO
 			"base-uri 'self'";
 		header += "\r\nX-Content-Type-Options: nosniff";
 		header += "\r\nReferrer-Policy: strict-origin-when-cross-origin";
+
+		if (!extra_header.empty())
+		{
+			header += "\r\n" + extra_header;
+			extra_header.clear();
+		}
 
 		if (cors)
 			header += "\r\nAccess-Control-Allow-Origin: *";
