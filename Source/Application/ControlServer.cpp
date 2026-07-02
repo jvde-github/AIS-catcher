@@ -21,6 +21,7 @@
 #include "Logger.h"
 #include "Writer.h"
 #include "Convert.h"
+#include "WebDB.h"
 
 static std::string randomToken()
 {
@@ -149,25 +150,19 @@ void ControlServer::loginSucceeded()
 	login_block_until = 0;
 }
 
+// engine state and viewer ports are included unauthenticated: the webviewer
+// itself is an open service on its own port, so this reveals nothing new and
+// lets the hub UI embed the viewer before login
 void ControlServer::sendStatus(IO::TCPServerConnection &c, bool authenticated)
 {
-	std::string s;
-	JSON::Writer w(s);
-	w.beginObject();
+	bool running = core.getEngineState() == ControlCore::EngineState::Running;
+	const char *auth = authenticated ? "ok" : (core.hasPassword() ? "login" : "setup");
 
-	if (!authenticated)
-	{
-		w.kv("auth", core.hasPassword() ? "login" : "setup");
-	}
-	else
-	{
-		bool running = core.getEngineState() == ControlCore::EngineState::Running;
-		w.kv("auth", "ok")
-			.kv("engine", running ? "running" : "stopped")
-			.kv("uptime", core.getUptime());
-	}
+	std::string s = std::string("{\"auth\":\"") + auth +
+					"\",\"engine\":\"" + (running ? "running" : "stopped") +
+					"\",\"uptime\":" + std::to_string(core.getUptime()) +
+					",\"viewers\":" + core.getViewersJSON() + "}";
 
-	w.endObject().finish();
 	Response(c, "application/json", s);
 }
 
@@ -227,6 +222,27 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 			loginFailed();
 			sendError(c, "invalid password", 401);
 		}
+	}
+	else if (r.method == "GET" && path.compare(0, 5, "/api/") != 0)
+	{
+#ifdef HASWEBVIEWER
+		// the hub UI itself is served without auth; the login/setup flow lives
+		// in the page and everything sensitive stays behind the API
+		std::string file = (path == "/") ? "control/index.html" : "control" + path;
+
+		auto it = WebDB::files.find(file);
+		if (it == WebDB::files.end())
+			it = WebDB::files.find(path.substr(1)); // shared assets like favicon.ico
+		if (it != WebDB::files.end())
+		{
+			const WebDB::FileData &f = it->second;
+			ResponseRaw(c, f.mime_type, (char *)f.data, f.size, true, std::string(f.mime_type) != "text/html");
+		}
+		else
+			HTTPServer::Request(c, path, false);
+#else
+		HTTPServer::Request(c, path, false);
+#endif
 	}
 	else if (!authenticated)
 	{
@@ -290,6 +306,10 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 	else if (path == "/api/devices" && r.method == "GET")
 	{
 		Response(c, "application/json", core.getDeviceListJSON());
+	}
+	else if (path == "/api/serial" && r.method == "GET")
+	{
+		Response(c, "application/json", core.getSerialListJSON());
 	}
 	else if (path == "/api/log" && r.method == "GET")
 	{

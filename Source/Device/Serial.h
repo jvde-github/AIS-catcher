@@ -98,6 +98,7 @@ namespace Device
 		~SerialPort();
 
 		void Open(uint64_t handle) override;
+		static const std::vector<std::string> &getDevicePaths() { return device_list; }
 		std::string getRateDescription() override { return std::to_string(baudrate) + " baud"; }
 		bool isStreaming() override { return Device::isStreaming() && !lost; }
 		bool isCallback() override { return true; }

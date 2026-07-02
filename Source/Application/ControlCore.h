@@ -49,6 +49,8 @@ public:
 	std::string getConfig();
 	bool setConfig(const std::string &json, std::string &error);
 	std::string getDeviceListJSON();
+	std::string getSerialListJSON();
+	std::string getViewersJSON();
 
 	int getControlPort() const { return control_port; }
 	const std::string &getConfigFile() const { return config_file; }

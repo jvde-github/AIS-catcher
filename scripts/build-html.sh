@@ -77,5 +77,10 @@ perform_sed "$DIST/index.html" "s|style\.css?hash=[^\"]*|style.css?hash=${CSS_HA
 perform_sed "$DIST/index.html" "s|script\.js?hash=[^\"]*|script.js?hash=${JS_HASH}|g" ''
 
 
+# Control hub UI (managed mode -E) — plain static files served by the
+# control server under the control/ prefix
+rm -rf "$DIST/control"
+cp -R frontend/control "$DIST/control"
+
 echo "Built frontend/dist — baking into WebDB..."
 ./scripts/build-web-db.sh "$DIST"

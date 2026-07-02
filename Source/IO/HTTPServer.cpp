@@ -103,8 +103,10 @@ namespace IO
 
 	void HTTPServer::Request(IO::TCPServerConnection &c, const std::string &, bool)
 	{
+		// SendDirect, not Send: the response must hit the socket before Close,
+		// a queued send would be discarded with the connection
 		std::string r = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 15\r\nConnection: close\r\n\r\nPage not found.";
-		Send(c, r.c_str(), r.length());
+		c.SendDirect(r.c_str(), r.length());
 		c.Close();
 	}
 
@@ -245,6 +247,9 @@ namespace IO
 			"img-src 'self' data: blob: http: https:; "
 			"connect-src 'self' http: https: ws: wss:; "
 			"font-src 'self' data:; "
+			// http(s) frame-src so the control hub can embed the webviewer,
+			// which runs on a different port of the same host
+			"frame-src 'self' http: https:; "
 			"frame-ancestors " + frame_ancestors + "; "
 			"base-uri 'self'";
 		header += "\r\nX-Content-Type-Options: nosniff";

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>AIS-catcher</title>
+    <link rel="stylesheet" href="css/tailwind.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            background: #f8fafc;
+            touch-action: pan-x pan-y;
+            overscroll-behavior: none;
+            position: fixed;
+            width: 100%;
+        }
+
+        #hub-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            min-height: 0;
+        }
+
+        #webviewer-frame {
+            position: absolute;
+            top: 0;
+            left: 0;
+            border: none;
+            width: 100%;
+            height: 100%;
+            touch-action: pan-x pan-y;
+        }
+
+        #bottom-bar {
+            position: relative;
+            flex-shrink: 0;
+            width: 100%;
+            background: #0f172a;
+            border-top: 1px solid #334155;
+            z-index: 50;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .hub-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 0.75rem;
+            color: white;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            min-width: 70px;
+        }
+
+        .hub-button:hover {
+            background: #1e293b;
+        }
+
+        .hub-button.active {
+            background: #1e293b;
+        }
+
+        .hub-button svg {
+            width: 1.5rem;
+            height: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        #config-panel {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 100%;
+            max-width: 400px;
+            height: 100vh;
+            height: 100dvh;
+            background: white;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            transition: right 0.3s ease;
+            z-index: 60;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        #config-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        #config-panel.open {
+            right: 0;
+        }
+
+        #config-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            background: rgba(0, 0, 0, 0.3);
+            display: none;
+            z-index: 55;
+        }
+
+        #config-overlay.open {
+            display: block;
+        }
+
+        @media (max-width: 640px) {
+            #config-panel {
+                max-width: 100%;
+            }
+        }
+
+        #login-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        #login-overlay.open {
+            display: flex;
+        }
+
+        #log-box {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 11px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div id="hub-container">
+        <div id="loading" class="text-center p-8 absolute inset-0 flex items-center justify-center">
+            <div>
+                <svg class="animate-spin h-12 w-12 text-slate-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="text-slate-600">Connecting...</p>
+            </div>
+        </div>
+        <iframe id="webviewer-frame" src="" class="hidden" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+
+        <div id="config-overlay"></div>
+
+        <!-- Login / first-run setup modal -->
+        <div id="login-overlay">
+            <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+                <h3 id="login-title" class="text-lg font-semibold text-slate-800 mb-1">Sign In</h3>
+                <p id="login-subtitle" class="text-sm text-slate-500 mb-4">Authentication required to continue.</p>
+                <div id="login-error" class="hidden mb-3 text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
+                <form id="login-form" class="space-y-3">
+                    <input id="login-password" name="password" type="password" autocomplete="current-password"
+                        placeholder="Password"
+                        class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                    <input id="login-password2" name="password2" type="password" autocomplete="new-password"
+                        placeholder="Confirm password"
+                        class="hidden w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                    <div class="flex gap-2 pt-1">
+                        <button type="button" id="login-cancel"
+                            class="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 transition">
+                            Cancel
+                        </button>
+                        <button type="submit" id="login-submit"
+                            class="flex-1 px-4 py-2 rounded-lg text-sm font-semibold bg-slate-800 text-white hover:bg-slate-700 transition">
+                            Sign In
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Config Panel -->
+        <div id="config-panel">
+            <div class="flex items-center justify-between p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 id="config-title" class="text-lg font-semibold text-slate-800">Configuration</h3>
+                <button id="config-close" class="text-slate-600 hover:text-slate-800 p-1">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="status-message" class="hidden"></div>
+            <div id="config-content" class="p-4"></div>
+        </div>
+
+    </div>
+
+    <nav id="bottom-bar">
+        <div id="status-dot-wrap" class="absolute left-3 bottom-0 h-16 flex flex-col items-start justify-center gap-1" style="z-index:51">
+            <div class="relative group">
+                <span id="status-dot" class="block w-2.5 h-2.5 rounded-full bg-slate-500 cursor-default"></span>
+                <div class="absolute bottom-full left-0 mb-2 min-w-max px-2.5 py-1.5 rounded-lg bg-slate-800 text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap">
+                    <div id="status-dot-label" class="font-medium">Checking&#8230;</div>
+                    <div id="status-dot-uptime" class="text-slate-400 text-xs mt-0.5"></div>
+                    <div class="absolute top-full left-3 border-4 border-transparent border-t-slate-800"></div>
+                </div>
+            </div>
+            <select id="viewer-select" class="hidden text-[10px] bg-transparent text-slate-400 border-0 outline-none cursor-pointer leading-none p-0 max-w-[3.5rem]" title="Switch webviewer"></select>
+        </div>
+        <div id="nav-buttons" class="flex items-center justify-center h-16 gap-6 sm:gap-12 pl-16 pr-4 transition-opacity">
+            <button id="nav-start-restart" class="hub-button" data-view="control">
+                <svg id="nav-sr-icon" viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="M320-200v-560l440 280-440 280Zm80-280Zm0 134 210-134-210-134v268Z" />
+                </svg>
+                <span id="nav-sr-label">Start</span>
+            </button>
+            <button id="nav-btn-input" class="hub-button" data-view="input">
+                <svg viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="M160-80q-33 0-56.5-23.5T80-160v-480q0-25 13.5-45t36.5-29l506-206 26 66-330 134h468q33 0 56.5 23.5T880-640v480q0 33-23.5 56.5T800-80H160Zm0-80h640v-280H160v280Zm160-40q42 0 71-29t29-71q0-42-29-71t-71-29q-42 0-71 29t-29 71q0 42 29 71t71 29ZM160-520h480v-80h80v80h80v-120H160v120Zm0 360v-280 280Z" />
+                </svg>
+                <span>Input</span>
+            </button>
+            <button id="nav-btn-output" class="hub-button" data-view="output">
+                <svg viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="M680-80q-50 0-85-35t-35-85q0-6 3-28L282-392q-16 15-37 23.5t-45 8.5q-50 0-85-35t-35-85q0-50 35-85t85-35q24 0 45 8.5t37 23.5l281-164q-2-7-2.5-13.5T560-760q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35q-24 0-45-8.5T598-672L317-508q2-7 2.5-13.5t.5-14.5q0-8-.5-14.5T317-452l281 164q16-15 37-23.5t45-8.5q50 0 85 35t35 85q0 50-35 85t-85 35Zm0-80q17 0 28.5-11.5T720-200q0-17-11.5-28.5T680-240q-17 0-28.5 11.5T640-200q0 17 11.5 28.5T680-160ZM200-440q17 0 28.5-11.5T240-480q0-17-11.5-28.5T200-520q-17 0-28.5 11.5T160-480q0 17 11.5 28.5T200-440Zm480-280q17 0 28.5-11.5T720-760q0-17-11.5-28.5T680-800q-17 0-28.5 11.5T640-760q0 17 11.5 28.5T680-720Zm0 520ZM200-480Zm480-280Z" />
+                </svg>
+                <span>Output</span>
+            </button>
+            <button id="nav-btn-control" class="hub-button" data-view="control-panel">
+                <svg viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm0-80q-25 0-42.5-17.5T422-480q0-25 17.5-42.5T482-540q25 0 42.5 17.5T542-480q0 25-17.5 42.5T482-420Zm-2-60Zm-40 320h79-79Z" />
+                </svg>
+                <span>Control</span>
+            </button>
+        </div>
+    </nav>
+
+    <script src="js/schema.js"></script>
+    <script src="js/config-manager.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
