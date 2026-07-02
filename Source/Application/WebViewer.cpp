@@ -841,6 +841,16 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 
 	bool multi = receivers.size() > 1 && !filter.hasIDFilter() && groups_in == 0xFFFFFFFFFFFFFFFF;
 
+	// re-entrant for managed mode where the viewer outlives engine runs:
+	// device/model descriptions are rebuilt from scratch on every connect
+	states[0]->product.clear();
+	states[0]->vendor.clear();
+	states[0]->serial.clear();
+	states[0]->sample_rate.clear();
+	states[0]->model_name.clear();
+
+	std::size_t first_new = states.size();
+
 	for (int k = 0; k < (int)receivers.size(); k++)
 	{
 		Receiver &r = *receivers[k];
@@ -887,9 +897,36 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 	for (auto &s : states)
 		s->applyConfig(tracking, filter);
 
+	// trackers added after start() (managed-mode engine restart) still need
+	// their internal streams wired
+	if (run)
+	{
+		for (std::size_t i = first_new; i < states.size(); i++)
+		{
+			states[i]->setup();
+			states[i]->wireStreams();
+		}
+		pluginManager.setReceivers(states);
+	}
+
 	Debug() << "Mutex: WebViewer sinks self-lock (DB/PlaneDB), raw_counter atomic (" << receivers.size() << " receivers)";
 
 	raw_counter.setFilter(filter);
+}
+
+// Managed mode: unwire the per-run engine while the server keeps running.
+// The aggregate tracker (states[0]) stays, so ship history, statistics and
+// live SSE connections survive engine restarts.
+void WebViewer::disconnectEngine()
+{
+	msg_channels = nullptr;
+	comm_feed = nullptr;
+
+	if (states.size() > 1)
+	{
+		states.erase(states.begin() + 1, states.end());
+		pluginManager.setReceivers(states);
+	}
 }
 
 void WebViewer::setDeviceDescription(const std::string &product, const std::string &vendor, const std::string &serial)
@@ -985,6 +1022,7 @@ void WebViewer::start()
 		if (port > lastport)
 			throw std::runtime_error("Cannot open port in range [" + std::to_string(firstport) + "," + std::to_string(lastport) + "]");
 
+		bound_port = port;
 		Info() << "HTML Server running at port " << std::to_string(port);
 	}
 	else

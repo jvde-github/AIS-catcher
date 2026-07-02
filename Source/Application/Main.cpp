@@ -335,7 +335,11 @@ static void Assert(bool b, std::string &context, const std::string &msg = "")
 	}
 }
 
+#ifdef HASWEBVIEWER
+static void run(RunState &state, WebViewer *managed_viewer = nullptr)
+#else
 static void run(RunState &state)
+#endif
 {
 	// -------------
 	// set up the receiver and open the device
@@ -347,6 +351,7 @@ static void run(RunState &state)
 #ifdef HASWEBVIEWER
 	for (auto &s : state.servers)
 		has_server |= s->active();
+	has_server |= managed_viewer != nullptr;
 #endif
 	bool has_http = false;
 	for (auto &o : state.msg)
@@ -450,6 +455,9 @@ static void run(RunState &state)
 	for (auto &s : state.servers)
 		if (s->active())
 			s->connect(state.receivers);
+
+	if (managed_viewer)
+		managed_viewer->connect(state.receivers);
 #endif
 
 	for (auto &o : state.msg)
@@ -469,6 +477,19 @@ static void run(RunState &state)
 			}
 			s->start();
 		}
+
+	// the managed viewer is already running; it only gets the per-run wiring
+	if (managed_viewer)
+	{
+		managed_viewer->setOutputChannels(state.msg);
+		managed_viewer->setCommFeed(state.comm_feed);
+
+		if (state.own_mmsi != -1)
+		{
+			managed_viewer->SetKey(AIS::KEY_SETTING_SHARE_LOC, "true");
+			managed_viewer->SetKey(AIS::KEY_SETTING_OWN_MMSI, std::to_string(state.own_mmsi));
+		}
+	}
 #endif
 
 	Debug() << "Starting statistics";
@@ -590,10 +611,59 @@ static void run(RunState &state)
 	}
 
 #ifdef HASWEBVIEWER
+	if (managed_viewer)
+		managed_viewer->disconnectEngine();
+
 	for (auto &s : state.servers)
 		s->close();
 #endif
 }
+
+#ifdef HASWEBVIEWER
+// The persistent viewer lives as long as the process, so the hub UI keeps its
+// map, ship history and SSE connections across engine restarts. It is
+// configured once from the config's server section: build a throwaway
+// RunState through the normal Config machinery and steal the first active
+// instance.
+static std::unique_ptr<WebViewer> startManagedViewer(const std::string &config_file, ControlCore &core)
+{
+	std::unique_ptr<WebViewer> viewer;
+
+	try
+	{
+		RunState boot;
+		Config c(boot);
+		c.read(config_file);
+
+		for (auto &s : boot.servers)
+			if (s && s->active())
+			{
+				viewer = std::move(s);
+				break;
+			}
+	}
+	catch (std::exception const &e)
+	{
+		Error() << "Control: viewer configuration failed: " << e.what();
+		return viewer;
+	}
+
+	if (!viewer)
+		return viewer;
+
+	try
+	{
+		viewer->start();
+		core.setViewerPort(viewer->getBoundPort());
+	}
+	catch (std::exception const &e)
+	{
+		Error() << "Control: viewer not started: " << e.what();
+		viewer.reset();
+	}
+	return viewer;
+}
+#endif
 
 // Managed mode (-E): supervisor loop that builds a fresh RunState from the
 // config file for every engine start and tears it down on stop/restart. The
@@ -606,6 +676,10 @@ static int runManaged(const std::string &config_file, int port)
 	Info() << "Control: managed mode, config file \"" << config_file << "\"";
 	server.start();
 
+#ifdef HASWEBVIEWER
+	std::unique_ptr<WebViewer> viewer = startManagedViewer(config_file, core);
+#endif
+
 	while (!stop_process)
 	{
 		if (core.engineDesired())
@@ -613,21 +687,35 @@ static int runManaged(const std::string &config_file, int port)
 			stop = false;
 
 			RunState state;
+			state.managed_mode = true;
 			Config c(state);
 
 			try
 			{
 				state.receivers.back()->getDeviceManager().refreshDevices();
 				c.read(config_file);
+#ifdef HASWEBVIEWER
+				// viewer added or fixed in the config after startup
+				if (!viewer)
+					viewer = startManagedViewer(config_file, core);
+#endif
 				core.reportRunning();
 				Info() << "Control: engine started";
+#ifdef HASWEBVIEWER
+				run(state, viewer.get());
+#else
 				run(state);
+#endif
 			}
 			catch (std::exception const &e)
 			{
 				Error() << "Control: engine failed: " << e.what();
 				for (auto &r : state.receivers)
 					r->stop();
+#ifdef HASWEBVIEWER
+				if (viewer)
+					viewer->disconnectEngine();
+#endif
 				core.engineFailed();
 			}
 			core.reportStopped();
@@ -638,6 +726,11 @@ static int runManaged(const std::string &config_file, int port)
 			core.waitForCommand();
 		}
 	}
+
+#ifdef HASWEBVIEWER
+	if (viewer)
+		viewer->close();
+#endif
 	return 0;
 }
 

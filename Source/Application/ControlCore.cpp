@@ -318,57 +318,6 @@ std::string ControlCore::getSerialListJSON()
 	return s;
 }
 
-// [{"port":8100,"active":true},...] from the server section, for the hub UI
-// to locate the webviewer; empty array when unavailable
-std::string ControlCore::getViewersJSON()
-{
-	std::string s;
-	JSON::Writer w(s);
-	w.beginArray();
-
-	try
-	{
-		JSON::Parser parser(JSON_DICT_SETTING);
-		JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
-
-		auto addEntry = [&w](const JSON::Value &e)
-		{
-			if (!e.isObject())
-				return;
-
-			int port = 0;
-			bool active = true;
-
-			for (const auto &m : e.getObject().getMembers())
-			{
-				if (m.Key() == AIS::KEY_SETTING_PORT)
-					port = Util::Parse::Integer(m.Get().to_string(), 1, 65535);
-				else if (m.Key() == AIS::KEY_SETTING_ACTIVE)
-					active = Util::Parse::Switch(m.Get().to_string());
-			}
-
-			if (port > 0)
-				w.beginObject().kv("port", port).kv("active", active).endObject();
-		};
-
-		const JSON::Value *v = doc.root[AIS::KEY_SETTING_SERVER];
-		if (v)
-		{
-			if (v->isArray())
-				for (const auto &e : v->getArray())
-					addEntry(e);
-			else
-				addEntry(*v);
-		}
-	}
-	catch (const std::exception &)
-	{
-	}
-
-	w.endArray().finish();
-	return s;
-}
-
 bool ControlCore::validate(const std::string &json, std::string &error)
 {
 	try

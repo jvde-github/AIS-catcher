@@ -150,9 +150,9 @@ void ControlServer::loginSucceeded()
 	login_block_until = 0;
 }
 
-// engine state and viewer ports are included unauthenticated: the webviewer
-// itself is an open service on its own port, so this reveals nothing new and
-// lets the hub UI embed the viewer before login
+// engine state and the viewer port are included unauthenticated: the
+// webviewer itself is an open service on its own port, so this reveals
+// nothing new and lets the hub UI embed the viewer before login
 void ControlServer::sendStatus(IO::TCPServerConnection &c, bool authenticated)
 {
 	bool running = core.getEngineState() == ControlCore::EngineState::Running;
@@ -161,7 +161,7 @@ void ControlServer::sendStatus(IO::TCPServerConnection &c, bool authenticated)
 	std::string s = std::string("{\"auth\":\"") + auth +
 					"\",\"engine\":\"" + (running ? "running" : "stopped") +
 					"\",\"uptime\":" + std::to_string(core.getUptime()) +
-					",\"viewers\":" + core.getViewersJSON() + "}";
+					",\"viewer\":" + std::to_string(core.getViewerPort()) + "}";
 
 	Response(c, "application/json", s);
 }

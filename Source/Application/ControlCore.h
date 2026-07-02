@@ -20,6 +20,7 @@
 #include <string>
 #include <mutex>
 #include <condition_variable>
+#include <atomic>
 #include <ctime>
 
 // Engine control for managed mode (-E): the config file is the single source
@@ -50,7 +51,10 @@ public:
 	bool setConfig(const std::string &json, std::string &error);
 	std::string getDeviceListJSON();
 	std::string getSerialListJSON();
-	std::string getViewersJSON();
+
+	// the actually bound port of the persistent viewer, 0 if none
+	void setViewerPort(int p) { viewer_port = p; }
+	int getViewerPort() const { return viewer_port; }
 
 	int getControlPort() const { return control_port; }
 	const std::string &getConfigFile() const { return config_file; }
@@ -69,6 +73,7 @@ public:
 private:
 	std::string config_file;
 	int control_port = 8110;
+	std::atomic<int> viewer_port{0};
 	std::string password_hash;
 	std::string password_salt;
 

@@ -41,6 +41,10 @@ struct RunState {
 	std::vector<OutputStatistics> stat;
 	std::vector<uint64_t> msg_count;
 
+	// Managed mode (-E): the server section is handled by the persistent
+	// viewer owned by the supervisor, not by per-run states
+	bool managed_mode = false;
+
 	// Configuration flags set during arg parsing / config reading
 	int own_mmsi = -1;
 	int timeout = 0;

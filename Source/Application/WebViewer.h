@@ -277,6 +277,7 @@ private:
 
 	int firstport = 0;
 	int lastport = 0;
+	int bound_port = 0;
 	bool run = false;
 	bool port_set = false;
 	bool use_zlib = true;
@@ -365,6 +366,7 @@ public:
 	bool &active() { return run; }
 	void connect(const std::vector<std::unique_ptr<Receiver>> &receivers);
 	void connect(AIS::Model &model, Connection<JSON::JSON> &json, Device::Device &device);
+	void disconnectEngine();
 	void setDeviceDescription(const std::string &product, const std::string &vendor, const std::string &serial);
 	void start();
 	void close();
@@ -378,6 +380,7 @@ public:
 	void setCommFeed(IO::OutputMessage *f) { comm_feed = f; }
 
 	bool isPortSet() { return port_set; }
+	int getBoundPort() { return bound_port; }
 	// HTTP callbacks
 	void Request(IO::TCPServerConnection &c, const std::string &r, bool gzip) override;
 

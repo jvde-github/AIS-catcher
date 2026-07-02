@@ -6,9 +6,8 @@
     'use strict';
 
     let auth = 'login';           // 'setup' | 'login' | 'ok'
-    let viewers = [];
-    let port = '';
-    let viewerActive = true;
+    let port = 0;                 // persistent viewer port, 0 = none
+    let viewerLoaded = false;
     let engineRunning = false;
     let pendingAction = null;
     let currentLoadTimeout = null;
@@ -186,6 +185,12 @@
         return fetchStatus()
             .then(data => {
                 updateStartRestartButton(data.engine === 'running', data.uptime);
+                // viewer appeared after a config fix + engine start
+                if (data.viewer && !viewerLoaded) {
+                    port = data.viewer;
+                    clearOverlayMessages();
+                    loadWebviewer();
+                }
                 return data;
             })
             .catch(() => null);
@@ -217,12 +222,17 @@
         }, interval);
     }
 
+    // the viewer is persistent, so start/restart never reloads the page —
+    // the map, its history and the SSE stream survive the engine cycle
     function onStartRestartClick() {
         const action = engineRunning ? 'restart' : 'start';
         requireAuth(() => {
             setNavBusy(true);
             engineAction(action)
-                .then(() => pollUntilRunning(() => window.location.reload()))
+                .then(() => pollUntilRunning(() => {
+                    setNavBusy(false);
+                    refreshEngineStatus();
+                }))
                 .catch(() => setNavBusy(false));
         });
     }
@@ -269,70 +279,13 @@
             });
     }
 
-    function showEngineStopped() {
-        const div = showOverlayMessage(`
+    function showNoViewer() {
+        showOverlayMessage(`
             <div class="max-w-md p-8 text-center">
-                <svg class="h-16 w-16 text-slate-400 mx-auto mb-4" viewBox="0 -960 960 960" fill="currentColor">
-                    <path d="M320-200v-560l440 280-440 280Zm80-280Zm0 134 210-134-210-134v268Z" />
-                </svg>
-                <h3 class="text-xl font-semibold text-slate-800 mb-2">Receiver Stopped</h3>
-                <p class="text-slate-600 mb-4">The receiver is not running. Start it to see the map.</p>
-                <button class="hub-start-btn inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg transition font-medium">Start</button>
+                <h3 class="text-xl font-semibold text-slate-800 mb-2">No Webviewer</h3>
+                <p class="text-slate-600 mb-4">No active webviewer is configured. Add one under Output &rarr; Viewer, save, and start the receiver.</p>
             </div>
         `);
-        div.querySelector('.hub-start-btn').addEventListener('click', function () {
-            const btn = this;
-            requireAuth(() => {
-                btn.textContent = 'Starting...';
-                btn.disabled = true;
-                engineAction('start')
-                    .then(() => pollUntilRunning(() => window.location.reload()))
-                    .catch(() => { btn.disabled = false; btn.textContent = 'Start'; });
-            });
-        });
-    }
-
-    function showViewerDisabled() {
-        const div = showOverlayMessage(`
-            <div class="max-w-md p-8 text-center">
-                <h3 class="text-xl font-semibold text-slate-800 mb-2">Webviewer Output Disabled</h3>
-                <p class="text-slate-600 mb-1">The webviewer on port <strong>${port}</strong> is configured but <strong>inactive</strong>.</p>
-                <p class="text-slate-500 text-sm mb-6">Enable it and restart the receiver.</p>
-                <button class="hub-enable-btn inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg transition font-medium">Enable &amp; Restart</button>
-            </div>
-        `);
-        div.querySelector('.hub-enable-btn').addEventListener('click', function () {
-            const btn = this;
-            requireAuth(() => {
-                btn.disabled = true;
-                btn.textContent = 'Saving...';
-                fetch('/api/config')
-                    .then(r => r.json())
-                    .then(cfg => {
-                        const entries = Array.isArray(cfg.server) ? cfg.server : (cfg.server ? [cfg.server] : []);
-                        entries.forEach(srv => {
-                            if (String(srv.port) === String(port)) srv.active = true;
-                        });
-                        return fetch('/api/config', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(cfg)
-                        });
-                    })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (!data.status) throw new Error(data.error || 'save failed');
-                        btn.textContent = 'Restarting...';
-                        return engineAction('restart');
-                    })
-                    .then(() => pollUntilRunning(() => window.location.reload()))
-                    .catch(err => {
-                        btn.disabled = false;
-                        btn.textContent = 'Enable & Restart';
-                        alert('Failed to enable webviewer: ' + err.message);
-                    });
-            });
-        });
     }
 
     function loadWebviewer() {
@@ -344,6 +297,7 @@
             url.hash = '';
 
             iframe.src = url.toString();
+            viewerLoaded = true;
 
             currentLoadTimeout = setTimeout(() => {
                 showError('Webviewer Not Responding', 'Port ' + port + ' is not responding.', true);
@@ -362,50 +316,6 @@
         } catch (e) {
             showError('Configuration Error', 'There was an error processing the webviewer URL.');
         }
-    }
-
-    function initViewerSelect() {
-        if (viewers.length <= 1) return;
-        const sel = document.getElementById('viewer-select');
-        sel.innerHTML = '';
-        viewers.forEach(srv => {
-            const opt = document.createElement('option');
-            opt.value = srv.port;
-            opt.textContent = ':' + srv.port;
-            if (String(srv.port) === String(port)) opt.selected = true;
-            sel.appendChild(opt);
-        });
-        sel.classList.remove('hidden');
-    }
-
-    function proceedWithViewer(selectedPort, selectedActive) {
-        port = String(selectedPort);
-        viewerActive = selectedActive;
-        sessionStorage.setItem('webviewer_port', port);
-        initViewerSelect();
-
-        if (!engineRunning) {
-            loadingDiv.classList.add('hidden');
-            showEngineStopped();
-        } else if (!viewerActive) {
-            loadingDiv.classList.add('hidden');
-            showViewerDisabled();
-        } else {
-            loadWebviewer();
-        }
-        startStatusPolling();
-    }
-
-    function switchViewer(selectedPort) {
-        clearTimeout(currentLoadTimeout);
-        const srv = viewers.find(s => String(s.port) === String(selectedPort));
-        if (!srv) return;
-        closeConfigPanel();
-        clearOverlayMessages();
-        iframe.classList.add('hidden');
-        iframe.src = '';
-        loadingDiv.classList.remove('hidden');
-        proceedWithViewer(srv.port, srv.active);
     }
 
     // ------------------------------------------------------------------
@@ -729,30 +639,26 @@
         document.getElementById('nav-btn-input').addEventListener('click', () => openConfig('input'));
         document.getElementById('nav-btn-output').addEventListener('click', () => openConfig('output'));
         document.getElementById('nav-btn-control').addEventListener('click', () => openConfig('control-panel'));
-        document.getElementById('viewer-select').addEventListener('change', e => switchViewer(e.target.value));
 
         fetchStatus()
             .then(data => {
                 auth = data.auth;
-                viewers = Array.isArray(data.viewers) ? data.viewers : [];
+                port = data.viewer || 0;
                 updateStartRestartButton(data.engine === 'running', data.uptime);
                 setAuthButtons(isLoggedIn());
+                startStatusPolling();
 
                 if (auth === 'setup') {
                     loadingDiv.classList.add('hidden');
                     openLoginModal();
-                    return;
                 }
 
-                if (!viewers.length) {
-                    showError('Webviewer Not Configured', 'No webviewer is configured. Add one under Output → Viewer.');
-                    return;
+                if (port)
+                    loadWebviewer();
+                else if (auth !== 'setup') {
+                    loadingDiv.classList.add('hidden');
+                    showNoViewer();
                 }
-
-                const savedPort = sessionStorage.getItem('webviewer_port');
-                const saved = savedPort && viewers.find(s => String(s.port) === String(savedPort));
-                const srv = saved || viewers[0];
-                proceedWithViewer(srv.port, srv.active);
             })
             .catch(() => {
                 loadingDiv.classList.add('hidden');
