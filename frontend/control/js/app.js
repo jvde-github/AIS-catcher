@@ -282,8 +282,8 @@
     function showNoViewer() {
         showOverlayMessage(`
             <div class="max-w-md p-8 text-center">
-                <h3 class="text-xl font-semibold text-slate-800 mb-2">No Webviewer</h3>
-                <p class="text-slate-600 mb-4">No active webviewer is configured. Add one under Output &rarr; Viewer, save, and start the receiver.</p>
+                <h3 class="text-xl font-semibold text-slate-800 mb-2">Viewer Not Running</h3>
+                <p class="text-slate-600 mb-4">The built-in viewer could not be started &mdash; its port may be in use. Check the log in the Control panel.</p>
             </div>
         `);
     }

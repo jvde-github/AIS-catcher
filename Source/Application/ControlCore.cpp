@@ -48,8 +48,7 @@ void ControlCore::createDefaultConfig()
 		"  \"config\": \"aiscatcher\",\n"
 		"  \"version\": 1,\n"
 		"  \"engine\": \"off\",\n"
-		"  \"control\": { \"port\": 8110 },\n"
-		"  \"server\": { \"active\": true, \"port\": 8100 }\n"
+		"  \"control\": { \"port\": 8110 }\n"
 		"}\n";
 
 	std::string error;

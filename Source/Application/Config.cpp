@@ -67,8 +67,6 @@ void Config::setSettingsFromJSON(const JSON::Value &m, Setting &s)
 #ifdef HASWEBVIEWER
 void Config::setServerfromJSON(const JSON::Value &m)
 {
-	if (_state.managed_mode)
-		return;
 
 	if (m.isArray())
 	{

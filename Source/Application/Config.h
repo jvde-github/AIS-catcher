@@ -48,7 +48,6 @@ class Config
 	RunState &_state;
 
 	bool isActiveObject(const JSON::Value &m);
-	void setSettingsFromJSON(const JSON::Value &m, Setting &s);
 	void setModelfromJSON(const JSON::Member &m);
 
 	// Device settings (RTLSDR, AIRSPY, ...) of the current receiver, nullptr if key is not a device
@@ -85,6 +84,8 @@ public:
 
 	void read(const std::string &file_config);
 	void set(const std::string &str);
+
+	static void setSettingsFromJSON(const JSON::Value &m, Setting &s);
 
 	bool isSharingDefined() const { return _state.xshare_defined; }
 };

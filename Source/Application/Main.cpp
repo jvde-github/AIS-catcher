@@ -40,6 +40,7 @@
 #include "Logger.h"
 #include "Screen.h"
 #include "File.h"
+#include "Helper.h"
 
 // stop ends the current run (device end, timeout, engine stop); stop_process
 // additionally ends the managed-mode supervisor loop (signals only)
@@ -621,35 +622,34 @@ static void run(RunState &state)
 
 #ifdef HASWEBVIEWER
 // The persistent viewer lives as long as the process, so the hub UI keeps its
-// map, ship history and SSE connections across engine restarts. It is
-// configured once from the config's server section: build a throwaway
-// RunState through the normal Config machinery and steal the first active
-// instance.
+// map, ship history and SSE connections across engine restarts. It is part of
+// the control apparatus, separate from the config's server section (which
+// keeps its normal per-run meaning): defaults to port 8100, configurable via
+// a "viewer" object inside the control section.
 static std::unique_ptr<WebViewer> startManagedViewer(const std::string &config_file, ControlCore &core)
 {
-	std::unique_ptr<WebViewer> viewer;
+	std::unique_ptr<WebViewer> viewer(new WebViewer());
+
+	viewer->active() = true;
+	viewer->SetKey(AIS::KEY_SETTING_PORT, "8100");
 
 	try
 	{
-		RunState boot;
-		Config c(boot);
-		c.read(config_file);
+		JSON::Parser parser(JSON_DICT_SETTING);
+		JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
 
-		for (auto &s : boot.servers)
-			if (s && s->active())
-			{
-				viewer = std::move(s);
-				break;
-			}
+		const JSON::Value *ctrl = doc.root[AIS::KEY_SETTING_CONTROL];
+		if (ctrl && ctrl->isObject())
+		{
+			const JSON::Value *v = ctrl->getObject()[AIS::KEY_SETTING_VIEWER];
+			if (v && v->isObject())
+				Config::setSettingsFromJSON(*v, *viewer);
+		}
 	}
 	catch (std::exception const &e)
 	{
 		Error() << "Control: viewer configuration failed: " << e.what();
-		return viewer;
 	}
-
-	if (!viewer)
-		return viewer;
 
 	try
 	{
@@ -687,7 +687,6 @@ static int runManaged(const std::string &config_file, int port)
 			stop = false;
 
 			RunState state;
-			state.managed_mode = true;
 			Config c(state);
 
 			try
