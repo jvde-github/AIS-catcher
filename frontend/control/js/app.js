@@ -204,12 +204,22 @@
     }
 
     // fast settle after an engine action: the state flip is near-instant
-    // in-process, so poll tightly instead of waiting for the slow cycle
-    function pollUntilState(target, onDone, maxWaitMs = 20000) {
+    // in-process, so poll tightly instead of waiting for the slow cycle;
+    // an engine-failure event on the log stream aborts the wait right away
+    // `since` must be captured before the engine action is sent: the failure
+    // event on the log stream can arrive before the action's HTTP response
+    function pollUntilState(target, onDone, since, maxWaitMs = 20000) {
         const interval = 400;
+        const started = since || Date.now();
         let elapsed = 0;
         const timer = setInterval(() => {
             elapsed += interval;
+            if (engineFailedAt >= started) {
+                clearInterval(timer);
+                refreshEngineStatus();
+                onDone(false);
+                return;
+            }
             fetchStatus()
                 .then(d => {
                     updateStartRestartButton(d.engine === 'running', d.uptime);
@@ -230,9 +240,10 @@
         const action = engineRunning ? 'stop' : 'start';
         const target = engineRunning ? 'stopped' : 'running';
         requireAuth(() => {
+            const since = Date.now();
             setNavBusy(true);
             engineAction(action)
-                .then(() => pollUntilState(target, () => setNavBusy(false)))
+                .then(() => pollUntilState(target, () => setNavBusy(false), since))
                 .catch(() => setNavBusy(false));
         });
     }
@@ -270,10 +281,11 @@
         if (btn)
             btn.addEventListener('click', () => {
                 requireAuth(() => {
+                    const since = Date.now();
                     btn.textContent = 'Restarting...';
                     btn.disabled = true;
                     engineAction('restart')
-                        .then(() => pollUntilState('running', () => window.location.reload()))
+                        .then(() => pollUntilState('running', ok => { if (ok) window.location.reload(); else { btn.disabled = false; btn.textContent = 'Restart'; } }, since))
                         .catch(() => { btn.disabled = false; btn.textContent = 'Restart'; });
                 });
             });
@@ -510,6 +522,7 @@
 
     let alertSource = null;
     let alertReplayDone = false;
+    let engineFailedAt = 0;
 
     // surface warnings and errors from the process log as toast
     // notifications; the history replayed on connect is skipped
@@ -521,9 +534,11 @@
             if (!alertReplayDone) return;
             try {
                 const m = JSON.parse(e.data);
-                if (m.level === 'error' || m.level === 'critical')
+                if (m.level === 'error' || m.level === 'critical') {
+                    if (m.message.indexOf('engine failed') >= 0)
+                        engineFailedAt = Date.now();
                     App.notify('error', m.message);
-                else if (m.level === 'warning')
+                } else if (m.level === 'warning')
                     App.notify('warning', m.message);
             } catch (_) { }
         });
