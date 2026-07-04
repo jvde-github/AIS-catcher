@@ -98,6 +98,12 @@ public:
 	void engineFailed();
 	void waitForCommand();
 
+	// seconds to pause before the next start when the engine ended without a
+	// stop command (device unplugged, stream dropped); 0 = start right away
+	int consumeRetryDelay();
+	// bumped on every explicit engine command so a retry pause can be cut short
+	int commandSequence() { return command_seq; }
+
 private:
 	std::string config_file;
 	int control_port = 8110;
@@ -113,6 +119,16 @@ private:
 	bool restart_pending = false;
 	EngineState state = EngineState::Stopped;
 	std::time_t engine_start_time = 0;
+
+	// automatic restart after an unexpected engine end, with exponential
+	// backoff so a missing device does not flood the log with attempts
+	static const int RETRY_DELAY_FIRST = 5;
+	static const int RETRY_DELAY_MAX = 60;
+	static const int RETRY_HEALTHY_UPTIME = 60;
+	bool auto_retry = false;
+	bool retry_pending = false;
+	int retry_delay = 0;
+	std::atomic<int> command_seq{0};
 
 	std::mutex file_mtx;
 

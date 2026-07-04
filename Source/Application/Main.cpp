@@ -707,6 +707,19 @@ static int runManaged(const std::string &config_file, int port, int viewer_port,
 	{
 		if (core.engineDesired())
 		{
+			// pause before an automatic restart after an unexpected engine
+			// end; an explicit command or process stop cuts the wait short
+			int delay = core.consumeRetryDelay();
+			if (delay > 0)
+			{
+				Warning() << "Control: engine stopped unexpectedly, restarting in " << delay << " seconds";
+				int seq = core.commandSequence();
+				for (int i = 0; i < delay * 4 && !stop_process && core.commandSequence() == seq; i++)
+					std::this_thread::sleep_for(std::chrono::milliseconds(250));
+				if (stop_process || !core.engineDesired())
+					continue;
+			}
+
 			stop = false;
 
 			RunState state;

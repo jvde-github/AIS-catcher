@@ -108,8 +108,12 @@ void ControlCore::readManagedFields(int port_override)
 
 void ControlCore::startEngine()
 {
+	command_seq++;
 	{
 		std::lock_guard<std::mutex> lock(mtx);
+		auto_retry = false;
+		retry_pending = false;
+		retry_delay = 0;
 		if (desired)
 			return;
 		desired = true;
@@ -121,10 +125,14 @@ void ControlCore::startEngine()
 
 void ControlCore::stopEngine()
 {
+	command_seq++;
 	{
 		std::lock_guard<std::mutex> lock(mtx);
 		desired = false;
 		restart_pending = false;
+		auto_retry = false;
+		retry_pending = false;
+		retry_delay = 0;
 	}
 	persistEngineField(false);
 	StopRequest();
@@ -132,12 +140,16 @@ void ControlCore::stopEngine()
 
 void ControlCore::restartEngine()
 {
+	command_seq++;
 	bool running;
 	{
 		std::lock_guard<std::mutex> lock(mtx);
 		desired = true;
 		running = (state == EngineState::Running);
 		restart_pending = running;
+		auto_retry = false;
+		retry_pending = false;
+		retry_delay = 0;
 	}
 	persistEngineField(true);
 
@@ -409,19 +421,34 @@ void ControlCore::reportRunning()
 void ControlCore::reportStopped()
 {
 	std::lock_guard<std::mutex> lock(mtx);
+	bool was_running = state == EngineState::Running;
 	state = EngineState::Stopped;
 
 	if (restart_pending)
 		restart_pending = false;
-	else
-		desired = false;
+	else if (desired)
+	{
+		// the engine ended without a stop command (device unplugged, stream
+		// dropped): schedule an automatic restart. A healthy run resets the
+		// backoff so a fresh problem starts with a short delay again.
+		if (was_running && std::time(nullptr) - engine_start_time >= RETRY_HEALTHY_UPTIME)
+			retry_delay = 0;
+		retry_delay = retry_delay ? MIN(retry_delay * 2, RETRY_DELAY_MAX) : RETRY_DELAY_FIRST;
+		auto_retry = true;
+		retry_pending = true;
+	}
 }
 
 void ControlCore::engineFailed()
 {
 	std::lock_guard<std::mutex> lock(mtx);
-	desired = false;
 	restart_pending = false;
+
+	// a start attempt during automatic recovery keeps retrying (the device
+	// may simply not be back yet); a user-initiated start that fails stays
+	// stopped so a broken config does not loop
+	if (!auto_retry)
+		desired = false;
 }
 
 void ControlCore::waitForCommand()
@@ -429,4 +456,13 @@ void ControlCore::waitForCommand()
 	std::unique_lock<std::mutex> lock(mtx);
 	cv.wait_for(lock, std::chrono::milliseconds(250), [this]
 				{ return desired; });
+}
+
+int ControlCore::consumeRetryDelay()
+{
+	std::lock_guard<std::mutex> lock(mtx);
+	if (!retry_pending)
+		return 0;
+	retry_pending = false;
+	return retry_delay;
 }
