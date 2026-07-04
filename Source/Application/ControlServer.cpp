@@ -260,8 +260,10 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 			it = WebDB::files.find(path.substr(1)); // shared assets like favicon.ico
 		if (it != WebDB::files.end())
 		{
+			// no caching: hub assets carry no version hash, and a stale
+			// app.js against a newer binary breaks the UI silently
 			const WebDB::FileData &f = it->second;
-			ResponseRaw(c, f.mime_type, (char *)f.data, f.size, true, std::string(f.mime_type) != "text/html");
+			ResponseRaw(c, f.mime_type, (char *)f.data, f.size, true, false);
 		}
 		else
 			HTTPServer::Request(c, path, false);
