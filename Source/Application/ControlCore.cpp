@@ -36,12 +36,14 @@
 ControlCore::ControlCore(const std::string &file, int port_override, const std::string &bind) : config_file(file), bind_address(bind)
 {
 	if (!std::ifstream(config_file).good())
-		createDefaultConfig();
+		createDefaultConfig(port_override);
 
 	readManagedFields(port_override);
 }
 
-void ControlCore::createDefaultConfig()
+// a port given on the command line is written into the new file, so a later
+// plain "-E <file>" relaunch keeps binding the same port
+void ControlCore::createDefaultConfig(int port_override)
 {
 	const std::string content =
 		"{\n"
@@ -49,7 +51,7 @@ void ControlCore::createDefaultConfig()
 		"  \"version\": 1,\n"
 		"  \"engine\": \"off\",\n"
 		"  \"sharing\": true,\n"
-		"  \"control\": { \"port\": 8110, \"wizard\": true }\n"
+		"  \"control\": { \"port\": " + std::to_string(port_override > 0 ? port_override : control_port) + ", \"wizard\": true }\n"
 		"}\n";
 
 	std::string error;

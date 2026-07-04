@@ -132,7 +132,7 @@ private:
 
 	std::mutex file_mtx;
 
-	void createDefaultConfig();
+	void createDefaultConfig(int port_override);
 	void readManagedFields(int port_override);
 	void refreshAuthFields(const std::string &json);
 	bool validate(const std::string &json, std::string &error);
