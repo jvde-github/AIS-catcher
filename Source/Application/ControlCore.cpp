@@ -345,6 +345,8 @@ bool ControlCore::writeFileAtomic(const std::string &path, const std::string &co
 	}
 
 	file.write(content.data(), content.size());
+	if (content.empty() || content.back() != '\n')
+		file.write("\n", 1);
 	file.close();
 
 	if (file.fail())
