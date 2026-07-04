@@ -363,7 +363,8 @@
             const url = new URL(window.location.href);
             url.port = port;
             url.pathname = '/';
-            url.search = '';
+            // the hub is the front door; the embedded viewer skips its own welcome dialog
+            url.search = '?welcome=false';
             url.hash = '';
 
             iframe.src = url.toString();
