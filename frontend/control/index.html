@@ -188,16 +188,23 @@
         }
 
         /* bottom bar: buttons centered, status + LEDs + community grouped on
-           the right — three flex zones so they can never overlap */
+           the right. The empty left spacer shrinks first, so when space gets
+           tight the buttons drift left before any indicator collapses. */
         #bar-inner {
             display: flex;
             align-items: center;
             height: 4rem;
             padding: 0 12px;
+            gap: 12px;
         }
 
         #bar-left {
             flex: 1 1 0;
+            min-width: 0;
+        }
+
+        #bar-right {
+            min-width: max-content;
         }
 
         #status-dot-wrap {
@@ -208,8 +215,8 @@
             overflow: hidden;
         }
 
-        /* light separator between the status and the activity/community group */
-        #bar-divider {
+        /* light separators between status, activity LEDs and community link */
+        .bar-divider {
             display: none;
             width: 1px;
             height: 1.75rem;
@@ -217,7 +224,13 @@
         }
 
         @media (min-width: 640px) {
-            #bar-divider {
+            .bar-divider.div-640 {
+                display: block;
+            }
+        }
+
+        @media (min-width: 660px) {
+            .bar-divider.div-768 {
                 display: block;
             }
         }
@@ -238,15 +251,28 @@
             gap: 0.75rem;
         }
 
-        /* community map link: nice to have, first to go when space is tight */
+        /* community map link: subordinate icon-only shortcut, first to go
+           when space is tight */
         #community-link {
             display: none;
             text-decoration: none;
+            color: #64748b;
+            transition: color 0.15s;
         }
 
-        @media (min-width: 768px) {
+        #community-link svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        #community-link:hover {
+            color: #cbd5e1;
+        }
+
+        @media (min-width: 660px) {
             #community-link {
                 display: flex;
+                align-items: center;
             }
         }
 
@@ -766,10 +792,11 @@
                 </div>
                 <span id="status-dot-text" class="hidden sm:inline text-xs font-medium text-slate-400"></span>
             </div>
-            <div id="bar-divider"></div>
+            <div class="bar-divider div-640"></div>
             <div id="channel-leds"></div>
+            <div class="bar-divider div-768"></div>
             <a id="community-link" href="https://www.aiscatcher.org" target="_blank" rel="noopener"
-                class="hub-button" title="AIS-catcher community map">
+                title="AIS-catcher community map">
                 <svg viewBox="0 0 106.63 101.41" fill="currentColor">
                     <g transform="translate(-2.8209 -5.1046)">
                         <path d="m100.94 53.199h-3.5e-4c-0.0018 12.359-5.0165 23.535-13.138 31.663-8.1284 8.1213-19.304 13.136-31.663 13.138-12.359-0.00176-23.535-5.0168-31.663-13.138-8.1216-8.1284-13.136-19.304-13.138-31.663h-8.5132c-0.0019 14.692 5.9867 28.045 15.632 37.683 9.6383 9.6449 22.991 15.634 37.683 15.632 14.692 2e-3 28.045-5.9866 37.683-15.632 9.6446-9.6379 15.633-22.991 15.632-37.683h-8.5132" />
@@ -780,7 +807,6 @@
                         <path d="m55.832 18.164 1.182 0.393c7.4393 2.4518 16.912 4.3557 24.848 5.6822v-13.731s-16.507-1.9276-26.03-5.4042c-9.5227 3.4766-26.03 5.4042-26.03 5.4042v13.731c7.9439-1.3264 17.425-3.2381 24.848-5.6822l1.182-0.393" />
                     </g>
                 </svg>
-                <span>Community</span>
             </a>
         </div>
         </div>
