@@ -187,8 +187,8 @@
             flex-shrink: 0;
         }
 
-        /* bottom bar: status left, buttons centered, channel LEDs right —
-           three flex zones so they can never overlap */
+        /* bottom bar: buttons centered, status + LEDs + community grouped on
+           the right — three flex zones so they can never overlap */
         #bar-inner {
             display: flex;
             align-items: center;
@@ -196,13 +196,30 @@
             padding: 0 12px;
         }
 
-        #status-dot-wrap {
+        #bar-left {
             flex: 1 1 0;
+        }
+
+        #status-dot-wrap {
             display: flex;
             align-items: center;
             gap: 8px;
             min-width: 0;
             overflow: hidden;
+        }
+
+        /* light separator between the status and the activity/community group */
+        #bar-divider {
+            display: none;
+            width: 1px;
+            height: 1.75rem;
+            background: #334155;
+        }
+
+        @media (min-width: 640px) {
+            #bar-divider {
+                display: block;
+            }
         }
 
         #nav-buttons {
@@ -710,17 +727,7 @@
 
     <nav id="bottom-bar">
         <div id="bar-inner">
-        <div id="status-dot-wrap">
-            <div class="relative group">
-                <span id="status-dot" class="block w-2.5 h-2.5 rounded-full bg-slate-500 cursor-default"></span>
-                <div class="absolute bottom-full left-0 mb-2 min-w-max px-2.5 py-1.5 rounded-lg bg-slate-800 text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap">
-                    <div id="status-dot-label" class="font-medium">Checking&#8230;</div>
-                    <div id="status-dot-uptime" class="text-slate-400 text-xs mt-0.5"></div>
-                    <div class="absolute top-full left-3 border-4 border-transparent border-t-slate-800"></div>
-                </div>
-            </div>
-            <span id="status-dot-text" class="hidden sm:inline text-xs font-medium text-slate-400"></span>
-        </div>
+        <div id="bar-left"></div>
         <div id="nav-buttons" class="transition-opacity">
             <button id="nav-start-restart" class="hub-button" data-view="control">
                 <svg id="nav-sr-icon" viewBox="0 -960 960 960" fill="currentColor">
@@ -748,6 +755,18 @@
             </button>
         </div>
         <div id="bar-right">
+            <div id="status-dot-wrap">
+                <div class="relative group">
+                    <span id="status-dot" class="block w-2.5 h-2.5 rounded-full bg-slate-500 cursor-default"></span>
+                    <div class="absolute bottom-full mb-2 min-w-max px-2.5 py-1.5 rounded-lg bg-slate-800 text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap" style="right:0">
+                        <div id="status-dot-label" class="font-medium">Checking&#8230;</div>
+                        <div id="status-dot-uptime" class="text-slate-400 text-xs mt-0.5"></div>
+                        <div class="absolute top-full border-4 border-transparent border-t-slate-800" style="right:12px"></div>
+                    </div>
+                </div>
+                <span id="status-dot-text" class="hidden sm:inline text-xs font-medium text-slate-400"></span>
+            </div>
+            <div id="bar-divider"></div>
             <div id="channel-leds"></div>
             <a id="community-link" href="https://www.aiscatcher.org" target="_blank" rel="noopener"
                 class="hub-button" title="AIS-catcher community map">
