@@ -52,6 +52,39 @@ void ControlServer::start()
 	Info() << "Control: control server running at port " << core.getControlPort();
 }
 
+// at most one event per second, and only when a counter moved — a quiet
+// station costs nothing, a busy one 20 bytes/s
+void ControlServer::processClients()
+{
+	HTTPServer::processClients();
+
+	std::time_t now = std::time(nullptr);
+	if (now == activity_time)
+		return;
+
+	uint32_t snapshot[4];
+	bool changed = false;
+	for (int i = 0; i < 4; i++)
+	{
+		snapshot[i] = core.getChannelActivity().count[i];
+		changed |= snapshot[i] != activity_sent[i];
+	}
+
+	if (!changed)
+		return;
+
+	activity_time = now;
+
+	std::string s = "[";
+	for (int i = 0; i < 4; i++)
+		s += std::to_string(snapshot[i]) + (i < 3 ? "," : "]");
+
+	for (int i = 0; i < 4; i++)
+		activity_sent[i] = snapshot[i];
+
+	sendSSE(1, "activity", s);
+}
+
 void ControlServer::close()
 {
 	if (log_listener >= 0)
@@ -346,6 +379,10 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 		if (s)
 			for (auto &m : Logger::getInstance().getLastMessages(25))
 				s->SendEvent("log", m.toJSON());
+	}
+	else if (path == "/api/activity" && r.method == "GET")
+	{
+		upgradeSSE(c, 1);
 	}
 	else
 	{

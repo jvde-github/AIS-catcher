@@ -337,9 +337,9 @@ static void Assert(bool b, std::string &context, const std::string &msg = "")
 }
 
 #ifdef HASWEBVIEWER
-static void run(RunState &state, WebViewer *managed_viewer = nullptr)
+static void run(RunState &state, WebViewer *managed_viewer = nullptr, ControlCore *control = nullptr)
 #else
-static void run(RunState &state)
+static void run(RunState &state, ControlCore *control = nullptr)
 #endif
 {
 	// -------------
@@ -461,6 +461,11 @@ static void run(RunState &state)
 	if (managed_viewer)
 		managed_viewer->connect(state.receivers);
 #endif
+
+	if (control)
+		for (auto &r : state.receivers)
+			for (int j = 0; j < r->Count(); j++)
+				r->Output(j).Connect((StreamIn<AIS::Message> *)&control->getChannelActivity());
 
 	for (auto &o : state.msg)
 		o->Start();
@@ -731,9 +736,9 @@ static int runManaged(const std::string &config_file, int port, int viewer_port,
 				core.reportRunning();
 				Info() << "Control: engine started";
 #ifdef HASWEBVIEWER
-				run(state, viewer.get());
+				run(state, viewer.get(), &core);
 #else
-				run(state);
+				run(state, &core);
 #endif
 			}
 			catch (std::exception const &e)

@@ -31,13 +31,17 @@
 class ControlServer : public IO::HTTPServer
 {
 public:
-	ControlServer(ControlCore &core) : core(core) {}
+	ControlServer(ControlCore &core) : core(core) { setSSETopic(1, "activity"); }
 	~ControlServer() { close(); }
 
 	void start();
 	void close();
 
 	void Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r, bool accept_gzip) override;
+
+protected:
+	// piggybacks the server loop to emit the channel-activity SSE tick
+	void processClients() override;
 
 private:
 	ControlCore &core;
@@ -51,6 +55,9 @@ private:
 	std::time_t login_block_until = 0;
 
 	int log_listener = -1;
+
+	uint32_t activity_sent[4] = {0, 0, 0, 0};
+	std::time_t activity_time = 0;
 
 	std::string createSession();
 	bool checkSession(const std::string &cookie);

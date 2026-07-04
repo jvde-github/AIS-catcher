@@ -166,6 +166,7 @@ namespace IO
 		}
 
 		void setFrameAncestors(const std::string &v) { frame_ancestors = v; }
+		void setSSETopic(int id, const std::string &topic) { sse_topic[MIN(id, 3)] = topic; }
 
 		// one-shot header (e.g. Set-Cookie) included in the next response only
 		void setExtraHeader(const std::string &h) { extra_header = h; }
@@ -198,8 +199,10 @@ namespace IO
 		}
 
 		void Parse(const std::string &s, HTTPRequest &r, bool &accept_gzip);
-		void processClients();
 
 		ZIP zip;
+
+	protected:
+		void processClients() override;
 	};
 }

@@ -149,6 +149,46 @@
             white-space: pre-wrap;
             word-break: break-word;
         }
+
+        /* per-channel activity LEDs, next to the engine state */
+        #channel-leds {
+            display: none;
+        }
+
+        @media (min-width: 640px) {
+            #channel-leds {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-left: 10px;
+            }
+        }
+
+        .ch-led-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .ch-led {
+            width: 7px;
+            height: 7px;
+            border-radius: 9999px;
+            background: #334155;
+            transition: background-color 0.5s ease-out;
+        }
+
+        .ch-led.flash {
+            background: #34d399;
+            transition: none;
+        }
+
+        .ch-led-label {
+            font-size: 8px;
+            line-height: 1;
+            color: #64748b;
+        }
     </style>
 </head>
 <body>
@@ -223,6 +263,7 @@
                 </div>
             </div>
             <span id="status-dot-text" class="hidden sm:inline text-xs font-medium text-slate-400"></span>
+            <div id="channel-leds"></div>
         </div>
         <div id="nav-buttons" class="flex items-center justify-center h-16 gap-6 sm:gap-12 pl-16 pr-4 transition-opacity">
             <button id="nav-start-restart" class="hub-button" data-view="control">

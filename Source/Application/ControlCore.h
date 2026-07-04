@@ -23,6 +23,27 @@
 #include <atomic>
 #include <ctime>
 
+#include "Stream.h"
+#include "Message.h"
+
+// Counts decoded messages per AIS channel; the control server streams the
+// changes as a light SSE feed driving the hub's activity LEDs
+class ChannelActivity : public StreamIn<AIS::Message>
+{
+public:
+	std::atomic<uint32_t> count[4]{};
+
+	void Receive(const AIS::Message *msg, int len, TAG &tag) override
+	{
+		for (int i = 0; i < len; i++)
+		{
+			int idx = msg[i].getChannel() - 'A';
+			if (idx >= 0 && idx < 4)
+				count[idx]++;
+		}
+	}
+};
+
 // Engine control for managed mode (-E): the config file is the single source
 // of truth and the engine (RunState) can be started, stopped and restarted
 // in-process. Command methods are thread-safe so any binding (HTTP control
@@ -56,6 +77,8 @@ public:
 	void setViewerPort(int p) { viewer_port = p; }
 	int getViewerPort() const { return viewer_port; }
 
+	ChannelActivity &getChannelActivity() { return channel_activity; }
+
 	int getControlPort() const { return control_port; }
 	const std::string &getConfigFile() const { return config_file; }
 	const std::string &getBindAddress() const { return bind_address; }
@@ -80,6 +103,7 @@ private:
 	int control_port = 8110;
 	std::string bind_address = "127.0.0.1";
 	std::atomic<int> viewer_port{0};
+	ChannelActivity channel_activity;
 	std::string password_hash;
 	std::string password_salt;
 

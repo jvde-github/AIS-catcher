@@ -120,6 +120,7 @@
                 auth = 'ok';
                 setAuthButtons(true);
                 startAlertStream();
+                startChannelLeds();
                 const action = pendingAction;
                 closeLoginModal();
                 refreshEngineStatus();
@@ -261,6 +262,47 @@
             engineAction(action)
                 .then(() => pollUntilState(target, () => setNavBusy(false), since))
                 .catch(() => setNavBusy(false));
+        });
+    }
+
+    // ------------------------------------------------------------------
+    // Channel activity LEDs, driven by the control server's light SSE:
+    // one [A,B,C,D] counter event per second, only when something moved
+    // ------------------------------------------------------------------
+
+    const CHANNELS = ['A', 'B', 'C', 'D'];
+    let channelPrev = null;
+    let activitySource = null;
+
+    function startChannelLeds() {
+        if (activitySource || !isLoggedIn()) return;
+
+        const wrap = document.getElementById('channel-leds');
+        if (!wrap) return;
+
+        wrap.innerHTML = CHANNELS.map((c, i) =>
+            `<div class="ch-led-item" id="ch-item-${i}" style="${i >= 2 ? 'display:none' : ''}">
+                <span class="ch-led" id="ch-led-${i}"></span>
+                <span class="ch-led-label">${c}</span>
+            </div>`).join('');
+
+        activitySource = new EventSource('/api/activity');
+        activitySource.addEventListener('activity', e => {
+            try {
+                const ch = JSON.parse(e.data);
+                ch.forEach((count, i) => {
+                    // C and D are unusual; show them once they carry traffic
+                    if (i >= 2 && count > 0)
+                        document.getElementById('ch-item-' + i).style.display = '';
+
+                    if (channelPrev && count > channelPrev[i]) {
+                        const led = document.getElementById('ch-led-' + i);
+                        led.classList.add('flash');
+                        setTimeout(() => led.classList.remove('flash'), 500);
+                    }
+                });
+                channelPrev = ch.slice();
+            } catch (_) { }
         });
     }
 
@@ -705,6 +747,7 @@
                 setAuthButtons(isLoggedIn());
                 startStatusPolling();
                 startAlertStream();
+                startChannelLeds();
 
                 if (auth === 'setup') {
                     loadingDiv.classList.add('hidden');
