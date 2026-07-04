@@ -55,7 +55,7 @@
             service: {
                 icon: 'aiscatcher',
                 name: 'AIS-catcher Community Station',
-                blurb: 'Share your reception with the AIS-catcher community map. Register a station and it gets a name, coverage statistics and a public page on aiscatcher.org.',
+                blurb: 'Share your reception with the AIS-catcher community map. Registering a station gives you a station key: paste it below to link this receiver. Your station gets a name, coverage statistics and a public page on aiscatcher.org.',
                 linkLabel: 'Create station on aiscatcher.org',
                 url: 'https://www.aiscatcher.org/addstation_ac',
                 field: {
