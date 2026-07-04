@@ -46,7 +46,7 @@
             id: 'input',
             title: 'Input Device',
             type: 'input',
-            intro: 'Select the device that receives AIS. SDR devices below were detected on this machine; a dAISy or other NMEA receiver connects via a serial port.'
+            intro: 'Select the device that receives AIS: a dAISy-catcher, one of the SDR devices detected on this machine, or another NMEA receiver on a serial port.'
         },
         {
             id: 'community',
@@ -102,9 +102,19 @@
     let devices = null;      // /api/devices result
     let serialPorts = null;  // /api/serial result
 
+    // fixed profile of the Wegmatt dAISy-catcher: only the serial path varies
+    const DAISY_CATCHER = {
+        baudrate: 115200,
+        init_seq: 'co2,v',
+        url: 'https://shop.wegmatt.com/products/daisy-catcher-high-performance-ais-receiver'
+    };
+
+    const MEMORY_ICON =
+        '<svg viewBox="0 -960 960 960" fill="currentColor"><path d="M360-360v-240h240v240H360Zm80-80h80v-80h-80v80Zm-40 320v-80h-80q-33 0-56.5-23.5T240-280v-80h-80v-80h80v-80h-80v-80h80v-80q0-33 23.5-56.5T320-760h80v-80h80v80h80v-80h80v80h80q33 0 56.5 23.5T800-680v80h80v80h-80v80h80v80h-80v80q0 33-23.5 56.5T720-240h-80v80h-80v-80h-80v80h-80Zm320-160v-480H320v480h400ZM480-480Z"/></svg>';
+
     function resetState() {
         stepIndex = 0;
-        sel = { device: null, daisy: false, daisy_port: '', daisy_baudrate: 38400, community_uid: '', aishub_port: '' };
+        sel = { kind: null, device: null, dc_port: '', serial_port: '', serial_baudrate: 38400, community_uid: '', aishub_port: '' };
     }
 
     // the wizard is shown while control.wizard is true in the config (set
@@ -213,7 +223,7 @@
     }
 
     function clearStep(step) {
-        if (step.type === 'input') { sel.device = null; sel.daisy = false; }
+        if (step.type === 'input') { sel.kind = null; sel.device = null; }
         else if (step.type === 'service') sel[step.service.field.key] = '';
     }
 
@@ -248,12 +258,24 @@
             const box = document.getElementById('wz-devices');
             if (!box) return;
 
-            let html = '';
+            const portOptions = (ports || []).map(p => '<option value="' + esc(p) + '">').join('');
+
+            let html =
+                '<label class="wz-option' + (sel.kind === 'dc' ? ' selected' : '') + '" data-dev="dc">' +
+                '<input type="radio" name="wz-dev" ' + (sel.kind === 'dc' ? 'checked' : '') + '>' +
+                '<span class="wz-option-icon">' + MEMORY_ICON + '</span>' +
+                '<span class="wz-option-main"><span class="wz-option-title">dAISy-catcher</span>' +
+                '<span class="wz-option-sub">High-performance AIS receiver &mdash; <a class="wz-mini-link" href="' + DAISY_CATCHER.url + '" target="_blank" rel="noopener">shop.wegmatt.com</a></span>' +
+                '<span class="wz-daisy' + (sel.kind === 'dc' ? '' : ' hidden') + '" id="wz-dc-fields">' +
+                '<input id="wz-dc-port" list="wz-serial-list" placeholder="Serial port, e.g. /dev/serial0" value="' + esc(sel.dc_port) + '">' +
+                '</span></span>' +
+                '</label>';
+
             if (!list.length)
-                html += '<p class="wz-none">No SDR devices detected. Connect an RTL-SDR or similar dongle, or use a serial device below.</p>';
+                html += '<p class="wz-none">No SDR devices detected. Connect an RTL-SDR or similar dongle, or use a serial device.</p>';
 
             list.forEach((d, i) => {
-                const active = sel.device && sel.device.input === d.input && sel.device.serial === d.serial;
+                const active = sel.kind === 'sdr' && sel.device && sel.device.input === d.input && sel.device.serial === d.serial;
                 html +=
                     '<label class="wz-option' + (active ? ' selected' : '') + '" data-dev="' + i + '">' +
                     '<input type="radio" name="wz-dev" ' + (active ? 'checked' : '') + '>' +
@@ -262,46 +284,43 @@
                     '</label>';
             });
 
-            const portOptions = (ports || []).map(p => '<option value="' + esc(p) + '">').join('');
             html +=
-                '<label class="wz-option' + (sel.daisy ? ' selected' : '') + '" data-dev="daisy">' +
-                '<input type="radio" name="wz-dev" ' + (sel.daisy ? 'checked' : '') + '>' +
-                '<span class="wz-option-main"><span class="wz-option-title">dAISy / serial NMEA receiver</span>' +
-                '<span class="wz-option-sub">Hardware AIS receiver connected via a serial port</span>' +
-                '<span class="wz-daisy' + (sel.daisy ? '' : ' hidden') + '" id="wz-daisy-fields">' +
-                '<input id="wz-daisy-port" list="wz-serial-list" placeholder="Serial port, e.g. /dev/serial0" value="' + esc(sel.daisy_port) + '">' +
-                '<datalist id="wz-serial-list">' + portOptions + '</datalist>' +
-                '<select id="wz-daisy-baud">' +
-                BAUD_RATES.map(b => '<option value="' + b + '"' + (b === sel.daisy_baudrate ? ' selected' : '') + '>' + b + ' baud</option>').join('') +
+                '<label class="wz-option' + (sel.kind === 'serial' ? ' selected' : '') + '" data-dev="serial">' +
+                '<input type="radio" name="wz-dev" ' + (sel.kind === 'serial' ? 'checked' : '') + '>' +
+                '<span class="wz-option-main"><span class="wz-option-title">Serial</span>' +
+                '<span class="wz-option-sub">NMEA receiver connected via a serial port</span>' +
+                '<span class="wz-daisy' + (sel.kind === 'serial' ? '' : ' hidden') + '" id="wz-serial-fields">' +
+                '<input id="wz-serial-port" list="wz-serial-list" placeholder="Serial port, e.g. /dev/serial0" value="' + esc(sel.serial_port) + '">' +
+                '<select id="wz-serial-baud">' +
+                BAUD_RATES.map(b => '<option value="' + b + '"' + (b === sel.serial_baudrate ? ' selected' : '') + '>' + b + ' baud</option>').join('') +
                 '</select>' +
                 '</span></span>' +
-                '</label>';
+                '</label>' +
+                '<datalist id="wz-serial-list">' + portOptions + '</datalist>';
 
             box.innerHTML = html;
 
             box.querySelectorAll('.wz-option').forEach(opt => {
-                opt.addEventListener('click', () => {
+                opt.addEventListener('click', e => {
+                    if (e.target.closest('.wz-mini-link')) return;
                     box.querySelectorAll('.wz-option').forEach(o => o.classList.remove('selected'));
                     opt.classList.add('selected');
                     opt.querySelector('input[type=radio]').checked = true;
-                    if (opt.dataset.dev === 'daisy') {
-                        sel.device = null;
-                        sel.daisy = true;
-                        document.getElementById('wz-daisy-fields').classList.remove('hidden');
-                    } else {
-                        sel.daisy = false;
-                        sel.device = list[+opt.dataset.dev];
-                        const f = document.getElementById('wz-daisy-fields');
-                        if (f) f.classList.add('hidden');
-                    }
+                    const kind = opt.dataset.dev;
+                    sel.kind = kind === 'dc' ? 'dc' : kind === 'serial' ? 'serial' : 'sdr';
+                    sel.device = sel.kind === 'sdr' ? list[+kind] : null;
+                    document.getElementById('wz-dc-fields').classList.toggle('hidden', sel.kind !== 'dc');
+                    document.getElementById('wz-serial-fields').classList.toggle('hidden', sel.kind !== 'serial');
                     stepError();
                 });
             });
 
-            const portInput = document.getElementById('wz-daisy-port');
-            const baudInput = document.getElementById('wz-daisy-baud');
-            if (portInput) portInput.addEventListener('input', () => { sel.daisy_port = portInput.value.trim(); });
-            if (baudInput) baudInput.addEventListener('change', () => { sel.daisy_baudrate = +baudInput.value; });
+            const dcPort = document.getElementById('wz-dc-port');
+            const serialPort = document.getElementById('wz-serial-port');
+            const serialBaud = document.getElementById('wz-serial-baud');
+            dcPort.addEventListener('input', () => { sel.dc_port = dcPort.value.trim(); });
+            serialPort.addEventListener('input', () => { sel.serial_port = serialPort.value.trim(); });
+            serialBaud.addEventListener('change', () => { sel.serial_baudrate = +serialBaud.value; });
         }).catch(() => {
             const box = document.getElementById('wz-devices');
             if (box) box.innerHTML = '<p class="wz-none">Could not scan for devices.</p>';
@@ -335,10 +354,12 @@
 
     function changeList() {
         const items = [];
-        if (sel.device)
+        if (sel.kind === 'sdr' && sel.device)
             items.push('Input device: <b>' + esc(SDR_TYPES[sel.device.input] || sel.device.input) + ' [' + esc(sel.device.serial || '') + ']</b>');
-        else if (sel.daisy && sel.daisy_port)
-            items.push('Input device: <b>serial receiver on ' + esc(sel.daisy_port) + '</b> at ' + sel.daisy_baudrate + ' baud');
+        else if (sel.kind === 'dc' && sel.dc_port)
+            items.push('Input device: <b>dAISy-catcher on ' + esc(sel.dc_port) + '</b>');
+        else if (sel.kind === 'serial' && sel.serial_port)
+            items.push('Input device: <b>serial receiver on ' + esc(sel.serial_port) + '</b> at ' + sel.serial_baudrate + ' baud');
         if (sel.community_uid)
             items.push('Community sharing with your registered station key');
         if (sel.aishub_port)
@@ -364,7 +385,11 @@
     function onNext(step) {
         stepError();
 
-        if (step.type === 'input' && sel.daisy && !sel.daisy_port) {
+        if (step.type === 'input' && sel.kind === 'dc' && !sel.dc_port) {
+            stepError('Enter the serial port of the dAISy-catcher, or press Skip.');
+            return;
+        }
+        if (step.type === 'input' && sel.kind === 'serial' && !sel.serial_port) {
             stepError('Enter the serial port of the receiver, or press Skip.');
             return;
         }
@@ -395,16 +420,25 @@
         fetch('/api/config')
             .then(r => { if (!r.ok) throw new Error('failed to load configuration'); return r.json(); })
             .then(cfg => {
-                if (sel.device) {
+                if (sel.kind === 'sdr' && sel.device) {
                     cfg.input = sel.device.input;
                     cfg.serial = sel.device.serial;
-                } else if (sel.daisy && sel.daisy_port) {
+                } else if (sel.kind === 'dc' && sel.dc_port) {
                     cfg.input = 'SERIALPORT';
                     cfg.serialport = Object.assign({}, cfg.serialport, {
                         active: true,
-                        port: sel.daisy_port,
-                        baudrate: sel.daisy_baudrate
+                        port: sel.dc_port,
+                        baudrate: DAISY_CATCHER.baudrate,
+                        init_seq: DAISY_CATCHER.init_seq
                     });
+                } else if (sel.kind === 'serial' && sel.serial_port) {
+                    cfg.input = 'SERIALPORT';
+                    cfg.serialport = Object.assign({}, cfg.serialport, {
+                        active: true,
+                        port: sel.serial_port,
+                        baudrate: sel.serial_baudrate
+                    });
+                    delete cfg.serialport.init_seq;
                 }
                 if (sel.community_uid) {
                     cfg.sharing = true;
