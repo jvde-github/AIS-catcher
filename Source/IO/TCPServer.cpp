@@ -500,6 +500,10 @@ namespace IO
 			return false;
 
 #ifndef _WIN32
+		{
+			int optval = 1;
+			setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+		}
 		if (reuse_port)
 		{
 			int optval = 1;
