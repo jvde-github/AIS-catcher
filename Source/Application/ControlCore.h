@@ -37,7 +37,7 @@ public:
 		Running
 	};
 
-	ControlCore(const std::string &config_file, int port_override = 0);
+	ControlCore(const std::string &config_file, int port_override = 0, const std::string &bind = "127.0.0.1");
 
 	// command interface, thread-safe
 	void startEngine();
@@ -58,6 +58,11 @@ public:
 
 	int getControlPort() const { return control_port; }
 	const std::string &getConfigFile() const { return config_file; }
+	const std::string &getBindAddress() const { return bind_address; }
+
+	// local mode: bound to loopback only, no password needed; any other bind
+	// address exposes the control server and makes authentication mandatory
+	bool authRequired() const { return bind_address != "127.0.0.1" && bind_address != "localhost"; }
 
 	bool hasPassword();
 	bool verifyPassword(const std::string &password);
@@ -73,6 +78,7 @@ public:
 private:
 	std::string config_file;
 	int control_port = 8110;
+	std::string bind_address = "127.0.0.1";
 	std::atomic<int> viewer_port{0};
 	std::string password_hash;
 	std::string password_salt;

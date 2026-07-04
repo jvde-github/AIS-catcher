@@ -49,7 +49,8 @@
     // Auth
     // ------------------------------------------------------------------
 
-    function isLoggedIn() { return auth === 'ok'; }
+    // 'open' = local mode without authentication (loopback binding)
+    function isLoggedIn() { return auth === 'ok' || auth === 'open'; }
 
     function setAuthButtons(loggedIn) {
         ['nav-btn-input', 'nav-btn-output', 'nav-btn-control'].forEach(id => {
@@ -551,6 +552,7 @@
                     <h4 class="font-semibold text-slate-800 mb-2">Log</h4>
                     <div id="log-box" class="bg-slate-900 text-slate-200 rounded-lg p-3 h-48 overflow-y-auto"></div>
                 </div>
+                ${auth === 'open' ? '' : `
                 <div>
                     <h4 class="font-semibold text-slate-800 mb-2">Change Password</h4>
                     <form id="password-form" class="space-y-2">
@@ -562,14 +564,17 @@
                     </form>
                 </div>
                 <button id="hub-btn-logout" class="w-full border border-slate-300 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg transition text-sm font-medium">Logout</button>
+                `}
             </div>
         `;
 
         document.getElementById('hub-btn-start').addEventListener('click', () => controlEngine('start'));
         document.getElementById('hub-btn-stop').addEventListener('click', () => controlEngine('stop'));
         document.getElementById('hub-btn-restart').addEventListener('click', () => controlEngine('restart'));
-        document.getElementById('hub-btn-logout').addEventListener('click', logout);
-        document.getElementById('password-form').addEventListener('submit', changePassword);
+        if (auth !== 'open') {
+            document.getElementById('hub-btn-logout').addEventListener('click', logout);
+            document.getElementById('password-form').addEventListener('submit', changePassword);
+        }
 
         updateControlStatus();
         startLogStream();

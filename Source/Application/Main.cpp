@@ -96,7 +96,7 @@ static void Usage()
 	Info() << "\t[-C [filename] - read configuration settings from file]";
 	Info() << "\t[-D [connection string] - write messages to PostgreSQL database]";
 	Info() << "\t[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]";
-	Info() << "\t[-E [filename] [port] - managed mode: run engine from config file with control server, must be only option (default port: 8110)]";
+	Info() << "\t[-E [filename] [port] [bind address] - managed mode: engine run from config file with control server, must be only option (default: port 8110, local access without password; bind 0.0.0.0 for LAN access with password)]";
 	Info() << "\t[-f [filename] write NMEA lines to file]";
 	Info() << "\t[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]";
 	Info() << "\t[-G [LEVEL level] [SYSTEM on] - control logging (levels: DEBUG, INFO, WARNING, ERROR, CRITICAL) or enable system logging]";
@@ -633,6 +633,8 @@ static std::unique_ptr<WebViewer> startManagedViewer(const std::string &config_f
 
 	viewer->active() = true;
 	viewer->setEphemeralPort();
+	if (core.getBindAddress() != "0.0.0.0")
+		viewer->setIP(core.getBindAddress());
 	viewer->SetKey(AIS::KEY_SETTING_REALTIME, "on");
 	viewer->SetKey(AIS::KEY_SETTING_LOG, "on");
 
@@ -671,16 +673,20 @@ static std::unique_ptr<WebViewer> startManagedViewer(const std::string &config_f
 // Managed mode (-E): supervisor loop that builds a fresh RunState from the
 // config file for every engine start and tears it down on stop/restart. The
 // process survives a broken config; the user fixes it via the control API.
-static int runManaged(const std::string &config_file, int port)
+static int runManaged(const std::string &config_file, int port, const std::string &bind)
 {
-	ControlCore core(config_file, port);
+	ControlCore core(config_file, port, bind);
 	ControlServer server(core);
 
 	// managed mode is driven from the log page, so include DEBUG detail
 	// (device open/close, stream wiring) that a CLI user would not want
 	Logger::getInstance().setMinLevel(LogLevel::DEBUG);
 
-	Info() << "Control: managed mode, config file \"" << config_file << "\"";
+	if (core.authRequired())
+		Info() << "Control: managed mode, config file \"" << config_file << "\", bound to " << core.getBindAddress() << ", password required";
+	else
+		Info() << "Control: managed mode, config file \"" << config_file << "\", local access only";
+
 	server.start();
 
 #ifdef HASWEBVIEWER
@@ -1284,10 +1290,37 @@ int main(int argc, char *argv[])
 
 		if (managed)
 		{
-			if (expanded.size() < 3 || expanded.size() > 4 || expanded[1] != "-E")
-				throw std::runtime_error("in managed mode all settings live in the config file: AIS-catcher -E <config file> [port]");
+			const std::string usage = "AIS-catcher -E <config file> [port] [bind address]";
 
-			std::string file;
+			if (expanded.size() < 3 || expanded.size() > 5 || expanded[1] != "-E")
+				throw std::runtime_error("in managed mode all settings live in the config file: " + usage);
+
+			auto isIPv4 = [](const std::string &s)
+			{
+				int dots = 0, val = 0, digits = 0;
+				for (char c : s)
+				{
+					if (c == '.')
+					{
+						if (!digits || val > 255)
+							return false;
+						dots++;
+						val = 0;
+						digits = 0;
+					}
+					else if (c >= '0' && c <= '9')
+					{
+						val = val * 10 + (c - '0');
+						if (++digits > 3)
+							return false;
+					}
+					else
+						return false;
+				}
+				return dots == 3 && digits > 0 && val <= 255;
+			};
+
+			std::string file, bind = "127.0.0.1";
 			int port = 0;
 
 			for (std::size_t i = 2; i < expanded.size(); i++)
@@ -1295,16 +1328,18 @@ int main(int argc, char *argv[])
 				const std::string &a = expanded[i];
 				if (!a.empty() && a.find_first_not_of("0123456789") == std::string::npos)
 					port = Util::Parse::Integer(a, 1, 65535);
+				else if (isIPv4(a))
+					bind = a;
 				else if (file.empty())
 					file = a;
 				else
-					throw std::runtime_error("managed mode takes one config file and optionally one port: AIS-catcher -E <config file> [port]");
+					throw std::runtime_error("managed mode takes a config file, optionally a port and a bind address: " + usage);
 			}
 
 			if (file.empty())
-				throw std::runtime_error("managed mode requires a config file: AIS-catcher -E <config file> [port]");
+				throw std::runtime_error("managed mode requires a config file: " + usage);
 
-			return runManaged(file, port);
+			return runManaged(file, port, bind);
 		}
 
 		std::vector<char *> argv_expanded;

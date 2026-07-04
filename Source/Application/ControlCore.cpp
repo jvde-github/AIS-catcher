@@ -33,7 +33,7 @@
 #include "Config.h"
 #include "DeviceManager.h"
 
-ControlCore::ControlCore(const std::string &file, int port_override) : config_file(file)
+ControlCore::ControlCore(const std::string &file, int port_override, const std::string &bind) : config_file(file), bind_address(bind)
 {
 	if (!std::ifstream(config_file).good())
 		createDefaultConfig();

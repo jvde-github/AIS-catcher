@@ -159,6 +159,18 @@ namespace IO
 				value.erase(0, value.find_first_not_of(" \t"));
 				r.cookie = value;
 			}
+			else if (key == "HOST:")
+			{
+				std::getline(line_stream, value);
+				value.erase(0, value.find_first_not_of(" \t"));
+				r.host = value;
+			}
+			else if (key == "ORIGIN:")
+			{
+				std::getline(line_stream, value);
+				value.erase(0, value.find_first_not_of(" \t"));
+				r.origin = value;
+			}
 			else if (key == "CONTENT-LENGTH:")
 			{
 				std::getline(line_stream, value);

@@ -107,6 +107,8 @@ namespace IO
 		std::string target;
 		std::string body;
 		std::string cookie;
+		std::string host;
+		std::string origin;
 
 		std::string path() const
 		{

@@ -40,6 +40,9 @@ static std::string randomToken()
 
 void ControlServer::start()
 {
+	if (core.getBindAddress() != "0.0.0.0")
+		setIP(core.getBindAddress());
+
 	if (!HTTPServer::start(core.getControlPort()))
 		throw std::runtime_error("Control: cannot start control server at port " + std::to_string(core.getControlPort()));
 
@@ -156,7 +159,7 @@ void ControlServer::loginSucceeded()
 void ControlServer::sendStatus(IO::TCPServerConnection &c, bool authenticated)
 {
 	bool running = core.getEngineState() == ControlCore::EngineState::Running;
-	const char *auth = authenticated ? "ok" : (core.hasPassword() ? "login" : "setup");
+	const char *auth = !core.authRequired() ? "open" : (authenticated ? "ok" : (core.hasPassword() ? "login" : "setup"));
 
 	std::string s = std::string("{\"auth\":\"") + auth +
 					"\",\"engine\":\"" + (running ? "running" : "stopped") +
@@ -182,7 +185,25 @@ void ControlServer::sendError(IO::TCPServerConnection &c, const std::string &mes
 void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r, bool accept_gzip)
 {
 	const std::string path = r.path();
-	const bool authenticated = checkSession(r.cookie);
+	const bool authenticated = !core.authRequired() || checkSession(r.cookie);
+
+	// cross-origin browser POSTs carry an Origin header that does not match
+	// our own host; reject them so the passwordless local mode cannot be
+	// driven by a malicious web page (CSRF)
+	if (r.method == "POST" && !r.origin.empty())
+	{
+		std::string origin = r.origin;
+		if (origin.compare(0, 7, "http://") == 0)
+			origin = origin.substr(7);
+		else if (origin.compare(0, 8, "https://") == 0)
+			origin = origin.substr(8);
+
+		if (origin != r.host)
+		{
+			sendError(c, "cross-origin request rejected", 403);
+			return;
+		}
+	}
 
 	const std::string cookie_attr = "; Path=/; Max-Age=" + std::to_string(SESSION_LIFETIME) + "; HttpOnly; SameSite=Strict";
 
@@ -192,7 +213,9 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 	}
 	else if (path == "/api/setup" && r.method == "POST")
 	{
-		if (core.hasPassword())
+		if (!core.authRequired())
+			sendError(c, "authentication disabled in local mode", 403);
+		else if (core.hasPassword())
 			sendError(c, "password already set", 403);
 		else if (r.body.length() < 6)
 			sendError(c, "password needs at least 6 characters");
@@ -207,7 +230,9 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 	{
 		int wait = 0;
 
-		if (!core.hasPassword())
+		if (!core.authRequired())
+			sendError(c, "authentication disabled in local mode", 403);
+		else if (!core.hasPassword())
 			sendError(c, "no password set", 403);
 		else if (loginBlocked(wait))
 			sendError(c, "too many attempts, retry in " + std::to_string(wait) + "s", 429);
@@ -256,7 +281,9 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 	}
 	else if (path == "/api/password" && r.method == "POST")
 	{
-		if (r.body.length() < 6)
+		if (!core.authRequired())
+			sendError(c, "authentication disabled in local mode", 403);
+		else if (r.body.length() < 6)
 			sendError(c, "password needs at least 6 characters");
 		else
 		{
