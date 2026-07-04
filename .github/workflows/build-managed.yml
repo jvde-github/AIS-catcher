@@ -1,0 +1,325 @@
+# Preview builds for the managed-mode branch. This workflow only exists on
+# the `managed` branch and publishes to its own rolling pre-release
+# (managed-preview) and Docker tag (:managed), so it cannot interfere with
+# main's build.yml, Edge release or :edge image. Delete this file when the
+# branch is merged into main.
+name: Build managed preview
+
+on:
+  push:
+    branches:
+      - 'managed'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  RELEASE_TARGET: managed-preview
+
+jobs:
+  release:
+    name: Ensure preview release exists
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v6
+
+    - name: Create rolling pre-release if missing
+      run: |
+        if ! gh release view "$RELEASE_TARGET" --repo ${{ github.repository }} > /dev/null 2>&1; then
+          gh release create "$RELEASE_TARGET" \
+            --repo ${{ github.repository }} \
+            --target managed \
+            --prerelease \
+            --title "Managed Mode Preview" \
+            --notes "$(cat <<'EOF'
+        Rolling preview build of the `managed` branch: AIS-catcher running as a self-contained appliance (`-E`), with a built-in control server, hub UI, persistent web viewer and first-run setup wizard.
+
+        **Quick start**
+
+        - Windows: download the zip below, unpack and run `start.bat` (or `AIS-catcher.exe -E config.json`), then open http://localhost:8118
+        - Debian/Ubuntu/Raspberry Pi: install the matching `.deb` below, then `AIS-catcher -E config.json` and open http://localhost:8118
+        - Docker: `docker run -v ais-config:/config -p 8118:8118 -p 8100:8100 --device /dev/bus/usb ghcr.io/jvde-github/ais-catcher:managed -E /config/config.json 8118 8100 0.0.0.0`, then open http://localhost:8118 — inside a container the server must bind 0.0.0.0, so you are asked to set a password on first visit
+
+        Assets are replaced on every push to the branch; the tag does not track the latest commit.
+        EOF
+        )"
+        else
+          echo "Release $RELEASE_TARGET already exists"
+        fi
+
+  build_packages:
+    name: Debian/Ubuntu packages
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RUN_NUMBER: ${{ github.run_number }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { distro: debian, codename: bookworm, arch: amd64 }
+          - { distro: debian, codename: bookworm, arch: arm64 }
+          - { distro: debian, codename: bookworm, arch: armhf }
+          - { distro: debian, codename: trixie,   arch: amd64 }
+          - { distro: debian, codename: trixie,   arch: arm64 }
+          - { distro: debian, codename: trixie,   arch: armhf }
+          - { distro: ubuntu, codename: jammy,    arch: amd64 }
+          - { distro: ubuntu, codename: noble,    arch: amd64 }
+          - { distro: ubuntu, codename: noble,    arch: arm64 }
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: Set filename
+      run: echo "filename=ais-catcher_${{ matrix.distro }}_${{ matrix.codename }}_${{ matrix.arch }}.deb" >> $GITHUB_ENV
+
+    - name: Setup QEMU
+      uses: docker/setup-qemu-action@v4
+
+    - name: Setup Buildx
+      uses: docker/setup-buildx-action@v4
+
+    - name: Map architecture
+      id: arch
+      run: |
+        case "${{ matrix.arch }}" in
+          armhf) echo "platform=linux/arm/v7" >> $GITHUB_OUTPUT ;;
+          *)     echo "platform=linux/${{ matrix.arch }}" >> $GITHUB_OUTPUT ;;
+        esac
+
+    - name: Build package
+      run: |
+        mkdir -p output
+        docker run --rm \
+          --platform ${{ steps.arch.outputs.platform }} \
+          -v $(pwd):/src \
+          -v $(pwd)/output:/output \
+          -w /src \
+          -e RUN_NUMBER=${RUN_NUMBER} \
+          ${{ matrix.distro }}:${{ matrix.codename }} \
+          bash scripts/build-debian.sh -o /output
+        mv output/ais-catcher.deb ${{ env.filename }}
+
+    - name: Upload to release
+      run: gh release upload "${{ env.RELEASE_TARGET }}" ${{ env.filename }} --repo ${{ github.repository }} --clobber
+
+  Docker:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Calculate Container Metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=managed
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Images
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64, linux/arm64, linux/arm/v7
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            RUN_NUMBER=${{ github.run_number }}
+          no-cache: true
+
+  Windows:
+    needs: release
+    runs-on: windows-2022
+    env:
+      RUN_NUMBER: ${{ github.run_number }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [x86, x64]
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v3
+      with:
+        msbuild-architecture: ${{matrix.platform}}
+
+    - name: Restore vcpkg packages
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: vcpkg integrate install
+
+    - name: Install vcpkg packages
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+        vcpkg install libpq:${{matrix.platform}}-windows fftw3:${{matrix.platform}}-windows sqlite3:${{matrix.platform}}-windows openssl:${{matrix.platform}}-windows libusb:${{matrix.platform}}-windows pthread:${{matrix.platform}}-windows zlib:${{matrix.platform}}-windows soxr:${{matrix.platform}}-windows zeromq:${{matrix.platform}}-windows
+
+    - name: Setting up directories
+      run: |
+        mkdir output; cd output; mkdir plugins; mkdir Licenses; cd ..; mkdir include; cd include; mkdir curl; mkdir openssl; cd ..; mkdir release; mkdir lib;
+        cp C:\vcpkg\installed\${{matrix.platform}}-windows\include\*.h include
+        cp C:\vcpkg\installed\${{matrix.platform}}-windows\include\openssl\*.h include\openssl
+        cp C:\vcpkg\installed\${{matrix.platform}}-windows\lib\*.lib lib
+        cp C:\vcpkg\installed\${{matrix.platform}}-windows\bin\*.dll release
+
+    - name: Create start.bat
+      run: |
+        cd output
+        echo "AIS-catcher -E config.json`nPAUSE" |Out-File -FilePath start.bat -Encoding ascii
+        cd ..
+
+    - name: Building Libraries and AIS-catcher
+      run: |
+        echo "x64" > x64-a; echo "Win32" > x86-a; $msplatform = $(cat "${{matrix.platform}}-a")
+        $gen = "Visual Studio 17 2022"
+        $config = "Release"
+
+        $libusb_inc = "C:\vcpkg\installed\${{matrix.platform}}-windows\include\libusb-1.0"
+        $libusb_lib = "C:\vcpkg\installed\${{matrix.platform}}-windows\lib\libusb-1.0.lib"
+        $pthread_lib = "C:\vcpkg\installed\${{matrix.platform}}-windows\lib\pthreadVC3.lib"
+        $pthread_inc = "C:\vcpkg\installed\${{matrix.platform}}-windows\include"
+        $fftw3_lib = "C:\vcpkg\installed\${{matrix.platform}}-windows\lib\fftw3.lib"
+        $fftw3_inc = "C:\vcpkg\installed\${{matrix.platform}}-windows\include"
+
+        echo "RTLSDR"
+        git clone https://github.com/jvde-github/rtl-sdr.git
+        cd rtl-sdr; mkdir build; cd build
+        cmake .. -A $msplatform -G $gen -DLIBUSB_FOUND=1  -DLIBUSB_INCLUDE_DIRS="$libusb_inc"
+        msbuild /verbosity:quiet /m /p:Configuration=$config /p:Platform=$msplatform rtlsdr.sln
+        cd ..; cd ..
+        cp rtl-sdr\build\src\Release\*.dll release
+        cp rtl-sdr\build\src\Release\*.lib lib
+        cp rtl-sdr\include\*.h include
+        cp rtl-sdr\COPYING output\Licenses\RTLSDR
+
+        echo "AIRSPY HF+"
+        git clone https://github.com/airspy/airspyhf.git
+        cd airspyhf; mkdir build; cd build
+        cmake .. -A $msplatform -G $gen -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc"
+        msbuild /verbosity:quiet /m /p:Configuration=$config /p:Platform=$msplatform airspyhf_all.sln
+        cd ..; cd ..
+        cp airspyhf\build\libairspyhf\src\Release\*.dll release
+        cp airspyhf\build\libairspyhf\src\Release\*.lib lib
+        cp airspyhf\libairspyhf\src\airspyhf.h include
+        cp airspyhf\LICENSE.BSD output\Licenses\AIRSPYHF
+
+        echo "AIRSPY"
+        git clone https://github.com/airspy/airspyone_host.git
+        cd airspyone_host; git reset --hard b97309a6a24db161de990d6e4f0432fc94f72cd9; mkdir build; cd build
+        cmake .. -A $msplatform -G $gen -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc"
+        msbuild /verbosity:quiet /m /p:Configuration=$config /p:Platform=$msplatform airspy_all.sln
+        cd ..; cd ..
+        cp airspyone_host\build\airspy-tools\src\*.dll release
+        cp airspyone_host\build\libairspy\src\Release\*.lib lib
+        cp airspyone_host\libairspy\src\*.h include
+        cp airspyone_host\airspy-tools\LICENSE.md output\Licenses\AIRSPY
+
+        echo "HACK RF"
+        git clone https://github.com/greatscottgadgets/hackrf.git
+        cd hackrf; git reset --hard 34cbbe7330d1e11e7967f84da39d04a61bfdf4f1; cd host; mkdir build; cd build
+        cmake .. -A $msplatform -G $gen -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc" -DFFTW_LIBRARIES="$fftw3_lib" -DFFTW_INCLUDES="$fftw3_inc"
+        msbuild /verbosity:quiet /m /p:Configuration=$config /p:Platform=$msplatform HackRF.sln
+        cd ..; cd ..; cd ..
+        cp hackrf\host\build\libhackrf\src\Release\*.dll release
+        cp hackrf\host\build\libhackrf\src\Release\*.lib lib
+        cp hackrf\host\libhackrf\src\*.h include
+        cp hackrf\COPYING output\Licenses\HACKRF
+
+        echo "AIS-catcher"
+        mkdir build; cd build
+        cmake .. -A $msplatform -G $gen -DPOTHOSSDR_INCLUDE_DIR=${{github.workspace}}\include -DPOTHOSSDR_LIBRARY_DIR=${{github.workspace}}\lib -DPOTHOSSDR_BINARY_DIR=${{github.workspace}}\release -DRUN_NUMBER=$env:RUN_NUMBER
+        msbuild /verbosity:quiet /m /p:Configuration=$config /p:Platform=$msplatform AIS-catcher.sln
+        cd ..
+        cp LICENSE output\Licenses\AIS-catcher
+
+    - name: Prepare output
+      run: cp build\*.dll output; cp build\Release\*.exe output; cp plugins\* output\plugins; cp README.md output;
+
+    - name: Smoke test artifact (x64 clean build)
+      if: matrix.platform == 'x64'
+      shell: pwsh
+      run: |
+        $dest = Join-Path $env:RUNNER_TEMP "smoke-${{matrix.platform}}"
+        Remove-Item -Recurse -Force $dest -ErrorAction SilentlyContinue
+        Copy-Item -Recurse output $dest
+        Add-Type -MemberDefinition '[System.Runtime.InteropServices.DllImport("kernel32.dll")] public static extern uint SetErrorMode(uint mode);' -Name S -Namespace N -PassThru | Out-Null
+        [N.S]::SetErrorMode(0x8003) | Out-Null
+        Push-Location $dest
+        & .\AIS-catcher.exe -h BUILD
+        $exit = $LASTEXITCODE
+        Pop-Location
+        if ($exit -ne 0) {
+          throw "Smoke test failed: AIS-catcher.exe -h BUILD exited with $exit (missing DLL or runtime error)"
+        }
+        Write-Host "Smoke test PASSED"
+
+    - name: Compress and upload ZIP file
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher ${{matrix.platform}}.zip"
+        bash -c "gh release upload '${{ env.RELEASE_TARGET }}' './output/AIS-catcher ${{matrix.platform}}.zip' --repo ${{ github.repository }} --clobber"
+        del "output\AIS-catcher ${{matrix.platform}}.zip"
+
+    - name: Download SDRPlay API
+      run: |
+        cd "C:/Program Files/"
+        Invoke-WebRequest -Uri " https://www.sdrplay.com/software/SDRplay_RSP_API-Windows-3.09.exe" -OutFile sdrplay.exe
+        choco install innoextract
+        innoextract sdrplay.exe
+        ren app SDRplay
+
+    - name: Building with SDRPlay support
+      run: |
+        cp "C:\Program Files\SDRplay\API\docs\SDRplay_RSP_API_Release_Notes_V3.09.pdf" output\Licenses\SDRPLAY.pdf
+
+        echo "x64" > x64-a; echo "Win32" > x86-a; $msplatform = $(cat "${{matrix.platform}}-a")
+        $gen = "Visual Studio 17 2022"
+        $config = "Release"
+
+        echo "AIS-catcher"
+
+        Remove-Item build -Recurse
+        mkdir build; cd build
+        cmake .. -A $msplatform -G $gen -DPOTHOSSDR_INCLUDE_DIR=${{github.workspace}}\include -DPOTHOSSDR_LIBRARY_DIR=${{github.workspace}}\lib -DPOTHOSSDR_BINARY_DIR=${{github.workspace}}\release -DRUN_NUMBER=$env:RUN_NUMBER
+        msbuild /verbosity:quiet /m /p:Configuration=$config /p:Platform=$msplatform AIS-catcher.sln
+        cd ..
+        cp LICENSE output\Licenses\AIS-catcher
+
+    - name: Prepare output SDRPLAY
+      run: cp build\*.dll output; cp build\Release\*.exe output; cp plugins\* output\plugins; cp README.md output;
+
+    - name: Compress and upload SDRPLAY ZIP file
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
+        bash -c "gh release upload '${{ env.RELEASE_TARGET }}' './output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip' --repo ${{ github.repository }} --clobber"
+        del "output\AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
