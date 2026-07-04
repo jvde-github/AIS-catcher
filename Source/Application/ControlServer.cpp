@@ -314,11 +314,11 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 		setExtraHeader("Set-Cookie: aiscontrol=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict");
 		sendOK(c);
 	}
+	// changing the password is allowed in local mode too: it prepares the
+	// credentials used once the instance is exposed with a LAN binding
 	else if (path == "/api/password" && r.method == "POST")
 	{
-		if (!core.authRequired())
-			sendError(c, "authentication disabled in local mode", 403);
-		else if (r.body.length() < 6)
+		if (r.body.length() < 6)
 			sendError(c, "password needs at least 6 characters");
 		else
 		{

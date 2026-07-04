@@ -142,12 +142,49 @@
             display: flex;
         }
 
+        /* process log, styled like the control tool's log page */
         #log-box {
-            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-            font-size: 11px;
+            background: #0f172a;
+            padding: 0.75rem;
+            height: 45vh;
+            overflow: auto;
+        }
+
+        .log-line {
+            display: flex;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.75rem;
             line-height: 1.5;
-            white-space: pre-wrap;
-            word-break: break-word;
+            padding: 1px 0;
+            white-space: pre;
+        }
+
+        .log-line.error {
+            color: #f87171;
+        }
+
+        .log-line.warning {
+            color: #fbbf24;
+        }
+
+        .log-line.info {
+            color: #60a5fa;
+        }
+
+        .log-line.debug {
+            color: #94a3b8;
+            opacity: 0.75;
+        }
+
+        .log-line.default {
+            color: #cbd5e1;
+        }
+
+        .log-ts {
+            color: #475569;
+            margin-right: 0.5em;
+            user-select: none;
+            flex-shrink: 0;
         }
 
         /* bottom bar: status left, buttons centered, channel LEDs right —

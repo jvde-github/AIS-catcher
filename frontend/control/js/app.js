@@ -618,7 +618,22 @@
         logSource.addEventListener('log', e => {
             try {
                 const m = JSON.parse(e.data);
-                box.textContent += '[' + m.time + '] ' + m.message + '\n';
+                const line = document.createElement('div');
+                const level = ['error', 'critical'].indexOf(m.level) >= 0 ? 'error'
+                    : ['warning', 'info', 'debug'].indexOf(m.level) >= 0 ? m.level : 'default';
+                line.className = 'log-line ' + level;
+
+                const ts = document.createElement('span');
+                ts.className = 'log-ts';
+                ts.textContent = m.time;
+                const msg = document.createElement('span');
+                msg.textContent = m.message;
+                line.appendChild(ts);
+                line.appendChild(msg);
+
+                box.appendChild(line);
+                while (box.childElementCount > 500)
+                    box.removeChild(box.firstChild);
                 box.scrollTop = box.scrollHeight;
             } catch (_) { }
         });
@@ -637,16 +652,10 @@
                     </div>
                     <div id="hub-uptime" class="text-sm text-slate-600"></div>
                 </div>
-                <div class="space-y-3">
-                    <button id="hub-btn-start" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2 font-medium">Start</button>
-                    <button id="hub-btn-stop" class="w-full bg-rose-600 hover:bg-rose-700 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2 font-medium">Stop</button>
-                    <button id="hub-btn-restart" class="w-full bg-slate-600 hover:bg-slate-700 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2 font-medium">Restart</button>
-                </div>
                 <div>
                     <h4 class="font-semibold text-slate-800 mb-2">Log</h4>
-                    <div id="log-box" class="bg-slate-900 text-slate-200 rounded-lg p-3 h-48 overflow-y-auto"></div>
+                    <div id="log-box" class="rounded-lg"></div>
                 </div>
-                ${auth === 'open' ? '' : `
                 <div>
                     <h4 class="font-semibold text-slate-800 mb-2">Change Password</h4>
                     <form id="password-form" class="space-y-2">
@@ -656,19 +665,15 @@
                             class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
                         <button type="submit" class="w-full bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition text-sm font-medium">Change Password</button>
                     </form>
+                    ${auth === 'open' ? '<p class="text-xs text-slate-500 mt-2">Local access needs no password; this one is used when AIS-catcher is started with LAN access (bind 0.0.0.0).</p>' : ''}
                 </div>
-                <button id="hub-btn-logout" class="w-full border border-slate-300 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg transition text-sm font-medium">Logout</button>
-                `}
+                ${auth === 'open' ? '' : '<button id="hub-btn-logout" class="w-full border border-slate-300 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg transition text-sm font-medium">Logout</button>'}
             </div>
         `;
 
-        document.getElementById('hub-btn-start').addEventListener('click', () => controlEngine('start'));
-        document.getElementById('hub-btn-stop').addEventListener('click', () => controlEngine('stop'));
-        document.getElementById('hub-btn-restart').addEventListener('click', () => controlEngine('restart'));
-        if (auth !== 'open') {
+        document.getElementById('password-form').addEventListener('submit', changePassword);
+        if (auth !== 'open')
             document.getElementById('hub-btn-logout').addEventListener('click', logout);
-            document.getElementById('password-form').addEventListener('submit', changePassword);
-        }
 
         updateControlStatus();
         startLogStream();
@@ -688,16 +693,6 @@
             }
             if (uptimeEl) uptimeEl.textContent = running ? 'Uptime: ' + formatUptime(data.uptime) : '';
         });
-    }
-
-    function controlEngine(action) {
-        setNavBusy(true);
-        engineAction(action)
-            .then(() => setTimeout(() => {
-                updateControlStatus();
-                setNavBusy(false);
-            }, 1000))
-            .catch(() => setNavBusy(false));
     }
 
     function changePassword(e) {
