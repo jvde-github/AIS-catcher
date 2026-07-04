@@ -207,6 +207,9 @@
             <div id="config-content" class="p-4"></div>
         </div>
 
+        <!-- toasts sit above the bottom bar; config-manager's App.notify
+             reuses this container instead of creating its own -->
+        <div id="toast-container" class="fixed right-6 z-50 flex flex-col items-end" style="bottom: 5.5rem"></div>
     </div>
 
     <nav id="bottom-bar">

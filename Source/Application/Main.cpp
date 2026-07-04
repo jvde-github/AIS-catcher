@@ -710,6 +710,13 @@ static int runManaged(const std::string &config_file, int port, int viewer_port,
 			{
 				state.receivers.back()->getDeviceManager().refreshDevices();
 				c.read(config_file);
+
+				// without this check openDevice() would fall back to the
+				// first detected device, which is never what a managed-mode
+				// user intended
+				for (auto &r : state.receivers)
+					if (r->getDeviceManager().InputType() == Type::NONE && r->getDeviceManager().SerialNumber().empty())
+						throw std::runtime_error("no input device selected, configure one under Input");
 #ifdef HASWEBVIEWER
 				// viewer added or fixed in the config after startup
 				if (!viewer)

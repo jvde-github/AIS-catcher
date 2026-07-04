@@ -119,6 +119,7 @@
                 }
                 auth = 'ok';
                 setAuthButtons(true);
+                startAlertStream();
                 const action = pendingAction;
                 closeLoginModal();
                 refreshEngineStatus();
@@ -161,8 +162,8 @@
         const label = document.getElementById('nav-sr-label');
         const icon = document.getElementById('nav-sr-icon');
         if (running) {
-            label.textContent = 'Restart';
-            icon.innerHTML = '<path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 132 28.5T720-690v-110h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 139-44t87-116h84q-28 106-114 173t-196 67Z"/>';
+            label.textContent = 'Stop';
+            icon.innerHTML = '<path d="M320-640v320-320Zm-80 400v-480h480v480H240Zm80-80h320v-320H320v320Z"/>';
         } else {
             label.textContent = 'Start';
             icon.innerHTML = '<path d="M320-200v-560l440 280-440 280Zm80-280Zm0 134 210-134-210-134v268Z"/>';
@@ -199,41 +200,39 @@
 
     function startStatusPolling() {
         if (statusPollInterval) return;
-        statusPollInterval = setInterval(refreshEngineStatus, 12000);
+        statusPollInterval = setInterval(refreshEngineStatus, 5000);
     }
 
-    function pollUntilRunning(onReady, maxWaitMs = 30000) {
-        const interval = 1000;
+    // fast settle after an engine action: the state flip is near-instant
+    // in-process, so poll tightly instead of waiting for the slow cycle
+    function pollUntilState(target, onDone, maxWaitMs = 20000) {
+        const interval = 400;
         let elapsed = 0;
         const timer = setInterval(() => {
             elapsed += interval;
             fetchStatus()
                 .then(d => {
-                    if (d.engine === 'running') {
+                    updateStartRestartButton(d.engine === 'running', d.uptime);
+                    if (d.engine === target || elapsed >= maxWaitMs) {
                         clearInterval(timer);
-                        onReady();
-                    } else if (elapsed >= maxWaitMs) {
-                        clearInterval(timer);
-                        setNavBusy(false);
+                        onDone(d.engine === target);
                     }
                 })
                 .catch(() => {
-                    if (elapsed >= maxWaitMs) { clearInterval(timer); setNavBusy(false); }
+                    if (elapsed >= maxWaitMs) { clearInterval(timer); onDone(false); }
                 });
         }, interval);
     }
 
-    // the viewer is persistent, so start/restart never reloads the page —
+    // the viewer is persistent, so engine actions never reload the page —
     // the map, its history and the SSE stream survive the engine cycle
     function onStartRestartClick() {
-        const action = engineRunning ? 'restart' : 'start';
+        const action = engineRunning ? 'stop' : 'start';
+        const target = engineRunning ? 'stopped' : 'running';
         requireAuth(() => {
             setNavBusy(true);
             engineAction(action)
-                .then(() => pollUntilRunning(() => {
-                    setNavBusy(false);
-                    refreshEngineStatus();
-                }))
+                .then(() => pollUntilState(target, () => setNavBusy(false)))
                 .catch(() => setNavBusy(false));
         });
     }
@@ -274,7 +273,7 @@
                     btn.textContent = 'Restarting...';
                     btn.disabled = true;
                     engineAction('restart')
-                        .then(() => pollUntilRunning(() => window.location.reload()))
+                        .then(() => pollUntilState('running', () => window.location.reload()))
                         .catch(() => { btn.disabled = false; btn.textContent = 'Restart'; });
                 });
             });
@@ -509,6 +508,28 @@
     // Control panel: engine, log stream, password
     // ------------------------------------------------------------------
 
+    let alertSource = null;
+    let alertReplayDone = false;
+
+    // surface warnings and errors from the process log as toast
+    // notifications; the history replayed on connect is skipped
+    function startAlertStream() {
+        if (alertSource || !isLoggedIn()) return;
+        alertReplayDone = false;
+        alertSource = new EventSource('/api/log');
+        alertSource.addEventListener('log', e => {
+            if (!alertReplayDone) return;
+            try {
+                const m = JSON.parse(e.data);
+                if (m.level === 'error' || m.level === 'critical')
+                    App.notify('error', m.message);
+                else if (m.level === 'warning')
+                    App.notify('warning', m.message);
+            } catch (_) { }
+        });
+        alertSource.onopen = () => setTimeout(() => { alertReplayDone = true; }, 500);
+    }
+
     function stopLogStream() {
         if (logSource) {
             logSource.close();
@@ -652,6 +673,7 @@
                 updateStartRestartButton(data.engine === 'running', data.uptime);
                 setAuthButtons(isLoggedIn());
                 startStatusPolling();
+                startAlertStream();
 
                 if (auth === 'setup') {
                     loadingDiv.classList.add('hidden');
