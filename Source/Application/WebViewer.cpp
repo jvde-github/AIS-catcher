@@ -912,6 +912,7 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 	Debug() << "Mutex: WebViewer sinks self-lock (DB/PlaneDB), raw_counter atomic (" << receivers.size() << " receivers)";
 
 	raw_counter.setFilter(filter);
+	engine_connected = true;
 }
 
 // Managed mode: unwire the per-run engine while the server keeps running.
@@ -919,6 +920,7 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 // live SSE connections survive engine restarts.
 void WebViewer::disconnectEngine()
 {
+	engine_connected = false;
 	msg_channels = nullptr;
 	setCommFeed(nullptr);
 
@@ -962,6 +964,7 @@ void WebViewer::connect(AIS::Model &model, Connection<JSON::JSON> &json, Device:
 
 	states[0]->applyConfig(tracking, filter);
 	raw_counter.setFilter(filter);
+	engine_connected = true;
 }
 
 void WebViewer::Reset()
@@ -1097,6 +1100,7 @@ std::string WebViewer::buildStatJSON(ReceiverTracker *s)
 	w.kv("tcp_clients", numberOfClients());
 	w.kv("sharing", comm_feed != nullptr);
 	w.kv("sharing_uuid", comm_feed != nullptr && comm_feed->hasUUID());
+	w.kv("engine_running", engine_connected);
 	if (tracking.latlon_share && tracking.lat != LAT_UNDEFINED && tracking.lon != LON_UNDEFINED)
 	{
 		std::string link = "https://www.aiscatcher.org/?&zoom=10&lat=" + std::to_string(tracking.lat) + "&lon=" + std::to_string(tracking.lon);

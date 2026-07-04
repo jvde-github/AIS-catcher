@@ -787,6 +787,10 @@ td {
     fill: #ff9900 !important;
 }
 
+.fill-gray {
+    fill: #9e9e9e !important;
+}
+
 
 
 #hover-info {

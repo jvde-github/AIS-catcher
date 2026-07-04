@@ -347,6 +347,10 @@ private:
 	// Community feed output (not owned), used to report sharing status
 	IO::OutputMessage *comm_feed = nullptr;
 
+	// False while the managed-mode viewer runs without an engine; the frontend
+	// shows sharing as "engine stopped" rather than "off" in that state
+	bool engine_connected = false;
+
 	// Parse ?receiver=N from query string; returns 0 on missing/invalid.
 	int parseReceiver(const std::string &query);
 	// Parse ?since=T from query string; returns 0 on missing/invalid.

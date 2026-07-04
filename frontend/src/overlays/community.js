@@ -49,13 +49,18 @@ function viewSane(v) {
 // go stale.
 let liveSharing = null;
 
-export function updateSharingState(sharing, sharing_uuid) {
-    liveSharing = { sharing: !!sharing, sharing_uuid: !!sharing_uuid };
+export function updateSharingState(sharing, sharing_uuid, engine_running) {
+    liveSharing = {
+        sharing: !!sharing,
+        sharing_uuid: !!sharing_uuid,
+        engine_running: engine_running !== false,
+    };
     applySharingState();
 }
 
 export function sharingDisplay() {
     const f = liveSharing || deps.config.features || {};
+    if (f.engine_running === false) return ["Receiver stopped", "gray"];
     if (!f.sharing)        return ["No", "red"];
     if (!f.sharing_uuid)   return ["Yes (anonymous)", "orange"];
     return ["Yes", "green"];
@@ -63,12 +68,13 @@ export function sharingDisplay() {
 
 export function applySharingState() {
     const f = liveSharing || deps.config.features || {};
-    const cls = !f.sharing ? "fill-red"
+    const cls = f.engine_running === false ? "fill-gray"
+              : !f.sharing ? "fill-red"
               : !f.sharing_uuid ? "fill-orange"
               : "fill-green";
     const btn = document.getElementById("xchange");
     if (btn) {
-        btn.classList.remove("fill-red", "fill-orange", "fill-green");
+        btn.classList.remove("fill-red", "fill-orange", "fill-green", "fill-gray");
         btn.classList.add(cls);
     }
 }
