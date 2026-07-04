@@ -49,7 +49,7 @@ void ControlCore::createDefaultConfig()
 		"  \"version\": 1,\n"
 		"  \"engine\": \"off\",\n"
 		"  \"sharing\": true,\n"
-		"  \"control\": { \"port\": 8110 }\n"
+		"  \"control\": { \"port\": 8110, \"wizard\": true }\n"
 		"}\n";
 
 	std::string error;

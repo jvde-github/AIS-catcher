@@ -125,6 +125,7 @@
                 closeLoginModal();
                 refreshEngineStatus();
                 if (action) action();
+                else SetupWizard.maybeAutoOpen();
             })
             .catch(() => {
                 submitBtn.disabled = false;
@@ -668,11 +669,16 @@
                     </form>
                     ${auth === 'open' ? '<p class="text-xs text-slate-500 mt-2">Local access needs no password; this one is used when AIS-catcher is started with LAN access (bind 0.0.0.0).</p>' : ''}
                 </div>
+                <button id="hub-btn-wizard" class="w-full border border-slate-300 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg transition text-sm font-medium">Setup Wizard</button>
                 ${auth === 'open' ? '' : '<button id="hub-btn-logout" class="w-full border border-slate-300 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg transition text-sm font-medium">Logout</button>'}
             </div>
         `;
 
         document.getElementById('password-form').addEventListener('submit', changePassword);
+        document.getElementById('hub-btn-wizard').addEventListener('click', () => {
+            closeConfigPanel();
+            SetupWizard.open();
+        });
         if (auth !== 'open')
             document.getElementById('hub-btn-logout').addEventListener('click', logout);
 
@@ -749,6 +755,10 @@
                     loadingDiv.classList.add('hidden');
                     openLoginModal();
                 }
+
+                // first-run: offer the setup wizard when no input is configured
+                if (isLoggedIn())
+                    SetupWizard.maybeAutoOpen();
 
                 if (port)
                     loadWebviewer();
