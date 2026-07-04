@@ -150,7 +150,52 @@
             word-break: break-word;
         }
 
-        /* per-channel activity LEDs, next to the engine state */
+        /* bottom bar: status left, buttons centered, channel LEDs right —
+           three flex zones so they can never overlap */
+        #bar-inner {
+            display: flex;
+            align-items: center;
+            height: 4rem;
+            padding: 0 12px;
+        }
+
+        #status-dot-wrap {
+            flex: 1 1 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        #nav-buttons {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+
+        #bar-right {
+            flex: 1 1 0;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        @media (min-width: 640px) {
+            #nav-buttons {
+                gap: 3rem;
+            }
+        }
+
+        @media (max-width: 639px) {
+            .hub-button {
+                min-width: 54px;
+                padding: 0.5rem 0.4rem;
+            }
+        }
+
+        /* per-channel activity LEDs */
         #channel-leds {
             display: none;
         }
@@ -160,7 +205,7 @@
                 display: flex;
                 align-items: center;
                 gap: 8px;
-                margin-left: 10px;
+                margin-right: 6px;
             }
         }
 
@@ -253,7 +298,8 @@
     </div>
 
     <nav id="bottom-bar">
-        <div id="status-dot-wrap" class="absolute left-3 bottom-0 h-16 flex items-center gap-2" style="z-index:51">
+        <div id="bar-inner">
+        <div id="status-dot-wrap">
             <div class="relative group">
                 <span id="status-dot" class="block w-2.5 h-2.5 rounded-full bg-slate-500 cursor-default"></span>
                 <div class="absolute bottom-full left-0 mb-2 min-w-max px-2.5 py-1.5 rounded-lg bg-slate-800 text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap">
@@ -263,9 +309,8 @@
                 </div>
             </div>
             <span id="status-dot-text" class="hidden sm:inline text-xs font-medium text-slate-400"></span>
-            <div id="channel-leds"></div>
         </div>
-        <div id="nav-buttons" class="flex items-center justify-center h-16 gap-6 sm:gap-12 pl-16 pr-4 transition-opacity">
+        <div id="nav-buttons" class="transition-opacity">
             <button id="nav-start-restart" class="hub-button" data-view="control">
                 <svg id="nav-sr-icon" viewBox="0 -960 960 960" fill="currentColor">
                     <path d="M320-200v-560l440 280-440 280Zm80-280Zm0 134 210-134-210-134v268Z" />
@@ -286,10 +331,14 @@
             </button>
             <button id="nav-btn-control" class="hub-button" data-view="control-panel">
                 <svg viewBox="0 -960 960 960" fill="currentColor">
-                    <path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm0-80q-25 0-42.5-17.5T422-480q0-25 17.5-42.5T482-540q25 0 42.5 17.5T542-480q0 25-17.5 42.5T482-420Zm-2-60Zm-40 320h79-79Z" />
+                    <path d="M686-132 444-376q-20 8-40.5 12t-43.5 4q-100 0-170-70t-70-170q0-36 10-68.5t28-61.5l146 146 72-72-146-146q29-18 61.5-28t68.5-10q100 0 170 70t70 170q0 23-4 43.5T584-516l244 242q12 12 12 29t-12 29l-84 84q-12 12-29 12t-29-12Zm29-85 27-27-256-256q18-20 26-46.5t8-53.5q0-60-38.5-104.5T386-758l74 74q12 12 12 28t-12 28L332-500q-12 12-28 12t-28-12l-74-74q9 57 53.5 95.5T360-440q26 0 52-8t47-25l256 256ZM472-488Z" />
                 </svg>
                 <span>Control</span>
             </button>
+        </div>
+        <div id="bar-right">
+            <div id="channel-leds"></div>
+        </div>
         </div>
     </nav>
 
