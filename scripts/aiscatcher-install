@@ -37,6 +37,7 @@ Options:
   -p, --package              Install from pre-built package (faster, recommended)
   -i, --interactive          Source build with interactive feature selection (forces source path)
   -b, --branch               Specify git branch to clone (default: main)
+  -M, --managed              Run the service in managed mode (-E ${MANAGED_CONFIG_FILE} ${MANAGED_BIND})
   --no-systemd               Skip systemd service installation (useful for containers)
   --no-user                  Skip user creation and run as root (useful for containers)
   --set-reboot-on-failure [BURST [SEC]]  Enable reboot watchdog (default: 3 restarts in 1800s)
@@ -89,6 +90,8 @@ readonly README_DIR="${CONFIG_DIR}/README"
 readonly LIB_DIR="/usr/lib/ais-catcher"
 readonly CONFIG_FILE="${CONFIG_DIR}/config.json"
 readonly CMD_FILE="${CONFIG_DIR}/config.cmd"
+readonly MANAGED_CONFIG_FILE="${CONFIG_DIR}/aiscatcher.json"
+readonly MANAGED_BIND="0.0.0.0:8118"
 readonly SERVICE_NAME="ais-catcher.service"
 readonly SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}"
 readonly REBOOT_SERVICE_NAME="ais-catcher-reboot.service"
@@ -107,6 +110,7 @@ INSTALL_PACKAGE=false
 INTERACTIVE=false
 SKIP_SYSTEMD=false
 SKIP_USER=false
+MANAGED=false
 BRANCH="main"
 SERVICE_STATE=""
 SET_REBOOT=""
@@ -851,8 +855,13 @@ Group=aiscatcher
 SupplementaryGroups=plugdev dialout"
     fi
 
+    local exec_start="/usr/bin/AIS-catcher -G system on -o 0 -C ${CONFIG_FILE} @${CMD_FILE}"
+    if [ "$MANAGED" = true ]; then
+        exec_start="/usr/bin/AIS-catcher -E ${MANAGED_CONFIG_FILE} ${MANAGED_BIND}"
+    fi
+
     service_content+="
-ExecStart=/usr/bin/AIS-catcher -G system on -o 0 -C ${CONFIG_FILE} @${CMD_FILE}
+ExecStart=${exec_start}
 Restart=${restart_policy}
 RestartSec=10
 
@@ -986,6 +995,12 @@ parse_arguments() {
                 else
                     error_exit "Option -b/--branch requires a branch name argument"
                 fi
+                ;;
+            -M|--managed)
+                log "INFO" "Managed mode service requested (-E ${MANAGED_CONFIG_FILE} ${MANAGED_BIND})"
+                MANAGED=true
+                INSTALL_REQUESTED=true
+                shift
                 ;;
             --no-systemd)
                 log "INFO" "Skipping systemd service installation"
