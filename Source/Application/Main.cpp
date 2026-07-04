@@ -374,8 +374,9 @@ static void run(RunState &state)
 		r.setupModel(group, i);
 	}
 
-	// for community feed, restrict to local SDR hardware only
-	if (state.comm_feed && !state.xshare_defined)
+	// without a sharing key the community feed is restricted to local SDR
+	// hardware, so rebroadcast network sources are not shared unclaimed
+	if (state.comm_feed && !state.comm_feed->hasUUID())
 	{
 		uint64_t live_groups = 0;
 		for (const auto &r : state.receivers)
@@ -717,6 +718,11 @@ static int runManaged(const std::string &config_file, int port, int viewer_port,
 				for (auto &r : state.receivers)
 					if (r->getDeviceManager().InputType() == Type::NONE && r->getDeviceManager().SerialNumber().empty())
 						throw std::runtime_error("no input device selected, configure one under Input");
+
+				// same default as normal mode: community sharing on unless
+				// the config says otherwise
+				if (!state.xshare_defined && !state.comm_feed)
+					state.createCommunityFeed();
 #ifdef HASWEBVIEWER
 				// viewer added or fixed in the config after startup
 				if (!viewer)

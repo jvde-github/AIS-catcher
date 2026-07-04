@@ -377,7 +377,13 @@ public:
 		msg_channels = &msg;
 	}
 
-	void setCommFeed(IO::OutputMessage *f) { comm_feed = f; }
+	void setCommFeed(IO::OutputMessage *f)
+	{
+		comm_feed = f;
+		// keep the frontend sharing flags in sync when the feed arrives after
+		// start(), as it does for the persistent managed-mode viewer
+		pluginManager.setSharing(f != nullptr, f && f->hasUUID());
+	}
 
 	bool isPortSet() { return port_set; }
 	int getBoundPort() { return bound_port; }

@@ -920,7 +920,7 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 void WebViewer::disconnectEngine()
 {
 	msg_channels = nullptr;
-	comm_feed = nullptr;
+	setCommFeed(nullptr);
 
 	if (states.size() > 1)
 	{
