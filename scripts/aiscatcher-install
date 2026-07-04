@@ -1173,23 +1173,41 @@ display_installation_summary() {
     fi
     
     echo -e "${COLOR_BOLD}CONFIGURATION:${COLOR_RESET}"
-    echo "  • Edit main configuration:"
-    echo -e "    ${COLOR_YELLOW}nano ${CONFIG_FILE}${COLOR_RESET}"
+    if [ "$MANAGED" = true ]; then
+        echo "  • Managed mode: configure everything from the hub, not by hand"
+        echo -e "    config file: ${COLOR_YELLOW}${MANAGED_CONFIG_FILE}${COLOR_RESET}"
+        echo ""
+        echo "  • The engine starts, stops and restarts from the hub"
+    else
+        echo "  • Edit main configuration:"
+        echo -e "    ${COLOR_YELLOW}nano ${CONFIG_FILE}${COLOR_RESET}"
+        echo ""
+        echo "  • Edit command-line options:"
+        echo -e "    ${COLOR_YELLOW}nano ${CMD_FILE}${COLOR_RESET}"
+        echo ""
+        echo "  • After editing, restart the service:"
+        echo -e "    ${COLOR_YELLOW}systemctl restart ${SERVICE_NAME}${COLOR_RESET}"
+    fi
     echo ""
-    echo "  • Edit command-line options:"
-    echo -e "    ${COLOR_YELLOW}nano ${CMD_FILE}${COLOR_RESET}"
-    echo ""
-    echo "  • After editing, restart the service:"
-    echo -e "    ${COLOR_YELLOW}systemctl restart ${SERVICE_NAME}${COLOR_RESET}"
-    echo ""
-    
+
     echo -e "${COLOR_BOLD}WEB INTERFACE:${COLOR_RESET}"
-    echo "  • Once running, access the web interface at:"
-    echo -e "    ${COLOR_CYAN}http://localhost:8100${COLOR_RESET}"
-    echo "    (or use your server's IP address)"
-    echo ""
-    echo "  • Enable the web server by editing ${CONFIG_FILE}"
-    echo -e "    and setting ${COLOR_YELLOW}\"active\": true${COLOR_RESET} in the \"server\" section"
+    if [ "$MANAGED" = true ]; then
+        local ctrl_port="${MANAGED_BIND##*:}"
+        echo "  • Control hub (configuration and control):"
+        echo -e "    ${COLOR_CYAN}http://localhost:${ctrl_port}${COLOR_RESET}"
+        echo "  • Built-in map viewer:"
+        echo -e "    ${COLOR_CYAN}http://localhost:$((ctrl_port + 1))${COLOR_RESET}"
+        echo "    (or use your server's IP address)"
+        echo ""
+        echo "  • Set an admin password on your first visit"
+    else
+        echo "  • Once running, access the web interface at:"
+        echo -e "    ${COLOR_CYAN}http://localhost:8100${COLOR_RESET}"
+        echo "    (or use your server's IP address)"
+        echo ""
+        echo "  • Enable the web server by editing ${CONFIG_FILE}"
+        echo -e "    and setting ${COLOR_YELLOW}\"active\": true${COLOR_RESET} in the \"server\" section"
+    fi
     echo ""
     
     echo -e "${COLOR_BOLD}USEFUL COMMANDS:${COLOR_RESET}"
