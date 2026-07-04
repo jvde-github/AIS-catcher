@@ -148,10 +148,15 @@
         const nav = document.getElementById('nav-buttons');
         const dot = document.getElementById('status-dot');
         const dotLabel = document.getElementById('status-dot-label');
+        const dotText = document.getElementById('status-dot-text');
         if (busy) {
             nav.classList.add('opacity-50', 'pointer-events-none');
             if (dot) dot.className = 'block w-2.5 h-2.5 rounded-full bg-amber-400 cursor-default';
             if (dotLabel) dotLabel.textContent = 'Working...';
+            if (dotText) {
+                dotText.className = 'hidden sm:inline text-xs font-medium text-amber-400';
+                dotText.textContent = 'Working...';
+            }
         } else {
             nav.classList.remove('opacity-50', 'pointer-events-none');
         }
@@ -171,6 +176,7 @@
         const dot = document.getElementById('status-dot');
         const dotLabel = document.getElementById('status-dot-label');
         const dotUptime = document.getElementById('status-dot-uptime');
+        const dotText = document.getElementById('status-dot-text');
         if (dot && dotLabel) {
             if (running) {
                 dot.className = 'block w-2.5 h-2.5 rounded-full bg-emerald-500 cursor-default';
@@ -181,6 +187,16 @@
             }
         }
         if (dotUptime) dotUptime.textContent = running ? formatUptime(uptime) : '';
+        if (dotText) {
+            if (running) {
+                dotText.className = 'hidden sm:inline text-xs font-medium text-emerald-600';
+                const up = formatUptime(uptime);
+                dotText.textContent = 'Running' + (up ? ' · ' + up : '');
+            } else {
+                dotText.className = 'hidden sm:inline text-xs font-medium text-slate-400';
+                dotText.textContent = 'Stopped';
+            }
+        }
     }
 
     function refreshEngineStatus() {

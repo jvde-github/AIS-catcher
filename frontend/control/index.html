@@ -213,7 +213,7 @@
     </div>
 
     <nav id="bottom-bar">
-        <div id="status-dot-wrap" class="absolute left-3 bottom-0 h-16 flex flex-col items-start justify-center gap-1" style="z-index:51">
+        <div id="status-dot-wrap" class="absolute left-3 bottom-0 h-16 flex items-center gap-2" style="z-index:51">
             <div class="relative group">
                 <span id="status-dot" class="block w-2.5 h-2.5 rounded-full bg-slate-500 cursor-default"></span>
                 <div class="absolute bottom-full left-0 mb-2 min-w-max px-2.5 py-1.5 rounded-lg bg-slate-800 text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap">
@@ -222,6 +222,7 @@
                     <div class="absolute top-full left-3 border-4 border-transparent border-t-slate-800"></div>
                 </div>
             </div>
+            <span id="status-dot-text" class="hidden sm:inline text-xs font-medium text-slate-400"></span>
         </div>
         <div id="nav-buttons" class="flex items-center justify-center h-16 gap-6 sm:gap-12 pl-16 pr-4 transition-opacity">
             <button id="nav-start-restart" class="hub-button" data-view="control">
