@@ -44,15 +44,25 @@ function viewSane(v) {
         && Number.isFinite(v.zoom) && v.zoom >= 0    && v.zoom <= 28;
 }
 
+// Live values from the stat feed take precedence over the page-load config:
+// the viewer outlives engine restarts in managed mode, so the baked features
+// go stale.
+let liveSharing = null;
+
+export function updateSharingState(sharing, sharing_uuid) {
+    liveSharing = { sharing: !!sharing, sharing_uuid: !!sharing_uuid };
+    applySharingState();
+}
+
 export function sharingDisplay() {
-    const f = deps.config.features || {};
+    const f = liveSharing || deps.config.features || {};
     if (!f.sharing)        return ["No", "red"];
     if (!f.sharing_uuid)   return ["Yes (anonymous)", "orange"];
     return ["Yes", "green"];
 }
 
 export function applySharingState() {
-    const f = deps.config.features || {};
+    const f = liveSharing || deps.config.features || {};
     const cls = !f.sharing ? "fill-red"
               : !f.sharing_uuid ? "fill-orange"
               : "fill-green";

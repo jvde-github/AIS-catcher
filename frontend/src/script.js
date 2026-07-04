@@ -2752,6 +2752,7 @@ async function updateStatistics() {
         if (stat.station_link != "") document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
 
         const statSharingElement = document.getElementById("stat_sharing");
+        community.updateSharingState(stat.sharing, stat.sharing_uuid);
         const [sharingText, sharingColor] = community.sharingDisplay();
         statSharingElement.innerHTML = `<a href="${stat.sharing_link}" target="_blank" style="color: ${sharingColor}">${sharingText}</a>`;
 

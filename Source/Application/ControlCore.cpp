@@ -48,6 +48,7 @@ void ControlCore::createDefaultConfig()
 		"  \"config\": \"aiscatcher\",\n"
 		"  \"version\": 1,\n"
 		"  \"engine\": \"off\",\n"
+		"  \"sharing\": true,\n"
 		"  \"control\": { \"port\": 8110 }\n"
 		"}\n";
 

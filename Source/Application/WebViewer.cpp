@@ -1096,6 +1096,7 @@ std::string WebViewer::buildStatJSON(ReceiverTracker *s)
 	s->writeCountersJSON(w);
 	w.kv("tcp_clients", numberOfClients());
 	w.kv("sharing", comm_feed != nullptr);
+	w.kv("sharing_uuid", comm_feed != nullptr && comm_feed->hasUUID());
 	if (tracking.latlon_share && tracking.lat != LAT_UNDEFINED && tracking.lon != LON_UNDEFINED)
 	{
 		std::string link = "https://www.aiscatcher.org/?&zoom=10&lat=" + std::to_string(tracking.lat) + "&lon=" + std::to_string(tracking.lon);
