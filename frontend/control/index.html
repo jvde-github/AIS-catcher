@@ -142,6 +142,50 @@
             display: flex;
         }
 
+        /* collapsible System panel sections (config, log) */
+        details.sys-section summary {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #1e293b;
+            padding: 0.25rem 0;
+            margin-bottom: 0.5rem;
+            list-style: none;
+            user-select: none;
+        }
+
+        details.sys-section summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .sys-chev {
+            width: 16px;
+            height: 16px;
+            color: #64748b;
+            transition: transform 0.15s;
+            flex-shrink: 0;
+        }
+
+        details.sys-section[open] .sys-chev {
+            transform: rotate(90deg);
+        }
+
+        /* config file view, same visual language as the log */
+        #config-json {
+            background: #0f172a;
+            color: #cbd5e1;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.75rem;
+            line-height: 1.5;
+            padding: 0.75rem;
+            max-height: 45vh;
+            overflow: auto;
+            white-space: pre;
+            margin: 0;
+        }
+
         /* process log, styled like the control tool's log page */
         #log-box {
             background: #0f172a;

@@ -654,10 +654,20 @@
                     </div>
                     <div id="hub-uptime" class="text-sm text-slate-600"></div>
                 </div>
-                <div>
-                    <h4 class="font-semibold text-slate-800 mb-2">Log</h4>
+                <details class="sys-section" id="sys-config-details">
+                    <summary>
+                        <svg class="sys-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                        Configuration
+                    </summary>
+                    <pre id="config-json" class="rounded-lg">Loading...</pre>
+                </details>
+                <details class="sys-section" id="sys-log-details">
+                    <summary>
+                        <svg class="sys-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                        Log
+                    </summary>
                     <div id="log-box" class="rounded-lg"></div>
-                </div>
+                </details>
                 <div>
                     <h4 class="font-semibold text-slate-800 mb-2">Change Password</h4>
                     <form id="password-form" class="space-y-2">
@@ -682,8 +692,26 @@
         if (auth !== 'open')
             document.getElementById('hub-btn-logout').addEventListener('click', logout);
 
+        // both sections are collapsed by default; the config is re-read on
+        // every expand so it reflects the file as it is now
+        document.getElementById('sys-config-details').addEventListener('toggle', e => {
+            if (e.target.open) loadConfigJson();
+        });
+        document.getElementById('sys-log-details').addEventListener('toggle', e => {
+            const box = document.getElementById('log-box');
+            if (e.target.open && box) box.scrollTop = box.scrollHeight;
+        });
+
         updateControlStatus();
         startLogStream();
+    }
+
+    function loadConfigJson() {
+        const pre = document.getElementById('config-json');
+        fetch('/api/config')
+            .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+            .then(cfg => { pre.textContent = JSON.stringify(cfg, null, 2); })
+            .catch(() => { pre.textContent = 'Could not load the configuration.'; });
     }
 
     function updateControlStatus() {
