@@ -96,7 +96,7 @@ static void Usage()
 	Info() << "\t[-C [filename] - read configuration settings from file]";
 	Info() << "\t[-D [connection string] - write messages to PostgreSQL database]";
 	Info() << "\t[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]";
-	Info() << "\t[-E [filename] [port] [bind address] - managed mode: engine run from config file with control server, must be only option (default: port 8110, local access without password; bind 0.0.0.0 for LAN access with password)]";
+	Info() << "\t[-E [filename] [control port] [viewer port] [bind address] - managed mode: engine run from config file with control server, must be only option (defaults: control port 8110, OS-assigned viewer port, local access without password; bind 0.0.0.0 for LAN access with password)]";
 	Info() << "\t[-f [filename] write NMEA lines to file]";
 	Info() << "\t[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]";
 	Info() << "\t[-G [LEVEL level] [SYSTEM on] - control logging (levels: DEBUG, INFO, WARNING, ERROR, CRITICAL) or enable system logging]";
@@ -627,7 +627,7 @@ static void run(RunState &state)
 // keeps its normal per-run meaning): the OS assigns it a free port (the hub
 // learns it via /api/status), overridable via a "viewer" object inside the
 // control section.
-static std::unique_ptr<WebViewer> startManagedViewer(const std::string &config_file, ControlCore &core)
+static std::unique_ptr<WebViewer> startManagedViewer(const std::string &config_file, ControlCore &core, int viewer_port)
 {
 	std::unique_ptr<WebViewer> viewer(new WebViewer());
 
@@ -656,6 +656,10 @@ static std::unique_ptr<WebViewer> startManagedViewer(const std::string &config_f
 		Error() << "Control: viewer configuration failed: " << e.what();
 	}
 
+	// command line wins over config, same as the control port
+	if (viewer_port > 0)
+		viewer->SetKey(AIS::KEY_SETTING_PORT, std::to_string(viewer_port));
+
 	try
 	{
 		viewer->start();
@@ -673,7 +677,7 @@ static std::unique_ptr<WebViewer> startManagedViewer(const std::string &config_f
 // Managed mode (-E): supervisor loop that builds a fresh RunState from the
 // config file for every engine start and tears it down on stop/restart. The
 // process survives a broken config; the user fixes it via the control API.
-static int runManaged(const std::string &config_file, int port, const std::string &bind)
+static int runManaged(const std::string &config_file, int port, int viewer_port, const std::string &bind)
 {
 	ControlCore core(config_file, port, bind);
 	ControlServer server(core);
@@ -690,7 +694,7 @@ static int runManaged(const std::string &config_file, int port, const std::strin
 	server.start();
 
 #ifdef HASWEBVIEWER
-	std::unique_ptr<WebViewer> viewer = startManagedViewer(config_file, core);
+	std::unique_ptr<WebViewer> viewer = startManagedViewer(config_file, core, viewer_port);
 #endif
 
 	while (!stop_process)
@@ -709,7 +713,7 @@ static int runManaged(const std::string &config_file, int port, const std::strin
 #ifdef HASWEBVIEWER
 				// viewer added or fixed in the config after startup
 				if (!viewer)
-					viewer = startManagedViewer(config_file, core);
+					viewer = startManagedViewer(config_file, core, viewer_port);
 #endif
 				core.reportRunning();
 				Info() << "Control: engine started";
@@ -1290,9 +1294,9 @@ int main(int argc, char *argv[])
 
 		if (managed)
 		{
-			const std::string usage = "AIS-catcher -E <config file> [port] [bind address]";
+			const std::string usage = "AIS-catcher -E <config file> [control port] [viewer port] [bind address]";
 
-			if (expanded.size() < 3 || expanded.size() > 5 || expanded[1] != "-E")
+			if (expanded.size() < 3 || expanded.size() > 6 || expanded[1] != "-E")
 				throw std::runtime_error("in managed mode all settings live in the config file: " + usage);
 
 			auto isIPv4 = [](const std::string &s)
@@ -1321,25 +1325,32 @@ int main(int argc, char *argv[])
 			};
 
 			std::string file, bind = "127.0.0.1";
-			int port = 0;
+			int port = 0, viewer_port = 0;
 
 			for (std::size_t i = 2; i < expanded.size(); i++)
 			{
 				const std::string &a = expanded[i];
 				if (!a.empty() && a.find_first_not_of("0123456789") == std::string::npos)
-					port = Util::Parse::Integer(a, 1, 65535);
+				{
+					if (!port)
+						port = Util::Parse::Integer(a, 1, 65535);
+					else if (!viewer_port)
+						viewer_port = Util::Parse::Integer(a, 1, 65535);
+					else
+						throw std::runtime_error("managed mode takes at most two ports (control, viewer): " + usage);
+				}
 				else if (isIPv4(a))
 					bind = a;
 				else if (file.empty())
 					file = a;
 				else
-					throw std::runtime_error("managed mode takes a config file, optionally a port and a bind address: " + usage);
+					throw std::runtime_error("managed mode takes a config file, optionally ports and a bind address: " + usage);
 			}
 
 			if (file.empty())
 				throw std::runtime_error("managed mode requires a config file: " + usage);
 
-			return runManaged(file, port, bind);
+			return runManaged(file, port, viewer_port, bind);
 		}
 
 		std::vector<char *> argv_expanded;
