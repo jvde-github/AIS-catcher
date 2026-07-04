@@ -110,7 +110,7 @@
     };
 
     const MEMORY_ICON =
-        '<svg viewBox="0 -960 960 960" fill="currentColor"><path d="M360-360v-240h240v240H360Zm80-80h80v-80h-80v80Zm-40 320v-80h-80q-33 0-56.5-23.5T240-280v-80h-80v-80h80v-80h-80v-80h80v-80q0-33 23.5-56.5T320-760h80v-80h80v80h80v-80h80v80h80q33 0 56.5 23.5T800-680v80h80v80h-80v80h80v80h-80v80q0 33-23.5 56.5T720-240h-80v80h-80v-80h-80v80h-80Zm320-160v-480H320v480h400ZM480-480Z"/></svg>';
+        '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 9H9v6h6V9zm-2 4h-2v-2h2v2zm8-2V9h-2V7c0-1.1-.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1 0-2 .9-2 2v2H3v2h2v2H3v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2zm-4 6H7V7h10v10z"/></svg>';
 
     function resetState() {
         stepIndex = 0;
