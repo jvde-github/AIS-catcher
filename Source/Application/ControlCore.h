@@ -106,7 +106,7 @@ public:
 
 private:
 	std::string config_file;
-	int control_port = 8110;
+	int control_port = 8118;
 	std::string bind_address = "127.0.0.1";
 	std::atomic<int> viewer_port{0};
 	ChannelActivity channel_activity;

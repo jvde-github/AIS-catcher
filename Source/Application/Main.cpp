@@ -96,7 +96,7 @@ static void Usage()
 	Info() << "\t[-C [filename] - read configuration settings from file]";
 	Info() << "\t[-D [connection string] - write messages to PostgreSQL database]";
 	Info() << "\t[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]";
-	Info() << "\t[-E [filename] [control port] [viewer port] [bind address] - managed mode: engine run from config file with control server, must be only option (defaults: control port 8110, OS-assigned viewer port, local access without password; bind 0.0.0.0 for LAN access with password)]";
+	Info() << "\t[-E [filename] [control port] [viewer port] [bind address] - managed mode: engine run from config file with control server, must be only option (defaults: control port 8118, OS-assigned viewer port, local access without password; bind 0.0.0.0 for LAN access with password)]";
 	Info() << "\t[-f [filename] write NMEA lines to file]";
 	Info() << "\t[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]";
 	Info() << "\t[-G [LEVEL level] [SYSTEM on] - control logging (levels: DEBUG, INFO, WARNING, ERROR, CRITICAL) or enable system logging]";
