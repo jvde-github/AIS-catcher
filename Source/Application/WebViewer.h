@@ -201,6 +201,7 @@ class PluginManager
 		bool realtime = false;
 		bool log_enabled = false;
 		bool decoder = false;
+		bool managed = false;
 		bool sharing = false;
 		bool sharing_uuid = false;
 		std::vector<std::pair<int, std::string>> receivers;
@@ -224,6 +225,7 @@ public:
 	void setRealtime(bool b);
 	void setLog(bool b);
 	void setDecoder(bool b);
+	void setManaged(bool b);
 	void setSharing(bool sharing, bool sharing_uuid);
 	void setStation(const std::string &name);
 	void setReceivers(const std::vector<std::unique_ptr<ReceiverTracker>> &states);
@@ -277,7 +279,9 @@ private:
 
 	int firstport = 0;
 	int lastport = 0;
+	int bound_port = 0;
 	bool run = false;
+	bool serving = false;
 	bool port_set = false;
 	bool use_zlib = true;
 	bool realtime = false;
@@ -295,6 +299,7 @@ private:
 
 	// All receiver states. Index 0 = aggregate "All", index 1..N = per-receiver (only when N > 1).
 	std::vector<std::unique_ptr<ReceiverTracker>> states;
+	mutable std::recursive_mutex state_mtx;
 
 	PlaneDB planes;
 
@@ -346,6 +351,8 @@ private:
 	// Community feed output (not owned), used to report sharing status
 	IO::OutputMessage *comm_feed = nullptr;
 
+	bool engine_connected = false;
+
 	// Parse ?receiver=N from query string; returns 0 on missing/invalid.
 	int parseReceiver(const std::string &query);
 	// Parse ?since=T from query string; returns 0 on missing/invalid.
@@ -363,8 +370,10 @@ public:
 	}
 
 	bool &active() { return run; }
+	void setManagedMode() { pluginManager.setManaged(true); }
 	void connect(const std::vector<std::unique_ptr<Receiver>> &receivers);
 	void connect(AIS::Model &model, Connection<JSON::JSON> &json, Device::Device &device);
+	void disconnectEngine();
 	void setDeviceDescription(const std::string &product, const std::string &vendor, const std::string &serial);
 	void start();
 	void close();
@@ -375,9 +384,20 @@ public:
 		msg_channels = &msg;
 	}
 
-	void setCommFeed(IO::OutputMessage *f) { comm_feed = f; }
+	void setCommFeed(IO::OutputMessage *f)
+	{
+		comm_feed = f;
+		pluginManager.setSharing(f != nullptr, f && f->hasUUID());
+	}
 
 	bool isPortSet() { return port_set; }
+	int getBoundPort() { return bound_port; }
+
+	void setEphemeralPort()
+	{
+		port_set = true;
+		firstport = lastport = 0;
+	}
 	// HTTP callbacks
 	void Request(IO::TCPServerConnection &c, const std::string &r, bool gzip) override;
 

@@ -23,6 +23,7 @@
 #include <vector>
 #include <thread>
 #include <atomic>
+#include <mutex>
 #include <string>
 
 #ifdef _WIN32
@@ -87,8 +88,8 @@ namespace Device
 
 		static const uint32_t BUFFER_SIZE = 16 * 16384;
 
-		// Static vector to store device paths (handle = vector index)
 		static std::vector<std::string> device_list;
+		static std::mutex list_mtx;
 
 		void ReadAsync();
 		void Dump(RAW &r);
@@ -98,6 +99,11 @@ namespace Device
 		~SerialPort();
 
 		void Open(uint64_t handle) override;
+		static std::vector<std::string> getDevicePathsCopy()
+		{
+			std::lock_guard<std::mutex> lock(list_mtx);
+			return device_list;
+		}
 		std::string getRateDescription() override { return std::to_string(baudrate) + " baud"; }
 		bool isStreaming() override { return Device::isStreaming() && !lost; }
 		bool isCallback() override { return true; }

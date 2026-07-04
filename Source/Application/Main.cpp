@@ -31,6 +31,8 @@
 #endif
 #include "RunState.h"
 #include "Config.h"
+#include "ControlCore.h"
+#include "ManagedMain.h"
 #include "JSON.h"
 #include "JSON/Parser.h"
 #include "N2KStream.h"
@@ -39,7 +41,8 @@
 #include "Screen.h"
 #include "File.h"
 
-static std::atomic<bool> stop;
+std::atomic<bool> stop;
+std::atomic<bool> stop_process;
 
 void StopRequest()
 {
@@ -50,7 +53,10 @@ void StopRequest()
 BOOL WINAPI consoleHandler(DWORD signal)
 {
 	if (signal == CTRL_C_EVENT)
+	{
 		stop = true;
+		stop_process = true;
+	}
 	return TRUE;
 }
 #else
@@ -65,6 +71,7 @@ static void consoleHandler(int signal)
 		std::cerr << "Termination request: " << signal;
 
 	stop = true;
+	stop_process = true;
 }
 #endif
 
@@ -86,6 +93,7 @@ static void Usage()
 	Info() << "\t[-C [filename] - read configuration settings from file]";
 	Info() << "\t[-D [connection string] - write messages to PostgreSQL database]";
 	Info() << "\t[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]";
+	Info() << "\t[-E [config file] [bind address:port] - managed mode: engine run from config file with control server, must be only option (defaults: config.json, control port 8118, viewer on control port + 1, local access without password; use 0.0.0.0:port for LAN access with password)]";
 	Info() << "\t[-f [filename] write NMEA lines to file]";
 	Info() << "\t[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]";
 	Info() << "\t[-G [LEVEL level] [SYSTEM on] - control logging (levels: DEBUG, INFO, WARNING, ERROR, CRITICAL) or enable system logging]";
@@ -220,7 +228,6 @@ static void printBuildConfiguration()
 // -------------------------------
 // Command line support functions
 
-
 // Expand @filename response-file arguments (gcc/clang convention).
 // Each line is whitespace-split; lines whose first non-whitespace
 // character is '#' are skipped, as are blank lines. CR endings are
@@ -270,7 +277,6 @@ static void expandResponseFiles(int argc, char *argv[],
 		expandResponseFiles((int)tok_argv.size(), tok_argv.data(), out, depth + 1);
 	}
 }
-
 
 static void parseSettings(Setting &s, char *argv[], int ptr, int argc)
 {
@@ -325,7 +331,11 @@ static void Assert(bool b, std::string &context, const std::string &msg = "")
 	}
 }
 
-static void run(RunState &state)
+#ifdef HASWEBVIEWER
+void run(RunState &state, WebViewer *managed_viewer, ControlCore *control)
+#else
+void run(RunState &state, ControlCore *control)
+#endif
 {
 	// -------------
 	// set up the receiver and open the device
@@ -337,6 +347,7 @@ static void run(RunState &state)
 #ifdef HASWEBVIEWER
 	for (auto &s : state.servers)
 		has_server |= s->active();
+	has_server |= managed_viewer != nullptr;
 #endif
 	bool has_http = false;
 	for (auto &o : state.msg)
@@ -358,8 +369,7 @@ static void run(RunState &state)
 		r.setupModel(group, i);
 	}
 
-	// for community feed, restrict to local SDR hardware only
-	if (state.comm_feed && !state.xshare_defined)
+	if (state.comm_feed && (control ? !state.comm_feed->hasUUID() : !state.xshare_defined))
 	{
 		uint64_t live_groups = 0;
 		for (const auto &r : state.receivers)
@@ -419,7 +429,8 @@ static void run(RunState &state)
 		for (auto &o : state.msg)
 			o->Connect(r);
 
-		state.screen.Connect(r);
+		if (!control)
+			state.screen.Connect(r);
 
 		if (r.verbose || state.timeout_nomsg)
 			state.stat[i].connect(r);
@@ -440,7 +451,15 @@ static void run(RunState &state)
 	for (auto &s : state.servers)
 		if (s->active())
 			s->connect(state.receivers);
+
+	if (managed_viewer)
+		managed_viewer->connect(state.receivers);
 #endif
+
+	if (control)
+		for (auto &r : state.receivers)
+			for (int j = 0; j < r->Count(); j++)
+				r->Output(j).Connect((StreamIn<AIS::Message> *)&control->getChannelActivity());
 
 	for (auto &o : state.msg)
 		o->Start();
@@ -459,6 +478,18 @@ static void run(RunState &state)
 			}
 			s->start();
 		}
+
+	if (managed_viewer)
+	{
+		managed_viewer->setOutputChannels(state.msg);
+		managed_viewer->setCommFeed(state.comm_feed);
+
+		if (state.own_mmsi != -1)
+		{
+			managed_viewer->SetKey(AIS::KEY_SETTING_SHARE_LOC, "true");
+			managed_viewer->SetKey(AIS::KEY_SETTING_OWN_MMSI, std::to_string(state.own_mmsi));
+		}
+	}
 #endif
 
 	Debug() << "Starting statistics";
@@ -469,7 +500,6 @@ static void run(RunState &state)
 	for (auto &r : state.receivers)
 		r->play();
 
-	stop = false;
 	const int SLEEP = 50;
 	auto time_start = high_resolution_clock::now();
 	auto time_timeout_start = time_start;
@@ -580,6 +610,9 @@ static void run(RunState &state)
 	}
 
 #ifdef HASWEBVIEWER
+	if (managed_viewer)
+		managed_viewer->disconnectEngine();
+
 	for (auto &s : state.servers)
 		s->close();
 #endif
@@ -959,8 +992,10 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 			receiver.SetKey(AIS::KEY_SETTING_LAT, arg1).SetKey(AIS::KEY_SETTING_LON, arg2);
 			break;
 		case 'A':
+			throw std::runtime_error("Option -A is obsolete. Please use -I instead.");
+			break;
 		case 'E':
-			throw std::runtime_error("Option -" + std::string(1, param[1]) + " is obsolete. Please use -I instead.");
+			throw std::runtime_error("Option -E (managed mode) must be the only option: AIS-catcher -E [config file] [bind address:port].");
 			break;
 		case 'I':
 		{
@@ -1120,6 +1155,12 @@ int main(int argc, char *argv[])
 
 		std::vector<std::string> expanded;
 		expandResponseFiles(argc, argv, expanded);
+
+		if (Managed::isInvocation(expanded))
+		{
+			printVersion();
+			return Managed::main(expanded);
+		}
 
 		std::vector<char *> argv_expanded;
 		argv_expanded.reserve(expanded.size() + 1);

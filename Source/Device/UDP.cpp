@@ -84,7 +84,7 @@ namespace Device
 			throw std::runtime_error("UDP: cannot bind to port.");
 		}
 		SleepSystem(100);
-		Debug() << "UDP: server opened at port " << port;
+		Debug() << "UDP: listening on " << server << " port " << port;
 	}
 	void UDP::Close()
 	{

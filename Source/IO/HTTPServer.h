@@ -99,12 +99,35 @@ namespace IO
 		}
 	};
 
+	struct HTTPRequest
+	{
+		std::string method;
+		std::string target;
+		std::string body;
+		std::string cookie;
+		std::string host;
+		std::string origin;
+
+		std::string path() const
+		{
+			std::string::size_type pos = target.find('?');
+			return pos == std::string::npos ? target : target.substr(0, pos);
+		}
+
+		std::string query() const
+		{
+			std::string::size_type pos = target.find('?');
+			return pos == std::string::npos ? "" : target.substr(pos + 1);
+		}
+	};
+
 	class HTTPServer : public IO::TCPServer
 	{
 		std::array<std::string, 4> sse_topic = {"aiscatcher", "nmea", "nmea", "log"};
 
 	public:
 		virtual void Request(IO::TCPServerConnection &c, const std::string &msg, bool accept_gzip);
+		virtual void Request(IO::TCPServerConnection &c, const HTTPRequest &r, bool accept_gzip);
 
 		void Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip = false, bool cache = false, bool cors = false, int status = 200);
 		void Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip = false, bool cache = false, bool cors = false, int status = 200);
@@ -139,6 +162,10 @@ namespace IO
 		}
 
 		void setFrameAncestors(const std::string &v) { frame_ancestors = v; }
+		void setFrameSrc(const std::string &v) { frame_src = v; }
+		void setSSETopic(int id, const std::string &topic) { sse_topic[MIN(id, 3)] = topic; }
+
+		void setExtraHeader(const std::string &h) { extra_header = h; }
 
 	private:
 		std::string ret, header;
@@ -147,6 +174,8 @@ namespace IO
 		// different port. Tighten with the `frame_ancestors` setting if the
 		// instance is exposed beyond a trusted network.
 		std::string frame_ancestors = "*";
+		std::string frame_src = "'self'";
+		std::string extra_header;
 		std::list<IO::SSEConnection> sse;
 		std::mutex sse_mtx;
 
@@ -166,9 +195,11 @@ namespace IO
 			}
 		}
 
-		void Parse(const std::string &s, std::string &get, bool &accept_gzip);
-		void processClients();
+		void Parse(const std::string &s, HTTPRequest &r, bool &accept_gzip);
 
 		ZIP zip;
+
+	protected:
+		void processClients() override;
 	};
 }

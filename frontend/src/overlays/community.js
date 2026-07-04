@@ -44,21 +44,34 @@ function viewSane(v) {
         && Number.isFinite(v.zoom) && v.zoom >= 0    && v.zoom <= 28;
 }
 
+let liveSharing = null;
+
+export function updateSharingState(sharing, sharing_uuid, engine_running) {
+    liveSharing = {
+        sharing: !!sharing,
+        sharing_uuid: !!sharing_uuid,
+        engine_running: engine_running !== false,
+    };
+    applySharingState();
+}
+
 export function sharingDisplay() {
-    const f = deps.config.features || {};
+    const f = liveSharing || deps.config.features || {};
+    if (f.engine_running === false) return ["Receiver stopped", "gray"];
     if (!f.sharing)        return ["No", "red"];
     if (!f.sharing_uuid)   return ["Yes (anonymous)", "orange"];
     return ["Yes", "green"];
 }
 
 export function applySharingState() {
-    const f = deps.config.features || {};
-    const cls = !f.sharing ? "fill-red"
+    const f = liveSharing || deps.config.features || {};
+    const cls = f.engine_running === false ? "fill-gray"
+              : !f.sharing ? "fill-red"
               : !f.sharing_uuid ? "fill-orange"
               : "fill-green";
     const btn = document.getElementById("xchange");
     if (btn) {
-        btn.classList.remove("fill-red", "fill-orange", "fill-green");
+        btn.classList.remove("fill-red", "fill-orange", "fill-green", "fill-gray");
         btn.classList.add(cls);
     }
 }

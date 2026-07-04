@@ -23,9 +23,12 @@
 #include "Writer.h"
 
 std::vector<Device::Description> DeviceManager::device_list;
+std::mutex DeviceManager::list_mtx;
 
 void DeviceManager::refreshDevices()
 {
+	std::lock_guard<std::mutex> lock(list_mtx);
+
 	device_list.clear();
 
 	RTLSDR().getDeviceList(device_list);
@@ -98,50 +101,56 @@ Device::Device *DeviceManager::getDeviceByType(Type type)
 
 bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int frequency, TAG &tag)
 {
-	int idx = device_list.empty() ? -1 : 0;
-	uint64_t handle = device_list.empty() ? 0 : device_list[0].getHandle();
+	uint64_t handle;
 
-	if (!serial.empty()) {
-		Info() << "Searching for device with SN " << serial << (type != Type::NONE ? " and type " + Util::Parse::DeviceTypeString(type) : "") << ".";
-	}
-
-	if (!serial.empty() || type != Type::NONE)
 	{
-		idx = -1;
-		for (int i = 0; i < device_list.size(); i++)
-		{
-			bool serial_match = device_list[i].getSerial() == serial && (type == Type::NONE || type == device_list[i].getType());
-			bool type_match = serial.empty() && (type == device_list[i].getType());
+		std::lock_guard<std::mutex> lock(list_mtx);
 
-			if (serial_match || type_match)
+		int idx = device_list.empty() ? -1 : 0;
+		handle = device_list.empty() ? 0 : device_list[0].getHandle();
+
+		if (!serial.empty()) {
+			Info() << "Searching for device with SN " << serial << (type != Type::NONE ? " and type " + Util::Parse::DeviceTypeString(type) : "") << ".";
+		}
+
+		if (!serial.empty() || type != Type::NONE)
+		{
+			idx = -1;
+			for (int i = 0; i < device_list.size(); i++)
 			{
-				idx = i;
-				handle = device_list[i].getHandle();
-				break;
+				bool serial_match = device_list[i].getSerial() == serial && (type == Type::NONE || type == device_list[i].getType());
+				bool type_match = serial.empty() && (type == device_list[i].getType());
+
+				if (serial_match || type_match)
+				{
+					idx = i;
+					handle = device_list[i].getHandle();
+					break;
+				}
+			}
+			if (idx == -1)
+			{
+				if (!serial.empty())
+				{
+					Error() << "Device Manager: cannot find device with SN " << serial << ".";
+					printAvailableDevices_locked();
+					return false;
+				}
+
+				idx = 0;
+				handle = 0;
 			}
 		}
-		if (idx == -1)
+
+		if (type == Type::NONE && device_list.size() == 0)
 		{
-			if (!serial.empty())
-			{
-				Error() << "Device Manager: cannot find device with SN " << serial << ".";
-				printAvailableDevices();
-				return false;
-			}
-
-			idx = 0;
-			handle = 0;
+			Error() << "Device Manager: no devices available.";
+			return false;
 		}
-	}
 
-	if (type == Type::NONE && device_list.size() == 0)
-	{
-		Error() << "Device Manager: no devices available.";
-		return false;
+		if (type == Type::NONE)
+			type = device_list[idx].getType();
 	}
-
-	if (type == Type::NONE)
-		type = device_list[idx].getType();
 
 	device = getDeviceByType(type);
 
@@ -167,39 +176,54 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 	return true;
 }
 
+void DeviceManager::printAvailableDevices_locked()
+{
+	Info() << "Found " << device_list.size() << " device(s):";
+
+	for (int i = 0; i < device_list.size(); i++)
+	{
+		Info() << i << ": " << device_list[i].toString();
+	}
+}
+
 void DeviceManager::printAvailableDevices(bool JSON)
 {
 	if (!JSON)
 	{
-		Info() << "Found " << device_list.size() << " device(s):";
-
-		for (int i = 0; i < device_list.size(); i++)
-		{
-			Info() << i << ": " << device_list[i].toString();
-		}
+		std::lock_guard<std::mutex> lock(list_mtx);
+		printAvailableDevices_locked();
 	}
 	else
 	{
-		std::string s;
-		JSON::Writer w(s);
-		w.beginObject().key("devices").beginArray();
-		for (int i = 0; i < device_list.size(); i++)
-		{
-			std::string type = Util::Parse::DeviceTypeString(device_list[i].getType());
-			std::string serial = device_list[i].getSerial();
-			w.beginObject()
-				.kv("input", type)
-				.kv("serial", serial)
-				.kv("name", type + " [" + serial + "]")
-				.endObject();
-		}
-		w.endArray().endObject().finish();
-		std::cout << s << "\n";
+		std::cout << getDeviceListJSON() << "\n";
 	}
+}
+
+std::string DeviceManager::getDeviceListJSON()
+{
+	std::lock_guard<std::mutex> lock(list_mtx);
+
+	std::string s;
+	JSON::Writer w(s);
+	w.beginObject().key("devices").beginArray();
+	for (int i = 0; i < device_list.size(); i++)
+	{
+		std::string type = Util::Parse::DeviceTypeString(device_list[i].getType());
+		std::string serial = device_list[i].getSerial();
+		w.beginObject()
+			.kv("input", type)
+			.kv("serial", serial)
+			.kv("name", type + " [" + serial + "]")
+			.endObject();
+	}
+	w.endArray().endObject().finish();
+	return s;
 }
 
 void DeviceManager::selectDeviceByIndex(int index)
 {
+	std::lock_guard<std::mutex> lock(list_mtx);
+
 	if (index < 0 || index >= device_list.size())
 		throw std::runtime_error("Device Manager: device does not exist");
 

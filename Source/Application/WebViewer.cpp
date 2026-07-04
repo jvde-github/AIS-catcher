@@ -40,6 +40,7 @@ void PluginManager::setMsgSave(bool b) { config.save_messages = b; }
 void PluginManager::setRealtime(bool b) { config.realtime = b; }
 void PluginManager::setLog(bool b) { config.log_enabled = b; }
 void PluginManager::setDecoder(bool b) { config.decoder = b; }
+void PluginManager::setManaged(bool b) { config.managed = b; }
 void PluginManager::setSharing(bool sharing, bool sharing_uuid)
 {
 	config.sharing = sharing;
@@ -191,6 +192,7 @@ std::string PluginManager::render() const
 			.kv("realtime", config.realtime)
 			.kv("log", config.log_enabled)
 			.kv("decoder", config.decoder)
+			.kv("managed", config.managed)
 			.kv("about_md", aboutPresent)
 			.kv("sharing", config.sharing)
 			.kv("sharing_uuid", config.sharing_uuid)
@@ -837,9 +839,19 @@ ReceiverTracker *WebViewer::getState(int idx)
 
 void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 {
+	std::lock_guard<std::recursive_mutex> lock(state_mtx);
+
 	const std::string newline = "<br>";
 
 	bool multi = receivers.size() > 1 && !filter.hasIDFilter() && groups_in == 0xFFFFFFFFFFFFFFFF;
+
+	states[0]->product.clear();
+	states[0]->vendor.clear();
+	states[0]->serial.clear();
+	states[0]->sample_rate.clear();
+	states[0]->model_name.clear();
+
+	std::size_t first_new = states.size();
 
 	for (int k = 0; k < (int)receivers.size(); k++)
 	{
@@ -887,9 +899,35 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 	for (auto &s : states)
 		s->applyConfig(tracking, filter);
 
+	if (serving)
+	{
+		for (std::size_t i = first_new; i < states.size(); i++)
+		{
+			states[i]->setup();
+			states[i]->wireStreams();
+		}
+		pluginManager.setReceivers(states);
+	}
+
 	Debug() << "Mutex: WebViewer sinks self-lock (DB/PlaneDB), raw_counter atomic (" << receivers.size() << " receivers)";
 
 	raw_counter.setFilter(filter);
+	engine_connected = true;
+}
+
+void WebViewer::disconnectEngine()
+{
+	std::lock_guard<std::recursive_mutex> lock(state_mtx);
+
+	engine_connected = false;
+	msg_channels = nullptr;
+	setCommFeed(nullptr);
+
+	if (states.size() > 1)
+	{
+		states.erase(states.begin() + 1, states.end());
+		pluginManager.setReceivers(states);
+	}
 }
 
 void WebViewer::setDeviceDescription(const std::string &product, const std::string &vendor, const std::string &serial)
@@ -925,6 +963,7 @@ void WebViewer::connect(AIS::Model &model, Connection<JSON::JSON> &json, Device:
 
 	states[0]->applyConfig(tracking, filter);
 	raw_counter.setFilter(filter);
+	engine_connected = true;
 }
 
 void WebViewer::Reset()
@@ -985,16 +1024,26 @@ void WebViewer::start()
 		if (port > lastport)
 			throw std::runtime_error("Cannot open port in range [" + std::to_string(firstport) + "," + std::to_string(lastport) + "]");
 
-		Info() << "HTML Server running at port " << std::to_string(port);
+		bound_port = port;
+	}
+	else if (port_set)
+	{
+		if (!HTTPServer::start(0))
+			throw std::runtime_error("Cannot open OS-assigned port");
+
+		bound_port = listening_port;
 	}
 	else
 		throw std::runtime_error("HTML server ports not specified");
+
+	Info() << "HTML Server running at port " << std::to_string(bound_port);
 
 	time_start = time(nullptr);
 
 	pluginManager.setReceivers(states);
 
 	run = true;
+	serving = true;
 
 	backup.start();
 }
@@ -1005,6 +1054,7 @@ void WebViewer::close()
 	logger.Stop();
 
 	run = false;
+	serving = false;
 	backup.stop();
 
 	if (!backup.getFilename().empty() && !backup.save())
@@ -1049,6 +1099,8 @@ std::string WebViewer::buildStatJSON(ReceiverTracker *s)
 	s->writeCountersJSON(w);
 	w.kv("tcp_clients", numberOfClients());
 	w.kv("sharing", comm_feed != nullptr);
+	w.kv("sharing_uuid", comm_feed != nullptr && comm_feed->hasUUID());
+	w.kv("engine_running", engine_connected);
 	if (tracking.latlon_share && tracking.lat != LAT_UNDEFINED && tracking.lon != LON_UNDEFINED)
 	{
 		std::string link = "https://www.aiscatcher.org/?&zoom=10&lat=" + std::to_string(tracking.lat) + "&lon=" + std::to_string(tracking.lon);
@@ -1259,6 +1311,8 @@ const WebViewer::Route WebViewer::routes[] = {
 
 void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response, bool gzip)
 {
+	std::lock_guard<std::recursive_mutex> lock(state_mtx);
+
 	std::string r;
 	std::string a;
 
@@ -1358,6 +1412,8 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 
 Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 {
+	std::lock_guard<std::recursive_mutex> lock(state_mtx);
+
 	switch (key)
 	{
 	case AIS::KEY_SETTING_PORT:

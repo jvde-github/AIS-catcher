@@ -17,24 +17,27 @@
 
 #pragma once
 
+#include <atomic>
 #include <string>
 #include <vector>
-#include <cstdint>
 
-namespace Util
+#include "RunState.h"
+#include "ControlCore.h"
+#ifdef HASWEBVIEWER
+#include "WebViewer.h"
+#endif
+
+extern std::atomic<bool> stop;
+extern std::atomic<bool> stop_process;
+
+#ifdef HASWEBVIEWER
+void run(RunState &state, WebViewer *managed_viewer = nullptr, ControlCore *control = nullptr);
+#else
+void run(RunState &state, ControlCore *control = nullptr);
+#endif
+
+namespace Managed
 {
-	class Helper
-	{
-	public:
-		static std::string readFile(const std::string &filename);
-		static bool writeFileAtomic(const std::string &path, const std::string &content, std::string &error);
-		static int lsb(uint64_t x);
-		static std::vector<std::string> getFilesWithExtension(const std::string &directory, const std::string &extension);
-		static std::vector<std::string> getFilesInDirectory(const std::string &directory);
-		static long getMemoryConsumption();
-		static std::string getOS();
-		static std::string getHardware();
-		static uint16_t CRC16(const uint8_t *data, size_t length);
-		static bool isUUID(const std::string &s);
-	};
+	bool isInvocation(const std::vector<std::string> &args);
+	int main(const std::vector<std::string> &args);
 }

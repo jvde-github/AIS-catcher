@@ -58,8 +58,8 @@ namespace
 
 namespace Device
 {
-	// Initialize static member
 	std::vector<std::string> SerialPort::device_list;
+	std::mutex SerialPort::list_mtx;
 
 	void SerialPort::ReadAsync()
 	{
@@ -187,6 +187,7 @@ namespace Device
 	{
 		if (port.empty())
 		{
+			std::lock_guard<std::mutex> lock(list_mtx);
 			if (handle < device_list.size())
 			{
 				port = device_list[handle];
@@ -504,6 +505,7 @@ namespace Device
 	}
 	void SerialPort::getDeviceList(std::vector<Description> &DeviceList)
 	{
+		std::lock_guard<std::mutex> lock(list_mtx);
 		device_list.clear();
 
 #if defined(__APPLE__)

@@ -73,7 +73,7 @@ const config = window.__SERVER_CONFIG__ || {
     features: {
         share_location: false, save_messages: false,
         realtime: false, log: false, decoder: false,
-        about_md: false,
+        managed: false, about_md: false,
     },
     receivers: [],
     plugins: { loaded: [], errors: [] }, // loaded: [{ name, version }, ...]
@@ -2752,6 +2752,7 @@ async function updateStatistics() {
         if (stat.station_link != "") document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
 
         const statSharingElement = document.getElementById("stat_sharing");
+        community.updateSharingState(stat.sharing, stat.sharing_uuid, stat.engine_running);
         const [sharingText, sharingColor] = community.sharingDisplay();
         statSharingElement.innerHTML = `<a href="${stat.sharing_link}" target="_blank" style="color: ${sharingColor}">${sharingText}</a>`;
 
@@ -5557,6 +5558,16 @@ updateForLegacySettings();
 
 applyDynamicStyling();
 community.applySharingState();
+
+if (config.features.managed) {
+    const pollSharingState = async () => {
+        if (document.hidden) return;
+        const stat = await fetchStatistics();
+        if (stat) community.updateSharingState(stat.sharing, stat.sharing_uuid, stat.engine_running);
+    };
+    pollSharingState();
+    setInterval(pollSharingState, 10000);
+}
 
 console.log("Setup tabs");
 initFullScreen();

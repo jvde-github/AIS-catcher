@@ -609,7 +609,7 @@ namespace IO
 		connection = &tcp;
 
 		if (connection->connect())
-			ss << "connected\n";
+			ss << "connected";
 		else
 		{
 			if (!persistent)

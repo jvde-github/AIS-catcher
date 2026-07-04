@@ -234,8 +234,11 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/ZMQ.cmake)
 
 set(CPP
     Source/Application/Config.cpp
+    Source/Application/ControlCore.cpp
+    Source/Application/ControlServer.cpp
     Source/Application/DeviceManager.cpp
     Source/Application/Main.cpp
+    Source/Application/ManagedMain.cpp
     Source/Application/MapTiles.cpp
     Source/Application/Prometheus.cpp
     Source/Application/Receiver.cpp

@@ -15,6 +15,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <cstdio>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -78,6 +79,39 @@ namespace Util
 		if (fileSize > 0)
 			file.read(&str[0], fileSize);
 		return str;
+	}
+
+	bool Helper::writeFileAtomic(const std::string &path, const std::string &content, std::string &error)
+	{
+		const std::string tmp = path + ".tmp";
+
+		std::ofstream file(tmp, std::ios::binary | std::ios::trunc);
+		if (!file)
+		{
+			error = "cannot open \"" + tmp + "\" for writing";
+			return false;
+		}
+
+		file.write(content.data(), content.size());
+		file.close();
+
+		if (file.fail())
+		{
+			std::remove(tmp.c_str());
+			error = "cannot write \"" + tmp + "\"";
+			return false;
+		}
+
+#ifdef _WIN32
+		std::remove(path.c_str());
+#endif
+		if (std::rename(tmp.c_str(), path.c_str()) != 0)
+		{
+			std::remove(tmp.c_str());
+			error = "cannot rename \"" + tmp + "\" to \"" + path + "\"";
+			return false;
+		}
+		return true;
 	}
 
 	int Helper::lsb(uint64_t x)

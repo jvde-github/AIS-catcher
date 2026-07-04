@@ -486,10 +486,9 @@ namespace IO
 
 	bool TCPServer::start(int port)
 	{
-		// Check if port is already in use
 		for (const auto &p : active_ports)
 		{
-			if (p == port)
+			if (port && p == port)
 			{
 				Error() << "TCP Server: port " << port << " is already in use by another server instance";
 				return false;
@@ -535,6 +534,14 @@ namespace IO
 			Net::closeSocket(sock);
 			sock = -1;
 			return false;
+		}
+
+		if (port == 0)
+		{
+			struct sockaddr_in bound;
+			socklen_t len = sizeof(bound);
+			if (getsockname(sock, (SOCKADDR *)&bound, &len) == 0)
+				port = ntohs(bound.sin_port);
 		}
 
 		for (auto &c : client)

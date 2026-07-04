@@ -77,5 +77,19 @@ perform_sed "$DIST/index.html" "s|style\.css?hash=[^\"]*|style.css?hash=${CSS_HA
 perform_sed "$DIST/index.html" "s|script\.js?hash=[^\"]*|script.js?hash=${JS_HASH}|g" ''
 
 
+# Control hub UI (managed mode -E) — plain static files served by the
+# control server under the control/ prefix; tailwind.css is generated from
+# the hub markup like the viewer's npm-built assets
+rm -rf "$DIST/control"
+cp -R frontend/control "$DIST/control"
+mkdir -p "$DIST/control/css"
+(cd "$SRC" && npx @tailwindcss/cli \
+    -i control.tailwind.css \
+    -o ../dist/control/css/tailwind.css --minify)
+if [ ! -s "$DIST/control/css/tailwind.css" ]; then
+    echo "ERROR: tailwind build produced no css" >&2
+    exit 1
+fi
+
 echo "Built frontend/dist — baking into WebDB..."
 ./scripts/build-web-db.sh "$DIST"

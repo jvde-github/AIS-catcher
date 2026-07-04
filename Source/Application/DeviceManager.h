@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <mutex>
+
 #include "Common.h"
 
 #include "Device/FileRAW.h"
@@ -58,9 +60,10 @@ class DeviceManager
     Device::N2KSCAN _N2KSCAN;
 
     Device::Device *getDeviceByType(Type type);
+    void printAvailableDevices_locked();
 
-    // Available devices
     static std::vector<Device::Description> device_list;
+    static std::mutex list_mtx;
     Device::Device *device = nullptr;
 
 public:
@@ -97,5 +100,6 @@ public:
 
     bool openDevice(int sample_rate, int bandwidth, int ppm, int frequency, TAG &tag);
     void printAvailableDevices(bool JSON = false);
+    static std::string getDeviceListJSON();
     void selectDeviceByIndex(int index);
 };

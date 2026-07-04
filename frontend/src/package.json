@@ -16,6 +16,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
+    "@tailwindcss/cli": "4.2.2",
+    "tailwindcss": "4.2.2",
     "eslint": "^9.0.0",
     "globals": "^15.0.0",
     "sharp": "^0.35.0",

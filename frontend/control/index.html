@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>AIS-catcher</title>
+    <link rel="stylesheet" href="css/tailwind.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            background: #f8fafc;
+            touch-action: pan-x pan-y;
+            overscroll-behavior: none;
+            position: fixed;
+            width: 100%;
+        }
+
+        #hub-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            min-height: 0;
+        }
+
+        #webviewer-frame {
+            position: absolute;
+            top: 0;
+            left: 0;
+            border: none;
+            width: 100%;
+            height: 100%;
+            touch-action: pan-x pan-y;
+        }
+
+        #bottom-bar {
+            position: relative;
+            flex-shrink: 0;
+            width: 100%;
+            background: #0f172a;
+            border-top: 1px solid #334155;
+            z-index: 50;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .hub-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 0.75rem;
+            color: white;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            min-width: 70px;
+        }
+
+        .hub-button:hover {
+            background: #1e293b;
+        }
+
+        .hub-button.active {
+            background: #1e293b;
+        }
+
+        .hub-button svg {
+            width: 1.5rem;
+            height: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        /* draws the eye to Start/Restart while saved settings wait to be applied */
+        .hub-button.attention {
+            background: #9a3412;
+        }
+
+        .hub-button.attention:hover {
+            background: #7c2d12;
+        }
+
+        #config-panel {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 100%;
+            max-width: 400px;
+            height: 100vh;
+            height: 100dvh;
+            background: white;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            transition: right 0.3s ease;
+            z-index: 60;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        #config-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        #config-panel.open {
+            right: 0;
+        }
+
+        #config-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            background: rgba(0, 0, 0, 0.3);
+            display: none;
+            z-index: 55;
+        }
+
+        #config-overlay.open {
+            display: block;
+        }
+
+        @media (max-width: 640px) {
+            #config-panel {
+                max-width: 100%;
+            }
+        }
+
+        #login-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        #login-overlay.open {
+            display: flex;
+        }
+
+        /* collapsible System panel sections (config, log) */
+        details.sys-section summary {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #1e293b;
+            padding: 0.25rem 0;
+            margin-bottom: 0.5rem;
+            list-style: none;
+            user-select: none;
+        }
+
+        details.sys-section summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .sys-chev {
+            width: 16px;
+            height: 16px;
+            color: #64748b;
+            transition: transform 0.15s;
+            flex-shrink: 0;
+        }
+
+        details.sys-section[open] .sys-chev {
+            transform: rotate(90deg);
+        }
+
+        /* config file view, same visual language as the log */
+        #config-json {
+            background: #0f172a;
+            color: #cbd5e1;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.75rem;
+            line-height: 1.5;
+            padding: 0.75rem;
+            max-height: 45vh;
+            overflow: auto;
+            white-space: pre;
+            margin: 0;
+        }
+
+        /* process log, styled like the control tool's log page */
+        #log-box {
+            background: #0f172a;
+            padding: 0.75rem;
+            height: 45vh;
+            overflow: auto;
+        }
+
+        .log-line {
+            display: flex;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.75rem;
+            line-height: 1.5;
+            padding: 1px 0;
+            white-space: pre;
+        }
+
+        .log-line.error {
+            color: #f87171;
+        }
+
+        .log-line.warning {
+            color: #fbbf24;
+        }
+
+        .log-line.info {
+            color: #60a5fa;
+        }
+
+        .log-line.debug {
+            color: #94a3b8;
+            opacity: 0.75;
+        }
+
+        .log-line.default {
+            color: #cbd5e1;
+        }
+
+        .log-ts {
+            color: #475569;
+            margin-right: 0.5em;
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        /* bottom bar: buttons centered, status + LEDs + community grouped on
+           the right. The empty left spacer shrinks first, so when space gets
+           tight the buttons drift left before any indicator collapses. */
+        #bar-inner {
+            display: flex;
+            align-items: center;
+            height: 4rem;
+            padding: 0 12px;
+            gap: 12px;
+        }
+
+        #bar-left {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+
+        #bar-right {
+            min-width: max-content;
+        }
+
+        #status-dot-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        /* light separators between status, activity LEDs and community link */
+        .bar-divider {
+            display: none;
+            width: 1px;
+            height: 1.75rem;
+            background: #334155;
+        }
+
+        @media (min-width: 640px) {
+            .bar-divider.div-640 {
+                display: block;
+            }
+        }
+
+        @media (min-width: 660px) {
+            .bar-divider.div-768 {
+                display: block;
+            }
+        }
+
+        #nav-buttons {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+
+        #bar-right {
+            flex: 1 1 0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        /* community map link: subordinate icon-only shortcut, first to go
+           when space is tight */
+        #community-link {
+            display: none;
+            text-decoration: none;
+            color: #64748b;
+            transition: color 0.15s;
+        }
+
+        #community-link svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        #community-link:hover {
+            color: #cbd5e1;
+        }
+
+        @media (min-width: 660px) {
+            #community-link {
+                display: flex;
+                align-items: center;
+            }
+        }
+
+        @media (min-width: 640px) {
+            #nav-buttons {
+                gap: 3rem;
+            }
+        }
+
+        @media (max-width: 639px) {
+            .hub-button {
+                min-width: 54px;
+                padding: 0.5rem 0.4rem;
+            }
+        }
+
+        /* per-channel activity LEDs */
+        #channel-leds {
+            display: none;
+        }
+
+        @media (min-width: 640px) {
+            #channel-leds {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-right: 6px;
+            }
+        }
+
+        .ch-led-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .ch-led {
+            width: 7px;
+            height: 7px;
+            border-radius: 9999px;
+            background: #334155;
+            transition: background-color 0.5s ease-out;
+        }
+
+        .ch-led.flash {
+            background: #34d399;
+            transition: none;
+        }
+
+        .ch-led-label {
+            font-size: 8px;
+            line-height: 1;
+            color: #64748b;
+        }
+
+        /* setup wizard */
+        #wizard-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 90;
+            padding: 1rem;
+        }
+
+        #wizard-overlay.open {
+            display: flex;
+        }
+
+        #wizard-card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 480px;
+            max-height: calc(100vh - 2rem);
+            max-height: calc(100dvh - 2rem);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .wz-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1rem 0 1.5rem;
+        }
+
+        .wz-x {
+            border: none;
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 0.5rem;
+        }
+
+        .wz-x:hover {
+            color: #1e293b;
+            background: #f1f5f9;
+        }
+
+        .wz-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .wz-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 9999px;
+            background: #e2e8f0;
+        }
+
+        .wz-dot.active {
+            background: #0857b1;
+        }
+
+        .wz-dot.past {
+            background: #93c5fd;
+        }
+
+        .wz-body {
+            padding: 0.75rem 1.5rem 0.5rem;
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .wz-body h2 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0.75rem 0 0.15rem;
+        }
+
+        .wz-body h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #0f172a;
+            margin: 0 0 0.5rem;
+        }
+
+        .wz-body p {
+            font-size: 0.875rem;
+            color: #475569;
+            line-height: 1.55;
+            margin: 0.5rem 0;
+        }
+
+        .wz-welcome {
+            text-align: center;
+            padding-bottom: 0.25rem;
+        }
+
+        .wz-welcome p {
+            text-align: left;
+        }
+
+        .wz-welcome .wz-sub {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0;
+        }
+
+        .wz-logo {
+            display: inline-block;
+            width: 64px;
+            height: 64px;
+        }
+
+        .wz-logo svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .wz-fineprint {
+            font-size: 0.72rem !important;
+            color: #94a3b8 !important;
+        }
+
+        .wz-fineprint a {
+            color: #64748b;
+            text-decoration: underline;
+        }
+
+        .wz-intro {
+            margin-top: 0;
+        }
+
+        .wz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .wz-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .wz-option:hover {
+            border-color: #cbd5e1;
+            background: #f8fafc;
+        }
+
+        .wz-option.selected {
+            border-color: #0857b1;
+            background: #eff6ff;
+        }
+
+        .wz-option input[type="radio"] {
+            margin-top: 0.2rem;
+            accent-color: #0857b1;
+        }
+
+        .wz-option-icon {
+            flex-shrink: 0;
+            width: 28px;
+            height: 28px;
+            color: #64748b;
+        }
+
+        .wz-option.selected .wz-option-icon {
+            color: #0857b1;
+        }
+
+        .wz-option-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .wz-mini-link {
+            color: #0857b1;
+            text-decoration: underline;
+        }
+
+        .wz-option-main {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .wz-option-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .wz-option-sub {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .wz-daisy {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .wz-daisy.hidden {
+            display: none;
+        }
+
+        .wz-daisy input,
+        .wz-daisy select,
+        .wz-input {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            color: #0f172a;
+            background: white;
+            box-sizing: border-box;
+        }
+
+        .wz-daisy input:focus,
+        .wz-input:focus {
+            outline: 2px solid #93c5fd;
+            border-color: #0857b1;
+        }
+
+        .wz-none {
+            font-size: 0.8rem !important;
+            color: #94a3b8 !important;
+        }
+
+        .wz-loading {
+            font-size: 0.85rem;
+            color: #64748b;
+            padding: 0.75rem 0;
+        }
+
+        .wz-service {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            margin: 0.5rem 0 0.75rem;
+        }
+
+        .wz-service-icon {
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+        }
+
+        .wz-service-icon svg,
+        .wz-service-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .wz-field-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #334155;
+            margin: 0.9rem 0 0.3rem;
+        }
+
+        .wz-summary {
+            margin: 0.5rem 0 1rem;
+            padding-left: 1.25rem;
+            font-size: 0.875rem;
+            color: #334155;
+            line-height: 1.9;
+        }
+
+        .wz-check {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #334155;
+            margin: 0.5rem 0;
+        }
+
+        .wz-check input {
+            accent-color: #0857b1;
+        }
+
+        .wz-error {
+            margin: 0 1.5rem;
+            font-size: 0.8rem;
+            color: #e11d48;
+            background: #fff1f2;
+            border: 1px solid #fecdd3;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .wz-error.hidden {
+            display: none;
+        }
+
+        .wz-foot {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.5rem 1.25rem;
+        }
+
+        .wz-foot-right {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .wz-btn {
+            border-radius: 0.5rem;
+            padding: 0.5rem 1.25rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: background 0.15s;
+        }
+
+        .wz-btn.primary {
+            background: #1e293b;
+            color: white;
+        }
+
+        .wz-btn.primary:hover {
+            background: #334155;
+        }
+
+        .wz-btn.primary:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        .wz-btn.ghost {
+            background: transparent;
+            color: #64748b;
+            border: 1px solid #cbd5e1;
+        }
+
+        .wz-btn.ghost:hover {
+            background: #f8fafc;
+        }
+
+        .wz-btn.link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #0857b1;
+            color: white;
+            text-decoration: none;
+            margin: 0.25rem 0;
+        }
+
+        .wz-btn.link:hover {
+            background: #0a66d0;
+        }
+
+        .wz-btn.link svg {
+            width: 14px;
+            height: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="hub-container">
+        <div id="loading" class="text-center p-8 absolute inset-0 flex items-center justify-center">
+            <div>
+                <svg class="animate-spin h-12 w-12 text-slate-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="text-slate-600">Connecting...</p>
+            </div>
+        </div>
+        <iframe id="webviewer-frame" src="" class="hidden" allow="fullscreen" allowfullscreen
+            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+
+        <div id="config-overlay"></div>
+
+        <!-- Login / first-run setup modal -->
+        <div id="login-overlay">
+            <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+                <h3 id="login-title" class="text-lg font-semibold text-slate-800 mb-1">Sign In</h3>
+                <p id="login-subtitle" class="text-sm text-slate-500 mb-4">Authentication required to continue.</p>
+                <div id="login-error" class="hidden mb-3 text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
+                <form id="login-form" class="space-y-3">
+                    <input id="login-password" name="password" type="password" autocomplete="current-password"
+                        placeholder="Password"
+                        class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                    <input id="login-password2" name="password2" type="password" autocomplete="new-password"
+                        placeholder="Confirm password"
+                        class="hidden w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                    <div class="flex gap-2 pt-1">
+                        <button type="button" id="login-cancel"
+                            class="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 transition">
+                            Cancel
+                        </button>
+                        <button type="submit" id="login-submit"
+                            class="flex-1 px-4 py-2 rounded-lg text-sm font-semibold bg-slate-800 text-white hover:bg-slate-700 transition">
+                            Sign In
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Config Panel -->
+        <div id="config-panel">
+            <div class="flex items-center justify-between p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 id="config-title" class="text-lg font-semibold text-slate-800">Configuration</h3>
+                <button id="config-close" class="text-slate-600 hover:text-slate-800 p-1">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="status-message" class="hidden"></div>
+            <div id="config-content" class="p-4"></div>
+        </div>
+
+        <!-- toasts sit above the bottom bar on the left, clear of the config
+             panel that slides in from the right; config-manager's App.notify
+             reuses this container instead of creating its own -->
+        <div id="toast-container" class="fixed flex flex-col items-start" style="bottom: 5.5rem; left: 1.5rem; z-index: 70"></div>
+    </div>
+
+    <nav id="bottom-bar">
+        <div id="bar-inner">
+        <div id="bar-left"></div>
+        <div id="nav-buttons" class="transition-opacity">
+            <button id="nav-start-restart" class="hub-button" data-view="control">
+                <svg id="nav-sr-icon" viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="M320-200v-560l440 280-440 280Zm80-280Zm0 134 210-134-210-134v268Z" />
+                </svg>
+                <span id="nav-sr-label">Start</span>
+            </button>
+            <button id="nav-btn-input" class="hub-button" data-view="input">
+                <svg viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="M160-80q-33 0-56.5-23.5T80-160v-480q0-25 13.5-45t36.5-29l506-206 26 66-330 134h468q33 0 56.5 23.5T880-640v480q0 33-23.5 56.5T800-80H160Zm0-80h640v-280H160v280Zm160-40q42 0 71-29t29-71q0-42-29-71t-71-29q-42 0-71 29t-29 71q0 42 29 71t71 29ZM160-520h480v-80h80v80h80v-120H160v120Zm0 360v-280 280Z" />
+                </svg>
+                <span>Input</span>
+            </button>
+            <button id="nav-btn-output" class="hub-button" data-view="output">
+                <svg viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="M680-80q-50 0-85-35t-35-85q0-6 3-28L282-392q-16 15-37 23.5t-45 8.5q-50 0-85-35t-35-85q0-50 35-85t85-35q24 0 45 8.5t37 23.5l281-164q-2-7-2.5-13.5T560-760q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35q-24 0-45-8.5T598-672L317-508q2-7 2.5-13.5t.5-14.5q0-8-.5-14.5T317-452l281 164q16-15 37-23.5t45-8.5q50 0 85 35t35 85q0 50-35 85t-85 35Zm0-80q17 0 28.5-11.5T720-200q0-17-11.5-28.5T680-240q-17 0-28.5 11.5T640-200q0 17 11.5 28.5T680-160ZM200-440q17 0 28.5-11.5T240-480q0-17-11.5-28.5T200-520q-17 0-28.5 11.5T160-480q0 17 11.5 28.5T200-440Zm480-280q17 0 28.5-11.5T720-760q0-17-11.5-28.5T680-800q-17 0-28.5 11.5T640-760q0 17 11.5 28.5T680-720Zm0 520ZM200-480Zm480-280Z" />
+                </svg>
+                <span>Output</span>
+            </button>
+            <button id="nav-btn-control" class="hub-button" data-view="control-panel">
+                <svg viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="M686-132 444-376q-20 8-40.5 12t-43.5 4q-100 0-170-70t-70-170q0-36 10-68.5t28-61.5l146 146 72-72-146-146q29-18 61.5-28t68.5-10q100 0 170 70t70 170q0 23-4 43.5T584-516l244 242q12 12 12 29t-12 29l-84 84q-12 12-29 12t-29-12Zm29-85 27-27-256-256q18-20 26-46.5t8-53.5q0-60-38.5-104.5T386-758l74 74q12 12 12 28t-12 28L332-500q-12 12-28 12t-28-12l-74-74q9 57 53.5 95.5T360-440q26 0 52-8t47-25l256 256ZM472-488Z" />
+                </svg>
+                <span>System</span>
+            </button>
+        </div>
+        <div id="bar-right">
+            <div id="status-dot-wrap">
+                <div class="relative group">
+                    <span id="status-dot" class="block w-2.5 h-2.5 rounded-full bg-slate-500 cursor-default"></span>
+                    <div class="absolute bottom-full mb-2 min-w-max px-2.5 py-1.5 rounded-lg bg-slate-800 text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap" style="right:0">
+                        <div id="status-dot-label" class="font-medium">Checking&#8230;</div>
+                        <div id="status-dot-uptime" class="text-slate-400 text-xs mt-0.5"></div>
+                        <div class="absolute top-full border-4 border-transparent border-t-slate-800" style="right:12px"></div>
+                    </div>
+                </div>
+                <span id="status-dot-text" class="hidden sm:inline text-xs font-medium text-slate-400"></span>
+            </div>
+            <div class="bar-divider div-640"></div>
+            <div id="channel-leds"></div>
+            <div class="bar-divider div-768"></div>
+            <a id="community-link" href="https://www.aiscatcher.org" target="_blank" rel="noopener"
+                title="AIS-catcher community map">
+                <svg viewBox="0 0 106.63 101.41" fill="currentColor">
+                    <g transform="translate(-2.8209 -5.1046)">
+                        <path d="m100.94 53.199h-3.5e-4c-0.0018 12.359-5.0165 23.535-13.138 31.663-8.1284 8.1213-19.304 13.136-31.663 13.138-12.359-0.00176-23.535-5.0168-31.663-13.138-8.1216-8.1284-13.136-19.304-13.138-31.663h-8.5132c-0.0019 14.692 5.9867 28.045 15.632 37.683 9.6383 9.6449 22.991 15.634 37.683 15.632 14.692 2e-3 28.045-5.9866 37.683-15.632 9.6446-9.6379 15.633-22.991 15.632-37.683h-8.5132" />
+                        <path d="m56.136 93.173c11.013 0.0018 21.031-4.4905 28.254-11.72 7.2291-7.2224 11.722-17.24 11.72-28.254h-8.5136c-0.0018 8.6801-3.5204 16.521-9.2262 22.233-5.7125 5.7058-13.553 9.2248-22.234 9.2262-8.6808-0.0014-16.521-3.52-22.234-9.2262-5.7059-5.7122-9.2243-13.553-9.2262-22.233h-8.5134c-0.0019 11.013 4.4909 21.031 11.72 28.254 7.2226 7.2291 17.24 11.721 28.254 11.72" />
+                        <path d="m29.503 53.199c-0.0017 7.3353 2.9947 14.018 7.8078 18.825 4.8065 4.8129 11.489 7.8098 18.825 7.8077 7.3357 0.0021 14.018-2.9947 18.825-7.8077 4.8129-4.807 7.8094-11.489 7.8077-18.825h-8.5136c-0.0018 5.0024-2.0242 9.5081-5.3142 12.804-3.2967 3.2904-7.802 5.3125-12.805 5.3142-5.0027-0.0018-9.5081-2.0239-12.805-5.3142-3.2904-3.2964-5.3125-7.802-5.3145-12.804h-8.5134" />
+                        <path d="m56.136 47.791c2.9866 0 5.4077 2.4215 5.4077 5.4084 0 2.9859-2.4211 5.4074-5.4077 5.4074s-5.4077-2.4215-5.4077-5.4074c0-2.987 2.4211-5.4084 5.4077-5.4084zm0 18.247c7.0905 0 12.838-5.7482 12.838-12.838 0-7.0908-5.7478-12.839-12.838-12.839s-12.839 5.7478-12.839 12.839c0 7.0901 5.7482 12.838 12.839 12.838" />
+                        <path d="m56.093 35.218c9.377 0 17.181 6.6996 18.644 15.45h21.047v-20.877s-24.146-2.7524-39.691-8.1104c-15.544 5.358-39.691 8.1104-39.691 8.1104v20.877h21.047c1.4628-8.7499 9.2663-15.45 18.644-15.45" />
+                        <path d="m55.832 18.164 1.182 0.393c7.4393 2.4518 16.912 4.3557 24.848 5.6822v-13.731s-16.507-1.9276-26.03-5.4042c-9.5227 3.4766-26.03 5.4042-26.03 5.4042v13.731c7.9439-1.3264 17.425-3.2381 24.848-5.6822l1.182-0.393" />
+                    </g>
+                </svg>
+            </a>
+        </div>
+        </div>
+    </nav>
+
+    <script src="js/schema.js"></script>
+    <script src="js/config-manager.js"></script>
+    <script src="js/wizard.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

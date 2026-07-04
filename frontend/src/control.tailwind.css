@@ -1,0 +1,8 @@
+/* Input for the control hub's Tailwind build; lives here (not in
+   frontend/control) so the CLI resolves the tailwindcss package from this
+   package's node_modules. build-html.sh compiles this to
+   dist/control/css/tailwind.css; only classes used by the hub markup and
+   scripts below end up in the output. */
+@import "tailwindcss" source(none);
+@source "../control/index.html";
+@source "../control/js";
