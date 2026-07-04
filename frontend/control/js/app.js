@@ -413,7 +413,7 @@
         const titles = {
             input: 'Input Configuration',
             output: 'Output Configuration',
-            'control-panel': 'Control'
+            'control-panel': 'System'
         };
         configTitle.textContent = titles[type] || 'Configuration';
 
