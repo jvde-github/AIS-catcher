@@ -11,6 +11,7 @@
     let statusPollInterval = null;
     let logSource = null;
     let currentOutputType = 'sharing';
+    let flowOutputTarget = null;
 
     const iframe = document.getElementById('webviewer-frame');
     const loadingDiv = document.getElementById('loading');
@@ -29,11 +30,11 @@
         output: { label: 'Output', nav: 'output' },
         flow: { label: 'Data Flow', nav: 'control-panel' },
         status: { label: 'System', nav: 'control-panel' },
-        viewer: { label: 'Map Viewer', nav: 'control-panel' },
+        viewer: { label: 'Map', nav: 'control-panel' },
         config: { label: 'Configuration', nav: 'control-panel' },
         log: { label: 'Log', nav: 'control-panel' },
         wizard: { label: 'Wizard', nav: 'control-panel' },
-        password: { label: 'Reset Password', nav: 'control-panel' }
+        password: { label: 'Access', nav: 'control-panel' }
     };
 
     function fetchStatus() {
@@ -449,8 +450,31 @@
             .catch(() => configLoadFailed(loadOutputConfig, host));
     }
 
+    const OUTPUT_TAB_ACTIVE = 'flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-800 shadow-sm transition-all';
+    const OUTPUT_TAB_INACTIVE = 'flex-1 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-700 transition-all';
+
+    function setOutputType(value) {
+        currentOutputType = value;
+        document.querySelectorAll('[data-output-type]').forEach(b => {
+            b.className = b.dataset.outputType === value ? OUTPUT_TAB_ACTIVE : OUTPUT_TAB_INACTIVE;
+        });
+        updateOutputView();
+    }
+
+    // Open the Output tab on a specific sub-type (used by the Data Flow nodes).
+    function selectOutputTab(value) {
+        const wasLoaded = systemOutputLoaded;
+        flowOutputTarget = value;
+        switchSystemTab('output');
+        if (wasLoaded) {
+            setOutputType(value);
+            flowOutputTarget = null;
+        }
+    }
+
     function renderOutputConfig(host) {
-        currentOutputType = 'sharing';
+        const initial = flowOutputTarget || 'sharing';
+        flowOutputTarget = null;
         host.textContent = '';
         const wrapper = document.createElement('div');
         wrapper.className = 'space-y-4';
@@ -458,22 +482,13 @@
         const tabBar = document.createElement('div');
         tabBar.className = 'flex flex-wrap gap-1.5 p-1.5 bg-slate-100 rounded-xl mb-2';
 
-        const activeClass = 'flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-800 shadow-sm transition-all';
-        const inactiveClass = 'flex-1 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-700 transition-all';
-
         outputTypes.forEach(({ value, label }) => {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.dataset.outputType = value;
             btn.textContent = label;
-            btn.className = value === currentOutputType ? activeClass : inactiveClass;
-            btn.addEventListener('click', () => {
-                currentOutputType = value;
-                tabBar.querySelectorAll('button').forEach(b => {
-                    b.className = b.dataset.outputType === value ? activeClass : inactiveClass;
-                });
-                updateOutputView();
-            });
+            btn.className = OUTPUT_TAB_INACTIVE;
+            btn.addEventListener('click', () => setOutputType(value));
             tabBar.appendChild(btn);
         });
 
@@ -483,7 +498,7 @@
         wrapper.appendChild(container);
         host.appendChild(wrapper);
 
-        updateOutputView();
+        setOutputType(initial);
     }
 
     function updateOutputView() {
@@ -601,8 +616,7 @@
     function switchSystemTab(tab, force) {
         if (!SYSTEM_TABS[tab] || (!force && tab === currentSystemTab)) return;
 
-        // Input/Output/Map Viewer hold editable forms; guard against losing
-        // unsaved edits when moving to another tab, mirroring the old drawer.
+        // Guard against losing unsaved edits when leaving an editable tab.
         if (!force && typeof App !== 'undefined' && App.state && App.state.unsaved) {
             if (!confirm('You have unsaved changes. Are you sure you want to switch without saving?')) return;
             App.setUnsaved(false);
@@ -672,7 +686,7 @@
                 </div>
             </div>
             <div class="sys-pane hidden" data-pane="status">
-                <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 max-w-md">
+                <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 w-full max-w-md mx-auto">
                     <div class="flex items-center justify-between mb-2">
                         <span class="font-semibold text-slate-800">Receiver</span>
                         <div id="hub-status" class="flex items-center space-x-2">
@@ -683,8 +697,10 @@
                 </div>
             </div>
             <div class="sys-pane hidden" data-pane="viewer">
-                <p class="text-xs text-slate-500 mb-3">Settings for the built-in map viewer. Changes take effect on the next receiver restart; reload the page to see new tabs.</p>
-                <div id="viewer-config-container"></div>
+                <div>
+                    <p class="text-xs text-slate-500 mb-3">Settings for the built-in map viewer. Changes take effect on the next receiver restart; reload the page to see new tabs.</p>
+                    <div id="viewer-config-container"></div>
+                </div>
             </div>
             <div class="sys-pane hidden" data-pane="config">
                 <pre id="config-json" class="rounded-lg">Loading...</pre>
@@ -714,7 +730,9 @@
                                 class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
                             <input id="new-password2" type="password" autocomplete="new-password" placeholder="Confirm new password"
                                 class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
-                            <button type="submit" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition text-sm font-medium">Reset Password</button>
+                            <div class="flex justify-end pt-1">
+                                <button type="submit" class="w-auto sm:w-32 bg-slate-800 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-700 shadow-md transition-all duration-200 text-xs sm:text-sm font-medium transform hover:-translate-y-0.5">Reset</button>
+                            </div>
                         </form>
                         ${auth === 'open' ? '<p class="text-xs text-slate-500 mt-3">Local access needs no password; this one is used when AIS-catcher is started with LAN access (bind 0.0.0.0).</p>' : '<button id="hub-btn-logout" class="mt-4 w-full sm:w-auto border border-slate-300 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg transition text-sm font-medium">Logout</button>'}
                     </div>
@@ -747,7 +765,8 @@
         createSimpleConfigManager({
             schema: schema,
             containerId: 'viewer-config-container',
-            nestedPath: ['control', 'viewer']
+            nestedPath: ['control', 'viewer'],
+            title: 'Map'
         });
     }
 
@@ -788,12 +807,12 @@
         return s;
     }
 
-    function flowNode(label, zones, active, isInput, navTab) {
+    function flowNode(label, zones, active, isInput, onClick) {
         const border = active ? 'border-r-emerald-400' : 'border-r-rose-400';
         const div = document.createElement('button');
         div.type = 'button';
         div.className = `text-left bg-white border border-slate-200 border-r-[6px] ${border} rounded-lg px-3 py-2.5 shadow-sm min-w-0 cursor-pointer hover:bg-slate-50 transition-colors`;
-        div.addEventListener('click', () => switchSystemTab(navTab));
+        div.addEventListener('click', onClick);
 
         const lbl = document.createElement('div');
         lbl.className = 'text-sm font-medium text-slate-700 truncate';
@@ -895,22 +914,23 @@
 
                 const outputs = [];
                 [
-                    { type: 'UDP', key: 'udp' },
-                    { type: 'TCP', key: 'tcp' },
-                    { type: 'HTTP', key: 'http' },
-                    { type: 'MQTT', key: 'mqtt' },
-                    { type: 'TCP Server', key: 'tcp_listener' },
-                    { type: 'Webviewer', key: 'server' }
-                ].forEach(({ type, key }) => {
+                    { type: 'UDP', key: 'udp', sub: 'udp' },
+                    { type: 'TCP', key: 'tcp', sub: 'tcp' },
+                    { type: 'HTTP', key: 'http', sub: 'http' },
+                    { type: 'MQTT', key: 'mqtt', sub: 'mqtt' },
+                    { type: 'TCP Server', key: 'tcp_listener', sub: 'tcp-server' },
+                    { type: 'Webviewer', key: 'server', sub: 'server' }
+                ].forEach(({ type, key, sub }) => {
                     (cfg[key] || []).forEach(item => {
-                        outputs.push({ label: flowOutputLabel(type, item), zones: item.zone || [], active: item.active !== false });
+                        outputs.push({ label: flowOutputLabel(type, item), zones: item.zone || [], active: item.active !== false, sub });
                     });
                 });
                 if (cfg.sharing !== undefined) {
                     outputs.push({
                         label: 'Community',
                         zones: Array.isArray(cfg.sharing_zone) ? cfg.sharing_zone : [],
-                        active: cfg.sharing === true
+                        active: cfg.sharing === true,
+                        sub: 'sharing'
                     });
                 }
 
@@ -935,12 +955,12 @@
                 });
 
                 const inputEls = receivers.map(r => {
-                    const n = flowNode(r.label, r.zones, r.active, true, 'input');
+                    const n = flowNode(r.label, r.zones, r.active, true, () => switchSystemTab('input'));
                     inputsEl.appendChild(n);
                     return n;
                 });
                 const outputEls = outputs.map(o => {
-                    const n = flowNode(o.label, o.zones, o.active, false, 'output');
+                    const n = flowNode(o.label, o.zones, o.active, false, () => selectOutputTab(o.sub));
                     outputsEl.appendChild(n);
                     return n;
                 });

@@ -1056,6 +1056,11 @@
                         )
                     );
                     wrapper.appendChild(header);
+                } else if (this.config.title) {
+                    const header = el('div', Styles.cardHeader, {},
+                        el('h4', 'text-sm sm:text-sm font-semibold text-slate-700', {}, this.config.title)
+                    );
+                    wrapper.appendChild(header);
                 }
 
                 const fieldsDiv = el('div', this.config.isList ? Styles.cardBody : 'p-3 sm:p-5');
@@ -1111,33 +1116,32 @@
             if (App.state.unsaved) App.setUnsaved(true);
         }
 
+        // Each manager owns its own JSON disclosure (ids keyed by containerId)
+        // so sibling sections in the same view don't fight over one shared box.
+        jsonPreId() { return 'json_content-' + this.config.containerId; }
+
         ensureJsonUI() {
             const parent = this.container.parentElement;
-            const existingContainer = document.getElementById('json-content-container');
+            if (!parent || document.getElementById(this.jsonPreId())) return;
 
-            if (existingContainer) {
-                const toggleDiv = existingContainer.parentElement;
-                if (toggleDiv) {
-                    parent.appendChild(toggleDiv);
-                }
-                return;
-            }
+            const contentId = 'json-content-' + this.config.containerId;
+            const chevronId = 'chevron-' + this.config.containerId;
 
             const toggleDiv = el('div', 'mt-6 sm:mt-8 px-4 sm:px-0 max-w-2xl sm:mx-auto border-t border-slate-200 pt-6');
             const btn = el('button', 'flex items-center text-slate-500 hover:text-slate-800 transition-colors focus:outline-none group text-sm font-medium', {
-                type: 'button', onClick: () => global.toggleJsonContent()
+                type: 'button', onClick: () => global.toggleJsonContent(contentId, chevronId)
             });
 
             const chevron = el('svg', 'h-4 w-4 mr-2 transform transition-transform duration-200 text-slate-400 group-hover:text-slate-600', {
-                id: 'chevron-icon', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor'
+                id: chevronId, fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor'
             }, el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 9l-7 7-7-7' }));
 
             btn.appendChild(chevron);
             btn.appendChild(el('span', '', {}, 'JSON'));
 
-            const contentDiv = el('div', 'mt-3 hidden transition-all', { id: 'json-content-container' });
+            const contentDiv = el('div', 'mt-3 hidden transition-all', { id: contentId });
             const pre = el('pre', 'w-full p-4 rounded-lg bg-slate-900 text-slate-200 text-xs font-mono overflow-auto custom-scrollbar border border-slate-700 shadow-inner', {
-                id: 'json_content', readonly: '', style: 'max-height: 300px;'
+                id: this.jsonPreId(), readonly: '', style: 'max-height: 300px;'
             });
 
             contentDiv.appendChild(pre);
@@ -1216,15 +1220,24 @@
         }
 
         updateJsonDebug() {
-            const el = document.getElementById('json_content');
+            const el = document.getElementById(this.jsonPreId());
             if (!el) return;
-            let cfg = {};
-            try { cfg = JSON.parse(el.textContent) || {}; } catch { }
-            if (this.config.nestedPath) this.setNested(cfg);
-            else if (this.config.channelType) cfg[this.config.channelType] = this.data;
-            else Object.assign(cfg, this.data);
+            const cfg = {};
+            if (this.config.nestedPath) {
+                this.setNested(cfg);
+            } else if (this.config.channelType) {
+                cfg[this.config.channelType] = this.data;
+            } else {
+                // Top-level section (e.g. sharing): this.data is the whole
+                // config, so include only the fields declared in its schema.
+                this.fields.forEach(f => {
+                    const val = f.jsonpath ? Utils.getNested(this.data, f.jsonpath) : this.data[f.name];
+                    if (val === undefined) return;
+                    if (f.jsonpath) Utils.setNested(cfg, f.jsonpath, val);
+                    else cfg[f.name] = val;
+                });
+            }
             el.textContent = JSON.stringify(cfg, null, 2);
-            global.appState = { jsonData: cfg };
         }
 
         async save() {
@@ -1283,14 +1296,12 @@
     global.createSimpleConfigManager = (config) => { config.isList = false; return new ConfigManager(config); };
     global.createChannelManager = (config) => { config.isList = true; return new ConfigManager(config); };
 
-    global.toggleJsonContent = () => {
-        const c = document.getElementById('json-content-container');
-        const i = document.getElementById('chevron-icon');
+    global.toggleJsonContent = (contentId, chevronId) => {
+        const c = document.getElementById(contentId);
+        const i = document.getElementById(chevronId);
         if (c) {
             const hidden = c.classList.toggle('hidden');
             if (i) i.setAttribute('class', `h-4 w-4 mr-2 transform transition-transform duration-200 text-slate-400 group-hover:text-slate-600 ${hidden ? '' : 'rotate-180'}`);
-            const label = i ? i.nextElementSibling : null;
-            if (label) label.textContent = hidden ? 'Advanced: Show JSON Config' : 'Advanced: Hide JSON Config';
         }
     };
 
