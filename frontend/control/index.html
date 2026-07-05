@@ -15,11 +15,12 @@
             height: 100dvh;
             display: flex;
             flex-direction: column;
-            background: #f8fafc;
+            background: #18181b;
             touch-action: pan-x pan-y;
             overscroll-behavior: none;
             position: fixed;
             width: 100%;
+            color-scheme: dark;
         }
 
         #hub-container {
@@ -45,8 +46,8 @@
             position: relative;
             flex-shrink: 0;
             width: 100%;
-            background: #0f172a;
-            border-top: 1px solid #334155;
+            background: #18181b;
+            border-top: 1px solid #3f3f46;
             z-index: 50;
             padding-bottom: env(safe-area-inset-bottom);
         }
@@ -68,11 +69,11 @@
         }
 
         .hub-button:hover {
-            background: #1e293b;
+            background: #27272a;
         }
 
         .hub-button.active {
-            background: #1e293b;
+            background: #27272a;
         }
 
         .hub-button svg {
@@ -93,7 +94,7 @@
         #system-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.55);
+            background: rgba(24, 24, 27, 0.55);
             display: none;
             align-items: center;
             justify-content: center;
@@ -106,9 +107,10 @@
         }
 
         #system-modal {
-            background: #fff;
+            background: #0c0c0e;
+            border: 1px solid #3f3f46;
             border-radius: 1rem;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
             width: 100%;
             max-width: 1000px;
             height: 85vh;
@@ -123,8 +125,8 @@
             align-items: center;
             justify-content: space-between;
             padding: 1rem 1.25rem;
-            border-bottom: 1px solid #e2e8f0;
-            background: linear-gradient(to right, #f8fafc, #ffffff);
+            border-bottom: 1px solid #3f3f46;
+            background: #18181b;
             flex-shrink: 0;
         }
 
@@ -133,7 +135,8 @@
             flex-wrap: wrap;
             gap: 0.375rem;
             padding: 0.75rem 1.25rem;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid #3f3f46;
+            background: #18181b;
             flex-shrink: 0;
         }
 
@@ -142,19 +145,20 @@
             border-radius: 0.5rem;
             font-size: 0.8125rem;
             font-weight: 500;
-            color: #64748b;
+            color: #a1a1aa;
             cursor: pointer;
             transition: color 0.15s, background-color 0.15s;
         }
 
         .sys-tab:hover {
-            color: #334155;
-            background: #f1f5f9;
+            color: #f4f4f5;
+            background: #27272a;
         }
 
         .sys-tab.active {
-            background: #1e293b;
-            color: #fff;
+            background: #3f3f46;
+            color: #fafafa;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
 
         #system-body {
@@ -209,8 +213,8 @@
         }
 
         #config-json {
-            background: #0f172a;
-            color: #cbd5e1;
+            background: #18181b;
+            color: #d4d4d8;
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
             font-size: 0.75rem;
             line-height: 1.5;
@@ -223,7 +227,7 @@
         }
 
         #log-box {
-            background: #0f172a;
+            background: #18181b;
             padding: 0.75rem;
             flex: 1;
             min-height: 0;
@@ -252,16 +256,16 @@
         }
 
         .log-line.debug {
-            color: #94a3b8;
+            color: #a1a1aa;
             opacity: 0.75;
         }
 
         .log-line.default {
-            color: #cbd5e1;
+            color: #d4d4d8;
         }
 
         .log-ts {
-            color: #475569;
+            color: #52525b;
             margin-right: 0.5em;
             user-select: none;
             flex-shrink: 0;
@@ -299,7 +303,7 @@
             display: none;
             width: 1px;
             height: 1.75rem;
-            background: #334155;
+            background: #3f3f46;
         }
 
         @media (min-width: 640px) {
@@ -335,7 +339,7 @@
         #community-link {
             display: none;
             text-decoration: none;
-            color: #64748b;
+            color: #a1a1aa;
             transition: color 0.15s;
         }
 
@@ -345,7 +349,7 @@
         }
 
         #community-link:hover {
-            color: #cbd5e1;
+            color: #d4d4d8;
         }
 
         @media (min-width: 660px) {
@@ -392,7 +396,7 @@
             width: 7px;
             height: 7px;
             border-radius: 9999px;
-            background: #334155;
+            background: #3f3f46;
             transition: background-color 0.5s ease-out;
         }
 
@@ -404,13 +408,13 @@
         .ch-led-label {
             font-size: 8px;
             line-height: 1;
-            color: #64748b;
+            color: #a1a1aa;
         }
 
         #wizard-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.55);
+            background: rgba(24, 24, 27, 0.55);
             display: none;
             align-items: center;
             justify-content: center;
@@ -423,7 +427,8 @@
         }
 
         #wizard-card {
-            background: white;
+            background: #18181b;
+            border: 1px solid #3f3f46;
             border-radius: 1rem;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
             width: 100%;
@@ -445,15 +450,15 @@
         .wz-x {
             border: none;
             background: transparent;
-            color: #64748b;
+            color: #a1a1aa;
             cursor: pointer;
             padding: 0.25rem;
             border-radius: 0.5rem;
         }
 
         .wz-x:hover {
-            color: #1e293b;
-            background: #f1f5f9;
+            color: #f4f4f5;
+            background: #27272a;
         }
 
         .wz-dots {
@@ -465,7 +470,7 @@
             width: 8px;
             height: 8px;
             border-radius: 9999px;
-            background: #e2e8f0;
+            background: #3f3f46;
         }
 
         .wz-dot.active {
@@ -486,20 +491,20 @@
         .wz-body h2 {
             font-size: 1.35rem;
             font-weight: 700;
-            color: #0f172a;
+            color: #f4f4f5;
             margin: 0.75rem 0 0.15rem;
         }
 
         .wz-body h3 {
             font-size: 1.1rem;
             font-weight: 600;
-            color: #0f172a;
+            color: #f4f4f5;
             margin: 0 0 0.5rem;
         }
 
         .wz-body p {
             font-size: 0.875rem;
-            color: #475569;
+            color: #d4d4d8;
             line-height: 1.55;
             margin: 0.5rem 0;
         }
@@ -516,7 +521,7 @@
         .wz-welcome .wz-sub {
             text-align: center;
             font-size: 0.75rem;
-            color: #94a3b8;
+            color: #a1a1aa;
             margin-top: 0;
         }
 
@@ -533,11 +538,11 @@
 
         .wz-fineprint {
             font-size: 0.72rem !important;
-            color: #94a3b8 !important;
+            color: #a1a1aa !important;
         }
 
         .wz-fineprint a {
-            color: #64748b;
+            color: #a1a1aa;
             text-decoration: underline;
         }
 
@@ -556,7 +561,7 @@
             display: flex;
             align-items: flex-start;
             gap: 0.75rem;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #3f3f46;
             border-radius: 0.75rem;
             padding: 0.75rem 1rem;
             cursor: pointer;
@@ -564,13 +569,13 @@
         }
 
         .wz-option:hover {
-            border-color: #cbd5e1;
-            background: #f8fafc;
+            border-color: #52525b;
+            background: #27272a;
         }
 
         .wz-option.selected {
-            border-color: #0857b1;
-            background: #eff6ff;
+            border-color: #3b82f6;
+            background: rgba(59,130,246,0.15);
         }
 
         .wz-option input[type="radio"] {
@@ -582,7 +587,7 @@
             flex-shrink: 0;
             width: 28px;
             height: 28px;
-            color: #64748b;
+            color: #a1a1aa;
         }
 
         .wz-option.selected .wz-option-icon {
@@ -610,12 +615,12 @@
         .wz-option-title {
             font-size: 0.875rem;
             font-weight: 600;
-            color: #0f172a;
+            color: #f4f4f5;
         }
 
         .wz-option-sub {
             font-size: 0.75rem;
-            color: #64748b;
+            color: #a1a1aa;
         }
 
         .wz-daisy {
@@ -633,12 +638,12 @@
         .wz-daisy select,
         .wz-input {
             width: 100%;
-            border: 1px solid #cbd5e1;
+            border: 1px solid #52525b;
             border-radius: 0.5rem;
             padding: 0.5rem 0.75rem;
             font-size: 0.875rem;
-            color: #0f172a;
-            background: white;
+            color: #f4f4f5;
+            background: #0a0a0c;
             box-sizing: border-box;
         }
 
@@ -650,12 +655,12 @@
 
         .wz-none {
             font-size: 0.8rem !important;
-            color: #94a3b8 !important;
+            color: #a1a1aa !important;
         }
 
         .wz-loading {
             font-size: 0.85rem;
-            color: #64748b;
+            color: #a1a1aa;
             padding: 0.75rem 0;
         }
 
@@ -683,7 +688,7 @@
             display: block;
             font-size: 0.8rem;
             font-weight: 600;
-            color: #334155;
+            color: #d4d4d8;
             margin: 0.9rem 0 0.3rem;
         }
 
@@ -691,7 +696,7 @@
             margin: 0.5rem 0 1rem;
             padding-left: 1.25rem;
             font-size: 0.875rem;
-            color: #334155;
+            color: #d4d4d8;
             line-height: 1.9;
         }
 
@@ -700,7 +705,7 @@
             align-items: center;
             gap: 0.5rem;
             font-size: 0.875rem;
-            color: #334155;
+            color: #d4d4d8;
             margin: 0.5rem 0;
         }
 
@@ -711,9 +716,9 @@
         .wz-error {
             margin: 0 1.5rem;
             font-size: 0.8rem;
-            color: #e11d48;
-            background: #fff1f2;
-            border: 1px solid #fecdd3;
+            color: #fda4af;
+            background: rgba(244,63,94,0.12);
+            border: 1px solid rgba(244,63,94,0.35);
             border-radius: 0.5rem;
             padding: 0.5rem 0.75rem;
         }
@@ -745,12 +750,13 @@
         }
 
         .wz-btn.primary {
-            background: #1e293b;
-            color: white;
+            background: #27272a;
+            color: #e4e4e7;
+            border: 1px solid #52525b;
         }
 
         .wz-btn.primary:hover {
-            background: #334155;
+            background: #3f3f46;
         }
 
         .wz-btn.primary:disabled {
@@ -760,12 +766,12 @@
 
         .wz-btn.ghost {
             background: transparent;
-            color: #64748b;
-            border: 1px solid #cbd5e1;
+            color: #a1a1aa;
+            border: 1px solid #52525b;
         }
 
         .wz-btn.ghost:hover {
-            background: #f8fafc;
+            background: #27272a;
         }
 
         .wz-btn.link {
@@ -792,35 +798,35 @@
     <div id="hub-container">
         <div id="loading" class="text-center p-8 absolute inset-0 flex items-center justify-center">
             <div>
-                <svg class="animate-spin h-12 w-12 text-slate-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+                <svg class="animate-spin h-12 w-12 text-zinc-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <p class="text-slate-600">Connecting...</p>
+                <p class="text-zinc-300">Connecting...</p>
             </div>
         </div>
         <iframe id="webviewer-frame" src="" class="hidden" allow="fullscreen" allowfullscreen
             sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
 
         <div id="login-overlay">
-            <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
-                <h3 id="login-title" class="text-lg font-semibold text-slate-800 mb-1">Sign In</h3>
-                <p id="login-subtitle" class="text-sm text-slate-500 mb-4">Authentication required to continue.</p>
-                <div id="login-error" class="hidden mb-3 text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
+            <div class="bg-zinc-800 border border-zinc-700 rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+                <h3 id="login-title" class="text-lg font-semibold text-zinc-100 mb-1">Sign In</h3>
+                <p id="login-subtitle" class="text-sm text-zinc-400 mb-4">Authentication required to continue.</p>
+                <div id="login-error" class="hidden mb-3 text-sm text-rose-300 bg-rose-900/40 border border-rose-800 rounded-lg px-3 py-2"></div>
                 <form id="login-form" class="space-y-3">
                     <input id="login-password" name="password" type="password" autocomplete="current-password"
                         placeholder="Password"
-                        class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                        class="w-full bg-zinc-900 text-zinc-100 placeholder-zinc-500 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500" />
                     <input id="login-password2" name="password2" type="password" autocomplete="new-password"
                         placeholder="Confirm password"
-                        class="hidden w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                        class="hidden w-full bg-zinc-900 text-zinc-100 placeholder-zinc-500 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500" />
                     <div class="flex gap-2 pt-1">
                         <button type="button" id="login-cancel"
-                            class="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 transition">
+                            class="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-zinc-600 text-zinc-300 hover:bg-zinc-700 transition">
                             Cancel
                         </button>
                         <button type="submit" id="login-submit"
-                            class="flex-1 px-4 py-2 rounded-lg text-sm font-semibold bg-slate-800 text-white hover:bg-slate-700 transition">
+                            class="flex-1 px-4 py-2 rounded-lg text-sm font-semibold bg-zinc-100 text-zinc-900 hover:bg-white transition">
                             Sign In
                         </button>
                     </div>
@@ -833,8 +839,8 @@
         <div id="system-overlay">
             <div id="system-modal">
                 <div id="system-header">
-                    <h3 id="system-title" class="text-lg font-semibold text-slate-800">Settings</h3>
-                    <button id="system-close" class="text-slate-600 hover:text-slate-800 p-1">
+                    <h3 id="system-title" class="text-lg font-semibold text-zinc-100">Settings</h3>
+                    <button id="system-close" class="text-zinc-400 hover:text-zinc-100 p-1">
                         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -892,14 +898,14 @@
         <div id="bar-right">
             <div id="status-dot-wrap">
                 <div class="relative group">
-                    <span id="status-dot" class="block w-2.5 h-2.5 rounded-full bg-slate-500 cursor-default"></span>
-                    <div class="absolute bottom-full mb-2 min-w-max px-2.5 py-1.5 rounded-lg bg-slate-800 text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap" style="right:0">
+                    <span id="status-dot" class="block w-2.5 h-2.5 rounded-full bg-zinc-500 cursor-default"></span>
+                    <div class="absolute bottom-full mb-2 min-w-max px-2.5 py-1.5 rounded-lg bg-zinc-800 text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap" style="right:0">
                         <div id="status-dot-label" class="font-medium">Checking&#8230;</div>
-                        <div id="status-dot-uptime" class="text-slate-400 text-xs mt-0.5"></div>
-                        <div class="absolute top-full border-4 border-transparent border-t-slate-800" style="right:12px"></div>
+                        <div id="status-dot-uptime" class="text-zinc-400 text-xs mt-0.5"></div>
+                        <div class="absolute top-full border-4 border-transparent border-t-zinc-800" style="right:12px"></div>
                     </div>
                 </div>
-                <span id="status-dot-text" class="hidden sm:inline text-xs font-medium text-slate-400"></span>
+                <span id="status-dot-text" class="hidden sm:inline text-xs font-medium text-zinc-400"></span>
             </div>
             <div class="bar-divider div-640"></div>
             <div id="channel-leds"></div>

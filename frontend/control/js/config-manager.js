@@ -11,18 +11,18 @@
         if (document.getElementById('cm-device-modal')) return;
         const modal = el('div', 'fixed inset-0 flex items-center justify-center hidden z-[100] p-4',
             { id: 'cm-device-modal', style: 'background-color: rgba(0,0,0,0.3)' },
-            el('div', 'bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col relative', {},
-                el('div', 'flex justify-between items-center p-3 md:p-4 border-b flex-shrink-0', {},
-                    el('h3', 'text-base md:text-lg font-medium text-gray-800', {}, 'Select Device'),
-                    el('button', 'text-gray-600 hover:text-gray-800', { type: 'button', onClick: () => modal.classList.add('hidden') },
+            el('div', 'bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col relative', {},
+                el('div', 'flex justify-between items-center p-3 md:p-4 border-b border-zinc-700 flex-shrink-0', {},
+                    el('h3', 'text-base md:text-lg font-medium text-zinc-100', {}, 'Select Device'),
+                    el('button', 'text-zinc-400 hover:text-zinc-200', { type: 'button', onClick: () => modal.classList.add('hidden') },
                         el('svg', 'h-6 w-6', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
                             el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M6 18L18 6M6 6l12 12' })
                         )
                     )
                 ),
                 el('div', 'p-3 md:p-4 overflow-y-auto flex-1', { id: 'cm-device-list' }),
-                el('div', 'flex justify-end p-3 md:p-4 border-t flex-shrink-0', {},
-                    el('button', 'bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition duration-200 text-sm', {
+                el('div', 'flex justify-end p-3 md:p-4 border-t border-zinc-700 flex-shrink-0', {},
+                    el('button', 'bg-zinc-100 text-zinc-900 px-4 py-2 rounded-md hover:bg-white transition duration-200 text-sm', {
                         type: 'button', onClick: () => modal.classList.add('hidden')
                     }, 'Close')
                 )
@@ -35,18 +35,18 @@
         if (document.getElementById('cm-serial-modal')) return;
         const modal = el('div', 'fixed inset-0 flex items-center justify-center hidden z-[100] p-4',
             { id: 'cm-serial-modal', style: 'background-color: rgba(0,0,0,0.3)' },
-            el('div', 'bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col relative', {},
-                el('div', 'flex justify-between items-center p-3 md:p-4 border-b flex-shrink-0', {},
-                    el('h3', 'text-base md:text-lg font-medium text-gray-800', {}, 'Select Serial Device'),
-                    el('button', 'text-gray-600 hover:text-gray-800', { type: 'button', onClick: () => modal.classList.add('hidden') },
+            el('div', 'bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col relative', {},
+                el('div', 'flex justify-between items-center p-3 md:p-4 border-b border-zinc-700 flex-shrink-0', {},
+                    el('h3', 'text-base md:text-lg font-medium text-zinc-100', {}, 'Select Serial Device'),
+                    el('button', 'text-zinc-400 hover:text-zinc-200', { type: 'button', onClick: () => modal.classList.add('hidden') },
                         el('svg', 'h-6 w-6', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
                             el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M6 18L18 6M6 6l12 12' })
                         )
                     )
                 ),
                 el('div', 'p-3 md:p-4 overflow-y-auto flex-1', { id: 'cm-serial-list' }),
-                el('div', 'flex justify-end p-3 md:p-4 border-t flex-shrink-0', {},
-                    el('button', 'bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition duration-200 text-sm', {
+                el('div', 'flex justify-end p-3 md:p-4 border-t border-zinc-700 flex-shrink-0', {},
+                    el('button', 'bg-zinc-100 text-zinc-900 px-4 py-2 rounded-md hover:bg-white transition duration-200 text-sm', {
                         type: 'button', onClick: () => modal.classList.add('hidden')
                     }, 'Close')
                 )
@@ -92,18 +92,18 @@
         if (document.getElementById('cm-zone-modal')) return;
         const modal = el('div', 'fixed inset-0 flex items-center justify-center hidden z-[100] p-4',
             { id: 'cm-zone-modal', style: 'background-color: rgba(0,0,0,0.3)' },
-            el('div', 'bg-white rounded-lg shadow-xl w-full max-w-sm flex flex-col relative', {},
-                el('div', 'flex justify-between items-center p-4 border-b flex-shrink-0', {},
-                    el('h3', 'text-base font-medium text-gray-800', {}, 'Manage Zones'),
-                    el('button', 'text-gray-600 hover:text-gray-800', { type: 'button', onClick: () => modal.classList.add('hidden') },
+            el('div', 'bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl w-full max-w-sm flex flex-col relative', {},
+                el('div', 'flex justify-between items-center p-4 border-b border-zinc-700 flex-shrink-0', {},
+                    el('h3', 'text-base font-medium text-zinc-100', {}, 'Manage Zones'),
+                    el('button', 'text-zinc-400 hover:text-zinc-200', { type: 'button', onClick: () => modal.classList.add('hidden') },
                         el('svg', 'h-5 w-5', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
                             el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M6 18L18 6M6 6l12 12' })
                         )
                     )
                 ),
                 el('div', 'p-4 flex flex-col gap-4', { id: 'cm-zone-body' }),
-                el('div', 'flex justify-end p-4 border-t flex-shrink-0', {},
-                    el('button', 'bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition text-sm', {
+                el('div', 'flex justify-end p-4 border-t border-zinc-700 flex-shrink-0', {},
+                    el('button', 'bg-zinc-800 text-white px-4 py-2 rounded-lg hover:bg-zinc-700 transition text-sm', {
                         type: 'button', onClick: () => modal.classList.add('hidden')
                     }, 'Done')
                 )
@@ -130,7 +130,7 @@
 
         const chipsWrap = el('div', 'flex flex-wrap gap-1.5 min-h-[2rem]');
         if (activeZoneEdit.zones.length === 0) {
-            chipsWrap.appendChild(el('span', 'text-xs text-slate-400 italic', {}, 'No zones assigned'));
+            chipsWrap.appendChild(el('span', 'text-xs text-zinc-400 italic', {}, 'No zones assigned'));
         } else {
             activeZoneEdit.zones.forEach((zone, i) => {
                 const chip = el('span', `inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getZoneColor(zone)}`, {},
@@ -151,7 +151,7 @@
 
         const addSection = el('div', 'flex flex-col gap-1');
         const inputRow = el('div', 'flex gap-2');
-        const input = el('input', 'flex-1 px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-500', {
+        const input = el('input', 'flex-1 px-3 py-1.5 bg-zinc-900 text-zinc-100 placeholder-zinc-500 border border-zinc-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500', {
             type: 'text',
             placeholder: 'Zone name (e.g. internal)',
             onKeydown: (e) => {
@@ -163,7 +163,7 @@
             }
         });
         inputRow.appendChild(input);
-        inputRow.appendChild(el('button', 'px-3 py-1.5 bg-slate-800 text-white rounded-lg text-sm hover:bg-slate-700 transition', {
+        inputRow.appendChild(el('button', 'px-3 py-1.5 bg-zinc-800 text-white rounded-lg text-sm hover:bg-zinc-700 transition', {
             type: 'button', onClick: addZoneFromInput
         }, 'Add'));
         addSection.appendChild(inputRow);
@@ -445,7 +445,7 @@
             ensureSerialModal();
             const modal = document.getElementById('cm-serial-modal');
             const list = document.getElementById('cm-serial-list');
-            list.innerHTML = '<div class="text-center p-4 text-slate-500">Loading...</div>';
+            list.innerHTML = '<div class="text-center p-4 text-zinc-500">Loading...</div>';
             modal.classList.remove('hidden');
             fetch('/api/serial')
                 .then(r => r.json())
@@ -453,11 +453,11 @@
                     list.innerHTML = '';
                     const devices = Array.isArray(data) ? data : [];
                     if (devices.length === 0) {
-                        list.innerHTML = '<li class="text-gray-500 p-2">No devices found</li>';
+                        list.innerHTML = '<li class="text-zinc-400 p-2">No devices found</li>';
                         return;
                     }
                     devices.forEach(device => {
-                        list.appendChild(el('li', 'p-2 hover:bg-gray-100 cursor-pointer rounded', {
+                        list.appendChild(el('li', 'p-2 text-zinc-200 hover:bg-zinc-700 cursor-pointer rounded', {
                             onClick: () => {
                                 const mgr = ManagerRegistry.get(activeSerialSelection.containerId);
                                 if (mgr) {
@@ -475,7 +475,7 @@
                         }, device));
                     });
                 })
-                .catch(() => { list.innerHTML = '<li class="text-red-500 p-2">Error loading devices</li>'; });
+                .catch(() => { list.innerHTML = '<li class="text-rose-400 p-2">Error loading devices</li>'; });
         },
 
         openDeviceSelectionModal: (index, containerId) => {
@@ -483,7 +483,7 @@
             ensureDeviceModal();
             const modal = document.getElementById('cm-device-modal');
             const list = document.getElementById('cm-device-list');
-            list.innerHTML = '<div class="text-center p-4 text-slate-500">Loading...</div>';
+            list.innerHTML = '<div class="text-center p-4 text-zinc-500">Loading...</div>';
             modal.classList.remove('hidden');
             fetch('/api/devices')
                 .then(r => r.json())
@@ -491,13 +491,13 @@
                     list.innerHTML = '';
                     const devices = Array.isArray(data.devices) ? data.devices : [];
                     if (devices.length === 0) {
-                        list.innerHTML = '<li class="text-gray-500 p-2">No devices found</li>';
+                        list.innerHTML = '<li class="text-zinc-400 p-2">No devices found</li>';
                         return;
                     }
                     devices.forEach(device => {
-                        list.appendChild(el('li', 'flex items-center justify-between p-2 border rounded-md hover:bg-gray-100 mb-2', {},
+                        list.appendChild(el('li', 'flex items-center justify-between p-2 text-zinc-200 border border-zinc-700 rounded-md hover:bg-zinc-700 mb-2', {},
                             el('span', '', {}, device.name),
-                            el('button', 'bg-gray-600 text-white px-2 py-1 rounded-md hover:bg-gray-700 text-sm', {
+                            el('button', 'bg-zinc-100 text-zinc-900 px-2 py-1 rounded-md hover:bg-white text-sm', {
                                 type: 'button',
                                 onClick: () => {
                                     const mgr = ManagerRegistry.get(activeDeviceSelection.containerId);
@@ -517,7 +517,7 @@
                         ));
                     });
                 })
-                .catch(() => { list.innerHTML = '<li class="text-red-500 p-2">Error loading devices</li>'; });
+                .catch(() => { list.innerHTML = '<li class="text-rose-400 p-2">Error loading devices</li>'; });
         },
 
         openRegistration: () => window.open('https://aiscatcher.org/register', '_blank'),
@@ -546,23 +546,23 @@
     };
 
     const Styles = {
-        input: 'w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-white border border-slate-300 rounded-lg text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all duration-200 shadow-sm text-xs sm:text-sm',
+        input: 'w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:border-transparent transition-all duration-200 shadow-sm text-xs sm:text-sm',
         select: 'appearance-none pr-8',
-        toggle: "w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-slate-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-800",
-        slider: 'flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-800',
-        sliderContainer: 'flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 bg-slate-50 rounded-lg border border-slate-100',
-        sliderDisplay: 'text-xs sm:text-sm font-mono font-medium text-slate-600 min-w-[2.5rem] sm:min-w-[3rem] text-center px-1.5 sm:px-2 py-0.5 sm:py-1 bg-slate-100 rounded border border-slate-200',
-        label: 'block text-slate-700 text-xs sm:text-sm font-semibold mb-1 sm:mb-2 ml-0.5',
-        description: 'mt-0.5 text-[10px] sm:text-xs text-slate-500 ml-0.5',
-        button: 'w-full sm:w-auto bg-white border border-slate-300 text-slate-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 transition duration-200 shadow-sm inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-medium',
-        buttonPrimary: 'px-2.5 sm:px-3 py-1.5 sm:py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition duration-200 shadow-sm flex items-center justify-center min-w-[40px] sm:min-w-[44px] text-xs sm:text-sm',
-        card: 'bg-white rounded-none sm:rounded-xl border-x-0 sm:border-x border-slate-200 shadow-sm sm:max-w-2xl sm:mx-auto mb-2 sm:mb-6 relative hover:shadow-md transition-shadow duration-300 overflow-hidden',
-        cardHeader: 'flex justify-between items-center px-3 sm:px-5 py-2 sm:py-2.5 bg-slate-100 border-b border-slate-200',
+        toggle: "w-11 h-6 bg-zinc-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-zinc-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500",
+        slider: 'flex-1 h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-zinc-100',
+        sliderContainer: 'flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 bg-zinc-900 rounded-lg border border-zinc-700',
+        sliderDisplay: 'text-xs sm:text-sm font-mono font-medium text-zinc-300 min-w-[2.5rem] sm:min-w-[3rem] text-center px-1.5 sm:px-2 py-0.5 sm:py-1 bg-zinc-800 rounded border border-zinc-700',
+        label: 'block text-zinc-200 text-xs sm:text-sm font-semibold mb-1 sm:mb-2 ml-0.5',
+        description: 'mt-0.5 text-[10px] sm:text-xs text-zinc-400 ml-0.5',
+        button: 'w-full sm:w-auto bg-zinc-800 border border-zinc-600 text-zinc-200 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-zinc-700 transition duration-200 shadow-sm inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-medium',
+        buttonPrimary: 'px-2.5 sm:px-3 py-1.5 sm:py-2 bg-zinc-800 border border-zinc-600 text-zinc-200 rounded-lg hover:bg-zinc-700 transition duration-200 shadow-sm flex items-center justify-center min-w-[40px] sm:min-w-[44px] text-xs sm:text-sm',
+        card: 'bg-zinc-800 rounded-none sm:rounded-xl border-x-0 sm:border-x border-zinc-700 shadow-sm sm:max-w-2xl sm:mx-auto mb-2 sm:mb-6 relative hover:shadow-md transition-shadow duration-300 overflow-hidden',
+        cardHeader: 'flex justify-between items-center px-3 sm:px-5 py-2 sm:py-2.5 bg-zinc-900 border-b border-zinc-700',
         cardBody: 'p-3 sm:p-5',
-        deleteBtn: 'text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1 sm:p-1.5 rounded-lg transition duration-200',
-        chevron: 'pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500',
-        saveActive: 'w-auto sm:w-32 bg-slate-800 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-700 shadow-md transition-all duration-200 text-xs sm:text-sm font-medium transform hover:-translate-y-0.5',
-        saveInactive: 'w-auto sm:w-32 bg-white border border-slate-300 text-slate-400 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 shadow-sm transition-all duration-200 text-xs sm:text-sm font-medium cursor-default',
+        deleteBtn: 'text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 p-1 sm:p-1.5 rounded-lg transition duration-200',
+        chevron: 'pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-zinc-400',
+        saveActive: 'w-auto sm:w-32 bg-zinc-800 border border-zinc-600 text-zinc-200 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-zinc-700 shadow-sm transition-all duration-200 text-xs sm:text-sm font-medium',
+        saveInactive: 'w-auto sm:w-32 bg-zinc-800 border border-zinc-700 text-zinc-500 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-zinc-700 shadow-sm transition-all duration-200 text-xs sm:text-sm font-medium cursor-default',
     };
 
     const Icons = {
@@ -572,7 +572,7 @@
         delete: () => el('svg', 'h-5 w-5', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
             el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
         ),
-        plus: () => el('svg', 'w-4 h-4 text-slate-500', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+        plus: () => el('svg', 'w-4 h-4 text-zinc-500', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
             el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 4v16m8-8H4' })
         ),
     };
@@ -584,7 +584,7 @@
             const container = document.getElementById('toast-container') || this.createToastContainer();
             const colorClass = type === 'error'
                 ? 'bg-rose-600 text-white'
-                : 'bg-slate-800 text-white border border-slate-700';
+                : 'bg-zinc-800 text-white border border-zinc-700';
 
             const toast = el('div', `mb-3 px-4 py-3 rounded-lg shadow-xl transform transition-all duration-300 translate-y-2 opacity-0 flex items-center gap-3 ${colorClass}`, {},
                 type === 'success' ? el('span', 'font-bold text-emerald-400', {}, '✓') : el('span', 'font-bold text-white', {}, '!'),
@@ -755,7 +755,7 @@
                 const isOff = currentValue === false || currentValue === 'false';
                 const numVal = isOff ? (field.defaultNumber || field.min || 0) : parseFloat(currentValue);
                 const display = el('span', Styles.sliderDisplay, {}, isNaN(numVal) ? 0 : numVal);
-                const unit = field.unit ? el('span', 'text-xs sm:text-sm text-slate-600 ml-1', {}, field.unit) : null;
+                const unit = field.unit ? el('span', 'text-xs sm:text-sm text-zinc-400 ml-1', {}, field.unit) : null;
 
                 const slider = el('input', Styles.slider, {
                     type: 'range',
@@ -791,7 +791,7 @@
                 const isOff = currentValue === false || currentValue === 'false';
                 const numVal = isOff ? (field.defaultInteger || field.min || 0) : parseInt(currentValue, 10);
                 const display = el('span', Styles.sliderDisplay, {}, isNaN(numVal) ? 0 : numVal);
-                const unit = el('span', 'text-xs sm:text-sm text-slate-600 ml-1', {}, 's');
+                const unit = el('span', 'text-xs sm:text-sm text-zinc-400 ml-1', {}, 's');
 
                 const slider = el('input', Styles.slider, {
                     type: 'range',
@@ -840,7 +840,7 @@
 
                 const wrapper = el('div', 'flex flex-col gap-1');
                 const badgesDiv = el('div', 'flex flex-wrap items-center gap-1');
-                const manageBtn = el('button', 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200 transition', {
+                const manageBtn = el('button', 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-700 text-zinc-300 border border-zinc-600 hover:bg-zinc-600 transition', {
                     type: 'button',
                     onClick: () => openZoneModal(zones, (updated) => {
                         zones.length = 0;
@@ -879,7 +879,7 @@
                     }
                 }
 
-                const hintEl = el('span', 'text-xs text-slate-400 italic');
+                const hintEl = el('span', 'text-xs text-zinc-400 italic');
                 renderZoneBadges();
                 wrapper.appendChild(badgesDiv);
                 if (field.hint) wrapper.appendChild(hintEl);
@@ -1037,15 +1037,15 @@
 
                     const header = el('div', Styles.cardHeader, {},
                         el('div', 'flex items-center gap-2', {},
-                            el('span', 'flex items-center justify-center w-5 h-5 text-xs font-bold bg-slate-200 text-slate-600 rounded-full', {}, `${index + 1}`),
-                            el('h4', 'text-sm sm:text-sm font-semibold text-slate-700', {}, this.config.title)
+                            el('span', 'flex items-center justify-center w-5 h-5 text-xs font-bold bg-zinc-700 text-zinc-300 rounded-full', {}, `${index + 1}`),
+                            el('h4', 'text-sm sm:text-sm font-semibold text-zinc-100', {}, this.config.title)
                         ),
                         el('div', 'flex items-center gap-2 sm:gap-3', {},
                             activeField ? el('label', 'flex items-center gap-1.5 cursor-pointer select-none', {},
-                                el('span', 'text-xs font-medium text-slate-400', {}, 'Active'),
+                                el('span', 'text-xs font-medium text-zinc-400', {}, 'Active'),
                                 el('div', 'relative inline-flex items-center', {},
                                     toggleInput,
-                                    el('div', "w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500")
+                                    el('div', "w-9 h-5 bg-zinc-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500")
                                 )
                             ) : null,
                             el('button', Styles.deleteBtn, {
@@ -1058,7 +1058,7 @@
                     wrapper.appendChild(header);
                 } else if (this.config.title) {
                     const header = el('div', Styles.cardHeader, {},
-                        el('h4', 'text-sm sm:text-sm font-semibold text-slate-700', {}, this.config.title)
+                        el('h4', 'text-sm sm:text-sm font-semibold text-zinc-100', {}, this.config.title)
                     );
                     wrapper.appendChild(header);
                 }
@@ -1095,18 +1095,18 @@
             const btnGroup = el('div', `${containerIdClass} mt-6 sm:mt-8 px-4 sm:px-0 flex flex-row flex-wrap justify-end items-center gap-2 sm:gap-3 max-w-2xl sm:mx-auto`);
 
             if (this.config.isList) {
-                btnGroup.appendChild(el('button', 'w-auto sm:w-32 bg-white border border-slate-300 text-slate-700 px-4 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 transition duration-200 shadow-sm inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-medium', {
+                btnGroup.appendChild(el('button', 'w-auto sm:w-32 bg-zinc-800 border border-zinc-600 text-zinc-200 px-4 py-1.5 sm:py-2 rounded-lg hover:bg-zinc-700 transition duration-200 shadow-sm inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-medium', {
                     type: 'button', onClick: () => this.addItem()
                 },
                     Icons.plus(),
                     'Add Item'));
             }
 
-            btnGroup.appendChild(el('button', 'w-auto sm:w-32 bg-white border border-slate-300 text-slate-400 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 shadow-sm transition-all duration-200 text-xs sm:text-sm font-medium cursor-default', {
+            btnGroup.appendChild(el('button', 'w-auto sm:w-32 bg-zinc-800 border border-zinc-700 text-zinc-500 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-zinc-700 shadow-sm transition-all duration-200 text-xs sm:text-sm font-medium cursor-default', {
                 type: 'button', dataset: { saveBtn: 'true' }, onClick: () => this.save()
             }, 'Save'));
 
-            const jsonSection = this.container.parentElement.querySelector('.border-t.border-slate-200.pt-6');
+            const jsonSection = this.container.parentElement.querySelector('.border-t.border-zinc-700.pt-6');
             if (jsonSection) {
                 this.container.parentElement.insertBefore(btnGroup, jsonSection);
             } else {
@@ -1127,12 +1127,12 @@
             const contentId = 'json-content-' + this.config.containerId;
             const chevronId = 'chevron-' + this.config.containerId;
 
-            const toggleDiv = el('div', 'mt-6 sm:mt-8 px-4 sm:px-0 max-w-2xl sm:mx-auto border-t border-slate-200 pt-6');
-            const btn = el('button', 'flex items-center text-slate-500 hover:text-slate-800 transition-colors focus:outline-none group text-sm font-medium', {
+            const toggleDiv = el('div', 'mt-6 sm:mt-8 px-4 sm:px-0 max-w-2xl sm:mx-auto border-t border-zinc-700 pt-6');
+            const btn = el('button', 'flex items-center text-zinc-400 hover:text-zinc-100 transition-colors focus:outline-none group text-sm font-medium', {
                 type: 'button', onClick: () => global.toggleJsonContent(contentId, chevronId)
             });
 
-            const chevron = el('svg', 'h-4 w-4 mr-2 transform transition-transform duration-200 text-slate-400 group-hover:text-slate-600', {
+            const chevron = el('svg', 'h-4 w-4 mr-2 transform transition-transform duration-200 text-zinc-400 group-hover:text-zinc-200', {
                 id: chevronId, fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor'
             }, el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 9l-7 7-7-7' }));
 
@@ -1140,7 +1140,7 @@
             btn.appendChild(el('span', '', {}, 'JSON'));
 
             const contentDiv = el('div', 'mt-3 hidden transition-all', { id: contentId });
-            const pre = el('pre', 'w-full p-4 rounded-lg bg-slate-900 text-slate-200 text-xs font-mono overflow-auto custom-scrollbar border border-slate-700 shadow-inner', {
+            const pre = el('pre', 'w-full p-4 rounded-lg bg-zinc-900 text-zinc-200 text-xs font-mono overflow-auto custom-scrollbar border border-zinc-700 shadow-inner', {
                 id: this.jsonPreId(), readonly: '', style: 'max-height: 300px;'
             });
 
@@ -1301,7 +1301,7 @@
         const i = document.getElementById(chevronId);
         if (c) {
             const hidden = c.classList.toggle('hidden');
-            if (i) i.setAttribute('class', `h-4 w-4 mr-2 transform transition-transform duration-200 text-slate-400 group-hover:text-slate-600 ${hidden ? '' : 'rotate-180'}`);
+            if (i) i.setAttribute('class', `h-4 w-4 mr-2 transform transition-transform duration-200 text-zinc-400 group-hover:text-zinc-200 ${hidden ? '' : 'rotate-180'}`);
         }
     };
 
