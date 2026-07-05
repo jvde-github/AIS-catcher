@@ -10,15 +10,31 @@
     let currentLoadTimeout = null;
     let statusPollInterval = null;
     let logSource = null;
-    let currentView = 'main';
     let currentOutputType = 'sharing';
 
     const iframe = document.getElementById('webviewer-frame');
     const loadingDiv = document.getElementById('loading');
-    const configPanel = document.getElementById('config-panel');
-    const configOverlay = document.getElementById('config-overlay');
-    const configContent = document.getElementById('config-content');
-    const configTitle = document.getElementById('config-title');
+    const systemOverlay = document.getElementById('system-overlay');
+    const systemBody = document.getElementById('system-body');
+    const systemTitle = document.getElementById('system-title');
+    let currentSystemTab = null;
+    let systemInputLoaded = false;
+    let systemOutputLoaded = false;
+    let systemViewerLoaded = false;
+    let flowResizeObserver = null;
+
+    // tab id -> header label / which nav-bar button to highlight
+    const SYSTEM_TABS = {
+        input: { label: 'Input', nav: 'input' },
+        output: { label: 'Output', nav: 'output' },
+        flow: { label: 'Data Flow', nav: 'control-panel' },
+        status: { label: 'System', nav: 'control-panel' },
+        viewer: { label: 'Map Viewer', nav: 'control-panel' },
+        config: { label: 'Configuration', nav: 'control-panel' },
+        log: { label: 'Log', nav: 'control-panel' },
+        wizard: { label: 'Wizard', nav: 'control-panel' },
+        password: { label: 'Reset Password', nav: 'control-panel' }
+    };
 
     function fetchStatus() {
         return fetch('/api/status').then(r => r.json());
@@ -201,7 +217,7 @@
 
     function startStatusPolling() {
         if (statusPollInterval) return;
-        statusPollInterval = setInterval(refreshEngineStatus, 5000);
+        statusPollInterval = setInterval(() => refreshEngineStatus().then(renderHubStatus), 5000);
     }
 
     function pollUntilState(target, onDone, since, maxWaitMs = 20000) {
@@ -364,65 +380,12 @@
         }
     }
 
-    function openConfig(type) {
-        requireAuth(() => _openConfig(type));
-    }
-
-    function _openConfig(type) {
-        if (typeof App !== 'undefined' && App.setUnsaved) App.setUnsaved(false);
-        const statusEl = document.getElementById('status-message');
-        if (statusEl) {
-            statusEl.className = 'hidden';
-            statusEl.innerHTML = '';
-        }
-
-        currentView = type;
-
-        document.querySelectorAll('.hub-button').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.view === type);
-        });
-
-        const titles = {
-            input: 'Input Configuration',
-            output: 'Output Configuration',
-            'control-panel': 'System'
-        };
-        configTitle.textContent = titles[type] || 'Configuration';
-
-        if (type === 'input') loadSourceConfig();
-        else if (type === 'output') loadOutputConfig();
-        else if (type === 'control-panel') loadControlPanel();
-
-        configPanel.classList.add('open');
-        configOverlay.classList.add('open');
-    }
-
-    function closeConfigPanel() {
-        if (typeof App !== 'undefined' && App.state && App.state.unsaved) {
-            if (!confirm('You have unsaved changes. Are you sure you want to close without saving?')) return;
-        }
-        if (typeof App !== 'undefined' && App.setUnsaved) App.setUnsaved(false);
-
-        const statusEl = document.getElementById('status-message');
-        if (statusEl) {
-            statusEl.className = 'hidden';
-            statusEl.innerHTML = '';
-        }
-
-        stopLogStream();
-        currentOutputType = 'sharing';
-        configPanel.classList.remove('open');
-        configOverlay.classList.remove('open');
-        currentView = 'main';
-        document.querySelectorAll('.hub-button').forEach(btn => btn.classList.remove('active'));
-    }
-
     function loadingSpinner() {
         return '<div class="text-center p-8"><div class="animate-spin h-8 w-8 border-4 border-slate-300 border-t-slate-600 rounded-full mx-auto mb-2"></div><p class="text-sm text-slate-600">Loading...</p></div>';
     }
 
-    function configLoadFailed(retry) {
-        configContent.textContent = '';
+    function configLoadFailed(retry, host) {
+        host.textContent = '';
         const errorDiv = document.createElement('div');
         errorDiv.className = 'text-center p-8';
         const p = document.createElement('p');
@@ -434,22 +397,24 @@
         button.textContent = 'Retry';
         errorDiv.appendChild(p);
         errorDiv.appendChild(button);
-        configContent.appendChild(errorDiv);
+        host.appendChild(errorDiv);
     }
 
     function loadSourceConfig() {
-        configContent.innerHTML = loadingSpinner();
+        const host = document.getElementById('sys-input-body');
+        if (!host) return;
+        host.innerHTML = loadingSpinner();
         fetch('/api/config')
             .then(res => {
                 if (!res.ok) throw new Error('Failed to fetch configuration');
                 return res.json();
             })
             .then(() => {
-                configContent.textContent = '';
+                host.textContent = '';
                 const container = document.createElement('div');
                 container.id = 'hub-receivers-container';
                 container.className = 'space-y-4';
-                configContent.appendChild(container);
+                host.appendChild(container);
 
                 createChannelManager({
                     channelType: 'receiver',
@@ -458,7 +423,7 @@
                     title: 'Receiver'
                 });
             })
-            .catch(() => configLoadFailed(loadSourceConfig));
+            .catch(() => configLoadFailed(loadSourceConfig, host));
     }
 
     const outputTypes = [
@@ -472,19 +437,21 @@
     ];
 
     function loadOutputConfig() {
-        configContent.innerHTML = loadingSpinner();
+        const host = document.getElementById('sys-output-body');
+        if (!host) return;
+        host.innerHTML = loadingSpinner();
         fetch('/api/config')
             .then(res => {
                 if (!res.ok) throw new Error('Failed to fetch configuration');
                 return res.json();
             })
-            .then(() => renderOutputConfig())
-            .catch(() => configLoadFailed(loadOutputConfig));
+            .then(() => renderOutputConfig(host))
+            .catch(() => configLoadFailed(loadOutputConfig, host));
     }
 
-    function renderOutputConfig() {
+    function renderOutputConfig(host) {
         currentOutputType = 'sharing';
-        configContent.textContent = '';
+        host.textContent = '';
         const wrapper = document.createElement('div');
         wrapper.className = 'space-y-4';
 
@@ -514,7 +481,7 @@
         container.id = 'hub-output-container';
         wrapper.appendChild(tabBar);
         wrapper.appendChild(container);
-        configContent.appendChild(wrapper);
+        host.appendChild(wrapper);
 
         updateOutputView();
     }
@@ -608,11 +575,104 @@
         });
     }
 
-    function loadControlPanel() {
+    function openSystem(tab) {
+        requireAuth(() => _openSystem(tab));
+    }
+
+    function _openSystem(tab) {
+        loadSystemPanel();
+        systemOverlay.classList.add('open');
+        switchSystemTab(tab || 'status', true);
+    }
+
+    function closeSystem() {
+        if (typeof App !== 'undefined' && App.state && App.state.unsaved) {
+            if (!confirm('You have unsaved changes. Are you sure you want to close without saving?')) return;
+        }
+        if (typeof App !== 'undefined' && App.setUnsaved) App.setUnsaved(false);
+
         stopLogStream();
-        configContent.innerHTML = `
-            <div class="space-y-6">
-                <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+        stopFlowObserver();
+        systemOverlay.classList.remove('open');
+        currentSystemTab = null;
+        document.querySelectorAll('.hub-button').forEach(btn => btn.classList.remove('active'));
+    }
+
+    function switchSystemTab(tab, force) {
+        if (!SYSTEM_TABS[tab] || (!force && tab === currentSystemTab)) return;
+
+        // Input/Output/Map Viewer hold editable forms; guard against losing
+        // unsaved edits when moving to another tab, mirroring the old drawer.
+        if (!force && typeof App !== 'undefined' && App.state && App.state.unsaved) {
+            if (!confirm('You have unsaved changes. Are you sure you want to switch without saving?')) return;
+            App.setUnsaved(false);
+            if (currentSystemTab === 'input') systemInputLoaded = false;
+            else if (currentSystemTab === 'output') systemOutputLoaded = false;
+            else if (currentSystemTab === 'viewer') systemViewerLoaded = false;
+        }
+
+        currentSystemTab = tab;
+        systemTitle.textContent = SYSTEM_TABS[tab].label;
+
+        const nav = SYSTEM_TABS[tab].nav;
+        document.querySelectorAll('.hub-button').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.view === nav);
+        });
+        document.querySelectorAll('#system-tabs .sys-tab').forEach(b => {
+            b.classList.toggle('active', b.dataset.tab === tab);
+        });
+        systemBody.querySelectorAll('.sys-pane').forEach(p => {
+            p.classList.toggle('hidden', p.dataset.pane !== tab);
+        });
+
+        if (tab === 'input') {
+            if (!systemInputLoaded) { systemInputLoaded = true; loadSourceConfig(); }
+        } else if (tab === 'output') {
+            if (!systemOutputLoaded) { systemOutputLoaded = true; loadOutputConfig(); }
+        } else if (tab === 'viewer') {
+            if (!systemViewerLoaded) { systemViewerLoaded = true; loadViewerConfig(); }
+        } else if (tab === 'flow') {
+            loadDataFlow();
+        } else if (tab === 'config') {
+            loadConfigJson();
+        } else if (tab === 'log') {
+            const box = document.getElementById('log-box');
+            if (box) box.scrollTop = box.scrollHeight;
+        }
+    }
+
+    function loadSystemPanel() {
+        stopLogStream();
+        stopFlowObserver();
+        if (typeof App !== 'undefined' && App.setUnsaved) App.setUnsaved(false);
+        systemInputLoaded = false;
+        systemOutputLoaded = false;
+        systemViewerLoaded = false;
+        systemBody.innerHTML = `
+            <div id="status-message" class="hidden"></div>
+            <div class="sys-pane hidden" data-pane="input"><div id="sys-input-body"></div></div>
+            <div class="sys-pane hidden" data-pane="output"><div id="sys-output-body"></div></div>
+            <div class="sys-pane hidden" data-pane="flow">
+                <p class="text-xs text-slate-500 mb-4">Signal routing between inputs and outputs based on shared zones.</p>
+                <div id="flow-loading" class="text-center text-slate-400 py-16">Loading&hellip;</div>
+                <div id="flow-empty" class="hidden text-center text-slate-400 py-16">No receivers or outputs configured.</div>
+                <div id="flow-patch" class="hidden">
+                    <div id="flow-legend" class="flex flex-wrap gap-2 mb-5"></div>
+                    <div class="grid mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider" style="grid-template-columns:1fr 100px 1fr">
+                        <div>Input</div><div></div><div>Output</div>
+                    </div>
+                    <div id="flow-graph" class="relative" style="min-height:60px">
+                        <div class="grid gap-0" style="grid-template-columns:1fr 100px 1fr">
+                            <div id="flow-inputs" class="flex flex-col gap-3 pr-2"></div>
+                            <div></div>
+                            <div id="flow-outputs" class="flex flex-col gap-3 pl-2"></div>
+                        </div>
+                        <svg id="flow-svg" class="absolute inset-0 pointer-events-none" style="width:100%;overflow:visible"></svg>
+                    </div>
+                </div>
+            </div>
+            <div class="sys-pane hidden" data-pane="status">
+                <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 max-w-md">
                     <div class="flex items-center justify-between mb-2">
                         <span class="font-semibold text-slate-800">Receiver</span>
                         <div id="hub-status" class="flex items-center space-x-2">
@@ -621,62 +681,54 @@
                     </div>
                     <div id="hub-uptime" class="text-sm text-slate-600"></div>
                 </div>
-                <details class="sys-section" id="sys-viewer-details">
-                    <summary>
-                        <svg class="sys-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-                        Map Viewer
-                    </summary>
-                    <p class="text-xs text-slate-500 mb-2">Settings for the built-in map viewer. Changes take effect on the next receiver restart; reload the page to see new tabs.</p>
-                    <div id="viewer-config-container"></div>
-                </details>
-                <details class="sys-section" id="sys-config-details">
-                    <summary>
-                        <svg class="sys-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-                        Configuration
-                    </summary>
-                    <pre id="config-json" class="rounded-lg">Loading...</pre>
-                </details>
-                <details class="sys-section" id="sys-log-details">
-                    <summary>
-                        <svg class="sys-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-                        Log
-                    </summary>
-                    <div id="log-box" class="rounded-lg"></div>
-                </details>
-                <div>
-                    <h4 class="font-semibold text-slate-800 mb-2">Change Password</h4>
-                    <form id="password-form" class="space-y-2">
-                        <input id="new-password" type="password" autocomplete="new-password" placeholder="New password"
-                            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
-                        <input id="new-password2" type="password" autocomplete="new-password" placeholder="Confirm new password"
-                            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
-                        <button type="submit" class="w-full bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition text-sm font-medium">Change Password</button>
-                    </form>
-                    ${auth === 'open' ? '<p class="text-xs text-slate-500 mt-2">Local access needs no password; this one is used when AIS-catcher is started with LAN access (bind 0.0.0.0).</p>' : ''}
+            </div>
+            <div class="sys-pane hidden" data-pane="viewer">
+                <p class="text-xs text-slate-500 mb-3">Settings for the built-in map viewer. Changes take effect on the next receiver restart; reload the page to see new tabs.</p>
+                <div id="viewer-config-container"></div>
+            </div>
+            <div class="sys-pane hidden" data-pane="config">
+                <pre id="config-json" class="rounded-lg">Loading...</pre>
+            </div>
+            <div class="sys-pane hidden" data-pane="log">
+                <div id="log-box" class="rounded-lg"></div>
+            </div>
+            <div class="sys-pane hidden" data-pane="wizard">
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm max-w-2xl mx-auto overflow-hidden">
+                    <div class="flex justify-between items-center px-5 py-2.5 bg-slate-100 border-b border-slate-200">
+                        <span class="font-semibold text-slate-800">Setup Wizard</span>
+                    </div>
+                    <div class="p-5">
+                        <p class="text-xs text-slate-500 mb-3">Step through the guided setup to configure your receiver, sharing and viewer.</p>
+                        <button id="hub-btn-wizard" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition text-sm font-medium">Open Setup Wizard</button>
+                    </div>
                 </div>
-                <button id="hub-btn-wizard" class="w-full border border-slate-300 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg transition text-sm font-medium">Setup Wizard</button>
-                ${auth === 'open' ? '' : '<button id="hub-btn-logout" class="w-full border border-slate-300 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg transition text-sm font-medium">Logout</button>'}
+            </div>
+            <div class="sys-pane hidden" data-pane="password">
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm max-w-2xl mx-auto overflow-hidden">
+                    <div class="flex justify-between items-center px-5 py-2.5 bg-slate-100 border-b border-slate-200">
+                        <span class="font-semibold text-slate-800">Reset Password</span>
+                    </div>
+                    <div class="p-5">
+                        <form id="password-form" class="space-y-2">
+                            <input id="new-password" type="password" autocomplete="new-password" placeholder="New password"
+                                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                            <input id="new-password2" type="password" autocomplete="new-password" placeholder="Confirm new password"
+                                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                            <button type="submit" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition text-sm font-medium">Reset Password</button>
+                        </form>
+                        ${auth === 'open' ? '<p class="text-xs text-slate-500 mt-3">Local access needs no password; this one is used when AIS-catcher is started with LAN access (bind 0.0.0.0).</p>' : '<button id="hub-btn-logout" class="mt-4 w-full sm:w-auto border border-slate-300 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg transition text-sm font-medium">Logout</button>'}
+                    </div>
+                </div>
             </div>
         `;
 
         document.getElementById('password-form').addEventListener('submit', changePassword);
         document.getElementById('hub-btn-wizard').addEventListener('click', () => {
-            closeConfigPanel();
+            closeSystem();
             SetupWizard.open();
         });
         if (auth !== 'open')
             document.getElementById('hub-btn-logout').addEventListener('click', logout);
-
-        document.getElementById('sys-config-details').addEventListener('toggle', e => {
-            if (e.target.open) loadConfigJson();
-        });
-        document.getElementById('sys-viewer-details').addEventListener('toggle', e => {
-            if (e.target.open) loadViewerConfig();
-        });
-        document.getElementById('sys-log-details').addEventListener('toggle', e => {
-            const box = document.getElementById('log-box');
-            if (e.target.open && box) box.scrollTop = box.scrollHeight;
-        });
 
         updateControlStatus();
         startLogStream();
@@ -707,20 +759,236 @@
             .catch(() => { pre.textContent = 'Could not load the configuration.'; });
     }
 
-    function updateControlStatus() {
-        refreshEngineStatus().then(data => {
-            if (!data) return;
-            const statusEl = document.getElementById('hub-status');
-            const uptimeEl = document.getElementById('hub-uptime');
-            const running = data.engine === 'running';
+    // Data Flow tab: a patch-bay view of signal routing. Inputs (left) and
+    // outputs (right) are linked wherever they share a zone name; outputs with
+    // no zone receive from every input. Zone colours match the config chips.
+    const FLOW_ZONE_HEX = ['#93c5fd', '#6ee7b7', '#c4b5fd', '#fcd34d', '#fca5a5', '#67e8f9', '#fdba74', '#5eead4'];
+    const FLOW_ZONE_BADGE = [
+        'bg-blue-100 text-blue-700 border border-blue-200',
+        'bg-emerald-100 text-emerald-700 border border-emerald-200',
+        'bg-violet-100 text-violet-700 border border-violet-200',
+        'bg-amber-100 text-amber-700 border border-amber-200',
+        'bg-rose-100 text-rose-700 border border-rose-200',
+        'bg-cyan-100 text-cyan-700 border border-cyan-200',
+        'bg-orange-100 text-orange-700 border border-orange-200',
+        'bg-teal-100 text-teal-700 border border-teal-200'
+    ];
+    function flowZoneHash(zone) {
+        let h = 0;
+        for (let i = 0; i < zone.length; i++) h = (h * 31 + zone.charCodeAt(i)) & 0xFFFF;
+        return h;
+    }
+    const flowZoneHex = zone => FLOW_ZONE_HEX[flowZoneHash(zone) % FLOW_ZONE_HEX.length];
+    const flowZoneBadge = zone => FLOW_ZONE_BADGE[flowZoneHash(zone) % FLOW_ZONE_BADGE.length];
 
-            if (statusEl) {
-                statusEl.innerHTML = running
-                    ? '<span class="text-sm font-medium text-emerald-600">Running</span><span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>'
-                    : '<span class="text-sm font-medium text-slate-600">Stopped</span><span class="relative flex h-2.5 w-2.5"><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-400"></span></span>';
+    function flowBadge(zone) {
+        const s = document.createElement('span');
+        s.className = `inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${flowZoneBadge(zone)}`;
+        s.textContent = zone;
+        return s;
+    }
+
+    function flowNode(label, zones, active, isInput, navTab) {
+        const border = active ? 'border-r-emerald-400' : 'border-r-rose-400';
+        const div = document.createElement('button');
+        div.type = 'button';
+        div.className = `text-left bg-white border border-slate-200 border-r-[6px] ${border} rounded-lg px-3 py-2.5 shadow-sm min-w-0 cursor-pointer hover:bg-slate-50 transition-colors`;
+        div.addEventListener('click', () => switchSystemTab(navTab));
+
+        const lbl = document.createElement('div');
+        lbl.className = 'text-sm font-medium text-slate-700 truncate';
+        lbl.textContent = label;
+        div.appendChild(lbl);
+
+        if (zones && zones.length > 0) {
+            const row = document.createElement('div');
+            row.className = 'flex flex-wrap gap-1 mt-1';
+            zones.forEach(z => row.appendChild(flowBadge(z)));
+            div.appendChild(row);
+        } else if (!isInput) {
+            const note = document.createElement('div');
+            note.className = 'text-xs text-slate-400 italic mt-0.5';
+            note.textContent = 'all inputs';
+            div.appendChild(note);
+        }
+        return div;
+    }
+
+    function drawFlowConnections(inputEls, outputEls, connections, svg, graphEl) {
+        svg.innerHTML = '';
+        svg.setAttribute('height', graphEl.offsetHeight);
+        const gr = graphEl.getBoundingClientRect();
+
+        connections.forEach(({ ii, oi, zones, isAll }) => {
+            const iEl = inputEls[ii];
+            const oEl = outputEls[oi];
+            if (!iEl || !oEl) return;
+            const ir = iEl.getBoundingClientRect();
+            const or = oEl.getBoundingClientRect();
+            const x1 = ir.right - gr.left;
+            const y1 = ir.top + ir.height / 2 - gr.top;
+            const x2 = or.left - gr.left;
+            const y2 = or.top + or.height / 2 - gr.top;
+            const cx = (x1 + x2) / 2;
+
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', `M ${x1} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}`);
+            path.setAttribute('fill', 'none');
+            if (isAll) {
+                path.setAttribute('stroke', '#cbd5e1');
+                path.setAttribute('stroke-width', '1.5');
+                path.setAttribute('stroke-dasharray', '5 3');
+            } else {
+                path.setAttribute('stroke', flowZoneHex(zones[0]));
+                path.setAttribute('stroke-width', '2.5');
+                path.setAttribute('opacity', '0.75');
             }
-            if (uptimeEl) uptimeEl.textContent = running ? 'Uptime: ' + formatUptime(data.uptime) : '';
+            svg.appendChild(path);
         });
+    }
+
+    function flowOutputLabel(type, item) {
+        if (item && item.description) return `${type} · ${item.description}`;
+        if (item && item.host && item.port) return `${type} · ${item.host}:${item.port}`;
+        if (item && item.url) return `${type} · ${item.url}`;
+        if (item && item.host) return `${type} · ${item.host}`;
+        if (item && item.port) return `${type} · :${item.port}`;
+        return type;
+    }
+
+    function stopFlowObserver() {
+        if (flowResizeObserver) {
+            flowResizeObserver.disconnect();
+            flowResizeObserver = null;
+        }
+    }
+
+    function loadDataFlow() {
+        stopFlowObserver();
+        const patchEl = document.getElementById('flow-patch');
+        if (!patchEl) return;
+        const loadingEl = document.getElementById('flow-loading');
+        const emptyEl = document.getElementById('flow-empty');
+        const inputsEl = document.getElementById('flow-inputs');
+        const outputsEl = document.getElementById('flow-outputs');
+        const legendEl = document.getElementById('flow-legend');
+        const svg = document.getElementById('flow-svg');
+        const graphEl = document.getElementById('flow-graph');
+
+        inputsEl.innerHTML = '';
+        outputsEl.innerHTML = '';
+        legendEl.innerHTML = '';
+        svg.innerHTML = '';
+        emptyEl.classList.add('hidden');
+        patchEl.classList.add('hidden');
+        loadingEl.textContent = 'Loading…';
+        loadingEl.classList.remove('hidden');
+
+        fetch('/api/config')
+            .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+            .then(cfg => {
+                const receivers = (cfg.receiver || []).map((item, i) => ({
+                    label: `${item.input || 'Unknown'} ${item.serial ? '#' + item.serial : '#' + (i + 1)}`,
+                    zones: item.zone || [],
+                    active: item.active !== false
+                }));
+
+                const outputs = [];
+                [
+                    { type: 'UDP', key: 'udp' },
+                    { type: 'TCP', key: 'tcp' },
+                    { type: 'HTTP', key: 'http' },
+                    { type: 'MQTT', key: 'mqtt' },
+                    { type: 'TCP Server', key: 'tcp_listener' },
+                    { type: 'Webviewer', key: 'server' }
+                ].forEach(({ type, key }) => {
+                    (cfg[key] || []).forEach(item => {
+                        outputs.push({ label: flowOutputLabel(type, item), zones: item.zone || [], active: item.active !== false });
+                    });
+                });
+                if (cfg.sharing !== undefined) {
+                    outputs.push({
+                        label: 'Community',
+                        zones: Array.isArray(cfg.sharing_zone) ? cfg.sharing_zone : [],
+                        active: cfg.sharing === true
+                    });
+                }
+
+                loadingEl.classList.add('hidden');
+                if (receivers.length === 0 && outputs.length === 0) {
+                    emptyEl.classList.remove('hidden');
+                    return;
+                }
+                patchEl.classList.remove('hidden');
+
+                const allZones = new Set();
+                [...receivers, ...outputs].forEach(n => n.zones.forEach(z => allZones.add(z)));
+                allZones.forEach(z => {
+                    const item = document.createElement('span');
+                    item.className = `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${flowZoneBadge(z)}`;
+                    const dot = document.createElement('span');
+                    dot.className = 'w-2 h-2 rounded-full flex-shrink-0';
+                    dot.style.background = flowZoneHex(z);
+                    item.appendChild(dot);
+                    item.appendChild(document.createTextNode(z));
+                    legendEl.appendChild(item);
+                });
+
+                const inputEls = receivers.map(r => {
+                    const n = flowNode(r.label, r.zones, r.active, true, 'input');
+                    inputsEl.appendChild(n);
+                    return n;
+                });
+                const outputEls = outputs.map(o => {
+                    const n = flowNode(o.label, o.zones, o.active, false, 'output');
+                    outputsEl.appendChild(n);
+                    return n;
+                });
+
+                const connections = [];
+                outputs.forEach((output, oi) => {
+                    if (output.zones.length === 0) {
+                        receivers.forEach((_, ii) => connections.push({ ii, oi, zones: [], isAll: true }));
+                    } else {
+                        receivers.forEach((receiver, ii) => {
+                            const shared = output.zones.filter(z => receiver.zones.includes(z));
+                            if (shared.length > 0) connections.push({ ii, oi, zones: shared, isAll: false });
+                        });
+                    }
+                });
+
+                const redraw = () => drawFlowConnections(inputEls, outputEls, connections, svg, graphEl);
+                requestAnimationFrame(redraw);
+                stopFlowObserver();
+                flowResizeObserver = new ResizeObserver(redraw);
+                flowResizeObserver.observe(graphEl);
+            })
+            .catch(() => {
+                loadingEl.textContent = 'Failed to load configuration.';
+                loadingEl.classList.remove('hidden');
+            });
+    }
+
+    // Refresh the System > Status pane. The elements only exist while the
+    // modal is open, so this is a cheap no-op otherwise; it is driven both by
+    // the initial open and by the 5s status poll so the tab stays live.
+    function renderHubStatus(data) {
+        if (!data) return;
+        const statusEl = document.getElementById('hub-status');
+        const uptimeEl = document.getElementById('hub-uptime');
+        if (!statusEl && !uptimeEl) return;
+        const running = data.engine === 'running';
+
+        if (statusEl) {
+            statusEl.innerHTML = running
+                ? '<span class="text-sm font-medium text-emerald-600">Running</span><span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>'
+                : '<span class="text-sm font-medium text-slate-600">Stopped</span><span class="relative flex h-2.5 w-2.5"><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-400"></span></span>';
+        }
+        if (uptimeEl) uptimeEl.textContent = running ? 'Uptime: ' + formatUptime(data.uptime) : '';
+    }
+
+    function updateControlStatus() {
+        refreshEngineStatus().then(renderHubStatus);
     }
 
     function changePassword(e) {
@@ -751,12 +1019,18 @@
     function init() {
         document.getElementById('login-form').addEventListener('submit', submitLogin);
         document.getElementById('login-cancel').addEventListener('click', closeLoginModal);
-        document.getElementById('config-close').addEventListener('click', closeConfigPanel);
-        document.getElementById('config-overlay').addEventListener('click', closeConfigPanel);
         document.getElementById('nav-start-restart').addEventListener('click', onStartRestartClick);
-        document.getElementById('nav-btn-input').addEventListener('click', () => openConfig('input'));
-        document.getElementById('nav-btn-output').addEventListener('click', () => openConfig('output'));
-        document.getElementById('nav-btn-control').addEventListener('click', () => openConfig('control-panel'));
+        document.getElementById('nav-btn-input').addEventListener('click', () => openSystem('input'));
+        document.getElementById('nav-btn-output').addEventListener('click', () => openSystem('output'));
+        document.getElementById('nav-btn-control').addEventListener('click', () => openSystem('status'));
+        document.getElementById('system-close').addEventListener('click', closeSystem);
+        systemOverlay.addEventListener('click', e => {
+            if (e.target === systemOverlay) closeSystem();
+        });
+        document.getElementById('system-tabs').addEventListener('click', e => {
+            const btn = e.target.closest('.sys-tab');
+            if (btn) switchSystemTab(btn.dataset.tab);
+        });
 
         fetchStatus()
             .then(data => {

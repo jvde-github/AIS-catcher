@@ -561,8 +561,8 @@
         cardBody: 'p-3 sm:p-5',
         deleteBtn: 'text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1 sm:p-1.5 rounded-lg transition duration-200',
         chevron: 'pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500',
-        saveActive: 'bg-slate-800 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-700 shadow-md transition-all duration-200 text-xs sm:text-sm font-medium transform hover:-translate-y-0.5',
-        saveInactive: 'bg-white border border-slate-300 text-slate-400 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 shadow-sm transition-all duration-200 text-xs sm:text-sm font-medium cursor-default',
+        saveActive: 'w-auto sm:w-32 bg-slate-800 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-700 shadow-md transition-all duration-200 text-xs sm:text-sm font-medium transform hover:-translate-y-0.5',
+        saveInactive: 'w-auto sm:w-32 bg-white border border-slate-300 text-slate-400 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 shadow-sm transition-all duration-200 text-xs sm:text-sm font-medium cursor-default',
     };
 
     const Icons = {
@@ -1087,17 +1087,17 @@
 
             this.ensureJsonUI();
 
-            const btnGroup = el('div', `${containerIdClass} mt-6 sm:mt-8 px-4 sm:px-0 flex flex-col sm:flex-row justify-end items-stretch sm:items-center gap-2 sm:gap-3 max-w-2xl sm:mx-auto`);
+            const btnGroup = el('div', `${containerIdClass} mt-6 sm:mt-8 px-4 sm:px-0 flex flex-row flex-wrap justify-end items-center gap-2 sm:gap-3 max-w-2xl sm:mx-auto`);
 
             if (this.config.isList) {
-                btnGroup.appendChild(el('button', 'w-full sm:w-32 bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 transition duration-200 shadow-sm inline-flex items-center justify-center gap-2 text-sm font-medium', {
+                btnGroup.appendChild(el('button', 'w-auto sm:w-32 bg-white border border-slate-300 text-slate-700 px-4 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 transition duration-200 shadow-sm inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-medium', {
                     type: 'button', onClick: () => this.addItem()
                 },
                     Icons.plus(),
                     'Add Item'));
             }
 
-            btnGroup.appendChild(el('button', 'w-full sm:w-32 bg-white border border-slate-300 text-slate-400 px-6 py-2 rounded-lg hover:bg-slate-50 shadow-sm transition-all duration-200 text-sm font-medium cursor-default', {
+            btnGroup.appendChild(el('button', 'w-auto sm:w-32 bg-white border border-slate-300 text-slate-400 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 shadow-sm transition-all duration-200 text-xs sm:text-sm font-medium cursor-default', {
                 type: 'button', dataset: { saveBtn: 'true' }, onClick: () => this.save()
             }, 'Save'));
 

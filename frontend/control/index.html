@@ -90,51 +90,108 @@
             background: #7c2d12;
         }
 
-        #config-panel {
+        #system-overlay {
             position: fixed;
-            top: 0;
-            right: -100%;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 65;
+            padding: 1rem;
+        }
+
+        #system-overlay.open {
+            display: flex;
+        }
+
+        #system-modal {
+            background: #fff;
+            border-radius: 1rem;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
             width: 100%;
-            max-width: 400px;
-            height: 100vh;
-            height: 100dvh;
-            background: white;
-            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
-            transition: right 0.3s ease;
-            z-index: 60;
+            max-width: 1000px;
+            height: 85vh;
+            max-height: 85vh;
             display: flex;
             flex-direction: column;
-            padding-bottom: env(safe-area-inset-bottom);
+            overflow: hidden;
         }
 
-        #config-content {
+        #system-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: linear-gradient(to right, #f8fafc, #ffffff);
+            flex-shrink: 0;
+        }
+
+        #system-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.375rem;
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid #e2e8f0;
+            flex-shrink: 0;
+        }
+
+        .sys-tab {
+            padding: 0.4rem 0.95rem;
+            border-radius: 0.5rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: #64748b;
+            cursor: pointer;
+            transition: color 0.15s, background-color 0.15s;
+        }
+
+        .sys-tab:hover {
+            color: #334155;
+            background: #f1f5f9;
+        }
+
+        .sys-tab.active {
+            background: #1e293b;
+            color: #fff;
+        }
+
+        #system-body {
             flex: 1;
+            min-height: 0;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sys-pane {
+            flex: 1;
+            min-height: 0;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
         }
 
-        #config-panel.open {
-            right: 0;
-        }
-
-        #config-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100vh;
-            height: 100dvh;
-            background: rgba(0, 0, 0, 0.3);
+        .sys-pane.hidden {
             display: none;
-            z-index: 55;
         }
 
-        #config-overlay.open {
-            display: block;
+        .sys-pane[data-pane="log"],
+        .sys-pane[data-pane="config"] {
+            overflow: hidden;
         }
 
         @media (max-width: 640px) {
-            #config-panel {
+            #system-overlay {
+                padding: 0;
+            }
+            #system-modal {
                 max-width: 100%;
+                height: 100vh;
+                height: 100dvh;
+                max-height: none;
+                border-radius: 0;
             }
         }
 
@@ -151,37 +208,6 @@
             display: flex;
         }
 
-        /* collapsible System panel sections (config, log) */
-        details.sys-section summary {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            color: #1e293b;
-            padding: 0.25rem 0;
-            margin-bottom: 0.5rem;
-            list-style: none;
-            user-select: none;
-        }
-
-        details.sys-section summary::-webkit-details-marker {
-            display: none;
-        }
-
-        .sys-chev {
-            width: 16px;
-            height: 16px;
-            color: #64748b;
-            transition: transform 0.15s;
-            flex-shrink: 0;
-        }
-
-        details.sys-section[open] .sys-chev {
-            transform: rotate(90deg);
-        }
-
-        /* config file view, same visual language as the log */
         #config-json {
             background: #0f172a;
             color: #cbd5e1;
@@ -189,17 +215,18 @@
             font-size: 0.75rem;
             line-height: 1.5;
             padding: 0.75rem;
-            max-height: 45vh;
+            flex: 1;
+            min-height: 0;
             overflow: auto;
             white-space: pre;
             margin: 0;
         }
 
-        /* process log, styled like the control tool's log page */
         #log-box {
             background: #0f172a;
             padding: 0.75rem;
-            height: 45vh;
+            flex: 1;
+            min-height: 0;
             overflow: auto;
         }
 
@@ -268,7 +295,6 @@
             overflow: hidden;
         }
 
-        /* light separators between status, activity LEDs and community link */
         .bar-divider {
             display: none;
             width: 1px;
@@ -342,7 +368,6 @@
             }
         }
 
-        /* per-channel activity LEDs */
         #channel-leds {
             display: none;
         }
@@ -382,7 +407,6 @@
             color: #64748b;
         }
 
-        /* setup wizard */
         #wizard-overlay {
             position: fixed;
             inset: 0;
@@ -778,9 +802,6 @@
         <iframe id="webviewer-frame" src="" class="hidden" allow="fullscreen" allowfullscreen
             sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
 
-        <div id="config-overlay"></div>
-
-        <!-- Login / first-run setup modal -->
         <div id="login-overlay">
             <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
                 <h3 id="login-title" class="text-lg font-semibold text-slate-800 mb-1">Sign In</h3>
@@ -807,23 +828,35 @@
             </div>
         </div>
 
-        <!-- Config Panel -->
-        <div id="config-panel">
-            <div class="flex items-center justify-between p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
-                <h3 id="config-title" class="text-lg font-semibold text-slate-800">Configuration</h3>
-                <button id="config-close" class="text-slate-600 hover:text-slate-800 p-1">
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
+        <!-- The nav bar's Input/Output/System buttons all open this modal and
+             jump to the matching tab. -->
+        <div id="system-overlay">
+            <div id="system-modal">
+                <div id="system-header">
+                    <h3 id="system-title" class="text-lg font-semibold text-slate-800">Settings</h3>
+                    <button id="system-close" class="text-slate-600 hover:text-slate-800 p-1">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="system-tabs">
+                    <button class="sys-tab" data-tab="input">Input</button>
+                    <button class="sys-tab" data-tab="output">Output</button>
+                    <button class="sys-tab" data-tab="flow">Data Flow</button>
+                    <button class="sys-tab" data-tab="status">Status</button>
+                    <button class="sys-tab" data-tab="viewer">Map Viewer</button>
+                    <button class="sys-tab" data-tab="config">Configuration</button>
+                    <button class="sys-tab" data-tab="log">Log</button>
+                    <button class="sys-tab" data-tab="wizard">Wizard</button>
+                    <button class="sys-tab" data-tab="password">Reset Password</button>
+                </div>
+                <div id="system-body"></div>
             </div>
-            <div id="status-message" class="hidden"></div>
-            <div id="config-content" class="p-4"></div>
         </div>
 
-        <!-- toasts sit above the bottom bar on the left, clear of the config
-             panel that slides in from the right; config-manager's App.notify
-             reuses this container instead of creating its own -->
+        <!-- toasts sit above the bottom bar on the left; config-manager's
+             App.notify reuses this container instead of creating its own -->
         <div id="toast-container" class="fixed flex flex-col items-start" style="bottom: 5.5rem; left: 1.5rem; z-index: 70"></div>
     </div>
 
