@@ -642,15 +642,21 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 		{
 		case 'G':
 			Assert(count % 2 == 0, param, "requires parameters in key/value pairs");
-			Util::Convert::toUpper(arg1);
-			Util::Convert::toUpper(arg2);
 
-			if (cb != -1 && arg1 == "SYSTEM" && arg2 == "ON")
+			if (cb != -1)
 			{
-				Logger::getInstance().removeLogListener(cb);
-				cb = -1;
-				// Enable DEBUG level when switching to system logging for journalctl filtering
-				Logger::getInstance().setMinLevel(LogLevel::DEBUG);
+				for (int k = 0; k + 1 < count; k += 2)
+				{
+					std::string key = argv[ptr + 1 + k];
+					Util::Convert::toUpper(key);
+					if (key == "SYSTEM" && Util::Parse::Switch(argv[ptr + 2 + k]))
+					{
+						Logger::getInstance().removeLogListener(cb);
+						cb = -1;
+						Logger::getInstance().setMinLevel(LogLevel::DEBUG);
+						break;
+					}
+				}
 			}
 			parseSettings(Logger::getInstance(), argv, ptr, argc);
 			break;

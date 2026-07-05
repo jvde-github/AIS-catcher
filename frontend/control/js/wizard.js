@@ -316,7 +316,6 @@
             '<div class="wz-service">' +
             icon(s.icon, 'wz-service-icon') +
             '<div class="wz-service-main">' +
-            '<span class="wz-option-title">' + esc(s.name) + '</span>' +
             '<p class="wz-intro">' + esc(s.blurb) + '</p>' +
             '</div>' +
             '</div>' +

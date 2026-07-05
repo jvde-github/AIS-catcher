@@ -957,13 +957,12 @@ const receiverSchema = {
     rtltcp_tuner: {
         name: "rtltcp_tuner",
         label: "Tuner Gain",
-        type: "number",
+        type: "auto-float",
         jsonpath: "rtltcp.tuner",
         min: 0,
         max: 50,
         step: 0.1,
-        defaultValue: 33,
-        placeholder: "0-50, auto",
+        defaultValue: "auto",
         dependsOn: {
             field: "rtltcp_protocol",
             value: "rtltcp"
