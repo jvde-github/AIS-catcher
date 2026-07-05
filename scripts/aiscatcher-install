@@ -113,6 +113,7 @@ SKIP_USER=false
 MANAGED=false
 BRANCH="main"
 SERVICE_STATE=""
+SERVICE_START_FAILED=false
 SET_REBOOT=""
 REBOOT_BURST="${REBOOT_BURST_DEFAULT}"
 REBOOT_INTERVAL="${REBOOT_INTERVAL_DEFAULT}"
@@ -914,6 +915,32 @@ stop_disable_and_save_service_state() {
     log "INFO" "Service state saved: $SERVICE_STATE"
 }
 
+# A start command can succeed while the process then exits (most commonly
+# because its ports are already in use), so poll is-active and dump diagnostics
+# if the service never comes up. Returns non-zero if it does not.
+verify_service_active() {
+    local started=false i
+    for i in {1..10}; do
+        systemctl is-active --quiet "$SERVICE_NAME" && { started=true; break; }
+        sleep 1
+    done
+
+    if [[ "$started" == true ]]; then
+        log "INFO" "$SERVICE_NAME is running properly"
+        return 0
+    fi
+
+    log "ERROR" "$SERVICE_NAME did not stay running after start"
+    systemctl status "$SERVICE_NAME" --no-pager -l 2>/dev/null | tail -n 15 || true
+    journalctl -u "$SERVICE_NAME" -n 20 --no-pager 2>/dev/null || true
+    if [[ "$MANAGED" == true ]]; then
+        local ctrl_port="${MANAGED_BIND##*:}"
+        log "ERROR" "Managed mode could not start — control port ${ctrl_port} or viewer port $((ctrl_port + 1)) may already be in use"
+        log "ERROR" "Free the port(s), then run: systemctl restart ${SERVICE_NAME}"
+    fi
+    return 1
+}
+
 # FIXED: Improved service state restoration with better error handling
 restore_service_state() {
     if [[ -z "$SERVICE_STATE" ]]; then
@@ -922,11 +949,11 @@ restore_service_state() {
     fi
 
     log "INFO" "Restoring AIS-catcher service state"
-    
+
     IFS=',' read -ra STATE_ARRAY <<< "$SERVICE_STATE"
     local was_active=${STATE_ARRAY[0]:-false}
     local was_enabled=${STATE_ARRAY[1]:-false}
-    
+
     # Enable first if it was enabled
     if [[ "$was_enabled" == true ]]; then
         if systemctl enable "$SERVICE_NAME"; then
@@ -936,30 +963,24 @@ restore_service_state() {
             return 1
         fi
     fi
-    
+
     # Then start if it was active
     if [[ "$was_active" == true ]]; then
         # Clear any stale failed state from before the update so start isn't blocked
         systemctl reset-failed "$SERVICE_NAME" 2>/dev/null || true
         if systemctl start "$SERVICE_NAME"; then
-            log "INFO" "$SERVICE_NAME started successfully"
-            local started=false
-            for i in {1..10}; do
-                systemctl is-active --quiet "$SERVICE_NAME" && { started=true; break; }
-                sleep 1
-            done
-            if [[ "$started" == true ]]; then
-                log "INFO" "$SERVICE_NAME is running properly"
-            else
-                log "WARN" "$SERVICE_NAME may have failed to start properly"
-                systemctl status "$SERVICE_NAME" --no-pager || true
+            log "INFO" "$SERVICE_NAME start command issued"
+            # Only verify the managed default-start (the script's own decision);
+            # a plain restore of the user's prior state is taken at face value.
+            if [[ "$MANAGED" == true ]]; then
+                verify_service_active || SERVICE_START_FAILED=true
             fi
         else
             log "ERROR" "Failed to start $SERVICE_NAME"
             return 1
         fi
     fi
-    
+
     # Clear the global state after restore
     SERVICE_STATE=""
     log "INFO" "Service state restored and cleared"
@@ -1106,7 +1127,32 @@ display_installation_summary() {
     echo -e "${COLOR_BOLD_GREEN}                    AIS-CATCHER INSTALLATION SUMMARY${COLOR_RESET}"
     echo -e "${COLOR_BOLD_BLUE}${divider}${COLOR_RESET}\n"
     echo -e "${COLOR_BOLD_GREEN}✓ Installation completed successfully!${COLOR_RESET}\n"
-    
+
+    if [ "$SKIP_SYSTEMD" = false ]; then
+        echo -e "${COLOR_BOLD}SERVICE STATUS:${COLOR_RESET}"
+        if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
+            echo -e "  • ${SERVICE_NAME}: ${COLOR_BOLD_GREEN}running${COLOR_RESET}"
+        else
+            echo -e "  • ${SERVICE_NAME}: ${COLOR_YELLOW}not running${COLOR_RESET}"
+        fi
+        if systemctl is-enabled --quiet "$SERVICE_NAME" 2>/dev/null; then
+            echo -e "  • Start on boot: ${COLOR_BOLD_GREEN}enabled${COLOR_RESET}"
+        else
+            echo -e "  • Start on boot: ${COLOR_YELLOW}disabled${COLOR_RESET}"
+        fi
+        if [ "$SERVICE_START_FAILED" = true ]; then
+            echo ""
+            echo -e "  ${COLOR_YELLOW}⚠ The service was started but did not stay running.${COLOR_RESET}"
+            if [ "$MANAGED" = true ]; then
+                local status_port="${MANAGED_BIND##*:}"
+                echo -e "    Control port ${status_port} or viewer port $((status_port + 1)) may already be in use."
+            fi
+            echo -e "    Check logs: ${COLOR_YELLOW}journalctl -u ${SERVICE_NAME} -n 30 --no-pager${COLOR_RESET}"
+            echo -e "    Then retry: ${COLOR_YELLOW}systemctl restart ${SERVICE_NAME}${COLOR_RESET}"
+        fi
+        echo ""
+    fi
+
     echo -e "${COLOR_BOLD}INSTALLED FILES:${COLOR_RESET}"
     echo "  • Executable:         /usr/bin/AIS-catcher"
     echo "  • Configuration:      ${CONFIG_DIR}/"
@@ -1286,6 +1332,12 @@ main() {
     # Phase 10: Setup and start service
     if [ "$SKIP_SYSTEMD" = false ]; then
         setup_systemd_service
+
+        # Managed installs (-M) are enabled and started by default, regardless of prior state.
+        if [ "$MANAGED" = true ]; then
+            log "INFO" "Managed mode: enabling and starting ${SERVICE_NAME} by default"
+            SERVICE_STATE="true,true"
+        fi
 
         if ! restore_service_state; then
             log "ERROR" "Failed to restore service state"
