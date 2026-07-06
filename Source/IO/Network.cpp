@@ -74,26 +74,22 @@ namespace IO
 
 		for (int i = 0; i < len; i++)
 		{
-			if (filter.include(*(AIS::Message *)data[i].binary))
+			const AIS::Message &msg = *(AIS::Message *)data[i].binary;
+			if (filter.include(msg))
 			{
+				const std::lock_guard<std::mutex> lock(msg_list_mutex);
+				count(msg.type());
+
 				if (protocol == PROTOCOL::NMEA)
 				{
-					auto nmea = ((AIS::Message *)data[i].binary)->sentences();
-					const std::lock_guard<std::mutex> lock(msg_list_mutex);
-
-					for (size_t j = 0; j < nmea.size(); j++)
-					{
-						enqueue(nmea[j]);
-					}
+					for (const auto &nmea : msg.sentences())
+						enqueue(nmea);
 				}
 				else
 				{
 					std::string s;
 					builder.stringify(data[i], s);
-					{
-						const std::lock_guard<std::mutex> lock(msg_list_mutex);
-						enqueue(std::move(s));
-					}
+					enqueue(std::move(s));
 				}
 			}
 		}
@@ -114,12 +110,16 @@ namespace IO
 		// receiver info) keeps aggregators alive between message bursts.
 		std::list<std::string> send_list;
 		std::string lat_snap, lon_snap;
+		int msg_snap, pos_snap;
 
 		{
 			const std::lock_guard<std::mutex> lock(msg_list_mutex);
 			send_list.splice(send_list.begin(), msg_list);
 			lat_snap = lat;
 			lon_snap = lon;
+			msg_snap = msg_count;
+			pos_snap = pos_count;
+			msg_count = pos_count = 0;
 		}
 
 		post_body.clear();
@@ -184,9 +184,9 @@ namespace IO
 		}
 
 		if (r < 200 || r > 299)
-			Error() << "HTTP Client [" << url << "]: return code " << r;
+			Error() << "HTTP Client [" << url << "]: return code " << r << " (" << msg_snap << " messages, " << pos_snap << " positions)";
 		else if (show_response)
-			Info() << "HTTP Client [" << url << "]: return code " << r;
+			Info() << "HTTP Client [" << url << "]: return code " << r << " (" << msg_snap << " messages, " << pos_snap << " positions)";
 	}
 
 	void HTTPStreamer::process()

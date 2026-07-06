@@ -83,6 +83,7 @@ namespace IO
 
 		std::list<std::string> msg_list;
 		std::mutex msg_list_mutex;
+		int msg_count = 0, pos_count = 0;
 
 		static const size_t MSG_LIST_MAX = 100000;
 
@@ -95,6 +96,14 @@ namespace IO
 				stats.dropped++;
 			}
 			msg_list.push_back(std::move(s));
+		}
+
+		// caller holds msg_list_mutex
+		void count(unsigned type)
+		{
+			msg_count++;
+			if (type == 1 || type == 2 || type == 3 || type == 18 || type == 19 || type == 27)
+				pos_count++;
 		}
 
 	public:
