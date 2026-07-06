@@ -338,7 +338,7 @@ jobs:
     - name: Create start.bat
       run: |
         cd output
-        echo "AIS-catcher -v 10 -X -u 127.0.0.1 10110 -N 8100 PLUGIN_DIR plugins`nPAUSE" |Out-File -FilePath start.bat -Encoding ascii
+        Set-Content -Path start.bat -Value 'start "" /b cmd /c "timeout /t 3 >nul & start http://localhost:8100/"', 'AIS-catcher -v 10 -X -u 127.0.0.1 10110 -N 8100 PLUGIN_DIR plugins', 'PAUSE' -Encoding ascii
         cd ..
 
     - name: Building Libraries and AIS-catcher
