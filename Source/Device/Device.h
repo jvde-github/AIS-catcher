@@ -41,6 +41,7 @@ namespace Device {
 		std::string serial;
 		uint64_t handle;
 		Type type;
+		bool claimed = false;
 
 	public:
 		Description(std::string v, std::string p, std::string s, uint64_t h, Type t) : vendor(v), product(p), serial(s), handle(h), type(t) {}
@@ -50,6 +51,8 @@ namespace Device {
 		const std::string &getSerial() { return serial; }
 		Type getType() { return type; }
 		uint64_t getHandle() { return handle; }
+		bool isClaimed() { return claimed; }
+		void setClaimed(bool c = true) { claimed = c; }
 	};
 
 	class Device : public SimpleStreamOut<RAW>, public Setting {

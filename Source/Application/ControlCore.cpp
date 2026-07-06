@@ -76,18 +76,7 @@ void ControlCore::readManagedFields(int port_override)
 				if (!m.Get().isObject())
 					throw std::runtime_error("control section needs to be an object");
 
-				for (const auto &c : m.Get().getObject().getMembers())
-				{
-					switch (c.Key())
-					{
-					case AIS::KEY_SETTING_PASSWORD:
-						password_hash = c.Get().to_string();
-						break;
-					case AIS::KEY_SETTING_SALT:
-						password_salt = c.Get().to_string();
-						break;
-					}
-				}
+				applyAuthFields(m.Get());
 				break;
 			}
 		}
@@ -107,9 +96,7 @@ void ControlCore::startEngine()
 	command_seq++;
 	{
 		std::lock_guard<std::mutex> lock(mtx);
-		auto_retry = false;
-		retry_pending = false;
-		retry_delay = 0;
+		resetRetry();
 		if (desired)
 			return;
 		desired = true;
@@ -126,9 +113,7 @@ void ControlCore::stopEngine()
 		std::lock_guard<std::mutex> lock(mtx);
 		desired = false;
 		restart_pending = false;
-		auto_retry = false;
-		retry_pending = false;
-		retry_delay = 0;
+		resetRetry();
 	}
 	persistEngineField(false);
 	StopRequest();
@@ -143,9 +128,8 @@ void ControlCore::restartEngine()
 		desired = true;
 		running = (state == EngineState::Running);
 		restart_pending = running;
-		auto_retry = false;
-		retry_pending = false;
-		retry_delay = 0;
+		resetRetry();
+		auto_retry = running;
 	}
 	persistEngineField(true);
 
@@ -204,6 +188,17 @@ bool ControlCore::setConfig(const std::string &json, std::string &error)
 	return true;
 }
 
+void ControlCore::applyAuthFields(const JSON::Value &control)
+{
+	for (const auto &c : control.getObject().getMembers())
+	{
+		if (c.Key() == AIS::KEY_SETTING_PASSWORD)
+			password_hash = c.Get().to_string();
+		else if (c.Key() == AIS::KEY_SETTING_SALT)
+			password_salt = c.Get().to_string();
+	}
+}
+
 void ControlCore::refreshAuthFields(const std::string &json)
 {
 	try
@@ -215,13 +210,7 @@ void ControlCore::refreshAuthFields(const std::string &json)
 		if (v && v->isObject())
 		{
 			std::lock_guard<std::mutex> lock(mtx);
-			for (const auto &c : v->getObject().getMembers())
-			{
-				if (c.Key() == AIS::KEY_SETTING_PASSWORD)
-					password_hash = c.Get().to_string();
-				else if (c.Key() == AIS::KEY_SETTING_SALT)
-					password_salt = c.Get().to_string();
-			}
+			applyAuthFields(*v);
 		}
 	}
 	catch (const std::exception &)
@@ -385,28 +374,44 @@ bool ControlCore::engineDesired()
 	return desired;
 }
 
+bool ControlCore::engineRetrying()
+{
+	std::lock_guard<std::mutex> lock(mtx);
+	return desired && auto_retry && state != EngineState::Running;
+}
+
 void ControlCore::reportRunning()
 {
 	std::lock_guard<std::mutex> lock(mtx);
 	state = EngineState::Running;
 	engine_start_time = std::time(nullptr);
+	auto_retry = false;
 }
 
 void ControlCore::reportStopped()
 {
 	std::lock_guard<std::mutex> lock(mtx);
 	bool was_running = state == EngineState::Running;
+	bool healthy = was_running && std::time(nullptr) - engine_start_time >= RETRY_HEALTHY_UPTIME;
 	state = EngineState::Stopped;
 
 	if (restart_pending)
 		restart_pending = false;
 	else if (desired)
 	{
-		if (was_running && std::time(nullptr) - engine_start_time >= RETRY_HEALTHY_UPTIME)
-			retry_delay = 0;
-		retry_delay = retry_delay ? MIN(retry_delay * 2, RETRY_DELAY_MAX) : RETRY_DELAY_FIRST;
-		auto_retry = true;
-		retry_pending = true;
+		if (was_running || auto_retry)
+		{
+			if (healthy)
+				retry_delay = 0;
+			retry_delay = retry_delay ? MIN(retry_delay * 2, RETRY_DELAY_MAX) : RETRY_DELAY_FIRST;
+			auto_retry = true;
+			retry_pending = true;
+		}
+		else
+		{
+			desired = false;
+			resetRetry();
+		}
 	}
 }
 
@@ -414,9 +419,6 @@ void ControlCore::engineFailed()
 {
 	std::lock_guard<std::mutex> lock(mtx);
 	restart_pending = false;
-
-	if (!auto_retry)
-		desired = false;
 }
 
 void ControlCore::waitForCommand()

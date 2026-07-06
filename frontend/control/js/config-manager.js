@@ -1259,7 +1259,13 @@
                 } else if (this.config.channelType) {
                     fullConfig[this.config.channelType] = this.data;
                 } else {
-                    Object.assign(fullConfig, this.data);
+                    this.fields.forEach(f => {
+                        if (f.skipSave) return;
+                        const val = f.jsonpath ? Utils.getNested(this.data, f.jsonpath) : this.data[f.name];
+                        if (val === undefined) return;
+                        if (f.jsonpath) Utils.setNested(fullConfig, f.jsonpath, val);
+                        else fullConfig[f.name] = val;
+                    });
                 }
 
                 if (!fullConfig.config) fullConfig.config = 'aiscatcher';

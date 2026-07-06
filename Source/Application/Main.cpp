@@ -500,6 +500,16 @@ void run(RunState &state, ControlCore *control)
 	for (auto &r : state.receivers)
 		r->play();
 
+	if (control)
+	{
+		control->reportRunning();
+		Info() << "Control: engine started";
+
+		for (auto &r : state.receivers)
+			if (!r->verbose)
+				r->logSummary();
+	}
+
 	const int SLEEP = 50;
 	auto time_start = high_resolution_clock::now();
 	auto time_timeout_start = time_start;

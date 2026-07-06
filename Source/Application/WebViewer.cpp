@@ -612,12 +612,10 @@ bool BackupManager::load()
 
 void ReceiverTracker::applyConfig(const TrackingConfig &cfg, const AIS::Filter &f)
 {
-	ships.setLat(cfg.lat);
-	ships.setLon(cfg.lon);
+	setStationPosition(cfg.lat, cfg.lon, cfg.use_GPS);
 	ships.setShareLatLon(cfg.latlon_share);
 	ships.setServerMode(cfg.server_mode);
 	ships.setMsgSave(cfg.msg_save);
-	ships.setUseGPS(cfg.use_GPS);
 	ships.setOwnMMSI(cfg.own_mmsi);
 	ships.setTimeHistory(cfg.time_history);
 	ships.setFilter(f);
@@ -1410,6 +1408,13 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 }
 
+void WebViewer::applyStationPosition()
+{
+	std::lock_guard<std::recursive_mutex> lock(state_mtx);
+	for (auto &s : states)
+		s->setStationPosition(tracking.lat, tracking.lon, tracking.use_GPS);
+}
+
 Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 {
 	std::lock_guard<std::recursive_mutex> lock(state_mtx);
@@ -1460,7 +1465,7 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 		break;
 	case AIS::KEY_SETTING_LAT:
 		tracking.lat = Util::Parse::Float(arg);
-		planes.setLat(tracking.lat);
+		applyStationPosition();
 		break;
 	case AIS::KEY_SETTING_CUTOFF:
 		tracking.cutoff = Util::Parse::Integer(arg, 0, 10000);
@@ -1483,10 +1488,11 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 		break;
 	case AIS::KEY_SETTING_LON:
 		tracking.lon = Util::Parse::Float(arg);
-		planes.setLon(tracking.lon);
+		applyStationPosition();
 		break;
 	case AIS::KEY_SETTING_USE_GPS:
 		tracking.use_GPS = Util::Parse::Switch(arg);
+		applyStationPosition();
 		break;
 	case AIS::KEY_SETTING_KML:
 		KML = Util::Parse::Switch(arg);

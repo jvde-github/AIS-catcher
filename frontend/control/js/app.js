@@ -6,7 +6,33 @@
     let port = 0;
     let viewerLoaded = false;
     let engineRunning = false;
+    let engineDesired = false;
+    let pendingApply = false;
     let pendingAction = null;
+
+    const ENGINE_ICONS = {
+        start: '<path d="M320-200v-560l440 280-440 280Zm80-280Zm0 134 210-134-210-134v268Z"/>',
+        stop: '<path d="M240-240v-480h480v480H240Z"/>',
+        restart: '<path d="M440-122q-121-15-200.5-105.5T160-440q0-66 26-126.5T260-672l57 57q-38 34-57.5 79T240-440q0 88 56 155.5T440-203v81Zm80 0v-81q87-16 143.5-83T720-440q0-100-70-170t-170-70h-3l44 44-56 56-140-140 140-140 56 56-44 44h3q134 0 227 93t93 227q0 121-79.5 211.5T520-122Z"/>'
+    };
+
+    function engineButtonMode() {
+        if (!engineRunning) return engineDesired ? 'stop' : 'start';
+        return pendingApply ? 'restart' : 'stop';
+    }
+
+    function renderEngineButton() {
+        const mode = engineButtonMode();
+        const btn = document.getElementById('nav-start-restart');
+        const label = document.getElementById('nav-sr-label');
+        const icon = document.getElementById('nav-sr-icon');
+        if (btn) btn.classList.toggle('attention', pendingApply);
+        if (icon && icon.dataset.mode !== mode) {
+            icon.dataset.mode = mode;
+            icon.innerHTML = ENGINE_ICONS[mode];
+            if (label) label.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+        }
+    }
     let currentLoadTimeout = null;
     let statusPollInterval = null;
     let logSource = null;
@@ -42,7 +68,18 @@
     }
 
     function engineAction(action) {
-        return fetch('/api/engine', { method: 'POST', body: action }).then(r => r.json());
+        return fetch('/api/engine', { method: 'POST', body: action })
+            .then(r => r.json().then(body => {
+                if (!r.ok || !body.status) {
+                    if (r.status === 401) {
+                        auth = 'login';
+                        updateBarVisibility();
+                        openLoginModal();
+                    }
+                    throw new Error(body.error || 'Engine ' + action + ' failed');
+                }
+                return body;
+            }));
     }
 
     function formatUptime(seconds) {
@@ -57,18 +94,23 @@
 
     function isLoggedIn() { return auth === 'ok' || auth === 'open'; }
 
-    function setAuthButtons(loggedIn) {
-        ['nav-btn-input', 'nav-btn-output', 'nav-btn-control'].forEach(id => {
-            const btn = document.getElementById(id);
-            if (!btn) return;
-            if (loggedIn) {
-                btn.classList.remove('opacity-40', 'pointer-events-none');
-                btn.removeAttribute('title');
-            } else {
-                btn.classList.add('opacity-40', 'pointer-events-none');
-                btn.title = 'Login required';
-            }
-        });
+    let barCollapsed = false;
+
+    function updateBarVisibility() {
+        const bar = document.getElementById('bottom-bar');
+        const loginPill = document.getElementById('login-pill');
+        const restore = document.getElementById('bar-restore');
+        const loggedIn = isLoggedIn();
+        if (loginPill) loginPill.classList.toggle('show', !loggedIn);
+        if (restore) restore.classList.toggle('show', loggedIn && barCollapsed);
+        if (bar) bar.style.display = (loggedIn && !barCollapsed) ? '' : 'none';
+    }
+
+
+    function setBarCollapsed(collapsed) {
+        barCollapsed = collapsed;
+        try { localStorage.setItem('hubBarCollapsed', collapsed ? '1' : '0'); } catch (e) { /* ignore */ }
+        updateBarVisibility();
     }
 
     function openLoginModal() {
@@ -123,7 +165,7 @@
                     return;
                 }
                 auth = 'ok';
-                setAuthButtons(true);
+                updateBarVisibility();
                 startAlertStream();
                 startChannelLeds();
                 const action = pendingAction;
@@ -147,65 +189,82 @@
         openLoginModal();
     }
 
-    function setNavBusy(busy) {
-        const nav = document.getElementById('nav-buttons');
-        const dot = document.getElementById('status-dot');
-        const dotLabel = document.getElementById('status-dot-label');
-        const dotText = document.getElementById('status-dot-text');
-        if (busy) {
-            nav.classList.add('opacity-50', 'pointer-events-none');
-            if (dot) dot.className = 'block w-2.5 h-2.5 rounded-full bg-amber-400 cursor-default';
-            if (dotLabel) dotLabel.textContent = 'Working...';
-            if (dotText) {
-                dotText.className = 'hidden sm:inline text-xs font-medium text-amber-400';
-                dotText.textContent = 'Working...';
-            }
-        } else {
-            nav.classList.remove('opacity-50', 'pointer-events-none');
+    function setEngineButtonDisabled(disabled) {
+        const btn = document.getElementById('nav-start-restart');
+        if (btn) {
+            btn.disabled = disabled;
+            btn.classList.toggle('opacity-50', disabled);
         }
     }
 
-    function updateStartRestartButton(running, uptime) {
+    const ENGINE_STATES = {
+        running: { label: 'Running', dot: 'bg-emerald-500', text: 'text-emerald-600', hex: '#10b981' },
+        starting: { label: 'Starting...', dot: 'bg-amber-400', text: 'text-amber-400', hex: '#fbbf24' },
+        retrying: { label: 'Reconnecting...', dot: 'bg-amber-400', text: 'text-amber-400', hex: '#fbbf24' },
+        stopped: { label: 'Stopped', dot: 'bg-slate-500', text: 'text-slate-400', hex: '#64748b' }
+    };
+
+    function renderEngineState(data) {
+        if (!data) return;
+        const running = data.engine === 'running';
         engineRunning = running;
-        const label = document.getElementById('nav-sr-label');
-        const icon = document.getElementById('nav-sr-icon');
-        if (running) {
-            label.textContent = 'Restart';
-            icon.innerHTML = '<path d="M440-122q-121-15-200.5-105.5T160-440q0-66 26-126.5T260-672l57 57q-38 34-57.5 79T240-440q0 88 56 155.5T440-203v81Zm80 0v-81q87-16 143.5-83T720-440q0-100-70-170t-170-70h-3l44 44-56 56-140-140 140-140 56 56-44 44h3q134 0 227 93t93 227q0 121-79.5 211.5T520-122Z"/>';
-        } else {
-            label.textContent = 'Start';
-            icon.innerHTML = '<path d="M320-200v-560l440 280-440 280Zm80-280Zm0 134 210-134-210-134v268Z"/>';
-        }
+        engineDesired = !!data.desired;
+        renderEngineButton();
+
+        const state = running ? 'running' : (data.retrying ? 'retrying' : (data.desired ? 'starting' : 'stopped'));
+        const s = ENGINE_STATES[state];
+        const up = running ? formatUptime(data.uptime) : '';
+
         const dot = document.getElementById('status-dot');
+        if (dot) dot.className = 'block w-2.5 h-2.5 rounded-full cursor-default ' + s.dot;
         const dotLabel = document.getElementById('status-dot-label');
+        if (dotLabel) dotLabel.textContent = s.label;
         const dotUptime = document.getElementById('status-dot-uptime');
+        if (dotUptime) dotUptime.textContent = up;
         const dotText = document.getElementById('status-dot-text');
-        if (dot && dotLabel) {
-            if (running) {
-                dot.className = 'block w-2.5 h-2.5 rounded-full bg-emerald-500 cursor-default';
-                dotLabel.textContent = 'Running';
-            } else {
-                dot.className = 'block w-2.5 h-2.5 rounded-full bg-slate-500 cursor-default';
-                dotLabel.textContent = 'Stopped';
-            }
-        }
-        if (dotUptime) dotUptime.textContent = running ? formatUptime(uptime) : '';
         if (dotText) {
-            if (running) {
-                dotText.className = 'hidden sm:inline text-xs font-medium text-emerald-600';
-                const up = formatUptime(uptime);
-                dotText.textContent = 'Running' + (up ? ' · ' + up : '');
-            } else {
-                dotText.className = 'hidden sm:inline text-xs font-medium text-slate-400';
-                dotText.textContent = 'Stopped';
-            }
+            dotText.className = 'hidden sm:inline text-xs font-medium ' + s.text;
+            dotText.textContent = s.label + (up ? ' · ' + up : '');
         }
+        const restoreDot = document.getElementById('restore-dot');
+        if (restoreDot) restoreDot.style.background = s.hex;
+
+        const hubStatus = document.getElementById('hub-status');
+        if (hubStatus && hubStatus.dataset.state !== state) {
+            hubStatus.dataset.state = state;
+            hubStatus.innerHTML = '<span class="text-sm font-medium ' + s.text + '">' + s.label + '</span>' +
+                '<span class="relative flex h-2.5 w-2.5">' +
+                (running ? '<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>' : '') +
+                '<span class="relative inline-flex rounded-full h-2.5 w-2.5 ' + s.dot + '"></span></span>';
+        }
+        const hubUptime = document.getElementById('hub-uptime');
+        if (hubUptime) hubUptime.textContent = up ? 'Uptime: ' + up : '';
     }
+
+    let reloadUntil = 0;
+    let overlayRestartBtn = null;
 
     function refreshEngineStatus() {
         return fetchStatus()
             .then(data => {
-                updateStartRestartButton(data.engine === 'running', data.uptime);
+                if (data.auth !== auth) {
+                    auth = data.auth;
+                    updateBarVisibility();
+                }
+                renderEngineState(data);
+                setEngineButtonDisabled(false);
+                if (reloadUntil) {
+                    if (data.engine === 'running') {
+                        reloadUntil = 0;
+                        window.location.reload();
+                    } else if (data.desired === false || Date.now() > reloadUntil) {
+                        reloadUntil = 0;
+                        if (overlayRestartBtn) {
+                            overlayRestartBtn.disabled = false;
+                            overlayRestartBtn.textContent = 'Restart';
+                        }
+                    }
+                }
                 if (data.viewer && !viewerLoaded) {
                     port = data.viewer;
                     clearOverlayMessages();
@@ -213,38 +272,15 @@
                 }
                 return data;
             })
-            .catch(() => null);
+            .catch(() => {
+                setEngineButtonDisabled(false);
+                return null;
+            });
     }
 
     function startStatusPolling() {
         if (statusPollInterval) return;
-        statusPollInterval = setInterval(() => refreshEngineStatus().then(renderHubStatus), 5000);
-    }
-
-    function pollUntilState(target, onDone, since, maxWaitMs = 20000) {
-        const interval = 400;
-        const started = since || Date.now();
-        let elapsed = 0;
-        const timer = setInterval(() => {
-            elapsed += interval;
-            if (engineFailedAt >= started) {
-                clearInterval(timer);
-                refreshEngineStatus();
-                onDone(false);
-                return;
-            }
-            fetchStatus()
-                .then(d => {
-                    updateStartRestartButton(d.engine === 'running', d.uptime);
-                    if (d.engine === target || elapsed >= maxWaitMs) {
-                        clearInterval(timer);
-                        onDone(d.engine === target);
-                    }
-                })
-                .catch(() => {
-                    if (elapsed >= maxWaitMs) { clearInterval(timer); onDone(false); }
-                });
-        }, interval);
+        statusPollInterval = setInterval(refreshEngineStatus, 1000);
     }
 
     window.hubConfigSaved = function (kind) {
@@ -252,19 +288,21 @@
             App.notify('info', 'Reload the page to apply the map viewer changes', 8000);
         } else {
             App.notify('info', (engineRunning ? 'Restart' : 'Start') + ' the receiver to apply the new configuration', 8000);
-            document.getElementById('nav-start-restart').classList.add('attention');
+            pendingApply = true;
+            renderEngineButton();
         }
     };
 
     function onStartRestartClick() {
-        const action = engineRunning ? 'restart' : 'start';
-        document.getElementById('nav-start-restart').classList.remove('attention');
+        const action = engineButtonMode();
         requireAuth(() => {
-            const since = Date.now();
-            setNavBusy(true);
+            setEngineButtonDisabled(true);
             engineAction(action)
-                .then(() => pollUntilState('running', () => setNavBusy(false), since))
-                .catch(() => setNavBusy(false));
+                .then(() => { pendingApply = false; renderEngineButton(); })
+                .catch(e => {
+                    setEngineButtonDisabled(false);
+                    if (e && e.message) App.notify('error', e.message);
+                });
         });
     }
 
@@ -332,12 +370,12 @@
         if (btn)
             btn.addEventListener('click', () => {
                 requireAuth(() => {
-                    const since = Date.now();
                     btn.textContent = 'Restarting...';
                     btn.disabled = true;
+                    overlayRestartBtn = btn;
+                    reloadUntil = Date.now() + 90000;
                     engineAction('restart')
-                        .then(() => pollUntilState('running', ok => { if (ok) window.location.reload(); else { btn.disabled = false; btn.textContent = 'Restart'; } }, since))
-                        .catch(() => { btn.disabled = false; btn.textContent = 'Restart'; });
+                        .catch(() => { reloadUntil = 0; btn.disabled = false; btn.textContent = 'Restart'; });
                 });
             });
     }
@@ -530,27 +568,29 @@
 
     let alertSource = null;
     let alertReplayDone = false;
-    let engineFailedAt = 0;
+    let alertReplayUntil = 0;
+    let lastAlertTime = '';
 
     function startAlertStream() {
         if (alertSource || !isLoggedIn()) return;
         alertReplayDone = false;
         alertSource = new EventSource('/api/log');
         alertSource.addEventListener('log', e => {
-            if (!alertReplayDone) return;
             try {
                 const m = JSON.parse(e.data);
+                if (Date.now() < alertReplayUntil && m.time && m.time <= lastAlertTime) return;
+                if (m.time && m.time > lastAlertTime) lastAlertTime = m.time;
+                if (!alertReplayDone) return;
                 if (m.level === 'error' || m.level === 'critical') {
-                    if (m.message.indexOf('engine failed') >= 0)
-                        engineFailedAt = Date.now();
                     App.notify('error', m.message);
                 } else if (m.level === 'warning')
                     App.notify('warning', m.message);
             } catch (_) { }
         });
         alertSource.onopen = () => {
-            alertReplayDone = false;
-            setTimeout(() => { alertReplayDone = true; }, 500);
+            alertReplayUntil = Date.now() + 500;
+            if (!alertReplayDone)
+                setTimeout(() => { alertReplayDone = true; }, 500);
         };
     }
 
@@ -597,7 +637,7 @@
     function _openSystem(tab) {
         loadSystemPanel();
         systemOverlay.classList.add('open');
-        switchSystemTab(tab || 'status', true);
+        switchSystemTab(tab || 'flow', true);
     }
 
     function closeSystem() {
@@ -709,32 +749,39 @@
                 <div id="log-box" class="rounded-lg"></div>
             </div>
             <div class="sys-pane hidden" data-pane="wizard">
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm max-w-2xl mx-auto overflow-hidden">
-                    <div class="flex justify-between items-center px-5 py-2.5 bg-slate-100 border-b border-slate-200">
-                        <span class="font-semibold text-slate-800">Setup Wizard</span>
+                <div class="max-w-2xl mx-auto px-4 sm:px-0">
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="flex justify-between items-center px-5 py-2.5 bg-slate-100 border-b border-slate-200">
+                            <span class="font-semibold text-slate-800">Setup Wizard</span>
+                        </div>
+                        <div class="p-5">
+                            <p class="text-xs text-slate-500">Step through the guided setup to configure your receiver, sharing and viewer.</p>
+                        </div>
                     </div>
-                    <div class="p-5">
-                        <p class="text-xs text-slate-500 mb-3">Step through the guided setup to configure your receiver, sharing and viewer.</p>
-                        <button id="hub-btn-wizard" class="w-full sm:w-auto bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 shadow-sm px-4 py-2 rounded-lg transition text-sm font-medium">Open Setup Wizard</button>
+                    <div class="mt-6 sm:mt-8 flex flex-row flex-wrap justify-end items-center gap-2 sm:gap-3">
+                        <button id="hub-btn-wizard" class="w-auto bg-white border border-slate-300 text-slate-700 px-4 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 transition duration-200 shadow-sm inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-medium">Open Setup Wizard</button>
                     </div>
                 </div>
             </div>
             <div class="sys-pane hidden" data-pane="password">
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm max-w-2xl mx-auto overflow-hidden">
-                    <div class="flex justify-between items-center px-5 py-2.5 bg-slate-100 border-b border-slate-200">
-                        <span class="font-semibold text-slate-800">Reset Password</span>
+                <div class="max-w-2xl mx-auto px-4 sm:px-0">
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="flex justify-between items-center px-5 py-2.5 bg-slate-100 border-b border-slate-200">
+                            <span class="font-semibold text-slate-800">Reset Password</span>
+                        </div>
+                        <div class="p-5">
+                            <form id="password-form" class="space-y-2">
+                                <input id="new-password" type="password" autocomplete="new-password" placeholder="New password"
+                                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                                <input id="new-password2" type="password" autocomplete="new-password" placeholder="Confirm new password"
+                                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                            </form>
+                            ${auth === 'open' ? '<p class="text-xs text-slate-500 mt-3">Local access needs no password; this one is used when AIS-catcher is started with LAN access (bind 0.0.0.0).</p>' : ''}
+                        </div>
                     </div>
-                    <div class="p-5">
-                        <form id="password-form" class="space-y-2">
-                            <input id="new-password" type="password" autocomplete="new-password" placeholder="New password"
-                                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
-                            <input id="new-password2" type="password" autocomplete="new-password" placeholder="Confirm new password"
-                                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
-                            <div class="flex justify-end pt-1">
-                                <button type="submit" class="w-auto sm:w-32 bg-white border border-slate-300 text-slate-700 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 shadow-sm transition-all duration-200 text-xs sm:text-sm font-medium">Reset</button>
-                            </div>
-                        </form>
-                        ${auth === 'open' ? '<p class="text-xs text-slate-500 mt-3">Local access needs no password; this one is used when AIS-catcher is started with LAN access (bind 0.0.0.0).</p>' : '<button id="hub-btn-logout" class="mt-4 w-full sm:w-auto border border-slate-300 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg transition text-sm font-medium">Logout</button>'}
+                    <div class="mt-6 sm:mt-8 flex flex-row flex-wrap justify-end items-center gap-2 sm:gap-3">
+                        ${auth === 'open' ? '' : '<button id="hub-btn-logout" type="button" class="w-auto sm:w-32 bg-white border border-slate-300 text-slate-700 px-4 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 transition duration-200 shadow-sm inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-medium">Logout</button>'}
+                        <button type="submit" form="password-form" class="w-auto sm:w-32 bg-white border border-slate-300 text-slate-700 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 shadow-sm transition-all duration-200 text-xs sm:text-sm font-medium">Reset</button>
                     </div>
                 </div>
             </div>
@@ -748,7 +795,7 @@
         if (auth !== 'open')
             document.getElementById('hub-btn-logout').addEventListener('click', logout);
 
-        updateControlStatus();
+        refreshEngineStatus();
         startLogStream();
     }
 
@@ -989,28 +1036,6 @@
             });
     }
 
-    // Refresh the System > Status pane. The elements only exist while the
-    // modal is open, so this is a cheap no-op otherwise; it is driven both by
-    // the initial open and by the 5s status poll so the tab stays live.
-    function renderHubStatus(data) {
-        if (!data) return;
-        const statusEl = document.getElementById('hub-status');
-        const uptimeEl = document.getElementById('hub-uptime');
-        if (!statusEl && !uptimeEl) return;
-        const running = data.engine === 'running';
-
-        if (statusEl) {
-            statusEl.innerHTML = running
-                ? '<span class="text-sm font-medium text-emerald-600">Running</span><span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>'
-                : '<span class="text-sm font-medium text-slate-600">Stopped</span><span class="relative flex h-2.5 w-2.5"><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-400"></span></span>';
-        }
-        if (uptimeEl) uptimeEl.textContent = running ? 'Uptime: ' + formatUptime(data.uptime) : '';
-    }
-
-    function updateControlStatus() {
-        refreshEngineStatus().then(renderHubStatus);
-    }
-
     function changePassword(e) {
         e.preventDefault();
         const p1 = document.getElementById('new-password').value;
@@ -1042,7 +1067,11 @@
         document.getElementById('nav-start-restart').addEventListener('click', onStartRestartClick);
         document.getElementById('nav-btn-input').addEventListener('click', () => openSystem('input'));
         document.getElementById('nav-btn-output').addEventListener('click', () => openSystem('output'));
-        document.getElementById('nav-btn-control').addEventListener('click', () => openSystem('status'));
+        document.getElementById('nav-btn-control').addEventListener('click', () => openSystem('flow'));
+        document.getElementById('login-pill').addEventListener('click', () => { pendingAction = null; openLoginModal(); });
+        document.getElementById('bar-collapse').addEventListener('click', () => setBarCollapsed(true));
+        document.getElementById('bar-restore').addEventListener('click', () => setBarCollapsed(false));
+        try { if (localStorage.getItem('hubBarCollapsed') === '1') setBarCollapsed(true); } catch (e) { /* ignore */ }
         document.getElementById('system-close').addEventListener('click', closeSystem);
         systemOverlay.addEventListener('click', e => {
             if (e.target === systemOverlay) closeSystem();
@@ -1056,8 +1085,8 @@
             .then(data => {
                 auth = data.auth;
                 port = data.viewer || 0;
-                updateStartRestartButton(data.engine === 'running', data.uptime);
-                setAuthButtons(isLoggedIn());
+                renderEngineState(data);
+                updateBarVisibility();
                 startStatusPolling();
                 startAlertStream();
                 startChannelLeds();

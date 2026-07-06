@@ -441,7 +441,13 @@
                 if (global.App && App.notify) App.notify('success', 'Configuration saved');
                 if (startAfter)
                     return fetch('/api/status').then(r => r.json())
-                        .then(st => fetch('/api/engine', { method: 'POST', body: st.engine === 'running' ? 'restart' : 'start' }));
+                        .then(st => fetch('/api/engine', { method: 'POST', body: st.engine === 'running' ? 'restart' : 'start' }))
+                        .then(r => r.json())
+                        .then(res => {
+                            if (!res.status && global.App && App.notify)
+                                App.notify('error', 'Could not start the receiver: ' + (res.error || 'request failed'));
+                        })
+                        .catch(() => { if (global.App && App.notify) App.notify('error', 'Could not start the receiver'); });
             })
             .catch(e => {
                 nextBtn.disabled = false;

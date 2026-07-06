@@ -166,4 +166,5 @@ public:
 
 	void play();
 	void stop();
+	void logSummary();
 };

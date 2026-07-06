@@ -272,8 +272,11 @@ namespace Device
 			char v[256] = {0}, p[256] = {0}, s[256] = {0};
 			int rc = rtlsdr_get_device_usb_strings(i, v, p, s);
 			if (rc != 0)
-				Warning() << "RTLSDR: cannot read USB strings for device " << i
-						  << " (error " << rc << ": " << libusbErrorName(rc) << ").";
+			{
+				Info() << "RTLSDR: device " << i << " present but not accessible (error "
+					   << rc << ": " << libusbErrorName(rc) << "); may need a WinUSB driver.";
+				continue;
+			}
 			DeviceList.push_back(Description(v, p, s, (uint64_t)i, Type::RTLSDR));
 		}
 	}

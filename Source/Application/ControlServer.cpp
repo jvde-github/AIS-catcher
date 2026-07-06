@@ -177,6 +177,8 @@ void ControlServer::sendStatus(IO::TCPServerConnection &c, bool authenticated)
 	w.beginObject()
 		.kv("auth", auth)
 		.kv("engine", running ? "running" : "stopped")
+		.kv("desired", core.engineDesired())
+		.kv("retrying", core.engineRetrying())
 		.kv("uptime", core.getUptime())
 		.kv("viewer", core.getViewerPort())
 		.endObject()
@@ -211,7 +213,20 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 		else if (origin.compare(0, 8, "https://") == 0)
 			origin = origin.substr(8);
 
-		if (origin != r.host)
+		auto stripDefaultPort = [](std::string h) -> std::string {
+			if (h.size() > 3 && h.compare(h.size() - 3, 3, ":80") == 0)
+				return h.substr(0, h.size() - 3);
+			if (h.size() > 4 && h.compare(h.size() - 4, 4, ":443") == 0)
+				return h.substr(0, h.size() - 4);
+			return h;
+		};
+
+		origin = stripDefaultPort(origin);
+
+		bool same_origin = origin == stripDefaultPort(r.host) ||
+						   (!r.forwarded_host.empty() && origin == stripDefaultPort(r.forwarded_host));
+
+		if (!same_origin)
 		{
 			sendError(c, "cross-origin request rejected", 403);
 			return;

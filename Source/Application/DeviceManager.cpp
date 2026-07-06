@@ -115,19 +115,29 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 
 		if (!serial.empty() || type != Type::NONE)
 		{
-			idx = -1;
+			std::vector<int> matches;
 			for (int i = 0; i < device_list.size(); i++)
 			{
 				bool serial_match = device_list[i].getSerial() == serial && (type == Type::NONE || type == device_list[i].getType());
 				bool type_match = serial.empty() && (type == device_list[i].getType());
 
 				if (serial_match || type_match)
-				{
-					idx = i;
-					handle = device_list[i].getHandle();
-					break;
-				}
+					matches.push_back(i);
 			}
+
+			idx = -1;
+			for (int m : matches)
+				if (!device_list[m].isClaimed()) { idx = m; break; }
+
+			if (idx == -1 && !matches.empty())
+			{
+				Device::Description &d = device_list[matches.front()];
+				Error() << "Device Manager: configuration opens the same device twice ("
+						<< Util::Parse::DeviceTypeString(d.getType()) << " SN " << d.getSerial()
+						<< "). Each receiver must select a distinct device (set a unique \"serial\").";
+				return false;
+			}
+
 			if (idx == -1)
 			{
 				if (!serial.empty())
@@ -139,6 +149,19 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 
 				idx = 0;
 				handle = 0;
+			}
+			else
+			{
+				handle = device_list[idx].getHandle();
+				device_list[idx].setClaimed();
+
+				if (serial.empty() && matches.size() > 1)
+				{
+					Device::Description &d = device_list[idx];
+					Warning() << "Device Manager: multiple devices match type "
+							  << Util::Parse::DeviceTypeString(type) << "; selecting SN " << d.getSerial()
+							  << ". Set \"serial\" to choose a specific device.";
+				}
 			}
 		}
 

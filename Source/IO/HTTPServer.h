@@ -107,6 +107,7 @@ namespace IO
 		std::string cookie;
 		std::string host;
 		std::string origin;
+		std::string forwarded_host;
 
 		std::string path() const
 		{

@@ -174,8 +174,6 @@ namespace Managed
 							reapplyViewerSettings(*viewer, config_file);
 					}
 #endif
-					core.reportRunning();
-					Info() << "Control: engine started";
 #ifdef HASWEBVIEWER
 					run(state, viewer.get(), &core);
 #else
@@ -184,7 +182,7 @@ namespace Managed
 				}
 				catch (std::exception const &e)
 				{
-					Error() << "Control: engine failed: " << e.what();
+					Error() << e.what();
 					for (auto &r : state.receivers)
 						r->stop();
 #ifdef HASWEBVIEWER

@@ -131,6 +131,7 @@ public:
 
 	// Config
 	void applyConfig(const TrackingConfig &cfg, const AIS::Filter &f);
+	void setStationPosition(float lat, float lon, bool use_gps) { ships.setConfigPosition(lat, lon, use_gps); }
 
 	// Lifecycle
 	void setup();
@@ -296,6 +297,8 @@ private:
 
 	PluginManager pluginManager;
 	TrackingConfig tracking;
+
+	void applyStationPosition();
 
 	// All receiver states. Index 0 = aggregate "All", index 1..N = per-receiver (only when N > 1).
 	std::vector<std::unique_ptr<ReceiverTracker>> states;

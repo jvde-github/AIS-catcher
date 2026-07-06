@@ -45,8 +45,12 @@ const ChannelFields = {
         defaultValue: defaultValue,
         options: [
             { value: 'NMEA', label: 'NMEA' },
+            { value: 'NMEA_TAG', label: 'NMEA + TAG' },
             { value: 'JSON_NMEA', label: 'JSON with NMEA' },
-            { value: 'JSON_FULL', label: 'JSON Full' }
+            { value: 'JSON_SPARSE', label: 'JSON (compact)' },
+            { value: 'JSON_FULL', label: 'JSON (full)' },
+            { value: 'JSON_ANNOTATED', label: 'JSON (annotated)' },
+            { value: 'BINARY_NMEA', label: 'Binary' }
         ]
     }),
     position_interval: () => ({
@@ -56,7 +60,7 @@ const ChannelFields = {
         defaultValue: false,
         defaultInteger: 60,
         min: 0,
-        max: 300,
+        max: 3600,
         step: 1
     }),
     zones: () => ({
@@ -315,7 +319,8 @@ const webviewerSchema = {
         type: 'number',
         jsonpath: 'backup',
         defaultValue: 10,
-        min: 0,
+        min: 5,
+        max: 2880,
         width: 25
     },
     history: {
@@ -573,8 +578,8 @@ const receiverSchema = {
         label: "Frequency Correction (ppm)",
         type: "number",
         jsonpath: "rtlsdr.freqoffset",
-        min: -50,
-        max: 50,
+        min: -150,
+        max: 150,
         defaultValue: 0,
         dependsOn: {
             field: "input",
@@ -879,7 +884,8 @@ const receiverSchema = {
             { value: "mqtt", label: "MQTT" },
             { value: "gpsd", label: "GPSD" },
             { value: "beast", label: "BEAST" },
-            { value: "basestation", label: "BASESTATION" }
+            { value: "basestation", label: "BASESTATION" },
+            { value: "raw1090", label: "RAW1090" }
         ],
         dependsOn: {
             field: "input",
@@ -1068,7 +1074,7 @@ const receiverSchema = {
             { value: 1, label: "1" },
             { value: 2, label: "2" }
         ],
-        defaultValue: "0",
+        defaultValue: 0,
         dependsOn: {
             field: "rtltcp_protocol",
             value: ["mqtt", "wsmqtt"]
@@ -1221,7 +1227,7 @@ const receiverSchema = {
         label: "Port",
         type: "number",
         jsonpath: "spyserver.port",
-        placeholder: "e.g., 5555",
+        placeholder: "e.g., 1234",
         defaultValue: "1234",
         dependsOn: {
             field: "input",

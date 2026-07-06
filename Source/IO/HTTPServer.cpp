@@ -169,6 +169,12 @@ namespace IO
 				value.erase(0, value.find_first_not_of(" \t"));
 				r.origin = value;
 			}
+			else if (key == "X-FORWARDED-HOST:")
+			{
+				std::getline(line_stream, value);
+				value.erase(0, value.find_first_not_of(" \t"));
+				r.forwarded_host = value;
+			}
 			else if (key == "CONTENT-LENGTH:")
 			{
 				std::getline(line_stream, value);

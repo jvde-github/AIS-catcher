@@ -27,6 +27,8 @@
 #include "Stream.h"
 #include "Message.h"
 
+namespace JSON { class Value; }
+
 class ChannelActivity : public StreamIn<AIS::Message>
 {
 public:
@@ -85,6 +87,7 @@ public:
 	static std::string randomHex(size_t length);
 
 	bool engineDesired();
+	bool engineRetrying();
 	void reportRunning();
 	void reportStopped();
 	void engineFailed();
@@ -114,6 +117,13 @@ private:
 	bool auto_retry = false;
 	bool retry_pending = false;
 	int retry_delay = 0;
+
+	void resetRetry()
+	{
+		auto_retry = false;
+		retry_pending = false;
+		retry_delay = 0;
+	}
 	std::atomic<int> command_seq{0};
 
 	std::mutex file_mtx;
@@ -121,6 +131,7 @@ private:
 
 	void createDefaultConfig();
 	void readManagedFields(int port_override);
+	void applyAuthFields(const JSON::Value &control);
 	void refreshAuthFields(const std::string &json);
 	bool validate(const std::string &json, std::string &error);
 	bool writeFileAtomic(const std::string &path, const std::string &content, std::string &error);

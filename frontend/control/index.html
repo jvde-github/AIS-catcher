@@ -281,11 +281,11 @@
         #bar-left {
             flex: 1 1 0;
             min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
 
-        #bar-right {
-            min-width: max-content;
-        }
 
         #status-dot-wrap {
             display: flex;
@@ -324,6 +324,7 @@
 
         #bar-right {
             flex: 1 1 0;
+            min-width: max-content;
             display: flex;
             align-items: center;
             justify-content: flex-end;
@@ -353,6 +354,73 @@
                 display: flex;
                 align-items: center;
             }
+        }
+
+        #bar-collapse {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            background: transparent;
+            border: none;
+            color: #a1a1aa;
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+
+        #bar-collapse:hover {
+            color: #d4d4d8;
+        }
+
+        #bar-collapse svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        #bar-restore,
+        #login-pill {
+            position: fixed;
+            left: 12px;
+            bottom: calc(12px + env(safe-area-inset-bottom));
+            z-index: 55;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 0.45rem 0.8rem;
+            background: #18181b;
+            border: 1px solid #3f3f46;
+            border-radius: 9999px;
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+            transition: background-color 0.2s;
+        }
+
+        #bar-restore:hover,
+        #login-pill:hover {
+            background: #27272a;
+        }
+
+        #bar-restore.show,
+        #login-pill.show {
+            display: flex;
+        }
+
+        #bar-restore svg,
+        #login-pill svg {
+            width: 16px;
+            height: 16px;
+            color: #a1a1aa;
+        }
+
+        #restore-dot {
+            display: block;
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 9999px;
+            background: #64748b;
         }
 
         @media (min-width: 640px) {
@@ -774,14 +842,16 @@
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            background: #0857b1;
-            color: white;
+            background: #fff;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
             text-decoration: none;
             margin: 0.25rem 0;
         }
 
         .wz-btn.link:hover {
-            background: #0a66d0;
+            background: #f8fafc;
         }
 
         .wz-btn.link svg {
@@ -864,7 +934,15 @@
 
     <nav id="bottom-bar">
         <div id="bar-inner">
-        <div id="bar-left"></div>
+        <div id="bar-left">
+            <button id="bar-collapse" type="button" title="Hide controls" aria-label="Hide controls">
+                <svg viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z" />
+                </svg>
+            </button>
+            <div class="bar-divider div-640"></div>
+            <div id="channel-leds"></div>
+        </div>
         <div id="nav-buttons" class="transition-opacity">
             <button id="nav-start-restart" class="hub-button" data-view="control">
                 <svg id="nav-sr-icon" viewBox="0 -960 960 960" fill="currentColor">
@@ -903,8 +981,6 @@
                 </div>
                 <span id="status-dot-text" class="hidden sm:inline text-xs font-medium text-slate-400"></span>
             </div>
-            <div class="bar-divider div-640"></div>
-            <div id="channel-leds"></div>
             <div class="bar-divider div-768"></div>
             <a id="community-link" href="https://www.aiscatcher.org" target="_blank" rel="noopener"
                 title="AIS-catcher community map">
@@ -922,6 +998,21 @@
         </div>
         </div>
     </nav>
+
+    <button id="bar-restore" type="button" title="Show controls" aria-label="Show controls">
+        <span id="restore-dot"></span>
+        <span id="restore-label">Controls</span>
+        <svg viewBox="0 -960 960 960" fill="currentColor">
+            <path d="m480-528 184 184 56-56-240-240-240 240 56 56 184-184Z" />
+        </svg>
+    </button>
+
+    <button id="login-pill" type="button" title="Sign in" aria-label="Sign in">
+        <svg viewBox="0 -960 960 960" fill="currentColor">
+            <path d="M480-120v-80h280v-560H480v-80h280q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H480Zm-80-160-55-58 102-102H120v-80h327L345-622l55-58 200 200-200 200Z" />
+        </svg>
+        <span>Login</span>
+    </button>
 
     <script src="js/schema.js"></script>
     <script src="js/config-manager.js"></script>

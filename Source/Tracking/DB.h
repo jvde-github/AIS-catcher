@@ -144,6 +144,15 @@ public:
 		this->lon = lon;
 		gps_position = false;
 	}
+	void setConfigPosition(float lat, float lon, bool use_gps)
+	{
+		use_GPS = use_gps;
+		if (use_gps && gps_position)
+			return;
+		this->lat = lat;
+		this->lon = lon;
+		gps_position = false;
+	}
 	void setLat(float lat) { this->lat = lat; gps_position = false; }
 	void setLon(float lon) { this->lon = lon; gps_position = false; }
 
