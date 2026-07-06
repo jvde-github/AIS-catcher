@@ -338,7 +338,21 @@ jobs:
     - name: Create start.bat
       run: |
         cd output
-        Set-Content -Path start.bat -Value 'start "" /b cmd /c "timeout /t 3 >nul & start http://localhost:8100/"', 'AIS-catcher -v 10 -X -u 127.0.0.1 10110 -N 8100 PLUGIN_DIR plugins', 'PAUSE' -Encoding ascii
+        echo "AIS-catcher -v 10 -X -u 127.0.0.1 10110 -N 8100 PLUGIN_DIR plugins`nPAUSE" |Out-File -FilePath start.bat -Encoding ascii
+        @'
+        @echo off
+        if "%1"=="browser" goto browser
+        start "" /min cmd /c ""%~f0" browser"
+        AIS-catcher -E 127.0.0.1:8118
+        PAUSE
+        exit /b
+        :browser
+        timeout /t 1 >nul
+        set "EDGE=%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"
+        if not exist "%EDGE%" set "EDGE=%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"
+        if exist "%EDGE%" (start "" "%EDGE%" --app=http://127.0.0.1:8118/) else (start "" http://127.0.0.1:8118/)
+        exit /b
+        '@ | Out-File -FilePath start-GUI.bat -Encoding ascii
         cd ..
 
     - name: Building Libraries and AIS-catcher
