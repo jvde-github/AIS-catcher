@@ -185,7 +185,7 @@
                 dot.className = 'block w-2.5 h-2.5 rounded-full bg-emerald-500 cursor-default';
                 dotLabel.textContent = 'Running';
             } else {
-                dot.className = 'block w-2.5 h-2.5 rounded-full bg-zinc-500 cursor-default';
+                dot.className = 'block w-2.5 h-2.5 rounded-full bg-slate-500 cursor-default';
                 dotLabel.textContent = 'Stopped';
             }
         }
@@ -196,7 +196,7 @@
                 const up = formatUptime(uptime);
                 dotText.textContent = 'Running' + (up ? ' · ' + up : '');
             } else {
-                dotText.className = 'hidden sm:inline text-xs font-medium text-zinc-400';
+                dotText.className = 'hidden sm:inline text-xs font-medium text-slate-400';
                 dotText.textContent = 'Stopped';
             }
         }
@@ -306,7 +306,7 @@
     function showOverlayMessage(html) {
         const hubContainer = document.getElementById('hub-container');
         const div = document.createElement('div');
-        div.className = 'hub-overlay-msg flex items-center justify-center h-full bg-zinc-900 absolute inset-0 z-10';
+        div.className = 'hub-overlay-msg flex items-center justify-center h-full bg-slate-50 absolute inset-0 z-10';
         div.innerHTML = html;
         loadingDiv.classList.add('hidden');
         hubContainer.insertBefore(div, hubContainer.firstChild);
@@ -323,9 +323,9 @@
                 <svg class="h-16 w-16 text-amber-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                 </svg>
-                <h3 class="text-xl font-semibold text-zinc-100 mb-2">${title}</h3>
-                <p class="text-zinc-400 mb-4">${message}</p>
-                ${showRestart ? '<button class="hub-restart-btn inline-flex items-center gap-2 bg-zinc-100 hover:bg-white text-zinc-900 px-6 py-2 rounded-lg transition font-medium">Restart</button>' : ''}
+                <h3 class="text-xl font-semibold text-slate-800 mb-2">${title}</h3>
+                <p class="text-slate-600 mb-4">${message}</p>
+                ${showRestart ? '<button class="hub-restart-btn inline-flex items-center gap-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 shadow-sm px-6 py-2 rounded-lg transition font-medium">Restart</button>' : ''}
             </div>
         `);
         const btn = div.querySelector('.hub-restart-btn');
@@ -345,8 +345,8 @@
     function showNoViewer() {
         showOverlayMessage(`
             <div class="max-w-md p-8 text-center">
-                <h3 class="text-xl font-semibold text-zinc-100 mb-2">Viewer Not Running</h3>
-                <p class="text-zinc-400 mb-4">The built-in viewer could not be started &mdash; its port may be in use. Check the log in the Control panel.</p>
+                <h3 class="text-xl font-semibold text-slate-800 mb-2">Viewer Not Running</h3>
+                <p class="text-slate-600 mb-4">The built-in viewer could not be started &mdash; its port may be in use. Check the log in the Control panel.</p>
             </div>
         `);
     }
@@ -382,7 +382,7 @@
     }
 
     function loadingSpinner() {
-        return '<div class="text-center p-8"><div class="animate-spin h-8 w-8 border-4 border-zinc-700 border-t-zinc-300 rounded-full mx-auto mb-2"></div><p class="text-sm text-zinc-400">Loading...</p></div>';
+        return '<div class="text-center p-8"><div class="animate-spin h-8 w-8 border-4 border-slate-300 border-t-slate-600 rounded-full mx-auto mb-2"></div><p class="text-sm text-slate-600">Loading...</p></div>';
     }
 
     function configLoadFailed(retry, host) {
@@ -390,11 +390,11 @@
         const errorDiv = document.createElement('div');
         errorDiv.className = 'text-center p-8';
         const p = document.createElement('p');
-        p.className = 'text-zinc-400';
+        p.className = 'text-slate-600';
         p.textContent = 'Failed to load configuration';
         const button = document.createElement('button');
         button.onclick = retry;
-        button.className = 'mt-4 px-4 py-2 bg-zinc-600 text-white rounded-lg hover:bg-zinc-700';
+        button.className = 'mt-4 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700';
         button.textContent = 'Retry';
         errorDiv.appendChild(p);
         errorDiv.appendChild(button);
@@ -450,8 +450,8 @@
             .catch(() => configLoadFailed(loadOutputConfig, host));
     }
 
-    const OUTPUT_TAB_ACTIVE = 'flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold bg-zinc-700 text-white shadow-sm transition-all';
-    const OUTPUT_TAB_INACTIVE = 'flex-1 px-2 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-all';
+    const OUTPUT_TAB_ACTIVE = 'flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-800 shadow-sm transition-all';
+    const OUTPUT_TAB_INACTIVE = 'flex-1 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-700 transition-all';
 
     function setOutputType(value) {
         currentOutputType = value;
@@ -480,7 +480,7 @@
         wrapper.className = 'space-y-4';
 
         const tabBar = document.createElement('div');
-        tabBar.className = 'flex flex-wrap gap-1.5 p-1.5 bg-zinc-900 rounded-xl mb-2';
+        tabBar.className = 'flex flex-wrap gap-1.5 p-1.5 bg-slate-100 rounded-xl mb-2';
 
         outputTypes.forEach(({ value, label }) => {
             const btn = document.createElement('button');
@@ -667,12 +667,12 @@
             <div class="sys-pane hidden" data-pane="input"><div id="sys-input-body"></div></div>
             <div class="sys-pane hidden" data-pane="output"><div id="sys-output-body"></div></div>
             <div class="sys-pane hidden" data-pane="flow">
-                <p class="text-xs text-zinc-400 mb-4">Signal routing between inputs and outputs based on shared zones.</p>
-                <div id="flow-loading" class="text-center text-zinc-400 py-16">Loading&hellip;</div>
-                <div id="flow-empty" class="hidden text-center text-zinc-400 py-16">No receivers or outputs configured.</div>
+                <p class="text-xs text-slate-500 mb-4">Signal routing between inputs and outputs based on shared zones.</p>
+                <div id="flow-loading" class="text-center text-slate-400 py-16">Loading&hellip;</div>
+                <div id="flow-empty" class="hidden text-center text-slate-400 py-16">No receivers or outputs configured.</div>
                 <div id="flow-patch" class="hidden">
                     <div id="flow-legend" class="flex flex-wrap gap-2 mb-5"></div>
-                    <div class="grid mb-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider" style="grid-template-columns:1fr 100px 1fr">
+                    <div class="grid mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider" style="grid-template-columns:1fr 100px 1fr">
                         <div>Input</div><div></div><div>Output</div>
                     </div>
                     <div id="flow-graph" class="relative" style="min-height:60px">
@@ -686,19 +686,19 @@
                 </div>
             </div>
             <div class="sys-pane hidden" data-pane="status">
-                <div class="bg-zinc-800 rounded-lg p-4 border border-zinc-700 w-full max-w-md mx-auto">
+                <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 w-full max-w-md mx-auto">
                     <div class="flex items-center justify-between mb-2">
-                        <span class="font-semibold text-zinc-100">Receiver</span>
+                        <span class="font-semibold text-slate-800">Receiver</span>
                         <div id="hub-status" class="flex items-center space-x-2">
-                            <span class="text-sm font-medium text-zinc-400">Checking...</span>
+                            <span class="text-sm font-medium text-slate-600">Checking...</span>
                         </div>
                     </div>
-                    <div id="hub-uptime" class="text-sm text-zinc-400"></div>
+                    <div id="hub-uptime" class="text-sm text-slate-600"></div>
                 </div>
             </div>
             <div class="sys-pane hidden" data-pane="viewer">
                 <div>
-                    <p class="text-xs text-zinc-400 mb-3">Settings for the built-in map viewer. Changes take effect on the next receiver restart; reload the page to see new tabs.</p>
+                    <p class="text-xs text-slate-500 mb-3">Settings for the built-in map viewer. Changes take effect on the next receiver restart; reload the page to see new tabs.</p>
                     <div id="viewer-config-container"></div>
                 </div>
             </div>
@@ -709,41 +709,34 @@
                 <div id="log-box" class="rounded-lg"></div>
             </div>
             <div class="sys-pane hidden" data-pane="wizard">
-                <div>
-                    <div class="bg-zinc-800 rounded-xl border border-zinc-700 shadow-sm max-w-2xl mx-auto overflow-hidden">
-                        <div class="flex justify-between items-center px-5 py-2.5 bg-zinc-900 border-b border-zinc-700">
-                            <span class="font-semibold text-zinc-100">Setup Wizard</span>
-                        </div>
-                        <div class="p-5">
-                            <p class="text-xs text-zinc-400">Step through the guided setup to configure your receiver, sharing and viewer.</p>
-                        </div>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm max-w-2xl mx-auto overflow-hidden">
+                    <div class="flex justify-between items-center px-5 py-2.5 bg-slate-100 border-b border-slate-200">
+                        <span class="font-semibold text-slate-800">Setup Wizard</span>
                     </div>
-                    <div class="mt-6 sm:mt-8 px-4 sm:px-0 flex justify-end max-w-2xl mx-auto">
-                        <button id="hub-btn-wizard" class="w-auto bg-zinc-800 border border-zinc-600 text-zinc-200 hover:bg-zinc-700 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg transition-all duration-200 text-xs sm:text-sm font-medium">Open Setup Wizard</button>
+                    <div class="p-5">
+                        <p class="text-xs text-slate-500 mb-3">Step through the guided setup to configure your receiver, sharing and viewer.</p>
+                        <button id="hub-btn-wizard" class="w-full sm:w-auto bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 shadow-sm px-4 py-2 rounded-lg transition text-sm font-medium">Open Setup Wizard</button>
                     </div>
                 </div>
             </div>
             <div class="sys-pane hidden" data-pane="password">
-                <form id="password-form">
-                    <div class="bg-zinc-800 rounded-xl border border-zinc-700 shadow-sm max-w-2xl mx-auto overflow-hidden">
-                        <div class="flex justify-between items-center px-5 py-2.5 bg-zinc-900 border-b border-zinc-700">
-                            <span class="font-semibold text-zinc-100">Reset Password</span>
-                        </div>
-                        <div class="p-5">
-                            <div class="space-y-2">
-                                <input id="new-password" type="password" autocomplete="new-password" placeholder="New password"
-                                    class="w-full bg-zinc-900 text-zinc-100 placeholder-zinc-500 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500" />
-                                <input id="new-password2" type="password" autocomplete="new-password" placeholder="Confirm new password"
-                                    class="w-full bg-zinc-900 text-zinc-100 placeholder-zinc-500 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500" />
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm max-w-2xl mx-auto overflow-hidden">
+                    <div class="flex justify-between items-center px-5 py-2.5 bg-slate-100 border-b border-slate-200">
+                        <span class="font-semibold text-slate-800">Reset Password</span>
+                    </div>
+                    <div class="p-5">
+                        <form id="password-form" class="space-y-2">
+                            <input id="new-password" type="password" autocomplete="new-password" placeholder="New password"
+                                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                            <input id="new-password2" type="password" autocomplete="new-password" placeholder="Confirm new password"
+                                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                            <div class="flex justify-end pt-1">
+                                <button type="submit" class="w-auto sm:w-32 bg-white border border-slate-300 text-slate-700 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 shadow-sm transition-all duration-200 text-xs sm:text-sm font-medium">Reset</button>
                             </div>
-                            ${auth === 'open' ? '<p class="text-xs text-zinc-400 mt-3">Local access needs no password; this one is used when AIS-catcher is started with LAN access (bind 0.0.0.0).</p>' : ''}
-                        </div>
+                        </form>
+                        ${auth === 'open' ? '<p class="text-xs text-slate-500 mt-3">Local access needs no password; this one is used when AIS-catcher is started with LAN access (bind 0.0.0.0).</p>' : '<button id="hub-btn-logout" class="mt-4 w-full sm:w-auto border border-slate-300 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg transition text-sm font-medium">Logout</button>'}
                     </div>
-                    <div class="mt-6 sm:mt-8 px-4 sm:px-0 flex flex-row flex-wrap justify-end items-center gap-2 sm:gap-3 max-w-2xl mx-auto">
-                        ${auth === 'open' ? '' : '<button id="hub-btn-logout" type="button" class="w-auto sm:w-32 bg-zinc-800 border border-zinc-600 text-zinc-200 hover:bg-zinc-700 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg transition-all duration-200 text-xs sm:text-sm font-medium">Logout</button>'}
-                        <button type="submit" class="w-auto sm:w-32 bg-zinc-800 border border-zinc-600 text-zinc-200 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-zinc-700 shadow-sm transition-all duration-200 text-xs sm:text-sm font-medium">Reset</button>
-                    </div>
-                </form>
+                </div>
             </div>
         `;
 
@@ -818,11 +811,11 @@
         const border = active ? 'border-r-emerald-400' : 'border-r-rose-400';
         const div = document.createElement('button');
         div.type = 'button';
-        div.className = `text-left bg-zinc-800 border border-zinc-700 border-r-[6px] ${border} rounded-lg px-3 py-2.5 shadow-sm min-w-0 cursor-pointer hover:bg-zinc-700 transition-colors`;
+        div.className = `text-left bg-white border border-slate-200 border-r-[6px] ${border} rounded-lg px-3 py-2.5 shadow-sm min-w-0 cursor-pointer hover:bg-slate-50 transition-colors`;
         div.addEventListener('click', onClick);
 
         const lbl = document.createElement('div');
-        lbl.className = 'text-sm font-medium text-zinc-100 truncate';
+        lbl.className = 'text-sm font-medium text-slate-700 truncate';
         lbl.textContent = label;
         div.appendChild(lbl);
 
@@ -833,7 +826,7 @@
             div.appendChild(row);
         } else if (!isInput) {
             const note = document.createElement('div');
-            note.className = 'text-xs text-zinc-400 italic mt-0.5';
+            note.className = 'text-xs text-slate-400 italic mt-0.5';
             note.textContent = 'all inputs';
             div.appendChild(note);
         }
@@ -1009,7 +1002,7 @@
         if (statusEl) {
             statusEl.innerHTML = running
                 ? '<span class="text-sm font-medium text-emerald-600">Running</span><span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>'
-                : '<span class="text-sm font-medium text-zinc-400">Stopped</span><span class="relative flex h-2.5 w-2.5"><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-zinc-400"></span></span>';
+                : '<span class="text-sm font-medium text-slate-600">Stopped</span><span class="relative flex h-2.5 w-2.5"><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-400"></span></span>';
         }
         if (uptimeEl) uptimeEl.textContent = running ? 'Uptime: ' + formatUptime(data.uptime) : '';
     }

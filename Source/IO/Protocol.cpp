@@ -167,7 +167,9 @@ namespace Protocol
 #endif
 
 			// Error a wedged (half-open / zero-window) socket instead of hanging forever.
+#if defined(TCP_USER_TIMEOUT) || (defined(_WIN32) && defined(TCP_MAXRT))
 			const int user_timeout_ms = (idle + 5 * 2) * 1000;
+#endif
 #if defined(TCP_USER_TIMEOUT)
 			if (setsockopt(sock, IPPROTO_TCP, TCP_USER_TIMEOUT, (const char *)&user_timeout_ms, sizeof(user_timeout_ms)))
 				Debug() << "TCP (" << host << ":" << port << "): TCP_USER_TIMEOUT not applied: " << strerror(errno);
