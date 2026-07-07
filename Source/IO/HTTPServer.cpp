@@ -135,49 +135,55 @@ namespace IO
 			if (line.empty())
 				break;
 
-			std::istringstream line_stream(line);
-			std::string key, value;
-			std::getline(line_stream, key, ' ');
-			Util::Convert::toUpper(key);
+			if (first_line)
+			{
+				first_line = false;
 
-			if (first_line && (key == "GET" || key == "POST"))
-			{
-				r.method = key;
-				std::getline(line_stream, value, ' ');
-				r.target = value;
+				std::istringstream line_stream(line);
+				std::string key, value;
+				std::getline(line_stream, key, ' ');
+				Util::Convert::toUpper(key);
+
+				if (key == "GET" || key == "POST")
+				{
+					r.method = key;
+					std::getline(line_stream, value, ' ');
+					r.target = value;
+				}
+				continue;
 			}
-			else if (key == "ACCEPT-ENCODING:")
+
+			std::size_t colon = line.find(':');
+			if (colon == std::string::npos)
+				continue;
+
+			std::string key = line.substr(0, colon);
+			std::string value = line.substr(colon + 1);
+			Util::Convert::toUpper(key);
+			value.erase(0, value.find_first_not_of(" \t"));
+
+			if (key == "ACCEPT-ENCODING")
 			{
-				std::getline(line_stream, value);
 				accept_gzip = value.find("gzip") != std::string::npos;
 			}
-			else if (key == "COOKIE:")
+			else if (key == "COOKIE")
 			{
-				std::getline(line_stream, value);
-				value.erase(0, value.find_first_not_of(" \t"));
 				r.cookie = value;
 			}
-			else if (key == "HOST:")
+			else if (key == "HOST")
 			{
-				std::getline(line_stream, value);
-				value.erase(0, value.find_first_not_of(" \t"));
 				r.host = value;
 			}
-			else if (key == "ORIGIN:")
+			else if (key == "ORIGIN")
 			{
-				std::getline(line_stream, value);
-				value.erase(0, value.find_first_not_of(" \t"));
 				r.origin = value;
 			}
-			else if (key == "X-FORWARDED-HOST:")
+			else if (key == "X-FORWARDED-HOST")
 			{
-				std::getline(line_stream, value);
-				value.erase(0, value.find_first_not_of(" \t"));
 				r.forwarded_host = value;
 			}
-			else if (key == "CONTENT-LENGTH:")
+			else if (key == "CONTENT-LENGTH")
 			{
-				std::getline(line_stream, value);
 				try
 				{
 					content_length = std::stoul(value);
@@ -191,8 +197,6 @@ namespace IO
 					content_length = 0;
 				}
 			}
-
-			first_line = false;
 		}
 
 		if (!r.method.empty() && content_length > 0)

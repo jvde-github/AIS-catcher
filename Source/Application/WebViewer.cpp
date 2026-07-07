@@ -1353,10 +1353,10 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	}
 	else if (r == "/api/log" && showlog)
 	{
-		IO::SSEConnection *s = upgradeSSE(c, 3);
-		if (s)
-			for (auto &m : Logger::getInstance().getLastMessages(25))
-				s->SendEvent("log", m.toJSON());
+		std::vector<std::string> backlog;
+		for (auto &m : Logger::getInstance().getLastMessages(25))
+			backlog.push_back(m.toJSON());
+		upgradeSSE(c, 3, backlog);
 	}
 	// Prefix-match routes
 	else if (r.substr(0, 6) == "/tiles")

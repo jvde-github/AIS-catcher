@@ -166,7 +166,7 @@
                 }
                 auth = 'ok';
                 updateBarVisibility();
-                startAlertStream();
+                startLogStream();
                 startChannelLeds();
                 const action = pendingAction;
                 closeLoginModal();
@@ -250,6 +250,8 @@
                 if (data.auth !== auth) {
                     auth = data.auth;
                     updateBarVisibility();
+                    startLogStream();
+                    startChannelLeds();
                 }
                 renderEngineState(data);
                 setEngineButtonDisabled(false);
@@ -281,6 +283,11 @@
     function startStatusPolling() {
         if (statusPollInterval) return;
         statusPollInterval = setInterval(refreshEngineStatus, 1000);
+    }
+
+    function stopStatusPolling() {
+        clearInterval(statusPollInterval);
+        statusPollInterval = null;
     }
 
     window.hubConfigSaved = function (kind) {
@@ -361,11 +368,13 @@
                 <svg class="h-16 w-16 text-amber-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                 </svg>
-                <h3 class="text-xl font-semibold text-slate-800 mb-2">${title}</h3>
-                <p class="text-slate-600 mb-4">${message}</p>
+                <h3 class="hub-err-title text-xl font-semibold text-slate-800 mb-2"></h3>
+                <p class="hub-err-msg text-slate-600 mb-4"></p>
                 ${showRestart ? '<button class="hub-restart-btn inline-flex items-center gap-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 shadow-sm px-6 py-2 rounded-lg transition font-medium">Restart</button>' : ''}
             </div>
         `);
+        div.querySelector('.hub-err-title').textContent = title;
+        div.querySelector('.hub-err-msg').textContent = message;
         const btn = div.querySelector('.hub-restart-btn');
         if (btn)
             btn.addEventListener('click', () => {
@@ -419,50 +428,21 @@
         }
     }
 
-    function loadingSpinner() {
-        return '<div class="text-center p-8"><div class="animate-spin h-8 w-8 border-4 border-slate-300 border-t-slate-600 rounded-full mx-auto mb-2"></div><p class="text-sm text-slate-600">Loading...</p></div>';
-    }
-
-    function configLoadFailed(retry, host) {
-        host.textContent = '';
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'text-center p-8';
-        const p = document.createElement('p');
-        p.className = 'text-slate-600';
-        p.textContent = 'Failed to load configuration';
-        const button = document.createElement('button');
-        button.onclick = retry;
-        button.className = 'mt-4 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700';
-        button.textContent = 'Retry';
-        errorDiv.appendChild(p);
-        errorDiv.appendChild(button);
-        host.appendChild(errorDiv);
-    }
-
     function loadSourceConfig() {
         const host = document.getElementById('sys-input-body');
         if (!host) return;
-        host.innerHTML = loadingSpinner();
-        fetch('/api/config')
-            .then(res => {
-                if (!res.ok) throw new Error('Failed to fetch configuration');
-                return res.json();
-            })
-            .then(() => {
-                host.textContent = '';
-                const container = document.createElement('div');
-                container.id = 'hub-receivers-container';
-                container.className = 'space-y-4';
-                host.appendChild(container);
+        host.textContent = '';
+        const container = document.createElement('div');
+        container.id = 'hub-receivers-container';
+        container.className = 'space-y-4';
+        host.appendChild(container);
 
-                createChannelManager({
-                    channelType: 'receiver',
-                    schema: receiverSchema,
-                    containerId: 'hub-receivers-container',
-                    title: 'Receiver'
-                });
-            })
-            .catch(() => configLoadFailed(loadSourceConfig, host));
+        createChannelManager({
+            channelType: 'receiver',
+            schema: receiverSchema,
+            containerId: 'hub-receivers-container',
+            title: 'Receiver'
+        });
     }
 
     const outputTypes = [
@@ -478,20 +458,17 @@
     function loadOutputConfig() {
         const host = document.getElementById('sys-output-body');
         if (!host) return;
-        host.innerHTML = loadingSpinner();
-        fetch('/api/config')
-            .then(res => {
-                if (!res.ok) throw new Error('Failed to fetch configuration');
-                return res.json();
-            })
-            .then(() => renderOutputConfig(host))
-            .catch(() => configLoadFailed(loadOutputConfig, host));
+        renderOutputConfig(host);
     }
 
     const OUTPUT_TAB_ACTIVE = 'flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-800 shadow-sm transition-all';
     const OUTPUT_TAB_INACTIVE = 'flex-1 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-700 transition-all';
 
     function setOutputType(value) {
+        if (value !== currentOutputType && typeof App !== 'undefined' && App.state && App.state.unsaved) {
+            if (!confirm('You have unsaved changes. Are you sure you want to switch without saving?')) return;
+            App.setUnsaved(false);
+        }
         currentOutputType = value;
         document.querySelectorAll('[data-output-type]').forEach(b => {
             b.className = b.dataset.outputType === value ? OUTPUT_TAB_ACTIVE : OUTPUT_TAB_INACTIVE;
@@ -566,68 +543,67 @@
         }
     }
 
-    let alertSource = null;
-    let alertReplayDone = false;
-    let alertReplayUntil = 0;
-    let lastAlertTime = '';
+    let logReplayDone = false;
+    let logReplayUntil = 0;
+    let lastLogTime = '';
+    const logBuffer = [];
+    const LOG_BUFFER_MAX = 500;
 
-    function startAlertStream() {
-        if (alertSource || !isLoggedIn()) return;
-        alertReplayDone = false;
-        alertSource = new EventSource('/api/log');
-        alertSource.addEventListener('log', e => {
+    function buildLogLine(m) {
+        const level = ['error', 'critical'].indexOf(m.level) >= 0 ? 'error'
+            : ['warning', 'info', 'debug'].indexOf(m.level) >= 0 ? m.level : 'default';
+        const line = document.createElement('div');
+        line.className = 'log-line ' + level;
+        const ts = document.createElement('span');
+        ts.className = 'log-ts';
+        ts.textContent = m.time;
+        const msg = document.createElement('span');
+        msg.textContent = m.message;
+        line.appendChild(ts);
+        line.appendChild(msg);
+        return line;
+    }
+
+    function renderLogBox() {
+        const box = document.getElementById('log-box');
+        if (!box) return;
+        box.textContent = '';
+        logBuffer.forEach(m => box.appendChild(buildLogLine(m)));
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function startLogStream() {
+        if (logSource || !isLoggedIn()) return;
+        logReplayDone = false;
+        logSource = new EventSource('/api/log');
+        logSource.addEventListener('log', e => {
             try {
                 const m = JSON.parse(e.data);
-                if (Date.now() < alertReplayUntil && m.time && m.time <= lastAlertTime) return;
-                if (m.time && m.time > lastAlertTime) lastAlertTime = m.time;
-                if (!alertReplayDone) return;
+                if (Date.now() < logReplayUntil && m.time && m.time <= lastLogTime) return;
+                if (m.time && m.time > lastLogTime) lastLogTime = m.time;
+
+                logBuffer.push(m);
+                if (logBuffer.length > LOG_BUFFER_MAX) logBuffer.shift();
+                const box = document.getElementById('log-box');
+                if (box) {
+                    box.appendChild(buildLogLine(m));
+                    while (box.childElementCount > LOG_BUFFER_MAX)
+                        box.removeChild(box.firstChild);
+                    box.scrollTop = box.scrollHeight;
+                }
+
+                if (!logReplayDone) return;
                 if (m.level === 'error' || m.level === 'critical') {
                     App.notify('error', m.message);
                 } else if (m.level === 'warning')
                     App.notify('warning', m.message);
             } catch (_) { }
         });
-        alertSource.onopen = () => {
-            alertReplayUntil = Date.now() + 500;
-            if (!alertReplayDone)
-                setTimeout(() => { alertReplayDone = true; }, 500);
+        logSource.onopen = () => {
+            logReplayUntil = Date.now() + 500;
+            if (!logReplayDone)
+                setTimeout(() => { logReplayDone = true; }, 500);
         };
-    }
-
-    function stopLogStream() {
-        if (logSource) {
-            logSource.close();
-            logSource = null;
-        }
-    }
-
-    function startLogStream() {
-        stopLogStream();
-        const box = document.getElementById('log-box');
-        if (!box) return;
-        logSource = new EventSource('/api/log');
-        logSource.addEventListener('log', e => {
-            try {
-                const m = JSON.parse(e.data);
-                const line = document.createElement('div');
-                const level = ['error', 'critical'].indexOf(m.level) >= 0 ? 'error'
-                    : ['warning', 'info', 'debug'].indexOf(m.level) >= 0 ? m.level : 'default';
-                line.className = 'log-line ' + level;
-
-                const ts = document.createElement('span');
-                ts.className = 'log-ts';
-                ts.textContent = m.time;
-                const msg = document.createElement('span');
-                msg.textContent = m.message;
-                line.appendChild(ts);
-                line.appendChild(msg);
-
-                box.appendChild(line);
-                while (box.childElementCount > 500)
-                    box.removeChild(box.firstChild);
-                box.scrollTop = box.scrollHeight;
-            } catch (_) { }
-        });
     }
 
     function openSystem(tab) {
@@ -646,7 +622,6 @@
         }
         if (typeof App !== 'undefined' && App.setUnsaved) App.setUnsaved(false);
 
-        stopLogStream();
         stopFlowObserver();
         systemOverlay.classList.remove('open');
         currentSystemTab = null;
@@ -696,7 +671,6 @@
     }
 
     function loadSystemPanel() {
-        stopLogStream();
         stopFlowObserver();
         if (typeof App !== 'undefined' && App.setUnsaved) App.setUnsaved(false);
         systemInputLoaded = false;
@@ -796,7 +770,7 @@
             document.getElementById('hub-btn-logout').addEventListener('click', logout);
 
         refreshEngineStatus();
-        startLogStream();
+        renderLogBox();
     }
 
     function loadViewerConfig() {
@@ -828,28 +802,9 @@
     // Data Flow tab: a patch-bay view of signal routing. Inputs (left) and
     // outputs (right) are linked wherever they share a zone name; outputs with
     // no zone receive from every input. Zone colours match the config chips.
-    const FLOW_ZONE_HEX = ['#93c5fd', '#6ee7b7', '#c4b5fd', '#fcd34d', '#fca5a5', '#67e8f9', '#fdba74', '#5eead4'];
-    const FLOW_ZONE_BADGE = [
-        'bg-blue-100 text-blue-700 border border-blue-200',
-        'bg-emerald-100 text-emerald-700 border border-emerald-200',
-        'bg-violet-100 text-violet-700 border border-violet-200',
-        'bg-amber-100 text-amber-700 border border-amber-200',
-        'bg-rose-100 text-rose-700 border border-rose-200',
-        'bg-cyan-100 text-cyan-700 border border-cyan-200',
-        'bg-orange-100 text-orange-700 border border-orange-200',
-        'bg-teal-100 text-teal-700 border border-teal-200'
-    ];
-    function flowZoneHash(zone) {
-        let h = 0;
-        for (let i = 0; i < zone.length; i++) h = (h * 31 + zone.charCodeAt(i)) & 0xFFFF;
-        return h;
-    }
-    const flowZoneHex = zone => FLOW_ZONE_HEX[flowZoneHash(zone) % FLOW_ZONE_HEX.length];
-    const flowZoneBadge = zone => FLOW_ZONE_BADGE[flowZoneHash(zone) % FLOW_ZONE_BADGE.length];
-
     function flowBadge(zone) {
         const s = document.createElement('span');
-        s.className = `inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${flowZoneBadge(zone)}`;
+        s.className = `inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ZoneColors.badge(zone)}`;
         s.textContent = zone;
         return s;
     }
@@ -905,7 +860,7 @@
                 path.setAttribute('stroke-width', '1.5');
                 path.setAttribute('stroke-dasharray', '5 3');
             } else {
-                path.setAttribute('stroke', flowZoneHex(zones[0]));
+                path.setAttribute('stroke', ZoneColors.hex(zones[0]));
                 path.setAttribute('stroke-width', '2.5');
                 path.setAttribute('opacity', '0.75');
             }
@@ -992,10 +947,10 @@
                 [...receivers, ...outputs].forEach(n => n.zones.forEach(z => allZones.add(z)));
                 allZones.forEach(z => {
                     const item = document.createElement('span');
-                    item.className = `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${flowZoneBadge(z)}`;
+                    item.className = `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${ZoneColors.badge(z)}`;
                     const dot = document.createElement('span');
                     dot.className = 'w-2 h-2 rounded-full flex-shrink-0';
-                    dot.style.background = flowZoneHex(z);
+                    dot.style.background = ZoneColors.hex(z);
                     item.appendChild(dot);
                     item.appendChild(document.createTextNode(z));
                     legendEl.appendChild(item);
@@ -1080,6 +1035,17 @@
             const btn = e.target.closest('.sys-tab');
             if (btn) switchSystemTab(btn.dataset.tab);
         });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && systemOverlay.classList.contains('open')) closeSystem();
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopStatusPolling();
+            } else {
+                refreshEngineStatus();
+                startStatusPolling();
+            }
+        });
 
         fetchStatus()
             .then(data => {
@@ -1088,7 +1054,7 @@
                 renderEngineState(data);
                 updateBarVisibility();
                 startStatusPolling();
-                startAlertStream();
+                startLogStream();
                 startChannelLeds();
 
                 if (auth === 'setup') {
@@ -1109,6 +1075,7 @@
             .catch(() => {
                 loadingDiv.classList.add('hidden');
                 showError('Connection Error', 'Cannot reach the control server.');
+                startStatusPolling();
             });
     }
 

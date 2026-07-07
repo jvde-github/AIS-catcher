@@ -200,6 +200,8 @@ namespace Managed
 			}
 		}
 
+		server.close();
+
 #ifdef HASWEBVIEWER
 		{
 			std::lock_guard<std::mutex> lock(viewer_mtx);

@@ -65,12 +65,15 @@
         'bg-orange-100 text-orange-700 border border-orange-200',
         'bg-teal-100 text-teal-700 border border-teal-200',
     ];
+    const ZONE_HEX = ['#93c5fd', '#6ee7b7', '#c4b5fd', '#fcd34d', '#fca5a5', '#67e8f9', '#fdba74', '#5eead4'];
 
-    function getZoneColor(zone) {
+    function zoneHash(zone) {
         let hash = 0;
         for (let i = 0; i < zone.length; i++) hash = (hash * 31 + zone.charCodeAt(i)) & 0xFFFF;
-        return ZONE_COLORS[hash % ZONE_COLORS.length];
+        return hash;
     }
+    const getZoneColor = zone => ZONE_COLORS[zoneHash(zone) % ZONE_COLORS.length];
+    const getZoneHex = zone => ZONE_HEX[zoneHash(zone) % ZONE_HEX.length];
 
     async function fetchAllZones() {
         try {
@@ -981,37 +984,42 @@
             if (!this.container) return;
 
             ManagerRegistry.set(config.containerId, this);
+            this.load();
+        }
+
+        load() {
+            this.container.textContent = '';
+            this.container.appendChild(el('div', 'text-center p-8', {},
+                el('div', 'animate-spin h-8 w-8 border-4 border-slate-300 border-t-slate-600 rounded-full mx-auto mb-2'),
+                el('p', 'text-sm text-slate-600', {}, 'Loading...')));
 
             this.loadData().then(() => {
                 this.render();
                 this.updateJsonDebug();
+            }).catch(() => {
+                this.container.textContent = '';
+                this.container.appendChild(el('div', 'text-center p-8', {},
+                    el('p', 'text-slate-600', {}, 'Failed to load configuration'),
+                    el('button', 'mt-4 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700', {
+                        type: 'button', onClick: () => this.load()
+                    }, 'Retry')));
             });
         }
 
         async loadData() {
-            let fullConfig = null;
-            try {
-                const res = await fetch('/api/config');
-                if (!res.ok) throw new Error('Fetch failed');
-                fullConfig = await res.json();
-            } catch {
-                const jsonEl = document.getElementById('json_content');
-                if (jsonEl?.textContent.trim()) {
-                    try { fullConfig = JSON.parse(jsonEl.textContent); } catch { }
-                }
-            }
-            if (fullConfig && typeof fullConfig === 'object') {
-                const { warnings } = ConfigNormalizer.normalize(fullConfig);
-                if (warnings.length) App.notifyWarnings(warnings);
-                if (this.config.nestedPath)
-                    this.data = this.getNested(fullConfig) || (this.config.isList ? [] : {});
-                else
-                    this.data = this.config.channelType
-                        ? (fullConfig[this.config.channelType] || (this.config.isList ? [] : {}))
-                        : fullConfig;
-            } else {
-                this.data = this.config.isList ? [] : {};
-            }
+            const res = await fetch('/api/config');
+            if (!res.ok) throw new Error('Failed to fetch configuration');
+            const fullConfig = await res.json();
+            if (!fullConfig || typeof fullConfig !== 'object') throw new Error('Invalid configuration');
+
+            const { warnings } = ConfigNormalizer.normalize(fullConfig);
+            if (warnings.length) App.notifyWarnings(warnings);
+            if (this.config.nestedPath)
+                this.data = this.getNested(fullConfig) || (this.config.isList ? [] : {});
+            else
+                this.data = this.config.channelType
+                    ? (fullConfig[this.config.channelType] || (this.config.isList ? [] : {}))
+                    : fullConfig;
             if (!this.config.isList) {
                 this.fields.forEach(f => this.data[f.name] ??= f.defaultValue);
             }
@@ -1242,7 +1250,7 @@
         }
 
         async save() {
-            const saveBtn = document.querySelector('[data-save-btn]');
+            const saveBtn = this.container.parentElement.querySelector(`.controls-${this.config.containerId} [data-save-btn]`);
 
             if (saveBtn) {
                 saveBtn.textContent = 'Saving...';
@@ -1298,6 +1306,7 @@
     }
 
     global.App = App;
+    global.ZoneColors = { badge: getZoneColor, hex: getZoneHex };
     global.normalizeConfig = (cfg) => ConfigNormalizer.normalize(cfg);
     global.createConfigManager = (config) => new ConfigManager(config);
     global.createSimpleConfigManager = (config) => { config.isList = false; return new ConfigManager(config); };

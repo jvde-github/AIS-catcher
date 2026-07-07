@@ -91,5 +91,16 @@ if [ ! -s "$DIST/control/css/tailwind.css" ]; then
     exit 1
 fi
 
+# Cache-bust hub assets (served with a 1-year cache header, like the viewer's)
+for f in css/tailwind.css js/schema.js js/config-manager.js js/wizard.js js/app.js; do
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        HASH=$(md5 -q "$DIST/control/$f")
+    else
+        HASH=$(md5sum "$DIST/control/$f" | cut -d' ' -f1)
+    fi
+    BASE=$(basename "$f")
+    perform_sed "$DIST/control/index.html" "s|${BASE}?hash=[^\"]*|${BASE}?hash=${HASH}|g" ''
+done
+
 echo "Built frontend/dist — baking into WebDB..."
 ./scripts/build-web-db.sh "$DIST"

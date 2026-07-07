@@ -81,7 +81,17 @@ std::string ControlServer::createSession()
 	std::string token = ControlCore::randomHex(48);
 
 	std::lock_guard<std::mutex> lock(auth_mtx);
-	sessions[token] = std::time(nullptr) + SESSION_LIFETIME;
+
+	std::time_t now = std::time(nullptr);
+	for (auto it = sessions.begin(); it != sessions.end();)
+	{
+		if (it->second < now)
+			it = sessions.erase(it);
+		else
+			++it;
+	}
+
+	sessions[token] = now + SESSION_LIFETIME;
 	return token;
 }
 
@@ -364,10 +374,10 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 	}
 	else if (path == "/api/log" && r.method == "GET")
 	{
-		IO::SSEConnection *s = upgradeSSE(c, 3);
-		if (s)
-			for (auto &m : Logger::getInstance().getLastMessages(25))
-				s->SendEvent("log", m.toJSON());
+		std::vector<std::string> backlog;
+		for (auto &m : Logger::getInstance().getLastMessages(25))
+			backlog.push_back(m.toJSON());
+		upgradeSSE(c, 3, backlog);
 	}
 	else if (path == "/api/activity" && r.method == "GET")
 	{

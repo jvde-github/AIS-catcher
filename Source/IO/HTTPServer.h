@@ -140,7 +140,12 @@ namespace IO
 			cleanupSSE_locked();
 		}
 
-		IO::SSEConnection *upgradeSSE(IO::TCPServerConnection &c, int id)
+		void upgradeSSE(IO::TCPServerConnection &c, int id)
+		{
+			upgradeSSE(c, id, std::vector<std::string>());
+		}
+
+		void upgradeSSE(IO::TCPServerConnection &c, int id, const std::vector<std::string> &backlog)
 		{
 			std::lock_guard<std::mutex> lk(sse_mtx);
 			cleanupSSE_locked();
@@ -148,7 +153,8 @@ namespace IO
 			sse.emplace_back(&c, id);
 			auto &connection = sse.back();
 			connection.Start();
-			return &connection;
+			for (const auto &data : backlog)
+				connection.SendEvent(sse_topic[MIN(id, 3)], data);
 		}
 
 		void sendSSE(int id, const std::string &event, const std::string &data)
