@@ -81,6 +81,7 @@ const httpSchema = {
         defaultValue: 'AISCATCHER',
         options: [
             { value: 'AISCATCHER', label: 'AISCATCHER' },
+            { value: 'MINIMAL', label: 'MINIMAL' },
             { value: 'APRS', label: 'APRS' },
             { value: 'LIST', label: 'LIST' },
             { value: 'AIRFRAMES', label: 'AIRFRAMES' },
@@ -94,6 +95,7 @@ const httpSchema = {
         type: 'number',
         required: true,
         min: 1,
+        max: 86400,
         defaultValue: 60,
         placeholder: '60',
         width: 25
@@ -603,7 +605,7 @@ const receiverSchema = {
         label: "RTLAGC",
         type: "toggle",
         jsonpath: "rtlsdr.rtlagc",
-        defaultValue: false,
+        defaultValue: true,
         width: 25,
         dependsOn: {
             field: "input",
@@ -991,10 +993,10 @@ const receiverSchema = {
         label: "Protocols",
         type: "text",
         jsonpath: "rtltcp.protocols",
-        defaultValue: "mqtt",
+        placeholder: "WebSocket sub-protocols",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: ["ws", "wsmqtt"]
+            value: "ws"
         }
     },
     rtltcp_binary: {
@@ -1002,11 +1004,11 @@ const receiverSchema = {
         label: "Binary Mode",
         type: "toggle",
         jsonpath: "rtltcp.binary",
-        defaultValue: true,
+        defaultValue: false,
         width: 25,
         dependsOn: {
             field: "rtltcp_protocol",
-            value: ["ws", "wsmqtt"]
+            value: "ws"
         }
     },
     rtltcp_origin: {
