@@ -69,9 +69,18 @@ export const getLonValFormat = (ship) => {
 };
 
 
-export const getEtaVal = (ship) =>
-    ("0" + ship.eta_month).slice(-2) + "-" + ("0" + ship.eta_day).slice(-2) + " " +
-    ("0" + ship.eta_hour).slice(-2) + ":" + ("0" + ship.eta_minute).slice(-2);
+const ETA_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// ETA in AIS type 5 is UTC; month 0, day 0, hour 24 and minute 60 mean "not available"
+export const getEtaVal = (ship) => {
+    const date = ship.eta_month >= 1 && ship.eta_month <= 12 && ship.eta_day >= 1 && ship.eta_day <= 31
+        ? ship.eta_day + " " + ETA_MONTHS[ship.eta_month - 1]
+        : "";
+    const time = ship.eta_hour >= 0 && ship.eta_hour <= 23 && ship.eta_minute >= 0 && ship.eta_minute <= 59
+        ? ("0" + ship.eta_hour).slice(-2) + ":" + ("0" + ship.eta_minute).slice(-2) + "Z"
+        : "";
+    return date && time ? date + " " + time : (date || time || "-");
+};
 
 export const getDeltaTimeVal = (s) => {
     const days = Math.floor(s / (24 * 3600));
