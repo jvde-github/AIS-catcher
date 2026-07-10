@@ -1489,11 +1489,11 @@ td {
 }
 
 .stat-panel section div {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .stat-panel section div span:first-child {
-    flex: 1 1 150px;
     text-align: right;
     color: var(--stat-label-color);
     padding: 5px 20px 5px 20px;
@@ -1506,7 +1506,6 @@ td {
 }
 
 .stat-panel section div span:last-child {
-    flex: 1 0 150px;
     text-align: left;
     color: var(--stat-color);
     padding: 5px 20px 5px 20px;
