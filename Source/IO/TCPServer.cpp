@@ -65,12 +65,13 @@ namespace IO
 		out_pos = 0;
 	}
 
-	void TCPServerConnection::Start(SOCKET s)
+	void TCPServerConnection::Start(SOCKET s, bool local)
 	{
 		msg.clear();
 		out.clear();
 		out_pos = 0;
 		stamp = std::time(nullptr);
+		is_local = local;
 		sock = s;
 	}
 
@@ -288,10 +289,11 @@ namespace IO
 
 	void TCPServer::acceptClients()
 	{
-		int addrlen = sizeof(service);
+		sockaddr_in peer;
+		int addrlen = sizeof(peer);
 		SOCKET conn_socket;
 
-		conn_socket = accept(sock, (SOCKADDR *)&service, (socklen_t *)&addrlen);
+		conn_socket = accept(sock, (SOCKADDR *)&peer, (socklen_t *)&addrlen);
 #ifdef _WIN32
 		if (conn_socket == SOCKET_ERROR)
 #else
@@ -313,7 +315,9 @@ namespace IO
 			}
 			else
 			{
-				client[ptr].Start(conn_socket);
+				bool local = addrlen >= (int)sizeof(peer) && peer.sin_family == AF_INET &&
+							 (ntohl(peer.sin_addr.s_addr) >> 24) == 127;
+				client[ptr].Start(conn_socket, local);
 
 				int flag = 1;
 				if (setsockopt(conn_socket, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag)) != 0)

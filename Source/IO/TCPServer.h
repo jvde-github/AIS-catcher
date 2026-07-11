@@ -63,6 +63,7 @@ namespace IO
 		size_t out_pos = 0; // read cursor into out; [out_pos, out.size()) is unsent
 		std::time_t stamp;
 		bool is_locked = false;
+		bool is_local = false;
 
 		void Lock();
 		void Unlock();
@@ -72,7 +73,7 @@ namespace IO
 		}
 
 		void Close();
-		void Start(SOCKET s);
+		void Start(SOCKET s, bool local = false);
 		int Inactive(std::time_t now);
 		bool isConnected() { return sock != -1; }
 		bool hasSendBuffer() { return out_pos < out.size(); }
