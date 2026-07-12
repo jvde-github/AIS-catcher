@@ -124,7 +124,7 @@ std::string LogMessage::toJSON() const
 {
 	std::string msg = JSON::Writer::escape(message);
 
-	return "{\"level\":\"" + levelToString() + "\",\"message\":" + msg + ",\"time\":\"" + time + "\"}";
+	return "{\"level\":\"" + levelToString() + "\",\"message\":" + msg + ",\"time\":\"" + time + "\",\"seq\":" + std::to_string(seq) + "}";
 }
 
 Logger &Logger::getInstance()
@@ -288,7 +288,7 @@ void Logger::log(LogLevel level, const std::string &message)
 		return;
 
 	std::string time_str = getCurrentTime();
-	LogMessage log_msg(level, message, time_str);
+	LogMessage log_msg(level, message, time_str, seq_.fetch_add(1));
 
 	storeMessage(log_msg);
 	notifyListeners(log_msg);

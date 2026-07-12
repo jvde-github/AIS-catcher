@@ -41,9 +41,10 @@ struct LogMessage
     LogLevel level;
     std::string message;
     std::string time;
+    uint32_t seq = 0;
 
     LogMessage() : level(LogLevel::EMPTY) {}
-    LogMessage(LogLevel l, std::string msg, std::string time) : level(l), message(std::move(msg)), time(std::move(time)) {}
+    LogMessage(LogLevel l, std::string msg, std::string time, uint32_t seq = 0) : level(l), message(std::move(msg)), time(std::move(time)), seq(seq) {}
 
     std::string levelToString() const;
     std::string toJSON() const;
@@ -94,6 +95,7 @@ private:
 
     std::mutex mutex_;
     LogLevel min_level_ = LogLevel::INFO;
+    std::atomic<uint32_t> seq_{1};
 
     std::vector<LogMessage> message_buffer_;
     int buffer_position_ = 0;

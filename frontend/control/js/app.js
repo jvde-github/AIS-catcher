@@ -461,8 +461,8 @@
         renderOutputConfig(host);
     }
 
-    const OUTPUT_TAB_ACTIVE = 'flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-800 shadow-sm transition-all';
-    const OUTPUT_TAB_INACTIVE = 'flex-1 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-700 transition-all';
+    const OUTPUT_TAB_ACTIVE = 'sys-tab active';
+    const OUTPUT_TAB_INACTIVE = 'sys-tab';
 
     function setOutputType(value) {
         if (value !== currentOutputType && typeof App !== 'undefined' && App.state && App.state.unsaved) {
@@ -495,7 +495,7 @@
         wrapper.className = 'space-y-4';
 
         const tabBar = document.createElement('div');
-        tabBar.className = 'flex flex-wrap gap-1.5 p-1.5 bg-slate-100 rounded-xl mb-2';
+        tabBar.className = 'sys-subtabs';
 
         outputTypes.forEach(({ value, label }) => {
             const btn = document.createElement('button');
@@ -544,10 +544,19 @@
     }
 
     let logReplayDone = false;
-    let logReplayUntil = 0;
     let lastLogTime = '';
+    let lastLogSeq = -1;
     const logBuffer = [];
     const LOG_BUFFER_MAX = 500;
+
+    function isReplayedLog(m) {
+        if (typeof m.seq !== 'number') return false;
+        const d = (m.seq - lastLogSeq) >>> 0;
+        const ahead = lastLogSeq < 0 || (d > 0 && d < 0x80000000);
+        if (!ahead && (!m.time || m.time <= lastLogTime)) return true;
+        lastLogSeq = m.seq;
+        return false;
+    }
 
     function buildLogLine(m) {
         const level = ['error', 'critical'].indexOf(m.level) >= 0 ? 'error'
@@ -579,7 +588,7 @@
         logSource.addEventListener('log', e => {
             try {
                 const m = JSON.parse(e.data);
-                if (Date.now() < logReplayUntil && m.time && m.time <= lastLogTime) return;
+                if (isReplayedLog(m)) return;
                 if (m.time && m.time > lastLogTime) lastLogTime = m.time;
 
                 logBuffer.push(m);
@@ -600,7 +609,6 @@
             } catch (_) { }
         });
         logSource.onopen = () => {
-            logReplayUntil = Date.now() + 500;
             if (!logReplayDone)
                 setTimeout(() => { logReplayDone = true; }, 500);
         };
