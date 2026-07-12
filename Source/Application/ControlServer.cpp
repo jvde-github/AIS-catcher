@@ -15,11 +15,13 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include "AIS-catcher.h"
 #include "ControlServer.h"
 #include "Logger.h"
 #include "Writer.h"
 #include "Convert.h"
 #include "WebDB.h"
+#include "Helper.h"
 
 void ControlServer::start()
 {
@@ -193,9 +195,21 @@ void ControlServer::sendStatus(IO::TCPServerConnection &c, bool authenticated)
 		.kv("desired", core.engineDesired())
 		.kv("retrying", core.engineRetrying())
 		.kv("uptime", core.getUptime())
-		.kv("viewer", core.getViewerPort())
-		.endObject()
-		.finish();
+		.kv("viewer", core.getViewerPort());
+
+	if (authenticated)
+	{
+		static const std::string os = Util::Helper::getOS();
+		static const std::string hardware = Util::Helper::getHardware();
+
+		w.kv("version", VERSION_DESCRIBE)
+			.kv("build_date", __DATE__)
+			.kv("os", os)
+			.kv("hardware", hardware)
+			.kv("memory", (unsigned long long)Util::Helper::getMemoryConsumption());
+	}
+
+	w.endObject().finish();
 
 	Response(c, "application/json", s);
 }

@@ -241,6 +241,22 @@
         }
         const hubUptime = document.getElementById('hub-uptime');
         if (hubUptime) hubUptime.textContent = up ? 'Uptime: ' + up : '';
+
+        const sysinfo = document.getElementById('hub-sysinfo');
+        if (sysinfo) {
+            const rows = [
+                ['Version', data.version],
+                ['Build date', data.build_date],
+                ['Operating system', data.os],
+                ['Hardware', data.hardware],
+                ['Memory usage', data.memory ? formatBytes(data.memory) : '']
+            ].filter(r => r[1]);
+            sysinfo.innerHTML = rows.map(r =>
+                '<div class="flex justify-between gap-4"><span class="text-slate-500">' + r[0] + '</span><span class="text-slate-700 text-right truncate">' + r[1] + '</span></div>'
+            ).join('');
+            const card = document.getElementById('hub-sysinfo-card');
+            if (card) card.classList.toggle('hidden', rows.length === 0);
+        }
     }
 
     let reloadUntil = 0;
@@ -710,14 +726,20 @@
                 </div>
             </div>
             <div class="sys-pane hidden" data-pane="status">
-                <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 w-full max-w-md mx-auto">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="font-semibold text-slate-800">Receiver</span>
-                        <div id="hub-status" class="flex items-center space-x-2">
-                            <span class="text-sm font-medium text-slate-600">Checking...</span>
+                <div class="w-full max-w-md mx-auto space-y-4">
+                    <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-semibold text-slate-800">Receiver</span>
+                            <div id="hub-status" class="flex items-center space-x-2">
+                                <span class="text-sm font-medium text-slate-600">Checking...</span>
+                            </div>
                         </div>
+                        <div id="hub-uptime" class="text-sm text-slate-600"></div>
                     </div>
-                    <div id="hub-uptime" class="text-sm text-slate-600"></div>
+                    <div id="hub-sysinfo-card" class="hidden bg-slate-50 rounded-lg p-4 border border-slate-200">
+                        <div class="font-semibold text-slate-800 mb-2">System</div>
+                        <div id="hub-sysinfo" class="text-sm space-y-1.5"></div>
+                    </div>
                 </div>
             </div>
             <div class="sys-pane hidden" data-pane="viewer">
