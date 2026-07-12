@@ -49,6 +49,7 @@
     let systemOutputLoaded = false;
     let systemViewerLoaded = false;
     let flowResizeObserver = null;
+    let flowStatsTimer = null;
 
     // tab id -> header label / which nav-bar button to highlight
     const SYSTEM_TABS = {
@@ -60,7 +61,8 @@
         config: { label: 'Configuration', nav: 'control-panel' },
         log: { label: 'Log', nav: 'control-panel' },
         wizard: { label: 'Wizard', nav: 'control-panel' },
-        password: { label: 'Access', nav: 'control-panel' }
+        password: { label: 'Access', nav: 'control-panel' },
+        license: { label: 'License', nav: 'control-panel' }
     };
 
     function fetchStatus() {
@@ -767,7 +769,62 @@
                     </div>
                 </div>
             </div>
+            <div class="sys-pane hidden" data-pane="license">
+                <div class="max-w-2xl mx-auto px-4 sm:px-0 pb-4">
+                    <div class="flex gap-3 items-start bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
+                        <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <div class="text-sm text-amber-800">
+                            <p class="font-semibold mb-1">Research and educational software &mdash; not for operational use</p>
+                            <p class="text-xs leading-relaxed">Do not rely on AIS-catcher for navigation, collision avoidance or any application where safety of life or property is at stake.
+                                Receiving radio signals may be regulated or restricted in your country; you are responsible for complying with local laws before use.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="flex flex-col items-center pt-6 pb-4 px-5">
+                            <span id="license-logo" class="block w-12 h-12 text-slate-700 mb-3"></span>
+                            <h2 class="text-xl font-semibold text-slate-800">License Agreement</h2>
+                            <p class="text-xs text-slate-500 mt-1">AIS-catcher &copy; 2021&ndash;2026 jvde.github@gmail.com</p>
+                        </div>
+                        <div class="mx-5 mb-5 h-80 overflow-y-auto border border-slate-200 rounded-lg p-4 bg-slate-50 text-sm text-slate-600">
+                            <h3 class="text-base font-bold text-slate-800 mb-1">GNU GENERAL PUBLIC LICENSE</h3>
+                            <p class="text-xs text-slate-500 mb-3">Version 3, 29 June 2007</p>
+                            <p class="mb-2">Copyright &copy; 2007 Free Software Foundation, Inc. &lt;https://fsf.org/&gt;</p>
+                            <p class="mb-4">Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed.</p>
+                            <h4 class="font-bold text-slate-700 mt-4 mb-2">Preamble</h4>
+                            <p class="mb-2">The GNU General Public License is a free, copyleft license for software and other kinds of works.</p>
+                            <p class="mb-2">The licenses for most software and other practical works are designed to take away your freedom to share and change the works.
+                                By contrast, the GNU General Public License is intended to guarantee your freedom to share and change all versions of a program&mdash;to
+                                make sure it remains free software for all its users. We, the Free Software Foundation, use the GNU General Public License for most of
+                                our software; it applies also to any other work released this way by its authors. You can apply it to your programs, too.</p>
+                            <p class="mb-2">When we speak of free software, we are referring to freedom, not price. Our General Public Licenses are designed to make sure
+                                that you have the freedom to distribute copies of free software (and charge for them if you wish), that you receive source code or can
+                                get it if you want it, that you can change the software or use pieces of it in new free programs, and that you know you can do these things.</p>
+                            <p class="mb-2">To protect your rights, we need to prevent others from denying you these rights or asking you to surrender the rights.
+                                Therefore, you have certain responsibilities if you distribute copies of the software, or if you modify it: responsibilities to respect
+                                the freedom of others.</p>
+                            <p class="mb-2">For example, if you distribute copies of such a program, whether gratis or for a fee, you must pass on to the recipients the
+                                same freedoms that you received. You must make sure that they, too, receive or can get the source code. And you must show them these
+                                terms so they know their rights.</p>
+                            <p class="mt-4 mb-2 italic">This is a summary. For the full text, please visit
+                                <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener" class="text-blue-700 underline">gnu.org</a> or the
+                                <a href="https://github.com/jvde-github/AIS-catcher/blob/main/LICENSE" target="_blank" rel="noopener" class="text-blue-700 underline">LICENSE file on GitHub</a>.</p>
+                            <h4 class="font-bold text-slate-700 mt-4 mb-2">Disclaimer of Warranty</h4>
+                            <p class="mb-2 uppercase font-bold text-xs">There is no warranty for the program, to the extent permitted by applicable law. Except when
+                                otherwise stated in writing the copyright holders and/or other parties provide the program &ldquo;as is&rdquo; without warranty of any
+                                kind, either expressed or implied, including, but not limited to, the implied warranties of merchantability and fitness for a particular
+                                purpose. The entire risk as to the quality and performance of the program is with you. Should the program prove defective, you assume
+                                the cost of all necessary servicing, repair or correction.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         `;
+
+        const communityLogo = document.querySelector('#community-link svg');
+        const licenseLogo = document.getElementById('license-logo');
+        if (communityLogo && licenseLogo) licenseLogo.innerHTML = communityLogo.outerHTML;
 
         document.getElementById('password-form').addEventListener('submit', changePassword);
         document.getElementById('hub-btn-wizard').addEventListener('click', () => {
@@ -890,6 +947,69 @@
             flowResizeObserver.disconnect();
             flowResizeObserver = null;
         }
+        if (flowStatsTimer) {
+            clearInterval(flowStatsTimer);
+            flowStatsTimer = null;
+        }
+    }
+
+    function formatBytes(b) {
+        if (!b || b < 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let i = 0;
+        while (b >= 1024 && i < units.length - 1) { b /= 1024; i++; }
+        return (i === 0 ? b : b.toFixed(1)) + ' ' + units[i];
+    }
+
+    // stat.json output types -> Data Flow node sub types
+    const FLOW_STAT_TYPES = { 'UDP': 'udp', 'TCP Client': 'tcp', 'HTTP': 'http', 'MQTT': 'mqtt', 'TCP Listener': 'tcp-server' };
+
+    function flowStatDetails(sub, s) {
+        const parts = [];
+        if (sub !== 'udp' && sub !== 'http')
+            parts.push(`<span class="font-medium ${s.connected ? 'text-emerald-600' : 'text-rose-500'}">${s.connected ? 'Connected' : 'Not connected'}</span>`);
+        parts.push(`<span>${formatBytes(s.bytes_out)} out</span>`);
+        if (s.bytes_in > 0) parts.push(`<span>${formatBytes(s.bytes_in)} in</span>`);
+        if (sub !== 'udp') parts.push(`<span>ok/fail ${s.connect_ok}/${s.connect_fail}</span>`);
+        if (s.reconnects > 0) parts.push(`<span>${s.reconnects} reconnects</span>`);
+        if (s.dropped > 0) parts.push(`<span class="text-amber-600">${s.dropped} dropped</span>`);
+        return parts.join('');
+    }
+
+    function updateFlowStats(outputs, statEls) {
+        if (!port || !engineRunning) {
+            statEls.forEach(el => { el.innerHTML = ''; });
+            return;
+        }
+        let url;
+        try {
+            url = new URL(window.location.href);
+            url.port = port;
+            url.pathname = '/api/stat.json';
+            url.search = '?receiver=0';
+            url.hash = '';
+        } catch (e) { return; }
+
+        fetch(url.toString())
+            .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+            .then(stat => {
+                const pools = {};
+                (stat.outputs || []).forEach(o => {
+                    const sub = o.description === 'Community Feed' ? 'sharing' : FLOW_STAT_TYPES[o.type];
+                    if (sub) (pools[sub] = pools[sub] || []).push(o);
+                });
+                outputs.forEach((o, i) => {
+                    const el = statEls[i];
+                    if (!el) return;
+                    if (o.sub === 'server') {
+                        el.innerHTML = `<span>${stat.tcp_clients} connection${stat.tcp_clients === 1 ? '' : 's'}</span>`;
+                        return;
+                    }
+                    const m = pools[o.sub] && pools[o.sub].shift();
+                    el.innerHTML = m ? flowStatDetails(o.sub, m.stats) : '';
+                });
+            })
+            .catch(() => statEls.forEach(el => { el.innerHTML = ''; }));
     }
 
     function loadDataFlow() {
@@ -974,6 +1094,17 @@
                     outputsEl.appendChild(n);
                     return n;
                 });
+
+                const statEls = outputEls.map(n => {
+                    const d = document.createElement('div');
+                    d.className = 'flex flex-wrap gap-x-2 text-xs text-slate-400 mt-1';
+                    n.appendChild(d);
+                    return d;
+                });
+                updateFlowStats(outputs, statEls);
+                flowStatsTimer = setInterval(() => {
+                    if (currentSystemTab === 'flow') updateFlowStats(outputs, statEls);
+                }, 5000);
 
                 const connections = [];
                 outputs.forEach((output, oi) => {

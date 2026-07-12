@@ -180,7 +180,10 @@ void ControlServer::loginSucceeded()
 void ControlServer::sendStatus(IO::TCPServerConnection &c, bool authenticated)
 {
 	bool running = core.getEngineState() == ControlCore::EngineState::Running;
-	const char *auth = (!core.authRequired() || c.is_local) ? "open" : (authenticated ? "ok" : (core.hasPassword() ? "login" : "setup"));
+	const char *auth = !core.authRequired() ? "open"
+					   : !core.hasPassword() ? (authenticated ? "ok" : "setup")
+					   : c.is_local			 ? "open"
+											 : (authenticated ? "ok" : "login");
 
 	std::string s;
 	JSON::Writer w(s);
@@ -213,7 +216,7 @@ void ControlServer::sendError(IO::TCPServerConnection &c, const std::string &mes
 void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r, bool accept_gzip)
 {
 	const std::string path = r.path();
-	const bool authenticated = !core.authRequired() || c.is_local || checkSession(r.cookie);
+	const bool authenticated = !core.authRequired() || (c.is_local && core.hasPassword()) || checkSession(r.cookie);
 
 	if (r.method == "POST" && !r.origin.empty())
 	{
