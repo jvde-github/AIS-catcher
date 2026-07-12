@@ -217,7 +217,7 @@ std::vector<LogMessage> Logger::getLastMessages(int n)
 
 	int ptr = (buffer_position_ + message_buffer_.size() - n) % message_buffer_.size();
 
-	while (ptr != buffer_position_)
+	for (int i = 0; i < n; i++)
 	{
 		if (message_buffer_[ptr].level != LogLevel::EMPTY)
 		{

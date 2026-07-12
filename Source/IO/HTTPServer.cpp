@@ -99,6 +99,17 @@ namespace IO
 				}
 			}
 		}
+
+		// reclaims dead SSE slots even when no events flow
+		auto now = std::chrono::steady_clock::now();
+		if (now - last_sse_ping >= std::chrono::seconds(SSE_PING_INTERVAL))
+		{
+			last_sse_ping = now;
+			std::lock_guard<std::mutex> lk(sse_mtx);
+			for (auto &s : sse)
+				s.Ping();
+			cleanupSSE_locked();
+		}
 	}
 
 	void HTTPServer::Request(IO::TCPServerConnection &c, const std::string &, bool)

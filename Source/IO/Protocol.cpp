@@ -131,53 +131,13 @@ namespace Protocol
 
 		if (keep_alive)
 		{
-			int idle = 20;
-#ifdef _WIN32
-			if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (const char *)&yes, sizeof(yes)))
-#else
-			if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&yes, sizeof(yes)))
-#endif
-				return fail();
-#if defined(__APPLE__)
-			if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPALIVE, &idle, sizeof(idle)))
-				return fail();
-#elif defined(_WIN32)
-			int interval = 5;
-			struct tcp_keepalive keepalive;
-			keepalive.onoff = 1;
-			keepalive.keepalivetime = idle * 1000;
-			keepalive.keepaliveinterval = interval * 1000;
-			DWORD br;
-			if (WSAIoctl(sock, SIO_KEEPALIVE_VALS, &keepalive, sizeof(keepalive), NULL, 0, &br, NULL, NULL) == SOCKET_ERROR)
-				return fail();
-#elif defined(__ANDROID__)
-			int interval = 5;
-			int count = 2;
-			if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)) ||
-				setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) ||
-				setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count)))
-				return fail();
-#else
-			int interval = 5;
-			int count = 2;
-			if (setsockopt(sock, SOL_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)) ||
-				setsockopt(sock, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) ||
-				setsockopt(sock, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)))
-				return fail();
-#endif
+			const int idle = 20, interval = 5, count = 2;
 
-			// Error a wedged (half-open / zero-window) socket instead of hanging forever.
-#if defined(TCP_USER_TIMEOUT) || (defined(_WIN32) && defined(TCP_MAXRT))
-			const int user_timeout_ms = (idle + 5 * 2) * 1000;
-#endif
-#if defined(TCP_USER_TIMEOUT)
-			if (setsockopt(sock, IPPROTO_TCP, TCP_USER_TIMEOUT, (const char *)&user_timeout_ms, sizeof(user_timeout_ms)))
-				Debug() << "TCP (" << host << ":" << port << "): TCP_USER_TIMEOUT not applied: " << strerror(errno);
-#elif defined(_WIN32) && defined(TCP_MAXRT)
-			DWORD maxrt_secs = (DWORD)(user_timeout_ms / 1000);
-			if (setsockopt(sock, IPPROTO_TCP, TCP_MAXRT, (const char *)&maxrt_secs, sizeof(maxrt_secs)))
-				Debug() << "TCP (" << host << ":" << port << "): TCP_MAXRT not applied. Error code: " << WSAGetLastError();
-#endif
+			if (!Net::setTCPKeepAlive(sock, idle, interval, count))
+				return fail();
+
+			if (!Net::setTCPUserTimeout(sock, (idle + interval * count) * 1000))
+				Debug() << "TCP (" << host << ":" << port << "): user timeout not applied: " << Net::errorString(Net::lastError());
 		}
 
 		if (persistent)

@@ -35,7 +35,7 @@
     }
     let currentLoadTimeout = null;
     let statusPollInterval = null;
-    let logSource = null;
+    let eventSource = null;
     let currentOutputType = 'sharing';
     let flowOutputTarget = null;
 
@@ -168,8 +168,7 @@
                 }
                 auth = 'ok';
                 updateBarVisibility();
-                startLogStream();
-                startChannelLeds();
+                startEventStream();
                 const action = pendingAction;
                 closeLoginModal();
                 refreshEngineStatus();
@@ -268,8 +267,7 @@
                 if (data.auth !== auth) {
                     auth = data.auth;
                     updateBarVisibility();
-                    startLogStream();
-                    startChannelLeds();
+                    startEventStream();
                 }
                 renderEngineState(data);
                 setEngineButtonDisabled(false);
@@ -333,37 +331,33 @@
 
     const CHANNELS = ['A', 'B', 'C', 'D'];
     let channelPrev = null;
-    let activitySource = null;
 
-    function startChannelLeds() {
-        if (activitySource || !isLoggedIn()) return;
-
+    function initChannelLeds() {
         const wrap = document.getElementById('channel-leds');
-        if (!wrap) return;
+        if (!wrap || wrap.childElementCount > 0) return;
 
         wrap.innerHTML = CHANNELS.map((c, i) =>
             `<div class="ch-led-item" id="ch-item-${i}" style="${i >= 2 ? 'display:none' : ''}">
                 <span class="ch-led" id="ch-led-${i}"></span>
                 <span class="ch-led-label">${c}</span>
             </div>`).join('');
+    }
 
-        activitySource = new EventSource('/api/activity');
-        activitySource.addEventListener('activity', e => {
-            try {
-                const ch = JSON.parse(e.data);
-                ch.forEach((count, i) => {
-                    if (i >= 2 && count > 0)
-                        document.getElementById('ch-item-' + i).style.display = '';
+    function onActivityEvent(e) {
+        try {
+            const ch = JSON.parse(e.data);
+            ch.forEach((count, i) => {
+                if (i >= 2 && count > 0)
+                    document.getElementById('ch-item-' + i).style.display = '';
 
-                    if (channelPrev && count > channelPrev[i]) {
-                        const led = document.getElementById('ch-led-' + i);
-                        led.classList.add('flash');
-                        setTimeout(() => led.classList.remove('flash'), 500);
-                    }
-                });
-                channelPrev = ch.slice();
-            } catch (_) { }
-        });
+                if (channelPrev && count > channelPrev[i]) {
+                    const led = document.getElementById('ch-led-' + i);
+                    led.classList.add('flash');
+                    setTimeout(() => led.classList.remove('flash'), 500);
+                }
+            });
+            channelPrev = ch.slice();
+        } catch (_) { }
     }
 
     function showOverlayMessage(html) {
@@ -599,37 +593,48 @@
         box.scrollTop = box.scrollHeight;
     }
 
-    function startLogStream() {
-        if (logSource || !isLoggedIn()) return;
+    function onLogEvent(e) {
+        try {
+            const m = JSON.parse(e.data);
+            if (isReplayedLog(m)) return;
+            if (m.time && m.time > lastLogTime) lastLogTime = m.time;
+
+            logBuffer.push(m);
+            if (logBuffer.length > LOG_BUFFER_MAX) logBuffer.shift();
+            const box = document.getElementById('log-box');
+            if (box) {
+                box.appendChild(buildLogLine(m));
+                while (box.childElementCount > LOG_BUFFER_MAX)
+                    box.removeChild(box.firstChild);
+                box.scrollTop = box.scrollHeight;
+            }
+
+            if (!logReplayDone) return;
+            if (m.level === 'error' || m.level === 'critical') {
+                App.notify('error', m.message);
+            } else if (m.level === 'warning')
+                App.notify('warning', m.message);
+        } catch (_) { }
+    }
+
+    function startEventStream() {
+        if (eventSource || !isLoggedIn()) return;
+        initChannelLeds();
         logReplayDone = false;
-        logSource = new EventSource('/api/log');
-        logSource.addEventListener('log', e => {
-            try {
-                const m = JSON.parse(e.data);
-                if (isReplayedLog(m)) return;
-                if (m.time && m.time > lastLogTime) lastLogTime = m.time;
-
-                logBuffer.push(m);
-                if (logBuffer.length > LOG_BUFFER_MAX) logBuffer.shift();
-                const box = document.getElementById('log-box');
-                if (box) {
-                    box.appendChild(buildLogLine(m));
-                    while (box.childElementCount > LOG_BUFFER_MAX)
-                        box.removeChild(box.firstChild);
-                    box.scrollTop = box.scrollHeight;
-                }
-
-                if (!logReplayDone) return;
-                if (m.level === 'error' || m.level === 'critical') {
-                    App.notify('error', m.message);
-                } else if (m.level === 'warning')
-                    App.notify('warning', m.message);
-            } catch (_) { }
-        });
-        logSource.onopen = () => {
+        eventSource = new EventSource('/api/stream' + (lastLogSeq >= 0 ? '?since=' + lastLogSeq : ''));
+        eventSource.addEventListener('log', onLogEvent);
+        eventSource.addEventListener('activity', onActivityEvent);
+        eventSource.onopen = () => {
             if (!logReplayDone)
                 setTimeout(() => { logReplayDone = true; }, 500);
         };
+    }
+
+    function stopEventStream() {
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
     }
 
     function openSystem(tab) {
@@ -1202,9 +1207,11 @@
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 stopStatusPolling();
+                stopEventStream();
             } else {
                 refreshEngineStatus();
                 startStatusPolling();
+                startEventStream();
             }
         });
 
@@ -1215,8 +1222,7 @@
                 renderEngineState(data);
                 updateBarVisibility();
                 startStatusPolling();
-                startLogStream();
-                startChannelLeds();
+                startEventStream();
 
                 if (auth === 'setup') {
                     loadingDiv.classList.add('hidden');

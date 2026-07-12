@@ -30,7 +30,6 @@ class ControlServer : public IO::HTTPServer
 public:
 	ControlServer(ControlCore &core) : core(core)
 	{
-		setSSETopic(1, "activity");
 		setFrameSrc("'self' http: https:");
 	}
 	~ControlServer() { close(); }
@@ -45,6 +44,9 @@ protected:
 
 private:
 	ControlCore &core;
+
+	static const int SSE_ACTIVITY = 1;
+	static const int SSE_LOG = 3;
 
 	static const int SESSION_LIFETIME = 7 * 24 * 3600;
 	static const int MAX_LOGIN_BLOCK = 300;

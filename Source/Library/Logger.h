@@ -23,6 +23,7 @@
 #include <vector>
 #include <memory>
 #include <atomic>
+#include <climits>
 
 #include "Common.h"
 
@@ -67,6 +68,18 @@ public:
     void removeLogListener(int id);
 
     std::vector<LogMessage> getLastMessages(int n);
+
+    std::vector<std::string> getBacklogJSON(int n, uint32_t since = 0)
+    {
+        std::vector<std::string> backlog;
+        for (auto &m : getLastMessages(since ? INT_MAX : n))
+        {
+            uint32_t after = m.seq - since;
+            if (!since || (after != 0 && after < 0x80000000u))
+                backlog.push_back(m.toJSON());
+        }
+        return backlog;
+    }
     void setMaxBufferSize(int size)
     {
         std::lock_guard<std::mutex> lock(mutex_);

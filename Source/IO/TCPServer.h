@@ -21,6 +21,7 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
+#include <atomic>
 #include <array>
 #include <vector>
 #include <functional>
@@ -62,7 +63,7 @@ namespace IO
 		std::vector<char> out;
 		size_t out_pos = 0; // read cursor into out; [out_pos, out.size()) is unsent
 		std::time_t stamp;
-		bool is_locked = false;
+		std::atomic<bool> is_locked{false};
 		bool is_local = false;
 
 		void Lock();

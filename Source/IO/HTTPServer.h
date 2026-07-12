@@ -19,6 +19,7 @@
 #include <list>
 #include <thread>
 #include <mutex>
+#include <chrono>
 #include <time.h>
 
 #include "SocketUtil.h"
@@ -36,17 +37,23 @@ namespace IO
 	class SSEConnection
 	{
 	protected:
-		bool running = false;
 		IO::TCPServerConnection *connection;
-		int _id = 0;
+		uint32_t mask = 0;
 
 	public:
-		SSEConnection(IO::TCPServerConnection *c, int id) : connection(c), _id(id) { c->setVerbosity(false); }
+		SSEConnection(IO::TCPServerConnection *c, uint32_t m) : connection(c), mask(m) { c->setVerbosity(false); }
 		~SSEConnection() { Close(); }
 
-		int getID()
+		bool subscribed(int id)
 		{
-			return _id;
+			return (mask >> id) & 1;
+		}
+
+		void Ping()
+		{
+			static const char ping[] = ": ping\r\n\r\n";
+			if (connection)
+				connection->SendDirect(ping, sizeof(ping) - 1);
 		}
 
 		void Start()
@@ -54,7 +61,6 @@ namespace IO
 			if (!connection)
 				return;
 
-			running = true;
 			connection->Lock();
 
 			std::string headers = "HTTP/1.1 200 OK\r\n";
@@ -73,19 +79,19 @@ namespace IO
 
 		void Close()
 		{
-
+			// close before unlock, or the slot can be re-accepted while still referenced here
 			if (connection)
 			{
 				connection->SendDirect("\r\n", 2);
-				connection->Unlock();
 				connection->Close();
+				connection->Unlock();
 				connection = nullptr;
 			}
 		}
 
 		void SendEvent(const std::string &eventName, const std::string &eventData, const std::string &eventId = "")
 		{
-			if (connection && running)
+			if (connection)
 			{
 				std::string eventStr = "event: " + eventName + "\r\n";
 				if (!eventId.empty())
@@ -120,12 +126,31 @@ namespace IO
 			std::string::size_type pos = target.find('?');
 			return pos == std::string::npos ? "" : target.substr(pos + 1);
 		}
+
+		static std::string queryParam(const std::string &q, const std::string &name)
+		{
+			std::string::size_type pos = 0;
+			while (pos < q.size())
+			{
+				std::string::size_type amp = q.find('&', pos);
+				if (amp == std::string::npos)
+					amp = q.size();
+				std::string::size_type eq = q.find('=', pos);
+				if (eq != std::string::npos && eq < amp && q.compare(pos, eq - pos, name) == 0)
+					return q.substr(eq + 1, amp - eq - 1);
+				pos = amp + 1;
+			}
+			return "";
+		}
+
+		std::string queryParam(const std::string &name) const
+		{
+			return queryParam(query(), name);
+		}
 	};
 
 	class HTTPServer : public IO::TCPServer
 	{
-		std::array<std::string, 4> sse_topic = {"aiscatcher", "nmea", "nmea", "log"};
-
 	public:
 		virtual void Request(IO::TCPServerConnection &c, const std::string &msg, bool accept_gzip);
 		virtual void Request(IO::TCPServerConnection &c, const HTTPRequest &r, bool accept_gzip);
@@ -140,21 +165,19 @@ namespace IO
 			cleanupSSE_locked();
 		}
 
-		void upgradeSSE(IO::TCPServerConnection &c, int id)
-		{
-			upgradeSSE(c, id, std::vector<std::string>());
-		}
-
-		void upgradeSSE(IO::TCPServerConnection &c, int id, const std::vector<std::string> &backlog)
+		// backlog is built under sse_mtx so no event can fall between snapshot and registration
+		void upgradeSSE(IO::TCPServerConnection &c, uint32_t mask, const std::string &topic = "",
+						const std::function<std::vector<std::string>()> &backlog = nullptr)
 		{
 			std::lock_guard<std::mutex> lk(sse_mtx);
 			cleanupSSE_locked();
 
-			sse.emplace_back(&c, id);
+			sse.emplace_back(&c, mask);
 			auto &connection = sse.back();
 			connection.Start();
-			for (const auto &data : backlog)
-				connection.SendEvent(sse_topic[MIN(id, 3)], data);
+			if (backlog)
+				for (const auto &data : backlog())
+					connection.SendEvent(topic, data);
 		}
 
 		void sendSSE(int id, const std::string &event, const std::string &data)
@@ -162,15 +185,14 @@ namespace IO
 			std::lock_guard<std::mutex> lk(sse_mtx);
 			for (auto it = sse.begin(); it != sse.end(); ++it)
 			{
-				if (it->getID() == id)
-					it->SendEvent(sse_topic[MIN(id, 3)], data);
+				if (it->subscribed(id))
+					it->SendEvent(event, data);
 			}
 			cleanupSSE_locked();
 		}
 
 		void setFrameAncestors(const std::string &v) { frame_ancestors = v; }
 		void setFrameSrc(const std::string &v) { frame_src = v; }
-		void setSSETopic(int id, const std::string &topic) { sse_topic[MIN(id, 3)] = topic; }
 
 		void setExtraHeader(const std::string &h) { extra_header = h; }
 
@@ -185,6 +207,8 @@ namespace IO
 		std::string extra_header;
 		std::list<IO::SSEConnection> sse;
 		std::mutex sse_mtx;
+		std::chrono::steady_clock::time_point last_sse_ping{};
+		static const int SSE_PING_INTERVAL = 20;
 
 		void cleanupSSE_locked()
 		{

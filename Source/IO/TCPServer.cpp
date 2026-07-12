@@ -327,6 +327,10 @@ namespace IO
 					return;
 				}
 
+				const int idle = 60, interval = 20, count = 3;
+				Net::setTCPKeepAlive(conn_socket, idle, interval, count);
+				Net::setTCPUserTimeout(conn_socket, (idle + interval * count) * 1000);
+
 				if (!setNonBlock(conn_socket))
 				{
 					Error() << "TCP Server: cannot make client socket non-blocking.";

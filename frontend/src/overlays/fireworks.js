@@ -10,60 +10,77 @@ import { fromLonLat } from 'ol/proj';
 
 let deps = null; // { config, extraVector, showDialog, showNotification }
 let evtSource = null;
+let active = false;
 
 export function init(d) {
     deps = d;
 }
 
 export function isRunning() {
-    return evtSource != null;
+    return active;
 }
 
 export function toggle() {
-    if (evtSource == null) start();
+    if (!active) start();
     else stop();
 }
 
 export function start() {
-    if (evtSource == null) {
-        if (!deps.config.features.realtime) {
-            deps.showDialog("Error", "Cannot run Firework Mode. Please ensure that AIS-catcher is running with -N REALTIME on.");
-            return;
-        }
-
-        evtSource = new EventSource("api/signal");
-
-        evtSource.addEventListener(
-            "nmea",
-            function (e) {
-                const jsonData = JSON.parse(e.data);
-
-                if (Object.hasOwn(jsonData, "channel") && Object.hasOwn(jsonData, "lat") && Object.hasOwn(jsonData, "lon")) {
-                    addMarker(jsonData.lat, jsonData.lon, jsonData.channel);
-                }
-            },
-            false,
-        );
-
-        evtSource.onerror = function () {
-            stop();
-            deps.showDialog("Error", "Problem running Firework Mode, cannot reach server. Please ensure that AIS-catcher is running with -N REALTIME on.");
-        };
-
-        evtSource.onopen = function () {
-            deps.showNotification("Fireworks Mode started");
-            console.log("Fireworks connected");
-        };
+    if (active) return;
+    if (!deps.config.features.realtime) {
+        deps.showDialog("Error", "Cannot run Firework Mode. Please ensure that AIS-catcher is running with -N REALTIME on.");
+        return;
     }
+    active = true;
+    deps.showNotification("Fireworks Mode started");
+    openStream();
 }
 
-export function stop() {
+function openStream() {
+    if (evtSource != null || document.hidden) return;
+
+    evtSource = new EventSource("api/signal");
+
+    evtSource.addEventListener(
+        "nmea",
+        function (e) {
+            const jsonData = JSON.parse(e.data);
+
+            if (Object.hasOwn(jsonData, "channel") && Object.hasOwn(jsonData, "lat") && Object.hasOwn(jsonData, "lon")) {
+                addMarker(jsonData.lat, jsonData.lon, jsonData.channel);
+            }
+        },
+        false,
+    );
+
+    evtSource.onerror = function () {
+        stop();
+        deps.showDialog("Error", "Problem running Firework Mode, cannot reach server. Please ensure that AIS-catcher is running with -N REALTIME on.");
+    };
+
+    evtSource.onopen = function () {
+        console.log("Fireworks connected");
+    };
+}
+
+function closeStream() {
     if (evtSource != null) {
-        deps.showNotification("Fireworks Mode stopped");
         evtSource.close();
         evtSource = null;
     }
 }
+
+export function stop() {
+    if (!active) return;
+    active = false;
+    closeStream();
+    deps.showNotification("Fireworks Mode stopped");
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) closeStream();
+    else if (active) openStream();
+});
 
 function addMarker(lat, lon, ch) {
     const latlon = fromLonLat([lon, lat]);

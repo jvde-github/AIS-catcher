@@ -32,7 +32,7 @@ void ControlServer::start()
 		throw std::runtime_error("Control: cannot start control server at port " + std::to_string(core.getControlPort()));
 
 	log_listener = Logger::getInstance().addLogListener([this](const LogMessage &m)
-														{ sendSSE(3, "log", m.toJSON()); });
+														{ sendSSE(SSE_LOG, "log", m.toJSON()); });
 
 	Info() << "Control: control server running at port " << core.getControlPort();
 }
@@ -65,7 +65,7 @@ void ControlServer::processClients()
 	for (int i = 0; i < 4; i++)
 		activity_sent[i] = snapshot[i];
 
-	sendSSE(1, "activity", s);
+	sendSSE(SSE_ACTIVITY, "activity", s);
 }
 
 void ControlServer::close()
@@ -389,16 +389,13 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 	{
 		Response(c, "application/json", core.getSerialListJSON());
 	}
-	else if (path == "/api/log" && r.method == "GET")
+	else if (path == "/api/stream" && r.method == "GET")
 	{
-		std::vector<std::string> backlog;
-		for (auto &m : Logger::getInstance().getLastMessages(25))
-			backlog.push_back(m.toJSON());
-		upgradeSSE(c, 3, backlog);
-	}
-	else if (path == "/api/activity" && r.method == "GET")
-	{
-		upgradeSSE(c, 1);
+		// single log + activity stream: browsers cap persistent connections per host
+		uint32_t since = (uint32_t)strtoul(r.queryParam("since").c_str(), nullptr, 10);
+
+		upgradeSSE(c, (1u << SSE_ACTIVITY) | (1u << SSE_LOG), "log", [since]() -> std::vector<std::string>
+				   { return Logger::getInstance().getBacklogJSON(25, since); });
 	}
 	else
 	{

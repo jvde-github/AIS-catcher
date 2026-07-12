@@ -1153,7 +1153,7 @@ int main(int argc, char *argv[])
 
 	try
 	{
-		Logger::getInstance().setMaxBufferSize(50);
+		Logger::getInstance().setMaxBufferSize(200);
 		cb = Logger::getInstance().addLogListener([](const LogMessage &msg)
 												  { std::cerr << msg.message << "\n"; });
 

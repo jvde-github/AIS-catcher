@@ -798,14 +798,14 @@ void ReceiverTracker::appendDevice(Device::Device *device, const std::string &ne
 	sample_rate += device->getRateDescription() + newline;
 }
 
-int WebViewer::parseReceiver(const std::string &query)
+int WebViewer::parseReceiver(const std::string &target)
 {
-	auto pos = query.find("receiver=");
+	auto pos = target.find('?');
 	if (pos == std::string::npos)
 		return 0;
 	try
 	{
-		return std::stoi(query.substr(pos + 9));
+		return std::stoi(IO::HTTPRequest::queryParam(target.substr(pos + 1), "receiver"));
 	}
 	catch (...)
 	{
@@ -813,14 +813,14 @@ int WebViewer::parseReceiver(const std::string &query)
 	}
 }
 
-std::time_t WebViewer::parseSinceParam(const std::string &query)
+std::time_t WebViewer::parseSinceParam(const std::string &target)
 {
-	auto pos = query.find("since=");
+	auto pos = target.find('?');
 	if (pos == std::string::npos)
 		return 0;
 	try
 	{
-		return (std::time_t)std::stoll(query.substr(pos + 6));
+		return (std::time_t)std::stoll(IO::HTTPRequest::queryParam(target.substr(pos + 1), "since"));
 	}
 	catch (...)
 	{
@@ -1345,18 +1345,16 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	// SSE routes (upgrade connection, not a normal response)
 	if (r == "/api/sse" && realtime)
 	{
-		upgradeSSE(c, 1);
+		upgradeSSE(c, 1u << 1);
 	}
 	else if (r == "/api/signal" && realtime)
 	{
-		upgradeSSE(c, 2);
+		upgradeSSE(c, 1u << 2);
 	}
 	else if (r == "/api/log" && showlog)
 	{
-		std::vector<std::string> backlog;
-		for (auto &m : Logger::getInstance().getLastMessages(25))
-			backlog.push_back(m.toJSON());
-		upgradeSSE(c, 3, backlog);
+		upgradeSSE(c, 1u << 3, "log", []() -> std::vector<std::string>
+				   { return Logger::getInstance().getBacklogJSON(25); });
 	}
 	// Prefix-match routes
 	else if (r.substr(0, 6) == "/tiles")

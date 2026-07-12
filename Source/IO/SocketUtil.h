@@ -25,6 +25,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
+#include <mstcpip.h>
 #else
 #include <sys/socket.h>
 #include <netdb.h>
@@ -32,6 +33,7 @@
 #include <unistd.h>
 #include <cerrno>
 #include <cstring>
+#include <netinet/tcp.h>
 #ifdef __ANDROID__
 #include <netinet/in.h>
 #endif
@@ -88,6 +90,54 @@ namespace Net
 		return s;
 #else
 		return std::strerror(e);
+#endif
+	}
+
+	inline bool setTCPKeepAlive(SOCKET sock, int idle, int interval, int count)
+	{
+		int yes = 1;
+#ifdef _WIN32
+		if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (const char *)&yes, sizeof(yes)))
+			return false;
+
+		struct tcp_keepalive keepalive;
+		keepalive.onoff = 1;
+		keepalive.keepalivetime = idle * 1000;
+		keepalive.keepaliveinterval = interval * 1000;
+		DWORD br;
+		if (WSAIoctl(sock, SIO_KEEPALIVE_VALS, &keepalive, sizeof(keepalive), NULL, 0, &br, NULL, NULL) == SOCKET_ERROR)
+			return false;
+#else
+		if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (void *)&yes, sizeof(yes)))
+			return false;
+#if defined(__APPLE__)
+		if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPALIVE, &idle, sizeof(idle)))
+			return false;
+#elif defined(__ANDROID__)
+		if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)) ||
+			setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) ||
+			setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count)))
+			return false;
+#else
+		if (setsockopt(sock, SOL_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)) ||
+			setsockopt(sock, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) ||
+			setsockopt(sock, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)))
+			return false;
+#endif
+#endif
+		return true;
+	}
+
+	// Error a wedged (half-open / zero-window) socket instead of hanging forever.
+	inline bool setTCPUserTimeout(SOCKET sock, int timeout_ms)
+	{
+#if defined(TCP_USER_TIMEOUT)
+		return setsockopt(sock, IPPROTO_TCP, TCP_USER_TIMEOUT, (const char *)&timeout_ms, sizeof(timeout_ms)) == 0;
+#elif defined(_WIN32) && defined(TCP_MAXRT)
+		DWORD maxrt_secs = (DWORD)(timeout_ms / 1000);
+		return setsockopt(sock, IPPROTO_TCP, TCP_MAXRT, (const char *)&maxrt_secs, sizeof(maxrt_secs)) == 0;
+#else
+		return true;
 #endif
 	}
 

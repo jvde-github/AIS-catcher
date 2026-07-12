@@ -4,10 +4,12 @@ export class LogViewer {
         this.logScroll = document.getElementById('log_scroll');
         this.logContent = document.getElementById('log_content');
         this.eventSource = null;
+        this.onVisibility = () => document.hidden ? this.closeStream() : this.connect();
+        document.addEventListener('visibilitychange', this.onVisibility);
     }
 
     connect() {
-        if (this.eventSource) return;
+        if (this.eventSource || document.hidden) return;
         this.eventSource = new EventSource("api/log");
 
         this.eventSource.addEventListener('log', (event) => {
@@ -79,6 +81,11 @@ export class LogViewer {
     }
 
     disconnect() {
+        document.removeEventListener('visibilitychange', this.onVisibility);
+        this.closeStream();
+    }
+
+    closeStream() {
         if (this.eventSource) {
             this.eventSource.close();
             this.eventSource = null;
