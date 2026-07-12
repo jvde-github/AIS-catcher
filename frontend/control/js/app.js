@@ -200,7 +200,7 @@
     const ENGINE_STATES = {
         running: { label: 'Running', dot: 'bg-emerald-500', text: 'text-emerald-600', hex: '#10b981' },
         starting: { label: 'Starting...', dot: 'bg-amber-400', text: 'text-amber-400', hex: '#fbbf24' },
-        retrying: { label: 'Reconnecting...', dot: 'bg-amber-400', text: 'text-amber-400', hex: '#fbbf24' },
+        retrying: { label: 'Retrying...', dot: 'bg-amber-400', text: 'text-amber-400', hex: '#fbbf24' },
         stopped: { label: 'Stopped', dot: 'bg-slate-500', text: 'text-slate-400', hex: '#64748b' }
     };
 

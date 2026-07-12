@@ -38,6 +38,8 @@ ControlCore::ControlCore(const std::string &file, int port_override, const std::
 		createDefaultConfig();
 
 	readManagedFields(port_override);
+
+	auto_retry = desired;
 }
 
 void ControlCore::createDefaultConfig()
