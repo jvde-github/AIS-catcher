@@ -2789,7 +2789,13 @@ async function updateStatistics() {
                 const s = o.stats;
                 const showStatus = o.type !== "UDP" && !o.type.startsWith("HTTP");
 
-                html += `<div><span>Output</span><span>${o.description || o.type}</span></div>`;
+                let name = sanitizeString(o.description || o.type);
+                if (o.link && /^https?:\/\//i.test(o.link)) {
+                    const href = sanitizeString(o.link);
+                    name = `<a href="${href}" target="_blank" rel="noopener" title="${href}" style="color:inherit">${name}` +
+                        ` <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 -960 960 960" fill="currentColor" style="vertical-align:-1px"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h560v-280h80v280q0 33-23.5 56.5T760-120H200Zm188-212-56-56 372-372H520v-80h320v320h-80v-184L388-332Z"/></svg></a>`;
+                }
+                html += `<div><span>Output</span><span>${name}</span></div>`;
                 if (showStatus) {
                     const connected = s.connected ? "Connected" : "Not connected";
                     const connectedColor = s.connected ? "green" : "red";
@@ -2805,6 +2811,8 @@ async function updateStatistics() {
                 html += "</section>";
             }
             outputSection.innerHTML = html;
+        } else {
+            outputSection.innerHTML = "";
         }
     }
 }

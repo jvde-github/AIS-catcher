@@ -142,7 +142,7 @@ class RealtimeViewer {
         if (config.features.decoder) {
             const decoderIcon = document.createElement('span');
             decoderIcon.className = 'nmea-decoder-icon';
-            decoderIcon.innerHTML = '<i class="decode_icon"></i>';
+            decoderIcon.innerHTML = '<i class="comment_icon"></i>';
             decoderIcon.title = 'Decode NMEA';
             decoderIcon.addEventListener('click', (e) => {
                 e.stopPropagation();

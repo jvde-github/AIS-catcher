@@ -88,6 +88,7 @@ public:
 
 	bool engineDesired();
 	bool engineRetrying();
+	uint32_t statusStamp();
 	void reportRunning();
 	void reportStopped();
 	void engineFailed();
@@ -125,6 +126,7 @@ private:
 		retry_delay = 0;
 	}
 	std::atomic<int> command_seq{0};
+	uint32_t status_epoch = 0;
 
 	std::mutex file_mtx;
 	std::function<void()> config_changed;

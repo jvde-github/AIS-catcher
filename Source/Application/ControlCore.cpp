@@ -103,6 +103,7 @@ void ControlCore::startEngine()
 			return;
 		desired = true;
 		restart_pending = false;
+		status_epoch++;
 	}
 	persistEngineField(true);
 	cv.notify_all();
@@ -116,6 +117,7 @@ void ControlCore::stopEngine()
 		desired = false;
 		restart_pending = false;
 		resetRetry();
+		status_epoch++;
 	}
 	persistEngineField(false);
 	StopRequest();
@@ -132,6 +134,7 @@ void ControlCore::restartEngine()
 		restart_pending = running;
 		resetRetry();
 		auto_retry = running;
+		status_epoch++;
 	}
 	persistEngineField(true);
 
@@ -376,6 +379,14 @@ bool ControlCore::engineDesired()
 	return desired;
 }
 
+uint32_t ControlCore::statusStamp()
+{
+	std::lock_guard<std::mutex> lock(mtx);
+	uint32_t bits = (state == EngineState::Running ? 1 : 0) | (desired ? 2 : 0) |
+					((desired && auto_retry && state != EngineState::Running) ? 4 : 0);
+	return (status_epoch << 3) | bits;
+}
+
 bool ControlCore::engineRetrying()
 {
 	std::lock_guard<std::mutex> lock(mtx);
@@ -388,6 +399,7 @@ void ControlCore::reportRunning()
 	state = EngineState::Running;
 	engine_start_time = std::time(nullptr);
 	auto_retry = false;
+	status_epoch++;
 }
 
 void ControlCore::reportStopped()
@@ -396,6 +408,7 @@ void ControlCore::reportStopped()
 	bool was_running = state == EngineState::Running;
 	bool healthy = was_running && std::time(nullptr) - engine_start_time >= RETRY_HEALTHY_UPTIME;
 	state = EngineState::Stopped;
+	status_epoch++;
 
 	if (restart_pending)
 		restart_pending = false;

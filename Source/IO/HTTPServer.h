@@ -165,6 +165,18 @@ namespace IO
 			cleanupSSE_locked();
 		}
 
+		bool hasSSEClients()
+		{
+			std::lock_guard<std::mutex> lk(sse_mtx);
+			return !sse.empty();
+		}
+
+		void closeAllSSE()
+		{
+			std::lock_guard<std::mutex> lk(sse_mtx);
+			sse.clear();
+		}
+
 		// backlog is built under sse_mtx so no event can fall between snapshot and registration
 		void upgradeSSE(IO::TCPServerConnection &c, uint32_t mask, const std::string &topic = "",
 						const std::function<std::vector<std::string>()> &backlog = nullptr)

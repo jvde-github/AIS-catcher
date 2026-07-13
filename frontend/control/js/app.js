@@ -34,7 +34,8 @@
         }
     }
     let currentLoadTimeout = null;
-    let statusPollInterval = null;
+    let streamRetryTimer = null;
+    let streamWatchdog = null;
     let eventSource = null;
     let currentOutputType = 'sharing';
     let flowOutputTarget = null;
@@ -205,6 +206,21 @@
         stopped: { label: 'Stopped', dot: 'bg-slate-500', text: 'text-slate-400', hex: '#64748b' }
     };
 
+    let engineStateKey = 'stopped';
+    let uptimeBase = 0;
+    let uptimeStamp = 0;
+
+    function updateUptimeDisplay() {
+        const s = ENGINE_STATES[engineStateKey];
+        const up = engineRunning ? formatUptime(uptimeBase + Math.floor((Date.now() - uptimeStamp) / 1000)) : '';
+        const dotUptime = document.getElementById('status-dot-uptime');
+        if (dotUptime) dotUptime.textContent = up;
+        const dotText = document.getElementById('status-dot-text');
+        if (dotText) dotText.textContent = s.label + (up ? ' · ' + up : '');
+        const hubUptime = document.getElementById('hub-uptime');
+        if (hubUptime) hubUptime.textContent = up ? 'Uptime: ' + up : '';
+    }
+
     function renderEngineState(data) {
         if (!data) return;
         const running = data.engine === 'running';
@@ -214,19 +230,18 @@
 
         const state = running ? 'running' : (data.retrying ? 'retrying' : (data.desired ? 'starting' : 'stopped'));
         const s = ENGINE_STATES[state];
-        const up = running ? formatUptime(data.uptime) : '';
+        engineStateKey = state;
+        if (data.uptime !== undefined) {
+            uptimeBase = data.uptime;
+            uptimeStamp = Date.now();
+        }
 
         const dot = document.getElementById('status-dot');
-        if (dot) dot.className = 'block w-2.5 h-2.5 rounded-full cursor-default ' + s.dot;
+        if (dot) dot.className = 'block w-2.5 h-2.5 rounded-full ' + s.dot;
         const dotLabel = document.getElementById('status-dot-label');
         if (dotLabel) dotLabel.textContent = s.label;
-        const dotUptime = document.getElementById('status-dot-uptime');
-        if (dotUptime) dotUptime.textContent = up;
         const dotText = document.getElementById('status-dot-text');
-        if (dotText) {
-            dotText.className = 'hidden sm:inline text-xs font-medium ' + s.text;
-            dotText.textContent = s.label + (up ? ' · ' + up : '');
-        }
+        if (dotText) dotText.className = 'hidden sm:inline text-xs font-medium ' + s.text;
         const restoreDot = document.getElementById('restore-dot');
         if (restoreDot) restoreDot.style.background = s.hex;
 
@@ -238,11 +253,11 @@
                 (running ? '<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>' : '') +
                 '<span class="relative inline-flex rounded-full h-2.5 w-2.5 ' + s.dot + '"></span></span>';
         }
-        const hubUptime = document.getElementById('hub-uptime');
-        if (hubUptime) hubUptime.textContent = up ? 'Uptime: ' + up : '';
+
+        updateUptimeDisplay();
 
         const sysinfo = document.getElementById('hub-sysinfo');
-        if (sysinfo) {
+        if (sysinfo && data.version) {
             const rows = [
                 ['Version', data.version],
                 ['Build date', data.build_date],
@@ -261,49 +276,72 @@
     let reloadUntil = 0;
     let overlayRestartBtn = null;
 
+    function restartTimedOut() {
+        reloadUntil = 0;
+        if (overlayRestartBtn) {
+            overlayRestartBtn.disabled = false;
+            overlayRestartBtn.textContent = 'Restart';
+        }
+    }
+
+    function applyStatus(data) {
+        if (data.auth && data.auth !== auth) {
+            auth = data.auth;
+            updateBarVisibility();
+            startEventStream();
+        }
+        renderEngineState(data);
+        setEngineButtonDisabled(false);
+        if (reloadUntil) {
+            if (data.engine === 'running') {
+                reloadUntil = 0;
+                window.location.reload();
+            } else if (data.desired === false || Date.now() > reloadUntil) {
+                restartTimedOut();
+            }
+        }
+        if (data.viewer && !viewerLoaded) {
+            port = data.viewer;
+            clearOverlayMessages();
+            loadWebviewer();
+        }
+        return data;
+    }
+
     function refreshEngineStatus() {
         return fetchStatus()
-            .then(data => {
-                if (data.auth !== auth) {
-                    auth = data.auth;
-                    updateBarVisibility();
-                    startEventStream();
-                }
-                renderEngineState(data);
-                setEngineButtonDisabled(false);
-                if (reloadUntil) {
-                    if (data.engine === 'running') {
-                        reloadUntil = 0;
-                        window.location.reload();
-                    } else if (data.desired === false || Date.now() > reloadUntil) {
-                        reloadUntil = 0;
-                        if (overlayRestartBtn) {
-                            overlayRestartBtn.disabled = false;
-                            overlayRestartBtn.textContent = 'Restart';
-                        }
-                    }
-                }
-                if (data.viewer && !viewerLoaded) {
-                    port = data.viewer;
-                    clearOverlayMessages();
-                    loadWebviewer();
-                }
-                return data;
-            })
+            .then(applyStatus)
             .catch(() => {
                 setEngineButtonDisabled(false);
                 return null;
             });
     }
 
-    function startStatusPolling() {
-        if (statusPollInterval) return;
-        statusPollInterval = setInterval(refreshEngineStatus, 1000);
+    function scheduleStreamRetry() {
+        if (streamRetryTimer) return;
+        streamRetryTimer = setTimeout(() => {
+            streamRetryTimer = null;
+            refreshEngineStatus().then(data => {
+                startEventStream();
+                if (!data) scheduleStreamRetry();
+            });
+        }, 5000);
     }
 
-    function stopStatusPolling() {
-        clearInterval(statusPollInterval);
-        statusPollInterval = null;
+    function cancelStreamRetry() {
+        clearTimeout(streamRetryTimer);
+        streamRetryTimer = null;
+    }
+
+    function armStreamWatchdog() {
+        clearTimeout(streamWatchdog);
+        streamWatchdog = setTimeout(() => {
+            streamWatchdog = null;
+            if (eventSource && eventSource.readyState === EventSource.CONNECTING) {
+                stopEventStream();
+                scheduleStreamRetry();
+            }
+        }, 10000);
     }
 
     window.hubConfigSaved = function (kind) {
@@ -476,6 +514,44 @@
     const OUTPUT_TAB_ACTIVE = 'sys-tab active';
     const OUTPUT_TAB_INACTIVE = 'sys-tab';
 
+    const TAB_ARROWS = {
+        left: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 -960 960 960" fill="currentColor"><path d="M560-240 320-480l240-240 56 56-184 184 184 184-56 56Z"/></svg>',
+        right: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 -960 960 960" fill="currentColor"><path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z"/></svg>'
+    };
+
+    function enableTabScroll(el) {
+        const wrap = document.createElement('div');
+        wrap.className = 'tab-scroll-wrap';
+        el.parentNode.insertBefore(wrap, el);
+        wrap.appendChild(el);
+
+        ['left', 'right'].forEach(dir => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'tab-scroll-btn ' + dir;
+            btn.innerHTML = TAB_ARROWS[dir];
+            btn.addEventListener('click', () => {
+                el.scrollBy({ left: (dir === 'left' ? -0.6 : 0.6) * el.clientWidth, behavior: 'smooth' });
+            });
+            wrap.appendChild(btn);
+        });
+
+        const update = () => {
+            const max = el.scrollWidth - el.clientWidth;
+            wrap.classList.toggle('can-left', el.scrollLeft > 4);
+            wrap.classList.toggle('can-right', el.scrollLeft < max - 4);
+        };
+        el.addEventListener('scroll', update, { passive: true });
+        el.addEventListener('wheel', e => {
+            if (!e.deltaX && el.scrollWidth > el.clientWidth) {
+                el.scrollLeft += e.deltaY;
+                e.preventDefault();
+            }
+        }, { passive: false });
+        new ResizeObserver(update).observe(el);
+        update();
+    }
+
     function setOutputType(value) {
         if (value !== currentOutputType && typeof App !== 'undefined' && App.state && App.state.unsaved) {
             if (!confirm('You have unsaved changes. Are you sure you want to switch without saving?')) return;
@@ -484,6 +560,7 @@
         currentOutputType = value;
         document.querySelectorAll('[data-output-type]').forEach(b => {
             b.className = b.dataset.outputType === value ? OUTPUT_TAB_ACTIVE : OUTPUT_TAB_INACTIVE;
+            if (b.dataset.outputType === value) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         });
         updateOutputView();
     }
@@ -524,6 +601,7 @@
         wrapper.appendChild(tabBar);
         wrapper.appendChild(container);
         host.appendChild(wrapper);
+        enableTabScroll(tabBar);
 
         setOutputType(initial);
     }
@@ -624,13 +702,29 @@
         eventSource = new EventSource('/api/stream' + (lastLogSeq >= 0 ? '?since=' + lastLogSeq : ''));
         eventSource.addEventListener('log', onLogEvent);
         eventSource.addEventListener('activity', onActivityEvent);
+        eventSource.addEventListener('status', e => {
+            try { applyStatus(JSON.parse(e.data)); } catch (_) { }
+        });
         eventSource.onopen = () => {
+            clearTimeout(streamWatchdog);
+            streamWatchdog = null;
             if (!logReplayDone)
                 setTimeout(() => { logReplayDone = true; }, 500);
         };
+        eventSource.onerror = () => {
+            if (eventSource && eventSource.readyState === EventSource.CLOSED) {
+                stopEventStream();
+                scheduleStreamRetry();
+            } else {
+                armStreamWatchdog();
+            }
+        };
+        armStreamWatchdog();
     }
 
     function stopEventStream() {
+        clearTimeout(streamWatchdog);
+        streamWatchdog = null;
         if (eventSource) {
             eventSource.close();
             eventSource = null;
@@ -680,6 +774,7 @@
         });
         document.querySelectorAll('#system-tabs .sys-tab').forEach(b => {
             b.classList.toggle('active', b.dataset.tab === tab);
+            if (b.dataset.tab === tab) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         });
         systemBody.querySelectorAll('.sys-pane').forEach(p => {
             p.classList.toggle('hidden', p.dataset.pane !== tab);
@@ -901,16 +996,40 @@
         return s;
     }
 
-    function flowNode(label, zones, active, isInput, onClick) {
+    function safeLink(url) {
+        return url && /^https?:\/\//i.test(url) ? url : null;
+    }
+
+    function flowNode(label, zones, active, isInput, onClick, link) {
         const border = active ? 'border-r-emerald-400' : 'border-r-rose-400';
-        const div = document.createElement('button');
-        div.type = 'button';
+        const div = document.createElement('div');
+        div.setAttribute('role', 'button');
+        div.tabIndex = 0;
         div.className = `text-left bg-white border border-slate-200 border-r-[6px] ${border} rounded-lg px-3 py-2.5 shadow-sm min-w-0 cursor-pointer hover:bg-slate-50 transition-colors`;
         div.addEventListener('click', onClick);
+        div.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick(e);
+            }
+        });
 
-        const lbl = document.createElement('div');
-        lbl.className = 'text-sm font-medium text-slate-700 truncate';
+        const url = safeLink(link);
+        const lbl = document.createElement(url ? 'a' : 'div');
+        lbl.className = 'block text-sm font-medium text-slate-700 truncate';
         lbl.textContent = label;
+        if (url) {
+            lbl.href = url;
+            lbl.target = '_blank';
+            lbl.rel = 'noopener';
+            lbl.title = url;
+            lbl.className += ' underline decoration-slate-300 hover:decoration-slate-500';
+            lbl.addEventListener('click', e => e.stopPropagation());
+            const icon = document.createElement('span');
+            icon.className = 'inline-block align-[-2px] ml-1 text-slate-400';
+            icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h560v-280h80v280q0 33-23.5 56.5T760-120H200Zm188-212-56-56 372-372H520v-80h320v320h-80v-184L388-332Z"/></svg>';
+            lbl.appendChild(icon);
+        }
         div.appendChild(lbl);
 
         if (zones && zones.length > 0) {
@@ -1079,7 +1198,7 @@
                     { type: 'Webviewer', key: 'server', sub: 'server' }
                 ].forEach(({ type, key, sub }) => {
                     (cfg[key] || []).forEach(item => {
-                        outputs.push({ label: flowOutputLabel(type, item), zones: item.zone || [], active: item.active !== false, sub });
+                        outputs.push({ label: flowOutputLabel(type, item), zones: item.zone || [], active: item.active !== false, sub, link: item.link });
                     });
                 });
                 if (cfg.sharing !== undefined) {
@@ -1117,7 +1236,7 @@
                     return n;
                 });
                 const outputEls = outputs.map(o => {
-                    const n = flowNode(o.label, o.zones, o.active, false, () => selectOutputTab(o.sub));
+                    const n = flowNode(o.label, o.zones, o.active, false, () => selectOutputTab(o.sub), o.link);
                     outputsEl.appendChild(n);
                     return n;
                 });
@@ -1189,6 +1308,7 @@
         document.getElementById('nav-btn-input').addEventListener('click', () => openSystem('input'));
         document.getElementById('nav-btn-output').addEventListener('click', () => openSystem('output'));
         document.getElementById('nav-btn-control').addEventListener('click', () => openSystem('flow'));
+        document.getElementById('status-dot-wrap').addEventListener('click', () => openSystem('log'));
         document.getElementById('login-pill').addEventListener('click', () => { pendingAction = null; openLoginModal(); });
         document.getElementById('bar-collapse').addEventListener('click', () => setBarCollapsed(true));
         document.getElementById('bar-restore').addEventListener('click', () => setBarCollapsed(false));
@@ -1201,19 +1321,29 @@
             const btn = e.target.closest('.sys-tab');
             if (btn) switchSystemTab(btn.dataset.tab);
         });
+        enableTabScroll(document.getElementById('system-tabs'));
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape' && systemOverlay.classList.contains('open')) closeSystem();
         });
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
-                stopStatusPolling();
+                cancelStreamRetry();
                 stopEventStream();
             } else {
                 refreshEngineStatus();
-                startStatusPolling();
                 startEventStream();
             }
         });
+        let sysinfoStamp = 0;
+        setInterval(() => {
+            if (document.hidden) return;
+            updateUptimeDisplay();
+            if (reloadUntil && Date.now() > reloadUntil) restartTimedOut();
+            if (systemOverlay.classList.contains('open') && currentSystemTab === 'status' && Date.now() - sysinfoStamp > 5000) {
+                sysinfoStamp = Date.now();
+                refreshEngineStatus();
+            }
+        }, 1000);
 
         fetchStatus()
             .then(data => {
@@ -1221,7 +1351,6 @@
                 port = data.viewer || 0;
                 renderEngineState(data);
                 updateBarVisibility();
-                startStatusPolling();
                 startEventStream();
 
                 if (auth === 'setup') {
@@ -1242,7 +1371,7 @@
             .catch(() => {
                 loadingDiv.classList.add('hidden');
                 showError('Connection Error', 'Cannot reach the control server.');
-                startStatusPolling();
+                scheduleStreamRetry();
             });
     }
 

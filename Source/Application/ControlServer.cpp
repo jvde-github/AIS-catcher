@@ -41,6 +41,16 @@ void ControlServer::processClients()
 {
 	HTTPServer::processClients();
 
+	if (hasSSEClients())
+	{
+		uint32_t stamp = core.statusStamp();
+		if (stamp != status_state)
+		{
+			status_state = stamp;
+			sendSSE(SSE_STATUS, "status", statusJSON(nullptr, false));
+		}
+	}
+
 	std::time_t now = std::time(nullptr);
 	if (now == activity_time)
 		return;
@@ -179,19 +189,18 @@ void ControlServer::loginSucceeded()
 	login_block_until = 0;
 }
 
-void ControlServer::sendStatus(IO::TCPServerConnection &c, bool authenticated)
+std::string ControlServer::statusJSON(const char *auth, bool authenticated)
 {
 	bool running = core.getEngineState() == ControlCore::EngineState::Running;
-	const char *auth = !core.authRequired() ? "open"
-					   : !core.hasPassword() ? (authenticated ? "ok" : "setup")
-					   : c.is_local			 ? "open"
-											 : (authenticated ? "ok" : "login");
 
 	std::string s;
 	JSON::Writer w(s);
-	w.beginObject()
-		.kv("auth", auth)
-		.kv("engine", running ? "running" : "stopped")
+	w.beginObject();
+
+	if (auth)
+		w.kv("auth", auth);
+		
+	w.kv("engine", running ? "running" : "stopped")
 		.kv("desired", core.engineDesired())
 		.kv("retrying", core.engineRetrying())
 		.kv("uptime", core.getUptime())
@@ -210,8 +219,17 @@ void ControlServer::sendStatus(IO::TCPServerConnection &c, bool authenticated)
 	}
 
 	w.endObject().finish();
+	return s;
+}
 
-	Response(c, "application/json", s);
+void ControlServer::sendStatus(IO::TCPServerConnection &c, bool authenticated)
+{
+	const char *auth = !core.authRequired()	 ? "open"
+					   : !core.hasPassword() ? (authenticated ? "ok" : "setup")
+					   : c.is_local			 ? "open"
+											 : (authenticated ? "ok" : "login");
+
+	Response(c, "application/json", statusJSON(auth, authenticated));
 }
 
 void ControlServer::sendOK(IO::TCPServerConnection &c)
@@ -240,7 +258,8 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 		else if (origin.compare(0, 8, "https://") == 0)
 			origin = origin.substr(8);
 
-		auto stripDefaultPort = [](std::string h) -> std::string {
+		auto stripDefaultPort = [](std::string h) -> std::string
+		{
 			if (h.size() > 3 && h.compare(h.size() - 3, 3, ":80") == 0)
 				return h.substr(0, h.size() - 3);
 			if (h.size() > 4 && h.compare(h.size() - 4, 4, ":443") == 0)
@@ -340,6 +359,7 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 		{
 			core.setPassword(r.body);
 			destroyAllSessions();
+			closeAllSSE();
 			setExtraHeader("Set-Cookie: aiscontrol=" + createSession() + cookie_attr);
 			sendOK(c);
 		}
@@ -391,11 +411,13 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 	}
 	else if (path == "/api/stream" && r.method == "GET")
 	{
-		// single log + activity stream: browsers cap persistent connections per host
+		// single log + activity + status stream: browsers cap persistent connections per host
 		uint32_t since = (uint32_t)strtoul(r.queryParam("since").c_str(), nullptr, 10);
 
-		upgradeSSE(c, (1u << SSE_ACTIVITY) | (1u << SSE_LOG), "log", [since]() -> std::vector<std::string>
+		upgradeSSE(c, (1u << SSE_ACTIVITY) | (1u << SSE_STATUS) | (1u << SSE_LOG), "log", [since]() -> std::vector<std::string>
 				   { return Logger::getInstance().getBacklogJSON(25, since); });
+
+		status_state = STATUS_UNSENT;
 	}
 	else
 	{

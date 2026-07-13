@@ -46,6 +46,7 @@ private:
 	ControlCore &core;
 
 	static const int SSE_ACTIVITY = 1;
+	static const int SSE_STATUS = 2;
 	static const int SSE_LOG = 3;
 
 	static const int SESSION_LIFETIME = 7 * 24 * 3600;
@@ -61,6 +62,9 @@ private:
 	uint32_t activity_sent[4] = {0, 0, 0, 0};
 	std::time_t activity_time = 0;
 
+	static const uint32_t STATUS_UNSENT = 0xFFFFFFFF;
+	uint32_t status_state = STATUS_UNSENT;
+
 	std::string createSession();
 	bool checkSession(const std::string &cookie);
 	void destroySession(const std::string &cookie);
@@ -71,6 +75,7 @@ private:
 	void loginFailed();
 	void loginSucceeded();
 
+	std::string statusJSON(const char *auth, bool authenticated);
 	void sendStatus(IO::TCPServerConnection &c, bool authenticated);
 	void sendOK(IO::TCPServerConnection &c);
 	void sendError(IO::TCPServerConnection &c, const std::string &message, int status = 400);

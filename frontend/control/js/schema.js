@@ -22,7 +22,15 @@ const ChannelFields = {
         name: 'description',
         label: 'Description',
         type: 'text',
-        placeholder: 'Optional description'
+        placeholder: 'Optional description',
+        width: 50
+    }),
+    link: () => ({
+        name: 'link',
+        label: 'Link',
+        type: 'text',
+        placeholder: 'Optional link, e.g. https://example.com',
+        width: 50
     }),
     active: () => ({
         name: 'active',
@@ -108,6 +116,7 @@ const httpSchema = {
         placeholder: 'https://example.com'
     },
     description: ChannelFields.description(),
+    link: ChannelFields.link(),
     active: ChannelFields.active(),
     id: {
         name: 'id',
@@ -145,6 +154,7 @@ const udpSchema = {
     host: ChannelFields.host(),
     port: ChannelFields.port(),
     description: ChannelFields.description(),
+    link: ChannelFields.link(),
     active: ChannelFields.active(),
     broadcast: {
         name: 'broadcast',
@@ -163,6 +173,7 @@ const tcpSchema = {
     host: ChannelFields.host(),
     port: ChannelFields.port(),
     description: ChannelFields.description(),
+    link: ChannelFields.link(),
     active: ChannelFields.active(),
     persist: {
         name: 'persist',
@@ -194,6 +205,7 @@ const tcpServerSchema = {
         placeholder: '5010'
     },
     description: ChannelFields.description(),
+    link: ChannelFields.link(),
     active: ChannelFields.active(),
     unique: ChannelFields.unique(),
     msgformat: ChannelFields.msgformat(),
@@ -210,6 +222,7 @@ const mqttSchema = {
         placeholder: 'mqtt[s]://[user:pass@]host[:port]'
     },
     description: ChannelFields.description(),
+    link: ChannelFields.link(),
     active: ChannelFields.active(),
     topic: {
         name: 'topic',

@@ -42,7 +42,7 @@ namespace IO
 		JSON::Serializer builder{JSON_DICT_FULL};
 
 		OutputStats stats;
-		std::string description, type;
+		std::string description, link, type;
 		unsigned long lines_sent = 0;
 
 		// Formats one AIS message into the reusable `json` member buffer.
@@ -96,8 +96,10 @@ namespace IO
 		{
 			w.beginObject()
 				.kv("type", type)
-				.kv("description", description)
-				.key("stats");
+				.kv("description", description);
+			if (!link.empty())
+				w.kv("link", link);
+			w.key("stats");
 			stats.writeJSON(w);
 			w.endObject();
 		}
@@ -146,6 +148,9 @@ namespace IO
 			case AIS::KEY_SETTING_DESCRIPTION:
 			case AIS::KEY_SETTING_DESC:
 				description = arg;
+				return true;
+			case AIS::KEY_SETTING_LINK:
+				link = arg;
 				return true;
 			case AIS::KEY_SETTING_ZONE:
 				Util::Parse::Split(arg, ',', zones);

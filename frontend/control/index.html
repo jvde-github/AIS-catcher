@@ -130,11 +130,58 @@
 
         #system-tabs {
             display: flex;
-            flex-wrap: wrap;
             gap: 0.375rem;
-            padding: 0.75rem 1.25rem;
+            padding: 0.5rem 1.25rem;
             border-bottom: 1px solid #e2e8f0;
             flex-shrink: 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        #system-tabs::-webkit-scrollbar,
+        .sys-subtabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab-scroll-wrap {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #fff;
+            flex-shrink: 0;
+        }
+
+        .tab-scroll-btn {
+            position: absolute;
+            top: 0;
+            bottom: 1px;
+            width: 2.25rem;
+            display: none;
+            align-items: center;
+            color: #475569;
+            cursor: pointer;
+            z-index: 11;
+        }
+
+        .tab-scroll-btn.left {
+            left: 0;
+            justify-content: flex-start;
+            background: linear-gradient(to right, #fff 55%, transparent);
+        }
+
+        .tab-scroll-btn.right {
+            right: 0;
+            justify-content: flex-end;
+            background: linear-gradient(to left, #fff 55%, transparent);
+        }
+
+        .tab-scroll-wrap.can-left .tab-scroll-btn.left,
+        .tab-scroll-wrap.can-right .tab-scroll-btn.right {
+            display: flex;
+        }
+
+        .tab-scroll-wrap:has(.sys-subtabs) .tab-scroll-btn {
+            bottom: calc(0.5rem + 1px);
         }
 
         .sys-tab {
@@ -145,6 +192,8 @@
             color: #64748b;
             cursor: pointer;
             transition: color 0.15s, background-color 0.15s;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .sys-tab:hover {
@@ -159,20 +208,17 @@
 
         .sys-subtabs {
             display: flex;
-            flex-wrap: wrap;
             gap: 0.375rem;
-            padding-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
             border-bottom: 1px solid #e2e8f0;
-            position: sticky;
-            top: 0;
-            background: #fff;
-            z-index: 10;
+            overflow-x: auto;
+            scrollbar-width: none;
         }
 
         #system-body {
             flex: 1;
             min-height: 0;
-            padding: 1.25rem;
+            padding: 0.75rem 1.25rem 1.25rem;
             display: flex;
             flex-direction: column;
         }
@@ -204,6 +250,10 @@
                 height: 100dvh;
                 max-height: none;
                 border-radius: 0;
+            }
+            .sys-tab {
+                font-size: 0.75rem;
+                padding: 0.35rem 0.75rem;
             }
         }
 
@@ -305,6 +355,7 @@
             gap: 8px;
             min-width: 0;
             overflow: hidden;
+            cursor: pointer;
         }
 
         .bar-divider {
@@ -987,7 +1038,7 @@
         <div id="bar-right">
             <div id="status-dot-wrap">
                 <div class="relative group">
-                    <span id="status-dot" class="block w-2.5 h-2.5 rounded-full bg-slate-500 cursor-default"></span>
+                    <span id="status-dot" class="block w-2.5 h-2.5 rounded-full bg-slate-500"></span>
                     <div class="absolute bottom-full mb-2 min-w-max px-2.5 py-1.5 rounded-lg bg-slate-800 text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap" style="right:0">
                         <div id="status-dot-label" class="font-medium">Checking&#8230;</div>
                         <div id="status-dot-uptime" class="text-slate-400 text-xs mt-0.5"></div>
