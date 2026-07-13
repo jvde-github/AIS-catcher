@@ -450,7 +450,12 @@ namespace AIS
 		if (id_type == 2)
 			T(msg, AIS::KEY_VTS_TARGET_ID, start + 2, 42, text);
 		else
-			U(msg, AIS::KEY_VTS_TARGET_ID, start + 2, 42);
+		{
+			// 42-bit field; MMSI/IMO ids are LSB-aligned so real values fit an int
+			uint64_t id = msg.getUint64(start + 2, 42);
+			if (id <= 0x7FFFFFFF)
+				json.Add(AIS::KEY_VTS_TARGET_ID, (int)id);
+		}
 		X(msg, AIS::KEY_SPARE, start + 44, 4);
 		SL(msg, AIS::KEY_VTS_TARGET_LAT, start + 48, 24, 1 / 60000.0f, 0);
 		SL(msg, AIS::KEY_VTS_TARGET_LON, start + 72, 25, 1 / 60000.0f, 0);

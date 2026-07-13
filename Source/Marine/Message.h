@@ -215,6 +215,15 @@ namespace AIS
 			return (unsigned)((w >> shift) & mask);
 		}
 
+		uint64_t getUint64(int start, int len) const
+		{
+			if (len <= 32)
+				return getUint(start, len);
+			if (len > 64)
+				return 0;
+			return ((uint64_t)getUint(start, len - 32) << 32) | getUint(start + len - 32, 32);
+		}
+
 		int getInt(int start, int len) const
 		{
 			const unsigned ones = ~0u;
