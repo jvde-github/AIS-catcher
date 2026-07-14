@@ -344,6 +344,7 @@ private:
 
 	// JSON builders for complex endpoints
 	std::string buildStatJSON(ReceiverTracker *s);
+	std::string buildOutputStatsJSON();
 	std::string buildMultiPathJSON(ReceiverTracker *s, const std::string &query);
 
 	// NMEA decoder utility

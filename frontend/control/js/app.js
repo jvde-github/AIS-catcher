@@ -74,16 +74,23 @@
         return fetch('/api/engine', { method: 'POST', body: action })
             .then(r => r.json().then(body => {
                 if (!r.ok || !body.status) {
-                    if (r.status === 401) {
-                        auth = 'login';
-                        updateBarVisibility();
-                        openLoginModal();
-                    }
+                    if (r.status === 401) window.hubAuthRequired();
                     throw new Error(body.error || 'Engine ' + action + ' failed');
                 }
                 return body;
             }));
     }
+
+    // Central handler for expired sessions (used by config-manager and the
+    // wizard too): ask for the password again, leaving unsaved edits intact.
+    window.hubAuthRequired = function () {
+        if (isLoggedIn()) {
+            auth = 'login';
+            stopEventStream();
+            updateBarVisibility();
+        }
+        openLoginModal();
+    };
 
     function formatUptime(seconds) {
         if (!seconds || seconds <= 0) return '';
@@ -300,7 +307,7 @@
                 restartTimedOut();
             }
         }
-        if (data.viewer && !viewerLoaded) {
+        if (data.viewer && (!viewerLoaded || data.viewer !== port)) {
             port = data.viewer;
             clearOverlayMessages();
             loadWebviewer();
@@ -495,14 +502,17 @@
         });
     }
 
-    const outputTypes = [
-        { value: 'sharing', label: 'Community' },
-        { value: 'udp', label: 'UDP' },
-        { value: 'http', label: 'HTTP' },
-        { value: 'mqtt', label: 'MQTT' },
-        { value: 'tcp', label: 'TCP Client' },
-        { value: 'tcp-server', label: 'TCP Server' },
-        { value: 'server', label: 'Viewer' },
+    // Single registry for every output sub-type: tab value/label, schema,
+    // config array key (none for sharing, which is a set of top-level keys),
+    // label in the data-flow view and the type string stat.json reports.
+    const OUTPUT_TYPES = [
+        { value: 'sharing', label: 'Community', schema: sharingSchema },
+        { value: 'udp', label: 'UDP', schema: udpSchema, configKey: 'udp', flowLabel: 'UDP', statType: 'UDP' },
+        { value: 'http', label: 'HTTP', schema: httpSchema, configKey: 'http', flowLabel: 'HTTP', statType: 'HTTP' },
+        { value: 'mqtt', label: 'MQTT', schema: mqttSchema, configKey: 'mqtt', flowLabel: 'MQTT', statType: 'MQTT' },
+        { value: 'tcp', label: 'TCP Client', schema: tcpSchema, configKey: 'tcp', flowLabel: 'TCP', statType: 'TCP Client' },
+        { value: 'tcp-server', label: 'TCP Server', schema: tcpServerSchema, configKey: 'tcp_listener', flowLabel: 'TCP Server', statType: 'TCP Listener' },
+        { value: 'server', label: 'Viewer', schema: webviewerSchema, configKey: 'server', flowLabel: 'Webviewer' },
     ];
 
     function loadOutputConfig() {
@@ -553,7 +563,8 @@
     }
 
     function setOutputType(value) {
-        if (value !== currentOutputType && typeof App !== 'undefined' && App.state && App.state.unsaved) {
+        if (value === currentOutputType) return;
+        if (typeof App !== 'undefined' && App.state && App.state.unsaved) {
             if (!confirm('You have unsaved changes. Are you sure you want to switch without saving?')) return;
             App.setUnsaved(false);
         }
@@ -579,6 +590,7 @@
     function renderOutputConfig(host) {
         const initial = flowOutputTarget || 'sharing';
         flowOutputTarget = null;
+        currentOutputType = null;
         host.textContent = '';
         const wrapper = document.createElement('div');
         wrapper.className = 'space-y-4';
@@ -586,7 +598,7 @@
         const tabBar = document.createElement('div');
         tabBar.className = 'sys-subtabs';
 
-        outputTypes.forEach(({ value, label }) => {
+        OUTPUT_TYPES.forEach(({ value, label }) => {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.dataset.outputType = value;
@@ -607,28 +619,20 @@
     }
 
     function updateOutputView() {
-        const schemaMap = {
-            sharing: sharingSchema,
-            udp: udpSchema,
-            http: httpSchema,
-            mqtt: mqttSchema,
-            tcp: tcpSchema,
-            'tcp-server': tcpServerSchema,
-            server: webviewerSchema
-        };
+        const t = OUTPUT_TYPES.find(o => o.value === currentOutputType);
+        if (!t) return;
 
-        if (currentOutputType === 'sharing') {
+        if (!t.configKey) {
             createSimpleConfigManager({
-                schema: schemaMap.sharing,
+                schema: t.schema,
                 containerId: 'hub-output-container'
             });
         } else {
-            const channelTypeMap = { 'tcp-server': 'tcp_listener' };
             createChannelManager({
-                channelType: channelTypeMap[currentOutputType] || currentOutputType,
-                schema: schemaMap[currentOutputType],
+                channelType: t.configKey,
+                schema: t.schema,
                 containerId: 'hub-output-container',
-                title: currentOutputType.charAt(0).toUpperCase() + currentOutputType.slice(1)
+                title: t.label
             });
         }
     }
@@ -638,6 +642,7 @@
     let lastLogSeq = -1;
     const logBuffer = [];
     const LOG_BUFFER_MAX = 500;
+    let lastToast = { message: '', time: 0 };
 
     function isReplayedLog(m) {
         if (typeof m.seq !== 'number') return false;
@@ -688,10 +693,12 @@
             }
 
             if (!logReplayDone) return;
-            if (m.level === 'error' || m.level === 'critical') {
-                App.notify('error', m.message);
-            } else if (m.level === 'warning')
-                App.notify('warning', m.message);
+            if (m.level === 'error' || m.level === 'critical' || m.level === 'warning') {
+                // a crash-looping engine repeats the same line; one toast per 10s
+                if (m.message === lastToast.message && Date.now() - lastToast.time < 10000) return;
+                lastToast = { message: m.message, time: Date.now() };
+                App.notify(m.level === 'warning' ? 'warning' : 'error', m.message);
+            }
         } catch (_) { }
     }
 
@@ -799,6 +806,8 @@
     function loadSystemPanel() {
         stopFlowObserver();
         if (typeof App !== 'undefined' && App.setUnsaved) App.setUnsaved(false);
+        // one fresh config fetch per panel open; the tabs share it from here
+        ConfigStore.invalidate();
         systemInputLoaded = false;
         systemOutputLoaded = false;
         systemViewerLoaded = false;
@@ -891,58 +900,12 @@
                     </div>
                 </div>
             </div>
-            <div class="sys-pane hidden" data-pane="license">
-                <div class="max-w-2xl mx-auto px-4 sm:px-0 pb-4">
-                    <div class="flex gap-3 items-start bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
-                        <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                        </svg>
-                        <div class="text-sm text-amber-800">
-                            <p class="font-semibold mb-1">Research and educational software &mdash; not for operational use</p>
-                            <p class="text-xs leading-relaxed">Do not rely on AIS-catcher for navigation, collision avoidance or any application where safety of life or property is at stake.
-                                Receiving radio signals may be regulated or restricted in your country; you are responsible for complying with local laws before use.</p>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div class="flex flex-col items-center pt-6 pb-4 px-5">
-                            <span id="license-logo" class="block w-12 h-12 text-slate-700 mb-3"></span>
-                            <h2 class="text-xl font-semibold text-slate-800">License Agreement</h2>
-                            <p class="text-xs text-slate-500 mt-1">AIS-catcher &copy; 2021&ndash;2026 jvde.github@gmail.com</p>
-                        </div>
-                        <div class="mx-5 mb-5 h-80 overflow-y-auto border border-slate-200 rounded-lg p-4 bg-slate-50 text-sm text-slate-600">
-                            <h3 class="text-base font-bold text-slate-800 mb-1">GNU GENERAL PUBLIC LICENSE</h3>
-                            <p class="text-xs text-slate-500 mb-3">Version 3, 29 June 2007</p>
-                            <p class="mb-2">Copyright &copy; 2007 Free Software Foundation, Inc. &lt;https://fsf.org/&gt;</p>
-                            <p class="mb-4">Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed.</p>
-                            <h4 class="font-bold text-slate-700 mt-4 mb-2">Preamble</h4>
-                            <p class="mb-2">The GNU General Public License is a free, copyleft license for software and other kinds of works.</p>
-                            <p class="mb-2">The licenses for most software and other practical works are designed to take away your freedom to share and change the works.
-                                By contrast, the GNU General Public License is intended to guarantee your freedom to share and change all versions of a program&mdash;to
-                                make sure it remains free software for all its users. We, the Free Software Foundation, use the GNU General Public License for most of
-                                our software; it applies also to any other work released this way by its authors. You can apply it to your programs, too.</p>
-                            <p class="mb-2">When we speak of free software, we are referring to freedom, not price. Our General Public Licenses are designed to make sure
-                                that you have the freedom to distribute copies of free software (and charge for them if you wish), that you receive source code or can
-                                get it if you want it, that you can change the software or use pieces of it in new free programs, and that you know you can do these things.</p>
-                            <p class="mb-2">To protect your rights, we need to prevent others from denying you these rights or asking you to surrender the rights.
-                                Therefore, you have certain responsibilities if you distribute copies of the software, or if you modify it: responsibilities to respect
-                                the freedom of others.</p>
-                            <p class="mb-2">For example, if you distribute copies of such a program, whether gratis or for a fee, you must pass on to the recipients the
-                                same freedoms that you received. You must make sure that they, too, receive or can get the source code. And you must show them these
-                                terms so they know their rights.</p>
-                            <p class="mt-4 mb-2 italic">This is a summary. For the full text, please visit
-                                <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener" class="text-blue-700 underline">gnu.org</a> or the
-                                <a href="https://github.com/jvde-github/AIS-catcher/blob/main/LICENSE" target="_blank" rel="noopener" class="text-blue-700 underline">LICENSE file on GitHub</a>.</p>
-                            <h4 class="font-bold text-slate-700 mt-4 mb-2">Disclaimer of Warranty</h4>
-                            <p class="mb-2 uppercase font-bold text-xs">There is no warranty for the program, to the extent permitted by applicable law. Except when
-                                otherwise stated in writing the copyright holders and/or other parties provide the program &ldquo;as is&rdquo; without warranty of any
-                                kind, either expressed or implied, including, but not limited to, the implied warranties of merchantability and fitness for a particular
-                                purpose. The entire risk as to the quality and performance of the program is with you. Should the program prove defective, you assume
-                                the cost of all necessary servicing, repair or correction.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <div class="sys-pane hidden" data-pane="license"></div>
         `;
+
+        // static license content lives in index.html
+        systemBody.querySelector('[data-pane="license"]')
+            .appendChild(document.getElementById('license-pane-content').content.cloneNode(true));
 
         const communityLogo = document.querySelector('#community-link svg');
         const licenseLogo = document.getElementById('license-logo');
@@ -980,8 +943,7 @@
 
     function loadConfigJson() {
         const pre = document.getElementById('config-json');
-        fetch('/api/config')
-            .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+        ConfigStore.fetch()
             .then(cfg => { pre.textContent = JSON.stringify(cfg, null, 2); })
             .catch(() => { pre.textContent = 'Could not load the configuration.'; });
     }
@@ -1108,7 +1070,8 @@
     }
 
     // stat.json output types -> Data Flow node sub types
-    const FLOW_STAT_TYPES = { 'UDP': 'udp', 'TCP Client': 'tcp', 'HTTP': 'http', 'MQTT': 'mqtt', 'TCP Listener': 'tcp-server' };
+    const FLOW_STAT_TYPES = {};
+    OUTPUT_TYPES.forEach(o => { if (o.statType) FLOW_STAT_TYPES[o.statType] = o.value; });
 
     function flowStatDetails(sub, s) {
         const parts = [];
@@ -1131,8 +1094,8 @@
         try {
             url = new URL(window.location.href);
             url.port = port;
-            url.pathname = '/api/stat.json';
-            url.search = '?receiver=0';
+            url.pathname = '/api/output_stats.json';
+            url.search = '';
             url.hash = '';
         } catch (e) { return; }
 
@@ -1179,9 +1142,11 @@
         loadingEl.textContent = 'Loading…';
         loadingEl.classList.remove('hidden');
 
-        fetch('/api/config')
-            .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+        ConfigStore.fetch()
             .then(cfg => {
+                // tab switched or modal closed while loading: don't install
+                // the stats timer and observer on a stale pane
+                if (currentSystemTab !== 'flow') return;
                 const receivers = (cfg.receiver || []).map((item, i) => ({
                     label: `${item.input || 'Unknown'} ${item.serial ? '#' + item.serial : '#' + (i + 1)}`,
                     zones: item.zone || [],
@@ -1189,16 +1154,10 @@
                 }));
 
                 const outputs = [];
-                [
-                    { type: 'UDP', key: 'udp', sub: 'udp' },
-                    { type: 'TCP', key: 'tcp', sub: 'tcp' },
-                    { type: 'HTTP', key: 'http', sub: 'http' },
-                    { type: 'MQTT', key: 'mqtt', sub: 'mqtt' },
-                    { type: 'TCP Server', key: 'tcp_listener', sub: 'tcp-server' },
-                    { type: 'Webviewer', key: 'server', sub: 'server' }
-                ].forEach(({ type, key, sub }) => {
-                    (cfg[key] || []).forEach(item => {
-                        outputs.push({ label: flowOutputLabel(type, item), zones: item.zone || [], active: item.active !== false, sub, link: item.link });
+                OUTPUT_TYPES.forEach(({ value, configKey, flowLabel }) => {
+                    if (!configKey) return;
+                    (cfg[configKey] || []).forEach(item => {
+                        outputs.push({ label: flowOutputLabel(flowLabel, item), zones: item.zone || [], active: item.active !== false, sub: value, link: item.link });
                     });
                 });
                 if (cfg.sharing !== undefined) {
@@ -1285,7 +1244,7 @@
             return;
         }
         fetch('/api/password', { method: 'POST', body: p1 })
-            .then(r => r.json())
+            .then(r => { if (r.status === 401) window.hubAuthRequired(); return r.json(); })
             .then(data => {
                 if (data.status) {
                     App.notify('success', 'Password changed');
@@ -1334,15 +1293,10 @@
                 startEventStream();
             }
         });
-        let sysinfoStamp = 0;
         setInterval(() => {
             if (document.hidden) return;
             updateUptimeDisplay();
             if (reloadUntil && Date.now() > reloadUntil) restartTimedOut();
-            if (systemOverlay.classList.contains('open') && currentSystemTab === 'status' && Date.now() - sysinfoStamp > 5000) {
-                sysinfoStamp = Date.now();
-                refreshEngineStatus();
-            }
         }, 1000);
 
         fetchStatus()

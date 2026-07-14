@@ -18,6 +18,11 @@
 #include <fstream>
 #include <chrono>
 #include <random>
+#include <cstring>
+#ifndef _WIN32
+#include <climits>
+#include <cstdlib>
+#endif
 
 #include "ControlCore.h"
 #include "SHA256.h"
@@ -189,6 +194,65 @@ bool ControlCore::setConfig(const std::string &json, std::string &error)
 
 	if (config_changed)
 		config_changed();
+
+	return true;
+}
+
+static bool isSameFile(const std::string &a, const std::string &b)
+{
+#ifdef _WIN32
+	return a == b;
+#else
+	char ra[PATH_MAX], rb[PATH_MAX];
+	if (!realpath(a.c_str(), ra) || !realpath(b.c_str(), rb))
+		return a == b;
+	return strcmp(ra, rb) == 0;
+#endif
+}
+
+// Reads the pre-managed-mode config file recorded by the installer in
+// control.legacy_config; only that one path is ever served, never the
+// active config itself.
+bool ControlCore::readLegacyConfig(std::string &content)
+{
+	std::string path;
+
+	try
+	{
+		std::lock_guard<std::mutex> lock(file_mtx);
+
+		JSON::Parser parser(JSON_DICT_SETTING);
+		JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
+
+		const JSON::Value *v = doc.root[AIS::KEY_SETTING_CONTROL];
+		if (!v || !v->isObject())
+			return false;
+
+		for (const auto &c : v->getObject().getMembers())
+			if (c.Key() == AIS::KEY_SETTING_LEGACY_CONFIG)
+				path = c.Get().to_string();
+	}
+	catch (const std::exception &)
+	{
+		return false;
+	}
+
+	if (path.empty() || isSameFile(path, config_file))
+		return false;
+
+	try
+	{
+		content = Util::Helper::readFile(path);
+
+		// syntactically valid JSON only; old configs may hold retired keys
+		JSON::Parser parser(JSON_DICT_SETTING);
+		parser.setSkipUnknown(true);
+		parser.parse(content);
+	}
+	catch (const std::exception &)
+	{
+		return false;
+	}
 
 	return true;
 }

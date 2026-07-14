@@ -24,6 +24,12 @@
             nextLabel: 'Get started'
         },
         {
+            id: 'import',
+            title: 'Previous Settings',
+            type: 'import',
+            intro: 'A configuration from a previous installation was found. Select what to carry over; steps already covered by the import are skipped.'
+        },
+        {
             id: 'input',
             title: 'Input Device',
             type: 'input',
@@ -78,6 +84,105 @@
     let overlay = null;
     let devices = null;
     let serialPorts = null;
+    let legacyOutputs = null; // null = still fetching, [] = nothing to import
+    let legacyPromise = null;
+
+    // Legacy sections the wizard can carry over; entries are reduced to the
+    // fields their schema declares and coerced by normalizeConfig. Other
+    // root fields stay behind on purpose.
+    const IMPORT_CHANNELS = [
+        { key: 'udp', label: 'UDP', schema: udpSchema, essentials: ['host', 'port'] },
+        { key: 'tcp', label: 'TCP Client', schema: tcpSchema, essentials: ['host', 'port'] },
+        { key: 'http', label: 'HTTP', schema: httpSchema, essentials: ['url'] },
+        { key: 'mqtt', label: 'MQTT', schema: mqttSchema, essentials: ['url'] },
+        { key: 'tcp_listener', label: 'TCP Server', schema: tcpServerSchema, essentials: ['port'] },
+        { key: 'server', label: 'Webviewer', schema: webviewerSchema, essentials: ['port'] }
+    ];
+
+    function channelTitle(label, item) {
+        if (item.host && item.port) return label + ' · ' + item.host + ':' + item.port;
+        if (item.url) return label + ' · ' + item.url;
+        if (item.port) return label + ' · :' + item.port;
+        return label;
+    }
+
+    // copy only the fields the schema declares, at their jsonpath (receiver
+    // settings nest per device, e.g. rtlsdr.tuner)
+    function sanitizeBySchema(item, schema) {
+        const clean = {};
+        Object.values(schema).forEach(f => {
+            if (f.type === 'button') return;
+            const path = (f.jsonpath || f.name || '').split('.');
+            if (!path[0]) return;
+            let s = item;
+            for (const p of path) {
+                if (!s || typeof s !== 'object') return;
+                s = s[p];
+            }
+            if (s === undefined) return;
+            let d = clean;
+            for (let i = 0; i < path.length - 1; i++)
+                d = d[path[i]] = d[path[i]] || {};
+            d[path[path.length - 1]] = s;
+        });
+        return clean;
+    }
+
+    function buildLegacyOutputs(cfg) {
+        const items = [];
+
+        let receivers = cfg.receiver || [];
+        if (!Array.isArray(receivers)) receivers = [receivers];
+        receivers.forEach(item => {
+            if (!item || typeof item !== 'object') return;
+            const clean = sanitizeBySchema(item, receiverSchema);
+            if (!clean.input && !clean.serial) return;
+            if (clean.input) clean.input = String(clean.input).toUpperCase();
+            items.push({
+                kind: 'receiver', key: 'receiver', idFields: ['input', 'serial'], item: clean,
+                checked: clean.active !== false,
+                title: 'Receiver · ' + (SDR_TYPES[clean.input] || clean.input || 'device'),
+                subtitle: clean.serial ? 'Serial ' + clean.serial : ((clean.serialport && clean.serialport.port) || '')
+            });
+        });
+
+        if (typeof cfg.sharing_key === 'string' && UUID_RE.test(cfg.sharing_key)) {
+            const checked = cfg.sharing !== false;
+            items.push({ kind: 'sharing', key: cfg.sharing_key, checked, title: 'Community station key', subtitle: cfg.sharing_key });
+            if (checked && !sel.community_uid) sel.community_uid = cfg.sharing_key;
+        }
+
+        IMPORT_CHANNELS.forEach(({ key, label, schema, essentials }) => {
+            let arr = cfg[key] || [];
+            if (!Array.isArray(arr)) arr = [arr];
+            arr.forEach(item => {
+                if (!item || typeof item !== 'object') return;
+                const clean = sanitizeBySchema(item, schema);
+                if (!essentials.every(f => clean[f] !== undefined && clean[f] !== ''))
+                    return;
+                // entries disabled in the legacy config default to unchecked
+                items.push({ kind: 'channel', key, idFields: essentials, item: clean, checked: clean.active !== false, title: channelTitle(label, clean), subtitle: clean.description || '' });
+            });
+        });
+
+        return items;
+    }
+
+    function fetchLegacy() {
+        legacyOutputs = null;
+        legacyPromise = fetch('/api/legacy_config')
+            .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+            .then(cfg => {
+                // single-object channels predate the array form; wrap them so
+                // normalizeConfig's migrations apply to them too
+                IMPORT_CHANNELS.forEach(({ key }) => {
+                    if (cfg[key] && !Array.isArray(cfg[key])) cfg[key] = [cfg[key]];
+                });
+                if (cfg.receiver && !Array.isArray(cfg.receiver)) cfg.receiver = [cfg.receiver];
+                legacyOutputs = buildLegacyOutputs(normalizeConfig(cfg).config);
+            })
+            .catch(() => { legacyOutputs = []; });
+    }
 
     const ROOT_DEVICE_KEYS = ['input', 'serial', 'serialport', 'rtlsdr', 'rtltcp', 'airspy', 'airspyhf',
         'hydrasdr', 'sdrplay', 'hackrf', 'udpserver', 'soapysdr', 'nmea2000', 'file', 'zmq', 'spyserver', 'wavfile'];
@@ -96,6 +201,9 @@
 
     function resetState() {
         stepIndex = 0;
+        // rescan devices on every wizard open
+        devices = null;
+        serialPorts = null;
         sel = { kind: null, device: null, dc_port: '', serial_port: '', serial_baudrate: 38400, community_uid: '', aishub_port: '' };
     }
 
@@ -109,12 +217,15 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(cfg, null, 2)
-        }).then(r => r.json());
+        }).then(r => {
+            ConfigStore.invalidate();
+            if (r.status === 401 && global.hubAuthRequired) global.hubAuthRequired();
+            return r.json();
+        });
     }
 
     function clearWizardFlag() {
-        fetch('/api/config')
-            .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+        ConfigStore.fetch(true)
             .then(cfg => {
                 if (!wizardFlagOn(cfg)) return;
                 cfg.control.wizard = false;
@@ -154,15 +265,43 @@
         if (overlay) overlay.classList.remove('open');
     }
 
+    // A step is hidden when a checked import already covers it; unchecking
+    // in the import step brings it back. The import step itself is hidden
+    // when there is nothing to import.
+    function stepHidden(step) {
+        if (step.type === 'import')
+            return legacyOutputs !== null && legacyOutputs.length === 0;
+        if (legacyOutputs === null || legacyOutputs.length === 0)
+            return false;
+        if (step.type === 'input')
+            return legacyOutputs.some(it => it.checked && it.kind === 'receiver');
+        if (step.id === 'community')
+            return legacyOutputs.some(it => it.checked && it.kind === 'sharing');
+        if (step.id === 'aishub')
+            return legacyOutputs.some(it => it.checked && it.key === 'udp');
+        return false;
+    }
+
+    // step forward/back, jumping over hidden steps; welcome and finish are
+    // never hidden so the loop always terminates
+    function gotoStep(dir) {
+        do
+            stepIndex += dir;
+        while (stepHidden(WIZARD_STEPS[stepIndex]));
+        renderStep();
+    }
+
     function renderStep() {
         const step = WIZARD_STEPS[stepIndex];
         const card = document.getElementById('wizard-card');
 
-        const dots = WIZARD_STEPS.map((s, i) =>
-            '<span class="wz-dot' + (i === stepIndex ? ' active' : i < stepIndex ? ' past' : '') + '"></span>').join('');
+        const dots = WIZARD_STEPS.map((s, i) => {
+            if (stepHidden(s)) return '';
+            return '<span class="wz-dot' + (i === stepIndex ? ' active' : i < stepIndex ? ' past' : '') + '"></span>';
+        }).join('');
 
         const showBack = stepIndex > 0;
-        const showSkip = step.type === 'input' || step.type === 'service';
+        const showSkip = step.type === 'input' || step.type === 'service' || step.type === 'import';
         const nextLabel = step.nextLabel || 'Next';
 
         card.innerHTML =
@@ -185,6 +324,7 @@
         const body = document.getElementById('wz-body');
         if (step.type === 'welcome') renderWelcome(body, step);
         else if (step.type === 'input') renderInput(body, step);
+        else if (step.type === 'import') renderImport(body, step);
         else if (step.type === 'service') renderService(body, step);
         else if (step.type === 'finish') renderFinish(body, step);
 
@@ -193,9 +333,9 @@
             if (global.App && App.notify) App.notify('info', 'Setup cancelled — run the wizard anytime from the System panel');
         });
         const back = document.getElementById('wz-back');
-        if (back) back.addEventListener('click', () => { stepIndex--; renderStep(); });
+        if (back) back.addEventListener('click', () => gotoStep(-1));
         const skip = document.getElementById('wz-skip');
-        if (skip) skip.addEventListener('click', () => { clearStep(step); stepIndex++; renderStep(); });
+        if (skip) skip.addEventListener('click', () => { clearStep(step); gotoStep(1); });
         document.getElementById('wz-next').addEventListener('click', () => onNext(step));
     }
 
@@ -209,6 +349,12 @@
     function clearStep(step) {
         if (step.type === 'input') { sel.kind = null; sel.device = null; }
         else if (step.type === 'service') sel[step.service.field.key] = '';
+        else if (step.type === 'import') {
+            (legacyOutputs || []).forEach(it => {
+                it.checked = false;
+                if (it.kind === 'sharing' && sel.community_uid === it.key) sel.community_uid = '';
+            });
+        }
     }
 
     function renderWelcome(body, step) {
@@ -309,6 +455,43 @@
         });
     }
 
+    function renderImport(body, step) {
+        if (legacyOutputs === null) {
+            body.innerHTML = '<h3>' + esc(step.title) + '</h3><div class="wz-loading">Looking for previous settings&hellip;</div>';
+            legacyPromise.then(() => {
+                if (WIZARD_STEPS[stepIndex].type !== 'import') return;
+                if (legacyOutputs.length) renderStep();
+                else gotoStep(1);
+            });
+            return;
+        }
+
+        body.innerHTML =
+            '<h3>' + esc(step.title) + '</h3>' +
+            '<p class="wz-intro">' + esc(step.intro) + '</p>' +
+            '<div class="wz-options">' +
+            legacyOutputs.map((it, i) =>
+                '<label class="wz-option' + (it.checked ? ' selected' : '') + '">' +
+                '<input type="checkbox" data-imp="' + i + '"' + (it.checked ? ' checked' : '') + '>' +
+                '<span class="wz-option-main"><span class="wz-option-title">' + esc(it.title) + '</span>' +
+                (it.subtitle ? '<span class="wz-option-sub">' + esc(it.subtitle) + '</span>' : '') +
+                '</span></label>').join('') +
+            '</div>' +
+            '<p class="wz-fineprint">Only settings recognised by this version are imported.</p>';
+
+        body.querySelectorAll('[data-imp]').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const it = legacyOutputs[+cb.dataset.imp];
+                it.checked = cb.checked;
+                cb.closest('.wz-option').classList.toggle('selected', cb.checked);
+                if (it.kind === 'sharing') {
+                    if (cb.checked) sel.community_uid = it.key;
+                    else if (sel.community_uid === it.key) sel.community_uid = '';
+                }
+            });
+        });
+    }
+
     function renderService(body, step) {
         const s = step.service;
         body.innerHTML =
@@ -341,6 +524,10 @@
             items.push('Community sharing with your registered station key');
         if (sel.aishub_port)
             items.push('UDP feed to <b>data.aishub.net:' + esc(sel.aishub_port) + '</b> (AISHub)');
+        (legacyOutputs || []).forEach(it => {
+            if (it.checked && it.kind !== 'sharing')
+                items.push('Import <b>' + esc(it.title) + (it.subtitle ? ' (' + esc(it.subtitle) + ')' : '') + '</b>');
+        });
         return items;
     }
 
@@ -377,8 +564,7 @@
             applyAndClose();
             return;
         }
-        stepIndex++;
-        renderStep();
+        gotoStep(1);
     }
 
     function applyAndClose() {
@@ -390,8 +576,7 @@
         nextBtn.disabled = true;
         nextBtn.textContent = 'Saving...';
 
-        fetch('/api/config')
-            .then(r => { if (!r.ok) throw new Error('failed to load configuration'); return r.json(); })
+        ConfigStore.fetch(true)
             .then(cfg => {
                 const hasDevice = (sel.kind === 'sdr' && sel.device) ||
                     (sel.kind === 'dc' && sel.dc_port) ||
@@ -432,6 +617,15 @@
                     if (!dup) udp.push({ active: true, host: 'data.aishub.net', port: +sel.aishub_port, description: 'AISHub' });
                     cfg.udp = udp;
                 }
+                (legacyOutputs || []).forEach(it => {
+                    if (!it.checked || it.kind === 'sharing') return;
+                    let arr = cfg[it.key] || [];
+                    if (!Array.isArray(arr)) arr = [arr];
+                    const dup = arr.some(x => x && typeof x === 'object' &&
+                        it.idFields.every(f => String(x[f]) === String(it.item[f])));
+                    if (!dup) arr.push(it.item);
+                    cfg[it.key] = arr;
+                });
                 if (cfg.control) cfg.control.wizard = false;
                 return postConfig(cfg);
             })
@@ -460,13 +654,13 @@
         open() {
             ensureOverlay();
             resetState();
+            fetchLegacy();
             renderStep();
             overlay.classList.add('open');
         },
 
         maybeAutoOpen() {
-            fetch('/api/config')
-                .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+            ConfigStore.fetch()
                 .then(cfg => { if (wizardFlagOn(cfg)) SetupWizard.open(); })
                 .catch(() => { });
         }

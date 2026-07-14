@@ -65,6 +65,7 @@ public:
 
 	std::string getConfig();
 	bool setConfig(const std::string &json, std::string &error);
+	bool readLegacyConfig(std::string &content);
 	std::string getDeviceListJSON();
 	std::string getSerialListJSON();
 

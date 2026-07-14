@@ -333,7 +333,7 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 		if (it != WebDB::files.end())
 		{
 			const WebDB::FileData &f = it->second;
-			ResponseRaw(c, f.mime_type, (char *)f.data, f.size, true, false);
+			ResponseRaw(c, f.mime_type, (char *)f.data, f.size, true, std::string(f.mime_type) != "text/html");
 		}
 		else
 			HTTPServer::Request(c, path, false);
@@ -374,6 +374,14 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 		{
 			sendError(c, e.what(), 500);
 		}
+	}
+	else if (path == "/api/legacy_config" && r.method == "GET")
+	{
+		std::string content;
+		if (core.readLegacyConfig(content))
+			Response(c, "application/json", content, accept_gzip);
+		else
+			sendError(c, "no previous configuration found", 404);
 	}
 	else if (path == "/api/config" && r.method == "POST")
 	{

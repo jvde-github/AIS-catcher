@@ -736,6 +736,23 @@ setup_configuration() {
     log "INFO" "Setting up configuration files"
     mkdir -p "$CONFIG_DIR" || error_exit "Failed to create config directory"
 
+    # Managed mode on a machine with a pre-existing legacy config: seed the
+    # managed config with its path so the setup wizard can offer to import
+    # the configured output channels. Must run before the legacy default
+    # config is (re)created below, so a fresh install does not qualify.
+    if [[ "$MANAGED" == true && ! -f "$MANAGED_CONFIG_FILE" && -f "$CONFIG_FILE" ]]; then
+        log "INFO" "Existing config.json found; the setup wizard will offer to import its outputs"
+        cat << EOF | tee "$MANAGED_CONFIG_FILE" > /dev/null || error_exit "Failed to create aiscatcher.json"
+{
+  "config": "aiscatcher",
+  "version": 1,
+  "engine": "off",
+  "sharing": true,
+  "control": { "wizard": true, "legacy_config": "${CONFIG_FILE}" }
+}
+EOF
+    fi
+
     if [[ ! -f "$CONFIG_FILE" ]]; then
         echo '{"config":"aiscatcher","version":1,"screen":0,"verbose":true,"verbose_time":60,"sharing":true,"udp":[],"tcp":[],"server":{"active":false,"plugin_dir":"/etc/AIS-catcher/plugins","cdn":"/etc/AIS-catcher/webassets","file":"/etc/AIS-catcher/stat.bin","realtime":false,"geojson":false,"prome":false,"port":"8100","backup":"10","context":"settings"},"rtlsdr":{"tuner":"auto","bandwidth":"192K","sample_rate":"1536K","biastee":false,"rtlagc":true},"airspyhf":{"threshold":"low","preamp":false},"rtltcp":{"protocol":"none","sample_rate":"288K","bandwidth":"0","rtlagc":false}}' | tee "$CONFIG_FILE" > /dev/null || error_exit "Failed to create config.json"
     fi

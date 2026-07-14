@@ -1141,6 +1141,28 @@ std::string WebViewer::buildStatJSON(ReceiverTracker *s)
 	return content;
 }
 
+// Slim variant of stat.json for the control hub's data-flow tab, which only
+// needs the per-output counters.
+std::string WebViewer::buildOutputStatsJSON()
+{
+	std::string content;
+	JSON::Writer w(content);
+
+	w.beginObject();
+	w.kv("tcp_clients", numberOfClients());
+	w.key("outputs").beginArray();
+	if (msg_channels)
+	{
+		for (auto &o : *msg_channels)
+			o->writeJSON(w);
+	}
+	w.endArray();
+	w.endObject();
+
+	w.finish();
+	return content;
+}
+
 std::string WebViewer::buildMultiPathJSON(ReceiverTracker *s, const std::string &query)
 {
 	std::stringstream ss(query);
@@ -1217,6 +1239,9 @@ const WebViewer::Route WebViewer::routes[] = {
 	{"/stat.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *s, const std::string &)
 	 { return s ? w->buildStatJSON(s) : std::string("{}"); }, true},
+	{"/api/output_stats.json", nullptr, "application/json",
+	 [](WebViewer *w, ReceiverTracker *, const std::string &)
+	 { return w->buildOutputStatsJSON(); }, true},
 	{"/api/path.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *s, const std::string &a)
 	 { return w->buildMultiPathJSON(s, a); }, true},

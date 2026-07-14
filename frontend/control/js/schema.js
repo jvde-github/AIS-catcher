@@ -1085,11 +1085,11 @@ const receiverSchema = {
         type: "select",
         jsonpath: "rtltcp.qos",
         options: [
-            { value: 0, label: "0" },
-            { value: 1, label: "1" },
-            { value: 2, label: "2" }
+            { value: "0", label: "0" },
+            { value: "1", label: "1" },
+            { value: "2", label: "2" }
         ],
-        defaultValue: 0,
+        defaultValue: "0",
         dependsOn: {
             field: "rtltcp_protocol",
             value: ["mqtt", "wsmqtt"]

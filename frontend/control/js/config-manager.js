@@ -4,47 +4,49 @@
 
     const ManagerRegistry = new Map();
 
-    let activeDeviceSelection = { index: 0, containerId: '' };
-    let activeSerialSelection = { index: 0, containerId: '' };
-
-    function ensureDeviceModal() {
-        if (document.getElementById('cm-device-modal')) return;
-        const modal = el('div', 'fixed inset-0 flex items-center justify-center hidden z-[100] p-4',
-            { id: 'cm-device-modal', style: 'background-color: rgba(0,0,0,0.3)' },
-            el('div', 'bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col relative', {},
-                el('div', 'flex justify-between items-center p-3 md:p-4 border-b flex-shrink-0', {},
-                    el('h3', 'text-base md:text-lg font-medium text-gray-800', {}, 'Select Device'),
-                    el('button', 'text-gray-600 hover:text-gray-800', { type: 'button', onClick: () => modal.classList.add('hidden') },
-                        el('svg', 'h-6 w-6', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-                            el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M6 18L18 6M6 6l12 12' })
-                        )
-                    )
-                ),
-                el('div', 'p-3 md:p-4 overflow-y-auto flex-1', { id: 'cm-device-list' }),
-                el('div', 'flex justify-end p-3 md:p-4 border-t flex-shrink-0', {},
-                    el('button', 'bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 shadow-sm transition duration-200 text-sm', {
-                        type: 'button', onClick: () => modal.classList.add('hidden')
-                    }, 'Close')
-                )
-            )
-        );
-        document.body.appendChild(modal);
+    // Session may expire mid-edit: route 401s through the login modal so the
+    // user can sign in again without losing unsaved edits.
+    function authFailed(r) {
+        if (r.status === 401 && typeof global.hubAuthRequired === 'function')
+            global.hubAuthRequired();
+        return r.status === 401;
     }
 
-    function ensureSerialModal() {
-        if (document.getElementById('cm-serial-modal')) return;
-        const modal = el('div', 'fixed inset-0 flex items-center justify-center hidden z-[100] p-4',
-            { id: 'cm-serial-modal', style: 'background-color: rgba(0,0,0,0.3)' },
+    // Shared /api/config fetch: readers reuse one request, each getting its
+    // own copy to mutate. Invalidated on save and on every panel open.
+    const ConfigStore = {
+        promise: null,
+        fetch(fresh) {
+            if (fresh || !this.promise) {
+                const p = fetch('/api/config').then(r => {
+                    if (!r.ok) throw new Error(authFailed(r) ? 'Authentication required' : 'Failed to fetch configuration');
+                    return r.json();
+                });
+                p.catch(() => { if (this.promise === p) this.promise = null; });
+                this.promise = p;
+            }
+            return this.promise.then(cfg => JSON.parse(JSON.stringify(cfg)));
+        },
+        invalidate() { this.promise = null; }
+    };
+
+    // Shared shell for the device and serial-port pickers; the list lives in
+    // '<id>-list' and is rebuilt on every open.
+    function ensurePickerModal(id, title) {
+        let modal = document.getElementById(id);
+        if (modal) return modal;
+        modal = el('div', 'fixed inset-0 flex items-center justify-center hidden z-[100] p-4',
+            { id, style: 'background-color: rgba(0,0,0,0.3)' },
             el('div', 'bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col relative', {},
                 el('div', 'flex justify-between items-center p-3 md:p-4 border-b flex-shrink-0', {},
-                    el('h3', 'text-base md:text-lg font-medium text-gray-800', {}, 'Select Serial Device'),
+                    el('h3', 'text-base md:text-lg font-medium text-gray-800', {}, title),
                     el('button', 'text-gray-600 hover:text-gray-800', { type: 'button', onClick: () => modal.classList.add('hidden') },
                         el('svg', 'h-6 w-6', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
                             el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M6 18L18 6M6 6l12 12' })
                         )
                     )
                 ),
-                el('div', 'p-3 md:p-4 overflow-y-auto flex-1', { id: 'cm-serial-list' }),
+                el('div', 'p-3 md:p-4 overflow-y-auto flex-1', { id: id + '-list' }),
                 el('div', 'flex justify-end p-3 md:p-4 border-t flex-shrink-0', {},
                     el('button', 'bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 shadow-sm transition duration-200 text-sm', {
                         type: 'button', onClick: () => modal.classList.add('hidden')
@@ -53,6 +55,18 @@
             )
         );
         document.body.appendChild(modal);
+        return modal;
+    }
+
+    function applyToManager(containerId, index, fn) {
+        const mgr = ManagerRegistry.get(containerId);
+        if (!mgr) return;
+        const target = mgr.config.isList ? mgr.data[index] : mgr.data;
+        if (!target) return;
+        fn(target);
+        App.setUnsaved(true);
+        mgr.updateJsonDebug();
+        mgr.render();
     }
 
     const ZONE_COLORS = [
@@ -77,9 +91,7 @@
 
     async function fetchAllZones() {
         try {
-            const res = await fetch('/api/config');
-            if (!res.ok) return [];
-            const cfg = await res.json();
+            const cfg = await ConfigStore.fetch();
             const zones = new Set();
             ['receiver', 'udp', 'tcp', 'http', 'mqtt', 'tcp_listener', 'server'].forEach(key => {
                 (cfg[key] || []).forEach(item => { if (Array.isArray(item.zone)) item.zone.forEach(z => zones.add(z)); });
@@ -234,7 +246,7 @@
             else element.setAttribute(key, value);
         });
 
-        children.forEach(child => child && element.appendChild(
+        children.forEach(child => (child || child === 0) && element.appendChild(
             typeof child === 'string' || typeof child === 'number' ? document.createTextNode(child) : child
         ));
         return element;
@@ -259,10 +271,8 @@
         },
         parseInteger: value => {
             if (typeof value === 'number') return Math.floor(value);
-            if (typeof value !== 'string') return 0;
-            const str = value.trim(), mult = /k$/i.test(str) ? 1000 : 1;
-            const num = parseInt(str, 10);
-            return isNaN(num) ? 0 : num * mult;
+            const n = parseNumberLike(value);
+            return n === null ? 0 : Math.floor(n);
         },
         toBoolean: v => typeof v === 'string' ? ['true', 'on', 'yes', '1'].includes(v.toLowerCase()) : !!v,
 
@@ -444,14 +454,12 @@
 
     const ActionRegistry = {
         openSerialDeviceModal: (index, containerId) => {
-            activeSerialSelection = { index, containerId };
-            ensureSerialModal();
-            const modal = document.getElementById('cm-serial-modal');
-            const list = document.getElementById('cm-serial-list');
+            const modal = ensurePickerModal('cm-serial-modal', 'Select Serial Device');
+            const list = document.getElementById('cm-serial-modal-list');
             list.innerHTML = '<div class="text-center p-4 text-slate-500">Loading...</div>';
             modal.classList.remove('hidden');
             fetch('/api/serial')
-                .then(r => r.json())
+                .then(r => { if (authFailed(r)) throw new Error(); return r.json(); })
                 .then(data => {
                     list.innerHTML = '';
                     const devices = Array.isArray(data) ? data : [];
@@ -462,17 +470,10 @@
                     devices.forEach(device => {
                         list.appendChild(el('li', 'p-2 hover:bg-gray-100 cursor-pointer rounded', {
                             onClick: () => {
-                                const mgr = ManagerRegistry.get(activeSerialSelection.containerId);
-                                if (mgr) {
-                                    const target = mgr.config.isList ? mgr.data[activeSerialSelection.index] : mgr.data;
-                                    if (target) {
-                                        if (!target.serialport) target.serialport = {};
-                                        target.serialport.port = device;
-                                        App.setUnsaved(true);
-                                        mgr.updateJsonDebug();
-                                        mgr.render();
-                                    }
-                                }
+                                applyToManager(containerId, index, target => {
+                                    if (!target.serialport) target.serialport = {};
+                                    target.serialport.port = device;
+                                });
                                 modal.classList.add('hidden');
                             }
                         }, device));
@@ -482,14 +483,12 @@
         },
 
         openDeviceSelectionModal: (index, containerId) => {
-            activeDeviceSelection = { index, containerId };
-            ensureDeviceModal();
-            const modal = document.getElementById('cm-device-modal');
-            const list = document.getElementById('cm-device-list');
+            const modal = ensurePickerModal('cm-device-modal', 'Select Device');
+            const list = document.getElementById('cm-device-modal-list');
             list.innerHTML = '<div class="text-center p-4 text-slate-500">Loading...</div>';
             modal.classList.remove('hidden');
             fetch('/api/devices')
-                .then(r => r.json())
+                .then(r => { if (authFailed(r)) throw new Error(); return r.json(); })
                 .then(data => {
                     list.innerHTML = '';
                     const devices = Array.isArray(data.devices) ? data.devices : [];
@@ -503,17 +502,10 @@
                             el('button', 'bg-white border border-slate-300 text-slate-700 px-2 py-1 rounded-md hover:bg-slate-50 shadow-sm text-sm', {
                                 type: 'button',
                                 onClick: () => {
-                                    const mgr = ManagerRegistry.get(activeDeviceSelection.containerId);
-                                    if (mgr) {
-                                        const target = mgr.config.isList ? mgr.data[activeDeviceSelection.index] : mgr.data;
-                                        if (target) {
-                                            target.input = device.input ? device.input.toUpperCase() : '';
-                                            target.serial = device.serial || '';
-                                            App.setUnsaved(true);
-                                            mgr.updateJsonDebug();
-                                            mgr.render();
-                                        }
-                                    }
+                                    applyToManager(containerId, index, target => {
+                                        target.input = device.input ? device.input.toUpperCase() : '';
+                                        target.serial = device.serial || '';
+                                    });
                                     modal.classList.add('hidden');
                                 }
                             }, 'Select')
@@ -581,7 +573,7 @@
     };
 
     const App = {
-        state: { data: {}, unsaved: false },
+        state: { unsaved: false },
 
         notify(type, message, duration = 6000) {
             const container = document.getElementById('toast-container') || this.createToastContainer();
@@ -699,7 +691,10 @@
                     value: isPreset ? '' : parsedCurrent,
                     style: isPreset ? 'display: none' : 'display: block',
                     placeholder: field.placeholder || 'Enter custom value...',
-                    onInput: (e) => onUpdate(parseInt(e.target.value, 10))
+                    onInput: (e) => {
+                        const n = parseInt(e.target.value, 10);
+                        if (!isNaN(n)) onUpdate(n);
+                    }
                 });
 
                 const select = el('div', 'relative', {},
@@ -896,8 +891,17 @@
                 placeholder: field.placeholder || '',
                 onInput: Utils.debounce((e) => {
                     let val = e.target.value;
-                    if (field.type === 'number') val = parseFloat(val);
-                    if (field.type === 'integer') val = Utils.parseInteger(val);
+                    if (field.type === 'number' || field.type === 'integer') {
+                        // a cleared field removes the key (never NaN -> null in
+                        // the saved JSON); unparsable input keeps the last value
+                        if (val.trim() === '') {
+                            val = undefined;
+                        } else {
+                            const n = parseNumberLike(val);
+                            if (n === null) return;
+                            val = field.type === 'integer' ? Math.floor(n) : n;
+                        }
+                    }
                     onUpdate(val);
                 }, 200)
             });
@@ -1007,9 +1011,7 @@
         }
 
         async loadData() {
-            const res = await fetch('/api/config');
-            if (!res.ok) throw new Error('Failed to fetch configuration');
-            const fullConfig = await res.json();
+            const fullConfig = await ConfigStore.fetch();
             if (!fullConfig || typeof fullConfig !== 'object') throw new Error('Invalid configuration');
 
             const { warnings } = ConfigNormalizer.normalize(fullConfig);
@@ -1115,7 +1117,7 @@
                 type: 'button', dataset: { saveBtn: 'true' }, onClick: () => this.save()
             }, 'Save'));
 
-            const jsonSection = this.container.parentElement.querySelector('.border-t.border-slate-200.pt-6');
+            const jsonSection = this.container.parentElement.querySelector('[data-json-section]');
             if (jsonSection) {
                 this.container.parentElement.insertBefore(btnGroup, jsonSection);
             } else {
@@ -1127,7 +1129,7 @@
 
         // Each manager owns its own JSON disclosure (ids keyed by containerId)
         // so sibling sections in the same view don't fight over one shared box.
-        jsonPreId() { return 'json_content-' + this.config.containerId; }
+        jsonPreId() { return 'json-pre-' + this.config.containerId; }
 
         ensureJsonUI() {
             const parent = this.container.parentElement;
@@ -1136,7 +1138,7 @@
             const contentId = 'json-content-' + this.config.containerId;
             const chevronId = 'chevron-' + this.config.containerId;
 
-            const toggleDiv = el('div', 'mt-6 sm:mt-8 px-4 sm:px-0 max-w-2xl sm:mx-auto border-t border-slate-200 pt-6');
+            const toggleDiv = el('div', 'mt-6 sm:mt-8 px-4 sm:px-0 max-w-2xl sm:mx-auto border-t border-slate-200 pt-6', { dataset: { jsonSection: '' } });
             const btn = el('button', 'flex items-center text-slate-500 hover:text-slate-800 transition-colors focus:outline-none group text-sm font-medium', {
                 type: 'button', onClick: () => global.toggleJsonContent(contentId, chevronId)
             });
@@ -1258,9 +1260,9 @@
             }
 
             try {
-                const fullConfigRes = await fetch('/api/config');
-                if (!fullConfigRes.ok) throw new Error('Failed to fetch current config');
-                const fullConfig = await fullConfigRes.json();
+                // read-modify-write against a fresh copy so other sections keep
+                // any changes made outside this manager
+                const fullConfig = await ConfigStore.fetch(true);
 
                 if (this.config.nestedPath) {
                     this.setNested(fullConfig);
@@ -1288,7 +1290,12 @@
                     body: JSON.stringify(fullConfig)
                 });
 
-                if (!saveRes.ok) throw new Error('Save Failed');
+                if (!saveRes.ok) {
+                    authFailed(saveRes);
+                    const body = await saveRes.json().catch(() => null);
+                    throw new Error(body && body.error ? body.error : 'Save failed');
+                }
+                ConfigStore.invalidate();
                 App.setUnsaved(false);
                 App.notify('success', 'Configuration saved successfully');
                 if (global.hubConfigSaved)
@@ -1306,6 +1313,7 @@
     }
 
     global.App = App;
+    global.ConfigStore = ConfigStore;
     global.ZoneColors = { badge: getZoneColor, hex: getZoneHex };
     global.normalizeConfig = (cfg) => ConfigNormalizer.normalize(cfg);
     global.createConfigManager = (config) => new ConfigManager(config);
