@@ -3,6 +3,7 @@
     'use strict';
 
     let auth = 'login';
+    let hasPassword = true;
     let port = 0;
     let viewerLoaded = false;
     let engineRunning = false;
@@ -92,6 +93,18 @@
         openLoginModal();
     };
 
+    // Called by the wizard when it is cancelled while no password is set:
+    // the modal is the backstop, so the requirement cannot be dismissed.
+    window.hubPasswordBackstop = openLoginModal;
+
+    // Called by the wizard once its password step has authenticated us.
+    window.hubAuthGranted = function () {
+        hasPassword = true;
+        if (!isLoggedIn()) auth = 'ok';
+        updateBarVisibility();
+        startEventStream();
+    };
+
     function formatUptime(seconds) {
         if (!seconds || seconds <= 0) return '';
         const d = Math.floor(seconds / 86400);
@@ -117,17 +130,27 @@
     }
 
 
+    // collapse is session-only: the bar always starts expanded
     function setBarCollapsed(collapsed) {
         barCollapsed = collapsed;
-        try { localStorage.setItem('hubBarCollapsed', collapsed ? '1' : '0'); } catch (e) { /* ignore */ }
         updateBarVisibility();
     }
 
+    // No password means one must be set, regardless of how the page is
+    // reached; the modal is the backstop when the wizard does not run.
+    function passwordSetupMode() {
+        return !hasPassword;
+    }
+
+    function openWizard() {
+        SetupWizard.open({ needed: passwordSetupMode(), setup: auth === 'setup' });
+    }
+
     function openLoginModal() {
-        const setup = auth === 'setup';
+        const setup = passwordSetupMode();
         document.getElementById('login-title').textContent = setup ? 'Set Password' : 'Sign In';
         document.getElementById('login-subtitle').textContent = setup
-            ? 'First run: choose an admin password to protect this control page.'
+            ? 'No password set: choose an admin password to protect this control page.'
             : 'Authentication required to continue.';
         document.getElementById('login-password2').classList.toggle('hidden', !setup);
         document.getElementById('login-submit').textContent = setup ? 'Set Password' : 'Sign In';
@@ -151,7 +174,7 @@
 
     function submitLogin(e) {
         e.preventDefault();
-        const setup = auth === 'setup';
+        const setup = passwordSetupMode();
         const password = document.getElementById('login-password').value;
         const submitBtn = document.getElementById('login-submit');
         document.getElementById('login-error').classList.add('hidden');
@@ -162,7 +185,8 @@
         }
 
         submitBtn.disabled = true;
-        fetch(setup ? '/api/setup' : '/api/login', { method: 'POST', body: password })
+        const endpoint = auth === 'setup' ? '/api/setup' : setup ? '/api/password' : '/api/login';
+        fetch(endpoint, { method: 'POST', body: password })
             .then(r => r.json())
             .then(data => {
                 submitBtn.disabled = false;
@@ -170,8 +194,14 @@
                     loginError(data.error || 'Login failed');
                     return;
                 }
-                if (setup) {
+                if (auth === 'setup') {
                     window.location.reload();
+                    return;
+                }
+                if (setup) {
+                    hasPassword = true;
+                    App.notify('success', 'Password set');
+                    closeLoginModal();
                     return;
                 }
                 auth = 'ok';
@@ -179,9 +209,10 @@
                 startEventStream();
                 const action = pendingAction;
                 closeLoginModal();
-                refreshEngineStatus();
+                refreshEngineStatus().then(st => {
+                    if (!action && st && st.wizard) openWizard();
+                });
                 if (action) action();
-                else SetupWizard.maybeAutoOpen();
             })
             .catch(() => {
                 submitBtn.disabled = false;
@@ -297,6 +328,7 @@
             updateBarVisibility();
             startEventStream();
         }
+        if (data.has_password !== undefined) hasPassword = !!data.has_password;
         renderEngineState(data);
         setEngineButtonDisabled(false);
         if (reloadUntil) {
@@ -914,7 +946,7 @@
         document.getElementById('password-form').addEventListener('submit', changePassword);
         document.getElementById('hub-btn-wizard').addEventListener('click', () => {
             closeSystem();
-            SetupWizard.open();
+            openWizard();
         });
         if (auth !== 'open')
             document.getElementById('hub-btn-logout').addEventListener('click', logout);
@@ -1247,6 +1279,7 @@
             .then(r => { if (r.status === 401) window.hubAuthRequired(); return r.json(); })
             .then(data => {
                 if (data.status) {
+                    hasPassword = true;
                     App.notify('success', 'Password changed');
                     document.getElementById('password-form').reset();
                 } else {
@@ -1271,7 +1304,6 @@
         document.getElementById('login-pill').addEventListener('click', () => { pendingAction = null; openLoginModal(); });
         document.getElementById('bar-collapse').addEventListener('click', () => setBarCollapsed(true));
         document.getElementById('bar-restore').addEventListener('click', () => setBarCollapsed(false));
-        try { if (localStorage.getItem('hubBarCollapsed') === '1') setBarCollapsed(true); } catch (e) { /* ignore */ }
         document.getElementById('system-close').addEventListener('click', closeSystem);
         systemOverlay.addEventListener('click', e => {
             if (e.target === systemOverlay) closeSystem();
@@ -1302,18 +1334,21 @@
         fetchStatus()
             .then(data => {
                 auth = data.auth;
+                hasPassword = !!data.has_password || auth === 'login';
                 port = data.viewer || 0;
                 renderEngineState(data);
                 updateBarVisibility();
                 startEventStream();
 
-                if (auth === 'setup') {
+                // the wizard leads with its password step; without a wizard
+                // run, a missing password is prompted via the modal instead
+                if (data.wizard && (isLoggedIn() || auth === 'setup')) {
+                    loadingDiv.classList.add('hidden');
+                    openWizard();
+                } else if (passwordSetupMode()) {
                     loadingDiv.classList.add('hidden');
                     openLoginModal();
                 }
-
-                if (isLoggedIn())
-                    SetupWizard.maybeAutoOpen();
 
                 if (port)
                     loadWebviewer();

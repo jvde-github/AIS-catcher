@@ -24,6 +24,11 @@
             nextLabel: 'Get started'
         },
         {
+            id: 'password',
+            title: 'Set Password',
+            type: 'password'
+        },
+        {
             id: 'import',
             title: 'Previous Settings',
             type: 'import',
@@ -33,12 +38,14 @@
             id: 'input',
             title: 'Input Device',
             type: 'input',
+            coveredBy: 'receiver',
             intro: 'Select the device that receives AIS: a dAISy-catcher, one of the SDR devices detected on this machine, or another NMEA receiver on a serial port.'
         },
         {
             id: 'community',
             title: 'AIS-catcher Community',
             type: 'service',
+            coveredBy: 'sharing',
             service: {
                 icon: 'aiscatcher',
                 name: 'AIS-catcher Community Station',
@@ -57,6 +64,7 @@
             id: 'aishub',
             title: 'AISHub',
             type: 'service',
+            coveredBy: 'udp',
             service: {
                 icon: 'aishub.png',
                 name: 'AISHub',
@@ -86,6 +94,10 @@
     let serialPorts = null;
     let legacyOutputs = null; // null = still fetching, [] = nothing to import
     let legacyPromise = null;
+    // Password-step state, passed in by app.js at open(): shown (and
+    // mandatory) whenever no password is set; `setup` selects the endpoint
+    // for the LAN-bound first run, where nothing else works until it is set.
+    let pwState = { needed: false, setup: false };
 
     // Legacy sections the wizard can carry over; entries are reduced to the
     // fields their schema declares and coerced by normalizeConfig. Other
@@ -128,12 +140,12 @@
         return clean;
     }
 
+    // cfg comes from normalizeConfig with the channel arrays pre-wrapped in
+    // fetchLegacy, so every section here is an array (or absent)
     function buildLegacyOutputs(cfg) {
         const items = [];
 
-        let receivers = cfg.receiver || [];
-        if (!Array.isArray(receivers)) receivers = [receivers];
-        receivers.forEach(item => {
+        (cfg.receiver || []).forEach(item => {
             if (!item || typeof item !== 'object') return;
             const clean = sanitizeBySchema(item, receiverSchema);
             if (!clean.input && !clean.serial) return;
@@ -148,14 +160,12 @@
 
         if (typeof cfg.sharing_key === 'string' && UUID_RE.test(cfg.sharing_key)) {
             const checked = cfg.sharing !== false;
-            items.push({ kind: 'sharing', key: cfg.sharing_key, checked, title: 'Community station key', subtitle: cfg.sharing_key });
+            items.push({ kind: 'sharing', uuid: cfg.sharing_key, checked, title: 'Community station key', subtitle: cfg.sharing_key });
             if (checked && !sel.community_uid) sel.community_uid = cfg.sharing_key;
         }
 
         IMPORT_CHANNELS.forEach(({ key, label, schema, essentials }) => {
-            let arr = cfg[key] || [];
-            if (!Array.isArray(arr)) arr = [arr];
-            arr.forEach(item => {
+            (cfg[key] || []).forEach(item => {
                 if (!item || typeof item !== 'object') return;
                 const clean = sanitizeBySchema(item, schema);
                 if (!essentials.every(f => clean[f] !== undefined && clean[f] !== ''))
@@ -253,10 +263,7 @@
         overlay.innerHTML = '<div id="wizard-card"></div>';
         document.body.appendChild(overlay);
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape' && overlay.classList.contains('open')) {
-                close(true);
-                if (global.App && App.notify) App.notify('info', 'Setup cancelled — run the wizard anytime from the System panel');
-            }
+            if (e.key === 'Escape' && overlay.classList.contains('open')) cancelWizard();
         });
     }
 
@@ -265,21 +272,29 @@
         if (overlay) overlay.classList.remove('open');
     }
 
-    // A step is hidden when a checked import already covers it; unchecking
-    // in the import step brings it back. The import step itself is hidden
-    // when there is nothing to import.
+    function cancelWizard() {
+        close(true);
+        // cancelling must not bypass the password requirement: hand over to
+        // the set-password modal
+        if (pwState.needed && global.hubPasswordBackstop) {
+            global.hubPasswordBackstop();
+            return;
+        }
+        if (global.App && App.notify) App.notify('info', 'Setup cancelled — run the wizard anytime from the System panel');
+    }
+
+    // A step is hidden when a checked import covers it (its coveredBy matches
+    // the import's kind or config key); unchecking in the import step brings
+    // it back. The import step itself is hidden when there is nothing to
+    // import.
     function stepHidden(step) {
+        if (step.type === 'password')
+            return !pwState.needed;
         if (step.type === 'import')
             return legacyOutputs !== null && legacyOutputs.length === 0;
-        if (legacyOutputs === null || legacyOutputs.length === 0)
+        if (!step.coveredBy || legacyOutputs === null)
             return false;
-        if (step.type === 'input')
-            return legacyOutputs.some(it => it.checked && it.kind === 'receiver');
-        if (step.id === 'community')
-            return legacyOutputs.some(it => it.checked && it.kind === 'sharing');
-        if (step.id === 'aishub')
-            return legacyOutputs.some(it => it.checked && it.key === 'udp');
-        return false;
+        return legacyOutputs.some(it => it.checked && (it.kind === step.coveredBy || it.key === step.coveredBy));
     }
 
     // step forward/back, jumping over hidden steps; welcome and finish are
@@ -301,7 +316,10 @@
         }).join('');
 
         const showBack = stepIndex > 0;
-        const showSkip = step.type === 'input' || step.type === 'service' || step.type === 'import';
+        // no skipping past the import step while its content is still loading:
+        // the items arrive pre-checked and must not be applied unseen
+        const showSkip = step.type === 'input' || step.type === 'service' ||
+            (step.type === 'import' && legacyOutputs !== null);
         const nextLabel = step.nextLabel || 'Next';
 
         card.innerHTML =
@@ -323,15 +341,13 @@
 
         const body = document.getElementById('wz-body');
         if (step.type === 'welcome') renderWelcome(body, step);
+        else if (step.type === 'password') renderPassword(body, step);
         else if (step.type === 'input') renderInput(body, step);
         else if (step.type === 'import') renderImport(body, step);
         else if (step.type === 'service') renderService(body, step);
         else if (step.type === 'finish') renderFinish(body, step);
 
-        document.getElementById('wz-cancel').addEventListener('click', () => {
-            close(true);
-            if (global.App && App.notify) App.notify('info', 'Setup cancelled — run the wizard anytime from the System panel');
-        });
+        document.getElementById('wz-cancel').addEventListener('click', cancelWizard);
         const back = document.getElementById('wz-back');
         if (back) back.addEventListener('click', () => gotoStep(-1));
         const skip = document.getElementById('wz-skip');
@@ -352,7 +368,7 @@
         else if (step.type === 'import') {
             (legacyOutputs || []).forEach(it => {
                 it.checked = false;
-                if (it.kind === 'sharing' && sel.community_uid === it.key) sel.community_uid = '';
+                if (it.kind === 'sharing' && sel.community_uid === it.uuid) sel.community_uid = '';
             });
         }
     }
@@ -374,9 +390,14 @@
     function renderInput(body, step) {
         body.innerHTML = '<h3>' + esc(step.title) + '</h3><p class="wz-intro">' + esc(step.intro) + '</p><div id="wz-devices" class="wz-options"><div class="wz-loading">Scanning devices&hellip;</div></div>';
 
+        const getJSON = url => fetch(url).then(r => {
+            if (r.status === 401 && global.hubAuthRequired) global.hubAuthRequired();
+            if (!r.ok) throw new Error();
+            return r.json();
+        });
         const fetches = [
-            devices ? Promise.resolve(devices) : fetch('/api/devices').then(r => r.json()).then(d => (devices = d)),
-            serialPorts ? Promise.resolve(serialPorts) : fetch('/api/serial').then(r => r.json()).then(d => (serialPorts = d))
+            devices ? Promise.resolve(devices) : getJSON('/api/devices').then(d => (devices = d)),
+            serialPorts ? Promise.resolve(serialPorts) : getJSON('/api/serial').then(d => (serialPorts = d))
         ];
 
         Promise.all(fetches).then(([dev, ports]) => {
@@ -455,6 +476,40 @@
         });
     }
 
+    function renderPassword(body, step) {
+        body.innerHTML =
+            '<h3>' + esc(step.title) + '</h3>' +
+            '<p class="wz-intro">Choose an admin password to protect this control page.</p>' +
+            '<label class="wz-field-label">Password</label>' +
+            '<input id="wz-pw1" class="wz-input" type="password" autocomplete="new-password">' +
+            '<label class="wz-field-label">Confirm password</label>' +
+            '<input id="wz-pw2" class="wz-input" type="password" autocomplete="new-password">';
+    }
+
+    function submitPassword() {
+        const p1 = document.getElementById('wz-pw1').value;
+        const p2 = document.getElementById('wz-pw2').value;
+
+        if (p1.length < 6) { stepError('The password needs at least 6 characters.'); return; }
+        if (p1 !== p2) { stepError('Passwords do not match.'); return; }
+
+        const nextBtn = document.getElementById('wz-next');
+        nextBtn.disabled = true;
+        fetch(pwState.setup ? '/api/setup' : '/api/password', { method: 'POST', body: p1 })
+            .then(r => r.json())
+            .then(res => {
+                nextBtn.disabled = false;
+                if (!res.status) { stepError(res.error || 'Could not set the password.'); return; }
+                const wasSetup = pwState.setup;
+                pwState = { needed: false, setup: false };
+                if (global.hubAuthGranted) global.hubAuthGranted();
+                // before setup the legacy config was not accessible yet
+                if (wasSetup) fetchLegacy();
+                gotoStep(1);
+            })
+            .catch(() => { nextBtn.disabled = false; stepError('Connection error. Please try again.'); });
+    }
+
     function renderImport(body, step) {
         if (legacyOutputs === null) {
             body.innerHTML = '<h3>' + esc(step.title) + '</h3><div class="wz-loading">Looking for previous settings&hellip;</div>';
@@ -485,8 +540,8 @@
                 it.checked = cb.checked;
                 cb.closest('.wz-option').classList.toggle('selected', cb.checked);
                 if (it.kind === 'sharing') {
-                    if (cb.checked) sel.community_uid = it.key;
-                    else if (sel.community_uid === it.key) sel.community_uid = '';
+                    if (cb.checked) sel.community_uid = it.uuid;
+                    else if (sel.community_uid === it.uuid) sel.community_uid = '';
                 }
             });
         });
@@ -545,6 +600,13 @@
     function onNext(step) {
         stepError();
 
+        if (step.type === 'password') {
+            submitPassword();
+            return;
+        }
+        // wait for the legacy scan; its promise callback advances or re-renders
+        if (step.type === 'import' && legacyOutputs === null)
+            return;
         if (step.type === 'input' && sel.kind === 'dc' && !sel.dc_port) {
             stepError('Enter the serial port of the dAISy-catcher, or press Skip.');
             return;
@@ -586,7 +648,7 @@
                     if (!Array.isArray(cfg.receiver) || !cfg.receiver.length) cfg.receiver = [{}];
                     const rx = cfg.receiver[0];
                     if (sel.kind === 'sdr') {
-                        rx.input = sel.device.input;
+                        rx.input = String(sel.device.input || '').toUpperCase();
                         rx.serial = sel.device.serial;
                     } else if (sel.kind === 'dc') {
                         rx.input = 'SERIALPORT';
@@ -634,7 +696,7 @@
                 close(false);
                 if (global.App && App.notify) App.notify('success', 'Configuration saved');
                 if (startAfter)
-                    return fetch('/api/status').then(r => r.json())
+                    return fetch('/api/status').then(r => { if (!r.ok) throw new Error(); return r.json(); })
                         .then(st => fetch('/api/engine', { method: 'POST', body: st.engine === 'running' ? 'restart' : 'start' }))
                         .then(r => r.json())
                         .then(res => {
@@ -651,18 +713,13 @@
     }
 
     const SetupWizard = {
-        open() {
+        open(pw) {
             ensureOverlay();
             resetState();
+            pwState = { needed: !!(pw && pw.needed), setup: !!(pw && pw.setup) };
             fetchLegacy();
             renderStep();
             overlay.classList.add('open');
-        },
-
-        maybeAutoOpen() {
-            ConfigStore.fetch()
-                .then(cfg => { if (wizardFlagOn(cfg)) SetupWizard.open(); })
-                .catch(() => { });
         }
     };
 

@@ -84,6 +84,7 @@ public:
 	bool hasPassword();
 	bool verifyPassword(const std::string &password);
 	void setPassword(const std::string &password);
+	bool wizardPending();
 
 	static std::string randomHex(size_t length);
 
@@ -105,6 +106,7 @@ private:
 	ChannelActivity channel_activity;
 	std::string password_hash;
 	std::string password_salt;
+	bool wizard_flag = false;
 
 	std::mutex mtx;
 	std::condition_variable cv;

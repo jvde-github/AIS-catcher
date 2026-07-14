@@ -204,14 +204,16 @@ std::string ControlServer::statusJSON(const char *auth, bool authenticated)
 		.kv("desired", core.engineDesired())
 		.kv("retrying", core.engineRetrying())
 		.kv("uptime", core.getUptime())
-		.kv("viewer", core.getViewerPort());
+		.kv("viewer", core.getViewerPort())
+		.kv("wizard", core.wizardPending());
 
 	if (authenticated)
 	{
 		static const std::string os = Util::Helper::getOS();
 		static const std::string hardware = Util::Helper::getHardware();
 
-		w.kv("version", VERSION_DESCRIBE)
+		w.kv("has_password", core.hasPassword())
+			.kv("version", VERSION_DESCRIBE)
 			.kv("build_date", __DATE__)
 			.kv("os", os)
 			.kv("hardware", hardware)

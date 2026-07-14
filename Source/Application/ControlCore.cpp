@@ -259,13 +259,19 @@ bool ControlCore::readLegacyConfig(std::string &content)
 
 void ControlCore::applyAuthFields(const JSON::Value &control)
 {
+	bool wizard = false;
+
 	for (const auto &c : control.getObject().getMembers())
 	{
 		if (c.Key() == AIS::KEY_SETTING_PASSWORD)
 			password_hash = c.Get().to_string();
 		else if (c.Key() == AIS::KEY_SETTING_SALT)
 			password_salt = c.Get().to_string();
+		else if (c.Key() == AIS::KEY_SETTING_WIZARD)
+			wizard = Util::Parse::Switch(c.Get().to_string());
 	}
+
+	wizard_flag = wizard;
 }
 
 void ControlCore::refreshAuthFields(const std::string &json)
@@ -276,15 +282,21 @@ void ControlCore::refreshAuthFields(const std::string &json)
 		JSON::Document doc = parser.parse(json);
 
 		const JSON::Value *v = doc.root[AIS::KEY_SETTING_CONTROL];
+		std::lock_guard<std::mutex> lock(mtx);
 		if (v && v->isObject())
-		{
-			std::lock_guard<std::mutex> lock(mtx);
 			applyAuthFields(*v);
-		}
+		else
+			wizard_flag = false;
 	}
 	catch (const std::exception &)
 	{
 	}
+}
+
+bool ControlCore::wizardPending()
+{
+	std::lock_guard<std::mutex> lock(mtx);
+	return wizard_flag;
 }
 
 bool ControlCore::hasPassword()
