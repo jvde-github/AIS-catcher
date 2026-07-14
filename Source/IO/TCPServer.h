@@ -28,6 +28,10 @@
 
 #include "SocketUtil.h"
 
+#ifndef _WIN32
+#include <poll.h>
+#endif
+
 #include "Common.h"
 #include "OutputStats.h"
 
@@ -43,6 +47,9 @@ namespace IO
 		// Reclaim the already-sent prefix only once it grows past this, so the
 		// memmove is amortized across many sends instead of paid on every drain.
 		const static size_t OUT_COMPACT_THRESHOLD = 64 * 1024;
+		// clear() keeps capacity; buffers grown past this are freed so a slot
+		// can't pin its peak size for the server's lifetime.
+		const static size_t BUFFER_RETAIN_LIMIT = 256 * 1024;
 		bool verbose = true;
 
 		size_t pending() const { return out.size() - out_pos; }
@@ -51,6 +58,19 @@ namespace IO
 			if (out_pos == 0)
 				return;
 			out.erase(out.begin(), out.begin() + out_pos);
+			out_pos = 0;
+		}
+		template <typename T> static void shrink(T &buf)
+		{
+			if (buf.capacity() > BUFFER_RETAIN_LIMIT)
+				T().swap(buf);
+			else
+				buf.clear();
+		}
+		void releaseBuffers()
+		{
+			shrink(out);
+			shrink(msg);
 			out_pos = 0;
 		}
 
@@ -65,19 +85,22 @@ namespace IO
 		std::time_t stamp;
 		std::atomic<bool> is_locked{false};
 		bool is_local = false;
+		// close once the out buffer drains (HTTP/1.0 or Connection: close)
+		bool close_after_send = false;
+		// current request is HEAD: full headers, suppressed body
+		bool head_request = false;
+		// arrival time of the pending request's first byte, 0 if none (HTTP header timeout)
+		std::time_t request_start = 0;
 
 		void Lock();
 		void Unlock();
-		bool isLocked()
-		{
-			return is_locked;
-		}
+		bool isLocked() const { return is_locked; }
 
 		void Close();
 		void Start(SOCKET s, bool local = false);
-		int Inactive(std::time_t now);
-		bool isConnected() { return sock != -1; }
-		bool hasSendBuffer() { return out_pos < out.size(); }
+		int Inactive(std::time_t now) const;
+		bool isConnected() const { return sock != -1; }
+		bool hasSendBuffer() const { return out_pos < out.size(); }
 		void SendBuffer();
 		bool Send(const char *buffer, int length);
 		bool SendDirect(const char *buffer, int length);
@@ -101,7 +124,6 @@ namespace IO
 		bool SendAllDirect(const char *data, int len);
 
 		void setReusePort(bool b) { reuse_port = b; }
-		bool setNonBlock(SOCKET sock);
 		void setIP(const std::string &ip) { IP_BIND = ip; }
 
 	protected:
@@ -121,14 +143,20 @@ namespace IO
 		std::atomic<bool> stop{false};
 
 		void Run();
-		sockaddr_in service;
+
+		// pfds[0] is the listening socket, pfds[i + 1] belongs to client[i];
+		// unused slots get fd = -1 so poll skips them.
+		std::array<pollfd, MAX_CONN + 1> pfds;
 
 		bool Send(TCPServerConnection &c, const char *data, int len)
 		{
+			if (!c.Send(data, len))
+				return false;
+
 			if (pstats)
 				pstats->bytes_out += len;
 
-			return c.Send(data, len);
+			return true;
 		}
 
 		int findFreeClient();

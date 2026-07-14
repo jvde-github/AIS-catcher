@@ -21,82 +21,96 @@
 
 namespace IO
 {
+	static std::string httpDate(time_t t)
+	{
+		struct tm tm_utc;
+#ifdef _WIN32
+		gmtime_s(&tm_utc, &t);
+#else
+		gmtime_r(&t, &tm_utc);
+#endif
+		char buf[40];
+		strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", &tm_utc);
+		return buf;
+	}
+
 	// HTTP Server
 	void HTTPServer::processClients()
 	{
 		static const std::string EOF_MSG = "\r\n\r\n";
 
+		const std::time_t now_t = std::time(nullptr);
+
 		for (auto &c : client)
 		{
-			if (c.isConnected())
+			if (c.isConnected() && !c.close_after_send)
 			{
+				// timer runs while a request is arriving but not yet complete
+				if (c.msg.empty())
+					c.request_start = 0;
+				else if (c.request_start == 0)
+					c.request_start = now_t;
 
 				std::size_t pos = c.msg.find(EOF_MSG);
 				while (pos != std::string::npos)
 				{
-					// Lowercase the header region and find Content-Length anchored to a line start.
-					// The request line is always first, so the header (if present) follows "\r\n".
-					std::string headers(c.msg, 0, pos);
-					Util::Convert::toLower(headers);
-
-					std::size_t content_length = 0;
-					std::size_t cl_pos = headers.find("\r\ncontent-length:");
-					if (cl_pos != std::string::npos)
-					{
-						std::size_t vs = cl_pos + 17;
-						std::size_t ve = c.msg.find("\r\n", vs);
-						std::string cl_value = c.msg.substr(vs, ve - vs);
-						cl_value.erase(0, cl_value.find_first_not_of(" \t"));
-						try
-						{
-							content_length = std::stoul(cl_value);
-							if (content_length > 1024 * 1024)
-							{
-								Error() << "Server: closing connection, Content-Length too large: " << content_length;
-								c.Close();
-								break;
-							}
-						}
-						catch (...)
-						{
-							Error() << "Server: closing connection, invalid Content-Length: " << cl_value;
-							c.Close();
-							break;
-						}
-					}
-
-					// Calculate how much data we need (headers + body)
-					// Check for integer overflow
-					std::size_t required_length = pos + 4;
-					if (required_length > 1024 * 1024 || content_length > 1024 * 1024 - required_length)
-					{
-						Error() << "Server: closing connection, total request size too large";
-						c.Close();
-						break;
-					}
-					required_length += content_length; // If we don't have all the data yet, wait for more
-					if (c.msg.size() < required_length)
-					{
-						break;
-					}
-
 					HTTPRequest request;
-					bool gzip;
-					// Pass the entire message including body to Parse
-					Parse(c.msg.substr(0, required_length), request, gzip);
-					if (!request.target.empty())
-						Request(c, request, gzip);
+					std::string error;
+					int status = parseHeaders(c.msg, pos, request, error);
+					if (status)
+					{
+						reject(c, status, error);
+						break;
+					}
+
+					// Wait for the body if it has not fully arrived yet
+					std::size_t required_length = pos + 4;
+					if (required_length > MAX_REQUEST_SIZE || request.content_length > MAX_REQUEST_SIZE - required_length)
+					{
+						reject(c, 413, "total request size too large");
+						break;
+					}
+					required_length += request.content_length;
+					if (c.msg.size() < required_length)
+						break;
+
+					if (request.method == "POST" && request.content_length > 0)
+						request.body = c.msg.substr(pos + 4, request.content_length);
+
+					c.close_after_send = !request.keep_alive;
+
+					// HEAD is GET without the body; ResponseRaw suppresses it
+					c.head_request = request.method == "HEAD";
+					if (c.head_request)
+						request.method = "GET";
+
+					if (request.method == "GET" || request.method == "POST")
+					{
+						if (!request.target.empty())
+							Request(c, request, request.accept_gzip);
+					}
+					else if (!request.method.empty())
+					{
+						setExtraHeader("Allow: GET, HEAD, POST");
+						Response(c, "text/plain", std::string("Method not allowed."), false, false, false, 405);
+					}
+					c.head_request = false;
 
 					c.msg.erase(0, required_length);
+					c.request_start = c.msg.empty() ? 0 : now_t;
+					// closing after this response; ignore any pipelined requests
+					if (c.close_after_send)
+						break;
 					pos = c.msg.find(EOF_MSG);
 				}
 
 				// Limit accumulated message size to prevent memory exhaustion
-				if (c.msg.size() > 1024 * 1024)
-				{
-					Error() << "Server: closing connection, accumulated message too large: " << c.sock;
-					c.Close();
-				}
+				if (c.msg.size() > MAX_REQUEST_SIZE)
+					reject(c, 431, "accumulated message too large");
+				// drop never-completing requests so slow senders can't exhaust slots (slowloris)
+				else if (!c.close_after_send && !c.msg.empty() && c.request_start != 0 &&
+						 (now_t - c.request_start) > REQUEST_TIMEOUT)
+					reject(c, 408, "request header timeout");
 			}
 		}
 
@@ -114,9 +128,19 @@ namespace IO
 
 	void HTTPServer::Request(IO::TCPServerConnection &c, const std::string &, bool)
 	{
-		std::string r = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 15\r\nConnection: close\r\n\r\nPage not found.";
-		c.SendDirect(r.c_str(), r.length());
-		c.Close();
+		c.close_after_send = true;
+		Response(c, "text/html", std::string("Page not found."), false, false, false, 404);
+	}
+
+	// Send an error response and drop the connection once it is flushed;
+	// whatever is left in the input buffer cannot be trusted after a
+	// malformed request.
+	void HTTPServer::reject(IO::TCPServerConnection &c, int status, const std::string &reason)
+	{
+		Error() << "Server: closing connection, " << reason;
+		c.close_after_send = true;
+		Response(c, "text/plain", reason, false, false, false, status);
+		c.msg.clear();
 	}
 
 	void HTTPServer::Request(IO::TCPServerConnection &c, const HTTPRequest &r, bool accept_gzip)
@@ -128,38 +152,39 @@ namespace IO
 		Request(c, msg, accept_gzip);
 	}
 
-	void HTTPServer::Parse(const std::string &s, HTTPRequest &r, bool &accept_gzip)
+	int HTTPServer::parseHeaders(const std::string &msg, std::size_t header_end, HTTPRequest &r, std::string &error)
 	{
-
 		r = HTTPRequest();
-		accept_gzip = false;
 
-		std::istringstream iss(s);
-		std::string line;
-		std::size_t content_length = 0;
+		std::string version, connection;
+		std::size_t line_start = 0;
 		bool first_line = true;
+		bool seen_content_length = false;
 
-		while (std::getline(iss, line))
+		while (line_start < header_end)
 		{
-			if (!line.empty() && line.back() == '\r')
-				line.pop_back();
-			if (line.empty())
-				break;
+			std::size_t line_end = msg.find("\r\n", line_start);
+			if (line_end == std::string::npos || line_end > header_end)
+				line_end = header_end;
+
+			std::string line = msg.substr(line_start, line_end - line_start);
+			line_start = line_end + 2;
 
 			if (first_line)
 			{
 				first_line = false;
 
-				std::istringstream line_stream(line);
-				std::string key, value;
-				std::getline(line_stream, key, ' ');
-				Util::Convert::toUpper(key);
+				std::size_t sp1 = line.find(' ');
+				std::size_t sp2 = sp1 == std::string::npos ? std::string::npos : line.find(' ', sp1 + 1);
 
-				if (key == "GET" || key == "POST")
+				r.method = line.substr(0, sp1);
+				Util::Convert::toUpper(r.method);
+				if (sp1 != std::string::npos)
+					r.target = line.substr(sp1 + 1, sp2 == std::string::npos ? std::string::npos : sp2 - sp1 - 1);
+				if (sp2 != std::string::npos)
 				{
-					r.method = key;
-					std::getline(line_stream, value, ' ');
-					r.target = value;
+					version = line.substr(sp2 + 1);
+					Util::Convert::toUpper(version);
 				}
 				continue;
 			}
@@ -175,7 +200,7 @@ namespace IO
 
 			if (key == "ACCEPT-ENCODING")
 			{
-				accept_gzip = value.find("gzip") != std::string::npos;
+				r.accept_gzip = value.find("gzip") != std::string::npos;
 			}
 			else if (key == "COOKIE")
 			{
@@ -193,29 +218,50 @@ namespace IO
 			{
 				r.forwarded_host = value;
 			}
+			else if (key == "CONNECTION")
+			{
+				connection = value;
+				Util::Convert::toLower(connection);
+			}
+			else if (key == "TRANSFER-ENCODING")
+			{
+				// unsupported framing must be rejected, not misparsed
+				error = "Transfer-Encoding not supported";
+				return 501;
+			}
 			else if (key == "CONTENT-LENGTH")
 			{
+				if (seen_content_length)
+				{
+					error = "duplicate Content-Length header";
+					return 400;
+				}
+				seen_content_length = true;
+
 				try
 				{
-					content_length = std::stoul(value);
-					if (content_length > 1024 * 1024)
-					{
-						content_length = 0;
-					}
+					r.content_length = std::stoul(value);
 				}
 				catch (...)
 				{
-					content_length = 0;
+					error = "invalid Content-Length: " + value;
+					return 400;
+				}
+				if (r.content_length > MAX_REQUEST_SIZE)
+				{
+					error = "Content-Length too large: " + value;
+					return 413;
 				}
 			}
 		}
 
-		if (!r.method.empty() && content_length > 0)
-		{
-			size_t body_start = s.find("\r\n\r\n");
-			if (body_start != std::string::npos)
-				r.body = s.substr(body_start + 4, content_length);
-		}
+		// HTTP/1.0 is close-by-default, HTTP/1.1 keep-alive-by-default
+		if (version == "HTTP/1.0")
+			r.keep_alive = connection.find("keep-alive") != std::string::npos;
+		else
+			r.keep_alive = connection.find("close") == std::string::npos;
+
+		return 0;
 	}
 
 	static const char *statusText(int status)
@@ -230,10 +276,20 @@ namespace IO
 			return "Forbidden";
 		case 404:
 			return "Not Found";
+		case 405:
+			return "Method Not Allowed";
+		case 408:
+			return "Request Timeout";
+		case 413:
+			return "Content Too Large";
 		case 429:
 			return "Too Many Requests";
+		case 431:
+			return "Request Header Fields Too Large";
 		case 500:
 			return "Internal Server Error";
+		case 501:
+			return "Not Implemented";
 		default:
 			return "OK";
 		}
@@ -241,22 +297,13 @@ namespace IO
 
 	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip, bool cache, bool cors, int status)
 	{
-#ifdef HASZLIB
-		if (gzip)
-		{
-			zip.zip(content);
-			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache, cors, status);
-			return;
-		}
-#endif
-
-		ResponseRaw(c, type, content.c_str(), content.size(), false, cache, cors, status);
+		Response(c, type, content.c_str(), (int)content.size(), gzip, cache, cors, status);
 	}
 
 	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache, bool cors, int status)
 	{
 #ifdef HASZLIB
-		if (gzip)
+		if (gzip && len >= (int)GZIP_MIN_LENGTH)
 		{
 			zip.zip(data, len);
 			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache, cors, status);
@@ -267,22 +314,34 @@ namespace IO
 		ResponseRaw(c, type, data, len, false, cache, cors, status);
 	}
 
+	// Headers identical for every response, rebuilt only when the frame_*
+	// settings change.
+	const std::string &HTTPServer::commonHeaders()
+	{
+		if (common_headers.empty())
+		{
+			common_headers = "\r\nServer: AIS-catcher";
+			common_headers += "\r\nContent-Security-Policy: default-src 'self'; "
+				"script-src 'self'; "
+				"style-src 'self' 'unsafe-inline'; "
+				"img-src 'self' data: blob: http: https:; "
+				"connect-src 'self' http: https: ws: wss:; "
+				"font-src 'self' data:; "
+				"frame-src " + frame_src + "; "
+				"frame-ancestors " + frame_ancestors + "; "
+				"base-uri 'self'";
+			common_headers += "\r\nX-Content-Type-Options: nosniff";
+			common_headers += "\r\nReferrer-Policy: strict-origin-when-cross-origin";
+			common_headers += "\r\nVary: Accept-Encoding";
+		}
+		return common_headers;
+	}
+
 	void HTTPServer::ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache, bool cors, int status)
 	{
-
-		std::string header = "HTTP/1.1 " + std::to_string(status) + " " + statusText(status) + "\r\nServer: AIS-catcher\r\nContent-Type: " + type;
-
-		header += "\r\nContent-Security-Policy: default-src 'self'; "
-			"script-src 'self'; "
-			"style-src 'self' 'unsafe-inline'; "
-			"img-src 'self' data: blob: http: https:; "
-			"connect-src 'self' http: https: ws: wss:; "
-			"font-src 'self' data:; "
-			"frame-src " + frame_src + "; "
-			"frame-ancestors " + frame_ancestors + "; "
-			"base-uri 'self'";
-		header += "\r\nX-Content-Type-Options: nosniff";
-		header += "\r\nReferrer-Policy: strict-origin-when-cross-origin";
+		std::string header = "HTTP/1.1 " + std::to_string(status) + " " + statusText(status) +
+							 "\r\nContent-Type: " + type + commonHeaders();
+		header += "\r\nDate: " + httpDate(time(nullptr));
 
 		if (!extra_header.empty())
 		{
@@ -299,18 +358,15 @@ namespace IO
 		if (cache)
 		{
 			header += "\r\nCache-Control: max-age=31536000, stale-while-revalidate=604800, stale-if-error=604800";
-			time_t now = time(0) + 31536000;
-			char buf[100];
-			strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", gmtime(&now));
-			header += "\r\nExpires: " + std::string(buf);
+			header += "\r\nExpires: " + httpDate(time(nullptr) + 31536000);
 		}
 		else
 		{
 			header += "\r\nCache-Control: private, no-store, max-age=0, s-maxage=0";
-			header += "\r\nPragma: no-cache";
 		}
 
-		header += "\r\nConnection: keep-alive\r\nContent-Length: " + std::to_string(len) + "\r\n\r\n";
+		header += std::string("\r\nConnection: ") + (c.close_after_send ? "close" : "keep-alive") +
+				  "\r\nContent-Length: " + std::to_string(len) + "\r\n\r\n";
 
 		if (!Send(c, header.c_str(), header.length()))
 		{
@@ -318,6 +374,10 @@ namespace IO
 			c.Close();
 			return;
 		}
+
+		if (c.head_request)
+			return;
+
 		if (!Send(c, data, len))
 		{
 			Error() << "Server: closing client socket.";

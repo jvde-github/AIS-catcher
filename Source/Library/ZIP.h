@@ -64,7 +64,7 @@ public:
 			strm.zfree = Z_NULL;
 			strm.opaque = Z_NULL;
 
-			if (deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, windowBits | GZIP_ENCODING, 8, Z_DEFAULT_STRATEGY) < 0)
+			if (deflateInit2(&strm, Z_BEST_SPEED, Z_DEFLATED, windowBits | GZIP_ENCODING, 8, Z_DEFAULT_STRATEGY) < 0)
 				return false;
 
 			strm.next_in = (unsigned char *)data;

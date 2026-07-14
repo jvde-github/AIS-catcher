@@ -114,6 +114,9 @@ namespace IO
 		std::string host;
 		std::string origin;
 		std::string forwarded_host;
+		bool keep_alive = true;
+		bool accept_gzip = false;
+		std::size_t content_length = 0;
 
 		std::string path() const
 		{
@@ -203,13 +206,12 @@ namespace IO
 			cleanupSSE_locked();
 		}
 
-		void setFrameAncestors(const std::string &v) { frame_ancestors = v; }
-		void setFrameSrc(const std::string &v) { frame_src = v; }
+		void setFrameAncestors(const std::string &v) { frame_ancestors = v; common_headers.clear(); }
+		void setFrameSrc(const std::string &v) { frame_src = v; common_headers.clear(); }
 
 		void setExtraHeader(const std::string &h) { extra_header = h; }
 
 	private:
-		std::string ret, header;
 		// Default `*` permits any embedding — AIS-catcher is typically
 		// self-hosted on a LAN and is commonly iframed by a control app on a
 		// different port. Tighten with the `frame_ancestors` setting if the
@@ -217,10 +219,16 @@ namespace IO
 		std::string frame_ancestors = "*";
 		std::string frame_src = "'self'";
 		std::string extra_header;
+		std::string common_headers;
 		std::list<IO::SSEConnection> sse;
 		std::mutex sse_mtx;
 		std::chrono::steady_clock::time_point last_sse_ping{};
 		static const int SSE_PING_INTERVAL = 20;
+		// below this size the gzip header/CPU overhead outweighs the savings
+		static const size_t GZIP_MIN_LENGTH = 1024;
+		static const std::size_t MAX_REQUEST_SIZE = 1024 * 1024;
+		// seconds a request has to finish arriving before its slot is reclaimed
+		static const int REQUEST_TIMEOUT = 15;
 
 		void cleanupSSE_locked()
 		{
@@ -238,7 +246,12 @@ namespace IO
 			}
 		}
 
-		void Parse(const std::string &s, HTTPRequest &r, bool &accept_gzip);
+		// Single parse pass over msg[0, header_end): request line + headers,
+		// including framing validation. Returns 0 on success or the HTTP
+		// status the request must be rejected with, with `error` set.
+		int parseHeaders(const std::string &msg, std::size_t header_end, HTTPRequest &r, std::string &error);
+		void reject(IO::TCPServerConnection &c, int status, const std::string &reason);
+		const std::string &commonHeaders();
 
 		ZIP zip;
 

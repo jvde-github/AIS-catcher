@@ -15,6 +15,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <algorithm>
 #include <cstring>
 #include <string>
 
@@ -25,7 +26,6 @@
 #else
 #include <arpa/inet.h> // For inet_addr() and INADDR_ANY
 #include <netinet/tcp.h>
-#include <poll.h>
 #ifdef __ANDROID__
 #include <android/log.h>
 #endif
@@ -60,45 +60,36 @@ namespace IO
 			Net::closeSocket(sock);
 			sock = -1;
 		}
-		msg.clear();
-		out.clear();
-		out_pos = 0;
+		releaseBuffers();
 	}
 
 	void TCPServerConnection::Start(SOCKET s, bool local)
 	{
-		msg.clear();
-		out.clear();
-		out_pos = 0;
+		releaseBuffers();
+		close_after_send = false;
+		head_request = false;
+		request_start = 0;
 		stamp = std::time(nullptr);
 		is_local = local;
 		sock = s;
 	}
 
-	int TCPServerConnection::Inactive(std::time_t now)
+	int TCPServerConnection::Inactive(std::time_t now) const
 	{
-		return (int)((long int)now - (long int)stamp);
+		return (int)std::difftime(now, stamp);
 	}
 
 	void TCPServerConnection::Read()
 	{
 		std::lock_guard<std::mutex> lock(mtx);
 
-		char buffer[1024];
+		char buffer[16384];
 
 		if (isConnected())
 		{
-
 			int nread = recv(sock, buffer, sizeof(buffer), 0);
-			int e = Net::lastError();
-			if (nread == 0 || (nread < 0 && !Net::wouldBlock(e)))
-			{
-				if (nread < 0 && verbose)
-					Error() << "Socket: connection closed by error: " << Net::errorString(e) << ", sock = " << sock;
 
-				CloseUnsafe();
-			}
-			else if (nread > 0)
+			if (nread > 0)
 			{
 				if (msg.size() + nread > MAX_BUFFER_SIZE)
 				{
@@ -107,8 +98,23 @@ namespace IO
 				}
 				else
 				{
-					msg += std::string(buffer, nread);
-					stamp = std::time(0);
+					msg.append(buffer, nread);
+					stamp = std::time(nullptr);
+				}
+			}
+			else if (nread == 0)
+			{
+				CloseUnsafe();
+			}
+			else
+			{
+				int e = Net::lastError();
+				if (!Net::wouldBlock(e))
+				{
+					if (verbose)
+						Error() << "Socket: connection closed by error: " << Net::errorString(e) << ", sock = " << sock;
+
+					CloseUnsafe();
 				}
 			}
 		}
@@ -138,7 +144,7 @@ namespace IO
 				out_pos += bytes;
 				if (out_pos == out.size())
 				{
-					out.clear();
+					shrink(out);
 					out_pos = 0;
 				}
 			}
@@ -256,17 +262,11 @@ namespace IO
 		if (sock != -1)
 			Net::closeSocket(sock);
 
-		// Remove port from active_ports
 		if (listening_port != -1)
 		{
-			for (auto it = active_ports.begin(); it != active_ports.end(); ++it)
-			{
-				if (*it == listening_port)
-				{
-					active_ports.erase(it);
-					break;
-				}
-			}
+			auto it = std::find(active_ports.begin(), active_ports.end(), listening_port);
+			if (it != active_ports.end())
+				active_ports.erase(it);
 		}
 	}
 
@@ -306,38 +306,37 @@ namespace IO
 			return;
 		}
 
+		int ptr = findFreeClient();
+		if (ptr == -1)
 		{
-			int ptr = findFreeClient();
-			if (ptr == -1)
-			{
-				Error() << "TCP Server: max connections reached (" << MAX_CONN << ", closing socket.";
-				Net::closeSocket(conn_socket);
-			}
-			else
-			{
-				bool local = addrlen >= (int)sizeof(peer) && peer.sin_family == AF_INET &&
-							 (ntohl(peer.sin_addr.s_addr) >> 24) == 127;
-				client[ptr].Start(conn_socket, local);
-
-				int flag = 1;
-				if (setsockopt(conn_socket, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag)) != 0)
-				{
-					Error() << "TCP Server: cannot set TCP_NODELAY on client socket.";
-					client[ptr].Close();
-					return;
-				}
-
-				const int idle = 60, interval = 20, count = 3;
-				Net::setTCPKeepAlive(conn_socket, idle, interval, count);
-				Net::setTCPUserTimeout(conn_socket, (idle + interval * count) * 1000);
-
-				if (!setNonBlock(conn_socket))
-				{
-					Error() << "TCP Server: cannot make client socket non-blocking.";
-					client[ptr].Close();
-				}
-			}
+			Error() << "TCP Server: max connections reached (" << MAX_CONN << "), closing socket.";
+			Net::closeSocket(conn_socket);
+			return;
 		}
+
+		// Configure fully before Start() publishes the socket to broadcast threads.
+		int flag = 1;
+		if (setsockopt(conn_socket, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag)) != 0)
+		{
+			Error() << "TCP Server: cannot set TCP_NODELAY on client socket.";
+			Net::closeSocket(conn_socket);
+			return;
+		}
+
+		const int idle = 60, interval = 20, count = 3;
+		Net::setTCPKeepAlive(conn_socket, idle, interval, count);
+		Net::setTCPUserTimeout(conn_socket, (idle + interval * count) * 1000);
+
+		if (!Net::setNonBlocking(conn_socket))
+		{
+			Error() << "TCP Server: cannot make client socket non-blocking.";
+			Net::closeSocket(conn_socket);
+			return;
+		}
+
+		bool local = addrlen >= (int)sizeof(peer) && peer.sin_family == AF_INET &&
+					 (ntohl(peer.sin_addr.s_addr) >> 24) == 127;
+		client[ptr].Start(conn_socket, local);
 	}
 
 	void TCPServer::cleanUp()
@@ -352,16 +351,21 @@ namespace IO
 
 	void TCPServer::readClients()
 	{
-
-		for (auto &c : client)
-			c.Read();
+		for (int i = 0; i < MAX_CONN; i++)
+			if (pfds[i + 1].revents & (POLLIN | POLLERR | POLLHUP | POLLNVAL))
+				client[i].Read();
 	}
 
 	void TCPServer::writeClients()
 	{
 
 		for (auto &c : client)
+		{
 			c.SendBuffer();
+
+			if (c.close_after_send && c.isConnected() && !c.isLocked() && !c.hasSendBuffer())
+				c.Close();
+		}
 	}
 
 	void TCPServer::processClients()
@@ -379,9 +383,12 @@ namespace IO
 	{
 		while (!stop)
 		{
+			SleepAndWait();
+
 			try
 			{
-				acceptClients();
+				if (pfds[0].revents & POLLIN)
+					acceptClients();
 				readClients();
 				processClients();
 				writeClients();
@@ -398,9 +405,6 @@ namespace IO
 				for (auto &c : client)
 					c.Close();
 			}
-
-			if (!stop)
-				SleepAndWait();
 		}
 
 		Debug() << "TCP Server: thread ending.";
@@ -409,35 +413,34 @@ namespace IO
 	void TCPServer::SleepAndWait()
 	{
 		// poll() rather than select(): keyed on fd values with no FD_SETSIZE ceiling,
-		// so a high-numbered socket in a busy process can't overflow an fd_set. The
-		// result is unused — this only blocks until something is ready or 1s elapses.
-		std::vector<pollfd> pfds;
-		pfds.reserve(MAX_CONN + 1);
+		// so a high-numbered socket in a busy process can't overflow an fd_set.
+		// Blocks until a socket is ready or 1s elapses; the revents left in pfds
+		// tell Run() which sockets to accept/read.
+		pfds[0].fd = sock;
+		pfds[0].events = POLLIN;
+		pfds[0].revents = 0;
 
-		pollfd pfd;
-		pfd.fd = sock;
-		pfd.events = POLLIN;
-		pfd.revents = 0;
-		pfds.push_back(pfd);
-
-		for (auto &c : client)
+		for (int i = 0; i < MAX_CONN; i++)
 		{
-			if (!c.isConnected())
-				continue;
+			TCPServerConnection &c = client[i];
+			pollfd &p = pfds[i + 1];
 
-			pfd.fd = c.sock;
-			pfd.events = POLLIN;
+			p.fd = c.isConnected() ? c.sock : -1;
+			p.events = POLLIN;
 			if (c.hasSendBuffer())
-				pfd.events |= POLLOUT;
-			pfd.revents = 0;
-			pfds.push_back(pfd);
+				p.events |= POLLOUT;
+			p.revents = 0;
 		}
 
 #ifdef _WIN32
-		WSAPoll(pfds.data(), (ULONG)pfds.size(), 1000);
+		int r = WSAPoll(pfds.data(), (ULONG)pfds.size(), 1000);
 #else
-		poll(pfds.data(), (nfds_t)pfds.size(), 1000);
+		int r = poll(pfds.data(), (nfds_t)pfds.size(), 1000);
 #endif
+		// on poll failure fall back to sweeping every socket rather than none
+		if (r < 0)
+			for (auto &p : pfds)
+				p.revents = POLLIN;
 	}
 
 	bool TCPServer::SendAll(const std::string &m)
@@ -487,11 +490,6 @@ namespace IO
 		return success;
 	}
 
-	bool TCPServer::setNonBlock(SOCKET s)
-	{
-		return Net::setNonBlocking(s);
-	}
-
 	bool TCPServer::start(int port)
 	{
 		for (const auto &p : active_ports)
@@ -518,6 +516,7 @@ namespace IO
 			setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
 		}
 #endif
+		sockaddr_in service;
 		memset(&service, 0, sizeof(service));
 		service.sin_family = AF_INET;
 
@@ -562,7 +561,7 @@ namespace IO
 			c.Unlock();
 		}
 
-		if (!setNonBlock(sock))
+		if (!Net::setNonBlocking(sock))
 		{
 			Error() << "TCP Server: cannot set socket to non-blocking";
 		}
