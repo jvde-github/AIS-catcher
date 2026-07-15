@@ -291,6 +291,8 @@ namespace Protocol
 		int sock = -1;
 		State state = DISCONNECTED;
 		time_t stamp = 0;
+		time_t last_reconnect = 0;
+		bool in_connect = false;
 
 		long reset_interval = 0; // jittered reset deadline in seconds, measured from stamp
 
@@ -301,8 +303,17 @@ namespace Protocol
 
 		bool reconnect()
 		{
+			// reconnecting from within an onConnect() handshake recurses without bound
+			if (in_connect)
+			{
+				disconnect();
+				return false;
+			}
+
 			if (stats)
 				stats->reconnects++;
+
+			last_reconnect = time(nullptr);
 
 			Debug() << "TCP: Reconnecting to " << host << ":" << port;
 			disconnect();
@@ -315,7 +326,15 @@ namespace Protocol
 					<< " (" << Net::errorString(error_code) << ")." << (persistent ? " Reconnecting." : " Failed.");
 
 			if (persistent)
-				reconnect();
+			{
+				if (std::difftime(time(nullptr), last_reconnect) > RECONNECT_TIME)
+					reconnect();
+				else
+				{
+					disconnect();
+					stamp = time(nullptr);
+				}
+			}
 			else
 			{
 				if (stats)
@@ -372,6 +391,19 @@ namespace Protocol
 
 		void setStats(IO::OutputStats *s) { stats = s; }
 		void setVerifyCertificates(bool v) { verify_certificates = v; }
+
+		bool setOptionKey(AIS::Keys key, const std::string &value) override
+		{
+			switch (key)
+			{
+			case AIS::KEY_SETTING_SSL_VERIFY:
+				verify_certificates = Util::Parse::Switch(value);
+				break;
+			default:
+				return false;
+			}
+			return true;
+		}
 
 	private:
 		bool performHandshake();
@@ -641,6 +673,8 @@ namespace Protocol
 
 	public:
 		WebSocket() : ProtocolBase("WS") {};
+
+		void setPath(const std::string &p) { path = p.empty() ? "/" : p; }
 
 		void onConnect() override;
 		void onDisconnect() override;

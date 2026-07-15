@@ -52,10 +52,13 @@ namespace IO
 		Protocol::TLS tls;
 		Protocol::ProtocolBase *connection = nullptr;
 
+		int timeout = 10;
+
 		void createMessageBody(const std::string &msg, bool gzip, bool multipart, const std::string &copyname);
 		const void *getMessagePtr(bool gzip) const { return gzip ? zip.getOutputPtr() : message.c_str(); }
 		size_t getMessageLength(bool gzip) const { return gzip ? zip.getOutputLength() : message.length(); }
 		void createHeader(bool gzip, bool multipart);
+		bool sendAll(const void *data, int length);
 		int parseResponse();
 
 	public:
@@ -68,6 +71,8 @@ namespace IO
 		{
 			userpwd = up;
 		}
+
+		void setTimeout(int t) { timeout = t; }
 
 		void setVerifyCertificates(bool v)
 		{

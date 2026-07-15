@@ -202,7 +202,8 @@ namespace Util
 		const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 		std::string out;
-		int val = 0, valb = -6;
+		unsigned val = 0;
+		int valb = -6;
 		for (uint8_t c : in)
 		{
 			val = (val << 8) + c;

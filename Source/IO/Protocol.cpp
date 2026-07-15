@@ -68,6 +68,7 @@ namespace Protocol
 	bool TCP::connect()
 	{
 		state = DISCONNECTED;
+		stamp = time(nullptr);
 
 		struct addrinfo h;
 
@@ -183,7 +184,9 @@ namespace Protocol
 				stats->connected = true;
 			}
 
+			in_connect = true;
 			onConnect();
+			in_connect = false;
 
 			bytes_sent = 0;
 			bytes_received = 0;
@@ -194,7 +197,8 @@ namespace Protocol
 			return fail();
 
 		// Non-blocking connect in progress.
-		if (isConnected(timeout))
+		int elapsed = (int)std::difftime(time(nullptr), stamp);
+		if (isConnected(MAX(timeout - elapsed, 0)))
 			return true;
 
 		// isConnected() may have internally detected async failure and reset sock to -1.
@@ -255,7 +259,10 @@ namespace Protocol
 				stats->connect_ok++;
 				stats->connected = true;
 			}
+
+			in_connect = true;
 			onConnect();
+			in_connect = false;
 
 			return true;
 		}
@@ -592,12 +599,40 @@ namespace Protocol
 		// do not block if we are not waiting
 		if (!wait || timeout <= 0)
 		{
-			int pending = SSL_pending(ssl);
-			if (pending > 0)
+			int avail = SSL_pending(ssl);
+			if (avail == 0)
 			{
-				int to_read = MIN(pending, length);
-				int r = SSL_read(ssl, data, to_read);
-				result = (r > 0 ? r : 0);
+				SOCKET sock = getSocket();
+#ifdef _WIN32
+				if (sock != INVALID_SOCKET)
+#else
+				if (sock >= 0)
+#endif
+				{
+					fd_set readfds;
+					FD_ZERO(&readfds);
+					FD_SET(sock, &readfds);
+					timeval tv = {0, 0};
+					if (select(sock + 1, &readfds, nullptr, nullptr, &tv) > 0)
+						avail = length;
+				}
+			}
+			if (avail > 0)
+			{
+				int r = SSL_read(ssl, data, MIN(avail, length));
+				if (r > 0)
+					result = r;
+				else
+				{
+					int err = SSL_get_error(ssl, r);
+					if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE)
+					{
+						if (stats)
+							stats->bytes_in += BIO_number_read(SSL_get_rbio(ssl)) - before;
+						disconnect();
+						return -1;
+					}
+				}
 			}
 		}
 		else
@@ -1265,6 +1300,19 @@ namespace Protocol
 	}
 
 	///  ------WebSocket Implementation------
+	static void randomMaskingKey(uint8_t key[4])
+	{
+#ifdef HASOPENSSL
+		if (RAND_bytes(key, 4) == 1)
+			return;
+#endif
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_int_distribution<int> dis(0, 255);
+		for (int i = 0; i < 4; ++i)
+			key[i] = (uint8_t)dis(gen);
+	}
+
 	void WebSocket::onConnect()
 	{
 		buffer_ptr = 0;
@@ -1505,13 +1553,17 @@ namespace Protocol
 		}
 
 		int sent = prev->send(frame.data(), frame.size());
-		if (sent != (int)frame.size())
+		if (sent == (int)frame.size())
+			return length;
+
+		if (sent > 0)
 		{
-			Error() << "WebSocket: Failed to send frame.";
+			Error() << "WebSocket: incomplete frame send, disconnecting.";
+			disconnect();
 			return -1;
 		}
 
-		return length;
+		return sent;
 	}
 
 	int WebSocket::populateData(void *data, int length)
@@ -1529,7 +1581,7 @@ namespace Protocol
 
 	int WebSocket::read(void *data, int data_len, int t, bool wait)
 	{
-		if (received_ptr >= data_len)
+		if (data_len > 0 && received_ptr >= data_len)
 		{
 			return populateData(data, data_len);
 		}
@@ -1622,9 +1674,29 @@ namespace Protocol
 				}
 				break;
 			case OPCODE::CLOSE:
+			{
 				Warning() << "WebSocket: Connection closed by remote host.";
+
+				// echo the close code back before tearing down (RFC 6455 5.5.1)
+				int echo_len = MIN((int)length, 2);
+				if (mask)
+					for (int i = 0; i < echo_len; ++i)
+						buffer[ptr + i] ^= masking_key[i % 4];
+
+				uint8_t close_key[4];
+				randomMaskingKey(close_key);
+
+				frame.resize(0);
+				frame.push_back(0x80 | (uint8_t)OPCODE::CLOSE);
+				frame.push_back(0x80 | echo_len);
+				frame.insert(frame.end(), close_key, close_key + 4);
+				for (int i = 0; i < echo_len; ++i)
+					frame.push_back(buffer[ptr + i] ^ close_key[i % 4]);
+				prev->send(frame.data(), frame.size());
+
 				disconnect();
 				break;
+			}
 			case OPCODE::PING:
 			{
 				// Control frames (like PING/PONG) must have payload <= 125 bytes per RFC 6455
@@ -1643,24 +1715,7 @@ namespace Protocol
 
 				// Client-to-server frames must be masked (RFC 6455 §5.3)
 				uint8_t pong_key[4];
-#ifdef HASOPENSSL
-				if (RAND_bytes(pong_key, 4) != 1)
-				{
-					std::random_device rd;
-					std::mt19937 gen(rd());
-					std::uniform_int_distribution<int> dis(0, 255);
-					for (int i = 0; i < 4; ++i)
-						pong_key[i] = (uint8_t)dis(gen);
-				}
-#else
-				{
-					std::random_device rd;
-					std::mt19937 gen(rd());
-					std::uniform_int_distribution<int> dis(0, 255);
-					for (int i = 0; i < 4; ++i)
-						pong_key[i] = (uint8_t)dis(gen);
-				}
-#endif
+				randomMaskingKey(pong_key);
 
 				frame.resize(0);
 				frame.push_back(0x80 | (uint8_t)OPCODE::PONG);
@@ -1688,9 +1743,12 @@ namespace Protocol
 		}
 	}
 
+	// prev->isConnected() must run first: it drives the reconnect and re-handshake
 	bool WebSocket::isConnected()
 	{
-		return connected && prev && prev->isConnected();
+		bool prev_connected = prev && prev->isConnected();
+
+		return prev_connected && connected;
 	}
 
 	void WebSocket::onDisconnect()

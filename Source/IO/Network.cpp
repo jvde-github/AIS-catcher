@@ -43,6 +43,7 @@ namespace IO
 	void HTTPStreamer::Start()
 	{
 		http.setStats(&stats);
+		http.setTimeout(TIMEOUT);
 
 		if (!running)
 		{
@@ -601,24 +602,21 @@ namespace IO
 		tcp.setOptionKey(AIS::KEY_SETTING_HOST, host);
 		tcp.setOptionKey(AIS::KEY_SETTING_PORT, port);
 		tcp.setOptionKey(AIS::KEY_SETTING_PERSIST, Util::Convert::toString(persistent));
-		tcp.setOptionKey(AIS::KEY_SETTING_TIMEOUT, "0");
+		tcp.setOptionKey(AIS::KEY_SETTING_TIMEOUT, persistent ? "0" : "10");
 		tcp.setOptionKey(AIS::KEY_SETTING_KEEP_ALIVE, Util::Convert::toString(keep_alive));
 		if (reset > 0)
 			tcp.setOptionKey(AIS::KEY_SETTING_RESET, std::to_string(reset));
 
 		connection = &tcp;
 
-		if (connection->connect())
+		if (connection->connect() && tcp.getState() == Protocol::TCP::READY)
 			ss << "connected";
+		else if (persistent)
+			ss << "pending";
 		else
 		{
-			if (!persistent)
-			{
-				ss << "failed";
-				throw std::runtime_error("TCP feed cannot connect to " + host + " port " + port);
-			}
-			else
-				ss << "pending";
+			ss << "failed";
+			throw std::runtime_error("TCP feed cannot connect to " + host + " port " + port);
 		}
 
 		Info() << ss.str();
@@ -809,8 +807,13 @@ namespace IO
 				continue;
 
 			formatInto(data[i], tag, false, "", "\r\n");
-			topic_template.write(tag, data[i], topic_buf);
-			((Protocol::MQTT *)session)->send(json.data(), (int)json.size(), topic_buf);
+			if (session == &mqtt)
+			{
+				topic_template.write(tag, data[i], topic_buf);
+				mqtt.send(json.data(), (int)json.size(), topic_buf);
+			}
+			else
+				session->send(json.data(), (int)json.size());
 		}
 
 		session->read(nullptr, 0, 0, false);
@@ -824,8 +827,13 @@ namespace IO
 			{
 				json.clear();
 				builder.stringify(data[i], json, "\r\n");
-				topic_template.write(tag, *((AIS::Message *)data[i].binary), topic_buf);
-				((Protocol::MQTT *)session)->send(json.data(), (int)json.size(), topic_buf);
+				if (session == &mqtt)
+				{
+					topic_template.write(tag, *((AIS::Message *)data[i].binary), topic_buf);
+					mqtt.send(json.data(), (int)json.size(), topic_buf);
+				}
+				else
+					session->send(json.data(), (int)json.size());
 			}
 		}
 
@@ -841,6 +849,7 @@ namespace IO
 			std::string prot, host, port, path, username, password;
 			Util::Parse::URL(arg, prot, username, password, host, port, path);
 
+			ws.setPath(path);
 			if (!host.empty())
 				SetKey(AIS::KEY_SETTING_HOST, host);
 			if (!port.empty())
@@ -881,7 +890,7 @@ namespace IO
 			topic_template.set(arg);
 			break;
 		default:
-			if (!tcp.setOptionKey(key, arg) && !mqtt.setOptionKey(key, arg) && !ws.setOptionKey(key, arg) && !setOptionKey(key, arg))
+			if (!tcp.setOptionKey(key, arg) && !mqtt.setOptionKey(key, arg) && !ws.setOptionKey(key, arg) && !tls.setOptionKey(key, arg) && !setOptionKey(key, arg))
 				throw std::runtime_error(std::string("MQTT output - unknown option: ") + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
 			break;
 		}

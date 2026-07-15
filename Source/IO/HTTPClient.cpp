@@ -119,6 +119,20 @@ namespace IO
 		header += "Content-Length: " + std::to_string(getMessageLength(gzip)) + "\r\n\r\n";
 	}
 
+	bool HTTPClient::sendAll(const void *data, int length)
+	{
+		const char *p = (const char *)data;
+		while (length > 0)
+		{
+			int sent = connection->send(p, length);
+			if (sent <= 0)
+				return false;
+			p += sent;
+			length -= sent;
+		}
+		return true;
+	}
+
 	int HTTPClient::Post(const std::string &msg, bool gzip, bool multipart, const std::string &copyname)
 	{
 		if (multipart) gzip = false;
@@ -129,7 +143,7 @@ namespace IO
 		tcp.setOptionKey(AIS::KEY_SETTING_HOST, host);
 		tcp.setOptionKey(AIS::KEY_SETTING_PORT, port);
 		tcp.setOptionKey(AIS::KEY_SETTING_PERSIST, "false");
-		tcp.setOptionKey(AIS::KEY_SETTING_TIMEOUT, "1");
+		tcp.setOptionKey(AIS::KEY_SETTING_TIMEOUT, std::to_string(timeout));
 
 		if (secure)
 		{
@@ -151,7 +165,7 @@ namespace IO
 		buffer.resize(8192); // Start with 8KB buffer
 
 		// Send header
-		if (connection->send(header.c_str(), header.length()) < 0)
+		if (!sendAll(header.c_str(), (int)header.length()))
 		{
 			Error() << "HTTP Client [" << host << "]: write failed";
 			connection->disconnect();
@@ -159,7 +173,7 @@ namespace IO
 		}
 
 		// Send body
-		if (connection->send(getMessagePtr(gzip), (int)getMessageLength(gzip)) < 0)
+		if (!sendAll(getMessagePtr(gzip), (int)getMessageLength(gzip)))
 		{
 			Error() << "HTTP Client [" << host << "]: write failed";
 			connection->disconnect();
