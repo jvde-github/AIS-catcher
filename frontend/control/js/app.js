@@ -973,10 +973,20 @@
         });
     }
 
+    function highlightJson(text) {
+        const esc = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return esc.replace(/("(?:\\.|[^"\\])*")(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g, (m, str, colon) => {
+            if (str) return colon ? `<span class="j-key">${str}</span>${colon}` : `<span class="j-str">${str}</span>`;
+            if (m === 'true' || m === 'false') return `<span class="j-bool">${m}</span>`;
+            if (m === 'null') return `<span class="j-null">${m}</span>`;
+            return `<span class="j-num">${m}</span>`;
+        });
+    }
+
     function loadConfigJson() {
         const pre = document.getElementById('config-json');
         ConfigStore.fetch()
-            .then(cfg => { pre.textContent = JSON.stringify(cfg, null, 2); })
+            .then(cfg => { pre.innerHTML = highlightJson(JSON.stringify(cfg, null, 2)); })
             .catch(() => { pre.textContent = 'Could not load the configuration.'; });
     }
 

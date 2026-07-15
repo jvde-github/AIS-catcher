@@ -543,8 +543,8 @@
     const Styles = {
         input: 'w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-white border border-slate-300 rounded-lg text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all duration-200 shadow-sm text-xs sm:text-sm',
         select: 'appearance-none pr-8',
-        toggle: "relative w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-slate-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-800",
-        slider: 'flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-800',
+        toggle: "relative w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0857b1]",
+        slider: 'flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#0857b1]',
         sliderContainer: 'flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 bg-slate-50 rounded-lg border border-slate-100',
         sliderDisplay: 'text-xs sm:text-sm font-mono font-medium text-slate-600 min-w-[2.5rem] sm:min-w-[3rem] text-center px-1.5 sm:px-2 py-0.5 sm:py-1 bg-slate-100 rounded border border-slate-200',
         label: 'block text-slate-700 text-xs sm:text-sm font-semibold mb-1 sm:mb-2 ml-0.5',
@@ -556,7 +556,7 @@
         cardBody: 'p-3 sm:p-5',
         deleteBtn: 'text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1 sm:p-1.5 rounded-lg transition duration-200',
         chevron: 'pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500',
-        saveActive: 'w-auto sm:w-32 bg-slate-800 text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-700 shadow-md transition-all duration-200 text-xs sm:text-sm font-medium transform hover:-translate-y-0.5',
+        saveActive: 'w-auto sm:w-32 bg-[#0857b1] text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-[#0a63c6] shadow-md transition-all duration-200 text-xs sm:text-sm font-medium transform hover:-translate-y-0.5',
         saveInactive: 'w-auto sm:w-32 bg-white border border-slate-300 text-slate-400 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 shadow-sm transition-all duration-200 text-xs sm:text-sm font-medium cursor-default',
     };
 
