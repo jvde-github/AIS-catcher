@@ -798,14 +798,11 @@ void ReceiverTracker::appendDevice(Device::Device *device, const std::string &ne
 	sample_rate += device->getRateDescription() + newline;
 }
 
-int WebViewer::parseReceiver(const std::string &target)
+int WebViewer::parseReceiver(const std::string &query)
 {
-	auto pos = target.find('?');
-	if (pos == std::string::npos)
-		return 0;
 	try
 	{
-		return std::stoi(IO::HTTPRequest::queryParam(target.substr(pos + 1), "receiver"));
+		return std::stoi(IO::HTTPRequest::queryParam(query, "receiver"));
 	}
 	catch (...)
 	{
@@ -813,14 +810,11 @@ int WebViewer::parseReceiver(const std::string &target)
 	}
 }
 
-std::time_t WebViewer::parseSinceParam(const std::string &target)
+std::time_t WebViewer::parseSinceParam(const std::string &query)
 {
-	auto pos = target.find('?');
-	if (pos == std::string::npos)
-		return 0;
 	try
 	{
-		return (std::time_t)std::stoll(IO::HTTPRequest::queryParam(target.substr(pos + 1), "since"));
+		return (std::time_t)std::stoll(IO::HTTPRequest::queryParam(query, "since"));
 	}
 	catch (...)
 	{
