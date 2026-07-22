@@ -397,6 +397,8 @@ namespace AIS
 	{
 		if (getLength() == 0)
 			return true;
+		if (getLength() > MAX_AIS_LENGTH)
+			return false;
 
 		const int ml[28] = {149, 149, 149, 168, 418, 88, 72, 56, 168, 70, 168, 72, 40, 40, 88, 92, 80, 168, 312, 70, 271, 145, 154, 160, 72, 60, 96, 168};
 
@@ -701,8 +703,8 @@ namespace AIS
 		int byteIdx = (pos * 6) >> 3;
 		int endBits = (pos + count) * 6;
 
-		if (endBits > MAX_AIS_LENGTH)
-			count = (MAX_AIS_LENGTH - pos * 6) / 6;
+		if (endBits > MAX_AIS_NMEA_LENGTH)
+			count = (MAX_AIS_NMEA_LENGTH - pos * 6) / 6;
 
 		if (count < 0)
 			return;

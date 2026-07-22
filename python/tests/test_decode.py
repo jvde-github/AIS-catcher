@@ -15,6 +15,27 @@ SAMPLE_TYPE5 = (
     b"!AIVDM,2,1,4,A,55O0W7`00001L@gCWGA2uItLth@DqtL5@F22220j1h742t0Ht0000000,0*08\r\n"
     b"!AIVDM,2,2,4,A,000000000000000,2*20\r\n"
 )
+SAMPLE_TYPE26_MAX = (
+    b"!AIVDM,4,1,7,A,J1mg=5AEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE,0*69\r\n"
+    b"!AIVDM,4,2,7,A,EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE,0*17\r\n"
+    b"!AIVDM,4,3,7,A,EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE,0*16\r\n"
+    b"!AIVDM,4,4,7,A,EEEEE@4SA@,4*76\r\n"
+)
+# The same 1068 armored bits with zero fill bits declared; checksum adjusted.
+SAMPLE_TYPE26_TOO_LONG = SAMPLE_TYPE26_MAX.replace(b",4*76\r\n", b",0*72\r\n")
+
+
+def unescape_binary_packet(packet):
+    decoded = bytearray()
+    index = 0
+    while index < len(packet):
+        value = packet[index]
+        if value == 0xAD:
+            index += 1
+            value = {0xAD: 0xAD, 0xAE: 0x0A, 0xAF: 0x0D}[packet[index]]
+        decoded.append(value)
+        index += 1
+    return bytes(decoded)
 
 
 def test_decode_type1():
@@ -45,6 +66,33 @@ def test_decode_two_sentences():
     print(f"decoded {len(msgs)} messages")
     for m in msgs:
         print(" ", m)
+
+
+def test_decode_max_length_type26():
+    dec = aiscat.Decoder()
+    assert dec.feed(SAMPLE_TYPE26_MAX) == 1
+    msg = dec.next()
+    assert msg is not None
+    assert msg["type"] == 26
+    assert msg["mmsi"] == 123456789
+    assert msg["radio"] == 0x12345
+
+    binary_dec = aiscat.Decoder(format="binary")
+    assert binary_dec.feed(SAMPLE_TYPE26_MAX) == 1
+    encoded_packet = binary_dec.next()
+    packet = unescape_binary_packet(encoded_packet)
+    assert packet[:2] == b"\xac\x00"
+    assert int.from_bytes(packet[12:14], "big") == 1064
+
+    binary_roundtrip = aiscat.Decoder()
+    assert binary_roundtrip.feed(encoded_packet) == 1
+    roundtrip_msg = binary_roundtrip.next()
+    assert roundtrip_msg["type"] == 26
+    assert roundtrip_msg["radio"] == 0x12345
+
+    oversized_dec = aiscat.Decoder()
+    assert oversized_dec.feed(SAMPLE_TYPE26_TOO_LONG) == 0
+    assert oversized_dec.next() is None
 
 
 # Free-threading: independent Decoder instances must be usable from different
@@ -158,6 +206,7 @@ def test_nmea_tag_decoders_from_multiple_threads():
 if __name__ == "__main__":
     test_decode_type1()
     test_decode_two_sentences()
+    test_decode_max_length_type26()
     test_import_does_not_enable_gil()
     test_independent_decoders_from_multiple_threads()
     test_multifragment_decoders_from_multiple_threads()

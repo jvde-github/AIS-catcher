@@ -41,7 +41,7 @@ namespace AIS
 		int station = 0;
 		int own_mmsi = -1;
 
-		const int MaxBits = MAX_AIS_LENGTH;
+		const int MaxBits = MAX_AIS_FRAME_LENGTH;
 		const int MIN_TRAINING_BITS = 4;
 
 		bool QuickReset = true;

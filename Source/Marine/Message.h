@@ -35,8 +35,11 @@
 namespace AIS
 {
 
-#define MAX_AIS_BYTES 128
-#define MAX_AIS_LENGTH (MAX_AIS_BYTES * 8)
+#define MAX_AIS_LENGTH 1064
+#define MAX_AIS_BYTES ((MAX_AIS_LENGTH + 7) / 8)
+#define MAX_AIS_NMEA_LENGTH (((MAX_AIS_LENGTH + 5) / 6) * 6)
+#define MAX_AIS_FRAME_LENGTH (MAX_AIS_LENGTH + 16 + 7)
+#define MAX_AIS_FRAME_BYTES ((MAX_AIS_FRAME_LENGTH + 7) / 8)
 
 	class GPS
 	{
@@ -63,7 +66,7 @@ namespace AIS
 		static std::atomic<int> ID;
 		static int nextSeqId();
 
-		uint8_t data[MAX_AIS_BYTES + 4]; // +4 padding so 5-byte reads in getText/getUint never go out of bounds
+		uint8_t data[MAX_AIS_FRAME_BYTES + 4]; // Includes FCS/closing-flag capture and read padding.
 		int64_t rxtime; // microseconds since epoch
 		int64_t toa; // time of arrival in seconds since epoch
 		int length;
@@ -191,7 +194,7 @@ namespace AIS
 		}
 
 		// Raw payload bytes; for hot decoders that bulk-load multiple fields.
-		// Buffer is MAX_AIS_BYTES + 4 bytes (zero-padded by clear()).
+		// Buffer has four zero-padded bytes after the raw-frame capture area.
 		const uint8_t* raw() const { return data; }
 
 		unsigned getUint(int start, int len) const
@@ -253,7 +256,7 @@ namespace AIS
 
 		void setBit(int i, bool b)
 		{
-			if (i >= MAX_AIS_LENGTH || i < 0)
+			if (i >= MAX_AIS_FRAME_LENGTH || i < 0)
 				return;
 
 			if (b)
@@ -264,7 +267,7 @@ namespace AIS
 
 		bool getBit(int i) const
 		{
-			if (i >= MAX_AIS_LENGTH || i < 0)
+			if (i >= MAX_AIS_FRAME_LENGTH || i < 0)
 				return false;
 
 			return data[i >> 3] & (1 << (i & 7));
