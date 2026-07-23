@@ -3,8 +3,9 @@
 # AIS-catcher Installation Script
 #
 # Description:
-#   Automated installation script for AIS-catcher on Debian and Ubuntu systems.
-#   Supports both package-based and source-based installations.
+#   Automated installation script for AIS-catcher on Debian, Ubuntu and Fedora
+#   systems. Supports both package-based (.deb/.rpm) and source-based
+#   installations.
 #
 # Usage:
 #   sudo ./aiscatcher-install [OPTIONS]
@@ -17,7 +18,7 @@
 #
 # Requirements:
 #   - Must be run as root (use sudo)
-#   - Debian-based system (Debian/Ubuntu/Raspbian)
+#   - Debian-based system (Debian/Ubuntu/Raspbian) or Fedora
 #   - Internet connection for downloading packages/source
 #
 # Author: AIS-catcher Project
@@ -380,6 +381,38 @@ handle_auto_restart_setting() {
 # UTILITY FUNCTIONS (Used by both package and source installations)
 ################################################################################
 
+# Package manager abstraction: apt (Debian/Ubuntu/Raspbian) or dnf (Fedora).
+if command -v apt-get &>/dev/null; then
+    PKG_MANAGER="apt"
+elif command -v dnf &>/dev/null; then
+    PKG_MANAGER="dnf"
+else
+    PKG_MANAGER=""
+fi
+readonly PKG_MANAGER
+
+require_package_manager() {
+    if [[ -z "$PKG_MANAGER" ]]; then
+        error_exit "No supported package manager found (need apt-get or dnf)"
+    fi
+}
+
+pkg_update() {
+    if [[ "$PKG_MANAGER" == "apt" ]]; then
+        apt-get update
+    else
+        dnf -y makecache
+    fi
+}
+
+pkg_install() {
+    if [[ "$PKG_MANAGER" == "apt" ]]; then
+        apt-get install -y "$@"
+    else
+        dnf -y install "$@"
+    fi
+}
+
 # Check for conflicting existing service
 check_existing_service() {
     if systemctl is-enabled aiscatcher.service &>/dev/null; then
@@ -390,7 +423,9 @@ check_existing_service() {
     fi
 }
 
-# Detect system information (OS, version, architecture)
+# Detect system information (OS, version, architecture).
+# apt systems identify by codename + dpkg arch (debian_bookworm_arm64),
+# dnf systems by version number + machine arch (fedora_44_x86_64).
 get_system_info() {
     local os version arch
     if [ -f /etc/os-release ]; then
@@ -400,14 +435,22 @@ get_system_info() {
         else
             os="${ID:-}"
         fi
-        version="${VERSION_CODENAME:-}"
+        if [[ "$PKG_MANAGER" == "dnf" ]]; then
+            version="${VERSION_ID:-}"
+        else
+            version="${VERSION_CODENAME:-}"
+        fi
         [[ -z "$os" ]]      && error_exit "Could not determine OS ID from /etc/os-release"
-        [[ -z "$version" ]] && error_exit "Could not determine VERSION_CODENAME from /etc/os-release"
+        [[ -z "$version" ]] && error_exit "Could not determine OS version from /etc/os-release"
     else
         os=$(uname -s)  || error_exit "Failed to determine OS name (uname -s)"
         version=$(uname -r) || error_exit "Failed to determine OS version (uname -r)"
     fi
-    arch=$(dpkg --print-architecture) || error_exit "Failed to determine system architecture (dpkg --print-architecture)"
+    if [[ "$PKG_MANAGER" == "dnf" ]]; then
+        arch=$(uname -m) || error_exit "Failed to determine system architecture (uname -m)"
+    else
+        arch=$(dpkg --print-architecture) || error_exit "Failed to determine system architecture (dpkg --print-architecture)"
+    fi
 
     echo "${os}_${version}_${arch}"
 }
@@ -420,23 +463,34 @@ get_system_info() {
 # OpenSSL/zlib stay required (always-on infrastructure features). Per-feature
 # optional packages are only installed when the matching FEATURE_* is ON.
 install_source_build_dependencies() {
-    local required_deps="git cmake build-essential pkg-config libssl-dev zlib1g-dev libusb-1.0-0-dev curl"
-    local optional_deps=""
-    [[ "$FEATURE_ZMQ"      == "ON" ]] && optional_deps+=" libzmq3-dev"
-    [[ "$FEATURE_PSQL"     == "ON" ]] && optional_deps+=" libpq-dev"
-    [[ "$FEATURE_SQLITE"   == "ON" ]] && optional_deps+=" libsqlite3-dev"
-    [[ "$FEATURE_AIRSPY"   == "ON" ]] && optional_deps+=" libairspy-dev"
-    [[ "$FEATURE_AIRSPYHF" == "ON" ]] && optional_deps+=" libairspyhf-dev"
-    [[ "$FEATURE_HACKRF"   == "ON" ]] && optional_deps+=" libhackrf-dev"
-    [[ "$FEATURE_SOAPYSDR" == "ON" ]] && optional_deps+=" libsoapysdr-dev"
+    local required_deps optional_deps=""
+    if [[ "$PKG_MANAGER" == "apt" ]]; then
+        required_deps="git cmake build-essential pkg-config libssl-dev zlib1g-dev libusb-1.0-0-dev curl"
+        [[ "$FEATURE_ZMQ"      == "ON" ]] && optional_deps+=" libzmq3-dev"
+        [[ "$FEATURE_PSQL"     == "ON" ]] && optional_deps+=" libpq-dev"
+        [[ "$FEATURE_SQLITE"   == "ON" ]] && optional_deps+=" libsqlite3-dev"
+        [[ "$FEATURE_AIRSPY"   == "ON" ]] && optional_deps+=" libairspy-dev"
+        [[ "$FEATURE_AIRSPYHF" == "ON" ]] && optional_deps+=" libairspyhf-dev"
+        [[ "$FEATURE_HACKRF"   == "ON" ]] && optional_deps+=" libhackrf-dev"
+        [[ "$FEATURE_SOAPYSDR" == "ON" ]] && optional_deps+=" libsoapysdr-dev"
+    else
+        required_deps="git cmake gcc-c++ make pkgconf-pkg-config openssl-devel zlib-devel libusb1-devel curl"
+        [[ "$FEATURE_ZMQ"      == "ON" ]] && optional_deps+=" zeromq-devel"
+        [[ "$FEATURE_PSQL"     == "ON" ]] && optional_deps+=" libpq-devel"
+        [[ "$FEATURE_SQLITE"   == "ON" ]] && optional_deps+=" sqlite-devel"
+        [[ "$FEATURE_AIRSPY"   == "ON" ]] && optional_deps+=" airspyone_host-devel"
+        [[ "$FEATURE_AIRSPYHF" == "ON" ]] && optional_deps+=" airspyhf-devel"
+        [[ "$FEATURE_HACKRF"   == "ON" ]] && optional_deps+=" hackrf-devel"
+        [[ "$FEATURE_SOAPYSDR" == "ON" ]] && optional_deps+=" SoapySDR-devel"
+    fi
 
     log "INFO" "Installing required build dependencies: $required_deps"
-    apt-get install -y $required_deps || error_exit "Failed to install required dependencies"
+    pkg_install $required_deps || error_exit "Failed to install required dependencies"
 
     if [[ -n "$optional_deps" ]]; then
         log "INFO" "Installing optional dependencies (failures allowed):$optional_deps"
         for pkg in $optional_deps; do
-            if apt-get install -y "$pkg"; then
+            if pkg_install "$pkg"; then
                 log "INFO" "Installed $pkg"
             else
                 log "WARN" "Could not install $pkg - corresponding feature may be unavailable"
@@ -610,6 +664,10 @@ check_package_availability() {
         "ais-catcher_ubuntu_resolute_amd64.deb"
         "ais-catcher_ubuntu_resolute_arm64.deb"
         "ais-catcher_ubuntu_resolute_armhf.deb"
+        "ais-catcher_fedora_43_x86_64.rpm"
+        "ais-catcher_fedora_43_aarch64.rpm"
+        "ais-catcher_fedora_44_x86_64.rpm"
+        "ais-catcher_fedora_44_aarch64.rpm"
     )
 
     for package in "${packages[@]}"; do
@@ -622,10 +680,10 @@ check_package_availability() {
     return 1
 }
 
-# Download and install a pre-built Debian package by filename.
+# Download and install a pre-built package (.deb or .rpm) by filename.
 # Separated from install_package_method so the download/install logic can be
 # tested or reused independently of the method-selection layer.
-download_and_install_deb() {
+download_and_install_pkg() {
     local package=$1
     local download_url="https://github.com/jvde-github/AIS-catcher/releases/download/Edge/$package"
    
@@ -646,17 +704,24 @@ download_and_install_deb() {
     # Ensure the downloaded file has correct permissions
     chmod 644 "$DEB_TMP_DIR/$package"
 
-    # Use --allow-downgrades to handle version conflicts and better error handling
     log "INFO" "Installing package and dependencies..."
     local install_success=false
-    if apt-get install -y --allow-downgrades "$DEB_TMP_DIR/$package"; then
-        install_success=true
-        log "INFO" "Package installed successfully"
-    else
-        log "WARN" "Standard package installation failed, trying with additional flags..."
-        if apt-get install -y --allow-downgrades --allow-change-held-packages "$DEB_TMP_DIR/$package"; then
+    if [[ "$package" == *.rpm ]]; then
+        if dnf -y install "$DEB_TMP_DIR/$package"; then
             install_success=true
-            log "INFO" "Package installed successfully with additional flags"
+            log "INFO" "Package installed successfully"
+        fi
+    else
+        # Use --allow-downgrades to handle version conflicts and better error handling
+        if apt-get install -y --allow-downgrades "$DEB_TMP_DIR/$package"; then
+            install_success=true
+            log "INFO" "Package installed successfully"
+        else
+            log "WARN" "Standard package installation failed, trying with additional flags..."
+            if apt-get install -y --allow-downgrades --allow-change-held-packages "$DEB_TMP_DIR/$package"; then
+                install_success=true
+                log "INFO" "Package installed successfully with additional flags"
+            fi
         fi
     fi
 
@@ -672,7 +737,7 @@ download_and_install_deb() {
     log "INFO" "AIS-catcher package installation completed"
 }
 
-# Resolve which .deb package to use for this system and drive download_and_install_deb.
+# Resolve which pre-built package to use for this system and drive download_and_install_pkg.
 install_package_method() {
     local system_info
     system_info=$(get_system_info)
@@ -689,11 +754,14 @@ install_package_method() {
 
     log "INFO" "Package available: $package"
 
-    # Install minimal dependencies for package installation
-    log "INFO" "Installing minimal dependencies for package installation"
-    apt-get install -y curl || error_exit "Failed to install minimal dependencies"
+    # Install minimal dependencies for package installation (skip if curl is
+    # already present — on Fedora, installing curl over curl-minimal conflicts)
+    if ! command -v curl &>/dev/null; then
+        log "INFO" "Installing minimal dependencies for package installation"
+        pkg_install curl || error_exit "Failed to install minimal dependencies"
+    fi
 
-    download_and_install_deb "$package" || return 1
+    download_and_install_pkg "$package" || return 1
     log "INFO" "AIS-catcher installation from package completed successfully"
 }
 
@@ -1332,7 +1400,8 @@ main() {
     check_existing_service
 
     # Phase 6: System preparation
-    apt-get update || error_exit "Failed to update package lists"
+    require_package_manager
+    pkg_update || error_exit "Failed to update package lists"
 
     # Phase 7: Stop existing service if needed
     if [ "$SKIP_SYSTEMD" = false ]; then

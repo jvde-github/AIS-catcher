@@ -19,6 +19,7 @@ mkdir -p "${LOG_DIR}"
 # Matrix (must match .github/workflows/build.yml)
 DEBIAN_CODENAMES=(bullseye bookworm trixie)
 UBUNTU_CODENAMES=(focal jammy noble plucky questing resolute)
+FEDORA_VERSIONS=(43 44)
 ARCHS=(amd64 arm64 armhf)
 
 # Filters from args (empty = no filter)
@@ -52,8 +53,10 @@ run_test() {
         "${distro}:${codename}" \
         bash -c "
             set -e
-            apt-get update -qq
-            apt-get install -y -qq curl
+            if command -v apt-get >/dev/null; then
+                apt-get update -qq
+                apt-get install -y -qq curl
+            fi
             bash <(curl -fsSL ${SCRIPT_URL}) --package --no-systemd --no-user
             AIS-catcher -l
         " > "${logfile}" 2>&1; then
@@ -99,6 +102,14 @@ for codename in "${UBUNTU_CODENAMES[@]}"; do
         [[ "${codename}" == "focal" && "${arch}" == "armhf" ]] && continue
         should_run ubuntu "${codename}" "${arch}" || continue
         run_test ubuntu "${codename}" "${arch}"
+    done
+done
+
+# No armhf — Fedora only ships x86_64 and aarch64
+for version in "${FEDORA_VERSIONS[@]}"; do
+    for arch in amd64 arm64; do
+        should_run fedora "${version}" "${arch}" || continue
+        run_test fedora "${version}" "${arch}"
     done
 done
 
