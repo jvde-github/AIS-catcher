@@ -1029,11 +1029,57 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	return positionUpdated;
 }
 
+static bool isBinaryContentKey(int key)
+{
+	switch (key)
+	{
+	case AIS::KEY_TEXT:
+	case AIS::KEY_CREW_COUNT:
+	case AIS::KEY_PASSENGER_COUNT:
+	case AIS::KEY_SHIPBOARD_PERSONNEL_COUNT:
+	case AIS::KEY_WSPEED:
+	case AIS::KEY_WGUST:
+	case AIS::KEY_WDIR:
+	case AIS::KEY_WGUSTDIR:
+	case AIS::KEY_AIRTEMP:
+	case AIS::KEY_HUMIDITY:
+	case AIS::KEY_DEWPOINT:
+	case AIS::KEY_PRESSURE:
+	case AIS::KEY_PRESSURETEND:
+	case AIS::KEY_VISIBILITY:
+	case AIS::KEY_WATERLEVEL:
+	case AIS::KEY_LEVELTREND:
+	case AIS::KEY_CSPEED:
+	case AIS::KEY_CDIR:
+	case AIS::KEY_CSPEED2:
+	case AIS::KEY_CDIR2:
+	case AIS::KEY_CDEPTH2:
+	case AIS::KEY_CSPEED3:
+	case AIS::KEY_CDIR3:
+	case AIS::KEY_CDEPTH3:
+	case AIS::KEY_WAVEHEIGHT:
+	case AIS::KEY_WAVEPERIOD:
+	case AIS::KEY_WAVEDIR:
+	case AIS::KEY_SWELLHEIGHT:
+	case AIS::KEY_SWELLPERIOD:
+	case AIS::KEY_SWELLDIR:
+	case AIS::KEY_SEASTATE:
+	case AIS::KEY_WATERTEMP:
+	case AIS::KEY_PRECIPTYPE:
+	case AIS::KEY_SALINITY:
+	case AIS::KEY_ICE:
+		return true;
+	default:
+		return false;
+	}
+}
+
 void DB::processBinaryMessage(const JSON::JSON &data, Ship &ship, bool &position_updated)
 {
 	const AIS::Message *msg = (AIS::Message *)data.binary;
 	int type = msg->type();
 	FLOAT32 loc_lat = LAT_UNDEFINED, loc_lon = LON_UNDEFINED;
+	bool has_content = false;
 
 	// Only process binary message types 6 and 8
 	if (type != 6 && type != 8)
@@ -1063,10 +1109,15 @@ void DB::processBinaryMessage(const JSON::JSON &data, Ship &ship, bool &position
 		{
 			loc_lon = p.Get().getFloat();
 		}
+		else if (isBinaryContentKey(p.Key()))
+		{
+			has_content = true;
+		}
 	}
 
 	const bool is_text = binmsg.dac == 1 && (binmsg.fi == 0 || binmsg.fi == 29 || binmsg.fi == 30);
-	if (is_text || (binmsg.dac == 1 && binmsg.fi == 31) || (binmsg.dac == 200 && binmsg.fi == 55))
+	const bool is_stored_type = is_text || (binmsg.dac == 1 && binmsg.fi == 31) || (binmsg.dac == 200 && binmsg.fi == 55);
+	if (is_stored_type && has_content)
 	{
 		binmsg.json.clear();
 		builder.stringify(data, binmsg.json);
