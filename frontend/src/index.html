@@ -116,14 +116,27 @@
 				<header>System</header>
 				<section>
 					<div><span>Settings</span><span style="cursor: pointer" data-action="applyDefaultSettings"> Reset
-						</span></div>
+						</span><small class="st-desc">Restore all settings to defaults</small>
+						</div>
+				</section>
+				<section>
+					
+					<div class="half noandroid"><span>Plugins</span><span style="cursor: pointer" data-action="showPlugins">
+							Show </span><small class="st-desc">List the loaded plugins</small>
+						</div>
+					<div class="half"><span>Server Errors</span><span style="cursor: pointer"
+							data-action="showServerErrors"> Show </span><small class="st-desc">Errors reported by the server</small>
+						</div>
+					
+				</section>
+				<section>
 					<div class="noandroid">
 						<span>Dark Mode</span><span>
 							<input type="checkbox" id="settings_darkmode" data-on-change="setDarkMode" />
 						</span>
 					</div>
-					<div class="noandroid"><span>Plugins</span><span style="cursor: pointer" data-action="showPlugins">
-							Show </span></div>
+				</section>
+				<section>
 					<div>
 						<span>Coordinate Format</span><span>
 							<select id="settings_coordinate_format" data-on-change="setCoordinateFormat">
@@ -132,7 +145,8 @@
 								<option value="dms">Degrees Minutes Seconds</option>
 							</select>
 						</span>
-					</div>
+					<small class="st-desc">Display format for latitude and longitude</small>
+						</div>
 					<div>
 						<span>Units</span><span>
 							<select id="settings_metric" data-on-change="setMetrics">
@@ -141,69 +155,76 @@
 								<option value="imperial">Imperial</option>
 							</select>
 						</span>
-					</div>
+					<small class="st-desc">Units for distance and speed</small>
+						</div>
+				</section>
+				
+				<header>Table</header>
+				<section>
 					<div>
 						<span>Use Icon in Table</span><span>
 							<input type="checkbox" id="settings_table_shiptype_use_icon"
 								data-on-change="setTableIcon" />
 						</span>
-					</div>
+					<small class="st-desc">Show the ship type as an icon</small>
+						</div>
 				</section>
 				<header>Map</header>
 				<section>
-					<div>
-						<span>Show station icon</span><span>
+					<div class="third">
+						<span>Station Icon</span><span>
 							<input type="checkbox" id="settings_show_station"
 								data-on-change="setMapSetting" data-key="show_station" />
 						</span>
-					</div>
+					<small class="st-desc">Show the station marker on the map</small>
+						</div>
+					
+				</section>
+				<section>
 					<div>
-						<span id="icon_scale_label">Ship icon size (1.0)</span>
-						<span>
-							<input type="range" id="settings_icon_scale" min="0.5" max="1.5" step="0.01"
-								data-on-change="setIconScale"
-								data-on-input="updateIconScaleDisplay" />
-						</span>
-					</div>
-					<div>
-						<span id="map_opacity_label">Map dimming (50%)</span>
+						<span id="map_opacity_label">Map Dimming (50%)</span>
 						<span>
 							<input type="range" id="settings_map_opacity" min="0" max="1" step="0.01"
 								data-on-change="setMapOpacity"
 								data-on-input="updateMapOpacityDisplay" />
 						</span>
-					</div>
-					<div>
-						<span>Fade inactive ships</span><span>
-							<input type="checkbox" id="settings_fading" data-on-change="setFading" />
-						</span>
-					</div>
-					<div>
-						<span>Hover Color</span><span>
+					<small class="st-desc">Dim the base map to make ships stand out</small>
+						</div>
+				</section>
+				
+				
+				<section>
+					<h5 class="st-title">Highlight Circles</h5>
+					<div class="third">
+						<span>Hover</span><span>
 							<input type="color" class="color-picker" id="settings_shiphover_color"
 								data-on-change="setMapSetting" data-key="shiphover_color" />
 						</span>
 					</div>
-					<div>
-						<span>Selection Color</span><span>
+					<div class="third">
+						<span>Selection</span><span>
 							<input type="color" class="color-picker" id="settings_shipselection_color"
 								data-on-change="setMapSetting" data-key="shipselection_color" />
 						</span>
 					</div>
 					<div>
-						<span id="circle_scale_label">Selector line width (6.0)</span>
+						<span id="circle_scale_label">Width (6.0)</span>
 						<span>
 							<input type="range" id="settings_circle_scale" min="2.0" max="10.0" step="0.5"
 								data-on-change="setMapSetting" data-key="circle_scale"
 								data-on-input="updateCircleScaleDisplay" />
 						</span>
-					</div>
+					<small class="st-desc">Border width of the highlight circle</small>
+						</div>
+				</section>
+				<section>
 					<div>
-						<span>Shipcard Always Top Left</span><span>
+						<span>Shipcard Position</span><span>
 							<input type="checkbox" id="settings_shipcard_top_left"
 								data-on-change="setMapSetting" data-key="shipcard_top_left" />
 						</span>
-					</div>
+					<small class="st-desc">Open the shipcard in the top left corner</small>
+						</div>
 
 
 				</section>
@@ -217,7 +238,10 @@
 								<option value="always">Always</option>
 							</select>
 						</span>
-					</div>
+					<small class="st-desc">Determines when labels are visible</small>
+						</div>
+				</section>
+				<section>
 					<div>
 						<span id="tooltip_font_size_label">Font Size (9)</span>
 						<span>
@@ -226,54 +250,65 @@
 								data-on-input="updateTooltipFontSizeDisplay" />
 						</span>
 					</div>
-					<div>
+				</section>
+				<section>
+					<div class="third">
 						<span>Declutter</span><span>
 							<input type="checkbox" id="settings_labels_declutter"
 								data-on-change="setMapSetting" data-key="labels_declutter" />
 						</span>
-					</div>
-					<div>
-						<span>Prioritize Selected Label</span><span>
+					<small class="st-desc">Hide overlapping labels</small>
+						</div>
+					<div class="third">
+						<span>Prioritize</span><span>
 							<input type="checkbox" id="settings_labels_prioritize_active"
 								data-on-change="setMapSetting" data-key="labels_prioritize_active" />
 						</span>
-					</div>
-					<div>
-						<span>Show Label Only for Selected</span><span>
+					<small class="st-desc">Label of the selected ship is always visible</small>
+						</div>
+					<div class="third">
+						<span>Selected Only</span><span>
 							<input type="checkbox" id="settings_labels_active_only"
 								data-on-change="setMapSetting" data-key="labels_active_only" />
 						</span>
-					</div>
-					<div>
-						<span>Class Color Background</span><span>
-							<input type="checkbox" id="settings_label_class_background"
-								data-on-change="setMapSetting" data-key="label_class_background" />
-						</span>
-					</div>
+					<small class="st-desc">Only show a label for the selected ship</small>
+						</div>
+					
 				</section>
 				<section>
 					<div>
-						<span>Color</span><span>
+						<span>Color by Class</span><span>
+							<input type="checkbox" id="settings_label_class_background"
+								data-on-change="setMapSetting" data-key="label_class_background" />
+						</span>
+					<small class="st-desc">Use the ship class color as label background</small>
+						</div>
+				</section>
+				<section>
+					<h5 class="st-title">Colors (Light Mode)</h5>
+					<div class="third">
+						<span>Text</span><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelColor"
 								data-on-change="setMapSetting" data-key="tooltipLabelColor" />
 						</span>
 					</div>
-					<div>
-						<span>Shadow Color</span><span>
+					<div class="third">
+						<span>Shadow</span><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelShadowColor"
 								data-on-change="setMapSetting" data-key="tooltipLabelShadowColor" />
 						</span>
 					</div>
 				</section>
 				<section>
-					<div>
-						<span>Color (Dark)</span><span>
+					<h5 class="st-title">Colors (Dark Mode)</h5>
+					<div class="third">
+						<span>Text</span><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelColorDark"
 								data-on-change="setMapSetting" data-key="tooltipLabelColorDark" />
 						</span>
 					</div>
-					<div>
-						<span>Shadow Color (Dark)</span><span>
+					<div class="third">
+						<span>Shadow</span><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelShadowColorDark"
 								data-on-change="setMapSetting" data-key="tooltipLabelShadowColorDark" />
 						</span>
@@ -282,32 +317,61 @@
 				<header>Graphs</header>
 				<section>
 					<div>
-						<span>Show signal level graphs</span><span>
+						<span>Signal Level</span><span>
 							<input type="checkbox" id="settings_show_signal_graphs"
 								data-on-change="setGraphVisibility" data-graph="signal" />
 						</span>
-					</div>
+					<small class="st-desc">Show or hide the signal level plots</small>
+						</div>
+				</section>
+				<section>
 					<div>
-						<span>Show frequency shift graphs</span><span>
+						<span>Frequency Offset</span><span>
 							<input type="checkbox" id="settings_show_ppm_graphs"
 								data-on-change="setGraphVisibility" data-graph="ppm" />
 						</span>
-					</div>
+					<small class="st-desc">Show or hide the frequency offset plots</small>
+						</div>
 				</section>
 				<header>Ship Outline</header>
 				<section>
 					<div>
-						<span>Border Color</span><span>
+						<span id="icon_scale_label">Marker Size (1.0)</span>
+						<span>
+							<input type="range" id="settings_icon_scale" min="0.5" max="1.5" step="0.01"
+								data-on-change="setIconScale"
+								data-on-input="updateIconScaleDisplay" />
+						</span>
+					<small class="st-desc">Size of the ship icons on the map</small>
+						</div>
+				</section>
+				<section>
+					<div>
+						<span>Marker Fading</span><span>
+							<input type="checkbox" id="settings_fading" data-on-change="setFading" />
+						</span>
+					<small class="st-desc">Fade markers with age</small>
+						</div>
+				</section>
+				
+				<section>
+					<h5 class="st-title">Ship Outline on the Map</h5>
+					<div class="third">
+						<span>Border</span><span>
 							<input type="color" class="color-picker" id="settings_shipoutline_border"
 								data-on-change="setMapSetting" data-key="shipoutline_border" />
 						</span>
+						<small class="st-desc">Ship outline stroke</small>
 					</div>
-					<div>
-						<span>Inner Color</span><span>
+					<div class="third">
+						<span>Fill</span><span>
 							<input type="color" class="color-picker" id="settings_shipoutline_inner"
 								data-on-change="setMapSetting" data-key="shipoutline_inner" />
 						</span>
+						<small class="st-desc">Ship shape fill</small>
 					</div>
+				</section>
+				<section>
 					<div>
 						<span id="shipoutline_opacity_label">Opacity (0.9)</span>
 						<span>
@@ -315,44 +379,64 @@
 								data-on-change="setMapSetting" data-key="shipoutline_opacity"
 								data-on-input="updateShipoutlineOpacityDisplay" />
 						</span>
-					</div>
+					<small class="st-desc">Transparency of the ship shape fill</small>
+						</div>
+					</section>
+				<section>
 					<div>
-						<span>Ship outline as circle</span>
+						<span>Outline as Circle</span>
 						<span>
 							<input type="checkbox" id="settings_show_circle_outline"
 								data-on-change="setMapSetting" data-key="show_circle_outline" />
 						</span>
-					</div>
+					<small class="st-desc">Draw a circle when the heading is unknown</small>
+						</div>
 				</section>
 				<header>Binary Messages</header>
 				<section>
 					<div>
-						<span>Show on map</span><span>
+						<span>Show on Map</span><span>
 							<select id="settings_binary_messages" data-on-change="setBinaryDisplay">
 								<option value="off">Off</option>
 								<option value="badge">Badge</option>
 								<option value="highlight">Badge + highlight</option>
 							</select>
 						</span>
-					</div>
-					<div>
-						<span>Categories</span><span>
-							<select id="settings_binary_categories" multiple size="3" data-on-change="setBinaryCategories">
-								<option value="data">Meteo &amp; sensors</option>
-								<option value="inland">Inland AIS</option>
-								<option value="text">Text messages</option>
-							</select>
+					<small class="st-desc">How binary messages appear on the map</small>
+						</div>
+								</section>
+				<section>
+					<h5 class="st-title">Categories</h5>
+					<div class="third">
+						<span>Meteo &amp; Sensors</span><span>
+							<input type="checkbox" id="settings_binary_cat_data" data-on-change="setBinaryCategory"
+								data-cat="data" />
 						</span>
+						<small class="st-desc">Weather and sensor reports</small>
+					</div>
+					<div class="third">
+						<span>Inland AIS</span><span>
+							<input type="checkbox" id="settings_binary_cat_inland" data-on-change="setBinaryCategory"
+								data-cat="inland" />
+						</span>
+						<small class="st-desc">Inland waterway messages</small>
+					</div>
+					<div class="third">
+						<span>Text Messages</span><span>
+							<input type="checkbox" id="settings_binary_cat_text" data-on-change="setBinaryCategory"
+								data-cat="text" />
+						</span>
+						<small class="st-desc">Safety and text broadcasts</small>
 					</div>
 				</section>
 				<header>Station Range</header>
 				<section>
-					<div>
-						<span>Station Range</span><span>
+					<div class="quarter">
+						<span>Show</span><span>
 							<input type="checkbox" id="settings_show_range" data-on-change="setRangeSwitch" />
 						</span>
 					</div>
-					<div>
+					<div class="threequarter">
 						<span>Time Period</span>
 						<span>
 							<select id="settings_range_timeframe" data-on-change="setRangeTimePeriod">
@@ -362,41 +446,47 @@
 							</select>
 						</span>
 					</div>
-					<div>
-						<span>Color</span><span>
+				</section>
+				<section>
+					<h5 class="st-title">Range (Long Timeframe)</h5>
+					<div class="third">
+						<span>Light</span><span>
 							<input type="color" class="color-picker" id="settings_range_color"
 								data-on-change="setRangeColor" data-field="range_color" />
 						</span>
 					</div>
-					<div>
-						<span>Color (Short)</span><span>
-							<input type="color" class="color-picker" id="settings_range_color_short"
-								data-on-change="setRangeColor" data-field="range_color_short" />
-						</span>
-					</div>
-				</section>
-				<section>
-					<div>
-						<span>Color (Dark)</span><span>
+					<div class="third">
+						<span>Dark</span><span>
 							<input type="color" class="color-picker" id="settings_range_color_dark"
 								data-on-change="setRangeColor" data-field="range_color_dark" />
 						</span>
 					</div>
-					<div>
-						<span>Color (Short, Dark)</span><span>
+					</section>
+				<section>
+					<h5 class="st-title">Range (Short Timeframe)</h5>
+					<div class="third">
+						<span>Light</span><span>
+							<input type="color" class="color-picker" id="settings_range_color_short"
+								data-on-change="setRangeColor" data-field="range_color_short" />
+						</span>
+					</div>
+					<div class="third">
+						<span>Dark</span><span>
 							<input type="color" class="color-picker" id="settings_range_color_dark_short"
 								data-on-change="setRangeColor" data-field="range_color_dark_short" />
 						</span>
 					</div>
 				</section>
 				<section>
-					<div>
-						<span>Range Rings</span><span>
+					<h5 class="st-title">Distance Rings</h5>
+					<div class="third">
+						<span>Show</span><span>
 							<input type="checkbox" id="settings_distance_circles"
 								data-on-change="setMapSetting" data-key="distance_circles" />
 						</span>
-					</div>
-					<div>
+					<small class="st-desc">Distance circles around the station</small>
+						</div>
+					<div class="third">
 						<span>Color</span><span>
 							<input type="color" class="color-picker" id="settings_distance_circle_color"
 								data-on-change="setMapSettingDistanceColor" />
@@ -406,125 +496,133 @@
 				<header>Tracks</header>
 				<section>
 					<div>
-						<span id="track_weight_label">Track Weight (1)</span>
+						<span id="track_weight_label">Weight (1)</span>
 						<span>
 							<input type="range" id="settings_track_weight" min="1" max="4" step="1"
 								data-on-change="setMapSetting" data-key="track_weight"
 								data-on-input="updateTrackWeightDisplay" />
 						</span>
-					</div>
+					<small class="st-desc">Line width of ship tracks</small>
+						</div>
 					<div>
-						<span id="track_trash_threshold_label">Track Dash Threshold (0s)</span>
+						<span id="track_trash_threshold_label">Dash Threshold (30s)</span>
 						<span>
 							<input type="range" id="settings_track_trash_threshold" min="0" max="300" step="10"
 								data-on-change="setMapSetting" data-key="track_trash_threshold"
 								data-on-input="updateTrackTrashThresholdDisplay" />
 						</span>
-					</div>
-					<div>
-						<span>Show Track on Selection</span><span>
+					<small class="st-desc">Dash track segments with reception gaps longer than this</small>
+						</div>
+					</section>
+				<section>
+					<h5 class="st-title">Auto Show Track</h5>
+					<div class="third">
+						<span>Selection</span><span>
 							<input type="checkbox" id="settings_show_track_on_select"
 								data-on-change="setShowTrackOnSelect" />
 						</span>
 					</div>
-					<div>
-						<span>Show Track on Hover</span><span>
+					<div class="third">
+						<span>Hover</span><span>
 							<input type="checkbox" id="settings_show_track_on_hover"
 								data-on-change="setShowTrackOnHover" />
 						</span>
 					</div>
 				</section>
 				<section>
+					<h5 class="st-title">Track Colors</h5>
 					<div>
-						<span>Apply Color to All Ships</span><span>
+						<span>Uniform Color</span><span>
 							<input type="color" class="color-picker" id="settings_apply_all_track_color" value="#12a5ed"
 								data-on-change="applyColorToAllTracks" />
 							<button type="button" data-action="resetTrackColorsToDefault"
-								style="margin-left: 10px; padding: 2px 8px; font-size: 11px;">Reset</button>
+								style="margin-left: 10px;">Reset</button>
 						</span>
-					</div>
+					<small class="st-desc">One color for all ship types</small>
+						</div>
 				</section>
 				<section>
-					<div>
-						<span>Cargo Ships</span><span>
+					<h5 class="st-title">Custom Track Colors</h5>
+					<div class="third">
+						<span>Cargo</span><span>
 							<input type="color" class="color-picker" id="settings_track_cargo_color"
 								data-on-change="setTrackClassColor" data-shipclass="CARGO" />
 						</span>
 					</div>
-					<div>
-						<span>Class B Vessels</span><span>
+					<div class="third">
+						<span>Class B</span><span>
 							<input type="color" class="color-picker" id="settings_track_b_color"
 								data-on-change="setTrackClassColor" data-shipclass="B" />
 						</span>
 					</div>
-					<div>
-						<span>Passenger Ships</span><span>
+					<div class="third">
+						<span>Passenger</span><span>
 							<input type="color" class="color-picker" id="settings_track_passenger_color"
 								data-on-change="setTrackClassColor" data-shipclass="PASSENGER" />
 						</span>
 					</div>
-					<div>
-						<span>Tanker Ships</span><span>
+					<div class="third">
+						<span>Tanker</span><span>
 							<input type="color" class="color-picker" id="settings_track_tanker_color"
 								data-on-change="setTrackClassColor" data-shipclass="TANKER" />
 						</span>
 					</div>
-					<div>
-						<span>Fishing Vessels</span><span>
+					<div class="third">
+						<span>Fishing</span><span>
 							<input type="color" class="color-picker" id="settings_track_fishing_color"
 								data-on-change="setTrackClassColor" data-shipclass="FISHING" />
 						</span>
 					</div>
-					<div>
-						<span>High Speed Craft</span><span>
+					<div class="third">
+						<span>High Speed</span><span>
 							<input type="color" class="color-picker" id="settings_track_highspeed_color"
 								data-on-change="setTrackClassColor" data-shipclass="HIGHSPEED" />
 						</span>
 					</div>
-					<div>
-						<span>Special Vessels</span><span>
+					<div class="third">
+						<span>Special</span><span>
 							<input type="color" class="color-picker" id="settings_track_special_color"
 								data-on-change="setTrackClassColor" data-shipclass="SPECIAL" />
 						</span>
 					</div>
-					<div>
+					<div class="third">
 						<span>Aid-to-Navigation</span><span>
 							<input type="color" class="color-picker" id="settings_track_aton_color"
 								data-on-change="setTrackClassColor" data-shipclass="ATON" />
 						</span>
 					</div>
-					<div>
+					<div class="third">
 						<span>Base Stations</span><span>
 							<input type="color" class="color-picker" id="settings_track_station_color"
 								data-on-change="setTrackClassColor" data-shipclass="STATION" />
 						</span>
 					</div>
-					<div>
+					<div class="third">
 						<span>SAR/EPIRB</span><span>
 							<input type="color" class="color-picker" id="settings_track_sartepirb_color"
 								data-on-change="setTrackClassColor" data-shipclass="SARTEPIRB" />
 						</span>
 					</div>
-					<div>
+					<div class="third">
 						<span>Aircraft</span><span>
 							<input type="color" class="color-picker" id="settings_track_plane_color"
 								data-on-change="setTrackClassColor" data-shipclass="PLANE" />
 						</span>
 					</div>
-					<div>
+					<div class="third">
 						<span>Helicopters</span><span>
 							<input type="color" class="color-picker" id="settings_track_helicopter_color"
 								data-on-change="setTrackClassColor" data-shipclass="HELICOPTER" />
 						</span>
 					</div>
-					<div>
-						<span>Other Vessels</span><span>
+					<div class="third">
+						<span>Other</span><span>
 							<input type="color" class="color-picker" id="settings_track_other_color"
 								data-on-change="setTrackClassColor" data-shipclass="OTHER" />
 						</span>
 					</div>
-					<div>
-						<span>Unknown Type</span><span>
+					<div class="third">
+						<span>Unknown</span><span>
 							<input type="color" class="color-picker" id="settings_track_unknown_color"
 								data-on-change="setTrackClassColor" data-shipclass="UNKNOWN" />
 						</span>
@@ -536,19 +634,26 @@
 						<span>Kiosk Mode</span><span>
 							<input type="checkbox" id="settings_kiosk_mode" data-on-change="setKiosk">
 						</span>
-					</div>
+					<small class="st-desc">Unattended display that cycles through ships</small>
+						</div>
+				</section>
+				<section>
 					<div>
 						<span id="kiosk_rotation_speed_label">Rotation Speed (5s)</span><span>
 							<input type="range" id="settings_kiosk_rotation_speed" min="3" max="30" step="1"
 								data-on-change="setKioskRotationSpeed"
 								data-on-input="updateKioskSpeedDisplay">
 						</span>
-					</div>
+					<small class="st-desc">Seconds each ship is shown</small>
+						</div>
+				</section>
+				<section>
 					<div>
 						<span>Pan Map</span><span>
 							<input type="checkbox" id="settings_kiosk_pan_map" data-on-change="setKioskPanMap">
 						</span>
-					</div>
+					<small class="st-desc">Center the map on each ship shown</small>
+						</div>
 				</section>
 			</div>
 		</div>
@@ -647,10 +752,13 @@
 						id="ctx_ppm_graphs">Show frequency shift graphs</span></li>
 			</ul>
 
+			<div class="overlay" id="dialog-overlay" data-action="closeDialog"></div>
 			<div id="dialog-box" class="hidden">
-				<div class="dialog-title">Dialog Title</div>
+				<div class="dialog-header">
+					<div class="dialog-title">Dialog Title</div>
+					<div class="close_icon" data-action="closeDialog"></div>
+				</div>
 				<div class="dialog-message">This is the message area.</div>
-				<button class="dialog-close" data-action="closeDialog">Close</button>
 			</div>
 
 			<div class="tabcontent addscrollbar" id="about">

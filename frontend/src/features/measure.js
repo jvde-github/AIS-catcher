@@ -86,25 +86,23 @@ function measureStyleFunction(feature) {
 export function init(d) {
     deps = d;
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const mapcardContent = document.getElementById('measurecardInner');
+    const mapcardContent = document.getElementById('measurecardInner');
 
-        mapcardContent.addEventListener('click', (event) => {
-            const row = event.target.closest('tr');
-            if (row) {
-                const measureIndex = row.getAttribute('data-index');
-                if (event.target.classList.contains('visibility_icon')) {
-                    measures[measureIndex].visible = !measures[measureIndex].visible;
-                    refreshMeasures();
-                } else if (event.target.classList.contains('delete_icon')) {
-                    measures.splice(measureIndex, 1);
-                    refreshMeasures();
-                }
+    mapcardContent.addEventListener('click', (event) => {
+        const row = event.target.closest('tr');
+        if (row) {
+            const measureIndex = row.getAttribute('data-index');
+            if (event.target.classList.contains('visibility_icon')) {
+                measures[measureIndex].visible = !measures[measureIndex].visible;
+                refreshMeasures();
+            } else if (event.target.classList.contains('delete_icon')) {
+                measures.splice(measureIndex, 1);
+                refreshMeasures();
             }
-        });
-
-        refreshMeasures();
+        }
     });
+
+    refreshMeasures();
 }
 
 export function refreshMeasures() {
@@ -112,13 +110,18 @@ export function refreshMeasures() {
 
     const shipsDB = deps.getShipsDB();
     const mapcardContent = document.getElementById('measurecardInner');
-    mapcardContent.innerHTML = '';
 
     let content = '';
+    let rowIndex = 0;
 
     measures = measures.filter(measure => {
 
         if ((measure.start_type == 'ship' && !(measure.start_value in shipsDB))) {
+            deps.showNotification('Ship out of range for measurement.');
+            return false;
+        }
+
+        if (measure.end_type == 'ship' && !(measure.end_value in shipsDB)) {
             deps.showNotification('Ship out of range for measurement.');
             return false;
         }
@@ -166,7 +169,7 @@ export function refreshMeasures() {
         }
         let icon = measure.visible ? 'visibility' : 'visibility_off';
 
-        content += `<tr data-index="${measures.indexOf(measure)}"><td style="padding: 2px;"><i style="padding-left:2px; font-size: 15px;" class="${icon}_icon visibility_icon"></i></td><td style="padding: 0px;"><i style="font-size: 15px;" class="delete_icon"></i></td><td>${from}</td><td>${to}</td><td title="${distance} ${getDistanceUnit()}">${distance}</td><td title="${bearing} degrees">${bearing}</td></tr>`;
+        content += `<tr data-index="${rowIndex++}"><td style="padding: 2px;"><i style="padding-left:2px; font-size: 15px;" class="${icon}_icon visibility_icon"></i></td><td style="padding: 0px;"><i style="font-size: 15px;" class="delete_icon"></i></td><td>${from}</td><td>${to}</td><td title="${distance} ${getDistanceUnit()}">${distance}</td><td title="${bearing} degrees">${bearing}</td></tr>`;
 
         return true;
     });
@@ -180,18 +183,21 @@ function startMeasurementAtPoint(t, v) {
     deps.ensureMeasurecardVisible();
     deps.showNotification('Select end point or object');
     refreshMeasures();
-    startMeasureMode();
+    setMeasureMode();
+}
+
+function setMeasureEnd(t, v) {
+    const lastMeasureIndex = measures.length - 1;
+    measures[lastMeasureIndex] = {
+        ...measures[lastMeasureIndex],
+        end_value: v,
+        end_type: t
+    };
 }
 
 function endMeasurement(t, v) {
     if (isMeasuring) {
-
-        const lastMeasureIndex = measures.length - 1;
-        measures[lastMeasureIndex] = {
-            ...measures[lastMeasureIndex],
-            end_value: v,
-            end_type: t
-        };
+        setMeasureEnd(t, v);
 
         isMeasuring = false;
 
@@ -199,11 +205,6 @@ function endMeasurement(t, v) {
         refreshMeasures();
         clearMeasureMode();
     }
-}
-
-function startMeasureMode() {
-    measureMode = true;
-    document.getElementById('map').classList.add('crosshair_cursor');
 }
 
 function clearMeasureMode() {
@@ -238,22 +239,8 @@ export function handleMapClick(shipMmsi, getLonLat) {
 export function updateMeasureEnd(shipMmsi, getLonLat) {
     if (!isMeasuring) return;
 
-    const lastMeasureIndex = measures.length - 1;
-
-    if (shipMmsi != null) {
-        measures[lastMeasureIndex] = {
-            ...measures[lastMeasureIndex],
-            end_value: shipMmsi,
-            end_type: "ship"
-        };
-    }
-    else {
-        measures[lastMeasureIndex] = {
-            ...measures[lastMeasureIndex],
-            end_value: getLonLat(),
-            end_type: "point"
-        };
-    }
+    if (shipMmsi != null) setMeasureEnd("ship", shipMmsi);
+    else setMeasureEnd("point", getLonLat());
 
     refreshMeasures();
 }

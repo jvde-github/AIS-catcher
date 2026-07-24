@@ -9,6 +9,7 @@ import { containsCoordinate } from 'ol/extent';
 //   showShipcard, saveSettings }
 let deps = null;
 let kioskAnimationInterval = null;
+const DEFAULT_ROTATION_SPEED = 5;
 
 export function init(d) {
     deps = d;
@@ -21,7 +22,8 @@ export function setKiosk(enabled) {
 }
 
 export function setKioskRotationSpeed(speed) {
-    settings.kiosk_rotation_speed = parseInt(speed);
+    const parsed = parseInt(speed);
+    settings.kiosk_rotation_speed = parsed > 0 ? parsed : DEFAULT_ROTATION_SPEED;
     deps.saveSettings();
 
     if (isKiosk() && kioskAnimationInterval) {

@@ -30,14 +30,12 @@
         invalidate() { this.promise = null; }
     };
 
-    // Shared shell for the device and serial-port pickers; the list lives in
-    // '<id>-list' and is rebuilt on every open.
-    function ensurePickerModal(id, title) {
+    function ensurePickerModal(id, title, opts = {}) {
         let modal = document.getElementById(id);
         if (modal) return modal;
         modal = el('div', 'fixed inset-0 flex items-center justify-center hidden z-[100] p-4',
             { id, style: 'background-color: rgba(0,0,0,0.3)' },
-            el('div', 'bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col relative', {},
+            el('div', `bg-white rounded-lg shadow-xl w-full ${opts.maxWidth || 'max-w-2xl max-h-[90vh]'} flex flex-col relative`, {},
                 el('div', 'flex justify-between items-center p-3 md:p-4 border-b flex-shrink-0', {},
                     el('h3', 'text-base md:text-lg font-medium text-gray-800', {}, title),
                     el('button', 'text-gray-600 hover:text-gray-800', { type: 'button', onClick: () => modal.classList.add('hidden') },
@@ -46,11 +44,11 @@
                         )
                     )
                 ),
-                el('div', 'p-3 md:p-4 overflow-y-auto flex-1', { id: id + '-list' }),
+                el('div', opts.bodyClass || 'p-3 md:p-4 overflow-y-auto flex-1', { id: opts.bodyId || id + '-list' }),
                 el('div', 'flex justify-end p-3 md:p-4 border-t flex-shrink-0', {},
                     el('button', 'bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 shadow-sm transition duration-200 text-sm', {
                         type: 'button', onClick: () => modal.classList.add('hidden')
-                    }, 'Close')
+                    }, opts.footerLabel || 'Close')
                 )
             )
         );
@@ -89,12 +87,19 @@
     const getZoneColor = zone => ZONE_COLORS[zoneHash(zone) % ZONE_COLORS.length];
     const getZoneHex = zone => ZONE_HEX[zoneHash(zone) % ZONE_HEX.length];
 
+    function zoneChip(zone, onRemove) {
+        return el('span', `inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getZoneColor(zone)}`, {},
+            zone,
+            el('button', 'ml-0.5 hover:opacity-60 font-bold leading-none', { type: 'button', onClick: onRemove }, '×')
+        );
+    }
+
     async function fetchAllZones() {
         try {
             const cfg = await ConfigStore.fetch();
             const zones = new Set();
-            ['receiver', 'udp', 'tcp', 'http', 'mqtt', 'tcp_listener', 'server'].forEach(key => {
-                (cfg[key] || []).forEach(item => { if (Array.isArray(item.zone)) item.zone.forEach(z => zones.add(z)); });
+            CHANNEL_REGISTRY.forEach(({ configKey }) => {
+                (cfg[configKey] || []).forEach(item => { if (Array.isArray(item.zone)) item.zone.forEach(z => zones.add(z)); });
             });
             if (Array.isArray(cfg.sharing_zone)) cfg.sharing_zone.forEach(z => zones.add(z));
             return [...zones].sort();
@@ -104,27 +109,12 @@
     let activeZoneEdit = { zones: [], onUpdate: null, allZones: [] };
 
     function ensureZoneModal() {
-        if (document.getElementById('cm-zone-modal')) return;
-        const modal = el('div', 'fixed inset-0 flex items-center justify-center hidden z-[100] p-4',
-            { id: 'cm-zone-modal', style: 'background-color: rgba(0,0,0,0.3)' },
-            el('div', 'bg-white rounded-lg shadow-xl w-full max-w-sm flex flex-col relative', {},
-                el('div', 'flex justify-between items-center p-4 border-b flex-shrink-0', {},
-                    el('h3', 'text-base font-medium text-gray-800', {}, 'Manage Zones'),
-                    el('button', 'text-gray-600 hover:text-gray-800', { type: 'button', onClick: () => modal.classList.add('hidden') },
-                        el('svg', 'h-5 w-5', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-                            el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M6 18L18 6M6 6l12 12' })
-                        )
-                    )
-                ),
-                el('div', 'p-4 flex flex-col gap-4', { id: 'cm-zone-body' }),
-                el('div', 'flex justify-end p-4 border-t flex-shrink-0', {},
-                    el('button', 'bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 shadow-sm transition text-sm', {
-                        type: 'button', onClick: () => modal.classList.add('hidden')
-                    }, 'Done')
-                )
-            )
-        );
-        document.body.appendChild(modal);
+        ensurePickerModal('cm-zone-modal', 'Manage Zones', {
+            maxWidth: 'max-w-sm',
+            bodyId: 'cm-zone-body',
+            bodyClass: 'p-4 flex flex-col gap-4',
+            footerLabel: 'Done'
+        });
     }
 
     function openZoneModal(currentZones, onUpdate) {
@@ -148,18 +138,11 @@
             chipsWrap.appendChild(el('span', 'text-xs text-slate-400 italic', {}, 'No zones assigned'));
         } else {
             activeZoneEdit.zones.forEach((zone, i) => {
-                const chip = el('span', `inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getZoneColor(zone)}`, {},
-                    zone,
-                    el('button', 'ml-0.5 hover:opacity-60 font-bold leading-none', {
-                        type: 'button',
-                        onClick: () => {
-                            activeZoneEdit.zones.splice(i, 1);
-                            activeZoneEdit.onUpdate([...activeZoneEdit.zones]);
-                            renderZoneModalBody();
-                        }
-                    }, '×')
-                );
-                chipsWrap.appendChild(chip);
+                chipsWrap.appendChild(zoneChip(zone, () => {
+                    activeZoneEdit.zones.splice(i, 1);
+                    activeZoneEdit.onUpdate([...activeZoneEdit.zones]);
+                    renderZoneModalBody();
+                }));
             });
         }
         body.appendChild(chipsWrap);
@@ -263,11 +246,12 @@
     };
 
     const Utils = {
+        el,
         debounce: (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; },
         getNested: (obj, path) => path?.split('.').reduce((a, p) => a?.[p], obj),
         setNested: (obj, path, val) => {
             const keys = path.split('.'), last = keys.pop();
-            keys.reduce((a, k) => a[k] = a[k] || {}, obj)[last] = val;
+            keys.reduce((a, k) => (a[k] && typeof a[k] === 'object') ? a[k] : (a[k] = {}), obj)[last] = val;
         },
         parseInteger: value => {
             if (typeof value === 'number') return Math.floor(value);
@@ -335,15 +319,7 @@
     };
 
     const ConfigNormalizer = {
-        arraySchemas: {
-            receiver: () => receiverSchema,
-            server: () => webviewerSchema,
-            http: () => httpSchema,
-            mqtt: () => mqttSchema,
-            tcp: () => tcpSchema,
-            udp: () => udpSchema,
-            tcp_listener: () => tcpServerSchema,
-        },
+        arraySchemas: CHANNEL_REGISTRY.reduce((m, c) => { m[c.configKey] = c.schema; return m; }, {}),
         topLevelSchemas: () => [sharingSchema, generalSettingsSchema],
 
         receiverKeys: ['serial', 'input', 'verbose', 'model', 'meta', 'own_mmsi',
@@ -434,9 +410,9 @@
             if (!cfg || typeof cfg !== 'object') return { config: cfg, warnings, changed: false };
             let changed = this.migrate(cfg);
 
-            for (const [key, getSchema] of Object.entries(this.arraySchemas)) {
+            for (const [key, schema] of Object.entries(this.arraySchemas)) {
                 if (!Array.isArray(cfg[key])) continue;
-                const fields = Object.values(getSchema());
+                const fields = Object.values(schema);
                 cfg[key].forEach((item, i) => {
                     const r = this.coerceFields(item, fields, `${key}[${i}].`);
                     warnings.push(...r.warnings);
@@ -452,70 +428,61 @@
         }
     };
 
+    function pickerAction({ id, title, endpoint, extract, renderRow, apply }) {
+        return (index, containerId) => {
+            const modal = ensurePickerModal(id, title);
+            const list = document.getElementById(id + '-list');
+            list.innerHTML = '<div class="text-center p-4 text-slate-500">Loading...</div>';
+            modal.classList.remove('hidden');
+            fetch(endpoint)
+                .then(r => { if (authFailed(r)) throw new Error(); return r.json(); })
+                .then(data => {
+                    list.innerHTML = '';
+                    const devices = extract(data);
+                    if (devices.length === 0) {
+                        list.innerHTML = '<li class="text-gray-500 p-2">No devices found</li>';
+                        return;
+                    }
+                    devices.forEach(device => {
+                        list.appendChild(renderRow(device, () => {
+                            applyToManager(containerId, index, target => apply(target, device));
+                            modal.classList.add('hidden');
+                        }));
+                    });
+                })
+                .catch(() => { list.innerHTML = '<li class="text-red-500 p-2">Error loading devices</li>'; });
+        };
+    }
+
     const ActionRegistry = {
-        openSerialDeviceModal: (index, containerId) => {
-            const modal = ensurePickerModal('cm-serial-modal', 'Select Serial Device');
-            const list = document.getElementById('cm-serial-modal-list');
-            list.innerHTML = '<div class="text-center p-4 text-slate-500">Loading...</div>';
-            modal.classList.remove('hidden');
-            fetch('/api/serial')
-                .then(r => { if (authFailed(r)) throw new Error(); return r.json(); })
-                .then(data => {
-                    list.innerHTML = '';
-                    const devices = Array.isArray(data) ? data : [];
-                    if (devices.length === 0) {
-                        list.innerHTML = '<li class="text-gray-500 p-2">No devices found</li>';
-                        return;
-                    }
-                    devices.forEach(device => {
-                        list.appendChild(el('li', 'p-2 hover:bg-gray-100 cursor-pointer rounded', {
-                            onClick: () => {
-                                applyToManager(containerId, index, target => {
-                                    if (!target.serialport) target.serialport = {};
-                                    target.serialport.port = device;
-                                });
-                                modal.classList.add('hidden');
-                            }
-                        }, device));
-                    });
-                })
-                .catch(() => { list.innerHTML = '<li class="text-red-500 p-2">Error loading devices</li>'; });
-        },
+        openSerialDeviceModal: pickerAction({
+            id: 'cm-serial-modal',
+            title: 'Select Serial Device',
+            endpoint: '/api/serial',
+            extract: data => Array.isArray(data) ? data : [],
+            renderRow: (device, select) => el('li', 'p-2 hover:bg-gray-100 cursor-pointer rounded', { onClick: select }, device),
+            apply: (target, device) => {
+                if (!target.serialport) target.serialport = {};
+                target.serialport.port = device;
+            }
+        }),
 
-        openDeviceSelectionModal: (index, containerId) => {
-            const modal = ensurePickerModal('cm-device-modal', 'Select Device');
-            const list = document.getElementById('cm-device-modal-list');
-            list.innerHTML = '<div class="text-center p-4 text-slate-500">Loading...</div>';
-            modal.classList.remove('hidden');
-            fetch('/api/devices')
-                .then(r => { if (authFailed(r)) throw new Error(); return r.json(); })
-                .then(data => {
-                    list.innerHTML = '';
-                    const devices = Array.isArray(data.devices) ? data.devices : [];
-                    if (devices.length === 0) {
-                        list.innerHTML = '<li class="text-gray-500 p-2">No devices found</li>';
-                        return;
-                    }
-                    devices.forEach(device => {
-                        list.appendChild(el('li', 'flex items-center justify-between p-2 border rounded-md hover:bg-gray-100 mb-2', {},
-                            el('span', '', {}, device.name),
-                            el('button', 'bg-white border border-slate-300 text-slate-700 px-2 py-1 rounded-md hover:bg-slate-50 shadow-sm text-sm', {
-                                type: 'button',
-                                onClick: () => {
-                                    applyToManager(containerId, index, target => {
-                                        target.input = device.input ? device.input.toUpperCase() : '';
-                                        target.serial = device.serial || '';
-                                    });
-                                    modal.classList.add('hidden');
-                                }
-                            }, 'Select')
-                        ));
-                    });
-                })
-                .catch(() => { list.innerHTML = '<li class="text-red-500 p-2">Error loading devices</li>'; });
-        },
-
-        openRegistration: () => window.open('https://aiscatcher.org/register', '_blank'),
+        openDeviceSelectionModal: pickerAction({
+            id: 'cm-device-modal',
+            title: 'Select Device',
+            endpoint: '/api/devices',
+            extract: data => Array.isArray(data.devices) ? data.devices : [],
+            renderRow: (device, select) => el('li', 'flex items-center justify-between p-2 border rounded-md hover:bg-gray-100 mb-2', {},
+                el('span', '', {}, device.name),
+                el('button', 'bg-white border border-slate-300 text-slate-700 px-2 py-1 rounded-md hover:bg-slate-50 shadow-sm text-sm', {
+                    type: 'button', onClick: select
+                }, 'Select')
+            ),
+            apply: (target, device) => {
+                target.input = device.input ? device.input.toUpperCase() : '';
+                target.serial = device.serial || '';
+            }
+        }),
 
         openSharingManagement: (index, containerId) => {
             const scope = containerId ? document.getElementById(containerId) : document;
@@ -643,6 +610,55 @@
         }
     };
 
+    function sliderInput(field, currentValue, onUpdate, opts) {
+        const isOff = opts.isOff(currentValue);
+        const numVal = isOff ? opts.fallback : opts.parse(currentValue);
+        const display = el('span', Styles.sliderDisplay, {}, isNaN(numVal) ? 0 : numVal);
+
+        const slider = el('input', Styles.slider, {
+            type: 'range',
+            min: field.min, max: field.max, step: field.step || opts.defaultStep,
+            value: isNaN(numVal) ? opts.fallback : numVal,
+            onInput: (e) => {
+                display.textContent = e.target.value;
+                if (isActive()) onUpdate(opts.parse(e.target.value));
+            }
+        });
+
+        const children = [slider, display];
+        if (opts.unit) children.push(el('span', 'text-xs sm:text-sm text-slate-600 ml-1', {}, opts.unit));
+        const sliderContainer = el('div', `${Styles.sliderContainer} mt-2`, { style: isOff ? 'display: none' : 'display: flex' }, ...children);
+
+        const setActive = (active) => {
+            sliderContainer.style.display = active ? 'flex' : 'none';
+            onUpdate(active ? opts.parse(slider.value) : opts.offValue);
+        };
+
+        let isActive, control;
+        if (opts.control === 'toggle') {
+            const checkbox = el('input', 'sr-only peer', {
+                type: 'checkbox',
+                checked: !isOff,
+                onChange: (e) => setActive(e.target.checked)
+            });
+            isActive = () => checkbox.checked;
+            control = el('label', 'relative inline-flex items-center cursor-pointer h-[30px] sm:h-[38px]', {},
+                checkbox,
+                el('div', Styles.toggle, {})
+            );
+        } else {
+            const select = el('select', `${Styles.input} ${Styles.select}`, {
+                onChange: (e) => setActive(e.target.value === 'custom')
+            },
+                el('option', '', { value: opts.offOption.value, selected: isOff }, opts.offOption.label),
+                el('option', '', { value: 'custom', selected: !isOff }, 'Custom')
+            );
+            isActive = () => select.value === 'custom';
+            control = el('div', 'relative', {}, select, el('div', Styles.chevron, {}, Icons.chevronDown()));
+        }
+        return el('div', '', {}, control, sliderContainer);
+    }
+
     const Renderer = {
         createInput(field, currentValue, onUpdate, index = 0, containerId = '') {
             const type = field.type;
@@ -718,120 +734,38 @@
             }
 
             if (type === 'auto-float' || type === 'auto-integer') {
-                const isAuto = String(currentValue).toLowerCase() === 'auto';
-                const numVal = isAuto ? (field.min || 0) : parseFloat(currentValue);
-                const display = el('span', Styles.sliderDisplay, {}, isNaN(numVal) ? 0 : numVal);
-
-                const slider = el('input', Styles.slider, {
-                    type: 'range',
-                    min: field.min, max: field.max, step: field.step || (field.type === 'auto-integer' ? 1 : 0.1),
-                    value: isNaN(numVal) ? (field.min || 0) : numVal,
-                    onInput: (e) => {
-                        display.textContent = e.target.value;
-                        if (selector.querySelector('select').value === 'custom') onUpdate(parseFloat(e.target.value));
-                    }
+                return sliderInput(field, currentValue, onUpdate, {
+                    isOff: v => String(v).toLowerCase() === 'auto',
+                    offValue: 'auto',
+                    offOption: { value: 'auto', label: 'Auto' },
+                    parse: parseFloat,
+                    defaultStep: type === 'auto-integer' ? 1 : 0.1,
+                    fallback: field.min || 0
                 });
-
-                const sliderContainer = el('div', `${Styles.sliderContainer} mt-2`, { style: isAuto ? 'display: none' : 'display: flex' }, slider, display);
-
-                const selector = el('div', 'relative', {},
-                    el('select', `${Styles.input} ${Styles.select}`, {
-                        onChange: (e) => {
-                            const isNowAuto = e.target.value === 'auto';
-                            sliderContainer.style.display = isNowAuto ? 'none' : 'flex';
-                            onUpdate(isNowAuto ? 'auto' : parseFloat(slider.value));
-                        }
-                    },
-                        el('option', '', { value: 'auto', selected: isAuto }, 'Auto'),
-                        el('option', '', { value: 'custom', selected: !isAuto }, `Custom`)
-                    ),
-                    el('div', Styles.chevron, {}, Icons.chevronDown())
-                );
-                return el('div', '', {}, selector, sliderContainer);
             }
 
             if (type === 'off-number') {
-                const isOff = currentValue === false || currentValue === 'false';
-                const numVal = isOff ? (field.defaultNumber || field.min || 0) : parseFloat(currentValue);
-                const display = el('span', Styles.sliderDisplay, {}, isNaN(numVal) ? 0 : numVal);
-                const unit = field.unit ? el('span', 'text-xs sm:text-sm text-slate-600 ml-1', {}, field.unit) : null;
-
-                const slider = el('input', Styles.slider, {
-                    type: 'range',
-                    min: field.min, max: field.max, step: field.step || 1,
-                    value: isNaN(numVal) ? (field.defaultNumber || field.min || 0) : numVal,
-                    onInput: (e) => {
-                        display.textContent = e.target.value;
-                        if (selector.querySelector('select').value === 'custom') onUpdate(parseFloat(e.target.value));
-                    }
+                return sliderInput(field, currentValue, onUpdate, {
+                    isOff: v => v === false || v === 'false',
+                    offValue: false,
+                    offOption: { value: 'off', label: 'Off' },
+                    parse: parseFloat,
+                    defaultStep: 1,
+                    fallback: field.defaultNumber || field.min || 0,
+                    unit: field.unit
                 });
-
-                const sliderChildren = [slider, display];
-                if (unit) sliderChildren.push(unit);
-                const sliderContainer = el('div', `${Styles.sliderContainer} mt-2`, { style: isOff ? 'display: none' : 'display: flex' }, ...sliderChildren);
-
-                const selector = el('div', 'relative', {},
-                    el('select', `${Styles.input} ${Styles.select}`, {
-                        onChange: (e) => {
-                            const isNowOff = e.target.value === 'off';
-                            sliderContainer.style.display = isNowOff ? 'none' : 'flex';
-                            onUpdate(isNowOff ? false : parseFloat(slider.value));
-                        }
-                    },
-                        el('option', '', { value: 'off', selected: isOff }, 'Off'),
-                        el('option', '', { value: 'custom', selected: !isOff }, `Custom`)
-                    ),
-                    el('div', Styles.chevron, {}, Icons.chevronDown())
-                );
-                return el('div', '', {}, selector, sliderContainer);
             }
 
             if (type === 'switch-integer') {
-                const isOff = currentValue === false || currentValue === 'false';
-                const numVal = isOff ? (field.defaultInteger || field.min || 0) : parseInt(currentValue, 10);
-                const display = el('span', Styles.sliderDisplay, {}, isNaN(numVal) ? 0 : numVal);
-                const unit = el('span', 'text-xs sm:text-sm text-slate-600 ml-1', {}, 's');
-
-                const slider = el('input', Styles.slider, {
-                    type: 'range',
-                    min: field.min, max: field.max, step: field.step || 1,
-                    value: isNaN(numVal) ? (field.defaultInteger || field.min || 0) : numVal,
-                    onInput: (e) => {
-                        display.textContent = e.target.value;
-                        onUpdate(parseInt(e.target.value, 10));
-                    }
+                return sliderInput(field, currentValue, onUpdate, {
+                    isOff: v => v === false || v === 'false',
+                    offValue: false,
+                    control: 'toggle',
+                    parse: v => parseInt(v, 10),
+                    defaultStep: 1,
+                    fallback: field.defaultInteger || field.min || 0,
+                    unit: field.unit || 's'
                 });
-
-                const sliderContainer = el('div', `${Styles.sliderContainer} mt-2`, { style: isOff ? 'display: none' : 'display: flex' }, slider, display, unit);
-
-                const toggleContainer = el('label', 'relative inline-flex items-center cursor-pointer h-[30px] sm:h-[38px]', {});
-                const checkbox = el('input', 'sr-only peer', {
-                    type: 'checkbox',
-                    checked: !isOff,
-                    onChange: (e) => {
-                        const isNowOff = !e.target.checked;
-                        sliderContainer.style.display = isNowOff ? 'none' : 'flex';
-                        onUpdate(isNowOff ? false : parseInt(slider.value, 10));
-                    }
-                });
-                const toggleSwitch = el('div', Styles.toggle, {});
-
-                toggleContainer.appendChild(checkbox);
-                toggleContainer.appendChild(toggleSwitch);
-
-                return el('div', '', {}, toggleContainer, sliderContainer);
-            }
-
-            if (type === 'range') {
-                const display = el('span', Styles.sliderDisplay, {}, currentValue || 0);
-                const slider = el('input', Styles.slider, {
-                    type: 'range', min: field.min, max: field.max, step: field.step, value: currentValue || 0,
-                    onInput: (e) => {
-                        display.textContent = e.target.value;
-                        onUpdate(e.target.value);
-                    }
-                });
-                return el('div', Styles.sliderContainer, {}, slider, display);
             }
 
             if (type === 'zones') {
@@ -857,19 +791,11 @@
                 function renderZoneBadges() {
                     badgesDiv.innerHTML = '';
                     zones.forEach((zone, i) => {
-                        badgesDiv.appendChild(
-                            el('span', `inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-medium ${getZoneColor(zone)}`, {},
-                                zone,
-                                el('button', 'ml-0.5 hover:opacity-60 font-bold leading-none', {
-                                    type: 'button',
-                                    onClick: () => {
-                                        zones.splice(i, 1);
-                                        onUpdate([...zones]);
-                                        renderZoneBadges();
-                                    }
-                                }, '×')
-                            )
-                        );
+                        badgesDiv.appendChild(zoneChip(zone, () => {
+                            zones.splice(i, 1);
+                            onUpdate([...zones]);
+                            renderZoneBadges();
+                        }));
                     });
                     badgesDiv.appendChild(manageBtn);
                     if (field.hint) {
@@ -885,21 +811,27 @@
                 return wrapper;
             }
 
+            const isNumber = type === 'number';
             return el('input', Styles.input, {
-                type: type === 'integer' ? 'text' : (type || 'text'),
+                type: type || 'text',
                 value: currentValue !== undefined ? currentValue : '',
                 placeholder: field.placeholder || '',
+                min: isNumber ? field.min : undefined,
+                max: isNumber ? field.max : undefined,
+                step: isNumber ? field.step : undefined,
                 onInput: Utils.debounce((e) => {
                     let val = e.target.value;
-                    if (field.type === 'number' || field.type === 'integer') {
+                    if (isNumber) {
                         // a cleared field removes the key (never NaN -> null in
                         // the saved JSON); unparsable input keeps the last value
                         if (val.trim() === '') {
                             val = undefined;
                         } else {
-                            const n = parseNumberLike(val);
+                            let n = parseNumberLike(val);
                             if (n === null) return;
-                            val = field.type === 'integer' ? Math.floor(n) : n;
+                            if (field.min !== undefined && n < field.min) n = field.min;
+                            if (field.max !== undefined && n > field.max) n = field.max;
+                            val = n;
                         }
                     }
                     onUpdate(val);
@@ -907,7 +839,7 @@
             });
         },
 
-        renderField(field, index, dataContext, onUpdateCallback, onDepencyCheck, containerId = '') {
+        renderField(field, index, dataContext, onUpdateCallback, onDependencyCheck, containerId = '') {
             let val = field.jsonpath ? Utils.getNested(dataContext, field.jsonpath) : dataContext[field.name];
             if (val === undefined) val = field.defaultValue;
 
@@ -917,7 +849,7 @@
                     onClick: () => (typeof field.onClick === 'function' ? field.onClick : ActionRegistry[field.onClick])?.(index, containerId)
                 }, field.buttonIcon && el('span', '', { innerHTML: field.buttonIcon }),
                 typeof field.buttonLabel === 'function' ? field.buttonLabel(dataContext) : (field.buttonLabel || 'Action'))
-                : this.createInput(field, val, newValue => { onUpdateCallback(field, newValue); onDepencyCheck(); }, index, containerId);
+                : this.createInput(field, val, newValue => { onUpdateCallback(field, newValue); onDependencyCheck(); }, index, containerId);
 
             if (field.withButton && field.type !== 'button') {
                 const action = typeof field.withButton.onClick === 'function'
@@ -1215,40 +1147,34 @@
         }
 
         getNested(obj) {
-            let o = obj;
-            for (const p of this.config.nestedPath)
-                o = (o && typeof o === 'object') ? o[p] : undefined;
-            return o;
+            return Utils.getNested(obj, this.config.nestedPath.join('.'));
         }
 
         setNested(obj) {
-            const path = this.config.nestedPath;
-            let o = obj;
-            for (let i = 0; i < path.length - 1; i++) {
-                if (!o[path[i]] || typeof o[path[i]] !== 'object') o[path[i]] = {};
-                o = o[path[i]];
+            Utils.setNested(obj, this.config.nestedPath.join('.'), this.data);
+        }
+
+        applyDataTo(target, { forSave = false } = {}) {
+            if (this.config.nestedPath) {
+                this.setNested(target);
+            } else if (this.config.channelType) {
+                target[this.config.channelType] = this.data;
+            } else {
+                this.fields.forEach(f => {
+                    if (forSave && f.skipSave) return;
+                    const val = f.jsonpath ? Utils.getNested(this.data, f.jsonpath) : this.data[f.name];
+                    if (val === undefined) return;
+                    if (f.jsonpath) Utils.setNested(target, f.jsonpath, val);
+                    else target[f.name] = val;
+                });
             }
-            o[path[path.length - 1]] = this.data;
         }
 
         updateJsonDebug() {
             const el = document.getElementById(this.jsonPreId());
             if (!el) return;
             const cfg = {};
-            if (this.config.nestedPath) {
-                this.setNested(cfg);
-            } else if (this.config.channelType) {
-                cfg[this.config.channelType] = this.data;
-            } else {
-                // Top-level section (e.g. sharing): this.data is the whole
-                // config, so include only the fields declared in its schema.
-                this.fields.forEach(f => {
-                    const val = f.jsonpath ? Utils.getNested(this.data, f.jsonpath) : this.data[f.name];
-                    if (val === undefined) return;
-                    if (f.jsonpath) Utils.setNested(cfg, f.jsonpath, val);
-                    else cfg[f.name] = val;
-                });
-            }
+            this.applyDataTo(cfg);
             el.textContent = JSON.stringify(cfg, null, 2);
         }
 
@@ -1264,20 +1190,7 @@
                 // read-modify-write against a fresh copy so other sections keep
                 // any changes made outside this manager
                 const fullConfig = await ConfigStore.fetch(true);
-
-                if (this.config.nestedPath) {
-                    this.setNested(fullConfig);
-                } else if (this.config.channelType) {
-                    fullConfig[this.config.channelType] = this.data;
-                } else {
-                    this.fields.forEach(f => {
-                        if (f.skipSave) return;
-                        const val = f.jsonpath ? Utils.getNested(this.data, f.jsonpath) : this.data[f.name];
-                        if (val === undefined) return;
-                        if (f.jsonpath) Utils.setNested(fullConfig, f.jsonpath, val);
-                        else fullConfig[f.name] = val;
-                    });
-                }
+                this.applyDataTo(fullConfig, { forSave: true });
 
                 if (!fullConfig.config) fullConfig.config = 'aiscatcher';
                 if (!fullConfig.version) fullConfig.version = 1;
@@ -1314,10 +1227,10 @@
     }
 
     global.App = App;
+    global.Utils = Utils;
     global.ConfigStore = ConfigStore;
     global.ZoneColors = { badge: getZoneColor, hex: getZoneHex };
     global.normalizeConfig = (cfg) => ConfigNormalizer.normalize(cfg);
-    global.createConfigManager = (config) => new ConfigManager(config);
     global.createSimpleConfigManager = (config) => { config.isList = false; return new ConfigManager(config); };
     global.createChannelManager = (config) => { config.isList = true; return new ConfigManager(config); };
 

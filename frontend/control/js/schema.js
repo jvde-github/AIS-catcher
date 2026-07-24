@@ -4,7 +4,6 @@ const ChannelFields = {
         name: 'host',
         label: 'Host',
         type: 'text',
-        required: true,
         defaultValue: '127.0.0.1',
         placeholder: 'e.g., 192.168.1.101',
         width: 75
@@ -13,7 +12,6 @@ const ChannelFields = {
         name: 'port',
         label: 'Port',
         type: 'number',
-        required: true,
         defaultValue: 10110,
         placeholder: '10110',
         width: 25
@@ -84,12 +82,122 @@ const ChannelFields = {
     })
 };
 
+const sdrGainFields = (prefix, inputValue) => ({
+    [`${prefix}_gain_mode`]: {
+        name: `${prefix}_gain_mode`,
+        label: "Gain Mode",
+        type: "select",
+        jsonpath: `${prefix}.gain_mode`,
+        defaultValue: "linearity",
+        options: [
+            { value: "free", label: "Free" },
+            { value: "linearity", label: "Linearity" },
+            { value: "sensitivity", label: "Sensitivity" }
+        ],
+        tooltip: "Linearity and Sensitivity use one combined gain; Free sets LNA, mixer and VGA individually",
+        dependsOn: {
+            field: "input",
+            value: inputValue
+        }
+    },
+    [`${prefix}_vga`]: {
+        name: `${prefix}_vga`,
+        label: "VGA",
+        type: "number",
+        jsonpath: `${prefix}.vga`,
+        min: 0,
+        max: 14,
+        step: 1,
+        defaultValue: 10,
+        placeholder: "0-14",
+        width: 33,
+        dependsOn: {
+            field: `${prefix}_gain_mode`,
+            value: "free"
+        }
+    },
+    [`${prefix}_mixer`]: {
+        name: `${prefix}_mixer`,
+        label: "Mixer",
+        type: "auto-integer",
+        jsonpath: `${prefix}.mixer`,
+        min: 0,
+        max: 14,
+        step: 1,
+        defaultValue: "auto",
+        placeholder: "auto or 0-14",
+        width: 33,
+        dependsOn: {
+            field: `${prefix}_gain_mode`,
+            value: "free"
+        }
+    },
+    [`${prefix}_lna`]: {
+        name: `${prefix}_lna`,
+        label: "LNA",
+        type: "auto-integer",
+        jsonpath: `${prefix}.lna`,
+        min: 0,
+        max: 14,
+        step: 1,
+        defaultValue: "auto",
+        placeholder: "auto or 0-14",
+        width: 32,
+        dependsOn: {
+            field: `${prefix}_gain_mode`,
+            value: "free"
+        }
+    },
+    [`${prefix}_linearity`]: {
+        name: `${prefix}_linearity`,
+        label: "Linearity",
+        type: "number",
+        jsonpath: `${prefix}.linearity`,
+        min: 0,
+        max: 21,
+        step: 1,
+        defaultValue: 17,
+        placeholder: "0-21",
+        dependsOn: {
+            field: `${prefix}_gain_mode`,
+            value: "linearity"
+        }
+    },
+    [`${prefix}_sensitivity`]: {
+        name: `${prefix}_sensitivity`,
+        label: "Sensitivity",
+        type: "number",
+        jsonpath: `${prefix}.sensitivity`,
+        min: 0,
+        max: 21,
+        step: 1,
+        defaultValue: 17,
+        placeholder: "0-21",
+        dependsOn: {
+            field: `${prefix}_gain_mode`,
+            value: "sensitivity"
+        }
+    },
+    [`${prefix}_biastee`]: {
+        name: `${prefix}_biastee`,
+        label: "Bias tee",
+        type: "toggle",
+        jsonpath: `${prefix}.biastee`,
+        tooltip: "Power an external LNA over the antenna cable",
+        defaultValue: false,
+        width: 25,
+        dependsOn: {
+            field: "input",
+            value: inputValue
+        }
+    }
+});
+
 const httpSchema = {
     protocol: {
         name: 'protocol',
         label: 'Protocol',
         type: 'select',
-        required: true,
         defaultValue: 'AISCATCHER',
         options: [
             { value: 'AISCATCHER', label: 'AISCATCHER' },
@@ -106,7 +214,6 @@ const httpSchema = {
         name: 'interval',
         label: 'Interval (seconds)',
         type: 'number',
-        required: true,
         min: 1,
         max: 86400,
         defaultValue: 60,
@@ -118,7 +225,6 @@ const httpSchema = {
         name: 'url',
         label: 'URL',
         type: 'text',
-        required: true,
         placeholder: 'https://example.com'
     },
     description: ChannelFields.description(),
@@ -128,7 +234,6 @@ const httpSchema = {
         name: 'id',
         label: 'ID',
         type: 'text',
-        required: true,
         placeholder: 'Station ID',
         tooltip: 'Station identifier included in the feed'
     },
@@ -213,7 +318,6 @@ const tcpServerSchema = {
         name: 'port',
         label: 'Port',
         type: 'number',
-        required: true,
         defaultValue: 5010,
         placeholder: '5010',
         tooltip: 'Local port where clients connect to read the stream (max 64 clients)'
@@ -232,7 +336,6 @@ const mqttSchema = {
         name: 'url',
         label: 'URL',
         type: 'text',
-        required: true,
         placeholder: 'mqtt[s]://[user:pass@]host[:port]'
     },
     description: ChannelFields.description(),
@@ -242,7 +345,6 @@ const mqttSchema = {
         name: 'topic',
         label: 'Topic',
         type: 'text',
-        required: true,
         placeholder: 'ais/data',
         defaultValue: 'ais/data',
         tooltip: 'Supports placeholders such as %mmsi%, %type% and %channel% for dynamic topics'
@@ -344,7 +446,6 @@ const webviewerSchema = {
         label: 'Backup File',
         type: 'text',
         jsonpath: 'file',
-        required: true,
         width: 75,
         tooltip: 'File where statistics and plot history are saved across restarts'
     },
@@ -473,8 +574,7 @@ const sharingSchema = {
         label: 'Sharing Key (UUID)',
         type: 'text',
         placeholder: 'Enter UUID',
-        tooltip: 'Station key from aiscatcher.org; leave empty to share anonymously',
-        pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+        tooltip: 'Station key from aiscatcher.org; leave empty to share anonymously'
     },
     _create_key_button: {
         name: '_create_key_button',
@@ -516,7 +616,6 @@ const receiverSchema = {
             { value: "NMEA2000", label: "NMEA2000" }
         ],
         withButton: {
-            label: "",
             onClick: "openDeviceSelectionModal",
             icon: `<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
                     <path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z" />
@@ -715,222 +814,8 @@ const receiverSchema = {
             value: "AIRSPYHF"
         }
     },
-    airspy_gain_mode: {
-        name: "airspy_gain_mode",
-        label: "Gain Mode",
-        type: "select",
-        jsonpath: "airspy.gain_mode",
-        defaultValue: "linearity",
-        options: [
-            { value: "free", label: "Free" },
-            { value: "linearity", label: "Linearity" },
-            { value: "sensitivity", label: "Sensitivity" }
-        ],
-        tooltip: "Linearity and Sensitivity use one combined gain; Free sets LNA, mixer and VGA individually",
-        dependsOn: {
-            field: "input",
-            value: "AIRSPY"
-        }
-    },
-    airspy_vga: {
-        name: "airspy_vga",
-        label: "VGA",
-        type: "number",
-        jsonpath: "airspy.vga",
-        min: 0,
-        max: 14,
-        step: 1,
-        defaultValue: 10,
-        placeholder: "0-14",
-        width: 33,
-        dependsOn: {
-            field: "airspy_gain_mode",
-            value: "free"
-        }
-    },
-    airspy_mixer: {
-        name: "airspy_mixer",
-        label: "Mixer",
-        type: "auto-integer",
-        jsonpath: "airspy.mixer",
-        min: 0,
-        max: 14,
-        step: 1,
-        defaultValue: "auto",
-        placeholder: "auto or 0-14",
-        width: 33,
-        dependsOn: {
-            field: "airspy_gain_mode",
-            value: "free"
-        }
-    },
-    airspy_lna: {
-        name: "airspy_lna",
-        label: "LNA",
-        type: "auto-integer",
-        jsonpath: "airspy.lna",
-        min: 0,
-        max: 14,
-        step: 1,
-        defaultValue: "auto",
-        placeholder: "auto or 0-14",
-        width: 32,
-        dependsOn: {
-            field: "airspy_gain_mode",
-            value: "free"
-        }
-    },
-    airspy_linearity: {
-        name: "airspy_linearity",
-        label: "Linearity",
-        type: "number",
-        jsonpath: "airspy.linearity",
-        min: 0,
-        max: 21,
-        step: 1,
-        defaultValue: 17,
-        placeholder: "0-21",
-        dependsOn: {
-            field: "airspy_gain_mode",
-            value: "linearity"
-        }
-    },
-    airspy_sensitivity: {
-        name: "airspy_sensitivity",
-        label: "Sensitivity",
-        type: "number",
-        jsonpath: "airspy.sensitivity",
-        min: 0,
-        max: 21,
-        step: 1,
-        defaultValue: 17,
-        placeholder: "0-21",
-        dependsOn: {
-            field: "airspy_gain_mode",
-            value: "sensitivity"
-        }
-    },
-    airspy_biastee: {
-        name: "airspy_biastee",
-        label: "Bias tee",
-        type: "toggle",
-        jsonpath: "airspy.biastee",
-        tooltip: "Power an external LNA over the antenna cable",
-        defaultValue: false,
-        width: 25,
-        dependsOn: {
-            field: "input",
-            value: "AIRSPY"
-        }
-    },
-    hydrasdr_gain_mode: {
-        name: "hydrasdr_gain_mode",
-        label: "Gain Mode",
-        type: "select",
-        jsonpath: "hydrasdr.gain_mode",
-        defaultValue: "linearity",
-        options: [
-            { value: "free", label: "Free" },
-            { value: "linearity", label: "Linearity" },
-            { value: "sensitivity", label: "Sensitivity" }
-        ],
-        tooltip: "Linearity and Sensitivity use one combined gain; Free sets LNA, mixer and VGA individually",
-        dependsOn: {
-            field: "input",
-            value: "HYDRASDR"
-        }
-    },
-    hydrasdr_vga: {
-        name: "hydrasdr_vga",
-        label: "VGA",
-        type: "number",
-        jsonpath: "hydrasdr.vga",
-        min: 0,
-        max: 14,
-        step: 1,
-        defaultValue: 10,
-        placeholder: "0-14",
-        width: 33,
-        dependsOn: {
-            field: "hydrasdr_gain_mode",
-            value: "free"
-        }
-    },
-    hydrasdr_mixer: {
-        name: "hydrasdr_mixer",
-        label: "Mixer",
-        type: "auto-integer",
-        jsonpath: "hydrasdr.mixer",
-        min: 0,
-        max: 14,
-        step: 1,
-        defaultValue: "auto",
-        placeholder: "auto or 0-14",
-        width: 33,
-        dependsOn: {
-            field: "hydrasdr_gain_mode",
-            value: "free"
-        }
-    },
-    hydrasdr_lna: {
-        name: "hydrasdr_lna",
-        label: "LNA",
-        type: "auto-integer",
-        jsonpath: "hydrasdr.lna",
-        min: 0,
-        max: 14,
-        step: 1,
-        defaultValue: "auto",
-        placeholder: "auto or 0-14",
-        width: 32,
-        dependsOn: {
-            field: "hydrasdr_gain_mode",
-            value: "free"
-        }
-    },
-    hydrasdr_linearity: {
-        name: "hydrasdr_linearity",
-        label: "Linearity",
-        type: "number",
-        jsonpath: "hydrasdr.linearity",
-        min: 0,
-        max: 21,
-        step: 1,
-        defaultValue: 17,
-        placeholder: "0-21",
-        dependsOn: {
-            field: "hydrasdr_gain_mode",
-            value: "linearity"
-        }
-    },
-    hydrasdr_sensitivity: {
-        name: "hydrasdr_sensitivity",
-        label: "Sensitivity",
-        type: "number",
-        jsonpath: "hydrasdr.sensitivity",
-        min: 0,
-        max: 21,
-        step: 1,
-        defaultValue: 17,
-        placeholder: "0-21",
-        dependsOn: {
-            field: "hydrasdr_gain_mode",
-            value: "sensitivity"
-        }
-    },
-    hydrasdr_biastee: {
-        name: "hydrasdr_biastee",
-        label: "Bias tee",
-        type: "toggle",
-        jsonpath: "hydrasdr.biastee",
-        tooltip: "Power an external LNA over the antenna cable",
-        defaultValue: false,
-        width: 25,
-        dependsOn: {
-            field: "input",
-            value: "HYDRASDR"
-        }
-    },
+    ...sdrGainFields('airspy', 'AIRSPY'),
+    ...sdrGainFields('hydrasdr', 'HYDRASDR'),
     rtltcp_protocol: {
         name: "rtltcp_protocol",
         label: "Protocol",
@@ -1151,7 +1036,6 @@ const receiverSchema = {
         jsonpath: "serialport.port",
         placeholder: "e.g., /dev/tty0",
         withButton: {
-            label: "",
             onClick: "openSerialDeviceModal",
             icon: `<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
                         <path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/>
@@ -1357,3 +1241,21 @@ const generalSettingsSchema = {
         tooltip: 'Count the timeout only while no messages arrive — a watchdog for stalled input'
     }
 };
+
+const CHANNEL_REGISTRY = [
+    { key: 'receiver', label: 'Receiver', schema: receiverSchema, configKey: 'receiver' },
+    { key: 'udp', label: 'UDP', schema: udpSchema, configKey: 'udp', flowLabel: 'UDP', statType: 'UDP', essentials: ['host', 'port'] },
+    { key: 'http', label: 'HTTP', schema: httpSchema, configKey: 'http', flowLabel: 'HTTP', statType: 'HTTP', essentials: ['url'] },
+    { key: 'mqtt', label: 'MQTT', schema: mqttSchema, configKey: 'mqtt', flowLabel: 'MQTT', statType: 'MQTT', essentials: ['url'] },
+    { key: 'tcp', label: 'TCP Client', schema: tcpSchema, configKey: 'tcp', flowLabel: 'TCP', statType: 'TCP Client', essentials: ['host', 'port'] },
+    { key: 'tcp_listener', label: 'TCP Server', schema: tcpServerSchema, configKey: 'tcp_listener', flowLabel: 'TCP Server', statType: 'TCP Listener', essentials: ['port'] },
+    { key: 'server', label: 'Viewer', schema: webviewerSchema, configKey: 'server', flowLabel: 'Webviewer', essentials: ['port'] }
+];
+
+function channelTitle(label, item) {
+    if (item && item.host && item.port) return label + ' · ' + item.host + ':' + item.port;
+    if (item && item.url) return label + ' · ' + item.url;
+    if (item && item.host) return label + ' · ' + item.host;
+    if (item && item.port) return label + ' · :' + item.port;
+    return label;
+}

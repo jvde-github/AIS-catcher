@@ -102,21 +102,7 @@
     // Legacy sections the wizard can carry over; entries are reduced to the
     // fields their schema declares and coerced by normalizeConfig. Other
     // root fields stay behind on purpose.
-    const IMPORT_CHANNELS = [
-        { key: 'udp', label: 'UDP', schema: udpSchema, essentials: ['host', 'port'] },
-        { key: 'tcp', label: 'TCP Client', schema: tcpSchema, essentials: ['host', 'port'] },
-        { key: 'http', label: 'HTTP', schema: httpSchema, essentials: ['url'] },
-        { key: 'mqtt', label: 'MQTT', schema: mqttSchema, essentials: ['url'] },
-        { key: 'tcp_listener', label: 'TCP Server', schema: tcpServerSchema, essentials: ['port'] },
-        { key: 'server', label: 'Webviewer', schema: webviewerSchema, essentials: ['port'] }
-    ];
-
-    function channelTitle(label, item) {
-        if (item.host && item.port) return label + ' · ' + item.host + ':' + item.port;
-        if (item.url) return label + ' · ' + item.url;
-        if (item.port) return label + ' · :' + item.port;
-        return label;
-    }
+    const IMPORT_CHANNELS = CHANNEL_REGISTRY.filter(c => c.essentials);
 
     // copy only the fields the schema declares, at their jsonpath (receiver
     // settings nest per device, e.g. rtlsdr.tuner)
@@ -124,18 +110,11 @@
         const clean = {};
         Object.values(schema).forEach(f => {
             if (f.type === 'button') return;
-            const path = (f.jsonpath || f.name || '').split('.');
-            if (!path[0]) return;
-            let s = item;
-            for (const p of path) {
-                if (!s || typeof s !== 'object') return;
-                s = s[p];
-            }
-            if (s === undefined) return;
-            let d = clean;
-            for (let i = 0; i < path.length - 1; i++)
-                d = d[path[i]] = d[path[i]] || {};
-            d[path[path.length - 1]] = s;
+            const path = f.jsonpath || f.name;
+            if (!path) return;
+            const v = Utils.getNested(item, path);
+            if (v === undefined) return;
+            Utils.setNested(clean, path, v);
         });
         return clean;
     }
@@ -230,6 +209,7 @@
         }).then(r => {
             ConfigStore.invalidate();
             if (r.status === 401 && global.hubAuthRequired) global.hubAuthRequired();
+            if (!r.ok) return r.json().catch(() => null).then(b => { throw new Error((b && b.error) || 'Save failed'); });
             return r.json();
         });
     }
@@ -241,7 +221,10 @@
                 cfg.control.wizard = false;
                 return postConfig(cfg);
             })
-            .catch(() => { });
+            .catch(e => {
+                console.error('Could not clear the wizard flag:', e);
+                if (global.App && App.notify) App.notify('error', 'Could not save the wizard state');
+            });
     }
 
     function icon(name, cls) {

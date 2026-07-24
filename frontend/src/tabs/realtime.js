@@ -3,13 +3,13 @@ import { settings } from '../core/state.js';
 let viewer = null;
 let savedState = null;
 let keydownHandler = null;
+let pendingFilters = null;
 
 class RealtimeViewer {
     constructor(filterMMSI = null) {
     
         this.nmeaContent = document.getElementById('realtime_nmea_content');
         this.eventSource = null;
-        this.nmeaCount = 0;
         this.maxLines = 100;
         this.isPaused = false;
         this.filterMMSIs = filterMMSI ? [filterMMSI] : [];
@@ -103,11 +103,9 @@ class RealtimeViewer {
     addNmeaMessage(data) {
         if (this.filterMMSIs.length > 0 && !this.filterMMSIs.includes(data.mmsi.toString())) return;
 
-        if (this.nmeaCount > this.maxLines) {
-            const rows = this.nmeaContent.getElementsByTagName('tr');
-            if (rows.length > 0) {
-                this.nmeaContent.removeChild(rows[rows.length - 1]);
-            }
+        const rows = this.nmeaContent.getElementsByTagName('tr');
+        if (rows.length >= this.maxLines) {
+            this.nmeaContent.removeChild(rows[rows.length - 1]);
         }
 
         const config = window.AISCatcher.config;
@@ -204,7 +202,6 @@ class RealtimeViewer {
         row.addEventListener('click', () => togglePause(true));
 
         this.nmeaContent.insertBefore(row, this.nmeaContent.firstChild);
-        this.nmeaCount++;
     }
 
     pause() { this.isPaused = true; }
@@ -303,6 +300,12 @@ export function activate(filterMMSI = null) {
         }
     }
 
+    if (pendingFilters) {
+        pendingFilters.forEach((f) => viewer.addFilterMMSI(f));
+        pendingFilters = null;
+        window.__app__.saveSettings();
+    }
+
     updateFilterDisplay();
     syncPauseButton(viewer.isPaused);
 
@@ -343,12 +346,8 @@ export function openForMMSI(mmsi) {
     }
     savedState = null;
 
+    pendingFilters = [...existingFilters, mmsi];
     document.getElementById('realtime_tab').click();
-
-    setTimeout(() => {
-        existingFilters.forEach((f) => addFilter(f));
-        addFilter(mmsi);
-    }, 50);
 }
 
 export function togglePause(showMessage = false) {
@@ -375,7 +374,6 @@ export function toggleBackgroundStreaming() {
 export function clear() {
     if (viewer && viewer.nmeaContent) {
         viewer.nmeaContent.innerHTML = '';
-        viewer.nmeaCount = 0;
     }
 }
 

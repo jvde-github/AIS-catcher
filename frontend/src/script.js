@@ -1,7 +1,7 @@
 import { settings, isAndroid } from './core/state.js';
 import { ShippingClass } from './core/constants.js';
-import { debounce, decodeHTMLEntities, deriveLabelBackground, copyToClipboard } from './core/util.js';
-import { calcOffset1M, createShipOutlineGeometry, createDistanceGeometry } from './core/geo.js';
+import { debounce, decodeHTMLEntities, deriveLabelBackground, copyToClipboard, hexToRgb } from './core/util.js';
+import { calcOffset1M, createShipOutlineGeometry, createDistanceGeometry, hasValidCoords } from './core/geo.js';
 import { init as initRainRadar } from './overlays/rainradar.js';
 import * as fireworks from './overlays/fireworks.js';
 import * as community from './overlays/community.js';
@@ -115,7 +115,7 @@ const ACTIONS = {
     activateTab: (e, d) => activateTab(e, d.tab),
     openWebControl: () => openWebControl(),
     toggleInfoPanel: () => toggleInfoPanel(),
-    headerSettings: (e) => showContextMenu(e, '', '', ['settings', 'center']),
+    headerSettings: () => openSettings(),
     toggleScreenSize: () => toggleScreenSize(),
     toggleReceiverDropdown: (e) => toggleReceiverDropdown(e),
 
@@ -141,7 +141,7 @@ const ACTIONS = {
     setGraphVisibility: (e, d, el) => setGraphVisibility(d.graph, el.checked),
     setMapSetting: (e, d, el) => setMapSetting(d.key, el.type === 'checkbox' ? el.checked : el.value),
     setBinaryDisplay: (e, d, el) => setBinaryDisplay(el.value),
-    setBinaryCategories: (e, d, el) => setBinaryCategories(Array.from(el.selectedOptions).map(o => o.value)),
+    setBinaryCategory: (e, d, el) => setBinaryCategory(d.cat, el.checked),
     setRangeColor: (e, d, el) => setRangeColor(el.value, d.field),
     setMapSettingDistanceColor: (e, d, el) => { removeDistanceCircles(); setMapSetting('distance_circle_color', el.value); },
     setShowTrackOnSelect: (e, d, el) => { settings.show_track_on_select = el.checked; saveSettings(); },
@@ -152,15 +152,15 @@ const ACTIONS = {
 
     // settings: range/icon-scale/opacity sliders (oninput = display only, onchange = persist)
     setIconScale: (e, d, el) => { settings.icon_scale = el.value; redrawMap(); saveSettings(); },
-    updateIconScaleDisplay: (e, d, el) => updateIconScaleDisplay(el.value),
+    updateIconScaleDisplay: (e, d, el) => updateSliderDisplay('iconScale', el.value),
     setMapOpacity: (e, d, el) => { settings.map_opacity = el.value; setMapOpacity(); saveSettings(); },
-    updateMapOpacityDisplay: (e, d, el) => updateMapOpacityDisplay(el.value),
-    updateCircleScaleDisplay: (e, d, el) => updateCircleScaleDisplay(el.value),
-    updateTooltipFontSizeDisplay: (e, d, el) => updateTooltipFontSizeDisplay(el.value),
-    updateShipoutlineOpacityDisplay: (e, d, el) => updateShipoutlineOpacityDisplay(el.value),
-    updateTrackWeightDisplay: (e, d, el) => updateTrackWeightDisplay(el.value),
-    updateTrackTrashThresholdDisplay: (e, d, el) => updateTrackTrashThresholdDisplay(el.value),
-    updateKioskSpeedDisplay: (e, d, el) => updateKioskSpeedDisplay(el.value),
+    updateMapOpacityDisplay: (e, d, el) => updateSliderDisplay('mapOpacity', el.value),
+    updateCircleScaleDisplay: (e, d, el) => updateSliderDisplay('circleScale', el.value),
+    updateTooltipFontSizeDisplay: (e, d, el) => updateSliderDisplay('tooltipFontSize', el.value),
+    updateShipoutlineOpacityDisplay: (e, d, el) => updateSliderDisplay('shipoutlineOpacity', el.value),
+    updateTrackWeightDisplay: (e, d, el) => updateSliderDisplay('trackWeight', el.value),
+    updateTrackTrashThresholdDisplay: (e, d, el) => updateSliderDisplay('trackTrashThreshold', el.value),
+    updateKioskSpeedDisplay: (e, d, el) => updateSliderDisplay('kioskSpeed', el.value),
 
     // context menu (depends on global context_mmsi/card_mmsi)
     toggleShipcardPin: () => toggleShipcardPin(),
@@ -372,7 +372,6 @@ const baseMapSelector = document.getElementById("baseMapSelector");
 let shipcardIconCount = undefined;
 const shipcardIconMax = 3;
 let shipcardIconOffset = 0;
-const plugins_main = [];
 let card_mmsi = null,
     card_type = null;
 // `let` so AISCatcher.setRefreshInterval can mutate.
@@ -526,7 +525,7 @@ function applyDefaultSettings() {
 
     updateSortMarkers();
     setDarkMode(settings.dark_mode);
-    setMetrics(settings.metric);
+    setMetrics(settings.metric, false);
     updateMapLayer();
     setFading(settings.fading);
 
@@ -537,6 +536,8 @@ function applyDefaultSettings() {
     settings.welcome = false;
 
     redrawMap();
+    updateSettingsTab();
+    showNotification("Settings restored to defaults");
 }
 
 // some functions useful in plugins
@@ -599,9 +600,6 @@ function removeOverlayLayer(title) {
 function removeOverlayLayerAll() {
     overlapmaps = {};
 }
-function addControlToMap(c) {
-    c.addTo(map);
-}
 
 const getICAOFromHexIdent = (h) => h.toString(16).toUpperCase().padStart(6, '0')
 const getICAO = (plane) => getICAOFromHexIdent(plane.hexident)
@@ -618,6 +616,131 @@ async function copyClipboard(t) {
         return false;
     }
     return true;
+}
+
+const SETTINGS_TAB_GROUPS = [
+    { title: "System", subs: [["System", "General"]] },
+    {
+        title: "Map", subs: [
+            ["Map", "General"], ["Ship Labels", "Labels"], ["Ship Outline", "Ships"],
+            ["Binary Messages", "Binary"], ["Station Range", "Range"], ["Tracks", "Tracks"],
+            ["Kiosk", "Kiosk"]
+        ]
+    },
+    { title: "Plots", subs: [["Graphs", "Plots"]] },
+    { title: "Table", subs: [["Table", "Table"]] },
+];
+
+let settingsGroups = [];
+let settingsSubNav = null;
+let settingsSubWrap = null;
+let settingsChevronLeft = null;
+let settingsChevronRight = null;
+
+function buildSettingsTabs() {
+    const main = document.querySelector(".settings_main");
+
+    const parsed = {};
+    let currentName = null;
+    for (const child of Array.from(main.children)) {
+        if (child.tagName === "HEADER") {
+            currentName = child.textContent.trim();
+            parsed[currentName] = { header: child, sections: [] };
+        } else if (child.tagName === "SECTION" && currentName) {
+            parsed[currentName].sections.push(child);
+        }
+    }
+    if (Object.keys(parsed).length < 2) return;
+
+    settingsGroups = SETTINGS_TAB_GROUPS
+        .map((g) => ({
+            title: g.title,
+            subs: g.subs.filter(([name]) => name in parsed).map(([name, label]) => ({ label, ...parsed[name] })),
+        }))
+        .filter((g) => g.subs.length > 0);
+
+    const mapped = new Set(SETTINGS_TAB_GROUPS.flatMap((g) => g.subs.map(([name]) => name)));
+    for (const name of Object.keys(parsed)) {
+        if (!mapped.has(name)) settingsGroups.push({ title: name, subs: [{ label: name, ...parsed[name] }] });
+    }
+
+    const nav = document.createElement("nav");
+    nav.className = "settings_tabs";
+    settingsGroups.forEach((g, i) => {
+        const tab = document.createElement("div");
+        tab.className = "settings_tab";
+        tab.textContent = g.title;
+        tab.onclick = () => selectSettingsGroup(i);
+        nav.appendChild(tab);
+    });
+    const headerSlot = document.querySelector("#settings .settings_header div:nth-child(2)");
+    headerSlot.appendChild(nav);
+
+    settingsSubNav = document.createElement("nav");
+    settingsSubNav.className = "settings_tabs settings_subtabs";
+
+    settingsSubWrap = document.createElement("div");
+    settingsSubWrap.className = "settings_nav settings_tabscroll";
+    const chevron = (label, dir) => {
+        const c = document.createElement("div");
+        c.className = "settings_tabchevron";
+        c.textContent = label;
+        c.onclick = () => settingsSubNav.scrollBy({ left: dir * 140, behavior: "smooth" });
+        return c;
+    };
+    settingsChevronLeft = chevron("‹", -1);
+    settingsChevronRight = chevron("›", 1);
+    settingsSubWrap.append(settingsChevronLeft, settingsSubNav, settingsChevronRight);
+    main.prepend(settingsSubWrap);
+
+    settingsSubNav.addEventListener("scroll", updateSettingsChevrons);
+    window.addEventListener("resize", updateSettingsChevrons);
+
+    selectSettingsGroup(0);
+}
+
+function updateSettingsChevrons() {
+    const nav = settingsSubNav;
+    const overflow = nav.scrollWidth > settingsSubWrap.clientWidth - 1;
+    settingsChevronLeft.style.display = overflow && nav.scrollLeft > 2 ? "" : "none";
+    settingsChevronRight.style.display =
+        overflow && nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 2 ? "" : "none";
+}
+
+function selectSettingsGroup(idx) {
+    const group = settingsGroups[idx];
+    document.querySelectorAll(".settings_tabs:not(.settings_subtabs) .settings_tab")
+        .forEach((t, i) => t.classList.toggle("active", i === idx));
+
+    settingsSubNav.innerHTML = "";
+    settingsSubWrap.style.display = group.subs.length > 1 ? "" : "none";
+    group.subs.forEach((sub, i) => {
+        const tab = document.createElement("div");
+        tab.className = "settings_tab";
+        tab.textContent = sub.label;
+        tab.onclick = () => selectSettingsSub(idx, i);
+        settingsSubNav.appendChild(tab);
+    });
+    selectSettingsSub(idx, 0);
+    settingsSubNav.scrollLeft = 0;
+    updateSettingsChevrons();
+}
+
+function selectSettingsSub(groupIdx, subIdx) {
+    const shown = new Set(settingsGroups[groupIdx].subs[subIdx].sections);
+    const main = document.querySelector(".settings_main");
+    let first = true;
+    for (const child of main.children) {
+        if (child.tagName === "HEADER") child.style.display = "none";
+        else if (child.tagName === "SECTION") {
+            const show = shown.has(child);
+            child.style.display = show ? "" : "none";
+            child.classList.toggle("st-first", show && first);
+            if (show) first = false;
+        }
+    }
+    settingsSubNav.querySelectorAll(".settings_tab").forEach((t, i) => t.classList.toggle("active", i === subIdx));
+    main.scrollTop = 0;
 }
 
 function openSettings() {
@@ -641,10 +764,13 @@ function setCoordinateFormat(format) {
 }
 
 
-function copyCoordinates(m) {
+async function copyCoordinates(m) {
     const raw = shipsDB[m]?.raw;
-    const coords = raw ? raw.lat + "," + raw.lon : "not found";
-    if (copyClipboard(coords)) showNotification("Coordinates copied to clipboard");
+    if (!raw) {
+        showNotification("Ship not found");
+        return;
+    }
+    if (await copyClipboard(raw.lat + "," + raw.lon)) showNotification("Coordinates copied to clipboard");
 }
 
 let hoverMMSI = undefined;
@@ -669,12 +795,12 @@ const rangeStyleFunction = function (feature) {
 
 const shapeStyleFunction = function (feature) {
 
-    const c = settings.shipoutline_inner;
+    const [r, g, b] = hexToRgb(settings.shipoutline_inner);
     const o = settings.shipoutline_opacity;
 
     return new ol.style.Style({
         fill: new ol.style.Fill({
-            color: `rgba(${parseInt(c.slice(-6, -4), 16)}, ${parseInt(c.slice(-4, -2), 16)}, ${parseInt(c.slice(-2), 16)}, ${o})`
+            color: `rgba(${r}, ${g}, ${b}, ${o})`
         }),
         stroke: new ol.style.Stroke({
             color: hoverMMSI && hoverType == 'ship' && feature.ship.mmsi == hoverMMSI ? settings.shiphover_color : settings.shipoutline_border,
@@ -714,6 +840,7 @@ const markerStyle = function (feature) {
 
     const length = (feature.ship.to_bow || 0) + (feature.ship.to_stern || 0);
     const mult = length >= 100 && length <= 200 ? 0.9 : length > 200 ? 1.1 : 0.75;
+    const highlighted = (feature.ship.mmsi == hoverMMSI && hoverType == 'ship') || (feature.ship.mmsi == card_mmsi && card_type == 'ship');
 
     return new ol.style.Style({
         image: new ol.style.Icon({
@@ -722,29 +849,14 @@ const markerStyle = function (feature) {
             offset: [feature.ship.cx, feature.ship.cy],
             size: [feature.ship.imgSize, feature.ship.imgSize],
             scale: settings.icon_scale * mult,
-            opacity: 1
+            opacity: highlighted ? 1 : getShipOpacity(feature.ship)
         })
     });
 };
 
 
 const planeStyle = function (feature) {
-    const altitude = feature.plane.altitude || 0;
-    const shadowScale = Math.min(Math.max(altitude / 40000, 0.1), 1); // 0.1-1 scale based on height up to 40000ft
-
     return [
-        /* Shadow/border layer
-        new ol.style.Style({
-            image: new ol.style.Icon({
-                src: "https://www.aiscatcher.org/hub_test/sprites_hub.png",
-                rotation: feature.plane.rot,
-                offset: [feature.plane.cx, feature.plane.cy],
-                size: [feature.plane.imgSize, feature.plane.imgSize],
-                scale: (settings.icon_scale * feature.plane.scaling) * (1 + shadowScale * 1),
-                opacity: 0.25
-            })
-        }), */
-        // Main aircraft layer
         new ol.style.Style({
             image: new ol.style.Icon({
                 src: SpritesAll,
@@ -987,44 +1099,53 @@ async function fetchJSON(l, m) {
         response = await fetch(l + "?" + m);
     } catch (error) {
         showDialog("Error", error);
+        return null;
+    }
+    if (!response.ok) {
+        showDialog("Error", "Server returned " + response.status);
+        return null;
     }
     return response.text();
 }
 
+function objectToTableHtml(obj, copyContext) {
+    let tableHtml = '<table class="mytable">';
+    for (let key in obj) {
+        let value = obj[key];
+        if (Array.isArray(value) || (value !== null && typeof value === 'object')) value = JSON.stringify(value);
+        if (value == null) value = '';
+        const safeKey = sanitizeString(String(key));
+        const safeVal = sanitizeString(String(value));
+        const copyAttrs = copyContext ? ` data-on-contextmenu="showNMEAContextCopy" data-copy="${safeVal}"` : '';
+        tableHtml += `<tr><td>${safeKey}</td><td${copyAttrs}>${safeVal}</td></tr>`;
+    }
+    return tableHtml + "</table>";
+}
+
+async function showJSONTableDialog(url, m, title, copyContext) {
+    const s = await fetchJSON(url, m);
+    if (s == null) return;
+
+    let obj;
+    try {
+        obj = JSON.parse(s);
+    } catch (error) {
+        showDialog("Error", "Invalid response from server");
+        return;
+    }
+    showDialog(title, objectToTableHtml(obj, copyContext));
+}
 
 async function showNMEA(m) {
     if (config.features.save_messages) {
-        const s = await fetchJSON("api/message", m);
-        const obj = JSON.parse(s);
-
-        let tableHtml = '<table class="mytable">';
-        for (let key in obj) {
-            let value = obj[key];
-            if (Array.isArray(value) || (value !== null && typeof value === 'object')) value = JSON.stringify(value);
-            if (value == null) value = '';
-            const safeKey = sanitizeString(String(key));
-            const safeVal = sanitizeString(String(value));
-            tableHtml += `<tr><td>${safeKey}</td><td data-on-contextmenu="showNMEAContextCopy" data-copy="${safeVal}">${safeVal}</td></tr>`;
-        }
-        tableHtml += "</table>";
-
-        showDialog("Message " + m, tableHtml);
+        await showJSONTableDialog("api/message", m, "Message " + m, true);
     } else {
         showDialog("Error", 'Please enable "-N MSG on" in AIS-catcher settings.');
     }
 }
 
 async function showVesselDetail(m) {
-    let s = await fetchJSON("api/vessel", m);
-    let obj = JSON.parse(s);
-
-    let tableHtml = '<table class="mytable">';
-    for (let key in obj) {
-        tableHtml += "<tr><td>" + key + "</td><td>" + obj[key] + "</td></tr>";
-    }
-    tableHtml += "</table>";
-
-    showDialog("Vessel " + m, tableHtml);
+    await showJSONTableDialog("api/vessel", m, "Vessel " + m, false);
 }
 
 function showBinaryMessageDialog(featureOrMmsi) {
@@ -1042,7 +1163,7 @@ function showBinaryMessageDialog(featureOrMmsi) {
     } else if (typeof featureOrMmsi === 'number' || typeof featureOrMmsi === 'string') {
         const mmsi = Number(featureOrMmsi);
 
-        if (!binaryDB[mmsi] || !binaryDB[mmsi].ship_messages || binaryDB[mmsi].ship_messages.length === 0) {
+        if (shipBinaryMessages(mmsi).length === 0) {
             showDialog("Binary Messages", "No binary messages available for this vessel");
             return;
         }
@@ -1087,7 +1208,7 @@ function getBinaryMessageList(messages) {
 
         content += '</div>';
 
-        if (msg.message && msg.message.dac == 1 && (msg.message.fid == 31 || msg.message.fi == 31)) {
+        if (isMeteoMessage(msg)) {
             content += getBinaryMessageContent(msg, true);
         } else if (isInlandMessage(msg)) {
             content += getInlandMessageContent(msg);
@@ -1100,7 +1221,7 @@ function getBinaryMessageList(messages) {
             // Add a collapsible section for raw data
             content += `<details class="binary-raw-data">
                           <summary>Show Raw Data</summary>
-                          <pre>${JSON.stringify(msg.message, null, 2)}</pre>
+                          <pre>${sanitizeString(JSON.stringify(msg.message, null, 2))}</pre>
                         </details>`;
 
             content += '</div>';
@@ -1114,9 +1235,12 @@ function getBinaryMessageList(messages) {
     return content;
 }
 
-function copyText(m) {
-    if (copyClipboard(m)) showNotification("Content copied to clipboard");
+async function copyText(m) {
+    if (await copyClipboard(m)) showNotification("Content copied to clipboard");
 }
+
+const TOOLTIP_FLAG_STYLE = "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%";
+const CARD_FLAG_STYLE = "padding: 0px; margin: 0px; margin-right: 5px; box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5); font-size: 26px;";
 
 const EXT_LINKS = {
     aiscatcher:    id => `https://www.aiscatcher.org/ship/details/${id}`,
@@ -1279,12 +1403,14 @@ function showDialog(title, message) {
     dialogTitle.innerText = title;
     dialogMessage.innerHTML = message;
     dialogBox.classList.remove("hidden");
+    document.getElementById("dialog-overlay").classList.add("active");
 }
 
 function closeDialog() {
     let dialogBox = document.getElementById("dialog-box");
     dialogBox.classList.add("hidden");
     dialogBox.style.maxWidth = "";
+    document.getElementById("dialog-overlay").classList.remove("active");
 }
 
 function showNotification(message) {
@@ -1303,40 +1429,6 @@ function showNotification(message) {
     }, 2000);
 }
 
-function checkLatestVersion() {
-    const buildVersion = config.build.version;
-    if (!buildVersion || buildVersion === 'unknown') {
-        console.log('AIS-catcher: build version not available, skipping version check');
-        return;
-    }
-
-    fetch('https://www.aiscatcher.org/api/version')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to fetch latest release info');
-            }
-            return response.json();
-        })
-        .then(data => {
-            const latestVersion = data.tag_name;
-            if (latestVersion && latestVersion !== buildVersion) {
-                console.log('AIS-catcher: New version available! Current: ' + buildVersion + ', Latest: ' + latestVersion);
-                showDialog('Update Available',
-                    'A new version of AIS-catcher is available!<br><br>' +
-                    'Current version: <b>' + buildVersion + '</b><br>' +
-                    'Latest version: <b>' + latestVersion + '</b><br><br>' +
-                    'Updating ensures you have the latest features and security updates.<br><br>' +
-                    'Please visit <a href="https://docs.aiscatcher.org" target="_blank">docs.aiscatcher.org</a> for installation instructions or ' +
-                    '<a href="https://github.com/jvde-github/AIS-catcher/releases/latest" target="_blank">GitHub Releases</a> to download the latest version.');
-            } else {
-                console.log('AIS-catcher: You are running the latest version (' + buildVersion + ')');
-            }
-        })
-        .catch(error => {
-            console.log('AIS-catcher: Could not check for updates - ' + error.message);
-        });
-}
-
 function headerClick() {
     window.open("https://www.aiscatcher.org");
 }
@@ -1348,12 +1440,7 @@ function openWebControl() {
 }
 
 function updateMapLayer() {
-
     if (activeTileLayer) {
-
-        const overlays = JSON.parse(JSON.stringify(settings.map_overlay));
-        settings.map_overlay = JSON.parse(JSON.stringify(overlays));
-
         setMapOpacity();
         triggerMapLayer();
     }
@@ -1374,20 +1461,14 @@ function triggerMapLayer() {
     if (activeTileLayer)
         activeTileLayer.setVisible(false);
 
-    if (settings.dark_mode) {
-        activeTileLayer = settings.map_night in basemaps ? basemaps[settings.map_night] : basemaps[Object.keys(basemaps)[0]];
-
-    } else {
-        activeTileLayer = settings.map_day in basemaps ? basemaps[settings.map_day] : basemaps[Object.keys(basemaps)[0]];
-    }
+    const key = settings.dark_mode ? settings.map_night : settings.map_day;
+    activeTileLayer = key in basemaps ? basemaps[key] : basemaps[Object.keys(basemaps)[0]];
+    if (!activeTileLayer) return;
 
     activeTileLayer.setVisible(true);
 
-    if (settings.map_overlay.length > 0) {
-        for (let i = 0; i < settings.map_overlay.length; i++) {
-            if (settings.map_overlay[i] in overlapmaps)
-                overlapmaps[settings.map_overlay[i]].setVisible(settings.map_overlay[i] in overlapmaps);
-        }
+    for (const overlay of settings.map_overlay) {
+        if (overlay in overlapmaps) overlapmaps[overlay].setVisible(true);
     }
 
     const attributions = activeTileLayer.getSource().getAttributions();
@@ -1451,15 +1532,11 @@ const handleClick = function (pixel, target, event) {
         function (feature) { if ('ship' in feature || 'plane' in feature || 'link' in feature || 'binary' in feature) { return feature; } }, { hitTolerance: 10 });
 
     let included = feature && 'ship' in feature && feature.ship.mmsi in shipsDB;
-    let included_plane = feature && 'plane' in feature && feature.plane.hexident in planesDB;
 
     if (event.originalEvent.shiftKey || measure.isActive()) {
-        const shipMmsi = (feature && 'ship' in feature && feature.ship.mmsi in shipsDB) ? feature.ship.mmsi : null;
-        measure.handleMapClick(shipMmsi, () => ol.proj.toLonLat(map.getCoordinateFromPixel(pixel)));
+        measure.handleMapClick(included ? feature.ship.mmsi : null, () => ol.proj.toLonLat(map.getCoordinateFromPixel(pixel)));
         return;
     }
-
-
 
     if (feature && 'link' in feature && !included) {
         window.open(feature.link, '_blank');
@@ -1468,14 +1545,12 @@ const handleClick = function (pixel, target, event) {
         closeSettings();
         showBinaryMessageDialog(feature);
         return;
-    } else if (feature && 'ship' in feature || included) {
-
+    } else if (feature && 'ship' in feature) {
         closeDialog();
         closeSettings();
         showShipcard('ship', feature.ship.mmsi, pixel);
     }
-    else if (feature && 'plane' in feature || included_plane) {
-
+    else if (feature && 'plane' in feature) {
         closeDialog();
         closeSettings();
         showShipcard('plane', feature.plane.hexident, pixel);
@@ -1583,13 +1658,13 @@ function toggleLabel() {
     redrawMap();
 }
 
-function setMetrics(s) {
+function setMetrics(s, notify = true) {
     if (s.toUpperCase() == "DEFAULT") settings.metric = "DEFAULT";
     else if (s.toUpperCase() == "METRIC") settings.metric = "SI";
     else if (s.toUpperCase() == "IMPERIAL") settings.metric = "IMPERIAL";
     else settings.metric = "DEFAULT";
 
-    showNotification("Switched units to " + s);
+    if (notify) showNotification("Switched units to " + s);
     saveSettings();
 
     refresh_data();
@@ -1636,8 +1711,6 @@ function updateMarkerCountTooltip() {
                     cAton++;
                     break;
                 case ShippingClass.PLANE:
-                    cHeli++;
-                    break;
                 case ShippingClass.HELICOPTER:
                     cHeli++;
                     break;
@@ -1703,7 +1776,6 @@ function updateSortMarkers() {
 }
 
 function compareNumber(valueA, valueB) {
-    if (valueA == null && valueB == null) return settings.tableside_order === "ascending" ? 1 : -1;
     if (valueA == null) return settings.tableside_order === "ascending" ? 1 : -1;
     if (valueB == null) return settings.tableside_order === "ascending" ? -1 : 1;
     return valueA - valueB;
@@ -1760,7 +1832,7 @@ function updateTablecard() {
         const shipName = String(getShipName(ship) || ship.mmsi);
         if (filter && !shipName.toLowerCase().includes(filter)) continue;
 
-        const dist = ship.distance ? (getDistanceVal(ship.distance) + (ship.repeat > 0 ? " (R)" : "")) : "";
+        const dist = ship.distance != null ? (getDistanceVal(ship.distance) + (ship.repeat > 0 ? " (R)" : "")) : "";
         const distTitle = ship.distance != null ? getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "") : "";
         const spd = ship.speed != null ? getSpeedVal(ship.speed) : "";
         const spdTitle = ship.speed != null ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : "";
@@ -1874,10 +1946,12 @@ function setRangeTimePeriod(v) {
     fetchRange(true).then(() => drawRange());
 }
 
-async function toggleRange() {
-    const isSationSet = station && Object.hasOwn(station, "lat") && Object.hasOwn(station, "lon") && !(station.lat == 0 && station.lon == 0);
+function stationHasLocation() {
+    return station && Object.hasOwn(station, "lat") && Object.hasOwn(station, "lon") && !(station.lat == 0 && station.lon == 0);
+}
 
-    if (!config.features.share_location || !isSationSet) {
+async function toggleRange() {
+    if (!config.features.share_location || !stationHasLocation()) {
         showDialog("Error", "Unable to show range as station location not available");
         settings.show_range = false;
     } else settings.show_range = !settings.show_range;
@@ -1896,24 +1970,22 @@ function setFading(b) {
 
 function toggleFading() {
     settings.fading = !settings.fading;
+    saveSettings();
+    redrawMap();
 }
 
+const GRAPH_KINDS = {
+    signal: { setting: 'show_signal_graphs', header: 'Signal Level' },
+    ppm: { setting: 'show_ppm_graphs', header: 'Frequency Shift' }
+};
+
 function setGraphVisibility(type, show, save = true) {
-    if (type === 'signal') {
-        settings.show_signal_graphs = show;
-        // Toggle signal level graphs
+    const kind = GRAPH_KINDS[type];
+    if (kind) {
+        settings[kind.setting] = show;
         document.querySelectorAll('.graph-panel').forEach(panel => {
             const header = panel.querySelector('header');
-            if (header && header.textContent.includes('Signal Level')) {
-                panel.style.display = show ? '' : 'none';
-            }
-        });
-    } else if (type === 'ppm') {
-        settings.show_ppm_graphs = show;
-        // Toggle frequency shift graphs
-        document.querySelectorAll('.graph-panel').forEach(panel => {
-            const header = panel.querySelector('header');
-            if (header && header.textContent.includes('Frequency Shift')) {
+            if (header && header.textContent.includes(kind.header)) {
                 panel.style.display = show ? '' : 'none';
             }
         });
@@ -1922,11 +1994,8 @@ function setGraphVisibility(type, show, save = true) {
 }
 
 function toggleGraphVisibility(type) {
-    if (type === 'signal') {
-        setGraphVisibility('signal', !settings.show_signal_graphs);
-    } else if (type === 'ppm') {
-        setGraphVisibility('ppm', !settings.show_ppm_graphs);
-    }
+    const kind = GRAPH_KINDS[type];
+    if (kind) setGraphVisibility(type, !settings[kind.setting]);
 }
 
 function showPlugins() {
@@ -1957,9 +2026,7 @@ function showServerErrors() {
 }
 
 async function fetchRange(forcefetch = false) {
-    const isSationSet = station && Object.hasOwn(station, "lat") && Object.hasOwn(station, "lon") && !(station.lat == 0 && station.lon == 0);
-
-    if (!isSationSet || !settings.show_range) {
+    if (!stationHasLocation() || !settings.show_range) {
         settings.show_range = false;
         range_update_time = undefined;
         return;
@@ -2018,26 +2085,14 @@ async function fetchRange(forcefetch = false) {
     const deltaNorth = calcOffset1M([station.lon, station.lat], 0)[0];
     const deltaEast = calcOffset1M([station.lon, station.lat], 90)[1];
 
+    const radialPoint = (r, k) => [
+        station.lon + ((r * deltaEast * 1000) / 0.5399568) * Math.sin(((k * 2) / N) * Math.PI),
+        station.lat + ((r * deltaNorth * 1000) / 0.5399568) * Math.cos(((k * 2) / N) * Math.PI),
+    ];
+
     for (let i = 0; i < N; i++) {
-        range_outline.push([
-            station.lon + ((range[i] * deltaEast * 1000) / 0.5399568) * Math.sin(((i * 2) / N) * Math.PI),
-            station.lat + ((range[i] * deltaNorth * 1000) / 0.5399568) * Math.cos(((i * 2) / N) * Math.PI),
-        ]);
-
-        range_outline.push([
-            station.lon + ((range[i] * deltaEast * 1000) / 0.5399568) * Math.sin((((i + 1) * 2) / N) * Math.PI),
-            station.lat + ((range[i] * deltaNorth * 1000) / 0.5399568) * Math.cos((((i + 1) * 2) / N) * Math.PI),
-        ]);
-
-        range_outline_short.push([
-            station.lon + ((range_short[i] * deltaEast * 1000) / 0.5399568) * Math.sin(((i * 2) / N) * Math.PI),
-            station.lat + ((range_short[i] * deltaNorth * 1000) / 0.5399568) * Math.cos(((i * 2) / N) * Math.PI),
-        ]);
-
-        range_outline_short.push([
-            station.lon + ((range_short[i] * deltaEast * 1000) / 0.5399568) * Math.sin((((i + 1) * 2) / N) * Math.PI),
-            station.lat + ((range_short[i] * deltaNorth * 1000) / 0.5399568) * Math.cos((((i + 1) * 2) / N) * Math.PI),
-        ]);
+        range_outline.push(radialPoint(range[i], i), radialPoint(range[i], i + 1));
+        range_outline_short.push(radialPoint(range_short[i], i), radialPoint(range_short[i], i + 1));
     }
 
     range_outline = range_outline.map(point => ol.proj.fromLonLat(point));
@@ -2098,22 +2153,10 @@ function removeDistanceCircles() {
 
 
 function distanceCircleStyleFunction(feature) {
-    let clr, width;
-
-    if (feature === hover_feature) {
-        clr = 'orange';
-        clr = settings.distance_circle_color;
-
-        width = 5;
-    } else {
-        clr = settings.distance_circle_color;
-        width = 1;
-    }
-
     return new ol.style.Style({
         stroke: new ol.style.Stroke({
-            color: clr,
-            width: width
+            color: settings.distance_circle_color,
+            width: feature === hover_feature ? 5 : 1
         })
     });
 }
@@ -2191,7 +2234,8 @@ async function fetchBinary() {
                 }
 
                 const exists = binaryDB[mmsi].ship_messages.some(m =>
-                    m.timestamp === msg.timestamp && m.dac === msg.dac && m.fi === msg.fi);
+                    m.timestamp === msg.timestamp && m.message?.dac === msg.message.dac &&
+                    (m.message?.fid ?? m.message?.fi) === (msg.message.fid ?? msg.message.fi));
                 if (exists) return;
 
                 msg.formattedTime = formatTime(msg.timestamp);
@@ -2237,22 +2281,28 @@ async function fetchShips(noDoubleFetch = true) {
         return false;
     }
 
-    let ships = {};
-
     isFetchingShips = true;
-    let response;
     try {
-        response = await fetch("api/ships_array.json?receiver=" + activeReceiver + (shipsSince > 0 ? "&since=" + shipsSince : ""));
-    } catch (error) {
-
-        console.log("failed loading ships: " + error);
-        return false;
+        return await fetchShipsBody();
     } finally {
         isFetchingShips = false;
     }
-    ships = await response.json();
+}
 
+async function fetchShipsBody() {
+    let ships = {};
 
+    try {
+        const response = await fetch("api/ships_array.json?receiver=" + activeReceiver + (shipsSince > 0 ? "&since=" + shipsSince : ""));
+        if (!response.ok) {
+            console.log("failed loading ships: HTTP " + response.status);
+            return false;
+        }
+        ships = await response.json();
+    } catch (error) {
+        console.log("failed loading ships: " + error);
+        return false;
+    }
 
     const dynamicKeys = [
         "mmsi", "lat", "lon", "distance", "bearing",
@@ -2284,6 +2334,7 @@ async function fetchShips(noDoubleFetch = true) {
             const s = Object.fromEntries(staticKeys.map((k, i) => [k, v[i]]));
             s.shipname = sanitizeString(s.shipname);
             s.callsign = sanitizeString(s.callsign);
+            s.destination = sanitizeString(s.destination || "");
             s.eni = sanitizeString(s.eni || "");
             s.vendorid = sanitizeString(s.vendorid || "");
             const mmsi = s.mmsi;
@@ -2301,14 +2352,11 @@ async function fetchShips(noDoubleFetch = true) {
             const s = Object.fromEntries(dynamicKeys.map((k, i) => [k, v[i]]));
 
             const flags = s.flags;
-            s.validated = flags & 3;
-            s.validated2 = (flags & 3) == 2 ? -1 : flags & 3;
+            s.validated = (flags & 3) == 2 ? -1 : flags & 3;
             s.repeat = (flags >> 2) & 3;
             s.virtual_aid = (flags >> 4) & 1;
             s.approx = (flags >> 5) & 1;
-            s.approximate = s.approx;
             s.channels = (flags >> 6) & 0b1111;
-            s.channels2 = (flags >> 6) & 0b1111;
             s.cs_unit = (flags >> 10) & 3;
             s.raim = (flags >> 12) & 3;
             s.dte = (flags >> 14) & 3;
@@ -2500,10 +2548,6 @@ function showMenu() {
     }
 }
 
-function hideMenuifSmall() {
-    hideMenu();
-}
-
 function toggleMenu() {
     document.getElementById("menubar").classList.toggle("visible");
     document.getElementById("menubar_mini").classList.toggle("showflex");
@@ -2546,8 +2590,10 @@ function setBinaryDisplay(v) {
     redrawMap();
 }
 
-function setBinaryCategories(shown) {
-    settings.binary_exclude = BINARY_CATEGORIES.filter(c => !shown.includes(c));
+function setBinaryCategory(cat, shown) {
+    const excluded = settings.binary_exclude.filter(c => c !== cat);
+    if (!shown) excluded.push(cat);
+    settings.binary_exclude = excluded;
     saveSettings();
 
     binarySince = 0;
@@ -2577,29 +2623,13 @@ function applyColorToAllTracks(color) {
 }
 
 function updateTrackColorInputs() {
-    document.getElementById("settings_track_cargo_color").value = settings.track_class_colors[ShippingClass.CARGO];
-    document.getElementById("settings_track_b_color").value = settings.track_class_colors[ShippingClass.B];
-    document.getElementById("settings_track_passenger_color").value = settings.track_class_colors[ShippingClass.PASSENGER];
-    document.getElementById("settings_track_tanker_color").value = settings.track_class_colors[ShippingClass.TANKER];
-    document.getElementById("settings_track_fishing_color").value = settings.track_class_colors[ShippingClass.FISHING];
-    document.getElementById("settings_track_highspeed_color").value = settings.track_class_colors[ShippingClass.HIGHSPEED];
-    document.getElementById("settings_track_special_color").value = settings.track_class_colors[ShippingClass.SPECIAL];
-    document.getElementById("settings_track_aton_color").value = settings.track_class_colors[ShippingClass.ATON];
-    document.getElementById("settings_track_station_color").value = settings.track_class_colors[ShippingClass.STATION];
-    document.getElementById("settings_track_sartepirb_color").value = settings.track_class_colors[ShippingClass.SARTEPIRB];
-    document.getElementById("settings_track_plane_color").value = settings.track_class_colors[ShippingClass.PLANE];
-    document.getElementById("settings_track_helicopter_color").value = settings.track_class_colors[ShippingClass.HELICOPTER];
-    document.getElementById("settings_track_other_color").value = settings.track_class_colors[ShippingClass.OTHER];
-    document.getElementById("settings_track_unknown_color").value = settings.track_class_colors[ShippingClass.UNKNOWN];
-}
-
-
-function shipcardismax() {
-    return document.getElementById("shipcard").classList.contains("shipcard-ismax");
+    for (const key of Object.keys(ShippingClass)) {
+        document.getElementById(`settings_track_${key.toLowerCase()}_color`).value = settings.track_class_colors[ShippingClass[key]];
+    }
 }
 
 function shipcardselect(e) {
-    if (shipcardismax()) {
+    if (isShipcardMax()) {
         e.classList.toggle("shipcard-max-only");
         e.classList.toggle("shipcard-row-selected");
     } else toggleShipcardSize();
@@ -2617,7 +2647,7 @@ function toggleShipcardSize() {
 
     let e = document.getElementById("shipcard_content").children;
 
-    if (shipcardismax()) {
+    if (isShipcardMax()) {
         for (let i = 0; i < e.length; i++) {
             if (
                 (e[i].classList.contains("shipcard-max-only") && e[i].classList.contains("shipcard-row-selected")) ||
@@ -2645,6 +2675,16 @@ function toggleShipcardSize() {
     }
 }
 
+function syncReceiverUI() {
+    const btn = document.getElementById("receiver-btn");
+    if (btn) btn.classList.toggle("active", activeReceiver !== 0);
+    const dd = document.getElementById("receiver-dropdown");
+    if (!dd) return;
+    for (const item of dd.children) {
+        item.classList.toggle("active", parseInt(item.dataset.idx) === activeReceiver);
+    }
+}
+
 function updateReceiverSelect(receivers) {
     const wrap = document.getElementById("receiver-btn-wrap");
     if (!wrap) return;
@@ -2653,25 +2693,19 @@ function updateReceiverSelect(receivers) {
         return;
     }
     wrap.style.display = "flex";
-    const btn = document.getElementById("receiver-btn");
-    if (btn) btn.classList.toggle("active", activeReceiver !== 0);
     const dd = document.getElementById("receiver-dropdown");
-    if (!dd) return;
-    if (dd.children.length !== receivers.length) {
+    if (dd && dd.children.length !== receivers.length) {
         dd.innerHTML = "";
         for (const r of receivers) {
             const item = document.createElement("div");
-            item.className = "receiver-dropdown-item" + (r.idx === activeReceiver ? " active" : "");
+            item.className = "receiver-dropdown-item";
             item.dataset.idx = r.idx;
             item.textContent = r.label;
             item.onclick = () => { onReceiverChange(r.idx); closeReceiverDropdown(); };
             dd.appendChild(item);
         }
-    } else {
-        for (const item of dd.children) {
-            item.classList.toggle("active", parseInt(item.dataset.idx) === activeReceiver);
-        }
     }
+    syncReceiverUI();
 }
 
 function toggleReceiverDropdown(event) {
@@ -2690,14 +2724,10 @@ function onReceiverChange(idx) {
     activeReceiver = parseInt(idx, 10) || 0;
     shipsSince = 0;
     binarySince = 0;
-    const btn = document.getElementById("receiver-btn");
-    if (btn) btn.classList.toggle("active", activeReceiver !== 0);
-    const dd = document.getElementById("receiver-dropdown");
-    if (dd) {
-        for (const item of dd.children) {
-            item.classList.toggle("active", parseInt(item.dataset.idx) === activeReceiver);
-        }
-    }
+    range_update_time = null;
+    lastPathFetch = 0;
+    paths = {};
+    syncReceiverUI();
     refresh_data();
 }
 
@@ -2705,16 +2735,13 @@ function onReceiverChange(idx) {
 
 // fetches main statistics from the server
 async function fetchStatistics() {
-    let response;
     try {
-        response = await fetch("api/stat.json?receiver=" + activeReceiver);
+        const response = await fetch("api/stat.json?receiver=" + activeReceiver);
+        if (!response.ok) return;
+        return await response.json();
     } catch (error) {
-
         return;
     }
-    let statistics = await response.json();
-
-    return statistics;
 }
 
 function updateStat(stat, tf) {
@@ -2834,22 +2861,17 @@ document.addEventListener('click', function (event) {
 
 function getTooltipContent(ship) {
     let content = '<div class="tooltip-card">' +
-        getFlagStyled(ship.country, "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%") +
+        getFlagStyled(ship.country, TOOLTIP_FLAG_STYLE) +
         '<div>' +
         (getShipName(ship) || ship.mmsi) + ' at ' + getSpeedVal(ship.speed) + ' ' + getSpeedUnit() + '<br>' +
         'Received ' + getDeltaTimeVal(shipsSince - ship.last_signal) + ' ago' +
         '</div>' +
         '</div>';
 
-    if (ship.mmsi in binaryDB && binaryDB[ship.mmsi].ship_messages &&
-        binaryDB[ship.mmsi].ship_messages.length > 0) {
+    const messages = shipBinaryMessages(ship.mmsi);
+    if (messages.length > 0) {
 
-        const messages = binaryDB[ship.mmsi].ship_messages;
-
-        const meteoMessages = messages.filter(msg =>
-            msg.message && msg.message.dac == 1 &&
-            (msg.message.fid == 31 || msg.message.fi == 31)
-        );
+        const meteoMessages = messages.filter(isMeteoMessage);
 
         if (meteoMessages.length > 0) {
             content += getBinaryMessageContent(meteoMessages);
@@ -2891,7 +2913,7 @@ function getTooltipContentPlane(plane) {
     const altitude = plane.airborne == 1 ? (plane.altitude ? Math.round(plane.altitude) + ' ft' : '-') : 'ground';
     const speed = plane.speed ? Math.round(plane.speed) : '-';
     return '<div class="tooltip-card">' +
-        getFlagStyled(plane.country, "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%") +
+        getFlagStyled(plane.country, TOOLTIP_FLAG_STYLE) +
         '<div>' +
         (plane.callsign || plane.hexident) + ' at ' + altitude + '/' + speed + ' kts<br>' +
         'Received ' + getDeltaTimeVal(planesSince - plane.last_signal) + ' ago' +
@@ -2917,11 +2939,6 @@ function getShipCSSClassAndStyle(ship, opacity = 1) {
     return { class: "sprites", style: style, hint: ship.hint };
 }
 
-function getIconCSS(ship, opacity = 1) {
-    const { class: classValue, style, hint } = getShipCSSClassAndStyle(ship, opacity);
-    return `class="${classValue}" style="${style}" title="${hint}"`;
-}
-
 function getTableShiptype(ship, opacity = 1) {
     if (ship == null) return "";
 
@@ -2932,44 +2949,29 @@ function getTableShiptype(ship, opacity = 1) {
 }
 
 
-function notImplemented() {
-    showDialog("Warning", "Not implemented yet");
+function syncCircleFeature(feature, raw, mmsi, styleFn) {
+    if (feature) {
+        if (raw && raw.lon && raw.lat) {
+            feature.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([raw.lon, raw.lat])));
+            return feature;
+        }
+        extraVector.removeFeature(feature);
+        return undefined;
+    }
+
+    if (raw && raw.lon && raw.lat) {
+        feature = new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat([raw.lon, raw.lat])));
+        feature.setStyle(styleFn);
+        feature.mmsi = mmsi;
+        extraVector.addFeature(feature);
+        return feature;
+    }
+    return undefined;
 }
 
-
-
 function updateFocusMarker() {
-    const shipRaw = card_type == 'ship' ? shipsDB[card_mmsi]?.raw : null;
-    const planeRaw = card_type == 'plane' ? planesDB[card_mmsi]?.raw : null;
-
-    if (selectCircleFeature) {
-        if (shipRaw && shipRaw.lon && shipRaw.lat) {
-            selectCircleFeature.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([shipRaw.lon, shipRaw.lat])));
-            return;
-        }
-        else if (planeRaw && planeRaw.lon && planeRaw.lat) {
-            selectCircleFeature.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([planeRaw.lon, planeRaw.lat])));
-            return;
-        }
-        else {
-            extraVector.removeFeature(selectCircleFeature);
-            selectCircleFeature = undefined;
-            return;
-        }
-    }
-
-    if (shipRaw && shipRaw.lon && shipRaw.lat) {
-        selectCircleFeature = new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat([shipRaw.lon, shipRaw.lat])));
-        selectCircleFeature.setStyle(selectCircleStyleFunction);
-        selectCircleFeature.mmsi = card_mmsi;
-        extraVector.addFeature(selectCircleFeature);
-    }
-    else if (planeRaw && planeRaw.lon && planeRaw.lat) {
-        selectCircleFeature = new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat([planeRaw.lon, planeRaw.lat])));
-        selectCircleFeature.setStyle(selectCircleStyleFunction);
-        selectCircleFeature.mmsi = card_mmsi;
-        extraVector.addFeature(selectCircleFeature);
-    }
+    const raw = card_type == 'ship' ? shipsDB[card_mmsi]?.raw : card_type == 'plane' ? planesDB[card_mmsi]?.raw : null;
+    selectCircleFeature = syncCircleFeature(selectCircleFeature, raw, card_mmsi, selectCircleStyleFunction);
 }
 
 const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
@@ -3054,39 +3056,6 @@ function toggleAttribution() {
     foldout.style.display = foldout.style.display === 'block' ? 'none' : 'block';
 }
 
-function getTooltipContentBinary(mmsiOrBinary) {
-    if (typeof mmsiOrBinary === 'number' || typeof mmsiOrBinary === 'string') {
-        const mmsi = Number(mmsiOrBinary);
-        if (mmsi in binaryDB && binaryDB[mmsi].ship_messages && binaryDB[mmsi].ship_messages.length > 0) {
-            const meteoMessages = binaryDB[mmsi].ship_messages.filter(msg =>
-                msg.message &&
-                msg.message.dac == 1 &&
-                (msg.message.fid == 31 || msg.message.fi == 31)
-            );
-
-            if (meteoMessages.length > 0) {
-                meteoMessages.sort((a, b) => b.timestamp - a.timestamp);
-
-                let content = '';
-
-                meteoMessages.forEach((meteoMsg, index) => {
-                    if (index > 0) {
-                        content += '<hr style="margin: 12px 0; border: 0; border-top: 1px dashed rgba(255,255,255,0.8);">';
-                    }
-
-                    // Add the individual message content
-                    content += getBinaryMessageContent(meteoMsg);
-                });
-
-                return content;
-            }
-        }
-        return ''; // No meteorological messages found
-    }
-
-    return getBinaryMessageContent(mmsiOrBinary);
-}
-
 function getBinaryMessageContent(binary, includeRaw = false) {
     const messages = Array.isArray(binary) ? binary : [binary];
 
@@ -3111,21 +3080,16 @@ function getBinaryMessageContent(binary, includeRaw = false) {
     }
     content += '</div>';
 
-    const row = (label, value) =>
-        `<div style="display: flex; justify-content: space-between; padding: 1px 0; white-space: nowrap;">` +
-        `<span style="font-size: 11px; opacity: 0.6; margin-right: 12px;">${label}</span>` +
-        `<span style="font-size: 11px; font-weight: bold;">${value}</span></div>`;
-
     // Wind
     if ('wspeed' in msg && msg.wspeed != null) {
         let val = msg.wspeed.toFixed(1) + ' kts';
         if ('wdir' in msg && msg.wdir != null && msg.wdir !== 360) val += ' / ' + msg.wdir + '&deg;';
-        content += row('Wind', val);
+        content += meteoRow('Wind', val);
     }
 
     // Air temperature
     if ('airtemp' in msg && msg.airtemp != null) {
-        content += row('Air', msg.airtemp.toFixed(1) + '&deg;C');
+        content += meteoRow('Air', msg.airtemp.toFixed(1) + '&deg;C');
     }
 
     // Pressure
@@ -3134,7 +3098,7 @@ function getBinaryMessageContent(binary, includeRaw = false) {
         if ('pressuretend' in msg && msg.pressuretend != null) {
             val += ' (' + ['steady', 'decreasing', 'increasing'][msg.pressuretend] + ')';
         }
-        content += row('Pressure', val);
+        content += meteoRow('Pressure', val);
     }
 
     // Water current
@@ -3143,17 +3107,17 @@ function getBinaryMessageContent(binary, includeRaw = false) {
     if (currentSpeed != null) {
         let val = currentSpeed.toFixed(1) + ' kts';
         if (currentDir != null && currentDir !== 360) val += ' / ' + currentDir + '&deg;';
-        content += row('Current', val);
+        content += meteoRow('Current', val);
     }
 
     // Water level
     if ('waterlevel' in msg && msg.waterlevel != null) {
-        content += row('Water Level', msg.waterlevel.toFixed(2) + ' m');
+        content += meteoRow('Water Level', msg.waterlevel.toFixed(2) + ' m');
     }
 
     // Water temperature
     if ('watertemp' in msg && msg.watertemp != null) {
-        content += row('Water', msg.watertemp.toFixed(1) + '&deg;C');
+        content += meteoRow('Water', msg.watertemp.toFixed(1) + '&deg;C');
     }
 
     // Waves
@@ -3161,7 +3125,7 @@ function getBinaryMessageContent(binary, includeRaw = false) {
         let val = msg.waveheight.toFixed(1) + ' m';
         if ('wavedir' in msg && msg.wavedir != null && msg.wavedir !== 360) val += ' / ' + msg.wavedir + '&deg;';
         if ('waveperiod' in msg && msg.waveperiod != null) val += ', ' + msg.waveperiod + 's';
-        content += row('Wave', val);
+        content += meteoRow('Wave', val);
     }
 
     // Swell
@@ -3169,12 +3133,12 @@ function getBinaryMessageContent(binary, includeRaw = false) {
         let val = msg.swellheight.toFixed(1) + ' m';
         if ('swelldir' in msg && msg.swelldir != null && msg.swelldir !== 360) val += ' / ' + msg.swelldir + '&deg;';
         if ('swellperiod' in msg && msg.swellperiod != null) val += ', ' + msg.swellperiod + 's';
-        content += row('Swell', val);
+        content += meteoRow('Swell', val);
     }
 
     // Visibility
     if ('visibility' in msg && msg.visibility != null) {
-        content += row('Visibility', msg.visibility.toFixed(1) + ' nm');
+        content += meteoRow('Visibility', msg.visibility.toFixed(1) + ' nm');
     }
 
     if (includeRaw) {
@@ -3188,16 +3152,33 @@ function getBinaryMessageContent(binary, includeRaw = false) {
     return content;
 }
 
+const meteoRow = (label, value) =>
+    `<div style="display: flex; justify-content: space-between; padding: 1px 0; white-space: nowrap;">` +
+    `<span style="font-size: 11px; opacity: 0.6; margin-right: 12px;">${label}</span>` +
+    `<span style="font-size: 11px; font-weight: bold;">${value}</span></div>`;
+
+function fiOf(m) {
+    return m.fid != null ? m.fid : m.fi;
+}
+
+function shipBinaryMessages(mmsi) {
+    return (mmsi != null && binaryDB[mmsi]?.ship_messages) || [];
+}
+
 function isInlandMessage(msg) {
     if (!msg.message) return false;
-    const fi = msg.message.fid != null ? msg.message.fid : msg.message.fi;
-    return msg.message.dac == 200 && fi == 55;
+    return msg.message.dac == 200 && fiOf(msg.message) == 55;
 }
 
 function isTextMessage(msg) {
     if (!msg.message) return false;
-    const fi = msg.message.fid != null ? msg.message.fid : msg.message.fi;
+    const fi = fiOf(msg.message);
     return msg.message.dac == 1 && (fi == 0 || fi == 29 || fi == 30);
+}
+
+function isMeteoMessage(msg) {
+    if (!msg.message) return false;
+    return msg.message.dac == 1 && fiOf(msg.message) == 31;
 }
 
 const BINARY_CATEGORIES = ['data', 'inland', 'text'];
@@ -3216,8 +3197,7 @@ function binaryAnyShown() {
 
 function getTextMessageContent(msg) {
     const m = msg.message;
-    const fi = m.fid != null ? m.fid : m.fi;
-    const kind = m.type == 6 || fi == 30 ? "Text message (addressed)" : "Text message (broadcast)";
+    const kind = m.type == 6 || fiOf(m) == 30 ? "Text message (addressed)" : "Text message (broadcast)";
 
     let content = '<div class="binary-message-details">';
     content += `<div><strong>${kind}</strong></div>`;
@@ -3253,19 +3233,14 @@ function getInlandMessageContent(binary) {
 
     const msg = entry.message;
 
-    const row = (label, value) =>
-        `<div style="display: flex; justify-content: space-between; padding: 1px 0; white-space: nowrap;">` +
-        `<span style="font-size: 11px; opacity: 0.6; margin-right: 12px;">${label}</span>` +
-        `<span style="font-size: 11px; font-weight: bold;">${value}</span></div>`;
-
     let content = '<div class="meteo-tooltip">';
     content += `<div style="font-size: 11px; color: #FFA500; padding: 4px 0 3px; margin-bottom: 2px;">`;
     content += `<span style="font-size: 11px;">${entry.formattedTime} - Persons on Board</span>`;
     content += '</div>';
 
-    if (msg.crew_count != null) content += row('Crew', msg.crew_count);
-    if (msg.passenger_count != null) content += row('Passengers', msg.passenger_count);
-    if (msg.shipboard_personnel_count != null) content += row('Personnel', msg.shipboard_personnel_count);
+    if (msg.crew_count != null) content += meteoRow('Crew', msg.crew_count);
+    if (msg.passenger_count != null) content += meteoRow('Passengers', msg.passenger_count);
+    if (msg.shipboard_personnel_count != null) content += meteoRow('Personnel', msg.shipboard_personnel_count);
 
     content += '</div>';
     return content;
@@ -3273,7 +3248,7 @@ function getInlandMessageContent(binary) {
 
 const startHover = function (type, mmsi, pixel, feature) {
 
-    if (type != 'ship' && type != 'tooltip' && type != 'plane' && type != 'binary') return;
+    if (type != 'ship' && type != 'tooltip' && type != 'plane') return;
 
     if (mmsi !== hoverMMSI || hoverType !== type) {
         stopHover();
@@ -3308,39 +3283,12 @@ const startHover = function (type, mmsi, pixel, feature) {
 }
 
 function updateHoverMarker() {
-
-    const shipRaw = hoverType == 'ship' ? shipsDB[hoverMMSI]?.raw : null;
-    const planeRaw = hoverType == 'plane' ? planesDB[hoverMMSI]?.raw : null;
-
-    if (hoverCircleFeature) {
-        if (shipRaw && shipRaw.lon && shipRaw.lat) {
-            hoverCircleFeature.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([shipRaw.lon, shipRaw.lat])));
-            return;
-        }
-        else if (planeRaw && planeRaw.lon && planeRaw.lat) {
-            hoverCircleFeature.setGeometry(new ol.geom.Point(ol.proj.fromLonLat([planeRaw.lon, planeRaw.lat])));
-            return;
-        }
-        else {
-            extraVector.removeFeature(hoverCircleFeature);
-            hoverCircleFeature = undefined;
-            hoverMMSI = undefined;
-            hoverType = undefined;
-            return;
-        }
-    }
-
-    if (shipRaw && shipRaw.lon && shipRaw.lat) {
-        hoverCircleFeature = new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat([shipRaw.lon, shipRaw.lat])));
-        hoverCircleFeature.setStyle(hoverCircleStyleFunction);
-        hoverCircleFeature.mmsi = hoverMMSI;
-        extraVector.addFeature(hoverCircleFeature);
-    }
-    else if (planeRaw && planeRaw.lon && planeRaw.lat) {
-        hoverCircleFeature = new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat([planeRaw.lon, planeRaw.lat])));
-        hoverCircleFeature.setStyle(hoverCircleStyleFunction);
-        hoverCircleFeature.mmsi = hoverMMSI;
-        extraVector.addFeature(hoverCircleFeature);
+    const raw = hoverType == 'ship' ? shipsDB[hoverMMSI]?.raw : hoverType == 'plane' ? planesDB[hoverMMSI]?.raw : null;
+    const had = hoverCircleFeature != undefined;
+    hoverCircleFeature = syncCircleFeature(hoverCircleFeature, raw, hoverMMSI, hoverCircleStyleFunction);
+    if (had && !hoverCircleFeature) {
+        hoverMMSI = undefined;
+        hoverType = undefined;
     }
 }
 
@@ -3365,8 +3313,7 @@ function getFeature(pixel, target) {
     const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
         function (feature) { if ('ship' in feature || 'plane' in feature || 'tooltip' in feature || 'binary' in feature) { return feature; } }, { hitTolerance: 10 });
 
-    if (feature) return feature;
-    return undefined;
+    return feature;
 }
 
 const handlePointerMove = function (pixel, target) {
@@ -3417,10 +3364,7 @@ const handlePointerMove = function (pixel, target) {
             tooltipContent += '</div>';
 
             // Add meteo data if available
-            const meteoMessages = feature.binary_messages.filter(msg =>
-                msg.message && msg.message.dac == 1 &&
-                (msg.message.fid == 31 || msg.message.fi == 31)
-            );
+            const meteoMessages = feature.binary_messages.filter(isMeteoMessage);
 
             if (meteoMessages.length > 0) {
                 tooltipContent += getBinaryMessageContent(meteoMessages);
@@ -3536,7 +3480,7 @@ function loadSettings() {
         }
     }
     if (settings.activeReceiver) activeReceiver = settings.activeReceiver;
-    if (!shipcardismax()) toggleShipcardSize();
+    if (!isShipcardMax()) toggleShipcardSize();
 
     if (settings.shipcard_rows && settings.shipcard_rows.length > 0) {
         const rows = document.querySelectorAll(".shipcard-content-row");
@@ -3548,7 +3492,7 @@ function loadSettings() {
                 row.setAttribute("class", "mapcard-content-row shipcard-content-row shipcard-max-only");
             }
         });
-        if (settings.shipcard_max != shipcardismax()) {
+        if (settings.shipcard_max != isShipcardMax()) {
             toggleShipcardSize();
         }
     }
@@ -3823,7 +3767,7 @@ async function fetchTracks() {
 }
 
 function trackOptionString(mmsi) {
-    const hover_track = mmsi == hoverType == 'ship' && hoverMMSI && hover_enabled_track;
+    const hover_track = hoverType == 'ship' && mmsi == hoverMMSI && hover_enabled_track;
     const select_track = card_type == 'ship' && mmsi == card_mmsi && select_enabled_track;
     const track_shown = marker_tracks.has(Number(mmsi));
 
@@ -3874,19 +3818,14 @@ function updateMessageButton() {
     const iconElement = messageButton.querySelector('i.mail_icon');
     if (!iconElement) return;
 
-    const hasBinaryMsgs = card_mmsi &&
-        binaryDB &&
-        card_mmsi in binaryDB &&
-        binaryDB[card_mmsi].ship_messages &&
-        binaryDB[card_mmsi].ship_messages.length > 0;
+    const count = shipBinaryMessages(card_mmsi).length;
 
     const existingBadge = iconElement.querySelector('.message-badge');
     if (existingBadge) {
         existingBadge.remove();
     }
 
-    if (hasBinaryMsgs) {
-        const count = binaryDB[card_mmsi].ship_messages.length;
+    if (count > 0) {
         messageButton.style.display = '';
 
         const badge = document.createElement('span');
@@ -3898,26 +3837,30 @@ function updateMessageButton() {
     }
 }
 
+function showCardOutOfRange() {
+    document
+        .getElementById("shipcard_content")
+        .querySelectorAll("span:nth-child(2)")
+        .forEach((e) => (e.innerHTML = null));
+    document.getElementById("shipcard_header_title").innerHTML = "<b style='color:red;'>Out of range</b>";
+    document.getElementById("shipcard_header_flag").innerHTML = "";
+    document.getElementById("shipcard_mmsi").innerHTML = card_mmsi;
+
+    updateFocusMarker();
+}
+
 function populateShipcard() {
 
     if (card_type != 'ship') return;
 
     if (!(card_mmsi in shipsDB)) {
-        document
-            .getElementById("shipcard_content")
-            .querySelectorAll("span:nth-child(2)")
-            .forEach((e) => (e.innerHTML = null));
-        document.getElementById("shipcard_header_title").innerHTML = "<b style='color:red;'>Out of range</b>";
-        document.getElementById("shipcard_header_flag").innerHTML = "";
-        document.getElementById("shipcard_mmsi").innerHTML = card_mmsi;
-
-        updateFocusMarker();
+        showCardOutOfRange();
         return;
     }
 
     let ship = shipsDB[card_mmsi].raw;
 
-    document.getElementById("shipcard_header_flag").innerHTML = getFlagStyled(ship.country, "padding: 0px; margin: 0px; margin-right: 5px; box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5); font-size: 26px;");
+    document.getElementById("shipcard_header_flag").innerHTML = getFlagStyled(ship.country, CARD_FLAG_STYLE);
     document.getElementById("shipcard_header_title").innerHTML = (getShipName(ship) || ship.mmsi);
 
     setShipcardValidation(ship.validated);
@@ -3940,7 +3883,7 @@ function populateShipcard() {
         { id: "heading", u: "&deg", d: 0 },
         { id: "level", u: "dB", d: 1 },
         { id: "ppm", u: "ppm", d: 1 },
-    ].forEach((el) => (document.getElementById("shipcard_" + el.id).innerHTML = ship[el.id] ? Number(ship[el.id]).toFixed(el.d) + " " + el.u : null));
+    ].forEach((el) => (document.getElementById("shipcard_" + el.id).innerHTML = ship[el.id] != null ? Number(ship[el.id]).toFixed(el.d) + " " + el.u : null));
 
     document.getElementById("shipcard_country").innerHTML = getCountryName(ship.country);
     document.getElementById("shipcard_callsign").innerHTML = getCallSign(ship);
@@ -3961,17 +3904,17 @@ function populateShipcard() {
     document.getElementById("shipcard_status").innerHTML = getStatusVal(ship);
     document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(shipsSince - ship.last_signal);
     document.getElementById("shipcard_eta").innerHTML = ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
-    document.getElementById("shipcard_lat").innerHTML = ship.lat ? getLatValFormat(ship) : null;
-    document.getElementById("shipcard_lon").innerHTML = ship.lon ? getLonValFormat(ship) : null;
-    document.getElementById("shipcard_altitude").innerHTML = ship.altitude ? ship.altitude + " m" : null;
+    document.getElementById("shipcard_lat").innerHTML = ship.lat != null ? getLatValFormat(ship) : null;
+    document.getElementById("shipcard_lon").innerHTML = ship.lon != null ? getLonValFormat(ship) : null;
+    document.getElementById("shipcard_altitude").innerHTML = ship.altitude != null ? ship.altitude + " m" : null;
 
-    document.getElementById("shipcard_speed").innerHTML = ship.speed ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
-    document.getElementById("shipcard_distance").innerHTML = ship.distance ? (getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "")) : null;
+    document.getElementById("shipcard_speed").innerHTML = ship.speed != null ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
+    document.getElementById("shipcard_distance").innerHTML = ship.distance != null ? (getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "")) : null;
     document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDimVal(ship.draught) + " " + getDimUnit() : null;
     document.getElementById("shipcard_dimension").innerHTML = getShipDimension(ship);
     document.getElementById("shipcard_bluesign").innerHTML = ship.maneuver === 2 ? "Set" : (ship.maneuver === 1 ? "Not set" : null);
 
-    updateShipcardTrackOption(card_mmsi);
+    updateShipcardTrackOption();
     updateMessageButton();
     updateTechDetails(ship);
 
@@ -4077,30 +4020,22 @@ function getCategory(plane) {
         23: "Service"
     };
 
-    return categories[plane.category] || plane.category.toString() || "-";
+    return categories[plane.category] || plane.category.toString();
 }
 
 function populatePlanecard() {
 
     if (card_type != 'plane') return;
 
+    if (!(card_mmsi in planesDB)) {
+        showCardOutOfRange();
+        return;
+    }
+
     document
         .getElementById("shipcard_content")
         .querySelectorAll("span:nth-child(2)")
         .forEach((e) => (e.innerHTML = null));
-
-    if (!(card_mmsi in planesDB)) {
-        document
-            .getElementById("shipcard_content")
-            .querySelectorAll("span:nth-child(2)")
-            .forEach((e) => (e.innerHTML = null));
-        document.getElementById("shipcard_header_title").innerHTML = "<b style='color:red;'>Out of range</b>";
-        document.getElementById("shipcard_header_flag").innerHTML = "";
-        document.getElementById("shipcard_mmsi").innerHTML = card_mmsi;
-
-        updateFocusMarker();
-        return;
-    }
 
     let plane = planesDB[card_mmsi].raw;
 
@@ -4108,7 +4043,7 @@ function populatePlanecard() {
 
     // Set header
     document.getElementById("shipcard_header_title").textContent = (plane.callsign || getICAO(plane));
-    document.getElementById("shipcard_header_flag").innerHTML = getFlagStyled(plane.country, "padding: 0px; margin: 0px; margin-right: 5px; box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5); font-size: 26px;");
+    document.getElementById("shipcard_header_flag").innerHTML = getFlagStyled(plane.country, CARD_FLAG_STYLE);
 
     // Populate plane fields
     document.getElementById("shipcard_plane_country").innerHTML = getCountryName(plane.country);
@@ -4127,7 +4062,7 @@ function populatePlanecard() {
     document.getElementById("shipcard_plane_messages").textContent = plane.nMessages || "-";
     document.getElementById("shipcard_plane_downlink").textContent = getStringfromMsgType(plane.message_types);
     document.getElementById("shipcard_plane_TC").textContent = getStringfromMsgType(plane.message_subtypes);
-    document.getElementById("shipcard_plane_distance").innerHTML = plane.distance ? (getDistanceVal(plane.distance) + " " + getDistanceUnit()) : null;
+    document.getElementById("shipcard_plane_distance").innerHTML = plane.distance != null ? (getDistanceVal(plane.distance) + " " + getDistanceUnit()) : null;
 
     document.getElementById("shipcard_plane_last_group").innerHTML = getStringfromGroup(plane.last_group);
     document.getElementById("shipcard_plane_sources").innerHTML = getStringfromGroup(plane.group_mask);
@@ -4136,9 +4071,9 @@ function populatePlanecard() {
         { id: "heading", u: "&deg", d: 0 },
         { id: "level", u: "dB", d: 1 },
         { id: "bearing", u: "&deg", d: 0 }
-    ].forEach((el) => (document.getElementById("shipcard_plane_" + el.id).innerHTML = plane[el.id] ? Number(plane[el.id]).toFixed(el.d) + " " + el.u : null));
+    ].forEach((el) => (document.getElementById("shipcard_plane_" + el.id).innerHTML = plane[el.id] != null ? Number(plane[el.id]).toFixed(el.d) + " " + el.u : null));
 
-    updateShipcardTrackOption(card_mmsi);
+    updateShipcardTrackOption();
 }
 
 function shipcardMinIfMaxonMobile() {
@@ -4276,18 +4211,7 @@ function adjustMapForShipcard(pixel) {
         );
 
         if (isUnderShipcard) {
-            let newPixel = [...pixel];
-            let margin = 10; // Margin in pixels
-
-            if (shipcardRect.bottom + margin + 20 <= mapRect.bottom) { // 20 is an approximate marker height
-                newPixel[1] = shipcardRect.bottom + margin;
-            }
-            else if (shipcardRect.right + margin + 20 <= mapRect.right) { // 20 is an approximate marker width
-                newPixel[0] = shipcardRect.right + margin;
-            }
-            newPixel = pixel;
-
-            moveMapCenter(newPixel);
+            moveMapCenter(pixel);
         }
     }
 }
@@ -4744,15 +4668,7 @@ function redrawBinaryMessages() {
         // Cache all messages
         const allMessages = msgData.ship_messages;
 
-        // Check if the ship exists in shipsDB
-        const shipExists = mmsi in shipsDB;
-        const hasValidShipCoordinates = shipExists &&
-            shipsDB[mmsi].raw.lat !== null &&
-            shipsDB[mmsi].raw.lon !== null &&
-            shipsDB[mmsi].raw.lat !== 0 &&
-            shipsDB[mmsi].raw.lon !== 0 &&
-            shipsDB[mmsi].raw.lat < 90 &&
-            shipsDB[mmsi].raw.lon < 180;
+        const hasValidShipCoordinates = mmsi in shipsDB && hasValidCoords(shipsDB[mmsi].raw.lat, shipsDB[mmsi].raw.lon);
 
         if (hasValidShipCoordinates) {
             // Prepare arrays for messages to show at ship or at their own locations
@@ -4775,7 +4691,7 @@ function redrawBinaryMessages() {
                 const msgLon = msg.message_lon;
 
                 // Skip invalid coordinates
-                if (msgLat === 0 || msgLon === 0 || msgLat > 90 || msgLon > 180) return;
+                if (!hasValidCoords(msgLat, msgLon)) return;
 
                 // Simple distance calculation
                 const distanceThreshold = 0.05; // Approx 5km
@@ -4831,7 +4747,7 @@ function addMessageToGridCell(msg, mmsi, gridCells, gridSize) {
     const msgLon = msg.message_lon;
 
     // Skip invalid coordinates
-    if (msgLat === 0 || msgLon === 0 || msgLat > 90 || msgLon > 180) return;
+    if (!hasValidCoords(msgLat, msgLon)) return;
 
     // Create grid cell key for clustering
     const gridX = Math.floor(msgLon / gridSize);
@@ -4886,7 +4802,6 @@ function redrawMap() {
     markerFeatures = {};
 
     markerVector.clear();
-    binaryVector.clear();
     planeVector.clear();
     shapeVector.clear();
     labelVector.clear();
@@ -4900,7 +4815,7 @@ function redrawMap() {
 
     for (let [mmsi, entry] of Object.entries(shipsDB)) {
         let ship = entry.raw;
-        if (ship.lat != null && ship.lon != null && ship.lat != 0 && ship.lon != 0 && ship.lat < 90 && ship.lon < 180) {
+        if (hasValidCoords(ship.lat, ship.lon)) {
             getSprite(ship)
 
             const lon = ship.lon
@@ -4938,7 +4853,7 @@ function redrawMap() {
 
         for (let [hexident, entry] of Object.entries(planesDB)) {
             let plane = entry.raw;
-            if (plane.lat != null && plane.lon != null && plane.lat != 0 && plane.lon != 0 && plane.lat < 90 && plane.lon < 180) {
+            if (hasValidCoords(plane.lat, plane.lon)) {
                 getPlaneSprite(plane)
 
                 const lon = plane.lon
@@ -5025,7 +4940,7 @@ function redrawMap() {
     updateMarkerCount();
     updateTablecard();
 
-    drawStation(station);
+    drawStation();
     updateDistanceCircles();
 
 }
@@ -5131,8 +5046,9 @@ function updateSettingsTab() {
     document.getElementById("settings_show_labels").value = settings.show_labels.toLowerCase();
 
     document.getElementById("settings_binary_messages").value = settings.binary_messages;
-    Array.from(document.getElementById("settings_binary_categories").options).forEach(
-        o => { o.selected = !settings.binary_exclude.includes(o.value); });
+    for (const cat of BINARY_CATEGORIES) {
+        document.getElementById("settings_binary_cat_" + cat).checked = !settings.binary_exclude.includes(cat);
+    }
 
     document.getElementById("settings_shipoutline_border").value = settings.shipoutline_border;
     document.getElementById("settings_shipoutline_inner").value = settings.shipoutline_inner;
@@ -5152,13 +5068,13 @@ function updateSettingsTab() {
     document.getElementById("settings_track_trash_threshold").value = settings.track_trash_threshold;
 
     // Update all slider display values
-    updateIconScaleDisplay(settings.icon_scale);
-    updateMapOpacityDisplay(settings.map_opacity);
-    updateTrackWeightDisplay(settings.track_weight);
-    updateTrackTrashThresholdDisplay(settings.track_trash_threshold);
-    updateTooltipFontSizeDisplay(settings.tooltipLabelFontSize);
-    updateShipoutlineOpacityDisplay(settings.shipoutline_opacity);
-    updateCircleScaleDisplay(settings.circle_scale || 6.0);
+    updateSliderDisplay('iconScale', settings.icon_scale);
+    updateSliderDisplay('mapOpacity', settings.map_opacity);
+    updateSliderDisplay('trackWeight', settings.track_weight);
+    updateSliderDisplay('trackTrashThreshold', settings.track_trash_threshold);
+    updateSliderDisplay('tooltipFontSize', settings.tooltipLabelFontSize);
+    updateSliderDisplay('shipoutlineOpacity', settings.shipoutline_opacity);
+    updateSliderDisplay('circleScale', settings.circle_scale || 6.0);
 
     document.getElementById("settings_tooltipLabelColor").value = settings.tooltipLabelColor;
     document.getElementById("settings_tooltipLabelShadowColor").value = settings.tooltipLabelShadowColor;
@@ -5174,7 +5090,7 @@ function updateSettingsTab() {
     document.getElementById("settings_kiosk_rotation_speed").value = settings.kiosk_rotation_speed;
     document.getElementById("settings_kiosk_pan_map").checked = settings.kiosk_pan_map;
 
-    updateKioskSpeedDisplay(settings.kiosk_rotation_speed);
+    updateSliderDisplay('kioskSpeed', settings.kiosk_rotation_speed);
 
     // Update ship class color inputs
     updateTrackColorInputs();
@@ -5187,7 +5103,8 @@ function activateTab(b, a) {
         return;
     }
 
-    hideMenuifSmall();
+    hideMenu();
+    closeSettings();
 
     Array.from(document.getElementById("menubar").children).forEach((e) => (e.className = e.className.replace(" active", "")));
     Array.from(document.getElementById("menubar_mini").children).forEach((e) => (e.className = e.className.replace(" active", "")));
@@ -5211,11 +5128,11 @@ function activateTab(b, a) {
     clearInterval(interval);
 
     refresh_data().then(() => {
+        clearInterval(interval);
         interval = setInterval(refresh_data, refreshIntervalMs);
     });
 
     if (a != "map") fireworks.stop();
-    if (a == "settings") updateSettingsTab();
 
     if (a == "log") {
         import('./tabs/log.js').then(({ LogViewer }) => {
@@ -5232,6 +5149,7 @@ function activateTab(b, a) {
     if (a == "realtime" && config.features.realtime) {
         import('./tabs/realtime.js').then((m) => {
             realtimeModule = m;
+            if (settings.tab !== 'realtime') return;
             m.activate();
         }).catch((err) => console.error('Failed to load realtime tab module:', err));
     } else if (a != 'realtime') {
@@ -5283,37 +5201,20 @@ function updateAndroid() {
     androidStyle.textContent = sel + " { display: none !important; }";
 }
 
-function updateKioskSpeedDisplay(value) {
-    document.getElementById("kiosk_rotation_speed_label").textContent = `Rotation Speed (${value}s)`;
-}
+const SLIDER_DISPLAYS = {
+    kioskSpeed: ["kiosk_rotation_speed_label", (v) => `Rotation Speed (${v}s)`],
+    trackWeight: ["track_weight_label", (v) => `Weight (${v})`],
+    trackTrashThreshold: ["track_trash_threshold_label", (v) => `Dash Threshold (${v}s)`],
+    iconScale: ["icon_scale_label", (v) => `Marker Size (${parseFloat(v).toFixed(2)})`],
+    mapOpacity: ["map_opacity_label", (v) => `Map Dimming (${Math.round(parseFloat(v) * 100)}%)`],
+    tooltipFontSize: ["tooltip_font_size_label", (v) => `Font Size (${v})`],
+    shipoutlineOpacity: ["shipoutline_opacity_label", (v) => `Opacity (${parseFloat(v).toFixed(2)})`],
+    circleScale: ["circle_scale_label", (v) => `Width (${parseFloat(v).toFixed(1)})`],
+};
 
-function updateTrackWeightDisplay(value) {
-    document.getElementById("track_weight_label").textContent = `Track Weight (${value})`;
-}
-
-function updateTrackTrashThresholdDisplay(value) {
-    document.getElementById("track_trash_threshold_label").textContent = `Track Dash Threshold (${value}s)`;
-}
-
-function updateIconScaleDisplay(value) {
-    document.getElementById("icon_scale_label").textContent = `Ship icon size (${parseFloat(value).toFixed(2)})`;
-}
-
-function updateMapOpacityDisplay(value) {
-    const percentage = Math.round(parseFloat(value) * 100);
-    document.getElementById("map_opacity_label").textContent = `Map dimming (${percentage}%)`;
-}
-
-function updateTooltipFontSizeDisplay(value) {
-    document.getElementById("tooltip_font_size_label").textContent = `Font Size (${value})`;
-}
-
-function updateShipoutlineOpacityDisplay(value) {
-    document.getElementById("shipoutline_opacity_label").textContent = `Opacity (${parseFloat(value).toFixed(2)})`;
-}
-
-function updateCircleScaleDisplay(value) {
-    document.getElementById("circle_scale_label").textContent = `Selector line width (${parseFloat(value).toFixed(1)})`;
+function updateSliderDisplay(key, value) {
+    const [id, format] = SLIDER_DISPLAYS[key];
+    document.getElementById(id).textContent = format(value);
 }
 
 function showAboutDialog() {
@@ -5347,18 +5248,13 @@ function showAboutDialog() {
 }
 
 function showWelcome() {
-    if (settings.welcome == true || (settings.welcome == "true" && !isAndroid())) showAboutDialog();
+    if ((settings.welcome == true || settings.welcome == "true") && !isAndroid()) showAboutDialog();
 
     settings.welcome = false;
     saveSettings();
 }
 
 // for overwrite and insert code where needed
-function main() {
-    plugins_main.forEach(function (p) {
-        p();
-    });
-}
 
 addTileLayer("OpenStreetMap", new ol.layer.Tile({
     source: new ol.source.OSM({ maxZoom: 19 })
@@ -5594,42 +5490,19 @@ if (urlParams.get("mmsi")) openFocus(urlParams.get("mmsi"), urlParams.get("zoom"
 updateSortMarkers();
 saveSettings();
 prepareShipcard();
+buildSettingsTabs();
 
-if (!config.features.about_md) {
-    document.getElementById("about_tab").style.display = "none";
-    document.getElementById("about_tab_mini").style.display = "none";
-}
-
-if (!config.features.realtime) {
-    document.getElementById("realtime_tab").style.display = "none";
-    document.getElementById("realtime_tab_mini").style.display = "none";
-
-    // Hide realtime context menu items
-    const realtimeMenuItems = document.querySelectorAll('.ctx-realtime');
-    realtimeMenuItems.forEach(item => {
-        item.style.display = 'none';
-    });
-
-    // Hide realtime option in shipcard
-    const shipcardRealtime = document.getElementById('shipcard_realtime_option');
-    if (shipcardRealtime) {
-        shipcardRealtime.style.display = 'none';
+for (const [enabled, tab] of [
+    [config.features.about_md, "about"],
+    [config.features.realtime, "realtime"],
+    [config.features.log, "log"],
+    [config.features.decoder, "decoder"],
+    [config.webcontrol_http, "webcontrol"],
+]) {
+    if (!enabled) {
+        document.getElementById(tab + "_tab").style.display = "none";
+        document.getElementById(tab + "_tab_mini").style.display = "none";
     }
-}
-
-if (!config.features.log) {
-    document.getElementById("log_tab").style.display = "none";
-    document.getElementById("log_tab_mini").style.display = "none";
-}
-
-if (!config.features.decoder) {
-    document.getElementById("decoder_tab").style.display = "none";
-    document.getElementById("decoder_tab_mini").style.display = "none";
-}
-
-if (!config.webcontrol_http) {
-    document.getElementById("webcontrol_tab").style.display = "none";
-    document.getElementById("webcontrol_tab_mini").style.display = "none";
 }
 
 showWelcome();
@@ -5639,7 +5512,6 @@ updateAndroid();
 
 if (isAndroid()) showMenu();
 
-main();
 
 // Re-apply chart colors after all stylesheets load (Firefox iframe quirk).
 window.addEventListener('load', () => {
@@ -5650,4 +5522,3 @@ window.addEventListener('load', () => {
     });
 });
 
-//checkLatestVersion();

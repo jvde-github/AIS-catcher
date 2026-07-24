@@ -25,14 +25,19 @@ import {
 
 let table = null;
 let tableFirstTime = true;
+let uiWired = false;
+
+function validatedColor(ship, pos = "green", neg = "red", neutral = "inherited") {
+    return ship.validated == 1 ? pos : ship.validated == -1 ? neg : neutral;
+}
 
 function customShipFilter(data, filterParams) {
     const { shipsSince } = window.__app__;
     const query = filterParams.query.toLowerCase();
     return (data.shipname || "").toLowerCase().includes(query) ||
-        data.mmsi.toString().includes(query) ||
+        String(data.mmsi ?? "").includes(query) ||
         (data.callsign || "").toLowerCase().includes(query) ||
-        data.shipclass.toString().includes(query) ||
+        String(data.shipclass ?? "").includes(query) ||
         (data.last_signal != null && getDeltaTimeVal(shipsSince - data.last_signal).includes(query)) ||
         (data.count != null && data.count.toString().includes(query)) ||
         (data.ppm != null && data.ppm.toString().includes(query)) ||
@@ -52,6 +57,16 @@ function padEni(v) {
     return /^\d{1,7}$/.test(v) ? v.padStart(8, "0") : v;
 }
 
+function etaSortValue(ship) {
+    return ship.eta_month != null && ship.eta_day != null && ship.eta_hour != null && ship.eta_minute != null
+        ? ((ship.eta_month * 31 + ship.eta_day) * 24 + ship.eta_hour) * 60 + ship.eta_minute
+        : -1;
+}
+
+function dimSortValue(ship) {
+    return ship.to_bow != null && ship.to_stern != null ? ship.to_bow + ship.to_stern : -1;
+}
+
 function buildColumns() {
     return [
         {
@@ -66,7 +81,8 @@ function buildColumns() {
         { title: "ENI", field: "eni", sorter: (a, b) => padEni(a).localeCompare(padEni(b)), formatter: (cell) => padEni(cell.getValue()) },
         { title: "Dest", field: "destination", sorter: "string", formatter: (cell) => { const v = cell.getValue(); return v != null ? v : ""; } },
         {
-            title: "ETA", field: "eta", sorter: "string",
+            title: "ETA", field: "eta",
+            sorter: (a, b, aRow, bRow) => etaSortValue(aRow.getData()) - etaSortValue(bRow.getData()),
             formatter: (cell) => {
                 const ship = cell.getRow().getData();
                 return ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
@@ -98,11 +114,13 @@ function buildColumns() {
             formatter: (cell) => window.__app__.getTableShiptype(cell.getRow().getData()),
         },
         {
-            title: "Class", field: "class", sorter: "string",
+            title: "Class", field: "class",
+            sorter: (a, b, aRow, bRow) => getMmsiTypeVal(aRow.getData()).localeCompare(getMmsiTypeVal(bRow.getData())),
             formatter: (cell) => getMmsiTypeVal(cell.getRow().getData()),
         },
         {
-            title: "Dim", field: "dimension", sorter: "number",
+            title: "Dim", field: "dimension",
+            sorter: (a, b, aRow, bRow) => dimSortValue(aRow.getData()) - dimSortValue(bRow.getData()),
             formatter: (cell) => {
                 const ship = cell.getRow().getData();
                 return ship ? getShipDimension(ship) || "" : "";
@@ -157,16 +175,14 @@ function buildColumns() {
             title: "Lat", field: "lat", sorter: "number",
             formatter: (cell) => {
                 const ship = cell.getRow().getData();
-                const color = ship.validated == 1 ? "green" : ship.validated == -1 ? "red" : "inherited";
-                return "<div style='color:" + color + "'>" + (ship.lat != null ? getLatValFormat(ship) : "") + "</div>";
+                return "<div style='color:" + validatedColor(ship) + "'>" + (ship.lat != null ? getLatValFormat(ship) : "") + "</div>";
             },
         },
         {
             title: "Lon", field: "lon", sorter: "number",
             formatter: (cell) => {
                 const ship = cell.getRow().getData();
-                const color = ship.validated == 1 ? "green" : ship.validated == -1 ? "red" : "inherited";
-                return "<div style='color:" + color + "'>" + (ship.lon != null ? getLonValFormat(ship) : "") + "</div>";
+                return "<div style='color:" + validatedColor(ship) + "'>" + (ship.lon != null ? getLonValFormat(ship) : "") + "</div>";
             },
         },
         {
@@ -196,16 +212,19 @@ function buildColumns() {
             formatter: (cell) => getStringfromMsgType(cell.getValue()),
         },
         {
-            title: "MSG6", field: "MSG6", sorter: "number",
-            formatter: (cell) => cell.getValue() & (1 << 6) ? "Yes" : "No",
+            title: "MSG6", field: "MSG6",
+            sorter: (a, b, aRow, bRow) => ((aRow.getData().msg_type >> 6) & 1) - ((bRow.getData().msg_type >> 6) & 1),
+            formatter: (cell) => cell.getRow().getData().msg_type & (1 << 6) ? "Yes" : "No",
         },
         {
-            title: "MSG8", field: "MSG8", sorter: "number",
-            formatter: (cell) => cell.getValue() & (1 << 8) ? "Yes" : "No",
+            title: "MSG8", field: "MSG8",
+            sorter: (a, b, aRow, bRow) => ((aRow.getData().msg_type >> 8) & 1) - ((bRow.getData().msg_type >> 8) & 1),
+            formatter: (cell) => cell.getRow().getData().msg_type & (1 << 8) ? "Yes" : "No",
         },
         {
-            title: "MSG27", field: "MSG27", sorter: "number",
-            formatter: (cell) => cell.getValue() & (1 << 27) ? "Yes" : "No",
+            title: "MSG27", field: "MSG27",
+            sorter: (a, b, aRow, bRow) => ((aRow.getData().msg_type >> 27) & 1) - ((bRow.getData().msg_type >> 27) & 1),
+            formatter: (cell) => cell.getRow().getData().msg_type & (1 << 27) ? "Yes" : "No",
         },
         {
             title: "Src", field: "group_mask", sorter: "number",
@@ -294,6 +313,9 @@ function search(query) {
 }
 
 function wireUIEvents() {
+    if (uiWired) return;
+    uiWired = true;
+
     const searchInput = document.getElementById("shipSearch");
     if (searchInput) {
         searchInput.addEventListener("input", (e) => search(e.target.value));
@@ -339,8 +361,7 @@ export async function update() {
             index: "mmsi",
             rowFormatter: (row) => {
                 const ship = row.getData();
-                const borderColor = ship.validated == 1 ? "#7CFC00" : ship.validated == -1 ? "red" : "lightgrey";
-                row.getElement().style.borderLeft = `10px solid ${borderColor}`;
+                row.getElement().style.borderLeft = `10px solid ${validatedColor(ship, "#7CFC00", "red", "lightgrey")}`;
             },
             data,
             layout: "fitDataTable",

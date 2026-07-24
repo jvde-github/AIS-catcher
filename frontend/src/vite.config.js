@@ -28,6 +28,7 @@ export default defineConfig({
           // statically import script.js and the browser instantiates it
           // twice (different URL than the original <script> tag).
           if (id.includes('/frontend/src/core/')) return 'core';
+          if (id.includes('/frontend/src/overlays/pollingtile')) return 'core';
 
           if (id.includes('node_modules/chart.js') ||
               id.includes('node_modules/chartjs-plugin-annotation')) return 'chart';

@@ -4,6 +4,7 @@ export class LogViewer {
         this.logScroll = document.getElementById('log_scroll');
         this.logContent = document.getElementById('log_content');
         this.eventSource = null;
+        this.maxEntries = 500;
         this.onVisibility = () => document.hidden ? this.closeStream() : this.connect();
         document.addEventListener('visibilitychange', this.onVisibility);
     }
@@ -72,12 +73,20 @@ export class LogViewer {
         logEntry.appendChild(content);
 
         this.logContent.appendChild(logEntry);
+        this.trimLog();
     }
 
     appendRawLog(message) {
         const logEntry = document.createElement('div');
         logEntry.textContent = message + '\n';
         this.logContent.appendChild(logEntry);
+        this.trimLog();
+    }
+
+    trimLog() {
+        while (this.logContent.children.length > this.maxEntries) {
+            this.logContent.removeChild(this.logContent.firstChild);
+        }
     }
 
     disconnect() {
@@ -110,8 +119,9 @@ export class LogViewer {
 
         const status = connected ? 'Connected' : 'Disconnected';
         this.logState.innerHTML = '';
-        this.logState.display = 'none';
+        this.logState.style.display = 'none';
         if (!connected) {
+            this.logState.style.display = '';
             this.logState.appendChild(stateIcon);
             this.logState.appendChild(document.createTextNode(`Status: ${status}`));
         }

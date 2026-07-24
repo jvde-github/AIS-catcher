@@ -6,7 +6,7 @@ import { CLASS_A, CLASS_B, BASESTATION, SAR, SARTEPIRB, ATON } from './constants
 
 export const getDistanceConversion = (c) =>
     settings.metric === "DEFAULT" ? c : settings.metric === "SI" ? c * 1.852 : c * 1.15078;
-export const getDistanceVal = (c) => Number(getDistanceConversion(c)).toFixed(1).toLocaleString();
+export const getDistanceVal = (c) => Number(getDistanceConversion(c)).toFixed(1);
 export const getDistanceUnit = () =>
     settings.metric === "DEFAULT" ? "nmi" : settings.metric === "SI" ? "km" : "mi";
 
@@ -35,7 +35,7 @@ export function decimalToDMS(l, isLatitude) {
     const minutes = Math.floor((Math.abs(l) - degrees) * 60);
     const seconds = Number(((Math.abs(l) - degrees) * 60 - minutes) * 60).toFixed(1);
     const direction = isLatitude ? (l > 0 ? "N" : "S") : l > 0 ? "E" : "W";
-    return degrees + "&deg" + minutes + "'" + seconds + '"' + direction;
+    return degrees + "&deg;" + minutes + "'" + seconds + '"' + direction;
 }
 
 export function decimalToDDM(l, isLatitude) {

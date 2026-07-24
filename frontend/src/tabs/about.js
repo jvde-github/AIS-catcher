@@ -5,20 +5,16 @@ let loaded = false;
 export async function setup() {
     if (loaded) return;
 
-    let response;
+    let text;
     try {
-        response = await fetch("about.md");
+        const response = await fetch("about.md");
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        text = await response.text();
     } catch (error) {
-        alert("Error loading about.md: " + error);
-        for (const id of ['about_tab', 'about_tab_mini']) {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-        }
+        window.AISCatcher.showNotification("Error loading about.md: " + error);
         return;
     }
 
-    const text = await response.text();
     document.getElementById("about_content").innerHTML = marked.parse(text);
     loaded = true;
 }

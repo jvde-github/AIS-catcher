@@ -11,6 +11,9 @@ import { fromLonLat } from 'ol/proj';
 let deps = null; // { config, extraVector, showDialog, showNotification }
 let evtSource = null;
 let active = false;
+let connected = false;
+let consecutiveErrors = 0;
+const MAX_CONSECUTIVE_ERRORS = 5;
 
 export function init(d) {
     deps = d;
@@ -32,6 +35,8 @@ export function start() {
         return;
     }
     active = true;
+    connected = false;
+    consecutiveErrors = 0;
     deps.showNotification("Fireworks Mode started");
     openStream();
 }
@@ -44,7 +49,15 @@ function openStream() {
     evtSource.addEventListener(
         "nmea",
         function (e) {
-            const jsonData = JSON.parse(e.data);
+            connected = true;
+            consecutiveErrors = 0;
+
+            let jsonData;
+            try {
+                jsonData = JSON.parse(e.data);
+            } catch {
+                return;
+            }
 
             if (Object.hasOwn(jsonData, "channel") && Object.hasOwn(jsonData, "lat") && Object.hasOwn(jsonData, "lon")) {
                 addMarker(jsonData.lat, jsonData.lon, jsonData.channel);
@@ -54,11 +67,16 @@ function openStream() {
     );
 
     evtSource.onerror = function () {
-        stop();
-        deps.showDialog("Error", "Problem running Firework Mode, cannot reach server. Please ensure that AIS-catcher is running with -N REALTIME on.");
+        consecutiveErrors++;
+        if (!connected || consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+            stop();
+            deps.showDialog("Error", "Problem running Firework Mode, cannot reach server. Please ensure that AIS-catcher is running with -N REALTIME on.");
+        }
     };
 
     evtSource.onopen = function () {
+        connected = true;
+        consecutiveErrors = 0;
         console.log("Fireworks connected");
     };
 }

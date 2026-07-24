@@ -18,12 +18,10 @@ Chart.register(
     Annotation,
 );
 
+Chart.defaults.font.family = 'ui-sans-serif, system-ui, sans-serif';
+
 const charts = {};
 let initialized = false;
-
-export function isInitialized() {
-    return initialized;
-}
 
 
 function cssvar(name) {
@@ -74,11 +72,6 @@ function updateChartColors(c, colorVariables) {
 }
 
 function updateColorMulti(c) {
-    const colorVariables = ["--chart4-color", "--chart1-color", "--chart2-color", "--chart5-color", "--chart6-color"];
-    updateChartColors(c, colorVariables);
-}
-
-function updateColorSingle(c) {
     const colorVariables = ["--chart4-color", "--chart1-color", "--chart2-color", "--chart5-color", "--chart6-color"];
     updateChartColors(c, colorVariables);
 }
@@ -232,9 +225,6 @@ const plot_level = {
 
 const plot_radar = {
     type: "polarArea",
-    animation: false,
-    responsive: true,
-    plugins: { legend: { display: true } },
     data: {
         datasets: [
             { label: "Class B", borderWidth: 1 },
@@ -242,8 +232,9 @@ const plot_radar = {
         ],
     },
     options: {
-        legend: { display: false },
-        scale: { ticks: { min: 0 } },
+        animation: false,
+        responsive: true,
+        plugins: { legend: { display: true } },
     },
 };
 
@@ -252,37 +243,35 @@ function init() {
     if (initialized) return;
 
     const chartConfigs = [
-        { varName: "chart_radar_hour", id: "chart-radar-hour", ctx: "2d", config: plot_radar, clone: true },
-        { varName: "chart_radar_day", id: "chart-radar-day", ctx: "2d", config: plot_radar, clone: true },
-        { varName: "chart_seconds", id: "chart-seconds", config: plot_count, clone: true },
-        { varName: "chart_minutes", id: "chart-minutes", config: plot_count, clone: true },
-        { varName: "chart_hours", id: "chart-hours", config: plot_count, clone: true },
-        { varName: "chart_days", id: "chart-days", config: plot_count, clone: true },
-        { varName: "chart_ppm", id: "chart-ppm", config: plot_single, clone: true },
-        { varName: "chart_ppm_minute", id: "chart-ppm-minute", config: plot_single, clone: true },
-        { varName: "chart_distance_hour", id: "chart-distance-hour", config: plot_distance, clone: false },
-        { varName: "chart_distance_day", id: "chart-distance-day", config: plot_distance, clone: false },
-        { varName: "chart_minute_vessel", id: "chart-vessels-minute", config: plot_single, clone: false },
-        { varName: "chart_hour_vessel", id: "chart-vessels-hour", config: plot_single, clone: false },
-        { varName: "chart_day_vessel", id: "chart-vessels-day", config: plot_single, clone: false },
+        { varName: "chart_radar_hour", id: "chart-radar-hour", config: plot_radar },
+        { varName: "chart_radar_day", id: "chart-radar-day", config: plot_radar },
+        { varName: "chart_seconds", id: "chart-seconds", config: plot_count },
+        { varName: "chart_minutes", id: "chart-minutes", config: plot_count },
+        { varName: "chart_hours", id: "chart-hours", config: plot_count },
+        { varName: "chart_days", id: "chart-days", config: plot_count },
+        { varName: "chart_ppm", id: "chart-ppm", config: plot_single },
+        { varName: "chart_ppm_minute", id: "chart-ppm-minute", config: plot_single },
+        { varName: "chart_distance_hour", id: "chart-distance-hour", config: plot_distance },
+        { varName: "chart_distance_day", id: "chart-distance-day", config: plot_distance },
+        { varName: "chart_minute_vessel", id: "chart-vessels-minute", config: plot_single },
+        { varName: "chart_hour_vessel", id: "chart-vessels-hour", config: plot_single },
+        { varName: "chart_day_vessel", id: "chart-vessels-day", config: plot_single },
+        { varName: "chart_level", id: "chart-level", config: plot_level },
+        { varName: "chart_level_hour", id: "chart-level-hour", config: plot_level },
     ];
 
-    for (const { varName, id, ctx, config, clone } of chartConfigs) {
+    for (const { varName, id, config } of chartConfigs) {
         try {
             const canvas = document.getElementById(id);
             if (!canvas) {
                 console.warn(`Canvas element not found: ${id}`);
                 continue;
             }
-            const context = ctx === "2d" ? canvas.getContext("2d") : canvas;
-            const chartConfig = clone ? cloneChartConfig(config) : config;
-            charts[varName] = new Chart(context, chartConfig);
+            charts[varName] = new Chart(canvas, cloneChartConfig(config));
         } catch (error) {
             console.error(`Failed to initialize chart ${id}:`, error);
         }
     }
-    charts.chart_level = new Chart(document.getElementById("chart-level"), cloneChartConfig(plot_level));
-    charts.chart_level_hour = new Chart(document.getElementById("chart-level-hour"), cloneChartConfig(plot_level));
 
     initialized = true;
     updateColors();
@@ -348,27 +337,18 @@ function updateChartSingle(b, f1, f2, c) {
     c.update();
 }
 
-function updateChartLevel(chartData, timeframe, chartName, chart) {
+function updateChartLevel(chartData, timeframe, chart) {
     if (!chartData?.[timeframe]) return;
     const timeSeriesData = chartData[timeframe];
 
     const minLevelData = [];
-    for (let i = 0; i < timeSeriesData.time.length; i++) {
-        minLevelData.push({
-            x: timeSeriesData.time[i],
-            y: timeSeriesData.stat[i].level_min == null ? null : timeSeriesData.stat[i].level_min,
-        });
-    }
-    chart.data.datasets[1].data = minLevelData;
-
     const maxLevelData = [];
     for (let i = 0; i < timeSeriesData.time.length; i++) {
-        maxLevelData.push({
-            x: timeSeriesData.time[i],
-            y: timeSeriesData.stat[i].level_max == null ? null : timeSeriesData.stat[i].level_max,
-        });
+        minLevelData.push({ x: timeSeriesData.time[i], y: timeSeriesData.stat[i].level_min });
+        maxLevelData.push({ x: timeSeriesData.time[i], y: timeSeriesData.stat[i].level_max });
     }
     chart.data.datasets[0].data = maxLevelData;
+    chart.data.datasets[1].data = minLevelData;
     chart.update();
 }
 
@@ -397,14 +377,15 @@ export async function update() {
         u.textContent = unit;
     });
 
-    let response;
+    let b;
     try {
-        response = await fetch("api/history_full.json?receiver=" + activeReceiver);
+        const response = await fetch("api/history_full.json?receiver=" + activeReceiver);
+        if (!response.ok) return;
+        b = await response.json();
     } catch (error) {
         console.error('plots: history fetch failed:', error);
         return;
     }
-    const b = await response.json();
 
     updateChartMulti(b, "second", charts.chart_seconds);
     updateChartMulti(b, "minute", charts.chart_minutes);
@@ -413,8 +394,8 @@ export async function update() {
 
     updateChartSingle(b, "minute", "ppm", charts.chart_ppm_minute);
     updateChartSingle(b, "hour", "ppm", charts.chart_ppm);
-    updateChartLevel(b, "minute", "level", charts.chart_level);
-    updateChartLevel(b, "hour", "level", charts.chart_level_hour);
+    updateChartLevel(b, "minute", charts.chart_level);
+    updateChartLevel(b, "hour", charts.chart_level_hour);
     updateChartSingle(b, "minute", "vessels", charts.chart_minute_vessel);
     updateChartSingle(b, "hour", "vessels", charts.chart_hour_vessel);
     updateChartSingle(b, "day", "vessels", charts.chart_day_vessel);
@@ -440,7 +421,7 @@ export function updateColors() {
         if (chart) { updateColorMulti(chart); chart.update(); }
     });
     single.forEach((chart) => {
-        if (chart) { updateColorSingle(chart); chart.update(); }
+        if (chart) { updateColorMulti(chart); chart.update(); }
     });
     level.forEach((chart) => {
         if (chart) {

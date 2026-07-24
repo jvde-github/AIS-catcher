@@ -1,3 +1,5 @@
+import { sanitizeString } from '../core/format.js';
+
 export function decode() {
     const input = document.getElementById('decoder_input').value.trim();
     const statusEl = document.getElementById('decoder_status');
@@ -19,7 +21,7 @@ export function decode() {
         .then((response) => response.json())
         .then((data) => {
             if (data.error) {
-                statusEl.innerHTML = `<span class="decoder-error">Error: ${data.error}</span>`;
+                statusEl.innerHTML = `<span class="decoder-error">Error: ${sanitizeString(String(data.error))}</span>`;
                 return;
             }
 
@@ -51,13 +53,13 @@ export function decode() {
                         let keyCol = key;
                         if (unit) keyCol += ` (${unit})`;
 
-                        let valueCol = value;
+                        let valueCol = String(value);
                         if (text) valueCol += ` (${text})`;
 
                         html += '<tr>';
-                        html += `<td class="decoder-field-key">${keyCol}</td>`;
-                        html += `<td class="decoder-field-value">${valueCol}</td>`;
-                        html += `<td class="decoder-field-description">${description}</td>`;
+                        html += `<td class="decoder-field-key">${sanitizeString(keyCol)}</td>`;
+                        html += `<td class="decoder-field-value">${sanitizeString(valueCol)}</td>`;
+                        html += `<td class="decoder-field-description">${sanitizeString(String(description))}</td>`;
                         html += '</tr>';
                     }
                 });

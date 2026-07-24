@@ -77,7 +77,23 @@
     };
 
     function fetchStatus() {
-        return fetch('/api/status').then(r => r.json());
+        return fetch('/api/status').then(r => {
+            if (!r.ok) throw new Error('Status request failed');
+            return r.json();
+        });
+    }
+
+    function postPassword(endpoint, pw) {
+        return fetch(endpoint, { method: 'POST', body: pw })
+            .catch(() => { throw new Error('Connection error. Please try again.'); })
+            .then(r => {
+                if (r.status === 401 && endpoint !== '/api/login') window.hubAuthRequired();
+                return r.json().catch(() => { throw new Error('Connection error. Please try again.'); });
+            })
+            .then(data => {
+                if (!data.status) throw new Error(data.error || 'Request failed');
+                return data;
+            });
     }
 
     function engineAction(action) {
@@ -195,14 +211,9 @@
 
         submitBtn.disabled = true;
         const endpoint = auth === 'setup' ? '/api/setup' : setup ? '/api/password' : '/api/login';
-        fetch(endpoint, { method: 'POST', body: password })
-            .then(r => r.json())
-            .then(data => {
+        postPassword(endpoint, password)
+            .then(() => {
                 submitBtn.disabled = false;
-                if (!data.status) {
-                    loginError(data.error || 'Login failed');
-                    return;
-                }
                 if (auth === 'setup') {
                     window.location.reload();
                     return;
@@ -223,9 +234,9 @@
                 });
                 if (action) action();
             })
-            .catch(() => {
+            .catch(err => {
                 submitBtn.disabled = false;
-                loginError('Connection error. Please try again.');
+                loginError(err.message || 'Login failed');
             });
     }
 
@@ -312,9 +323,13 @@
                 ['Hardware', data.hardware],
                 ['Memory usage', data.memory ? formatBytes(data.memory) : '']
             ].filter(r => r[1]);
-            sysinfo.innerHTML = rows.map(r =>
-                '<div class="flex justify-between gap-4"><span class="text-slate-500">' + r[0] + '</span><span class="text-slate-700 text-right truncate">' + r[1] + '</span></div>'
-            ).join('');
+            sysinfo.textContent = '';
+            rows.forEach(r => sysinfo.appendChild(
+                Utils.el('div', 'flex justify-between gap-4', {},
+                    Utils.el('span', 'text-slate-500', {}, r[0]),
+                    Utils.el('span', 'text-slate-700 text-right truncate', {}, r[1])
+                )
+            ));
             const card = document.getElementById('hub-sysinfo-card');
             if (card) card.classList.toggle('hidden', rows.length === 0);
         }
@@ -543,24 +558,14 @@
         });
     }
 
-    // Single registry for every output sub-type: tab value/label, schema,
-    // config array key (none for sharing, which is a set of top-level keys),
-    // label in the data-flow view and the type string stat.json reports.
     const OUTPUT_TYPES = [
         { value: 'sharing', label: 'Community', schema: sharingSchema },
-        { value: 'udp', label: 'UDP', schema: udpSchema, configKey: 'udp', flowLabel: 'UDP', statType: 'UDP' },
-        { value: 'http', label: 'HTTP', schema: httpSchema, configKey: 'http', flowLabel: 'HTTP', statType: 'HTTP' },
-        { value: 'mqtt', label: 'MQTT', schema: mqttSchema, configKey: 'mqtt', flowLabel: 'MQTT', statType: 'MQTT' },
-        { value: 'tcp', label: 'TCP Client', schema: tcpSchema, configKey: 'tcp', flowLabel: 'TCP', statType: 'TCP Client' },
-        { value: 'tcp-server', label: 'TCP Server', schema: tcpServerSchema, configKey: 'tcp_listener', flowLabel: 'TCP Server', statType: 'TCP Listener' },
-        { value: 'server', label: 'Viewer', schema: webviewerSchema, configKey: 'server', flowLabel: 'Webviewer' },
+        ...CHANNEL_REGISTRY.filter(c => c.key !== 'receiver').map(c => ({
+            value: c.key === 'tcp_listener' ? 'tcp-server' : c.key,
+            label: c.label, schema: c.schema, configKey: c.configKey,
+            flowLabel: c.flowLabel, statType: c.statType
+        }))
     ];
-
-    function loadOutputConfig() {
-        const host = document.getElementById('sys-output-body');
-        if (!host) return;
-        renderOutputConfig(host);
-    }
 
     const OUTPUT_TAB_ACTIVE = 'sys-tab active';
     const OUTPUT_TAB_INACTIVE = 'sys-tab';
@@ -831,7 +836,11 @@
         if (tab === 'input') {
             if (!systemInputLoaded) { systemInputLoaded = true; loadSourceConfig(); }
         } else if (tab === 'output') {
-            if (!systemOutputLoaded) { systemOutputLoaded = true; loadOutputConfig(); }
+            if (!systemOutputLoaded) {
+                systemOutputLoaded = true;
+                const host = document.getElementById('sys-output-body');
+                if (host) renderOutputConfig(host);
+            }
         } else if (tab === 'viewer') {
             if (!systemViewerLoaded) { systemViewerLoaded = true; loadViewerConfig(); }
         } else if (tab === 'flow') {
@@ -970,7 +979,6 @@
         const schema = {};
         keys.forEach(k => {
             schema[k] = Object.assign({}, webviewerSchema[k]);
-            delete schema[k].required;
             schema[k].width = widths[k];
         });
         schema.use_gps.label = 'GPS';
@@ -1094,11 +1102,7 @@
 
     function flowOutputLabel(type, item) {
         if (item && item.description) return `${type} · ${item.description}`;
-        if (item && item.host && item.port) return `${type} · ${item.host}:${item.port}`;
-        if (item && item.url) return `${type} · ${item.url}`;
-        if (item && item.host) return `${type} · ${item.host}`;
-        if (item && item.port) return `${type} · :${item.port}`;
-        return type;
+        return channelTitle(type, item);
     }
 
     function stopFlowObserver() {
@@ -1294,18 +1298,13 @@
             App.notify('error', 'Passwords do not match');
             return;
         }
-        fetch('/api/password', { method: 'POST', body: p1 })
-            .then(r => { if (r.status === 401) window.hubAuthRequired(); return r.json(); })
-            .then(data => {
-                if (data.status) {
-                    hasPassword = true;
-                    App.notify('success', 'Password changed');
-                    document.getElementById('password-form').reset();
-                } else {
-                    App.notify('error', data.error || 'Failed to change password');
-                }
+        postPassword('/api/password', p1)
+            .then(() => {
+                hasPassword = true;
+                App.notify('success', 'Password changed');
+                document.getElementById('password-form').reset();
             })
-            .catch(() => App.notify('error', 'Connection error'));
+            .catch(err => App.notify('error', err.message || 'Failed to change password'));
     }
 
     function logout() {
