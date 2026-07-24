@@ -17,6 +17,12 @@
         restart: '<path d="M440-122q-121-15-200.5-105.5T160-440q0-66 26-126.5T260-672l57 57q-38 34-57.5 79T240-440q0 88 56 155.5T440-203v81Zm80 0v-81q87-16 143.5-83T720-440q0-100-70-170t-170-70h-3l44 44-56 56-140-140 140-140 56 56-44 44h3q134 0 227 93t93 227q0 121-79.5 211.5T520-122Z"/>'
     };
 
+    const ENGINE_TITLES = {
+        start: 'Start AIS-catcher',
+        stop: 'Stop AIS-catcher',
+        restart: 'Restart AIS-catcher to apply configuration changes'
+    };
+
     function engineButtonMode() {
         if (!engineRunning) return engineDesired ? 'stop' : 'start';
         return pendingApply ? 'restart' : 'stop';
@@ -27,7 +33,10 @@
         const btn = document.getElementById('nav-start-restart');
         const label = document.getElementById('nav-sr-label');
         const icon = document.getElementById('nav-sr-icon');
-        if (btn) btn.classList.toggle('attention', pendingApply);
+        if (btn) {
+            btn.classList.toggle('attention', pendingApply);
+            btn.title = ENGINE_TITLES[mode];
+        }
         if (icon && icon.dataset.mode !== mode) {
             icon.dataset.mode = mode;
             icon.innerHTML = ENGINE_ICONS[mode];

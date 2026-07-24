@@ -37,20 +37,23 @@ const ChannelFields = {
         label: 'Active',
         type: 'toggle',
         defaultValue: true,
-        width: 25
+        width: 25,
+        tooltip: 'Turn off to pause this channel without removing it'
     }),
     unique: () => ({
         name: 'unique',
         label: 'Unique',
         type: 'toggle',
         defaultValue: false,
-        width: 25
+        width: 25,
+        tooltip: 'Drop duplicate messages received within a few seconds'
     }),
     msgformat: (defaultValue = 'NMEA') => ({
         name: 'msgformat',
         label: 'Message Format',
         type: 'select',
         defaultValue: defaultValue,
+        tooltip: 'Format of forwarded messages: raw NMEA, NMEA with TAG block, or decoded JSON',
         options: [
             { value: 'NMEA', label: 'NMEA' },
             { value: 'NMEA_TAG', label: 'NMEA + TAG' },
@@ -65,6 +68,7 @@ const ChannelFields = {
         name: 'position_interval',
         label: 'Downsample Position',
         type: 'switch-integer',
+        tooltip: 'At most one position report per vessel per interval (seconds); other message types pass unchanged',
         defaultValue: false,
         defaultInteger: 60,
         min: 0,
@@ -95,7 +99,8 @@ const httpSchema = {
             { value: 'AIRFRAMES', label: 'AIRFRAMES' },
             { value: 'NMEA', label: 'NMEA' }
         ],
-        width: 75
+        width: 75,
+        tooltip: 'Submission format expected by the server, e.g. AISCATCHER JSON or APRS for aprs.fi'
     },
     interval: {
         name: 'interval',
@@ -106,7 +111,8 @@ const httpSchema = {
         max: 86400,
         defaultValue: 60,
         placeholder: '60',
-        width: 25
+        width: 25,
+        tooltip: 'How often collected messages are posted to the URL'
     },
     url: {
         name: 'url',
@@ -123,13 +129,15 @@ const httpSchema = {
         label: 'ID',
         type: 'text',
         required: true,
-        placeholder: 'Station ID'
+        placeholder: 'Station ID',
+        tooltip: 'Station identifier included in the feed'
     },
     userpwd: {
         name: 'userpwd',
         label: 'Credentials',
         type: 'text',
-        placeholder: 'user:password'
+        placeholder: 'user:password',
+        tooltip: 'HTTP authentication, sent as user:password'
     },
     gzip: {
         name: 'gzip',
@@ -137,6 +145,7 @@ const httpSchema = {
         type: 'toggle',
         defaultValue: false,
         width: 25,
+        tooltip: 'Compress posted data'
     },
     response: {
         name: 'response',
@@ -144,6 +153,7 @@ const httpSchema = {
         type: 'toggle',
         defaultValue: true,
         width: 25,
+        tooltip: 'Log the server response'
     },
     unique: ChannelFields.unique(),
     position_interval: ChannelFields.position_interval(),
@@ -162,6 +172,7 @@ const udpSchema = {
         type: 'toggle',
         defaultValue: false,
         width: 25,
+        tooltip: 'Allow sending to broadcast addresses'
     },
     unique: ChannelFields.unique(),
     msgformat: ChannelFields.msgformat(),
@@ -181,6 +192,7 @@ const tcpSchema = {
         type: 'toggle',
         defaultValue: true,
         width: 25,
+        tooltip: 'Reconnect automatically after failures'
     },
     keep_alive: {
         name: 'keep_alive',
@@ -188,6 +200,7 @@ const tcpSchema = {
         type: 'toggle',
         defaultValue: false,
         width: 25,
+        tooltip: 'Enable TCP keep-alive probes'
     },
     unique: ChannelFields.unique(),
     msgformat: ChannelFields.msgformat(),
@@ -202,7 +215,8 @@ const tcpServerSchema = {
         type: 'number',
         required: true,
         defaultValue: 5010,
-        placeholder: '5010'
+        placeholder: '5010',
+        tooltip: 'Local port where clients connect to read the stream (max 64 clients)'
     },
     description: ChannelFields.description(),
     link: ChannelFields.link(),
@@ -230,7 +244,8 @@ const mqttSchema = {
         type: 'text',
         required: true,
         placeholder: 'ais/data',
-        defaultValue: 'ais/data'
+        defaultValue: 'ais/data',
+        tooltip: 'Supports placeholders such as %mmsi%, %type% and %channel% for dynamic topics'
     },
     client_id: {
         name: 'client_id',
@@ -272,14 +287,16 @@ const webviewerSchema = {
         type: 'text',
         jsonpath: 'station',
         defaultValue: 'My Station',
-        width: 75
+        width: 75,
+        tooltip: 'Station name shown in the web viewer'
     },
     station_link: {
         name: 'station_link',
         label: 'Station Link',
         type: 'text',
         jsonpath: 'station_link',
-        placeholder: 'https://...'
+        placeholder: 'https://...',
+        tooltip: 'External website linked from the station name'
     },
     lat: {
         name: 'lat',
@@ -309,7 +326,8 @@ const webviewerSchema = {
         type: 'text',
         jsonpath: 'plugin_dir',
         placeholder: '/path/to/plugins',
-        width: 50
+        width: 50,
+        tooltip: 'Directory with .pjs/.pss plugins injected into the viewer'
     },
     webcontrol_http: {
         name: 'webcontrol_http',
@@ -318,7 +336,8 @@ const webviewerSchema = {
         jsonpath: 'webcontrol_http',
         defaultValue: '',
         placeholder: 'http://127.0.0.1:8110',
-        width: 50
+        width: 50,
+        tooltip: 'URL of this Web Control, linked from the viewer menu'
     },
     file: {
         name: 'file',
@@ -326,7 +345,8 @@ const webviewerSchema = {
         type: 'text',
         jsonpath: 'file',
         required: true,
-        width: 75
+        width: 75,
+        tooltip: 'File where statistics and plot history are saved across restarts'
     },
     backup: {
         name: 'backup',
@@ -336,7 +356,8 @@ const webviewerSchema = {
         defaultValue: 10,
         min: 5,
         max: 2880,
-        width: 25
+        width: 25,
+        tooltip: 'How often the statistics file is written'
     },
     history: {
         name: 'history',
@@ -346,7 +367,8 @@ const webviewerSchema = {
         defaultValue: 1800,
         min: 5,
         max: 43200,
-        width: 50
+        width: 50,
+        tooltip: 'Ships without messages for this long are removed from the viewer'
     },
     context: {
         name: 'context',
@@ -354,7 +376,8 @@ const webviewerSchema = {
         type: 'text',
         jsonpath: 'context',
         defaultValue: 'settings',
-        width: 50
+        width: 50,
+        tooltip: 'Browser storage key for viewer settings; use distinct values to keep multiple viewers separate'
     },
     active: {
         name: 'active',
@@ -370,7 +393,8 @@ const webviewerSchema = {
         type: 'toggle',
         jsonpath: 'share_loc',
         defaultValue: false,
-        width: 24
+        width: 24,
+        tooltip: 'Show the station location and range on the map'
     },
     use_gps: {
         name: 'use_gps',
@@ -378,7 +402,8 @@ const webviewerSchema = {
         type: 'toggle',
         jsonpath: 'use_gps',
         defaultValue: true,
-        width: 24
+        width: 24,
+        tooltip: 'Let GPS input update the station location'
     },
     realtime: {
         name: 'realtime',
@@ -386,7 +411,8 @@ const webviewerSchema = {
         type: 'toggle',
         jsonpath: 'realtime',
         defaultValue: false,
-        width: 24
+        width: 24,
+        tooltip: 'Stream live NMEA messages to the viewer'
     },
     geojson: {
         name: 'geojson',
@@ -394,7 +420,8 @@ const webviewerSchema = {
         type: 'toggle',
         jsonpath: 'geojson',
         defaultValue: false,
-        width: 24
+        width: 24,
+        tooltip: 'Enable the GeoJSON API endpoints'
     },
     prome: {
         name: 'prome',
@@ -402,7 +429,8 @@ const webviewerSchema = {
         type: 'toggle',
         jsonpath: 'prome',
         defaultValue: false,
-        width: 24
+        width: 24,
+        tooltip: 'Serve Prometheus metrics at /metrics'
     },
     log: {
         name: 'log',
@@ -410,7 +438,8 @@ const webviewerSchema = {
         type: 'toggle',
         jsonpath: 'log',
         defaultValue: false,
-        width: 24
+        width: 24,
+        tooltip: 'Show the log tab in the viewer'
     },
     decoder: {
         name: 'decoder',
@@ -418,7 +447,8 @@ const webviewerSchema = {
         type: 'toggle',
         jsonpath: 'decoder',
         defaultValue: false,
-        width: 24
+        width: 24,
+        tooltip: 'Enable the NMEA decoder tab'
     },
     zones: {
         name: 'zone',
@@ -435,13 +465,15 @@ const sharingSchema = {
         name: 'sharing',
         label: 'Enable Sharing',
         type: 'toggle',
-        defaultValue: false
+        defaultValue: false,
+        tooltip: 'Share received messages with the aiscatcher.org community map'
     },
     sharing_key: {
         name: 'sharing_key',
         label: 'Sharing Key (UUID)',
         type: 'text',
         placeholder: 'Enter UUID',
+        tooltip: 'Station key from aiscatcher.org; leave empty to share anonymously',
         pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
     },
     _create_key_button: {
@@ -502,6 +534,7 @@ const receiverSchema = {
             { value: "AB", label: "AB" },
             { value: "CD", label: "CD" }
         ],
+        tooltip: "AB is the standard AIS channel pair (161.975/162.025 MHz), CD the long-range channels",
         dependsOn: {
             field: "input",
             value: ["RTLSDR", "AIRSPY", "AIRSPYHF", "HACKRF", "HYDRASDR"]
@@ -513,6 +546,7 @@ const receiverSchema = {
         type: "text",
         jsonpath: "serial",
         placeholder: "Optional Serial Key",
+        tooltip: "Select a specific device by serial number when several are connected",
         dependsOn: {
             field: "input",
             value: ["RTLSDR", "AIRSPY", "AIRSPYHF", "HYDRASDR", "HACKRF"]
@@ -533,6 +567,7 @@ const receiverSchema = {
         jsonpath: "sensitivity_high",
         defaultValue: false,
         width: 25,
+        tooltip: "Adds a higher-sensitivity decoder model for a few percent more messages at extra CPU load",
         dependsOn: {
             field: "input",
             value: ["RTLSDR", "AIRSPY", "AIRSPYHF", "HACKRF", "HYDRASDR"]
@@ -547,6 +582,7 @@ const receiverSchema = {
         max: 50,
         step: 0.1,
         defaultValue: "auto",
+        tooltip: "Gain in dB, or auto for AGC",
         dependsOn: {
             field: "input",
             value: "RTLSDR"
@@ -565,6 +601,7 @@ const receiverSchema = {
             { value: 0, label: "Off" },
             { value: 192000, label: "192K" }
         ],
+        tooltip: "Tuner filter bandwidth; Off uses the device default",
         dependsOn: {
             field: "input",
             value: "RTLSDR"
@@ -583,6 +620,7 @@ const receiverSchema = {
             { value: 288000, label: "288K" },
             { value: 1536000, label: "1536K (default)" }
         ],
+        tooltip: "1536K is recommended; 288K reduces CPU load on small devices",
         dependsOn: {
             field: "input",
             value: "RTLSDR"
@@ -596,6 +634,7 @@ const receiverSchema = {
         min: -150,
         max: 150,
         defaultValue: 0,
+        tooltip: "Correct the dongle frequency error in ppm",
         dependsOn: {
             field: "input",
             value: "RTLSDR"
@@ -606,6 +645,7 @@ const receiverSchema = {
         label: "Bias tee",
         type: "toggle",
         jsonpath: "rtlsdr.biastee",
+        tooltip: "Power an external LNA over the antenna cable",
         defaultValue: false,
         width: 25,
         dependsOn: {
@@ -618,6 +658,7 @@ const receiverSchema = {
         label: "RTLAGC",
         type: "toggle",
         jsonpath: "rtlsdr.rtlagc",
+        tooltip: "RTL2832U internal AGC",
         defaultValue: true,
         width: 25,
         dependsOn: {
@@ -655,6 +696,7 @@ const receiverSchema = {
             { value: "low", label: "Low" },
             { value: "high", label: "High" }
         ],
+        tooltip: "Automatic gain control threshold",
         dependsOn: {
             field: "input",
             value: "AIRSPYHF"
@@ -665,6 +707,7 @@ const receiverSchema = {
         label: "Preamp",
         type: "toggle",
         jsonpath: "airspyhf.preamp",
+        tooltip: "Enable the built-in preamplifier",
         defaultValue: false,
         width: 25,
         dependsOn: {
@@ -683,6 +726,7 @@ const receiverSchema = {
             { value: "linearity", label: "Linearity" },
             { value: "sensitivity", label: "Sensitivity" }
         ],
+        tooltip: "Linearity and Sensitivity use one combined gain; Free sets LNA, mixer and VGA individually",
         dependsOn: {
             field: "input",
             value: "AIRSPY"
@@ -771,6 +815,7 @@ const receiverSchema = {
         label: "Bias tee",
         type: "toggle",
         jsonpath: "airspy.biastee",
+        tooltip: "Power an external LNA over the antenna cable",
         defaultValue: false,
         width: 25,
         dependsOn: {
@@ -789,6 +834,7 @@ const receiverSchema = {
             { value: "linearity", label: "Linearity" },
             { value: "sensitivity", label: "Sensitivity" }
         ],
+        tooltip: "Linearity and Sensitivity use one combined gain; Free sets LNA, mixer and VGA individually",
         dependsOn: {
             field: "input",
             value: "HYDRASDR"
@@ -877,6 +923,7 @@ const receiverSchema = {
         label: "Bias tee",
         type: "toggle",
         jsonpath: "hydrasdr.biastee",
+        tooltip: "Power an external LNA over the antenna cable",
         defaultValue: false,
         width: 25,
         dependsOn: {
@@ -902,6 +949,7 @@ const receiverSchema = {
             { value: "basestation", label: "BASESTATION" },
             { value: "raw1090", label: "RAW1090" }
         ],
+        tooltip: "Stream format of the remote server: raw I/Q (RTLTCP), NMEA text, MQTT, WebSocket, GPSD or ADS-B",
         dependsOn: {
             field: "input",
             value: "RTLTCP"
@@ -984,6 +1032,7 @@ const receiverSchema = {
         max: 50,
         step: 0.1,
         defaultValue: "auto",
+        tooltip: "Gain in dB, or auto for AGC",
         dependsOn: {
             field: "rtltcp_protocol",
             value: "rtltcp"
@@ -1126,6 +1175,7 @@ const receiverSchema = {
             { value: "57600", label: "57600" },
             { value: "115200", label: "115200" }
         ],
+        tooltip: "38400 is the standard rate for AIS equipment",
         dependsOn: {
             field: "input",
             value: "SERIALPORT"
@@ -1137,6 +1187,7 @@ const receiverSchema = {
         type: "text",
         jsonpath: "serialport.init_seq",
         placeholder: "",
+        tooltip: "Commands sent to the device when the port is opened",
         dependsOn: {
             field: "input",
             value: "SERIALPORT"
@@ -1148,6 +1199,7 @@ const receiverSchema = {
         type: "text",
         jsonpath: "udpserver.server",
         placeholder: "e.g., 127.0.0.1",
+        tooltip: "Local address the UDP server listens on",
         dependsOn: {
             field: "input",
             value: "UDPSERVER"
@@ -1203,6 +1255,7 @@ const receiverSchema = {
         label: "Preamp",
         type: "toggle",
         jsonpath: "hackrf.preamp",
+        tooltip: "Enable the built-in preamplifier",
         defaultValue: false,
         width: 25,
         dependsOn: {
@@ -1256,6 +1309,7 @@ const receiverSchema = {
         jsonpath: "nmea2000.interface",
         placeholder: "CAN interface name",
         defaultValue: "can0",
+        tooltip: "socketCAN interface, Linux only",
         dependsOn: {
             field: "input",
             value: "NMEA2000"
@@ -1267,7 +1321,8 @@ const receiverSchema = {
         type: "toggle",
         jsonpath: "verbose",
         defaultValue: false,
-        width: 25
+        width: 25,
+        tooltip: "Print received messages and statistics in the log"
     },
     zones: {
         name: "zone",
@@ -1289,7 +1344,8 @@ const generalSettingsSchema = {
         min: 1,
         max: 3600,
         step: 1,
-        unit: 's'
+        unit: 's',
+        tooltip: 'Stop the receiver after this many seconds'
     },
     timeout_only_when_idle: {
         name: 'timeout_only_when_idle',
@@ -1297,6 +1353,7 @@ const generalSettingsSchema = {
         type: 'toggle',
         jsonpath: 'timeout_only_when_idle',
         defaultValue: false,
-        width: 50
+        width: 50,
+        tooltip: 'Count the timeout only while no messages arrive — a watchdog for stalled input'
     }
 };

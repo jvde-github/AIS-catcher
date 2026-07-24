@@ -943,6 +943,7 @@
                 container._field = field;
                 container._dataContext = dataContext;
             }
+            if (field.tooltip) container.title = field.tooltip;
             if (field.description) container.appendChild(el('p', Styles.description, {}, field.description));
 
             return container;
