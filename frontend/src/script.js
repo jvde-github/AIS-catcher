@@ -508,7 +508,7 @@ function restoreDefaultSettings() {
 
 // NMEA Decoder Functions
 function toggleInfoPanel() {
-    const overlay = document.querySelector('.overlay');
+    const overlay = document.getElementById('info-overlay');
     const infoPanel = document.querySelector('.info-panel');
 
     overlay.classList.toggle('active');
