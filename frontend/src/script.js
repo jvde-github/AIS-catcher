@@ -3733,6 +3733,7 @@ function deleteAllTracks() {
     paths = p;
 
     redrawMap(); updateShipcardTrackOption();
+    saveSettings();
 }
 
 async function resetTracksFromNow() {
