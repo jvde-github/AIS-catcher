@@ -357,7 +357,6 @@ let interval,
     planesTimeout = 300,
     planesLastCleanup = 0,
     hover_feature = undefined,
-    show_all_tracks = false,
     logViewer = null,
     range_outline = undefined,
     range_outline_short = undefined,
@@ -1214,13 +1213,12 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
     updateAndroid();
     kiosk.updateKiosk();
 
-    if (show_all_tracks) {
+    if (settings.show_all_tracks) {
         document.querySelectorAll(".ctx-noalltracks").forEach(function (element) {
             element.style.display = "none";
         });
     }
-
-    if (show_all_tracks || marker_tracks.size > 0) {
+    if (settings.show_all_tracks || marker_tracks.size > 0) {
         document.querySelectorAll(".ctx-removealltracks").forEach(function (element) {
             element.style.display = "flex";
         });
@@ -3685,7 +3683,6 @@ function unpinCenter() {
 
 
 async function showAllTracks() {
-    show_all_tracks = true;
     settings.show_all_tracks = true;
     trackCutoff = 0;
     lastPathFetch = 0;
@@ -3714,7 +3711,6 @@ async function showTracksForMMSIs(mmsis) {
 }
 
 function deleteAllTracks() {
-    show_all_tracks = false;
     settings.show_all_tracks = false;
     trackCutoff = 0;
     lastPathFetch = 0;
@@ -3748,12 +3744,12 @@ async function resetTracksFromNow() {
 
 
 async function fetchTracks() {
-    if (marker_tracks.size == 0 && show_all_tracks == false) return true;
+    if (marker_tracks.size == 0 && settings.show_all_tracks == false) return true;
 
     let a;
     let isDelta = false;
     try {
-        if (show_all_tracks) {
+        if (settings.show_all_tracks) {
             const sinceParam = lastPathFetch > 0 ? "&since=" + lastPathFetch : "";
             isDelta = sinceParam !== "";
             a = await fetch("api/allpath.json?receiver=" + activeReceiver + sinceParam);
@@ -3839,7 +3835,7 @@ function trackOptionString(mmsi) {
 function updateShipcardTrackOption() {
     const trackOptionElement = document.getElementById("shipcard_track_option");
 
-    if (show_all_tracks || card_type == 'plane') {
+    if (settings.show_all_tracks || card_type == 'plane') {
         trackOptionElement.style.opacity = "0.5";
         trackOptionElement.style.pointerEvents = "none";
     } else {
@@ -4967,7 +4963,7 @@ function redrawMap() {
 
     for (let [mmsi, entry] of Object.entries(paths)) {
 
-        if (marker_tracks.has(Number(mmsi)) || show_all_tracks) {
+        if (marker_tracks.has(Number(mmsi)) || settings.show_all_tracks) {
             const path = paths[mmsi];
             const ship = shipsDB[mmsi]?.raw;
             const shipclass = ship?.shipclass;
@@ -5568,8 +5564,6 @@ console.log("Load settings from URL parameters");
 
 loadSettingsFromURL();
 updateForLegacySettings();
-show_all_tracks = settings.show_all_tracks;
-
 applyDynamicStyling();
 community.applySharingState();
 
