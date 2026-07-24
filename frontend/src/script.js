@@ -363,7 +363,6 @@ let interval,
     planesTimeout = 300,
     planesLastCleanup = 0,
     hover_feature = undefined,
-    show_all_tracks = false,
     logViewer = null,
     range_outline = undefined,
     range_outline_short = undefined,
@@ -486,6 +485,7 @@ function restoreDefaultSettings() {
         map_opacity: 0.5,
         show_track_on_hover: false,
         show_track_on_select: false,
+        show_all_tracks: false,
         shipcard_pinned: false,
         shipcard_top_left: false,
         show_signal_graphs: true,
@@ -1359,13 +1359,12 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
     updateAndroid();
     kiosk.updateKiosk();
 
-    if (show_all_tracks) {
+    if (settings.show_all_tracks) {
         document.querySelectorAll(".ctx-noalltracks").forEach(function (element) {
             element.style.display = "none";
         });
     }
-
-    if (show_all_tracks || marker_tracks.size > 0) {
+    if (settings.show_all_tracks || marker_tracks.size > 0) {
         document.querySelectorAll(".ctx-removealltracks").forEach(function (element) {
             element.style.display = "flex";
         });
@@ -3528,7 +3527,7 @@ function convertStringBooleansToActual() {
         'distance_circles', 'table_shiptype_use_icon', 'fix_center',
         'show_circle_outline', 'dark_mode', 'setcoord', 'eri', 'loadURL',
         'show_station', 'labels_declutter', 'labels_prioritize_active', 'labels_active_only', 'label_class_background', 'show_track_on_hover',
-        'show_track_on_select', 'shipcard_max', 'shipcard_top_left', 'kiosk_pan_map',
+        'show_track_on_select', 'shipcard_max', 'shipcard_top_left', 'kiosk_pan_map', 'show_all_tracks',
         'show_signal_graphs', 'show_ppm_graphs'
     ];
 
@@ -3650,13 +3649,14 @@ function unpinCenter() {
 
 
 async function showAllTracks() {
-    show_all_tracks = true;
+    settings.show_all_tracks = true;
     trackCutoff = 0;
     lastPathFetch = 0;
     select_enabled_track = hover_enabled_track = false;
     await fetchTracks();
     redrawMap();
-    updateShipcardTrackOption()
+    updateShipcardTrackOption();
+    saveSettings();
 }
 
 async function showTracksForMMSIs(mmsis) {
@@ -3677,7 +3677,7 @@ async function showTracksForMMSIs(mmsis) {
 }
 
 function deleteAllTracks() {
-    show_all_tracks = false;
+    settings.show_all_tracks = false;
     trackCutoff = 0;
     lastPathFetch = 0;
     marker_tracks = new Set();
@@ -3695,6 +3695,7 @@ function deleteAllTracks() {
     paths = p;
 
     redrawMap(); updateShipcardTrackOption();
+    saveSettings();
 }
 
 async function resetTracksFromNow() {
@@ -3709,12 +3710,12 @@ async function resetTracksFromNow() {
 
 
 async function fetchTracks() {
-    if (marker_tracks.size == 0 && show_all_tracks == false) return true;
+    if (marker_tracks.size == 0 && settings.show_all_tracks == false) return true;
 
     let a;
     let isDelta = false;
     try {
-        if (show_all_tracks) {
+        if (settings.show_all_tracks) {
             const sinceParam = lastPathFetch > 0 ? "&since=" + lastPathFetch : "";
             isDelta = sinceParam !== "";
             a = await fetch("api/allpath.json?receiver=" + activeReceiver + sinceParam);
@@ -3800,7 +3801,7 @@ function trackOptionString(mmsi) {
 function updateShipcardTrackOption() {
     const trackOptionElement = document.getElementById("shipcard_track_option");
 
-    if (show_all_tracks || card_type == 'plane') {
+    if (settings.show_all_tracks || card_type == 'plane') {
         trackOptionElement.style.opacity = "0.5";
         trackOptionElement.style.pointerEvents = "none";
     } else {
@@ -4899,7 +4900,7 @@ function redrawMap() {
 
     for (let [mmsi, entry] of Object.entries(paths)) {
 
-        if (marker_tracks.has(Number(mmsi)) || show_all_tracks) {
+        if (marker_tracks.has(Number(mmsi)) || settings.show_all_tracks) {
             const path = paths[mmsi];
             const ship = shipsDB[mmsi]?.raw;
             const shipclass = ship?.shipclass;
@@ -5481,7 +5482,6 @@ console.log("Load settings from URL parameters");
 
 loadSettingsFromURL();
 updateForLegacySettings();
-
 applyDynamicStyling();
 community.applySharingState();
 
