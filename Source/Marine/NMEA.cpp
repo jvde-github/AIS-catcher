@@ -24,6 +24,11 @@
 
 namespace AIS
 {
+	// Accept upstream timestamps only between 2000-01-01 and 2050-01-01, otherwise treat as unset (#596).
+	static inline int64_t validTOA(int64_t toa_us)
+	{
+		return (toa_us > 946684800000000LL && toa_us < 2524608000000000LL) ? toa_us : 0;
+	}
 
 	void NMEA::reset()
 	{
@@ -558,10 +563,10 @@ namespace AIS
 					break;
 				case AIS::KEY_RXUXTIME:
 					if (!saw_toa)
-						mctx.toa = (int64_t)std::llround(p.Get().getFloat() * 1000000.0);
+						mctx.toa = validTOA((int64_t)std::llround(p.Get().getFloat() * 1000000.0));
 					break;
 				case AIS::KEY_TOA:
-					mctx.toa = (int64_t)std::llround(p.Get().getFloat() * 1000000.0);
+					mctx.toa = validTOA((int64_t)std::llround(p.Get().getFloat() * 1000000.0));
 					saw_toa = true;
 					break;
 				case AIS::KEY_STATION_ID:
@@ -843,33 +848,18 @@ namespace AIS
 				}
 				case 'c':
 				{
-					bool hasDot = false;
-					for (int i = 0; i < vLen; i++)
-					{
-						if (val[i] == '.')
-						{
-							hasDot = true;
-							break;
-						}
-					}
-
-					if (hasDot)
+					if (memchr(val, '.', vLen))
 					{
 						char *end;
 						double ts = strtod(val, &end);
 						if (end > val)
-							mctx.toa = (int64_t)std::llround(ts * 1000000.0);
+							mctx.toa = validTOA((int64_t)std::llround(ts * 1000000.0));
 					}
 					else
 					{
-						bool neg = (vLen > 0 && val[0] == '-');
 						int64_t raw;
-						if (parse_uint(val + neg, vLen - neg, raw))
-						{
-							if (neg)
-								raw = -raw;
-							mctx.toa = (raw > 100000000000LL || raw < -100000000000LL) ? raw : (raw * 1000000);
-						}
+						if (parse_uint(val, vLen, raw))
+							mctx.toa = validTOA(raw > 100000000000LL ? raw : (raw * 1000000));
 					}
 					break;
 				}
