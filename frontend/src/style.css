@@ -3,6 +3,7 @@
     --accent: var(--primary-color);
     --text-muted: #64748b;
     --alert-red: #e01b24;
+    --hl-accent: #1c71d8;
     --ok-text: green;
     --ok-strong: #7cfc00;
     --hdr-band: #f0f4f8;
@@ -714,7 +715,13 @@ td {
 }
 
 .map-button:hover {
-    background-color: var(--menu-border-color) !important;
+    color: var(--hl-accent) !important;
+    fill: var(--hl-accent) !important;
+    outline: none !important;
+}
+
+.map-button:hover svg {
+    transform: scale(1.2);
 }
 
 .map-button:focus {
@@ -724,6 +731,7 @@ td {
 .map-button svg {
     width: 19px !important;
     height: 19px !important;
+    transition: transform 0.15s ease;
 }
 
 /* Top pill holds denser glyphs (ship/ruler) — render them a touch smaller
