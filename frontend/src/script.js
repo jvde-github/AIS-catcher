@@ -332,6 +332,12 @@ function _bindDelegatedActions() {
         });
     }
 }
+document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (!document.getElementById("dialog-box").classList.contains("hidden")) closeDialog();
+    else if (document.querySelector(".settings_window").classList.contains("active")) closeSettings();
+});
+
 if (document.body) _bindDelegatedActions();
 else document.addEventListener('DOMContentLoaded', _bindDelegatedActions);
 
@@ -637,6 +643,22 @@ let settingsSubWrap = null;
 let settingsChevronLeft = null;
 let settingsChevronRight = null;
 
+function makeSettingsTab(label, activate) {
+    const tab = document.createElement("div");
+    tab.className = "settings_tab";
+    tab.textContent = label;
+    tab.setAttribute("role", "tab");
+    tab.tabIndex = 0;
+    tab.onclick = activate;
+    tab.onkeydown = (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            activate();
+        }
+    };
+    return tab;
+}
+
 function buildSettingsTabs() {
     const main = document.querySelector(".settings_main");
 
@@ -666,18 +688,16 @@ function buildSettingsTabs() {
 
     const nav = document.createElement("nav");
     nav.className = "settings_tabs";
+    nav.setAttribute("role", "tablist");
     settingsGroups.forEach((g, i) => {
-        const tab = document.createElement("div");
-        tab.className = "settings_tab";
-        tab.textContent = g.title;
-        tab.onclick = () => selectSettingsGroup(i);
-        nav.appendChild(tab);
+        nav.appendChild(makeSettingsTab(g.title, () => selectSettingsGroup(i)));
     });
-    const headerSlot = document.querySelector("#settings .settings_header div:nth-child(2)");
+    const headerSlot = document.querySelector("#settings .settings_header .hdr-slot");
     headerSlot.appendChild(nav);
 
     settingsSubNav = document.createElement("nav");
     settingsSubNav.className = "settings_tabs settings_subtabs";
+    settingsSubNav.setAttribute("role", "tablist");
 
     settingsSubWrap = document.createElement("div");
     settingsSubWrap.className = "settings_nav settings_tabscroll";
@@ -710,16 +730,15 @@ function updateSettingsChevrons() {
 function selectSettingsGroup(idx) {
     const group = settingsGroups[idx];
     document.querySelectorAll(".settings_tabs:not(.settings_subtabs) .settings_tab")
-        .forEach((t, i) => t.classList.toggle("active", i === idx));
+        .forEach((t, i) => {
+            t.classList.toggle("active", i === idx);
+            t.setAttribute("aria-selected", i === idx);
+        });
 
     settingsSubNav.innerHTML = "";
     settingsSubWrap.style.display = group.subs.length > 1 ? "" : "none";
     group.subs.forEach((sub, i) => {
-        const tab = document.createElement("div");
-        tab.className = "settings_tab";
-        tab.textContent = sub.label;
-        tab.onclick = () => selectSettingsSub(idx, i);
-        settingsSubNav.appendChild(tab);
+        settingsSubNav.appendChild(makeSettingsTab(sub.label, () => selectSettingsSub(idx, i)));
     });
     selectSettingsSub(idx, 0);
     settingsSubNav.scrollLeft = 0;
@@ -739,7 +758,10 @@ function selectSettingsSub(groupIdx, subIdx) {
             if (show) first = false;
         }
     }
-    settingsSubNav.querySelectorAll(".settings_tab").forEach((t, i) => t.classList.toggle("active", i === subIdx));
+    settingsSubNav.querySelectorAll(".settings_tab").forEach((t, i) => {
+        t.classList.toggle("active", i === subIdx);
+        t.setAttribute("aria-selected", i === subIdx);
+    });
     main.scrollTop = 0;
 }
 

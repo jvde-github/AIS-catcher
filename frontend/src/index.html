@@ -83,8 +83,7 @@
 
 		<div class="tableside_window settings-bg tabcontent" id="tableside">
 			<div class="settings_header">
-				<div></div>
-				<div class="">
+				<div class="hdr-slot">
 					<input type="text" class="search-box" id="shipSearchSide" placeholder="Search for ships...">
 				</div>
 				<div data-action="hideTablecard" class="close_icon"></div>
@@ -108,14 +107,13 @@
 
 		<div class="settings_window settings-bg" id="settings">
 			<div class="settings_header">
-				<div></div>
-				<div></div>
+				<div class="hdr-slot"></div>
 				<div data-action="closeSettings" class="close_icon"></div>
 			</div>
-			<div class="settings_main stat-panel settings-bg" style="border-radius: 0px;">
+			<div class="settings_main settings-bg">
 				<header>System</header>
 				<section>
-					<div><span>Settings</span><span style="cursor: pointer" data-action="applyDefaultSettings"> Reset
+					<div><span>Defaults</span><span style="cursor: pointer" data-action="applyDefaultSettings"> Reset
 						</span><small class="st-desc">Restore all settings to defaults</small>
 						</div>
 				</section>
@@ -355,7 +353,7 @@
 				</section>
 				
 				<section>
-					<h5 class="st-title">Ship Outline on the Map</h5>
+					<h5 class="st-title">Ship Outline</h5>
 					<div class="third">
 						<span>Border</span><span>
 							<input type="color" class="color-picker" id="settings_shipoutline_border"
@@ -370,8 +368,7 @@
 						</span>
 						<small class="st-desc">Ship shape fill</small>
 					</div>
-				</section>
-				<section>
+					
 					<div>
 						<span id="shipoutline_opacity_label">Opacity (0.9)</span>
 						<span>
@@ -381,8 +378,7 @@
 						</span>
 					<small class="st-desc">Transparency of the ship shape fill</small>
 						</div>
-					</section>
-				<section>
+					
 					<div>
 						<span>Outline as Circle</span>
 						<span>
