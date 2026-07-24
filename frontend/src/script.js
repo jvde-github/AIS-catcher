@@ -481,6 +481,7 @@ function restoreDefaultSettings() {
         map_opacity: 0.5,
         show_track_on_hover: false,
         show_track_on_select: false,
+        show_all_tracks: false,
         shipcard_pinned: false,
         shipcard_top_left: false,
         show_signal_graphs: true,
@@ -3562,7 +3563,7 @@ function convertStringBooleansToActual() {
         'distance_circles', 'table_shiptype_use_icon', 'fix_center',
         'show_circle_outline', 'dark_mode', 'setcoord', 'eri', 'loadURL',
         'show_station', 'labels_declutter', 'labels_prioritize_active', 'labels_active_only', 'label_class_background', 'show_track_on_hover',
-        'show_track_on_select', 'shipcard_max', 'shipcard_top_left', 'kiosk_pan_map',
+        'show_track_on_select', 'shipcard_max', 'shipcard_top_left', 'kiosk_pan_map', 'show_all_tracks',
         'show_signal_graphs', 'show_ppm_graphs'
     ];
 
@@ -3685,12 +3686,14 @@ function unpinCenter() {
 
 async function showAllTracks() {
     show_all_tracks = true;
+    settings.show_all_tracks = true;
     trackCutoff = 0;
     lastPathFetch = 0;
     select_enabled_track = hover_enabled_track = false;
     await fetchTracks();
     redrawMap();
-    updateShipcardTrackOption()
+    updateShipcardTrackOption();
+    saveSettings();
 }
 
 async function showTracksForMMSIs(mmsis) {
@@ -3712,6 +3715,7 @@ async function showTracksForMMSIs(mmsis) {
 
 function deleteAllTracks() {
     show_all_tracks = false;
+    settings.show_all_tracks = false;
     trackCutoff = 0;
     lastPathFetch = 0;
     marker_tracks = new Set();
@@ -5563,6 +5567,7 @@ console.log("Load settings from URL parameters");
 
 loadSettingsFromURL();
 updateForLegacySettings();
+show_all_tracks = settings.show_all_tracks;
 
 applyDynamicStyling();
 community.applySharingState();
