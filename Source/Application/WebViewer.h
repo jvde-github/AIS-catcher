@@ -105,6 +105,8 @@ struct TrackingConfig
 	uint32_t own_mmsi = 0;
 	int time_history = 30 * 60;
 	int cutoff = 0;
+	int track_mem = -1; // MB; -1 = default (8, 128 in server mode)
+	std::string track_thin = "60:5,120:10,1440:30";
 };
 
 // Bundles all per-receiver (or aggregate) state: ship DB, counters, history.

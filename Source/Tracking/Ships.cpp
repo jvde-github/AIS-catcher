@@ -26,6 +26,9 @@ void Ship::reset()
 {
 
 	path_ptr = -1;
+	path_oldest = -1;
+	path_count = 0;
+	generation++;
 
 	mmsi = count = msg_type = shiptype = group_mask = 0;
 	flags.reset();

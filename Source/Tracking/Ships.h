@@ -47,6 +47,8 @@ struct Ship
     ShipLL hash;     // hash bucket chain
     uint32_t mmsi;
     int count, msg_type, shipclass, mmsi_type, shiptype, heading, status, path_ptr;
+    int path_oldest = -1, path_count = 0;
+    uint16_t generation = 0; // bumped on slot reuse; invalidates path fix-up entries
     int to_port, to_bow, to_starboard, to_stern, IMO, angle, altitude, received_stations;
     int unit_model, unit_serial;
     char month, day, hour, minute;

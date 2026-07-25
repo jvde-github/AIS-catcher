@@ -28,14 +28,65 @@
 #include "Writer.h"
 #include "Ships.h"
 
-struct PathPoint
+// Track history storage — tiered chunk lists with age-triggered whole-chunk
+// consolidation; see TRACK_STORAGE_DESIGN.md for the full design.
+
+typedef uint32_t PtRef; // (chunk << PATH_CHUNK_BITS) | slot
+
+const PtRef PATH_NONE = 0xFFFFFFFF;
+const int PATH_CHUNK_BITS = 12;
+const int PATH_CHUNK_POINTS = 1 << PATH_CHUNK_BITS;
+const int PATH_LATLON_SCALE = 600000; // AIS wire unit: 1/600000 deg
+
+// packed sog_cog_hdg: bits 0-9 sog (0.1 kn, 1023 n/a), 10-21 cog (0.1 deg,
+// 3600 n/a), 22-30 heading (deg, 511 n/a), bit 31 spare
+const uint32_t PATH_SOG_NA = 1023;
+const uint32_t PATH_COG_NA = 3600;
+const uint32_t PATH_HDG_NA = 511;
+
+struct PathPoint // 20 bytes, AIS wire units
 {
-	float lat, lon;
-	uint32_t mmsi = 0;
-	std::time_t timestamp_start = 0;
-	std::time_t timestamp_end = 0;
-	int count = 0;
-	int next = 0;
+	int32_t lat, lon;
+	uint32_t ts;
+	uint32_t sog_cog_hdg;
+	PtRef next_older;
+};
+
+struct PathChunk
+{
+	struct Fixup
+	{
+		uint32_t ship;
+		uint16_t ship_gen;
+		uint16_t chunk_gen; // generation of pred's chunk at record time
+		PtRef pred;			// point in a newer chunk whose next_older crosses into this chunk
+	};
+	struct Touched
+	{
+		uint32_t ship;
+		uint16_t ship_gen;
+	};
+
+	std::vector<PathPoint> pt;
+	std::vector<Fixup> fixups;
+	std::vector<Touched> touched;
+	uint32_t latest_ts = 0;
+	int prev = -1, next = -1; // tier chunk list: prev = newer, next = older
+	int tier = -1;
+	int bump = 0;
+	bool sealed = false; // bump chunk closed early (seal-by-age); no longer receives
+	uint16_t gen = 0;	 // bumped when the chunk is emptied; invalidates fix-ups into it
+
+	PathChunk() : pt(PATH_CHUNK_POINTS) {}
+};
+
+struct PathTier
+{
+	int spacing = 0;   // seconds between stored points (0 = raw)
+	int exit_age = -1; // age in seconds at which chunks consolidate into the next tier (-1 = last tier)
+	int head = -1;	   // newest chunk (bump target)
+	int tail = -1;	   // oldest chunk (consolidation candidate)
+	int nchunks = 0;
 };
 
 struct BinaryMessage
@@ -66,7 +117,7 @@ class DB : public StreamIn<JSON::JSON>,
 
 	JSON::Serializer builder{JSON_DICT_FULL};
 
-	int first = 0, last = 0, count = 0, path_idx = 0;
+	int first = 0, last = 0, count = 0;
 	std::string content, delim;
 	float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 	int TIME_HISTORY = 30 * 60;
@@ -78,8 +129,17 @@ class DB : public StreamIn<JSON::JSON>,
 	uint32_t own_mmsi = 0;
 
 	int Nships = 4096;
-	int Npaths = Nships * 16;
 	int HASH_SIZE = 8209;
+
+	// track history storage
+	int track_mem_mb = 8; // TRACK_MEM; server_mode scales in setup()
+	std::string track_thin = "60:5,120:10,1440:30";
+	std::vector<std::unique_ptr<PathChunk>> chunks;
+	std::vector<int> empty_chunks;
+	std::vector<PathTier> tiers;
+	std::vector<PtRef> run_buf; // scratch for consolidateChunk
+	int max_chunks = 0;
+	bool consolidating = false;
 
 	struct HashBucket
 	{
@@ -88,7 +148,6 @@ class DB : public StreamIn<JSON::JSON>,
 	};
 
 	std::vector<Ship> ships;
-	std::vector<PathPoint> paths;
 	std::vector<HashBucket> hash_table;
 
 	bool isValidCoord(float lat, float lon);
@@ -113,7 +172,22 @@ class DB : public StreamIn<JSON::JSON>,
 	bool writeSinglePathJSONCompactSince(int idx, std::time_t since, JSON::Writer &w);
 	bool hasPathPointsSince(int idx, std::time_t since);
 	void writeSinglePathGeoJSON(int idx, JSON::Writer &w);
-	bool isNextPathPoint(int idx, uint32_t mmsi, int count) { return idx != -1 && paths[idx].mmsi == mmsi && paths[idx].count < count; }
+
+	// track history storage internals
+	PathPoint &deref(PtRef h) { return chunks[h >> PATH_CHUNK_BITS]->pt[h & (PATH_CHUNK_POINTS - 1)]; }
+	const PathPoint &deref(PtRef h) const { return chunks[h >> PATH_CHUNK_BITS]->pt[h & (PATH_CHUNK_POINTS - 1)]; }
+	int chunkOf(PtRef h) const { return (int)(h >> PATH_CHUNK_BITS); }
+	static uint32_t packSogCogHdg(float speed, float cog, int heading);
+	PtRef tierAppend(int tier, const PathPoint &p);
+	int acquireChunk(int tier);
+	int newChunk();
+	int makeSpace();
+	void releaseChunk(int cidx);
+	void ageCheck(std::time_t now);
+	void consolidateChunk(int cidx, bool promote);
+	void consolidateRun(int cidx, int dst, int ship_idx, PtRef pred);
+	void parseTrackThin();
+	void addCrossingBookkeeping(int ship_idx, PtRef p); // fix-up/touched entries for a new head link
 
 	AIS::Filter filter;
 
@@ -134,6 +208,8 @@ public:
 
 	void setup();
 	void setTimeHistory(int t) { TIME_HISTORY = t; }
+	void setTrackMem(int mb) { track_mem_mb = mb; }
+	void setTrackThin(const std::string &s) { track_thin = s; }
 	void setShareLatLon(bool b) { latlon_share = b; }
 	bool getShareLatLon() { return latlon_share; }
 

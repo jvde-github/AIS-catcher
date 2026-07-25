@@ -17,8 +17,12 @@
 
 #include "AIS-catcher.h"
 #include "DB.h"
+#include "Parse.h"
+#include "Convert.h"
 
 #include <fstream>
+#include <sstream>
+#include <cmath>
 
 //-----------------------------------
 // simple ship database
@@ -29,14 +33,28 @@ void DB::setup()
 	if (server_mode)
 	{
 		Nships *= 32;
-		Npaths *= 32;
 		HASH_SIZE = 262147;
+		if (track_mem_mb < 0)
+			track_mem_mb = 128;
 
-		Info() << "DB: internal ship database extended to " << Nships << " ships and " << Npaths << " path points";
+		Info() << "DB: internal ship database extended to " << Nships << " ships";
 	}
 
+	if (track_mem_mb < 0)
+		track_mem_mb = 8;
+
+	parseTrackThin();
+
+	const int chunk_bytes = (int)(sizeof(PathPoint) * PATH_CHUNK_POINTS + 4096);
+	max_chunks = MAX(4, (int)(((int64_t)track_mem_mb << 20) / chunk_bytes));
+
+	std::string tier_desc;
+	for (size_t k = 1; k < tiers.size(); k++)
+		tier_desc += (k > 1 ? "/" : "") + std::to_string(tiers[k].spacing / 60) + "min";
+	Info() << "DB: track history " << track_mem_mb << " MB (" << max_chunks << " chunks of " << PATH_CHUNK_POINTS
+		   << " points), tiers: raw" << (tier_desc.empty() ? "" : "/" + tier_desc);
+
 	ships.resize(Nships);
-	paths.resize(Npaths);
 	hash_table.resize(HASH_SIZE);
 
 	first = Nships - 1;
@@ -395,67 +413,62 @@ std::string DB::getAllPathJSON()
 	return content;
 }
 
+// Path points are emitted as [lat, lon, ts_start, ts_end] like before; the
+// storage keeps one timestamp per point, so ts_end (last time at that
+// position) is derived as the next-newer point's ts — for the head, the
+// ship's last_signal.
+
 void DB::writeSinglePathJSON(int idx, JSON::Writer &w)
 {
-	uint32_t mmsi = ships[idx].mmsi;
-	int ptr = ships[idx].path_ptr;
-	int t = ships[idx].count + 1;
+	PtRef ptr = ships[idx].path_ptr == -1 ? PATH_NONE : (PtRef)ships[idx].path_ptr;
+	std::time_t newer_ts = ships[idx].last_signal;
 
 	w.beginArray();
-	while (isNextPathPoint(ptr, mmsi, t))
+	while (ptr != PATH_NONE)
 	{
-		if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
-			w.beginArray().val(paths[ptr].lat).val(paths[ptr].lon).val(paths[ptr].timestamp_start).val(paths[ptr].timestamp_end).endArray();
-		t = paths[ptr].count;
-		ptr = paths[ptr].next;
+		const PathPoint &p = deref(ptr);
+		w.beginArray().val(p.lat / (float)PATH_LATLON_SCALE).val(p.lon / (float)PATH_LATLON_SCALE).val((std::time_t)p.ts).val(newer_ts).endArray();
+		newer_ts = (std::time_t)p.ts;
+		ptr = p.next_older;
 	}
 	w.endArray();
 }
 
 void DB::writeSinglePathJSONCompact(int idx, JSON::Writer &w)
 {
-	uint32_t mmsi = ships[idx].mmsi;
-	int ptr = ships[idx].path_ptr;
-	int t = ships[idx].count + 1;
+	PtRef ptr = ships[idx].path_ptr == -1 ? PATH_NONE : (PtRef)ships[idx].path_ptr;
+	std::time_t newer_ts = ships[idx].last_signal;
 	int cnt = 0;
 
 	w.beginArray();
-	while (isNextPathPoint(ptr, mmsi, t))
+	while (ptr != PATH_NONE && cnt < 250)
 	{
-		if (cnt >= 250)
-			break;
-
-		if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
-		{
-			w.beginArray().val(paths[ptr].lat).val(paths[ptr].lon).val(paths[ptr].timestamp_start).val(paths[ptr].timestamp_end).endArray();
-			cnt++;
-		}
-		t = paths[ptr].count;
-		ptr = paths[ptr].next;
+		const PathPoint &p = deref(ptr);
+		w.beginArray().val(p.lat / (float)PATH_LATLON_SCALE).val(p.lon / (float)PATH_LATLON_SCALE).val((std::time_t)p.ts).val(newer_ts).endArray();
+		cnt++;
+		newer_ts = (std::time_t)p.ts;
+		ptr = p.next_older;
 	}
 	w.endArray();
 }
 
 bool DB::writeSinglePathJSONCompactSince(int idx, std::time_t since, JSON::Writer &w)
 {
-	uint32_t mmsi = ships[idx].mmsi;
-	int ptr = ships[idx].path_ptr;
-	int t = ships[idx].count + 1;
+	PtRef ptr = ships[idx].path_ptr == -1 ? PATH_NONE : (PtRef)ships[idx].path_ptr;
+	std::time_t newer_ts = ships[idx].last_signal;
 	bool any = false;
 
 	w.beginArray();
-	while (isNextPathPoint(ptr, mmsi, t))
+	while (ptr != PATH_NONE)
 	{
-		if ((long int)paths[ptr].timestamp_end < (long int)since)
+		if ((long int)newer_ts < (long int)since)
 			break;
 
-		if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
-		{
-			w.beginArray().val(paths[ptr].lat).val(paths[ptr].lon).val(paths[ptr].timestamp_start).val(paths[ptr].timestamp_end).endArray();
-			any = true;
-		}
-		t = paths[ptr].count;
-		ptr = paths[ptr].next;
+		const PathPoint &p = deref(ptr);
+		w.beginArray().val(p.lat / (float)PATH_LATLON_SCALE).val(p.lon / (float)PATH_LATLON_SCALE).val((std::time_t)p.ts).val(newer_ts).endArray();
+		any = true;
+		newer_ts = (std::time_t)p.ts;
+		ptr = p.next_older;
 	}
 	w.endArray();
 	return any;
@@ -463,15 +476,11 @@ bool DB::writeSinglePathJSONCompactSince(int idx, std::time_t since, JSON::Write
 
 bool DB::hasPathPointsSince(int idx, std::time_t since)
 {
-	// Path list is reverse-chronological — the head is the most recent
-	// point. If the head is older than `since`, nothing newer exists;
-	// otherwise at least one point is in the window. Coordinate validity
-	// is filtered at write time by writeSinglePathJSONCompactSince.
-	int ptr = ships[idx].path_ptr;
-	int t = ships[idx].count + 1;
-	if (!isNextPathPoint(ptr, ships[idx].mmsi, t))
+	// The chain is reverse-chronological; the head's derived ts_end is the
+	// ship's last_signal. If that is older than `since`, nothing newer exists.
+	if (ships[idx].path_ptr == -1)
 		return false;
-	return (long int)paths[ptr].timestamp_end >= (long int)since;
+	return (long int)ships[idx].last_signal >= (long int)since;
 }
 
 std::string DB::getAllPathJSONSince(std::time_t since)
@@ -504,43 +513,38 @@ std::string DB::getAllPathJSONSince(std::time_t since)
 void DB::writeSinglePathGeoJSON(int idx, JSON::Writer &w)
 {
 	uint32_t mmsi = ships[idx].mmsi;
-	int path_head = ships[idx].path_ptr;
-	int count_head = ships[idx].count + 1;
+	PtRef path_head = ships[idx].path_ptr == -1 ? PATH_NONE : (PtRef)ships[idx].path_ptr;
 
 	w.beginObject().kv("type", "Feature").key("geometry").beginObject().kv("type", "LineString").key("coordinates").beginArray();
 	{
-		int ptr = path_head;
-		int t = count_head;
-		while (isNextPathPoint(ptr, mmsi, t))
+		PtRef ptr = path_head;
+		while (ptr != PATH_NONE)
 		{
-			if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
-				w.beginArray().val(paths[ptr].lon).val(paths[ptr].lat).endArray();
-			t = paths[ptr].count;
-			ptr = paths[ptr].next;
+			const PathPoint &p = deref(ptr);
+			w.beginArray().val(p.lon / (float)PATH_LATLON_SCALE).val(p.lat / (float)PATH_LATLON_SCALE).endArray();
+			ptr = p.next_older;
 		}
 	}
 	w.endArray().endObject().key("properties").beginObject().kv("mmsi", mmsi).key("timestamps_start").beginArray();
 	{
-		int ptr = path_head;
-		int t = count_head;
-		while (isNextPathPoint(ptr, mmsi, t))
+		PtRef ptr = path_head;
+		while (ptr != PATH_NONE)
 		{
-			if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
-				w.val(paths[ptr].timestamp_start);
-			t = paths[ptr].count;
-			ptr = paths[ptr].next;
+			const PathPoint &p = deref(ptr);
+			w.val((std::time_t)p.ts);
+			ptr = p.next_older;
 		}
 	}
 	w.endArray().key("timestamps_end").beginArray();
 	{
-		int ptr = path_head;
-		int t = count_head;
-		while (isNextPathPoint(ptr, mmsi, t))
+		PtRef ptr = path_head;
+		std::time_t newer_ts = ships[idx].last_signal;
+		while (ptr != PATH_NONE)
 		{
-			if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
-				w.val(paths[ptr].timestamp_end);
-			t = paths[ptr].count;
-			ptr = paths[ptr].next;
+			const PathPoint &p = deref(ptr);
+			w.val(newer_ts);
+			newer_ts = (std::time_t)p.ts;
+			ptr = p.next_older;
 		}
 	}
 	w.endArray().endObject().endObject();
@@ -690,57 +694,396 @@ void DB::moveShipToFront(int ptr)
 	first = ptr;
 }
 
-void DB::addToPath(int ptr)
+// ------------------------------------------------------------------
+// Track history storage: tiered chunk lists, bump inserts, age-triggered
+// whole-chunk consolidation. See TRACK_STORAGE_DESIGN.md.
+
+void DB::parseTrackThin()
 {
+	tiers.clear();
 
-	int idx = ships[ptr].path_ptr;
-	float lat = ships[ptr].lat;
-	float lon = ships[ptr].lon;
-	int count = ships[ptr].count;
-	uint32_t mmsi = ships[ptr].mmsi;
-	std::time_t timestamp = ships[ptr].last_signal;
+	std::vector<std::pair<int, int>> pairs; // boundary min, spacing min
+	std::string s = track_thin;
+	Util::Convert::toUpper(s);
 
-	if (isNextPathPoint(idx, mmsi, count))
+	if (!s.empty() && s != "OFF")
 	{
-		// path exists and ship did not move
-		if (paths[idx].lat == lat && paths[idx].lon == lon)
+		std::stringstream ss(s);
+		std::string item;
+		int prev_b = 0, prev_s = 0;
+		while (std::getline(ss, item, ','))
 		{
-			paths[idx].count = ships[ptr].count;
-			paths[idx].timestamp_end = timestamp; // Update end time, keep start time
-			return;
-		}
-		// if there exist a previous path point, check if ship moved more than 100 meters and, if not, update clustered path point
-		int next = paths[idx].next;
-		if (isNextPathPoint(next, mmsi, paths[idx].count))
-		{
-			float lat_prev = paths[next].lat;
-			float lon_prev = paths[next].lon;
-
-			float d = (lat_prev - lat) * (lat_prev - lat) + (lon_prev - lon) * (lon_prev - lon);
-
-			if (d < 0.000001)
-			{
-				// Update clustered point: keep start time, update end time and position
-				paths[idx].lat = lat;
-				paths[idx].lon = lon;
-				paths[idx].count = ships[ptr].count;
-				paths[idx].timestamp_end = timestamp; // Keep timestamp_start unchanged
-				return;
-			}
+			size_t c = item.find(':');
+			if (c == std::string::npos)
+				throw std::runtime_error("DB: TRACK_THIN entry \"" + item + "\" is not boundary:spacing");
+			int b = (int)Util::Parse::Integer(item.substr(0, c), 1, 7 * 24 * 60, "TRACK_THIN");
+			int sp = (int)Util::Parse::Integer(item.substr(c + 1), 1, 24 * 60, "TRACK_THIN");
+			if (b <= prev_b || sp <= prev_s)
+				throw std::runtime_error("DB: TRACK_THIN boundaries and spacings must be strictly increasing");
+			prev_b = b;
+			prev_s = sp;
+			pairs.push_back(std::pair<int, int>(b, sp));
 		}
 	}
 
-	// create new path point
-	paths[path_idx].next = idx;
-	paths[path_idx].lat = lat;
-	paths[path_idx].lon = lon;
-	paths[path_idx].mmsi = ships[ptr].mmsi;
-	paths[path_idx].count = ships[ptr].count;
-	paths[path_idx].timestamp_start = timestamp; // New point: start and end are the same initially
-	paths[path_idx].timestamp_end = timestamp;
+	PathTier t0;
+	t0.spacing = 0;
+	t0.exit_age = pairs.empty() ? -1 : pairs[0].first * 60;
+	tiers.push_back(t0);
 
-	ships[ptr].path_ptr = path_idx;
-	path_idx = (path_idx + 1) % Npaths;
+	for (size_t i = 0; i < pairs.size(); i++)
+	{
+		PathTier t;
+		t.spacing = pairs[i].second * 60;
+		t.exit_age = (i + 1 < pairs.size()) ? pairs[i + 1].first * 60 : -1;
+		tiers.push_back(t);
+	}
+}
+
+uint32_t DB::packSogCogHdg(float speed, float cog, int heading)
+{
+	uint32_t s = PATH_SOG_NA, c = PATH_COG_NA, h = PATH_HDG_NA;
+
+	if (speed >= 0 && speed <= 102.2f)
+		s = (uint32_t)(speed * 10 + 0.5f);
+	if (cog >= 0 && cog < 360)
+		c = (uint32_t)(cog * 10 + 0.5f) % 3600;
+	if (heading >= 0 && heading < 360)
+		h = (uint32_t)heading;
+
+	return s | (c << 10) | (h << 22);
+}
+
+int DB::newChunk()
+{
+	chunks.push_back(std::unique_ptr<PathChunk>(new PathChunk()));
+	return (int)chunks.size() - 1;
+}
+
+void DB::releaseChunk(int cidx)
+{
+	PathChunk &C = *chunks[cidx];
+	PathTier &t = tiers[C.tier];
+
+	if (C.prev != -1)
+		chunks[C.prev]->next = C.next;
+	else
+		t.head = C.next;
+	if (C.next != -1)
+		chunks[C.next]->prev = C.prev;
+	else
+		t.tail = C.prev;
+	t.nchunks--;
+
+	C.tier = -1;
+	C.prev = C.next = -1;
+	C.bump = 0;
+	C.sealed = false;
+	C.latest_ts = 0;
+	C.gen++; // invalidates all fix-up entries referencing points in this chunk
+	C.fixups.clear();
+	C.touched.clear();
+
+	empty_chunks.push_back(cidx);
+}
+
+int DB::acquireChunk(int tier)
+{
+	int c;
+	if (!empty_chunks.empty())
+	{
+		c = empty_chunks.back();
+		empty_chunks.pop_back();
+	}
+	else if ((int)chunks.size() < max_chunks || consolidating)
+	{
+		// during consolidation the pool may transiently exceed the cap by a
+		// chunk (the source is freed at the end and lands on the empty ring)
+		c = newChunk();
+	}
+	else
+		c = makeSpace();
+
+	PathChunk &C = *chunks[c];
+	PathTier &t = tiers[tier];
+
+	C.tier = tier;
+	C.prev = -1;
+	C.next = t.head;
+	if (t.head != -1)
+		chunks[t.head]->prev = c;
+	else
+		t.tail = c;
+	t.head = c;
+	t.nchunks++;
+
+	return c;
+}
+
+int DB::makeSpace()
+{
+	// walk back over the granularities: drop the oldest chunk of the
+	// coarsest non-empty tier (keep-nothing consolidation — the splice is
+	// what prevents dangling links; never a raw free)
+	for (int k = (int)tiers.size() - 1; k >= 0; k--)
+	{
+		if (tiers[k].tail == -1)
+			continue;
+		consolidateChunk(tiers[k].tail, false);
+		int c = empty_chunks.back();
+		empty_chunks.pop_back();
+		return c;
+	}
+	return newChunk(); // no chunks exist at all
+}
+
+PtRef DB::tierAppend(int tier, const PathPoint &p)
+{
+	PathTier &t = tiers[tier];
+	int c = t.head;
+	if (c == -1 || chunks[c]->bump == PATH_CHUNK_POINTS || chunks[c]->sealed)
+		c = acquireChunk(tier);
+
+	PathChunk &C = *chunks[c];
+	int slot = C.bump++;
+	C.pt[slot] = p;
+	C.latest_ts = p.ts;
+	return ((PtRef)c << PATH_CHUNK_BITS) | (PtRef)slot;
+}
+
+void DB::addToPath(int ptr)
+{
+	Ship &s = ships[ptr];
+
+	if (!isValidCoord(s.lat, s.lon))
+		return;
+
+	int32_t la = (int32_t)std::lround(s.lat * PATH_LATLON_SCALE);
+	int32_t lo = (int32_t)std::lround(s.lon * PATH_LATLON_SCALE);
+
+	if (s.path_ptr != -1)
+	{
+		// stationary clustering: close to the head point -> do nothing;
+		// dwell time is the gap to the next-newer point at read time.
+		// threshold matches the old 1e-6 squared-degrees test (~100 m)
+		const PathPoint &h = deref((PtRef)s.path_ptr);
+		int64_t dla = (int64_t)h.lat - la, dlo = (int64_t)h.lon - lo;
+		if (dla * dla + dlo * dlo < (int64_t)600 * 600)
+			return;
+	}
+
+	PathPoint p;
+	p.lat = la;
+	p.lon = lo;
+	p.ts = (uint32_t)s.last_signal;
+	p.sog_cog_hdg = packSogCogHdg(s.speed, s.cog, s.heading);
+	p.next_older = (s.path_ptr == -1) ? PATH_NONE : (PtRef)s.path_ptr;
+
+	PtRef h = tierAppend(0, p);
+	addCrossingBookkeeping(ptr, h);
+
+	if (s.path_ptr == -1)
+		s.path_oldest = (int)h;
+	s.path_ptr = (int)h;
+	s.path_count++;
+}
+
+// record fix-up/touched entries for a freshly written chain head link
+void DB::addCrossingBookkeeping(int ship_idx, PtRef p)
+{
+	Ship &s = ships[ship_idx];
+	PathChunk &pc = *chunks[chunkOf(p)];
+	PtRef older = deref(p).next_older;
+
+	if (older == PATH_NONE)
+	{
+		PathChunk::Touched t;
+		t.ship = (uint32_t)ship_idx;
+		t.ship_gen = s.generation;
+		pc.touched.push_back(t);
+	}
+	else if (chunkOf(older) != chunkOf(p))
+	{
+		PathChunk::Fixup f;
+		f.ship = (uint32_t)ship_idx;
+		f.ship_gen = s.generation;
+		f.chunk_gen = pc.gen;
+		f.pred = p;
+		chunks[chunkOf(older)]->fixups.push_back(f);
+
+		PathChunk::Touched t;
+		t.ship = (uint32_t)ship_idx;
+		t.ship_gen = s.generation;
+		pc.touched.push_back(t);
+	}
+}
+
+void DB::ageCheck(std::time_t now)
+{
+	if (consolidating)
+		return;
+
+	for (size_t k = 0; k < tiers.size(); k++)
+	{
+		PathTier &t = tiers[k];
+		if (t.exit_age < 0 || t.tail == -1)
+			continue;
+
+		// seal-by-age: a lingering bump chunk whose oldest point has aged
+		// out stops receiving so it can drain (quiet stations)
+		PathChunk &H = *chunks[t.head];
+		if (!H.sealed && H.bump > 0 && (long int)H.pt[0].ts + t.exit_age < (long int)now)
+			H.sealed = true;
+
+		PathChunk &T = *chunks[t.tail];
+		bool open_head = (t.tail == t.head && !T.sealed);
+		if (!open_head && T.bump > 0 && (long int)T.latest_ts + t.exit_age < (long int)now)
+		{
+			consolidateChunk(t.tail, true);
+			return; // at most one consolidation per call
+		}
+	}
+}
+
+// walk one ship's run inside chunk cidx (entered at `pred`, or the ship's
+// head if pred == PATH_NONE), promote spacing/turn survivors into tier dst,
+// splice the chain around the chunk
+void DB::consolidateRun(int cidx, int dst, int ship_idx, PtRef pred)
+{
+	Ship &s = ships[ship_idx];
+	int spacing = dst >= 0 ? tiers[dst].spacing : 0;
+
+	run_buf.clear();
+	PtRef cur = (pred == PATH_NONE) ? (PtRef)s.path_ptr : deref(pred).next_older;
+	while (cur != PATH_NONE && chunkOf(cur) == cidx)
+	{
+		run_buf.push_back(cur);
+		cur = deref(cur).next_older;
+	}
+	PtRef cont = cur; // continuation in coarser tiers, or PATH_NONE
+	int removed = (int)run_buf.size();
+
+	// process old -> new; the reference is the older kept neighbour
+	PtRef link_older = cont;
+	PtRef oldest_kept = PATH_NONE;
+	long int ref_ts = 0;
+	int ref_cog = -1; // 0.1 deg units, -1 = none/NA
+	if (cont != PATH_NONE)
+	{
+		const PathPoint &cp = deref(cont);
+		ref_ts = (long int)cp.ts;
+		uint32_t cc = (cp.sog_cog_hdg >> 10) & 0xFFF;
+		ref_cog = (cc == PATH_COG_NA) ? -1 : (int)cc;
+	}
+
+	for (int i = (int)run_buf.size() - 1; dst >= 0 && i >= 0; i--)
+	{
+		PathPoint p = deref(run_buf[i]); // copy before source is recycled
+
+		uint32_t pc = (p.sog_cog_hdg >> 10) & 0xFFF;
+		int p_cog = (pc == PATH_COG_NA) ? -1 : (int)pc;
+		bool turn = false;
+		if (p_cog >= 0 && ref_cog >= 0)
+		{
+			int d = p_cog > ref_cog ? p_cog - ref_cog : ref_cog - p_cog;
+			turn = MIN(d, 3600 - d) > 120; // keep course changes > 12 deg
+		}
+
+		if (link_older != PATH_NONE && (long int)p.ts < ref_ts + spacing && !turn)
+			continue; // dropped: slot is simply recycled with the chunk
+
+		p.next_older = link_older;
+		PtRef np = tierAppend(dst, p);
+		if (link_older != PATH_NONE && chunkOf(link_older) != chunkOf(np))
+		{
+			PathChunk::Fixup f;
+			f.ship = (uint32_t)ship_idx;
+			f.ship_gen = s.generation;
+			f.chunk_gen = chunks[chunkOf(np)]->gen;
+			f.pred = np;
+			chunks[chunkOf(link_older)]->fixups.push_back(f);
+		}
+		if (oldest_kept == PATH_NONE)
+			oldest_kept = np;
+		link_older = np;
+		ref_ts = (long int)p.ts;
+		ref_cog = p_cog;
+		removed--;
+	}
+
+	PtRef new_target = link_older; // newest kept copy, or cont if none kept
+
+	// splice the ship's chain around the chunk
+	if (pred != PATH_NONE)
+	{
+		deref(pred).next_older = new_target;
+		if (new_target != PATH_NONE && chunkOf(new_target) != chunkOf(pred))
+		{
+			PathChunk::Fixup f;
+			f.ship = (uint32_t)ship_idx;
+			f.ship_gen = s.generation;
+			f.chunk_gen = chunks[chunkOf(pred)]->gen;
+			f.pred = pred;
+			chunks[chunkOf(new_target)]->fixups.push_back(f);
+		}
+	}
+	else
+	{
+		s.path_ptr = (new_target == PATH_NONE) ? -1 : (int)new_target;
+		if (new_target != PATH_NONE)
+		{
+			PathChunk::Touched t;
+			t.ship = (uint32_t)ship_idx;
+			t.ship_gen = s.generation;
+			chunks[chunkOf(new_target)]->touched.push_back(t);
+		}
+	}
+
+	if (cont == PATH_NONE)
+	{
+		// the run contained the ship's tail
+		if (oldest_kept != PATH_NONE)
+			s.path_oldest = (int)oldest_kept;
+		else if (pred != PATH_NONE)
+			s.path_oldest = (int)pred;
+		else
+			s.path_oldest = -1;
+	}
+	s.path_count -= removed;
+}
+
+void DB::consolidateChunk(int cidx, bool promote)
+{
+	consolidating = true;
+
+	PathChunk &C = *chunks[cidx];
+	int dst = (promote && C.tier + 1 < (int)tiers.size()) ? C.tier + 1 : -1;
+
+	for (size_t i = 0; i < C.fixups.size(); i++)
+	{
+		const PathChunk::Fixup f = C.fixups[i];
+		if (f.ship >= ships.size() || ships[f.ship].generation != f.ship_gen)
+			continue;
+		if (chunkOf(f.pred) >= (int)chunks.size() || chunks[chunkOf(f.pred)]->gen != f.chunk_gen)
+			continue; // pred's chunk was recycled since the entry was recorded
+		const PathPoint &pp = deref(f.pred);
+		if (pp.next_older == PATH_NONE || chunkOf(pp.next_older) != cidx)
+			continue; // pred no longer links into this chunk
+		consolidateRun(cidx, dst, (int)f.ship, f.pred);
+	}
+
+	for (size_t i = 0; i < C.touched.size(); i++)
+	{
+		const PathChunk::Touched t = C.touched[i];
+		if (t.ship >= ships.size() || ships[t.ship].generation != t.ship_gen)
+			continue;
+		if (ships[t.ship].path_ptr == -1 || chunkOf((PtRef)ships[t.ship].path_ptr) != cidx)
+			continue; // ship's head moved on; a fix-up entry covers it
+		consolidateRun(cidx, dst, (int)t.ship, PATH_NONE);
+	}
+
+	releaseChunk(cidx);
+	consolidating = false;
 }
 
 bool DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &v, bool allowApproximate, bool &staticUpdated)
@@ -1210,6 +1553,9 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 	if (type == 1 || type == 2 || type == 3 || type == 18 || type == 19 || type == 9)
 		addToPath(ptr);
 
+	// consolidate at most one fully-aged chunk per message (data time as clock)
+	ageCheck(ship.last_signal);
+
 	if (type == 6 || type == 8)
 		processBinaryMessage(data[0], ship, position_updated);
 
@@ -1380,11 +1726,18 @@ bool DB::Load(std::ifstream &file)
 
 		ShipLL saved_incoming = ships[ptr].incoming;
 		ShipLL saved_hash = ships[ptr].hash;
+		uint16_t saved_gen = ships[ptr].generation;
 
 		ships[ptr] = temp_ships[i];
 
 		ships[ptr].incoming = saved_incoming;
 		ships[ptr].hash = saved_hash;
+
+		// paths are not persisted; the slot keeps its live generation
+		ships[ptr].generation = saved_gen;
+		ships[ptr].path_ptr = -1;
+		ships[ptr].path_oldest = -1;
+		ships[ptr].path_count = 0;
 	}
 
 	Info() << "DB: Restored " << ship_count << " ships from backup";
@@ -1530,14 +1883,58 @@ void DB::checkIntegrity()
 		ptr = ships[ptr].incoming.next;
 	}
 
-	// 5. Verify path_idx is in range
-	if (path_idx < 0 || path_idx >= Npaths)
+	// 5. Verify tier chunk lists: prev/next symmetry, nchunks, tier ids,
+	//    time-sorted disjoint chunks (latest_ts non-increasing tail-ward)
+	int chunks_in_tiers = 0;
+	for (size_t k = 0; k < tiers.size(); k++)
 	{
-		Error() << "DB integrity: path_idx " << path_idx << " out of range [0," << Npaths << ")";
+		const PathTier &t = tiers[k];
+		int c = t.head, cprev = -1, n = 0;
+		uint32_t newer_latest = 0xFFFFFFFF;
+		while (c != -1 && n <= (int)chunks.size())
+		{
+			const PathChunk &C = *chunks[c];
+			if (C.tier != (int)k)
+			{
+				Error() << "DB integrity: chunk " << c << " tier " << C.tier << " but in tier " << k << " list";
+				errors++;
+			}
+			if (C.prev != cprev)
+			{
+				Error() << "DB integrity: chunk " << c << " prev=" << C.prev << " expected " << cprev;
+				errors++;
+			}
+			if (C.latest_ts > newer_latest)
+			{
+				Error() << "DB integrity: tier " << k << " chunk " << c << " out of time order";
+				errors++;
+			}
+			newer_latest = C.latest_ts;
+			cprev = c;
+			c = C.next;
+			n++;
+		}
+		if (cprev != t.tail)
+		{
+			Error() << "DB integrity: tier " << k << " tail=" << t.tail << " but list ends at " << cprev;
+			errors++;
+		}
+		if (n != t.nchunks)
+		{
+			Error() << "DB integrity: tier " << k << " nchunks=" << t.nchunks << " but list has " << n;
+			errors++;
+		}
+		chunks_in_tiers += n;
+	}
+	if (chunks_in_tiers + (int)empty_chunks.size() != (int)chunks.size())
+	{
+		Error() << "DB integrity: " << chunks.size() << " chunks but " << chunks_in_tiers << " in tiers + " << empty_chunks.size() << " empty";
 		errors++;
 	}
 
-	// 6. Verify path chains for active ships
+	// 6. Verify path chains for active ships: handles valid, ts monotone
+	//    non-increasing, chunk ranges older-or-equal tail-ward, length =
+	//    path_count, tail = path_oldest
 	ptr = first;
 	for (int i = 0; i < count; i++)
 	{
@@ -1545,28 +1942,44 @@ void DB::checkIntegrity()
 			break;
 
 		Ship &ship = ships[ptr];
-		int pidx = ship.path_ptr;
-		int pcount = ship.count + 1;
+		PtRef pidx = ship.path_ptr == -1 ? PATH_NONE : (PtRef)ship.path_ptr;
+		PtRef tail = PATH_NONE;
+		uint32_t newer_ts = 0xFFFFFFFF;
 		int path_steps = 0;
 
-		while (isNextPathPoint(pidx, ship.mmsi, pcount))
+		while (pidx != PATH_NONE)
 		{
-			if (pidx < 0 || pidx >= Npaths)
+			int c = chunkOf(pidx);
+			if (c < 0 || c >= (int)chunks.size() || chunks[c]->tier == -1 || (int)(pidx & (PATH_CHUNK_POINTS - 1)) >= chunks[c]->bump)
 			{
-				Error() << "DB integrity: ship mmsi=" << ship.mmsi << " path ptr " << pidx << " out of range";
+				Error() << "DB integrity: ship mmsi=" << ship.mmsi << " path handle " << pidx << " invalid";
 				errors++;
 				break;
 			}
-			pcount = paths[pidx].count;
-			pidx = paths[pidx].next;
+			const PathPoint &p = deref(pidx);
+			if (p.ts > newer_ts)
+			{
+				Error() << "DB integrity: ship mmsi=" << ship.mmsi << " path not time-ordered";
+				errors++;
+				break;
+			}
+			newer_ts = p.ts;
+			tail = pidx;
+			pidx = p.next_older;
 			path_steps++;
 
-			if (path_steps > Npaths)
-			{
-				Error() << "DB integrity: ship mmsi=" << ship.mmsi << " path chain has cycle";
-				errors++;
+			if (path_steps > ship.path_count)
 				break;
-			}
+		}
+		if (path_steps != ship.path_count)
+		{
+			Error() << "DB integrity: ship mmsi=" << ship.mmsi << " path length " << path_steps << " != path_count " << ship.path_count;
+			errors++;
+		}
+		if (tail != (ship.path_oldest == -1 ? PATH_NONE : (PtRef)ship.path_oldest))
+		{
+			Error() << "DB integrity: ship mmsi=" << ship.mmsi << " tail != path_oldest";
+			errors++;
 		}
 		ptr = ships[ptr].incoming.next;
 	}

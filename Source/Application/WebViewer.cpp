@@ -618,6 +618,8 @@ void ReceiverTracker::applyConfig(const TrackingConfig &cfg, const AIS::Filter &
 	ships.setMsgSave(cfg.msg_save);
 	ships.setOwnMMSI(cfg.own_mmsi);
 	ships.setTimeHistory(cfg.time_history);
+	ships.setTrackMem(cfg.track_mem);
+	ships.setTrackThin(cfg.track_thin);
 	ships.setFilter(f);
 
 	if (cfg.cutoff > 0)
@@ -1522,6 +1524,12 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 		break;
 	case AIS::KEY_SETTING_HISTORY:
 		tracking.time_history = Util::Parse::Integer(arg, 5, 12 * 3600);
+		break;
+	case AIS::KEY_SETTING_TRACK_MEM:
+		tracking.track_mem = Util::Parse::Integer(arg, 1, 4096, "TRACK_MEM");
+		break;
+	case AIS::KEY_SETTING_TRACK_THIN:
+		tracking.track_thin = arg;
 		break;
 	case AIS::KEY_SETTING_FILE:
 		backup.setFilename(arg);
