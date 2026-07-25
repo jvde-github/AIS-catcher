@@ -898,6 +898,9 @@ const labelStyle = function (feature) {
 
     if (settings.labels_active_only && !isActive) return new ol.style.Style({});
 
+    const isHovered = 'ship' in feature && hoverType === 'ship' && feature.ship.mmsi == hoverMMSI;
+    const op = !('ship' in feature) || isActive || isHovered ? 1 : getShipOpacity(feature.ship);
+
     const font = settings.tooltipLabelFontSize + "px Arial";
     const text = new ol.style.Text({
         text: decodeHTMLEntities('ship' in feature ?
@@ -912,18 +915,15 @@ const labelStyle = function (feature) {
     if (settings.label_class_background) {
         const obj = 'ship' in feature ? feature.ship : feature.plane;
         const base = (obj && settings.track_class_colors[obj.shipclass]) || '#12a5ed';
-        text.setFill(new ol.style.Fill({ color: '#ffffff' }));
-        text.setBackgroundFill(new ol.style.Fill({ color: deriveLabelBackground(base) }));
-        text.setBackgroundStroke(new ol.style.Stroke({ color: 'rgba(0, 0, 0, 0.35)', width: 1 }));
+        text.setFill(new ol.style.Fill({ color: `rgba(255, 255, 255, ${op})` }));
+        text.setBackgroundFill(new ol.style.Fill({ color: deriveLabelBackground(base, 0.88 * op) }));
+        text.setBackgroundStroke(new ol.style.Stroke({ color: `rgba(0, 0, 0, ${0.35 * op})`, width: 1 }));
         text.setPadding([2, 4, 2, 4]);
     } else {
-        text.setFill(new ol.style.Fill({
-            color: settings.dark_mode ? settings.tooltipLabelColorDark : settings.tooltipLabelColor
-        }));
-        text.setStroke(new ol.style.Stroke({
-            color: settings.dark_mode ? settings.tooltipLabelShadowColorDark : settings.tooltipLabelShadowColor,
-            width: 5
-        }));
+        const [lr, lg, lb] = hexToRgb(settings.dark_mode ? settings.tooltipLabelColorDark : settings.tooltipLabelColor);
+        const [sr, sg, sb] = hexToRgb(settings.dark_mode ? settings.tooltipLabelShadowColorDark : settings.tooltipLabelShadowColor);
+        text.setFill(new ol.style.Fill({ color: `rgba(${lr}, ${lg}, ${lb}, ${op})` }));
+        text.setStroke(new ol.style.Stroke({ color: `rgba(${sr}, ${sg}, ${sb}, ${op})`, width: 5 }));
     }
 
     const isSelected = (settings.labels_prioritize_active ?? true) && isActive;

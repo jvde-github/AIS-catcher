@@ -25,12 +25,12 @@ export function hexToRgb(hex) {
 
 // Derive a readable label background from a (often bright) track color:
 // boost saturation by pushing channels away from luma, then darken.
-export function deriveLabelBackground(hex) {
+export function deriveLabelBackground(hex, alpha = 0.88) {
     let [r, g, b] = hexToRgb(hex);
     const luma = 0.299 * r + 0.587 * g + 0.114 * b;
     const saturate = 1.35, darken = 0.6;
     const adjust = (c) => Math.max(0, Math.min(255, Math.round((luma + (c - luma) * saturate) * darken)));
-    return `rgba(${adjust(r)}, ${adjust(g)}, ${adjust(b)}, 0.88)`;
+    return `rgba(${adjust(r)}, ${adjust(g)}, ${adjust(b)}, ${alpha})`;
 }
 
 export async function copyToClipboard(textToCopy) {
