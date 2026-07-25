@@ -1082,6 +1082,9 @@ void DB::consolidateChunk(int cidx, bool promote)
 		consolidateRun(cidx, dst, (int)t.ship, PATH_NONE);
 	}
 
+	Debug() << "DB: consolidated tier " << C.tier << " chunk (" << C.bump << " pts, " << C.fixups.size() << " fixups, "
+			<< C.touched.size() << " touched)" << (dst >= 0 ? "" : " keep-nothing");
+
 	releaseChunk(cidx);
 	consolidating = false;
 }
