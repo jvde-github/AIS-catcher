@@ -105,8 +105,8 @@ namespace AIS
 			rot = (u < 0) ? -rot * rot : rot * rot;
 			json.Add(p, (int)(rot + 0.5));
 		}
-		else
-			json.Add(p, u); // sentinel: -128, -127, or 127
+		else if (u != -128) // -128 = not available; raw value stays in turn_unscaled
+			json.Add(p, u); // 127/-127: turning right/left > 5 deg/30 s, no TI
 	}
 
 	void JSONAIS::B(const AIS::Message &msg, int p, int start, int len)
@@ -1162,11 +1162,11 @@ namespace AIS
 			TURN(msg, AIS::KEY_TURN, 42, 8);
 			UL(msg, AIS::KEY_SPEED, 50, 10, 0.1f, 0, 1023);
 			B(msg, AIS::KEY_ACCURACY, 60, 1);
-			SL(msg, AIS::KEY_LON, 61, 28, 1 / 600000.0f, 0);
-			SL(msg, AIS::KEY_LAT, 89, 27, 1 / 600000.0f, 0);
-			UL(msg, AIS::KEY_COURSE, 116, 12, 0.1f, 0);
-			U(msg, AIS::KEY_HEADING, 128, 9 /*, 511*/);
-			U(msg, AIS::KEY_SECOND, 137, 6);
+			SL(msg, AIS::KEY_LON, 61, 28, 1 / 600000.0f, 0, 108600000);
+			SL(msg, AIS::KEY_LAT, 89, 27, 1 / 600000.0f, 0, 54600000);
+			UL(msg, AIS::KEY_COURSE, 116, 12, 0.1f, 0, 3600);
+			U(msg, AIS::KEY_HEADING, 128, 9, 511);
+			U(msg, AIS::KEY_SECOND, 137, 6, 60);
 			E(msg, AIS::KEY_MANEUVER, 143, 2);
 			X(msg, AIS::KEY_SPARE, 145, 2);
 			// M.1371-6 Table 46: bit 147 is Transmit power (0=high, 1=low). Pre-M.1371-6 was part of spare.
@@ -1186,8 +1186,8 @@ namespace AIS
 			U(msg, AIS::KEY_MINUTE, 66, 6, 60);
 			U(msg, AIS::KEY_SECOND, 72, 6, 60);
 			B(msg, AIS::KEY_ACCURACY, 78, 1);
-			SL(msg, AIS::KEY_LON, 79, 28, 1 / 600000.0f, 0);
-			SL(msg, AIS::KEY_LAT, 107, 27, 1 / 600000.0f, 0);
+			SL(msg, AIS::KEY_LON, 79, 28, 1 / 600000.0f, 0, 108600000);
+			SL(msg, AIS::KEY_LAT, 107, 27, 1 / 600000.0f, 0, 54600000);
 			E(msg, AIS::KEY_EPFD, 134, 4, AIS::KEY_EPFD_TEXT);
 			// M.1371-6 Table 49: bit 138 is Transmission control flag for satellite broadcast. Pre-M.1371-6 was part of spare.
 			B(msg, AIS::KEY_TRANSMISSION_CONTROL, 138, 1);
@@ -1198,7 +1198,7 @@ namespace AIS
 			break;
 		case 5:
 			U(msg, AIS::KEY_AIS_VERSION, 38, 2);
-			U(msg, AIS::KEY_IMO, 40, 30);
+			U(msg, AIS::KEY_IMO, 40, 30, 0);
 			T(msg, AIS::KEY_CALLSIGN, 70, 42, callsign);
 			T(msg, AIS::KEY_SHIPNAME, 112, 120, shipname);
 			E(msg, AIS::KEY_SHIPTYPE, 232, 8, AIS::KEY_SHIPTYPE_TEXT);
@@ -1212,7 +1212,7 @@ namespace AIS
 			U(msg, AIS::KEY_DAY, 278, 5, 0);
 			U(msg, AIS::KEY_HOUR, 283, 5, 24);
 			U(msg, AIS::KEY_MINUTE, 288, 6, 60);
-			UL(msg, AIS::KEY_DRAUGHT, 294, 8, 0.1f, 0);
+			UL(msg, AIS::KEY_DRAUGHT, 294, 8, 0.1f, 0, 0);
 			T(msg, AIS::KEY_DESTINATION, 302, 120, destination);
 			B(msg, AIS::KEY_DTE, 422, 1);
 			X(msg, AIS::KEY_SPARE, 423, 1);
@@ -1250,13 +1250,13 @@ namespace AIS
 			ProcessMsg8Data(msg);
 			break;
 		case 9:
-			U(msg, AIS::KEY_ALT, 38, 12);
-			U(msg, AIS::KEY_SPEED, 50, 10);
+			U(msg, AIS::KEY_ALT, 38, 12, 4095);
+			U(msg, AIS::KEY_SPEED, 50, 10, 1023);
 			B(msg, AIS::KEY_ACCURACY, 60, 1);
-			SL(msg, AIS::KEY_LON, 61, 28, 1 / 600000.0f, 0);
-			SL(msg, AIS::KEY_LAT, 89, 27, 1 / 600000.0f, 0);
-			UL(msg, AIS::KEY_COURSE, 116, 12, 0.1f, 0);
-			U(msg, AIS::KEY_SECOND, 128, 6);
+			SL(msg, AIS::KEY_LON, 61, 28, 1 / 600000.0f, 0, 108600000);
+			SL(msg, AIS::KEY_LAT, 89, 27, 1 / 600000.0f, 0, 54600000);
+			UL(msg, AIS::KEY_COURSE, 116, 12, 0.1f, 0, 3600);
+			U(msg, AIS::KEY_SECOND, 128, 6, 60);
 			// M.1371-6 Table 57: bit 134 is Altitude sensor (0=GNSS, 1=barometric); 135-141 is spare. Pre-M.1371-6 was 8-bit regional reserved.
 			B(msg, AIS::KEY_ALT_SENSOR, 134, 1);
 			X(msg, AIS::KEY_SPARE, 135, 7);
@@ -1302,19 +1302,19 @@ namespace AIS
 			U(msg, AIS::KEY_INCREMENT2, 134, 10);
 			break;
 		case 17:
-			SL(msg, AIS::KEY_LON, 40, 18, 1 / 600.0f, 0);
-			SL(msg, AIS::KEY_LAT, 58, 17, 1 / 600.0f, 0);
+			SL(msg, AIS::KEY_LON, 40, 18, 1 / 600.0f, 0, 108600);
+			SL(msg, AIS::KEY_LAT, 58, 17, 1 / 600.0f, 0, 54600);
 			D(msg, AIS::KEY_DATA, 80, MIN(736, msg.getLength() - 80), datastring);
 			break;
 		case 18:
-			UL(msg, AIS::KEY_SPEED, 46, 10, 0.1f, 0);
+			UL(msg, AIS::KEY_SPEED, 46, 10, 0.1f, 0, 1023);
 			B(msg, AIS::KEY_ACCURACY, 56, 1);
-			SL(msg, AIS::KEY_LON, 57, 28, 1 / 600000.0f, 0);
-			SL(msg, AIS::KEY_LAT, 85, 27, 1 / 600000.0f, 0);
-			UL(msg, AIS::KEY_COURSE, 112, 12, 0.1f, 0);
-			U(msg, AIS::KEY_HEADING, 124, 9);
+			SL(msg, AIS::KEY_LON, 57, 28, 1 / 600000.0f, 0, 108600000);
+			SL(msg, AIS::KEY_LAT, 85, 27, 1 / 600000.0f, 0, 54600000);
+			UL(msg, AIS::KEY_COURSE, 112, 12, 0.1f, 0, 3600);
+			U(msg, AIS::KEY_HEADING, 124, 9, 511);
 			U(msg, AIS::KEY_RESERVED, 38, 8);
-			U(msg, AIS::KEY_SECOND, 133, 6);
+			U(msg, AIS::KEY_SECOND, 133, 6, 60);
 			// M.1371-6 Table 68: bit 139 is Transmit power (0=high, 1=low); 140 is spare. Pre-M.1371-6 was 2-bit regional reserved.
 			B(msg, AIS::KEY_POWER, 139, 1);
 			X(msg, AIS::KEY_SPARE, 140, 1);
@@ -1328,11 +1328,11 @@ namespace AIS
 			U(msg, AIS::KEY_RADIO, 148, 20);
 			break;
 		case 19:
-			UL(msg, AIS::KEY_SPEED, 46, 10, 0.1, 0);
-			SL(msg, AIS::KEY_LON, 57, 28, 1 / 600000.0f, 0);
-			SL(msg, AIS::KEY_LAT, 85, 27, 1 / 600000.0f, 0);
-			UL(msg, AIS::KEY_COURSE, 112, 12, 0.1f, 0);
-			U(msg, AIS::KEY_HEADING, 124, 9);
+			UL(msg, AIS::KEY_SPEED, 46, 10, 0.1, 0, 1023);
+			SL(msg, AIS::KEY_LON, 57, 28, 1 / 600000.0f, 0, 108600000);
+			SL(msg, AIS::KEY_LAT, 85, 27, 1 / 600000.0f, 0, 54600000);
+			UL(msg, AIS::KEY_COURSE, 112, 12, 0.1f, 0, 3600);
+			U(msg, AIS::KEY_HEADING, 124, 9, 511);
 			T(msg, AIS::KEY_SHIPNAME, 143, 120, shipname);
 			E(msg, AIS::KEY_SHIPTYPE, 263, 8, AIS::KEY_SHIPTYPE_TEXT);
 			U(msg, AIS::KEY_TO_BOW, 271, 9);
@@ -1342,7 +1342,7 @@ namespace AIS
 			E(msg, AIS::KEY_EPFD, 301, 4, AIS::KEY_EPFD_TEXT);
 			B(msg, AIS::KEY_ACCURACY, 56, 1);
 			X(msg, AIS::KEY_SPARE, 38, 8);
-			U(msg, AIS::KEY_SECOND, 133, 6);
+			U(msg, AIS::KEY_SECOND, 133, 6, 60);
 			// M.1371-6 Table 69: bits 139-142 are spare (pre-M.1371-6 was 4-bit regional reserved).
 			X(msg, AIS::KEY_SPARE, 139, 4);
 			B(msg, AIS::KEY_RAIM, 305, 1);
@@ -1378,14 +1378,14 @@ namespace AIS
 			E(msg, AIS::KEY_AID_TYPE, 38, 5, AIS::KEY_AID_TYPE_TEXT);
 			T(msg, AIS::KEY_NAME, 43, 120, name);
 			B(msg, AIS::KEY_ACCURACY, 163, 1);
-			SL(msg, AIS::KEY_LON, 164, 28, 1 / 600000.0f, 0);
-			SL(msg, AIS::KEY_LAT, 192, 27, 1 / 600000.0f, 0);
+			SL(msg, AIS::KEY_LON, 164, 28, 1 / 600000.0f, 0, 108600000);
+			SL(msg, AIS::KEY_LAT, 192, 27, 1 / 600000.0f, 0, 54600000);
 			U(msg, AIS::KEY_TO_BOW, 219, 9);
 			U(msg, AIS::KEY_TO_STERN, 228, 9);
 			U(msg, AIS::KEY_TO_PORT, 237, 6);
 			U(msg, AIS::KEY_TO_STARBOARD, 243, 6);
 			E(msg, AIS::KEY_EPFD, 249, 4, AIS::KEY_EPFD_TEXT);
-			U(msg, AIS::KEY_SECOND, 253, 6);
+			U(msg, AIS::KEY_SECOND, 253, 6, 60);
 			B(msg, AIS::KEY_OFF_POSITION, 259, 1);
 			// M.1371-6 Table 71: bits 260-267 are AtoN status (per IALA R0126). Pre-M.1371-6 referenced as regional.
 			U(msg, AIS::KEY_ATON_STATUS, 260, 8);
@@ -1502,17 +1502,17 @@ namespace AIS
 			B(msg, AIS::KEY_ACCURACY, 38, 1);
 			B(msg, AIS::KEY_RAIM, 39, 1);
 			E(msg, AIS::KEY_STATUS, 40, 4, AIS::KEY_STATUS_TEXT);
-			SL(msg, AIS::KEY_LON, 44, 18, 1 / 600.0f, 0);
-			SL(msg, AIS::KEY_LAT, 62, 17, 1 / 600.0f, 0);
-			U(msg, AIS::KEY_SPEED, 79, 6);
-			U(msg, AIS::KEY_COURSE, 85, 9);
+			SL(msg, AIS::KEY_LON, 44, 18, 1 / 600.0f, 0, 108600);
+			SL(msg, AIS::KEY_LAT, 62, 17, 1 / 600.0f, 0, 54600);
+			U(msg, AIS::KEY_SPEED, 79, 6, 63);
+			U(msg, AIS::KEY_COURSE, 85, 9, 511);
 			U(msg, AIS::KEY_GNSS, 94, 1);
 			break;
 		case 28:
 			// AtoN Report (single-slot) per ITU-R M.1371-6 §A7-3.26, Table 84
-			U(msg, AIS::KEY_SECOND, 38, 6);
-			SL(msg, AIS::KEY_LON, 44, 28, 1 / 600000.0f, 0);
-			SL(msg, AIS::KEY_LAT, 72, 27, 1 / 600000.0f, 0);
+			U(msg, AIS::KEY_SECOND, 38, 6, 60);
+			SL(msg, AIS::KEY_LON, 44, 28, 1 / 600000.0f, 0, 108600000);
+			SL(msg, AIS::KEY_LAT, 72, 27, 1 / 600000.0f, 0, 54600000);
 			U(msg, AIS::KEY_RESTRICTED_USE, 99, 2);
 			U(msg, AIS::KEY_ATON_STATION_TYPE, 101, 3);
 			// station_type==4 means Virtual AtoN — mirror msg 21's virtual_aid flag.
