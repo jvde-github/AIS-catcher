@@ -16,7 +16,7 @@ Tabulator.registerModule([
 import {
     getFlag, getShipName, getCallSign, getCountryName,
     getStatusVal, getMmsiTypeVal,
-    getShipDimension, getDimVal, getDimUnit,
+    getShipDimension, getDimVal, getDimUnit, getDraughtVal,
     getDeltaTimeVal, getEtaVal,
     getDistanceVal, getLatValFormat, getLonValFormat,
     getSpeedVal, getSpeedUnit,
@@ -130,7 +130,7 @@ function buildColumns() {
             title: "Draught", field: "draught", sorter: "number",
             formatter: (cell) => {
                 const ship = cell.getRow().getData();
-                return ship.draught ? getDimVal(ship.draught) + " " + getDimUnit() : null;
+                return ship.draught ? getDraughtVal(ship.draught) + " " + getDimUnit() : null;
             },
         },
         {

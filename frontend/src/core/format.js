@@ -24,6 +24,11 @@ export const getDimVal = (c) =>
 export const getDimUnit = () =>
     settings.metric === "DEFAULT" || settings.metric === "SI" ? "m" : "ft";
 
+export const getDraughtVal = (c) =>
+    settings.metric === "DEFAULT" || settings.metric === "SI"
+        ? Number(c).toFixed(1)
+        : Number(c * 3.2808399).toFixed(1);
+
 export const getShipDimension = (ship) =>
     ship.to_bow != null && ship.to_stern != null && ship.to_port != null && ship.to_starboard != null
         ? getDimVal(ship.to_bow + ship.to_stern) + " " + getDimUnit() + " x " + getDimVal(ship.to_port + ship.to_starboard) + " " + getDimUnit()

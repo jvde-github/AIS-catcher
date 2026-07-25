@@ -11,7 +11,7 @@ import * as boxselect from './features/boxselect.js';
 import {
     getDistanceVal, getDistanceUnit,
     getSpeedVal, getSpeedUnit,
-    getDimVal, getDimUnit, getShipDimension,
+    getDimVal, getDimUnit, getDraughtVal, getShipDimension,
     getLatValFormat, getLonValFormat,
     getEtaVal, getDeltaTimeVal,
     getShipName, getCallSign, setShipNameProvider, setCallSignProvider,
@@ -3901,7 +3901,7 @@ function populateShipcard() {
 
     // round and add units
     [
-        { id: "cog", u: "&deg", d: 0 },
+        { id: "cog", u: "&deg", d: 1 },
         { id: "bearing", u: "&deg", d: 0 },
         { id: "heading", u: "&deg", d: 0 },
         { id: "level", u: "dB", d: 1 },
@@ -3933,7 +3933,7 @@ function populateShipcard() {
 
     document.getElementById("shipcard_speed").innerHTML = ship.speed != null ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
     document.getElementById("shipcard_distance").innerHTML = ship.distance != null ? (getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "")) : null;
-    document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDimVal(ship.draught) + " " + getDimUnit() : null;
+    document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDraughtVal(ship.draught) + " " + getDimUnit() : null;
     document.getElementById("shipcard_dimension").innerHTML = getShipDimension(ship);
     document.getElementById("shipcard_bluesign").innerHTML = ship.maneuver === 2 ? "Set" : (ship.maneuver === 1 ? "Not set" : null);
 
