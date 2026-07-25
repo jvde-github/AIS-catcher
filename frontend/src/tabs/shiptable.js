@@ -18,7 +18,7 @@ import {
     getStatusVal, getMmsiTypeVal,
     getShipDimension, getDimVal, getDimUnit, getDraughtVal,
     getDeltaTimeVal, getEtaVal,
-    getDistanceVal, getLatValFormat, getLonValFormat,
+    getDistanceVal, getDistanceUnit, getLatValFormat, getLonValFormat,
     getSpeedVal, getSpeedUnit,
     getStringfromChannels, getStringfromMsgType, getStringfromGroup,
 } from '../core/format.js';
@@ -127,10 +127,10 @@ function buildColumns() {
             },
         },
         {
-            title: "Draught", field: "draught", sorter: "number",
+            title: "Draught (" + getDimUnit() + ")", field: "draught", sorter: "number",
             formatter: (cell) => {
                 const ship = cell.getRow().getData();
-                return ship.draught ? getDraughtVal(ship.draught) + " " + getDimUnit() : null;
+                return ship.draught ? getDraughtVal(ship.draught) : null;
             },
         },
         {
@@ -149,14 +149,14 @@ function buildColumns() {
             },
         },
         {
-            title: "RSSI", field: "level", sorter: "number",
+            title: "RSSI (dB)", field: "level", sorter: "number",
             formatter: (cell) => {
                 const value = cell.getValue();
                 return value != null ? Number(value).toFixed(1) : "";
             },
         },
         {
-            title: "Dist", field: "distance", sorter: "number",
+            title: "Dist (" + getDistanceUnit() + ")", field: "distance", sorter: "number",
             formatter: (cell) => {
                 const ship = cell.getRow().getData();
                 return (ship != null && ship.distance != null)
@@ -186,10 +186,10 @@ function buildColumns() {
             },
         },
         {
-            title: "Spd", field: "speed", sorter: "number",
+            title: "Spd (" + getSpeedUnit() + ")", field: "speed", sorter: "number",
             formatter: (cell) => {
                 const value = cell.getValue();
-                return value ? getSpeedVal(value) + " " + getSpeedUnit() : null;
+                return value ? getSpeedVal(value) : null;
             },
         },
         {
