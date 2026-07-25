@@ -123,7 +123,7 @@
             align-items: stretch;
             height: 52px;
             border-bottom: 1px solid #e2e8f0;
-            background: #dfe5ec;
+            background: #f0f4f8;
             flex-shrink: 0;
         }
 
@@ -132,21 +132,29 @@
             display: flex;
             align-items: center;
             padding: 0 14px 0 1.25rem;
-            background: #f0f4f8;
+            background: #dfe5ec;
             border-top-right-radius: 25% 50%;
             border-bottom-right-radius: 25% 50%;
+            font-size: 15px;
+            font-weight: 500;
         }
 
         #system-close {
             align-self: center;
-            width: 35px;
-            height: 35px;
+            width: 28px;
+            height: 28px;
+            color: #475569;
+            transition: opacity 0.15s ease;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 50%;
             margin: 0 14px 0 10px;
             flex-shrink: 0;
+        }
+
+        #system-close:hover {
+            opacity: 0.65;
         }
 
         #system-tabs {
@@ -997,9 +1005,9 @@
         <div id="system-overlay">
             <div id="system-modal">
                 <div id="system-header">
-                    <h3 id="system-title" class="text-lg font-semibold text-slate-800">Settings</h3>
-                    <button id="system-close" class="text-slate-600 hover:text-slate-800 p-1">
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <h3 id="system-title" class="text-slate-800">Settings</h3>
+                    <button id="system-close" class="p-1">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
