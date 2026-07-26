@@ -51,7 +51,7 @@ namespace DSP
 	class Deinterleave : public StreamIn<T>
 	{
 		int lastSymbol = 0;
-		long sample_idx = 0;
+		long long sample_idx = 0;
 
 	public:
 		virtual ~Deinterleave() {}
@@ -77,7 +77,7 @@ namespace DSP
 		int lastSymbol = 0;
 		std::vector<CFLOAT32> sample;
 		FLOAT32 level = 0.0f;
-		long sample_idx = 0;
+		long long sample_idx = 0;
 
 	public:
 		virtual ~ScatterPLL() {}

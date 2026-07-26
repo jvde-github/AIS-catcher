@@ -160,6 +160,9 @@ std::unique_ptr<AIS::Model> &Receiver::addModel(int m)
 	case 10:
 		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelRAW1090()));
 		break;
+	case 11:
+		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelEngineV2()));
+		break;
 	default:
 		throw std::runtime_error("Model not implemented in this version. Check in later.");
 	}

@@ -57,7 +57,7 @@ namespace AIS
 		return 0;
 	}
 
-	void NMEA::initMsg(char channel, int src, int64_t toa, long start_idx, long end_idx)
+	void NMEA::initMsg(char channel, int src, int64_t toa, long long start_idx, long long end_idx)
 	{
 		msg.clear();
 		msg.setRxTimeUnix(rxtime_cache);

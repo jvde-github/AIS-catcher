@@ -248,6 +248,7 @@ set(CPP
     Source/Device/Serial.cpp
     Source/Device/SpyServer.cpp
     Source/Device/UDP.cpp
+    Source/DSP/Decoder/V2/Engine.cpp
     Source/DSP/Demod.cpp
     Source/DSP/DSP.cpp
     Source/DSP/Model.cpp

@@ -46,6 +46,7 @@
     <ClCompile Include="..\Source\Device\SpyServer.cpp" />
     <ClCompile Include="..\Source\Device\UDP.cpp" />
     <ClCompile Include="..\Source\Device\ZMQ.cpp" />
+    <ClCompile Include="..\Source\DSP\Decoder\V2\Engine.cpp" />
     <ClCompile Include="..\Source\DSP\Demod.cpp" />
     <ClCompile Include="..\Source\DSP\DSP.cpp" />
     <ClCompile Include="..\Source\DSP\Model.cpp" />
@@ -101,6 +102,7 @@
     <ClInclude Include="..\Source\Device\FileWAV.h" />
     <ClInclude Include="..\Source\Device\RTLTCP.h" />
     <ClInclude Include="..\Source\Device\UDP.h" />
+    <ClInclude Include="..\Source\DSP\Decoder\V2\Engine.h" />
     <ClInclude Include="..\Source\DSP\Demod.h" />
     <ClInclude Include="..\Source\DSP\Filters.h" />
     <ClInclude Include="..\Source\Marine\AIS.h" />
