@@ -194,7 +194,10 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members, bool 
 			_state.receivers.back()->SetKey((AIS::Keys)m.Key(), m.Get().to_string());
 			break;
 		case AIS::KEY_SETTING_MODEL:
-			setModelfromJSON(m);
+			if (m.Get().isString())
+				_state.receivers.back()->SetKey((AIS::Keys)m.Key(), m.Get().to_string());
+			else
+				setModelfromJSON(m);
 			break;
 		case AIS::KEY_SETTING_OWN_MMSI:
 			_state.own_mmsi = m.Get().getInt();

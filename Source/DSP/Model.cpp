@@ -478,7 +478,7 @@ namespace AIS
 	{
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 
-		setName("AIS engine " VERSION);
+		setName("AIS engine v1 base");
 
 		assert(C_a != NULL && C_b != NULL);
 
@@ -560,7 +560,7 @@ namespace AIS
 	{
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 
-		setName("Challenger " VERSION);
+		setName("AIS engine v1 high");
 
 		assert(C_a != NULL && C_b != NULL);
 

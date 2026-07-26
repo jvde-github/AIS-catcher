@@ -53,6 +53,7 @@ class Receiver : public Setting
 
 	bool timing = false;
 	bool high_sensitivity = false;
+	int model_select = 0;
 
 	int sample_rate = 0, bandwidth = 0, ppm = 0, own_mmsi = -1;
 	int receiver_index = -1;
@@ -91,8 +92,23 @@ public:
 			verbose = Util::Parse::Switch(arg);
 			break;
 		case AIS::KEY_SETTING_SENSITIVITY_HIGH:
+			Warning() << "Receiver: \"sensitivity_high\" is deprecated and will be removed, use \"model\": \"v1_high\" instead";
 			high_sensitivity = Util::Parse::Switch(arg);
 			break;
+		case AIS::KEY_SETTING_MODEL:
+		{
+			std::string v = arg;
+			Util::Convert::toUpper(v);
+			if (v.empty() || v == "AUTO")
+				model_select = 0;
+			else if (v == "V1_BASE")
+				model_select = 2;
+			else if (v == "V1_HIGH")
+				model_select = 4;
+			else
+				throw std::runtime_error(getName() + ": model must be auto, v1_base or v1_high");
+			break;
+		}
 		case AIS::KEY_SETTING_CHANNEL:
 			setChannel(arg, "");
 			break;

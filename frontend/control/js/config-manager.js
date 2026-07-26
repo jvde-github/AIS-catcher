@@ -360,6 +360,14 @@
                 }
             }
 
+            for (const r of cfg.receiver) {
+                if (r && typeof r === 'object' && 'sensitivity_high' in r) {
+                    if (Utils.toBoolean(r.sensitivity_high) && !('model' in r)) r.model = 'v1_high';
+                    delete r.sensitivity_high;
+                    changed = true;
+                }
+            }
+
             for (const key of ['udp', 'tcp_listener', 'tcp']) {
                 if (!Array.isArray(cfg[key])) continue;
                 for (const ch of cfg[key]) {
@@ -1009,21 +1017,48 @@
 
                 const fieldsDiv = el('div', this.config.isList ? Styles.cardBody : 'p-3 sm:p-5');
                 const innerFields = el('div', 'flex flex-wrap gap-x-3 gap-y-2');
+                const advInner = el('div', 'flex flex-wrap gap-x-3 gap-y-2 w-full');
+                let syncAdvanced = () => { };
+                const refresh = () => { Renderer.updateVisibility(innerFields, item); syncAdvanced(); };
+
                 this.fields.forEach(field => {
                     if (activeField && field.name === 'active') return;
                     const fieldEl = Renderer.renderField(field, index, item,
                         (fld, val) => this.updateValue(index, fld, val),
-                        () => Renderer.updateVisibility(innerFields, item),
+                        refresh,
                         this.config.containerId
                     );
-                    innerFields.appendChild(fieldEl);
+                    (field.advanced ? advInner : innerFields).appendChild(fieldEl);
                 });
+
+                if (advInner.children.length) {
+                    this.advancedOpen = this.advancedOpen || new Set();
+                    const open = this.advancedOpen.has(index);
+                    const chevron = el('span', 'inline-block transition-transform duration-200' + (open ? ' rotate-90' : ''), { innerHTML: '&#9656;' });
+                    advInner.style.display = open ? 'flex' : 'none';
+                    const advBtn = el('button', 'flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600 transition', {
+                        type: 'button',
+                        onClick: () => {
+                            const nowOpen = !this.advancedOpen.has(index);
+                            if (nowOpen) this.advancedOpen.add(index); else this.advancedOpen.delete(index);
+                            advInner.style.display = nowOpen ? 'flex' : 'none';
+                            chevron.classList.toggle('rotate-90', nowOpen);
+                        }
+                    }, chevron, 'Advanced');
+                    const advRow = el('div', 'w-full mt-1', {}, advBtn);
+                    innerFields.appendChild(advRow);
+                    innerFields.appendChild(advInner);
+                    syncAdvanced = () => {
+                        const any = Array.from(advInner.children).some(c => c.style.display !== 'none');
+                        advRow.style.display = any ? 'block' : 'none';
+                    };
+                }
                 fieldsDiv.appendChild(innerFields);
 
                 wrapper.appendChild(fieldsDiv);
                 this.container.appendChild(wrapper);
 
-                Renderer.updateVisibility(innerFields, item);
+                refresh();
             });
 
             this.renderControls();

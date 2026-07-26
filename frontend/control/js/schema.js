@@ -659,18 +659,19 @@ const receiverSchema = {
         defaultValue: true,
         width: 25
     },
-    sensitivity_high: {
-        name: "sensitivity_high",
-        label: "High Sensitivity",
-        type: "toggle",
-        jsonpath: "sensitivity_high",
-        defaultValue: false,
-        width: 25,
-        tooltip: "Adds a higher-sensitivity decoder model for a few percent more messages at extra CPU load",
-        dependsOn: {
-            field: "input",
-            value: ["RTLSDR", "AIRSPY", "AIRSPYHF", "HACKRF", "HYDRASDR"]
-        }
+    model: {
+        name: "model",
+        label: "Model",
+        type: "select",
+        jsonpath: "model",
+        defaultValue: "auto",
+        advanced: true,
+        options: [
+            { value: "auto", label: "Auto" },
+            { value: "v1_base", label: "AIS Engine v1 Base" },
+            { value: "v1_high", label: "AIS Engine v1 High" }
+        ],
+        tooltip: "AIS Engine v1 High decodes a few percent more messages at extra CPU load; Auto currently selects v1 Base"
     },
     rtlsdr_tuner: {
         name: "tuner",

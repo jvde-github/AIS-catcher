@@ -173,27 +173,30 @@ void Receiver::setupModel(int &group, int idx)
 	// if nothing defined, create one model
 	if (!models.size())
 	{
-		switch (device->getFormat())
-		{
-		case Format::TXT:
-			addModel(5);
-			break;
-		case Format::N2K:
-			addModel(6);
-			break;
-		case Format::BASESTATION:
-			addModel(7);
-			break;
-		case Format::BEAST:
-			addModel(8);
-			break;
-		case Format::RAW1090:
-			addModel(10);
-			break;
-		default:
-			addModel(high_sensitivity ? 4 : 2);
-			break;
-		}
+		if (model_select)
+			addModel(model_select);
+		else
+			switch (device->getFormat())
+			{
+			case Format::TXT:
+				addModel(5);
+				break;
+			case Format::N2K:
+				addModel(6);
+				break;
+			case Format::BASESTATION:
+				addModel(7);
+				break;
+			case Format::BEAST:
+				addModel(8);
+				break;
+			case Format::RAW1090:
+				addModel(10);
+				break;
+			default:
+				addModel(high_sensitivity ? 4 : 2);
+				break;
+			}
 	}
 
 	// ensure some basic compatibility between model and device
