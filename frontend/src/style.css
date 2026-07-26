@@ -582,6 +582,22 @@ a:focus {
     border-collapse: collapse;
 }
 
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable.tabulator-col-sorter-element:hover {
+    background-color: var(--table-header-background-color);
+    background-image: linear-gradient(rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.12));
+}
+
+.tabulator .tabulator-header .tabulator-col .tabulator-arrow {
+    border-top-color: rgba(255, 255, 255, 0.45) !important;
+    border-bottom-color: rgba(255, 255, 255, 0.45) !important;
+}
+
+.tabulator .tabulator-header .tabulator-col[aria-sort="ascending"] .tabulator-arrow,
+.tabulator .tabulator-header .tabulator-col[aria-sort="descending"] .tabulator-arrow {
+    border-top-color: white !important;
+    border-bottom-color: white !important;
+}
+
 .tabulator-row:hover {
     background-color: var(--table-selection-background-color) !important;
 }
@@ -1099,18 +1115,11 @@ td {
 }
 
 #measurecard {
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px var(--shadow-color);
     top: 16px;
     left: 16px;
-}
-
-#measurecard .mapcard_header {
-    flex-basis: 24px;
-    font-size: 13px;
-    margin-top: 5px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--table-border-color);
 }
 
 .mapcard.visible {
@@ -1782,6 +1791,28 @@ td {
 }
 
 .dialog-header .close_icon:hover {
+    opacity: 0.65;
+}
+
+.dialog-title-hint {
+    font-size: 12px;
+    font-weight: 400;
+    opacity: 0.7;
+    margin-left: 6px;
+}
+
+.dialog-header .dialog-header-action {
+    flex: none;
+    display: flex;
+    align-items: center;
+    color: var(--hdr-icon);
+    font-size: 15px;
+    margin-left: 12px;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.dialog-header .dialog-header-action:hover {
     opacity: 0.65;
 }
 

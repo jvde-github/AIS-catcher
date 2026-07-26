@@ -126,10 +126,12 @@ export function refreshMeasures() {
             return false;
         }
 
+        const pointLabel = (lonlat) => `(${lonlat[1].toFixed(1)},${lonlat[0].toFixed(1)})`;
+
         let sc = undefined, ss = undefined, from = undefined;
         if (measure.start_type == 'point') {
             sc = fromLonLat(measure.start_value);
-            from = "point";
+            from = pointLabel(measure.start_value);
         } else {
             ss = shipsDB[measure.start_value].raw;
             sc = fromLonLat([ss.lon, ss.lat]);
@@ -140,7 +142,7 @@ export function refreshMeasures() {
         if ('end_type' in measure) {
             if (measure.end_type == 'point') {
                 ec = fromLonLat(measure.end_value);
-                to = "point";
+                to = pointLabel(measure.end_value);
             } else {
                 es = shipsDB[measure.end_value].raw;
                 ec = fromLonLat([es.lon, es.lat]);
