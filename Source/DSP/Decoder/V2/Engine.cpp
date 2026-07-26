@@ -224,12 +224,34 @@ namespace V2
 		return true;
 	}
 
+	// octant-reduced polynomial atan2, max error 2e-4 rad
+	static inline float atan2_fast(float y, float x)
+	{
+		const float ax = fabsf(x), ay = fabsf(y);
+		const float mx = ax > ay ? ax : ay;
+		const float mn = ax > ay ? ay : ax;
+
+		if (mx == 0.0f)
+			return 0.0f;
+
+		const float a = mn / mx;
+		const float s = a * a;
+		float r = ((-0.0464964749f * s + 0.15931422f) * s - 0.327622764f) * s * a + a;
+
+		if (ay > ax)
+			r = 1.57079637f - r;
+		if (x < 0.0f)
+			r = 3.14159274f - r;
+
+		return y < 0.0f ? -r : r;
+	}
+
 	void FMDemod::Run(const CFLOAT32 *input, float *output)
 	{
 		for (int i = 0; i < BLOCK_SIZE; i++)
 		{
 			const CFLOAT32 p = input[i] * std::conj(prev);
-			output[i] = atan2f(p.imag(), p.real()) / PI;
+			output[i] = atan2_fast(p.imag(), p.real()) / PI;
 			prev = input[i];
 		}
 	}
