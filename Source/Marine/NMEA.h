@@ -129,7 +129,7 @@ namespace AIS
 
 		std::vector<AIVDM> queue;
 
-		void initMsg(char channel, int src, int64_t toa = 0, long start_idx = 0, long end_idx = 0);
+		void initMsg(char channel, int src, int64_t toa = 0, long long start_idx = 0, long long end_idx = 0);
 		void assembleAIS(TAG &tag);
 		void addline(const AIVDM &a);
 		void reset();

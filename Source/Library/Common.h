@@ -249,8 +249,8 @@ struct TAG
 	Type driver = Type::NONE;
 	FLOAT32 station_lat = LAT_UNDEFINED;
 	FLOAT32 station_lon = LON_UNDEFINED;
-	long sample_idx = 0;
-	long msg_idx_start, msg_idx_end;
+	long long sample_idx = 0;
+	long long msg_idx_start, msg_idx_end;
 	uint32_t ipv4 = 0;
 	uint32_t error = MESSAGE_ERROR_NONE;
 	bool replay = false;

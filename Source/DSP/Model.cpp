@@ -437,6 +437,26 @@ namespace AIS
 		return;
 	}
 
+	void ModelEngineV2::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
+	{
+		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
+		setName("AIS engine v2 base");
+
+		assert(C_a != NULL && C_b != NULL);
+
+		V2_a.setOrigin(CH1, station, own_mmsi);
+		V2_b.setOrigin(CH2, station, own_mmsi);
+
+		*C_a >> V2_a;
+		*C_b >> V2_b;
+
+		for (int i = 0; i < V2::Engine::N_DECODERS; i++)
+		{
+			V2_a.getDecoder(i) >> output;
+			V2_b.getDecoder(i) >> output;
+		}
+	}
+
 	void ModelStandard::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);

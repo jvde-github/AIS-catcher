@@ -66,8 +66,8 @@ namespace AIS
 
 		Message msg;
 
-		long start_idx = 0;
-		long end_idx = 0;
+		long long start_idx = 0;
+		long long end_idx = 0;
 
 	public:
 		virtual ~Decoder() {}
@@ -79,7 +79,109 @@ namespace AIS
 			own_mmsi = o;
 		}
 
-		void Receive(const FLOAT32 *data, int len, TAG &tag);
+		void Receive(const FLOAT32 *data, int len, TAG &tag)
+		{
+			for (int i = 0; i < len; i++)
+				Run(data[i], tag);
+		}
+
+		// Per-bit kernel: Receive() loops over this; the V2 engine calls it
+		// directly. Returns FOUNDMESSAGE on the completing bit, else the
+		// resting state.
+		State Run(FLOAT32 sample, TAG &tag)
+		{
+			// NRZI
+			BIT d = sample > 0;
+			BIT Bit = !(d ^ prev);
+			prev = d;
+
+			bool found = false;
+
+			// State machine
+			// At this stage: "position" bits into sequence, inspect the next bit:
+
+			switch (state)
+			{
+			case State::TRAINING:
+				if (Bit != lastBit) // 01 10
+				{
+					position++;
+				}
+				else // 11 or 00
+				{
+					if (position > MIN_TRAINING_BITS)
+					{
+						start_idx = tag.sample_idx;
+						NextState(State::STARTFLAG, Bit ? 3 : 1); // we are at * in ..0101|01*111110 ..010|*01111110
+					}
+					else
+						NextState(State::TRAINING, 0);
+				}
+				break;
+			case State::STARTFLAG:
+
+				if (position == 7)
+				{
+					if (Bit == 0)
+					{
+						NextState(State::DATAFCS, 0); // 0111111*0....
+						level = 0.0f;
+					}
+					else
+						NextState(State::TRAINING, 0);
+				}
+				else
+				{
+					if (Bit == 1)
+						position++;
+					else
+						NextState(State::TRAINING, 0);
+				}
+				break;
+			case State::DATAFCS:
+
+				msg.setBit(position++, Bit);
+
+				// add power of signal of bit length
+				if (tag.mode & 1)
+					level += tag.sample_lvl;
+
+				if (Bit == 1)
+				{
+					if (one_seq_count == 5)
+					{
+						if (tag.mode & 1)
+							tag.level = level / position;
+						end_idx = tag.sample_idx;
+						found = processData(position - 7, tag);
+						if (found)
+							NextState(State::FOUNDMESSAGE, 0);
+						NextState(State::TRAINING, 0);
+					}
+					else
+						one_seq_count++;
+				}
+				else
+				{
+					if (one_seq_count == 5)
+						position--; // bit-destuff
+					one_seq_count = 0;
+				}
+
+				if (position == MaxBits || (QuickReset && canStop(position)))
+					NextState(State::TRAINING, 0);
+				break;
+
+			default:
+				break;
+			}
+			lastBit = Bit;
+			return found ? State::FOUNDMESSAGE : state;
+		}
+
+		void reset() { NextState(State::TRAINING, 0); }
+		State getState() const { return state; }
+		long long getStartIdx() const { return start_idx; }
 
 		// MessageIn
 		virtual void Signal(const DecoderSignals &in);

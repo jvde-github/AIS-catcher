@@ -71,7 +71,7 @@ namespace AIS
 		int64_t toa; // time of arrival in seconds since epoch
 		int length;
 		char channel;
-		long start_idx, end_idx;
+		long long start_idx, end_idx;
 		int station;
 		int own_mmsi = -1;
 
@@ -156,12 +156,12 @@ namespace AIS
 			rxtime = t;
 		}
 
-		void setStartIdx(long s)
+		void setStartIdx(long long s)
 		{
 			start_idx = s;
 		}
 
-		void setEndIdx(long e)
+		void setEndIdx(long long e)
 		{
 			end_idx = e;
 		}

@@ -29,6 +29,7 @@
 
 #include "DSP.h"
 #include "Demod.h"
+#include "Decoder/V2/Engine.h"
 #include "StreamHelpers.h"
 
 #include "Device/Device.h"
@@ -228,6 +229,15 @@ namespace AIS
 		void buildModel(char, char, int, bool, Device::Device *);
 		Setting &SetKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
+	};
+
+	// v2 engine: slot-predicted frequency correction, decision-directed tracking, FM branch
+	class ModelEngineV2 : public ModelFrontend
+	{
+		V2::Engine V2_a, V2_b;
+
+	public:
+		void buildModel(char, char, int, bool, Device::Device *);
 	};
 
 	// Standard demodulation model for FM discriminator input

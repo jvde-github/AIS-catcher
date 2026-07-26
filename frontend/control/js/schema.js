@@ -669,9 +669,10 @@ const receiverSchema = {
         options: [
             { value: "auto", label: "Auto" },
             { value: "v1_base", label: "AIS Engine v1 Base" },
-            { value: "v1_high", label: "AIS Engine v1 High" }
+            { value: "v1_high", label: "AIS Engine v1 High" },
+            { value: "v2_base", label: "AIS Engine v2 Base (experimental)" }
         ],
-        tooltip: "AIS Engine v1 High decodes a few percent more messages at extra CPU load; Auto currently selects v1 Base"
+        tooltip: "AIS Engine v1 High decodes a few percent more messages at extra CPU load; v2 Base is a new faster, more sensitive engine (experimental); Auto currently selects v1 Base"
     },
     rtlsdr_tuner: {
         name: "tuner",

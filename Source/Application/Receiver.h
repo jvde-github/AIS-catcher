@@ -105,8 +105,10 @@ public:
 				model_select = 2;
 			else if (v == "V1_HIGH")
 				model_select = 4;
+			else if (v == "V2_BASE")
+				model_select = 11;
 			else
-				throw std::runtime_error(getName() + ": model must be auto, v1_base or v1_high");
+				throw std::runtime_error(getName() + ": model must be auto, v1_base, v1_high or v2_base");
 			break;
 		}
 		case AIS::KEY_SETTING_CHANNEL:

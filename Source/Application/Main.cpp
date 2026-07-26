@@ -676,7 +676,7 @@ static void parseCLI(int argc, char *argv[], RunState &state, Config &c, int &cb
 			break;
 		case 'm':
 			Assert(count == 1, param, "requires one parameter [model number].");
-			receiver.addModel(Util::Parse::Integer(arg1, 0, 9));
+			receiver.addModel(Util::Parse::Integer(arg1, 0, 11));
 			break;
 		case 'M':
 			Assert(count <= 1, param, "requires zero or one parameter [DT].");
