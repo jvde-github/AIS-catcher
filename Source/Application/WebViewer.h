@@ -108,7 +108,7 @@ struct TrackingConfig
 };
 
 // Bundles all per-receiver (or aggregate) state: ship DB, counters, history.
-// states[0] is always "All" (aggregate). states[1..N] are per-receiver when N > 1.
+// states[0] is always "All" (aggregate). states[1..N] are per receiver/model pair when there is more than one.
 struct ReceiverTracker
 {
 private:
@@ -300,7 +300,7 @@ private:
 
 	void applyStationPosition();
 
-	// All receiver states. Index 0 = aggregate "All", index 1..N = per-receiver (only when N > 1).
+	// All receiver states. Index 0 = aggregate "All", index 1..N = per receiver/model pair (only when there is more than one).
 	std::vector<std::unique_ptr<ReceiverTracker>> states;
 	mutable std::recursive_mutex state_mtx;
 

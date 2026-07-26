@@ -835,7 +835,11 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 
 	const std::string newline = "<br>";
 
-	bool multi = receivers.size() > 1 && !filter.hasIDFilter() && groups_in == 0xFFFFFFFFFFFFFFFF;
+	int connectable = 0;
+	for (auto &rp : receivers)
+		connectable += rp->Count();
+
+	bool multi = connectable > 1 && !filter.hasIDFilter() && groups_in == 0xFFFFFFFFFFFFFFFF;
 
 	states[0]->product.clear();
 	states[0]->vendor.clear();
@@ -848,25 +852,26 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 	for (int k = 0; k < (int)receivers.size(); k++)
 	{
 		Receiver &r = *receivers[k];
-		ReceiverTracker *per = nullptr;
 
 		bool rec_details = false;
 		for (int j = 0; j < r.Count(); j++)
 		{
 			if (r.Output(j).canConnect(groups_in))
 			{
+				ReceiverTracker *per = nullptr;
+
+				if (multi)
+				{
+					states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker()));
+					per = states.back().get();
+					per->setDevice(r.getDeviceManager().getDevice());
+					if (r.Count() > 1)
+						per->label = receivers.size() > 1 ? per->label + " " + r.Model(j)->getName() : r.Model(j)->getName();
+				}
+
 				if (!rec_details)
 				{
-					auto *device = r.getDeviceManager().getDevice();
-
-					if (multi)
-					{
-						states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker()));
-						per = states.back().get();
-						per->setDevice(device);
-					}
-
-					states[0]->appendDevice(device, newline);
+					states[0]->appendDevice(r.getDeviceManager().getDevice(), newline);
 					rec_details = true;
 				}
 
