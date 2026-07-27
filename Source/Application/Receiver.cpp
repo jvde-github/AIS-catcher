@@ -125,6 +125,32 @@ void Receiver::setupDevice()
 std::unique_ptr<AIS::Model> &Receiver::addModel(int m)
 {
 
+	// -1: the default model for the input format
+	if (m == -1)
+	{
+		switch (deviceManager.getInputFormat())
+		{
+		case Format::TXT:
+			m = 5;
+			break;
+		case Format::N2K:
+			m = 6;
+			break;
+		case Format::BASESTATION:
+			m = 7;
+			break;
+		case Format::BEAST:
+			m = 8;
+			break;
+		case Format::RAW1090:
+			m = 10;
+			break;
+		default:
+			m = high_sensitivity ? 4 : 2;
+			break;
+		}
+	}
+
 	switch (m)
 	{
 	case 0:
@@ -175,32 +201,7 @@ void Receiver::setupModel(int &group, int idx)
 	auto *device = deviceManager.getDevice();
 	// if nothing defined, create one model
 	if (!models.size())
-	{
-		if (model_select)
-			addModel(model_select);
-		else
-			switch (device->getFormat())
-			{
-			case Format::TXT:
-				addModel(5);
-				break;
-			case Format::N2K:
-				addModel(6);
-				break;
-			case Format::BASESTATION:
-				addModel(7);
-				break;
-			case Format::BEAST:
-				addModel(8);
-				break;
-			case Format::RAW1090:
-				addModel(10);
-				break;
-			default:
-				addModel(high_sensitivity ? 4 : 2);
-				break;
-			}
-	}
+		addModel(-1);
 
 	// ensure some basic compatibility between model and device
 	for (const auto &m : models)

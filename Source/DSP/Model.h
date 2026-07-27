@@ -60,7 +60,6 @@ namespace AIS
 	class Model : public Setting
 	{
 	protected:
-		std::string name = "";
 		int station = 0;
 		int own_mmsi = -1;
 
@@ -82,8 +81,7 @@ namespace AIS
 		StreamOut<GPS> &OutputGPS() { return output_gps; }
 		StreamOut<Plane::ADSB> &OutputADSB() { return outputADSB; }
 
-		void setName(const std::string &s) { name = s; }
-		const std::string &getName() { return name; }
+		void setName(const std::string &s) { setting_name = s; }
 
 		float getTotalTiming() { return timer.getTotalTiming(); }
 
@@ -102,7 +100,7 @@ namespace AIS
 				own_mmsi = Util::Parse::Integer(arg);
 				break;
 			default:
-				throw std::runtime_error("Model: unknown setting.");
+				throw std::runtime_error(getName() + ": setting \"" + AIS::KeyMap[key][JSON_DICT_SETTING] + "\" not supported");
 			}
 			return *this;
 		}
@@ -155,6 +153,10 @@ namespace AIS
 	// Standard demodulation model, FM with brute-force timing recovery
 	class ModelStandard : public ModelFrontend
 	{
+	public:
+		ModelStandard() { setName("Standard (non-coherent)"); }
+
+	private:
 		Demod::FM FM_a, FM_b;
 
 		DSP::Filter FR_a, FR_b;
@@ -168,6 +170,10 @@ namespace AIS
 	// Base model for development purposes, simplest and fastest
 	class ModelBase : public ModelFrontend
 	{
+	public:
+		ModelBase() { setName("Base (non-coherent)"); }
+
+	private:
 		Demod::FM FM_a, FM_b;
 		DSP::Filter FR_a, FR_b;
 		DSP::SimplePLL sampler_a, sampler_b;
@@ -180,6 +186,10 @@ namespace AIS
 	// Simple model embedding some elements of a coherent model with local phase estimation
 	class ModelDefault : public ModelFrontend
 	{
+	public:
+		ModelDefault() { setName("AIS engine v1 base"); }
+
+	private:
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
 		Demod::PhaseSearch CD_a[N_SAMPLES_PER_SYMBOL], CD_b[N_SAMPLES_PER_SYMBOL];
 		Demod::PhaseSearchEMA CD_EMA_a[N_SAMPLES_PER_SYMBOL], CD_EMA_b[N_SAMPLES_PER_SYMBOL];
@@ -204,6 +214,10 @@ namespace AIS
 	// Simple model embedding some elements of a coherent model with local phase estimation
 	class ModelChallenger : public ModelFrontend
 	{
+	public:
+		ModelChallenger() { setName("AIS engine v1 high"); }
+
+	private:
 		DSP::SquareFreqOffsetCorrection CGF_a, CGF_b;
 
 		DSP::FilterComplex FC_a, FC_b;
@@ -234,6 +248,10 @@ namespace AIS
 	// v2 engine: slot-predicted frequency correction, decision-directed tracking, FM branch
 	class ModelEngineV2 : public ModelFrontend
 	{
+	public:
+		ModelEngineV2() { setName("AIS engine v2 base"); }
+
+	private:
 		V2::Engine V2_a, V2_b;
 
 	public:
@@ -243,6 +261,10 @@ namespace AIS
 	// Standard demodulation model for FM discriminator input
 	class ModelDiscriminator : public Model
 	{
+	public:
+		ModelDiscriminator() { setName("FM discriminator output model"); }
+
+	private:
 		Util::RealPart RP;
 		Util::ImaginaryPart IP;
 		DSP::Upsample US;
@@ -261,6 +283,10 @@ namespace AIS
 	// Standard demodulation model for FM discriminator input
 	class ModelNMEA : public Model
 	{
+	public:
+		ModelNMEA() { setName("NMEA input"); }
+
+	private:
 		NMEA nmea;
 
 	public:
@@ -272,6 +298,10 @@ namespace AIS
 
 	class ModelN2K : public Model
 	{
+	public:
+		ModelN2K() { setName("N2K input"); }
+
+	private:
 		N2KtoMessage n2k;
 
 	public:
@@ -283,6 +313,10 @@ namespace AIS
 
 	class ModelBaseStation : public Model
 	{
+	public:
+		ModelBaseStation() { setName("ADSB input"); }
+
+	private:
 		Basestation model;
 
 	public:
@@ -294,6 +328,10 @@ namespace AIS
 
 	class ModelBeast : public Model
 	{
+	public:
+		ModelBeast() { setName("ADSB input"); }
+
+	private:
 		Beast model;
 
 	public:
@@ -305,6 +343,10 @@ namespace AIS
 
 	class ModelRAW1090 : public Model
 	{
+	public:
+		ModelRAW1090() { setName("ADSB input"); }
+
+	private:
 		RAW1090 model;
 
 	public:
@@ -316,6 +358,10 @@ namespace AIS
 
 	class ModelExport : public Model
 	{
+	public:
+		ModelExport() { setName("Export output"); }
+
+	private:
 		Util::WriteWAV wav;
 
 	public:

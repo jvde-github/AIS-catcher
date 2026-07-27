@@ -111,6 +111,7 @@ const PLUGIN_API_VERSION = 5;
 const ACTIONS = {
     // header bar
     toggleMenu: () => toggleMenu(),
+    hideMenu: () => hideMenu(),
     headerClick: () => headerClick(),
     activateTab: (e, d) => activateTab(e, d.tab),
     openWebControl: () => openWebControl(),
@@ -118,6 +119,7 @@ const ACTIONS = {
     headerSettings: () => openSettings(),
     toggleScreenSize: () => toggleScreenSize(),
     toggleReceiverDropdown: (e) => toggleReceiverDropdown(e),
+    closeReceiverDropdown: () => closeReceiverDropdown(),
 
     // tableside / generic close buttons / dialog
     hideTablecard: () => hideTablecard(),
@@ -314,6 +316,8 @@ window.__app__ = {
     get saveSettings() { return saveSettings; },
     get fetchShips() { return fetchShips; },
     get shipsSince() { return shipsSince; },
+    get receivers() { return config.receivers || []; },
+    get setReceiver() { return onReceiverChange; },
 };
 
 function _bindDelegatedActions() {
@@ -336,6 +340,7 @@ document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (!document.getElementById("dialog-box").classList.contains("hidden")) closeDialog();
     else if (document.querySelector(".settings_window").classList.contains("active")) closeSettings();
+    else if (document.getElementById("menubar").classList.contains("visible")) hideMenu();
 });
 
 if (document.body) _bindDelegatedActions();
@@ -2570,13 +2575,17 @@ function showMenu() {
 }
 
 function toggleMenu() {
-    document.getElementById("menubar").classList.toggle("visible");
+    const menubar = document.getElementById("menubar");
+    menubar.classList.toggle("visible");
     document.getElementById("menubar_mini").classList.toggle("showflex");
     document.getElementById("menubar_mini").classList.toggle("hide");
 
     const menuButton = document.getElementById("header_menu_button");
     menuButton.classList.toggle("menu_icon");
     menuButton.classList.toggle("close_icon");
+
+    document.getElementById("menubar-overlay").classList
+        .toggle("active", menubar.classList.contains("visible") && !isAndroid());
 }
 
 function initFullScreen() {
@@ -2697,6 +2706,8 @@ function toggleShipcardSize() {
 }
 
 function syncReceiverUI() {
+    const chartSource = document.getElementById("chart_source_a");
+    if (chartSource && chartSource.options.length) chartSource.value = String(activeReceiver);
     const btn = document.getElementById("receiver-btn");
     if (btn) btn.classList.toggle("active", activeReceiver !== 0);
     const dd = document.getElementById("receiver-dropdown");
@@ -2733,12 +2744,15 @@ function toggleReceiverDropdown(event) {
     event.stopPropagation();
     const dd = document.getElementById("receiver-dropdown");
     if (!dd) return;
-    dd.style.display = dd.style.display === "none" ? "block" : "none";
+    const opening = dd.style.display === "none";
+    dd.style.display = opening ? "block" : "none";
+    document.getElementById("receiver-dropdown-overlay").classList.toggle("active", opening);
 }
 
 function closeReceiverDropdown() {
     const dd = document.getElementById("receiver-dropdown");
     if (dd) dd.style.display = "none";
+    document.getElementById("receiver-dropdown-overlay").classList.remove("active");
 }
 
 function onReceiverChange(idx) {
@@ -2871,14 +2885,6 @@ function tableRowClick(m) {
 
     selectMapTab(m);
 }
-
-// Receiver-dropdown close-on-outside-click.
-document.addEventListener('click', function (event) {
-    const wrap = document.getElementById('receiver-btn-wrap');
-    if (wrap && !wrap.contains(event.target)) {
-        closeReceiverDropdown();
-    }
-});
 
 function getTooltipContent(ship) {
     let content = '<div class="tooltip-card">' +

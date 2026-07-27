@@ -59,9 +59,11 @@
 			<div id="receiver-btn" class="header-icon" title="Select receiver" data-action="toggleReceiverDropdown">
 				<i class="radio_icon small-icon"></i>
 			</div>
+			<div class="overlay" id="receiver-dropdown-overlay" data-action="closeReceiverDropdown"></div>
 			<div id="receiver-dropdown" class="receiver-dropdown" style="display:none"></div>
 		</div>
 	</div>
+	<div class="overlay" id="menubar-overlay" data-action="hideMenu"></div>
 	<nav id="menubar" class="nokiosk">
 		<div data-action="activateTab" data-tab="map" id="map_tab" title="Live map of received vessels"><i class="map_icon"></i><span>Map</span></div>
 		<div data-action="activateTab" data-tab="stat" id="stat_tab" title="System and receiver statistics"><i class="business_center_icon"></i><span>Statistics</span>
@@ -1064,7 +1066,35 @@
 			</div>
 
 			<div class="tabcontent addscrollbar" id="plots" style="display: none;">
+				<div class="chart-sources" id="chart_sources" style="display: none;">
+					<label>Source<select id="chart_source_a"></select></label>
+					<label>Compare with<select id="chart_source_b"></select></label>
+				</div>
 				<div class="graphtab" data-on-contextmenu="plotsContextMenu">
+					<div class="graph-panel compare-panel" style="display: none;">
+						<header>Messages per Minute — A vs B</header>
+						<canvas id="chart-compare-minutes"></canvas>
+					</div>
+					<div class="graph-panel compare-panel" style="display: none;">
+						<header>Messages per Hour — A vs B</header>
+						<canvas id="chart-compare-hours"></canvas>
+					</div>
+					<div class="graph-panel compare-panel" style="display: none;">
+						<header>Message Gain per Minute — B vs A</header>
+						<canvas id="chart-compare-gain-minute"></canvas>
+					</div>
+					<div class="graph-panel compare-panel" style="display: none;">
+						<header>Message Gain per Hour — B vs A</header>
+						<canvas id="chart-compare-gain-hour"></canvas>
+					</div>
+					<div class="graph-panel compare-panel" style="display: none;">
+						<header>Vessels per Minute — A vs B</header>
+						<canvas id="chart-compare-vessels-minute"></canvas>
+					</div>
+					<div class="graph-panel compare-panel" style="display: none;">
+						<header>Vessels per Hour — A vs B</header>
+						<canvas id="chart-compare-vessels-hour"></canvas>
+					</div>
 					<div class="graph-panel">
 						<header>Messages per Second</header>
 						<canvas id="chart-seconds"></canvas>

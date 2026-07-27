@@ -337,6 +337,8 @@
 
     let reloadUntil = 0;
     let overlayRestartBtn = null;
+    let pendingViewerReload = false;
+    let lastUptime = Infinity;
 
     function restartTimedOut() {
         reloadUntil = 0;
@@ -363,9 +365,18 @@
                 restartTimedOut();
             }
         }
+        // a restart can complete between two status updates, so a falling
+        // uptime is the signal, not a stopped state we may never observe
+        const uptime = data.engine === 'running' && typeof data.uptime === 'number' ? data.uptime : Infinity;
+        const reloadFrame = pendingViewerReload && uptime < lastUptime;
+        lastUptime = uptime;
+        if (reloadFrame) pendingViewerReload = false;
+
         if (data.viewer && (!viewerLoaded || data.viewer !== port)) {
             port = data.viewer;
             clearOverlayMessages();
+            loadWebviewer();
+        } else if (reloadFrame && viewerLoaded) {
             loadWebviewer();
         }
         return data;
@@ -407,9 +418,16 @@
         }, 10000);
     }
 
-    window.hubConfigSaved = function (kind) {
-        if (kind === 'viewer') {
-            App.notify('info', 'Reload the page to apply the map viewer changes', 8000);
+    window.hubConfigSaved = function (kind, opts) {
+        // a running receiver picks the settings up when it restarts
+        if (opts && opts.reloadWebviewer) pendingViewerReload = true;
+        if (opts && opts.restartWebviewer) {
+            if (engineRunning) pendingViewerReload = true;
+            else if (viewerLoaded) loadWebviewer();
+        }
+
+        if (kind === 'viewer' && !engineRunning) {
+            App.notify('info', 'Map viewer settings applied', 5000);
         } else {
             App.notify('info', (engineRunning ? 'Restart' : 'Start') + ' the receiver to apply the new configuration', 8000);
             pendingApply = true;
@@ -901,12 +919,7 @@
                     </div>
                 </div>
             </div>
-            <div class="sys-pane hidden" data-pane="viewer">
-                <div>
-                    <p class="text-xs text-slate-500 mb-3">Settings for the built-in map viewer. Changes take effect on the next receiver restart; reload the page to see new tabs.</p>
-                    <div id="viewer-config-container"></div>
-                </div>
-            </div>
+            <div class="sys-pane hidden" data-pane="viewer"><div><div id="viewer-config-container"></div></div></div>
             <div class="sys-pane hidden" data-pane="config">
                 <pre id="config-json" class="rounded-lg">Loading...</pre>
             </div>
@@ -974,12 +987,18 @@
     }
 
     function loadViewerConfig() {
-        const keys = ['lat', 'lon', 'use_gps'];
-        const widths = { lat: 38, lon: 38, use_gps: 18 };
+        // every viewer setting except the port, which follows the control port
+        const keys = ['station', 'station_link', 'lat', 'lon', 'webcontrol_http',
+                      'plugin_dir', 'file', 'backup', 'history',
+                      'share_loc', 'realtime', 'decoder', 'log', 'use_gps', 'zones'];
+        const toggles = ['share_loc', 'realtime', 'decoder', 'log', 'use_gps'];
+        const halves = ['station', 'station_link'];
         const schema = {};
         keys.forEach(k => {
             schema[k] = Object.assign({}, webviewerSchema[k]);
-            schema[k].width = widths[k];
+            if (toggles.indexOf(k) !== -1) schema[k].width = 19; // five across one row
+            if (halves.indexOf(k) !== -1) schema[k].width = 50;
+            if (k === 'history') schema[k].width = 100; // so the toggles start on a new row
         });
         schema.use_gps.label = 'GPS';
         createSimpleConfigManager({
@@ -999,6 +1018,8 @@
             return `<span class="j-num">${m}</span>`;
         });
     }
+
+    window.highlightJson = highlightJson;
 
     function loadConfigJson() {
         const pre = document.getElementById('config-json');
@@ -1176,6 +1197,11 @@
             .catch(() => statEls.forEach(el => { el.innerHTML = ''; }));
     }
 
+    function engineTypeLabel(type) {
+        const opt = receiverSchema.engines.options.find(o => o.value === (type || 'auto'));
+        return opt ? opt.label : (type || 'auto').replace(/_/g, ' ');
+    }
+
     function loadDataFlow() {
         stopFlowObserver();
         const patchEl = document.getElementById('flow-patch');
@@ -1202,28 +1228,42 @@
                 // tab switched or modal closed while loading: don't install
                 // the stats timer and observer on a stale pane
                 if (currentSystemTab !== 'flow') return;
-                const receivers = (cfg.receiver || []).map((item, i) => ({
-                    label: `${item.input || 'Unknown'} ${item.serial ? '#' + item.serial : '#' + (i + 1)}`,
-                    zones: item.zone || [],
-                    active: item.active !== false
-                }));
+                // one node per engine, with the receiver's zones plus its own
+                const receivers = [];
+                (cfg.receiver || []).forEach((item, i) => {
+                    const label = `${item.input || 'Unknown'} ${item.serial ? '#' + item.serial : '#' + (i + 1)}`;
+                    const engines = Array.isArray(item.engines) && item.engines.length ? item.engines : [{}];
+                    engines.forEach(e => receivers.push({
+                        label: engines.length > 1 ? `${label} · ${engineTypeLabel(e.type)}` : label,
+                        zones: [...(item.zone || []), ...(Array.isArray(e.zone) ? e.zone : [])],
+                        active: item.active !== false
+                    }));
+                });
 
                 const outputs = [];
-                OUTPUT_TYPES.forEach(({ value, configKey, flowLabel }) => {
-                    if (!configKey) return;
-                    (cfg[configKey] || []).forEach(item => {
-                        outputs.push({ label: flowOutputLabel(flowLabel, item), zones: item.zone || [], active: item.active !== false, sub: value, link: item.link });
+                const mapCfg = (cfg.control && cfg.control.viewer) || null;
+                if (mapCfg)
+                    outputs.push({
+                        label: 'Map',
+                        zones: Array.isArray(mapCfg.zone) ? mapCfg.zone : [],
+                        active: true,
+                        tab: 'viewer'
                     });
-                });
-                if (cfg.sharing !== undefined) {
+
+                if (cfg.sharing !== undefined)
                     outputs.push({
                         label: 'Community',
                         zones: Array.isArray(cfg.sharing_zone) ? cfg.sharing_zone : [],
                         active: cfg.sharing === true,
                         sub: 'sharing'
                     });
-                }
 
+                OUTPUT_TYPES.forEach(({ value, configKey, flowLabel }) => {
+                    if (!configKey) return;
+                    (cfg[configKey] || []).forEach(item => {
+                        outputs.push({ label: flowOutputLabel(flowLabel, item), zones: item.zone || [], active: item.active !== false, sub: value, link: item.link });
+                    });
+                });
                 loadingEl.classList.add('hidden');
                 if (receivers.length === 0 && outputs.length === 0) {
                     emptyEl.classList.remove('hidden');
@@ -1250,7 +1290,8 @@
                     return n;
                 });
                 const outputEls = outputs.map(o => {
-                    const n = flowNode(o.label, o.zones, o.active, false, () => selectOutputTab(o.sub), o.link);
+                    const open = o.tab ? () => switchSystemTab(o.tab) : () => selectOutputTab(o.sub);
+                    const n = flowNode(o.label, o.zones, o.active, false, open, o.link);
                     outputsEl.appendChild(n);
                     return n;
                 });

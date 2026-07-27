@@ -1,9 +1,9 @@
 // Manual Chart.js registration (vs `chart.js/auto`) to tree-shake out chart
-// types we don't use. Only scatter (line) + polarArea are needed.
+// types we don't use. Only scatter (line), bar and polarArea are needed.
 import {
     Chart,
-    LineController, ScatterController, PolarAreaController,
-    PointElement, LineElement, ArcElement,
+    LineController, ScatterController, PolarAreaController, BarController,
+    PointElement, LineElement, ArcElement, BarElement,
     LinearScale, LogarithmicScale, RadialLinearScale,
     Tooltip, Legend, Filler,
 } from 'chart.js';
@@ -11,8 +11,8 @@ import Annotation from 'chartjs-plugin-annotation';
 import { getDistanceConversion, getDistanceUnit } from '../core/format.js';
 
 Chart.register(
-    LineController, ScatterController, PolarAreaController,
-    PointElement, LineElement, ArcElement,
+    LineController, ScatterController, PolarAreaController, BarController,
+    PointElement, LineElement, ArcElement, BarElement,
     LinearScale, LogarithmicScale, RadialLinearScale,
     Tooltip, Legend, Filler,
     Annotation,
@@ -239,12 +239,171 @@ const plot_radar = {
 };
 
 
+const plot_compare = (axis) => ({
+    type: "scatter",
+    data: {
+        datasets: [
+            { label: "A", data: [], showLine: true, fill: false, pointStyle: false, borderWidth: 2 },
+            { label: "B", data: [], showLine: true, fill: false, pointStyle: false, borderWidth: 2 },
+        ],
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: true } },
+        elements: { point: { radius: 1 } },
+        animation: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: { display: true, align: "center" },
+                grid: { display: true },
+                title: { display: true, text: axis, font: { size: 12 }, color: "#666" },
+            },
+            x: {
+                ticks: { display: true },
+                title: { display: true, text: "Time", font: { size: 16 }, color: "#666" },
+            },
+        },
+    },
+});
+
+const gain_annotation = {
+    type: "line",
+    borderColor: "rgba(12,118,170)",
+    borderDash: [6, 6],
+    borderWidth: 2,
+    scaleID: "y",
+    value: 0,
+    label: { display: true, position: "start", backgroundColor: "transparent", font: { size: 11 } },
+};
+
+const plot_gain = {
+    type: "bar",
+    data: {
+        datasets: [
+            { label: "Gain", data: [], borderWidth: 0 },
+        ],
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: true },
+            annotation: { annotations: { gain_annotation } },
+        },
+        animation: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: { display: true, align: "center" },
+                grid: { display: true },
+                title: { display: true, text: "More messages than A (%)", font: { size: 12 }, color: "#666" },
+            },
+            x: {
+                type: "linear",
+                offset: true,
+                ticks: { display: true },
+                title: { display: true, text: "Time", font: { size: 16 }, color: "#666" },
+            },
+        },
+    },
+};
+
+// A is the viewer-wide scope (shared with the top bar); B is chart-only
+let sourceB = null;
+let updateToken = 0;
+
+function receiverLabel(idx) {
+    const r = (window.__app__.receivers || []).find((x) => x.idx === idx);
+    return r ? r.label : `Receiver ${idx}`;
+}
+
+function buildSourceSelectors() {
+    const bar = document.getElementById("chart_sources");
+    const selA = document.getElementById("chart_source_a");
+    const selB = document.getElementById("chart_source_b");
+    if (!bar || !selA || !selB) return;
+
+    const receivers = window.__app__.receivers || [];
+    if (receivers.length <= 1) {
+        bar.style.display = "none";
+        return;
+    }
+    bar.style.display = "flex";
+    if (selA.options.length === receivers.length) return;
+
+    selA.innerHTML = "";
+    selB.innerHTML = "";
+    for (const r of receivers) {
+        selA.appendChild(new Option(r.label, r.idx));
+        selB.appendChild(new Option(r.label, r.idx));
+    }
+    selB.insertBefore(new Option("none", ""), selB.firstChild);
+
+    selA.value = String(window.__app__.activeReceiver);
+    selB.value = sourceB === null ? "" : String(sourceB);
+
+    selA.onchange = () => window.__app__.setReceiver(parseInt(selA.value, 10));
+    selB.onchange = () => { sourceB = selB.value === "" ? null : parseInt(selB.value, 10); update(); };
+}
+
+async function fetchHistory(idx) {
+    try {
+        const response = await fetch("api/history_full.json?receiver=" + idx);
+        if (!response.ok) return null;
+        return await response.json();
+    } catch (error) {
+        console.error("plots: history fetch failed:", error);
+        return null;
+    }
+}
+
+const series = (h, f, key) => (h && h[f] ? h[f].time.map((t, i) => ({ x: t, y: h[f].stat[i][key] })) : []);
+
+function updateChartCompare(a, b, f, key, c, srcA, srcB) {
+    if (!c) return;
+    c.data.datasets[0].label = receiverLabel(srcA);
+    c.data.datasets[0].data = series(a, f, key);
+    c.data.datasets[1].label = receiverLabel(srcB);
+    c.data.datasets[1].data = series(b, f, key);
+    c.update();
+}
+
+function updateChartGain(a, b, f, c, srcA, srcB) {
+    if (!c) return;
+    const other = new Map(series(b, f, "count").map((p) => [p.x, p.y]));
+    const shared = series(a, f, "count").filter((p) => p.y > 0 && other.has(p.x));
+
+    // the period average weighs each bucket by its message count, so quiet
+    // minutes do not count as much as busy ones
+    const totalA = shared.reduce((s, p) => s + p.y, 0);
+    const totalB = shared.reduce((s, p) => s + other.get(p.x), 0);
+    const average = totalA > 0 ? (100 * (totalB - totalA)) / totalA : 0;
+
+    c.data.datasets[0].label = receiverLabel(srcB) + " vs " + receiverLabel(srcA);
+    c.data.datasets[0].data = shared.map((p) => ({ x: p.x, y: (100 * (other.get(p.x) - p.y)) / p.y }));
+
+    // with nothing to compare against, an average of 0 would read as parity
+    const annotation = c.options.plugins.annotation.annotations.gain_annotation;
+    annotation.display = shared.length > 0;
+    annotation.value = average;
+    annotation.borderColor = cssvar("--chart-color");
+    annotation.label.content = "average " + (average >= 0 ? "+" : "") + average.toFixed(1) + "%";
+    annotation.label.color = cssvar("--chart-color");
+    c.update();
+}
+
 function init() {
     if (initialized) return;
 
     const chartConfigs = [
         { varName: "chart_radar_hour", id: "chart-radar-hour", config: plot_radar },
         { varName: "chart_radar_day", id: "chart-radar-day", config: plot_radar },
+        { varName: "chart_compare_minutes", id: "chart-compare-minutes", config: plot_compare("Message Count") },
+        { varName: "chart_compare_hours", id: "chart-compare-hours", config: plot_compare("Message Count") },
+        { varName: "chart_compare_gain_minute", id: "chart-compare-gain-minute", config: plot_gain },
+        { varName: "chart_compare_gain_hour", id: "chart-compare-gain-hour", config: plot_gain },
+        { varName: "chart_compare_vessels_minute", id: "chart-compare-vessels-minute", config: plot_compare("Vessel Count") },
+        { varName: "chart_compare_vessels_hour", id: "chart-compare-vessels-hour", config: plot_compare("Vessel Count") },
         { varName: "chart_seconds", id: "chart-seconds", config: plot_count },
         { varName: "chart_minutes", id: "chart-minutes", config: plot_count },
         { varName: "chart_hours", id: "chart-hours", config: plot_count },
@@ -371,20 +530,31 @@ function updateRadar(b, f, c) {
 export async function update() {
     init();
 
-    const { activeReceiver } = window.__app__;
+    buildSourceSelectors();
+    const token = ++updateToken;
+    const sourceA = window.__app__.activeReceiver;
+    const sourceBAtStart = sourceB;
     const unit = getDistanceUnit().toUpperCase();
     document.querySelectorAll(".distunit").forEach((u) => {
         u.textContent = unit;
     });
 
-    let b;
-    try {
-        const response = await fetch("api/history_full.json?receiver=" + activeReceiver);
-        if (!response.ok) return;
-        b = await response.json();
-    } catch (error) {
-        console.error('plots: history fetch failed:', error);
-        return;
+    const [b, cmp] = await Promise.all([
+        fetchHistory(sourceA),
+        sourceBAtStart !== null ? fetchHistory(sourceBAtStart) : Promise.resolve(null),
+    ]);
+    if (!b || token !== updateToken) return;
+
+    document.querySelectorAll(".compare-panel").forEach((p) => {
+        p.style.display = sourceBAtStart === null ? "none" : "";
+    });
+    if (sourceBAtStart !== null) {
+        updateChartCompare(b, cmp, "minute", "count", charts.chart_compare_minutes, sourceA, sourceBAtStart);
+        updateChartCompare(b, cmp, "hour", "count", charts.chart_compare_hours, sourceA, sourceBAtStart);
+        updateChartGain(b, cmp, "minute", charts.chart_compare_gain_minute, sourceA, sourceBAtStart);
+        updateChartGain(b, cmp, "hour", charts.chart_compare_gain_hour, sourceA, sourceBAtStart);
+        updateChartCompare(b, cmp, "minute", "vessels", charts.chart_compare_vessels_minute, sourceA, sourceBAtStart);
+        updateChartCompare(b, cmp, "hour", "vessels", charts.chart_compare_vessels_hour, sourceA, sourceBAtStart);
     }
 
     updateChartMulti(b, "second", charts.chart_seconds);
@@ -416,6 +586,9 @@ export function updateColors() {
                     charts.chart_minute_vessel, charts.chart_ppm_minute, charts.chart_hour_vessel,
                     charts.chart_day_vessel];
     const radar = [charts.chart_radar_day, charts.chart_radar_hour];
+    const compare = [charts.chart_compare_minutes, charts.chart_compare_hours,
+                     charts.chart_compare_vessels_minute, charts.chart_compare_vessels_hour];
+    const gain = [charts.chart_compare_gain_minute, charts.chart_compare_gain_hour];
 
     multi.forEach((chart) => {
         if (chart) { updateColorMulti(chart); chart.update(); }
@@ -432,5 +605,11 @@ export function updateColors() {
     });
     radar.forEach((chart) => {
         if (chart) { updateColorRadar(chart); chart.update(); }
+    });
+    compare.forEach((chart) => {
+        if (chart) { updateChartColors(chart, ["--chart1-color", "--chart2-color"]); chart.update(); }
+    });
+    gain.forEach((chart) => {
+        if (chart) { updateChartColors(chart, ["--chart2-color"]); chart.update(); }
     });
 }

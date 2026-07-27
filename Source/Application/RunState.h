@@ -22,6 +22,10 @@
 #include "Receiver.h"
 #ifdef HASWEBVIEWER
 #include "WebViewer.h"
+
+// The viewer of managed mode (-E), null otherwise. It outlives the engine, so
+// it is not part of RunState; the config reader applies "control"."viewer" to it.
+extern WebViewer *managed_viewer;
 #endif
 #include "Screen.h"
 

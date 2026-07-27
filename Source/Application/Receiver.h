@@ -53,7 +53,6 @@ class Receiver : public Setting
 
 	bool timing = false;
 	bool high_sensitivity = false;
-	int model_select = 0;
 
 	int sample_rate = 0, bandwidth = 0, ppm = 0, own_mmsi = -1;
 	int receiver_index = -1;
@@ -76,6 +75,8 @@ public:
 
 	bool verbose = false;
 	std::vector<std::string> zones;
+	// extra zones per engine; the receiver's zones apply to all of them
+	std::vector<std::vector<std::string>> engine_zones;
 
 	// Device manager
 	DeviceManager deviceManager;
@@ -92,25 +93,9 @@ public:
 			verbose = Util::Parse::Switch(arg);
 			break;
 		case AIS::KEY_SETTING_SENSITIVITY_HIGH:
-			Warning() << "Receiver: \"sensitivity_high\" is deprecated and will be removed, use \"model\": \"v1_high\" instead";
+			Warning() << "Receiver: \"sensitivity_high\" is deprecated and will be removed, use \"engines\": [ { \"type\": \"v1_high\" } ] instead";
 			high_sensitivity = Util::Parse::Switch(arg);
 			break;
-		case AIS::KEY_SETTING_MODEL:
-		{
-			std::string v = arg;
-			Util::Convert::toUpper(v);
-			if (v.empty() || v == "AUTO")
-				model_select = 0;
-			else if (v == "V1_BASE")
-				model_select = 2;
-			else if (v == "V1_HIGH")
-				model_select = 4;
-			else if (v == "V2_BASE")
-				model_select = 11;
-			else
-				throw std::runtime_error(getName() + ": model must be auto, v1_base, v1_high or v2_base");
-			break;
-		}
 		case AIS::KEY_SETTING_CHANNEL:
 			setChannel(arg, "");
 			break;
@@ -167,6 +152,18 @@ public:
 	std::unique_ptr<AIS::Model> &addModel(int m);
 	std::unique_ptr<AIS::Model> &Model(int i) { return models[i]; }
 	int Count() { return models.size(); }
+	uint64_t getGroupMask(int i) const { return jsonais[i]->out.getGroupOut(); }
+	bool inZone(int i, const std::string &zone) const
+	{
+		for (const auto &z : zones)
+			if (z == zone)
+				return true;
+		if (i < (int)engine_zones.size())
+			for (const auto &z : engine_zones[i])
+				if (z == zone)
+					return true;
+		return false;
+	}
 	uint64_t getGroupMask() const {
 		uint64_t mask = 0;
 		for (int i = 0; i < (int)jsonais.size(); i++)

@@ -33,7 +33,14 @@ namespace Managed
 {
 
 #ifdef HASWEBVIEWER
-	static std::unique_ptr<WebViewer> makeViewer(const std::string &config_file, ControlCore &core)
+	// only the port is fixed: it follows the control port
+	static void setViewerDefaults(WebViewer &viewer, ControlCore &core)
+	{
+		if (core.getControlPort() < 65535)
+			viewer.SetKey(AIS::KEY_SETTING_PORT, std::to_string(core.getControlPort() + 1));
+	}
+
+	static std::unique_ptr<WebViewer> makeViewer(ControlCore &core)
 	{
 		std::unique_ptr<WebViewer> viewer(new WebViewer());
 
@@ -43,69 +50,20 @@ namespace Managed
 			viewer->setIP(core.getBindAddress());
 		viewer->setReusePort(false);
 
-		viewer->SetKey(AIS::KEY_SETTING_SHARE_LOC, "on");
-		viewer->SetKey(AIS::KEY_SETTING_REALTIME, "on");
-		viewer->SetKey(AIS::KEY_SETTING_DECODER, "on");
-		viewer->SetKey(AIS::KEY_SETTING_LOG, "off");
-
-		try
-		{
-			JSON::Parser parser(JSON_DICT_SETTING);
-			JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
-
-			const JSON::Value *ctrl = doc.root[AIS::KEY_SETTING_CONTROL];
-			if (ctrl && ctrl->isObject())
-			{
-				const JSON::Value *v = ctrl->getObject()[AIS::KEY_SETTING_VIEWER];
-				if (v && v->isObject())
-					Config::setSettingsFromJSON(*v, *viewer);
-			}
-		}
-		catch (std::exception const &e)
-		{
-			Error() << "Control: viewer configuration failed: " << e.what();
-		}
-
-		if (core.getControlPort() < 65535)
-			viewer->SetKey(AIS::KEY_SETTING_PORT, std::to_string(core.getControlPort() + 1));
+		setViewerDefaults(*viewer, core);
+		managed_viewer = viewer.get();
 
 		return viewer;
 	}
 
-	static std::unique_ptr<WebViewer> startManagedViewer(const std::string &config_file, ControlCore &core)
+	// its HTTP server, ship database and statistics stay up throughout
+	static void restartViewer(WebViewer &viewer, const std::string &config_file, ControlCore &core)
 	{
-		std::unique_ptr<WebViewer> viewer = makeViewer(config_file, core);
-		viewer->start();
-		return viewer;
-	}
-
-	static void reapplyViewerSettings(WebViewer &viewer, const std::string &config_file)
-	{
-		static const AIS::Keys live_keys[] = {
-			AIS::KEY_SETTING_LAT, AIS::KEY_SETTING_LON, AIS::KEY_SETTING_USE_GPS};
-
-		try
-		{
-			JSON::Parser parser(JSON_DICT_SETTING);
-			JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
-
-			const JSON::Value *ctrl = doc.root[AIS::KEY_SETTING_CONTROL];
-			if (!ctrl || !ctrl->isObject())
-				return;
-
-			const JSON::Value *v = ctrl->getObject()[AIS::KEY_SETTING_VIEWER];
-			if (!v || !v->isObject())
-				return;
-
-			for (const auto &m : v->getObject().getMembers())
-				for (const auto k : live_keys)
-					if (m.Key() == k)
-						viewer.SetKey(k, m.Get().to_string());
-		}
-		catch (std::exception const &e)
-		{
-			Error() << "Control: viewer settings not re-applied: " << e.what();
-		}
+		viewer.stop();
+		viewer.resetSettings();
+		setViewerDefaults(viewer, core);
+		Config::readManagedViewer(config_file);
+		viewer.start();
 	}
 #endif
 
@@ -122,14 +80,19 @@ namespace Managed
 		server.start();
 
 #ifdef HASWEBVIEWER
-		std::unique_ptr<WebViewer> viewer = startManagedViewer(config_file, core);
+		std::unique_ptr<WebViewer> viewer = makeViewer(core);
+		Config::readManagedViewer(config_file);
+		viewer->start();
 
 		std::mutex viewer_mtx;
 
-		core.setConfigChangedCallback([&viewer, &viewer_mtx, &config_file]()
+		core.setConfigChangedCallback([&viewer, &viewer_mtx, &config_file, &core]()
 									  {
+									// rewiring the trackers needs an idle engine
+									if (viewer->engineConnected())
+										return;
 									std::lock_guard<std::mutex> lock(viewer_mtx);
-									if (viewer) reapplyViewerSettings(*viewer, config_file); });
+									restartViewer(*viewer, config_file, core); });
 #endif
 
 		while (!stop_process)
@@ -157,6 +120,13 @@ namespace Managed
 				try
 				{
 					state.receivers.back()->getDeviceManager().refreshDevices();
+#ifdef HASWEBVIEWER
+					// c.read() applies "control"."viewer" to the stopped viewer
+					std::unique_lock<std::mutex> viewer_lock(viewer_mtx);
+					viewer->stop();
+					viewer->resetSettings();
+					setViewerDefaults(*viewer, core);
+#endif
 					c.read(config_file);
 
 					for (auto &r : state.receivers)
@@ -166,15 +136,9 @@ namespace Managed
 					if (!state.xshare_defined && !state.comm_feed)
 						state.createCommunityFeed();
 #ifdef HASWEBVIEWER
-					{
-						std::lock_guard<std::mutex> lock(viewer_mtx);
-						if (!viewer)
-							viewer = startManagedViewer(config_file, core);
-						else
-							reapplyViewerSettings(*viewer, config_file);
-					}
-#endif
-#ifdef HASWEBVIEWER
+					viewer->start();
+					viewer_lock.unlock();
+
 					run(state, viewer.get(), &core);
 #else
 					run(state, &core);
@@ -186,8 +150,11 @@ namespace Managed
 					for (auto &r : state.receivers)
 						r->stop();
 #ifdef HASWEBVIEWER
-					if (viewer)
+					{
+						std::lock_guard<std::mutex> lock(viewer_mtx);
 						viewer->disconnectEngine();
+						viewer->start();
+					}
 #endif
 					core.engineFailed();
 				}
@@ -205,8 +172,7 @@ namespace Managed
 #ifdef HASWEBVIEWER
 		{
 			std::lock_guard<std::mutex> lock(viewer_mtx);
-			if (viewer)
-				viewer->close();
+			viewer->close();
 		}
 #endif
 		return 0;

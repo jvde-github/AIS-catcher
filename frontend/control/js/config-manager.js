@@ -322,7 +322,7 @@
         arraySchemas: CHANNEL_REGISTRY.reduce((m, c) => { m[c.configKey] = c.schema; return m; }, {}),
         topLevelSchemas: () => [sharingSchema, generalSettingsSchema],
 
-        receiverKeys: ['serial', 'input', 'verbose', 'model', 'meta', 'own_mmsi',
+        receiverKeys: ['serial', 'input', 'verbose', 'model', 'engines', 'meta', 'own_mmsi',
             'rtlsdr', 'rtltcp', 'airspy', 'airspyhf', 'hydrasdr', 'sdrplay', 'serialport',
             'hackrf', 'udpserver', 'soapysdr', 'nmea2000', 'file', 'zmq',
             'spyserver', 'wavfile'],
@@ -361,9 +361,23 @@
             }
 
             for (const r of cfg.receiver) {
-                if (r && typeof r === 'object' && 'sensitivity_high' in r) {
-                    if (Utils.toBoolean(r.sensitivity_high) && !('model' in r)) r.model = 'v1_high';
+                if (!r || typeof r !== 'object') continue;
+                if ('sensitivity_high' in r) {
+                    if (Utils.toBoolean(r.sensitivity_high) && !('engines' in r)) r.engines = [{ type: 'v1_high' }];
                     delete r.sensitivity_high;
+                    changed = true;
+                }
+                if (typeof r.model === 'string') {
+                    if (!('engines' in r)) r.engines = [r.model === 'auto' ? {} : { type: r.model }];
+                    delete r.model;
+                    changed = true;
+                }
+                if (r.model && typeof r.model === 'object' && !Array.isArray(r.model)) {
+                    const settings = {};
+                    for (const k of Object.keys(r.model)) if (k !== 'active') settings[k] = r.model[k];
+                    const entry = Object.keys(settings).length ? { settings } : {};
+                    r.engines = Array.isArray(r.engines) ? r.engines : [entry];
+                    delete r.model;
                     changed = true;
                 }
             }
@@ -516,15 +530,15 @@
     };
 
     const Styles = {
-        input: 'w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-white border border-slate-300 rounded-lg text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all duration-200 shadow-sm text-xs sm:text-sm',
+        input: 'w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-white border border-slate-300 rounded-lg text-slate-700 placeholder-slate-400 hover:border-[#0857b1] focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all duration-200 shadow-sm text-xs sm:text-sm',
         select: 'appearance-none pr-8',
-        toggle: "relative w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0857b1]",
+        toggle: "relative w-11 h-6 bg-slate-200 hover:ring-1 hover:ring-[#0857b1] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0857b1]",
         slider: 'flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#0857b1]',
         sliderContainer: 'flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 bg-slate-50 rounded-lg border border-slate-100',
         sliderDisplay: 'text-xs sm:text-sm font-mono font-medium text-slate-600 min-w-[2.5rem] sm:min-w-[3rem] text-center px-1.5 sm:px-2 py-0.5 sm:py-1 bg-slate-100 rounded border border-slate-200',
         label: 'block text-slate-700 text-xs sm:text-sm font-semibold mb-1 sm:mb-2 ml-0.5',
         description: 'mt-0.5 text-[10px] sm:text-xs text-slate-500 ml-0.5',
-        button: 'w-full sm:w-auto bg-white border border-slate-300 text-slate-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 transition duration-200 shadow-sm inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-medium',
+        button: 'w-full sm:w-auto bg-white border border-slate-300 text-slate-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:border-[#0857b1] hover:bg-slate-50 transition duration-200 shadow-sm inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-medium',
         buttonPrimary: 'px-2.5 sm:px-3 py-1.5 sm:py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition duration-200 shadow-sm flex items-center justify-center min-w-[40px] sm:min-w-[44px] text-xs sm:text-sm',
         card: 'bg-white rounded-none sm:rounded-xl border-x-0 sm:border-x border-slate-200 shadow-sm sm:max-w-2xl sm:mx-auto mb-2 sm:mb-6 relative hover:shadow-md transition-shadow duration-300 overflow-hidden',
         cardHeader: 'flex justify-between items-center px-3 sm:px-5 py-2 sm:py-2.5 bg-slate-100 border-b border-slate-200',
@@ -668,7 +682,7 @@
     }
 
     const Renderer = {
-        createInput(field, currentValue, onUpdate, index = 0, containerId = '') {
+        createInput(field, currentValue, onUpdate, index = 0, containerId = '', dataContext = null) {
             const type = field.type;
 
             if (type === 'select') {
@@ -776,6 +790,122 @@
                 });
             }
 
+            if (type === 'engines') {
+                const list = Array.isArray(currentValue) && currentValue.length
+                    ? currentValue.map(e => (e && typeof e === 'object') ? { ...e } : {})
+                    : [{}];
+
+                const wrapper = el('div', 'flex flex-col gap-2');
+                const rows = el('div', 'flex flex-col gap-3');
+
+                const push = () => onUpdate(list.map(e => ({ ...e })));
+
+                const addBtn = el('button', 'self-start inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200 transition', {
+                    type: 'button',
+                    onClick: () => { list.push({}); push(); render(); }
+                },
+                    el('svg', 'w-3 h-3', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                        el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 4v16m8-8H4' })),
+                    'Add Engine');
+
+                function render() {
+                    rows.innerHTML = '';
+                    list.forEach((entry, i) => {
+                        const select = el('select', `${Styles.input} ${Styles.select}`, {
+                            onChange: e => {
+                                if (e.target.value === 'auto') delete list[i].type;
+                                else list[i].type = e.target.value;
+
+                                // drop settings the new type does not accept
+                                const ok = (field.settings || [])
+                                    .filter(st => !st.types || st.types.includes(e.target.value))
+                                    .map(st => st.name);
+                                if (list[i].settings) {
+                                    (field.settings || []).forEach(st => {
+                                        if (!ok.includes(st.name)) delete list[i].settings[st.name];
+                                    });
+                                    if (!Object.keys(list[i].settings).length) delete list[i].settings;
+                                }
+                                push();
+                                render();
+                            }
+                        });
+                        (field.options || []).forEach(o => select.appendChild(
+                            el('option', '', { value: o.value, selected: (entry.type || 'auto') === o.value }, o.label)));
+
+                        const shown = (field.settings || []).filter(st => !st.types || st.types.includes(entry.type || 'auto')).map(st => st.name);
+                        const tuned = Object.keys(entry.settings || {}).some(k => !shown.includes(k));
+                        const row = el('div', 'flex flex-col gap-2 border border-slate-200 rounded-lg p-3', {},
+                            el('div', 'flex items-center gap-2', {},
+                                el('div', 'relative flex-1', {}, select),
+                                tuned ? el('span', 'text-xs text-slate-400 whitespace-nowrap', {}, 'tuned') : null,
+                                el('button', Styles.deleteBtn, {
+                                    type: 'button',
+                                    title: 'Remove engine',
+                                    disabled: list.length < 2,
+                                    style: list.length < 2 ? 'visibility:hidden' : '',
+                                    onClick: () => { list.splice(i, 1); push(); render(); }
+                                }, Icons.delete())));
+
+                        // the receiver's zones apply to every engine, shown greyed
+                        if (list.length > 1) {
+                            const zones = Array.isArray(entry.zone) ? entry.zone : [];
+                            const inherited = Array.isArray(dataContext?.zone) ? dataContext.zone : [];
+                            const chips = el('div', 'flex flex-wrap items-center gap-1');
+                            const commit = updated => {
+                                if (updated.length) entry.zone = updated;
+                                else delete entry.zone;
+                                push();
+                                render();
+                            };
+                            zones.forEach((z, zi) => chips.appendChild(zoneChip(z, () => {
+                                const next = zones.slice();
+                                next.splice(zi, 1);
+                                commit(next);
+                            })));
+                            inherited.forEach(z => chips.appendChild(
+                                el('span', 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-400 border border-slate-200',
+                                    { title: 'from the receiver, applies to every engine' }, z)));
+                            chips.appendChild(el('button', 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200 transition', {
+                                type: 'button',
+                                onClick: () => openZoneModal(zones, commit)
+                            },
+                                el('svg', 'w-3 h-3', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                    el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 4v16m8-8H4' })),
+                                'Add Zone'));
+                            row.appendChild(chips);
+                        }
+
+                        const cur = entry.type || 'auto';
+                        (field.settings || [])
+                            .filter(st => !st.types || st.types.includes(cur))
+                            .forEach(st => {
+                                const own = entry.settings || {};
+                                const toggle = Renderer.createInput({ type: 'toggle' }, own[st.name], on => {
+                                    if (on) (entry.settings = entry.settings || {})[st.name] = true;
+                                    else if (entry.settings) {
+                                        delete entry.settings[st.name];
+                                        if (!Object.keys(entry.settings).length) delete entry.settings;
+                                    }
+                                    push();
+                                    render();
+                                });
+                                toggle.className += ' gap-2';
+                                toggle.appendChild(el('span', 'text-xs text-slate-500', { title: st.tooltip || '' }, st.label));
+                                row.appendChild(toggle);
+                            });
+
+                        rows.appendChild(row);
+                    });
+                    addBtn.style.display = list.length >= 4 ? 'none' : '';
+                }
+
+                render();
+                wrapper.appendChild(rows);
+                wrapper.appendChild(addBtn);
+                return wrapper;
+            }
+
             if (type === 'zones') {
                 const zones = Array.isArray(currentValue) ? [...currentValue] : [];
 
@@ -857,7 +987,7 @@
                     onClick: () => (typeof field.onClick === 'function' ? field.onClick : ActionRegistry[field.onClick])?.(index, containerId)
                 }, field.buttonIcon && el('span', '', { innerHTML: field.buttonIcon }),
                 typeof field.buttonLabel === 'function' ? field.buttonLabel(dataContext) : (field.buttonLabel || 'Action'))
-                : this.createInput(field, val, newValue => { onUpdateCallback(field, newValue); onDependencyCheck(); }, index, containerId);
+                : this.createInput(field, val, newValue => { onUpdateCallback(field, newValue); onDependencyCheck(); }, index, containerId, dataContext);
 
             if (field.withButton && field.type !== 'button') {
                 const action = typeof field.withButton.onClick === 'function'
@@ -875,7 +1005,7 @@
                 style: field.width ? `flex: 0 1 calc(${field.width}% - 0.375rem); min-width: 0;` : 'flex: 1 1 100%;'
             });
 
-            if (field.type !== 'button') container.appendChild(el('label', Styles.label, {}, field.label));
+            if (field.type !== 'button' && field.label) container.appendChild(el('label', Styles.label, {}, field.label));
             container.appendChild(inputEl);
             
             if (field.type === 'button' && typeof field.buttonLabel === 'function') {
@@ -925,6 +1055,9 @@
             this.container = document.getElementById(config.containerId);
             this.fields = Object.values(config.schema);
             this.data = config.isList ? [] : {};
+            this.hasViewerFields = this.fields.some(f => f.reloadWebviewer || f.restartWebviewer);
+            this.reloadWebviewer = false;
+            this.restartWebviewer = false;
 
             if (!this.container) return;
 
@@ -1017,8 +1150,10 @@
 
                 const fieldsDiv = el('div', this.config.isList ? Styles.cardBody : 'p-3 sm:p-5');
                 const innerFields = el('div', 'flex flex-wrap gap-x-3 gap-y-2');
-                const advInner = el('div', 'flex flex-wrap gap-x-3 gap-y-2 w-full');
-                let syncAdvanced = () => { };
+                // `advanced` puts a field in a collapsible section; a string names it
+                const sections = new Map();
+                const syncs = [];
+                let syncAdvanced = () => syncs.forEach(f => f());
                 const refresh = () => { Renderer.updateVisibility(innerFields, item); syncAdvanced(); };
 
                 this.fields.forEach(field => {
@@ -1028,31 +1163,35 @@
                         refresh,
                         this.config.containerId
                     );
-                    (field.advanced ? advInner : innerFields).appendChild(fieldEl);
+                    if (!field.advanced) return innerFields.appendChild(fieldEl);
+                    const title = typeof field.advanced === 'string' ? field.advanced : 'Advanced';
+                    if (!sections.has(title)) sections.set(title, el('div', 'flex flex-wrap gap-x-3 gap-y-2 w-full'));
+                    sections.get(title).appendChild(fieldEl);
                 });
 
-                if (advInner.children.length) {
-                    this.advancedOpen = this.advancedOpen || new Set();
-                    const open = this.advancedOpen.has(index);
+                this.advancedOpen = this.advancedOpen || new Set();
+                sections.forEach((body, title) => {
+                    const key = `${index}|${title}`;
+                    const open = this.advancedOpen.has(key);
                     const chevron = el('span', 'inline-block transition-transform duration-200' + (open ? ' rotate-90' : ''), { innerHTML: '&#9656;' });
-                    advInner.style.display = open ? 'flex' : 'none';
-                    const advBtn = el('button', 'flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600 transition', {
+                    body.style.display = open ? 'flex' : 'none';
+                    const btn = el('button', 'flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600 transition', {
                         type: 'button',
                         onClick: () => {
-                            const nowOpen = !this.advancedOpen.has(index);
-                            if (nowOpen) this.advancedOpen.add(index); else this.advancedOpen.delete(index);
-                            advInner.style.display = nowOpen ? 'flex' : 'none';
+                            const nowOpen = !this.advancedOpen.has(key);
+                            if (nowOpen) this.advancedOpen.add(key); else this.advancedOpen.delete(key);
+                            body.style.display = nowOpen ? 'flex' : 'none';
                             chevron.classList.toggle('rotate-90', nowOpen);
                         }
-                    }, chevron, 'Advanced');
-                    const advRow = el('div', 'w-full mt-1', {}, advBtn);
-                    innerFields.appendChild(advRow);
-                    innerFields.appendChild(advInner);
-                    syncAdvanced = () => {
-                        const any = Array.from(advInner.children).some(c => c.style.display !== 'none');
-                        advRow.style.display = any ? 'block' : 'none';
-                    };
-                }
+                    }, chevron, title);
+                    const row = el('div', 'w-full mt-1', {}, btn);
+                    innerFields.appendChild(row);
+                    innerFields.appendChild(body);
+                    syncs.push(() => {
+                        const any = Array.from(body.children).some(c => c.style.display !== 'none');
+                        row.style.display = any ? 'block' : 'none';
+                    });
+                });
                 fieldsDiv.appendChild(innerFields);
 
                 wrapper.appendChild(fieldsDiv);
@@ -1133,6 +1272,8 @@
             const target = this.config.isList ? this.data[index] : this.data;
             if (field.jsonpath) Utils.setNested(target, field.jsonpath, value);
             else target[field.name] = value;
+            if (field.reloadWebviewer) this.reloadWebviewer = true;
+            if (field.restartWebviewer) this.restartWebviewer = true;
             App.setUnsaved(true);
             this.updateJsonDebug();
             
@@ -1149,6 +1290,7 @@
             });
             this.data.push(newItem);
             this.render();
+            if (this.hasViewerFields) this.reloadWebviewer = true;
             App.setUnsaved(true);
             this.updateJsonDebug();
         }
@@ -1157,6 +1299,7 @@
             if (confirm(`Are you sure you want to remove this ${this.config.title}?`)) {
                 this.data.splice(index, 1);
                 this.render();
+                if (this.hasViewerFields) this.reloadWebviewer = true;
                 App.setUnsaved(true);
                 this.updateJsonDebug();
             }
@@ -1210,7 +1353,9 @@
             if (!el) return;
             const cfg = {};
             this.applyDataTo(cfg);
-            el.textContent = JSON.stringify(cfg, null, 2);
+            const text = JSON.stringify(cfg, null, 2);
+            if (typeof global.highlightJson === 'function') el.innerHTML = global.highlightJson(text);
+            else el.textContent = text;
         }
 
         async save() {
@@ -1248,7 +1393,10 @@
                 App.setUnsaved(false);
                 App.notify('success', 'Configuration saved successfully');
                 if (global.hubConfigSaved)
-                    global.hubConfigSaved(this.config.nestedPath ? 'viewer' : 'engine');
+                    global.hubConfigSaved(this.config.nestedPath ? 'viewer' : 'engine',
+                        { reloadWebviewer: this.reloadWebviewer, restartWebviewer: this.restartWebviewer });
+                this.reloadWebviewer = false;
+                this.restartWebviewer = false;
             } catch (e) {
                 console.error(e);
                 App.notify('error', 'Failed to save configuration: ' + e.message);

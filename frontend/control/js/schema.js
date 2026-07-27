@@ -385,6 +385,7 @@ const webviewerSchema = {
     },
     station: {
         name: 'station',
+        restartWebviewer: true,
         label: 'Station',
         type: 'text',
         jsonpath: 'station',
@@ -394,6 +395,7 @@ const webviewerSchema = {
     },
     station_link: {
         name: 'station_link',
+        restartWebviewer: true,
         label: 'Station Link',
         type: 'text',
         jsonpath: 'station_link',
@@ -402,6 +404,7 @@ const webviewerSchema = {
     },
     lat: {
         name: 'lat',
+        restartWebviewer: true,
         label: 'Latitude',
         type: 'number',
         jsonpath: 'lat',
@@ -413,6 +416,7 @@ const webviewerSchema = {
     },
     lon: {
         name: 'lon',
+        restartWebviewer: true,
         label: 'Longitude',
         type: 'number',
         jsonpath: 'lon',
@@ -424,6 +428,7 @@ const webviewerSchema = {
     },
     plugin_dir: {
         name: 'plugin_dir',
+        restartWebviewer: true,
         label: 'Plugin Directory',
         type: 'text',
         jsonpath: 'plugin_dir',
@@ -433,6 +438,7 @@ const webviewerSchema = {
     },
     webcontrol_http: {
         name: 'webcontrol_http',
+        restartWebviewer: true,
         label: 'Web Control Link',
         type: 'text',
         jsonpath: 'webcontrol_http',
@@ -443,6 +449,7 @@ const webviewerSchema = {
     },
     file: {
         name: 'file',
+        restartWebviewer: true,
         label: 'Backup File',
         type: 'text',
         jsonpath: 'file',
@@ -451,6 +458,7 @@ const webviewerSchema = {
     },
     backup: {
         name: 'backup',
+        restartWebviewer: true,
         label: 'Minutes',
         type: 'number',
         jsonpath: 'backup',
@@ -462,6 +470,7 @@ const webviewerSchema = {
     },
     history: {
         name: 'history',
+        restartWebviewer: true,
         label: 'Ship Timeout (s)',
         type: 'number',
         jsonpath: 'history',
@@ -473,6 +482,7 @@ const webviewerSchema = {
     },
     context: {
         name: 'context',
+        restartWebviewer: true,
         label: 'Context',
         type: 'text',
         jsonpath: 'context',
@@ -490,6 +500,7 @@ const webviewerSchema = {
     },
     share_loc: {
         name: 'share_loc',
+        restartWebviewer: true,
         label: 'Location',
         type: 'toggle',
         jsonpath: 'share_loc',
@@ -499,6 +510,7 @@ const webviewerSchema = {
     },
     use_gps: {
         name: 'use_gps',
+        restartWebviewer: true,
         label: 'Use GPS',
         type: 'toggle',
         jsonpath: 'use_gps',
@@ -508,6 +520,7 @@ const webviewerSchema = {
     },
     realtime: {
         name: 'realtime',
+        restartWebviewer: true,
         label: 'Realtime',
         type: 'toggle',
         jsonpath: 'realtime',
@@ -517,6 +530,7 @@ const webviewerSchema = {
     },
     geojson: {
         name: 'geojson',
+        restartWebviewer: true,
         label: 'GeoJSON',
         type: 'toggle',
         jsonpath: 'geojson',
@@ -526,6 +540,7 @@ const webviewerSchema = {
     },
     prome: {
         name: 'prome',
+        restartWebviewer: true,
         label: 'Prometheus',
         type: 'toggle',
         jsonpath: 'prome',
@@ -535,6 +550,7 @@ const webviewerSchema = {
     },
     log: {
         name: 'log',
+        restartWebviewer: true,
         label: 'Show Log',
         type: 'toggle',
         jsonpath: 'log',
@@ -544,6 +560,7 @@ const webviewerSchema = {
     },
     decoder: {
         name: 'decoder',
+        restartWebviewer: true,
         label: 'Decoder',
         type: 'toggle',
         jsonpath: 'decoder',
@@ -553,6 +570,7 @@ const webviewerSchema = {
     },
     zones: {
         name: 'zone',
+        restartWebviewer: true,
         label: 'Zones',
         type: 'zones',
         jsonpath: 'zone',
@@ -596,12 +614,18 @@ const sharingSchema = {
     }
 };
 
+// Two flags drive the embedded viewer after a save:
+//   restartWebviewer - applied on save while the receiver is stopped, else on
+//                      its next start; the frame reload follows the same rule
+//   reloadWebviewer  - takes effect when the engine restarts, so the frame is
+//                      reloaded once it is running again
 const receiverSchema = {
     input: {
         name: "input",
         label: "Device Type",
         type: "select",
         jsonpath: "input",
+        reloadWebviewer: true,
         options: [
             { value: "", label: "Select Device" },
             { value: "RTLSDR", label: "RTLSDR" },
@@ -645,6 +669,7 @@ const receiverSchema = {
         type: "text",
         jsonpath: "serial",
         placeholder: "Optional Serial Key",
+        reloadWebviewer: true,
         tooltip: "Select a specific device by serial number when several are connected",
         dependsOn: {
             field: "input",
@@ -657,22 +682,33 @@ const receiverSchema = {
         type: "toggle",
         jsonpath: "active",
         defaultValue: true,
+        reloadWebviewer: true,
         width: 25
     },
-    model: {
-        name: "model",
-        label: "Model",
-        type: "select",
-        jsonpath: "model",
-        defaultValue: "auto",
-        advanced: true,
+    engines: {
+        name: "engines",
+        label: "",
+        type: "engines",
+        jsonpath: "engines",
+        defaultValue: undefined,
+        reloadWebviewer: true,
+        advanced: "Engines",
         options: [
             { value: "auto", label: "Auto" },
             { value: "v1_base", label: "AIS Engine v1 Base" },
             { value: "v1_high", label: "AIS Engine v1 High" },
             { value: "v2_base", label: "AIS Engine v2 Base (experimental)" }
         ],
-        tooltip: "AIS Engine v1 High decodes a few percent more messages at extra CPU load; v2 Base is a new faster, more sensitive engine (experimental); Auto currently selects v1 Base"
+        tooltip: "Each engine decodes the same signal independently; a second engine is for comparing decoders and doubles CPU, and its messages are forwarded to outputs as well",
+        settings: [
+            {
+                name: "fp_ds",
+                label: "Fixed-point downsampling",
+                type: "toggle",
+                types: ["v1_base", "v1_high", "v2_base"],
+                tooltip: "Integer downsampling of 1536K input: less CPU on low-end hardware"
+            }
+        ]
     },
     rtlsdr_tuner: {
         name: "tuner",
@@ -1215,7 +1251,9 @@ const receiverSchema = {
         label: "Zones",
         type: "zones",
         jsonpath: "zone",
-        defaultValue: []
+        defaultValue: [],
+        reloadWebviewer: true,
+        tooltip: "Routes this receiver to outputs sharing a zone; applies to every engine, which can add zones of their own"
     }
 };
 

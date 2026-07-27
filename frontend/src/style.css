@@ -288,6 +288,10 @@ a:focus {
     line-height: 15px;
 }
 
+#receiver-dropdown-overlay {
+    z-index: 10009;
+}
+
 .receiver-dropdown {
     position: absolute;
     top: calc(100% + 10px);
@@ -381,7 +385,12 @@ a:focus {
     color: var(--menu-font-color);
 }
 
+#menubar-overlay {
+    z-index: 99998;
+}
+
 #menubar {
+    position: relative;
     z-index: 99999;
     background: var(--menu-background-color);
     color: var(--menu-font-color);
@@ -390,6 +399,9 @@ a:focus {
     display: none;
     flex-direction: row;
     visibility: visible;
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
 }
 
 #menubar div {
@@ -471,6 +483,37 @@ a:focus {
     .bottombar {
         display: none;
     }
+}
+
+.chart-sources {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 18px;
+    margin: 14px 25px 0 25px;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.chart-sources label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chart-sources select {
+    background: var(--menu-background-color);
+    color: var(--menu-font-color);
+    border: 1px solid var(--menu-border-color);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+.chart-sources select:hover {
+    border-color: var(--accent);
 }
 
 .graphtab {

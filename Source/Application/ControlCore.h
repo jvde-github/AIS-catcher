@@ -135,6 +135,7 @@ private:
 	std::function<void()> config_changed;
 
 	void createDefaultConfig();
+	void addViewerDefaults();
 	void readManagedFields(int port_override);
 	void applyAuthFields(const JSON::Value &control);
 	void refreshAuthFields(const std::string &json);

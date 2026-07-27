@@ -42,6 +42,7 @@ ControlCore::ControlCore(const std::string &file, int port_override, const std::
 	if (!std::ifstream(config_file).good())
 		createDefaultConfig();
 
+	addViewerDefaults();
 	readManagedFields(port_override);
 
 	auto_retry = desired;
@@ -55,7 +56,11 @@ void ControlCore::createDefaultConfig()
 		"  \"version\": 1,\n"
 		"  \"engine\": \"off\",\n"
 		"  \"sharing\": true,\n"
-		"  \"control\": { \"wizard\": true }\n"
+		"  \"control\": {\n"
+		"    \"wizard\": true,\n"
+		"    \"viewer\": { \"share_loc\": true, \"realtime\": true, \"decoder\": true, \"log\": false,\n"
+		"                 \"file\": " + JSON::Writer::escape(config_file + ".stats") + " }\n"
+		"  }\n"
 		"}\n";
 
 	std::string error;
@@ -406,7 +411,7 @@ bool ControlCore::validate(const std::string &json, std::string &error)
 	try
 	{
 		RunState scratch;
-		Config c(scratch);
+		Config c(scratch, true);
 		c.set(json);
 	}
 	catch (const std::exception &e)
@@ -423,6 +428,62 @@ bool ControlCore::writeFileAtomic(const std::string &path, const std::string &co
 		return Util::Helper::writeFileAtomic(path, content + "\n", error);
 
 	return Util::Helper::writeFileAtomic(path, content, error);
+}
+
+// a configuration written before the viewer had a "viewer" section gets the defaults once
+void ControlCore::addViewerDefaults()
+{
+	std::lock_guard<std::mutex> lock(file_mtx);
+
+	const struct { AIS::Keys key; std::string value; } defaults[] = {
+		{AIS::KEY_SETTING_SHARE_LOC, "on"},
+		{AIS::KEY_SETTING_REALTIME, "on"},
+		{AIS::KEY_SETTING_DECODER, "on"},
+		{AIS::KEY_SETTING_LOG, "off"},
+		{AIS::KEY_SETTING_FILE, config_file + ".stats"}};
+
+	try
+	{
+		JSON::Parser parser(JSON_DICT_SETTING);
+		JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
+
+		const JSON::Value *ctrl = doc.root[AIS::KEY_SETTING_CONTROL];
+		if (!ctrl || !ctrl->isObject())
+			return;
+
+		const JSON::Value *v = ctrl->getObject()[AIS::KEY_SETTING_VIEWER];
+		JSON::JSON *viewer = v && v->isObject() ? const_cast<JSON::JSON *>(&v->getObject()) : doc.pool.addObject();
+
+		bool changed = false;
+		for (const auto &d : defaults)
+			if (!(*viewer)[d.key])
+			{
+				viewer->Set(d.key, d.value, doc.pool);
+				changed = true;
+			}
+
+		if (!changed)
+			return;
+
+		if (!v)
+		{
+			JSON::Value val;
+			val.setObject(viewer);
+			const_cast<JSON::JSON &>(ctrl->getObject()).Set(AIS::KEY_SETTING_VIEWER, val);
+		}
+
+		std::string out;
+		JSON::Serializer serializer(JSON_DICT_SETTING);
+		serializer.stringify(doc.root, out);
+
+		std::string error;
+		if (!writeFileAtomic(config_file, out, error))
+			Error() << "Control: cannot add viewer defaults: " << error;
+	}
+	catch (const std::exception &e)
+	{
+		Error() << "Control: cannot add viewer defaults: " << e.what();
+	}
 }
 
 void ControlCore::persistEngineField(bool on)

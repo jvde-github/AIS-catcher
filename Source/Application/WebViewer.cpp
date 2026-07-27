@@ -33,6 +33,16 @@ PluginManager::PluginManager()
 	config.build_describe = VERSION_DESCRIBE;
 }
 
+void PluginManager::resetPlugins()
+{
+	plugin_code = "\n\nfunction loadPlugins() {\n";
+	stylesheets.clear();
+	about = "This content can be set by the station owner";
+	aboutPresent = false;
+	config.plugins_loaded.clear();
+	config.plugin_errors.clear();
+}
+
 void PluginManager::setContext(const std::string &ctx) { config.context = ctx; }
 void PluginManager::setWebControl(const std::string &url) { config.webcontrol_http = url; }
 void PluginManager::setShareLoc(bool b) { config.share_location = b; }
@@ -468,7 +478,7 @@ void WebViewer::Clear()
 
 void BackupManager::run()
 {
-	Info() << "Server: starting backup service every " << interval << " minutes.";
+	Debug() << "Server: starting backup service every " << interval << " minutes.";
 
 	while (running)
 	{
@@ -480,19 +490,13 @@ void BackupManager::run()
 			Error() << "Server: failed to write backup: " << filename;
 	}
 
-	Info() << "Server: stopping backup service.";
+	Debug() << "Server: stopping backup service.";
 }
 
 void BackupManager::start()
 {
-	if (interval <= 0 || !tracker)
+	if (interval <= 0 || !tracker || filename.empty())
 		return;
-
-	if (filename.empty())
-	{
-		Warning() << "Server: backup of statistics requested without providing backup filename.";
-		return;
-	}
 
 	running = true;
 	thread = std::thread(&BackupManager::run, this);
@@ -848,6 +852,7 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 	states[0]->model_name.clear();
 
 	std::size_t first_new = states.size();
+	std::vector<int> state_receiver;
 
 	for (int k = 0; k < (int)receivers.size(); k++)
 	{
@@ -863,6 +868,7 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 				if (multi)
 				{
 					states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker()));
+					state_receiver.push_back(k + 1);
 					per = states.back().get();
 					per->setDevice(r.getDeviceManager().getDevice());
 					if (r.Count() > 1)
@@ -892,6 +898,20 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 			}
 		}
 	}
+
+	// devices without a serial describe themselves identically: number those by
+	// receiver, comparing originals since a suffix would hide later duplicates
+	std::vector<std::string> original;
+	for (std::size_t i = first_new; i < states.size(); i++)
+		original.push_back(states[i]->label);
+
+	for (std::size_t i = 0; i < original.size(); i++)
+		for (std::size_t j = 0; j < original.size(); j++)
+			if (i != j && original[i] == original[j])
+			{
+				states[first_new + i]->label += " #" + std::to_string(state_receiver[i]);
+				break;
+			}
 
 	for (auto &s : states)
 		s->applyConfig(tracking, filter);
@@ -973,22 +993,28 @@ void WebViewer::Reset()
 	time_start = time(nullptr);
 }
 
-void WebViewer::start()
+void WebViewer::resetSettings()
 {
-	for (auto &s : states)
-		s->setup();
+	std::lock_guard<std::recursive_mutex> lock(state_mtx);
+
+	mapSources.clear();
+	zones.clear();
+	pluginManager.resetPlugins();
+}
+
+void WebViewer::applySettings()
+{
+	std::lock_guard<std::recursive_mutex> lock(state_mtx);
 
 	pluginManager.setSharing(comm_feed != nullptr,
 							  comm_feed && comm_feed->hasUUID());
 
-	backup.setTracker(states[0].get());
-
-	if (backup.getFilename().empty())
-		Clear();
-	else if (!backup.load())
+	// sinks can only be added, so rebuild the list rather than append to it
+	for (auto &s : states)
 	{
-		Error() << "Statistics - cannot read file.";
-		Clear();
+		s->applyConfig(tracking, filter);
+		s->clearSinks();
+		s->wireStreams();
 	}
 
 	if (realtime)
@@ -997,62 +1023,95 @@ void WebViewer::start()
 		sse_streamer.setSSE(this);
 	}
 
+	if (supportPrometheus)
+		states[0]->connectSink(dataPrometheus);
+
+	logger.Stop();
 	if (showlog)
 	{
 		logger.setSSE(this);
 		logger.Start();
 	}
 
-	for (auto &s : states)
+	backup.stop();
+	backup.setTracker(states[0].get());
+	backup.start();
+}
+
+void WebViewer::start()
+{
+	// the ship database and its restored statistics survive a stop/start
+	if (!initialized)
 	{
-		s->wireStreams();
+		for (auto &s : states)
+			s->setup();
+
+		backup.setTracker(states[0].get());
+
+		if (backup.getFilename().empty())
+			Clear();
+		else if (!backup.load())
+		{
+			Error() << "Statistics - cannot read file.";
+			Clear();
+		}
+
+		initialized = true;
 	}
 
-	if (supportPrometheus)
-		states[0]->connectSink(dataPrometheus);
+	applySettings();
 
-	if (firstport && lastport)
+	// the HTTP server keeps running across a stop/start, so bind only once
+	if (!bound_port)
 	{
-		int port;
-		for (port = firstport; port <= lastport; port++)
-			if (HTTPServer::start(port))
-				break;
+		if (firstport && lastport)
+		{
+			int port;
+			for (port = firstport; port <= lastport; port++)
+				if (HTTPServer::start(port))
+					break;
 
-		if (port > lastport)
-			throw std::runtime_error("Cannot open port in range [" + std::to_string(firstport) + "," + std::to_string(lastport) + "]");
+			if (port > lastport)
+				throw std::runtime_error("Cannot open port in range [" + std::to_string(firstport) + "," + std::to_string(lastport) + "]");
 
-		bound_port = port;
+			bound_port = port;
+		}
+		else if (port_set)
+		{
+			if (!HTTPServer::start(0))
+				throw std::runtime_error("Cannot open OS-assigned port");
+
+			bound_port = listening_port;
+		}
+		else
+			throw std::runtime_error("HTML server ports not specified");
+
+		Info() << "HTML Server running at port " << std::to_string(bound_port);
+
+		time_start = time(nullptr);
 	}
-	else if (port_set)
-	{
-		if (!HTTPServer::start(0))
-			throw std::runtime_error("Cannot open OS-assigned port");
-
-		bound_port = listening_port;
-	}
-	else
-		throw std::runtime_error("HTML server ports not specified");
-
-	Info() << "HTML Server running at port " << std::to_string(bound_port);
-
-	time_start = time(nullptr);
 
 	pluginManager.setReceivers(states);
 
 	run = true;
 	serving = true;
+}
 
-	backup.start();
+void WebViewer::stop()
+{
+	std::lock_guard<std::recursive_mutex> lock(state_mtx);
+
+	serving = false;
+
+	logger.Stop();
+	backup.stop();
 }
 
 void WebViewer::close()
 {
+	stop();
 	stopThread();
-	logger.Stop();
-
 	run = false;
-	serving = false;
-	backup.stop();
 
 	if (!backup.getFilename().empty() && !backup.save())
 	{
@@ -1334,6 +1393,13 @@ const WebViewer::Route WebViewer::routes[] = {
 void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response, bool gzip)
 {
 	std::lock_guard<std::recursive_mutex> lock(state_mtx);
+
+	// between stop() and start() the settings are only half applied
+	if (!serving)
+	{
+		Response(c, "text/plain", std::string("Viewer is applying settings."), false, false, false, 503);
+		return;
+	}
 
 	std::string r;
 	std::string a;

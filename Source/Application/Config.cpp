@@ -65,6 +65,36 @@ void Config::setSettingsFromJSON(const JSON::Value &m, Setting &s)
 }
 
 #ifdef HASWEBVIEWER
+void Config::setManagedViewerfromJSON(const JSON::Value &m)
+{
+	if (!managed_viewer || !m.isObject())
+		return;
+
+	const JSON::Value *v = m.getObject()[AIS::KEY_SETTING_VIEWER];
+	if (v && v->isObject())
+		setSettingsFromJSON(*v, *managed_viewer);
+}
+
+void Config::readManagedViewer(const std::string &file_config)
+{
+	if (!managed_viewer)
+		return;
+
+	try
+	{
+		JSON::Parser parser(JSON_DICT_SETTING);
+		JSON::Document doc = parser.parse(Util::Helper::readFile(file_config));
+
+		const JSON::Value *ctrl = doc.root[AIS::KEY_SETTING_CONTROL];
+		if (ctrl)
+			setManagedViewerfromJSON(*ctrl);
+	}
+	catch (std::exception const &e)
+	{
+		Error() << "Control: viewer configuration failed: " << e.what();
+	}
+}
+
 void Config::setServerfromJSON(const JSON::Value &m)
 {
 
@@ -121,8 +151,64 @@ void Config::setModelfromJSON(const JSON::Member &m)
 	if (!isActiveObject(m.Get()))
 		return;
 
-	_state.receivers.back()->addModel(_state.receivers.back()->getDeviceManager().isTXTformatSet() ? 5 : 2);
-	setSettingsFromJSON(m.Get(), *_state.receivers.back()->Model(_state.receivers.back()->Count() - 1));
+	Receiver &r = *_state.receivers.back();
+
+	r.addModel(-1);
+	setSettingsFromJSON(m.Get(), *r.Model(r.Count() - 1));
+}
+
+int Config::engineType(const std::string &s)
+{
+	std::string t = s;
+	Util::Convert::toUpper(t);
+
+	if (t.empty() || t == "AUTO")
+		return -1;
+	if (t == "V1_BASE")
+		return 2;
+	if (t == "V1_HIGH")
+		return 4;
+	if (t == "V2_BASE")
+		return 11;
+
+	throw std::runtime_error("engine type must be auto, v1_base, v1_high or v2_base");
+}
+
+// "engines": [ { "type": "v2_base", "settings": { "afc_wide": "off" } } ]
+void Config::setEnginefromJSON(const JSON::Value &v)
+{
+	if (!isActiveObject(v))
+		return;
+
+	Receiver &r = *_state.receivers.back();
+
+	int type = -1;
+	const JSON::Value *settings = nullptr;
+	std::vector<std::string> zones;
+
+	for (const JSON::Member &p : v.getObject().getMembers())
+	{
+		if (p.Key() == AIS::KEY_SETTING_MODEL_TYPE)
+			type = engineType(p.Get().to_string());
+		else if (p.Key() == AIS::KEY_SETTING_SETTINGS)
+			settings = &p.Get();
+		else if (p.Key() == AIS::KEY_SETTING_ZONE)
+		{
+			if (!p.Get().isArray())
+				throw std::runtime_error("engine: \"zone\" must be an array of strings");
+			for (const auto &z : p.Get().getArray())
+				zones.push_back(z.to_string());
+		}
+		else if (p.Key() != AIS::KEY_SETTING_ACTIVE)
+			throw std::runtime_error("engine: \"" + std::string(AIS::KeyMap[p.Key()][JSON_DICT_SETTING]) + "\" must be inside the engine's \"settings\" block");
+	}
+
+	r.addModel(type);
+	r.engine_zones.resize(r.Count()); // index must line up with the model
+	r.engine_zones.back() = zones;
+
+	if (settings)
+		setSettingsFromJSON(*settings, *r.Model(r.Count() - 1));
 }
 
 void Config::setReceiverFromArray(const JSON::Member &m)
@@ -181,6 +267,9 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members, bool 
 	{
 		switch (m.Key())
 		{
+		case AIS::KEY_SETTING_ENGINES:
+		case AIS::KEY_SETTING_MODEL:
+			break; // pass 3
 		case AIS::KEY_SETTING_ZONE:
 			if (!m.Get().isArray())
 				throw std::runtime_error("\"zone\" must be an array of strings");
@@ -193,12 +282,6 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members, bool 
 		case AIS::KEY_SETTING_SENSITIVITY_HIGH:
 			_state.receivers.back()->SetKey((AIS::Keys)m.Key(), m.Get().to_string());
 			break;
-		case AIS::KEY_SETTING_MODEL:
-			if (m.Get().isString())
-				_state.receivers.back()->SetKey((AIS::Keys)m.Key(), m.Get().to_string());
-			else
-				setModelfromJSON(m);
-			break;
 		case AIS::KEY_SETTING_OWN_MMSI:
 			_state.own_mmsi = m.Get().getInt();
 			break;
@@ -209,6 +292,26 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members, bool 
 				setSettingsFromJSON(m.Get(), *device);
 			break;
 		}
+		}
+	}
+
+	// engines are applied once the input format is known
+	for (const auto &m : members)
+	{
+		if (m.Key() == AIS::KEY_SETTING_ENGINES)
+		{
+			if (!m.Get().isArray())
+				throw std::runtime_error("\"engines\" must be an array, e.g. [ { \"type\": \"v2_base\", \"settings\": { ... } } ]");
+			for (const auto &v : m.Get().getArray())
+				setEnginefromJSON(v);
+		}
+		else if (m.Key() == AIS::KEY_SETTING_MODEL)
+		{
+			Warning() << "Receiver: \"model\" is deprecated and will be removed, use \"engines\": [ { \"type\": ... } ] instead";
+			if (m.Get().isString())
+				_state.receivers.back()->addModel(engineType(m.Get().to_string()));
+			else
+				setModelfromJSON(m);
 		}
 	}
 }
@@ -349,6 +452,11 @@ void Config::set(const std::string &str)
 		case AIS::KEY_SETTING_RECEIVER: // handled in pass 1.5
 			break;
 		case AIS::KEY_SETTING_CONTROL: // managed mode (-E) fields, consumed by ControlCore
+#ifdef HASWEBVIEWER
+			if (!dry_run)
+				setManagedViewerfromJSON(m.Get());
+#endif
+			break;
 		case AIS::KEY_SETTING_ENGINE:
 			break;
 		case AIS::KEY_SETTING_SCREEN:

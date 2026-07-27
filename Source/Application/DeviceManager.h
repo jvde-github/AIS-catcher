@@ -91,6 +91,7 @@ public:
     Device::N2KSCAN &N2KSCAN() { return _N2KSCAN; }
 
     void refreshDevices();
+    Format getInputFormat() { return getDeviceByType(type) ? getDeviceByType(type)->getFormat() : Format::CU8; }
     bool isTXTformatSet() { return getDeviceByType(type) ? (getDeviceByType(type)->getFormat() == Format::TXT) : false; }
 
     Type &InputType() { return type; }

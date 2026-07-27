@@ -418,7 +418,6 @@ namespace AIS
 	void ModelBase::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
-		setName("Base (non-coherent)");
 
 		assert(C_a != NULL && C_b != NULL);
 
@@ -440,7 +439,6 @@ namespace AIS
 	void ModelEngineV2::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
-		setName("AIS engine v2 base");
 
 		assert(C_a != NULL && C_b != NULL);
 
@@ -460,7 +458,6 @@ namespace AIS
 	void ModelStandard::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
-		setName("Standard (non-coherent)");
 
 		assert(C_a != NULL && C_b != NULL);
 
@@ -498,7 +495,6 @@ namespace AIS
 	{
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 
-		setName("AIS engine v1 base");
 
 		assert(C_a != NULL && C_b != NULL);
 
@@ -580,7 +576,6 @@ namespace AIS
 	{
 		ModelFrontend::buildModel(CH1, CH2, sample_rate, timerOn, dev);
 
-		setName("AIS engine v1 high");
 
 		assert(C_a != NULL && C_b != NULL);
 
@@ -680,7 +675,6 @@ namespace AIS
 
 	void ModelDiscriminator::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
-		setName("FM discriminator output model");
 
 		device = dev;
 		const int N_SAMPLES_PER_SYMBOL = 48000 / 9600;
@@ -735,7 +729,6 @@ namespace AIS
 
 	void ModelNMEA::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
-		setName("NMEA input");
 		device = dev;
 		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
 		physical >> nmea >> output;
@@ -792,7 +785,6 @@ namespace AIS
 
 	void ModelN2K::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
-		setName("N2K input");
 		n2k.setOwnMMSI(own_mmsi);
 		device = dev;
 		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
@@ -811,7 +803,6 @@ namespace AIS
 
 	void ModelBaseStation::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
-		setName("ADSB input");
 		device = dev;
 		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
 		physical >> model >> outputADSB;
@@ -829,7 +820,6 @@ namespace AIS
 
 	void ModelBeast::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
-		setName("ADSB input");
 		device = dev;
 		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
 		physical >> model >> outputADSB;
@@ -847,7 +837,6 @@ namespace AIS
 
 	void ModelRAW1090::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
-		setName("ADSB input");
 		device = dev;
 		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
 		physical >> model >> outputADSB;
@@ -875,7 +864,6 @@ namespace AIS
 
 	void ModelExport::buildModel(char, char, int sample_rate, bool timerOn, Device::Device *dev)
 	{
-		setName("Export output");
 		device = dev;
 
 		wav.setOptionKey(AIS::KEY_SETTING_SAMPLE_RATE, std::to_string(sample_rate));

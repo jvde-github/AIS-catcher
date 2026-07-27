@@ -142,6 +142,9 @@ public:
 
 	// Wire internal streams (ships → hist_* → counters)
 	void wireStreams();
+	// Drop every sink, so wireStreams() can be run again without duplicating.
+	// Only safe while the engine is stopped and nothing is delivering.
+	void clearSinks() { ships.out.clear(); }
 
 	// Connect incoming data sources (ships as sink)
 	void connectJSON(Connection<JSON::JSON> &c) { c.Connect((StreamIn<JSON::JSON> *)&ships); }
@@ -235,6 +238,7 @@ public:
 	void addStyle(const std::string &path);
 	void addPluginDir(const std::string &dir);
 	void setAbout(const std::string &path);
+	void resetPlugins();
 
 	bool isAboutPresent() const { return aboutPresent; }
 	const std::string &getAbout() const { return about; }
@@ -283,6 +287,7 @@ private:
 	int bound_port = 0;
 	bool run = false;
 	bool serving = false;
+	bool initialized = false;
 	bool port_set = false;
 	bool use_zlib = true;
 	bool realtime = false;
@@ -355,7 +360,8 @@ private:
 	// Community feed output (not owned), used to report sharing status
 	IO::OutputMessage *comm_feed = nullptr;
 
-	bool engine_connected = false;
+	// read from the HTTP thread while connect()/disconnectEngine() write it
+	std::atomic<bool> engine_connected{false};
 
 	// Parse ?receiver=N from query string; returns 0 on missing/invalid.
 	int parseReceiver(const std::string &query);
@@ -379,9 +385,15 @@ public:
 	void connect(AIS::Model &model, Connection<JSON::JSON> &json, Device::Device &device);
 	void disconnectEngine();
 	void setDeviceDescription(const std::string &product, const std::string &vendor, const std::string &serial);
+	// stop, resetSettings, the settings themselves, then start: the HTTP server
+	// and the ship database stay up, so the viewer remains reachable throughout
 	void start();
+	void stop();
 	void close();
 	void Reset();
+	void resetSettings();
+	// settings that need more than a stored value: sinks, log listener, backup
+	void applySettings();
 
 	void setOutputChannels(const std::vector<std::unique_ptr<IO::OutputMessage>> &msg)
 	{
@@ -394,6 +406,10 @@ public:
 		pluginManager.setSharing(f != nullptr, f && f->hasUUID());
 	}
 
+	void setGroupsIn(uint64_t g) { groups_in = g; }
+	// true from connect() until disconnectEngine(), so it brackets the period
+	// in which receiver threads may be delivering into the trackers
+	bool engineConnected() const { return engine_connected; }
 	bool isPortSet() { return port_set; }
 	int getBoundPort() { return bound_port; }
 

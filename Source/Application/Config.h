@@ -49,6 +49,8 @@ class Config
 
 	bool isActiveObject(const JSON::Value &m);
 	void setModelfromJSON(const JSON::Member &m);
+	void setEnginefromJSON(const JSON::Value &v);
+	static int engineType(const std::string &s);
 
 	// Device settings (RTLSDR, AIRSPY, ...) of the current receiver, nullptr if key is not a device
 	Setting *getDeviceSetting(AIS::Keys key);
@@ -75,17 +77,21 @@ class Config
 #ifdef HASWEBVIEWER
 	void setServerfromJSON(const JSON::Value &m);
 #endif
+	bool dry_run = false;
 	void setReceiverfromJSON(const std::vector<JSON::Member> &m, bool unspecAllowed);
 	void setReceiverFromArray(const JSON::Member &m);
 	void setSharing(const std::vector<JSON::Member> &members);
 
 public:
-	Config(RunState &state) : _state(state) {}
+	// dry: parse for validation only, without touching the managed viewer
+	Config(RunState &state, bool dry = false) : _state(state), dry_run(dry) {}
 
 	void read(const std::string &file_config);
 	void set(const std::string &str);
 
 	static void setSettingsFromJSON(const JSON::Value &m, Setting &s);
+	static void setManagedViewerfromJSON(const JSON::Value &m);
+	static void readManagedViewer(const std::string &file_config);
 
 	bool isSharingDefined() const { return _state.xshare_defined; }
 };

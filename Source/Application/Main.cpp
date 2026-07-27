@@ -44,6 +44,10 @@
 std::atomic<bool> stop;
 std::atomic<bool> stop_process;
 
+#ifdef HASWEBVIEWER
+WebViewer *managed_viewer = nullptr;
+#endif
+
 void StopRequest()
 {
 	stop = true;
@@ -389,14 +393,9 @@ void run(RunState &state, ControlCore *control)
 		uint64_t mask = 0;
 		for (const auto &r : state.receivers)
 		{
-			bool matched = false;
-			for (const auto &rz : r->zones)
-			{
+			for (int i = 0; i < r->Count(); i++)
 				for (const auto &oz : zones)
-					if (rz == oz) { matched = true; break; }
-				if (matched) break;
-			}
-			if (matched) mask |= r->getGroupMask();
+					if (r->inZone(i, oz)) { mask |= r->getGroupMask(i); break; }
 		}
 		return mask;
 	};
@@ -418,6 +417,16 @@ void run(RunState &state, ControlCore *control)
 		if (!mask)
 			Warning() << "Server has zone filter but no matching receivers — will receive nothing";
 		s->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(mask));
+	}
+
+	// the managed viewer persists across engine runs, so an empty zone list
+	// must clear a mask a previous configuration may have left behind
+	if (managed_viewer)
+	{
+		uint64_t mask = managed_viewer->zones.empty() ? 0xFFFFFFFFFFFFFFFF : resolveZones(managed_viewer->zones);
+		if (!mask)
+			Warning() << "Map has zone filter but no matching receivers — will receive nothing";
+		managed_viewer->setGroupsIn(mask);
 	}
 #endif
 
