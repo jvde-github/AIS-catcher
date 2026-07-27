@@ -2584,8 +2584,9 @@ function toggleMenu() {
     menuButton.classList.toggle("menu_icon");
     menuButton.classList.toggle("close_icon");
 
+    const floats = ["absolute", "fixed"].includes(getComputedStyle(menubar).position);
     document.getElementById("menubar-overlay").classList
-        .toggle("active", menubar.classList.contains("visible") && !isAndroid());
+        .toggle("active", menubar.classList.contains("visible") && floats);
 }
 
 function initFullScreen() {
