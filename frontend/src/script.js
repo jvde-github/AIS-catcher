@@ -4657,7 +4657,7 @@ async function updateMap() {
 
     await Promise.all([
         fetchTracks(),
-        planeLayer.isVisible() ? fetchPlanes() : Promise.resolve(true),
+        planeLayer.getVisible() ? fetchPlanes() : Promise.resolve(true),
         (binaryLayer.isVisible() && binaryAnyShown()) ? fetchBinary() : Promise.resolve(true),
         fetchRange(),
     ]);
@@ -4878,7 +4878,7 @@ function redrawMap() {
 
     redrawBinaryMessages();
 
-    if (planeLayer.isVisible()) {
+    if (planeLayer.getVisible()) {
 
         for (let [hexident, entry] of Object.entries(planesDB)) {
             let plane = entry.raw;
@@ -5444,13 +5444,12 @@ else {
     });
 }
 
-addOverlayLayer("Aircraft", planeLayer);
-
-
 console.log("Starting plugin code");
 
 
 window.loadPlugins && window.loadPlugins();
+
+addOverlayLayer("Aircraft", planeLayer);
 
 let urlParams = new URLSearchParams(window.location.search);
 restoreDefaultSettings();
