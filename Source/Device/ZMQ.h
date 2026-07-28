@@ -61,6 +61,7 @@ namespace Device {
 		std::string Get();
 
 		std::string getProduct() { return "ZMQ"; }
+		std::string getIdentity() { return "ZMQ:" + endpoint; }
 	};
 }
 

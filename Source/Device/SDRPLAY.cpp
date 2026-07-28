@@ -17,7 +17,9 @@
 
 #ifdef HASSDRPLAY
 
+#include <cstdlib>
 #include <cstring>
+#include <mutex>
 
 #include "SDRPLAY.h"
 
@@ -28,22 +30,26 @@ namespace Device {
 	//---------------------------------------
 	// Device SDRPLAY
 
-	int SDRPLAY::API_count = 0;
+	// The API service connection is opened on first use, not on construction,
+	// and held until process exit. A failed open is retried on the next call,
+	// so a service started after AIS-catcher is picked up.
+	static std::mutex api_mtx;
+	static bool api_open = false;
 
-	SDRPLAY::SDRPLAY() : Device(Format::CF32, 2304000, Type::SDRPLAY, "SDRPLAY") {
-		if (API_count == 0 && sdrplay_api_Open() != sdrplay_api_Success)
-			return;
+	static bool ensureAPI() {
+		std::lock_guard<std::mutex> lock(api_mtx);
 
-		API_count++;
-		running = true;
+		if (!api_open && sdrplay_api_Open() == sdrplay_api_Success) {
+			api_open = true;
+			std::atexit([]() { sdrplay_api_Close(); });
+		}
+		return api_open;
 	}
 
-	SDRPLAY::~SDRPLAY() {
-		if (running && --API_count == 0) sdrplay_api_Close();
-	}
+	SDRPLAY::SDRPLAY() : Device(Format::CF32, 2304000, Type::SDRPLAY, "SDRPLAY") {}
 
 	void SDRPLAY::Open(uint64_t h) {
-		if (!running) throw std::runtime_error("SDRPLAY: API v3.x not running");
+		if (!ensureAPI()) throw std::runtime_error("SDRPLAY: API v3.x not running");
 
 		sdrplay_api_ErrT err;
 		unsigned int DeviceCount;
@@ -180,7 +186,7 @@ namespace Device {
 
 	void SDRPLAY::getDeviceList(std::vector<Description>& DeviceList) {
 		unsigned int DeviceCount;
-		if (!running) {
+		if (!ensureAPI()) {
 			Warning() << "SDRPLAY: API v3.x not running, no SDRplay devices available.";
 			return;
 		}

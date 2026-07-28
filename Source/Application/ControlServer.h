@@ -45,6 +45,22 @@ protected:
 private:
 	ControlCore &core;
 
+	// The endpoints that answer without a session, method null meaning any.
+	// Everything else is private: a mistake here locks an endpoint down
+	// rather than exposing it.
+	struct PublicEndpoint
+	{
+		const char *path;
+		const char *method;
+	};
+
+	static const PublicEndpoint public_endpoints[];
+	static bool isPublic(const std::string &path, const std::string &method);
+
+	// serve the bundled control frontend, or 404
+	void serveStatic(IO::TCPServerConnection &c, const std::string &path);
+	static std::string cookieAttributes();
+
 	static const int SSE_ACTIVITY = 1;
 	static const int SSE_STATUS = 2;
 	static const int SSE_LOG = 3;
@@ -70,6 +86,8 @@ private:
 	void destroySession(const std::string &cookie);
 	void destroyAllSessions();
 	static std::string sessionFromCookie(const std::string &cookie);
+
+	static bool sameOrigin(const IO::HTTPRequest &r);
 
 	bool loginBlocked(int &seconds_left);
 	void loginFailed();

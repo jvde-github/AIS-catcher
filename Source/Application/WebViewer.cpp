@@ -16,221 +16,15 @@
 */
 
 #include "WebViewer.h"
+#include "Device/Device.h"
 #include "WebDB.h"
 #include "NMEA.h"
 #include "JSONAIS.h"
 #include "Helper.h"
 
 #include <cstdio>
+#include <cstdlib>
 #include <cerrno>
-
-// --- PluginManager ---
-
-PluginManager::PluginManager()
-	: plugin_code("\n\nfunction loadPlugins() {\n")
-{
-	config.build_version = VERSION;
-	config.build_describe = VERSION_DESCRIBE;
-}
-
-void PluginManager::resetPlugins()
-{
-	plugin_code = "\n\nfunction loadPlugins() {\n";
-	stylesheets.clear();
-	about = "This content can be set by the station owner";
-	aboutPresent = false;
-	config.plugins_loaded.clear();
-	config.plugin_errors.clear();
-}
-
-void PluginManager::setContext(const std::string &ctx) { config.context = ctx; }
-void PluginManager::setWebControl(const std::string &url) { config.webcontrol_http = url; }
-void PluginManager::setShareLoc(bool b) { config.share_location = b; }
-void PluginManager::setMsgSave(bool b) { config.save_messages = b; }
-void PluginManager::setRealtime(bool b) { config.realtime = b; }
-void PluginManager::setLog(bool b) { config.log_enabled = b; }
-void PluginManager::setDecoder(bool b) { config.decoder = b; }
-void PluginManager::setManaged(bool b) { config.managed = b; }
-void PluginManager::setSharing(bool sharing, bool sharing_uuid)
-{
-	config.sharing = sharing;
-	config.sharing_uuid = sharing_uuid;
-}
-
-void PluginManager::setStation(const std::string &name)
-{
-	// Caller passes an already-JSON-quoted string ("\"MyStation\""); strip
-	// quotes for storage so the JSON writer at render time can re-quote.
-	if (name.length() >= 2 && name.front() == '"' && name.back() == '"')
-		config.station = name.substr(1, name.length() - 2);
-	else
-		config.station = name;
-}
-
-void PluginManager::setReceivers(const std::vector<std::unique_ptr<ReceiverTracker>> &states)
-{
-	config.receivers.clear();
-	if (states.size() > 1)
-		for (int i = 0; i < (int)states.size(); i++)
-			config.receivers.emplace_back(i, states[i]->label);
-}
-
-void PluginManager::addPlugin(const std::string &arg)
-{
-	int version = 0;
-	std::string author, description;
-
-	plugin_code += "\n//=============\n//" + arg + "\n\n";
-	try
-	{
-		std::string s = Util::Helper::readFile(arg);
-
-		JSON::Parser parser(JSON_DICT_SETTING);
-		std::string firstline = s.substr(0, s.find('\n'));
-		if (firstline.length() > 2 && firstline[0] == '/' && firstline[1] == '/')
-			firstline = firstline.substr(2);
-		else
-			throw std::runtime_error("Plugin does not start with // followed by JSON description.");
-
-		JSON::Document j = parser.parse(firstline);
-
-		for (const auto &p : j.getMembers())
-		{
-			switch (p.Key())
-			{
-			case AIS::KEY_SETTING_VERSION:
-				version = p.Get().getInt();
-				break;
-			case AIS::KEY_SETTING_AUTHOR:
-				author = p.Get().getString();
-				break;
-			case AIS::KEY_SETTING_DESCRIPTION:
-			case AIS::KEY_SETTING_DESC:
-				description = p.Get().getString();
-				break;
-			default:
-				throw std::runtime_error("Unknown key in plugin JSON field");
-				break;
-			}
-		}
-		Info() << "Adding plugin (" + arg + "). Description: \"" << description << "\", Author: \"" << author << "\", version " << version;
-		// v3: pre-CSP (inline-string handlers, no longer run under strict CSP).
-		// v4: function-callback contract for addShipcardItem etc.
-		// v5: ES-module script.js — overrides go through AISCatcher hooks.
-		if (version < 3 || version > 5)
-			throw std::runtime_error("Version not supported, expected 3..5, got " + std::to_string(version));
-		if (version == 3)
-			Warning() << "Plugin \"" << arg << "\" declares version 3 (pre-CSP). It may render but inline-string handlers will not run under strict CSP. Consider updating to version 5.";
-		config.plugins_loaded.emplace_back(arg, version);
-		std::string safe_arg = JSON::Writer::escape(arg);
-		plugin_code += "\ntry{\n" + s + "\n} catch (error) {\nshowDialog(\"Error in Plugin \" + " + safe_arg + ", \"Plugins contain error: \" + error + \"</br>Consider updating plugins or disabling them.\"); }\n";
-	}
-	catch (const std::exception &e)
-	{
-		Warning() << "Server: Plugin \"" + arg + "\" ignored - JS plugin error : " << e.what();
-		config.plugin_errors.push_back(arg + ": " + e.what());
-	}
-}
-
-void PluginManager::addPluginCode(const std::string &code)
-{
-	plugin_code += code;
-}
-
-void PluginManager::addStyle(const std::string &arg)
-{
-	Info() << "Server: adding plugin (CSS): " << arg;
-	config.plugins_loaded.emplace_back("CSS: " + arg, 0);
-
-	stylesheets += "/* ================ */\n";
-	stylesheets += "/* CSS plugin: " + arg + "*/\n";
-	try
-	{
-		stylesheets += Util::Helper::readFile(arg) + "\n";
-	}
-	catch (const std::exception &e)
-	{
-		stylesheets += "/* FAILED */\r\n";
-		Warning() << "Server: style plugin error - " << e.what();
-		config.plugin_errors.push_back(arg + ": " + e.what());
-	}
-}
-
-void PluginManager::addPluginDir(const std::string &dir)
-{
-	const std::vector<std::string> &files_js = Util::Helper::getFilesWithExtension(dir, ".pjs");
-	for (const auto &f : files_js)
-		addPlugin(f);
-
-	const std::vector<std::string> &files_ss = Util::Helper::getFilesWithExtension(dir, ".pss");
-	for (const auto &f : files_ss)
-		addStyle(f);
-
-	if (files_ss.empty() && files_js.empty())
-		Info() << "Server: no plugin files found in directory.";
-}
-
-void PluginManager::setAbout(const std::string &path)
-{
-	Info() << "Server: about context from " << path;
-	about = Util::Helper::readFile(path);
-	aboutPresent = true;
-}
-
-std::string PluginManager::render() const
-{
-	std::string out;
-
-	// 1. Emit the structured config blob. Single source of truth for all
-	//    server-side state the frontend needs at startup.
-	out += "window.__SERVER_CONFIG__ = ";
-	{
-		JSON::Writer w(out);
-		w.beginObject()
-			.key("build")
-			.beginObject()
-			.kv("version", config.build_version)
-			.kv("describe", config.build_describe)
-			.endObject()
-			.kv("context", config.context)
-			.kv("station", config.station)
-			.kv("webcontrol_http", config.webcontrol_http)
-			.key("features")
-			.beginObject()
-			.kv("share_location", config.share_location)
-			.kv("save_messages", config.save_messages)
-			.kv("realtime", config.realtime)
-			.kv("log", config.log_enabled)
-			.kv("decoder", config.decoder)
-			.kv("managed", config.managed)
-			.kv("about_md", aboutPresent)
-			.kv("sharing", config.sharing)
-			.kv("sharing_uuid", config.sharing_uuid)
-			.endObject()
-			.key("receivers")
-			.beginArray();
-		for (const auto &r : config.receivers)
-			w.beginObject().kv("idx", r.first).kv("label", r.second).endObject();
-		w.endArray()
-			.key("plugins")
-			.beginObject()
-			.key("loaded")
-			.beginArray();
-		for (const auto &p : config.plugins_loaded)
-			w.beginObject().kv("name", p.first).kv("version", p.second).endObject();
-		w.endArray().key("errors").beginArray();
-		for (const auto &e : config.plugin_errors)
-			w.val(e);
-		w.endArray().endObject().endObject();
-		w.finish();
-	}
-	out += ";\n";
-
-	// 2. Plugin function body and trailing
-	out += plugin_code + "}\n";
-
-	return out;
-}
 
 // --- SSEStreamer ---
 
@@ -315,20 +109,20 @@ WebViewer::WebViewer() : Setting("WebViewer"),
 	states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker("All")));
 }
 
-std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced)
+std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input)
 {
 	// Decoder class with full pipeline: NMEA -> Message -> JSON -> Array
 	class NMEADecoder : public StreamIn<JSON::JSON>
 	{
+		enum { MAX_OUTPUT_SIZE = 1024 * 1024 };
+
 	public:
 		AIS::NMEA nmea_decoder;
 		AIS::JSONAIS json_converter;
 		JSON::Serializer *builder;
 		JSON::Writer *writer;
-		size_t message_count;
-		const size_t MAX_OUTPUT_SIZE;
 
-		NMEADecoder(JSON::Serializer *b, JSON::Writer *w) : builder(b), writer(w), message_count(0), MAX_OUTPUT_SIZE(1024 * 1024)
+		NMEADecoder(JSON::Serializer *b, JSON::Writer *w) : builder(b), writer(w)
 		{
 			nmea_decoder >> json_converter;
 			json_converter.out.Connect(this);
@@ -342,7 +136,6 @@ std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input, bool enha
 					throw std::runtime_error("Output size limit exceeded");
 
 				builder->stringify(data[i], *writer);
-				message_count++;
 			}
 		}
 	};
@@ -353,7 +146,7 @@ std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input, bool enha
 	w.beginArray();
 
 	JSON::Serializer builder(JSON_DICT_FULL);
-	builder.setStringifyEnhanced(enhanced);
+	builder.setStringifyEnhanced(true);
 	NMEADecoder decoder(&builder, &w);
 
 	std::string input = nmea_input + "\n";
@@ -388,55 +181,38 @@ static std::string urlDecode(const std::string &in)
 	return out;
 }
 
-std::vector<std::string> WebViewer::parsePath(const std::string &url)
+static long long toInt(const std::string &s, long long def = 0)
 {
-	std::vector<std::string> path;
-	std::string pattern = "/";
-
-	auto pos = url.find(pattern);
-	if (pos != 0)
-		return path;
-
-	std::string remainder = url.substr(pattern.length());
-	std::stringstream ss(remainder);
-	std::string segment;
-
-	while (std::getline(ss, segment, '/'))
-	{
-		if (!segment.empty())
-		{
-			path.push_back(segment);
-		}
-	}
-
-	return path;
+	char *end = nullptr;
+	long long v = std::strtoll(s.c_str(), &end, 10);
+	return end == s.c_str() ? def : v;
 }
 
+// "/tiles/<layer>/<z>/<x>/<y>"
 bool WebViewer::parseMBTilesURL(const std::string &url, std::string &layerID, int &z, int &x, int &y)
 {
-	std::string pattern = "/tiles/";
-
 	layerID.clear();
 
-	std::string segment;
-	std::vector<std::string> segments = parsePath(url);
+	std::vector<std::string> segment;
+	std::stringstream ss(url);
+	std::string s;
 
-	if (segments.size() != 5 || segments[0] != "tiles")
+	while (std::getline(ss, s, '/'))
+		if (!s.empty())
+			segment.push_back(s);
+
+	if (segment.size() != 5 || segment[0] != "tiles")
 		return false;
 
-	try
-	{
-		layerID = segments[1];
-		z = std::stoi(segments[2]);
-		x = std::stoi(segments[3]);
-		y = std::stoi(segments[4]);
+	z = (int)toInt(segment[2], -1);
+	x = (int)toInt(segment[3], -1);
+	y = (int)toInt(segment[4], -1);
 
-		return true;
-	}
-	catch (...)
-	{
+	if (z < 0 || x < 0 || y < 0)
 		return false;
-	}
+
+	layerID = segment[1];
+	return true;
 }
 
 void WebViewer::addMBTilesSource(const std::string &filepath, bool overlay)
@@ -446,7 +222,7 @@ void WebViewer::addMBTilesSource(const std::string &filepath, bool overlay)
 	if (source->open(filepath))
 	{
 		mapSources.push_back(source);
-		pluginManager.addPluginCode(source->generatePluginCode(overlay));
+		plugins.addCode(source->generatePluginCode(overlay));
 	}
 	else
 	{
@@ -461,7 +237,7 @@ void WebViewer::addFileSystemTilesSource(const std::string &directoryPath, bool 
 	if (source->open(directoryPath))
 	{
 		mapSources.push_back(source);
-		pluginManager.addPluginCode(source->generatePluginCode(overlay));
+		plugins.addCode(source->generatePluginCode(overlay));
 	}
 	else
 	{
@@ -469,361 +245,9 @@ void WebViewer::addFileSystemTilesSource(const std::string &directoryPath, bool 
 	}
 }
 
-void WebViewer::Clear()
+long long WebViewer::queryInt(const std::string &query, const char *name)
 {
-	states[0]->clear();
-}
-
-// --- BackupManager ---
-
-void BackupManager::run()
-{
-	Debug() << "Server: starting backup service every " << interval << " minutes.";
-
-	while (running)
-	{
-		std::unique_lock<std::mutex> lock(mtx);
-		cv.wait_for(lock, std::chrono::minutes(interval), [this]
-					{ return !running.load(); });
-
-		if (running && !save())
-			Error() << "Server: failed to write backup: " << filename;
-	}
-
-	Debug() << "Server: stopping backup service.";
-}
-
-void BackupManager::start()
-{
-	if (interval <= 0 || !tracker || filename.empty())
-		return;
-
-	running = true;
-	thread = std::thread(&BackupManager::run, this);
-}
-
-void BackupManager::stop()
-{
-	if (running.load())
-	{
-		{
-			// must hold mtx so the store cannot slip between the run thread's
-			// predicate check and its wait, which would stall join() a full interval
-			std::lock_guard<std::mutex> lock(mtx);
-			running = false;
-		}
-		cv.notify_all();
-		if (thread.joinable())
-			thread.join();
-	}
-}
-
-bool BackupManager::save()
-{
-	if (filename.empty() || !tracker)
-		return false;
-
-	const std::string tmp = filename + ".tmp";
-
-	try
-	{
-		std::ofstream outfile(tmp, std::ios::binary | std::ios::trunc);
-
-		if (!outfile.is_open())
-		{
-			Error() << "Server: cannot open backup file for writing: "
-					<< tmp << " (" << std::strerror(errno) << ")";
-			return false;
-		}
-
-		outfile.exceptions(std::ios::failbit | std::ios::badbit);
-
-		if (!tracker->save(outfile))
-		{
-			outfile.close();
-			std::remove(tmp.c_str());
-			return false;
-		}
-
-		outfile.close();
-	}
-	catch (const std::ios_base::failure &e)
-	{
-		Error() << "Server: write error on " << tmp << " (" << std::strerror(errno) << ")";
-		std::remove(tmp.c_str());
-		return false;
-	}
-	catch (const std::exception &e)
-	{
-		Error() << e.what();
-		std::remove(tmp.c_str());
-		return false;
-	}
-	catch (...)
-	{
-		Error() << "Server: unknown error writing " << tmp;
-		std::remove(tmp.c_str());
-		return false;
-	}
-
-#ifdef _WIN32
-	std::remove(filename.c_str());
-#endif
-	if (std::rename(tmp.c_str(), filename.c_str()) != 0)
-	{
-		Error() << "Server: cannot rename " << tmp << " -> " << filename
-				<< " (" << std::strerror(errno) << ")";
-		std::remove(tmp.c_str());
-		return false;
-	}
-
-	return true;
-}
-
-bool BackupManager::load()
-{
-	if (filename.empty() || !tracker)
-		return false;
-
-	Info() << "Server: reading statistics from " << filename;
-	try
-	{
-		std::ifstream infile(filename, std::ios::binary);
-
-		if (!infile.is_open())
-		{
-			Warning() << "Server: cannot open backup file for reading: "
-					  << filename << " (" << std::strerror(errno) << ")";
-			return false;
-		}
-
-		if (!tracker->load(infile))
-		{
-			Warning() << "Server: Could not load statistics from backup";
-			return false;
-		}
-
-		infile.close();
-	}
-	catch (const std::exception &e)
-	{
-		Error() << e.what();
-		return false;
-	}
-
-	return true;
-}
-
-void ReceiverTracker::applyConfig(const TrackingConfig &cfg, const AIS::Filter &f)
-{
-	setStationPosition(cfg.lat, cfg.lon, cfg.use_GPS);
-	ships.setShareLatLon(cfg.latlon_share);
-	ships.setServerMode(cfg.server_mode);
-	ships.setMsgSave(cfg.msg_save);
-	ships.setOwnMMSI(cfg.own_mmsi);
-	ships.setTimeHistory(cfg.time_history);
-	ships.setFilter(f);
-
-	if (cfg.cutoff > 0)
-	{
-		hist_second.setCutoff(cfg.cutoff);
-		hist_minute.setCutoff(cfg.cutoff);
-		hist_hour.setCutoff(cfg.cutoff);
-		hist_day.setCutoff(cfg.cutoff);
-		counter.setCutOff(cfg.cutoff);
-		counter_session.setCutOff(cfg.cutoff);
-	}
-}
-
-void ReceiverTracker::setup()
-{
-	ships.setup();
-}
-
-void ReceiverTracker::wireStreams()
-{
-	ships >> hist_day;
-	ships >> hist_hour;
-	ships >> hist_minute;
-	ships >> hist_second;
-	ships >> counter;
-	ships >> counter_session;
-}
-
-void ReceiverTracker::clear()
-{
-	counter.Clear();
-	counter_session.Clear();
-	hist_second.Clear();
-	hist_minute.Clear();
-	hist_hour.Clear();
-	hist_day.Clear();
-}
-
-void ReceiverTracker::reset()
-{
-	counter_session.Clear();
-	hist_second.Clear();
-	hist_minute.Clear();
-	hist_hour.Clear();
-	hist_day.Clear();
-	ships.setup();
-}
-
-bool ReceiverTracker::save(std::ofstream &f)
-{
-	return counter.Save(f) && hist_second.Save(f) && hist_minute.Save(f) && hist_hour.Save(f) && hist_day.Save(f) && ships.Save(f);
-}
-
-bool ReceiverTracker::load(std::ifstream &f)
-{
-	if (!counter.Load(f) || !hist_second.Load(f) || !hist_minute.Load(f) || !hist_hour.Load(f) || !hist_day.Load(f))
-		return false;
-
-	if (f.peek() != EOF && !ships.Load(f))
-		Warning() << "Backup: ship positions could not be restored from backup (format change?).";
-
-	return true;
-}
-
-void ReceiverTracker::writeHistoryJSON(JSON::Writer &w)
-{
-	w.beginObject();
-	w.key("second");
-	hist_second.writeJSON(w);
-	w.key("minute");
-	hist_minute.writeJSON(w);
-	w.key("hour");
-	hist_hour.writeJSON(w);
-	w.key("day");
-	hist_day.writeJSON(w);
-	w.endObject();
-}
-
-void ReceiverTracker::writeCountersJSON(JSON::Writer &w)
-{
-	w.key("total");
-	counter.writeJSON(w);
-	w.key("session");
-	counter_session.writeJSON(w);
-	w.key("last_day");
-	hist_day.writeLastStatJSON(w);
-	w.key("last_hour");
-	hist_hour.writeLastStatJSON(w);
-	w.key("last_minute");
-	hist_minute.writeLastStatJSON(w);
-	w.kv("msg_rate", hist_second.getAverage());
-	w.kv("vessel_count", ships.getCount());
-	w.kv("vessel_max", ships.getMaxCount());
-}
-
-std::string ReceiverTracker::toHistoryJSON()
-{
-	std::string s;
-	JSON::Writer w(s);
-	writeHistoryJSON(w);
-	w.finish();
-	return s;
-}
-
-std::string ReceiverTracker::toCountersJSON()
-{
-	std::string s;
-	JSON::Writer w(s);
-	writeCountersJSON(w);
-	w.finish();
-	return s;
-}
-
-void ReceiverTracker::writeSummary(std::ostream &out)
-{
-	auto tidy = [](std::string s) -> std::string {
-		size_t pos;
-		while ((pos = s.find("<br>")) != std::string::npos)  s.replace(pos, 4, ", ");
-		while ((pos = s.find("<br/>")) != std::string::npos) s.replace(pos, 5, ", ");
-		while (!s.empty() && (s.back() == ' ' || s.back() == ',' ||
-		                       s.back() == '\n' || s.back() == '\r'))
-			s.pop_back();
-		while (!s.empty() && (s.front() == ' ' || s.front() == ','))
-			s.erase(s.begin());
-		return s;
-	};
-
-	out << "=== state: " << (label.empty() ? "(unnamed)" : label) << " ===\n";
-
-	std::string p = tidy(product), v = tidy(vendor), sn = tidy(serial), sr = tidy(sample_rate);
-	if (!p.empty())
-	{
-		out << "  device:   " << p;
-		bool has_extra = (!v.empty() && v != "-") || (!sn.empty() && sn != "-") || !sr.empty();
-		if (has_extra)
-		{
-			out << " [";
-			bool first = true;
-			auto sep = [&]() { if (!first) out << ", "; first = false; };
-			if (!v.empty() && v != "-")  { sep(); out << v; }
-			if (!sn.empty() && sn != "-") { sep(); out << "sn=" << sn; }
-			if (!sr.empty())              { sep(); out << "rate=" << sr; }
-			out << "]";
-		}
-		out << "\n";
-	}
-	std::string mn = tidy(model_name);
-	if (!mn.empty())
-		out << "  model:    " << mn << "\n";
-
-	out << "  vessels:  " << ships.getCount()
-	    << "   msg/s: " << hist_second.getAverage() << "\n";
-	counter_session.print(out, "  ");
-}
-
-void ReceiverTracker::setDevice(Device::Device *device)
-{
-	product = device->getProduct();
-	vendor = device->getVendor().empty() ? "-" : device->getVendor();
-	serial = device->getSerial().empty() ? "-" : device->getSerial();
-	sample_rate = device->getRateDescription();
-
-	if (serial == ".")
-		label = "Console";
-	else
-	{
-		label = product;
-		if (serial != "-")
-			label += " " + serial;
-	}
-}
-
-void ReceiverTracker::appendDevice(Device::Device *device, const std::string &newline)
-{
-	product += device->getProduct() + newline;
-	vendor += (device->getVendor().empty() ? "-" : device->getVendor()) + newline;
-	serial += (device->getSerial().empty() ? "-" : device->getSerial()) + newline;
-	sample_rate += device->getRateDescription() + newline;
-}
-
-int WebViewer::parseReceiver(const std::string &query)
-{
-	try
-	{
-		return std::stoi(IO::HTTPRequest::queryParam(query, "receiver"));
-	}
-	catch (...)
-	{
-		return 0;
-	}
-}
-
-std::time_t WebViewer::parseSinceParam(const std::string &query)
-{
-	try
-	{
-		return (std::time_t)std::stoll(IO::HTTPRequest::queryParam(query, "since"));
-	}
-	catch (...)
-	{
-		return 0;
-	}
+	return toInt(IO::HTTPRequest::queryParam(query, name));
 }
 
 ReceiverTracker *WebViewer::getState(int idx)
@@ -833,17 +257,183 @@ ReceiverTracker *WebViewer::getState(int idx)
 	return states[idx].get();
 }
 
-void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
+namespace
+{
+	// What a per-receiver tracker is called, and what identifies it across runs.
+	struct Names
+	{
+		std::string label;
+		std::string key;
+	};
+
+	// The label drops the device name when a receiver runs several models, while
+	// the key always keeps both. Two receivers on one device can therefore share a
+	// key while showing different labels; they are near enough that handing the
+	// history of one to the other is acceptable, and the label is set from the
+	// receiver either way.
+	Names namesFor(Receiver &r, int j, std::size_t receiver_count)
+	{
+		Device::Device *device = r.getDeviceManager().getDevice();
+
+		Names n;
+		n.label = deviceLabel(device);
+		if (r.Count() > 1)
+			n.label = receiver_count > 1 ? n.label + " " + r.Model(j)->getName() : r.Model(j)->getName();
+		n.key = device->getIdentity() + "|" + r.Model(j)->getName();
+
+		return n;
+	}
+
+	std::unique_ptr<ReceiverTracker> takeMatching(std::vector<std::unique_ptr<ReceiverTracker>> &previous, const std::string &key)
+	{
+		for (auto &old : previous)
+			if (old && old->key == key)
+				return std::move(old);
+
+		return std::unique_ptr<ReceiverTracker>();
+	}
+
+	// Every model output the group mask lets through: k is the receiver index,
+	// j the model index within that receiver.
+	template <typename F>
+	void forEachConnectable(const std::vector<std::unique_ptr<Receiver>> &receivers, uint64_t groups, F fn)
+	{
+		for (int k = 0; k < (int)receivers.size(); k++)
+			for (int j = 0; j < receivers[k]->Count(); j++)
+				if (receivers[k]->Output(j).canConnect(groups))
+					fn(*receivers[k], j, k);
+	}
+}
+
+// The aggregate tracker takes every output, whichever receiver it came from.
+void WebViewer::wireAggregate(const std::vector<std::unique_ptr<Receiver>> &receivers, const std::string &newline)
+{
+	// the receiver whose device is already in the description, so a receiver
+	// running several models only contributes it once
+	int described = -1;
+
+	forEachConnectable(receivers, settings.groups_in, [&](Receiver &r, int j, int k)
+	{
+		Device::Device *device = r.getDeviceManager().getDevice();
+
+		if (described != k)
+		{
+			states[0]->appendDevice(device, newline);
+			described = k;
+		}
+
+		states[0]->model_name += r.Model(j)->getName() + newline;
+		states[0]->connectJSON(r.OutputJSON(j));
+		states[0]->connectGPS(r.OutputGPS(j));
+		r.OutputADSB(j).Connect((StreamIn<Plane::ADSB> *)&planes);
+
+		*device >> raw_counter;
+	});
+}
+
+// Zone filtering resolves here rather than in the caller: this is the only
+// reader of groups_in, and running every time means a viewer that outlives the
+// engine cannot keep a mask from a previous configuration.
+void WebViewer::resolveZoneMask(const std::vector<std::unique_ptr<Receiver>> &receivers)
+{
+	if (settings.zones.empty())
+		return;
+
+	settings.groups_in = resolveZones(receivers, settings.zones);
+	if (!settings.groups_in)
+		Warning() << "Viewer has zone filter but no matching receivers — will receive nothing";
+}
+
+// One tracker per connectable output, each handed the tracker that served the
+// same input last run when there is one. Walks the outputs twice: a name is only
+// final once every other name is known, since duplicates get numbered.
+void WebViewer::attachTrackers(const std::vector<std::unique_ptr<Receiver>> &receivers,
+							   std::vector<std::unique_ptr<ReceiverTracker>> &previous,
+							   const std::string &newline)
+{
+	// Labels are numbered when two outputs would show the same one, which no
+	// single output can tell on its own — hence the look ahead. Keys need no
+	// such thing: identical inputs are indistinguishable, so takeMatching()
+	// handing them out in order puts each tracker back where it was.
+	std::vector<std::string> claimed;
+	forEachConnectable(receivers, settings.groups_in, [&](Receiver &r, int j, int)
+	{
+		claimed.push_back(namesFor(r, j, receivers.size()).label);
+	});
+
+	forEachConnectable(receivers, settings.groups_in, [&](Receiver &r, int j, int k)
+	{
+		Names n = namesFor(r, j, receivers.size());
+
+		int sharing = 0;
+		for (const auto &c : claimed)
+			if (c == n.label)
+				sharing++;
+		if (sharing > 1)
+			n.label += " #" + std::to_string(k + 1);
+
+		std::unique_ptr<ReceiverTracker> tracker = takeMatching(previous, n.key);
+		const bool fresh = !tracker;
+		if (fresh)
+			tracker.reset(new ReceiverTracker());
+
+		tracker->setDevice(r.getDeviceManager().getDevice());
+		tracker->label = n.label;
+		tracker->key = n.key;
+		tracker->model_name = r.Model(j)->getName() + newline;
+
+		tracker->connectJSON(r.OutputJSON(j));
+		tracker->connectGPS(r.OutputGPS(j));
+
+		// a reclaimed tracker is already set up and was rewired by applySettings()
+		if (serving && fresh)
+		{
+			tracker->setup();
+			tracker->wireStreams();
+		}
+
+		states.push_back(std::move(tracker));
+	});
+}
+
+
+void WebViewer::attachEngine(const std::vector<std::unique_ptr<Receiver>> &receivers)
 {
 	std::lock_guard<std::recursive_mutex> lock(state_mtx);
 
 	const std::string newline = "<br>";
 
+	resolveZoneMask(receivers);
+
 	int connectable = 0;
 	for (auto &rp : receivers)
 		connectable += rp->Count();
 
-	bool multi = connectable > 1 && !filter.hasIDFilter() && groups_in == 0xFFFFFFFFFFFFFFFF;
+	// one tracker per output only pays off when the outputs can be told apart
+	const bool multi = connectable > 1 && !filter.hasIDFilter() && settings.groups_in == 0xFFFFFFFFFFFFFFFF;
+
+	// trackers of the previous run: attachTrackers() takes the ones whose input is
+	// still here, and the rest are dropped when this vector goes out of scope
+	std::vector<std::unique_ptr<ReceiverTracker>> previous = beginAttach();
+
+	wireAggregate(receivers, newline);
+
+	if (multi)
+		attachTrackers(receivers, previous, newline);
+
+	Debug() << "Mutex: WebViewer sinks self-lock (DB/PlaneDB), raw_counter atomic (" << receivers.size() << " receivers)";
+
+	endAttach();
+}
+
+std::vector<std::unique_ptr<ReceiverTracker>> WebViewer::beginAttach()
+{
+	std::lock_guard<std::recursive_mutex> lock(state_mtx);
+
+	std::vector<std::unique_ptr<ReceiverTracker>> previous;
+	for (std::size_t i = 1; i < states.size(); i++)
+		previous.push_back(std::move(states[i]));
+	states.erase(states.begin() + 1, states.end());
 
 	states[0]->product.clear();
 	states[0]->vendor.clear();
@@ -851,104 +441,38 @@ void WebViewer::connect(const std::vector<std::unique_ptr<Receiver>> &receivers)
 	states[0]->sample_rate.clear();
 	states[0]->model_name.clear();
 
-	std::size_t first_new = states.size();
-	std::vector<int> state_receiver;
-
-	for (int k = 0; k < (int)receivers.size(); k++)
-	{
-		Receiver &r = *receivers[k];
-
-		bool rec_details = false;
-		for (int j = 0; j < r.Count(); j++)
-		{
-			if (r.Output(j).canConnect(groups_in))
-			{
-				ReceiverTracker *per = nullptr;
-
-				if (multi)
-				{
-					states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker()));
-					state_receiver.push_back(k + 1);
-					per = states.back().get();
-					per->setDevice(r.getDeviceManager().getDevice());
-					if (r.Count() > 1)
-						per->label = receivers.size() > 1 ? per->label + " " + r.Model(j)->getName() : r.Model(j)->getName();
-				}
-
-				if (!rec_details)
-				{
-					states[0]->appendDevice(r.getDeviceManager().getDevice(), newline);
-					rec_details = true;
-				}
-
-				states[0]->model_name += r.Model(j)->getName() + newline;
-				if (per)
-					per->model_name += r.Model(j)->getName() + newline;
-
-				states[0]->connectJSON(r.OutputJSON(j));
-				if (per)
-					per->connectJSON(r.OutputJSON(j));
-
-				states[0]->connectGPS(r.OutputGPS(j));
-				if (per)
-					per->connectGPS(r.OutputGPS(j));
-				r.OutputADSB(j).Connect((StreamIn<Plane::ADSB> *)&planes);
-
-				*r.getDeviceManager().getDevice() >> raw_counter;
-			}
-		}
-	}
-
-	// devices without a serial describe themselves identically: number those by
-	// receiver, comparing originals since a suffix would hide later duplicates
-	std::vector<std::string> original;
-	for (std::size_t i = first_new; i < states.size(); i++)
-		original.push_back(states[i]->label);
-
-	for (std::size_t i = 0; i < original.size(); i++)
-		for (std::size_t j = 0; j < original.size(); j++)
-			if (i != j && original[i] == original[j])
-			{
-				states[first_new + i]->label += " #" + std::to_string(state_receiver[i]);
-				break;
-			}
-
-	for (auto &s : states)
-		s->applyConfig(tracking, filter);
-
-	if (serving)
-	{
-		for (std::size_t i = first_new; i < states.size(); i++)
-		{
-			states[i]->setup();
-			states[i]->wireStreams();
-		}
-		pluginManager.setReceivers(states);
-	}
-
-	Debug() << "Mutex: WebViewer sinks self-lock (DB/PlaneDB), raw_counter atomic (" << receivers.size() << " receivers)";
-
-	raw_counter.setFilter(filter);
-	engine_connected = true;
+	return previous;
 }
 
-void WebViewer::disconnectEngine()
+void WebViewer::endAttach()
 {
 	std::lock_guard<std::recursive_mutex> lock(state_mtx);
 
-	engine_connected = false;
+	for (auto &s : states)
+		s->applyConfig(settings.tracking, filter);
+
+	if (serving)
+		frontend.setReceivers(states);
+
+	raw_counter.setFilter(filter);
+	engine_attached = true;
+}
+
+void WebViewer::detachEngine()
+{
+	std::lock_guard<std::recursive_mutex> lock(state_mtx);
+
+	// Only the references into the engine that is going away. The trackers stay:
+	// attachEngine() rebuilds them on the next run.
+	engine_attached = false;
 	msg_channels = nullptr;
 	setCommFeed(nullptr);
-
-	if (states.size() > 1)
-	{
-		states.erase(states.begin() + 1, states.end());
-		pluginManager.setReceivers(states);
-	}
 }
 
 void WebViewer::setDeviceDescription(const std::string &product, const std::string &vendor, const std::string &serial)
 {
+	std::lock_guard<std::recursive_mutex> lock(state_mtx);
+
 	pending_product = product;
 	pending_vendor = vendor;
 	pending_serial = serial;
@@ -961,10 +485,16 @@ void WebViewer::setDeviceDescription(const std::string &product, const std::stri
 		states[0]->serial = serial;
 }
 
-void WebViewer::connect(AIS::Model &model, Connection<JSON::JSON> &json, Device::Device &device)
+// Android: a single model on a single device, wired without a Receiver. Only the
+// middle differs from the overload above — the prologue and epilogue are shared,
+// so a change to either reaches this path too.
+void WebViewer::attachEngine(AIS::Model &model, Connection<JSON::JSON> &json, Device::Device &device)
 {
+	std::lock_guard<std::recursive_mutex> lock(state_mtx);
+
+	beginAttach();
+
 	states[0]->setDevice(&device);
-	states[0]->label = "All";
 	states[0]->model_name = model.getName();
 
 	// Android supplies USB product/vendor/serial out-of-band via setDeviceDescription().
@@ -978,13 +508,13 @@ void WebViewer::connect(AIS::Model &model, Connection<JSON::JSON> &json, Device:
 	states[0]->connectJSON(json);
 	device >> raw_counter;
 
-	states[0]->applyConfig(tracking, filter);
-	raw_counter.setFilter(filter);
-	engine_connected = true;
+	endAttach();
 }
 
-void WebViewer::Reset()
+void WebViewer::resetStatistics()
 {
+	std::lock_guard<std::recursive_mutex> lock(state_mtx);
+
 	for (auto &s : states)
 	{
 		s->reset();
@@ -993,41 +523,55 @@ void WebViewer::Reset()
 	time_start = time(nullptr);
 }
 
-void WebViewer::resetSettings()
+// Everything SetKey() can write must be undone here, or a setting dropped from
+// the config keeps its old value for the lifetime of the process. The bound
+// socket, the ship database and the statistics deliberately survive.
+void WebViewer::resetSettings(int port)
 {
 	std::lock_guard<std::recursive_mutex> lock(state_mtx);
 
+	settings = Settings();
+	filter = AIS::Filter();
+
 	mapSources.clear();
-	zones.clear();
-	pluginManager.resetPlugins();
+	backup.resetSettings();
+	frontend.reset();
+	plugins.reset();
+	resetFrameAncestors();
+
+	setPort(port);
 }
 
 void WebViewer::applySettings()
 {
 	std::lock_guard<std::recursive_mutex> lock(state_mtx);
 
-	pluginManager.setSharing(comm_feed != nullptr,
+	frontend.setSharing(comm_feed != nullptr,
 							  comm_feed && comm_feed->hasUUID());
+
+	// values SetKey() pushes into sub-objects: re-apply them so a reset sticks
+	sse_streamer.setObfuscate(!settings.showdecoder);
+	raw_counter.setFilter(filter);
 
 	// sinks can only be added, so rebuild the list rather than append to it
 	for (auto &s : states)
 	{
-		s->applyConfig(tracking, filter);
+		s->applyConfig(settings.tracking, filter);
 		s->clearSinks();
 		s->wireStreams();
 	}
 
-	if (realtime)
+	if (settings.realtime)
 	{
 		states[0]->connectSink(sse_streamer);
 		sse_streamer.setSSE(this);
 	}
 
-	if (supportPrometheus)
+	if (settings.supportPrometheus)
 		states[0]->connectSink(dataPrometheus);
 
 	logger.Stop();
-	if (showlog)
+	if (settings.showlog)
 	{
 		logger.setSSE(this);
 		logger.Start();
@@ -1038,25 +582,35 @@ void WebViewer::applySettings()
 	backup.start();
 }
 
-void WebViewer::start()
+void WebViewer::startServing()
 {
+	std::lock_guard<std::recursive_mutex> lock(state_mtx);
+
 	// the ship database and its restored statistics survive a stop/start
 	if (!initialized)
 	{
 		for (auto &s : states)
 			s->setup();
 
-		backup.setTracker(states[0].get());
+		states[0]->clear();
+		initialized = true;
+	}
 
-		if (backup.getFilename().empty())
-			Clear();
-		else if (!backup.load())
+	backup.setTracker(states[0].get());
+
+	// Read whenever the configured file changes, not just at the first start: a
+	// managed viewer serves before its settings are applied, and a file named
+	// later — or a failed read of one that did not exist yet — would otherwise
+	// never be picked up.
+	if (backup.getFilename() != stats_file)
+	{
+		stats_file = backup.getFilename();
+
+		if (!stats_file.empty() && !backup.load())
 		{
 			Error() << "Statistics - cannot read file.";
-			Clear();
+			states[0]->clear();
 		}
-
-		initialized = true;
 	}
 
 	applySettings();
@@ -1064,19 +618,19 @@ void WebViewer::start()
 	// the HTTP server keeps running across a stop/start, so bind only once
 	if (!bound_port)
 	{
-		if (firstport && lastport)
+		if (settings.firstport && settings.lastport)
 		{
 			int port;
-			for (port = firstport; port <= lastport; port++)
+			for (port = settings.firstport; port <= settings.lastport; port++)
 				if (HTTPServer::start(port))
 					break;
 
-			if (port > lastport)
-				throw std::runtime_error("Cannot open port in range [" + std::to_string(firstport) + "," + std::to_string(lastport) + "]");
+			if (port > settings.lastport)
+				throw std::runtime_error("Cannot open port in range [" + std::to_string(settings.firstport) + "," + std::to_string(settings.lastport) + "]");
 
 			bound_port = port;
 		}
-		else if (port_set)
+		else if (settings.port_set)
 		{
 			if (!HTTPServer::start(0))
 				throw std::runtime_error("Cannot open OS-assigned port");
@@ -1091,13 +645,13 @@ void WebViewer::start()
 		time_start = time(nullptr);
 	}
 
-	pluginManager.setReceivers(states);
+	frontend.setReceivers(states);
 
-	run = true;
+	is_active = true;
 	serving = true;
 }
 
-void WebViewer::stop()
+void WebViewer::stopServing()
 {
 	std::lock_guard<std::recursive_mutex> lock(state_mtx);
 
@@ -1107,18 +661,22 @@ void WebViewer::stop()
 	backup.stop();
 }
 
-void WebViewer::close()
+void WebViewer::shutdown()
 {
-	stop();
+	stopServing();
 	stopThread();
-	run = false;
+	is_active = false;
+
+	// a viewer that never served has nothing to save or report
+	if (!initialized)
+		return;
 
 	if (!backup.getFilename().empty() && !backup.save())
 	{
 		Error() << "Statistics - cannot write file: " << backup.getFilename();
 	}
 
-	if (stats_on_close)
+	if (settings.stats_on_close)
 	{
 		std::ostringstream ss;
 		ss << "\n";
@@ -1135,15 +693,20 @@ void WebViewer::close()
 
 int WebViewer::parseMMSI(const std::string &query)
 {
-	try
+	long long mmsi = toInt(query, -1);
+	return (mmsi >= 1 && mmsi <= 999999999) ? (int)mmsi : -1;
+}
+
+void WebViewer::writeOutputsJSON(JSON::Writer &w)
+{
+	w.kv("tcp_clients", numberOfClients());
+	w.key("outputs").beginArray();
+	if (msg_channels)
 	{
-		int mmsi = std::stoi(query);
-		return (mmsi >= 1 && mmsi <= 999999999) ? mmsi : -1;
+		for (auto &o : *msg_channels)
+			o->writeJSON(w);
 	}
-	catch (...)
-	{
-		return -1;
-	}
+	w.endArray();
 }
 
 std::string WebViewer::buildStatJSON(ReceiverTracker *s)
@@ -1153,13 +716,12 @@ std::string WebViewer::buildStatJSON(ReceiverTracker *s)
 
 	w.beginObject();
 	s->writeCountersJSON(w);
-	w.kv("tcp_clients", numberOfClients());
 	w.kv("sharing", comm_feed != nullptr);
 	w.kv("sharing_uuid", comm_feed != nullptr && comm_feed->hasUUID());
-	w.kv("engine_running", engine_connected);
-	if (tracking.latlon_share && tracking.lat != LAT_UNDEFINED && tracking.lon != LON_UNDEFINED)
+	w.kv("engine_running", engine_attached);
+	if (settings.tracking.latlon_share && settings.tracking.lat != LAT_UNDEFINED && settings.tracking.lon != LON_UNDEFINED)
 	{
-		std::string link = "https://www.aiscatcher.org/?&zoom=10&lat=" + std::to_string(tracking.lat) + "&lon=" + std::to_string(tracking.lon);
+		std::string link = "https://www.aiscatcher.org/?&zoom=10&lat=" + std::to_string(settings.tracking.lat) + "&lon=" + std::to_string(settings.tracking.lon);
 		w.kv("sharing_link", link);
 	}
 	else
@@ -1167,8 +729,8 @@ std::string WebViewer::buildStatJSON(ReceiverTracker *s)
 		w.kv("sharing_link", "https://www.aiscatcher.org");
 	}
 
-	w.kv_raw("station", station);
-	w.kv_raw("station_link", station_link);
+	w.kv("station", settings.station);
+	w.kv("station_link", settings.station_link);
 	w.kv("sample_rate", s->sample_rate);
 	w.kv("msg_rate", s->getMsgRate());
 	w.kv("vessel_count", s->getCount());
@@ -1185,13 +747,7 @@ std::string WebViewer::buildStatJSON(ReceiverTracker *s)
 	w.kv_raw("os", os);
 	w.kv_raw("hardware", hardware);
 
-	w.key("outputs").beginArray();
-	if (msg_channels)
-	{
-		for (auto &o : *msg_channels)
-			o->writeJSON(w);
-	}
-	w.endArray();
+	writeOutputsJSON(w);
 	w.kv("received", (unsigned long long)raw_counter.received());
 	w.endObject();
 
@@ -1207,14 +763,7 @@ std::string WebViewer::buildOutputStatsJSON()
 	JSON::Writer w(content);
 
 	w.beginObject();
-	w.kv("tcp_clients", numberOfClients());
-	w.key("outputs").beginArray();
-	if (msg_channels)
-	{
-		for (auto &o : *msg_channels)
-			o->writeJSON(w);
-	}
-	w.endArray();
+	writeOutputsJSON(w);
 	w.endObject();
 
 	w.finish();
@@ -1239,24 +788,16 @@ std::string WebViewer::buildMultiPathJSON(ReceiverTracker *s, const std::string 
 			break;
 		}
 
-		try
-		{
-			int mmsi = std::stoi(mmsi_str);
-			if (mmsi >= 1 && mmsi <= 999999999)
-			{
-				char keybuf[12];
-				int n = snprintf(keybuf, sizeof(keybuf), "%d", mmsi);
-				w.key(keybuf, n).raw_val(s ? s->getPathJSON(mmsi) : std::string("{}"));
-			}
-		}
-		catch (const std::invalid_argument &)
+		int mmsi = parseMMSI(mmsi_str);
+		if (mmsi < 0)
 		{
 			Error() << "Server - path MMSI invalid: " << mmsi_str;
+			continue;
 		}
-		catch (const std::out_of_range &)
-		{
-			Error() << "Server - path MMSI out of range: " << mmsi_str;
-		}
+
+		char keybuf[12];
+		int n = snprintf(keybuf, sizeof(keybuf), "%d", mmsi);
+		w.key(keybuf, n).raw_val(s->getPathJSON(mmsi));
 	}
 	w.endObject();
 	w.finish();
@@ -1265,38 +806,37 @@ std::string WebViewer::buildMultiPathJSON(ReceiverTracker *s, const std::string 
 
 // --- Route table ---
 
+// The tracker a handler is given is never null: getState() falls back to the
+// aggregate, which exists for the lifetime of the viewer.
 const WebViewer::Route WebViewer::routes[] = {
 	// JSON API routes (application/json)
 	{"/api/ships.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->getShipsJSON() : std::string("{}"); }, true},
+	 { return s->getShipsJSON(); }, true},
 	{"/ships.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->getShipsJSON() : std::string("{}"); }, true},
+	 { return s->getShipsJSON(); }, true},
 	{"/api/ships_full.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->getShipsJSON(true) : std::string("{}"); }, true},
+	 { return s->getShipsJSON(true); }, true},
 	{"/api/ships_array.json", nullptr, "application/json",
-	 [](WebViewer *w, ReceiverTracker *s, const std::string &a)
-	 { std::time_t since = w->parseSinceParam(a);
-	   return s ? s->getShipsJSONcompact(since) : std::string("{}"); }, true},
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 { return s->getShipsJSONcompact(queryInt(a, "since")); }, true},
 	{"/api/planes_array.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &a)
-	 { std::time_t since = w->parseSinceParam(a);
-	   return w->planes.getCompactArray(false, since); }, true},
+	 { return w->planes.getCompactArray(false, queryInt(a, "since")); }, true},
 	{"/api/binmsgs.json", nullptr, "application/json",
-	 [](WebViewer *w, ReceiverTracker *s, const std::string &a)
-	 { std::time_t since = w->parseSinceParam(a);
-	   return s ? s->getBinaryMessagesJSON(since) : std::string("{}"); }, true},
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 { return s->getBinaryMessagesJSON(queryInt(a, "since")); }, true},
 	{"/api/history_full.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->toHistoryJSON() : std::string("{}"); }, true},
+	 { return s->toHistoryJSON(); }, true},
 	{"/api/stat.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *s, const std::string &)
-	 { return s ? w->buildStatJSON(s) : std::string("{}"); }, true},
+	 { return w->buildStatJSON(s); }, true},
 	{"/stat.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *s, const std::string &)
-	 { return s ? w->buildStatJSON(s) : std::string("{}"); }, true},
+	 { return w->buildStatJSON(s); }, true},
 	{"/api/output_stats.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &)
 	 { return w->buildOutputStatsJSON(); }, true},
@@ -1304,29 +844,23 @@ const WebViewer::Route WebViewer::routes[] = {
 	 [](WebViewer *w, ReceiverTracker *s, const std::string &a)
 	 { return w->buildMultiPathJSON(s, a); }, true},
 	{"/api/allpath.json", nullptr, "application/json",
-	 [](WebViewer *w, ReceiverTracker *s, const std::string &a)
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 {
-		 if (!s)
-			 return std::string("{}");
-		 std::time_t since = w->parseSinceParam(a);
+		 std::time_t since = (std::time_t)queryInt(a, "since");
 		 return since > 0 ? s->getAllPathJSONSince(since) : s->getAllPathJSON();
 	 }, true},
 	{"/api/path.geojson", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 {
-		 if (!s)
-			 return std::string("{}");
 		 int mmsi = parseMMSI(a);
 		 return mmsi > 0 ? s->getPathGeoJSON(mmsi) : std::string("{}");
 	 }, true},
 	{"/api/allpath.geojson", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->getAllPathGeoJSON() : std::string("{}"); }, true},
+	 { return s->getAllPathGeoJSON(); }, true},
 	{"/api/message", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 {
-		 if (!s)
-			 return std::string("{\"error\":\"No data available\"}");
 		 int mmsi = parseMMSI(a);
 		 if (mmsi <= 0)
 			 return std::string("{\"error\":\"Invalid MMSI\"}");
@@ -1336,22 +870,20 @@ const WebViewer::Route WebViewer::routes[] = {
 	{"/api/vessel", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 {
-		 if (!s)
-			 return std::string("{\"error\":\"No data available\"}");
 		 int mmsi = parseMMSI(a);
 		 if (mmsi <= 0)
 			 return std::string("{\"error\":\"Invalid MMSI\"}");
 		 std::string vessel = s->getShipJSON(mmsi);
 		 return vessel == "{}" ? std::string("{\"error\":\"Vessel not found\"}") : vessel;
 	 }, true},
-	{"/api/decode", &WebViewer::showdecoder, "application/json",
+	{"/api/decode", &WebViewer::Settings::showdecoder, "application/json",
 	 [](WebViewer *, ReceiverTracker *, const std::string &a)
 	 {
 		 try
 		 {
 			 if (a.empty() || a.size() > 1024)
 				 return std::string("{\"error\":\"Input size limit exceeded\"}");
-			 std::string result = decodeNMEAtoJSON(urlDecode(a), true);
+			 std::string result = decodeNMEAtoJSON(urlDecode(a));
 			 return result == "[]" ? std::string("{\"error\":\"No valid AIS messages decoded\"}") : result;
 		 }
 		 catch (const std::exception &e)
@@ -1361,36 +893,36 @@ const WebViewer::Route WebViewer::routes[] = {
 		 }
 	 }, true},
 
-	// Conditional GeoJSON/KML routes
-	{"/geojson", &WebViewer::GeoJSON, "application/json",
+	// Conditional settings.GeoJSON/settings.KML routes
+	{"/geojson", &WebViewer::Settings::GeoJSON, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->getGeoJSON() : std::string("{}"); }, true},
-	{"/allpath.geojson", &WebViewer::GeoJSON, "application/json",
+	 { return s->getGeoJSON(); }, true},
+	{"/allpath.geojson", &WebViewer::Settings::GeoJSON, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->getAllPathGeoJSON() : std::string("{}"); }, true},
-	{"/kml", &WebViewer::KML, "application/vnd.google-earth.kml+xml",
+	 { return s->getAllPathGeoJSON(); }, true},
+	{"/kml", &WebViewer::Settings::KML, "application/vnd.google-earth.kml+xml",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
-	 { return s ? s->getKML() : std::string(); }, true},
+	 { return s->getKML(); }, true},
 
 	// Prometheus metrics
-	{"/metrics", &WebViewer::supportPrometheus, "text/plain",
+	{"/metrics", &WebViewer::Settings::supportPrometheus, "text/plain",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &)
 	 { return w->dataPrometheus.toPrometheus(); }, true},
 
 	// Frontend assets
 	{"/custom/plugins.js", nullptr, "application/javascript",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &)
-	 { return w->pluginManager.render(); }, false},
+	 { return w->frontend.render(w->plugins); }, false},
 	{"/custom/config.css", nullptr, "text/css",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &)
-	 { return w->pluginManager.getStylesheets(); }, false},
+	 { return w->plugins.getStylesheets(); }, false},
 	{"/about.md", nullptr, "text/markdown",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &)
-	 { return w->pluginManager.getAbout(); }, false},
+	 { return w->plugins.getAbout(); }, false},
 
 	{nullptr, nullptr, nullptr, nullptr, false}};
 
-void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response, bool gzip)
+void WebViewer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &request, bool gzip)
 {
 	std::lock_guard<std::recursive_mutex> lock(state_mtx);
 
@@ -1401,20 +933,11 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 		return;
 	}
 
-	std::string r;
-	std::string a;
+	std::string r = request.path();
 
-	std::string::size_type pos = response.find('?');
-
-	if (pos != std::string::npos)
-	{
-		r = response.substr(0, pos);
-		a = response.substr(pos + 1, response.length());
-	}
-	else
-	{
-		r = response;
-	}
+	// the single argument a handler receives: the query string for a GET, the
+	// body for a POST (/api/decode submits the NMEA that way)
+	const std::string a = request.method == "POST" && !request.body.empty() ? request.body : request.query();
 
 	if (r == "/")
 		r = "/index.html";
@@ -1424,24 +947,24 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 	{
 		if (r != rt->path)
 			continue;
-		if (rt->flag && !(this->*(rt->flag)))
+		if (rt->flag && !(settings.*(rt->flag)))
 			continue;
 
-		ReceiverTracker *s = getState(parseReceiver(a));
-		Response(c, rt->content_type, rt->handler(this, s, a), use_zlib && gzip, false, rt->cors);
+		ReceiverTracker *s = getState((int)queryInt(a, "receiver"));
+		Response(c, rt->content_type, rt->handler(this, s, a), settings.use_zlib && gzip, false, rt->cors);
 		return;
 	}
 
 	// SSE routes (upgrade connection, not a normal response)
-	if (r == "/api/sse" && realtime)
+	if (r == "/api/sse" && settings.realtime)
 	{
 		upgradeSSE(c, 1u << 1);
 	}
-	else if (r == "/api/signal" && realtime)
+	else if (r == "/api/signal" && settings.realtime)
 	{
 		upgradeSSE(c, 1u << 2);
 	}
-	else if (r == "/api/log" && showlog)
+	else if (r == "/api/log" && settings.showlog)
 	{
 		upgradeSSE(c, 1u << 3, "log", []() -> std::vector<std::string>
 				   { return Logger::getInstance().getBacklogJSON(25); });
@@ -1465,7 +988,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const std::string &response,
 
 					if (!data.empty())
 					{
-						Response(c, contentType, (char *)data.data(), data.size(), use_zlib && gzip, true);
+						Response(c, contentType, (char *)data.data(), data.size(), settings.use_zlib && gzip, true);
 						return;
 					}
 				}
@@ -1500,7 +1023,7 @@ void WebViewer::applyStationPosition()
 {
 	std::lock_guard<std::recursive_mutex> lock(state_mtx);
 	for (auto &s : states)
-		s->setStationPosition(tracking.lat, tracking.lon, tracking.use_GPS);
+		s->setStationPosition(settings.tracking.lat, settings.tracking.lon, settings.tracking.use_GPS);
 }
 
 Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
@@ -1510,89 +1033,89 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 	switch (key)
 	{
 	case AIS::KEY_SETTING_PORT:
-		port_set = true;
-		firstport = lastport = Util::Parse::Integer(arg, 1, 65535);
+		settings.port_set = true;
+		settings.firstport = settings.lastport = Util::Parse::Integer(arg, 1, 65535);
 		break;
 	case AIS::KEY_SETTING_SERVER_MODE:
-		tracking.server_mode = Util::Parse::Switch(arg);
+		settings.tracking.server_mode = Util::Parse::Switch(arg);
 		break;
 	case AIS::KEY_SETTING_ZLIB:
-		use_zlib = Util::Parse::Switch(arg);
+		settings.use_zlib = Util::Parse::Switch(arg);
 		break;
 	case AIS::KEY_SETTING_GROUPS_IN:
-		groups_in = Util::Parse::Integer(arg);
+		// a zone filter, if there is one, overrides this in attachEngine()
+		settings.groups_in = Util::Parse::Integer(arg);
 		break;
 	case AIS::KEY_SETTING_ZONE:
-		Util::Parse::Split(arg, ',', zones);
+		Util::Parse::Split(arg, ',', settings.zones);
 		break;
 	case AIS::KEY_SETTING_PORT_MIN:
-		port_set = true;
-		firstport = Util::Parse::Integer(arg, 1, 65535);
-		lastport = MAX(firstport, lastport);
+		settings.port_set = true;
+		settings.firstport = Util::Parse::Integer(arg, 1, 65535);
+		settings.lastport = MAX(settings.firstport, settings.lastport);
 		break;
 	case AIS::KEY_SETTING_PORT_MAX:
-		port_set = true;
-		lastport = Util::Parse::Integer(arg, 1, 65535);
-		firstport = MIN(firstport, lastport);
+		settings.port_set = true;
+		settings.lastport = Util::Parse::Integer(arg, 1, 65535);
+		settings.firstport = MIN(settings.firstport, settings.lastport);
 		break;
 	case AIS::KEY_SETTING_STATION:
-		station = JSON::Writer::escape(arg);
-		pluginManager.setStation(station);
+		settings.station = arg;
+		frontend.setStation(arg);
 		break;
 	case AIS::KEY_SETTING_STATS_ON_CLOSE:
-		stats_on_close = Util::Parse::Switch(arg);
+		settings.stats_on_close = Util::Parse::Switch(arg);
 		break;
 	case AIS::KEY_SETTING_STATION_LINK:
-		station_link = JSON::Writer::escape(arg);
+		settings.station_link = arg;
 		break;
 	case AIS::KEY_SETTING_WEBCONTROL_HTTP:
-		pluginManager.setWebControl(arg);
+		frontend.setWebControl(arg);
 		break;
 	case AIS::KEY_SETTING_FRAME_ANCESTORS:
 		setFrameAncestors(arg);
 		break;
 	case AIS::KEY_SETTING_LAT:
-		tracking.lat = Util::Parse::Float(arg);
+		settings.tracking.lat = Util::Parse::Float(arg);
 		applyStationPosition();
 		break;
 	case AIS::KEY_SETTING_CUTOFF:
-		tracking.cutoff = Util::Parse::Integer(arg, 0, 10000);
-		dataPrometheus.setCutOff(tracking.cutoff);
+		settings.tracking.cutoff = Util::Parse::Integer(arg, 0, 10000);
 		break;
 	case AIS::KEY_SETTING_SHARE_LOC:
-		tracking.latlon_share = Util::Parse::Switch(arg);
-		pluginManager.setShareLoc(tracking.latlon_share);
+		settings.tracking.latlon_share = Util::Parse::Switch(arg);
+		frontend.setShareLoc(settings.tracking.latlon_share);
 		break;
 	case AIS::KEY_SETTING_IP_BIND:
 		setIP(arg);
 		break;
 	case AIS::KEY_SETTING_CONTEXT:
-		pluginManager.setContext(arg);
+		frontend.setContext(arg);
 		break;
 	case AIS::KEY_SETTING_MESSAGE:
 	case AIS::KEY_SETTING_MSG:
-		tracking.msg_save = Util::Parse::Switch(arg);
-		pluginManager.setMsgSave(tracking.msg_save);
+		settings.tracking.msg_save = Util::Parse::Switch(arg);
+		frontend.setMsgSave(settings.tracking.msg_save);
 		break;
 	case AIS::KEY_SETTING_LON:
-		tracking.lon = Util::Parse::Float(arg);
+		settings.tracking.lon = Util::Parse::Float(arg);
 		applyStationPosition();
 		break;
 	case AIS::KEY_SETTING_USE_GPS:
-		tracking.use_GPS = Util::Parse::Switch(arg);
+		settings.tracking.use_GPS = Util::Parse::Switch(arg);
 		applyStationPosition();
 		break;
 	case AIS::KEY_SETTING_KML:
-		KML = Util::Parse::Switch(arg);
+		settings.KML = Util::Parse::Switch(arg);
 		break;
 	case AIS::KEY_SETTING_GEOJSON:
-		GeoJSON = Util::Parse::Switch(arg);
+		settings.GeoJSON = Util::Parse::Switch(arg);
 		break;
 	case AIS::KEY_SETTING_OWN_MMSI:
-		tracking.own_mmsi = Util::Parse::Integer(arg, 0, 999999999);
+		settings.tracking.own_mmsi = Util::Parse::Integer(arg, 0, 999999999);
 		break;
 	case AIS::KEY_SETTING_HISTORY:
-		tracking.time_history = Util::Parse::Integer(arg, 5, 12 * 3600);
+		settings.tracking.time_history = Util::Parse::Integer(arg, 5, 12 * 3600);
 		break;
 	case AIS::KEY_SETTING_FILE:
 		backup.setFilename(arg);
@@ -1616,32 +1139,32 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 		backup.setInterval(Util::Parse::Integer(arg, 5, 2 * 24 * 60));
 		break;
 	case AIS::KEY_SETTING_REALTIME:
-		realtime = Util::Parse::Switch(arg);
-		pluginManager.setRealtime(realtime);
+		settings.realtime = Util::Parse::Switch(arg);
+		frontend.setRealtime(settings.realtime);
 		break;
 	case AIS::KEY_SETTING_LOG:
-		showlog = Util::Parse::Switch(arg);
-		pluginManager.setLog(showlog);
+		settings.showlog = Util::Parse::Switch(arg);
+		frontend.setLog(settings.showlog);
 		break;
 	case AIS::KEY_SETTING_DECODER:
-		showdecoder = Util::Parse::Switch(arg);
-		pluginManager.setDecoder(showdecoder);
-		sse_streamer.setObfuscate(!showdecoder);
+		settings.showdecoder = Util::Parse::Switch(arg);
+		frontend.setDecoder(settings.showdecoder);
+		sse_streamer.setObfuscate(!settings.showdecoder);
 		break;
 	case AIS::KEY_SETTING_PLUGIN:
-		pluginManager.addPlugin(arg);
+		plugins.addPlugin(arg);
 		break;
 	case AIS::KEY_SETTING_STYLE:
-		pluginManager.addStyle(arg);
+		plugins.addStyle(arg);
 		break;
 	case AIS::KEY_SETTING_PLUGIN_DIR:
-		pluginManager.addPluginDir(arg);
+		plugins.addDir(arg);
 		break;
 	case AIS::KEY_SETTING_ABOUT:
-		pluginManager.setAbout(arg);
+		plugins.setAbout(arg);
 		break;
 	case AIS::KEY_SETTING_PROME:
-		supportPrometheus = Util::Parse::Switch(arg);
+		settings.supportPrometheus = Util::Parse::Switch(arg);
 		break;
 	case AIS::KEY_SETTING_REUSE_PORT:
 		setReusePort(Util::Parse::Switch(arg));

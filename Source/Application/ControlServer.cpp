@@ -247,41 +247,95 @@ void ControlServer::sendError(IO::TCPServerConnection &c, const std::string &mes
 	Response(c, "application/json", s, false, false, false, status);
 }
 
+bool ControlServer::sameOrigin(const IO::HTTPRequest &r)
+{
+	if (r.origin.empty())
+		return true;
+
+	auto host = [](std::string h) -> std::string
+	{
+		if (h.compare(0, 7, "http://") == 0)
+			h = h.substr(7);
+		else if (h.compare(0, 8, "https://") == 0)
+			h = h.substr(8);
+
+		if (h.size() > 3 && h.compare(h.size() - 3, 3, ":80") == 0)
+			return h.substr(0, h.size() - 3);
+		if (h.size() > 4 && h.compare(h.size() - 4, 4, ":443") == 0)
+			return h.substr(0, h.size() - 4);
+		return h;
+	};
+
+	const std::string origin = host(r.origin);
+
+	return origin == host(r.host) ||
+		   (!r.forwarded_host.empty() && origin == host(r.forwarded_host));
+}
+
+std::string ControlServer::cookieAttributes()
+{
+	return "; Path=/; Max-Age=" + std::to_string(SESSION_LIFETIME) + "; HttpOnly; SameSite=Strict";
+}
+
+const ControlServer::PublicEndpoint ControlServer::public_endpoints[] = {
+	{"/api/status", nullptr},
+	{"/api/setup", "POST"},
+	{"/api/login", "POST"},
+	{nullptr, nullptr}};
+
+bool ControlServer::isPublic(const std::string &path, const std::string &method)
+{
+	for (const PublicEndpoint *e = public_endpoints; e->path; ++e)
+		if (path == e->path && (!e->method || method == e->method))
+			return true;
+
+	return false;
+}
+
+void ControlServer::serveStatic(IO::TCPServerConnection &c, const std::string &path)
+{
+#ifdef HASWEBVIEWER
+	std::string file = (path == "/") ? "control/index.html" : "control" + path;
+
+	auto it = WebDB::files.find(file);
+	if (it == WebDB::files.end())
+		it = WebDB::files.find(path.substr(1));
+
+	if (it != WebDB::files.end())
+	{
+		const WebDB::FileData &f = it->second;
+		ResponseRaw(c, f.mime_type, (char *)f.data, f.size, true, std::string(f.mime_type) != "text/html");
+		return;
+	}
+#endif
+	HTTPServer::Request(c, path, false);
+}
+
 void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r, bool accept_gzip)
 {
 	const std::string path = r.path();
 	const bool authenticated = !core.authRequired() || (c.is_local && core.hasPassword()) || checkSession(r.cookie);
 
-	if (r.method == "POST" && !r.origin.empty())
+	if (r.method == "POST" && !sameOrigin(r))
 	{
-		std::string origin = r.origin;
-		if (origin.compare(0, 7, "http://") == 0)
-			origin = origin.substr(7);
-		else if (origin.compare(0, 8, "https://") == 0)
-			origin = origin.substr(8);
-
-		auto stripDefaultPort = [](std::string h) -> std::string
-		{
-			if (h.size() > 3 && h.compare(h.size() - 3, 3, ":80") == 0)
-				return h.substr(0, h.size() - 3);
-			if (h.size() > 4 && h.compare(h.size() - 4, 4, ":443") == 0)
-				return h.substr(0, h.size() - 4);
-			return h;
-		};
-
-		origin = stripDefaultPort(origin);
-
-		bool same_origin = origin == stripDefaultPort(r.host) ||
-						   (!r.forwarded_host.empty() && origin == stripDefaultPort(r.forwarded_host));
-
-		if (!same_origin)
-		{
-			sendError(c, "cross-origin request rejected", 403);
-			return;
-		}
+		sendError(c, "cross-origin request rejected", 403);
+		return;
 	}
 
-	const std::string cookie_attr = "; Path=/; Max-Age=" + std::to_string(SESSION_LIFETIME) + "; HttpOnly; SameSite=Strict";
+	// the bundled frontend, served before the API so it never needs a session
+	if (r.method == "GET" && path.compare(0, 5, "/api/") != 0)
+	{
+		serveStatic(c, path);
+		return;
+	}
+
+	// One gate for everything below, so no endpoint can end up public by being
+	// written above it. An unknown path answers as a private one would.
+	if (!authenticated && !isPublic(path, r.method))
+	{
+		sendError(c, "authentication required", 401);
+		return;
+	}
 
 	if (path == "/api/status")
 	{
@@ -298,7 +352,7 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 		else
 		{
 			core.setPassword(r.body);
-			setExtraHeader("Set-Cookie: aiscontrol=" + createSession() + cookie_attr);
+			setExtraHeader("Set-Cookie: aiscontrol=" + createSession() + cookieAttributes());
 			sendOK(c);
 		}
 	}
@@ -315,7 +369,7 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 		else if (core.verifyPassword(r.body))
 		{
 			loginSucceeded();
-			setExtraHeader("Set-Cookie: aiscontrol=" + createSession() + cookie_attr);
+			setExtraHeader("Set-Cookie: aiscontrol=" + createSession() + cookieAttributes());
 			sendOK(c);
 		}
 		else
@@ -323,29 +377,6 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 			loginFailed();
 			sendError(c, "invalid password", 401);
 		}
-	}
-	else if (r.method == "GET" && path.compare(0, 5, "/api/") != 0)
-	{
-#ifdef HASWEBVIEWER
-		std::string file = (path == "/") ? "control/index.html" : "control" + path;
-
-		auto it = WebDB::files.find(file);
-		if (it == WebDB::files.end())
-			it = WebDB::files.find(path.substr(1));
-		if (it != WebDB::files.end())
-		{
-			const WebDB::FileData &f = it->second;
-			ResponseRaw(c, f.mime_type, (char *)f.data, f.size, true, std::string(f.mime_type) != "text/html");
-		}
-		else
-			HTTPServer::Request(c, path, false);
-#else
-		HTTPServer::Request(c, path, false);
-#endif
-	}
-	else if (!authenticated)
-	{
-		sendError(c, "authentication required", 401);
 	}
 	else if (path == "/api/logout" && r.method == "POST")
 	{
@@ -362,7 +393,7 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 			core.setPassword(r.body);
 			destroyAllSessions();
 			closeAllSSE();
-			setExtraHeader("Set-Cookie: aiscontrol=" + createSession() + cookie_attr);
+			setExtraHeader("Set-Cookie: aiscontrol=" + createSession() + cookieAttributes());
 			sendOK(c);
 		}
 	}
@@ -377,14 +408,6 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 			sendError(c, e.what(), 500);
 		}
 	}
-	else if (path == "/api/legacy_config" && r.method == "GET")
-	{
-		std::string content;
-		if (core.readLegacyConfig(content))
-			Response(c, "application/json", content, accept_gzip);
-		else
-			sendError(c, "no previous configuration found", 404);
-	}
 	else if (path == "/api/config" && r.method == "POST")
 	{
 		std::string error;
@@ -392,6 +415,14 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 			sendOK(c);
 		else
 			sendError(c, error);
+	}
+	else if (path == "/api/legacy_config" && r.method == "GET")
+	{
+		std::string content;
+		if (core.readLegacyConfig(content))
+			Response(c, "application/json", content, accept_gzip);
+		else
+			sendError(c, "no previous configuration found", 404);
 	}
 	else if (path == "/api/engine" && r.method == "POST")
 	{

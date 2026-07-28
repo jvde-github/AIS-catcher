@@ -38,8 +38,6 @@ namespace Device {
 		FIFO fifo;
 		std::vector<CFLOAT32> output;
 
-		static int API_count;
-
 		sdrplay_api_DeviceT device;
 		sdrplay_api_DeviceParamsT* deviceParams = NULL;
 		sdrplay_api_RxChannelParamsT* chParams = NULL;
@@ -50,13 +48,10 @@ namespace Device {
 		void callback(short* xi, short* xq, sdrplay_api_StreamCbParamsT* params, unsigned int numSamples, unsigned int reset);
 		void callback_event(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT* params);
 
-		bool running = false;
-
 		std::string getHardwareDescription(unsigned char);
 
 	public:
 		SDRPLAY();
-		~SDRPLAY();
 
 		void Open(uint64_t h);
 		void Play();

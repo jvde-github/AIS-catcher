@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <memory>
 #include <string>
 #include <mutex>
 #include <condition_variable>
@@ -27,7 +28,9 @@
 #include "Stream.h"
 #include "Message.h"
 
-namespace JSON { class Value; }
+#include "JSON.h"
+
+class DeviceManager;
 
 class ChannelActivity : public StreamIn<AIS::Message>
 {
@@ -55,6 +58,7 @@ public:
 	};
 
 	ControlCore(const std::string &config_file, int port_override = 0, const std::string &bind = "127.0.0.1");
+	~ControlCore();
 
 	void startEngine();
 	void stopEngine();
@@ -71,7 +75,9 @@ public:
 
 	int getViewerPort() const { return control_port < 65535 ? control_port + 1 : 0; }
 
-	void setConfigChangedCallback(std::function<void()> f) { config_changed = f; }
+	// True once per config write from the control API. The managed loop polls it
+	// so the viewer is only ever reconfigured from the thread that owns it.
+	bool consumeConfigChanged() { return config_dirty.exchange(false); }
 
 	ChannelActivity &getChannelActivity() { return channel_activity; }
 
@@ -98,6 +104,18 @@ public:
 
 	int consumeRetryDelay();
 	int commandSequence() { return command_seq; }
+
+	// bracket the managed loop's engine scope: no device rescans while active
+	void beginEngineSession()
+	{
+		std::lock_guard<std::mutex> lock(scan_mtx);
+		engine_busy = true;
+	}
+	void endEngineSession()
+	{
+		std::lock_guard<std::mutex> lock(scan_mtx);
+		engine_busy = false;
+	}
 
 private:
 	std::string config_file;
@@ -131,8 +149,14 @@ private:
 	std::atomic<int> command_seq{0};
 	uint32_t status_epoch = 0;
 
+	// kept alive rather than built per request: constructing one instantiates
+	// every device type, and some of those open their vendor API
+	std::unique_ptr<DeviceManager> scanner;
+	std::mutex scan_mtx;
+	bool engine_busy = false; // guarded by scan_mtx
+
 	std::mutex file_mtx;
-	std::function<void()> config_changed;
+	std::atomic<bool> config_dirty{false};
 
 	void createDefaultConfig();
 	void addViewerDefaults();
@@ -141,6 +165,9 @@ private:
 	void refreshAuthFields(const std::string &json);
 	bool validate(const std::string &json, std::string &error);
 	bool writeFileAtomic(const std::string &path, const std::string &content, std::string &error);
+	// Read-modify-write of the config file under file_mtx. The callback returns
+	// false to leave the file untouched; any failure is logged as "cannot <what>".
+	void mutateConfig(const char *what, const std::function<bool(JSON::Document &)> &fn);
 	void persistEngineField(bool on);
 	void persistControlAuth(const std::string &hash, const std::string &salt);
 };

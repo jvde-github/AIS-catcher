@@ -97,61 +97,30 @@ void Config::readManagedViewer(const std::string &file_config)
 
 void Config::setServerfromJSON(const JSON::Value &m)
 {
-
-	if (m.isArray())
+	auto add = [this](const JSON::Value &v)
 	{
-		for (const auto &v : m.getArray())
-		{
-			if (!isActiveObject(v))
-				continue;
-			_state.servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
-			setSettingsFromJSON(v, *_state.servers.back());
-			_state.servers.back()->active() = true;
-		}
-	}
-	else
-	{
-		if (!isActiveObject(m))
+		if (!isActiveObject(v))
 			return;
 
-		_state.servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
-		setSettingsFromJSON(m, *_state.servers.back());
-		_state.servers.back()->active() = true;
-	}
+		_engine.servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
+		setSettingsFromJSON(v, *_engine.servers.back());
+		_engine.servers.back()->setActive(true);
+	};
+
+	if (m.isArray())
+		for (const auto &v : m.getArray())
+			add(v);
+	else
+		add(m);
 }
 #endif
-
-Setting *Config::getDeviceSetting(AIS::Keys key)
-{
-	DeviceManager &dm = _state.receivers.back()->getDeviceManager();
-
-	switch (key)
-	{
-	case AIS::KEY_SETTING_RTLSDR: return &dm.RTLSDR();
-	case AIS::KEY_SETTING_RTLTCP: return &dm.RTLTCP();
-	case AIS::KEY_SETTING_AIRSPY: return &dm.AIRSPY();
-	case AIS::KEY_SETTING_AIRSPYHF: return &dm.AIRSPYHF();
-	case AIS::KEY_SETTING_SDRPLAY: return &dm.SDRPLAY();
-	case AIS::KEY_SETTING_WAVFILE: return &dm.WAV();
-	case AIS::KEY_SETTING_SERIALPORT: return &dm.SerialPort();
-	case AIS::KEY_SETTING_HACKRF: return &dm.HACKRF();
-	case AIS::KEY_SETTING_HYDRASDR: return &dm.HYDRASDR();
-	case AIS::KEY_SETTING_UDPSERVER: return &dm.UDP();
-	case AIS::KEY_SETTING_SOAPYSDR: return &dm.SOAPYSDR();
-	case AIS::KEY_SETTING_NMEA2000: return &dm.N2KSCAN();
-	case AIS::KEY_SETTING_FILE: return &dm.RAW();
-	case AIS::KEY_SETTING_ZMQ: return &dm.ZMQ();
-	case AIS::KEY_SETTING_SPYSERVER: return &dm.SpyServer();
-	default: return nullptr;
-	}
-}
 
 void Config::setModelfromJSON(const JSON::Member &m)
 {
 	if (!isActiveObject(m.Get()))
 		return;
 
-	Receiver &r = *_state.receivers.back();
+	Receiver &r = *_engine.receivers.back();
 
 	r.addModel(-1);
 	setSettingsFromJSON(m.Get(), *r.Model(r.Count() - 1));
@@ -165,11 +134,11 @@ int Config::engineType(const std::string &s)
 	if (t.empty() || t == "AUTO")
 		return -1;
 	if (t == "V1_BASE")
-		return 2;
+		return AIS::MODEL_V1_BASE;
 	if (t == "V1_HIGH")
-		return 4;
+		return AIS::MODEL_V1_HIGH;
 	if (t == "V2_BASE")
-		return 11;
+		return AIS::MODEL_V2_BASE;
 
 	throw std::runtime_error("engine type must be auto, v1_base, v1_high or v2_base");
 }
@@ -180,7 +149,7 @@ void Config::setEnginefromJSON(const JSON::Value &v)
 	if (!isActiveObject(v))
 		return;
 
-	Receiver &r = *_state.receivers.back();
+	Receiver &r = *_engine.receivers.back();
 
 	int type = -1;
 	const JSON::Value *settings = nullptr;
@@ -254,12 +223,12 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members, bool 
 
 	if ((!serial.empty() || !input.empty()))
 	{
-		_state.newReceiver();
+		_engine.newReceiver();
 
 		if (!serial.empty())
-			_state.receivers.back()->SetKey(AIS::KEY_SETTING_SERIAL, serial);
+			_engine.receivers.back()->SetKey(AIS::KEY_SETTING_SERIAL, serial);
 		if (!input.empty())
-			_state.receivers.back()->SetKey(AIS::KEY_SETTING_INPUT, input);
+			_engine.receivers.back()->SetKey(AIS::KEY_SETTING_INPUT, input);
 	}
 
 	// pass 2
@@ -274,20 +243,20 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members, bool 
 			if (!m.Get().isArray())
 				throw std::runtime_error("\"zone\" must be an array of strings");
 			for (const auto &v : m.Get().getArray())
-				_state.receivers.back()->zones.push_back(v.to_string());
+				_engine.receivers.back()->zones.push_back(v.to_string());
 			break;
 		case AIS::KEY_SETTING_VERBOSE:
 		case AIS::KEY_SETTING_CHANNEL:
 		case AIS::KEY_SETTING_META:
 		case AIS::KEY_SETTING_SENSITIVITY_HIGH:
-			_state.receivers.back()->SetKey((AIS::Keys)m.Key(), m.Get().to_string());
+			_engine.receivers.back()->SetKey((AIS::Keys)m.Key(), m.Get().to_string());
 			break;
 		case AIS::KEY_SETTING_OWN_MMSI:
-			_state.own_mmsi = m.Get().getInt();
+			_engine.own_mmsi = m.Get().getInt();
 			break;
 		default:
 		{
-			Setting *device = getDeviceSetting((AIS::Keys)m.Key());
+			Setting *device = _engine.receivers.back()->getDeviceManager().settingForKey((AIS::Keys)m.Key());
 			if (device && isActiveObject(m.Get()))
 				setSettingsFromJSON(m.Get(), *device);
 			break;
@@ -309,7 +278,7 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members, bool 
 		{
 			Warning() << "Receiver: \"model\" is deprecated and will be removed, use \"engines\": [ { \"type\": ... } ] instead";
 			if (m.Get().isString())
-				_state.receivers.back()->addModel(engineType(m.Get().to_string()));
+				_engine.receivers.back()->addModel(engineType(m.Get().to_string()));
 			else
 				setModelfromJSON(m);
 		}
@@ -336,7 +305,7 @@ void Config::setSharing(const std::vector<JSON::Member> &members)
 		if (m.Key() == AIS::KEY_SETTING_SHARING)
 		{
 			xchange = Util::Parse::Switch(m.Get().to_string());
-			_state.xshare_defined = true;
+			_engine.xshare_defined = true;
 		}
 		else if (m.Key() == AIS::KEY_SETTING_SHARING_KEY)
 			uuid = m.Get().to_string();
@@ -349,14 +318,14 @@ void Config::setSharing(const std::vector<JSON::Member> &members)
 		}
 	}
 
-	if (xchange && !_state.comm_feed)
-		_state.createCommunityFeed();
+	if (xchange && !_engine.comm_feed)
+		_engine.createCommunityFeed();
 
-	if (!uuid.empty() && _state.comm_feed)
-		_state.comm_feed->SetKey(AIS::KEY_SETTING_UUID, uuid);
+	if (!uuid.empty() && _engine.comm_feed)
+		_engine.comm_feed->SetKey(AIS::KEY_SETTING_UUID, uuid);
 
-	if (!zones.empty() && _state.comm_feed)
-		_state.comm_feed->zones = zones;
+	if (!zones.empty() && _engine.comm_feed)
+		_engine.comm_feed->zones = zones;
 }
 
 void Config::set(const std::string &str)
@@ -383,6 +352,11 @@ void Config::set(const std::string &str)
 
 	if (version > 1 || config != "aiscatcher")
 		throw std::runtime_error("version and/or format of config file not supported (required version <=1)");
+
+	// rejected before setReceiverfromJSON runs, so nothing is applied from an invalid config
+	for (const auto &m : doc.getMembers())
+		if (m.Key() == AIS::KEY_SETTING_CHANNEL || m.Key() == AIS::KEY_SETTING_ENGINES)
+			throw std::runtime_error(std::string("Config file: \"") + AIS::KeyMap[m.Key()][JSON_DICT_SETTING] + "\" is not allowed in the main section, set it inside a receiver object.");
 
 	setReceiverfromJSON(doc.getMembers(), true);
 	setSharing(doc.getMembers());
@@ -460,24 +434,24 @@ void Config::set(const std::string &str)
 		case AIS::KEY_SETTING_ENGINE:
 			break;
 		case AIS::KEY_SETTING_SCREEN:
-			_state.screen.setScreen(m.Get().to_string());
+			_engine.screen.setScreen(m.Get().to_string());
 			break;
 		case AIS::KEY_SETTING_TIMEOUT:
 			if (m.Get().isBool()) {
 				if (!m.Get().getBool())
-					_state.timeout = 0;
+					_engine.timeout = 0;
 				else
 					throw std::runtime_error("Config file: timeout must be false or a number between 1 and 3600.");
 			}
 			else {
-				_state.timeout = Util::Parse::Integer(m.Get().to_string(), 1, 3600);
+				_engine.timeout = Util::Parse::Integer(m.Get().to_string(), 1, 3600);
 			}
 			break;
 		case AIS::KEY_SETTING_TIMEOUT_NOMSG:
-			_state.timeout_nomsg = Util::Parse::Switch(m.Get().to_string());
+			_engine.timeout_nomsg = Util::Parse::Switch(m.Get().to_string());
 			break;
 		case AIS::KEY_SETTING_VERBOSE_TIME:
-			_state.screen.verboseUpdateTime = Util::Parse::Integer(m.Get().to_string(), 1, 300);
+			_engine.screen.verboseUpdateTime = Util::Parse::Integer(m.Get().to_string(), 1, 300);
 			break;
 		default:
 			if (m.Key() >= 0 && m.Key() < AIS::KEY_COUNT)

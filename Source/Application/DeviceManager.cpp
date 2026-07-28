@@ -25,78 +25,76 @@
 std::vector<Device::Description> DeviceManager::device_list;
 std::mutex DeviceManager::list_mtx;
 
+namespace
+{
+	// One row per device type: its "-g<flag>" command line switch (0 when it has
+	// none), its config file key, its Type, and whether refreshDevices() asks it
+	// to enumerate hardware. Network/file devices must not enumerate: they push
+	// an unconditional pseudo-entry that would pollute the device list. Rows are
+	// ordered enumerating-first; that order fixes the "-d:x" indices.
+	struct DeviceEntry
+	{
+		char flag;
+		AIS::Keys key;
+		Type type;
+		bool enumerate;
+		Device::Device &(*device)(DeviceManager &);
+	};
+
+	const DeviceEntry device_settings[] = {
+		{'r', AIS::KEY_SETTING_RTLSDR, Type::RTLSDR, true, [](DeviceManager &d) -> Device::Device & { return d.RTLSDR(); }},
+		{'h', AIS::KEY_SETTING_AIRSPYHF, Type::AIRSPYHF, true, [](DeviceManager &d) -> Device::Device & { return d.AIRSPYHF(); }},
+		{'m', AIS::KEY_SETTING_AIRSPY, Type::AIRSPY, true, [](DeviceManager &d) -> Device::Device & { return d.AIRSPY(); }},
+		{'s', AIS::KEY_SETTING_SDRPLAY, Type::SDRPLAY, true, [](DeviceManager &d) -> Device::Device & { return d.SDRPLAY(); }},
+		{'f', AIS::KEY_SETTING_HACKRF, Type::HACKRF, true, [](DeviceManager &d) -> Device::Device & { return d.HACKRF(); }},
+		{'u', AIS::KEY_SETTING_SOAPYSDR, Type::SOAPYSDR, true, [](DeviceManager &d) -> Device::Device & { return d.SOAPYSDR(); }},
+		{0, AIS::KEY_SETTING_NMEA2000, Type::N2K, true, [](DeviceManager &d) -> Device::Device & { return d.N2KSCAN(); }},
+		{'e', AIS::KEY_SETTING_SERIALPORT, Type::SERIALPORT, true, [](DeviceManager &d) -> Device::Device & { return d.SerialPort(); }},
+		{'d', AIS::KEY_SETTING_HYDRASDR, Type::HYDRASDR, true, [](DeviceManager &d) -> Device::Device & { return d.HYDRASDR(); }},
+		{'a', AIS::KEY_SETTING_FILE, Type::RAWFILE, false, [](DeviceManager &d) -> Device::Device & { return d.RAW(); }},
+		{'w', AIS::KEY_SETTING_WAVFILE, Type::WAVFILE, false, [](DeviceManager &d) -> Device::Device & { return d.WAV(); }},
+		{'t', AIS::KEY_SETTING_RTLTCP, Type::RTLTCP, false, [](DeviceManager &d) -> Device::Device & { return d.RTLTCP(); }},
+		{'y', AIS::KEY_SETTING_SPYSERVER, Type::SPYSERVER, false, [](DeviceManager &d) -> Device::Device & { return d.SpyServer(); }},
+		{'z', AIS::KEY_SETTING_ZMQ, Type::ZMQ, false, [](DeviceManager &d) -> Device::Device & { return d.ZMQ(); }},
+		{0, AIS::KEY_SETTING_UDPSERVER, Type::UDP, false, [](DeviceManager &d) -> Device::Device & { return d.UDP(); }}};
+}
+
+Setting *DeviceManager::settingForFlag(char flag)
+{
+	for (const auto &d : device_settings)
+		if (d.flag && d.flag == flag)
+			return &d.device(*this);
+
+	return nullptr;
+}
+
+Setting *DeviceManager::settingForKey(AIS::Keys key)
+{
+	for (const auto &d : device_settings)
+		if (d.key == key)
+			return &d.device(*this);
+
+	return nullptr;
+}
+
 void DeviceManager::refreshDevices()
 {
 	std::lock_guard<std::mutex> lock(list_mtx);
 
 	device_list.clear();
 
-	RTLSDR().getDeviceList(device_list);
-	AIRSPYHF().getDeviceList(device_list);
-	AIRSPY().getDeviceList(device_list);
-	SDRPLAY().getDeviceList(device_list);
-	HACKRF().getDeviceList(device_list);
-	SOAPYSDR().getDeviceList(device_list);
-	N2KSCAN().getDeviceList(device_list);
-	SerialPort().getDeviceList(device_list);
-	HYDRASDR().getDeviceList(device_list);
+	for (const auto &d : device_settings)
+		if (d.enumerate)
+			d.device(*this).getDeviceList(device_list);
 }
 
 Device::Device *DeviceManager::getDeviceByType(Type type)
 {
-	switch (type)
-	{
-	case Type::WAVFILE:
-		return &_WAV;
-	case Type::RAWFILE:
-		return &_RAW;
-	case Type::RTLTCP:
-		return &_RTLTCP;
-	case Type::SPYSERVER:
-		return &_SpyServer;
-	case Type::SERIALPORT:
-		return &_SerialPort;
-	case Type::UDP:
-		return &_UDP;
-#ifdef HASNMEA2000
-	case Type::N2K:
-		return &_N2KSCAN;
-#endif
-#ifdef HASZMQ
-	case Type::ZMQ:
-		return &_ZMQ;
-#endif
-#ifdef HASAIRSPYHF
-	case Type::AIRSPYHF:
-		return &_AIRSPYHF;
-#endif
-#ifdef HASAIRSPY
-	case Type::AIRSPY:
-		return &_AIRSPY;
-#endif
-#ifdef HASSDRPLAY
-	case Type::SDRPLAY:
-		return &_SDRPLAY;
-#endif
-#ifdef HASRTLSDR
-	case Type::RTLSDR:
-		return &_RTLSDR;
-#endif
-#ifdef HASHACKRF
-	case Type::HACKRF:
-		return &_HACKRF;
-#endif
-#ifdef HASHYDRASDR
-	case Type::HYDRASDR:
-		return &_HYDRASDR;
-#endif
-#ifdef HASSOAPYSDR
-	case Type::SOAPYSDR:
-		return &_SOAPYSDR;
-#endif
-	default:
-		return nullptr;
-	}
+	for (const auto &d : device_settings)
+		if (d.type == type)
+			return &d.device(*this);
+
+	return nullptr;
 }
 
 bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int frequency, TAG &tag)

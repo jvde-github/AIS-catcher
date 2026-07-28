@@ -42,20 +42,7 @@ namespace Device
 		void applySettings();
 
 	public:
-		HACKRF() : Device(Format::CS8, 6144000, Type::HACKRF, "HACKRF")
-		{
-			if (hackrf_init() != HACKRF_SUCCESS)
-				throw std::runtime_error("HACKRF: Cannot open hackrf library");
-		}
-		~HACKRF()
-		{
-			if (list)
-			{
-				hackrf_device_list_free(list);
-				list = NULL;
-			}
-			hackrf_exit();
-		}
+		HACKRF() : Device(Format::CS8, 6144000, Type::HACKRF, "HACKRF") {}
 
 		void Open(uint64_t h);
 		void Close();

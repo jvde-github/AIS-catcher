@@ -40,6 +40,8 @@ namespace Device
 #ifndef _WIN32
 			if (use_raw_stdin)
 			{
+				size_t total = 0;
+
 				while (Device::isStreaming())
 				{
 					struct pollfd pfd;
@@ -61,6 +63,16 @@ namespace Device
 						break;
 
 					fifo.Push(buffer.data(), (int)bytesRead);
+					total += bytesRead;
+				}
+
+				// the FIFO only releases whole blocks: pad the I/Q tail, never text
+				bool is_text = getFormat() == Format::TXT || getFormat() == Format::BASESTATION || getFormat() == Format::BEAST || getFormat() == Format::RAW1090;
+				int rem = (int)(total % fifo.BlockSize());
+				if (rem > 0 && !is_text)
+				{
+					std::memset(buffer.data(), 0, fifo.BlockSize() - rem);
+					fifo.Push(buffer.data(), fifo.BlockSize() - rem);
 				}
 			}
 			else
@@ -171,16 +183,13 @@ namespace Device
 
 		if (filename == "." || filename == "stdin")
 		{
+			// the poll()-based reader stays interruptible on shutdown; a blocking
+			// std::cin.read() survives SIGINT (SA_RESTART) and hangs Stop()'s join
 #ifndef _WIN32
-			if (is_text)
-			{
-				use_raw_stdin = true;
-			}
-			else
+			use_raw_stdin = true;
+#else
+			file = &std::cin;
 #endif
-			{
-				file = &std::cin;
-			}
 		}
 		else
 		{

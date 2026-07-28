@@ -24,14 +24,11 @@
 #include <mutex>
 
 #include "AIS-catcher.h"
-#include "Signals.h"
+#include "JSONAIS.h"
 #include "Common.h"
 #include "Model.h"
 #include "StreamCounter.h"
-#include "Network.h"
 #include "AIS.h"
-#include "DB.h"
-#include "History.h"
 #include "JSON.h"
 #include "DeviceManager.h"
 
@@ -44,7 +41,6 @@ public:
 	std::vector<std::unique_ptr<IO::StreamCounter>> statistics;
 
 	void connect(Receiver &r);
-	void start();
 };
 
 // Hardware + Model with output connectors for messages and JSON
@@ -152,7 +148,9 @@ public:
 	std::unique_ptr<AIS::Model> &addModel(int m);
 	std::unique_ptr<AIS::Model> &Model(int i) { return models[i]; }
 	int Count() { return models.size(); }
-	uint64_t getGroupMask(int i) const { return jsonais[i]->out.getGroupOut(); }
+	// jsonais is only sized by setupModel(), so guard against being asked
+	// before the models are wired
+	uint64_t getGroupMask(int i) const { return i < (int)jsonais.size() ? jsonais[i]->out.getGroupOut() : 0; }
 	bool inZone(int i, const std::string &zone) const
 	{
 		for (const auto &z : zones)
@@ -171,11 +169,6 @@ public:
 		return mask;
 	}
 
-	void setup(int &g, int idx)
-	{
-		setupDevice();
-		setupModel(g, idx);
-	}
 	void setupDevice();
 	void setupModel(int &g, int idx);
 
@@ -183,3 +176,7 @@ public:
 	void stop();
 	void logSummary();
 };
+
+// Zone-based filtering: the group mask of every model output that overlaps one of
+// the zones. An empty mask means the filter matches no receiver at all.
+uint64_t resolveZones(const std::vector<std::unique_ptr<Receiver>> &receivers, const std::vector<std::string> &zones);

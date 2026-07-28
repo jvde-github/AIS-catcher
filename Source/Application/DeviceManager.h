@@ -90,6 +90,11 @@ public:
     Device::UDP &UDP() { return _UDP; }
     Device::N2KSCAN &N2KSCAN() { return _N2KSCAN; }
 
+    // The device Setting a "-g<flag>" switch or a config file key names,
+    // nullptr when it names no device.
+    Setting *settingForFlag(char flag);
+    Setting *settingForKey(AIS::Keys key);
+
     void refreshDevices();
     Format getInputFormat() { return getDeviceByType(type) ? getDeviceByType(type)->getFormat() : Format::CU8; }
     bool isTXTformatSet() { return getDeviceByType(type) ? (getDeviceByType(type)->getFormat() == Format::TXT) : false; }

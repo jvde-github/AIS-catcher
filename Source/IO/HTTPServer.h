@@ -209,6 +209,13 @@ namespace IO
 		void setFrameAncestors(const std::string &v) { frame_ancestors = v; common_headers.clear(); }
 		void setFrameSrc(const std::string &v) { frame_src = v; common_headers.clear(); }
 
+		// back to the defaults documented below, for a reconfigure
+		void resetFrameAncestors()
+		{
+			setFrameAncestors("*");
+			setFrameSrc("'self'");
+		}
+
 		void setExtraHeader(const std::string &h) { extra_header = h; }
 
 	private:

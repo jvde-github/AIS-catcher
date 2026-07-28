@@ -22,11 +22,17 @@
 #include <mutex>
 #include <atomic>
 
+#include "AIS-catcher.h"
+
 #include "Stream.h"
 #include "JSONAIS.h"
 #include "Convert.h"
 #include "Message.h"
 #include "Writer.h"
+
+// Distance from the receiver, in nautical miles, beyond which a position is
+// treated as implausible and the message left out of the statistics.
+const int LONG_RANGE_CUTOFF_DEFAULT = 2500;
 
 // ----------------------------
 // Class to log message count stat
@@ -39,7 +45,7 @@ class MessageStatistics {
 	static const int _VERSION = 3;
 	static const int _RADAR_BUCKETS = 18;
 
-	int _LONG_RANGE_CUTOFF = 2500;
+	int _LONG_RANGE_CUTOFF = LONG_RANGE_CUTOFF_DEFAULT;
 
 	int _count, _exclude, _vessels;
 	int _msg[28];

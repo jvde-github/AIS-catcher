@@ -66,9 +66,10 @@ namespace V2
 		CFLOAT32 s = CFLOAT32(0.0f, 0.0f); // decision-folded EMA
 		CFLOAT32 u = CFLOAT32(1.0f, 0.0f); // decision line direction (unit)
 		int prev_decision = 0;
-		float weight = 0.88f;
+		float weight = 0.86f;		// tracking, after sync
+		float weight_train = 0.75f; // acquisition, while training
 
-		int Run(CFLOAT32 z);
+		int Run(CFLOAT32 z, bool training);
 
 	private:
 		CFLOAT32 Rotate90(CFLOAT32 z);
@@ -120,7 +121,8 @@ namespace V2
 		int di = 0;
 		long long sample_idx = 0;
 		int fill = 0;
-		float ppm = 0.0f;
+		float ppm = 0.0f, ppm_prev = 0.0f;
+		int ppm_split = 0;
 
 		bool midWins(const CFLOAT32 *input) const;
 		void CGF(const CFLOAT32 *input, CFLOAT32 *output, bool busy);
@@ -130,6 +132,15 @@ namespace V2
 
 	public:
 		Engine();
+
+		void setWeights(float train, float track)
+		{
+			for (int i = 0; i < 5; i++)
+			{
+				trk[i].weight_train = train;
+				trk[i].weight = track;
+			}
+		}
 
 		void setOrigin(char channel, int station, int own_mmsi)
 		{

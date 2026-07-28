@@ -168,15 +168,18 @@ const STATUS_STRINGS = [
     "Under way sailing",
     "Reserved for HSC",
     "Reserved for WIG",
-    "Reserved",
-    "Reserved",
+    "Towing astern",
+    "Pushing ahead / towing alongside",
     "Reserved",
     "AIS-SART is active",
-    "Not available",
+    "Undefined",
 ];
 
 export function getStatusVal(ship) {
-    return STATUS_STRINGS[Math.min(ship.status, 15)];
+    // 15 is "undefined" in the standard, so a missing or out-of-range status
+    // lands there instead of rendering as undefined.
+    const s = ship.status;
+    return STATUS_STRINGS[Number.isInteger(s) && s >= 0 && s <= 15 ? s : 15];
 }
 
 

@@ -16,20 +16,32 @@
 */
 
 #pragma once
+#include <atomic>
 #include <memory>
 #include <vector>
 
 #include "Receiver.h"
+#include "Network.h"
 #ifdef HASWEBVIEWER
 #include "WebViewer.h"
 
 // The viewer of managed mode (-E), null otherwise. It outlives the engine, so
-// it is not part of RunState; the config reader applies "control"."viewer" to it.
+// it is not part of Engine; the config reader applies "control"."viewer" to it.
 extern WebViewer *managed_viewer;
 #endif
 #include "Screen.h"
 
-struct RunState {
+class WebViewer;
+class ControlCore;
+
+// stop ends the running engine, stop_process the managed-mode loop around it
+extern std::atomic<bool> stop;
+extern std::atomic<bool> stop_process;
+
+// One engine run: the receivers, their outputs and the servers that belong to them,
+// built up by the command line parser or the config reader and then started by run().
+// Managed mode constructs a new one for every start/stop cycle.
+struct Engine {
 	// Receivers and outputs
 	std::vector<std::unique_ptr<Receiver>> receivers;
 #ifdef HASWEBVIEWER
@@ -64,9 +76,20 @@ struct RunState {
 	int exit_code = 0;
 	int nrec = 0;
 
-	RunState() {
+	Engine() {
 		receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 	}
+
+	// The viewer outlives the engine, so detaching must happen even when run()
+	// threw halfway or was never called at all.
+	~Engine() { detach(); }
+
+	// Open the devices, wire up the outputs and run until stopped.
+	void run(WebViewer *viewer = nullptr, ControlCore *control = nullptr);
+
+	// Stop the receivers, close the servers and drop the viewer's references
+	// into this object. Idempotent.
+	void detach();
 
 	// Each device option on the command line / in config defines a new receiver,
 	// except the first which reuses the default-constructed one.
@@ -92,4 +115,9 @@ struct RunState {
 			.SetKey(AIS::KEY_SETTING_INCLUDE_SAMPLE_START, "on");
 		return *comm_feed;
 	}
+
+private:
+	// the viewer run() was handed, kept so detach() can reach it
+	WebViewer *attached_viewer = nullptr;
+	bool detached = false;
 };

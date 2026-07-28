@@ -16,7 +16,7 @@
 */
 
 #include <memory>
-#include <mutex>
+#include <stdexcept>
 #include <thread>
 
 #include "AIS-catcher.h"
@@ -29,45 +29,73 @@
 #include "Logger.h"
 #include "Helper.h"
 
+#ifdef HASWEBVIEWER
+#include "WebViewer.h"
+#endif
+
 namespace Managed
 {
 
-#ifdef HASWEBVIEWER
-	// only the port is fixed: it follows the control port
-	static void setViewerDefaults(WebViewer &viewer, ControlCore &core)
+	bool isInvocation(const std::vector<std::string> &args)
 	{
-		if (core.getControlPort() < 65535)
-			viewer.SetKey(AIS::KEY_SETTING_PORT, std::to_string(core.getControlPort() + 1));
+		for (const auto &a : args)
+			if (a == "-E")
+				return true;
+		return false;
 	}
+
+#ifndef HASWEBVIEWER
+
+	int run(const std::vector<std::string> &)
+	{
+		throw std::runtime_error("managed mode (-E) is not available in this build: it requires the web viewer (build with WEBVIEWER=ON)");
+	}
+
+#else
 
 	static std::unique_ptr<WebViewer> makeViewer(ControlCore &core)
 	{
 		std::unique_ptr<WebViewer> viewer(new WebViewer());
 
-		viewer->active() = true;
+		viewer->setActive(true);
 		viewer->setManagedMode();
 		if (core.getBindAddress() != "0.0.0.0")
 			viewer->setIP(core.getBindAddress());
 		viewer->setReusePort(false);
 
-		setViewerDefaults(*viewer, core);
+		viewer->setPort(core.getViewerPort());
 		managed_viewer = viewer.get();
 
 		return viewer;
 	}
 
-	// its HTTP server, ship database and statistics stay up throughout
+	// The one valid reconfigure order: stop, reset, apply, start. Its HTTP
+	// server, ship database and statistics stay up throughout. If apply throws,
+	// the viewer is left stopped and the caller decides how to bring it back.
+	template <typename F>
+	static void reconfigureViewer(WebViewer &viewer, ControlCore &core, F apply)
+	{
+		viewer.stopServing();
+		viewer.resetSettings(core.getViewerPort());
+		apply();
+		viewer.startServing();
+	}
+
 	static void restartViewer(WebViewer &viewer, const std::string &config_file, ControlCore &core)
 	{
-		viewer.stop();
-		viewer.resetSettings();
-		setViewerDefaults(viewer, core);
-		Config::readManagedViewer(config_file);
-		viewer.start();
+		reconfigureViewer(viewer, core, [&]
+						  { Config::readManagedViewer(config_file); });
 	}
-#endif
 
-	static int runManaged(const std::string &config_file, int port, const std::string &bind)
+	// construct before the Engine so the session covers ~Engine's device close
+	struct EngineSessionGuard
+	{
+		ControlCore &core;
+		EngineSessionGuard(ControlCore &c) : core(c) { core.beginEngineSession(); }
+		~EngineSessionGuard() { core.endEngineSession(); }
+	};
+
+	static int serve(const std::string &config_file, int port, const std::string &bind)
 	{
 		ControlCore core(config_file, port, bind);
 		ControlServer server(core);
@@ -79,21 +107,9 @@ namespace Managed
 
 		server.start();
 
-#ifdef HASWEBVIEWER
 		std::unique_ptr<WebViewer> viewer = makeViewer(core);
 		Config::readManagedViewer(config_file);
-		viewer->start();
-
-		std::mutex viewer_mtx;
-
-		core.setConfigChangedCallback([&viewer, &viewer_mtx, &config_file, &core]()
-									  {
-									// rewiring the trackers needs an idle engine
-									if (viewer->engineConnected())
-										return;
-									std::lock_guard<std::mutex> lock(viewer_mtx);
-									restartViewer(*viewer, config_file, core); });
-#endif
+		viewer->startServing();
 
 		while (!stop_process)
 		{
@@ -105,7 +121,14 @@ namespace Managed
 					Warning() << "Control: engine stopped unexpectedly, restarting in " << delay << " seconds";
 					int seq = core.commandSequence();
 					for (int i = 0; i < delay * 4 && !stop_process && core.commandSequence() == seq; i++)
+					{
+						// the engine is down for the whole wait, so viewer-only
+						// settings can be applied here as well as when idle
+						if (core.consumeConfigChanged())
+							restartViewer(*viewer, config_file, core);
+
 						std::this_thread::sleep_for(std::chrono::milliseconds(250));
+					}
 					if (stop_process || !core.engineDesired())
 						continue;
 				}
@@ -114,48 +137,36 @@ namespace Managed
 				if (!core.engineDesired())
 					continue;
 
-				RunState state;
-				Config c(state);
+				EngineSessionGuard session(core);
+				Engine engine;
+				Config c(engine);
 
 				try
 				{
-					state.receivers.back()->getDeviceManager().refreshDevices();
-#ifdef HASWEBVIEWER
-					// c.read() applies "control"."viewer" to the stopped viewer
-					std::unique_lock<std::mutex> viewer_lock(viewer_mtx);
-					viewer->stop();
-					viewer->resetSettings();
-					setViewerDefaults(*viewer, core);
-#endif
-					c.read(config_file);
+					engine.receivers.back()->getDeviceManager().refreshDevices();
 
-					for (auto &r : state.receivers)
-						if (r->getDeviceManager().InputType() == Type::NONE && r->getDeviceManager().SerialNumber().empty())
-							throw std::runtime_error("no input device selected, configure one under Input");
+					core.consumeConfigChanged();
+					reconfigureViewer(*viewer, core, [&]
+					{
+						// c.read() applies "control"."viewer" to the stopped viewer
+						c.read(config_file);
 
-					if (!state.xshare_defined && !state.comm_feed)
-						state.createCommunityFeed();
-#ifdef HASWEBVIEWER
-					viewer->start();
-					viewer_lock.unlock();
+						for (auto &r : engine.receivers)
+							if (r->getDeviceManager().InputType() == Type::NONE && r->getDeviceManager().SerialNumber().empty())
+								throw std::runtime_error("no input device selected, configure one under Input");
+					});
 
-					run(state, viewer.get(), &core);
-#else
-					run(state, &core);
-#endif
+					engine.run(viewer.get(), &core);
 				}
 				catch (std::exception const &e)
 				{
 					Error() << e.what();
-					for (auto &r : state.receivers)
-						r->stop();
-#ifdef HASWEBVIEWER
-					{
-						std::lock_guard<std::mutex> lock(viewer_mtx);
-						viewer->disconnectEngine();
-						viewer->start();
-					}
-#endif
+
+					// the throw skipped run()'s own detach() and ~Engine only runs
+					// at the end of this iteration, after the viewer is back up
+					engine.detach();
+
+					viewer->startServing();
 					core.engineFailed();
 				}
 				core.reportStopped();
@@ -163,30 +174,21 @@ namespace Managed
 			}
 			else
 			{
+				// viewer-only settings apply while the engine is stopped; anything
+				// else is picked up by the engine start above
+				if (core.consumeConfigChanged())
+					restartViewer(*viewer, config_file, core);
+
 				core.waitForCommand();
 			}
 		}
 
 		server.close();
-
-#ifdef HASWEBVIEWER
-		{
-			std::lock_guard<std::mutex> lock(viewer_mtx);
-			viewer->close();
-		}
-#endif
+		viewer->shutdown();
 		return 0;
 	}
 
-	bool isInvocation(const std::vector<std::string> &args)
-	{
-		for (const auto &a : args)
-			if (a == "-E")
-				return true;
-		return false;
-	}
-
-	int main(const std::vector<std::string> &args)
+	int run(const std::vector<std::string> &args)
 	{
 		const std::string usage = "AIS-catcher -E [config file] [bind address:port]";
 
@@ -224,7 +226,9 @@ namespace Managed
 				throw std::runtime_error("Control: listen address must be [ip:]port, e.g. 127.0.0.1:8118: " + usage);
 		}
 
-		return runManaged(file, port, bind);
+		return serve(file, port, bind);
 	}
+
+#endif
 
 }

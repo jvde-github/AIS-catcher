@@ -17,7 +17,9 @@
 
 #ifdef HASHACKRF
 
+#include <cstdlib>
 #include <cstring>
+#include <mutex>
 
 #include "HACKRF.h"
 
@@ -29,11 +31,31 @@ namespace Device
 
 	hackrf_device_list_t *HACKRF::list = nullptr;
 
+	// The hackrf library is initialized on first use, not on construction, and
+	// held until process exit. A failed init is retried on the next call.
+	static std::mutex api_mtx;
+	static bool api_open = false;
+
+	static bool ensureAPI()
+	{
+		std::lock_guard<std::mutex> lock(api_mtx);
+
+		if (!api_open && hackrf_init() == HACKRF_SUCCESS)
+		{
+			api_open = true;
+			std::atexit([]() { hackrf_exit(); });
+		}
+		return api_open;
+	}
+
 	void HACKRF::Open(uint64_t h)
 	{
+		// getDeviceList() frees and rebuilds the shared list under the same lock
+		std::lock_guard<std::mutex> lock(api_mtx);
+
 		if (!list)
 			throw std::runtime_error("HACKRF: cannot open device, internal error.");
-		if (h > list->devicecount)
+		if (h >= (uint64_t)list->devicecount)
 			throw std::runtime_error("HACKRF: cannot open device.");
 
 		int result = hackrf_open_by_serial(list->serial_numbers[h], &device);
@@ -101,11 +123,17 @@ namespace Device
 
 	void HACKRF::getDeviceList(std::vector<Description> &DeviceList)
 	{
-
-		if (!list)
+		if (!ensureAPI())
 		{
-			list = hackrf_device_list();
+			Warning() << "HACKRF: cannot open hackrf library, no HackRF devices available.";
+			return;
 		}
+
+		std::lock_guard<std::mutex> lock(api_mtx);
+
+		if (list)
+			hackrf_device_list_free(list);
+		list = hackrf_device_list();
 
 		for (int i = 0; i < list->devicecount; i++)
 		{

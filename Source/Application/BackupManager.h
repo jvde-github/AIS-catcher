@@ -16,37 +16,41 @@
 */
 
 #pragma once
-#include <iostream>
-#include <string.h>
+#include <atomic>
+#include <condition_variable>
 #include <mutex>
+#include <string>
+#include <thread>
 
-#include "AIS-catcher.h"
-#include "JSONAIS.h"
+#include "ReceiverTracker.h"
 
-class PrometheusCounter : public StreamIn<JSON::JSON> {
+class BackupManager
+{
+	std::thread thread;
 	std::mutex mtx;
+	std::condition_variable cv;
+	std::atomic<bool> running{false};
+	int interval = -1;
+	std::string filename;
+	ReceiverTracker *tracker = nullptr;
 
-	unsigned int _count;
-	unsigned int _msg[28];
-	unsigned int _channel[4];
-
-	float _distance;
-
-	std::string ppm;
-	std::string level;
-
-	void Add(const AIS::Message& m, const TAG& tag);
-	void Clear();
-	void resetSamples(); // caller must hold mtx
+	void run();
 
 public:
-	PrometheusCounter();
-	virtual ~PrometheusCounter() {}
+	void setInterval(int minutes) { interval = minutes; }
+	void setFilename(const std::string &f) { filename = f; }
+	void resetSettings()
+	{
+		interval = -1;
+		filename.clear();
+	}
+	const std::string &getFilename() const { return filename; }
+	void setTracker(ReceiverTracker *t) { tracker = t; }
 
-	void Reset();
+	void start();
+	void stop();
+	bool save();
+	bool load();
 
-	int getCount() { return _count; }
-
-	void Receive(const JSON::JSON* json, int len, TAG& tag);
-	std::string toPrometheus();
+	~BackupManager() { stop(); }
 };

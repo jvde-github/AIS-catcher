@@ -20,13 +20,11 @@
 #include <string>
 #include <vector>
 
-#include "Engine.h"
-#include "ControlCore.h"
-
-namespace Managed
+// The classic command line: build one engine from the arguments (and any
+// config file "-C" names) and run it once. Mirrors Managed::run(), which
+// supervises engines in a loop instead.
+namespace CommandLine
 {
-	bool isInvocation(const std::vector<std::string> &args);
-	// Managed mode drives the web viewer and serves its control UI from the baked-in
-	// web database, so it is only available in a build that includes the viewer.
-	int run(const std::vector<std::string> &args);
+	void printVersion();
+	int run(const std::vector<std::string> &args, int &cb);
 }

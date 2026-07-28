@@ -445,6 +445,9 @@ namespace AIS
 		V2_a.setOrigin(CH1, station, own_mmsi);
 		V2_b.setOrigin(CH2, station, own_mmsi);
 
+		V2_a.setWeights(dd_train, dd_weight);
+		V2_b.setWeights(dd_train, dd_weight);
+
 		*C_a >> V2_a;
 		*C_b >> V2_b;
 
@@ -453,6 +456,28 @@ namespace AIS
 			V2_a.getDecoder(i) >> output;
 			V2_b.getDecoder(i) >> output;
 		}
+	}
+
+	Setting &ModelEngineV2::SetKey(AIS::Keys key, const std::string &arg)
+	{
+		switch (key)
+		{
+		case AIS::KEY_SETTING_DD_TRAIN:
+			dd_train = Util::Parse::Float(arg, 0.0, 1.0);
+			break;
+		case AIS::KEY_SETTING_DD_WEIGHT:
+			dd_weight = Util::Parse::Float(arg, 0.0, 1.0);
+			break;
+		default:
+			ModelFrontend::SetKey(key, arg);
+			break;
+		}
+		return *this;
+	}
+
+	std::string ModelEngineV2::Get()
+	{
+		return "dd_train " + Util::Convert::toString(dd_train) + " dd_weight " + Util::Convert::toString(dd_weight) + " " + ModelFrontend::Get();
 	}
 
 	void ModelStandard::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)

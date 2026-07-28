@@ -131,22 +131,22 @@ std::unique_ptr<AIS::Model> &Receiver::addModel(int m)
 		switch (deviceManager.getInputFormat())
 		{
 		case Format::TXT:
-			m = 5;
+			m = AIS::MODEL_NMEA;
 			break;
 		case Format::N2K:
-			m = 6;
+			m = AIS::MODEL_N2K;
 			break;
 		case Format::BASESTATION:
-			m = 7;
+			m = AIS::MODEL_BASESTATION;
 			break;
 		case Format::BEAST:
-			m = 8;
+			m = AIS::MODEL_BEAST;
 			break;
 		case Format::RAW1090:
-			m = 10;
+			m = AIS::MODEL_RAW1090;
 			break;
 		default:
-			m = high_sensitivity ? 4 : 2;
+			m = high_sensitivity ? AIS::MODEL_V1_HIGH : AIS::MODEL_V1_BASE;
 			break;
 		}
 	}
@@ -226,8 +226,9 @@ void Receiver::setupModel(int &group, int idx)
 	for (size_t i = 0; i < models.size(); i++)
 		jsonais.emplace_back(new AIS::JSONAIS());
 
-	// assign the output of each individual model to a separate group;
-	// capped at 32 as group masks pass through Parse::Integer (long, 32-bit on Windows)
+	// assign the output of each individual model to a separate group; bits 0-30
+	// only, as group masks pass through Parse::Integer (long, 32-bit on Windows)
+	// where bit 31 would overflow
 	if (group + (int)models.size() >= 32)
 		throw std::runtime_error("Receiver: too many models/receivers, group bit limit exceeded.");
 
@@ -300,4 +301,18 @@ void OutputStatistics::connect(Receiver &r)
 	}
 }
 
-void OutputStatistics::start() {}
+uint64_t resolveZones(const std::vector<std::unique_ptr<Receiver>> &receivers, const std::vector<std::string> &zones)
+{
+	uint64_t mask = 0;
+
+	for (const auto &r : receivers)
+		for (int i = 0; i < r->Count(); i++)
+			for (const auto &z : zones)
+				if (r->inZone(i, z))
+				{
+					mask |= r->getGroupMask(i);
+					break;
+				}
+
+	return mask;
+}

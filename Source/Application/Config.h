@@ -22,7 +22,7 @@
 
 #include "AIS-catcher.h"
 
-#include "RunState.h"
+#include "Engine.h"
 
 #include "JSON/JSON.h"
 #include "JSON/Parser.h"
@@ -45,15 +45,12 @@
 
 class Config
 {
-	RunState &_state;
+	Engine &_engine;
 
 	bool isActiveObject(const JSON::Value &m);
 	void setModelfromJSON(const JSON::Member &m);
 	void setEnginefromJSON(const JSON::Value &v);
 	static int engineType(const std::string &s);
-
-	// Device settings (RTLSDR, AIRSPY, ...) of the current receiver, nullptr if key is not a device
-	Setting *getDeviceSetting(AIS::Keys key);
 
 	// Create one output of type T per active object in the array, with settings applied
 	template <typename T>
@@ -67,8 +64,8 @@ class Config
 			if (!isActiveObject(v))
 				continue;
 
-			_state.msg.push_back(std::unique_ptr<IO::OutputMessage>(new T()));
-			IO::OutputMessage &o = *_state.msg.back();
+			_engine.msg.push_back(std::unique_ptr<IO::OutputMessage>(new T()));
+			IO::OutputMessage &o = *_engine.msg.back();
 			if (default_timeout)
 				o.SetKey(AIS::KEY_SETTING_TIMEOUT, default_timeout);
 			setSettingsFromJSON(v, o);
@@ -84,7 +81,7 @@ class Config
 
 public:
 	// dry: parse for validation only, without touching the managed viewer
-	Config(RunState &state, bool dry = false) : _state(state), dry_run(dry) {}
+	Config(Engine &engine, bool dry = false) : _engine(engine), dry_run(dry) {}
 
 	void read(const std::string &file_config);
 	void set(const std::string &str);
@@ -92,6 +89,4 @@ public:
 	static void setSettingsFromJSON(const JSON::Value &m, Setting &s);
 	static void setManagedViewerfromJSON(const JSON::Value &m);
 	static void readManagedViewer(const std::string &file_config);
-
-	bool isSharingDefined() const { return _state.xshare_defined; }
 };

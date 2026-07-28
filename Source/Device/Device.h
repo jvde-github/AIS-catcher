@@ -152,6 +152,12 @@ namespace Device {
 			return "";
 		}
 
+		// Stable identity of this input across engine runs; network devices
+		// override it with their address.
+		virtual std::string getIdentity() {
+			return getProduct() + ":" + getSerial();
+		}
+
 		virtual void setFormat(Format f) { format = f; }
 		virtual Format getFormat() { return format; }
 		Type getDriver() { return DeviceType; }

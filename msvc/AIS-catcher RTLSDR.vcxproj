@@ -23,6 +23,11 @@
     <ClCompile Include="..\Source\Application\ControlCore.cpp" />
     <ClCompile Include="..\Source\Application\ControlServer.cpp" />
     <ClCompile Include="..\Source\Application\DeviceManager.cpp" />
+    <ClCompile Include="..\Source\Application\BackupManager.cpp" />
+    <ClCompile Include="..\Source\Application\Engine.cpp" />
+    <ClCompile Include="..\Source\Application\FrontendConfig.cpp" />
+    <ClCompile Include="..\Source\Tracking\ReceiverTracker.cpp" />
+    <ClCompile Include="..\Source\Application\CommandLine.cpp" />
     <ClCompile Include="..\Source\Application\Main.cpp" />
     <ClCompile Include="..\Source\Application\ManagedMain.cpp" />
     <ClCompile Include="..\Source\Application\MapTiles.cpp" />
@@ -46,7 +51,7 @@
     <ClCompile Include="..\Source\Device\SpyServer.cpp" />
     <ClCompile Include="..\Source\Device\UDP.cpp" />
     <ClCompile Include="..\Source\Device\ZMQ.cpp" />
-    <ClCompile Include="..\Source\DSP\Decoder\V2\Engine.cpp" />
+    <ClCompile Include="..\Source\DSP\Decoder\V2\V2Engine.cpp" />
     <ClCompile Include="..\Source\DSP\Demod.cpp" />
     <ClCompile Include="..\Source\DSP\DSP.cpp" />
     <ClCompile Include="..\Source\DSP\Model.cpp" />
@@ -85,8 +90,12 @@
     <ClInclude Include="..\Source\Application\Config.h" />
     <ClInclude Include="..\Source\Application\ControlCore.h" />
     <ClInclude Include="..\Source\Application\ControlServer.h" />
+    <ClInclude Include="..\Source\Application\CommandLine.h" />
     <ClInclude Include="..\Source\Application\ManagedMain.h" />
-    <ClInclude Include="..\Source\Application\RunState.h" />
+    <ClInclude Include="..\Source\Application\BackupManager.h" />
+    <ClInclude Include="..\Source\Application\Engine.h" />
+    <ClInclude Include="..\Source\Application\FrontendConfig.h" />
+    <ClInclude Include="..\Source\Tracking\ReceiverTracker.h" />
     <ClInclude Include="..\Source\Application\DeviceManager.h" />
     <ClInclude Include="..\Source\Application\WebDB.h" />
     <ClInclude Include="..\Source\Library\Logger.h" />
@@ -102,7 +111,7 @@
     <ClInclude Include="..\Source\Device\FileWAV.h" />
     <ClInclude Include="..\Source\Device\RTLTCP.h" />
     <ClInclude Include="..\Source\Device\UDP.h" />
-    <ClInclude Include="..\Source\DSP\Decoder\V2\Engine.h" />
+    <ClInclude Include="..\Source\DSP\Decoder\V2\V2Engine.h" />
     <ClInclude Include="..\Source\DSP\Demod.h" />
     <ClInclude Include="..\Source\DSP\Filters.h" />
     <ClInclude Include="..\Source\Marine\AIS.h" />

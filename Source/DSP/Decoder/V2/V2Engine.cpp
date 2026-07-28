@@ -18,7 +18,7 @@
 #include <cmath>
 #include <cstring>
 
-#include "Engine.h"
+#include "V2Engine.h"
 #include "FFT.h"
 #include "Filters.h"
 
@@ -183,11 +183,11 @@ namespace V2
 		return r;
 	}
 
-	int PhaseTracker::Run(CFLOAT32 z)
+	int PhaseTracker::Run(CFLOAT32 z, bool training)
 	{
 		z = Rotate90(z);
 
-		const float alpha = weight;
+		const float alpha = training ? weight_train : weight;
 		const float beta = 1.0f - alpha;
 
 		const float proj = z.real() * u.real() + z.imag() * u.imag();
@@ -278,15 +278,21 @@ namespace V2
 		const bool slot_locked = norm2(slot_ema) >= SLOT_LOCK;
 		const int e = (int)(((slot_phase - sample_idx) % SLOT + SLOT) % SLOT);
 
+		ppm_prev = ppm;
+
 		float f;
 		if (slot_locked && e < BLOCK_SIZE)
 		{
+			ppm_split = e; // [0, e) keeps the previous block's frequency
+
 			fo.Derotate(fo.last_f, input, output, e);
 			f = fo.Estimate(input + e);
 			fo.Derotate(f, input + e, output + e, BLOCK_SIZE - e);
 		}
 		else
 		{
+			ppm_split = 0;
+
 			const int offset = (!busy && midWins(input)) ? BLOCK_SIZE / 2 : 0;
 			f = fo.Estimate(input + offset);
 
@@ -332,14 +338,17 @@ namespace V2
 		// Coherent Decoder
 		filter37.Run(fm_demodulated, fm_filtered);
 
-		tag.ppm = ppm;
+		tag.ppm = ppm_prev;
 
 		for (int i = 0; i < BLOCK_SIZE; i++)
 		{
+			if (i == ppm_split)
+				tag.ppm = ppm;
+
 			tag.sample_idx = sample_idx++;
 
 			// Coherent decoder
-			const int bit = trk[di].Run(coh_filtered[i]);
+			const int bit = trk[di].Run(coh_filtered[i], dec[di].getState() == AIS::State::TRAINING);
 
 			tag.sample_lvl = norm2(coh_filtered[i]);
 

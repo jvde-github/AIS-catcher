@@ -251,6 +251,7 @@ namespace Device
 		std::string Get();
 
 		std::string getProduct() { return "SPYSERVER"; }
+		std::string getIdentity() { return "SPYSERVER:" + host + ":" + port; }
 		void setFormat(Format f) {}
 	};
 }

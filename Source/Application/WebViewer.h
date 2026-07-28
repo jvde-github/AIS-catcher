@@ -33,9 +33,11 @@
 #include "AIS.h"
 #include "Prometheus.h"
 #include "HTTPServer.h"
-#include "DB.h"
+#include "MsgOut.h"
 #include "PlaneDB.h"
-#include "History.h"
+#include "ReceiverTracker.h"
+#include "FrontendConfig.h"
+#include "BackupManager.h"
 #include "Receiver.h"
 #include "MapTiles.h"
 
@@ -54,25 +56,24 @@ public:
 	void setObfuscate(bool o) { obfuscate = o; }
 };
 
+// Forwards log messages to the viewer's SSE clients. The Logger singleton
+// outlives this object, so the listener must be removed in the destructor or it
+// keeps invoking a callback into freed memory.
 class WebViewerLogger
 {
-protected:
 	IO::HTTPServer *server = nullptr;
-	Logger::LogCallback logCallback;
 	int cb = -1;
 
 public:
+	~WebViewerLogger() { Stop(); }
+
+	void setSSE(IO::HTTPServer *s) { server = s; }
+
 	void Start()
 	{
-		logCallback = [this](const LogMessage &msg)
-		{
-			if (server)
-			{
-				server->sendSSE(3, "log", msg.toJSON());
-			}
-		};
-
-		cb = Logger::getInstance().addLogListener(logCallback);
+		Stop();
+		cb = Logger::getInstance().addLogListener([this](const LogMessage &msg)
+												  { if (server) server->sendSSE(3, "log", msg.toJSON()); });
 	}
 
 	void Stop()
@@ -83,225 +84,52 @@ public:
 			cb = -1;
 		}
 	}
-
-	// The Logger singleton outlives this object; the listener must be
-	// removed here or it keeps invoking a callback into freed memory.
-	virtual ~WebViewerLogger() { Stop(); }
-
-	void setSSE(IO::HTTPServer *s)
-	{
-		server = s;
-	}
-};
-
-// Tracking/DB config accumulated during Set(), applied to all ReceiverTrackers in connect().
-struct TrackingConfig
-{
-	float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
-	bool latlon_share = false;
-	bool server_mode = false;
-	bool msg_save = false;
-	bool use_GPS = true;
-	uint32_t own_mmsi = 0;
-	int time_history = 30 * 60;
-	int cutoff = 0;
-};
-
-// Bundles all per-receiver (or aggregate) state: ship DB, counters, history.
-// states[0] is always "All" (aggregate). states[1..N] are per receiver/model pair when there is more than one.
-struct ReceiverTracker
-{
-private:
-	DB ships;
-	Counter counter, counter_session;
-	History<60, 1> hist_second;
-	History<60, 60> hist_minute;
-	History<24, 3600> hist_hour;
-	History<90, 86400> hist_day;
-
-public:
-	std::string label;
-	std::string product, vendor, serial, model_name, sample_rate;
-
-	ReceiverTracker(const std::string &label = "") : label(label) {}
-
-	// Device metadata
-	void setDevice(Device::Device *device);
-	void appendDevice(Device::Device *device, const std::string &newline);
-
-	// Config
-	void applyConfig(const TrackingConfig &cfg, const AIS::Filter &f);
-	void setStationPosition(float lat, float lon, bool use_gps) { ships.setConfigPosition(lat, lon, use_gps); }
-
-	// Lifecycle
-	void setup();
-	void clear();
-	void reset();
-	bool save(std::ofstream &f);
-	bool load(std::ifstream &f);
-
-	// Wire internal streams (ships → hist_* → counters)
-	void wireStreams();
-	// Drop every sink, so wireStreams() can be run again without duplicating.
-	// Only safe while the engine is stopped and nothing is delivering.
-	void clearSinks() { ships.out.clear(); }
-
-	// Connect incoming data sources (ships as sink)
-	void connectJSON(Connection<JSON::JSON> &c) { c.Connect((StreamIn<JSON::JSON> *)&ships); }
-	void connectGPS(Connection<AIS::GPS> &c) { c.Connect((StreamIn<AIS::GPS> *)&ships); }
-
-	// Mark ships as cross-thread sink (multiple device threads feeding it).
-	// Locking ships also serializes the synchronous cascade into hist_*/counter.
-	void setExclusive() { ships.setExclusive(true); }
-
-	// Connect outgoing sinks (ships as source)
-	template <typename T>
-	void connectSink(T &sink) { ships >> sink; }
-
-	// JSON output
-	void writeHistoryJSON(JSON::Writer &w);
-	void writeCountersJSON(JSON::Writer &w);
-	std::string toHistoryJSON();
-	std::string toCountersJSON();
-
-	void writeSummary(std::ostream &out);
-
-	// Ship data queries
-	int getCount() { return ships.getCount(); }
-	int getMaxCount() { return ships.getMaxCount(); }
-	float getMsgRate() { return hist_second.getAverage(); }
-
-	std::string getShipsJSON(bool full = false) { return ships.getJSON(full); }
-	std::string getShipsJSONcompact(std::time_t since = 0) { return ships.getJSONcompact(false, since); }
-	std::string getBinaryMessagesJSON(std::time_t since = 0) { return ships.getBinaryMessagesJSON(since); }
-	std::string getKML() { return ships.getKML(); }
-	std::string getGeoJSON() { return ships.getGeoJSON(); }
-	std::string getAllPathJSON() { return ships.getAllPathJSON(); }
-	std::string getAllPathJSONSince(std::time_t since) { return ships.getAllPathJSONSince(since); }
-	std::string getAllPathGeoJSON() { return ships.getAllPathGeoJSON(); }
-	std::string getPathJSON(uint32_t mmsi) { return ships.getPathJSON(mmsi); }
-	std::string getPathGeoJSON(uint32_t mmsi) { return ships.getPathGeoJSON(mmsi); }
-	std::string getMessage(uint32_t mmsi) { return ships.getMessage(mmsi); }
-	std::string getShipJSON(uint32_t mmsi) { return ships.getShipJSON(mmsi); }
-};
-
-// Manages JS/CSS plugin content and frontend configuration variables.
-class PluginManager
-{
-	// Server config emitted as a single JSON blob at render time. The frontend
-	// reads it via window.__SERVER_CONFIG__; render() also emits a thin compat
-	// shim that re-exposes the individual globals so existing code/plugins that
-	// reference realtime_enabled, decoder_enabled, build_version etc. keep
-	// working without changes.
-	struct Config
-	{
-		std::string build_version;
-		std::string build_describe;
-		std::string context = "settings";
-		std::string station; // already JSON-quoted (legacy: Receiver.cpp passes a stringified value)
-		std::string webcontrol_http;
-		bool share_location = false;
-		bool save_messages = false;
-		bool realtime = false;
-		bool log_enabled = false;
-		bool decoder = false;
-		bool managed = false;
-		bool sharing = false;
-		bool sharing_uuid = false;
-		std::vector<std::pair<int, std::string>> receivers;
-		// version 0 means "no declared version" (CSS plugins).
-		std::vector<std::pair<std::string, int>> plugins_loaded;
-		std::vector<std::string> plugin_errors;
-	} config;
-
-	std::string plugin_code;
-	std::string stylesheets;
-	std::string about = "This content can be set by the station owner";
-	bool aboutPresent = false;
-
-public:
-	PluginManager();
-
-	void setContext(const std::string &ctx);
-	void setWebControl(const std::string &url);
-	void setShareLoc(bool b);
-	void setMsgSave(bool b);
-	void setRealtime(bool b);
-	void setLog(bool b);
-	void setDecoder(bool b);
-	void setManaged(bool b);
-	void setSharing(bool sharing, bool sharing_uuid);
-	void setStation(const std::string &name);
-	void setReceivers(const std::vector<std::unique_ptr<ReceiverTracker>> &states);
-	void addPlugin(const std::string &path);
-	void addPluginCode(const std::string &code);
-	void addStyle(const std::string &path);
-	void addPluginDir(const std::string &dir);
-	void setAbout(const std::string &path);
-	void resetPlugins();
-
-	bool isAboutPresent() const { return aboutPresent; }
-	const std::string &getAbout() const { return about; }
-	const std::string &getStylesheets() const { return stylesheets; }
-
-	std::string render() const;
-};
-
-class BackupManager
-{
-	std::thread thread;
-	std::mutex mtx;
-	std::condition_variable cv;
-	std::atomic<bool> running{false};
-	int interval = -1;
-	std::string filename;
-	ReceiverTracker *tracker = nullptr;
-
-	void run();
-
-public:
-	void setInterval(int minutes) { interval = minutes; }
-	void setFilename(const std::string &f) { filename = f; }
-	const std::string &getFilename() const { return filename; }
-	void setTracker(ReceiverTracker *t) { tracker = t; }
-
-	void start();
-	void stop();
-	bool save();
-	bool load();
-
-	~BackupManager() { stop(); }
 };
 
 class WebViewer : public IO::HTTPServer, public Setting
 {
-	uint64_t groups_in = 0xFFFFFFFFFFFFFFFF;
-
 public:
-	std::vector<std::string> zones;
+	// Every plain value SetKey() writes lives here, so resetSettings() can put
+	// the viewer back to its defaults by assigning a fresh instance. Anything
+	// that is not a setting (bound socket, ship database, serving state) must
+	// stay outside, or a reconfigure would throw away the running viewer.
+	struct Settings
+	{
+		uint64_t groups_in = 0xFFFFFFFFFFFFFFFF;
+		std::vector<std::string> zones;
+
+		int firstport = 0;
+		int lastport = 0;
+		bool port_set = false;
+
+		bool use_zlib = true;
+		bool realtime = false;
+		bool showlog = false;
+		bool showdecoder = false;
+		bool KML = false;
+		bool GeoJSON = false;
+		bool supportPrometheus = false;
+		bool stats_on_close = false;
+
+		std::string station, station_link;
+
+		TrackingConfig tracking;
+	};
 
 private:
+	Settings settings;
 
-	int firstport = 0;
-	int lastport = 0;
 	int bound_port = 0;
-	bool run = false;
+	bool is_active = false;
 	bool serving = false;
 	bool initialized = false;
-	bool port_set = false;
-	bool use_zlib = true;
-	bool realtime = false;
-	bool showlog = false;
-	bool showdecoder = false;
-	bool KML = false;
-	bool GeoJSON = false;
-	bool supportPrometheus = false;
-	bool stats_on_close = false;
+	// the statistics file last read, so a change of name triggers a fresh read
+	std::string stats_file;
 
 	std::vector<std::shared_ptr<MapTiles>> mapSources;
 
-	PluginManager pluginManager;
-	TrackingConfig tracking;
+	PluginStore plugins;
+	FrontendConfig frontend;
 
 	void applyStationPosition();
 
@@ -317,18 +145,14 @@ private:
 	ByteCounter raw_counter;
 
 	std::time_t time_start = 0;
-	std::string station = "\"\"", station_link = "\"\"";
 	std::string os, hardware;
 
 	BackupManager backup;
-
-	void Clear();
 
 	AIS::Filter filter;
 
 	std::string pending_product, pending_vendor, pending_serial;
 
-	std::vector<std::string> parsePath(const std::string &url);
 	bool parseMBTilesURL(const std::string &url, std::string &layerID, int &z, int &x, int &y);
 	void addMBTilesSource(const std::string &filepath, bool overlay);
 	void addFileSystemTilesSource(const std::string &directoryPath, bool overlay);
@@ -338,7 +162,7 @@ private:
 
 	struct Route {
 		const char *path;
-		bool WebViewer::*flag;
+		bool Settings::*flag;
 		const char *content_type;
 		RouteHandler handler;
 		bool cors;
@@ -351,22 +175,31 @@ private:
 	std::string buildStatJSON(ReceiverTracker *s);
 	std::string buildOutputStatsJSON();
 	std::string buildMultiPathJSON(ReceiverTracker *s, const std::string &query);
+	void writeOutputsJSON(JSON::Writer &w);
 
 	// NMEA decoder utility
-	static std::string decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced = true);
+	static std::string decodeNMEAtoJSON(const std::string &nmea_input);
 
 	const std::vector<std::unique_ptr<IO::OutputMessage>> *msg_channels = nullptr;
 
 	// Community feed output (not owned), used to report sharing status
 	IO::OutputMessage *comm_feed = nullptr;
 
-	// read from the HTTP thread while connect()/disconnectEngine() write it
-	std::atomic<bool> engine_connected{false};
+	// read from the HTTP thread while attachEngine()/detachEngine() write it
+	std::atomic<bool> engine_attached{false};
 
-	// Parse ?receiver=N from query string; returns 0 on missing/invalid.
-	int parseReceiver(const std::string &query);
-	// Parse ?since=T from query string; returns 0 on missing/invalid.
-	std::time_t parseSinceParam(const std::string &query);
+	// attachEngine() in pieces. beginAttach()/endAttach() are shared with the
+	// Android overload, so that path cannot drift from the receiver-list one;
+	// beginAttach() hands back the previous run's trackers, ignore them to
+	// start over.
+	void resolveZoneMask(const std::vector<std::unique_ptr<Receiver>> &receivers);
+	void wireAggregate(const std::vector<std::unique_ptr<Receiver>> &receivers, const std::string &newline);
+	void attachTrackers(const std::vector<std::unique_ptr<Receiver>> &receivers, std::vector<std::unique_ptr<ReceiverTracker>> &previous, const std::string &newline);
+	std::vector<std::unique_ptr<ReceiverTracker>> beginAttach();
+	void endAttach();
+
+	// Named integer from a query string; 0 when missing or malformed.
+	static long long queryInt(const std::string &query, const char *name);
 	// Return state at idx, clamped to states[0] on out-of-range.
 	ReceiverTracker *getState(int idx);
 
@@ -379,19 +212,30 @@ public:
 		stopThread();
 	}
 
-	bool &active() { return run; }
-	void setManagedMode() { pluginManager.setManaged(true); }
-	void connect(const std::vector<std::unique_ptr<Receiver>> &receivers);
-	void connect(AIS::Model &model, Connection<JSON::JSON> &json, Device::Device &device);
-	void disconnectEngine();
+	void setActive(bool b) { is_active = b; }
+	bool isActive() const { return is_active; }
+	void setManagedMode() { frontend.setManaged(true); }
+	void attachEngine(const std::vector<std::unique_ptr<Receiver>> &receivers);
+
+	// Called only from the Android JNI glue, which lives outside this repository:
+	// attachEngine(model, json, device), setDeviceDescription(), setEphemeralPort(),
+	// resetStatistics(), setActive(), startServing()/stopServing()/shutdown() and
+	// SetKey(). Renaming any of those breaks that build, so keep this list current.
+	void attachEngine(AIS::Model &model, Connection<JSON::JSON> &json, Device::Device &device);
+	void detachEngine();
 	void setDeviceDescription(const std::string &product, const std::string &vendor, const std::string &serial);
-	// stop, resetSettings, the settings themselves, then start: the HTTP server
-	// and the ship database stay up, so the viewer remains reachable throughout
-	void start();
-	void stop();
-	void close();
-	void Reset();
-	void resetSettings();
+	// stopServing, resetSettings, the settings themselves, then startServing: the
+	// HTTP socket and the ship database stay up, so the viewer stays reachable.
+	// While stopped the server answers 503 rather than half-applied settings.
+	void startServing();
+	void stopServing();
+	// for good: unbinds, writes the statistics file and joins the server thread
+	void shutdown();
+	// drop the accumulated statistics, keeping the configuration (Android only)
+	void resetStatistics();
+	// Back to defaults, then the one setting the config file does not own. Taking
+	// the port here keeps it impossible to reset and forget to restore it.
+	void resetSettings(int port);
 	// settings that need more than a stored value: sinks, log listener, backup
 	void applySettings();
 
@@ -403,23 +247,29 @@ public:
 	void setCommFeed(IO::OutputMessage *f)
 	{
 		comm_feed = f;
-		pluginManager.setSharing(f != nullptr, f && f->hasUUID());
+		frontend.setSharing(f != nullptr, f && f->hasUUID());
 	}
 
-	void setGroupsIn(uint64_t g) { groups_in = g; }
-	// true from connect() until disconnectEngine(), so it brackets the period
-	// in which receiver threads may be delivering into the trackers
-	bool engineConnected() const { return engine_connected; }
-	bool isPortSet() { return port_set; }
+	bool isPortSet() { return settings.port_set; }
 	int getBoundPort() { return bound_port; }
+
+	// 0 leaves the port unset, so startServing() reports it rather than binding at random
+	void setPort(int port)
+	{
+		if (!port)
+			return;
+
+		settings.port_set = true;
+		settings.firstport = settings.lastport = port;
+	}
 
 	void setEphemeralPort()
 	{
-		port_set = true;
-		firstport = lastport = 0;
+		settings.port_set = true;
+		settings.firstport = settings.lastport = 0;
 	}
 	// HTTP callbacks
-	void Request(IO::TCPServerConnection &c, const std::string &r, bool gzip) override;
+	void Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r, bool gzip) override;
 
 	Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 	std::string Get() override { return ""; }

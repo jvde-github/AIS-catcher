@@ -33,9 +33,11 @@
 #include "Keys.h"
 #include "Parser.h"
 #include "Writer.h"
-#include "RunState.h"
+#include "Engine.h"
 #include "Config.h"
 #include "DeviceManager.h"
+
+ControlCore::~ControlCore() {}
 
 ControlCore::ControlCore(const std::string &file, int port_override, const std::string &bind) : config_file(file), bind_address(bind)
 {
@@ -197,8 +199,7 @@ bool ControlCore::setConfig(const std::string &json, std::string &error)
 
 	refreshAuthFields(json);
 
-	if (config_changed)
-		config_changed();
+	config_dirty = true;
 
 	return true;
 }
@@ -349,7 +350,7 @@ void ControlCore::setPassword(const std::string &password)
 	persistControlAuth(hash, salt);
 }
 
-void ControlCore::persistControlAuth(const std::string &hash, const std::string &salt)
+void ControlCore::mutateConfig(const char *what, const std::function<bool(JSON::Document &)> &fn)
 {
 	std::lock_guard<std::mutex> lock(file_mtx);
 
@@ -358,6 +359,27 @@ void ControlCore::persistControlAuth(const std::string &hash, const std::string 
 		JSON::Parser parser(JSON_DICT_SETTING);
 		JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
 
+		if (!fn(doc))
+			return;
+
+		std::string out;
+		JSON::Serializer serializer(JSON_DICT_SETTING);
+		serializer.stringify(doc.root, out);
+
+		std::string error;
+		if (!writeFileAtomic(config_file, out, error))
+			Error() << "Control: cannot " << what << ": " << error;
+	}
+	catch (const std::exception &e)
+	{
+		Error() << "Control: cannot " << what << ": " << e.what();
+	}
+}
+
+void ControlCore::persistControlAuth(const std::string &hash, const std::string &salt)
+{
+	mutateConfig("persist password", [&](JSON::Document &doc)
+	{
 		const JSON::Value *v = doc.root[AIS::KEY_SETTING_CONTROL];
 		if (v && v->isObject())
 		{
@@ -375,23 +397,26 @@ void ControlCore::persistControlAuth(const std::string &hash, const std::string 
 			nv.setObject(control);
 			doc.root.Set(AIS::KEY_SETTING_CONTROL, nv);
 		}
-
-		std::string out;
-		JSON::Serializer serializer(JSON_DICT_SETTING);
-		serializer.stringify(doc.root, out);
-
-		std::string error;
-		if (!writeFileAtomic(config_file, out, error))
-			Error() << "Control: cannot persist password: " << error;
-	}
-	catch (const std::exception &e)
-	{
-		Error() << "Control: cannot persist password: " << e.what();
-	}
+		return true;
+	});
 }
 
 std::string ControlCore::getDeviceListJSON()
 {
+	// hardware comes and goes between engine runs, so the list the UI shows must
+	// be rescanned; enumerating can disturb a device being opened or streaming
+	// (the SDRplay API in particular) and clears the claimed flags, so leave the
+	// list alone for the whole engine session, device open through close
+	std::lock_guard<std::mutex> lock(scan_mtx);
+
+	if (!engine_busy)
+	{
+		if (!scanner)
+			scanner.reset(new DeviceManager());
+
+		scanner->refreshDevices();
+	}
+
 	return DeviceManager::getDeviceListJSON();
 }
 
@@ -410,7 +435,7 @@ bool ControlCore::validate(const std::string &json, std::string &error)
 {
 	try
 	{
-		RunState scratch;
+		Engine scratch;
 		Config c(scratch, true);
 		c.set(json);
 	}
@@ -433,8 +458,6 @@ bool ControlCore::writeFileAtomic(const std::string &path, const std::string &co
 // a configuration written before the viewer had a "viewer" section gets the defaults once
 void ControlCore::addViewerDefaults()
 {
-	std::lock_guard<std::mutex> lock(file_mtx);
-
 	const struct { AIS::Keys key; std::string value; } defaults[] = {
 		{AIS::KEY_SETTING_SHARE_LOC, "on"},
 		{AIS::KEY_SETTING_REALTIME, "on"},
@@ -442,14 +465,11 @@ void ControlCore::addViewerDefaults()
 		{AIS::KEY_SETTING_LOG, "off"},
 		{AIS::KEY_SETTING_FILE, config_file + ".stats"}};
 
-	try
+	mutateConfig("add viewer defaults", [&](JSON::Document &doc)
 	{
-		JSON::Parser parser(JSON_DICT_SETTING);
-		JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
-
 		const JSON::Value *ctrl = doc.root[AIS::KEY_SETTING_CONTROL];
 		if (!ctrl || !ctrl->isObject())
-			return;
+			return false;
 
 		const JSON::Value *v = ctrl->getObject()[AIS::KEY_SETTING_VIEWER];
 		JSON::JSON *viewer = v && v->isObject() ? const_cast<JSON::JSON *>(&v->getObject()) : doc.pool.addObject();
@@ -462,52 +482,24 @@ void ControlCore::addViewerDefaults()
 				changed = true;
 			}
 
-		if (!changed)
-			return;
-
-		if (!v)
+		if (changed && !v)
 		{
 			JSON::Value val;
 			val.setObject(viewer);
 			const_cast<JSON::JSON &>(ctrl->getObject()).Set(AIS::KEY_SETTING_VIEWER, val);
 		}
 
-		std::string out;
-		JSON::Serializer serializer(JSON_DICT_SETTING);
-		serializer.stringify(doc.root, out);
-
-		std::string error;
-		if (!writeFileAtomic(config_file, out, error))
-			Error() << "Control: cannot add viewer defaults: " << error;
-	}
-	catch (const std::exception &e)
-	{
-		Error() << "Control: cannot add viewer defaults: " << e.what();
-	}
+		return changed;
+	});
 }
 
 void ControlCore::persistEngineField(bool on)
 {
-	std::lock_guard<std::mutex> lock(file_mtx);
-
-	try
+	mutateConfig("persist engine state", [on](JSON::Document &doc)
 	{
-		JSON::Parser parser(JSON_DICT_SETTING);
-		JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
 		doc.root.Set(AIS::KEY_SETTING_ENGINE, on ? "on" : "off", doc.pool);
-
-		std::string out;
-		JSON::Serializer serializer(JSON_DICT_SETTING);
-		serializer.stringify(doc.root, out);
-
-		std::string error;
-		if (!writeFileAtomic(config_file, out, error))
-			Error() << "Control: cannot persist engine state: " << error;
-	}
-	catch (const std::exception &e)
-	{
-		Error() << "Control: cannot persist engine state: " << e.what();
-	}
+		return true;
+	});
 }
 
 bool ControlCore::engineDesired()

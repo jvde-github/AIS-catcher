@@ -29,7 +29,7 @@
 
 #include "DSP.h"
 #include "Demod.h"
-#include "Decoder/V2/Engine.h"
+#include "Decoder/V2/V2Engine.h"
 #include "StreamHelpers.h"
 
 #include "Device/Device.h"
@@ -53,6 +53,22 @@ namespace AIS
 		TXT,
 		N2K,
 		BASESTATION
+	};
+
+	// The legacy "-m" / "model" selector, which Receiver::addModel() maps to a
+	// class. Only the models referred to by identity elsewhere are named; the
+	// rest are reachable by number alone.
+	enum ModelNumber
+	{
+		MODEL_V1_BASE = 2,
+		MODEL_V1_HIGH = 4,
+		MODEL_NMEA = 5,
+		MODEL_N2K = 6,
+		MODEL_BASESTATION = 7,
+		MODEL_BEAST = 8,
+		MODEL_RAW1090 = 10,
+		MODEL_V2_BASE = 11,
+		MODEL_MAX = 11
 	};
 
 
@@ -253,9 +269,12 @@ namespace AIS
 
 	private:
 		V2::Engine V2_a, V2_b;
+		float dd_train = 0.75f, dd_weight = 0.86f;
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
+		Setting &SetKey(AIS::Keys key, const std::string &arg);
+		std::string Get();
 	};
 
 	// Standard demodulation model for FM discriminator input
