@@ -141,6 +141,7 @@ const ACTIONS = {
     setKioskRotationSpeed: (e, d, el) => kiosk.setKioskRotationSpeed(el.value),
     setKioskPanMap: (e, d, el) => kiosk.setKioskPanMap(el.checked),
     setGraphVisibility: (e, d, el) => setGraphVisibility(d.graph, el.checked),
+    setPlotAbsoluteTime: (e, d, el) => setPlotAbsoluteTime(el.checked),
     setMapSetting: (e, d, el) => setMapSetting(d.key, el.type === 'checkbox' ? el.checked : el.value),
     setBinaryDisplay: (e, d, el) => setBinaryDisplay(el.value),
     setBinaryCategory: (e, d, el) => setBinaryCategory(d.cat, el.checked),
@@ -495,6 +496,7 @@ function restoreDefaultSettings() {
         shipcard_top_left: false,
         show_signal_graphs: true,
         show_ppm_graphs: true,
+        plot_absolute_time: true,
         shipcard_pinned_x: null,
         shipcard_pinned_y: null,
         kiosk_rotation_speed: 5,
@@ -2019,6 +2021,12 @@ function setGraphVisibility(type, show, save = true) {
     if (save) saveSettings();
 }
 
+function setPlotAbsoluteTime(on, save = true) {
+    settings.plot_absolute_time = on;
+    plotsModule?.setAbsoluteTime(on);
+    if (save) saveSettings();
+}
+
 function toggleGraphVisibility(type) {
     const kind = GRAPH_KINDS[type];
     if (kind) setGraphVisibility(type, !settings[kind.setting]);
@@ -3472,6 +3480,7 @@ function saveSettings() {
     // Apply graph visibility settings (without saving during initialization)
     setGraphVisibility('signal', settings.show_signal_graphs, false);
     setGraphVisibility('ppm', settings.show_ppm_graphs, false);
+    setPlotAbsoluteTime(settings.plot_absolute_time, false);
 }
 
 function updateForLegacySettings() {
@@ -3535,7 +3544,7 @@ function convertStringBooleansToActual() {
         'show_circle_outline', 'dark_mode', 'setcoord', 'eri', 'loadURL',
         'show_station', 'labels_declutter', 'labels_prioritize_active', 'labels_active_only', 'label_class_background', 'show_track_on_hover',
         'show_track_on_select', 'shipcard_max', 'shipcard_top_left', 'kiosk_pan_map', 'show_all_tracks',
-        'show_signal_graphs', 'show_ppm_graphs'
+        'show_signal_graphs', 'show_ppm_graphs', 'plot_absolute_time'
     ];
 
     booleanSettings.forEach(key => {
@@ -5019,7 +5028,10 @@ function refresh_data() {
                 } else if (settings.tab === "stat") {
                     await updateStatistics();
                 } else if (settings.tab === "plots") {
-                    if (!plotsModule) plotsModule = await import('./tabs/plots.js');
+                    if (!plotsModule) {
+                        plotsModule = await import('./tabs/plots.js');
+                        plotsModule.setAbsoluteTime(settings.plot_absolute_time);
+                    }
                     await plotsModule.update();
                 } else if (settings.tab === "ships") {
                     if (!shipTableModule) shipTableModule = await import('./tabs/shiptable.js');
@@ -5060,6 +5072,7 @@ function updateSettingsTab() {
     document.getElementById("settings_fading").checked = settings.fading;
     document.getElementById("settings_show_signal_graphs").checked = settings.show_signal_graphs;
     document.getElementById("settings_show_ppm_graphs").checked = settings.show_ppm_graphs;
+    document.getElementById("settings_plot_absolute_time").checked = settings.plot_absolute_time;
     document.getElementById("settings_shiphover_color").value = settings.shiphover_color;
     document.getElementById("settings_shipselection_color").value = settings.shipselection_color;
 

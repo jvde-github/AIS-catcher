@@ -157,6 +157,10 @@ public:
 		long int tm_now = ((long int)time(nullptr)) / (long int)INTERVAL;
 
 		w.beginObject();
+
+		w.key("now").val((long int)(tm_now * (long int)INTERVAL));
+		w.key("interval").val((long int)INTERVAL);
+
 		w.key("time").beginArray();
 		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {
 			bool new_tm = history[idx].time >= tm;

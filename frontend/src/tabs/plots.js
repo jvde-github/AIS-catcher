@@ -50,53 +50,135 @@ function average(d) {
     return c / (b.length - 1);
 }
 
+// Enough precision to be useful without crowding the chip.
+function formatAverage(v) {
+    if (!Number.isFinite(v)) return "";
+    return Math.abs(v) >= 100 ? Math.round(v).toString() : v.toFixed(1);
+}
+
 function cloneChartConfig(config) {
     const clone = JSON.parse(JSON.stringify(config));
-    if (clone.options?.plugins?.annotation?.annotations?.graph_annotation) {
-        clone.options.plugins.annotation.annotations.graph_annotation.value = (a) => average(a);
+    // the JSON round trip drops scriptable options, so re-attach them
+    const a = clone.options?.plugins?.annotation?.annotations?.graph_annotation;
+    if (a) {
+        a.value = (d) => average(d);
+        a.label.display = (d) => Number.isFinite(average(d));
+        a.label.content = (d) => formatAverage(average(d));
     }
     return clone;
+}
+
+const FILL_ALPHA = 0.55;
+
+function withAlpha(color, alpha) {
+    const hex = color.replace("#", "");
+    if (!/^[0-9a-f]{3}$|^[0-9a-f]{6}$/i.test(hex)) return color;
+    const full = hex.length === 3 ? hex.replace(/./g, (d) => d + d) : hex;
+    const n = parseInt(full, 16);
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
 function updateChartColors(c, colorVariables) {
     c.data.datasets.forEach((dataset, index) => {
         const color = cssvar(colorVariables[index]);
-        dataset.backgroundColor = color;
         dataset.borderColor = color;
+        dataset.backgroundColor = dataset.fill ? withAlpha(color, FILL_ALPHA) : color;
     });
-    c.options.scales.x.ticks.color = cssvar("--chart-color");
-    c.options.scales.x.grid.color = cssvar("--chart-grid-color");
-    c.options.scales.y.ticks.color = cssvar("--chart-color");
-    c.options.scales.y.grid.color = cssvar("--chart-grid-color");
-    c.options.plugins.legend.labels.color = cssvar("--chart-color");
+    const ink = cssvar("--chart-color");
+    const grid = cssvar("--chart-grid-color");
+
+    // chart.options is a proxy whose setters recurse when enumerated
+    const scales = c.config.options?.scales || {};
+    Object.keys(scales).forEach((id) => {
+        const scale = scales[id];
+        if (!scale) return;
+        if (scale.ticks) scale.ticks.color = ink;
+        if (scale.grid) scale.grid.color = grid;
+        if (scale.title) scale.title.color = ink;
+    });
+    c.options.plugins.legend.labels.color = ink;
+    updateTooltipColors(c);
+    updateAnnotationColors(c);
 }
 
+function updateTooltipColors(c) {
+    const opts = c.config.options;
+    if (!opts) return;
+    opts.plugins = opts.plugins || {};
+    opts.plugins.tooltip = opts.plugins.tooltip || {};
+
+    const ink = cssvar("--chart-color");
+    Object.assign(opts.plugins.tooltip, {
+        backgroundColor: cssvar("--tooltip-background-color"),
+        borderColor: cssvar("--tooltip-border-color"),
+        borderWidth: 1,
+        titleColor: ink,
+        bodyColor: ink,
+    });
+}
+
+// The average chip borrows the hover tooltip's surface so the two read as one
+// layer, and its text stays an ink colour rather than the series colour.
+function updateAnnotationColors(c) {
+    const annotations = c.options?.plugins?.annotation?.annotations;
+    if (!annotations) return;
+
+    Object.values(annotations).forEach((a) => {
+        if (!a.label) return;
+        a.label.backgroundColor = cssvar("--tooltip-background-color");
+        a.label.borderColor = cssvar("--tooltip-border-color");
+        a.label.color = cssvar("--chart-color");
+    });
+}
+
+const COLORS_SERIES = ["--chart4-color", "--chart1-color", "--chart2-color", "--chart5-color", "--chart6-color"];
+const COLORS_DISTANCE = ["--chart4-color", "--chart1-color", "--chart2-color", "--chart5-color", "--chart-envelope-color"];
+
 function updateColorMulti(c) {
-    const colorVariables = ["--chart4-color", "--chart1-color", "--chart2-color", "--chart5-color", "--chart6-color"];
-    updateChartColors(c, colorVariables);
+    updateChartColors(c, COLORS_SERIES);
 }
 
 function updateColorRadar(c) {
-    const colorVariables = ["--chart2-color", "--chart4-color", "--chart2-color", "--chart5-color", "--chart4-color"];
+    const colorVariables = ["--chart2-color", "--chart1-color"];
     c.data.datasets.forEach((dataset, index) => {
         const color = cssvar(colorVariables[index]);
-        dataset.backgroundColor = color;
+        dataset.backgroundColor = withAlpha(color, FILL_ALPHA);
         dataset.borderColor = color;
     });
     c.options.scales.r.grid.color = cssvar("--chart-grid-color");
     c.options.scales.r.ticks.color = cssvar("--chart-color");
     c.options.scales.r.ticks.backdropColor = cssvar("--panel-color");
+    updateTooltipColors(c);
 }
 
 
+// One average line for every chart: same dash, width and colour, with the value
+// in a chip. Colours are filled in by updateAnnotationColors() per theme.
+const AVERAGE_LINE_COLOR = "rgb(12, 118, 170)";
+
+const average_label = {
+    display: true,
+    position: "start",
+    borderWidth: 1,
+    borderRadius: 4,
+    font: { size: 11 },
+    padding: { top: 2, bottom: 2, left: 6, right: 6 },
+    content: "",
+};
+
 const graph_annotation = {
     type: "line",
-    borderColor: "rgba(12,118,170)",
+    borderColor: AVERAGE_LINE_COLOR,
     borderDash: [6, 6],
     borderDashOffset: 0,
     borderWidth: 3,
     scaleID: "y",
     value: (a) => average(a),
+    label: {
+        ...average_label,
+        display: (d) => Number.isFinite(average(d)),
+        content: (d) => formatAverage(average(d)),
+    },
 };
 
 const graph_options_count = {
@@ -115,7 +197,7 @@ const graph_options_count = {
             beginAtZero: true,
             ticks: { display: true, align: 'center' },
             grid: { display: true },
-            title: { display: true, text: 'Message Count', font: { size: 12 }, color: '#666' },
+            title: { display: true, text: 'Message Count', font: { size: 12 } },
         },
         y_right: {
             stacked: true,
@@ -123,11 +205,11 @@ const graph_options_count = {
             ticks: { display: true, align: 'center' },
             grid: { display: false },
             position: 'right',
-            title: { display: true, text: 'Vessel Count', font: { size: 12 }, color: '#666' },
+            title: { display: true, text: 'Vessel Count', font: { size: 12 } },
         },
         x: {
             ticks: { display: true },
-            title: { display: true, text: 'Time', font: { size: 16 }, color: '#666' },
+            title: { display: true, text: 'Time', font: { size: 16 } },
         },
     },
 };
@@ -196,7 +278,7 @@ const plot_distance = {
             { label: "SE", data: [], showLine: true, pointStyle: false, borderWidth: 2 },
             { label: "SW", data: [], showLine: true, pointStyle: false, borderWidth: 2 },
             { label: "NW", data: [], showLine: true, pointStyle: false, borderWidth: 2 },
-            { label: "Max", data: [], showLine: true, backgroundColor: "rgb(211,211,211,0.9)", fill: true, pointStyle: false, borderWidth: 0 },
+            { label: "Max", data: [], showLine: true, fill: true, pointStyle: false, borderWidth: 0 },
         ],
     },
     options: graph_options_distance,
@@ -257,11 +339,11 @@ const plot_compare = (axis) => ({
                 beginAtZero: true,
                 ticks: { display: true, align: "center" },
                 grid: { display: true },
-                title: { display: true, text: axis, font: { size: 12 }, color: "#666" },
+                title: { display: true, text: axis, font: { size: 12 } },
             },
             x: {
                 ticks: { display: true },
-                title: { display: true, text: "Time", font: { size: 16 }, color: "#666" },
+                title: { display: true, text: "Time", font: { size: 16 } },
             },
         },
     },
@@ -269,12 +351,13 @@ const plot_compare = (axis) => ({
 
 const gain_annotation = {
     type: "line",
-    borderColor: "rgba(12,118,170)",
+    borderColor: AVERAGE_LINE_COLOR,
     borderDash: [6, 6],
-    borderWidth: 2,
+    borderDashOffset: 0,
+    borderWidth: 3,
     scaleID: "y",
     value: 0,
-    label: { display: true, position: "start", backgroundColor: "transparent", font: { size: 11 } },
+    label: { ...average_label },
 };
 
 const plot_gain = {
@@ -296,13 +379,13 @@ const plot_gain = {
                 beginAtZero: true,
                 ticks: { display: true, align: "center" },
                 grid: { display: true },
-                title: { display: true, text: "More messages than A (%)", font: { size: 12 }, color: "#666" },
+                title: { display: true, text: "More messages than A (%)", font: { size: 12 } },
             },
             x: {
                 type: "linear",
                 offset: true,
                 ticks: { display: true },
-                title: { display: true, text: "Time", font: { size: 16 }, color: "#666" },
+                title: { display: true, text: "Time", font: { size: 16 } },
             },
         },
     },
@@ -359,12 +442,89 @@ async function fetchHistory(idx) {
 
 const series = (h, f, key) => (h && h[f] ? h[f].time.map((t, i) => ({ x: t, y: h[f].stat[i][key] })) : []);
 
+function setTimeAxis(c, source) {
+    if (!c || !source || typeof source.now !== "number" || typeof source.interval !== "number") return;
+    c.$timeAxis = { now: source.now, interval: source.interval };
+}
+
+let absoluteTime = true;
+
+export function setAbsoluteTime(on) {
+    absoluteTime = !!on;
+    Object.values(charts).forEach((c) => c && c.update());
+}
+
+const bucketDate = (value, axis) => new Date((axis.now + Math.round(value) * axis.interval) * 1000);
+const clock = (d) => d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+const day = (d) => d.toLocaleDateString([], { day: "numeric", month: "short" });
+
+function formatTimeTick(value, axis, prev) {
+    // fractional steps fall between buckets
+    if (Math.abs(value - Math.round(value)) > 1e-9) return "";
+
+    const d = bucketDate(value, axis);
+    const before = prev === undefined ? null : bucketDate(prev, axis);
+
+    if (axis.interval >= 86400) return day(d);
+
+    if (axis.interval >= 3600) {
+        return !before || before.getDate() !== d.getDate() ? day(d) : clock(d);
+    }
+
+    if (axis.interval >= 60) {
+        return !before || before.getHours() !== d.getHours() ? clock(d) : ":" + String(d.getMinutes()).padStart(2, "0");
+    }
+
+    return !before || before.getMinutes() !== d.getMinutes() ? clock(d) : ":" + String(d.getSeconds()).padStart(2, "0");
+}
+
+function formatTimeTooltip(value, axis) {
+    const d = bucketDate(value, axis);
+    if (axis.interval >= 86400) return day(d);
+    if (axis.interval < 60) {
+        return day(d) + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    }
+    return day(d) + " " + clock(d);
+}
+
+// cloneChartConfig's JSON round trip drops functions, so these attach to the live chart
+function attachTimeAxis(c) {
+    const opts = c.config.options;
+    const x = opts?.scales?.x;
+    if (!x) return;
+
+    x.ticks = x.ticks || {};
+    x.ticks.maxRotation = 0;
+    x.ticks.autoSkipPadding = 12;
+    x.ticks.callback = function (value, index, ticks) {
+        const axis = this.chart.$timeAxis;
+        if (!axis || !absoluteTime) return value;
+        return formatTimeTick(value, axis, index > 0 ? ticks[index - 1].value : undefined);
+    };
+
+    opts.plugins = opts.plugins || {};
+    opts.plugins.tooltip = opts.plugins.tooltip || {};
+    opts.plugins.tooltip.callbacks = {
+        title: (items) => {
+            if (!items.length) return "";
+            const axis = c.$timeAxis;
+            return axis && absoluteTime ? formatTimeTooltip(items[0].parsed.x, axis) : String(items[0].parsed.x);
+        },
+        label: (item) => {
+            const y = item.parsed.y;
+            const value = Number.isInteger(y) ? y.toLocaleString() : y.toFixed(1);
+            return `${item.dataset.label}: ${value}`;
+        },
+    };
+}
+
 function updateChartCompare(a, b, f, key, c, srcA, srcB) {
     if (!c) return;
     c.data.datasets[0].label = receiverLabel(srcA);
     c.data.datasets[0].data = series(a, f, key);
     c.data.datasets[1].label = receiverLabel(srcB);
     c.data.datasets[1].data = series(b, f, key);
+    setTimeAxis(c, a && a[f]);
     c.update();
 }
 
@@ -386,9 +546,9 @@ function updateChartGain(a, b, f, c, srcA, srcB) {
     const annotation = c.options.plugins.annotation.annotations.gain_annotation;
     annotation.display = shared.length > 0;
     annotation.value = average;
-    annotation.borderColor = cssvar("--chart-color");
-    annotation.label.content = "average " + (average >= 0 ? "+" : "") + average.toFixed(1) + "%";
-    annotation.label.color = cssvar("--chart-color");
+    annotation.label.content = (average >= 0 ? "+" : "") + average.toFixed(1) + "%";
+    updateAnnotationColors(c);
+    setTimeAxis(c, a && a[f]);
     c.update();
 }
 
@@ -427,6 +587,7 @@ function init() {
                 continue;
             }
             charts[varName] = new Chart(canvas, cloneChartConfig(config));
+            attachTimeAxis(charts[varName]);
         } catch (error) {
             console.error(`Failed to initialize chart ${id}:`, error);
         }
@@ -458,6 +619,7 @@ function updateChartMulti(b, f, c) {
     c.data.datasets[2].data = hB;
     c.data.datasets[3].data = hS;
     c.data.datasets[4].data = hT;
+    setTimeAxis(c, source);
     c.update();
 }
 
@@ -482,6 +644,7 @@ function updateChartDistance(b, f, c) {
     c.data.datasets[2].data = hSW;
     c.data.datasets[3].data = hNW;
     c.data.datasets[4].data = hM;
+    setTimeAxis(c, source);
     c.update();
 }
 
@@ -493,6 +656,7 @@ function updateChartSingle(b, f1, f2, c) {
         h.push({ x: source.time[i], y: source.stat[i][f2] });
     }
     c.data.datasets[0].data = h;
+    setTimeAxis(c, source);
     c.update();
 }
 
@@ -508,6 +672,7 @@ function updateChartLevel(chartData, timeframe, chart) {
     }
     chart.data.datasets[0].data = maxLevelData;
     chart.data.datasets[1].data = minLevelData;
+    setTimeAxis(chart, timeSeriesData);
     chart.update();
 }
 
@@ -582,9 +747,9 @@ export function updateColors() {
 
     const multi = [charts.chart_minutes, charts.chart_hours, charts.chart_days, charts.chart_seconds];
     const level = [charts.chart_level, charts.chart_level_hour];
-    const single = [charts.chart_distance_day, charts.chart_distance_hour, charts.chart_ppm,
-                    charts.chart_minute_vessel, charts.chart_ppm_minute, charts.chart_hour_vessel,
-                    charts.chart_day_vessel];
+    const single = [charts.chart_ppm, charts.chart_minute_vessel, charts.chart_ppm_minute,
+                    charts.chart_hour_vessel, charts.chart_day_vessel];
+    const distance = [charts.chart_distance_day, charts.chart_distance_hour];
     const radar = [charts.chart_radar_day, charts.chart_radar_hour];
     const compare = [charts.chart_compare_minutes, charts.chart_compare_hours,
                      charts.chart_compare_vessels_minute, charts.chart_compare_vessels_hour];
@@ -595,6 +760,9 @@ export function updateColors() {
     });
     single.forEach((chart) => {
         if (chart) { updateColorMulti(chart); chart.update(); }
+    });
+    distance.forEach((chart) => {
+        if (chart) { updateChartColors(chart, COLORS_DISTANCE); chart.update(); }
     });
     level.forEach((chart) => {
         if (chart) {
@@ -607,9 +775,9 @@ export function updateColors() {
         if (chart) { updateColorRadar(chart); chart.update(); }
     });
     compare.forEach((chart) => {
-        if (chart) { updateChartColors(chart, ["--chart1-color", "--chart2-color"]); chart.update(); }
+        if (chart) { updateChartColors(chart, ["--chart4-color", "--chart1-color"]); chart.update(); }
     });
     gain.forEach((chart) => {
-        if (chart) { updateChartColors(chart, ["--chart2-color"]); chart.update(); }
+        if (chart) { updateChartColors(chart, ["--chart1-color"]); chart.update(); }
     });
 }
