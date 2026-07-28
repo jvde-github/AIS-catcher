@@ -1,6 +1,10 @@
 :root {
     --primary-color: #0857b1;
     --accent: var(--primary-color);
+    --accent-ink: white;
+    --decoder-surface: white;
+    --decoder-line: rgba(128, 128, 128, 0.25);
+    --decoder-sunken: rgba(0, 0, 0, 0.03);
     --text-muted: #64748b;
     --alert-red: #e01b24;
     --hl-accent: #1c71d8;
@@ -88,6 +92,10 @@
 .dark {
     --hl-accent: #58a6ff;
     --accent: var(--hl-accent);
+    --accent-ink: #06121f;
+    --decoder-surface: rgb(38, 38, 38);
+    --decoder-line: rgba(200, 200, 200, 0.16);
+    --decoder-sunken: rgba(0, 0, 0, 0.35);
     --text-muted: #9aa0a6;
     --ok-text: #7ce481;
     --primary-color: #5dd5d5;
@@ -3473,10 +3481,6 @@ td {
     color: var(--hl-accent);
 }
 
-.dark #decoder_input:focus {
-    border-color: var(--hl-accent);
-}
-
 .dark .ship-table-columns-btn:hover,
 .dark .search-box:focus {
     border-color: var(--hl-accent);
@@ -4355,11 +4359,12 @@ td {
     margin: 0 auto;
 }
 
-.decoder-panel {
-    background: var(--panel-color);
+.decoder-panel,
+.decoder-message {
+    background: var(--decoder-surface);
+    border: 1px solid var(--decoder-line);
     border-radius: 8px;
     padding: 20px;
-    box-shadow: 0 2px 4px var(--shadow-color-light);
 }
 
 .decoder-panel h3 {
@@ -4380,17 +4385,17 @@ td {
     padding: 10px;
     font-family: 'Courier New', monospace;
     font-size: 0.9em;
-    border: 1px solid var(--table-border-color);
+    border: 1px solid var(--decoder-line);
     border-radius: 4px;
     resize: vertical;
-    background: var(--settings-bg-color);
+    background: var(--decoder-sunken);
     color: var(--main-font-color);
     box-sizing: border-box;
 }
 
 #decoder_input:focus {
     outline: none;
-    border-color: var(--secondary-color);
+    border-color: var(--accent);
 }
 
 .decoder-buttons {
@@ -4402,18 +4407,32 @@ td {
 .decoder-btn-primary,
 .decoder-btn-secondary {
     padding: 10px 20px;
-    border: none;
+    border: 1px solid transparent;
     border-radius: 4px;
     font-size: 0.9em;
+    font-family: inherit;
     cursor: pointer;
     transition: var(--hover-transition);
-    background-color: var(--graph-header-bg-color);
-    color: var(--graph-header-color);
 }
 
-.decoder-btn-primary:hover,
+.decoder-btn-primary {
+    background-color: var(--accent);
+    color: var(--accent-ink);
+}
+
+.decoder-btn-secondary {
+    background-color: transparent;
+    border-color: var(--decoder-line);
+    color: var(--main-font-color);
+}
+
+.decoder-btn-primary:hover {
+    filter: brightness(1.15);
+}
+
 .decoder-btn-secondary:hover {
-    background-color: var(--menu-background-hover-color);
+    border-color: var(--accent);
+    color: var(--accent);
 }
 
 .decoder-status {
@@ -4435,18 +4454,11 @@ td {
     gap: 15px;
 }
 
-.decoder-message {
-    background: var(--panel-color);
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px var(--shadow-color-light);
-}
-
 .decoder-message h4 {
     margin-top: 0;
     margin-bottom: 15px;
     color: var(--stat-color);
-    border-bottom: 1px solid var(--stat-divider-color);
+    border-bottom: 1px solid var(--decoder-line);
     padding-bottom: 8px;
     font-size: 0.9em;
 }
@@ -4458,7 +4470,7 @@ td {
 }
 
 .decoder-table tr {
-    border-bottom: 1px solid var(--table-border-color);
+    border-bottom: 1px solid var(--decoder-line);
 }
 
 .decoder-table tr:last-child {
@@ -4481,8 +4493,9 @@ td {
     color: var(--stat-color);
     font-family: 'Courier New', monospace;
     width: 35%;
-    border-left: solid 1px var(--stat-divider-color);
+    border-left: solid 1px var(--decoder-line);
     padding-left: 20px;
+    overflow-wrap: anywhere;
 }
 
 .decoder-field-description {

@@ -290,7 +290,8 @@ function updateFilterDisplay() {
     document.getElementById('realtime_filter_count').textContent = n || '';
     document.getElementById('realtime_filter_button').classList.toggle('active', n > 0);
 
-    if (document.getElementById('realtime_filter_kind')) renderFilterDialog();
+    const open = !document.getElementById('dialog-box').classList.contains('hidden');
+    if (open && document.getElementById('realtime_filter_kind')) renderFilterDialog();
 }
 
 function valueFieldHTML() {
@@ -318,7 +319,7 @@ function filterDialogHTML() {
             ${valueFieldHTML()}
             <button class="realtime-filter-add" data-action="addRealtimeFilter">Add</button>
         </div>${active}
-        <div class="realtime-filter-hint">Values of the same kind widen the selection, different kinds narrow it.</div>
+        <div class="realtime-filter-hint">Same kind matches any (OR), different kinds must all match (AND).</div>
         </div>`;
 }
 
