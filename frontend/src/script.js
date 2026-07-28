@@ -202,7 +202,10 @@ const ACTIONS = {
     toggleGraphVisibility: (e, d) => toggleGraphVisibility(d.graph),
 
     // realtime / decoder controls
-    promptFilterMMSI: () => realtimeModule?.promptFilter(),
+    openRealtimeFilters: () => realtimeModule?.openFilters(),
+    addRealtimeFilter: () => realtimeModule?.addFilterFromInput(),
+    clearRealtimeFilters: () => realtimeModule?.clearFilters(),
+    realtimeFilterKindChanged: () => realtimeModule?.filterKindChanged(),
     toggleBackgroundStreaming: () => realtimeModule?.toggleBackgroundStreaming(),
     toggleRealtimePause: () => realtimeModule?.togglePause(),
     clearRealtimeTable: () => realtimeModule?.clear(),
@@ -249,7 +252,7 @@ const ACTIONS = {
     techInfo: (e) => { e.stopPropagation(); toggleShipcardPopover("tech_popover", "shipcard_tech_info"); },
     shiptypeInfo: (e) => { e.stopPropagation(); toggleShipcardPopover("shiptype_popover", "shipcard_shiptype_info"); },
     showNMEAContextCopy: (e, d) => showContextMenu(e, d.copy || '', 'ship', ['settings', 'copy-text']),
-    removeRealtimeFilterMMSI: (e, d) => realtimeModule?.removeFilter(d.mmsi),
+    removeRealtimeFilter: (e, d) => realtimeModule?.removeFilter(d.kind, d.value),
 };
 
 // Public plugin API. Mutable state uses getters so plugins always see the
@@ -503,7 +506,7 @@ function restoreDefaultSettings() {
         kiosk_pan_map: true,
         shiptable_columns: ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"],
         realtime_background_streaming: false,
-        realtime_filter_mmsis: [],
+        realtime_filters: [],
         binary_messages: "highlight",
         binary_exclude: []
     });
@@ -3466,8 +3469,8 @@ function saveSettings() {
     settings.shipcard_rows = selectedRows;
     settings.activeReceiver = activeReceiver;
 
-    const filters = realtimeModule?.getFilterMMSIs();
-    if (filters !== null && filters !== undefined) settings.realtime_filter_mmsis = filters;
+    const filters = realtimeModule?.getFilters();
+    if (filters !== null && filters !== undefined) settings.realtime_filters = filters;
     const bg = realtimeModule?.getBackgroundStreaming();
     if (bg !== null && bg !== undefined) settings.realtime_background_streaming = bg;
 

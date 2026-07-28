@@ -1800,6 +1800,11 @@ td {
     overflow: hidden;
 }
 
+.dark #dialog-box {
+    border: 1px solid var(--hdr-border);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+}
+
 .dialog-header {
     display: flex;
     align-items: center;
@@ -3969,6 +3974,90 @@ td {
     flex: 1;
 }
 
+.realtime-filter-input {
+    padding: 0.35rem 0.5rem;
+    background: var(--panel-color);
+    border: 1px solid var(--menu-border-color);
+    border-radius: 3px;
+    color: var(--menu-font-color);
+    font-size: 0.9rem;
+    font-family: inherit;
+}
+
+.realtime-filter-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.realtime-filter-row .realtime-filter-input:nth-child(2) {
+    flex: 1;
+}
+
+.realtime-filter-add,
+.realtime-filter-clear {
+    padding: 0.35rem 0.9rem;
+    background: var(--panel-color);
+    border: 1px solid var(--menu-border-color);
+    border-radius: 3px;
+    color: var(--menu-font-color);
+    font-size: 0.9rem;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.realtime-filter-add:hover,
+.realtime-filter-clear:hover {
+    border-color: var(--menu-font-color);
+}
+
+.realtime-filter-active {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.realtime-filter-active .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    flex: 1;
+}
+
+.realtime-filter-none,
+.realtime-filter-hint {
+    margin-top: 1rem;
+    opacity: 0.6;
+    font-size: 0.85rem;
+}
+
+.realtime-control-btn span.realtime-filter-count {
+    display: none;
+    position: absolute;
+    top: 3px;
+    right: 1px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.realtime-control-btn.active span.realtime-filter-count {
+    display: flex;
+    background: var(--accent);
+    color: var(--panel-color);
+}
+
+.filter-chip-kind {
+    opacity: 0.6;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
 .filter-chip {
     display: inline-flex;
     align-items: center;
@@ -4030,6 +4119,7 @@ td {
 }
 
 .realtime-control-btn {
+    position: relative;
     padding: 0.6rem;
     background: transparent;
     border: none;
@@ -4205,6 +4295,24 @@ td {
 
 .dark .channel-box {
     background-color: #3a3a3a;
+}
+
+.dark .channel-box.active {
+    background-color: var(--accent);
+    color: var(--panel-color);
+}
+
+.nmea-mmsi {
+    display: inline-block;
+    padding: 2px 6px;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.85em;
+}
+
+.dark .nmea-mmsi {
+    border-color: var(--menu-divider-color);
 }
 
 .aiscatcher-logo-control {

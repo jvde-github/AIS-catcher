@@ -5,14 +5,33 @@ let savedState = null;
 let keydownHandler = null;
 let pendingFilters = null;
 
+const FILTER_KINDS = {
+    mmsi: { label: 'MMSI', get: (d) => String(d.mmsi) },
+    type: { label: 'Type', get: (d) => String(d.type) },
+    channel: { label: 'Ch', get: (d) => String(d.channel) },
+};
+
+function normalizeFilter(kind, value) {
+    if (!FILTER_KINDS[kind]) return null;
+    const v = String(value ?? '').trim();
+
+    if (kind === 'channel') return /^[ABCD]$/.test(v.toUpperCase()) ? v.toUpperCase() : null;
+
+    const n = parseInt(v, 10);
+    if (!(n > 0) || (kind === 'type' && n > 27)) return null;
+    return String(n);
+}
+
 class RealtimeViewer {
     constructor(filterMMSI = null) {
-    
+
         this.nmeaContent = document.getElementById('realtime_nmea_content');
         this.eventSource = null;
         this.maxLines = 100;
         this.isPaused = false;
-        this.filterMMSIs = filterMMSI ? [filterMMSI] : [];
+        this.filters = [];
+        this.groups = {};
+        if (filterMMSI) this.addFilter('mmsi', filterMMSI);
         this.activeMode = 'nmea';
 
         this.backgroundStreaming = settings.realtime_background_streaming === true;
@@ -101,7 +120,7 @@ class RealtimeViewer {
     }
 
     addNmeaMessage(data) {
-        if (this.filterMMSIs.length > 0 && !this.filterMMSIs.includes(data.mmsi.toString())) return;
+        if (!this.matches(data)) return;
 
         const rows = this.nmeaContent.getElementsByTagName('tr');
         if (rows.length >= this.maxLines) {
@@ -169,12 +188,7 @@ class RealtimeViewer {
             mmsiSpan.textContent = data.mmsi;
         }
 
-        mmsiSpan.style.border = '1px solid #d0d0d0';
-        mmsiSpan.style.padding = '2px 6px';
-        mmsiSpan.style.borderRadius = '3px';
-        mmsiSpan.style.display = 'inline-block';
-        mmsiSpan.style.cursor = 'pointer';
-        mmsiSpan.style.fontSize = '0.85em';
+        mmsiSpan.className = 'nmea-mmsi';
         mmsiCell.appendChild(mmsiSpan);
 
         mmsiSpan.addEventListener('click', (e) => {
@@ -210,18 +224,40 @@ class RealtimeViewer {
         this.connectNmea();
     }
 
-    addFilterMMSI(mmsi) {
-        const mmsiStr = mmsi.toString();
-        if (!this.filterMMSIs.includes(mmsiStr)) this.filterMMSIs.push(mmsiStr);
+    reindex() {
+        this.groups = {};
+        for (const f of this.filters) (this.groups[f.kind] ||= []).push(f.value);
     }
 
-    removeFilterMMSI(mmsi) {
-        const mmsiStr = mmsi.toString();
-        this.filterMMSIs = this.filterMMSIs.filter((m) => m !== mmsiStr);
+    matches(data) {
+        for (const kind in this.groups)
+            if (!this.groups[kind].includes(FILTER_KINDS[kind].get(data))) return false;
+        return true;
+    }
+
+    addFilter(kind, value) {
+        const v = normalizeFilter(kind, value);
+        if (v === null) return false;
+        if (!this.filters.some((f) => f.kind === kind && f.value === v)) {
+            this.filters.push({ kind, value: v });
+            this.reindex();
+        }
+        return true;
+    }
+
+    removeFilter(kind, value) {
+        this.filters = this.filters.filter((f) => !(f.kind === kind && f.value === String(value)));
+        this.reindex();
+    }
+
+    setFilters(list) {
+        this.clearFilters();
+        for (const f of list || []) this.addFilter(f.kind, f.value);
     }
 
     clearFilters() {
-        this.filterMMSIs = [];
+        this.filters = [];
+        this.reindex();
     }
 }
 
@@ -236,37 +272,65 @@ function syncPauseButton(isPaused) {
     }
 }
 
+let dialogKind = 'mmsi';
+
+function chipsHTML() {
+    return viewer.filters.map((f) => `<div class="filter-chip">
+        <span class="filter-chip-kind">${FILTER_KINDS[f.kind].label}</span><span>${f.value}</span>
+        <button title="Remove filter" data-action="removeRealtimeFilter" data-kind="${f.kind}"
+            data-value="${f.value}"><i class="close_icon"></i></button></div>`).join('');
+}
+
 function updateFilterDisplay() {
     if (!viewer) return;
-    const filterDisplay = document.getElementById('realtime_filter_display');
-    const filterChips = document.getElementById('realtime_mmsi_filters');
-    if (!filterDisplay || !filterChips) return;
+    const n = viewer.filters.length;
 
-    if (viewer.filterMMSIs.length > 0) {
-        filterChips.textContent = '';
-        viewer.filterMMSIs.forEach((mmsi) => {
-            const chip = document.createElement('div');
-            chip.className = 'filter-chip';
+    document.getElementById('realtime_mmsi_filters').innerHTML = chipsHTML();
+    document.getElementById('realtime_filter_display').style.display = n ? 'flex' : 'none';
+    document.getElementById('realtime_filter_count').textContent = n || '';
+    document.getElementById('realtime_filter_button').classList.toggle('active', n > 0);
 
-            const label = document.createElement('span');
-            label.textContent = mmsi;
+    if (document.getElementById('realtime_filter_kind')) renderFilterDialog();
+}
 
-            const btn = document.createElement('button');
-            btn.title = 'Remove filter';
-            btn.dataset.action = 'removeRealtimeFilterMMSI';
-            btn.dataset.mmsi = mmsi;
-            const icon = document.createElement('i');
-            icon.className = 'close_icon';
-            btn.appendChild(icon);
+function valueFieldHTML() {
+    if (dialogKind === 'channel')
+        return `<select id="realtime_filter_value" class="realtime-filter-input">
+            ${['A', 'B', 'C', 'D'].map((c) => `<option>${c}</option>`).join('')}</select>`;
 
-            chip.appendChild(label);
-            chip.appendChild(btn);
-            filterChips.appendChild(chip);
-        });
-        filterDisplay.style.display = 'flex';
-    } else {
-        filterDisplay.style.display = 'none';
-    }
+    const hint = dialogKind === 'type' ? 'Message type 1 - 27' : 'MMSI number';
+    return `<input id="realtime_filter_value" class="realtime-filter-input" placeholder="${hint}">`;
+}
+
+function filterDialogHTML() {
+    const kinds = Object.entries(FILTER_KINDS).map(([k, v]) =>
+        `<option value="${k}"${k === dialogKind ? ' selected' : ''}>${v.label}</option>`).join('');
+
+    const active = viewer.filters.length
+        ? `<div class="realtime-filter-active"><div class="filter-chips">${chipsHTML()}</div>
+            <button class="realtime-filter-clear" data-action="clearRealtimeFilters">Remove all</button></div>`
+        : '<div class="realtime-filter-none">No filters. Every message is shown.</div>';
+
+    return `<div class="realtime-filter-editor">
+        <div class="realtime-filter-row">
+            <select id="realtime_filter_kind" class="realtime-filter-input"
+                data-on-change="realtimeFilterKindChanged">${kinds}</select>
+            ${valueFieldHTML()}
+            <button class="realtime-filter-add" data-action="addRealtimeFilter">Add</button>
+        </div>${active}
+        <div class="realtime-filter-hint">Values of the same kind widen the selection, different kinds narrow it.</div>
+        </div>`;
+}
+
+function renderFilterDialog() {
+    window.AISCatcher.showDialog('NMEA filters', filterDialogHTML());
+    document.getElementById('dialog-box').style.maxWidth = '520px';
+
+    const field = document.getElementById('realtime_filter_value');
+    field.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') addFilterFromInput();
+    });
+    field.focus();
 }
 
 function handleKeydown(event) {
@@ -277,6 +341,7 @@ function handleKeydown(event) {
 }
 
 
+
 export function activate(filterMMSI = null) {
     const config = window.AISCatcher.config;
 
@@ -285,8 +350,10 @@ export function activate(filterMMSI = null) {
     if (!viewer) {
         viewer = new RealtimeViewer(filterMMSI);
 
-        if (settings.realtime_filter_mmsis && Array.isArray(settings.realtime_filter_mmsis)) {
-            viewer.filterMMSIs = [...settings.realtime_filter_mmsis];
+        if (Array.isArray(settings.realtime_filters) && settings.realtime_filters.length) {
+            viewer.setFilters(settings.realtime_filters);
+        } else if (Array.isArray(settings.realtime_filter_mmsis) && settings.realtime_filter_mmsis.length) {
+            viewer.setFilters(settings.realtime_filter_mmsis.map((m) => ({ kind: 'mmsi', value: m })));
         }
         if (savedState && savedState.isPaused) {
             viewer.isPaused = true;
@@ -301,7 +368,7 @@ export function activate(filterMMSI = null) {
     }
 
     if (pendingFilters) {
-        pendingFilters.forEach((f) => viewer.addFilterMMSI(f));
+        pendingFilters.forEach((f) => viewer.addFilter(f.kind, f.value));
         pendingFilters = null;
         window.__app__.saveSettings();
     }
@@ -334,11 +401,11 @@ export function openForMMSI(mmsi) {
     if (!config.features.realtime) return;
 
     if (viewer && document.getElementById('realtime').style.display === 'block') {
-        addFilter(mmsi);
+        addFilter('mmsi', mmsi);
         return;
     }
 
-    const existingFilters = viewer ? [...viewer.filterMMSIs] : [];
+    const existingFilters = viewer ? [...viewer.filters] : [];
 
     if (viewer) {
         viewer.disconnect();
@@ -346,7 +413,7 @@ export function openForMMSI(mmsi) {
     }
     savedState = null;
 
-    pendingFilters = [...existingFilters, mmsi];
+    pendingFilters = [...existingFilters, { kind: 'mmsi', value: mmsi }];
     document.getElementById('realtime_tab').click();
 }
 
@@ -377,35 +444,45 @@ export function clear() {
     }
 }
 
-export function promptFilter() {
-    const mmsiInput = prompt('Enter MMSI to filter:');
-    if (!mmsiInput) return;
-    const mmsi = parseInt(mmsiInput.trim(), 10);
-    if (!isNaN(mmsi) && mmsi > 0) {
-        addFilter(mmsi);
-    } else {
-        alert('Please enter a valid MMSI number.');
+export function addFilter(kind, value) {
+    if (!viewer) return;
+    if (!viewer.addFilter(kind, value)) {
+        window.AISCatcher.showNotification('Not a valid ' + (FILTER_KINDS[kind] ? FILTER_KINDS[kind].label : kind));
+        return;
     }
-}
-
-export function addFilter(mmsi) {
-    if (!viewer) return;
-    const filterValue = mmsi ? mmsi.toString().trim() : '';
-    if (!filterValue) return;
-    viewer.addFilterMMSI(filterValue);
     updateFilterDisplay();
     window.__app__.saveSettings();
 }
 
-export function removeFilter(mmsi) {
+export function addFilterFromInput() {
+    addFilter(dialogKind, document.getElementById('realtime_filter_value').value);
+}
+
+export function openFilters() {
+    if (viewer) renderFilterDialog();
+}
+
+export function removeFilter(kind, value) {
     if (!viewer) return;
-    viewer.removeFilterMMSI(mmsi);
+    viewer.removeFilter(kind, value);
     updateFilterDisplay();
     window.__app__.saveSettings();
 }
 
-export function getFilterMMSIs() {
-    return viewer ? viewer.filterMMSIs : null;
+export function clearFilters() {
+    if (!viewer) return;
+    viewer.clearFilters();
+    updateFilterDisplay();
+    window.__app__.saveSettings();
+}
+
+export function filterKindChanged() {
+    dialogKind = document.getElementById('realtime_filter_kind').value;
+    renderFilterDialog();
+}
+
+export function getFilters() {
+    return viewer ? viewer.filters : null;
 }
 
 export function getBackgroundStreaming() {

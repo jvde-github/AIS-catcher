@@ -776,8 +776,10 @@
 				<div class="realtime-viewer">
 					<div class="realtime-tabs">
 						<div class="realtime-spacer"></div>
-						<button class="realtime-control-btn" data-action="promptFilterMMSI" title="Filter by MMSI">
+						<button id="realtime_filter_button" class="realtime-control-btn"
+							data-action="openRealtimeFilters" title="Filters">
 							<span class="filter_alt_icon"></span>
+							<span id="realtime_filter_count" class="realtime-filter-count"></span>
 						</button>
 						<label class="realtime-background-toggle" title="Keep streaming when tab is hidden">
 							<input type="checkbox" id="realtime_background_streaming"

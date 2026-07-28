@@ -69,6 +69,7 @@ function cloneChartConfig(config) {
 }
 
 const FILL_ALPHA = 0.3;
+const BAR_ALPHA = 0.45;
 
 function withAlpha(color, alpha) {
     const hex = color.replace("#", "");
@@ -79,10 +80,12 @@ function withAlpha(color, alpha) {
 }
 
 function updateChartColors(c, colorVariables) {
+    const bars = c.config.type === "bar";
     c.data.datasets.forEach((dataset, index) => {
         const color = cssvar(colorVariables[index]);
         dataset.borderColor = color;
-        dataset.backgroundColor = dataset.fill ? withAlpha(color, FILL_ALPHA) : color;
+        if (bars) dataset.backgroundColor = withAlpha(color, BAR_ALPHA);
+        else dataset.backgroundColor = dataset.fill ? withAlpha(color, FILL_ALPHA) : color;
     });
     const ink = cssvar("--chart-color");
     const grid = cssvar("--chart-grid-color");
@@ -259,11 +262,11 @@ const plot_count = {
     type: "scatter",
     data: {
         datasets: [
-            { label: "Vessel Count", data: [], type: "line", showLine: true, fill: false, pointStyle: false, borderWidth: 2, yAxisID: 'y_right' },
-            { label: "Class A", data: [], showLine: true, fill: "origin", borderWidth: 2, pointStyle: false },
-            { label: "Class B", data: [], showLine: true, fill: "-1", borderWidth: 2, pointStyle: false },
-            { label: "Base Station", data: [], showLine: true, fill: "-1", borderWidth: 2, pointStyle: false },
-            { label: "Other", data: [], showLine: true, fill: "-1", borderWidth: 2, pointStyle: false },
+            { label: "Vessel Count", data: [], type: "line", showLine: true, fill: false, pointStyle: false, borderWidth: 1.5, yAxisID: 'y_right' },
+            { label: "Class A", data: [], showLine: true, fill: "origin", borderWidth: 1, pointStyle: false },
+            { label: "Class B", data: [], showLine: true, fill: "-1", borderWidth: 1, pointStyle: false },
+            { label: "Base Station", data: [], showLine: true, fill: "-1", borderWidth: 1, pointStyle: false },
+            { label: "Other", data: [], showLine: true, fill: "-1", borderWidth: 1, pointStyle: false },
         ],
     },
     options: graph_options_count,
@@ -363,7 +366,7 @@ const plot_gain = {
     type: "bar",
     data: {
         datasets: [
-            { label: "Gain", data: [], borderWidth: 0 },
+            { label: "Gain", data: [], borderWidth: 1 },
         ],
     },
     options: {

@@ -258,7 +258,8 @@ namespace V2
 
 	Engine::Engine() : filter17(Filters::Coherent.data()), filter37(Filters::Receiver.data())
 	{
-		memset(raw, 0, sizeof raw);
+		for (int i = 0; i < 2 * BLOCK_SIZE; i++)
+			raw[i] = CFLOAT32(0.0f, 0.0f);
 	}
 
 	bool Engine::midWins(const CFLOAT32 *input) const
