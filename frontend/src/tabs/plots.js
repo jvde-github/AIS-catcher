@@ -68,7 +68,7 @@ function cloneChartConfig(config) {
     return clone;
 }
 
-const FILL_ALPHA = 0.55;
+const FILL_ALPHA = 0.3;
 
 function withAlpha(color, alpha) {
     const hex = color.replace("#", "");
@@ -87,7 +87,6 @@ function updateChartColors(c, colorVariables) {
     const ink = cssvar("--chart-color");
     const grid = cssvar("--chart-grid-color");
 
-    // chart.options is a proxy whose setters recurse when enumerated
     const scales = c.config.options?.scales || {};
     Object.keys(scales).forEach((id) => {
         const scale = scales[id];
@@ -459,7 +458,6 @@ const clock = (d) => d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digi
 const day = (d) => d.toLocaleDateString([], { day: "numeric", month: "short" });
 
 function formatTimeTick(value, axis, prev) {
-    // fractional steps fall between buckets
     if (Math.abs(value - Math.round(value)) > 1e-9) return "";
 
     const d = bucketDate(value, axis);
@@ -487,7 +485,6 @@ function formatTimeTooltip(value, axis) {
     return day(d) + " " + clock(d);
 }
 
-// cloneChartConfig's JSON round trip drops functions, so these attach to the live chart
 function attachTimeAxis(c) {
     const opts = c.config.options;
     const x = opts?.scales?.x;
