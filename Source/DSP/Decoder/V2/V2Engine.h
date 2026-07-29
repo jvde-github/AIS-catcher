@@ -64,7 +64,6 @@ namespace V2
 	{
 		unsigned rot = 0;
 		CFLOAT32 s = CFLOAT32(0.0f, 0.0f); // decision-folded EMA
-		CFLOAT32 u = CFLOAT32(1.0f, 0.0f); // decision line direction (unit)
 		int prev_decision = 0;
 		float weight = 0.86f;		// tracking, after sync
 		float weight_train = 0.75f; // acquisition, while training

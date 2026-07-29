@@ -22,6 +22,8 @@
 #include "FFT.h"
 #include "Filters.h"
 
+#define SUBBIN_INTERP 0
+
 namespace V2
 {
 	// tuning
@@ -108,7 +110,24 @@ namespace V2
 		if (fz < 0)
 			return 0.0f;
 
-		return (fft_length / 2 - (fz + delta / 2.0f)) / 2.0f / fft_length;
+		float frac = 0.0f;
+
+#if SUBBIN_INTERP
+		if (fz > 0 && fz + delta + 1 < fft_length)
+		{
+			const float a = magnitude[fz - 1] + magnitude[fz - 1 + delta];
+			const float c = magnitude[fz + 1] + magnitude[fz + 1 + delta];
+			const float den = a - 2.0f * max_val + c;
+
+			if (den < 0.0f)
+			{
+				frac = 0.5f * (a - c) / den;
+				frac = frac > 0.5f ? 0.5f : (frac < -0.5f ? -0.5f : frac);
+			}
+		}
+#endif
+
+		return (fft_length / 2 - (fz + frac + delta / 2.0f)) / 2.0f / fft_length;
 	}
 
 	void FreqOffset::Derotate(float f, const CFLOAT32 *src, CFLOAT32 *dst, int len)
@@ -190,14 +209,10 @@ namespace V2
 		const float alpha = training ? weight_train : weight;
 		const float beta = 1.0f - alpha;
 
-		const float proj = z.real() * u.real() + z.imag() * u.imag();
+		const float proj = z.real() * s.real() + z.imag() * s.imag();
 		const float d = proj >= 0.0f ? 1.0f : -1.0f;
 
 		s = alpha * s + (beta * d) * z;
-
-		const float mag = sqrtf(norm2(s));
-		if (mag > 1e-12f)
-			u = s / mag;
 
 		// differential decision (NRZI-style, cancels any 180-degree offset)
 		const int decision = proj > 0.0f ? 1 : 0;
