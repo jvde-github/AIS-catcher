@@ -448,7 +448,7 @@ export function clear() {
 export function addFilter(kind, value) {
     if (!viewer) return;
     if (!viewer.addFilter(kind, value)) {
-        window.AISCatcher.showNotification('Not a valid ' + (FILTER_KINDS[kind] ? FILTER_KINDS[kind].label : kind));
+        window.AISCatcher.showNotification('Not a valid ' + (FILTER_KINDS[kind] ? FILTER_KINDS[kind].label : kind), 'error');
         return;
     }
     updateFilterDisplay();

@@ -11,7 +11,7 @@ export async function setup() {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         text = await response.text();
     } catch (error) {
-        window.AISCatcher.showNotification("Error loading about.md: " + error);
+        window.AISCatcher.showNotification("Error loading about.md: " + error, "error");
         return;
     }
 

@@ -393,42 +393,72 @@ const plot_gain = {
     },
 };
 
-// A is the viewer-wide scope (shared with the top bar); B is chart-only
+let mode = "overview";
+let sourceA = null;
 let sourceB = null;
 let updateToken = 0;
 
+function receivers() {
+    return window.__app__.receivers || [];
+}
+
 function receiverLabel(idx) {
-    const r = (window.__app__.receivers || []).find((x) => x.idx === idx);
+    const r = receivers().find((x) => x.idx === idx);
     return r ? r.label : `Receiver ${idx}`;
 }
 
-function buildSourceSelectors() {
+export function setMode(next) {
+    if (next !== "compare") next = "overview";
+    if (next === mode) return;
+    mode = next;
+    if (mode === "compare") {
+        if (sourceA === null) sourceA = window.__app__.activeReceiver;
+        if (sourceB === null) {
+            const other = receivers().find((r) => r.idx !== sourceA);
+            sourceB = other ? other.idx : sourceA;
+        }
+    }
+    update();
+}
+
+function applyMode() {
+    const multi = receivers().length > 1;
+    if (!multi) mode = "overview";
+
+    const tabs = document.getElementById("plots_modes");
+    if (tabs) {
+        tabs.style.display = multi ? "flex" : "none";
+        for (const tab of tabs.children)
+            tab.classList.toggle("active", tab.dataset.mode === mode);
+    }
+
     const bar = document.getElementById("chart_sources");
+    if (bar) bar.style.display = mode === "compare" ? "flex" : "none";
+
+    const plots = document.getElementById("plots");
+    if (plots) plots.classList.toggle("compare-mode", mode === "compare");
+
+    if (mode === "compare") buildSourceSelectors();
+}
+
+function buildSourceSelectors() {
     const selA = document.getElementById("chart_source_a");
     const selB = document.getElementById("chart_source_b");
-    if (!bar || !selA || !selB) return;
+    if (!selA || !selB) return;
 
-    const receivers = window.__app__.receivers || [];
-    if (receivers.length <= 1) {
-        bar.style.display = "none";
-        return;
+    const list = receivers();
+    if (selA.options.length !== list.length) {
+        selA.innerHTML = "";
+        selB.innerHTML = "";
+        for (const r of list) {
+            selA.appendChild(new Option(r.label, r.idx));
+            selB.appendChild(new Option(r.label, r.idx));
+        }
+        selA.onchange = () => { sourceA = parseInt(selA.value, 10) || 0; update(); };
+        selB.onchange = () => { sourceB = parseInt(selB.value, 10) || 0; update(); };
     }
-    bar.style.display = "flex";
-    if (selA.options.length === receivers.length) return;
-
-    selA.innerHTML = "";
-    selB.innerHTML = "";
-    for (const r of receivers) {
-        selA.appendChild(new Option(r.label, r.idx));
-        selB.appendChild(new Option(r.label, r.idx));
-    }
-    selB.insertBefore(new Option("none", ""), selB.firstChild);
-
-    selA.value = String(window.__app__.activeReceiver);
-    selB.value = sourceB === null ? "" : String(sourceB);
-
-    selA.onchange = () => window.__app__.setReceiver(parseInt(selA.value, 10));
-    selB.onchange = () => { sourceB = selB.value === "" ? null : parseInt(selB.value, 10); update(); };
+    selA.value = String(sourceA);
+    selB.value = String(sourceB);
 }
 
 async function fetchHistory(idx) {
@@ -695,32 +725,29 @@ function updateRadar(b, f, c) {
 export async function update() {
     init();
 
-    buildSourceSelectors();
+    applyMode();
     const token = ++updateToken;
-    const sourceA = window.__app__.activeReceiver;
-    const sourceBAtStart = sourceB;
     const unit = getDistanceUnit().toUpperCase();
     document.querySelectorAll(".distunit").forEach((u) => {
         u.textContent = unit;
     });
 
-    const [b, cmp] = await Promise.all([
-        fetchHistory(sourceA),
-        sourceBAtStart !== null ? fetchHistory(sourceBAtStart) : Promise.resolve(null),
-    ]);
-    if (!b || token !== updateToken) return;
+    if (mode === "compare") {
+        const a = sourceA, cmpIdx = sourceB;
+        const [ha, hb] = await Promise.all([fetchHistory(a), fetchHistory(cmpIdx)]);
+        if (!ha || !hb || token !== updateToken) return;
 
-    document.querySelectorAll(".compare-panel").forEach((p) => {
-        p.style.display = sourceBAtStart === null ? "none" : "";
-    });
-    if (sourceBAtStart !== null) {
-        updateChartCompare(b, cmp, "minute", "count", charts.chart_compare_minutes, sourceA, sourceBAtStart);
-        updateChartCompare(b, cmp, "hour", "count", charts.chart_compare_hours, sourceA, sourceBAtStart);
-        updateChartGain(b, cmp, "minute", charts.chart_compare_gain_minute, sourceA, sourceBAtStart);
-        updateChartGain(b, cmp, "hour", charts.chart_compare_gain_hour, sourceA, sourceBAtStart);
-        updateChartCompare(b, cmp, "minute", "vessels", charts.chart_compare_vessels_minute, sourceA, sourceBAtStart);
-        updateChartCompare(b, cmp, "hour", "vessels", charts.chart_compare_vessels_hour, sourceA, sourceBAtStart);
+        updateChartCompare(ha, hb, "minute", "count", charts.chart_compare_minutes, a, cmpIdx);
+        updateChartCompare(ha, hb, "hour", "count", charts.chart_compare_hours, a, cmpIdx);
+        updateChartGain(ha, hb, "minute", charts.chart_compare_gain_minute, a, cmpIdx);
+        updateChartGain(ha, hb, "hour", charts.chart_compare_gain_hour, a, cmpIdx);
+        updateChartCompare(ha, hb, "minute", "vessels", charts.chart_compare_vessels_minute, a, cmpIdx);
+        updateChartCompare(ha, hb, "hour", "vessels", charts.chart_compare_vessels_hour, a, cmpIdx);
+        return;
     }
+
+    const b = await fetchHistory(window.__app__.activeReceiver);
+    if (!b || token !== updateToken) return;
 
     updateChartMulti(b, "second", charts.chart_seconds);
     updateChartMulti(b, "minute", charts.chart_minutes);

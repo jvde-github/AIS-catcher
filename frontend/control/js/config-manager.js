@@ -564,23 +564,38 @@
     const App = {
         state: { unsaved: false },
 
-        notify(type, message, duration = 6000) {
+        notify(type, message, duration) {
             const container = document.getElementById('toast-container') || this.createToastContainer();
+            const time = { info: 5000, success: 5000, warning: 7000, error: 9000 };
+            const icon = {
+                info: null,
+                success: ['✓', 'text-emerald-400'],
+                warning: ['!', 'text-amber-400'],
+                error: ['!', 'text-white'],
+            };
+            if (!(type in time)) type = 'info';
+
             const colorClass = type === 'error'
                 ? 'bg-rose-600 text-white'
                 : 'bg-slate-800 text-white border border-slate-700';
 
+            const close = el('span', 'ml-1 font-bold leading-none cursor-pointer opacity-60 hover:opacity-100', { title: 'Dismiss' }, '×');
             const toast = el('div', `mb-3 px-4 py-3 rounded-lg shadow-xl transform transition-all duration-300 translate-y-2 opacity-0 flex items-center gap-3 ${colorClass}`, {},
-                type === 'success' ? el('span', 'font-bold text-emerald-400', {}, '✓') : el('span', 'font-bold text-white', {}, '!'),
-                el('span', 'text-sm font-medium', {}, message)
+                icon[type] ? el('span', 'font-bold ' + icon[type][1], {}, icon[type][0]) : null,
+                el('span', 'text-sm font-medium flex-1', {}, message),
+                close
             );
 
             container.appendChild(toast);
             requestAnimationFrame(() => toast.classList.remove('translate-y-2', 'opacity-0'));
-            setTimeout(() => {
+
+            const dismiss = () => {
+                clearTimeout(timer);
                 toast.classList.add('opacity-0', 'translate-y-2');
                 setTimeout(() => toast.remove(), 300);
-            }, duration);
+            };
+            close.addEventListener('click', dismiss);
+            const timer = setTimeout(dismiss, duration || time[type]);
         },
 
         createToastContainer() {

@@ -118,8 +118,8 @@ const ACTIONS = {
     toggleInfoPanel: () => toggleInfoPanel(),
     headerSettings: () => openSettings(),
     toggleScreenSize: () => toggleScreenSize(),
-    toggleReceiverDropdown: (e) => toggleReceiverDropdown(e),
-    closeReceiverDropdown: () => closeReceiverDropdown(),
+    showReceiverDialog: () => showReceiverDialog(),
+    selectReceiver: (e, d) => selectReceiver(d.idx),
 
     // tableside / generic close buttons / dialog
     hideTablecard: () => hideTablecard(),
@@ -200,6 +200,7 @@ const ACTIONS = {
     openSettings: () => openSettings(),
     toggleDarkMode: () => toggleDarkMode(),
     toggleGraphVisibility: (e, d) => toggleGraphVisibility(d.graph),
+    setPlotsMode: (e, d) => plotsModule?.setMode(d.mode),
 
     // realtime / decoder controls
     openRealtimeFilters: () => realtimeModule?.openFilters(),
@@ -553,7 +554,7 @@ function applyDefaultSettings() {
 
     redrawMap();
     updateSettingsTab();
-    showNotification("Settings restored to defaults");
+    showNotification("Settings restored to defaults", "success");
 }
 
 // some functions useful in plugins
@@ -650,8 +651,7 @@ const SETTINGS_TAB_GROUPS = [
 let settingsGroups = [];
 let settingsSubNav = null;
 let settingsSubWrap = null;
-let settingsChevronLeft = null;
-let settingsChevronRight = null;
+let settingsScrollers = [];
 
 function makeSettingsTab(label, activate) {
     const tab = document.createElement("div");
@@ -703,38 +703,46 @@ function buildSettingsTabs() {
         nav.appendChild(makeSettingsTab(g.title, () => selectSettingsGroup(i)));
     });
     const headerSlot = document.querySelector("#settings .settings_header .hdr-slot");
-    headerSlot.appendChild(nav);
+    headerSlot.appendChild(makeTabScroller(nav).wrap);
 
     settingsSubNav = document.createElement("nav");
     settingsSubNav.className = "settings_tabs settings_subtabs";
     settingsSubNav.setAttribute("role", "tablist");
-
-    settingsSubWrap = document.createElement("div");
-    settingsSubWrap.className = "settings_nav settings_tabscroll";
-    const chevron = (label, dir) => {
-        const c = document.createElement("div");
-        c.className = "settings_tabchevron";
-        c.textContent = label;
-        c.onclick = () => settingsSubNav.scrollBy({ left: dir * 140, behavior: "smooth" });
-        return c;
-    };
-    settingsChevronLeft = chevron("‹", -1);
-    settingsChevronRight = chevron("›", 1);
-    settingsSubWrap.append(settingsChevronLeft, settingsSubNav, settingsChevronRight);
+    settingsSubWrap = makeTabScroller(settingsSubNav, "settings_nav").wrap;
     main.prepend(settingsSubWrap);
-
-    settingsSubNav.addEventListener("scroll", updateSettingsChevrons);
-    window.addEventListener("resize", updateSettingsChevrons);
 
     selectSettingsGroup(0);
 }
 
+function makeTabScroller(nav, extraClass) {
+    const wrap = document.createElement("div");
+    wrap.className = "settings_tabscroll" + (extraClass ? " " + extraClass : "");
+
+    const chevron = (label, dir) => {
+        const c = document.createElement("div");
+        c.className = "settings_tabchevron";
+        c.textContent = label;
+        c.onclick = () => nav.scrollBy({ left: dir * 140, behavior: "smooth" });
+        return c;
+    };
+    const left = chevron("‹", -1);
+    const right = chevron("›", 1);
+    wrap.append(left, nav, right);
+
+    const sync = () => {
+        const overflow = nav.scrollWidth > wrap.clientWidth - 1;
+        left.style.display = overflow && nav.scrollLeft > 2 ? "" : "none";
+        right.style.display =
+            overflow && nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 2 ? "" : "none";
+    };
+    nav.addEventListener("scroll", sync);
+    window.addEventListener("resize", sync);
+    settingsScrollers.push(sync);
+    return { wrap, sync };
+}
+
 function updateSettingsChevrons() {
-    const nav = settingsSubNav;
-    const overflow = nav.scrollWidth > settingsSubWrap.clientWidth - 1;
-    settingsChevronLeft.style.display = overflow && nav.scrollLeft > 2 ? "" : "none";
-    settingsChevronRight.style.display =
-        overflow && nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 2 ? "" : "none";
+    settingsScrollers.forEach((sync) => sync());
 }
 
 function selectSettingsGroup(idx) {
@@ -799,10 +807,10 @@ function setCoordinateFormat(format) {
 async function copyCoordinates(m) {
     const raw = shipsDB[m]?.raw;
     if (!raw) {
-        showNotification("Ship not found");
+        showNotification("Ship not found", "error");
         return;
     }
-    if (await copyClipboard(raw.lat + "," + raw.lon)) showNotification("Coordinates copied to clipboard");
+    if (await copyClipboard(raw.lat + "," + raw.lon)) showNotification("Coordinates copied to clipboard", "success");
 }
 
 let hoverMMSI = undefined;
@@ -1141,15 +1149,17 @@ async function fetchJSON(l, m) {
 }
 
 function objectToTableHtml(obj, copyContext) {
-    let tableHtml = '<table class="mytable">';
+    let tableHtml = '<table class="kv-table">';
     for (let key in obj) {
         let value = obj[key];
         if (Array.isArray(value) || (value !== null && typeof value === 'object')) value = JSON.stringify(value);
         if (value == null) value = '';
         const safeKey = sanitizeString(String(key));
         const safeVal = sanitizeString(String(value));
-        const copyAttrs = copyContext ? ` data-on-contextmenu="showNMEAContextCopy" data-copy="${safeVal}"` : '';
-        tableHtml += `<tr><td>${safeKey}</td><td${copyAttrs}>${safeVal}</td></tr>`;
+        const empty = safeVal === '';
+        const copyAttrs = copyContext && !empty ? ` data-on-contextmenu="showNMEAContextCopy" data-copy="${safeVal}"` : '';
+        const cell = empty ? '<span class="kv-empty">-</span>' : safeVal;
+        tableHtml += `<tr><td class="kv-key">${safeKey}</td><td class="kv-value"${copyAttrs}>${cell}</td></tr>`;
     }
     return tableHtml + "</table>";
 }
@@ -1170,14 +1180,14 @@ async function showJSONTableDialog(url, m, title, copyContext) {
 
 async function showNMEA(m) {
     if (config.features.save_messages) {
-        await showJSONTableDialog("api/message", m, "Message " + m, true);
+        await showJSONTableDialog("api/message", m + "&receiver=" + activeReceiver, "Message " + m, true);
     } else {
         showDialog("Error", 'Please enable "-N MSG on" in AIS-catcher settings.');
     }
 }
 
 async function showVesselDetail(m) {
-    await showJSONTableDialog("api/vessel", m, "Vessel " + m, false);
+    await showJSONTableDialog("api/vessel", m + "&receiver=" + activeReceiver, "Vessel " + m, false);
 }
 
 function showBinaryMessageDialog(featureOrMmsi) {
@@ -1268,7 +1278,7 @@ function getBinaryMessageList(messages) {
 }
 
 async function copyText(m) {
-    if (await copyClipboard(m)) showNotification("Content copied to clipboard");
+    if (await copyClipboard(m)) showNotification("Content copied to clipboard", "success");
 }
 
 const TOOLTIP_FLAG_STYLE = "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%";
@@ -1444,20 +1454,42 @@ function closeDialog() {
     document.getElementById("dialog-overlay").classList.remove("active");
 }
 
-function showNotification(message) {
-    console.log("[notification] " + message);
+const NOTIFICATION_TIME = { info: 5000, success: 5000, warning: 7000, error: 9000 };
+const NOTIFICATION_ICON = { info: "", success: "✓", warning: "!", error: "!" };
+
+function showNotification(message, type = "info", duration) {
+    if (!(type in NOTIFICATION_TIME)) type = "info";
+    (type === "error" ? console.error : console.log)("[notification] " + message);
+
     const notificationElement = document.createElement("div");
-    notificationElement.classList.add("notification");
-    notificationElement.textContent = message;
+    notificationElement.className = "notification notification-" + type;
+
+    let icon = null;
+    if (NOTIFICATION_ICON[type]) {
+        icon = document.createElement("span");
+        icon.className = "notification-icon";
+        icon.textContent = NOTIFICATION_ICON[type];
+    }
+    const text = document.createElement("span");
+    text.className = "notification-text";
+    text.textContent = message;
+    const close = document.createElement("span");
+    close.className = "notification-close";
+    close.title = "Dismiss";
+    close.textContent = "×";
+    if (icon) notificationElement.append(icon);
+    notificationElement.append(text, close);
 
     notificationContainer.appendChild(notificationElement);
+    requestAnimationFrame(() => notificationElement.classList.add("show"));
 
-    setTimeout(() => {
-        notificationElement.style.opacity = 0;
-        setTimeout(() => {
-            notificationContainer.removeChild(notificationElement);
-        }, 500);
-    }, 2000);
+    const dismiss = () => {
+        clearTimeout(timer);
+        notificationElement.classList.remove("show");
+        setTimeout(() => notificationElement.remove(), 300);
+    };
+    close.addEventListener("click", dismiss);
+    const timer = setTimeout(dismiss, duration || NOTIFICATION_TIME[type]);
 }
 
 function headerClick() {
@@ -2717,53 +2749,33 @@ function toggleShipcardSize() {
 }
 
 function syncReceiverUI() {
-    const chartSource = document.getElementById("chart_source_a");
-    if (chartSource && chartSource.options.length) chartSource.value = String(activeReceiver);
     const btn = document.getElementById("receiver-btn");
-    if (btn) btn.classList.toggle("active", activeReceiver !== 0);
-    const dd = document.getElementById("receiver-dropdown");
-    if (!dd) return;
-    for (const item of dd.children) {
-        item.classList.toggle("active", parseInt(item.dataset.idx) === activeReceiver);
-    }
+    if (!btn) return;
+    btn.classList.toggle("active", activeReceiver !== 0);
+    const r = (config.receivers || []).find((x) => x.idx === activeReceiver);
+    btn.title = r ? "Receiver: " + r.label : "Select receiver";
 }
 
 function updateReceiverSelect(receivers) {
     const wrap = document.getElementById("receiver-btn-wrap");
     if (!wrap) return;
-    if (!receivers || receivers.length <= 1) {
-        wrap.style.display = "none";
-        return;
-    }
-    wrap.style.display = "flex";
-    const dd = document.getElementById("receiver-dropdown");
-    if (dd && dd.children.length !== receivers.length) {
-        dd.innerHTML = "";
-        for (const r of receivers) {
-            const item = document.createElement("div");
-            item.className = "receiver-dropdown-item";
-            item.dataset.idx = r.idx;
-            item.textContent = r.label;
-            item.onclick = () => { onReceiverChange(r.idx); closeReceiverDropdown(); };
-            dd.appendChild(item);
-        }
-    }
+    wrap.style.display = !receivers || receivers.length <= 1 ? "none" : "flex";
     syncReceiverUI();
 }
 
-function toggleReceiverDropdown(event) {
-    event.stopPropagation();
-    const dd = document.getElementById("receiver-dropdown");
-    if (!dd) return;
-    const opening = dd.style.display === "none";
-    dd.style.display = opening ? "block" : "none";
-    document.getElementById("receiver-dropdown-overlay").classList.toggle("active", opening);
+function showReceiverDialog() {
+    const receivers = config.receivers || [];
+    let html = '<div class="receiver-list">';
+    for (const r of receivers) {
+        html += `<div class="receiver-option${r.idx === activeReceiver ? " active" : ""}"` +
+            ` data-action="selectReceiver" data-idx="${r.idx}">${sanitizeString(r.label)}</div>`;
+    }
+    showDialog("Select Receiver", html + "</div>");
 }
 
-function closeReceiverDropdown() {
-    const dd = document.getElementById("receiver-dropdown");
-    if (dd) dd.style.display = "none";
-    document.getElementById("receiver-dropdown-overlay").classList.remove("active");
+function selectReceiver(idx) {
+    closeDialog();
+    onReceiverChange(idx);
 }
 
 function onReceiverChange(idx) {
@@ -3723,7 +3735,7 @@ async function resetTracksFromNow() {
     await fetchTracks();
     redrawMap();
     updateShipcardTrackOption();
-    showNotification("Tracks reset — showing from now");
+    showNotification("Tracks reset — showing from now", "success");
 }
 
 

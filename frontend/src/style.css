@@ -85,9 +85,10 @@
     --tooltip-background-color: #daebfe;
     --tooltip-border-color: white;
     --textshadow: white 1px 1px 0px;
-    --notification-background-color: #0b1033;
+    --notification-background-color: #1e293b;
     --notification-font-color: white;
-    --notification-border-color: 0857b1;
+    --notification-border-color: #334155;
+    --notification-error-color: #e11d48;
     --label-shadow-color: white;
     --label-shadow-width: 2px;
     --link-color: purple;
@@ -173,9 +174,6 @@
     --tooltip-background-color: rgb(60, 60, 60);
     --tooltip-border-color: rgb(30, 30, 30);
     --textshadow: black 1px 1px 0px;
-    --notification-background-color: lightgrey;
-    --notification-font-color: black;
-    --notification-border-color: rgb(17, 17, 17);
     --label-shadow-color: black;
     --link-color: var(--hl-accent);
     --link-hover-focus-color: #7ce481;
@@ -230,7 +228,8 @@ a:focus {
 }
 
 .header-title {
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: 0;
     background-color: var(--header-title-color);
     border-top-right-radius: 25% 50%;
     border-bottom-right-radius: 25% 50%;
@@ -244,6 +243,10 @@ a:focus {
     padding-top: 17px;
     line-height: 20px;
     padding-right: 50px;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .header-title div {
@@ -270,6 +273,10 @@ a:focus {
 @media only screen and (max-width: 750px) {
     .header-title div {
         display: none;
+    }
+
+    .header-title span {
+        padding-right: 15px;
     }
 }
 
@@ -298,6 +305,7 @@ a:focus {
 
 .header-icon {
     width: 35px;
+    flex: none;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -307,43 +315,29 @@ a:focus {
     line-height: 15px;
 }
 
-#receiver-dropdown-overlay {
-    z-index: 10009;
+.receiver-list {
+    display: flex;
+    flex-direction: column;
 }
 
-.receiver-dropdown {
-    position: absolute;
-    top: calc(100% + 10px);
-    right: 8px;
-    background: var(--menu-background-color);
-    border: 1px solid var(--menu-divider-color);
-    border-radius: 8px;
-    box-shadow: 0 4px 12px var(--shadow-color);
-    z-index: 10010;
-    min-width: 140px;
-    padding: 4px 0;
-    white-space: nowrap;
-}
-
-.receiver-dropdown-item {
-    padding: 5px 14px;
-    font-size: 13px;
+.receiver-option {
+    padding: 10px 4px;
+    font-size: 14px;
     color: var(--menu-font-color);
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    border-radius: 6px;
+    overflow-wrap: anywhere;
 }
 
-.receiver-dropdown-item + .receiver-dropdown-item {
+.receiver-option + .receiver-option {
     border-top: 1px solid var(--menu-divider-color);
 }
 
-.receiver-dropdown-item:hover {
+.receiver-option:hover {
     background: var(--menu-background-hover-color);
 }
 
-.receiver-dropdown-item.active {
+.receiver-option.active {
     color: var(--primary-color);
     font-weight: 600;
 }
@@ -379,6 +373,7 @@ a:focus {
     transition: var(--hover-transition);
     font-size: 24px;
     width: 40px;
+    flex: none;
     border-right: 1px solid rgb(120, 120, 120);
 }
 
@@ -502,6 +497,22 @@ a:focus {
     .bottombar {
         display: none;
     }
+}
+
+.plots-tabs {
+    margin: 4px 25px 0 25px;
+}
+
+#plots .compare-panel {
+    display: none;
+}
+
+#plots.compare-mode .compare-panel {
+    display: block;
+}
+
+#plots.compare-mode .graph-panel:not(.compare-panel) {
+    display: none;
 }
 
 .chart-sources {
@@ -1801,10 +1812,13 @@ td {
 
 /* Improved Dialog Box Styling - Preserving Original Structure */
 #dialog-box {
-    position: fixed;
-    max-height: 80vh;
-    width: 90%;
-    max-width: 900px;
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    max-height: 80%;
+    width: max-content;
+    min-width: min(320px, 90%);
+    max-width: min(90%, 900px);
     background-color: var(--menu-background-color);
     color: var(--menu-font-color);
     border: 0px solid #ccc;
@@ -1817,6 +1831,10 @@ td {
     overflow: hidden;
 }
 
+#dialog-box.hidden {
+    display: none;
+}
+
 .dark #dialog-box {
     border: 1px solid var(--hdr-border);
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
@@ -1824,6 +1842,7 @@ td {
 
 .dialog-header {
     display: flex;
+    flex: none;
     align-items: center;
     height: 52px;
     background: var(--hdr-band);
@@ -1883,12 +1902,44 @@ td {
     opacity: 0.65;
 }
 
+.kv-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.kv-table td {
+    padding: 6px 14px;
+    border-top: 1px solid var(--menu-divider-color);
+    vertical-align: top;
+}
+
+.kv-table tr:first-child td {
+    border-top: none;
+}
+
+.kv-table .kv-key {
+    color: var(--text-muted);
+    white-space: nowrap;
+    padding-left: 0;
+    border-right: 1px solid var(--menu-divider-color);
+}
+
+.kv-table .kv-value {
+    overflow-wrap: anywhere;
+}
+
+.kv-empty {
+    color: var(--text-muted);
+}
+
 .dialog-message {
     padding: 15px 20px 25px 20px;
     font-size: 14px;
     user-select: text;
     overflow-y: auto;
-    max-height: calc(80vh - 90px);
+    flex: 1 1 auto;
+    min-height: 0;
     box-sizing: border-box;
 }
 
@@ -2028,8 +2079,8 @@ td {
 /* Mobile Adjustments */
 @media only screen and (max-width: 600px) {
     #dialog-box {
-        width: 95%;
-        max-height: 90vh;
+        max-width: 95%;
+        max-height: 90%;
         border-radius: 4px;
     }
 
@@ -2041,7 +2092,6 @@ td {
     .dialog-message {
         padding: 12px 15px;
         font-size: 13px;
-        max-height: calc(90vh - 110px);
     }
 
     .dialog-close {
@@ -2763,28 +2813,77 @@ td {
 
 .notification-container {
     position: absolute;
-    margin: 5px;
+    left: 10px;
+    bottom: 10px;
     z-index: 10005;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
 }
 
 .notification {
-    background-color: var(--notification-background-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: min(360px, calc(100vw - 20px));
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.35;
     color: var(--notification-font-color);
-    border-radius: 2px;
-    width: 300px;
-    border-color: var(--notification-border-color);
-    padding: 10px;
-    opacity: 0.8;
+    background: var(--notification-background-color);
+    border: 1px solid var(--notification-border-color);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateY(8px);
     transition:
-        opacity 0.5s ease-in-out,
-        transform 0.5s ease-in-out;
-    margin-bottom: 5px;
+        opacity 0.3s ease,
+        transform 0.3s ease;
 }
 
-@media only screen and (max-width: 750px) {
-    .notification {
-        border-radius: 0px;
-    }
+.notification.show {
+    opacity: 1;
+    transform: none;
+}
+
+.notification-icon {
+    flex: none;
+    font-weight: 700;
+}
+
+.notification-text {
+    flex: 1 1 auto;
+}
+
+.notification-close {
+    flex: none;
+    margin-left: 4px;
+    padding: 0 2px;
+    font-size: 18px;
+    line-height: 1;
+    opacity: 0.6;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.notification-close:hover {
+    opacity: 1;
+}
+
+.notification-success .notification-icon {
+    color: #34d399;
+}
+
+.notification-warning .notification-icon {
+    color: #fbbf24;
+}
+
+.notification-error {
+    background: var(--notification-error-color);
+    border-color: var(--notification-error-color);
 }
 
 .flash-up {
@@ -2835,11 +2934,14 @@ td {
     padding: 0px;
     margin: 0px;
     transform: translateX(432px);
-    transition: transform 0.3s ease-out;
+    visibility: hidden;
+    transition: transform 0.3s ease-out, visibility 0s linear 0.3s;
 }
 
 .tableside_window.active {
     transform: translateX(0);
+    visibility: visible;
+    transition: transform 0.3s ease-out, visibility 0s;
     box-shadow: -10px 0 15px -5px var(--shadow-color);
 }
 
@@ -2858,11 +2960,14 @@ td {
     padding: 0px;
     margin: 0px;
     transform: translateX(-110%);
-    transition: transform 0.3s ease-out;
+    visibility: hidden;
+    transition: transform 0.3s ease-out, visibility 0s linear 0.3s;
 }
 
 .settings_window.active {
     transform: translateX(0);
+    visibility: visible;
+    transition: transform 0.3s ease-out, visibility 0s;
     box-shadow: 10px 0 15px -5px var(--shadow-color);
 }
 
@@ -2966,7 +3071,8 @@ td {
     color: var(--st-label-strong);
 }
 
-.settings_tabs {
+.settings_tabs,
+.plots-tabs {
     display: flex;
     gap: 0.375rem;
     padding: 0 1.25rem;
@@ -2981,6 +3087,20 @@ td {
     align-self: stretch;
     align-items: stretch;
     font-size: 14px;
+    min-width: 0;
+}
+
+.settings_header .settings_tabscroll {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.settings_header .settings_tabchevron {
+    border-bottom: none;
+}
+
+.settings_header .settings_tabchevron::before {
+    display: none;
 }
 
 .settings_header .settings_tab {
@@ -2992,7 +3112,8 @@ td {
     display: none;
 }
 
-.settings_tab {
+.settings_tab,
+.plots-tab {
     padding: 0.55rem 0.95rem;
     border-bottom: 3px solid transparent;
     font-size: 0.8125rem;
@@ -3004,7 +3125,8 @@ td {
     flex-shrink: 0;
 }
 
-.settings_tab:hover {
+.settings_tab:hover,
+.plots-tab:hover {
     color: var(--st-label-strong);
 }
 
@@ -3012,7 +3134,8 @@ td {
     padding: 0.55rem 0.65rem;
 }
 
-.settings_tab.active {
+.settings_tab.active,
+.plots-tab.active {
     color: var(--st-accent);
     border-bottom-color: var(--st-accent);
 }
@@ -3249,6 +3372,8 @@ td {
     flex: none;
     width: fit-content;
     min-width: 7rem;
+    max-width: 100%;
+    box-sizing: border-box;
     justify-content: center;
     text-align: center;
     border: 1px solid var(--st-input-border);
@@ -3298,6 +3423,7 @@ td {
 
 .settings_header .hdr-slot {
     flex: 1 1 0;
+    min-width: 0;
     display: flex;
     align-items: center;
     padding: 0;
@@ -3469,7 +3595,7 @@ td {
 
 .dark .binary-message-source,
 .dark .ownShipIcon i,
-.dark .receiver-dropdown-item.active,
+.dark .receiver-option.active,
 .dark #overlayContainer label:hover,
 .dark .column-menu-reset:hover {
     color: var(--hl-accent);

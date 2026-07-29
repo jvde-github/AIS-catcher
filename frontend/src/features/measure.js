@@ -117,12 +117,12 @@ export function refreshMeasures() {
     measures = measures.filter(measure => {
 
         if ((measure.start_type == 'ship' && !(measure.start_value in shipsDB))) {
-            deps.showNotification('Ship out of range for measurement.');
+            deps.showNotification('Ship out of range for measurement.', 'warning');
             return false;
         }
 
         if (measure.end_type == 'ship' && !(measure.end_value in shipsDB)) {
-            deps.showNotification('Ship out of range for measurement.');
+            deps.showNotification('Ship out of range for measurement.', 'warning');
             return false;
         }
 
@@ -203,7 +203,7 @@ function endMeasurement(t, v) {
 
         isMeasuring = false;
 
-        deps.showNotification('Measurement added.');
+        deps.showNotification('Measurement added.', 'success');
         refreshMeasures();
         clearMeasureMode();
     }

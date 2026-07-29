@@ -55,12 +55,10 @@
 			<i id="screentoggle-id" class="fullscreen_icon small-icon"></i>
 		</div>
 
-		<div id="receiver-btn-wrap" style="display:none; position:relative; align-items:center;">
-			<div id="receiver-btn" class="header-icon" title="Select receiver" data-action="toggleReceiverDropdown">
+		<div id="receiver-btn-wrap" style="display:none; align-items:center;">
+			<div id="receiver-btn" class="header-icon" title="Select receiver" data-action="showReceiverDialog">
 				<i class="radio_icon small-icon"></i>
 			</div>
-			<div class="overlay" id="receiver-dropdown-overlay" data-action="closeReceiverDropdown"></div>
-			<div id="receiver-dropdown" class="receiver-dropdown" style="display:none"></div>
 		</div>
 	</div>
 	<div class="overlay" id="menubar-overlay" data-action="hideMenu"></div>
@@ -1077,32 +1075,36 @@
 			</div>
 
 			<div class="tabcontent addscrollbar" id="plots" style="display: none;">
+				<div class="plots-tabs" id="plots_modes" style="display: none;">
+					<div class="plots-tab active" data-action="setPlotsMode" data-mode="overview">Overview</div>
+					<div class="plots-tab" data-action="setPlotsMode" data-mode="compare">Compare</div>
+				</div>
 				<div class="chart-sources" id="chart_sources" style="display: none;">
-					<label>Source<select id="chart_source_a"></select></label>
-					<label>Compare with<select id="chart_source_b"></select></label>
+					<label>Source A<select id="chart_source_a"></select></label>
+					<label>Source B<select id="chart_source_b"></select></label>
 				</div>
 				<div class="graphtab" data-on-contextmenu="plotsContextMenu">
-					<div class="graph-panel compare-panel" style="display: none;">
+					<div class="graph-panel compare-panel">
 						<header>Messages per Minute — A vs B</header>
 						<canvas id="chart-compare-minutes"></canvas>
 					</div>
-					<div class="graph-panel compare-panel" style="display: none;">
+					<div class="graph-panel compare-panel">
 						<header>Messages per Hour — A vs B</header>
 						<canvas id="chart-compare-hours"></canvas>
 					</div>
-					<div class="graph-panel compare-panel" style="display: none;">
+					<div class="graph-panel compare-panel">
 						<header>Message Gain per Minute — B vs A</header>
 						<canvas id="chart-compare-gain-minute"></canvas>
 					</div>
-					<div class="graph-panel compare-panel" style="display: none;">
+					<div class="graph-panel compare-panel">
 						<header>Message Gain per Hour — B vs A</header>
 						<canvas id="chart-compare-gain-hour"></canvas>
 					</div>
-					<div class="graph-panel compare-panel" style="display: none;">
+					<div class="graph-panel compare-panel">
 						<header>Vessels per Minute — A vs B</header>
 						<canvas id="chart-compare-vessels-minute"></canvas>
 					</div>
-					<div class="graph-panel compare-panel" style="display: none;">
+					<div class="graph-panel compare-panel">
 						<header>Vessels per Hour — A vs B</header>
 						<canvas id="chart-compare-vessels-hour"></canvas>
 					</div>
