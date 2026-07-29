@@ -1535,7 +1535,6 @@ function applyDynamicStyling() {
                 }
             }
     `;
-    else style += " .settings_window { top: 72px; }\n";
 
     dynamicStyle.innerHTML = style;
 }
