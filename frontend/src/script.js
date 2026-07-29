@@ -5279,9 +5279,9 @@ function showAboutDialog() {
         <div style="display: flex; align-items: center; margin-top: 10px;">
         <span style="text-align: center; margin-right: 10px;"><i style="font-size: 40px" class="directions_aiscatcher_icon"></i></span>
         <span>
-        <a href="https://www.aiscatcher.org" target="_blank" rel="noopener"><b style="font-size: 1.6em;">AIS-catcher</b></a>
+        <a href="https://www.aiscatcher.org" target="_blank" rel="noopener"><b style="font-size: 22px;">AIS-catcher</b></a>
         <br>
-        <b style="font-size: 0.8em;">&copy; 2021-2026 jvde.github@gmail.com</b>
+        <b style="font-size: 11px;">&copy; 2021-2026 jvde.github@gmail.com</b>
         </span>
         </div>
         <p>

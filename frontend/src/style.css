@@ -57,15 +57,15 @@
     --mainspace-container-color: lightgrey;
     --tableheader-header-color: black;
     --tableheader-header-background-color: rgb(240, 240, 240);
-    --table-header-background-color: var(--primary-color);
+    --table-header-background-color: var(--hdr-swoosh);
     --table-border-color: #e8e8e8;
     --table-background-color: white;
     --table-selection-background-color: #daebfe;
     --table-alternate-background-color: var(--panel-color);
-    --main-font-color: var(--tertiary-color);
-    --stat-label-color: darkgrey;
+    --main-font-color: var(--menu-font-color);
+    --stat-label-color: var(--text-muted);
     --stat-divider-color: var(--tertiary-color);
-    --stat-color: var(--tertiary-color);
+    --stat-color: var(--menu-font-color);
     --shipcard-font-color: var(--menu-font-color);
     --shipcard-header-color: var(--menu-background-color);
     --shipcard-content-color: var(--menu-background-color);
@@ -79,9 +79,9 @@
     --hover-transform: scale(0.93);
     --hover-transition: transform ease-out 0.2s, background 0.4s;
     --hover-background: rgba(255, 255, 255, 0.5);
-    --graph-header-color: white;
-    --graph-header-bg-color: var(--primary-color);
-    --graph-header-side-color: rgba(242, 248, 255, 0.5);
+    --graph-header-color: var(--menu-font-color);
+    --graph-header-bg-color: var(--hdr-swoosh);
+    --graph-header-side-color: var(--hdr-band);
     --tooltip-background-color: #daebfe;
     --tooltip-border-color: white;
     --textshadow: white 1px 1px 0px;
@@ -120,7 +120,7 @@
     --bottombar-color: black;
     --settings-bg-color: rgb(25, 25, 25);
     --settings-header-bg-color: rgb(25, 25, 25);
-    --panel-color: black;
+    --panel-color: #1c1c1c;
     --ok-color: #7ce481;
     --error-color: #cf6679;
     --stationCircleColor: darkgrey;
@@ -128,7 +128,7 @@
     --header-title-color: #4a4a4a;
     --selection-color: #9fa8da;
     --mainspace-color: rgb(25, 25, 25);
-    --backdrop-color: black;
+    --backdrop-color: #171717;
     --focus-color: #90caf9;
     --light-gray: lightgray;
     --header-font-color: #f8f9fa;
@@ -137,19 +137,19 @@
     --dialog-title-color: rgb(50, 50, 50);
     --menu-divider-color: rgb(80, 80, 80);
     --menu-background-hover-color: rgba(255, 255, 255, 0.08);
-    --menu-font-color: #f8f9fa;
+    --menu-font-color: #dcdcdc;
     --mainspace-container-color: #212529;
     --tableheader-header-color: white;
     --tableheader-header-background-color: rgb(30, 30, 30);
-    --table-header-background-color: rgb(50, 50, 50);
-    --table-border-color: rgb(18, 18, 18);
-    --table-background-color: rgb(18, 18, 18);
+    --table-header-background-color: var(--graph-header-bg-color);
+    --table-border-color: var(--graph-header-side-color);
+    --table-background-color: var(--panel-color);
     --table-selection-background-color: rgb(60, 60, 60);
-    --table-alternate-background-color: rgb(30, 30, 30);
-    --main-font-color: white;
-    --stat-label-color: darkgrey;
+    --table-alternate-background-color: rgb(34, 34, 34);
+    --main-font-color: var(--menu-font-color);
+    --stat-label-color: var(--text-muted);
     --stat-divider-color: rgb(50, 50, 50);
-    --stat-color: white;
+    --stat-color: var(--menu-font-color);
     --shipcard-footer-background-color: rgb(40, 40, 40);
     --shipcard-header-color: rgb(50, 50, 50);
     --shipcard-content-color: rgb(13, 13, 13);
@@ -168,9 +168,9 @@
     --chart-color: lightgrey;
     --chart-grid-color: rgb(56, 56, 56);
     --hover-background: rgba(255, 255, 255, 0.1);
-    --graph-header-color: white;
+    --graph-header-color: var(--menu-font-color);
     --graph-header-bg-color: rgb(41, 41, 41);
-    --graph-header-side-color: rgb(32, 32, 32);
+    --graph-header-side-color: rgb(37, 37, 37);
     --tooltip-background-color: rgb(60, 60, 60);
     --tooltip-border-color: rgb(30, 30, 30);
     --textshadow: black 1px 1px 0px;
@@ -598,7 +598,8 @@ a:focus {
     background-color: var(--graph-header-bg-color);
     color: var(--graph-header-color);
     text-align: center;
-    font-size: 1em;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .graph-panel>canvas {
@@ -649,7 +650,7 @@ a:focus {
 .tabulator .tabulator-header .tabulator-col {
     background-color: var(--table-header-background-color);
     font-size: 12px;
-    color: white;
+    color: var(--menu-font-color);
     border: none;
     padding: 8px 14px;
     border-collapse: collapse;
@@ -661,14 +662,14 @@ a:focus {
 }
 
 .tabulator .tabulator-header .tabulator-col .tabulator-arrow {
-    border-top-color: rgba(255, 255, 255, 0.45) !important;
-    border-bottom-color: rgba(255, 255, 255, 0.45) !important;
+    border-top-color: var(--text-muted) !important;
+    border-bottom-color: var(--text-muted) !important;
 }
 
 .tabulator .tabulator-header .tabulator-col[aria-sort="ascending"] .tabulator-arrow,
 .tabulator .tabulator-header .tabulator-col[aria-sort="descending"] .tabulator-arrow {
-    border-top-color: white !important;
-    border-bottom-color: white !important;
+    border-top-color: var(--menu-font-color) !important;
+    border-bottom-color: var(--menu-font-color) !important;
 }
 
 .tabulator-row:hover {
@@ -1606,14 +1607,15 @@ td {
     background-color: var(--graph-header-bg-color);
     color: var(--graph-header-color);
     text-align: center;
-    font-size: 1em;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .stat-panel section {
     margin-bottom: 10px;
     padding: 10px;
     margin: 0 auto;
-    font-size: 0.9em;
+    font-size: 14px;
 }
 
 .stat-panel section div {
