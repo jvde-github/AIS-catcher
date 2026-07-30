@@ -1,0 +1,1090 @@
+/* ============================================================================
+   components.css — shared UI components (layer 2)
+
+   One definition per idiom, used by both the viewer and the control hub.
+   Legacy selectors sit alongside each component class so markup can migrate
+   incrementally — drop them from the selector list as it does.
+
+   Load order:
+     viewer  tokens.css -> icons.css -> components.css -> style.css
+     hub     tokens.css -> icons.css -> components.css -> inline \3c style>
+   ========================================================================= */
+
+
+/* --- header band -----------------------------------------------------------
+   Full-width strip holding a rounded "swoosh" slot. */
+
+.band,
+.settings_header,
+.dialog-header {
+    display: flex;
+    flex: none;
+    height: var(--size-header);
+    background: var(--color-band);
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text);
+}
+
+.band,
+.settings_header {
+    align-items: stretch;
+}
+
+/* the dialog centres its children instead: its close icon must not stretch */
+.dialog-header {
+    align-items: center;
+}
+
+.band-slot,
+.settings_header .hdr-slot,
+.dialog-title {
+    flex: 1 1 0;
+    min-width: 0;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    background: var(--color-band-accent);
+    border-top-right-radius: 25% 50%;
+    border-bottom-right-radius: 25% 50%;
+    color: var(--color-text);
+}
+
+/* slot variant carrying a title rather than a control */
+.band-title,
+.dialog-title {
+    padding: 0 14px 0 var(--space-5);
+    font-size: var(--fs-lg);
+    font-weight: var(--fw-medium);
+}
+
+
+/* --- tab strip ------------------------------------------------------------ */
+
+.tabs,
+.settings_tabs,
+.plots-tabs,
+.sys-subtabs {
+    display: flex;
+    gap: 0.375rem;
+    padding: 0 var(--space-5);
+    border-bottom: 1px solid var(--color-border);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar,
+.settings_tabs::-webkit-scrollbar,
+.plots-tabs::-webkit-scrollbar,
+.sys-subtabs::-webkit-scrollbar {
+    display: none;
+}
+
+/* nested strip sits flush inside a pane that already has padding */
+.sys-subtabs {
+    padding: 0;
+}
+
+.tab,
+.settings_tab,
+.plots-tab,
+.sys-tab {
+    padding: 0.55rem 0.95rem;
+    border-bottom: 3px solid transparent;
+    font-size: var(--fs-md);
+    font-weight: var(--fw-medium);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: color var(--dur-fast), border-color var(--dur-fast);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.tab:hover,
+.settings_tab:hover,
+.plots-tab:hover,
+.sys-tab:hover {
+    color: var(--color-text-strong);
+}
+
+.tab.active,
+.settings_tab.active,
+.plots-tab.active,
+.sys-tab.active {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+}
+
+
+/* --- tab strip overflow ----------------------------------------------------
+   components.js toggles .can-left / .can-right. Set --tab-fade wherever the
+   strip sits on something other than the panel background. */
+
+.tab-scroll-wrap {
+    --tab-fade: var(--color-surface);
+    position: relative;
+    display: flex;
+    min-width: 0;
+}
+
+/* Must stay shrinkable: flex-shrink:0 here sizes the strip to its content, so
+   nothing overflows and the arrows never appear. */
+.tab-scroll-wrap>:not(.tab-scroll-btn) {
+    flex: 1 1 auto;
+    min-width: 0;
+    scroll-padding-inline: 2.75rem;
+}
+
+.tab-scroll-btn {
+    position: absolute;
+    top: 0;
+    bottom: 1px;
+    width: 2.75rem;
+    display: none;
+    align-items: center;
+    padding: 0;
+    border: none;
+    color: var(--color-icon);
+    cursor: pointer;
+    z-index: 1;
+}
+
+.tab-scroll-btn.left {
+    left: 0;
+    justify-content: flex-start;
+    padding-left: 10px;
+    background: linear-gradient(to right, var(--tab-fade) 72%, transparent);
+}
+
+.tab-scroll-btn.right {
+    right: 0;
+    justify-content: flex-end;
+    padding-right: 10px;
+    background: linear-gradient(to left, var(--tab-fade) 72%, transparent);
+}
+
+.tab-scroll-wrap.can-left .tab-scroll-btn.left,
+.tab-scroll-wrap.can-right .tab-scroll-btn.right {
+    display: flex;
+}
+
+.tab-scroll-btn:hover {
+    color: var(--color-text-strong);
+}
+
+
+/* --- field -----------------------------------------------------------------
+   One config entry: label, control, optional description. The form *engine*
+   on top of it (slider, withButton, dependsOn) stays with the hub. */
+
+.fieldset,
+.settings_main section {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--space-3);
+    row-gap: var(--space-2);
+}
+
+.field,
+.settings_main section div {
+    display: flex;
+    flex-direction: column;
+    /* stretch: a form control normally fills its field. The viewer overrides
+       this to flex-start, where controls are sized to their content. */
+    align-items: stretch;
+    gap: 0;
+    min-width: 0;
+    margin-bottom: var(--space-2);
+    flex: 1 1 100%;
+}
+
+.field-label,
+.settings_main section div span:first-child {
+    display: block;
+    margin-left: 2px;
+    text-align: left;
+    margin-bottom: var(--space-2);
+    font-size: var(--fs-base);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text-strong);
+}
+
+.field-desc,
+.settings_main .st-desc {
+    display: block;
+    margin-top: 2px;
+    margin-left: 2px;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-normal);
+    color: var(--color-text-muted);
+    white-space: normal;
+}
+
+/* width fractions, subtracting their share of the --space-3 column gap */
+.field-half {
+    flex: 0 1 calc(50% - 0.375rem);
+}
+
+.field-third {
+    flex: 0 1 calc(33.333% - 0.5rem);
+}
+
+.field-quarter {
+    flex: 0 1 calc(25% - 0.5625rem);
+}
+
+@media (max-width: 640px) {
+    .field-label {
+        font-size: var(--fs-sm);
+        margin-bottom: var(--space-1);
+    }
+
+    .field-desc {
+        font-size: var(--fs-2xs);
+    }
+}
+
+
+/* --- form controls ---------------------------------------------------------
+   Width is deliberately unset: the viewer sizes to content, the hub stretches
+   to the field. Each frame sets its own. */
+
+.input,
+.realtime-filter-input,
+.settings_main select,
+.settings_main .color-picker {
+    padding: 8px 12px;
+    font-family: inherit;
+    font-size: var(--fs-base);
+    color: var(--color-text);
+    background-color: var(--color-surface-raised);
+    border: 1px solid var(--color-field-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    box-sizing: border-box;
+    transition: border-color var(--dur-med) ease, box-shadow var(--dur-med) ease;
+}
+
+.input:hover,
+.realtime-filter-input:hover,
+.settings_main select:hover {
+    border-color: var(--color-accent);
+}
+
+.input:focus,
+.realtime-filter-input:focus,
+.settings_main select:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.input::placeholder {
+    color: var(--color-text-subtle);
+    opacity: 1;
+}
+
+/* native chevron replaced so it can follow the theme */
+.select,
+select.realtime-filter-input,
+.settings_main select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 32px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+}
+
+/* keeps a toggle on the same midline as inputs in the same row */
+.toggle-slot {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: 38px;
+    cursor: pointer;
+}
+
+.toggle,
+.settings_main input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    flex: none;
+    position: relative;
+    width: 44px;
+    height: 24px;
+    margin: 7px 0;
+    border-radius: var(--radius-xl);
+    background: var(--color-track);
+    cursor: pointer;
+    transition: background var(--dur-fast) ease;
+}
+
+.toggle::after,
+.settings_main input[type="checkbox"]::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    box-sizing: border-box;
+    border: 1px solid var(--color-field-border);
+    border-radius: var(--radius-circle);
+    background: var(--color-knob);
+    transition: transform var(--dur-fast) ease;
+}
+
+.toggle:checked,
+.settings_main input[type="checkbox"]:checked {
+    background: var(--color-accent);
+}
+
+.toggle:checked::after,
+.settings_main input[type="checkbox"]:checked::after {
+    transform: translateX(20px);
+    border-color: var(--color-knob);
+}
+
+.toggle:hover,
+.settings_main input[type="checkbox"]:hover {
+    box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+/* compact variant, for a toggle sitting inside a header rather than a field */
+.toggle-sm {
+    width: 36px;
+    height: 20px;
+    margin: 0;
+}
+
+.toggle-sm::after {
+    width: 16px;
+    height: 16px;
+}
+
+.toggle-sm:checked::after {
+    transform: translateX(16px);
+}
+
+/* "on/enabled" rather than "setting applied" — deliberately green, not accent,
+   so an active item reads differently from a checked option */
+.toggle-on:checked {
+    background: var(--color-on);
+}
+
+.slider,
+.settings_main input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 24px;
+    background: transparent;
+    cursor: pointer;
+}
+
+/* Form button — not .map-button or .hub-button. The tab scroller's arrows are
+   excluded: they carry their own borderless styling. */
+.btn,
+.settings_main button:not(.tab-scroll-btn),
+.settings_main section div>span[data-action] {
+    flex: none;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: 8px 16px;
+    font-family: inherit;
+    font-size: var(--fs-base);
+    font-weight: var(--fw-medium);
+    color: var(--color-text-strong);
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-field-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+
+.btn:hover,
+.settings_main button:not(.tab-scroll-btn):hover,
+.settings_main section div>span[data-action]:hover {
+    border-color: var(--color-accent);
+    background: var(--color-bg);
+}
+
+.btn-primary {
+    color: var(--color-accent-ink);
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+}
+
+.btn-primary:hover {
+    background: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
+}
+
+
+/* --- card ------------------------------------------------------------------
+   Full-bleed on phones, a centred rounded sheet above 640px. */
+
+.card {
+    position: relative;
+    max-width: 42rem;
+    margin: 0 auto var(--space-6) auto;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: box-shadow var(--dur-slow) ease;
+}
+
+.card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px var(--space-5);
+    background: var(--color-surface-alt);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.card-body {
+    padding: var(--space-5);
+}
+
+@media (max-width: 640px) {
+    .card {
+        max-width: none;
+        margin-bottom: var(--space-2);
+        border-left: none;
+        border-right: none;
+        border-radius: 0;
+    }
+
+    .card-header {
+        padding: var(--space-2) var(--space-3);
+    }
+
+    .card-body {
+        padding: var(--space-3);
+    }
+}
+
+
+.card-title {
+    margin: 0;
+    font-size: var(--fs-base);
+    font-weight: var(--fw-semibold);
+    color: var(--color-text-strong);
+}
+
+
+/* --- badge -----------------------------------------------------------------
+   A small chip carrying a number or a one-word state. */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-bold);
+    line-height: 1;
+    color: var(--color-text-muted);
+    background: var(--color-band-accent);
+    border-radius: var(--radius-full);
+}
+
+
+/* --- alert -----------------------------------------------------------------
+   Inline notice that stays until the condition clears, unlike a toast. */
+
+.alert {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: 12px var(--space-4);
+    font-size: var(--fs-base);
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+}
+
+.alert-warning {
+    color: var(--color-warning);
+    background: var(--color-warning-bg);
+    border-color: var(--color-warning-border);
+}
+
+.alert-danger {
+    color: var(--color-danger);
+    background: var(--color-danger-bg);
+    border-color: var(--color-danger-border);
+}
+
+.alert-info {
+    color: var(--color-info);
+    background: var(--color-info-bg);
+    border-color: var(--color-info-border);
+}
+
+.alert-icon {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    align-self: flex-start;
+}
+
+
+/* --- button variants -------------------------------------------------------
+   .btn is defined above; these are the shapes that sit beside it. */
+
+/* square icon button, sized to stay a comfortable tap target */
+.btn-icon {
+    min-width: 44px;
+    padding: 8px 12px;
+}
+
+/* destructive affordance: quiet until hovered */
+.btn-danger {
+    padding: 6px;
+    color: var(--color-text-subtle);
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.btn-danger:hover {
+    color: var(--color-danger);
+    background: var(--color-danger-bg);
+    border: none;
+}
+
+.btn:disabled,
+.btn.is-disabled {
+    color: var(--color-text-subtle);
+    cursor: default;
+}
+
+
+/* --- slider row ------------------------------------------------------------
+   A range input beside a monospace readout of its value. */
+
+.slider-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+}
+
+.slider-row .slider {
+    flex: 1;
+}
+
+.slider-value {
+    min-width: 3rem;
+    padding: 4px var(--space-2);
+    font-family: var(--font-mono);
+    font-size: var(--fs-md);
+    font-weight: var(--fw-medium);
+    color: var(--color-text-muted);
+    text-align: center;
+    background: var(--color-surface-alt);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+}
+
+
+/* --- layout vocabulary -----------------------------------------------------
+   Not a general utility system: needed once means write it against the
+   component instead of adding a class here. */
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.row-tight,
+.col-tight {
+    gap: var(--space-1);
+}
+
+.row-loose,
+.col-loose {
+    gap: var(--space-3);
+}
+
+.row-between {
+    justify-content: space-between;
+}
+
+.row-center {
+    justify-content: center;
+}
+
+.row-end {
+    justify-content: flex-end;
+}
+
+.row-wrap {
+    flex-wrap: wrap;
+}
+
+.row-top {
+    align-items: flex-start;
+}
+
+/* Distinct from .col on purpose: children stay block boxes, so `margin: auto`
+   still centres them. As a flex column an auto margin shrink-wraps instead. */
+.stack>*+* {
+    margin-top: var(--space-2);
+}
+
+.stack-loose>*+* {
+    margin-top: var(--space-4);
+}
+
+.stack-tight>*+* {
+    margin-top: var(--space-1);
+}
+
+/* forces a wrap onto its own line in a flex-wrap container */
+.full {
+    flex-basis: 100%;
+    width: 100%;
+}
+
+/* takes the free space in a row and may shrink below its content */
+.grow {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.no-shrink {
+    flex: none;
+}
+
+.relative {
+    position: relative;
+}
+
+.grid {
+    display: grid;
+}
+
+.self-start {
+    align-self: flex-start;
+}
+
+.center-block {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.clickable {
+    cursor: pointer;
+    user-select: none;
+}
+
+
+/* --- text vocabulary ------------------------------------------------------ */
+
+.t-strong {
+    font-weight: var(--fw-semibold);
+    color: var(--color-text-strong);
+}
+
+.t-muted {
+    color: var(--color-text-muted);
+}
+
+.t-subtle {
+    color: var(--color-text-subtle);
+}
+
+.t-small {
+    font-size: var(--fs-sm);
+}
+
+.t-center {
+    text-align: center;
+}
+
+.t-mono {
+    font-family: var(--font-mono);
+}
+
+.t-lg {
+    font-size: var(--fs-lg);
+}
+
+.t-italic {
+    font-style: italic;
+}
+
+.t-right {
+    text-align: right;
+}
+
+.t-nowrap {
+    white-space: nowrap;
+}
+
+.t-caps {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.t-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.t-link {
+    color: var(--color-accent);
+    text-decoration: underline;
+}
+
+.t-warn {
+    color: var(--color-warning);
+}
+
+.t-danger {
+    color: var(--color-danger);
+}
+
+/* an inline pill carrying a short label — a chip, not a count badge */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 2px var(--space-2);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    color: var(--color-text-muted);
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-full);
+}
+
+
+/* --- box -------------------------------------------------------------------
+   Bordered container with no header. Unlike .card it neither centres itself
+   nor caps its width, so it nests anywhere. */
+
+.box {
+    padding: var(--space-4);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+}
+
+.box-quiet {
+    background: transparent;
+}
+
+
+/* --- zone chip -------------------------------------------------------------
+   Tint and border are mixed from the one declared hue, so the pair stays
+   consistent in either theme. */
+
+.zone-1 { --zone: var(--zone-1); }
+.zone-2 { --zone: var(--zone-2); }
+.zone-3 { --zone: var(--zone-3); }
+.zone-4 { --zone: var(--zone-4); }
+.zone-5 { --zone: var(--zone-5); }
+.zone-6 { --zone: var(--zone-6); }
+.zone-7 { --zone: var(--zone-7); }
+.zone-8 { --zone: var(--zone-8); }
+
+[class*="zone-"] {
+    color: var(--zone);
+    background: color-mix(in srgb, var(--zone) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--zone) 32%, transparent);
+}
+
+
+/* --- option ----------------------------------------------------------------
+   Selectable card: icon, title, sub-line, selected state. */
+
+.option {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: 12px var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    cursor: pointer;
+    transition: border-color var(--dur-fast), background var(--dur-fast);
+}
+
+.option:hover {
+    border-color: var(--color-field-border);
+    background: var(--color-bg);
+}
+
+.option.selected {
+    border-color: var(--color-accent);
+    background: var(--color-accent-bg);
+}
+
+/* quiet icon button: no chrome until hovered */
+.btn-quiet {
+    padding: var(--space-1);
+    color: var(--color-text-muted);
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.btn-quiet:hover {
+    color: var(--color-text-strong);
+    background: var(--color-surface-alt);
+    border: none;
+}
+
+
+/* --- icon hover ------------------------------------------------------- */
+
+.icon-hover>i,
+.icon-hover>svg,
+.icon-hover>[class$="_icon"],
+#menubar div>i,
+.hub-button>svg,
+.hub-button>[class$="_icon"] {
+    transition: transform var(--ease) var(--dur-med);
+}
+
+@media (hover: hover) {
+
+    .icon-hover:hover>i,
+    .icon-hover:hover>svg,
+    .icon-hover:hover>[class$="_icon"],
+    #menubar div:hover>i,
+    .hub-button:hover>svg,
+    .hub-button:hover>[class$="_icon"] {
+        transform: var(--hover-lift);
+    }
+}
+
+
+/* --- icon sizing -----------------------------------------------------------
+   For raw inline <svg>; the masked icons in icons.css size from 1em. */
+
+.icon-sm { width: 16px; height: 16px; }
+.icon-md { width: 20px; height: 20px; }
+.icon-lg { width: 24px; height: 24px; }
+.icon-xl { width: 48px; height: 48px; }
+.icon-2xl { width: 64px; height: 64px; }
+
+
+/* --- spinner ---------------------------------------------------------------
+   A rotating ring, sized by the icon classes above. */
+
+.spinner {
+    display: inline-block;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-text-muted);
+    border-radius: var(--radius-circle);
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+
+/* --- status dot ------------------------------------------------------------ */
+
+.dot {
+    display: inline-block;
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-circle);
+    background: var(--color-text-subtle);
+}
+
+.dot-sm { width: 8px; height: 8px; }
+.dot-ok { background: var(--color-on); }
+.dot-warn { background: var(--color-warning-ink); }
+.dot-error { background: var(--color-danger); }
+
+/* a soft halo that fades outward, for a "live" indicator */
+.dot-pulse {
+    position: relative;
+}
+
+.dot-pulse::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: inherit;
+    animation: ping 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes ping {
+    75%, 100% { transform: scale(2.2); opacity: 0; }
+}
+
+
+/* --- tooltip ---------------------------------------------------------------
+   Hover label anchored above its trigger. The trigger needs .tooltip-anchor. */
+
+.tooltip-anchor {
+    position: relative;
+}
+
+.tooltip {
+    position: absolute;
+    bottom: 100%;
+    margin-bottom: var(--space-2);
+    padding: 6px 10px;
+    min-width: max-content;
+    font-size: var(--fs-sm);
+    color: var(--overlay-ink);
+    background: var(--overlay-bg);
+    border-radius: var(--radius-lg);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-fast) ease;
+}
+
+.tooltip-anchor:hover .tooltip {
+    opacity: 1;
+}
+
+.tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    border: 6px solid transparent;
+    border-top-color: var(--overlay-bg);
+}
+
+
+/* --- toast -----------------------------------------------------------------
+   Driven by AISComponents.toast(). Dark in both themes on purpose: an overlay
+   on the app, not a surface within it, so it bypasses --color-surface. */
+
+.toast-container {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    z-index: var(--z-toast);
+    display: flex;
+    flex-direction: column;
+    /* explicit: a stacked toast must not be narrower than its neighbour, or the
+       stack reads as ragged */
+    align-items: stretch;
+    gap: var(--space-2);
+    pointer-events: none;
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: min(360px, calc(100vw - 20px));
+    padding: 12px 16px;
+    border-radius: var(--radius-lg);
+    font-size: var(--fs-base);
+    font-weight: var(--fw-medium);
+    line-height: 1.35;
+    color: var(--overlay-ink);
+    background: var(--overlay-bg);
+    border: 1px solid var(--overlay-border);
+    box-shadow: var(--shadow-lg);
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity var(--dur-slow) ease, transform var(--dur-slow) ease;
+}
+
+.toast.toast-visible {
+    opacity: 1;
+    transform: none;
+}
+
+/* fixed column so the message text starts at the same x in every severity */
+.toast-icon {
+    flex: none;
+    width: 1em;
+    text-align: center;
+    font-weight: var(--fw-bold);
+}
+
+.toast-text {
+    flex: 1 1 auto;
+}
+
+.toast-close {
+    flex: none;
+    margin-left: 4px;
+    padding: 0 2px;
+    font-size: var(--fs-xl);
+    line-height: 1;
+    opacity: 0.6;
+    cursor: pointer;
+    transition: opacity var(--dur-fast) ease;
+}
+
+.toast-close:hover {
+    opacity: 1;
+}
+
+.toast-success .toast-icon {
+    color: var(--color-success-ink);
+}
+
+.toast-warning .toast-icon {
+    color: var(--color-warning-ink);
+}
+
+.toast-error {
+    background: var(--overlay-danger);
+    border-color: var(--overlay-danger);
+}
+
+
+/* --- column header ---------------------------------------------------------
+   One treatment for every "label over a group of values": table column
+   headers and settings section headers alike. */
+
+.col-header,
+.settings_main>header,
+.tablecard_inner table thead>tr>th,
+.signal-table thead th,
+.tabulator .tabulator-header .tabulator-col {
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+}
+
+
+/* --- visibility ------------------------------------------------------------
+   Last and !important on purpose: must win over components that set their own
+   display (.alert, .row, .field are all flex). */
+
+.hidden {
+    display: none !important;
+}

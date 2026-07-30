@@ -14,6 +14,9 @@
 	<link rel="stylesheet" href="lib.css?hash=fcddc372b683c9753d216d397f31c3ef" />
 	<link rel="stylesheet" href="flag-icons.css?hash=99530c13bfb3d255dc8c976ba302306c" />
 
+	<link rel="stylesheet" href="tokens.css?hash=" />
+	<link rel="stylesheet" href="icons.css?hash=" />
+	<link rel="stylesheet" href="components.css?hash=" />
 	<link rel="stylesheet" href="style.css?hash=abc9548e0685c62329b1c38aafe7623c" />
 	<link rel="stylesheet" href="custom/config.css" />
 
@@ -79,12 +82,12 @@
 	</nav>
 
 	<div class="mainspace-container">
-		<div class="notification-container" id="notification-container"></div>
+		<div class="toast-container" id="notification-container"></div>
 
 		<div class="tableside_window settings-bg tabcontent" id="tableside">
 			<div class="settings_header">
 				<div class="hdr-slot">
-					<input type="text" class="search-box" id="shipSearchSide" placeholder="Search for ships...">
+					<input type="text" class="input search-box" id="shipSearchSide" placeholder="Search for ships...">
 				</div>
 				<div data-action="hideTablecard" class="close_icon"></div>
 			</div>
@@ -773,22 +776,22 @@
 			<div class="tabcontent addscrollbar can-copy" id="realtime">
 				<div class="realtime-viewer">
 					<div class="realtime-tabs">
-						<div class="realtime-spacer"></div>
-						<button id="realtime_filter_button" class="realtime-control-btn"
-							data-action="openRealtimeFilters" title="Filters">
-							<span class="filter_alt_icon"></span>
-							<span id="realtime_filter_count" class="realtime-filter-count"></span>
-						</button>
 						<label class="realtime-background-toggle" title="Keep streaming when tab is hidden">
 							<input type="checkbox" id="realtime_background_streaming"
 								data-on-change="toggleBackgroundStreaming">
 							<span>Background</span>
 						</label>
-						<button id="realtime_pause_button" class="realtime-control-btn" data-action="toggleRealtimePause"
+						<div class="realtime-spacer"></div>
+						<button id="realtime_filter_button" class="btn-quiet realtime-control-btn"
+							data-action="openRealtimeFilters" title="Filters">
+							<span class="filter_alt_icon"></span>
+							<span id="realtime_filter_count" class="realtime-filter-count"></span>
+						</button>
+						<button id="realtime_pause_button" class="btn-quiet realtime-control-btn" data-action="toggleRealtimePause"
 							title="Pause/Resume stream">
 							<span class="pause_icon"></span>
 						</button>
-						<button class="realtime-control-btn" data-action="clearRealtimeTable" title="Clear table">
+						<button class="btn-quiet realtime-control-btn" data-action="clearRealtimeTable" title="Clear table">
 							<span class="delete_icon"></span>
 						</button>
 					</div>
@@ -829,11 +832,11 @@
 						<p>Paste NMEA sentences below (one per line) and click "Decode" to see detailed AIS message
 							information.</p>
 						<textarea id="decoder_input"
-							placeholder="!AIVDM,1,1,,A,13HOI:0P0000VOHLCnHQKwvL05Ip,0*23&#10;!AIVDM,1,1,,B,15MwkT0P00G?q0`Hgd@1g?v428D;,0*7B"
+							placeholder="Paste NMEA sentences here, one per line&#10;e.g. !AIVDM,1,1,,A,…"
 							rows="6"></textarea>
 						<div class="decoder-buttons">
-							<button data-action="decodeNMEA" class="decoder-btn-primary">Decode</button>
-							<button data-action="clearDecoder" class="decoder-btn-secondary">Clear</button>
+							<button data-action="decodeNMEA" class="btn btn-primary">Decode</button>
+							<button data-action="clearDecoder" class="btn">Clear</button>
 						</div>
 						<div id="decoder_status" class="decoder-status"></div>
 					</div>
@@ -1174,9 +1177,9 @@
 			<div class="tabcontent" id="ships" style="display: none;">
 				<div class="tablesection">
 					<div class="search-container">
-						<input type="text" class="search-box" id="shipSearch" placeholder="Search for ships...">
+						<input type="text" class="input search-box" id="shipSearch" placeholder="Search for ships...">
 						<div class="ship-table-column-dropdown">
-							<button class="ship-table-columns-btn" type="button" id="shipTableColumnDropdownToggle">
+							<button class="btn ship-table-columns-btn" type="button" id="shipTableColumnDropdownToggle">
 								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
 									stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 									<rect x="3" y="3" width="18" height="18" rx="2" />
@@ -1239,7 +1242,7 @@
 						<tr>
 							<td>Map:</td>
 							<td>
-								<select id="baseMapSelector">
+								<select id="baseMapSelector" class="input select">
 								</select>
 							</td>
 						</tr>
@@ -1578,14 +1581,15 @@
 	</div>
 	<div class="bottombar"></div>
 
+	<script src="components.js?hash="></script>
 	<script src="custom/plugins.js"></script>
 	<script type="module" src="script.js?hash=ed7758b2a2e7264247e5e2cc7d7c416c"></script>
 
 
 	<div class="overlay" id="info-overlay" data-action="toggleInfoPanel"></div>
 	<div class="info-panel">
-		<div class="header-info-panel">
-			<div class="info-title">About</div>
+		<div class="header-info-panel band">
+			<div class="info-title band-slot band-title">About</div>
 			<button class="close_icon" data-action="toggleInfoPanel"></button>
 		</div>
 

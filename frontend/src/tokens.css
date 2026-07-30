@@ -1,0 +1,441 @@
+/* ============================================================================
+   tokens.css — design tokens for AIS-catcher
+
+   Copied by build-html.sh to dist/tokens.css and dist/control/css/tokens.css:
+   the hub's server prefixes every path with "control" and cannot reach the
+   viewer's copy, so it is two physical files from one source.
+
+   Layers, in dependency order. A layer may only reference the one above it.
+     1  PRIMITIVES  raw values, never referenced by component CSS
+     2  SEMANTIC    meaning, flips with .dark
+     3  CHROME      deliberately theme-independent (app bar, terminals)
+     4  SCALES      type, space, radius, shadow, motion, z-index, sizes
+     5  COMPONENT   light/dark pairs no semantic role covers
+
+   The viewer toggles .dark on <html>; the hub never does and stays light, its
+   dark bottom bar coming from layer 3. That contrast is intended.
+   ========================================================================= */
+
+
+/* ---------------------------------------------------------------------------
+   1  PRIMITIVES — do not reference outside this file.
+   ------------------------------------------------------------------------ */
+:root {
+    /* native controls follow the theme; without it they stay light in dark mode */
+    color-scheme: light;
+
+    /* neutral ramp, light — the codebase already sits on slate; this adopts it */
+    --slate-0: #ffffff;
+    --slate-50: #f8fafc;
+    --slate-100: #f1f5f9;
+    --slate-200: #e2e8f0;
+    --slate-300: #cbd5e1;
+    --slate-400: #94a3b8;
+    --slate-500: #64748b;
+    --slate-600: #475569;
+    --slate-700: #334155;
+    --slate-800: #1e293b;
+
+    /* neutral ramp, dark — untinted; ascending index is lighter */
+    --ink-100: #171717;
+    --ink-200: #1c1c1c;
+    --ink-300: #222222;
+    --ink-400: #292929;
+    --ink-500: #3a3a3a;
+    --ink-600: #4a4a4a;
+    --ink-700: #6b7280;
+    --ink-800: #9aa0a6;
+    --ink-900: #dcdcdc;
+    --ink-1000: #f8f9fa;
+
+    /* chrome ramp — the always-dark bar; zinc, distinct from --ink on purpose */
+    --zinc-900: #18181b;
+    --zinc-800: #27272a;
+    --zinc-700: #3f3f46;
+    --zinc-400: #a1a1aa;
+    --zinc-300: #d4d4d8;
+    --zinc-200: #e4e4e7;
+
+    /* hues */
+    --blue-700: #0a68d0;
+    --blue-600: #0857b1;
+    --blue-500: #1c71d8;
+    --blue-400: #58a6ff;
+    --blue-300: #60a5fa;
+    --sky-300: #7dd3fc;
+    --cyan-400: #5dd5d5;
+    --cyan-500: #12a5ed;
+    --green-700: #15803d;
+    --green-300: #7ce481;
+    --emerald-400: #34d399;
+    --emerald-300: #6ee7b7;
+    --amber-700: #b45309;
+    --amber-400: #fbbf24;
+    --orange-800: #9a3412;
+    --orange-900: #7c2d12;
+    --red-700: #e01b24;
+    --red-500: #e11d48;
+    --red-400: #f87171;
+    --violet-300: #c4b5fd;
+}
+
+
+/* ---------------------------------------------------------------------------
+   2  SEMANTIC — role, not appearance. Flips with .dark.
+   ------------------------------------------------------------------------ */
+:root {
+    /* surface */
+    --color-bg: var(--slate-50);
+    --color-surface: var(--slate-0);
+    --color-surface-alt: var(--slate-100);
+    --color-surface-raised: var(--slate-0);
+    --color-band: var(--slate-100);
+    --color-band-accent: var(--slate-200);
+
+    /* ink */
+    --color-text: rgb(66, 66, 66);
+    --color-text-strong: var(--slate-700);
+    --color-text-muted: var(--slate-500);
+    --color-text-subtle: var(--slate-400);
+    --color-icon: var(--slate-600);
+
+    /* line */
+    --color-border: var(--slate-200);
+    --color-border-strong: #cccccc;
+    --color-field-border: var(--slate-300);
+    --color-rule: rgba(128, 128, 128, 0.25);
+
+    /* interactive */
+    --color-accent: var(--blue-600);
+    --color-accent-hover: var(--blue-700);
+    --color-accent-ink: var(--slate-0);
+    --color-accent-soft: #93c5fd;
+    --color-accent-bg: #eff6ff;
+    --color-focus-ring: color-mix(in srgb, var(--color-accent) 25%, transparent);
+    --color-hover: rgba(0, 0, 0, 0.05);
+    --color-selected: #daebfe;
+    --color-track: var(--slate-200);
+    --color-control: var(--slate-0);
+
+    /* status */
+    /* green-700, not -600: status text on white needs 4.5:1 */
+    --color-success: var(--green-700);
+    --color-success-ink: var(--emerald-400);
+    --color-warning: var(--amber-700);
+    --color-warning-ink: var(--amber-400);
+    --color-danger: var(--red-700);
+    --color-danger-bg: #fff1f2;
+    --color-danger-border: #fecdd3;
+    --color-warning-bg: #fffbeb;
+    --color-warning-border: #fde68a;
+    --color-info-bg: #eff6ff;
+    --color-info-border: #bfdbfe;
+    --color-info: var(--blue-600);
+
+    /* brand — the app top bar, its own role and not a neutral surface */
+    --color-brand: var(--blue-600);
+    --color-brand-accent: #0e6cd8;
+    --color-brand-ink: var(--slate-0);
+
+    /* link */
+    --color-link: purple;
+    --color-link-hover: blue;
+
+    /* elevation tint */
+    --color-shadow: rgba(0, 0, 0, 0.3);
+    --color-shadow-soft: rgba(0, 0, 0, 0.15);
+
+    /* 5 series plus an envelope; index 3 is intentionally absent in tabs/plots.js */
+    --color-chart-1: #2a6094;
+    --color-chart-2: #37723f;
+    --color-chart-3: #9c3b34;
+    --color-chart-4: #bd5a2e;
+    --color-chart-5: #743a78;
+    --color-chart-6: #a37a1c;
+    --color-chart-envelope: #d3d3d3;
+    --color-chart-ink: rgb(66, 66, 66);
+    --color-chart-grid: lightgrey;
+
+    /* 8 hues, hashed per zone name; tint and border are derived */
+    --zone-1: #2563eb;
+    --zone-2: #059669;
+    --zone-3: #7c3aed;
+    --zone-4: #b45309;
+    --zone-5: #e11d48;
+    --zone-6: #0891b2;
+    --zone-7: #ea580c;
+    --zone-8: #0d9488;
+
+    /* map */
+    --color-station-fill: #0b1033;
+    --color-timestamp: rgba(0, 0, 0, 0.7);
+}
+
+.dark {
+    color-scheme: dark;
+
+    --color-bg: var(--ink-100);
+    --color-surface: var(--ink-200);
+    --color-surface-alt: var(--ink-300);
+    --color-surface-raised: var(--ink-400);
+    --color-band: var(--ink-100);
+    --color-band-accent: var(--ink-300);
+
+    --color-text: var(--ink-900);
+    --color-text-strong: var(--ink-900);
+    --color-text-muted: var(--ink-800);
+    --color-text-subtle: var(--ink-700);
+    --color-icon: var(--ink-800);
+
+    --color-border: var(--ink-500);
+    --color-border-strong: var(--ink-600);
+    --color-field-border: #464646;
+    --color-rule: rgba(200, 200, 200, 0.16);
+
+    --color-accent: var(--blue-400);
+    --color-accent-hover: var(--blue-300);
+    --color-accent-ink: #06121f;
+    --color-accent-soft: #2c5480;
+    --color-accent-bg: #0c2440;
+    --color-danger-bg: #3f1418;
+    --color-danger-border: #6b2129;
+    --color-warning-bg: #3a2c0a;
+    --color-warning-border: #6b5312;
+    --color-info-bg: #0c2440;
+    --color-info-border: #1e4976;
+    --color-hover: rgba(255, 255, 255, 0.08);
+    --color-selected: #3c3c3c;
+    --color-track: #5a5a5a;
+    --color-control: var(--ink-200);
+
+    --color-success: var(--green-300);
+    --color-warning: var(--amber-400);
+    --color-danger: #cf6679;
+    --color-info: var(--blue-400);
+
+    --color-brand: #323232;
+    --color-brand-accent: var(--ink-600);
+    --color-brand-ink: var(--ink-1000);
+
+    --color-link: var(--blue-400);
+    --color-link-hover: var(--green-300);
+
+    --color-shadow: rgba(255, 255, 255, 0.1);
+    --color-shadow-soft: rgba(255, 255, 255, 0.1);
+
+    --color-chart-1: #3d76ab;
+    --color-chart-2: #43834d;
+    --color-chart-3: #b3524a;
+    --color-chart-4: #c06336;
+    --color-chart-5: #8d5693;
+    --color-chart-6: #9c7720;
+    --color-chart-envelope: #6b6b6b;
+    --color-chart-ink: lightgrey;
+    --color-chart-grid: #383838;
+
+    --color-station-fill: #05081f;
+    --color-timestamp: rgba(255, 255, 255, 0.6);
+}
+
+
+/* ---------------------------------------------------------------------------
+   3  CHROME — theme-independent by design. None of these flip.
+   ------------------------------------------------------------------------ */
+:root {
+    --chrome-bg: var(--zinc-900);
+    --chrome-bg-hover: var(--zinc-800);
+    --chrome-border: var(--zinc-700);
+    /* not pure white: #fff here is ~19:1 and glares on a persistent bar */
+    --chrome-text-muted: var(--zinc-400);
+    --chrome-text-hover: var(--zinc-300);
+    --chrome-text: var(--zinc-200);
+    --chrome-attention: var(--orange-800);
+    --chrome-attention-hover: var(--orange-900);
+    --chrome-dot: var(--slate-500);
+    --chrome-led-on: var(--emerald-400);
+
+    --term-bg: var(--zinc-900);
+    --term-text: var(--zinc-300);
+    --term-error: var(--red-400);
+    --term-warn: var(--amber-400);
+    --term-info: var(--blue-300);
+    --term-debug: var(--slate-400);
+    --term-meta: var(--slate-600);
+
+    /* always-dark floating surfaces: tooltip, toast */
+    --overlay-bg: var(--slate-800);
+    --overlay-border: var(--slate-700);
+    --overlay-ink: var(--slate-0);
+    --overlay-danger: var(--red-500);
+
+    --code-key: var(--sky-300);
+    --code-string: var(--amber-400);
+    --code-number: var(--emerald-300);
+    --code-literal: var(--violet-300);
+
+    /* neutral, not slate-tinted: a tinted scrim reads as a blue cast over the map */
+    --color-scrim: rgba(0, 0, 0, 0.5);
+}
+
+
+/* ---------------------------------------------------------------------------
+   4  SCALES — no theme dimension.
+   ------------------------------------------------------------------------ */
+:root {
+    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+    --fs-2xs: 0.625rem;
+    --fs-xs: 0.6875rem;
+    --fs-sm: 0.75rem;
+    --fs-md: 0.8125rem;
+    --fs-base: 0.875rem;
+    --fs-lg: 1rem;
+    --fs-xl: 1.125rem;
+    --fs-2xl: 1.25rem;
+    --fs-3xl: 1.5rem;
+
+    --fw-normal: 400;
+    --fw-medium: 500;
+    --fw-semibold: 600;
+    --fw-bold: 700;
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --radius-2xl: 20px;
+    --radius-circle: 50%;
+    --radius-full: 9999px;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 2px 8px var(--color-shadow);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.18);
+    --shadow-overlay: 0 20px 50px rgba(0, 0, 0, 0.28);
+    /* edge glow for the sliding side panels */
+    --shadow-panel: 0 0 15px -5px var(--color-shadow);
+
+    --dur-fast: 0.15s;
+    --dur-med: 0.2s;
+    --dur-slow: 0.3s;
+    --ease: ease-out;
+    --hover-lift: scale(0.86);
+
+    /* ascending; add a level here rather than a magnitude at the call site */
+    --z-base: 1;
+    --z-sticky: 2;
+    --z-map-label: 10;
+    --z-map-card: 20;
+    --z-map-control: 30;
+    --z-card: 40;
+    --z-panel: 50;
+    --z-float: 60;
+    --z-panel-top: 70;
+    --z-scrim: 80;
+    --z-dialog: 90;
+    --z-toast: 100;
+    --z-overlay: 110;
+    --z-info: 120;
+    --z-menu-scrim: 130;
+    --z-menu: 140;
+
+    --size-topbar: 40px;
+    --size-header: 48px;
+    /* tall header variant: the ship table's top offset and the info panel band */
+    --size-header-tall: 55px;
+    --size-panel: 430px;
+    --size-panel-wide: 500px;
+    --size-panel-narrow: 288px;
+}
+
+
+/* ---------------------------------------------------------------------------
+   5  COMPONENT — light/dark pairs no semantic role covers.
+   Adding one means no existing role fits.
+   ------------------------------------------------------------------------ */
+:root {
+    /* cyan in dark where --color-accent stays blue: deliberately different */
+    --color-secondary: var(--cyan-500);
+    --color-highlight: var(--blue-500);
+    /* active/selected element accent */
+    --color-active: var(--cyan-500);
+    --color-error: red;
+    /* not --color-danger: this red is deliberately the same in both themes */
+    --color-alert: var(--red-700);
+    --color-ok: rgb(129, 244, 129);
+    --color-ok-text: green;
+    --color-ok-strong: #7cfc00;
+
+    --color-panel: var(--color-surface);
+    --color-surface-overlay: var(--color-surface);
+    --color-canvas: var(--color-surface-alt);
+    --color-bottombar: #0b1033;
+
+    --color-menu: var(--color-surface-alt);
+    --color-menu-hover: var(--color-selected);
+    --color-menu-border: var(--color-border-strong);
+    --color-menu-divider: var(--color-border-strong);
+
+    --color-tooltip: var(--color-selected);
+    --color-tooltip-border: var(--color-surface);
+
+    --color-shipcard-header: var(--color-surface-raised);
+    --color-shipcard-footer: var(--color-surface-raised);
+    --color-shipcard-selected: rgb(240, 241, 248);
+    --color-stat-divider: var(--color-border);
+
+    --color-hover-overlay: rgba(255, 255, 255, 0.5);
+    --transition-hover: transform var(--ease) var(--dur-med), background 0.4s;
+
+    /* viewer fills; the hub uses coloured text on --term-bg. Both intended. */
+    --color-log-error: var(--color-alert);
+    --color-log-warn: #f97316;
+    --color-log-ink: rgba(255, 255, 255, 0.6);
+
+    /* generic on/off indicator: NMEA channel LEDs, active-item toggles */
+    --color-off: #e0e0e0;
+    --color-on: #10b981;
+
+    /* toggle knob: white in both themes */
+    --color-knob: var(--slate-0);
+}
+
+.dark {
+    --color-secondary: var(--cyan-400);
+    --color-highlight: var(--blue-400);
+    --color-active: var(--blue-400);
+    --color-error: #cf6679;
+    --color-ok: var(--green-300);
+    --color-ok-text: var(--green-300);
+
+    --color-panel: #191919;
+    --color-surface-overlay: #262626;
+    --color-canvas: #191919;
+    --color-bottombar: #000000;
+
+    --color-menu: var(--color-surface-raised);
+    --color-menu-hover: var(--color-hover);
+    --color-menu-border: #111111;
+    --color-menu-divider: #505050;
+
+    --color-tooltip: #3c3c3c;
+    --color-tooltip-border: #1e1e1e;
+
+    --color-shipcard-header: #323232;
+    --color-shipcard-footer: #282828;
+    --color-shipcard-selected: #323232;
+    --color-stat-divider: #323232;
+
+    --color-hover-overlay: rgba(255, 255, 255, 0.1);
+
+    --color-off: #3a3a3a;
+    --color-on: var(--color-accent);
+}

@@ -715,30 +715,9 @@ function buildSettingsTabs() {
 }
 
 function makeTabScroller(nav, extraClass) {
-    const wrap = document.createElement("div");
-    wrap.className = "settings_tabscroll" + (extraClass ? " " + extraClass : "");
-
-    const chevron = (label, dir) => {
-        const c = document.createElement("div");
-        c.className = "settings_tabchevron";
-        c.textContent = label;
-        c.onclick = () => nav.scrollBy({ left: dir * 140, behavior: "smooth" });
-        return c;
-    };
-    const left = chevron("‹", -1);
-    const right = chevron("›", 1);
-    wrap.append(left, nav, right);
-
-    const sync = () => {
-        const overflow = nav.scrollWidth > wrap.clientWidth - 1;
-        left.style.display = overflow && nav.scrollLeft > 2 ? "" : "none";
-        right.style.display =
-            overflow && nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 2 ? "" : "none";
-    };
-    nav.addEventListener("scroll", sync);
-    window.addEventListener("resize", sync);
-    settingsScrollers.push(sync);
-    return { wrap, sync };
+    const { wrap, update } = window.AISComponents.tabScroller(nav, extraClass);
+    settingsScrollers.push(update);
+    return { wrap, sync: update };
 }
 
 function updateSettingsChevrons() {
@@ -1454,42 +1433,9 @@ function closeDialog() {
     document.getElementById("dialog-overlay").classList.remove("active");
 }
 
-const NOTIFICATION_TIME = { info: 5000, success: 5000, warning: 7000, error: 9000 };
-const NOTIFICATION_ICON = { info: "", success: "✓", warning: "!", error: "!" };
-
 function showNotification(message, type = "info", duration) {
-    if (!(type in NOTIFICATION_TIME)) type = "info";
     (type === "error" ? console.error : console.log)("[notification] " + message);
-
-    const notificationElement = document.createElement("div");
-    notificationElement.className = "notification notification-" + type;
-
-    let icon = null;
-    if (NOTIFICATION_ICON[type]) {
-        icon = document.createElement("span");
-        icon.className = "notification-icon";
-        icon.textContent = NOTIFICATION_ICON[type];
-    }
-    const text = document.createElement("span");
-    text.className = "notification-text";
-    text.textContent = message;
-    const close = document.createElement("span");
-    close.className = "notification-close";
-    close.title = "Dismiss";
-    close.textContent = "×";
-    if (icon) notificationElement.append(icon);
-    notificationElement.append(text, close);
-
-    notificationContainer.appendChild(notificationElement);
-    requestAnimationFrame(() => notificationElement.classList.add("show"));
-
-    const dismiss = () => {
-        clearTimeout(timer);
-        notificationElement.classList.remove("show");
-        setTimeout(() => notificationElement.remove(), 300);
-    };
-    close.addEventListener("click", dismiss);
-    const timer = setTimeout(dismiss, duration || NOTIFICATION_TIME[type]);
+    return window.AISComponents.toast(type, message, duration, "notification-container");
 }
 
 function headerClick() {
@@ -1561,7 +1507,7 @@ function applyDynamicStyling() {
                     right: 0;
                     width: 500px;
                     border: solid;
-                    border-color: var(--menu-border-color);
+                    border-color: var(--color-menu-border);
                     border-radius: 5px;
                     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
                 }
@@ -2620,7 +2566,7 @@ function toggleMenu() {
     const menubar = document.getElementById("menubar");
     menubar.classList.toggle("visible");
     document.getElementById("menubar_mini").classList.toggle("showflex");
-    document.getElementById("menubar_mini").classList.toggle("hide");
+    document.getElementById("menubar_mini").classList.toggle("hidden");
 
     const menuButton = document.getElementById("header_menu_button");
     menuButton.classList.toggle("menu_icon");
@@ -2712,7 +2658,7 @@ function shipcardselect(e) {
 
 function toggleShipcardSize() {
     Array.from(document.getElementsByClassName("shipcard-min-only")).forEach((e) => e.classList.toggle("visible"));
-    Array.from(document.getElementsByClassName("shipcard-max-only")).forEach((e) => e.classList.toggle("hide"));
+    Array.from(document.getElementsByClassName("shipcard-max-only")).forEach((e) => e.classList.toggle("hidden"));
 
     document.getElementById("shipcard").classList.toggle("shipcard-ismax");
     document.getElementById("shipcard_minmax_button").classList.toggle("keyboard_arrow_down_icon");
@@ -3251,7 +3197,7 @@ function getTextMessageContent(msg) {
 
     let content = '<div class="binary-message-details">';
     content += `<div><strong>${kind}</strong></div>`;
-    content += `<div style="font-size: 1.1em; margin: 6px 0; white-space: pre-wrap;">${sanitizeString(m.text || '')}</div>`;
+    content += `<div style="font-size: var(--fs-lg); margin: 6px 0; white-space: pre-wrap;">${sanitizeString(m.text || '')}</div>`;
 
     if (m.dest_mmsi) {
         const destName = m.dest_mmsi in shipsDB ?
@@ -4153,7 +4099,7 @@ function drawStation() {
         image: new ol.style.Icon({
             anchor: [0.5, 0.5],
             scale: 0.3,
-            color: 'white', //getComputedStyle(document.documentElement).getPropertyValue('--secondary-color'),
+            color: 'white', //getComputedStyle(document.documentElement).getPropertyValue('--color-secondary'),
             src: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath fill="white" d="M198-278q-60-58-89-133T80-560q0-74 29-149t89-133l35 35q-50 49-76.5 116.5T130-560q0 63 26.5 130.5T233-313l-35 35Zm92-92q-40-37-59-89.5T212-560q0-48 19-100.5t59-89.5l35 35q-29 29-46 72.5T262-560q0 35 17.5 79.5T325-405l-35 35Zm4 290 133-405q-17-12-27.5-31T389-560q0-38 26.5-64.5T480-651q38 0 64.5 26.5T571-560q0 25-10.5 44T533-485L666-80h-59l-29-90H383l-30 90h-59Zm108-150h156l-78-238-78 238Zm268-140-35-35q29-29 46-72.5t17-82.5q0-35-17.5-79.5T635-715l35-35q39 37 58.5 89.5T748-560q0 47-19.5 100T670-370Zm92 92-35-35q49-49 76-116.5T830-560q0-63-27-130.5T727-807l35-35q60 58 89 133t29 149q0 75-27.5 149.5T762-278Z"/%3E%3C/svg%3E',
         })
     });
@@ -4166,7 +4112,7 @@ function drawStation() {
                 width: 3
             }),
             fill: new ol.style.Fill({
-                color: getComputedStyle(document.documentElement).getPropertyValue('--tertiary-color')
+                color: getComputedStyle(document.documentElement).getPropertyValue('--color-station-fill')
             }),
         })
     });
@@ -4294,11 +4240,11 @@ function applyShipcardPinStyling() {
     const shipcard = document.getElementById("shipcard");
     if (settings.shipcard_pinned) {
         shipcard.classList.add("pinned");
-        document.getElementById("shipcard_drag_handle").classList.add("opacity-25");
+        document.getElementById("shipcard_drag_handle").classList.add("opacity-50");
     }
     else {
         shipcard.classList.remove("pinned");
-        document.getElementById("shipcard_drag_handle").classList.remove("opacity-25");
+        document.getElementById("shipcard_drag_handle").classList.remove("opacity-50");
     }
 }
 

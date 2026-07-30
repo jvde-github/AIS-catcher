@@ -243,7 +243,8 @@
         if (overlay) return;
         overlay = document.createElement('div');
         overlay.id = 'wizard-overlay';
-        overlay.innerHTML = '<div id="wizard-card"></div>';
+        overlay.className = 'hub-overlay';
+        overlay.innerHTML = '<div id="wizard-card" class="modal-card"></div>';
         document.body.appendChild(overlay);
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape' && overlay.classList.contains('open')) cancelWizard();
@@ -295,7 +296,7 @@
 
         const dots = WIZARD_STEPS.map((s, i) => {
             if (stepHidden(s)) return '';
-            return '<span class="wz-dot' + (i === stepIndex ? ' active' : i < stepIndex ? ' past' : '') + '"></span>';
+            return '<span class="dot dot-sm wz-dot' + (i === stepIndex ? ' active' : i < stepIndex ? ' past' : '') + '"></span>';
         }).join('');
 
         const showBack = stepIndex > 0;
@@ -306,19 +307,19 @@
         const nextLabel = step.nextLabel || 'Next';
 
         card.innerHTML =
-            '<div class="wz-head">' +
+            '<div class="row row-between wz-head">' +
             '  <div class="wz-dots">' + dots + '</div>' +
-            '  <button id="wz-cancel" title="Cancel setup" class="wz-x">' +
-            '    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
+            '  <button id="wz-cancel" title="Cancel setup" class="btn btn-quiet wz-x">' +
+            '    <svg class="icon-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
             '  </button>' +
             '</div>' +
             '<div class="wz-body" id="wz-body"></div>' +
-            '<div class="wz-error hidden" id="wz-error"></div>' +
+            '<div class="alert alert-danger wz-error hidden" id="wz-error"></div>' +
             '<div class="wz-foot">' +
-            (showBack ? '<button id="wz-back" class="wz-btn ghost">Back</button>' : '<span></span>') +
+            (showBack ? '<button id="wz-back" class="btn-quiet">Back</button>' : '<span></span>') +
             '  <div class="wz-foot-right">' +
-            (showSkip ? '<button id="wz-skip" class="wz-btn ghost">Skip</button>' : '') +
-            '    <button id="wz-next" class="wz-btn primary">' + esc(nextLabel) + '</button>' +
+            (showSkip ? '<button id="wz-skip" class="btn-quiet">Skip</button>' : '') +
+            '    <button id="wz-next" class="btn btn-primary">' + esc(nextLabel) + '</button>' +
             '  </div>' +
             '</div>';
 
@@ -371,7 +372,7 @@
     }
 
     function renderInput(body, step) {
-        body.innerHTML = '<h3>' + esc(step.title) + '</h3><p class="wz-intro">' + esc(step.intro) + '</p><div id="wz-devices" class="wz-options"><div class="wz-loading">Scanning devices&hellip;</div></div>';
+        body.innerHTML = '<h3>' + esc(step.title) + '</h3><p class="wz-intro">' + esc(step.intro) + '</p><div id="wz-devices" class="col wz-options"><div class="wz-loading">Scanning devices&hellip;</div></div>';
 
         const getJSON = url => fetch(url).then(r => {
             if (r.status === 401 && global.hubAuthRequired) global.hubAuthRequired();
@@ -391,13 +392,13 @@
             const portOptions = (ports || []).map(p => '<option value="' + esc(p) + '">').join('');
 
             let html =
-                '<label class="wz-option' + (sel.kind === 'dc' ? ' selected' : '') + '" data-dev="dc">' +
+                '<label class="option wz-option' + (sel.kind === 'dc' ? ' selected' : '') + '" data-dev="dc">' +
                 '<input type="radio" name="wz-dev" ' + (sel.kind === 'dc' ? 'checked' : '') + '>' +
                 '<span class="wz-option-icon">' + CABLE_ICON + '</span>' +
                 '<span class="wz-option-main"><span class="wz-option-title">dAISy-catcher</span>' +
                 '<span class="wz-option-sub">High-performance AIS receiver &mdash; <a class="wz-mini-link" href="' + DAISY_CATCHER.url + '" target="_blank" rel="noopener">shop.wegmatt.com</a></span>' +
-                '<span class="wz-daisy' + (sel.kind === 'dc' ? '' : ' hidden') + '" id="wz-dc-fields">' +
-                '<input id="wz-dc-port" list="wz-serial-list" placeholder="Serial port, e.g. /dev/serial0" value="' + esc(sel.dc_port) + '">' +
+                '<span class="col wz-daisy' + (sel.kind === 'dc' ? '' : ' hidden') + '" id="wz-dc-fields">' +
+                '<input id="wz-dc-port" class="input" list="wz-serial-list" placeholder="Serial port, e.g. /dev/serial0" value="' + esc(sel.dc_port) + '">' +
                 '</span></span>' +
                 '</label>';
 
@@ -407,7 +408,7 @@
             list.forEach((d, i) => {
                 const active = sel.kind === 'sdr' && sel.device && sel.device.input === d.input && sel.device.serial === d.serial;
                 html +=
-                    '<label class="wz-option' + (active ? ' selected' : '') + '" data-dev="' + i + '">' +
+                    '<label class="option wz-option' + (active ? ' selected' : '') + '" data-dev="' + i + '">' +
                     '<input type="radio" name="wz-dev" ' + (active ? 'checked' : '') + '>' +
                     '<span class="wz-option-icon">' + USB_ICON + '</span>' +
                     '<span class="wz-option-main"><span class="wz-option-title">' + esc(SDR_TYPES[d.input]) + '</span>' +
@@ -416,14 +417,14 @@
             });
 
             html +=
-                '<label class="wz-option' + (sel.kind === 'serial' ? ' selected' : '') + '" data-dev="serial">' +
+                '<label class="option wz-option' + (sel.kind === 'serial' ? ' selected' : '') + '" data-dev="serial">' +
                 '<input type="radio" name="wz-dev" ' + (sel.kind === 'serial' ? 'checked' : '') + '>' +
                 '<span class="wz-option-icon">' + CABLE_ICON + '</span>' +
                 '<span class="wz-option-main"><span class="wz-option-title">Serial</span>' +
                 '<span class="wz-option-sub">NMEA receiver connected via a serial port</span>' +
-                '<span class="wz-daisy' + (sel.kind === 'serial' ? '' : ' hidden') + '" id="wz-serial-fields">' +
-                '<input id="wz-serial-port" list="wz-serial-list" placeholder="Serial port, e.g. /dev/serial0" value="' + esc(sel.serial_port) + '">' +
-                '<select id="wz-serial-baud">' +
+                '<span class="col wz-daisy' + (sel.kind === 'serial' ? '' : ' hidden') + '" id="wz-serial-fields">' +
+                '<input id="wz-serial-port" class="input" list="wz-serial-list" placeholder="Serial port, e.g. /dev/serial0" value="' + esc(sel.serial_port) + '">' +
+                '<select id="wz-serial-baud" class="input select">' +
                 BAUD_RATES.map(b => '<option value="' + b + '"' + (b === sel.serial_baudrate ? ' selected' : '') + '>' + b + ' baud</option>').join('') +
                 '</select>' +
                 '</span></span>' +
@@ -463,10 +464,10 @@
         body.innerHTML =
             '<h3>' + esc(step.title) + '</h3>' +
             '<p class="wz-intro">Choose an admin password to protect this control page.</p>' +
-            '<label class="wz-field-label">Password</label>' +
-            '<input id="wz-pw1" class="wz-input" type="password" autocomplete="new-password">' +
-            '<label class="wz-field-label">Confirm password</label>' +
-            '<input id="wz-pw2" class="wz-input" type="password" autocomplete="new-password">';
+            '<div class="field"><label class="field-label">Password</label>' +
+            '<input id="wz-pw1" class="input" type="password" autocomplete="new-password"></div>' +
+            '<div class="field"><label class="field-label">Confirm password</label>' +
+            '<input id="wz-pw2" class="input" type="password" autocomplete="new-password"></div>';
     }
 
     function submitPassword() {
@@ -507,7 +508,7 @@
         body.innerHTML =
             '<h3>' + esc(step.title) + '</h3>' +
             '<p class="wz-intro">' + esc(step.intro) + '</p>' +
-            '<div class="wz-options">' +
+            '<div class="col wz-options">' +
             legacyOutputs.map((it, i) =>
                 '<label class="wz-option' + (it.checked ? ' selected' : '') + '">' +
                 '<input type="checkbox" data-imp="' + i + '"' + (it.checked ? ' checked' : '') + '>' +
@@ -534,16 +535,16 @@
         const s = step.service;
         body.innerHTML =
             '<h3>' + esc(step.title) + '</h3>' +
-            '<div class="wz-service">' +
+            '<div class="row wz-service">' +
             icon(s.icon, 'wz-service-icon') +
             '<div class="wz-service-main">' +
             '<p class="wz-intro">' + esc(s.blurb) + '</p>' +
             '</div>' +
             '</div>' +
-            '<a class="wz-btn link" href="' + esc(s.url) + '" target="_blank" rel="noopener">' + esc(s.linkLabel) +
+            '<a class="btn wz-link" href="' + esc(s.url) + '" target="_blank" rel="noopener">' + esc(s.linkLabel) +
             ' <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>' +
-            '<label class="wz-field-label">' + esc(s.field.label) + '</label>' +
-            '<input id="wz-service-field" class="wz-input" placeholder="' + esc(s.field.placeholder) + '" value="' + esc(sel[s.field.key] || '') + '">' +
+            '<label class="field-label">' + esc(s.field.label) + '</label>' +
+            '<input id="wz-service-field" class="input" placeholder="' + esc(s.field.placeholder) + '" value="' + esc(sel[s.field.key] || '') + '">' +
             '<p class="wz-fineprint">Leave empty and press Next (or Skip) if you do not want to set this up now.</p>';
 
         const field = document.getElementById('wz-service-field');
@@ -623,9 +624,11 @@
 
         ConfigStore.fetch(true)
             .then(cfg => {
-                const hasDevice = (sel.kind === 'sdr' && sel.device) ||
-                    (sel.kind === 'dc' && sel.dc_port) ||
-                    (sel.kind === 'serial' && sel.serial_port);
+                const inputStep = WIZARD_STEPS.find(s => s.type === 'input');
+                const hasDevice = !stepHidden(inputStep) &&
+                    ((sel.kind === 'sdr' && sel.device) ||
+                        (sel.kind === 'dc' && sel.dc_port) ||
+                        (sel.kind === 'serial' && sel.serial_port));
                 if (hasDevice) {
                     ROOT_DEVICE_KEYS.forEach(k => { delete cfg[k]; });
                     if (!Array.isArray(cfg.receiver) || !cfg.receiver.length) cfg.receiver = [{}];

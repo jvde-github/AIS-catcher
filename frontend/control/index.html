@@ -5,9 +5,38 @@
     <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>AIS-catcher</title>
-    <link rel="stylesheet" href="css/tailwind.css?hash=">
+    <link rel="stylesheet" href="css/tokens.css?hash=">
+    <link rel="stylesheet" href="css/icons.css?hash=">
+    <link rel="stylesheet" href="css/components.css?hash=">
     <style>
+        /* base reset — hub only; the viewer has its own in style.css */
+        *, *::before, *::after { box-sizing: border-box; }
+
+        h1, h2, h3, h4, h5, h6, p {
+            margin: 0;
+            font-size: inherit;
+            font-weight: inherit;
+        }
+
+        ul, ol { margin: 0; padding: 0; }
+
+        button, input, select, textarea {
+            font: inherit;
+            color: inherit;
+            margin: 0;
+        }
+
+        button { background: none; border: 0; padding: 0; cursor: pointer; }
+
+        img, svg { display: block; max-width: 100%; }
+
+        a { color: inherit; text-decoration: inherit; }
+
         body {
+            font-family: var(--font-sans);
+            font-size: var(--fs-base);
+            color: var(--color-text);
+            -webkit-font-smoothing: antialiased;
             margin: 0;
             padding: 0;
             overflow: hidden;
@@ -15,7 +44,7 @@
             height: 100dvh;
             display: flex;
             flex-direction: column;
-            background: #f8fafc;
+            background: var(--color-bg);
             touch-action: pan-x pan-y;
             overscroll-behavior: none;
             position: fixed;
@@ -45,9 +74,9 @@
             position: relative;
             flex-shrink: 0;
             width: 100%;
-            background: #18181b;
-            border-top: 1px solid #3f3f46;
-            z-index: 50;
+            background: var(--chrome-bg);
+            border-top: 1px solid var(--chrome-border);
+            z-index: var(--z-panel);
             padding-bottom: env(safe-area-inset-bottom);
         }
 
@@ -56,198 +85,143 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 0.5rem 0.75rem;
-            color: white;
+            padding: var(--space-2) var(--space-3);
+            color: var(--chrome-text);
             background: transparent;
             border: none;
             cursor: pointer;
-            transition: background-color 0.2s;
-            border-radius: 0.5rem;
-            font-size: 0.75rem;
+            transition: background-color var(--dur-med);
+            border-radius: var(--radius-lg);
+            font-size: var(--fs-sm);
             min-width: 70px;
         }
 
-        .hub-button:hover {
-            background: #27272a;
-        }
-
         .hub-button.active {
-            background: #27272a;
+            background: var(--chrome-bg-hover);
         }
 
-        .hub-button svg {
+        .hub-button>svg,
+        .hub-button>[class$="_icon"] {
             width: 1.5rem;
             height: 1.5rem;
-            margin-bottom: 0.25rem;
+            margin-bottom: var(--space-1);
         }
 
         /* draws the eye to Start/Restart while saved settings wait to be applied */
         .hub-button.attention {
-            background: #9a3412;
+            background: var(--chrome-attention);
         }
 
         .hub-button.attention:hover {
-            background: #7c2d12;
+            background: var(--chrome-attention-hover);
         }
 
-        #system-overlay {
+        /* fullscreen scrim + centred child; per-overlay rules set the layer */
+        .hub-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.55);
+            background: var(--color-scrim);
             display: none;
             align-items: center;
             justify-content: center;
-            z-index: 65;
-            padding: 1rem;
+            padding: var(--space-4);
         }
 
-        #system-overlay.open {
+        .hub-overlay.open {
             display: flex;
         }
 
-        #system-modal {
-            background: #fff;
-            border-radius: 1rem;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+        .modal-card {
+            background: var(--color-surface);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-overlay);
             width: 100%;
-            max-width: 1000px;
-            height: 85vh;
-            max-height: 85vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
+        #system-overlay {
+            z-index: var(--z-panel-top);
+        }
+
+        #system-modal {
+            max-width: 60rem;
+            height: 85vh;
+            max-height: 85vh;
+        }
+
         #system-header {
-            display: flex;
-            align-items: stretch;
-            height: 52px;
-            border-bottom: 1px solid #e2e8f0;
-            background: #f0f4f8;
             flex-shrink: 0;
         }
 
-        #system-title {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            padding: 0 14px 0 1.25rem;
-            background: #dfe5ec;
-            border-top-right-radius: 25% 50%;
-            border-bottom-right-radius: 25% 50%;
-            font-size: 15px;
-            font-weight: 500;
+        #system-modal>.tab-scroll-wrap {
+            flex-shrink: 0;
+            background: var(--color-surface);
         }
 
+        /* keeps each sub-tab aligned under its parent tab */
+        .sys-subtabs {
+            padding: 0 var(--space-1);
+        }
+
+        .sys-pane .tab-scroll-wrap {
+            margin: 0 calc(-1 * var(--space-5));
+        }
+
+        #system-tabs {
+            border-bottom: none;
+            padding: 0 var(--space-1);
+            align-self: stretch;
+            align-items: stretch;
+            min-width: 0;
+        }
+
+        #system-slot .tab-scroll-wrap {
+            flex: 1 1 0;
+            min-width: 0;
+            align-self: stretch;
+            background: none;
+            --tab-fade: var(--color-band-accent);
+        }
+
+        #system-slot .sys-tab {
+            display: flex;
+            align-items: center;
+        }
+
+        #system-tabs .sys-tab.active.has-sub {
+            color: var(--color-text-strong);
+            border-bottom-color: var(--color-text-strong);
+        }
+
+        /* chrome from .btn-quiet; only geometry lives here */
         #system-close {
             align-self: center;
             width: 28px;
             height: 28px;
-            color: #475569;
-            transition: opacity 0.15s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%;
+            border-radius: var(--radius-circle);
             margin: 0 14px 0 10px;
             flex-shrink: 0;
         }
 
-        #system-close:hover {
-            opacity: 0.65;
-        }
-
-        #system-tabs {
-            display: flex;
-            gap: 0.375rem;
-            padding: 0 1.25rem;
-            border-bottom: 1px solid #e2e8f0;
-            flex-shrink: 0;
-            overflow-x: auto;
-            scrollbar-width: none;
-        }
-
-        #system-tabs::-webkit-scrollbar,
-        .sys-subtabs::-webkit-scrollbar {
-            display: none;
-        }
-
+        /* supersedes the shared position: relative — the strip pins to the pane top */
         .tab-scroll-wrap {
             position: sticky;
             top: 0;
-            z-index: 10;
-            background: #fff;
+            z-index: var(--z-sticky);
+            background: var(--color-surface);
             flex-shrink: 0;
         }
 
-        .tab-scroll-btn {
-            position: absolute;
-            top: 0;
-            bottom: 1px;
-            width: 2.75rem;
-            display: none;
-            align-items: center;
-            color: #475569;
-            cursor: pointer;
-            z-index: 11;
-        }
-
-        .tab-scroll-btn.left {
-            left: 0;
-            justify-content: flex-start;
-            padding-left: 10px;
-            background: linear-gradient(to right, #fff 55%, transparent);
-        }
-
-        .tab-scroll-btn.right {
-            right: 0;
-            justify-content: flex-end;
-            padding-right: 10px;
-            background: linear-gradient(to left, #fff 55%, transparent);
-        }
-
-        .tab-scroll-wrap.can-left .tab-scroll-btn.left,
-        .tab-scroll-wrap.can-right .tab-scroll-btn.right {
-            display: flex;
-        }
-
-        .tab-scroll-wrap:has(.sys-subtabs) .tab-scroll-btn {
-            bottom: 1px;
-        }
-
-        .sys-tab {
-            padding: 0.55rem 0.95rem;
-            border-bottom: 3px solid transparent;
-            font-size: 0.8125rem;
-            font-weight: 500;
-            color: #64748b;
-            cursor: pointer;
-            transition: color 0.15s, border-color 0.15s;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-
-        .sys-tab:hover {
-            color: #334155;
-        }
-
-        .sys-tab.active {
-            color: #0857b1;
-            border-bottom-color: #0857b1;
-        }
-
-        .sys-subtabs {
-            display: flex;
-            gap: 0.375rem;
-            border-bottom: 1px solid #e2e8f0;
-            overflow-x: auto;
-            scrollbar-width: none;
-        }
 
         #system-body {
             flex: 1;
             min-height: 0;
-            padding: 0.75rem 1.25rem 1.25rem;
+            padding: var(--space-3) 0 var(--space-5);
             display: flex;
             flex-direction: column;
         }
@@ -255,6 +229,7 @@
         .sys-pane {
             flex: 1;
             min-height: 0;
+            padding: 0 var(--space-5);
             overflow-y: auto;
             display: flex;
             flex-direction: column;
@@ -269,6 +244,100 @@
             overflow: hidden;
         }
 
+        .sys-pb { padding-bottom: var(--space-4); }
+        .sys-pad-head { padding: var(--space-6) var(--space-5) var(--space-4); }
+        .sys-inline { display: inline-block; vertical-align: -2px; }
+        .sys-round { border-radius: var(--radius-lg); }
+        .sys-o25 { opacity: 0.25; }
+        .sys-o50 { opacity: 0.5; }
+        .sys-o75 { opacity: 0.75; }
+        .sys-ok { color: var(--color-success); }
+        .sys-warn-ink { color: var(--color-warning); }
+        .sys-chip-btn { font-family: inherit; cursor: pointer; }
+        .sys-chip-btn:not([class*="zone-"]) { border: 1px solid transparent; }
+        .sys-chip-btn:hover { opacity: 0.8; }
+        .sys-flow-node { cursor: pointer; border-right: 6px solid var(--color-danger); }
+        .sys-flow-node.sys-node-on { border-right-color: var(--color-on); }
+        .sys-flow-grid { display: grid; grid-template-columns: 1fr 100px 1fr;
+                         column-gap: var(--space-2); }
+        .hub-overlay-msg { position: absolute; inset: 0; z-index: var(--z-card);
+                           background: var(--color-bg); }
+        .sys-narrow { max-width: 28rem; margin: var(--space-4) auto 0; width: 100%; }
+        .sys-pane-inner { width: 100%; max-width: 42rem; margin: 0 auto;
+                          padding: var(--space-4) var(--space-4) 0; }
+        .sys-json-sep { margin-top: var(--space-6); padding-top: var(--space-6);
+                        border-top: 1px solid var(--color-border); }
+        .sys-scrollbox>h3,
+        .sys-scrollbox>h4 {
+            margin-top: var(--space-4);
+        }
+
+        .sys-scrollbox { margin: 0 var(--space-5) var(--space-5); height: 20rem; overflow-y: auto; }
+        /* mono-on-dark terminal surface, shared by the config/log panes */
+        .term-pane { background: var(--term-bg); color: var(--term-text);
+                     font-family: var(--font-mono); font-size: var(--fs-sm);
+                     line-height: 1.5; padding: var(--space-3);
+                     border-radius: var(--radius-lg); overflow: auto; }
+        .sys-json-pre { width: 100%; padding: var(--space-4);
+                        border: 1px solid var(--chrome-border); }
+        .sys-overlay { position: fixed; inset: 0; display: flex; align-items: center;
+                       justify-content: center; padding: var(--space-4); z-index: var(--z-dialog); }
+        .sys-overlay-fill { position: absolute; inset: 0; pointer-events: none; }
+        .sys-rotates { display: inline-block; transition: transform var(--dur-med) ease; }
+        .rotate-90 { transform: rotate(90deg); }
+        @media (max-width: 640px) { .sys-wide-only { display: none; } }
+
+        .sys-minrow { min-height: 2rem; }
+        .sys-pick { cursor: pointer; border-radius: var(--radius-md); }
+        .sys-pick:hover { background: var(--color-surface-alt); }
+        .sys-modal-card { width: 100%; max-height: 90vh; }
+        .sys-modal-sm { max-width: 28rem; }
+        .sys-modal-body { padding: var(--space-4); overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+        .sys-empty { padding: var(--space-8) 0; }
+        .sys-dismiss { margin-left: 2px; font-weight: var(--fw-bold); line-height: 1; cursor: pointer; }
+        .sys-dismiss:hover { opacity: 0.6; }
+        .sys-login-card { max-width: 24rem; padding: var(--space-6); }
+        .sys-modal-foot { padding: var(--space-3); border-top: 1px solid var(--color-border); flex-shrink: 0; }
+
+        .sys-splash { position: absolute; inset: 0; padding: var(--space-8);
+                      display: flex; align-items: center; justify-content: center;
+                      text-align: center; }
+        .sys-splash-box { max-width: 28rem; padding: var(--space-8); }
+        .sys-actions { margin-top: var(--space-6); }
+
+        .sys-floating-alert {
+            position: fixed;
+            right: var(--space-6);
+            bottom: var(--space-6);
+            z-index: var(--z-toast);
+            max-width: 28rem;
+            width: 100%;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* fixed to the viewport, clear of #bar-inner's 4rem bar; the shared
+           class only handles layout and gap */
+        #toast-container {
+            position: fixed;
+            bottom: 5.5rem;
+            left: var(--space-6);
+        }
+
+        .sys-status-alert {
+            align-items: flex-start;
+            margin-bottom: var(--space-4);
+        }
+
+        /* fixed width so the row does not jump between active and inactive */
+        .sys-save {
+            width: 8rem;
+        }
+
+        /* the hub stretches form controls to the field; the viewer sizes to content */
+        .input {
+            width: 100%;
+        }
+
         @media (max-width: 640px) {
             #system-overlay {
                 padding: 0;
@@ -281,97 +350,75 @@
                 border-radius: 0;
             }
             .sys-tab {
-                font-size: 0.75rem;
-                padding: 0.5rem 0.75rem;
+                font-size: var(--fs-sm);
+                padding: var(--space-2) var(--space-3);
             }
         }
 
         #login-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-        }
-        #login-overlay.open {
-            display: flex;
+            z-index: var(--z-overlay);
+            padding: 0;
         }
 
         #config-json {
-            background: #0f172a;
-            color: #cbd5e1;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 0.75rem;
-            line-height: 1.5;
-            padding: 0.75rem;
             flex: 1;
             min-height: 0;
-            overflow: auto;
             white-space: pre;
             margin: 0;
         }
 
-        .j-key { color: #7dd3fc; }
-        .j-str { color: #fbbf24; }
-        .j-num { color: #6ee7b7; }
-        .j-bool, .j-null { color: #c4b5fd; }
+        .j-key { color: var(--code-key); }
+        .j-str { color: var(--code-string); }
+        .j-num { color: var(--code-number); }
+        .j-bool, .j-null { color: var(--code-literal); }
 
         #log-box {
-            background: #0f172a;
-            padding: 0.75rem;
             flex: 1;
             min-height: 0;
-            overflow: auto;
         }
 
         .log-line {
             display: flex;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 0.75rem;
-            line-height: 1.5;
             padding: 1px 0;
             white-space: pre;
         }
 
         .log-line.error {
-            color: #f87171;
+            color: var(--term-error);
         }
 
         .log-line.warning {
-            color: #fbbf24;
+            color: var(--term-warn);
         }
 
         .log-line.info {
-            color: #60a5fa;
+            color: var(--term-info);
         }
 
         .log-line.debug {
-            color: #94a3b8;
+            color: var(--term-debug);
             opacity: 0.75;
         }
 
         .log-line.default {
-            color: #cbd5e1;
+            color: var(--term-text);
         }
 
         .log-ts {
-            color: #475569;
+            color: var(--term-meta);
             margin-right: 0.5em;
             user-select: none;
             flex-shrink: 0;
         }
 
-        /* bottom bar: buttons centered, status + LEDs + community grouped on
-           the right. The empty left spacer shrinks first, so when space gets
-           tight the buttons drift left before any indicator collapses. */
+        /* the empty left spacer shrinks first, so the buttons drift left
+           before any indicator collapses */
         #bar-inner {
             display: flex;
             align-items: center;
             height: 4rem;
-            padding: 0 12px;
-            gap: 12px;
+            padding: 0 var(--space-3);
+            gap: var(--space-3);
         }
 
         #bar-left {
@@ -379,24 +426,27 @@
             min-width: 0;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: var(--space-3);
         }
-
 
         #status-dot-wrap {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: var(--space-2);
             min-width: 0;
             overflow: hidden;
             cursor: pointer;
+        }
+
+        #status-dot-wrap .tooltip {
+            right: 0;
         }
 
         .bar-divider {
             display: none;
             width: 1px;
             height: 1.75rem;
-            background: #3f3f46;
+            background: var(--chrome-border);
         }
 
         @media (min-width: 640px) {
@@ -416,7 +466,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 1.5rem;
+            gap: var(--space-6);
         }
 
         #bar-right {
@@ -425,16 +475,14 @@
             display: flex;
             align-items: center;
             justify-content: flex-end;
-            gap: 0.75rem;
+            gap: var(--space-3);
         }
 
-        /* community map link: subordinate icon-only shortcut, first to go
-           when space is tight */
         #community-link {
             display: none;
             text-decoration: none;
-            color: #a1a1aa;
-            transition: color 0.15s;
+            color: var(--chrome-text-muted);
+            transition: color var(--dur-fast);
         }
 
         #community-link svg {
@@ -443,7 +491,7 @@
         }
 
         #community-link:hover {
-            color: #d4d4d8;
+            color: var(--chrome-text-hover);
         }
 
         @media (min-width: 660px) {
@@ -457,19 +505,20 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 4px;
+            padding: var(--space-1);
             background: transparent;
             border: none;
-            color: #a1a1aa;
+            color: var(--chrome-text-muted);
             cursor: pointer;
-            transition: color 0.15s;
+            transition: color var(--dur-fast);
         }
 
         #bar-collapse:hover {
-            color: #d4d4d8;
+            color: var(--chrome-text-hover);
         }
 
-        #bar-collapse svg {
+        #bar-collapse svg,
+        #bar-collapse [class$="_icon"] {
             width: 20px;
             height: 20px;
         }
@@ -479,25 +528,25 @@
             position: fixed;
             left: 12px;
             bottom: calc(12px + env(safe-area-inset-bottom));
-            z-index: 55;
+            z-index: var(--z-float);
             display: none;
             align-items: center;
-            gap: 8px;
-            padding: 0.45rem 0.8rem;
-            background: #18181b;
-            border: 1px solid #3f3f46;
-            border-radius: 9999px;
-            color: #fff;
-            font-size: 0.75rem;
-            font-weight: 500;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-3);
+            background: var(--chrome-bg);
+            border: 1px solid var(--chrome-border);
+            border-radius: var(--radius-full);
+            color: var(--chrome-text);
+            font-size: var(--fs-sm);
+            font-weight: var(--fw-medium);
             cursor: pointer;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
-            transition: background-color 0.2s;
+            box-shadow: var(--shadow-lg);
+            transition: background-color var(--dur-med);
         }
 
         #bar-restore:hover,
         #login-pill:hover {
-            background: #27272a;
+            background: var(--chrome-bg-hover);
         }
 
         #bar-restore.show,
@@ -506,18 +555,20 @@
         }
 
         #bar-restore svg,
-        #login-pill svg {
+        #login-pill svg,
+        #bar-restore [class$="_icon"],
+        #login-pill [class$="_icon"] {
             width: 16px;
             height: 16px;
-            color: #a1a1aa;
+            color: var(--chrome-text-muted);
         }
 
         #restore-dot {
             display: block;
             width: 0.5rem;
             height: 0.5rem;
-            border-radius: 9999px;
-            background: #64748b;
+            border-radius: var(--radius-full);
+            background: var(--chrome-dot);
         }
 
         @media (min-width: 640px) {
@@ -529,7 +580,7 @@
         @media (max-width: 639px) {
             .hub-button {
                 min-width: 54px;
-                padding: 0.5rem 0.4rem;
+                padding: var(--space-2) 6px;
             }
         }
 
@@ -541,7 +592,7 @@
             #channel-leds {
                 display: flex;
                 align-items: center;
-                gap: 8px;
+                gap: var(--space-2);
                 margin-right: 6px;
             }
         }
@@ -556,122 +607,92 @@
         .ch-led {
             width: 7px;
             height: 7px;
-            border-radius: 9999px;
-            background: #3f3f46;
+            border-radius: var(--radius-full);
+            background: var(--chrome-border);
+            /* slower than --dur-slow on purpose: the LED afterglow */
             transition: background-color 0.5s ease-out;
         }
 
         .ch-led.flash {
-            background: #34d399;
+            background: var(--chrome-led-on);
             transition: none;
         }
 
         .ch-led-label {
-            font-size: 8px;
+            font-size: var(--fs-2xs);
             line-height: 1;
-            color: #a1a1aa;
+            color: var(--chrome-text-muted);
         }
 
         #wizard-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.55);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 90;
-            padding: 1rem;
-        }
-
-        #wizard-overlay.open {
-            display: flex;
+            z-index: var(--z-dialog);
         }
 
         #wizard-card {
-            background: white;
-            border-radius: 1rem;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
-            width: 100%;
             max-width: 480px;
             max-height: calc(100vh - 2rem);
             max-height: calc(100dvh - 2rem);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
         }
 
-        .wz-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem 1rem 0 1.5rem;
-        }
 
-        .wz-x {
-            border: none;
-            background: transparent;
-            color: #64748b;
-            cursor: pointer;
-            padding: 0.25rem;
-            border-radius: 0.5rem;
-        }
-
-        .wz-x:hover {
-            color: #1e293b;
-            background: #f1f5f9;
-        }
+        .wz-link { text-decoration: none; margin: var(--space-1) 0; }
+        .wz-x { border-radius: var(--radius-lg); }
+        .wz-head { padding: var(--space-4) var(--space-4) 0 var(--space-6); }
+        .wz-error { margin: 0 var(--space-6); }
+        .wz-options, .wz-daisy { margin-top: var(--space-3); }
+        .wz-service { margin: var(--space-2) 0 var(--space-3); gap: var(--space-4); }
+        /* the footer's quiet buttons carry text, not icons */
+        .wz-foot .btn-quiet { padding: 8px var(--space-4); }
 
         .wz-dots {
             display: flex;
-            gap: 6px;
+            align-items: center;
+            gap: var(--space-2);
         }
 
         .wz-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 9999px;
-            background: #e2e8f0;
+            background: var(--color-track);
         }
 
         .wz-dot.active {
-            background: #0857b1;
+            background: var(--color-accent);
         }
 
         .wz-dot.past {
-            background: #93c5fd;
+            background: var(--color-accent-soft);
         }
 
         .wz-body {
-            padding: 0.75rem 1.5rem 0.5rem;
+            padding: var(--space-3) var(--space-6) var(--space-2);
             overflow-y: auto;
             flex: 1;
             min-height: 0;
         }
 
         .wz-body h2 {
-            font-size: 1.35rem;
-            font-weight: 700;
-            color: #0f172a;
-            margin: 0.75rem 0 0.15rem;
+            font-size: var(--fs-2xl);
+            font-weight: var(--fw-bold);
+            color: var(--color-text-strong);
+            margin: var(--space-3) 0 2px;
         }
 
         .wz-body h3 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #0f172a;
-            margin: 0 0 0.5rem;
+            font-size: var(--fs-xl);
+            font-weight: var(--fw-semibold);
+            color: var(--color-text-strong);
+            margin: 0 0 var(--space-2);
         }
 
         .wz-body p {
-            font-size: 0.875rem;
-            color: #475569;
+            font-size: var(--fs-base);
+            color: var(--color-text-muted);
             line-height: 1.55;
-            margin: 0.5rem 0;
+            margin: var(--space-2) 0;
         }
 
         .wz-welcome {
             text-align: center;
-            padding-bottom: 0.25rem;
+            padding-bottom: var(--space-1);
         }
 
         .wz-welcome p {
@@ -680,8 +701,8 @@
 
         .wz-welcome .wz-sub {
             text-align: center;
-            font-size: 0.75rem;
-            color: #94a3b8;
+            font-size: var(--fs-sm);
+            color: var(--color-text-subtle);
             margin-top: 0;
         }
 
@@ -689,7 +710,7 @@
             display: inline-block;
             width: 64px;
             height: 64px;
-            color: #0857b1;
+            color: var(--color-accent);
         }
 
         .wz-logo svg {
@@ -697,13 +718,14 @@
             height: 100%;
         }
 
-        .wz-fineprint {
-            font-size: 0.72rem !important;
-            color: #94a3b8 !important;
+        /* two classes so it outranks .wz-body p without !important */
+        .wz-body .wz-fineprint {
+            font-size: var(--fs-xs);
+            color: var(--color-text-subtle);
         }
 
         .wz-fineprint a {
-            color: #64748b;
+            color: var(--color-text-muted);
             text-decoration: underline;
         }
 
@@ -711,49 +733,25 @@
             margin-top: 0;
         }
 
-        .wz-options {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            margin-top: 0.75rem;
-        }
 
-        .wz-option {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            border: 1px solid #e2e8f0;
-            border-radius: 0.75rem;
-            padding: 0.75rem 1rem;
-            cursor: pointer;
-            transition: border-color 0.15s, background 0.15s;
-        }
 
-        .wz-option:hover {
-            border-color: #cbd5e1;
-            background: #f8fafc;
-        }
 
-        .wz-option.selected {
-            border-color: #0857b1;
-            background: #eff6ff;
-        }
 
         .wz-option input[type="radio"],
         .wz-option input[type="checkbox"] {
-            margin-top: 0.2rem;
-            accent-color: #0857b1;
+            margin-top: 3px;
+            accent-color: var(--color-accent);
         }
 
         .wz-option-icon {
             flex-shrink: 0;
             width: 28px;
             height: 28px;
-            color: #64748b;
+            color: var(--color-text-muted);
         }
 
-        .wz-option.selected .wz-option-icon {
-            color: #0857b1;
+        .option.selected .wz-option-icon {
+            color: var(--color-accent);
         }
 
         .wz-option-icon svg {
@@ -762,11 +760,12 @@
         }
 
         .wz-mini-link {
-            color: #0857b1;
+            color: var(--color-accent);
             text-decoration: underline;
         }
 
-        .wz-option-main {
+        .wz-option-main,
+        .wz-service-main {
             display: flex;
             flex-direction: column;
             gap: 2px;
@@ -775,69 +774,33 @@
         }
 
         .wz-option-title {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: #0f172a;
+            font-size: var(--fs-base);
+            font-weight: var(--fw-semibold);
+            color: var(--color-text-strong);
         }
 
         .wz-option-sub {
-            font-size: 0.75rem;
-            color: #64748b;
+            font-size: var(--fs-sm);
+            color: var(--color-text-muted);
         }
 
-        .wz-daisy {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-        }
-
-        .wz-daisy.hidden {
-            display: none;
-        }
-
-        .wz-daisy input,
-        .wz-daisy select,
-        .wz-input {
-            width: 100%;
-            border: 1px solid #cbd5e1;
-            border-radius: 0.5rem;
-            padding: 0.5rem 0.75rem;
-            font-size: 0.875rem;
-            color: #0f172a;
-            background: white;
-            box-sizing: border-box;
-        }
-
-        .wz-daisy input:focus,
-        .wz-input:focus {
-            outline: 2px solid #93c5fd;
-            border-color: #0857b1;
-        }
-
-        .wz-none {
-            font-size: 0.8rem !important;
-            color: #94a3b8 !important;
+        .wz-body .wz-none {
+            font-size: var(--fs-md);
+            color: var(--color-text-subtle);
         }
 
         .wz-loading {
-            font-size: 0.85rem;
-            color: #64748b;
-            padding: 0.75rem 0;
+            font-size: var(--fs-base);
+            color: var(--color-text-muted);
+            padding: var(--space-3) 0;
         }
 
-        .wz-service {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            margin: 0.5rem 0 0.75rem;
-        }
 
         .wz-service-icon {
             flex-shrink: 0;
             width: 48px;
             height: 48px;
-            color: #0857b1;
+            color: var(--color-accent);
         }
 
         .wz-service-icon svg,
@@ -847,114 +810,46 @@
             object-fit: contain;
         }
 
-        .wz-field-label {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: #334155;
-            margin: 0.9rem 0 0.3rem;
-        }
 
         .wz-summary {
-            margin: 0.5rem 0 1rem;
-            padding-left: 1.25rem;
-            font-size: 0.875rem;
-            color: #334155;
+            margin: var(--space-2) 0 var(--space-4);
+            padding-left: var(--space-5);
+            font-size: var(--fs-base);
+            color: var(--color-text-strong);
             line-height: 1.9;
         }
 
         .wz-check {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            font-size: 0.875rem;
-            color: #334155;
-            margin: 0.5rem 0;
+            gap: var(--space-2);
+            font-size: var(--fs-base);
+            color: var(--color-text-strong);
+            margin: var(--space-2) 0;
         }
 
         .wz-check input {
-            accent-color: #0857b1;
-        }
-
-        .wz-error {
-            margin: 0 1.5rem;
-            font-size: 0.8rem;
-            color: #e11d48;
-            background: #fff1f2;
-            border: 1px solid #fecdd3;
-            border-radius: 0.5rem;
-            padding: 0.5rem 0.75rem;
-        }
-
-        .wz-error.hidden {
-            display: none;
+            accent-color: var(--color-accent);
         }
 
         .wz-foot {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 1rem 1.5rem 1.25rem;
+            padding: var(--space-4) var(--space-6) var(--space-5);
         }
 
         .wz-foot-right {
             display: flex;
-            gap: 0.5rem;
+            gap: var(--space-2);
         }
 
-        .wz-btn {
-            border-radius: 0.5rem;
-            padding: 0.5rem 1.25rem;
-            font-size: 0.875rem;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            transition: background 0.15s;
-        }
-
-        .wz-btn.primary {
-            background: #fff;
-            color: #334155;
-            border: 1px solid #cbd5e1;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        }
-
-        .wz-btn.primary:hover {
-            background: #f8fafc;
-        }
-
-        .wz-btn.primary:disabled {
+        .btn-primary:disabled {
             opacity: 0.6;
             cursor: default;
         }
 
-        .wz-btn.ghost {
-            background: transparent;
-            color: #64748b;
-            border: 1px solid #cbd5e1;
-        }
-
-        .wz-btn.ghost:hover {
-            background: #f8fafc;
-        }
-
-        .wz-btn.link {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: #fff;
-            color: #334155;
-            border: 1px solid #cbd5e1;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-            text-decoration: none;
-            margin: 0.25rem 0;
-        }
-
-        .wz-btn.link:hover {
-            background: #f8fafc;
-        }
-
-        .wz-btn.link svg {
+        .wz-link svg {
             width: 14px;
             height: 14px;
         }
@@ -962,37 +857,39 @@
 </head>
 <body>
     <div id="hub-container">
-        <div id="loading" class="text-center p-8 absolute inset-0 flex items-center justify-center">
-            <div>
-                <svg class="animate-spin h-12 w-12 text-slate-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        <div id="loading" class="sys-splash">
+            <div class="stack-loose">
+                <svg class="spinner icon-xl center-block" fill="none" viewBox="0 0 24 24">
+                    <circle class="sys-o25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="sys-o75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <p class="text-slate-600">Connecting...</p>
+                <p class="t-muted">Connecting...</p>
             </div>
         </div>
         <iframe id="webviewer-frame" src="" class="hidden" allow="fullscreen" allowfullscreen
             sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
 
-        <div id="login-overlay">
-            <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
-                <h3 id="login-title" class="text-lg font-semibold text-slate-800 mb-1">Sign In</h3>
-                <p id="login-subtitle" class="text-sm text-slate-500 mb-4">Authentication required to continue.</p>
-                <div id="login-error" class="hidden mb-3 text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
-                <form id="login-form" class="space-y-3">
+        <div id="login-overlay" class="hub-overlay">
+            <div class="card sys-login-card stack-loose">
+                <div class="stack-tight">
+                    <h3 id="login-title" class="t-strong t-lg">Sign In</h3>
+                    <p id="login-subtitle" class="t-small t-muted">Authentication required to continue.</p>
+                </div>
+                <div id="login-error" class="alert alert-danger hidden"></div>
+                <form id="login-form" class="stack">
                     <input id="login-password" name="password" type="password" autocomplete="current-password"
                         placeholder="Password"
-                        class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                        class="input" />
                     <input id="login-password2" name="password2" type="password" autocomplete="new-password"
                         placeholder="Confirm password"
-                        class="hidden w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
-                    <div class="flex gap-2 pt-1">
+                        class="input hidden" />
+                    <div class="row">
                         <button type="button" id="login-cancel"
-                            class="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-slate-300 text-slate-600 hover:bg-slate-50 transition">
+                            class="btn grow">
                             Cancel
                         </button>
                         <button type="submit" id="login-submit"
-                            class="flex-1 px-4 py-2 rounded-lg text-sm font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 shadow-sm transition">
+                            class="btn grow">
                             Sign In
                         </button>
                     </div>
@@ -1002,26 +899,30 @@
 
         <!-- The nav bar's Input/Output/System buttons all open this modal and
              jump to the matching tab. -->
-        <div id="system-overlay">
-            <div id="system-modal">
-                <div id="system-header">
-                    <h3 id="system-title" class="text-slate-800">Settings</h3>
-                    <button id="system-close" class="p-1">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div id="system-overlay" class="hub-overlay">
+            <div id="system-modal" class="modal-card">
+                <div id="system-header" class="band">
+                    <div id="system-slot" class="band-slot">
+                        <div id="system-tabs" class="tabs">
+                            <button class="sys-tab" data-tab="input">Input</button>
+                            <button class="sys-tab" data-tab="output">Output</button>
+                            <button class="sys-tab" data-tab="viewer">Map</button>
+                            <button class="sys-tab" data-tab="flow">Flow</button>
+                            <button class="sys-tab" data-top="system" data-tab="status">System</button>
+                        </div>
+                    </div>
+                    <button id="system-close" class="btn-quiet">
+                        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
-                <div id="system-tabs">
-                    <button class="sys-tab" data-tab="input">Input</button>
-                    <button class="sys-tab" data-tab="output">Output</button>
-                    <button class="sys-tab" data-tab="flow">Data Flow</button>
+                <div id="system-subtabs" class="sys-subtabs hidden">
                     <button class="sys-tab" data-tab="status">Status</button>
-                    <button class="sys-tab" data-tab="viewer">Map</button>
                     <button class="sys-tab" data-tab="log">Log</button>
-                    <button class="sys-tab" data-tab="wizard">Wizard</button>
-                    <button class="sys-tab" data-tab="password">Access</button>
                     <button class="sys-tab" data-tab="config">Configuration</button>
+                    <button class="sys-tab" data-tab="password">Access</button>
+                    <button class="sys-tab" data-tab="wizard">Wizard</button>
                     <button class="sys-tab" data-tab="license">License</button>
                 </div>
                 <div id="system-body"></div>
@@ -1030,54 +931,54 @@
 
         <!-- toasts sit above the bottom bar on the left; config-manager's
              App.notify reuses this container instead of creating its own -->
-        <div id="toast-container" class="fixed flex flex-col items-start" style="bottom: 5.5rem; left: 1.5rem; z-index: 70"></div>
+        <div id="toast-container" class="toast-container"></div>
     </div>
 
     <!-- static content of the system panel's License tab; cloned into the
          pane each time the panel is rebuilt -->
     <template id="license-pane-content">
-        <div class="max-w-2xl mx-auto px-4 sm:px-0 pb-4">
-            <div class="flex gap-3 items-start bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
-                <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="sys-pane-inner sys-pb">
+            <div class="alert alert-warning sys-status-alert">
+                <svg class="alert-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                 </svg>
-                <div class="text-sm text-amber-800">
-                    <p class="font-semibold mb-1">Research and educational software &mdash; not for operational use</p>
-                    <p class="text-xs leading-relaxed">Do not rely on AIS-catcher for navigation, collision avoidance or any application where safety of life or property is at stake.
+                <div class="t-small t-warn stack-tight">
+                    <p class="t-strong">Research and educational software &mdash; not for operational use</p>
+                    <p class="t-small">Do not rely on AIS-catcher for navigation, collision avoidance or any application where safety of life or property is at stake.
                         Receiving radio signals may be regulated or restricted in your country; you are responsible for complying with local laws before use.</p>
                 </div>
             </div>
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div class="flex flex-col items-center pt-6 pb-4 px-5">
-                    <span id="license-logo" class="block w-12 h-12 text-slate-700 mb-3"></span>
-                    <h2 class="text-xl font-semibold text-slate-800">License Agreement</h2>
-                    <p class="text-xs text-slate-500 mt-1">AIS-catcher &copy; 2021&ndash;2026 jvde.github@gmail.com</p>
+            <div class="card">
+                <div class="col row-center sys-pad-head">
+                    <span id="license-logo" class="icon-xl center-block"></span>
+                    <h2 class="t-strong t-lg">License Agreement</h2>
+                    <p class="t-small t-muted">AIS-catcher &copy; 2021&ndash;2026 jvde.github@gmail.com</p>
                 </div>
-                <div class="mx-5 mb-5 h-80 overflow-y-auto border border-slate-200 rounded-lg p-4 bg-slate-50 text-sm text-slate-600">
-                    <h3 class="text-base font-bold text-slate-800 mb-1">GNU GENERAL PUBLIC LICENSE</h3>
-                    <p class="text-xs text-slate-500 mb-3">Version 3, 29 June 2007</p>
-                    <p class="mb-2">Copyright &copy; 2007 Free Software Foundation, Inc. &lt;https://fsf.org/&gt;</p>
-                    <p class="mb-4">Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed.</p>
-                    <h4 class="font-bold text-slate-700 mt-4 mb-2">Preamble</h4>
-                    <p class="mb-2">The GNU General Public License is a free, copyleft license for software and other kinds of works.</p>
-                    <p class="mb-2">The licenses for most software and other practical works are designed to take away your freedom to share and change the works.
+                <div class="box t-small t-muted sys-scrollbox stack">
+                    <h3 class="t-strong">GNU GENERAL PUBLIC LICENSE</h3>
+                    <p class="t-small t-muted">Version 3, 29 June 2007</p>
+                    <p>Copyright &copy; 2007 Free Software Foundation, Inc. &lt;https://fsf.org/&gt;</p>
+                    <p>Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed.</p>
+                    <h4 class="t-strong">Preamble</h4>
+                    <p>The GNU General Public License is a free, copyleft license for software and other kinds of works.</p>
+                    <p>The licenses for most software and other practical works are designed to take away your freedom to share and change the works.
                         By contrast, the GNU General Public License is intended to guarantee your freedom to share and change all versions of a program&mdash;to
                         make sure it remains free software for all its users. We, the Free Software Foundation, use the GNU General Public License for most of
                         our software; it applies also to any other work released this way by its authors. You can apply it to your programs, too.</p>
-                    <p class="mb-2">When we speak of free software, we are referring to freedom, not price. Our General Public Licenses are designed to make sure
+                    <p>When we speak of free software, we are referring to freedom, not price. Our General Public Licenses are designed to make sure
                         that you have the freedom to distribute copies of free software (and charge for them if you wish), that you receive source code or can
                         get it if you want it, that you can change the software or use pieces of it in new free programs, and that you know you can do these things.</p>
-                    <p class="mb-2">To protect your rights, we need to prevent others from denying you these rights or asking you to surrender the rights.
+                    <p>To protect your rights, we need to prevent others from denying you these rights or asking you to surrender the rights.
                         Therefore, you have certain responsibilities if you distribute copies of the software, or if you modify it: responsibilities to respect
                         the freedom of others.</p>
-                    <p class="mb-2">For example, if you distribute copies of such a program, whether gratis or for a fee, you must pass on to the recipients the
+                    <p>For example, if you distribute copies of such a program, whether gratis or for a fee, you must pass on to the recipients the
                         same freedoms that you received. You must make sure that they, too, receive or can get the source code. And you must show them these
                         terms so they know their rights.</p>
-                    <p class="mt-4 mb-2 italic">This is a summary. For the full text, please visit
-                        <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener" class="text-blue-700 underline">gnu.org</a> or the
-                        <a href="https://github.com/jvde-github/AIS-catcher/blob/main/LICENSE" target="_blank" rel="noopener" class="text-blue-700 underline">LICENSE file on GitHub</a>.</p>
-                    <h4 class="font-bold text-slate-700 mt-4 mb-2">Disclaimer of Warranty</h4>
-                    <p class="mb-2 uppercase font-bold text-xs">There is no warranty for the program, to the extent permitted by applicable law. Except when
+                    <p class="t-italic">This is a summary. For the full text, please visit
+                        <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener" class="t-link">gnu.org</a> or the
+                        <a href="https://github.com/jvde-github/AIS-catcher/blob/main/LICENSE" target="_blank" rel="noopener" class="t-link">LICENSE file on GitHub</a>.</p>
+                    <h4 class="t-strong">Disclaimer of Warranty</h4>
+                    <p class="t-small t-strong t-caps">There is no warranty for the program, to the extent permitted by applicable law. Except when
                         otherwise stated in writing the copyright holders and/or other parties provide the program &ldquo;as is&rdquo; without warranty of any
                         kind, either expressed or implied, including, but not limited to, the implied warranties of merchantability and fitness for a particular
                         purpose. The entire risk as to the quality and performance of the program is with you. Should the program prove defective, you assume
@@ -1091,50 +992,39 @@
         <div id="bar-inner">
         <div id="bar-left">
             <button id="bar-collapse" type="button" title="Hide controls" aria-label="Hide controls">
-                <svg viewBox="0 -960 960 960" fill="currentColor">
-                    <path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z" />
-                </svg>
+                <span class="expand_more_icon"></span>
             </button>
             <div class="bar-divider div-640"></div>
             <div id="channel-leds"></div>
         </div>
-        <div id="nav-buttons" class="transition-opacity">
+        <div id="nav-buttons">
             <button id="nav-start-restart" class="hub-button" data-view="control" title="Start AIS-catcher">
-                <svg id="nav-sr-icon" viewBox="0 -960 960 960" fill="currentColor">
-                    <path d="M320-200v-560l440 280-440 280Zm80-280Zm0 134 210-134-210-134v268Z" />
-                </svg>
+                <span id="nav-sr-icon" class="engine_start_icon"></span>
                 <span id="nav-sr-label">Start</span>
             </button>
             <button id="nav-btn-input" class="hub-button" data-view="input" title="Configure the receiver input source">
-                <svg viewBox="0 -960 960 960" fill="currentColor">
-                    <path d="M160-80q-33 0-56.5-23.5T80-160v-480q0-25 13.5-45t36.5-29l506-206 26 66-330 134h468q33 0 56.5 23.5T880-640v480q0 33-23.5 56.5T800-80H160Zm0-80h640v-280H160v280Zm160-40q42 0 71-29t29-71q0-42-29-71t-71-29q-42 0-71 29t-29 71q0 42 29 71t71 29ZM160-520h480v-80h80v80h80v-120H160v120Zm0 360v-280 280Z" />
-                </svg>
+                <span class="radio_icon"></span>
                 <span>Input</span>
             </button>
             <button id="nav-btn-output" class="hub-button" data-view="output" title="Configure outputs and data sharing">
-                <svg viewBox="0 -960 960 960" fill="currentColor">
-                    <path d="M680-80q-50 0-85-35t-35-85q0-6 3-28L282-392q-16 15-37 23.5t-45 8.5q-50 0-85-35t-35-85q0-50 35-85t85-35q24 0 45 8.5t37 23.5l281-164q-2-7-2.5-13.5T560-760q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35q-24 0-45-8.5T598-672L317-508q2-7 2.5-13.5t.5-14.5q0-8-.5-14.5T317-452l281 164q16-15 37-23.5t45-8.5q50 0 85 35t35 85q0 50-35 85t-85 35Zm0-80q17 0 28.5-11.5T720-200q0-17-11.5-28.5T680-240q-17 0-28.5 11.5T640-200q0 17 11.5 28.5T680-160ZM200-440q17 0 28.5-11.5T240-480q0-17-11.5-28.5T200-520q-17 0-28.5 11.5T160-480q0 17 11.5 28.5T200-440Zm480-280q17 0 28.5-11.5T720-760q0-17-11.5-28.5T680-800q-17 0-28.5 11.5T640-760q0 17 11.5 28.5T680-720Zm0 520ZM200-480Zm480-280Z" />
-                </svg>
+                <span class="share_icon"></span>
                 <span>Output</span>
             </button>
             <button id="nav-btn-control" class="hub-button" data-view="control-panel" title="Settings, status, logs and configuration">
-                <svg viewBox="0 -960 960 960" fill="currentColor">
-                    <path d="M686-132 444-376q-20 8-40.5 12t-43.5 4q-100 0-170-70t-70-170q0-36 10-68.5t28-61.5l146 146 72-72-146-146q29-18 61.5-28t68.5-10q100 0 170 70t70 170q0 23-4 43.5T584-516l244 242q12 12 12 29t-12 29l-84 84q-12 12-29 12t-29-12Zm29-85 27-27-256-256q18-20 26-46.5t8-53.5q0-60-38.5-104.5T386-758l74 74q12 12 12 28t-12 28L332-500q-12 12-28 12t-28-12l-74-74q9 57 53.5 95.5T360-440q26 0 52-8t47-25l256 256ZM472-488Z" />
-                </svg>
+                <span class="build_icon"></span>
                 <span>System</span>
             </button>
         </div>
         <div id="bar-right">
             <div id="status-dot-wrap">
-                <div class="relative group">
-                    <span id="status-dot" class="block w-2.5 h-2.5 rounded-full bg-slate-500"></span>
-                    <div class="absolute bottom-full mb-2 min-w-max px-2.5 py-1.5 rounded-lg bg-slate-800 text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap" style="right:0">
-                        <div id="status-dot-label" class="font-medium">Checking&#8230;</div>
-                        <div id="status-dot-uptime" class="text-slate-400 text-xs mt-0.5"></div>
-                        <div class="absolute top-full border-4 border-transparent border-t-slate-800" style="right:12px"></div>
+                <div class="tooltip-anchor">
+                    <span id="status-dot" class="dot"></span>
+                    <div class="tooltip stack-tight">
+                        <div id="status-dot-label" class="t-small">Checking&#8230;</div>
+                        <div id="status-dot-uptime" class="t-small t-subtle"></div>
                     </div>
                 </div>
-                <span id="status-dot-text" class="hidden sm:inline text-xs font-medium text-slate-400"></span>
+                <span id="status-dot-text" class="t-small t-subtle sys-wide-only"></span>
             </div>
             <div class="bar-divider div-768"></div>
             <a id="community-link" href="https://www.aiscatcher.org" target="_blank" rel="noopener"
@@ -1157,18 +1047,15 @@
     <button id="bar-restore" type="button" title="Show controls" aria-label="Show controls">
         <span id="restore-dot"></span>
         <span id="restore-label">Controls</span>
-        <svg viewBox="0 -960 960 960" fill="currentColor">
-            <path d="m480-528 184 184 56-56-240-240-240 240 56 56 184-184Z" />
-        </svg>
+        <span class="expand_less_icon"></span>
     </button>
 
     <button id="login-pill" type="button" title="Sign in" aria-label="Sign in">
-        <svg viewBox="0 -960 960 960" fill="currentColor">
-            <path d="M480-120v-80h280v-560H480v-80h280q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H480Zm-80-160-55-58 102-102H120v-80h327L345-622l55-58 200 200-200 200Z" />
-        </svg>
+        <span class="login_icon"></span>
         <span>Login</span>
     </button>
 
+    <script src="js/components.js?hash="></script>
     <script src="js/schema.js?hash="></script>
     <script src="js/config-manager.js?hash="></script>
     <script src="js/wizard.js?hash="></script>

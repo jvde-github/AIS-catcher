@@ -795,7 +795,7 @@ std::string WebViewer::buildMultiPathJSON(ReceiverTracker *s, const std::string 
 			continue;
 		}
 
-		char keybuf[12];
+		char keybuf[16];
 		int n = snprintf(keybuf, sizeof(keybuf), "%d", mmsi);
 		w.key(keybuf, n).raw_val(s->getPathJSON(mmsi));
 	}

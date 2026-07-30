@@ -1309,7 +1309,7 @@ bool DB::Save(std::ofstream &file)
 		ptr = ships[ptr].incoming.prev;
 	}
 
-	Info() << "DB: Saved " << ships_written << " ships to backup";
+	Debug() << "DB: Saved " << ships_written << " ships to backup";
 	return true;
 }
 

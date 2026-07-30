@@ -80,6 +80,26 @@ jobs:
     - name: Spell Check with Typos
       uses: crate-ci/typos@v1.46.0
 
+  warnings:
+    name: Warnings as Errors
+    needs: bakeHTML
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v6
+      with:
+        ref: ${{ env.CHECKOUT_REF }}
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake pkg-config \
+          zlib1g-dev libssl-dev libsqlite3-dev libpq-dev \
+          librtlsdr-dev libzmq3-dev libusb-1.0-0-dev
+    - name: Configure
+      run: cmake -S . -B build -DWARNINGS_AS_ERRORS=ON
+    - name: Build
+      run: cmake --build build -j$(nproc)
+
   build_debian:
     needs: pre_build_checks
     runs-on: ubuntu-latest

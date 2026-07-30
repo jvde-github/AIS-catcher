@@ -309,7 +309,7 @@ function filterDialogHTML() {
 
     const active = viewer.filters.length
         ? `<div class="realtime-filter-active"><div class="filter-chips">${chipsHTML()}</div>
-            <button class="realtime-filter-clear" data-action="clearRealtimeFilters">Remove all</button></div>`
+            <button class="btn realtime-filter-clear" data-action="clearRealtimeFilters">Remove all</button></div>`
         : '<div class="realtime-filter-none">No filters. Every message is shown.</div>';
 
     return `<div class="realtime-filter-editor">
@@ -317,7 +317,7 @@ function filterDialogHTML() {
             <select id="realtime_filter_kind" class="realtime-filter-input"
                 data-on-change="realtimeFilterKindChanged">${kinds}</select>
             ${valueFieldHTML()}
-            <button class="realtime-filter-add" data-action="addRealtimeFilter">Add</button>
+            <button class="btn realtime-filter-add" data-action="addRealtimeFilter">Add</button>
         </div>${active}
         <div class="realtime-filter-hint">Same kind matches any (OR), different kinds must all match (AND).</div>
         </div>`;

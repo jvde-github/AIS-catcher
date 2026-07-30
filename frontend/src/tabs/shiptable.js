@@ -238,7 +238,7 @@ function populateColumnVisibilityMenu() {
     menu.innerHTML = "";
 
     const header = document.createElement("div");
-    header.className = "column-menu-header";
+    header.className = "col-header column-menu-header";
     header.textContent = "Show columns";
     menu.appendChild(header);
 
@@ -270,7 +270,7 @@ function populateColumnVisibilityMenu() {
     footer.className = "column-menu-footer";
     const resetBtn = document.createElement("button");
     resetBtn.type = "button";
-    resetBtn.className = "column-menu-reset";
+    resetBtn.className = "btn-quiet column-menu-reset";
     resetBtn.innerHTML =
         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span>Reset to default</span>';
     resetBtn.addEventListener("click", () => resetColumns());
@@ -361,7 +361,7 @@ export async function update() {
             index: "mmsi",
             rowFormatter: (row) => {
                 const ship = row.getData();
-                row.getElement().style.borderLeft = `10px solid ${validatedColor(ship, "#7CFC00", "red", "lightgrey")}`;
+                row.getElement().style.borderLeft = `10px solid ${validatedColor(ship, "var(--color-ok-strong)", "var(--color-error)", "var(--color-off)")}`;
             },
             data,
             layout: "fitDataTable",

@@ -129,7 +129,7 @@ namespace IO
 	protected:
 		SOCKET sock = -1;
 		int timeout = 30;
-		bool reuse_port = true;
+		bool reuse_port = false;
 		std::string IP_BIND;
 		int listening_port = -1;
 

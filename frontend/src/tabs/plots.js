@@ -87,8 +87,8 @@ function updateChartColors(c, colorVariables) {
         if (bars) dataset.backgroundColor = withAlpha(color, BAR_ALPHA);
         else dataset.backgroundColor = dataset.fill ? withAlpha(color, FILL_ALPHA) : color;
     });
-    const ink = cssvar("--chart-color");
-    const grid = cssvar("--chart-grid-color");
+    const ink = cssvar("--color-chart-ink");
+    const grid = cssvar("--color-chart-grid");
 
     const scales = c.config.options?.scales || {};
     Object.keys(scales).forEach((id) => {
@@ -109,10 +109,10 @@ function updateTooltipColors(c) {
     opts.plugins = opts.plugins || {};
     opts.plugins.tooltip = opts.plugins.tooltip || {};
 
-    const ink = cssvar("--chart-color");
+    const ink = cssvar("--color-chart-ink");
     Object.assign(opts.plugins.tooltip, {
-        backgroundColor: cssvar("--tooltip-background-color"),
-        borderColor: cssvar("--tooltip-border-color"),
+        backgroundColor: cssvar("--color-tooltip"),
+        borderColor: cssvar("--color-tooltip-border"),
         borderWidth: 1,
         titleColor: ink,
         bodyColor: ink,
@@ -127,29 +127,29 @@ function updateAnnotationColors(c) {
 
     Object.values(annotations).forEach((a) => {
         if (!a.label) return;
-        a.label.backgroundColor = cssvar("--tooltip-background-color");
-        a.label.borderColor = cssvar("--tooltip-border-color");
-        a.label.color = cssvar("--chart-color");
+        a.label.backgroundColor = cssvar("--color-tooltip");
+        a.label.borderColor = cssvar("--color-tooltip-border");
+        a.label.color = cssvar("--color-chart-ink");
     });
 }
 
-const COLORS_SERIES = ["--chart4-color", "--chart1-color", "--chart2-color", "--chart5-color", "--chart6-color"];
-const COLORS_DISTANCE = ["--chart4-color", "--chart1-color", "--chart2-color", "--chart5-color", "--chart-envelope-color"];
+const COLORS_SERIES = ["--color-chart-4", "--color-chart-1", "--color-chart-2", "--color-chart-5", "--color-chart-6"];
+const COLORS_DISTANCE = ["--color-chart-4", "--color-chart-1", "--color-chart-2", "--color-chart-5", "--color-chart-envelope"];
 
 function updateColorMulti(c) {
     updateChartColors(c, COLORS_SERIES);
 }
 
 function updateColorRadar(c) {
-    const colorVariables = ["--chart2-color", "--chart1-color"];
+    const colorVariables = ["--color-chart-2", "--color-chart-1"];
     c.data.datasets.forEach((dataset, index) => {
         const color = cssvar(colorVariables[index]);
         dataset.backgroundColor = withAlpha(color, FILL_ALPHA);
         dataset.borderColor = color;
     });
-    c.options.scales.r.grid.color = cssvar("--chart-grid-color");
-    c.options.scales.r.ticks.color = cssvar("--chart-color");
-    c.options.scales.r.ticks.backdropColor = cssvar("--panel-color");
+    c.options.scales.r.grid.color = cssvar("--color-chart-grid");
+    c.options.scales.r.ticks.color = cssvar("--color-chart-ink");
+    c.options.scales.r.ticks.backdropColor = cssvar("--color-surface");
     updateTooltipColors(c);
 }
 
@@ -793,7 +793,7 @@ export function updateColors() {
     });
     level.forEach((chart) => {
         if (chart) {
-            const colorVariables = ["--chart1-color", "--chart1-color", "--chart1-color"];
+            const colorVariables = ["--color-chart-1", "--color-chart-1", "--color-chart-1"];
             updateChartColors(chart, colorVariables);
             chart.update();
         }
@@ -802,9 +802,9 @@ export function updateColors() {
         if (chart) { updateColorRadar(chart); chart.update(); }
     });
     compare.forEach((chart) => {
-        if (chart) { updateChartColors(chart, ["--chart4-color", "--chart1-color"]); chart.update(); }
+        if (chart) { updateChartColors(chart, ["--color-chart-4", "--color-chart-1"]); chart.update(); }
     });
     gain.forEach((chart) => {
-        if (chart) { updateChartColors(chart, ["--chart1-color"]); chart.update(); }
+        if (chart) { updateChartColors(chart, ["--color-chart-1"]); chart.update(); }
     });
 }

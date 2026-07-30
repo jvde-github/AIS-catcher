@@ -11,11 +11,8 @@
     let pendingApply = false;
     let pendingAction = null;
 
-    const ENGINE_ICONS = {
-        start: '<path d="M320-200v-560l440 280-440 280Zm80-280Zm0 134 210-134-210-134v268Z"/>',
-        stop: '<path d="M240-240v-480h480v480H240Z"/>',
-        restart: '<path d="M440-122q-121-15-200.5-105.5T160-440q0-66 26-126.5T260-672l57 57q-38 34-57.5 79T240-440q0 88 56 155.5T440-203v81Zm80 0v-81q87-16 143.5-83T720-440q0-100-70-170t-170-70h-3l44 44-56 56-140-140 140-140 56 56-44 44h3q134 0 227 93t93 227q0 121-79.5 211.5T520-122Z"/>'
-    };
+    // shapes live in icons.css; swap the class rather than inlining SVG
+    const ENGINE_ICONS = { start: 'engine_start_icon', stop: 'engine_stop_icon', restart: 'engine_restart_icon' };
 
     const ENGINE_TITLES = {
         start: 'Start AIS-catcher',
@@ -39,7 +36,7 @@
         }
         if (icon && icon.dataset.mode !== mode) {
             icon.dataset.mode = mode;
-            icon.innerHTML = ENGINE_ICONS[mode];
+            icon.className = ENGINE_ICONS[mode];
             if (label) label.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
         }
     }
@@ -54,20 +51,22 @@
     const loadingDiv = document.getElementById('loading');
     const systemOverlay = document.getElementById('system-overlay');
     const systemBody = document.getElementById('system-body');
-    const systemTitle = document.getElementById('system-title');
+    const systemTabs = document.getElementById('system-tabs');
+    const systemSubtabs = document.getElementById('system-subtabs');
     let currentSystemTab = null;
     let systemInputLoaded = false;
     let systemOutputLoaded = false;
     let systemViewerLoaded = false;
     let flowResizeObserver = null;
+    let flowRenderId = 0;
     let flowStatsTimer = null;
 
     // tab id -> header label / which nav-bar button to highlight
     const SYSTEM_TABS = {
         input: { label: 'Input', nav: 'input' },
         output: { label: 'Output', nav: 'output' },
-        flow: { label: 'Data Flow', nav: 'control-panel' },
-        status: { label: 'System', nav: 'control-panel' },
+        flow: { label: 'Flow', nav: 'control-panel' },
+        status: { label: 'Status', nav: 'control-panel' },
         viewer: { label: 'Map', nav: 'control-panel' },
         config: { label: 'Configuration', nav: 'control-panel' },
         log: { label: 'Log', nav: 'control-panel' },
@@ -75,6 +74,10 @@
         password: { label: 'Access', nav: 'control-panel' },
         license: { label: 'License', nav: 'control-panel' }
     };
+
+    const SYSTEM_GROUP = ['status', 'log', 'config', 'password', 'wizard', 'license'];
+    let lastSystemLeaf = 'status';
+    const TABS_WITH_SUBS = ['system', 'output'];
 
     function fetchStatus() {
         return fetch('/api/status').then(r => {
@@ -253,15 +256,15 @@
         const btn = document.getElementById('nav-start-restart');
         if (btn) {
             btn.disabled = disabled;
-            btn.classList.toggle('opacity-50', disabled);
+            btn.classList.toggle('sys-o50', disabled);
         }
     }
 
     const ENGINE_STATES = {
-        running: { label: 'Running', dot: 'bg-emerald-500', text: 'text-emerald-600', hex: '#10b981' },
-        starting: { label: 'Starting...', dot: 'bg-amber-400', text: 'text-amber-400', hex: '#fbbf24' },
-        retrying: { label: 'Retrying...', dot: 'bg-amber-400', text: 'text-amber-400', hex: '#fbbf24' },
-        stopped: { label: 'Stopped', dot: 'bg-slate-500', text: 'text-slate-400', hex: '#64748b' }
+        running: { label: 'Running', dot: 'dot-ok', text: 'sys-ok', dotColor: 'var(--color-on)' },
+        starting: { label: 'Starting...', dot: 'dot-warn', text: 'sys-warn-ink', dotColor: 'var(--color-warning-ink)' },
+        retrying: { label: 'Retrying...', dot: 'dot-warn', text: 'sys-warn-ink', dotColor: 'var(--color-warning-ink)' },
+        stopped: { label: 'Stopped', dot: '', text: 't-subtle', dotColor: 'var(--chrome-dot)' }
     };
 
     let engineStateKey = 'stopped';
@@ -295,21 +298,20 @@
         }
 
         const dot = document.getElementById('status-dot');
-        if (dot) dot.className = 'block w-2.5 h-2.5 rounded-full ' + s.dot;
+        if (dot) dot.className = 'dot ' + s.dot;
         const dotLabel = document.getElementById('status-dot-label');
         if (dotLabel) dotLabel.textContent = s.label;
         const dotText = document.getElementById('status-dot-text');
-        if (dotText) dotText.className = 'hidden sm:inline text-xs font-medium ' + s.text;
+        if (dotText) dotText.className = 't-small sys-wide-only ' + s.text;
         const restoreDot = document.getElementById('restore-dot');
-        if (restoreDot) restoreDot.style.background = s.hex;
+        if (restoreDot) restoreDot.style.background = s.dotColor;
 
         const hubStatus = document.getElementById('hub-status');
         if (hubStatus && hubStatus.dataset.state !== state) {
             hubStatus.dataset.state = state;
-            hubStatus.innerHTML = '<span class="text-sm font-medium ' + s.text + '">' + s.label + '</span>' +
-                '<span class="relative flex h-2.5 w-2.5">' +
-                (running ? '<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>' : '') +
-                '<span class="relative inline-flex rounded-full h-2.5 w-2.5 ' + s.dot + '"></span></span>';
+            hubStatus.innerHTML = '<span class="t-small ' + s.text + '">' + s.label + '</span>' +
+                '<span class="relative row">' +
+                '<span class="dot ' + s.dot + (running ? ' dot-pulse' : '') + '"></span></span>';
         }
 
         updateUptimeDisplay();
@@ -325,9 +327,9 @@
             ].filter(r => r[1]);
             sysinfo.textContent = '';
             rows.forEach(r => sysinfo.appendChild(
-                Utils.el('div', 'flex justify-between gap-4', {},
-                    Utils.el('span', 'text-slate-500', {}, r[0]),
-                    Utils.el('span', 'text-slate-700 text-right truncate', {}, r[1])
+                Utils.el('div', 'row row-between row-loose', {},
+                    Utils.el('span', 't-muted', {}, r[0]),
+                    Utils.el('span', 't-strong t-right t-truncate', {}, r[1])
                 )
             ));
             const card = document.getElementById('hub-sysinfo-card');
@@ -336,6 +338,7 @@
     }
 
     let reloadUntil = 0;
+    let reloadSawDown = false;
     let overlayRestartBtn = null;
     let pendingViewerReload = false;
     let lastUptime = Infinity;
@@ -357,19 +360,22 @@
         if (data.has_password !== undefined) hasPassword = !!data.has_password;
         renderEngineState(data);
         setEngineButtonDisabled(false);
+        // a restart can complete between two status updates, so a falling
+        // uptime is the signal, not a stopped state we may never observe
+        const uptime = data.engine === 'running' && typeof data.uptime === 'number' ? data.uptime : Infinity;
+        const fell = uptime < lastUptime;
+        lastUptime = uptime;
         if (reloadUntil) {
-            if (data.engine === 'running') {
+            if (data.engine === 'running' && (reloadSawDown || fell)) {
                 reloadUntil = 0;
                 window.location.reload();
             } else if (data.desired === false || Date.now() > reloadUntil) {
                 restartTimedOut();
+            } else if (data.engine !== 'running') {
+                reloadSawDown = true;
             }
         }
-        // a restart can complete between two status updates, so a falling
-        // uptime is the signal, not a stopped state we may never observe
-        const uptime = data.engine === 'running' && typeof data.uptime === 'number' ? data.uptime : Infinity;
-        const reloadFrame = pendingViewerReload && uptime < lastUptime;
-        lastUptime = uptime;
+        const reloadFrame = pendingViewerReload && fell;
         if (reloadFrame) pendingViewerReload = false;
 
         if (data.viewer && (!viewerLoaded || data.viewer !== port)) {
@@ -480,9 +486,10 @@
     }
 
     function showOverlayMessage(html) {
+        clearOverlayMessages();
         const hubContainer = document.getElementById('hub-container');
         const div = document.createElement('div');
-        div.className = 'hub-overlay-msg flex items-center justify-center h-full bg-slate-50 absolute inset-0 z-10';
+        div.className = 'hub-overlay-msg row row-center';
         div.innerHTML = html;
         loadingDiv.classList.add('hidden');
         hubContainer.insertBefore(div, hubContainer.firstChild);
@@ -495,18 +502,18 @@
 
     function showError(title, message, showRestart = false) {
         const div = showOverlayMessage(`
-            <div class="max-w-md p-8 text-center">
-                <svg class="h-16 w-16 text-amber-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="t-center sys-splash-box stack-loose">
+                <svg class="icon-2xl t-warn center-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                 </svg>
-                <h3 class="hub-err-title text-xl font-semibold text-slate-800 mb-2"></h3>
-                <p class="hub-err-msg text-slate-600 mb-4"></p>
-                ${showRestart ? '<button class="hub-restart-btn inline-flex items-center gap-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 shadow-sm px-6 py-2 rounded-lg transition font-medium">Restart</button>' : ''}
+                <h3 data-role="err-title" class="t-strong t-lg"></h3>
+                <p data-role="err-msg" class="t-muted"></p>
+                ${showRestart ? '<button data-role="err-restart" class="btn">Restart</button>' : ''}
             </div>
         `);
-        div.querySelector('.hub-err-title').textContent = title;
-        div.querySelector('.hub-err-msg').textContent = message;
-        const btn = div.querySelector('.hub-restart-btn');
+        div.querySelector('[data-role="err-title"]').textContent = title;
+        div.querySelector('[data-role="err-msg"]').textContent = message;
+        const btn = div.querySelector('[data-role="err-restart"]');
         if (btn)
             btn.addEventListener('click', () => {
                 requireAuth(() => {
@@ -514,6 +521,7 @@
                     btn.disabled = true;
                     overlayRestartBtn = btn;
                     reloadUntil = Date.now() + 90000;
+                    reloadSawDown = false;
                     engineAction('restart')
                         .catch(() => { reloadUntil = 0; btn.disabled = false; btn.textContent = 'Restart'; });
                 });
@@ -522,9 +530,9 @@
 
     function showNoViewer() {
         showOverlayMessage(`
-            <div class="max-w-md p-8 text-center">
-                <h3 class="text-xl font-semibold text-slate-800 mb-2">Viewer Not Running</h3>
-                <p class="text-slate-600 mb-4">The built-in viewer could not be started &mdash; its port may be in use. Check the log in the Control panel.</p>
+            <div class="t-center sys-splash-box stack">
+                <h3 class="t-strong t-lg">Viewer Not Running</h3>
+                <p class="t-muted">The built-in viewer could not be started &mdash; its port may be in use. Check the log in the Control panel.</p>
             </div>
         `);
     }
@@ -540,12 +548,14 @@
             iframe.src = url.toString();
             viewerLoaded = true;
 
+            clearTimeout(currentLoadTimeout);
             currentLoadTimeout = setTimeout(() => {
                 showError('Webviewer Not Responding', 'Port ' + port + ' is not responding.', true);
             }, 8000);
 
             iframe.onload = function () {
                 clearTimeout(currentLoadTimeout);
+                clearOverlayMessages();
                 loadingDiv.classList.add('hidden');
                 iframe.classList.remove('hidden');
             };
@@ -565,7 +575,7 @@
         host.textContent = '';
         const container = document.createElement('div');
         container.id = 'hub-receivers-container';
-        container.className = 'space-y-4';
+        container.className = 'stack stack-loose';
         host.appendChild(container);
 
         createChannelManager({
@@ -588,42 +598,8 @@
     const OUTPUT_TAB_ACTIVE = 'sys-tab active';
     const OUTPUT_TAB_INACTIVE = 'sys-tab';
 
-    const TAB_ARROWS = {
-        left: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 -960 960 960" fill="currentColor"><path d="M560-240 320-480l240-240 56 56-184 184 184 184-56 56Z"/></svg>',
-        right: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 -960 960 960" fill="currentColor"><path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z"/></svg>'
-    };
-
     function enableTabScroll(el) {
-        const wrap = document.createElement('div');
-        wrap.className = 'tab-scroll-wrap';
-        el.parentNode.insertBefore(wrap, el);
-        wrap.appendChild(el);
-
-        ['left', 'right'].forEach(dir => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'tab-scroll-btn ' + dir;
-            btn.innerHTML = TAB_ARROWS[dir];
-            btn.addEventListener('click', () => {
-                el.scrollBy({ left: (dir === 'left' ? -0.6 : 0.6) * el.clientWidth, behavior: 'smooth' });
-            });
-            wrap.appendChild(btn);
-        });
-
-        const update = () => {
-            const max = el.scrollWidth - el.clientWidth;
-            wrap.classList.toggle('can-left', el.scrollLeft > 4);
-            wrap.classList.toggle('can-right', el.scrollLeft < max - 4);
-        };
-        el.addEventListener('scroll', update, { passive: true });
-        el.addEventListener('wheel', e => {
-            if (!e.deltaX && el.scrollWidth > el.clientWidth) {
-                el.scrollLeft += e.deltaY;
-                e.preventDefault();
-            }
-        }, { passive: false });
-        new ResizeObserver(update).observe(el);
-        update();
+        return window.AISComponents.tabScroller(el);
     }
 
     function setOutputType(value) {
@@ -657,7 +633,7 @@
         currentOutputType = null;
         host.textContent = '';
         const wrapper = document.createElement('div');
-        wrapper.className = 'space-y-4';
+        wrapper.className = 'stack stack-loose';
 
         const tabBar = document.createElement('div');
         tabBar.className = 'sys-subtabs';
@@ -706,7 +682,7 @@
     let lastLogSeq = -1;
     const logBuffer = [];
     const LOG_BUFFER_MAX = 500;
-    let lastToast = { message: '', time: 0 };
+    let lastToast = { message: '', showing: false };
 
     function isReplayedLog(m) {
         if (typeof m.seq !== 'number') return false;
@@ -758,10 +734,14 @@
 
             if (!logReplayDone) return;
             if (m.level === 'error' || m.level === 'critical' || m.level === 'warning') {
-                // a crash-looping engine repeats the same line; one toast per 10s
-                if (m.message === lastToast.message && Date.now() - lastToast.time < 10000) return;
-                lastToast = { message: m.message, time: Date.now() };
-                App.notify(m.level === 'warning' ? 'warning' : 'error', m.message);
+                // a crash-looping engine repeats the same line: suppress a repeat
+                // only while its toast is still on screen, so dismissing one lets
+                // the next occurrence through instead of muting it for a fixed window
+                if (m.message === lastToast.message && lastToast.showing) return;
+                const rec = { message: m.message, showing: true };
+                lastToast = rec;
+                App.notify(m.level === 'warning' ? 'warning' : 'error', m.message,
+                    undefined, () => { rec.showing = false; });
             }
         } catch (_) { }
     }
@@ -837,15 +817,25 @@
         }
 
         currentSystemTab = tab;
-        systemTitle.textContent = SYSTEM_TABS[tab].label;
+        const grouped = SYSTEM_GROUP.indexOf(tab) !== -1;
+        if (grouped) lastSystemLeaf = tab;
+        const top = grouped ? 'system' : tab;
 
         const nav = SYSTEM_TABS[tab].nav;
         document.querySelectorAll('.hub-button').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.view === nav);
         });
         document.querySelectorAll('#system-tabs .sys-tab').forEach(b => {
-            b.classList.toggle('active', b.dataset.tab === tab);
-            if (b.dataset.tab === tab) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            const active = (b.dataset.top || b.dataset.tab) === top;
+            b.classList.toggle('active', active);
+            b.classList.toggle('has-sub', active && TABS_WITH_SUBS.indexOf(top) !== -1);
+            if (active) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        });
+        systemSubtabs.classList.toggle('hidden', !grouped);
+        systemSubtabs.querySelectorAll('.sys-tab').forEach(b => {
+            const active = b.dataset.tab === tab;
+            b.classList.toggle('active', active);
+            if (active && grouped) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         });
         systemBody.querySelectorAll('.sys-pane').forEach(p => {
             p.classList.toggle('hidden', p.dataset.pane !== tab);
@@ -884,82 +874,82 @@
             <div class="sys-pane hidden" data-pane="input"><div id="sys-input-body"></div></div>
             <div class="sys-pane hidden" data-pane="output"><div id="sys-output-body"></div></div>
             <div class="sys-pane hidden" data-pane="flow">
-                <p class="text-xs text-slate-500 mb-4">Signal routing between inputs and outputs based on shared zones.</p>
-                <div id="flow-loading" class="text-center text-slate-400 py-16">Loading&hellip;</div>
-                <div id="flow-empty" class="hidden text-center text-slate-400 py-16">No receivers or outputs configured.</div>
-                <div id="flow-patch" class="hidden">
-                    <div id="flow-legend" class="flex flex-wrap gap-2 mb-5"></div>
-                    <div class="grid mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider" style="grid-template-columns:1fr 100px 1fr">
+                <p class="t-small t-muted">Signal routing between inputs and outputs based on shared zones.</p>
+                <div id="flow-loading" class="t-center t-subtle sys-empty">Loading&hellip;</div>
+                <div id="flow-empty" class="t-center t-subtle sys-empty hidden">No receivers or outputs configured.</div>
+                <div id="flow-patch" class="hidden stack-loose">
+                    <div id="flow-legend" class="row row-wrap"></div>
+                    <div class="col-header sys-flow-grid">
                         <div>Input</div><div></div><div>Output</div>
                     </div>
                     <div id="flow-graph" class="relative" style="min-height:60px">
-                        <div class="grid gap-0" style="grid-template-columns:1fr 100px 1fr">
-                            <div id="flow-inputs" class="flex flex-col gap-3 pr-2"></div>
+                        <div class="sys-flow-grid">
+                            <div id="flow-inputs" class="col col-loose"></div>
                             <div></div>
-                            <div id="flow-outputs" class="flex flex-col gap-3 pl-2"></div>
+                            <div id="flow-outputs" class="col col-loose"></div>
                         </div>
-                        <svg id="flow-svg" class="absolute inset-0 pointer-events-none" style="width:100%;overflow:visible"></svg>
+                        <svg id="flow-svg" class="sys-overlay-fill" style="width:100%;overflow:visible"></svg>
                     </div>
                 </div>
             </div>
             <div class="sys-pane hidden" data-pane="status">
-                <div class="w-full max-w-md mx-auto space-y-4">
-                    <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="font-semibold text-slate-800">Receiver</span>
-                            <div id="hub-status" class="flex items-center space-x-2">
-                                <span class="text-sm font-medium text-slate-600">Checking...</span>
+                <div class="stack stack-loose sys-narrow">
+                    <div class="box stack-tight">
+                        <div class="row row-between">
+                            <span class="t-strong">Receiver</span>
+                            <div id="hub-status" class="row">
+                                <span class="t-small t-muted">Checking...</span>
                             </div>
                         </div>
-                        <div id="hub-uptime" class="text-sm text-slate-600"></div>
+                        <div id="hub-uptime" class="t-muted"></div>
                     </div>
-                    <div id="hub-sysinfo-card" class="hidden bg-slate-50 rounded-lg p-4 border border-slate-200">
-                        <div class="font-semibold text-slate-800 mb-2">System</div>
-                        <div id="hub-sysinfo" class="text-sm space-y-1.5"></div>
+                    <div id="hub-sysinfo-card" class="box hidden stack">
+                        <div class="t-strong">System</div>
+                        <div id="hub-sysinfo" class="stack stack-tight t-small"></div>
                     </div>
                 </div>
             </div>
             <div class="sys-pane hidden" data-pane="viewer"><div><div id="viewer-config-container"></div></div></div>
             <div class="sys-pane hidden" data-pane="config">
-                <pre id="config-json" class="rounded-lg">Loading...</pre>
+                <pre id="config-json" class="term-pane">Loading...</pre>
             </div>
             <div class="sys-pane hidden" data-pane="log">
-                <div id="log-box" class="rounded-lg"></div>
+                <div id="log-box" class="term-pane"></div>
             </div>
             <div class="sys-pane hidden" data-pane="wizard">
-                <div class="max-w-2xl mx-auto px-4 sm:px-0">
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div class="flex justify-between items-center px-5 py-2.5 bg-slate-100 border-b border-slate-200">
-                            <span class="font-semibold text-slate-800">Setup Wizard</span>
+                <div class="sys-pane-inner">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="t-strong">Setup Wizard</span>
                         </div>
-                        <div class="p-5">
-                            <p class="text-xs text-slate-500">Step through the guided setup to configure your receiver, sharing and viewer.</p>
+                        <div class="card-body">
+                            <p class="t-small t-muted">Step through the guided setup to configure your receiver, sharing and viewer.</p>
                         </div>
                     </div>
-                    <div class="mt-6 sm:mt-8 flex flex-row flex-wrap justify-end items-center gap-2 sm:gap-3">
-                        <button id="hub-btn-wizard" class="w-auto bg-white border border-slate-300 text-slate-700 px-4 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 transition duration-200 shadow-sm inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-medium">Open Setup Wizard</button>
+                    <div class="row row-wrap row-end row-loose sys-actions">
+                        <button id="hub-btn-wizard" class="btn">Open Setup Wizard</button>
                     </div>
                 </div>
             </div>
             <div class="sys-pane hidden" data-pane="password">
-                <div class="max-w-2xl mx-auto px-4 sm:px-0">
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div class="flex justify-between items-center px-5 py-2.5 bg-slate-100 border-b border-slate-200">
-                            <span class="font-semibold text-slate-800">Reset Password</span>
+                <div class="sys-pane-inner">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="t-strong">Reset Password</span>
                         </div>
-                        <div class="p-5">
-                            <form id="password-form" class="space-y-2">
+                        <div class="card-body">
+                            <form id="password-form" class="stack">
                                 <input id="new-password" type="password" autocomplete="new-password" placeholder="New password"
-                                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                                    class="input" />
                                 <input id="new-password2" type="password" autocomplete="new-password" placeholder="Confirm new password"
-                                    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                                    class="input" />
                             </form>
-                            ${auth === 'open' ? '<p class="text-xs text-slate-500 mt-3">Local access needs no password; this one is used when AIS-catcher is started with LAN access (bind 0.0.0.0).</p>' : ''}
+                            ${auth === 'open' ? '<p class="t-small t-muted">Local access needs no password; this one is used when AIS-catcher is started with LAN access (bind 0.0.0.0).</p>' : ''}
                         </div>
                     </div>
-                    <div class="mt-6 sm:mt-8 flex flex-row flex-wrap justify-end items-center gap-2 sm:gap-3">
-                        ${auth === 'open' ? '' : '<button id="hub-btn-logout" type="button" class="w-auto sm:w-32 bg-white border border-slate-300 text-slate-700 px-4 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 transition duration-200 shadow-sm inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-medium">Logout</button>'}
-                        <button type="submit" form="password-form" class="w-auto sm:w-32 bg-white border border-slate-300 text-slate-700 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 shadow-sm transition-all duration-200 text-xs sm:text-sm font-medium">Reset</button>
+                    <div class="row row-wrap row-end row-loose sys-actions">
+                        ${auth === 'open' ? '' : '<button id="hub-btn-logout" type="button" class="btn sys-save">Logout</button>'}
+                        <button type="submit" form="password-form" class="btn sys-save">Reset</button>
                     </div>
                 </div>
             </div>
@@ -1033,7 +1023,7 @@
     // no zone receive from every input. Zone colours match the config chips.
     function flowBadge(zone) {
         const s = document.createElement('span');
-        s.className = `inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ZoneColors.badge(zone)}`;
+        s.className = `chip ${ZoneColors.badge(zone)}`;
         s.textContent = zone;
         return s;
     }
@@ -1043,11 +1033,11 @@
     }
 
     function flowNode(label, zones, active, isInput, onClick, link) {
-        const border = active ? 'border-r-emerald-400' : 'border-r-rose-400';
+        const border = active ? 'sys-node-on' : 'sys-node-off';
         const div = document.createElement('div');
         div.setAttribute('role', 'button');
         div.tabIndex = 0;
-        div.className = `text-left bg-white border border-slate-200 border-r-[6px] ${border} rounded-lg px-3 py-2.5 shadow-sm min-w-0 cursor-pointer hover:bg-slate-50 transition-colors`;
+        div.className = `box sys-flow-node stack-tight ${border}`;
         div.addEventListener('click', onClick);
         div.addEventListener('keydown', e => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -1058,17 +1048,16 @@
 
         const url = safeLink(link);
         const lbl = document.createElement(url ? 'a' : 'div');
-        lbl.className = 'block text-sm font-medium text-slate-700 truncate';
+        lbl.className = 't-small t-strong t-truncate';
         lbl.textContent = label;
         if (url) {
             lbl.href = url;
             lbl.target = '_blank';
             lbl.rel = 'noopener';
             lbl.title = url;
-            lbl.className += ' underline decoration-slate-300 hover:decoration-slate-500';
             lbl.addEventListener('click', e => e.stopPropagation());
             const icon = document.createElement('span');
-            icon.className = 'inline-block align-[-2px] ml-1 text-slate-400';
+            icon.className = 't-subtle sys-inline';
             icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h560v-280h80v280q0 33-23.5 56.5T760-120H200Zm188-212-56-56 372-372H520v-80h320v320h-80v-184L388-332Z"/></svg>';
             lbl.appendChild(icon);
         }
@@ -1076,12 +1065,12 @@
 
         if (zones && zones.length > 0) {
             const row = document.createElement('div');
-            row.className = 'flex flex-wrap gap-1 mt-1';
+            row.className = 'row row-wrap row-tight';
             zones.forEach(z => row.appendChild(flowBadge(z)));
             div.appendChild(row);
         } else if (!isInput) {
             const note = document.createElement('div');
-            note.className = 'text-xs text-slate-400 italic mt-0.5';
+            note.className = 't-small t-subtle t-italic';
             note.textContent = 'all inputs';
             div.appendChild(note);
         }
@@ -1109,11 +1098,11 @@
             path.setAttribute('d', `M ${x1} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}`);
             path.setAttribute('fill', 'none');
             if (isAll) {
-                path.setAttribute('stroke', '#cbd5e1');
+                path.style.stroke = 'var(--color-field-border)';
                 path.setAttribute('stroke-width', '1.5');
                 path.setAttribute('stroke-dasharray', '5 3');
             } else {
-                path.setAttribute('stroke', ZoneColors.hex(zones[0]));
+                path.style.stroke = ZoneColors.css(zones[0]);
                 path.setAttribute('stroke-width', '2.5');
                 path.setAttribute('opacity', '0.75');
             }
@@ -1152,12 +1141,12 @@
     function flowStatDetails(sub, s) {
         const parts = [];
         if (sub !== 'udp' && sub !== 'http')
-            parts.push(`<span class="font-medium ${s.connected ? 'text-emerald-600' : 'text-rose-500'}">${s.connected ? 'Connected' : 'Not connected'}</span>`);
+            parts.push(`<span class="t-strong ${s.connected ? 'sys-ok' : 't-danger'}">${s.connected ? 'Connected' : 'Not connected'}</span>`);
         parts.push(`<span>${formatBytes(s.bytes_out)} out</span>`);
         if (s.bytes_in > 0) parts.push(`<span>${formatBytes(s.bytes_in)} in</span>`);
         if (sub !== 'udp') parts.push(`<span>ok/fail ${s.connect_ok}/${s.connect_fail}</span>`);
         if (s.reconnects > 0) parts.push(`<span>${s.reconnects} reconnects</span>`);
-        if (s.dropped > 0) parts.push(`<span class="text-amber-600">${s.dropped} dropped</span>`);
+        if (s.dropped > 0) parts.push(`<span class="t-warn">${s.dropped} dropped</span>`);
         return parts.join('');
     }
 
@@ -1204,6 +1193,7 @@
 
     function loadDataFlow() {
         stopFlowObserver();
+        const renderId = ++flowRenderId;
         const patchEl = document.getElementById('flow-patch');
         if (!patchEl) return;
         const loadingEl = document.getElementById('flow-loading');
@@ -1225,9 +1215,7 @@
 
         ConfigStore.fetch()
             .then(cfg => {
-                // tab switched or modal closed while loading: don't install
-                // the stats timer and observer on a stale pane
-                if (currentSystemTab !== 'flow') return;
+                if (currentSystemTab !== 'flow' || renderId !== flowRenderId) return;
                 // one node per engine, with the receiver's zones plus its own
                 const receivers = [];
                 (cfg.receiver || []).forEach((item, i) => {
@@ -1275,10 +1263,10 @@
                 [...receivers, ...outputs].forEach(n => n.zones.forEach(z => allZones.add(z)));
                 allZones.forEach(z => {
                     const item = document.createElement('span');
-                    item.className = `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${ZoneColors.badge(z)}`;
+                    item.className = `chip ${ZoneColors.badge(z)}`;
                     const dot = document.createElement('span');
-                    dot.className = 'w-2 h-2 rounded-full flex-shrink-0';
-                    dot.style.background = ZoneColors.hex(z);
+                    dot.className = 'dot dot-sm';
+                    dot.style.background = ZoneColors.css(z);
                     item.appendChild(dot);
                     item.appendChild(document.createTextNode(z));
                     legendEl.appendChild(item);
@@ -1298,7 +1286,7 @@
 
                 const statEls = outputEls.map(n => {
                     const d = document.createElement('div');
-                    d.className = 'flex flex-wrap gap-x-2 text-xs text-slate-400 mt-1';
+                    d.className = 'row row-wrap t-small t-subtle';
                     n.appendChild(d);
                     return d;
                 });
@@ -1326,6 +1314,7 @@
                 flowResizeObserver.observe(graphEl);
             })
             .catch(() => {
+                if (currentSystemTab !== 'flow' || renderId !== flowRenderId) return;
                 loadingEl.textContent = 'Failed to load configuration.';
                 loadingEl.classList.remove('hidden');
             });
@@ -1358,7 +1347,7 @@
         document.getElementById('nav-start-restart').addEventListener('click', onStartRestartClick);
         document.getElementById('nav-btn-input').addEventListener('click', () => openSystem('input'));
         document.getElementById('nav-btn-output').addEventListener('click', () => openSystem('output'));
-        document.getElementById('nav-btn-control').addEventListener('click', () => openSystem('flow'));
+        document.getElementById('nav-btn-control').addEventListener('click', () => openSystem(lastSystemLeaf));
         document.getElementById('status-dot-wrap').addEventListener('click', () => openSystem('log'));
         document.getElementById('login-pill').addEventListener('click', () => { pendingAction = null; openLoginModal(); });
         document.getElementById('bar-collapse').addEventListener('click', () => setBarCollapsed(true));
@@ -1367,13 +1356,19 @@
         systemOverlay.addEventListener('click', e => {
             if (e.target === systemOverlay) closeSystem();
         });
-        document.getElementById('system-tabs').addEventListener('click', e => {
+        systemTabs.addEventListener('click', e => {
+            const btn = e.target.closest('.sys-tab');
+            if (btn) switchSystemTab(btn.dataset.top === 'system' ? lastSystemLeaf : btn.dataset.tab);
+        });
+        systemSubtabs.addEventListener('click', e => {
             const btn = e.target.closest('.sys-tab');
             if (btn) switchSystemTab(btn.dataset.tab);
         });
-        enableTabScroll(document.getElementById('system-tabs'));
+        enableTabScroll(systemTabs);
+        enableTabScroll(systemSubtabs);
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape' && systemOverlay.classList.contains('open')) closeSystem();
+            if (e.key === 'Escape' && systemOverlay.classList.contains('open') &&
+                !document.getElementById('login-overlay').classList.contains('open')) closeSystem();
         });
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {

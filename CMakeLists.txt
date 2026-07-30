@@ -93,6 +93,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(SANITIZE "Build with AddressSanitizer + UBSanitizer" OFF)
 option(TSAN "Build with ThreadSanitizer" OFF)
+option(WARNINGS_AS_ERRORS "Treat compiler warnings as errors (CI/development only)" OFF)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if(SANITIZE)
@@ -109,7 +110,13 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"
     add_compile_options("-Wall")
     add_compile_options("-Wno-psabi")
     add_compile_options("-Wno-sign-compare")
+    if(WARNINGS_AS_ERRORS)
+        add_compile_options("-Werror")
+    endif()
 elseif(MSVC)
+    if(WARNINGS_AS_ERRORS)
+        add_compile_options("/WX")
+    endif()
     set(OPTIMIZATION_FLAGS "-DWIN32_LEAN_AND_MEAN /EHsc /W3 /Oi /Ot /fp:fast") # spellchecker:disable-line
 endif()
 

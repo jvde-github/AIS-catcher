@@ -33,20 +33,20 @@
     function ensurePickerModal(id, title, opts = {}) {
         let modal = document.getElementById(id);
         if (modal) return modal;
-        modal = el('div', 'fixed inset-0 flex items-center justify-center hidden z-[100] p-4',
-            { id, style: 'background-color: rgba(0,0,0,0.3)' },
-            el('div', `bg-white rounded-lg shadow-xl w-full ${opts.maxWidth || 'max-w-2xl max-h-[90vh]'} flex flex-col relative`, {},
-                el('div', 'flex justify-between items-center p-3 md:p-4 border-b flex-shrink-0', {},
-                    el('h3', 'text-base md:text-lg font-medium text-gray-800', {}, title),
-                    el('button', 'text-gray-600 hover:text-gray-800', { type: 'button', onClick: () => modal.classList.add('hidden') },
-                        el('svg', 'h-6 w-6', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+        modal = el('div', 'sys-overlay hidden',
+            { id, style: 'background-color: var(--color-scrim)' },
+            el('div', `card col sys-modal-card ${opts.maxWidth || ''}`, {},
+                el('div', 'row row-between card-header', {},
+                    el('h3', 't-strong t-lg', {}, title),
+                    el('button', 'btn btn-quiet', { type: 'button', onClick: () => modal.classList.add('hidden') },
+                        el('svg', 'icon-lg', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
                             el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M6 18L18 6M6 6l12 12' })
                         )
                     )
                 ),
-                el('div', opts.bodyClass || 'p-3 md:p-4 overflow-y-auto flex-1', { id: opts.bodyId || id + '-list' }),
-                el('div', 'flex justify-end p-3 md:p-4 border-t flex-shrink-0', {},
-                    el('button', 'bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 shadow-sm transition duration-200 text-sm', {
+                el('div', opts.bodyClass || 'sys-modal-body', { id: opts.bodyId || id + '-list' }),
+                el('div', 'row row-end sys-modal-foot', {},
+                    el('button', 'btn', {
                         type: 'button', onClick: () => modal.classList.add('hidden')
                     }, opts.footerLabel || 'Close')
                 )
@@ -62,35 +62,38 @@
         const target = mgr.config.isList ? mgr.data[index] : mgr.data;
         if (!target) return;
         fn(target);
+        if (mgr.hasViewerFields) mgr.reloadWebviewer = true;
+        mgr.dirty = true;
         App.setUnsaved(true);
         mgr.updateJsonDebug();
         mgr.render();
     }
 
-    const ZONE_COLORS = [
-        'bg-blue-100 text-blue-700 border border-blue-200',
-        'bg-emerald-100 text-emerald-700 border border-emerald-200',
-        'bg-violet-100 text-violet-700 border border-violet-200',
-        'bg-amber-100 text-amber-700 border border-amber-200',
-        'bg-rose-100 text-rose-700 border border-rose-200',
-        'bg-cyan-100 text-cyan-700 border border-cyan-200',
-        'bg-orange-100 text-orange-700 border border-orange-200',
-        'bg-teal-100 text-teal-700 border border-teal-200',
-    ];
-    const ZONE_HEX = ['#93c5fd', '#6ee7b7', '#c4b5fd', '#fcd34d', '#fca5a5', '#67e8f9', '#fdba74', '#5eead4'];
-
+    const ZONE_COLORS = ['zone-1', 'zone-2', 'zone-3', 'zone-4',
+        'zone-5', 'zone-6', 'zone-7', 'zone-8'];
     function zoneHash(zone) {
         let hash = 0;
         for (let i = 0; i < zone.length; i++) hash = (hash * 31 + zone.charCodeAt(i)) & 0xFFFF;
         return hash;
     }
-    const getZoneColor = zone => ZONE_COLORS[zoneHash(zone) % ZONE_COLORS.length];
-    const getZoneHex = zone => ZONE_HEX[zoneHash(zone) % ZONE_HEX.length];
+    const zoneColorIndex = new Map();
+    function zoneIndex(zone) {
+        if (zoneColorIndex.has(zone)) return zoneColorIndex.get(zone);
+        let i = zoneHash(zone) % ZONE_COLORS.length;
+        if (zoneColorIndex.size < ZONE_COLORS.length) {
+            const used = new Set(zoneColorIndex.values());
+            while (used.has(i)) i = (i + 1) % ZONE_COLORS.length;
+        }
+        zoneColorIndex.set(zone, i);
+        return i;
+    }
+    const getZoneColor = zone => ZONE_COLORS[zoneIndex(zone)];
+    const getZoneCss = zone => `var(--${getZoneColor(zone)})`;
 
     function zoneChip(zone, onRemove) {
-        return el('span', `inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getZoneColor(zone)}`, {},
+        return el('span', `chip ${getZoneColor(zone)}`, {},
             zone,
-            el('button', 'ml-0.5 hover:opacity-60 font-bold leading-none', { type: 'button', onClick: onRemove }, '×')
+            el('button', 'sys-dismiss', { type: 'button', onClick: onRemove }, '×')
         );
     }
 
@@ -98,9 +101,14 @@
         try {
             const cfg = await ConfigStore.fetch();
             const zones = new Set();
-            CHANNEL_REGISTRY.forEach(({ configKey }) => {
-                (cfg[configKey] || []).forEach(item => { if (Array.isArray(item.zone)) item.zone.forEach(z => zones.add(z)); });
-            });
+            const walk = o => {
+                if (Array.isArray(o)) { o.forEach(walk); return; }
+                if (!o || typeof o !== 'object') return;
+                if (Array.isArray(o.zone)) o.zone.forEach(z => zones.add(z));
+                Object.values(o).forEach(walk);
+            };
+            walk(cfg);
+            ManagerRegistry.forEach(mgr => walk(mgr.data));
             if (Array.isArray(cfg.sharing_zone)) cfg.sharing_zone.forEach(z => zones.add(z));
             return [...zones].sort();
         } catch { return []; }
@@ -110,9 +118,9 @@
 
     function ensureZoneModal() {
         ensurePickerModal('cm-zone-modal', 'Manage Zones', {
-            maxWidth: 'max-w-sm',
+            maxWidth: 'sys-modal-sm',
             bodyId: 'cm-zone-body',
-            bodyClass: 'p-4 flex flex-col gap-4',
+            bodyClass: 'col col-loose sys-modal-body',
             footerLabel: 'Done'
         });
     }
@@ -121,6 +129,8 @@
         ensureZoneModal();
         activeZoneEdit.zones = [...currentZones];
         activeZoneEdit.onUpdate = onUpdate;
+        activeZoneEdit.allZones = [];
+        renderZoneModalBody();
         fetchAllZones().then(all => {
             activeZoneEdit.allZones = all;
             renderZoneModalBody();
@@ -133,9 +143,9 @@
         if (!body) return;
         body.innerHTML = '';
 
-        const chipsWrap = el('div', 'flex flex-wrap gap-1.5 min-h-[2rem]');
+        const chipsWrap = el('div', 'row row-wrap row-tight sys-minrow');
         if (activeZoneEdit.zones.length === 0) {
-            chipsWrap.appendChild(el('span', 'text-xs text-slate-400 italic', {}, 'No zones assigned'));
+            chipsWrap.appendChild(el('span', 't-small t-subtle t-italic', {}, 'No zones assigned'));
         } else {
             activeZoneEdit.zones.forEach((zone, i) => {
                 chipsWrap.appendChild(zoneChip(zone, () => {
@@ -147,9 +157,9 @@
         }
         body.appendChild(chipsWrap);
 
-        const addSection = el('div', 'flex flex-col gap-1');
-        const inputRow = el('div', 'flex gap-2');
-        const input = el('input', 'flex-1 px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-500', {
+        const addSection = el('div', 'col col-tight');
+        const inputRow = el('div', 'row');
+        const input = el('input', 'input grow', {
             type: 'text',
             placeholder: 'Zone name (e.g. internal)',
             onKeydown: (e) => {
@@ -161,12 +171,12 @@
             }
         });
         inputRow.appendChild(input);
-        inputRow.appendChild(el('button', 'px-3 py-1.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm hover:bg-slate-50 shadow-sm transition', {
+        inputRow.appendChild(el('button', 'btn', {
             type: 'button', onClick: addZoneFromInput
         }, 'Add'));
         addSection.appendChild(inputRow);
 
-        const suggestionsDiv = el('div', 'flex flex-wrap gap-1 mt-1', { id: 'cm-zone-suggestions' });
+        const suggestionsDiv = el('div', 'row row-wrap row-tight', { id: 'cm-zone-suggestions' });
         addSection.appendChild(suggestionsDiv);
         body.appendChild(addSection);
 
@@ -189,7 +199,7 @@
                 !activeZoneEdit.zones.includes(z) && (query === '' || z.toLowerCase().includes(query))
             );
             suggestions.slice(0, 8).forEach(z => {
-                suggestionsDiv.appendChild(el('button', `text-xs px-2 py-0.5 rounded-full ${getZoneColor(z)} hover:opacity-80 transition`, {
+                suggestionsDiv.appendChild(el('button', `chip sys-chip-btn ${getZoneColor(z)}`, {
                     type: 'button',
                     onClick: () => {
                         if (!activeZoneEdit.zones.includes(z)) {
@@ -454,7 +464,7 @@
         return (index, containerId) => {
             const modal = ensurePickerModal(id, title);
             const list = document.getElementById(id + '-list');
-            list.innerHTML = '<div class="text-center p-4 text-slate-500">Loading...</div>';
+            list.innerHTML = '<div class="t-center t-muted sys-empty">Loading...</div>';
             modal.classList.remove('hidden');
             fetch(endpoint)
                 .then(r => { if (authFailed(r)) throw new Error(); return r.json(); })
@@ -462,7 +472,7 @@
                     list.innerHTML = '';
                     const devices = extract(data);
                     if (devices.length === 0) {
-                        list.innerHTML = '<li class="text-gray-500 p-2">No devices found</li>';
+                        list.innerHTML = '<li class="t-center t-muted sys-empty">No devices found</li>';
                         return;
                     }
                     devices.forEach(device => {
@@ -472,7 +482,7 @@
                         }));
                     });
                 })
-                .catch(() => { list.innerHTML = '<li class="text-red-500 p-2">Error loading devices</li>'; });
+                .catch(() => { list.innerHTML = '<li class="t-center t-danger sys-empty">Error loading devices</li>'; });
         };
     }
 
@@ -482,7 +492,7 @@
             title: 'Select Serial Device',
             endpoint: '/api/serial',
             extract: data => Array.isArray(data) ? data : [],
-            renderRow: (device, select) => el('li', 'p-2 hover:bg-gray-100 cursor-pointer rounded', { onClick: select }, device),
+            renderRow: (device, select) => el('li', 'sys-pick', { onClick: select }, device),
             apply: (target, device) => {
                 if (!target.serialport) target.serialport = {};
                 target.serialport.port = device;
@@ -494,9 +504,9 @@
             title: 'Select Device',
             endpoint: '/api/devices',
             extract: data => Array.isArray(data.devices) ? data.devices : [],
-            renderRow: (device, select) => el('li', 'flex items-center justify-between p-2 border rounded-md hover:bg-gray-100 mb-2', {},
+            renderRow: (device, select) => el('li', 'row row-between box sys-pick', {},
                 el('span', '', {}, device.name),
-                el('button', 'bg-white border border-slate-300 text-slate-700 px-2 py-1 rounded-md hover:bg-slate-50 shadow-sm text-sm', {
+                el('button', 'btn', {
                     type: 'button', onClick: select
                 }, 'Select')
             ),
@@ -530,33 +540,33 @@
     };
 
     const Styles = {
-        input: 'w-full px-2 sm:px-3 py-1.5 sm:py-2 bg-white border border-slate-300 rounded-lg text-slate-700 placeholder-slate-400 hover:border-[#0857b1] focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all duration-200 shadow-sm text-xs sm:text-sm',
-        select: 'appearance-none pr-8',
-        toggle: "relative w-11 h-6 bg-slate-200 hover:ring-1 hover:ring-[#0857b1] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0857b1]",
-        slider: 'flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#0857b1]',
-        sliderContainer: 'flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 bg-slate-50 rounded-lg border border-slate-100',
-        sliderDisplay: 'text-xs sm:text-sm font-mono font-medium text-slate-600 min-w-[2.5rem] sm:min-w-[3rem] text-center px-1.5 sm:px-2 py-0.5 sm:py-1 bg-slate-100 rounded border border-slate-200',
-        label: 'block text-slate-700 text-xs sm:text-sm font-semibold mb-1 sm:mb-2 ml-0.5',
-        description: 'mt-0.5 text-[10px] sm:text-xs text-slate-500 ml-0.5',
-        button: 'w-full sm:w-auto bg-white border border-slate-300 text-slate-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:border-[#0857b1] hover:bg-slate-50 transition duration-200 shadow-sm inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-medium',
-        buttonPrimary: 'px-2.5 sm:px-3 py-1.5 sm:py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition duration-200 shadow-sm flex items-center justify-center min-w-[40px] sm:min-w-[44px] text-xs sm:text-sm',
-        card: 'bg-white rounded-none sm:rounded-xl border-x-0 sm:border-x border-slate-200 shadow-sm sm:max-w-2xl sm:mx-auto mb-2 sm:mb-6 relative hover:shadow-md transition-shadow duration-300 overflow-hidden',
-        cardHeader: 'flex justify-between items-center px-3 sm:px-5 py-2 sm:py-2.5 bg-slate-100 border-b border-slate-200',
-        cardBody: 'p-3 sm:p-5',
-        deleteBtn: 'text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1 sm:p-1.5 rounded-lg transition duration-200',
-        chevron: 'pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500',
-        saveActive: 'w-auto sm:w-32 bg-[#0857b1] text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-[#0a63c6] shadow-md transition-all duration-200 text-xs sm:text-sm font-medium transform hover:-translate-y-0.5',
-        saveInactive: 'w-auto sm:w-32 bg-white border border-slate-300 text-slate-400 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 shadow-sm transition-all duration-200 text-xs sm:text-sm font-medium cursor-default',
+        input: 'input',
+        select: 'select',
+        toggle: 'toggle',
+        slider: 'slider',
+        sliderContainer: 'slider-row',
+        sliderDisplay: 'slider-value',
+        label: 'field-label',
+        description: 'field-desc',
+        button: 'btn',
+        buttonPrimary: 'btn btn-icon',
+        card: 'card',
+        cardHeader: 'card-header',
+        cardBody: 'card-body',
+        deleteBtn: 'btn btn-danger',
+        chevron: '',
+        saveActive: 'btn btn-primary sys-save',
+        saveInactive: 'btn is-disabled sys-save',
     };
 
     const Icons = {
-        chevronDown: () => el('svg', 'h-4 w-4', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+        chevronDown: () => el('svg', 'icon-sm', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
             el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 9l-7 7-7-7' })
         ),
-        delete: () => el('svg', 'h-5 w-5', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+        delete: () => el('svg', 'icon-md', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
             el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
         ),
-        plus: () => el('svg', 'w-4 h-4 text-slate-500', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+        plus: () => el('svg', 'icon-sm t-muted', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
             el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 4v16m8-8H4' })
         ),
     };
@@ -564,44 +574,8 @@
     const App = {
         state: { unsaved: false },
 
-        notify(type, message, duration) {
-            const container = document.getElementById('toast-container') || this.createToastContainer();
-            const time = { info: 5000, success: 5000, warning: 7000, error: 9000 };
-            const icon = {
-                info: null,
-                success: ['✓', 'text-emerald-400'],
-                warning: ['!', 'text-amber-400'],
-                error: ['!', 'text-white'],
-            };
-            if (!(type in time)) type = 'info';
-
-            const colorClass = type === 'error'
-                ? 'bg-rose-600 text-white'
-                : 'bg-slate-800 text-white border border-slate-700';
-
-            const close = el('span', 'ml-1 font-bold leading-none cursor-pointer opacity-60 hover:opacity-100', { title: 'Dismiss' }, '×');
-            const toast = el('div', `mb-3 px-4 py-3 rounded-lg shadow-xl transform transition-all duration-300 translate-y-2 opacity-0 flex items-center gap-3 ${colorClass}`, {},
-                icon[type] ? el('span', 'font-bold ' + icon[type][1], {}, icon[type][0]) : null,
-                el('span', 'text-sm font-medium flex-1', {}, message),
-                close
-            );
-
-            container.appendChild(toast);
-            requestAnimationFrame(() => toast.classList.remove('translate-y-2', 'opacity-0'));
-
-            const dismiss = () => {
-                clearTimeout(timer);
-                toast.classList.add('opacity-0', 'translate-y-2');
-                setTimeout(() => toast.remove(), 300);
-            };
-            close.addEventListener('click', dismiss);
-            const timer = setTimeout(dismiss, duration || time[type]);
-        },
-
-        createToastContainer() {
-            const div = el('div', 'fixed bottom-6 right-6 z-50 flex flex-col items-end', { id: 'toast-container' });
-            document.body.appendChild(div);
-            return div;
+        notify(type, message, duration, onClose) {
+            return window.AISComponents.toast(type, message, duration, undefined, onClose);
         },
 
         notifyWarnings(warnings) {
@@ -610,17 +584,17 @@
             console.warn('Config normalization warnings:', msgs);
             let banner = document.getElementById('normalize-warning-banner');
             if (!banner) {
-                banner = el('div', 'fixed bottom-6 right-6 z-50 max-w-md w-full bg-amber-50 border border-amber-200 text-amber-800 rounded-lg shadow-sm px-4 py-3 text-sm', { id: 'normalize-warning-banner' });
+                banner = el('div', 'alert alert-warning sys-floating-alert', { id: 'normalize-warning-banner' });
                 document.body.appendChild(banner);
             }
             banner.innerHTML = '';
-            banner.appendChild(el('div', 'flex items-start justify-between gap-3', {},
+            banner.appendChild(el('div', 'row row-between row-top row-loose', {},
                 el('div', '', {},
-                    el('p', 'font-semibold mb-1', {}, `${msgs.length} config value(s) could not be normalized and were left unchanged:`),
-                    el('div', 'space-y-1', {}, ...msgs.slice(0, 12).map(m => el('div', '', {}, m))),
-                    msgs.length > 12 ? el('p', 'mb-1 text-amber-700', {}, `…and ${msgs.length - 12} more (see console).`) : null
+                    el('p', 't-strong', {}, `${msgs.length} config value(s) could not be normalized and were left unchanged:`),
+                    el('div', 'stack stack-tight', {}, ...msgs.slice(0, 12).map(m => el('div', '', {}, m))),
+                    msgs.length > 12 ? el('p', 't-warn', {}, `…and ${msgs.length - 12} more (see console).`) : null
                 ),
-                el('button', 'text-amber-700 font-bold leading-none', { type: 'button', title: 'Dismiss', onClick: () => banner.remove() }, '✕')
+                el('button', 't-warn t-strong', { type: 'button', title: 'Dismiss', onClick: () => banner.remove() }, '✕')
             ));
         },
 
@@ -630,10 +604,10 @@
 
             if (statusEl) {
                 if (bool) {
-                    statusEl.className = 'mb-6 px-4 py-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-sm flex items-center shadow-sm';
+                    statusEl.className = 'alert alert-warning sys-status-alert';
                     statusEl.innerHTML = `
-                        <svg class="w-4 h-4 mr-2 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                        <span class="font-medium">You have unsaved changes.</span>
+                        <svg class="icon-sm t-warn" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <span class="t-small">You have unsaved changes.</span>
                     `;
                 } else {
                     statusEl.className = 'hidden';
@@ -663,26 +637,23 @@
         });
 
         const children = [slider, display];
-        if (opts.unit) children.push(el('span', 'text-xs sm:text-sm text-slate-600 ml-1', {}, opts.unit));
-        const sliderContainer = el('div', `${Styles.sliderContainer} mt-2`, { style: isOff ? 'display: none' : 'display: flex' }, ...children);
+        if (opts.unit) children.push(el('span', 't-small t-muted', {}, opts.unit));
+        const sliderContainer = el('div', Styles.sliderContainer + (isOff ? ' hidden' : ''), {}, ...children);
 
         const setActive = (active) => {
-            sliderContainer.style.display = active ? 'flex' : 'none';
+            sliderContainer.classList.toggle('hidden', !active);
             onUpdate(active ? opts.parse(slider.value) : opts.offValue);
         };
 
         let isActive, control;
         if (opts.control === 'toggle') {
-            const checkbox = el('input', 'sr-only peer', {
+            const checkbox = el('input', Styles.toggle, {
                 type: 'checkbox',
                 checked: !isOff,
                 onChange: (e) => setActive(e.target.checked)
             });
             isActive = () => checkbox.checked;
-            control = el('label', 'relative inline-flex items-center cursor-pointer h-[30px] sm:h-[38px]', {},
-                checkbox,
-                el('div', Styles.toggle, {})
-            );
+            control = el('label', 'toggle-slot', {}, checkbox);
         } else {
             const select = el('select', `${Styles.input} ${Styles.select}`, {
                 onChange: (e) => setActive(e.target.value === 'custom')
@@ -691,7 +662,7 @@
                 el('option', '', { value: 'custom', selected: !isOff }, 'Custom')
             );
             isActive = () => select.value === 'custom';
-            control = el('div', 'relative', {}, select, el('div', Styles.chevron, {}, Icons.chevronDown()));
+            control = select;
         }
         return el('div', '', {}, control, sliderContainer);
     }
@@ -718,20 +689,18 @@
                             value: opt.value,
                             selected: String(opt.value).toLowerCase() === valStr.toLowerCase()
                         }, opt.label))
-                    ),
-                    el('div', Styles.chevron, {}, Icons.chevronDown())
+                    )
                 );
             }
 
             if (type === 'toggle') {
                 // match Styles.input height so the pill centers on the same midline as inputs in the row
-                return el('label', 'relative inline-flex items-center cursor-pointer group h-[30px] sm:h-[38px]', {},
-                    el('input', 'sr-only peer', {
+                return el('label', 'toggle-slot', {},
+                    el('input', Styles.toggle, {
                         type: 'checkbox',
                         checked: Utils.toBoolean(currentValue),
                         onChange: e => onUpdate(e.target.checked)
-                    }),
-                    el('div', Styles.toggle)
+                    })
                 );
             }
 
@@ -739,10 +708,9 @@
                 const parsedCurrent = Utils.parseInteger(currentValue);
                 const isPreset = field.presets && field.presets.some(p => Utils.parseInteger(p.value) === parsedCurrent);
 
-                const customInput = el('input', `${Styles.input} mt-2`, {
+                const customInput = el('input', Styles.input + (isPreset ? ' hidden' : ''), {
                     type: 'number',
                     value: isPreset ? '' : parsedCurrent,
-                    style: isPreset ? 'display: none' : 'display: block',
                     placeholder: field.placeholder || 'Enter custom value...',
                     onInput: (e) => {
                         const n = parseInt(e.target.value, 10);
@@ -754,20 +722,19 @@
                     el('select', `${Styles.input} ${Styles.select}`, {
                         onChange: (e) => {
                             if (e.target.value === 'custom') {
-                                customInput.style.display = 'block';
+                                customInput.classList.remove('hidden');
                                 customInput.focus();
                             } else {
-                                customInput.style.display = 'none';
+                                customInput.classList.add('hidden');
                                 onUpdate(parseInt(e.target.value, 10));
                             }
                         }
                     },
                         ...(field.presets || []).map(p => el('option', '', { value: p.value, selected: Utils.parseInteger(p.value) === parsedCurrent }, p.label)),
                         el('option', '', { value: 'custom', selected: !isPreset }, 'Custom Value...')
-                    ),
-                    el('div', Styles.chevron, {}, Icons.chevronDown())
+                    )
                 );
-                return el('div', 'space-y-2', {}, select, customInput);
+                return el('div', 'col', {}, select, customInput);
             }
 
             if (type === 'auto-float' || type === 'auto-integer') {
@@ -810,16 +777,16 @@
                     ? currentValue.map(e => (e && typeof e === 'object') ? { ...e } : {})
                     : [{}];
 
-                const wrapper = el('div', 'flex flex-col gap-2');
-                const rows = el('div', 'flex flex-col gap-3');
+                const wrapper = el('div', 'col');
+                const rows = el('div', 'col col-loose');
 
                 const push = () => onUpdate(list.map(e => ({ ...e })));
 
-                const addBtn = el('button', 'self-start inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200 transition', {
+                const addBtn = el('button', 'chip sys-chip-btn self-start', {
                     type: 'button',
                     onClick: () => { list.push({}); push(); render(); }
                 },
-                    el('svg', 'w-3 h-3', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                    el('svg', 'icon-sm', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
                         el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 4v16m8-8H4' })),
                     'Add Engine');
 
@@ -850,10 +817,10 @@
 
                         const shown = (field.settings || []).filter(st => !st.types || st.types.includes(entry.type || 'auto')).map(st => st.name);
                         const tuned = Object.keys(entry.settings || {}).some(k => !shown.includes(k));
-                        const row = el('div', 'flex flex-col gap-2 border border-slate-200 rounded-lg p-3', {},
-                            el('div', 'flex items-center gap-2', {},
-                                el('div', 'relative flex-1', {}, select),
-                                tuned ? el('span', 'text-xs text-slate-400 whitespace-nowrap', {}, 'tuned') : null,
+                        const row = el('div', 'box col', {},
+                            el('div', 'row', {},
+                                el('div', 'grow relative', {}, select),
+                                tuned ? el('span', 't-small t-subtle t-nowrap', {}, 'tuned') : null,
                                 el('button', Styles.deleteBtn, {
                                     type: 'button',
                                     title: 'Remove engine',
@@ -866,7 +833,7 @@
                         if (list.length > 1) {
                             const zones = Array.isArray(entry.zone) ? entry.zone : [];
                             const inherited = Array.isArray(dataContext?.zone) ? dataContext.zone : [];
-                            const chips = el('div', 'flex flex-wrap items-center gap-1');
+                            const chips = el('div', 'row row-wrap row-tight');
                             const commit = updated => {
                                 if (updated.length) entry.zone = updated;
                                 else delete entry.zone;
@@ -879,13 +846,13 @@
                                 commit(next);
                             })));
                             inherited.forEach(z => chips.appendChild(
-                                el('span', 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-400 border border-slate-200',
+                                el('span', 'chip',
                                     { title: 'from the receiver, applies to every engine' }, z)));
-                            chips.appendChild(el('button', 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200 transition', {
+                            chips.appendChild(el('button', 'chip sys-chip-btn', {
                                 type: 'button',
                                 onClick: () => openZoneModal(zones, commit)
                             },
-                                el('svg', 'w-3 h-3', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                                el('svg', 'icon-sm', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
                                     el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 4v16m8-8H4' })),
                                 'Add Zone'));
                             row.appendChild(chips);
@@ -905,14 +872,13 @@
                                     push();
                                     render();
                                 });
-                                toggle.className += ' gap-2';
-                                toggle.appendChild(el('span', 'text-xs text-slate-500', { title: st.tooltip || '' }, st.label));
+                                toggle.appendChild(el('span', 't-small t-muted', { title: st.tooltip || '' }, st.label));
                                 row.appendChild(toggle);
                             });
 
                         rows.appendChild(row);
                     });
-                    addBtn.style.display = list.length >= 4 ? 'none' : '';
+                    addBtn.classList.toggle('hidden', list.length >= 4);
                 }
 
                 render();
@@ -924,9 +890,9 @@
             if (type === 'zones') {
                 const zones = Array.isArray(currentValue) ? [...currentValue] : [];
 
-                const wrapper = el('div', 'flex flex-col gap-1');
-                const badgesDiv = el('div', 'flex flex-wrap items-center gap-1');
-                const manageBtn = el('button', 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200 transition', {
+                const wrapper = el('div', 'col col-tight');
+                const badgesDiv = el('div', 'row row-wrap row-tight');
+                const manageBtn = el('button', 'chip sys-chip-btn', {
                     type: 'button',
                     onClick: () => openZoneModal(zones, (updated) => {
                         zones.length = 0;
@@ -935,7 +901,7 @@
                         renderZoneBadges();
                     })
                 },
-                    el('svg', 'w-3 h-3', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                    el('svg', 'icon-sm', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
                         el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 4v16m8-8H4' })
                     ),
                     'Add Zone'
@@ -957,7 +923,7 @@
                     }
                 }
 
-                const hintEl = el('span', 'text-xs text-slate-400 italic');
+                const hintEl = el('span', 't-small t-subtle t-italic');
                 renderZoneBadges();
                 wrapper.appendChild(badgesDiv);
                 if (field.hint) wrapper.appendChild(hintEl);
@@ -1008,14 +974,14 @@
                 const action = typeof field.withButton.onClick === 'function'
                     ? field.withButton.onClick
                     : ActionRegistry[field.withButton.onClick] || (() => { });
-                inputEl = el('div', 'flex items-center gap-2', {},
-                    el('div', 'flex-1', {}, inputEl),
+                inputEl = el('div', 'row', {},
+                    el('div', 'grow', {}, inputEl),
                     el('button', Styles.buttonPrimary, { type: 'button', onClick: () => action(index, containerId) },
                         el('span', '', { innerHTML: field.withButton.icon || 'Action' }))
                 );
             }
 
-            const container = el('div', `mb-1.5 sm:mb-2 transition-all duration-200${field.width ? ' field-sized' : ''}`, {
+            const container = el('div', 'field', {
                 dataset: { field: field.name, dependsOn: field.dependsOn ? JSON.stringify(field.dependsOn) : null },
                 style: field.width ? `flex: 0 1 calc(${field.width}% - 0.375rem); min-width: 0;` : 'flex: 1 1 100%;'
             });
@@ -1043,7 +1009,7 @@
                     const ctrl = container.querySelector(`[data-field="${dep.field}"]`);
 
                     if (ctrl && getComputedStyle(ctrl).display === 'none') {
-                        div.style.display = 'none';
+                        div.classList.add('hidden');
                         div.querySelectorAll('input, select, button').forEach(el => el.disabled = true);
                         return;
                     }
@@ -1057,7 +1023,7 @@
                         ? dep.value.some(v => String(v).toLowerCase() === valStr)
                         : String(dep.value).toLowerCase() === valStr;
 
-                    div.style.display = match ? 'block' : 'none';
+                    div.classList.toggle('hidden', !match);
                     div.querySelectorAll('input, select, button').forEach(el => el.disabled = !match);
                 });
             }
@@ -1073,6 +1039,7 @@
             this.hasViewerFields = this.fields.some(f => f.reloadWebviewer || f.restartWebviewer);
             this.reloadWebviewer = false;
             this.restartWebviewer = false;
+            this.dirty = false;
 
             if (!this.container) return;
 
@@ -1082,18 +1049,18 @@
 
         load() {
             this.container.textContent = '';
-            this.container.appendChild(el('div', 'text-center p-8', {},
-                el('div', 'animate-spin h-8 w-8 border-4 border-slate-300 border-t-slate-600 rounded-full mx-auto mb-2'),
-                el('p', 'text-sm text-slate-600', {}, 'Loading...')));
+            this.container.appendChild(el('div', 't-center sys-empty', {},
+                el('div', 'spinner icon-lg center-block'),
+                el('p', 't-muted', {}, 'Loading...')));
 
             this.loadData().then(() => {
                 this.render();
                 this.updateJsonDebug();
             }).catch(() => {
                 this.container.textContent = '';
-                this.container.appendChild(el('div', 'text-center p-8', {},
-                    el('p', 'text-slate-600', {}, 'Failed to load configuration'),
-                    el('button', 'mt-4 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700', {
+                this.container.appendChild(el('div', 't-center sys-empty', {},
+                    el('p', 't-muted', {}, 'Failed to load configuration'),
+                    el('button', 'btn btn-primary', {
                         type: 'button', onClick: () => this.load()
                     }, 'Retry')));
             });
@@ -1129,24 +1096,21 @@
                 const wrapper = el('div', Styles.card, { dataset: { receiverCard: index } });
 
                 if (this.config.isList) {
-                    const toggleInput = activeField ? el('input', 'sr-only peer', {
+                    const toggleInput = activeField ? el('input', 'toggle toggle-sm toggle-on', {
                         type: 'checkbox',
                         checked: isActive,
                         onChange: e => this.updateValue(index, activeField, e.target.checked)
                     }) : null;
 
                     const header = el('div', Styles.cardHeader, {},
-                        el('div', 'flex items-center gap-2', {},
-                            el('span', 'flex items-center justify-center w-5 h-5 text-xs font-bold bg-slate-200 text-slate-600 rounded-full', {}, `${index + 1}`),
-                            el('h4', 'text-sm sm:text-sm font-semibold text-slate-700', {}, this.config.title)
+                        el('div', 'row', {},
+                            el('span', 'badge', {}, `${index + 1}`),
+                            el('h4', 'card-title', {}, this.config.title)
                         ),
-                        el('div', 'flex items-center gap-2 sm:gap-3', {},
-                            activeField ? el('label', 'flex items-center gap-1.5 cursor-pointer select-none', {},
-                                el('span', 'text-xs font-medium text-slate-400', {}, 'Active'),
-                                el('div', 'relative inline-flex items-center', {},
-                                    toggleInput,
-                                    el('div', "w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500")
-                                )
+                        el('div', 'row', {},
+                            activeField ? el('label', 'row row-tight clickable', {},
+                                el('span', 't-small t-subtle', {}, 'Active'),
+                                toggleInput
                             ) : null,
                             el('button', Styles.deleteBtn, {
                                 type: 'button',
@@ -1158,13 +1122,13 @@
                     wrapper.appendChild(header);
                 } else if (this.config.title) {
                     const header = el('div', Styles.cardHeader, {},
-                        el('h4', 'text-sm sm:text-sm font-semibold text-slate-700', {}, this.config.title)
+                        el('h4', 'card-title', {}, this.config.title)
                     );
                     wrapper.appendChild(header);
                 }
 
-                const fieldsDiv = el('div', this.config.isList ? Styles.cardBody : 'p-3 sm:p-5');
-                const innerFields = el('div', 'flex flex-wrap gap-x-3 gap-y-2');
+                const fieldsDiv = el('div', Styles.cardBody);
+                const innerFields = el('div', 'fieldset');
                 // `advanced` puts a field in a collapsible section; a string names it
                 const sections = new Map();
                 const syncs = [];
@@ -1180,7 +1144,7 @@
                     );
                     if (!field.advanced) return innerFields.appendChild(fieldEl);
                     const title = typeof field.advanced === 'string' ? field.advanced : 'Advanced';
-                    if (!sections.has(title)) sections.set(title, el('div', 'flex flex-wrap gap-x-3 gap-y-2 w-full'));
+                    if (!sections.has(title)) sections.set(title, el('div', 'fieldset full'));
                     sections.get(title).appendChild(fieldEl);
                 });
 
@@ -1188,23 +1152,23 @@
                 sections.forEach((body, title) => {
                     const key = `${index}|${title}`;
                     const open = this.advancedOpen.has(key);
-                    const chevron = el('span', 'inline-block transition-transform duration-200' + (open ? ' rotate-90' : ''), { innerHTML: '&#9656;' });
-                    body.style.display = open ? 'flex' : 'none';
-                    const btn = el('button', 'flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600 transition', {
+                    const chevron = el('span', 'sys-rotates' + (open ? ' rotate-90' : ''), { innerHTML: '&#9656;' });
+                    body.classList.toggle('hidden', !open);
+                    const btn = el('button', 'row row-tight t-small t-subtle clickable', {
                         type: 'button',
                         onClick: () => {
                             const nowOpen = !this.advancedOpen.has(key);
                             if (nowOpen) this.advancedOpen.add(key); else this.advancedOpen.delete(key);
-                            body.style.display = nowOpen ? 'flex' : 'none';
+                            body.classList.toggle('hidden', !nowOpen);
                             chevron.classList.toggle('rotate-90', nowOpen);
                         }
                     }, chevron, title);
-                    const row = el('div', 'w-full mt-1', {}, btn);
+                    const row = el('div', 'full', {}, btn);
                     innerFields.appendChild(row);
                     innerFields.appendChild(body);
                     syncs.push(() => {
-                        const any = Array.from(body.children).some(c => c.style.display !== 'none');
-                        row.style.display = any ? 'block' : 'none';
+                        const any = Array.from(body.children).some(c => !c.classList.contains('hidden'));
+                        row.classList.toggle('hidden', !any);
                     });
                 });
                 fieldsDiv.appendChild(innerFields);
@@ -1225,17 +1189,17 @@
 
             this.ensureJsonUI();
 
-            const btnGroup = el('div', `${containerIdClass} mt-6 sm:mt-8 px-4 sm:px-0 flex flex-row flex-wrap justify-end items-center gap-2 sm:gap-3 max-w-2xl sm:mx-auto`);
+            const btnGroup = el('div', `${containerIdClass} row row-wrap row-end sys-pane-inner sys-actions`);
 
             if (this.config.isList) {
-                btnGroup.appendChild(el('button', 'w-auto sm:w-32 bg-white border border-slate-300 text-slate-700 px-4 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 transition duration-200 shadow-sm inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-medium', {
+                btnGroup.appendChild(el('button', 'btn sys-save', {
                     type: 'button', onClick: () => this.addItem()
                 },
                     Icons.plus(),
                     'Add Item'));
             }
 
-            btnGroup.appendChild(el('button', 'w-auto sm:w-32 bg-white border border-slate-300 text-slate-400 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg hover:bg-slate-50 shadow-sm transition-all duration-200 text-xs sm:text-sm font-medium cursor-default', {
+            btnGroup.appendChild(el('button', 'btn is-disabled sys-save', {
                 type: 'button', dataset: { saveBtn: 'true' }, onClick: () => this.save()
             }, 'Save'));
 
@@ -1260,20 +1224,20 @@
             const contentId = 'json-content-' + this.config.containerId;
             const chevronId = 'chevron-' + this.config.containerId;
 
-            const toggleDiv = el('div', 'mt-6 sm:mt-8 px-4 sm:px-0 max-w-2xl sm:mx-auto border-t border-slate-200 pt-6', { dataset: { jsonSection: '' } });
-            const btn = el('button', 'flex items-center text-slate-500 hover:text-slate-800 transition-colors focus:outline-none group text-sm font-medium', {
+            const toggleDiv = el('div', 'sys-pane-inner sys-json-sep', { dataset: { jsonSection: '' } });
+            const btn = el('button', 'row t-muted clickable', {
                 type: 'button', onClick: () => global.toggleJsonContent(contentId, chevronId)
             });
 
-            const chevron = el('svg', 'h-4 w-4 mr-2 transform transition-transform duration-200 text-slate-400 group-hover:text-slate-600', {
+            const chevron = el('svg', 'icon-sm t-subtle sys-rotates', {
                 id: chevronId, fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor'
             }, el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 9l-7 7-7-7' }));
 
             btn.appendChild(chevron);
             btn.appendChild(el('span', '', {}, 'JSON'));
 
-            const contentDiv = el('div', 'mt-3 hidden transition-all', { id: contentId });
-            const pre = el('pre', 'w-full p-4 rounded-lg bg-slate-900 text-slate-200 text-xs font-mono overflow-auto custom-scrollbar border border-slate-700 shadow-inner', {
+            const contentDiv = el('div', 'hidden', { id: contentId });
+            const pre = el('pre', 'term-pane sys-json-pre', {
                 id: this.jsonPreId(), readonly: '', style: 'max-height: 300px;'
             });
 
@@ -1289,6 +1253,7 @@
             else target[field.name] = value;
             if (field.reloadWebviewer) this.reloadWebviewer = true;
             if (field.restartWebviewer) this.restartWebviewer = true;
+            this.dirty = true;
             App.setUnsaved(true);
             this.updateJsonDebug();
             
@@ -1306,6 +1271,7 @@
             this.data.push(newItem);
             this.render();
             if (this.hasViewerFields) this.reloadWebviewer = true;
+            this.dirty = true;
             App.setUnsaved(true);
             this.updateJsonDebug();
         }
@@ -1315,6 +1281,7 @@
                 this.data.splice(index, 1);
                 this.render();
                 if (this.hasViewerFields) this.reloadWebviewer = true;
+                this.dirty = true;
                 App.setUnsaved(true);
                 this.updateJsonDebug();
             }
@@ -1405,7 +1372,10 @@
                     throw new Error(body && body.error ? body.error : 'Save failed');
                 }
                 ConfigStore.invalidate();
-                App.setUnsaved(false);
+                this.dirty = false;
+                let anyDirty = false;
+                ManagerRegistry.forEach(m => { if (m.dirty) anyDirty = true; });
+                App.setUnsaved(anyDirty);
                 App.notify('success', 'Configuration saved successfully');
                 if (global.hubConfigSaved)
                     global.hubConfigSaved(this.config.nestedPath ? 'viewer' : 'engine',
@@ -1427,7 +1397,7 @@
     global.App = App;
     global.Utils = Utils;
     global.ConfigStore = ConfigStore;
-    global.ZoneColors = { badge: getZoneColor, hex: getZoneHex };
+    global.ZoneColors = { badge: getZoneColor, css: getZoneCss };
     global.normalizeConfig = (cfg) => ConfigNormalizer.normalize(cfg);
     global.createSimpleConfigManager = (config) => { config.isList = false; return new ConfigManager(config); };
     global.createChannelManager = (config) => { config.isList = true; return new ConfigManager(config); };
@@ -1437,7 +1407,7 @@
         const i = document.getElementById(chevronId);
         if (c) {
             const hidden = c.classList.toggle('hidden');
-            if (i) i.setAttribute('class', `h-4 w-4 mr-2 transform transition-transform duration-200 text-slate-400 group-hover:text-slate-600 ${hidden ? '' : 'rotate-180'}`);
+            if (i) i.classList.toggle('rotate-90', !hidden);
         }
     };
 

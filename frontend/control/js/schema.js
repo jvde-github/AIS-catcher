@@ -511,7 +511,7 @@ const webviewerSchema = {
     use_gps: {
         name: 'use_gps',
         restartWebviewer: true,
-        label: 'Use GPS',
+        label: 'Use GPS',
         type: 'toggle',
         jsonpath: 'use_gps',
         defaultValue: true,
@@ -551,7 +551,7 @@ const webviewerSchema = {
     log: {
         name: 'log',
         restartWebviewer: true,
-        label: 'Show Log',
+        label: 'Show Log',
         type: 'toggle',
         jsonpath: 'log',
         defaultValue: false,
@@ -601,7 +601,7 @@ const sharingSchema = {
             const sharingKey = dataContext.sharing_key || '';
             return sharingKey.trim() === '' ? 'Create New Sharing Key' : 'Edit Station Details';
         },
-        buttonIcon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8L10 14" /></svg>',
+        buttonIcon: '<svg xmlns="http://www.w3.org/2000/svg" class="icon-md" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8L10 14" /></svg>',
         onClick: 'openSharingManagement',
         skipSave: true
     },
