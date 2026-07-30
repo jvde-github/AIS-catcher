@@ -83,7 +83,7 @@ class DB : public StreamIn<JSON::JSON>,
 
 	static const int SWEEP_INTERVAL = 3600;
 	std::time_t last_sweep = 0;
-	void sweep(int sweeps);
+	void sweep();
 
 	struct HashBucket
 	{

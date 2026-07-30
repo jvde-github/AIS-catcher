@@ -994,7 +994,7 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	ship.ppm = tag.ppm;
 	ship.level = tag.level;
 	ship.msg_type |= 1 << type;
-	ship.stampType(type);
+	ship.refreshType(type);
 
 	if (msg->getChannel() >= 'A' && msg->getChannel() <= 'D')
 		ship.orOpChannels(1 << (msg->getChannel() - 'A'));
@@ -1274,7 +1274,7 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 	Send(data, len, tag);
 }
 
-// Age the per-ship message type lanes and drop the fields nobody can still refresh.
+// Age the per-ship message type TTLs and drop the fields nobody can still refresh.
 // Driven by the engine loop rather than by incoming messages, so a receiver that has
 // gone deaf stops presenting an old picture as if it were live.
 void DB::tick(std::time_t now)
@@ -1286,29 +1286,23 @@ void DB::tick(std::time_t now)
 	if (now - last_sweep < SWEEP_INTERVAL)
 		return;
 
-	int sweeps = (int)((now - last_sweep) / SWEEP_INTERVAL);
-	last_sweep += (std::time_t)sweeps * SWEEP_INTERVAL;
-
-	sweep(sweeps);
+	last_sweep = now;
+	sweep();
 }
 
-void DB::sweep(int sweeps)
+void DB::sweep()
 {
 	// message types the filter blocks can never arrive, so they must not count as absent
 	uint32_t always_live = ~filter.getAllow();
 
-	// nothing at all was heard from ships beyond a full window, so every lane there is
-	// stale no matter how many sweeps actually ran (suspend, clock step): decay them all
-	// the way down. Already-emptied ships exit decayAndExpire on its first compare.
-	std::time_t cutoff = last_sweep - (std::time_t)LANE_LIFE * SWEEP_INTERVAL;
+	// nothing at all was heard from ships beyond a full window, so their TTLs are stale
+	// no matter how many sweeps actually ran (suspend, clock step): expire them outright.
+	// Already-expired ships exit decayAndExpire on its first compare.
+	std::time_t cutoff = last_sweep - (std::time_t)TYPE_TTL * SWEEP_INTERVAL;
 
 	for (int ptr = first; ptr != -1; ptr = ships[ptr].incoming.next)
-	{
-		if (ships[ptr].mmsi == 0)
-			continue;
-
-		ships[ptr].decayAndExpire(ships[ptr].last_signal < cutoff ? LANE_LIFE : sweeps, always_live);
-	}
+		if (ships[ptr].mmsi)
+			ships[ptr].decayAndExpire(ships[ptr].last_signal < cutoff ? TYPE_TTL : 1, always_live);
 }
 
 bool DB::Save(std::ofstream &file)
@@ -1389,6 +1383,7 @@ bool DB::Load(std::ifstream &file)
 	// Read all ships into a temporary buffer first, validating before modifying DB state
 	std::vector<Ship> temp_ships(ship_count);
 	std::time_t previous_signal = 0;
+	std::time_t now = std::time(nullptr);
 
 	for (int i = 0; i < ship_count; i++)
 	{
@@ -1401,11 +1396,11 @@ bool DB::Load(std::ifstream &file)
 		// Not persisted; treat all loaded ships as having static data
 		temp_ships[i].last_static_signal = temp_ships[i].last_signal;
 
-		// Lanes are not persisted either. A ship heard shortly before the backup keeps its
+		// TTLs are not persisted either. A ship heard shortly before the backup keeps its
 		// fields for one more window, anything older is expired here so a stale record does
 		// not come back to life across a restart.
-		if (std::time(nullptr) - temp_ships[i].last_signal < (std::time_t)LANE_LIFE * SWEEP_INTERVAL)
-			temp_ships[i].seedTypeLanes(temp_ships[i].msg_type);
+		if (now - temp_ships[i].last_signal < (std::time_t)TYPE_TTL * SWEEP_INTERVAL)
+			temp_ships[i].seedTypeTTL(temp_ships[i].msg_type);
 		else
 		{
 			temp_ships[i].type_seen = 0;

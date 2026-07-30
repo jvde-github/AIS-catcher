@@ -98,17 +98,17 @@ static uint32_t typeFields(int type)
 	return 0;
 }
 
-void Ship::stampType(int type)
+void Ship::refreshType(int type)
 {
-	type_seen = (type_seen & ~(3ULL << (type * 2))) | ((uint64_t)LANE_LIFE << (type * 2));
+	type_seen = (type_seen & ~(3ULL << (type * 2))) | ((uint64_t)TYPE_TTL << (type * 2));
 }
 
-void Ship::seedTypeLanes(int mask)
+void Ship::seedTypeTTL(int mask)
 {
 	type_seen = 0;
 	for (int t = 1; t <= MAX_MSG_TYPE; t++)
 		if (mask & (1 << t))
-			stampType(t);
+			refreshType(t);
 }
 
 void Ship::decayAndExpire(int sweeps, uint32_t always_live)
@@ -116,24 +116,24 @@ void Ship::decayAndExpire(int sweeps, uint32_t always_live)
 	if (sweeps <= 0 || type_seen == 0)
 		return;
 
-	bool dropped = false;
+	bool expired = false;
 	uint32_t supported = 0;
 
 	for (int t = 1; t <= MAX_MSG_TYPE; t++)
 	{
-		int lane = (type_seen >> (t * 2)) & 3;
-		if (lane)
+		int ttl = (type_seen >> (t * 2)) & 3;
+		if (ttl)
 		{
-			lane = lane > sweeps ? lane - sweeps : 0;
-			type_seen = (type_seen & ~(3ULL << (t * 2))) | ((uint64_t)lane << (t * 2));
-			dropped |= lane == 0;
+			ttl = ttl > sweeps ? ttl - sweeps : 0;
+			type_seen = (type_seen & ~(3ULL << (t * 2))) | ((uint64_t)ttl << (t * 2));
+			expired |= ttl == 0;
 		}
 
-		if (lane || (always_live & (1 << t)))
+		if (ttl || (always_live & (1 << t)))
 			supported |= typeFields(t);
 	}
 
-	if (dropped)
+	if (expired)
 		clearFields(~supported & EXPIRABLE_FIELDS);
 }
 

@@ -39,8 +39,8 @@ const int ATON_MASK = (1 << 21) | (1 << 28);
 const int MAX_MSG_TYPE = 28;
 // sweeps a message type survives without being heard again, so a field lives 2-3 hours
 // after its last producer at the default one hour sweep interval
-const int LANE_LIFE = 3;
-static_assert(LANE_LIFE <= 3, "LANE_LIFE must fit the two-bit lanes in Ship::type_seen");
+const int TYPE_TTL = 3;
+static_assert(TYPE_TTL <= 3, "TYPE_TTL must fit the two-bit counters in Ship::type_seen");
 
 // Fields that are cleared once no message type that can produce them has been heard
 // recently. Identity (name, callsign, IMO, dimensions, ...) is deliberately absent:
@@ -77,14 +77,15 @@ struct Ship
     char shipname[21], destination[21], callsign[8], country_code[3], vin[9], vendorid[4];
     std::string msg;
     uint64_t last_group, group_mask;
-    // two bits per message type, counting down once per sweep. Zero means "not heard
-    // recently", which is also the never-heard state. Not persisted: seeded on load.
+    // a two-bit TTL per message type, refreshed on arrival and counted down by the
+    // sweep. Zero means "not heard recently", which is also the never-heard state.
+    // Not persisted: seeded on load.
     uint64_t type_seen;
     Util::PackedInt flags;
 
     void reset();
-    void stampType(int type);
-    void seedTypeLanes(int mask);
+    void refreshType(int type);
+    void seedTypeTTL(int mask);
     void decayAndExpire(int sweeps, uint32_t always_live);
     void clearFields(uint32_t doomed);
     int getMMSItype();
