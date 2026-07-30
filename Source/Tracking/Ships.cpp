@@ -301,7 +301,17 @@ int Ship::getMMSItype()
 	{
 		return MMSI_SARTEPIRB;
 	}
-	if (msg_type & ATON_MASK || (mmsi >= 990000000 && mmsi <= 999999999))
+	// the number outranks the received message types: one bad decode should not
+	// reclassify a base station or an aid to navigation for the rest of the run
+	if (mmsi >= 990000000 && mmsi <= 999999999)
+	{
+		return MMSI_ATON;
+	}
+	if (mmsi < 9000000)
+	{
+		return MMSI_BASESTATION;
+	}
+	if (msg_type & ATON_MASK)
 	{
 		return MMSI_ATON;
 	}
@@ -313,7 +323,7 @@ int Ship::getMMSItype()
 	{
 		return MMSI_CLASS_B;
 	}
-	if (msg_type & BASESTATION_MASK || (mmsi < 9000000))
+	if (msg_type & BASESTATION_MASK)
 	{
 		return MMSI_BASESTATION;
 	}
