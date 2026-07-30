@@ -1277,9 +1277,8 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 // gone deaf stops presenting an old picture as if it were live.
 void DB::tick(std::time_t now)
 {
-	if (now - last_sweep < SWEEP_INTERVAL)
-		return;
-
+	// the caller ticks once a minute, so take the lock and read last_sweep under it
+	// rather than pre-checking it unlocked against the sweep that writes it
 	std::lock_guard<std::mutex> lock(mtx);
 
 	if (now - last_sweep < SWEEP_INTERVAL)
