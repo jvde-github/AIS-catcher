@@ -35,12 +35,12 @@ const int CLASS_B_STATIC_MASK = 1 << 24;
 const int BASESTATION_MASK = (1 << 4) | (1 << 16) | (1 << 17) | (1 << 20) | (1 << 22) | (1 << 23);
 const int SAR_MASK = 1 << 9;
 const int ATON_MASK = (1 << 21) | (1 << 28);
-const int LR_MASK = 1 << 27;
 
 const int MAX_MSG_TYPE = 28;
 // sweeps a message type survives without being heard again, so a field lives 2-3 hours
 // after its last producer at the default one hour sweep interval
 const int LANE_LIFE = 3;
+static_assert(LANE_LIFE <= 3, "LANE_LIFE must fit the two-bit lanes in Ship::type_seen");
 
 // Fields that are cleared once no message type that can produce them has been heard
 // recently. Identity (name, callsign, IMO, dimensions, ...) is deliberately absent:
@@ -85,7 +85,6 @@ struct Ship
     void reset();
     void stampType(int type);
     void seedTypeLanes(int mask);
-    uint32_t liveTypes() const;
     void decayAndExpire(int sweeps, uint32_t always_live);
     void clearFields(uint32_t doomed);
     int getMMSItype();

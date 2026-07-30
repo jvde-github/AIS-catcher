@@ -69,53 +69,33 @@ void Ship::reset()
 	msg.clear();
 }
 
-// Which message types can write which field. A field is cleared only when none of its
+// Which fields each message type can refresh. A field is cleared only when none of its
 // producers has been heard recently, so a live type 18 keeps speed alive after a stray
 // type 1 ages out, while status - which type 18 cannot carry - still goes.
-namespace
+static uint32_t typeFields(int type)
 {
-	struct FieldProducers
+	switch (type)
 	{
-		uint32_t field;
-		uint32_t types;
-	};
-
-	const uint32_t POSITION_MASK = CLASS_A_MASK | CLASS_B_MASK | SAR_MASK | LR_MASK | (1 << 4) | (1 << 11) | (1 << 21);
-	const uint32_t MOBILE_POS_MASK = CLASS_A_MASK | CLASS_B_MASK | SAR_MASK | LR_MASK;
-	const uint32_t COMMSTATE_MASK = CLASS_A_MASK | (1 << 4) | (1 << 11) | (1 << 26);
-
-	const FieldProducers EXPIRY[] = {
-		{ F_LAT, POSITION_MASK },
-		{ F_LON, POSITION_MASK },
-		{ F_SPEED, MOBILE_POS_MASK },
-		{ F_COG, MOBILE_POS_MASK },
-		{ F_HEADING, CLASS_A_MASK | CLASS_B_MASK },
-		{ F_STATUS, CLASS_A_MASK | LR_MASK },
-		{ F_MANEUVER, CLASS_A_MASK },
-		{ F_ALTITUDE, SAR_MASK },
-		{ F_RECV_STATIONS, COMMSTATE_MASK },
-		{ F_OFF_POSITION, 1 << 21 },
-	};
-
-	struct TypeFieldTable
-	{
-		uint32_t fields[MAX_MSG_TYPE + 1];
-
-		TypeFieldTable()
-		{
-			memset(fields, 0, sizeof(fields));
-			for (const auto &e : EXPIRY)
-				for (int t = 1; t <= MAX_MSG_TYPE; t++)
-					if (e.types & (1 << t))
-						fields[t] |= e.field;
-		}
-	};
-
-	const TypeFieldTable &typeFields()
-	{
-		static TypeFieldTable table;
-		return table;
+	case 1:
+	case 2:
+	case 3:
+		return F_LAT | F_LON | F_SPEED | F_COG | F_HEADING | F_STATUS | F_MANEUVER | F_RECV_STATIONS;
+	case 4:
+	case 11:
+		return F_LAT | F_LON | F_RECV_STATIONS;
+	case 9:
+		return F_LAT | F_LON | F_SPEED | F_COG | F_ALTITUDE;
+	case 18:
+	case 19:
+		return F_LAT | F_LON | F_SPEED | F_COG | F_HEADING;
+	case 21:
+		return F_LAT | F_LON | F_OFF_POSITION;
+	case 26:
+		return F_RECV_STATIONS;
+	case 27:
+		return F_LAT | F_LON | F_SPEED | F_COG | F_STATUS;
 	}
+	return 0;
 }
 
 void Ship::stampType(int type)
@@ -131,42 +111,30 @@ void Ship::seedTypeLanes(int mask)
 			stampType(t);
 }
 
-uint32_t Ship::liveTypes() const
-{
-	uint32_t live = 0;
-	for (int t = 1; t <= MAX_MSG_TYPE; t++)
-		if ((type_seen >> (t * 2)) & 3)
-			live |= 1 << t;
-	return live;
-}
-
 void Ship::decayAndExpire(int sweeps, uint32_t always_live)
 {
-	if (sweeps <= 0)
+	if (sweeps <= 0 || type_seen == 0)
 		return;
 
 	bool dropped = false;
+	uint32_t supported = 0;
+
 	for (int t = 1; t <= MAX_MSG_TYPE; t++)
 	{
 		int lane = (type_seen >> (t * 2)) & 3;
-		if (lane == 0)
-			continue;
+		if (lane)
+		{
+			lane = lane > sweeps ? lane - sweeps : 0;
+			type_seen = (type_seen & ~(3ULL << (t * 2))) | ((uint64_t)lane << (t * 2));
+			dropped |= lane == 0;
+		}
 
-		int next = lane > sweeps ? lane - sweeps : 0;
-		type_seen = (type_seen & ~(3ULL << (t * 2))) | ((uint64_t)next << (t * 2));
-		dropped |= next == 0;
+		if (lane || (always_live & (1 << t)))
+			supported |= typeFields(t);
 	}
 
-	if (!dropped)
-		return;
-
-	uint32_t live = liveTypes() | always_live;
-	uint32_t supported = 0;
-	for (int t = 1; t <= MAX_MSG_TYPE; t++)
-		if (live & (1 << t))
-			supported |= typeFields().fields[t];
-
-	clearFields(~supported & EXPIRABLE_FIELDS);
+	if (dropped)
+		clearFields(~supported & EXPIRABLE_FIELDS);
 }
 
 void Ship::clearFields(uint32_t doomed)

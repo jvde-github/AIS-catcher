@@ -1295,18 +1295,17 @@ void DB::sweep(int sweeps)
 	// message types the filter blocks can never arrive, so they must not count as absent
 	uint32_t always_live = ~filter.getAllow();
 
-	// ships older than the longest lane were emptied by an earlier sweep, and the list
-	// is ordered by last_signal
+	// nothing at all was heard from ships beyond a full window, so every lane there is
+	// stale no matter how many sweeps actually ran (suspend, clock step): decay them all
+	// the way down. Already-emptied ships exit decayAndExpire on its first compare.
 	std::time_t cutoff = last_sweep - (std::time_t)LANE_LIFE * SWEEP_INTERVAL;
 
 	for (int ptr = first; ptr != -1; ptr = ships[ptr].incoming.next)
 	{
 		if (ships[ptr].mmsi == 0)
 			continue;
-		if (ships[ptr].last_signal < cutoff)
-			break;
 
-		ships[ptr].decayAndExpire(sweeps, always_live);
+		ships[ptr].decayAndExpire(ships[ptr].last_signal < cutoff ? LANE_LIFE : sweeps, always_live);
 	}
 }
 
