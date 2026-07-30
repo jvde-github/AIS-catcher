@@ -103,12 +103,12 @@ void Ship::refreshType(int type)
 	type_seen = (type_seen & ~(3ULL << (type * 2))) | ((uint64_t)TYPE_TTL << (type * 2));
 }
 
-void Ship::seedTypeTTL(int mask)
+void Ship::seedTypeTTL(int mask, int ttl)
 {
 	type_seen = 0;
 	for (int t = 1; t <= MAX_MSG_TYPE; t++)
 		if (mask & (1 << t))
-			refreshType(t);
+			type_seen |= (uint64_t)ttl << (t * 2);
 }
 
 void Ship::decayAndExpire(int sweeps, uint32_t always_live)

@@ -85,7 +85,7 @@ struct Ship
 
     void reset();
     void refreshType(int type);
-    void seedTypeTTL(int mask);
+    void seedTypeTTL(int mask, int ttl);
     void decayAndExpire(int sweeps, uint32_t always_live);
     void clearFields(uint32_t doomed);
     int getMMSItype();

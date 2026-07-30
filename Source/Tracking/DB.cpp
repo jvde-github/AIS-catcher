@@ -1396,11 +1396,12 @@ bool DB::Load(std::ifstream &file)
 		// Not persisted; treat all loaded ships as having static data
 		temp_ships[i].last_static_signal = temp_ships[i].last_signal;
 
-		// TTLs are not persisted either. A ship heard shortly before the backup keeps its
-		// fields for one more window, anything older is expired here so a stale record does
-		// not come back to life across a restart.
-		if (now - temp_ships[i].last_signal < (std::time_t)TYPE_TTL * SWEEP_INTERVAL)
-			temp_ships[i].seedTypeTTL(temp_ships[i].msg_type);
+		// TTLs are not persisted either: derive the remaining life from the last message
+		// time, so a restart neither extends nor revives a fading record. An unset or
+		// ancient last_signal lands at or below zero and expires the fields right here.
+		int ttl = TYPE_TTL - (int)((now - temp_ships[i].last_signal) / SWEEP_INTERVAL);
+		if (ttl > 0)
+			temp_ships[i].seedTypeTTL(temp_ships[i].msg_type, MIN(ttl, TYPE_TTL));
 		else
 		{
 			temp_ships[i].type_seen = 0;
