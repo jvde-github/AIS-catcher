@@ -106,6 +106,8 @@ public:
 	void writeSummary(std::ostream &out);
 
 	// Ship data queries
+	void tick(std::time_t now) { ships.tick(now); }
+
 	int getCount() { return ships.getCount(); }
 	int getMaxCount() { return ships.getMaxCount(); }
 	float getMsgRate() { return hist_second.getAverage(); }

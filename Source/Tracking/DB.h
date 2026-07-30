@@ -81,6 +81,10 @@ class DB : public StreamIn<JSON::JSON>,
 	int Npaths = Nships * 16;
 	int HASH_SIZE = 8209;
 
+	static const int SWEEP_INTERVAL = 3600;
+	std::time_t last_sweep = 0;
+	void sweep(int sweeps);
+
 	struct HashBucket
 	{
 		int first = -1;
@@ -133,6 +137,7 @@ public:
 	std::mutex mtx;
 
 	void setup();
+	void tick(std::time_t now);
 	void setTimeHistory(int t) { TIME_HISTORY = t; }
 	void setShareLatLon(bool b) { latlon_share = b; }
 	bool getShareLatLon() { return latlon_share; }

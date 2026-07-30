@@ -35,6 +35,28 @@ const int CLASS_B_STATIC_MASK = 1 << 24;
 const int BASESTATION_MASK = (1 << 4) | (1 << 16) | (1 << 17) | (1 << 20) | (1 << 22) | (1 << 23);
 const int SAR_MASK = 1 << 9;
 const int ATON_MASK = (1 << 21) | (1 << 28);
+const int LR_MASK = 1 << 27;
+
+const int MAX_MSG_TYPE = 28;
+// sweeps a message type survives without being heard again, so a field lives 2-3 hours
+// after its last producer at the default one hour sweep interval
+const int LANE_LIFE = 3;
+
+// Fields that are cleared once no message type that can produce them has been heard
+// recently. Identity (name, callsign, IMO, dimensions, ...) is deliberately absent:
+// a stale name is better than a blank one on a ship that comes back into range.
+const uint32_t F_LAT = 1 << 0;
+const uint32_t F_LON = 1 << 1;
+const uint32_t F_SPEED = 1 << 2;
+const uint32_t F_COG = 1 << 3;
+const uint32_t F_HEADING = 1 << 4;
+const uint32_t F_STATUS = 1 << 5;
+const uint32_t F_MANEUVER = 1 << 6;
+const uint32_t F_ALTITUDE = 1 << 7;
+const uint32_t F_RECV_STATIONS = 1 << 8;
+const uint32_t F_OFF_POSITION = 1 << 9;
+
+const uint32_t EXPIRABLE_FIELDS = F_LAT | F_LON | F_SPEED | F_COG | F_HEADING | F_STATUS | F_MANEUVER | F_ALTITUDE | F_RECV_STATIONS | F_OFF_POSITION;
 
 struct ShipLL
 {
@@ -55,9 +77,17 @@ struct Ship
     char shipname[21], destination[21], callsign[8], country_code[3], vin[9], vendorid[4];
     std::string msg;
     uint64_t last_group, group_mask;
+    // two bits per message type, counting down once per sweep. Zero means "not heard
+    // recently", which is also the never-heard state. Not persisted: seeded on load.
+    uint64_t type_seen;
     Util::PackedInt flags;
 
     void reset();
+    void stampType(int type);
+    void seedTypeLanes(int mask);
+    uint32_t liveTypes() const;
+    void decayAndExpire(int sweeps, uint32_t always_live);
+    void clearFields(uint32_t doomed);
     int getMMSItype();
     int getShipTypeClassEri();
     int getShipTypeClass();

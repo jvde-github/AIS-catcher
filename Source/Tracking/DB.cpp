@@ -39,6 +39,8 @@ void DB::setup()
 	paths.resize(Npaths);
 	hash_table.resize(HASH_SIZE);
 
+	last_sweep = std::time(nullptr);
+
 	first = Nships - 1;
 	last = 0;
 	count = 0;
@@ -992,6 +994,7 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	ship.ppm = tag.ppm;
 	ship.level = tag.level;
 	ship.msg_type |= 1 << type;
+	ship.stampType(type);
 
 	if (msg->getChannel() >= 'A' && msg->getChannel() <= 'D')
 		ship.orOpChannels(1 << (msg->getChannel() - 'A'));
@@ -1269,6 +1272,45 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 	Send(data, len, tag);
 }
 
+// Age the per-ship message type lanes and drop the fields nobody can still refresh.
+// Driven by the engine loop rather than by incoming messages, so a receiver that has
+// gone deaf stops presenting an old picture as if it were live.
+void DB::tick(std::time_t now)
+{
+	if (now - last_sweep < SWEEP_INTERVAL)
+		return;
+
+	std::lock_guard<std::mutex> lock(mtx);
+
+	if (now - last_sweep < SWEEP_INTERVAL)
+		return;
+
+	int sweeps = (int)((now - last_sweep) / SWEEP_INTERVAL);
+	last_sweep += (std::time_t)sweeps * SWEEP_INTERVAL;
+
+	sweep(sweeps);
+}
+
+void DB::sweep(int sweeps)
+{
+	// message types the filter blocks can never arrive, so they must not count as absent
+	uint32_t always_live = ~filter.getAllow();
+
+	// ships older than the longest lane were emptied by an earlier sweep, and the list
+	// is ordered by last_signal
+	std::time_t cutoff = last_sweep - (std::time_t)LANE_LIFE * SWEEP_INTERVAL;
+
+	for (int ptr = first; ptr != -1; ptr = ships[ptr].incoming.next)
+	{
+		if (ships[ptr].mmsi == 0)
+			continue;
+		if (ships[ptr].last_signal < cutoff)
+			break;
+
+		ships[ptr].decayAndExpire(sweeps, always_live);
+	}
+}
+
 bool DB::Save(std::ofstream &file)
 {
 	std::lock_guard<std::mutex> lock(mtx);
@@ -1358,6 +1400,17 @@ bool DB::Load(std::ifstream &file)
 
 		// Not persisted; treat all loaded ships as having static data
 		temp_ships[i].last_static_signal = temp_ships[i].last_signal;
+
+		// Lanes are not persisted either. A ship heard shortly before the backup keeps its
+		// fields for one more window, anything older is expired here so a stale record does
+		// not come back to life across a restart.
+		if (std::time(nullptr) - temp_ships[i].last_signal < (std::time_t)LANE_LIFE * SWEEP_INTERVAL)
+			temp_ships[i].seedTypeLanes(temp_ships[i].msg_type);
+		else
+		{
+			temp_ships[i].type_seen = 0;
+			temp_ships[i].clearFields(EXPIRABLE_FIELDS);
+		}
 
 		if (i > 0 && temp_ships[i].last_signal < previous_signal)
 		{

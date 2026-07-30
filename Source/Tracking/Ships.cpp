@@ -28,6 +28,7 @@ void Ship::reset()
 	path_ptr = -1;
 
 	mmsi = count = msg_type = shiptype = group_mask = 0;
+	type_seen = 0;
 	flags.reset();
 
 	heading = HEADING_UNDEFINED;
@@ -66,6 +67,138 @@ void Ship::reset()
 	last_group = GROUP_OUT_UNDEFINED;
 
 	msg.clear();
+}
+
+// Which message types can write which field. A field is cleared only when none of its
+// producers has been heard recently, so a live type 18 keeps speed alive after a stray
+// type 1 ages out, while status - which type 18 cannot carry - still goes.
+namespace
+{
+	struct FieldProducers
+	{
+		uint32_t field;
+		uint32_t types;
+	};
+
+	const uint32_t POSITION_MASK = CLASS_A_MASK | CLASS_B_MASK | SAR_MASK | LR_MASK | (1 << 4) | (1 << 11) | (1 << 21);
+	const uint32_t MOBILE_POS_MASK = CLASS_A_MASK | CLASS_B_MASK | SAR_MASK | LR_MASK;
+	const uint32_t COMMSTATE_MASK = CLASS_A_MASK | (1 << 4) | (1 << 11) | (1 << 26);
+
+	const FieldProducers EXPIRY[] = {
+		{ F_LAT, POSITION_MASK },
+		{ F_LON, POSITION_MASK },
+		{ F_SPEED, MOBILE_POS_MASK },
+		{ F_COG, MOBILE_POS_MASK },
+		{ F_HEADING, CLASS_A_MASK | CLASS_B_MASK },
+		{ F_STATUS, CLASS_A_MASK | LR_MASK },
+		{ F_MANEUVER, CLASS_A_MASK },
+		{ F_ALTITUDE, SAR_MASK },
+		{ F_RECV_STATIONS, COMMSTATE_MASK },
+		{ F_OFF_POSITION, 1 << 21 },
+	};
+
+	struct TypeFieldTable
+	{
+		uint32_t fields[MAX_MSG_TYPE + 1];
+
+		TypeFieldTable()
+		{
+			memset(fields, 0, sizeof(fields));
+			for (const auto &e : EXPIRY)
+				for (int t = 1; t <= MAX_MSG_TYPE; t++)
+					if (e.types & (1 << t))
+						fields[t] |= e.field;
+		}
+	};
+
+	const TypeFieldTable &typeFields()
+	{
+		static TypeFieldTable table;
+		return table;
+	}
+}
+
+void Ship::stampType(int type)
+{
+	type_seen = (type_seen & ~(3ULL << (type * 2))) | ((uint64_t)LANE_LIFE << (type * 2));
+}
+
+void Ship::seedTypeLanes(int mask)
+{
+	type_seen = 0;
+	for (int t = 1; t <= MAX_MSG_TYPE; t++)
+		if (mask & (1 << t))
+			stampType(t);
+}
+
+uint32_t Ship::liveTypes() const
+{
+	uint32_t live = 0;
+	for (int t = 1; t <= MAX_MSG_TYPE; t++)
+		if ((type_seen >> (t * 2)) & 3)
+			live |= 1 << t;
+	return live;
+}
+
+void Ship::decayAndExpire(int sweeps, uint32_t always_live)
+{
+	if (sweeps <= 0)
+		return;
+
+	bool dropped = false;
+	for (int t = 1; t <= MAX_MSG_TYPE; t++)
+	{
+		int lane = (type_seen >> (t * 2)) & 3;
+		if (lane == 0)
+			continue;
+
+		int next = lane > sweeps ? lane - sweeps : 0;
+		type_seen = (type_seen & ~(3ULL << (t * 2))) | ((uint64_t)next << (t * 2));
+		dropped |= next == 0;
+	}
+
+	if (!dropped)
+		return;
+
+	uint32_t live = liveTypes() | always_live;
+	uint32_t supported = 0;
+	for (int t = 1; t <= MAX_MSG_TYPE; t++)
+		if (live & (1 << t))
+			supported |= typeFields().fields[t];
+
+	clearFields(~supported & EXPIRABLE_FIELDS);
+}
+
+void Ship::clearFields(uint32_t doomed)
+{
+	if (!doomed)
+		return;
+
+	if (doomed & F_LAT)
+		lat = LAT_UNDEFINED;
+	if (doomed & F_LON)
+		lon = LON_UNDEFINED;
+	if (doomed & (F_LAT | F_LON))
+	{
+		distance = DISTANCE_UNDEFINED;
+		angle = ANGLE_UNDEFINED;
+	}
+	if (doomed & F_SPEED)
+		speed = SPEED_UNDEFINED;
+	if (doomed & F_COG)
+		cog = COG_UNDEFINED;
+	if (doomed & F_HEADING)
+		heading = HEADING_UNDEFINED;
+	if (doomed & F_STATUS)
+		status = STATUS_UNDEFINED;
+	if (doomed & F_MANEUVER)
+		setManeuver(0);
+	if (doomed & F_ALTITUDE)
+		altitude = ALT_UNDEFINED;
+	if (doomed & F_RECV_STATIONS)
+		received_stations = RECEIVED_STATIONS_UNDEFINED;
+	if (doomed & F_OFF_POSITION)
+		setOffPosition(0);
 }
 
 std::string getSprite(const Ship *ship)

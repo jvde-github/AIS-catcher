@@ -511,6 +511,14 @@ void WebViewer::attachEngine(AIS::Model &model, Connection<JSON::JSON> &json, De
 	endAttach();
 }
 
+void WebViewer::tick(std::time_t now)
+{
+	std::lock_guard<std::recursive_mutex> lock(state_mtx);
+
+	for (auto &s : states)
+		s->tick(now);
+}
+
 void WebViewer::resetStatistics()
 {
 	std::lock_guard<std::recursive_mutex> lock(state_mtx);

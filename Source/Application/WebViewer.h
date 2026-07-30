@@ -231,6 +231,9 @@ public:
 	void stopServing();
 	// for good: unbinds, writes the statistics file and joins the server thread
 	void shutdown();
+	// periodic maintenance from the engine loop, roughly once a minute. Must return
+	// promptly: no blocking I/O, no fsync, no blocking connect, no DNS.
+	void tick(std::time_t now);
 	// drop the accumulated statistics, keeping the configuration (Android only)
 	void resetStatistics();
 	// Back to defaults, then the one setting the config file does not own. Taking
