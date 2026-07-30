@@ -1032,11 +1032,13 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	return positionUpdated;
 }
 
-static bool isBinaryContentKey(int key)
+static bool isBinaryContent(const JSON::Member &p)
 {
-	switch (key)
+	switch (p.Key())
 	{
 	case AIS::KEY_TEXT:
+		// getText trims the '@'/space padding, so a pure-padding broadcast is empty
+		return !p.Get().getString().empty();
 	case AIS::KEY_CREW_COUNT:
 	case AIS::KEY_PASSENGER_COUNT:
 	case AIS::KEY_SHIPBOARD_PERSONNEL_COUNT:
@@ -1112,7 +1114,7 @@ void DB::processBinaryMessage(const JSON::JSON &data, Ship &ship, bool &position
 		{
 			loc_lon = p.Get().getFloat();
 		}
-		else if (isBinaryContentKey(p.Key()))
+		else if (isBinaryContent(p))
 		{
 			has_content = true;
 		}
