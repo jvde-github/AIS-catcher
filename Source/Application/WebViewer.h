@@ -231,8 +231,7 @@ public:
 	void stopServing();
 	// for good: unbinds, writes the statistics file and joins the server thread
 	void shutdown();
-	// periodic maintenance from the engine loop; handlers gate on the timestamp
-	// and must return promptly, no blocking I/O
+	// periodic maintenance; handlers gate on the timestamp and must not block
 	void tick(std::time_t now);
 	// drop the accumulated statistics, keeping the configuration (Android only)
 	void resetStatistics();

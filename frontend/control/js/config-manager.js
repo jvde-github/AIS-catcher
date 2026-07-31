@@ -378,15 +378,18 @@
                     changed = true;
                 }
                 if (typeof r.model === 'string') {
-                    if (!('engines' in r)) r.engines = [r.model === 'auto' ? {} : { type: r.model }];
+                    const model = r.model.toLowerCase();
+                    if (!('engines' in r)) r.engines = [model === 'auto' ? {} : { type: model }];
                     delete r.model;
                     changed = true;
                 }
                 if (r.model && typeof r.model === 'object' && !Array.isArray(r.model)) {
-                    const settings = {};
-                    for (const k of Object.keys(r.model)) if (k !== 'active') settings[k] = r.model[k];
-                    const entry = Object.keys(settings).length ? { settings } : {};
-                    r.engines = Array.isArray(r.engines) ? r.engines : [entry];
+                    if (!('active' in r.model) || Utils.toBoolean(r.model.active)) {
+                        const settings = {};
+                        for (const k of Object.keys(r.model)) if (k !== 'active') settings[k] = r.model[k];
+                        const entry = Object.keys(settings).length ? { settings } : {};
+                        r.engines = Array.isArray(r.engines) ? r.engines : [entry];
+                    }
                     delete r.model;
                     changed = true;
                 }
@@ -794,6 +797,7 @@
                 function render() {
                     rows.innerHTML = '';
                     list.forEach((entry, i) => {
+                        const type = String(entry.type || 'auto').toLowerCase();
                         const select = el('select', `${Styles.input} ${Styles.select}`, {
                             onChange: e => {
                                 if (e.target.value === 'auto') delete list[i].type;
@@ -814,9 +818,9 @@
                             }
                         });
                         (field.options || []).forEach(o => select.appendChild(
-                            el('option', '', { value: o.value, selected: (entry.type || 'auto') === o.value }, o.label)));
+                            el('option', '', { value: o.value, selected: type === o.value }, o.label)));
 
-                        const shown = (field.settings || []).filter(st => !st.types || st.types.includes(entry.type || 'auto')).map(st => st.name);
+                        const shown = (field.settings || []).filter(st => !st.types || st.types.includes(type)).map(st => st.name);
                         const tuned = Object.keys(entry.settings || {}).some(k => !shown.includes(k));
                         const row = el('div', 'box col', {},
                             el('div', 'row', {},
@@ -831,7 +835,7 @@
                                 }, Icons.delete())));
 
                         // the receiver's zones apply to every engine, shown greyed
-                        if (list.length > 1) {
+                        if (list.length > 1 || (Array.isArray(entry.zone) && entry.zone.length)) {
                             const zones = Array.isArray(entry.zone) ? entry.zone : [];
                             const inherited = Array.isArray(dataContext?.zone) ? dataContext.zone : [];
                             const chips = el('div', 'row row-wrap row-tight');
@@ -859,9 +863,8 @@
                             row.appendChild(chips);
                         }
 
-                        const cur = entry.type || 'auto';
                         (field.settings || [])
-                            .filter(st => !st.types || st.types.includes(cur))
+                            .filter(st => !st.types || st.types.includes(type))
                             .forEach(st => {
                                 const own = entry.settings || {};
                                 const toggle = Renderer.createInput({ type: 'toggle' }, own[st.name], on => {
@@ -883,6 +886,12 @@
                 }
 
                 render();
+                let zonesSnapshot = JSON.stringify(dataContext?.zone ?? null);
+                wrapper.dataset.syncContext = '1';
+                wrapper._syncContext = () => {
+                    const z = JSON.stringify(dataContext?.zone ?? null);
+                    if (z !== zonesSnapshot) { zonesSnapshot = z; render(); }
+                };
                 wrapper.appendChild(rows);
                 wrapper.appendChild(addBtn);
                 return wrapper;
@@ -1028,6 +1037,7 @@
                     div.querySelectorAll('input, select, button').forEach(el => el.disabled = !match);
                 });
             }
+            container.querySelectorAll('[data-sync-context]').forEach(div => div._syncContext && div._syncContext());
         }
     };
 

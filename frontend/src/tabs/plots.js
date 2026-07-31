@@ -482,7 +482,9 @@ function setTimeAxis(c, source) {
 let absoluteTime = true;
 
 export function setAbsoluteTime(on) {
-    absoluteTime = !!on;
+    on = !!on;
+    if (on === absoluteTime) return;
+    absoluteTime = on;
     Object.values(charts).forEach((c) => c && c.update());
 }
 
@@ -548,19 +550,26 @@ function attachTimeAxis(c) {
     };
 }
 
+function timeShift(a, b, f) {
+    const A = a && a[f], B = b && b[f];
+    return A && B && A.interval ? Math.round((B.now - A.now) / A.interval) : 0;
+}
+
 function updateChartCompare(a, b, f, key, c, srcA, srcB) {
     if (!c) return;
+    const shift = timeShift(a, b, f);
     c.data.datasets[0].label = receiverLabel(srcA);
     c.data.datasets[0].data = series(a, f, key);
     c.data.datasets[1].label = receiverLabel(srcB);
-    c.data.datasets[1].data = series(b, f, key);
+    c.data.datasets[1].data = series(b, f, key).map((p) => ({ x: p.x + shift, y: p.y }));
     setTimeAxis(c, a && a[f]);
     c.update();
 }
 
 function updateChartGain(a, b, f, c, srcA, srcB) {
     if (!c) return;
-    const other = new Map(series(b, f, "count").map((p) => [p.x, p.y]));
+    const shift = timeShift(a, b, f);
+    const other = new Map(series(b, f, "count").map((p) => [p.x + shift, p.y]));
     const shared = series(a, f, "count").filter((p) => p.y > 0 && other.has(p.x));
 
     // the period average weighs each bucket by its message count, so quiet

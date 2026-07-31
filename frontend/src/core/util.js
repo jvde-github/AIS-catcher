@@ -18,8 +18,14 @@ export function decodeHTMLEntities(text) {
     return textArea.value;
 }
 
-export function hexToRgb(hex) {
-    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
+const colorCtx = document.createElement('canvas').getContext('2d');
+
+export function hexToRgb(color) {
+    color = String(color || '');
+    if (/^[a-f\d]{6}$/i.test(color)) color = '#' + color;
+    colorCtx.fillStyle = '#12a5ed';
+    colorCtx.fillStyle = color;
+    const m = /^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(colorCtx.fillStyle);
     return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [18, 165, 237];
 }
 

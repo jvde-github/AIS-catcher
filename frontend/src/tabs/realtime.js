@@ -353,8 +353,6 @@ export function activate(filterMMSI = null) {
 
         if (Array.isArray(settings.realtime_filters) && settings.realtime_filters.length) {
             viewer.setFilters(settings.realtime_filters);
-        } else if (Array.isArray(settings.realtime_filter_mmsis) && settings.realtime_filter_mmsis.length) {
-            viewer.setFilters(settings.realtime_filter_mmsis.map((m) => ({ kind: 'mmsi', value: m })));
         }
         if (savedState && savedState.isPaused) {
             viewer.isPaused = true;

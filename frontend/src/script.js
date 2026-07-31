@@ -1605,7 +1605,7 @@ function initMap() {
     });
 
     map.on('moveend', function (evt) {
-        debouncedSaveSettings();
+        debouncedSaveMapView();
         debouncedDrawMap();
     });
 
@@ -2572,10 +2572,17 @@ function toggleMenu() {
     menuButton.classList.toggle("menu_icon");
     menuButton.classList.toggle("close_icon");
 
+    syncMenuScrim();
+}
+
+function syncMenuScrim() {
+    const menubar = document.getElementById("menubar");
     const floats = ["absolute", "fixed"].includes(getComputedStyle(menubar).position);
     document.getElementById("menubar-overlay").classList
         .toggle("active", menubar.classList.contains("visible") && floats);
 }
+
+window.matchMedia("(min-width: 750px)").addEventListener("change", syncMenuScrim);
 
 function initFullScreen() {
     document.addEventListener("fullscreenchange", handleFullScreenChange);
@@ -3389,7 +3396,18 @@ const handlePointerMove = function (pixel, target) {
         () => ol.proj.toLonLat(map.getCoordinateFromPixel(pixel)));
 };
 
-const debouncedSaveSettings = debounce(saveSettings, 250);
+function saveMapView() {
+    if (map === undefined) return;
+    const center = ol.proj.toLonLat(map.getView().getCenter());
+    settings.lat = center[1];
+    settings.lon = center[0];
+    settings.zoom = map.getView().getZoom();
+    localStorage[context] = JSON.stringify(settings);
+    community.notifyCommunityPopupView();
+    updateMapURL();
+}
+
+const debouncedSaveMapView = debounce(saveMapView, 250);
 const debouncedDrawMap = debounce(redrawMap, 250);
 const debounceShowHoverTrack = debounce(showHoverTrack, 250);
 
@@ -3448,6 +3466,12 @@ function updateForLegacySettings() {
 
         settings.coordinate_format = settings.latlon_in_dms ? "dms" : "decimal";
         delete settings.latlon_in_dms;
+    }
+
+    if ('realtime_filter_mmsis' in settings) {
+        if (Array.isArray(settings.realtime_filter_mmsis) && settings.realtime_filter_mmsis.length && !(settings.realtime_filters || []).length)
+            settings.realtime_filters = settings.realtime_filter_mmsis.map((m) => ({ kind: 'mmsi', value: m }));
+        delete settings.realtime_filter_mmsis;
     }
 
     if (!("showPlanesAtFirst" in settings)) {
@@ -5238,11 +5262,11 @@ function showAboutDialog() {
         </p>
         <p>
         The web-interface gratefully uses the following libraries:
-        <a href="https://www.chartjs.org/docs/latest/charts/line.html" target="_blank" rel="noopener" rel="nofollow">chart.js</a>,
-        <a href="https://www.chartjs.org/chartjs-plugin-annotation/latest/" target="_blank" rel="noopener" rel="nofollow">chart.js annotation plugin</a>,
-        <a href="https://openlayers.org/" target="_blank" rel="noopener" rel="nofollow">openlayers</a>,
-        <a href="https://fonts.google.com/icons?selected=Material+Icons" target="_blank" rel="noopener" rel="nofollow">Material Design Icons</a>,
-        <a href="https://tabulator.info/" target="_blank" rel="noopener" rel="nofollow">tabulator</a>,
+        <a href="https://www.chartjs.org/docs/latest/charts/line.html" target="_blank" rel="noopener nofollow">chart.js</a>,
+        <a href="https://www.chartjs.org/chartjs-plugin-annotation/latest/" target="_blank" rel="noopener nofollow">chart.js annotation plugin</a>,
+        <a href="https://openlayers.org/" target="_blank" rel="noopener nofollow">openlayers</a>,
+        <a href="https://fonts.google.com/icons?selected=Material+Icons" target="_blank" rel="noopener nofollow">Material Design Icons</a>,
+        <a href="https://tabulator.info/" target="_blank" rel="noopener nofollow">tabulator</a>,
         <a href="https://github.com/markedjs/marked" target="_blank" rel="noopener">marked</a>, and
         <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noopener">flag-icons</a>. Please consult the links for the respective licenses.
         </p>`;

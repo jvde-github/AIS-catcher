@@ -69,9 +69,8 @@ void Ship::reset()
 	msg.clear();
 }
 
-// Which fields each message type can refresh, indexed by type; F_SIGNAL is in every
-// row as reception data comes with every message. A missing field here expires
-// early, a spurious one never expires.
+// Which fields each message type can refresh, indexed by type. A missing field
+// here expires early, a spurious one never expires.
 static const uint32_t TYPE_FIELDS[MAX_MSG_TYPE + 1] = {
 	0,																			// 0  does not exist
 	F_SIGNAL | F_LATLON | F_SPEED_COG | F_HEADING | F_STATUS | F_MANEUVER | F_RECV_STATIONS, // 1  position report
@@ -293,7 +292,7 @@ int Ship::getMMSItype()
 	{
 		return MMSI_SARTEPIRB;
 	}
-	// the number outranks the message types: a bad decode must not reclassify a station
+	// the MMSI number outranks the message types
 	if (mmsi >= 990000000 && mmsi <= 999999999)
 	{
 		return MMSI_ATON;
