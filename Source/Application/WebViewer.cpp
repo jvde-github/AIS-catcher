@@ -1090,6 +1090,9 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 	case AIS::KEY_SETTING_CUTOFF:
 		settings.tracking.cutoff = Util::Parse::Integer(arg, 0, 10000);
 		break;
+	case AIS::KEY_SETTING_EXPIRE:
+		settings.tracking.expire_fields = Util::Parse::Switch(arg);
+		break;
 	case AIS::KEY_SETTING_SHARE_LOC:
 		settings.tracking.latlon_share = Util::Parse::Switch(arg);
 		frontend.setShareLoc(settings.tracking.latlon_share);
