@@ -599,6 +599,7 @@
         },
 
         setUnsaved(bool) {
+            if (!bool) ManagerRegistry.forEach(m => { m.dirty = false; });
             this.state.unsaved = bool;
             const statusEl = document.getElementById('status-message');
 
