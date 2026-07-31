@@ -44,6 +44,7 @@ struct TrackingConfig
 	bool use_GPS = true;
 	uint32_t own_mmsi = 0;
 	int time_history = 30 * 60;
+	bool expire_fields = false;
 	// 0 means "not configured": LONG_RANGE_CUTOFF_DEFAULT is used instead
 	int cutoff = 0;
 };
@@ -106,6 +107,8 @@ public:
 	void writeSummary(std::ostream &out);
 
 	// Ship data queries
+	void tick(std::time_t now) { ships.tick(now); }
+
 	int getCount() { return ships.getCount(); }
 	int getMaxCount() { return ships.getMaxCount(); }
 	float getMsgRate() { return hist_second.getAverage(); }

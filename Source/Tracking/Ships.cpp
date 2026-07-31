@@ -28,6 +28,7 @@ void Ship::reset()
 	path_ptr = -1;
 
 	mmsi = count = msg_type = shiptype = group_mask = 0;
+	type_ttl = 0;
 	flags.reset();
 
 	heading = HEADING_UNDEFINED;
@@ -66,6 +67,130 @@ void Ship::reset()
 	last_group = GROUP_OUT_UNDEFINED;
 
 	msg.clear();
+}
+
+// Which fields each message type can refresh, indexed by type; F_SIGNAL is in every
+// row as reception data comes with every message. A missing field here expires
+// early, a spurious one never expires.
+static const uint32_t TYPE_FIELDS[MAX_MSG_TYPE + 1] = {
+	0,																			// 0  does not exist
+	F_SIGNAL | F_LATLON | F_SPEED_COG | F_HEADING | F_STATUS | F_MANEUVER | F_RECV_STATIONS, // 1  position report
+	F_SIGNAL | F_LATLON | F_SPEED_COG | F_HEADING | F_STATUS | F_MANEUVER | F_RECV_STATIONS, // 2  position report
+	F_SIGNAL | F_LATLON | F_SPEED_COG | F_HEADING | F_STATUS | F_MANEUVER | F_RECV_STATIONS, // 3  position report
+	F_SIGNAL | F_LATLON | F_RECV_STATIONS,										// 4  base station report
+	F_SIGNAL | F_VOYAGE | F_STATIC,												// 5  static and voyage
+	F_SIGNAL | F_LATLON | F_OFF_POSITION | F_STATIC | F_VOYAGE,					// 6  addressed binary, buoy/AtoN monitor payloads
+	F_SIGNAL,																	// 7  binary acknowledge
+	F_SIGNAL | F_STATIC | F_VOYAGE | F_OFF_POSITION,							// 8  broadcast binary, inland static and AtoN monitor payloads
+	F_SIGNAL | F_LATLON | F_SPEED_COG | F_ALTITUDE,								// 9  SAR aircraft
+	F_SIGNAL,																	// 10 UTC inquiry
+	F_SIGNAL | F_LATLON | F_RECV_STATIONS,										// 11 UTC response
+	F_SIGNAL,																	// 12 addressed safety
+	F_SIGNAL,																	// 13 safety acknowledge
+	F_SIGNAL,																	// 14 broadcast safety
+	F_SIGNAL,																	// 15 interrogation
+	F_SIGNAL,																	// 16 assignment
+	F_SIGNAL,																	// 17 DGNSS broadcast
+	F_SIGNAL | F_LATLON | F_SPEED_COG | F_HEADING | F_COMM_CAP,					// 18 class B position
+	F_SIGNAL | F_LATLON | F_SPEED_COG | F_HEADING | F_STATIC,					// 19 class B extended
+	F_SIGNAL,																	// 20 link management
+	F_SIGNAL | F_LATLON | F_OFF_POSITION | F_STATIC,							// 21 aid to navigation
+	F_SIGNAL,																	// 22 channel management
+	F_SIGNAL,																	// 23 group assignment
+	F_SIGNAL | F_STATIC,														// 24 class B static
+	F_SIGNAL | F_LATLON | F_OFF_POSITION | F_STATIC | F_VOYAGE,					// 25 single slot binary, same payloads as 6/8
+	F_SIGNAL | F_LATLON | F_OFF_POSITION | F_STATIC | F_VOYAGE | F_RECV_STATIONS, // 26 multiple slot binary, same payloads as 6/8
+	F_SIGNAL | F_LATLON | F_SPEED_COG | F_STATUS,								// 27 long range
+	F_SIGNAL | F_LATLON | F_STATIC,												// 28 AtoN report
+};
+
+void Ship::decayAndExpire()
+{
+	if (~type_ttl & msg_type)
+	{
+		uint32_t supported = 0;
+		for (int t = 1; t <= MAX_MSG_TYPE; t++)
+			if (type_ttl & (1 << t))
+				supported |= TYPE_FIELDS[t];
+
+		clearFields(~supported);
+
+		msg_type = type_ttl;
+		setType();
+	}
+
+	type_ttl = 0;
+}
+
+void Ship::clearFields(uint32_t doomed)
+{
+	if (doomed & F_LATLON)
+	{
+		lat = LAT_UNDEFINED;
+		lon = LON_UNDEFINED;
+		distance = DISTANCE_UNDEFINED;
+		angle = ANGLE_UNDEFINED;
+		setApproximate(0);
+		setValidated(0);
+		setRAIM(0);
+		setAssigned(0);
+	}
+	if (doomed & F_SPEED_COG)
+	{
+		speed = SPEED_UNDEFINED;
+		cog = COG_UNDEFINED;
+	}
+	if (doomed & F_HEADING)
+		heading = HEADING_UNDEFINED;
+	if (doomed & F_STATUS)
+		status = STATUS_UNDEFINED;
+	if (doomed & F_MANEUVER)
+		setManeuver(0);
+	if (doomed & F_ALTITUDE)
+		altitude = ALT_UNDEFINED;
+	if (doomed & F_RECV_STATIONS)
+		received_stations = RECEIVED_STATIONS_UNDEFINED;
+	if (doomed & F_OFF_POSITION)
+		setOffPosition(0);
+	if (doomed & F_VOYAGE)
+	{
+		memset(destination, 0, sizeof(destination));
+		month = ETA_MONTH_UNDEFINED;
+		day = ETA_DAY_UNDEFINED;
+		hour = ETA_HOUR_UNDEFINED;
+		minute = ETA_MINUTE_UNDEFINED;
+		draught = DRAUGHT_UNDEFINED;
+	}
+	if (doomed & F_STATIC)
+	{
+		memset(shipname, 0, sizeof(shipname));
+		memset(callsign, 0, sizeof(callsign));
+		memset(vendorid, 0, sizeof(vendorid));
+		memset(vin, 0, sizeof(vin));
+		unit_model = unit_serial = -1;
+		IMO = IMO_UNDEFINED;
+		shiptype = 0;
+		to_port = to_bow = to_starboard = to_stern = DIMENSION_UNDEFINED;
+		setDTE(0);
+		setVirtualAid(0);
+	}
+	if (doomed & F_COMM_CAP)
+	{
+		setCSUnit(0);
+		setDisplay(0);
+		setDSC(0);
+		setBand(0);
+		setMsg22(0);
+	}
+	if (doomed & F_SIGNAL)
+	{
+		ppm = PPM_UNDEFINED;
+		level = LEVEL_UNDEFINED;
+		setRepeat(0);
+		memset(country_code, 0, sizeof(country_code));
+		clearOpChannels();
+		msg.clear();
+	}
 }
 
 std::string getSprite(const Ship *ship)
@@ -168,7 +293,16 @@ int Ship::getMMSItype()
 	{
 		return MMSI_SARTEPIRB;
 	}
-	if (msg_type & ATON_MASK || (mmsi >= 990000000 && mmsi <= 999999999))
+	// the number outranks the message types: a bad decode must not reclassify a station
+	if (mmsi >= 990000000 && mmsi <= 999999999)
+	{
+		return MMSI_ATON;
+	}
+	if (mmsi < 9000000)
+	{
+		return MMSI_BASESTATION;
+	}
+	if (msg_type & ATON_MASK)
 	{
 		return MMSI_ATON;
 	}
@@ -180,7 +314,7 @@ int Ship::getMMSItype()
 	{
 		return MMSI_CLASS_B;
 	}
-	if (msg_type & BASESTATION_MASK || (mmsi < 9000000))
+	if (msg_type & BASESTATION_MASK)
 	{
 		return MMSI_BASESTATION;
 	}

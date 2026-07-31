@@ -36,6 +36,23 @@ const int BASESTATION_MASK = (1 << 4) | (1 << 16) | (1 << 17) | (1 << 20) | (1 <
 const int SAR_MASK = 1 << 9;
 const int ATON_MASK = (1 << 21) | (1 << 28);
 
+const int MAX_MSG_TYPE = 28;
+
+// Fields cleared once none of their producer types has been heard recently. Only
+// mmsi, count, the last_signal times and group survive; the sweep trims msg_type.
+const uint32_t F_LATLON = 1 << 0;
+const uint32_t F_SPEED_COG = 1 << 1;
+const uint32_t F_HEADING = 1 << 2;
+const uint32_t F_STATUS = 1 << 3;
+const uint32_t F_MANEUVER = 1 << 4;
+const uint32_t F_ALTITUDE = 1 << 5;
+const uint32_t F_RECV_STATIONS = 1 << 6;
+const uint32_t F_OFF_POSITION = 1 << 7;
+const uint32_t F_VOYAGE = 1 << 8;
+const uint32_t F_STATIC = 1 << 9;
+const uint32_t F_COMM_CAP = 1 << 10;
+const uint32_t F_SIGNAL = 1 << 11;
+
 struct ShipLL
 {
     int prev = -1, next = -1;
@@ -55,9 +72,14 @@ struct Ship
     char shipname[21], destination[21], callsign[8], country_code[3], vin[9], vendorid[4];
     std::string msg;
     uint64_t last_group, group_mask;
+    // types heard since the last sweep; not persisted
+    int type_ttl;
     Util::PackedInt flags;
 
     void reset();
+    void markType(int type) { msg_type |= 1 << type; type_ttl |= 1 << type; }
+    void decayAndExpire();
+    void clearFields(uint32_t doomed);
     int getMMSItype();
     int getShipTypeClassEri();
     int getShipTypeClass();
@@ -80,6 +102,7 @@ public:
     void setVirtualAid(int val) { flags.set(4, 1, val); }
     void setApproximate(int val) { flags.set(5, 1, val); }
     void orOpChannels(int val) { flags.orOp(6, 4, val); }
+    void clearOpChannels() { flags.set(6, 4, 0); }
     void setCSUnit(int val) { flags.set(10, 2, val); } // 0=unknown, 1=SOTDMA, 2=Carrier Sense
     void setRAIM(int val) { flags.set(12, 2, val); } // 0=unknown, 1=false, 2=true
     void setDTE(int val) { flags.set(14, 2, val); } // 0=unknown, 1=ready, 2=not ready

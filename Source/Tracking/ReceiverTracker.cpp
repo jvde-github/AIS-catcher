@@ -26,6 +26,7 @@ void ReceiverTracker::applyConfig(const TrackingConfig &cfg, const AIS::Filter &
 	ships.setMsgSave(cfg.msg_save);
 	ships.setOwnMMSI(cfg.own_mmsi);
 	ships.setTimeHistory(cfg.time_history);
+	ships.setExpireFields(cfg.expire_fields);
 	ships.setFilter(f);
 
 	// applied unconditionally: a config that drops "cutoff" must go back to the

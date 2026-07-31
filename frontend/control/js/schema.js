@@ -518,6 +518,16 @@ const webviewerSchema = {
         width: 24,
         tooltip: 'Let GPS input update the station location'
     },
+    expire: {
+        name: 'expire',
+        restartWebviewer: true,
+        label: 'Expire',
+        type: 'toggle',
+        jsonpath: 'expire',
+        defaultValue: false,
+        width: 24,
+        tooltip: 'Clear ship data fields once the messages carrying them stop arriving'
+    },
     realtime: {
         name: 'realtime',
         restartWebviewer: true,

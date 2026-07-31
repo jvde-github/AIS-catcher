@@ -39,6 +39,8 @@ void DB::setup()
 	paths.resize(Npaths);
 	hash_table.resize(HASH_SIZE);
 
+	last_sweep = std::time(nullptr);
+
 	first = Nships - 1;
 	last = 0;
 	count = 0;
@@ -839,7 +841,8 @@ bool DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &v, b
 		v.received_stations = p.Get().getInt();
 		break;
 	case AIS::KEY_ALT:
-		v.altitude = p.Get().getInt();
+		if (msg->type() == 9)
+			v.altitude = p.Get().getInt();
 		break;
 	case AIS::KEY_VIRTUAL_AID:
 		v.setVirtualAid(p.Get().getBool());
@@ -991,7 +994,7 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 
 	ship.ppm = tag.ppm;
 	ship.level = tag.level;
-	ship.msg_type |= 1 << type;
+	ship.markType(type);
 
 	if (msg->getChannel() >= 'A' && msg->getChannel() <= 'D')
 		ship.orOpChannels(1 << (msg->getChannel() - 'A'));
@@ -1029,11 +1032,13 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	return positionUpdated;
 }
 
-static bool isBinaryContentKey(int key)
+static bool isBinaryContent(const JSON::Member &p)
 {
-	switch (key)
+	switch (p.Key())
 	{
 	case AIS::KEY_TEXT:
+		// getText trims the '@'/space padding, so a pure-padding broadcast is empty
+		return !p.Get().getString().empty();
 	case AIS::KEY_CREW_COUNT:
 	case AIS::KEY_PASSENGER_COUNT:
 	case AIS::KEY_SHIPBOARD_PERSONNEL_COUNT:
@@ -1109,7 +1114,7 @@ void DB::processBinaryMessage(const JSON::JSON &data, Ship &ship, bool &position
 		{
 			loc_lon = p.Get().getFloat();
 		}
-		else if (isBinaryContentKey(p.Key()))
+		else if (isBinaryContent(p))
 		{
 			has_content = true;
 		}
@@ -1269,6 +1274,23 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 	Send(data, len, tag);
 }
 
+void DB::tick(std::time_t now)
+{
+	if (!expire_fields)
+		return;
+
+	std::lock_guard<std::mutex> lock(mtx);
+
+	if (now - last_sweep < TIME_HISTORY)
+		return;
+
+	last_sweep = now;
+
+	for (int ptr = first; ptr != -1; ptr = ships[ptr].incoming.next)
+		if (ships[ptr].mmsi)
+			ships[ptr].decayAndExpire();
+}
+
 bool DB::Save(std::ofstream &file)
 {
 	std::lock_guard<std::mutex> lock(mtx);
@@ -1358,6 +1380,9 @@ bool DB::Load(std::ifstream &file)
 
 		// Not persisted; treat all loaded ships as having static data
 		temp_ships[i].last_static_signal = temp_ships[i].last_signal;
+
+		// Not persisted; stale records are left to the sweep
+		temp_ships[i].type_ttl = temp_ships[i].msg_type;
 
 		if (i > 0 && temp_ships[i].last_signal < previous_signal)
 		{
