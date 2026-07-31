@@ -1285,11 +1285,7 @@ void DB::tick(std::time_t now)
 		return;
 
 	last_sweep = now;
-	sweep();
-}
 
-void DB::sweep()
-{
 	for (int ptr = first; ptr != -1; ptr = ships[ptr].incoming.next)
 		if (ships[ptr].mmsi)
 			ships[ptr].decayAndExpire();
@@ -1385,7 +1381,7 @@ bool DB::Load(std::ifstream &file)
 		// Not persisted; treat all loaded ships as having static data
 		temp_ships[i].last_static_signal = temp_ships[i].last_signal;
 
-		// Not persisted; seeded from msg_type, stale records are left to the sweep
+		// Not persisted; stale records are left to the sweep
 		temp_ships[i].type_ttl = temp_ships[i].msg_type;
 
 		if (i > 0 && temp_ships[i].last_signal < previous_signal)

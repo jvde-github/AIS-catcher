@@ -44,7 +44,6 @@ struct TrackingConfig
 	bool use_GPS = true;
 	uint32_t own_mmsi = 0;
 	int time_history = 30 * 60;
-	// clear fields whose message types stopped arriving, see DB::sweep
 	bool expire_fields = false;
 	// 0 means "not configured": LONG_RANGE_CUTOFF_DEFAULT is used instead
 	int cutoff = 0;

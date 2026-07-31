@@ -48,16 +48,10 @@ const uint32_t F_MANEUVER = 1 << 4;
 const uint32_t F_ALTITUDE = 1 << 5;
 const uint32_t F_RECV_STATIONS = 1 << 6;
 const uint32_t F_OFF_POSITION = 1 << 7;
-// voyage data: destination, ETA and draught
 const uint32_t F_VOYAGE = 1 << 8;
-// identity: name, callsign, IMO, ship type, dimensions, vendor info, ENI and DTE
 const uint32_t F_STATIC = 1 << 9;
-// class B capability flags: CS, DSC, band, display, msg22
 const uint32_t F_COMM_CAP = 1 << 10;
-// reception data any message refreshes: ppm, level, channels, country and saved msg
 const uint32_t F_SIGNAL = 1 << 11;
-
-const uint32_t EXPIRABLE_FIELDS = F_LATLON | F_SPEED_COG | F_HEADING | F_STATUS | F_MANEUVER | F_ALTITUDE | F_RECV_STATIONS | F_OFF_POSITION | F_VOYAGE | F_STATIC | F_COMM_CAP | F_SIGNAL;
 
 struct ShipLL
 {
@@ -78,7 +72,7 @@ struct Ship
     char shipname[21], destination[21], callsign[8], country_code[3], vin[9], vendorid[4];
     std::string msg;
     uint64_t last_group, group_mask;
-    // types heard since the last sweep, same bit layout as msg_type; not persisted
+    // types heard since the last sweep; not persisted
     int type_ttl;
     Util::PackedInt flags;
 

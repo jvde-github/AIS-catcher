@@ -83,7 +83,6 @@ class DB : public StreamIn<JSON::JSON>,
 
 	bool expire_fields = false;
 	std::time_t last_sweep = 0;
-	void sweep();
 
 	struct HashBucket
 	{
@@ -138,8 +137,7 @@ public:
 
 	void setup();
 	void tick(std::time_t now);
-	// Seconds; also the sweep interval, floored at the engine tick rate
-	void setTimeHistory(int t) { TIME_HISTORY = MAX(60, t); }
+	void setTimeHistory(int t) { TIME_HISTORY = t; }
 	void setExpireFields(bool b) { expire_fields = b; }
 	void setShareLatLon(bool b) { latlon_share = b; }
 	bool getShareLatLon() { return latlon_share; }

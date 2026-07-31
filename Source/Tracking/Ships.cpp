@@ -69,51 +69,51 @@ void Ship::reset()
 	msg.clear();
 }
 
-// Which fields each message type can refresh, indexed by type. A missing entry here
-// expires its fields early, a spurious one keeps them alive forever.
+// Which fields each message type can refresh, indexed by type; F_SIGNAL is in every
+// row as reception data comes with every message. A missing field here expires
+// early, a spurious one never expires.
 static const uint32_t TYPE_FIELDS[MAX_MSG_TYPE + 1] = {
 	0,																			// 0  does not exist
-	F_LATLON | F_SPEED_COG | F_HEADING | F_STATUS | F_MANEUVER | F_RECV_STATIONS, // 1  position report
-	F_LATLON | F_SPEED_COG | F_HEADING | F_STATUS | F_MANEUVER | F_RECV_STATIONS, // 2  position report
-	F_LATLON | F_SPEED_COG | F_HEADING | F_STATUS | F_MANEUVER | F_RECV_STATIONS, // 3  position report
-	F_LATLON | F_RECV_STATIONS,													// 4  base station report
-	F_VOYAGE | F_STATIC,														// 5  static and voyage
-	0,																			// 6  addressed binary
-	0,																			// 7  binary acknowledge
-	0,																			// 8  broadcast binary
-	F_LATLON | F_SPEED_COG | F_ALTITUDE,										// 9  SAR aircraft
-	0,																			// 10 UTC inquiry
-	F_LATLON | F_RECV_STATIONS,													// 11 UTC response
-	0,																			// 12 addressed safety
-	0,																			// 13 safety acknowledge
-	0,																			// 14 broadcast safety
-	0,																			// 15 interrogation
-	0,																			// 16 assignment
-	0,																			// 17 DGNSS broadcast
-	F_LATLON | F_SPEED_COG | F_HEADING | F_COMM_CAP,							// 18 class B position
-	F_LATLON | F_SPEED_COG | F_HEADING | F_STATIC,								// 19 class B extended
-	0,																			// 20 link management
-	F_LATLON | F_OFF_POSITION | F_STATIC,										// 21 aid to navigation
-	0,																			// 22 channel management
-	0,																			// 23 group assignment
-	F_STATIC,																	// 24 class B static
-	0,																			// 25 single slot binary
-	F_RECV_STATIONS,															// 26 multiple slot binary
-	F_LATLON | F_SPEED_COG | F_STATUS,											// 27 long range
-	0,																			// 28 not defined
+	F_SIGNAL | F_LATLON | F_SPEED_COG | F_HEADING | F_STATUS | F_MANEUVER | F_RECV_STATIONS, // 1  position report
+	F_SIGNAL | F_LATLON | F_SPEED_COG | F_HEADING | F_STATUS | F_MANEUVER | F_RECV_STATIONS, // 2  position report
+	F_SIGNAL | F_LATLON | F_SPEED_COG | F_HEADING | F_STATUS | F_MANEUVER | F_RECV_STATIONS, // 3  position report
+	F_SIGNAL | F_LATLON | F_RECV_STATIONS,										// 4  base station report
+	F_SIGNAL | F_VOYAGE | F_STATIC,												// 5  static and voyage
+	F_SIGNAL | F_LATLON | F_OFF_POSITION | F_STATIC | F_VOYAGE,					// 6  addressed binary, buoy/AtoN monitor payloads
+	F_SIGNAL,																	// 7  binary acknowledge
+	F_SIGNAL | F_STATIC | F_VOYAGE | F_OFF_POSITION,							// 8  broadcast binary, inland static and AtoN monitor payloads
+	F_SIGNAL | F_LATLON | F_SPEED_COG | F_ALTITUDE,								// 9  SAR aircraft
+	F_SIGNAL,																	// 10 UTC inquiry
+	F_SIGNAL | F_LATLON | F_RECV_STATIONS,										// 11 UTC response
+	F_SIGNAL,																	// 12 addressed safety
+	F_SIGNAL,																	// 13 safety acknowledge
+	F_SIGNAL,																	// 14 broadcast safety
+	F_SIGNAL,																	// 15 interrogation
+	F_SIGNAL,																	// 16 assignment
+	F_SIGNAL,																	// 17 DGNSS broadcast
+	F_SIGNAL | F_LATLON | F_SPEED_COG | F_HEADING | F_COMM_CAP,					// 18 class B position
+	F_SIGNAL | F_LATLON | F_SPEED_COG | F_HEADING | F_STATIC,					// 19 class B extended
+	F_SIGNAL,																	// 20 link management
+	F_SIGNAL | F_LATLON | F_OFF_POSITION | F_STATIC,							// 21 aid to navigation
+	F_SIGNAL,																	// 22 channel management
+	F_SIGNAL,																	// 23 group assignment
+	F_SIGNAL | F_STATIC,														// 24 class B static
+	F_SIGNAL | F_LATLON | F_OFF_POSITION | F_STATIC | F_VOYAGE,					// 25 single slot binary, same payloads as 6/8
+	F_SIGNAL | F_LATLON | F_OFF_POSITION | F_STATIC | F_VOYAGE | F_RECV_STATIONS, // 26 multiple slot binary, same payloads as 6/8
+	F_SIGNAL | F_LATLON | F_SPEED_COG | F_STATUS,								// 27 long range
+	F_SIGNAL | F_LATLON | F_STATIC,												// 28 AtoN report
 };
 
 void Ship::decayAndExpire()
 {
 	if (~type_ttl & msg_type)
 	{
-		// signal data is refreshed by every message, so it only goes on total silence
-		uint32_t supported = type_ttl ? F_SIGNAL : 0;
+		uint32_t supported = 0;
 		for (int t = 1; t <= MAX_MSG_TYPE; t++)
 			if (type_ttl & (1 << t))
 				supported |= TYPE_FIELDS[t];
 
-		clearFields(~supported & EXPIRABLE_FIELDS);
+		clearFields(~supported);
 
 		msg_type = type_ttl;
 		setType();
@@ -124,9 +124,6 @@ void Ship::decayAndExpire()
 
 void Ship::clearFields(uint32_t doomed)
 {
-	if (!doomed)
-		return;
-
 	if (doomed & F_LATLON)
 	{
 		lat = LAT_UNDEFINED;
@@ -189,6 +186,7 @@ void Ship::clearFields(uint32_t doomed)
 	{
 		ppm = PPM_UNDEFINED;
 		level = LEVEL_UNDEFINED;
+		setRepeat(0);
 		memset(country_code, 0, sizeof(country_code));
 		clearOpChannels();
 		msg.clear();
