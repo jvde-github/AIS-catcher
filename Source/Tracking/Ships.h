@@ -37,26 +37,27 @@ const int SAR_MASK = 1 << 9;
 const int ATON_MASK = (1 << 21) | (1 << 28);
 
 const int MAX_MSG_TYPE = 28;
-// sweeps a message type survives without being heard again, so a field lives 2-3 hours
-// after its last producer at the default one hour sweep interval
-const int TYPE_TTL = 3;
-static_assert(TYPE_TTL <= 3, "TYPE_TTL must fit the two-bit counters in Ship::type_seen");
 
-// Fields that are cleared once no message type that can produce them has been heard
-// recently. Identity (name, callsign, IMO, dimensions, ...) is deliberately absent:
-// a stale name is better than a blank one on a ship that comes back into range.
-const uint32_t F_LAT = 1 << 0;
-const uint32_t F_LON = 1 << 1;
-const uint32_t F_SPEED = 1 << 2;
-const uint32_t F_COG = 1 << 3;
-const uint32_t F_HEADING = 1 << 4;
-const uint32_t F_STATUS = 1 << 5;
-const uint32_t F_MANEUVER = 1 << 6;
-const uint32_t F_ALTITUDE = 1 << 7;
-const uint32_t F_RECV_STATIONS = 1 << 8;
-const uint32_t F_OFF_POSITION = 1 << 9;
+// Fields cleared once none of their producer types has been heard recently. Only
+// mmsi, count, the last_signal times and group survive; the sweep trims msg_type.
+const uint32_t F_LATLON = 1 << 0;
+const uint32_t F_SPEED_COG = 1 << 1;
+const uint32_t F_HEADING = 1 << 2;
+const uint32_t F_STATUS = 1 << 3;
+const uint32_t F_MANEUVER = 1 << 4;
+const uint32_t F_ALTITUDE = 1 << 5;
+const uint32_t F_RECV_STATIONS = 1 << 6;
+const uint32_t F_OFF_POSITION = 1 << 7;
+// voyage data: destination, ETA and draught
+const uint32_t F_VOYAGE = 1 << 8;
+// identity: name, callsign, IMO, ship type, dimensions, vendor info, ENI and DTE
+const uint32_t F_STATIC = 1 << 9;
+// class B capability flags: CS, DSC, band, display, msg22
+const uint32_t F_COMM_CAP = 1 << 10;
+// reception data any message refreshes: ppm, level, channels, country and saved msg
+const uint32_t F_SIGNAL = 1 << 11;
 
-const uint32_t EXPIRABLE_FIELDS = F_LAT | F_LON | F_SPEED | F_COG | F_HEADING | F_STATUS | F_MANEUVER | F_ALTITUDE | F_RECV_STATIONS | F_OFF_POSITION;
+const uint32_t EXPIRABLE_FIELDS = F_LATLON | F_SPEED_COG | F_HEADING | F_STATUS | F_MANEUVER | F_ALTITUDE | F_RECV_STATIONS | F_OFF_POSITION | F_VOYAGE | F_STATIC | F_COMM_CAP | F_SIGNAL;
 
 struct ShipLL
 {
@@ -77,16 +78,13 @@ struct Ship
     char shipname[21], destination[21], callsign[8], country_code[3], vin[9], vendorid[4];
     std::string msg;
     uint64_t last_group, group_mask;
-    // a two-bit TTL per message type, refreshed on arrival and counted down by the
-    // sweep. Zero means "not heard recently", which is also the never-heard state.
-    // Not persisted: seeded on load.
-    uint64_t type_seen;
+    // types heard since the last sweep, same bit layout as msg_type; not persisted
+    int type_ttl;
     Util::PackedInt flags;
 
     void reset();
-    void refreshType(int type);
-    void seedTypeTTL(int mask, int ttl);
-    void decayAndExpire(int sweeps, uint32_t always_live);
+    void markType(int type) { msg_type |= 1 << type; type_ttl |= 1 << type; }
+    void decayAndExpire();
     void clearFields(uint32_t doomed);
     int getMMSItype();
     int getShipTypeClassEri();
@@ -110,6 +108,7 @@ public:
     void setVirtualAid(int val) { flags.set(4, 1, val); }
     void setApproximate(int val) { flags.set(5, 1, val); }
     void orOpChannels(int val) { flags.orOp(6, 4, val); }
+    void clearOpChannels() { flags.set(6, 4, 0); }
     void setCSUnit(int val) { flags.set(10, 2, val); } // 0=unknown, 1=SOTDMA, 2=Carrier Sense
     void setRAIM(int val) { flags.set(12, 2, val); } // 0=unknown, 1=false, 2=true
     void setDTE(int val) { flags.set(14, 2, val); } // 0=unknown, 1=ready, 2=not ready

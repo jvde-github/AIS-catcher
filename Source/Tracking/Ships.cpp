@@ -28,7 +28,7 @@ void Ship::reset()
 	path_ptr = -1;
 
 	mmsi = count = msg_type = shiptype = group_mask = 0;
-	type_seen = 0;
+	type_ttl = 0;
 	flags.reset();
 
 	heading = HEADING_UNDEFINED;
@@ -69,72 +69,57 @@ void Ship::reset()
 	msg.clear();
 }
 
-// Which fields each message type can refresh. A field is cleared only when none of its
-// producers has been heard recently, so a live type 18 keeps speed alive after a stray
-// type 1 ages out, while status - which type 18 cannot carry - still goes.
-static uint32_t typeFields(int type)
+// Which fields each message type can refresh, indexed by type. A missing entry here
+// expires its fields early, a spurious one keeps them alive forever.
+static const uint32_t TYPE_FIELDS[MAX_MSG_TYPE + 1] = {
+	0,																			// 0  does not exist
+	F_LATLON | F_SPEED_COG | F_HEADING | F_STATUS | F_MANEUVER | F_RECV_STATIONS, // 1  position report
+	F_LATLON | F_SPEED_COG | F_HEADING | F_STATUS | F_MANEUVER | F_RECV_STATIONS, // 2  position report
+	F_LATLON | F_SPEED_COG | F_HEADING | F_STATUS | F_MANEUVER | F_RECV_STATIONS, // 3  position report
+	F_LATLON | F_RECV_STATIONS,													// 4  base station report
+	F_VOYAGE | F_STATIC,														// 5  static and voyage
+	0,																			// 6  addressed binary
+	0,																			// 7  binary acknowledge
+	0,																			// 8  broadcast binary
+	F_LATLON | F_SPEED_COG | F_ALTITUDE,										// 9  SAR aircraft
+	0,																			// 10 UTC inquiry
+	F_LATLON | F_RECV_STATIONS,													// 11 UTC response
+	0,																			// 12 addressed safety
+	0,																			// 13 safety acknowledge
+	0,																			// 14 broadcast safety
+	0,																			// 15 interrogation
+	0,																			// 16 assignment
+	0,																			// 17 DGNSS broadcast
+	F_LATLON | F_SPEED_COG | F_HEADING | F_COMM_CAP,							// 18 class B position
+	F_LATLON | F_SPEED_COG | F_HEADING | F_STATIC,								// 19 class B extended
+	0,																			// 20 link management
+	F_LATLON | F_OFF_POSITION | F_STATIC,										// 21 aid to navigation
+	0,																			// 22 channel management
+	0,																			// 23 group assignment
+	F_STATIC,																	// 24 class B static
+	0,																			// 25 single slot binary
+	F_RECV_STATIONS,															// 26 multiple slot binary
+	F_LATLON | F_SPEED_COG | F_STATUS,											// 27 long range
+	0,																			// 28 not defined
+};
+
+void Ship::decayAndExpire()
 {
-	switch (type)
+	if (~type_ttl & msg_type)
 	{
-	case 1:
-	case 2:
-	case 3:
-		return F_LAT | F_LON | F_SPEED | F_COG | F_HEADING | F_STATUS | F_MANEUVER | F_RECV_STATIONS;
-	case 4:
-	case 11:
-		return F_LAT | F_LON | F_RECV_STATIONS;
-	case 9:
-		return F_LAT | F_LON | F_SPEED | F_COG | F_ALTITUDE;
-	case 18:
-	case 19:
-		return F_LAT | F_LON | F_SPEED | F_COG | F_HEADING;
-	case 21:
-		return F_LAT | F_LON | F_OFF_POSITION;
-	case 26:
-		return F_RECV_STATIONS;
-	case 27:
-		return F_LAT | F_LON | F_SPEED | F_COG | F_STATUS;
-	}
-	return 0;
-}
+		// signal data is refreshed by every message, so it only goes on total silence
+		uint32_t supported = type_ttl ? F_SIGNAL : 0;
+		for (int t = 1; t <= MAX_MSG_TYPE; t++)
+			if (type_ttl & (1 << t))
+				supported |= TYPE_FIELDS[t];
 
-void Ship::refreshType(int type)
-{
-	type_seen = (type_seen & ~(3ULL << (type * 2))) | ((uint64_t)TYPE_TTL << (type * 2));
-}
-
-void Ship::seedTypeTTL(int mask, int ttl)
-{
-	type_seen = 0;
-	for (int t = 1; t <= MAX_MSG_TYPE; t++)
-		if (mask & (1 << t))
-			type_seen |= (uint64_t)ttl << (t * 2);
-}
-
-void Ship::decayAndExpire(int sweeps, uint32_t always_live)
-{
-	if (sweeps <= 0 || type_seen == 0)
-		return;
-
-	bool expired = false;
-	uint32_t supported = 0;
-
-	for (int t = 1; t <= MAX_MSG_TYPE; t++)
-	{
-		int ttl = (type_seen >> (t * 2)) & 3;
-		if (ttl)
-		{
-			ttl = ttl > sweeps ? ttl - sweeps : 0;
-			type_seen = (type_seen & ~(3ULL << (t * 2))) | ((uint64_t)ttl << (t * 2));
-			expired |= ttl == 0;
-		}
-
-		if (ttl || (always_live & (1 << t)))
-			supported |= typeFields(t);
-	}
-
-	if (expired)
 		clearFields(~supported & EXPIRABLE_FIELDS);
+
+		msg_type = type_ttl;
+		setType();
+	}
+
+	type_ttl = 0;
 }
 
 void Ship::clearFields(uint32_t doomed)
@@ -142,19 +127,22 @@ void Ship::clearFields(uint32_t doomed)
 	if (!doomed)
 		return;
 
-	if (doomed & F_LAT)
-		lat = LAT_UNDEFINED;
-	if (doomed & F_LON)
-		lon = LON_UNDEFINED;
-	if (doomed & (F_LAT | F_LON))
+	if (doomed & F_LATLON)
 	{
+		lat = LAT_UNDEFINED;
+		lon = LON_UNDEFINED;
 		distance = DISTANCE_UNDEFINED;
 		angle = ANGLE_UNDEFINED;
+		setApproximate(0);
+		setValidated(0);
+		setRAIM(0);
+		setAssigned(0);
 	}
-	if (doomed & F_SPEED)
+	if (doomed & F_SPEED_COG)
+	{
 		speed = SPEED_UNDEFINED;
-	if (doomed & F_COG)
 		cog = COG_UNDEFINED;
+	}
 	if (doomed & F_HEADING)
 		heading = HEADING_UNDEFINED;
 	if (doomed & F_STATUS)
@@ -167,6 +155,44 @@ void Ship::clearFields(uint32_t doomed)
 		received_stations = RECEIVED_STATIONS_UNDEFINED;
 	if (doomed & F_OFF_POSITION)
 		setOffPosition(0);
+	if (doomed & F_VOYAGE)
+	{
+		memset(destination, 0, sizeof(destination));
+		month = ETA_MONTH_UNDEFINED;
+		day = ETA_DAY_UNDEFINED;
+		hour = ETA_HOUR_UNDEFINED;
+		minute = ETA_MINUTE_UNDEFINED;
+		draught = DRAUGHT_UNDEFINED;
+	}
+	if (doomed & F_STATIC)
+	{
+		memset(shipname, 0, sizeof(shipname));
+		memset(callsign, 0, sizeof(callsign));
+		memset(vendorid, 0, sizeof(vendorid));
+		memset(vin, 0, sizeof(vin));
+		unit_model = unit_serial = -1;
+		IMO = IMO_UNDEFINED;
+		shiptype = 0;
+		to_port = to_bow = to_starboard = to_stern = DIMENSION_UNDEFINED;
+		setDTE(0);
+		setVirtualAid(0);
+	}
+	if (doomed & F_COMM_CAP)
+	{
+		setCSUnit(0);
+		setDisplay(0);
+		setDSC(0);
+		setBand(0);
+		setMsg22(0);
+	}
+	if (doomed & F_SIGNAL)
+	{
+		ppm = PPM_UNDEFINED;
+		level = LEVEL_UNDEFINED;
+		memset(country_code, 0, sizeof(country_code));
+		clearOpChannels();
+		msg.clear();
+	}
 }
 
 std::string getSprite(const Ship *ship)
@@ -269,8 +295,7 @@ int Ship::getMMSItype()
 	{
 		return MMSI_SARTEPIRB;
 	}
-	// the number outranks the received message types: one bad decode should not
-	// reclassify a base station or an aid to navigation for the rest of the run
+	// the number outranks the message types: a bad decode must not reclassify a station
 	if (mmsi >= 990000000 && mmsi <= 999999999)
 	{
 		return MMSI_ATON;

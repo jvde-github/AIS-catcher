@@ -81,7 +81,7 @@ class DB : public StreamIn<JSON::JSON>,
 	int Npaths = Nships * 16;
 	int HASH_SIZE = 8209;
 
-	static const int SWEEP_INTERVAL = 3600;
+	bool expire_fields = false;
 	std::time_t last_sweep = 0;
 	void sweep();
 
@@ -138,7 +138,9 @@ public:
 
 	void setup();
 	void tick(std::time_t now);
-	void setTimeHistory(int t) { TIME_HISTORY = t; }
+	// Seconds; also the sweep interval, floored at the engine tick rate
+	void setTimeHistory(int t) { TIME_HISTORY = MAX(60, t); }
+	void setExpireFields(bool b) { expire_fields = b; }
 	void setShareLatLon(bool b) { latlon_share = b; }
 	bool getShareLatLon() { return latlon_share; }
 

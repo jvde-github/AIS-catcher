@@ -360,8 +360,6 @@ namespace AIS
 		bool SetOptionKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 		bool isOn() { return on; }
-		// message types that can still arrive, so a consumer can tell "not heard" from "filtered out"
-		uint32_t getAllow() const { return on ? allow : all; }
 		bool hasIDFilter() const { return !ID_allowed.empty() || !MMSI_allowed.empty(); }
 		std::string getAllowed();
 		bool includeGPS() { return on ? GPS : true; }
