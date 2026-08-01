@@ -430,8 +430,7 @@ bool DB::writeSinglePathJSONCompactSince(int idx, std::time_t since, JSON::Write
 
 bool DB::hasPathPointsSince(int idx, std::time_t since)
 {
-	// the track is time-ordered, so if the newest point is older than
-	// `since`, nothing newer exists
+	// a newest point older than `since` means nothing newer exists
 	uint32_t r = paths.tail(idx);
 	return PathStore::isPoint(r) && (std::time_t)paths.at(r).time >= since;
 }

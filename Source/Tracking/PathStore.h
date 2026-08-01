@@ -25,25 +25,14 @@
 #include "Logger.h"
 #endif
 
-// Tiered block store for ship tracks.
-//
-// Points live in fixed blocks of 256 and form a doubly-linked, time-ordered
-// list per ship. The list is circular through a per-ship anchor held here: the
-// oldest point's prev and the newest point's next refer back to the ship. A
-// reference packs (block << 8 | slot) in a uint32_t; the top bit marks a ship
-// anchor instead. A live point never holds NIL, so prev == NIL marks a dead
-// slot awaiting block recycling.
-//
-// Blocks are chained into three tiers, head = newest:
-//   RT    full-resolution points, roughly the last hour
-//   FIVE  older history, thinned to one point per GRANULARITY
-//   FREE  recycled blocks
-//
-// A full RT block older than HORIZON is compacted: each point is kept (moved
-// to FIVE) if it is at least GRANULARITY after the previous kept point of the
-// same ship, else unlinked. Under memory pressure the tiers degrade in order:
-// force-compact young RT blocks first, then overwrite the oldest FIVE history,
-// and only as a last resort drop recent RT data.
+// Tiered block store for ship tracks. Points live in blocks of 256 and form a
+// doubly-linked, time-ordered list per ship, circular through a per-ship
+// anchor: a reference packs (block << 8 | slot) in a uint32_t, the top bit
+// marks a ship anchor, prev == NIL marks a dead slot. Blocks chain into three
+// tiers (head = newest): RT holds full resolution for roughly the last hour,
+// FIVE older history thinned to one point per GRANULARITY, FREE recycled
+// blocks. Under memory pressure young RT blocks are force-compacted first,
+// then the oldest FIVE history is overwritten.
 
 class PathStore
 {
@@ -77,7 +66,7 @@ private:
 	struct Block
 	{
 		Point pts[BLOCK_SIZE];
-		uint32_t t_first = 0, t_last = 0; // start times of first/last point written
+		uint32_t t_first = 0, t_last = 0;
 		int prev = -1, next = -1;
 		uint16_t count = 0, live = 0;
 		uint8_t tier = FREE;
@@ -197,8 +186,7 @@ private:
 			pushHead(FIVE, d);
 		}
 
-		// copy after the potential eviction above, which may have respliced
-		// this point's neighbours
+		// the eviction above may have respliced this point's neighbours
 		Point &p = deref(r);
 		Block &dst = blocks[d];
 		int j = dst.count++;
@@ -222,8 +210,7 @@ private:
 			Point &p = blk.pts[i];
 			if (p.prev == NIL)
 				continue;
-			// prev is the last kept point of this ship: older points are
-			// already thinned and drops below unlink as we go
+			// prev is the last kept point of this ship since drops unlink as we go
 			if ((p.prev & SHIP_BIT) || p.time - deref(p.prev).time >= GRANULARITY)
 				moveToFive((uint32_t)(b << 8) | i);
 			else
@@ -236,8 +223,7 @@ private:
 
 	void compactExpired(uint32_t now)
 	{
-		// cap the drain so a backlog built up during an idle spell cannot
-		// stall a single add; two per fill still outpaces expiry
+		// capped so a backlog after an idle spell cannot stall a single add
 		for (int k = 0; k < 2; k++)
 			if (lists[RT].tail != lists[RT].head && blocks[lists[RT].tail].t_last + HORIZON < now)
 				compactBlock(lists[RT].tail);
@@ -248,11 +234,9 @@ private:
 		int b = popFree();
 		if (b == -1 && lists[RT].tail != lists[RT].head)
 		{
-			// shrinking a young block ~12:1 into FIVE beats overwriting a
-			// whole block of history
+			// thinning a young block into FIVE beats overwriting history
 			compactBlock(lists[RT].tail);
-			// with FIVE empty the keepers above had nowhere to go; compact a
-			// second block so the one just freed can seed the FIVE tier
+			// a second pass lets the block just freed seed an empty FIVE tier
 			if (lists[FIVE].head == -1 && lists[RT].tail != lists[RT].head)
 				compactBlock(lists[RT].tail);
 			b = popFree();
@@ -324,8 +308,7 @@ public:
 			pushHead(RT, b);
 		}
 
-		// fetch the tail only now: compaction or eviction above may have
-		// moved or dropped this ship's newest point
+		// compaction or eviction above may have moved this ship's newest point
 		uint32_t tl = anchors[ship].tail;
 
 		Block &blk = blocks[b];
@@ -352,8 +335,7 @@ public:
 
 	void wipe(int ship)
 	{
-		// unlinking the head point advances the anchor, so this walks the
-		// whole track and leaves the anchor self-referential
+		// unlinking the head advances the anchor until it is self-referential
 		while (!(anchors[ship].head & SHIP_BIT))
 		{
 			uint32_t r = anchors[ship].head;
