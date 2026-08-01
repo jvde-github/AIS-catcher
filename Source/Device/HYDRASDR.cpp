@@ -24,51 +24,6 @@
 
 #include "HYDRASDR.h"
 
-// libhydrasdr 1.0 predates the unified gain API, the rf_frontend register
-// interface and the version macros introduced in 1.1; emulate the 1.1 API so
-// the driver builds against both
-#ifndef HYDRASDR_VERSION_NUM
-
-enum hydrasdr_gain_type_t
-{
-	HYDRASDR_GAIN_TYPE_LNA,
-	HYDRASDR_GAIN_TYPE_MIXER,
-	HYDRASDR_GAIN_TYPE_VGA,
-	HYDRASDR_GAIN_TYPE_LINEARITY,
-	HYDRASDR_GAIN_TYPE_SENSITIVITY,
-	HYDRASDR_GAIN_TYPE_LNA_AGC,
-	HYDRASDR_GAIN_TYPE_MIXER_AGC
-};
-
-static int hydrasdr_set_gain(struct hydrasdr_device *dev, hydrasdr_gain_type_t type, uint8_t value)
-{
-	switch (type)
-	{
-	case HYDRASDR_GAIN_TYPE_LNA:
-		return hydrasdr_set_lna_gain(dev, value);
-	case HYDRASDR_GAIN_TYPE_MIXER:
-		return hydrasdr_set_mixer_gain(dev, value);
-	case HYDRASDR_GAIN_TYPE_VGA:
-		return hydrasdr_set_vga_gain(dev, value);
-	case HYDRASDR_GAIN_TYPE_LINEARITY:
-		return hydrasdr_set_linearity_gain(dev, value);
-	case HYDRASDR_GAIN_TYPE_SENSITIVITY:
-		return hydrasdr_set_sensitivity_gain(dev, value);
-	case HYDRASDR_GAIN_TYPE_LNA_AGC:
-		return hydrasdr_set_lna_agc(dev, value);
-	case HYDRASDR_GAIN_TYPE_MIXER_AGC:
-		return hydrasdr_set_mixer_agc(dev, value);
-	}
-	return HYDRASDR_ERROR_INVALID_PARAM;
-}
-
-static int hydrasdr_rf_frontend_write(struct hydrasdr_device *dev, uint16_t reg, uint32_t value)
-{
-	return hydrasdr_r82x_write(dev, (uint8_t)reg, (uint8_t)value);
-}
-
-#endif
-
 namespace Device
 {
 	//----------------------------------------
