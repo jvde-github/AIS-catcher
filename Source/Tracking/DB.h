@@ -27,7 +27,7 @@
 #include "JSON.h"
 #include "Writer.h"
 
-// validate ship and path structures every 25 updates
+// validate ship and path structures once a minute
 #define CHECK_DB_INTEGRITY
 
 #include "Ships.h"
@@ -119,7 +119,7 @@ class DB : public StreamIn<JSON::JSON>,
 	void processBinaryMessage(const JSON::JSON &data, Ship &ship, bool &position_updated);
 #ifdef CHECK_DB_INTEGRITY
 	void checkIntegrity();
-	int update_counter = 0;
+	std::time_t last_check = 0;
 #endif
 
 public:

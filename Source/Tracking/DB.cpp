@@ -405,7 +405,7 @@ void DB::writeSinglePathJSONCompact(int idx, JSON::Writer &w)
 	for (uint32_t r = paths.tail(idx); PathStore::isPoint(r) && cnt < 250; r = paths.at(r).prev, cnt++)
 	{
 		const PathStore::Point &p = paths.at(r);
-		w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.time).endArray();
+		w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.end()).endArray();
 	}
 	w.endArray();
 }
@@ -418,10 +418,10 @@ bool DB::writeSinglePathJSONCompactSince(int idx, std::time_t since, JSON::Write
 	for (uint32_t r = paths.tail(idx); PathStore::isPoint(r); r = paths.at(r).prev)
 	{
 		const PathStore::Point &p = paths.at(r);
-		if ((std::time_t)p.time < since)
+		if ((std::time_t)p.end() < since)
 			break;
 
-		w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.time).endArray();
+		w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.end()).endArray();
 		any = true;
 	}
 	w.endArray();
@@ -430,9 +430,10 @@ bool DB::writeSinglePathJSONCompactSince(int idx, std::time_t since, JSON::Write
 
 bool DB::hasPathPointsSince(int idx, std::time_t since)
 {
-	// a newest point older than `since` means nothing newer exists
+	// only the newest point's dwell can still extend, so an end older than
+	// `since` means nothing newer exists
 	uint32_t r = paths.tail(idx);
-	return PathStore::isPoint(r) && (std::time_t)paths.at(r).time >= since;
+	return PathStore::isPoint(r) && (std::time_t)paths.at(r).end() >= since;
 }
 
 std::string DB::getAllPathJSONSince(std::time_t since)
@@ -474,7 +475,7 @@ void DB::writeSinglePathGeoJSON(int idx, JSON::Writer &w)
 
 	w.endArray().key("timestamps_end").beginArray();
 	for (uint32_t r = paths.tail(idx); PathStore::isPoint(r); r = paths.at(r).prev)
-		w.val(paths.at(r).time);
+		w.val(paths.at(r).end());
 
 	w.endArray().endObject().endObject();
 }
@@ -1152,23 +1153,23 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 	else
 		tag.validated = false;
 
-#ifdef CHECK_DB_INTEGRITY
-	if (++update_counter % 25 == 0)
-		checkIntegrity();
-#endif
-
 	lock.unlock();
 	Send(data, len, tag);
 }
 
 void DB::tick(std::time_t now)
 {
-	if (!expire_fields)
-		return;
-
 	std::lock_guard<std::mutex> lock(mtx);
 
-	if (now - last_sweep < TIME_HISTORY)
+#ifdef CHECK_DB_INTEGRITY
+	if (now - last_check >= 60)
+	{
+		last_check = now;
+		checkIntegrity();
+	}
+#endif
+
+	if (!expire_fields || now - last_sweep < TIME_HISTORY)
 		return;
 
 	last_sweep = now;

@@ -25,35 +25,43 @@
 #include "Logger.h"
 #endif
 
-// Tiered block store for ship tracks. Points live in blocks of 256 and form a
+// Tiered block store for ship tracks. Points live in blocks and form a
 // doubly-linked, time-ordered list per ship, circular through a per-ship
-// anchor: a reference packs (block << 8 | slot) in a uint32_t, the top bit
-// marks a ship anchor, prev == NIL marks a dead slot. Blocks chain into three
-// tiers (head = newest): RT holds full resolution for roughly the last hour,
-// FIVE older history thinned to one point per GRANULARITY, FREE recycled
-// blocks. Under memory pressure young RT blocks are force-compacted first,
-// then the oldest FIVE history is overwritten.
+// anchor: a reference packs (block << BLOCK_SHIFT | slot) in a uint32_t, the
+// top bit marks a ship anchor, prev == NIL marks a dead slot. A point covers
+// [time, time + dur]: a stationary ship extends its newest point's dwell
+// instead of adding points. Blocks chain into three tiers (head = newest): RT
+// holds full resolution for roughly the last hour, FIVE older history thinned
+// to one point per GRANULARITY, FREE recycled blocks. Under memory pressure
+// young RT blocks are force-compacted first, then the oldest FIVE history is
+// overwritten.
 
 class PathStore
 {
+	static const uint32_t DUR_UNIT = 2; // seconds per dwell unit
+
 public:
 	struct Point
 	{
 		float lat, lon;
 		uint32_t time;
 		uint32_t prev, next;
-		uint16_t cog, sog; // 0.1 degree / 0.1 knot, NA when unknown
+		uint16_t dur;	  // dwell past `time` in DUR_UNIT seconds
+		uint8_t cog, sog; // 2 degree / 0.5 knot units, NA when unknown
+
+		uint32_t end() const { return time + (uint32_t)dur * DUR_UNIT; }
 	};
 
-	static const uint16_t NA = 0xFFFF;
+	static const uint8_t NA = 0xFF;
 
 private:
-	static const int BLOCK_SIZE = 256;
+	static const int BLOCK_SHIFT = 8;
+	static const int BLOCK_SIZE = 1 << BLOCK_SHIFT;
 	static const uint32_t SHIP_BIT = 0x80000000u;
 	static const uint32_t NIL = 0xFFFFFFFFu;
 
-	static const uint32_t HORIZON = 3600;	// full-resolution window in seconds
-	static const uint32_t GRANULARITY = 300; // point spacing beyond HORIZON, also the prune interval
+	static const uint32_t HORIZON = 3600;	 // full-resolution window in seconds
+	static const uint32_t GRANULARITY = 300; // point spacing beyond HORIZON, also the dwell continuity gap
 	static const int DEADBAND = 40;			 // meters a ship must move to count as significant
 
 	enum Tier
@@ -66,7 +74,6 @@ private:
 	struct Block
 	{
 		Point pts[BLOCK_SIZE];
-		uint32_t t_first = 0, t_last = 0;
 		int prev = -1, next = -1;
 		uint16_t count = 0, live = 0;
 		uint8_t tier = FREE;
@@ -86,7 +93,9 @@ private:
 	std::vector<Anchor> anchors;
 	List lists[3];
 
-	Point &deref(uint32_t r) { return blocks[r >> 8].pts[r & (BLOCK_SIZE - 1)]; }
+	static uint32_t ref(int b, int i) { return ((uint32_t)b << BLOCK_SHIFT) | i; }
+
+	Point &deref(uint32_t r) { return blocks[r >> BLOCK_SHIFT].pts[r & (BLOCK_SIZE - 1)]; }
 
 	void setNext(uint32_t r, uint32_t v)
 	{
@@ -110,7 +119,7 @@ private:
 		setNext(p.prev, p.next);
 		setPrev(p.next, p.prev);
 		p.prev = NIL;
-		blocks[r >> 8].live--;
+		blocks[r >> BLOCK_SHIFT].live--;
 	}
 
 	void pushHead(int tier, int b)
@@ -154,7 +163,7 @@ private:
 		Block &blk = blocks[b];
 		for (int i = 0; i < blk.count; i++)
 			if (blk.pts[i].prev != NIL)
-				unlink((uint32_t)(b << 8) | i);
+				unlink(ref(b, i));
 		detach(b);
 		blk.count = blk.live = 0;
 		return b;
@@ -192,14 +201,10 @@ private:
 		int j = dst.count++;
 		dst.live++;
 
-		uint32_t nr = (uint32_t)(d << 8) | j;
+		uint32_t nr = ref(d, j);
 		dst.pts[j] = p;
 		setNext(p.prev, nr);
 		setPrev(p.next, nr);
-
-		dst.t_last = p.time;
-		if (j == 0)
-			dst.t_first = p.time;
 	}
 
 	void compactBlock(int b)
@@ -212,20 +217,22 @@ private:
 				continue;
 			// prev is the last kept point of this ship since drops unlink as we go
 			if ((p.prev & SHIP_BIT) || p.time - deref(p.prev).time >= GRANULARITY)
-				moveToFive((uint32_t)(b << 8) | i);
+				moveToFive(ref(b, i));
 			else
-				unlink((uint32_t)(b << 8) | i);
+				unlink(ref(b, i));
 		}
 		detach(b);
 		blk.count = blk.live = 0;
 		pushHead(FREE, b);
 	}
 
+	uint32_t newestTime(int b) { return blocks[b].pts[blocks[b].count - 1].time; }
+
 	void compactExpired(uint32_t now)
 	{
 		// capped so a backlog after an idle spell cannot stall a single add
 		for (int k = 0; k < 2; k++)
-			if (lists[RT].tail != lists[RT].head && blocks[lists[RT].tail].t_last + HORIZON < now)
+			if (lists[RT].tail != lists[RT].head && newestTime(lists[RT].tail) + HORIZON < now)
 				compactBlock(lists[RT].tail);
 	}
 
@@ -243,28 +250,35 @@ private:
 		}
 		if (b == -1 && lists[FIVE].tail != -1)
 			b = evictBlock(lists[FIVE].tail);
-		if (b == -1)
+		if (b == -1 && lists[RT].tail != -1)
 			b = evictBlock(lists[RT].tail);
 		return b;
 	}
 
-	static uint16_t encodeCOG(float c) { return (c >= 0 && c < 360) ? (uint16_t)(c * 10 + 0.5f) : NA; }
-	static uint16_t encodeSOG(float s) { return (s >= 0 && s < 6553) ? (uint16_t)(s * 10 + 0.5f) : NA; }
+	static uint8_t encodeCOG(float c) { return (c >= 0 && c < 360) ? (uint8_t)(c / 2 + 0.5f) : NA; }
 
-	bool significant(const Point &q, float lat, float lon, uint16_t cog, uint16_t sog)
+	static uint8_t encodeSOG(float s)
+	{
+		if (s < 0)
+			return NA;
+		float v = s * 2 + 0.5f;
+		return v < 254.0f ? (uint8_t)v : (uint8_t)254;
+	}
+
+	bool significant(const Point &q, float lat, float lon, uint8_t cog, uint8_t sog)
 	{
 		float dlat = (lat - q.lat) * 111120.0f;
 		float dlon = (lon - q.lon) * 111120.0f * cosf(lat * 0.01745329f);
 		if (dlat * dlat + dlon * dlon > (float)(DEADBAND * DEADBAND))
 			return true;
-		if (q.sog != NA && sog != NA && (sog > q.sog ? sog - q.sog : q.sog - sog) > 5)
+		if (q.sog != NA && sog != NA && (sog > q.sog ? sog - q.sog : q.sog - sog) > 1)
 			return true;
-		if (sog != NA && sog > 5 && q.cog != NA && cog != NA)
+		if (sog != NA && sog > 1 && q.cog != NA && cog != NA)
 		{
 			int d = cog > q.cog ? cog - q.cog : q.cog - cog;
-			if (d > 1800)
-				d = 3600 - d;
-			if (d > 100)
+			if (d > 90)
+				d = 180 - d;
+			if (d > 5)
 				return true;
 		}
 		return false;
@@ -275,6 +289,8 @@ public:
 	{
 		if (nblocks < 2)
 			nblocks = 2;
+		if (nblocks > (1 << (31 - BLOCK_SHIFT)))
+			nblocks = 1 << (31 - BLOCK_SHIFT); // refs must not collide with SHIP_BIT
 
 		blocks.assign(nblocks, Block());
 		anchors.resize(nships);
@@ -289,15 +305,20 @@ public:
 	void add(int ship, float lat, float lon, float cog, float sog, std::time_t now)
 	{
 		uint32_t t = now > 0 ? (uint32_t)now : 0;
-		uint16_t c = encodeCOG(cog), s = encodeSOG(sog);
+		uint8_t c = encodeCOG(cog), s = encodeSOG(sog);
 
 		if (!(anchors[ship].tail & SHIP_BIT))
 		{
 			Point &q = deref(anchors[ship].tail);
-			if (t < q.time)
-				t = q.time; // time cannot run backwards within a track
-			if (t - q.time < GRANULARITY && !significant(q, lat, lon, c, s))
+			if (t < q.end())
+				t = q.end(); // time cannot run backwards within a track
+
+			// stationary and continuous: extend the dwell of the newest point
+			if (!significant(q, lat, lon, c, s) && t - q.end() <= GRANULARITY && t - q.time < 0xFFFFu * DUR_UNIT)
+			{
+				q.dur = (uint16_t)((t - q.time) / DUR_UNIT);
 				return;
+			}
 		}
 
 		int b = lists[RT].head;
@@ -305,6 +326,8 @@ public:
 		{
 			compactExpired(t);
 			b = allocRT();
+			if (b == -1)
+				return;
 			pushHead(RT, b);
 		}
 
@@ -319,18 +342,15 @@ public:
 		p.lat = lat;
 		p.lon = lon;
 		p.time = t;
+		p.dur = 0;
 		p.cog = c;
 		p.sog = s;
 		p.prev = tl;
 		p.next = SHIP_BIT | ship;
 
-		uint32_t r = (uint32_t)(b << 8) | i;
+		uint32_t r = ref(b, i);
 		setNext(tl, r);
 		anchors[ship].tail = r;
-
-		blk.t_last = t;
-		if (i == 0)
-			blk.t_first = t;
 	}
 
 	void wipe(int ship)
@@ -340,14 +360,14 @@ public:
 		{
 			uint32_t r = anchors[ship].head;
 			unlink(r);
-			freeIfDead(r >> 8);
+			freeIfDead(r >> BLOCK_SHIFT);
 		}
 	}
 
 	// newest-first traversal: for (r = tail(ship); isPoint(r); r = at(r).prev)
 	uint32_t tail(int ship) const { return anchors[ship].tail; }
 	static bool isPoint(uint32_t r) { return !(r & SHIP_BIT); }
-	const Point &at(uint32_t r) const { return blocks[r >> 8].pts[r & (BLOCK_SIZE - 1)]; }
+	const Point &at(uint32_t r) const { return blocks[r >> BLOCK_SHIFT].pts[r & (BLOCK_SIZE - 1)]; }
 
 #ifdef CHECK_DB_INTEGRITY
 	int check()
@@ -370,6 +390,11 @@ public:
 				if (blocks[b].tier != t || blocks[b].prev != prev)
 				{
 					Error() << "PathStore integrity: block " << b << " tier/prev mismatch";
+					errors++;
+				}
+				if (t != FREE && blocks[b].count == 0)
+				{
+					Error() << "PathStore integrity: block " << b << " empty in tier " << t;
 					errors++;
 				}
 				prev = b;
@@ -403,25 +428,25 @@ public:
 		{
 			uint32_t self = SHIP_BIT | ship;
 			uint32_t back = self, r = anchors[ship].head;
-			uint32_t prev_time = 0;
+			uint32_t prev_end = 0;
 			int steps = 0;
 
 			while (r != self)
 			{
-				if (!isPoint(r) || (int)(r >> 8) >= nblocks || (int)(r & (BLOCK_SIZE - 1)) >= blocks[r >> 8].count)
+				if (!isPoint(r) || (int)(r >> BLOCK_SHIFT) >= nblocks || (int)(r & (BLOCK_SIZE - 1)) >= blocks[r >> BLOCK_SHIFT].count)
 				{
 					Error() << "PathStore integrity: ship " << ship << " bad ref " << r;
 					errors++;
 					break;
 				}
 				Point &p = deref(r);
-				if (p.prev != back || p.time < prev_time)
+				if (p.prev != back || p.time < prev_end)
 				{
 					Error() << "PathStore integrity: ship " << ship << " chain broken at " << r;
 					errors++;
 					break;
 				}
-				prev_time = p.time;
+				prev_end = p.end();
 				back = r;
 				r = p.next;
 				if (++steps > nblocks * BLOCK_SIZE)
