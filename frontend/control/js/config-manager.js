@@ -1090,7 +1090,14 @@
                     ? (fullConfig[this.config.channelType] || (this.config.isList ? [] : {}))
                     : fullConfig;
             if (!this.config.isList) {
-                this.fields.forEach(f => this.data[f.name] ??= f.defaultValue);
+                this.fields.forEach(f => {
+                    if (f.jsonpath) {
+                        if (Utils.getNested(this.data, f.jsonpath) === undefined)
+                            Utils.setNested(this.data, f.jsonpath, f.defaultValue);
+                    } else {
+                        this.data[f.name] ??= f.defaultValue;
+                    }
+                });
             }
         }
 

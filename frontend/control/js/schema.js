@@ -538,8 +538,8 @@ const webviewerSchema = {
         width: 24,
         tooltip: 'Stream live NMEA messages to the viewer'
     },
-    msgs: {
-        name: 'msgs',
+    msg: {
+        name: 'msg',
         restartWebviewer: true,
         label: 'Msgs',
         type: 'toggle',

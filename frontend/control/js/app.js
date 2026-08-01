@@ -980,7 +980,7 @@
         // every viewer setting except the port, which follows the control port
         const keys = ['station', 'station_link', 'lat', 'lon', 'webcontrol_http',
                       'plugin_dir', 'file', 'backup', 'history',
-                      'share_loc', 'realtime', 'msgs', 'decoder', 'log', 'use_gps', 'expire', 'zones'];
+                      'share_loc', 'realtime', 'msg', 'decoder', 'log', 'use_gps', 'expire', 'zones'];
         const halves = ['station', 'station_link'];
         const schema = {};
         keys.forEach(k => {
