@@ -1923,37 +1923,7 @@ a:focus {
     width: 100%;
 }
 
-.settings_main input[type="range"]::-webkit-slider-runnable-track {
-    height: 8px;
-    border-radius: var(--radius-lg);
-    background: var(--color-track);
-}
-
-.settings_main input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    margin-top: -4px;
-    border-radius: var(--radius-circle);
-    background: var(--color-accent);
-    box-shadow: 0 1px 2px var(--color-shadow-soft);
-}
-
-.settings_main input[type="range"]::-moz-range-track {
-    height: 8px;
-    border-radius: var(--radius-lg);
-    background: var(--color-track);
-}
-
-.settings_main input[type="range"]::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    border: none;
-    border-radius: var(--radius-circle);
-    background: var(--color-accent);
-    box-shadow: 0 1px 2px var(--color-shadow-soft);
-}
-
+/* range-input track/thumb styling is shared with the hub in components.css */
 
 .settings_main .color-picker {
     width: 110px;
@@ -1976,14 +1946,6 @@ a:focus {
     border-color: var(--color-accent);
 }
 
-
-.settings_main input[type="range"]:hover::-webkit-slider-thumb {
-    box-shadow: 0 1px 2px var(--color-shadow-soft), 0 0 0 2px var(--color-accent);
-}
-
-.settings_main input[type="range"]:hover::-moz-range-thumb {
-    box-shadow: 0 1px 2px var(--color-shadow-soft), 0 0 0 2px var(--color-accent);
-}
 
 /* .band / .band-slot live in components.css, shared with the control hub */
 .settings_header {
