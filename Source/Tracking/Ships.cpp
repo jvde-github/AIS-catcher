@@ -24,9 +24,6 @@
 
 void Ship::reset()
 {
-
-	path_ptr = -1;
-
 	mmsi = count = msg_type = shiptype = group_mask = 0;
 	type_ttl = 0;
 	flags.reset();
@@ -490,6 +487,7 @@ bool Ship::Save(std::ofstream &file) const
 {
 	int magic = _SHIP_MAGIC;
 	int version = _SHIP_VERSION;
+	int legacy_path_ptr = -1; // keeps the on-disk layout of version 3
 
 	return (bool)(W(magic) && W(version)
 		&& W(mmsi) && W(count) && W(msg_type) && W(shiptype) && W(group_mask) && W(flags)
@@ -504,12 +502,13 @@ bool Ship::Save(std::ofstream &file) const
 		&& W(shipname) && W(destination) && W(callsign) && W(country_code) && W(vin)
 		&& W(vendorid) && W(unit_model) && W(unit_serial)
 		&& W(last_group)
-		&& W(incoming.next) && W(incoming.prev) && W(path_ptr));
+		&& W(incoming.next) && W(incoming.prev) && W(legacy_path_ptr));
 }
 
 bool Ship::Load(std::ifstream &file)
 {
 	int magic = 0, version = 0;
+	int legacy_path_ptr = 0;
 
 	if (!R(magic) || !R(version) || magic != _SHIP_MAGIC || version != _SHIP_VERSION)
 		return false;
@@ -526,7 +525,7 @@ bool Ship::Load(std::ifstream &file)
 		&& R(shipname) && R(destination) && R(callsign) && R(country_code) && R(vin)
 		&& R(vendorid) && R(unit_model) && R(unit_serial)
 		&& R(last_group)
-		&& R(incoming.next) && R(incoming.prev) && R(path_ptr));
+		&& R(incoming.next) && R(incoming.prev) && R(legacy_path_ptr));
 
 	// msg vector is not persisted
 	msg.clear();

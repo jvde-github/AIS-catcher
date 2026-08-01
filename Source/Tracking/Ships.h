@@ -63,7 +63,7 @@ struct Ship
     ShipLL incoming; // time-ordered linked list
     ShipLL hash;     // hash bucket chain
     uint32_t mmsi;
-    int count, msg_type, shipclass, mmsi_type, shiptype, heading, status, path_ptr;
+    int count, msg_type, shipclass, mmsi_type, shiptype, heading, status;
     int to_port, to_bow, to_starboard, to_stern, IMO, angle, altitude, received_stations;
     int unit_model, unit_serial;
     char month, day, hour, minute;

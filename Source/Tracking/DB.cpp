@@ -29,14 +29,14 @@ void DB::setup()
 	if (server_mode)
 	{
 		Nships *= 32;
-		Npaths *= 32;
 		HASH_SIZE = 262147;
 
-		Info() << "DB: internal ship database extended to " << Nships << " ships and " << Npaths << " path points";
+		Info() << "DB: internal ship database extended to " << Nships << " ships";
 	}
 
 	ships.resize(Nships);
-	paths.resize(Npaths);
+	// roughly 0.6 KB of path storage per ship
+	paths.setup(Nships / 10, Nships);
 	hash_table.resize(HASH_SIZE);
 
 	last_sweep = std::time(nullptr);
@@ -397,67 +397,32 @@ std::string DB::getAllPathJSON()
 	return content;
 }
 
-void DB::writeSinglePathJSON(int idx, JSON::Writer &w)
-{
-	uint32_t mmsi = ships[idx].mmsi;
-	int ptr = ships[idx].path_ptr;
-	int t = ships[idx].count + 1;
-
-	w.beginArray();
-	while (isNextPathPoint(ptr, mmsi, t))
-	{
-		if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
-			w.beginArray().val(paths[ptr].lat).val(paths[ptr].lon).val(paths[ptr].timestamp_start).val(paths[ptr].timestamp_end).endArray();
-		t = paths[ptr].count;
-		ptr = paths[ptr].next;
-	}
-	w.endArray();
-}
-
 void DB::writeSinglePathJSONCompact(int idx, JSON::Writer &w)
 {
-	uint32_t mmsi = ships[idx].mmsi;
-	int ptr = ships[idx].path_ptr;
-	int t = ships[idx].count + 1;
 	int cnt = 0;
 
 	w.beginArray();
-	while (isNextPathPoint(ptr, mmsi, t))
+	for (uint32_t r = paths.tail(idx); PathStore::isPoint(r) && cnt < 250; r = paths.at(r).prev, cnt++)
 	{
-		if (cnt >= 250)
-			break;
-
-		if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
-		{
-			w.beginArray().val(paths[ptr].lat).val(paths[ptr].lon).val(paths[ptr].timestamp_start).val(paths[ptr].timestamp_end).endArray();
-			cnt++;
-		}
-		t = paths[ptr].count;
-		ptr = paths[ptr].next;
+		const PathStore::Point &p = paths.at(r);
+		w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.time).endArray();
 	}
 	w.endArray();
 }
 
 bool DB::writeSinglePathJSONCompactSince(int idx, std::time_t since, JSON::Writer &w)
 {
-	uint32_t mmsi = ships[idx].mmsi;
-	int ptr = ships[idx].path_ptr;
-	int t = ships[idx].count + 1;
 	bool any = false;
 
 	w.beginArray();
-	while (isNextPathPoint(ptr, mmsi, t))
+	for (uint32_t r = paths.tail(idx); PathStore::isPoint(r); r = paths.at(r).prev)
 	{
-		if ((long int)paths[ptr].timestamp_end < (long int)since)
+		const PathStore::Point &p = paths.at(r);
+		if ((std::time_t)p.time < since)
 			break;
 
-		if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
-		{
-			w.beginArray().val(paths[ptr].lat).val(paths[ptr].lon).val(paths[ptr].timestamp_start).val(paths[ptr].timestamp_end).endArray();
-			any = true;
-		}
-		t = paths[ptr].count;
-		ptr = paths[ptr].next;
+		w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.time).endArray();
+		any = true;
 	}
 	w.endArray();
 	return any;
@@ -465,15 +430,10 @@ bool DB::writeSinglePathJSONCompactSince(int idx, std::time_t since, JSON::Write
 
 bool DB::hasPathPointsSince(int idx, std::time_t since)
 {
-	// Path list is reverse-chronological — the head is the most recent
-	// point. If the head is older than `since`, nothing newer exists;
-	// otherwise at least one point is in the window. Coordinate validity
-	// is filtered at write time by writeSinglePathJSONCompactSince.
-	int ptr = ships[idx].path_ptr;
-	int t = ships[idx].count + 1;
-	if (!isNextPathPoint(ptr, ships[idx].mmsi, t))
-		return false;
-	return (long int)paths[ptr].timestamp_end >= (long int)since;
+	// the track is time-ordered, so if the newest point is older than
+	// `since`, nothing newer exists
+	uint32_t r = paths.tail(idx);
+	return PathStore::isPoint(r) && (std::time_t)paths.at(r).time >= since;
 }
 
 std::string DB::getAllPathJSONSince(std::time_t since)
@@ -505,46 +465,18 @@ std::string DB::getAllPathJSONSince(std::time_t since)
 
 void DB::writeSinglePathGeoJSON(int idx, JSON::Writer &w)
 {
-	uint32_t mmsi = ships[idx].mmsi;
-	int path_head = ships[idx].path_ptr;
-	int count_head = ships[idx].count + 1;
-
 	w.beginObject().kv("type", "Feature").key("geometry").beginObject().kv("type", "LineString").key("coordinates").beginArray();
-	{
-		int ptr = path_head;
-		int t = count_head;
-		while (isNextPathPoint(ptr, mmsi, t))
-		{
-			if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
-				w.beginArray().val(paths[ptr].lon).val(paths[ptr].lat).endArray();
-			t = paths[ptr].count;
-			ptr = paths[ptr].next;
-		}
-	}
-	w.endArray().endObject().key("properties").beginObject().kv("mmsi", mmsi).key("timestamps_start").beginArray();
-	{
-		int ptr = path_head;
-		int t = count_head;
-		while (isNextPathPoint(ptr, mmsi, t))
-		{
-			if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
-				w.val(paths[ptr].timestamp_start);
-			t = paths[ptr].count;
-			ptr = paths[ptr].next;
-		}
-	}
+	for (uint32_t r = paths.tail(idx); PathStore::isPoint(r); r = paths.at(r).prev)
+		w.beginArray().val(paths.at(r).lon).val(paths.at(r).lat).endArray();
+
+	w.endArray().endObject().key("properties").beginObject().kv("mmsi", ships[idx].mmsi).key("timestamps_start").beginArray();
+	for (uint32_t r = paths.tail(idx); PathStore::isPoint(r); r = paths.at(r).prev)
+		w.val(paths.at(r).time);
+
 	w.endArray().key("timestamps_end").beginArray();
-	{
-		int ptr = path_head;
-		int t = count_head;
-		while (isNextPathPoint(ptr, mmsi, t))
-		{
-			if (isValidCoord(paths[ptr].lat, paths[ptr].lon))
-				w.val(paths[ptr].timestamp_end);
-			t = paths[ptr].count;
-			ptr = paths[ptr].next;
-		}
-	}
+	for (uint32_t r = paths.tail(idx); PathStore::isPoint(r); r = paths.at(r).prev)
+		w.val(paths.at(r).time);
+
 	w.endArray().endObject().endObject();
 }
 
@@ -656,6 +588,7 @@ int DB::createShip(int hash_new)
 	}
 
 	count = MIN(count + 1, Nships);
+	paths.wipe(ptr);
 	ships[ptr].reset();
 
 	// insert into new hash bucket (after reset so hash pointers are clean)
@@ -694,55 +627,10 @@ void DB::moveShipToFront(int ptr)
 
 void DB::addToPath(int ptr)
 {
+	const Ship &ship = ships[ptr];
 
-	int idx = ships[ptr].path_ptr;
-	float lat = ships[ptr].lat;
-	float lon = ships[ptr].lon;
-	int count = ships[ptr].count;
-	uint32_t mmsi = ships[ptr].mmsi;
-	std::time_t timestamp = ships[ptr].last_signal;
-
-	if (isNextPathPoint(idx, mmsi, count))
-	{
-		// path exists and ship did not move
-		if (paths[idx].lat == lat && paths[idx].lon == lon)
-		{
-			paths[idx].count = ships[ptr].count;
-			paths[idx].timestamp_end = timestamp; // Update end time, keep start time
-			return;
-		}
-		// if there exist a previous path point, check if ship moved more than 100 meters and, if not, update clustered path point
-		int next = paths[idx].next;
-		if (isNextPathPoint(next, mmsi, paths[idx].count))
-		{
-			float lat_prev = paths[next].lat;
-			float lon_prev = paths[next].lon;
-
-			float d = (lat_prev - lat) * (lat_prev - lat) + (lon_prev - lon) * (lon_prev - lon);
-
-			if (d < 0.000001)
-			{
-				// Update clustered point: keep start time, update end time and position
-				paths[idx].lat = lat;
-				paths[idx].lon = lon;
-				paths[idx].count = ships[ptr].count;
-				paths[idx].timestamp_end = timestamp; // Keep timestamp_start unchanged
-				return;
-			}
-		}
-	}
-
-	// create new path point
-	paths[path_idx].next = idx;
-	paths[path_idx].lat = lat;
-	paths[path_idx].lon = lon;
-	paths[path_idx].mmsi = ships[ptr].mmsi;
-	paths[path_idx].count = ships[ptr].count;
-	paths[path_idx].timestamp_start = timestamp; // New point: start and end are the same initially
-	paths[path_idx].timestamp_end = timestamp;
-
-	ships[ptr].path_ptr = path_idx;
-	path_idx = (path_idx + 1) % Npaths;
+	if (isValidCoord(ship.lat, ship.lon))
+		paths.add(ptr, ship.lat, ship.lon, ship.cog, ship.speed, ship.last_signal);
 }
 
 bool DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &v, bool allowApproximate, bool &staticUpdated)
@@ -1555,46 +1443,8 @@ void DB::checkIntegrity()
 		ptr = ships[ptr].incoming.next;
 	}
 
-	// 5. Verify path_idx is in range
-	if (path_idx < 0 || path_idx >= Npaths)
-	{
-		Error() << "DB integrity: path_idx " << path_idx << " out of range [0," << Npaths << ")";
-		errors++;
-	}
-
-	// 6. Verify path chains for active ships
-	ptr = first;
-	for (int i = 0; i < count; i++)
-	{
-		if (ptr == -1)
-			break;
-
-		Ship &ship = ships[ptr];
-		int pidx = ship.path_ptr;
-		int pcount = ship.count + 1;
-		int path_steps = 0;
-
-		while (isNextPathPoint(pidx, ship.mmsi, pcount))
-		{
-			if (pidx < 0 || pidx >= Npaths)
-			{
-				Error() << "DB integrity: ship mmsi=" << ship.mmsi << " path ptr " << pidx << " out of range";
-				errors++;
-				break;
-			}
-			pcount = paths[pidx].count;
-			pidx = paths[pidx].next;
-			path_steps++;
-
-			if (path_steps > Npaths)
-			{
-				Error() << "DB integrity: ship mmsi=" << ship.mmsi << " path chain has cycle";
-				errors++;
-				break;
-			}
-		}
-		ptr = ships[ptr].incoming.next;
-	}
+	// 5. Verify path store block lists, live counts and per-ship chains
+	errors += paths.check();
 
 	if (errors)
 		Error() << "DB integrity: " << errors << " errors found";
