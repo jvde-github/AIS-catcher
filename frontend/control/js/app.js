@@ -980,13 +980,11 @@
         // every viewer setting except the port, which follows the control port
         const keys = ['station', 'station_link', 'lat', 'lon', 'webcontrol_http',
                       'plugin_dir', 'file', 'backup', 'history',
-                      'share_loc', 'realtime', 'decoder', 'log', 'use_gps', 'expire', 'zones'];
-        const toggles = ['share_loc', 'realtime', 'decoder', 'log', 'use_gps', 'expire'];
+                      'share_loc', 'realtime', 'msgs', 'decoder', 'log', 'use_gps', 'expire', 'zones'];
         const halves = ['station', 'station_link'];
         const schema = {};
         keys.forEach(k => {
             schema[k] = Object.assign({}, webviewerSchema[k]);
-            if (toggles.indexOf(k) !== -1) schema[k].width = 16; // six across one row
             if (halves.indexOf(k) !== -1) schema[k].width = 50;
             if (k === 'history') schema[k].width = 100; // so the toggles start on a new row
         });

@@ -1160,6 +1160,8 @@ async function showJSONTableDialog(url, m, title, copyContext) {
 async function showNMEA(m) {
     if (config.features.save_messages) {
         await showJSONTableDialog("api/message", m + "&receiver=" + activeReceiver, "Message " + m, true);
+    } else if (config.features.managed) {
+        showDialog("Error", 'Enable the "Msgs" setting in the viewer configuration of the control panel.');
     } else {
         showDialog("Error", 'Please enable "-N MSG on" in AIS-catcher settings.');
     }
