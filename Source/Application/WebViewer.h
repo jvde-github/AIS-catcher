@@ -178,7 +178,7 @@ private:
 	void writeOutputsJSON(JSON::Writer &w);
 
 	// NMEA decoder utility
-	static std::string decodeNMEAtoJSON(const std::string &nmea_input);
+	static std::string decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced = true);
 
 	const std::vector<std::unique_ptr<IO::OutputMessage>> *msg_channels = nullptr;
 

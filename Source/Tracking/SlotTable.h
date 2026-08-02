@@ -61,6 +61,21 @@ public:
 
 	Key key(int h) const { return slots[h].key; }
 
+	// Keyed slots form a contiguous prefix of the LRU, newest first (validate
+	// checks this), so iteration stops at the first empty slot. `f` returns
+	// false to stop early.
+	template <typename F>
+	void forEach(F f) const
+	{
+		for (int h = head; h != NIL; h = slots[h].lru_next)
+		{
+			if (slots[h].key == 0)
+				break;
+			if (!f(h))
+				break;
+		}
+	}
+
 	int find(Key k) const
 	{
 		for (int h = buckets[bucket(k)]; h != NIL; h = slots[h].h_next)
@@ -135,6 +150,20 @@ public:
 			e++;
 		}
 
+		// keyed slots must form a contiguous prefix of the LRU; persistence walks on that basis
+		bool empty_seen = false;
+		for (int h = head; h != NIL; h = slots[h].lru_next)
+		{
+			if (slots[h].key == 0)
+				empty_seen = true;
+			else if (empty_seen)
+			{
+				errors.push_back("keyed slot " + std::to_string(h) + " sits behind an empty one");
+				e++;
+				empty_seen = false;
+			}
+		}
+
 		std::vector<int> in_bucket(n, 0);
 		for (int b = 0; b < (int)buckets.size(); b++)
 		{
@@ -172,8 +201,6 @@ public:
 				errors.push_back("keyed slot " + std::to_string(h) + " appears on " + std::to_string(in_bucket[h]) + " chains");
 				e++;
 			}
-			if (slots[h].key == 0 && in_bucket[h] != 0)
-				e++;
 		}
 
 		return e;

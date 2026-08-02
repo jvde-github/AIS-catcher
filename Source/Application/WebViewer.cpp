@@ -109,7 +109,7 @@ WebViewer::WebViewer() : Setting("WebViewer"),
 	states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker("All")));
 }
 
-std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input)
+std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced)
 {
 	// Decoder class with full pipeline: NMEA -> Message -> JSON -> Array
 	class NMEADecoder : public StreamIn<JSON::JSON>
@@ -146,7 +146,7 @@ std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input)
 	w.beginArray();
 
 	JSON::Serializer builder(JSON_DICT_FULL);
-	builder.setStringifyEnhanced(true);
+	builder.setStringifyEnhanced(enhanced);
 	NMEADecoder decoder(&builder, &w);
 
 	std::string input = nmea_input + "\n";
@@ -805,9 +805,7 @@ std::string WebViewer::buildMultiPathJSON(ReceiverTracker *s, const std::string 
 			continue;
 		}
 
-		char keybuf[16];
-		int n = snprintf(keybuf, sizeof(keybuf), "%d", mmsi);
-		w.key(keybuf, n).raw_val(s->getPathJSON(mmsi));
+		w.key((unsigned)mmsi).raw_val(s->getPathJSON(mmsi));
 	}
 	w.endObject();
 	w.finish();
@@ -834,7 +832,7 @@ const WebViewer::Route WebViewer::routes[] = {
 	 { return s->getShipsJSONcompact(queryInt(a, "since")); }, true},
 	{"/api/planes_array.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &a)
-	 { return w->planes.getCompactArray(false, queryInt(a, "since")); }, true},
+	 { return w->planes.getCompactArray(queryInt(a, "since")); }, true},
 	{"/api/binmsgs.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 { return s->getBinaryMessagesJSON(queryInt(a, "since")); }, true},
@@ -869,13 +867,13 @@ const WebViewer::Route WebViewer::routes[] = {
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
 	 { return s->getAllPathGeoJSON(); }, true},
 	{"/api/message", nullptr, "application/json",
-	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 [](WebViewer *w, ReceiverTracker *s, const std::string &a)
 	 {
 		 int mmsi = parseMMSI(a);
 		 if (mmsi <= 0)
 			 return std::string("{\"error\":\"Invalid MMSI\"}");
 		 std::string msg = s->getMessage(mmsi);
-		 return msg.empty() ? std::string("{\"error\":\"Message not found\"}") : msg;
+		 return msg.empty() ? std::string("{\"error\":\"Message not found\"}") : w->decodeNMEAtoJSON(msg, false);
 	 }, true},
 	{"/api/vessel", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)

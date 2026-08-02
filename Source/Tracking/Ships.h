@@ -85,6 +85,8 @@ struct Ship
     bool getKML(std::string &) const;
     bool getGeoJSON(JSON::Writer &, bool station_known) const;
     void getJSON(JSON::Writer &, long int delta_time, bool station_known) const;
+    void writeCompactDynamic(JSON::Writer &) const;
+    void writeCompactStatic(JSON::Writer &) const;
 
     // File persistence functions
     bool Save(std::ofstream &file) const;

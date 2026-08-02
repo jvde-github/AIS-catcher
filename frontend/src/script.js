@@ -116,7 +116,6 @@ const ACTIONS = {
     activateTab: (e, d) => activateTab(e, d.tab),
     openWebControl: () => openWebControl(),
     toggleInfoPanel: () => toggleInfoPanel(),
-    headerSettings: () => openSettings(),
     toggleScreenSize: () => toggleScreenSize(),
     showReceiverDialog: () => showReceiverDialog(),
     selectReceiver: (e, d) => selectReceiver(d.idx),
@@ -142,7 +141,9 @@ const ACTIONS = {
     setKioskPanMap: (e, d, el) => kiosk.setKioskPanMap(el.checked),
     setGraphVisibility: (e, d, el) => setGraphVisibility(d.graph, el.checked),
     setPlotAbsoluteTime: (e, d, el) => setPlotAbsoluteTime(el.checked),
-    setMapSetting: (e, d, el) => setMapSetting(d.key, el.type === 'checkbox' ? el.checked : el.value),
+    setMapSetting: (e, d, el) => setMapSetting(d.key,
+        el.type === 'checkbox' ? el.checked :
+        (el.type === 'range' || el.type === 'number') ? Number(el.value) : el.value),
     setTrackHistory: (e, d, el) => setTrackHistory(TRACK_HISTORY_STOPS[el.value]),
     setBinaryDisplay: (e, d, el) => setBinaryDisplay(el.value),
     setBinaryCategory: (e, d, el) => setBinaryCategory(d.cat, el.checked),
@@ -156,18 +157,10 @@ const ACTIONS = {
     setTrackClassColor: (e, d, el) => setTrackClassColor(d.shipclass, el.value),
 
     // settings: range/icon-scale/opacity sliders (oninput = display only, onchange = persist)
-    setIconScale: (e, d, el) => { settings.icon_scale = el.value; redrawMap(); saveSettings(); },
-    updateIconScaleDisplay: (e, d, el) => updateSliderDisplay('iconScale', el.value),
-    setMapOpacity: (e, d, el) => { settings.map_opacity = el.value; setMapOpacity(); saveSettings(); },
-    updateMapOpacityDisplay: (e, d, el) => updateSliderDisplay('mapOpacity', el.value),
-    updateCircleScaleDisplay: (e, d, el) => updateSliderDisplay('circleScale', el.value),
-    updateTooltipFontSizeDisplay: (e, d, el) => updateSliderDisplay('tooltipFontSize', el.value),
-    updateShipoutlineOpacityDisplay: (e, d, el) => updateSliderDisplay('shipoutlineOpacity', el.value),
-    updateTrackWeightDisplay: (e, d, el) => updateSliderDisplay('trackWeight', el.value),
-    updateTrackOpacityDisplay: (e, d, el) => updateSliderDisplay('trackOpacity', el.value),
+    setIconScale: (e, d, el) => { settings.icon_scale = Number(el.value); redrawMap(); saveSettings(); },
+    setMapOpacity: (e, d, el) => { settings.map_opacity = Number(el.value); setMapOpacity(); saveSettings(); },
+    updateSliderDisplay: (e, d, el) => updateSliderDisplay(d.display, el.value),
     updateTrackHistoryDisplay: (e, d, el) => updateSliderDisplay('trackHistory', TRACK_HISTORY_STOPS[el.value]),
-    updateTrackTrashThresholdDisplay: (e, d, el) => updateSliderDisplay('trackTrashThreshold', el.value),
-    updateKioskSpeedDisplay: (e, d, el) => updateSliderDisplay('kioskSpeed', el.value),
 
     // context menu (depends on global context_mmsi/card_mmsi)
     toggleShipcardPin: () => toggleShipcardPin(),
@@ -347,7 +340,7 @@ function _bindDelegatedActions() {
 }
 document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    if (!document.getElementById("dialog-box").classList.contains("hidden")) closeDialog();
+    if (dialogModal && dialogModal.isOpen()) closeDialog();
     else if (document.querySelector(".settings_window").classList.contains("active")) closeSettings();
     else if (document.getElementById("menubar").classList.contains("visible")) hideMenu();
 });
@@ -441,10 +434,7 @@ function resetTrackColorsToDefault() {
     redrawMap();
 }
 
-function restoreDefaultSettings() {
-    // In-place mutation: `settings` is imported, the binding is read-only here.
-    for (const k of Object.keys(settings)) delete settings[k];
-    Object.assign(settings, {
+const DEFAULT_SETTINGS = {
         counter: true,
         fading: false,
         android: false,
@@ -518,9 +508,12 @@ function restoreDefaultSettings() {
         realtime_filters: [],
         binary_messages: "highlight",
         binary_exclude: []
-    });
+};
 
-    // Set default track colors
+function restoreDefaultSettings() {
+    // In-place mutation: `settings` is imported, the binding is read-only here.
+    for (const k of Object.keys(settings)) delete settings[k];
+    Object.assign(settings, JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
     settings.track_class_colors = getDefaultTrackColors();
 }
 
@@ -771,6 +764,7 @@ function selectSettingsSub(groupIdx, subIdx) {
 }
 
 function openSettings() {
+    updateSettingsTab();
     document.querySelector(".settings_window").classList.add("active");
 }
 
@@ -1171,6 +1165,8 @@ async function showJSONTableDialog(url, m, title, copyContext) {
         showDialog("Error", "Invalid response from server");
         return;
     }
+    // api/message decodes the stored NMEA on request and returns an array
+    if (Array.isArray(obj)) obj = obj[0] || {};
     showDialog(title, objectToTableHtml(obj, copyContext));
 }
 
@@ -1214,7 +1210,7 @@ function showBinaryMessageDialog(featureOrMmsi) {
     }
 
     showDialog(title, content);
-    document.getElementById("dialog-box").style.maxWidth = "500px";
+    dialogModal.card.style.maxWidth = "500px";
 }
 
 function getBinaryMessageList(messages) {
@@ -1434,22 +1430,20 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
     document.addEventListener("click", hideContextMenu);
 }
 
-function showDialog(title, message) {
-    let dialogBox = document.getElementById("dialog-box");
-    const dialogTitle = dialogBox.querySelector(".dialog-title");
-    const dialogMessage = dialogBox.querySelector(".dialog-message");
+let dialogModal = null;
 
-    dialogTitle.innerText = title;
-    dialogMessage.innerHTML = message;
-    dialogBox.classList.remove("hidden");
-    document.getElementById("dialog-overlay").classList.add("active");
+function showDialog(title, message) {
+    if (!dialogModal)
+        dialogModal = window.AISComponents.modal({ id: "dialog-box", cardClass: "modal-fit", bodyClass: "dialog-message" });
+    dialogModal.setTitle(title);
+    dialogModal.body.innerHTML = message;
+    dialogModal.open();
 }
 
 function closeDialog() {
-    let dialogBox = document.getElementById("dialog-box");
-    dialogBox.classList.add("hidden");
-    dialogBox.style.maxWidth = "";
-    document.getElementById("dialog-overlay").classList.remove("active");
+    if (!dialogModal) return;
+    dialogModal.card.style.maxWidth = "";
+    dialogModal.close();
 }
 
 function showNotification(message, type = "info", duration) {
@@ -3435,15 +3429,20 @@ const handlePointerMove = function (pixel, target) {
         () => ol.proj.toLonLat(map.getCoordinateFromPixel(pixel)));
 };
 
-function saveMapView() {
-    if (map === undefined) return;
-    const center = ol.proj.toLonLat(map.getView().getCenter());
-    settings.lat = center[1];
-    settings.lon = center[0];
-    settings.zoom = map.getView().getZoom();
+function persistSettings() {
+    if (map !== undefined) {
+        const center = ol.proj.toLonLat(map.getView().getCenter());
+        settings.lat = center[1];
+        settings.lon = center[0];
+        settings.zoom = map.getView().getZoom();
+    }
     localStorage[context] = JSON.stringify(settings);
     community.notifyCommunityPopupView();
     updateMapURL();
+}
+
+function saveMapView() {
+    if (map !== undefined) persistSettings();
 }
 
 const debouncedSaveMapView = debounce(saveMapView, 250);
@@ -3462,15 +3461,6 @@ function updateMapURL() {
 
 
 function saveSettings() {
-    if (map !== undefined) {
-        let view = map.getView();
-        let center = ol.proj.toLonLat(view.getCenter()); // Convert the center coordinate to longitude and latitude
-        settings.lat = center[1]; // Latitude
-        settings.lon = center[0]; // Longitude
-        settings.zoom = view.getZoom(); // Zoom level
-    }
-
-
     const scRows = document.querySelectorAll(".shipcard-content-row");
 
     const selectedRows = [];
@@ -3488,16 +3478,10 @@ function saveSettings() {
     const bg = realtimeModule?.getBackgroundStreaming();
     if (bg !== null && bg !== undefined) settings.realtime_background_streaming = bg;
 
-    localStorage[context] = JSON.stringify(settings);
+    persistSettings();
 
-    community.notifyCommunityPopupView();
-    updateMapURL();
-    updateSettingsTab();
-
-    // Apply graph visibility settings (without saving during initialization)
-    setGraphVisibility('signal', settings.show_signal_graphs, false);
-    setGraphVisibility('ppm', settings.show_ppm_graphs, false);
-    setPlotAbsoluteTime(settings.plot_absolute_time, false);
+    if (document.querySelector(".settings_window").classList.contains("active"))
+        updateSettingsTab();
 }
 
 function updateForLegacySettings() {
@@ -3561,27 +3545,18 @@ function loadSettings() {
 }
 
 function convertStringSettingsToActual() {
-    const booleanSettings = [
-        'counter', 'fading', 'android', 'kiosk', 'welcome', 'show_range',
-        'distance_circles', 'table_shiptype_use_icon', 'fix_center',
-        'show_circle_outline', 'dark_mode', 'setcoord', 'eri', 'loadURL',
-        'show_station', 'labels_declutter', 'labels_prioritize_active', 'labels_active_only', 'label_class_background', 'show_track_on_hover',
-        'show_track_on_select', 'shipcard_max', 'shipcard_top_left', 'kiosk_pan_map', 'show_all_tracks',
-        'show_signal_graphs', 'show_ppm_graphs', 'plot_absolute_time'
-    ];
-    const numericSettings = [
-        'icon_scale', 'track_weight', 'track_opacity', 'track_history', 'track_trash_threshold',
-        'zoom', 'lat', 'lon', 'map_opacity', 'tooltipLabelFontSize', 'shipoutline_opacity',
-        'circle_scale', 'center_radius', 'kiosk_rotation_speed'
-    ];
+    // shipcard_max is written by saveSettings and absent from the defaults
+    const extraBooleans = ['shipcard_max'];
 
-    booleanSettings.forEach(key => {
-        if (typeof settings[key] === 'string') settings[key] = settings[key] === "true";
-    });
-    numericSettings.forEach(key => {
-        if (typeof settings[key] === 'string' && settings[key] !== '' && !isNaN(settings[key]))
-            settings[key] = Number(settings[key]);
-    });
+    for (const key of Object.keys(DEFAULT_SETTINGS).concat(extraBooleans)) {
+        const v = settings[key];
+        if (typeof v !== 'string') continue;
+        const want = extraBooleans.includes(key) ? 'boolean' : typeof DEFAULT_SETTINGS[key];
+        if (want === 'boolean')
+            settings[key] = v === "true";
+        else if (want === 'number' && v !== '' && !isNaN(v))
+            settings[key] = Number(v);
+    }
 }
 
 function loadSettingsFromURL() {
@@ -4971,7 +4946,6 @@ function redrawMap() {
             if (path.length > 0 && path[0].length >= 4) {
                 let currentSegment = [];
                 let currentDashed = false;
-                const cutoff = trackWindowStart();
 
                 for (let i = 0; i < path.length; i++) {
                     const point = path[i];
@@ -5114,25 +5088,22 @@ async function openFocus(m, z) {
 }
 
 function updateSettingsTab() {
+    document.querySelectorAll('[data-on-change="setMapSetting"][data-key]').forEach(el => {
+        if (el.type === 'checkbox') el.checked = settings[el.dataset.key];
+        else el.value = settings[el.dataset.key];
+    });
+
     document.getElementById("settings_darkmode").checked = settings.dark_mode;
     document.getElementById("settings_coordinate_format").value = settings.coordinate_format;
     document.getElementById("settings_metric").value = getMetrics().toLowerCase();
-    document.getElementById("settings_show_station").checked = settings.show_station;
     document.getElementById("settings_fading").checked = settings.fading;
     document.getElementById("settings_show_signal_graphs").checked = settings.show_signal_graphs;
     document.getElementById("settings_show_ppm_graphs").checked = settings.show_ppm_graphs;
     document.getElementById("settings_plot_absolute_time").checked = settings.plot_absolute_time;
-    document.getElementById("settings_shiphover_color").value = settings.shiphover_color;
-    document.getElementById("settings_shipselection_color").value = settings.shipselection_color;
 
     document.getElementById("settings_show_range").checked = settings.show_range;
-    document.getElementById("settings_distance_circles").checked = settings.distance_circles;
     document.getElementById("settings_distance_circle_color").value = settings.distance_circle_color;
 
-    document.getElementById("settings_labels_declutter").checked = settings.labels_declutter;
-    document.getElementById("settings_labels_prioritize_active").checked = settings.labels_prioritize_active;
-    document.getElementById("settings_labels_active_only").checked = settings.labels_active_only;
-    document.getElementById("settings_label_class_background").checked = settings.label_class_background;
     document.getElementById("settings_tooltipLabelFontsize").value = settings.tooltipLabelFontSize;
 
     document.getElementById("settings_show_labels").value = settings.show_labels.toLowerCase();
@@ -5142,12 +5113,6 @@ function updateSettingsTab() {
         document.getElementById("settings_binary_cat_" + cat).checked = !settings.binary_exclude.includes(cat);
     }
 
-    document.getElementById("settings_shipoutline_border").value = settings.shipoutline_border;
-    document.getElementById("settings_shipoutline_inner").value = settings.shipoutline_inner;
-    document.getElementById("settings_shipoutline_opacity").value = settings.shipoutline_opacity;
-    document.getElementById("settings_show_circle_outline").checked = settings.show_circle_outline;
-    document.getElementById("settings_circle_scale").value = settings.circle_scale;
-
     document.getElementById("settings_range_color").value = settings.range_color;
     document.getElementById("settings_range_timeframe").value = settings.range_timeframe;
     document.getElementById("settings_range_color_short").value = settings.range_color_short;
@@ -5156,10 +5121,7 @@ function updateSettingsTab() {
 
     document.getElementById("settings_map_opacity").value = settings.map_opacity;
     document.getElementById("settings_icon_scale").value = settings.icon_scale;
-    document.getElementById("settings_track_weight").value = settings.track_weight;
-    document.getElementById("settings_track_opacity").value = settings.track_opacity;
     document.getElementById("settings_track_history").value = Math.max(0, TRACK_HISTORY_STOPS.indexOf(settings.track_history));
-    document.getElementById("settings_track_trash_threshold").value = settings.track_trash_threshold;
 
     // Update all slider display values
     updateSliderDisplay('iconScale', settings.icon_scale);
@@ -5181,7 +5143,6 @@ function updateSettingsTab() {
     document.getElementById("settings_show_track_on_hover").checked = settings.show_track_on_hover;
     document.getElementById("settings_show_track_on_select").checked = settings.show_track_on_select;
     document.getElementById("settings_track_visibility").value = settings.show_all_tracks ? "all" : "selected";
-    document.getElementById("settings_shipcard_top_left").checked = settings.shipcard_top_left;
 
     document.getElementById("settings_kiosk_mode").checked = settings.kiosk;
     document.getElementById("settings_kiosk_rotation_speed").value = settings.kiosk_rotation_speed;
@@ -5601,6 +5562,9 @@ selectTab();
 if (urlParams.get("mmsi")) openFocus(urlParams.get("mmsi"), urlParams.get("zoom"));
 updateSortMarkers();
 saveSettings();
+setGraphVisibility('signal', settings.show_signal_graphs, false);
+setGraphVisibility('ppm', settings.show_ppm_graphs, false);
+setPlotAbsoluteTime(settings.plot_absolute_time, false);
 prepareShipcard();
 buildSettingsTabs();
 

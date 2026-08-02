@@ -140,5 +140,88 @@ window.AISComponents = (function () {
         return dismiss;
     }
 
-    return { tabScroller: tabScroller, toast: toast, TOAST_TIME: TOAST_TIME };
+    /* --- modal ------------------------------------------------------------ */
+
+    /* Card-in-scrim dialog shared by viewer and hub; the same id returns the
+       same instance. opts: { id, title, cardClass (extra card classes, e.g.
+       "modal-sm"/"modal-fit"), bodyClass, footerLabel (falsy = no footer
+       bar), onClose }.
+       Returns { root, card, body, foot, setTitle, open, close, isOpen }. */
+    function modal(opts) {
+        var existing = document.getElementById(opts.id);
+        if (existing && existing._modal) return existing._modal;
+
+        var root = document.createElement("div");
+        root.className = "modal-overlay hidden";
+        root.id = opts.id;
+
+        var card = document.createElement("div");
+        card.className = "card col modal-card" + (opts.cardClass ? " " + opts.cardClass : "");
+
+        var header = document.createElement("div");
+        header.className = "dialog-header";
+
+        var title = document.createElement("div");
+        title.className = "dialog-title";
+        title.textContent = opts.title || "";
+
+        var closeBtn = document.createElement("div");
+        closeBtn.className = "close_icon";
+
+        header.appendChild(title);
+        header.appendChild(closeBtn);
+        card.appendChild(header);
+
+        var body = document.createElement("div");
+        body.className = opts.bodyClass || "modal-body";
+        card.appendChild(body);
+
+        var foot = null;
+        if (opts.footerLabel) {
+            foot = document.createElement("div");
+            foot.className = "row row-end modal-foot";
+            var okBtn = document.createElement("button");
+            okBtn.type = "button";
+            okBtn.className = "btn";
+            okBtn.textContent = opts.footerLabel;
+            okBtn.addEventListener("click", close);
+            foot.appendChild(okBtn);
+            card.appendChild(foot);
+        }
+
+        root.appendChild(card);
+        document.body.appendChild(root);
+
+        function onKey(e) {
+            if (e.key === "Escape") close();
+        }
+        function open() {
+            root.classList.remove("hidden");
+            document.addEventListener("keydown", onKey);
+        }
+        function close() {
+            root.classList.add("hidden");
+            document.removeEventListener("keydown", onKey);
+            if (opts.onClose) opts.onClose();
+        }
+        function isOpen() {
+            return !root.classList.contains("hidden");
+        }
+
+        closeBtn.addEventListener("click", close);
+        /* mousedown, not click: a text selection ending on the scrim must not dismiss */
+        root.addEventListener("mousedown", function (e) {
+            if (e.target === root) close();
+        });
+
+        var api = {
+            root: root, card: card, body: body, foot: foot,
+            setTitle: function (t) { title.textContent = t; },
+            open: open, close: close, isOpen: isOpen
+        };
+        root._modal = api;
+        return api;
+    }
+
+    return { tabScroller: tabScroller, toast: toast, TOAST_TIME: TOAST_TIME, modal: modal };
 })();

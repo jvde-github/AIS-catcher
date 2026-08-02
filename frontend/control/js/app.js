@@ -54,9 +54,7 @@
     const systemTabs = document.getElementById('system-tabs');
     const systemSubtabs = document.getElementById('system-subtabs');
     let currentSystemTab = null;
-    let systemInputLoaded = false;
-    let systemOutputLoaded = false;
-    let systemViewerLoaded = false;
+    const loadedTabs = new Set();
     let flowResizeObserver = null;
     let flowRenderId = 0;
     let flowStatsTimer = null;
@@ -318,22 +316,29 @@
 
         const sysinfo = document.getElementById('hub-sysinfo');
         if (sysinfo && data.version) {
-            const rows = [
-                ['Version', data.version],
-                ['Build date', data.build_date],
-                ['Operating system', data.os],
-                ['Hardware', data.hardware],
-                ['Memory usage', data.memory ? formatBytes(data.memory) : '']
-            ].filter(r => r[1]);
-            sysinfo.textContent = '';
-            rows.forEach(r => sysinfo.appendChild(
-                Utils.el('div', 'row row-between row-loose', {},
-                    Utils.el('span', 't-muted', {}, r[0]),
-                    Utils.el('span', 't-strong t-right t-truncate', {}, r[1])
-                )
-            ));
-            const card = document.getElementById('hub-sysinfo-card');
-            if (card) card.classList.toggle('hidden', rows.length === 0);
+            if (!sysinfo._memEl) {
+                const rows = [
+                    ['Version', data.version],
+                    ['Build date', data.build_date],
+                    ['Operating system', data.os],
+                    ['Hardware', data.hardware]
+                ].filter(r => r[1]);
+                sysinfo.textContent = '';
+                rows.forEach(r => sysinfo.appendChild(
+                    Utils.el('div', 'row row-between row-loose', {},
+                        Utils.el('span', 't-muted', {}, r[0]),
+                        Utils.el('span', 't-strong t-right t-truncate', {}, r[1])
+                    )
+                ));
+                sysinfo._memEl = Utils.el('span', 't-strong t-right t-truncate', {}, '');
+                sysinfo._memRow = Utils.el('div', 'row row-between row-loose hidden', {},
+                    Utils.el('span', 't-muted', {}, 'Memory usage'), sysinfo._memEl);
+                sysinfo.appendChild(sysinfo._memRow);
+                const card = document.getElementById('hub-sysinfo-card');
+                if (card) card.classList.remove('hidden');
+            }
+            sysinfo._memEl.textContent = data.memory ? formatBytes(data.memory) : '';
+            sysinfo._memRow.classList.toggle('hidden', !data.memory);
         }
     }
 
@@ -537,15 +542,18 @@
         `);
     }
 
+    function viewerUrl(pathname, search) {
+        const url = new URL(window.location.href);
+        url.port = port;
+        url.pathname = pathname;
+        url.search = search || '';
+        url.hash = '';
+        return url.toString();
+    }
+
     function loadWebviewer() {
         try {
-            const url = new URL(window.location.href);
-            url.port = port;
-            url.pathname = '/';
-            url.search = '?welcome=false';
-            url.hash = '';
-
-            iframe.src = url.toString();
+            iframe.src = viewerUrl('/', '?welcome=false');
             viewerLoaded = true;
 
             clearTimeout(currentLoadTimeout);
@@ -602,12 +610,16 @@
         return window.AISComponents.tabScroller(el);
     }
 
+    function confirmDiscardUnsaved(verb) {
+        if (typeof App === 'undefined' || !App.state || !App.state.unsaved) return true;
+        if (!confirm(`You have unsaved changes. Are you sure you want to ${verb} without saving?`)) return false;
+        App.setUnsaved(false);
+        return true;
+    }
+
     function setOutputType(value) {
         if (value === currentOutputType) return;
-        if (typeof App !== 'undefined' && App.state && App.state.unsaved) {
-            if (!confirm('You have unsaved changes. Are you sure you want to switch without saving?')) return;
-            App.setUnsaved(false);
-        }
+        if (!confirmDiscardUnsaved('switch')) return;
         currentOutputType = value;
         document.querySelectorAll('[data-output-type]').forEach(b => {
             b.className = b.dataset.outputType === value ? OUTPUT_TAB_ACTIVE : OUTPUT_TAB_INACTIVE;
@@ -618,7 +630,7 @@
 
     // Open the Output tab on a specific sub-type (used by the Data Flow nodes).
     function selectOutputTab(value) {
-        const wasLoaded = systemOutputLoaded;
+        const wasLoaded = loadedTabs.has('output');
         flowOutputTarget = value;
         switchSystemTab('output');
         if (wasLoaded) {
@@ -793,9 +805,7 @@
     }
 
     function closeSystem() {
-        if (typeof App !== 'undefined' && App.state && App.state.unsaved) {
-            if (!confirm('You have unsaved changes. Are you sure you want to close without saving?')) return;
-        }
+        if (!confirmDiscardUnsaved('close')) return;
         if (typeof App !== 'undefined' && App.setUnsaved) App.setUnsaved(false);
 
         stopFlowObserver();
@@ -809,11 +819,8 @@
 
         // Guard against losing unsaved edits when leaving an editable tab.
         if (!force && typeof App !== 'undefined' && App.state && App.state.unsaved) {
-            if (!confirm('You have unsaved changes. Are you sure you want to switch without saving?')) return;
-            App.setUnsaved(false);
-            if (currentSystemTab === 'input') systemInputLoaded = false;
-            else if (currentSystemTab === 'output') systemOutputLoaded = false;
-            else if (currentSystemTab === 'viewer') systemViewerLoaded = false;
+            if (!confirmDiscardUnsaved('switch')) return;
+            loadedTabs.delete(currentSystemTab);
         }
 
         currentSystemTab = tab;
@@ -842,15 +849,15 @@
         });
 
         if (tab === 'input') {
-            if (!systemInputLoaded) { systemInputLoaded = true; loadSourceConfig(); }
+            if (!loadedTabs.has(tab)) { loadedTabs.add(tab); loadSourceConfig(); }
         } else if (tab === 'output') {
-            if (!systemOutputLoaded) {
-                systemOutputLoaded = true;
+            if (!loadedTabs.has(tab)) {
+                loadedTabs.add(tab);
                 const host = document.getElementById('sys-output-body');
                 if (host) renderOutputConfig(host);
             }
         } else if (tab === 'viewer') {
-            if (!systemViewerLoaded) { systemViewerLoaded = true; loadViewerConfig(); }
+            if (!loadedTabs.has(tab)) { loadedTabs.add(tab); loadViewerConfig(); }
         } else if (tab === 'flow') {
             loadDataFlow();
         } else if (tab === 'config') {
@@ -866,9 +873,7 @@
         if (typeof App !== 'undefined' && App.setUnsaved) App.setUnsaved(false);
         // one fresh config fetch per panel open; the tabs share it from here
         ConfigStore.invalidate();
-        systemInputLoaded = false;
-        systemOutputLoaded = false;
-        systemViewerLoaded = false;
+        loadedTabs.clear();
         systemBody.innerHTML = `
             <div id="status-message" class="hidden"></div>
             <div class="sys-pane hidden" data-pane="input"><div id="sys-input-body"></div></div>
@@ -990,8 +995,6 @@
         schema.use_gps.label = 'GPS';
         createSimpleConfigManager({
             schema: schema,
-            sectionOrder: ['Connection', 'Station', 'Location', 'Retention', 'Service',
-                           'Backup', 'Storage', 'Features', 'Zones'],
             containerId: 'viewer-config-container',
             nestedPath: ['control', 'viewer'],
             title: 'Map'
@@ -1156,14 +1159,10 @@
         }
         let url;
         try {
-            url = new URL(window.location.href);
-            url.port = port;
-            url.pathname = '/api/output_stats.json';
-            url.search = '';
-            url.hash = '';
+            url = viewerUrl('/api/output_stats.json');
         } catch (e) { return; }
 
-        fetch(url.toString())
+        fetch(url)
             .then(r => { if (!r.ok) throw new Error(); return r.json(); })
             .then(stat => {
                 const pools = {};
@@ -1352,6 +1351,11 @@
         document.getElementById('bar-collapse').addEventListener('click', () => setBarCollapsed(true));
         document.getElementById('bar-restore').addEventListener('click', () => setBarCollapsed(false));
         document.getElementById('system-close').addEventListener('click', closeSystem);
+        const headerSave = document.getElementById('system-save');
+        headerSave.addEventListener('click', async () => {
+            headerSave.disabled = true;
+            try { await App.saveDirty(); } finally { headerSave.disabled = false; }
+        });
         systemOverlay.addEventListener('click', e => {
             if (e.target === systemOverlay) closeSystem();
         });

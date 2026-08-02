@@ -50,7 +50,7 @@
 			<i class="info_icon small-icon"></i>
 		</div>
 
-		<div title="Settings" data-action="headerSettings" class="header-icon">
+		<div title="Settings" data-action="openSettings" class="header-icon">
 			<i class="settings_icon small-icon"></i>
 		</div>
 
@@ -187,7 +187,7 @@
 						<span>
 							<input type="range" id="settings_map_opacity" min="0" max="1" step="0.01"
 								data-on-change="setMapOpacity"
-								data-on-input="updateMapOpacityDisplay" />
+								data-on-input="updateSliderDisplay" data-display="mapOpacity" />
 						</span>
 					<small class="st-desc">Dim the base map to make ships stand out</small>
 						</div>
@@ -213,7 +213,7 @@
 						<span>
 							<input type="range" id="settings_circle_scale" min="2.0" max="10.0" step="0.5"
 								data-on-change="setMapSetting" data-key="circle_scale"
-								data-on-input="updateCircleScaleDisplay" />
+								data-on-input="updateSliderDisplay" data-display="circleScale" />
 						</span>
 					<small class="st-desc">Border width of the highlight circle</small>
 						</div>
@@ -248,7 +248,7 @@
 						<span>
 							<input type="range" id="settings_tooltipLabelFontsize" min="6" max="16" step="1"
 								data-on-change="setMapSetting" data-key="tooltipLabelFontSize"
-								data-on-input="updateTooltipFontSizeDisplay" />
+								data-on-input="updateSliderDisplay" data-display="tooltipFontSize" />
 						</span>
 					</div>
 				</section>
@@ -350,7 +350,7 @@
 						<span>
 							<input type="range" id="settings_icon_scale" min="0.5" max="1.5" step="0.01"
 								data-on-change="setIconScale"
-								data-on-input="updateIconScaleDisplay" />
+								data-on-input="updateSliderDisplay" data-display="iconScale" />
 						</span>
 					<small class="st-desc">Size of the ship icons on the map</small>
 						</div>
@@ -386,7 +386,7 @@
 						<span>
 							<input type="range" id="settings_shipoutline_opacity" min="0" max="1" step="0.01"
 								data-on-change="setMapSetting" data-key="shipoutline_opacity"
-								data-on-input="updateShipoutlineOpacityDisplay" />
+								data-on-input="updateSliderDisplay" data-display="shipoutlineOpacity" />
 						</span>
 					<small class="st-desc">Transparency of the ship shape fill</small>
 						</div>
@@ -546,7 +546,7 @@
 						<span>
 							<input type="range" id="settings_track_weight" min="1" max="4" step="1"
 								data-on-change="setMapSetting" data-key="track_weight"
-								data-on-input="updateTrackWeightDisplay" />
+								data-on-input="updateSliderDisplay" data-display="trackWeight" />
 						</span>
 					<small class="st-desc">Line width of ship tracks</small>
 						</div>
@@ -555,7 +555,7 @@
 						<span>
 							<input type="range" id="settings_track_opacity" min="0.05" max="1" step="0.05"
 								data-on-change="setMapSetting" data-key="track_opacity"
-								data-on-input="updateTrackOpacityDisplay" />
+								data-on-input="updateSliderDisplay" data-display="trackOpacity" />
 						</span>
 					<small class="st-desc">Transparency of ship tracks</small>
 						</div>
@@ -564,7 +564,7 @@
 						<span>
 							<input type="range" id="settings_track_trash_threshold" min="0" max="300" step="10"
 								data-on-change="setMapSetting" data-key="track_trash_threshold"
-								data-on-input="updateTrackTrashThresholdDisplay" />
+								data-on-input="updateSliderDisplay" data-display="trackTrashThreshold" />
 						</span>
 					<small class="st-desc">Dash track segments with reception gaps longer than this</small>
 						</div>
@@ -682,7 +682,7 @@
 						<span id="kiosk_rotation_speed_label">Rotation Speed (5s)</span><span>
 							<input type="range" id="settings_kiosk_rotation_speed" min="3" max="30" step="1"
 								data-on-change="setKioskRotationSpeed"
-								data-on-input="updateKioskSpeedDisplay">
+								data-on-input="updateSliderDisplay" data-display="kioskSpeed">
 						</span>
 					<small class="st-desc">Seconds each ship is shown</small>
 						</div>
@@ -791,15 +791,6 @@
 				<li class="ctx-charts" data-action="toggleGraphVisibility" data-graph="ppm"><i class="timeline_icon"></i><span
 						id="ctx_ppm_graphs">Show frequency shift graphs</span></li>
 			</ul>
-
-			<div class="overlay" id="dialog-overlay" data-action="closeDialog"></div>
-			<div id="dialog-box" class="hidden">
-				<div class="dialog-header">
-					<div class="dialog-title">Dialog Title</div>
-					<div class="close_icon" data-action="closeDialog"></div>
-				</div>
-				<div class="dialog-message">This is the message area.</div>
-			</div>
 
 			<div class="tabcontent addscrollbar" id="about">
 				<div class="aboutpage" id="about_content"></div>

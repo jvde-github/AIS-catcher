@@ -17,15 +17,13 @@
 
 #pragma once
 #include <cstdint>
+#include <cstdlib>
 #include <cmath>
 #include <ctime>
+#include <string>
 #include <vector>
 
 #include "Geodesy.h"
-
-#ifdef CHECK_DB_INTEGRITY
-#include "Logger.h"
-#endif
 
 // Tiered block store for ship tracks. Points live in blocks and form a
 // doubly-linked, time-ordered list per ship, circular through a per-ship
@@ -56,7 +54,6 @@ public:
 
 	static const uint8_t NA = 0xFF;
 
-	static std::size_t blockBytes() { return sizeof(Block); }
 
 private:
 	static const int BLOCK_SHIFT = 8;
@@ -68,13 +65,7 @@ private:
 	static const uint32_t GRANULARITY = 300; // point spacing beyond HORIZON
 	static const uint32_t DWELL_GAP = 900;	 // silence that ends a dwell: two missed 3-minute reports
 	static const int DEADBAND = 40;			 // meters a ship must move to count as significant
-	static const int BAND_MOORED = 50;		 // alongside, only fenders and GPS wander
-	static const int BAND_ANCHORED = 200;	 // swinging on the chain
-	static const int BAND_SLOW = 100;		 // idle but status unknown, Class B carries none
 	static const uint8_t IDLE_SOG = 1;		 // 0.5 knot units, at or below this a ship is not making way
-
-	static const int NAV_ANCHORED = 1; // ITU-R M.1371 navigational status
-	static const int NAV_MOORED = 5;
 
 	enum Tier
 	{
@@ -106,8 +97,10 @@ private:
 	List lists[3];
 
 	static uint32_t ref(int b, int i) { return ((uint32_t)b << BLOCK_SHIFT) | i; }
+	static int blockOf(uint32_t r) { return (int)(r >> BLOCK_SHIFT); }
+	static int slotOf(uint32_t r) { return (int)(r & (BLOCK_SIZE - 1)); }
 
-	Point &deref(uint32_t r) { return blocks[r >> BLOCK_SHIFT].pts[r & (BLOCK_SIZE - 1)]; }
+	Point &deref(uint32_t r) { return const_cast<Point &>(at(r)); }
 
 	void setNext(uint32_t r, uint32_t v)
 	{
@@ -131,7 +124,7 @@ private:
 		setNext(p.prev, p.next);
 		setPrev(p.next, p.prev);
 		p.prev = NIL;
-		blocks[r >> BLOCK_SHIFT].live--;
+		blocks[blockOf(r)].live--;
 	}
 
 	void pushHead(int tier, int b)
@@ -170,6 +163,13 @@ private:
 		return b;
 	}
 
+	void recycle(int b)
+	{
+		detach(b);
+		blocks[b].count = blocks[b].live = 0;
+		pushHead(FREE, b);
+	}
+
 	int evictBlock(int b)
 	{
 		Block &blk = blocks[b];
@@ -186,9 +186,7 @@ private:
 		Block &blk = blocks[b];
 		if (blk.live > 0 || blk.tier == FREE || lists[blk.tier].head == b)
 			return;
-		detach(b);
-		blk.count = 0;
-		pushHead(FREE, b);
+		recycle(b);
 	}
 
 	void moveToFive(uint32_t r)
@@ -233,9 +231,7 @@ private:
 			else
 				unlink(ref(b, i));
 		}
-		detach(b);
-		blk.count = blk.live = 0;
-		pushHead(FREE, b);
+		recycle(b);
 	}
 
 	uint32_t newestTime(int b) { return blocks[b].pts[blocks[b].count - 1].time; }
@@ -262,8 +258,6 @@ private:
 		}
 		if (b == -1 && lists[FIVE].tail != -1)
 			b = evictBlock(lists[FIVE].tail);
-		if (b == -1 && lists[RT].tail != -1)
-			b = evictBlock(lists[RT].tail);
 		return b;
 	}
 
@@ -277,27 +271,18 @@ private:
 		return v < 254.0f ? (uint8_t)v : (uint8_t)254;
 	}
 
-	static int idleBand(int status)
-	{
-		if (status == NAV_MOORED)
-			return BAND_MOORED;
-		if (status == NAV_ANCHORED)
-			return BAND_ANCHORED;
-		return BAND_SLOW;
-	}
-
-	bool significant(const Point &q, float lat, float lon, uint8_t cog, uint8_t sog, int status)
+	bool significant(const Point &q, float lat, float lon, uint8_t cog, uint8_t sog, int idle_band)
 	{
 		bool idle = q.sog != NA && sog != NA && q.sog <= IDLE_SOG && sog <= IDLE_SOG;
-		int band = idle ? idleBand(status) : DEADBAND;
+		int band = idle ? idle_band : DEADBAND;
 
 		if (Util::Geodesy::distanceSqMeters(q.lat, q.lon, lat, lon) > (float)(band * band))
 			return true;
-		if (q.sog != NA && sog != NA && (sog > q.sog ? sog - q.sog : q.sog - sog) > 1)
+		if (q.sog != NA && sog != NA && std::abs((int)sog - (int)q.sog) > 1)
 			return true;
-		if (sog != NA && sog > 1 && q.cog != NA && cog != NA)
+		if (sog != NA && sog > IDLE_SOG && q.cog != NA && cog != NA)
 		{
-			int d = cog > q.cog ? cog - q.cog : q.cog - cog;
+			int d = std::abs((int)cog - (int)q.cog);
 			if (d > 90)
 				d = 180 - d;
 			if (d > 5)
@@ -307,12 +292,17 @@ private:
 	}
 
 public:
-	void setup(int nblocks, int nships)
+	// the byte budget covers the per-ship anchors, the block pool gets the
+	// rest; returns the resulting block count
+	int setup(long budget_bytes, int nships)
 	{
+		long left = budget_bytes - (long)nships * (long)sizeof(Anchor);
+		int nblocks = left > 0 ? (int)(left / (long)sizeof(Block)) : 0;
+
 		if (nblocks < 2)
 			nblocks = 2;
-		if (nblocks > (1 << (31 - BLOCK_SHIFT)))
-			nblocks = 1 << (31 - BLOCK_SHIFT); // refs must not collide with SHIP_BIT
+		if (nblocks > (int)(SHIP_BIT >> BLOCK_SHIFT))
+			nblocks = (int)(SHIP_BIT >> BLOCK_SHIFT); // refs must not collide with SHIP_BIT
 
 		blocks.assign(nblocks, Block());
 		anchors.resize(nships);
@@ -322,21 +312,25 @@ public:
 		lists[RT] = lists[FIVE] = lists[FREE] = List();
 		for (int b = nblocks - 1; b >= 0; b--)
 			pushHead(FREE, b);
+
+		return nblocks;
 	}
 
-	void add(int ship, float lat, float lon, float cog, float sog, int status, std::time_t now)
+	// idle_band: meters a ship not making way may wander before a new point is stored
+	void add(int ship, float lat, float lon, float cog, float sog, int idle_band, std::time_t now)
 	{
 		uint32_t t = now > 0 ? (uint32_t)now : 0;
 		uint8_t c = encodeCOG(cog), s = encodeSOG(sog);
 
-		if (!(anchors[ship].tail & SHIP_BIT))
+		if (isPoint(anchors[ship].tail))
 		{
 			Point &q = deref(anchors[ship].tail);
-			if (t < q.end())
-				t = q.end(); // time cannot run backwards within a track
+			uint32_t qe = q.end();
+			if (t < qe)
+				t = qe; // time cannot run backwards within a track
 
 			// stationary and continuous: extend the dwell of the newest point
-			if (!significant(q, lat, lon, c, s, status) && t - q.end() <= DWELL_GAP && t - q.time < 0xFFFFu * DUR_UNIT)
+			if (t - qe <= DWELL_GAP && t - q.time < 0xFFFFu * DUR_UNIT && !significant(q, lat, lon, c, s, idle_band))
 			{
 				q.dur = (uint16_t)((t - q.time) / DUR_UNIT);
 				return;
@@ -378,23 +372,32 @@ public:
 	void wipe(int ship)
 	{
 		// unlinking the head advances the anchor until it is self-referential
-		while (!(anchors[ship].head & SHIP_BIT))
+		while (isPoint(anchors[ship].head))
 		{
 			uint32_t r = anchors[ship].head;
 			unlink(r);
-			freeIfDead(r >> BLOCK_SHIFT);
+			freeIfDead(blockOf(r));
 		}
 	}
 
 	// newest-first traversal: for (r = tail(ship); isPoint(r); r = at(r).prev)
 	uint32_t tail(int ship) const { return anchors[ship].tail; }
 	static bool isPoint(uint32_t r) { return !(r & SHIP_BIT); }
-	const Point &at(uint32_t r) const { return blocks[r >> BLOCK_SHIFT].pts[r & (BLOCK_SIZE - 1)]; }
+	const Point &at(uint32_t r) const { return blocks[blockOf(r)].pts[slotOf(r)]; }
 
-#ifdef CHECK_DB_INTEGRITY
-	int check()
+	// only the newest point's dwell can still extend, so an end older than
+	// `since` means nothing newer exists
+	bool hasSince(int ship, std::time_t since) const
 	{
-		int errors = 0;
+		uint32_t r = tail(ship);
+		return isPoint(r) && (std::time_t)at(r).end() >= since;
+	}
+
+	// Structural invariants. Returns the number of problems found and appends a
+	// description of each to `errors`.
+	int check(std::vector<std::string> &errors) const
+	{
+		int e = 0;
 		int nblocks = (int)blocks.size();
 		std::vector<int> seen(nblocks, 0);
 
@@ -405,26 +408,26 @@ public:
 			{
 				if (b < 0 || b >= nblocks || seen[b]++)
 				{
-					Error() << "PathStore integrity: invalid or repeated block " << b << " in tier " << t;
-					errors++;
+					errors.push_back("path store: invalid or repeated block " + std::to_string(b) + " in tier " + std::to_string(t));
+					e++;
 					break;
 				}
 				if (blocks[b].tier != t || blocks[b].prev != prev)
 				{
-					Error() << "PathStore integrity: block " << b << " tier/prev mismatch";
-					errors++;
+					errors.push_back("path store: block " + std::to_string(b) + " tier/prev mismatch");
+					e++;
 				}
 				if (t != FREE && blocks[b].count == 0)
 				{
-					Error() << "PathStore integrity: block " << b << " empty in tier " << t;
-					errors++;
+					errors.push_back("path store: block " + std::to_string(b) + " empty in tier " + std::to_string(t));
+					e++;
 				}
 				prev = b;
 			}
 			if (lists[t].tail != prev)
 			{
-				Error() << "PathStore integrity: tier " << t << " tail mismatch";
-				errors++;
+				errors.push_back("path store: tier " + std::to_string(t) + " tail mismatch");
+				e++;
 			}
 		}
 
@@ -432,8 +435,8 @@ public:
 		{
 			if (seen[b] != 1)
 			{
-				Error() << "PathStore integrity: block " << b << " in " << seen[b] << " tiers";
-				errors++;
+				errors.push_back("path store: block " + std::to_string(b) + " in " + std::to_string(seen[b]) + " tiers");
+				e++;
 			}
 			int live = 0;
 			for (int i = 0; i < blocks[b].count; i++)
@@ -441,8 +444,8 @@ public:
 					live++;
 			if (live != blocks[b].live)
 			{
-				Error() << "PathStore integrity: block " << b << " live " << blocks[b].live << " != " << live;
-				errors++;
+				errors.push_back("path store: block " + std::to_string(b) + " live " + std::to_string(blocks[b].live) + " != " + std::to_string(live));
+				e++;
 			}
 		}
 
@@ -455,17 +458,17 @@ public:
 
 			while (r != self)
 			{
-				if (!isPoint(r) || (int)(r >> BLOCK_SHIFT) >= nblocks || (int)(r & (BLOCK_SIZE - 1)) >= blocks[r >> BLOCK_SHIFT].count)
+				if (!isPoint(r) || blockOf(r) >= nblocks || slotOf(r) >= blocks[blockOf(r)].count)
 				{
-					Error() << "PathStore integrity: ship " << ship << " bad ref " << r;
-					errors++;
+					errors.push_back("path store: ship " + std::to_string(ship) + " bad ref " + std::to_string(r));
+					e++;
 					break;
 				}
-				Point &p = deref(r);
+				const Point &p = at(r);
 				if (p.prev != back || p.time < prev_end)
 				{
-					Error() << "PathStore integrity: ship " << ship << " chain broken at " << r;
-					errors++;
+					errors.push_back("path store: ship " + std::to_string(ship) + " chain broken at " + std::to_string(r));
+					e++;
 					break;
 				}
 				prev_end = p.end();
@@ -473,18 +476,17 @@ public:
 				r = p.next;
 				if (++steps > nblocks * BLOCK_SIZE)
 				{
-					Error() << "PathStore integrity: ship " << ship << " chain has cycle";
-					errors++;
+					errors.push_back("path store: ship " + std::to_string(ship) + " chain has cycle");
+					e++;
 					break;
 				}
 			}
 			if (r == self && anchors[ship].tail != back)
 			{
-				Error() << "PathStore integrity: ship " << ship << " tail anchor mismatch";
-				errors++;
+				errors.push_back("path store: ship " + std::to_string(ship) + " tail anchor mismatch");
+				e++;
 			}
 		}
-		return errors;
+		return e;
 	}
-#endif
 };

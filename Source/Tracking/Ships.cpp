@@ -545,6 +545,69 @@ bool Ship::Load(std::ifstream &file)
 #undef W
 #undef R
 
+void Ship::writeCompactDynamic(JSON::Writer &w) const
+{
+	w.beginArray().val(mmsi);
+	if (isValidCoord(lat, lon))
+	{
+		w.val(lat).val(lon);
+		if (distance != DISTANCE_UNDEFINED && angle != ANGLE_UNDEFINED)
+			w.val(distance).val(angle);
+		else
+			w.val_null().val_null();
+	}
+	else
+		w.val_null().val_null().val_null().val_null();
+
+	w.val_unless(heading, HEADING_UNDEFINED)
+		.val_unless(cog, COG_UNDEFINED)
+		.val_unless(speed, SPEED_UNDEFINED)
+		.val(status)
+		.val_unless(level, LEVEL_UNDEFINED)
+		.val_unless(ppm, PPM_UNDEFINED)
+		.val(count)
+		.val(msg_type)
+		.val(last_signal)
+		.val(last_group)
+		.val(group_mask)
+		.val((unsigned long long)flags.getPackedValue())
+		.val_unless(altitude, ALT_UNDEFINED)
+		.val_unless(received_stations, RECEIVED_STATIONS_UNDEFINED)
+		.val(mmsi_type)
+		.val(shipclass)
+		.val(country_code)
+		.endArray();
+}
+
+void Ship::writeCompactStatic(JSON::Writer &w) const
+{
+	w.beginArray().val(mmsi);
+
+	if (getVirtualAid())
+		w.val(shipname, " [V]");
+	else
+		w.val(shipname);
+
+	w.val(callsign)
+		.val(destination)
+		.val(shiptype)
+		.val_unless(IMO, IMO_UNDEFINED)
+		.val_unless(to_bow, DIMENSION_UNDEFINED)
+		.val_unless(to_stern, DIMENSION_UNDEFINED)
+		.val_unless(to_port, DIMENSION_UNDEFINED)
+		.val_unless(to_starboard, DIMENSION_UNDEFINED)
+		.val_unless(draught, DRAUGHT_UNDEFINED)
+		.val_unless((int)month, ETA_MONTH_UNDEFINED)
+		.val_unless((int)day, ETA_DAY_UNDEFINED)
+		.val_unless((int)hour, ETA_HOUR_UNDEFINED)
+		.val_unless((int)minute, ETA_MINUTE_UNDEFINED)
+		.val(vin)
+		.val(vendorid)
+		.val_unless(unit_model, -1)
+		.val_unless(unit_serial, -1)
+		.endArray();
+}
+
 void Ship::getJSON(JSON::Writer &w, long int delta_time, bool station_known) const
 {
 	w.beginObject().kv("mmsi", mmsi);

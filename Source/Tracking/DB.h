@@ -19,6 +19,8 @@
 #include <iostream>
 #include <string.h>
 #include <memory>
+#include <mutex>
+#include <vector>
 
 #include "AIS.h"
 #include "JSONAIS.h"
@@ -32,38 +34,36 @@
 
 #include "Ships.h"
 #include "SlotTable.h"
-#include "Geodesy.h"
 #include "PathStore.h"
-
-struct BinaryMessage
-{
-	std::string json;
-	int type;
-	int dac;
-	int fi;
-	FLOAT32 lat, lon;
-	time_t timestamp = 0;
-	bool used;
-
-	BinaryMessage() { Clear(); }
-
-	void Clear()
-	{
-		used = false;
-		type = dac = fi = -1;
-		lat = LAT_UNDEFINED;
-		lon = LON_UNDEFINED;
-	};
-};
 
 class DB : public StreamIn<JSON::JSON>,
 		   public StreamIn<AIS::GPS>,
 		   public StreamOut<JSON::JSON>
 {
+	struct BinaryMessage
+	{
+		std::string json;
+		int type;
+		int dac;
+		int fi;
+		FLOAT32 lat, lon;
+		time_t timestamp = 0;
+		bool used;
+
+		BinaryMessage() { Clear(); }
+
+		void Clear()
+		{
+			used = false;
+			type = dac = fi = -1;
+			lat = LAT_UNDEFINED;
+			lon = LON_UNDEFINED;
+		};
+	};
 
 	JSON::Serializer builder{JSON_DICT_FULL};
 
-	std::string content, delim;
+	std::string content;
 	float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 	int TIME_HISTORY = 30 * 60;
 	bool latlon_share = false;
@@ -74,9 +74,8 @@ class DB : public StreamIn<JSON::JSON>,
 	uint32_t own_mmsi = 0;
 
 	int HASH_SIZE = 8209;
-	// track storage is independent of server mode: only the ship count scales
-	static const int TRACK_MEMORY_DEFAULT_KB = 1024;
-	int track_memory_kb = TRACK_MEMORY_DEFAULT_KB;
+	// 0 = unset, resolved at setup: the server-mode default leaves room for the anchor slots
+	int track_memory_kb = 0;
 
 	bool expire_fields = false;
 	std::time_t last_sweep = 0;
@@ -86,14 +85,37 @@ class DB : public StreamIn<JSON::JSON>,
 	SlotTable<Ship, uint32_t> ships;
 	PathStore paths;
 
+	std::mutex mtx;
+
+	struct PathPt
+	{
+		float lat, lon;
+		uint32_t time, end;
+	};
+	std::vector<PathPt> path_scratch;
+
 	bool updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &v, bool allowApproximate, bool &staticUpdated);
 
 	bool updateShip(const JSON::JSON &, TAG &, Ship &);
 	void addToPath(int ptr);
+	int claimShip(uint32_t mmsi);
 
-	void writeSinglePathJSONCompact(int idx, JSON::Writer &w);
-	bool writeSinglePathJSONCompactSince(int idx, std::time_t since, JSON::Writer &w);
-	bool hasPathPointsSince(int idx, std::time_t since);
+	template <typename F>
+	void forEachRecent(std::time_t tm, bool full, std::time_t since, F f)
+	{
+		ships.forEach([&](int ptr) {
+			const Ship &ship = ships[ptr];
+			long int delta_time = (long int)tm - (long int)ship.last_signal;
+			if (!full && delta_time > TIME_HISTORY)
+				return false;
+			if (since > 0 && ship.last_signal < since)
+				return false;
+			f(ptr, ship, delta_time);
+			return true;
+		});
+	}
+
+	void writeSinglePathJSONCompact(int idx, JSON::Writer &w, std::time_t since = 0);
 	void writeSinglePathGeoJSON(int idx, JSON::Writer &w);
 
 	AIS::Filter filter;
@@ -102,17 +124,13 @@ class DB : public StreamIn<JSON::JSON>,
 	BinaryMessage binaryMessages[MAX_BINARY_MESSAGES];
 	int binaryMsgIndex = 0;
 
-	void processBinaryMessage(const JSON::JSON &data, Ship &ship, bool &position_updated);
+	void processBinaryMessage(const JSON::JSON &data);
 #ifdef CHECK_DB_INTEGRITY
 	void checkIntegrity();
 	std::time_t last_check = 0;
 #endif
 
 public:
-	DB() : builder(JSON_DICT_FULL) {}
-
-	std::mutex mtx;
-
 	void setup();
 	void tick(std::time_t now);
 	void setTimeHistory(int t) { TIME_HISTORY = t; }
@@ -121,7 +139,6 @@ public:
 	void setShareLatLon(bool b) { latlon_share = b; }
 	bool getShareLatLon() { return latlon_share; }
 
-	bool setUseGPS(bool b) { return use_GPS = b; }
 	void setLatLon(float lat, float lon)
 	{
 		this->lat = lat;

@@ -1151,3 +1151,72 @@ select.realtime-filter-input,
 .hidden {
     display: none !important;
 }
+
+/* --- modal (companion to AISComponents.modal) --------------------------- */
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+    background-color: var(--color-scrim);
+    z-index: var(--z-dialog);
+}
+
+.modal-card {
+    width: 100%;
+    max-width: 40rem;
+    max-height: 90vh;
+    overflow: hidden; /* clips the header band inside the card radius */
+}
+
+/* one treatment for every icon action sitting in a dialog header band */
+.dialog-header .close_icon,
+.dialog-header .dialog-header-action {
+    flex: none;
+    align-self: center;
+    display: flex;
+    align-items: center;
+    color: var(--color-icon);
+    font-size: var(--fs-lg);
+    margin: 0 16px 0 12px;
+    cursor: pointer;
+    transition: opacity var(--dur-fast) ease;
+}
+
+.dialog-header .close_icon:hover,
+.dialog-header .dialog-header-action:hover {
+    opacity: 0.65;
+}
+
+/* the action sits left of the close icon, so no trailing gap */
+.dialog-header .dialog-header-action {
+    margin-right: 0;
+}
+
+.modal-sm {
+    max-width: 28rem;
+}
+
+/* shrink-to-content card for message/table dialogs */
+.modal-fit {
+    width: max-content;
+    min-width: min(320px, 90%);
+    max-width: min(90%, 900px);
+    max-height: 80vh;
+}
+
+.modal-body {
+    padding: var(--space-4);
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.modal-foot {
+    padding: var(--space-3);
+    border-top: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
