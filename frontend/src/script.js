@@ -358,6 +358,7 @@ else document.addEventListener('DOMContentLoaded', _bindDelegatedActions);
 let interval,
     activeReceiver = 0,
     lastPathFetch = 0,
+    lastFullPathFetch = 0,
     paths = {},
     trackCutoff = 0,
     pathsFrom = -1,
@@ -2633,7 +2634,7 @@ function setTrackHistory(minutes) {
 
     // deltas only move forwards, so reaching further back needs a full refetch
     const want = trackWindowStart();
-    const covered = pathsFrom === 0 || (pathsFrom > 0 && want !== 0 && want >= pathsFrom);
+    const covered = pathsFrom === 0 || (pathsFrom > 0 && want >= pathsFrom);
 
     if (covered) {
         redrawMap();
@@ -3559,7 +3560,7 @@ function loadSettings() {
     settings.android = false;
 }
 
-function convertStringBooleansToActual() {
+function convertStringSettingsToActual() {
     const booleanSettings = [
         'counter', 'fading', 'android', 'kiosk', 'welcome', 'show_range',
         'distance_circles', 'table_shiptype_use_icon', 'fix_center',
@@ -3568,13 +3569,18 @@ function convertStringBooleansToActual() {
         'show_track_on_select', 'shipcard_max', 'shipcard_top_left', 'kiosk_pan_map', 'show_all_tracks',
         'show_signal_graphs', 'show_ppm_graphs', 'plot_absolute_time'
     ];
+    const numericSettings = [
+        'icon_scale', 'track_weight', 'track_opacity', 'track_history', 'track_trash_threshold',
+        'zoom', 'lat', 'lon', 'map_opacity', 'tooltipLabelFontSize', 'shipoutline_opacity',
+        'circle_scale', 'center_radius', 'kiosk_rotation_speed'
+    ];
 
     booleanSettings.forEach(key => {
-        if (Object.hasOwn(settings, key)) {
-            if (typeof settings[key] === 'string') {
-                settings[key] = settings[key] === "true";
-            }
-        }
+        if (typeof settings[key] === 'string') settings[key] = settings[key] === "true";
+    });
+    numericSettings.forEach(key => {
+        if (typeof settings[key] === 'string' && settings[key] !== '' && !isNaN(settings[key]))
+            settings[key] = Number(settings[key]);
     });
 }
 
@@ -3590,7 +3596,7 @@ function loadSettingsFromURL() {
         }
     }
 
-    convertStringBooleansToActual();
+    convertStringSettingsToActual();
 }
 
 function mapResetViewZoom(z, m) {
@@ -3764,12 +3770,14 @@ async function fetchTracks() {
     let isDelta = false;
     try {
         if (settings.show_all_tracks) {
-            const windowStart = trackWindowStart();
-            const sinceParam = lastPathFetch > 0
-                ? "&since=" + lastPathFetch
-                : (windowStart ? "&since=" + windowStart : "");
-            isDelta = lastPathFetch > 0;
-            if (!isDelta) pathsFrom = windowStart;
+            // deltas accumulate points the server has pruned, so resync with a full fetch every hour
+            isDelta = lastPathFetch > 0 && Date.now() - lastFullPathFetch < 3600 * 1000;
+            let sinceParam = "&since=" + lastPathFetch;
+            if (!isDelta) {
+                pathsFrom = trackWindowStart();
+                sinceParam = pathsFrom ? "&since=" + pathsFrom : "";
+                lastFullPathFetch = Date.now();
+            }
             a = await fetch("api/allpath.json?receiver=" + activeReceiver + sinceParam);
         } else {
             for (var mmsi of marker_tracks) {
@@ -3778,6 +3786,7 @@ async function fetchTracks() {
                 }
             }
             const mmsi_str = Array.from(marker_tracks).join(",");
+            pathsFrom = 0;
             a = await fetch("api/path.json?" + mmsi_str + "&receiver=" + activeReceiver);
         }
 
@@ -4950,6 +4959,7 @@ function redrawMap() {
         }
     }
 
+    const cutoff = trackWindowStart();
     for (let [mmsi, entry] of Object.entries(paths)) {
 
         if (marker_tracks.has(Number(mmsi)) || settings.show_all_tracks) {
