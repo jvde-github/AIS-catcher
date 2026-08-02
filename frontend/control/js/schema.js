@@ -538,6 +538,16 @@ const webviewerSchema = {
         width: 24,
         tooltip: 'Stream live NMEA messages to the viewer'
     },
+    msg: {
+        name: 'msg',
+        restartWebviewer: true,
+        label: 'Msgs',
+        type: 'toggle',
+        jsonpath: 'msg',
+        defaultValue: false,
+        width: 24,
+        tooltip: 'Keep the last NMEA messages per ship for display in the ship card'
+    },
     geojson: {
         name: 'geojson',
         restartWebviewer: true,

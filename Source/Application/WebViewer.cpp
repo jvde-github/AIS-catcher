@@ -1103,6 +1103,8 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 	case AIS::KEY_SETTING_CONTEXT:
 		frontend.setContext(arg);
 		break;
+	case AIS::KEY_SETTING_MSGS:
+		break;
 	case AIS::KEY_SETTING_MESSAGE:
 	case AIS::KEY_SETTING_MSG:
 		settings.tracking.msg_save = Util::Parse::Switch(arg);

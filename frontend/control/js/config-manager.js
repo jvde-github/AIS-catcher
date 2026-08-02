@@ -345,6 +345,20 @@
                 changed = true;
             }
 
+            // canonical viewer key is 'msg': fold the 'message' alias into it
+            // and drop 'msgs', which was briefly seeded by a defaults bug
+            const canonMsg = (v) => {
+                if (!v || typeof v !== 'object') return;
+                if ('msgs' in v) { delete v.msgs; changed = true; }
+                if ('message' in v) {
+                    if (!('msg' in v)) v.msg = v.message;
+                    delete v.message;
+                    changed = true;
+                }
+            };
+            canonMsg(cfg.control && cfg.control.viewer);
+            if (Array.isArray(cfg.server)) cfg.server.forEach(canonMsg);
+
             const receiverCfg = {};
             let hasReceiverSettings = false;
             for (const key of this.receiverKeys) {
@@ -1090,7 +1104,14 @@
                     ? (fullConfig[this.config.channelType] || (this.config.isList ? [] : {}))
                     : fullConfig;
             if (!this.config.isList) {
-                this.fields.forEach(f => this.data[f.name] ??= f.defaultValue);
+                this.fields.forEach(f => {
+                    if (f.jsonpath) {
+                        if (Utils.getNested(this.data, f.jsonpath) === undefined)
+                            Utils.setNested(this.data, f.jsonpath, f.defaultValue);
+                    } else {
+                        this.data[f.name] ??= f.defaultValue;
+                    }
+                });
             }
         }
 
