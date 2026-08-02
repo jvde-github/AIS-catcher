@@ -230,7 +230,7 @@ std::string getSprite(const Ship *ship)
 
 bool Ship::getKML(std::string &kmlString) const
 {
-	if (lat == LAT_UNDEFINED || lon == LON_UNDEFINED || (lat == 0 && lon == 0))
+	if (!isValidCoord(lat, lon))
 		return false;
 
 	std::string shipNameStr(shipname);
@@ -248,10 +248,15 @@ bool Ship::getKML(std::string &kmlString) const
 	return true;
 }
 
-bool Ship::getGeoJSON(JSON::Writer &w) const
+bool Ship::getGeoJSON(JSON::Writer &w, bool station_known) const
 {
 	w.beginObject().kv("type", "Feature").key("properties").beginObject()
-		.kv("mmsi", mmsi).kv("distance", distance).kv("bearing", angle)
+		.kv("mmsi", mmsi);
+	if (station_known)
+		w.kv("distance", distance).kv("bearing", angle);
+	else
+		w.kv_null("distance").kv_null("bearing");
+	w
 		.kv_unless("level", level, LEVEL_UNDEFINED).kv("count", count)
 		.kv_unless("ppm", ppm, PPM_UNDEFINED).kv("group_mask", group_mask)
 		.kv("approx", (bool)getApproximate())
@@ -487,7 +492,6 @@ bool Ship::Save(std::ofstream &file) const
 {
 	int magic = _SHIP_MAGIC;
 	int version = _SHIP_VERSION;
-	int legacy_path_ptr = -1; // keeps the on-disk layout of version 3
 
 	return (bool)(W(magic) && W(version)
 		&& W(mmsi) && W(count) && W(msg_type) && W(shiptype) && W(group_mask) && W(flags)
@@ -501,16 +505,17 @@ bool Ship::Save(std::ofstream &file) const
 		&& W(shipclass) && W(mmsi_type)
 		&& W(shipname) && W(destination) && W(callsign) && W(country_code) && W(vin)
 		&& W(vendorid) && W(unit_model) && W(unit_serial)
-		&& W(last_group)
-		&& W(incoming.next) && W(incoming.prev) && W(legacy_path_ptr));
+		&& W(last_group));
 }
 
 bool Ship::Load(std::ifstream &file)
 {
 	int magic = 0, version = 0;
-	int legacy_path_ptr = 0;
 
-	if (!R(magic) || !R(version) || magic != _SHIP_MAGIC || version != _SHIP_VERSION)
+	if (!R(magic) || !R(version) || magic != _SHIP_MAGIC)
+		return false;
+
+	if (version != _SHIP_VERSION && version != _SHIP_VERSION_LINKED)
 		return false;
 
 	bool ok = (bool)(R(mmsi) && R(count) && R(msg_type) && R(shiptype) && R(group_mask) && R(flags)
@@ -524,8 +529,13 @@ bool Ship::Load(std::ifstream &file)
 		&& R(shipclass) && R(mmsi_type)
 		&& R(shipname) && R(destination) && R(callsign) && R(country_code) && R(vin)
 		&& R(vendorid) && R(unit_model) && R(unit_serial)
-		&& R(last_group)
-		&& R(incoming.next) && R(incoming.prev) && R(legacy_path_ptr));
+		&& R(last_group));
+
+	if (ok && version == _SHIP_VERSION_LINKED)
+	{
+		int discard[3];
+		ok = (bool)R(discard);
+	}
 
 	// msg vector is not persisted
 	msg.clear();
@@ -534,3 +544,61 @@ bool Ship::Load(std::ifstream &file)
 
 #undef W
 #undef R
+
+void Ship::getJSON(JSON::Writer &w, long int delta_time, bool station_known) const
+{
+	w.beginObject().kv("mmsi", mmsi);
+
+	if (isValidCoord(lat, lon))
+	{
+		w.kv("lat", lat).kv("lon", lon);
+		if (station_known)
+			w.kv("distance", distance).kv("bearing", angle);
+		else
+			w.kv_null("distance").kv_null("bearing");
+	}
+	else
+		w.kv_null("lat").kv_null("lon").kv_null("distance").kv_null("bearing");
+
+	w.kv_unless("level", level, LEVEL_UNDEFINED)
+		.kv("count", count)
+		.kv_unless("ppm", ppm, PPM_UNDEFINED)
+		.kv("group_mask", group_mask)
+		.kv("approx", (bool)getApproximate())
+		.kv_unless("heading", heading, HEADING_UNDEFINED)
+		.kv_unless("cog", cog, COG_UNDEFINED)
+		.kv_unless("speed", speed, SPEED_UNDEFINED)
+		.kv_unless("to_bow", to_bow, DIMENSION_UNDEFINED)
+		.kv_unless("to_stern", to_stern, DIMENSION_UNDEFINED)
+		.kv_unless("to_starboard", to_starboard, DIMENSION_UNDEFINED)
+		.kv_unless("to_port", to_port, DIMENSION_UNDEFINED)
+		.kv("shiptype", shiptype)
+		.kv("mmsi_type", mmsi_type)
+		.kv("shipclass", shipclass)
+		.kv("validated", getValidated())
+		.kv("msg_type", msg_type)
+		.kv("channels", getChannels())
+		.kv("country", country_code)
+		.kv("status", status)
+		.kv_unless("draught", draught, DRAUGHT_UNDEFINED)
+		.kv_unless("eta_month", (int)month, ETA_MONTH_UNDEFINED)
+		.kv_unless("eta_day", (int)day, ETA_DAY_UNDEFINED)
+		.kv_unless("eta_hour", (int)hour, ETA_HOUR_UNDEFINED)
+		.kv_unless("eta_minute", (int)minute, ETA_MINUTE_UNDEFINED)
+		.kv_unless("imo", IMO, IMO_UNDEFINED)
+		.kv("callsign", callsign);
+
+	if (getVirtualAid())
+		w.kv("shipname", shipname, " [V]");
+	else
+		w.kv("shipname", shipname);
+
+	w.kv("destination", destination)
+		.kv("eni", vin)
+		.kv("vendorid", vendorid)
+		.kv_unless("model", unit_model, -1)
+		.kv_unless("serial", unit_serial, -1)
+		.kv("repeat", getRepeat())
+		.kv("last_signal", delta_time)
+		.endObject();
+}

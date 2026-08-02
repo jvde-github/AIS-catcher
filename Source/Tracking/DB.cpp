@@ -25,6 +25,7 @@
 
 void DB::setup()
 {
+	int Nships = 4096;
 
 	if (server_mode)
 	{
@@ -34,57 +35,13 @@ void DB::setup()
 		Info() << "DB: internal ship database extended to " << Nships << " ships";
 	}
 
-	ships.resize(Nships);
-	// roughly 0.6 KB of path storage per ship
-	paths.setup(Nships / 10, Nships);
-	hash_table.resize(HASH_SIZE);
+	ships.setup(Nships, HASH_SIZE);
 
-	last_sweep = std::time(nullptr);
-
-	first = Nships - 1;
-	last = 0;
-	count = 0;
-
-	// set up linked list
-	for (int i = 0; i < Nships; i++)
-	{
-		ships[i].incoming.next = i - 1;
-		ships[i].incoming.prev = i + 1;
-
-		ships[i].hash.next = -1;
-		ships[i].hash.prev = -1;
-	}
-	ships[Nships - 1].incoming.prev = -1;
+	int path_blocks = (int)((long)track_memory_kb * 1024 / PathStore::blockBytes());
+	Info() << "DB: track store " << track_memory_kb << " KB (" << path_blocks << " blocks)";
+	paths.setup(path_blocks, Nships);
 }
 
-bool DB::isValidCoord(float lat, float lon)
-{
-	return !(lat == 0 && lon == 0) && lat != 91 && lon != 181;
-}
-
-// https://www.movable-type.co.uk/scripts/latlong.html
-void DB::getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float &distance, int &bearing)
-{
-	const float EarthRadius = 6371.0f;			// Earth radius in kilometers
-	const float NauticalMilePerKm = 0.5399568f; // Conversion factor
-
-	// Convert the latitudes and longitudes from degrees to radians
-	lat1 = deg2rad(lat1);
-	lon1 = deg2rad(lon1);
-	lat2 = deg2rad(lat2);
-	lon2 = deg2rad(lon2);
-
-	// Compute the distance using the haversine formula
-	float dlat = lat2 - lat1, dlon = lon2 - lon1;
-	float a = sin(dlat / 2) * sin(dlat / 2) + cos(lat1) * cos(lat2) * sin(dlon / 2) * sin(dlon / 2);
-	distance = 2 * EarthRadius * NauticalMilePerKm * asin(sqrt(a));
-
-	float y = sin(dlon) * cos(lat2);
-	float x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dlon);
-	bearing = rad2deg(atan2(y, x));
-}
-
-// add member to get JSON in form of array with values and keys separately
 std::string DB::getJSONcompact(bool full, std::time_t since)
 {
 	std::lock_guard<std::mutex> lock(mtx);
@@ -95,15 +52,14 @@ std::string DB::getJSONcompact(bool full, std::time_t since)
 	{
 		JSON::Writer w(content, 65536);
 
-		w.beginObject().kv("count", count).kv("time", tm).kv("timeout", TIME_HISTORY);
+		w.beginObject().kv("count", ships.size()).kv("time", tm).kv("timeout", TIME_HISTORY);
 		if (latlon_share && isValidCoord(lat, lon))
 			w.key("station").beginObject().kv("lat", lat).kv("lon", lon).kv("mmsi", own_mmsi).kv("gps", gps_position).endObject();
 
 		// --- Pass 1: dynamic array ---
 		w.key("dynamic").beginArray();
 
-		int ptr = first;
-		while (ptr != -1)
+		for (int ptr = ships.front(); ptr != SHIP_NIL; ptr = ships.next(ptr))
 		{
 			const Ship &ship = ships[ptr];
 			if (ship.mmsi != 0)
@@ -145,15 +101,13 @@ std::string DB::getJSONcompact(bool full, std::time_t since)
 					.val(ship.country_code)
 					.endArray();
 			}
-			ptr = ships[ptr].incoming.next;
 		}
 		w.endArray(); // dynamic
 
 		// --- Pass 2: static array ---
 		w.key("static").beginArray();
 
-		ptr = first;
-		while (ptr != -1)
+		for (int ptr = ships.front(); ptr != SHIP_NIL; ptr = ships.next(ptr))
 		{
 			const Ship &ship = ships[ptr];
 			if (ship.mmsi != 0)
@@ -193,7 +147,6 @@ std::string DB::getJSONcompact(bool full, std::time_t since)
 						.endArray();
 				}
 			}
-			ptr = ships[ptr].incoming.next;
 		}
 		w.endArray(); // static
 
@@ -203,64 +156,6 @@ std::string DB::getJSONcompact(bool full, std::time_t since)
 	return content;
 }
 
-void DB::getShipJSON(const Ship &ship, JSON::Writer &w, long int delta_time)
-{
-	w.beginObject().kv("mmsi", ship.mmsi);
-
-	if (isValidCoord(ship.lat, ship.lon))
-	{
-		w.kv("lat", ship.lat).kv("lon", ship.lon);
-		if (isValidCoord(lat, lon))
-			w.kv("distance", ship.distance).kv("bearing", ship.angle);
-		else
-			w.kv_null("distance").kv_null("bearing");
-	}
-	else
-		w.kv_null("lat").kv_null("lon").kv_null("distance").kv_null("bearing");
-
-	w.kv_unless("level", ship.level, LEVEL_UNDEFINED)
-		.kv("count", ship.count)
-		.kv_unless("ppm", ship.ppm, PPM_UNDEFINED)
-		.kv("group_mask", ship.group_mask)
-		.kv("approx", (bool)ship.getApproximate())
-		.kv_unless("heading", ship.heading, HEADING_UNDEFINED)
-		.kv_unless("cog", ship.cog, COG_UNDEFINED)
-		.kv_unless("speed", ship.speed, SPEED_UNDEFINED)
-		.kv_unless("to_bow", ship.to_bow, DIMENSION_UNDEFINED)
-		.kv_unless("to_stern", ship.to_stern, DIMENSION_UNDEFINED)
-		.kv_unless("to_starboard", ship.to_starboard, DIMENSION_UNDEFINED)
-		.kv_unless("to_port", ship.to_port, DIMENSION_UNDEFINED)
-		.kv("shiptype", ship.shiptype)
-		.kv("mmsi_type", ship.mmsi_type)
-		.kv("shipclass", ship.shipclass)
-		.kv("validated", ship.getValidated())
-		.kv("msg_type", ship.msg_type)
-		.kv("channels", ship.getChannels())
-		.kv("country", ship.country_code)
-		.kv("status", ship.status)
-		.kv_unless("draught", ship.draught, DRAUGHT_UNDEFINED)
-		.kv_unless("eta_month", (int)ship.month, ETA_MONTH_UNDEFINED)
-		.kv_unless("eta_day", (int)ship.day, ETA_DAY_UNDEFINED)
-		.kv_unless("eta_hour", (int)ship.hour, ETA_HOUR_UNDEFINED)
-		.kv_unless("eta_minute", (int)ship.minute, ETA_MINUTE_UNDEFINED)
-		.kv_unless("imo", ship.IMO, IMO_UNDEFINED)
-		.kv("callsign", ship.callsign);
-
-	if (ship.getVirtualAid())
-		w.kv("shipname", ship.shipname, " [V]");
-	else
-		w.kv("shipname", ship.shipname);
-
-	w.kv("destination", ship.destination)
-		.kv("eni", ship.vin)
-		.kv("vendorid", ship.vendorid)
-		.kv_unless("model", ship.unit_model, -1)
-		.kv_unless("serial", ship.unit_serial, -1)
-		.kv("repeat", ship.getRepeat())
-		.kv("last_signal", delta_time)
-		.endObject();
-}
-
 std::string DB::getJSON(bool full)
 {
 	std::lock_guard<std::mutex> lock(mtx);
@@ -268,14 +163,13 @@ std::string DB::getJSON(bool full)
 	content.clear();
 	{
 		JSON::Writer w(content, 65536);
-		w.beginObject().kv("count", count);
+		w.beginObject().kv("count", ships.size());
 		if (latlon_share)
 			w.key("station").beginObject().kv("lat", lat).kv("lon", lon).kv("mmsi", own_mmsi).kv("gps", gps_position).endObject();
 		w.key("ships").beginArray();
 
 		std::time_t tm = time(nullptr);
-		int ptr = first;
-		while (ptr != -1)
+		for (int ptr = ships.front(); ptr != SHIP_NIL; ptr = ships.next(ptr))
 		{
 			const Ship &ship = ships[ptr];
 			if (ship.mmsi != 0)
@@ -284,9 +178,8 @@ std::string DB::getJSON(bool full)
 				if (!full && delta_time > TIME_HISTORY)
 					break;
 
-				getShipJSON(ship, w, delta_time);
+				ship.getJSON(w, delta_time, isValidCoord(lat, lon));
 			}
-			ptr = ships[ptr].incoming.next;
 		}
 		w.endArray().kv("error", false).endObject().raw("\n\n");
 	}
@@ -297,7 +190,7 @@ std::string DB::getShipJSON(int mmsi)
 {
 	std::lock_guard<std::mutex> lock(mtx);
 
-	int ptr = findShip(mmsi);
+	int ptr = ships.find(mmsi);
 	if (ptr == -1)
 		return "{}";
 
@@ -307,7 +200,7 @@ std::string DB::getShipJSON(int mmsi)
 	content.clear();
 	{
 		JSON::Writer w(content, 1024);
-		getShipJSON(ship, w, delta_time);
+		ship.getJSON(w, delta_time, isValidCoord(lat, lon));
 	}
 	return content;
 }
@@ -317,10 +210,9 @@ std::string DB::getKML()
 	std::lock_guard<std::mutex> lock(mtx);
 
 	content.assign("<?xml version=\"1.0\" encoding=\"UTF-8\"?><kml xmlns = \"http://www.opengis.net/kml/2.2\"><Document>");
-	int ptr = first;
 	std::time_t tm = time(nullptr);
 
-	while (ptr != -1)
+	for (int ptr = ships.front(); ptr != SHIP_NIL; ptr = ships.next(ptr))
 	{
 		const Ship &ship = ships[ptr];
 		if (ship.mmsi != 0)
@@ -330,7 +222,6 @@ std::string DB::getKML()
 				break;
 			ship.getKML(content);
 		}
-		ptr = ships[ptr].incoming.next;
 	}
 	content += "</Document></kml>";
 	return content;
@@ -345,9 +236,8 @@ std::string DB::getGeoJSON()
 		JSON::Writer w(content, 65536);
 		w.beginObject().kv("type", "FeatureCollection").kv("time_span", TIME_HISTORY).key("features").beginArray();
 
-		int ptr = first;
 		std::time_t tm = time(nullptr);
-		while (ptr != -1)
+		for (int ptr = ships.front(); ptr != SHIP_NIL; ptr = ships.next(ptr))
 		{
 			const Ship &ship = ships[ptr];
 			if (ship.mmsi != 0)
@@ -356,9 +246,8 @@ std::string DB::getGeoJSON()
 				if (delta_time > TIME_HISTORY)
 					break;
 
-				ship.getGeoJSON(w);
+				ship.getGeoJSON(w, isValidCoord(lat, lon));
 			}
-			ptr = ships[ptr].incoming.next;
 		}
 		w.endArray().endObject();
 	}
@@ -375,8 +264,7 @@ std::string DB::getAllPathJSON()
 		w.beginObject();
 
 		std::time_t tm = time(nullptr);
-		int ptr = first;
-		while (ptr != -1)
+		for (int ptr = ships.front(); ptr != SHIP_NIL; ptr = ships.next(ptr))
 		{
 			const Ship &ship = ships[ptr];
 			if (ship.mmsi != 0)
@@ -390,7 +278,6 @@ std::string DB::getAllPathJSON()
 				w.key(keybuf, n);
 				writeSinglePathJSONCompact(ptr, w);
 			}
-			ptr = ships[ptr].incoming.next;
 		}
 		w.endObject().raw("\n\n");
 	}
@@ -399,10 +286,8 @@ std::string DB::getAllPathJSON()
 
 void DB::writeSinglePathJSONCompact(int idx, JSON::Writer &w)
 {
-	int cnt = 0;
-
 	w.beginArray();
-	for (uint32_t r = paths.tail(idx); PathStore::isPoint(r) && cnt < 250; r = paths.at(r).prev, cnt++)
+	for (uint32_t r = paths.tail(idx); PathStore::isPoint(r); r = paths.at(r).prev)
 	{
 		const PathStore::Point &p = paths.at(r);
 		w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.end()).endArray();
@@ -445,8 +330,7 @@ std::string DB::getAllPathJSONSince(std::time_t since)
 		JSON::Writer w(content, 65536);
 		w.beginObject();
 
-		int ptr = first;
-		while (ptr != -1)
+		for (int ptr = ships.front(); ptr != SHIP_NIL; ptr = ships.next(ptr))
 		{
 			const Ship &ship = ships[ptr];
 			if (ship.mmsi != 0 && hasPathPointsSince(ptr, since))
@@ -456,7 +340,6 @@ std::string DB::getAllPathJSONSince(std::time_t since)
 				w.key(keybuf, n);
 				writeSinglePathJSONCompactSince(ptr, since, w);
 			}
-			ptr = ships[ptr].incoming.next;
 		}
 		w.endObject().raw("\n\n");
 	}
@@ -483,7 +366,7 @@ void DB::writeSinglePathGeoJSON(int idx, JSON::Writer &w)
 std::string DB::getPathJSON(uint32_t mmsi)
 {
 	std::lock_guard<std::mutex> lock(mtx);
-	int idx = findShip(mmsi);
+	int idx = ships.find(mmsi);
 
 	content.clear();
 	{
@@ -499,7 +382,7 @@ std::string DB::getPathJSON(uint32_t mmsi)
 std::string DB::getPathGeoJSON(uint32_t mmsi)
 {
 	std::lock_guard<std::mutex> lock(mtx);
-	int idx = findShip(mmsi);
+	int idx = ships.find(mmsi);
 
 	content.clear();
 	{
@@ -522,8 +405,7 @@ std::string DB::getAllPathGeoJSON()
 		w.beginObject().kv("type", "FeatureCollection").key("features").beginArray();
 
 		std::time_t tm = time(nullptr);
-		int ptr = first;
-		while (ptr != -1)
+		for (int ptr = ships.front(); ptr != SHIP_NIL; ptr = ships.next(ptr))
 		{
 			const Ship &ship = ships[ptr];
 			if (ship.mmsi != 0)
@@ -534,7 +416,6 @@ std::string DB::getAllPathGeoJSON()
 
 				writeSinglePathGeoJSON(ptr, w);
 			}
-			ptr = ships[ptr].incoming.next;
 		}
 		w.endArray().endObject().raw("\n\n");
 	}
@@ -544,85 +425,10 @@ std::string DB::getAllPathGeoJSON()
 std::string DB::getMessage(uint32_t mmsi)
 {
 	std::lock_guard<std::mutex> lock(mtx);
-	int ptr = findShip(mmsi);
+	int ptr = ships.find(mmsi);
 	if (ptr == -1)
 		return "";
 	return ships[ptr].msg;
-}
-
-int DB::findShip(uint32_t mmsi)
-{
-	int hash = Hash(mmsi);
-	int ptr = hash_table[hash].first;
-
-	while (ptr != -1)
-	{
-		if (ships[ptr].mmsi == mmsi)
-			return ptr;
-		ptr = ships[ptr].hash.next;
-	}
-	return -1;
-}
-
-int DB::createShip(int hash_new)
-{
-	int ptr = last;
-
-	// remove the old vessel from the hash table, if any
-	uint32_t old_mmsi = ships[ptr].mmsi;
-	if (old_mmsi != 0)
-	{
-		int hash_old = Hash(old_mmsi);
-		int hprev = ships[ptr].hash.prev;
-		int hnext = ships[ptr].hash.next;
-
-		if (hprev != -1)
-			ships[hprev].hash.next = hnext;
-		else
-			hash_table[hash_old].first = hnext;
-
-		if (hnext != -1)
-			ships[hnext].hash.prev = hprev;
-		else
-			hash_table[hash_old].last = hprev;
-	}
-
-	count = MIN(count + 1, Nships);
-	paths.wipe(ptr);
-	ships[ptr].reset();
-
-	// insert into new hash bucket (after reset so hash pointers are clean)
-	ships[ptr].hash.next = hash_table[hash_new].first;
-	ships[ptr].hash.prev = -1;
-
-	if (hash_table[hash_new].first != -1)
-		ships[hash_table[hash_new].first].hash.prev = ptr;
-
-	hash_table[hash_new].first = ptr;
-	if (hash_table[hash_new].last == -1)
-		hash_table[hash_new].last = ptr;
-
-	return ptr;
-}
-
-void DB::moveShipToFront(int ptr)
-{
-	if (ptr == first)
-		return;
-
-	// remove ptr out of the linked list
-	if (ships[ptr].incoming.next != -1)
-		ships[ships[ptr].incoming.next].incoming.prev = ships[ptr].incoming.prev;
-	else
-		last = ships[ptr].incoming.prev;
-	ships[ships[ptr].incoming.prev].incoming.next = ships[ptr].incoming.next;
-
-	// new ship is first in list
-	ships[ptr].incoming.next = first;
-	ships[ptr].incoming.prev = -1;
-
-	ships[first].incoming.prev = ptr;
-	first = ptr;
 }
 
 void DB::addToPath(int ptr)
@@ -1080,13 +886,16 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 	}
 
 	// setup/find ship in database
-	int hash = Hash(msg->mmsi());
-	int ptr = findShip(msg->mmsi());
+	int ptr = ships.find(msg->mmsi());
 
-	if (ptr == -1)
-		ptr = createShip(hash);
-
-	moveShipToFront(ptr);
+	if (ptr == SHIP_NIL)
+	{
+		ptr = ships.create(msg->mmsi());
+		paths.wipe(ptr);
+		ships[ptr].reset();
+	}
+	else
+		ships.touch(ptr);
 
 	// update ship and tag data
 	Ship &ship = ships[ptr];
@@ -1109,7 +918,7 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 	// update ship with distance and bearing if position is updated with message
 	if (position_updated && isValidCoord(lat, lon))
 	{
-		getDistanceAndBearing(lat, lon, ship.lat, ship.lon, ship.distance, ship.angle);
+		Util::Geodesy::distanceBearing(lat, lon, ship.lat, ship.lon, ship.distance, ship.angle);
 
 		tag.distance = ship.distance;
 		tag.angle = ship.angle;
@@ -1174,7 +983,7 @@ void DB::tick(std::time_t now)
 
 	last_sweep = now;
 
-	for (int ptr = first; ptr != -1; ptr = ships[ptr].incoming.next)
+	for (int ptr = ships.front(); ptr != SHIP_NIL; ptr = ships.next(ptr))
 		if (ships[ptr].mmsi)
 			ships[ptr].decayAndExpire();
 }
@@ -1193,30 +1002,30 @@ bool DB::Save(std::ofstream &file)
 		return false;
 
 	// Write ship count first
+	int count = ships.size();
 	if (!file.write((const char *)&count, sizeof(int)))
 		return false;
 
 	// Find the last ship by going count steps from first
-	int ptr = first;
+	int ptr = ships.front();
 	for (int i = 1; i < count; i++)
 	{
-		if (ptr == -1)
+		if (ptr == SHIP_NIL)
 			break;
-		ptr = ships[ptr].incoming.next;
+		ptr = ships.next(ptr);
 	}
 
 	// Write ships from last ship backwards to first
 	int ships_written;
 	for (ships_written = 0; ships_written < count; ships_written++)
 	{
-		if (ptr == -1)
+		if (ptr == SHIP_NIL)
 			break;
 
-		// Use Ship's Save method instead of direct binary write
 		if (!ships[ptr].Save(file))
 			return false;
 
-		ptr = ships[ptr].incoming.prev;
+		ptr = ships.prev(ptr);
 	}
 
 	Debug() << "DB: Saved " << ships_written << " ships to backup";
@@ -1248,7 +1057,7 @@ bool DB::Load(std::ifstream &file)
 	if (!file.read((char *)&ship_count, sizeof(int)))
 		return false;
 
-	if (ship_count < 0 || ship_count > Nships)
+	if (ship_count < 0 || ship_count > ships.capacity())
 	{
 		Warning() << "DB: Invalid ship count in backup file: " << ship_count;
 		return false;
@@ -1272,6 +1081,12 @@ bool DB::Load(std::ifstream &file)
 		// Not persisted; stale records are left to the sweep
 		temp_ships[i].type_ttl = temp_ships[i].msg_type;
 
+		if (temp_ships[i].mmsi == 0)
+		{
+			Error() << "DB: Ship with empty MMSI at index " << i;
+			return false;
+		}
+
 		if (i > 0 && temp_ships[i].last_signal < previous_signal)
 		{
 			Error() << "DB: Ships not in chronological order at index " << i;
@@ -1284,20 +1099,16 @@ bool DB::Load(std::ifstream &file)
 	// All validated, now apply to DB
 	for (int i = 0; i < ship_count; i++)
 	{
-		int h = Hash(temp_ships[i].mmsi);
-		int ptr = findShip(temp_ships[i].mmsi);
-		if (ptr == -1)
-			ptr = createShip(h);
-
-		moveShipToFront(ptr);
-
-		ShipLL saved_incoming = ships[ptr].incoming;
-		ShipLL saved_hash = ships[ptr].hash;
+		int ptr = ships.find(temp_ships[i].mmsi);
+		if (ptr == SHIP_NIL)
+		{
+			ptr = ships.create(temp_ships[i].mmsi);
+			paths.wipe(ptr);
+		}
+		else
+			ships.touch(ptr);
 
 		ships[ptr] = temp_ships[i];
-
-		ships[ptr].incoming = saved_incoming;
-		ships[ptr].hash = saved_hash;
 	}
 
 	Info() << "DB: Restored " << ship_count << " ships from backup";
@@ -1307,146 +1118,46 @@ bool DB::Load(std::ifstream &file)
 #ifdef CHECK_DB_INTEGRITY
 void DB::checkIntegrity()
 {
-	int errors = 0;
+	std::vector<std::string> errors;
+	int n = ships.validate(errors);
 
-	// 1. Walk the incoming linked list and verify structure
-	int list_count = 0;
-	std::vector<bool> in_list(Nships, false);
-
-	int ptr = first;
-	int prev_ptr = -1;
-	while (ptr != -1 && list_count <= Nships)
+	// live records must form a contiguous prefix of the LRU: DB::Save walks on that basis
+	bool empty_seen = false;
+	int live = 0;
+	for (int ptr = ships.front(); ptr != SHIP_NIL; ptr = ships.next(ptr))
 	{
-		if (ptr < 0 || ptr >= Nships)
+		if (ships.key(ptr) != ships[ptr].mmsi)
 		{
-			Error() << "DB integrity: incoming list ptr " << ptr << " out of range";
-			errors++;
-			break;
+			errors.push_back("slot " + std::to_string(ptr) + " key " + std::to_string(ships.key(ptr)) + " but mmsi " + std::to_string(ships[ptr].mmsi));
+			n++;
 		}
-		if (in_list[ptr])
-		{
-			Error() << "DB integrity: incoming list has cycle at ptr " << ptr;
-			errors++;
-			break;
-		}
-		if (ships[ptr].incoming.prev != prev_ptr)
-		{
-			Error() << "DB integrity: ship " << ptr << " prev=" << ships[ptr].incoming.prev << " expected " << prev_ptr;
-			errors++;
-		}
-		in_list[ptr] = true;
-		prev_ptr = ptr;
-		ptr = ships[ptr].incoming.next;
-		list_count++;
-	}
 
-	if (list_count != Nships)
-	{
-		Error() << "DB integrity: incoming list has " << list_count << " nodes, expected " << Nships;
-		errors++;
-	}
-
-	if (prev_ptr != last)
-	{
-		Error() << "DB integrity: last=" << last << " but tail of list is " << prev_ptr;
-		errors++;
-	}
-
-	// 2. Verify count: walk from first, count ships with mmsi != 0 that are contiguous from head
-	int active_count = 0;
-	ptr = first;
-	while (ptr != -1)
-	{
-		if (ships[ptr].mmsi != 0)
-			active_count++;
+		if (ships[ptr].mmsi == 0)
+			empty_seen = true;
 		else
-			break;
-		ptr = ships[ptr].incoming.next;
-	}
-	if (active_count != count)
-	{
-		Error() << "DB integrity: active ship count " << active_count << " != stored count " << count;
-		errors++;
-	}
-
-	// 3. Verify hash table: every ship with mmsi != 0 must be in the correct bucket
-	int hash_total = 0;
-	for (int h = 0; h < HASH_SIZE; h++)
-	{
-		int bucket_count = 0;
-		int bptr = hash_table[h].first;
-		int bprev = -1;
-		int blast = -1;
-
-		while (bptr != -1)
 		{
-			if (bptr < 0 || bptr >= Nships)
+			live++;
+			if (empty_seen)
 			{
-				Error() << "DB integrity: hash bucket " << h << " ptr " << bptr << " out of range";
-				errors++;
-				break;
-			}
-			if (ships[bptr].hash.prev != bprev)
-			{
-				Error() << "DB integrity: hash bucket " << h << " ship " << bptr << " prev=" << ships[bptr].hash.prev << " expected " << bprev;
-				errors++;
-			}
-			if (ships[bptr].mmsi == 0)
-			{
-				Error() << "DB integrity: hash bucket " << h << " contains ship " << bptr << " with mmsi=0";
-				errors++;
-			}
-			else if (Hash(ships[bptr].mmsi) != h)
-			{
-				Error() << "DB integrity: ship " << bptr << " mmsi=" << ships[bptr].mmsi << " in bucket " << h << " but hash=" << Hash(ships[bptr].mmsi);
-				errors++;
-			}
-			blast = bptr;
-			bprev = bptr;
-			bptr = ships[bptr].hash.next;
-			bucket_count++;
-
-			if (bucket_count > Nships)
-			{
-				Error() << "DB integrity: hash bucket " << h << " has cycle";
-				errors++;
-				break;
+				errors.push_back("live slot " + std::to_string(ptr) + " sits behind an empty one");
+				n++;
+				empty_seen = false;
 			}
 		}
-
-		if (hash_table[h].last != blast)
-		{
-			Error() << "DB integrity: hash bucket " << h << " last=" << hash_table[h].last << " but tail is " << blast;
-			errors++;
-		}
-
-		hash_total += bucket_count;
 	}
 
-	if (hash_total != count)
+	if (live != ships.size())
 	{
-		Error() << "DB integrity: hash table contains " << hash_total << " ships, expected " << count;
-		errors++;
+		errors.push_back("count " + std::to_string(ships.size()) + " but " + std::to_string(live) + " live records");
+		n++;
 	}
 
-	// 4. Verify every active ship is findable via hash
-	ptr = first;
-	for (int i = 0; i < count; i++)
-	{
-		if (ptr == -1)
-			break;
-		if (ships[ptr].mmsi != 0 && findShip(ships[ptr].mmsi) != ptr)
-		{
-			Error() << "DB integrity: ship " << ptr << " mmsi=" << ships[ptr].mmsi << " not findable via hash";
-			errors++;
-		}
-		ptr = ships[ptr].incoming.next;
-	}
+	n += paths.check();
 
-	// 5. Verify path store block lists, live counts and per-ship chains
-	errors += paths.check();
+	for (std::size_t i = 0; i < errors.size(); i++)
+		Error() << "DB integrity: " << errors[i];
 
-	if (errors)
-		Error() << "DB integrity: " << errors << " errors found";
+	if (n == 0)
+		Debug() << "DB integrity: OK (" << live << " ships)";
 }
 #endif

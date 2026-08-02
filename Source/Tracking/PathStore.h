@@ -21,6 +21,8 @@
 #include <ctime>
 #include <vector>
 
+#include "Geodesy.h"
+
 #ifdef CHECK_DB_INTEGRITY
 #include "Logger.h"
 #endif
@@ -53,6 +55,8 @@ public:
 	};
 
 	static const uint8_t NA = 0xFF;
+
+	static std::size_t blockBytes() { return sizeof(Block); }
 
 private:
 	static const int BLOCK_SHIFT = 8;
@@ -273,13 +277,6 @@ private:
 		return v < 254.0f ? (uint8_t)v : (uint8_t)254;
 	}
 
-	// cos(lat) within 0.7% up to 85 degrees, several times cheaper than libm on the add() path
-	static float cosLat(float lat)
-	{
-		float x = lat * 0.01745329f, x2 = x * x;
-		return 1.0f + x2 * (-0.5f + x2 * (0.0416667f - x2 * 0.00138889f));
-	}
-
 	static int idleBand(int status)
 	{
 		if (status == NAV_MOORED)
@@ -294,9 +291,7 @@ private:
 		bool idle = q.sog != NA && sog != NA && q.sog <= IDLE_SOG && sog <= IDLE_SOG;
 		int band = idle ? idleBand(status) : DEADBAND;
 
-		float dlat = (lat - q.lat) * 111120.0f;
-		float dlon = (lon - q.lon) * 111120.0f * cosLat(lat);
-		if (dlat * dlat + dlon * dlon > (float)(band * band))
+		if (Util::Geodesy::distanceSqMeters(q.lat, q.lon, lat, lon) > (float)(band * band))
 			return true;
 		if (q.sog != NA && sog != NA && (sog > q.sog ? sog - q.sog : q.sog - sog) > 1)
 			return true;

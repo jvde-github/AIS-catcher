@@ -388,6 +388,8 @@ void WebViewer::attachTrackers(const std::vector<std::unique_ptr<Receiver>> &rec
 		// a reclaimed tracker is already set up and was rewired by applySettings()
 		if (serving && fresh)
 		{
+			// config first: setup() sizes the track store from it
+			tracker->applyConfig(settings.tracking, filter);
 			tracker->setup();
 			tracker->wireStreams();
 		}
@@ -1089,6 +1091,9 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 		break;
 	case AIS::KEY_SETTING_CUTOFF:
 		settings.tracking.cutoff = Util::Parse::Integer(arg, 0, 10000);
+		break;
+	case AIS::KEY_SETTING_TRACK_MEMORY:
+		settings.tracking.track_memory = Util::Parse::Integer(arg, 16, 256 * 1024);
 		break;
 	case AIS::KEY_SETTING_EXPIRE:
 		settings.tracking.expire_fields = Util::Parse::Switch(arg);

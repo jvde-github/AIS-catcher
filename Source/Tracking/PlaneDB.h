@@ -1,6 +1,8 @@
 #include <array>
 
 #include "ADSB.h"
+#include "SlotTable.h"
+#include "Geodesy.h"
 #include "Stream.h"
 #include "JSON/Writer.h"
 
@@ -8,13 +10,6 @@ class PlaneDB : public StreamIn<Plane::ADSB>
 {
 private:
     std::mutex mtx;
-
-    struct LL
-    {
-        int prev, next;
-    };
-    const int END = -1;
-    const int FREE = -2;
 
     const static int CPR_CACHE_SIZE = 3;
 
@@ -24,96 +19,17 @@ private:
     int CPR_cache_even_idx = 0;
     int CPR_cache_odd_idx = 0;
 
-    static float deg2rad(float deg) { return deg * PI / 180.0f; }
-    static int rad2deg(float rad) { return (int)(360 + rad * 180 / PI) % 360; }
+    static const int N = 512;
+    static const int NBUCKETS = 1031;
 
-    // https://www.movable-type.co.uk/scripts/latlong.html
-    static void getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float &distance, int &bearing)
-    {
-        const float EarthRadius = 6371.0f;          // Earth radius in kilometers
-        const float NauticalMilePerKm = 0.5399568f; // Conversion factor
-
-        // Convert the latitudes and longitudes from degrees to radians
-        lat1 = deg2rad(lat1);
-        lon1 = deg2rad(lon1);
-        lat2 = deg2rad(lat2);
-        lon2 = deg2rad(lon2);
-
-        // Compute the distance using the haversine formula
-        float dlat = lat2 - lat1, dlon = lon2 - lon1;
-        float a = sin(dlat / 2) * sin(dlat / 2) + cos(lat1) * cos(lat2) * sin(dlon / 2) * sin(dlon / 2);
-        distance = 2 * EarthRadius * NauticalMilePerKm * asin(sqrt(a));
-
-        float y = sin(dlon) * cos(lat2);
-        float x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dlon);
-        bearing = rad2deg(atan2(y, x));
-    }
-
-    int first = -1;
-    int last = -1;
-    int count = 0;
-    std::vector<Plane::ADSB> items;
-    const int N = 512;
-    std::array<LL, 512> hash_ll;
+    SlotTable<Plane::ADSB, uint32_t> table;
 
     FLOAT32 station_lat = LAT_UNDEFINED, station_lon = LON_UNDEFINED;
-
-    // for debugging
-    void checkDepth()
-    {
-
-        int m = 0, gc = 0;
-        for (int i = 0; i < N; i++)
-        {
-            int c = 0;
-            int ptr = hash_ll[i].next;
-            while (ptr != END)
-            {
-                c++;
-                ptr = items[ptr].hash_ll.next;
-            }
-            if (c > m)
-                m = c;
-
-            gc += c;
-        }
-        std::cerr << "Max: " << m << " out of total " << gc << std::endl;
-    }
-
-    // FNV-1 hash
-    int hash(uint32_t hexident) const
-    {
-        const uint32_t PRIME = 16777619;
-        uint32_t hash = 2166136261;
-        hash = (hash ^ hexident) * PRIME;
-        return hash % N;
-    }
 
 public:
     PlaneDB()
     {
-        items.resize(N);
-
-        first = N - 1;
-        last = 0;
-        count = 0;
-
-        // set up linked list
-        for (int i = 0; i < N; i++)
-        {
-            items[i].time_ll.next = i - 1;
-            items[i].time_ll.prev = i + 1;
-
-            items[i].hash_ll.prev = FREE;
-            items[i].hash_ll.next = FREE;
-        }
-        items[N - 1].time_ll.prev = -1;
-
-        for (int i = 0; i < N; i++)
-        {
-            hash_ll[i].prev = END;
-            hash_ll[i].next = END;
-        }
+        table.setup(N, NBUCKETS);
 
         for (int i = 0; i < CPR_CACHE_SIZE; i++)
         {
@@ -132,88 +48,11 @@ public:
             lat = tag.station_lat;
             lon = tag.station_lon;
         }
-        if (items[ptr].lat != LAT_UNDEFINED && items[ptr].lon != LON_UNDEFINED)
+        if (table[ptr].lat != LAT_UNDEFINED && table[ptr].lon != LON_UNDEFINED)
         {
-            lat = items[ptr].lat;
-            lon = items[ptr].lon;
+            lat = table[ptr].lat;
+            lon = table[ptr].lon;
         }
-    }
-
-    void moveToFront(int ptr)
-    {
-        if (ptr == first)
-            return;
-
-        // remove ptr out of the linked list
-        if (items[ptr].time_ll.next != -1)
-            items[items[ptr].time_ll.next].time_ll.prev = items[ptr].time_ll.prev;
-        else
-            last = items[ptr].time_ll.prev;
-
-        items[items[ptr].time_ll.prev].time_ll.next = items[ptr].time_ll.next;
-
-        // new ship is first in list
-        items[ptr].time_ll.next = first;
-        items[ptr].time_ll.prev = -1;
-
-        items[first].time_ll.prev = ptr;
-        first = ptr;
-    }
-
-    int create(int hexident, int hexident_status = HEXINDENT_DIRECT)
-    {
-        int ptr = last;
-
-        int oldhash = hash(items[ptr].hexident);
-        int newhash = hash(hexident);
-
-        // Remove from hash list if already present
-        if (items[ptr].hash_ll.next != FREE || items[ptr].hash_ll.prev != FREE)
-        {
-            if (items[ptr].hash_ll.next != END)
-                items[items[ptr].hash_ll.next].hash_ll.prev = items[ptr].hash_ll.prev;
-            else
-                hash_ll[oldhash].prev = items[ptr].hash_ll.prev;
-
-            if (items[ptr].hash_ll.prev != END)
-                items[items[ptr].hash_ll.prev].hash_ll.next = items[ptr].hash_ll.next;
-            else
-                hash_ll[oldhash].next = items[ptr].hash_ll.next;
-        }
-
-        // Insert into hash list (node is guaranteed to be removed already)
-        items[ptr].hash_ll.prev = END;
-        items[ptr].hash_ll.next = hash_ll[newhash].next;
-
-        if (hash_ll[newhash].next != END)
-            items[hash_ll[newhash].next].hash_ll.prev = ptr;
-
-        hash_ll[newhash].next = ptr;
-
-        count = MIN(count + 1, N);
-        items[ptr].clear();
-        items[ptr].hexident = hexident;
-        items[ptr].hexident_status = hexident_status;
-
-        if (hexident_status == HEXINDENT_DIRECT)
-            items[ptr].setCountryCode();
-
-        return ptr;
-    }
-
-    int find(int hexid) const
-    {
-
-        int h = hash(hexid);
-        int ptr = hash_ll[h].next;
-        while (ptr != END)
-        {
-            if (items[ptr].hexident == hexid)
-                return ptr;
-            ptr = items[ptr].hash_ll.next;
-        }
-
-        return -1;
     }
 
     bool checkInCPRCache(const Plane::CPR &cpr, bool even)
@@ -250,20 +89,26 @@ public:
             return;
 
         // Find or create plane entry
-        int ptr = find(msg->hexident);
+        int ptr = table.find(msg->hexident);
 
-        if (ptr == -1)
+        if (ptr == SlotTable<Plane::ADSB, uint32_t>::NIL)
         {
             // if ICAO is implied from CRC, ignore the message if not known
             if (msg->hexident_status == HEXINDENT_IMPLIED_FROM_CRC)
                 return;
 
-            ptr = create(msg->hexident, msg->hexident_status);
-        }
+            ptr = table.create(msg->hexident);
+            table[ptr].clear();
+            table[ptr].hexident = msg->hexident;
+            table[ptr].hexident_status = msg->hexident_status;
 
-        // Move to front and update data
-        moveToFront(ptr);
-        Plane::ADSB &plane = items[ptr];
+            if (msg->hexident_status == HEXINDENT_DIRECT)
+                table[ptr].setCountryCode();
+        }
+        else
+            table.touch(ptr);
+
+        Plane::ADSB &plane = table[ptr];
 
         // Update timestamp and core identifiers
         plane.rxtime = msg->rxtime;
@@ -364,7 +209,7 @@ public:
                         {
                             FLOAT32 distance = DISTANCE_UNDEFINED;
                             int angle = ANGLE_UNDEFINED;
-                            getDistanceAndBearing(plane.CPR_history[independent].lat, plane.CPR_history[independent].lon, lat_new, lon_new, distance, angle);
+                            Util::Geodesy::distanceBearing(plane.CPR_history[independent].lat, plane.CPR_history[independent].lon, lat_new, lon_new, distance, angle);
 
                             double speed = plane.speed == SPEED_UNDEFINED ? 1000 : plane.speed * 1.5;
                             double max_distance = deltat * speed / 3600.0;
@@ -390,7 +235,7 @@ public:
 
         if (position_updated && tag.station_lat != LAT_UNDEFINED && tag.station_lon != LON_UNDEFINED)
         {
-            getDistanceAndBearing(tag.station_lat, tag.station_lon, plane.lat, plane.lon, plane.distance, plane.angle);
+            Util::Geodesy::distanceBearing(tag.station_lat, tag.station_lon, plane.lat, plane.lon, plane.distance, plane.angle);
             tag.distance = plane.distance;
             tag.angle = plane.angle;
         }
@@ -457,13 +302,13 @@ public:
         std::string content;
         JSON::Writer w(content, 4096);
         std::time_t now = std::time(nullptr);
-        w.beginObject().kv("count", count).kv("time", (long long)now).key("values").beginArray();
+        w.beginObject().kv("count", table.size()).kv("time", (long long)now).key("values").beginArray();
 
-        int ptr = first;
+        int ptr = table.front();
 
         while (ptr != -1)
         {
-            const Plane::ADSB &plane = items[ptr];
+            const Plane::ADSB &plane = table[ptr];
 
             if (plane.hexident != HEXIDENT_UNDEFINED)
             {
@@ -500,7 +345,7 @@ public:
                         .val_unless(plane.angle, ANGLE_UNDEFINED).endArray();
                 }
             }
-            ptr = items[ptr].time_ll.next;
+            ptr = table.next(ptr);
         }
 
         w.endArray().kv("error", false).endObject().raw("\n\n");
@@ -508,9 +353,7 @@ public:
         return content;
     }
 
-    int getFirst() const { return first; }
-    int getLast() const { return last; }
-    int getCount() const { return count; }
+    int getCount() const { return table.size(); }
 
     void setLat(FLOAT32 lat) { this->station_lat = lat; }
     void setLon(FLOAT32 lon) { this->station_lon = lon; }

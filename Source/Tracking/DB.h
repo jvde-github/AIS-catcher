@@ -31,6 +31,8 @@
 #define CHECK_DB_INTEGRITY
 
 #include "Ships.h"
+#include "SlotTable.h"
+#include "Geodesy.h"
 #include "PathStore.h"
 
 struct BinaryMessage
@@ -61,7 +63,6 @@ class DB : public StreamIn<JSON::JSON>,
 
 	JSON::Serializer builder{JSON_DICT_FULL};
 
-	int first = 0, last = 0, count = 0;
 	std::string content, delim;
 	float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 	int TIME_HISTORY = 30 * 60;
@@ -72,39 +73,24 @@ class DB : public StreamIn<JSON::JSON>,
 	bool gps_position = false;
 	uint32_t own_mmsi = 0;
 
-	int Nships = 4096;
 	int HASH_SIZE = 8209;
+	// track storage is independent of server mode: only the ship count scales
+	static const int TRACK_MEMORY_DEFAULT_KB = 1024;
+	int track_memory_kb = TRACK_MEMORY_DEFAULT_KB;
 
 	bool expire_fields = false;
 	std::time_t last_sweep = 0;
 
-	struct HashBucket
-	{
-		int first = -1;
-		int last = -1;
-	};
+	static const int SHIP_NIL = SlotTable<Ship, uint32_t>::NIL;
 
-	std::vector<Ship> ships;
+	SlotTable<Ship, uint32_t> ships;
 	PathStore paths;
-	std::vector<HashBucket> hash_table;
 
-	bool isValidCoord(float lat, float lon);
-
-	static float deg2rad(float deg) { return deg * PI / 180.0f; }
-	static int rad2deg(float rad) { return (int)(360 + rad * 180 / PI) % 360; }
-	int Hash(uint32_t mmsi) { return mmsi % HASH_SIZE; }
-
-	int findShip(uint32_t mmsi);
-	int createShip(int hash);
-	void moveShipToFront(int);
 	bool updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &v, bool allowApproximate, bool &staticUpdated);
 
 	bool updateShip(const JSON::JSON &, TAG &, Ship &);
 	void addToPath(int ptr);
 
-	static void getDistanceAndBearing(float lat1, float lon1, float lat2, float lon2, float &distance, int &bearing);
-
-	void getShipJSON(const Ship &ship, JSON::Writer &w, long int now);
 	void writeSinglePathJSONCompact(int idx, JSON::Writer &w);
 	bool writeSinglePathJSONCompactSince(int idx, std::time_t since, JSON::Writer &w);
 	bool hasPathPointsSince(int idx, std::time_t since);
@@ -131,6 +117,7 @@ public:
 	void tick(std::time_t now);
 	void setTimeHistory(int t) { TIME_HISTORY = t; }
 	void setExpireFields(bool b) { expire_fields = b; }
+	void setTrackMemory(int kb) { if (kb > 0) track_memory_kb = kb; }
 	void setShareLatLon(bool b) { latlon_share = b; }
 	bool getShareLatLon() { return latlon_share; }
 
@@ -185,8 +172,8 @@ public:
 	std::string getKML();
 	std::string getGeoJSON();
 
-	int getCount() { return count; }
-	int getMaxCount() { return Nships; }
+	int getCount() { return ships.size(); }
+	int getMaxCount() { return ships.capacity(); }
 
 	void setServerMode(bool b) { server_mode = b; }
 	void setMsgSave(bool b) { msg_save = b; }

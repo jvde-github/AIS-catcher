@@ -143,6 +143,7 @@ const ACTIONS = {
     setGraphVisibility: (e, d, el) => setGraphVisibility(d.graph, el.checked),
     setPlotAbsoluteTime: (e, d, el) => setPlotAbsoluteTime(el.checked),
     setMapSetting: (e, d, el) => setMapSetting(d.key, el.type === 'checkbox' ? el.checked : el.value),
+    setTrackHistory: (e, d, el) => setTrackHistory(TRACK_HISTORY_STOPS[el.value]),
     setBinaryDisplay: (e, d, el) => setBinaryDisplay(el.value),
     setBinaryCategory: (e, d, el) => setBinaryCategory(d.cat, el.checked),
     setRangeColor: (e, d, el) => setRangeColor(el.value, d.field),
@@ -163,6 +164,7 @@ const ACTIONS = {
     updateShipoutlineOpacityDisplay: (e, d, el) => updateSliderDisplay('shipoutlineOpacity', el.value),
     updateTrackWeightDisplay: (e, d, el) => updateSliderDisplay('trackWeight', el.value),
     updateTrackOpacityDisplay: (e, d, el) => updateSliderDisplay('trackOpacity', el.value),
+    updateTrackHistoryDisplay: (e, d, el) => updateSliderDisplay('trackHistory', TRACK_HISTORY_STOPS[el.value]),
     updateTrackTrashThresholdDisplay: (e, d, el) => updateSliderDisplay('trackTrashThreshold', el.value),
     updateKioskSpeedDisplay: (e, d, el) => updateSliderDisplay('kioskSpeed', el.value),
 
@@ -357,6 +359,7 @@ let interval,
     lastPathFetch = 0,
     paths = {},
     trackCutoff = 0,
+    pathsFrom = -1,
     map,
     basemaps = {},
     overlapmaps = {},
@@ -449,6 +452,7 @@ function restoreDefaultSettings() {
         icon_scale: 1,
         track_weight: 1,
         track_opacity: 1,
+        track_history: 30,
         track_trash_threshold: 30,
         show_range: false,
         distance_circles: true,
@@ -2622,6 +2626,25 @@ function setMapSetting(a, v) {
     redrawMap();
 }
 
+function setTrackHistory(minutes) {
+    settings.track_history = minutes;
+    saveSettings();
+
+    // deltas only move forwards, so reaching further back needs a full refetch
+    const want = trackWindowStart();
+    const covered = pathsFrom === 0 || (pathsFrom > 0 && want !== 0 && want >= pathsFrom);
+
+    if (covered) {
+        redrawMap();
+        return;
+    }
+
+    paths = {};
+    lastPathFetch = 0;
+    pathsFrom = -1;
+    fetchTracks().then(redrawMap);
+}
+
 function setBinaryDisplay(v) {
     settings.binary_messages = v;
     binaryStyleCache.clear();
@@ -2751,6 +2774,7 @@ function onReceiverChange(idx) {
     range_update_time = null;
     lastPathFetch = 0;
     paths = {};
+    pathsFrom = -1;
     syncReceiverUI();
     refresh_data();
 }
@@ -3714,6 +3738,7 @@ function deleteAllTracks() {
 async function resetTracksFromNow() {
     trackCutoff = shipsSince || Math.floor(Date.now() / 1000);
     paths = {};
+    pathsFrom = -1;
     lastPathFetch = 0;
     await fetchTracks();
     redrawMap();
@@ -3729,8 +3754,12 @@ async function fetchTracks() {
     let isDelta = false;
     try {
         if (settings.show_all_tracks) {
-            const sinceParam = lastPathFetch > 0 ? "&since=" + lastPathFetch : "";
-            isDelta = sinceParam !== "";
+            const windowStart = trackWindowStart();
+            const sinceParam = lastPathFetch > 0
+                ? "&since=" + lastPathFetch
+                : (windowStart ? "&since=" + windowStart : "");
+            isDelta = lastPathFetch > 0;
+            if (!isDelta) pathsFrom = windowStart;
             a = await fetch("api/allpath.json?receiver=" + activeReceiver + sinceParam);
         } else {
             for (var mmsi of marker_tracks) {
@@ -3780,21 +3809,21 @@ async function fetchTracks() {
             }
             for (const mmsi in paths) {
                 if (!(mmsi in shipsDB)) delete paths[mmsi];
-                else if (paths[mmsi].length > 250) paths[mmsi] = paths[mmsi].slice(0, 250);
             }
         }
     } catch (error) {
         console.log("Error loading path: " + error);
-        if (!isDelta) paths = {};
+        if (!isDelta) { paths = {}; pathsFrom = -1; }
         lastPathFetch = 0;
         return false;
     }
 
-    if (trackCutoff > 0) {
+    const cutoff = trackCutoff;
+    if (cutoff > 0) {
         for (const mmsi in paths) {
             const arr = paths[mmsi];
             let k = 0;
-            while (k < arr.length && arr[k][3] >= trackCutoff) k++;
+            while (k < arr.length && arr[k][3] >= cutoff) k++;
             paths[mmsi] = arr.slice(0, k + 1);
         }
     }
@@ -4922,9 +4951,12 @@ function redrawMap() {
             if (path.length > 0 && path[0].length >= 4) {
                 let currentSegment = [];
                 let currentDashed = false;
+                const cutoff = trackWindowStart();
 
-                for (let i = 0; i < Math.min(path.length, 250); i++) {
+                for (let i = 0; i < path.length; i++) {
                     const point = path[i];
+                    if (cutoff && point[3] < cutoff)
+                        break;
                     const coord = ol.proj.fromLonLat([point[1], point[0]]);
 
                     let isDashed = false;
@@ -5106,6 +5138,7 @@ function updateSettingsTab() {
     document.getElementById("settings_icon_scale").value = settings.icon_scale;
     document.getElementById("settings_track_weight").value = settings.track_weight;
     document.getElementById("settings_track_opacity").value = settings.track_opacity;
+    document.getElementById("settings_track_history").value = Math.max(0, TRACK_HISTORY_STOPS.indexOf(settings.track_history));
     document.getElementById("settings_track_trash_threshold").value = settings.track_trash_threshold;
 
     // Update all slider display values
@@ -5113,6 +5146,7 @@ function updateSettingsTab() {
     updateSliderDisplay('mapOpacity', settings.map_opacity);
     updateSliderDisplay('trackWeight', settings.track_weight);
     updateSliderDisplay('trackOpacity', settings.track_opacity);
+    updateSliderDisplay('trackHistory', settings.track_history);
     updateSliderDisplay('trackTrashThreshold', settings.track_trash_threshold);
     updateSliderDisplay('tooltipFontSize', settings.tooltipLabelFontSize);
     updateSliderDisplay('shipoutlineOpacity', settings.shipoutline_opacity);
@@ -5243,10 +5277,26 @@ function updateAndroid() {
     androidStyle.textContent = sel + " { display: none !important; }";
 }
 
+// minutes of track to draw; the last stop means everything held by the server
+const TRACK_HISTORY_STOPS = [1, 5, 15, 30, 60, 180, 360, 720, 1440, 0];
+// Oldest point to show, in SERVER epoch seconds, 0 for everything. Point times
+// and the `since` filter are server-side, so a skewed browser clock must not leak in.
+function trackWindowStart() {
+    if (!settings.track_history) return 0;
+    const now = shipsSince || Math.floor(Date.now() / 1000);
+    return now - settings.track_history * 60;
+}
+
+function trackHistoryLabel(m) {
+    if (!m) return 'All';
+    return m < 60 ? m + ' min' : (m / 60) + ' h';
+}
+
 const SLIDER_DISPLAYS = {
     kioskSpeed: ["kiosk_rotation_speed_label", (v) => `Rotation Speed (${v}s)`],
     trackWeight: ["track_weight_label", (v) => `Weight (${v})`],
     trackOpacity: ["track_opacity_label", (v) => `Opacity (${Math.round(parseFloat(v) * 100)}%)`],
+    trackHistory: ["track_history_label", (v) => `History (${trackHistoryLabel(Number(v))})`],
     trackTrashThreshold: ["track_trash_threshold_label", (v) => `Dash Threshold (${v}s)`],
     iconScale: ["icon_scale_label", (v) => `Marker Size (${parseFloat(v).toFixed(2)})`],
     mapOpacity: ["map_opacity_label", (v) => `Map Dimming (${Math.round(parseFloat(v) * 100)}%)`],

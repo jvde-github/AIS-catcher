@@ -47,6 +47,8 @@ struct TrackingConfig
 	bool expire_fields = false;
 	// 0 means "not configured": LONG_RANGE_CUTOFF_DEFAULT is used instead
 	int cutoff = 0;
+	// kilobytes of track storage; 0 keeps the default
+	int track_memory = 0;
 };
 
 // Bundles all per-receiver (or aggregate) state: ship DB, counters, history.
