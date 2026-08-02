@@ -2,6 +2,7 @@
 const ChannelFields = {
     host: () => ({
         name: 'host',
+        section: 'Connection',
         label: 'Host',
         type: 'text',
         defaultValue: '127.0.0.1',
@@ -10,6 +11,7 @@ const ChannelFields = {
     }),
     port: () => ({
         name: 'port',
+        section: 'Connection',
         label: 'Port',
         type: 'number',
         defaultValue: 10110,
@@ -18,6 +20,7 @@ const ChannelFields = {
     }),
     description: () => ({
         name: 'description',
+        section: 'Label',
         label: 'Description',
         type: 'text',
         placeholder: 'Optional description',
@@ -25,6 +28,7 @@ const ChannelFields = {
     }),
     link: () => ({
         name: 'link',
+        section: 'Label',
         label: 'Link',
         type: 'text',
         placeholder: 'Optional link, e.g. https://example.com',
@@ -32,26 +36,29 @@ const ChannelFields = {
     }),
     active: () => ({
         name: 'active',
+        section: 'Options',
         label: 'Active',
         type: 'toggle',
         defaultValue: true,
         width: 25,
-        tooltip: 'Turn off to pause this channel without removing it'
+        tooltip: 'Pause without removing'
     }),
     unique: () => ({
         name: 'unique',
+        section: 'Filter',
         label: 'Unique',
         type: 'toggle',
         defaultValue: false,
-        width: 25,
-        tooltip: 'Drop duplicate messages received within a few seconds'
+        width: 50,
+        tooltip: 'Drops duplicates seen within a few seconds'
     }),
     msgformat: (defaultValue = 'NMEA') => ({
         name: 'msgformat',
+        section: 'Format',
         label: 'Message Format',
         type: 'select',
         defaultValue: defaultValue,
-        tooltip: 'Format of forwarded messages: raw NMEA, NMEA with TAG block, or decoded JSON',
+        tooltip: 'Format of forwarded messages',
         options: [
             { value: 'NMEA', label: 'NMEA' },
             { value: 'NMEA_TAG', label: 'NMEA + TAG' },
@@ -64,9 +71,11 @@ const ChannelFields = {
     }),
     position_interval: () => ({
         name: 'position_interval',
+        section: 'Filter',
         label: 'Downsample Position',
         type: 'switch-integer',
-        tooltip: 'At most one position report per vessel per interval (seconds); other message types pass unchanged',
+        tooltip: 'Keeps one position per vessel per this many seconds',
+        width: 50,
         defaultValue: false,
         defaultInteger: 60,
         min: 0,
@@ -75,6 +84,7 @@ const ChannelFields = {
     }),
     zones: () => ({
         name: 'zone',
+        section: 'Zones',
         label: 'Zones',
         type: 'zones',
         defaultValue: [],
@@ -94,7 +104,7 @@ const sdrGainFields = (prefix, inputValue) => ({
             { value: "linearity", label: "Linearity" },
             { value: "sensitivity", label: "Sensitivity" }
         ],
-        tooltip: "Linearity and Sensitivity use one combined gain; Free sets LNA, mixer and VGA individually",
+        tooltip: "Free sets LNA, mixer and VGA individually",
         dependsOn: {
             field: "input",
             value: inputValue
@@ -183,7 +193,7 @@ const sdrGainFields = (prefix, inputValue) => ({
         label: "Bias tee",
         type: "toggle",
         jsonpath: `${prefix}.biastee`,
-        tooltip: "Power an external LNA over the antenna cable",
+        tooltip: "Powers an external LNA over the cable",
         defaultValue: false,
         width: 25,
         dependsOn: {
@@ -194,8 +204,68 @@ const sdrGainFields = (prefix, inputValue) => ({
 });
 
 const httpSchema = {
+    description: ChannelFields.description(),
+    link: ChannelFields.link(),
+    url: {
+        name: 'url',
+        section: 'Connection',
+        label: 'URL',
+        type: 'text',
+        width: 75,
+        placeholder: 'https://example.com'
+    },
+    interval: {
+        name: 'interval',
+        section: 'Connection',
+        label: 'Interval (seconds)',
+        type: 'number',
+        min: 1,
+        max: 86400,
+        defaultValue: 60,
+        placeholder: '60',
+        width: 25,
+        tooltip: 'How often messages are posted'
+    },
+    active: ChannelFields.active(),
+    id: {
+        name: 'id',
+        section: 'Connection',
+        label: 'ID',
+        type: 'text',
+        width: 25,
+        placeholder: 'Station ID',
+        tooltip: 'Station identifier in the feed'
+    },
+    userpwd: {
+        name: 'userpwd',
+        section: 'Connection',
+        label: 'Credentials',
+        type: 'text',
+        width: 75,
+        placeholder: 'user:password',
+        tooltip: 'Sent as user:password'
+    },
+    gzip: {
+        name: 'gzip',
+        section: 'Options',
+        label: 'Gzip',
+        type: 'toggle',
+        defaultValue: false,
+        width: 25,
+        tooltip: 'Compress posted data'
+    },
+    response: {
+        name: 'response',
+        section: 'Options',
+        label: 'Response',
+        type: 'toggle',
+        defaultValue: true,
+        width: 25,
+        tooltip: 'Log the server response'
+    },
     protocol: {
         name: 'protocol',
+        section: 'Format',
         label: 'Protocol',
         type: 'select',
         defaultValue: 'AISCATCHER',
@@ -207,58 +277,7 @@ const httpSchema = {
             { value: 'AIRFRAMES', label: 'AIRFRAMES' },
             { value: 'NMEA', label: 'NMEA' }
         ],
-        width: 75,
-        tooltip: 'Submission format expected by the server, e.g. AISCATCHER JSON or APRS for aprs.fi'
-    },
-    interval: {
-        name: 'interval',
-        label: 'Interval (seconds)',
-        type: 'number',
-        min: 1,
-        max: 86400,
-        defaultValue: 60,
-        placeholder: '60',
-        width: 25,
-        tooltip: 'How often collected messages are posted to the URL'
-    },
-    url: {
-        name: 'url',
-        label: 'URL',
-        type: 'text',
-        placeholder: 'https://example.com'
-    },
-    description: ChannelFields.description(),
-    link: ChannelFields.link(),
-    active: ChannelFields.active(),
-    id: {
-        name: 'id',
-        label: 'ID',
-        type: 'text',
-        placeholder: 'Station ID',
-        tooltip: 'Station identifier included in the feed'
-    },
-    userpwd: {
-        name: 'userpwd',
-        label: 'Credentials',
-        type: 'text',
-        placeholder: 'user:password',
-        tooltip: 'HTTP authentication, sent as user:password'
-    },
-    gzip: {
-        name: 'gzip',
-        label: 'Gzip',
-        type: 'toggle',
-        defaultValue: false,
-        width: 25,
-        tooltip: 'Compress posted data'
-    },
-    response: {
-        name: 'response',
-        label: 'Response',
-        type: 'toggle',
-        defaultValue: true,
-        width: 25,
-        tooltip: 'Log the server response'
+        tooltip: 'Submission format expected by the server'
     },
     unique: ChannelFields.unique(),
     position_interval: ChannelFields.position_interval(),
@@ -266,33 +285,35 @@ const httpSchema = {
 };
 
 const udpSchema = {
-    host: ChannelFields.host(),
-    port: ChannelFields.port(),
     description: ChannelFields.description(),
     link: ChannelFields.link(),
+    host: ChannelFields.host(),
+    port: ChannelFields.port(),
     active: ChannelFields.active(),
     broadcast: {
         name: 'broadcast',
+        section: 'Options',
         label: 'Broadcast',
         type: 'toggle',
         defaultValue: false,
         width: 25,
         tooltip: 'Allow sending to broadcast addresses'
     },
-    unique: ChannelFields.unique(),
     msgformat: ChannelFields.msgformat(),
+    unique: ChannelFields.unique(),
     position_interval: ChannelFields.position_interval(),
     zones: ChannelFields.zones()
 };
 
 const tcpSchema = {
-    host: ChannelFields.host(),
-    port: ChannelFields.port(),
     description: ChannelFields.description(),
     link: ChannelFields.link(),
+    host: ChannelFields.host(),
+    port: ChannelFields.port(),
     active: ChannelFields.active(),
     persist: {
         name: 'persist',
+        section: 'Options',
         label: 'Reconnect',
         type: 'toggle',
         defaultValue: true,
@@ -301,64 +322,72 @@ const tcpSchema = {
     },
     keep_alive: {
         name: 'keep_alive',
+        section: 'Options',
         label: 'Keep Alive',
         type: 'toggle',
         defaultValue: false,
         width: 25,
         tooltip: 'Enable TCP keep-alive probes'
     },
-    unique: ChannelFields.unique(),
     msgformat: ChannelFields.msgformat(),
+    unique: ChannelFields.unique(),
     position_interval: ChannelFields.position_interval(),
     zones: ChannelFields.zones()
 };
 
 const tcpServerSchema = {
+    description: ChannelFields.description(),
+    link: ChannelFields.link(),
     port: {
         name: 'port',
+        section: 'Connection',
         label: 'Port',
         type: 'number',
         defaultValue: 5010,
         placeholder: '5010',
-        tooltip: 'Local port where clients connect to read the stream (max 64 clients)'
+        tooltip: 'Port clients connect to, max 64'
     },
-    description: ChannelFields.description(),
-    link: ChannelFields.link(),
     active: ChannelFields.active(),
-    unique: ChannelFields.unique(),
     msgformat: ChannelFields.msgformat(),
+    unique: ChannelFields.unique(),
     position_interval: ChannelFields.position_interval(),
     zones: ChannelFields.zones()
 };
 
 const mqttSchema = {
+    description: ChannelFields.description(),
+    link: ChannelFields.link(),
     url: {
         name: 'url',
+        section: 'Connection',
         label: 'URL',
         type: 'text',
         placeholder: 'mqtt[s]://[user:pass@]host[:port]'
     },
-    description: ChannelFields.description(),
-    link: ChannelFields.link(),
     active: ChannelFields.active(),
     topic: {
         name: 'topic',
+        section: 'Connection',
         label: 'Topic',
         type: 'text',
         placeholder: 'ais/data',
         defaultValue: 'ais/data',
-        tooltip: 'Supports placeholders such as %mmsi%, %type% and %channel% for dynamic topics'
+        tooltip: 'Supports %mmsi%, %type% and %channel% placeholders'
     },
     client_id: {
         name: 'client_id',
+        section: 'Connection',
         label: 'Client ID',
         type: 'text',
+        width: 50,
         placeholder: 'Optional client identifier'
     },
     qos: {
         name: 'qos',
+        section: 'Connection',
         label: 'QoS',
         type: 'select',
+        width: 50,
         defaultValue: '0',
         options: [
             { value: '0', label: '0 - At most once' },
@@ -375,35 +404,41 @@ const mqttSchema = {
 const webviewerSchema = {
     port: {
         name: 'port',
+        section: 'Connection',
         label: 'Port',
         type: 'number',
         jsonpath: 'port',
         defaultValue: 8100,
         min: 1,
         max: 65535,
-        width: 25
+        width: 25,
+        tooltip: 'Port the viewer is served on'
     },
     station: {
         name: 'station',
+        section: 'Station',
         restartWebviewer: true,
         label: 'Station',
         type: 'text',
         jsonpath: 'station',
         defaultValue: 'My Station',
-        width: 75,
+        width: 100,
         tooltip: 'Station name shown in the web viewer'
     },
     station_link: {
         name: 'station_link',
+        section: 'Station',
         restartWebviewer: true,
         label: 'Station Link',
         type: 'text',
+        width: 50,
         jsonpath: 'station_link',
         placeholder: 'https://...',
         tooltip: 'External website linked from the station name'
     },
     lat: {
         name: 'lat',
+        section: 'Location',
         restartWebviewer: true,
         label: 'Latitude',
         type: 'number',
@@ -412,10 +447,12 @@ const webviewerSchema = {
         step: 0.0001,
         min: -90,
         max: 90,
-        width: 50
+        width: 50,
+        tooltip: 'Station latitude in decimal degrees'
     },
     lon: {
         name: 'lon',
+        section: 'Location',
         restartWebviewer: true,
         label: 'Longitude',
         type: 'number',
@@ -424,10 +461,12 @@ const webviewerSchema = {
         step: 0.0001,
         min: -180,
         max: 180,
-        width: 50
+        width: 50,
+        tooltip: 'Station longitude in decimal degrees'
     },
     plugin_dir: {
         name: 'plugin_dir',
+        section: 'Storage',
         restartWebviewer: true,
         label: 'Plugin Directory',
         type: 'text',
@@ -438,6 +477,7 @@ const webviewerSchema = {
     },
     webcontrol_http: {
         name: 'webcontrol_http',
+        section: 'Station',
         restartWebviewer: true,
         label: 'Web Control Link',
         type: 'text',
@@ -449,15 +489,17 @@ const webviewerSchema = {
     },
     file: {
         name: 'file',
+        section: 'Backup',
         restartWebviewer: true,
         label: 'Backup File',
         type: 'text',
         jsonpath: 'file',
         width: 75,
-        tooltip: 'File where statistics and plot history are saved across restarts'
+        tooltip: 'Keeps statistics across restarts, empty to disable'
     },
     backup: {
         name: 'backup',
+        section: 'Backup',
         restartWebviewer: true,
         label: 'Minutes',
         type: 'number',
@@ -470,6 +512,7 @@ const webviewerSchema = {
     },
     history: {
         name: 'history',
+        section: 'Retention',
         restartWebviewer: true,
         label: 'Ship Timeout (s)',
         type: 'number',
@@ -478,78 +521,100 @@ const webviewerSchema = {
         min: 5,
         max: 43200,
         width: 50,
-        tooltip: 'Ships without messages for this long are removed from the viewer'
+        tooltip: 'Hides ships with no messages for this long'
+    },
+    track_memory: {
+        name: 'track_memory',
+        section: 'Retention',
+        restartWebviewer: true,
+        label: 'Track Memory (KB)',
+        type: 'number',
+        jsonpath: 'track_memory',
+        defaultValue: 1024,
+        min: 16,
+        max: 262144,
+        width: 50,
+        tooltip: 'More memory keeps longer track history'
     },
     context: {
         name: 'context',
+        section: 'Storage',
         restartWebviewer: true,
         label: 'Context',
         type: 'text',
         jsonpath: 'context',
         defaultValue: 'settings',
-        width: 50,
-        tooltip: 'Browser storage key for viewer settings; use distinct values to keep multiple viewers separate'
+        width: 100,
+        tooltip: 'Browser storage key; separates viewers'
     },
     active: {
         name: 'active',
+        section: 'Connection',
         label: 'Active',
         type: 'toggle',
         jsonpath: 'active',
         defaultValue: true,
-        width: 24
+        width: 24,
+        tooltip: 'Serve the viewer on this port'
     },
     share_loc: {
         name: 'share_loc',
+        section: 'Location',
         restartWebviewer: true,
         label: 'Location',
         type: 'toggle',
         jsonpath: 'share_loc',
         defaultValue: false,
         width: 24,
-        tooltip: 'Show the station location and range on the map'
+        tooltip: 'Show station location and range on the map'
     },
     use_gps: {
         name: 'use_gps',
+        section: 'Location',
         restartWebviewer: true,
         label: 'Use GPS',
         type: 'toggle',
         jsonpath: 'use_gps',
         defaultValue: true,
         width: 24,
-        tooltip: 'Let GPS input update the station location'
+        tooltip: 'Let GPS update the station location'
     },
     expire: {
         name: 'expire',
+        section: 'Retention',
         restartWebviewer: true,
         label: 'Expire',
         type: 'toggle',
         jsonpath: 'expire',
         defaultValue: false,
         width: 24,
-        tooltip: 'Clear ship data fields once the messages carrying them stop arriving'
+        tooltip: 'Clear fields when their messages stop'
     },
     realtime: {
         name: 'realtime',
+        section: 'Features',
         restartWebviewer: true,
         label: 'Realtime',
         type: 'toggle',
         jsonpath: 'realtime',
         defaultValue: false,
         width: 24,
-        tooltip: 'Stream live NMEA messages to the viewer'
+        tooltip: 'Stream live NMEA to the viewer'
     },
     msg: {
         name: 'msg',
+        section: 'Features',
         restartWebviewer: true,
         label: 'Msgs',
         type: 'toggle',
         jsonpath: 'msg',
         defaultValue: false,
         width: 24,
-        tooltip: 'Keep the last NMEA messages per ship for display in the ship card'
+        tooltip: 'Keep recent NMEA per ship for the ship card'
     },
     geojson: {
         name: 'geojson',
+        section: 'Service',
         restartWebviewer: true,
         label: 'GeoJSON',
         type: 'toggle',
@@ -560,6 +625,7 @@ const webviewerSchema = {
     },
     prome: {
         name: 'prome',
+        section: 'Service',
         restartWebviewer: true,
         label: 'Prometheus',
         type: 'toggle',
@@ -570,6 +636,7 @@ const webviewerSchema = {
     },
     log: {
         name: 'log',
+        section: 'Features',
         restartWebviewer: true,
         label: 'Show Log',
         type: 'toggle',
@@ -580,6 +647,7 @@ const webviewerSchema = {
     },
     decoder: {
         name: 'decoder',
+        section: 'Features',
         restartWebviewer: true,
         label: 'Decoder',
         type: 'toggle',
@@ -590,6 +658,7 @@ const webviewerSchema = {
     },
     zones: {
         name: 'zone',
+        section: 'Zones',
         restartWebviewer: true,
         label: 'Zones',
         type: 'zones',
@@ -605,14 +674,14 @@ const sharingSchema = {
         label: 'Enable Sharing',
         type: 'toggle',
         defaultValue: false,
-        tooltip: 'Share received messages with the aiscatcher.org community map'
+        tooltip: 'Share messages with the community map'
     },
     sharing_key: {
         name: 'sharing_key',
         label: 'Sharing Key (UUID)',
         type: 'text',
         placeholder: 'Enter UUID',
-        tooltip: 'Station key from aiscatcher.org; leave empty to share anonymously'
+        tooltip: 'Leave empty to share anonymously'
     },
     _create_key_button: {
         name: '_create_key_button',
@@ -677,7 +746,7 @@ const receiverSchema = {
             { value: "AB", label: "AB" },
             { value: "CD", label: "CD" }
         ],
-        tooltip: "AB is the standard AIS channel pair (161.975/162.025 MHz), CD the long-range channels",
+        tooltip: "AB is standard, CD the long-range pair",
         dependsOn: {
             field: "input",
             value: ["RTLSDR", "AIRSPY", "AIRSPYHF", "HACKRF", "HYDRASDR"]
@@ -690,7 +759,7 @@ const receiverSchema = {
         jsonpath: "serial",
         placeholder: "Optional Serial Key",
         reloadWebviewer: true,
-        tooltip: "Select a specific device by serial number when several are connected",
+        tooltip: "Pick a device by serial number",
         dependsOn: {
             field: "input",
             value: ["RTLSDR", "AIRSPY", "AIRSPYHF", "HYDRASDR", "HACKRF"]
@@ -719,7 +788,7 @@ const receiverSchema = {
             { value: "v1_high", label: "AIS Engine v1 High" },
             { value: "v2_base", label: "AIS Engine v2 Base (experimental)" }
         ],
-        tooltip: "Each engine decodes the same signal independently; a second engine is for comparing decoders and doubles CPU, and its messages are forwarded to outputs as well",
+        tooltip: "A second engine compares decoders and doubles CPU",
         settings: [
             {
                 name: "fp_ds",
@@ -802,7 +871,7 @@ const receiverSchema = {
         label: "Bias tee",
         type: "toggle",
         jsonpath: "rtlsdr.biastee",
-        tooltip: "Power an external LNA over the antenna cable",
+        tooltip: "Powers an external LNA over the cable",
         defaultValue: false,
         width: 25,
         dependsOn: {
@@ -892,7 +961,7 @@ const receiverSchema = {
             { value: "basestation", label: "BASESTATION" },
             { value: "raw1090", label: "RAW1090" }
         ],
-        tooltip: "Stream format of the remote server: raw I/Q (RTLTCP), NMEA text, MQTT, WebSocket, GPSD or ADS-B",
+        tooltip: "Stream format of the remote server",
         dependsOn: {
             field: "input",
             value: "RTLTCP"
@@ -1117,7 +1186,7 @@ const receiverSchema = {
             { value: "57600", label: "57600" },
             { value: "115200", label: "115200" }
         ],
-        tooltip: "38400 is the standard rate for AIS equipment",
+        tooltip: "38400 is standard for AIS equipment",
         dependsOn: {
             field: "input",
             value: "SERIALPORT"
@@ -1273,7 +1342,7 @@ const receiverSchema = {
         jsonpath: "zone",
         defaultValue: [],
         reloadWebviewer: true,
-        tooltip: "Routes this receiver to outputs sharing a zone; applies to every engine, which can add zones of their own"
+        tooltip: "Routes this receiver to outputs sharing a zone"
     }
 };
 
@@ -1298,7 +1367,7 @@ const generalSettingsSchema = {
         jsonpath: 'timeout_only_when_idle',
         defaultValue: false,
         width: 50,
-        tooltip: 'Count the timeout only while no messages arrive — a watchdog for stalled input'
+        tooltip: 'Watchdog: counts only while input is idle'
     }
 };
 

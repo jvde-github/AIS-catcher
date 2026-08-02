@@ -1090,6 +1090,10 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 	case AIS::KEY_SETTING_CUTOFF:
 		settings.tracking.cutoff = Util::Parse::Integer(arg, 0, 10000);
 		break;
+	case AIS::KEY_SETTING_TRACK_MEMORY:
+		// accepted and range checked, but the track store is not yet sized from it
+		Util::Parse::Integer(arg, 16, 256 * 1024);
+		break;
 	case AIS::KEY_SETTING_EXPIRE:
 		settings.tracking.expire_fields = Util::Parse::Switch(arg);
 		break;

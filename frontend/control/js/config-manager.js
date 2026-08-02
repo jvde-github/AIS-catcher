@@ -556,6 +556,9 @@
         }
     };
 
+    const SECTION_ORDER = ['Label', 'Connection', 'Station', 'Location', 'Format',
+        'Options', 'Retention', 'Service', 'Backup', 'Storage', 'Features', 'Filter', 'Zones'];
+
     const Styles = {
         input: 'input',
         select: 'select',
@@ -565,6 +568,7 @@
         sliderDisplay: 'slider-value',
         label: 'field-label',
         description: 'field-desc',
+        section: 'field-section',
         button: 'btn',
         buttonPrimary: 'btn btn-icon',
         card: 'card',
@@ -1018,8 +1022,9 @@
                 container._field = field;
                 container._dataContext = dataContext;
             }
-            if (field.tooltip) container.title = field.tooltip;
-            if (field.description) container.appendChild(el('p', Styles.description, {}, field.description));
+            const desc = field.description || field.tooltip;
+            if (desc) container.appendChild(el('p', Styles.description, {}, desc));
+            else if (field.tooltip) container.title = field.tooltip;
 
             return container;
         },
@@ -1167,8 +1172,27 @@
                 let syncAdvanced = () => syncs.forEach(f => f());
                 const refresh = () => { Renderer.updateVisibility(innerFields, item); syncAdvanced(); };
 
-                this.fields.forEach(field => {
+                // Section all fields of a schema or none: an unsectioned one trailing a block reads as part of it.
+                const ordered = [];
+                const bySection = new Map();
+                this.fields.forEach(f => {
+                    const key = (!f.advanced && f.section) || null;
+                    if (key === null) return ordered.push(f);
+                    if (!bySection.has(key)) bySection.set(key, []);
+                    bySection.get(key).push(f);
+                });
+                const order = this.config.sectionOrder || SECTION_ORDER;
+                const rank = k => { const i = order.indexOf(k); return i === -1 ? order.length : i; };
+                [...bySection.keys()].sort((a, b) => rank(a) - rank(b))
+                    .forEach(k => ordered.push(bySection.get(k)));
+
+                let currentSection = null;
+                ordered.flat().forEach(field => {
                     if (activeField && field.name === 'active') return;
+                    if (field.section && field.section !== currentSection && !field.advanced) {
+                        currentSection = field.section;
+                        innerFields.appendChild(el('h5', Styles.section, {}, field.section));
+                    }
                     const fieldEl = Renderer.renderField(field, index, item,
                         (fld, val) => this.updateValue(index, fld, val),
                         refresh,

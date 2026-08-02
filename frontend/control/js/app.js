@@ -978,19 +978,20 @@
 
     function loadViewerConfig() {
         // every viewer setting except the port, which follows the control port
-        const keys = ['station', 'station_link', 'lat', 'lon', 'webcontrol_http',
-                      'plugin_dir', 'file', 'backup', 'history',
-                      'share_loc', 'realtime', 'msg', 'decoder', 'log', 'use_gps', 'expire', 'zones'];
-        const halves = ['station', 'station_link'];
+        const keys = ['station', 'station_link', 'webcontrol_http',
+                      'lat', 'lon', 'share_loc', 'use_gps',
+                      'history', 'track_memory', 'expire',
+                      'file', 'backup',
+                      'plugin_dir', 'context',
+                      'realtime', 'msg', 'decoder', 'log', 'geojson', 'prome',
+                      'zones'];
         const schema = {};
-        keys.forEach(k => {
-            schema[k] = Object.assign({}, webviewerSchema[k]);
-            if (halves.indexOf(k) !== -1) schema[k].width = 50;
-            if (k === 'history') schema[k].width = 100; // so the toggles start on a new row
-        });
+        keys.forEach(k => { schema[k] = Object.assign({}, webviewerSchema[k]); });
         schema.use_gps.label = 'GPS';
         createSimpleConfigManager({
             schema: schema,
+            sectionOrder: ['Connection', 'Station', 'Location', 'Retention', 'Service',
+                           'Backup', 'Storage', 'Features', 'Zones'],
             containerId: 'viewer-config-container',
             nestedPath: ['control', 'viewer'],
             title: 'Map'
