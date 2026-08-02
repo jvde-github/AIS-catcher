@@ -556,6 +556,10 @@
         }
     };
 
+    // Default section order; a panel may override with config.sectionOrder.
+    // Unlisted sections fall to the end.
+    const SECTION_ORDER = ['Label', 'Connection', 'Format', 'Options', 'Filter', 'Zones'];
+
     const Styles = {
         input: 'input',
         select: 'select',
@@ -1169,17 +1173,20 @@
                 let syncAdvanced = () => syncs.forEach(f => f());
                 const refresh = () => { Renderer.updateVisibility(innerFields, item); syncAdvanced(); };
 
-                // Grouped by section, first appearance wins. A schema that sections
-                // any field should section all of them: an unsectioned field trailing
-                // a block reads as part of it.
+                // Section all fields of a schema or none: an unsectioned field
+                // trailing a block reads as part of it.
                 const ordered = [];
                 const bySection = new Map();
                 this.fields.forEach(f => {
                     const key = (!f.advanced && f.section) || null;
                     if (key === null) return ordered.push(f);
-                    if (!bySection.has(key)) { bySection.set(key, []); ordered.push(bySection.get(key)); }
+                    if (!bySection.has(key)) bySection.set(key, []);
                     bySection.get(key).push(f);
                 });
+                const order = this.config.sectionOrder || SECTION_ORDER;
+                const rank = k => { const i = order.indexOf(k); return i === -1 ? order.length : i; };
+                [...bySection.keys()].sort((a, b) => rank(a) - rank(b))
+                    .forEach(k => ordered.push(bySection.get(k)));
 
                 let currentSection = null;
                 ordered.flat().forEach(field => {

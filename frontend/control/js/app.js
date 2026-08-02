@@ -983,13 +983,15 @@
                       'history', 'track_memory', 'expire',
                       'file', 'backup',
                       'plugin_dir', 'context',
-                      'realtime', 'msg', 'decoder', 'log',
+                      'realtime', 'msg', 'decoder', 'log', 'geojson', 'prome',
                       'zones'];
         const schema = {};
         keys.forEach(k => { schema[k] = Object.assign({}, webviewerSchema[k]); });
         schema.use_gps.label = 'GPS';
         createSimpleConfigManager({
             schema: schema,
+            sectionOrder: ['Connection', 'Station', 'Location', 'Retention', 'Service',
+                           'Backup', 'Storage', 'Features', 'Zones'],
             containerId: 'viewer-config-container',
             nestedPath: ['control', 'viewer'],
             title: 'Map'

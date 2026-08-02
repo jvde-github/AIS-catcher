@@ -231,6 +231,7 @@ const httpSchema = {
         section: 'Connection',
         label: 'ID',
         type: 'text',
+        width: 25,
         placeholder: 'Station ID',
         tooltip: 'Station identifier in the feed'
     },
@@ -239,6 +240,7 @@ const httpSchema = {
         section: 'Connection',
         label: 'Credentials',
         type: 'text',
+        width: 75,
         placeholder: 'user:password',
         tooltip: 'Sent as user:password'
     },
@@ -377,6 +379,7 @@ const mqttSchema = {
         section: 'Connection',
         label: 'Client ID',
         type: 'text',
+        width: 50,
         placeholder: 'Optional client identifier'
     },
     qos: {
@@ -384,6 +387,7 @@ const mqttSchema = {
         section: 'Connection',
         label: 'QoS',
         type: 'select',
+        width: 50,
         defaultValue: '0',
         options: [
             { value: '0', label: '0 - At most once' },
@@ -400,13 +404,15 @@ const mqttSchema = {
 const webviewerSchema = {
     port: {
         name: 'port',
+        section: 'Connection',
         label: 'Port',
         type: 'number',
         jsonpath: 'port',
         defaultValue: 8100,
         min: 1,
         max: 65535,
-        width: 25
+        width: 25,
+        tooltip: 'Port the viewer is served on'
     },
     station: {
         name: 'station',
@@ -441,7 +447,8 @@ const webviewerSchema = {
         step: 0.0001,
         min: -90,
         max: 90,
-        width: 50
+        width: 50,
+        tooltip: 'Station latitude in decimal degrees'
     },
     lon: {
         name: 'lon',
@@ -454,7 +461,8 @@ const webviewerSchema = {
         step: 0.0001,
         min: -180,
         max: 180,
-        width: 50
+        width: 50,
+        tooltip: 'Station longitude in decimal degrees'
     },
     plugin_dir: {
         name: 'plugin_dir',
@@ -541,11 +549,13 @@ const webviewerSchema = {
     },
     active: {
         name: 'active',
+        section: 'Connection',
         label: 'Active',
         type: 'toggle',
         jsonpath: 'active',
         defaultValue: true,
-        width: 24
+        width: 24,
+        tooltip: 'Serve the viewer on this port'
     },
     share_loc: {
         name: 'share_loc',
@@ -604,6 +614,7 @@ const webviewerSchema = {
     },
     geojson: {
         name: 'geojson',
+        section: 'Service',
         restartWebviewer: true,
         label: 'GeoJSON',
         type: 'toggle',
@@ -614,6 +625,7 @@ const webviewerSchema = {
     },
     prome: {
         name: 'prome',
+        section: 'Service',
         restartWebviewer: true,
         label: 'Prometheus',
         type: 'toggle',
