@@ -565,6 +565,7 @@
         sliderDisplay: 'slider-value',
         label: 'field-label',
         description: 'field-desc',
+        section: 'field-section',
         button: 'btn',
         buttonPrimary: 'btn btn-icon',
         card: 'card',
@@ -1018,8 +1019,9 @@
                 container._field = field;
                 container._dataContext = dataContext;
             }
-            if (field.tooltip) container.title = field.tooltip;
-            if (field.description) container.appendChild(el('p', Styles.description, {}, field.description));
+            const desc = field.description || field.tooltip;
+            if (desc) container.appendChild(el('p', Styles.description, {}, desc));
+            else if (field.tooltip) container.title = field.tooltip;
 
             return container;
         },
@@ -1167,8 +1169,25 @@
                 let syncAdvanced = () => syncs.forEach(f => f());
                 const refresh = () => { Renderer.updateVisibility(innerFields, item); syncAdvanced(); };
 
-                this.fields.forEach(field => {
+                // Grouped by section, first appearance wins. A schema that sections
+                // any field should section all of them: an unsectioned field trailing
+                // a block reads as part of it.
+                const ordered = [];
+                const bySection = new Map();
+                this.fields.forEach(f => {
+                    const key = (!f.advanced && f.section) || null;
+                    if (key === null) return ordered.push(f);
+                    if (!bySection.has(key)) { bySection.set(key, []); ordered.push(bySection.get(key)); }
+                    bySection.get(key).push(f);
+                });
+
+                let currentSection = null;
+                ordered.flat().forEach(field => {
                     if (activeField && field.name === 'active') return;
+                    if (field.section && field.section !== currentSection && !field.advanced) {
+                        currentSection = field.section;
+                        innerFields.appendChild(el('h5', Styles.section, {}, field.section));
+                    }
                     const fieldEl = Renderer.renderField(field, index, item,
                         (fld, val) => this.updateValue(index, fld, val),
                         refresh,

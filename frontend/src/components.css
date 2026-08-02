@@ -208,6 +208,25 @@
     color: var(--color-text-strong);
 }
 
+/* Section header inside a .fieldset — the hub's .st-title equivalent. */
+.field-section {
+    flex: 1 1 100%;
+    margin: var(--space-2) 0 var(--space-1) 2px;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-border);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.field-section:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
 .field-desc,
 .settings_main .st-desc {
     display: block;
