@@ -556,9 +556,8 @@
         }
     };
 
-    // Default section order; a panel may override with config.sectionOrder.
-    // Unlisted sections fall to the end.
-    const SECTION_ORDER = ['Label', 'Connection', 'Format', 'Options', 'Filter', 'Zones'];
+    const SECTION_ORDER = ['Label', 'Connection', 'Station', 'Location', 'Format',
+        'Options', 'Retention', 'Service', 'Backup', 'Storage', 'Features', 'Filter', 'Zones'];
 
     const Styles = {
         input: 'input',
@@ -1173,8 +1172,7 @@
                 let syncAdvanced = () => syncs.forEach(f => f());
                 const refresh = () => { Renderer.updateVisibility(innerFields, item); syncAdvanced(); };
 
-                // Section all fields of a schema or none: an unsectioned field
-                // trailing a block reads as part of it.
+                // Section all fields of a schema or none: an unsectioned one trailing a block reads as part of it.
                 const ordered = [];
                 const bySection = new Map();
                 this.fields.forEach(f => {

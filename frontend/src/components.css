@@ -208,7 +208,6 @@
     color: var(--color-text-strong);
 }
 
-/* Section header inside a .fieldset — the hub's .st-title equivalent. */
 .field-section {
     flex: 1 1 100%;
     margin: var(--space-2) 0 var(--space-1) 2px;

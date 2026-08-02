@@ -36,7 +36,7 @@ const ChannelFields = {
     }),
     active: () => ({
         name: 'active',
-        section: 'Connection',
+        section: 'Options',
         label: 'Active',
         type: 'toggle',
         defaultValue: true,
@@ -206,6 +206,14 @@ const sdrGainFields = (prefix, inputValue) => ({
 const httpSchema = {
     description: ChannelFields.description(),
     link: ChannelFields.link(),
+    url: {
+        name: 'url',
+        section: 'Connection',
+        label: 'URL',
+        type: 'text',
+        width: 75,
+        placeholder: 'https://example.com'
+    },
     interval: {
         name: 'interval',
         section: 'Connection',
@@ -217,13 +225,6 @@ const httpSchema = {
         placeholder: '60',
         width: 25,
         tooltip: 'How often messages are posted'
-    },
-    url: {
-        name: 'url',
-        section: 'Connection',
-        label: 'URL',
-        type: 'text',
-        placeholder: 'https://example.com'
     },
     active: ChannelFields.active(),
     id: {
@@ -246,7 +247,7 @@ const httpSchema = {
     },
     gzip: {
         name: 'gzip',
-        section: 'Connection',
+        section: 'Options',
         label: 'Gzip',
         type: 'toggle',
         defaultValue: false,
@@ -255,7 +256,7 @@ const httpSchema = {
     },
     response: {
         name: 'response',
-        section: 'Connection',
+        section: 'Options',
         label: 'Response',
         type: 'toggle',
         defaultValue: true,
@@ -276,7 +277,6 @@ const httpSchema = {
             { value: 'AIRFRAMES', label: 'AIRFRAMES' },
             { value: 'NMEA', label: 'NMEA' }
         ],
-        width: 75,
         tooltip: 'Submission format expected by the server'
     },
     unique: ChannelFields.unique(),
@@ -292,7 +292,7 @@ const udpSchema = {
     active: ChannelFields.active(),
     broadcast: {
         name: 'broadcast',
-        section: 'Connection',
+        section: 'Options',
         label: 'Broadcast',
         type: 'toggle',
         defaultValue: false,
@@ -313,7 +313,7 @@ const tcpSchema = {
     active: ChannelFields.active(),
     persist: {
         name: 'persist',
-        section: 'Connection',
+        section: 'Options',
         label: 'Reconnect',
         type: 'toggle',
         defaultValue: true,
@@ -322,7 +322,7 @@ const tcpSchema = {
     },
     keep_alive: {
         name: 'keep_alive',
-        section: 'Connection',
+        section: 'Options',
         label: 'Keep Alive',
         type: 'toggle',
         defaultValue: false,
@@ -521,7 +521,7 @@ const webviewerSchema = {
         min: 5,
         max: 43200,
         width: 50,
-        tooltip: 'Ships silent this long stop being shown'
+        tooltip: 'Hides ships with no messages for this long'
     },
     track_memory: {
         name: 'track_memory',
