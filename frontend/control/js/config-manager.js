@@ -1024,7 +1024,6 @@
             }
             const desc = field.description || field.tooltip;
             if (desc) container.appendChild(el('p', Styles.description, {}, desc));
-            else if (field.tooltip) container.title = field.tooltip;
 
             return container;
         },
