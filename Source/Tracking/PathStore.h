@@ -61,8 +61,16 @@ private:
 	static const uint32_t NIL = 0xFFFFFFFFu;
 
 	static const uint32_t HORIZON = 3600;	 // full-resolution window in seconds
-	static const uint32_t GRANULARITY = 300; // point spacing beyond HORIZON, also the dwell continuity gap
+	static const uint32_t GRANULARITY = 300; // point spacing beyond HORIZON
+	static const uint32_t DWELL_GAP = 900;	 // silence that ends a dwell: two missed 3-minute reports
 	static const int DEADBAND = 40;			 // meters a ship must move to count as significant
+	static const int BAND_MOORED = 50;		 // alongside, only fenders and GPS wander
+	static const int BAND_ANCHORED = 200;	 // swinging on the chain
+	static const int BAND_SLOW = 100;		 // idle but status unknown, Class B carries none
+	static const uint8_t IDLE_SOG = 1;		 // 0.5 knot units, at or below this a ship is not making way
+
+	static const int NAV_ANCHORED = 1; // ITU-R M.1371 navigational status
+	static const int NAV_MOORED = 5;
 
 	enum Tier
 	{
@@ -265,11 +273,30 @@ private:
 		return v < 254.0f ? (uint8_t)v : (uint8_t)254;
 	}
 
-	bool significant(const Point &q, float lat, float lon, uint8_t cog, uint8_t sog)
+	// cos(lat) within 0.7% up to 85 degrees, several times cheaper than libm on the add() path
+	static float cosLat(float lat)
 	{
+		float x = lat * 0.01745329f, x2 = x * x;
+		return 1.0f + x2 * (-0.5f + x2 * (0.0416667f - x2 * 0.00138889f));
+	}
+
+	static int idleBand(int status)
+	{
+		if (status == NAV_MOORED)
+			return BAND_MOORED;
+		if (status == NAV_ANCHORED)
+			return BAND_ANCHORED;
+		return BAND_SLOW;
+	}
+
+	bool significant(const Point &q, float lat, float lon, uint8_t cog, uint8_t sog, int status)
+	{
+		bool idle = q.sog != NA && sog != NA && q.sog <= IDLE_SOG && sog <= IDLE_SOG;
+		int band = idle ? idleBand(status) : DEADBAND;
+
 		float dlat = (lat - q.lat) * 111120.0f;
-		float dlon = (lon - q.lon) * 111120.0f * cosf(lat * 0.01745329f);
-		if (dlat * dlat + dlon * dlon > (float)(DEADBAND * DEADBAND))
+		float dlon = (lon - q.lon) * 111120.0f * cosLat(lat);
+		if (dlat * dlat + dlon * dlon > (float)(band * band))
 			return true;
 		if (q.sog != NA && sog != NA && (sog > q.sog ? sog - q.sog : q.sog - sog) > 1)
 			return true;
@@ -302,7 +329,7 @@ public:
 			pushHead(FREE, b);
 	}
 
-	void add(int ship, float lat, float lon, float cog, float sog, std::time_t now)
+	void add(int ship, float lat, float lon, float cog, float sog, int status, std::time_t now)
 	{
 		uint32_t t = now > 0 ? (uint32_t)now : 0;
 		uint8_t c = encodeCOG(cog), s = encodeSOG(sog);
@@ -314,7 +341,7 @@ public:
 				t = q.end(); // time cannot run backwards within a track
 
 			// stationary and continuous: extend the dwell of the newest point
-			if (!significant(q, lat, lon, c, s) && t - q.end() <= GRANULARITY && t - q.time < 0xFFFFu * DUR_UNIT)
+			if (!significant(q, lat, lon, c, s, status) && t - q.end() <= DWELL_GAP && t - q.time < 0xFFFFu * DUR_UNIT)
 			{
 				q.dur = (uint16_t)((t - q.time) / DUR_UNIT);
 				return;

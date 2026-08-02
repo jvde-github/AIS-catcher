@@ -630,7 +630,7 @@ void DB::addToPath(int ptr)
 	const Ship &ship = ships[ptr];
 
 	if (isValidCoord(ship.lat, ship.lon))
-		paths.add(ptr, ship.lat, ship.lon, ship.cog, ship.speed, ship.last_signal);
+		paths.add(ptr, ship.lat, ship.lon, ship.cog, ship.speed, ship.status, ship.last_signal);
 }
 
 bool DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &v, bool allowApproximate, bool &staticUpdated)
