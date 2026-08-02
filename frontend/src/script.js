@@ -150,6 +150,7 @@ const ACTIONS = {
     setMapSettingDistanceColor: (e, d, el) => { removeDistanceCircles(); setMapSetting('distance_circle_color', el.value); },
     setShowTrackOnSelect: (e, d, el) => { settings.show_track_on_select = el.checked; saveSettings(); },
     setShowTrackOnHover: (e, d, el) => { settings.show_track_on_hover = el.checked; saveSettings(); },
+    setTrackVisibility: (e, d, el) => setTrackVisibility(el.value),
     applyColorToAllTracks: (e, d, el) => applyColorToAllTracks(el.value),
     resetTrackColorsToDefault: () => resetTrackColorsToDefault(),
     setTrackClassColor: (e, d, el) => setTrackClassColor(d.shipclass, el.value),
@@ -3685,6 +3686,15 @@ function unpinCenter() {
 }
 
 
+function setTrackVisibility(mode) {
+    if (mode === 'all') return showAllTracks();
+    if (mode === 'none') return deleteAllTracks();
+    settings.show_all_tracks = false;
+    saveSettings();
+    redrawMap();
+    updateShipcardTrackOption();
+}
+
 async function showAllTracks() {
     settings.show_all_tracks = true;
     trackCutoff = 0;
@@ -5160,6 +5170,7 @@ function updateSettingsTab() {
     document.getElementById("settings_table_shiptype_use_icon").checked = settings.table_shiptype_use_icon;
     document.getElementById("settings_show_track_on_hover").checked = settings.show_track_on_hover;
     document.getElementById("settings_show_track_on_select").checked = settings.show_track_on_select;
+    document.getElementById("settings_track_visibility").value = settings.show_all_tracks ? "all" : "selected";
     document.getElementById("settings_shipcard_top_left").checked = settings.shipcard_top_left;
 
     document.getElementById("settings_kiosk_mode").checked = settings.kiosk;

@@ -504,13 +504,24 @@
 				<header>Tracks</header>
 				<section>
 					<div>
+						<span>Show Tracks</span>
+						<span>
+							<select id="settings_track_visibility" data-on-change="setTrackVisibility">
+								<option value="selected">Selected ships</option>
+								<option value="all">All ships</option>
+								<option value="none">None</option>
+							</select>
+						</span>
+					<small class="st-desc">Which ships draw a track</small>
+						</div>
+					<div>
 						<span id="track_history_label">History (30 min)</span>
 						<span>
 							<input type="range" id="settings_track_history" min="0" max="9" step="1"
 								data-on-change="setTrackHistory"
 								data-on-input="updateTrackHistoryDisplay" />
 						</span>
-					<small class="st-desc">How far back tracks are drawn</small>
+					<small class="st-desc">Maximum age drawn; the server may hold less</small>
 						</div>
 				</section>
 				<section>
