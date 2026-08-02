@@ -503,7 +503,7 @@
 				</section>
 				<header>Tracks</header>
 				<section>
-					<div>
+					<div class="half">
 						<span id="track_weight_label">Weight (1)</span>
 						<span>
 							<input type="range" id="settings_track_weight" min="1" max="4" step="1"
@@ -512,14 +512,14 @@
 						</span>
 					<small class="st-desc">Line width of ship tracks</small>
 						</div>
-					<div>
-						<span id="track_trash_threshold_label">Dash Threshold (30s)</span>
+					<div class="half">
+						<span id="track_opacity_label">Opacity (100%)</span>
 						<span>
-							<input type="range" id="settings_track_trash_threshold" min="0" max="300" step="10"
-								data-on-change="setMapSetting" data-key="track_trash_threshold"
-								data-on-input="updateTrackTrashThresholdDisplay" />
+							<input type="range" id="settings_track_opacity" min="0.05" max="1" step="0.05"
+								data-on-change="setMapSetting" data-key="track_opacity"
+								data-on-input="updateTrackOpacityDisplay" />
 						</span>
-					<small class="st-desc">Dash track segments with reception gaps longer than this</small>
+					<small class="st-desc">Transparency of ship tracks</small>
 						</div>
 					</section>
 				<section>
@@ -635,6 +635,17 @@
 								data-on-change="setTrackClassColor" data-shipclass="UNKNOWN" />
 						</span>
 					</div>
+				</section>
+				<section>
+					<div>
+						<span id="track_trash_threshold_label">Dash Threshold (30s)</span>
+						<span>
+							<input type="range" id="settings_track_trash_threshold" min="0" max="300" step="10"
+								data-on-change="setMapSetting" data-key="track_trash_threshold"
+								data-on-input="updateTrackTrashThresholdDisplay" />
+						</span>
+					<small class="st-desc">Dash track segments with reception gaps longer than this</small>
+						</div>
 				</section>
 				<header>Kiosk</header>
 				<section>

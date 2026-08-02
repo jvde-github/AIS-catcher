@@ -162,6 +162,7 @@ const ACTIONS = {
     updateTooltipFontSizeDisplay: (e, d, el) => updateSliderDisplay('tooltipFontSize', el.value),
     updateShipoutlineOpacityDisplay: (e, d, el) => updateSliderDisplay('shipoutlineOpacity', el.value),
     updateTrackWeightDisplay: (e, d, el) => updateSliderDisplay('trackWeight', el.value),
+    updateTrackOpacityDisplay: (e, d, el) => updateSliderDisplay('trackOpacity', el.value),
     updateTrackTrashThresholdDisplay: (e, d, el) => updateSliderDisplay('trackTrashThreshold', el.value),
     updateKioskSpeedDisplay: (e, d, el) => updateSliderDisplay('kioskSpeed', el.value),
 
@@ -447,6 +448,7 @@ function restoreDefaultSettings() {
         coordinate_format: "decimal",
         icon_scale: 1,
         track_weight: 1,
+        track_opacity: 1,
         track_trash_threshold: 30,
         show_range: false,
         distance_circles: true,
@@ -831,6 +833,7 @@ const shapeStyleFunction = function (feature) {
 const trackStyleFunction = function (feature) {
     let w = Number(settings.track_weight);
     let c = '#12a5ed'; // Default fallback color
+    let highlighted = false;
 
     // Use shipping class color if available
     if (feature.shipclass && settings.track_class_colors[feature.shipclass]) {
@@ -840,10 +843,18 @@ const trackStyleFunction = function (feature) {
     if (feature.mmsi == hoverMMSI && hoverType == 'ship') {
         c = settings.shiphover_color;
         w = w + 2;
+        highlighted = true;
     }
     else if (feature.mmsi == card_mmsi && card_type == 'ship') {
         c = settings.shipselection_color;
         w = w + 2;
+        highlighted = true;
+    }
+
+    const o = Number(settings.track_opacity);
+    if (!highlighted && o < 1) {
+        const [r, g, b] = hexToRgb(c);
+        c = `rgba(${r}, ${g}, ${b}, ${o})`;
     }
 
     return new ol.style.Style({
@@ -1596,7 +1607,7 @@ function initMap() {
         value.setVisible(false);
     }
 
-    [rangeLayer, shapeLayer, trackLayer, markerLayer, labelLayer, extraLayer, binaryLayer, measure.measureVector].forEach(layer => {
+    [trackLayer, rangeLayer, shapeLayer, markerLayer, labelLayer, extraLayer, binaryLayer, measure.measureVector].forEach(layer => {
         map.addLayer(layer);
     });
 
@@ -5094,12 +5105,14 @@ function updateSettingsTab() {
     document.getElementById("settings_map_opacity").value = settings.map_opacity;
     document.getElementById("settings_icon_scale").value = settings.icon_scale;
     document.getElementById("settings_track_weight").value = settings.track_weight;
+    document.getElementById("settings_track_opacity").value = settings.track_opacity;
     document.getElementById("settings_track_trash_threshold").value = settings.track_trash_threshold;
 
     // Update all slider display values
     updateSliderDisplay('iconScale', settings.icon_scale);
     updateSliderDisplay('mapOpacity', settings.map_opacity);
     updateSliderDisplay('trackWeight', settings.track_weight);
+    updateSliderDisplay('trackOpacity', settings.track_opacity);
     updateSliderDisplay('trackTrashThreshold', settings.track_trash_threshold);
     updateSliderDisplay('tooltipFontSize', settings.tooltipLabelFontSize);
     updateSliderDisplay('shipoutlineOpacity', settings.shipoutline_opacity);
@@ -5233,6 +5246,7 @@ function updateAndroid() {
 const SLIDER_DISPLAYS = {
     kioskSpeed: ["kiosk_rotation_speed_label", (v) => `Rotation Speed (${v}s)`],
     trackWeight: ["track_weight_label", (v) => `Weight (${v})`],
+    trackOpacity: ["track_opacity_label", (v) => `Opacity (${Math.round(parseFloat(v) * 100)}%)`],
     trackTrashThreshold: ["track_trash_threshold_label", (v) => `Dash Threshold (${v}s)`],
     iconScale: ["icon_scale_label", (v) => `Marker Size (${parseFloat(v).toFixed(2)})`],
     mapOpacity: ["map_opacity_label", (v) => `Map Dimming (${Math.round(parseFloat(v) * 100)}%)`],
