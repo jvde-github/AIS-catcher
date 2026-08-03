@@ -1220,3 +1220,14 @@ select.realtime-filter-input,
     border-top: 1px solid var(--color-border);
     flex-shrink: 0;
 }
+
+/* the overlay keeps the dialog inset from the screen edges, so it must not
+   pick up the full-bleed phone treatment of in-page cards */
+@media (max-width: 640px) {
+    .modal-card {
+        border-left: 1px solid var(--color-border);
+        border-right: 1px solid var(--color-border);
+        border-radius: var(--radius-xl);
+        margin-bottom: 0;
+    }
+}
