@@ -66,7 +66,6 @@ namespace Plane
         struct
         {
             FLOAT32 lat, lon;
-            std::time_t timestamp;
             struct Plane::CPR cpr;
             bool even;
         } CPR_history[3];

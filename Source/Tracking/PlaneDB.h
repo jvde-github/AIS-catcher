@@ -28,14 +28,34 @@ class PlaneDB : public StreamIn<Plane::ADSB>
 
     static const int CPR_CACHE_SIZE = 3;
 
-    Plane::CPR CPR_cache_even[CPR_CACHE_SIZE];
-    Plane::CPR CPR_cache_odd[CPR_CACHE_SIZE];
+    struct CPRCache
+    {
+        Plane::CPR entries[CPR_CACHE_SIZE];
+        int idx = 0;
 
-    int CPR_cache_even_idx = 0;
-    int CPR_cache_odd_idx = 0;
+        // true when an identical frame was seen in the last two seconds;
+        // otherwise the frame is remembered
+        bool isDuplicate(const Plane::CPR &cpr)
+        {
+            for (const auto &e : entries)
+                if (e.Valid() && cpr.timestamp - e.timestamp <= 2 &&
+                    e.lat == cpr.lat && e.lon == cpr.lon && e.airborne == cpr.airborne)
+                    return true;
+
+            entries[idx] = cpr;
+            idx = (idx + 1) % CPR_CACHE_SIZE;
+            return false;
+        }
+    };
+
+    CPRCache cpr_cache[2]; // indexed by parity
 
     static const int N = 512;
     static const int NBUCKETS = 1031;
+
+    static const int TIMEOUT_AIRBORNE = 60; // ADS-B goes quiet only when the plane is gone
+    static const int TIMEOUT_GROUND = 300;  // ground traffic reports lazily
+    static const int CONFIRM_WINDOW = 15 * 60;
 
     typedef SlotTable<Plane::ADSB, uint32_t> Table;
     Table table;
@@ -45,34 +65,16 @@ class PlaneDB : public StreamIn<Plane::ADSB>
         lat = LAT_UNDEFINED;
         lon = LON_UNDEFINED;
 
-        if (isValidCoord(tag.station_lat, tag.station_lon))
-        {
-            lat = tag.station_lat;
-            lon = tag.station_lon;
-        }
-        if (table[ptr].lat != LAT_UNDEFINED && table[ptr].lon != LON_UNDEFINED)
+        if (isValidCoord(table[ptr].lat, table[ptr].lon))
         {
             lat = table[ptr].lat;
             lon = table[ptr].lon;
         }
-    }
-
-    bool checkInCPRCache(const Plane::CPR &cpr, bool even)
-    {
-        Plane::CPR(&cache)[CPR_CACHE_SIZE] = even ? CPR_cache_even : CPR_cache_odd;
-        int &idx = even ? CPR_cache_even_idx : CPR_cache_odd_idx;
-
-        for (int i = 0; i < CPR_CACHE_SIZE; i++)
+        else if (isValidCoord(tag.station_lat, tag.station_lon))
         {
-            if (!cache[i].Valid() || cpr.timestamp - cache[i].timestamp > 2)
-                continue;
-            if (cache[i].lat == cpr.lat && cache[i].lon == cpr.lon && cache[i].airborne == cpr.airborne)
-                return true;
+            lat = tag.station_lat;
+            lon = tag.station_lon;
         }
-
-        cache[idx] = cpr;
-        idx = (idx + 1) % CPR_CACHE_SIZE;
-        return false;
     }
 
     // NIL when the ICAO is only implied from CRC and the plane is not already known
@@ -99,9 +101,9 @@ class PlaneDB : public StreamIn<Plane::ADSB>
         return ptr;
     }
 
-    void updateCPRLeg(Plane::ADSB &plane, int ptr, const Plane::CPR &leg, bool even, TAG &tag, bool &position_updated, FLOAT32 &lat_new, FLOAT32 &lon_new)
+    void updateCPRLeg(Plane::ADSB &plane, int ptr, const Plane::CPR &leg, bool even, TAG &tag, bool &positionUpdated, FLOAT32 &lat_new, FLOAT32 &lon_new)
     {
-        if (!leg.Valid() || checkInCPRCache(leg, even))
+        if (!leg.Valid() || cpr_cache[even].isDuplicate(leg))
             return;
 
         (even ? plane.even : plane.odd) = leg;
@@ -110,14 +112,36 @@ class PlaneDB : public StreamIn<Plane::ADSB>
         if (!leg.airborne)
             calcReferencePosition(tag, ptr, ref_lat, ref_lon);
 
-        plane.decodeCPR(ref_lat, ref_lon, even, position_updated, lat_new, lon_new);
+        plane.decodeCPR(ref_lat, ref_lon, even, positionUpdated, lat_new, lon_new);
+    }
+
+    // An unvalidated fix becomes trusted when it lies within plausible travel
+    // range of the last position decoded from an independent CPR pair.
+    bool confirmedByHistory(const Plane::ADSB &plane, FLOAT32 lat, FLOAT32 lon)
+    {
+        const auto &cur = plane.CPR_history[plane.CPR_history_idx];
+        const auto &prev = plane.CPR_history[(plane.CPR_history_idx + 2) % 3];
+        const auto &independent = plane.CPR_history[(plane.CPR_history_idx + 1) % 3];
+
+        if (!cur.cpr.Valid() || !prev.cpr.Valid() || !independent.cpr.Valid() || cur.even == prev.even)
+            return false;
+
+        double deltat = 1 + cur.cpr.timestamp - independent.cpr.timestamp;
+        if (deltat >= CONFIRM_WINDOW)
+            return false;
+
+        FLOAT32 distance = DISTANCE_UNDEFINED;
+        int angle = ANGLE_UNDEFINED;
+        Util::Geodesy::distanceBearing(independent.lat, independent.lon, lat, lon, distance, angle);
+
+        // unknown speed assumes fast; a known speed gets a 50% margin
+        double max_speed = plane.speed == SPEED_UNDEFINED ? 1000 : plane.speed * 1.5;
+        return distance < deltat * max_speed / 3600.0;
     }
 
     // Process a single decoded message; caller must hold mtx.
-    void update(const Plane::ADSB *msg, TAG &tag)
+    void updatePlane(const Plane::ADSB *msg, TAG &tag)
     {
-        bool position_updated = false;
-
         if (msg->hexident == HEXIDENT_UNDEFINED || msg->status == STATUS_ERROR)
             return;
 
@@ -140,8 +164,9 @@ class PlaneDB : public StreamIn<Plane::ADSB>
             plane.category = msg->category;
 
         FLOAT32 lat_new = LAT_UNDEFINED, lon_new = LON_UNDEFINED;
+        bool positionUpdated = false;
 
-        if (msg->lat != LAT_UNDEFINED && msg->lon != LON_UNDEFINED)
+        if (isValidCoord(msg->lat, msg->lon))
         {
             plane.lat = msg->lat;
             plane.lon = msg->lon;
@@ -149,13 +174,13 @@ class PlaneDB : public StreamIn<Plane::ADSB>
 
             lat_new = msg->lat;
             lon_new = msg->lon;
-            position_updated = true;
+            positionUpdated = true;
         }
 
-        updateCPRLeg(plane, ptr, msg->even, true, tag, position_updated, lat_new, lon_new);
-        updateCPRLeg(plane, ptr, msg->odd, false, tag, position_updated, lat_new, lon_new);
+        updateCPRLeg(plane, ptr, msg->even, true, tag, positionUpdated, lat_new, lon_new);
+        updateCPRLeg(plane, ptr, msg->odd, false, tag, positionUpdated, lat_new, lon_new);
 
-        if (position_updated)
+        if (positionUpdated)
         {
             if (plane.position_status == Plane::ValueStatus::VALID)
             {
@@ -167,38 +192,11 @@ class PlaneDB : public StreamIn<Plane::ADSB>
             }
 
             // store the history of the last 3 CPR positions
-            auto &cur = plane.CPR_history[plane.CPR_history_idx];
-            cur.lat = lat_new;
-            cur.lon = lon_new;
-            cur.even = msg->even.Valid();
-            cur.cpr = msg->even.Valid() ? plane.even : plane.odd;
+            bool even = msg->even.Valid();
+            plane.CPR_history[plane.CPR_history_idx] = {lat_new, lon_new, even ? plane.even : plane.odd, even};
 
-            if (plane.position_status == Plane::ValueStatus::UNKNOWN)
-            {
-                // check for consistency with the last independent position,
-                // i.e. one with a different CPR pair for both legs
-                const auto &prev = plane.CPR_history[(plane.CPR_history_idx + 2) % 3];
-                const auto &independent = plane.CPR_history[(plane.CPR_history_idx + 1) % 3];
-
-                if (prev.cpr.Valid() && cur.cpr.Valid() && cur.even != prev.even && independent.cpr.Valid())
-                {
-                    double deltat = 1 - independent.cpr.timestamp + cur.cpr.timestamp;
-                    if (deltat < 15 * 60)
-                    {
-                        FLOAT32 distance = DISTANCE_UNDEFINED;
-                        int angle = ANGLE_UNDEFINED;
-                        Util::Geodesy::distanceBearing(independent.lat, independent.lon, lat_new, lon_new, distance, angle);
-
-                        double speed = plane.speed == SPEED_UNDEFINED ? 1000 : plane.speed * 1.5;
-                        double max_distance = deltat * speed / 3600.0;
-
-                        if (distance < max_distance)
-                        {
-                            plane.position_status = Plane::ValueStatus::VALID;
-                        }
-                    }
-                }
-            }
+            if (plane.position_status == Plane::ValueStatus::UNKNOWN && confirmedByHistory(plane, lat_new, lon_new))
+                plane.position_status = Plane::ValueStatus::VALID;
 
             plane.CPR_history_idx = (plane.CPR_history_idx + 1) % 3;
 
@@ -210,7 +208,7 @@ class PlaneDB : public StreamIn<Plane::ADSB>
             }
         }
 
-        if (position_updated && isValidCoord(tag.station_lat, tag.station_lon))
+        if (positionUpdated && isValidCoord(tag.station_lat, tag.station_lon))
         {
             Util::Geodesy::distanceBearing(tag.station_lat, tag.station_lon, plane.lat, plane.lon, plane.distance, plane.angle);
             tag.distance = plane.distance;
@@ -252,11 +250,9 @@ public:
     {
         table.setup(N, NBUCKETS);
 
-        for (int i = 0; i < CPR_CACHE_SIZE; i++)
-        {
-            CPR_cache_even[i].clear();
-            CPR_cache_odd[i].clear();
-        }
+        for (auto &c : cpr_cache)
+            for (auto &e : c.entries)
+                e.clear();
     }
 
     void Receive(const Plane::ADSB *msg, int len, TAG &tag)
@@ -264,7 +260,7 @@ public:
         std::lock_guard<std::mutex> lock(mtx);
 
         for (int i = 0; i < len; i++)
-            update(&msg[i], tag);
+            updatePlane(&msg[i], tag);
     }
 
     std::string getCompactArray(std::time_t since = 0)
@@ -281,12 +277,12 @@ public:
             std::time_t rx = plane.getRxTimeUnix();
             long int time_since_update = now - rx;
 
-            if (time_since_update > 300)
+            if (time_since_update > TIMEOUT_GROUND)
                 return false;
             if (since > 0 && rx < since)
                 return false;
 
-            if (time_since_update <= 60 || (time_since_update <= 300 && plane.airborne == 0))
+            if (time_since_update <= TIMEOUT_AIRBORNE || (time_since_update <= TIMEOUT_GROUND && plane.airborne == 0))
             {
                 w.beginArray().val(plane.hexident)
                     .val_unless(plane.lat, LAT_UNDEFINED).val_unless(plane.lon, LON_UNDEFINED)
