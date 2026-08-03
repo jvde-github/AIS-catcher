@@ -64,7 +64,7 @@ class DB : public StreamIn<JSON::JSON>,
 	JSON::Serializer builder{JSON_DICT_FULL};
 
 	std::string content;
-	float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
+	float station_lat = LAT_UNDEFINED, station_lon = LON_UNDEFINED;
 	int TIME_HISTORY = 30 * 60;
 	bool latlon_share = false;
 	bool server_mode = false;
@@ -94,29 +94,30 @@ class DB : public StreamIn<JSON::JSON>,
 	};
 	std::vector<PathPt> path_scratch;
 
-	bool updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &v, bool allowApproximate, bool &staticUpdated);
+	void updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship, bool allowApproximate, bool &positionUpdated, bool &staticUpdated);
 
 	bool updateShip(const JSON::JSON &, TAG &, Ship &);
 	void addToPath(int ptr);
 	int claimShip(uint32_t mmsi);
 
+	// the two scope rules fold into one cutoff: 0 passes everything, since
+	// last_signal is never negative
 	template <typename F>
 	void forEachRecent(std::time_t tm, bool full, std::time_t since, F f)
 	{
+		std::time_t cutoff = full ? since : MAX(since, tm - TIME_HISTORY);
 		ships.forEach([&](int ptr) {
 			const Ship &ship = ships[ptr];
-			long int delta_time = (long int)tm - (long int)ship.last_signal;
-			if (!full && delta_time > TIME_HISTORY)
+			if (ship.last_signal < cutoff)
 				return false;
-			if (since > 0 && ship.last_signal < since)
-				return false;
-			f(ptr, ship, delta_time);
+			
+			f(ptr, ship, (long int)tm - (long int)ship.last_signal);
 			return true;
 		});
 	}
 
-	void writeSinglePathJSONCompact(int idx, JSON::Writer &w, std::time_t since = 0);
-	void writeSinglePathGeoJSON(int idx, JSON::Writer &w);
+	void writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since = 0);
+	void writeSinglePathGeoJSON(int ptr, JSON::Writer &w);
 
 	AIS::Filter filter;
 
@@ -141,8 +142,8 @@ public:
 
 	void setLatLon(float lat, float lon)
 	{
-		this->lat = lat;
-		this->lon = lon;
+		station_lat = lat;
+		station_lon = lon;
 		gps_position = false;
 	}
 	void setConfigPosition(float lat, float lon, bool use_gps)
@@ -150,15 +151,15 @@ public:
 		use_GPS = use_gps;
 		if (use_gps && gps_position)
 			return;
-		this->lat = lat;
-		this->lon = lon;
+		station_lat = lat;
+		station_lon = lon;
 		gps_position = false;
 	}
-	void setLat(float lat) { this->lat = lat; gps_position = false; }
-	void setLon(float lon) { this->lon = lon; gps_position = false; }
+	void setLat(float lat) { station_lat = lat; gps_position = false; }
+	void setLon(float lon) { station_lon = lon; gps_position = false; }
 
-	float getLat() { return lat; }
-	float getLon() { return lon; }
+	float getLat() { return station_lat; }
+	float getLon() { return station_lon; }
 
 	void setOwnMMSI(uint32_t mmsi) { own_mmsi = mmsi; }
 
@@ -171,8 +172,8 @@ public:
 		if (use_GPS)
 		{
 			std::lock_guard<std::mutex> lock(mtx);
-			lat = data[0].getLat();
-			lon = data[0].getLon();
+			station_lat = data[0].getLat();
+			station_lon = data[0].getLon();
 			gps_position = true;
 		}
 	}

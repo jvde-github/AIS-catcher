@@ -184,6 +184,14 @@ enum MMSI_Class
 const float DISTANCE_UNDEFINED = -1;
 const float LAT_UNDEFINED = 91;
 const float LON_UNDEFINED = 181;
+
+// (0,0) counts as unset: a zeroed position leaks in far more often than a
+// vessel sits on Null Island
+inline bool isValidCoord(float lat, float lon)
+{
+	return !(lat == 0 && lon == 0) && lat != LAT_UNDEFINED && lon != LON_UNDEFINED;
+}
+
 const float COG_UNDEFINED = 360;
 const float SPEED_UNDEFINED = -1;
 const float DRAUGHT_UNDEFINED = -1;
@@ -240,7 +248,7 @@ struct TAG
 	int status = STATUS_OK;
 	int angle = -1;
 	float distance = -1;
-	float lat = 0, lon = 0;
+	float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 	bool validated = false;
 	std::time_t previous_signal = (std::time_t)0;
 	int shipclass = CLASS_UNKNOWN;

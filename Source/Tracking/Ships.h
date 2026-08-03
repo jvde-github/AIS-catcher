@@ -53,10 +53,6 @@ const uint32_t F_STATIC = 1 << 9;
 const uint32_t F_COMM_CAP = 1 << 10;
 const uint32_t F_SIGNAL = 1 << 11;
 
-inline bool isValidCoord(float lat, float lon)
-{
-	return !(lat == 0 && lon == 0) && lat != LAT_UNDEFINED && lon != LON_UNDEFINED;
-}
 
 struct Ship
 {

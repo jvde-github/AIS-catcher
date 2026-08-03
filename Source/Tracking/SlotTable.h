@@ -106,6 +106,7 @@ public:
 	{
 		if (h == head)
 			return;
+		
 		lruUnlink(h);
 		lruPushFront(h);
 	}
@@ -232,8 +233,10 @@ private:
 	{
 		slots[h].lru_prev = NIL;
 		slots[h].lru_next = head;
+
 		if (head != NIL)
 			slots[head].lru_prev = h;
+
 		head = h;
 		if (tail == NIL)
 			tail = h;

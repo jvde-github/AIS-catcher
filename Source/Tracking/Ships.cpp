@@ -228,6 +228,18 @@ std::string getSprite(const Ship *ship)
 	return "";
 }
 
+static void appendXMLEscaped(std::string &out, const std::string &s)
+{
+	for (char c : s)
+		switch (c)
+		{
+		case '&': out += "&amp;"; break;
+		case '<': out += "&lt;"; break;
+		case '>': out += "&gt;"; break;
+		default: out += c;
+		}
+}
+
 bool Ship::getKML(std::string &kmlString) const
 {
 	if (!isValidCoord(lat, lon))
@@ -241,8 +253,9 @@ bool Ship::getKML(std::string &kmlString) const
 
 	kmlString += "<Style id=\"" + styleId + "\"><IconStyle><scale>1</scale><heading>" +
 				 std::to_string(cog) + "</heading><Icon><href>/icons.png</href>" +
-				 getSprite(this) + "</Icon></IconStyle></Style><Placemark><name>" +
-				 name + "</name><description>Description of your placemark</description><styleUrl>#" +
+				 getSprite(this) + "</Icon></IconStyle></Style><Placemark><name>";
+	appendXMLEscaped(kmlString, name);
+	kmlString += "</name><styleUrl>#" +
 				 styleId + "</styleUrl><Point><coordinates>" +
 				 coordinates + "</coordinates></Point></Placemark>";
 	return true;

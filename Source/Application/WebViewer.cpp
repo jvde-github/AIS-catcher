@@ -86,7 +86,7 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 			server->sendSSE(1, "nmea", json);
 		}
 
-		if (tag.lat != 0 && tag.lon != 0)
+		if (isValidCoord(tag.lat, tag.lon))
 		{
 			std::string json;
 			JSON::Writer w(json);

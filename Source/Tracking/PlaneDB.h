@@ -45,7 +45,7 @@ class PlaneDB : public StreamIn<Plane::ADSB>
         lat = LAT_UNDEFINED;
         lon = LON_UNDEFINED;
 
-        if (tag.station_lat != LAT_UNDEFINED && tag.station_lon != LON_UNDEFINED)
+        if (isValidCoord(tag.station_lat, tag.station_lon))
         {
             lat = tag.station_lat;
             lon = tag.station_lon;
@@ -210,7 +210,7 @@ class PlaneDB : public StreamIn<Plane::ADSB>
             }
         }
 
-        if (position_updated && tag.station_lat != LAT_UNDEFINED && tag.station_lon != LON_UNDEFINED)
+        if (position_updated && isValidCoord(tag.station_lat, tag.station_lon))
         {
             Util::Geodesy::distanceBearing(tag.station_lat, tag.station_lon, plane.lat, plane.lon, plane.distance, plane.angle);
             tag.distance = plane.distance;
