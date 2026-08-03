@@ -41,7 +41,7 @@ struct TrackingConfig
 	bool latlon_share = false;
 	bool server_mode = false;
 	bool msg_save = false;
-	bool use_GPS = true;
+	bool use_gps = true;
 	uint32_t own_mmsi = 0;
 	int time_history = 30 * 60;
 	bool expire_fields = false;

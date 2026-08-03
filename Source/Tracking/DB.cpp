@@ -26,22 +26,22 @@
 
 void DB::setup()
 {
-	int Nships = 4096;
+	int nships = 4096;
 
 	if (server_mode)
 	{
-		Nships *= 32;
-		HASH_SIZE = 262147;
+		nships *= 32;
+		nbuckets = 262147;
 
-		Info() << "DB: internal ship database extended to " << Nships << " ships";
+		Info() << "DB: internal ship database extended to " << nships << " ships";
 	}
 
-	ships.setup(Nships, HASH_SIZE);
+	ships.setup(nships, nbuckets);
 
 	if (track_memory_kb == 0)
 		track_memory_kb = server_mode ? 4096 : 1024;
 
-	int path_blocks = paths.setup((long)track_memory_kb * 1024, Nships);
+	int path_blocks = paths.setup((long)track_memory_kb * 1024, nships);
 	Debug() << "DB: track store " << track_memory_kb << " KB (" << path_blocks << " blocks)";
 }
 
@@ -49,26 +49,26 @@ std::string DB::getJSONcompact(bool full, std::time_t since)
 {
 	std::lock_guard<std::mutex> lock(mtx);
 
-	std::time_t tm = time(nullptr);
+	std::time_t now = time(nullptr);
 
 	content.clear();
 	{
 		JSON::Writer w(content, 65536);
 
-		w.beginObject().kv("count", ships.size()).kv("time", tm).kv("timeout", TIME_HISTORY);
+		w.beginObject().kv("count", ships.size()).kv("time", now).kv("timeout", time_history);
 		if (latlon_share && isValidCoord(station_lat, station_lon))
 			w.key("station").beginObject().kv("lat", station_lat).kv("lon", station_lon).kv("mmsi", own_mmsi).kv("gps", gps_position).endObject();
 
 		// --- Pass 1: dynamic array ---
 		w.key("dynamic").beginArray();
-		forEachRecent(tm, full, since, [&](int, const Ship &ship, long int) {
+		forEachRecent(now, full, since, [&](int, const Ship &ship, long int) {
 			ship.writeCompactDynamic(w);
 		});
 		w.endArray(); // dynamic
 
 		// --- Pass 2: static array ---
 		w.key("static").beginArray();
-		forEachRecent(tm, full, since, [&](int, const Ship &ship, long int) {
+		forEachRecent(now, full, since, [&](int, const Ship &ship, long int) {
 			if (since == 0 || ship.last_static_signal >= since)
 				ship.writeCompactStatic(w);
 		});
@@ -94,8 +94,8 @@ std::string DB::getJSON(bool full)
 	
 		w.key("ships").beginArray();
 
-		std::time_t tm = time(nullptr);
-		forEachRecent(tm, full, 0, [&](int, const Ship &ship, long int delta_time) {
+		std::time_t now = time(nullptr);
+		forEachRecent(now, full, 0, [&](int, const Ship &ship, long int delta_time) {
 			ship.getJSON(w, delta_time, isValidCoord(station_lat, station_lon));
 		});
 
@@ -128,9 +128,9 @@ std::string DB::getKML()
 	std::lock_guard<std::mutex> lock(mtx);
 
 	content.assign("<?xml version=\"1.0\" encoding=\"UTF-8\"?><kml xmlns = \"http://www.opengis.net/kml/2.2\"><Document>");
-	std::time_t tm = time(nullptr);
+	std::time_t now = time(nullptr);
 
-	forEachRecent(tm, false, 0, [&](int, const Ship &ship, long int) {
+	forEachRecent(now, false, 0, [&](int, const Ship &ship, long int) {
 		ship.getKML(content);
 	});
 
@@ -145,10 +145,10 @@ std::string DB::getGeoJSON()
 	content.clear();
 	{
 		JSON::Writer w(content, 65536);
-		w.beginObject().kv("type", "FeatureCollection").kv("time_span", TIME_HISTORY).key("features").beginArray();
+		w.beginObject().kv("type", "FeatureCollection").kv("time_span", time_history).key("features").beginArray();
 
-		std::time_t tm = time(nullptr);
-		forEachRecent(tm, false, 0, [&](int, const Ship &ship, long int) {
+		std::time_t now = time(nullptr);
+		forEachRecent(now, false, 0, [&](int, const Ship &ship, long int) {
 			ship.getGeoJSON(w, isValidCoord(station_lat, station_lon));
 		});
 		w.endArray().endObject();
@@ -165,8 +165,8 @@ std::string DB::getAllPathJSON()
 		JSON::Writer w(content, 65536);
 		w.beginObject();
 
-		std::time_t tm = time(nullptr);
-		forEachRecent(tm, false, 0, [&](int ptr, const Ship &ship, long int) {
+		std::time_t now = time(nullptr);
+		forEachRecent(now, false, 0, [&](int ptr, const Ship &ship, long int) {
 			w.key(ship.mmsi);
 			writeSinglePathJSONCompact(ptr, w);
 		});
@@ -275,8 +275,8 @@ std::string DB::getAllPathGeoJSON()
 		JSON::Writer w(content, 65536);
 		w.beginObject().kv("type", "FeatureCollection").key("features").beginArray();
 
-		std::time_t tm = time(nullptr);
-		forEachRecent(tm, false, 0, [&](int ptr, const Ship &, long int) {
+		std::time_t now = time(nullptr);
+		forEachRecent(now, false, 0, [&](int ptr, const Ship &, long int) {
 			writeSinglePathGeoJSON(ptr, w);
 		});
 		w.endArray().endObject().raw("\n\n");
@@ -551,7 +551,7 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	// Ship came back into dashboard scope after being gone long enough that
 	// frontends will have dropped their cached entry. Replay static on the
 	// next incremental poll by bumping last_static_signal.
-	bool back_in_scope = prev_signal > 0 && ship.last_signal - prev_signal > TIME_HISTORY;
+	bool back_in_scope = prev_signal > 0 && ship.last_signal - prev_signal > time_history;
 
 	if (staticUpdated || (back_in_scope && ship.last_static_signal > 0))
 		ship.last_static_signal = ship.last_signal;
@@ -637,7 +637,7 @@ void DB::processBinaryMessage(const JSON::JSON &data)
 	if (type != 6 && type != 8)
 		return;
 
-	BinaryMessage &binmsg = binaryMessages[binaryMsgIndex];
+	BinaryMessage &binmsg = binary_messages[binary_msg_index];
 	binmsg.Clear();
 
 	binmsg.type = type;
@@ -680,7 +680,7 @@ void DB::processBinaryMessage(const JSON::JSON &data)
 			binmsg.lon = loc_lon;
 		}
 		binmsg.timestamp = msg->getRxTimeUnix();
-		binaryMsgIndex = (binaryMsgIndex + 1) % MAX_BINARY_MESSAGES;
+		binary_msg_index = (binary_msg_index + 1) % MAX_BINARY_MESSAGES;
 	}
 }
 
@@ -690,21 +690,21 @@ std::string DB::getBinaryMessagesJSON(std::time_t since)
 	content.clear();
 	{
 		JSON::Writer w(content, 4096);
-		std::time_t tm = time(nullptr);
+		std::time_t now = time(nullptr);
 
-		w.beginObject().kv("time", tm).kv("timeout", TIME_HISTORY).key("messages").beginArray();
+		w.beginObject().kv("time", now).kv("timeout", time_history).key("messages").beginArray();
 
-		int startIndex = (binaryMsgIndex + MAX_BINARY_MESSAGES - 1) % MAX_BINARY_MESSAGES;
+		int startIndex = (binary_msg_index + MAX_BINARY_MESSAGES - 1) % MAX_BINARY_MESSAGES;
 
 		for (int i = 0; i < MAX_BINARY_MESSAGES; i++)
 		{
 			int idx = (startIndex - i + MAX_BINARY_MESSAGES) % MAX_BINARY_MESSAGES;
-			const BinaryMessage &msg = binaryMessages[idx];
+			const BinaryMessage &msg = binary_messages[idx];
 
 			if (!msg.used)
 				continue;
 
-			if ((long int)tm - (long int)msg.timestamp > TIME_HISTORY)
+			if ((long int)now - (long int)msg.timestamp > time_history)
 				break;
 
 			if (since > 0 && msg.timestamp < since)
@@ -739,12 +739,12 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 	const AIS::Message *msg = (AIS::Message *)data[0].binary;
 	int type = msg->type();
 
-	if (!filter.include(*msg))
-		return;
-	
 	if (type < 1 || type > 28 || msg->mmsi() == 0)
 		return;
 
+	if (!filter.include(*msg))
+		return;
+	
 	std::unique_lock<std::mutex> lock(mtx);
 
 	if (!isValidCoord(station_lat, station_lon) && isValidCoord(tag.station_lat, tag.station_lon))
@@ -824,7 +824,7 @@ void DB::tick(std::time_t now)
 #else
 	bool check_due = false;
 #endif
-	bool sweep_due = expire_fields && now - last_sweep >= TIME_HISTORY;
+	bool sweep_due = expire_fields && now - last_sweep >= time_history;
 
 	if (!check_due && !sweep_due)
 		return;

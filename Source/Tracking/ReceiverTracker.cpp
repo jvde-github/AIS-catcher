@@ -20,7 +20,7 @@
 
 void ReceiverTracker::applyConfig(const TrackingConfig &cfg, const AIS::Filter &f)
 {
-	setStationPosition(cfg.lat, cfg.lon, cfg.use_GPS);
+	setStationPosition(cfg.lat, cfg.lon, cfg.use_gps);
 	ships.setShareLatLon(cfg.latlon_share);
 	ships.setServerMode(cfg.server_mode);
 	ships.setMsgSave(cfg.msg_save);

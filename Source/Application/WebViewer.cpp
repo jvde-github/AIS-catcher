@@ -1031,7 +1031,7 @@ void WebViewer::applyStationPosition()
 {
 	std::lock_guard<std::recursive_mutex> lock(state_mtx);
 	for (auto &s : states)
-		s->setStationPosition(settings.tracking.lat, settings.tracking.lon, settings.tracking.use_GPS);
+		s->setStationPosition(settings.tracking.lat, settings.tracking.lon, settings.tracking.use_gps);
 }
 
 Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
@@ -1118,7 +1118,7 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 		applyStationPosition();
 		break;
 	case AIS::KEY_SETTING_USE_GPS:
-		settings.tracking.use_GPS = Util::Parse::Switch(arg);
+		settings.tracking.use_gps = Util::Parse::Switch(arg);
 		applyStationPosition();
 		break;
 	case AIS::KEY_SETTING_KML:

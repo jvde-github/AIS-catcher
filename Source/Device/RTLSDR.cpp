@@ -18,6 +18,7 @@
 #ifdef HASRTLSDR
 
 #include <cstring>
+#include <cstdlib>
 
 #include "RTLSDR.h"
 
@@ -230,7 +231,7 @@ namespace Device
 		int gain = gains[0];
 
 		for (const auto &h : gains)
-			if (abs(h - g) < abs(g - gain))
+			if (std::abs(h - g) < std::abs(g - gain))
 				gain = h;
 
 		if (rtlsdr_set_tuner_gain(dev, gain) != 0)

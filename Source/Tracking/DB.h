@@ -65,15 +65,15 @@ class DB : public StreamIn<JSON::JSON>,
 
 	std::string content;
 	float station_lat = LAT_UNDEFINED, station_lon = LON_UNDEFINED;
-	int TIME_HISTORY = 30 * 60;
+	int time_history = 30 * 60;
 	bool latlon_share = false;
 	bool server_mode = false;
 	bool msg_save = false;
-	bool use_GPS = true;
+	bool use_gps = true;
 	bool gps_position = false;
 	uint32_t own_mmsi = 0;
 
-	int HASH_SIZE = 8209;
+	int nbuckets = 8209;
 	// 0 = unset, resolved at setup: the server-mode default leaves room for the anchor slots
 	int track_memory_kb = 0;
 
@@ -103,15 +103,15 @@ class DB : public StreamIn<JSON::JSON>,
 	// the two scope rules fold into one cutoff: 0 passes everything, since
 	// last_signal is never negative
 	template <typename F>
-	void forEachRecent(std::time_t tm, bool full, std::time_t since, F f)
+	void forEachRecent(std::time_t now, bool full, std::time_t since, F f)
 	{
-		std::time_t cutoff = full ? since : MAX(since, tm - TIME_HISTORY);
+		std::time_t cutoff = full ? since : MAX(since, now - time_history);
 		ships.forEach([&](int ptr) {
 			const Ship &ship = ships[ptr];
 			if (ship.last_signal < cutoff)
 				return false;
 			
-			f(ptr, ship, (long int)tm - (long int)ship.last_signal);
+			f(ptr, ship, (long int)now - (long int)ship.last_signal);
 			return true;
 		});
 	}
@@ -122,8 +122,8 @@ class DB : public StreamIn<JSON::JSON>,
 	AIS::Filter filter;
 
 	static const int MAX_BINARY_MESSAGES = 10;
-	BinaryMessage binaryMessages[MAX_BINARY_MESSAGES];
-	int binaryMsgIndex = 0;
+	BinaryMessage binary_messages[MAX_BINARY_MESSAGES];
+	int binary_msg_index = 0;
 
 	void processBinaryMessage(const JSON::JSON &data);
 #ifdef CHECK_DB_INTEGRITY
@@ -134,7 +134,7 @@ class DB : public StreamIn<JSON::JSON>,
 public:
 	void setup();
 	void tick(std::time_t now);
-	void setTimeHistory(int t) { TIME_HISTORY = t; }
+	void setTimeHistory(int t) { time_history = t; }
 	void setExpireFields(bool b) { expire_fields = b; }
 	void setTrackMemory(int kb) { if (kb > 0) track_memory_kb = kb; }
 	void setShareLatLon(bool b) { latlon_share = b; }
@@ -146,10 +146,10 @@ public:
 		station_lon = lon;
 		gps_position = false;
 	}
-	void setConfigPosition(float lat, float lon, bool use_gps)
+	void setConfigPosition(float lat, float lon, bool gps)
 	{
-		use_GPS = use_gps;
-		if (use_gps && gps_position)
+		use_gps = gps;
+		if (gps && gps_position)
 			return;
 		station_lat = lat;
 		station_lon = lon;
@@ -169,7 +169,7 @@ public:
 	void Receive(const JSON::JSON *data, int len, TAG &tag);
 	void Receive(const AIS::GPS *data, int len, TAG &tag)
 	{
-		if (use_GPS)
+		if (use_gps)
 		{
 			std::lock_guard<std::mutex> lock(mtx);
 			station_lat = data[0].getLat();
