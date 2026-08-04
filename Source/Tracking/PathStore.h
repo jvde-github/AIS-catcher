@@ -53,6 +53,9 @@ public:
 
 	static const uint8_t NA = 0xFF;
 
+	// silence that ends a dwell, and so how long a point's end can still grow
+	static const uint32_t DWELL_GAP = 900;
+
 
 private:
 	static const int BLOCK_SHIFT = 8;
@@ -62,7 +65,6 @@ private:
 
 	static const uint32_t HORIZON = 3600;	 // full-resolution window in seconds
 	static const uint32_t GRANULARITY = 300; // point spacing beyond HORIZON
-	static const uint32_t DWELL_GAP = 900;	 // silence that ends a dwell
 	static const uint32_t DWELL_MAX = 0xFFFFu; // ceiling of the uint16 dur field
 	static const int DEADBAND = 40;			 // meters a ship must move to count as significant
 	static const uint8_t IDLE_SOG = 1;		 // 0.5 knot units, at or below this a ship is not making way
@@ -376,42 +378,43 @@ public:
 	// Blocks fill in slot order and HIST grows at its head, so the oldest point
 	// held is the first live slot of the HIST tail, or the RT tail while nothing
 	// has aged out. 0 when empty.
-	uint32_t oldestTime() const
+	// Bounds of the replayable timeline, 0 when empty. Scans every live slot: a
+	// listed block can hold no live points, and a dwell extension moves `newest`
+	// without appending anything. Called once per panel open.
+	void bounds(uint32_t &oldest, uint32_t &newest) const
 	{
-		const int tiers[2] = {HIST, RT};
+		oldest = 0;
+		newest = 0;
 
-		for (int t = 0; t < 2; t++)
+		for (std::size_t b = 0; b < blocks.size(); b++)
 		{
-			int b = lists[tiers[t]].tail;
-			if (b == -1)
-				continue;
-
 			const Block &blk = blocks[b];
 			for (int i = 0; i < blk.count; i++)
-				if (blk.pts[i].prev != NIL)
-					return blk.pts[i].time;
+			{
+				const Point &p = blk.pts[i];
+				if (p.prev == NIL)
+					continue;
+
+				if (oldest == 0 || p.time < oldest)
+					oldest = p.time;
+				if (p.end() > newest)
+					newest = p.end();
+			}
 		}
-		return 0;
 	}
 
-	// Mirror of oldestTime: the head block of RT while anything is live, or of
-	// HIST on a store that has gone quiet.
+	uint32_t oldestTime() const
+	{
+		uint32_t oldest, newest;
+		bounds(oldest, newest);
+		return oldest;
+	}
+
 	uint32_t newestTime() const
 	{
-		const int tiers[2] = {RT, HIST};
-
-		for (int t = 0; t < 2; t++)
-		{
-			int b = lists[tiers[t]].head;
-			if (b == -1)
-				continue;
-
-			const Block &blk = blocks[b];
-			for (int i = blk.count - 1; i >= 0; i--)
-				if (blk.pts[i].prev != NIL)
-					return blk.pts[i].end();
-		}
-		return 0;
+		uint32_t oldest, newest;
+		bounds(oldest, newest);
+		return newest;
 	}
 
 	uint32_t tail(int ship) const { return anchors[ship].tail; }

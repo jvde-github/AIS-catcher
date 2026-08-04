@@ -189,12 +189,12 @@ void DB::writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since,
 		if ((std::time_t)p.end() < since)
 		{
 			if (seed)
-				w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.end()).endArray();
+				w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.end()).val_unless(p.sog, PathStore::NA).endArray();
 			break;
 		}
 
 		if (until <= 0 || (std::time_t)p.time <= until)
-			w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.end()).endArray();
+			w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.end()).val_unless(p.sog, PathStore::NA).endArray();
 	}
 	w.endArray();
 }
@@ -235,10 +235,13 @@ std::string DB::getReplayInfoJSON(std::time_t block)
 		// scrubber before it has fetched any of the track data. `block` is the
 		// chunk size of the addressing scheme, so the client never has to hard-
 		// code the server's value.
+		uint32_t oldest, newest;
+		paths.bounds(oldest, newest);
+
 		w.beginObject()
 			.kv("now", (std::time_t)time(nullptr))
-			.kv("oldest", paths.oldestTime())
-			.kv("newest", paths.newestTime())
+			.kv("oldest", oldest)
+			.kv("newest", newest)
 			.kv("block", block)
 			.endObject();
 		w.raw("\n\n");

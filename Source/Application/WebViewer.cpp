@@ -819,6 +819,14 @@ std::string WebViewer::buildMultiPathJSON(ReceiverTracker *s, const std::string 
 // range that would miss the cache. Changing this invalidates every cached
 // block, which is the intended effect.
 static const std::time_t REPLAY_BLOCK = 600;
+static const long long MAX_REPLAY_LOOKBACK = 7 * 24 * 3600;
+
+// Checked before it is multiplied by anything: a negative index yields a
+// negative `until`, which the path writer reads as "no upper bound".
+static bool validReplayBlock(long long block)
+{
+	return block > 0 && block <= (long long)(time(nullptr) / REPLAY_BLOCK);
+}
 
 // The tracker a handler is given is never null: getState() falls back to the
 // aggregate, which exists for the lifetime of the viewer.
@@ -875,17 +883,24 @@ const WebViewer::Route WebViewer::routes[] = {
 	{"/api/replay.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 {
-		 std::time_t since = (std::time_t)queryInt(a, "block") * REPLAY_BLOCK;
-		 return s->getReplayJSON(since, since + REPLAY_BLOCK - 1,
-								 (std::time_t)queryInt(a, "lookback"));
+		 long long block = queryInt(a, "block");
+		 if (!validReplayBlock(block))
+			 return std::string("{}\n\n");
+
+		 std::time_t since = (std::time_t)(block * REPLAY_BLOCK);
+		 long long lookback = queryInt(a, "lookback");
+		 if (lookback < 0 || lookback > MAX_REPLAY_LOOKBACK)
+			 lookback = 0;
+
+		 return s->getReplayJSON(since, since + REPLAY_BLOCK - 1, (std::time_t)lookback);
 	 }, true,
-	 // A closed block can only lose points to eviction from here on: late
-	 // messages are clamped forward, never backfilled. A cached copy is at
-	 // worst richer than a refetch.
+	 // A dwell inside the block can still grow for DWELL_GAP after it ends, so
+	 // caching waits that out; past it only eviction changes anything.
 	 [](const std::string &q) -> bool
 	 {
-		 long block = queryInt(q, "block");
-		 return block > 0 && (block + 1) * REPLAY_BLOCK <= time(nullptr);
+		 long long block = queryInt(q, "block");
+		 return validReplayBlock(block) &&
+				(block + 1) * REPLAY_BLOCK + (long long)PathStore::DWELL_GAP <= (long long)time(nullptr);
 	 }},
 	{"/api/path.geojson", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)

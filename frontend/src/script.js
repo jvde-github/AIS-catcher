@@ -2776,6 +2776,7 @@ function selectReceiver(idx) {
 }
 
 function onReceiverChange(idx) {
+    if (replaycardVisible()) toggleReplaycard();
     activeReceiver = parseInt(idx, 10) || 0;
     shipsSince = 0;
     binarySince = 0;
@@ -3629,7 +3630,8 @@ function replaycardVisible() {
 // the same vessel twice. Exiting just puts them back and lets the normal
 // refresh rebuild from shipsDB.
 function setLiveLayersVisible(on) {
-    [markerLayer, trackLayer, labelLayer, shapeLayer].forEach(l => l.setVisible(on));
+    [markerLayer, trackLayer, labelLayer, shapeLayer, planeLayer, binaryLayer]
+        .forEach(l => l.setVisible(on));
 }
 
 function toggleReplaycard() {
@@ -3645,7 +3647,7 @@ function toggleReplaycard() {
         replay.refreshBounds().then(updateReplaycard);
     } else {
         replayLoadAt.cancel();
-        if (replay.isActive()) stopReplay();
+        stopReplay();
     }
 }
 
@@ -3724,7 +3726,7 @@ function replayRemain(sec) {
 
     if (s >= 86400) {
         const days = Math.floor(s / 86400);
-        const hours = Math.round((s % 86400) / 3600);
+        const hours = Math.floor((s % 86400) / 3600);
         return days + "d" + (hours ? " " + hours + "h" : "");
     }
 

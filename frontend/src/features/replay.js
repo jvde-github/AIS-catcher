@@ -32,14 +32,17 @@ let filling = false;
 let instant = 0;
 let active = false;
 let loading = false;
+// bumped on teardown; an in-flight load drops its work if it no longer matches
+let generation = 0;
 
 // How long a vessel lingers at its last known position once it stops reporting,
 // matching how the live map holds and fades a ship that has gone quiet.
 const STALE_DROP = 1800;
 
-// Longest silence still worth interpolating across. Must stay above the
-// server's GRANULARITY (300 s), below which history is thinned by design.
-const MAX_INTERP = 600;
+// Longest silence worth interpolating across. Must clear the gaps thinned
+// history leaves (GRANULARITY plus the raw gap that survived it), or an old
+// track stutters where the same track interpolated smoothly when fresh.
+const MAX_INTERP = 1200;
 
 // Blocks are addressed by index so a stretch of time is always the same URL and
 // a closed one can sit in the HTTP cache; a range derived from "now" would mint
@@ -69,9 +72,11 @@ export function cycleSpeed() {
     speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
     deps.onStateChange?.();
 }
-// the replayable timeline, known from `bounds` before any block is fetched
+// Known from `bounds` before any block is fetched; 0 is the empty sentinel.
 export function getTimeline() {
-    return { start: bounds.oldest, end: bounds.newest || bounds.now };
+    if (!bounds.oldest || !bounds.newest || bounds.newest <= bounds.oldest)
+        return { start: 0, end: 0 };
+    return { start: bounds.oldest, end: bounds.newest };
 }
 export function getInstant() { return instant; }
 
@@ -150,6 +155,7 @@ async function loadBlock(start) {
 export async function load(at) {
     if (loading) return false;
     loading = true;
+    const gen = ++generation;
     deps.onStateChange?.();
 
     try {
@@ -159,7 +165,10 @@ export async function load(at) {
             return false;
         }
 
+        if (gen !== generation) return false;
+
         fleet = {};
+        features = {};
         blocks.clear();
         const tl = getTimeline();
         instant = at > 0 ? Math.max(tl.start, Math.min(tl.end, at)) : tl.start;
@@ -171,6 +180,8 @@ export async function load(at) {
 
         // the block under the playhead is enough to draw; the worker does the rest
         await loadBlock(blockStart(instant));
+
+        if (gen !== generation) return false;
 
         if (Object.keys(fleet).length === 0) {
             deps.showNotification('Replay: no tracks in that window');
@@ -216,10 +227,12 @@ async function pump() {
     if (filling) return;
     filling = true;
 
+    const gen = generation;
     try {
         let b;
-        while (active && (b = nextWanted()) !== null) {
+        while (active && gen === generation && (b = nextWanted()) !== null) {
             await loadBlock(b);
+            if (gen !== generation) return;
             buildFeatures();
             if (!playing) draw();
             deps.onStateChange?.();
@@ -242,7 +255,8 @@ export function play() {
 
     const tick = (now) => {
         if (!playing) return;
-        const dt = (now - lastFrame) / 1000;
+        // rAF stops in a hidden tab; uncapped, the frame back skips to the end
+        const dt = Math.min((now - lastFrame) / 1000, 0.25);
         lastFrame = now;
 
         const wasBlock = blockStart(instant);
@@ -276,6 +290,7 @@ export function pause() {
 
 export function stop() {
     pause();
+    generation++;
     active = false;
     fleet = {};
     features = {};
@@ -348,11 +363,30 @@ function sample(s, T) {
     const i = firstAlive(pts, T);
 
     if (T >= pts[i][2]) {
-        // Sitting on a point. A real dwell means the vessel is genuinely
-        // holding station; a zero-length one is just the instant we happen to
-        // have landed on, so take heading from the leg it is travelling.
-        if (pts[i][3] > pts[i][2])
-            return { lat: pts[i][0], lon: pts[i][1], knots: 0, brg: null };
+        // Sitting on a point. A dwell on an idle vessel means it is genuinely
+        // holding station; on a vessel under way it is deadband compression
+        // (moved less than the store's threshold between reports), so keep it
+        // sailing toward the next point. sog is in half-knot units, null when
+        // unknown — and unknown parks, like blocks cached before sog existed.
+        if (pts[i][3] > pts[i][2]) {
+            const sog = pts[i][4];
+            if (sog == null || sog <= 2)
+                return { lat: pts[i][0], lon: pts[i][1], knots: 0, brg: null };
+
+            if (i + 1 < pts.length && pts[i + 1][2] - pts[i][3] <= MAX_INTERP) {
+                const span = pts[i + 1][2] - pts[i][2];
+                const f = span > 0 ? Math.max(0, Math.min(1, (T - pts[i][2]) / span)) : 0;
+                const l = leg(s, i, i + 1);
+                return {
+                    lat: pts[i][0] + (pts[i + 1][0] - pts[i][0]) * f,
+                    lon: pts[i][1] + (pts[i + 1][1] - pts[i][1]) * f,
+                    knots: sog / 2, brg: l.brg,
+                };
+            }
+
+            const l = i > 0 ? leg(s, i - 1, i) : { brg: null, knots: 0 };
+            return { lat: pts[i][0], lon: pts[i][1], knots: sog / 2, brg: l.brg };
+        }
 
         const l = i > 0 ? leg(s, i - 1, i) : leg(s, i, i + 1);
         return { lat: pts[i][0], lon: pts[i][1], knots: l.knots, brg: l.brg };
@@ -364,13 +398,19 @@ function sample(s, T) {
     const gap = pts[b][2] - pts[a][3];
     if (gap > MAX_INTERP) return holdAt(s, a, T);
 
-    const f = gap > 0 ? Math.max(0, Math.min(1, (T - pts[a][3]) / gap)) : 0;
+    // a moving dwell already advanced the vessel through its span; slide from
+    // the same anchor so the position is continuous at the handoff
+    const sogA = pts[a][4];
+    const movingDwell = pts[a][3] > pts[a][2] && sogA != null && sogA > 2;
+    const start = movingDwell ? pts[a][2] : pts[a][3];
+    const span = pts[b][2] - start;
+    const f = span > 0 ? Math.max(0, Math.min(1, (T - start) / span)) : 0;
     const l = leg(s, a, b);
 
     return {
         lat: pts[a][0] + (pts[b][0] - pts[a][0]) * f,
         lon: pts[a][1] + (pts[b][1] - pts[a][1]) * f,
-        knots: l.knots, brg: l.brg,
+        knots: movingDwell ? sogA / 2 : l.knots, brg: l.brg,
     };
 }
 
