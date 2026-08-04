@@ -374,13 +374,9 @@ public:
 			unlink(anchors[ship].head);
 	}
 
-	// newest-first traversal: for (r = tail(ship); isPoint(r); r = at(r).prev)
-	// Blocks fill in slot order and HIST grows at its head, so the oldest point
-	// held is the first live slot of the HIST tail, or the RT tail while nothing
-	// has aged out. 0 when empty.
-	// Bounds of the replayable timeline, 0 when empty. Scans every live slot: a
-	// listed block can hold no live points, and a dwell extension moves `newest`
-	// without appending anything. Called once per panel open.
+	// Bounds of the replayable timeline, 0 when empty. Scans every live slot:
+	// a dwell extension moves `newest` without appending anything, so no list
+	// order can answer this. Called once per replay open.
 	void bounds(uint32_t &oldest, uint32_t &newest) const
 	{
 		oldest = 0;
@@ -403,20 +399,7 @@ public:
 		}
 	}
 
-	uint32_t oldestTime() const
-	{
-		uint32_t oldest, newest;
-		bounds(oldest, newest);
-		return oldest;
-	}
-
-	uint32_t newestTime() const
-	{
-		uint32_t oldest, newest;
-		bounds(oldest, newest);
-		return newest;
-	}
-
+	// newest-first traversal: for (r = tail(ship); isPoint(r); r = at(r).prev)
 	uint32_t tail(int ship) const { return anchors[ship].tail; }
 	static bool isPoint(uint32_t r) { return !(r & SHIP_BIT); }
 	const Point &at(uint32_t r) const { return blocks[blockOf(r)].pts[slotOf(r)]; }

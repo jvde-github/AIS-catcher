@@ -21,7 +21,7 @@ let deps = null;
 const markerSource = new VectorSource({ features: [] });
 export const markerLayer = new VectorLayer({ source: markerSource });
 
-// mmsi -> { pts, cls, name, len }; pts is oldest-first [lat, lon, t, e]
+// mmsi -> { pts, cls, name, len }; pts is oldest-first [lat, lon, t, e, sog]
 let fleet = {};
 // mmsi -> { marker, shown, style, last }
 let features = {};
@@ -72,7 +72,6 @@ export function cycleSpeed() {
     speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
     deps.onStateChange?.();
 }
-// Known from `bounds` before any block is fetched; 0 is the empty sentinel.
 export function getTimeline() {
     if (!bounds.oldest || !bounds.newest || bounds.newest <= bounds.oldest)
         return { start: 0, end: 0 };
@@ -178,7 +177,6 @@ export async function load(at) {
         manifest = await api(
             `api/replay_ships.json?since=${tl.start}&lookback=${BLOCK_LOOKBACK}`);
 
-        // the block under the playhead is enough to draw; the worker does the rest
         await loadBlock(blockStart(instant));
 
         if (gen !== generation) return false;
@@ -350,68 +348,46 @@ function firstAlive(pts, T) {
     return lo;
 }
 
-// Position of one ship at time T.
-//   - before its first point or after its last dwell ends: not present
-//   - inside a point's [t, e] span: parked there (moored vessels hold still)
-//   - between two points: linear along the segment
+// Position of one ship at time T: absent before its first point, held then
+// dropped after its last, in between sliding linearly along its current
+// segment. A dwell on an idle vessel parks instead; on a vessel under way a
+// dwell is only deadband compression, so it keeps sailing — anchored at the
+// dwell's start so the position is continuous where the gap takes over.
 function sample(s, T) {
     const pts = s.pts;
-    // before its first report a vessel genuinely is not there yet
     if (T < pts[0][2]) return null;
     if (T > pts[pts.length - 1][3]) return holdAt(s, pts.length - 1, T);
 
     const i = firstAlive(pts, T);
+    const a = T >= pts[i][2] ? i : i - 1;
+    const pa = pts[a];
+    // sog is in half-knot units, null when unknown; unknown parks, matching
+    // blocks cached before the field existed
+    const sog = pa[4];
+    const underWay = sog != null && sog > 2;
 
-    if (T >= pts[i][2]) {
-        // Sitting on a point. A dwell on an idle vessel means it is genuinely
-        // holding station; on a vessel under way it is deadband compression
-        // (moved less than the store's threshold between reports), so keep it
-        // sailing toward the next point. sog is in half-knot units, null when
-        // unknown — and unknown parks, like blocks cached before sog existed.
-        if (pts[i][3] > pts[i][2]) {
-            const sog = pts[i][4];
-            if (sog == null || sog <= 2)
-                return { lat: pts[i][0], lon: pts[i][1], knots: 0, brg: null };
+    if (T <= pa[3] && !underWay)
+        return { lat: pa[0], lon: pa[1], knots: 0, brg: null };
 
-            if (i + 1 < pts.length && pts[i + 1][2] - pts[i][3] <= MAX_INTERP) {
-                const span = pts[i + 1][2] - pts[i][2];
-                const f = span > 0 ? Math.max(0, Math.min(1, (T - pts[i][2]) / span)) : 0;
-                const l = leg(s, i, i + 1);
-                return {
-                    lat: pts[i][0] + (pts[i + 1][0] - pts[i][0]) * f,
-                    lon: pts[i][1] + (pts[i + 1][1] - pts[i][1]) * f,
-                    knots: sog / 2, brg: l.brg,
-                };
-            }
-
-            const l = i > 0 ? leg(s, i - 1, i) : { brg: null, knots: 0 };
-            return { lat: pts[i][0], lon: pts[i][1], knots: sog / 2, brg: l.brg };
-        }
-
-        const l = i > 0 ? leg(s, i - 1, i) : leg(s, i, i + 1);
-        return { lat: pts[i][0], lon: pts[i][1], knots: l.knots, brg: l.brg };
+    const b = a + 1;
+    if (b < pts.length && pts[b][2] - pa[3] <= MAX_INTERP) {
+        const start = underWay ? pa[2] : pa[3];
+        const span = pts[b][2] - start;
+        const f = span > 0 ? Math.max(0, Math.min(1, (T - start) / span)) : 0;
+        const l = leg(s, a, b);
+        return {
+            lat: pa[0] + (pts[b][0] - pa[0]) * f,
+            lon: pa[1] + (pts[b][1] - pa[1]) * f,
+            knots: underWay ? sog / 2 : l.knots, brg: l.brg,
+        };
     }
 
-    // In the gap between two points. Sliding smoothly across a long silence
-    // would invent a track the vessel never sailed, so past the cutoff hold it.
-    const a = i - 1, b = i;
-    const gap = pts[b][2] - pts[a][3];
-    if (gap > MAX_INTERP) return holdAt(s, a, T);
-
-    // a moving dwell already advanced the vessel through its span; slide from
-    // the same anchor so the position is continuous at the handoff
-    const sogA = pts[a][4];
-    const movingDwell = pts[a][3] > pts[a][2] && sogA != null && sogA > 2;
-    const start = movingDwell ? pts[a][2] : pts[a][3];
-    const span = pts[b][2] - start;
-    const f = span > 0 ? Math.max(0, Math.min(1, (T - start) / span)) : 0;
-    const l = leg(s, a, b);
-
-    return {
-        lat: pts[a][0] + (pts[b][0] - pts[a][0]) * f,
-        lon: pts[a][1] + (pts[b][1] - pts[a][1]) * f,
-        knots: movingDwell ? sogA / 2 : l.knots, brg: l.brg,
-    };
+    // no next point within reach: hold rather than invent a track never sailed
+    if (T <= pa[3]) {
+        const l = a > 0 ? leg(s, a - 1, a) : { brg: null };
+        return { lat: pa[0], lon: pa[1], knots: sog / 2, brg: l.brg };
+    }
+    return holdAt(s, a, T);
 }
 
 // Additive: later blocks bring vessels the first did not have, and an existing
