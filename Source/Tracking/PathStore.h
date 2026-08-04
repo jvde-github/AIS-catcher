@@ -373,6 +373,47 @@ public:
 	}
 
 	// newest-first traversal: for (r = tail(ship); isPoint(r); r = at(r).prev)
+	// Blocks fill in slot order and HIST grows at its head, so the oldest point
+	// held is the first live slot of the HIST tail, or the RT tail while nothing
+	// has aged out. 0 when empty.
+	uint32_t oldestTime() const
+	{
+		const int tiers[2] = {HIST, RT};
+
+		for (int t = 0; t < 2; t++)
+		{
+			int b = lists[tiers[t]].tail;
+			if (b == -1)
+				continue;
+
+			const Block &blk = blocks[b];
+			for (int i = 0; i < blk.count; i++)
+				if (blk.pts[i].prev != NIL)
+					return blk.pts[i].time;
+		}
+		return 0;
+	}
+
+	// Mirror of oldestTime: the head block of RT while anything is live, or of
+	// HIST on a store that has gone quiet.
+	uint32_t newestTime() const
+	{
+		const int tiers[2] = {RT, HIST};
+
+		for (int t = 0; t < 2; t++)
+		{
+			int b = lists[tiers[t]].head;
+			if (b == -1)
+				continue;
+
+			const Block &blk = blocks[b];
+			for (int i = blk.count - 1; i >= 0; i--)
+				if (blk.pts[i].prev != NIL)
+					return blk.pts[i].end();
+		}
+		return 0;
+	}
+
 	uint32_t tail(int ship) const { return anchors[ship].tail; }
 	static bool isPoint(uint32_t r) { return !(r & SHIP_BIT); }
 	const Point &at(uint32_t r) const { return blocks[blockOf(r)].pts[slotOf(r)]; }

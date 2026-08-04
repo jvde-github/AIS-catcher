@@ -175,16 +175,26 @@ std::string DB::getAllPathJSON()
 	return content;
 }
 
-void DB::writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since)
+// Points are newest first, so the walk skips past the window, emits while it
+// overlaps and stops once clear of it. A dwell point is emitted by every window
+// its [time, end] span touches. `seed` also emits the first point wholly before
+// the window — where the vessel was when it opened — without which a chunk
+// cannot draw a ship that last reported before it began.
+void DB::writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since, std::time_t until, bool seed)
 {
 	w.beginArray();
 	for (uint32_t r = paths.tail(ptr); PathStore::isPoint(r); r = paths.at(r).prev)
 	{
 		const PathStore::Point &p = paths.at(r);
 		if ((std::time_t)p.end() < since)
+		{
+			if (seed)
+				w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.end()).endArray();
 			break;
+		}
 
-		w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.end()).endArray();
+		if (until <= 0 || (std::time_t)p.time <= until)
+			w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.end()).endArray();
 	}
 	w.endArray();
 }
@@ -208,6 +218,55 @@ std::string DB::getAllPathJSONSince(std::time_t since)
 		w.endObject().raw("\n\n");
 	}
 	return content;
+}
+
+// Only the oldest and newest blocks are inspected, so this is cheap enough to
+// call whenever the replay panel opens.
+std::string DB::getReplayInfoJSON(std::time_t block)
+{
+	std::lock_guard<std::mutex> lock(mtx);
+
+	content.clear();
+	{
+		JSON::Writer w(content, 256);
+
+		// `newest` is the end of the replayable timeline, which trails `now` by
+		// however long the feed has been quiet — the viewer needs it to size a
+		// scrubber before it has fetched any of the track data. `block` is the
+		// chunk size of the addressing scheme, so the client never has to hard-
+		// code the server's value.
+		w.beginObject()
+			.kv("now", (std::time_t)time(nullptr))
+			.kv("oldest", paths.oldestTime())
+			.kv("newest", paths.newestTime())
+			.kv("block", block)
+			.endObject();
+		w.raw("\n\n");
+	}
+	return content;
+}
+
+// Per-ship styling, sent once so the chunks stay geometry. Read straight off
+// the record rather than through the static-signal gate: a name captured hours
+// ago is what a replay of that period wants.
+std::string DB::getReplayShipsJSON(std::time_t since, std::time_t lookback)
+{
+	return getReplayObjectJSON(since, lookback, [](JSON::Writer &w, int, const Ship &ship) {
+		w.key(ship.mmsi).beginObject()
+			.kv("c", ship.shipclass)
+			.kv("n", ship.shipname)
+			.kv_unless("b", ship.to_bow, DIMENSION_UNDEFINED)
+			.kv_unless("s", ship.to_stern, DIMENSION_UNDEFINED)
+			.endObject();
+	});
+}
+
+std::string DB::getReplayJSON(std::time_t since, std::time_t until, std::time_t lookback)
+{
+	return getReplayObjectJSON(since, lookback, [this, since, until](JSON::Writer &w, int ptr, const Ship &ship) {
+		w.key(ship.mmsi);
+		writeSinglePathJSONCompact(ptr, w, since, until, true);
+	});
 }
 
 void DB::writeSinglePathGeoJSON(int ptr, JSON::Writer &w)
@@ -585,8 +644,13 @@ static bool isBinaryContent(const JSON::Member &p)
 	switch (p.Key())
 	{
 	case AIS::KEY_TEXT:
-		// getText trims the '@'/space padding, so a pure-padding broadcast is empty
-		return !p.Get().getString().empty();
+	{
+		// getText trims the '@'/space padding, so a pure-padding broadcast is
+		// empty. ONWA transponders broadcast their on/off state as text, which
+		// is status rather than anything worth listing.
+		const std::string &t = p.Get().getString();
+		return !t.empty() && t != "ONWAON" && t != "ONWAOFF";
+	}
 	case AIS::KEY_CREW_COUNT:
 	case AIS::KEY_PASSENGER_COUNT:
 	case AIS::KEY_SHIPBOARD_PERSONNEL_COUNT:

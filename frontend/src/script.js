@@ -8,6 +8,7 @@ import * as community from './overlays/community.js';
 import * as kiosk from './features/kiosk.js';
 import * as measure from './features/measure.js';
 import * as boxselect from './features/boxselect.js';
+import * as replay from './features/replay.js';
 import {
     getDistanceVal, getDistanceUnit,
     getSpeedVal, getSpeedUnit,
@@ -119,6 +120,12 @@ const ACTIONS = {
     toggleScreenSize: () => toggleScreenSize(),
     showReceiverDialog: () => showReceiverDialog(),
     selectReceiver: (e, d) => selectReceiver(d.idx),
+
+    // replay
+    toggleReplaycard: () => toggleReplaycard(),
+    replayToggle: () => replayToggle(),
+    replayCycleSpeed: () => replay.cycleSpeed(),
+    replaySeek: (e, d, el) => replaySeek(el),
 
     // tableside / generic close buttons / dialog
     hideTablecard: () => hideTablecard(),
@@ -866,10 +873,14 @@ const trackStyleFunction = function (feature) {
     });
 }
 
+// icon scale bucket by vessel length, shared with replay
+function iconScale(length) {
+    return length >= 100 && length <= 200 ? 0.9 : length > 200 ? 1.1 : 0.75;
+}
+
 const markerStyle = function (feature) {
 
-    const length = (feature.ship.to_bow || 0) + (feature.ship.to_stern || 0);
-    const mult = length >= 100 && length <= 200 ? 0.9 : length > 200 ? 1.1 : 0.75;
+    const mult = iconScale((feature.ship.to_bow || 0) + (feature.ship.to_stern || 0));
     const highlighted = (feature.ship.mmsi == hoverMMSI && hoverType == 'ship') || (feature.ship.mmsi == card_mmsi && card_type == 'ship');
 
     return new ol.style.Style({
@@ -1607,7 +1618,8 @@ function initMap() {
         value.setVisible(false);
     }
 
-    [trackLayer, rangeLayer, shapeLayer, markerLayer, labelLayer, extraLayer, binaryLayer, measure.measureVector].forEach(layer => {
+    [trackLayer, rangeLayer, shapeLayer, markerLayer, labelLayer, extraLayer, binaryLayer, measure.measureVector,
+     replay.markerLayer].forEach(layer => {
         map.addLayer(layer);
     });
 
@@ -2957,11 +2969,15 @@ function getTooltipContentPlane(plane) {
         '</div>';
 }
 
-function getShipOpacity(ship) {
+// age-based fade shared with replay, so a replayed moment fades like the
+// moment itself did
+function fadeOpacity(age) {
     if (settings.fading == false) return 1;
+    return Math.max(0.2, Math.min(1, 1 - (age / 1800) * 0.8));
+}
 
-    let opacity = 1 - ((shipsSince - ship.last_signal) / 1800) * 0.8;
-    return Math.max(0.2, Math.min(1, opacity));
+function getShipOpacity(ship) {
+    return fadeOpacity(shipsSince - ship.last_signal);
 }
 
 
@@ -3603,6 +3619,153 @@ function measurecardVisible() {
 function toggleMeasurecard() {
     if (shipcardVisible() && !measurecardVisible()) showShipcard(null, null);
     document.getElementById("measurecard").classList.toggle("visible");
+}
+
+function replaycardVisible() {
+    return document.getElementById("replaybar").classList.contains("visible");
+}
+
+// While replay owns the map the live layers step aside, so the two never draw
+// the same vessel twice. Exiting just puts them back and lets the normal
+// refresh rebuild from shipsDB.
+function setLiveLayersVisible(on) {
+    [markerLayer, trackLayer, labelLayer, shapeLayer].forEach(l => l.setVisible(on));
+}
+
+function toggleReplaycard() {
+    const bar = document.getElementById("replaybar");
+    bar.classList.toggle("visible");
+    // the phone layout hangs off this: the bar spans the full width there and
+    // the map controls step aside for it
+    document.body.classList.toggle("replay-open", bar.classList.contains("visible"));
+
+    if (replaycardVisible()) {
+        // before anything is loaded the scrubber spans the server's whole
+        // history, so dragging it chooses where playback will start
+        replay.refreshBounds().then(updateReplaycard);
+    } else {
+        replayLoadAt.cancel();
+        if (replay.isActive()) stopReplay();
+    }
+}
+
+// The scrubber means "start here" until a load has happened, and "seek here"
+// after — so Play is the only control needed to get from opening the bar to
+// watching the fleet move.
+async function replayToggle() {
+    if (replay.isLoading()) return;
+
+    if (replay.isPlaying()) {
+        replay.pause();
+        return;
+    }
+
+    if (!replay.isActive()) {
+        replayLoadAt.cancel();
+        const at = replayScrubTime(document.getElementById("replayScrub").value);
+
+        if (!(await replayShowAt(at))) return;
+    }
+    replay.play();
+}
+
+function stopReplay() {
+    replay.stop();
+    redrawMap();
+    updateReplaycard();
+}
+
+// The scrubber's 0..1000 value mapped onto the replayable timeline.
+function replayScrubTime(value) {
+    const tl = replay.getTimeline();
+    return tl.start + (tl.end - tl.start) * (Number(value) / 1000);
+}
+
+// Dragging the slider is the primary way in: the labels follow immediately,
+// and shortly after the drag settles the fleet for that moment is loaded and
+// drawn. Play then only starts the clock on what is already on screen.
+const replayLoadAt = debounce((at) => replayShowAt(at), 250);
+
+function replaySeek(el) {
+    const tl = replay.getTimeline();
+    if (tl.end <= tl.start) return;
+
+    const at = replayScrubTime(el.value);
+
+    if (replay.isActive()) {
+        replay.seek(at);
+        return;
+    }
+
+    updateReplaycard();
+    replayLoadAt(at);
+}
+
+async function replayShowAt(at) {
+    const ok = await replay.load(at);
+    updateReplaycard();
+    return ok;
+}
+
+// The playhead as wall-clock time. Seconds matter on a short span; over a
+// multi-day one the date does instead, and there is no room for both.
+function replayStamp(unixSec, spanSec) {
+    if (spanSec > 86400) {
+        const d = new Date(unixSec * 1000);
+        return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " +
+            d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    }
+    return formatTime(unixSec);
+}
+
+// Time left, collapsing to days once it stops fitting as h:mm:ss.
+function replayRemain(sec) {
+    const s = Math.max(0, Math.round(sec));
+
+    if (s >= 86400) {
+        const days = Math.floor(s / 86400);
+        const hours = Math.round((s % 86400) / 3600);
+        return days + "d" + (hours ? " " + hours + "h" : "");
+    }
+
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = String(s % 60).padStart(2, "0");
+    return h > 0 ? h + ":" + String(m).padStart(2, "0") + ":" + ss : m + ":" + ss;
+}
+
+function updateReplaycard() {
+    const bar = document.getElementById("replaybar");
+    if (!bar || !bar.classList.contains("visible")) return;
+
+    const scrub = document.getElementById("replayScrub");
+    const { start, end } = replay.getTimeline();
+
+    bar.classList.toggle("playing", replay.isPlaying());
+    bar.classList.toggle("loading", replay.isLoading());
+    document.getElementById("replaySpeed").textContent = replay.getSpeed() + "×";
+
+    // no history at all means nothing to start
+    const hasHistory = end > start;
+    document.getElementById("replayPlay").disabled = !hasHistory || replay.isLoading();
+    scrub.disabled = !hasHistory;
+
+    const at = replay.isActive() ? replay.getInstant() : replayScrubTime(scrub.value);
+
+    if (replay.isActive() && end > start)
+        scrub.value = Math.round(((at - start) / (end - start)) * 1000);
+
+    document.getElementById("replayFill").style.width = (Number(scrub.value) / 10) + "%";
+
+    const elapsed = document.getElementById("replayElapsed");
+    elapsed.textContent = hasHistory ? replayStamp(at, end - start) : "--:--";
+    elapsed.title = hasHistory ? new Date(at * 1000).toLocaleString() : "";
+
+    document.getElementById("replayRemaining").textContent =
+        hasHistory ? "-" + replayRemain(end - at) : "--:--";
+
+    document.getElementById("replayPlay").title =
+        replay.isLoading() ? "Loading" : replay.isPlaying() ? "Pause" : "Play";
 }
 
 async function ToggleTrackOnMap(m) {
@@ -4602,31 +4765,40 @@ const shippingMappings = {
     }
 }
 
-function getSprite(ship) {
-    let shipClass = ship.shipclass;
-    let sprite = shippingMappings[shipClass] || {
+// Pure sprite pick for a class in motion, shared with replay: rows whose
+// undirected variant sits at cy 20 have a directional one at cy 0 that is
+// used once the vessel is under way.
+function spriteFor(shipClass, speed, cog) {
+    const sprite = shippingMappings[shipClass] || {
         cx: 120,
         cy: 20,
         imgSize: 20,
         hint: ''
-    }
+    };
 
-    ship.rot = 0
-    ship.cx = sprite.cx
-    ship.cy = sprite.cy
-    ship.imgSize = sprite.imgSize
-    ship.hint = sprite.hint
+    let cy = sprite.cy;
+    let rot = 0;
 
     if (sprite.cy === 20) {
-        if (ship.speed != null && ship.speed > 0.5 && ship.cog != null) {
-            ship.cy = 0
-            ship.rot = ship.cog * 3.1415926 / 180;
+        if (speed != null && speed > 0.5 && cog != null) {
+            cy = 0;
+            rot = cog * 3.1415926 / 180;
         }
-    } else if ((shipClass == ShippingClass.HELICOPTER || shipClass == ShippingClass.PLANE) && ship.cog != null) {
-        ship.rot = ship.cog * 3.1415926 / 180;
+    } else if ((shipClass == ShippingClass.HELICOPTER || shipClass == ShippingClass.PLANE) && cog != null) {
+        rot = cog * 3.1415926 / 180;
     }
 
-    return
+    return { cx: sprite.cx, cy: cy, imgSize: sprite.imgSize, hint: sprite.hint, rot: rot };
+}
+
+function getSprite(ship) {
+    const s = spriteFor(ship.shipclass, ship.speed, ship.cog);
+
+    ship.rot = s.rot
+    ship.cx = s.cx
+    ship.cy = s.cy
+    ship.imgSize = s.imgSize
+    ship.hint = s.hint
 }
 function getPlaneSprite(plane) {
     let sprite = shippingMappings[ShippingClass.PLANE];
@@ -4682,6 +4854,11 @@ function getPlaneSprite(plane) {
 const SpritesAll = 'icons.png'
 
 async function updateMap() {
+    // Opening the replay bar hands the map over: from that point the live
+    // layers are on their way out and polling for ships, tracks and planes
+    // fetches data the user is no longer looking at. Closing it resumes.
+    if (replaycardVisible() || replay.isActive()) return;
+
     const ok = await fetchShips();
     if (!ok) return;
 
@@ -5521,6 +5698,16 @@ boxselect.init({
     getShipsDB: () => shipsDB,
     showTracks: showTracksForMMSIs,
     showNotification,
+});
+replay.init({
+    getReceiver: () => activeReceiver,
+    spriteFor,
+    iconScale,
+    fadeOpacity,
+    spriteSheet: SpritesAll,
+    setLiveLayers: setLiveLayersVisible,
+    showNotification,
+    onStateChange: updateReplaycard,
 });
 
 console.log("Plugin loading completed");

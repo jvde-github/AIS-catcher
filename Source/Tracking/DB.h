@@ -116,8 +116,32 @@ class DB : public StreamIn<JSON::JSON>,
 		});
 	}
 
-	void writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since = 0);
+	void writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since = 0, std::time_t until = 0, bool seed = false);
 	void writeSinglePathGeoJSON(int ptr, JSON::Writer &w);
+
+	// Shared scaffolding for the replay endpoints: eligibility reaches back by
+	// `lookback` past the window start, so a vessel silent since before the
+	// window still shows for as long as the viewer keeps it on the map, and
+	// `emit` writes the per-ship value.
+	template <typename F>
+	std::string getReplayObjectJSON(std::time_t since, std::time_t lookback, F emit)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		const std::time_t from = since > lookback ? since - lookback : 0;
+
+		content.clear();
+		{
+			JSON::Writer w(content, 65536);
+			w.beginObject();
+
+			forEachRecent(time(nullptr), true, from, [&](int ptr, const Ship &ship, long int) {
+				if (paths.hasSince(ptr, from))
+					emit(w, ptr, ship);
+			});
+			w.endObject().raw("\n\n");
+		}
+		return content;
+	}
 
 	AIS::Filter filter;
 
@@ -184,6 +208,9 @@ public:
 	std::string getPathJSON(uint32_t);
 	std::string getAllPathJSON();
 	std::string getAllPathJSONSince(std::time_t since);
+	std::string getReplayInfoJSON(std::time_t block);
+	std::string getReplayShipsJSON(std::time_t since, std::time_t lookback = 0);
+	std::string getReplayJSON(std::time_t since, std::time_t until, std::time_t lookback = 0);
 	std::string getPathGeoJSON(uint32_t);
 	std::string getAllPathGeoJSON();
 	std::string getMessage(uint32_t);

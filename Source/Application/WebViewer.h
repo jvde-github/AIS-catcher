@@ -166,6 +166,8 @@ private:
 		const char *content_type;
 		RouteHandler handler;
 		bool cors;
+		// Per-request cacheability; null for routes that never are.
+		bool (*cacheable)(const std::string &query);
 	};
 
 	static const Route routes[];

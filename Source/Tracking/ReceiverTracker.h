@@ -122,6 +122,9 @@ public:
 	std::string getGeoJSON() { return ships.getGeoJSON(); }
 	std::string getAllPathJSON() { return ships.getAllPathJSON(); }
 	std::string getAllPathJSONSince(std::time_t since) { return ships.getAllPathJSONSince(since); }
+	std::string getReplayInfoJSON(std::time_t block) { return ships.getReplayInfoJSON(block); }
+	std::string getReplayShipsJSON(std::time_t since, std::time_t lookback) { return ships.getReplayShipsJSON(since, lookback); }
+	std::string getReplayJSON(std::time_t since, std::time_t until, std::time_t lookback) { return ships.getReplayJSON(since, until, lookback); }
 	std::string getAllPathGeoJSON() { return ships.getAllPathGeoJSON(); }
 	std::string getPathJSON(uint32_t mmsi) { return ships.getPathJSON(mmsi); }
 	std::string getPathGeoJSON(uint32_t mmsi) { return ships.getPathGeoJSON(mmsi); }

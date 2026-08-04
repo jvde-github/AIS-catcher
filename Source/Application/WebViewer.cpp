@@ -814,6 +814,12 @@ std::string WebViewer::buildMultiPathJSON(ReceiverTracker *s, const std::string 
 
 // --- Route table ---
 
+// Replay history is served in fixed blocks addressed by index, so a stretch of
+// time is always the same URL and no client can ask for a slightly different
+// range that would miss the cache. Changing this invalidates every cached
+// block, which is the intended effect.
+static const std::time_t REPLAY_BLOCK = 600;
+
 // The tracker a handler is given is never null: getState() falls back to the
 // aggregate, which exists for the lifetime of the viewer.
 const WebViewer::Route WebViewer::routes[] = {
@@ -857,6 +863,30 @@ const WebViewer::Route WebViewer::routes[] = {
 		 std::time_t since = (std::time_t)queryInt(a, "since");
 		 return since > 0 ? s->getAllPathJSONSince(since) : s->getAllPathJSON();
 	 }, true},
+	{"/api/replay_info.json", nullptr, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &)
+	 { return s->getReplayInfoJSON(REPLAY_BLOCK); }, true},
+	{"/api/replay_ships.json", nullptr, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 {
+		 return s->getReplayShipsJSON((std::time_t)queryInt(a, "since"),
+									  (std::time_t)queryInt(a, "lookback"));
+	 }, true},
+	{"/api/replay.json", nullptr, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 {
+		 std::time_t since = (std::time_t)queryInt(a, "block") * REPLAY_BLOCK;
+		 return s->getReplayJSON(since, since + REPLAY_BLOCK - 1,
+								 (std::time_t)queryInt(a, "lookback"));
+	 }, true,
+	 // A closed block can only lose points to eviction from here on: late
+	 // messages are clamped forward, never backfilled. A cached copy is at
+	 // worst richer than a refetch.
+	 [](const std::string &q) -> bool
+	 {
+		 long block = queryInt(q, "block");
+		 return block > 0 && (block + 1) * REPLAY_BLOCK <= time(nullptr);
+	 }},
 	{"/api/path.geojson", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 {
@@ -959,7 +989,8 @@ void WebViewer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &reque
 			continue;
 
 		ReceiverTracker *s = getState((int)queryInt(a, "receiver"));
-		Response(c, rt->content_type, rt->handler(this, s, a), settings.use_zlib && gzip, false, rt->cors);
+		const bool may_cache = rt->cacheable && rt->cacheable(a);
+		Response(c, rt->content_type, rt->handler(this, s, a), settings.use_zlib && gzip, may_cache, rt->cors);
 		return;
 	}
 
