@@ -14,7 +14,7 @@ import { fromLonLat } from 'ol/proj';
 import { settings } from '../core/state.js';
 import { decodeHTMLEntities } from '../core/util.js';
 import { calculateBearing } from '../core/geo.js';
-import { getSpeedVal, getSpeedUnit, getDeltaTimeVal, getFlagStyled, sanitizeString } from '../core/format.js';
+import { getSpeedVal, getSpeedUnit, getDeltaTimeVal, getFlagStyled, getShipTypeShort, sanitizeString } from '../core/format.js';
 
 // { getReceiver, spriteFor, iconScale, fadeOpacity, labelText, spriteSheet,
 //   setLiveLayers, showNotification, onStateChange }
@@ -155,8 +155,8 @@ async function loadBlock(start) {
                 // escaped at ingest like the live store; tooltips render innerHTML
                 name: sanitizeString(m.n || ''),
                 country: sanitizeString(m.f || ''),
-                // to_bow/to_stern are omitted when undefined; icon scaling wants 0
-                len: (m.b || 0) + (m.s || 0),
+                type: m.t ?? null,
+                len: m.l || 0,
             };
         }
         const merged = mergePoints(s.pts, pts);
@@ -429,7 +429,8 @@ function tooltipHTML(mmsi, s, fix) {
         + getFlagStyled(s.country, FLAG_STYLE) + '<div>'
         + (s.name || 'MMSI ' + mmsi) + ' at ' + getSpeedVal(fix.knots || 0) + ' ' + getSpeedUnit();
     if (s.name) html += '<br>MMSI ' + mmsi;
-    if (fix.age) html += '<br>Silent for ' + getDeltaTimeVal(fix.age);
+    if (s.type != null) html += '<br>' + getShipTypeShort(s.type);
+    if (fix.age) html += '<br>Silent for ' + getDeltaTimeVal(Math.round(fix.age));
     return html + '</div></div>';
 }
 

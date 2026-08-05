@@ -276,12 +276,14 @@ std::string DB::getReplayShipsJSON(std::time_t since, std::time_t lookback)
 {
 	since = MAX(since, replayFloor(time(nullptr)));
 	return getReplayObjectJSON(since, lookback, [](JSON::Writer &w, int, const Ship &ship) {
+		int length = ship.to_bow != DIMENSION_UNDEFINED && ship.to_stern != DIMENSION_UNDEFINED ? ship.to_bow + ship.to_stern : 0;
+
 		w.key(ship.mmsi).beginObject()
 			.kv("c", ship.shipclass)
 			.kv("n", ship.shipname)
 			.kv("f", ship.country_code)
-			.kv_unless("b", ship.to_bow, DIMENSION_UNDEFINED)
-			.kv_unless("s", ship.to_stern, DIMENSION_UNDEFINED)
+			.kv_unless("t", ship.shiptype, 0)
+			.kv_unless("l", length, 0)
 			.endObject();
 	});
 }
