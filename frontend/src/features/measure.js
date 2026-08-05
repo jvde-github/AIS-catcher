@@ -200,12 +200,8 @@ function setMeasureEnd(t, v) {
 function endMeasurement(t, v) {
     if (isMeasuring) {
         setMeasureEnd(t, v);
-
-        isMeasuring = false;
-
         deps.showNotification('Measurement added.', 'success');
-        refreshMeasures();
-        clearMeasureMode();
+        cancel();
     }
 }
 
@@ -217,6 +213,12 @@ function clearMeasureMode() {
 export function setMeasureMode() {
     measureMode = true;
     document.getElementById('map').classList.add('crosshair_cursor');
+}
+
+export function cancel() {
+    isMeasuring = false;
+    clearMeasureMode();
+    refreshMeasures();
 }
 
 export function isActive() {

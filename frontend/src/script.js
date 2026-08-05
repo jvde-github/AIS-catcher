@@ -3021,9 +3021,13 @@ function getTooltipContentPlane(plane) {
 
 // age-based fade shared with replay, so a replayed moment fades like the
 // moment itself did
+function fadeCurve(age) {
+    return Math.max(0.2, Math.min(1, 1 - (age / 1800) * 0.8));
+}
+
 function fadeOpacity(age) {
     if (settings.fading == false) return 1;
-    return Math.max(0.2, Math.min(1, 1 - (age / 1800) * 0.8));
+    return fadeCurve(age);
 }
 
 function getShipOpacity(ship) {
@@ -3699,6 +3703,13 @@ function toggleReplaycard() {
     document.body.classList.toggle("replay-open", bar.classList.contains("visible"));
 
     if (replaycardVisible()) {
+        // replay owns the screen: the live panels and tools step aside
+        closeSettings();
+        closeTableSide();
+        if (shipcardVisible()) showShipcard(null, null);
+        if (measurecardVisible()) toggleMeasurecard();
+        measure.cancel();
+
         // before anything is loaded the scrubber spans the server's whole
         // history, so dragging it chooses where playback will start
         replay.refreshBounds().then(updateReplaycard);
@@ -5798,7 +5809,8 @@ replay.init({
     getReceiver: () => activeReceiver,
     spriteFor,
     iconScale,
-    fadeOpacity,
+    // always fades: the icon-fading setting only governs the live map
+    fadeOpacity: fadeCurve,
     labelText: buildLabelText,
     spriteSheet: SpritesAll,
     setLiveLayers: setLiveLayersVisible,
