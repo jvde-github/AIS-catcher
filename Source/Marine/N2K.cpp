@@ -21,6 +21,7 @@
 //	https://github.com/AK-Homberger/NMEA2000-AIS-Gateway
 
 #ifdef HASNMEA2000
+#include <cmath>
 #include <N2kMsg.h>
 #include "N2K.h"
 
@@ -103,7 +104,7 @@ namespace AIS
 		if (turn == 0xfffff)
 			turn_unscaled = -128;
 		else
-			turn_unscaled = ROUND(sqrtf(fabs(turn)) * 4.733f) * (turn < 0 ? -1 : 1);
+			turn_unscaled = ROUND(sqrtf(std::fabs(turn)) * 4.733f) * (turn < 0 ? -1 : 1);
 
 		unsigned char byte = N2kMsg.GetByte(idx);
 		int status = byte & 15;

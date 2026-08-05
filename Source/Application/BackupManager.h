@@ -49,7 +49,7 @@ public:
 
 	void start();
 	void stop();
-	bool save();
+	bool save(bool include_ships = true);
 	bool load();
 
 	~BackupManager() { stop(); }

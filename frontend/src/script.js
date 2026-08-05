@@ -8,6 +8,7 @@ import * as community from './overlays/community.js';
 import * as kiosk from './features/kiosk.js';
 import * as measure from './features/measure.js';
 import * as boxselect from './features/boxselect.js';
+import * as replay from './features/replay.js';
 import {
     getDistanceVal, getDistanceUnit,
     getSpeedVal, getSpeedUnit,
@@ -71,7 +72,7 @@ const config = window.__SERVER_CONFIG__ || {
     station: '',
     webcontrol_http: '',
     features: {
-        share_location: false, save_messages: false,
+        share_location: false, save_messages: false, replay: true,
         realtime: false, log: false, decoder: false,
         managed: false, about_md: false,
     },
@@ -116,10 +117,16 @@ const ACTIONS = {
     activateTab: (e, d) => activateTab(e, d.tab),
     openWebControl: () => openWebControl(),
     toggleInfoPanel: () => toggleInfoPanel(),
-    headerSettings: () => openSettings(),
     toggleScreenSize: () => toggleScreenSize(),
     showReceiverDialog: () => showReceiverDialog(),
     selectReceiver: (e, d) => selectReceiver(d.idx),
+
+    // replay
+    toggleReplaycard: () => toggleReplaycard(),
+    replayToggle: () => replayToggle(),
+    replayCycleSpeed: () => replay.cycleSpeed(),
+    replayToggleLabels: () => replay.toggleLabels(),
+    replaySeek: (e, d, el) => replaySeek(el),
 
     // tableside / generic close buttons / dialog
     hideTablecard: () => hideTablecard(),
@@ -142,7 +149,9 @@ const ACTIONS = {
     setKioskPanMap: (e, d, el) => kiosk.setKioskPanMap(el.checked),
     setGraphVisibility: (e, d, el) => setGraphVisibility(d.graph, el.checked),
     setPlotAbsoluteTime: (e, d, el) => setPlotAbsoluteTime(el.checked),
-    setMapSetting: (e, d, el) => setMapSetting(d.key, el.type === 'checkbox' ? el.checked : el.value),
+    setMapSetting: (e, d, el) => setMapSetting(d.key,
+        el.type === 'checkbox' ? el.checked :
+        (el.type === 'range' || el.type === 'number') ? Number(el.value) : el.value),
     setTrackHistory: (e, d, el) => setTrackHistory(TRACK_HISTORY_STOPS[el.value]),
     setBinaryDisplay: (e, d, el) => setBinaryDisplay(el.value),
     setBinaryCategory: (e, d, el) => setBinaryCategory(d.cat, el.checked),
@@ -156,18 +165,10 @@ const ACTIONS = {
     setTrackClassColor: (e, d, el) => setTrackClassColor(d.shipclass, el.value),
 
     // settings: range/icon-scale/opacity sliders (oninput = display only, onchange = persist)
-    setIconScale: (e, d, el) => { settings.icon_scale = el.value; redrawMap(); saveSettings(); },
-    updateIconScaleDisplay: (e, d, el) => updateSliderDisplay('iconScale', el.value),
-    setMapOpacity: (e, d, el) => { settings.map_opacity = el.value; setMapOpacity(); saveSettings(); },
-    updateMapOpacityDisplay: (e, d, el) => updateSliderDisplay('mapOpacity', el.value),
-    updateCircleScaleDisplay: (e, d, el) => updateSliderDisplay('circleScale', el.value),
-    updateTooltipFontSizeDisplay: (e, d, el) => updateSliderDisplay('tooltipFontSize', el.value),
-    updateShipoutlineOpacityDisplay: (e, d, el) => updateSliderDisplay('shipoutlineOpacity', el.value),
-    updateTrackWeightDisplay: (e, d, el) => updateSliderDisplay('trackWeight', el.value),
-    updateTrackOpacityDisplay: (e, d, el) => updateSliderDisplay('trackOpacity', el.value),
+    setIconScale: (e, d, el) => { settings.icon_scale = Number(el.value); redrawMap(); saveSettings(); },
+    setMapOpacity: (e, d, el) => { settings.map_opacity = Number(el.value); setMapOpacity(); saveSettings(); },
+    updateSliderDisplay: (e, d, el) => updateSliderDisplay(d.display, el.value),
     updateTrackHistoryDisplay: (e, d, el) => updateSliderDisplay('trackHistory', TRACK_HISTORY_STOPS[el.value]),
-    updateTrackTrashThresholdDisplay: (e, d, el) => updateSliderDisplay('trackTrashThreshold', el.value),
-    updateKioskSpeedDisplay: (e, d, el) => updateSliderDisplay('kioskSpeed', el.value),
 
     // context menu (depends on global context_mmsi/card_mmsi)
     toggleShipcardPin: () => toggleShipcardPin(),
@@ -345,10 +346,11 @@ function _bindDelegatedActions() {
         });
     }
 }
+// the dialog is absent here: its modal component closes itself on Escape
 document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    if (!document.getElementById("dialog-box").classList.contains("hidden")) closeDialog();
-    else if (document.querySelector(".settings_window").classList.contains("active")) closeSettings();
+    if (dialogModal && dialogModal.isOpen()) return;
+    if (document.querySelector(".settings_window").classList.contains("active")) closeSettings();
     else if (document.getElementById("menubar").classList.contains("visible")) hideMenu();
 });
 
@@ -441,10 +443,7 @@ function resetTrackColorsToDefault() {
     redrawMap();
 }
 
-function restoreDefaultSettings() {
-    // In-place mutation: `settings` is imported, the binding is read-only here.
-    for (const k of Object.keys(settings)) delete settings[k];
-    Object.assign(settings, {
+const DEFAULT_SETTINGS = {
         counter: true,
         fading: false,
         android: false,
@@ -518,9 +517,12 @@ function restoreDefaultSettings() {
         realtime_filters: [],
         binary_messages: "highlight",
         binary_exclude: []
-    });
+};
 
-    // Set default track colors
+function restoreDefaultSettings() {
+    // In-place mutation: `settings` is imported, the binding is read-only here.
+    for (const k of Object.keys(settings)) delete settings[k];
+    Object.assign(settings, JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
     settings.track_class_colors = getDefaultTrackColors();
 }
 
@@ -589,6 +591,38 @@ function addOverlayLayer(title, layer) {
         addOverlayCheckbox(title);
     }
 }
+function attributionHTML(layer) {
+    const a = layer?.getSource()?.getAttributions();
+    const raw = typeof a === 'function' ? a() : a;
+    return Array.isArray(raw) ? raw.join(', ') : (raw || '');
+}
+
+// <option> holds text only, so the credit has to lose its markup there
+function attributionPlain(layer) {
+    const div = document.createElement('div');
+    div.innerHTML = attributionHTML(layer);
+    return (div.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
+// polling overlays get their source only once switched on
+function refreshOverlayCredits() {
+    document.querySelectorAll('.overlay-row').forEach(row => {
+        const credit = attributionHTML(overlapmaps[row.querySelector('input')?.id]);
+        let note = row.querySelector('.map-attribution-note');
+
+        if (!credit) {
+            if (note) note.remove();
+            return;
+        }
+        if (!note) {
+            note = document.createElement('span');
+            note.className = 'map-attribution-note';
+            row.appendChild(note);
+        }
+        note.innerHTML = credit;
+    });
+}
+
 function addOverlayCheckbox(title) {
     const overlayContainer = document.getElementById('overlayContainer');
     if (!overlayContainer || overlayContainer.querySelector(`#${CSS.escape(title)}`)) return;
@@ -603,9 +637,11 @@ function addOverlayCheckbox(title) {
     label.setAttribute('for', title);
     label.textContent = title;
 
-    overlayContainer.appendChild(checkbox);
-    overlayContainer.appendChild(label);
-    overlayContainer.appendChild(document.createElement('br'));
+    const row = document.createElement('div');
+    row.className = 'overlay-row';
+    row.appendChild(checkbox);
+    row.appendChild(label);
+    overlayContainer.appendChild(row);
 
     checkbox.addEventListener('change', function () {
         overlapmaps[title].setVisible(this.checked);
@@ -771,6 +807,7 @@ function selectSettingsSub(groupIdx, subIdx) {
 }
 
 function openSettings() {
+    updateSettingsTab();
     document.querySelector(".settings_window").classList.add("active");
 }
 
@@ -872,10 +909,14 @@ const trackStyleFunction = function (feature) {
     });
 }
 
+// icon scale bucket by vessel length, shared with replay
+function iconScale(length) {
+    return length >= 100 && length <= 200 ? 0.9 : length > 200 ? 1.1 : 0.75;
+}
+
 const markerStyle = function (feature) {
 
-    const length = (feature.ship.to_bow || 0) + (feature.ship.to_stern || 0);
-    const mult = length >= 100 && length <= 200 ? 0.9 : length > 200 ? 1.1 : 0.75;
+    const mult = iconScale((feature.ship.to_bow || 0) + (feature.ship.to_stern || 0));
     const highlighted = (feature.ship.mmsi == hoverMMSI && hoverType == 'ship') || (feature.ship.mmsi == card_mmsi && card_type == 'ship');
 
     return new ol.style.Style({
@@ -906,29 +947,19 @@ const planeStyle = function (feature) {
     ];
 };
 
-const labelStyle = function (feature) {
-    const isActive = (card_type === 'ship' && 'ship' in feature && feature.ship.mmsi == card_mmsi) ||
-                     (card_type === 'plane' && 'plane' in feature && feature.plane.hexident == card_mmsi);
-
-    if (settings.labels_active_only && !isActive) return new ol.style.Style({});
-
-    const isHovered = 'ship' in feature && hoverType === 'ship' && feature.ship.mmsi == hoverMMSI;
-    const op = !('ship' in feature) || isActive || isHovered ? 1 : getShipOpacity(feature.ship);
-
-    const font = settings.tooltipLabelFontSize + "px Arial";
+// Text portion of a map label, shared with the replay layer via replay.init.
+// `cls` drives the class-colored background mode, `op` fades with the vessel.
+function buildLabelText(txt, op, cls) {
     const text = new ol.style.Text({
-        text: decodeHTMLEntities('ship' in feature ?
-            (feature.ship.shipname || feature.ship.mmsi.toString()) :
-            (feature.plane.callsign || getICAO(feature.plane))),
+        text: txt,
         overflow: true,
         offsetY: 25,
         offsetX: 25,
-        font: font
+        font: settings.tooltipLabelFontSize + "px Arial"
     });
 
     if (settings.label_class_background) {
-        const obj = 'ship' in feature ? feature.ship : feature.plane;
-        const base = (obj && settings.track_class_colors[obj.shipclass]) || '#12a5ed';
+        const base = settings.track_class_colors[cls] || '#12a5ed';
         text.setFill(new ol.style.Fill({ color: `rgba(255, 255, 255, ${op})` }));
         text.setBackgroundFill(new ol.style.Fill({ color: deriveLabelBackground(base, 0.88 * op) }));
         text.setBackgroundStroke(new ol.style.Stroke({ color: `rgba(0, 0, 0, ${0.35 * op})`, width: 1 }));
@@ -939,6 +970,24 @@ const labelStyle = function (feature) {
         text.setFill(new ol.style.Fill({ color: `rgba(${lr}, ${lg}, ${lb}, ${op})` }));
         text.setStroke(new ol.style.Stroke({ color: `rgba(${sr}, ${sg}, ${sb}, ${op})`, width: 5 }));
     }
+    return text;
+}
+
+const labelStyle = function (feature) {
+    const isActive = (card_type === 'ship' && 'ship' in feature && feature.ship.mmsi == card_mmsi) ||
+                     (card_type === 'plane' && 'plane' in feature && feature.plane.hexident == card_mmsi);
+
+    if (settings.labels_active_only && !isActive) return new ol.style.Style({});
+
+    const isHovered = 'ship' in feature && hoverType === 'ship' && feature.ship.mmsi == hoverMMSI;
+    const op = !('ship' in feature) || isActive || isHovered ? 1 : getShipOpacity(feature.ship);
+
+    const obj = 'ship' in feature ? feature.ship : feature.plane;
+    const text = buildLabelText(
+        decodeHTMLEntities('ship' in feature ?
+            (feature.ship.shipname || feature.ship.mmsi.toString()) :
+            (feature.plane.callsign || getICAO(feature.plane))),
+        op, obj.shipclass);
 
     const isSelected = (settings.labels_prioritize_active ?? true) && isActive;
 
@@ -1171,6 +1220,8 @@ async function showJSONTableDialog(url, m, title, copyContext) {
         showDialog("Error", "Invalid response from server");
         return;
     }
+    // api/message decodes the stored NMEA on request and returns an array
+    if (Array.isArray(obj)) obj = obj[0] || {};
     showDialog(title, objectToTableHtml(obj, copyContext));
 }
 
@@ -1214,7 +1265,7 @@ function showBinaryMessageDialog(featureOrMmsi) {
     }
 
     showDialog(title, content);
-    document.getElementById("dialog-box").style.maxWidth = "500px";
+    dialogModal.card.style.maxWidth = "500px";
 }
 
 function getBinaryMessageList(messages) {
@@ -1312,6 +1363,7 @@ function showMapMenu(event) {
     }
 
     baseMapSelector.value = settings.dark_mode ? settings.map_night : settings.map_day;
+    refreshOverlayCredits();
 
     mapMenu.style.display = "block";
 
@@ -1369,6 +1421,12 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
     // Hide realtime menu items if realtime is disabled
     if (!config.features.realtime) {
         document.querySelectorAll('.ctx-realtime').forEach((element) => {
+            element.style.display = "none";
+        });
+    }
+
+    if (!config.features.replay) {
+        document.querySelectorAll('.ctx-replay').forEach((element) => {
             element.style.display = "none";
         });
     }
@@ -1434,22 +1492,22 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
     document.addEventListener("click", hideContextMenu);
 }
 
-function showDialog(title, message) {
-    let dialogBox = document.getElementById("dialog-box");
-    const dialogTitle = dialogBox.querySelector(".dialog-title");
-    const dialogMessage = dialogBox.querySelector(".dialog-message");
+let dialogModal = null;
 
-    dialogTitle.innerText = title;
-    dialogMessage.innerHTML = message;
-    dialogBox.classList.remove("hidden");
-    document.getElementById("dialog-overlay").classList.add("active");
+function showDialog(title, message) {
+    if (!dialogModal)
+        dialogModal = window.AISComponents.modal({
+            id: "dialog-box", cardClass: "modal-fit", bodyClass: "dialog-message",
+            // some callers widen the card for their content; every close path resets it
+            onClose: () => { dialogModal.card.style.maxWidth = ""; },
+        });
+    dialogModal.setTitle(title);
+    dialogModal.body.innerHTML = message;
+    dialogModal.open();
 }
 
 function closeDialog() {
-    let dialogBox = document.getElementById("dialog-box");
-    dialogBox.classList.add("hidden");
-    dialogBox.style.maxWidth = "";
-    document.getElementById("dialog-overlay").classList.remove("active");
+    if (dialogModal) dialogModal.close();
 }
 
 function showNotification(message, type = "info", duration) {
@@ -1499,15 +1557,9 @@ function triggerMapLayer() {
         if (overlay in overlapmaps) overlapmaps[overlay].setVisible(true);
     }
 
-    const attributions = activeTileLayer.getSource().getAttributions();
-    const mapAttributions = document.getElementById("map_attributions");
-    if (typeof attributions === 'function') {
-        const currentAttributions = attributions();
-        mapAttributions.innerHTML = currentAttributions.join(', ');
-    } else if (Array.isArray(attributions)) {
-        mapAttributions.innerHTML = attributions.join(', ');
-    }
+    document.getElementById("map_attributions").innerHTML = attributionHTML(activeTileLayer);
 
+    flashAttribution();
 }
 
 const dynamicStyle = document.createElement("style");
@@ -1613,7 +1665,8 @@ function initMap() {
         value.setVisible(false);
     }
 
-    [trackLayer, rangeLayer, shapeLayer, markerLayer, labelLayer, extraLayer, binaryLayer, measure.measureVector].forEach(layer => {
+    [trackLayer, rangeLayer, shapeLayer, markerLayer, labelLayer, extraLayer, binaryLayer, measure.measureVector,
+     replay.markerLayer].forEach(layer => {
         map.addLayer(layer);
     });
 
@@ -1662,8 +1715,10 @@ function initMap() {
 
     Object.keys(basemaps).forEach(key => {
         const option = document.createElement("option");
+        const credit = attributionPlain(basemaps[key]);
         option.value = key;
-        option.textContent = key;
+        option.textContent = credit ? `${key} — ${credit}` : key;
+        option.title = option.textContent;
         baseMapSelector.appendChild(option);
     });
     baseMapSelector.value = settings.dark_mode ? settings.map_night : settings.map_day;
@@ -2770,6 +2825,7 @@ function selectReceiver(idx) {
 }
 
 function onReceiverChange(idx) {
+    if (replaycardVisible()) toggleReplaycard();
     activeReceiver = parseInt(idx, 10) || 0;
     shipsSince = 0;
     binarySince = 0;
@@ -2963,11 +3019,19 @@ function getTooltipContentPlane(plane) {
         '</div>';
 }
 
-function getShipOpacity(ship) {
-    if (settings.fading == false) return 1;
+// age-based fade shared with replay, so a replayed moment fades like the
+// moment itself did
+function fadeCurve(age) {
+    return Math.max(0.2, Math.min(1, 1 - (age / 1800) * 0.8));
+}
 
-    let opacity = 1 - ((shipsSince - ship.last_signal) / 1800) * 0.8;
-    return Math.max(0.2, Math.min(1, opacity));
+function fadeOpacity(age) {
+    if (settings.fading == false) return 1;
+    return fadeCurve(age);
+}
+
+function getShipOpacity(ship) {
+    return fadeOpacity(shipsSince - ship.last_signal);
 }
 
 
@@ -3092,10 +3156,22 @@ function showHoverTrack(mmsi) {
     }
 }
 
+let attributionTimer = null;
+
+function showAttribution(on) {
+    const foldout = document.getElementById('map-attribution-foldout');
+    clearTimeout(attributionTimer);
+    foldout.classList.toggle('visible', on);
+}
+
+function flashAttribution() {
+    showAttribution(true);
+    attributionTimer = setTimeout(() => showAttribution(false), 5000);
+}
+
 function toggleAttribution() {
     const foldout = document.getElementById('map-attribution-foldout');
-    if (!foldout) return;
-    foldout.style.display = foldout.style.display === 'block' ? 'none' : 'block';
+    showAttribution(!foldout.classList.contains('visible'));
 }
 
 function getBinaryMessageContent(binary, includeRaw = false) {
@@ -3435,18 +3511,19 @@ const handlePointerMove = function (pixel, target) {
         () => ol.proj.toLonLat(map.getCoordinateFromPixel(pixel)));
 };
 
-function saveMapView() {
-    if (map === undefined) return;
-    const center = ol.proj.toLonLat(map.getView().getCenter());
-    settings.lat = center[1];
-    settings.lon = center[0];
-    settings.zoom = map.getView().getZoom();
+function persistSettings() {
+    if (map !== undefined) {
+        const center = ol.proj.toLonLat(map.getView().getCenter());
+        settings.lat = center[1];
+        settings.lon = center[0];
+        settings.zoom = map.getView().getZoom();
+    }
     localStorage[context] = JSON.stringify(settings);
     community.notifyCommunityPopupView();
     updateMapURL();
 }
 
-const debouncedSaveMapView = debounce(saveMapView, 250);
+const debouncedSaveMapView = debounce(persistSettings, 250);
 const debouncedDrawMap = debounce(redrawMap, 250);
 const debounceShowHoverTrack = debounce(showHoverTrack, 250);
 
@@ -3462,15 +3539,6 @@ function updateMapURL() {
 
 
 function saveSettings() {
-    if (map !== undefined) {
-        let view = map.getView();
-        let center = ol.proj.toLonLat(view.getCenter()); // Convert the center coordinate to longitude and latitude
-        settings.lat = center[1]; // Latitude
-        settings.lon = center[0]; // Longitude
-        settings.zoom = view.getZoom(); // Zoom level
-    }
-
-
     const scRows = document.querySelectorAll(".shipcard-content-row");
 
     const selectedRows = [];
@@ -3488,16 +3556,10 @@ function saveSettings() {
     const bg = realtimeModule?.getBackgroundStreaming();
     if (bg !== null && bg !== undefined) settings.realtime_background_streaming = bg;
 
-    localStorage[context] = JSON.stringify(settings);
+    persistSettings();
 
-    community.notifyCommunityPopupView();
-    updateMapURL();
-    updateSettingsTab();
-
-    // Apply graph visibility settings (without saving during initialization)
-    setGraphVisibility('signal', settings.show_signal_graphs, false);
-    setGraphVisibility('ppm', settings.show_ppm_graphs, false);
-    setPlotAbsoluteTime(settings.plot_absolute_time, false);
+    if (document.querySelector(".settings_window").classList.contains("active"))
+        updateSettingsTab();
 }
 
 function updateForLegacySettings() {
@@ -3561,27 +3623,18 @@ function loadSettings() {
 }
 
 function convertStringSettingsToActual() {
-    const booleanSettings = [
-        'counter', 'fading', 'android', 'kiosk', 'welcome', 'show_range',
-        'distance_circles', 'table_shiptype_use_icon', 'fix_center',
-        'show_circle_outline', 'dark_mode', 'setcoord', 'eri', 'loadURL',
-        'show_station', 'labels_declutter', 'labels_prioritize_active', 'labels_active_only', 'label_class_background', 'show_track_on_hover',
-        'show_track_on_select', 'shipcard_max', 'shipcard_top_left', 'kiosk_pan_map', 'show_all_tracks',
-        'show_signal_graphs', 'show_ppm_graphs', 'plot_absolute_time'
-    ];
-    const numericSettings = [
-        'icon_scale', 'track_weight', 'track_opacity', 'track_history', 'track_trash_threshold',
-        'zoom', 'lat', 'lon', 'map_opacity', 'tooltipLabelFontSize', 'shipoutline_opacity',
-        'circle_scale', 'center_radius', 'kiosk_rotation_speed'
-    ];
+    // shipcard_max is written by saveSettings and absent from the defaults
+    const extraBooleans = ['shipcard_max'];
 
-    booleanSettings.forEach(key => {
-        if (typeof settings[key] === 'string') settings[key] = settings[key] === "true";
-    });
-    numericSettings.forEach(key => {
-        if (typeof settings[key] === 'string' && settings[key] !== '' && !isNaN(settings[key]))
-            settings[key] = Number(settings[key]);
-    });
+    for (const key of Object.keys(DEFAULT_SETTINGS).concat(extraBooleans)) {
+        const v = settings[key];
+        if (typeof v !== 'string') continue;
+        const want = extraBooleans.includes(key) ? 'boolean' : typeof DEFAULT_SETTINGS[key];
+        if (want === 'boolean')
+            settings[key] = v === "true";
+        else if (want === 'number' && v !== '' && !isNaN(v))
+            settings[key] = Number(v);
+    }
 }
 
 function loadSettingsFromURL() {
@@ -3628,6 +3681,203 @@ function measurecardVisible() {
 function toggleMeasurecard() {
     if (shipcardVisible() && !measurecardVisible()) showShipcard(null, null);
     document.getElementById("measurecard").classList.toggle("visible");
+}
+
+function replaycardVisible() {
+    return document.getElementById("replaybar").classList.contains("visible");
+}
+
+// While replay owns the map the live layers step aside, so the two never draw
+// the same vessel twice. Exiting just puts them back and lets the normal
+// refresh rebuild from shipsDB.
+function setLiveLayersVisible(on) {
+    [markerLayer, trackLayer, labelLayer, shapeLayer, planeLayer, binaryLayer]
+        .forEach(l => l.setVisible(on));
+}
+
+function toggleReplaycard() {
+    const bar = document.getElementById("replaybar");
+    bar.classList.toggle("visible");
+    // the phone layout hangs off this: the bar spans the full width there and
+    // the map controls step aside for it
+    document.body.classList.toggle("replay-open", bar.classList.contains("visible"));
+
+    if (replaycardVisible()) {
+        // replay owns the screen: the live panels and tools step aside
+        closeSettings();
+        closeTableSide();
+        if (shipcardVisible()) showShipcard(null, null);
+        if (measurecardVisible()) toggleMeasurecard();
+        measure.cancel();
+
+        // before anything is loaded the scrubber spans the server's whole
+        // history, so dragging it chooses where playback will start
+        replay.refreshBounds().then(updateReplaycard);
+    } else {
+        replayLoadAt.cancel();
+        stopReplay();
+    }
+}
+
+// The scrubber means "start here" until a load has happened, and "seek here"
+// after — so Play is the only control needed to get from opening the bar to
+// watching the fleet move.
+async function replayToggle() {
+    if (replay.isLoading()) return;
+
+    if (replay.isPlaying()) {
+        replay.pause();
+        return;
+    }
+
+    if (!replay.isActive()) {
+        replayLoadAt.cancel();
+        const at = replayScrubTime(document.getElementById("replayScrub").value);
+
+        if (!(await replayShowAt(at))) return;
+    }
+    replay.play();
+}
+
+function stopReplay() {
+    replay.stop();
+    redrawMap();
+    updateReplaycard();
+}
+
+// The scrubber's 0..1000 value mapped onto the replayable timeline.
+function replayScrubTime(value) {
+    const tl = replay.getTimeline();
+    return tl.start + (tl.end - tl.start) * (Number(value) / 1000);
+}
+
+// Dragging the slider is the primary way in: the labels follow immediately,
+// and shortly after the drag settles the fleet for that moment is loaded and
+// drawn. Play then only starts the clock on what is already on screen.
+const replayLoadAt = debounce((at) => replayShowAt(at), 250);
+
+function replaySeek(el) {
+    const tl = replay.getTimeline();
+    if (tl.end <= tl.start) return;
+
+    const at = replayScrubTime(el.value);
+
+    if (replay.isActive()) {
+        replay.seek(at);
+        return;
+    }
+
+    updateReplaycard();
+    replayLoadAt(at);
+}
+
+async function replayShowAt(at) {
+    const ok = await replay.load(at);
+    updateReplaycard();
+    return ok;
+}
+
+// The playhead as wall-clock time. Seconds matter on a short span; over a
+// multi-day one the date does instead, and there is no room for both.
+function replayStamp(unixSec, spanSec) {
+    if (spanSec > 86400) {
+        const d = new Date(unixSec * 1000);
+        return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " +
+            d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    }
+    return formatTime(unixSec);
+}
+
+// Time left, collapsing to days once it stops fitting as h:mm:ss.
+function replayRemain(sec) {
+    const s = Math.max(0, Math.round(sec));
+
+    if (s >= 86400) {
+        const days = Math.floor(s / 86400);
+        const hours = Math.floor((s % 86400) / 3600);
+        return days + "d" + (hours ? " " + hours + "h" : "");
+    }
+
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = String(s % 60).padStart(2, "0");
+    return h > 0 ? h + ":" + String(m).padStart(2, "0") + ":" + ss : m + ":" + ss;
+}
+
+// Runs at animation rate while playing, so element lookups are cached and every
+// write is guarded: most of the bar only changes on discrete events, and the
+// time labels only when the displayed second does.
+let replayEls = null;
+const replayShown = {};
+
+function updateReplaycard() {
+    const bar = document.getElementById("replaybar");
+    if (!bar || !bar.classList.contains("visible")) return;
+
+    if (!replayEls)
+        replayEls = {
+            scrub: document.getElementById("replayScrub"),
+            speed: document.getElementById("replaySpeed"),
+            labels: document.getElementById("replayLabels"),
+            play: document.getElementById("replayPlay"),
+            fill: document.getElementById("replayFill"),
+            elapsed: document.getElementById("replayElapsed"),
+            remaining: document.getElementById("replayRemaining"),
+        };
+    const ui = replayEls, shown = replayShown;
+    const { start, end } = replay.getTimeline();
+
+    bar.classList.toggle("playing", replay.isPlaying());
+    bar.classList.toggle("loading", replay.isLoading());
+
+    const speed = replay.getSpeed();
+    if (shown.speed !== speed) {
+        shown.speed = speed;
+        ui.speed.textContent = speed + "×";
+    }
+
+    const labelsOn = replay.getLabels();
+    if (shown.labelsOn !== labelsOn) {
+        shown.labelsOn = labelsOn;
+        ui.labels.classList.toggle("on", labelsOn);
+        ui.labels.setAttribute("aria-pressed", labelsOn);
+        ui.labels.title = labelsOn ? "Hide ship labels" : "Show ship labels";
+        ui.labels.setAttribute("aria-label", ui.labels.title);
+    }
+
+    // no history at all means nothing to start
+    const hasHistory = end > start;
+    ui.play.disabled = !hasHistory || replay.isLoading();
+    ui.scrub.disabled = !hasHistory;
+
+    const playTitle = replay.isLoading() ? "Loading" : replay.isPlaying() ? "Pause" : "Play";
+    if (shown.playTitle !== playTitle) {
+        shown.playTitle = playTitle;
+        ui.play.title = playTitle;
+    }
+
+    const at = replay.isActive() ? replay.getInstant() : replayScrubTime(ui.scrub.value);
+
+    if (replay.isActive() && hasHistory) {
+        const v = Math.round(((at - start) / (end - start)) * 1000);
+        if (Number(ui.scrub.value) !== v) ui.scrub.value = v;
+    }
+
+    const fill = (Number(ui.scrub.value) / 10) + "%";
+    if (shown.fill !== fill) {
+        shown.fill = fill;
+        ui.fill.style.width = fill;
+    }
+
+    const atSec = hasHistory ? Math.floor(at) : -1;
+    if (shown.atSec !== atSec || shown.start !== start || shown.end !== end) {
+        shown.atSec = atSec;
+        shown.start = start;
+        shown.end = end;
+        ui.elapsed.textContent = hasHistory ? replayStamp(at, end - start) : "--:--";
+        ui.elapsed.title = hasHistory ? new Date(at * 1000).toLocaleString() : "";
+        ui.remaining.textContent = hasHistory ? "-" + replayRemain(end - at) : "--:--";
+    }
 }
 
 async function ToggleTrackOnMap(m) {
@@ -4627,31 +4877,40 @@ const shippingMappings = {
     }
 }
 
-function getSprite(ship) {
-    let shipClass = ship.shipclass;
-    let sprite = shippingMappings[shipClass] || {
+// Pure sprite pick for a class in motion, shared with replay: rows whose
+// undirected variant sits at cy 20 have a directional one at cy 0 that is
+// used once the vessel is under way.
+function spriteFor(shipClass, speed, cog) {
+    const sprite = shippingMappings[shipClass] || {
         cx: 120,
         cy: 20,
         imgSize: 20,
         hint: ''
-    }
+    };
 
-    ship.rot = 0
-    ship.cx = sprite.cx
-    ship.cy = sprite.cy
-    ship.imgSize = sprite.imgSize
-    ship.hint = sprite.hint
+    let cy = sprite.cy;
+    let rot = 0;
 
     if (sprite.cy === 20) {
-        if (ship.speed != null && ship.speed > 0.5 && ship.cog != null) {
-            ship.cy = 0
-            ship.rot = ship.cog * 3.1415926 / 180;
+        if (speed != null && speed > 0.5 && cog != null) {
+            cy = 0;
+            rot = cog * 3.1415926 / 180;
         }
-    } else if ((shipClass == ShippingClass.HELICOPTER || shipClass == ShippingClass.PLANE) && ship.cog != null) {
-        ship.rot = ship.cog * 3.1415926 / 180;
+    } else if ((shipClass == ShippingClass.HELICOPTER || shipClass == ShippingClass.PLANE) && cog != null) {
+        rot = cog * 3.1415926 / 180;
     }
 
-    return
+    return { cx: sprite.cx, cy: cy, imgSize: sprite.imgSize, hint: sprite.hint, rot: rot };
+}
+
+function getSprite(ship) {
+    const s = spriteFor(ship.shipclass, ship.speed, ship.cog);
+
+    ship.rot = s.rot
+    ship.cx = s.cx
+    ship.cy = s.cy
+    ship.imgSize = s.imgSize
+    ship.hint = s.hint
 }
 function getPlaneSprite(plane) {
     let sprite = shippingMappings[ShippingClass.PLANE];
@@ -4707,6 +4966,11 @@ function getPlaneSprite(plane) {
 const SpritesAll = 'icons.png'
 
 async function updateMap() {
+    // Opening the replay bar hands the map over: from that point the live
+    // layers are on their way out and polling for ships, tracks and planes
+    // fetches data the user is no longer looking at. Closing it resumes.
+    if (replaycardVisible() || replay.isActive()) return;
+
     const ok = await fetchShips();
     if (!ok) return;
 
@@ -5113,26 +5377,21 @@ async function openFocus(m, z) {
 }
 
 function updateSettingsTab() {
+    document.querySelectorAll('[data-on-change="setMapSetting"][data-key]').forEach(el => {
+        if (el.type === 'checkbox') el.checked = settings[el.dataset.key];
+        else el.value = settings[el.dataset.key];
+    });
+
     document.getElementById("settings_darkmode").checked = settings.dark_mode;
     document.getElementById("settings_coordinate_format").value = settings.coordinate_format;
     document.getElementById("settings_metric").value = getMetrics().toLowerCase();
-    document.getElementById("settings_show_station").checked = settings.show_station;
     document.getElementById("settings_fading").checked = settings.fading;
     document.getElementById("settings_show_signal_graphs").checked = settings.show_signal_graphs;
     document.getElementById("settings_show_ppm_graphs").checked = settings.show_ppm_graphs;
     document.getElementById("settings_plot_absolute_time").checked = settings.plot_absolute_time;
-    document.getElementById("settings_shiphover_color").value = settings.shiphover_color;
-    document.getElementById("settings_shipselection_color").value = settings.shipselection_color;
 
     document.getElementById("settings_show_range").checked = settings.show_range;
-    document.getElementById("settings_distance_circles").checked = settings.distance_circles;
     document.getElementById("settings_distance_circle_color").value = settings.distance_circle_color;
-
-    document.getElementById("settings_labels_declutter").checked = settings.labels_declutter;
-    document.getElementById("settings_labels_prioritize_active").checked = settings.labels_prioritize_active;
-    document.getElementById("settings_labels_active_only").checked = settings.labels_active_only;
-    document.getElementById("settings_label_class_background").checked = settings.label_class_background;
-    document.getElementById("settings_tooltipLabelFontsize").value = settings.tooltipLabelFontSize;
 
     document.getElementById("settings_show_labels").value = settings.show_labels.toLowerCase();
 
@@ -5140,12 +5399,6 @@ function updateSettingsTab() {
     for (const cat of BINARY_CATEGORIES) {
         document.getElementById("settings_binary_cat_" + cat).checked = !settings.binary_exclude.includes(cat);
     }
-
-    document.getElementById("settings_shipoutline_border").value = settings.shipoutline_border;
-    document.getElementById("settings_shipoutline_inner").value = settings.shipoutline_inner;
-    document.getElementById("settings_shipoutline_opacity").value = settings.shipoutline_opacity;
-    document.getElementById("settings_show_circle_outline").checked = settings.show_circle_outline;
-    document.getElementById("settings_circle_scale").value = settings.circle_scale;
 
     document.getElementById("settings_range_color").value = settings.range_color;
     document.getElementById("settings_range_timeframe").value = settings.range_timeframe;
@@ -5155,10 +5408,7 @@ function updateSettingsTab() {
 
     document.getElementById("settings_map_opacity").value = settings.map_opacity;
     document.getElementById("settings_icon_scale").value = settings.icon_scale;
-    document.getElementById("settings_track_weight").value = settings.track_weight;
-    document.getElementById("settings_track_opacity").value = settings.track_opacity;
     document.getElementById("settings_track_history").value = Math.max(0, TRACK_HISTORY_STOPS.indexOf(settings.track_history));
-    document.getElementById("settings_track_trash_threshold").value = settings.track_trash_threshold;
 
     // Update all slider display values
     updateSliderDisplay('iconScale', settings.icon_scale);
@@ -5171,16 +5421,10 @@ function updateSettingsTab() {
     updateSliderDisplay('shipoutlineOpacity', settings.shipoutline_opacity);
     updateSliderDisplay('circleScale', settings.circle_scale || 6.0);
 
-    document.getElementById("settings_tooltipLabelColor").value = settings.tooltipLabelColor;
-    document.getElementById("settings_tooltipLabelShadowColor").value = settings.tooltipLabelShadowColor;
-
-    document.getElementById("settings_tooltipLabelColorDark").value = settings.tooltipLabelColorDark;
-    document.getElementById("settings_tooltipLabelShadowColorDark").value = settings.tooltipLabelShadowColorDark;
     document.getElementById("settings_table_shiptype_use_icon").checked = settings.table_shiptype_use_icon;
     document.getElementById("settings_show_track_on_hover").checked = settings.show_track_on_hover;
     document.getElementById("settings_show_track_on_select").checked = settings.show_track_on_select;
     document.getElementById("settings_track_visibility").value = settings.show_all_tracks ? "all" : "selected";
-    document.getElementById("settings_shipcard_top_left").checked = settings.shipcard_top_left;
 
     document.getElementById("settings_kiosk_mode").checked = settings.kiosk;
     document.getElementById("settings_kiosk_rotation_speed").value = settings.kiosk_rotation_speed;
@@ -5446,7 +5690,8 @@ addOverlayLayer("NOAA", new ol.layer.Tile({
             'TRANSPARENT': 'true',
             'VERSION': '1.3.0'
         },
-        serverType: 'geoserver'
+        serverType: 'geoserver',
+        attributions: 'Charts: &copy; <a href="https://nauticalcharts.noaa.gov">NOAA</a>'
     })
 }));
 
@@ -5560,6 +5805,18 @@ boxselect.init({
     showTracks: showTracksForMMSIs,
     showNotification,
 });
+replay.init({
+    getReceiver: () => activeReceiver,
+    spriteFor,
+    iconScale,
+    // always fades: the icon-fading setting only governs the live map
+    fadeOpacity: fadeCurve,
+    labelText: buildLabelText,
+    spriteSheet: SpritesAll,
+    setLiveLayers: setLiveLayersVisible,
+    showNotification,
+    onStateChange: updateReplaycard,
+});
 
 console.log("Plugin loading completed");
 
@@ -5600,6 +5857,9 @@ selectTab();
 if (urlParams.get("mmsi")) openFocus(urlParams.get("mmsi"), urlParams.get("zoom"));
 updateSortMarkers();
 saveSettings();
+setGraphVisibility('signal', settings.show_signal_graphs, false);
+setGraphVisibility('ppm', settings.show_ppm_graphs, false);
+setPlotAbsoluteTime(settings.plot_absolute_time, false);
 prepareShipcard();
 buildSettingsTabs();
 
@@ -5615,6 +5875,9 @@ for (const [enabled, tab] of [
         document.getElementById(tab + "_tab_mini").style.display = "none";
     }
 }
+
+if (!config.features.replay)
+    document.querySelectorAll('.ctx-replay').forEach(el => { el.style.display = "none"; });
 
 showWelcome();
 kiosk.updateKiosk();

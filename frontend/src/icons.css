@@ -68,6 +68,7 @@
 .radio_icon,
 .expand_more_icon,
 .share_icon,
+.save_icon,
 .expand_less_icon,
 .login_icon,
 .engine_start_icon,
@@ -133,6 +134,11 @@
 
 .cloud_download_icon {
     --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M251-160q-88 0-149.5-61.5T40-371q0-78 50-137t127-71q18-90 83-150t151-68v349l-83-83-43 43 156 156 156-156-43-43-83 83v-349q101 11 169 90t68 185v24q72-2 122 46.5T920-329q0 69-50 119t-119 50H251Z"/%3E%3C/svg%3E');
+}
+
+.save_icon {
+    /* Feather stroke icon, not Material: the mask keys off rendered alpha, so strokes work too */
+    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3E%3Cpath d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/%3E%3Cpolyline points="17 21 17 13 7 13 7 21"/%3E%3Cpolyline points="7 3 7 8 15 8"/%3E%3C/svg%3E');
 }
 
 .view_list_icon {

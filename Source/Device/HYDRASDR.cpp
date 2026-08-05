@@ -19,6 +19,7 @@
 
 #ifdef HASHYDRASDR
 
+#include <cstdlib>
 #include <cstring>
 #include <iomanip>
 
@@ -74,7 +75,7 @@ namespace Device
 		int mindelta = rates[0];
 		for (const auto &r : rates)
 		{
-			int delta = abs((int)r - (int)getSampleRate());
+			int delta = std::abs((int)r - (int)getSampleRate());
 			if (delta < mindelta)
 			{
 				rate = r;

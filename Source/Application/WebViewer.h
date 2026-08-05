@@ -110,6 +110,7 @@ public:
 		bool GeoJSON = false;
 		bool supportPrometheus = false;
 		bool stats_on_close = false;
+		bool replay = true;
 
 		std::string station, station_link;
 
@@ -166,6 +167,8 @@ private:
 		const char *content_type;
 		RouteHandler handler;
 		bool cors;
+		// Per-request cacheability; null for routes that never are.
+		bool (*cacheable)(const std::string &query);
 	};
 
 	static const Route routes[];
@@ -178,7 +181,7 @@ private:
 	void writeOutputsJSON(JSON::Writer &w);
 
 	// NMEA decoder utility
-	static std::string decodeNMEAtoJSON(const std::string &nmea_input);
+	static std::string decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced = true);
 
 	const std::vector<std::unique_ptr<IO::OutputMessage>> *msg_channels = nullptr;
 

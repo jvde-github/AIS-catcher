@@ -63,18 +63,9 @@ namespace Plane
 
     struct ADSB
     {
-        struct LL
-        {
-            int prev, next;
-        };
-
-        LL time_ll;
-        LL hash_ll;
-
         struct
         {
             FLOAT32 lat, lon;
-            std::time_t timestamp;
             struct Plane::CPR cpr;
             bool even;
         } CPR_history[3];

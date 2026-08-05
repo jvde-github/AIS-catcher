@@ -34,7 +34,7 @@ void BackupManager::run()
 		cv.wait_for(lock, std::chrono::minutes(interval), [this]
 					{ return !running.load(); });
 
-		if (running && !save())
+		if (running && !save(false))
 			Error() << "Server: failed to write backup: " << filename;
 	}
 
@@ -66,7 +66,7 @@ void BackupManager::stop()
 	}
 }
 
-bool BackupManager::save()
+bool BackupManager::save(bool include_ships)
 {
 	if (filename.empty() || !tracker)
 		return false;
@@ -86,7 +86,7 @@ bool BackupManager::save()
 
 		outfile.exceptions(std::ios::failbit | std::ios::badbit);
 
-		if (!tracker->save(outfile))
+		if (!tracker->save(outfile, include_ships))
 		{
 			outfile.close();
 			std::remove(tmp.c_str());

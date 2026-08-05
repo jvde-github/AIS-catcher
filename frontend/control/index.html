@@ -196,7 +196,8 @@
         }
 
         /* chrome from .btn-quiet; only geometry lives here */
-        #system-close {
+        #system-close,
+        #system-save {
             align-self: center;
             width: 28px;
             height: 28px;
@@ -206,6 +207,15 @@
             border-radius: var(--radius-circle);
             margin: 0 14px 0 10px;
             flex-shrink: 0;
+        }
+
+        #system-save {
+            margin-right: 0;
+            color: var(--color-accent);
+        }
+
+        #system-save + #system-close {
+            margin-left: 0;
         }
 
         /* supersedes the shared position: relative — the strip pins to the pane top */
@@ -280,8 +290,6 @@
                      border-radius: var(--radius-lg); overflow: auto; }
         .sys-json-pre { width: 100%; padding: var(--space-4);
                         border: 1px solid var(--chrome-border); }
-        .sys-overlay { position: fixed; inset: 0; display: flex; align-items: center;
-                       justify-content: center; padding: var(--space-4); z-index: var(--z-dialog); }
         .sys-overlay-fill { position: absolute; inset: 0; pointer-events: none; }
         .sys-rotates { display: inline-block; transition: transform var(--dur-med) ease; }
         .rotate-90 { transform: rotate(90deg); }
@@ -290,14 +298,10 @@
         .sys-minrow { min-height: 2rem; }
         .sys-pick { cursor: pointer; border-radius: var(--radius-md); }
         .sys-pick:hover { background: var(--color-surface-alt); }
-        .sys-modal-card { width: 100%; max-height: 90vh; }
-        .sys-modal-sm { max-width: 28rem; }
-        .sys-modal-body { padding: var(--space-4); overflow-y: auto; flex: 1 1 auto; min-height: 0; }
         .sys-empty { padding: var(--space-8) 0; }
         .sys-dismiss { margin-left: 2px; font-weight: var(--fw-bold); line-height: 1; cursor: pointer; }
         .sys-dismiss:hover { opacity: 0.6; }
         .sys-login-card { max-width: 24rem; padding: var(--space-6); }
-        .sys-modal-foot { padding: var(--space-3); border-top: 1px solid var(--color-border); flex-shrink: 0; }
 
         .sys-splash { position: absolute; inset: 0; padding: var(--space-8);
                       display: flex; align-items: center; justify-content: center;
@@ -911,6 +915,9 @@
                             <button class="sys-tab" data-top="system" data-tab="status">System</button>
                         </div>
                     </div>
+                    <button id="system-save" class="btn-quiet hidden" title="Save changes">
+                        <span class="save_icon icon-sm"></span>
+                    </button>
                     <button id="system-close" class="btn-quiet">
                         <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

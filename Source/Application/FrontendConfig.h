@@ -72,6 +72,7 @@ class FrontendConfig
 	std::string webcontrol_http;
 	bool share_location = false;
 	bool save_messages = false;
+	bool replay = true;
 	bool realtime = false;
 	bool log_enabled = false;
 	bool decoder = false;
@@ -87,6 +88,7 @@ public:
 	void setWebControl(const std::string &url) { webcontrol_http = url; }
 	void setShareLoc(bool b) { share_location = b; }
 	void setMsgSave(bool b) { save_messages = b; }
+	void setReplay(bool b) { replay = b; }
 	void setRealtime(bool b) { realtime = b; }
 	void setLog(bool b) { log_enabled = b; }
 	void setDecoder(bool b) { decoder = b; }

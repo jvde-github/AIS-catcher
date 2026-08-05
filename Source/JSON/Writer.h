@@ -726,6 +726,20 @@ namespace JSON
 			return *this;
 		}
 
+		// Numeric key: writes "123":
+		Writer &key(unsigned long long k)
+		{
+			reserve_more(24); // sep + quotes + colon + 20 digits
+			put_sep_raw();
+			put_char('"');
+			put_uint_raw(k);
+			put_char('"');
+			put_char(':');
+			need_sep = false;
+			return *this;
+		}
+		Writer &key(unsigned k) { return key((unsigned long long)k); }
+
 		// Like val() but for already-serialised JSON fragments. Honors need_sep.
 		Writer &raw_val(const char *raw, size_t rawlen)
 		{

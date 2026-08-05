@@ -20,13 +20,15 @@
 
 void ReceiverTracker::applyConfig(const TrackingConfig &cfg, const AIS::Filter &f)
 {
-	setStationPosition(cfg.lat, cfg.lon, cfg.use_GPS);
+	setStationPosition(cfg.lat, cfg.lon, cfg.use_gps);
 	ships.setShareLatLon(cfg.latlon_share);
 	ships.setServerMode(cfg.server_mode);
 	ships.setMsgSave(cfg.msg_save);
 	ships.setOwnMMSI(cfg.own_mmsi);
 	ships.setTimeHistory(cfg.time_history);
+	ships.setReplayTime(cfg.replay_time);
 	ships.setExpireFields(cfg.expire_fields);
+	ships.setTrackMemory(cfg.track_memory);
 	ships.setFilter(f);
 
 	// applied unconditionally: a config that drops "cutoff" must go back to the
@@ -76,9 +78,9 @@ void ReceiverTracker::reset()
 	ships.setup();
 }
 
-bool ReceiverTracker::save(std::ofstream &f)
+bool ReceiverTracker::save(std::ofstream &f, bool include_ships)
 {
-	return counter.Save(f) && hist_second.Save(f) && hist_minute.Save(f) && hist_hour.Save(f) && hist_day.Save(f) && ships.Save(f);
+	return counter.Save(f) && hist_second.Save(f) && hist_minute.Save(f) && hist_hour.Save(f) && hist_day.Save(f) && (!include_ships || ships.Save(f));
 }
 
 bool ReceiverTracker::load(std::ifstream &f)

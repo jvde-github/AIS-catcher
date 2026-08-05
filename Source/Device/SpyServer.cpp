@@ -22,6 +22,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <cstdlib>
 #include <cstring>
 
 #include "SpyServer.h"
@@ -67,7 +68,7 @@ namespace Device
 		for (int i = dec_min; i <= dec_max; i++)
 		{
 			int rate = device_info.MaximumSampleRate >> i;
-			int d = abs((int)rate - (int)sample_rate);
+			int d = std::abs((int)rate - (int)sample_rate);
 
 			if (rate >= 96000)
 			{

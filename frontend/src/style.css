@@ -603,8 +603,10 @@ a:focus {
     height: 15px !important;
 }
 
-/* Attribution fold-out, opened from the (i) button in the bottom control group */
 .map-attribution-foldout {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-slow, 400ms) ease;
     position: absolute;
     right: 54px;
     bottom: 30px;
@@ -620,7 +622,22 @@ a:focus {
     line-height: 1.4;
 }
 
+.map-attribution-foldout.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
 .map-attribution-foldout a {
+    color: inherit;
+}
+
+.map-attribution-note {
+    font-size: var(--fs-2xs);
+    line-height: 1.4;
+    color: var(--color-text-muted);
+}
+
+.map-attribution-note a {
     color: inherit;
 }
 
@@ -1422,9 +1439,21 @@ a:focus {
     cursor: pointer;
 }
 
+.overlay-row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.overlay-row .map-attribution-note {
+    grid-column: 2;
+    margin-top: -2px;
+}
+
 #overlayContainer label {
     cursor: pointer;
-    line-height: 1.9;
+    line-height: 1.5;
 }
 
 #overlayContainer label:hover {
@@ -1441,36 +1470,9 @@ a:focus {
     border-top-color: var(--color-rule);
 }
 
-/* Improved Dialog Box Styling - Preserving Original Structure */
-#dialog-box {
-    position: absolute;
-    display: flex;
-    flex-direction: column;
-    max-height: 80%;
-    width: max-content;
-    min-width: min(320px, 90%);
-    max-width: min(90%, 900px);
-    background-color: var(--color-surface-raised);
-    color: var(--color-text);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    z-index: var(--z-dialog);
-    overflow: hidden;
-}
-
-.dark #dialog-box {
-    border: 1px solid var(--color-border);
-    box-shadow: var(--shadow-overlay);
-}
-
 /* .band / .band-slot / .band-title live in components.css */
 
-/* one treatment for every icon action sitting in a header band */
-.dialog-header .close_icon,
-.dialog-header .dialog-header-action,
+/* same treatment as .dialog-header .close_icon in components.css */
 .settings_header>.close_icon {
     flex: none;
     align-self: center;
@@ -1483,15 +1485,8 @@ a:focus {
     transition: opacity var(--dur-fast) ease;
 }
 
-.dialog-header .close_icon:hover,
-.dialog-header .dialog-header-action:hover,
 .settings_header>.close_icon:hover {
     opacity: 0.65;
-}
-
-/* the action sits left of the close icon, so no trailing gap */
-.dialog-header .dialog-header-action {
-    margin-right: 0;
 }
 
 .dialog-title-hint {
@@ -1540,12 +1535,6 @@ a:focus {
     flex: 1 1 auto;
     min-height: 0;
     box-sizing: border-box;
-}
-
-#dialog-overlay {
-    /* above the map controls and settings panel, both of which would otherwise
-       show through the modal scrim */
-    z-index: var(--z-scrim);
 }
 
 /* Binary Messages Dialog Styling */
@@ -1618,12 +1607,6 @@ a:focus {
 
 /* Mobile Adjustments */
 @media only screen and (max-width: 600px) {
-    #dialog-box {
-        max-width: 95%;
-        max-height: 90%;
-        border-radius: var(--radius-sm);
-    }
-
     .dialog-title {
         font-size: var(--fs-lg);
         padding: 12px 15px;
@@ -2907,4 +2890,332 @@ a:focus {
     .decoder-field-key {
         width: 50%;
     }
+}
+/* ---------------------------------------------------------------------------
+   Replay transport bar — a floating capsule pinned to the bottom of the map.
+   Hidden until the replay feature is opened.
+   --------------------------------------------------------------------------- */
+
+#replaybar {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    z-index: var(--z-card);
+
+    display: none;
+    align-items: center;
+    gap: 12px;
+
+    width: min(460px, calc(100% - 32px));
+    padding: 8px 14px;
+    box-sizing: border-box;
+
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-surface-raised) 82%, transparent);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: var(--shadow-lg);
+    color: var(--color-text);
+
+    opacity: 0;
+    transition: opacity 160ms ease, transform 160ms ease;
+}
+
+#replaybar.visible {
+    display: flex;
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+#replaybar button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+#replaybar button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+#replaybar svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.replaybar-play {
+    width: 32px;
+    height: 32px;
+}
+
+/* one button, three glyphs — which shows depends on state on #replaybar */
+.replay-icon-pause,
+.replay-icon-wait {
+    display: none;
+}
+
+#replaybar.playing .replay-icon-play {
+    display: none;
+}
+
+#replaybar.playing .replay-icon-pause {
+    display: block;
+}
+
+#replaybar.loading .replay-icon-play,
+#replaybar.loading .replay-icon-pause {
+    display: none;
+}
+
+#replaybar.loading .replay-icon-wait {
+    display: block;
+    animation: replay-spin 900ms linear infinite;
+}
+
+@keyframes replay-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.replaybar-labels {
+    width: 28px;
+    height: 28px;
+    color: var(--color-text-muted);
+}
+
+.replaybar-labels.on {
+    color: var(--color-accent);
+    background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+    border-radius: var(--radius-full);
+}
+
+/* one button, two glyphs — open label when on, slashed when off */
+.replay-icon-labels-on {
+    display: none;
+}
+
+.replaybar-labels.on .replay-icon-labels-on {
+    display: block;
+}
+
+.replaybar-labels.on .replay-icon-labels-off {
+    display: none;
+}
+
+.replaybar-time {
+    flex-shrink: 0;
+    min-width: 52px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-muted);
+    text-align: center;
+    user-select: none;
+}
+
+/* the wall-clock stamp is the wider of the two, and can carry a date */
+#replayElapsed {
+    min-width: 76px;
+    color: var(--color-text);
+}
+
+/* the track is a thin rail that thickens on hover, Apple-style */
+.replaybar-track {
+    position: relative;
+    flex: 1;
+    height: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.replaybar-track::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-text) 18%, transparent);
+    transition: height 120ms ease;
+}
+
+.replaybar-fill {
+    position: absolute;
+    left: 0;
+    width: 0;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background: var(--cyan-500);
+    pointer-events: none;
+    transition: height 120ms ease;
+}
+
+.replaybar-track:hover::before,
+.replaybar-track:hover .replaybar-fill {
+    height: 6px;
+}
+
+/* the real input sits transparent on top so it keeps native drag behaviour */
+.replaybar-track input[type="range"] {
+    position: relative;
+    width: 100%;
+    margin: 0;
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+.replaybar-track input[type="range"]:disabled {
+    cursor: default;
+}
+
+.replaybar-track input[type="range"]::-webkit-slider-runnable-track {
+    height: 20px;
+    background: transparent;
+}
+
+.replaybar-track input[type="range"]::-moz-range-track {
+    height: 20px;
+    background: transparent;
+}
+
+.replaybar-track input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    margin-top: 4px;
+    border-radius: var(--radius-circle);
+    background: var(--color-text);
+    box-shadow: var(--shadow-sm);
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+.replaybar-track input[type="range"]::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border: none;
+    border-radius: var(--radius-circle);
+    background: var(--color-text);
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+.replaybar-track:hover input[type="range"]:not(:disabled)::-webkit-slider-thumb,
+.replaybar-track input[type="range"]:active::-webkit-slider-thumb {
+    opacity: 1;
+}
+
+.replaybar-track:hover input[type="range"]:not(:disabled)::-moz-range-thumb,
+.replaybar-track input[type="range"]:active::-moz-range-thumb {
+    opacity: 1;
+}
+
+.replaybar-speed {
+    min-width: 34px;
+    height: 22px;
+    padding: 0 6px;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
+    color: var(--color-text-muted);
+}
+
+.replaybar-close svg {
+    width: 16px;
+    height: 16px;
+    color: var(--color-text-muted);
+}
+
+/* Touch has no hover, so a thumb that only appears on hover is a handle the
+   user can never see. Show it always, and make it big enough to grab. */
+@media (hover: none) {
+
+    .replaybar-track input[type="range"]::-webkit-slider-thumb,
+    .replaybar-track input[type="range"]::-moz-range-thumb {
+        opacity: 1;
+    }
+
+    .replaybar-track input[type="range"]::-webkit-slider-thumb {
+        width: 16px;
+        height: 16px;
+        margin-top: 2px;
+    }
+
+    .replaybar-track input[type="range"]::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+    }
+
+    .replaybar-track::before,
+    .replaybar-fill {
+        height: 6px;
+    }
+}
+
+/* On a phone the capsule becomes a bar across the foot of the map: full width,
+   flat against the bottom edge, clear of the home indicator. */
+@media (max-width: 560px) {
+    #replaybar {
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: auto;
+        gap: 6px;
+        padding: 10px 8px calc(10px + env(safe-area-inset-bottom, 0px));
+        border-radius: 0;
+        transform: translateY(8px);
+    }
+
+    #replaybar.visible {
+        transform: translateY(0);
+    }
+
+    /* touch targets, not pointer targets */
+    .replaybar-play {
+        width: 40px;
+        height: 40px;
+    }
+
+    #replaybar svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .replaybar-close svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .replaybar-time {
+        min-width: 38px;
+        font-size: 10px;
+    }
+
+    #replayElapsed {
+        min-width: 38px;
+    }
+
+    .replaybar-speed {
+        min-width: 32px;
+        height: 28px;
+        font-size: 10px;
+    }
+
+}
+
+/* Replay owns the screen: the map controls have nothing to act on while
+   history is being played back. */
+body.replay-open .map-button-box {
+    display: none;
 }

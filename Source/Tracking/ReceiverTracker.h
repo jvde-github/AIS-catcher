@@ -41,12 +41,16 @@ struct TrackingConfig
 	bool latlon_share = false;
 	bool server_mode = false;
 	bool msg_save = false;
-	bool use_GPS = true;
+	bool use_gps = true;
 	uint32_t own_mmsi = 0;
 	int time_history = 30 * 60;
+	// caps how far back one replay request can walk, 0 is unlimited
+	int replay_time = 3600;
 	bool expire_fields = false;
 	// 0 means "not configured": LONG_RANGE_CUTOFF_DEFAULT is used instead
 	int cutoff = 0;
+	// kilobytes of track storage; 0 keeps the default
+	int track_memory = 0;
 };
 
 // Bundles all per-receiver (or aggregate) state: ship DB, counters, history.
@@ -82,7 +86,7 @@ public:
 	void setup();
 	void clear();
 	void reset();
-	bool save(std::ofstream &f);
+	bool save(std::ofstream &f, bool include_ships = true);
 	bool load(std::ifstream &f);
 
 	// Wire internal streams (ships → hist_* → counters)
@@ -120,6 +124,9 @@ public:
 	std::string getGeoJSON() { return ships.getGeoJSON(); }
 	std::string getAllPathJSON() { return ships.getAllPathJSON(); }
 	std::string getAllPathJSONSince(std::time_t since) { return ships.getAllPathJSONSince(since); }
+	std::string getReplayInfoJSON(std::time_t block) { return ships.getReplayInfoJSON(block); }
+	std::string getReplayShipsJSON(std::time_t since, std::time_t lookback) { return ships.getReplayShipsJSON(since, lookback); }
+	std::string getReplayJSON(std::time_t since, std::time_t until, std::time_t lookback) { return ships.getReplayJSON(since, until, lookback); }
 	std::string getAllPathGeoJSON() { return ships.getAllPathGeoJSON(); }
 	std::string getPathJSON(uint32_t mmsi) { return ships.getPathJSON(mmsi); }
 	std::string getPathGeoJSON(uint32_t mmsi) { return ships.getPathGeoJSON(mmsi); }

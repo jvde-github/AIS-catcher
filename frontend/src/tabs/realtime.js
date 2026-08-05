@@ -290,7 +290,8 @@ function updateFilterDisplay() {
     document.getElementById('realtime_filter_count').textContent = n || '';
     document.getElementById('realtime_filter_button').classList.toggle('active', n > 0);
 
-    const open = !document.getElementById('dialog-box').classList.contains('hidden');
+    const box = document.getElementById('dialog-box');
+    const open = !!box && !box.classList.contains('hidden');
     if (open && document.getElementById('realtime_filter_kind')) renderFilterDialog();
 }
 
@@ -325,7 +326,7 @@ function filterDialogHTML() {
 
 function renderFilterDialog() {
     window.AISCatcher.showDialog('NMEA filters', filterDialogHTML());
-    document.getElementById('dialog-box').style.maxWidth = '520px';
+    document.querySelector('#dialog-box .modal-card').style.maxWidth = '520px';
 
     const field = document.getElementById('realtime_filter_value');
     field.addEventListener('keydown', (e) => {

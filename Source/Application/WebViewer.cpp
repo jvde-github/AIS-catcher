@@ -86,7 +86,7 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 			server->sendSSE(1, "nmea", json);
 		}
 
-		if (tag.lat != 0 && tag.lon != 0)
+		if (isValidCoord(tag.lat, tag.lon))
 		{
 			std::string json;
 			JSON::Writer w(json);
@@ -109,7 +109,7 @@ WebViewer::WebViewer() : Setting("WebViewer"),
 	states.push_back(std::unique_ptr<ReceiverTracker>(new ReceiverTracker("All")));
 }
 
-std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input)
+std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input, bool enhanced)
 {
 	// Decoder class with full pipeline: NMEA -> Message -> JSON -> Array
 	class NMEADecoder : public StreamIn<JSON::JSON>
@@ -146,7 +146,7 @@ std::string WebViewer::decodeNMEAtoJSON(const std::string &nmea_input)
 	w.beginArray();
 
 	JSON::Serializer builder(JSON_DICT_FULL);
-	builder.setStringifyEnhanced(true);
+	builder.setStringifyEnhanced(enhanced);
 	NMEADecoder decoder(&builder, &w);
 
 	std::string input = nmea_input + "\n";
@@ -388,6 +388,8 @@ void WebViewer::attachTrackers(const std::vector<std::unique_ptr<Receiver>> &rec
 		// a reclaimed tracker is already set up and was rewired by applySettings()
 		if (serving && fresh)
 		{
+			// config first: setup() sizes the track store from it
+			tracker->applyConfig(settings.tracking, filter);
 			tracker->setup();
 			tracker->wireStreams();
 		}
@@ -598,7 +600,11 @@ void WebViewer::startServing()
 	if (!initialized)
 	{
 		for (auto &s : states)
+		{
+			// config first: setup() sizes the track store from it
+			s->applyConfig(settings.tracking, filter);
 			s->setup();
+		}
 
 		states[0]->clear();
 		initialized = true;
@@ -803,9 +809,7 @@ std::string WebViewer::buildMultiPathJSON(ReceiverTracker *s, const std::string 
 			continue;
 		}
 
-		char keybuf[16];
-		int n = snprintf(keybuf, sizeof(keybuf), "%d", mmsi);
-		w.key(keybuf, n).raw_val(s->getPathJSON(mmsi));
+		w.key((unsigned)mmsi).raw_val(s->getPathJSON(mmsi));
 	}
 	w.endObject();
 	w.finish();
@@ -813,6 +817,20 @@ std::string WebViewer::buildMultiPathJSON(ReceiverTracker *s, const std::string 
 }
 
 // --- Route table ---
+
+// Replay history is served in fixed blocks addressed by index, so a stretch of
+// time is always the same URL and no client can ask for a slightly different
+// range that would miss the cache. Changing this invalidates every cached
+// block, which is the intended effect.
+static const std::time_t REPLAY_BLOCK = 600;
+static const long long MAX_REPLAY_LOOKBACK = 7 * 24 * 3600;
+
+// Checked before it is multiplied by anything: a negative index yields a
+// negative `until`, which the path writer reads as "no upper bound".
+static bool validReplayBlock(long long block)
+{
+	return block > 0 && block <= (long long)(time(nullptr) / REPLAY_BLOCK);
+}
 
 // The tracker a handler is given is never null: getState() falls back to the
 // aggregate, which exists for the lifetime of the viewer.
@@ -832,7 +850,7 @@ const WebViewer::Route WebViewer::routes[] = {
 	 { return s->getShipsJSONcompact(queryInt(a, "since")); }, true},
 	{"/api/planes_array.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &a)
-	 { return w->planes.getCompactArray(false, queryInt(a, "since")); }, true},
+	 { return w->planes.getCompactArray(queryInt(a, "since")); }, true},
 	{"/api/binmsgs.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 { return s->getBinaryMessagesJSON(queryInt(a, "since")); }, true},
@@ -857,6 +875,37 @@ const WebViewer::Route WebViewer::routes[] = {
 		 std::time_t since = (std::time_t)queryInt(a, "since");
 		 return since > 0 ? s->getAllPathJSONSince(since) : s->getAllPathJSON();
 	 }, true},
+	{"/api/replay_info.json", &WebViewer::Settings::replay, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &)
+	 { return s->getReplayInfoJSON(REPLAY_BLOCK); }, true},
+	{"/api/replay_ships.json", &WebViewer::Settings::replay, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 {
+		 return s->getReplayShipsJSON((std::time_t)queryInt(a, "since"),
+									  (std::time_t)queryInt(a, "lookback"));
+	 }, true},
+	{"/api/replay.json", &WebViewer::Settings::replay, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 {
+		 long long block = queryInt(a, "block");
+		 if (!validReplayBlock(block))
+			 return std::string("{}\n\n");
+
+		 std::time_t since = (std::time_t)(block * REPLAY_BLOCK);
+		 long long lookback = queryInt(a, "lookback");
+		 if (lookback < 0 || lookback > MAX_REPLAY_LOOKBACK)
+			 lookback = 0;
+
+		 return s->getReplayJSON(since, since + REPLAY_BLOCK - 1, (std::time_t)lookback);
+	 }, true,
+	 // A dwell inside the block can still grow for DWELL_GAP after it ends, so
+	 // caching waits that out; past it only eviction changes anything.
+	 [](const std::string &q) -> bool
+	 {
+		 long long block = queryInt(q, "block");
+		 return validReplayBlock(block) &&
+				(block + 1) * REPLAY_BLOCK + (long long)PathStore::DWELL_GAP <= (long long)time(nullptr);
+	 }},
 	{"/api/path.geojson", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 {
@@ -867,13 +916,13 @@ const WebViewer::Route WebViewer::routes[] = {
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
 	 { return s->getAllPathGeoJSON(); }, true},
 	{"/api/message", nullptr, "application/json",
-	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 [](WebViewer *w, ReceiverTracker *s, const std::string &a)
 	 {
 		 int mmsi = parseMMSI(a);
 		 if (mmsi <= 0)
 			 return std::string("{\"error\":\"Invalid MMSI\"}");
 		 std::string msg = s->getMessage(mmsi);
-		 return msg.empty() ? std::string("{\"error\":\"Message not found\"}") : msg;
+		 return msg.empty() ? std::string("{\"error\":\"Message not found\"}") : w->decodeNMEAtoJSON(msg, false);
 	 }, true},
 	{"/api/vessel", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
@@ -959,7 +1008,8 @@ void WebViewer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &reque
 			continue;
 
 		ReceiverTracker *s = getState((int)queryInt(a, "receiver"));
-		Response(c, rt->content_type, rt->handler(this, s, a), settings.use_zlib && gzip, false, rt->cors);
+		const bool may_cache = rt->cacheable && rt->cacheable(a);
+		Response(c, rt->content_type, rt->handler(this, s, a), settings.use_zlib && gzip, may_cache, rt->cors);
 		return;
 	}
 
@@ -1031,7 +1081,7 @@ void WebViewer::applyStationPosition()
 {
 	std::lock_guard<std::recursive_mutex> lock(state_mtx);
 	for (auto &s : states)
-		s->setStationPosition(settings.tracking.lat, settings.tracking.lon, settings.tracking.use_GPS);
+		s->setStationPosition(settings.tracking.lat, settings.tracking.lon, settings.tracking.use_gps);
 }
 
 Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
@@ -1091,8 +1141,14 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 		settings.tracking.cutoff = Util::Parse::Integer(arg, 0, 10000);
 		break;
 	case AIS::KEY_SETTING_TRACK_MEMORY:
-		// accepted and range checked, but the track store is not yet sized from it
-		Util::Parse::Integer(arg, 16, 256 * 1024);
+		settings.tracking.track_memory = Util::Parse::Integer(arg, 16, 256 * 1024);
+		break;
+	case AIS::KEY_SETTING_REPLAY:
+		settings.replay = Util::Parse::Switch(arg);
+		frontend.setReplay(settings.replay);
+		break;
+	case AIS::KEY_SETTING_REPLAY_TIME:
+		settings.tracking.replay_time = Util::Parse::Integer(arg, 0, 7 * 24 * 3600);
 		break;
 	case AIS::KEY_SETTING_EXPIRE:
 		settings.tracking.expire_fields = Util::Parse::Switch(arg);
@@ -1119,7 +1175,7 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 		applyStationPosition();
 		break;
 	case AIS::KEY_SETTING_USE_GPS:
-		settings.tracking.use_GPS = Util::Parse::Switch(arg);
+		settings.tracking.use_gps = Util::Parse::Switch(arg);
 		applyStationPosition();
 		break;
 	case AIS::KEY_SETTING_KML:

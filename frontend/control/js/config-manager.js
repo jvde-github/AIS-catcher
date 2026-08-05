@@ -30,31 +30,6 @@
         invalidate() { this.promise = null; }
     };
 
-    function ensurePickerModal(id, title, opts = {}) {
-        let modal = document.getElementById(id);
-        if (modal) return modal;
-        modal = el('div', 'sys-overlay hidden',
-            { id, style: 'background-color: var(--color-scrim)' },
-            el('div', `card col sys-modal-card ${opts.maxWidth || ''}`, {},
-                el('div', 'row row-between card-header', {},
-                    el('h3', 't-strong t-lg', {}, title),
-                    el('button', 'btn btn-quiet', { type: 'button', onClick: () => modal.classList.add('hidden') },
-                        el('svg', 'icon-lg', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-                            el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M6 18L18 6M6 6l12 12' })
-                        )
-                    )
-                ),
-                el('div', opts.bodyClass || 'sys-modal-body', { id: opts.bodyId || id + '-list' }),
-                el('div', 'row row-end sys-modal-foot', {},
-                    el('button', 'btn', {
-                        type: 'button', onClick: () => modal.classList.add('hidden')
-                    }, opts.footerLabel || 'Close')
-                )
-            )
-        );
-        document.body.appendChild(modal);
-        return modal;
-    }
 
     function applyToManager(containerId, index, fn) {
         const mgr = ManagerRegistry.get(containerId);
@@ -116,17 +91,16 @@
 
     let activeZoneEdit = { zones: [], onUpdate: null, allZones: [] };
 
-    function ensureZoneModal() {
-        ensurePickerModal('cm-zone-modal', 'Manage Zones', {
-            maxWidth: 'sys-modal-sm',
-            bodyId: 'cm-zone-body',
-            bodyClass: 'col col-loose sys-modal-body',
-            footerLabel: 'Done'
-        });
-    }
 
     function openZoneModal(currentZones, onUpdate) {
-        ensureZoneModal();
+        const modal = window.AISComponents.modal({
+            id: 'cm-zone-modal',
+            title: 'Manage Zones',
+            cardClass: 'modal-sm',
+            bodyClass: 'col col-loose modal-body',
+            footerLabel: 'Done'
+        });
+        modal.body.id = 'cm-zone-body';
         activeZoneEdit.zones = [...currentZones];
         activeZoneEdit.onUpdate = onUpdate;
         activeZoneEdit.allZones = [];
@@ -135,7 +109,7 @@
             activeZoneEdit.allZones = all;
             renderZoneModalBody();
         });
-        document.getElementById('cm-zone-modal').classList.remove('hidden');
+        modal.open();
     }
 
     function renderZoneModalBody() {
@@ -330,7 +304,7 @@
 
     const ConfigNormalizer = {
         arraySchemas: CHANNEL_REGISTRY.reduce((m, c) => { m[c.configKey] = c.schema; return m; }, {}),
-        topLevelSchemas: () => [sharingSchema, generalSettingsSchema],
+        topLevelSchemas: [sharingSchema, generalSettingsSchema],
 
         receiverKeys: ['serial', 'input', 'verbose', 'model', 'engines', 'meta', 'own_mmsi',
             'rtlsdr', 'rtltcp', 'airspy', 'airspyhf', 'hydrasdr', 'sdrplay', 'serialport',
@@ -468,7 +442,7 @@
                     if (r.changed) changed = true;
                 });
             }
-            for (const schema of this.topLevelSchemas()) {
+            for (const schema of this.topLevelSchemas) {
                 const r = this.coerceFields(cfg, Object.values(schema), '');
                 warnings.push(...r.warnings);
                 if (r.changed) changed = true;
@@ -479,10 +453,10 @@
 
     function pickerAction({ id, title, endpoint, extract, renderRow, apply }) {
         return (index, containerId) => {
-            const modal = ensurePickerModal(id, title);
-            const list = document.getElementById(id + '-list');
+            const modal = window.AISComponents.modal({ id, title, footerLabel: 'Close' });
+            const list = modal.body;
             list.innerHTML = '<div class="t-center t-muted sys-empty">Loading...</div>';
-            modal.classList.remove('hidden');
+            modal.open();
             fetch(endpoint)
                 .then(r => { if (authFailed(r)) throw new Error(); return r.json(); })
                 .then(data => {
@@ -495,7 +469,7 @@
                     devices.forEach(device => {
                         list.appendChild(renderRow(device, () => {
                             applyToManager(containerId, index, target => apply(target, device));
-                            modal.classList.add('hidden');
+                            modal.close();
                         }));
                     });
                 })
@@ -557,7 +531,7 @@
     };
 
     const SECTION_ORDER = ['Label', 'Connection', 'Station', 'Location', 'Format',
-        'Options', 'Retention', 'Service', 'Backup', 'Storage', 'Features', 'Filter', 'Zones'];
+        'Options', 'Retention', 'Service', 'Replay', 'Backup', 'Storage', 'Features', 'Filter', 'Zones'];
 
     const Styles = {
         input: 'input',
@@ -575,19 +549,18 @@
         cardHeader: 'card-header',
         cardBody: 'card-body',
         deleteBtn: 'btn btn-danger',
-        chevron: '',
         saveActive: 'btn btn-primary sys-save',
         saveInactive: 'btn is-disabled sys-save',
     };
 
     const Icons = {
-        chevronDown: () => el('svg', 'icon-sm', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+        chevronDown: (cls = 'icon-sm', attrs = {}) => el('svg', cls, Object.assign({ fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, attrs),
             el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 9l-7 7-7-7' })
         ),
         delete: () => el('svg', 'icon-md', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
             el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
         ),
-        plus: () => el('svg', 'icon-sm t-muted', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+        plus: (cls = 'icon-sm t-muted') => el('svg', cls, { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
             el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 4v16m8-8H4' })
         ),
     };
@@ -620,6 +593,7 @@
         },
 
         setUnsaved(bool) {
+            if (bool && this.state.unsaved) return;
             if (!bool) ManagerRegistry.forEach(m => { m.dirty = false; });
             this.state.unsaved = bool;
             const statusEl = document.getElementById('status-message');
@@ -639,7 +613,17 @@
             document.querySelectorAll('[data-save-btn]').forEach(btn => {
                 btn.className = bool ? Styles.saveActive : Styles.saveInactive;
             });
+            const headerSave = document.getElementById('system-save');
+            if (headerSave) headerSave.classList.toggle('hidden', !bool);
             window.onbeforeunload = bool ? () => true : null;
+        },
+
+        // at most one tab can hold unsaved edits, but a tab may span several managers
+        async saveDirty() {
+            const dirty = [];
+            ManagerRegistry.forEach(m => { if (m.dirty) dirty.push(m); });
+            for (const m of dirty)
+                await m.save();
         }
     };
 
@@ -648,13 +632,14 @@
         const numVal = isOff ? opts.fallback : opts.parse(currentValue);
         const display = el('span', Styles.sliderDisplay, {}, isNaN(numVal) ? 0 : numVal);
 
+        const commit = Utils.debounce(onUpdate, 200);
         const slider = el('input', Styles.slider, {
             type: 'range',
             min: field.min, max: field.max, step: field.step || opts.defaultStep,
             value: isNaN(numVal) ? opts.fallback : numVal,
             onInput: (e) => {
                 display.textContent = e.target.value;
-                if (isActive()) onUpdate(opts.parse(e.target.value));
+                if (isActive()) commit(opts.parse(e.target.value));
             }
         });
 
@@ -807,10 +792,7 @@
                 const addBtn = el('button', 'chip sys-chip-btn self-start', {
                     type: 'button',
                     onClick: () => { list.push({}); push(); render(); }
-                },
-                    el('svg', 'icon-sm', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                        el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 4v16m8-8H4' })),
-                    'Add Engine');
+                }, Icons.plus('icon-sm'), 'Add Engine');
 
                 function render() {
                     rows.innerHTML = '';
@@ -874,10 +856,7 @@
                             chips.appendChild(el('button', 'chip sys-chip-btn', {
                                 type: 'button',
                                 onClick: () => openZoneModal(zones, commit)
-                            },
-                                el('svg', 'icon-sm', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                                    el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 4v16m8-8H4' })),
-                                'Add Zone'));
+                            }, Icons.plus('icon-sm'), 'Add Zone'));
                             row.appendChild(chips);
                         }
 
@@ -928,12 +907,7 @@
                         onUpdate([...zones]);
                         renderZoneBadges();
                     })
-                },
-                    el('svg', 'icon-sm', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                        el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 4v16m8-8H4' })
-                    ),
-                    'Add Zone'
-                );
+                }, Icons.plus('icon-sm'), 'Add Zone');
 
                 function renderZoneBadges() {
                     badgesDiv.innerHTML = '';
@@ -1020,7 +994,6 @@
             if (field.type === 'button' && typeof field.buttonLabel === 'function') {
                 container._buttonEl = inputEl;
                 container._field = field;
-                container._dataContext = dataContext;
             }
             const desc = field.description || field.tooltip;
             if (desc) container.appendChild(el('p', Styles.description, {}, desc));
@@ -1029,31 +1002,38 @@
         },
 
         updateVisibility(container, dataContext) {
+            const divs = container.querySelectorAll('[data-depends-on]');
+            // two passes so chains of dependent fields settle; stop early once stable
             for (let pass = 0; pass < 2; pass++) {
-                container.querySelectorAll('[data-depends-on]').forEach(div => {
-                    const rawDep = div.getAttribute('data-depends-on');
-                    if (!rawDep || rawDep === 'null') return;
-                    const dep = JSON.parse(rawDep);
+                let changed = false;
+                divs.forEach(div => {
+                    if (div._dep === undefined) {
+                        const rawDep = div.getAttribute('data-depends-on');
+                        div._dep = rawDep && rawDep !== 'null' ? JSON.parse(rawDep) : null;
+                    }
+                    const dep = div._dep;
+                    if (!dep) return;
                     const ctrl = container.querySelector(`[data-field="${dep.field}"]`);
 
-                    if (ctrl && getComputedStyle(ctrl).display === 'none') {
-                        div.classList.add('hidden');
-                        div.querySelectorAll('input, select, button').forEach(el => el.disabled = true);
-                        return;
+                    let hide;
+                    if (ctrl && ctrl.classList.contains('hidden'))
+                        hide = true;
+                    else {
+                        const input = ctrl?.querySelector('input, select');
+                        const val = input ? (input.type === 'checkbox' ? input.checked : input.value)
+                            : Utils.getNested(dataContext, dep.field) ?? dataContext[dep.field];
+
+                        const valStr = String(val).toLowerCase();
+                        hide = !(Array.isArray(dep.value)
+                            ? dep.value.some(v => String(v).toLowerCase() === valStr)
+                            : String(dep.value).toLowerCase() === valStr);
                     }
 
-                    const input = ctrl?.querySelector('input, select');
-                    const val = input ? (input.type === 'checkbox' ? input.checked : input.value)
-                        : Utils.getNested(dataContext, dep.field) ?? dataContext[dep.field];
-
-                    const valStr = String(val).toLowerCase();
-                    const match = Array.isArray(dep.value)
-                        ? dep.value.some(v => String(v).toLowerCase() === valStr)
-                        : String(dep.value).toLowerCase() === valStr;
-
-                    div.classList.toggle('hidden', !match);
-                    div.querySelectorAll('input, select, button').forEach(el => el.disabled = !match);
+                    if (div.classList.contains('hidden') !== hide) changed = true;
+                    div.classList.toggle('hidden', hide);
+                    div.querySelectorAll('input, select, button').forEach(el => el.disabled = hide);
                 });
+                if (!changed) break;
             }
             container.querySelectorAll('[data-sync-context]').forEach(div => div._syncContext && div._syncContext());
         }
@@ -1180,8 +1160,7 @@
                     if (!bySection.has(key)) bySection.set(key, []);
                     bySection.get(key).push(f);
                 });
-                const order = this.config.sectionOrder || SECTION_ORDER;
-                const rank = k => { const i = order.indexOf(k); return i === -1 ? order.length : i; };
+                const rank = k => { const i = SECTION_ORDER.indexOf(k); return i === -1 ? SECTION_ORDER.length : i; };
                 [...bySection.keys()].sort((a, b) => rank(a) - rank(b))
                     .forEach(k => ordered.push(bySection.get(k)));
 
@@ -1254,7 +1233,8 @@
                     'Add Item'));
             }
 
-            btnGroup.appendChild(el('button', 'btn is-disabled sys-save', {
+            btnGroup.appendChild(el('button',
+                App.state.unsaved ? Styles.saveActive : Styles.saveInactive, {
                 type: 'button', dataset: { saveBtn: 'true' }, onClick: () => this.save()
             }, 'Save'));
 
@@ -1265,7 +1245,6 @@
                 this.container.parentElement.appendChild(btnGroup);
             }
 
-            if (App.state.unsaved) App.setUnsaved(true);
         }
 
         // Each manager owns its own JSON disclosure (ids keyed by containerId)
@@ -1281,12 +1260,13 @@
 
             const toggleDiv = el('div', 'sys-pane-inner sys-json-sep', { dataset: { jsonSection: '' } });
             const btn = el('button', 'row t-muted clickable', {
-                type: 'button', onClick: () => global.toggleJsonContent(contentId, chevronId)
+                type: 'button', onClick: () => {
+                    global.toggleJsonContent(contentId, chevronId);
+                    if (this.jsonStale) this.updateJsonDebug();
+                }
             });
 
-            const chevron = el('svg', 'icon-sm t-subtle sys-rotates', {
-                id: chevronId, fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor'
-            }, el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 9l-7 7-7-7' }));
+            const chevron = Icons.chevronDown('icon-sm t-subtle sys-rotates', { id: chevronId });
 
             btn.appendChild(chevron);
             btn.appendChild(el('span', '', {}, 'JSON'));
@@ -1302,16 +1282,19 @@
             parent.appendChild(toggleDiv);
         }
 
+        markDirty() {
+            this.dirty = true;
+            App.setUnsaved(true);
+            this.updateJsonDebug();
+        }
+
         updateValue(index, field, value) {
             const target = this.config.isList ? this.data[index] : this.data;
             if (field.jsonpath) Utils.setNested(target, field.jsonpath, value);
             else target[field.name] = value;
             if (field.reloadWebviewer) this.reloadWebviewer = true;
             if (field.restartWebviewer) this.restartWebviewer = true;
-            this.dirty = true;
-            App.setUnsaved(true);
-            this.updateJsonDebug();
-            
+            this.markDirty();
             this.updateDynamicButtons(index);
         }
 
@@ -1326,9 +1309,7 @@
             this.data.push(newItem);
             this.render();
             if (this.hasViewerFields) this.reloadWebviewer = true;
-            this.dirty = true;
-            App.setUnsaved(true);
-            this.updateJsonDebug();
+            this.markDirty();
         }
 
         removeItem(index) {
@@ -1336,9 +1317,7 @@
                 this.data.splice(index, 1);
                 this.render();
                 if (this.hasViewerFields) this.reloadWebviewer = true;
-                this.dirty = true;
-                App.setUnsaved(true);
-                this.updateJsonDebug();
+                this.markDirty();
             }
         }
 
@@ -1351,13 +1330,10 @@
             const dataContext = this.config.isList ? this.data[index] : this.data;
             
             targetContainer.querySelectorAll('[data-field]').forEach(fieldContainer => {
-                if (fieldContainer._buttonEl && fieldContainer._field && typeof fieldContainer._field.buttonLabel === 'function') {
-                    const newLabel = fieldContainer._field.buttonLabel(dataContext);
-                    const textNode = Array.from(fieldContainer._buttonEl.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
-                    if (textNode) {
-                        textNode.textContent = newLabel;
-                    }
-                }
+                if (!fieldContainer._buttonEl) return;
+                const newLabel = fieldContainer._field.buttonLabel(dataContext);
+                const textNode = Array.from(fieldContainer._buttonEl.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
+                if (textNode) textNode.textContent = newLabel;
             });
         }
 
@@ -1386,13 +1362,19 @@
         }
 
         updateJsonDebug() {
-            const el = document.getElementById(this.jsonPreId());
-            if (!el) return;
+            const pre = document.getElementById(this.jsonPreId());
+            if (!pre) return;
+            const content = document.getElementById('json-content-' + this.config.containerId);
+            if (content && content.classList.contains('hidden')) {
+                this.jsonStale = true;
+                return;
+            }
+            this.jsonStale = false;
             const cfg = {};
             this.applyDataTo(cfg);
             const text = JSON.stringify(cfg, null, 2);
-            if (typeof global.highlightJson === 'function') el.innerHTML = global.highlightJson(text);
-            else el.textContent = text;
+            if (typeof global.highlightJson === 'function') pre.innerHTML = global.highlightJson(text);
+            else pre.textContent = text;
         }
 
         async save() {

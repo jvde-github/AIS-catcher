@@ -53,17 +53,11 @@ const uint32_t F_STATIC = 1 << 9;
 const uint32_t F_COMM_CAP = 1 << 10;
 const uint32_t F_SIGNAL = 1 << 11;
 
-struct ShipLL
-{
-    int prev = -1, next = -1;
-};
 
 struct Ship
 {
-    ShipLL incoming; // time-ordered linked list
-    ShipLL hash;     // hash bucket chain
     uint32_t mmsi;
-    int count, msg_type, shipclass, mmsi_type, shiptype, heading, status, path_ptr;
+    int count, msg_type, shipclass, mmsi_type, shiptype, heading, status;
     int to_port, to_bow, to_starboard, to_stern, IMO, angle, altitude, received_stations;
     int unit_model, unit_serial;
     char month, day, hour, minute;
@@ -85,7 +79,10 @@ struct Ship
     int getShipTypeClass();
     void setType();
     bool getKML(std::string &) const;
-    bool getGeoJSON(JSON::Writer &) const;
+    bool getGeoJSON(JSON::Writer &, bool station_known) const;
+    void getJSON(JSON::Writer &, long int delta_time, bool station_known) const;
+    void writeCompactDynamic(JSON::Writer &) const;
+    void writeCompactStatic(JSON::Writer &) const;
 
     // File persistence functions
     bool Save(std::ofstream &file) const;
@@ -93,7 +90,8 @@ struct Ship
 
 private:
     static const int _SHIP_MAGIC = 0x53484950; // "SHIP" in hex
-    static const int _SHIP_VERSION = 3;
+    static const int _SHIP_VERSION = 4;
+    static const int _SHIP_VERSION_LINKED = 3; // trailing slot links, read and discarded
 
 public:
     // Setters for PackedInt fields
