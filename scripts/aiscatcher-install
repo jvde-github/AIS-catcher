@@ -1145,6 +1145,10 @@ parse_arguments() {
             -h|--help)
                 usage
                 ;;
+            _)
+                # old AIS-catcher-control builds invoke this script as "bash -s -- _ -p"
+                shift
+                ;;
             *)
                 log "ERROR" "Unknown option: $1"
                 log "INFO" "Use --help for usage information"
