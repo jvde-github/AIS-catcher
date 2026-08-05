@@ -77,9 +77,9 @@ void ReceiverTracker::reset()
 	ships.setup();
 }
 
-bool ReceiverTracker::save(std::ofstream &f)
+bool ReceiverTracker::save(std::ofstream &f, bool include_ships)
 {
-	return counter.Save(f) && hist_second.Save(f) && hist_minute.Save(f) && hist_hour.Save(f) && hist_day.Save(f) && ships.Save(f);
+	return counter.Save(f) && hist_second.Save(f) && hist_minute.Save(f) && hist_hour.Save(f) && hist_day.Save(f) && (!include_ships || ships.Save(f));
 }
 
 bool ReceiverTracker::load(std::ifstream &f)

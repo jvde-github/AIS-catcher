@@ -84,7 +84,7 @@ public:
 	void setup();
 	void clear();
 	void reset();
-	bool save(std::ofstream &f);
+	bool save(std::ofstream &f, bool include_ships = true);
 	bool load(std::ifstream &f);
 
 	// Wire internal streams (ships → hist_* → counters)
