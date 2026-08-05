@@ -31,6 +31,9 @@ namespace Device {
 		int gRdB = 32;
 		bool AGC = false;
 		char antenna = 'A';
+		char tuner = 'A';
+
+		bool isDuoSlave() const { return device.hwVer == SDRPLAY_RSPduo_ID && device.rspDuoMode == sdrplay_api_RspDuoMode_Slave; }
 
 		std::thread run_thread;
 		void Run();
