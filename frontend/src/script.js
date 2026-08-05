@@ -2962,6 +2962,7 @@ function getTooltipContent(ship) {
         getFlagStyled(ship.country, TOOLTIP_FLAG_STYLE) +
         '<div>' +
         (getShipName(ship) || ship.mmsi) + ' at ' + getSpeedVal(ship.speed) + ' ' + getSpeedUnit() + '<br>' +
+        (ship.shiptype ? getShipTypeShort(ship.shiptype) + '<br>' : '') +
         'Received ' + getDeltaTimeVal(shipsSince - ship.last_signal) + ' ago' +
         '</div>' +
         '</div>';
