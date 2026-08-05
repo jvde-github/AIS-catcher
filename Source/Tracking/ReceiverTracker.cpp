@@ -26,6 +26,7 @@ void ReceiverTracker::applyConfig(const TrackingConfig &cfg, const AIS::Filter &
 	ships.setMsgSave(cfg.msg_save);
 	ships.setOwnMMSI(cfg.own_mmsi);
 	ships.setTimeHistory(cfg.time_history);
+	ships.setReplayTime(cfg.replay_time);
 	ships.setExpireFields(cfg.expire_fields);
 	ships.setTrackMemory(cfg.track_memory);
 	ships.setFilter(f);

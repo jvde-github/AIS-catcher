@@ -56,6 +56,8 @@ public:
 	// silence that ends a dwell, and so how long a point's end can still grow
 	static const uint32_t DWELL_GAP = 900;
 
+	// point spacing beyond HORIZON, published to the replay client
+	static const uint32_t GRANULARITY = 300;
 
 private:
 	static const int BLOCK_SHIFT = 8;
@@ -64,7 +66,6 @@ private:
 	static const uint32_t NIL = 0xFFFFFFFFu;
 
 	static const uint32_t HORIZON = 3600;	 // full-resolution window in seconds
-	static const uint32_t GRANULARITY = 300; // point spacing beyond HORIZON
 	static const uint32_t DWELL_MAX = 0xFFFFu; // ceiling of the uint16 dur field
 	static const int DEADBAND = 40;			 // meters a ship must move to count as significant
 	static const uint8_t IDLE_SOG = 1;		 // 0.5 knot units, at or below this a ship is not making way
@@ -374,33 +375,10 @@ public:
 			unlink(anchors[ship].head);
 	}
 
-	// Bounds of the replayable timeline, 0 when empty. Scans every live slot:
-	// a dwell extension moves `newest` without appending anything, so no list
-	// order can answer this. Called once per replay open.
-	void bounds(uint32_t &oldest, uint32_t &newest) const
-	{
-		oldest = 0;
-		newest = 0;
-
-		for (std::size_t b = 0; b < blocks.size(); b++)
-		{
-			const Block &blk = blocks[b];
-			for (int i = 0; i < blk.count; i++)
-			{
-				const Point &p = blk.pts[i];
-				if (p.prev == NIL)
-					continue;
-
-				if (oldest == 0 || p.time < oldest)
-					oldest = p.time;
-				if (p.end() > newest)
-					newest = p.end();
-			}
-		}
-	}
-
 	// newest-first traversal: for (r = tail(ship); isPoint(r); r = at(r).prev)
 	uint32_t tail(int ship) const { return anchors[ship].tail; }
+	// a chain is time-ordered, so head is the ship's oldest surviving point
+	uint32_t head(int ship) const { return anchors[ship].head; }
 	static bool isPoint(uint32_t r) { return !(r & SHIP_BIT); }
 	const Point &at(uint32_t r) const { return blocks[blockOf(r)].pts[slotOf(r)]; }
 

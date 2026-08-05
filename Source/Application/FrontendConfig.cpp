@@ -186,6 +186,7 @@ std::string FrontendConfig::render(const PluginStore &plugins) const
 			.beginObject()
 			.kv("share_location", share_location)
 			.kv("save_messages", save_messages)
+			.kv("replay", replay)
 			.kv("realtime", realtime)
 			.kv("log", log_enabled)
 			.kv("decoder", decoder)

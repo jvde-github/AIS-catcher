@@ -117,39 +117,28 @@ public:
 	{
 		const int n = (int)records.size();
 		int e = 0;
+		auto fail = [&](const std::string &msg) { errors.push_back(msg); e++; };
 
 		int seen = 0, keyed = 0;
 		for (int h = head, p = NIL; h != NIL; p = h, h = slots[h].lru_next)
 		{
 			if (++seen > n)
 			{
-				errors.push_back("LRU list is cyclic");
-				return ++e;
+				fail("LRU list is cyclic");
+				return e;
 			}
 			if (slots[h].lru_prev != p)
-			{
-				errors.push_back("LRU prev broken at slot " + std::to_string(h));
-				e++;
-			}
+				fail("LRU prev broken at slot " + std::to_string(h));
 			if (slots[h].key != 0)
 				keyed++;
 			if (slots[h].lru_next == NIL && h != tail)
-			{
-				errors.push_back("LRU tail mismatch at slot " + std::to_string(h));
-				e++;
-			}
+				fail("LRU tail mismatch at slot " + std::to_string(h));
 		}
 
 		if (seen != n)
-		{
-			errors.push_back("LRU holds " + std::to_string(seen) + " of " + std::to_string(n) + " slots");
-			e++;
-		}
+			fail("LRU holds " + std::to_string(seen) + " of " + std::to_string(n) + " slots");
 		if (keyed != count)
-		{
-			errors.push_back("count " + std::to_string(count) + " but " + std::to_string(keyed) + " keyed slots");
-			e++;
-		}
+			fail("count " + std::to_string(count) + " but " + std::to_string(keyed) + " keyed slots");
 
 		// keyed slots must form a contiguous prefix of the LRU; persistence walks on that basis
 		bool empty_seen = false;
@@ -159,8 +148,7 @@ public:
 				empty_seen = true;
 			else if (empty_seen)
 			{
-				errors.push_back("keyed slot " + std::to_string(h) + " sits behind an empty one");
-				e++;
+				fail("keyed slot " + std::to_string(h) + " sits behind an empty one");
 				empty_seen = false;
 			}
 		}
@@ -173,24 +161,15 @@ public:
 			{
 				if (++walked > n)
 				{
-					errors.push_back("hash chain " + std::to_string(b) + " is cyclic");
-					return ++e;
+					fail("hash chain " + std::to_string(b) + " is cyclic");
+					return e;
 				}
 				if (slots[h].h_prev != p)
-				{
-					errors.push_back("hash prev broken at slot " + std::to_string(h));
-					e++;
-				}
+					fail("hash prev broken at slot " + std::to_string(h));
 				if (slots[h].key == 0)
-				{
-					errors.push_back("empty slot " + std::to_string(h) + " on a hash chain");
-					e++;
-				}
+					fail("empty slot " + std::to_string(h) + " on a hash chain");
 				else if (bucket(slots[h].key) != b)
-				{
-					errors.push_back("slot " + std::to_string(h) + " in the wrong bucket");
-					e++;
-				}
+					fail("slot " + std::to_string(h) + " in the wrong bucket");
 				in_bucket[h]++;
 			}
 		}
@@ -198,10 +177,7 @@ public:
 		for (int h = 0; h < n; h++)
 		{
 			if (slots[h].key != 0 && in_bucket[h] != 1)
-			{
-				errors.push_back("keyed slot " + std::to_string(h) + " appears on " + std::to_string(in_bucket[h]) + " chains");
-				e++;
-			}
+				fail("keyed slot " + std::to_string(h) + " appears on " + std::to_string(in_bucket[h]) + " chains");
 		}
 
 		return e;

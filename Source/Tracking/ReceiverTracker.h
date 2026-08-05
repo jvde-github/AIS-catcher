@@ -44,6 +44,8 @@ struct TrackingConfig
 	bool use_gps = true;
 	uint32_t own_mmsi = 0;
 	int time_history = 30 * 60;
+	// caps how far back one replay request can walk, 0 is unlimited
+	int replay_time = 3600;
 	bool expire_fields = false;
 	// 0 means "not configured": LONG_RANGE_CUTOFF_DEFAULT is used instead
 	int cutoff = 0;

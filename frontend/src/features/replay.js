@@ -12,9 +12,11 @@ import Icon from 'ol/style/Icon';
 import { fromLonLat } from 'ol/proj';
 
 import { settings } from '../core/state.js';
+import { decodeHTMLEntities } from '../core/util.js';
 import { calculateBearing } from '../core/geo.js';
+import { getSpeedVal, getSpeedUnit, getDeltaTimeVal, getFlagStyled, sanitizeString } from '../core/format.js';
 
-// { getReceiver, spriteFor, iconScale, fadeOpacity, spriteSheet,
+// { getReceiver, spriteFor, iconScale, fadeOpacity, labelText, spriteSheet,
 //   setLiveLayers, showNotification, onStateChange }
 let deps = null;
 
@@ -40,9 +42,10 @@ let generation = 0;
 const STALE_DROP = 1800;
 
 // Longest silence worth interpolating across. Must clear the gaps thinned
-// history leaves (GRANULARITY plus the raw gap that survived it), or an old
-// track stutters where the same track interpolated smoothly when fresh.
-const MAX_INTERP = 1200;
+// history leaves — the server's thinning spacing plus the raw gap that survives
+// it, both published in replay_info — or an old track stutters where the same
+// track interpolated smoothly when fresh.
+let MAX_INTERP = 1200;
 
 // Blocks are addressed by index so a stretch of time is always the same URL and
 // a closed one can sit in the HTTP cache; a range derived from "now" would mint
@@ -52,7 +55,7 @@ const BLOCK_LOOKBACK = STALE_DROP;
 
 const blockStart = (t) => Math.floor(t / BLOCK) * BLOCK;
 
-const SPEEDS = [10, 30, 60, 120, 300];
+const SPEEDS = [10, 30, 60, 120, 300, 600, 900];
 let speed = 60;
 let playing = false;
 let raf = null;
@@ -70,6 +73,15 @@ export function getSpeed() { return speed; }
 
 export function cycleSpeed() {
     speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
+    deps.onStateChange?.();
+}
+
+let labels = false;
+
+export function getLabels() { return labels; }
+export function toggleLabels() {
+    labels = !labels;
+    if (active) draw();
     deps.onStateChange?.();
 }
 export function getTimeline() {
@@ -92,6 +104,7 @@ export async function refreshBounds() {
         const info = await api('api/replay_info.json');
         bounds = { now: info.now || 0, oldest: info.oldest || 0, newest: info.newest || 0 };
         if (info.block > 0) BLOCK = info.block;
+        if (info.granularity > 0 && info.dwell_gap > 0) MAX_INTERP = info.granularity + info.dwell_gap;
     } catch (e) {
         bounds = { now: 0, oldest: 0, newest: 0 };
     }
@@ -123,8 +136,10 @@ function mergePoints(existing, incoming) {
 async function loadBlock(start) {
     if (blocks.has(start)) return false;
 
+    const gen = generation;
     const data = await api(
         `api/replay.json?block=${start / BLOCK}&lookback=${BLOCK_LOOKBACK}`);
+    if (gen !== generation) return false;
     blocks.add(start);
 
     for (const mmsi in data) {
@@ -137,7 +152,9 @@ async function loadBlock(start) {
             s = fleet[mmsi] = {
                 pts: [],
                 cls: m.c ?? 1,
-                name: m.n || '',
+                // escaped at ingest like the live store; tooltips render innerHTML
+                name: sanitizeString(m.n || ''),
+                country: sanitizeString(m.f || ''),
                 // to_bow/to_stern are omitted when undefined; icon scaling wants 0
                 len: (m.b || 0) + (m.s || 0),
             };
@@ -172,10 +189,12 @@ export async function load(at) {
         const tl = getTimeline();
         instant = at > 0 ? Math.max(tl.start, Math.min(tl.end, at)) : tl.start;
 
-        // one manifest for the whole window; repeating it per block would undo
-        // the saving that blocking is for
+        // One manifest for the whole window; repeating it per block would undo
+        // the saving that blocking is for. Styling only, so losing it degrades
+        // the looks, not the replay.
         manifest = await api(
-            `api/replay_ships.json?since=${tl.start}&lookback=${BLOCK_LOOKBACK}`);
+            `api/replay_ships.json?since=${tl.start}&lookback=${BLOCK_LOOKBACK}`)
+            .catch(() => ({}));
 
         await loadBlock(blockStart(instant));
 
@@ -309,10 +328,16 @@ export function seek(time) {
     pump();
 }
 
+const NO_LEG = { brg: null, knots: 0 };
+
 // Course and speed made good from a to b. Bearing comes from the segment being
 // travelled, so the icon always points where the vessel is visibly going.
+// Constant for the segment's lifetime, so the trig runs once per segment, not
+// per frame; the cache keys on the pts array so a block merge (which swaps in
+// a new array) invalidates it.
 function leg(s, a, b) {
-    if (a < 0 || b >= s.pts.length || a === b) return { brg: null, knots: 0 };
+    if (a < 0 || b >= s.pts.length || a === b) return NO_LEG;
+    if (s.legPts === s.pts && s.legA === a && s.legB === b) return s.legV;
 
     const [latA, lonA] = s.pts[a], [latB, lonB] = s.pts[b];
     const dLat = latB - latA;
@@ -320,10 +345,14 @@ function leg(s, a, b) {
     const metres = Math.hypot(dLat, dLon) * 111320;
     const secs = Math.max(1, s.pts[b][2] - s.pts[a][3]);
 
-    return {
+    s.legPts = s.pts;
+    s.legA = a;
+    s.legB = b;
+    s.legV = {
         brg: metres > 1 ? calculateBearing([lonA, latA], [lonB, latB]) : null,
         knots: (metres / secs) / 0.514444,
     };
+    return s.legV;
 }
 
 // Hold a vessel that stopped reporting at point i, keeping the heading and
@@ -333,7 +362,7 @@ function holdAt(s, i, T) {
     const age = T - s.pts[i][3];
     if (age > STALE_DROP) return null;
 
-    const l = i > 0 ? leg(s, i - 1, i) : { brg: null, knots: 0 };
+    const l = i > 0 ? leg(s, i - 1, i) : NO_LEG;
     return { lat: s.pts[i][0], lon: s.pts[i][1], knots: l.knots, brg: l.brg, age };
 }
 
@@ -384,10 +413,24 @@ function sample(s, T) {
 
     // no next point within reach: hold rather than invent a track never sailed
     if (T <= pa[3]) {
-        const l = a > 0 ? leg(s, a - 1, a) : { brg: null };
+        const l = a > 0 ? leg(s, a - 1, a) : NO_LEG;
         return { lat: pa[0], lon: pa[1], knots: sog / 2, brg: l.brg };
     }
     return holdAt(s, a, T);
+}
+
+// matches TOOLTIP_FLAG_STYLE on the live map, so the two tooltips look alike
+const FLAG_STYLE = "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%";
+
+// built from the frame being shown, so it follows the replay clock
+function tooltipHTML(mmsi, s, fix) {
+    if (!fix) return '';
+    let html = '<div class="tooltip-card">'
+        + getFlagStyled(s.country, FLAG_STYLE) + '<div>'
+        + (s.name || 'MMSI ' + mmsi) + ' at ' + getSpeedVal(fix.knots || 0) + ' ' + getSpeedUnit();
+    if (s.name) html += '<br>MMSI ' + mmsi;
+    if (fix.age) html += '<br>Silent for ' + getDeltaTimeVal(fix.age);
+    return html + '</div></div>';
 }
 
 // Additive: later blocks bring vessels the first did not have, and an existing
@@ -400,7 +443,12 @@ function buildFeatures() {
         marker.set('mmsi', mmsi);
         marker.set('name', fleet[mmsi].name);
 
-        features[mmsi] = { marker, shown: false, style: null, last: {} };
+        const f = { marker, shown: false, style: null, last: {}, fix: null };
+        // `tooltip` is what the map's pointermove looks for
+        Object.defineProperty(marker, 'tooltip', {
+            get: () => tooltipHTML(mmsi, fleet[mmsi] || {}, f.fix),
+        });
+        features[mmsi] = f;
     }
 }
 
@@ -411,13 +459,16 @@ function place(f, s, fix) {
     const sp = deps.spriteFor(s.cls, fix.knots, fix.brg);
     const scale = (settings.icon_scale ?? 1) * deps.iconScale(s.len);
     const opacity = fix.age ? deps.fadeOpacity(fix.age) : 1;
+    const label = labels ? (s.name || String(f.marker.get('mmsi'))) : '';
     const l = f.last;
 
     if (l.cx === sp.cx && l.cy === sp.cy && l.rot === sp.rot && l.scale === scale
-        && l.opacity === opacity && l.lat === fix.lat && l.lon === fix.lon) return;
+        && l.opacity === opacity && l.lat === fix.lat && l.lon === fix.lon
+        && l.label === label) return;
 
     // the sprite cell fixes the Icon; rotation, scale and opacity are mutable
-    if (l.cx !== sp.cx || l.cy !== sp.cy) {
+    const rebuilt = l.cx !== sp.cx || l.cy !== sp.cy;
+    if (rebuilt) {
         f.style = new Style({
             image: new Icon({
                 src: deps.spriteSheet,
@@ -427,6 +478,9 @@ function place(f, s, fix) {
         });
         f.marker.setStyle(f.style);
     }
+    // the label carries the fade too, so a fading held vessel refreshes its text
+    if (rebuilt || l.label !== label || (label && l.opacity !== opacity))
+        f.style.setText(label ? deps.labelText(decodeHTMLEntities(label), opacity, s.cls) : null);
     const img = f.style.getImage();
     img.setRotation(sp.rot);
     img.setScale(scale);
@@ -438,7 +492,7 @@ function place(f, s, fix) {
     else
         f.marker.changed();
 
-    f.last = { cx: sp.cx, cy: sp.cy, rot: sp.rot, scale, opacity, lat: fix.lat, lon: fix.lon };
+    f.last = { cx: sp.cx, cy: sp.cy, rot: sp.rot, scale, opacity, lat: fix.lat, lon: fix.lon, label };
 }
 
 function draw() {
@@ -447,6 +501,7 @@ function draw() {
     for (const mmsi in fleet) {
         const f = features[mmsi];
         const fix = sample(fleet[mmsi], instant);
+        f.fix = fix;
 
         if (!fix) {
             if (f.shown) {

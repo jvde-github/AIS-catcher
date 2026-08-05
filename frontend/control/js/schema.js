@@ -540,6 +540,31 @@ const webviewerSchema = {
         width: 50,
         tooltip: 'More memory keeps longer track history'
     },
+    replay: {
+        name: 'replay',
+        section: 'Replay',
+        restartWebviewer: true,
+        label: 'Replay',
+        type: 'toggle',
+        jsonpath: 'replay',
+        defaultValue: true,
+        width: 24,
+        tooltip: 'Let visitors animate past tracks'
+    },
+    replay_time: {
+        name: 'replay_time',
+        section: 'Replay',
+        restartWebviewer: true,
+        label: 'Max Replay (s)',
+        type: 'number',
+        jsonpath: 'replay_time',
+        defaultValue: 3600,
+        min: 0,
+        max: 604800,
+        width: 50,
+        tooltip: 'How far back visitors may scrub, 0 for everything held',
+        dependsOn: { field: 'replay', value: true }
+    },
     context: {
         name: 'context',
         section: 'Storage',

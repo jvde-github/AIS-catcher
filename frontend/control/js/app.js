@@ -986,6 +986,7 @@
         const keys = ['station', 'station_link', 'webcontrol_http',
                       'lat', 'lon', 'share_loc', 'use_gps',
                       'history', 'track_memory', 'expire',
+                      'replay', 'replay_time',
                       'file', 'backup',
                       'plugin_dir', 'context',
                       'realtime', 'msg', 'decoder', 'log', 'geojson', 'prome',

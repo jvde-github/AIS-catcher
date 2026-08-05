@@ -72,7 +72,7 @@ const config = window.__SERVER_CONFIG__ || {
     station: '',
     webcontrol_http: '',
     features: {
-        share_location: false, save_messages: false,
+        share_location: false, save_messages: false, replay: true,
         realtime: false, log: false, decoder: false,
         managed: false, about_md: false,
     },
@@ -125,6 +125,7 @@ const ACTIONS = {
     toggleReplaycard: () => toggleReplaycard(),
     replayToggle: () => replayToggle(),
     replayCycleSpeed: () => replay.cycleSpeed(),
+    replayToggleLabels: () => replay.toggleLabels(),
     replaySeek: (e, d, el) => replaySeek(el),
 
     // tableside / generic close buttons / dialog
@@ -345,10 +346,11 @@ function _bindDelegatedActions() {
         });
     }
 }
+// the dialog is absent here: its modal component closes itself on Escape
 document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    if (dialogModal && dialogModal.isOpen()) closeDialog();
-    else if (document.querySelector(".settings_window").classList.contains("active")) closeSettings();
+    if (dialogModal && dialogModal.isOpen()) return;
+    if (document.querySelector(".settings_window").classList.contains("active")) closeSettings();
     else if (document.getElementById("menubar").classList.contains("visible")) hideMenu();
 });
 
@@ -589,6 +591,38 @@ function addOverlayLayer(title, layer) {
         addOverlayCheckbox(title);
     }
 }
+function attributionHTML(layer) {
+    const a = layer?.getSource()?.getAttributions();
+    const raw = typeof a === 'function' ? a() : a;
+    return Array.isArray(raw) ? raw.join(', ') : (raw || '');
+}
+
+// <option> holds text only, so the credit has to lose its markup there
+function attributionPlain(layer) {
+    const div = document.createElement('div');
+    div.innerHTML = attributionHTML(layer);
+    return (div.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
+// polling overlays get their source only once switched on
+function refreshOverlayCredits() {
+    document.querySelectorAll('.overlay-row').forEach(row => {
+        const credit = attributionHTML(overlapmaps[row.querySelector('input')?.id]);
+        let note = row.querySelector('.map-attribution-note');
+
+        if (!credit) {
+            if (note) note.remove();
+            return;
+        }
+        if (!note) {
+            note = document.createElement('span');
+            note.className = 'map-attribution-note';
+            row.appendChild(note);
+        }
+        note.innerHTML = credit;
+    });
+}
+
 function addOverlayCheckbox(title) {
     const overlayContainer = document.getElementById('overlayContainer');
     if (!overlayContainer || overlayContainer.querySelector(`#${CSS.escape(title)}`)) return;
@@ -603,9 +637,11 @@ function addOverlayCheckbox(title) {
     label.setAttribute('for', title);
     label.textContent = title;
 
-    overlayContainer.appendChild(checkbox);
-    overlayContainer.appendChild(label);
-    overlayContainer.appendChild(document.createElement('br'));
+    const row = document.createElement('div');
+    row.className = 'overlay-row';
+    row.appendChild(checkbox);
+    row.appendChild(label);
+    overlayContainer.appendChild(row);
 
     checkbox.addEventListener('change', function () {
         overlapmaps[title].setVisible(this.checked);
@@ -911,29 +947,19 @@ const planeStyle = function (feature) {
     ];
 };
 
-const labelStyle = function (feature) {
-    const isActive = (card_type === 'ship' && 'ship' in feature && feature.ship.mmsi == card_mmsi) ||
-                     (card_type === 'plane' && 'plane' in feature && feature.plane.hexident == card_mmsi);
-
-    if (settings.labels_active_only && !isActive) return new ol.style.Style({});
-
-    const isHovered = 'ship' in feature && hoverType === 'ship' && feature.ship.mmsi == hoverMMSI;
-    const op = !('ship' in feature) || isActive || isHovered ? 1 : getShipOpacity(feature.ship);
-
-    const font = settings.tooltipLabelFontSize + "px Arial";
+// Text portion of a map label, shared with the replay layer via replay.init.
+// `cls` drives the class-colored background mode, `op` fades with the vessel.
+function buildLabelText(txt, op, cls) {
     const text = new ol.style.Text({
-        text: decodeHTMLEntities('ship' in feature ?
-            (feature.ship.shipname || feature.ship.mmsi.toString()) :
-            (feature.plane.callsign || getICAO(feature.plane))),
+        text: txt,
         overflow: true,
         offsetY: 25,
         offsetX: 25,
-        font: font
+        font: settings.tooltipLabelFontSize + "px Arial"
     });
 
     if (settings.label_class_background) {
-        const obj = 'ship' in feature ? feature.ship : feature.plane;
-        const base = (obj && settings.track_class_colors[obj.shipclass]) || '#12a5ed';
+        const base = settings.track_class_colors[cls] || '#12a5ed';
         text.setFill(new ol.style.Fill({ color: `rgba(255, 255, 255, ${op})` }));
         text.setBackgroundFill(new ol.style.Fill({ color: deriveLabelBackground(base, 0.88 * op) }));
         text.setBackgroundStroke(new ol.style.Stroke({ color: `rgba(0, 0, 0, ${0.35 * op})`, width: 1 }));
@@ -944,6 +970,24 @@ const labelStyle = function (feature) {
         text.setFill(new ol.style.Fill({ color: `rgba(${lr}, ${lg}, ${lb}, ${op})` }));
         text.setStroke(new ol.style.Stroke({ color: `rgba(${sr}, ${sg}, ${sb}, ${op})`, width: 5 }));
     }
+    return text;
+}
+
+const labelStyle = function (feature) {
+    const isActive = (card_type === 'ship' && 'ship' in feature && feature.ship.mmsi == card_mmsi) ||
+                     (card_type === 'plane' && 'plane' in feature && feature.plane.hexident == card_mmsi);
+
+    if (settings.labels_active_only && !isActive) return new ol.style.Style({});
+
+    const isHovered = 'ship' in feature && hoverType === 'ship' && feature.ship.mmsi == hoverMMSI;
+    const op = !('ship' in feature) || isActive || isHovered ? 1 : getShipOpacity(feature.ship);
+
+    const obj = 'ship' in feature ? feature.ship : feature.plane;
+    const text = buildLabelText(
+        decodeHTMLEntities('ship' in feature ?
+            (feature.ship.shipname || feature.ship.mmsi.toString()) :
+            (feature.plane.callsign || getICAO(feature.plane))),
+        op, obj.shipclass);
 
     const isSelected = (settings.labels_prioritize_active ?? true) && isActive;
 
@@ -1319,6 +1363,7 @@ function showMapMenu(event) {
     }
 
     baseMapSelector.value = settings.dark_mode ? settings.map_night : settings.map_day;
+    refreshOverlayCredits();
 
     mapMenu.style.display = "block";
 
@@ -1376,6 +1421,12 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
     // Hide realtime menu items if realtime is disabled
     if (!config.features.realtime) {
         document.querySelectorAll('.ctx-realtime').forEach((element) => {
+            element.style.display = "none";
+        });
+    }
+
+    if (!config.features.replay) {
+        document.querySelectorAll('.ctx-replay').forEach((element) => {
             element.style.display = "none";
         });
     }
@@ -1445,16 +1496,18 @@ let dialogModal = null;
 
 function showDialog(title, message) {
     if (!dialogModal)
-        dialogModal = window.AISComponents.modal({ id: "dialog-box", cardClass: "modal-fit", bodyClass: "dialog-message" });
+        dialogModal = window.AISComponents.modal({
+            id: "dialog-box", cardClass: "modal-fit", bodyClass: "dialog-message",
+            // some callers widen the card for their content; every close path resets it
+            onClose: () => { dialogModal.card.style.maxWidth = ""; },
+        });
     dialogModal.setTitle(title);
     dialogModal.body.innerHTML = message;
     dialogModal.open();
 }
 
 function closeDialog() {
-    if (!dialogModal) return;
-    dialogModal.card.style.maxWidth = "";
-    dialogModal.close();
+    if (dialogModal) dialogModal.close();
 }
 
 function showNotification(message, type = "info", duration) {
@@ -1504,15 +1557,9 @@ function triggerMapLayer() {
         if (overlay in overlapmaps) overlapmaps[overlay].setVisible(true);
     }
 
-    const attributions = activeTileLayer.getSource().getAttributions();
-    const mapAttributions = document.getElementById("map_attributions");
-    if (typeof attributions === 'function') {
-        const currentAttributions = attributions();
-        mapAttributions.innerHTML = currentAttributions.join(', ');
-    } else if (Array.isArray(attributions)) {
-        mapAttributions.innerHTML = attributions.join(', ');
-    }
+    document.getElementById("map_attributions").innerHTML = attributionHTML(activeTileLayer);
 
+    flashAttribution();
 }
 
 const dynamicStyle = document.createElement("style");
@@ -1668,8 +1715,10 @@ function initMap() {
 
     Object.keys(basemaps).forEach(key => {
         const option = document.createElement("option");
+        const credit = attributionPlain(basemaps[key]);
         option.value = key;
-        option.textContent = key;
+        option.textContent = credit ? `${key} — ${credit}` : key;
+        option.title = option.textContent;
         baseMapSelector.appendChild(option);
     });
     baseMapSelector.value = settings.dark_mode ? settings.map_night : settings.map_day;
@@ -3103,10 +3152,22 @@ function showHoverTrack(mmsi) {
     }
 }
 
+let attributionTimer = null;
+
+function showAttribution(on) {
+    const foldout = document.getElementById('map-attribution-foldout');
+    clearTimeout(attributionTimer);
+    foldout.classList.toggle('visible', on);
+}
+
+function flashAttribution() {
+    showAttribution(true);
+    attributionTimer = setTimeout(() => showAttribution(false), 5000);
+}
+
 function toggleAttribution() {
     const foldout = document.getElementById('map-attribution-foldout');
-    if (!foldout) return;
-    foldout.style.display = foldout.style.display === 'block' ? 'none' : 'block';
+    showAttribution(!foldout.classList.contains('visible'));
 }
 
 function getBinaryMessageContent(binary, includeRaw = false) {
@@ -3458,11 +3519,7 @@ function persistSettings() {
     updateMapURL();
 }
 
-function saveMapView() {
-    if (map !== undefined) persistSettings();
-}
-
-const debouncedSaveMapView = debounce(saveMapView, 250);
+const debouncedSaveMapView = debounce(persistSettings, 250);
 const debouncedDrawMap = debounce(redrawMap, 250);
 const debounceShowHoverTrack = debounce(showHoverTrack, 250);
 
@@ -3736,38 +3793,80 @@ function replayRemain(sec) {
     return h > 0 ? h + ":" + String(m).padStart(2, "0") + ":" + ss : m + ":" + ss;
 }
 
+// Runs at animation rate while playing, so element lookups are cached and every
+// write is guarded: most of the bar only changes on discrete events, and the
+// time labels only when the displayed second does.
+let replayEls = null;
+const replayShown = {};
+
 function updateReplaycard() {
     const bar = document.getElementById("replaybar");
     if (!bar || !bar.classList.contains("visible")) return;
 
-    const scrub = document.getElementById("replayScrub");
+    if (!replayEls)
+        replayEls = {
+            scrub: document.getElementById("replayScrub"),
+            speed: document.getElementById("replaySpeed"),
+            labels: document.getElementById("replayLabels"),
+            play: document.getElementById("replayPlay"),
+            fill: document.getElementById("replayFill"),
+            elapsed: document.getElementById("replayElapsed"),
+            remaining: document.getElementById("replayRemaining"),
+        };
+    const ui = replayEls, shown = replayShown;
     const { start, end } = replay.getTimeline();
 
     bar.classList.toggle("playing", replay.isPlaying());
     bar.classList.toggle("loading", replay.isLoading());
-    document.getElementById("replaySpeed").textContent = replay.getSpeed() + "×";
+
+    const speed = replay.getSpeed();
+    if (shown.speed !== speed) {
+        shown.speed = speed;
+        ui.speed.textContent = speed + "×";
+    }
+
+    const labelsOn = replay.getLabels();
+    if (shown.labelsOn !== labelsOn) {
+        shown.labelsOn = labelsOn;
+        ui.labels.classList.toggle("on", labelsOn);
+        ui.labels.setAttribute("aria-pressed", labelsOn);
+        ui.labels.title = labelsOn ? "Hide ship labels" : "Show ship labels";
+        ui.labels.setAttribute("aria-label", ui.labels.title);
+    }
 
     // no history at all means nothing to start
     const hasHistory = end > start;
-    document.getElementById("replayPlay").disabled = !hasHistory || replay.isLoading();
-    scrub.disabled = !hasHistory;
+    ui.play.disabled = !hasHistory || replay.isLoading();
+    ui.scrub.disabled = !hasHistory;
 
-    const at = replay.isActive() ? replay.getInstant() : replayScrubTime(scrub.value);
+    const playTitle = replay.isLoading() ? "Loading" : replay.isPlaying() ? "Pause" : "Play";
+    if (shown.playTitle !== playTitle) {
+        shown.playTitle = playTitle;
+        ui.play.title = playTitle;
+    }
 
-    if (replay.isActive() && end > start)
-        scrub.value = Math.round(((at - start) / (end - start)) * 1000);
+    const at = replay.isActive() ? replay.getInstant() : replayScrubTime(ui.scrub.value);
 
-    document.getElementById("replayFill").style.width = (Number(scrub.value) / 10) + "%";
+    if (replay.isActive() && hasHistory) {
+        const v = Math.round(((at - start) / (end - start)) * 1000);
+        if (Number(ui.scrub.value) !== v) ui.scrub.value = v;
+    }
 
-    const elapsed = document.getElementById("replayElapsed");
-    elapsed.textContent = hasHistory ? replayStamp(at, end - start) : "--:--";
-    elapsed.title = hasHistory ? new Date(at * 1000).toLocaleString() : "";
+    const fill = (Number(ui.scrub.value) / 10) + "%";
+    if (shown.fill !== fill) {
+        shown.fill = fill;
+        ui.fill.style.width = fill;
+    }
 
-    document.getElementById("replayRemaining").textContent =
-        hasHistory ? "-" + replayRemain(end - at) : "--:--";
-
-    document.getElementById("replayPlay").title =
-        replay.isLoading() ? "Loading" : replay.isPlaying() ? "Pause" : "Play";
+    const atSec = hasHistory ? Math.floor(at) : -1;
+    if (shown.atSec !== atSec || shown.start !== start || shown.end !== end) {
+        shown.atSec = atSec;
+        shown.start = start;
+        shown.end = end;
+        ui.elapsed.textContent = hasHistory ? replayStamp(at, end - start) : "--:--";
+        ui.elapsed.title = hasHistory ? new Date(at * 1000).toLocaleString() : "";
+        ui.remaining.textContent = hasHistory ? "-" + replayRemain(end - at) : "--:--";
+    }
 }
 
 async function ToggleTrackOnMap(m) {
@@ -5283,8 +5382,6 @@ function updateSettingsTab() {
     document.getElementById("settings_show_range").checked = settings.show_range;
     document.getElementById("settings_distance_circle_color").value = settings.distance_circle_color;
 
-    document.getElementById("settings_tooltipLabelFontsize").value = settings.tooltipLabelFontSize;
-
     document.getElementById("settings_show_labels").value = settings.show_labels.toLowerCase();
 
     document.getElementById("settings_binary_messages").value = settings.binary_messages;
@@ -5313,11 +5410,6 @@ function updateSettingsTab() {
     updateSliderDisplay('shipoutlineOpacity', settings.shipoutline_opacity);
     updateSliderDisplay('circleScale', settings.circle_scale || 6.0);
 
-    document.getElementById("settings_tooltipLabelColor").value = settings.tooltipLabelColor;
-    document.getElementById("settings_tooltipLabelShadowColor").value = settings.tooltipLabelShadowColor;
-
-    document.getElementById("settings_tooltipLabelColorDark").value = settings.tooltipLabelColorDark;
-    document.getElementById("settings_tooltipLabelShadowColorDark").value = settings.tooltipLabelShadowColorDark;
     document.getElementById("settings_table_shiptype_use_icon").checked = settings.table_shiptype_use_icon;
     document.getElementById("settings_show_track_on_hover").checked = settings.show_track_on_hover;
     document.getElementById("settings_show_track_on_select").checked = settings.show_track_on_select;
@@ -5587,7 +5679,8 @@ addOverlayLayer("NOAA", new ol.layer.Tile({
             'TRANSPARENT': 'true',
             'VERSION': '1.3.0'
         },
-        serverType: 'geoserver'
+        serverType: 'geoserver',
+        attributions: 'Charts: &copy; <a href="https://nauticalcharts.noaa.gov">NOAA</a>'
     })
 }));
 
@@ -5706,6 +5799,7 @@ replay.init({
     spriteFor,
     iconScale,
     fadeOpacity,
+    labelText: buildLabelText,
     spriteSheet: SpritesAll,
     setLiveLayers: setLiveLayersVisible,
     showNotification,
@@ -5769,6 +5863,9 @@ for (const [enabled, tab] of [
         document.getElementById(tab + "_tab_mini").style.display = "none";
     }
 }
+
+if (!config.features.replay)
+    document.querySelectorAll('.ctx-replay').forEach(el => { el.style.display = "none"; });
 
 showWelcome();
 kiosk.updateKiosk();

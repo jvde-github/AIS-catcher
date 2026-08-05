@@ -600,7 +600,11 @@ void WebViewer::startServing()
 	if (!initialized)
 	{
 		for (auto &s : states)
+		{
+			// config first: setup() sizes the track store from it
+			s->applyConfig(settings.tracking, filter);
 			s->setup();
+		}
 
 		states[0]->clear();
 		initialized = true;
@@ -871,16 +875,16 @@ const WebViewer::Route WebViewer::routes[] = {
 		 std::time_t since = (std::time_t)queryInt(a, "since");
 		 return since > 0 ? s->getAllPathJSONSince(since) : s->getAllPathJSON();
 	 }, true},
-	{"/api/replay_info.json", nullptr, "application/json",
+	{"/api/replay_info.json", &WebViewer::Settings::replay, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
 	 { return s->getReplayInfoJSON(REPLAY_BLOCK); }, true},
-	{"/api/replay_ships.json", nullptr, "application/json",
+	{"/api/replay_ships.json", &WebViewer::Settings::replay, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 {
 		 return s->getReplayShipsJSON((std::time_t)queryInt(a, "since"),
 									  (std::time_t)queryInt(a, "lookback"));
 	 }, true},
-	{"/api/replay.json", nullptr, "application/json",
+	{"/api/replay.json", &WebViewer::Settings::replay, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 {
 		 long long block = queryInt(a, "block");
@@ -1138,6 +1142,13 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 		break;
 	case AIS::KEY_SETTING_TRACK_MEMORY:
 		settings.tracking.track_memory = Util::Parse::Integer(arg, 16, 256 * 1024);
+		break;
+	case AIS::KEY_SETTING_REPLAY:
+		settings.replay = Util::Parse::Switch(arg);
+		frontend.setReplay(settings.replay);
+		break;
+	case AIS::KEY_SETTING_REPLAY_TIME:
+		settings.tracking.replay_time = Util::Parse::Integer(arg, 0, 7 * 24 * 3600);
 		break;
 	case AIS::KEY_SETTING_EXPIRE:
 		settings.tracking.expire_fields = Util::Parse::Switch(arg);

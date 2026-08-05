@@ -29,8 +29,7 @@
 #include "JSON.h"
 #include "Writer.h"
 
-// validate ship and path structures once a minute
-#define CHECK_DB_INTEGRITY
+// define CHECK_DB_INTEGRITY to validate ship and path structures once a minute
 
 #include "Ships.h"
 #include "SlotTable.h"
@@ -66,6 +65,10 @@ class DB : public StreamIn<JSON::JSON>,
 	std::string content;
 	float station_lat = LAT_UNDEFINED, station_lon = LON_UNDEFINED;
 	int time_history = 30 * 60;
+	// caps how far back replay may serve, 0 is unlimited
+	int replay_time = 3600;
+	// newest last_signal among recycled ships: older scenes are missing vessels
+	std::time_t evict_horizon = 0;
 	bool latlon_share = false;
 	bool server_mode = false;
 	bool msg_save = false;
@@ -86,13 +89,6 @@ class DB : public StreamIn<JSON::JSON>,
 	PathStore paths;
 
 	std::mutex mtx;
-
-	struct PathPt
-	{
-		float lat, lon;
-		uint32_t time, end;
-	};
-	std::vector<PathPt> path_scratch;
 
 	void updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship, bool allowApproximate, bool &positionUpdated, bool &staticUpdated);
 
@@ -116,8 +112,17 @@ class DB : public StreamIn<JSON::JSON>,
 		});
 	}
 
-	void writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since = 0, std::time_t until = 0, bool seed = false);
+	void writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since = 0, std::time_t until = 0);
 	void writeSinglePathGeoJSON(int ptr, JSON::Writer &w);
+
+	// Oldest time replay may serve, 0 when unbounded: the replay_time cap,
+	// never reaching past the eviction horizon — every vessel that transmitted
+	// after the horizon is still in the table, so scenes above it are complete.
+	std::time_t replayFloor(std::time_t now) const
+	{
+		std::time_t cutoff = replay_time > 0 && now > replay_time ? now - replay_time : 0;
+		return cutoff > evict_horizon ? cutoff : evict_horizon;
+	}
 
 	// Shared scaffolding for the replay endpoints: eligibility reaches back by
 	// `lookback` past the window start, so a vessel silent since before the
@@ -159,6 +164,7 @@ public:
 	void setup();
 	void tick(std::time_t now);
 	void setTimeHistory(int t) { time_history = t; }
+	void setReplayTime(int t) { replay_time = t; }
 	void setExpireFields(bool b) { expire_fields = b; }
 	void setTrackMemory(int kb) { if (kb > 0) track_memory_kb = kb; }
 	void setShareLatLon(bool b) { latlon_share = b; }
@@ -209,8 +215,8 @@ public:
 	std::string getAllPathJSON();
 	std::string getAllPathJSONSince(std::time_t since);
 	std::string getReplayInfoJSON(std::time_t block);
-	std::string getReplayShipsJSON(std::time_t since, std::time_t lookback = 0);
-	std::string getReplayJSON(std::time_t since, std::time_t until, std::time_t lookback = 0);
+	std::string getReplayShipsJSON(std::time_t since, std::time_t lookback);
+	std::string getReplayJSON(std::time_t since, std::time_t until, std::time_t lookback);
 	std::string getPathGeoJSON(uint32_t);
 	std::string getAllPathGeoJSON();
 	std::string getMessage(uint32_t);

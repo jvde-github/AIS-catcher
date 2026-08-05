@@ -177,24 +177,28 @@ std::string DB::getAllPathJSON()
 
 // Points are newest first, so the walk skips past the window, emits while it
 // overlaps and stops once clear of it. A dwell point is emitted by every window
-// its [time, end] span touches. `seed` also emits the first point wholly before
-// the window — where the vessel was when it opened — without which a chunk
-// cannot draw a ship that last reported before it began.
-void DB::writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since, std::time_t until, bool seed)
+// its [time, end] span touches. A windowed walk (until > 0) also emits the
+// first point wholly before the window — where the vessel was when it opened —
+// without which a chunk cannot draw a ship that last reported before it began.
+void DB::writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since, std::time_t until)
 {
+	auto emit = [&](const PathStore::Point &p) {
+		w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.end()).val_unless(p.sog, PathStore::NA).endArray();
+	};
+
 	w.beginArray();
 	for (uint32_t r = paths.tail(ptr); PathStore::isPoint(r); r = paths.at(r).prev)
 	{
 		const PathStore::Point &p = paths.at(r);
 		if ((std::time_t)p.end() < since)
 		{
-			if (seed)
-				w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.end()).val_unless(p.sog, PathStore::NA).endArray();
+			if (until > 0)
+				emit(p);
 			break;
 		}
 
 		if (until <= 0 || (std::time_t)p.time <= until)
-			w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.end()).val_unless(p.sog, PathStore::NA).endArray();
+			emit(p);
 	}
 	w.endArray();
 }
@@ -220,8 +224,6 @@ std::string DB::getAllPathJSONSince(std::time_t since)
 	return content;
 }
 
-// Only the oldest and newest blocks are inspected, so this is cheap enough to
-// call whenever the replay panel opens.
 std::string DB::getReplayInfoJSON(std::time_t block)
 {
 	std::lock_guard<std::mutex> lock(mtx);
@@ -230,19 +232,37 @@ std::string DB::getReplayInfoJSON(std::time_t block)
 	{
 		JSON::Writer w(content, 256);
 
-		// `newest` is the end of the replayable timeline, which trails `now` by
-		// however long the feed has been quiet — the viewer needs it to size a
-		// scrubber before it has fetched any of the track data. `block` is the
-		// chunk size of the addressing scheme, so the client never has to hard-
-		// code the server's value.
-		uint32_t oldest, newest;
-		paths.bounds(oldest, newest);
+		std::time_t now = time(nullptr);
+
+		// bounds of the replayable timeline, 0 when empty; `newest` trails
+		// `now` while the feed is quiet
+		uint32_t oldest = 0, newest = 0;
+		ships.forEach([&](int ptr) {
+			uint32_t h = paths.head(ptr);
+			if (PathStore::isPoint(h))
+			{
+				uint32_t t = paths.at(h).time;
+				uint32_t e = paths.at(paths.tail(ptr)).end();
+				if (oldest == 0 || t < oldest)
+					oldest = t;
+				if (e > newest)
+					newest = e;
+			}
+			return true;
+		});
+
+		// the client only asks for blocks within the bounds it is given
+		std::time_t cutoff = replayFloor(now);
+		if (oldest && (std::time_t)oldest < cutoff)
+			oldest = (uint32_t)cutoff;
 
 		w.beginObject()
-			.kv("now", (std::time_t)time(nullptr))
+			.kv("now", now)
 			.kv("oldest", oldest)
 			.kv("newest", newest)
 			.kv("block", block)
+			.kv("granularity", (int)PathStore::GRANULARITY)
+			.kv("dwell_gap", (int)PathStore::DWELL_GAP)
 			.endObject();
 		w.raw("\n\n");
 	}
@@ -254,10 +274,12 @@ std::string DB::getReplayInfoJSON(std::time_t block)
 // ago is what a replay of that period wants.
 std::string DB::getReplayShipsJSON(std::time_t since, std::time_t lookback)
 {
+	since = MAX(since, replayFloor(time(nullptr)));
 	return getReplayObjectJSON(since, lookback, [](JSON::Writer &w, int, const Ship &ship) {
 		w.key(ship.mmsi).beginObject()
 			.kv("c", ship.shipclass)
 			.kv("n", ship.shipname)
+			.kv("f", ship.country_code)
 			.kv_unless("b", ship.to_bow, DIMENSION_UNDEFINED)
 			.kv_unless("s", ship.to_stern, DIMENSION_UNDEFINED)
 			.endObject();
@@ -266,32 +288,32 @@ std::string DB::getReplayShipsJSON(std::time_t since, std::time_t lookback)
 
 std::string DB::getReplayJSON(std::time_t since, std::time_t until, std::time_t lookback)
 {
+	// a window that ends before the cutoff serves nothing
+	if (until < replayFloor(time(nullptr)))
+		return "{}\n\n";
+
 	return getReplayObjectJSON(since, lookback, [this, since, until](JSON::Writer &w, int ptr, const Ship &ship) {
 		w.key(ship.mmsi);
-		writeSinglePathJSONCompact(ptr, w, since, until, true);
+		writeSinglePathJSONCompact(ptr, w, since, until);
 	});
 }
 
 void DB::writeSinglePathGeoJSON(int ptr, JSON::Writer &w)
 {
-	path_scratch.clear();
+	w.beginObject().kv("type", "Feature").key("geometry").beginObject().kv("type", "LineString").key("coordinates").beginArray();
 	for (uint32_t r = paths.tail(ptr); PathStore::isPoint(r); r = paths.at(r).prev)
 	{
 		const PathStore::Point &p = paths.at(r);
-		path_scratch.push_back(PathPt{p.lat, p.lon, p.time, p.end()});
+		w.beginArray().val(p.lon).val(p.lat).endArray();
 	}
 
-	w.beginObject().kv("type", "Feature").key("geometry").beginObject().kv("type", "LineString").key("coordinates").beginArray();
-	for (const PathPt &p : path_scratch)
-		w.beginArray().val(p.lon).val(p.lat).endArray();
-
 	w.endArray().endObject().key("properties").beginObject().kv("mmsi", ships[ptr].mmsi).key("timestamps_start").beginArray();
-	for (const PathPt &p : path_scratch)
-		w.val(p.time);
+	for (uint32_t r = paths.tail(ptr); PathStore::isPoint(r); r = paths.at(r).prev)
+		w.val(paths.at(r).time);
 
 	w.endArray().key("timestamps_end").beginArray();
-	for (const PathPt &p : path_scratch)
-		w.val(p.end);
+	for (uint32_t r = paths.tail(ptr); PathStore::isPoint(r); r = paths.at(r).prev)
+		w.val(paths.at(r).end());
 
 	w.endArray().endObject().endObject();
 }
@@ -792,6 +814,9 @@ int DB::claimShip(uint32_t mmsi)
 	if (ptr == SHIP_NIL)
 	{
 		ptr = ships.create(mmsi);
+		// the recycled record still holds the evicted ship
+		if (ships[ptr].last_signal > evict_horizon)
+			evict_horizon = ships[ptr].last_signal;
 		paths.wipe(ptr);
 		ships[ptr].reset();
 	}

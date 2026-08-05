@@ -531,7 +531,7 @@
     };
 
     const SECTION_ORDER = ['Label', 'Connection', 'Station', 'Location', 'Format',
-        'Options', 'Retention', 'Service', 'Backup', 'Storage', 'Features', 'Filter', 'Zones'];
+        'Options', 'Retention', 'Service', 'Replay', 'Backup', 'Storage', 'Features', 'Filter', 'Zones'];
 
     const Styles = {
         input: 'input',
@@ -1160,8 +1160,7 @@
                     if (!bySection.has(key)) bySection.set(key, []);
                     bySection.get(key).push(f);
                 });
-                const order = this.config.sectionOrder || SECTION_ORDER;
-                const rank = k => { const i = order.indexOf(k); return i === -1 ? order.length : i; };
+                const rank = k => { const i = SECTION_ORDER.indexOf(k); return i === -1 ? SECTION_ORDER.length : i; };
                 [...bySection.keys()].sort((a, b) => rank(a) - rank(b))
                     .forEach(k => ordered.push(bySection.get(k)));
 
@@ -1234,7 +1233,8 @@
                     'Add Item'));
             }
 
-            btnGroup.appendChild(el('button', 'btn is-disabled sys-save', {
+            btnGroup.appendChild(el('button',
+                App.state.unsaved ? Styles.saveActive : Styles.saveInactive, {
                 type: 'button', dataset: { saveBtn: 'true' }, onClick: () => this.save()
             }, 'Save'));
 
@@ -1245,7 +1245,6 @@
                 this.container.parentElement.appendChild(btnGroup);
             }
 
-            if (App.state.unsaved) App.setUnsaved(true);
         }
 
         // Each manager owns its own JSON disclosure (ids keyed by containerId)

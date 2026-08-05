@@ -722,7 +722,7 @@
 						<path
 							d="M160-240q-33 0-56.5-23.5T80-320v-320q0-33 23.5-56.5T160-720h640q33 0 56.5 23.5T880-640v320q0 33-23.5 56.5T800-240H160Zm0-80h640v-320H680v160h-80v-160h-80v160h-80v-160h-80v160h-80v-160H160v320Zm120-160h80-80Zm160 0h80-80Zm160 0h80-80Zm-120 0Z" />
 					</svg>Measure distance</li>
-				<li class="ctx-map" data-action="toggleReplaycard"><i class="play_arrow_icon"></i>Replay</li>
+				<li class="ctx-map ctx-replay" data-action="toggleReplaycard"><i class="play_arrow_icon"></i>Replay</li>
 				<li class="ctx-map ctx-removealltracks" data-action="resetTracksFromNow"><i
 						class="timeline_icon"></i>Reset tracks (from now)</li>
 				<li class="ctx-map ctx-removealltracks" data-action="deleteAllTracks"><i
@@ -731,6 +731,7 @@
 						id="ctx_fireworks"></span></li>
 				<li class="ctx-map" data-action="toggleLabel"><i class="label_icon"></i><span id="ctx_labelswitch"></span>
 				</li>
+				<li class="ctx-map" data-action="toggleAttribution"><i class="info_icon"></i>Map attribution</li>
 				<li class="ctx-map" data-action="toggleKioskMode"><i class="jamboard_kiosk_icon"></i>Toggle Kiosk Mode
 					</li>
 					<li class="ctx-map" data-action="toggleCommunityPane"><i class="public_icon"></i>Toggle Community Pane
@@ -1342,6 +1343,17 @@
 					<button id="replaySpeed" data-action="replayCycleSpeed" class="replaybar-speed"
 						title="Playback speed">60&times;</button>
 
+					<button id="replayLabels" data-action="replayToggleLabels" class="replaybar-labels"
+						title="Show ship labels" aria-label="Show ship labels" aria-pressed="false">
+						<svg class="replay-icon-labels-on" viewBox="0 -960 960 960" aria-hidden="true">
+							<path d="M840-480 666-234q-11 16-28.5 25t-37.5 9H200q-33 0-56.5-23.5T120-280v-400q0-33 23.5-56.5T200-760h400q20 0 37.5 9t28.5 25l174 246Zm-98 0L602-680H200v400h402l140-200Z" />
+						</svg>
+						<svg class="replay-icon-labels-off" viewBox="0 -960 960 960" aria-hidden="true">
+							<path d="M840-480 666-234q-11 16-28.5 25t-37.5 9H200q-33 0-56.5-23.5T120-280v-400q0-33 23.5-56.5T200-760h400q20 0 37.5 9t28.5 25l174 246Zm-98 0L602-680H200v400h402l140-200Z" />
+							<path d="M160-800 800-160" fill="none" stroke="currentColor" stroke-width="70" stroke-linecap="round" />
+						</svg>
+					</button>
+
 					<button data-action="toggleReplaycard" class="replaybar-close" title="Close replay"
 						aria-label="Close replay">
 						<svg viewBox="0 -960 960 960" aria-hidden="true">
@@ -1557,6 +1569,13 @@
 								d="M158-200 82-468q-3-12 2.5-28t23.5-22l52-18v-184q0-33 23.5-56.5T240-800h120v-120h240v120h120q33 0 56.5 23.5T800-720v184l52 18q21 8 25 23.5t1 26.5l-76 268q-50 0-91-23.5T640-280q-30 33-71 56.5T480-200q-48 0-89-23.5T320-280q-30 33-71 56.5T158-200ZM80-40v-80h80q42 0 83-13t77-39q36 26 77 38t83 12q42 0 83-12t77-38q36 26 77 39t83 13h80v80h-80q-42 0-82-10t-78-30q-38 20-78.5 30T480-40q-41 0-81.5-10T320-80q-38 20-78 30t-82 10H80Zm160-522 240-78 240 78v-158H240v158Z" />
 						</svg>
 					</button>
+					<button title="Replay tracks" type="button" data-action="toggleReplaycard"
+						class="btn btn-primary map-button color-grey ctx-replay">
+						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+							<path
+								d="M480-120q-138 0-240.5-91.5T122-440h82q14 104 92.5 172T480-200q117 0 198.5-81.5T760-480q0-117-81.5-198.5T480-760q-69 0-129 32t-101 88h110v80H120v-240h80v94q51-64 124.5-99T480-840q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-480q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-120Zm112-192L440-464v-216h80v184l128 128-56 56Z" />
+						</svg>
+					</button>
 					<button title="Settings" type="button" data-action="mapSettingsContextMenu"
 						class="btn btn-primary map-button color-grey">
 						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
@@ -1596,8 +1615,7 @@
 					</svg>
 				</div>
 
-				<div id="map-attribution-foldout" class="ol-control ol-unselectable map-attribution-foldout"
-					style="display: none;">
+				<div id="map-attribution-foldout" class="ol-control ol-unselectable map-attribution-foldout">
 					<span id="map_attributions"></span>
 				</div>
 
@@ -1625,13 +1643,6 @@
 						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
 							<path
 								d="M480-118 120-398l66-50 294 228 294-228 66 50-360 280Zm0-202L120-600l360-280 360 280-360 280Zm0-280Zm0 178 230-178-230-178-230 178 230 178Z" />
-						</svg>
-					</button>
-					<button title="Map attribution" type="button" data-action="toggleAttribution"
-						class="btn btn-primary map-button color-grey">
-						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
-							<path
-								d="M440-280h80v-240h-80v240Zm40-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z" />
 						</svg>
 					</button>
 				</div>

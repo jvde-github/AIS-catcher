@@ -603,8 +603,10 @@ a:focus {
     height: 15px !important;
 }
 
-/* Attribution fold-out, opened from the (i) button in the bottom control group */
 .map-attribution-foldout {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-slow, 400ms) ease;
     position: absolute;
     right: 54px;
     bottom: 30px;
@@ -620,7 +622,22 @@ a:focus {
     line-height: 1.4;
 }
 
+.map-attribution-foldout.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
 .map-attribution-foldout a {
+    color: inherit;
+}
+
+.map-attribution-note {
+    font-size: var(--fs-2xs);
+    line-height: 1.4;
+    color: var(--color-text-muted);
+}
+
+.map-attribution-note a {
     color: inherit;
 }
 
@@ -1422,9 +1439,21 @@ a:focus {
     cursor: pointer;
 }
 
+.overlay-row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.overlay-row .map-attribution-note {
+    grid-column: 2;
+    margin-top: -2px;
+}
+
 #overlayContainer label {
     cursor: pointer;
-    line-height: 1.9;
+    line-height: 1.5;
 }
 
 #overlayContainer label:hover {
@@ -2957,6 +2986,31 @@ a:focus {
     }
 }
 
+.replaybar-labels {
+    width: 28px;
+    height: 28px;
+    color: var(--color-text-muted);
+}
+
+.replaybar-labels.on {
+    color: var(--color-accent);
+    background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+    border-radius: var(--radius-full);
+}
+
+/* one button, two glyphs — open label when on, slashed when off */
+.replay-icon-labels-on {
+    display: none;
+}
+
+.replaybar-labels.on .replay-icon-labels-on {
+    display: block;
+}
+
+.replaybar-labels.on .replay-icon-labels-off {
+    display: none;
+}
+
 .replaybar-time {
     flex-shrink: 0;
     min-width: 52px;
@@ -3117,8 +3171,8 @@ a:focus {
         right: 0;
         bottom: 0;
         width: auto;
-        gap: 10px;
-        padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+        gap: 6px;
+        padding: 10px 8px calc(10px + env(safe-area-inset-bottom, 0px));
         border-radius: 0;
         transform: translateY(8px);
     }
@@ -3144,22 +3198,24 @@ a:focus {
     }
 
     .replaybar-time {
-        min-width: 44px;
-        font-size: 11px;
+        min-width: 38px;
+        font-size: 10px;
     }
 
     #replayElapsed {
-        min-width: 64px;
+        min-width: 38px;
     }
 
     .replaybar-speed {
-        min-width: 40px;
+        min-width: 32px;
         height: 28px;
+        font-size: 10px;
     }
 
-    /* Replay owns the screen on a phone: the map controls have nothing to act
-       on while history is being played back, and there is no room for both. */
-    body.replay-open .map-button-box {
-        display: none;
-    }
+}
+
+/* Replay owns the screen: the map controls have nothing to act on while
+   history is being played back. */
+body.replay-open .map-button-box {
+    display: none;
 }
