@@ -20,21 +20,21 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Source\Application\Config.cpp" />
-    <ClCompile Include="..\Source\Application\ControlCore.cpp" />
-    <ClCompile Include="..\Source\Application\ControlServer.cpp" />
+    <ClCompile Include="..\Source\Control\ControlCore.cpp" />
+    <ClCompile Include="..\Source\Control\ControlServer.cpp" />
     <ClCompile Include="..\Source\Application\DeviceManager.cpp" />
-    <ClCompile Include="..\Source\Application\BackupManager.cpp" />
+    <ClCompile Include="..\Source\Web\BackupManager.cpp" />
     <ClCompile Include="..\Source\Application\Engine.cpp" />
-    <ClCompile Include="..\Source\Application\FrontendConfig.cpp" />
+    <ClCompile Include="..\Source\Web\FrontendConfig.cpp" />
     <ClCompile Include="..\Source\Tracking\ReceiverTracker.cpp" />
     <ClCompile Include="..\Source\Application\CommandLine.cpp" />
     <ClCompile Include="..\Source\Application\Main.cpp" />
-    <ClCompile Include="..\Source\Application\ManagedMain.cpp" />
-    <ClCompile Include="..\Source\Application\MapTiles.cpp" />
-    <ClCompile Include="..\Source\Application\Prometheus.cpp" />
+    <ClCompile Include="..\Source\Control\ManagedMain.cpp" />
+    <ClCompile Include="..\Source\Web\MapTiles.cpp" />
+    <ClCompile Include="..\Source\Web\Prometheus.cpp" />
     <ClCompile Include="..\Source\Application\Receiver.cpp" />
-    <ClCompile Include="..\Source\Application\WebDB.cpp" />
-    <ClCompile Include="..\Source\Application\WebViewer.cpp" />
+    <ClCompile Include="..\Source\Web\WebDB.cpp" />
+    <ClCompile Include="..\Source\Web\WebViewer.cpp" />
     <ClCompile Include="..\Source\DBMS\PostgreSQL.cpp" />
     <ClCompile Include="..\Source\Device\AIRSPY.cpp" />
     <ClCompile Include="..\Source\Device\AIRSPYHF.cpp" />
@@ -86,26 +86,26 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Source\Application\AIS-catcher.h" />
-    <ClInclude Include="..\Source\Application\Prometheus.h" />
+    <ClInclude Include="..\Source\Web\Prometheus.h" />
     <ClInclude Include="..\Source\Application\Config.h" />
-    <ClInclude Include="..\Source\Application\ControlCore.h" />
-    <ClInclude Include="..\Source\Application\ControlServer.h" />
+    <ClInclude Include="..\Source\Control\ControlCore.h" />
+    <ClInclude Include="..\Source\Control\ControlServer.h" />
     <ClInclude Include="..\Source\Application\CommandLine.h" />
-    <ClInclude Include="..\Source\Application\ManagedMain.h" />
-    <ClInclude Include="..\Source\Application\BackupManager.h" />
+    <ClInclude Include="..\Source\Control\ManagedMain.h" />
+    <ClInclude Include="..\Source\Web\BackupManager.h" />
     <ClInclude Include="..\Source\Application\Engine.h" />
-    <ClInclude Include="..\Source\Application\FrontendConfig.h" />
+    <ClInclude Include="..\Source\Web\FrontendConfig.h" />
     <ClInclude Include="..\Source\Tracking\ReceiverTracker.h" />
     <ClInclude Include="..\Source\Application\DeviceManager.h" />
-    <ClInclude Include="..\Source\Application\WebDB.h" />
+    <ClInclude Include="..\Source\Web\WebDB.h" />
     <ClInclude Include="..\Source\Library\Logger.h" />
-    <ClInclude Include="..\Source\Application\WebViewer.h" />
+    <ClInclude Include="..\Source\Web\WebViewer.h" />
     <ClInclude Include="..\Source\Application\Receiver.h" />
     <ClInclude Include="..\Source\Tracking\Ships.h" />
     <ClInclude Include="..\Source\Tracking\DB.h" />
     <ClInclude Include="..\Source\DBMS\PostgreSQL.h" />
     <ClInclude Include="..\Source\IO\HTTPClient.h" />
-    <ClInclude Include="..\Source\Application\MapTiles.h" />
+    <ClInclude Include="..\Source\Web\MapTiles.h" />
     <ClInclude Include="..\Source\Aviation\Beast.h" />
     <ClInclude Include="..\Source\Device\Device.h" />
     <ClInclude Include="..\Source\Device\FileWAV.h" />
@@ -226,25 +226,25 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..;../Source;../Source/Application;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..;../Source;../Source/Application;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..;../Source;../Source/Application;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..;../Source;../Source/Application;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>

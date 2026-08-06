@@ -9,7 +9,7 @@ ba = "ba"
 [files]
 extend-exclude = [
     "msvc/",
-    "Source/Application/WebDB.cpp",
+    "Source/Web/WebDB.cpp",
     "Source/JSON/JSONAIS.cpp",
     "frontend/",
     "CMakeLists.txt",

@@ -14,7 +14,7 @@ export default [
       globals: {
         ...globals.browser,
 
-        // server-injected (Source/Application/WebViewer.cpp)
+        // server-injected (Source/Web/WebViewer.cpp)
         // window.__SERVER_CONFIG__ is the single source of truth; read via the
         // top-of-file `config` const. Listed here so eslint accepts the raw
         // window property reference.
