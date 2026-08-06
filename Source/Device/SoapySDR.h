@@ -24,6 +24,7 @@
 #include <SoapySDR/Modules.hpp>
 #include <SoapySDR/Registry.hpp>
 #include <SoapySDR/Device.hpp>
+#include <SoapySDR/Logger.hpp>
 
 namespace Device
 {
@@ -77,7 +78,7 @@ namespace Device
 		void applySettings();
 
 	public:
-		SOAPYSDR() : Device(Format::CF32, 0, Type::SOAPYSDR, "SoapySDR") {}
+		SOAPYSDR();
 
 		void Open(uint64_t h);
 		void Play();

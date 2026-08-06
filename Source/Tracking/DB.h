@@ -120,7 +120,7 @@ class DB : public StreamIn<JSON::JSON>,
 	std::time_t pathFloor(std::time_t now) const
 	{
 		std::time_t cutoff = track_time > 0 && now > track_time ? now - track_time : 0;
-		return cutoff > evict_horizon ? cutoff : evict_horizon;
+		return MAX(cutoff, evict_horizon);
 	}
 
 	// Shared scaffolding for the replay endpoints: eligibility reaches back by

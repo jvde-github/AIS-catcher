@@ -36,13 +36,14 @@ namespace Device {
 	static std::mutex api_mtx;
 	static bool api_open = false;
 
+	// never sdrplay_api_Close: not refcounted, double-frees after an in-process
+	// SoapySDRPlay3 open/close cycle
 	static bool ensureAPI() {
 		std::lock_guard<std::mutex> lock(api_mtx);
 
-		if (!api_open && sdrplay_api_Open() == sdrplay_api_Success) {
+		if (!api_open && sdrplay_api_Open() == sdrplay_api_Success)
 			api_open = true;
-			std::atexit([]() { sdrplay_api_Close(); });
-		}
+
 		return api_open;
 	}
 
@@ -58,7 +59,10 @@ namespace Device {
 		sdrplay_api_DeviceT devices[SDRPLAY_MAX_DEVICES];
 		sdrplay_api_GetDevices(devices, &DeviceCount, SDRPLAY_MAX_DEVICES);
 
-		if (h >= DeviceCount) throw std::runtime_error("SDRPLAY: cannot open device, handle not available.");
+		if (h >= DeviceCount) {
+			sdrplay_api_UnlockDeviceApi();
+			throw std::runtime_error("SDRPLAY: cannot open device, handle not available.");
+		}
 
 		device = devices[h];
 

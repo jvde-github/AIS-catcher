@@ -227,9 +227,18 @@
         return n;
     };
 
+    const pendingDebounces = new Set();
+
     const Utils = {
         el,
-        debounce: (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; },
+        debounce: (fn, ms) => {
+            let t, args;
+            const flush = () => { clearTimeout(t); pendingDebounces.delete(flush); fn(...args); };
+            const wrapped = (...a) => { args = a; clearTimeout(t); pendingDebounces.add(flush); t = setTimeout(flush, ms); };
+            wrapped.cancel = () => { clearTimeout(t); pendingDebounces.delete(flush); };
+            return wrapped;
+        },
+        flushDebounces: () => { [...pendingDebounces].forEach(f => f()); },
         getNested: (obj, path) => path?.split('.').reduce((a, p) => a?.[p], obj),
         setNested: (obj, path, val) => {
             const keys = path.split('.'), last = keys.pop();
@@ -644,6 +653,7 @@
         const sliderContainer = el('div', Styles.sliderContainer + (isOff ? ' hidden' : ''), {}, ...children);
 
         const setActive = (active) => {
+            if (!active) commit.cancel();
             sliderContainer.classList.toggle('hidden', !active);
             onUpdate(active ? opts.parse(slider.value) : opts.offValue);
         };
@@ -1251,18 +1261,27 @@
 
         ensureJsonUI() {
             const parent = this.container.parentElement;
-            if (!parent || document.getElementById(this.jsonPreId())) return;
+            if (!parent) return;
 
             const contentId = 'json-content-' + this.config.containerId;
             const chevronId = 'chevron-' + this.config.containerId;
+            const toggle = () => {
+                global.toggleJsonContent(contentId, chevronId);
+                if (this.jsonStale) this.updateJsonDebug();
+            };
+
+            const existingPre = document.getElementById(this.jsonPreId());
+            if (existingPre) {
+                // shared pane across sub-tabs: re-point the toggle at this manager
+                const section = existingPre.closest('[data-json-section]');
+                const btn = section && section.querySelector('button');
+                if (btn) btn.onclick = toggle;
+                return;
+            }
 
             const toggleDiv = el('div', 'sys-pane-inner sys-json-sep', { dataset: { jsonSection: '' } });
-            const btn = el('button', 'row t-muted clickable', {
-                type: 'button', onClick: () => {
-                    global.toggleJsonContent(contentId, chevronId);
-                    if (this.jsonStale) this.updateJsonDebug();
-                }
-            });
+            const btn = el('button', 'row t-muted clickable', { type: 'button' });
+            btn.onclick = toggle;
 
             const chevron = Icons.chevronDown('icon-sm t-subtle sys-rotates', { id: chevronId });
 
@@ -1376,6 +1395,8 @@
         }
 
         async save() {
+            Utils.flushDebounces();
+
             const saveBtn = this.container.parentElement.querySelector(`.controls-${this.config.containerId} [data-save-btn]`);
 
             if (saveBtn) {

@@ -116,8 +116,14 @@ public:
 
 		if (!(readInteger(file, tmp, 0x4f80b) && readInteger(file, tmp, 1) && readInteger(file, tmp, /*sizeof(history)*/ -1) && readInteger(file, tmp, INTERVAL) && readInteger(file, tmp, N))) return false;
 
-		readInteger(file, start, -1);
-		readInteger(file, end, -1);
+		int start_in, end_in;
+		readInteger(file, start_in, -1);
+		readInteger(file, end_in, -1);
+
+		if (start_in < 0 || start_in >= N || end_in < 0 || end_in >= N) return false;
+
+		start = start_in;
+		end = end_in;
 
 		for (int i = 0; i < N; i++) {
 			if (!file.read((char*)&history[i].time, sizeof(history[i].time))) return false;

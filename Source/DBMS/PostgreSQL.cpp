@@ -357,12 +357,12 @@ namespace IO
 	{
 		while (!terminate)
 		{
-			for (int i = 0; !terminate && i < (conn_fails == 0 ? INTERVAL : 2) && message_queue.size() < MAX_QUEUE_SIZE / 2; i++)
+			for (int i = 0; !terminate && i < (conn_fails == 0 ? INTERVAL : 2) && queueSize() < MAX_QUEUE_SIZE / 2; i++)
 			{
 				SleepSystem(1000);
 			}
 
-			if (!message_queue.empty())
+			if (queueSize() > 0)
 				post();
 
 			if (terminate)
@@ -395,11 +395,14 @@ namespace IO
 		PGresult *res = PQexec(con, "SELECT key_id, key_str FROM ais_keys");
 		if (PQresultStatus(res) != PGRES_TUPLES_OK)
 		{
-			throw std::runtime_error("DBMS: error fetching ais_keys table: " + std::string(PQerrorMessage(con)));
+			std::string err = PQerrorMessage(con);
+			PQclear(res);
+			throw std::runtime_error("DBMS: error fetching ais_keys table: " + err);
 		}
 
 		int key_count = 0;
-		for (int row = 0; row < PQntuples(res); row++)
+		std::string unknown_key;
+		for (int row = 0; row < PQntuples(res) && unknown_key.empty(); row++)
 		{
 			int id = atoi(PQgetvalue(res, row, 0));
 			std::string name = PQgetvalue(res, row, 1);
@@ -416,8 +419,12 @@ namespace IO
 				}
 			}
 			if (!found)
-				throw std::runtime_error("DBMS: The requested key \"" + name + "\" in ais_keys is not defined.");
+				unknown_key = name;
 		}
+		PQclear(res);
+
+		if (!unknown_key.empty())
+			throw std::runtime_error("DBMS: The requested key \"" + unknown_key + "\" in ais_keys is not defined.");
 
 		if (key_count > 0 && !MSGS)
 		{

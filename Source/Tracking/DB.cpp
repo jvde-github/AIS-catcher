@@ -659,58 +659,6 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	return positionUpdated;
 }
 
-static bool isBinaryContent(const JSON::Member &p)
-{
-	switch (p.Key())
-	{
-	case AIS::KEY_TEXT:
-	{
-		// getText trims the '@'/space padding, so a pure-padding broadcast is
-		// empty. ONWA transponders broadcast their on/off state as text, which
-		// is status rather than anything worth listing.
-		const std::string &t = p.Get().getString();
-		return !t.empty() && t != "ONWAON" && t != "ONWAOFF";
-	}
-	case AIS::KEY_CREW_COUNT:
-	case AIS::KEY_PASSENGER_COUNT:
-	case AIS::KEY_SHIPBOARD_PERSONNEL_COUNT:
-	case AIS::KEY_WSPEED:
-	case AIS::KEY_WGUST:
-	case AIS::KEY_WDIR:
-	case AIS::KEY_WGUSTDIR:
-	case AIS::KEY_AIRTEMP:
-	case AIS::KEY_HUMIDITY:
-	case AIS::KEY_DEWPOINT:
-	case AIS::KEY_PRESSURE:
-	case AIS::KEY_PRESSURETEND:
-	case AIS::KEY_VISIBILITY:
-	case AIS::KEY_WATERLEVEL:
-	case AIS::KEY_LEVELTREND:
-	case AIS::KEY_CSPEED:
-	case AIS::KEY_CDIR:
-	case AIS::KEY_CSPEED2:
-	case AIS::KEY_CDIR2:
-	case AIS::KEY_CDEPTH2:
-	case AIS::KEY_CSPEED3:
-	case AIS::KEY_CDIR3:
-	case AIS::KEY_CDEPTH3:
-	case AIS::KEY_WAVEHEIGHT:
-	case AIS::KEY_WAVEPERIOD:
-	case AIS::KEY_WAVEDIR:
-	case AIS::KEY_SWELLHEIGHT:
-	case AIS::KEY_SWELLPERIOD:
-	case AIS::KEY_SWELLDIR:
-	case AIS::KEY_SEASTATE:
-	case AIS::KEY_WATERTEMP:
-	case AIS::KEY_PRECIPTYPE:
-	case AIS::KEY_SALINITY:
-	case AIS::KEY_ICE:
-		return true;
-	default:
-		return false;
-	}
-}
-
 void DB::processBinaryMessage(const JSON::JSON &data)
 {
 	const AIS::Message *msg = (AIS::Message *)data.binary;
@@ -721,40 +669,84 @@ void DB::processBinaryMessage(const JSON::JSON &data)
 	if (type != 6 && type != 8)
 		return;
 
-	BinaryMessage &binmsg = binary_messages[binary_msg_index];
-	binmsg.Clear();
+	int dac = -1, fi = -1;
 
-	binmsg.type = type;
-
-	// Extract DAC and FI from message
 	for (const auto &p : data.getMembers())
 	{
-		if (p.Key() == AIS::KEY_DAC)
+		switch (p.Key())
 		{
-			binmsg.dac = p.Get().getInt();
-		}
-		else if (p.Key() == AIS::KEY_FID)
-		{
-			binmsg.fi = p.Get().getInt();
-		}
-		else if (p.Key() == AIS::KEY_LAT)
-		{
+		case AIS::KEY_DAC:
+			dac = p.Get().getInt();
+			break;
+		case AIS::KEY_FID:
+			fi = p.Get().getInt();
+			break;
+		case AIS::KEY_LAT:
 			loc_lat = p.Get().getFloat();
-		}
-		else if (p.Key() == AIS::KEY_LON)
-		{
+			break;
+		case AIS::KEY_LON:
 			loc_lon = p.Get().getFloat();
-		}
-		else if (isBinaryContent(p))
+			break;
+		case AIS::KEY_TEXT:
 		{
+			// getText trims the '@'/space padding, so a pure-padding broadcast is
+			// empty. ONWA transponders broadcast their on/off state as text, which
+			// is status rather than anything worth listing.
+			const std::string &t = p.Get().getString();
+			if (!t.empty() && t != "ONWAON" && t != "ONWAOFF")
+				has_content = true;
+			break;
+		}
+		case AIS::KEY_CREW_COUNT:
+		case AIS::KEY_PASSENGER_COUNT:
+		case AIS::KEY_SHIPBOARD_PERSONNEL_COUNT:
+		case AIS::KEY_WSPEED:
+		case AIS::KEY_WGUST:
+		case AIS::KEY_WDIR:
+		case AIS::KEY_WGUSTDIR:
+		case AIS::KEY_AIRTEMP:
+		case AIS::KEY_HUMIDITY:
+		case AIS::KEY_DEWPOINT:
+		case AIS::KEY_PRESSURE:
+		case AIS::KEY_PRESSURETEND:
+		case AIS::KEY_VISIBILITY:
+		case AIS::KEY_WATERLEVEL:
+		case AIS::KEY_LEVELTREND:
+		case AIS::KEY_CSPEED:
+		case AIS::KEY_CDIR:
+		case AIS::KEY_CSPEED2:
+		case AIS::KEY_CDIR2:
+		case AIS::KEY_CDEPTH2:
+		case AIS::KEY_CSPEED3:
+		case AIS::KEY_CDIR3:
+		case AIS::KEY_CDEPTH3:
+		case AIS::KEY_WAVEHEIGHT:
+		case AIS::KEY_WAVEPERIOD:
+		case AIS::KEY_WAVEDIR:
+		case AIS::KEY_SWELLHEIGHT:
+		case AIS::KEY_SWELLPERIOD:
+		case AIS::KEY_SWELLDIR:
+		case AIS::KEY_SEASTATE:
+		case AIS::KEY_WATERTEMP:
+		case AIS::KEY_PRECIPTYPE:
+		case AIS::KEY_SALINITY:
+		case AIS::KEY_ICE:
 			has_content = true;
+			break;
+		default:
+			break;
 		}
 	}
 
-	const bool is_text = binmsg.dac == 1 && (binmsg.fi == 0 || binmsg.fi == 29 || binmsg.fi == 30);
-	const bool is_stored_type = is_text || (binmsg.dac == 1 && binmsg.fi == 31) || (binmsg.dac == 200 && binmsg.fi == 55);
+	const bool is_text = dac == 1 && (fi == 0 || fi == 29 || fi == 30);
+	const bool is_stored_type = is_text || (dac == 1 && fi == 31) || (dac == 200 && fi == 55);
 	if (is_stored_type && has_content)
 	{
+		BinaryMessage &binmsg = binary_messages[binary_msg_index];
+		binmsg.Clear();
+		binmsg.type = type;
+		binmsg.dac = dac;
+		binmsg.fi = fi;
 		binmsg.json.clear();
 		builder.stringify(data, binmsg.json);
 		binmsg.used = true;
@@ -810,8 +802,7 @@ int DB::claimShip(uint32_t mmsi)
 	{
 		ptr = ships.create(mmsi);
 		// the recycled record still holds the evicted ship
-		if (ships[ptr].last_signal > evict_horizon)
-			evict_horizon = ships[ptr].last_signal;
+		evict_horizon = MAX(evict_horizon, ships[ptr].last_signal);
 		paths.wipe(ptr);
 		ships[ptr].reset();
 	}

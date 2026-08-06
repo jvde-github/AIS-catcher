@@ -26,6 +26,35 @@ namespace Device {
 	//---------------------------------------
 	// Device SOAPYSDR
 
+	// route Soapy module logs into our Logger; INFO is per-device chatter -> Debug
+	static void logHandler(const SoapySDRLogLevel level, const char* message) {
+		switch (level) {
+		case SOAPY_SDR_FATAL:
+		case SOAPY_SDR_CRITICAL:
+		case SOAPY_SDR_ERROR:
+			Error() << "SOAPYSDR: " << message;
+			break;
+		case SOAPY_SDR_WARNING:
+			Warning() << "SOAPYSDR: " << message;
+			break;
+		default:
+			Debug() << "SOAPYSDR: " << message;
+			break;
+		}
+	}
+
+	static void registerLogHandler() {
+		static bool registered = false;
+		if (!registered) {
+			SoapySDR::registerLogHandler(&logHandler);
+			registered = true;
+		}
+	}
+
+	SOAPYSDR::SOAPYSDR() : Device(Format::CF32, 0, Type::SOAPYSDR, "SoapySDR") {
+		registerLogHandler();
+	}
+
 	void SOAPYSDR::Open(uint64_t h) {
 		Device::Open(h);
 		if (h < dev_list.size()) {

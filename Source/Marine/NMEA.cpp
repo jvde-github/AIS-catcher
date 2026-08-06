@@ -246,13 +246,21 @@ namespace AIS
 			}
 
 			float minutes = (float)atof(nmeaPos);
-			if (minutes == 0 && nmeaPos[0] != '0')
+			if ((minutes == 0 && nmeaPos[0] != '0') || minutes >= 60.0f)
 			{
 				error |= true;
 				return 0;
 			}
 
 			v = degrees + minutes / 60.0;
+
+			float limit = (quadrant == 'N' || quadrant == 'S') ? 90.0f : 180.0f;
+			if (v > limit)
+			{
+				error |= true;
+				return 0;
+			}
+
 			if (quadrant == 'W' || quadrant == 'S')
 				v = -v;
 		}

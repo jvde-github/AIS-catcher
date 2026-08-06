@@ -34,6 +34,8 @@ namespace IO
 		return buf;
 	}
 
+	const int HTTPServer::SSE_PING_INTERVAL;
+
 	// HTTP Server
 	void HTTPServer::processClients()
 	{

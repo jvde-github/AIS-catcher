@@ -21,6 +21,7 @@
 
 #ifdef HASPSQL
 
+#include <atomic>
 #include <fstream>
 #include <iostream>
 #include <thread>
@@ -46,7 +47,7 @@ namespace IO
 
 		PGconn *con = nullptr;
 		std::vector<int> db_keys;
-		bool terminate = false, running = false;
+		std::atomic<bool> terminate{false}, running{false};
 
 		struct QueuedEntry
 		{
@@ -75,6 +76,12 @@ namespace IO
 		std::thread run_thread;
 
 		std::mutex queue_mutex;
+
+		size_t queueSize()
+		{
+			const std::lock_guard<std::mutex> lock(queue_mutex);
+			return message_queue.size();
+		}
 
 		int INTERVAL = 10;
 
