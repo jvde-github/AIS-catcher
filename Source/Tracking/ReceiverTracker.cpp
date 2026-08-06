@@ -26,7 +26,7 @@ void ReceiverTracker::applyConfig(const TrackingConfig &cfg, const AIS::Filter &
 	ships.setMsgSave(cfg.msg_save);
 	ships.setOwnMMSI(cfg.own_mmsi);
 	ships.setTimeHistory(cfg.time_history);
-	ships.setReplayTime(cfg.replay_time);
+	ships.setTrackTime(cfg.track_time);
 	ships.setExpireFields(cfg.expire_fields);
 	ships.setTrackMemory(cfg.track_memory);
 	ships.setFilter(f);
@@ -58,9 +58,8 @@ void ReceiverTracker::wireStreams()
 	ships >> counter_session;
 }
 
-void ReceiverTracker::clear()
+void ReceiverTracker::clearHistories()
 {
-	counter.Clear();
 	counter_session.Clear();
 	hist_second.Clear();
 	hist_minute.Clear();
@@ -68,13 +67,15 @@ void ReceiverTracker::clear()
 	hist_day.Clear();
 }
 
+void ReceiverTracker::clear()
+{
+	counter.Clear();
+	clearHistories();
+}
+
 void ReceiverTracker::reset()
 {
-	counter_session.Clear();
-	hist_second.Clear();
-	hist_minute.Clear();
-	hist_hour.Clear();
-	hist_day.Clear();
+	clearHistories();
 	ships.setup();
 }
 
@@ -176,11 +177,16 @@ void ReceiverTracker::writeSummary(std::ostream &out)
 	counter_session.print(out, "  ");
 }
 
+static std::string orDash(const std::string &s)
+{
+	return s.empty() ? "-" : s;
+}
+
 // How a device names itself. attachEngine() needs this before it has a tracker to
 // put it in, because the name is what identifies a tracker across engine runs.
 std::string deviceLabel(Device::Device *device)
 {
-	const std::string serial = device->getSerial().empty() ? "-" : device->getSerial();
+	const std::string serial = orDash(device->getSerial());
 
 	if (serial == ".")
 		return "Console";
@@ -195,8 +201,8 @@ std::string deviceLabel(Device::Device *device)
 void ReceiverTracker::setDevice(Device::Device *device)
 {
 	product = device->getProduct();
-	vendor = device->getVendor().empty() ? "-" : device->getVendor();
-	serial = device->getSerial().empty() ? "-" : device->getSerial();
+	vendor = orDash(device->getVendor());
+	serial = orDash(device->getSerial());
 	sample_rate = device->getRateDescription();
 
 	label = deviceLabel(device);
@@ -205,7 +211,7 @@ void ReceiverTracker::setDevice(Device::Device *device)
 void ReceiverTracker::appendDevice(Device::Device *device, const std::string &newline)
 {
 	product += device->getProduct() + newline;
-	vendor += (device->getVendor().empty() ? "-" : device->getVendor()) + newline;
-	serial += (device->getSerial().empty() ? "-" : device->getSerial()) + newline;
+	vendor += orDash(device->getVendor()) + newline;
+	serial += orDash(device->getSerial()) + newline;
 	sample_rate += device->getRateDescription() + newline;
 }

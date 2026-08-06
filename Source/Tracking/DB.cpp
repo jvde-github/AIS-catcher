@@ -166,9 +166,10 @@ std::string DB::getAllPathJSON()
 		w.beginObject();
 
 		std::time_t now = time(nullptr);
+		std::time_t floor = pathFloor(now);
 		forEachRecent(now, false, 0, [&](int ptr, const Ship &ship, long int) {
 			w.key(ship.mmsi);
-			writeSinglePathJSONCompact(ptr, w);
+			writeSinglePathJSONCompact(ptr, w, floor);
 		});
 		w.endObject().raw("\n\n");
 	}
@@ -206,6 +207,8 @@ void DB::writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since,
 std::string DB::getAllPathJSONSince(std::time_t since)
 {
 	std::lock_guard<std::mutex> lock(mtx);
+
+	since = MAX(since, pathFloor(time(nullptr)));
 
 	content.clear();
 	{
@@ -252,7 +255,7 @@ std::string DB::getReplayInfoJSON(std::time_t block)
 		});
 
 		// the client only asks for blocks within the bounds it is given
-		std::time_t cutoff = replayFloor(now);
+		std::time_t cutoff = pathFloor(now);
 		if (oldest && (std::time_t)oldest < cutoff)
 			oldest = (uint32_t)cutoff;
 
@@ -274,7 +277,7 @@ std::string DB::getReplayInfoJSON(std::time_t block)
 // ago is what a replay of that period wants.
 std::string DB::getReplayShipsJSON(std::time_t since, std::time_t lookback)
 {
-	since = MAX(since, replayFloor(time(nullptr)));
+	since = MAX(since, pathFloor(time(nullptr)));
 	return getReplayObjectJSON(since, lookback, [](JSON::Writer &w, int, const Ship &ship) {
 		int length = ship.to_bow != DIMENSION_UNDEFINED && ship.to_stern != DIMENSION_UNDEFINED ? ship.to_bow + ship.to_stern : 0;
 
@@ -291,7 +294,7 @@ std::string DB::getReplayShipsJSON(std::time_t since, std::time_t lookback)
 std::string DB::getReplayJSON(std::time_t since, std::time_t until, std::time_t lookback)
 {
 	// a window that ends before the cutoff serves nothing
-	if (until < replayFloor(time(nullptr)))
+	if (until < pathFloor(time(nullptr)))
 		return "{}\n\n";
 
 	return getReplayObjectJSON(since, lookback, [this, since, until](JSON::Writer &w, int ptr, const Ship &ship) {
@@ -300,22 +303,23 @@ std::string DB::getReplayJSON(std::time_t since, std::time_t until, std::time_t 
 	});
 }
 
-void DB::writeSinglePathGeoJSON(int ptr, JSON::Writer &w)
+template <typename F>
+static void walkPath(const PathStore &paths, int ptr, std::time_t floor, F emit)
+{
+	for (uint32_t r = paths.tail(ptr); PathStore::isPoint(r) && (std::time_t)paths.at(r).end() >= floor; r = paths.at(r).prev)
+		emit(paths.at(r));
+}
+
+void DB::writeSinglePathGeoJSON(int ptr, JSON::Writer &w, std::time_t floor)
 {
 	w.beginObject().kv("type", "Feature").key("geometry").beginObject().kv("type", "LineString").key("coordinates").beginArray();
-	for (uint32_t r = paths.tail(ptr); PathStore::isPoint(r); r = paths.at(r).prev)
-	{
-		const PathStore::Point &p = paths.at(r);
-		w.beginArray().val(p.lon).val(p.lat).endArray();
-	}
+	walkPath(paths, ptr, floor, [&](const PathStore::Point &p) { w.beginArray().val(p.lon).val(p.lat).endArray(); });
 
 	w.endArray().endObject().key("properties").beginObject().kv("mmsi", ships[ptr].mmsi).key("timestamps_start").beginArray();
-	for (uint32_t r = paths.tail(ptr); PathStore::isPoint(r); r = paths.at(r).prev)
-		w.val(paths.at(r).time);
+	walkPath(paths, ptr, floor, [&](const PathStore::Point &p) { w.val(p.time); });
 
 	w.endArray().key("timestamps_end").beginArray();
-	for (uint32_t r = paths.tail(ptr); PathStore::isPoint(r); r = paths.at(r).prev)
-		w.val(paths.at(r).end());
+	walkPath(paths, ptr, floor, [&](const PathStore::Point &p) { w.val(p.end()); });
 
 	w.endArray().endObject().endObject();
 }
@@ -329,7 +333,7 @@ std::string DB::getPathJSON(uint32_t mmsi)
 	{
 		JSON::Writer w(content, 1024);
 		if (ptr != SHIP_NIL)
-			writeSinglePathJSONCompact(ptr, w);
+			writeSinglePathJSONCompact(ptr, w, pathFloor(time(nullptr)));
 		else
 			w.beginArray().endArray();
 	}
@@ -345,7 +349,7 @@ std::string DB::getPathGeoJSON(uint32_t mmsi)
 	{
 		JSON::Writer w(content, 1024);
 		if (ptr != SHIP_NIL)
-			writeSinglePathGeoJSON(ptr, w);
+			writeSinglePathGeoJSON(ptr, w, pathFloor(time(nullptr)));
 		else
 			w.beginObject().kv("type", "Feature").key("geometry").beginObject().kv("type", "LineString").key("coordinates").beginArray().endArray().endObject().key("properties").beginObject().kv("mmsi", mmsi).endObject().endObject();
 	}
@@ -362,8 +366,9 @@ std::string DB::getAllPathGeoJSON()
 		w.beginObject().kv("type", "FeatureCollection").key("features").beginArray();
 
 		std::time_t now = time(nullptr);
+		std::time_t floor = pathFloor(now);
 		forEachRecent(now, false, 0, [&](int ptr, const Ship &, long int) {
-			writeSinglePathGeoJSON(ptr, w);
+			writeSinglePathGeoJSON(ptr, w, floor);
 		});
 		w.endArray().endObject().raw("\n\n");
 	}
@@ -434,28 +439,16 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship
 		staticUpdated = true;
 		break;
 	case AIS::KEY_MONTH:
-		if (msg->type() != 5)
-			break;
-		ship.month = (char)p.Get().getInt();
-		staticUpdated = true;
-		break;
 	case AIS::KEY_DAY:
-		if (msg->type() != 5)
-			break;
-		ship.day = (char)p.Get().getInt();
-		staticUpdated = true;
-		break;
-	case AIS::KEY_MINUTE:
-		if (msg->type() != 5)
-			break;
-		ship.minute = (char)p.Get().getInt();
-		staticUpdated = true;
-		break;
 	case AIS::KEY_HOUR:
-		if (msg->type() != 5)
-			break;
-		ship.hour = (char)p.Get().getInt();
-		staticUpdated = true;
+	case AIS::KEY_MINUTE:
+		if (msg->type() == 5)
+		{
+			(p.Key() == AIS::KEY_MONTH ? ship.month : p.Key() == AIS::KEY_DAY ? ship.day
+										  : p.Key() == AIS::KEY_HOUR		 ? ship.hour
+																			 : ship.minute) = (char)p.Get().getInt();
+			staticUpdated = true;
+		}
 		break;
 	case AIS::KEY_HEADING:
 		ship.heading = p.Get().getInt();
@@ -991,8 +984,6 @@ bool DB::Save(std::ofstream &file)
 bool DB::Load(std::ifstream &file)
 {
 	std::lock_guard<std::mutex> lock(mtx);
-
-	std::cerr << "Loading ships from backup file." << std::endl;
 
 	int magic = 0, version = 0;
 

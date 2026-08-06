@@ -38,9 +38,7 @@
         if (!target) return;
         fn(target);
         if (mgr.hasViewerFields) mgr.reloadWebviewer = true;
-        mgr.dirty = true;
-        App.setUnsaved(true);
-        mgr.updateJsonDebug();
+        mgr.markDirty();
         mgr.render();
     }
 
@@ -508,30 +506,30 @@
         }),
 
         openSharingManagement: (index, containerId) => {
-            const scope = containerId ? document.getElementById(containerId) : document;
-            const card = scope?.querySelector(`[data-receiver-card="${index}"]`);
-            const sharingKeyInput = (card || scope || document).querySelector('[data-field="sharing_key"] input');
-            const sharingKey = sharingKeyInput ? sharingKeyInput.value.trim() : '';
-            if (sharingKey === '') {
-                window.open('https://aiscatcher.org/register', '_blank');
-            } else {
-                window.open(`https://www.aiscatcher.org/editstation/${sharingKey}`, '_blank');
-            }
+            const input = fieldInput(index, containerId, 'sharing_key');
+            const sharingKey = input ? input.value.trim() : '';
+            window.open(sharingKey === ''
+                ? 'https://aiscatcher.org/register'
+                : `https://www.aiscatcher.org/editstation/${sharingKey}`, '_blank');
         },
 
         clearSerial: (index, containerId) => {
-            const scope = containerId ? document.getElementById(containerId) : document;
-            const card = scope?.querySelector(`[data-receiver-card="${index}"]`);
-            const serialField = (card || scope || document).querySelector('[data-field="serial"] input');
-            if (serialField) {
-                serialField.value = '';
-                serialField.dispatchEvent(new Event('input', { bubbles: true }));
+            const input = fieldInput(index, containerId, 'serial');
+            if (input) {
+                input.value = '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
             }
         }
     };
 
+    function fieldInput(index, containerId, name) {
+        const scope = containerId ? document.getElementById(containerId) : document;
+        const card = scope?.querySelector(`[data-receiver-card="${index}"]`);
+        return (card || scope || document).querySelector(`[data-field="${name}"] input`);
+    }
+
     const SECTION_ORDER = ['Label', 'Connection', 'Station', 'Location', 'Format',
-        'Options', 'Retention', 'Service', 'Replay', 'Backup', 'Storage', 'Features', 'Filter', 'Zones'];
+        'Options', 'Tracks', 'Retention', 'Service', 'Backup', 'Storage', 'Features', 'Filter', 'Zones'];
 
     const Styles = {
         input: 'input',
@@ -620,10 +618,8 @@
 
         // at most one tab can hold unsaved edits, but a tab may span several managers
         async saveDirty() {
-            const dirty = [];
-            ManagerRegistry.forEach(m => { if (m.dirty) dirty.push(m); });
-            for (const m of dirty)
-                await m.save();
+            for (const m of ManagerRegistry.values())
+                if (m.dirty) await m.save();
         }
     };
 
@@ -919,10 +915,7 @@
                         }));
                     });
                     badgesDiv.appendChild(manageBtn);
-                    if (field.hint) {
-                        const hintText = zones.length === 0 ? field.hint : '';
-                        hintEl.textContent = hintText;
-                    }
+                    if (field.hint) hintEl.textContent = zones.length ? '' : field.hint;
                 }
 
                 const hintEl = el('span', 't-small t-subtle t-italic');
@@ -1088,6 +1081,12 @@
                     ? (fullConfig[this.config.channelType] || (this.config.isList ? [] : {}))
                     : fullConfig;
             if (!this.config.isList) {
+                // replay_time became track_time; migrate once or the server-side
+                // alias fights the new key
+                if (this.data.replay_time !== undefined) {
+                    this.data.track_time ??= this.data.replay_time;
+                    delete this.data.replay_time;
+                }
                 this.fields.forEach(f => {
                     if (f.jsonpath) {
                         if (Utils.getNested(this.data, f.jsonpath) === undefined)
@@ -1148,7 +1147,7 @@
                 // `advanced` puts a field in a collapsible section; a string names it
                 const sections = new Map();
                 const syncs = [];
-                let syncAdvanced = () => syncs.forEach(f => f());
+                const syncAdvanced = () => syncs.forEach(f => f());
                 const refresh = () => { Renderer.updateVisibility(innerFields, item); syncAdvanced(); };
 
                 // Section all fields of a schema or none: an unsectioned one trailing a block reads as part of it.
@@ -1244,7 +1243,6 @@
             } else {
                 this.container.parentElement.appendChild(btnGroup);
             }
-
         }
 
         // Each manager owns its own JSON disclosure (ids keyed by containerId)
@@ -1410,9 +1408,7 @@
                 }
                 ConfigStore.invalidate();
                 this.dirty = false;
-                let anyDirty = false;
-                ManagerRegistry.forEach(m => { if (m.dirty) anyDirty = true; });
-                App.setUnsaved(anyDirty);
+                App.setUnsaved([...ManagerRegistry.values()].some(m => m.dirty));
                 App.notify('success', 'Configuration saved successfully');
                 if (global.hubConfigSaved)
                     global.hubConfigSaved(this.config.nestedPath ? 'viewer' : 'engine',

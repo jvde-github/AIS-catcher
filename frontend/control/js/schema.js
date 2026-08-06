@@ -529,7 +529,7 @@ const webviewerSchema = {
     },
     track_memory: {
         name: 'track_memory',
-        section: 'Retention',
+        section: 'Tracks',
         restartWebviewer: true,
         label: 'Track Memory (KB)',
         type: 'number',
@@ -542,7 +542,7 @@ const webviewerSchema = {
     },
     replay: {
         name: 'replay',
-        section: 'Replay',
+        section: 'Service',
         restartWebviewer: true,
         label: 'Replay',
         type: 'toggle',
@@ -551,19 +551,18 @@ const webviewerSchema = {
         width: 24,
         tooltip: 'Let visitors animate past tracks'
     },
-    replay_time: {
-        name: 'replay_time',
-        section: 'Replay',
+    track_time: {
+        name: 'track_time',
+        section: 'Tracks',
         restartWebviewer: true,
-        label: 'Max Replay (s)',
+        label: 'Max Track Age (s)',
         type: 'number',
-        jsonpath: 'replay_time',
+        jsonpath: 'track_time',
         defaultValue: 3600,
         min: 0,
         max: 604800,
         width: 50,
-        tooltip: 'How far back visitors may scrub, 0 for everything held',
-        dependsOn: { field: 'replay', value: true }
+        tooltip: 'How far back tracks and replay reach, 0 for no limit'
     },
     context: {
         name: 'context',
@@ -617,7 +616,7 @@ const webviewerSchema = {
         jsonpath: 'expire',
         defaultValue: false,
         width: 24,
-        tooltip: 'Clear fields when their messages stop'
+        tooltip: 'Clears ship data that is not reconfirmed by fresh messages'
     },
     realtime: {
         name: 'realtime',

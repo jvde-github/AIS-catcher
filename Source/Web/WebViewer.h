@@ -153,8 +153,10 @@ private:
 	AIS::Filter filter;
 
 	std::string pending_product, pending_vendor, pending_serial;
+	void applyPendingDescription();
 
 	bool parseMBTilesURL(const std::string &url, std::string &layerID, int &z, int &x, int &y);
+	void addTileSource(std::shared_ptr<MapTiles> source, const std::string &path, bool overlay, const char *what);
 	void addMBTilesSource(const std::string &filepath, bool overlay);
 	void addFileSystemTilesSource(const std::string &directoryPath, bool overlay);
 

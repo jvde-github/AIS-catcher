@@ -65,8 +65,8 @@ class DB : public StreamIn<JSON::JSON>,
 	std::string content;
 	float station_lat = LAT_UNDEFINED, station_lon = LON_UNDEFINED;
 	int time_history = 30 * 60;
-	// caps how far back replay may serve, 0 is unlimited
-	int replay_time = 3600;
+	// oldest track and replay data served, 0 is unlimited
+	int track_time = 3600;
 	// newest last_signal among recycled ships: older scenes are missing vessels
 	std::time_t evict_horizon = 0;
 	bool latlon_share = false;
@@ -113,14 +113,13 @@ class DB : public StreamIn<JSON::JSON>,
 	}
 
 	void writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since = 0, std::time_t until = 0);
-	void writeSinglePathGeoJSON(int ptr, JSON::Writer &w);
+	void writeSinglePathGeoJSON(int ptr, JSON::Writer &w, std::time_t floor);
 
-	// Oldest time replay may serve, 0 when unbounded: the replay_time cap,
-	// never reaching past the eviction horizon — every vessel that transmitted
-	// after the horizon is still in the table, so scenes above it are complete.
-	std::time_t replayFloor(std::time_t now) const
+	// Oldest time any path data is served: the track_time cap, never reaching
+	// past the eviction horizon into scenes that are missing recycled vessels.
+	std::time_t pathFloor(std::time_t now) const
 	{
-		std::time_t cutoff = replay_time > 0 && now > replay_time ? now - replay_time : 0;
+		std::time_t cutoff = track_time > 0 && now > track_time ? now - track_time : 0;
 		return cutoff > evict_horizon ? cutoff : evict_horizon;
 	}
 
@@ -164,7 +163,7 @@ public:
 	void setup();
 	void tick(std::time_t now);
 	void setTimeHistory(int t) { time_history = t; }
-	void setReplayTime(int t) { replay_time = t; }
+	void setTrackTime(int t) { track_time = t; }
 	void setExpireFields(bool b) { expire_fields = b; }
 	void setTrackMemory(int kb) { if (kb > 0) track_memory_kb = kb; }
 	void setShareLatLon(bool b) { latlon_share = b; }

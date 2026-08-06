@@ -985,8 +985,8 @@
         // every viewer setting except the port, which follows the control port
         const keys = ['station', 'station_link', 'webcontrol_http',
                       'lat', 'lon', 'share_loc', 'use_gps',
-                      'history', 'track_memory', 'expire',
-                      'replay', 'replay_time',
+                      'history', 'track_memory', 'track_time', 'expire',
+                      'replay',
                       'file', 'backup',
                       'plugin_dir', 'context',
                       'realtime', 'msg', 'decoder', 'log', 'geojson', 'prome',

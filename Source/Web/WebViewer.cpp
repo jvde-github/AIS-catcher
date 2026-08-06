@@ -215,34 +215,27 @@ bool WebViewer::parseMBTilesURL(const std::string &url, std::string &layerID, in
 	return true;
 }
 
-void WebViewer::addMBTilesSource(const std::string &filepath, bool overlay)
+void WebViewer::addTileSource(std::shared_ptr<MapTiles> source, const std::string &path, bool overlay, const char *what)
 {
-#if HASSQLITE
-	auto source = std::make_shared<MBTilesSupport>();
-	if (source->open(filepath))
+	if (source->open(path))
 	{
 		mapSources.push_back(source);
 		plugins.addCode(source->generatePluginCode(overlay));
 	}
 	else
-	{
-		Error() << "Failed to load MBTiles from: " << filepath;
-	}
+		Error() << "Failed to load " << what << " from: " << path;
+}
+
+void WebViewer::addMBTilesSource(const std::string &filepath, bool overlay)
+{
+#if HASSQLITE
+	addTileSource(std::make_shared<MBTilesSupport>(), filepath, overlay, "MBTiles");
 #endif
 }
 
 void WebViewer::addFileSystemTilesSource(const std::string &directoryPath, bool overlay)
 {
-	auto source = std::make_shared<FileSystemTiles>();
-	if (source->open(directoryPath))
-	{
-		mapSources.push_back(source);
-		plugins.addCode(source->generatePluginCode(overlay));
-	}
-	else
-	{
-		Error() << "Failed to load FileSystemTiles from: " << directoryPath;
-	}
+	addTileSource(std::make_shared<FileSystemTiles>(), directoryPath, overlay, "FileSystemTiles");
 }
 
 long long WebViewer::queryInt(const std::string &query, const char *name)
@@ -471,6 +464,16 @@ void WebViewer::detachEngine()
 	setCommFeed(nullptr);
 }
 
+void WebViewer::applyPendingDescription()
+{
+	if (!pending_product.empty())
+		states[0]->product = pending_product;
+	if (!pending_vendor.empty())
+		states[0]->vendor = pending_vendor;
+	if (!pending_serial.empty())
+		states[0]->serial = pending_serial;
+}
+
 void WebViewer::setDeviceDescription(const std::string &product, const std::string &vendor, const std::string &serial)
 {
 	std::lock_guard<std::recursive_mutex> lock(state_mtx);
@@ -479,12 +482,7 @@ void WebViewer::setDeviceDescription(const std::string &product, const std::stri
 	pending_vendor = vendor;
 	pending_serial = serial;
 
-	if (!product.empty())
-		states[0]->product = product;
-	if (!vendor.empty())
-		states[0]->vendor = vendor;
-	if (!serial.empty())
-		states[0]->serial = serial;
+	applyPendingDescription();
 }
 
 // Android: a single model on a single device, wired without a Receiver. Only the
@@ -500,12 +498,7 @@ void WebViewer::attachEngine(AIS::Model &model, Connection<JSON::JSON> &json, De
 	states[0]->model_name = model.getName();
 
 	// Android supplies USB product/vendor/serial out-of-band via setDeviceDescription().
-	if (!pending_product.empty())
-		states[0]->product = pending_product;
-	if (!pending_vendor.empty())
-		states[0]->vendor = pending_vendor;
-	if (!pending_serial.empty())
-		states[0]->serial = pending_serial;
+	applyPendingDescription();
 
 	states[0]->connectJSON(json);
 	device >> raw_counter;
@@ -733,15 +726,10 @@ std::string WebViewer::buildStatJSON(ReceiverTracker *s)
 	w.kv("sharing", comm_feed != nullptr);
 	w.kv("sharing_uuid", comm_feed != nullptr && comm_feed->hasUUID());
 	w.kv("engine_running", engine_attached);
+	std::string link = "https://www.aiscatcher.org";
 	if (settings.tracking.latlon_share && settings.tracking.lat != LAT_UNDEFINED && settings.tracking.lon != LON_UNDEFINED)
-	{
-		std::string link = "https://www.aiscatcher.org/?&zoom=10&lat=" + std::to_string(settings.tracking.lat) + "&lon=" + std::to_string(settings.tracking.lon);
-		w.kv("sharing_link", link);
-	}
-	else
-	{
-		w.kv("sharing_link", "https://www.aiscatcher.org");
-	}
+		link += "/?&zoom=10&lat=" + std::to_string(settings.tracking.lat) + "&lon=" + std::to_string(settings.tracking.lon);
+	w.kv("sharing_link", link);
 
 	w.kv("station", settings.station);
 	w.kv("station_link", settings.station_link);
@@ -1147,8 +1135,9 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 		settings.replay = Util::Parse::Switch(arg);
 		frontend.setReplay(settings.replay);
 		break;
+	case AIS::KEY_SETTING_TRACK_TIME:
 	case AIS::KEY_SETTING_REPLAY_TIME:
-		settings.tracking.replay_time = Util::Parse::Integer(arg, 0, 7 * 24 * 3600);
+		settings.tracking.track_time = Util::Parse::Integer(arg, 0, 7 * 24 * 3600);
 		break;
 	case AIS::KEY_SETTING_EXPIRE:
 		settings.tracking.expire_fields = Util::Parse::Switch(arg);
