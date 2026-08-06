@@ -673,6 +673,10 @@ a:focus {
     margin-bottom: 5px;
 }
 
+.tooltip-sub {
+    color: var(--color-text-muted);
+}
+
 #hover-info div div {
     text-align: left;
 }

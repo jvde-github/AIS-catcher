@@ -428,9 +428,10 @@ function tooltipHTML(mmsi, s, fix) {
     let html = '<div class="tooltip-card">'
         + getFlagStyled(s.country, FLAG_STYLE) + '<div>'
         + (s.name || 'MMSI ' + mmsi) + ' at ' + getSpeedVal(fix.knots || 0) + ' ' + getSpeedUnit();
-    if (s.name) html += '<br>MMSI ' + mmsi;
-    if (s.type != null) html += '<br>' + getShipTypeShort(s.type);
-    if (fix.age) html += '<br>Silent for ' + getDeltaTimeVal(Math.round(fix.age));
+    let sub = '';
+    if (s.type != null) sub += getShipTypeShort(s.type);
+    if (fix.age) sub += (sub ? ' - ' : '') + 'Silent for ' + getDeltaTimeVal(Math.round(fix.age));
+    if (sub) html += '<div class="tooltip-sub">' + sub + '</div>';
     return html + '</div></div>';
 }
 
