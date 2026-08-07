@@ -281,6 +281,8 @@ namespace Protocol
 
 		bool persistent = true;
 		int reset_time = -1;
+		// Captured at the point of failure: closeSocket() would overwrite errno.
+		std::string last_error;
 		int timeout = 0;
 		bool keep_alive = true;
 

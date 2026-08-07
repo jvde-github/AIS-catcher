@@ -186,7 +186,7 @@ namespace IO
 		}
 
 		if (r < 200 || r > 299)
-			Error() << "HTTP Client [" << url << "]: return code " << r << " (" << msg_snap << " messages, " << pos_snap << " positions)";
+			Error() << "HTTP Client [" << url << "]: " << IO::httpStatusString(r) << " (" << msg_snap << " messages, " << pos_snap << " positions)";
 		else if (show_response)
 			Info() << "HTTP Client [" << url << "]: return code " << r << " (" << msg_snap << " messages, " << pos_snap << " positions)";
 	}

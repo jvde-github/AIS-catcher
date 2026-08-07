@@ -92,6 +92,7 @@ namespace Protocol
 			return false;
 		}
 
+		last_error.clear();
 		for (struct addrinfo *p = ai.get(); p != nullptr; p = p->ai_next)
 		{
 			if (connectAddress(p))
@@ -101,6 +102,8 @@ namespace Protocol
 		if (stats)
 			stats->connect_fail++;
 
+		Error() << "TCP (" << host << ":" << port << "): " << last_error;
+
 		return persistent;
 	}
 
@@ -109,8 +112,10 @@ namespace Protocol
 	// Returns false if this address failed — sock is closed and reset to -1 so the caller can try the next.
 	bool TCP::connectAddress(struct addrinfo *p)
 	{
-		auto fail = [this]() -> bool
+		auto fail = [this, p](const char *op, const char *why = nullptr) -> bool
 		{
+			last_error = std::string(op) + " " + Net::addressString(p) + ": " +
+						 (why ? std::string(why) : Net::errorString(Net::lastError()));
 			if (sock != -1)
 			{
 				Net::closeSocket(sock);
@@ -121,7 +126,7 @@ namespace Protocol
 
 		sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 		if (sock == -1)
-			return false;
+			return fail("socket");
 
 		int yes = 1;
 #ifdef _WIN32
@@ -129,14 +134,14 @@ namespace Protocol
 #else
 		if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void *)&yes, sizeof(yes)) == -1)
 #endif
-			return fail();
+			return fail("TCP_NODELAY");
 
 		if (keep_alive)
 		{
 			const int idle = 20, interval = 5, count = 2;
 
 			if (!Net::setTCPKeepAlive(sock, idle, interval, count))
-				return fail();
+				return fail("keepalive");
 
 			if (!Net::setTCPUserTimeout(sock, (idle + interval * count) * 1000))
 				Debug() << "TCP (" << host << ":" << port << "): user timeout not applied: " << Net::errorString(Net::lastError());
@@ -146,8 +151,7 @@ namespace Protocol
 		{
 			if (!Net::setNonBlocking(sock))
 			{
-				Error() << "TCP (" << host << ":" << port << "): failed to set non-blocking: " << Net::errorString(Net::lastError());
-				return fail();
+				return fail("set non-blocking");
 			}
 		}
 		else if (timeout > 0)
@@ -160,12 +164,12 @@ namespace Protocol
 			DWORD tv_ms = (DWORD)timeout * 1000;
 			if (setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char *)&tv_ms, sizeof(tv_ms)) ||
 				setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv_ms, sizeof(tv_ms)))
-				return fail();
+				return fail("socket timeout");
 #else
 			struct timeval tv = {timeout, 0};
 			if (setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) ||
 				setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)))
-				return fail();
+				return fail("socket timeout");
 #endif
 		}
 
@@ -195,7 +199,7 @@ namespace Protocol
 			return true;
 		}
 		if (!Net::connectInProgress(Net::lastError()))
-			return fail();
+			return fail("connect");
 
 		// Non-blocking connect in progress.
 		int elapsed = (int)std::difftime(time(nullptr), stamp);
@@ -210,7 +214,8 @@ namespace Protocol
 		if (persistent)
 			return true;
 
-		return fail();
+		// errno still holds EINPROGRESS from ::connect(), which would misreport this.
+		return fail("connect", "timed out");
 	}
 
 	bool TCP::isConnected(int t)

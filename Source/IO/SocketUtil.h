@@ -56,6 +56,16 @@ namespace Net
 #endif
 	}
 
+	// Numeric host:port, so errors name the address actually tried.
+	inline std::string addressString(const struct addrinfo *p)
+	{
+		char h[NI_MAXHOST], s[NI_MAXSERV];
+		if (p && getnameinfo(p->ai_addr, (socklen_t)p->ai_addrlen, h, sizeof(h), s, sizeof(s),
+							 NI_NUMERICHOST | NI_NUMERICSERV) == 0)
+			return std::string(h) + ":" + s;
+		return "?";
+	}
+
 	inline bool wouldBlock(int e)
 	{
 #ifdef _WIN32

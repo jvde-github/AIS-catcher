@@ -41,6 +41,23 @@ namespace IO
 		HTTP_CONNECTION_FAILED = -4
 	};
 
+	inline std::string httpStatusString(int r)
+	{
+		switch (r)
+		{
+		case HTTP_NO_RESPONSE:
+			return "no response";
+		case HTTP_UNSUPPORTED_ENCODING:
+			return "unsupported encoding";
+		case HTTP_PARSE_ERROR:
+			return "parse error";
+		case HTTP_CONNECTION_FAILED:
+			return "connection failed";
+		default:
+			return std::to_string(r);
+		}
+	}
+
 	class HTTPClient
 	{
 		ZIP zip;
