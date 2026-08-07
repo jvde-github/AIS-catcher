@@ -24,6 +24,13 @@
 #include <cstring>
 #include <fstream>
 
+#include <fcntl.h>
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
+
 void BackupManager::run()
 {
 	Debug() << "Server: starting backup service every " << interval << " minutes.";
@@ -66,6 +73,26 @@ void BackupManager::stop()
 	}
 }
 
+// the data must be on disk before the rename makes it the live backup, or a
+// power cut can replace a good file with a truncated one (ext4/SD delayed
+// allocation); no sync on Windows - FlushFileBuffers needs a writable handle
+// and the remove+rename pair below is not atomic there anyway
+static bool syncFile(const std::string &path)
+{
+#ifdef _WIN32
+	(void)path;
+	return true;
+#else
+	int fd = ::open(path.c_str(), O_RDONLY);
+	if (fd < 0)
+		return false;
+
+	bool ok = ::fsync(fd) == 0;
+	::close(fd);
+	return ok;
+#endif
+}
+
 bool BackupManager::save(bool include_ships)
 {
 	if (filename.empty() || !tracker)
@@ -95,21 +122,16 @@ bool BackupManager::save(bool include_ships)
 
 		outfile.close();
 	}
-	catch (const std::ios_base::failure &e)
-	{
-		Error() << "Server: write error on " << tmp << " (" << std::strerror(errno) << ")";
-		std::remove(tmp.c_str());
-		return false;
-	}
 	catch (const std::exception &e)
 	{
-		Error() << e.what();
+		Error() << "Server: write error on " << tmp << " (" << e.what() << ")";
 		std::remove(tmp.c_str());
 		return false;
 	}
-	catch (...)
+
+	if (!syncFile(tmp))
 	{
-		Error() << "Server: unknown error writing " << tmp;
+		Error() << "Server: cannot sync " << tmp << " to disk (" << std::strerror(errno) << ")";
 		std::remove(tmp.c_str());
 		return false;
 	}
@@ -150,8 +172,6 @@ bool BackupManager::load()
 			Warning() << "Server: Could not load statistics from backup";
 			return false;
 		}
-
-		infile.close();
 	}
 	catch (const std::exception &e)
 	{

@@ -332,7 +332,6 @@ function renderFilterDialog() {
     field.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') addFilterFromInput();
     });
-    field.focus();
 }
 
 function handleKeydown(event) {

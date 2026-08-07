@@ -178,6 +178,7 @@
         document.getElementById('login-subtitle').textContent = setup
             ? 'No password set: choose an admin password to protect this control page.'
             : 'Authentication required to continue.';
+        document.getElementById('login-password').setAttribute('autocomplete', setup ? 'new-password' : 'current-password');
         document.getElementById('login-password2').classList.toggle('hidden', !setup);
         document.getElementById('login-submit').textContent = setup ? 'Set Password' : 'Sign In';
         document.getElementById('login-cancel').classList.toggle('hidden', setup);

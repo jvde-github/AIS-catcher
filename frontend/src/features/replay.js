@@ -55,8 +55,8 @@ const BLOCK_LOOKBACK = STALE_DROP;
 
 const blockStart = (t) => Math.floor(t / BLOCK) * BLOCK;
 
-const SPEEDS = [10, 30, 60, 120, 300, 600, 900];
-let speed = 60;
+const SPEEDS = [10, 30, 60, 120, 300, 600, 900, 1800, 3600];
+let speed = 300;
 let playing = false;
 let raf = null;
 let lastFrame = 0;
@@ -224,18 +224,27 @@ export async function load(at) {
     }
 }
 
-// The block under the playhead, then a short runway ahead and one behind.
-// Chosen fresh each call rather than as a fixed list: the playhead keeps moving
-// while a request is in flight, so the best next block moves with it.
+// Seconds of wall-clock playback the runway ahead of the playhead should cover.
+// Measured in wall clock rather than blocks so the fast speeds, which burn a
+// block every fraction of a second, still get a usable buffer.
+const RUNWAY = 4;
+
+// The block under the playhead, then a runway ahead and one behind. Chosen
+// fresh each call rather than as a fixed list: the playhead keeps moving while
+// a request is in flight, so the best next block moves with it.
 function nextWanted() {
     const tl = getTimeline();
     const first = blockStart(tl.start), last = blockStart(tl.end);
     const cur = Math.min(Math.max(blockStart(instant), first), last);
+    const ahead = Math.max(3, Math.ceil((speed * RUNWAY) / BLOCK));
 
-    for (const d of [0, 1, 2, 3, -1]) {
+    for (let d = 0; d <= ahead; d++) {
         const b = cur + d * BLOCK;
         if (b >= first && b <= last && !blocks.has(b)) return b;
     }
+
+    const back = cur - BLOCK;
+    if (back >= first && back <= last && !blocks.has(back)) return back;
     return null;
 }
 
