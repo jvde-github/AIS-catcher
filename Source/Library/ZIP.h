@@ -22,18 +22,10 @@
 
 #ifdef HASZLIB
 #include <zlib.h>
-
-#define windowBits 15
-#define GZIP_ENCODING 16
 #endif
 
 class ZIP
 {
-
-#ifdef HASZLIB
-	z_stream strm;
-#endif
-
 	std::vector<unsigned char> output;
 
 public:
@@ -56,40 +48,30 @@ public:
 
 	bool zip(const char *data, int len)
 	{
+		output.clear();
 #ifdef HASZLIB
-
-		try
-		{
-			strm.zalloc = Z_NULL;
-			strm.zfree = Z_NULL;
-			strm.opaque = Z_NULL;
-
-			if (deflateInit2(&strm, Z_BEST_SPEED, Z_DEFLATED, windowBits | GZIP_ENCODING, 8, Z_DEFAULT_STRATEGY) < 0)
-				return false;
-
-			strm.next_in = (unsigned char *)data;
-			strm.avail_in = len;
-
-			uLong bound = deflateBound(&strm, len);
-			output.resize(bound);
-
-			strm.avail_out = bound;
-			strm.next_out = (unsigned char *)output.data();
-
-			int result = deflate(&strm, Z_FINISH);
-			deflateEnd(&strm);
-
-			if (result != Z_STREAM_END)
-				throw std::runtime_error("ZLIB: deflate did not complete");
-
-			output.resize(strm.total_out);
-			return true;
-		}
-		catch (...)
-		{
-			output.clear();
+		if (len < 0)
 			return false;
-		}
+
+		z_stream strm = {};
+		if (deflateInit2(&strm, Z_BEST_SPEED, Z_DEFLATED, 15 | 16, 8, Z_DEFAULT_STRATEGY) != Z_OK)
+			return false;
+
+		strm.next_in = (unsigned char *)data;
+		strm.avail_in = len;
+
+		output.resize(deflateBound(&strm, len));
+		strm.next_out = output.data();
+		strm.avail_out = output.size();
+
+		bool ok = deflate(&strm, Z_FINISH) == Z_STREAM_END;
+		if (ok)
+			output.resize(strm.total_out);
+		else
+			output.clear();
+
+		deflateEnd(&strm);
+		return ok;
 #else
 		return false;
 #endif

@@ -9,6 +9,7 @@ export function init(addOverlayLayer) {
     const layer = createPollingTileLayer({
         name: 'atmospheric_ducting',
         title: 'Atmospheric Ducting',
+        attributions: 'Surface-based duct (NOAA GFS) · <a href="https://www.aiscatcher.org" target="_blank">aiscatcher.org</a>',
         getSourceOptions: async () => {
             const response = await fetch(MANIFEST_URL, { cache: 'no-store' });
             const manifest = await response.json();
@@ -21,7 +22,6 @@ export function init(addOverlayLayer) {
             return {
                 url: BASE_URL + frame.url_template,
                 maxZoom: manifest.zoom_max,
-                attributions: 'Surface-based duct (NOAA GFS) · <a href="https://www.aiscatcher.org" target="_blank">aiscatcher.org</a>',
             };
         },
     });

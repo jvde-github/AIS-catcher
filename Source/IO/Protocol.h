@@ -39,6 +39,7 @@
 #include "Common.h"
 #include "OutputStats.h"
 #include "Keys.h"
+#include "Logger.h"
 
 namespace Protocol
 {

@@ -32,6 +32,7 @@
 #endif
 
 #include "Common.h"
+#include "Logger.h"
 
 namespace N2K
 {

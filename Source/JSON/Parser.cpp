@@ -52,23 +52,16 @@ namespace JSON
 	[[noreturn]] void Parser::error(const std::string &err, int pos)
 	{
 		const int char_limit = 40;
-		int sz = (int)(pend - p_start);
 		int from = MAX(pos - char_limit, 0);
-		int to = MIN(pos + char_limit, sz);
+		int to = MIN(pos + char_limit, (int)(pend - p_start));
 
-		std::stringstream ss;
-		for (int i = from; i < to; i++)
-		{
-			char c = p_start[i];
-			char d = (c == '\t' || c == '\r' || c == '\n') ? ' ' : c;
-			ss << d;
-		}
+		std::string context(p_start + from, p_start + to);
+		for (char &c : context)
+			if (c == '\t' || c == '\r' || c == '\n')
+				c = ' ';
 
-		ss << std::endl
-		   << std::string(MIN(char_limit, pos - from), ' ') << "^" << std::endl
-		   << std::string(MIN(char_limit, pos - from), ' ') << "^" << std::endl;
-
-		throw std::runtime_error("syntax error in JSON: " + err);
+		throw std::runtime_error("syntax error in JSON: " + err +
+								 " at offset " + std::to_string(pos) + " near [" + context + "]");
 	}
 
 	[[noreturn]] void Parser::error(const char *err, int pos)

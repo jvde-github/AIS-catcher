@@ -19,6 +19,7 @@
 #include <iostream>
 
 #include "ADSB.h"
+#include "Logger.h"
 
 // References:
 // https://github.com/antirez/dump1090/blob/master/dump1090.c
@@ -158,6 +159,59 @@ namespace Plane
         return SPEED_UNDEFINED;
     }
 
+    // Gillham-coded identity, interleaved across msg[2] and msg[3]
+    void ADSB::decodeSquawk()
+    {
+        int a = ((msg[3] & 0x80) >> 5) | ((msg[2] & 0x02) >> 0) | ((msg[2] & 0x08) >> 3);
+        int b = ((msg[3] & 0x02) << 1) | ((msg[3] & 0x08) >> 2) | ((msg[3] & 0x20) >> 5);
+        int c = ((msg[2] & 0x01) << 2) | ((msg[2] & 0x04) >> 1) | ((msg[2] & 0x10) >> 4);
+        int d = ((msg[3] & 0x01) << 2) | ((msg[3] & 0x04) >> 1) | ((msg[3] & 0x10) >> 4);
+
+        squawk = a * 1000 + b * 100 + c * 10 + d;
+    }
+
+    // Subtypes 1 and 2 only: 3 and 4 report airspeed, not ground velocity
+    void ADSB::decodeVelocity(int ST)
+    {
+        int ewVelocity = getUint(46, 10);
+        int nsVelocity = getUint(57, 10);
+
+        if (ewVelocity && nsVelocity)
+        {
+            bool Dew = getUint(45, 1);
+            bool Dns = getUint(56, 1);
+
+            ewVelocity = Dew ? -(ewVelocity - 1) : (ewVelocity - 1);
+            nsVelocity = Dns ? -(nsVelocity - 1) : (nsVelocity - 1);
+
+            speed = sqrt(nsVelocity * nsVelocity + ewVelocity * ewVelocity);
+            heading = atan2(ewVelocity, nsVelocity) * 360.0 / (2 * PI);
+            if (heading < 0)
+                heading += 360;
+
+            if (ST == 2)
+                speed *= 4;
+        }
+
+        int VR = getUint(69, 9);
+        if (VR)
+        {
+            bool Svr = getUint(68, 1);
+            vertrate = (VR - 1) * 64 * (Svr ? -1 : 1);
+        }
+        airborne = 1;
+    }
+
+    void ADSB::storeCPR(bool is_airborne)
+    {
+        CPR &cpr = getUint(53, 1) ? odd : even;
+
+        cpr.lat = getUint(54, 17);
+        cpr.lon = getUint(71, 17);
+        cpr.timestamp = rxtime;
+        cpr.airborne = is_airborne;
+    }
+
     void ADSB::Decode()
     {
         if (msgtype == '1')
@@ -180,25 +234,16 @@ namespace Plane
         case 0:  // Short Air-Air Surveillance
         case 4:  // Surveillance, Altitude Reply
         case 20: // Comm-B, Altitude Reply
-        {
             setCRCandICAO();
             altitude = decodeAC13Field();
-        }
-        break;
+            break;
 
         case 5:  // Surveillance, Identity Reply
         case 21: // Comm-B, Identity Reply, ground or air
-        {
             setCRCandICAO();
-
-            int a = ((msg[3] & 0x80) >> 5) | ((msg[2] & 0x02) >> 0) | ((msg[2] & 0x08) >> 3);
-            int b = ((msg[3] & 0x02) << 1) | ((msg[3] & 0x08) >> 2) | ((msg[3] & 0x20) >> 5);
-            int c = ((msg[2] & 0x01) << 2) | ((msg[2] & 0x04) >> 1) | ((msg[2] & 0x10) >> 4);
-            int d = ((msg[3] & 0x01) << 2) | ((msg[3] & 0x04) >> 1) | ((msg[3] & 0x10) >> 4);
-
-            squawk = a * 1000 + b * 100 + c * 10 + d;
+            decodeSquawk();
             break;
-        }
+
         case 11: // All-Call Reply, ground or air
         {
             hexident = getUint(8, 24);
@@ -259,63 +304,22 @@ namespace Plane
                 break;
 
             case 19: // Airborne Velocity
-                if (ST >= 1 && ST <= 4)
-                {
-                    if (ST == 1 || ST == 2)
-                    {
-                        int ewVelocity = getUint(46, 10);
-                        int nsVelocity = getUint(57, 10);
-
-                        if (ewVelocity && nsVelocity)
-                        {
-                            bool Dew = getUint(45, 1);
-                            bool Dns = getUint(56, 1);
-
-                            ewVelocity = Dew ? -(ewVelocity - 1) : (ewVelocity - 1);
-                            nsVelocity = Dns ? -(nsVelocity - 1) : (nsVelocity - 1);
-
-                            speed = sqrt(nsVelocity * nsVelocity + ewVelocity * ewVelocity);
-                            heading = atan2(ewVelocity, nsVelocity) * 360.0 / (2 * PI);
-                            if (heading < 0)
-                                heading += 360;
-
-                            if (ST == 2)
-                                speed *= 4;
-                        }
-
-                        int VR = getUint(69, 9);
-                        if (VR)
-                        {
-                            bool Svr = getUint(68, 1);
-                            vertrate = (VR - 1) * 64 * (Svr ? -1 : 1);
-                        }
-                        airborne = 1;
-                    }
-                    // ignore ST 3/4, unknown aircraft speed
-                }
-
+                if (ST == 1 || ST == 2)
+                    decodeVelocity(ST);
                 break;
 
             case 5: // Surface Position
             case 6:
             case 7:
             case 8:
-            {
                 airborne = 0;
 
                 if (getUint(44, 1))
                     heading = getUint(45, 7) * 360 / 128.0;
 
                 speed = decodeMovement();
-
-                CPR &cpr = getUint(53, 1) ? odd : even;
-
-                cpr.lat = getUint(54, 17);
-                cpr.lon = getUint(71, 17);
-                cpr.timestamp = rxtime;
-                cpr.airborne = false;
-            }
-            break;
+                storeCPR(false);
+                break;
 
             case 9: // Airborne Position (barometric altitude)
             case 10:
@@ -330,18 +334,10 @@ namespace Plane
             case 20: // Airborne Position (GNSS height instead of barometric)
             case 21:
             case 22:
-            {
                 altitude = decodeAC12Field();
                 airborne = 1;
-
-                CPR &cpr = getUint(53, 1) ? odd : even;
-
-                cpr.lat = getUint(54, 17);
-                cpr.lon = getUint(71, 17);
-                cpr.timestamp = rxtime;
-                cpr.airborne = true;
-            }
-            break;
+                storeCPR(true);
+                break;
             }
             break;
         }

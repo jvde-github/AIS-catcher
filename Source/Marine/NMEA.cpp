@@ -536,7 +536,7 @@ namespace AIS
 				{
 				case AIS::KEY_CLASS:
 				{
-					const auto &s = p.Get().getStringRef();
+					const auto &s = p.Get().getString();
 					if (s == "AIS")
 						cls = CLS_AIS;
 					else if (s == "TPV")
@@ -549,11 +549,11 @@ namespace AIS
 				}
 				case AIS::KEY_UUID:
 					if (!uuid.empty())
-						uuid_match = (p.Get().getStringRef() == uuid);
+						uuid_match = (p.Get().getString() == uuid);
 					break;
 				case AIS::KEY_DEVICE:
 				{
-					const auto &s = p.Get().getStringRef();
+					const auto &s = p.Get().getString();
 					if (s == "AIS-catcher")
 						dev = DEV_AIS_CATCHER;
 					else if (s == "dAISy-catcher")
@@ -599,7 +599,7 @@ namespace AIS
 					tag.ipv4 = p.Get().getInt();
 					break;
 				case AIS::KEY_MESSAGE:
-					message = &p.Get().getStringRef();
+					message = &p.Get().getString();
 					break;
 				case AIS::KEY_NMEA:
 					if (p.Get().isArray())
@@ -624,7 +624,7 @@ namespace AIS
 				queue.clear();
 				for (const auto &v : nmea_array->getArray())
 				{
-					const std::string &vs = v.getStringRef();
+					const std::string &vs = v.getString();
 					processAIS(vs.data(), (int)vs.size(), tag);
 				}
 			}

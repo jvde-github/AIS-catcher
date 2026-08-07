@@ -19,7 +19,7 @@
 
 #include <vector>
 #include <deque>
-#include <iostream>
+#include <string>
 
 #include "Common.h"
 
@@ -70,22 +70,17 @@ namespace JSON
 			static const std::string empty;
 			return isString() ? *data.s : empty;
 		}
-		const std::string &getStringRef() const
-		{
-			static const std::string empty;
-			return isString() ? *data.s : empty;
-		}
 		const JSON &getObject() const { return *data.o; }
 		JSON &getObject() { return *data.o; }
 
 		Type getType() const { return type; }
-		const bool isObject() const { return type == Type::OBJECT; }
-		const bool isBool() const { return type == Type::BOOL; }
-		const bool isArray() const { return type == Type::ARRAY; }
-		const bool isArrayString() const { return type == Type::ARRAY_STRING; }
-		const bool isString() const { return type == Type::STRING; }
-		const bool isFloat() const { return type == Type::FLOAT; }
-		const bool isInt() const { return type == Type::INT; }
+		bool isObject() const { return type == Type::OBJECT; }
+		bool isBool() const { return type == Type::BOOL; }
+		bool isArray() const { return type == Type::ARRAY; }
+		bool isArrayString() const { return type == Type::ARRAY_STRING; }
+		bool isString() const { return type == Type::STRING; }
+		bool isFloat() const { return type == Type::FLOAT; }
+		bool isInt() const { return type == Type::INT; }
 
 		void setFloat(double v)
 		{
@@ -141,42 +136,14 @@ namespace JSON
 		Value value;
 
 	public:
-		Member(int p, Value v) : key(p), value(v)
-		{
-		}
-		Member(int p, long int v) : key(p)
-		{
-			value.setInt(v);
-		}
-		Member(int p, double v) : key(p)
-		{
-			value.setFloat(v);
-		}
-		Member(int p, bool v)
-		{
-			key = p;
-			value.setBool(v);
-		}
-		Member(int p, std::string *v)
-		{
-			key = p;
-			value.setString(v);
-		}
-		Member(int p, std::vector<std::string> *v)
-		{
-			key = p;
-			value.setStringArray(v);
-		}
-		Member(int p, JSON *v)
-		{
-			key = p;
-			value.setObject(v);
-		}
-		Member(int p)
-		{
-			key = p;
-			value.setNull();
-		}
+		Member(int p, Value v) : key(p), value(v) {}
+		Member(int p, long int v) : key(p) { value.setInt(v); }
+		Member(int p, double v) : key(p) { value.setFloat(v); }
+		Member(int p, bool v) : key(p) { value.setBool(v); }
+		Member(int p, std::string *v) : key(p) { value.setString(v); }
+		Member(int p, std::vector<std::string> *v) : key(p) { value.setStringArray(v); }
+		Member(int p, JSON *v) : key(p) { value.setObject(v); }
+		Member(int p) : key(p) { value.setNull(); }
 
 		int Key() const { return key; }
 		const Value &Get() const { return value; }
@@ -213,25 +180,16 @@ namespace JSON
 
 		const Value *operator[](int p) const { return getValue(p); }
 
-		void Add(int p, int v)
-		{
-			members.emplace_back(p, (long int)v);
-		}
+		void Add(int p) { members.emplace_back(p); }
+		void Add(int p, int v) { members.emplace_back(p, (long int)v); }
+		void Add(int p, double v) { members.emplace_back(p, v); }
+		void Add(int p, bool v) { members.emplace_back(p, v); }
+		void Add(int p, JSON *v) { members.emplace_back(p, v); }
+		void Add(int p, Value v) { members.emplace_back(p, v); }
 
-		void Add(int p, double v)
-		{
-			members.emplace_back(p, (double)v);
-		}
-
-		void Add(int p, bool v)
-		{
-			members.emplace_back(p, (bool)v);
-		}
-
-		void Add(int p, JSON *v)
-		{
-			members.emplace_back(p, v);
-		}
+		// for items where memory is managed outside the object
+		void Add(int p, const std::string *v) { members.emplace_back(p, (std::string *)v); }
+		void Add(int p, const std::vector<std::string> *v) { members.emplace_back(p, (std::vector<std::string> *)v); }
 
 		void Add(int p, const std::string &v, Pool &pool);
 		void Set(int p, const std::string &v, Pool &pool);
@@ -245,27 +203,6 @@ namespace JSON
 					return;
 				}
 			members.emplace_back(p, v);
-		}
-
-		void Add(int p)
-		{
-			members.emplace_back(p);
-		}
-
-		void Add(int p, Value v)
-		{
-			members.emplace_back(p, (Value)v);
-		}
-
-		// for items where memory is managed outside the object
-		void Add(int p, const std::string *v)
-		{
-			members.emplace_back(p, (std::string *)v);
-		}
-
-		void Add(int p, const std::vector<std::string> *v)
-		{
-			members.emplace_back(p, (std::vector<std::string> *)v);
 		}
 	};
 
@@ -332,13 +269,9 @@ namespace JSON
 
 	inline void JSON::Set(int p, const std::string &v, Pool &pool)
 	{
-		for (auto &o : members)
-			if (o.Key() == p)
-			{
-				o = Member(p, pool.addString(v));
-				return;
-			}
-		members.emplace_back(p, pool.addString(v));
+		Value val;
+		val.setString(pool.addString(v));
+		Set(p, val);
 	}
 
 	// Document: owns a root JSON and its pool

@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <chrono>
+
 #include <vector>
 #include <fstream>
 #include <string>
@@ -58,17 +60,17 @@ namespace Util
 	template <typename T>
 	class Timer : public SimpleStreamInOut<T, T>
 	{
-		high_resolution_clock::time_point time_start;
+		std::chrono::high_resolution_clock::time_point time_start;
 		float timing = 0.0;
 
 		void tic()
 		{
-			time_start = high_resolution_clock::now();
+			time_start = std::chrono::high_resolution_clock::now();
 		}
 
 		void toc()
 		{
-			timing += 1e-3f * duration_cast<microseconds>(high_resolution_clock::now() - time_start).count();
+			timing += 1e-3f * std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - time_start).count();
 		}
 
 	public:

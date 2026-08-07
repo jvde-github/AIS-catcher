@@ -21,6 +21,7 @@
 #include <cstdlib>
 
 #include "RTLSDR.h"
+#include "Logger.h"
 
 namespace Device
 {

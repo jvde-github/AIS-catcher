@@ -22,6 +22,7 @@
 #include <iomanip>
 
 #include "AIRSPYHF.h"
+#include "Logger.h"
 
 namespace Device
 {

@@ -55,8 +55,7 @@ void RAW1090::Receive(const RAW *data, int len, TAG &tag)
                 const uint8_t *p = (const uint8_t *)std::memchr(src, '*', end - src);
                 if (!p) break;
                 src = p + 1;
-                msg.reset(rxtime_cache);
-                msg.len = 0;
+                reset_msg();
                 state = State::ACCUMULATE;
             }
 
@@ -84,8 +83,7 @@ void RAW1090::Receive(const RAW *data, int len, TAG &tag)
                 state = State::WAIT_START;
                 continue;
             case '*':
-                msg.reset(rxtime_cache);
-                msg.len = 0;
+                reset_msg();
                 continue;
             case '\r':
             case '\n':
@@ -113,6 +111,28 @@ void RAW1090::Receive(const RAW *data, int len, TAG &tag)
 static inline int frame_size_for(uint8_t type)
 {
     return 8 + ((type == '3') ? 14 : (type == '2') ? 7 : 2);
+}
+
+bool Beast::start_frame(uint8_t type)
+{
+    if (type < 0x31 || type > 0x33)
+        return false;
+
+    frame_buf[0] = type;
+    frame_pos = 1;
+    frame_total = frame_size_for(type);
+    state = State::ACCUMULATE;
+    return true;
+}
+
+bool Beast::frame_done(TAG &tag)
+{
+    if (frame_pos != frame_total)
+        return false;
+
+    process_frame(tag);
+    state = State::WAIT_START;
+    return true;
 }
 
 void Beast::process_frame(TAG &tag)
@@ -160,14 +180,7 @@ void Beast::Receive(const RAW *data, int len, TAG &tag)
             {
                 if (src >= end) break;
                 uint8_t type = *src++;
-                if (type >= 0x31 && type <= 0x33)
-                {
-                    frame_buf[0] = type;
-                    frame_pos = 1;
-                    frame_total = frame_size_for(type);
-                    state = State::ACCUMULATE;
-                }
-                else
+                if (!start_frame(type))
                 {
                     // 0x1A 0x1A → stay in WAIT_TYPE; anything else resyncs.
                     if (type != BEAST_ESCAPE) state = State::WAIT_START;
@@ -206,42 +219,24 @@ void Beast::Receive(const RAW *data, int len, TAG &tag)
 
                 frame_pos = (int)(dst - &frame_buf[0]);
 
-                if (frame_pos == frame_total)
-                {
-                    process_frame(tag);
-                    state = State::WAIT_START;
-                    continue;
-                }
+                if (frame_done(tag)) continue;
                 if (src >= end) break;
                 // Hit a 0x1A; consume it and fall through to ACCUMULATE_ESC.
                 src++;
                 state = State::ACCUMULATE_ESC;
             }
 
+            // state == ACCUMULATE_ESC, by fall-through or on re-entry
             if (src >= end) break;
             uint8_t b = *src++;
             if (b == BEAST_ESCAPE)
             {
                 frame_buf[frame_pos++] = BEAST_ESCAPE;
                 state = State::ACCUMULATE;
-                if (frame_pos == frame_total)
-                {
-                    process_frame(tag);
-                    state = State::WAIT_START;
-                }
+                frame_done(tag);
             }
-            else if (b >= 0x31 && b <= 0x33)
-            {
-                // 0x1A <type>: a new frame starts here.
-                frame_buf[0] = b;
-                frame_pos = 1;
-                frame_total = frame_size_for(b);
-                state = State::ACCUMULATE;
-            }
-            else
-            {
+            else if (!start_frame(b)) // 0x1A <type> starts a new frame here
                 state = State::WAIT_START;
-            }
         }
     }
 }

@@ -19,6 +19,7 @@
 #include <fstream>
 
 #include "MsgOut.h"
+#include "Logger.h"
 
 namespace IO
 {

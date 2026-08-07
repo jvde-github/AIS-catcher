@@ -594,7 +594,8 @@ function addOverlayLayer(title, layer) {
 function attributionHTML(layer) {
     const a = layer?.getSource()?.getAttributions();
     const raw = typeof a === 'function' ? a() : a;
-    return Array.isArray(raw) ? raw.join(', ') : (raw || '');
+    const html = Array.isArray(raw) ? raw.join(', ') : (raw || '');
+    return html || layer?.get?.('attributions') || '';
 }
 
 // <option> holds text only, so the credit has to lose its markup there
@@ -3167,7 +3168,7 @@ function showAttribution(on) {
 
 function flashAttribution() {
     showAttribution(true);
-    attributionTimer = setTimeout(() => showAttribution(false), 5000);
+    attributionTimer = setTimeout(() => showAttribution(false), 3000);
 }
 
 function toggleAttribution() {

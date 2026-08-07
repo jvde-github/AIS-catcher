@@ -22,6 +22,9 @@
 
 #include <chrono>
 #include <complex>
+#include <cstdint>
+#include <ctime>
+#include <string>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -216,7 +219,7 @@ const int STATUS_ERROR = 1;
 
 const int HEXINDENT_DIRECT = 1;
 const int HEXINDENT_IMPLIED_FROM_CRC = 2;
-const int HEXINDENT_NON_ICAO = 3; // e.g. dump1090 '~' prefix: address received but not ICAO-assigned // e.g. dump1090 '~' prefix: address received but not ICAO-assigned
+const int HEXINDENT_NON_ICAO = 3; // e.g. dump1090 '~' prefix: address received but not ICAO-assigned
 
 const int MSG_TYPE_UNDEFINED = -1;
 const int DF_UNDEFINED = -1;
@@ -246,8 +249,8 @@ struct TAG
 	// some data flowing from DB downstream
 	int version = VERSION_NUMBER;
 	int status = STATUS_OK;
-	int angle = -1;
-	float distance = -1;
+	int angle = ANGLE_UNDEFINED;
+	float distance = DISTANCE_UNDEFINED;
 	float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 	bool validated = false;
 	std::time_t previous_signal = (std::time_t)0;
@@ -258,18 +261,13 @@ struct TAG
 	FLOAT32 station_lat = LAT_UNDEFINED;
 	FLOAT32 station_lon = LON_UNDEFINED;
 	long long sample_idx = 0;
-	long long msg_idx_start, msg_idx_end;
+	long long msg_idx_start = 0, msg_idx_end = 0;
 	uint32_t ipv4 = 0;
 	uint32_t error = MESSAGE_ERROR_NONE;
 	bool replay = false;
 
 	void clear()
 	{
-		// driver = Type::NONE;
-		// hardware.clear();
-		// version = 0;
-		// group = GROUP_OUT_UNDEFINED;
-
 		status = STATUS_OK;
 		sample_lvl = LEVEL_UNDEFINED;
 		level = LEVEL_UNDEFINED;
@@ -317,8 +315,6 @@ public:
 	virtual void onMsg(const T &) {}
 };
 
-using namespace std::chrono;
-
 const FLOAT32 PI = 3.14159265358979323846f;
 
 #ifndef MIN
@@ -328,5 +324,3 @@ const FLOAT32 PI = 3.14159265358979323846f;
 #ifndef MAX
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
-
-#include "Logger.h"

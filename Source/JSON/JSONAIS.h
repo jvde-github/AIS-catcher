@@ -17,8 +17,6 @@
 
 #pragma once
 
-#include <iomanip>
-
 #include "Stream.h"
 #include "JSON/JSON.h"
 #include "Keys.h"

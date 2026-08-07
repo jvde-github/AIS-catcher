@@ -18,6 +18,7 @@
 #include "AIS-catcher.h"
 #include "Config.h"
 #include "Helper.h"
+#include "Logger.h"
 
 bool Config::isActiveObject(const JSON::Value &m)
 {

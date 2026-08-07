@@ -15,8 +15,6 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <cstring>
-
 #include "TemplateString.h"
 #include "Message.h"
 #include "../JSON/Writer.h"
@@ -25,120 +23,111 @@ namespace Util
 {
 	void TemplateString::set(const std::string &t)
 	{
+		struct Token
+		{
+			const char *name;
+			Segment::Kind kind;
+			size_t reserve;
+		};
+
+		static const Token TOKENS[] = {
+			{"mmsi", Segment::MMSI, 10},
+			{"ppm", Segment::PPM, 12},
+			{"station", Segment::STATION, 11},
+			{"type", Segment::TYPE, 2},
+			{"repeat", Segment::REPEAT, 1},
+			{"channel", Segment::CHANNEL, 1},
+			{"rxtimeux", Segment::RXTIMEUX, 11},
+		};
+
 		tpl = t;
 		segments.clear();
 		estimated_size = 0;
 		has_substitution = false;
 
-		auto push_literal = [&](const char *p, size_t n)
+		auto push_literal = [&](size_t pos, size_t n)
 		{
 			if (!n)
 				return;
 			if (!segments.empty() && segments.back().kind == Segment::LITERAL)
-				segments.back().literal.append(p, n);
+				segments.back().literal.append(t, pos, n);
 			else
-			{
-				segments.emplace_back();
-				segments.back().kind = Segment::LITERAL;
-				segments.back().literal.assign(p, n);
-			}
+				segments.push_back({Segment::LITERAL, t.substr(pos, n)});
 			estimated_size += n;
 		};
 
-		auto push_sub = [&](Segment::Kind k, size_t reserve)
-		{
-			segments.emplace_back();
-			segments.back().kind = k;
-			estimated_size += reserve;
-			has_substitution = true;
-		};
-
-		const size_t n = t.size();
 		size_t i = 0;
-		while (i < n)
+		while (i < t.size())
 		{
-			if (t[i] != '%')
+			size_t open = t.find('%', i);
+			if (open == std::string::npos)
 			{
-				size_t j = t.find('%', i);
-				if (j == std::string::npos)
-				{
-					push_literal(t.data() + i, n - i);
-					break;
-				}
-				push_literal(t.data() + i, j - i);
-				i = j;
+				push_literal(i, t.size() - i);
+				break;
+			}
+			push_literal(i, open - i);
+
+			size_t close = t.find('%', open + 1);
+			const Token *tok = nullptr;
+
+			if (close != std::string::npos)
+				for (const Token &c : TOKENS)
+					if (t.compare(open + 1, close - open - 1, c.name) == 0)
+					{
+						tok = &c;
+						break;
+					}
+
+			if (!tok)
+			{
+				// Unterminated or unknown token: emit this '%' and rescan, so a
+				// stray literal '%' cannot consume the opener of the next one.
+				push_literal(open, 1);
+				i = open + 1;
 				continue;
 			}
 
-			size_t end = t.find('%', i + 1);
-			if (end == std::string::npos)
-			{
-				push_literal(t.data() + i, 1);
-				i++;
-				continue;
-			}
-
-			const char *kp = t.data() + i + 1;
-			size_t kn = end - i - 1;
-
-			auto eq = [&](const char *s, size_t l)
-			{ return kn == l && std::memcmp(kp, s, l) == 0; };
-
-			if (eq("mmsi", 4))           push_sub(Segment::MMSI, 10);
-			else if (eq("ppm", 3))       push_sub(Segment::PPM, 12);
-			else if (eq("station", 7))   push_sub(Segment::STATION, 11);
-			else if (eq("type", 4))      push_sub(Segment::TYPE, 2);
-			else if (eq("repeat", 6))    push_sub(Segment::REPEAT, 1);
-			else if (eq("channel", 7))   push_sub(Segment::CHANNEL, 1);
-			else if (eq("rxtimeux", 8))  push_sub(Segment::RXTIMEUX, 11);
-			else
-			{
-				// Unknown token: emit this '%' and rescan, so a stray literal
-				// '%' cannot consume the opener of the next substitution.
-				push_literal(t.data() + i, 1);
-				i++;
-				continue;
-			}
-
-			i = end + 1;
+			segments.push_back({tok->kind, std::string()});
+			estimated_size += tok->reserve;
+			has_substitution = true;
+			i = close + 1;
 		}
 	}
 
 	void TemplateString::write(const TAG &tag, const AIS::Message &msg, std::string &out) const
 	{
 		out.clear();
+
+		JSON::Writer w(out, estimated_size + 16);
+		for (const auto &s : segments)
 		{
-			JSON::Writer w(out, estimated_size + 16);
-			for (const auto &s : segments)
+			switch (s.kind)
 			{
-				switch (s.kind)
-				{
-				case Segment::LITERAL:
-					w.append(s.literal.data(), s.literal.size());
-					break;
-				case Segment::MMSI:
-					w.append_int((long long)msg.mmsi());
-					break;
-				case Segment::PPM:
-					if (tag.ppm != PPM_UNDEFINED)
-						w.append_float((double)tag.ppm);
-					break;
-				case Segment::STATION:
-					w.append_int((long long)msg.getStation());
-					break;
-				case Segment::TYPE:
-					w.append_int((long long)msg.type());
-					break;
-				case Segment::REPEAT:
-					w.append_int((long long)msg.repeat());
-					break;
-				case Segment::CHANNEL:
-					w.append(msg.getChannel());
-					break;
-				case Segment::RXTIMEUX:
-					w.append_int((long long)msg.getRxTimeUnix());
-					break;
-				}
+			case Segment::LITERAL:
+				w.append(s.literal.data(), s.literal.size());
+				break;
+			case Segment::MMSI:
+				w.append_int((long long)msg.mmsi());
+				break;
+			case Segment::PPM:
+				if (tag.ppm != PPM_UNDEFINED)
+					w.append_float((double)tag.ppm);
+				break;
+			case Segment::STATION:
+				w.append_int((long long)msg.getStation());
+				break;
+			case Segment::TYPE:
+				w.append_int((long long)msg.type());
+				break;
+			case Segment::REPEAT:
+				w.append_int((long long)msg.repeat());
+				break;
+			case Segment::CHANNEL:
+				w.append(msg.getChannel());
+				break;
+			case Segment::RXTIMEUX:
+				w.append_int((long long)msg.getRxTimeUnix());
+				break;
 			}
 		}
 	}

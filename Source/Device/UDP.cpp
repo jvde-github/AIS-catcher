@@ -21,6 +21,7 @@
 #endif
 
 #include "UDP.h"
+#include "Logger.h"
 
 namespace Device
 {

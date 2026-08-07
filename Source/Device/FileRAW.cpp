@@ -25,6 +25,7 @@
 #endif
 
 #include "FileRAW.h"
+#include "Logger.h"
 
 namespace Device
 {

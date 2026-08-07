@@ -239,6 +239,9 @@ namespace Plane
         int decodeAC12Field();
         int decodeAC13Field();
         double decodeMovement();
+        void decodeSquawk();
+        void decodeVelocity(int ST);
+        void storeCPR(bool is_airborne);
 
         static int MOD(int a, int b);
         static int NL(double lat);

@@ -38,13 +38,18 @@ protected:
     int minZoom;
     int maxZoom;
 
+    bool isValidCoordinate(int z, int x, int y) const;
+
+    std::string pluginCode(bool overlay, const std::string &sourceOptions) const;
+
 public:
     MapTiles();
     virtual ~MapTiles() = default;
 
     virtual bool open(const std::string &source) = 0;
-    virtual bool isValidTile(int z, int x, int y) const = 0;
-    virtual const std::vector<unsigned char> &getTile(int z, int x, int y, std::string &s) = 0;
+
+    // Empty result means no such tile.
+    virtual const std::vector<unsigned char> &getTile(int z, int x, int y, std::string &contentType) = 0;
     virtual std::string generatePluginCode(bool overlay) const = 0;
 
     const std::string &getName() const { return name; }
@@ -53,8 +58,6 @@ public:
     int getMaxZoom() const { return maxZoom; }
     const std::string &getFormat() const { return format; }
     const std::string &getLayerID() const { return layerID; }
-
-    bool isValidCoordinate(int z, int x, int y) const;
 };
 
 #ifdef HASSQLITE
@@ -65,16 +68,15 @@ private:
     std::vector<int> zoomMapping;
 
     void loadMetadata();
+    int getMBTilesZoom(int olZoom) const;
+
 public:
     MBTilesSupport();
     ~MBTilesSupport() override;
 
     bool open(const std::string &filename) override;
-    bool isValidTile(int z, int x, int y) const override;
     const std::vector<unsigned char> &getTile(int z, int x, int y, std::string &contentType) override;
     std::string generatePluginCode(bool overlay) const override;
-
-    int getMBTilesZoom(int olZoom) const;
 };
 #endif
 
@@ -84,10 +86,7 @@ private:
     std::string basePath;
     std::vector<int> availableZooms;
 
-    bool pathExists(const std::string &path) const;
     bool isDirectory(const std::string &path) const;
-    std::string getFilename(const std::string &path) const;
-    std::string getExtension(const std::string &filename) const;
     std::vector<std::string> listDirectory(const std::string &path) const;
 
     void scanDirectory();
@@ -98,7 +97,6 @@ public:
     ~FileSystemTiles() override = default;
 
     bool open(const std::string &directoryPath) override;
-    bool isValidTile(int z, int x, int y) const override;
     const std::vector<unsigned char> &getTile(int z, int x, int y, std::string &contentType) override;
     std::string generatePluginCode(bool overlay) const override;
 };

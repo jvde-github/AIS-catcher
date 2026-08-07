@@ -185,7 +185,6 @@ namespace AIS
 	// Reference: https://www.itu.int/dms_pubrec/itu-r/rec/m/R-REC-M.585-9-202205-I!!PDF-E.pdf
 	void JSONAIS::COUNTRY(const AIS::Message &msg)
 	{
-
 		uint32_t mid = msg.mmsi();
 		while (mid > 1000)
 			mid /= 10;
@@ -1092,7 +1091,6 @@ namespace AIS
 	}
 	void JSONAIS::ProcessMsg(const AIS::Message &msg, TAG &tag)
 	{
-
 		channel = std::string(1, msg.getChannel());
 
 		json.Add(AIS::KEY_CLASS, &class_str);

@@ -18,16 +18,19 @@
 #pragma once
 
 #include <vector>
-#include <algorithm>
-#include <iostream>
 #include "Common.h"
+#include "Logger.h"
 
 namespace AIS
 {
-    // Circular buffer for tracking key-timestamp pairs with automatic aging
+    // Circular buffer of key-timestamp pairs. Entries older than the caller's
+    // interval are aged out lazily during lookup. The buffer doubles on demand
+    // up to max_capacity, after which the oldest entry is overwritten.
     template <typename KeyType>
     struct MessageHistory
     {
+        static const uint32_t NOT_FOUND = 0xFFFFFFFF;
+
         struct Entry
         {
             KeyType key = 0;
@@ -43,12 +46,12 @@ namespace AIS
         bool max_capacity_warning_shown = false;
 
         MessageHistory(size_t initial_cap = 128, size_t max_cap = 32768)
-            : capacity(initial_cap), max_capacity(max_cap)
-        {
-            entries.resize(capacity);
-        }
+            : entries(initial_cap), capacity(initial_cap), max_capacity(max_cap) {}
 
-        // Expand buffer capacity by factor of 2, up to max_capacity
+        size_t forward(size_t i) const { return i + 1 == capacity ? 0 : i + 1; }
+        size_t backward(size_t i) const { return (i == 0 ? capacity : i) - 1; }
+
+        // Relinearises into a fresh buffer, so the ring always restarts at zero
         bool expandCapacity()
         {
             if (capacity >= max_capacity)
@@ -62,104 +65,68 @@ namespace AIS
             }
 
             size_t new_capacity = MIN(capacity * 2, max_capacity);
+            std::vector<Entry> grown(new_capacity);
 
-            entries.resize(new_capacity);
+            for (size_t i = 0; i < count; i++)
+                grown[i] = entries[(tail + i) % capacity];
 
-            // If buffer wraps around, move wrapped portion to the end and clear old slots
-            if (head <= tail && count > 0)
-            {
-                // Move elements from [0, head) to [capacity, capacity + head)
-                std::copy(entries.begin(), entries.begin() + head, entries.begin() + capacity);
-                // Clear the old slots to avoid dirty data
-                std::fill(entries.begin(), entries.begin() + head, Entry{});
-                head = capacity + head;
-            }
-
+            entries.swap(grown);
             capacity = new_capacity;
+            tail = 0;
+            head = count;
 
             Debug() << "Message History buffer expanded capacity to " << capacity;
 
             return true;
         }
 
+        // Walks back from the newest entry, dropping the tail once an entry
+        // predates max_age: everything beyond it is older still
         uint32_t findAge(KeyType key, uint32_t current_time, uint32_t max_age)
         {
-            if (count == 0)
-                return 0xFFFFFFFF; // Empty
+            size_t idx = backward(head);
 
-            // Walk backward from most recent
-            size_t idx = (head - 1 + capacity) % capacity;
-            size_t items_checked = 0;
-
-            while (items_checked < count)
+            for (size_t checked = 0; checked < count; checked++)
             {
                 const Entry &e = entries[idx];
 
-                // Check if entry is too old
                 if (current_time - e.timestamp > max_age)
                 {
-                    // Age out this and all older entries
-                    count = items_checked;
-                    tail = (idx + 1) % capacity;
+                    count = checked;
+                    tail = forward(idx);
                     break;
                 }
 
                 if (e.key == key)
-                {
                     return current_time - e.timestamp;
-                }
 
-                idx = (idx - 1 + capacity) % capacity;
-                items_checked++;
+                idx = backward(idx);
             }
 
-            return 0xFFFFFFFF;
+            return NOT_FOUND;
         }
 
-        // Returns true if should be included (age >= threshold or not found)
+        // True when the key is unseen or last seen at least `threshold` ago
         bool check(KeyType key, uint32_t timestamp, uint32_t threshold)
         {
-            uint32_t age = findAge(key, timestamp, threshold);
+            if (findAge(key, timestamp, threshold) < threshold)
+                return false;
 
-            if (age >= threshold)
-            {
-                add(key, timestamp, threshold);
-                return true;
-            }
-
-            return false;
+            add(key, timestamp, threshold);
+            return true;
         }
 
         void add(KeyType key, uint32_t timestamp, uint32_t max_age)
         {
-            if (count == capacity)
+            if (count == capacity && (timestamp - entries[tail].timestamp >= max_age || !expandCapacity()))
             {
-                const Entry &e = entries[tail];
-                if (timestamp - e.timestamp < max_age)
-                {
-                    if (!expandCapacity())
-                    {
-                        tail = (tail + 1) % capacity;
-                        count--;
-                    }
-                }
-                else
-                {
-                    tail = (tail + 1) % capacity;
-                    count--;
-
-#ifdef DEBUG_HISTORY
-                    if (!validate())
-                    {
-                        std::cerr << "ERROR: Buffer validation failed after add()" << std::endl;
-                    }
-#endif
-                }
+                tail = forward(tail);
+                count--;
             }
 
             entries[head].key = key;
             entries[head].timestamp = timestamp;
-            head = (head + 1) % capacity;
+            head = forward(head);
             count++;
         }
     };

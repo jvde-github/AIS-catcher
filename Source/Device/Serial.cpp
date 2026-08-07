@@ -26,6 +26,7 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <limits.h>
+#include "Logger.h"
 #endif
 
 namespace

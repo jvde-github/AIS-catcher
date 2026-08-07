@@ -20,6 +20,7 @@
 #include <string>
 
 #include "TCPServer.h"
+#include "Logger.h"
 
 #ifdef _WIN32
 #include <mstcpip.h>

@@ -15,90 +15,94 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <iomanip>
-#include <sstream>
-#include <algorithm>
+#include <cctype>
 
 #include "Convert.h"
 
 namespace Util
 {
+	namespace
+	{
+		struct UTC
+		{
+			int year, month, day, hour, min, sec;
+		};
+
+		// No gmtime/strftime: avoids the TZ lock.
+		// civil_from_days: https://howardhinnant.github.io/date_algorithms.html
+		UTC breakdown(const std::time_t &t)
+		{
+			int64_t s = static_cast<int64_t>(t);
+			if (s < 0) s = 0;
+
+			UTC u;
+			u.sec = s % 60; s /= 60;
+			u.min = s % 60; s /= 60;
+			u.hour = s % 24; s /= 24;
+
+			int z = static_cast<int>(s) + 719468;
+			int era = (z >= 0 ? z : z - 146096) / 146097;
+			unsigned doe = static_cast<unsigned>(z - era * 146097);
+			unsigned yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+			unsigned doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+			unsigned mp = (5 * doy + 2) / 153;
+
+			u.day = static_cast<int>(doy - (153 * mp + 2) / 5 + 1);
+			u.month = static_cast<int>(mp + (mp < 10 ? 3 : -9));
+			u.year = static_cast<int>(yoe) + era * 400 + (u.month <= 2);
+			return u;
+		}
+
+		inline void put2(char *p, int v)
+		{
+			p[0] = '0' + v / 10;
+			p[1] = '0' + v % 10;
+		}
+	}
+
 	std::string Convert::toTimeStr(const std::time_t &t)
 	{
-		// Fast UTC breakdown without gmtime/strftime (avoids TZ locks)
-		int64_t s = static_cast<int64_t>(t);
-		if (s < 0) s = 0;
-		int sec = s % 60; s /= 60;
-		int min = s % 60; s /= 60;
-		int hour = s % 24; s /= 24;
-
-		// Days since 1970-01-01 to y/m/d (civil_from_days, Howard Hinnant)
-		int z = static_cast<int>(s) + 719468;
-		int era = (z >= 0 ? z : z - 146096) / 146097;
-		unsigned doe = static_cast<unsigned>(z - era * 146097);
-		unsigned yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
-		int y = static_cast<int>(yoe) + era * 400;
-		unsigned doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-		unsigned mp = (5 * doy + 2) / 153;
-		unsigned d = doy - (153 * mp + 2) / 5 + 1;
-		unsigned m = mp + (mp < 10 ? 3 : -9);
-		y += (m <= 2);
+		UTC u = breakdown(t);
 
 		char str[16];
-		auto put2 = [](char *p, int v) { p[0] = '0' + v / 10; p[1] = '0' + v % 10; };
-		put2(str, y / 100);
-		put2(str + 2, y % 100);
-		put2(str + 4, m);
-		put2(str + 6, d);
-		put2(str + 8, hour);
-		put2(str + 10, min);
-		put2(str + 12, sec);
-		str[14] = '\0';
-		return std::string(str);
+		put2(str, u.year / 100);
+		put2(str + 2, u.year % 100);
+		put2(str + 4, u.month);
+		put2(str + 6, u.day);
+		put2(str + 8, u.hour);
+		put2(str + 10, u.min);
+		put2(str + 12, u.sec);
+		return std::string(str, 14);
 	}
 
 	std::string Convert::toTimestampStr(const std::time_t &t)
 	{
-		int64_t s = static_cast<int64_t>(t);
-		if (s < 0) s = 0;
-		int sec = s % 60; s /= 60;
-		int min = s % 60; s /= 60;
-		int hour = s % 24; s /= 24;
+		UTC u = breakdown(t);
 
-		int z = static_cast<int>(s) + 719468;
-		int era = (z >= 0 ? z : z - 146096) / 146097;
-		unsigned doe = static_cast<unsigned>(z - era * 146097);
-		unsigned yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
-		int y = static_cast<int>(yoe) + era * 400;
-		unsigned doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-		unsigned mp = (5 * doy + 2) / 153;
-		unsigned d = doy - (153 * mp + 2) / 5 + 1;
-		unsigned m = mp + (mp < 10 ? 3 : -9);
-		y += (m <= 2);
-
-		char str[22];
-		auto put2 = [](char *p, int v) { p[0] = '0' + v / 10; p[1] = '0' + v % 10; };
-		put2(str, y / 100);
-		put2(str + 2, y % 100);
+		char str[24];
+		put2(str, u.year / 100);
+		put2(str + 2, u.year % 100);
 		str[4] = '/';
-		put2(str + 5, m);
+		put2(str + 5, u.month);
 		str[7] = '/';
-		put2(str + 8, d);
+		put2(str + 8, u.day);
 		str[10] = ' ';
-		put2(str + 11, hour);
+		put2(str + 11, u.hour);
 		str[13] = ':';
-		put2(str + 14, min);
+		put2(str + 14, u.min);
 		str[16] = ':';
-		put2(str + 17, sec);
-		str[19] = '\0';
-		return std::string(str);
+		put2(str + 17, u.sec);
+		return std::string(str, 19);
 	}
 
 	std::string Convert::toHexString(uint64_t l)
 	{
-		std::stringstream s;
-		s << std::uppercase << std::hex << std::setfill('0') << std::setw(16) << l;
-		return s.str();
+		static const char hex[] = "0123456789ABCDEF";
+
+		char str[16];
+		for (int i = 15; i >= 0; i--, l >>= 4)
+			str[i] = hex[l & 0xF];
+		return std::string(str, 16);
 	}
 
 	std::string Convert::toString(Format format)
@@ -199,7 +203,7 @@ namespace Util
 
 	std::string Convert::toBase64(const std::string &in)
 	{
-		const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+		static const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 		std::string out;
 		unsigned val = 0;
@@ -224,13 +228,13 @@ namespace Util
 	void Convert::toUpper(std::string &s)
 	{
 		for (auto &c : s)
-			c = toupper(c);
+			c = (char)toupper((unsigned char)c);
 	}
 
 	void Convert::toLower(std::string &s)
 	{
 		for (auto &c : s)
-			c = tolower(c);
+			c = (char)tolower((unsigned char)c);
 	}
 
 	// not using the complex class functions to be independent of internal representation

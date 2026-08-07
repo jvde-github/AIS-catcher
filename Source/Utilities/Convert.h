@@ -19,7 +19,7 @@
 
 #include <cstdint>
 #include <string>
-#include <time.h>
+#include <ctime>
 
 #include "Stream.h"
 
@@ -61,7 +61,7 @@ namespace Util
 			return isHexDigit(c) ? hexDigitValue(c) : -1;
 		}
 		static std::string toString(Format format);
-		static std::string toString(bool b) { return b ? std::string("ON") : std::string("OFF"); }
+		static std::string toString(bool b) { return b ? "ON" : "OFF"; }
 		static std::string toString(bool b, FLOAT32 v) { return b ? std::string("AUTO") : std::to_string(v); }
 		static std::string toString(FLOAT32 f)
 		{

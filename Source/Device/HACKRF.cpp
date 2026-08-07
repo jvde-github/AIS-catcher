@@ -22,6 +22,7 @@
 #include <mutex>
 
 #include "HACKRF.h"
+#include "Logger.h"
 
 namespace Device
 {

@@ -1027,16 +1027,13 @@ void WebViewer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &reque
 				if (source->getLayerID() != layer)
 					continue;
 
-				if (source->isValidTile(z, x, y))
-				{
-					std::string contentType;
-					const std::vector<unsigned char> &data = source->getTile(z, x, y, contentType);
+				std::string contentType;
+				const std::vector<unsigned char> &data = source->getTile(z, x, y, contentType);
 
-					if (!data.empty())
-					{
-						Response(c, contentType, (char *)data.data(), data.size(), settings.use_zlib && gzip, true);
-						return;
-					}
+				if (!data.empty())
+				{
+					Response(c, contentType, (char *)data.data(), data.size(), settings.use_zlib && gzip, true);
+					return;
 				}
 			}
 			Response(c, "text/plain", std::string("Tile not found"), false, false, false, 404);

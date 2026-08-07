@@ -20,6 +20,7 @@
 #include <cstring>
 
 #include "SoapySDR.h"
+#include "Logger.h"
 
 namespace Device {
 

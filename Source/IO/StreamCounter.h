@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <chrono>
+
 #include "Common.h"
 #include "Stream.h"
 #include "AIS.h"
@@ -30,7 +32,7 @@ namespace IO
 		uint64_t lastcount = 0;
 		float rate = 0.0f;
 
-		high_resolution_clock::time_point time_lastupdate;
+		std::chrono::high_resolution_clock::time_point time_lastupdate;
 		int msg_count = 0;
 
 	public:
@@ -58,8 +60,8 @@ namespace IO
 
 		void Stamp()
 		{
-			auto timeNow = high_resolution_clock::now();
-			float seconds = 1e-6f * duration_cast<microseconds>(timeNow - time_lastupdate).count();
+			auto timeNow = std::chrono::high_resolution_clock::now();
+			float seconds = 1e-6f * std::chrono::duration_cast<std::chrono::microseconds>(timeNow - time_lastupdate).count();
 
 			msg_count = count - lastcount;
 			rate += 1.0f * (msg_count / seconds - rate);
@@ -74,7 +76,7 @@ namespace IO
 		void resetStatistic()
 		{
 			count = 0;
-			time_lastupdate = high_resolution_clock::now();
+			time_lastupdate = std::chrono::high_resolution_clock::now();
 		}
 	};
 }

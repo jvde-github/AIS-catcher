@@ -20,6 +20,7 @@
 #include <cstring>
 
 #include "ZMQ.h"
+#include "Logger.h"
 
 namespace Device {
 

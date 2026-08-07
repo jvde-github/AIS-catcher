@@ -27,6 +27,7 @@
 #ifdef HASNMEA2000
 #include "Common.h"
 #include "JSONAIS.h"
+#include "Logger.h"
 
 #include <iostream>
 #include <string.h>

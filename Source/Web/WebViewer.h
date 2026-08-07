@@ -40,6 +40,7 @@
 #include "BackupManager.h"
 #include "Receiver.h"
 #include "MapTiles.h"
+#include "Logger.h"
 
 class SSEStreamer : public StreamIn<JSON::JSON>
 {

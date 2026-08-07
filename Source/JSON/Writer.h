@@ -225,34 +225,34 @@ namespace JSON
 			need_sep = false;
 		}
 
-		// Short-run memcpy that lets the compiler emit fixed-size ldr/str pairs
-		// instead of a _memcpy stub call. Hot on JSON key/value writes.
-		// [1..8]: size-specialized. [9..16]: two overlapping 8-byte copies
-		// (branch-free). Default: fall back to memcpy.
 		inline void put_bytes_short(const char *s, size_t n)
 		{
-			switch (n)
-			{
-			case 0: break;
-			case 1: ptr[0] = s[0]; break;
-			case 2: std::memcpy(ptr, s, 2); break;
-			case 3: std::memcpy(ptr, s, 3); break;
-			case 4: std::memcpy(ptr, s, 4); break;
-			case 5: std::memcpy(ptr, s, 5); break;
-			case 6: std::memcpy(ptr, s, 6); break;
-			case 7: std::memcpy(ptr, s, 7); break;
-			case 8: std::memcpy(ptr, s, 8); break;
-			case 9:  std::memcpy(ptr, s, 9);  break;
-			case 10: std::memcpy(ptr, s, 10); break;
-			case 11: std::memcpy(ptr, s, 11); break;
-			case 12: std::memcpy(ptr, s, 12); break;
-			case 13: std::memcpy(ptr, s, 13); break;
-			case 14: std::memcpy(ptr, s, 14); break;
-			case 15: std::memcpy(ptr, s, 15); break;
-			case 16: std::memcpy(ptr, s, 16); break;
-			default: std::memcpy(ptr, s, n); break;
-			}
+			char *d = ptr;
 			ptr += n;
+
+			if (n >= 8)
+			{
+				if (n > 16)
+				{
+					std::memcpy(d, s, n);
+					return;
+				}
+				std::memcpy(d, s, 8);
+				std::memcpy(d + n - 8, s + n - 8, 8);
+				return;
+			}
+			if (n >= 4)
+			{
+				std::memcpy(d, s, 4);
+				std::memcpy(d + n - 4, s + n - 4, 4);
+				return;
+			}
+			if (n == 0)
+				return;
+
+			d[0] = s[0];
+			d[n >> 1] = s[n >> 1];
+			d[n - 1] = s[n - 1];
 		}
 
 		// Writes "key":. Caller must have reserved >= klen + 3.
@@ -340,11 +340,7 @@ namespace JSON
 				start = ++s;
 			}
 			if (s > start)
-			{
-				size_t n = (size_t)(s - start);
-				memcpy(ptr, start, n);
-				ptr += n;
-			}
+				put_bytes_short(start, (size_t)(s - start));
 		}
 
 		// JSON-escaped string with surrounding quotes.
@@ -775,22 +771,11 @@ namespace JSON
 		int dict = 0;
 		bool stringify_enhanced = false;
 
-		void write_value(const Value &v, Writer &w)
+		// Separate: folding these into write_value's chain lets GCC rebuild a jump table.
+		void write_value_container(const Value &v, Writer &w)
 		{
 			switch (v.getType())
 			{
-			case Value::Type::STRING:
-				w.val(v.getStringRef());
-				break;
-			case Value::Type::INT:
-				w.val((long long)v.getInt());
-				break;
-			case Value::Type::FLOAT:
-				w.val(v.getFloat());
-				break;
-			case Value::Type::BOOL:
-				w.val(v.getBool());
-				break;
 			case Value::Type::OBJECT:
 				write_object(v.getObject(), w);
 				break;
@@ -816,6 +801,21 @@ namespace JSON
 				w.val_null();
 				break;
 			}
+		}
+
+		inline void write_value(const Value &v, Writer &w)
+		{
+			const Value::Type t = v.getType();
+			if (t == Value::Type::INT)
+				w.val((long long)v.getInt());
+			else if (t == Value::Type::STRING)
+				w.val(v.getString());
+			else if (t == Value::Type::FLOAT)
+				w.val(v.getFloat());
+			else if (t == Value::Type::BOOL)
+				w.val(v.getBool());
+			else
+				write_value_container(v, w);
 		}
 
 		void write_value_enhanced(const Value &v, int key_index, Writer &w)

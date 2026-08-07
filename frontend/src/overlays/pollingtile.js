@@ -6,13 +6,17 @@ import XYZ from 'ol/source/XYZ';
 
 const POLL_INTERVAL_MS = 10 * 60 * 1000;
 
-export function createPollingTileLayer({ name, title, getSourceOptions }) {
+export function createPollingTileLayer({ name, title, attributions, getSourceOptions }) {
     const layer = new TileLayer({
         name,
         title,
         type: 'overlay',
         opacity: 0.7,
     });
+
+    // The source only exists once the overlay is switched on, so the credit is
+    // kept on the layer too - the menu has to show it before first activation.
+    if (attributions) layer.set('attributions', attributions);
 
     let intervalId = null;
 
@@ -21,7 +25,7 @@ export function createPollingTileLayer({ name, title, getSourceOptions }) {
         try {
             const options = await getSourceOptions();
             if (!options) return false;
-            layer.setSource(new XYZ(options));
+            layer.setSource(new XYZ({ attributions, ...options }));
             return true;
         } catch (error) {
             console.error(`Error refreshing ${title} overlay:`, error);

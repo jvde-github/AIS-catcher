@@ -31,6 +31,7 @@
 #include "AIS.h"
 #include "JSON.h"
 #include "DeviceManager.h"
+#include "Logger.h"
 
 class Receiver;
 

@@ -22,6 +22,7 @@
 #include <mutex>
 
 #include "SDRPLAY.h"
+#include "Logger.h"
 
 namespace Device {
 

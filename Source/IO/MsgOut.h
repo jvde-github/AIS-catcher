@@ -29,6 +29,7 @@
 #include "OutputStats.h"
 #include "JSON/JSON.h"
 #include "JSON/Writer.h"
+#include "Logger.h"
 
 class Receiver;
 

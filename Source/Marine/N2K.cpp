@@ -35,9 +35,7 @@ namespace AIS
 
 	inline int ROUND(double x)
 	{
-		if (x < 0)
-			return (int)(-0.5f + x);
-		return (int)(0.5f + x);
+		return (int)(x < 0 ? x - 0.5 : x + 0.5);
 	}
 
 	void N2KtoMessage::startMessage(const tN2kMsg &N2kMsg, int &idx)
@@ -525,43 +523,32 @@ namespace AIS
 	{
 		if (len == 0)
 			return;
+
+		static const struct
+		{
+			unsigned long pgn;
+			void (N2KtoMessage::*handler)(const tN2kMsg &, TAG &);
+		} handlers[] = {
+			{129038, &N2KtoMessage::onMsg129038},
+			{129039, &N2KtoMessage::onMsg129039},
+			{129040, &N2KtoMessage::onMsg129040},
+			{129041, &N2KtoMessage::onMsg129041},
+			{129793, &N2KtoMessage::onMsg129793},
+			{129794, &N2KtoMessage::onMsg129794},
+			{129798, &N2KtoMessage::onMsg129798},
+			{129802, &N2KtoMessage::onMsg129802},
+			{129809, &N2KtoMessage::onMsg129809},
+			{129810, &N2KtoMessage::onMsg129810},
+		};
+
 		tN2kMsg N2kMsg = *((tN2kMsg *)data->data);
 
-		switch (N2kMsg.PGN)
-		{
-		case 129038:
-			onMsg129038(N2kMsg, tag);
-			break;
-		case 129793:
-			onMsg129793(N2kMsg, tag);
-			break;
-		case 129794:
-			onMsg129794(N2kMsg, tag);
-			break;
-		case 129798:
-			onMsg129798(N2kMsg, tag);
-			break;
-		case 129802:
-			onMsg129802(N2kMsg, tag);
-			break;
-		case 129039:
-			onMsg129039(N2kMsg, tag);
-			break;
-		case 129040:
-			onMsg129040(N2kMsg, tag);
-			break;
-		case 129041:
-			onMsg129041(N2kMsg, tag);
-			break;
-		case 129809:
-			onMsg129809(N2kMsg, tag);
-			break;
-		case 129810:
-			onMsg129810(N2kMsg, tag);
-			break;
-		default:
-			break;
-		}
+		for (const auto &h : handlers)
+			if (h.pgn == N2kMsg.PGN)
+			{
+				(this->*h.handler)(N2kMsg, tag);
+				return;
+			}
 	}
 }
 

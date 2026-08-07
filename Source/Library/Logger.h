@@ -18,6 +18,7 @@
 #pragma once
 
 #include <string>
+#include <sstream>
 #include <mutex>
 #include <functional>
 #include <vector>
@@ -47,7 +48,7 @@ struct LogMessage
     LogMessage() : level(LogLevel::EMPTY) {}
     LogMessage(LogLevel l, std::string msg, std::string time, uint32_t seq = 0) : level(l), message(std::move(msg)), time(std::move(time)), seq(seq) {}
 
-    std::string levelToString() const;
+    const char *levelToString() const;
     std::string toJSON() const;
 };
 

@@ -20,6 +20,7 @@
 #include "Helper.h"
 #include "Writer.h"
 #include "Statistics.h"
+#include "Logger.h"
 
 //--------------------------------------------
 

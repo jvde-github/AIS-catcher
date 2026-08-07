@@ -36,6 +36,12 @@ class RAW1090 : public SimpleStreamInOut<RAW, Plane::ADSB>
     // During ACCUMULATE, msg.len holds the nibble count (halved on dispatch).
     // msg.len & 1 == 0 → next char is the high nibble of a new byte.
 
+    void reset_msg()
+    {
+        msg.reset(rxtime_cache);
+        msg.len = 0;
+    }
+
 public:
     virtual ~RAW1090() {}
 
@@ -64,4 +70,7 @@ public:
 
 private:
     void process_frame(TAG &tag);
+    // Begins a frame on a valid type byte ('1'..'3'), false leaves state untouched
+    bool start_frame(uint8_t type);
+    bool frame_done(TAG &tag);
 };

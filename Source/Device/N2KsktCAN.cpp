@@ -19,6 +19,7 @@
 
 #include "N2KsktCAN.h"
 #include "N2KInterface.h"
+#include "Logger.h"
 
 #ifdef __linux__
 #include <ifaddrs.h>
