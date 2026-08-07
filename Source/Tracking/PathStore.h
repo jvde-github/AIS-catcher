@@ -22,6 +22,7 @@
 #include <ctime>
 #include <string>
 #include <vector>
+#include <deque>
 
 #include "Geodesy.h"
 
@@ -94,8 +95,10 @@ private:
 		uint32_t head, tail;
 	};
 
-	std::vector<Block> blocks;
+	// deque, not vector: growth must not move a Block, deref() hands out Point&.
+	std::deque<Block> blocks;
 	std::vector<Anchor> anchors;
+	int block_cap = 0;
 	List lists[3];
 
 	static uint32_t ref(int b, int i) { return ((uint32_t)b << BLOCK_SHIFT) | i; }
@@ -244,9 +247,23 @@ private:
 				compactBlock(lists[RT].tail);
 	}
 
+	// a fresh block enters through FREE so every block is on exactly one tier
+	int growBlock()
+	{
+		if ((int)blocks.size() >= block_cap)
+			return -1;
+
+		blocks.push_back(Block());
+		pushBlockHead(FREE, (int)blocks.size() - 1);
+		return popFreeBlock();
+	}
+
 	int allocRTBlock()
 	{
 		int b = popFreeBlock();
+
+		if (b == -1)
+			b = growBlock();
 
 		if (b == -1 && lists[RT].tail != lists[RT].head)
 		{
@@ -309,15 +326,14 @@ public:
 		if (nblocks > (int)(SHIP_BIT >> BLOCK_SHIFT))
 			nblocks = (int)(SHIP_BIT >> BLOCK_SHIFT); // refs must not collide with SHIP_BIT
 
-		blocks.assign(nblocks, Block());
+		block_cap = nblocks;
+		blocks.clear();
 		anchors.resize(nships);
 
 		for (int i = 0; i < nships; i++)
 			anchors[i].head = anchors[i].tail = SHIP_BIT | i;
 
 		lists[RT] = lists[HIST] = lists[FREE] = List();
-		for (int b = nblocks - 1; b >= 0; b--)
-			pushBlockHead(FREE, b);
 
 		return nblocks;
 	}
