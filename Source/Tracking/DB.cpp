@@ -18,6 +18,7 @@
 #include "AIS-catcher.h"
 #include "DB.h"
 #include "Geodesy.h"
+#include "Logger.h"
 
 #include <fstream>
 

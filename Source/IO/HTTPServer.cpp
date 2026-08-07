@@ -18,6 +18,7 @@
 #include <cstring>
 
 #include "HTTPServer.h"
+#include "Logger.h"
 
 namespace IO
 {

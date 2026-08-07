@@ -26,6 +26,7 @@
 #include <cstring>
 
 #include "SpyServer.h"
+#include "Logger.h"
 
 namespace Device
 {

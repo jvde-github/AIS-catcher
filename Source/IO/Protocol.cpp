@@ -16,6 +16,7 @@
 */
 
 #include "Protocol.h"
+#include "Logger.h"
 
 #include <sys/types.h>
 
@@ -290,7 +291,7 @@ namespace Protocol
 	{
 		if (state == READY && reset_time > 0 && std::difftime(time(nullptr), stamp) > reset_interval)
 		{
-			Warning() << "TCP (" << host << ":" << port << "): connection expired, reconnect.";
+			Debug() << "TCP (" << host << ":" << port << "): reset interval reached, refreshing connection.";
 			reconnect();
 		}
 

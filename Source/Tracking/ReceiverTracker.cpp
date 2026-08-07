@@ -17,6 +17,7 @@
 
 #include "ReceiverTracker.h"
 #include "Device/Device.h"
+#include "Logger.h"
 
 void ReceiverTracker::applyConfig(const TrackingConfig &cfg, const AIS::Filter &f)
 {

@@ -22,6 +22,7 @@
 #include "Convert.h"
 #include "Parse.h"
 #include "Helper.h"
+#include "Logger.h"
 
 namespace IO
 {

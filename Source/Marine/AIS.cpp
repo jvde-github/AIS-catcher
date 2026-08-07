@@ -16,6 +16,7 @@
 */
 
 #include "AIS.h"
+#include "Logger.h"
 
 // Sources:
 //	https://www.itu.int/dms_pubrec/itu-r/rec/m/R-REC-M.1371-0-199811-S!!PDF-E.pdf

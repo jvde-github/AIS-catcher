@@ -20,6 +20,7 @@
 #include "DBMS/PostgreSQL.h"
 
 #include "AIS-catcher.h"
+#include "Logger.h"
 
 namespace IO
 {

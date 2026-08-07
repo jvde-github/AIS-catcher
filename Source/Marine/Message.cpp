@@ -20,6 +20,7 @@
 #include "Helper.h"
 #include "JSON/Writer.h"
 #include "Library/SWAR.h"
+#include "Logger.h"
 
 namespace AIS
 {

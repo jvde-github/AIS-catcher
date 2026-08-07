@@ -19,6 +19,7 @@
 
 #include "Serial.h"
 #include "Helper.h"
+#include "Logger.h"
 
 #ifndef _WIN32
 #include <sys/select.h>
@@ -26,7 +27,6 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <limits.h>
-#include "Logger.h"
 #endif
 
 namespace

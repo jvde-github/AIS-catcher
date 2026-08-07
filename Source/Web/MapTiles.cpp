@@ -16,6 +16,7 @@
 */
 
 #include "MapTiles.h"
+#include "Logger.h"
 
 #include <fstream>
 #include <algorithm>
@@ -23,7 +24,6 @@
 #include <cstring>
 #include <stdexcept>
 
-#include "Logger.h"
 
 #ifdef _WIN32
 #include <windows.h>

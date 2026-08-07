@@ -17,6 +17,7 @@
 
 #include "HTTPClient.h"
 #include "Convert.h"
+#include "Logger.h"
 
 namespace IO
 {

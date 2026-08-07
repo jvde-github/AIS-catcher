@@ -21,6 +21,7 @@
 #include "NMEA.h"
 #include "JSONAIS.h"
 #include "Helper.h"
+#include "Logger.h"
 
 #include <cstdio>
 #include <cstdlib>

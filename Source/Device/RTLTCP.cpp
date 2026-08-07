@@ -18,6 +18,7 @@
 #include <cstring>
 
 #include "RTLTCP.h"
+#include "Logger.h"
 
 namespace Device
 {

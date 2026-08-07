@@ -20,6 +20,7 @@
 #include "Convert.h"
 #include "Helper.h"
 #include "SWAR.h"
+#include "Logger.h"
 #include <cmath>
 
 namespace AIS

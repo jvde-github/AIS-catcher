@@ -20,6 +20,7 @@
 #include "Model.h"
 #include "Parse.h"
 #include "Convert.h"
+#include "Logger.h"
 
 namespace AIS
 {

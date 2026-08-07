@@ -22,6 +22,7 @@
 
 #include "FFT.h"
 #include "DSP.h"
+#include "Logger.h"
 
 namespace DSP {
 	void SimplePLL::Receive(const FLOAT32* data, int len, TAG& tag) {

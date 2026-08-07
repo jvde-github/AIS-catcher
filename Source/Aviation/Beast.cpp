@@ -18,9 +18,9 @@
 #include <cmath>
 
 #include "Beast.h"
-#include "Logger.h"
 #include "SWAR.h"
 #include "Convert.h"
+#include "Logger.h"
 
 namespace
 {
