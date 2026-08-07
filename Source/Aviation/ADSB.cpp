@@ -20,6 +20,7 @@
 
 #include "ADSB.h"
 #include "Logger.h"
+#include "JSON/Writer.h"
 
 // References:
 // https://github.com/antirez/dump1090/blob/master/dump1090.c
@@ -30,6 +31,64 @@
 // below is a simplified version of the code from dump1090.c by Antirez
 namespace Plane
 {
+
+    void ADSB::getJSON(JSON::Writer &w, long int delta_time) const
+    {
+        w.beginObject().kv("hexident", hexident);
+
+        if (isValidCoord(lat, lon))
+        {
+            w.kv("lat", lat).kv("lon", lon)
+                .kv_unless("distance", distance, DISTANCE_UNDEFINED)
+                .kv_unless("bearing", angle, ANGLE_UNDEFINED);
+        }
+        else
+            w.kv_null("lat").kv_null("lon");
+
+        w.kv_unless("level", signalLevel, LEVEL_UNDEFINED)
+            .kv("count", nMessages)
+            .kv("group_mask", group_mask)
+            .kv_unless("altitude", altitude, ALTITUDE_UNDEFINED)
+            .kv_unless("speed", speed, SPEED_UNDEFINED)
+            .kv_unless("heading", heading, HEADING_UNDEFINED)
+            .kv_unless("vertrate", vertrate, VERT_RATE_UNDEFINED)
+            .kv_unless("squawk", squawk, SQUAWK_UNDEFINED)
+            .kv_unless("category", category, CATEGORY_UNDEFINED)
+            .kv("airborne", airborne)
+            .kv("callsign", callsign)
+            .kv("message_types", message_types)
+            .kv("message_subtypes", message_subtypes)
+            .kv("last_group", last_group);
+
+        if (country_code[0] != ' ')
+            w.kv("country", {country_code, 2});
+        else
+            w.kv_null("country");
+
+        w.kv("last_signal", delta_time).endObject();
+    }
+
+    void ADSB::writeCompact(JSON::Writer &w, std::time_t rx) const
+    {
+        w.beginArray().val(hexident)
+            .val_unless(lat, LAT_UNDEFINED).val_unless(lon, LON_UNDEFINED)
+            .val_unless(altitude, ALTITUDE_UNDEFINED).val_unless(speed, SPEED_UNDEFINED)
+            .val_unless(heading, HEADING_UNDEFINED).val_unless(vertrate, VERT_RATE_UNDEFINED)
+            .val_unless(squawk, SQUAWK_UNDEFINED)
+            .val(callsign).val(airborne).val(nMessages).val((long long)rx)
+            .val_unless(category, CATEGORY_UNDEFINED).val_unless(signalLevel, LEVEL_UNDEFINED);
+
+        if (country_code[0] != ' ')
+            w.val({country_code, 2});
+        else
+            w.val_null();
+
+        w.val_unless(distance, DISTANCE_UNDEFINED)
+            .val(message_types).val(message_subtypes)
+            .val(group_mask).val(last_group)
+            .val_unless(angle, ANGLE_UNDEFINED).endArray();
+    }
+    
     static const uint32_t crc_table2[256] = {
         0x000000U, 0xfff409U, 0x001c1bU, 0xffe812U, 0x003836U, 0xffcc3fU, 0x00242dU, 0xffd024U,
         0x00706cU, 0xff8465U, 0x006c77U, 0xff987eU, 0x00485aU, 0xffbc53U, 0x005441U, 0xffa048U,
@@ -370,7 +429,7 @@ namespace Plane
         return std::floor(2 * PI / acos(tmp));
     }
 
-    bool ADSB::decodeCPR(FLOAT32 ref_lat, FLOAT32 ref_lon, bool use_even, bool &updated,  FLOAT32 &lt, FLOAT32 &ln)
+    bool ADSB::decodeCPR(FLOAT32 ref_lat, FLOAT32 ref_lon, bool use_even, bool &updated, FLOAT32 &lt, FLOAT32 &ln)
     {
         if (!even.Valid() || !odd.Valid() || (even.airborne != odd.airborne))
             return false;
@@ -380,9 +439,8 @@ namespace Plane
             return false;
 
         if (even.airborne)
-        {
             return decodeCPR_airborne(use_even, updated, lt, ln);
-        }
+
         return decodeCPR_surface(ref_lat, ref_lon, use_even, updated, lt, ln);
     }
 

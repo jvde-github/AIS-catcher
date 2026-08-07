@@ -837,6 +837,9 @@ const WebViewer::Route WebViewer::routes[] = {
 	{"/api/ships_array.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 { return s->getShipsJSONcompact(queryInt(a, "since")); }, true},
+	{"/api/planes.json", nullptr, "application/json",
+	 [](WebViewer *w, ReceiverTracker *, const std::string &)
+	 { return w->planes.getJSON(); }, true},
 	{"/api/planes_array.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &a)
 	 { return w->planes.getCompactArray(queryInt(a, "since")); }, true},

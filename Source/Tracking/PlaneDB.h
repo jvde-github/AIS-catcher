@@ -60,6 +60,8 @@ class PlaneDB : public StreamIn<Plane::ADSB>
     typedef SlotTable<Plane::ADSB, uint32_t> Table;
     Table table;
 
+    std::string content;
+
     void calcReferencePosition(TAG &tag, int ptr, FLOAT32 &lat, FLOAT32 &lon)
     {
         lat = LAT_UNDEFINED;
@@ -263,48 +265,65 @@ public:
             updatePlane(&msg[i], tag);
     }
 
-    std::string getCompactArray(std::time_t since = 0)
+    // Newest-first LRU order, so the first record past a cutoff ends iteration.
+    template <typename F>
+    void forEachRecent(std::time_t now, std::time_t since, F f)
     {
-        std::lock_guard<std::mutex> lock(mtx);
-
-        std::string content;
-        JSON::Writer w(content, 32768);
-        std::time_t now = std::time(nullptr);
-        w.beginObject().kv("count", table.size()).kv("time", (long long)now).key("values").beginArray();
-
         table.forEach([&](int ptr) {
             const Plane::ADSB &plane = table[ptr];
             std::time_t rx = plane.getRxTimeUnix();
-            long int time_since_update = now - rx;
+            long int age = now - rx;
 
-            if (time_since_update > TIMEOUT_GROUND)
+            if (age > TIMEOUT_GROUND)
                 return false;
             if (since > 0 && rx < since)
                 return false;
 
-            if (time_since_update <= TIMEOUT_AIRBORNE || (time_since_update <= TIMEOUT_GROUND && plane.airborne == 0))
-            {
-                w.beginArray().val(plane.hexident)
-                    .val_unless(plane.lat, LAT_UNDEFINED).val_unless(plane.lon, LON_UNDEFINED)
-                    .val_unless(plane.altitude, ALTITUDE_UNDEFINED).val_unless(plane.speed, SPEED_UNDEFINED)
-                    .val_unless(plane.heading, HEADING_UNDEFINED).val_unless(plane.vertrate, VERT_RATE_UNDEFINED)
-                    .val_unless(plane.squawk, SQUAWK_UNDEFINED)
-                    .val(plane.callsign).val(plane.airborne).val(plane.nMessages).val((long long)rx)
-                    .val_unless(plane.category, CATEGORY_UNDEFINED).val_unless(plane.signalLevel, LEVEL_UNDEFINED);
-                if (plane.country_code[0] != ' ')
-                    w.val({plane.country_code, 2});
-                else
-                    w.val_null();
-                w.val_unless(plane.distance, DISTANCE_UNDEFINED)
-                    .val(plane.message_types).val(plane.message_subtypes)
-                    .val(plane.group_mask).val(plane.last_group)
-                    .val_unless(plane.angle, ANGLE_UNDEFINED).endArray();
-            }
+            if (age <= TIMEOUT_AIRBORNE || plane.airborne == 0)
+                f(plane, rx);
             return true;
         });
+    }
 
-        w.endArray().kv("error", false).endObject().raw("\n\n");
-        w.finish();
+    std::string getJSON()
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+
+        std::time_t now = std::time(nullptr);
+
+        content.clear();
+        {
+            JSON::Writer w(content, 32768);
+
+            w.beginObject().kv("count", table.size()).kv("time", (long long)now).key("planes").beginArray();
+
+            forEachRecent(now, 0, [&](const Plane::ADSB &plane, std::time_t rx) {
+                plane.getJSON(w, (long int)(now - rx));
+            });
+
+            w.endArray().kv("error", false).endObject().raw("\n\n");
+        }
+        return content;
+    }
+
+    std::string getCompactArray(std::time_t since = 0)
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+
+        std::time_t now = std::time(nullptr);
+
+        content.clear();
+        {
+            JSON::Writer w(content, 32768);
+
+            w.beginObject().kv("count", table.size()).kv("time", (long long)now).key("values").beginArray();
+
+            forEachRecent(now, since, [&](const Plane::ADSB &plane, std::time_t rx) {
+                plane.writeCompact(w, rx);
+            });
+
+            w.endArray().kv("error", false).endObject().raw("\n\n");
+        }
         return content;
     }
 };
