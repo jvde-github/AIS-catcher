@@ -165,13 +165,21 @@ private:
 		blk.prev = blk.next = -1;
 	}
 
+	// grows the pool while the budget allows, so both tiers claim blocks on demand
 	int popFreeBlock()
 	{
 		int b = lists[FREE].head;
 
-		if (b != -1)
-			detachBlock(FREE, b);
+		if (b == -1)
+		{
+			if ((int)blocks.size() >= block_cap)
+				return -1;
 
+			blocks.push_back(Block());
+			return (int)blocks.size() - 1;
+		}
+
+		detachBlock(FREE, b);
 		return b;
 	}
 
@@ -247,23 +255,9 @@ private:
 				compactBlock(lists[RT].tail);
 	}
 
-	// a fresh block enters through FREE so every block is on exactly one tier
-	int growBlock()
-	{
-		if ((int)blocks.size() >= block_cap)
-			return -1;
-
-		blocks.push_back(Block());
-		pushBlockHead(FREE, (int)blocks.size() - 1);
-		return popFreeBlock();
-	}
-
 	int allocRTBlock()
 	{
 		int b = popFreeBlock();
-
-		if (b == -1)
-			b = growBlock();
 
 		if (b == -1 && lists[RT].tail != lists[RT].head)
 		{
