@@ -1228,6 +1228,19 @@ const receiverSchema = {
             value: "SERIALPORT"
         }
     },
+    serialport_dump_file: {
+        name: "serialport_dump_file",
+        label: "Dump File",
+        type: "text",
+        jsonpath: "serialport.dump_file",
+        placeholder: "e.g., /var/log/ais-serial.log",
+        tooltip: "Append raw input to this file for troubleshooting",
+        advanced: true,
+        dependsOn: {
+            field: "input",
+            value: "SERIALPORT"
+        }
+    },
     udpserver_server: {
         name: "udpserver_server",
         label: "Server Address",
