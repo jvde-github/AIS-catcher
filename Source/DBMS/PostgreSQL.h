@@ -46,6 +46,9 @@ namespace IO
 		bool exec(int st, const std::vector<const char *> &params) override;
 		bool execReturningId(int st, const std::vector<const char *> &params, std::string &id) override;
 
+		void collectVesselsSince(const std::string &since, std::set<uint32_t> &out) override;
+		long execDelete(const char *sql, const char *param) override;
+
 		bool begin() override { return run("BEGIN"); }
 		bool commit() override { return run("COMMIT"); }
 		bool rollback() override { return run("ROLLBACK"); }

@@ -21,6 +21,7 @@
 #include "Logger.h"
 #include "Common.h"
 #include "Convert.h"
+#include "Helper.h"
 #include "Parse.h"
 
 namespace IO
@@ -331,7 +332,7 @@ namespace IO
 		if (t <= 0)
 			t = std::time(nullptr);
 
-		const std::time_t hour = t - (t % 3600);
+		const std::time_t hour = hourOf(t);
 
 		if (stats_current.hour != hour)
 		{
@@ -450,8 +451,17 @@ namespace IO
 
 		if (ok)
 		{
-			commit();
-			conn_fails = 0;
+			// a failed commit means nothing landed; count the cycle so the
+			// watchdog fires on a persistently failing backend
+			if (commit())
+			{
+				conn_fails = 0;
+				return;
+			}
+
+			rollback();
+			conn_fails++;
+			Warning() << "DBMS: dropped " << batch.size() << " messages, commit failed";
 			return;
 		}
 
@@ -467,13 +477,11 @@ namespace IO
 				return;
 			}
 
-			if (writeEntry(entry))
-				commit();
-			else
-			{
-				rollback();
-				failed++;
-			}
+			if (writeEntry(entry) && commit())
+				continue;
+
+			rollback();
+			failed++;
 		}
 
 		if (failed)
@@ -493,6 +501,13 @@ namespace IO
 			post();
 			flushed();
 
+			const long day = std::time(nullptr) / 86400;
+			if (day != maintain_day)
+			{
+				maintain_day = day;
+				maintain();
+			}
+
 			if (terminate)
 				break;
 
@@ -502,6 +517,31 @@ namespace IO
 				StopRequest();
 			}
 		}
+	}
+
+	void DatabaseOutput::maintain()
+	{
+		if (retention_days <= 0)
+			return;
+
+		const auto t0 = std::chrono::steady_clock::now();
+		const std::string cutoff = Util::Convert::toTimestampStr(retentionCutoff());
+
+		// chunked so a backlog never holds one long transaction; cascade covers children
+		long total = 0, rows;
+		do
+		{
+			rows = execDelete("DELETE FROM ais_message WHERE id IN "
+							  "(SELECT id FROM ais_message WHERE received_at < $1 LIMIT 5000)",
+							  cutoff.c_str());
+			total += rows;
+		} while (rows == 5000);
+
+		execDelete("DELETE FROM ais_stats_hourly WHERE bucket < $1", cutoff.c_str());
+		execDelete("DELETE FROM ais_state WHERE received_at < $1", cutoff.c_str());
+
+		if (total)
+			Info() << "DBMS: retention removed " << total << " messages older than " << cutoff << " in " << Util::Helper::msSince(t0) << " ms";
 	}
 
 	void DatabaseOutput::startWorker()
@@ -547,6 +587,19 @@ namespace IO
 
 		if (!prepareAll())
 			throw std::runtime_error("DBMS: cannot prepare statements, is the schema loaded? See create_pg.sql / create_sqlite.sql");
+
+		if (STATS)
+		{
+			const std::time_t now = std::time(nullptr);
+			stats_current.hour = hourOf(now);
+			collectVesselsSince(Util::Convert::toTimestampStr(stats_current.hour), stats_current.vessels);
+
+			if (!stats_current.vessels.empty())
+				Debug() << "DBMS: resumed hour bucket with " << stats_current.vessels.size() << " vessels already heard";
+		}
+
+		maintain();
+		maintain_day = std::time(nullptr) / 86400;
 
 		startWorker();
 	}
@@ -649,9 +702,7 @@ namespace IO
 		message_queue.push_back(std::move(entry));
 	}
 
-	// Settings that named the old per-message-type tables. They have no successor
-	// with a single position and static table, so say so rather than reporting an
-	// unknown option and leaving the reader to guess.
+	// removed table settings get an error naming their replacement
 	static const char *replacedBy(AIS::Keys key)
 	{
 		switch (key)
@@ -685,6 +736,9 @@ namespace IO
 			break;
 		case AIS::KEY_SETTING_CAPACITY:
 			capacity = Util::Parse::Integer(arg, 64, 1000000);
+			break;
+		case AIS::KEY_SETTING_RETENTION:
+			retention_days = Util::Parse::Integer(arg, 0, 36500);
 			break;
 		case AIS::KEY_SETTING_GROUPS_IN:
 			StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));

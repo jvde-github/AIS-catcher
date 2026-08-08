@@ -79,6 +79,31 @@ namespace IO
 		}
 	}
 
+	void SQLite::collectVesselsSince(const std::string &since, std::set<uint32_t> &out)
+	{
+		sqlite3_stmt *s = nullptr;
+		if (sqlite3_prepare_v2(db, "SELECT mmsi FROM ais_state WHERE received_at >= ?1", -1, &s, nullptr) != SQLITE_OK)
+			return;
+
+		sqlite3_bind_text(s, 1, since.c_str(), -1, SQLITE_STATIC);
+		while (sqlite3_step(s) == SQLITE_ROW)
+			out.insert((uint32_t)sqlite3_column_int64(s, 0));
+
+		sqlite3_finalize(s);
+	}
+
+	long SQLite::execDelete(const char *sql, const char *param)
+	{
+		sqlite3_stmt *s = nullptr;
+		if (sqlite3_prepare_v2(db, toSQLiteParams(sql).c_str(), -1, &s, nullptr) != SQLITE_OK)
+			return 0;
+
+		sqlite3_bind_text(s, 1, param, -1, SQLITE_STATIC);
+		const long rows = sqlite3_step(s) == SQLITE_DONE ? sqlite3_changes(db) : 0;
+		sqlite3_finalize(s);
+		return rows;
+	}
+
 	bool SQLite::run(const char *cmd)
 	{
 		char *err = nullptr;

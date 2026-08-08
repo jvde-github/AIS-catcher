@@ -17,6 +17,7 @@
 
 #include "PostgreSQL.h"
 #include "Logger.h"
+#include "Parse.h"
 
 #ifdef HASPSQL
 
@@ -113,6 +114,30 @@ namespace IO
 
 		prepared = true;
 		return true;
+	}
+
+	void PostgreSQL::collectVesselsSince(const std::string &since, std::set<uint32_t> &out)
+	{
+		const char *params[] = {since.c_str()};
+		PGresult *res = PQexecParams(con, "SELECT mmsi FROM ais_state WHERE received_at >= $1",
+									 1, nullptr, params, nullptr, nullptr, 0);
+
+		if (PQresultStatus(res) == PGRES_TUPLES_OK)
+			for (int i = 0; i < PQntuples(res); i++)
+				out.insert((uint32_t)Util::Parse::Integer(PQgetvalue(res, i, 0)));
+
+		PQclear(res);
+	}
+
+	long PostgreSQL::execDelete(const char *sql, const char *param)
+	{
+		const char *params[] = {param};
+		PGresult *res = PQexecParams(con, sql, 1, nullptr, params, nullptr, nullptr, 0);
+
+		// PQcmdTuples is empty for non-DML, which parses to zero
+		const long rows = PQresultStatus(res) == PGRES_COMMAND_OK ? Util::Parse::Integer(PQcmdTuples(res)) : 0;
+		PQclear(res);
+		return rows;
 	}
 
 	bool PostgreSQL::run(const char *cmd)

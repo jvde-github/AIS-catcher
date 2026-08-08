@@ -41,6 +41,13 @@
 
 #include "Helper.h"
 
+#include <fcntl.h>
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
+
 namespace Util
 {
 	uint16_t Helper::CRC16(const uint8_t *data, size_t length)
@@ -81,6 +88,30 @@ namespace Util
 		return str;
 	}
 
+	// on macOS fsync does not flush the drive cache, F_FULLFSYNC does
+	bool Helper::syncFile(const std::string &path)
+	{
+#ifdef _WIN32
+		int fd = _open(path.c_str(), _O_RDONLY | _O_BINARY);
+		if (fd < 0)
+			return false;
+		bool ok = _commit(fd) == 0;
+		_close(fd);
+		return ok;
+#else
+		int fd = ::open(path.c_str(), O_RDONLY);
+		if (fd < 0)
+			return false;
+#if defined(__APPLE__) && defined(F_FULLFSYNC)
+		bool ok = ::fcntl(fd, F_FULLFSYNC, 0) != -1 || ::fsync(fd) == 0;
+#else
+		bool ok = ::fsync(fd) == 0;
+#endif
+		::close(fd);
+		return ok;
+#endif
+	}
+
 	bool Helper::writeFileAtomic(const std::string &path, const std::string &content, std::string &error)
 	{
 		const std::string tmp = path + ".tmp";
@@ -99,6 +130,14 @@ namespace Util
 		{
 			std::remove(tmp.c_str());
 			error = "cannot write \"" + tmp + "\"";
+			return false;
+		}
+
+		// data must reach the disk before the rename makes it live
+		if (!syncFile(tmp))
+		{
+			std::remove(tmp.c_str());
+			error = "cannot sync \"" + tmp + "\" to disk";
 			return false;
 		}
 

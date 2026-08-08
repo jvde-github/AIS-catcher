@@ -26,8 +26,9 @@
 namespace IO
 {
 
-	// Same tables as files: three daily-rotating append logs, plus state and
-	// stats snapshots held in memory and rewritten whole on each flush.
+	// Same tables as files: daily-rotating append logs, while state and stats
+	// journal changes to a sidecar merged into the clean main file at startup,
+	// shutdown and day rollover; last row per key wins.
 	class CSV : public DatabaseOutput
 	{
 		static const int N_COLUMNS = N_POSITION + N_STATIC;
@@ -43,6 +44,16 @@ namespace IO
 			int count;
 			int msg_types;
 			int channels;
+			bool dirty;
+		};
+
+		struct Journal
+		{
+			std::ofstream log;
+			size_t bytes = 0, compacted = 0;
+
+			// 4x live balances write amplification against replay; floor stops thrash
+			bool due() const { return bytes > 1048576 && bytes > 4 * compacted; }
 		};
 
 		std::string dir;
@@ -54,24 +65,39 @@ namespace IO
 		std::string day_str;
 
 		SlotTable<StateRow, uint32_t> state;
-		bool state_dirty = false;
-		size_t state_bytes = 0; // seeds the reserve
+		std::vector<int> dirty_slots;
+		Journal state_log, stats_log;
 
-		// keyed on bucket so a partial hour is replaced, not appended twice
+		// crash recovery is the only reader: the clock caps staleness, the cap loss
+		static const int JOURNAL_INTERVAL = 600;
+		static const size_t JOURNAL_MAX_PENDING = 4096;
+		std::time_t journal_drained = 0;
+		std::set<std::string> stats_dirty_keys;
+
+		// deduplicated truth behind the stats journal, rewritten at compaction
 		std::map<std::string, std::string> stats_rows;
-		bool stats_dirty = false;
 
 		static void escape(std::string &out, const char *v);
 		static std::string join(const std::vector<const char *> &params);
 		static std::string header(int st);
+		static bool splitLine(const std::string &line, std::vector<std::string> &out);
 
 		const std::string &today();
 		bool openLog(int st, const std::string &day);
 		bool appendLine(int st, const std::string &line);
+		bool appendJournal(Journal &j, int st, const std::string &row);
+		void finishCompact(Journal &j, int st, const std::string &out);
+
+		void loadState();
+		void loadStateFile(const std::string &path);
+		void loadStats();
+		void loadStatsFile(const std::string &path);
 		void mergeState(const std::vector<const char *> &params);
+		void stateRow(std::string &out, int h);
 		void writeSnapshot(const char *name, const std::string &content);
-		void writeStateFile();
-		void writeStatsFile();
+		void compactState();
+		void compactStats();
+		void pruneLogs();
 		void closeDB();
 
 	protected:
@@ -90,6 +116,8 @@ namespace IO
 		bool transactional() const override { return false; }
 
 		void flushed() override;
+		void maintain() override;
+		void collectVesselsSince(const std::string &since, std::set<uint32_t> &out) override;
 
 	public:
 		CSV() : DatabaseOutput("CSV") { conn_string = "."; }

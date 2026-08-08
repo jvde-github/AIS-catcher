@@ -17,6 +17,7 @@
 
 #include "BackupManager.h"
 #include "Logger.h"
+#include "Helper.h"
 
 #include <cerrno>
 #include <chrono>
@@ -41,7 +42,9 @@ void BackupManager::run()
 		cv.wait_for(lock, std::chrono::minutes(interval), [this]
 					{ return !running.load(); });
 
-		if (running && !save(false))
+		// ships included: they carry the per-vessel dedup times the hourly
+		// vessel counts need to stay exact across a crash restore
+		if (running && !save())
 			Error() << "Server: failed to write backup: " << filename;
 	}
 
@@ -73,25 +76,6 @@ void BackupManager::stop()
 	}
 }
 
-// the data must be on disk before the rename makes it the live backup, or a
-// power cut can replace a good file with a truncated one (ext4/SD delayed
-// allocation); no sync on Windows - FlushFileBuffers needs a writable handle
-// and the remove+rename pair below is not atomic there anyway
-static bool syncFile(const std::string &path)
-{
-#ifdef _WIN32
-	(void)path;
-	return true;
-#else
-	int fd = ::open(path.c_str(), O_RDONLY);
-	if (fd < 0)
-		return false;
-
-	bool ok = ::fsync(fd) == 0;
-	::close(fd);
-	return ok;
-#endif
-}
 
 bool BackupManager::save(bool include_ships)
 {
@@ -129,7 +113,8 @@ bool BackupManager::save(bool include_ships)
 		return false;
 	}
 
-	if (!syncFile(tmp))
+	// data must reach the disk before the rename makes it the live backup
+	if (!Util::Helper::syncFile(tmp))
 	{
 		Error() << "Server: cannot sync " << tmp << " to disk (" << std::strerror(errno) << ")";
 		std::remove(tmp.c_str());

@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -28,6 +29,13 @@ namespace Util
 	public:
 		static std::string readFile(const std::string &filename);
 		static bool writeFileAtomic(const std::string &path, const std::string &content, std::string &error);
+		static bool syncFile(const std::string &path);
+
+		// elapsed wall time for log lines
+		static long msSince(const std::chrono::steady_clock::time_point &t0)
+		{
+			return (long)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
+		}
 		static int lsb(uint64_t x);
 		static std::vector<std::string> getFilesWithExtension(const std::string &directory, const std::string &extension);
 		static std::vector<std::string> getFilesInDirectory(const std::string &directory);

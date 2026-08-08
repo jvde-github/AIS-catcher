@@ -386,6 +386,16 @@ const dbSchema = {
         tooltip: 'File for SQLite, libpq connection string for PostgreSQL, directory for CSV',
         width: 60
     },
+    retention: {
+        name: 'retention',
+        label: 'Retention (days)',
+        type: 'number',
+        jsonpath: 'retention',
+        min: 0,
+        defaultValue: 0,
+        advanced: true,
+        tooltip: 'Days of history kept, pruned daily; 0 keeps everything'
+    },
     capacity: {
         name: 'capacity',
         label: 'State Capacity',

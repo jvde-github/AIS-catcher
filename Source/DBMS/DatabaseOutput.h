@@ -82,6 +82,21 @@ namespace IO
 		// end of a flush cycle
 		virtual void flushed() {}
 
+		// daily housekeeping: the default prunes SQL tables to `retention` days
+		virtual void maintain();
+
+		// one $1-parameterized statement, returns affected rows
+		virtual long execDelete(const char *sql, const char *param) { return 0; }
+
+		std::time_t retentionCutoff() const { return std::time(nullptr) - (std::time_t)retention_days * 86400; }
+
+
+		// targets heard since `since` (base timestamp format); restores only the
+		// hour's vessel count after a restart, the other columns restart by design
+		virtual void collectVesselsSince(const std::string &since, std::set<uint32_t> &out) {}
+
+		static std::time_t hourOf(std::time_t t) { return t - (t % 3600); }
+
 		// derived destructors must call this first: the worker calls their virtuals
 		void stopWorker();
 
@@ -142,6 +157,9 @@ namespace IO
 		// CSV-only, but every backend accepts it: the hub writes the whole object
 		int capacity = 8192;
 
+		// days of history maintain() keeps, 0 keeps everything
+		int retention_days = 0;
+
 		bool needMessageTable() const { return POSITION || STATIC || NMEA; }
 
 		void startWorker();
@@ -149,6 +167,8 @@ namespace IO
 	private:
 		std::atomic<bool> terminate{false}, running{false};
 		std::thread run_thread;
+
+		long maintain_day = 0;
 
 		std::vector<QueuedEntry> message_queue;
 		static const size_t MAX_QUEUE_SIZE = 2048;
