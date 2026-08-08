@@ -19,6 +19,45 @@
 #include "Config.h"
 #include "Helper.h"
 #include "Logger.h"
+#include "PostgreSQL.h"
+#include "SQLite.h"
+#include "CSV.h"
+
+IO::OutputMessage *Config::newDatabaseOutput(const std::string &type)
+{
+	if (type == "postgres" || type == "postgresql" || type == "psql")
+		return new IO::PostgreSQL();
+	if (type == "sqlite")
+		return new IO::SQLite();
+	if (type == "csv")
+		return new IO::CSV();
+
+	throw std::runtime_error("Database type \"" + type + "\" is not one of postgres, sqlite, csv.");
+}
+
+void Config::addDatabaseOutputsFromJSON(const JSON::Member &m)
+{
+	if (!m.Get().isArray())
+		throw std::runtime_error("Database settings need to be an \"array\" of \"objects\" in config file.");
+
+	for (const auto &v : m.Get().getArray())
+	{
+		if (!isActiveObject(v))
+			continue;
+
+		// "type" must be read ahead of the settings pass
+		std::string type = "postgres";
+		for (const JSON::Member &p : v.getObject().getMembers())
+			if (p.Key() == AIS::KEY_SETTING_MODEL_TYPE)
+			{
+				type = p.Get().to_string();
+				Util::Convert::toLower(type);
+			}
+
+		_engine.msg.push_back(std::unique_ptr<IO::OutputMessage>(newDatabaseOutput(type)));
+		setSettingsFromJSON(v, *_engine.msg.back(), AIS::KEY_SETTING_MODEL_TYPE);
+	}
+}
 
 bool Config::isActiveObject(const JSON::Value &m)
 {
@@ -36,12 +75,12 @@ bool Config::isActiveObject(const JSON::Value &m)
 	return true;
 }
 
-void Config::setSettingsFromJSON(const JSON::Value &m, Setting &s)
+void Config::setSettingsFromJSON(const JSON::Value &m, Setting &s, int skip)
 {
 
 	for (const JSON::Member &p : m.getObject().getMembers())
 	{
-		if (p.Key() != AIS::KEY_SETTING_ACTIVE)
+		if (p.Key() != AIS::KEY_SETTING_ACTIVE && p.Key() != skip)
 		{
 			if (p.Get().isArray())
 			{
@@ -423,6 +462,9 @@ void Config::set(const std::string &str)
 			break;
 		case AIS::KEY_SETTING_HTTP:
 			addOutputsFromJSON<IO::HTTPStreamer>(m, "HTTP");
+			break;
+		case AIS::KEY_SETTING_DB:
+			addDatabaseOutputsFromJSON(m);
 			break;
 		case AIS::KEY_SETTING_RECEIVER: // handled in pass 1.5
 			break;

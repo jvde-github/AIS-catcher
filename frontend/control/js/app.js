@@ -600,7 +600,7 @@
         ...CHANNEL_REGISTRY.filter(c => c.key !== 'receiver').map(c => ({
             value: c.key === 'tcp_listener' ? 'tcp-server' : c.key,
             label: c.label, schema: c.schema, configKey: c.configKey,
-            flowLabel: c.flowLabel, statType: c.statType
+            flowLabel: c.flowLabel, statType: c.statType, statTypes: c.statTypes
         }))
     ];
 
@@ -1140,7 +1140,10 @@
 
     // stat.json output types -> Data Flow node sub types
     const FLOW_STAT_TYPES = {};
-    OUTPUT_TYPES.forEach(o => { if (o.statType) FLOW_STAT_TYPES[o.statType] = o.value; });
+    OUTPUT_TYPES.forEach(o => {
+        if (o.statType) FLOW_STAT_TYPES[o.statType] = o.value;
+        (o.statTypes || []).forEach(t => { FLOW_STAT_TYPES[t] = o.value; });
+    });
 
     function flowStatDetails(sub, s) {
         const parts = [];

@@ -54,7 +54,7 @@ const ChannelFields = {
         type: 'toggle',
         defaultValue: false,
         width: 50,
-        tooltip: 'Drops duplicates seen within a few seconds'
+        tooltip: 'Drops a message identical to one seen in the last 3 seconds'
     }),
     msgformat: (defaultValue = 'NMEA') => ({
         name: 'msgformat',
@@ -78,7 +78,7 @@ const ChannelFields = {
         section: 'Filter',
         label: 'Downsample Position',
         type: 'switch-integer',
-        tooltip: 'Keeps one position per vessel per this many seconds',
+        tooltip: 'Off forwards every position; on keeps at most one per vessel within the seconds set (0-3600)',
         width: 50,
         defaultValue: false,
         defaultInteger: 60,
@@ -353,6 +353,135 @@ const tcpServerSchema = {
     },
     active: ChannelFields.active(),
     msgformat: ChannelFields.msgformat(),
+    unique: ChannelFields.unique(),
+    position_interval: ChannelFields.position_interval(),
+    zones: ChannelFields.zones()
+};
+
+// One channel for every backend: type picks the class, the rest is shared.
+const dbSchema = {
+    description: ChannelFields.description(),
+    link: ChannelFields.link(),
+    type: {
+        name: 'type',
+        section: 'Connection',
+        label: 'Database',
+        type: 'select',
+        jsonpath: 'type',
+        defaultValue: 'sqlite',
+        options: [
+            { value: 'sqlite', label: 'SQLite (local file)' },
+            { value: 'postgres', label: 'PostgreSQL' },
+            { value: 'csv', label: 'CSV files' }
+        ],
+        width: 40
+    },
+    conn_str: {
+        name: 'conn_str',
+        section: 'Connection',
+        label: 'Connection',
+        type: 'text',
+        jsonpath: 'conn_str',
+        placeholder: 'ais.db  ·  dbname=ais  ·  /var/log/ais',
+        tooltip: 'File for SQLite, libpq connection string for PostgreSQL, directory for CSV',
+        width: 60
+    },
+    capacity: {
+        name: 'capacity',
+        label: 'State Capacity',
+        type: 'number',
+        jsonpath: 'capacity',
+        min: 64,
+        max: 1000000,
+        defaultValue: 8192,
+        advanced: true,
+        tooltip: 'CSV only: how many targets the state file keeps before the least recently heard is dropped',
+        dependsOn: {
+            field: 'type',
+            value: 'csv'
+        }
+    },
+    station_id: {
+        name: 'station_id',
+        section: 'Station',
+        label: 'Station ID',
+        type: 'number',
+        jsonpath: 'station_id',
+        min: 0,
+        tooltip: 'Stamped on every row so several feeders can share one database'
+    },
+    active: ChannelFields.active(),
+    state: {
+        name: 'state',
+        section: 'Options',
+        label: 'State',
+        type: 'toggle',
+        jsonpath: 'state',
+        defaultValue: true,
+        width: 25,
+        tooltip: 'Latest values per MMSI, one row per vessel'
+    },
+    stats: {
+        name: 'stats',
+        section: 'Options',
+        label: 'Statistics',
+        type: 'toggle',
+        jsonpath: 'stats',
+        defaultValue: true,
+        width: 25,
+        tooltip: 'Hourly reception statistics, one row per hour'
+    },
+    position: {
+        name: 'position',
+        section: 'Options',
+        label: 'Positions',
+        type: 'toggle',
+        jsonpath: 'position',
+        defaultValue: false,
+        width: 25,
+        tooltip: 'Log every position report; grows with traffic'
+    },
+    dbstatic: {
+        name: 'static',
+        section: 'Options',
+        label: 'Static',
+        type: 'toggle',
+        jsonpath: 'static',
+        defaultValue: false,
+        width: 25,
+        tooltip: 'Log static and voyage reports; grows with traffic'
+    },
+    nmea: {
+        name: 'nmea',
+        section: 'Options',
+        label: 'Raw NMEA',
+        type: 'toggle',
+        jsonpath: 'nmea',
+        defaultValue: false,
+        width: 25,
+        advanced: true,
+        tooltip: 'Store the raw sentences with each message'
+    },
+    interval: {
+        name: 'interval',
+        label: 'Write Interval (seconds)',
+        type: 'number',
+        jsonpath: 'interval',
+        min: 5,
+        max: 1800,
+        defaultValue: 60,
+        advanced: true
+    },
+    max_fails: {
+        name: 'max_fails',
+        label: 'Max Failed Attempts',
+        type: 'number',
+        jsonpath: 'max_fails',
+        min: 1,
+        defaultValue: 10,
+        advanced: true,
+        tooltip: '1000 never gives up'
+    },
     unique: ChannelFields.unique(),
     position_interval: ChannelFields.position_interval(),
     zones: ChannelFields.zones()
@@ -1414,6 +1543,8 @@ const CHANNEL_REGISTRY = [
     { key: 'mqtt', label: 'MQTT', schema: mqttSchema, configKey: 'mqtt', flowLabel: 'MQTT', statType: 'MQTT', essentials: ['url'] },
     { key: 'tcp', label: 'TCP Client', schema: tcpSchema, configKey: 'tcp', flowLabel: 'TCP', statType: 'TCP Client', essentials: ['host', 'port'] },
     { key: 'tcp_listener', label: 'TCP Server', schema: tcpServerSchema, configKey: 'tcp_listener', flowLabel: 'TCP Server', statType: 'TCP Listener', essentials: ['port'] },
+    // one channel, three backends: each reports stats under its own type name
+    { key: 'db', label: 'Database', schema: dbSchema, configKey: 'db', flowLabel: 'Database', statTypes: ['PostgreSQL', 'SQLite', 'CSV'], essentials: ['conn_str'] },
     { key: 'server', label: 'Viewer', schema: webviewerSchema, configKey: 'server', flowLabel: 'Webviewer', essentials: ['port'] }
 ];
 

@@ -71,6 +71,15 @@ class Config
 			setSettingsFromJSON(v, o);
 		}
 	}
+	// the "db" array names its backend with a "type" field
+	void addDatabaseOutputsFromJSON(const JSON::Member &m);
+
+public:
+	// one name-to-backend map for config file and -D alike; throws on unknown type
+	static IO::OutputMessage *newDatabaseOutput(const std::string &type);
+
+private:
+
 #ifdef HASWEBVIEWER
 	void setServerfromJSON(const JSON::Value &m);
 #endif
@@ -86,7 +95,8 @@ public:
 	void read(const std::string &file_config);
 	void set(const std::string &str);
 
-	static void setSettingsFromJSON(const JSON::Value &m, Setting &s);
+	// skip: one extra key the caller already consumed, e.g. the "type" selector
+	static void setSettingsFromJSON(const JSON::Value &m, Setting &s, int skip = -1);
 	static void setManagedViewerfromJSON(const JSON::Value &m);
 	static void readManagedViewer(const std::string &file_config);
 };

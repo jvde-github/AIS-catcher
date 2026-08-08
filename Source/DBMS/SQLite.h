@@ -19,28 +19,29 @@
 
 #include "MsgOut.h"
 
-#ifdef HASPSQL
+#ifdef HASSQLITE
 
-#include <libpq-fe.h>
+#include <sqlite3.h>
 
 #include "DatabaseOutput.h"
 
 namespace IO
 {
 
-	class PostgreSQL : public DatabaseOutput
+	class SQLite : public DatabaseOutput
 	{
-		PGconn *con = nullptr;
-		bool prepared = false;
+		sqlite3 *db = nullptr;
+		sqlite3_stmt *stmt[ST_COUNT] = {nullptr};
 
 		bool run(const char *cmd);
-		bool execPrepared(int st, const std::vector<const char *> &params, std::string *id);
-		void initSession();
+		bool bindAndStep(int st, const std::vector<const char *> &params);
 		void closeDB();
 
 	protected:
 		void connectDB() override;
-		bool ensureConnection() override;
+
+		// a local file needs no reconnect, and the statements outlive the loop
+		bool ensureConnection() override { return db != nullptr; }
 		bool prepareAll() override;
 
 		bool exec(int st, const std::vector<const char *> &params) override;
@@ -51,20 +52,20 @@ namespace IO
 		bool rollback() override { return run("ROLLBACK"); }
 
 	public:
-		PostgreSQL() : DatabaseOutput("PostgreSQL") { conn_string = "dbname=ais"; }
-		~PostgreSQL();
+		SQLite() : DatabaseOutput("SQLite") { conn_string = "ais.db"; }
+		~SQLite();
 	};
 }
 
-#else // HASPSQL
+#else // HASSQLITE
 
 namespace IO
 {
-	class PostgreSQL : public OutputUnavailable
+	class SQLite : public OutputUnavailable
 	{
 	public:
-		PostgreSQL() : OutputUnavailable("PostgreSQL", "HASPSQL") {}
+		SQLite() : OutputUnavailable("SQLite", "HASSQLITE") {}
 	};
 }
 
-#endif // HASPSQL
+#endif // HASSQLITE

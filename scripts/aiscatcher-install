@@ -261,7 +261,7 @@ interactive_feature_select() {
     FEATURE_ZMQ=$(prompt_yes_no      "  ZMQ (-z input / ZMQ output)"          "$FEATURE_ZMQ")
     FEATURE_NMEA2000=$(prompt_yes_no "  NMEA2000 socketCAN (-i / -I)"         "$FEATURE_NMEA2000")
     FEATURE_PSQL=$(prompt_yes_no     "  PostgreSQL output (-D)"               "$FEATURE_PSQL")
-    FEATURE_SQLITE=$(prompt_yes_no   "  SQLite"                               "$FEATURE_SQLITE")
+    FEATURE_SQLITE=$(prompt_yes_no   "  SQLite (offline map tiles and -D output)" "$FEATURE_SQLITE")
 
     echo
     echo -e "${COLOR_BOLD}Other${COLOR_RESET}"
@@ -616,7 +616,7 @@ install_source_additional_files() {
 
     log "INFO" "Installing DBMS"
     mkdir -p "$DBMS_DIR" || error_exit "Failed to create DBMS directory"
-    cp "${TMP_DIR}/AIS-catcher/Source/DBMS/create.sql" "$DBMS_DIR" || error_exit "Failed to copy DBMS"
+    cp "${TMP_DIR}/AIS-catcher/Source/DBMS/create_pg.sql" "${TMP_DIR}/AIS-catcher/Source/DBMS/create_sqlite.sql" "$DBMS_DIR" || error_exit "Failed to copy DBMS"
 
     log "INFO" "Installing README"
     mkdir -p "$README_DIR" || error_exit "Failed to create README directory"
@@ -1248,7 +1248,7 @@ display_installation_summary() {
     echo "    - Main config:      ${CONFIG_FILE}"
     echo "    - Command options:  ${CMD_FILE}"
     echo "    - Plugins:          ${PLUGIN_DIR}/"
-    echo "    - Database schema:  ${DBMS_DIR}/create.sql"
+    echo "    - Database schema:  ${DBMS_DIR}/create_pg.sql, ${DBMS_DIR}/create_sqlite.sql"
     echo "    - Documentation:    ${README_DIR}/README.md"
     echo "    - License:          ${CONFIG_DIR}/LICENSE"
     if [ "$SKIP_SYSTEMD" = false ]; then

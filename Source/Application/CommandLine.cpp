@@ -33,7 +33,6 @@
 #include "JSON.h"
 #include "JSON/Parser.h"
 #include "N2KStream.h"
-#include "PostgreSQL.h"
 #include "Logger.h"
 #include "Screen.h"
 #include "File.h"
@@ -57,7 +56,7 @@ static void Usage()
 	Info() << "\t[-b benchmark demodulation models for time - for development purposes (default: off)]";
 	Info() << "\t[-c [AB/CD] - [optional: AB] select AIS channels and optionally the NMEA channel designations]";
 	Info() << "\t[-C [filename] - read configuration settings from file]";
-	Info() << "\t[-D [connection string] - write messages to PostgreSQL database]";
+	Info() << "\t[-D [connection string] - write messages to a database: libpq string, sqlite:[file] or csv:[directory]]";
 	Info() << "\t[-e [baudrate] [serial port] - read NMEA from serial port at specified baudrate]";
 	Info() << "\t[-E [config file] [bind address:port] - managed mode: engine run from config file with control server, must be only option (defaults: config.json, control port 8118, viewer on control port + 1, local access without password; use 0.0.0.0:port for LAN access with password)]";
 	Info() << "\t[-f [filename] write NMEA lines to file]";
@@ -447,11 +446,27 @@ static void parseCLI(int argc, char *argv[], Engine &engine, Config &c, int &cb)
 		break;
 		case 'D':
 		{
-			IO::OutputMessage &d = addOutput<IO::PostgreSQL>(engine);
+			// bare target = libpq string; a "sqlite:" or "csv:" prefix picks the backend
+			std::string type = "postgres";
+			std::string target = count % 2 == 1 ? arg1 : std::string();
+
+			if (target.compare(0, 7, "sqlite:") == 0)
+			{
+				type = "sqlite";
+				target = target.substr(7);
+			}
+			else if (target.compare(0, 4, "csv:") == 0)
+			{
+				type = "csv";
+				target = target.substr(4);
+			}
+
+			engine.msg.push_back(std::unique_ptr<IO::OutputMessage>(Config::newDatabaseOutput(type)));
+			IO::OutputMessage &d = *engine.msg.back();
 
 			if (count % 2 == 1)
 			{
-				d.SetKey(AIS::KEY_SETTING_CONN_STR, arg1);
+				d.SetKey(AIS::KEY_SETTING_CONN_STR, target);
 				if (count > 1)
 					parseSettings(d, argv, ptr + 1, argc);
 			}

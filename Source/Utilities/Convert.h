@@ -30,6 +30,7 @@ namespace Util
 	public:
 		static std::string toTimeStr(const std::time_t &t);
 		static std::string toTimestampStr(const std::time_t &t);
+		static std::string toDateStr(const std::time_t &t);
 		static std::string toHexString(uint64_t l);
 
 		// Days from civil 1970-01-01 to y-m-d (proleptic Gregorian).

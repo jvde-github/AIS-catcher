@@ -95,6 +95,20 @@ namespace Util
 		return std::string(str, 19);
 	}
 
+	std::string Convert::toDateStr(const std::time_t &t)
+	{
+		UTC u = breakdown(t);
+
+		char str[12];
+		put2(str, u.year / 100);
+		put2(str + 2, u.year % 100);
+		str[4] = '-';
+		put2(str + 5, u.month);
+		str[7] = '-';
+		put2(str + 8, u.day);
+		return std::string(str, 10);
+	}
+
 	std::string Convert::toHexString(uint64_t l)
 	{
 		static const char hex[] = "0123456789ABCDEF";
