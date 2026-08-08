@@ -1216,13 +1216,12 @@ const receiverSchema = {
             value: "SERIALPORT"
         }
     },
-    serialport_initseq: {
+    serialport_init_seq: {
         name: "serialport_init_seq",
         label: "Init Sequence",
         type: "text",
+        tooltip: "Commands sent to the device on open",
         jsonpath: "serialport.init_seq",
-        placeholder: "",
-        tooltip: "Commands sent to the device when the port is opened",
         dependsOn: {
             field: "input",
             value: "SERIALPORT"
@@ -1234,7 +1233,7 @@ const receiverSchema = {
         type: "text",
         jsonpath: "serialport.dump_file",
         placeholder: "e.g., /var/log/ais-serial.log",
-        tooltip: "Append raw input to this file for troubleshooting",
+        tooltip: "Append raw bytes to this file (also enables dump)",
         advanced: true,
         dependsOn: {
             field: "input",
