@@ -112,8 +112,9 @@ namespace IO
 				int e = Net::lastError();
 				if (!Net::wouldBlock(e))
 				{
+					// a peer dropping without a clean close is routine, not a server error
 					if (verbose)
-						Error() << "Socket: connection closed by error: " << Net::errorString(e) << ", sock = " << sock;
+						Debug() << "Socket: connection closed by peer: " << Net::errorString(e) << ", sock = " << sock;
 
 					CloseUnsafe();
 				}
