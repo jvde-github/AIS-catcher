@@ -146,6 +146,7 @@ namespace IO
 
 		int station_id = 0;
 		int conn_fails = 0;
+		bool connected = false;
 		int INTERVAL = 60;
 
 		// a failing database never stops the receiver: retries back off to 5 min
@@ -165,6 +166,7 @@ namespace IO
 		bool needMessageTable() const { return POSITION || STATIC || NMEA; }
 
 		void startWorker();
+		bool tryConnect();
 
 	private:
 		std::atomic<bool> terminate{false}, running{false};

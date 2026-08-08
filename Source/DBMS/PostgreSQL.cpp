@@ -39,8 +39,9 @@ namespace IO
 
 		if (con == nullptr || PQstatus(con) != CONNECTION_OK)
 		{
-			stats.connect_fail++;
-			throw std::runtime_error("DBMS: cannot open database :" + std::string(PQerrorMessage(con)));
+			const std::string err = con ? PQerrorMessage(con) : "out of memory";
+			closeDB();
+			throw std::runtime_error("DBMS: cannot open database: " + err);
 		}
 
 		initSession();

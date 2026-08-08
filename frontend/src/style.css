@@ -4,6 +4,9 @@ html {
     height: 100%;
     width: 100%;
     margin: 0;
+    /* stop iOS Safari inflating text in scrollable blocks (log view) */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     font-family: var(--font-sans);
     display: flex;
     flex-direction: column;

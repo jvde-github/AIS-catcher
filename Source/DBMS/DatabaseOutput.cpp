@@ -399,6 +399,12 @@ namespace IO
 	void DatabaseOutput::post()
 	{
 		// conn_fails counts consecutive failed cycles; any usable cycle resets it
+		if (!connected && !tryConnect())
+		{
+			conn_fails++;
+			return;
+		}
+
 		if (!ensureConnection())
 		{
 			conn_fails++;
@@ -579,16 +585,27 @@ namespace IO
 		Debug() << "DBMS: stop thread and database closed.";
 	}
 
-	void DatabaseOutput::setup()
+	// false leaves the output disconnected for the worker to retry with backoff
+	bool DatabaseOutput::tryConnect()
 	{
-		connectDB();
+		try
+		{
+			connectDB();
 
+			if (!prepareAll())
+				throw std::runtime_error("DBMS: cannot prepare statements, is the schema loaded? See create_pg.sql / create_sqlite.sql");
+		}
+		catch (const std::exception &e)
+		{
+			Error() << e.what();
+			stats.connect_fail++;
+			return false;
+		}
+
+		connected = true;
 		conn_fails = 0;
 		stats.connected = 1;
 		stats.connect_ok++;
-
-		if (!prepareAll())
-			throw std::runtime_error("DBMS: cannot prepare statements, is the schema loaded? See create_pg.sql / create_sqlite.sql");
 
 		if (STATS)
 		{
@@ -602,6 +619,16 @@ namespace IO
 
 		maintain();
 		maintain_day = std::time(nullptr) / 86400;
+		return true;
+	}
+
+	void DatabaseOutput::setup()
+	{
+		if (!tryConnect())
+		{
+			conn_fails = 1;
+			Warning() << "DBMS: output not available, the receiver continues and retries with backoff";
+		}
 
 		startWorker();
 	}
