@@ -494,28 +494,30 @@ namespace IO
 	{
 		while (!terminate)
 		{
-			for (int i = 0; !terminate && i < (conn_fails == 0 ? INTERVAL : 2) && queueSize() < MAX_QUEUE_SIZE / 2; i++)
+			for (int i = 0; !terminate && i < (conn_fails == 0 ? INTERVAL : retryDelay()) && queueSize() < MAX_QUEUE_SIZE / 2; i++)
 				SleepSystem(1000);
 
-			// unconditional: statistics need flushing even when the queue stays empty
-			post();
-			flushed();
-
-			const long day = std::time(nullptr) / 86400;
-			if (day != maintain_day)
+			// no backend may take the receiver down: log, back off, retry
+			try
 			{
-				maintain_day = day;
-				maintain();
+				post();
+				flushed();
+
+				const long day = std::time(nullptr) / 86400;
+				if (day != maintain_day)
+				{
+					maintain_day = day;
+					maintain();
+				}
+			}
+			catch (const std::exception &e)
+			{
+				Error() << "DBMS: " << e.what();
+				conn_fails++;
 			}
 
 			if (terminate)
 				break;
-
-			if (MAX_FAILS < 1000 && conn_fails > MAX_FAILS)
-			{
-				Error() << "DBMS: max attempts reached to connect to DBMS. Terminating.";
-				StopRequest();
-			}
 		}
 	}
 
@@ -750,7 +752,7 @@ namespace IO
 			INTERVAL = Util::Parse::Integer(arg, 5, 1800);
 			break;
 		case AIS::KEY_SETTING_MAX_FAILS:
-			MAX_FAILS = Util::Parse::Integer(arg);
+			Warning() << "DBMS: max_fails is ignored, a database output no longer stops the receiver";
 			break;
 		case AIS::KEY_SETTING_NMEA:
 			NMEA = Util::Parse::Switch(arg);

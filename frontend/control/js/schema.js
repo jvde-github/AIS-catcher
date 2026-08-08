@@ -482,16 +482,6 @@ const dbSchema = {
         defaultValue: 60,
         advanced: true
     },
-    max_fails: {
-        name: 'max_fails',
-        label: 'Max Failed Attempts',
-        type: 'number',
-        jsonpath: 'max_fails',
-        min: 1,
-        defaultValue: 10,
-        advanced: true,
-        tooltip: '1000 never gives up'
-    },
     unique: ChannelFields.unique(),
     position_interval: ChannelFields.position_interval(),
     zones: ChannelFields.zones()

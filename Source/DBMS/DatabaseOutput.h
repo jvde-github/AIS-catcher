@@ -146,8 +146,10 @@ namespace IO
 
 		int station_id = 0;
 		int conn_fails = 0;
-		int MAX_FAILS = 10;
 		int INTERVAL = 60;
+
+		// a failing database never stops the receiver: retries back off to 5 min
+		int retryDelay() const { return conn_fails < 9 ? MIN(1 << conn_fails, 300) : 300; }
 
 		bool POSITION = false, STATIC = false, NMEA = false;
 		bool STATE = true, STATS = true;
