@@ -589,3 +589,35 @@ jobs:
         Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
         bash -c "gh release upload '${{ env.RELEASE_TARGET }}' './output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip' --repo ${{ github.repository }} --clobber"
         del "output\AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
+
+  # Written only when every build above succeeded, so "latest built" and
+  # "latest pushed" cannot diverge: the control tool reads this manifest
+  # instead of the branch tip to decide whether an update is installable.
+  publish_manifest:
+    name: Publish build manifest
+    runs-on: ubuntu-22.04
+    needs: [bakeHTML, pre_build_checks, warnings, build_debian, build_ubuntu, build_fedora, test_install, Docker, Windows]
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'release'
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ env.CHECKOUT_REF }}
+        fetch-depth: 1
+
+    - name: Write and upload latest.json
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        COMMIT=$(git rev-parse --short HEAD)
+        VERSION=$(grep -oP '#define VERSION\s+"\K[^"]+' Source/Application/AIS-catcher.h)
+        cat > latest.json <<JSON
+        {
+          "commit": "${COMMIT}",
+          "version": "${VERSION}",
+          "run": ${{ github.run_number }},
+          "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        }
+        JSON
+        cat latest.json
+        gh release upload "${{ env.RELEASE_TARGET }}" latest.json --repo ${{ github.repository }} --clobber
