@@ -388,12 +388,12 @@ const dbSchema = {
     },
     retention: {
         name: 'retention',
+        section: 'Retention',
         label: 'Retention (days)',
         type: 'number',
         jsonpath: 'retention',
         min: 0,
         defaultValue: 0,
-        advanced: true,
         tooltip: 'Days of history kept, pruned daily; 0 keeps everything'
     },
     capacity: {
@@ -469,7 +469,6 @@ const dbSchema = {
         jsonpath: 'nmea',
         defaultValue: false,
         width: 25,
-        advanced: true,
         tooltip: 'Store the raw sentences with each message'
     },
     interval: {
