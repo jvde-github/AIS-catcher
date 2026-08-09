@@ -360,7 +360,10 @@ void Config::setSharing(const std::vector<JSON::Member> &members)
 		}
 	}
 
-	if (xchange && !_engine.comm_feed)
+	// A sharing_key is an explicit intent to share, credited to that key, so it
+	// enables the feed on its own -- otherwise the key was dropped and the station
+	// still shared anonymously via the default-on path.
+	if ((xchange || !uuid.empty()) && !_engine.comm_feed)
 		_engine.createCommunityFeed();
 
 	if (!uuid.empty() && _engine.comm_feed)
