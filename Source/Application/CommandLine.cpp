@@ -609,8 +609,9 @@ static void parseCLI(int argc, char *argv[], Engine &engine, Config &c, int &cb)
 
 				if (count == 1 && xarg_upper == "OFF")
 				{
-					// Explicitly disable sharing if "off" is provided as second parameter
-					Info() << "Community feed sharing disabled.";
+					// -X off suppresses the default-on feed, but a feed enabled by
+					// config still shares (if any source enables it, we share). The
+					// final state is reported once from Engine::run, not guessed here.
 					break;
 				}
 

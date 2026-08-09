@@ -116,6 +116,11 @@ void Engine::run(WebViewer *viewer, ControlCore *control)
 		comm_feed->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(live_groups));
 	}
 
+	// Report the actual final decision once, so it can't contradict a -X off that
+	// a config's sharing:true overrode (any source enabling sharing wins).
+	if (!control)
+		Info() << "Community feed sharing: " << (comm_feed ? "enabled." : "disabled.");
+
 	// zone-based output filtering: GROUPS_IN from zone overlap. The viewers do
 	// this for themselves in attachEngine().
 	for (auto &o : msg)
