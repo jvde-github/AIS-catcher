@@ -130,13 +130,16 @@ namespace IO
 
 		bool readyToSend() override
 		{
+			// Always let the batch through even with the socket down, so each
+			// message that can't go out is counted as dropped in sendFormatted
+			// rather than vanishing uncounted.
 			ResetIfNeeded();
-			return sock != -1;
+			return true;
 		}
 
 		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
 		{
-			if (sendto(sock, data, len, 0, address->ai_addr, (int)address->ai_addrlen) > 0)
+			if (sock != -1 && sendto(sock, data, len, 0, address->ai_addr, (int)address->ai_addrlen) > 0)
 				stats.bytes_out += len;
 			else
 				stats.dropped++;
