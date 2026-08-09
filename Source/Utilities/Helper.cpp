@@ -92,7 +92,8 @@ namespace Util
 	bool Helper::syncFile(const std::string &path)
 	{
 #ifdef _WIN32
-		int fd = _open(path.c_str(), _O_RDONLY | _O_BINARY);
+		// FlushFileBuffers behind _commit rejects read-only handles (issue #617)
+		int fd = _open(path.c_str(), _O_RDWR | _O_BINARY);
 		if (fd < 0)
 			return false;
 		bool ok = _commit(fd) == 0;
