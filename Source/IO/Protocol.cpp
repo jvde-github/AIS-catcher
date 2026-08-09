@@ -1695,7 +1695,11 @@ namespace Protocol
 
 			if (length < 0 || length > MAX_PACKET_SIZE)
 			{
-				Warning() << "WebSocket: message too long, skipped";
+				// The frame is larger than the buffer, so it cannot be consumed to
+				// resync -- returning -1 in place would re-parse the same header on
+				// every read and wedge the connection. Disconnect so it reconnects.
+				Warning() << "WebSocket (" << getHost() << ":" << getPort() << "): frame exceeds " << MAX_PACKET_SIZE << " bytes, disconnecting";
+				disconnect();
 				return -1;
 			}
 
