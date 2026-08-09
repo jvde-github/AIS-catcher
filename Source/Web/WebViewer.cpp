@@ -72,11 +72,15 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 
 				if (obfuscate)
 				{
+					// local cursor so the index is always < field_len even if
+					// another receiver thread advances the shared idx concurrently
+					unsigned pos = idx;
 					for (int i = 0; i < 3; i++)
 					{
-						idx = (idx + 1) % field_len;
-						nmea[start + 1 + idx] = '*';
+						pos = (pos + 1) % field_len;
+						nmea[start + 1 + pos] = '*';
 					}
+					idx = pos;
 				}
 
 				w.val(nmea);
