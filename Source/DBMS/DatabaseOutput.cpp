@@ -561,16 +561,17 @@ namespace IO
 		terminate = false;
 		run_thread = std::thread(&DatabaseOutput::process, this);
 
-		Debug() << "DBMS: start thread, filter: " << Util::Convert::toString(filter.isOn());
+		LogStream log = Debug();
+		log << "DBMS: start thread, filter: " << Util::Convert::toString(filter.isOn());
 
 		if (filter.isOn())
-			Debug() << ", Allowed: " << filter.getAllowed();
+			log << ", Allowed: " << filter.getAllowed();
 
-		Debug() << ", state " << Util::Convert::toString(STATE)
-				<< ", position " << Util::Convert::toString(POSITION)
-				<< ", static " << Util::Convert::toString(STATIC)
-				<< ", nmea " << Util::Convert::toString(NMEA)
-				<< ", stats " << Util::Convert::toString(STATS);
+		log << ", state " << Util::Convert::toString(STATE)
+			<< ", position " << Util::Convert::toString(POSITION)
+			<< ", static " << Util::Convert::toString(STATIC)
+			<< ", nmea " << Util::Convert::toString(NMEA)
+			<< ", stats " << Util::Convert::toString(STATS);
 	}
 
 	void DatabaseOutput::stopWorker()
