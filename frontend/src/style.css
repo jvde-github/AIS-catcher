@@ -612,7 +612,7 @@ a:focus {
     transition: opacity var(--duration-slow, 400ms) ease;
     position: absolute;
     right: 54px;
-    bottom: 30px;
+    bottom: 10px;
     max-width: 320px;
     z-index: var(--z-map-control);
     padding: 6px 10px;
