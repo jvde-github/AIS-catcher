@@ -100,6 +100,23 @@ const char *LogMessage::levelToString() const
 	return (i >= 0 && i < LEVEL_COUNT) ? LEVEL_NAMES[i] : "unknown";
 }
 
+int LogMessage::syslogLevel() const
+{
+	switch (level)
+	{
+	case LogLevel::DEBUG:
+		return 7;
+	case LogLevel::WARNING:
+		return 4;
+	case LogLevel::ERR:
+		return 3;
+	case LogLevel::CRITICAL:
+		return 2;
+	default:
+		return 6;
+	}
+}
+
 std::string LogMessage::toJSON() const
 {
 	return std::string("{\"level\":\"") + levelToString() +

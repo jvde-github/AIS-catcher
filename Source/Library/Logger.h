@@ -49,6 +49,7 @@ struct LogMessage
     LogMessage(LogLevel l, std::string msg, std::string time, uint32_t seq = 0) : level(l), message(std::move(msg)), time(std::move(time)), seq(seq) {}
 
     const char *levelToString() const;
+    int syslogLevel() const;
     std::string toJSON() const;
 };
 

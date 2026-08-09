@@ -20,6 +20,7 @@
 #include <unistd.h>
 #endif
 
+#include <cstdlib>
 #include <iostream>
 #include <fstream>
 #include <memory>
@@ -134,8 +135,16 @@ int main(int argc, char *argv[])
 	try
 	{
 		Logger::getInstance().setMaxBufferSize(200);
-		cb = Logger::getInstance().addLogListener([](const LogMessage &msg)
-												  { std::cerr << msg.message << "\n"; });
+		// under systemd, journald parses a <N> prefix on stderr lines into the
+		// entry priority and strips it (sd-daemon(3)), so log levels survive
+		// the journey into the journal
+		const bool journal = getenv("JOURNAL_STREAM") != nullptr;
+		cb = Logger::getInstance().addLogListener([journal](const LogMessage &msg)
+												  {
+													  if (journal)
+														  std::cerr << '<' << msg.syslogLevel() << '>' << msg.message << "\n";
+													  else
+														  std::cerr << msg.message << "\n"; });
 
 #ifdef _WIN32
 		if (!SetConsoleCtrlHandler(consoleHandler, TRUE))
