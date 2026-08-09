@@ -35,6 +35,7 @@
 #endif
 
 #include "Helper.h"
+#include "Convert.h"
 
 namespace Util
 {
@@ -262,28 +263,29 @@ namespace Util
 			{"model-b-rev2", "Raspberry Pi 1"},
 		};
 
-		// most specific first: "Raspberry Pi 5" is a substring of "Raspberry Pi 500"
+		// most specific first: "raspberry pi 5" is a substring of "raspberry pi 500".
+		// Needles are lowercase and matched case-insensitively, so a single row
+		// covers casing variants (e.g. "5 Lite" and "5 lite").
 		static const struct
 		{
 			const char *needle;
 			const char *family;
 		} RPI_MODELS[] = {
-			{"Raspberry Pi 500", "Raspberry Pi 500"},
-			{"Raspberry Pi 400", "Raspberry Pi 400"},
-			{"Raspberry Pi 5", "Raspberry Pi 5"},
-			{"Raspberry Pi 4", "Raspberry Pi 4"},
-			{"Raspberry Pi 3", "Raspberry Pi 3"},
-			{"Raspberry Pi 2", "Raspberry Pi 2"},
-			{"Compute Module 5 Lite", "Raspberry Pi Compute Module 5 Lite"},
-			{"Compute Module 5 lite", "Raspberry Pi Compute Module 5 Lite"},
-			{"Compute Module 5", "Raspberry Pi Compute Module 5"},
-			{"Compute Module 4", "Raspberry Pi Compute Module 4"},
-			{"Compute Module 3+", "Raspberry Pi Compute Module 3+"},
-			{"Compute Module 3", "Raspberry Pi Compute Module 3"},
-			{"Compute Module 0", "Raspberry Pi Compute Module 0"},
-			{"Compute Module", "Raspberry Pi Compute Module 1"},
-			{"Raspberry Pi Zero", "Raspberry Pi Zero"},
-			{"Raspberry Pi Model", "Raspberry Pi 1"},
+			{"raspberry pi 500", "Raspberry Pi 500"},
+			{"raspberry pi 400", "Raspberry Pi 400"},
+			{"raspberry pi 5", "Raspberry Pi 5"},
+			{"raspberry pi 4", "Raspberry Pi 4"},
+			{"raspberry pi 3", "Raspberry Pi 3"},
+			{"raspberry pi 2", "Raspberry Pi 2"},
+			{"compute module 5 lite", "Raspberry Pi Compute Module 5 Lite"},
+			{"compute module 5", "Raspberry Pi Compute Module 5"},
+			{"compute module 4", "Raspberry Pi Compute Module 4"},
+			{"compute module 3+", "Raspberry Pi Compute Module 3+"},
+			{"compute module 3", "Raspberry Pi Compute Module 3"},
+			{"compute module 0", "Raspberry Pi Compute Module 0"},
+			{"compute module", "Raspberry Pi Compute Module 1"},
+			{"raspberry pi zero", "Raspberry Pi Zero"},
+			{"raspberry pi model", "Raspberry Pi 1"},
 		};
 
 		for (const char *path : {"/proc/device-tree/compatible", "/sys/firmware/devicetree/base/compatible"})
@@ -312,8 +314,10 @@ namespace Util
 			std::string model;
 			if (!inFile || !std::getline(inFile, model, '\0') || model.empty())
 				continue;
+			std::string model_lc = model;
+			Util::Convert::toLower(model_lc);
 			for (const auto &m : RPI_MODELS)
-				if (model.find(m.needle) != std::string::npos)
+				if (model_lc.find(m.needle) != std::string::npos)
 					return m.family;
 			return model;
 		}

@@ -19,6 +19,7 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+#include <cstdio>
 
 #include "Common.h"
 #include "Stream.h"
@@ -55,8 +56,7 @@ namespace IO
 
 		// Formats one AIS message into the reusable `json` member buffer.
 		// Zero-allocation in steady state: clear() preserves capacity.
-		void formatInto(const AIS::Message &msg, TAG &tag,
-						bool sample_start, const std::string &uuid, const char *suffix)
+		void formatInto(const AIS::Message &msg, TAG &tag)
 		{
 			json.clear();
 			switch (fmt)
@@ -65,23 +65,60 @@ namespace IO
 				for (const auto &s : msg.sentences())
 				{
 					json += s;
-					json += suffix;
+					json += line_suffix;
 				}
 				break;
 			case MessageFormat::NMEA_TAG:
 				msg.getNMEATagBlock(json);
+				break;
+			case MessageFormat::FULL:
+				for (const auto &s : msg.sentences())
+				{
+					json += s;
+					json += " ( ";
+					if (msg.getLength() > 0)
+					{
+						json += "MSG: ";
+						json += std::to_string(msg.type());
+						json += ", REPEAT: ";
+						json += std::to_string(msg.repeat());
+						json += ", MMSI: ";
+						json += std::to_string(msg.mmsi());
+					}
+					else
+					{
+						json += "empty";
+					}
+					if ((tag.mode & 1) && tag.ppm != PPM_UNDEFINED && tag.level != LEVEL_UNDEFINED)
+					{
+						char tmp[64];
+						std::snprintf(tmp, sizeof(tmp), ", signalpower: %g, ppm: %g", tag.level, tag.ppm);
+						json += tmp;
+					}
+					if (tag.mode & 2)
+					{
+						json += ", timestamp: ";
+						json += msg.getRxTime();
+					}
+					if (msg.getStation())
+					{
+						json += ", ID: ";
+						json += std::to_string(msg.getStation());
+					}
+					json += ")\n";
+				}
 				break;
 			case MessageFormat::BINARY_NMEA:
 				msg.getBinaryNMEA(json, tag);
 				break;
 			case MessageFormat::COMMUNITY_HUB:
 				if (hub_lines++ % 100 == 0)
-					msg.getNMEAJSON(json, tag, sample_start, uuid, suffix);
+					msg.getNMEAJSON(json, tag, include_sample_start, uuid, line_suffix);
 				else
 					msg.getBinaryNMEA(json, tag);
 				break;
 			default:
-				msg.getNMEAJSON(json, tag, sample_start, uuid, suffix);
+				msg.getNMEAJSON(json, tag, include_sample_start, uuid, line_suffix);
 				break;
 			}
 		}
@@ -147,7 +184,7 @@ namespace IO
 				if (!filter.include(data[i]))
 					continue;
 
-				formatInto(data[i], tag, include_sample_start, uuid, line_suffix);
+				formatInto(data[i], tag);
 				sendFormatted(json.data(), (int)json.size(), &data[i], tag);
 			}
 			batchDone(tag);
@@ -274,6 +311,16 @@ namespace IO
 			default:
 				return filter.SetOptionKey(key, arg);
 			}
+		}
+
+		// Shared fallback for every output's SetKey default branch: try the common
+		// options (which already fall through to the filter), else one uniform error
+		// naming the output type and the offending key.
+		Setting &SetKey(AIS::Keys key, const std::string &arg) override
+		{
+			if (!setOptionKey(key, arg))
+				throw std::runtime_error(type + " output - unknown option: " + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
+			return *this;
 		}
 	};
 

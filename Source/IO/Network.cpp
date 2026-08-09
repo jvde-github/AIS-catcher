@@ -307,9 +307,7 @@ namespace IO
 			break;
 		}
 		default:
-			if (!setOptionKey(key, arg))
-				throw std::runtime_error(std::string("HTTP output - unknown option: ") + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
-			break;
+			return OutputMessage::SetKey(key, arg);
 		}
 		return *this;
 	}
@@ -439,9 +437,7 @@ namespace IO
 			setUUID(arg);
 			break;
 		default:
-			if (!setOptionKey(key, arg))
-				throw std::runtime_error(std::string("UDP output - unknown option: ") + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
-			break;
+			return OutputMessage::SetKey(key, arg);
 		}
 		return *this;
 	}
@@ -509,9 +505,7 @@ namespace IO
 			setUUID(arg);
 			break;
 		default:
-			if (!setOptionKey(key, arg))
-				throw std::runtime_error(std::string("TCP client - unknown option: ") + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
-			break;
+			return OutputMessage::SetKey(key, arg);
 		}
 		return *this;
 	}
@@ -539,9 +533,7 @@ namespace IO
 			timeout = Util::Parse::Integer(arg);
 			break;
 		default:
-			if (!setOptionKey(key, arg))
-				throw std::runtime_error(std::string("TCP listener - unknown option: ") + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
-			break;
+			return OutputMessage::SetKey(key, arg);
 		}
 		return *this;
 	}
@@ -653,8 +645,8 @@ namespace IO
 			topic_template.set(arg);
 			break;
 		default:
-			if (!tcp.setOptionKey(key, arg) && !mqtt.setOptionKey(key, arg) && !ws.setOptionKey(key, arg) && !tls.setOptionKey(key, arg) && !setOptionKey(key, arg))
-				throw std::runtime_error(std::string("MQTT output - unknown option: ") + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
+			if (!tcp.setOptionKey(key, arg) && !mqtt.setOptionKey(key, arg) && !ws.setOptionKey(key, arg) && !tls.setOptionKey(key, arg))
+				return OutputMessage::SetKey(key, arg);
 			break;
 		}
 		return *this;

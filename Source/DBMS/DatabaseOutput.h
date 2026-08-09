@@ -206,8 +206,6 @@ namespace IO
 		using StreamIn<JSON::JSON>::Receive;
 		void Receive(const JSON::JSON *data, int len, TAG &tag) override;
 
-		void Receive(const AIS::Message *, int, TAG &) override {}
-
 		void setup();
 		void Start() override { setup(); }
 

@@ -826,9 +826,7 @@ namespace IO
 			dev = arg;
 			break;
 		default:
-			if (!setOptionKey(key, arg) && !filter.SetOptionKey(key, arg))
-				throw std::runtime_error("N2K output - unknown option.");
-			break;
+			return OutputMessage::SetKey(key, arg);
 		}
 		return *this;
 	}

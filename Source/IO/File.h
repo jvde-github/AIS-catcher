@@ -92,9 +92,7 @@ namespace IO
 				break;
 			}
 			default:
-				if (!setOptionKey(key, arg))
-					throw std::runtime_error("File output - unknown option.");
-				break;
+				return OutputMessage::SetKey(key, arg);
 			}
 			return *this;
 		}

@@ -109,8 +109,6 @@ namespace IO
 		~HTTPStreamer() { Stop(); }
 		HTTPStreamer() : OutputMessage("HTTP"), url("http://127.0.0.1") { fmt = MessageFormat::JSON_FULL; }
 
-		void Receive(const AIS::Message *, int, TAG &) override {}
-
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 
 		void Start() override;

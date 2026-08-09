@@ -798,9 +798,7 @@ namespace IO
 			STATS = Util::Parse::Switch(arg);
 			break;
 		default:
-			if (!setOptionKey(key, arg) && !filter.SetOptionKey(key, arg))
-				throw std::runtime_error("DBMS: unknown option.");
-			break;
+			return OutputMessage::SetKey(key, arg);
 		}
 		return *this;
 	}

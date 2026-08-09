@@ -48,7 +48,6 @@ namespace IO
 			forward_gps = false;
 		}
 
-		void Receive(const AIS::Message *, int, TAG &) override {}
 		virtual ~N2KStreamer() { Stop(); }
 
 		void Start();

@@ -60,13 +60,5 @@ namespace IO
 		using StreamIn<AIS::GPS>::Receive;
 
 		void Connect(Receiver &r);
-		void Receive(const AIS::Message *data, int len, TAG &tag) override;
-
-		Setting &SetKey(AIS::Keys key, const std::string &arg) override
-		{
-			if (!setOptionKey(key, arg))
-				throw std::runtime_error("Screen output - unknown option.");
-			return *this;
-		}
 	};
 }
