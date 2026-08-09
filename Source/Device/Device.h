@@ -57,7 +57,8 @@ namespace Device {
 
 	class Device : public SimpleStreamOut<RAW>, public Setting {
 	protected:
-		bool streaming = false;
+		std::atomic<bool> streaming{false};
+		std::atomic<bool> lost{false}; // set by device/callback threads; polled by the main loop
 		FLOAT32 freq_offset = 0;
 		int tuner_bandwidth = 0;
 		uint32_t frequency = 0;
@@ -79,7 +80,7 @@ namespace Device {
 		virtual void OpenWithFileDescriptor(int) { throw std::runtime_error("Not supported for this device."); }
 
 		virtual void Close() {}
-		virtual void Play() { streaming = true; }
+		virtual void Play() { streaming = true; lost = false; }
 		virtual void Stop() { streaming = false; }
 
 		virtual void setSampleRate(uint32_t s) { sample_rate = s; }
@@ -90,7 +91,7 @@ namespace Device {
 		virtual uint32_t getFrequency() { return frequency; }
 
 		virtual bool isCallback() { return true; }
-		virtual bool isStreaming() { return streaming; }
+		virtual bool isStreaming() { return streaming && !lost; }
 		virtual bool isReplay() { return false; }
 
 		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }

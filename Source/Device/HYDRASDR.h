@@ -50,7 +50,6 @@ namespace Device
 		bool real_mode = false;
 
 		struct hydrasdr_device *dev = nullptr;
-		bool lost = false;
 		std::vector<uint32_t> rates;
 		uint64_t serial = 0;
 

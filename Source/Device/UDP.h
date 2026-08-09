@@ -33,7 +33,6 @@ namespace Device
 
 		struct addrinfo *address = nullptr;
 		SOCKET sock = -1;
-		bool lost = false;
 
 		std::thread run_thread;
 
@@ -51,7 +50,6 @@ namespace Device
 		void Play();
 		void Stop();
 
-		bool isStreaming() { return Device::isStreaming() && !lost; }
 		bool isCallback() { return true; }
 		void getDeviceList(std::vector<Description> &DeviceList);
 		std::string getRateDescription() { return "N/A"; }

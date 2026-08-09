@@ -194,7 +194,6 @@ namespace Device
 
 		static const int BUFFER_SIZE = 16 * 16384;
 
-		bool lost = false;
 		uint32_t status = 0;
 		std::thread async_thread;
 		std::thread run_thread;
@@ -241,7 +240,6 @@ namespace Device
 		void Play();
 		void Stop();
 
-		bool isStreaming() { return Device::isStreaming() && !lost; }
 		bool isCallback() { return true; }
 
 		void getDeviceList(std::vector<Description> &DeviceList);

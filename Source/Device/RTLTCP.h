@@ -43,7 +43,6 @@ namespace Device
 		static const int BUFFER_SIZE = 32 * 16384;
 		std::vector<char> buffer;
 
-		bool lost = false;
 		bool lossless = false;
 
 		std::thread async_thread;
@@ -66,7 +65,6 @@ namespace Device
 		void Play();
 		void Stop();
 
-		bool isStreaming() { return Device::isStreaming() && !lost; }
 		bool isCallback() { return true; }
 
 		void getDeviceList(std::vector<Description> &DeviceList);

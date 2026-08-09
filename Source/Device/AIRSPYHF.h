@@ -33,7 +33,6 @@ namespace Device
 
 		struct airspyhf_device *dev = NULL;
 		std::vector<uint32_t> rates;
-		bool lost = false;
 		uint64_t serial = 0;
 
 		static int callback_static(airspyhf_transfer_t *tf);

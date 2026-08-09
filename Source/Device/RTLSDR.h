@@ -46,8 +46,6 @@ namespace Device
 		std::thread async_thread;
 		std::thread run_thread;
 
-		bool lost = true;
-
 		FIFO fifo;
 
 		static void callback_static(CU8 *buf, uint32_t len, void *ctx);
@@ -82,7 +80,6 @@ namespace Device
 		void Stop() override;
 		void Close() override;
 
-		bool isStreaming() override { return Device::isStreaming() && !lost; }
 		bool isCallback() override { return true; }
 
 		void getDeviceList(std::vector<Description> &DeviceList) override;

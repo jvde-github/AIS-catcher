@@ -80,7 +80,6 @@ namespace Device
 		
 		std::thread read_thread;
 
-		std::atomic<bool> lost{false};
 		bool dump = false;
 		std::string dump_file;
 		std::ofstream dump_stream;
@@ -105,7 +104,6 @@ namespace Device
 			return device_list;
 		}
 		std::string getRateDescription() override { return std::to_string(baudrate) + " baud"; }
-		bool isStreaming() override { return Device::isStreaming() && !lost; }
 		bool isCallback() override { return true; }
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 		std::string Get() override;

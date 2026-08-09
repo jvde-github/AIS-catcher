@@ -66,8 +66,6 @@ namespace Device
 
 		void PrintActuals(void);
 
-		bool lost = true;
-
 		FIFO fifo;
 
 		void RunAsync();
@@ -85,7 +83,6 @@ namespace Device
 		void Stop();
 		void Close();
 
-		bool isStreaming() { return Device::isStreaming() && !lost; }
 		bool isCallback() { return true; }
 
 		void getDeviceList(std::vector<Description> &DeviceList);

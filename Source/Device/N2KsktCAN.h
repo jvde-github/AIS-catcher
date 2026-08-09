@@ -40,7 +40,6 @@ namespace Device
 
 		std::string _iface = "";
 
-		bool lost = false;
 		std::vector<std::string> available_interfaces;
 
 	public:

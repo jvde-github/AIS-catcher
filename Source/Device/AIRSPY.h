@@ -49,7 +49,6 @@ namespace Device
 		bool bias_tee = false;
 
 		struct airspy_device *dev = nullptr;
-		bool lost = false;
 		std::vector<uint32_t> rates;
 		uint64_t serial = 0;
 
