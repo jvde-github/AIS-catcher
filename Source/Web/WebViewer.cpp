@@ -758,6 +758,22 @@ std::string WebViewer::buildStatJSON(ReceiverTracker *s)
 	return content;
 }
 
+// the viewer polls this every 10s for the community icon; stat.json is 100x it
+std::string WebViewer::buildSharingStateJSON()
+{
+	std::string content;
+	JSON::Writer w(content);
+
+	w.beginObject()
+		.kv("sharing", comm_feed != nullptr)
+		.kv("sharing_uuid", comm_feed != nullptr && comm_feed->hasUUID())
+		.kv("engine_running", engine_attached)
+		.endObject();
+
+	w.finish();
+	return content;
+}
+
 // Slim variant of stat.json for the control hub's data-flow tab, which only
 // needs the per-output counters.
 std::string WebViewer::buildOutputStatsJSON()
@@ -855,6 +871,9 @@ const WebViewer::Route WebViewer::routes[] = {
 	{"/stat.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *s, const std::string &)
 	 { return w->buildStatJSON(s); }, true},
+	{"/api/sharing_state.json", nullptr, "application/json",
+	 [](WebViewer *w, ReceiverTracker *, const std::string &)
+	 { return w->buildSharingStateJSON(); }, true},
 	{"/api/output_stats.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &)
 	 { return w->buildOutputStatsJSON(); }, true},

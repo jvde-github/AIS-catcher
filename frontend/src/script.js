@@ -5836,8 +5836,12 @@ community.applySharingState();
 if (config.features.managed) {
     const pollSharingState = async () => {
         if (document.hidden) return;
-        const stat = await fetchStatistics();
-        if (stat) community.updateSharingState(stat.sharing, stat.sharing_uuid, stat.engine_running);
+        try {
+            const r = await fetch("api/sharing_state.json");
+            if (!r.ok) return;
+            const s = await r.json();
+            community.updateSharingState(s.sharing, s.sharing_uuid, s.engine_running);
+        } catch (e) { /* transient */ }
     };
     pollSharingState();
     setInterval(pollSharingState, 10000);

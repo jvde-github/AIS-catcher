@@ -180,6 +180,7 @@ private:
 	// JSON builders for complex endpoints
 	std::string buildStatJSON(ReceiverTracker *s);
 	std::string buildOutputStatsJSON();
+	std::string buildSharingStateJSON();
 	std::string buildMultiPathJSON(ReceiverTracker *s, const std::string &query);
 	void writeOutputsJSON(JSON::Writer &w);
 
