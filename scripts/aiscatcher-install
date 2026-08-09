@@ -941,7 +941,7 @@ Group=aiscatcher
 SupplementaryGroups=plugdev dialout"
     fi
 
-    local exec_start="/usr/bin/AIS-catcher -G system on -o 0 -C ${CONFIG_FILE} @${CMD_FILE}"
+    local exec_start="/usr/bin/AIS-catcher -G level debug -o 0 -C ${CONFIG_FILE} @${CMD_FILE}"
     if [ "$MANAGED" = true ]; then
         exec_start="/usr/bin/AIS-catcher -E ${MANAGED_CONFIG_FILE} ${MANAGED_BIND}"
     fi
