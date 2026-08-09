@@ -621,32 +621,33 @@ namespace Protocol
 		if (sent <= 0)
 		{
 			int error = SSL_get_error(ssl, sent);
-			switch (error)
-			{
-			case SSL_ERROR_WANT_WRITE:
-			case SSL_ERROR_WANT_READ:
-				return 0;
-			case SSL_ERROR_ZERO_RETURN:
-				Warning() << "TLS (" << getHost() << ":" << getPort() << "): Connection closed by peer";
-				if (stats)
-					stats->bytes_out += BIO_number_written(SSL_get_wbio(ssl)) - before;
-				disconnect();
-				return -1;
-			case SSL_ERROR_SYSCALL:
-			case SSL_ERROR_SSL:
-			default:
-				Error() << "TLS (" << getHost() << ":" << getPort() << "): Send error: " << getSSLErrorString(error);
-				if (stats)
-					stats->bytes_out += BIO_number_written(SSL_get_wbio(ssl)) - before;
-				disconnect();
-				return -1;
-			}
+			// Send buffer full on the non-blocking socket: wait once for the socket,
+			// then retry the SAME buffer. OpenSSL rejects a retry with different data
+			// as a bad write retry, so we must not just return and let the caller
+			// resend the next message. SSL_write is all-or-nothing, so one retry sends
+			// the whole message once there is room. Keep the wait short -- this runs on
+			// the decode thread, so blocking too long stalls the device FIFO.
+			const int wait_ms = 500;
+			if ((error == SSL_ERROR_WANT_WRITE || error == SSL_ERROR_WANT_READ) &&
+				Net::waitReady(getSocket(), error == SSL_ERROR_WANT_READ ? POLLIN : POLLOUT, wait_ms))
+				sent = SSL_write(ssl, data, length);
 		}
 
 		if (stats)
 			stats->bytes_out += BIO_number_written(SSL_get_wbio(ssl)) - before;
 
-		return sent;
+		if (sent > 0)
+			return sent;
+
+		int error = SSL_get_error(ssl, sent);
+		if (error == SSL_ERROR_ZERO_RETURN)
+			Warning() << "TLS (" << getHost() << ":" << getPort() << "): Connection closed by peer";
+		else if (error == SSL_ERROR_WANT_WRITE || error == SSL_ERROR_WANT_READ)
+			Warning() << "TLS (" << getHost() << ":" << getPort() << "): send still blocked after 500 ms, disconnecting";
+		else
+			Error() << "TLS (" << getHost() << ":" << getPort() << "): Send error: " << getSSLErrorString(error);
+		disconnect();
+		return -1;
 	}
 
 	int TLS::read(void *data, int length, int timeout, bool wait)

@@ -33,6 +33,7 @@
 #include <unistd.h>
 #include <cerrno>
 #include <cstring>
+#include <poll.h>
 #include <netinet/tcp.h>
 #ifdef __ANDROID__
 #include <netinet/in.h>
@@ -65,6 +66,23 @@ namespace Net
 			return std::string(h) + ":" + s;
 		return "?";
 	}
+
+	// Wait until the socket is ready for the given poll events (POLLIN/POLLOUT) or
+	// the timeout elapses; returns true if ready. Uses poll/WSAPoll, so unlike
+	// select it is not bounded by FD_SETSIZE.
+	inline bool waitReady(SOCKET s, short events, int timeout_ms)
+	{
+#ifdef _WIN32
+		WSAPOLLFD pfd = {s, events, 0};
+		return WSAPoll(&pfd, 1, timeout_ms) > 0 && (pfd.revents & (events | POLLHUP | POLLERR));
+#else
+		struct pollfd pfd = {s, events, 0};
+		return ::poll(&pfd, 1, timeout_ms) > 0 && (pfd.revents & (events | POLLHUP | POLLERR));
+#endif
+	}
+
+	inline bool waitWritable(SOCKET s, int timeout_ms) { return waitReady(s, POLLOUT, timeout_ms); }
+	inline bool waitReadable(SOCKET s, int timeout_ms) { return waitReady(s, POLLIN, timeout_ms); }
 
 	inline bool wouldBlock(int e)
 	{
