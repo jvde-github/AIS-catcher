@@ -38,6 +38,8 @@ namespace Device {
 		std::thread run_thread;
 		void Run();
 
+		bool lost = false; // set by the API event thread on device-removed; the main thread tears down
+
 		FIFO fifo;
 		std::vector<CFLOAT32> output;
 
@@ -62,6 +64,7 @@ namespace Device {
 		void Close();
 
 		virtual bool isCallback() { return true; }
+		bool isStreaming() { return Device::isStreaming() && !lost; }
 
 		void getDeviceList(std::vector<Description>& DeviceList);
 

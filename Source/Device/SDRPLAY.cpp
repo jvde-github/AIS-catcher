@@ -131,6 +131,7 @@ namespace Device {
 	}
 
 	void SDRPLAY::Play() {
+		lost = false;
 		fifo.Init(16 * 16384, 8);
 
 		// devParams is NULL for a duo slave: the master owns the clock, and the
@@ -164,7 +165,10 @@ namespace Device {
 	}
 
 	void SDRPLAY::Stop() {
-		if (isStreaming()) {
+		// Guard on the base flag, not isStreaming(): a device-removed event sets
+		// `lost` (making isStreaming() false), but the teardown below must still
+		// run -- and only ever from the main thread, never from a callback.
+		if (Device::isStreaming()) {
 			Device::Stop();
 			fifo.Halt();
 
@@ -188,13 +192,17 @@ namespace Device {
 	}
 
 	void SDRPLAY::callback_event(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT* params) {
+		// This runs on the SDRplay API's own event thread. Only signal that the
+		// device is gone -- never call Stop()/sdrplay_api_Uninit() here, as that
+		// re-enters the API from its callback thread (deadlock) and races the
+		// main thread's Stop(). The engine polls isStreaming() and tears down.
 		if (eventId == sdrplay_api_DeviceRemoved) {
 			Error() << "SDRPLAY: device disconnected";
-			Stop();
+			lost = true;
 		}
 		else if (eventId == sdrplay_api_RspDuoModeChange && params->rspDuoModeParams.modeChangeType == sdrplay_api_MasterDllDisappeared) {
 			Error() << "SDRPLAY: RSPduo master disappeared";
-			Stop();
+			lost = true;
 		}
 	}
 
