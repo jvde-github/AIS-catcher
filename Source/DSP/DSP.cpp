@@ -419,7 +419,7 @@ namespace DSP {
 		int delta = (int)(9600.0 / 48000.0 * N);
 		int wi = 0;
 
-		FFT::fft(fft_data);
+		fft_plan.fft(fft_data);
 
 		if (wide) {
 			if (cumsum.size() < N) cumsum.resize(N);

@@ -25,6 +25,7 @@
 #include <samplerate.h>
 #endif
 #include "Filters.h"
+#include "FFT.h"
 
 #include "Stream.h"
 #include "Signals.h"
@@ -373,6 +374,7 @@ namespace DSP
 		std::vector<CFLOAT32> output;
 		std::vector<CFLOAT32> fft_data;
 		std::vector<FLOAT32> cumsum;
+		FFT::Plan<FLOAT32> fft_plan;
 
 		CFLOAT32 rot = 1.0f;
 		int N = 2048;

@@ -63,7 +63,7 @@ namespace V2
 		for (int n = 0; n < fft_length; n++)
 			fft_data[FFT::rev(n, 9)] = window[n] * window[n];
 
-		FFT::fft(fft_data);
+		fft_plan.fft(fft_data);
 
 		// fftshift-ordered magnitudes
 		for (int i = 0; i < 256; i++)

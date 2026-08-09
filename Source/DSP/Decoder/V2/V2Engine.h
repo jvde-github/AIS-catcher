@@ -23,6 +23,7 @@
 #include "AIS.h"
 #include "Common.h"
 #include "Stream.h"
+#include "FFT.h"
 
 namespace V2
 {
@@ -39,6 +40,7 @@ namespace V2
 
 	private:
 		std::vector<CFLOAT32> fft_data = std::vector<CFLOAT32>(BLOCK_SIZE);
+		FFT::Plan<FLOAT32> fft_plan;
 		float magnitude[BLOCK_SIZE];
 	};
 
