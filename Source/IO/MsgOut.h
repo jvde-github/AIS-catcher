@@ -106,7 +106,18 @@ namespace IO
 		}
 
 		virtual bool readyToSend() { return true; }
-		virtual void sendFormatted(const char *, int, const AIS::Message *, TAG &) {}
+		// Reached only by a subclass that neither overrides sendFormatted nor
+		// overrides Receive — i.e. a wiring mistake. Say so once instead of
+		// dropping every message in silence.
+		bool warned_no_formatter = false;
+		virtual void sendFormatted(const char *, int, const AIS::Message *, TAG &)
+		{
+			if (!warned_no_formatter)
+			{
+				warned_no_formatter = true;
+				Error() << type << ": no sendFormatted() and Receive() not overridden — dropping all output.";
+			}
+		}
 		virtual void batchDone(TAG &) {}
 
 	public:
