@@ -299,7 +299,9 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members, bool 
 		default:
 		{
 			Setting *device = _engine.receivers.back()->getDeviceManager().settingForKey((AIS::Keys)m.Key());
-			if (device && isActiveObject(m.Get()))
+			if (!device)
+				throw std::runtime_error(std::string("Config file: field \"") + AIS::KeyMap[m.Key()][JSON_DICT_SETTING] + "\" is not allowed in a receiver object.");
+			if (isActiveObject(m.Get()))
 				setSettingsFromJSON(m.Get(), *device);
 			break;
 		}
