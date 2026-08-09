@@ -389,8 +389,8 @@ namespace JSON
 		{
 		case TokenType::LeftBrace:
 		{
-			if (++depth > MAX_DEPTH)
-				error_parser("maximum nesting depth exceeded");
+			if (++depth > max_depth)
+				error_parser("JSON nested deeper than " + std::to_string(max_depth) + " levels");
 			next();
 			while (is_match(TokenType::String))
 			{
@@ -409,8 +409,8 @@ namespace JSON
 		}
 		case TokenType::LeftBracket:
 		{
-			if (++depth > MAX_DEPTH)
-				error_parser("maximum nesting depth exceeded");
+			if (++depth > max_depth)
+				error_parser("JSON nested deeper than " + std::to_string(max_depth) + " levels");
 			next();
 			while (!is_match(TokenType::RightBracket))
 			{
@@ -527,8 +527,8 @@ namespace JSON
 			break;
 		case TokenType::LeftBrace:
 		{
-			if (++depth > MAX_DEPTH)
-				error_parser("maximum nesting depth exceeded");
+			if (++depth > max_depth)
+				error_parser("JSON nested deeper than " + std::to_string(max_depth) + " levels");
 			JSON *child = pool->addObject();
 			parse_into_core(child, pool);
 			v.setObject(child);
@@ -549,8 +549,8 @@ namespace JSON
 			break;
 		case TokenType::LeftBracket:
 		{
-			if (++depth > MAX_DEPTH)
-				error_parser("maximum nesting depth exceeded");
+			if (++depth > max_depth)
+				error_parser("JSON nested deeper than " + std::to_string(max_depth) + " levels");
 			std::vector<Value> *arr = pool->addArray();
 
 			next();

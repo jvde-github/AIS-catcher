@@ -58,7 +58,7 @@ namespace JSON
 		bool tokenEscaped = false;
 		std::string escapedText;
 		int depth = 0;
-		static const int MAX_DEPTH = 200;
+		int max_depth = 20; // JSON here is shallow (AIS input ~2, config <10); tighten per parser
 
 		[[noreturn]] void error(const std::string &err, int pos);
 		[[noreturn]] AISC_COLD_NOINLINE void error(const char *err, int pos);
@@ -109,5 +109,6 @@ namespace JSON
 		void parse_into(Document &doc, const std::string &j) { parse_into(doc.root, doc.pool, j); }
 		void setSkipUnknown(bool b) { skipUnknownKeys = b; }
 		void setMap(int d) { dict = d; }
+		void setMaxDepth(int d) { max_depth = d; }
 	};
 }

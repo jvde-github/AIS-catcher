@@ -184,6 +184,7 @@ namespace AIS
 		NMEA() : parser(JSON_DICT_INPUT)
 		{
 			parser.setSkipUnknown(true);
+			parser.setMaxDepth(2); // AIS input JSON is flat: only the nmea array nests below root
 		}
 
 		virtual ~NMEA() {}
