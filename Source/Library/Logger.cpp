@@ -231,10 +231,13 @@ int Logger::addConsoleListener()
 #endif
 	return addLogListener([journal](const LogMessage &msg)
 						  {
+							  // single insertion so concurrent writers cannot tear the line
+							  std::string line;
 							  if (journal)
-								  std::cerr << '<' << msg.syslogLevel() << '>' << msg.message << "\n";
-							  else
-								  std::cerr << msg.message << "\n"; });
+								  line = '<' + std::to_string(msg.syslogLevel()) + '>';
+							  line += msg.message;
+							  line += '\n';
+							  std::cerr << line; });
 }
 
 int Logger::addLogListener(LogCallback callback)
