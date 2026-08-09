@@ -289,6 +289,8 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members, bool 
 		case AIS::KEY_SETTING_CHANNEL:
 		case AIS::KEY_SETTING_META:
 		case AIS::KEY_SETTING_SENSITIVITY_HIGH:
+		case AIS::KEY_SETTING_LAT:
+		case AIS::KEY_SETTING_LON:
 			_engine.receivers.back()->SetKey((AIS::Keys)m.Key(), m.Get().to_string());
 			break;
 		case AIS::KEY_SETTING_OWN_MMSI:
@@ -494,7 +496,7 @@ void Config::set(const std::string &str)
 			_engine.timeout_nomsg = Util::Parse::Switch(m.Get().to_string());
 			break;
 		case AIS::KEY_SETTING_VERBOSE_TIME:
-			_engine.screen.verboseUpdateTime = Util::Parse::Integer(m.Get().to_string(), 1, 300);
+			_engine.screen.verboseUpdateTime = Util::Parse::Integer(m.Get().to_string(), 1, 3600);
 			break;
 		default:
 			if (m.Key() >= 0 && m.Key() < AIS::KEY_COUNT)

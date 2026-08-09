@@ -44,9 +44,12 @@ namespace Device {
 
 		FIFO fifo;
 		int timeout = 100;
+		bool lost = false;
 
 	public:
 		ZMQ() : Device(Format::CU8, 288000, Type::ZMQ, "ZMQ") {}
+
+		bool isStreaming() { return Device::isStreaming() && !lost; }
 
 		void Open(uint64_t h);
 		void Close();

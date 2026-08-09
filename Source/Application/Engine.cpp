@@ -144,9 +144,11 @@ void Engine::run(WebViewer *viewer, ControlCore *control)
 
 	if (receivers.size() > 1)
 	{
-		Debug() << "Mutex: enabling exclusive on " << msg.size() << " message outputs (" << receivers.size() << " receivers); screen uses thread-local buffers";
+		Debug() << "Mutex: enabling exclusive on " << msg.size() << " message outputs + screen (" << receivers.size() << " receivers)";
 		for (auto &o : msg)
 			o->setExclusive(true);
+		if (!control)
+			screen.setExclusive(true);
 	}
 	else
 	{

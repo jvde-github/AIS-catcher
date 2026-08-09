@@ -323,14 +323,12 @@ namespace IO
 	{
 		if (!Net::setNonBlocking(sock))
 			return false;
-#ifndef _WIN32
 		if (broadcast)
 		{
 			int broadcastEnable = 1;
 			if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (char *)&broadcastEnable, sizeof(broadcastEnable)) < 0)
 				return false;
 		}
-#endif
 		return true;
 	}
 

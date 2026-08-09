@@ -22,6 +22,7 @@
 #include "SWAR.h"
 #include "Logger.h"
 #include <cmath>
+#include <cstdint>
 
 namespace AIS
 {
@@ -203,7 +204,7 @@ namespace AIS
 
 	static bool parse_uint(const char *p, int len, int64_t &out)
 	{
-		if (len <= 0)
+		if (len <= 0 || len > 18)
 			return false;
 		int64_t v = 0;
 		for (int i = 0; i < len; i++)
@@ -256,7 +257,7 @@ namespace AIS
 			v = degrees + minutes / 60.0;
 
 			float limit = (quadrant == 'N' || quadrant == 'S') ? 90.0f : 180.0f;
-			if (v > limit)
+			if (v < 0.0f || v > limit)
 			{
 				error |= true;
 				return 0;
@@ -724,12 +725,23 @@ namespace AIS
 		if ((ch | lh | ll) < 0) { warnFail(ch < 0 ? ch : (lh < 0 ? lh : ll), " in header"); return false; }
 		int length_bits = (lh << 8) | ll;
 
-		if (length_bits < 0 || length_bits > MAX_AIS_LENGTH)
+		if (length_bits <= 0 || length_bits > MAX_AIS_LENGTH)
 		{
 			if (shouldWarn(WARN_BINARY_LENGTH))
 				Warning() << "binary: invalid message length " << length_bits;
 			return false;
 		}
+
+		bool valid_channel = (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9');
+		if (!valid_channel)
+		{
+			if (shouldWarn(WARN_BINARY_SHORT))
+				Warning() << "binary: invalid channel byte " << ch;
+			return false;
+		}
+
+		if (timestamp < 0 || timestamp > INT64_MAX / 1000000)
+			timestamp = 0;
 
 		initMsg((char)ch, station, (int64_t)timestamp * 1000000);
 

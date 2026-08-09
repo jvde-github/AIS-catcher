@@ -502,6 +502,7 @@ namespace Protocol
 				{
 					Error() << "GPSD: no or invalid response, likely not a gpsd server.";
 					disconnect();
+					return;
 				}
 			}
 
@@ -581,6 +582,7 @@ namespace Protocol
 			{
 				Error() << "RTLTCP: no or invalid response, likely not an rtl-tcp server.";
 				disconnect();
+				return;
 			}
 			connected = true;
 			ProtocolBase::onConnect();

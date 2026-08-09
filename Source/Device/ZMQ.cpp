@@ -68,6 +68,7 @@ namespace Device {
 
 	void ZMQ::Play() {
 		fifo.Init(BUFFER_SIZE);
+		lost = false;
 
 		Device::Play();
 
@@ -98,6 +99,7 @@ namespace Device {
 			}
 			else if (len < 0 && zmq_errno() != EAGAIN) {
 				Error() << "ZMQ: receive error: " << zmq_strerror(zmq_errno());
+				lost = true;
 				break;
 			}
 		}

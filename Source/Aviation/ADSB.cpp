@@ -458,6 +458,9 @@ namespace Plane
         if (lat_odd >= 270.0)
             lat_odd -= 360.0;
 
+        if (std::abs(lat_even) > 90.0 || std::abs(lat_odd) > 90.0)
+            return false;
+
         int nl = NL(lat_even);
 
         if (nl != NL(lat_odd))

@@ -241,6 +241,12 @@ namespace IO
 				}
 				seen_content_length = true;
 
+				if (value.empty() || value.find_first_not_of("0123456789") != std::string::npos)
+				{
+					error = "invalid Content-Length: " + value;
+					return 400;
+				}
+
 				try
 				{
 					r.content_length = std::stoul(value);

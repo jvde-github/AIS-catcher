@@ -2421,8 +2421,8 @@ async function fetchShipsBody() {
     if (ships.static) {
         ships.static.forEach((v) => {
             const s = Object.fromEntries(staticKeys.map((k, i) => [k, v[i]]));
-            s.shipname = sanitizeString(s.shipname);
-            s.callsign = sanitizeString(s.callsign);
+            s.shipname = sanitizeString(s.shipname || "");
+            s.callsign = sanitizeString(s.callsign || "");
             s.destination = sanitizeString(s.destination || "");
             s.eni = sanitizeString(s.eni || "");
             s.vendorid = sanitizeString(s.vendorid || "");
@@ -2880,10 +2880,17 @@ async function updateStatistics() {
     if (stat) {
         // in bulk....
         ["os", "tcp_clients", "hardware", "build_describe", "build_date", "station", "product", "vendor", "serial", "model", "sample_rate"].forEach(
-            (e) => (document.getElementById("stat_" + e).innerHTML = stat[e]),
+            (e) => (document.getElementById("stat_" + e).textContent = stat[e] != null ? stat[e] : ""),
         );
 
-        if (stat.station_link != "") document.getElementById("stat_station").innerHTML = "<a href='" + stat.station_link + "'>" + stat.station + "</a>";
+        if (stat.station_link != "") {
+            const el = document.getElementById("stat_station");
+            el.textContent = "";
+            const a = document.createElement("a");
+            a.href = /^https?:\/\//.test(stat.station_link) ? stat.station_link : "#";
+            a.textContent = stat.station;
+            el.appendChild(a);
+        }
 
         const statSharingElement = document.getElementById("stat_sharing");
         community.updateSharingState(stat.sharing, stat.sharing_uuid, stat.engine_running);
@@ -3015,7 +3022,7 @@ function getTooltipContentPlane(plane) {
     return '<div class="tooltip-card">' +
         getFlagStyled(plane.country, TOOLTIP_FLAG_STYLE) +
         '<div>' +
-        (plane.callsign || plane.hexident) + ' at ' + altitude + '/' + speed + ' kts<br>' +
+        sanitizeString(plane.callsign || plane.hexident || '') + ' at ' + altitude + '/' + speed + ' kts<br>' +
         'Received ' + getDeltaTimeVal(planesSince - plane.last_signal) + ' ago' +
         '</div>' +
         '</div>';

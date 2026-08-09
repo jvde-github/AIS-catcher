@@ -318,7 +318,15 @@ bool ControlCore::verifyPassword(const std::string &password)
 	if (password_hash.empty())
 		return false;
 
-	return Util::SHA256::hex(password_salt + password) == password_hash;
+	const std::string computed = Util::SHA256::hex(password_salt + password);
+	if (computed.size() != password_hash.size())
+		return false;
+
+	unsigned char diff = 0;
+	for (size_t i = 0; i < computed.size(); i++)
+		diff |= (unsigned char)(computed[i] ^ password_hash[i]);
+
+	return diff == 0;
 }
 
 std::string ControlCore::randomHex(size_t length)

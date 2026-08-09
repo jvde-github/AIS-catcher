@@ -57,6 +57,8 @@ namespace JSON
 		const char *tokenEnd = nullptr;
 		bool tokenEscaped = false;
 		std::string escapedText;
+		int depth = 0;
+		static const int MAX_DEPTH = 200;
 
 		[[noreturn]] void error(const std::string &err, int pos);
 		[[noreturn]] AISC_COLD_NOINLINE void error(const char *err, int pos);

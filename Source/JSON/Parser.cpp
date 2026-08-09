@@ -20,6 +20,7 @@
 #include <cmath>
 
 #include <cstdlib>
+#include <cstdint>
 
 #include "Parser.h"
 #include "Keys.h"
@@ -148,6 +149,7 @@ namespace JSON
 		{
 			p++;
 			tokenStart = p;
+			tokenEscaped = false;
 
 			// Word-sized fast scan: stop on '"' (end of string), '\\' (escape),
 			// or any byte < 0x20 (control char, illegal unescaped per JSON spec).
@@ -169,6 +171,7 @@ namespace JSON
 			else
 			{
 				parse_string_escaped(); // handles '\\', control chars, EOF
+				tokenEscaped = true;
 			}
 
 			currentType = TokenType::String;
@@ -386,6 +389,8 @@ namespace JSON
 		{
 		case TokenType::LeftBrace:
 		{
+			if (++depth > MAX_DEPTH)
+				error_parser("maximum nesting depth exceeded");
 			next();
 			while (is_match(TokenType::String))
 			{
@@ -399,10 +404,13 @@ namespace JSON
 				next();
 			}
 			must_match(TokenType::RightBrace, "expected '}'");
+			depth--;
 			break;
 		}
 		case TokenType::LeftBracket:
 		{
+			if (++depth > MAX_DEPTH)
+				error_parser("maximum nesting depth exceeded");
 			next();
 			while (!is_match(TokenType::RightBracket))
 			{
@@ -413,6 +421,7 @@ namespace JSON
 				next();
 			}
 			must_match(TokenType::RightBracket, "expected ']'");
+			depth--;
 			break;
 		}
 		case TokenType::String:
@@ -438,9 +447,21 @@ namespace JSON
 		{
 			int64_t val = 0;
 			bool neg = (*tokenStart == '-');
+			bool overflow = false;
 			for (const char *s = tokenStart + neg; s < tokenEnd; s++)
-				val = val * 10 + (*s - '0');
-			v.setInt(neg ? -val : val);
+			{
+				int d = *s - '0';
+				if (val > (INT64_MAX - d) / 10)
+				{
+					overflow = true;
+					break;
+				}
+				val = val * 10 + d;
+			}
+			if (overflow)
+				v.setInt(neg ? INT64_MIN : INT64_MAX);
+			else
+				v.setInt(neg ? -val : val);
 			break;
 		}
 		case TokenType::FloatingPoint:
@@ -451,13 +472,13 @@ namespace JSON
 			if (neg)
 				s++;
 
-			int64_t int_part = 0;
+			double int_part = 0.0;
 			while (s < tokenEnd && *s >= '0' && *s <= '9')
 			{
 				int_part = int_part * 10 + (*s - '0');
 				s++;
 			}
-			val = (double)int_part;
+			val = int_part;
 
 			if (s < tokenEnd && *s == '.')
 			{
@@ -506,9 +527,12 @@ namespace JSON
 			break;
 		case TokenType::LeftBrace:
 		{
+			if (++depth > MAX_DEPTH)
+				error_parser("maximum nesting depth exceeded");
 			JSON *child = pool->addObject();
 			parse_into_core(child, pool);
 			v.setObject(child);
+			depth--;
 			break;
 		}
 		case TokenType::False:
@@ -525,6 +549,8 @@ namespace JSON
 			break;
 		case TokenType::LeftBracket:
 		{
+			if (++depth > MAX_DEPTH)
+				error_parser("maximum nesting depth exceeded");
 			std::vector<Value> *arr = pool->addArray();
 
 			next();
@@ -542,6 +568,7 @@ namespace JSON
 
 			must_match(TokenType::RightBracket, "expected ']'");
 			v.setArray(arr);
+			depth--;
 		}
 
 		break;
@@ -593,6 +620,7 @@ namespace JSON
 		p_start = j.data();
 		p = p_start;
 		pend = p_start + j.size();
+		depth = 0;
 		next();
 		parse_into_core(&doc.root, &doc.pool);
 		next();
@@ -607,6 +635,7 @@ namespace JSON
 		pend = p_start + j.size();
 		target.clear();
 		pool.clear();
+		depth = 0;
 		next();
 		parse_into_core(&target, &pool);
 		next();

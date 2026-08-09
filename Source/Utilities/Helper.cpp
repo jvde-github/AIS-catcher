@@ -364,7 +364,6 @@ namespace Util
 			if (name.size() < extension.size())
 				continue;
 #ifdef _WIN32
-			// the old FindFirstFile pattern matched extensions case-insensitively
 			if (_stricmp(name.c_str() + name.size() - extension.size(), extension.c_str()) != 0)
 				continue;
 			files.push_back(directory + "\\" + name);
