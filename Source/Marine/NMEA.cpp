@@ -482,7 +482,7 @@ namespace AIS
 		uint8_t id = id_ch ? (id_ch - '0') : 0;
 
 		if (mctx.groupId != 0)
-			aivdm.match_key = (1u << 31) | (uint32_t)mctx.groupId;
+			aivdm.match_key = (1u << 31) | ((uint32_t)(mctx.groupId & 0x7FFF) << 16) | ((uint32_t)(uint8_t)channel_ch << 8) | (uint32_t)(id & 0x0F);
 		else
 			aivdm.match_key = ((uint32_t)(uint8_t)t1 << 24) | ((uint32_t)(uint8_t)t2 << 16) | ((uint32_t)(uint8_t)channel_ch << 8) | ((uint32_t)aivdm.count << 4) | id;
 

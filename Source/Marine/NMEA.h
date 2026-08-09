@@ -52,7 +52,7 @@ namespace AIS
 		{
 			std::string sentence;
 			uint64_t timestamp = 0;
-			uint32_t match_key = 0; // groupId: (1<<31)|gid, else: (t1<<24)|(t2<<16)|(ch<<8)|(count<<4)|ID
+			uint32_t match_key = 0; // grouped: (1<<31)|(gid15<<16)|(ch<<8)|id, else: (t1<<24)|(t2<<16)|(ch<<8)|(count<<4)|id -- ch always in bits 8-15 for channel()
 			uint32_t message_error = 0;
 			uint16_t data_offset = 0;
 			uint16_t data_len = 0;
