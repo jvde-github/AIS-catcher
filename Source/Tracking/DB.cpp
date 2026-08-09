@@ -48,6 +48,14 @@ void DB::setup()
 
 	int path_blocks = paths.setup((long)track_memory_kb * 1024, nships);
 	Debug() << "DB: track store " << track_memory_kb << " KB (" << path_blocks << " blocks)";
+
+	// the reset endpoint reaches this too: clear the state the container rebuild
+	// leaves behind, or a fresh DB still serves pre-reset broadcasts and floors
+	// replay at the old eviction horizon
+	for (int i = 0; i < MAX_BINARY_MESSAGES; i++)
+		binary_messages[i].Clear();
+	binary_msg_index = 0;
+	evict_horizon = 0;
 }
 
 std::string DB::getJSONcompact(bool full, std::time_t since)
