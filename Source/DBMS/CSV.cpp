@@ -168,6 +168,8 @@ namespace IO
 		if (!file.is_open())
 			return;
 
+		const auto t0 = std::chrono::steady_clock::now();
+
 		// chronological file, last row per target wins, upsert restores LRU order
 		std::vector<std::string> f;
 		std::string line;
@@ -230,7 +232,7 @@ namespace IO
 		if (skipped)
 			Warning() << "DBMS: skipped " << skipped << " corrupt lines in " << path;
 		if (restored)
-			Debug() << "DBMS: restored " << restored << " targets from " << path;
+			Debug() << "DBMS: restored " << restored << " targets from " << path << " in " << Util::Helper::msSince(t0) << " ms";
 	}
 
 	void CSV::loadStats()
@@ -251,6 +253,8 @@ namespace IO
 		if (!file.is_open())
 			return;
 
+		const auto t0 = std::chrono::steady_clock::now();
+
 		std::vector<std::string> f;
 		std::string line;
 		std::getline(file, line); // header
@@ -262,7 +266,7 @@ namespace IO
 		}
 
 		if (!stats_rows.empty())
-			Debug() << "DBMS: restored " << stats_rows.size() << " stat hours from " << path;
+			Debug() << "DBMS: restored " << stats_rows.size() << " stat hours from " << path << " in " << Util::Helper::msSince(t0) << " ms";
 	}
 
 	// append mode; only a brand-new file gets the header
