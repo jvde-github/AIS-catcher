@@ -224,8 +224,6 @@ std::vector<LogMessage> Logger::getLastMessages(int n)
 
 int Logger::addConsoleListener()
 {
-	// journald parses a <N> priority prefix on stderr lines and strips it
-	// (sd-daemon(3)), so log levels survive the journey into the journal
 	const bool journal = getenv("JOURNAL_STREAM") != nullptr;
 	return addLogListener([journal](const LogMessage &msg)
 						  {
