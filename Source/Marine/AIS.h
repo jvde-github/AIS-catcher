@@ -126,6 +126,7 @@ namespace AIS
 					{
 						NextState(State::DATAFCS, 0); // 0111111*0....
 						level = 0.0f;
+						msg.clear(); // zero the buffer so a short frame cannot read a previous frame's bits
 					}
 					else
 						NextState(State::TRAINING, 0);
