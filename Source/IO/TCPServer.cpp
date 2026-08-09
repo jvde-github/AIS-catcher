@@ -189,6 +189,22 @@ namespace IO
 				CloseUnsafe();
 				return false;
 			}
+			bytes = 0; // would-block: nothing sent, queue the whole message
+		}
+
+		if (bytes < length)
+		{
+			// Partial / would-block: queue the remainder for the poll thread to flush
+			// instead of dropping it (this is the server -- do not block on a slow
+			// client). Respect the same buffer cap as Send().
+			if (out_pos >= OUT_COMPACT_THRESHOLD)
+				compact();
+			if (pending() + (length - bytes) > MAX_BUFFER_SIZE)
+			{
+				CloseUnsafe();
+				return false;
+			}
+			out.insert(out.end(), data + bytes, data + length);
 		}
 		return true;
 	}

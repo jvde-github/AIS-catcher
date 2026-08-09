@@ -334,28 +334,48 @@ namespace Protocol
 		if (state != READY)
 			return persistent ? 0 : -1;
 
-		int sent = ::send(sock, (char *)data, length, 0);
-		if (sent < 0)
+		// Send the whole buffer. On a full send buffer (would-block / partial) wait
+		// for the socket and continue with the remainder, so we never leave a caller
+		// with a half-written frame. Bounded (500 ms) because this runs on the decode
+		// thread; a genuine stall disconnects.
+		const char *p = (const char *)data;
+		int total = 0;
+		while (total < length)
 		{
-			int error_code = Net::lastError();
-
-			if (Net::wouldBlock(error_code))
-				return 0;
-
-			return handleNetworkError("send", error_code, 0);
+			int sent = ::send(sock, p + total, length - total, 0);
+			if (sent > 0)
+			{
+				total += sent;
+				continue;
+			}
+			if (sent < 0)
+			{
+				int error_code = Net::lastError();
+				if (!Net::wouldBlock(error_code))
+				{
+					bytes_sent += total;
+					if (stats)
+						stats->bytes_out += total;
+					return handleNetworkError("send", error_code, 0);
+				}
+			}
+			if (!Net::waitWritable(sock, 500))
+			{
+				Warning() << "TCP (" << host << ":" << port << "): send stalled at " << total << "/" << length << " bytes, disconnecting";
+				disconnect();
+				bytes_sent += total;
+				if (stats)
+					stats->bytes_out += total;
+				return -1;
+			}
 		}
 
-		if (sent < length)
-		{
-			Warning() << "TCP (" << host << ":" << port << "): partial send " << sent << "/" << length << " bytes.";
-		}
-
-		bytes_sent += sent;
+		bytes_sent += total;
 
 		if (stats)
-			stats->bytes_out += sent;
+			stats->bytes_out += total;
 
-		return sent;
+		return total;
 	}
 
 	int TCP::read(void *data, int length, int timeout, bool wait)
