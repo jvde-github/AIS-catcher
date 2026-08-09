@@ -97,6 +97,9 @@ namespace Managed
 
 	static int serve(const std::string &config_file, int port, const std::string &bind)
 	{
+		// the hub's log view is the only window into a managed station
+		Logger::getInstance().setMinLevel(LogLevel::DEBUG);
+
 		ControlCore core(config_file, port, bind);
 		ControlServer server(core);
 
