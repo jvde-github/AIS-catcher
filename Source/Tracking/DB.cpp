@@ -27,6 +27,10 @@
 
 void DB::setup()
 {
+	// Reachable at runtime via the reset endpoint, so serialize the container
+	// rebuild against Receive (decode thread) and Save (backup thread).
+	std::lock_guard<std::mutex> lock(mtx);
+
 	int nships = 4096;
 
 	if (server_mode)
