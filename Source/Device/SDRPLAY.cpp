@@ -54,11 +54,15 @@ namespace Device {
 		if (!ensureAPI()) throw std::runtime_error("SDRPLAY: API v3.x not running");
 
 		sdrplay_api_ErrT err;
-		unsigned int DeviceCount;
+		unsigned int DeviceCount = 0;
 
 		sdrplay_api_LockDeviceApi();
 		sdrplay_api_DeviceT devices[SDRPLAY_MAX_DEVICES];
-		sdrplay_api_GetDevices(devices, &DeviceCount, SDRPLAY_MAX_DEVICES);
+		err = sdrplay_api_GetDevices(devices, &DeviceCount, SDRPLAY_MAX_DEVICES);
+		if (err != sdrplay_api_Success) {
+			sdrplay_api_UnlockDeviceApi();
+			throw std::runtime_error(std::string("SDRPLAY: GetDevices failed: ") + sdrplay_api_GetErrorString(err));
+		}
 
 		if (h >= DeviceCount) {
 			sdrplay_api_UnlockDeviceApi();
@@ -233,7 +237,7 @@ namespace Device {
 	}
 
 	void SDRPLAY::getDeviceList(std::vector<Description>& DeviceList) {
-		unsigned int DeviceCount;
+		unsigned int DeviceCount = 0;
 		if (!ensureAPI()) {
 			Warning() << "SDRPLAY: API v3.x not running, no SDRplay devices available.";
 			return;
@@ -247,9 +251,10 @@ namespace Device {
 
 		sdrplay_api_LockDeviceApi();
 		sdrplay_api_DeviceT devices[SDRPLAY_MAX_DEVICES];
-		sdrplay_api_GetDevices(devices, &DeviceCount, SDRPLAY_MAX_DEVICES);
+		if (sdrplay_api_GetDevices(devices, &DeviceCount, SDRPLAY_MAX_DEVICES) != sdrplay_api_Success)
+			DeviceCount = 0;
 
-		for (int i = 0; i < DeviceCount; i++)
+		for (unsigned int i = 0; i < DeviceCount; i++)
 			DeviceList.push_back(Description("SDRPLAY", getHardwareDescription(devices[i].hwVer), devices[i].SerNo, (uint64_t)i, Type::SDRPLAY));
 
 
