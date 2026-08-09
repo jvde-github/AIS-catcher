@@ -20,6 +20,7 @@
 #include <chrono>
 #include <ctime>
 #include <cstdio>
+#include <cstdlib>
 #include <vector>
 #include <algorithm>
 
@@ -219,6 +220,19 @@ std::vector<LogMessage> Logger::getLastMessages(int n)
 	}
 
 	return result;
+}
+
+int Logger::addConsoleListener()
+{
+	// journald parses a <N> priority prefix on stderr lines and strips it
+	// (sd-daemon(3)), so log levels survive the journey into the journal
+	const bool journal = getenv("JOURNAL_STREAM") != nullptr;
+	return addLogListener([journal](const LogMessage &msg)
+						  {
+							  if (journal)
+								  std::cerr << '<' << msg.syslogLevel() << '>' << msg.message << "\n";
+							  else
+								  std::cerr << msg.message << "\n"; });
 }
 
 int Logger::addLogListener(LogCallback callback)

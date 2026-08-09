@@ -67,6 +67,7 @@ public:
     void log(LogLevel level, const std::string &message);
 
     int addLogListener(LogCallback callback);
+    int addConsoleListener();
     void removeLogListener(int id);
 
     std::vector<LogMessage> getLastMessages(int n);
