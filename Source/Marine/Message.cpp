@@ -97,9 +97,9 @@ namespace AIS
 		w.append_int(tag.version);
 		w.append_lit(",\"driver\":");
 		w.append_int((int)tag.driver);
-		w.append_lit(",\"hardware\":\"");
+		w.append_lit(",\"hardware\":");
 		w.append_string_escaped(tag.hardware);
-		w.append_lit("\",\"channel\":\"");
+		w.append_lit(",\"channel\":\"");
 		w.append(getChannel());
 		w.append_lit("\",\"repeat\":");
 		w.append_int((long long)repeat());
