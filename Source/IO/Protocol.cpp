@@ -26,6 +26,7 @@
 #include <netinet/tcp.h>
 #ifdef __ANDROID__
 #include <android/log.h>
+#include <dirent.h>
 #endif
 #endif
 
@@ -36,6 +37,7 @@
 #ifdef HASOPENSSL
 #include <openssl/sha.h>
 #include <openssl/rand.h>
+#include <openssl/pem.h>
 #endif
 
 namespace Protocol
@@ -466,6 +468,49 @@ namespace Protocol
 #endif
 	}
 
+#ifdef __ANDROID__
+	// Android ships no OpenSSL trust store, and names its CA files with the pre-1.0.0
+	// subject hash, so a CApath lookup by the modern hash finds nothing. Read them once
+	// and hand the certificates to every context we build.
+	static const std::vector<X509 *> &androidCACertificates()
+	{
+		static std::vector<X509 *> certs;
+		static std::once_flag flag;
+
+		std::call_once(flag, []()
+					   {
+						   // the APEX store is the updatable one, /system the older location
+						   for (const char *dir : {"/apex/com.android.conscrypt/cacerts", "/system/etc/security/cacerts"})
+						   {
+							   DIR *d = opendir(dir);
+							   if (!d)
+								   continue;
+
+							   while (dirent *e = readdir(d))
+							   {
+								   if (e->d_name[0] == '.')
+									   continue;
+
+								   FILE *f = fopen((std::string(dir) + "/" + e->d_name).c_str(), "r");
+								   if (!f)
+									   continue;
+
+								   while (X509 *c = PEM_read_X509(f, nullptr, nullptr, nullptr))
+									   certs.push_back(c);
+								   fclose(f);
+							   }
+							   closedir(d);
+
+							   if (!certs.empty())
+								   break;
+						   }
+
+						   Info() << "TLS: loaded " << certs.size() << " system CA certificates"; });
+
+		return certs;
+	}
+#endif
+
 	void TLS::onConnect()
 	{
 		// Create SSL context
@@ -483,7 +528,17 @@ namespace Protocol
 		if (verify_certificates)
 		{
 			SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, nullptr);
+#ifdef __ANDROID__
+			const std::vector<X509 *> &cas = androidCACertificates();
+			if (cas.empty())
+				Error() << "TLS: no system CA certificates found, verification will fail";
+
+			X509_STORE *store = SSL_CTX_get_cert_store(ctx);
+			for (X509 *c : cas)
+				X509_STORE_add_cert(store, c);
+#else
 			SSL_CTX_set_default_verify_paths(ctx);
+#endif
 		}
 		else
 		{
