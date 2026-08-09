@@ -58,7 +58,7 @@ namespace Device {
 	class Device : public SimpleStreamOut<RAW>, public Setting {
 	protected:
 		std::atomic<bool> streaming{false};
-		std::atomic<bool> lost{false}; // set by device/callback threads; polled by the main loop
+		std::atomic<bool> lost{false};
 		FLOAT32 freq_offset = 0;
 		int tuner_bandwidth = 0;
 		uint32_t frequency = 0;

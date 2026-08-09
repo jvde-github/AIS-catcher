@@ -263,9 +263,7 @@ namespace Util
 			{"model-b-rev2", "Raspberry Pi 1"},
 		};
 
-		// most specific first: "raspberry pi 5" is a substring of "raspberry pi 500".
-		// Needles are lowercase and matched case-insensitively, so a single row
-		// covers casing variants (e.g. "5 Lite" and "5 lite").
+		// most specific first: "raspberry pi 5" is a substring of "raspberry pi 500"
 		static const struct
 		{
 			const char *needle;

@@ -334,10 +334,6 @@ namespace Protocol
 		if (state != READY)
 			return persistent ? 0 : -1;
 
-		// Send the whole buffer. On a full send buffer (would-block / partial) wait
-		// for the socket and continue with the remainder, so we never leave a caller
-		// with a half-written frame. Bounded (500 ms) because this runs on the decode
-		// thread; a genuine stall disconnects.
 		const char *p = (const char *)data;
 		int total = 0;
 		while (total < length)
@@ -641,12 +637,6 @@ namespace Protocol
 		if (sent <= 0)
 		{
 			int error = SSL_get_error(ssl, sent);
-			// Send buffer full on the non-blocking socket: wait once for the socket,
-			// then retry the SAME buffer. OpenSSL rejects a retry with different data
-			// as a bad write retry, so we must not just return and let the caller
-			// resend the next message. SSL_write is all-or-nothing, so one retry sends
-			// the whole message once there is room. Keep the wait short -- this runs on
-			// the decode thread, so blocking too long stalls the device FIFO.
 			const int wait_ms = 500;
 			if ((error == SSL_ERROR_WANT_WRITE || error == SSL_ERROR_WANT_READ) &&
 				Net::waitReady(getSocket(), error == SSL_ERROR_WANT_READ ? POLLIN : POLLOUT, wait_ms))
@@ -1715,9 +1705,6 @@ namespace Protocol
 
 			if (length < 0 || length > MAX_PACKET_SIZE)
 			{
-				// The frame is larger than the buffer, so it cannot be consumed to
-				// resync -- returning -1 in place would re-parse the same header on
-				// every read and wedge the connection. Disconnect so it reconnects.
 				Warning() << "WebSocket (" << getHost() << ":" << getPort() << "): frame exceeds " << MAX_PACKET_SIZE << " bytes, disconnecting";
 				disconnect();
 				return -1;

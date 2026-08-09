@@ -27,8 +27,6 @@
 
 void DB::setup()
 {
-	// Reachable at runtime via the reset endpoint, so serialize the container
-	// rebuild against Receive (decode thread) and Save (backup thread).
 	std::lock_guard<std::mutex> lock(mtx);
 
 	int nships = 4096;
@@ -49,9 +47,6 @@ void DB::setup()
 	int path_blocks = paths.setup((long)track_memory_kb * 1024, nships);
 	Debug() << "DB: track store " << track_memory_kb << " KB (" << path_blocks << " blocks)";
 
-	// the reset endpoint reaches this too: clear the state the container rebuild
-	// leaves behind, or a fresh DB still serves pre-reset broadcasts and floors
-	// replay at the old eviction horizon
 	for (int i = 0; i < MAX_BINARY_MESSAGES; i++)
 		binary_messages[i].Clear();
 	binary_msg_index = 0;

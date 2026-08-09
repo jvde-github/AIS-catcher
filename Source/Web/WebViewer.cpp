@@ -72,8 +72,6 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 
 				if (obfuscate)
 				{
-					// local cursor so the index is always < field_len even if
-					// another receiver thread advances the shared idx concurrently
 					unsigned pos = idx;
 					for (int i = 0; i < 3; i++)
 					{

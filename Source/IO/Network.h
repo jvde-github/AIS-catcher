@@ -130,9 +130,6 @@ namespace IO
 
 		bool readyToSend() override
 		{
-			// Always let the batch through even with the socket down, so each
-			// message that can't go out is counted as dropped in sendFormatted
-			// rather than vanishing uncounted.
 			ResetIfNeeded();
 			return true;
 		}

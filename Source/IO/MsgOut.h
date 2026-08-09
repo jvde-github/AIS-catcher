@@ -143,9 +143,6 @@ namespace IO
 		}
 
 		virtual bool readyToSend() { return true; }
-		// Reached only by a subclass that neither overrides sendFormatted nor
-		// overrides Receive — i.e. a wiring mistake. Say so once instead of
-		// dropping every message in silence.
 		bool warned_no_formatter = false;
 		virtual void sendFormatted(const char *, int, const AIS::Message *, TAG &)
 		{
@@ -313,9 +310,6 @@ namespace IO
 			}
 		}
 
-		// Shared fallback for every output's SetKey default branch: try the common
-		// options (which already fall through to the filter), else one uniform error
-		// naming the output type and the offending key.
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override
 		{
 			if (!setOptionKey(key, arg))

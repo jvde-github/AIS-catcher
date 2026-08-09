@@ -313,9 +313,6 @@ void ControlServer::serveStatic(IO::TCPServerConnection &c, const std::string &p
 void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r, bool accept_gzip)
 {
 	const std::string path = r.path();
-	// Once a password is set (public bind), always require it -- do not treat a
-	// loopback peer as authenticated: behind a same-host reverse proxy every
-	// request arrives from 127.0.0.1, which would bypass the password entirely.
 	const bool authenticated = !core.authRequired() || checkSession(r.cookie);
 
 	if (r.method == "POST" && !sameOrigin(r))

@@ -83,9 +83,6 @@ namespace FFT
 			Omega[s] = std::polar(T(1), T(-2.0 * PI) * T(s) / T(N));
 	}
 
-	// Radix-2 FFT with pre-computed twiddle factors. The twiddle table is a
-	// per-instance member, so concurrent receivers each own their own (no shared
-	// static, no cross-thread race, no recompute when sizes differ).
 	template <typename T>
 	class Plan
 	{

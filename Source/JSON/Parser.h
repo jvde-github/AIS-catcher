@@ -58,7 +58,7 @@ namespace JSON
 		bool tokenEscaped = false;
 		std::string escapedText;
 		int depth = 0;
-		int max_depth = 20; // JSON here is shallow (AIS input ~2, config <10); tighten per parser
+		int max_depth = 20;
 
 		[[noreturn]] void error(const std::string &err, int pos);
 		[[noreturn]] AISC_COLD_NOINLINE void error(const char *err, int pos);

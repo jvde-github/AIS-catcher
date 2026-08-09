@@ -67,9 +67,6 @@ namespace Net
 		return "?";
 	}
 
-	// Wait until the socket is ready for the given poll events (POLLIN/POLLOUT) or
-	// the timeout elapses; returns true if ready. Uses poll/WSAPoll, so unlike
-	// select it is not bounded by FD_SETSIZE.
 	inline bool waitReady(SOCKET s, short events, int timeout_ms)
 	{
 #ifdef _WIN32
