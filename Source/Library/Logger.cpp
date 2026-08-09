@@ -224,7 +224,11 @@ std::vector<LogMessage> Logger::getLastMessages(int n)
 
 int Logger::addConsoleListener()
 {
+#ifdef __linux__
 	const bool journal = getenv("JOURNAL_STREAM") != nullptr;
+#else
+	const bool journal = false;
+#endif
 	return addLogListener([journal](const LogMessage &msg)
 						  {
 							  if (journal)
