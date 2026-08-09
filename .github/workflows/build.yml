@@ -526,10 +526,36 @@ jobs:
         Push-Location $dest
         & .\AIS-catcher.exe -h BUILD
         $exit = $LASTEXITCODE
-        Pop-Location
         if ($exit -ne 0) {
+          Pop-Location
           throw "Smoke test failed: AIS-catcher.exe -h BUILD exited with $exit (missing DLL or runtime error)"
         }
+
+        # decode a sample to CSV: exercises the pipeline, the DBMS worker and
+        # the atomic file writes that a help screen never touches (issue #617)
+        Set-Content -Path sample.nmea -Value @(
+          '!AIVDM,1,1,,A,146i`8001H0k72>O?tWcUa=60`EP,0*77',
+          '!AIVDM,2,1,7,A,53bP?F41>b8u0<d:2204h8E9B0`tP4ppE>22220T5h041uHgN3lSlm3h,0*06',
+          '!AIVDM,2,2,7,A,jp8888888888880,2*39')
+        New-Item -ItemType Directory -Path csvout | Out-Null
+        & .\AIS-catcher.exe -r txt sample.nmea -D csv:csvout -X off -q
+        $exit = $LASTEXITCODE
+        if ($exit -ne 0 -or -not (Test-Path csvout\ais_state.csv)) {
+          Pop-Location
+          throw "Smoke test failed: CSV decode run exited with $exit or wrote no state file"
+        }
+
+        # managed mode must create its config, the exact path of issue #617
+        $p = Start-Process -FilePath .\AIS-catcher.exe -ArgumentList "-E","smoke.json","127.0.0.1:8123" -PassThru -NoNewWindow
+        Start-Sleep -Seconds 10
+        $alive = -not $p.HasExited
+        if ($alive) { Stop-Process -Id $p.Id -Force }
+        if (-not $alive -or -not (Test-Path smoke.json)) {
+          Pop-Location
+          throw "Smoke test failed: managed mode exited early or wrote no config file"
+        }
+
+        Pop-Location
         Write-Host "Smoke test PASSED"
 
     - name: Upload Artifacts
