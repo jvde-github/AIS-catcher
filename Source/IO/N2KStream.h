@@ -42,7 +42,13 @@ namespace IO
 		std::string dev = "can0";
 
 	public:
-		N2KStreamer() : OutputMessage("NMEA2000") { fmt = MessageFormat::JSON_FULL; }
+		N2KStreamer() : OutputMessage("NMEA2000")
+		{
+			fmt = MessageFormat::JSON_FULL;
+			forward_gps = false;
+		}
+
+		void Receive(const AIS::Message *, int, TAG &) override {}
 		virtual ~N2KStreamer() { Stop(); }
 
 		void Start();

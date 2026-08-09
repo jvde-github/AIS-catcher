@@ -24,6 +24,8 @@
 #include "Stream.h"
 #include "AIS.h"
 #include "Parse.h"
+#include "Convert.h"
+#include "Helper.h"
 #include "ADSB.h"
 #include "Keys.h"
 #include "OutputStats.h"
@@ -44,7 +46,12 @@ namespace IO
 
 		OutputStats stats;
 		std::string description, link, type;
-		unsigned long lines_sent = 0;
+		uint64_t hub_lines = 0;
+
+		std::string uuid;
+		bool include_sample_start = false;
+		bool forward_gps = true;
+		const char *line_suffix = "\r\n";
 
 		// Formats one AIS message into the reusable `json` member buffer.
 		// Zero-allocation in steady state: clear() preserves capacity.
@@ -68,17 +75,39 @@ namespace IO
 				msg.getBinaryNMEA(json, tag);
 				break;
 			case MessageFormat::COMMUNITY_HUB:
-				if (lines_sent > 0 && lines_sent % 100 != 0)
-					msg.getBinaryNMEA(json, tag);
-				else
+				if (hub_lines++ % 100 == 0)
 					msg.getNMEAJSON(json, tag, sample_start, uuid, suffix);
+				else
+					msg.getBinaryNMEA(json, tag);
 				break;
 			default:
 				msg.getNMEAJSON(json, tag, sample_start, uuid, suffix);
 				break;
 			}
-			lines_sent++;
 		}
+
+		// usesJSONStream() drives the stream wiring in Connect(), jsonFormat() the GPS encoding
+		bool usesJSONStream() const
+		{
+			return fmt == MessageFormat::JSON_FULL || fmt == MessageFormat::JSON_ANNOTATED ||
+				   fmt == MessageFormat::JSON_SPARSE;
+		}
+
+		bool jsonFormat() const
+		{
+			return usesJSONStream() || fmt == MessageFormat::JSON_NMEA;
+		}
+
+		void setUUID(const std::string &arg)
+		{
+			if (!Util::Helper::isUUID(arg))
+				throw std::runtime_error(type + ": invalid UUID: " + arg);
+			uuid = arg;
+		}
+
+		virtual bool readyToSend() { return true; }
+		virtual void sendFormatted(const char *, int, const AIS::Message *, TAG &) {}
+		virtual void batchDone(TAG &) {}
 
 	public:
 		std::vector<std::string> zones;
@@ -90,8 +119,61 @@ namespace IO
 
 		virtual void Start() {}
 		virtual void Stop() {}
-		virtual bool hasUUID() const { return false; }
+		bool hasUUID() const { return !uuid.empty(); }
 		void Connect(Receiver &r);
+
+		using StreamIn<AIS::Message>::Receive;
+		using StreamIn<JSON::JSON>::Receive;
+		using StreamIn<AIS::GPS>::Receive;
+
+		void Receive(const AIS::Message *data, int len, TAG &tag) override
+		{
+			if (!readyToSend())
+				return;
+
+			for (int i = 0; i < len; i++)
+			{
+				if (!filter.include(data[i]))
+					continue;
+
+				formatInto(data[i], tag, include_sample_start, uuid, line_suffix);
+				sendFormatted(json.data(), (int)json.size(), &data[i], tag);
+			}
+			batchDone(tag);
+		}
+
+		void Receive(const JSON::JSON *data, int len, TAG &tag) override
+		{
+			if (!readyToSend())
+				return;
+
+			for (int i = 0; i < len; i++)
+			{
+				const AIS::Message &msg = *(AIS::Message *)data[i].binary;
+				if (!filter.include(msg))
+					continue;
+
+				json.clear();
+				builder.stringify(data[i], json, line_suffix);
+				sendFormatted(json.data(), (int)json.size(), &msg, tag);
+			}
+			batchDone(tag);
+		}
+
+		void Receive(const AIS::GPS *data, int len, TAG &tag) override
+		{
+			if (!forward_gps || !filter.includeGPS() || !readyToSend())
+				return;
+
+			for (int i = 0; i < len; i++)
+			{
+				json.clear();
+				json += jsonFormat() ? data[i].getJSON() : data[i].getNMEA();
+				json += line_suffix;
+				sendFormatted(json.data(), (int)json.size(), nullptr, tag);
+			}
+			batchDone(tag);
+		}
 
 		void writeJSON(JSON::Writer &w) const
 		{
@@ -113,10 +195,21 @@ namespace IO
 			if (gi == 0)
 				return "sources: NONE";
 			std::string s;
-			for (int i = 0; i < 32; i++)
+			for (int i = 0; i < 64; i++)
 				if (gi & (1ULL << i))
 					s += (s.empty() ? "" : ",") + std::to_string(i + 1);
 			return "sources: " + s;
+		}
+
+		std::string startInfo()
+		{
+			std::string s = "msgformat: " + Util::Convert::toString(fmt);
+			if (!uuid.empty())
+				s += ", uuid: " + uuid;
+			const std::string f = filter.Get();
+			if (!f.empty())
+				s += ", " + f;
+			return s + ", " + getSourcesStr();
 		}
 
 		OutputMessage() : builder(JSON_DICT_FULL) {}
@@ -155,6 +248,9 @@ namespace IO
 				return true;
 			case AIS::KEY_SETTING_ZONE:
 				Util::Parse::Split(arg, ',', zones);
+				return true;
+			case AIS::KEY_SETTING_INCLUDE_SAMPLE_START:
+				include_sample_start = Util::Parse::Switch(arg);
 				return true;
 			case AIS::KEY_SETTING_GROUPS_IN:
 			{

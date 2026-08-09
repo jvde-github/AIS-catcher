@@ -19,7 +19,6 @@
 #include <list>
 #include <thread>
 #include <mutex>
-#include <sstream>
 
 #include "TemplateString.h"
 
@@ -51,23 +50,23 @@ namespace IO
 
 		ZIP zip;
 
-		std::string url, url_json, userpwd;
+		std::string url, url_json;
 		bool gzip = false, show_response = true;
 		int INTERVAL = 60;
 		int TIMEOUT = 10;
 
-		std::string stationid = "null", lat = "null", lon = "null";
-		std::string model = "null", model_setting = "null";
-		std::string product = "null", vendor = "null", serial = "null", device_setting = "null";
+		std::string stationid, lat, lon;
+		std::string model, model_setting;
+		std::string product, vendor, serial, device_setting;
 
-		enum class PROTOCOL
+		enum class UploadProtocol
 		{
 			AISCATCHER,
 			APRS,
 			LIST,
 			AIRFRAMES,
 			NMEA
-		} protocol = PROTOCOL::AISCATCHER;
+		} protocol = UploadProtocol::AISCATCHER;
 
 		std::string protocol_string = "jsonaiscatcher";
 
@@ -99,39 +98,23 @@ namespace IO
 		}
 
 		// caller holds msg_list_mutex
-		void count(unsigned type)
+		void count(const AIS::Message &msg)
 		{
 			msg_count++;
-			if (type == 1 || type == 2 || type == 3 || type == 18 || type == 19 || type == 27)
+			if (msg.isPositionReport())
 				pos_count++;
 		}
 
 	public:
 		~HTTPStreamer() { Stop(); }
-		HTTPStreamer() : OutputMessage("HTTP"), url("http://127.0.0.1"), userpwd("") { fmt = MessageFormat::JSON_FULL; }
+		HTTPStreamer() : OutputMessage("HTTP"), url("http://127.0.0.1") { fmt = MessageFormat::JSON_FULL; }
+
+		void Receive(const AIS::Message *, int, TAG &) override {}
 
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 
 		void Start() override;
 		void Stop() override;
-	};
-
-	class UDPEndPoint
-	{
-		std::string address;
-		std::string port;
-
-		int sourceID = -1;
-
-	public:
-		friend class UDPStreamer;
-		friend class TCPClientStreamer;
-
-		UDPEndPoint(const std::string &a, const std::string &p, int id = -1)
-			: address(a), port(p), sourceID(id)
-		{
-		}
-		int ID() { return sourceID; }
 	};
 
 	class UDPStreamer : public OutputMessage
@@ -143,11 +126,23 @@ namespace IO
 		int reset = -1;
 		long last_reconnect = 0;
 		bool broadcast = false;
-		std::string uuid;
-		bool include_sample_start = false;
 
 		void ResetIfNeeded();
 		bool applySocketOptions();
+
+		bool readyToSend() override
+		{
+			ResetIfNeeded();
+			return sock != -1;
+		}
+
+		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
+		{
+			if (sendto(sock, data, len, 0, address->ai_addr, (int)address->ai_addrlen) > 0)
+				stats.bytes_out += len;
+			else
+				stats.dropped++;
+		}
 
 	public:
 		~UDPStreamer();
@@ -158,36 +153,8 @@ namespace IO
 
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 
-		using StreamIn<AIS::Message>::Receive;
-		using StreamIn<JSON::JSON>::Receive;
-		using StreamIn<AIS::GPS>::Receive;
-
-		void Receive(const AIS::Message *data, int len, TAG &tag) override;
-		void Receive(const JSON::JSON *data, int len, TAG &tag) override;
-		void Receive(const AIS::GPS *data, int len, TAG &tag) override;
-
 		void Start() override;
-		void Start(UDPEndPoint &u)
-		{
-			host = u.address;
-			port = u.port;
-			Start();
-		}
 		void Stop() override;
-		void SendTo(const std::string &str)
-		{
-			if (sendto(sock, str.c_str(), (int)str.length(), 0, address->ai_addr, (int)address->ai_addrlen) > 0)
-				stats.bytes_out += str.length();
-			else
-				stats.dropped++;
-		}
-		void SendTo(const char *data, int len)
-		{
-			if (sendto(sock, data, len, 0, address->ai_addr, (int)address->ai_addrlen) > 0)
-				stats.bytes_out += len;
-			else
-				stats.dropped++;
-		}
 	};
 
 	class TCPClientStreamer : public OutputMessage
@@ -199,31 +166,25 @@ namespace IO
 		bool keep_alive = false;
 		bool persistent = true;
 		int reset = -1;
-		std::string uuid;
-		bool include_sample_start = false;
 		bool stop_requested = false;
+
+		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
+		{
+			if (SendTo(data, len) < 0 && !persistent && !stop_requested)
+			{
+				Critical() << "TCP feed: requesting termination.";
+				stop_requested = true;
+				StopRequest();
+			}
+		}
 
 	public:
 		TCPClientStreamer() : OutputMessage("TCP Client") { fmt = MessageFormat::NMEA; }
 
-		bool hasUUID() const override { return !uuid.empty(); }
-
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
-
-		using StreamIn<AIS::Message>::Receive;
-		using StreamIn<JSON::JSON>::Receive;
-		using StreamIn<AIS::GPS>::Receive;
-
-		void Receive(const AIS::Message *data, int len, TAG &tag) override;
-		void Receive(const JSON::JSON *data, int len, TAG &tag) override;
-		void Receive(const AIS::GPS *data, int len, TAG &tag) override;
 
 		void Start() override;
 		void Stop() override;
-
-		int SendTo(const std::string &str) { return SendTo(str.c_str(), (int)str.length()); }
-
-		int SendTo(const char *str) { return SendTo(str, (int)strlen(str)); }
 
 		int SendTo(const char *data, int len)
 		{
@@ -242,7 +203,11 @@ namespace IO
 	class TCPlistenerStreamer : public OutputMessage, public IO::TCPServer
 	{
 		int port = 5010;
-		bool include_sample_start = false;
+
+		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
+		{
+			SendAllDirect(data, len);
+		}
 
 	public:
 		TCPlistenerStreamer() : OutputMessage("TCP Listener") { fmt = MessageFormat::NMEA; }
@@ -250,14 +215,6 @@ namespace IO
 		virtual ~TCPlistenerStreamer() {};
 
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
-
-		using StreamIn<AIS::Message>::Receive;
-		using StreamIn<JSON::JSON>::Receive;
-		using StreamIn<AIS::GPS>::Receive;
-
-		void Receive(const AIS::Message *data, int len, TAG &tag) override;
-		void Receive(const JSON::JSON *data, int len, TAG &tag) override;
-		void Receive(const AIS::GPS *data, int len, TAG &tag) override;
 
 		void Start() override;
 		void Stop() override {}
@@ -267,7 +224,7 @@ namespace IO
 	{
 
 	private:
-		PROTOCOL Protocol = PROTOCOL::MQTT;
+		PROTOCOL protocol = PROTOCOL::MQTT;
 		Protocol::TCP tcp;
 		Protocol::MQTT mqtt;
 		Protocol::TLS tls;
@@ -277,21 +234,28 @@ namespace IO
 		Util::TemplateString topic_template;
 		std::string topic_buf;
 
+		void sendFormatted(const char *data, int len, const AIS::Message *msg, TAG &tag) override
+		{
+			if (session == &mqtt && msg)
+			{
+				topic_template.write(tag, *msg, topic_buf);
+				mqtt.send(data, len, topic_buf);
+			}
+			else
+				session->send(data, len);
+		}
+
+		void batchDone(TAG &) override { session->read(nullptr, 0, 0, false); }
+
 	public:
 		MQTTStreamer() : OutputMessage("MQTT"), topic_template("ais/data")
 		{
 			fmt = MessageFormat::JSON_FULL;
+			forward_gps = false;
 		}
 
 		void Start() override;
 		void Stop() override;
-
-		using StreamIn<AIS::Message>::Receive;
-		using StreamIn<JSON::JSON>::Receive;
-		using StreamIn<AIS::GPS>::Receive;
-
-		void Receive(const AIS::Message *data, int len, TAG &tag) override;
-		void Receive(const JSON::JSON *data, int len, TAG &tag) override;
 
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 	};

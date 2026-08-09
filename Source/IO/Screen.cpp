@@ -46,38 +46,13 @@ namespace IO
 		OutputMessage::Connect(r);
 	}
 
-	void ScreenOutput::Receive(const AIS::GPS *data, int len, TAG &tag)
-	{
-		if (fmt == MessageFormat::SILENT)
-			return;
-
-		thread_local std::string buf;
-		for (int i = 0; i < len; i++)
-		{
-			if (!filter.includeGPS())
-				continue;
-			buf.clear();
-			switch (fmt)
-			{
-			case MessageFormat::NMEA:
-			case MessageFormat::NMEA_TAG:
-			case MessageFormat::FULL:
-				buf += data[i].getNMEA();
-				break;
-			default:
-				buf += data[i].getJSON();
-				break;
-			}
-			buf += '\n';
-			std::cout.write(buf.data(), buf.size());
-		}
-		flushOut(tag.replay);
-	}
-
 	void ScreenOutput::Receive(const AIS::Message *data, int len, TAG &tag)
 	{
-		if (fmt == MessageFormat::SILENT)
+		if (fmt != MessageFormat::FULL)
+		{
+			OutputMessage::Receive(data, len, tag);
 			return;
+		}
 
 		thread_local std::string buf;
 		for (int i = 0; i < len; i++)
@@ -85,66 +60,44 @@ namespace IO
 			if (!filter.include(data[i]))
 				continue;
 
-			if (fmt == MessageFormat::FULL)
-			{
-				buf.clear();
-				for (const auto &s : data[i].sentences())
-				{
-					buf += s;
-					buf += " ( ";
-					if (data[i].getLength() > 0)
-					{
-						buf += "MSG: ";
-						buf += std::to_string(data[i].type());
-						buf += ", REPEAT: ";
-						buf += std::to_string(data[i].repeat());
-						buf += ", MMSI: ";
-						buf += std::to_string(data[i].mmsi());
-					}
-					else
-					{
-						buf += "empty";
-					}
-					if ((tag.mode & 1) && tag.ppm != PPM_UNDEFINED && tag.level != LEVEL_UNDEFINED)
-					{
-						char tmp[64];
-						std::snprintf(tmp, sizeof(tmp), ", signalpower: %g, ppm: %g", tag.level, tag.ppm);
-						buf += tmp;
-					}
-					if (tag.mode & 2)
-					{
-						buf += ", timestamp: ";
-						buf += data[i].getRxTime();
-					}
-					if (data[i].getStation())
-					{
-						buf += ", ID: ";
-						buf += std::to_string(data[i].getStation());
-					}
-					buf += ")\n";
-				}
-				std::cout.write(buf.data(), buf.size());
-			}
-			else
-			{
-				formatInto(data[i], tag, include_sample_start, "", "\n");
-				std::cout.write(json.data(), json.size());
-			}
-		}
-		flushOut(tag.replay);
-	}
-
-	void ScreenOutput::Receive(const JSON::JSON *data, int len, TAG &tag)
-	{
-		thread_local std::string buf;
-		for (int i = 0; i < len; i++)
-		{
-			if (!filter.include(*(AIS::Message *)data[i].binary))
-				continue;
 			buf.clear();
-			builder.stringify(data[i], buf, "\n");
+			for (const auto &s : data[i].sentences())
+			{
+				buf += s;
+				buf += " ( ";
+				if (data[i].getLength() > 0)
+				{
+					buf += "MSG: ";
+					buf += std::to_string(data[i].type());
+					buf += ", REPEAT: ";
+					buf += std::to_string(data[i].repeat());
+					buf += ", MMSI: ";
+					buf += std::to_string(data[i].mmsi());
+				}
+				else
+				{
+					buf += "empty";
+				}
+				if ((tag.mode & 1) && tag.ppm != PPM_UNDEFINED && tag.level != LEVEL_UNDEFINED)
+				{
+					char tmp[64];
+					std::snprintf(tmp, sizeof(tmp), ", signalpower: %g, ppm: %g", tag.level, tag.ppm);
+					buf += tmp;
+				}
+				if (tag.mode & 2)
+				{
+					buf += ", timestamp: ";
+					buf += data[i].getRxTime();
+				}
+				if (data[i].getStation())
+				{
+					buf += ", ID: ";
+					buf += std::to_string(data[i].getStation());
+				}
+				buf += ")\n";
+			}
 			std::cout.write(buf.data(), buf.size());
 		}
-		flushOut(tag.replay);
+		batchDone(tag);
 	}
 }

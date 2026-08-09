@@ -17,20 +17,15 @@
 
 #include <cstdio>
 #include <fstream>
-#include <sstream>
 #include <stdexcept>
-#include <unordered_map>
+#include <fcntl.h>
 
 #ifdef _WIN32
 #include <windows.h>
 #include <psapi.h>
+#include <io.h>
 #else
 #include <unistd.h>
-#endif
-
-#ifdef _WIN32
-#include <windows.h>
-#else
 #include <dirent.h>
 #endif
 
@@ -40,13 +35,6 @@
 #endif
 
 #include "Helper.h"
-
-#include <fcntl.h>
-#ifdef _WIN32
-#include <io.h>
-#else
-#include <unistd.h>
-#endif
 
 namespace Util
 {
@@ -183,15 +171,9 @@ namespace Util
 		}
 #else
 		std::ifstream statm("/proc/self/statm");
-		if (statm.is_open())
-		{
-			std::string line;
-			std::getline(statm, line);
-			std::stringstream ss(line);
-			long size, resident, shared, text, lib, data, dt;
-			ss >> size >> resident >> shared >> text >> lib >> data >> dt;
+		long size = 0, resident = 0;
+		if (statm >> size >> resident)
 			memory = resident * sysconf(_SC_PAGESIZE);
-		}
 #endif
 		return memory;
 	}
@@ -248,180 +230,125 @@ namespace Util
 		return "Mac";
 
 #elif __linux__
-		std::string line, model_name;
-
 		// Raspberry Pi: prefer device-tree compatible (recommended by Raspberry Pi docs)
 		// Ref: https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#raspberry-pi-revision-codes
+		static const struct
 		{
-			auto normalize_rpi_model = [](const std::string &model) -> std::string
+			const char *token;
+			const char *family;
+		} RPI_TOKENS[] = {
+			{"5-model-b", "Raspberry Pi 5"},
+			{"4-model-b", "Raspberry Pi 4"},
+			{"500", "Raspberry Pi 500"},
+			{"400", "Raspberry Pi 400"},
+			{"3-model-b", "Raspberry Pi 3"},
+			{"3-model-b-plus", "Raspberry Pi 3"},
+			{"3-model-a-plus", "Raspberry Pi 3"},
+			{"2-model-b", "Raspberry Pi 2"},
+			{"2-model-b-rev2", "Raspberry Pi 2"},
+			{"compute-module", "Raspberry Pi Compute Module 1"},
+			{"0-compute-module", "Raspberry Pi Compute Module 0"},
+			{"3-compute-module", "Raspberry Pi Compute Module 3"},
+			{"3-plus-compute-module", "Raspberry Pi Compute Module 3+"},
+			{"4-compute-module", "Raspberry Pi Compute Module 4"},
+			{"4s-compute-module", "Raspberry Pi Compute Module 4"},
+			{"model-zero", "Raspberry Pi Zero"},
+			{"model-zero-w", "Raspberry Pi Zero"},
+			{"model-zero-2-w", "Raspberry Pi Zero"},
+			{"model-a", "Raspberry Pi 1"},
+			{"model-a-plus", "Raspberry Pi 1"},
+			{"model-b", "Raspberry Pi 1"},
+			{"model-b-plus", "Raspberry Pi 1"},
+			{"model-b-rev2", "Raspberry Pi 1"},
+		};
+
+		// most specific first: "Raspberry Pi 5" is a substring of "Raspberry Pi 500"
+		static const struct
+		{
+			const char *needle;
+			const char *family;
+		} RPI_MODELS[] = {
+			{"Raspberry Pi 500", "Raspberry Pi 500"},
+			{"Raspberry Pi 400", "Raspberry Pi 400"},
+			{"Raspberry Pi 5", "Raspberry Pi 5"},
+			{"Raspberry Pi 4", "Raspberry Pi 4"},
+			{"Raspberry Pi 3", "Raspberry Pi 3"},
+			{"Raspberry Pi 2", "Raspberry Pi 2"},
+			{"Compute Module 5 Lite", "Raspberry Pi Compute Module 5 Lite"},
+			{"Compute Module 5 lite", "Raspberry Pi Compute Module 5 Lite"},
+			{"Compute Module 5", "Raspberry Pi Compute Module 5"},
+			{"Compute Module 4", "Raspberry Pi Compute Module 4"},
+			{"Compute Module 3+", "Raspberry Pi Compute Module 3+"},
+			{"Compute Module 3", "Raspberry Pi Compute Module 3"},
+			{"Compute Module 0", "Raspberry Pi Compute Module 0"},
+			{"Compute Module", "Raspberry Pi Compute Module 1"},
+			{"Raspberry Pi Zero", "Raspberry Pi Zero"},
+			{"Raspberry Pi Model", "Raspberry Pi 1"},
+		};
+
+		for (const char *path : {"/proc/device-tree/compatible", "/sys/firmware/devicetree/base/compatible"})
+		{
+			std::ifstream inFile(path, std::ios::binary);
+			std::string token;
+			while (inFile && std::getline(inFile, token, '\0'))
 			{
-				// Keep it intentionally simple: map device-tree models into stable product families.
-				if (model == "5-model-b")
-					return "Raspberry Pi 5";
-				if (model == "4-model-b")
-					return "Raspberry Pi 4";
-				if (model == "500")
-					return "Raspberry Pi 500";
-				if (model == "400")
-					return "Raspberry Pi 400";
-				if (model == "3-model-b" || model == "3-model-b-plus" || model == "3-model-a-plus")
-					return "Raspberry Pi 3";
-				if (model == "2-model-b")
-					return "Raspberry Pi 2";
-				// Compute Modules
-				if (model == "compute-module")
-					return "Raspberry Pi Compute Module 1";
-				if (model == "3-compute-module")
-					return "Raspberry Pi Compute Module 3";
-				if (model == "3-plus-compute-module")
-					return "Raspberry Pi Compute Module 3+";
-				if (model == "4-compute-module" || model == "4s-compute-module")
-					return "Raspberry Pi Compute Module 4";
-				if (model == "5-compute-module")
-					return "Raspberry Pi Compute Module 5";
-				// Future-proofing: some distros/DTs may append qualifiers.
+				// token looks like: "raspberrypi,5-model-b" or "brcm,bcm2712"
+				if (token.compare(0, 12, "raspberrypi,") != 0)
+					continue;
+				const std::string model = token.substr(12);
+				for (const auto &m : RPI_TOKENS)
+					if (model == m.token)
+						return m.family;
+				// future-proofing: some distros/DTs may append qualifiers
 				if (model.compare(0, 16, "5-compute-module") == 0)
-				{
-					if (model.find("lite") != std::string::npos)
-						return "Raspberry Pi Compute Module 5 Lite";
-					return "Raspberry Pi Compute Module 5";
-				}
-				if (model == "model-zero" || model == "model-zero-w" || model == "model-zero-2-w")
-					return "Raspberry Pi Zero";
-				if (model == "model-a" || model == "model-a-plus" || model == "model-b" || model == "model-b-plus" ||
-					model == "model-b-rev2")
-					return "Raspberry Pi 1";
-				return "";
-			};
-
-			auto parse_dt_compatible = [&](const std::string &path) -> std::string
-			{
-				std::ifstream inFile(path, std::ios::in | std::ios::binary);
-				if (!inFile.is_open())
-					return "";
-
-				std::string token;
-				while (std::getline(inFile, token, '\0'))
-				{
-					// token looks like: "raspberrypi,5-model-b" or "brcm,bcm2712"
-					static const std::string prefix = "raspberrypi,";
-					if (token.compare(0, prefix.size(), prefix) == 0)
-					{
-						std::string model = token.substr(prefix.size());
-						std::string mapped = normalize_rpi_model(model);
-						if (!mapped.empty())
-							return mapped;
-					}
-				}
-				return "";
-			};
-
-			std::string rpi = parse_dt_compatible("/proc/device-tree/compatible");
-			if (rpi.empty())
-				rpi = parse_dt_compatible("/sys/firmware/devicetree/base/compatible");
-			if (!rpi.empty())
-				return rpi;
-		}
-
-		// Try device-tree model as a fallback (works for Raspberry Pi and other ARM boards)
-		{
-			auto read_model = [&](const std::string &path) -> std::string
-			{
-				std::ifstream inFile(path, std::ios::in | std::ios::binary);
-				if (!inFile.is_open() || !std::getline(inFile, line, '\0'))
-					return "";
-				if (!line.empty() && line.back() == '\0')
-					line.pop_back();
-				return line;
-			};
-
-			std::string model = read_model("/proc/device-tree/model");
-			if (model.empty())
-				model = read_model("/sys/firmware/devicetree/base/model");
-			if (!model.empty())
-			{
-				// Normalize common Raspberry Pi strings to the simple families requested.
-				if (model.find("Raspberry Pi 5") != std::string::npos)
-					return "Raspberry Pi 5";
-				if (model.find("Raspberry Pi 500") != std::string::npos)
-					return "Raspberry Pi 500";
-				if (model.find("Raspberry Pi 400") != std::string::npos)
-					return "Raspberry Pi 400";
-				if (model.find("Raspberry Pi 4") != std::string::npos)
-					return "Raspberry Pi 4";
-				if (model.find("Raspberry Pi 3") != std::string::npos)
-					return "Raspberry Pi 3";
-				if (model.find("Raspberry Pi 2") != std::string::npos)
-					return "Raspberry Pi 2";
-				if (model.find("Compute Module 5") != std::string::npos)
-				{
-					if (model.find("Lite") != std::string::npos || model.find("lite") != std::string::npos)
-						return "Raspberry Pi Compute Module 5 Lite";
-					return "Raspberry Pi Compute Module 5";
-				}
-				if (model.find("Compute Module 4") != std::string::npos)
-					return "Raspberry Pi Compute Module 4";
-				if (model.find("Compute Module 3+") != std::string::npos)
-					return "Raspberry Pi Compute Module 3+";
-				if (model.find("Compute Module 3") != std::string::npos)
-					return "Raspberry Pi Compute Module 3";
-				if (model.find("Compute Module") != std::string::npos)
-					return "Raspberry Pi Compute Module 1";
-				if (model.find("Raspberry Pi Zero") != std::string::npos)
-					return "Raspberry Pi Zero";
-				if (model.find("Raspberry Pi Model") != std::string::npos)
-					return "Raspberry Pi 1";
-
-				return model;
+					return model.find("lite") != std::string::npos ? "Raspberry Pi Compute Module 5 Lite" : "Raspberry Pi Compute Module 5";
 			}
 		}
 
-		// Try DMI information (works for x86/x64 systems and some ARM systems)
+		// device-tree model as a fallback (Raspberry Pi and other ARM boards)
+		for (const char *path : {"/proc/device-tree/model", "/sys/firmware/devicetree/base/model"})
 		{
+			std::ifstream inFile(path, std::ios::binary);
+			std::string model;
+			if (!inFile || !std::getline(inFile, model, '\0') || model.empty())
+				continue;
+			for (const auto &m : RPI_MODELS)
+				if (model.find(m.needle) != std::string::npos)
+					return m.family;
+			return model;
+		}
+
+		// DMI information (x86/x64 systems and some ARM systems)
+		{
+			std::string product, vendor;
 			std::ifstream dmiProduct("/sys/class/dmi/id/product_name");
-			if (dmiProduct.is_open())
+			if (std::getline(dmiProduct, product) && !product.empty() &&
+				product != "To be filled by O.E.M." && product != "System Product Name")
 			{
-				std::string product;
-				if (std::getline(dmiProduct, product) && !product.empty() &&
-					product != "To be filled by O.E.M." &&
-					product != "System Product Name")
-				{
-					std::ifstream dmiVendor("/sys/class/dmi/id/sys_vendor");
-					if (dmiVendor.is_open())
-					{
-						std::string vendor;
-						if (std::getline(dmiVendor, vendor) && !vendor.empty() &&
-							vendor != "To be filled by O.E.M." &&
-							vendor != "System manufacturer")
-						{
-							return vendor + " " + product;
-						}
-					}
-					return product;
-				}
+				std::ifstream dmiVendor("/sys/class/dmi/id/sys_vendor");
+				if (std::getline(dmiVendor, vendor) && !vendor.empty() &&
+					vendor != "To be filled by O.E.M." && vendor != "System manufacturer")
+					return vendor + " " + product;
+				return product;
 			}
 		}
 
-		// Parse cpuinfo for CPU model name (best-effort fallback)
+		// cpuinfo model name as a best-effort fallback, last entry wins
 		{
+			std::string line, model_name;
 			std::ifstream inFile("/proc/cpuinfo");
-			if (inFile.is_open())
+			while (std::getline(inFile, line))
 			{
-				while (std::getline(inFile, line))
+				if (line.compare(0, 10, "model name") == 0)
 				{
-					if (line.substr(0, 10) == "model name")
-					{
-						std::size_t pos = line.find(": ");
-						if (pos != std::string::npos)
-							model_name = line.substr(pos + 2);
-					}
+					std::size_t pos = line.find(": ");
+					if (pos != std::string::npos)
+						model_name = line.substr(pos + 2);
 				}
 			}
+			if (!model_name.empty())
+				return model_name;
 		}
-
-		// Return CPU model name if available
-		if (!model_name.empty())
-			return model_name;
 
 		return "Linux System";
 #endif
@@ -432,40 +359,21 @@ namespace Util
 	std::vector<std::string> Helper::getFilesWithExtension(const std::string &directory, const std::string &extension)
 	{
 		std::vector<std::string> files;
-
+		for (const std::string &name : getFilesInDirectory(directory))
+		{
+			if (name.size() < extension.size())
+				continue;
 #ifdef _WIN32
-		WIN32_FIND_DATAA ffd;
-		HANDLE hFind = INVALID_HANDLE_VALUE;
-		const std::string search_path = directory + "\\*" + extension;
-		hFind = FindFirstFileA((LPCSTR)search_path.c_str(), &ffd);
-		if (hFind == INVALID_HANDLE_VALUE)
-			return files;
-
-		do
-		{
-			std::string full_path = directory + "\\" + std::string((char *)ffd.cFileName);
-			files.push_back(full_path);
-		} while (FindNextFileA(hFind, &ffd) != 0);
-		FindClose(hFind);
-
+			// the old FindFirstFile pattern matched extensions case-insensitively
+			if (_stricmp(name.c_str() + name.size() - extension.size(), extension.c_str()) != 0)
+				continue;
+			files.push_back(directory + "\\" + name);
 #else
-		DIR *dir;
-		struct dirent *ent;
-		if ((dir = opendir(directory.c_str())) != nullptr)
-		{
-			while ((ent = readdir(dir)) != nullptr)
-			{
-				std::string file_name = ent->d_name;
-				if (file_name.length() >= extension.length() &&
-					file_name.compare(file_name.length() - extension.length(), extension.length(), extension) == 0)
-				{
-					std::string full_path = directory + "/" + file_name;
-					files.push_back(full_path);
-				}
-			}
-			closedir(dir);
-		}
+			if (name.compare(name.size() - extension.size(), extension.size(), extension) != 0)
+				continue;
+			files.push_back(directory + "/" + name);
 #endif
+		}
 		return files;
 	}
 

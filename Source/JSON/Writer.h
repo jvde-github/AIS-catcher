@@ -697,6 +697,10 @@ namespace JSON
 		{
 			return kv_raw(k, raw.data(), raw.size());
 		}
+		Writer &kv_raw_opt(KeyRef k, const std::string &raw)
+		{
+			return raw.empty() ? kv_null(k) : kv_raw(k, raw);
+		}
 
 		// Writes "key": and leaves cursor positioned for the next val/raw write.
 		// need_sep is cleared so the following val() does not emit a comma.

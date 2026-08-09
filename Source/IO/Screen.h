@@ -25,18 +25,27 @@ namespace IO
 	class ScreenOutput : public OutputMessage
 	{
 	private:
-		bool include_sample_start = false;
+		bool readyToSend() override { return fmt != MessageFormat::SILENT; }
 
-		// live sources flush per message; bulk replays defer flushing to Stop()/buffer-full
-		void flushOut(bool replay)
+		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
 		{
-			if (!replay)
+			std::cout.write(data, len);
+		}
+
+		// live sources flush per batch; bulk replays defer flushing to Stop()/buffer-full
+		void batchDone(TAG &tag) override
+		{
+			if (!tag.replay)
 				std::cout.flush();
 		}
 
 	public:
 		int verboseUpdateTime = 3;
-		ScreenOutput() : OutputMessage("Screen") { fmt = MessageFormat::FULL; }
+		ScreenOutput() : OutputMessage("Screen")
+		{
+			fmt = MessageFormat::FULL;
+			line_suffix = "\n";
+		}
 		virtual ~ScreenOutput() {}
 
 		void Stop() override { std::cout.flush(); }
@@ -52,21 +61,11 @@ namespace IO
 
 		void Connect(Receiver &r);
 		void Receive(const AIS::Message *data, int len, TAG &tag) override;
-		void Receive(const JSON::JSON *data, int len, TAG &tag) override;
-		void Receive(const AIS::GPS *data, int len, TAG &tag) override;
 
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override
 		{
-			switch (key)
-			{
-			case AIS::KEY_SETTING_INCLUDE_SAMPLE_START:
-				include_sample_start = Util::Parse::Switch(arg);
-				break;
-			default:
-				if (!setOptionKey(key, arg) && !filter.SetOptionKey(key, arg))
-					throw std::runtime_error("Screen output - unknown option.");
-				break;
-			}
+			if (!setOptionKey(key, arg))
+				throw std::runtime_error("Screen output - unknown option.");
 			return *this;
 		}
 	};

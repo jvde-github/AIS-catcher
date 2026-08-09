@@ -46,7 +46,7 @@ namespace IO
 	void OutputMessage::Connect(Receiver &r)
 	{
 
-		if (fmt == MessageFormat::JSON_FULL || fmt == MessageFormat::JSON_ANNOTATED || fmt == MessageFormat::JSON_SPARSE)
+		if (usesJSONStream())
 			ConnectJSON(r);
 		else
 			ConnectMessage(r);

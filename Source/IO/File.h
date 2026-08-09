@@ -30,15 +30,36 @@ namespace IO
 
 		bool append_mode = true;
 
+		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
+		{
+			file.write(data, len);
+		}
+
+		void batchDone(TAG &) override
+		{
+			file.flush();
+
+			if (file.fail())
+			{
+				Error() << "File: cannot write to file.";
+				StopRequest();
+			}
+		}
+
 	public:
-		FileOutput() : OutputMessage("File") { fmt = MessageFormat::NMEA; }
+		FileOutput() : OutputMessage("File")
+		{
+			fmt = MessageFormat::NMEA;
+			line_suffix = "\n";
+			forward_gps = false;
+		}
 
 		~FileOutput()
 		{
 			Stop();
 		}
 
-		void Start()
+		void Start() override
 		{
 			file.open(filename, append_mode ? std::ios::app : std::ios::out);
 
@@ -48,99 +69,13 @@ namespace IO
 			}
 		}
 
-		void Stop()
+		void Stop() override
 		{
 			if (file.is_open())
 				file.close();
 		}
 
-		using StreamIn<AIS::Message>::Receive;
-		using StreamIn<JSON::JSON>::Receive;
-		using StreamIn<AIS::GPS>::Receive;
-
-		void Receive(const AIS::Message *data, int len, TAG &tag)
-		{
-			if (fmt == MessageFormat::NMEA)
-			{
-				for (int i = 0; i < len; i++)
-				{
-					if (!filter.include(data[i]))
-						continue;
-
-					for (const auto &s : data[i].sentences())
-					{
-						file.write(s.data(), s.size());
-						file.put('\n');
-					}
-				}
-			}
-			else if (fmt == MessageFormat::NMEA_TAG)
-			{
-				for (int i = 0; i < len; i++)
-				{
-					if (!filter.include(data[i]))
-						continue;
-
-					json.clear();
-					data[i].getNMEATagBlock(json);
-					file.write(json.data(), json.size());
-				}
-			}
-			else if (fmt == MessageFormat::BINARY_NMEA)
-			{
-				for (int i = 0; i < len; i++)
-				{
-					if (!filter.include(data[i]))
-						continue;
-
-					json.clear();
-					data[i].getBinaryNMEA(json, tag);
-					file.write(json.data(), json.size());
-				}
-			}
-			else
-			{
-				for (int i = 0; i < len; i++)
-				{
-					if (!filter.include(data[i]))
-						continue;
-
-					json.clear();
-					data[i].getNMEAJSON(json, tag, false, "", "\n");
-					file.write(json.data(), json.size());
-				}
-			}
-
-			file.flush();
-
-			if (file.fail())
-			{
-				Error() << "File: cannot write to file.";
-				StopRequest();
-			}
-		}
-
-		void Receive(const JSON::JSON *data, int len, TAG &tag)
-		{
-			for (int i = 0; i < len; i++)
-			{
-				if (filter.include(*(AIS::Message *)data[i].binary))
-				{
-					json.clear();
-					builder.stringify(data[i], json, "\n");
-					file.write(json.data(), json.size());
-				}
-			}
-			file.flush();
-
-			if (file.fail())
-			{
-				Error() << "File: cannot write to file.";
-				StopRequest();
-			}
-		}
-
-		Setting &SetKey(AIS::Keys key, const std::string &arg)
+		Setting &SetKey(AIS::Keys key, const std::string &arg) override
 		{
 			switch (key)
 			{
@@ -157,7 +92,7 @@ namespace IO
 				break;
 			}
 			default:
-				if (!setOptionKey(key, arg) && !filter.SetOptionKey(key, arg))
+				if (!setOptionKey(key, arg))
 					throw std::runtime_error("File output - unknown option.");
 				break;
 			}

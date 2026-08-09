@@ -80,9 +80,9 @@ namespace IO
 			if (filter.include(msg))
 			{
 				const std::lock_guard<std::mutex> lock(msg_list_mutex);
-				count(msg.type());
+				count(msg);
 
-				if (protocol == PROTOCOL::NMEA)
+				if (protocol == UploadProtocol::NMEA)
 				{
 					for (const auto &nmea : msg.sentences())
 						enqueue(nmea);
@@ -127,7 +127,7 @@ namespace IO
 		post_body.clear();
 		int r;
 
-		if (protocol == PROTOCOL::AISCATCHER || protocol == PROTOCOL::AIRFRAMES)
+		if (protocol == UploadProtocol::AISCATCHER || protocol == UploadProtocol::AIRFRAMES)
 		{
 			const std::string now = Util::Convert::toTimeStr(std::time(0));
 
@@ -135,22 +135,22 @@ namespace IO
 			w.beginObject()
 				.kv("protocol", protocol_string)
 				.kv("encodetime", now)
-				.kv_raw("stationid", stationid)
-				.kv_raw("station_lat", lat_snap)
-				.kv_raw("station_lon", lon_snap)
+				.kv_raw_opt("stationid", stationid)
+				.kv_raw_opt("station_lat", lat_snap)
+				.kv_raw_opt("station_lon", lon_snap)
 				.key("receiver")
 				.beginObject()
 				.kv("description", "AIS-catcher " VERSION)
 				.kv("version", VERSION_NUMBER)
-				.kv_raw("engine", model)
-				.kv_raw("setting", model_setting)
+				.kv_raw_opt("engine", model)
+				.kv_raw_opt("setting", model_setting)
 				.endObject()
 				.key("device")
 				.beginObject()
-				.kv_raw("product", product)
-				.kv_raw("vendor", vendor)
-				.kv_raw("serial", serial)
-				.kv_raw("setting", device_setting)
+				.kv_raw_opt("product", product)
+				.kv_raw_opt("vendor", vendor)
+				.kv_raw_opt("serial", serial)
+				.kv_raw_opt("setting", device_setting)
 				.endObject()
 				.key("msgs")
 				.beginArray();
@@ -160,12 +160,12 @@ namespace IO
 
 			r = http.Post(post_body, gzip, false, "");
 		}
-		else if (PROTOCOL::APRS == protocol)
+		else if (UploadProtocol::APRS == protocol)
 		{
 			const std::string now = Util::Convert::toTimeStr(std::time(0));
 
 			JSON::Writer w(post_body);
-			w.beginObject().kv("protocol", "jsonais").kv("encodetime", now).key("groups").beginArray().beginObject().key("path").beginArray().beginObject().kv_raw("name", stationid).kv_raw("url", url_json).endObject().endArray().key("msgs").beginArray();
+			w.beginObject().kv("protocol", "jsonais").kv("encodetime", now).key("groups").beginArray().beginObject().key("path").beginArray().beginObject().kv_raw_opt("name", stationid).kv_raw_opt("url", url_json).endObject().endArray().key("msgs").beginArray();
 
 			for (const auto &m : send_list)
 				w.raw_val(m);
@@ -213,7 +213,6 @@ namespace IO
 			break;
 		case AIS::KEY_SETTING_USERPWD:
 			http.setUserPwd(arg);
-			userpwd = arg;
 			break;
 		case AIS::KEY_SETTING_SSL_VERIFY:
 		{
@@ -274,34 +273,34 @@ namespace IO
 			if (a == "AISCATCHER")
 			{
 				protocol_string = "jsonaiscatcher";
-				protocol = PROTOCOL::AISCATCHER;
+				protocol = UploadProtocol::AISCATCHER;
 			}
 			else if (a == "MINIMAL")
 			{
 				builder.setMap(JSON_DICT_MINIMAL);
 				protocol_string = "jsonaiscatcher";
-				protocol = PROTOCOL::AISCATCHER;
+				protocol = UploadProtocol::AISCATCHER;
 			}
 			else if (a == "AIRFRAMES")
 			{
 				builder.setMap(JSON_DICT_MINIMAL);
 				protocol_string = "airframes";
-				protocol = PROTOCOL::AIRFRAMES;
+				protocol = UploadProtocol::AIRFRAMES;
 				gzip = zip.installed();
 				INTERVAL = 30;
 			}
 			else if (a == "LIST")
 			{
-				protocol = PROTOCOL::LIST;
+				protocol = UploadProtocol::LIST;
 			}
 			else if (a == "NMEA")
 			{
-				protocol = PROTOCOL::NMEA;
+				protocol = UploadProtocol::NMEA;
 			}
 			else if (a == "APRS")
 			{
 				builder.setMap(JSON_DICT_APRS);
-				protocol = PROTOCOL::APRS;
+				protocol = UploadProtocol::APRS;
 			}
 			else
 				throw std::runtime_error("HTTP: error - unknown protocol");
@@ -360,80 +359,15 @@ namespace IO
 		}
 	}
 
-	void UDPStreamer::Receive(const AIS::GPS *data, int len, TAG &tag)
-	{
-
-		ResetIfNeeded();
-
-		if (sock == -1)
-			return;
-
-		for (int i = 0; i < len; i++)
-		{
-			if (filter.includeGPS())
-			{
-				if (fmt != MessageFormat::JSON_NMEA)
-					SendTo((data[i].getNMEA() + "\r\n").c_str());
-				else
-					SendTo((data[i].getJSON() + "\r\n").c_str());
-			}
-		}
-	}
-
-	void UDPStreamer::Receive(const AIS::Message *data, int len, TAG &tag)
-	{
-
-		ResetIfNeeded();
-
-		if (sock == -1)
-			return;
-
-		for (int i = 0; i < len; i++)
-		{
-			if (!filter.include(data[i]))
-				continue;
-
-			formatInto(data[i], tag, include_sample_start, uuid, "\r\n");
-			SendTo(json.data(), (int)json.size());
-		}
-	}
-
-	void UDPStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
-	{
-
-		ResetIfNeeded();
-
-		if (sock == -1)
-			return;
-
-		for (int i = 0; i < len; i++)
-		{
-			if (filter.include(*(AIS::Message *)data[i].binary))
-			{
-				json.clear();
-				builder.stringify(data[i], json, "\r\n");
-				SendTo(json.data(), (int)json.size());
-			}
-		}
-	}
-
 	void UDPStreamer::Start()
 	{
-		std::stringstream ss;
-		ss << "UDP: open socket for host: " << host << ", port: " << port;
-		ss << ", msgformat: " << Util::Convert::toString(fmt);
+		std::string info = "UDP: open socket for host: " + host + ", port: " + port;
 		if (broadcast)
-			ss << ", broadcast: true";
+			info += ", broadcast: true";
 		if (reset > 0)
-			ss << ", reset: " << reset;
-		if (!uuid.empty())
-			ss << ", uuid: " << uuid;
-		std::string filter_str = filter.Get();
-		if (!filter_str.empty())
-			ss << ", " << filter_str;
-		ss << ", " << getSourcesStr();
+			info += ", reset: " + std::to_string(reset);
 
-		Info() << ss.str();
+		Info() << info << ", " << startInfo();
 
 		if (sock != -1)
 		{
@@ -504,13 +438,7 @@ namespace IO
 			reset = Util::Parse::Integer(arg, 1, 24 * 60);
 			break;
 		case AIS::KEY_SETTING_UUID:
-			if (Util::Helper::isUUID(arg))
-				uuid = arg;
-			else
-				throw std::runtime_error("UDP: invalid UUID: " + arg);
-			break;
-		case AIS::KEY_SETTING_INCLUDE_SAMPLE_START:
-			include_sample_start = Util::Parse::Switch(arg);
+			setUUID(arg);
 			break;
 		default:
 			if (!setOptionKey(key, arg))
@@ -522,81 +450,14 @@ namespace IO
 
 	// TCP output to server
 
-	void TCPClientStreamer::Receive(const AIS::GPS *data, int len, TAG &tag)
-	{
-
-		if (!filter.includeGPS())
-			return;
-
-		for (int i = 0; i < len; i++)
-		{
-			const std::string line = (fmt == MessageFormat::NMEA ? data[i].getNMEA() : data[i].getJSON()) + "\r\n";
-
-			if (SendTo(line.c_str()) < 0 && !persistent && !stop_requested)
-			{
-				Critical() << "TCP feed: requesting termination.";
-				stop_requested = true;
-				StopRequest();
-			}
-		}
-	}
-
-	void TCPClientStreamer::Receive(const AIS::Message *data, int len, TAG &tag)
-	{
-		for (int i = 0; i < len; i++)
-		{
-			if (!filter.include(data[i]))
-				continue;
-
-			formatInto(data[i], tag, include_sample_start, uuid, "\r\n");
-
-			if (SendTo(json.data(), (int)json.size()) < 0 && !persistent && !stop_requested)
-			{
-				Critical() << "TCP feed: requesting termination.";
-				stop_requested = true;
-				StopRequest();
-			}
-		}
-	}
-
-	void TCPClientStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
-	{
-
-		for (int i = 0; i < len; i++)
-		{
-			if (filter.include(*(AIS::Message *)data[i].binary))
-			{
-				json.clear();
-				builder.stringify(data[i], json, "\r\n");
-				if (SendTo(json.data(), (int)json.size()) < 0)
-					if (!persistent && !stop_requested)
-					{
-						Critical() << "TCP feed: requesting termination.";
-						stop_requested = true;
-						StopRequest();
-					}
-			}
-		}
-	}
-
 	void TCPClientStreamer::Start()
 	{
-		std::stringstream ss;
-
-		ss << "TCP feed: open socket for host: " << host << ", port: " << port;
-		ss << ", persist: " << Util::Convert::toString(persistent);
-		ss << ", keep_alive: " << Util::Convert::toString(keep_alive);
+		std::string info = "TCP feed: open socket for host: " + host + ", port: " + port;
+		info += ", persist: " + Util::Convert::toString(persistent);
+		info += ", keep_alive: " + Util::Convert::toString(keep_alive);
 		if (reset > 0)
-			ss << ", reset: " << reset;
-		if (!uuid.empty())
-			ss << ", uuid: " << uuid;
-
-		ss << ", msgformat: " << Util::Convert::toString(fmt);
-		std::string filter_str = filter.Get();
-		if (!filter_str.empty())
-			ss << ", " << filter_str;
-		ss << ", " << getSourcesStr();
-		ss << ", status: ";
+			info += ", reset: " + std::to_string(reset);
+		info += ", " + startInfo() + ", status: ";
 
 		// Set up TCP connection
 		tcp.setStats(&stats);
@@ -611,16 +472,14 @@ namespace IO
 		connection = &tcp;
 
 		if (connection->connect() && tcp.getState() == Protocol::TCP::READY)
-			ss << "connected";
+			Info() << info << "connected";
 		else if (persistent)
-			ss << "pending";
+			Info() << info << "pending";
 		else
 		{
-			ss << "failed";
+			Info() << info << "failed";
 			throw std::runtime_error("TCP feed cannot connect to " + host + " port " + port);
 		}
-
-		Info() << ss.str();
 	}
 
 	void TCPClientStreamer::Stop()
@@ -649,13 +508,7 @@ namespace IO
 			reset = Util::Parse::Integer(arg, 0, 3600);
 			break;
 		case AIS::KEY_SETTING_UUID:
-			if (Util::Helper::isUUID(arg))
-				uuid = arg;
-			else
-				throw std::runtime_error("TCP client: invalid UUID: " + arg);
-			break;
-		case AIS::KEY_SETTING_INCLUDE_SAMPLE_START:
-			include_sample_start = Util::Parse::Switch(arg);
+			setUUID(arg);
 			break;
 		default:
 			if (!setOptionKey(key, arg))
@@ -667,14 +520,7 @@ namespace IO
 
 	void TCPlistenerStreamer::Start()
 	{
-		std::stringstream ss;
-		ss << "TCP listener: open at port " << port;
-		std::string filter_str = filter.Get();
-		if (!filter_str.empty())
-			ss << ", " << filter_str;
-		ss << ", msgformat: " << Util::Convert::toString(fmt) << ".";
-
-		Info() << ss.str();
+		Info() << "TCP listener: open at port " << port << ", " << startInfo();
 
 		TCPServer::setStats(&stats);
 
@@ -694,49 +540,12 @@ namespace IO
 		case AIS::KEY_SETTING_TIMEOUT:
 			timeout = Util::Parse::Integer(arg);
 			break;
-		case AIS::KEY_SETTING_INCLUDE_SAMPLE_START:
-			include_sample_start = Util::Parse::Switch(arg);
-			break;
 		default:
 			if (!setOptionKey(key, arg))
 				throw std::runtime_error(std::string("TCP listener - unknown option: ") + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
 			break;
 		}
 		return *this;
-	}
-
-	void TCPlistenerStreamer::Receive(const AIS::GPS *data, int len, TAG &tag)
-	{
-		if (!filter.includeGPS())
-			return;
-
-		for (int i = 0; i < len; i++)
-			SendAllDirect((fmt == MessageFormat::NMEA ? data[i].getNMEA() : data[i].getJSON()) + "\r\n");
-	}
-
-	void TCPlistenerStreamer::Receive(const AIS::Message *data, int len, TAG &tag)
-	{
-		for (int i = 0; i < len; i++)
-		{
-			if (!filter.include(data[i]))
-				continue;
-
-			formatInto(data[i], tag, include_sample_start, "", "\r\n");
-			SendAllDirect(json.data(), (int)json.size());
-		}
-	}
-
-	void TCPlistenerStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
-	{
-		for (int i = 0; i < len; i++)
-		{
-			if (filter.include(*(AIS::Message *)data[i].binary))
-			{
-				json.clear();
-				builder.stringify(data[i], json, "\r\n");
-				SendAllDirect(json.data(), (int)json.size());
-			}
-		}
 	}
 
 	void MQTTStreamer::Stop()
@@ -746,17 +555,13 @@ namespace IO
 
 	void MQTTStreamer::Start()
 	{
-		std::stringstream ss;
-		ss << Util::Convert::toString(Protocol) << " feed: " << session->getHost() << ", port: " << session->getPort();
-		ss << ", msgformat: " << Util::Convert::toString(fmt);
-		std::string filter_str = filter.Get();
-		if (!filter_str.empty())
-			ss << ", " << filter_str;
+		const std::string info = Util::Convert::toString(protocol) + " feed: " + session->getHost() + ", port: " + session->getPort() + ", " + startInfo();
+
 		tcp.setOptionKey(AIS::KEY_SETTING_PERSIST, "on");
 		tcp.setStats(&stats);
 		tls.setStats(&stats);
 
-		switch (Protocol)
+		switch (protocol)
 		{
 
 		case PROTOCOL::TLS:
@@ -797,48 +602,7 @@ namespace IO
 		{
 			throw std::runtime_error("MQTT: cannot connect to " + session->getHost() + " port " + session->getPort());
 		}
-		Info() << ss.str();
-	}
-
-	void MQTTStreamer::Receive(const AIS::Message *data, int len, TAG &tag)
-	{
-		for (int i = 0; i < len; i++)
-		{
-			if (!filter.include(data[i]))
-				continue;
-
-			formatInto(data[i], tag, false, "", "\r\n");
-			if (session == &mqtt)
-			{
-				topic_template.write(tag, data[i], topic_buf);
-				mqtt.send(json.data(), (int)json.size(), topic_buf);
-			}
-			else
-				session->send(json.data(), (int)json.size());
-		}
-
-		session->read(nullptr, 0, 0, false);
-	}
-
-	void MQTTStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
-	{
-		for (int i = 0; i < len; i++)
-		{
-			if (filter.include(*(AIS::Message *)data[i].binary))
-			{
-				json.clear();
-				builder.stringify(data[i], json, "\r\n");
-				if (session == &mqtt)
-				{
-					topic_template.write(tag, *((AIS::Message *)data[i].binary), topic_buf);
-					mqtt.send(json.data(), (int)json.size(), topic_buf);
-				}
-				else
-					session->send(json.data(), (int)json.size());
-			}
-		}
-
-		session->read(nullptr, 0, 0, false);
+		Info() << info;
 	}
 
 	Setting &MQTTStreamer::SetKey(AIS::Keys key, const std::string &arg)
@@ -866,10 +630,10 @@ namespace IO
 		case AIS::KEY_SETTING_PROTOCOL:
 		{
 			std::string a = arg;
-			if (!Util::Parse().Protocol(a, Protocol))
+			if (!Util::Parse().Protocol(a, protocol))
 				throw std::runtime_error("MQTT output: unknown protocol: " + arg);
 
-			switch (Protocol)
+			switch (protocol)
 			{
 			case PROTOCOL::NONE:
 			case PROTOCOL::MQTT:

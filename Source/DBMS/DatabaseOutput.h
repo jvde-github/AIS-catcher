@@ -195,12 +195,18 @@ namespace IO
 		void process();
 
 	public:
-		DatabaseOutput(const char *name) : OutputMessage(name) { fmt = MessageFormat::JSON_FULL; }
+		DatabaseOutput(const char *name) : OutputMessage(name)
+		{
+			fmt = MessageFormat::JSON_FULL;
+			forward_gps = false;
+		}
 
 		using StreamIn<AIS::Message>::Receive;
 		using StreamIn<AIS::GPS>::Receive;
 		using StreamIn<JSON::JSON>::Receive;
 		void Receive(const JSON::JSON *data, int len, TAG &tag) override;
+
+		void Receive(const AIS::Message *, int, TAG &) override {}
 
 		void setup();
 		void Start() override { setup(); }

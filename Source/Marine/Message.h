@@ -193,6 +193,13 @@ namespace AIS
 			return (data[1] << 22) | (data[2] << 14) | (data[3] << 6) | (data[4] >> 2);
 		}
 
+		// vessel position reports: class A (1-3), class B (18/19), long-range (27)
+		bool isPositionReport() const
+		{
+			const unsigned t = type();
+			return t == 1 || t == 2 || t == 3 || t == 18 || t == 19 || t == 27;
+		}
+
 		// Raw payload bytes; for hot decoders that bulk-load multiple fields.
 		// Buffer has four zero-padded bytes after the raw-frame capture area.
 		const uint8_t* raw() const { return data; }
