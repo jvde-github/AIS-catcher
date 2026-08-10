@@ -32,7 +32,7 @@
 namespace Plane
 {
 
-    void ADSB::getJSON(JSON::Writer &w, long int delta_time) const
+    void ADSB::writeJSON(JSON::Writer &w, long int delta_time) const
     {
         w.beginObject().kv("hexident", hexident);
 

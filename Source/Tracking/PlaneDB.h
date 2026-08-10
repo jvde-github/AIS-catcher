@@ -298,7 +298,7 @@ public:
             w.beginObject().kv("count", table.size()).kv("time", (long long)now).key("planes").beginArray();
 
             forEachRecent(now, 0, [&](const Plane::ADSB &plane, std::time_t rx) {
-                plane.getJSON(w, (long int)(now - rx));
+                plane.writeJSON(w, (long int)(now - rx));
             });
 
             w.endArray().kv("error", false).endObject().raw("\n\n");

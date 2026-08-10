@@ -104,7 +104,7 @@ std::string DB::getJSON(bool full)
 
 		std::time_t now = time(nullptr);
 		forEachRecent(now, full, 0, [&](int, const Ship &ship, long int delta_time) {
-			ship.getJSON(w, delta_time, isValidCoord(station_lat, station_lon));
+			ship.writeJSON(w, delta_time, isValidCoord(station_lat, station_lon));
 		});
 
 		w.endArray().kv("error", false).endObject().raw("\n\n");
@@ -126,7 +126,7 @@ std::string DB::getShipJSON(int mmsi)
 	content.clear();
 	{
 		JSON::Writer w(content, 1024);
-		ship.getJSON(w, delta_time, isValidCoord(station_lat, station_lon));
+		ship.writeJSON(w, delta_time, isValidCoord(station_lat, station_lon));
 	}
 	return content;
 }
@@ -139,7 +139,7 @@ std::string DB::getKML()
 	std::time_t now = time(nullptr);
 
 	forEachRecent(now, false, 0, [&](int, const Ship &ship, long int) {
-		ship.getKML(content);
+		ship.writeKML(content);
 	});
 
 	content += "</Document></kml>";
@@ -157,7 +157,7 @@ std::string DB::getGeoJSON()
 
 		std::time_t now = time(nullptr);
 		forEachRecent(now, false, 0, [&](int, const Ship &ship, long int) {
-			ship.getGeoJSON(w, isValidCoord(station_lat, station_lon));
+			ship.writeGeoJSON(w, isValidCoord(station_lat, station_lon));
 		});
 		w.endArray().endObject();
 	}

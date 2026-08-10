@@ -124,7 +124,7 @@ namespace Plane
         void writeCompact(JSON::Writer &w, std::time_t rx) const;
 
         // One keyed object for /api/planes.json.
-        void getJSON(JSON::Writer &w, long int delta_time) const;
+        void writeJSON(JSON::Writer &w, long int delta_time) const;
 
         void Decode();
 
