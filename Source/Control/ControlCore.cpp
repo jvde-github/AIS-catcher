@@ -266,6 +266,7 @@ bool ControlCore::readLegacyConfig(std::string &content)
 void ControlCore::applyAuthFields(const JSON::Value &control)
 {
 	bool wizard = false;
+	LogLevel level = LogLevel::DEBUG;
 
 	for (const auto &c : control.getObject().getMembers())
 	{
@@ -275,9 +276,18 @@ void ControlCore::applyAuthFields(const JSON::Value &control)
 			password_salt = c.Get().to_string();
 		else if (c.Key() == AIS::KEY_SETTING_WIZARD)
 			wizard = Util::Parse::Switch(c.Get().to_string());
+		else if (c.Key() == AIS::KEY_SETTING_LEVEL)
+		{
+			if (!Logger::parseLevel(c.Get().to_string(), level))
+			{
+				Warning() << "Control: invalid log level \"" << c.Get().to_string() << "\", using DEBUG";
+				level = LogLevel::DEBUG;
+			}
+		}
 	}
 
 	wizard_flag = wizard;
+	Logger::getInstance().setMinLevel(level);
 }
 
 void ControlCore::refreshAuthFields(const std::string &json)
@@ -292,7 +302,10 @@ void ControlCore::refreshAuthFields(const std::string &json)
 		if (v && v->isObject())
 			applyAuthFields(*v);
 		else
+		{
 			wizard_flag = false;
+			Logger::getInstance().setMinLevel(LogLevel::DEBUG);
+		}
 	}
 	catch (const std::exception &)
 	{

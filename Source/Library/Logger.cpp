@@ -131,6 +131,24 @@ Logger &Logger::getInstance()
 	return instance;
 }
 
+bool Logger::parseLevel(const std::string &name, LogLevel &level)
+{
+	std::string a = name;
+	Util::Convert::toUpper(a);
+
+	for (int i = 0; i <= (int)LogLevel::CRITICAL; i++)
+	{
+		std::string candidate = LEVEL_NAMES[i];
+		Util::Convert::toUpper(candidate);
+		if (a == candidate)
+		{
+			level = (LogLevel)i;
+			return true;
+		}
+	}
+	return false;
+}
+
 Setting &Logger::SetKey(AIS::Keys key, const std::string &arg)
 {
 	switch (key)
@@ -140,20 +158,12 @@ Setting &Logger::SetKey(AIS::Keys key, const std::string &arg)
 		break;
 	case AIS::KEY_SETTING_LEVEL:
 	{
-		std::string a = arg;
-		Util::Convert::toUpper(a);
+		LogLevel level;
+		if (!parseLevel(arg, level))
+			throw std::runtime_error("Invalid log level: " + arg + ". Valid values: DEBUG, INFO, WARNING, ERROR, CRITICAL");
 
-		for (int i = 0; i <= (int)LogLevel::CRITICAL; i++)
-		{
-			std::string name = LEVEL_NAMES[i];
-			Util::Convert::toUpper(name);
-			if (a == name)
-			{
-				min_level_ = (LogLevel)i;
-				return *this;
-			}
-		}
-		throw std::runtime_error("Invalid log level: " + arg + ". Valid values: DEBUG, INFO, WARNING, ERROR, CRITICAL");
+		min_level_ = level;
+		break;
 	}
 	default:
 		throw std::runtime_error("Unknown option.");

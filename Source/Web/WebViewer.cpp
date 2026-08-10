@@ -1043,7 +1043,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &reque
 	else if (r == "/api/log" && settings.showlog)
 	{
 		upgradeSSE(c, 1u << 3, "log", []() -> std::vector<std::string>
-				   { return Logger::getInstance().getBacklogJSON(25); });
+				   { return Logger::getInstance().getBacklogJSON(INT_MAX); });
 	}
 	// Prefix-match routes
 	else if (r.substr(0, 6) == "/tiles")

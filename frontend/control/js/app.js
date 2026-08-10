@@ -697,6 +697,20 @@
     const LOG_BUFFER_MAX = 500;
     let lastToast = { message: '', showing: false };
 
+    const LOG_LEVELS = ['debug', 'info', 'warning', 'error', 'critical'];
+    let logLevelMin = 'info';
+    let logSearch = '';
+    try {
+        const stored = localStorage.getItem('hub-log-level');
+        if (LOG_LEVELS.indexOf(stored) >= 0) logLevelMin = stored;
+    } catch (_) { }
+
+    function passesLogFilter(m) {
+        const i = LOG_LEVELS.indexOf(m.level);
+        if (i >= 0 && i < LOG_LEVELS.indexOf(logLevelMin)) return false;
+        return !logSearch || m.message.toLowerCase().indexOf(logSearch) >= 0;
+    }
+
     function isReplayedLog(m) {
         if (typeof m.seq !== 'number') return false;
         const d = (m.seq - lastLogSeq) >>> 0;
@@ -713,7 +727,8 @@
         line.className = 'log-line ' + level;
         const ts = document.createElement('span');
         ts.className = 'log-ts';
-        ts.textContent = m.time;
+        ts.textContent = m.time.length > 19 ? m.time.slice(11, 19) : m.time;
+        ts.title = m.time;
         const msg = document.createElement('span');
         msg.textContent = m.message;
         line.appendChild(ts);
@@ -725,7 +740,13 @@
         const box = document.getElementById('log-box');
         if (!box) return;
         box.textContent = '';
-        logBuffer.forEach(m => box.appendChild(buildLogLine(m)));
+        logBuffer.forEach(m => { if (passesLogFilter(m)) box.appendChild(buildLogLine(m)); });
+        if (!box.childElementCount) {
+            const empty = document.createElement('div');
+            empty.className = 'log-empty';
+            empty.textContent = logBuffer.length ? 'No lines match the filter.' : 'Waiting for log output...';
+            box.appendChild(empty);
+        }
         box.scrollTop = box.scrollHeight;
     }
 
@@ -738,7 +759,9 @@
             logBuffer.push(m);
             if (logBuffer.length > LOG_BUFFER_MAX) logBuffer.shift();
             const box = document.getElementById('log-box');
-            if (box) {
+            if (box && passesLogFilter(m)) {
+                const placeholder = box.querySelector('.log-empty');
+                if (placeholder) placeholder.remove();
                 box.appendChild(buildLogLine(m));
                 while (box.childElementCount > LOG_BUFFER_MAX)
                     box.removeChild(box.firstChild);
@@ -920,7 +943,23 @@
                 <pre id="config-json" class="term-pane">Loading...</pre>
             </div>
             <div class="sys-pane hidden" data-pane="log">
-                <div id="log-box" class="term-pane"></div>
+                <div class="log-console">
+                    <div class="log-toolbar">
+                        <span class="log-prompt">&gt;_</span>
+                        <select id="log-level" class="log-control"
+                                title="Filters this console; the receiver records down to control.level (debug by default)">
+                            <option value="debug">debug</option>
+                            <option value="info">info</option>
+                            <option value="warning">warning</option>
+                            <option value="error">error</option>
+                            <option value="critical">critical</option>
+                        </select>
+                        <input id="log-search" class="log-control log-search" type="search"
+                               placeholder="search&hellip;" autocomplete="off" spellcheck="false">
+                        <span class="log-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                    </div>
+                    <div id="log-box"></div>
+                </div>
             </div>
             <div class="sys-pane hidden" data-pane="wizard">
                 <div class="sys-pane-inner">
@@ -977,6 +1016,21 @@
         });
         if (auth !== 'open')
             document.getElementById('hub-btn-logout').addEventListener('click', logout);
+
+        const levelSelect = document.getElementById('log-level');
+        levelSelect.value = logLevelMin;
+        levelSelect.addEventListener('change', () => {
+            logLevelMin = levelSelect.value;
+            try { localStorage.setItem('hub-log-level', logLevelMin); } catch (_) { }
+            renderLogBox();
+        });
+
+        const searchInput = document.getElementById('log-search');
+        searchInput.value = logSearch;
+        searchInput.addEventListener('input', () => {
+            logSearch = searchInput.value.trim().toLowerCase();
+            renderLogBox();
+        });
 
         refreshEngineStatus();
         renderLogBox();

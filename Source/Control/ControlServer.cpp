@@ -455,7 +455,7 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 		uint32_t since = (uint32_t)strtoul(r.queryParam("since").c_str(), nullptr, 10);
 
 		upgradeSSE(c, (1u << SSE_ACTIVITY) | (1u << SSE_STATUS) | (1u << SSE_LOG), "log", [since]() -> std::vector<std::string>
-				   { return Logger::getInstance().getBacklogJSON(25, since); });
+				   { return Logger::getInstance().getBacklogJSON(INT_MAX, since); });
 
 		status_state = STATUS_UNSENT;
 	}

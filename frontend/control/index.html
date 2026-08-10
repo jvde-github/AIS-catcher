@@ -377,9 +377,108 @@
         .j-num { color: var(--code-number); }
         .j-bool, .j-null { color: var(--code-literal); }
 
+        .log-console {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            background: var(--term-bg);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .log-toolbar {
+            flex: none;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-3);
+            border-bottom: 1px solid var(--overlay-border);
+        }
+
+        .log-prompt {
+            color: var(--term-meta);
+            font-family: var(--font-mono);
+            font-size: var(--fs-sm);
+            padding: 0 var(--space-1);
+            user-select: none;
+        }
+
+        .log-control {
+            font-family: inherit;
+            font-size: var(--fs-sm);
+            color: var(--term-text);
+            background-color: var(--overlay-bg);
+            border: 1px solid var(--overlay-border);
+            border-radius: var(--radius-md);
+            padding: 5px 10px;
+            transition: border-color var(--dur-med) ease;
+        }
+
+        .log-control:hover,
+        .log-control:focus {
+            border-color: var(--color-accent);
+        }
+
+        .log-control:focus {
+            outline: none;
+        }
+
+        select.log-control {
+            appearance: none;
+            -webkit-appearance: none;
+            padding-right: 28px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+        }
+
+        .log-search {
+            flex: 1;
+            min-width: 4rem;
+        }
+
+        .log-search::placeholder {
+            color: var(--term-meta);
+            opacity: 1;
+        }
+
+        .log-search::-webkit-search-cancel-button {
+            filter: invert(0.6);
+            cursor: pointer;
+        }
+
+        .log-dots {
+            display: flex;
+            gap: 6px;
+            padding-left: var(--space-1);
+        }
+
+        .log-dots i {
+            display: block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .log-dots i:nth-child(1) { background: var(--term-error); }
+        .log-dots i:nth-child(2) { background: var(--term-warn); }
+        .log-dots i:nth-child(3) { background: var(--chrome-led-on); }
+
         #log-box {
             flex: 1;
             min-height: 0;
+            overflow: auto;
+            padding: var(--space-3);
+            font-family: var(--font-mono);
+            font-size: var(--fs-sm);
+            line-height: 1.5;
+            color: var(--term-text);
+        }
+
+        .log-empty {
+            color: var(--term-meta);
+            padding: var(--space-2) 0;
         }
 
         .log-line {
