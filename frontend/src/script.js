@@ -20,7 +20,7 @@ import {
     getStatusVal, getMmsiTypeVal,
     getStringfromMsgType, getStringfromGroup, getStringfromChannels,
     getShipTypeShort, getShipTypeFull,
-    sanitizeString, formatBytes,
+    sanitizeString, formatBytes, isHttpUrl,
 } from './core/format.js';
 
 // Named imports (instead of `import * as ...`) so Vite tree-shakes everything
@@ -500,6 +500,7 @@ const DEFAULT_SETTINGS = {
         eri: true,
         loadURL: true,
         map_opacity: 0.5,
+        layer_opacity: { Aircraft: 1 },
         show_track_on_hover: false,
         show_track_on_select: false,
         show_all_tracks: false,
@@ -585,9 +586,7 @@ function addOverlayLayer(title, layer) {
         layer.setVisible(false);
         const visible = Array.isArray(settings.map_overlay) && settings.map_overlay.includes(title);
         layer.setVisible(visible);
-        if (typeof settings.map_opacity !== 'undefined') {
-            layer.setOpacity(Number(settings.map_opacity));
-        }
+        layer.setOpacity(getLayerOpacity(title));
         addOverlayCheckbox(title);
     }
 }
@@ -642,6 +641,33 @@ function addOverlayCheckbox(title) {
     row.className = 'overlay-row';
     row.appendChild(checkbox);
     row.appendChild(label);
+
+    const dim = document.createElement('div');
+    dim.className = 'overlay-dim';
+
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.className = 'slider';
+    slider.min = 0;
+    slider.max = 1;
+    slider.step = 0.01;
+    slider.title = `Dimming for ${title}`;
+
+    const readout = document.createElement('span');
+    readout.className = 'overlay-dim-value';
+
+    slider.addEventListener('input', function () {
+        setLayerOpacity(title, this.value);
+        updateDimRow(row);
+    });
+    slider.addEventListener('change', saveSettings);
+
+    dim.appendChild(slider);
+    dim.appendChild(readout);
+    row.appendChild(dim);
+    row.classList.toggle('overlay-off', !checkbox.checked);
+    updateDimRow(row);
+
     overlayContainer.appendChild(row);
 
     checkbox.addEventListener('change', function () {
@@ -652,9 +678,23 @@ function addOverlayCheckbox(title) {
             const i = settings.map_overlay.indexOf(title);
             if (i > -1) settings.map_overlay.splice(i, 1);
         }
+        row.classList.toggle('overlay-off', !this.checked);
         saveSettings();
         redrawMap();
     });
+}
+
+function updateDimRow(row) {
+    const title = row.querySelector('input[type="checkbox"]')?.id;
+    const slider = row.querySelector('.overlay-dim input[type="range"]');
+    if (!title || !slider) return;
+    const v = getLayerOpacity(title);
+    slider.value = v;
+    row.querySelector('.overlay-dim-value').textContent = `${Math.round(v * 100)}%`;
+}
+
+function syncOverlayDimmers() {
+    document.querySelectorAll('.overlay-row').forEach(updateDimRow);
 }
 function removeOverlayLayer(title) {
     delete overlapmaps[title];
@@ -1589,15 +1629,24 @@ function applyDynamicStyling() {
     dynamicStyle.innerHTML = style;
 }
 
+function getLayerOpacity(title) {
+    const v = settings.layer_opacity[title];
+    return Number(v === undefined ? settings.map_opacity : v);
+}
+
+function setLayerOpacity(title, value) {
+    settings.layer_opacity[title] = Number(value);
+    overlapmaps[title]?.setOpacity(Number(value));
+}
+
 function setMapOpacity() {
     for (let key in basemaps)
         basemaps[key].setOpacity(Number(settings.map_opacity));
 
-    for (let key in overlapmaps) {
-        if (key !== "Aircraft") {
-            overlapmaps[key].setOpacity(Number(settings.map_opacity));
-        }
-    }
+    for (let key in overlapmaps)
+        overlapmaps[key].setOpacity(getLayerOpacity(key));
+
+    syncOverlayDimmers();
 }
 
 let clickTimeout = undefined;
@@ -2887,7 +2936,7 @@ async function updateStatistics() {
             const el = document.getElementById("stat_station");
             el.textContent = "";
             const a = document.createElement("a");
-            a.href = /^https?:\/\//.test(stat.station_link) ? stat.station_link : "#";
+            a.href = isHttpUrl(stat.station_link) ? stat.station_link : "#";
             a.textContent = stat.station;
             el.appendChild(a);
         }
@@ -2931,7 +2980,7 @@ async function updateStatistics() {
                 const showStatus = o.type !== "UDP" && !o.type.startsWith("HTTP");
 
                 let name = sanitizeString(o.description || o.type);
-                if (o.link && /^https?:\/\//i.test(o.link)) {
+                if (o.link && isHttpUrl(o.link)) {
                     const href = sanitizeString(o.link);
                     name = `<a href="${href}" target="_blank" rel="noopener" title="${href}" style="color:inherit">${name}` +
                         ` <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 -960 960 960" fill="currentColor" style="vertical-align:-1px"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h560v-280h80v280q0 33-23.5 56.5T760-120H200Zm188-212-56-56 372-372H520v-80h320v320h-80v-184L388-332Z"/></svg></a>`;

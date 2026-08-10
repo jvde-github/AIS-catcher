@@ -204,7 +204,7 @@ namespace IO
 
 		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
 		{
-			SendAllDirect(data, len);
+			SendAll(data, len);
 		}
 
 	public:

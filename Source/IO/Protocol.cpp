@@ -42,6 +42,7 @@
 
 namespace Protocol
 {
+	const int ProtocolBase::SEND_STALL_MS;
 
 #ifdef HASOPENSSL
 	std::once_flag TLS::ssl_init_flag;
@@ -355,9 +356,9 @@ namespace Protocol
 					return handleNetworkError("send", error_code, 0);
 				}
 			}
-			if (!Net::waitWritable(sock, 500))
+			if (!waitSendReady())
 			{
-				Warning() << "TCP (" << host << ":" << port << "): send stalled at " << total << "/" << length << " bytes, disconnecting";
+				Debug() << "TCP (" << host << ":" << port << "): stalled at " << total << "/" << length << " bytes";
 				disconnect();
 				bytes_sent += total;
 				if (stats)
@@ -637,9 +638,8 @@ namespace Protocol
 		if (sent <= 0)
 		{
 			int error = SSL_get_error(ssl, sent);
-			const int wait_ms = 500;
 			if ((error == SSL_ERROR_WANT_WRITE || error == SSL_ERROR_WANT_READ) &&
-				Net::waitReady(getSocket(), error == SSL_ERROR_WANT_READ ? POLLIN : POLLOUT, wait_ms))
+				waitSendReady(error == SSL_ERROR_WANT_READ ? POLLIN : POLLOUT))
 				sent = SSL_write(ssl, data, length);
 		}
 
@@ -653,7 +653,7 @@ namespace Protocol
 		if (error == SSL_ERROR_ZERO_RETURN)
 			Warning() << "TLS (" << getHost() << ":" << getPort() << "): Connection closed by peer";
 		else if (error == SSL_ERROR_WANT_WRITE || error == SSL_ERROR_WANT_READ)
-			Warning() << "TLS (" << getHost() << ":" << getPort() << "): send still blocked after 500 ms, disconnecting";
+			Debug() << "TLS (" << getHost() << ":" << getPort() << "): still blocked after the retry";
 		else
 			Error() << "TLS (" << getHost() << ":" << getPort() << "): Send error: " << getSSLErrorString(error);
 		disconnect();

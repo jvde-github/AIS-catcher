@@ -61,11 +61,13 @@ namespace Device
 
 	void N2KSCAN::Play()
 	{
+		Device::Play();
 		N2K::N2KInterface.Start();
 	}
 
 	void N2KSCAN::Stop()
 	{
+		Device::Stop();
 		N2K::N2KInterface.Stop();
 	}
 

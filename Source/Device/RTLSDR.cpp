@@ -106,7 +106,6 @@ namespace Device
 		applySettings();
 
 		Device::Play();
-		lost = false;
 
 		rtlsdr_reset_buffer(dev);
 

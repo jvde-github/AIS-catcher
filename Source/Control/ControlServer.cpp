@@ -307,7 +307,7 @@ void ControlServer::serveStatic(IO::TCPServerConnection &c, const std::string &p
 		return;
 	}
 #endif
-	HTTPServer::Request(c, path, false);
+	NotFound(c);
 }
 
 void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r, bool accept_gzip)
@@ -461,6 +461,6 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 	}
 	else
 	{
-		HTTPServer::Request(c, path, false);
+		NotFound(c);
 	}
 }

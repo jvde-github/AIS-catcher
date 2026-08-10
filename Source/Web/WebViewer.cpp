@@ -34,6 +34,11 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 	if (!server)
 		return;
 
+	const bool want_nmea = server->sseSubscribed(1);
+	const bool want_signal = server->sseSubscribed(2);
+	if (!want_nmea && !want_signal)
+		return;
+
 	std::time_t now = std::time(nullptr);
 
 	for (int j = 0; j < len; j++)
@@ -41,7 +46,7 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 		AIS::Message *m = (AIS::Message *)data[j].binary;
 		char channel = m->getChannel();
 
-		if (!m->sentences().empty())
+		if (want_nmea && !m->sentences().empty())
 		{
 			std::string json;
 			JSON::Writer w(json);
@@ -89,7 +94,7 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 			server->sendSSE(1, "nmea", json);
 		}
 
-		if (isValidCoord(tag.lat, tag.lon))
+		if (want_signal && isValidCoord(tag.lat, tag.lon))
 		{
 			std::string json;
 			JSON::Writer w(json);
@@ -1082,7 +1087,7 @@ void WebViewer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &reque
 		{
 			// 404 silently — browsers probe /.well-known/, favicon variants,
 			// /robots.txt etc. and would flood the log.
-			HTTPServer::Request(c, r, false);
+			NotFound(c);
 		}
 	}
 }

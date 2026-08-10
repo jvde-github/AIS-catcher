@@ -143,6 +143,9 @@ namespace IO
 		}
 
 		virtual bool readyToSend() { return true; }
+		// Unreachable by construction: the outputs with no sendFormatted all use a
+		// JSON format, so usesJSONStream() routes them elsewhere. Kept loud in case
+		// that wiring ever slips, since the alternative is silent total data loss.
 		bool warned_no_formatter = false;
 		virtual void sendFormatted(const char *, int, const AIS::Message *, TAG &)
 		{

@@ -34,14 +34,26 @@
 namespace IO
 {
 
+	// Holds a generational handle to a connection, not a pin. The connection lives
+	// in the server's fixed slot array so the pointer is always valid; the stored
+	// generation tells us whether the slot is still OUR incarnation or has since
+	// been closed/reused by a different client. All the sends below run on the
+	// server's Run() thread (upgrade, ping, cleanup, and the posted fan-out), so
+	// they honour the single-owner discipline.
 	class SSEConnection
 	{
 	protected:
 		IO::TCPServerConnection *connection;
+		uint32_t gen;
 		uint32_t mask = 0;
 
+		IO::TCPServerConnection *live()
+		{
+			return (connection && connection->isConnected() && connection->getGeneration() == gen) ? connection : nullptr;
+		}
+
 	public:
-		SSEConnection(IO::TCPServerConnection *c, uint32_t m) : connection(c), mask(m) { c->setVerbosity(false); }
+		SSEConnection(IO::TCPServerConnection *c, uint32_t m) : connection(c), gen(c->getGeneration()), mask(m) { c->setVerbosity(false); }
 		~SSEConnection() { Close(); }
 
 		bool subscribed(int id)
@@ -52,16 +64,18 @@ namespace IO
 		void Ping()
 		{
 			static const char ping[] = ": ping\r\n\r\n";
-			if (connection)
-				connection->SendDirect(ping, sizeof(ping) - 1);
+			if (auto *c = live())
+				c->SendDirect(ping, sizeof(ping) - 1);
 		}
 
 		void Start()
 		{
-			if (!connection)
+			auto *c = live();
+			if (!c)
 				return;
 
-			connection->Lock();
+			c->setNoTimeout();			 // must survive the idle-timeout sweep
+			c->close_after_send = false; // the stream outlives the request that opened it
 
 			std::string headers = "HTTP/1.1 200 OK\r\n";
 			headers += "Content-Type: text/event-stream\r\n";
@@ -69,40 +83,46 @@ namespace IO
 			headers += "X-Accel-Buffering: no\r\n";
 			headers += "Connection: keep-alive\r\n\r\n";
 
-			connection->SendDirect(headers.c_str(), headers.length());
+			c->SendDirect(headers.c_str(), headers.length());
 		}
 
 		bool isConnected()
 		{
-			return connection && connection->isConnected();
+			return live() != nullptr;
 		}
 
 		void Close()
 		{
-			// close before unlock, or the slot can be re-accepted while still referenced here
-			if (connection)
+			if (auto *c = live())
 			{
-				connection->SendDirect("\r\n", 2);
-				connection->Close();
-				connection->Unlock();
-				connection = nullptr;
+				c->SendDirect("\r\n", 2);
+				c->Close();
 			}
+			connection = nullptr;
+		}
+
+		// Append an already-formatted SSE frame (fan-out builds it once).
+		void SendFrame(const std::string &frame)
+		{
+			if (auto *c = live())
+				c->SendDirect(frame.c_str(), (int)frame.length());
+		}
+
+		// The one place that knows the SSE wire format.
+		static std::string frame(const std::string &eventName, const std::string &eventData, const std::string &eventId = "")
+		{
+			std::string s = "event: " + eventName + "\r\n";
+			if (!eventId.empty())
+				s += "id: " + eventId + "\r\n";
+			return s + "data: " + eventData + "\r\n\r\n";
 		}
 
 		void SendEvent(const std::string &eventName, const std::string &eventData, const std::string &eventId = "")
 		{
-			if (connection)
-			{
-				std::string eventStr = "event: " + eventName + "\r\n";
-				if (!eventId.empty())
-				{
-					eventStr += "id: " + eventId + "\r\n";
-				}
-				eventStr += "data: " + eventData + "\r\n\r\n";
-
-				connection->SendDirect(eventStr.c_str(), eventStr.length());
-			}
+			SendFrame(frame(eventName, eventData, eventId));
 		}
+
+		uint32_t topics() const { return mask; }
 	};
 
 	struct HTTPRequest
@@ -116,6 +136,7 @@ namespace IO
 		std::string forwarded_host;
 		bool keep_alive = true;
 		bool accept_gzip = false;
+		bool expect_continue = false;
 		std::size_t content_length = 0;
 
 		std::string path() const
@@ -155,37 +176,30 @@ namespace IO
 	class HTTPServer : public IO::TCPServer
 	{
 	public:
-		virtual void Request(IO::TCPServerConnection &c, const std::string &msg, bool accept_gzip);
 		virtual void Request(IO::TCPServerConnection &c, const HTTPRequest &r, bool accept_gzip);
+		// 404 and close; the fallback for any path no subclass handles
+		void NotFound(IO::TCPServerConnection &c);
 
 		void Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip = false, bool cache = false, bool cors = false, int status = 200);
 		void Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip = false, bool cache = false, bool cors = false, int status = 200);
 		void ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip = false, bool cache = false, bool cors = false, int status = 200);
 
-		void cleanupSSE()
-		{
-			std::lock_guard<std::mutex> lk(sse_mtx);
-			cleanupSSE_locked();
-		}
-
-		bool hasSSEClients()
-		{
-			std::lock_guard<std::mutex> lk(sse_mtx);
-			return !sse.empty();
-		}
+		// The sse list is touched only by the Run() thread: every path in reaches it
+		// through processClients() or drainCommands(), so it needs no lock.
+		bool hasSSEClients() const { return !sse.empty(); }
 
 		void closeAllSSE()
 		{
-			std::lock_guard<std::mutex> lk(sse_mtx);
 			sse.clear();
+			republishTopics();
 		}
 
-		// backlog is built under sse_mtx so no event can fall between snapshot and registration
+		// A producer posting while this runs lands in both the backlog snapshot and
+		// the command queue, so a subscriber can see one duplicated event.
 		void upgradeSSE(IO::TCPServerConnection &c, uint32_t mask, const std::string &topic = "",
 						const std::function<std::vector<std::string>()> &backlog = nullptr)
 		{
-			std::lock_guard<std::mutex> lk(sse_mtx);
-			cleanupSSE_locked();
+			cleanupSSE();
 
 			sse.emplace_back(&c, mask);
 			auto &connection = sse.back();
@@ -193,17 +207,20 @@ namespace IO
 			if (backlog)
 				for (const auto &data : backlog())
 					connection.SendEvent(topic, data);
+			republishTopics();
 		}
 
+		// Lets a producer skip building a payload nobody is listening for.
+		bool sseSubscribed(int id) const { return (topics.load() >> id) & 1; }
+
+		// Producers (decode/log threads) only enqueue a pre-formatted frame; the
+		// Run() loop performs the actual fan-out, so no producer writes a socket.
 		void sendSSE(int id, const std::string &event, const std::string &data)
 		{
-			std::lock_guard<std::mutex> lk(sse_mtx);
-			for (auto it = sse.begin(); it != sse.end(); ++it)
-			{
-				if (it->subscribed(id))
-					it->SendEvent(event, data);
-			}
-			cleanupSSE_locked();
+			if (!sseSubscribed(id))
+				return;
+
+			post({Command::Derived, id, SSEConnection::frame(event, data)});
 		}
 
 		void setFrameAncestors(const std::string &v) { frame_ancestors = v; common_headers.clear(); }
@@ -228,7 +245,8 @@ namespace IO
 		std::string extra_header;
 		std::string common_headers;
 		std::list<IO::SSEConnection> sse;
-		std::mutex sse_mtx;
+		// union of the subscriber masks, read by producers on other threads
+		std::atomic<uint32_t> topics{0};
 		std::chrono::steady_clock::time_point last_sse_ping{};
 		static const int SSE_PING_INTERVAL = 20;
 		// below this size the gzip header/CPU overhead outweighs the savings
@@ -237,8 +255,9 @@ namespace IO
 		// seconds a request has to finish arriving before its slot is reclaimed
 		static const int REQUEST_TIMEOUT = 15;
 
-		void cleanupSSE_locked()
+		void cleanupSSE()
 		{
+			const std::size_t before = sse.size();
 			for (auto it = sse.begin(); it != sse.end();)
 			{
 				if (!it->isConnected())
@@ -251,6 +270,16 @@ namespace IO
 					++it;
 				}
 			}
+			if (sse.size() != before)
+				republishTopics();
+		}
+
+		void republishTopics()
+		{
+			uint32_t m = 0;
+			for (const auto &c : sse)
+				m |= c.topics();
+			topics.store(m);
 		}
 
 		// Single parse pass over msg[0, header_end): request line + headers,
@@ -264,5 +293,14 @@ namespace IO
 
 	protected:
 		void processClients() override;
+
+		// Run() thread: reap dead subscribers, then fan the frame out to the rest.
+		void onCommand(int id, const std::string &frame) override
+		{
+			cleanupSSE();
+			for (auto &c : sse)
+				if (c.subscribed(id))
+					c.SendFrame(frame);
+		}
 	};
 }

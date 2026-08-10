@@ -62,7 +62,7 @@ namespace AIS
 	class Message
 	{
 	protected:
-		const int MAX_NMEA_CHARS = 56;
+		static constexpr int MAX_NMEA_CHARS = 56;
 		static std::atomic<int> ID;
 		static int nextSeqId();
 
@@ -363,13 +363,12 @@ namespace AIS
 		bool remove_empty = false;
 
 	public:
-		virtual ~Filter() {}
 		bool SetOptionKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
-		bool isOn() { return on; }
+		bool isOn() const { return on; }
 		bool hasIDFilter() const { return !ID_allowed.empty() || !MMSI_allowed.empty(); }
 		std::string getAllowed();
-		bool includeGPS() { return on ? GPS : true; }
+		bool includeGPS() const { return on ? GPS : true; }
 		bool include(const Message &msg);
 	};
 }

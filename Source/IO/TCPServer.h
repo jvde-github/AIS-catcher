@@ -24,6 +24,7 @@
 #include <atomic>
 #include <array>
 #include <vector>
+#include <deque>
 #include <functional>
 
 #include "SocketUtil.h"
@@ -41,8 +42,6 @@ namespace IO
 	class TCPServerConnection
 	{
 	private:
-		std::mutex mtx;
-		void CloseUnsafe();
 		const static int MAX_BUFFER_SIZE = 1024 * 1024 * 8;
 		// Reclaim the already-sent prefix only once it grows past this, so the
 		// memmove is amortized across many sends instead of paid on every drain.
@@ -73,6 +72,8 @@ namespace IO
 			shrink(msg);
 			out_pos = 0;
 		}
+		// append to the out buffer, compacting first and enforcing the size cap
+		bool queue(const char *data, int length);
 
 	public:
 		~TCPServerConnection() { Close(); }
@@ -83,28 +84,30 @@ namespace IO
 		std::vector<char> out;
 		size_t out_pos = 0; // read cursor into out; [out_pos, out.size()) is unsent
 		std::time_t stamp;
-		std::atomic<bool> is_locked{false};
-		bool is_local = false;
+		// bumped on every Start(); a deferred reference (an SSE subscriber) carries
+		// this value and is validated before use, so a reused slot is detected, not aliased
+		uint32_t generation = 0;
+		// SSE streams read nothing after the GET, so exempt them from the idle sweep
+		bool no_timeout = false;
 		// close once the out buffer drains (HTTP/1.0 or Connection: close)
 		bool close_after_send = false;
 		// current request is HEAD: full headers, suppressed body
 		bool head_request = false;
+		// interim 100 Continue already sent for the request being received
+		bool continue_sent = false;
 		// arrival time of the pending request's first byte, 0 if none (HTTP header timeout)
 		std::time_t request_start = 0;
 
-		void Lock();
-		void Unlock();
-		bool isLocked() const { return is_locked; }
-
 		void Close();
-		void Start(SOCKET s, bool local = false);
+		void Start(SOCKET s);
 		int Inactive(std::time_t now) const;
 		bool isConnected() const { return sock != -1; }
+		uint32_t getGeneration() const { return generation; }
+		void setNoTimeout() { no_timeout = true; }
 		bool hasSendBuffer() const { return out_pos < out.size(); }
 		void SendBuffer();
 		bool Send(const char *buffer, int length);
 		bool SendDirect(const char *buffer, int length);
-		bool SendRaw(const char *buffer, int length);
 		void Read();
 		void setVerbosity(bool v) { verbose = v; }
 	};
@@ -119,9 +122,8 @@ namespace IO
 		// request handlers touch — the base-class destructor runs too late for
 		// members of derived classes.
 		void stopThread();
-		bool SendAll(const std::string &m);
-		bool SendAllDirect(const std::string &m);
-		bool SendAllDirect(const char *data, int len);
+		void SendAll(std::string m); // by value: moved into the queued Command
+		void SendAll(const char *data, int len) { SendAll(std::string(data, len)); }
 
 		void setReusePort(bool b) { reuse_port = b; }
 		void setIP(const std::string &ip) { IP_BIND = ip; }
@@ -144,9 +146,34 @@ namespace IO
 
 		void Run();
 
-		// pfds[0] is the listening socket, pfds[i + 1] belongs to client[i];
+		// Single-owner discipline: only the Run() thread ever touches a
+		// connection's socket/buffers. Cross-thread producers (broadcast output,
+		// SSE fan-out) enqueue a Command; the loop drains and executes them every
+		// cycle. cmd_mtx is the only shared lock, and it guards the queue alone —
+		// never a connection.
+		struct Command
+		{
+			// Derived is opaque to the base loop: it owns neither the id space nor
+			// the payload format.
+			enum Kind { BroadcastRaw, Derived } kind;
+			int id;
+			std::string data;
+		};
+		std::mutex cmd_mtx;
+		std::deque<Command> cmds;
+		std::deque<Command> cmd_scratch; // swapped with cmds so the nodes are reused
+		// Poked by post() so a queued command wakes the loop immediately instead
+		// of waiting for the poll timeout; degrades to timeout-only if unavailable.
+		Net::Wakeup wakeup;
+		std::time_t last_housekeeping = 0;
+		void post(Command c);
+		void drainCommands();
+		// Whatever a subclass queues, executed on the Run() thread.
+		virtual void onCommand(int, const std::string &) {}
+
+		// pfds[0] listening socket, pfds[1] the wake handle, pfds[i + 2] client[i];
 		// unused slots get fd = -1 so poll skips them.
-		std::array<pollfd, MAX_CONN + 1> pfds;
+		std::array<pollfd, MAX_CONN + 2> pfds;
 
 		bool Send(TCPServerConnection &c, const char *data, int len)
 		{
@@ -165,7 +192,7 @@ namespace IO
 		void readClients();
 		void writeClients();
 		virtual void processClients();
-		void cleanUp();
+		void cleanUp(std::time_t now);
 		void SleepAndWait();
 
 		void setStats(IO::OutputStats *s) { pstats = s; }

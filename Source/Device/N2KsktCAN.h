@@ -48,7 +48,6 @@ namespace Device
 
 		std::string getRateDescription() { return "N/A"; }
 
-		bool isStreaming() { return !lost; }
 		bool isCallback() { return true; }
 
 		std::string getProduct() { return "NMEA2000"; }

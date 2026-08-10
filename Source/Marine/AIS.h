@@ -62,7 +62,7 @@ namespace AIS
 		bool CRC16(int len);
 		bool processData(int len, TAG &tag);
 
-		bool canStop(int);
+		bool cannotBeValid(int);
 
 		Message msg;
 
@@ -169,7 +169,7 @@ namespace AIS
 					one_seq_count = 0;
 				}
 
-				if (position == MaxBits || (QuickReset && canStop(position)))
+				if (position == MaxBits || (QuickReset && cannotBeValid(position)))
 					NextState(State::TRAINING, 0);
 				break;
 

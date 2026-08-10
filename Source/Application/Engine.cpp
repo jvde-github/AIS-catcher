@@ -226,7 +226,7 @@ void Engine::run(WebViewer *viewer, ControlCore *control)
 	while (!stop)
 	{
 		for (auto &r : receivers)
-			stop = stop || !(r->getDeviceManager().getDevice()->isStreaming());
+			stop = stop || !(r->getDeviceManager().getDevice()->isActive());
 
 		// for non-callback devices (WAV file), the isStreaming() poll above pumps
 		// the data, so the loop must run unthrottled

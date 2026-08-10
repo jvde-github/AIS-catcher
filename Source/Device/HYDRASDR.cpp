@@ -186,12 +186,16 @@ namespace Device
 
 	bool HYDRASDR::isStreaming()
 	{
-		if (Device::isStreaming() && hydrasdr_is_streaming(dev) != 1)
+		if (!Device::isStreaming())
+			return false;
+
+		if (hydrasdr_is_streaming(dev) != 1)
 		{
 			lost = true;
+			return false;
 		}
 
-		return Device::isStreaming() && hydrasdr_is_streaming(dev) == 1;
+		return true;
 	}
 
 	// R82x (R820T/R828D) tuner bandwidth control tables

@@ -499,6 +499,11 @@ export function getShipTypeFull(s) {
 }
 
 
+// Only http(s) is safe to put in an href; javascript:/data: URLs are not.
+export function isHttpUrl(u) {
+    return typeof u === 'string' && /^https?:\/\//i.test(u);
+}
+
 export function sanitizeString(input) {
     const map = {
         '&': '&amp;',

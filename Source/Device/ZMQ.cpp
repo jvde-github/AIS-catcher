@@ -68,7 +68,6 @@ namespace Device {
 
 	void ZMQ::Play() {
 		fifo.Init(BUFFER_SIZE);
-		lost = false;
 
 		Device::Play();
 

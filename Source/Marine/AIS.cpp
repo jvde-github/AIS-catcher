@@ -109,7 +109,7 @@ namespace AIS
 	}
 
 	// returns true if data so far cannot result anymore in a valid message
-	bool Decoder::canStop(int len)
+	bool Decoder::cannotBeValid(int len)
 	{
 		const int END = 24;
 

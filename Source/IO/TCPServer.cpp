@@ -38,23 +38,7 @@ namespace IO
 	const int TCPServer::MAX_CONN;
 	std::vector<int> TCPServer::active_ports;
 
-	void TCPServerConnection::Lock()
-	{
-		is_locked = true;
-	}
-
-	void TCPServerConnection::Unlock()
-	{
-		is_locked = false;
-	}
-
 	void TCPServerConnection::Close()
-	{
-		std::lock_guard<std::mutex> lock(mtx);
-		CloseUnsafe();
-	}
-
-	void TCPServerConnection::CloseUnsafe()
 	{
 		if (sock != -1)
 		{
@@ -64,14 +48,17 @@ namespace IO
 		releaseBuffers();
 	}
 
-	void TCPServerConnection::Start(SOCKET s, bool local)
+	void TCPServerConnection::Start(SOCKET s)
 	{
 		releaseBuffers();
 		close_after_send = false;
 		head_request = false;
+		continue_sent = false;
+		no_timeout = false;
+		verbose = true;
 		request_start = 0;
 		stamp = std::time(nullptr);
-		is_local = local;
+		++generation; // new incarnation: invalidates any handle held to the old one
 		sock = s;
 	}
 
@@ -82,8 +69,6 @@ namespace IO
 
 	void TCPServerConnection::Read()
 	{
-		std::lock_guard<std::mutex> lock(mtx);
-
 		char buffer[16384];
 
 		if (isConnected())
@@ -95,7 +80,7 @@ namespace IO
 				if (msg.size() + nread > MAX_BUFFER_SIZE)
 				{
 					Warning() << "TCPServer: input buffer overflow, closing connection";
-					CloseUnsafe();
+					Close();
 				}
 				else
 				{
@@ -105,26 +90,23 @@ namespace IO
 			}
 			else if (nread == 0)
 			{
-				CloseUnsafe();
+				Close();
 			}
 			else
 			{
 				int e = Net::lastError();
 				if (!Net::wouldBlock(e))
 				{
-					// a peer dropping without a clean close is routine, not a server error
-					if (verbose)
-						Debug() << "Socket: connection closed by peer: " << Net::errorString(e) << ", sock = " << sock;
+					if (verbose && !Net::peerGone(e))
+						Debug() << "Socket: read failed: " << Net::errorString(e) << ", sock = " << sock;
 
-					CloseUnsafe();
+					Close();
 				}
 			}
 		}
 	}
 	void TCPServerConnection::SendBuffer()
 	{
-		std::lock_guard<std::mutex> lock(mtx);
-
 		if (isConnected() && hasSendBuffer())
 		{
 
@@ -135,10 +117,10 @@ namespace IO
 				int e = Net::lastError();
 				if (!Net::wouldBlock(e))
 				{
-					if (verbose)
+					if (verbose && !Net::peerGone(e))
 						Error() << "TCP Connection: error message to client: " << Net::errorString(e);
 
-					CloseUnsafe();
+					Close();
 				}
 			}
 			else
@@ -152,13 +134,8 @@ namespace IO
 			}
 		}
 	}
-	bool TCPServerConnection::Send(const char *data, int length)
+	bool TCPServerConnection::queue(const char *data, int length)
 	{
-		std::lock_guard<std::mutex> lock(mtx);
-
-		if (!isConnected())
-			return false;
-
 		if (out_pos >= OUT_COMPACT_THRESHOLD)
 			compact();
 
@@ -169,47 +146,13 @@ namespace IO
 		return true;
 	}
 
-	bool TCPServerConnection::SendRaw(const char *data, int length)
+	bool TCPServerConnection::Send(const char *data, int length)
 	{
-		std::lock_guard<std::mutex> lock(mtx);
-
-		if (!isConnected())
-			return false;
-
-		int bytes = ::send(sock, data, length, 0);
-
-		if (bytes < 0)
-		{
-			int e = Net::lastError();
-			if (!Net::wouldBlock(e))
-			{
-				if (verbose)
-					Error() << "TCP Connection: error message to client: " << Net::errorString(e);
-
-				CloseUnsafe();
-				return false;
-			}
-			bytes = 0;
-		}
-
-		if (bytes < length)
-		{
-			if (out_pos >= OUT_COMPACT_THRESHOLD)
-				compact();
-			if (pending() + (length - bytes) > MAX_BUFFER_SIZE)
-			{
-				CloseUnsafe();
-				return false;
-			}
-			out.insert(out.end(), data + bytes, data + length);
-		}
-		return true;
+		return isConnected() && queue(data, length);
 	}
 
 	bool TCPServerConnection::SendDirect(const char *data, int length)
 	{
-		std::lock_guard<std::mutex> lock(mtx);
-
 		if (!isConnected())
 			return false;
 
@@ -224,32 +167,25 @@ namespace IO
 				int e = Net::lastError();
 				if (!Net::wouldBlock(e))
 				{
-					if (verbose)
+					if (verbose && !Net::peerGone(e))
 						Error() << "TCP Connection: error message to client: " << Net::errorString(e);
 
-					CloseUnsafe();
+					Close();
 					return false;
 				}
 				bytes = 0;
 			}
 		}
 
-		if (bytes < length)
+		// A client this far behind (e.g. a stalled SSE consumer) will not
+		// recover; close instead of growing the buffer without bound.
+		if (bytes < length && !queue(data + bytes, length - bytes))
 		{
-			// A client this far behind (e.g. a stalled SSE consumer) will not
-			// recover; close instead of growing the buffer without bound.
-			if (out_pos >= OUT_COMPACT_THRESHOLD)
-				compact();
+			if (verbose)
+				Error() << "TCP Connection: send buffer limit exceeded, closing connection.";
 
-			if (pending() + (length - bytes) > MAX_BUFFER_SIZE)
-			{
-				if (verbose)
-					Error() << "TCP Connection: send buffer limit exceeded, closing connection.";
-
-				CloseUnsafe();
-				return false;
-			}
-			out.insert(out.end(), data + bytes, data + length);
+			Close();
+			return false;
 		}
 
 		return true;
@@ -260,6 +196,7 @@ namespace IO
 	void TCPServer::stopThread()
 	{
 		stop = true;
+		wakeup.notify(); // break out of poll() now rather than on the backstop
 
 		if (run_thread.joinable())
 			run_thread.join();
@@ -297,7 +234,7 @@ namespace IO
 	int TCPServer::findFreeClient()
 	{
 		for (int i = 0; i < MAX_CONN; i++)
-			if (!client[i].isLocked() && !client[i].isConnected())
+			if (!client[i].isConnected())
 				return i;
 		return -1;
 	}
@@ -316,7 +253,7 @@ namespace IO
 #endif
 		{
 			int e = Net::lastError();
-			if (!Net::wouldBlock(e))
+			if (!Net::wouldBlock(e) && !Net::peerGone(e))
 				Error() << "TCP Server: error accepting connection: " << Net::errorString(e);
 			return;
 		}
@@ -330,35 +267,35 @@ namespace IO
 		}
 
 		// Configure fully before Start() publishes the socket to broadcast threads.
+		// TCP_NODELAY is best-effort: a client that reset since accept() fails it,
+		// and that is not a reason to drop the connection here.
 		int flag = 1;
-		if (setsockopt(conn_socket, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag)) != 0)
-		{
-			Error() << "TCP Server: cannot set TCP_NODELAY on client socket.";
-			Net::closeSocket(conn_socket);
-			return;
-		}
+		setsockopt(conn_socket, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag));
 
 		const int idle = 60, interval = 20, count = 3;
 		Net::setTCPKeepAlive(conn_socket, idle, interval, count);
 		Net::setTCPUserTimeout(conn_socket, (idle + interval * count) * 1000);
 
+		// not optional: a blocking client socket would stall the loop
 		if (!Net::setNonBlocking(conn_socket))
 		{
-			Error() << "TCP Server: cannot make client socket non-blocking.";
+			int e = Net::lastError();
+			if (!Net::peerGone(e))
+				Error() << "TCP Server: cannot make client socket non-blocking: " << Net::errorString(e);
 			Net::closeSocket(conn_socket);
 			return;
 		}
 
-		bool local = addrlen >= (int)sizeof(peer) && peer.sin_family == AF_INET &&
-					 (ntohl(peer.sin_addr.s_addr) >> 24) == 127;
-		client[ptr].Start(conn_socket, local);
+		client[ptr].Start(conn_socket);
 	}
 
-	void TCPServer::cleanUp()
+	void TCPServer::cleanUp(std::time_t now)
 	{
+		if (!timeout)
+			return;
 
 		for (auto &c : client)
-			if (c.isConnected() && timeout && c.Inactive(time(0)) > timeout && !c.isLocked())
+			if (c.isConnected() && c.Inactive(now) > timeout && !c.no_timeout)
 			{
 				c.Close();
 			}
@@ -367,7 +304,7 @@ namespace IO
 	void TCPServer::readClients()
 	{
 		for (int i = 0; i < MAX_CONN; i++)
-			if (pfds[i + 1].revents & (POLLIN | POLLERR | POLLHUP | POLLNVAL))
+			if (pfds[i + 2].revents & (POLLIN | POLLERR | POLLHUP | POLLNVAL))
 				client[i].Read();
 	}
 
@@ -378,7 +315,7 @@ namespace IO
 		{
 			c.SendBuffer();
 
-			if (c.close_after_send && c.isConnected() && !c.isLocked() && !c.hasSendBuffer())
+			if (c.close_after_send && c.isConnected() && !c.hasSendBuffer())
 				c.Close();
 		}
 	}
@@ -402,16 +339,27 @@ namespace IO
 
 			try
 			{
+				// execute all queued cross-thread work here, on the sole owner
+				// thread; drain the wake first so a command posted mid-cycle is
+				// either already in the queue or re-wakes the next poll
+				if (pfds[1].revents & POLLIN)
+					wakeup.drain();
+				drainCommands();
 				if (pfds[0].revents & POLLIN)
 					acceptClients();
 				readClients();
 				processClients();
 				writeClients();
-				cleanUp();
 
-				if (pstats)
+				// the loop wakes per command now, so keep these sweeps at ~1 Hz
+				const std::time_t now = std::time(nullptr);
+				if (now != last_housekeeping)
 				{
-					pstats->connected = numberOfClients();
+					last_housekeeping = now;
+					cleanUp(now);
+
+					if (pstats)
+						pstats->connected = numberOfClients();
 				}
 			}
 			catch (const std::exception &e)
@@ -435,10 +383,15 @@ namespace IO
 		pfds[0].events = POLLIN;
 		pfds[0].revents = 0;
 
+		// the wake handle; -1 when unavailable so poll simply skips it
+		pfds[1].fd = wakeup.valid() ? wakeup.fd() : -1;
+		pfds[1].events = POLLIN;
+		pfds[1].revents = 0;
+
 		for (int i = 0; i < MAX_CONN; i++)
 		{
 			TCPServerConnection &c = client[i];
-			pollfd &p = pfds[i + 1];
+			pollfd &p = pfds[i + 2];
 
 			p.fd = c.isConnected() ? c.sock : -1;
 			p.events = POLLIN;
@@ -447,10 +400,15 @@ namespace IO
 			p.revents = 0;
 		}
 
+		// With the wake handle latency comes from poll() returning on the wake, so
+		// this timeout is just a liveness backstop — keep it long (1/s idle, gentle
+		// on low-power boards). Only when the wake is unavailable does it also carry
+		// command latency, so it tightens to 50 ms then.
+		const int POLL_MS = wakeup.valid() ? 1000 : 50;
 #ifdef _WIN32
-		int r = WSAPoll(pfds.data(), (ULONG)pfds.size(), 1000);
+		int r = WSAPoll(pfds.data(), (ULONG)pfds.size(), POLL_MS);
 #else
-		int r = poll(pfds.data(), (nfds_t)pfds.size(), 1000);
+		int r = poll(pfds.data(), (nfds_t)pfds.size(), POLL_MS);
 #endif
 		// on poll failure fall back to sweeping every socket rather than none
 		if (r < 0)
@@ -458,51 +416,53 @@ namespace IO
 				p.revents = POLLIN;
 	}
 
-	bool TCPServer::SendAll(const std::string &m)
+	void TCPServer::post(Command c)
 	{
-		bool success = true;
-		for (auto &c : client)
 		{
-			if (c.isConnected())
-			{
-				if (!c.Send(m.c_str(), m.length()))
-				{
-					c.Close();
-					Error() << "TCP listener: client not reading, close connection.";
-					if (pstats)
-						pstats->dropped++;
-					success = false;
-				}
-				else if (pstats)
-					pstats->bytes_out += m.length();
-			}
+			std::lock_guard<std::mutex> lk(cmd_mtx);
+			cmds.push_back(std::move(c));
 		}
-		return success;
+		// wake the loop now; the byte is coalesced so a burst can't flood the fd
+		wakeup.notify();
 	}
 
-	bool TCPServer::SendAllDirect(const std::string &m)
+	void TCPServer::drainCommands()
 	{
-		return SendAllDirect(m.c_str(), m.length());
-	}
-
-	bool TCPServer::SendAllDirect(const char *data, int len)
-	{
-		bool success = true;
-		for (auto &c : client)
 		{
-			if (c.isConnected())
+			std::lock_guard<std::mutex> lk(cmd_mtx);
+			if (cmds.empty())
+				return;
+			cmd_scratch.swap(cmds);
+		}
+		for (auto &c : cmd_scratch)
+		{
+			switch (c.kind)
 			{
-				if (!c.SendRaw(data, len))
+			case Command::BroadcastRaw:
+				for (auto &cl : client)
 				{
-					c.Close();
-					Error() << "TCP listener: client not reading, close connection.";
-					success = false;
+					if (cl.isConnected() && !Send(cl, c.data.data(), (int)c.data.size()))
+					{
+						cl.Close();
+						Error() << "TCP listener: client not reading, close connection.";
+						if (pstats)
+							pstats->dropped++;
+					}
 				}
-				else if (pstats)
-					pstats->bytes_out += len;
+				break;
+			case Command::Derived:
+				onCommand(c.id, c.data);
+				break;
 			}
 		}
-		return success;
+		cmd_scratch.clear();
+	}
+
+	// Cross-thread producers only enqueue; the Run() loop performs the actual
+	// sends, so no other thread ever touches a connection.
+	void TCPServer::SendAll(std::string m)
+	{
+		post({Command::BroadcastRaw, 0, std::move(m)});
 	}
 
 	bool TCPServer::start(int port)
@@ -571,10 +531,7 @@ namespace IO
 		}
 
 		for (auto &c : client)
-		{
 			c.Close();
-			c.Unlock();
-		}
 
 		if (!Net::setNonBlocking(sock))
 		{
@@ -589,6 +546,10 @@ namespace IO
 
 		listening_port = port;
 		active_ports.push_back(port);
+
+		// not fatal if it fails: the loop still drains on the poll timeout
+		if (!wakeup.init())
+			Debug() << "TCP Server: wake handle unavailable, relying on poll timeout.";
 
 		run_thread = std::thread(&TCPServer::Run, this);
 

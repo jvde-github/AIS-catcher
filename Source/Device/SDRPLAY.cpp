@@ -135,7 +135,6 @@ namespace Device {
 	}
 
 	void SDRPLAY::Play() {
-		lost = false;
 		fifo.Init(16 * 16384, 8);
 
 		// devParams is NULL for a duo slave: the master owns the clock, and the

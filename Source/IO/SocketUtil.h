@@ -18,6 +18,8 @@
 #pragma once
 
 #include <string>
+#include <atomic>
+#include <cstring>
 
 // Centralized platform socket includes and compat defines. winsock2.h must
 // precede windows.h to avoid the winsock1/2 redefinition clash.
@@ -79,7 +81,6 @@ namespace Net
 	}
 
 	inline bool waitWritable(SOCKET s, int timeout_ms) { return waitReady(s, POLLOUT, timeout_ms); }
-	inline bool waitReadable(SOCKET s, int timeout_ms) { return waitReady(s, POLLIN, timeout_ms); }
 
 	inline bool wouldBlock(int e)
 	{
@@ -87,6 +88,17 @@ namespace Net
 		return e == WSAEWOULDBLOCK;
 #else
 		return e == EWOULDBLOCK || e == EAGAIN;
+#endif
+	}
+
+	inline bool peerGone(int e)
+	{
+#ifdef _WIN32
+		return e == WSAECONNRESET || e == WSAECONNABORTED || e == WSAENOTCONN ||
+			   e == WSAESHUTDOWN || e == WSAETIMEDOUT || e == WSAENETRESET;
+#else
+		return e == ECONNRESET || e == EPIPE || e == ENOTCONN ||
+			   e == ECONNABORTED || e == ETIMEDOUT;
 #endif
 	}
 
@@ -183,4 +195,107 @@ namespace Net
 		return fl != -1 && fcntl(s, F_SETFL, fl | O_NONBLOCK) != -1;
 	}
 #endif
+
+	// Cross-thread wake for a poll()/WSAPoll() loop: a reliable, pollable handle
+	// the loop watches; another thread calls notify() to make the blocking poll
+	// return at once. POSIX uses a self-pipe, Windows a loopback TCP socket pair
+	// (WSAPoll accepts only SOCKETs) — both reliable, so no wake is ever dropped.
+	// Coalesced via `pending` so a burst of notify()s can't flood the fd, and
+	// degradable: if init() fails, fd() is -1 and the caller falls back to the
+	// poll timeout — never a hard failure.
+	class Wakeup
+	{
+		SOCKET rd = -1; // read end, added to the poll set
+		SOCKET wr = -1; // write end, poked by notify()
+		std::atomic<bool> pending{false};
+
+	public:
+		Wakeup() {}
+		~Wakeup() { close(); }
+		Wakeup(const Wakeup &) = delete;
+		Wakeup &operator=(const Wakeup &) = delete;
+
+		bool init()
+		{
+#ifdef _WIN32
+			SOCKET listener = ::socket(AF_INET, SOCK_STREAM, 0);
+			if (listener == INVALID_SOCKET)
+				return false;
+			struct sockaddr_in a;
+			std::memset(&a, 0, sizeof(a));
+			a.sin_family = AF_INET;
+			a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+			a.sin_port = 0;
+			int len = sizeof(a);
+			bool ok = ::bind(listener, (SOCKADDR *)&a, sizeof(a)) == 0 && ::listen(listener, 1) == 0 &&
+					  ::getsockname(listener, (SOCKADDR *)&a, &len) == 0;
+			if (ok)
+				wr = ::socket(AF_INET, SOCK_STREAM, 0);
+			ok = ok && wr != INVALID_SOCKET && ::connect(wr, (SOCKADDR *)&a, sizeof(a)) == 0;
+			if (ok)
+				rd = ::accept(listener, NULL, NULL);
+			ok = ok && rd != INVALID_SOCKET;
+			::closesocket(listener);
+			if (!ok)
+			{
+				close();
+				return false;
+			}
+#else
+			int fds[2];
+			if (::pipe(fds) != 0)
+				return false;
+			rd = fds[0];
+			wr = fds[1];
+#endif
+			setNonBlocking(rd);
+			setNonBlocking(wr);
+			return true;
+		}
+
+		SOCKET fd() const { return rd; }
+		bool valid() const { return rd != -1; }
+
+		// Coalesced: only the first notify() since the last drain() writes a byte;
+		// the rest see `pending` already set and return. Errors are ignored — a
+		// full pipe or a closed peer at shutdown is harmless, the poll backstop
+		// still fires.
+		void notify()
+		{
+			bool expected = false;
+			if (!pending.compare_exchange_strong(expected, true))
+				return;
+			if (wr == -1)
+				return;
+			char b = 1;
+#ifdef _WIN32
+			::send(wr, &b, 1, 0);
+#else
+			ssize_t n = ::write(wr, &b, 1);
+			(void)n;
+#endif
+		}
+
+		// Reset the flag, THEN empty the fd, and do it before the loop consumes its
+		// queue: a notify() racing the drain then leaves its byte for the next
+		// poll rather than being lost.
+		void drain()
+		{
+			pending.store(false);
+			if (rd == -1)
+				return;
+			char buf[256];
+#ifdef _WIN32
+			while (::recv(rd, buf, sizeof(buf), 0) > 0) {}
+#else
+			while (::read(rd, buf, sizeof(buf)) > 0) {}
+#endif
+		}
+
+		void close()
+		{
+			if (rd != -1) { closeSocket(rd); rd = -1; }
+			if (wr != -1) { closeSocket(wr); wr = -1; }
+		}
+	};
 }

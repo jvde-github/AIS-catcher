@@ -279,6 +279,10 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members, bool 
 		case AIS::KEY_SETTING_ENGINES:
 		case AIS::KEY_SETTING_MODEL:
 			break; // pass 3
+		case AIS::KEY_SETTING_SERIAL:
+		case AIS::KEY_SETTING_INPUT:
+		case AIS::KEY_SETTING_ACTIVE:
+			break; // consumed by pass 1
 		case AIS::KEY_SETTING_ZONE:
 			if (!m.Get().isArray())
 				throw std::runtime_error("\"zone\" must be an array of strings");
@@ -300,7 +304,13 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members, bool 
 		{
 			Setting *device = _engine.receivers.back()->getDeviceManager().settingForKey((AIS::Keys)m.Key());
 			if (!device)
-				throw std::runtime_error(std::string("Config file: field \"") + AIS::KeyMap[m.Key()][JSON_DICT_SETTING] + "\" is not allowed in a receiver object.");
+			{
+				// The top-level call gets the whole document; those fields belong to
+				// the later passes. Only an explicit receiver object can reject one.
+				if (!unspecAllowed)
+					throw std::runtime_error(std::string("Config file: field \"") + AIS::KeyMap[m.Key()][JSON_DICT_SETTING] + "\" is not allowed in a receiver object.");
+				break;
+			}
 			if (isActiveObject(m.Get()))
 				setSettingsFromJSON(m.Get(), *device);
 			break;
@@ -425,6 +435,8 @@ void Config::set(const std::string &str)
 		case AIS::KEY_SETTING_INPUT:
 		case AIS::KEY_SETTING_MODEL:
 		case AIS::KEY_SETTING_META:
+		case AIS::KEY_SETTING_LAT:
+		case AIS::KEY_SETTING_LON:
 		case AIS::KEY_SETTING_RTLSDR:
 		case AIS::KEY_SETTING_RTLTCP:
 		case AIS::KEY_SETTING_AIRSPY:

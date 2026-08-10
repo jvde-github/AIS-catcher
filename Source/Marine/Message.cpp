@@ -463,6 +463,7 @@ namespace AIS
 
 		// SWAR: extract sizeof(size_t) six-bit chars per iteration.
 		// 32-bit: 4 chars (24 bits, 3-byte step). 64-bit: 8 chars (48 bits, 6-byte step).
+		static_assert(sizeof(size_t) == 4 || sizeof(size_t) == 8, "getText SWAR assumes a 4- or 8-byte word");
 		constexpr int CHARS_PER = (int)sizeof(size_t);
 		constexpr int STEP_BYTES = CHARS_PER * 6 / 8;
 		constexpr int WORD_BITS = CHARS_PER * 8;

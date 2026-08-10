@@ -96,6 +96,22 @@ namespace Protocol
 
 		std::string layer = "*";
 
+		// One stall budget for every layer, so back-pressure behaves the same
+		// whether or not TLS is in the chain.
+		static const int SEND_STALL_MS = 500;
+
+		// False if the peer stayed blocked for the whole budget. `events` is POLLIN
+		// when TLS wants a read before it can write.
+		bool waitSendReady(short events = POLLOUT)
+		{
+			if (Net::waitReady(getSocket(), events, SEND_STALL_MS))
+				return true;
+
+			Warning() << getLayer() << " (" << getHost() << ":" << getPort()
+					  << "): send blocked for " << SEND_STALL_MS << " ms, disconnecting";
+			return false;
+		}
+
 	public:
 		ProtocolBase(const std::string &l) : layer(l) {};
 		virtual ~ProtocolBase() {}

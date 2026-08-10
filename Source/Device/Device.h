@@ -91,7 +91,11 @@ namespace Device {
 		virtual uint32_t getFrequency() { return frequency; }
 
 		virtual bool isCallback() { return true; }
-		virtual bool isStreaming() { return streaming && !lost; }
+		// Stop() gates teardown on this, so it must stay true after a device is lost.
+		virtual bool isStreaming() { return streaming; }
+		// Play state plus health. Virtual dispatch is deliberate: the overrides poll
+		// the hardware, and that poll is what sets `lost`.
+		bool isActive() { return isStreaming() && !lost; }
 		virtual bool isReplay() { return false; }
 
 		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }

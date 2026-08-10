@@ -92,7 +92,6 @@ namespace Device {
 		applySettings();
 
 		Device::Play();
-		lost = false;
 
 		if (print) PrintActuals();
 

@@ -101,7 +101,6 @@ namespace Device
 		applySettings();
 
 		StartServer();
-		lost = false;
 		run_thread = std::thread(&UDP::Run, this);
 
 		SleepSystem(10);

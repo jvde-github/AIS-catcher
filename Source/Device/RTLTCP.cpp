@@ -86,7 +86,6 @@ namespace Device
 			fifo.Init(1, BUFFER_SIZE);
 		}
 
-		lost = false;
 
 		async_thread = std::thread(&RTLTCP::RunAsync, this);
 		run_thread = std::thread(&RTLTCP::Run, this);

@@ -54,9 +54,20 @@ namespace IO
 				else if (c.request_start == 0)
 					c.request_start = now_t;
 
-				std::size_t pos = c.msg.find(EOF_MSG);
-				while (pos != std::string::npos)
+				while (true)
 				{
+					// RFC 9112 2.2: empty lines before the request line are ignored,
+					// not mistaken for the request itself
+					std::size_t skip = 0;
+					while (c.msg.compare(skip, 2, "\r\n") == 0)
+						skip += 2;
+					if (skip)
+						c.msg.erase(0, skip);
+
+					std::size_t pos = c.msg.find(EOF_MSG);
+					if (pos == std::string::npos)
+						break;
+
 					HTTPRequest request;
 					std::string error;
 					int status = parseHeaders(c.msg, pos, request, error);
@@ -75,7 +86,16 @@ namespace IO
 					}
 					required_length += request.content_length;
 					if (c.msg.size() < required_length)
+					{
+						// RFC 9110 10.1.1: the body only arrives once we say so
+						if (request.expect_continue && !c.continue_sent)
+						{
+							static const char cont[] = "HTTP/1.1 100 Continue\r\n\r\n";
+							c.continue_sent = true;
+							Send(c, cont, sizeof(cont) - 1);
+						}
 						break;
+					}
 
 					if (request.method == "POST" && request.content_length > 0)
 						request.body = c.msg.substr(pos + 4, request.content_length);
@@ -89,10 +109,9 @@ namespace IO
 
 					if (request.method == "GET" || request.method == "POST")
 					{
-						if (!request.target.empty())
-							Request(c, request, request.accept_gzip);
+						Request(c, request, request.accept_gzip);
 					}
-					else if (!request.method.empty())
+					else
 					{
 						setExtraHeader("Allow: GET, HEAD, POST");
 						Response(c, "text/plain", std::string("Method not allowed."), false, false, false, 405);
@@ -100,11 +119,11 @@ namespace IO
 					c.head_request = false;
 
 					c.msg.erase(0, required_length);
+					c.continue_sent = false;
 					c.request_start = c.msg.empty() ? 0 : now_t;
 					// closing after this response; ignore any pipelined requests
 					if (c.close_after_send)
 						break;
-					pos = c.msg.find(EOF_MSG);
 				}
 
 				// Limit accumulated message size to prevent memory exhaustion
@@ -122,14 +141,13 @@ namespace IO
 		if (now - last_sse_ping >= std::chrono::seconds(SSE_PING_INTERVAL))
 		{
 			last_sse_ping = now;
-			std::lock_guard<std::mutex> lk(sse_mtx);
 			for (auto &s : sse)
 				s.Ping();
-			cleanupSSE_locked();
+			cleanupSSE();
 		}
 	}
 
-	void HTTPServer::Request(IO::TCPServerConnection &c, const std::string &, bool)
+	void HTTPServer::NotFound(IO::TCPServerConnection &c)
 	{
 		c.close_after_send = true;
 		Response(c, "text/html", std::string("Page not found."), false, false, false, 404);
@@ -146,23 +164,20 @@ namespace IO
 		c.msg.clear();
 	}
 
-	void HTTPServer::Request(IO::TCPServerConnection &c, const HTTPRequest &r, bool accept_gzip)
+	void HTTPServer::Request(IO::TCPServerConnection &c, const HTTPRequest &, bool)
 	{
-		std::string msg = r.target;
-		if (r.method == "POST" && !r.body.empty())
-			msg += "?" + r.body;
-
-		Request(c, msg, accept_gzip);
+		NotFound(c);
 	}
 
 	int HTTPServer::parseHeaders(const std::string &msg, std::size_t header_end, HTTPRequest &r, std::string &error)
 	{
 		r = HTTPRequest();
 
-		std::string version, connection;
+		std::string version, connection, expect;
 		std::size_t line_start = 0;
 		bool first_line = true;
 		bool seen_content_length = false;
+		bool seen_host = false;
 
 		while (line_start < header_end)
 		{
@@ -180,26 +195,55 @@ namespace IO
 				std::size_t sp1 = line.find(' ');
 				std::size_t sp2 = sp1 == std::string::npos ? std::string::npos : line.find(' ', sp1 + 1);
 
-				r.method = line.substr(0, sp1);
-				Util::Convert::toUpper(r.method);
-				if (sp1 != std::string::npos)
-					r.target = line.substr(sp1 + 1, sp2 == std::string::npos ? std::string::npos : sp2 - sp1 - 1);
-				if (sp2 != std::string::npos)
+				// exactly three tokens: a space anywhere else is ambiguous framing, not a target we should guess at
+				if (sp1 == std::string::npos || sp1 == 0 || sp2 == std::string::npos ||
+					sp2 == sp1 + 1 || sp2 + 1 == line.size() || line.find(' ', sp2 + 1) != std::string::npos)
 				{
-					version = line.substr(sp2 + 1);
-					Util::Convert::toUpper(version);
+					error = "malformed request line";
+					return 400;
+				}
+
+				r.method = line.substr(0, sp1);
+				r.target = line.substr(sp1 + 1, sp2 - sp1 - 1);
+				version = line.substr(sp2 + 1);
+				Util::Convert::toUpper(r.method);
+				Util::Convert::toUpper(version);
+
+				if (version.size() != 8 || version.compare(0, 7, "HTTP/1.") != 0 || version[7] < '0' || version[7] > '9')
+				{
+					error = "unsupported HTTP version: " + version;
+					return 505;
 				}
 				continue;
 			}
 
+			// obs-fold: a continuation line can hide framing headers from this parser
+			if (line.empty() || line[0] == ' ' || line[0] == '\t')
+			{
+				error = "malformed header field";
+				return 400;
+			}
+
 			std::size_t colon = line.find(':');
-			if (colon == std::string::npos)
-				continue;
+			if (colon == std::string::npos || colon == 0)
+			{
+				error = "malformed header field";
+				return 400;
+			}
 
 			std::string key = line.substr(0, colon);
+			// whitespace before the colon is the classic request-smuggling desync
+			if (key.back() == ' ' || key.back() == '\t')
+			{
+				error = "whitespace before header colon";
+				return 400;
+			}
+
 			std::string value = line.substr(colon + 1);
 			Util::Convert::toUpper(key);
 			value.erase(0, value.find_first_not_of(" \t"));
+			std::size_t value_end = value.find_last_not_of(" \t");
+			value.erase(value_end == std::string::npos ? 0 : value_end + 1);
 
 			if (key == "ACCEPT-ENCODING")
 			{
@@ -211,6 +255,12 @@ namespace IO
 			}
 			else if (key == "HOST")
 			{
+				if (seen_host)
+				{
+					error = "duplicate Host header";
+					return 400;
+				}
+				seen_host = true;
 				r.host = value;
 			}
 			else if (key == "ORIGIN")
@@ -225,6 +275,11 @@ namespace IO
 			{
 				connection = value;
 				Util::Convert::toLower(connection);
+			}
+			else if (key == "EXPECT")
+			{
+				expect = value;
+				Util::Convert::toLower(expect);
 			}
 			else if (key == "TRANSFER-ENCODING")
 			{
@@ -263,6 +318,21 @@ namespace IO
 				}
 			}
 		}
+
+		if (first_line)
+		{
+			error = "missing request line";
+			return 400;
+		}
+
+		// Host is mandatory from HTTP/1.1 on, and 1.0 predates it
+		if (version != "HTTP/1.0" && !seen_host)
+		{
+			error = "missing Host header";
+			return 400;
+		}
+
+		r.expect_continue = expect.find("100-continue") != std::string::npos;
 
 		// HTTP/1.0 is close-by-default, HTTP/1.1 keep-alive-by-default
 		if (version == "HTTP/1.0")

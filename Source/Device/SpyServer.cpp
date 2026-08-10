@@ -101,7 +101,6 @@ namespace Device
 		Device::Play();
 
 		fifo.Init(16 * 16384, 8);
-		lost = false;
 
 		applySettings();
 

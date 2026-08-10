@@ -1458,6 +1458,40 @@ a:focus {
     margin-top: -2px;
 }
 
+.overlay-dim {
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px;
+    margin-left: 2px;
+}
+
+.overlay-dim .slider {
+    width: 100%;
+    margin: 0;
+}
+
+.overlay-dim-value {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-normal);
+    color: var(--color-text-muted);
+    min-width: 32px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.overlay-row.overlay-off .overlay-dim {
+    opacity: 0.45;
+}
+
+#overlayContainer {
+    display: block;
+    max-height: 42vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
 #overlayContainer label {
     cursor: pointer;
     line-height: 1.5;

@@ -183,12 +183,16 @@ namespace Device
 
 	bool AIRSPY::isStreaming()
 	{
-		if (Device::isStreaming() && airspy_is_streaming(dev) != 1)
+		if (!Device::isStreaming())
+			return false;
+
+		if (airspy_is_streaming(dev) != 1)
 		{
 			lost = true;
+			return false;
 		}
 
-		return Device::isStreaming() && airspy_is_streaming(dev) == 1;
+		return true;
 	}
 
 	// taken from acarsdec and pioneered by T. Leconte: https://github.com/TLeconte/acarsdec

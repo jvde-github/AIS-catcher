@@ -408,12 +408,11 @@ namespace Device
 
 		Device::Play();
 
-		lost = false;
 		read_thread = std::thread(&SerialPort::ReadAsync, this);
 	}
 	void SerialPort::Stop()
 	{
-		lost = true;
+		Device::Stop();
 		if (read_thread.joinable())
 		{
 			read_thread.join();
