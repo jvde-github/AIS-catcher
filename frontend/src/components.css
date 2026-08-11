@@ -1165,6 +1165,14 @@ select.realtime-filter-input,
     z-index: var(--z-dialog);
 }
 
+.modal-overlay.scrim-strong {
+    background-color: color-mix(in srgb, var(--color-scrim), #000 30%);
+}
+
+.dialog-hide-title .dialog-header {
+    display: none;
+}
+
 .modal-card {
     width: 100%;
     max-width: 40rem;

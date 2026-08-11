@@ -1312,6 +1312,30 @@ a:focus {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
+#stat_devices .device-row {
+    cursor: pointer;
+}
+
+#stat_devices .device-value {
+    position: relative;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 34px;
+}
+
+#stat_devices .device-value .info_icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: var(--color-text-muted);
+}
+
+#stat_devices .device-row:hover .info_icon {
+    background-color: var(--color-text);
+}
+
 .stat-panel section div span:first-child {
     text-align: right;
     color: var(--color-text-muted);

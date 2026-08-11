@@ -1250,7 +1250,7 @@ function objectToTableHtml(obj, copyContext) {
     return tableHtml + "</table>";
 }
 
-async function showJSONTableDialog(url, m, title, copyContext) {
+async function showJSONTableDialog(url, m, copyContext) {
     const s = await fetchJSON(url, m);
     if (s == null) return;
 
@@ -1263,12 +1263,12 @@ async function showJSONTableDialog(url, m, title, copyContext) {
     }
     // api/message decodes the stored NMEA on request and returns an array
     if (Array.isArray(obj)) obj = obj[0] || {};
-    showDialog(title, objectToTableHtml(obj, copyContext));
+    showDialogPlain(objectToTableHtml(obj, copyContext));
 }
 
 async function showNMEA(m) {
     if (config.features.save_messages) {
-        await showJSONTableDialog("api/message", m + "&receiver=" + activeReceiver, "Message " + m, true);
+        await showJSONTableDialog("api/message", m + "&receiver=" + activeReceiver, true);
     } else if (config.features.managed) {
         showDialog("Error", 'Enable the "Msgs" setting in the viewer configuration of the control panel.');
     } else {
@@ -1277,7 +1277,7 @@ async function showNMEA(m) {
 }
 
 async function showVesselDetail(m) {
-    await showJSONTableDialog("api/vessel", m + "&receiver=" + activeReceiver, "Vessel " + m, false);
+    await showJSONTableDialog("api/vessel", m + "&receiver=" + activeReceiver, false);
 }
 
 function showBinaryMessageDialog(featureOrMmsi) {
@@ -1535,16 +1535,23 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
 
 let dialogModal = null;
 
-function showDialog(title, message) {
-    if (!dialogModal)
+function showDialog(title, message, hideTitle) {
+    if (!dialogModal) {
         dialogModal = window.AISComponents.modal({
             id: "dialog-box", cardClass: "modal-fit", bodyClass: "dialog-message",
             // some callers widen the card for their content; every close path resets it
             onClose: () => { dialogModal.card.style.maxWidth = ""; },
         });
-    dialogModal.setTitle(title);
+        dialogModal.root.classList.add("scrim-strong");
+    }
+    dialogModal.card.classList.toggle("dialog-hide-title", !!hideTitle);
+    dialogModal.setTitle(title || "");
     dialogModal.body.innerHTML = message;
     dialogModal.open();
+}
+
+function showDialogPlain(message) {
+    showDialog("", message, true);
 }
 
 function closeDialog() {
@@ -2923,15 +2930,43 @@ function updateStat(stat, tf) {
     document.getElementById("stat_" + tf + "_msgother").innerText = count_other.toLocaleString();
 }
 
+function renderDevices(stat) {
+    const el = document.getElementById("stat_devices");
+    if (!el) return;
+    const prod = stat.product || [], vend = stat.vendor || [], ser = stat.serial || [], mod = stat.model || [], rate = stat.sample_rate || [];
+    const n = Math.max(prod.length, vend.length, ser.length, mod.length, rate.length);
+    el.replaceChildren();
+    for (let i = 0; i < n; i++) {
+        let name = prod[i] || mod[i] || "Device " + (i + 1);
+        if (ser[i] && ser[i] !== "-") name += " (" + ser[i] + ")";
+
+        const label = document.createElement("span");
+        label.textContent = i === 0 ? "Device" : "";
+        const icon = document.createElement("i");
+        icon.className = "info_icon";
+        const value = document.createElement("span");
+        value.className = "device-value";
+        value.append(name, icon);
+        const row = document.createElement("div");
+        row.className = "device-row";
+        row.title = "Show device details";
+        row.append(label, value);
+        row.onclick = () => showDialogPlain(objectToTableHtml({ Device: prod[i], Vendor: vend[i], Serial: ser[i], Engine: mod[i], "Sample rate": rate[i] }));
+        el.appendChild(row);
+    }
+}
+
 async function updateStatistics() {
     const stat = await fetchStatistics();
 
     if (stat) {
         // in bulk....
         const statText = (v) => (Array.isArray(v) ? v.join(", ") : v != null ? v : "");
-        ["os", "tcp_clients", "hardware", "build_describe", "build_date", "station", "product", "vendor", "serial", "model", "sample_rate"].forEach(
+        ["os", "tcp_clients", "hardware", "build_describe", "build_date", "station"].forEach(
             (e) => (document.getElementById("stat_" + e).textContent = statText(stat[e])),
         );
+
+        renderDevices(stat);
 
         if (stat.station_link != "") {
             const el = document.getElementById("stat_station");
