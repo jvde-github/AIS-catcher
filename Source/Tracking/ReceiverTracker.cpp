@@ -138,15 +138,14 @@ std::string ReceiverTracker::toHistoryJSON()
 
 void ReceiverTracker::writeSummary(std::ostream &out)
 {
-	auto tidy = [](std::string s) -> std::string {
-		size_t pos;
-		while ((pos = s.find("<br>")) != std::string::npos)  s.replace(pos, 4, ", ");
-		while ((pos = s.find("<br/>")) != std::string::npos) s.replace(pos, 5, ", ");
-		while (!s.empty() && (s.back() == ' ' || s.back() == ',' ||
-		                       s.back() == '\n' || s.back() == '\r'))
-			s.pop_back();
-		while (!s.empty() && (s.front() == ' ' || s.front() == ','))
-			s.erase(s.begin());
+	auto tidy = [](const std::vector<std::string> &v) -> std::string {
+		std::string s;
+		for (const std::string &e : v)
+		{
+			if (!s.empty())
+				s += ", ";
+			s += e;
+		}
 		return s;
 	};
 
@@ -201,18 +200,23 @@ std::string deviceLabel(Device::Device *device)
 
 void ReceiverTracker::setDevice(Device::Device *device)
 {
-	product = device->getProduct();
-	vendor = orDash(device->getVendor());
-	serial = orDash(device->getSerial());
-	sample_rate = device->getRateDescription();
+	product = {device->getProduct()};
+	vendor = {orDash(device->getVendor())};
+	serial = {orDash(device->getSerial())};
+	sample_rate = {device->getRateDescription()};
 
 	label = deviceLabel(device);
 }
 
-void ReceiverTracker::appendDevice(Device::Device *device, const std::string &newline)
+void ReceiverTracker::appendDevice(Device::Device *device)
 {
-	product += device->getProduct() + newline;
-	vendor += orDash(device->getVendor()) + newline;
-	serial += orDash(device->getSerial()) + newline;
-	sample_rate += device->getRateDescription() + newline;
+	product.push_back(device->getProduct());
+	vendor.push_back(orDash(device->getVendor()));
+	serial.push_back(orDash(device->getSerial()));
+	sample_rate.push_back(device->getRateDescription());
+}
+
+void ReceiverTracker::appendModel(const std::string &name)
+{
+	model_name.push_back(name);
 }

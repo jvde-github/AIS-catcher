@@ -307,7 +307,7 @@ namespace
 }
 
 // The aggregate tracker takes every output, whichever receiver it came from.
-void WebViewer::wireAggregate(const std::vector<std::unique_ptr<Receiver>> &receivers, const std::string &newline)
+void WebViewer::wireAggregate(const std::vector<std::unique_ptr<Receiver>> &receivers)
 {
 	// the receiver whose device is already in the description, so a receiver
 	// running several models only contributes it once
@@ -319,11 +319,11 @@ void WebViewer::wireAggregate(const std::vector<std::unique_ptr<Receiver>> &rece
 
 		if (described != k)
 		{
-			states[0]->appendDevice(device, newline);
+			states[0]->appendDevice(device);
 			described = k;
 		}
 
-		states[0]->model_name += r.Model(j)->getName() + newline;
+		states[0]->appendModel(r.Model(j)->getName());
 		states[0]->connectJSON(r.OutputJSON(j));
 		states[0]->connectGPS(r.OutputGPS(j));
 		r.OutputADSB(j).Connect((StreamIn<Plane::ADSB> *)&planes);
@@ -349,8 +349,7 @@ void WebViewer::resolveZoneMask(const std::vector<std::unique_ptr<Receiver>> &re
 // same input last run when there is one. Walks the outputs twice: a name is only
 // final once every other name is known, since duplicates get numbered.
 void WebViewer::attachTrackers(const std::vector<std::unique_ptr<Receiver>> &receivers,
-							   std::vector<std::unique_ptr<ReceiverTracker>> &previous,
-							   const std::string &newline)
+							   std::vector<std::unique_ptr<ReceiverTracker>> &previous)
 {
 	// Labels are numbered when two outputs would show the same one, which no
 	// single output can tell on its own — hence the look ahead. Keys need no
@@ -381,7 +380,7 @@ void WebViewer::attachTrackers(const std::vector<std::unique_ptr<Receiver>> &rec
 		tracker->setDevice(r.getDeviceManager().getDevice());
 		tracker->label = n.label;
 		tracker->key = n.key;
-		tracker->model_name = r.Model(j)->getName() + newline;
+		tracker->model_name = {r.Model(j)->getName()};
 
 		tracker->connectJSON(r.OutputJSON(j));
 		tracker->connectGPS(r.OutputGPS(j));
@@ -404,8 +403,6 @@ void WebViewer::attachEngine(const std::vector<std::unique_ptr<Receiver>> &recei
 {
 	std::lock_guard<std::recursive_mutex> lock(state_mtx);
 
-	const std::string newline = "<br>";
-
 	resolveZoneMask(receivers);
 
 	int connectable = 0;
@@ -419,10 +416,10 @@ void WebViewer::attachEngine(const std::vector<std::unique_ptr<Receiver>> &recei
 	// still here, and the rest are dropped when this vector goes out of scope
 	std::vector<std::unique_ptr<ReceiverTracker>> previous = beginAttach();
 
-	wireAggregate(receivers, newline);
+	wireAggregate(receivers);
 
 	if (multi)
-		attachTrackers(receivers, previous, newline);
+		attachTrackers(receivers, previous);
 
 	Debug() << "Mutex: WebViewer sinks self-lock (DB/PlaneDB), raw_counter atomic (" << receivers.size() << " receivers)";
 
@@ -475,11 +472,11 @@ void WebViewer::detachEngine()
 void WebViewer::applyPendingDescription()
 {
 	if (!pending_product.empty())
-		states[0]->product = pending_product;
+		states[0]->product = {pending_product};
 	if (!pending_vendor.empty())
-		states[0]->vendor = pending_vendor;
+		states[0]->vendor = {pending_vendor};
 	if (!pending_serial.empty())
-		states[0]->serial = pending_serial;
+		states[0]->serial = {pending_serial};
 }
 
 void WebViewer::setDeviceDescription(const std::string &product, const std::string &vendor, const std::string &serial)
@@ -503,7 +500,7 @@ void WebViewer::attachEngine(AIS::Model &model, Connection<JSON::JSON> &json, De
 	beginAttach();
 
 	states[0]->setDevice(&device);
-	states[0]->model_name = model.getName();
+	states[0]->model_name = {model.getName()};
 
 	// Android supplies USB product/vendor/serial out-of-band via setDeviceDescription().
 	applyPendingDescription();

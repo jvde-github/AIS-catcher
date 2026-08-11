@@ -653,6 +653,13 @@ namespace JSON
 			need_sep = true;
 			return *this;
 		}
+		Writer &kv(KeyRef k, const std::vector<std::string> &v)
+		{
+			key(k).beginArray();
+			for (const std::string &e : v)
+				val(e);
+			return endArray();
+		}
 		template <typename B, typename = typename std::enable_if<std::is_same<B, bool>::value>::type>
 		Writer &kv(KeyRef k, B v)
 		{

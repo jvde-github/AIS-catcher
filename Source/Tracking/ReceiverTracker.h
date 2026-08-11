@@ -72,13 +72,14 @@ public:
 	// Device::getIdentity() plus the model, so attachEngine() can hand a tracker back to
 	// the same input after a restart. Never shown: label is what the user sees.
 	std::string key;
-	std::string product, vendor, serial, model_name, sample_rate;
+	std::vector<std::string> product, vendor, serial, model_name, sample_rate;
 
 	ReceiverTracker(const std::string &label = "") : label(label) {}
 
 	// Device metadata
 	void setDevice(Device::Device *device);
-	void appendDevice(Device::Device *device, const std::string &newline);
+	void appendDevice(Device::Device *device);
+	void appendModel(const std::string &name);
 
 	// Config
 	void applyConfig(const TrackingConfig &cfg, const AIS::Filter &f);

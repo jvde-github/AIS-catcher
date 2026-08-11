@@ -200,8 +200,8 @@ private:
 	// beginAttach() hands back the previous run's trackers, ignore them to
 	// start over.
 	void resolveZoneMask(const std::vector<std::unique_ptr<Receiver>> &receivers);
-	void wireAggregate(const std::vector<std::unique_ptr<Receiver>> &receivers, const std::string &newline);
-	void attachTrackers(const std::vector<std::unique_ptr<Receiver>> &receivers, std::vector<std::unique_ptr<ReceiverTracker>> &previous, const std::string &newline);
+	void wireAggregate(const std::vector<std::unique_ptr<Receiver>> &receivers);
+	void attachTrackers(const std::vector<std::unique_ptr<Receiver>> &receivers, std::vector<std::unique_ptr<ReceiverTracker>> &previous);
 	std::vector<std::unique_ptr<ReceiverTracker>> beginAttach();
 	void endAttach();
 

@@ -2928,8 +2928,9 @@ async function updateStatistics() {
 
     if (stat) {
         // in bulk....
+        const statText = (v) => (Array.isArray(v) ? v.join(", ") : v != null ? v : "");
         ["os", "tcp_clients", "hardware", "build_describe", "build_date", "station", "product", "vendor", "serial", "model", "sample_rate"].forEach(
-            (e) => (document.getElementById("stat_" + e).textContent = stat[e] != null ? stat[e] : ""),
+            (e) => (document.getElementById("stat_" + e).textContent = statText(stat[e])),
         );
 
         if (stat.station_link != "") {
