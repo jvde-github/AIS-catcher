@@ -2955,6 +2955,16 @@ async function updateStatistics() {
             updateTitle();
         }
         document.getElementById("stat_memory").innerText = stat.memory ? Number(stat.memory / 1000000).toFixed(1) + " MB" : "N/A";
+        if (stat.track_time != null) {
+            const t = stat.track_time;
+            let age = "unlimited";
+            if (t > 0) {
+                const d = Math.floor(t / 86400), h = Math.floor((t % 86400) / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+                age = [d && d + "d", h && h + "h", m && m + "m", s && s + "s"].filter(Boolean).join(" ");
+            }
+            const mem = stat.track_memory >= 1024 ? Number(stat.track_memory / 1024).toFixed(0) + " MB" : stat.track_memory + " KB";
+            document.getElementById("stat_track").innerText = age + " / " + mem;
+        }
         document.getElementById("stat_received").innerText = formatBytes(stat.received);
         document.getElementById("stat_msg_rate").innerText = Number(stat.msg_rate).toFixed(1) + " msg/s";
         document.getElementById("stat_msg_min_rate").innerText = Number(stat.last_minute.count).toFixed(0) + " msg/min";

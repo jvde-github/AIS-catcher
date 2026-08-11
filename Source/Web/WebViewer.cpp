@@ -652,7 +652,21 @@ void WebViewer::startServing()
 		else
 			throw std::runtime_error("HTML server ports not specified");
 
-		Info() << "HTML Server running at port " << std::to_string(bound_port);
+		const auto &tc = settings.tracking;
+		const int mem_kb = tc.track_memory > 0 ? tc.track_memory : (tc.server_mode ? 4096 : 1024);
+
+		auto on = [](bool b) { return b ? "on" : "off"; };
+		Info() << "Webviewer: port " << bound_port
+			   << ", track_time: " << tc.track_time << "s, track_memory: " << mem_kb << " KB"
+			   << (tc.cutoff > 0 ? ", cutoff: " + std::to_string(tc.cutoff) : std::string())
+			   << (tc.server_mode ? ", server_mode: on" : "")
+			   << ", realtime: " << on(settings.realtime)
+			   << ", log: " << on(settings.showlog)
+			   << ", replay: " << on(settings.replay)
+			   << ", share_loc: " << on(tc.latlon_share)
+			   << (settings.showdecoder ? ", decoder: on" : "")
+			   << (settings.KML ? ", kml: on" : "")
+			   << (settings.GeoJSON ? ", geojson: on" : "");
 
 		time_start = time(nullptr);
 	}
@@ -751,6 +765,8 @@ std::string WebViewer::buildStatJSON(ReceiverTracker *s)
 	w.kv("build_describe", VERSION_DESCRIBE);
 	w.kv("run_time", std::to_string((long int)time(nullptr) - (long int)time_start));
 	w.kv("memory", (unsigned long long)Util::Helper::getMemoryConsumption());
+	w.kv("track_time", settings.tracking.track_time);
+	w.kv("track_memory", settings.tracking.track_memory > 0 ? settings.tracking.track_memory : (settings.tracking.server_mode ? 4096 : 1024));
 	w.kv_raw("os", os);
 	w.kv_raw("hardware", hardware);
 
