@@ -58,6 +58,9 @@ namespace IO
 				return;
 			out.erase(out.begin(), out.begin() + out_pos);
 			out_pos = 0;
+
+			if (out.capacity() > BUFFER_RETAIN_LIMIT && out.size() < out.capacity() / 2)
+				std::vector<char>(out).swap(out);
 		}
 		template <typename T> static void shrink(T &buf)
 		{
@@ -107,7 +110,6 @@ namespace IO
 		bool hasSendBuffer() const { return out_pos < out.size(); }
 		void SendBuffer();
 		bool Send(const char *buffer, int length);
-		bool SendDirect(const char *buffer, int length);
 		void Read();
 		void setVerbosity(bool v) { verbose = v; }
 	};

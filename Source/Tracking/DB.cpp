@@ -285,8 +285,7 @@ std::string DB::getReplayInfoJSON(std::time_t block)
 // ago is what a replay of that period wants.
 std::string DB::getReplayShipsJSON(std::time_t since, std::time_t lookback)
 {
-	since = MAX(since, pathFloor(time(nullptr)));
-	return getReplayObjectJSON(since, lookback, [](JSON::Writer &w, int, const Ship &ship) {
+	return getReplayObjectJSON(since, lookback, 0, [](JSON::Writer &w, int, const Ship &ship, std::time_t) {
 		int length = ship.to_bow != DIMENSION_UNDEFINED && ship.to_stern != DIMENSION_UNDEFINED ? ship.to_bow + ship.to_stern : 0;
 
 		w.key(ship.mmsi).beginObject()
@@ -301,13 +300,9 @@ std::string DB::getReplayShipsJSON(std::time_t since, std::time_t lookback)
 
 std::string DB::getReplayJSON(std::time_t since, std::time_t until, std::time_t lookback)
 {
-	// a window that ends before the cutoff serves nothing
-	if (until < pathFloor(time(nullptr)))
-		return "{}\n\n";
-
-	return getReplayObjectJSON(since, lookback, [this, since, until](JSON::Writer &w, int ptr, const Ship &ship) {
+	return getReplayObjectJSON(since, lookback, until, [this, until](JSON::Writer &w, int ptr, const Ship &ship, std::time_t from) {
 		w.key(ship.mmsi);
-		writeSinglePathJSONCompact(ptr, w, since, until);
+		writeSinglePathJSONCompact(ptr, w, from, until);
 	});
 }
 
@@ -423,13 +418,21 @@ static void copyField(char (&dst)[N], const std::string &s)
 	dst[n] = '\0';
 }
 
+// A binary payload carries the position of whatever it describes - a buoy, a
+// sensor station, a tidal window - never the sender's, so 6/25/26 are excluded
+// alongside 8; 17 reports the DGNSS reference station.
+static bool carriesOwnPosition(int type)
+{
+	return type != 6 && type != 8 && type != 17 && type != 25 && type != 26;
+}
+
 void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship, bool allowApproximate, bool &positionUpdated, bool &staticUpdated)
 {
 	switch (p.Key())
 	{
 	case AIS::KEY_LAT:
 	case AIS::KEY_LON:
-		if (msg->type() != 8 && msg->type() != 17 && (msg->type() != 27 || allowApproximate || ship.getApproximate()))
+		if (carriesOwnPosition(msg->type()) && (msg->type() != 27 || allowApproximate || ship.getApproximate()))
 		{
 			(p.Key() == AIS::KEY_LAT ? ship.lat : ship.lon) = p.Get().getFloat();
 			positionUpdated = true;

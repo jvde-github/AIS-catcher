@@ -99,8 +99,8 @@ public:
 		uint64_t groups_in = 0xFFFFFFFFFFFFFFFF;
 		std::vector<std::string> zones;
 
-		int firstport = 0;
-		int lastport = 0;
+		// 0 with port_set asks the OS for an ephemeral port
+		int port = 0;
 		bool port_set = false;
 
 		bool use_zlib = true;
@@ -110,7 +110,6 @@ public:
 		bool KML = false;
 		bool GeoJSON = false;
 		bool supportPrometheus = false;
-		bool stats_on_close = false;
 		bool replay = true;
 
 		std::string station, station_link;
@@ -269,13 +268,13 @@ public:
 			return;
 
 		settings.port_set = true;
-		settings.firstport = settings.lastport = port;
+		settings.port = port;
 	}
 
 	void setEphemeralPort()
 	{
 		settings.port_set = true;
-		settings.firstport = settings.lastport = 0;
+		settings.port = 0;
 	}
 	// HTTP callbacks
 	void Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r, bool gzip) override;

@@ -18,7 +18,6 @@
 #pragma once
 #include <fstream>
 #include <memory>
-#include <ostream>
 #include <string>
 #include <vector>
 
@@ -72,14 +71,15 @@ public:
 	// Device::getIdentity() plus the model, so attachEngine() can hand a tracker back to
 	// the same input after a restart. Never shown: label is what the user sees.
 	std::string key;
-	std::vector<std::string> product, vendor, serial, model_name, sample_rate;
+	// Parallel, one entry per device; model_name lists that device's engines, newline-separated.
+	std::vector<std::string> product, vendor, serial, model_name, sample_rate, device_label;
 
 	ReceiverTracker(const std::string &label = "") : label(label) {}
 
 	// Device metadata
 	void setDevice(Device::Device *device);
 	void appendDevice(Device::Device *device);
-	void appendModel(const std::string &name);
+	void appendModel(const std::string &name, bool same_device = false);
 
 	// Config
 	void applyConfig(const TrackingConfig &cfg, const AIS::Filter &f);
@@ -110,8 +110,6 @@ public:
 	void writeHistoryJSON(JSON::Writer &w);
 	void writeCountersJSON(JSON::Writer &w);
 	std::string toHistoryJSON();
-
-	void writeSummary(std::ostream &out);
 
 	// Ship data queries
 	void tick(std::time_t now) { ships.tick(now); }

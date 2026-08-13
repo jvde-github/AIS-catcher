@@ -1803,8 +1803,7 @@ a:focus {
 /* --color-control is its own light/dark pair, so no .dark override is needed */
 .settings_main select,
 .settings_main section div>span[data-action],
-.settings_main button:not(.tab-scroll-btn),
-.settings_main .color-picker {
+.settings_main button:not(.tab-scroll-btn) {
     background-color: var(--color-control);
 }
 
@@ -1973,13 +1972,11 @@ a:focus {
 
 /* range-input track/thumb styling is shared with the hub in components.css */
 
+/* border/radius/shadow come from the shared field styling in components.css */
 .settings_main .color-picker {
     width: 110px;
     height: 32px;
     padding: 4px;
-    border: 1px solid var(--color-field-border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
     background: var(--color-surface-raised);
 }
 
@@ -2008,20 +2005,6 @@ a:focus {
 
 .tableside_window .settings_header .hdr-slot {
     padding: 0 20px 0 1rem;
-}
-
-.settings_header>.close_icon {
-    flex: 0 0 auto;
-    align-self: center;
-    margin: 0 16px 0 12px;
-    font-size: var(--fs-lg);
-    color: var(--color-icon);
-    cursor: pointer;
-    transition: opacity var(--dur-fast) ease;
-}
-
-.settings_header>.close_icon:hover {
-    opacity: 0.65;
 }
 
 .settings_header .search-box {
@@ -2581,7 +2564,11 @@ a:focus {
     cursor: pointer;
     display: flex;
     align-items: center;
+    justify-content: center;
     transition: opacity var(--dur-med) ease;
+    color: var(--color-alert);
+    width: 20px;
+    height: 20px;
 }
 
 .filter-chip button {
@@ -2598,13 +2585,6 @@ a:focus {
 
 .realtime-spacer {
     flex: 1;
-}
-
-.realtime-clear-btn {
-    justify-content: center;
-    color: var(--color-alert);
-    width: 20px;
-    height: 20px;
 }
 
 .realtime-clear-btn:hover {

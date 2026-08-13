@@ -75,7 +75,7 @@ static const uint32_t TYPE_FIELDS[MAX_MSG_TYPE + 1] = {
 	F_SIGNAL | F_LATLON | F_SPEED_COG | F_HEADING | F_STATUS | F_MANEUVER | F_RECV_STATIONS, // 3  position report
 	F_SIGNAL | F_LATLON | F_RECV_STATIONS,										// 4  base station report
 	F_SIGNAL | F_VOYAGE | F_STATIC,												// 5  static and voyage
-	F_SIGNAL | F_LATLON | F_OFF_POSITION | F_STATIC | F_VOYAGE,					// 6  addressed binary, buoy/AtoN monitor payloads
+	F_SIGNAL | F_OFF_POSITION | F_STATIC | F_VOYAGE,							// 6  addressed binary, buoy/AtoN monitor payloads
 	F_SIGNAL,																	// 7  binary acknowledge
 	F_SIGNAL | F_STATIC | F_VOYAGE | F_OFF_POSITION,							// 8  broadcast binary, inland static and AtoN monitor payloads
 	F_SIGNAL | F_LATLON | F_SPEED_COG | F_ALTITUDE,								// 9  SAR aircraft
@@ -94,8 +94,8 @@ static const uint32_t TYPE_FIELDS[MAX_MSG_TYPE + 1] = {
 	F_SIGNAL,																	// 22 channel management
 	F_SIGNAL,																	// 23 group assignment
 	F_SIGNAL | F_STATIC,														// 24 class B static
-	F_SIGNAL | F_LATLON | F_OFF_POSITION | F_STATIC | F_VOYAGE,					// 25 single slot binary, same payloads as 6/8
-	F_SIGNAL | F_LATLON | F_OFF_POSITION | F_STATIC | F_VOYAGE | F_RECV_STATIONS, // 26 multiple slot binary, same payloads as 6/8
+	F_SIGNAL | F_OFF_POSITION | F_STATIC | F_VOYAGE,							// 25 single slot binary, same payloads as 6/8
+	F_SIGNAL | F_OFF_POSITION | F_STATIC | F_VOYAGE | F_RECV_STATIONS,			// 26 multiple slot binary, same payloads as 6/8
 	F_SIGNAL | F_LATLON | F_SPEED_COG | F_STATUS,								// 27 long range
 	F_SIGNAL | F_LATLON | F_STATIC,												// 28 AtoN report
 };
@@ -660,6 +660,14 @@ bool Ship::Load(std::ifstream &file)
 		int discard[3];
 		ok = (bool)R(discard);
 	}
+
+	// the file holds raw bytes: everything downstream reads these as C strings
+	shipname[sizeof(shipname) - 1] = '\0';
+	destination[sizeof(destination) - 1] = '\0';
+	callsign[sizeof(callsign) - 1] = '\0';
+	country_code[sizeof(country_code) - 1] = '\0';
+	vin[sizeof(vin) - 1] = '\0';
+	vendorid[sizeof(vendorid) - 1] = '\0';
 
 	// msg vector is not persisted
 	msg.clear();

@@ -317,13 +317,14 @@ void WebViewer::wireAggregate(const std::vector<std::unique_ptr<Receiver>> &rece
 	{
 		Device::Device *device = r.getDeviceManager().getDevice();
 
-		if (described != k)
+		const bool first_of_device = described != k;
+		if (first_of_device)
 		{
 			states[0]->appendDevice(device);
 			described = k;
 		}
 
-		states[0]->appendModel(r.Model(j)->getName());
+		states[0]->appendModel(r.Model(j)->getName(), !first_of_device);
 		states[0]->connectJSON(r.OutputJSON(j));
 		states[0]->connectGPS(r.OutputGPS(j));
 		r.OutputADSB(j).Connect((StreamIn<Plane::ADSB> *)&planes);
@@ -440,6 +441,7 @@ std::vector<std::unique_ptr<ReceiverTracker>> WebViewer::beginAttach()
 	states[0]->serial.clear();
 	states[0]->sample_rate.clear();
 	states[0]->model_name.clear();
+	states[0]->device_label.clear();
 
 	return previous;
 }
@@ -630,27 +632,14 @@ void WebViewer::startServing()
 	// the HTTP server keeps running across a stop/start, so bind only once
 	if (!bound_port)
 	{
-		if (settings.firstport && settings.lastport)
-		{
-			int port;
-			for (port = settings.firstport; port <= settings.lastport; port++)
-				if (HTTPServer::start(port))
-					break;
-
-			if (port > settings.lastport)
-				throw std::runtime_error("Cannot open port in range [" + std::to_string(settings.firstport) + "," + std::to_string(settings.lastport) + "]");
-
-			bound_port = port;
-		}
-		else if (settings.port_set)
-		{
-			if (!HTTPServer::start(0))
-				throw std::runtime_error("Cannot open OS-assigned port");
-
-			bound_port = listening_port;
-		}
-		else
+		if (!settings.port_set)
 			throw std::runtime_error("HTML server ports not specified");
+
+		if (!HTTPServer::start(settings.port))
+			throw std::runtime_error(settings.port ? "Cannot open port " + std::to_string(settings.port)
+												   : std::string("Cannot open OS-assigned port"));
+
+		bound_port = listening_port;
 
 		const auto &tc = settings.tracking;
 
@@ -701,18 +690,6 @@ void WebViewer::shutdown()
 	{
 		Error() << "Statistics - cannot write file: " << backup.getFilename();
 	}
-
-	if (settings.stats_on_close)
-	{
-		std::ostringstream ss;
-		ss << "\n";
-		for (auto &s : states)
-		{
-			s->writeSummary(ss);
-			ss << "\n";
-		}
-		Info() << ss.str();
-	}
 }
 
 // --- Route handler functions ---
@@ -760,6 +737,7 @@ std::string WebViewer::buildStatJSON(ReceiverTracker *s)
 	w.kv("vendor", s->vendor);
 	w.kv("serial", s->serial);
 	w.kv("model", s->model_name);
+	w.kv("device_label", s->device_label);
 	w.kv("build_date", __DATE__);
 	w.kv("build_version", VERSION);
 	w.kv("build_describe", VERSION_DESCRIBE);
@@ -1103,6 +1081,8 @@ void WebViewer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &reque
 			NotFound(c);
 		}
 	}
+	else
+		NotFound(c);
 }
 
 void WebViewer::applyStationPosition()
@@ -1120,7 +1100,7 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 	{
 	case AIS::KEY_SETTING_PORT:
 		settings.port_set = true;
-		settings.firstport = settings.lastport = Util::Parse::Integer(arg, 1, 65535);
+		settings.port = Util::Parse::Integer(arg, 1, 65535);
 		break;
 	case AIS::KEY_SETTING_SERVER_MODE:
 		settings.tracking.server_mode = Util::Parse::Switch(arg);
@@ -1136,22 +1116,35 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 		Util::Parse::Split(arg, ',', settings.zones);
 		break;
 	case AIS::KEY_SETTING_PORT_MIN:
-		settings.port_set = true;
-		settings.firstport = Util::Parse::Integer(arg, 1, 65535);
-		settings.lastport = MAX(settings.firstport, settings.lastport);
-		break;
 	case AIS::KEY_SETTING_PORT_MAX:
-		settings.port_set = true;
-		settings.lastport = Util::Parse::Integer(arg, 1, 65535);
-		settings.firstport = MIN(settings.firstport, settings.lastport);
+	{
+		static bool warned = false;
+		if (!warned)
+		{
+			Warning() << "Webviewer: 'port_min'/'port_max' are deprecated, use 'port' instead";
+			warned = true;
+		}
+		if (!settings.port_set)
+		{
+			settings.port_set = true;
+			settings.port = Util::Parse::Integer(arg, 1, 65535);
+		}
 		break;
+	}
 	case AIS::KEY_SETTING_STATION:
 		settings.station = arg;
 		frontend.setStation(arg);
 		break;
 	case AIS::KEY_SETTING_STATS_ON_CLOSE:
-		settings.stats_on_close = Util::Parse::Switch(arg);
+	{
+		static bool warned = false;
+		if (!warned)
+		{
+			Warning() << "Webviewer: 'stats_on_close' is deprecated and ignored";
+			warned = true;
+		}
 		break;
+	}
 	case AIS::KEY_SETTING_STATION_LINK:
 		settings.station_link = arg;
 		break;

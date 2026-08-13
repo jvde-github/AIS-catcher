@@ -9,6 +9,8 @@ import * as kiosk from './features/kiosk.js';
 import * as measure from './features/measure.js';
 import * as boxselect from './features/boxselect.js';
 import * as replay from './features/replay.js';
+import * as binary from './features/binary.js';
+import * as range from './features/range.js';
 import {
     getDistanceVal, getDistanceUnit,
     getSpeedVal, getSpeedUnit,
@@ -20,7 +22,7 @@ import {
     getStatusVal, getMmsiTypeVal,
     getStringfromMsgType, getStringfromGroup, getStringfromChannels,
     getShipTypeShort, getShipTypeFull,
-    sanitizeString, formatBytes, isHttpUrl,
+    sanitizeString, formatBytes, isHttpUrl, formatTime,
 } from './core/format.js';
 
 // Named imports (instead of `import * as ...`) so Vite tree-shakes everything
@@ -142,8 +144,8 @@ const ACTIONS = {
     setMetrics: (e, d, el) => setMetrics(el.value),
     setTableIcon: (e, d, el) => setTableIcon(el.checked),
     setFading: (e, d, el) => setFading(el.checked),
-    setRangeSwitch: (e, d, el) => setRangeSwitch(el.checked),
-    setRangeTimePeriod: (e, d, el) => setRangeTimePeriod(el.value),
+    setRangeSwitch: (e, d, el) => range.setRangeSwitch(el.checked),
+    setRangeTimePeriod: (e, d, el) => range.setRangeTimePeriod(el.value),
     setKiosk: (e, d, el) => kiosk.setKiosk(el.checked),
     setKioskRotationSpeed: (e, d, el) => kiosk.setKioskRotationSpeed(el.value),
     setKioskPanMap: (e, d, el) => kiosk.setKioskPanMap(el.checked),
@@ -153,10 +155,10 @@ const ACTIONS = {
         el.type === 'checkbox' ? el.checked :
         (el.type === 'range' || el.type === 'number') ? Number(el.value) : el.value),
     setTrackHistory: (e, d, el) => setTrackHistory(TRACK_HISTORY_STOPS[el.value]),
-    setBinaryDisplay: (e, d, el) => setBinaryDisplay(el.value),
-    setBinaryCategory: (e, d, el) => setBinaryCategory(d.cat, el.checked),
-    setRangeColor: (e, d, el) => setRangeColor(el.value, d.field),
-    setMapSettingDistanceColor: (e, d, el) => { removeDistanceCircles(); setMapSetting('distance_circle_color', el.value); },
+    setBinaryDisplay: (e, d, el) => binary.setBinaryDisplay(el.value),
+    setBinaryCategory: (e, d, el) => binary.setBinaryCategory(d.cat, el.checked),
+    setRangeColor: (e, d, el) => range.setRangeColor(el.value, d.field),
+    setMapSettingDistanceColor: (e, d, el) => { range.removeDistanceCircles(); setMapSetting('distance_circle_color', el.value); },
     setShowTrackOnSelect: (e, d, el) => { settings.show_track_on_select = el.checked; saveSettings(); },
     setShowTrackOnHover: (e, d, el) => { settings.show_track_on_hover = el.checked; saveSettings(); },
     setTrackVisibility: (e, d, el) => setTrackVisibility(el.value),
@@ -185,7 +187,7 @@ const ACTIONS = {
     toggleLabel: () => toggleLabel(),
     toggleKioskMode: () => kiosk.toggleKioskMode(),
     toggleFading: () => toggleFading(),
-    toggleRange: () => toggleRange(),
+    toggleRange: () => range.toggleRange(),
     toggleTrackCtx: () => toggleTrack(context_mmsi),
     pinVesselCtx: () => pinVessel(context_mmsi),
     mapResetViewZoomCtx: () => mapResetViewZoom(13, context_mmsi),
@@ -231,7 +233,7 @@ const ACTIONS = {
     shipcardSelectSelf: (e, d, el) => shipcardselect(el),
     shipcardContextMenu: (e) => showContextMenu(e, card_mmsi, card_type, ['object', 'object-map', 'ctx-shipcard']),
     showShipcardClose: () => showShipcard(null, null),
-    showBinaryMessageDialogCard: () => showBinaryMessageDialog(card_mmsi),
+    showBinaryMessageDialogCard: () => binary.showBinaryMessageDialog(card_mmsi),
     openRealtimeForMMSICard: async () => {
         if (!realtimeModule) realtimeModule = await import('./tabs/realtime.js');
         realtimeModule.openForMMSI(card_mmsi);
@@ -372,18 +374,12 @@ let interval,
     shipsSince = 0,
     shipsTimeout = 1800,
     shipsLastCleanup = 0,
-    binaryDB = {},
-    binarySince = 0,
-    binaryTimeout = 1800,
-    binaryMaxPerShip = 50,
     planesDB = {},
     planesSince = 0,
     planesTimeout = 300,
     planesLastCleanup = 0,
     hover_feature = undefined,
     logViewer = null,
-    range_outline = undefined,
-    range_outline_short = undefined,
     tab_title_station = config.station,
     tab_title_count = null,
     context_mmsi = null,
@@ -400,7 +396,6 @@ let card_mmsi = null,
 // `let` so AISCatcher.setRefreshInterval can mutate.
 let refreshIntervalMs = 2500;
 let shipFilterOverride = null;
-let range_update_time = null;
 let updateInProgress = false;
 let activeTileLayer = undefined;
 let hover_enabled_track = false,
@@ -558,10 +553,11 @@ function applyDefaultSettings() {
     setFading(settings.fading);
 
     updateFocusMarker();
-    removeDistanceCircles();
+    range.removeDistanceCircles();
 
     settings.tab = t;
     settings.welcome = false;
+    saveSettings();
 
     redrawMap();
     updateSettingsTab();
@@ -881,23 +877,6 @@ async function copyCoordinates(m) {
 let hoverMMSI = undefined;
 let hoverType = undefined;
 
-const rangeStyleFunction = function (feature) {
-    let clr = undefined;
-
-    if (feature.short) {
-        clr = settings.dark_mode ? settings.range_color_dark_short : settings.range_color_short;
-    } else {
-        clr = settings.dark_mode ? settings.range_color_dark : settings.range_color;
-    }
-
-    return new ol.style.Style({
-        stroke: new ol.style.Stroke({
-            color: clr,
-            width: feature === hover_feature ? 4 : 2
-        })
-    });
-}
-
 const shapeStyleFunction = function (feature) {
 
     const [r, g, b] = hexToRgb(settings.shipoutline_inner);
@@ -1075,77 +1054,7 @@ const selectCircleStyleFunction = function (feature) {
     return styles;
 }
 
-const binaryAssociatedOutline = new ol.style.Style({
-    image: new ol.style.Circle({
-        radius: 12,
-        fill: new ol.style.Fill({ color: 'rgba(255, 255, 255, 0)' }),
-        stroke: new ol.style.Stroke({ color: 'white', width: 2 })
-    }),
-    zIndex: 200
-});
-const binaryStyleCache = new Map();
-const binaryStyle = function (feature) {
-    const count = feature.get('binary_count') || feature.binary_count || 1;
-    const isAssociated = feature.get('is_associated') || feature.is_associated;
-    const highlight = settings.binary_messages === 'highlight';
-    const key = (isAssociated ? 'a:' : 'n:') + (highlight ? 'h:' : 'b:') + count;
-
-    let cached = binaryStyleCache.get(key);
-    if (cached) return cached;
-
-    if (isAssociated) {
-        const badge = new ol.style.Style({
-            image: new ol.style.Circle({
-                radius: 8,
-                fill: new ol.style.Fill({ color: 'rgba(220, 0, 0, 0.9)' }),
-                stroke: new ol.style.Stroke({ color: 'white', width: 1 }),
-                displacement: [10, 10]
-            }),
-            text: new ol.style.Text({
-                text: count.toString(),
-                font: 'bold 9px Arial',
-                fill: new ol.style.Fill({ color: 'white' }),
-                offsetX: 10,
-                offsetY: -10,
-                textAlign: 'center',
-                textBaseline: 'middle'
-            }),
-            zIndex: 201
-        });
-        cached = highlight ? [binaryAssociatedOutline, badge] : [badge];
-    } else {
-        const circle = new ol.style.Style({
-            image: new ol.style.Circle({
-                radius: 10,
-                fill: new ol.style.Fill({ color: 'rgba(220, 0, 0, 0.9)' }),
-                stroke: new ol.style.Stroke({ color: 'white', width: 1.5 })
-            }),
-            text: new ol.style.Text({
-                text: count.toString(),
-                font: 'bold 9px Arial',
-                fill: new ol.style.Fill({ color: 'white' }),
-                textAlign: 'center',
-                textBaseline: 'middle'
-            }),
-            zIndex: 100
-        });
-        cached = [circle];
-    }
-    binaryStyleCache.set(key, cached);
-    return cached;
-};
-
-
 const markerVector = new ol.source.Vector({
-    features: []
-})
-
-const binaryVector = new ol.source.Vector({
-    features: []
-})
-
-
-const rangeVector = new ol.source.Vector({
     features: []
 })
 
@@ -1174,10 +1083,7 @@ const markerLayer = new ol.layer.Vector({
     style: markerStyle
 })
 
-const binaryLayer = new ol.layer.Vector({
-    source: binaryVector,
-    style: binaryStyle
-})
+const binaryLayer = binary.binaryLayer;
 
 const planeLayer = new ol.layer.Vector({
     source: planeVector,
@@ -1199,10 +1105,7 @@ const trackLayer = new ol.layer.Vector({
     style: trackStyleFunction
 });
 
-const rangeLayer = new ol.layer.Vector({
-    source: rangeVector,
-    style: rangeStyleFunction
-});
+const rangeLayer = range.rangeLayer;
 
 const labelLayer = new ol.layer.Vector({
     source: labelVector,
@@ -1278,93 +1181,6 @@ async function showNMEA(m) {
 
 async function showVesselDetail(m) {
     await showJSONTableDialog("api/vessel", m + "&receiver=" + activeReceiver, false);
-}
-
-function showBinaryMessageDialog(featureOrMmsi) {
-    let title, content;
-
-    if (typeof featureOrMmsi === 'object') {
-        if (!featureOrMmsi.binary_messages || featureOrMmsi.binary_messages.length === 0) {
-            showDialog("Binary Message", "No message content available");
-            return;
-        }
-
-        title = "Binary Messages";
-        content = getBinaryMessageList(featureOrMmsi.binary_messages);
-
-    } else if (typeof featureOrMmsi === 'number' || typeof featureOrMmsi === 'string') {
-        const mmsi = Number(featureOrMmsi);
-
-        if (shipBinaryMessages(mmsi).length === 0) {
-            showDialog("Binary Messages", "No binary messages available for this vessel");
-            return;
-        }
-
-        const shipName = shipsDB[mmsi]?.raw?.shipname || `MMSI ${mmsi}`;
-        title = `Binary Messages for ${shipName}`;
-        content = getBinaryMessageList(binaryDB[mmsi].ship_messages);
-    }
-
-    showDialog(title, content);
-    dialogModal.card.style.maxWidth = "500px";
-}
-
-function getBinaryMessageList(messages) {
-    if (!messages || messages.length === 0) {
-        return "<p>No messages available</p>";
-    }
-
-    const sortedMessages = [...messages].sort((a, b) => b.timestamp - a.timestamp);
-
-    let content = '<div class="binary-messages-list">';
-
-    content += `<div class="binary-message-count">${sortedMessages.length} message${sortedMessages.length > 1 ? 's' : ''} available</div>`;
-
-    sortedMessages.forEach((msg, index) => {
-        if (index > 0) {
-            content += '<hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">';
-        }
-
-        content += '<div class="binary-message-item">';
-
-        content += `<div class="binary-message-header">
-                      <span class="binary-message-time">${msg.formattedTime || new Date(msg.timestamp * 1000).toLocaleTimeString()}</span>`;
-
-        if (msg.message && msg.message.mmsi) {
-            const shipName = msg.message.mmsi in shipsDB ?
-                (shipsDB[msg.message.mmsi].raw.shipname || `MMSI ${msg.message.mmsi}`) :
-                `MMSI ${msg.message.mmsi}`;
-
-            content += `<span class="binary-message-source"> from ${shipName}</span>`;
-        }
-
-        content += '</div>';
-
-        if (isMeteoMessage(msg)) {
-            content += getBinaryMessageContent(msg, true);
-        } else if (isInlandMessage(msg)) {
-            content += getInlandMessageContent(msg);
-        } else if (isTextMessage(msg)) {
-            content += getTextMessageContent(msg);
-        } else {
-            content += '<div class="binary-message-details">';
-            content += `<div><strong>Message Type:</strong> ${msg.message ? `DAC ${msg.message.dac}, FI ${msg.message.fid || msg.message.fi}` : 'Unknown'}</div>`;
-
-            // Add a collapsible section for raw data
-            content += `<details class="binary-raw-data">
-                          <summary>Show Raw Data</summary>
-                          <pre>${sanitizeString(JSON.stringify(msg.message, null, 2))}</pre>
-                        </details>`;
-
-            content += '</div>';
-        }
-
-        content += '</div>';
-    });
-
-    content += '</div>';
-
-    return content;
 }
 
 async function copyText(m) {
@@ -1658,14 +1474,14 @@ function setMapOpacity() {
 
 let clickTimeout = undefined;
 const handleClick = function (pixel, target, event) {
+    const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
+        function (feature) { if ('ship' in feature || 'plane' in feature || 'link' in feature || 'binary' in feature) { return feature; } }, { hitTolerance: 10 });
+
     if (clickTimeout) {
         clearTimeout(clickTimeout);
         clickTimeout = null;
-        return;
+        if (!feature) return;
     }
-
-    const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
-        function (feature) { if ('ship' in feature || 'plane' in feature || 'link' in feature || 'binary' in feature) { return feature; } }, { hitTolerance: 10 });
 
     let included = feature && 'ship' in feature && feature.ship.mmsi in shipsDB;
 
@@ -1679,7 +1495,7 @@ const handleClick = function (pixel, target, event) {
     } else if (feature && feature.binary === true && !feature.is_associated) {
         closeDialog();
         closeSettings();
-        showBinaryMessageDialog(feature);
+        binary.showBinaryMessageDialog(feature);
         return;
     } else if (feature && 'ship' in feature) {
         closeDialog();
@@ -2068,39 +1884,6 @@ function hideTablecard() {
     }
 }
 
-function setRangeSwitch(b) {
-    if (b != settings.show_range) {
-        toggleRange();
-    }
-}
-
-function setRangeColor(v, f) {
-    settings[f] = v;
-    redrawMap();
-}
-
-function setRangeTimePeriod(v) {
-    settings.range_timeframe = v;
-    saveSettings();
-    fetchRange(true).then(() => drawRange());
-}
-
-function stationHasLocation() {
-    return station && Object.hasOwn(station, "lat") && Object.hasOwn(station, "lon") && !(station.lat == 0 && station.lon == 0);
-}
-
-async function toggleRange() {
-    if (!config.features.share_location || !stationHasLocation()) {
-        showDialog("Error", "Unable to show range as station location not available");
-        settings.show_range = false;
-    } else settings.show_range = !settings.show_range;
-
-    saveSettings();
-
-    await fetchRange();
-    drawRange();
-}
-
 function setFading(b) {
     if (b != settings.fading) {
         toggleFading();
@@ -2168,256 +1951,6 @@ function showServerErrors() {
     if (errs.length > 0) sections.push(errs.join('\n'));
 
     showDialog("Server Errors", sections.length === 0 ? "None" : ("<pre>" + sections.join('\n\n') + "</pre>"));
-}
-
-async function fetchRange(forcefetch = false) {
-    if (!stationHasLocation() || !settings.show_range) {
-        settings.show_range = false;
-        range_update_time = undefined;
-        return;
-    }
-
-    const now = new Date();
-
-    if (!forcefetch && range_update_time && Math.floor((now - range_update_time) / 1000 / 60) < 15) return;
-
-    range_update_time = now;
-
-    let response, h;
-    try {
-        response = await fetch("api/history_full.json?receiver=" + activeReceiver);
-        h = await response.json();
-    } catch (error) {
-        settings.show_range = false;
-
-        return;
-    }
-
-
-
-    range_outline = [];
-    range_outline_short = [];
-
-    const N = h.day.stat[0].radar_a.length;
-
-    const range = [];
-    const range_short = [];
-
-    for (let i = 0; i < N; i++) {
-        let m = 0;
-        for (let j = 0; j < h.minute.stat.length; j++) {
-            m = Math.max(m, h.minute.stat[j].radar_a[i]);
-            m = Math.max(m, h.minute.stat[j].radar_b[i]);
-        }
-
-        range_short.push(m);
-
-        for (let j = 0; j < h.hour.stat.length; j++) {
-            m = Math.max(m, h.hour.stat[j].radar_a[i]);
-            m = Math.max(m, h.hour.stat[j].radar_b[i]);
-        }
-
-        const additionalDays = settings.range_timeframe == "7d" ? 7 : settings.range_timeframe == "30d" ? 30 : 0;
-
-        for (let j = 0; j < Math.min(additionalDays, h.day.stat.length); j++) {
-            m = Math.max(m, h.day.stat[j].radar_a[i]);
-            m = Math.max(m, h.day.stat[j].radar_b[i]);
-        }
-
-        range.push(m);
-    }
-
-    const deltaNorth = calcOffset1M([station.lon, station.lat], 0)[0];
-    const deltaEast = calcOffset1M([station.lon, station.lat], 90)[1];
-
-    const radialPoint = (r, k) => [
-        station.lon + ((r * deltaEast * 1000) / 0.5399568) * Math.sin(((k * 2) / N) * Math.PI),
-        station.lat + ((r * deltaNorth * 1000) / 0.5399568) * Math.cos(((k * 2) / N) * Math.PI),
-    ];
-
-    for (let i = 0; i < N; i++) {
-        range_outline.push(radialPoint(range[i], i), radialPoint(range[i], i + 1));
-        range_outline_short.push(radialPoint(range_short[i], i), radialPoint(range_short[i], i + 1));
-    }
-
-    range_outline = range_outline.map(point => ol.proj.fromLonLat(point));
-    range_outline_short = range_outline_short.map(point => ol.proj.fromLonLat(point));
-}
-
-let rangeFeature = undefined;
-let rangeShortFeature = undefined;
-
-function drawRange() {
-    if (rangeFeature) {
-        rangeVector.removeFeature(rangeFeature);
-        rangeFeature = undefined;
-    }
-
-    if (rangeShortFeature) {
-        rangeVector.removeFeature(rangeShortFeature);
-        rangeShortFeature = undefined;
-    }
-
-    if (!settings.show_range) return;
-
-    if (range_outline) {
-        rangeFeature = new ol.Feature({
-            geometry: new ol.geom.Polygon([range_outline])
-        });
-
-        rangeFeature.short = false;
-        rangeFeature.rangering = true;
-        rangeFeature.tooltip = "Station Range " + settings.range_timeframe;
-        rangeVector.addFeature(rangeFeature);
-    }
-
-    if (range_outline_short) {
-        rangeShortFeature = new ol.Feature({
-            geometry: new ol.geom.Polygon([range_outline_short])
-        });
-
-        rangeShortFeature.tooltip = "Station Range 1h";
-        rangeShortFeature.rangering = true;
-        rangeShortFeature.short = true;
-        rangeVector.addFeature(rangeShortFeature);
-    }
-}
-
-let distanceFeatures = undefined;
-let distanceLat = undefined;
-let distanceLon = undefined;
-let distanceMetric = undefined;
-
-function removeDistanceCircles() {
-    if (distanceFeatures) {
-        for (var i = 0; i < distanceFeatures.length; i++)
-            rangeVector.removeFeature(distanceFeatures[i]);
-    }
-    distanceFeatures = undefined;
-}
-
-
-function distanceCircleStyleFunction(feature) {
-    return new ol.style.Style({
-        stroke: new ol.style.Stroke({
-            color: settings.distance_circle_color,
-            width: feature === hover_feature ? 5 : 1
-        })
-    });
-}
-
-
-function updateDistanceCircles() {
-    const lat = station.lat;
-    const lon = station.lon;
-
-    if (!settings.distance_circles) {
-        removeDistanceCircles();
-        return;
-    }
-
-    if (!lat || !lon) return;
-
-    if (!distanceFeatures || distanceLat != lat || distanceLon != lon || distanceMetric != settings.metric) {
-
-        removeDistanceCircles();
-
-        distanceLat = lat;
-        distanceLon = lon;
-        distanceMetric = settings.metric;
-
-        distanceFeatures = [];
-
-        const conv = settings.metric === "DEFAULT" ? 1.852 : settings.metric === "SI" ? 1 : 1.609344;
-
-        const range = [5000, 10000, 25000, 50000, 100000];
-
-        for (var i = 0; i < range.length; i++) {
-
-            let distanceCircle = new ol.Feature({
-                geometry: createDistanceGeometry(lat, lon, range[i] * conv)
-            });
-
-            distanceCircle.tooltip = range[i] / 1000 + " " + getDistanceUnit().toUpperCase();
-            distanceCircle.distancecircle = true;
-            distanceCircle.setStyle(distanceCircleStyleFunction);
-            rangeVector.addFeature(distanceCircle);
-            distanceFeatures.push(distanceCircle);
-        }
-    }
-}
-
-function formatTime(timestamp) {
-    const date = new Date(timestamp * 1000);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
-
-async function fetchBinary() {
-    const isIncremental = binarySince > 0;
-
-    if (!isIncremental) binaryDB = {};
-
-    let response;
-    try {
-        response = await fetch("api/binmsgs.json?receiver=" + activeReceiver + (isIncremental ? "&since=" + binarySince : ""));
-        const data = await response.json();
-
-        const messages = data.messages || [];
-        const serverTime = data.time || 0;
-        if (data.timeout) binaryTimeout = data.timeout;
-
-        messages.forEach((msg) => {
-            const hasLocation = msg.message && msg.message.lat && msg.message.lon;
-            if (msg.message && msg.message.mmsi && binaryIncluded(msg)) {
-                const mmsi = msg.message.mmsi;
-
-                if (!binaryDB[mmsi]) {
-                    binaryDB[mmsi] = {
-                        ship_messages: [],
-                        standalone_messages: []
-                    };
-                }
-
-                const exists = binaryDB[mmsi].ship_messages.some(m =>
-                    m.timestamp === msg.timestamp && m.message?.dac === msg.message.dac &&
-                    (m.message?.fid ?? m.message?.fi) === (msg.message.fid ?? msg.message.fi));
-                if (exists) return;
-
-                msg.formattedTime = formatTime(msg.timestamp);
-                if (hasLocation) {
-                    msg.message_lat = msg.message.lat;
-                    msg.message_lon = msg.message.lon;
-                }
-
-                binaryDB[mmsi].ship_messages.push(msg);
-            }
-        });
-
-        if (serverTime > 0) {
-            binarySince = serverTime;
-            const cutoff = serverTime - binaryTimeout;
-            for (const mmsi in binaryDB) {
-                let msgs = binaryDB[mmsi].ship_messages.filter(m => m.timestamp > cutoff);
-                if (msgs.length > binaryMaxPerShip) {
-                    msgs.sort((a, b) => b.timestamp - a.timestamp);
-                    msgs.length = binaryMaxPerShip;
-                }
-                if (msgs.length === 0) delete binaryDB[mmsi];
-                else binaryDB[mmsi].ship_messages = msgs;
-            }
-        }
-
-        let idx = 0;
-        for (const mmsi in binaryDB) {
-            binaryDB[mmsi].ship_messages.forEach(m => { m.index = ++idx; });
-        }
-
-        return true;
-    } catch (error) {
-
-        console.log("Failed loading binary:", error);
-        return false;
-    }
 }
 
 async function fetchShips(noDoubleFetch = true) {
@@ -2759,28 +2292,6 @@ function setTrackHistory(minutes) {
     fetchTracks().then(redrawMap);
 }
 
-function setBinaryDisplay(v) {
-    settings.binary_messages = v;
-    binaryStyleCache.clear();
-    saveSettings();
-    redrawMap();
-}
-
-function setBinaryCategory(cat, shown) {
-    const excluded = settings.binary_exclude.filter(c => c !== cat);
-    if (!shown) excluded.push(cat);
-    settings.binary_exclude = excluded;
-    saveSettings();
-
-    binarySince = 0;
-    if (binaryLayer.isVisible() && binaryAnyShown()) {
-        fetchBinary().then(() => redrawMap());
-    } else {
-        binaryDB = {};
-        redrawMap();
-    }
-}
-
 function setTrackClassColor(shipClass, color) {
     settings.track_class_colors[ShippingClass[shipClass]] = color;
     saveSettings();
@@ -2885,8 +2396,8 @@ function onReceiverChange(idx) {
     if (replaycardVisible()) toggleReplaycard();
     activeReceiver = parseInt(idx, 10) || 0;
     shipsSince = 0;
-    binarySince = 0;
-    range_update_time = null;
+    binary.resetSince();
+    range.resetUpdateTime();
     lastPathFetch = 0;
     paths = {};
     pathsFrom = -1;
@@ -2933,12 +2444,15 @@ function updateStat(stat, tf) {
 function renderDevices(stat) {
     const el = document.getElementById("stat_devices");
     if (!el) return;
-    const prod = stat.product || [], vend = stat.vendor || [], ser = stat.serial || [], mod = stat.model || [], rate = stat.sample_rate || [];
-    const n = Math.max(prod.length, vend.length, ser.length, mod.length, rate.length);
+    const prod = stat.product || [], vend = stat.vendor || [], ser = stat.serial || [], mod = stat.model || [], rate = stat.sample_rate || [], dlab = stat.device_label || [];
+    const n = Math.max(prod.length, vend.length, ser.length, mod.length, rate.length, dlab.length);
     el.replaceChildren();
     for (let i = 0; i < n; i++) {
-        let name = prod[i] || mod[i] || "Device " + (i + 1);
-        if (ser[i] && ser[i] !== "-") name += " (" + ser[i] + ")";
+        let name = dlab[i];
+        if (!name) {
+            name = prod[i] || mod[i] || "Device " + (i + 1);
+            if (ser[i] && ser[i] !== "-") name += " (" + ser[i] + ")";
+        }
 
         const label = document.createElement("span");
         label.textContent = i === 0 ? "Device" : "";
@@ -2951,7 +2465,13 @@ function renderDevices(stat) {
         row.className = "device-row";
         row.title = "Show device details";
         row.append(label, value);
-        row.onclick = () => showDialogPlain(objectToTableHtml({ Device: prod[i], Vendor: vend[i], Serial: ser[i], Engine: mod[i], "Sample rate": rate[i] }));
+        const engines = String(mod[i] || "").split("\n").filter((e) => e !== "");
+        const info = { Device: prod[i], Vendor: vend[i], Serial: ser[i] };
+        if (engines.length > 1) engines.forEach((e, k) => (info["Engine " + (k + 1)] = e));
+        else info.Engine = engines[0];
+        info["Sample rate"] = rate[i];
+
+        row.onclick = () => showDialogPlain(objectToTableHtml(info));
         el.appendChild(row);
     }
 }
@@ -3070,44 +2590,8 @@ function getTooltipContent(ship) {
         '</div>' +
         '</div>';
 
-    const messages = shipBinaryMessages(ship.mmsi);
-    if (messages.length > 0) {
+    content += binary.tooltipSections(binary.shipBinaryMessages(ship.mmsi), true);
 
-        const meteoMessages = messages.filter(isMeteoMessage);
-
-        if (meteoMessages.length > 0) {
-            content += getBinaryMessageContent(meteoMessages);
-        }
-
-        const inlandMessages = messages.filter(msg => isInlandMessage(msg));
-
-        if (inlandMessages.length > 0) {
-            content += getInlandMessageContent(inlandMessages);
-        }
-
-        const textMessages = messages.filter(msg => isTextMessage(msg));
-
-        if (textMessages.length > 0) {
-            content += getTextMessageTooltip(textMessages);
-        }
-    }
-
-    return content;
-}
-
-function getTextMessageTooltip(messages) {
-    const sorted = [...messages].sort((a, b) => b.timestamp - a.timestamp);
-    const m = sorted[0];
-
-    let content = '<div class="meteo-tooltip">';
-    content += `<div style="font-size: 11px; color: #FFA500; padding: 4px 0 3px; margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center;">`;
-    content += `<span style="font-size: 11px;">${m.formattedTime} - Text Message</span>`;
-    if (sorted.length > 1) {
-        content += `<span style="font-size: 10px; opacity: 0.5; font-style: italic;">+${sorted.length - 1} more</span>`;
-    }
-    content += '</div>';
-    content += `<div style="font-size: 11px; font-weight: bold; white-space: pre-wrap;">${sanitizeString(m.message.text || '')}</div>`;
-    content += '</div>';
     return content;
 }
 
@@ -3278,195 +2762,6 @@ function toggleAttribution() {
     showAttribution(!foldout.classList.contains('visible'));
 }
 
-function getBinaryMessageContent(binary, includeRaw = false) {
-    const messages = Array.isArray(binary) ? binary : [binary];
-
-    if (messages.length === 0) return '';
-
-    messages.sort((a, b) => b.timestamp - a.timestamp);
-
-    const msg = messages[0].message;
-
-    const hasHydroData =
-        ('watercurrent' in msg && msg.watercurrent != null) ||
-        ('currentspeed' in msg && msg.currentspeed != null) ||
-        ('currentdir' in msg && msg.currentdir != null) ||
-        ('watertemp' in msg && msg.watertemp != null) ||
-        ('waterlevel' in msg && msg.waterlevel != null);
-
-    let content = '<div class="meteo-tooltip">';
-    content += `<div style="font-size: 11px; color: #FFA500; padding: 4px 0 3px; margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center;">`;
-    content += `<span style="font-size: 11px;">${messages[0].formattedTime} - ${hasHydroData ? 'Meteo & Hydro' : 'Meteo'}</span>`;
-    if (messages.length > 1) {
-        content += `<span style="font-size: 10px; opacity: 0.5; font-style: italic;">+${messages.length - 1} more</span>`;
-    }
-    content += '</div>';
-
-    // Wind
-    if ('wspeed' in msg && msg.wspeed != null) {
-        let val = msg.wspeed.toFixed(1) + ' kts';
-        if ('wdir' in msg && msg.wdir != null && msg.wdir !== 360) val += ' / ' + msg.wdir + '&deg;';
-        content += meteoRow('Wind', val);
-    }
-
-    // Air temperature
-    if ('airtemp' in msg && msg.airtemp != null) {
-        content += meteoRow('Air', msg.airtemp.toFixed(1) + '&deg;C');
-    }
-
-    // Pressure
-    if ('pressure' in msg && msg.pressure != null && msg.pressure > 799) {
-        let val = msg.pressure.toFixed(1) + ' hPa';
-        if ('pressuretend' in msg && msg.pressuretend != null) {
-            val += ' (' + ['steady', 'decreasing', 'increasing'][msg.pressuretend] + ')';
-        }
-        content += meteoRow('Pressure', val);
-    }
-
-    // Water current
-    const currentSpeed = msg.watercurrent || msg.currentspeed;
-    const currentDir = msg.currentdir || msg.currentdirection;
-    if (currentSpeed != null) {
-        let val = currentSpeed.toFixed(1) + ' kts';
-        if (currentDir != null && currentDir !== 360) val += ' / ' + currentDir + '&deg;';
-        content += meteoRow('Current', val);
-    }
-
-    // Water level
-    if ('waterlevel' in msg && msg.waterlevel != null) {
-        content += meteoRow('Water Level', msg.waterlevel.toFixed(2) + ' m');
-    }
-
-    // Water temperature
-    if ('watertemp' in msg && msg.watertemp != null) {
-        content += meteoRow('Water', msg.watertemp.toFixed(1) + '&deg;C');
-    }
-
-    // Waves
-    if ('waveheight' in msg && msg.waveheight != null) {
-        let val = msg.waveheight.toFixed(1) + ' m';
-        if ('wavedir' in msg && msg.wavedir != null && msg.wavedir !== 360) val += ' / ' + msg.wavedir + '&deg;';
-        if ('waveperiod' in msg && msg.waveperiod != null) val += ', ' + msg.waveperiod + 's';
-        content += meteoRow('Wave', val);
-    }
-
-    // Swell
-    if ('swellheight' in msg && msg.swellheight != null) {
-        let val = msg.swellheight.toFixed(1) + ' m';
-        if ('swelldir' in msg && msg.swelldir != null && msg.swelldir !== 360) val += ' / ' + msg.swelldir + '&deg;';
-        if ('swellperiod' in msg && msg.swellperiod != null) val += ', ' + msg.swellperiod + 's';
-        content += meteoRow('Swell', val);
-    }
-
-    // Visibility
-    if ('visibility' in msg && msg.visibility != null) {
-        content += meteoRow('Visibility', msg.visibility.toFixed(1) + ' nm');
-    }
-
-    if (includeRaw) {
-        content += `<details class="binary-raw-data">
-                      <summary>Show Raw Data</summary>
-                      <pre>${sanitizeString(JSON.stringify(msg, null, 2))}</pre>
-                    </details>`;
-    }
-
-    content += '</div>';
-    return content;
-}
-
-const meteoRow = (label, value) =>
-    `<div style="display: flex; justify-content: space-between; padding: 1px 0; white-space: nowrap;">` +
-    `<span style="font-size: 11px; opacity: 0.6; margin-right: 12px;">${label}</span>` +
-    `<span style="font-size: 11px; font-weight: bold;">${value}</span></div>`;
-
-function fiOf(m) {
-    return m.fid != null ? m.fid : m.fi;
-}
-
-function shipBinaryMessages(mmsi) {
-    return (mmsi != null && binaryDB[mmsi]?.ship_messages) || [];
-}
-
-function isInlandMessage(msg) {
-    if (!msg.message) return false;
-    return msg.message.dac == 200 && fiOf(msg.message) == 55;
-}
-
-function isTextMessage(msg) {
-    if (!msg.message) return false;
-    const fi = fiOf(msg.message);
-    return msg.message.dac == 1 && (fi == 0 || fi == 29 || fi == 30);
-}
-
-function isMeteoMessage(msg) {
-    if (!msg.message) return false;
-    return msg.message.dac == 1 && fiOf(msg.message) == 31;
-}
-
-const BINARY_CATEGORIES = ['data', 'inland', 'text'];
-
-function binaryIncluded(msg) {
-    const ex = settings.binary_exclude;
-    if (isTextMessage(msg)) return !ex.includes('text');
-    if (isInlandMessage(msg)) return !ex.includes('inland');
-    const hasLocation = msg.message && msg.message.lat && msg.message.lon;
-    return hasLocation && !ex.includes('data');
-}
-
-function binaryAnyShown() {
-    return BINARY_CATEGORIES.some(c => !settings.binary_exclude.includes(c));
-}
-
-function getTextMessageContent(msg) {
-    const m = msg.message;
-    const kind = m.type == 6 || fiOf(m) == 30 ? "Text message (addressed)" : "Text message (broadcast)";
-
-    let content = '<div class="binary-message-details">';
-    content += `<div><strong>${kind}</strong></div>`;
-    content += `<div style="font-size: var(--fs-lg); margin: 6px 0; white-space: pre-wrap;">${sanitizeString(m.text || '')}</div>`;
-
-    if (m.dest_mmsi) {
-        const destName = m.dest_mmsi in shipsDB ?
-            (shipsDB[m.dest_mmsi].raw.shipname || `MMSI ${m.dest_mmsi}`) :
-            `MMSI ${m.dest_mmsi}`;
-        content += `<div><strong>To:</strong> ${sanitizeString(String(destName))}</div>`;
-    }
-    if (m.ack_required) content += '<div>Acknowledgement requested</div>';
-
-    content += `<details class="binary-raw-data">
-                  <summary>Show Raw Data</summary>
-                  <pre>${sanitizeString(JSON.stringify(m, null, 2))}</pre>
-                </details>`;
-    content += '</div>';
-    return content;
-}
-
-function getInlandMessageContent(binary) {
-    const messages = Array.isArray(binary) ? binary : [binary];
-    if (messages.length === 0) return '';
-
-    // Keep only the latest persons-on-board message
-    let entry = null;
-    messages.forEach(m => {
-        if (!isInlandMessage(m)) return;
-        if (!entry || m.timestamp > entry.timestamp) entry = m;
-    });
-    if (!entry) return '';
-
-    const msg = entry.message;
-
-    let content = '<div class="meteo-tooltip">';
-    content += `<div style="font-size: 11px; color: #FFA500; padding: 4px 0 3px; margin-bottom: 2px;">`;
-    content += `<span style="font-size: 11px;">${entry.formattedTime} - Persons on Board</span>`;
-    content += '</div>';
-
-    if (msg.crew_count != null) content += meteoRow('Crew', msg.crew_count);
-    if (msg.passenger_count != null) content += meteoRow('Passengers', msg.passenger_count);
-    if (msg.shipboard_personnel_count != null) content += meteoRow('Personnel', msg.shipboard_personnel_count);
-
-    content += '</div>';
-    return content;
-}
 
 const startHover = function (type, mmsi, pixel, feature) {
 
@@ -3509,8 +2804,7 @@ function updateHoverMarker() {
     const had = hoverCircleFeature != undefined;
     hoverCircleFeature = syncCircleFeature(hoverCircleFeature, raw, hoverMMSI, hoverCircleStyleFunction);
     if (had && !hoverCircleFeature) {
-        hoverMMSI = undefined;
-        hoverType = undefined;
+        stopHover();
     }
 }
 
@@ -3585,19 +2879,7 @@ const handlePointerMove = function (pixel, target) {
             }
             tooltipContent += '</div>';
 
-            // Add meteo data if available
-            const meteoMessages = feature.binary_messages.filter(isMeteoMessage);
-
-            if (meteoMessages.length > 0) {
-                tooltipContent += getBinaryMessageContent(meteoMessages);
-            }
-
-            // Add inland data if available
-            const inlandMessages = feature.binary_messages.filter(msg => isInlandMessage(msg));
-
-            if (inlandMessages.length > 0) {
-                tooltipContent += getInlandMessageContent(inlandMessages);
-            }
+            tooltipContent += binary.tooltipSections(feature.binary_messages);
 
             startHover('tooltip', tooltipContent, pixel, feature);
         } else {
@@ -3795,8 +3077,9 @@ function replaycardVisible() {
 // the same vessel twice. Exiting just puts them back and lets the normal
 // refresh rebuild from shipsDB.
 function setLiveLayersVisible(on) {
-    [markerLayer, trackLayer, labelLayer, shapeLayer, planeLayer, binaryLayer]
+    [markerLayer, trackLayer, labelLayer, shapeLayer, binaryLayer]
         .forEach(l => l.setVisible(on));
+    planeLayer.setVisible(on && Array.isArray(settings.map_overlay) && settings.map_overlay.includes("Aircraft"));
 }
 
 function toggleReplaycard() {
@@ -4117,6 +3400,27 @@ async function resetTracksFromNow() {
 }
 
 
+function mergeTrackPoints(older, newer) {
+    const merged = [];
+    let i = 0, j = 0;
+
+    while (i < newer.length && j < older.length) {
+        const fresh = newer[i], prev = older[j];
+        if (fresh[2] === prev[2]) {
+            prev[0] = fresh[0]; prev[1] = fresh[1]; prev[3] = fresh[3];
+            merged.push(prev);
+            i++; j++;
+        } else if (fresh[2] > prev[2]) {
+            merged.push(fresh); i++;
+        } else {
+            merged.push(prev); j++;
+        }
+    }
+    while (i < newer.length) merged.push(newer[i++]);
+    while (j < older.length) merged.push(older[j++]);
+    return merged;
+}
+
 async function fetchTracks() {
     if (marker_tracks.size == 0 && settings.show_all_tracks == false) return true;
 
@@ -4156,29 +3460,9 @@ async function fetchTracks() {
             paths = newPaths;
         } else {
             for (const mmsi in newPaths) {
-                const newer = newPaths[mmsi];
-                if (!paths[mmsi]) {
-                    paths[mmsi] = newer;
-                    continue;
-                }
-                const older = paths[mmsi];
-                const merged = [];
-                let i = 0, j = 0;
-                while (i < newer.length && j < older.length) {
-                    const a = newer[i], b = older[j];
-                    if (a[2] === b[2]) {
-                        b[0] = a[0]; b[1] = a[1]; b[3] = a[3];
-                        merged.push(b);
-                        i++; j++;
-                    } else if (a[2] > b[2]) {
-                        merged.push(a); i++;
-                    } else {
-                        merged.push(b); j++;
-                    }
-                }
-                while (i < newer.length) merged.push(newer[i++]);
-                while (j < older.length) merged.push(older[j++]);
-                paths[mmsi] = merged;
+                paths[mmsi] = paths[mmsi]
+                    ? mergeTrackPoints(paths[mmsi], newPaths[mmsi])
+                    : newPaths[mmsi];
             }
             for (const mmsi in paths) {
                 if (!(mmsi in shipsDB)) delete paths[mmsi];
@@ -4256,7 +3540,7 @@ function updateMessageButton() {
     const iconElement = messageButton.querySelector('i.mail_icon');
     if (!iconElement) return;
 
-    const count = shipBinaryMessages(card_mmsi).length;
+    const count = binary.shipBinaryMessages(card_mmsi).length;
 
     const existingBadge = iconElement.querySelector('.message-badge');
     if (existingBadge) {
@@ -5081,8 +4365,8 @@ async function updateMap() {
     await Promise.all([
         fetchTracks(),
         planeLayer.getVisible() ? fetchPlanes() : Promise.resolve(true),
-        (binaryLayer.isVisible() && binaryAnyShown()) ? fetchBinary() : Promise.resolve(true),
-        fetchRange(),
+        (binaryLayer.isVisible() && binary.binaryAnyShown()) ? binary.fetchBinary() : Promise.resolve(true),
+        range.fetchRange(),
     ]);
 
     if (settings.setcoord == "true" || settings.setcoord == true) {
@@ -5103,150 +4387,6 @@ async function updateMap() {
 
     updateMarkerCount();
     redrawMap();
-}
-
-function redrawBinaryMessages() {
-    binaryVector.clear();
-
-    if (settings.binary_messages === 'off') return;
-
-    const gridCells = {}; // For clustering standalone messages
-    const gridSize = 0.01; // Grid size in degrees (approx. 1km)
-
-    // Process messages for vessels
-    for (const [mmsi, msgData] of Object.entries(binaryDB)) {
-        if (!msgData.ship_messages || msgData.ship_messages.length === 0) continue;
-
-        // Cache all messages
-        const allMessages = msgData.ship_messages;
-
-        const hasValidShipCoordinates = mmsi in shipsDB && hasValidCoords(shipsDB[mmsi].raw.lat, shipsDB[mmsi].raw.lon);
-
-        if (hasValidShipCoordinates) {
-            // Prepare arrays for messages to show at ship or at their own locations
-            const shipMessages = [];
-            const standaloneMessages = [];
-
-            const ship = shipsDB[mmsi].raw;
-            const shipLat = ship.lat;
-            const shipLon = ship.lon;
-
-            // Sort messages by proximity to the ship
-            allMessages.forEach(msg => {
-                // Messages without their own location (e.g. inland FID 10/55) badge on the ship
-                if (!msg.message_lat || !msg.message_lon) {
-                    shipMessages.push(msg);
-                    return;
-                }
-
-                const msgLat = msg.message_lat;
-                const msgLon = msg.message_lon;
-
-                // Skip invalid coordinates
-                if (!hasValidCoords(msgLat, msgLon)) return;
-
-                // Simple distance calculation
-                const distanceThreshold = 0.05; // Approx 5km
-                const distance = Math.sqrt(
-                    Math.pow(msgLat - shipLat, 2) +
-                    Math.pow(msgLon - shipLon, 2)
-                );
-
-                if (distance <= distanceThreshold) {
-                    // Message is close to ship, show at ship location
-                    shipMessages.push(msg);
-                } else {
-                    // Message is far from ship, show at its own location
-                    standaloneMessages.push(msg);
-                    addMessageToGridCell(msg, mmsi, gridCells, gridSize);
-                }
-            });
-
-            // Create badge at ship location if there are messages to show there
-            if (shipMessages.length > 0) {
-                const point = new ol.geom.Point(ol.proj.fromLonLat([shipLon, shipLat]));
-                const feature = new ol.Feature({
-                    geometry: point
-                });
-
-                feature.binary = true;
-                feature.ship = ship;
-                feature.binary_mmsi = mmsi;
-                feature.binary_count = shipMessages.length;
-                feature.binary_messages = shipMessages;
-                feature.is_associated = true;
-                feature.setId(`binary-ship-${mmsi}`);
-
-                binaryVector.addFeature(feature);
-            }
-
-        } else {
-            // No associated ship with valid coordinates - add all messages to grid cells for clustering
-            allMessages.forEach(msg => {
-                if (!msg.message_lat || !msg.message_lon) return;
-                addMessageToGridCell(msg, mmsi, gridCells, gridSize);
-            });
-        }
-    }
-
-    // Create features for grid cells (clustered standalone messages)
-    createGridCellFeatures(gridCells);
-}
-
-// Helper function to add a message to the appropriate grid cell
-function addMessageToGridCell(msg, mmsi, gridCells, gridSize) {
-    const msgLat = msg.message_lat;
-    const msgLon = msg.message_lon;
-
-    // Skip invalid coordinates
-    if (!hasValidCoords(msgLat, msgLon)) return;
-
-    // Create grid cell key for clustering
-    const gridX = Math.floor(msgLon / gridSize);
-    const gridY = Math.floor(msgLat / gridSize);
-    const gridKey = `${gridX},${gridY}`;
-
-    if (!gridCells[gridKey]) {
-        gridCells[gridKey] = {
-            messages: [],
-            totalLat: 0,
-            totalLon: 0,
-            mmsiCounts: {}
-        };
-    }
-
-    // Add to grid cell for clustering
-    gridCells[gridKey].messages.push(msg);
-    gridCells[gridKey].totalLat += msgLat;
-    gridCells[gridKey].totalLon += msgLon;
-    gridCells[gridKey].mmsiCounts[mmsi] =
-        (gridCells[gridKey].mmsiCounts[mmsi] || 0) + 1;
-}
-
-// Helper function to create features for grid cells
-function createGridCellFeatures(gridCells) {
-    for (const [gridKey, gridData] of Object.entries(gridCells)) {
-        if (gridData.messages.length === 0) continue;
-
-        // Calculate average position for this grid cell
-        const avgLat = gridData.totalLat / gridData.messages.length;
-        const avgLon = gridData.totalLon / gridData.messages.length;
-
-        const point = new ol.geom.Point(ol.proj.fromLonLat([avgLon, avgLat]));
-        const feature = new ol.Feature({
-            geometry: point
-        });
-
-        feature.binary = true;
-        feature.binary_count = gridData.messages.length;
-        feature.binary_messages = gridData.messages;
-        feature.binary_mmsi_counts = gridData.mmsiCounts;
-        feature.is_associated = false;
-        feature.tooltip = `${gridData.messages.length} binary messages`;
-        feature.setId(`binary-standalone-${gridKey}`);
-
-        binaryVector.addFeature(feature);
-    }
 }
 
 function redrawMap() {
@@ -5299,7 +4439,7 @@ function redrawMap() {
     }
     measure.refreshMeasures();
 
-    redrawBinaryMessages();
+    binary.redrawBinaryMessages();
 
     if (planeLayer.getVisible()) {
 
@@ -5337,6 +4477,15 @@ function redrawMap() {
 
             // Path: [lat, lon, start_time, end_time]
             if (path.length > 0 && path[0].length >= 4) {
+                const emitSegment = (coords, dashed) => {
+                    if (coords.length < 2) return;
+                    const feature = new ol.Feature(new ol.geom.LineString(coords));
+                    feature.mmsi = mmsi;
+                    feature.isDashed = dashed;
+                    feature.shipclass = shipclass;
+                    trackVector.addFeature(feature);
+                };
+
                 let currentSegment = [];
                 let currentDashed = false;
 
@@ -5360,35 +4509,19 @@ function redrawMap() {
                         // Continue current segment
                         currentSegment.push(coord);
                     } else {
-                        // Create feature for current segment
-                        if (currentSegment.length > 1) {
-                            const lineString = new ol.geom.LineString(currentSegment);
-                            const feature = new ol.Feature(lineString);
-                            feature.mmsi = mmsi;
-                            feature.isDashed = currentDashed;
-                            feature.shipclass = shipclass;
-                            trackVector.addFeature(feature);
-                        }
+                        emitSegment(currentSegment, currentDashed);
                         // Start new segment
                         currentSegment = [currentSegment[currentSegment.length - 1], coord];
                         currentDashed = isDashed;
                     }
                 }
 
-                // Add final segment
-                if (currentSegment.length > 1) {
-                    const lineString = new ol.geom.LineString(currentSegment);
-                    const feature = new ol.Feature(lineString);
-                    feature.mmsi = mmsi;
-                    feature.isDashed = currentDashed;
-                    feature.shipclass = shipclass;
-                    trackVector.addFeature(feature);
-                }
+                emitSegment(currentSegment, currentDashed);
             }
         }
     }
 
-    drawRange();
+    range.drawRange();
     updateFocusMarker();
     updateHoverMarker();
 
@@ -5396,7 +4529,7 @@ function redrawMap() {
     updateTablecard();
 
     drawStation();
-    updateDistanceCircles();
+    range.updateDistanceCircles();
 
 }
 
@@ -5500,7 +4633,7 @@ function updateSettingsTab() {
     document.getElementById("settings_show_labels").value = settings.show_labels.toLowerCase();
 
     document.getElementById("settings_binary_messages").value = settings.binary_messages;
-    for (const cat of BINARY_CATEGORIES) {
+    for (const cat of binary.BINARY_CATEGORIES) {
         document.getElementById("settings_binary_cat_" + cat).checked = !settings.binary_exclude.includes(cat);
     }
 
@@ -5902,6 +5035,23 @@ measure.init({
     getShipsDB: () => shipsDB,
     showNotification,
     ensureMeasurecardVisible: () => { if (!measurecardVisible()) toggleMeasurecard(); },
+});
+binary.init({
+    getActiveReceiver: () => activeReceiver,
+    getShipsDB: () => shipsDB,
+    getDialogModal: () => dialogModal,
+    showDialog,
+    saveSettings,
+    redrawMap,
+});
+range.init({
+    getConfig: () => config,
+    getStation: () => station,
+    getActiveReceiver: () => activeReceiver,
+    getHoverFeature: () => hover_feature,
+    showDialog,
+    saveSettings,
+    redrawMap,
 });
 boxselect.init({
     getMap: () => map,

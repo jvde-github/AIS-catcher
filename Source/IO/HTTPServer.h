@@ -65,7 +65,7 @@ namespace IO
 		{
 			static const char ping[] = ": ping\r\n\r\n";
 			if (auto *c = live())
-				c->SendDirect(ping, sizeof(ping) - 1);
+				c->Send(ping, sizeof(ping) - 1);
 		}
 
 		void Start()
@@ -83,7 +83,7 @@ namespace IO
 			headers += "X-Accel-Buffering: no\r\n";
 			headers += "Connection: keep-alive\r\n\r\n";
 
-			c->SendDirect(headers.c_str(), headers.length());
+			c->Send(headers.c_str(), headers.length());
 		}
 
 		bool isConnected()
@@ -95,7 +95,7 @@ namespace IO
 		{
 			if (auto *c = live())
 			{
-				c->SendDirect("\r\n", 2);
+				c->Send("\r\n", 2);
 				c->Close();
 			}
 			connection = nullptr;
@@ -105,7 +105,7 @@ namespace IO
 		void SendFrame(const std::string &frame)
 		{
 			if (auto *c = live())
-				c->SendDirect(frame.c_str(), (int)frame.length());
+				c->Send(frame.c_str(), (int)frame.length());
 		}
 
 		// The one place that knows the SSE wire format.

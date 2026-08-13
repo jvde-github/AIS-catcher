@@ -633,7 +633,10 @@
     function selectOutputTab(value) {
         const wasLoaded = loadedTabs.has('output');
         flowOutputTarget = value;
-        switchSystemTab('output');
+        if (!switchSystemTab('output')) {
+            flowOutputTarget = null;
+            return;
+        }
         if (wasLoaded) {
             setOutputType(value);
             flowOutputTarget = null;
@@ -839,11 +842,12 @@
     }
 
     function switchSystemTab(tab, force) {
-        if (!SYSTEM_TABS[tab] || (!force && tab === currentSystemTab)) return;
+        if (!SYSTEM_TABS[tab]) return false;
+        if (!force && tab === currentSystemTab) return true;
 
         // Guard against losing unsaved edits when leaving an editable tab.
         if (!force && typeof App !== 'undefined' && App.state && App.state.unsaved) {
-            if (!confirmDiscardUnsaved('switch')) return;
+            if (!confirmDiscardUnsaved('switch')) return false;
             loadedTabs.delete(currentSystemTab);
         }
 
@@ -890,6 +894,7 @@
             const box = document.getElementById('log-box');
             if (box) box.scrollTop = box.scrollHeight;
         }
+        return true;
     }
 
     function loadSystemPanel() {
@@ -1236,6 +1241,7 @@
                         el.innerHTML = `<span>${stat.tcp_clients} connection${stat.tcp_clients === 1 ? '' : 's'}</span>`;
                         return;
                     }
+                    if (!o.active) { el.innerHTML = ''; return; }
                     const m = pools[o.sub] && pools[o.sub].shift();
                     el.innerHTML = m ? flowStatDetails(o.sub, m.stats) : '';
                 });
@@ -1430,7 +1436,9 @@
         enableTabScroll(systemSubtabs);
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape' && systemOverlay.classList.contains('open') &&
-                !document.getElementById('login-overlay').classList.contains('open')) closeSystem();
+                !document.getElementById('login-overlay').classList.contains('open') &&
+                !document.querySelector('.modal-overlay:not(.hidden)') &&
+                !document.querySelector('#wizard-overlay.open')) closeSystem();
         });
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {

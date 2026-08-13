@@ -214,6 +214,19 @@ namespace IO
 					error = "unsupported HTTP version: " + version;
 					return 505;
 				}
+
+				if (r.target[0] != '/')
+				{
+					std::size_t scheme = r.target.find("://");
+					if (scheme == std::string::npos)
+					{
+						error = "unsupported request target: " + r.target;
+						return 400;
+					}
+
+					std::size_t slash = r.target.find('/', scheme + 3);
+					r.target = slash == std::string::npos ? "/" : r.target.substr(slash);
+				}
 				continue;
 			}
 
@@ -382,9 +395,8 @@ namespace IO
 	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache, bool cors, int status)
 	{
 #ifdef HASZLIB
-		if (gzip && len >= (int)GZIP_MIN_LENGTH)
+		if (gzip && len >= (int)GZIP_MIN_LENGTH && zip.zip(data, len))
 		{
-			zip.zip(data, len);
 			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache, cors, status);
 			return;
 		}

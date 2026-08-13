@@ -112,7 +112,7 @@ private:
     std::string getCurrentTime();
 
     std::mutex mutex_;
-    LogLevel min_level_ = LogLevel::INFO;
+    std::atomic<LogLevel> min_level_{LogLevel::INFO};
     std::atomic<uint32_t> seq_{1};
 
     std::vector<LogMessage> message_buffer_;

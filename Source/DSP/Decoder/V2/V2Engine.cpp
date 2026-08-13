@@ -22,7 +22,7 @@
 #include "FFT.h"
 #include "Filters.h"
 
-#define SUBBIN_INTERP 0
+#define SUBBIN_INTERP 1
 
 namespace V2
 {

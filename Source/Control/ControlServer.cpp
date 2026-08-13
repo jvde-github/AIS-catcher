@@ -297,7 +297,7 @@ void ControlServer::serveStatic(IO::TCPServerConnection &c, const std::string &p
 	std::string file = (path == "/") ? "control/index.html" : "control" + path;
 
 	auto it = WebDB::files.find(file);
-	if (it == WebDB::files.end())
+	if (it == WebDB::files.end() && path.size() > 1)
 		it = WebDB::files.find(path.substr(1));
 
 	if (it != WebDB::files.end())

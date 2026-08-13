@@ -148,11 +148,6 @@ namespace IO
 
 	bool TCPServerConnection::Send(const char *data, int length)
 	{
-		return isConnected() && queue(data, length);
-	}
-
-	bool TCPServerConnection::SendDirect(const char *data, int length)
-	{
 		if (!isConnected())
 			return false;
 

@@ -136,47 +136,6 @@ std::string ReceiverTracker::toHistoryJSON()
 	return s;
 }
 
-void ReceiverTracker::writeSummary(std::ostream &out)
-{
-	auto tidy = [](const std::vector<std::string> &v) -> std::string {
-		std::string s;
-		for (const std::string &e : v)
-		{
-			if (!s.empty())
-				s += ", ";
-			s += e;
-		}
-		return s;
-	};
-
-	out << "=== state: " << (label.empty() ? "(unnamed)" : label) << " ===\n";
-
-	std::string p = tidy(product), v = tidy(vendor), sn = tidy(serial), sr = tidy(sample_rate);
-	if (!p.empty())
-	{
-		out << "  device:   " << p;
-		bool has_extra = (!v.empty() && v != "-") || (!sn.empty() && sn != "-") || !sr.empty();
-		if (has_extra)
-		{
-			out << " [";
-			bool first = true;
-			auto sep = [&]() { if (!first) out << ", "; first = false; };
-			if (!v.empty() && v != "-")  { sep(); out << v; }
-			if (!sn.empty() && sn != "-") { sep(); out << "sn=" << sn; }
-			if (!sr.empty())              { sep(); out << "rate=" << sr; }
-			out << "]";
-		}
-		out << "\n";
-	}
-	std::string mn = tidy(model_name);
-	if (!mn.empty())
-		out << "  model:    " << mn << "\n";
-
-	out << "  vessels:  " << ships.getCount()
-	    << "   msg/s: " << hist_second.getAverage() << "\n";
-	counter_session.print(out, "  ");
-}
-
 static std::string orDash(const std::string &s)
 {
 	return s.empty() ? "-" : s;
@@ -206,6 +165,7 @@ void ReceiverTracker::setDevice(Device::Device *device)
 	sample_rate = {device->getRateDescription()};
 
 	label = deviceLabel(device);
+	device_label = {label};
 }
 
 void ReceiverTracker::appendDevice(Device::Device *device)
@@ -214,9 +174,13 @@ void ReceiverTracker::appendDevice(Device::Device *device)
 	vendor.push_back(orDash(device->getVendor()));
 	serial.push_back(orDash(device->getSerial()));
 	sample_rate.push_back(device->getRateDescription());
+	device_label.push_back(deviceLabel(device));
 }
 
-void ReceiverTracker::appendModel(const std::string &name)
+void ReceiverTracker::appendModel(const std::string &name, bool same_device)
 {
-	model_name.push_back(name);
+	if (same_device && !model_name.empty())
+		model_name.back() += "\n" + name;
+	else
+		model_name.push_back(name);
 }

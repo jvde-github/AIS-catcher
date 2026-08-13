@@ -26,6 +26,9 @@
 
 namespace IO
 {
+	// streamed into a log line, which binds a reference: without a definition
+	// only an optimizing build folds it and -O0 fails to link
+	const size_t HTTPStreamer::MSG_LIST_MAX;
 
 #ifdef _WIN32
 	static class WSA

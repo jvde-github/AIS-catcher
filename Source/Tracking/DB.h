@@ -126,22 +126,33 @@ class DB : public StreamIn<JSON::JSON>,
 	// Shared scaffolding for the replay endpoints: eligibility reaches back by
 	// `lookback` past the window start, so a vessel silent since before the
 	// window still shows for as long as the viewer keeps it on the map, and
-	// `emit` writes the per-ship value.
+	// `emit` writes the per-ship value. The window start is clamped here, under
+	// the lock that guards the horizon it is clamped to, and handed to `emit`;
+	// `until` is the window end, 0 for an unbounded one.
 	template <typename F>
-	std::string getReplayObjectJSON(std::time_t since, std::time_t lookback, F emit)
+	std::string getReplayObjectJSON(std::time_t since, std::time_t lookback, std::time_t until, F emit)
 	{
 		std::lock_guard<std::mutex> lock(mtx);
-		const std::time_t from = since > lookback ? since - lookback : 0;
+
+		const std::time_t now = time(nullptr);
+		const std::time_t floor = pathFloor(now);
 
 		content.clear();
 		{
 			JSON::Writer w(content, 65536);
 			w.beginObject();
 
-			forEachRecent(time(nullptr), true, from, [&](int ptr, const Ship &ship, long int) {
-				if (paths.hasSince(ptr, from))
-					emit(w, ptr, ship);
-			});
+			// a window that ends before the cutoff serves nothing
+			if (until <= 0 || until >= floor)
+			{
+				since = MAX(since, floor);
+				const std::time_t from = since > lookback ? since - lookback : 0;
+
+				forEachRecent(now, true, from, [&](int ptr, const Ship &ship, long int) {
+					if (paths.hasSince(ptr, from))
+						emit(w, ptr, ship, since);
+				});
+			}
 			w.endObject().raw("\n\n");
 		}
 		return content;

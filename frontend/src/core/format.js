@@ -87,6 +87,10 @@ export const getEtaVal = (ship) => {
     return date && time ? date + " " + time : (date || time || "-");
 };
 
+// Unix seconds -> local wall-clock time, e.g. "14:03:27".
+export const formatTime = (timestamp) =>
+    new Date(timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
 export const getDeltaTimeVal = (s) => {
     const days = Math.floor(s / (24 * 3600));
     const hours = Math.floor((s % (24 * 3600)) / 3600);
