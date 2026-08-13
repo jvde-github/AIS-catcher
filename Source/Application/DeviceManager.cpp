@@ -57,6 +57,26 @@ namespace
 		{'y', AIS::KEY_SETTING_SPYSERVER, Type::SPYSERVER, false, [](DeviceManager &d) -> Device::Device & { return d.SpyServer(); }},
 		{'z', AIS::KEY_SETTING_ZMQ, Type::ZMQ, false, [](DeviceManager &d) -> Device::Device & { return d.ZMQ(); }},
 		{0, AIS::KEY_SETTING_UDPSERVER, Type::UDP, false, [](DeviceManager &d) -> Device::Device & { return d.UDP(); }}};
+
+	// Types eligible for the implicit no-arguments default. Only SDR radios are
+	// unambiguous AIS receivers; serial/N2K ports (e.g. /dev/cu.debug-console)
+	// still enumerate but must be selected explicitly.
+	bool isAutoSelectable(Type t)
+	{
+		switch (t)
+		{
+		case Type::RTLSDR:
+		case Type::AIRSPYHF:
+		case Type::AIRSPY:
+		case Type::SDRPLAY:
+		case Type::HACKRF:
+		case Type::SOAPYSDR:
+		case Type::HYDRASDR:
+			return true;
+		default:
+			return false;
+		}
+	}
 }
 
 Setting *DeviceManager::settingForFlag(char flag)
@@ -162,11 +182,30 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 				}
 			}
 		}
-
-		if (type == Type::NONE && device_list.size() == 0)
+		else
 		{
-			Error() << "Device Manager: no devices available.";
-			return false;
+			// Nothing specified: auto-select the first available SDR radio only.
+			idx = -1;
+			for (int i = 0; i < device_list.size(); i++)
+				if (isAutoSelectable(device_list[i].getType()) && !device_list[i].isClaimed())
+				{
+					idx = i;
+					handle = device_list[i].getHandle();
+					device_list[i].setClaimed();
+					break;
+				}
+
+			if (idx == -1)
+			{
+				if (device_list.empty())
+					Error() << "Device Manager: no devices available.";
+				else
+				{
+					Error() << "Device Manager: no SDR device found, please select a device.";
+					printAvailableDevices_locked();
+				}
+				return false;
+			}
 		}
 
 		if (type == Type::NONE)
