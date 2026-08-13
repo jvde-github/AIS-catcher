@@ -85,6 +85,7 @@ namespace IO
 		int msg_count = 0, pos_count = 0, dropped_count = 0;
 
 		static const size_t MSG_LIST_MAX = 100000;
+		bool dropped_warned = false;
 
 		// caller holds msg_list_mutex
 		void enqueue(std::string s)

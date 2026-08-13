@@ -187,6 +187,13 @@ namespace IO
 			r = http.Post(post_body, gzip, false, "");
 		}
 
+		if (drop_snap && !dropped_warned)
+		{
+			dropped_warned = true;
+			Warning() << "HTTP Client [" << url << "]: batch over " << MSG_LIST_MAX << " messages, " << drop_snap
+					  << " dropped. Lower 'interval' (now " << INTERVAL << "s).";
+		}
+
 		std::string counts = std::to_string(sent) + " messages";
 		if (drop_snap)
 			counts += ", " + std::to_string(drop_snap) + " dropped";
