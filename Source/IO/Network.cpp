@@ -112,17 +112,19 @@ namespace IO
 		// receiver info) keeps aggregators alive between message bursts.
 		std::list<std::string> send_list;
 		std::string lat_snap, lon_snap;
-		int msg_snap, pos_snap;
+		int pos_snap, drop_snap;
 
 		{
 			const std::lock_guard<std::mutex> lock(msg_list_mutex);
 			send_list.splice(send_list.begin(), msg_list);
 			lat_snap = lat;
 			lon_snap = lon;
-			msg_snap = msg_count;
 			pos_snap = pos_count;
-			msg_count = pos_count = 0;
+			drop_snap = dropped_count;
+			msg_count = pos_count = dropped_count = 0;
 		}
+
+		const size_t sent = send_list.size();
 
 		post_body.clear();
 		int r;
@@ -185,10 +187,15 @@ namespace IO
 			r = http.Post(post_body, gzip, false, "");
 		}
 
+		std::string counts = std::to_string(sent) + " messages";
+		if (drop_snap)
+			counts += ", " + std::to_string(drop_snap) + " dropped";
+		counts += ", " + std::to_string(pos_snap) + " positions";
+
 		if (r < 200 || r > 299)
-			Error() << "HTTP Client [" << url << "]: " << IO::httpStatusString(r) << " (" << msg_snap << " messages, " << pos_snap << " positions)";
+			Error() << "HTTP Client [" << url << "]: " << IO::httpStatusString(r) << " (" << counts << ")";
 		else if (show_response)
-			Info() << "HTTP Client [" << url << "]: return code " << r << " (" << msg_snap << " messages, " << pos_snap << " positions)";
+			Info() << "HTTP Client [" << url << "]: return code " << r << " (" << counts << ")";
 	}
 
 	void HTTPStreamer::process()
