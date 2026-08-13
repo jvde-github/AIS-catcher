@@ -653,11 +653,11 @@ void WebViewer::startServing()
 			throw std::runtime_error("HTML server ports not specified");
 
 		const auto &tc = settings.tracking;
-		const int mem_kb = tc.track_memory > 0 ? tc.track_memory : (tc.server_mode ? 4096 : 1024);
 
 		auto on = [](bool b) { return b ? "on" : "off"; };
 		Info() << "Webviewer: port " << bound_port
-			   << ", track_time: " << tc.track_time << "s, track_memory: " << mem_kb << " KB"
+			   << (tc.track_time != 3600 ? ", track_time: " + std::to_string(tc.track_time) + "s" : std::string())
+			   << (tc.track_memory > 0 ? ", track_memory: " + std::to_string(tc.track_memory) + " KB" : std::string())
 			   << (tc.cutoff > 0 ? ", cutoff: " + std::to_string(tc.cutoff) : std::string())
 			   << (tc.server_mode ? ", server_mode: on" : "")
 			   << ", realtime: " << on(settings.realtime)

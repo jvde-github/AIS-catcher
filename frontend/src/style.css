@@ -1506,7 +1506,7 @@ a:focus {
 }
 
 .overlay-row.overlay-off .overlay-dim {
-    opacity: 0.45;
+    display: none;
 }
 
 #overlayContainer {
