@@ -573,49 +573,9 @@ jobs:
         bash -c "gh release upload '${{ env.RELEASE_TARGET }}' './output/AIS-catcher ${{matrix.platform}}.zip' --repo ${{ github.repository }} --clobber"
         del "output\AIS-catcher ${{matrix.platform}}.zip"
 
-    - name: Download SDRPlay API
-      run: |
-        cd "C:/Program Files/"
-        Invoke-WebRequest -Uri "https://www.sdrplay.com/hardware-api/?wpdmdl=1905" -OutFile sdrplay.exe
-        choco install innoextract
-        innoextract sdrplay.exe
-        ren app SDRplay
-
-    - name: Building with SDRPlay support
-      run: |
-        $notes = Get-ChildItem "C:\Program Files\SDRplay\API\docs\SDRplay_RSP_API_Release_Notes_V*.pdf" -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($notes) { Copy-Item $notes.FullName output\Licenses\SDRPLAY.pdf } else { Write-Warning "SDRplay release notes not found" }
-
-        echo "x64" > x64-a; echo "Win32" > x86-a; $msplatform = $(cat "${{matrix.platform}}-a")
-        $gen = "Visual Studio 17 2022"
-        $config = "Release"
-
-        echo "AIS-catcher"
-
-        Remove-Item build -Recurse
-        mkdir build; cd build
-        cmake .. -A $msplatform -G $gen -DPOTHOSSDR_INCLUDE_DIR=${{github.workspace}}\include -DPOTHOSSDR_LIBRARY_DIR=${{github.workspace}}\lib -DPOTHOSSDR_BINARY_DIR=${{github.workspace}}\release -DRUN_NUMBER=$env:RUN_NUMBER
-        msbuild /verbosity:quiet /m /p:Configuration=$config /p:Platform=$msplatform AIS-catcher.sln
-        cd ..
-        cp LICENSE output\Licenses\AIS-catcher
-
-    - name: Prepare output SDRPLAY
-      run: cp build\*.dll output; cp build\Release\*.exe output; cp plugins\* output\plugins; cp README.md output;
-
-    - name: Upload Artifacts SDRPLAY
-      uses: actions/upload-artifact@v7
-      with:
-        name: "AIS-catcher SDRPLAY ${{matrix.platform}}"
-        path: output
-
-    - name: Compress, upload, and delete ZIP file
-      if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'release'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        Compress-Archive -Path output/* -DestinationPath "output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
-        bash -c "gh release upload '${{ env.RELEASE_TARGET }}' './output/AIS-catcher SDRPLAY ${{matrix.platform}}.zip' --repo ${{ github.repository }} --clobber"
-        del "output\AIS-catcher SDRPLAY ${{matrix.platform}}.zip"
+    # No SDRPLAY build: sdrplay.com serves a bot challenge to runner IPs, so the
+    # API installer cannot be fetched here. The driver itself is unaffected and
+    # still builds on the platforms where users install the API themselves.
 
   # Written only when every build above succeeded, so "latest built" and
   # "latest pushed" cannot diverge: the control tool reads this manifest
