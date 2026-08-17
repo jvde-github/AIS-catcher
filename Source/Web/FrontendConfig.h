@@ -79,6 +79,7 @@ class FrontendConfig
 	bool managed = false;
 	bool sharing = false;
 	bool sharing_uuid = false;
+	bool split = true;
 	std::vector<std::pair<int, std::string>> receivers;
 
 public:
@@ -89,6 +90,7 @@ public:
 	void setShareLoc(bool b) { share_location = b; }
 	void setMsgSave(bool b) { save_messages = b; }
 	void setReplay(bool b) { replay = b; }
+	void setSplit(bool b) { split = b; }
 	void setRealtime(bool b) { realtime = b; }
 	void setLog(bool b) { log_enabled = b; }
 	void setDecoder(bool b) { decoder = b; }

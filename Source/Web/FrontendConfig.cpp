@@ -159,7 +159,7 @@ void FrontendConfig::setStation(const std::string &name)
 void FrontendConfig::setReceivers(const std::vector<std::unique_ptr<ReceiverTracker>> &states)
 {
 	receivers.clear();
-	if (states.size() > 1)
+	if (split && states.size() > 1)
 		for (int i = 0; i < (int)states.size(); i++)
 			receivers.emplace_back(i, states[i]->label);
 }

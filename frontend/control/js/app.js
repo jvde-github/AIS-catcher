@@ -1046,7 +1046,7 @@
         const keys = ['station', 'station_link', 'webcontrol_http',
                       'lat', 'lon', 'share_loc', 'use_gps',
                       'history', 'track_memory', 'track_time', 'expire',
-                      'replay',
+                      'replay', 'split',
                       'file', 'backup',
                       'plugin_dir', 'context',
                       'realtime', 'msg', 'decoder', 'log', 'geojson', 'prome',

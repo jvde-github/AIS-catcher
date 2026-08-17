@@ -253,7 +253,7 @@ long long WebViewer::queryInt(const std::string &query, const char *name)
 
 ReceiverTracker *WebViewer::getState(int idx)
 {
-	if (idx < 0 || idx >= (int)states.size())
+	if (!settings.split || idx < 0 || idx >= (int)states.size())
 		return states[0].get();
 	return states[idx].get();
 }
@@ -411,7 +411,7 @@ void WebViewer::attachEngine(const std::vector<std::unique_ptr<Receiver>> &recei
 		connectable += rp->Count();
 
 	// one tracker per output only pays off when the outputs can be told apart
-	const bool multi = connectable > 1 && !filter.hasIDFilter() && settings.groups_in == 0xFFFFFFFFFFFFFFFF;
+	const bool multi = settings.split && connectable > 1 && !filter.hasIDFilter() && settings.groups_in == 0xFFFFFFFFFFFFFFFF;
 
 	// trackers of the previous run: attachTrackers() takes the ones whose input is
 	// still here, and the rest are dropped when this vector goes out of scope
@@ -1167,6 +1167,10 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 	case AIS::KEY_SETTING_REPLAY:
 		settings.replay = Util::Parse::Switch(arg);
 		frontend.setReplay(settings.replay);
+		break;
+	case AIS::KEY_SETTING_SPLIT:
+		settings.split = Util::Parse::Switch(arg);
+		frontend.setSplit(settings.split);
 		break;
 	case AIS::KEY_SETTING_TRACK_TIME:
 	case AIS::KEY_SETTING_REPLAY_TIME:

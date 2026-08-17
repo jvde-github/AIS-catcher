@@ -111,6 +111,7 @@ public:
 		bool GeoJSON = false;
 		bool supportPrometheus = false;
 		bool replay = true;
+		bool split = true;
 
 		std::string station, station_link;
 

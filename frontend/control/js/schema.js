@@ -677,7 +677,18 @@ const webviewerSchema = {
         jsonpath: 'replay',
         defaultValue: true,
         width: 24,
-        tooltip: 'Let visitors animate past tracks'
+        tooltip: 'Visitors can animate tracks'
+    },
+    split: {
+        name: 'split',
+        section: 'Service',
+        restartWebviewer: true,
+        label: 'Per-Receiver Views',
+        type: 'toggle',
+        jsonpath: 'split',
+        defaultValue: true,
+        width: 24,
+        tooltip: 'Visitors can pick one receiver'
     },
     track_time: {
         name: 'track_time',
@@ -744,7 +755,7 @@ const webviewerSchema = {
         jsonpath: 'expire',
         defaultValue: false,
         width: 24,
-        tooltip: 'Clears ship data that is not reconfirmed by fresh messages'
+        tooltip: 'Clear data not reconfirmed by new messages'
     },
     realtime: {
         name: 'realtime',
@@ -777,7 +788,7 @@ const webviewerSchema = {
         jsonpath: 'geojson',
         defaultValue: false,
         width: 24,
-        tooltip: 'Enable the GeoJSON API endpoints'
+        tooltip: 'Enable GeoJSON endpoints'
     },
     prome: {
         name: 'prome',
@@ -788,7 +799,7 @@ const webviewerSchema = {
         jsonpath: 'prome',
         defaultValue: false,
         width: 24,
-        tooltip: 'Serve Prometheus metrics at /metrics'
+        tooltip: 'Metrics served at /metrics'
     },
     log: {
         name: 'log',
