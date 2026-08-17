@@ -576,14 +576,15 @@ jobs:
     - name: Download SDRPlay API
       run: |
         cd "C:/Program Files/"
-        Invoke-WebRequest -Uri " https://www.sdrplay.com/software/SDRplay_RSP_API-Windows-3.09.exe" -OutFile sdrplay.exe        
-        choco install innoextract 
+        Invoke-WebRequest -Uri "https://www.sdrplay.com/hardware-api/?wpdmdl=1905" -OutFile sdrplay.exe
+        choco install innoextract
         innoextract sdrplay.exe
         ren app SDRplay
 
     - name: Building with SDRPlay support
       run: |
-        cp "C:\Program Files\SDRplay\API\docs\SDRplay_RSP_API_Release_Notes_V3.09.pdf" output\Licenses\SDRPLAY.pdf
+        $notes = Get-ChildItem "C:\Program Files\SDRplay\API\docs\SDRplay_RSP_API_Release_Notes_V*.pdf" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($notes) { Copy-Item $notes.FullName output\Licenses\SDRPLAY.pdf } else { Write-Warning "SDRplay release notes not found" }
 
         echo "x64" > x64-a; echo "Win32" > x86-a; $msplatform = $(cat "${{matrix.platform}}-a")
         $gen = "Visual Studio 17 2022"

@@ -265,6 +265,14 @@ namespace Device {
 			return "RSPDUO";
 		case SDRPLAY_RSPdx_ID:
 			return "RSPDX";
+#ifdef SDRPLAY_RSP1B_ID
+		case SDRPLAY_RSP1B_ID:
+			return "RSP1B";
+#endif
+#ifdef SDRPLAY_RSPdxR2_ID
+		case SDRPLAY_RSPdxR2_ID:
+			return "RSPDXR2";
+#endif
 		default:
 			break;
 		}
