@@ -2520,6 +2520,13 @@ a:focus {
     }
 }
 
+/* the row is space-between for search vs controls; the two buttons belong
+   together on the right */
+#shipTableFilterBtn {
+    margin-left: auto;
+    margin-right: 8px;
+}
+
 #shipTableFilterBtn.filter-on {
     color: var(--color-accent);
     border-color: var(--color-accent);
