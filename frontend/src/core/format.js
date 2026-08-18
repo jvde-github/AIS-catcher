@@ -186,7 +186,10 @@ export function getShipDimensionSVG(ship) {
     const u = getDimUnit();
     const lbl = (v) => getDimVal(v) + " " + u;
 
-    const narrow = (v) => v * k < 26;
+    const hullL = +px(-b), hullR = +px(a);
+    const tight = hullR - hullL < 44;
+    const sternX = tight ? hullL - 3 : hullL, sternAnchor = tight ? "end" : "start";
+    const bowX = tight ? hullR + 3 : hullR, bowAnchor = tight ? "start" : "end";
 
     const GAP = 9;                               // the same clearance top and bottom
     const yArrow = 22, yLabel = 16;
@@ -207,8 +210,8 @@ export function getShipDimensionSVG(ship) {
   <line x1="${px(a)}"  y1="${yArrow + 4}" x2="${px(a)}"  y2="${py(0)}"  class="dim-ext"/>
   <line x1="${px(-b)}" y1="${yArrow}" x2="${px(0)}" y2="${yArrow}" class="dim-arrow" marker-start="url(#dimArrow)" marker-end="url(#dimArrow)"/>
   <line x1="${px(0)}"  y1="${yArrow}" x2="${px(a)}" y2="${yArrow}" class="dim-arrow" marker-start="url(#dimArrow)" marker-end="url(#dimArrow)"/>
-  <text x="${narrow(b) ? +px(-b) - 3 : px(-b / 2)}" y="${yLabel}" class="dim-t" text-anchor="${narrow(b) ? "end" : "middle"}">${lbl(b)}</text>
-  <text x="${narrow(a) ? +px(a) + 3 : px(a / 2)}" y="${yLabel}" class="dim-t" text-anchor="${narrow(a) ? "start" : "middle"}">${lbl(a)}</text>
+  <text x="${sternX.toFixed(1)}" y="${yLabel}" class="dim-t" text-anchor="${sternAnchor}">${lbl(b)}</text>
+  <text x="${bowX.toFixed(1)}" y="${yLabel}" class="dim-t" text-anchor="${bowAnchor}">${lbl(a)}</text>
 
   <polygon points="${ring}" class="dim-hull"/>
 
@@ -222,8 +225,8 @@ export function getShipDimensionSVG(ship) {
   <line x1="${px(0.8 * loa - b)}" y1="${py(d)}"  x2="${SIDE_X}" y2="${py(d)}"  class="dim-ext"/>
   <line x1="${SIDE_X}" y1="${py(-c)}" x2="${SIDE_X}" y2="${py(0)}" class="dim-arrow" marker-start="url(#dimArrow)" marker-end="url(#dimArrow)"/>
   <line x1="${SIDE_X}" y1="${py(0)}"  x2="${SIDE_X}" y2="${py(d)}" class="dim-arrow" marker-start="url(#dimArrow)" marker-end="url(#dimArrow)"/>
-  <text x="${SIDE_LABEL}" y="${(+py(-c / 2) + 3).toFixed(1)}" class="dim-t">${lbl(c)}</text>
-  <text x="${SIDE_LABEL}" y="${(+py(d / 2) + 3).toFixed(1)}" class="dim-t">${lbl(d)}</text>
+  <text x="${SIDE_LABEL}" y="${(+py(-c) + 8).toFixed(1)}" class="dim-t">${lbl(c)}</text>
+  <text x="${SIDE_LABEL}" y="${(+py(d) - 2).toFixed(1)}" class="dim-t">${lbl(d)}</text>
 
   <circle cx="${px(0)}" cy="${py(0)}" r="6.5" class="dim-origin-ring"/>
   <circle cx="${px(0)}" cy="${py(0)}" r="3.2" class="dim-origin"/>
