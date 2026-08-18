@@ -47,6 +47,8 @@ void DB::setup()
 	int path_blocks = paths.setup((long)track_memory_kb * 1024, nships);
 	Debug() << "DB: track store " << track_memory_kb << " KB (" << path_blocks << " blocks)";
 
+	changes.setup(nships, nships / 4);
+
 	for (int i = 0; i < MAX_BINARY_MESSAGES; i++)
 		binary_messages[i].Clear();
 	binary_msg_index = 0;
@@ -109,6 +111,17 @@ std::string DB::getJSON(bool full)
 
 		w.endArray().kv("error", false).endObject().raw("\n\n");
 	}
+	return content;
+}
+
+std::string DB::getChangesJSON(int mmsi)
+{
+	std::lock_guard<std::mutex> lock(mtx);
+
+	std::string content;
+	JSON::Writer w(content);
+	changes.writeJSON(w, (uint32_t)mmsi);
+	w.finish();
 	return content;
 }
 
@@ -192,7 +205,11 @@ std::string DB::getAllPathJSON()
 void DB::writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since, std::time_t until)
 {
 	auto emit = [&](const PathStore::Point &p) {
-		w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.end()).val_unless(p.sog, PathStore::NA).endArray();
+		w.beginArray().val(p.lat).val(p.lon).val(p.time).val(p.end())
+			.val_unless(p.sog, PathStore::NA)
+			.val_unless(p.cog, PathStore::NA)
+			.val_unless(p.hdg, PathStore::NA)
+			.endArray();
 	};
 
 	w.beginArray();
@@ -274,6 +291,7 @@ std::string DB::getReplayInfoJSON(std::time_t block)
 			.kv("block", block)
 			.kv("granularity", (int)PathStore::GRANULARITY)
 			.kv("dwell_gap", (int)PathStore::DWELL_GAP)
+			.kv("point_format", 2)
 			.endObject();
 		w.raw("\n\n");
 	}
@@ -286,15 +304,19 @@ std::string DB::getReplayInfoJSON(std::time_t block)
 std::string DB::getReplayShipsJSON(std::time_t since, std::time_t lookback)
 {
 	return getReplayObjectJSON(since, lookback, 0, [](JSON::Writer &w, int, const Ship &ship, std::time_t) {
-		int length = ship.to_bow != DIMENSION_UNDEFINED && ship.to_stern != DIMENSION_UNDEFINED ? ship.to_bow + ship.to_stern : 0;
-
 		w.key(ship.mmsi).beginObject()
 			.kv("c", ship.shipclass)
 			.kv("n", ship.shipname)
 			.kv("f", ship.country_code)
-			.kv_unless("t", ship.shiptype, 0)
-			.kv_unless("l", length, 0)
-			.endObject();
+			.kv_unless("t", ship.shiptype, 0);
+
+		// all-zero is how AtoN and many Class B units say "not applicable"
+		if (ship.to_bow != DIMENSION_UNDEFINED && ship.to_stern != DIMENSION_UNDEFINED &&
+			ship.to_port != DIMENSION_UNDEFINED && ship.to_starboard != DIMENSION_UNDEFINED &&
+			ship.to_bow + ship.to_stern > 0 && ship.to_port + ship.to_starboard > 0)
+			w.key("d").beginArray().val(ship.to_bow).val(ship.to_stern).val(ship.to_port).val(ship.to_starboard).endArray();
+
+		w.endObject();
 	});
 }
 
@@ -407,7 +429,7 @@ void DB::addToPath(int ptr)
 	const Ship &ship = ships[ptr];
 
 	if (isValidCoord(ship.lat, ship.lon))
-		paths.add(ptr, ship.lat, ship.lon, ship.cog, ship.speed, idleBand(ship.status), ship.last_signal);
+		paths.add(ptr, ship.lat, ship.lon, ship.cog, ship.heading, ship.speed, idleBand(ship.status), ship.last_signal);
 }
 
 template <size_t N>
@@ -424,6 +446,14 @@ static void copyField(char (&dst)[N], const std::string &s)
 static bool carriesOwnPosition(int type)
 {
 	return type != 6 && type != 8 && type != 17 && type != 25 && type != 26;
+}
+
+// A first value is initialisation, not a change: the ship record is where the
+// current value lives.
+void DB::logTextChange(const Ship &ship, int field, const char *old_value, const std::string &value)
+{
+	if (old_value[0] && value != old_value)
+		changes.addText(ship.mmsi, (StaticHistory::Field)field, value.c_str(), ship.last_signal);
 }
 
 void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship, bool allowApproximate, bool &positionUpdated, bool &staticUpdated)
@@ -467,7 +497,12 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship
 	case AIS::KEY_DRAUGHT:
 		if (p.Get().getFloat() != 0)
 		{
-			ship.draught = p.Get().getFloat();
+			const float d = p.Get().getFloat();
+			const bool first = ship.draught == DRAUGHT_UNDEFINED || ship.draught <= 0;
+			changes.addNumeric(ship.mmsi, StaticHistory::DRAUGHT,
+							   first ? (uint8_t)(d * 10 + 0.5f) : (uint8_t)(ship.draught * 10 + 0.5f),
+							   (uint8_t)(d * 10 + 0.5f), ship.last_signal, first);
+			ship.draught = d;
 			staticUpdated = true;
 		}
 		break;
@@ -481,8 +516,13 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship
 			ship.speed = p.Get().getFloat();
 		break;
 	case AIS::KEY_STATUS:
-		ship.status = p.Get().getInt();
-		break;
+	{
+		const int st = p.Get().getInt();
+		if (ship.status != STATUS_UNDEFINED)
+			changes.addNumeric(ship.mmsi, StaticHistory::STATUS, (uint8_t)ship.status, (uint8_t)st, ship.last_signal);
+		ship.status = st;
+	}
+	break;
 	case AIS::KEY_TO_BOW:
 		ship.to_bow = p.Get().getInt();
 		staticUpdated = true;
@@ -542,10 +582,12 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship
 		break;
 	case AIS::KEY_NAME:
 	case AIS::KEY_SHIPNAME:
+		logTextChange(ship, StaticHistory::SHIPNAME, ship.shipname, p.Get().getString());
 		copyField(ship.shipname, p.Get().getString());
 		staticUpdated = true;
 		break;
 	case AIS::KEY_CALLSIGN:
+		logTextChange(ship, StaticHistory::CALLSIGN, ship.callsign, p.Get().getString());
 		copyField(ship.callsign, p.Get().getString());
 		staticUpdated = true;
 		break;
@@ -565,6 +607,7 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship
 		copyField(ship.country_code, p.Get().getString());
 		break;
 	case AIS::KEY_DESTINATION:
+		logTextChange(ship, StaticHistory::DESTINATION, ship.destination, p.Get().getString());
 		copyField(ship.destination, p.Get().getString());
 		staticUpdated = true;
 		break;
@@ -633,8 +676,26 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	if (msg->getChannel() >= 'A' && msg->getChannel() <= 'D')
 		ship.orOpChannels(1 << (msg->getChannel() - 'A'));
 
+	// ETA arrives as four separate keys, so it is compared around the whole
+	// message rather than at an assignment site
+	const char eta_before[4] = {ship.month, ship.day, ship.hour, ship.minute};
+	const bool eta_was_set = ship.month != ETA_MONTH_UNDEFINED || ship.day != ETA_DAY_UNDEFINED ||
+							 ship.hour != ETA_HOUR_UNDEFINED || ship.minute != ETA_MINUTE_UNDEFINED;
+
 	for (const auto &p : data.getMembers())
 		updateFields(p, msg, ship, allowApproxLatLon, positionUpdated, staticUpdated);
+
+	const bool eta_now_set = ship.month != ETA_MONTH_UNDEFINED || ship.day != ETA_DAY_UNDEFINED ||
+							 ship.hour != ETA_HOUR_UNDEFINED || ship.minute != ETA_MINUTE_UNDEFINED;
+
+	if (eta_was_set && eta_now_set && (eta_before[0] != ship.month || eta_before[1] != ship.day ||
+									   eta_before[2] != ship.hour || eta_before[3] != ship.minute))
+	{
+		char eta[21];
+		std::snprintf(eta, sizeof(eta), "%02d-%02d %02d:%02d",
+					  (int)ship.month, (int)ship.day, (int)ship.hour, (int)ship.minute);
+		changes.addText(ship.mmsi, StaticHistory::ETA, eta, ship.last_signal);
+	}
 
 	ship.setType();
 

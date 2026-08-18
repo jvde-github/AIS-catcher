@@ -7,27 +7,48 @@ import OlFeature from 'ol/Feature';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import Point from 'ol/geom/Point';
+import Polygon from 'ol/geom/Polygon';
 import Style from 'ol/style/Style';
 import Icon from 'ol/style/Icon';
 import { fromLonLat } from 'ol/proj';
 
 import { settings } from '../core/state.js';
 import { decodeHTMLEntities } from '../core/util.js';
-import { calculateBearing } from '../core/geo.js';
+import { calculateBearing, shipOutlineLocal } from '../core/geo.js';
 import { getSpeedVal, getSpeedUnit, getDeltaTimeVal, getFlagStyled, getShipTypeShort, sanitizeString } from '../core/format.js';
 
 // { getReceiver, spriteFor, iconScale, fadeOpacity, labelText, spriteSheet,
-//   setLiveLayers, showNotification, onStateChange }
+//   getResolution, hullStyle, setLiveLayers, showNotification, onStateChange }
 let deps = null;
 
 const markerSource = new VectorSource({ features: [] });
 export const markerLayer = new VectorLayer({ source: markerSource });
 
-// mmsi -> { pts, cls, name, len }; pts is oldest-first [lat, lon, t, e, sog]
+const hullSource = new VectorSource({ features: [] });
+export const hullLayer = new VectorLayer({ source: hullSource });
+
+const HULL_ON_PX = 12;
+const HULL_OFF_PX = 10;
+// Ceiling on the OL objects the animation holds, independent of fleet size:
+// the pixel gate means only vessels large on screen ever ask for one.
+const HULL_POOL_MAX = 256;
+
+const DEG = Math.PI / 180;
+const hullPool = [];        // idle { feature, geom, ring } triples
+const hulls = {};           // mmsi -> triple currently on screen
+
+// mmsi -> { pts, cls, name, len, dim }; dim is [bow, stern, port, starboard]
+// relative to the reported position; pts is oldest-first [lat, lon, t, e, sog, cog, hdg]
 let fleet = {};
 // mmsi -> { marker, shown, style, last }
 let features = {};
 let bounds = { now: 0, oldest: 0, newest: 0 };
+// Point encoding the server publishes: 1 is sog in half knots and no angles,
+// 2 adds cog/hdg and moves sog to tenths. Blocks are cached per format.
+let pointFormat = 1;
+let sogDiv = 2;
+let cogDiv = 1;      // 0.1 degree units in format 2
+let underWayUnits = 2;   // 1 knot in the current sog units
 let blocks = new Set();
 let manifest = {};
 let filling = false;
@@ -64,6 +85,8 @@ let lastFrame = 0;
 export function init(d) {
     deps = d;
     markerLayer.setVisible(false);
+    hullLayer.setVisible(false);
+    if (d.hullStyle) hullLayer.setStyle(d.hullStyle);
 }
 
 export function isActive() { return active; }
@@ -105,6 +128,10 @@ export async function refreshBounds() {
         bounds = { now: info.now || 0, oldest: info.oldest || 0, newest: info.newest || 0 };
         if (info.block > 0) BLOCK = info.block;
         if (info.granularity > 0 && info.dwell_gap > 0) MAX_INTERP = info.granularity + info.dwell_gap;
+        pointFormat = info.point_format > 0 ? info.point_format : 1;
+        sogDiv = pointFormat >= 2 ? 10 : 2;
+        cogDiv = pointFormat >= 2 ? 10 : 1;
+        underWayUnits = pointFormat >= 2 ? 10 : 2;
     } catch (e) {
         bounds = { now: 0, oldest: 0, newest: 0 };
     }
@@ -138,7 +165,7 @@ async function loadBlock(start) {
 
     const gen = generation;
     const data = await api(
-        `api/replay.json?block=${start / BLOCK}&lookback=${BLOCK_LOOKBACK}`);
+        `api/replay.json?block=${start / BLOCK}&lookback=${BLOCK_LOOKBACK}&pf=${pointFormat}`);
     if (gen !== generation) return false;
     blocks.add(start);
 
@@ -156,7 +183,8 @@ async function loadBlock(start) {
                 name: sanitizeString(m.n || ''),
                 country: sanitizeString(m.f || ''),
                 type: m.t ?? null,
-                len: m.l || 0,
+                dim: m.d || null,
+                len: m.d ? m.d[0] + m.d[1] : 0,
             };
         }
         const merged = mergePoints(s.pts, pts);
@@ -207,8 +235,10 @@ export async function load(at) {
 
         active = true;
         markerSource.clear();
+        hullSource.clear();
         buildFeatures();
         markerLayer.setVisible(true);
+        hullLayer.setVisible(true);
         deps.setLiveLayers(false);
         draw();
 
@@ -324,6 +354,9 @@ export function stop() {
     manifest = {};
     markerSource.clear();
     markerLayer.setVisible(false);
+    for (const mmsi in hulls) releaseHull(mmsi);
+    hullSource.clear();
+    hullLayer.setVisible(false);
     deps.setLiveLayers(true);
     deps.onStateChange?.();
 }
@@ -338,6 +371,18 @@ export function seek(time) {
 }
 
 const NO_LEG = { brg: null, knots: 0 };
+
+function angleOf(p) {
+    if (p[6] != null) return p[6];
+    if (p[5] != null) return p[5] / cogDiv;
+    return null;
+}
+
+// Shortest way round: a vessel swinging through north must not spin 359 degrees.
+function lerpAngle(from, to, f) {
+    let d = ((to - from + 540) % 360) - 180;
+    return (from + d * f + 360) % 360;
+}
 
 // Course and speed made good from a to b. Bearing comes from the segment being
 // travelled, so the icon always points where the vessel is visibly going.
@@ -372,7 +417,7 @@ function holdAt(s, i, T) {
     if (age > STALE_DROP) return null;
 
     const l = i > 0 ? leg(s, i - 1, i) : NO_LEG;
-    return { lat: s.pts[i][0], lon: s.pts[i][1], knots: l.knots, brg: l.brg, age };
+    return { lat: s.pts[i][0], lon: s.pts[i][1], knots: l.knots, brg: l.brg, age, hdg: angleOf(s.pts[i]) };
 }
 
 // index of the first point whose dwell ends at or after T
@@ -399,13 +444,13 @@ function sample(s, T) {
     const i = firstAlive(pts, T);
     const a = T >= pts[i][2] ? i : i - 1;
     const pa = pts[a];
-    // sog is in half-knot units, null when unknown; unknown parks, matching
-    // blocks cached before the field existed
+    // sog units follow the server's point format, null when unknown; unknown
+    // parks, matching blocks cached before the field existed
     const sog = pa[4];
-    const underWay = sog != null && sog > 2;
+    const underWay = sog != null && sog > underWayUnits;
 
     if (T <= pa[3] && !underWay)
-        return { lat: pa[0], lon: pa[1], knots: 0, brg: null };
+        return { lat: pa[0], lon: pa[1], knots: 0, brg: null, hdg: angleOf(pa) };
 
     const b = a + 1;
     if (b < pts.length && pts[b][2] - pa[3] <= MAX_INTERP) {
@@ -413,17 +458,20 @@ function sample(s, T) {
         const span = pts[b][2] - start;
         const f = span > 0 ? Math.max(0, Math.min(1, (T - start) / span)) : 0;
         const l = leg(s, a, b);
+        const ha = angleOf(pa), hb = angleOf(pts[b]);
         return {
             lat: pa[0] + (pts[b][0] - pa[0]) * f,
             lon: pa[1] + (pts[b][1] - pa[1]) * f,
-            knots: underWay ? sog / 2 : l.knots, brg: l.brg,
+            knots: underWay ? sog / sogDiv : l.knots, brg: l.brg,
+            // turning through the segment reads as a turn, not a snap at the end
+            hdg: ha != null && hb != null ? lerpAngle(ha, hb, f) : (ha ?? hb),
         };
     }
 
     // no next point within reach: hold rather than invent a track never sailed
     if (T <= pa[3]) {
         const l = a > 0 ? leg(s, a - 1, a) : NO_LEG;
-        return { lat: pa[0], lon: pa[1], knots: sog / 2, brg: l.brg };
+        return { lat: pa[0], lon: pa[1], knots: sog / sogDiv, brg: l.brg, hdg: angleOf(pa) };
     }
     return holdAt(s, a, T);
 }
@@ -506,8 +554,58 @@ function place(f, s, fix) {
     f.last = { cx: sp.cx, cy: sp.cy, rot: sp.rot, scale, opacity, lat: fix.lat, lon: fix.lon, label };
 }
 
+function takeHull() {
+    const h = hullPool.pop();
+    if (h) return h;
+    const seed = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]];
+    const geom = new Polygon([seed]);
+    const feature = new OlFeature({ geometry: geom });
+    return { feature, geom, flat: geom.getFlatCoordinates() };
+}
+
+function releaseHull(mmsi) {
+    const h = hulls[mmsi];
+    if (!h) return;
+    hullSource.removeFeature(h.feature);
+    delete hulls[mmsi];
+    if (hullPool.length < HULL_POOL_MAX) hullPool.push(h);
+}
+
+// Rotate the precomputed outline into place. No geodesy, no allocation: two
+// trig calls and ten multiply-adds into a buffer that already exists.
+function placeHull(mmsi, s, fix, res) {
+    const local = s.local || (s.local = shipOutlineLocal(s.dim[0], s.dim[1], s.dim[2], s.dim[3]));
+
+    let h = hulls[mmsi];
+    if (!h) {
+        h = hulls[mmsi] = takeHull();
+        h.feature.ship = { mmsi: Number(mmsi) };   // shapeStyleFunction reads .ship
+        hullSource.addFeature(h.feature);
+    }
+
+    const t = fix.hdg * DEG, si = Math.sin(t), co = Math.cos(t);
+    const cosLat = Math.cos(fix.lat * DEG);
+    const k = cosLat > 1e-6 ? 1 / cosLat : 1;      // ground metres -> projected units
+    const c = fromLonLat([fix.lon, fix.lat]);
+    const X = c[0], Y = c[1];
+    const flat = h.flat;
+
+    for (let i = 0; i < 5; i++) {
+        const f = local[i][0], sd = local[i][1];
+        flat[i * 2]     = X + (f * si + sd * co) * k;
+        flat[i * 2 + 1] = Y + (f * co - sd * si) * k;
+    }
+    flat[10] = flat[0];
+    flat[11] = flat[1];
+
+    // the array OL already owns was written in place, so it only needs telling
+    h.geom.changed();
+}
+
 function draw() {
     if (!active) return;
+
+    const res = deps.getResolution?.();
 
     for (const mmsi in fleet) {
         const f = features[mmsi];
@@ -519,14 +617,29 @@ function draw() {
                 markerSource.removeFeature(f.marker);
                 f.shown = false;
             }
+            releaseHull(mmsi);
             continue;
         }
 
         place(f, fleet[mmsi], fix);
+        hull(mmsi, fleet[mmsi], fix, res);
 
         if (!f.shown) {
             markerSource.addFeature(f.marker);
             f.shown = true;
         }
     }
+}
+
+// Hulls are drawn by apparent size, not zoom: the fleet runs from 4 m tenders to
+// 365 m tankers, so one zoom threshold would be wrong for most of it. Mercator
+// inflates ground metres by 1/cos(lat), which is why latitude is in the test.
+function hull(mmsi, s, fix, res) {
+    if (!res || !s.dim || fix.hdg == null) return releaseHull(mmsi);
+
+    const px = s.len / (res * Math.cos(fix.lat * DEG));
+    const on = hulls[mmsi] ? px >= HULL_OFF_PX : px >= HULL_ON_PX;
+    if (!on) return releaseHull(mmsi);
+
+    placeHull(mmsi, s, fix, res);
 }

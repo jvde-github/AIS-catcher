@@ -390,6 +390,8 @@
     --color-shipcard-header: var(--color-surface-raised);
     --color-shipcard-footer: var(--color-surface-raised);
     --color-shipcard-selected: rgb(240, 241, 248);
+    --color-shipcard-edge: var(--blue-400);
+    --color-antenna: #c2136b;
     --color-stat-divider: var(--color-border);
 
     --color-hover-overlay: rgba(255, 255, 255, 0.5);
@@ -432,6 +434,8 @@
     --color-shipcard-header: #323232;
     --color-shipcard-footer: #282828;
     --color-shipcard-selected: #323232;
+    --color-shipcard-edge: var(--blue-400);
+    --color-antenna: #ff5ca3;
     --color-stat-divider: #323232;
 
     --color-hover-overlay: rgba(255, 255, 255, 0.1);

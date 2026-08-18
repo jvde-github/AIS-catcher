@@ -1,5 +1,6 @@
 import { settings, isAndroid } from './core/state.js';
 import { ShippingClass } from './core/constants.js';
+import { SPEED_PALETTES, palette as validPalette, bucketColor, speedBucket, paletteCSS } from './core/palette.js';
 import { debounce, decodeHTMLEntities, deriveLabelBackground, copyToClipboard, hexToRgb } from './core/util.js';
 import { calcOffset1M, createShipOutlineGeometry, createDistanceGeometry, hasValidCoords } from './core/geo.js';
 import { init as initRainRadar } from './overlays/rainradar.js';
@@ -14,7 +15,8 @@ import * as range from './features/range.js';
 import {
     getDistanceVal, getDistanceUnit,
     getSpeedVal, getSpeedUnit,
-    getDimVal, getDimUnit, getDraughtVal, getShipDimension,
+    getDimVal, getDimUnit, getDraughtVal, getShipDimension, getShipDimensionSVG, getSpeedHistorySVG,
+    getDraughtChartSVG, getChangeListHTML, CHANGE,
     getLatValFormat, getLonValFormat,
     getEtaVal, getDeltaTimeVal,
     getShipName, getCallSign, setShipNameProvider, setCallSignProvider,
@@ -163,6 +165,9 @@ const ACTIONS = {
     setShowTrackOnHover: (e, d, el) => { settings.show_track_on_hover = el.checked; saveSettings(); },
     setTrackVisibility: (e, d, el) => setTrackVisibility(el.value),
     applyColorToAllTracks: (e, d, el) => applyColorToAllTracks(el.value),
+    setTrackColorMode: (e, d, el) => setTrackColorMode(el.value),
+    setTrackSpeedPalette: (e, d, el) => setTrackSpeedPalette(el.value),
+    setTrackSpeedMax: (e, d, el) => setTrackSpeedMax(Number(el.value)),
     resetTrackColorsToDefault: () => resetTrackColorsToDefault(),
     setTrackClassColor: (e, d, el) => setTrackClassColor(d.shipclass, el.value),
 
@@ -259,6 +264,8 @@ const ACTIONS = {
     rotateShipcardIcons: () => rotateShipcardIcons(),
     techInfo: (e) => { e.stopPropagation(); toggleShipcardPopover("tech_popover", "shipcard_tech_info"); },
     shiptypeInfo: (e) => { e.stopPropagation(); toggleShipcardPopover("shiptype_popover", "shipcard_shiptype_info"); },
+    shipHistory: (e) => { e.stopPropagation(); openShipcardSection("changes"); },
+    toggleShipcardSection: (e, d, el) => { e.stopPropagation(); toggleShipcardSection(el?.dataset.section || d.section); },
     showNMEAContextCopy: (e, d) => showContextMenu(e, d.copy || '', 'ship', ['settings', 'copy-text']),
     removeRealtimeFilter: (e, d) => realtimeModule?.removeFilter(d.kind, d.value),
 };
@@ -412,6 +419,9 @@ const hover_info = document.getElementById('hover-info');
 
 let isFetchingShips = false;
 
+// legs whose points never reported a speed, in speed-colored mode
+const TRACK_SPEED_UNKNOWN_COLOR = '#9aa0a6';
+
 function getDefaultTrackColors() {
     return {
         [ShippingClass.CARGO]: '#00ff7f',
@@ -450,6 +460,9 @@ const DEFAULT_SETTINGS = {
         track_opacity: 1,
         track_history: 30,
         track_trash_threshold: 30,
+        track_color_mode: "class",
+        track_speed_palette: "turbo",
+        track_speed_max: 20,
         show_range: false,
         distance_circles: true,
         distance_circle_color: '#1c71d8',
@@ -898,8 +911,11 @@ const trackStyleFunction = function (feature) {
     let c = '#12a5ed'; // Default fallback color
     let highlighted = false;
 
-    // Use shipping class color if available
-    if (feature.shipclass && settings.track_class_colors[feature.shipclass]) {
+    // Speed colors are baked per segment when the track is built; otherwise
+    // the whole track takes the color of its shipping class
+    if (feature.speedColor) {
+        c = feature.speedColor;
+    } else if (feature.shipclass && settings.track_class_colors[feature.shipclass]) {
         c = settings.track_class_colors[feature.shipclass];
     }
 
@@ -1539,7 +1555,7 @@ function initMap() {
     }
 
     [trackLayer, rangeLayer, shapeLayer, markerLayer, labelLayer, extraLayer, binaryLayer, measure.measureVector,
-     replay.markerLayer].forEach(layer => {
+     replay.hullLayer, replay.markerLayer].forEach(layer => {
         map.addLayer(layer);
     });
 
@@ -2313,6 +2329,47 @@ function updateTrackColorInputs() {
     for (const key of Object.keys(ShippingClass)) {
         document.getElementById(`settings_track_${key.toLowerCase()}_color`).value = settings.track_class_colors[ShippingClass[key]];
     }
+}
+
+function setTrackColorMode(mode) {
+    settings.track_color_mode = mode === "speed" ? "speed" : "class";
+    updateTrackColorModeUI();
+    saveSettings();
+    redrawMap();
+}
+
+function setTrackSpeedPalette(key) {
+    settings.track_speed_palette = validPalette(key);
+    updateSpeedLegend();
+    saveSettings();
+    redrawMap();
+}
+
+function setTrackSpeedMax(knots) {
+    settings.track_speed_max = knots;
+    updateSpeedLegend();
+    saveSettings();
+    redrawMap();
+}
+
+// Only one of the two coloring blocks is on screen at a time: the per-class
+// pickers, or the palette with its scale.
+function updateTrackColorModeUI() {
+    const speed = settings.track_color_mode === "speed";
+    document.querySelectorAll(".track-class-color").forEach((el) => el.classList.toggle("hidden", speed));
+    document.querySelectorAll(".track-speed-color").forEach((el) => el.classList.toggle("hidden", !speed));
+    updateSpeedLegend();
+}
+
+// the scale is read at a glance, so its ticks carry no decimals
+const speedWhole = (knots) => Math.round(Number(getSpeedVal(knots)));
+
+function updateSpeedLegend() {
+    const bar = document.getElementById("track_speed_legend");
+    if (!bar) return;
+    bar.style.background = paletteCSS(settings.track_speed_palette);
+    document.getElementById("track_speed_scale_label").textContent =
+        `Scale (0 - ${speedWhole(settings.track_speed_max)} ${getSpeedUnit()})`;
 }
 
 function shipcardselect(e) {
@@ -3639,6 +3696,7 @@ function populateShipcard() {
     updateShipcardTrackOption();
     updateMessageButton();
     updateTechDetails(ship);
+    renderHullSection(ship);
 
 }
 
@@ -3683,6 +3741,111 @@ function updateTechDetails(ship) {
     document.getElementById("tech_vendor").textContent = ship.vendorid || "-";
     document.getElementById("tech_model").textContent = ship.model != null ? ship.model : "-";
     document.getElementById("tech_serial").textContent = ship.serial != null ? ship.serial : "-";
+}
+
+// Everything time-related about a vessel in one window: the track gives speed,
+// the change log gives draught and what else was edited. Both are fetched here
+// rather than per row, so opening a shipcard still costs nothing.
+let historyMMSI = 0;
+
+// Sections collapse independently of the card's own min/max, which toggles
+// `hidden` on every shipcard-max-only element — hence a class of their own.
+const sectionOpen = { voyage: true, vessel: true, source: false,
+                      hull: false, speed: false, draught: false, changes: false };
+
+let historyCache = { mmsi: 0, pts: null, changes: null };
+
+function applyShipcardSection(key) {
+    const open = !!sectionOpen[key];
+    document.querySelectorAll('#shipcard_content [data-section="' + key + '"]').forEach((el) => {
+        if (el.classList.contains("shipcard-section")) {
+            const caret = el.querySelector(".shipcard-section-caret");
+            if (caret) {
+                caret.classList.toggle("keyboard_arrow_up_icon", open);
+                caret.classList.toggle("keyboard_arrow_down_icon", !open);
+            }
+            return;
+        }
+        el.classList.toggle("sec-collapsed", !open);
+    });
+}
+
+function toggleShipcardSection(key) {
+    if (!key) return;
+    sectionOpen[key] = !sectionOpen[key];
+    applyShipcardSection(key);
+    if (sectionOpen[key]) fillShipcardSection(key);
+}
+
+function openShipcardSection(key) {
+    if (!sectionOpen[key]) toggleShipcardSection(key);
+}
+
+function setSectionAvailable(key, available) {
+    const head = document.getElementById("shipcard_" + key + "_head");
+    const body = document.getElementById("shipcard_" + key + "_section");
+    if (head) head.classList.toggle("sec-empty", !available);
+    if (body && !available) body.classList.add("sec-collapsed");
+}
+
+function renderHullSection(ship) {
+    ship = ship || shipsDB[card_mmsi]?.raw;
+    const svg = ship ? getShipDimensionSVG(ship) : "";
+    setSectionAvailable("hull", !!svg);
+    const body = document.getElementById("shipcard_hull_body");
+    if (body) body.innerHTML = svg;
+}
+
+async function fillShipcardSection(key) {
+    const mmsi = card_mmsi;
+    if (!mmsi) return;
+
+    if (key === "hull") return renderHullSection();
+    if (!["speed", "draught", "changes"].includes(key)) return;
+
+    const body = document.getElementById("shipcard_" + key + "_body");
+    if (!body) return;
+
+    if (historyCache.mmsi !== mmsi) {
+        body.innerHTML = '<span class="dim-note">Loading…</span>';
+        try {
+            const [p, c] = await Promise.all([
+                fetch("api/path.json?" + mmsi + "&receiver=" + activeReceiver).then((r) => r.json()),
+                fetch("api/changes.json?" + mmsi + "&receiver=" + activeReceiver).then((r) => r.json()),
+            ]);
+            historyCache = { mmsi, pts: p[mmsi] || [], changes: Array.isArray(c) ? c : [] };
+        } catch (err) {
+            body.innerHTML = '<span class="dim-note">History unavailable</span>';
+            return;
+        }
+    }
+    if (card_mmsi !== mmsi) return;
+
+    const ship = shipsDB[mmsi]?.raw;
+    let html = "";
+    if (key === "speed") html = getSpeedHistorySVG(historyCache.pts);
+    else if (key === "draught") html = getDraughtChartSVG(historyCache.changes, ship ? ship.draught : null);
+    else html = getChangeListHTML(historyCache.changes,
+        [CHANGE.DESTINATION, CHANGE.ETA, CHANGE.SHIPNAME, CHANGE.CALLSIGN, CHANGE.STATUS],
+        (x) => x.f === CHANGE.STATUS ? getStatusVal({ status: x.to })
+             : x.f === CHANGE.DRAUGHT ? getDimVal(x.to / 10) + " " + getDimUnit()
+             : String(x.to));
+
+    setSectionAvailable(key, !!html);
+    body.innerHTML = html || '<span class="dim-note">Nothing recorded yet</span>';
+}
+
+function resetShipHistory() {
+    historyCache = { mmsi: 0, pts: null, changes: null };
+    ["hull", "speed", "draught", "changes"].forEach((k) => {
+        const body = document.getElementById("shipcard_" + k + "_body");
+        if (body) body.innerHTML = "";
+        sectionOpen[k] = false;
+    });
+    sectionOpen.voyage = true;
+    sectionOpen.vessel = true;
+    sectionOpen.source = false;
+    Object.keys(sectionOpen).forEach(applyShipcardSection);
 }
 
 function toggleShipcardPopover(popoverId, iconId) {
@@ -4127,6 +4290,8 @@ function prepareShipcard() {
 }
 
 function showShipcard(type, m, pixel = undefined) {
+    resetShipHistory();
+
     const aside = document.getElementById("shipcard");
     const visible = shipcardVisible();
 
@@ -4468,6 +4633,21 @@ function redrawMap() {
     }
 
     const cutoff = trackWindowStart();
+    const speedMode = settings.track_color_mode === "speed";
+    const speedPalette = validPalette(settings.track_speed_palette);
+    const speedTop = Number(settings.track_speed_max) || 20;
+
+    // A leg is drawn at the mean of the speeds its two points report, in the
+    // tenths of a knot the path carries; a leg with no speed at either end
+    // gets a neutral color rather than the bottom of the ramp, which would
+    // read as "stopped".
+    const legBucket = (newer, older) => {
+        if (!speedMode) return 0;
+        const a = newer[4], b = older[4];
+        const sog = a != null && b != null ? (a + b) / 2 : (a != null ? a : b);
+        return sog == null ? -1 : speedBucket(sog / 10, speedTop);
+    };
+
     for (let [mmsi, entry] of Object.entries(paths)) {
 
         if (marker_tracks.has(Number(mmsi)) || settings.show_all_tracks) {
@@ -4475,19 +4655,22 @@ function redrawMap() {
             const ship = shipsDB[mmsi]?.raw;
             const shipclass = ship?.shipclass;
 
-            // Path: [lat, lon, start_time, end_time]
+            // Path: [lat, lon, start_time, end_time, sog, cog, hdg]
             if (path.length > 0 && path[0].length >= 4) {
-                const emitSegment = (coords, dashed) => {
+                const emitSegment = (coords, dashed, bucket) => {
                     if (coords.length < 2) return;
                     const feature = new ol.Feature(new ol.geom.LineString(coords));
                     feature.mmsi = mmsi;
                     feature.isDashed = dashed;
                     feature.shipclass = shipclass;
+                    if (speedMode)
+                        feature.speedColor = bucket < 0 ? TRACK_SPEED_UNKNOWN_COLOR : bucketColor(speedPalette, bucket);
                     trackVector.addFeature(feature);
                 };
 
                 let currentSegment = [];
                 let currentDashed = false;
+                let currentBucket = 0;
 
                 for (let i = 0; i < path.length; i++) {
                     const point = path[i];
@@ -4496,27 +4679,32 @@ function redrawMap() {
                     const coord = ol.proj.fromLonLat([point[1], point[0]]);
 
                     let isDashed = false;
+                    let bucket = 0;
                     if (i > 0) {
                         const timeBetweenPoints = path[i - 1][2] - point[3]; // newer start_time - older end_time
                         isDashed = timeBetweenPoints > settings.track_trash_threshold;
+                        bucket = legBucket(path[i - 1], point);
                     }
 
                     if (currentSegment.length === 0) {
                         // First point
                         currentSegment.push(coord);
                         currentDashed = false; // First segment is always solid
-                    } else if (currentDashed === isDashed) {
+                    } else if (currentSegment.length === 1 || (currentDashed === isDashed && currentBucket === bucket)) {
                         // Continue current segment
                         currentSegment.push(coord);
+                        currentDashed = isDashed;
+                        currentBucket = bucket;
                     } else {
-                        emitSegment(currentSegment, currentDashed);
+                        emitSegment(currentSegment, currentDashed, currentBucket);
                         // Start new segment
                         currentSegment = [currentSegment[currentSegment.length - 1], coord];
                         currentDashed = isDashed;
+                        currentBucket = bucket;
                     }
                 }
 
-                emitSegment(currentSegment, currentDashed);
+                emitSegment(currentSegment, currentDashed, currentBucket);
             }
         }
     }
@@ -4671,6 +4859,17 @@ function updateSettingsTab() {
 
     // Update ship class color inputs
     updateTrackColorInputs();
+
+    const paletteSelect = document.getElementById("settings_track_speed_palette");
+    if (!paletteSelect.options.length)
+        for (const [key, p] of Object.entries(SPEED_PALETTES))
+            paletteSelect.add(new Option(p.name, key));
+
+    paletteSelect.value = validPalette(settings.track_speed_palette);
+    document.getElementById("settings_track_color_mode").value = settings.track_color_mode === "speed" ? "speed" : "class";
+    document.getElementById("settings_track_speed_max").value = settings.track_speed_max;
+    updateSliderDisplay('trackSpeedMax', settings.track_speed_max);
+    updateTrackColorModeUI();
 }
 
 
@@ -4799,6 +4998,7 @@ const SLIDER_DISPLAYS = {
     trackOpacity: ["track_opacity_label", (v) => `Opacity (${Math.round(parseFloat(v) * 100)}%)`],
     trackHistory: ["track_history_label", (v) => `History (${trackHistoryLabel(Number(v))})`],
     trackTrashThreshold: ["track_trash_threshold_label", (v) => `Dash Threshold (${v}s)`],
+    trackSpeedMax: ["track_speed_max_label", (v) => `Scale Max (${speedWhole(v)} ${getSpeedUnit()})`],
     iconScale: ["icon_scale_label", (v) => `Marker Size (${parseFloat(v).toFixed(2)})`],
     mapOpacity: ["map_opacity_label", (v) => `Map Dimming (${Math.round(parseFloat(v) * 100)}%)`],
     tooltipFontSize: ["tooltip_font_size_label", (v) => `Font Size (${v})`],
@@ -5067,6 +5267,8 @@ replay.init({
     fadeOpacity: fadeCurve,
     labelText: buildLabelText,
     spriteSheet: SpritesAll,
+    getResolution: () => map.getView().getResolution(),
+    hullStyle: shapeStyleFunction,
     setLiveLayers: setLiveLayersVisible,
     showNotification,
     onStateChange: updateReplaycard,

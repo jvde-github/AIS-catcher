@@ -53,6 +53,20 @@ export function calcMove(coordinate, delta, distance) {
     return [coordinate[0] + delta[1] * distance, coordinate[1] + delta[0] * distance];
 }
 
+// The hull as five points in ship coordinates: metres forward of the reported
+// position (the antenna) and metres to starboard of it. Fixed for the life of
+// the vessel, so the animation can precompute it once and only rotate.
+export function shipOutlineLocal(to_bow, to_stern, to_port, to_starboard) {
+    const L = to_bow + to_stern;
+    return [
+        [-to_stern, to_starboard],                       // A  stern, starboard quarter
+        [-to_stern, -to_port],                           // B  stern, port quarter
+        [0.8 * L - to_stern, -to_port],                  // C  shoulder, port
+        [to_bow, 0.5 * (to_starboard - to_port)],        // D  bow
+        [0.8 * L - to_stern, to_starboard],              // E  shoulder, starboard
+    ];
+}
+
 export function createShipOutlineGeometry(ship) {
     if (!ship) return null;
     const coordinate = [ship.lon, ship.lat];
@@ -70,17 +84,11 @@ export function createShipOutlineGeometry(ship) {
     const deltaBow = calcOffset1M(coordinate, heading % 360);
     const deltaStarboard = calcOffset1M(coordinate, (heading + 90) % 360);
 
-    const stern = calcMove(coordinate, deltaBow, -to_stern);
+    const ring = shipOutlineLocal(to_bow, to_stern, to_port, to_starboard)
+        .map(([f, s]) => calcMove(calcMove(coordinate, deltaBow, f), deltaStarboard, s));
+    ring.push(ring[0]);
 
-    const A = calcMove(stern, deltaStarboard, to_starboard);
-    const B = calcMove(stern, deltaStarboard, -to_port);
-    const C = calcMove(B, deltaBow, 0.8 * (to_bow + to_stern));
-    const Dmid = calcMove(C, deltaStarboard, 0.5 * (to_starboard + to_port));
-    const D = calcMove(Dmid, deltaBow, 0.2 * (to_bow + to_stern));
-    const E = calcMove(C, deltaStarboard, to_starboard + to_port);
-
-    let shipOutlineCoords = [A, B, C, D, E, A].map(coord => fromLonLat(coord));
-    return new Polygon([shipOutlineCoords]);
+    return new Polygon([ring.map(coord => fromLonLat(coord))]);
 }
 
 export function createDistanceGeometry(lat, lon, radius) {

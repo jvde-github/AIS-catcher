@@ -46,13 +46,13 @@ public:
 		float lat, lon;
 		uint32_t time;
 		uint32_t prev, next;
-		uint16_t dur;	  // dwell past `time` in seconds
-		uint8_t cog, sog; // 2 degree / 0.5 knot units, NA when unknown
+		uint16_t dur;			   // dwell past `time` in seconds
+		uint16_t cog, hdg, sog;	   // 0.1 degree / 1 degree / 0.1 knot units, NA when unknown
 
 		uint32_t end() const { return time + dur; }
 	};
 
-	static const uint8_t NA = 0xFF;
+	static const uint16_t NA = 0xFFFF;
 
 	// silence that ends a dwell, and so how long a point's end can still grow
 	static const uint32_t DWELL_GAP = 900;
@@ -69,7 +69,7 @@ private:
 	static const uint32_t HORIZON = 3600;	 // full-resolution window in seconds
 	static const uint32_t DWELL_MAX = 0xFFFFu; // ceiling of the uint16 dur field
 	static const int DEADBAND = 40;			 // meters a ship must move to count as significant
-	static const uint8_t IDLE_SOG = 1;		 // 0.5 knot units, at or below this a ship is not making way
+	static const uint16_t IDLE_SOG = 5;		 // 0.1 knot units, at or below this a ship is not making way
 
 	enum Tier
 	{
@@ -275,17 +275,19 @@ private:
 		return b;
 	}
 
-	static uint8_t encodeCOG(float c) { return (c >= 0 && c < 360) ? (uint8_t)(c / 2 + 0.5f) : NA; }
+	static uint16_t encodeCOG(float c) { return (c >= 0 && c < 360) ? (uint16_t)(c * 10 + 0.5f) : NA; }
 
-	static uint8_t encodeSOG(float s)
+	static uint16_t encodeHDG(int h) { return (h >= 0 && h < 360) ? (uint16_t)h : NA; }
+
+	static uint16_t encodeSOG(float s)
 	{
 		if (!(s >= 0))
 			return NA;
-		float v = s * 2 + 0.5f;
-		return v < 254.0f ? (uint8_t)v : (uint8_t)254;
+		float v = s * 10 + 0.5f;
+		return v < 1022.0f ? (uint16_t)v : (uint16_t)1022;
 	}
 
-	bool significant(const Point &q, float lat, float lon, uint8_t cog, uint8_t sog, int idle_band)
+	bool significant(const Point &q, float lat, float lon, uint16_t cog, uint16_t sog, int idle_band)
 	{
 		bool idle = q.sog != NA && sog != NA && q.sog <= IDLE_SOG && sog <= IDLE_SOG;
 		int band = idle ? idle_band : DEADBAND;
@@ -293,15 +295,15 @@ private:
 		if (Util::Geodesy::distanceSqMeters(q.lat, q.lon, lat, lon) > (float)(band * band))
 			return true;
 
-		if (q.sog != NA && sog != NA && std::abs((int)sog - (int)q.sog) > 1)
+		if (q.sog != NA && sog != NA && std::abs((int)sog - (int)q.sog) > 5)
 			return true;
 
 		if (sog != NA && sog > IDLE_SOG && q.cog != NA && cog != NA)
 		{
 			int d = std::abs((int)cog - (int)q.cog);
-			if (d > 90)
-				d = 180 - d;
-			if (d > 5)
+			if (d > 1800)
+				d = 3600 - d;
+			if (d > 100)
 				return true;
 		}
 		return false;
@@ -333,10 +335,10 @@ public:
 	}
 
 	// idle_band: meters a ship not making way may wander before a new point is stored
-	void add(int ship, float lat, float lon, float cog, float sog, int idle_band, std::time_t now)
+	void add(int ship, float lat, float lon, float cog, int heading, float sog, int idle_band, std::time_t now)
 	{
 		uint32_t t = now > 0 ? (uint32_t)now : 0;
-		uint8_t c = encodeCOG(cog), s = encodeSOG(sog);
+		uint16_t c = encodeCOG(cog), h = encodeHDG(heading), s = encodeSOG(sog);
 
 		if (isPoint(anchors[ship].tail))
 		{
@@ -371,7 +373,7 @@ public:
 		int i = blk.count++;
 		blk.live++;
 
-		blk.pts[i] = {lat, lon, t, tl, SHIP_BIT | (uint32_t)ship, 0, c, s};
+		blk.pts[i] = {lat, lon, t, tl, SHIP_BIT | (uint32_t)ship, 0, c, h, s};
 
 		uint32_t r = ref(b, i);
 		setNext(tl, r);

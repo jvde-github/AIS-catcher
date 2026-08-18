@@ -56,6 +56,19 @@ function formatAverage(v) {
     return Math.abs(v) >= 100 ? Math.round(v).toString() : v.toFixed(1);
 }
 
+// Axis labels get long once counts run into the thousands: 12000 -> 12K.
+function compactNumber(v) {
+    const a = Math.abs(v);
+    const unit = a >= 1e9 ? [1e9, "B"] : a >= 1e6 ? [1e6, "M"] : [1e3, "K"];
+    const n = v / unit[0];
+    return (Math.abs(n) < 10 ? Number(n.toFixed(1)) : Math.round(n)) + unit[1];
+}
+
+function compactTick(value) {
+    if (!Number.isFinite(value) || Math.abs(value) < 1000) return this.getLabelForValue(value);
+    return compactNumber(value);
+}
+
 function cloneChartConfig(config) {
     const clone = JSON.parse(JSON.stringify(config));
     // the JSON round trip drops scriptable options, so re-attach them
@@ -533,6 +546,12 @@ function attachTimeAxis(c) {
         if (!axis || !absoluteTime) return value;
         return formatTimeTick(value, axis, index > 0 ? ticks[index - 1].value : undefined);
     };
+
+    for (const [id, scale] of Object.entries(opts.scales || {})) {
+        if (id === "x") continue;
+        scale.ticks = scale.ticks || {};
+        scale.ticks.callback = compactTick;
+    }
 
     opts.plugins = opts.plugins || {};
     opts.plugins.tooltip = opts.plugins.tooltip || {};

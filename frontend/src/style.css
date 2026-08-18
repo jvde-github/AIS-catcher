@@ -1005,21 +1005,30 @@ a:focus {
     position: relative;
 }
 
+/* flush with the card: an inset band leaves a rim of card behind it, which
+   reads as a misprint against the card's rounded corners */
 .mapcard-footer {
-    background-color: var(--color-shipcard-footer);
+    background-color: var(--color-menu);
     color: var(--color-text);
     flex: 0 0 50px;
     display: flex;
     flex-direction: row;
-    margin: 5px;
-    margin-bottom: 10px;
+    padding: 0 5px;
     justify-content: center;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+.mapcard.floating .mapcard-footer {
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 .mapcard-footer>div {
     flex: 0 1 100px;
     display: flex;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
     border-radius: var(--radius-lg);
     transition: var(--transition-hover);
 }
@@ -1033,18 +1042,16 @@ a:focus {
 }
 
 .mapcard-footer>div>i {
-    flex: 1;
+    flex: none;
     font-size: var(--fs-2xl);
-    margin: auto;
-    padding: 4px;
+    padding: 0;
 }
 
 .mapcard-footer>div>span {
-    flex: 1;
+    flex: none;
     font-size: var(--fs-2xs);
     line-height: 1;
     text-align: center;
-    padding-bottom: 4px;
 }
 
 .mapcard-footer>div.disabled {
@@ -1112,6 +1119,10 @@ a:focus {
     flex-direction: column;
 }
 
+/* a row whose first field needs the room of two columns, so the field beside it
+   still lines up with the third column of the rows above and below */
+.row-wide-first>div:first-child { flex: 2; }
+
 .mapcard-content-row>div>span:first-child {
     color: var(--color-text-muted);
     text-transform: uppercase;
@@ -1131,12 +1142,13 @@ a:focus {
 
 /* the !importants outrank icons.css, which sets masked icons to display: block */
 .shipcard-tech-icon {
-    font-size: var(--fs-base) !important;
+    font-size: var(--fs-sm) !important;
     cursor: help;
     color: var(--color-text-muted);
     display: inline-block !important;
-    vertical-align: text-top;
-    margin-left: 2px;
+    vertical-align: middle;
+    margin-left: 4px;
+    margin-top: -2px;
     line-height: 1;
 }
 
@@ -1148,10 +1160,20 @@ a:focus {
     display: inherit;
 }
 
+/* Marks a row as one the collapsed card keeps. Right edge only, so the label
+   column stays flush with every other row. */
 .shipcard-row-selected {
-    background-color: var(--color-shipcard-selected);
     display: flex;
     flex-direction: row;
+    border-right: 3px solid var(--color-shipcard-edge);
+    padding-right: 7px;   /* the border comes out of the padding */
+}
+
+/* Collapsing strips the selected class from every row, so the link back to the
+   expanded card is drawn on whichever row survives: the same line, thinner. */
+#shipcard:not(.shipcard-ismax) .shipcard-content-row:not(.shipcard-max-only) {
+    border-right: 2px solid var(--color-shipcard-edge);
+    padding-right: 8px;
 }
 
 /* Technical details popover */
@@ -1168,6 +1190,193 @@ a:focus {
     font-size: var(--fs-sm);
     padding: 8px 12px;
 }
+
+.dim-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.dim-hull {
+    fill: var(--color-accent);
+    fill-opacity: .10;
+    stroke: var(--color-accent);
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+}
+
+.dim-axis {
+    stroke: var(--color-text-subtle);
+    stroke-width: .9;
+    stroke-dasharray: 4 4;
+}
+
+.dim-ext { stroke: var(--color-text-subtle); stroke-width: .7; stroke-dasharray: 2 2; }
+.dim-arrow { stroke: var(--color-text-muted); stroke-width: .9; }
+
+.dim-t {
+    fill: var(--color-text-muted);
+    font-size: 9.5px;
+    font-family: inherit;
+}
+
+
+.spd-line {
+    fill: none;
+    stroke: var(--color-accent);
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+}
+
+.spd-axis { stroke: var(--color-text-subtle); stroke-width: .9; }
+.spd-grid { stroke: var(--color-rule); stroke-width: .8; stroke-dasharray: 3 3; }
+
+/* Section headings inside the shipcard: a full-width band, set like the field
+   labels around it so the card reads as one type system. Max-only, so a
+   collapsed card stays a single compact block. */
+.shipcard-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 10px;
+    background-color: var(--color-band-accent);
+    color: var(--color-text-muted);
+    font-size: var(--fs-2xs);
+    font-weight: var(--fw-medium);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    line-height: 14px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.shipcard-section:hover { filter: brightness(0.97); }
+
+.shipcard-caret-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--color-surface);
+    color: var(--color-text);
+    flex: none;
+}
+
+.shipcard-section:hover .shipcard-caret-chip { background: var(--color-surface-raised); }
+
+.shipcard-section-caret {
+    width: 13px;
+    height: 13px;
+    flex: none;
+}
+
+/* folded by the user, or empty for this vessel */
+.sec-collapsed,
+.sec-empty { display: none !important; }
+
+.hist-wrap { display: block; width: 100%; }
+
+/* Reported changes as a timeline: a rail down the left, one entry per change,
+   with what it was and what it became. */
+.tl {
+    position: relative;
+    list-style: none;
+    margin: 0;
+    padding: 10px 12px 8px 28px;
+}
+
+.tl::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 14px;
+    bottom: 14px;
+    width: 1px;
+    background: var(--color-rule);
+}
+
+.tl-item {
+    position: relative;
+    padding: 9px 0 11px;
+}
+
+.tl-item + .tl-item { border-top: 1px solid var(--color-rule); }
+
+.tl-dot {
+    position: absolute;
+    left: -17px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-surface);
+    border: 2px solid var(--color-shipcard-edge);
+}
+
+.tl-head {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.tl-title {
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    font-size: var(--fs-2xs);
+    letter-spacing: .04em;
+}
+
+.tl-time {
+    color: var(--color-text-subtle);
+    font-size: var(--fs-2xs);
+    white-space: nowrap;
+}
+
+.tl-vals {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.tl-pill {
+    color: var(--color-text);
+    font-size: var(--fs-sm);
+}
+
+.tl-was { color: var(--color-text-subtle); }
+
+.tl-arrow { color: var(--color-text-subtle); font-size: var(--fs-sm); }
+
+.tl-firstseen {
+    color: var(--color-text-subtle);
+    font-size: var(--fs-2xs);
+    font-style: italic;
+}
+
+.chart-grad-top { stop-color: var(--color-accent); stop-opacity: .28; }
+.chart-grad-bottom { stop-color: var(--color-accent); stop-opacity: .02; }
+
+.dim-note {
+    display: block;
+    padding: 10px 2px;
+    color: var(--color-text-muted);
+    font-size: var(--fs-sm);
+    text-align: center;
+}
+
+.dim-origin { fill: var(--color-antenna); }
+.dim-origin-ring { fill: none; stroke: var(--color-antenna); stroke-width: 1; opacity: .5; }
+.dim-origin-line { stroke: var(--color-text-subtle); opacity: .6; }
+.dim-origin-t { fill: var(--color-text-muted); }
 
 .tech-popover > div {
     display: flex;
@@ -1971,6 +2180,19 @@ a:focus {
 }
 
 /* range-input track/thumb styling is shared with the hub in components.css */
+
+/* Preview of the speed palette: the gradient the map draws tracks with. The
+   generic field rule would make a stretching column of it, hence the sizing.
+   The margins pad the 14px band out to the 28px box of the slider beside it,
+   so both columns' descriptions sit on the same line. */
+.settings_main .speed-legend {
+    flex: 0 0 auto;
+    width: 100%;
+    height: 12px;
+    margin: 7px 0;
+    border: 1px solid var(--color-field-border);
+    border-radius: var(--radius-md);
+}
 
 /* border/radius/shadow come from the shared field styling in components.css */
 .settings_main .color-picker {

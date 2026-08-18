@@ -34,6 +34,7 @@
 #include "Ships.h"
 #include "SlotTable.h"
 #include "PathStore.h"
+#include "StaticHistory.h"
 
 class DB : public StreamIn<JSON::JSON>,
 		   public StreamIn<AIS::GPS>,
@@ -87,6 +88,7 @@ class DB : public StreamIn<JSON::JSON>,
 
 	SlotTable<Ship, uint32_t> ships;
 	PathStore paths;
+	StaticHistory changes;
 
 	std::mutex mtx;
 
@@ -219,6 +221,8 @@ public:
 	}
 
 	std::string getShipJSON(int mmsi);
+	std::string getChangesJSON(int mmsi);
+	void logTextChange(const Ship &ship, int field, const char *old_value, const std::string &value);
 	std::string getJSON(bool full = false);
 	std::string getJSONcompact(bool full = false, std::time_t since = 0);
 	std::string getPathJSON(uint32_t);

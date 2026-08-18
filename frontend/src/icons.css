@@ -43,6 +43,7 @@
 .remove_circle_outline_icon,
 .label_icon,
 .signal_cellular_alt_icon,
+.track_changes_icon,
 .timeline_icon,
 .jamboard_kiosk_icon,
 .zoom_in_icon,
@@ -207,6 +208,10 @@
 
 .signal_cellular_alt_icon {
     --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M185-160v-117h127v117H185Zm253 0v-379h126v379H438Zm252 0v-640h126v640H690Z"/%3E%3C/svg%3E');
+}
+
+.track_changes_icon {
+    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M324-111.5Q251-143 197-197t-85.5-127Q80-397 80-480t31.5-156Q143-709 197-763t127-85.5Q397-880 480-880h30v326q22 9 36 29t14 45q0 33-23.5 56.5T480-400q-33 0-56.5-23.5T400-480q0-25 14-45t36-29v-104q-65 11-107.5 60.5T300-480q0 75 52.5 127.5T480-300q75 0 127.5-52.5T660-480q0-41-16-75t-44-59l43-43q35 33 56 78.5t21 98.5q0 100-70 170t-170 70q-100 0-170-70t-70-170q0-93 60-160.5T450-719v-100q-131 11-220.5 108T140-480q0 142 99 241t241 99q142 0 241-99t99-241q0-74-28.5-137T713-727l43-43q57 55 90.5 129.5T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80q-83 0-156-31.5Z"/%3E%3C/svg%3E');
 }
 
 .timeline_icon {

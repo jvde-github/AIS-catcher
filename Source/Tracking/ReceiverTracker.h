@@ -133,6 +133,7 @@ public:
 	std::string getPathGeoJSON(uint32_t mmsi) { return ships.getPathGeoJSON(mmsi); }
 	std::string getMessage(uint32_t mmsi) { return ships.getMessage(mmsi); }
 	std::string getShipJSON(uint32_t mmsi) { return ships.getShipJSON(mmsi); }
+	std::string getChangesJSON(uint32_t mmsi) { return ships.getChangesJSON(mmsi); }
 };
 
 // How a device names itself. attachEngine() needs this before it has a tracker

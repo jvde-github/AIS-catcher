@@ -942,6 +942,14 @@ const WebViewer::Route WebViewer::routes[] = {
 		 std::string vessel = s->getShipJSON(mmsi);
 		 return vessel == "{}" ? std::string("{\"error\":\"Vessel not found\"}") : vessel;
 	 }, true},
+	{"/api/changes.json", nullptr, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 {
+		 int mmsi = parseMMSI(a);
+		 if (mmsi <= 0)
+			 return std::string("{\"error\":\"Invalid MMSI\"}");
+		 return s->getChangesJSON(mmsi);
+	 }, true},
 	{"/api/decode", &WebViewer::Settings::showdecoder, "application/json",
 	 [](WebViewer *, ReceiverTracker *, const std::string &a)
 	 {
