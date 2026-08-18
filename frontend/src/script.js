@@ -2372,6 +2372,15 @@ function updateSpeedLegend() {
         `Scale (0 - ${speedWhole(settings.track_speed_max)} ${getSpeedUnit()})`;
 }
 
+function selectableShipcardRows() {
+    return document.querySelectorAll('#shipcard_content [data-action="shipcardSelectSelf"]');
+}
+
+function shipcardRowKey(row) {
+    const el = row.querySelector("[id]");
+    return el ? el.id : "";
+}
+
 function shipcardselect(e) {
     if (isShipcardMax()) {
         e.classList.toggle("shipcard-max-only");
@@ -2389,7 +2398,7 @@ function toggleShipcardSize() {
     document.getElementById("shipcard_minmax_button").classList.toggle("keyboard_arrow_down_icon");
     document.getElementById("shipcard_minmax_button").classList.toggle("keyboard_arrow_up_icon");
 
-    let e = document.getElementById("shipcard_content").children;
+    let e = selectableShipcardRows();
 
     if (isShipcardMax()) {
         for (let i = 0; i < e.length; i++) {
@@ -2417,6 +2426,8 @@ function toggleShipcardSize() {
             if (e[i].classList.contains("shipcard-row-selected")) e[i].classList.toggle("shipcard-row-selected");
         }
     }
+
+    fitShipcard();
 }
 
 function syncReceiverUI() {
@@ -2982,16 +2993,13 @@ function updateMapURL() {
 
 
 function saveSettings() {
-    const scRows = document.querySelectorAll(".shipcard-content-row");
-
     const selectedRows = [];
-    scRows.forEach((row) => {
-        const rowClasses = row.getAttribute("class");
-        selectedRows.push(rowClasses.includes("shipcard-max-only") ? 0 : 1);
+    selectableShipcardRows().forEach((row) => {
+        if (!row.classList.contains("shipcard-max-only")) selectedRows.push(shipcardRowKey(row));
     });
 
     settings.shipcard_max = isShipcardMax();
-    settings.shipcard_rows = selectedRows;
+    settings.shipcard_rows = selectedRows.filter(Boolean);
     settings.activeReceiver = activeReceiver;
 
     const filters = realtimeModule?.getFilters();
@@ -3047,19 +3055,19 @@ function loadSettings() {
     if (settings.activeReceiver) activeReceiver = settings.activeReceiver;
     if (!isShipcardMax()) toggleShipcardSize();
 
-    if (settings.shipcard_rows && settings.shipcard_rows.length > 0) {
-        const rows = document.querySelectorAll(".shipcard-content-row");
+    if (Array.isArray(settings.shipcard_rows) && settings.shipcard_rows.every((k) => typeof k === "string")) {
+        const pinned = new Set(settings.shipcard_rows);
 
-        rows.forEach((row, index) => {
-            if (settings.shipcard_rows[index] == 1) {
-                row.setAttribute("class", "mapcard-content-row shipcard-content-row shipcard-row-selected");
-            } else {
-                row.setAttribute("class", "mapcard-content-row shipcard-content-row shipcard-max-only");
-            }
+        selectableShipcardRows().forEach((row) => {
+            const on = pinned.has(shipcardRowKey(row));
+            row.classList.toggle("shipcard-max-only", !on);
+            row.classList.toggle("shipcard-row-selected", on);
         });
         if (settings.shipcard_max != isShipcardMax()) {
             toggleShipcardSize();
         }
+    } else {
+        settings.shipcard_rows = [];
     }
 
     settings.android = false;
@@ -3775,6 +3783,7 @@ function toggleShipcardSection(key) {
     sectionOpen[key] = !sectionOpen[key];
     applyShipcardSection(key);
     if (sectionOpen[key]) fillShipcardSection(key);
+    fitShipcard();
 }
 
 function openShipcardSection(key) {
@@ -3831,8 +3840,8 @@ async function fillShipcardSection(key) {
              : x.f === CHANGE.DRAUGHT ? getDimVal(x.to / 10) + " " + getDimUnit()
              : String(x.to));
 
-    setSectionAvailable(key, !!html);
     body.innerHTML = html || '<span class="dim-note">Nothing recorded yet</span>';
+    fitShipcard();
 }
 
 function resetShipHistory() {
@@ -3841,6 +3850,7 @@ function resetShipHistory() {
         const body = document.getElementById("shipcard_" + k + "_body");
         if (body) body.innerHTML = "";
         sectionOpen[k] = false;
+        setSectionAvailable(k, true);
     });
     sectionOpen.voyage = true;
     sectionOpen.vessel = true;
@@ -4145,11 +4155,32 @@ function toggleShipcardPin() {
 function placeTopLeft(aside) {
     const mapSize = map.getSize();
     const rect = aside.getBoundingClientRect();
-    if (mapSize && mapSize[0] >= rect.width + 20 && mapSize[1] >= rect.height + 20) {
+    if (mapSize && mapSize[0] >= rect.width + 20) {
         aside.style.left = "10px";
         aside.style.top = "10px";
         aside.classList.add("floating");
     }
+}
+
+function fitShipcard() {
+    const aside = document.getElementById("shipcard");
+    if (!aside || !shipcardVisible()) return;
+
+    const margin = 10;
+    const parent = aside.offsetParent;
+    const available = (parent ? parent.clientHeight : window.innerHeight) - 2 * margin;
+
+    aside.style.maxHeight = available + "px";
+
+    if (aside.offsetHeight >= available) {
+        aside.style.top = margin + "px";
+        if (!settings.shipcard_pinned) aside.style.left = margin + "px";
+        aside.classList.add("floating");
+        return;
+    }
+
+    const overflow = aside.offsetTop + aside.offsetHeight - (available + margin);
+    if (overflow > 0) aside.style.top = Math.max(margin, aside.offsetTop - overflow) + "px";
 }
 
 function positionAside(pixel, aside) {
@@ -4361,6 +4392,8 @@ function showShipcard(type, m, pixel = undefined) {
         aside.style.display = 'none';
         aside.offsetHeight;
         aside.style.display = '';
+
+        fitShipcard();
     }
 
     trackLayer.changed();
@@ -5355,4 +5388,6 @@ window.addEventListener('load', () => {
         });
     });
 });
+
+window.addEventListener('resize', () => fitShipcard());
 

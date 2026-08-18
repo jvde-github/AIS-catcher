@@ -186,6 +186,8 @@ export function getShipDimensionSVG(ship) {
     const u = getDimUnit();
     const lbl = (v) => getDimVal(v) + " " + u;
 
+    const narrow = (v) => v * k < 26;
+
     const GAP = 9;                               // the same clearance top and bottom
     const yArrow = 22, yLabel = 16;
     const hullTop = MID - c * k, hullBottom = MID + d * k;
@@ -205,8 +207,8 @@ export function getShipDimensionSVG(ship) {
   <line x1="${px(a)}"  y1="${yArrow + 4}" x2="${px(a)}"  y2="${py(0)}"  class="dim-ext"/>
   <line x1="${px(-b)}" y1="${yArrow}" x2="${px(0)}" y2="${yArrow}" class="dim-arrow" marker-start="url(#dimArrow)" marker-end="url(#dimArrow)"/>
   <line x1="${px(0)}"  y1="${yArrow}" x2="${px(a)}" y2="${yArrow}" class="dim-arrow" marker-start="url(#dimArrow)" marker-end="url(#dimArrow)"/>
-  <text x="${px(-b / 2)}" y="${yLabel}" class="dim-t" text-anchor="middle">${lbl(b)}</text>
-  <text x="${px(a / 2)}"  y="${yLabel}" class="dim-t" text-anchor="middle">${lbl(a)}</text>
+  <text x="${narrow(b) ? +px(-b) - 3 : px(-b / 2)}" y="${yLabel}" class="dim-t" text-anchor="${narrow(b) ? "end" : "middle"}">${lbl(b)}</text>
+  <text x="${narrow(a) ? +px(a) + 3 : px(a / 2)}" y="${yLabel}" class="dim-t" text-anchor="${narrow(a) ? "start" : "middle"}">${lbl(a)}</text>
 
   <polygon points="${ring}" class="dim-hull"/>
 
