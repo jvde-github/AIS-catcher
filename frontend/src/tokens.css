@@ -266,6 +266,7 @@
     --overlay-bg: var(--slate-800);
     --overlay-border: var(--slate-700);
     --overlay-ink: var(--slate-0);
+    --overlay-ink-muted: var(--slate-300);
     --overlay-danger: var(--red-500);
 
     --code-key: var(--sky-300);

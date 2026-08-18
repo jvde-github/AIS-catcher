@@ -1,6 +1,7 @@
 import { settings, isAndroid } from './core/state.js';
 import { ShippingClass } from './core/constants.js';
 import { SPEED_PALETTES, palette as validPalette, bucketColor, speedBucket, paletteCSS } from './core/palette.js';
+import * as filter from './core/filter.js';
 import { debounce, decodeHTMLEntities, deriveLabelBackground, copyToClipboard, hexToRgb } from './core/util.js';
 import { calcOffset1M, createShipOutlineGeometry, createDistanceGeometry, hasValidCoords } from './core/geo.js';
 import { init as initRainRadar } from './overlays/rainradar.js';
@@ -13,8 +14,8 @@ import * as replay from './features/replay.js';
 import * as binary from './features/binary.js';
 import * as range from './features/range.js';
 import {
-    getDistanceVal, getDistanceUnit,
-    getSpeedVal, getSpeedUnit,
+    getDistanceVal, getDistanceUnit, getDistanceConversion,
+    getSpeedVal, getSpeedUnit, getSpeedConversion,
     getDimVal, getDimUnit, getDraughtVal, getShipDimension, getShipDimensionSVG, getSpeedHistorySVG,
     getDraughtChartSVG, getChangeListHTML, CHANGE,
     getLatValFormat, getLonValFormat,
@@ -211,6 +212,29 @@ const ACTIONS = {
     showServerErrors: () => showServerErrors(),
     openSettings: () => openSettings(),
     toggleDarkMode: () => toggleDarkMode(),
+
+    // vessel filter
+    openFilterPanel: () => openFilterPanel(),
+    resetFilter: () => resetFilter(),
+    toggleFilterBucket: (e, d) => { filter.toggle("bucket", d.bucket); applyFilter(); },
+    toggleFilterItem: (e, d, el) => {
+        if (d.kind === "sender") filter.setSender(filter.SENDERS.find((x) => x.id === d.id), el.checked);
+        else filter.toggle(d.kind, Number(d.id));
+        applyFilter();
+    },
+    setAllFilterItems: (e, d) => {
+        if (d.kind === "sender") filter.setAllSenders(d.on === "1");
+        else filter.setAll(d.kind, d.on === "1");
+        applyFilter();
+    },
+    setFilterNumber: (e, d, el) => setFilterValue(d.key, el.value === "" ? null : Number(el.value)),
+    setFilterChoice: (e, d, el) => setFilterValue(d.key, el.value),
+    setFilterFlag: (e, d, el) => setFilterValue(d.key, el.checked),
+    updateFilterSeenDisplay: (e, d, el) => {
+        const label = document.getElementById("filter_seen_label");
+        const v = Number(el.value) || 0;
+        if (label) label.textContent = "Seen within" + (v > 0 ? " (" + v + " min)" : " (any)");
+    },
     toggleGraphVisibility: (e, d) => toggleGraphVisibility(d.graph),
     setPlotsMode: (e, d) => plotsModule?.setMode(d.mode),
 
@@ -337,6 +361,7 @@ window.__app__ = {
     get shipsSince() { return shipsSince; },
     get receivers() { return config.receivers || []; },
     get setReceiver() { return onReceiverChange; },
+    get shipsVisible() { return () => Object.values(shipsDB).filter(shipVisible).map((e) => e.raw); },
 };
 
 function _bindDelegatedActions() {
@@ -524,6 +549,7 @@ const DEFAULT_SETTINGS = {
         shiptable_columns: ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"],
         realtime_background_streaming: false,
         realtime_filters: [],
+        ship_filter: {},
         binary_messages: "highlight",
         binary_exclude: []
 };
@@ -738,6 +764,7 @@ const SETTINGS_TAB_GROUPS = [
             ["Kiosk", "Kiosk"]
         ]
     },
+    { title: "Filter", subs: [["Filter", "Vessels"]] },
     { title: "Plots", subs: [["Graphs", "Plots"]] },
     { title: "Table", subs: [["Table", "Table"]] },
 ];
@@ -1657,65 +1684,51 @@ function getMetrics() {
     return "Default";
 }
 
+const BUCKET_ELEMENT = {
+    am: "statcard_moving",
+    as: "statcard_stationary",
+    bm: "statcard_class_b_moving",
+    bs: "statcard_class_b_stationary",
+    aton: "statcard_aton",
+    base: "statcard_station",
+    sarte: "statcard_sarte",
+    air: "statcard_heli",
+};
+
+let shipCounts = { total: 0, shown: 0, buckets: {} };
+
+function shipVisible(entry) {
+    if (entry.show === undefined) entry.show = filter.shipPasses(entry.raw);
+    return entry.show;
+}
+
+function countShips() {
+    const buckets = {};
+    let total = 0, shown = 0;
+
+    for (const key in shipsDB) {
+        const entry = shipsDB[key];
+        const b = filter.bucketOf(entry.raw);
+        buckets[b] = (buckets[b] || 0) + 1;
+        total++;
+        if (shipVisible(entry)) shown++;
+    }
+    shipCounts = { total, shown, buckets };
+}
+
 function updateMarkerCountTooltip() {
-    if (shipsDB == null) {
-        ["statcard_stationary", "statcard_moving", "statcard_class_b_stationary", "statcard_class_b_moving", "statcard_station", "statcard_aton", "statcard_heli", "statcard_sarte"].forEach(function (id) {
-            document.getElementById(id).innerHTML = "";
-        });
-
-        return;
-    }
-
-    let cStationary = 0,
-        cMoving = 0,
-        cClassBstationary = 0,
-        cClassBmoving = 0,
-        cStation = 0,
-        cAton = 0,
-        cHeli = 0,
-        cSarte = 0;
-
-    for (let key of Object.keys(shipsDB)) {
-        let ship = shipsDB[key].raw;
-        switch (ship.shipclass) {
-                case ShippingClass.ATON:
-                    cAton++;
-                    break;
-                case ShippingClass.PLANE:
-                case ShippingClass.HELICOPTER:
-                    cHeli++;
-                    break;
-                case ShippingClass.STATION:
-                    cStation++;
-                    break;
-                case ShippingClass.SARTEPIRB:
-                    cSarte++;
-                    break;
-                case ShippingClass.B:
-                    if (ship.speed != null && ship.speed > 0.5) cClassBmoving++;
-                    else cClassBstationary++;
-                    break;
-                default:
-                    if (ship.speed != null && ship.speed > 0.5) cMoving++;
-                    else cStationary++;
-                    break;
-            }
-    }
-
-    const counts = {
-        statcard_moving: cMoving,
-        statcard_stationary: cStationary,
-        statcard_class_b_moving: cClassBmoving,
-        statcard_class_b_stationary: cClassBstationary,
-        statcard_aton: cAton,
-        statcard_station: cStation,
-        statcard_sarte: cSarte,
-        statcard_heli: cHeli,
-    };
-    for (const [id, v] of Object.entries(counts)) {
-        flashNumber(id, v);
-        const item = document.getElementById(id)?.closest('.stat-item');
-        if (item) item.dataset.zero = v === 0 ? 'true' : 'false';
+    for (const [id, elementId] of Object.entries(BUCKET_ELEMENT)) {
+        if (shipsDB == null) {
+            document.getElementById(elementId).innerHTML = "";
+            continue;
+        }
+        const v = shipCounts.buckets[id] || 0;
+        flashNumber(elementId, v);
+        const item = document.getElementById(elementId)?.closest(".stat-item");
+        if (item) {
+            item.dataset.zero = v === 0 ? "true" : "false";
+            item.classList.toggle("stat-off", filter.isActive() && filter.isHidden("bucket", id));
+        }
     }
 }
 
@@ -1791,7 +1804,7 @@ function updateTablecard() {
         });
     }
 
-    const filter = document.getElementById('shipSearchSide').value.toLowerCase();
+    const nameQuery = document.getElementById('shipSearchSide').value.toLowerCase();
 
     const rows = [];
     let addedRows = 0;
@@ -1799,9 +1812,10 @@ function updateTablecard() {
     for (let i = 0; i < shipKeys.length && addedRows < 200; i++) {
         const key = shipKeys[i];
         if (!(key in shipsDB)) continue;
+        if (!shipVisible(shipsDB[key])) continue;
         const ship = shipsDB[key].raw;
         const shipName = String(getShipName(ship) || ship.mmsi);
-        if (filter && !shipName.toLowerCase().includes(filter)) continue;
+        if (nameQuery && !shipName.toLowerCase().includes(nameQuery)) continue;
 
         const dist = ship.distance != null ? (getDistanceVal(ship.distance) + (ship.repeat > 0 ? " (R)" : "")) : "";
         const distTitle = ship.distance != null ? getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "") : "";
@@ -1853,15 +1867,213 @@ function flashNumber(id, newValue) {
 }
 
 function updateMarkerCount() {
+    if (shipsDB == null) {
+        flashNumber("markerCount", 0);
+        return;
+    }
+    if (replay.isActive()) return;
 
-    let count = 0;
-    if (shipsDB != null) {
-        count = Object.keys(shipsDB).length;
+    countShips();
+    renderCounts();
+}
+
+function renderCounts() {
+    const active = filter.isActive();
+    flashNumber("markerCount", active ? shipCounts.shown : shipCounts.total);
+    const el = document.getElementById("markerCount");
+    if (el) {
+        el.classList.toggle("count-filtered", active);
+        el.parentElement.title = active
+            ? shipCounts.shown + " of " + shipCounts.total + " vessels shown"
+            : "Counters";
     }
 
-    flashNumber("markerCount", count);
+    updateFilterIndicator();
 
     if (document.getElementById("statcard").style.display == "block") updateMarkerCountTooltip();
+}
+
+function updateFilterIndicator() {
+    const btn = document.getElementById("filter-btn");
+    if (!btn) return;
+
+    const active = filter.isActive();
+    btn.classList.toggle("fill-accent", active);
+    btn.classList.toggle("color-grey", !active);
+    btn.title = active
+        ? "Filter: " + filter.describe().join(" \u00b7 ") + " (" + shipCounts.shown + " of " + shipCounts.total + ")"
+        : "Filter vessels";
+
+    const tableBtn = document.getElementById("shipTableFilterBtn");
+    if (tableBtn) {
+        tableBtn.classList.toggle("filter-on", active);
+        tableBtn.title = btn.title;
+    }
+
+    const note = document.getElementById("filter_empty");
+    if (note) note.classList.toggle("visible", active && shipCounts.total > 0 && shipCounts.shown === 0);
+}
+
+const filterProbe = { shipclass: 0, speed: 0 };
+
+function applyFilter() {
+    saveSettings();
+    replay.refresh();
+    if (shipsDB != null) {
+        for (const key in shipsDB) shipsDB[key].show = undefined;
+        countShips();
+    }
+    updateMarkerCount();
+    renderCounts();
+    redrawMap();
+    updateTablecard();
+    shipTableModule?.update();
+    updateFilterUI();
+}
+
+function openFilterPanel() {
+    openSettingsTab("Filter");
+    updateFilterUI();
+}
+
+function openSettingsTab(title) {
+    const idx = settingsGroups.findIndex((g) => g.title === title);
+    openSettings();
+    if (idx >= 0) selectSettingsGroup(idx);
+}
+
+function updateFilterUI() {
+    const set = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (el.type === "checkbox") el.checked = !!value;
+            else el.value = value ?? "";
+        }
+    };
+    set("filter_seen", filter.get("seen"));
+    set("filter_validated", filter.get("validated"));
+    set("filter_repeated", filter.get("repeated"));
+
+    const seenLabel = document.getElementById("filter_seen_label");
+    if (seenLabel) {
+        const v = Number(filter.get("seen")) || 0;
+        seenLabel.textContent = "Seen within" + (v > 0 ? " (" + v + " min)" : " (any)");
+    }
+
+    const summary = document.getElementById("filter_summary");
+    if (summary) {
+        summary.textContent = filter.isActive()
+            ? shipCounts.shown + " of " + shipCounts.total + " vessels shown"
+            : "Showing every vessel";
+        summary.classList.toggle("filter-on", filter.isActive());
+    }
+
+    for (const [kind, box] of Object.entries(FILTER_LISTS)) {
+        buildFilterList(box, kind);
+        document.querySelectorAll("#" + box + " input").forEach((el) => {
+            const id = kind === "sender" ? el.dataset.id : Number(el.dataset.id);
+            if (kind === "sender") {
+                const state = filter.senderState(filter.SENDERS.find((x) => x.id === id));
+                el.checked = state !== "off";
+                el.indeterminate = state === "partial";
+            } else {
+                el.checked = !filter.isHidden(kind, id);
+            }
+        });
+    }
+
+    syncDualRange("filter_speed", "speed_min", "speed_max", getSpeedConversion, getSpeedUnit());
+    syncDualRange("filter_distance", "distance_min", "distance_max", getDistanceConversion, getDistanceUnit());
+
+    const known = station != null && station.lat != null && station.lon != null;
+    const distance = document.getElementById("filter_distance")?.closest("section");
+    if (distance) distance.style.display = known ? "" : "none";
+}
+
+const FILTER_LISTS = { sender: "filter_senders", class: "filter_classes", status: "filter_statuses" };
+
+function filterItems(kind) {
+    return kind === "sender" ? filter.SENDERS : filter.LISTS[kind].items();
+}
+
+function buildFilterList(boxId, kind) {
+    const box = document.getElementById(boxId);
+    if (!box || box.dataset.built) return;
+    box.dataset.built = "1";
+    box.innerHTML = filterItems(kind).map((item) => {
+        const icon = item.pos
+            ? '<span class="' + (item.icon || "shipicon") + '" style="background-position: ' + item.pos +
+              '; transform: scale(1.15)"></span>'
+            : "";
+        return '<label class="filter-check"><input type="checkbox" data-on-change="toggleFilterItem"' +
+            ' data-kind="' + kind + '" data-id="' + item.id + '">' + icon +
+            "<span>" + item.label + "</span></label>";
+    }).join("");
+}
+
+function buildDualRange(el) {
+    if (el.dataset.built) return;
+    el.dataset.built = "1";
+    const { min, max, step } = el.dataset;
+    el.innerHTML =
+        '<div class="dr-track"><div class="dr-fill"></div>' +
+        '<input type="range" class="dr-min" min="' + min + '" max="' + max + '" step="' + step + '">' +
+        '<input type="range" class="dr-max" min="' + min + '" max="' + max + '" step="' + step + '"></div>';
+
+    const lo = el.querySelector(".dr-min"), hi = el.querySelector(".dr-max");
+    const commit = () => {
+        const key = el.dataset.key;
+        const a = Number(lo.value), b = Number(hi.value);
+        setFilterValue(key + "_min", a <= Number(min) ? null : a);
+        setFilterValue(key + "_max", b >= Number(max) ? null : b);
+    };
+    lo.addEventListener("input", () => { if (Number(lo.value) > Number(hi.value)) hi.value = lo.value; paintDualRange(el); });
+    hi.addEventListener("input", () => { if (Number(hi.value) < Number(lo.value)) lo.value = hi.value; paintDualRange(el); });
+    lo.addEventListener("change", commit);
+    hi.addEventListener("change", commit);
+}
+
+function paintDualRange(el) {
+    const lo = el.querySelector(".dr-min"), hi = el.querySelector(".dr-max");
+    const min = Number(el.dataset.min), max = Number(el.dataset.max);
+    const a = Number(lo.value), b = Number(hi.value);
+    const span = max - min || 1;
+    const fill = el.querySelector(".dr-fill");
+    fill.style.left = ((a - min) / span) * 100 + "%";
+    fill.style.right = ((max - b) / span) * 100 + "%";
+
+    const title = document.getElementById(el.dataset.title);
+    if (title) title.textContent = el.dataset.label + " (" + rangeText(el, a, b, min, max) + ")";
+}
+
+function rangeText(el, a, b, min, max) {
+    const unit = el._unit || "";
+    const n = (v) => Math.round(el._convert ? el._convert(v) : v);
+    if (a <= min && b >= max) return "any";
+    if (b >= max) return n(a) + " " + unit + "+";
+    if (a <= min) return "up to " + n(b) + " " + unit;
+    return n(a) + " - " + n(b) + " " + unit;
+}
+
+function syncDualRange(id, minKey, maxKey, convert, unit) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    buildDualRange(el);
+    el._convert = convert;
+    el._unit = unit;
+    el.querySelector(".dr-min").value = filter.get(minKey) ?? el.dataset.min;
+    el.querySelector(".dr-max").value = filter.get(maxKey) ?? el.dataset.max;
+    paintDualRange(el);
+}
+
+function setFilterValue(key, value) {
+    filter.set(key, value);
+    applyFilter();
+}
+
+function resetFilter() {
+    filter.reset();
+    applyFilter();
 }
 
 function toggleStatcard() {
@@ -2034,6 +2246,7 @@ async function fetchShipsBody() {
             const mmsi = s.mmsi;
             if (mmsi in shipsDB) {
                 Object.assign(shipsDB[mmsi].raw, s);
+                shipsDB[mmsi].show = undefined;
             } else {
                 shipsDB[mmsi] = { raw: s };
             }
@@ -2065,6 +2278,7 @@ async function fetchShipsBody() {
             const mmsi = s.mmsi;
             if (mmsi in shipsDB) {
                 Object.assign(shipsDB[mmsi].raw, s);
+                shipsDB[mmsi].show = undefined;
             } else {
                 shipsDB[mmsi] = { raw: s };
             }
@@ -2080,6 +2294,7 @@ async function fetchShipsBody() {
 
     if (ships.timeout) shipsTimeout = ships.timeout;
     shipsSince = serverTime;
+    filter.setClock(serverTime);
 
     // periodically expire ships older than timeout
     if (isIncremental && serverTime - shipsLastCleanup > shipsTimeout / 2) {
@@ -2656,7 +2871,7 @@ function getTooltipContent(ship) {
         getFlagStyled(ship.country, TOOLTIP_FLAG_STYLE) +
         '<div>' +
         (getShipName(ship) || ship.mmsi) +
-        '<span class="tooltip-dim"> at ' + getSpeedVal(ship.speed) + ' ' + getSpeedUnit() + '</span>' +
+        '<span class="tooltip-dim"> at </span>' + getSpeedVal(ship.speed) + ' ' + getSpeedUnit() +
         '<div class="tooltip-sub">' + sub + '</div>' +
         '</div>' +
         '</div>';
@@ -2673,7 +2888,7 @@ function getTooltipContentPlane(plane) {
         getFlagStyled(plane.country, TOOLTIP_FLAG_STYLE) +
         '<div>' +
         sanitizeString(plane.callsign || plane.hexident || '') +
-        '<span class="tooltip-dim"> at ' + altitude + '/' + speed + ' kts</span>' +
+        '<span class="tooltip-dim"> at </span>' + altitude + '/' + speed + ' kts' +
         '<div class="tooltip-sub">received ' + getDeltaTimeVal(planesSince - plane.last_signal) + ' ago</div>' +
         '</div>' +
         '</div>';
@@ -4609,6 +4824,7 @@ function redrawMap() {
 
     for (let [mmsi, entry] of Object.entries(shipsDB)) {
         let ship = entry.raw;
+        if (!shipVisible(entry)) continue;
         if (hasValidCoords(ship.lat, ship.lon)) {
             getSprite(ship)
 
@@ -5307,6 +5523,16 @@ replay.init({
     getResolution: () => map.getView().getResolution(),
     hullStyle: shapeStyleFunction,
     setLiveLayers: setLiveLayersVisible,
+    filterPasses: (cls, knots) => {
+        filterProbe.shipclass = cls;
+        filterProbe.speed = knots;
+        return filter.passesAppearance(filterProbe);
+    },
+    bucketFor: filter.bucketFor,
+    onCounts: (counts) => {
+        shipCounts = counts;
+        renderCounts();
+    },
     showNotification,
     onStateChange: updateReplaycard,
 });

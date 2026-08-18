@@ -90,6 +90,7 @@ export function init(d) {
 }
 
 export function isActive() { return active; }
+export function refresh() { if (active) draw(); }
 export function isLoading() { return loading; }
 export function isPlaying() { return playing; }
 export function getSpeed() { return speed; }
@@ -350,6 +351,7 @@ export function stop() {
     active = false;
     fleet = {};
     features = {};
+    countSig = "";
     blocks.clear();
     manifest = {};
     markerSource.clear();
@@ -485,7 +487,7 @@ function tooltipHTML(mmsi, s, fix) {
     let html = '<div class="tooltip-card">'
         + getFlagStyled(s.country, FLAG_STYLE) + '<div>'
         + (s.name || 'MMSI ' + mmsi)
-        + '<span class="tooltip-dim"> at ' + getSpeedVal(fix.knots || 0) + ' ' + getSpeedUnit() + '</span>';
+        + '<span class="tooltip-dim"> at </span>' + getSpeedVal(fix.knots || 0) + ' ' + getSpeedUnit();
     let sub = '';
     if (s.type != null) sub += getShipTypeShort(s.type);
     if (fix.age) sub += (sub ? ' - ' : '') + 'Silent for ' + getDeltaTimeVal(Math.round(fix.age));
@@ -607,17 +609,35 @@ function placeHull(mmsi, s, fix, res) {
     h.geom.changed();
 }
 
+function passes(s, fix) {
+    return deps.filterPasses ? deps.filterPasses(s.cls, fix.knots) : true;
+}
+
+// Counted in the loop that already visits every vessel; only a changed tally
+// reaches the DOM.
+let countSig = "";
+
 function draw() {
     if (!active) return;
 
     const res = deps.getResolution?.();
+    const buckets = {};
+    let total = 0, shown = 0;
 
     for (const mmsi in fleet) {
         const f = features[mmsi];
         const fix = sample(fleet[mmsi], instant);
         f.fix = fix;
 
-        if (!fix) {
+        let visible = !!fix;
+        if (fix) {
+            const bucket = deps.bucketFor(fleet[mmsi].cls, fix.knots);
+            buckets[bucket] = (buckets[bucket] || 0) + 1;
+            total++;
+            visible = passes(fleet[mmsi], fix);
+        }
+
+        if (!visible) {
             if (f.shown) {
                 markerSource.removeFeature(f.marker);
                 f.shown = false;
@@ -625,6 +645,7 @@ function draw() {
             releaseHull(mmsi);
             continue;
         }
+        shown++;
 
         place(f, fleet[mmsi], fix);
         hull(mmsi, fleet[mmsi], fix, res);
@@ -633,6 +654,12 @@ function draw() {
             markerSource.addFeature(f.marker);
             f.shown = true;
         }
+    }
+
+    const sig = total + ":" + shown + ":" + JSON.stringify(buckets);
+    if (sig !== countSig) {
+        countSig = sig;
+        deps.onCounts?.({ total, shown, buckets });
     }
 }
 

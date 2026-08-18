@@ -501,6 +501,90 @@
 						</span>
 					</div>
 				</section>
+				<header>Filter</header>
+				<section>
+					<div class="filter-topbar">
+						<span id="filter_summary">Showing every vessel</span>
+						<button type="button" data-action="resetFilter">Reset</button>
+					</div>
+				</section>
+				<section>
+					<h5 class="st-title">Sender</h5>
+					<div>
+						<div id="filter_senders" class="filter-checks"></div>
+						<div class="filter-allnone">
+							<button type="button" data-action="setAllFilterItems" data-kind="sender" data-on="1">Select all</button>
+							<button type="button" data-action="setAllFilterItems" data-kind="sender" data-on="0">Unselect all</button>
+						</div>
+					</div>
+				</section>
+				<section>
+					<h5 class="st-title">Vessel type</h5>
+					<div>
+						<div id="filter_classes" class="filter-checks"></div>
+						<div class="filter-allnone">
+							<button type="button" data-action="setAllFilterItems" data-kind="class" data-on="1">Select all</button>
+							<button type="button" data-action="setAllFilterItems" data-kind="class" data-on="0">Unselect all</button>
+						</div>
+					</div>
+				</section>
+				<section>
+					<h5 class="st-title" id="filter_speed_title">Speed</h5>
+					<div>
+						<div class="dualrange" id="filter_speed" data-key="speed" data-min="0" data-max="40" data-step="1"
+							data-title="filter_speed_title" data-label="Speed"></div>
+					</div>
+				</section>
+				<section>
+					<h5 class="st-title" id="filter_distance_title">Distance</h5>
+					<div>
+						<div class="dualrange" id="filter_distance" data-key="distance" data-min="0" data-max="100" data-step="1"
+							data-title="filter_distance_title" data-label="Distance"></div>
+					</div>
+				</section>
+				<section>
+					<h5 class="st-title">Navigation status</h5>
+					<div>
+						<div id="filter_statuses" class="filter-checks"></div>
+						<div class="filter-allnone">
+							<button type="button" data-action="setAllFilterItems" data-kind="status" data-on="1">Select all</button>
+							<button type="button" data-action="setAllFilterItems" data-kind="status" data-on="0">Unselect all</button>
+						</div>
+					</div>
+				</section>
+				<section>
+					<h5 class="st-title">Reception</h5>
+					<div>
+						<span id="filter_seen_label">Seen within (any)</span>
+						<span>
+							<input type="range" id="filter_seen" min="0" max="120" step="5"
+								data-on-change="setFilterNumber" data-key="seen"
+								data-on-input="updateFilterSeenDisplay" />
+						</span>
+					</div>
+					<div>
+						<span>Validated</span>
+						<span>
+							<select id="filter_validated" data-on-change="setFilterChoice" data-key="validated">
+								<option value="any">Any</option>
+								<option value="yes">Validated only</option>
+								<option value="no">Not validated</option>
+								<option value="pending">Pending</option>
+							</select>
+						</span>
+					</div>
+					<div>
+						<span title="Vessels whose position reached the receiver through another AIS station rather than directly">Repeated</span>
+						<span>
+							<select id="filter_repeated" data-on-change="setFilterChoice" data-key="repeated">
+								<option value="any">All</option>
+								<option value="only">Repeated only</option>
+								<option value="never">Not repeated</option>
+							</select>
+						</span>
+					</div>
+				</section>
+
 				<header>Tracks</header>
 				<section>
 					<div>
@@ -1227,6 +1311,13 @@
 				<div class="tablesection">
 					<div class="search-container">
 						<input type="text" class="input search-box" id="shipSearch" placeholder="Search for ships...">
+						<button class="btn ship-table-columns-btn" type="button" id="shipTableFilterBtn"
+							data-action="openFilterPanel" title="Filter vessels">
+							<svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor">
+								<path d="M400-240v-80h160v80H400ZM240-440v-80h480v80H240ZM120-640v-80h720v80H120Z" />
+							</svg>
+							<span>Filter</span>
+						</button>
 						<div class="ship-table-column-dropdown">
 							<button class="btn ship-table-columns-btn" type="button" id="shipTableColumnDropdownToggle">
 								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1249,37 +1340,42 @@
 
 
 			<div class="tabcontent" id="map" style="display: none;">
+				<div id="filter_empty" class="filter-empty">
+					<span>No vessels match the filter</span>
+					<button type="button" data-action="resetFilter">Clear</button>
+				</div>
+
 				<aside id="statcard">
 					<div class="statcard_inner draggable">
-						<span class="stat-item" title="Class A Moving">
+						<span class="stat-item" title="Class A Moving — click to show or hide" data-action="toggleFilterBucket" data-bucket="am">
 							<span class="shipicon" style="background-position: -120px 0px; transform: rotate(45deg) scale(0.65)"></span>
 							<span id="statcard_moving"></span>
 						</span>
-						<span class="stat-item" title="Class A Stationary">
+						<span class="stat-item" title="Class A Stationary — click to show or hide" data-action="toggleFilterBucket" data-bucket="as">
 							<span class="shipicon" style="background-position: -120px -20px; transform: scale(0.65)"></span>
 							<span id="statcard_stationary"></span>
 						</span>
-						<span class="stat-item" title="Class B Moving">
+						<span class="stat-item" title="Class B Moving — click to show or hide" data-action="toggleFilterBucket" data-bucket="bm">
 							<span class="shipicon" style="background-position: -20px 0px; transform: rotate(45deg) scale(0.65)"></span>
 							<span id="statcard_class_b_moving"></span>
 						</span>
-						<span class="stat-item" title="Class B Stationary">
+						<span class="stat-item" title="Class B Stationary — click to show or hide" data-action="toggleFilterBucket" data-bucket="bs">
 							<span class="shipicon" style="background-position: -20px -20px; transform: scale(0.65)"></span>
 							<span id="statcard_class_b_stationary"></span>
 						</span>
-						<span class="stat-item" title="Aid-to-Navigation">
+						<span class="stat-item" title="Aid-to-Navigation — click to show or hide" data-action="toggleFilterBucket" data-bucket="aton">
 							<span class="staticon" style="background-position: 0px -20px; transform: scale(0.65)"></span>
 							<span id="statcard_aton"></span>
 						</span>
-						<span class="stat-item" title="Base Station">
+						<span class="stat-item" title="Base Station — click to show or hide" data-action="toggleFilterBucket" data-bucket="base">
 							<span class="staticon" style="background-position: -20px -20px; transform: scale(0.65)"></span>
 							<span id="statcard_station"></span>
 						</span>
-						<span class="stat-item" title="SARTE / EPIRB">
+						<span class="stat-item" title="SARTE / EPIRB — click to show or hide" data-action="toggleFilterBucket" data-bucket="sarte">
 							<span class="staticon" style="background-position: -40px -20px; transform: scale(0.65)"></span>
 							<span id="statcard_sarte"></span>
 						</span>
-						<span class="stat-item" title="Plane/Helicopter">
+						<span class="stat-item" title="Plane/Helicopter — click to show or hide" data-action="toggleFilterBucket" data-bucket="air">
 							<span class="helicoptericon" style="background-position: 0px 0px; transform: scale(0.55) rotate(45deg)"></span>
 							<span id="statcard_heli"></span>
 						</span>
@@ -1611,6 +1707,12 @@
 						<svg xmlns="http://www.w3.org/2000/svg" height="12" viewBox="0 -960 960 960" width="12">
 							<path
 								d="M158-200 82-468q-3-12 2.5-28t23.5-22l52-18v-184q0-33 23.5-56.5T240-800h120v-120h240v120h120q33 0 56.5 23.5T800-720v184l52 18q21 8 25 23.5t1 26.5l-76 268q-50 0-91-23.5T640-280q-30 33-71 56.5T480-200q-48 0-89-23.5T320-280q-30 33-71 56.5T158-200ZM80-40v-80h80q42 0 83-13t77-39q36 26 77 38t83 12q42 0 83-12t77-38q36 26 77 39t83 13h80v80h-80q-42 0-82-10t-78-30q-38 20-78.5 30T480-40q-41 0-81.5-10T320-80q-38 20-78 30t-82 10H80Zm160-522 240-78 240 78v-158H240v158Z" />
+						</svg>
+					</button>
+					<button id="filter-btn" title="Filter vessels" type="button" data-action="openFilterPanel"
+						class="btn btn-primary map-button color-grey">
+						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+							<path d="M400-240v-80h160v80H400ZM240-440v-80h480v80H240ZM120-640v-80h720v80H120Z" />
 						</svg>
 					</button>
 					<button title="Replay tracks" type="button" data-action="toggleReplaycard"

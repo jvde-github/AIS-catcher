@@ -678,7 +678,7 @@ a:focus {
 
 .tooltip-sub,
 .tooltip-dim {
-    color: var(--color-text-muted);
+    color: var(--overlay-ink-muted);
 }
 
 #hover-info div div {
@@ -695,6 +695,46 @@ a:focus {
 
 .fill-green {
     fill: var(--color-ok-text) !important;
+}
+
+.fill-accent {
+    fill: var(--color-accent) !important;
+}
+
+.filter-empty {
+    display: none;
+    position: absolute;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: var(--z-card);
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px 8px 16px;
+    border-radius: var(--radius-2xl);
+    background: var(--overlay-bg);
+    color: var(--overlay-ink);
+    box-shadow: var(--shadow-md);
+    font-size: var(--fs-sm);
+}
+
+.filter-empty.visible {
+    display: flex;
+}
+
+.filter-empty button {
+    padding: 2px 12px;
+    border: none;
+    border-radius: var(--radius-2xl);
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+}
+
+.count-filtered {
+    color: var(--color-accent);
+    font-weight: 600;
 }
 
 .fill-orange {
@@ -781,6 +821,23 @@ a:focus {
 
 .stat-item[data-zero="true"] {
     display: none;
+}
+
+.stat-item[data-action] {
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+}
+
+.stat-item[data-action]:hover {
+    background: var(--color-control);
+}
+
+.stat-item.stat-off {
+    opacity: 0.4;
+}
+
+.stat-item.stat-off span:last-child {
+    text-decoration: line-through;
 }
 
 .stat-item + .stat-item {
@@ -2013,6 +2070,190 @@ a:focus {
 /* --color-control is its own light/dark pair, so no .dark override is needed */
 .settings_main select,
 .settings_main section div>span[data-action],
+.settings_main section div.filter-checks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    align-self: stretch;
+    gap: 2px 20px;
+    margin: 4px 0 2px;
+}
+
+.settings_main section div.filter-allnone {
+    flex-direction: row;
+    align-self: flex-start;
+    gap: 8px;
+    margin: 6px 0 0;
+}
+
+.settings_main section div.filter-allnone button {
+    padding: 0;
+    font-size: var(--fs-sm);
+    background: none;
+    border: none;
+    color: var(--color-accent);
+    cursor: pointer;
+    width: auto;
+}
+
+.settings_main section div.filter-allnone button:hover {
+    text-decoration: underline;
+}
+
+.filter-check {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: var(--fs-base);
+    white-space: nowrap;
+    cursor: pointer;
+    padding: 7px 6px;
+    margin: 0 -6px;
+    border-radius: var(--radius-sm);
+}
+
+.filter-check:hover {
+    background: var(--color-control);
+}
+
+.settings_main .filter-check input[type="checkbox"] {
+    appearance: auto;
+    -webkit-appearance: auto;
+    width: 15px;
+    height: 15px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+}
+
+.settings_main .filter-check input[type="checkbox"]::before,
+.settings_main .filter-check input[type="checkbox"]::after {
+    content: none;
+}
+
+.filter-check .shipicon,
+.filter-check .staticon,
+.filter-check .helicoptericon {
+    flex: none;
+    margin: -2px 2px;
+}
+
+.filter-topbar {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+#filter_summary {
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+}
+
+#filter_summary.filter-on {
+    color: var(--color-accent);
+    font-weight: 600;
+}
+
+.settings_main section div.dualrange {
+    align-self: stretch;
+    display: block;
+    margin: 0;
+}
+
+.settings_main section div.dr-track {
+    display: block;
+    position: relative;
+    height: 24px;
+    margin: 0;
+}
+
+.settings_main section div.dr-fill {
+    margin: 0;
+}
+
+.dr-track::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 8px;
+    height: 8px;
+    border-radius: var(--radius-lg);
+    background: var(--color-track);
+}
+
+.dr-fill {
+    position: absolute;
+    top: 8px;
+    height: 8px;
+    border-radius: var(--radius-lg);
+    background: var(--color-accent);
+    opacity: 0.25;
+}
+
+.dr-track input[type="range"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 24px;
+    margin: 0;
+    background: none;
+    pointer-events: none;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.dr-track input[type="range"]::-webkit-slider-runnable-track {
+    background: none;
+    border: none;
+    height: 24px;
+}
+
+.dr-track input[type="range"]::-moz-range-track {
+    background: none;
+    border: none;
+    height: 24px;
+}
+
+.dr-track input[type="range"]::-webkit-slider-thumb {
+    pointer-events: auto;
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: 4px;
+    border: none;
+    border-radius: var(--radius-circle);
+    background: var(--color-accent);
+    box-shadow: 0 1px 2px var(--color-shadow-soft);
+    cursor: pointer;
+}
+
+.dr-track input[type="range"]::-moz-range-thumb {
+    pointer-events: auto;
+    width: 16px;
+    height: 16px;
+    border: none;
+    border-radius: var(--radius-circle);
+    background: var(--color-accent);
+    box-shadow: 0 1px 2px var(--color-shadow-soft);
+    cursor: pointer;
+}
+
+.dr-track input[type="range"]:hover::-webkit-slider-thumb {
+    box-shadow: 0 1px 2px var(--color-shadow-soft), 0 0 0 2px var(--color-accent);
+}
+
+.dr-track input[type="range"]:hover::-moz-range-thumb {
+    box-shadow: 0 1px 2px var(--color-shadow-soft), 0 0 0 2px var(--color-accent);
+}
+
 .settings_main button:not(.tab-scroll-btn) {
     background-color: var(--color-control);
 }
@@ -2266,6 +2507,22 @@ a:focus {
     gap: 7px;
     height: 38px;
     padding: 0 12px;
+}
+
+@media (max-width: 700px) {
+    .ship-table-columns-btn span {
+        display: none;
+    }
+
+    .ship-table-columns-btn {
+        gap: 4px;
+        padding: 0 10px;
+    }
+}
+
+#shipTableFilterBtn.filter-on {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
 }
 
 .ship-table-columns-btn .chevron {

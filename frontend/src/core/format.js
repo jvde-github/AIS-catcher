@@ -11,6 +11,8 @@ export const getDistanceVal = (c) => Number(getDistanceConversion(c)).toFixed(1)
 export const getDistanceUnit = () =>
     settings.metric === "DEFAULT" ? "nmi" : settings.metric === "SI" ? "km" : "mi";
 
+export const getSpeedConversion = (c) =>
+    settings.metric === "DEFAULT" ? c : settings.metric === "SI" ? c * 1.852 : c * 1.151;
 export const getSpeedVal = (c) =>
     settings.metric === "DEFAULT" ? Number(c).toFixed(1)
         : settings.metric === "SI" ? Number(c * 1.852).toFixed(1)

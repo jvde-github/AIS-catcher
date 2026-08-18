@@ -354,7 +354,7 @@ export async function update() {
     const ok = await window.__app__.fetchShips();
     if (!ok) return;
 
-    const data = Object.values(window.AISCatcher.shipsDB).map((ship) => ship.raw);
+    const data = window.__app__.shipsVisible();
 
     if (table == null) {
         table = new Tabulator("#shipTable", {
