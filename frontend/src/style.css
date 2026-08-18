@@ -676,7 +676,8 @@ a:focus {
     margin-bottom: 5px;
 }
 
-.tooltip-sub {
+.tooltip-sub,
+.tooltip-dim {
     color: var(--color-text-muted);
 }
 
@@ -684,7 +685,7 @@ a:focus {
     text-align: left;
 }
 
-#hover-info div span {
+#hover-info div span:not(.tooltip-dim) {
     font-size: var(--fs-3xl);
 }
 

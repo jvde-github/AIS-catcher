@@ -484,7 +484,8 @@ function tooltipHTML(mmsi, s, fix) {
     if (!fix) return '';
     let html = '<div class="tooltip-card">'
         + getFlagStyled(s.country, FLAG_STYLE) + '<div>'
-        + (s.name || 'MMSI ' + mmsi) + ' at ' + getSpeedVal(fix.knots || 0) + ' ' + getSpeedUnit();
+        + (s.name || 'MMSI ' + mmsi)
+        + '<span class="tooltip-dim"> at ' + getSpeedVal(fix.knots || 0) + ' ' + getSpeedUnit() + '</span>';
     let sub = '';
     if (s.type != null) sub += getShipTypeShort(s.type);
     if (fix.age) sub += (sub ? ' - ' : '') + 'Silent for ' + getDeltaTimeVal(Math.round(fix.age));
@@ -560,7 +561,11 @@ function takeHull() {
     const seed = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]];
     const geom = new Polygon([seed]);
     const feature = new OlFeature({ geometry: geom });
-    return { feature, geom, flat: geom.getFlatCoordinates() };
+    const hull = { feature, geom, flat: geom.getFlatCoordinates(), mmsi: 0 };
+    Object.defineProperty(feature, 'tooltip', {
+        get: () => tooltipHTML(hull.mmsi, fleet[hull.mmsi] || {}, features[hull.mmsi]?.fix),
+    });
+    return hull;
 }
 
 function releaseHull(mmsi) {
@@ -579,7 +584,7 @@ function placeHull(mmsi, s, fix, res) {
     let h = hulls[mmsi];
     if (!h) {
         h = hulls[mmsi] = takeHull();
-        h.feature.ship = { mmsi: Number(mmsi) };   // shapeStyleFunction reads .ship
+        h.mmsi = mmsi;
         hullSource.addFeature(h.feature);
     }
 

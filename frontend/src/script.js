@@ -900,7 +900,7 @@ const shapeStyleFunction = function (feature) {
             color: `rgba(${r}, ${g}, ${b}, ${o})`
         }),
         stroke: new ol.style.Stroke({
-            color: hoverMMSI && hoverType == 'ship' && feature.ship.mmsi == hoverMMSI ? settings.shiphover_color : settings.shipoutline_border,
+            color: hoverMMSI && hoverType == 'ship' && feature.ship?.mmsi == hoverMMSI ? settings.shiphover_color : settings.shipoutline_border,
             width: 2
         }),
     });
@@ -2649,12 +2649,15 @@ function tableRowClick(m) {
 }
 
 function getTooltipContent(ship) {
+    const sub = (ship.shiptype ? getShipTypeShort(ship.shiptype) + ' - ' : '') +
+        'received ' + getDeltaTimeVal(shipsSince - ship.last_signal) + ' ago';
+
     let content = '<div class="tooltip-card">' +
         getFlagStyled(ship.country, TOOLTIP_FLAG_STYLE) +
         '<div>' +
-        (getShipName(ship) || ship.mmsi) + ' at ' + getSpeedVal(ship.speed) + ' ' + getSpeedUnit() + '<br>' +
-        (ship.shiptype ? getShipTypeShort(ship.shiptype) + '<br>' : '') +
-        'Received ' + getDeltaTimeVal(shipsSince - ship.last_signal) + ' ago' +
+        (getShipName(ship) || ship.mmsi) +
+        '<span class="tooltip-dim"> at ' + getSpeedVal(ship.speed) + ' ' + getSpeedUnit() + '</span>' +
+        '<div class="tooltip-sub">' + sub + '</div>' +
         '</div>' +
         '</div>';
 
@@ -2669,8 +2672,9 @@ function getTooltipContentPlane(plane) {
     return '<div class="tooltip-card">' +
         getFlagStyled(plane.country, TOOLTIP_FLAG_STYLE) +
         '<div>' +
-        sanitizeString(plane.callsign || plane.hexident || '') + ' at ' + altitude + '/' + speed + ' kts<br>' +
-        'Received ' + getDeltaTimeVal(planesSince - plane.last_signal) + ' ago' +
+        sanitizeString(plane.callsign || plane.hexident || '') +
+        '<span class="tooltip-dim"> at ' + altitude + '/' + speed + ' kts</span>' +
+        '<div class="tooltip-sub">received ' + getDeltaTimeVal(planesSince - plane.last_signal) + ' ago</div>' +
         '</div>' +
         '</div>';
 }
