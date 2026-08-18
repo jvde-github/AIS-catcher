@@ -173,11 +173,11 @@ export function getShipDimensionSVG(ship) {
     const loa = a + b, beam = c + d;
     if (loa <= 0 || beam <= 0) return "";
 
-    const W = 280, LEFT = 46, HULL_W = 150;
+    const W = 280, LEFT = 46, HULL_W = 175;
     const BEAM_X = 30, BEAM_LABEL = 26;
-    const SIDE_X = LEFT + HULL_W + 12, SIDE_LABEL = SIDE_X + 6;
-    const MID = 46, MAX_HALF = 15;
+    const MAX_HALF = 30;
     const k = Math.min(HULL_W / loa, MAX_HALF / Math.max(c, d));
+    const MID = 34 + c * k;
 
     const ox = LEFT + b * k;
     const px = (f) => (ox + f * k).toFixed(1);
@@ -188,7 +188,15 @@ export function getShipDimensionSVG(ship) {
     const u = getDimUnit();
     const lbl = (v) => getDimVal(v) + " " + u;
 
+    // A hull too short or too thin to hold a label puts that pair outside it.
     const hullL = +px(-b), hullR = +px(a);
+    const hullTopY = +py(-c), hullBotY = +py(d);
+    const SIDE_X = hullR + 12, SIDE_LABEL = SIDE_X + 6;
+
+    const thin = hullBotY - hullTopY < 26;
+    const portY = thin ? hullTopY - 3 : hullTopY + 8;
+    const stbdY = thin ? hullBotY + 10 : hullBotY - 2;
+
     const tight = hullR - hullL < 44;
     const sternX = tight ? hullL - 3 : hullL, sternAnchor = tight ? "end" : "start";
     const bowX = tight ? hullR + 3 : hullR, bowAnchor = tight ? "start" : "end";
@@ -227,8 +235,8 @@ export function getShipDimensionSVG(ship) {
   <line x1="${px(0.8 * loa - b)}" y1="${py(d)}"  x2="${SIDE_X}" y2="${py(d)}"  class="dim-ext"/>
   <line x1="${SIDE_X}" y1="${py(-c)}" x2="${SIDE_X}" y2="${py(0)}" class="dim-arrow" marker-start="url(#dimArrow)" marker-end="url(#dimArrow)"/>
   <line x1="${SIDE_X}" y1="${py(0)}"  x2="${SIDE_X}" y2="${py(d)}" class="dim-arrow" marker-start="url(#dimArrow)" marker-end="url(#dimArrow)"/>
-  <text x="${SIDE_LABEL}" y="${(+py(-c) + 8).toFixed(1)}" class="dim-t">${lbl(c)}</text>
-  <text x="${SIDE_LABEL}" y="${(+py(d) - 2).toFixed(1)}" class="dim-t">${lbl(d)}</text>
+  <text x="${SIDE_LABEL}" y="${portY.toFixed(1)}" class="dim-t">${lbl(c)}</text>
+  <text x="${SIDE_LABEL}" y="${stbdY.toFixed(1)}" class="dim-t">${lbl(d)}</text>
 
   <circle cx="${px(0)}" cy="${py(0)}" r="6.5" class="dim-origin-ring"/>
   <circle cx="${px(0)}" cy="${py(0)}" r="3.2" class="dim-origin"/>
