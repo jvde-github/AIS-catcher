@@ -121,6 +121,7 @@ class RealtimeViewer {
 
     addNmeaMessage(data) {
         if (!this.matches(data)) return;
+        if (!window.__app__.mmsiVisible(data.mmsi)) return;
 
         const rows = this.nmeaContent.getElementsByTagName('tr');
         if (rows.length >= this.maxLines) {
@@ -147,6 +148,7 @@ class RealtimeViewer {
         timeCell.textContent = time;
         timeCell.style.fontSize = '0.85em';
 
+        row.dataset.mmsi = data.mmsi;
         const mmsiCell = document.createElement('td');
 
         const nmeaCell = document.createElement('td');
@@ -227,6 +229,13 @@ class RealtimeViewer {
     reindex() {
         this.groups = {};
         for (const f of this.filters) (this.groups[f.kind] ||= []).push(f.value);
+    }
+
+    dropHiddenRows() {
+        for (const row of [...this.nmeaContent.getElementsByTagName('tr')]) {
+            const mmsi = row.dataset.mmsi;
+            if (mmsi && !window.__app__.mmsiVisible(Number(mmsi))) row.remove();
+        }
     }
 
     matches(data) {
@@ -478,6 +487,10 @@ export function clearFilters() {
 export function filterKindChanged() {
     dialogKind = document.getElementById('realtime_filter_kind').value;
     renderFilterDialog();
+}
+
+export function applyVesselFilter() {
+    viewer?.dropHiddenRows();
 }
 
 export function getFilters() {

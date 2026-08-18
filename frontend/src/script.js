@@ -362,6 +362,7 @@ window.__app__ = {
     get receivers() { return config.receivers || []; },
     get setReceiver() { return onReceiverChange; },
     get shipsVisible() { return () => Object.values(shipsDB).filter(shipVisible).map((e) => e.raw); },
+    get mmsiVisible() { return (mmsi) => !shipsDB[mmsi] || shipVisible(shipsDB[mmsi]); },
 };
 
 function _bindDelegatedActions() {
@@ -1928,6 +1929,7 @@ function applyFilter() {
     redrawMap();
     updateTablecard();
     shipTableModule?.update();
+    realtimeModule?.applyVesselFilter();
     updateFilterUI();
 }
 
@@ -3727,7 +3729,9 @@ async function fetchTracks() {
                     ToggleTrackOnMap(mmsi);
                 }
             }
-            const mmsi_str = Array.from(marker_tracks).join(",");
+            const wanted = Array.from(marker_tracks).filter((m) => !shipsDB[m] || shipVisible(shipsDB[m]));
+            if (wanted.length === 0) return true;
+            const mmsi_str = wanted.join(",");
             pathsFrom = 0;
             a = await fetch("api/path.json?" + mmsi_str + "&receiver=" + activeReceiver);
         }
@@ -4902,6 +4906,8 @@ function redrawMap() {
     };
 
     for (let [mmsi, entry] of Object.entries(paths)) {
+
+        if (shipsDB[mmsi] && !shipVisible(shipsDB[mmsi])) continue;
 
         if (marker_tracks.has(Number(mmsi)) || settings.show_all_tracks) {
             const path = paths[mmsi];

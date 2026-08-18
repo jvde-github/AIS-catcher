@@ -2076,6 +2076,9 @@ a:focus {
     align-self: stretch;
     gap: 2px 20px;
     margin: 4px 0 2px;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    background: var(--color-band-soft);
 }
 
 .settings_main section div.filter-allnone {
@@ -2112,7 +2115,7 @@ a:focus {
 }
 
 .filter-check:hover {
-    background: var(--color-control);
+    background: var(--color-band-accent);
 }
 
 .settings_main .filter-check input[type="checkbox"] {
@@ -2520,11 +2523,12 @@ a:focus {
     }
 }
 
-/* the row is space-between for search vs controls; the two buttons belong
-   together on the right */
 #shipTableFilterBtn {
     margin-left: auto;
-    margin-right: 8px;
+}
+
+.search-container .search-box {
+    margin-right: 12px;
 }
 
 #shipTableFilterBtn.filter-on {

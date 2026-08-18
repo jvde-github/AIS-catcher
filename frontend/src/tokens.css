@@ -90,6 +90,7 @@
     --color-surface-alt: var(--slate-100);
     --color-surface-raised: var(--slate-0);
     --color-band: var(--slate-100);
+    --color-band-soft: var(--slate-50);
     --color-band-accent: var(--slate-200);
 
     /* ink */
@@ -179,6 +180,7 @@
     --color-surface-alt: var(--ink-300);
     --color-surface-raised: var(--ink-400);
     --color-band: var(--ink-100);
+    --color-band-soft: var(--ink-100);
     --color-band-accent: var(--ink-300);
 
     --color-text: var(--ink-900);

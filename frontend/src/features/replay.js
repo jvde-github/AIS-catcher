@@ -14,7 +14,7 @@ import { fromLonLat } from 'ol/proj';
 
 import { settings } from '../core/state.js';
 import { decodeHTMLEntities } from '../core/util.js';
-import { calculateBearing, shipOutlineLocal } from '../core/geo.js';
+import { shipOutlineLocal } from '../core/geo.js';
 import { getSpeedVal, getSpeedUnit, getDeltaTimeVal, getFlagStyled, getShipTypeShort, sanitizeString } from '../core/format.js';
 
 // { getReceiver, spriteFor, iconScale, fadeOpacity, labelText, spriteSheet,
@@ -372,13 +372,15 @@ export function seek(time) {
     pump();
 }
 
-const NO_LEG = { brg: null, knots: 0 };
+const NO_LEG = { knots: 0 };
 
-function angleOf(p) {
-    if (p[6] != null) return p[6];
-    if (p[5] != null) return p[5] / cogDiv;
-    return null;
-}
+const headingOf = (p) => (p[6] != null ? p[6] : null);
+const courseMadeGood = (p) => (p[5] != null ? p[5] / cogDiv : null);
+
+// Hulls turn to the heading, icons to the course, as on the live map; either
+// stands in for the other when only one was reported.
+const angleOf = (p) => headingOf(p) ?? courseMadeGood(p);
+const courseOf = (p) => courseMadeGood(p) ?? headingOf(p);
 
 // Shortest way round: a vessel swinging through north must not spin 359 degrees.
 function lerpAngle(from, to, f) {
@@ -386,11 +388,9 @@ function lerpAngle(from, to, f) {
     return (from + d * f + 360) % 360;
 }
 
-// Course and speed made good from a to b. Bearing comes from the segment being
-// travelled, so the icon always points where the vessel is visibly going.
-// Constant for the segment's lifetime, so the trig runs once per segment, not
-// per frame; the cache keys on the pts array so a block merge (which swaps in
-// a new array) invalidates it.
+// Speed made good from a to b, for vessels whose own report says nothing.
+// Constant for the segment's lifetime, so this runs once per segment rather than
+// per frame; the cache keys on the pts array so a block merge invalidates it.
 function leg(s, a, b) {
     if (a < 0 || b >= s.pts.length || a === b) return NO_LEG;
     if (s.legPts === s.pts && s.legA === a && s.legB === b) return s.legV;
@@ -404,10 +404,7 @@ function leg(s, a, b) {
     s.legPts = s.pts;
     s.legA = a;
     s.legB = b;
-    s.legV = {
-        brg: metres > 1 ? calculateBearing([lonA, latA], [lonB, latB]) : null,
-        knots: (metres / secs) / 0.514444,
-    };
+    s.legV = { knots: (metres / secs) / 0.514444 };
     return s.legV;
 }
 
@@ -418,8 +415,11 @@ function holdAt(s, i, T) {
     const age = T - s.pts[i][3];
     if (age > STALE_DROP) return null;
 
-    const l = i > 0 ? leg(s, i - 1, i) : NO_LEG;
-    return { lat: s.pts[i][0], lon: s.pts[i][1], knots: l.knots, brg: l.brg, age, hdg: angleOf(s.pts[i]) };
+    const sog = s.pts[i][4];
+    const knots = sog != null ? sog / sogDiv : (i > 0 ? leg(s, i - 1, i).knots : 0);
+
+    return { lat: s.pts[i][0], lon: s.pts[i][1], knots, age,
+             hdg: angleOf(s.pts[i]), cog: courseOf(s.pts[i]) };
 }
 
 // index of the first point whose dwell ends at or after T
@@ -452,7 +452,7 @@ function sample(s, T) {
     const underWay = sog != null && sog > underWayUnits;
 
     if (T <= pa[3] && !underWay)
-        return { lat: pa[0], lon: pa[1], knots: 0, brg: null, hdg: angleOf(pa) };
+        return { lat: pa[0], lon: pa[1], knots: 0, hdg: angleOf(pa), cog: courseOf(pa) };
 
     const b = a + 1;
     if (b < pts.length && pts[b][2] - pa[3] <= MAX_INTERP) {
@@ -460,20 +460,25 @@ function sample(s, T) {
         const span = pts[b][2] - start;
         const f = span > 0 ? Math.max(0, Math.min(1, (T - start) / span)) : 0;
         const l = leg(s, a, b);
-        const ha = angleOf(pa), hb = angleOf(pts[b]);
+        // turning through the segment reads as a turn, not a snap at the end
+        const between = (of) => {
+            const x = of(pa), y = of(pts[b]);
+            return x != null && y != null ? lerpAngle(x, y, f) : (x ?? y);
+        };
+
         return {
             lat: pa[0] + (pts[b][0] - pa[0]) * f,
             lon: pa[1] + (pts[b][1] - pa[1]) * f,
-            knots: underWay ? sog / sogDiv : l.knots, brg: l.brg,
-            // turning through the segment reads as a turn, not a snap at the end
-            hdg: ha != null && hb != null ? lerpAngle(ha, hb, f) : (ha ?? hb),
+            knots: underWay ? sog / sogDiv : l.knots,
+            hdg: between(angleOf),
+            cog: between(courseOf),
         };
     }
 
     // no next point within reach: hold rather than invent a track never sailed
     if (T <= pa[3]) {
         const l = a > 0 ? leg(s, a - 1, a) : NO_LEG;
-        return { lat: pa[0], lon: pa[1], knots: sog / sogDiv, brg: l.brg, hdg: angleOf(pa) };
+        return { lat: pa[0], lon: pa[1], knots: sog / sogDiv, hdg: angleOf(pa), cog: courseOf(pa) };
     }
     return holdAt(s, a, T);
 }
@@ -518,7 +523,7 @@ function buildFeatures() {
 // animation rate is pure allocation churn, and a frame that changes nothing for
 // a ship touches nothing.
 function place(f, s, fix) {
-    const sp = deps.spriteFor(s.cls, fix.knots, fix.brg);
+    const sp = deps.spriteFor(s.cls, fix.knots, fix.cog);
     const scale = (settings.icon_scale ?? 1) * deps.iconScale(s.len);
     const opacity = fix.age ? deps.fadeOpacity(fix.age) : 1;
     const label = labels ? (s.name || String(f.marker.get('mmsi'))) : '';
