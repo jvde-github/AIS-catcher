@@ -377,10 +377,11 @@ const NO_LEG = { knots: 0 };
 const headingOf = (p) => (p[6] != null ? p[6] : null);
 const courseMadeGood = (p) => (p[5] != null ? p[5] / cogDiv : null);
 
-// Hulls turn to the heading, icons to the course, as on the live map; either
-// stands in for the other when only one was reported.
-const angleOf = (p) => headingOf(p) ?? courseMadeGood(p);
+// Icons turn to the course, hulls to the heading — falling back to the course
+// only while the vessel is moving, a stopped vessel's course being noise.
 const courseOf = (p) => courseMadeGood(p) ?? headingOf(p);
+const angleOf = (p) =>
+    headingOf(p) ?? (p[4] != null && p[4] > underWayUnits ? courseMadeGood(p) : null);
 
 // Shortest way round: a vessel swinging through north must not spin 359 degrees.
 function lerpAngle(from, to, f) {

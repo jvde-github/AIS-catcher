@@ -1,7 +1,6 @@
 // Geodesic math and geometry builders; no app state.
 
 import Polygon from 'ol/geom/Polygon';
-import CircleGeom from 'ol/geom/Circle';
 import { fromLonLat } from 'ol/proj';
 
 export const hasValidCoords = function (lat, lon) {
@@ -77,8 +76,8 @@ export function createShipOutlineGeometry(ship) {
     if (to_bow == null || to_stern == null || to_port == null || to_starboard == null) return null;
 
     if (heading == null) {
-        if (ship.cog != null && ship.speed > 1) heading = ship.cog;
-        else return new CircleGeom(fromLonLat(coordinate), Math.max(to_bow, to_stern));
+        if (ship.cog == null || !(ship.speed > 1)) return null;
+        heading = ship.cog;
     }
 
     const deltaBow = calcOffset1M(coordinate, heading % 360);

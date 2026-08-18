@@ -518,7 +518,6 @@ const DEFAULT_SETTINGS = {
         shipoutline_border: "#A9A9A9",
         shipoutline_inner: "#808080",
         shipoutline_opacity: 0.9,
-        show_circle_outline: false,
         circle_scale: 6.0,
         dark_mode: false,
         center_radius: 0,
@@ -1919,13 +1918,13 @@ const filterProbe = { shipclass: 0, speed: 0 };
 
 function applyFilter() {
     saveSettings();
-    replay.refresh();
-    if (shipsDB != null) {
+    if (shipsDB != null)
         for (const key in shipsDB) shipsDB[key].show = undefined;
-        countShips();
-    }
+
+    // whichever view is on screen owns the counters: replay reports its own
+    // fleet as it redraws, and updateMarkerCount stands down while it does
+    replay.refresh();
     updateMarkerCount();
-    renderCounts();
     redrawMap();
     updateTablecard();
     shipTableModule?.update();
@@ -4848,10 +4847,9 @@ function redrawMap() {
             if (includeLabels)
                 labelVector.addFeature(feature)
 
-            if (showShapeOutlines && (ship.heading != null || settings.show_circle_outline)) {
-                const shapeFeature = new ol.Feature({
-                    geometry: createShipOutlineGeometry(ship)
-                })
+            const outline = showShapeOutlines ? createShipOutlineGeometry(ship) : null;
+            if (outline) {
+                const shapeFeature = new ol.Feature({ geometry: outline })
                 shapeFeature.ship = ship
                 shapeFeatures[ship.mmsi] = shapeFeature
 

@@ -72,6 +72,11 @@ export function setClock(serverTime) {
     if (serverTime > 0) clock = serverTime;
 }
 
+// shipPasses runs per vessel per frame during replay, so the summary of what is
+// active is computed once per change rather than rebuilt on every call.
+let revision = 0;
+let summary = { f: null, revision: -1, terms: [], active: false };
+
 function state() {
     if (!settings.ship_filter || typeof settings.ship_filter !== "object")
         settings.ship_filter = {};
@@ -92,6 +97,7 @@ export function get(key) {
 
 export function set(key, value) {
     state()[key] = value;
+    revision++;
 }
 
 // The three checkbox lists differ only in what they hold.
@@ -139,6 +145,7 @@ export function statusOf(ship) {
 
 export function reset() {
     settings.ship_filter = {};
+    revision++;
     state();
 }
 
@@ -163,8 +170,16 @@ export function bucketOf(ship) {
     return bucketFor(ship.shipclass, ship.speed);
 }
 
-function terms() {
+function current() {
     const f = state();
+    if (summary.f !== f || summary.revision !== revision) {
+        const list = describeTerms(f);
+        summary = { f, revision, terms: list, active: list.length > 0 };
+    }
+    return summary;
+}
+
+function describeTerms(f) {
     const list = [];
     if (f.hidden_buckets?.length) list.push(hiddenLabel(f.hidden_buckets.length, "group"));
     if (f.hidden_classes?.length) list.push(hiddenLabel(f.hidden_classes.length, "type"));
@@ -185,19 +200,18 @@ function hiddenLabel(n, what, plural = "s") {
 }
 
 export function isActive() {
-    return terms().length > 0;
+    return current().active;
 }
 
 export function describe() {
-    return terms();
+    return current().terms;
 }
 
 // The terms a replayed vessel can be judged on: it carries a class and a speed,
 // but no reception data, status or distance.
 export function passesAppearance(ship) {
-    if (!isActive()) return true;
-
-    const f = state();
+    const { active, f } = current();
+    if (!active) return true;
 
     if (f.hidden_buckets.length && f.hidden_buckets.includes(bucketOf(ship))) return false;
     if (f.hidden_classes.length && f.hidden_classes.includes(ship.shipclass)) return false;
@@ -208,10 +222,9 @@ export function passesAppearance(ship) {
 }
 
 export function shipPasses(ship) {
-    if (!isActive()) return true;
+    const { active, f } = current();
+    if (!active) return true;
     if (!passesAppearance(ship)) return false;
-
-    const f = state();
 
     if (f.hidden_statuses.length && f.hidden_statuses.includes(statusOf(ship))) return false;
 
