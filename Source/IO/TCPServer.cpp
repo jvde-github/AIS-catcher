@@ -462,6 +462,9 @@ namespace IO
 
 	bool TCPServer::start(int port)
 	{
+		for (auto &c : client)
+			c.owner = this;
+
 		for (const auto &p : active_ports)
 		{
 			if (port && p == port)

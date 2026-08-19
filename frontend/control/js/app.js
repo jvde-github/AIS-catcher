@@ -4,6 +4,9 @@
 
     let auth = 'login';
     let hasPassword = true;
+    // the viewer is mounted on this server, so one exposed port serves both
+    const VIEWER_PATH = '/viewer/';
+
     let port = 0;
     let viewerLoaded = false;
     let engineRunning = false;
@@ -40,7 +43,6 @@
             if (label) label.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
         }
     }
-    let currentLoadTimeout = null;
     let streamRetryTimer = null;
     let streamWatchdog = null;
     let eventSource = null;
@@ -48,7 +50,6 @@
     let flowOutputTarget = null;
 
     const iframe = document.getElementById('webviewer-frame');
-    const loadingDiv = document.getElementById('loading');
     const systemOverlay = document.getElementById('system-overlay');
     const systemBody = document.getElementById('system-body');
     const systemTabs = document.getElementById('system-tabs');
@@ -497,7 +498,6 @@
         const div = document.createElement('div');
         div.className = 'hub-overlay-msg row row-center';
         div.innerHTML = html;
-        loadingDiv.classList.add('hidden');
         hubContainer.insertBefore(div, hubContainer.firstChild);
         return div;
     }
@@ -543,39 +543,10 @@
         `);
     }
 
-    function viewerUrl(pathname, search) {
-        const url = new URL(window.location.href);
-        url.port = port;
-        url.pathname = pathname;
-        url.search = search || '';
-        url.hash = '';
-        return url.toString();
-    }
-
     function loadWebviewer() {
-        try {
-            iframe.src = viewerUrl('/', '?welcome=false');
-            viewerLoaded = true;
-
-            clearTimeout(currentLoadTimeout);
-            currentLoadTimeout = setTimeout(() => {
-                showError('Webviewer Not Responding', 'Port ' + port + ' is not responding.', true);
-            }, 8000);
-
-            iframe.onload = function () {
-                clearTimeout(currentLoadTimeout);
-                clearOverlayMessages();
-                loadingDiv.classList.add('hidden');
-                iframe.classList.remove('hidden');
-            };
-
-            iframe.onerror = function () {
-                clearTimeout(currentLoadTimeout);
-                showError('Webviewer Load Error', 'Failed to load the webviewer on port ' + port + '.');
-            };
-        } catch (e) {
-            showError('Configuration Error', 'There was an error processing the webviewer URL.');
-        }
+        iframe.src = iframe.src;
+        viewerLoaded = true;
+        clearOverlayMessages();
     }
 
     function loadSourceConfig() {
@@ -1221,12 +1192,7 @@
             statEls.forEach(el => { el.innerHTML = ''; });
             return;
         }
-        let url;
-        try {
-            url = viewerUrl('/api/output_stats.json');
-        } catch (e) { return; }
-
-        fetch(url)
+        fetch(VIEWER_PATH + 'api/output_stats.json')
             .then(r => { if (!r.ok) throw new Error(); return r.json(); })
             .then(stat => {
                 const pools = {};
@@ -1467,22 +1433,18 @@
                 // the wizard leads with its password step; without a wizard
                 // run, a missing password is prompted via the modal instead
                 if (data.wizard && (isLoggedIn() || auth === 'setup')) {
-                    loadingDiv.classList.add('hidden');
                     openWizard();
                 } else if (passwordSetupMode()) {
-                    loadingDiv.classList.add('hidden');
                     openLoginModal();
                 }
 
                 if (port)
                     loadWebviewer();
                 else if (auth !== 'setup') {
-                    loadingDiv.classList.add('hidden');
                     showNoViewer();
                 }
             })
             .catch(() => {
-                loadingDiv.classList.add('hidden');
                 showError('Connection Error', 'Cannot reach the control server.');
                 scheduleStreamRetry();
             });

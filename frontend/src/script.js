@@ -191,6 +191,18 @@ const ACTIONS = {
 
     // context menu (depends on global context_mmsi/card_mmsi)
     toggleShipcardPin: () => toggleShipcardPin(),
+    toggleTickerSide: () => {
+        settings.ticker_bottom = !settings.ticker_bottom;
+        const btn = document.getElementById("ticker_side");
+        if (btn) {
+            const label = settings.ticker_bottom ? "Move the bar to the top" : "Move the bar to the bottom";
+            btn.title = label;
+            btn.setAttribute("aria-label", label);
+        }
+        saveSettings();
+        applyPanels();
+        fitShipcard();
+    },
     toggleFollowStationCtx: () => toggleFollow("STATION"),
     copyTextCtx: () => copyText(context_mmsi),
     copyTextICAO: () => copyText(getICAOFromHexIdent(context_mmsi)),
@@ -522,6 +534,7 @@ const DEFAULT_SETTINGS = {
         center_radius: 0,
         show_station: true,
         ticker: true,
+        ticker_bottom: false,
         metric: "DEFAULT",
         setcoord: true,
         tab: "map",
@@ -2197,6 +2210,7 @@ function applyPanels(opts = {}) {
 
     document.body.classList.toggle("replay-open", panels.replay);
     document.body.classList.toggle("ticker-open", tickerOn);
+    document.body.classList.toggle("ticker-bottom", !!settings.ticker_bottom);
 
     el.shifted.forEach((e) => e.classList.toggle("active", panels.table));
 
@@ -4191,8 +4205,9 @@ function adjustMapForShipcard(pixel) {
 
 function pinShipcard() {
     settings.shipcard_pinned = true;
-    settings.shipcard_pinned_x = parseInt(shipcard.style.left) || 0;
-    settings.shipcard_pinned_y = parseInt(shipcard.style.top) || 0;
+    const card = panelElements().shipcard;
+    settings.shipcard_pinned_x = parseInt(card.style.left) || 0;
+    settings.shipcard_pinned_y = parseInt(card.style.top) || 0;
 
     applyShipcardPinStyling();
     showNotification("Shipcard pinned to current position");
@@ -4250,11 +4265,20 @@ function cardFullBleed() {
     return mqFullBleed.matches;
 }
 
+function tickerAtTop() {
+    return document.body.classList.contains("ticker-open") && !settings.ticker_bottom;
+}
+
+function tickerInset() {
+    if (cardFullBleed() || mqNarrow.matches || !tickerAtTop()) return 0;
+    return mapGap() + cssPx("--size-ticker", 44);
+}
+
 function mapTopInset() {
     if (cardFullBleed()) return 0;
 
     const gap = mapGap();
-    if (!document.body.classList.contains("ticker-open")) return gap;
+    if (!tickerAtTop()) return gap;
 
     // On a narrow screen the card takes the whole top anyway; giving the bar
     // its strip there would cost the card room it has none of to spare.
@@ -4271,8 +4295,8 @@ function placeTopLeft(aside) {
     const mapSize = map.getSize();
     const rect = aside.getBoundingClientRect();
     if (mapSize && mapSize[0] >= rect.width + 20) {
-        aside.style.left = leftWithin(aside.offsetParent, aside, mapGap()) + "px";
-        aside.style.top = mapTopInset() + "px";
+        aside.style.left = "0px";
+        aside.style.top = tickerInset() + "px";
         aside.classList.add("floating");
     }
 }
@@ -4280,6 +4304,17 @@ function placeTopLeft(aside) {
 function leftWithin(parent, aside, margin) {
     const width = parent ? parent.clientWidth : window.innerWidth;
     return Math.max(0, Math.min(margin, width - aside.offsetWidth));
+}
+
+function squareFlushCorners(aside) {
+    const parent = aside.offsetParent;
+    const w = parent ? parent.clientWidth : window.innerWidth;
+    const h = parent ? parent.clientHeight : window.innerHeight;
+
+    aside.classList.toggle("flush-left", aside.offsetLeft <= 0);
+    aside.classList.toggle("flush-top", aside.offsetTop <= 0);
+    aside.classList.toggle("flush-right", aside.offsetLeft + aside.offsetWidth >= w);
+    aside.classList.toggle("flush-bottom", aside.offsetTop + aside.offsetHeight >= h);
 }
 
 function fitShipcard() {
@@ -4300,11 +4335,14 @@ function fitShipcard() {
         aside.style.top = top + "px";
         if (!settings.shipcard_pinned) aside.style.left = leftWithin(parent, aside, margin) + "px";
         aside.classList.add("floating");
+        squareFlushCorners(aside);
         return;
     }
 
     const overflow = aside.offsetTop + aside.offsetHeight - bottom;
     if (overflow > 0) aside.style.top = Math.max(top, aside.offsetTop - overflow) + "px";
+
+    squareFlushCorners(aside);
 }
 
 function positionAside(pixel, aside) {
@@ -4330,6 +4368,7 @@ function positionAside(pixel, aside) {
 
     if (settings.shipcard_top_left) {
         placeTopLeft(aside);
+        squareFlushCorners(aside);
         adjustMapForShipcard(pixel);
         return;
     }
@@ -4371,6 +4410,7 @@ function positionAside(pixel, aside) {
     if (!placed) {
         placeTopLeft(aside);
     }
+    squareFlushCorners(aside);
     adjustMapForShipcard(pixel);
 }
 
@@ -5296,10 +5336,6 @@ else {
     });
 }
 
-console.log("Starting plugin code");
-
-window.loadPlugins && window.loadPlugins();
-
 addOverlayLayer("Aircraft", planeLayer);
 
 let urlParams = new URLSearchParams(window.location.search);
@@ -5340,6 +5376,8 @@ boxselect.init({
     showTracks: showTracksForMMSIs,
     showNotification,
 });
+let pluginActionCounter = 0;
+
 shipcard.init({
     fitShipcard,
     getReceiver: () => activeReceiver,
@@ -5350,7 +5388,7 @@ shipcard.init({
     selectTrackShown: () => select_enabled_track,
     registerAction: (action) => {
         if (typeof action === 'function') {
-            const name = '_plugin_' + (registerAction._counter = (registerAction._counter || 0) + 1);
+            const name = '_plugin_' + ++pluginActionCounter;
             ACTIONS[name] = action;
             return name;
         }
@@ -5391,6 +5429,10 @@ replay.init({
     onStateChange: updateReplaycard,
     onFrame: applyFixedCenter,
 });
+
+console.log("Starting plugin code");
+
+window.loadPlugins && window.loadPlugins();
 
 console.log("Plugin loading completed");
 

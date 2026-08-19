@@ -109,7 +109,8 @@ namespace IO
 
 					if (request.method == "GET" || request.method == "POST")
 					{
-						Request(c, request, request.accept_gzip);
+						if (!dispatchMount(c, request, request.accept_gzip))
+							Request(c, request, request.accept_gzip);
 					}
 					else
 					{
@@ -167,6 +168,36 @@ namespace IO
 	void HTTPServer::Request(IO::TCPServerConnection &c, const HTTPRequest &, bool)
 	{
 		NotFound(c);
+	}
+
+	bool HTTPServer::dispatchMount(IO::TCPServerConnection &c, const HTTPRequest &r, bool accept_gzip)
+	{
+		const std::string path = r.path();
+
+		for (const auto &m : mounts)
+		{
+			const std::string &prefix = m.first;
+			if (path.rfind(prefix, 0) != 0)
+				continue;
+
+			// What a mount serves is relative, so the browser must believe it is
+			// inside a directory.
+			if (path.size() == prefix.size())
+			{
+				setExtraHeader("Location: " + prefix + "/");
+				Response(c, "text/plain", std::string(), false, false, false, 301);
+				return true;
+			}
+
+			if (path[prefix.size()] != '/')
+				continue;
+
+			HTTPRequest sub = r;
+			sub.target = r.target.substr(prefix.size());
+			m.second->Request(c, sub, accept_gzip);
+			return true;
+		}
+		return false;
 	}
 
 	int HTTPServer::parseHeaders(const std::string &msg, std::size_t header_end, HTTPRequest &r, std::string &error)

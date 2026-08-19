@@ -408,7 +408,7 @@ export function populate() {
     ].forEach((el) => (document.getElementById("shipcard_" + el.id).innerHTML = ship[el.id] != null ? Number(ship[el.id]).toFixed(el.d) + " " + el.u : null));
 
     document.getElementById("shipcard_country").innerHTML = getCountryName(ship.country);
-    document.getElementById("shipcard_callsign").innerHTML = getCallSign(ship);
+    document.getElementById("shipcard_callsign").innerHTML = getCallSign(ship) || null;
     document.getElementById("shipcard_msgtypes").innerHTML = getStringfromMsgType(ship.msg_type);
 
     document.getElementById("shipcard_last_group").innerHTML = getStringfromGroup(ship.last_group);
@@ -416,12 +416,13 @@ export function populate() {
 
     document.getElementById("shipcard_channels").innerHTML = getStringfromChannels(ship.channels);
     document.getElementById("shipcard_type").innerHTML = getMmsiTypeVal(ship) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_tech_info" data-action="techInfo" title="Technical details"></i>';
-    document.getElementById("shipcard_shiptype").innerHTML = ship.shiptype != null
-        ? getShipTypeShort(ship.shiptype) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_shiptype_info" data-action="shiptypeInfo" title="Ship type details"></i>'
-        : getShipTypeShort(ship.shiptype);
-    document.getElementById("shiptype_code").textContent = ship.shiptype != null ? ship.shiptype : "-";
-    document.getElementById("shiptype_desc").textContent = ship.shiptype != null
-        ? getShipTypeFull(ship.shiptype)
+    const shiptype = ship.shiptype ?? null;
+    document.getElementById("shipcard_shiptype").innerHTML = shiptype != null
+        ? getShipTypeShort(shiptype) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_shiptype_info" data-action="shiptypeInfo" title="Ship type details"></i>'
+        : getShipTypeShort(shiptype);
+    document.getElementById("shiptype_code").textContent = shiptype != null ? shiptype : "-";
+    document.getElementById("shiptype_desc").textContent = shiptype != null
+        ? getShipTypeFull(shiptype)
         : "-";
     document.getElementById("shipcard_status").innerHTML = getStatusVal(ship);
     document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(clock - ship.last_signal);

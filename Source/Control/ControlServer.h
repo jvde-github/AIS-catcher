@@ -61,9 +61,6 @@ private:
 	void serveStatic(IO::TCPServerConnection &c, const std::string &path);
 	static std::string cookieAttributes();
 
-	static const int SSE_ACTIVITY = 1;
-	static const int SSE_STATUS = 2;
-	static const int SSE_LOG = 3;
 
 	static const int SESSION_LIFETIME = 7 * 24 * 3600;
 	static const int MAX_LOGIN_BLOCK = 300;

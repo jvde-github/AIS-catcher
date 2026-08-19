@@ -113,6 +113,9 @@ namespace Managed
 		Config::readManagedViewer(config_file);
 		viewer->startServing();
 
+		// one exposed port is enough for a station reached through a VPN or proxy
+		server.mount("/viewer", viewer.get());
+
 		while (!stop_process)
 		{
 			if (core.engineDesired())

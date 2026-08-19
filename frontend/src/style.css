@@ -525,19 +525,66 @@ a:focus {
     cursor: crosshair;
 }
 
+.ticker-side {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-right: -4px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+}
+
+.ticker-side:hover {
+    color: var(--color-text);
+}
+
+body.ticker-bottom .ticker-side svg {
+    transform: rotate(180deg);
+}
+
+body.ticker-bottom #ticker {
+    top: auto;
+    bottom: var(--size-map-gap);
+}
+
+body.ticker-open.ticker-bottom .map-button-box:not(.map-pill) {
+    transform: translateY(calc(-1 * (var(--size-ticker) + var(--size-map-gap))));
+}
+
+body.ticker-open.ticker-bottom .map-button-box:not(.map-pill).active {
+    transform: translateX(calc(-1 * var(--size-panel)))
+               translateY(calc(-1 * (var(--size-ticker) + var(--size-map-gap))));
+}
+
+body.ticker-bottom.ticker-open #replaybar {
+    bottom: calc(24px + var(--size-ticker) + var(--size-map-gap));
+}
+
+body.ticker-bottom.ticker-open #map-attribution-foldout,
+body.ticker-bottom.ticker-open .map-attribution-note {
+    bottom: calc(10px + var(--size-ticker) + var(--size-map-gap));
+}
+
 .ticker {
     position: absolute;
     box-sizing: border-box;
     top: var(--size-map-gap);
-    left: var(--size-map-gap);
-    right: var(--ticker-right, var(--size-map-gap));
+    left: 6px;
+    right: var(--ticker-right, 6px);
     height: var(--size-ticker);
     display: none;
     align-items: center;
     flex-wrap: nowrap;
     overflow: hidden;
     gap: 12px;
-    padding: 0 14px;
+    padding: 0 10px;
     z-index: var(--z-map-control);
     background: var(--color-ticker-bg);
     backdrop-filter: blur(8px);
@@ -704,7 +751,7 @@ a:focus {
     background: var(--color-off);
 }
 
-body.ticker-open .map-pill {
+body.ticker-open:not(.ticker-bottom) .map-pill {
     top: var(--size-ticker-inset) !important;
 }
 
@@ -715,8 +762,12 @@ body.ticker-open .map-pill {
         --ticker-right: calc(var(--size-map-gap) + var(--size-map-controls) + var(--size-map-gap));
     }
 
-    body.ticker-open .map-pill:not(.active) {
+    body.ticker-open:not(.ticker-bottom) .map-pill:not(.active) {
         top: var(--size-map-gap) !important;
+    }
+
+    body.ticker-open.ticker-bottom .map-button-box:not(.map-pill):not(.active) {
+        transform: none;
     }
 }
 
@@ -725,25 +776,29 @@ body.ticker-open .map-pill {
         --ticker-right: calc(var(--size-map-gap) + var(--size-map-controls) + var(--size-map-gap));
     }
 
-    body.ticker-open .map-pill.active {
+    body.ticker-open:not(.ticker-bottom) .map-pill.active {
         top: var(--size-map-gap) !important;
+    }
+
+    body.ticker-open.ticker-bottom .map-button-box:not(.map-pill).active {
+        transform: translateX(calc(-1 * var(--size-panel)));
     }
 }
 
-body.ticker-open #statcard {
+body.ticker-open:not(.ticker-bottom) #statcard {
     top: var(--size-ticker-inset);
 }
 
-body.ticker-open #measurecard {
+body.ticker-open:not(.ticker-bottom) #measurecard {
     top: calc(var(--size-ticker-inset) + 6px);
 }
 
-body.ticker-open .filter-empty {
+body.ticker-open:not(.ticker-bottom) .filter-empty {
     top: calc(var(--size-ticker-inset) + 50px);
 }
 
 @media only screen and (max-width: 500px) {
-    body.ticker-open #measurecard {
+    body.ticker-open:not(.ticker-bottom) #measurecard {
         top: 0;
     }
 }
@@ -1228,6 +1283,31 @@ body.ticker-open .filter-empty {
     width: 400px;
 }
 
+#shipcard .mapcard_content {
+    border-bottom-left-radius: inherit;
+    border-bottom-right-radius: inherit;
+}
+
+#shipcard.flush-left {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+#shipcard.flush-top {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+#shipcard.flush-right {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+#shipcard.flush-bottom {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
 .mapcard.floating {
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
@@ -1483,13 +1563,6 @@ body.ticker-open .filter-empty {
     flex-direction: row;
     border-right: 3px solid var(--color-shipcard-edge);
     padding-right: 7px;   /* the border comes out of the padding */
-}
-
-/* Collapsing strips the selected class from every row, so the link back to the
-   expanded card is drawn on whichever row survives: the same line, thinner. */
-#shipcard:not(.shipcard-ismax) .shipcard-content-row:not(.shipcard-max-only) {
-    border-right: 2px solid var(--color-shipcard-edge);
-    padding-right: 8px;
 }
 
 /* Technical details popover */

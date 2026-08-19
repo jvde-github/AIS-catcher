@@ -32,7 +32,7 @@ void ControlServer::start()
 		throw std::runtime_error("Control: cannot start control server at port " + std::to_string(core.getControlPort()));
 
 	log_listener = Logger::getInstance().addLogListener([this](const LogMessage &m)
-														{ sendSSE(SSE_LOG, "log", m.toJSON()); });
+														{ sendSSE(IO::SSE::LOG, "log", m.toJSON()); });
 
 	Info() << "Control: control server running at port " << core.getControlPort();
 }
@@ -47,7 +47,7 @@ void ControlServer::processClients()
 		if (stamp != status_state)
 		{
 			status_state = stamp;
-			sendSSE(SSE_STATUS, "status", statusJSON(nullptr, false));
+			sendSSE(IO::SSE::STATUS, "status", statusJSON(nullptr, false));
 		}
 	}
 
@@ -75,7 +75,7 @@ void ControlServer::processClients()
 	for (int i = 0; i < 4; i++)
 		activity_sent[i] = snapshot[i];
 
-	sendSSE(SSE_ACTIVITY, "activity", s);
+	sendSSE(IO::SSE::ACTIVITY, "activity", s);
 }
 
 void ControlServer::close()
@@ -454,7 +454,7 @@ void ControlServer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r
 		// single log + activity + status stream: browsers cap persistent connections per host
 		uint32_t since = (uint32_t)strtoul(r.queryParam("since").c_str(), nullptr, 10);
 
-		upgradeSSE(c, (1u << SSE_ACTIVITY) | (1u << SSE_STATUS) | (1u << SSE_LOG), "log", [since]() -> std::vector<std::string>
+		upgradeSSE(c, (1u << IO::SSE::ACTIVITY) | (1u << IO::SSE::STATUS) | (1u << IO::SSE::LOG), "log", [since]() -> std::vector<std::string>
 				   { return Logger::getInstance().getBacklogJSON(INT_MAX, since); });
 
 		status_state = STATUS_UNSENT;

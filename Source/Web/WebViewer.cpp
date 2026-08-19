@@ -37,8 +37,8 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 	if (!server)
 		return;
 
-	const bool want_nmea = server->sseSubscribed(1);
-	const bool want_signal = server->sseSubscribed(2);
+	const bool want_nmea = server->sseSubscribed(IO::SSE::NMEA);
+	const bool want_signal = server->sseSubscribed(IO::SSE::SIGNAL);
 	if (!want_nmea && !want_signal)
 		return;
 
@@ -94,7 +94,7 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 			w.endArray();
 			w.endObject();
 			w.finish();
-			server->sendSSE(1, "nmea", json);
+			server->sendSSE(IO::SSE::NMEA, "nmea", json);
 		}
 
 		if (want_signal && isValidCoord(tag.lat, tag.lon))
@@ -108,7 +108,7 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 				.kv("lon", tag.lon)
 				.endObject();
 			w.finish();
-			server->sendSSE(2, "nmea", json);
+			server->sendSSE(IO::SSE::SIGNAL, "nmea", json);
 		}
 	}
 }
@@ -1047,15 +1047,15 @@ void WebViewer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &reque
 	// SSE routes (upgrade connection, not a normal response)
 	if (r == "/api/sse" && settings.realtime)
 	{
-		upgradeSSE(c, 1u << 1);
+		upgradeSSE(c, 1u << IO::SSE::NMEA);
 	}
 	else if (r == "/api/signal" && settings.realtime)
 	{
-		upgradeSSE(c, 1u << 2);
+		upgradeSSE(c, 1u << IO::SSE::SIGNAL);
 	}
 	else if (r == "/api/log" && settings.showlog)
 	{
-		upgradeSSE(c, 1u << 3, "log", []() -> std::vector<std::string>
+		upgradeSSE(c, 1u << IO::SSE::VIEWER_LOG, "log", []() -> std::vector<std::string>
 				   { return Logger::getInstance().getBacklogJSON(INT_MAX); });
 	}
 	// Prefix-match routes

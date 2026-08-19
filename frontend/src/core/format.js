@@ -48,7 +48,7 @@ export const CHANGE_LABEL = { 1: "Draught", 2: "Status", 3: "Name", 4: "Callsign
 
 export function getChangeVal(change) {
     if (change.f === CHANGE.STATUS) return getStatusVal({ status: change.to });
-    if (change.f === CHANGE.DRAUGHT) return getDimVal(change.to / 10) + " " + getDimUnit();
+    if (change.f === CHANGE.DRAUGHT) return getDraughtVal(change.to / 10) + " " + getDimUnit();
     return String(change.to);
 }
 
@@ -107,7 +107,7 @@ export function getDraughtChartSVG(changes, currentDraught) {
     if (currentDraught != null) series.push({ t: Math.floor(Date.now() / 1000), v: currentDraught });
 
     const u = getDimUnit();
-    const disp = (m) => Number(getDimVal(m));
+    const disp = (m) => Number(getDraughtVal(m));
     const scaled = series.map((p) => ({ t: p.t, v: disp(p.v) }));
     const last = scaled[scaled.length - 1];
 

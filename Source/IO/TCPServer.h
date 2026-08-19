@@ -39,6 +39,8 @@
 namespace IO
 {
 
+	class TCPServer;
+
 	class TCPServerConnection
 	{
 	private:
@@ -96,6 +98,9 @@ namespace IO
 		bool close_after_send = false;
 		// current request is HEAD: full headers, suppressed body
 		bool head_request = false;
+
+		// the server whose Run() loop drives this connection
+		TCPServer *owner = nullptr;
 		// interim 100 Continue already sent for the request being received
 		bool continue_sent = false;
 		// arrival time of the pending request's first byte, 0 if none (HTTP header timeout)
