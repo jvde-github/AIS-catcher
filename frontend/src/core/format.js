@@ -32,10 +32,7 @@ export const getDraughtVal = (c) =>
         ? Number(c).toFixed(1)
         : Number(c * 3.2808399).toFixed(1);
 
-// Counts share a narrow button and a one-line bar, so past a thousand they are
-// shortened rather than allowed to set the width. One decimal while that still
-// says something (1.0K, 9.9K), none above it (34K, 120K). The exact figure stays
-// in the tooltip.
+// one decimal while it says something (1.0K, 9.9K), none above (34K, 120K)
 export function compactCount(n) {
     const v = Number(n) || 0;
 
@@ -49,8 +46,6 @@ export function compactCount(n) {
 export const CHANGE = { DRAUGHT: 1, STATUS: 2, SHIPNAME: 3, CALLSIGN: 4, DESTINATION: 5, ETA: 6 };
 export const CHANGE_LABEL = { 1: "Draught", 2: "Status", 3: "Name", 4: "Callsign", 5: "Destination", 6: "ETA" };
 
-// One reading of a change record's new value, so the shipcard's timeline and the
-// ticker cannot describe the same change differently.
 export function getChangeVal(change) {
     if (change.f === CHANGE.STATUS) return getStatusVal({ status: change.to });
     if (change.f === CHANGE.DRAUGHT) return getDimVal(change.to / 10) + " " + getDimUnit();
@@ -274,7 +269,6 @@ export const getShipDimension = (ship) =>
         ? getDimVal(ship.to_bow + ship.to_stern) + " " + getDimUnit() + " x " + getDimVal(ship.to_port + ship.to_starboard) + " " + getDimUnit()
         : null;
 
-
 export function decimalToDMS(l, isLatitude) {
     const degrees = Math.floor(Math.abs(l));
     const minutes = Math.floor((Math.abs(l) - degrees) * 60);
@@ -313,7 +307,6 @@ export const getLonValFormat = (ship) => {
     return prefix + formatCoordinate(ship.lon, false) + suffix;
 };
 
-
 const ETA_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // ETA in AIS type 5 is UTC; month 0, day 0, hour 24 and minute 60 mean "not available"
@@ -332,9 +325,7 @@ export const formatTime = (timestamp) =>
     new Date(timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
 export const getDeltaTimeVal = (s) => {
-    // A negative age has no reading, and the branches below would fall through
-    // all four and return the empty string - which shows as a blank field rather
-    // than as the mistake it is.
+    // negative would fall through every branch below and return 
     if (s < 0) s = 0;
 
     const days = Math.floor(s / (24 * 3600));
@@ -350,7 +341,6 @@ export const getDeltaTimeVal = (s) => {
 
     return result.trim();
 };
-
 
 // Override returning null/undefined falls through to the default field.
 let shipNameOverride = null;
@@ -431,7 +421,6 @@ export function getStatusVal(ship) {
     return STATUS_STRINGS[Number.isInteger(s) && s >= 0 && s <= 15 ? s : 15];
 }
 
-
 export function getMmsiTypeVal(ship) {
     switch (ship.mmsi_type) {
         case CLASS_A:
@@ -453,7 +442,6 @@ export function getMmsiTypeVal(ship) {
     }
     return "Unknown";
 }
-
 
 export function getStringfromMsgType(m) {
     let s = "";
@@ -497,7 +485,6 @@ export function getStringfromChannels(m) {
     }
     return s;
 }
-
 
 // Mirror of LookupTable_ship_types in Source/JSON/Keys.cpp — keep in sync.
 const SHIP_TYPE_TEXT = [
@@ -746,7 +733,6 @@ export function getShipTypeFull(s) {
     if (s >= 0 && s < SHIP_TYPE_TEXT.length) return SHIP_TYPE_TEXT[s];
     return SHIP_TYPE_INLAND_TEXT[s] || "Unknown (" + s + ")";
 }
-
 
 // Only http(s) is safe to put in an href; javascript:/data: URLs are not.
 export function isHttpUrl(u) {

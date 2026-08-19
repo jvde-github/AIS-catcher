@@ -6,8 +6,7 @@ import { ships, clock, cardMmsi, hoverMmsi } from '../core/store.js';
 import { fromLonLat } from 'ol/proj';
 import { containsCoordinate } from 'ol/extent';
 
-// { getMap, showShipcard, saveSettings } - the fleet, the clock and what is
-// selected come from the store rather than being handed over at init.
+// { getMap, showShipcard, saveSettings }
 let deps = null;
 let kioskAnimationInterval = null;
 const DEFAULT_ROTATION_SPEED = 5;
@@ -52,10 +51,8 @@ function clearAndHide(element) {
     element.style.display = "none";
 }
 
-// The snapshot is dropped once it has been handed back. Keeping it would make
-// the first value this element ever had authoritative forever, so any later
-// writer - a feature gate, a receiver list - would find its own value reverted
-// the next time kiosk mode ended.
+// the snapshot is dropped once handed back, or the first value an element ever
+// had stays authoritative forever
 function restoreOriginalDisplay(element) {
     const saved = originalDisplayValues.get(element);
     originalDisplayValues.delete(element);
@@ -64,9 +61,7 @@ function restoreOriginalDisplay(element) {
     else element.style.removeProperty('display');
 }
 
-// `restart` is opt-out because most callers are entering or leaving kiosk mode;
-// callers that only need the chrome re-hidden - opening a menu, say - must not
-// yank the rotation back to a new ship under the user's cursor.
+// callers that only need the chrome re-hidden must not restart the rotation
 export function updateKiosk(restart = true) {
     const kiosk = isKiosk();
     if (!kiosk) stopKioskAnimation();

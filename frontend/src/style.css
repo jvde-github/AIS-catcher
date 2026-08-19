@@ -512,7 +512,6 @@ a:focus {
     padding: 5px 4px;
 }
 
-
 /* Map styling */
 
 #map {
@@ -526,9 +525,6 @@ a:focus {
     cursor: crosshair;
 }
 
-/* Ticker: a strip along the top of the map. It sits at map-control depth, so
-   the settings panel (z-panel-top) and the side table (z-panel) both pass over
-   it, and it gives the table its width back rather than sliding underneath. */
 .ticker {
     position: absolute;
     box-sizing: border-box;
@@ -538,16 +534,11 @@ a:focus {
     height: var(--size-ticker);
     display: none;
     align-items: center;
-    /* A ticker that wraps stops being a strip: the height is fixed, so a second
-       line would be clipped rather than shown. Nothing here may wrap, and
-       whatever still will not fit is cut at the edge. */
     flex-wrap: nowrap;
     overflow: hidden;
     gap: 12px;
     padding: 0 14px;
     z-index: var(--z-map-control);
-    /* the map keeps showing through, but blurred, so a busy chart underneath
-       never competes with the headline; the palette is themed in tokens.css */
     background: var(--color-ticker-bg);
     backdrop-filter: blur(8px);
     border: 2px solid var(--color-ticker-border);
@@ -570,8 +561,6 @@ a:focus {
     right: calc(var(--size-panel) + var(--ticker-right, var(--size-map-gap)));
 }
 
-/* outlined rather than filled: a solid block of accent at the head of the bar
-   outweighs the news it introduces */
 .ticker-count {
     display: flex;
     align-items: center;
@@ -618,7 +607,6 @@ a:focus {
     padding: 2px 6px;
 }
 
-
 .ticker-buckets {
     display: none;
     align-items: center;
@@ -640,12 +628,39 @@ a:focus {
 /* one line, clipped at the edge: a ticker that wraps stops being a strip */
 .ticker-text {
     overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.ticker-scroller {
+    display: inline-block;
     white-space: nowrap;
 }
 
-/* The change reads like the shipcard's timeline: the old value steps back, the
-   new one is what the eye should land on. */
+.ticker-text.panning .ticker-scroller {
+    animation: ticker-pan var(--pan-duration, 8s) ease-in-out infinite alternate;
+}
+
+@keyframes ticker-pan {
+    0%, 18% {
+        transform: translateX(0);
+    }
+
+    82%, 100% {
+        transform: translateX(var(--pan-distance, 0));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ticker-text.panning .ticker-scroller {
+        animation: none;
+    }
+
+    .ticker-text {
+        text-overflow: ellipsis;
+    }
+}
+
 .tk-name {
     font-weight: var(--fw-bold);
 }
@@ -665,7 +680,6 @@ a:focus {
     margin-left: 6px;
 }
 
-/* right after the headline it dates, not banished to the far edge */
 .ticker-age {
     flex: none;
     color: var(--color-ticker-muted);
@@ -689,19 +703,12 @@ a:focus {
     background: var(--color-off);
 }
 
-/* the top control pill would otherwise sit on the strip */
-/* Everything the bar pushes down derives from the same two tokens; the only
-   variation is each element's own resting inset (10, 16 and 60 respectively). */
 body.ticker-open .map-pill {
     top: var(--size-ticker-inset) !important;
 }
 
-/* Given room, the bar stops short of the control column instead of running under
-   it, and the controls keep their place. What decides that is the width actually
-   available - the map minus the side table when it is out - so the two cases
-   have their own thresholds: 900px on its own, and 900 + the 430px panel with
-   the table open. Below either, the bar takes the full width it has and the
-   controls step down, exactly as on a narrow screen. */
+/* the bar clears the control column only where there is width for both; with
+   the table out that needs 900px + the 430px panel */
 @media only screen and (min-width: 900px) {
     .ticker:not(.active) {
         --ticker-right: calc(var(--size-map-gap) + var(--size-map-controls) + var(--size-map-gap));
@@ -712,7 +719,6 @@ body.ticker-open .map-pill {
     }
 }
 
-/* 900px of usable bar again, measured after the panel has taken its share */
 @media only screen and (min-width: 1330px) {
     .ticker.active {
         --ticker-right: calc(var(--size-map-gap) + var(--size-map-controls) + var(--size-map-gap));
@@ -735,8 +741,6 @@ body.ticker-open .filter-empty {
     top: calc(var(--size-ticker-inset) + 50px);
 }
 
-/* The full-bleed measure card reaches the top edge on a phone, and the offset
-   above - more specific than the layout rule that puts it there - must not win. */
 @media only screen and (max-width: 500px) {
     body.ticker-open #measurecard {
         top: 0;
@@ -791,14 +795,21 @@ body.ticker-open .filter-empty {
     border-top: 1px solid var(--color-border-strong) !important;
 }
 
-.map-button:hover {
-    color: var(--color-highlight) !important;
-    fill: var(--color-highlight) !important;
-    outline: none !important;
-}
+/* a tap leaves :hover applied on touch, so an untoggled button kept looking on */
+@media (hover: hover) {
+    .map-button:hover {
+        color: var(--color-highlight) !important;
+        fill: var(--color-highlight) !important;
+        outline: none !important;
+    }
 
-.map-button:hover svg {
-    transform: scale(1.2);
+    .map-button:hover svg {
+        transform: scale(1.2);
+    }
+
+    .map-button.is-active:hover::before {
+        background: var(--color-hover-overlay);
+    }
 }
 
 /* suppress the focus ring for pointer clicks only; keyboard focus stays visible */
@@ -817,9 +828,6 @@ body.ticker-open .filter-empty {
     transition: transform var(--dur-fast) ease;
 }
 
-/* An engaged toggle is ringed rather than filled: the glyph and a circle around
-   it take the accent, which reads at the pill's 15px glyph size without a solid
-   block of colour sitting in the middle of the map. */
 .map-button.is-active {
     color: var(--color-accent) !important;
     fill: var(--color-accent) !important;
@@ -836,10 +844,6 @@ body.ticker-open .filter-empty {
 
 .map-button.is-active>* {
     position: relative;
-}
-
-.map-button.is-active:hover::before {
-    background: var(--color-hover-overlay);
 }
 
 /* Top pill holds denser glyphs (ship/ruler) — render them a touch smaller
@@ -1046,7 +1050,6 @@ body.ticker-open .filter-empty {
     transition: transform var(--dur-slow) ease-out;
 }
 
-/* rides with the controls: same shift, same easing, so the pair stays aligned */
 #statcard.active {
     transform: translateX(calc(-1 * var(--size-panel)));
 }
@@ -1068,9 +1071,6 @@ body.ticker-open .filter-empty {
     padding: 1px 4px;
 }
 
-/* Dimmed, not removed. Hiding an empty bucket makes the row reflow every time a
-   count crosses zero - and with single-vessel buckets that is constant - while
-   a category you never receive simply looks like it was never there. */
 .stat-item[data-zero="true"] {
     opacity: 0.35;
 }
@@ -1539,7 +1539,6 @@ body.ticker-open .filter-empty {
     font-family: inherit;
 }
 
-
 .spd-line {
     fill: none;
     stroke: var(--color-accent);
@@ -1946,8 +1945,6 @@ body.ticker-open .filter-empty {
     pointer-events: none;
 }
 
-/* Always in the DOM so the row keeps one width as the state flips; the check
-   is the only thing that appears. */
 .floating-menu li .ctx-check {
     margin-left: auto;
     padding-left: 24px;
@@ -1960,8 +1957,6 @@ body.ticker-open .filter-empty {
     visibility: visible;
 }
 
-/* the rule sits in the margin rather than on the row, so the hover highlight
-   keeps the same box a row without one has */
 .floating-menu li.group-start {
     position: relative;
     margin-top: 17px;
@@ -2258,7 +2253,6 @@ body.ticker-open .filter-empty {
 .showflex {
     display: flex;
 }
-
 
 .flash-up {
     opacity: 0;
@@ -2608,7 +2602,6 @@ body.ticker-open .filter-empty {
     padding: 0.55rem 0.65rem;
 }
 
-
 /* .fieldset / .field / .field-label / .field-desc live in components.css;
    these are the viewer's own section chrome */
 .settings_main section div {
@@ -2642,7 +2635,6 @@ body.ticker-open .filter-empty {
     text-transform: uppercase;
     color: var(--color-text-muted);
 }
-
 
 .settings_main section>div.third {
     flex: 0 1 calc(33.333% - 0.5rem);
@@ -2750,7 +2742,6 @@ body.ticker-open .filter-empty {
 .settings_main select:hover {
     border-color: var(--color-accent);
 }
-
 
 /* .band / .band-slot live in components.css, shared with the control hub */
 .settings_header {

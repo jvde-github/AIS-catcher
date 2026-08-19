@@ -16,7 +16,6 @@
    dark bottom bar coming from layer 3. That contrast is intended.
    ========================================================================= */
 
-
 /* ---------------------------------------------------------------------------
    1  PRIMITIVES — do not reference outside this file.
    ------------------------------------------------------------------------ */
@@ -78,7 +77,6 @@
     --red-400: #f87171;
     --violet-300: #c4b5fd;
 }
-
 
 /* ---------------------------------------------------------------------------
    2  SEMANTIC — role, not appearance. Flips with .dark.
@@ -239,7 +237,6 @@
     --color-timestamp: rgba(255, 255, 255, 0.6);
 }
 
-
 /* ---------------------------------------------------------------------------
    3  CHROME — theme-independent by design. None of these flip.
    ------------------------------------------------------------------------ */
@@ -271,10 +268,7 @@
     --overlay-ink-muted: var(--slate-300);
     --overlay-danger: var(--red-500);
 
-    /* The ticker joins the always-dark floating surfaces in day mode: a light
-       strip competes with the chart under it, where a dark translucent one
-       reads as an overlay. In dark mode the page is already dark, so it takes
-       the raised surface and reads as chrome rather than a hole. */
+    /* dark in day mode like the tooltip surfaces; the raised surface in dark */
     --color-ticker-bg: color-mix(in srgb, var(--overlay-bg) 50%, transparent);
     --color-ticker-ink: var(--overlay-ink);
     --color-ticker-muted: var(--overlay-ink-muted);
@@ -290,7 +284,6 @@
     /* neutral, not slate-tinted: a tinted scrim reads as a blue cast over the map */
     --color-scrim: rgba(0, 0, 0, 0.5);
 }
-
 
 /* ---------------------------------------------------------------------------
    4  SCALES — no theme dimension.
@@ -367,21 +360,17 @@
     --size-header-tall: 55px;
     --size-panel: 430px;
 
-    /* Ticker geometry, stated once. The bar is border-box, so --size-ticker is
-       its whole height; --size-ticker-inset is where anything below it starts.
-       Both CSS offsets and mapTopInset() in script.js read these, so the bar's
-       height cannot drift away from the room the cards leave for it. */
+    /* the bar is border-box, so --size-ticker is its whole height; script.js
+       reads these too */
     --size-map-gap: 10px;
     --size-ticker: 44px;
     --size-ticker-inset: calc(var(--size-map-gap) + var(--size-ticker) + var(--size-map-gap));
 
     --size-map-button: 34px;
-    /* the control column's outer width: the button plus its 2px border */
     --size-map-controls: calc(var(--size-map-button) + 4px);
     --size-panel-wide: 500px;
     --size-panel-narrow: 288px;
 }
-
 
 /* ---------------------------------------------------------------------------
    5  COMPONENT — light/dark pairs no semantic role covers.

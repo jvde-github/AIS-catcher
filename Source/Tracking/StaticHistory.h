@@ -140,12 +140,10 @@ private:
 	// part worth checking and no per-ship timestamps are needed
 	static const std::size_t LOOKBACK = 64;
 
-	// what a value looks like, per ring - the only thing the two walks differ on
 	static void writeNum(JSON::Writer &o, const NumChange &e) { o.kv("from", (int)e.from).kv("to", (int)e.to); }
 	static void writeText(JSON::Writer &o, const TextChange &e) { o.kv("to", e.value); }
 
-	// One record shape for both endpoints. Authoring it twice is how a key added
-	// to one and not the other becomes a silent wire-format divergence.
+	// one record shape for both endpoints
 	template <typename E, typename F>
 	static void writeEntry(JSON::Writer &w, const E &e, bool with_mmsi, F value)
 	{
@@ -181,10 +179,7 @@ private:
 		{
 			const auto &e = ring[r];
 
-			// Walking newest-first, an unwritten slot means the ring has never
-			// wrapped, so everything behind it is empty too. Without this the
-			// server-mode ring - 128k entries - is walked in full on every poll,
-			// under the same lock the decoder takes per message.
+			// newest-first: an unwritten slot means the ring never wrapped
 			if (!e.time)
 				break;
 

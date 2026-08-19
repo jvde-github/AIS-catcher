@@ -3,8 +3,6 @@ import { ShippingClass } from './core/constants.js';
 import { SPEED_PALETTES, palette as validPalette, bucketColor, speedBucket, paletteCSS } from './core/palette.js';
 import * as filter from './core/filter.js';
 import { debounce, decodeHTMLEntities, deriveLabelBackground, copyToClipboard, hexToRgb } from './core/util.js';
-// Aliased to the names this file has always used: the store owns the data now,
-// but every read site here still reads the same way.
 import {
     ships as shipsDB, planes as planesDB, paths, pathsFrom, station,
     counts as shipCounts, shipsSince, planesSince, clock,
@@ -566,7 +564,6 @@ function restoreDefaultSettings() {
     settings.track_class_colors = getDefaultTrackColors();
 }
 
-
 // NMEA Decoder Functions
 function toggleInfoPanel() {
     const overlay = document.getElementById('info-overlay');
@@ -910,7 +907,6 @@ function setCoordinateFormat(format) {
     shipTableModule?.reset();
 }
 
-
 async function copyCoordinates(m) {
     const pos = vesselPosition(m);
     if (!pos) {
@@ -919,7 +915,6 @@ async function copyCoordinates(m) {
     }
     if (await copyClipboard(pos.lat + "," + pos.lon)) showNotification("Coordinates copied to clipboard", "success");
 }
-
 
 const shapeStyleFunction = function (feature) {
 
@@ -997,7 +992,6 @@ const markerStyle = function (feature) {
         })
     });
 };
-
 
 const planeStyle = function (feature) {
     return [
@@ -1160,14 +1154,12 @@ const labelLayer = new ol.layer.Vector({
     declutter: settings.labels_declutter ?? true
 });
 
-
 let shapeFeatures = {};
 let markerFeatures = {};
 
 let stationFeature = undefined;
 let hoverCircleFeature = undefined;
 let selectCircleFeature = undefined;
-
 
 async function fetchJSON(l, m) {
     let response;
@@ -1282,9 +1274,6 @@ const contextMenu = document.getElementById("context-menu");
 
 let replayPausedByMenu = false;
 
-// A toggle names the thing it governs and marks whether it is on; only real
-// commands keep a verb. Flipping the verb instead ("Show"/"Hide") hides the
-// state in prose and resizes the row every time it changes.
 const MENU_CHECKS = {
     toggleShipcardPin: () => settings.shipcard_pinned,
     toggleTrackCtx: () => trackIsShown(context_mmsi),
@@ -1309,10 +1298,6 @@ function applyMenuChecks() {
     });
 }
 
-// Separators are derived, never authored: a run of adjacent visible items
-// sharing a data-group gets a rule above it. No context can orphan a divider,
-// stack two, or leave one at an edge. A change between two lone items is not
-// worth a line - a three-item menu would otherwise be all rules.
 function applyMenuSeparators() {
     const runs = [];
 
@@ -1350,7 +1335,6 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
 
     hideMapMenu(event);
 
-
     context_mmsi = mmsi;
     context_type = type;
 
@@ -1370,8 +1354,6 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
         context.push(type + "-map");
     }
 
-    // an item may belong to several contexts: show it when any of them is asked
-    // for, so a replay-only menu can reuse live entries without owning them
     contextMenu.querySelectorAll("li").forEach((element) => {
         const owned = classList.filter((className) => element.classList.contains(className));
         if (owned.length === 0) return;
@@ -1393,8 +1375,6 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
 
     // we might have made non-android items visible in the context menu, so hide non-android items if needed
     updateAndroid();
-    // menu chrome only: restarting the rotation here would swap the vessel the
-    // menu was opened for
     kiosk.updateKiosk(false);
 
     if (settings.show_all_tracks) {
@@ -1402,22 +1382,17 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
             element.style.display = "none";
         });
     }
-    // feature gates only ever subtract: showing an item here would resurrect it
-    // in contexts the class filter had already ruled out
-    if (!(settings.show_all_tracks || marker_tracks.size > 0 || trackCutoff)) {
+        if (!(settings.show_all_tracks || marker_tracks.size > 0 || trackCutoff)) {
         document.querySelectorAll(".ctx-removealltracks").forEach(function (element) {
             element.style.display = "none";
         });
     }
-    // clearing is about hand-picked tracks; with every track on there is
-    // nothing to clear that turning the mode off would not already do
     if (settings.show_all_tracks || marker_tracks.size === 0) {
         document.querySelectorAll(".ctx-selectedtracks").forEach(function (element) {
             element.style.display = "none";
         });
     }
 
-    // the vessel and station toggles already offer the unfollow for their own target
     const unpinCovered = isFollowing(context_mmsi) || (context.includes("station") && isFollowing("STATION"));
     const unpinContext = context.includes("ctx-map") || context.includes("ctx-replay-map");
     document.getElementById("ctx_menu_unpin").style.display =
@@ -1467,7 +1442,7 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
         contextMenu.style.top = adjustedY + "px";
     }
 
-    document.addEventListener("click", hideContextMenu);
+    setTimeout(() => document.addEventListener("click", hideContextMenu), 0);
 }
 
 let dialogModal = null;
@@ -1621,8 +1596,7 @@ const handleClick = function (pixel, target, event) {
     } else if (feature && 'replayMmsi' in feature) {
         closeDialog();
         closeSettings();
-        // replay has no shipcard, and a tap is the only pointer a phone has
-        showContextMenu(event.originalEvent, feature.replayMmsi, 'ship', ["ctx-replay-ship"]);
+            showContextMenu(event.originalEvent, feature.replayMmsi, 'ship', ["ctx-replay-ship"]);
         return;
     } else if (feature && 'ship' in feature) {
         closeDialog();
@@ -1691,7 +1665,6 @@ function initMap() {
         handleClick(evt.pixel, evt.originalEvent.target, evt);
     });
 
-
     map.getTargetElement().addEventListener('pointerleave', function () {
         stopHover();
     });
@@ -1701,9 +1674,7 @@ function initMap() {
         const f = getFeature(map.getEventPixel(evt), map.getTargetElement())
 
         if (!f)
-            // replay owns the map: most of the live menu acts on layers that
-            // are not on screen, so offer only what still means something
-            showContextMenu(evt, 0, null, replay.isActive() ? ['ctx-replay-map'] : ['settings', 'ctx-map']);
+                showContextMenu(evt, 0, null, replay.isActive() ? ['ctx-replay-map'] : ['settings', 'ctx-map']);
         else if ('station' in f) {
             showContextMenu(evt, null, null, ["station", "ctx-map"]);
         }
@@ -1782,7 +1753,6 @@ const BUCKET_ELEMENT = {
     sarte: "statcard_sarte",
     air: "statcard_heli",
 };
-
 
 function shipVisible(entry) {
     if (entry.show === undefined) entry.show = filter.shipPasses(entry.raw);
@@ -1940,8 +1910,6 @@ function updateTablecard() {
 function flashNumber(id, newValue) {
 
     const element = document.getElementById(id);
-    // the rendered text is abbreviated past a thousand, so the comparison reads
-    // the number that was last set rather than parsing "34K" back to 34
     const oldValue = Number(element.dataset.value) || 0;
 
     if (newValue != oldValue) {
@@ -2168,22 +2136,6 @@ function resetFilter() {
 }
 
 // ─── map panels ──────────────────────────────────────────────────────────────
-//
-// What is open lives here and nowhere else. Every consequence of it - the class
-// on each panel, the shift the ship table imposes on the controls, the button
-// indicators, the inset the ticker costs the cards - is recomputed by
-// applyPanels() from this object alone.
-//
-// The point is not tidiness. Every layout bug this replaced was a path that
-// changed one surface and forgot a consequence: a panel closed without undoing
-// the shift it caused, an indicator left lit, an offset held for a bar that was
-// no longer on screen. Recomputing everything, every time, makes "forgot to
-// update X" impossible to express. It is five booleans and a dozen class
-// toggles - cheap enough to redo unconditionally, so there is no diffing and
-// nothing to keep in sync.
-//
-// applyPanels() is idempotent: call it from a toggle, a resize, a tab switch or
-// after settings load, and the DOM converges on the state.
 const panels = {
     shipcard: false,
     statcard: false,
@@ -2192,15 +2144,6 @@ const panels = {
     replay: false,
 };
 
-// Rules about which surfaces can coexist, stated once. Previously these lived
-// as ad-hoc close calls at the top of each opener, so they only held for the
-// paths that remembered them.
-//
-// The shipcard closes through showShipcard rather than by clearing the flag:
-// it carries selection state - the track it revealed, the focus marker, the
-// mmsi the card is about - that a bare class toggle would strand. That call
-// re-enters here, but setPanels writes the patch before normalising, so the
-// second pass sees the flag already down and stops.
 function normalisePanels() {
     if (panels.replay) {
         panels.table = false;
@@ -2218,17 +2161,10 @@ function setPanels(patch, opts) {
     applyPanels(opts);
 }
 
-// The one derived value that reaches outside `panels`: the ticker is a stored
-// preference, and replay, kiosk and the current tab each suppress it. Stated
-// here so applyPanels has a single answer to consult rather than four inputs,
-// and so a bar that is not on screen stops costing the cards their inset.
 function tickerWanted() {
     return !!settings.ticker && !panels.replay && !isKiosk() && settings.tab === "map";
 }
 
-// The elements applyPanels writes to, looked up once. They are static in
-// index.html and this runs on every panel change - a vessel click included - so
-// the lookups were the bulk of its cost.
 let panelEls = null;
 
 function panelElements() {
@@ -2243,7 +2179,6 @@ function panelElements() {
         countersBtn: document.getElementById("counters-btn"),
         tableBtn: document.getElementById("table-btn"),
         tickerBtn: document.getElementById("ticker-btn"),
-        // everything anchored to the right edge, which the table takes width from
         shifted: [...document.querySelectorAll(".map-button-box, #ticker, #statcard")],
         popovers: [...document.querySelectorAll("#shipcard .tech-popover")],
     };
@@ -2263,7 +2198,6 @@ function applyPanels(opts = {}) {
     el.replay.classList.toggle("visible", panels.replay);
     el.table.classList.toggle("active", panels.table);
 
-    // the phone layout and every ticker-aware offset hang off these
     document.body.classList.toggle("replay-open", panels.replay);
     document.body.classList.toggle("ticker-open", tickerOn);
 
@@ -2271,28 +2205,20 @@ function applyPanels(opts = {}) {
 
     el.countersBtn?.classList.toggle("is-active", panels.statcard);
     el.tableBtn?.classList.toggle("is-active", panels.table);
-    // the button reports the preference, not whether a mode happens to suppress it
     el.tickerBtn?.classList.toggle("is-active", !!settings.ticker);
 
-    // A card dragged aside keeps that spot only while it is open. Neither of
-    // these offers a "pin here" the way the shipcard does, so a position that
-    // outlived a close would be accident rather than preference - and inline
-    // left/top beat every offset the panel layout applies, so the card would
-    // ignore the ticker and the table for the rest of the session.
     if (!panels.shipcard) closeShipcardPopovers();
     if (!panels.statcard) resetCardPosition(el.statcard);
     if (!panels.measure) resetCardPosition(el.measure);
 
     ticker.setEnabled(tickerOn);
 
-    // last, because it measures the space the rest of the panels have left
     if (panels.shipcard && opts.reposition !== false) {
         positionAside(undefined, el.shipcard);
         fitShipcard();
     }
 }
 
-// undoes what makeDraggable wrote, handing the element back to the stylesheet
 function resetCardPosition(el) {
     if (!el || !el.style.left) return;
 
@@ -2311,7 +2237,6 @@ function toggleTicker() {
 }
 
 function toggleTablecard() {
-    // too narrow for a side panel: the table becomes a tab instead
     if (!panels.table && window.innerWidth < 800) {
         settings.tab = "ships";
         selectTab();
@@ -2508,10 +2433,6 @@ async function fetchShipsBody() {
 
     if (ships.timeout) shipsTimeout = ships.timeout;
 
-    // A second behind the server's own clock: whatever it wrote while it was
-    // serialising this response carries that same second, and asking for
-    // strictly-after would step straight over it. The overlap costs a repeat,
-    // which every one of these stores absorbs, and a gap costs a lost update.
     setShipsSince(serverTime - 1);
     setClock(serverTime);
     filter.setClock(serverTime);
@@ -2545,10 +2466,6 @@ async function fetchShipsBody() {
     return true;
 }
 
-// A shore station with a wide feed can outrun the timeout sweep, and every entry
-// costs a marker, a style and a row. Past the cap the quietest vessels go first -
-// they are the ones least likely to be on screen or under the cursor - and the
-// sort only runs on the rare refresh that is actually over.
 const MAX_SHIPS = 50000;
 
 function capShipsDB() {
@@ -2862,10 +2779,7 @@ function toggleShipcardSize() {
                 e[i].classList.toggle("shipcard-row-selected");
         }
 
-        // Once, after the rows have settled - this used to run per row, so a
-        // card with thirty selectable rows re-placed itself thirty times and
-        // could start a one-second map animation on each pass.
-        const aside = document.getElementById("shipcard");
+            const aside = document.getElementById("shipcard");
         if (aside.style.top && aside.getBoundingClientRect().bottom > window.innerHeight) {
             const db = card_type == "ship" ? shipsDB : card_type == "plane" ? planesDB : null;
 
@@ -2925,8 +2839,6 @@ function onReceiverChange(idx) {
     syncReceiverUI();
     refresh_data();
 }
-
-
 
 // fetches main statistics from the server
 async function fetchStatistics() {
@@ -3022,7 +2934,6 @@ async function updateStatistics() {
         community.updateSharingState(stat.sharing, stat.sharing_uuid, stat.engine_running);
         const [sharingText, sharingColor] = community.sharingDisplay();
         statSharingElement.innerHTML = `<a href="${stat.sharing_link}" target="_blank" style="color: ${sharingColor}">${sharingText}</a>`;
-
 
         document.getElementById("stat_update_time").textContent = Number(refreshIntervalMs / 1000).toFixed(1) + " s";
         let title = document.getElementById("stat_station").textContent;
@@ -3147,7 +3058,6 @@ function getShipOpacity(ship) {
     return fadeOpacity(clock - ship.last_signal);
 }
 
-
 function getShipCSSClassAndStyle(ship, opacity = 1) {
     getSprite(ship);
     let style = `opacity: ${opacity};`;
@@ -3166,7 +3076,6 @@ function getTableShiptype(ship, opacity = 1) {
         ? `<span class="table-shiptype-icon"><span class="${classValue}" style="${style}" title="${hint}"></span></span>`
         : hint;
 }
-
 
 function syncCircleFeature(feature, raw, mmsi, styleFn) {
     if (feature) {
@@ -3230,7 +3139,6 @@ const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
     }
 };
 
-
 const stopHover = function () {
 
     if (!hoverMMSI) return;
@@ -3288,7 +3196,6 @@ function toggleAttribution() {
     attributionPinned = !attributionPinned;
     showAttribution(attributionPinned);
 }
-
 
 const startHover = function (type, mmsi, pixel, feature) {
 
@@ -3439,7 +3346,6 @@ const debouncedSaveMapView = debounce(persistSettings, 250);
 const debouncedDrawMap = debounce(redrawMap, 250);
 const debounceShowHoverTrack = debounce(showHoverTrack, 250);
 
-
 function updateMapURL() {
     if (isAndroid()) return;
 
@@ -3448,7 +3354,6 @@ function updateMapURL() {
     let newURL = window.location.href.split("?")[0] + "?lat=" + center[1].toFixed(4) + "&lon=" + center[0].toFixed(4) + "&zoom=" + view.getZoom().toFixed(2) + "&tab=" + settings.tab;
     history.replaceState(null, null, newURL);
 }
-
 
 function saveSettings() {
     const selectedRows = [];
@@ -3495,7 +3400,6 @@ function updateForLegacySettings() {
             "The on-map Community Feed overlay has been replaced by a new <b>Community Pane</b> that opens the full aiscatcher.org map in a popup window.<br><br>Right-click the map and choose <b>Toggle Community Pane</b>, or use the network button in the map controls."));
     }
 }
-
 
 function loadSettings() {
     if (!urlParams.has("reset")) {
@@ -3878,7 +3782,6 @@ function toggleFollow(m) {
     else pinVessel(m);
 }
 
-
 function setTrackVisibility(mode) {
     if (mode === 'all') return showAllTracks();
     if (mode === 'none') return deleteAllTracks();
@@ -3938,8 +3841,6 @@ function deleteAllTracks() {
     saveSettings();
 }
 
-// Clipping history is reversible: the server still holds the full window, so
-// dropping the cutoff and refetching brings it all back.
 async function toggleTrackCutoff() {
     trackCutoff = trackCutoff ? 0 : (clock || Math.floor(Date.now() / 1000));
     setPaths({});
@@ -3952,14 +3853,11 @@ async function toggleTrackCutoff() {
         : "Tracks restored to the full history", "success");
 }
 
-// trackCutoff is server time; anchoring off the elapsed seconds instead of the
-// raw stamp keeps the clock right when the server and the browser disagree
 function trackCutoffLabel() {
     const ago = Math.max(0, (clock || 0) - trackCutoff);
     return new Date(Date.now() - ago * 1000)
         .toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
-
 
 function mergeTrackPoints(older, newer) {
     const merged = [];
@@ -4365,8 +4263,6 @@ function resetShipHistory() {
     Object.keys(sectionOpen).forEach(applyShipcardSection);
 }
 
-// Every popover in the card, so closing one - or closing the card - cannot
-// leave another open at a position measured against a layout that has moved on.
 function closeShipcardPopovers() {
     panelElements().popovers.forEach((el) => (el.style.display = "none"));
 }
@@ -4375,7 +4271,6 @@ function toggleShipcardPopover(popoverId, iconId) {
     const popover = document.getElementById(popoverId);
     const icon = document.getElementById(iconId);
 
-    // a second click on the same icon closes it, rather than re-placing it
     const wasOpen = popover.style.display === "block";
     closeShipcardPopovers();
     if (wasOpen) return;
@@ -4551,16 +4446,9 @@ function stationCoords() {
 
 let followAnimating = false;
 
-// Ease the camera over rather than teleporting it: at live cadence the pan
-// takes the whole gap between fixes, so the map drifts instead of stepping.
-// A move too large to read as motion still jumps.
 function panTo(lon, lat, smooth) {
     const view = map.getView();
 
-    // Both setCenter and animate cancel whatever the view is already doing, so
-    // re-centring on top of a user gesture kills their zoom mid-flight. Stand
-    // aside for it; the next fix picks the vessel back up. Our own follow pan
-    // is the one animation we may replace.
     if (view.getInteracting()) return;
     if (view.getAnimating() && !followAnimating) return;
 
@@ -4581,14 +4469,10 @@ function panTo(lon, lat, smooth) {
         return;
     }
 
-    // the callback fires on cancellation too, and cancelling happens inside
-    // animate(), so the flag has to be raised after the call
     view.animate({ center: coord, duration: refreshIntervalMs }, () => { followAnimating = false; });
     followAnimating = true;
 }
 
-// centering is deliberately independent of drawStation: a receiver without a
-// published position still has to be able to follow a vessel
 function applyFixedCenter() {
     if (!settings.fix_center) return;
 
@@ -4613,8 +4497,6 @@ function applyFixedCenter() {
 
     if (target == null) return;
 
-    // replay already moves the vessel frame by frame; easing on top of that
-    // would chase a target that has since moved on
     panTo(target.lon, target.lat, !replaying);
 
     settings.lat = target.lat;
@@ -4725,9 +4607,6 @@ function toggleShipcardPin() {
 
 // The ticker owns the top strip. A card that starts above it hides the very
 // thing that announced the vessel, so cards begin below it while it is out.
-// px value of a CSS length token, so a number the stylesheet owns is never
-// written down a second time in here. Read once: these are :root constants, and
-// getComputedStyle forces a style recalc when styles are dirty.
 const cssPxCache = new Map();
 
 function cssPx(name, fallback) {
@@ -4739,15 +4618,9 @@ function cssPx(name, fallback) {
     return value;
 }
 
-// One MediaQueryList each rather than one per call: mapTopInset and fitShipcard
-// ask on every placement, and parsing the query string again each time is the
-// expensive half.
 const mqFullBleed = window.matchMedia("(max-width: 500px), (max-height: 800px)");
 const mqNarrow = window.matchMedia("(max-width: 750px)");
 
-// Below these sizes the stylesheet takes the card edge to edge - left:0, top:0,
-// no radius, and height:100% when maximised. An inset written from here is a
-// margin the design does not want, and shows as a gap above and below.
 function cardFullBleed() {
     return mqFullBleed.matches;
 }
@@ -4762,8 +4635,6 @@ function mapTopInset() {
     // its strip there would cost the card room it has none of to spare.
     if (mqNarrow.matches) return gap;
 
-    // computed rather than read: --size-ticker-inset is a calc(), and an
-    // unregistered custom property's computed value is the unevaluated tokens
     return gap * 2 + cssPx("--size-ticker", 44);
 }
 
@@ -4781,9 +4652,6 @@ function placeTopLeft(aside) {
     }
 }
 
-// Below 750px the card is width:100%, so an inset from the left is width the
-// right edge does not have: it pushes that edge off screen while leaving the
-// margin visible on the left. Never place a card past the edge it cannot clear.
 function leftWithin(parent, aside, margin) {
     const width = parent ? parent.clientWidth : window.innerWidth;
     return Math.max(0, Math.min(margin, width - aside.offsetWidth));
@@ -4793,13 +4661,10 @@ function fitShipcard() {
     const aside = panelElements().shipcard;
     if (!aside || !shipcardVisible()) return;
 
-    // matches the inset at the top, so the card is symmetric in either mode
     const margin = cardFullBleed() ? 0 : mapGap();
     const parent = aside.offsetParent;
     const height = parent ? parent.clientHeight : window.innerHeight;
 
-    // the band the card may occupy, stated once: every bound below reads from
-    // it, so the height it is given and the place it is put cannot disagree
     const top = mapTopInset();
     const bottom = height - margin;
     const available = bottom - top;
@@ -4848,8 +4713,6 @@ function positionAside(pixel, aside) {
 
     if (pixel) {
         const margin = 35;
-        // the table's real width, not a number that has to be remembered: this
-        // read 592 against a panel that has been 430 for some time
         let marginRight = panels.table ? cssPx("--size-panel", 430) : 30;
 
         const mapSize = map.getSize();
@@ -4941,7 +4804,6 @@ function showShipcard(type, m, pixel = undefined) {
     let ship = m in shipsDB ? shipsDB[m].raw : null;
     let ship_old = card_mmsi in shipsDB ? shipsDB[card_mmsi].raw : null;
 
-
     if (select_enabled_track && (card_mmsi != m || m == null)) {
         select_enabled_track = false;
 
@@ -4951,14 +4813,11 @@ function showShipcard(type, m, pixel = undefined) {
     }
 
     if (m != null && !visible) {
-        // placed further down with the pixel that was clicked, so applyPanels
-        // must not place it here first
         setPanels({ shipcard: true, measure: false }, { reposition: false });
         select_enabled_track = false;
     } else if (visible && m == null) {
         setPanels({ shipcard: false });
     }
-
 
     if (type !== card_type) {
         document.querySelectorAll('#shipcard_content [data-context-type]').forEach(element => {
@@ -4974,7 +4833,6 @@ function showShipcard(type, m, pixel = undefined) {
 
     setCard(m, type);
 
-
     if (shipcardVisible()) {
         if (settings.show_track_on_select && card_type == 'ship') {
             if (hoverMMSI === m && hover_enabled_track && hoverType == 'ship') {
@@ -4986,7 +4844,6 @@ function showShipcard(type, m, pixel = undefined) {
                 showTrack(m);
             }
         }
-
 
         if (isShipcardMax()) {
             toggleShipcardSize();
@@ -5373,7 +5230,6 @@ function updateDarkMode() {
     redrawMap();
 }
 
-
 document.getElementById('zoom-in').addEventListener('click', function () {
     let view = map.getView();
     let zoom = view.getZoom();
@@ -5385,7 +5241,6 @@ document.getElementById('zoom-out').addEventListener('click', function () {
     let zoom = view.getZoom();
     view.setZoom(zoom - 1);
 });
-
 
 function setDarkMode(b) {
     settings.dark_mode = b;
@@ -5517,7 +5372,6 @@ function updateSettingsTab() {
     updateTrackColorModeUI();
 }
 
-
 function activateTab(b, a) {
     // Block decoder tab if decoder is disabled
     if (a === "decoder" && !config.features.decoder) {
@@ -5546,10 +5400,6 @@ function activateTab(b, a) {
     settings.tab = a;
     saveSettings();
 
-    // After the tab is recorded, since the ticker only belongs on the map. The
-    // sweep above hid every tabcontent, the ship table among them; converging
-    // puts the map's chrome back on the way in, and on the way out stops the
-    // ticker polling for a bar that is no longer on screen.
     applyPanels();
 
     clearInterval(interval);
@@ -5761,7 +5611,6 @@ addTileLayer("Satellite", new ol.layer.Tile({
     })
 }));
 
-
 addOverlayLayer("OpenSeaMap", new ol.layer.Tile({
     source: new ol.source.XYZ({
         url: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
@@ -5862,7 +5711,6 @@ else {
 }
 
 console.log("Starting plugin code");
-
 
 window.loadPlugins && window.loadPlugins();
 
@@ -6010,7 +5858,6 @@ updateAndroid();
 
 if (isAndroid()) showMenu();
 
-
 // Re-apply chart colors after all stylesheets load (Firefox iframe quirk).
 window.addEventListener('load', () => {
     requestAnimationFrame(() => {
@@ -6024,8 +5871,6 @@ window.addEventListener('load', () => {
 // read, so the whole layout has to converge - not just the card. Debounced
 // because a window drag fires this continuously and each pass measures.
 window.addEventListener('resize', debounce(() => {
-    // reposition: false - a resize must not snap a card placed beside its marker
-    // back to the corner; only its height and the layout around it are restated
     applyPanels({ reposition: false });
     fitShipcard();
 }, 150));
