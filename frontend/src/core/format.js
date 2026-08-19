@@ -32,9 +32,30 @@ export const getDraughtVal = (c) =>
         ? Number(c).toFixed(1)
         : Number(c * 3.2808399).toFixed(1);
 
+// Counts share a narrow button and a one-line bar, so past a thousand they are
+// shortened rather than allowed to set the width. One decimal while that still
+// says something (1.0K, 9.9K), none above it (34K, 120K). The exact figure stays
+// in the tooltip.
+export function compactCount(n) {
+    const v = Number(n) || 0;
+
+    if (v < 1000) return String(v);
+    if (v < 10000) return (v / 1000).toFixed(1) + "K";
+    if (v < 1000000) return Math.round(v / 1000) + "K";
+    return (v / 1000000).toFixed(1) + "M";
+}
+
 // Field ids shared with StaticHistory on the server.
 export const CHANGE = { DRAUGHT: 1, STATUS: 2, SHIPNAME: 3, CALLSIGN: 4, DESTINATION: 5, ETA: 6 };
-const CHANGE_LABEL = { 1: "Draught", 2: "Status", 3: "Name", 4: "Callsign", 5: "Destination", 6: "ETA" };
+export const CHANGE_LABEL = { 1: "Draught", 2: "Status", 3: "Name", 4: "Callsign", 5: "Destination", 6: "ETA" };
+
+// One reading of a change record's new value, so the shipcard's timeline and the
+// ticker cannot describe the same change differently.
+export function getChangeVal(change) {
+    if (change.f === CHANGE.STATUS) return getStatusVal({ status: change.to });
+    if (change.f === CHANGE.DRAUGHT) return getDimVal(change.to / 10) + " " + getDimUnit();
+    return String(change.to);
+}
 
 let chartSeq = 0;
 
@@ -311,6 +332,11 @@ export const formatTime = (timestamp) =>
     new Date(timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
 export const getDeltaTimeVal = (s) => {
+    // A negative age has no reading, and the branches below would fall through
+    // all four and return the empty string - which shows as a blank field rather
+    // than as the mistake it is.
+    if (s < 0) s = 0;
+
     const days = Math.floor(s / (24 * 3600));
     const hours = Math.floor((s % (24 * 3600)) / 3600);
     const minutes = Math.floor((s % 3600) / 60);

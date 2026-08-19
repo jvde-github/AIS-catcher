@@ -76,6 +76,10 @@ export function applySharingState() {
     }
 }
 
+export function isPaneOpen() {
+    return !!(communityPopup && !communityPopup.closed);
+}
+
 export function toggleCommunityPane() {
     if (communityPopup && !communityPopup.closed) {
         communityPopup.close();

@@ -134,6 +134,7 @@ public:
 	std::string getMessage(uint32_t mmsi) { return ships.getMessage(mmsi); }
 	std::string getShipJSON(uint32_t mmsi) { return ships.getShipJSON(mmsi); }
 	std::string getChangesJSON(uint32_t mmsi) { return ships.getChangesJSON(mmsi); }
+	std::string getRecentChangesJSON(uint32_t since, std::size_t max) { return ships.getRecentChangesJSON(since, max); }
 };
 
 // How a device names itself. attachEngine() needs this before it has a tracker

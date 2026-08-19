@@ -90,6 +90,12 @@ export function init(d) {
 }
 
 export function isActive() { return active; }
+
+// the interpolated position being drawn this frame, not the vessel's live fix
+export function fixFor(mmsi) {
+    const fix = features[mmsi]?.fix;
+    return fix ? { lat: fix.lat, lon: fix.lon } : null;
+}
 export function refresh() { if (active) draw(); }
 export function isLoading() { return loading; }
 export function isPlaying() { return playing; }
@@ -512,10 +518,12 @@ function buildFeatures() {
         marker.set('name', fleet[mmsi].name);
 
         const f = { marker, shown: false, style: null, last: {}, fix: null };
-        // `tooltip` is what the map's pointermove looks for
+        // `tooltip` is what the map's pointermove looks for, `replayMmsi` what
+        // its contextmenu uses to tell a replayed vessel from a live one
         Object.defineProperty(marker, 'tooltip', {
             get: () => tooltipHTML(mmsi, fleet[mmsi] || {}, f.fix),
         });
+        marker.replayMmsi = Number(mmsi);
         features[mmsi] = f;
     }
 }
@@ -570,6 +578,7 @@ function takeHull() {
     const geom = new Polygon([seed]);
     const feature = new OlFeature({ geometry: geom });
     const hull = { feature, geom, flat: geom.getFlatCoordinates(), mmsi: 0 };
+    Object.defineProperty(feature, 'replayMmsi', { get: () => Number(hull.mmsi) });
     Object.defineProperty(feature, 'tooltip', {
         get: () => tooltipHTML(hull.mmsi, fleet[hull.mmsi] || {}, features[hull.mmsi]?.fix),
     });
@@ -667,6 +676,8 @@ function draw() {
         countSig = sig;
         deps.onCounts?.({ total, shown, buckets });
     }
+
+    deps.onFrame?.();
 }
 
 // Hulls are drawn by apparent size, not zoom: the fleet runs from 4 m tenders to

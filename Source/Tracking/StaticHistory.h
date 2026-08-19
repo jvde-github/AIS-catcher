@@ -94,10 +94,21 @@ public:
 	void writeJSON(JSON::Writer &w, uint32_t mmsi) const
 	{
 		w.beginArray();
-		emit(w, mmsi, num, num_next, [](JSON::Writer &o, const NumChange &e)
-			 { o.kv("from", (int)e.from).kv("to", (int)e.to); });
-		emit(w, mmsi, txt, txt_next, [](JSON::Writer &o, const TextChange &e)
-			 { o.kv("to", e.value); });
+		emit(w, mmsi, num, num_next, writeNum);
+		emit(w, mmsi, txt, txt_next, writeText);
+		w.endArray();
+	}
+
+	// The whole fleet rather than one vessel, for a caller that polls: entries
+	// at or before `since` are ones it already has, so each ring is walked from
+	// the newest backwards and abandoned at the first stale entry.
+	void writeRecentJSON(JSON::Writer &w, uint32_t since, std::size_t max) const
+	{
+		// a budget per ring, not one shared: a fleet reporting draughts would
+		// otherwise spend the whole allowance before a single name is reached
+		w.beginArray();
+		emitRecent(w, since, max, num, num_next, writeNum);
+		emitRecent(w, since, max, txt, txt_next, writeText);
 		w.endArray();
 	}
 
@@ -129,6 +140,25 @@ private:
 	// part worth checking and no per-ship timestamps are needed
 	static const std::size_t LOOKBACK = 64;
 
+	// what a value looks like, per ring - the only thing the two walks differ on
+	static void writeNum(JSON::Writer &o, const NumChange &e) { o.kv("from", (int)e.from).kv("to", (int)e.to); }
+	static void writeText(JSON::Writer &o, const TextChange &e) { o.kv("to", e.value); }
+
+	// One record shape for both endpoints. Authoring it twice is how a key added
+	// to one and not the other becomes a silent wire-format divergence.
+	template <typename E, typename F>
+	static void writeEntry(JSON::Writer &w, const E &e, bool with_mmsi, F value)
+	{
+		w.beginObject().kv("t", (int)e.time);
+		if (with_mmsi)
+			w.kv("mmsi", (int)e.mmsi);
+		w.kv("f", (int)e.field);
+		value(w, e);
+		if (e.flags & INITIAL)
+			w.kv("i", 1);
+		w.endObject();
+	}
+
 	// The two rings differ only in what a value looks like, so the walk, the
 	// ownership check and the shared keys live here once.
 	template <typename V, typename F>
@@ -140,11 +170,30 @@ private:
 			if (e.mmsi != mmsi || !e.time)
 				continue;
 
-			w.beginObject().kv("t", (int)e.time).kv("f", (int)e.field);
-			value(w, e);
-			if (e.flags & INITIAL)
-				w.kv("i", 1);
-			w.endObject();
+			writeEntry(w, e, false, value);
+		}
+	}
+
+	template <typename V, typename F>
+	static void emitRecent(JSON::Writer &w, uint32_t since, std::size_t left, const V &ring, std::size_t next_idx, F value)
+	{
+		for (std::size_t i = 0, r = prev(next_idx, ring.size()); i < ring.size() && left; i++, r = prev(r, ring.size()))
+		{
+			const auto &e = ring[r];
+
+			// Walking newest-first, an unwritten slot means the ring has never
+			// wrapped, so everything behind it is empty too. Without this the
+			// server-mode ring - 128k entries - is walked in full on every poll,
+			// under the same lock the decoder takes per message.
+			if (!e.time)
+				break;
+
+			// the ring is in write order, so the first stale entry ends the walk
+			if (e.time <= since)
+				break;
+
+			writeEntry(w, e, true, value);
+			left--;
 		}
 	}
 

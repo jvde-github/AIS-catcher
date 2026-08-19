@@ -526,6 +526,223 @@ a:focus {
     cursor: crosshair;
 }
 
+/* Ticker: a strip along the top of the map. It sits at map-control depth, so
+   the settings panel (z-panel-top) and the side table (z-panel) both pass over
+   it, and it gives the table its width back rather than sliding underneath. */
+.ticker {
+    position: absolute;
+    box-sizing: border-box;
+    top: var(--size-map-gap);
+    left: var(--size-map-gap);
+    right: var(--ticker-right, var(--size-map-gap));
+    height: var(--size-ticker);
+    display: none;
+    align-items: center;
+    /* A ticker that wraps stops being a strip: the height is fixed, so a second
+       line would be clipped rather than shown. Nothing here may wrap, and
+       whatever still will not fit is cut at the edge. */
+    flex-wrap: nowrap;
+    overflow: hidden;
+    gap: 12px;
+    padding: 0 14px;
+    z-index: var(--z-map-control);
+    /* the map keeps showing through, but blurred, so a busy chart underneath
+       never competes with the headline; the palette is themed in tokens.css */
+    background: var(--color-ticker-bg);
+    backdrop-filter: blur(8px);
+    border: 2px solid var(--color-ticker-border);
+    border-radius: var(--radius-lg);
+    color: var(--color-ticker-ink);
+    font-size: var(--fs-sm);
+    box-shadow: var(--shadow-md);
+    transition: right var(--dur-slow) ease-out;
+}
+
+.ticker .stat-item {
+    color: var(--color-ticker-ink);
+}
+
+.ticker.visible {
+    display: flex;
+}
+
+.ticker.active {
+    right: calc(var(--size-panel) + var(--ticker-right, var(--size-map-gap)));
+}
+
+/* outlined rather than filled: a solid block of accent at the head of the bar
+   outweighs the news it introduces */
+.ticker-count {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    gap: 6px;
+    flex: none;
+    padding: 2px 10px;
+    border-radius: var(--radius-2xl);
+    background: transparent;
+    border: 1px solid var(--color-ticker-accent);
+    color: var(--color-ticker-accent);
+    fill: var(--color-ticker-accent);
+    font-weight: var(--fw-bold);
+    cursor: pointer;
+}
+
+@media (hover: hover) {
+    .ticker-count:hover,
+    .ticker-item:hover,
+    .ticker-buckets .stat-item[data-action]:hover {
+        background: var(--color-ticker-hover);
+    }
+}
+
+.ticker-feed {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 16px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+}
+
+.ticker-item {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+    min-width: 0;
+    flex: 0 1 auto;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    padding: 2px 6px;
+}
+
+
+.ticker-buckets {
+    display: none;
+    align-items: center;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    gap: 4px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.ticker.ticker-idle .ticker-feed {
+    display: none;
+}
+
+.ticker.ticker-idle .ticker-buckets {
+    display: flex;
+}
+
+/* one line, clipped at the edge: a ticker that wraps stops being a strip */
+.ticker-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The change reads like the shipcard's timeline: the old value steps back, the
+   new one is what the eye should land on. */
+.tk-name {
+    font-weight: var(--fw-bold);
+}
+
+.tk-sep,
+.tk-label,
+.tk-was,
+.tk-arrow {
+    color: var(--color-ticker-muted);
+}
+
+.tk-to {
+    color: var(--color-ticker-accent);
+}
+
+.ticker-text > span + span {
+    margin-left: 6px;
+}
+
+/* right after the headline it dates, not banished to the far edge */
+.ticker-age {
+    flex: none;
+    color: var(--color-ticker-muted);
+    font-size: var(--fs-xs);
+    white-space: nowrap;
+}
+
+.ticker-dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-circle);
+    background: var(--color-ok-strong);
+}
+
+.ticker-new {
+    background: var(--color-accent);
+}
+
+.ticker.ticker-idle .ticker-dot {
+    background: var(--color-off);
+}
+
+/* the top control pill would otherwise sit on the strip */
+/* Everything the bar pushes down derives from the same two tokens; the only
+   variation is each element's own resting inset (10, 16 and 60 respectively). */
+body.ticker-open .map-pill {
+    top: var(--size-ticker-inset) !important;
+}
+
+/* Given room, the bar stops short of the control column instead of running under
+   it, and the controls keep their place. What decides that is the width actually
+   available - the map minus the side table when it is out - so the two cases
+   have their own thresholds: 900px on its own, and 900 + the 430px panel with
+   the table open. Below either, the bar takes the full width it has and the
+   controls step down, exactly as on a narrow screen. */
+@media only screen and (min-width: 900px) {
+    .ticker:not(.active) {
+        --ticker-right: calc(var(--size-map-gap) + var(--size-map-controls) + var(--size-map-gap));
+    }
+
+    body.ticker-open .map-pill:not(.active) {
+        top: var(--size-map-gap) !important;
+    }
+}
+
+/* 900px of usable bar again, measured after the panel has taken its share */
+@media only screen and (min-width: 1330px) {
+    .ticker.active {
+        --ticker-right: calc(var(--size-map-gap) + var(--size-map-controls) + var(--size-map-gap));
+    }
+
+    body.ticker-open .map-pill.active {
+        top: var(--size-map-gap) !important;
+    }
+}
+
+body.ticker-open #statcard {
+    top: var(--size-ticker-inset);
+}
+
+body.ticker-open #measurecard {
+    top: calc(var(--size-ticker-inset) + 6px);
+}
+
+body.ticker-open .filter-empty {
+    top: calc(var(--size-ticker-inset) + 50px);
+}
+
+/* The full-bleed measure card reaches the top edge on a phone, and the offset
+   above - more specific than the layout rule that puts it there - must not win. */
+@media only screen and (max-width: 500px) {
+    body.ticker-open #measurecard {
+        top: 0;
+    }
+}
+
 .map-button-box {
     position: absolute;
     right: 10px;
@@ -554,7 +771,8 @@ a:focus {
 }
 
 .map-button {
-    width: 34px !important;
+    position: relative;
+    width: var(--size-map-button) !important;
     height: 34px !important;
     border: none !important;
     margin: 0px !important;
@@ -597,6 +815,31 @@ a:focus {
     width: 19px !important;
     height: 19px !important;
     transition: transform var(--dur-fast) ease;
+}
+
+/* An engaged toggle is ringed rather than filled: the glyph and a circle around
+   it take the accent, which reads at the pill's 15px glyph size without a solid
+   block of colour sitting in the middle of the map. */
+.map-button.is-active {
+    color: var(--color-accent) !important;
+    fill: var(--color-accent) !important;
+}
+
+.map-button.is-active::before {
+    content: "";
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-circle);
+    border: 2px solid var(--color-accent);
+}
+
+.map-button.is-active>* {
+    position: relative;
+}
+
+.map-button.is-active:hover::before {
+    background: var(--color-hover-overlay);
 }
 
 /* Top pill holds denser glyphs (ship/ruler) — render them a touch smaller
@@ -800,6 +1043,12 @@ a:focus {
     border-radius: var(--radius-md);
     border: 1px solid var(--color-border-strong);
     padding: 4px 6px;
+    transition: transform var(--dur-slow) ease-out;
+}
+
+/* rides with the controls: same shift, same easing, so the pair stays aligned */
+#statcard.active {
+    transform: translateX(calc(-1 * var(--size-panel)));
 }
 
 .statcard_inner {
@@ -819,8 +1068,11 @@ a:focus {
     padding: 1px 4px;
 }
 
+/* Dimmed, not removed. Hiding an empty bucket makes the row reflow every time a
+   count crosses zero - and with single-vessel buckets that is constant - while
+   a category you never receive simply looks like it was never there. */
 .stat-item[data-zero="true"] {
-    display: none;
+    opacity: 0.35;
 }
 
 .stat-item[data-action] {
@@ -1068,7 +1320,7 @@ a:focus {
 .mapcard-footer {
     background-color: var(--color-menu);
     color: var(--color-text);
-    flex: 0 0 50px;
+    flex: 0 0 60px;
     display: flex;
     flex-direction: row;
     padding: 0 5px;
@@ -1115,6 +1367,11 @@ a:focus {
 .mapcard-footer>div.disabled {
     opacity: 0.4;
     pointer-events: none;
+}
+
+.mapcard-footer>div.shipcard-icon-active {
+    background: var(--color-hover-overlay);
+    color: var(--color-accent);
 }
 
 .mapcard header>span:first-child {
@@ -1242,7 +1499,10 @@ a:focus {
     border: 1px solid var(--color-border-strong);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
-    z-index: var(--z-float);
+    /* Capped by the shipcard's own stacking context (--z-card), so a token above
+       that is a promise the DOM cannot keep. This only has to clear its
+       siblings inside the card. */
+    z-index: var(--z-sticky);
     min-width: 200px;
     max-width: 300px;
     font-size: var(--fs-sm);
@@ -1660,7 +1920,9 @@ a:focus {
     box-shadow: var(--shadow-md);
     list-style-type: none;
     padding: 8px 0;
-    z-index: var(--z-toast);
+    /* below dialogs: a menu is opened from the page, and a modal that is up
+       must stay in front of it */
+    z-index: var(--z-menu);
     font-size: var(--fs-base);
     color: var(--color-text);
     width: auto;
@@ -1682,6 +1944,37 @@ a:focus {
     background-color: var(--color-menu-divider);
     margin: 0.5rem 0;
     pointer-events: none;
+}
+
+/* Always in the DOM so the row keeps one width as the state flips; the check
+   is the only thing that appears. */
+.floating-menu li .ctx-check {
+    margin-left: auto;
+    padding-left: 24px;
+    color: var(--color-accent);
+    font-weight: var(--fw-bold);
+    visibility: hidden;
+}
+
+.floating-menu li.checked .ctx-check {
+    visibility: visible;
+}
+
+/* the rule sits in the margin rather than on the row, so the hover highlight
+   keeps the same box a row without one has */
+.floating-menu li.group-start {
+    position: relative;
+    margin-top: 17px;
+}
+
+.floating-menu li.group-start::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -9px;
+    height: 1px;
+    background-color: var(--color-menu-divider);
 }
 
 .floating-menu li:hover {

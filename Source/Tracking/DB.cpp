@@ -125,6 +125,19 @@ std::string DB::getChangesJSON(int mmsi)
 	return content;
 }
 
+std::string DB::getRecentChangesJSON(uint32_t since, std::size_t max)
+{
+	std::lock_guard<std::mutex> lock(mtx);
+
+	std::string content;
+	JSON::Writer w(content);
+	w.beginObject().kv("time", (int)time(nullptr)).key("changes");
+	changes.writeRecentJSON(w, since, max);
+	w.endObject();
+	w.finish();
+	return content;
+}
+
 std::string DB::getShipJSON(int mmsi)
 {
 	std::lock_guard<std::mutex> lock(mtx);

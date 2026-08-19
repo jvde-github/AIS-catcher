@@ -2,11 +2,12 @@
 // randomly selected visible ships.
 
 import { settings, isKiosk } from '../core/state.js';
+import { ships, clock, cardMmsi, hoverMmsi } from '../core/store.js';
 import { fromLonLat } from 'ol/proj';
 import { containsCoordinate } from 'ol/extent';
 
-// { getMap, getShipsDB, getShipsSince, getCardMmsi, getHoverMmsi,
-//   showShipcard, saveSettings }
+// { getMap, showShipcard, saveSettings } - the fleet, the clock and what is
+// selected come from the store rather than being handed over at init.
 let deps = null;
 let kioskAnimationInterval = null;
 const DEFAULT_ROTATION_SPEED = 5;
@@ -39,6 +40,7 @@ export function setKioskPanMap(enabled) {
 export function toggleKioskMode() {
     settings.kiosk = !settings.kiosk;
     updateKiosk();
+    deps.saveSettings();
 }
 
 const originalDisplayValues = new Map();
@@ -50,19 +52,25 @@ function clearAndHide(element) {
     element.style.display = "none";
 }
 
+// The snapshot is dropped once it has been handed back. Keeping it would make
+// the first value this element ever had authoritative forever, so any later
+// writer - a feature gate, a receiver list - would find its own value reverted
+// the next time kiosk mode ended.
 function restoreOriginalDisplay(element) {
     const saved = originalDisplayValues.get(element);
-    if (saved) {
-        element.style.display = saved;
-    } else {
-        element.style.removeProperty('display');
-    }
+    originalDisplayValues.delete(element);
+
+    if (saved) element.style.display = saved;
+    else element.style.removeProperty('display');
 }
 
-export function updateKiosk() {
+// `restart` is opt-out because most callers are entering or leaving kiosk mode;
+// callers that only need the chrome re-hidden - opening a menu, say - must not
+// yank the rotation back to a new ship under the user's cursor.
+export function updateKiosk(restart = true) {
     const kiosk = isKiosk();
-    if (kiosk) startKioskAnimation();
-    else stopKioskAnimation();
+    if (!kiosk) stopKioskAnimation();
+    else if (restart || !kioskAnimationInterval) startKioskAnimation();
 
     const toHide = document.querySelectorAll(kiosk ? ".nokiosk" : ".kiosk");
     const toShow = document.querySelectorAll(kiosk ? ".kiosk" : ".nokiosk");
@@ -72,12 +80,10 @@ export function updateKiosk() {
 
 function selectRandomShipForKiosk() {
     const map = deps.getMap();
-    const shipsDB = deps.getShipsDB();
-    const shipsSince = deps.getShipsSince();
 
     const mapExtent = map.getView().calculateExtent(map.getSize());
-    const visibleShips = Object.keys(shipsDB).filter(mmsi => {
-        const ship = shipsDB[mmsi].raw;
+    const visibleShips = Object.keys(ships).filter(mmsi => {
+        const ship = ships[mmsi].raw;
         if (!ship.lat || !ship.lon || ship.lat === 0 || ship.lon === 0) {
             return false;
         }
@@ -91,14 +97,14 @@ function selectRandomShipForKiosk() {
     }
 
     const candidates = visibleShips.filter(mmsi =>
-        mmsi != deps.getCardMmsi() && mmsi != deps.getHoverMmsi()
+        mmsi != cardMmsi && mmsi != hoverMmsi
     );
 
     const finalCandidates = candidates.length > 0 ? candidates : visibleShips;
 
     const weights = finalCandidates.map(mmsi => {
-        const ship = shipsDB[mmsi].raw;
-        const timeSinceUpdate = (shipsSince - ship.last_signal) || 3600;
+        const ship = ships[mmsi].raw;
+        const timeSinceUpdate = (clock - ship.last_signal) || 3600;
 
         // Higher weight for more recently updated ships
         if (timeSinceUpdate < 60) return 10;
@@ -121,13 +127,12 @@ function selectRandomShipForKiosk() {
 }
 
 function showKioskShip(mmsi) {
-    const shipsDB = deps.getShipsDB();
-    if (!mmsi || !(mmsi in shipsDB)) {
+    if (!mmsi || !(mmsi in ships)) {
         console.log("Invalid MMSI or ship not found:", mmsi);
         return;
     }
 
-    const ship = shipsDB[mmsi].raw;
+    const ship = ships[mmsi].raw;
     if (!ship.lat || !ship.lon) {
         console.log("Ship has no valid coordinates:", mmsi);
         return;

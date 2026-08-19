@@ -424,7 +424,9 @@ export async function fetchBinary() {
         });
 
         if (serverTime > 0) {
-            binarySince = serverTime;
+            // one second behind, so the tail of this response is not skipped;
+            // the exists check above absorbs whatever repeats
+            binarySince = serverTime - 1;
             const cutoff = serverTime - binaryTimeout;
             for (const mmsi in binaryDB) {
                 let msgs = binaryDB[mmsi].ship_messages.filter(m => m.timestamp > cutoff);

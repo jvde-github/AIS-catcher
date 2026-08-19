@@ -805,98 +805,44 @@
 
 		<div data-on-contextmenu="mainspaceContextMenu" class="mainspace">
 			<ul class="floating-menu" id="context-menu">
-				<li class="ctx-shipcard" data-action="toggleShipcardPin" id="ctx_shipcard_pin"><i
-						class="push_pin_icon"></i><span id="ctx_label_shipcard_pin">Pin/Unpin Shipcard position</span>
-				</li>
-				<li class="station" data-action="pinStation"><i class="push_pin_icon"></i>Center map on station</li>
-				<li class="divider station"></li>
-				<li class="copy-text" data-action="copyTextCtx"><i class="content_copy_icon"></i>Copy to
-					Clipboard</li>
-				<li class="divider copy-text"></li>
-				<li class="table-menu" data-action="downloadCSV"><i class="cloud_download_icon"></i>Download CSV</li>
-				<li class="divider table-menu"></li>
-				<li class="ctx-map" data-action="unpinCenter" id="ctx_menu_unpin"><i class="undo_icon"></i><span
-						id="ctx_unpin">Release map center</span></li>
-				<li class="ctx-map ctx-noalltracks" data-action="showAllTracks"><i class="timeline_icon"></i>Show all
-					tracks</li>
-				<li class="ctx-map noandroid" data-action="startBoxSelect"><i class="timeline_icon"></i>Show tracks in
-					area</li>
-				<li class="ctx-map" data-action="toggleMeasurecard"><svg xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 -960 960 960"
-						style="width:16px;height:16px;margin-right:8px;fill:currentColor;flex-shrink:0">
-						<path
-							d="M160-240q-33 0-56.5-23.5T80-320v-320q0-33 23.5-56.5T160-720h640q33 0 56.5 23.5T880-640v320q0 33-23.5 56.5T800-240H160Zm0-80h640v-320H680v160h-80v-160h-80v160h-80v-160h-80v160h-80v-160H160v320Zm120-160h80-80Zm160 0h80-80Zm160 0h80-80Zm-120 0Z" />
-					</svg>Measure distance</li>
-				<li class="ctx-map ctx-replay" data-action="toggleReplaycard"><i class="play_arrow_icon"></i>Replay</li>
-				<li class="ctx-map ctx-removealltracks" data-action="resetTracksFromNow"><i
-						class="timeline_icon"></i>Reset tracks (from now)</li>
-				<li class="ctx-map ctx-removealltracks" data-action="deleteAllTracks"><i
-						class="remove_circle_outline_icon"></i>Hide all tracks</li>
-				<li class="ctx-map" data-action="ToggleFireworks"><i class="explosion_icon"></i><span
-						id="ctx_fireworks"></span></li>
-				<li class="ctx-map" data-action="toggleLabel"><i class="label_icon"></i><span id="ctx_labelswitch"></span>
-				</li>
-				<li class="ctx-map" data-action="toggleAttribution"><i class="info_icon"></i>Map attribution</li>
-				<li class="ctx-map" data-action="toggleKioskMode"><i class="jamboard_kiosk_icon"></i>Toggle Kiosk Mode
-					</li>
-					<li class="ctx-map" data-action="toggleCommunityPane"><i class="public_icon"></i>Toggle Community Pane
-				</li>
-				<li class="divider ctx-map"></li>
-				<li class="ctx-map" data-action="toggleFading"><i class="directions_boat_icon"></i><span
-						id="ctx_fading"></span></li>
-				<li class="ctx-map" data-action="toggleRange"><i class="signal_cellular_alt_icon"></i><span
-						id="ctx_range"></span></li>
-				<li class="divider ctx-map"></li>
-				<li class="ship-map ctx-noalltracks" data-action="toggleTrackCtx"><i
-						class="timeline_icon"></i><span id="ctx_track"></span></li>
-				<li class="ship-map" data-action="pinVesselCtx"><i class="push_pin_icon"></i>Center map on vessel
-				</li>
-				<li class="ship-map" data-action="mapResetViewZoomCtx"><i class="zoom_in_icon"></i>Zoom in on
-					vessel</li>
-				<li class="ship-map" data-action="showShipcardCtx" data-kind="ship"><i
-						class="directions_boat_icon"></i>Show
-					Ship Card</li>
-				<li class="plane-map" data-action="showShipcardCtx" data-kind="plane"><i
-						class="directions_boat_icon"></i>Show
-					Plane Card</li>
-				<li class="divider ship-map plane-map"></li>
-				<li class="ship" data-action="openAISCatcherSiteCtx"><i class="directions_boat_icon"></i>View on
-					www.aiscatcher.org
-				</li>
-				<li class="ship" data-action="showVesselDetailCtx"><i class="dns_icon"></i>Show Vessel Database
-					Entry</li>
-				<li class="ship noandroid" data-action="showNMEACtx"><i class="mail_icon"></i>Show Last Message
-				</li>
-				<li class="ship ctx-realtime" data-action="openRealtimeForMMSICtx"><i
-						class="comment_icon"></i>Track NMEA
-				</li>
-				<li class="ship" data-action="copyTextCtx"><i class="content_copy_icon noandroid"></i>Copy MMSI
-				</li>
-				<li class="plane" data-action="copyTextICAO"><i
-						class="content_copy_icon noandroid"></i>Copy ICAO
-				</li>
-				<li class="ship" data-action="copyCoordinatesCtx"><i
-						class="content_paste_icon noandroid"></i>Copy Coordinates</li>
-				<li class="divider ship plane"></li>
-				<li class="plane noandroid" data-action="openGoogleSearchCtx" data-icao="1"><i
-						class="search_icon"></i>Search on
-					Google</li>
-				<li class="ship noandroid" data-action="openGoogleSearchCtx"><i class="search_icon"></i>Search on
-					Google</li>
-				<li class="ship noandroid" data-action="openVesselFinderCtx"><i class="public_icon"></i>Find on
-					VesselFinder</li>
-				<li class="ship noandroid" data-action="openAISHubCtx"><i class="public_icon"></i>Find on AISHub
-				</li>
-				<li class="divider ship plane noandroid"></li>
-				<li class="settings" data-action="showServerErrors"><i class="label_icon"></i>Show Server Errors</li>
-				<li class="settings" data-action="openSettings"><i class="build_icon"></i>Settings...</li>
-				<li class="settings noandroid" data-action="toggleDarkMode"><i class="brightness_4_icon"></i>Toggle
-					Light/Dark mode</li>
-				<li class="divider ctx-charts"></li>
-				<li class="ctx-charts" data-action="toggleGraphVisibility" data-graph="signal"><i class="timeline_icon"></i><span
-						id="ctx_signal_graphs">Show signal level graphs</span></li>
-				<li class="ctx-charts" data-action="toggleGraphVisibility" data-graph="ppm"><i class="timeline_icon"></i><span
-						id="ctx_ppm_graphs">Show frequency shift graphs</span></li>
+				<li class="ctx-shipcard" data-group="card" data-action="toggleShipcardPin" id="ctx_shipcard_pin"><i class="push_pin_icon"></i>Pin shipcard position<span class="ctx-check">✓</span></li>
+				<li class="copy-text" data-group="text" data-action="copyTextCtx"><i class="content_copy_icon"></i>Copy to Clipboard</li>
+				<li class="table-menu" data-group="table" data-action="downloadCSV"><i class="cloud_download_icon"></i>Download CSV</li>
+				<li class="station" data-group="focus" data-action="toggleFollowStationCtx"><i class="push_pin_icon"></i><span id="ctx_follow_station">Follow station</span></li>
+				<li class="ctx-map ctx-replay-map" data-group="focus" data-action="unpinCenter" id="ctx_menu_unpin"><i class="undo_icon"></i><span id="ctx_unpin">Release map center</span></li>
+				<li class="ship-map ctx-replay-ship" data-group="focus" data-action="toggleFollowCtx"><i class="push_pin_icon"></i><span id="ctx_follow">Follow vessel</span></li>
+				<li class="ship-map ctx-replay-ship" data-group="focus" data-action="mapResetViewZoomCtx"><i class="zoom_in_icon"></i>Zoom in on vessel</li>
+				<li class="ship-map" data-group="focus" data-action="showShipcardCtx" data-kind="ship"><i class="directions_boat_icon"></i>Ship card</li>
+				<li class="plane-map" data-group="focus" data-action="showShipcardCtx" data-kind="plane"><i class="directions_boat_icon"></i>Plane card</li>
+				<li class="ship-map ctx-noalltracks" data-group="tracks" data-action="toggleTrackCtx"><i class="timeline_icon"></i>Track<span class="ctx-check">✓</span></li>
+				<li class="ctx-map" data-group="tracks" data-action="toggleAllTracks"><i class="timeline_icon"></i>All tracks<span class="ctx-check">✓</span></li>
+				<li class="ctx-map noandroid ctx-noalltracks" data-group="tracks" data-action="startBoxSelect"><i class="highlight_alt_icon"></i>Show tracks in area</li>
+				<li class="ctx-map ctx-selectedtracks" data-group="tracks" data-action="deleteAllTracks"><i class="remove_circle_outline_icon"></i>Clear tracks</li>
+				<li class="ctx-map ctx-removealltracks" data-group="tracks" data-action="toggleTrackCutoff"><i class="timer_icon"></i><span id="ctx_trackcutoff">Tracks from now</span><span class="ctx-check">✓</span></li>
+								<li class="ship" data-group="vessel" data-action="showVesselDetailCtx"><i class="dns_icon"></i>Vessel database entry</li>
+				<li class="ship noandroid" data-group="vessel" data-action="showNMEACtx"><i class="mail_icon"></i>Last message</li>
+				<li class="ship ctx-realtime" data-group="vessel" data-action="openRealtimeForMMSICtx"><i class="comment_icon"></i>Track NMEA</li>
+				<li class="ship ctx-replay-ship" data-group="copy" data-action="copyTextCtx"><i class="content_copy_icon noandroid"></i>Copy MMSI</li>
+				<li class="plane" data-group="copy" data-action="copyTextICAO"><i class="content_copy_icon noandroid"></i>Copy ICAO</li>
+				<li class="ship ctx-replay-ship" data-group="copy" data-action="copyCoordinatesCtx"><i class="content_paste_icon noandroid"></i>Copy Coordinates</li>
+				<li class="ship" data-group="lookup" data-action="openAISCatcherSiteCtx"><i class="directions_aiscatcher_icon"></i>View on www.aiscatcher.org</li>
+				<li class="ship noandroid" data-group="lookup" data-action="openGoogleSearchCtx"><i class="search_icon"></i>Search on Google</li>
+				<li class="plane noandroid" data-group="lookup" data-action="openGoogleSearchCtx" data-icao="1"><i class="search_icon"></i>Search on Google</li>
+				<li class="ship noandroid" data-group="lookup" data-action="openVesselFinderCtx"><i class="public_icon"></i>Find on VesselFinder</li>
+				<li class="ship noandroid" data-group="lookup" data-action="openAISHubCtx"><i class="public_icon"></i>Find on AISHub</li>
+				<li class="ctx-map" data-group="display" data-action="toggleLabel"><i class="label_icon"></i>Ship labels<span class="ctx-check">✓</span></li>
+				<li class="ctx-map" data-group="display" data-action="toggleRange"><i class="signal_cellular_alt_icon"></i>Station range<span class="ctx-check">✓</span></li>
+				<li class="ctx-map" data-group="display" data-action="toggleAttribution"><i class="info_icon"></i>Map attribution<span class="ctx-check">✓</span></li>
+				<li class="ctx-map ctx-replay ctx-replay-map" data-group="tools" data-action="toggleReplaycard"><i class="play_arrow_icon"></i>Replay<span class="ctx-check">✓</span></li>
+				<li class="ctx-map" data-group="tools" data-action="toggleMeasurecard"><i class="straighten_icon"></i>Measure<span class="ctx-check">✓</span></li>
+				<li class="ctx-map" data-group="tools" data-action="toggleCommunityPane"><i class="public_icon"></i>Community pane<span class="ctx-check">✓</span></li>
+				<li class="ctx-map" data-group="tools" data-action="toggleKioskMode"><i class="jamboard_kiosk_icon"></i>Kiosk mode<span class="ctx-check">✓</span></li>
+				<li class="ctx-map" data-group="tools" data-action="ToggleFireworks"><i class="explosion_icon"></i>Fireworks<span class="ctx-check">✓</span></li>
+				<li class="ctx-charts" data-group="charts" data-action="toggleGraphVisibility" data-graph="signal"><i class="timeline_icon"></i>Signal level graphs<span class="ctx-check">✓</span></li>
+				<li class="ctx-charts" data-group="charts" data-action="toggleGraphVisibility" data-graph="ppm"><i class="timeline_icon"></i>Frequency shift graphs<span class="ctx-check">✓</span></li>
+				<li class="settings" data-group="app" data-action="showServerErrors"><i class="label_icon"></i>Server errors</li>
+				<li class="settings" data-group="app" data-action="openSettings"><i class="build_icon"></i>Settings...</li>
+				<li class="settings noandroid ctx-replay-map" data-group="app" data-action="toggleDarkMode"><i class="brightness_4_icon"></i>Dark mode<span class="ctx-check">✓</span></li>
 			</ul>
 
 			<div class="tabcontent addscrollbar" id="about">
@@ -1332,6 +1278,16 @@
 
 
 			<div class="tabcontent" id="map" style="display: none;">
+				<div id="ticker" class="ticker nokiosk">
+					<div class="ticker-count" title="Vessels" data-action="toggleStatcard">
+						<svg xmlns="http://www.w3.org/2000/svg" height="12" viewBox="0 -960 960 960" width="12">
+							<path
+								d="M158-200 82-468q-3-12 2.5-28t23.5-22l52-18v-184q0-33 23.5-56.5T240-800h120v-120h240v120h120q33 0 56.5 23.5T800-720v184l52 18q21 8 25 23.5t1 26.5l-76 268q-50 0-91-23.5T640-280q-30 33-71 56.5T480-200q-48 0-89-23.5T320-280q-30 33-71 56.5T158-200ZM80-40v-80h80q42 0 83-13t77-39q36 26 77 38t83 12q42 0 83-12t77-38q36 26 77 39t83 13h80v80h-80q-42 0-82-10t-78-30q-38 20-78.5 30T480-40q-41 0-81.5-10T320-80q-38 20-78 30t-82 10H80Zm160-522 240-78 240 78v-158H240v158Z" />
+						</svg><span id="ticker_counts">0</span>
+					</div>
+					<div id="ticker_feed" class="ticker-feed"></div>
+					<div id="ticker_buckets" class="ticker-buckets"></div>
+				</div>
 				<div id="filter_empty" class="filter-empty">
 					<span>No vessels match the filter</span>
 					<button type="button" data-action="resetFilter">Clear</button>
@@ -1653,19 +1609,24 @@
 					</div>
 
 <footer id="shipcard_footer" class="mapcard-footer shipcard-max-only">
-						<div title="View binary messages" data-action="showBinaryMessageDialogCard"
-							data-context-type="ship" class="noandroid"><i class="mail_icon"></i><span>Messages</span>
+						<div id="shipcard_message_option" title="View binary messages"
+							data-action="showBinaryMessageDialogCard" data-context-type="ship" class="noandroid"><i
+								class="mail_icon"></i><span>Messages</span>
+						</div>
+						<div id="shipcard_follow_option" title="Keep the map centred on this vessel"
+							data-action="toggleFollowCard" data-context-type="ship"><i
+								class="push_pin_icon"></i><span id="shipcard_follow">Follow</span>
 						</div>
 						<div id="shipcard_realtime_option" title="Track NMEA messages for this vessel"
 							data-action="openRealtimeForMMSICard" data-context-type="ship"><i
 								class="comment_icon"></i><span>Track NMEA</span>
 						</div>
-						<div title="Lookup on commuinity site" data-action="openAISCatcherSiteCard"
-							data-context-type="ship" class="noandroid"><i
-								class="info_icon"></i><span>www.aiscatcher.org</span></div>
 						<div id="shipcard_track_option" title="Track of current vessel" data-context-type="ship"
 							data-action="toggleTrackCard"><i id="shipcard_track_icon" class="timeline_icon"></i><span
 								id="shipcard_track">Track</span></div>
+						<div title="Lookup on commuinity site" data-action="openAISCatcherSiteCard"
+							data-context-type="ship" class="noandroid"><i
+								class="info_icon"></i><span>www.aiscatcher.org</span></div>
 
 						<div title="Search on FlightAware" data-action="openFlightAwareCard"
 							data-context-type="plane">
@@ -1691,15 +1652,19 @@
 				<div title="Counters"
 					class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box map-pill nokiosk"
 					style="top: 10px;">
-					<button type="button" data-action="toggleStatcard" class="btn btn-primary map-button"
-						style="font-size: 10px;">
+					<button id="counters-btn" type="button" data-action="toggleStatcard"
+						class="btn btn-primary map-button" style="font-size: 10px;">
 						<span id="markerCount">0</span>
 					</button>
-					<button type="button" data-action="toggleTablecard" class="btn btn-primary map-button">
+					<button id="table-btn" type="button" data-action="toggleTablecard" class="btn btn-primary map-button">
 						<svg xmlns="http://www.w3.org/2000/svg" height="12" viewBox="0 -960 960 960" width="12">
 							<path
 								d="M158-200 82-468q-3-12 2.5-28t23.5-22l52-18v-184q0-33 23.5-56.5T240-800h120v-120h240v120h120q33 0 56.5 23.5T800-720v184l52 18q21 8 25 23.5t1 26.5l-76 268q-50 0-91-23.5T640-280q-30 33-71 56.5T480-200q-48 0-89-23.5T320-280q-30 33-71 56.5T158-200ZM80-40v-80h80q42 0 83-13t77-39q36 26 77 38t83 12q42 0 83-12t77-38q36 26 77 39t83 13h80v80h-80q-42 0-82-10t-78-30q-38 20-78.5 30T480-40q-41 0-81.5-10T320-80q-38 20-78 30t-82 10H80Zm160-522 240-78 240 78v-158H240v158Z" />
 						</svg>
+					</button>
+					<button id="ticker-btn" title="Event ticker" type="button" data-action="toggleTicker"
+						class="btn btn-primary map-button color-grey">
+						<i class="feed_icon" style="width:15px;height:15px"></i>
 					</button>
 					<button id="filter-btn" title="Filter vessels" type="button" data-action="openFilterPanel"
 						class="btn btn-primary map-button color-grey">

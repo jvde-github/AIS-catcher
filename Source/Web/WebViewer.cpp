@@ -23,6 +23,9 @@
 #include "Helper.h"
 #include "Logger.h"
 
+// per poll; a viewer that has been away does not need the whole ring
+static const int CHANGES_TICKER_MAX = 60;
+
 #include <cstdio>
 #include <cstdlib>
 #include <cerrno>
@@ -950,6 +953,9 @@ const WebViewer::Route WebViewer::routes[] = {
 			 return std::string("{\"error\":\"Invalid MMSI\"}");
 		 return s->getChangesJSON(mmsi);
 	 }, true},
+	{"/api/changes_recent.json", nullptr, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 { return s->getRecentChangesJSON((uint32_t)queryInt(a, "since"), CHANGES_TICKER_MAX); }, true},
 	{"/api/decode", &WebViewer::Settings::showdecoder, "application/json",
 	 [](WebViewer *, ReceiverTracker *, const std::string &a)
 	 {

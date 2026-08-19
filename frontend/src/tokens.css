@@ -271,6 +271,17 @@
     --overlay-ink-muted: var(--slate-300);
     --overlay-danger: var(--red-500);
 
+    /* The ticker joins the always-dark floating surfaces in day mode: a light
+       strip competes with the chart under it, where a dark translucent one
+       reads as an overlay. In dark mode the page is already dark, so it takes
+       the raised surface and reads as chrome rather than a hole. */
+    --color-ticker-bg: color-mix(in srgb, var(--overlay-bg) 50%, transparent);
+    --color-ticker-ink: var(--overlay-ink);
+    --color-ticker-muted: var(--overlay-ink-muted);
+    --color-ticker-border: var(--overlay-border);
+    --color-ticker-hover: rgba(255, 255, 255, 0.14);
+    --color-ticker-accent: var(--blue-300);
+
     --code-key: var(--sky-300);
     --code-string: var(--amber-400);
     --code-number: var(--emerald-300);
@@ -355,6 +366,18 @@
     /* tall header variant: the ship table's top offset and the info panel band */
     --size-header-tall: 55px;
     --size-panel: 430px;
+
+    /* Ticker geometry, stated once. The bar is border-box, so --size-ticker is
+       its whole height; --size-ticker-inset is where anything below it starts.
+       Both CSS offsets and mapTopInset() in script.js read these, so the bar's
+       height cannot drift away from the room the cards leave for it. */
+    --size-map-gap: 10px;
+    --size-ticker: 44px;
+    --size-ticker-inset: calc(var(--size-map-gap) + var(--size-ticker) + var(--size-map-gap));
+
+    --size-map-button: 34px;
+    /* the control column's outer width: the button plus its 2px border */
+    --size-map-controls: calc(var(--size-map-button) + 4px);
     --size-panel-wide: 500px;
     --size-panel-narrow: 288px;
 }
@@ -425,6 +448,13 @@
     --color-surface-overlay: #262626;
     --color-canvas: #191919;
     --color-bottombar: #000000;
+
+    --color-ticker-bg: color-mix(in srgb, var(--color-surface-raised) 70%, transparent);
+    --color-ticker-ink: var(--color-text);
+    --color-ticker-muted: var(--color-text-muted);
+    --color-ticker-border: var(--color-border-strong);
+    --color-ticker-hover: var(--color-hover-overlay);
+    --color-ticker-accent: var(--color-accent);
 
     --color-menu: var(--color-surface-raised);
     --color-menu-hover: var(--color-hover);

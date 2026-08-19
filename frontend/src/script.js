@@ -1,8 +1,19 @@
-import { settings, isAndroid } from './core/state.js';
+import { settings, isAndroid, isKiosk } from './core/state.js';
 import { ShippingClass } from './core/constants.js';
 import { SPEED_PALETTES, palette as validPalette, bucketColor, speedBucket, paletteCSS } from './core/palette.js';
 import * as filter from './core/filter.js';
 import { debounce, decodeHTMLEntities, deriveLabelBackground, copyToClipboard, hexToRgb } from './core/util.js';
+// Aliased to the names this file has always used: the store owns the data now,
+// but every read site here still reads the same way.
+import {
+    ships as shipsDB, planes as planesDB, paths, pathsFrom, station,
+    counts as shipCounts, shipsSince, planesSince, clock,
+    cardMmsi as card_mmsi, cardType as card_type,
+    hoverMmsi as hoverMMSI, hoverType, markerTracks as marker_tracks,
+    setShips, setPlanes, setPaths, setPathsFrom, setStation,
+    setCounts as setShipCounts, setShipsSince, setPlanesSince, setClock,
+    setCard, setHover, setMarkerTracks,
+} from './core/store.js';
 import { calcOffset1M, createShipOutlineGeometry, createDistanceGeometry, hasValidCoords } from './core/geo.js';
 import { init as initRainRadar } from './overlays/rainradar.js';
 import * as fireworks from './overlays/fireworks.js';
@@ -13,6 +24,7 @@ import * as boxselect from './features/boxselect.js';
 import * as replay from './features/replay.js';
 import * as binary from './features/binary.js';
 import * as range from './features/range.js';
+import * as ticker from './features/ticker.js';
 import {
     getDistanceVal, getDistanceUnit, getDistanceConversion,
     getSpeedVal, getSpeedUnit, getSpeedConversion,
@@ -25,7 +37,7 @@ import {
     getStatusVal, getMmsiTypeVal,
     getStringfromMsgType, getStringfromGroup, getStringfromChannels,
     getShipTypeShort, getShipTypeFull,
-    sanitizeString, formatBytes, isHttpUrl, formatTime,
+    sanitizeString, formatBytes, isHttpUrl, formatTime, compactCount,
 } from './core/format.js';
 
 // Named imports (instead of `import * as ...`) so Vite tree-shakes everything
@@ -149,7 +161,7 @@ const ACTIONS = {
     setFading: (e, d, el) => setFading(el.checked),
     setRangeSwitch: (e, d, el) => range.setRangeSwitch(el.checked),
     setRangeTimePeriod: (e, d, el) => range.setRangeTimePeriod(el.value),
-    setKiosk: (e, d, el) => kiosk.setKiosk(el.checked),
+    setKiosk: (e, d, el) => { kiosk.setKiosk(el.checked); applyPanels(); },
     setKioskRotationSpeed: (e, d, el) => kiosk.setKioskRotationSpeed(el.value),
     setKioskPanMap: (e, d, el) => kiosk.setKioskPanMap(el.checked),
     setGraphVisibility: (e, d, el) => setGraphVisibility(d.graph, el.checked),
@@ -180,22 +192,21 @@ const ACTIONS = {
 
     // context menu (depends on global context_mmsi/card_mmsi)
     toggleShipcardPin: () => toggleShipcardPin(),
-    pinStation: () => pinStation(),
+    toggleFollowStationCtx: () => toggleFollow("STATION"),
     copyTextCtx: () => copyText(context_mmsi),
     copyTextICAO: () => copyText(getICAOFromHexIdent(context_mmsi)),
     downloadCSV: () => shipTableModule?.downloadCSV(),
     unpinCenter: () => unpinCenter(),
-    showAllTracks: () => showAllTracks(),
+    toggleAllTracks: () => settings.show_all_tracks ? deleteAllTracks() : showAllTracks(),
     deleteAllTracks: () => deleteAllTracks(),
-    resetTracksFromNow: () => resetTracksFromNow(),
+    toggleTrackCutoff: () => toggleTrackCutoff(),
     startBoxSelect: () => { boxselect.start(); showNotification('Drag a rectangle to enable tracks (Esc to cancel)'); },
     ToggleFireworks: () => fireworks.toggle(),
     toggleLabel: () => toggleLabel(),
-    toggleKioskMode: () => kiosk.toggleKioskMode(),
-    toggleFading: () => toggleFading(),
+    toggleKioskMode: () => { kiosk.toggleKioskMode(); applyPanels(); },
     toggleRange: () => range.toggleRange(),
     toggleTrackCtx: () => toggleTrack(context_mmsi),
-    pinVesselCtx: () => pinVessel(context_mmsi),
+    toggleFollowCtx: () => toggleFollow(context_mmsi),
     mapResetViewZoomCtx: () => mapResetViewZoom(13, context_mmsi),
     showShipcardCtx: (e, d) => showShipcard(d.kind, context_mmsi),
     openAISCatcherSiteCtx: () => openExt('aiscatcher', context_mmsi),
@@ -269,10 +280,12 @@ const ACTIONS = {
     },
     openAISCatcherSiteCard: () => openExt('aiscatcher', card_mmsi),
     toggleTrackCard: () => toggleTrack(card_mmsi),
+    toggleFollowCard: () => toggleFollow(card_mmsi),
     openFlightAwareCard: () => openExt('flightaware', card_mmsi),
     openPlaneSpottersCard: () => openExt('planespotters', card_mmsi),
     openADSBExchangeCard: () => openExt('adsbexchange', card_mmsi),
     toggleStatcard: () => toggleStatcard(),
+    toggleTicker: () => toggleTicker(),
     toggleTablecard: () => toggleTablecard(),
     mapSettingsContextMenu: (e, d, el) => showContextMenu(e, '', '', ['settings', 'ctx-map'], el),
     toggleCommunityPane: () => community.toggleCommunityPane(),
@@ -358,7 +371,7 @@ window.__app__ = {
     get selectMapTab() { return selectMapTab; },
     get saveSettings() { return saveSettings; },
     get fetchShips() { return fetchShips; },
-    get shipsSince() { return shipsSince; },
+    get shipsSince() { return clock; },
     get receivers() { return config.receivers || []; },
     get setReceiver() { return onReceiverChange; },
     get shipsVisible() { return () => Object.values(shipsDB).filter(shipVisible).map((e) => e.raw); },
@@ -396,19 +409,12 @@ let interval,
     activeReceiver = 0,
     lastPathFetch = 0,
     lastFullPathFetch = 0,
-    paths = {},
     trackCutoff = 0,
-    pathsFrom = -1,
     map,
     basemaps = {},
     overlapmaps = {},
-    station = {},
-    shipsDB = {},
-    shipsSince = 0,
     shipsTimeout = 1800,
     shipsLastCleanup = 0,
-    planesDB = {},
-    planesSince = 0,
     planesTimeout = 300,
     planesLastCleanup = 0,
     hover_feature = undefined,
@@ -423,17 +429,15 @@ const baseMapSelector = document.getElementById("baseMapSelector");
 
 let shipcardIconCount = undefined;
 const shipcardIconMax = 3;
+const SHIPCARD_ICON_UNAVAILABLE = 'shipcard-icon-unavailable';
 let shipcardIconOffset = 0;
-let card_mmsi = null,
-    card_type = null;
 // `let` so AISCatcher.setRefreshInterval can mutate.
 let refreshIntervalMs = 2500;
 let shipFilterOverride = null;
 let updateInProgress = false;
 let activeTileLayer = undefined;
 let hover_enabled_track = false,
-    select_enabled_track = false,
-    marker_tracks = new Set();
+    select_enabled_track = false;
 
 let center, shipcard;
 const context = config.context;
@@ -522,6 +526,7 @@ const DEFAULT_SETTINGS = {
         dark_mode: false,
         center_radius: 0,
         show_station: true,
+        ticker: true,
         metric: "DEFAULT",
         setcoord: true,
         tab: "map",
@@ -894,7 +899,7 @@ function closeSettings() {
 }
 
 function closeTableSide() {
-    document.querySelector(".tableside_window").classList.remove("active");
+    setPanels({ table: false });
 }
 
 function setCoordinateFormat(format) {
@@ -907,16 +912,14 @@ function setCoordinateFormat(format) {
 
 
 async function copyCoordinates(m) {
-    const raw = shipsDB[m]?.raw;
-    if (!raw) {
+    const pos = vesselPosition(m);
+    if (!pos) {
         showNotification("Ship not found", "error");
         return;
     }
-    if (await copyClipboard(raw.lat + "," + raw.lon)) showNotification("Coordinates copied to clipboard", "success");
+    if (await copyClipboard(pos.lat + "," + pos.lon)) showNotification("Coordinates copied to clipboard", "success");
 }
 
-let hoverMMSI = undefined;
-let hoverType = undefined;
 
 const shapeStyleFunction = function (feature) {
 
@@ -1277,9 +1280,65 @@ function showMapMenu(event) {
 
 const contextMenu = document.getElementById("context-menu");
 
+let replayPausedByMenu = false;
+
+// A toggle names the thing it governs and marks whether it is on; only real
+// commands keep a verb. Flipping the verb instead ("Show"/"Hide") hides the
+// state in prose and resizes the row every time it changes.
+const MENU_CHECKS = {
+    toggleShipcardPin: () => settings.shipcard_pinned,
+    toggleTrackCtx: () => trackIsShown(context_mmsi),
+    toggleAllTracks: () => settings.show_all_tracks,
+    toggleTrackCutoff: () => trackCutoff > 0,
+    toggleLabel: () => settings.show_labels != "never",
+    toggleRange: () => settings.show_range,
+    toggleAttribution: () => attributionPinned,
+    toggleReplaycard: () => replaycardVisible(),
+    toggleMeasurecard: () => measurecardVisible(),
+    toggleCommunityPane: () => community.isPaneOpen(),
+    toggleKioskMode: () => isKiosk(),
+    ToggleFireworks: () => fireworks.isRunning(),
+    toggleGraphVisibility: (el) => settings[GRAPH_KINDS[el.dataset.graph].setting],
+    toggleDarkMode: () => settings.dark_mode,
+};
+
+function applyMenuChecks() {
+    contextMenu.querySelectorAll("li[data-action]").forEach((el) => {
+        const check = MENU_CHECKS[el.dataset.action];
+        if (check) el.classList.toggle("checked", !!check(el));
+    });
+}
+
+// Separators are derived, never authored: a run of adjacent visible items
+// sharing a data-group gets a rule above it. No context can orphan a divider,
+// stack two, or leave one at an edge. A change between two lone items is not
+// worth a line - a three-item menu would otherwise be all rules.
+function applyMenuSeparators() {
+    const runs = [];
+
+    contextMenu.querySelectorAll("li").forEach((el) => {
+        el.classList.remove("group-start");
+        if (el.style.display === "none") return;
+
+        const last = runs[runs.length - 1];
+        if (last && last.group === el.dataset.group) last.items.push(el);
+        else runs.push({ group: el.dataset.group, items: [el] });
+    });
+
+    for (let i = 1; i < runs.length; i++) {
+        if (runs[i - 1].items.length > 1 || runs[i].items.length > 1)
+            runs[i].items[0].classList.add("group-start");
+    }
+}
+
 function hideContextMenu(event) {
     contextMenu.style.display = "none";
     document.removeEventListener("click", hideContextMenu);
+
+    if (replayPausedByMenu) {
+        replayPausedByMenu = false;
+        replay.play();
+    }
 }
 
 function showContextMenu(event, mmsi, type, context, anchorEl) {
@@ -1291,18 +1350,18 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
 
     hideMapMenu(event);
 
-    document.getElementById("ctx_labelswitch").textContent = settings.show_labels != "never" ? "Hide ship labels" : "Show ship labels";
-    document.getElementById("ctx_range").textContent = settings.show_range ? "Hide station range" : "Show station range";
-    document.getElementById("ctx_fading").textContent = settings.fading ? "Show icons without fading" : "Show icons with fading";
-    document.getElementById("ctx_fireworks").textContent = fireworks.isRunning() ? "Stop Fireworks Mode" : "Start Fireworks Mode";
-    document.getElementById("ctx_label_shipcard_pin").textContent = settings.shipcard_pinned ? "Unpin Shipcard position" : "Pin Shipcard position";
-    document.getElementById("ctx_signal_graphs").textContent = settings.show_signal_graphs ? "Hide signal level graphs" : "Show signal level graphs";
-    document.getElementById("ctx_ppm_graphs").textContent = settings.show_ppm_graphs ? "Hide frequency shift graphs" : "Show frequency shift graphs";
 
     context_mmsi = mmsi;
     context_type = type;
 
-    const classList = ["station", "settings", "plane-map", "ship-map", "plane", "ship", "ctx-map", "copy-text", "table-menu", "ctx-shipcard", "ctx-charts"];
+    // reading a menu over a moving fleet means the vessel it refers to has
+    // sailed on by the time you pick an item
+    if (replay.isPlaying()) {
+        replay.pause();
+        replayPausedByMenu = true;
+    }
+
+    const classList = ["station", "settings", "plane-map", "ship-map", "plane", "ship", "ctx-map", "copy-text", "table-menu", "ctx-shipcard", "ctx-charts", "ctx-replay-ship", "ctx-replay-map"];
 
     if (context.includes('object')) {
         context.push(type);
@@ -1311,12 +1370,12 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
         context.push(type + "-map");
     }
 
-    classList.forEach((className) => {
-        const shouldDisplay = context.includes(className);
-        const elements = document.querySelectorAll("." + className);
-        elements.forEach((element) => {
-            element.style.display = shouldDisplay ? "flex" : "none";
-        });
+    // an item may belong to several contexts: show it when any of them is asked
+    // for, so a replay-only menu can reuse live entries without owning them
+    contextMenu.querySelectorAll("li").forEach((element) => {
+        const owned = classList.filter((className) => element.classList.contains(className));
+        if (owned.length === 0) return;
+        element.style.display = owned.some((className) => context.includes(className)) ? "flex" : "none";
     });
 
     // Hide realtime menu items if realtime is disabled
@@ -1334,25 +1393,43 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
 
     // we might have made non-android items visible in the context menu, so hide non-android items if needed
     updateAndroid();
-    kiosk.updateKiosk();
+    // menu chrome only: restarting the rotation here would swap the vessel the
+    // menu was opened for
+    kiosk.updateKiosk(false);
 
     if (settings.show_all_tracks) {
         document.querySelectorAll(".ctx-noalltracks").forEach(function (element) {
             element.style.display = "none";
         });
     }
-    if (settings.show_all_tracks || marker_tracks.size > 0) {
-        document.querySelectorAll(".ctx-removealltracks").forEach(function (element) {
-            element.style.display = "flex";
-        });
-    } else {
+    // feature gates only ever subtract: showing an item here would resurrect it
+    // in contexts the class filter had already ruled out
+    if (!(settings.show_all_tracks || marker_tracks.size > 0 || trackCutoff)) {
         document.querySelectorAll(".ctx-removealltracks").forEach(function (element) {
             element.style.display = "none";
         });
     }
+    // clearing is about hand-picked tracks; with every track on there is
+    // nothing to clear that turning the mode off would not already do
+    if (settings.show_all_tracks || marker_tracks.size === 0) {
+        document.querySelectorAll(".ctx-selectedtracks").forEach(function (element) {
+            element.style.display = "none";
+        });
+    }
 
-    document.getElementById("ctx_menu_unpin").style.display = settings.fix_center && context.includes("ctx-map") ? "flex" : "none";
-    document.getElementById("ctx_track").innerText = trackOptionString(context_mmsi);
+    // the vessel and station toggles already offer the unfollow for their own target
+    const unpinCovered = isFollowing(context_mmsi) || (context.includes("station") && isFollowing("STATION"));
+    const unpinContext = context.includes("ctx-map") || context.includes("ctx-replay-map");
+    document.getElementById("ctx_menu_unpin").style.display =
+        settings.fix_center && unpinContext && !unpinCovered ? "flex" : "none";
+    document.getElementById("ctx_unpin").innerText =
+        isFollowing("STATION") ? "Unfollow station" : "Unfollow " + vesselLabel(settings.center_point);
+    document.getElementById("ctx_follow").innerText = isFollowing(context_mmsi) ? "Unfollow vessel" : "Follow vessel";
+    document.getElementById("ctx_follow_station").innerText = isFollowing("STATION") ? "Unfollow station" : "Follow station";
+    document.getElementById("ctx_trackcutoff").innerText = trackCutoff ? "Tracks from " + trackCutoffLabel() : "Tracks from now";
+
+    applyMenuChecks();
+    applyMenuSeparators();
 
     contextMenu.style.display = "block";
 
@@ -1519,7 +1596,7 @@ function setMapOpacity() {
 let clickTimeout = undefined;
 const handleClick = function (pixel, target, event) {
     const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
-        function (feature) { if ('ship' in feature || 'plane' in feature || 'link' in feature || 'binary' in feature) { return feature; } }, { hitTolerance: 10 });
+        function (feature) { if ('ship' in feature || 'plane' in feature || 'link' in feature || 'binary' in feature || 'replayMmsi' in feature) { return feature; } }, { hitTolerance: 10 });
 
     if (clickTimeout) {
         clearTimeout(clickTimeout);
@@ -1540,6 +1617,12 @@ const handleClick = function (pixel, target, event) {
         closeDialog();
         closeSettings();
         binary.showBinaryMessageDialog(feature);
+        return;
+    } else if (feature && 'replayMmsi' in feature) {
+        closeDialog();
+        closeSettings();
+        // replay has no shipcard, and a tap is the only pointer a phone has
+        showContextMenu(event.originalEvent, feature.replayMmsi, 'ship', ["ctx-replay-ship"]);
         return;
     } else if (feature && 'ship' in feature) {
         closeDialog();
@@ -1618,10 +1701,14 @@ function initMap() {
         const f = getFeature(map.getEventPixel(evt), map.getTargetElement())
 
         if (!f)
-            showContextMenu(evt, 0, null, ['settings', 'ctx-map']);
+            // replay owns the map: most of the live menu acts on layers that
+            // are not on screen, so offer only what still means something
+            showContextMenu(evt, 0, null, replay.isActive() ? ['ctx-replay-map'] : ['settings', 'ctx-map']);
         else if ('station' in f) {
             showContextMenu(evt, null, null, ["station", "ctx-map"]);
         }
+        else if ('replayMmsi' in f)
+            showContextMenu(evt, f.replayMmsi, 'ship', ["ctx-replay-ship"]);
         else if ('ship' in f)
             showContextMenu(evt, f.ship.mmsi, 'ship', ["ship", "ship-map"]);
         else if ('plane' in f)
@@ -1696,7 +1783,6 @@ const BUCKET_ELEMENT = {
     air: "statcard_heli",
 };
 
-let shipCounts = { total: 0, shown: 0, buckets: {} };
 
 function shipVisible(entry) {
     if (entry.show === undefined) entry.show = filter.shipPasses(entry.raw);
@@ -1714,7 +1800,7 @@ function countShips() {
         total++;
         if (shipVisible(entry)) shown++;
     }
-    shipCounts = { total, shown, buckets };
+    setShipCounts({ total, shown, buckets });
 }
 
 function updateMarkerCountTooltip() {
@@ -1829,7 +1915,7 @@ function updateTablecard() {
             `<td title="${distTitle}">${dist}</td>` +
             `<td title="${spdTitle}">${spd}</td>` +
             `<td>${getTableShiptype(ship)}</td>` +
-            `<td>${getDeltaTimeVal(shipsSince - ship.last_signal)}</td>` +
+            `<td>${getDeltaTimeVal(clock - ship.last_signal)}</td>` +
             `</tr>`);
         addedRows++;
     }
@@ -1854,13 +1940,16 @@ function updateTablecard() {
 function flashNumber(id, newValue) {
 
     const element = document.getElementById(id);
-    const oldValue = parseInt(element.innerText) || 0;
+    // the rendered text is abbreviated past a thousand, so the comparison reads
+    // the number that was last set rather than parsing "34K" back to 34
+    const oldValue = Number(element.dataset.value) || 0;
 
     if (newValue != oldValue) {
         element.classList.add("flash-up");
     }
 
-    element.innerText = newValue;
+    element.dataset.value = newValue;
+    element.innerText = compactCount(newValue);
 
     setTimeout(() => {
         element.classList.remove("flash-up");
@@ -1890,8 +1979,9 @@ function renderCounts() {
     }
 
     updateFilterIndicator();
+    ticker.setCounts({ shown: shipCounts.shown, total: shipCounts.total, filtered: active, buckets: shipCounts.buckets });
 
-    if (document.getElementById("statcard").style.display == "block") updateMarkerCountTooltip();
+    if (panels.statcard) updateMarkerCountTooltip();
 }
 
 function updateFilterIndicator() {
@@ -1899,7 +1989,7 @@ function updateFilterIndicator() {
     if (!btn) return;
 
     const active = filter.isActive();
-    btn.classList.toggle("fill-accent", active);
+    btn.classList.toggle("is-active", active);
     btn.classList.toggle("color-grey", !active);
     btn.title = active
         ? "Filter: " + filter.describe().join(" \u00b7 ") + " (" + shipCounts.shown + " of " + shipCounts.total + ")"
@@ -2077,40 +2167,163 @@ function resetFilter() {
     applyFilter();
 }
 
+// ─── map panels ──────────────────────────────────────────────────────────────
+//
+// What is open lives here and nowhere else. Every consequence of it - the class
+// on each panel, the shift the ship table imposes on the controls, the button
+// indicators, the inset the ticker costs the cards - is recomputed by
+// applyPanels() from this object alone.
+//
+// The point is not tidiness. Every layout bug this replaced was a path that
+// changed one surface and forgot a consequence: a panel closed without undoing
+// the shift it caused, an indicator left lit, an offset held for a bar that was
+// no longer on screen. Recomputing everything, every time, makes "forgot to
+// update X" impossible to express. It is five booleans and a dozen class
+// toggles - cheap enough to redo unconditionally, so there is no diffing and
+// nothing to keep in sync.
+//
+// applyPanels() is idempotent: call it from a toggle, a resize, a tab switch or
+// after settings load, and the DOM converges on the state.
+const panels = {
+    shipcard: false,
+    statcard: false,
+    table: false,
+    measure: false,
+    replay: false,
+};
+
+// Rules about which surfaces can coexist, stated once. Previously these lived
+// as ad-hoc close calls at the top of each opener, so they only held for the
+// paths that remembered them.
+//
+// The shipcard closes through showShipcard rather than by clearing the flag:
+// it carries selection state - the track it revealed, the focus marker, the
+// mmsi the card is about - that a bare class toggle would strand. That call
+// re-enters here, but setPanels writes the patch before normalising, so the
+// second pass sees the flag already down and stops.
+function normalisePanels() {
+    if (panels.replay) {
+        panels.table = false;
+        panels.measure = false;
+        closeSettings();
+    }
+
+    // both of these take the space, and the position, the shipcard occupies
+    if ((panels.replay || panels.measure) && panels.shipcard) showShipcard(null, null);
+}
+
+function setPanels(patch, opts) {
+    Object.assign(panels, patch);
+    normalisePanels();
+    applyPanels(opts);
+}
+
+// The one derived value that reaches outside `panels`: the ticker is a stored
+// preference, and replay, kiosk and the current tab each suppress it. Stated
+// here so applyPanels has a single answer to consult rather than four inputs,
+// and so a bar that is not on screen stops costing the cards their inset.
+function tickerWanted() {
+    return !!settings.ticker && !panels.replay && !isKiosk() && settings.tab === "map";
+}
+
+// The elements applyPanels writes to, looked up once. They are static in
+// index.html and this runs on every panel change - a vessel click included - so
+// the lookups were the bulk of its cost.
+let panelEls = null;
+
+function panelElements() {
+    if (panelEls) return panelEls;
+
+    panelEls = {
+        shipcard: document.getElementById("shipcard"),
+        statcard: document.getElementById("statcard"),
+        measure: document.getElementById("measurecard"),
+        replay: document.getElementById("replaybar"),
+        table: document.getElementById("tableside"),
+        countersBtn: document.getElementById("counters-btn"),
+        tableBtn: document.getElementById("table-btn"),
+        tickerBtn: document.getElementById("ticker-btn"),
+        // everything anchored to the right edge, which the table takes width from
+        shifted: [...document.querySelectorAll(".map-button-box, #ticker, #statcard")],
+        popovers: [...document.querySelectorAll("#shipcard .tech-popover")],
+    };
+    return panelEls;
+}
+
+// `reposition: false` when the caller places the shipcard itself straight after.
+// showShipcard knows the pixel that was clicked and this does not - and it must
+// place the card after filling it, since the placement measures its height.
+function applyPanels(opts = {}) {
+    const el = panelElements();
+    const tickerOn = tickerWanted();
+
+    el.shipcard.classList.toggle("visible", panels.shipcard);
+    el.statcard.style.display = panels.statcard ? "block" : "none";
+    el.measure.classList.toggle("visible", panels.measure);
+    el.replay.classList.toggle("visible", panels.replay);
+    el.table.classList.toggle("active", panels.table);
+
+    // the phone layout and every ticker-aware offset hang off these
+    document.body.classList.toggle("replay-open", panels.replay);
+    document.body.classList.toggle("ticker-open", tickerOn);
+
+    el.shifted.forEach((e) => e.classList.toggle("active", panels.table));
+
+    el.countersBtn?.classList.toggle("is-active", panels.statcard);
+    el.tableBtn?.classList.toggle("is-active", panels.table);
+    // the button reports the preference, not whether a mode happens to suppress it
+    el.tickerBtn?.classList.toggle("is-active", !!settings.ticker);
+
+    // A card dragged aside keeps that spot only while it is open. Neither of
+    // these offers a "pin here" the way the shipcard does, so a position that
+    // outlived a close would be accident rather than preference - and inline
+    // left/top beat every offset the panel layout applies, so the card would
+    // ignore the ticker and the table for the rest of the session.
+    if (!panels.shipcard) closeShipcardPopovers();
+    if (!panels.statcard) resetCardPosition(el.statcard);
+    if (!panels.measure) resetCardPosition(el.measure);
+
+    ticker.setEnabled(tickerOn);
+
+    // last, because it measures the space the rest of the panels have left
+    if (panels.shipcard && opts.reposition !== false) {
+        positionAside(undefined, el.shipcard);
+        fitShipcard();
+    }
+}
+
+// undoes what makeDraggable wrote, handing the element back to the stylesheet
+function resetCardPosition(el) {
+    if (!el || !el.style.left) return;
+
+    for (const prop of ["left", "top", "right", "bottom"]) el.style.removeProperty(prop);
+}
+
 function toggleStatcard() {
-    if (document.getElementById("statcard").style.display == "block") hideStatcard();
-    else showStatcard();
+    if (!panels.statcard) updateMarkerCountTooltip();
+    setPanels({ statcard: !panels.statcard });
 }
 
-function showStatcard() {
-    updateMarkerCountTooltip();
-    document.getElementById("statcard").style.display = "block";
-}
-
-function hideStatcard() {
-    document.getElementById("statcard").style.display = "none";
+function toggleTicker() {
+    settings.ticker = !settings.ticker;
+    saveSettings();
+    applyPanels();
 }
 
 function toggleTablecard() {
-    if (!document.getElementById("tableside").classList.contains("active") && window.innerWidth < 800) {
+    // too narrow for a side panel: the table becomes a tab instead
+    if (!panels.table && window.innerWidth < 800) {
         settings.tab = "ships";
         selectTab();
         return;
     }
 
-    document.getElementById("tableside").classList.toggle("active");
-    let elements = document.querySelectorAll(".map-button-box");
-    elements.forEach(function (element) {
-        element.classList.toggle("active");
-    });
-
+    setPanels({ table: !panels.table });
     updateTablecard();
 }
 
 function hideTablecard() {
-    if (document.getElementById("tableside").classList.contains("active")) {
-        toggleTablecard();
-    }
+    if (panels.table) toggleTablecard();
 }
 
 function setFading(b) {
@@ -2231,8 +2444,8 @@ async function fetchShipsBody() {
     const isIncremental = shipsSince > 0;
 
     if (!isIncremental) {
-        shipsDB = {};
-        station = {};
+        setShips({});
+        setStation({});
     }
 
     // Process static data first (name/voyage)
@@ -2294,7 +2507,13 @@ async function fetchShipsBody() {
     }
 
     if (ships.timeout) shipsTimeout = ships.timeout;
-    shipsSince = serverTime;
+
+    // A second behind the server's own clock: whatever it wrote while it was
+    // serialising this response carries that same second, and asking for
+    // strictly-after would step straight over it. The overlap costs a repeat,
+    // which every one of these stores absorbs, and a gap costs a lost update.
+    setShipsSince(serverTime - 1);
+    setClock(serverTime);
     filter.setClock(serverTime);
 
     // periodically expire ships older than timeout
@@ -2306,7 +2525,9 @@ async function fetchShipsBody() {
         shipsLastCleanup = serverTime;
     }
 
-    if (Object.hasOwn(ships, "station")) station = ships.station;
+    capShipsDB();
+
+    if (Object.hasOwn(ships, "station")) setStation(ships.station);
 
     center = {};
     if (String(settings.center_point).toUpperCase() == "STATION") {
@@ -2322,6 +2543,22 @@ async function fetchShipsBody() {
     community.pushVesselsToCommunityPopup(ships.dynamic);
 
     return true;
+}
+
+// A shore station with a wide feed can outrun the timeout sweep, and every entry
+// costs a marker, a style and a row. Past the cap the quietest vessels go first -
+// they are the ones least likely to be on screen or under the cursor - and the
+// sort only runs on the rare refresh that is actually over.
+const MAX_SHIPS = 50000;
+
+function capShipsDB() {
+    const keys = Object.keys(shipsDB);
+    if (keys.length <= MAX_SHIPS) return;
+
+    keys.sort((a, b) => shipsDB[b].raw.last_signal - shipsDB[a].raw.last_signal);
+    for (let i = MAX_SHIPS; i < keys.length; i++) delete shipsDB[keys[i]];
+
+    console.log("shipsDB capped at " + MAX_SHIPS + ", dropped " + (keys.length - MAX_SHIPS) + " quiet vessels");
 }
 
 async function fetchPlanes() {
@@ -2367,7 +2604,7 @@ async function fetchPlanes() {
     const serverTime = planes.time || 0;
     const isIncremental = planesSince > 0;
 
-    if (!isIncremental) planesDB = {};
+    if (!isIncremental) setPlanes({});
 
     if (planes.values) {
         planes.values.forEach((v) => {
@@ -2386,7 +2623,7 @@ async function fetchPlanes() {
         });
     }
 
-    planesSince = serverTime;
+    setPlanesSince(serverTime - 1);
 
     // Periodically expire planes silently dropped by the server's activity filter.
     if (isIncremental && serverTime - planesLastCleanup > planesTimeout / 2) {
@@ -2518,9 +2755,9 @@ function setTrackHistory(minutes) {
         return;
     }
 
-    paths = {};
+    setPaths({});
     lastPathFetch = 0;
-    pathsFrom = -1;
+    setPathsFrom(-1);
     fetchTracks().then(redrawMap);
 }
 
@@ -2623,18 +2860,18 @@ function toggleShipcardSize() {
                 (!e[i].classList.contains("shipcard-max-only") && !e[i].classList.contains("shipcard-row-selected"))
             )
                 e[i].classList.toggle("shipcard-row-selected");
+        }
 
-            const aside = document.getElementById("shipcard");
-            if (aside.style.top && aside.getBoundingClientRect().bottom > window.innerHeight) {
+        // Once, after the rows have settled - this used to run per row, so a
+        // card with thirty selectable rows re-placed itself thirty times and
+        // could start a one-second map animation on each pass.
+        const aside = document.getElementById("shipcard");
+        if (aside.style.top && aside.getBoundingClientRect().bottom > window.innerHeight) {
+            const db = card_type == "ship" ? shipsDB : card_type == "plane" ? planesDB : null;
 
-                if (card_mmsi in shipsDB && card_type == "ship") {
-                    let pixel = map.getPixelFromCoordinate(ol.proj.fromLonLat([shipsDB[card_mmsi].raw.lon, shipsDB[card_mmsi].raw.lat]));
-                    positionAside(pixel, aside);
-                }
-                else if (card_mmsi in planesDB && card_type == "plane") {
-                    let pixel = map.getPixelFromCoordinate(ol.proj.fromLonLat([planesDB[card_mmsi].raw.lon, planesDB[card_mmsi].raw.lat]));
-                    positionAside(pixel, aside);
-                }
+            if (db && card_mmsi in db) {
+                const raw = db[card_mmsi].raw;
+                positionAside(map.getPixelFromCoordinate(ol.proj.fromLonLat([raw.lon, raw.lat])), aside);
             }
         }
     } else {
@@ -2679,12 +2916,12 @@ function selectReceiver(idx) {
 function onReceiverChange(idx) {
     if (replaycardVisible()) toggleReplaycard();
     activeReceiver = parseInt(idx, 10) || 0;
-    shipsSince = 0;
+    setShipsSince(0);
     binary.resetSince();
     range.resetUpdateTime();
     lastPathFetch = 0;
-    paths = {};
-    pathsFrom = -1;
+    setPaths({});
+    setPathsFrom(-1);
     syncReceiverUI();
     refresh_data();
 }
@@ -2866,7 +3103,7 @@ function tableRowClick(m) {
 
 function getTooltipContent(ship) {
     const sub = (ship.shiptype ? getShipTypeShort(ship.shiptype) + ' - ' : '') +
-        'received ' + getDeltaTimeVal(shipsSince - ship.last_signal) + ' ago';
+        'received ' + getDeltaTimeVal(clock - ship.last_signal) + ' ago';
 
     let content = '<div class="tooltip-card">' +
         getFlagStyled(ship.country, TOOLTIP_FLAG_STYLE) +
@@ -2907,7 +3144,7 @@ function fadeOpacity(age) {
 }
 
 function getShipOpacity(ship) {
-    return fadeOpacity(shipsSince - ship.last_signal);
+    return fadeOpacity(clock - ship.last_signal);
 }
 
 
@@ -3009,8 +3246,7 @@ const stopHover = function () {
     const dc = hover_feature && ('distancecircle' in hover_feature || 'rangering' in hover_feature);
     const sf = hoverType == 'ship' && hoverMMSI in shapeFeatures;
 
-    hoverMMSI = undefined;
-    hoverType = undefined;
+    setHover(undefined, undefined);
     hover_feature = undefined;
     hover_enabled_track = false;
 
@@ -3033,6 +3269,7 @@ function showHoverTrack(mmsi) {
 }
 
 let attributionTimer = null;
+let attributionPinned = false;
 
 function showAttribution(on) {
     const foldout = document.getElementById('map-attribution-foldout');
@@ -3042,12 +3279,14 @@ function showAttribution(on) {
 
 function flashAttribution() {
     showAttribution(true);
-    attributionTimer = setTimeout(() => showAttribution(false), 3000);
+    attributionTimer = setTimeout(() => showAttribution(attributionPinned), 3000);
 }
 
+// the panel also flashes for 3s on a basemap change, and a menu tick must not
+// report that passing state as something the user switched on
 function toggleAttribution() {
-    const foldout = document.getElementById('map-attribution-foldout');
-    showAttribution(!foldout.classList.contains('visible'));
+    attributionPinned = !attributionPinned;
+    showAttribution(attributionPinned);
 }
 
 
@@ -3058,8 +3297,7 @@ const startHover = function (type, mmsi, pixel, feature) {
     if (mmsi !== hoverMMSI || hoverType !== type) {
         stopHover();
 
-        hoverMMSI = mmsi;
-        hoverType = type;
+        setHover(mmsi, type);
         hover_feature = feature;
 
         const shipRaw = type == 'ship' ? shipsDB[mmsi]?.raw : null;
@@ -3323,11 +3561,25 @@ function loadSettingsFromURL() {
     convertStringSettingsToActual();
 }
 
+function vesselPosition(m) {
+    if (m == null) return null;
+
+    if (replay.isActive()) {
+        const fix = replay.fixFor(m);
+        if (fix) return fix;
+    }
+    if (m in shipsDB) {
+        const ship = shipsDB[m].raw;
+        if (ship.lat != null && ship.lon != null) return { lat: ship.lat, lon: ship.lon };
+    }
+    return null;
+}
+
 function mapResetViewZoom(z, m) {
-    if (m && m in shipsDB) {
-        let ship = shipsDB[m].raw;
+    const pos = vesselPosition(m);
+    if (pos) {
         let view = map.getView();
-        view.setCenter(ol.proj.fromLonLat([ship.lon, ship.lat]));
+        view.setCenter(ol.proj.fromLonLat([pos.lon, pos.lat]));
         view.setZoom(Math.min(view.getMaxZoom(), Math.max(z, view.getZoom() + 1)));
     }
 
@@ -3342,20 +3594,19 @@ function mapResetView(z) {
 }
 
 function shipcardVisible() {
-    return document.getElementById("shipcard").classList.contains("visible");
+    return panels.shipcard;
 }
 
 function measurecardVisible() {
-    return document.getElementById("measurecard").classList.contains("visible");
+    return panels.measure;
 }
 
 function toggleMeasurecard() {
-    if (shipcardVisible() && !measurecardVisible()) showShipcard(null, null);
-    document.getElementById("measurecard").classList.toggle("visible");
+    setPanels({ measure: !panels.measure });
 }
 
 function replaycardVisible() {
-    return document.getElementById("replaybar").classList.contains("visible");
+    return panels.replay;
 }
 
 // While replay owns the map the live layers step aside, so the two never draw
@@ -3368,18 +3619,10 @@ function setLiveLayersVisible(on) {
 }
 
 function toggleReplaycard() {
-    const bar = document.getElementById("replaybar");
-    bar.classList.toggle("visible");
-    // the phone layout hangs off this: the bar spans the full width there and
-    // the map controls step aside for it
-    document.body.classList.toggle("replay-open", bar.classList.contains("visible"));
+    // which panels step aside is normalisePanels's business, not this function's
+    setPanels({ replay: !panels.replay });
 
-    if (replaycardVisible()) {
-        // replay owns the screen: the live panels and tools step aside
-        closeSettings();
-        closeTableSide();
-        if (shipcardVisible()) showShipcard(null, null);
-        if (measurecardVisible()) toggleMeasurecard();
+    if (panels.replay) {
         measure.cancel();
 
         // before anything is loaded the scrubber spans the server's whole
@@ -3596,8 +3839,12 @@ function trackIsShown(m) {
     return marker_tracks.has(Number(m));
 }
 
-function pinStation() {
-    pinVessel("STATION");
+function vesselLabel(m) {
+    if (m == null) return "";
+    if (String(m).toUpperCase() == "STATION") return "the station";
+
+    const ship = m in shipsDB ? shipsDB[m].raw : null;
+    return (ship && getShipName(ship)) || String(m);
 }
 
 function pinVessel(m) {
@@ -3605,12 +3852,30 @@ function pinVessel(m) {
     settings.fix_center = true;
     saveSettings();
     drawStation();
+    applyFixedCenter();
+    updateShipcardFollowOption();
+    showNotification("Following " + vesselLabel(m));
 }
 
 function unpinCenter() {
+    const was = settings.center_point;
     settings.fix_center = false;
     saveSettings();
     drawStation();
+    updateShipcardFollowOption();
+    showNotification("No longer following " + vesselLabel(was));
+}
+
+function isFollowing(m) {
+    return settings.fix_center && m != null &&
+        String(settings.center_point).toUpperCase() === String(m).toUpperCase();
+}
+
+function toggleFollow(m) {
+    if (m == null) return;
+
+    if (isFollowing(m)) unpinCenter();
+    else pinVessel(m);
 }
 
 
@@ -3655,7 +3920,7 @@ function deleteAllTracks() {
     settings.show_all_tracks = false;
     trackCutoff = 0;
     lastPathFetch = 0;
-    marker_tracks = new Set();
+    setMarkerTracks(new Set());
     let p = {};
 
     if (card_type == 'ship' && card_mmsi && settings.show_track_on_select) {
@@ -3667,21 +3932,32 @@ function deleteAllTracks() {
         }
     }
 
-    paths = p;
+    setPaths(p);
 
     redrawMap(); updateShipcardTrackOption();
     saveSettings();
 }
 
-async function resetTracksFromNow() {
-    trackCutoff = shipsSince || Math.floor(Date.now() / 1000);
-    paths = {};
-    pathsFrom = -1;
+// Clipping history is reversible: the server still holds the full window, so
+// dropping the cutoff and refetching brings it all back.
+async function toggleTrackCutoff() {
+    trackCutoff = trackCutoff ? 0 : (clock || Math.floor(Date.now() / 1000));
+    setPaths({});
+    setPathsFrom(-1);
     lastPathFetch = 0;
     await fetchTracks();
     redrawMap();
     updateShipcardTrackOption();
-    showNotification("Tracks reset — showing from now", "success");
+    showNotification(trackCutoff ? "Tracks now start from " + trackCutoffLabel()
+        : "Tracks restored to the full history", "success");
+}
+
+// trackCutoff is server time; anchoring off the elapsed seconds instead of the
+// raw stamp keeps the clock right when the server and the browser disagree
+function trackCutoffLabel() {
+    const ago = Math.max(0, (clock || 0) - trackCutoff);
+    return new Date(Date.now() - ago * 1000)
+        .toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 
@@ -3717,7 +3993,7 @@ async function fetchTracks() {
             isDelta = lastPathFetch > 0 && Date.now() - lastFullPathFetch < 3600 * 1000;
             let sinceParam = "&since=" + lastPathFetch;
             if (!isDelta) {
-                pathsFrom = trackWindowStart();
+                setPathsFrom(trackWindowStart());
                 sinceParam = pathsFrom ? "&since=" + pathsFrom : "";
                 lastFullPathFetch = Date.now();
             }
@@ -3731,7 +4007,7 @@ async function fetchTracks() {
             const wanted = Array.from(marker_tracks).filter((m) => !shipsDB[m] || shipVisible(shipsDB[m]));
             if (wanted.length === 0) return true;
             const mmsi_str = wanted.join(",");
-            pathsFrom = 0;
+            setPathsFrom(0);
             a = await fetch("api/path.json?" + mmsi_str + "&receiver=" + activeReceiver);
         }
 
@@ -3744,7 +4020,7 @@ async function fetchTracks() {
         if (maxTs > lastPathFetch) lastPathFetch = maxTs;
 
         if (!isDelta) {
-            paths = newPaths;
+            setPaths(newPaths);
         } else {
             for (const mmsi in newPaths) {
                 paths[mmsi] = paths[mmsi]
@@ -3757,7 +4033,7 @@ async function fetchTracks() {
         }
     } catch (error) {
         console.log("Error loading path: " + error);
-        if (!isDelta) { paths = {}; pathsFrom = -1; }
+        if (!isDelta) { setPaths({}); setPathsFrom(-1); }
         lastPathFetch = 0;
         return false;
     }
@@ -3800,6 +4076,15 @@ function updateShipcardTrackOption() {
     }
 }
 
+function updateShipcardFollowOption() {
+    const option = document.getElementById("shipcard_follow_option");
+    const following = isFollowing(card_mmsi);
+
+    option.querySelector("#shipcard_follow").innerText = following ? "Unfollow" : "Follow";
+    option.title = following ? "Stop centring the map on this vessel" : "Keep the map centred on this vessel";
+    option.classList.toggle("shipcard-icon-active", following);
+}
+
 function isShipcardMax() {
     let e = document.getElementById("shipcard").classList;
     return e.contains("shipcard-ismax");
@@ -3821,7 +4106,7 @@ function setShipcardValidation(v) {
 }
 
 function updateMessageButton() {
-    const messageButton = document.querySelector('#shipcard_footer [data-action="showBinaryMessageDialogCard"]');
+    const messageButton = document.getElementById("shipcard_message_option");
     if (!messageButton) return;
 
     const iconElement = messageButton.querySelector('i.mail_icon');
@@ -3829,21 +4114,20 @@ function updateMessageButton() {
 
     const count = binary.shipBinaryMessages(card_mmsi).length;
 
-    const existingBadge = iconElement.querySelector('.message-badge');
-    if (existingBadge) {
-        existingBadge.remove();
-    }
+    iconElement.querySelector('.message-badge')?.remove();
 
     if (count > 0) {
-        messageButton.style.display = '';
-
         const badge = document.createElement('span');
         badge.className = 'message-badge';
         badge.textContent = count;
         iconElement.appendChild(badge);
-    } else {
-        messageButton.style.display = 'none';
     }
+
+    const wasAvailable = !messageButton.classList.contains(SHIPCARD_ICON_UNAVAILABLE);
+    messageButton.classList.toggle(SHIPCARD_ICON_UNAVAILABLE, count === 0);
+
+    // a button without messages must give up its slot, not sit there hidden
+    if (wasAvailable !== (count > 0)) displayShipcardIcons(card_type);
 }
 
 function showCardOutOfRange() {
@@ -3911,7 +4195,7 @@ function populateShipcard() {
         ? getShipTypeFull(ship.shiptype)
         : "-";
     document.getElementById("shipcard_status").innerHTML = getStatusVal(ship);
-    document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(shipsSince - ship.last_signal);
+    document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(clock - ship.last_signal);
     document.getElementById("shipcard_eta").innerHTML = ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
     document.getElementById("shipcard_lat").innerHTML = ship.lat != null ? getLatValFormat(ship) : null;
     document.getElementById("shipcard_lon").innerHTML = ship.lon != null ? getLonValFormat(ship) : null;
@@ -3924,6 +4208,7 @@ function populateShipcard() {
     document.getElementById("shipcard_bluesign").innerHTML = ship.maneuver === 2 ? "Set" : (ship.maneuver === 1 ? "Not set" : null);
 
     updateShipcardTrackOption();
+    updateShipcardFollowOption();
     updateMessageButton();
     updateTechDetails(ship);
     renderHullSection(ship);
@@ -4080,9 +4365,20 @@ function resetShipHistory() {
     Object.keys(sectionOpen).forEach(applyShipcardSection);
 }
 
+// Every popover in the card, so closing one - or closing the card - cannot
+// leave another open at a position measured against a layout that has moved on.
+function closeShipcardPopovers() {
+    panelElements().popovers.forEach((el) => (el.style.display = "none"));
+}
+
 function toggleShipcardPopover(popoverId, iconId) {
     const popover = document.getElementById(popoverId);
     const icon = document.getElementById(iconId);
+
+    // a second click on the same icon closes it, rather than re-placing it
+    const wasOpen = popover.style.display === "block";
+    closeShipcardPopovers();
+    if (wasOpen) return;
 
     const onOutsideClick = (event) => {
         if (popover.contains(event.target)) return;
@@ -4200,8 +4496,7 @@ function shipcardMinIfMaxonMobile() {
 }
 
 function drawStation() {
-    const hasNoStation = settings.show_station == false || station == null || !Object.hasOwn(station, "lat") || !Object.hasOwn(station, "lon");
-    const hasMMSIcenter = settings.center_point && settings.center_point != "STATION" && settings.center_point in shipsDB;
+    const hasNoStation = settings.show_station == false || stationCoords() == null;
 
     if (stationFeature) {
         extraVector.removeFeature(stationFeature);
@@ -4244,32 +4539,86 @@ function drawStation() {
     stationFeature.station = true;
     extraVector.addFeature(stationFeature);
 
-    // MMSI is driving center but does not exist
-    if (!hasMMSIcenter && settings.center_point != "STATION") {
+}
+
+function followTargetIsStation() {
+    return String(settings.center_point).toUpperCase() == "STATION";
+}
+
+function stationCoords() {
+    return station != null && Object.hasOwn(station, "lat") && Object.hasOwn(station, "lon") ? station : null;
+}
+
+let followAnimating = false;
+
+// Ease the camera over rather than teleporting it: at live cadence the pan
+// takes the whole gap between fixes, so the map drifts instead of stepping.
+// A move too large to read as motion still jumps.
+function panTo(lon, lat, smooth) {
+    const view = map.getView();
+
+    // Both setCenter and animate cancel whatever the view is already doing, so
+    // re-centring on top of a user gesture kills their zoom mid-flight. Stand
+    // aside for it; the next fix picks the vessel back up. Our own follow pan
+    // is the one animation we may replace.
+    if (view.getInteracting()) return;
+    if (view.getAnimating() && !followAnimating) return;
+
+    const coord = ol.proj.fromLonLat([lon, lat]);
+    const from = view.getCenter();
+    const size = map.getSize();
+
+    if (from != null) {
+        const px = Math.hypot(coord[0] - from[0], coord[1] - from[1]) / view.getResolution();
+        if (px < 0.5) return;
+        // a jump too big to read as motion is not worth easing
+        smooth = smooth && size != null && px <= 2 * Math.max(size[0], size[1]);
+    }
+
+    if (!smooth) {
+        if (followAnimating) view.cancelAnimations();
+        view.setCenter(coord);
+        return;
+    }
+
+    // the callback fires on cancellation too, and cancelling happens inside
+    // animate(), so the flag has to be raised after the call
+    view.animate({ center: coord, duration: refreshIntervalMs }, () => { followAnimating = false; });
+    followAnimating = true;
+}
+
+// centering is deliberately independent of drawStation: a receiver without a
+// published position still has to be able to follow a vessel
+function applyFixedCenter() {
+    if (!settings.fix_center) return;
+
+    const replaying = replay.isActive();
+
+    let target = null;
+    if (followTargetIsStation()) {
+        target = stationCoords();
+    } else if (replaying || settings.center_point in shipsDB) {
+        // prefers the frame being drawn over where the vessel is right now
+        target = vesselPosition(settings.center_point);
+    } else if (shipCounts.total > 0) {
+        // the followed vessel aged out or left range; replay owns its own
+        // fleet, so a gap in the live set says nothing while it is running
+        const dropped = settings.center_point;
         settings.center_point = "STATION";
         settings.fix_center = false;
+        updateShipcardFollowOption();
+        showNotification("No longer following " + vesselLabel(dropped) + ": out of range");
+        return;
     }
 
-    if (settings.center_point == "STATION") {
-        center = station;
-    } else {
-        center = {};
-        if (hasMMSIcenter) {
-            let ship = shipsDB[settings.center_point].raw;
-            if (ship.lat != null && ship.lon != null) {
-                center = { lat: ship.lat, lon: ship.lon };
-            }
-        }
-    }
+    if (target == null) return;
 
-    if (settings.fix_center && center != null && Object.hasOwn(center, "lat") && Object.hasOwn(center, "lon")) {
+    // replay already moves the vessel frame by frame; easing on top of that
+    // would chase a target that has since moved on
+    panTo(target.lon, target.lat, !replaying);
 
-        let view = map.getView();
-        view.setCenter(ol.proj.fromLonLat([center.lon, center.lat]));
-
-        settings.lat = center.lat;
-        settings.lon = center.lon;
-    }
+    settings.lat = target.lat;
+    settings.lon = target.lon;
 }
 
 function moveMapCenter(px) {
@@ -4374,35 +4723,98 @@ function toggleShipcardPin() {
     }
 }
 
+// The ticker owns the top strip. A card that starts above it hides the very
+// thing that announced the vessel, so cards begin below it while it is out.
+// px value of a CSS length token, so a number the stylesheet owns is never
+// written down a second time in here. Read once: these are :root constants, and
+// getComputedStyle forces a style recalc when styles are dirty.
+const cssPxCache = new Map();
+
+function cssPx(name, fallback) {
+    if (cssPxCache.has(name)) return cssPxCache.get(name);
+
+    const px = parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
+    const value = isNaN(px) ? fallback : px;
+    cssPxCache.set(name, value);
+    return value;
+}
+
+// One MediaQueryList each rather than one per call: mapTopInset and fitShipcard
+// ask on every placement, and parsing the query string again each time is the
+// expensive half.
+const mqFullBleed = window.matchMedia("(max-width: 500px), (max-height: 800px)");
+const mqNarrow = window.matchMedia("(max-width: 750px)");
+
+// Below these sizes the stylesheet takes the card edge to edge - left:0, top:0,
+// no radius, and height:100% when maximised. An inset written from here is a
+// margin the design does not want, and shows as a gap above and below.
+function cardFullBleed() {
+    return mqFullBleed.matches;
+}
+
+function mapTopInset() {
+    if (cardFullBleed()) return 0;
+
+    const gap = mapGap();
+    if (!document.body.classList.contains("ticker-open")) return gap;
+
+    // On a narrow screen the card takes the whole top anyway; giving the bar
+    // its strip there would cost the card room it has none of to spare.
+    if (mqNarrow.matches) return gap;
+
+    // computed rather than read: --size-ticker-inset is a calc(), and an
+    // unregistered custom property's computed value is the unevaluated tokens
+    return gap * 2 + cssPx("--size-ticker", 44);
+}
+
+function mapGap() {
+    return cssPx("--size-map-gap", 10);
+}
+
 function placeTopLeft(aside) {
     const mapSize = map.getSize();
     const rect = aside.getBoundingClientRect();
     if (mapSize && mapSize[0] >= rect.width + 20) {
-        aside.style.left = "10px";
-        aside.style.top = "10px";
+        aside.style.left = leftWithin(aside.offsetParent, aside, mapGap()) + "px";
+        aside.style.top = mapTopInset() + "px";
         aside.classList.add("floating");
     }
 }
 
+// Below 750px the card is width:100%, so an inset from the left is width the
+// right edge does not have: it pushes that edge off screen while leaving the
+// margin visible on the left. Never place a card past the edge it cannot clear.
+function leftWithin(parent, aside, margin) {
+    const width = parent ? parent.clientWidth : window.innerWidth;
+    return Math.max(0, Math.min(margin, width - aside.offsetWidth));
+}
+
 function fitShipcard() {
-    const aside = document.getElementById("shipcard");
+    const aside = panelElements().shipcard;
     if (!aside || !shipcardVisible()) return;
 
-    const margin = 10;
+    // matches the inset at the top, so the card is symmetric in either mode
+    const margin = cardFullBleed() ? 0 : mapGap();
     const parent = aside.offsetParent;
-    const available = (parent ? parent.clientHeight : window.innerHeight) - 2 * margin;
+    const height = parent ? parent.clientHeight : window.innerHeight;
+
+    // the band the card may occupy, stated once: every bound below reads from
+    // it, so the height it is given and the place it is put cannot disagree
+    const top = mapTopInset();
+    const bottom = height - margin;
+    const available = bottom - top;
 
     aside.style.maxHeight = available + "px";
 
     if (aside.offsetHeight >= available) {
-        aside.style.top = margin + "px";
-        if (!settings.shipcard_pinned) aside.style.left = margin + "px";
+        aside.style.top = top + "px";
+        if (!settings.shipcard_pinned) aside.style.left = leftWithin(parent, aside, margin) + "px";
         aside.classList.add("floating");
         return;
     }
 
-    const overflow = aside.offsetTop + aside.offsetHeight - (available + margin);
-    if (overflow > 0) aside.style.top = Math.max(margin, aside.offsetTop - overflow) + "px";
+    const overflow = aside.offsetTop + aside.offsetHeight - bottom;
+    if (overflow > 0) aside.style.top = Math.max(top, aside.offsetTop - overflow) + "px";
 }
 
 function positionAside(pixel, aside) {
@@ -4436,7 +4848,9 @@ function positionAside(pixel, aside) {
 
     if (pixel) {
         const margin = 35;
-        let marginRight = document.getElementById("tableside").classList.contains("active") ? 592 : 30;
+        // the table's real width, not a number that has to be remembered: this
+        // read 592 against a panel that has been 430 for some time
+        let marginRight = panels.table ? cssPx("--size-panel", 430) : 30;
 
         const mapSize = map.getSize();
         const shipCardRect = aside.getBoundingClientRect();
@@ -4447,8 +4861,9 @@ function positionAside(pixel, aside) {
         const leftSpace = pixel[0] - (shipCardWidth + margin);
 
         if ((rightSpace > 0 || leftSpace > 0) && mapSize[1] > shipCardHeight + 2 * margin) {
+            const top = Math.max(margin, mapTopInset());
             let topPosition = pixel[1] - (shipCardHeight / 2);
-            topPosition = Math.max(margin, Math.min(mapSize[1] - shipCardHeight - margin, topPosition));
+            topPosition = Math.max(top, Math.min(mapSize[1] - shipCardHeight - margin, topPosition));
 
             aside.style.top = `${topPosition}px`;
 
@@ -4457,7 +4872,7 @@ function positionAside(pixel, aside) {
             } else if (leftSpace >= 0) {
                 aside.style.left = `${pixel[0] - shipCardWidth - margin}px`;
             } else {
-                aside.style.left = `${(mapSize[0] - shipCardWidth) / 2}px`;
+                aside.style.left = `${Math.max(0, (mapSize[0] - shipCardWidth) / 2)}px`;
             }
 
             aside.classList.add("floating");
@@ -4471,37 +4886,32 @@ function positionAside(pixel, aside) {
     adjustMapForShipcard(pixel);
 }
 
+function isMoreShipcardIcon(icon) {
+    return !!icon.querySelector('i')?.classList.contains('more_horiz_icon');
+}
+
+function shipcardIconAvailable(icon, type) {
+    if (icon.dataset.contextType !== type) return false;
+    if (icon.id === 'shipcard_realtime_option' && !config.features.realtime) return false;
+    return !icon.classList.contains(SHIPCARD_ICON_UNAVAILABLE);
+}
+
 function displayShipcardIcons(type) {
-    let icons = document.querySelectorAll('#shipcard_footer > div');
-    let idx = 0;
+    const icons = [...document.querySelectorAll('#shipcard_footer > div')];
+    const more = icons.filter(icon => isMoreShipcardIcon(icon) && icon.dataset.contextType === type);
+    const available = icons.filter(icon => !isMoreShipcardIcon(icon) && shipcardIconAvailable(icon, type));
 
-    for (let icon of icons) {
-        // Hide icons that don't match current context type
-        if (icon.dataset.contextType !== type && icon.dataset.contextType) {
-            icon.style.display = "none";
-            continue;
-        }
+    shipcardIconCount[type] = available.length;
+    if (shipcardIconOffset[type] >= available.length) shipcardIconOffset[type] = 0;
 
-        // Check if this is the More button - always show it and don't count it
-        const isMoreButton = icon.querySelector('i')?.classList.contains('more_horiz_icon');
-        if (isMoreButton) {
-            icon.style.display = "flex";
-            continue;
-        }
-
-        // Check if realtime option should be hidden
-        const isRealtimeDisabled = icon.id === 'shipcard_realtime_option' && !config.features.realtime;
-
-        if (isRealtimeDisabled) {
-            icon.style.display = "none";
-            // Don't increment idx, effectively removing it from the visible count
-        } else {
-            // Show if within offset range
-            const isInRange = idx >= shipcardIconOffset[type] && idx < shipcardIconOffset[type] + shipcardIconMax;
-            icon.style.display = isInRange ? "flex" : "none";
-            idx++;
-        }
+    const paged = available.length > shipcardIconMax;
+    for (const icon of icons) {
+        icon.style.display = more.includes(icon) && paged ? "flex" : "none";
     }
+
+    available
+        .slice(shipcardIconOffset[type], shipcardIconOffset[type] + shipcardIconMax)
+        .forEach(icon => (icon.style.display = "flex"));
 }
 
 function rotateShipcardIcons() {
@@ -4513,31 +4923,11 @@ function rotateShipcardIcons() {
 }
 
 function prepareShipcard() {
-    // Initialize offset/count objects if needed
-    if (!shipcardIconOffset || typeof shipcardIconOffset !== 'object') {
-        shipcardIconOffset = { ship: 0, plane: 0 };
-    }
-    shipcardIconCount = shipcardIconCount || { ship: 0, plane: 0 };
+    shipcardIconOffset = { ship: 0, plane: 0 };
+    shipcardIconCount = { ship: 0, plane: 0 };
 
-    // Count icons for each context
-    shipcardIconCount.ship = document.querySelectorAll('#shipcard_footer > div[data-context-type="ship"]').length;
-    shipcardIconCount.plane = document.querySelectorAll('#shipcard_footer > div[data-context-type="plane"]').length;
-
-    // Adjust count if realtime is disabled (exclude realtime option from count)
-    if (!config.features.realtime) {
-        const realtimeOption = document.getElementById('shipcard_realtime_option');
-        if (realtimeOption && realtimeOption.dataset.contextType === 'ship') {
-            shipcardIconCount.ship--;
-        }
-    }
-
-    // Add More button for each context if needed
-    if (shipcardIconCount.ship > shipcardIconMax) {
-        addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons', 'ship');
-    }
-    if (shipcardIconCount.plane > shipcardIconMax) {
-        addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons', 'plane');
-    }
+    addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons', 'ship');
+    addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons', 'plane');
 
     displayShipcardIcons('ship');
 }
@@ -4561,14 +4951,12 @@ function showShipcard(type, m, pixel = undefined) {
     }
 
     if (m != null && !visible) {
-        if (measurecardVisible()) toggleMeasurecard();
-        aside.classList.toggle("visible");
-
+        // placed further down with the pixel that was clicked, so applyPanels
+        // must not place it here first
+        setPanels({ shipcard: true, measure: false }, { reposition: false });
         select_enabled_track = false;
-
-
     } else if (visible && m == null) {
-        aside.classList.toggle("visible");
+        setPanels({ shipcard: false });
     }
 
 
@@ -4584,8 +4972,7 @@ function showShipcard(type, m, pixel = undefined) {
         displayShipcardIcons(type);
     }
 
-    card_mmsi = m;
-    card_type = type;
+    setCard(m, type);
 
 
     if (shipcardVisible()) {
@@ -4974,6 +5361,7 @@ function redrawMap() {
     updateTablecard();
 
     drawStation();
+    applyFixedCenter();
     range.updateDistanceCircles();
 
 }
@@ -5158,6 +5546,12 @@ function activateTab(b, a) {
     settings.tab = a;
     saveSettings();
 
+    // After the tab is recorded, since the ticker only belongs on the map. The
+    // sweep above hid every tabcontent, the ship table among them; converging
+    // puts the map's chrome back on the way in, and on the way out stops the
+    // ticker polling for a bar that is no longer on screen.
+    applyPanels();
+
     clearInterval(interval);
 
     refresh_data().then(() => {
@@ -5240,7 +5634,7 @@ const TRACK_HISTORY_STOPS = [1, 5, 15, 30, 60, 180, 360, 720, 1440, 0];
 // and the `since` filter are server-side, so a skewed browser clock must not leak in.
 function trackWindowStart() {
     if (!settings.track_history) return 0;
-    const now = shipsSince || Math.floor(Date.now() / 1000);
+    const now = clock || Math.floor(Date.now() / 1000);
     return now - settings.track_history * 60;
 }
 
@@ -5452,7 +5846,7 @@ function makeDraggable(dragHandle, dragTarget) {
     });
 }
 
-if (!window.matchMedia('(max-width: 500px), (max-height: 800px)').matches) {
+if (!cardFullBleed()) {
     document.querySelectorAll('aside').forEach((aside) => {
         const dragHandle = aside.querySelector('.draggable');
         if (dragHandle) {
@@ -5481,10 +5875,6 @@ community.init({ config, getMap: () => map });
 fireworks.init({ config, extraVector, showDialog, showNotification });
 kiosk.init({
     getMap: () => map,
-    getShipsDB: () => shipsDB,
-    getShipsSince: () => shipsSince,
-    getCardMmsi: () => card_mmsi,
-    getHoverMmsi: () => hoverMMSI,
     showShipcard,
     saveSettings,
 });
@@ -5516,6 +5906,11 @@ boxselect.init({
     showTracks: showTracksForMMSIs,
     showNotification,
 });
+ticker.init({
+    bucketHidden: (b) => filter.isActive() && filter.isHidden("bucket", b),
+    openVessel: (m) => openFocus(m, 14),
+});
+
 replay.init({
     getReceiver: () => activeReceiver,
     spriteFor,
@@ -5534,17 +5929,19 @@ replay.init({
     },
     bucketFor: filter.bucketFor,
     onCounts: (counts) => {
-        shipCounts = counts;
+        setShipCounts(counts);
         renderCounts();
     },
     showNotification,
     onStateChange: updateReplaycard,
+    onFrame: applyFixedCenter,
 });
 
 console.log("Plugin loading completed");
 
 console.log("Load settings");
 loadSettings();
+applyPanels();
 updateReceiverSelect(config.receivers);
 
 console.log("Load settings from URL parameters");
@@ -5623,5 +6020,13 @@ window.addEventListener('load', () => {
     });
 });
 
-window.addEventListener('resize', () => fitShipcard());
+// A resize can cross the breakpoints mapTopInset and the ticker's width rules
+// read, so the whole layout has to converge - not just the card. Debounced
+// because a window drag fires this continuously and each pass measures.
+window.addEventListener('resize', debounce(() => {
+    // reposition: false - a resize must not snap a card placed beside its marker
+    // back to the corner; only its height and the layout around it are restated
+    applyPanels({ reposition: false });
+    fitShipcard();
+}, 150));
 

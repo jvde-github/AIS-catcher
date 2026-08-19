@@ -222,6 +222,7 @@ public:
 
 	std::string getShipJSON(int mmsi);
 	std::string getChangesJSON(int mmsi);
+	std::string getRecentChangesJSON(uint32_t since, std::size_t max);
 	void logTextChange(const Ship &ship, int field, const char *old_value, const std::string &value);
 	std::string getJSON(bool full = false);
 	std::string getJSONcompact(bool full = false, std::time_t since = 0);
