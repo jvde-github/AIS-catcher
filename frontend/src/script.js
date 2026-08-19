@@ -23,6 +23,7 @@ import * as replay from './features/replay.js';
 import * as binary from './features/binary.js';
 import * as range from './features/range.js';
 import * as ticker from './features/ticker.js';
+import * as shipcard from './features/shipcard.js';
 import {
     getDistanceVal, getDistanceUnit, getDistanceConversion,
     getSpeedVal, getSpeedUnit, getSpeedConversion,
@@ -296,11 +297,11 @@ const ACTIONS = {
     showAboutFromInfoPanel: () => { toggleInfoPanel(); showAboutDialog(); },
 
     // dynamically-rendered shipcard items
-    rotateShipcardIcons: () => rotateShipcardIcons(),
-    techInfo: (e) => { e.stopPropagation(); toggleShipcardPopover("tech_popover", "shipcard_tech_info"); },
-    shiptypeInfo: (e) => { e.stopPropagation(); toggleShipcardPopover("shiptype_popover", "shipcard_shiptype_info"); },
-    shipHistory: (e) => { e.stopPropagation(); openShipcardSection("changes"); },
-    toggleShipcardSection: (e, d, el) => { e.stopPropagation(); toggleShipcardSection(el?.dataset.section || d.section); },
+    rotateShipcardIcons: () => shipcard.rotateIcons(),
+    techInfo: (e) => { e.stopPropagation(); shipcard.togglePopover("tech_popover", "shipcard_tech_info"); },
+    shiptypeInfo: (e) => { e.stopPropagation(); shipcard.togglePopover("shiptype_popover", "shipcard_shiptype_info"); },
+    shipHistory: (e) => { e.stopPropagation(); shipcard.openSection("changes"); },
+    toggleShipcardSection: (e, d, el) => { e.stopPropagation(); shipcard.toggleSection(el?.dataset.section || d.section); },
     showNMEAContextCopy: (e, d) => showContextMenu(e, d.copy || '', 'ship', ['settings', 'copy-text']),
     removeRealtimeFilter: (e, d) => realtimeModule?.removeFilter(d.kind, d.value),
 };
@@ -310,7 +311,7 @@ const ACTIONS = {
 window.AISCatcher = {
     PLUGIN_API_VERSION,
 
-    addShipcardItem,
+    addShipcardItem: shipcard.addItem,
     ACTIONS,
 
     showDialog,
@@ -425,10 +426,6 @@ let interval,
 
 const baseMapSelector = document.getElementById("baseMapSelector");
 
-let shipcardIconCount = undefined;
-const shipcardIconMax = 3;
-const SHIPCARD_ICON_UNAVAILABLE = 'shipcard-icon-unavailable';
-let shipcardIconOffset = 0;
 // `let` so AISCatcher.setRefreshInterval can mutate.
 let refreshIntervalMs = 2500;
 let shipFilterOverride = null;
@@ -437,7 +434,7 @@ let activeTileLayer = undefined;
 let hover_enabled_track = false,
     select_enabled_track = false;
 
-let center, shipcard;
+let center;
 const context = config.context;
 if (typeof window.loadPlugins === 'undefined') {
     window.loadPlugins = function () { };
@@ -2207,7 +2204,7 @@ function applyPanels(opts = {}) {
     el.tableBtn?.classList.toggle("is-active", panels.table);
     el.tickerBtn?.classList.toggle("is-active", !!settings.ticker);
 
-    if (!panels.shipcard) closeShipcardPopovers();
+    if (!panels.shipcard) shipcard.closePopovers();
     if (!panels.statcard) resetCardPosition(el.statcard);
     if (!panels.measure) resetCardPosition(el.measure);
 
@@ -2572,33 +2569,6 @@ function toggleScreenSize() {
 // of an entry in ACTIONS. Inline JS expression strings (the pre-CSP plugin
 // style) no longer work — strict CSP forbids them; convert plugins to pass a
 // function instead.
-function addShipcardItem(icon, txt, title, action, contextType = 'ship') {
-    const div = document.createElement("div");
-    div.title = title;
-    div.setAttribute("data-context-type", contextType);
-    if (icon.startsWith("fa")) {
-        icon = "question_mark";
-    }
-    const i = document.createElement("i");
-    i.className = icon + "_icon";
-    const span = document.createElement("span");
-    span.textContent = txt;
-    div.appendChild(i);
-    div.appendChild(span);
-
-    let name;
-    if (typeof action === 'function') {
-        name = '_plugin_' + (addShipcardItem._counter = (addShipcardItem._counter || 0) + 1);
-        ACTIONS[name] = action;
-    } else if (typeof action === 'string' && ACTIONS[action]) {
-        name = action;
-    } else {
-        console.warn('addShipcardItem: action must be a function or a registered ACTIONS key. Got:', action);
-        return;
-    }
-    div.dataset.action = name;
-    document.getElementById("shipcard_footer").appendChild(div);
-}
 
 function hideMenu() {
     if (document.getElementById("menubar").classList.contains("visible") && !isAndroid()) {
@@ -3719,7 +3689,7 @@ async function toggleTrack(m) {
     else {
         ToggleTrackOnMap(m);
     }
-    updateShipcardTrackOption(m);
+    shipcard.updateTrackOption();
 
 }
 
@@ -3727,7 +3697,7 @@ async function showTrack(m) {
     if (!marker_tracks.has(Number(m))) {
         ToggleTrackOnMap(m);
     }
-    updateShipcardTrackOption(m);
+    shipcard.updateTrackOption();
 
 }
 
@@ -3735,7 +3705,7 @@ async function hideTrack(m) {
     if (marker_tracks.has(Number(m))) {
         ToggleTrackOnMap(m);
     }
-    updateShipcardTrackOption(m);
+    shipcard.updateTrackOption();
 
 }
 
@@ -3757,7 +3727,7 @@ function pinVessel(m) {
     saveSettings();
     drawStation();
     applyFixedCenter();
-    updateShipcardFollowOption();
+    shipcard.updateFollowOption();
     showNotification("Following " + vesselLabel(m));
 }
 
@@ -3766,7 +3736,7 @@ function unpinCenter() {
     settings.fix_center = false;
     saveSettings();
     drawStation();
-    updateShipcardFollowOption();
+    shipcard.updateFollowOption();
     showNotification("No longer following " + vesselLabel(was));
 }
 
@@ -3788,7 +3758,7 @@ function setTrackVisibility(mode) {
     settings.show_all_tracks = false;
     saveSettings();
     redrawMap();
-    updateShipcardTrackOption();
+    shipcard.updateTrackOption();
 }
 
 async function showAllTracks() {
@@ -3798,7 +3768,7 @@ async function showAllTracks() {
     select_enabled_track = hover_enabled_track = false;
     await fetchTracks();
     redrawMap();
-    updateShipcardTrackOption();
+    shipcard.updateTrackOption();
     saveSettings();
 }
 
@@ -3814,7 +3784,7 @@ async function showTracksForMMSIs(mmsis) {
         lastPathFetch = 0;
         await fetchTracks();
         redrawMap();
-        updateShipcardTrackOption();
+        shipcard.updateTrackOption();
     }
     return mmsis.length;
 }
@@ -3837,7 +3807,7 @@ function deleteAllTracks() {
 
     setPaths(p);
 
-    redrawMap(); updateShipcardTrackOption();
+    redrawMap(); shipcard.updateTrackOption();
     saveSettings();
 }
 
@@ -3848,7 +3818,7 @@ async function toggleTrackCutoff() {
     lastPathFetch = 0;
     await fetchTracks();
     redrawMap();
-    updateShipcardTrackOption();
+    shipcard.updateTrackOption();
     showNotification(trackCutoff ? "Tracks now start from " + trackCutoffLabel()
         : "Tracks restored to the full history", "success");
 }
@@ -3949,211 +3919,9 @@ async function fetchTracks() {
     return true;
 }
 
-function trackOptionString(mmsi) {
-    const hover_track = hoverType == 'ship' && mmsi == hoverMMSI && hover_enabled_track;
-    const select_track = card_type == 'ship' && mmsi == card_mmsi && select_enabled_track;
-    const track_shown = marker_tracks.has(Number(mmsi));
-
-    if (hover_track || select_track) return "Show Track";
-    return track_shown ? "Hide Track" : "Show Track";
-}
-
-function updateShipcardTrackOption() {
-    const trackOptionElement = document.getElementById("shipcard_track_option");
-
-    if (settings.show_all_tracks || card_type == 'plane') {
-        trackOptionElement.style.opacity = "0.5";
-        trackOptionElement.style.pointerEvents = "none";
-    } else {
-        trackOptionElement.style.opacity = "1";
-        trackOptionElement.style.pointerEvents = "auto";
-    }
-
-    if (card_mmsi && card_type == 'ship') {
-        document.getElementById("shipcard_track").innerText = trackOptionString(card_mmsi);
-    }
-}
-
-function updateShipcardFollowOption() {
-    const option = document.getElementById("shipcard_follow_option");
-    const following = isFollowing(card_mmsi);
-
-    option.querySelector("#shipcard_follow").innerText = following ? "Unfollow" : "Follow";
-    option.title = following ? "Stop centring the map on this vessel" : "Keep the map centred on this vessel";
-    option.classList.toggle("shipcard-icon-active", following);
-}
-
 function isShipcardMax() {
     let e = document.getElementById("shipcard").classList;
     return e.contains("shipcard-ismax");
-}
-
-function setShipcardValidation(v) {
-    document.getElementById("shipcard_header").classList.remove("shipcard-validated", "shipcard-not-validated", "shipcard-dubious");
-
-    switch (v) {
-        case 1:
-            document.getElementById("shipcard_header").classList.add("shipcard-validated");
-            break;
-        case -1:
-            document.getElementById("shipcard_header").classList.add("shipcard-dubious");
-            break;
-        default:
-            document.getElementById("shipcard_header").classList.add("shipcard-not-validated");
-    }
-}
-
-function updateMessageButton() {
-    const messageButton = document.getElementById("shipcard_message_option");
-    if (!messageButton) return;
-
-    const iconElement = messageButton.querySelector('i.mail_icon');
-    if (!iconElement) return;
-
-    const count = binary.shipBinaryMessages(card_mmsi).length;
-
-    iconElement.querySelector('.message-badge')?.remove();
-
-    if (count > 0) {
-        const badge = document.createElement('span');
-        badge.className = 'message-badge';
-        badge.textContent = count;
-        iconElement.appendChild(badge);
-    }
-
-    const wasAvailable = !messageButton.classList.contains(SHIPCARD_ICON_UNAVAILABLE);
-    messageButton.classList.toggle(SHIPCARD_ICON_UNAVAILABLE, count === 0);
-
-    // a button without messages must give up its slot, not sit there hidden
-    if (wasAvailable !== (count > 0)) displayShipcardIcons(card_type);
-}
-
-function showCardOutOfRange() {
-    document
-        .getElementById("shipcard_content")
-        .querySelectorAll("span:nth-child(2)")
-        .forEach((e) => (e.innerHTML = null));
-    document.getElementById("shipcard_header_title").innerHTML = "<b style='color:red;'>Out of range</b>";
-    document.getElementById("shipcard_header_flag").innerHTML = "";
-    document.getElementById("shipcard_mmsi").innerHTML = card_mmsi;
-
-    updateFocusMarker();
-}
-
-function populateShipcard() {
-
-    if (card_type != 'ship') return;
-
-    if (!(card_mmsi in shipsDB)) {
-        showCardOutOfRange();
-        return;
-    }
-
-    let ship = shipsDB[card_mmsi].raw;
-
-    document.getElementById("shipcard_header_flag").innerHTML = getFlagStyled(ship.country, CARD_FLAG_STYLE);
-    document.getElementById("shipcard_header_title").innerHTML = (getShipName(ship) || ship.mmsi);
-
-    setShipcardValidation(ship.validated);
-
-    // verbatim copies
-    ["destination", "mmsi", "count", "received_stations"].forEach((e) => (document.getElementById("shipcard_" + e).innerHTML = ship[e] != null ? ship[e] : "-"));
-
-    if (ship.imo != null) {
-        document.getElementById("shipcard_imo_label").innerHTML = "IMO";
-        document.getElementById("shipcard_imo").innerHTML = ship.imo;
-    } else {
-        document.getElementById("shipcard_imo_label").innerHTML = ship.eni ? "ENI" : "IMO";
-        document.getElementById("shipcard_imo").innerHTML = ship.eni || "-";
-    }
-
-    // round and add units
-    [
-        { id: "cog", u: "&deg", d: 1 },
-        { id: "bearing", u: "&deg", d: 0 },
-        { id: "heading", u: "&deg", d: 0 },
-        { id: "level", u: "dB", d: 1 },
-        { id: "ppm", u: "ppm", d: 1 },
-    ].forEach((el) => (document.getElementById("shipcard_" + el.id).innerHTML = ship[el.id] != null ? Number(ship[el.id]).toFixed(el.d) + " " + el.u : null));
-
-    document.getElementById("shipcard_country").innerHTML = getCountryName(ship.country);
-    document.getElementById("shipcard_callsign").innerHTML = getCallSign(ship);
-    document.getElementById("shipcard_msgtypes").innerHTML = getStringfromMsgType(ship.msg_type);
-
-    document.getElementById("shipcard_last_group").innerHTML = getStringfromGroup(ship.last_group);
-    document.getElementById("shipcard_sources").innerHTML = getStringfromGroup(ship.group_mask);
-
-    document.getElementById("shipcard_channels").innerHTML = getStringfromChannels(ship.channels);
-    document.getElementById("shipcard_type").innerHTML = getMmsiTypeVal(ship) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_tech_info" data-action="techInfo" title="Technical details"></i>';
-    document.getElementById("shipcard_shiptype").innerHTML = ship.shiptype != null
-        ? getShipTypeShort(ship.shiptype) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_shiptype_info" data-action="shiptypeInfo" title="Ship type details"></i>'
-        : getShipTypeShort(ship.shiptype);
-    document.getElementById("shiptype_code").textContent = ship.shiptype != null ? ship.shiptype : "-";
-    document.getElementById("shiptype_desc").textContent = ship.shiptype != null
-        ? getShipTypeFull(ship.shiptype)
-        : "-";
-    document.getElementById("shipcard_status").innerHTML = getStatusVal(ship);
-    document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(clock - ship.last_signal);
-    document.getElementById("shipcard_eta").innerHTML = ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
-    document.getElementById("shipcard_lat").innerHTML = ship.lat != null ? getLatValFormat(ship) : null;
-    document.getElementById("shipcard_lon").innerHTML = ship.lon != null ? getLonValFormat(ship) : null;
-    document.getElementById("shipcard_altitude").innerHTML = ship.altitude != null ? ship.altitude + " m" : null;
-
-    document.getElementById("shipcard_speed").innerHTML = ship.speed != null ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
-    document.getElementById("shipcard_distance").innerHTML = ship.distance != null ? (getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "")) : null;
-    document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDraughtVal(ship.draught) + " " + getDimUnit() : null;
-    document.getElementById("shipcard_dimension").innerHTML = getShipDimension(ship);
-    document.getElementById("shipcard_bluesign").innerHTML = ship.maneuver === 2 ? "Set" : (ship.maneuver === 1 ? "Not set" : null);
-
-    updateShipcardTrackOption();
-    updateShipcardFollowOption();
-    updateMessageButton();
-    updateTechDetails(ship);
-    renderHullSection(ship);
-
-}
-
-function updateTechDetails(ship) {
-    // Helper to format flag values
-    const formatFlag = (value, trueText = "Yes", falseText = "No", unknownText = "-") => {
-        if (value === 0) return unknownText;
-        if (value === 1) return falseText;
-        if (value === 2) return trueText;
-        return unknownText;
-    };
-
-    // Update RAIM
-    document.getElementById("tech_raim").textContent = formatFlag(ship.raim);
-
-    // Update DTE
-    document.getElementById("tech_dte").textContent = formatFlag(ship.dte, "Not Ready", "Ready");
-
-    // Update Assigned Mode
-    document.getElementById("tech_assigned").textContent = formatFlag(ship.assigned, "Assigned", "Autonomous");
-
-    // Update Display
-    document.getElementById("tech_display").textContent = formatFlag(ship.display);
-
-    // Update DSC
-    document.getElementById("tech_dsc").textContent = formatFlag(ship.dsc);
-
-    // Update Band
-    document.getElementById("tech_band").textContent = formatFlag(ship.band, "Dual", "Single");
-
-    // Update MSG22
-    document.getElementById("tech_msg22").textContent = formatFlag(ship.msg22);
-
-    // Update Off Position
-    document.getElementById("tech_off_position").textContent = formatFlag(ship.off_position, "Off", "On");
-
-    // Update Maneuver
-    const maneuverText = ship.maneuver === 0 ? "-" : ship.maneuver === 1 ? "None" : "Special";
-    document.getElementById("tech_maneuver").textContent = maneuverText;
-
-    // Transponder vendor info (type 24 part B)
-    document.getElementById("tech_vendor").textContent = ship.vendorid || "-";
-    document.getElementById("tech_model").textContent = ship.model != null ? ship.model : "-";
-    document.getElementById("tech_serial").textContent = ship.serial != null ? ship.serial : "-";
 }
 
 // Everything time-related about a vessel in one window: the track gives speed,
@@ -4163,149 +3931,6 @@ let historyMMSI = 0;
 
 // Sections collapse independently of the card's own min/max, which toggles
 // `hidden` on every shipcard-max-only element — hence a class of their own.
-const sectionOpen = { voyage: true, vessel: true, source: false,
-                      hull: false, speed: false, draught: false, changes: false };
-
-let historyCache = { mmsi: 0, pts: null, changes: null };
-
-function applyShipcardSection(key) {
-    const open = !!sectionOpen[key];
-    document.querySelectorAll('#shipcard_content [data-section="' + key + '"]').forEach((el) => {
-        if (el.classList.contains("shipcard-section")) {
-            const caret = el.querySelector(".shipcard-section-caret");
-            if (caret) {
-                caret.classList.toggle("keyboard_arrow_up_icon", open);
-                caret.classList.toggle("keyboard_arrow_down_icon", !open);
-            }
-            return;
-        }
-        el.classList.toggle("sec-collapsed", !open);
-    });
-}
-
-function toggleShipcardSection(key) {
-    if (!key) return;
-    sectionOpen[key] = !sectionOpen[key];
-    applyShipcardSection(key);
-    if (sectionOpen[key]) fillShipcardSection(key);
-    fitShipcard();
-}
-
-function openShipcardSection(key) {
-    if (!sectionOpen[key]) toggleShipcardSection(key);
-}
-
-function setSectionAvailable(key, available) {
-    const head = document.getElementById("shipcard_" + key + "_head");
-    const body = document.getElementById("shipcard_" + key + "_section");
-    if (head) head.classList.toggle("sec-empty", !available);
-    if (body && !available) body.classList.add("sec-collapsed");
-}
-
-function renderHullSection(ship) {
-    ship = ship || shipsDB[card_mmsi]?.raw;
-    const svg = ship ? getShipDimensionSVG(ship) : "";
-    setSectionAvailable("hull", !!svg);
-    const body = document.getElementById("shipcard_hull_body");
-    if (body) body.innerHTML = svg;
-}
-
-async function fillShipcardSection(key) {
-    const mmsi = card_mmsi;
-    if (!mmsi) return;
-
-    if (key === "hull") return renderHullSection();
-    if (!["speed", "draught", "changes"].includes(key)) return;
-
-    const body = document.getElementById("shipcard_" + key + "_body");
-    if (!body) return;
-
-    if (historyCache.mmsi !== mmsi) {
-        body.innerHTML = '<span class="dim-note">Loading…</span>';
-        try {
-            const [p, c] = await Promise.all([
-                fetch("api/path.json?" + mmsi + "&receiver=" + activeReceiver).then((r) => r.json()),
-                fetch("api/changes.json?" + mmsi + "&receiver=" + activeReceiver).then((r) => r.json()),
-            ]);
-            historyCache = { mmsi, pts: p[mmsi] || [], changes: Array.isArray(c) ? c : [] };
-        } catch (err) {
-            body.innerHTML = '<span class="dim-note">History unavailable</span>';
-            return;
-        }
-    }
-    if (card_mmsi !== mmsi) return;
-
-    const ship = shipsDB[mmsi]?.raw;
-    let html = "";
-    if (key === "speed") html = getSpeedHistorySVG(historyCache.pts);
-    else if (key === "draught") html = getDraughtChartSVG(historyCache.changes, ship ? ship.draught : null);
-    else html = getChangeListHTML(historyCache.changes,
-        [CHANGE.DESTINATION, CHANGE.ETA, CHANGE.SHIPNAME, CHANGE.CALLSIGN, CHANGE.STATUS],
-        (x) => x.f === CHANGE.STATUS ? getStatusVal({ status: x.to })
-             : x.f === CHANGE.DRAUGHT ? getDimVal(x.to / 10) + " " + getDimUnit()
-             : String(x.to));
-
-    body.innerHTML = html || '<span class="dim-note">Nothing recorded yet</span>';
-    fitShipcard();
-}
-
-function resetShipHistory() {
-    historyCache = { mmsi: 0, pts: null, changes: null };
-    ["hull", "speed", "draught", "changes"].forEach((k) => {
-        const body = document.getElementById("shipcard_" + k + "_body");
-        if (body) body.innerHTML = "";
-        sectionOpen[k] = false;
-        setSectionAvailable(k, true);
-    });
-    sectionOpen.voyage = true;
-    sectionOpen.vessel = true;
-    sectionOpen.source = false;
-    Object.keys(sectionOpen).forEach(applyShipcardSection);
-}
-
-function closeShipcardPopovers() {
-    panelElements().popovers.forEach((el) => (el.style.display = "none"));
-}
-
-function toggleShipcardPopover(popoverId, iconId) {
-    const popover = document.getElementById(popoverId);
-    const icon = document.getElementById(iconId);
-
-    const wasOpen = popover.style.display === "block";
-    closeShipcardPopovers();
-    if (wasOpen) return;
-
-    const onOutsideClick = (event) => {
-        if (popover.contains(event.target)) return;
-        event.stopPropagation();
-        event.preventDefault();
-        popover.style.display = "none";
-        document.removeEventListener("click", onOutsideClick, true);
-    };
-
-    const iconRect = icon.getBoundingClientRect();
-    const shipcardRect = document.getElementById("shipcard").getBoundingClientRect();
-
-    popover.style.display = "block";
-
-    let left = iconRect.left - shipcardRect.left + 20;
-    let top = iconRect.bottom - shipcardRect.top + 5;
-
-    const popoverRect = popover.getBoundingClientRect();
-
-    if (iconRect.left + popoverRect.width + 20 > window.innerWidth)
-        left = Math.max(5, iconRect.right - shipcardRect.left - popoverRect.width - 5);
-    if (iconRect.bottom + popoverRect.height + 5 > window.innerHeight)
-        top = Math.max(5, iconRect.top - shipcardRect.top - popoverRect.height - 5);
-
-    left = Math.max(5, Math.min(left, shipcardRect.width - popoverRect.width - 5));
-    top = Math.max(5, top);
-
-    popover.style.left = left + "px";
-    popover.style.top = top + "px";
-
-    setTimeout(() => document.addEventListener("click", onOutsideClick, true), 0);
-}
 
 function getCategory(plane) {
     if (!plane || !plane.category) return "-";
@@ -4336,7 +3961,7 @@ function populatePlanecard() {
     if (card_type != 'plane') return;
 
     if (!(card_mmsi in planesDB)) {
-        showCardOutOfRange();
+        shipcard.showOutOfRange();
         return;
     }
 
@@ -4347,7 +3972,7 @@ function populatePlanecard() {
 
     let plane = planesDB[card_mmsi].raw;
 
-    setShipcardValidation(plane.validated);
+    shipcard.setValidation(plane.validated);
 
     // Set header
     document.getElementById("shipcard_header_title").textContent = (plane.callsign || getICAO(plane));
@@ -4381,7 +4006,7 @@ function populatePlanecard() {
         { id: "bearing", u: "&deg", d: 0 }
     ].forEach((el) => (document.getElementById("shipcard_plane_" + el.id).innerHTML = plane[el.id] != null ? Number(plane[el.id]).toFixed(el.d) + " " + el.u : null));
 
-    updateShipcardTrackOption();
+    shipcard.updateTrackOption();
 }
 
 function shipcardMinIfMaxonMobile() {
@@ -4490,7 +4115,7 @@ function applyFixedCenter() {
         const dropped = settings.center_point;
         settings.center_point = "STATION";
         settings.fix_center = false;
-        updateShipcardFollowOption();
+        shipcard.updateFollowOption();
         showNotification("No longer following " + vesselLabel(dropped) + ": out of range");
         return;
     }
@@ -4546,8 +4171,8 @@ function adjustMapForShipcard(pixel) {
             pixel = map.getPixelFromCoordinate(shipCoords);
         }
 
-        let shipcard = document.getElementById("shipcard");
-        let shipcardRect = shipcard.getBoundingClientRect();
+        let card = document.getElementById("shipcard");
+        let shipcardRect = card.getBoundingClientRect();
         let mapElement = map.getTargetElement();
         let mapRect = mapElement.getBoundingClientRect();
 
@@ -4586,13 +4211,13 @@ function unpinShipcard() {
 }
 
 function applyShipcardPinStyling() {
-    const shipcard = document.getElementById("shipcard");
+    const card = document.getElementById("shipcard");
     if (settings.shipcard_pinned) {
-        shipcard.classList.add("pinned");
+        card.classList.add("pinned");
         document.getElementById("shipcard_drag_handle").classList.add("opacity-50");
     }
     else {
-        shipcard.classList.remove("pinned");
+        card.classList.remove("pinned");
         document.getElementById("shipcard_drag_handle").classList.remove("opacity-50");
     }
 }
@@ -4749,54 +4374,8 @@ function positionAside(pixel, aside) {
     adjustMapForShipcard(pixel);
 }
 
-function isMoreShipcardIcon(icon) {
-    return !!icon.querySelector('i')?.classList.contains('more_horiz_icon');
-}
-
-function shipcardIconAvailable(icon, type) {
-    if (icon.dataset.contextType !== type) return false;
-    if (icon.id === 'shipcard_realtime_option' && !config.features.realtime) return false;
-    return !icon.classList.contains(SHIPCARD_ICON_UNAVAILABLE);
-}
-
-function displayShipcardIcons(type) {
-    const icons = [...document.querySelectorAll('#shipcard_footer > div')];
-    const more = icons.filter(icon => isMoreShipcardIcon(icon) && icon.dataset.contextType === type);
-    const available = icons.filter(icon => !isMoreShipcardIcon(icon) && shipcardIconAvailable(icon, type));
-
-    shipcardIconCount[type] = available.length;
-    if (shipcardIconOffset[type] >= available.length) shipcardIconOffset[type] = 0;
-
-    const paged = available.length > shipcardIconMax;
-    for (const icon of icons) {
-        icon.style.display = more.includes(icon) && paged ? "flex" : "none";
-    }
-
-    available
-        .slice(shipcardIconOffset[type], shipcardIconOffset[type] + shipcardIconMax)
-        .forEach(icon => (icon.style.display = "flex"));
-}
-
-function rotateShipcardIcons() {
-    shipcardIconOffset[card_type] += shipcardIconMax;
-    if (shipcardIconOffset[card_type] >= shipcardIconCount[card_type]) {
-        shipcardIconOffset[card_type] = 0;
-    }
-    displayShipcardIcons(card_type);
-}
-
-function prepareShipcard() {
-    shipcardIconOffset = { ship: 0, plane: 0 };
-    shipcardIconCount = { ship: 0, plane: 0 };
-
-    addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons', 'ship');
-    addShipcardItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons', 'plane');
-
-    displayShipcardIcons('ship');
-}
-
 function showShipcard(type, m, pixel = undefined) {
-    resetShipHistory();
+    shipcard.resetHistory();
 
     const aside = document.getElementById("shipcard");
     const visible = shipcardVisible();
@@ -4828,7 +4407,7 @@ function showShipcard(type, m, pixel = undefined) {
             }
         });
 
-        displayShipcardIcons(type);
+        shipcard.displayIcons(type);
     }
 
     setCard(m, type);
@@ -4851,7 +4430,7 @@ function showShipcard(type, m, pixel = undefined) {
         if (!visible) shipcardMinIfMaxonMobile();
         positionAside(pixel, aside);
 
-        if (card_type == 'ship') populateShipcard();
+        if (card_type == 'ship') shipcard.populate();
         else if (card_type == 'plane') populatePlanecard();
 
         // trigger reflow for iPad Safari
@@ -5044,7 +4623,7 @@ async function updateMap() {
 
     if (shipcardVisible()) {
         if (card_type == "ship")
-            populateShipcard();
+            shipcard.populate();
         else if (card_type == "plane")
             populatePlanecard();
     }
@@ -5389,7 +4968,10 @@ function activateTab(b, a) {
     for (var i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
 
     document.getElementById(a).style.display = "block";
-    if (a === "map") document.getElementById("tableside").style.display = "flex";
+    if (a === "map") {
+        document.getElementById("tableside").style.display = "flex";
+        map?.updateSize();
+    }
 
     const tabElement = document.getElementById(a + "_tab");
     if (tabElement) tabElement.className += " active";
@@ -5448,7 +5030,8 @@ function selectMapTab(m) {
     if (m in shipsDB) showShipcard('ship', m);
 }
 
-function selectTab() {
+// split out so the container can be revealed before initMap() runs
+function resolveTab() {
     if (settings.tab == "settings") settings.tab = "stat";
 
     // Check if requested tab is disabled and redirect to map
@@ -5466,8 +5049,11 @@ function selectTab() {
         settings.tab = "stat";
         alert("Invalid tab specified");
     }
-    activateTab(null, settings.tab);
-    //document.getElementById(settings.tab + "_tab").click();
+    return settings.tab;
+}
+
+function selectTab() {
+    activateTab(null, resolveTab());
 }
 
 const androidStyle = document.createElement("style");
@@ -5754,6 +5340,27 @@ boxselect.init({
     showTracks: showTracksForMMSIs,
     showNotification,
 });
+shipcard.init({
+    fitShipcard,
+    getReceiver: () => activeReceiver,
+    realtimeEnabled: () => config.features.realtime,
+    isFollowing,
+    updateFocusMarker,
+    hoverTrackShown: () => hover_enabled_track,
+    selectTrackShown: () => select_enabled_track,
+    registerAction: (action) => {
+        if (typeof action === 'function') {
+            const name = '_plugin_' + (registerAction._counter = (registerAction._counter || 0) + 1);
+            ACTIONS[name] = action;
+            return name;
+        }
+        if (typeof action === 'string' && ACTIONS[action]) return action;
+
+        console.warn('addShipcardItem: action must be a function or a registered ACTIONS key. Got:', action);
+        return null;
+    },
+});
+
 ticker.init({
     bucketHidden: (b) => filter.isActive() && filter.isHidden("bucket", b),
     openVessel: (m) => openFocus(m, 14),
@@ -5815,6 +5422,10 @@ if (config.features.managed) {
 
 console.log("Setup tabs");
 initFullScreen();
+
+// a map in a display:none container has a 0x0 viewport and asks for no tiles,
+// so reveal the target first and let the tile fetch overlap the rest of startup
+document.getElementById(resolveTab()).style.display = "block";
 initMap();
 
 import('./overlays/ducting.js')
@@ -5832,7 +5443,7 @@ saveSettings();
 setGraphVisibility('signal', settings.show_signal_graphs, false);
 setGraphVisibility('ppm', settings.show_ppm_graphs, false);
 setPlotAbsoluteTime(settings.plot_absolute_time, false);
-prepareShipcard();
+shipcard.prepare();
 buildSettingsTabs();
 
 for (const [enabled, tab] of [
