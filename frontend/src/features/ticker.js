@@ -6,21 +6,24 @@ import { getShipName } from '../core/format.js';
 const POLL_MS = 10000;
 const SLIDE_MS = 8000;
 const FADE_MS = 600;
-const MAX_AGE_MS = 10 * 60 * 1000;
+const MAX_AGE_MS = 30 * 60 * 1000;
 const MAX_EVENTS = 40;
 
 const COUNTS_EVERY = 4;
 
+// the newest few on a cold open, asked for rather than filtered out afterwards;
+// fetched wider than kept because baselines are dropped below
 const PRIME_MAX = 5;
-const PRIME_AGE = 60;
+const PRIME_FETCH = 15;
 
 // older events surface less often: shown only when the slide counter lands on
 // their period
 const PERIODS = [
     { under: 2 * 60 * 1000, period: 1 },
     { under: 5 * 60 * 1000, period: 2 },
+    { under: 15 * 60 * 1000, period: 4 },
 ];
-const OLDEST_PERIOD = 4;
+const OLDEST_PERIOD = 8;
 
 const MAX_SLOTS = 3;
 const SLOT_WIDTH = 520;
@@ -204,7 +207,8 @@ function changeKey(c) {
 
 async function poll() {
     try {
-        const response = await fetch("api/changes_recent.json" + (since ? "?since=" + since : ""));
+        const response = await fetch("api/changes_recent.json"
+            + (since ? "?since=" + since : "?max=" + PRIME_FETCH));
         if (!response.ok) return;
 
         const data = await response.json();
@@ -213,7 +217,7 @@ async function poll() {
 
         let changes = (data.changes || []).filter(worthShowing).sort((a, b) => b.t - a.t);
 
-        if (first) changes = changes.filter((c) => serverNow - c.t < PRIME_AGE).slice(0, PRIME_MAX);
+        if (first) changes = changes.slice(0, PRIME_MAX);
 
         // a second behind: the ring is walked with a strict `time > since`
         if (serverNow) since = serverNow - 1;

@@ -955,7 +955,15 @@ const WebViewer::Route WebViewer::routes[] = {
 	 }, true},
 	{"/api/changes_recent.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
-	 { return s->getRecentChangesJSON((uint32_t)queryInt(a, "since"), CHANGES_TICKER_MAX); }, true},
+	 {
+		 // the rings are walked newest-first, so a caller that wants only the
+		 // latest handful says so rather than being sent the lot to discard
+		 long long max = queryInt(a, "max");
+		 if (max <= 0 || max > CHANGES_TICKER_MAX)
+			 max = CHANGES_TICKER_MAX;
+
+		 return s->getRecentChangesJSON((uint32_t)queryInt(a, "since"), (std::size_t)max);
+	 }, true},
 	{"/api/decode", &WebViewer::Settings::showdecoder, "application/json",
 	 [](WebViewer *, ReceiverTracker *, const std::string &a)
 	 {
