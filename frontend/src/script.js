@@ -885,6 +885,7 @@ function selectSettingsSub(groupIdx, subIdx) {
 
 function openSettings() {
     updateSettingsTab();
+    updateFilterUI();
     document.querySelector(".settings_window").classList.add("active");
 }
 
@@ -1934,7 +1935,6 @@ function applyFilter() {
 
 function openFilterPanel() {
     openSettingsTab("Filter");
-    updateFilterUI();
 }
 
 function openSettingsTab(title) {
