@@ -601,7 +601,7 @@ a:focus {
     flex-wrap: nowrap;
     gap: 8px;
     min-width: 0;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     cursor: pointer;
     border-radius: var(--radius-sm);
     padding: 2px 6px;
@@ -629,6 +629,7 @@ a:focus {
 .ticker-text {
     overflow: hidden;
     white-space: nowrap;
+    flex: 1 1 auto;
     min-width: 0;
 }
 
@@ -676,7 +677,7 @@ a:focus {
     color: var(--color-ticker-accent);
 }
 
-.ticker-text > span + span {
+.ticker-scroller > span + span {
     margin-left: 6px;
 }
 

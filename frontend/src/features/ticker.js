@@ -272,11 +272,13 @@ const PAN_PX_PER_SEC = 40;
 function panIfClipped(slot) {
     slot.text.classList.remove("panning");
 
-    const overflow = slot.scroller.scrollWidth - slot.text.clientWidth;
+    // rects, not scrollWidth: engines disagree on what an inline-block that
+    // overflows its clipped parent reports there
+    const overflow = slot.scroller.getBoundingClientRect().width - slot.text.getBoundingClientRect().width;
     if (overflow <= 1) return;
 
-    slot.text.style.setProperty("--pan-distance", -overflow + "px");
-    slot.text.style.setProperty("--pan-duration", Math.max(4, overflow / PAN_PX_PER_SEC + 3) + "s");
+    slot.scroller.style.setProperty("--pan-distance", -Math.ceil(overflow) + "px");
+    slot.scroller.style.setProperty("--pan-duration", Math.max(4, overflow / PAN_PX_PER_SEC + 3) + "s");
     slot.text.classList.add("panning");
 }
 
