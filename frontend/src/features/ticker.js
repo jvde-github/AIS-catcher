@@ -5,14 +5,16 @@ import { getShipName } from '../core/format.js';
 
 const POLL_MS = 10000;
 const SLIDE_MS = 8000;
-const FADE_MS = 600;
+const FADE_MS = 1000;
 const MAX_AGE_MS = 30 * 60 * 1000;
 const MAX_EVENTS = 40;
 
 const COUNTS_EVERY = 4;
+// not 0: PERIODS uses 4 and 8, whose slides a phase-0 counts slide would swallow
+const COUNTS_PHASE = 1;
 
 // the newest few on a cold open, asked for rather than filtered out afterwards;
-// fetched wider than kept because baselines are dropped below
+// fetched wider than kept because most baselines are dropped below
 const PRIME_MAX = 5;
 const PRIME_FETCH = 15;
 
@@ -41,6 +43,10 @@ let bar, countsEl, bucketsEl, feedEl;
 let slots = [];
 let slotsWanted = 1;
 let bucketSpans = {};
+let fadeTimer = null;
+let wide = false;
+let bucketsWidth = 0;
+let shownKey = null;
 
 export function init(d) {
     deps = d;
@@ -49,16 +55,23 @@ export function init(d) {
     bucketsEl = document.getElementById("ticker_buckets");
     feedEl = document.getElementById("ticker_feed");
 
+    bar.style.setProperty("--ticker-fade", FADE_MS + "ms");
+
     buildSlots();
     buildBuckets();
     show([]);
 
     document.addEventListener("visibilitychange", () => document.hidden ? suspend() : resume());
-    window.addEventListener("resize", debounce(() => {
-        if (!isEnabled()) return;
+
+    new ResizeObserver(debounce(() => {
         measureSlots();
-        advance();
-    }, 200));
+        slots.forEach((slot, i) => {
+            if (i >= slotsWanted && slot.shown) {
+                slot.item.style.display = "none";
+                slot.shown = false;
+            }
+        });
+    }, 200)).observe(bar);
 }
 
 function buildSlots() {
@@ -89,9 +102,38 @@ function buildSlots() {
     }
 }
 
+// off the bar, not the feed: the feed is display:none while the counts are up
 function measureSlots() {
-    const width = feedEl ? feedEl.clientWidth : 0;
-    slotsWanted = Math.max(1, Math.min(MAX_SLOTS, Math.floor(width / SLOT_WIDTH)));
+    if (!bar || !feedEl) return;
+
+    const style = getComputedStyle(bar);
+    const gap = parseFloat(style.columnGap) || 0;
+    let taken = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+    let fixed = 0;
+
+    for (const child of bar.children) {
+        if (child === feedEl || child === bucketsEl) continue;
+        if (getComputedStyle(child).display === "none") continue;
+        taken += child.getBoundingClientRect().width;
+        fixed++;
+    }
+
+    const width = bar.clientWidth - taken - gap * fixed;
+
+    // summed from the chips: the container is flex:1, so its own box is the whole bar
+    if (bucketsEl) {
+        const chips = [...bucketsEl.children].filter((c) => getComputedStyle(c).display !== "none");
+        const bucketsGap = parseFloat(getComputedStyle(bucketsEl).columnGap) || 0;
+        const content = chips.reduce((a, c) => a + c.getBoundingClientRect().width, 0)
+            + bucketsGap * Math.max(0, chips.length - 1);
+        if (content) bucketsWidth = content;
+    }
+
+    const beside = width - bucketsWidth - gap;
+    wide = beside >= SLOT_WIDTH;
+    bar.classList.toggle("ticker-wide", wide);
+
+    slotsWanted = Math.max(1, Math.min(MAX_SLOTS, Math.floor((wide ? beside : width) / SLOT_WIDTH)));
 }
 
 function buildBuckets() {
@@ -137,7 +179,10 @@ function resume() {
 function suspend() {
     clearInterval(pollTimer);
     clearInterval(slideTimer);
-    pollTimer = slideTimer = null;
+    clearTimeout(fadeTimer);
+    pollTimer = slideTimer = fadeTimer = null;
+    shownKey = null;
+    bar.classList.remove("ticker-fading");
 }
 
 export function setCounts(c) {
@@ -169,11 +214,10 @@ function renderCounts() {
         : counts.total + " vessels";
 }
 
-// a baseline draught or status is not a change: every vessel emits one on its
-// first message
+// deliberate: a first-set name or destination is not news, but a first draught
+// is a reading - and the only baseline the draught chart has to start from
 function worthShowing(change) {
-    if (!change.i) return true;
-    return change.f === CHANGE.SHIPNAME || change.f === CHANGE.DESTINATION || change.f === CHANGE.CALLSIGN;
+    return !change.i || change.f === CHANGE.DRAUGHT;
 }
 
 function describe(change) {
@@ -232,9 +276,10 @@ async function poll() {
             change: c,
         }));
 
+        const wasEmpty = !events.length;
         events = fresh.concat(events).slice(0, MAX_EVENTS);
         cursor = -1;
-        advance();
+        if (wasEmpty) advance();
     } catch (error) {
         console.log("Failed loading ticker changes:", error);
     }
@@ -254,21 +299,57 @@ function advance() {
     const now = Date.now();
     events = events.filter((e) => now - e.at < MAX_AGE_MS);
 
-    if (!events.length) return show([]);
+    fadeTo(pick(now));
+}
+
+function pick(now) {
+    if (!events.length) return [];
 
     slide++;
 
-    if (slide % COUNTS_EVERY === 0) return show([]);
+    if (!wide && slide % COUNTS_EVERY === COUNTS_PHASE) return [];
+
+    // skip what is already up, or a period-1 event holds its slot every lap
+    const holding = events.length > slotsWanted && shownKey ? new Set(shownKey.split("|")) : null;
 
     const picked = [];
+    const sweep = (due) => {
+        for (let i = 0; i < events.length && picked.length < slotsWanted; i++) {
+            cursor = (cursor + 1) % events.length;
+            const event = events[cursor];
 
-    for (let i = 0; i < events.length && picked.length < slotsWanted; i++) {
-        cursor = (cursor + 1) % events.length;
-        const event = events[cursor];
-        if (slide % periodFor(now - event.at) === 0) picked.push(event);
+            if (picked.includes(event)) continue;
+            if (holding && holding.has(changeKey(event.change))) continue;
+            if (due && slide % periodFor(now - event.at) !== 0) continue;
+
+            picked.push(event);
+        }
+    };
+
+    sweep(true);
+    sweep(false);
+
+    return picked;
+}
+
+function fadeTo(picked) {
+    const key = picked.map((e) => changeKey(e.change)).join("|");
+
+    if (key === shownKey) {
+        picked.forEach((event, i) => {
+            if (slots[i]) slots[i].age.textContent = ageLabel(Date.now() - event.at);
+        });
+        return;
     }
+    shownKey = key;
 
-    show(picked.length ? picked : [events[0]]);
+    bar.classList.add("ticker-fading");
+    clearTimeout(fadeTimer);
+    fadeTimer = setTimeout(() => {
+        show(picked);
+        // two frames: the incoming region is display:none until show() runs
+        requestAnimationFrame(() => requestAnimationFrame(() => bar.classList.remove("ticker-fading")));
+    }, FADE_MS);
 }
 
 const PAN_PX_PER_SEC = 40;
@@ -309,7 +390,5 @@ function show(picked) {
         slot.dot.className = "ticker-dot" + (event.change.i ? " ticker-new" : "");
         slot.item.dataset.mmsi = event.change.mmsi;
         slot.item.title = text;
-
-        if (changed) slot.item.animate([{ opacity: 0 }, { opacity: 1 }], { duration: FADE_MS, easing: "ease-out" });
     });
 }

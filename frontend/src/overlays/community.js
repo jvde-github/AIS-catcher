@@ -57,10 +57,10 @@ export function updateSharingState(sharing, sharing_uuid, engine_running) {
 
 function sharingState() {
     const f = liveSharing || deps.config.features || {};
-    if (f.engine_running === false) return { label: "Receiver stopped", color: "gray" };
-    if (!f.sharing)        return { label: "No", color: "red" };
-    if (!f.sharing_uuid)   return { label: "Yes (anonymous)", color: "orange" };
-    return { label: "Yes", color: "green" };
+    if (f.engine_running === false) return { label: "Receiver stopped", color: "gray", state: "stopped" };
+    if (!f.sharing)        return { label: "No", color: "red", state: "off" };
+    if (!f.sharing_uuid)   return { label: "Yes (anonymous)", color: "orange", state: "anon" };
+    return { label: "Yes", color: "green", state: "on" };
 }
 
 export function sharingDisplay() {
@@ -68,12 +68,16 @@ export function sharingDisplay() {
     return [s.label, s.color];
 }
 
+let sharingPosted = null;
+
 export function applySharingState() {
-    const btn = document.getElementById("xchange");
-    if (btn) {
-        btn.classList.remove("fill-red", "fill-orange", "fill-green", "fill-gray");
-        btn.classList.add("fill-" + sharingState().color);
-    }
+    const state = sharingState().state;
+    if (window.parent === window || sharingPosted === state) return;
+
+    sharingPosted = state;
+    try {
+        window.parent.postMessage({ type: "aiscatcher:sharing", state }, window.location.origin);
+    } catch (e) { }
 }
 
 export function isPaneOpen() {

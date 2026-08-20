@@ -15,7 +15,7 @@ import { fromLonLat } from 'ol/proj';
 import { settings } from '../core/state.js';
 import { decodeHTMLEntities } from '../core/util.js';
 import { shipOutlineLocal } from '../core/geo.js';
-import { getSpeedVal, getSpeedUnit, getDeltaTimeVal, getFlagStyled, getShipTypeShort, sanitizeString } from '../core/format.js';
+import { getSpeedVal, getSpeedUnit, getDeltaTimeVal, getFlagStyled, getShipTypeShort, sanitizeString, TOOLTIP_FLAG_STYLE } from '../core/format.js';
 
 // { getReceiver, spriteFor, iconScale, fadeOpacity, labelText, spriteSheet,
 //   getResolution, hullStyle, setLiveLayers, showNotification, onStateChange }
@@ -490,14 +490,11 @@ function sample(s, T) {
     return holdAt(s, a, T);
 }
 
-// matches TOOLTIP_FLAG_STYLE on the live map, so the two tooltips look alike
-const FLAG_STYLE = "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%";
-
 // built from the frame being shown, so it follows the replay clock
 function tooltipHTML(mmsi, s, fix) {
     if (!fix) return '';
     let html = '<div class="tooltip-card">'
-        + getFlagStyled(s.country, FLAG_STYLE) + '<div>'
+        + getFlagStyled(s.country, TOOLTIP_FLAG_STYLE) + '<div>'
         + (s.name || 'MMSI ' + mmsi)
         + '<span class="tooltip-dim"> at </span>' + getSpeedVal(fix.knots || 0) + ' ' + getSpeedUnit();
     let sub = '';

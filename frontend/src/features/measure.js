@@ -177,6 +177,7 @@ export function refreshMeasures() {
     });
 
     mapcardContent.innerHTML = content;
+    deps.onMeasuresChanged();
 }
 
 function startMeasurementAtPoint(t, v) {
@@ -223,6 +224,10 @@ export function cancel() {
 
 export function isActive() {
     return measureMode || isMeasuring;
+}
+
+export function count() {
+    return measures.length;
 }
 
 // `shipMmsi` is null for a bare map point; `getLonLat` is lazy because the

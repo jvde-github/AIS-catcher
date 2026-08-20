@@ -266,7 +266,7 @@ export function getShipDimensionSVG(ship) {
 
 export const getShipDimension = (ship) =>
     ship.to_bow != null && ship.to_stern != null && ship.to_port != null && ship.to_starboard != null
-        ? getDimVal(ship.to_bow + ship.to_stern) + " " + getDimUnit() + " x " + getDimVal(ship.to_port + ship.to_starboard) + " " + getDimUnit()
+        ? getDimVal(ship.to_bow + ship.to_stern) + " \u00d7 " + getDimVal(ship.to_port + ship.to_starboard) + " " + getDimUnit()
         : null;
 
 export function decimalToDMS(l, isLatitude) {
@@ -388,6 +388,11 @@ export function getFlag(country) {
         ? `<span style="padding-right: 10px" title="` + getCountryName(country) + `" class="fi fi-${country.toLowerCase()}"></span> `
         : "<span></span>";
 }
+
+export const TOOLTIP_FLAG_STYLE =
+    "padding: 0px; margin: 0px; margin-right: 6px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 25px; opacity: 70%";
+
+export const CARD_FLAG_STYLE = "padding: 0px; margin: 0px; margin-right: 5px; box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5); font-size: 30px;";
 
 export function getFlagStyled(country, style) {
     return country

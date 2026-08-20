@@ -32,6 +32,7 @@ import {
     getLatValFormat, getLonValFormat,
     getEtaVal, getDeltaTimeVal,
     getShipName, getCallSign, setShipNameProvider, setCallSignProvider,
+    TOOLTIP_FLAG_STYLE, CARD_FLAG_STYLE,
     getCountryName, getFlagStyled,
     getStatusVal, getMmsiTypeVal,
     getStringfromMsgType, getStringfromGroup, getStringfromChannels,
@@ -147,6 +148,8 @@ const ACTIONS = {
     // tableside / generic close buttons / dialog
     hideTablecard: () => hideTablecard(),
     updateTableSort: (e, dataset, el) => updateTableSort(e, dataset, el),
+    tablePagePrev: () => turnTablePage(-1),
+    tablePageNext: () => turnTablePage(1),
     closeSettings: () => closeSettings(),
     closeDialog: () => closeDialog(),
 
@@ -165,6 +168,7 @@ const ACTIONS = {
     setKioskPanMap: (e, d, el) => kiosk.setKioskPanMap(el.checked),
     setGraphVisibility: (e, d, el) => setGraphVisibility(d.graph, el.checked),
     setPlotAbsoluteTime: (e, d, el) => setPlotAbsoluteTime(el.checked),
+    setMapToolbar: (e, d, el) => { settings.map_toolbar = el.value; saveSettings(); applyToolbarMode(); },
     setMapSetting: (e, d, el) => setMapSetting(d.key,
         el.type === 'checkbox' ? el.checked :
         (el.type === 'range' || el.type === 'number') ? Number(el.value) : el.value),
@@ -238,15 +242,12 @@ const ACTIONS = {
     // vessel filter
     openFilterPanel: () => openFilterPanel(),
     resetFilter: () => resetFilter(),
-    toggleFilterBucket: (e, d) => { filter.toggle("bucket", d.bucket); applyFilter(); },
-    toggleFilterItem: (e, d, el) => {
-        if (d.kind === "sender") filter.setSender(filter.SENDERS.find((x) => x.id === d.id), el.checked);
-        else filter.toggle(d.kind, Number(d.id));
+    toggleFilterItem: (e, d) => {
+        filter.toggle(d.kind, d.kind === "bucket" ? d.id : Number(d.id));
         applyFilter();
     },
     setAllFilterItems: (e, d) => {
-        if (d.kind === "sender") filter.setAllSenders(d.on === "1");
-        else filter.setAll(d.kind, d.on === "1");
+        filter.setAll(d.kind, d.on === "1");
         applyFilter();
     },
     setFilterNumber: (e, d, el) => setFilterValue(d.key, el.value === "" ? null : Number(el.value)),
@@ -300,7 +301,7 @@ const ACTIONS = {
     toggleTablecard: () => toggleTablecard(),
     mapSettingsContextMenu: (e, d, el) => showContextMenu(e, '', '', ['settings', 'ctx-map'], el),
     toggleCommunityPane: () => community.toggleCommunityPane(),
-    showMapMenu: (e) => showMapMenu(e),
+    openMapSettings: () => openSettingsTab("Map"),
     toggleAttribution: () => toggleAttribution(),
     mainspaceContextMenu: (e) => showContextMenu(e, 0, '', ['settings']),
     plotsContextMenu: (e) => showContextMenu(e, '', 'charts', ['settings', 'ctx-charts']),
@@ -534,7 +535,7 @@ const DEFAULT_SETTINGS = {
         center_radius: 0,
         show_station: true,
         ticker: true,
-        ticker_bottom: false,
+        ticker_bottom: true,
         metric: "DEFAULT",
         setcoord: true,
         tab: "map",
@@ -552,6 +553,7 @@ const DEFAULT_SETTINGS = {
         show_all_tracks: false,
         shipcard_pinned: false,
         shipcard_top_left: false,
+        map_toolbar: "compact",
         show_signal_graphs: true,
         show_ppm_graphs: true,
         plot_absolute_time: true,
@@ -592,10 +594,12 @@ function applyDefaultSettings() {
 
     let android = settings.android;
     let darkmode = settings.dark_mode;
+    const ship_filter = settings.ship_filter;
     restoreDefaultSettings();
 
     settings.android = android;
     settings.dark_mode = darkmode;
+    if (ship_filter) settings.ship_filter = ship_filter;
 
     updateSortMarkers();
     setDarkMode(settings.dark_mode);
@@ -611,6 +615,7 @@ function applyDefaultSettings() {
     saveSettings();
 
     redrawMap();
+    applyPanels();
     updateSettingsTab();
     showNotification("Settings restored to defaults", "success");
 }
@@ -649,6 +654,15 @@ function attributionPlain(layer) {
     const div = document.createElement('div');
     div.innerHTML = attributionHTML(layer);
     return (div.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
+function refreshBaseMapCredit() {
+    const note = document.getElementById("basemap_credit");
+    if (!note) return;
+
+    const credit = attributionHTML(basemaps[baseMapSelector.value]);
+    note.innerHTML = credit;
+    note.style.display = credit ? "" : "none";
 }
 
 // polling overlays get their source only once switched on
@@ -768,11 +782,11 @@ async function copyClipboard(t) {
 }
 
 const SETTINGS_TAB_GROUPS = [
-    { title: "System", subs: [["System", "General"]] },
+    { title: "General", subs: [["System", "General"]] },
     {
         title: "Map", subs: [
-            ["Map", "General"], ["Ship Labels", "Labels"], ["Ship Outline", "Ships"],
-            ["Binary Messages", "Binary"], ["Station Range", "Range"], ["Tracks", "Tracks"],
+            ["Map", "General"], ["Ship Outline", "Ships"], ["Ship Labels", "Labels"],
+            ["Tracks", "Tracks"], ["Station Range", "Range"], ["Binary Messages", "Binary"],
             ["Kiosk", "Kiosk"]
         ]
     },
@@ -802,8 +816,23 @@ function makeSettingsTab(label, activate) {
     return tab;
 }
 
+function groupSettingsRows(main) {
+    main.querySelectorAll("section").forEach((section) => {
+        if (section.querySelector(".st-group, .filter-checks, #overlayContainer")) return;
+
+        const rows = Array.from(section.children).filter((el) => el.tagName !== "H5");
+        if (!rows.length) return;
+
+        const box = document.createElement("div");
+        box.className = "st-group";
+        rows.forEach((row) => box.appendChild(row));
+        section.appendChild(box);
+    });
+}
+
 function buildSettingsTabs() {
     const main = document.querySelector(".settings_main");
+    groupSettingsRows(main);
 
     const parsed = {};
     let currentName = null;
@@ -898,6 +927,10 @@ function selectSettingsSub(groupIdx, subIdx) {
 function openSettings() {
     updateSettingsTab();
     updateFilterUI();
+    baseMapSelector.value = settings.dark_mode ? settings.map_night : settings.map_day;
+    refreshBaseMapCredit();
+    refreshOverlayCredits();
+    updateLabelColorRows();
     document.querySelector(".settings_window").classList.add("active");
 }
 
@@ -1236,8 +1269,6 @@ async function copyText(m) {
     if (await copyClipboard(m)) showNotification("Content copied to clipboard", "success");
 }
 
-const TOOLTIP_FLAG_STYLE = "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%";
-const CARD_FLAG_STYLE = "padding: 0px; margin: 0px; margin-right: 5px; box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5); font-size: 26px;";
 
 const EXT_LINKS = {
     aiscatcher:    id => `https://www.aiscatcher.org/ship/details/${id}`,
@@ -1249,36 +1280,6 @@ const EXT_LINKS = {
     flightaware:   id => `https://flightaware.com/live/modes/${getICAOFromHexIdent(id)}/redirect`,
 };
 function openExt(key, id) { window.open(EXT_LINKS[key](id)); }
-
-const mapMenu = document.getElementById("map-menu");
-
-function hideMapMenu(event) {
-
-    if (!mapMenu.contains(event.target)) {
-        mapMenu.style.display = "none";
-        document.removeEventListener("click", hideMapMenu);
-    }
-}
-
-function showMapMenu(event) {
-
-    hideContextMenu();
-    if (event && event.preventDefault) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
-
-    baseMapSelector.value = settings.dark_mode ? settings.map_night : settings.map_day;
-    refreshOverlayCredits();
-
-    mapMenu.style.display = "block";
-
-    mapMenu.style.left = "50%";
-    mapMenu.style.top = "50%";
-    mapMenu.style.transform = "translate(-50%, -50%)";
-
-    document.addEventListener("click", hideMapMenu);
-}
 
 const contextMenu = document.getElementById("context-menu");
 
@@ -1292,6 +1293,7 @@ const MENU_CHECKS = {
     toggleLabel: () => settings.show_labels != "never",
     toggleRange: () => settings.show_range,
     toggleAttribution: () => attributionPinned,
+    toggleTicker: () => settings.ticker,
     toggleReplaycard: () => replaycardVisible(),
     toggleMeasurecard: () => measurecardVisible(),
     toggleCommunityPane: () => community.isPaneOpen(),
@@ -1342,8 +1344,6 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
         event.preventDefault();
         event.stopPropagation();
     }
-
-    hideMapMenu(event);
 
     context_mmsi = mmsi;
     context_type = type;
@@ -1700,15 +1700,17 @@ function initMap() {
 
     Object.keys(basemaps).forEach(key => {
         const option = document.createElement("option");
-        const credit = attributionPlain(basemaps[key]);
         option.value = key;
-        option.textContent = credit ? `${key} — ${credit}` : key;
-        option.title = option.textContent;
+        option.textContent = key;
+        option.title = attributionPlain(basemaps[key]) || key;
         baseMapSelector.appendChild(option);
     });
     baseMapSelector.value = settings.dark_mode ? settings.map_night : settings.map_day;
 
-    baseMapSelector.addEventListener('change', function () { setMap(this.value); });
+    baseMapSelector.addEventListener('change', function () {
+        setMap(this.value);
+        refreshBaseMapCredit();
+    });
 
     Object.keys(overlapmaps).forEach(addOverlayCheckbox);
 
@@ -1809,6 +1811,7 @@ function updateTableSort(event, dataset, header) {
     settings.tableside_order = newOrder;
 
     saveSettings();
+    tablePage = 0;
     updateSortMarkers();
     updateTablecard();
 }
@@ -1840,7 +1843,52 @@ function compareString(valueA, valueB) {
     return (valueA + "").localeCompare(valueB + "");
 }
 
-document.getElementById('shipSearchSide').addEventListener('input', updateTablecard);
+document.getElementById('shipSearchSide').addEventListener('input', () => { tablePage = 0; updateTablecard(); });
+
+const TABLE_STALE_SEC = 600;
+const TABLE_FLAG_STYLE = "padding:0;margin:0 6px 0 0;box-shadow:1px 1px 2px rgba(0,0,0,0.2);font-size:16px;";
+
+let tablePage = 0;
+let tablePerPage = 0;
+let tableRedrawing = false;
+
+// 0 while the panel has no height yet, which happens on the frame it opens
+function tablePageSize() {
+    const inner = document.querySelector(".tablecard_inner");
+    const head = document.querySelector(".mytable thead");
+    const row = document.querySelector("#tablecardBody tr");
+    const rowHeight = Math.max(18, row ? row.getBoundingClientRect().height : 26);
+    const space = (inner ? inner.getBoundingClientRect().height : 0) -
+        (head ? head.getBoundingClientRect().height : 0);
+
+    return space < rowHeight ? 0 : Math.max(1, Math.floor(space / rowHeight));
+}
+
+// sub-pixel row heights make the arithmetic above optimistic by a row
+function tableRowsFitting() {
+    const inner = document.querySelector(".tablecard_inner");
+    if (!inner) return 0;
+
+    const bottom = inner.getBoundingClientRect().bottom;
+    return [...document.querySelectorAll("#tablecardBody tr")]
+        .filter((tr) => tr.getBoundingClientRect().bottom <= bottom + 1).length;
+}
+
+function renderTablePager(total, pages) {
+    const pager = document.getElementById("tablePager");
+    pager.hidden = pages < 2;
+    if (pager.hidden) return;
+
+    document.getElementById("tablePageLabel").textContent =
+        `${tablePage + 1} / ${pages} · ${total}`;
+    pager.querySelector('[data-action="tablePagePrev"]').disabled = tablePage === 0;
+    pager.querySelector('[data-action="tablePageNext"]').disabled = tablePage >= pages - 1;
+}
+
+function turnTablePage(step) {
+    tablePage += step;
+    updateTablecard();
+}
 
 function updateTablecard() {
     if (!document.getElementById("tableside").classList.contains("active")) return;
@@ -1873,34 +1921,61 @@ function updateTablecard() {
 
     const nameQuery = document.getElementById('shipSearchSide').value.toLowerCase();
 
-    const rows = [];
-    let addedRows = 0;
+    document.getElementById("table_dist_unit").textContent = getDistanceUnit();
+    document.getElementById("table_spd_unit").textContent = getSpeedUnit();
 
-    for (let i = 0; i < shipKeys.length && addedRows < 200; i++) {
-        const key = shipKeys[i];
-        if (!(key in shipsDB)) continue;
-        if (!shipVisible(shipsDB[key])) continue;
+    const shown = shipKeys.filter((key) => {
+        if (!(key in shipsDB) || !shipVisible(shipsDB[key])) return false;
+        if (!nameQuery) return true;
+        return String(getShipName(shipsDB[key].raw) || shipsDB[key].raw.mmsi).toLowerCase().includes(nameQuery);
+    });
+
+    const perPage = tablePerPage || tablePageSize();
+    if (!perPage) {
+        if (!tableRedrawing) {
+            tableRedrawing = true;
+            // re-enter only if a height exists by then; a panel that stays too
+            // short waits for the next resize instead of retrying every frame
+            requestAnimationFrame(() => { tableRedrawing = false; if (tablePageSize()) updateTablecard(); });
+        }
+        return;
+    }
+
+    const pages = Math.max(1, Math.ceil(shown.length / perPage));
+    tablePage = Math.min(Math.max(0, tablePage), pages - 1);
+
+    const rows = [];
+    for (const key of shown.slice(tablePage * perPage, (tablePage + 1) * perPage)) {
         const ship = shipsDB[key].raw;
         const shipName = String(getShipName(ship) || ship.mmsi);
-        if (nameQuery && !shipName.toLowerCase().includes(nameQuery)) continue;
+        const age = clock - ship.last_signal;
 
-        const dist = ship.distance != null ? (getDistanceVal(ship.distance) + (ship.repeat > 0 ? " (R)" : "")) : "";
-        const distTitle = ship.distance != null ? getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "") : "";
-        const spd = ship.speed != null ? getSpeedVal(ship.speed) : "";
-        const spdTitle = ship.speed != null ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : "";
+        const dist = ship.distance != null ? getDistanceVal(ship.distance) : "-";
+        const spd = ship.speed != null ? getSpeedVal(ship.speed) : "-";
+        const cls = (ship.mmsi == card_mmsi && card_type === "ship" ? " selected" : "") +
+            (age > TABLE_STALE_SEC ? " stale" : "");
 
-        rows.push(`<tr data-mmsi="${ship.mmsi}">` +
-            `<td>${getFlagStyled(ship.country, "padding:0;margin:0;box-shadow:1px 1px 2px rgba(0,0,0,0.2);font-size:16px;")}</td>` +
-            `<td>${shipName}</td>` +
-            `<td title="${distTitle}">${dist}</td>` +
-            `<td title="${spdTitle}">${spd}</td>` +
+        rows.push(`<tr class="${cls.trim()}" data-mmsi="${ship.mmsi}">` +
+            `<td>${getFlagStyled(ship.country, TABLE_FLAG_STYLE)}${shipName}` +
+            (ship.repeat > 0 ? `<span class="row-relay" title="Received through another station">&#8635;</span>` : "") +
+            `</td>` +
+            `<td class="num">${dist}</td>` +
+            `<td class="num">${spd}</td>` +
             `<td>${getTableShiptype(ship)}</td>` +
-            `<td>${getDeltaTimeVal(clock - ship.last_signal)}</td>` +
+            `<td class="num">${getDeltaTimeVal(age)}</td>` +
             `</tr>`);
-        addedRows++;
     }
 
     tableBody.innerHTML = rows.join('');
+    renderTablePager(shown.length, pages);
+
+    const fits = tableRowsFitting();
+    if (fits && fits !== perPage && rows.length === perPage && !tableRedrawing) {
+        tablePerPage = fits;
+        tableRedrawing = true;
+        updateTablecard();
+        tableRedrawing = false;
+    }
 
     tableBody.onmouseover = function(e) {
         const tr = e.target.closest('tr[data-mmsi]');
@@ -1953,7 +2028,7 @@ function renderCounts() {
         el.classList.toggle("count-filtered", active);
         el.parentElement.title = active
             ? shipCounts.shown + " of " + shipCounts.total + " vessels shown"
-            : "Counters";
+            : shipCounts.total + " vessels";
     }
 
     updateFilterIndicator();
@@ -1962,13 +2037,21 @@ function renderCounts() {
     if (panels.statcard) updateMarkerCountTooltip();
 }
 
+function updateMeasureIndicator() {
+    const btn = document.getElementById("measure-btn");
+    if (!btn) return;
+
+    const n = measure.count();
+    btn.classList.toggle("is-active", panels.measure || n > 0);
+    btn.title = n ? "Measure distance (" + n + ")" : "Measure distance";
+}
+
 function updateFilterIndicator() {
     const btn = document.getElementById("filter-btn");
     if (!btn) return;
 
     const active = filter.isActive();
     btn.classList.toggle("is-active", active);
-    btn.classList.toggle("color-grey", !active);
     btn.title = active
         ? "Filter: " + filter.describe().join(" \u00b7 ") + " (" + shipCounts.shown + " of " + shipCounts.total + ")"
         : "Filter vessels";
@@ -2040,14 +2123,8 @@ function updateFilterUI() {
     for (const [kind, box] of Object.entries(FILTER_LISTS)) {
         buildFilterList(box, kind);
         document.querySelectorAll("#" + box + " input").forEach((el) => {
-            const id = kind === "sender" ? el.dataset.id : Number(el.dataset.id);
-            if (kind === "sender") {
-                const state = filter.senderState(filter.SENDERS.find((x) => x.id === id));
-                el.checked = state !== "off";
-                el.indeterminate = state === "partial";
-            } else {
-                el.checked = !filter.isHidden(kind, id);
-            }
+            const id = kind === "bucket" ? el.dataset.id : Number(el.dataset.id);
+            el.checked = !filter.isHidden(kind, id);
         });
     }
 
@@ -2059,20 +2136,16 @@ function updateFilterUI() {
     if (distance) distance.style.display = known ? "" : "none";
 }
 
-const FILTER_LISTS = { sender: "filter_senders", class: "filter_classes", status: "filter_statuses" };
-
-function filterItems(kind) {
-    return kind === "sender" ? filter.SENDERS : filter.LISTS[kind].items();
-}
+const FILTER_LISTS = { bucket: "filter_senders", class: "filter_classes", status: "filter_statuses" };
 
 function buildFilterList(boxId, kind) {
     const box = document.getElementById(boxId);
     if (!box || box.dataset.built) return;
     box.dataset.built = "1";
-    box.innerHTML = filterItems(kind).map((item) => {
+    box.innerHTML = filter.LISTS[kind].items().map((item) => {
         const icon = item.pos
             ? '<span class="' + (item.icon || "shipicon") + '" style="background-position: ' + item.pos +
-              '; transform: scale(1.15)"></span>'
+              '; transform: scale(1.15)' + (item.spin ? " rotate(45deg)" : "") + '"></span>'
             : "";
         return '<label class="filter-check"><input type="checkbox" data-on-change="toggleFilterItem"' +
             ' data-kind="' + kind + '" data-id="' + item.id + '">' + icon +
@@ -2188,8 +2261,6 @@ function panelElements() {
         table: document.getElementById("tableside"),
         countersBtn: document.getElementById("counters-btn"),
         tableBtn: document.getElementById("table-btn"),
-        tickerBtn: document.getElementById("ticker-btn"),
-        shifted: [...document.querySelectorAll(".map-button-box, #ticker, #statcard")],
         popovers: [...document.querySelectorAll("#shipcard .tech-popover")],
     };
     return panelEls;
@@ -2211,12 +2282,14 @@ function applyPanels(opts = {}) {
     document.body.classList.toggle("replay-open", panels.replay);
     document.body.classList.toggle("ticker-open", tickerOn);
     document.body.classList.toggle("ticker-bottom", !!settings.ticker_bottom);
+    document.body.classList.toggle("table-open", panels.table);
 
-    el.shifted.forEach((e) => e.classList.toggle("active", panels.table));
+    applyToolbarMode();
+    mapChromeCache = null;
 
     el.countersBtn?.classList.toggle("is-active", panels.statcard);
     el.tableBtn?.classList.toggle("is-active", panels.table);
-    el.tickerBtn?.classList.toggle("is-active", !!settings.ticker);
+    updateMeasureIndicator();
 
     if (!panels.shipcard) shipcard.closePopovers();
     if (!panels.statcard) resetCardPosition(el.statcard);
@@ -2640,7 +2713,12 @@ function handleFullScreenChange() {
 function setMapSetting(a, v) {
     settings[a] = v;
     saveSettings();
+    if (a === "label_class_background") updateLabelColorRows();
     redrawMap();
+}
+
+function updateLabelColorRows() {
+    document.querySelectorAll(".label-colors").forEach((s) => { s.hidden = !!settings.label_class_background; });
 }
 
 function setTrackHistory(minutes) {
@@ -2723,7 +2801,7 @@ function updateSpeedLegend() {
     if (!bar) return;
     bar.style.background = paletteCSS(settings.track_speed_palette);
     document.getElementById("track_speed_scale_label").textContent =
-        `Scale (0 - ${speedWhole(settings.track_speed_max)} ${getSpeedUnit()})`;
+        `Preview (0 - ${speedWhole(settings.track_speed_max)} ${getSpeedUnit()})`;
 }
 
 function selectableShipcardRows() {
@@ -3086,14 +3164,66 @@ function updateFocusMarker() {
     selectCircleFeature = syncCircleFeature(selectCircleFeature, raw, card_mmsi, selectCircleStyleFunction);
 }
 
+// recomputed only when the chrome moves: hover runs this for every feature the
+// pointer crosses, and the answers change only on resize and panel toggles
+let mapChromeCache = null;
+
+function mapChrome() {
+    if (mapChromeCache) return mapChromeCache;
+
+    const frame = map.getTargetElement().getBoundingClientRect();
+    const rect = (selector) => {
+        const el = document.querySelector(selector);
+        if (!el || !el.offsetParent) return null;
+        const r = el.getBoundingClientRect();
+        return r.width && r.height ? r : null;
+    };
+
+    // the controls float inside the free area, and are gone in toolbar mode
+    let controlsLeft = null;
+    for (const selector of [".map-button-box.map-pill:not(.map-bottom)", ".map-button-box.map-bottom"]) {
+        const r = rect(selector);
+        if (r) controlsLeft = Math.min(controlsLeft ?? Infinity, r.left - frame.left);
+    }
+    const toolbar = rect("#maptoolbar");
+
+    mapChromeCache = {
+        width: frame.width,
+        height: frame.height,
+        top: mapInset("top"),
+        right: mapInset("right"),
+        bottom: mapInset("bottom"),
+        controlsLeft,
+        toolbarTop: toolbar ? toolbar.top - frame.top : null,
+    };
+    return mapChromeCache;
+}
+
+function tooltipBounds(tw, th) {
+    const c = mapChrome();
+    const gap = mapGap();
+
+    const bounds = {
+        minX: gap,
+        minY: c.top,
+        maxX: c.width - tw - c.right,
+        maxY: c.height - th - c.bottom,
+    };
+
+    if (c.controlsLeft != null) bounds.maxX = Math.min(bounds.maxX, c.controlsLeft - tw - gap);
+    if (c.toolbarTop != null) bounds.maxY = Math.min(bounds.maxY, c.toolbarTop - th - gap);
+
+    return bounds;
+}
+
 const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
 
     tooltip.innerHTML = mmsi;
 
     if (pixel) {
-        const [mapW, mapH] = map.getSize();
         const { offsetWidth: tw, offsetHeight: th } = tooltip;
         const dist = distance;
+        const bounds = tooltipBounds(tw, th);
 
         // we position the tooltip top-right of the ship in the direction of the ship's course to minimize overlap with path
         const calculatePosition = (a) => {
@@ -3106,14 +3236,13 @@ const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
         };
 
         let pos = calculatePosition(angle);
-        // if it is off the screen, we try to move it to the opposite side
-        if (pos.x + tw > mapW - 50 || pos.x < 0 || pos.y + th > mapH - 10 || pos.y < 0) {
+        // if it lands outside what is free, we try the opposite side
+        if (pos.x > bounds.maxX || pos.x < bounds.minX || pos.y > bounds.maxY || pos.y < bounds.minY) {
             pos = calculatePosition(angle + 180);
         }
 
-        // avoid that it is on top of controls or off screen
-        pos.x = Math.min(Math.max(pos.x, 10), mapW - tw - 50);
-        pos.y = Math.min(Math.max(pos.y, 10), mapH - th - 10);
+        pos.x = Math.min(Math.max(pos.x, bounds.minX), Math.max(bounds.minX, bounds.maxX));
+        pos.y = Math.min(Math.max(pos.y, bounds.minY), Math.max(bounds.minY, bounds.maxY));
 
         Object.assign(tooltip.style, {
             left: `${pos.x}px`,
@@ -3513,18 +3642,24 @@ function toggleReplaycard() {
     if (panels.replay) {
         measure.cancel();
 
-        // before anything is loaded the scrubber spans the server's whole
-        // history, so dragging it chooses where playback will start
-        replay.refreshBounds().then(updateReplaycard);
+        // the bar owns the map from the moment it opens
+        showShipcard(null, null);
+        stopHover();
+        setLiveLayersVisible(false);
+
+        replay.refreshBounds().then(() => {
+            // the user may have closed the bar while the fetch was in flight
+            if (!panels.replay) return;
+            updateReplaycard();
+            replayShowAt(replayScrubTime(document.getElementById("replayScrub").value));
+        });
     } else {
         replayLoadAt.cancel();
         stopReplay();
     }
 }
 
-// The scrubber means "start here" until a load has happened, and "seek here"
-// after — so Play is the only control needed to get from opening the bar to
-// watching the fleet move.
+// opening the bar already loaded the frame; this load is the fallback
 async function replayToggle() {
     if (replay.isLoading()) return;
 
@@ -4248,6 +4383,7 @@ function toggleShipcardPin() {
 // The ticker owns the top strip. A card that starts above it hides the very
 // thing that announced the vessel, so cards begin below it while it is out.
 const cssPxCache = new Map();
+window.addEventListener("resize", () => { cssPxCache.clear(); mapChromeCache = null; });
 
 function cssPx(name, fallback) {
     if (cssPxCache.has(name)) return cssPxCache.get(name);
@@ -4256,6 +4392,51 @@ function cssPx(name, fallback) {
     const value = isNaN(px) ? fallback : px;
     cssPxCache.set(name, value);
     return value;
+}
+
+let toolbarWidth = 0;
+let toolbarApplied = null;
+
+// the bar and the rail hold the same buttons; only the container changes
+function toolbarWide() {
+    if (settings.map_toolbar !== "wide" || isKiosk() || panels.replay) return false;
+
+    // centred, so the zoom column has to fit in the half-space beside it
+    return freeMapWidth() >= toolbarWidth + 2 * (cssPx("--size-map-controls", 44) + mapGap() * 2);
+}
+
+function applyToolbarMode() {
+    const bar = document.getElementById("maptoolbar");
+    const rail = document.querySelector(".map-button-box.map-pill:not(.map-bottom)");
+    if (!bar || !rail) return;
+
+    const buttons = [...rail.querySelectorAll("button[data-label]"), ...bar.querySelectorAll("button[data-label]")];
+
+    for (const btn of buttons) {
+        if (!btn.querySelector(".mb-label")) {
+            const label = document.createElement("span");
+            label.className = "mb-label";
+            label.textContent = btn.dataset.label;
+            btn.appendChild(label);
+        }
+    }
+
+    // display:none while compact, so the bar's natural width is taken once
+    // from an off-screen layout rather than guessed
+    if (!toolbarWidth) {
+        bar.style.cssText = "display:flex;visibility:hidden;position:absolute;left:-9999px";
+        for (const btn of buttons) bar.appendChild(btn);
+        toolbarWidth = bar.scrollWidth || 520;
+        bar.removeAttribute("style");
+    }
+
+    const wide = toolbarWide();
+    if (wide === toolbarApplied) return;
+    toolbarApplied = wide;
+
+    const host = wide ? bar : rail;
+    for (const btn of buttons) host.appendChild(btn);
+    document.body.classList.toggle("toolbar-wide", wide);
 }
 
 const mqFullBleed = window.matchMedia("(max-width: 500px), (max-height: 800px)");
@@ -4269,34 +4450,62 @@ function tickerAtTop() {
     return document.body.classList.contains("ticker-open") && !settings.ticker_bottom;
 }
 
+// off body: a custom property does not travel back up to the root element
+function mapInset(edge) {
+    const px = parseFloat(getComputedStyle(document.body).getPropertyValue("--map-inset-" + edge));
+    if (!isNaN(px)) return px;
+
+    // no @property support: the calc() comes back unresolved, so rebuild the
+    // value from the same facts the CSS derives it from
+    const cls = document.body.classList;
+    let inset = mapGap();
+    if (edge === "top" && cls.contains("ticker-open") && !cls.contains("ticker-bottom")) inset += cssPx("--size-ticker", 44);
+    if (edge === "bottom" && cls.contains("ticker-open") && cls.contains("ticker-bottom")) inset += cssPx("--size-ticker", 44);
+    if (edge === "right" && cls.contains("table-open")) inset += cssPx("--size-panel", 430);
+    return inset;
+}
+
 function tickerInset() {
     if (cardFullBleed() || mqNarrow.matches || !tickerAtTop()) return 0;
-    return mapGap() + cssPx("--size-ticker", 44);
+    return mapInset("top");
 }
 
 function mapTopInset() {
     if (cardFullBleed()) return 0;
 
-    const gap = mapGap();
-    if (!tickerAtTop()) return gap;
-
     // On a narrow screen the card takes the whole top anyway; giving the bar
     // its strip there would cost the card room it has none of to spare.
-    if (mqNarrow.matches) return gap;
+    if (mqNarrow.matches) return mapGap();
 
-    return gap * 2 + cssPx("--size-ticker", 44);
+    return mapInset("top");
 }
 
 function mapGap() {
     return cssPx("--size-map-gap", 10);
 }
 
+function freeMapWidth() {
+    const mapSize = map ? map.getSize() : null;
+    return (mapSize ? mapSize[0] : window.innerWidth) - (panels.table ? cssPx("--size-panel", 430) : 0);
+}
+
+// a docked card lines up with the side panels, whatever the header is doing
+function panelTopOffset() {
+    if (cardFullBleed()) return 0;
+
+    const panel = document.getElementById("tableside");
+    const parent = panelElements().shipcard.offsetParent;
+    if (!panel || !parent) return 0;
+
+    return Math.max(0, Math.round(panel.getBoundingClientRect().top - parent.getBoundingClientRect().top));
+}
+
 function placeTopLeft(aside) {
     const mapSize = map.getSize();
     const rect = aside.getBoundingClientRect();
-    if (mapSize && mapSize[0] >= rect.width + 20) {
-        aside.style.left = "0px";
-        aside.style.top = tickerInset() + "px";
+    if (mapSize && freeMapWidth() >= rect.width + 20) {
+        aside.style.left = mapGap() + "px";
+        aside.style.top = tickerInset() + panelTopOffset() + mapGap() + "px";
         aside.classList.add("floating");
     }
 }
@@ -4328,8 +4537,8 @@ function fitShipcard() {
     const top = mapTopInset();
     const bottom = height - margin;
     const available = bottom - top;
-
     aside.style.maxHeight = available + "px";
+    aside.style.maxWidth = Math.max(280, freeMapWidth() - margin * 2) + "px";
 
     if (aside.offsetHeight >= available) {
         aside.style.top = top + "px";
@@ -4927,6 +5136,7 @@ function updateSettingsTab() {
     });
 
     document.getElementById("settings_darkmode").checked = settings.dark_mode;
+    document.getElementById("settings_map_toolbar").value = settings.map_toolbar;
     document.getElementById("settings_coordinate_format").value = settings.coordinate_format;
     document.getElementById("settings_metric").value = getMetrics().toLowerCase();
     document.getElementById("settings_fading").checked = settings.fading;
@@ -5123,10 +5333,10 @@ const SLIDER_DISPLAYS = {
     kioskSpeed: ["kiosk_rotation_speed_label", (v) => `Rotation Speed (${v}s)`],
     trackWeight: ["track_weight_label", (v) => `Weight (${v})`],
     trackOpacity: ["track_opacity_label", (v) => `Opacity (${Math.round(parseFloat(v) * 100)}%)`],
-    trackHistory: ["track_history_label", (v) => `History (${trackHistoryLabel(Number(v))})`],
-    trackTrashThreshold: ["track_trash_threshold_label", (v) => `Dash Threshold (${v}s)`],
+    trackHistory: ["track_history_label", (v) => `Length (${trackHistoryLabel(Number(v))})`],
+    trackTrashThreshold: ["track_trash_threshold_label", (v) => `Dash After (${v}s)`],
     trackSpeedMax: ["track_speed_max_label", (v) => `Scale Max (${speedWhole(v)} ${getSpeedUnit()})`],
-    iconScale: ["icon_scale_label", (v) => `Marker Size (${parseFloat(v).toFixed(2)})`],
+    iconScale: ["icon_scale_label", (v) => `Size (${parseFloat(v).toFixed(2)})`],
     mapOpacity: ["map_opacity_label", (v) => `Map Dimming (${Math.round(parseFloat(v) * 100)}%)`],
     tooltipFontSize: ["tooltip_font_size_label", (v) => `Font Size (${v})`],
     shipoutlineOpacity: ["shipoutline_opacity_label", (v) => `Opacity (${parseFloat(v).toFixed(2)})`],
@@ -5352,6 +5562,7 @@ measure.init({
     getShipsDB: () => shipsDB,
     showNotification,
     ensureMeasurecardVisible: () => { if (!measurecardVisible()) toggleMeasurecard(); },
+    onMeasuresChanged: () => updateMeasureIndicator(),
 });
 binary.init({
     getActiveReceiver: () => activeReceiver,
@@ -5526,5 +5737,7 @@ window.addEventListener('load', () => {
 window.addEventListener('resize', debounce(() => {
     applyPanels({ reposition: false });
     fitShipcard();
+    tablePerPage = 0;
+    updateTablecard();
 }, 150));
 

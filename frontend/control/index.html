@@ -591,6 +591,14 @@
             height: 20px;
         }
 
+        #community-link { position: relative; }
+        #community-link::after { content: ""; position: absolute; left: 1px; right: 1px; bottom: -5px;
+                                 height: 2px; border-radius: 1px; background: transparent; }
+        #community-link.sharing-off::after { background: var(--color-danger); }
+        #community-link.sharing-anon::after { background: var(--color-warning); }
+        #community-link.sharing-on::after { background: var(--color-success); }
+        #community-link.sharing-stopped::after { background: var(--chrome-text-muted); }
+
         #community-link:hover {
             color: var(--chrome-text-hover);
         }

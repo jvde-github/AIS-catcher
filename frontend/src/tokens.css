@@ -178,7 +178,7 @@
     --color-surface-alt: var(--ink-300);
     --color-surface-raised: var(--ink-400);
     --color-band: var(--ink-100);
-    --color-band-soft: var(--ink-100);
+    --color-band-soft: var(--ink-300);
     --color-band-accent: var(--ink-300);
 
     --color-text: var(--ink-900);
@@ -364,7 +364,6 @@
        reads these too */
     --size-map-gap: 10px;
     --size-ticker: 44px;
-    --size-ticker-inset: calc(var(--size-map-gap) + var(--size-ticker) + var(--size-map-gap));
 
     --size-map-button: 34px;
     --size-map-controls: calc(var(--size-map-button) + 4px);

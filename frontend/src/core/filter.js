@@ -3,24 +3,18 @@ import { ShippingClass } from './constants.js';
 
 export const MOVING_KNOTS = 0.5;
 
+// icon and pos address the same sprite sheet the counters card draws from, so a
+// bucket looks the same wherever it is listed; spin marks the under-way sprites,
+// which are drawn at an angle
 export const BUCKETS = [
-    { id: "am", label: "Class A moving" },
-    { id: "as", label: "Class A stationary" },
-    { id: "bm", label: "Class B moving" },
-    { id: "bs", label: "Class B stationary" },
-    { id: "aton", label: "Aid-to-Navigation" },
-    { id: "base", label: "Base station" },
-    { id: "sarte", label: "SART / EPIRB" },
-    { id: "air", label: "Plane / helicopter" },
-];
-
-export const SENDERS = [
-    { id: "a", label: "Class A", buckets: ["am", "as"], icon: "shipicon", pos: "-120px 0px", spin: true },
-    { id: "b", label: "Class B", buckets: ["bm", "bs"], icon: "shipicon", pos: "-20px 0px", spin: true },
-    { id: "aton", label: "Aid-to-Navigation", buckets: ["aton"], icon: "staticon", pos: "0px -20px" },
-    { id: "base", label: "Base station", buckets: ["base"], icon: "staticon", pos: "-20px -20px" },
-    { id: "sarte", label: "SART / EPIRB", buckets: ["sarte"], icon: "staticon", pos: "-40px -20px" },
-    { id: "air", label: "Plane / helicopter", buckets: ["air"], icon: "helicoptericon", pos: "0px 0px", spin: true },
+    { id: "am", label: "Class A moving", icon: "shipicon", pos: "-120px 0px", spin: true },
+    { id: "as", label: "Class A stationary", icon: "shipicon", pos: "-120px -20px" },
+    { id: "bm", label: "Class B moving", icon: "shipicon", pos: "-20px 0px", spin: true },
+    { id: "bs", label: "Class B stationary", icon: "shipicon", pos: "-20px -20px" },
+    { id: "aton", label: "Aid-to-Navigation", icon: "staticon", pos: "0px -20px" },
+    { id: "base", label: "Base station", icon: "staticon", pos: "-20px -20px" },
+    { id: "sarte", label: "SART / EPIRB", icon: "staticon", pos: "-40px -20px" },
+    { id: "air", label: "Plane / helicopter", icon: "helicoptericon", pos: "0px 0px", spin: true },
 ];
 
 export const CLASSES = [
@@ -119,23 +113,6 @@ export function toggle(kind, id) {
 
 export function setAll(kind, on) {
     set(LISTS[kind].key, on ? [] : LISTS[kind].items().map((x) => x.id));
-}
-
-// A sender owns the buckets the counters card splits it into, so it is on, off,
-// or half-on when only one of a pair is hidden.
-export function senderState(sender) {
-    const hidden = get("hidden_buckets");
-    const off = sender.buckets.filter((b) => hidden.includes(b)).length;
-    return off === 0 ? "on" : off === sender.buckets.length ? "off" : "partial";
-}
-
-export function setSender(sender, on) {
-    const hidden = get("hidden_buckets").filter((b) => !sender.buckets.includes(b));
-    set("hidden_buckets", on ? hidden : [...hidden, ...sender.buckets]);
-}
-
-export function setAllSenders(on) {
-    setAll("bucket", on);
 }
 
 export function statusOf(ship) {

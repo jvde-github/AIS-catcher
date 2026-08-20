@@ -5,7 +5,7 @@ import { ships, cardMmsi, cardType, hoverMmsi, hoverType, markerTracks, clock } 
 import { settings } from '../core/state.js';
 import {
     CHANGE, getChangeVal, getChangeListHTML, getSpeedHistorySVG, getDraughtChartSVG,
-    getShipDimensionSVG, getShipDimension, getCallSign, getCountryName, getDeltaTimeVal,
+    getShipDimensionSVG, getShipDimension, getCallSign, getCountryName, getDeltaTimeVal, CARD_FLAG_STYLE,
     getDimUnit, getDistanceUnit, getDistanceVal, getDraughtVal, getEtaVal, getFlagStyled,
     getLatValFormat, getLonValFormat, getMmsiTypeVal, getShipName, getShipTypeFull,
     getShipTypeShort, getSpeedUnit, getSpeedVal, getStatusVal, getStringfromChannels,
@@ -277,7 +277,6 @@ export function updateMessageButton() {
 
 // ─── content ─────────────────────────────────────────────────────────────────
 
-const CARD_FLAG_STYLE = "padding: 0px; margin: 0px; margin-right: 5px; box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5); font-size: 26px;";
 
 export function trackOptionString(mmsi) {
     const hover_track = hoverType == 'ship' && mmsi == hoverMmsi && deps.hoverTrackShown();

@@ -395,6 +395,26 @@
         return data;
     }
 
+    window.addEventListener('message', (e) => {
+        if (e.origin !== window.location.origin) return;
+        if (!e.data || e.data.type !== 'aiscatcher:sharing') return;
+
+        const link = document.getElementById('community-link');
+        if (!link) return;
+
+        const SHARING = {
+            on: { title: 'Sharing with the community map' },
+            anon: { title: 'Sharing anonymously — register to claim your station' },
+            off: { title: 'Not sharing — put your station on the community map', href: 'https://aiscatcher.org/addstation_ac' },
+            stopped: { title: 'Receiver stopped' },
+        };
+        const state = e.data.state in SHARING ? e.data.state : 'off';
+        link.classList.remove('sharing-on', 'sharing-anon', 'sharing-off', 'sharing-stopped');
+        link.classList.add('sharing-' + state);
+        link.href = SHARING[state].href || 'https://www.aiscatcher.org';
+        link.title = SHARING[state].title;
+    });
+
     function refreshEngineStatus() {
         return fetchStatus()
             .then(applyStatus)

@@ -89,21 +89,25 @@
 				<div class="hdr-slot">
 					<input type="text" class="input search-box" id="shipSearchSide" placeholder="Search for ships...">
 				</div>
+				<div class="table-pager" id="tablePager" hidden>
+					<button type="button" data-action="tablePagePrev" title="Previous page" aria-label="Previous page">&#8249;</button>
+					<span id="tablePageLabel"></span>
+					<button type="button" data-action="tablePageNext" title="Next page" aria-label="Next page">&#8250;</button>
+				</div>
 				<div data-action="hideTablecard" class="close_icon"></div>
 			</div>
-			<div class="settings-bg tablecard_inner addscrollbar">
+			<div class="settings-bg tablecard_inner">
 				<table class="mytable">
 					<thead>
 						<tr>
-							<th data-column="flag" class="sort-icon" data-action="updateTableSort">Flag</th>
 							<th data-column="shipname" class="sort-icon" data-action="updateTableSort">Name</th>
-							<th data-column="distance" class="sort-icon" data-action="updateTableSort">Dist</th>
-							<th data-column="speed" class="sort-icon" data-action="updateTableSort">Spd</th>
+							<th data-column="distance" class="sort-icon num" data-action="updateTableSort">Dist <span id="table_dist_unit"></span></th>
+							<th data-column="speed" class="sort-icon num" data-action="updateTableSort">Spd <span id="table_spd_unit"></span></th>
 							<th data-column="type" class="sort-icon" data-action="updateTableSort">Type</th>
-							<th data-column="last_signal" class="sort-icon" data-action="updateTableSort">Last</th>
+							<th data-column="last_signal" class="sort-icon num" data-action="updateTableSort">Last</th>
 						</tr>
 					</thead>
-					<tbody class="addscrollbar" id="tablecardBody"></tbody>
+					<tbody id="tablecardBody"></tbody>
 				</table>
 			</div>
 		</div>
@@ -116,19 +120,20 @@
 			<div class="settings_main settings-bg">
 				<header>System</header>
 				<section>
-					<div><span>Defaults</span><span style="cursor: pointer" data-action="applyDefaultSettings"> Reset
-						</span><small class="st-desc">Restore all settings to defaults</small>
-						</div>
+					<div class="filter-topbar">
+						<span class="st-note">Restore all settings</span>
+						<button type="button" class="st-danger" data-action="applyDefaultSettings">Reset</button>
+					</div>
 				</section>
 				<section>
-					
-					<div class="third noandroid"><span>Plugins</span><span style="cursor: pointer" data-action="showPlugins">
-							Show </span><small class="st-desc">List the loaded plugins</small>
-						</div>
-					<div class="third"><span>Server Errors</span><span style="cursor: pointer"
-							data-action="showServerErrors"> Show </span><small class="st-desc">Errors reported by the server</small>
-						</div>
-					
+					<div class="third noandroid">
+						<span>Plugins</span><span style="cursor: pointer" data-action="showPlugins">Show</span>
+						<small class="st-desc">List the loaded plugins</small>
+					</div>
+					<div class="third">
+						<span>Server Errors</span><span style="cursor: pointer" data-action="showServerErrors">Show</span>
+						<small class="st-desc">Errors reported by the server</small>
+					</div>
 				</section>
 				<section>
 					<div class="noandroid">
@@ -138,7 +143,7 @@
 					</div>
 				</section>
 				<section>
-					<div>
+					<div class="half">
 						<span>Coordinate Format</span><span>
 							<select id="settings_coordinate_format" data-on-change="setCoordinateFormat">
 								<option value="decimal">Decimal Degrees</option>
@@ -146,9 +151,9 @@
 								<option value="dms">Degrees Minutes Seconds</option>
 							</select>
 						</span>
-					<small class="st-desc">Display format for latitude and longitude</small>
-						</div>
-					<div>
+						<small class="st-desc">Format for coordinates</small>
+					</div>
+					<div class="half">
 						<span>Units</span><span>
 							<select id="settings_metric" data-on-change="setMetrics">
 								<option value="default">Nautical</option>
@@ -156,24 +161,39 @@
 								<option value="imperial">Imperial</option>
 							</select>
 						</span>
-					<small class="st-desc">Units for distance and speed</small>
-						</div>
+						<small class="st-desc">Units for measurements</small>
+					</div>
 				</section>
-				
 				<header>Table</header>
 				<section>
+					<h5 class="st-title">Table</h5>
 					<div>
-						<span>Use Icon in Table</span><span>
+						<span>Ship Type Icon</span><span>
 							<input type="checkbox" id="settings_table_shiptype_use_icon"
 								data-on-change="setTableIcon" />
 						</span>
-					<small class="st-desc">Show the ship type as an icon</small>
+					<small class="st-desc">Draw the type instead of naming it</small>
 						</div>
 				</section>
 				<header>Map</header>
 				<section>
+					<h5 class="st-title">Base map</h5>
+					<div>
+						<span class="st-wide">
+							<select id="baseMapSelector" class="input select"></select>
+						</span>
+					<small id="basemap_credit" class="map-attribution-note"></small>
+					</div>
+				</section>
+				<section>
+					<h5 class="st-title">Overlays</h5>
+					<div>
+						<div id="overlayContainer"></div>
+					</div>
+				</section>
+				<section>
 					<div class="third">
-						<span>Station Icon</span><span>
+						<span>Station Marker</span><span>
 							<input type="checkbox" id="settings_show_station"
 								data-on-change="setMapSetting" data-key="show_station" />
 						</span>
@@ -192,8 +212,6 @@
 					<small class="st-desc">Dim the base map to make ships stand out</small>
 						</div>
 				</section>
-				
-				
 				<section>
 					<h5 class="st-title">Highlight Circles</h5>
 					<div class="third">
@@ -216,21 +234,48 @@
 								data-on-input="updateSliderDisplay" data-display="circleScale" />
 						</span>
 					<small class="st-desc">Border width of the highlight circle</small>
+					</div>
+					
+				</section>
+				<section>
+					<h5 class="st-title">Distance Rings</h5>
+					<div class="third">
+						<span>Show</span><span>
+							<input type="checkbox" id="settings_distance_circles"
+								data-on-change="setMapSetting" data-key="distance_circles" />
+						</span>
+					<small class="st-desc">Distance circles around the station</small>
 						</div>
+					<div class="third">
+						<span>Color</span><span>
+							<input type="color" class="color-picker" id="settings_distance_circle_color"
+								data-on-change="setMapSettingDistanceColor" />
+						</span>
+					</div>
 				</section>
 				<section>
 					<div>
-						<span>Shipcard Position</span><span>
+						<span>Dock Top Left</span><span>
 							<input type="checkbox" id="settings_shipcard_top_left"
 								data-on-change="setMapSetting" data-key="shipcard_top_left" />
 						</span>
 					<small class="st-desc">Open the shipcard in the top left corner</small>
 						</div>
+					<div>
+						<span>Toolbar</span><span>
+							<select id="settings_map_toolbar" data-on-change="setMapToolbar">
+								<option value="compact">Compact</option>
+								<option value="wide">Wide bar</option>
+							</select>
+						</span>
+						<small class="st-desc">A labelled bar along the bottom, on wide screens</small>
+					</div>
 
 
 				</section>
 				<header>Ship Labels</header>
 				<section>
+					<h5 class="st-title">Labels</h5>
 					<div>
 						<span>Show</span><span>
 							<select id="settings_show_labels" data-on-change="setMapSetting" data-key="show_labels">
@@ -239,10 +284,37 @@
 								<option value="always">Always</option>
 							</select>
 						</span>
-					<small class="st-desc">Determines when labels are visible</small>
-						</div>
+						<small class="st-desc">Determines when labels are visible</small>
+					</div>
 				</section>
 				<section>
+					<div>
+						<span>Declutter</span><span>
+							<input type="checkbox" id="settings_labels_declutter"
+								data-on-change="setMapSetting" data-key="labels_declutter" />
+						</span>
+						<small class="st-desc">Hide overlapping labels</small>
+					</div>
+				</section>
+				<section>
+					<h5 class="st-title">Selected Ship</h5>
+					<div class="half">
+						<span>Always Visible</span><span>
+							<input type="checkbox" id="settings_labels_prioritize_active"
+								data-on-change="setMapSetting" data-key="labels_prioritize_active" />
+						</span>
+						<small class="st-desc">Its label always wins against declutter</small>
+					</div>
+					<div class="half">
+						<span>Hide Others</span><span>
+							<input type="checkbox" id="settings_labels_active_only"
+								data-on-change="setMapSetting" data-key="labels_active_only" />
+						</span>
+						<small class="st-desc">Label only the selected ship</small>
+					</div>
+				</section>
+				<section>
+					<h5 class="st-title">Appearance</h5>
 					<div>
 						<span id="tooltip_font_size_label">Font Size (9)</span>
 						<span>
@@ -251,65 +323,33 @@
 								data-on-input="updateSliderDisplay" data-display="tooltipFontSize" />
 						</span>
 					</div>
-				</section>
-				<section>
-					<div class="third">
-						<span>Declutter</span><span>
-							<input type="checkbox" id="settings_labels_declutter"
-								data-on-change="setMapSetting" data-key="labels_declutter" />
-						</span>
-					<small class="st-desc">Hide overlapping labels</small>
-						</div>
-					<div class="third">
-						<span>Prioritize</span><span>
-							<input type="checkbox" id="settings_labels_prioritize_active"
-								data-on-change="setMapSetting" data-key="labels_prioritize_active" />
-						</span>
-					<small class="st-desc">Label of the selected ship is always visible</small>
-						</div>
-					<div class="third">
-						<span>Selected Only</span><span>
-							<input type="checkbox" id="settings_labels_active_only"
-								data-on-change="setMapSetting" data-key="labels_active_only" />
-						</span>
-					<small class="st-desc">Only show a label for the selected ship</small>
-						</div>
-					
-				</section>
-				<section>
 					<div>
-						<span>Color by Class</span><span>
+						<span>Class Colors</span><span>
 							<input type="checkbox" id="settings_label_class_background"
 								data-on-change="setMapSetting" data-key="label_class_background" />
 						</span>
-					<small class="st-desc">Use the ship class color as label background</small>
-						</div>
-				</section>
-				<section>
-					<h5 class="st-title">Colors (Light Mode)</h5>
-					<div class="third">
-						<span>Text</span><span>
+						<small class="st-desc">Class color as background, or the fixed colors below</small>
+					</div>
+					<div class="half label-colors">
+						<span>Text (Light)</span><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelColor"
 								data-on-change="setMapSetting" data-key="tooltipLabelColor" />
 						</span>
 					</div>
-					<div class="third">
-						<span>Shadow</span><span>
+					<div class="half label-colors">
+						<span>Shadow (Light)</span><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelShadowColor"
 								data-on-change="setMapSetting" data-key="tooltipLabelShadowColor" />
 						</span>
 					</div>
-				</section>
-				<section>
-					<h5 class="st-title">Colors (Dark Mode)</h5>
-					<div class="third">
-						<span>Text</span><span>
+					<div class="half label-colors">
+						<span>Text (Dark)</span><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelColorDark"
 								data-on-change="setMapSetting" data-key="tooltipLabelColorDark" />
 						</span>
 					</div>
-					<div class="third">
-						<span>Shadow</span><span>
+					<div class="half label-colors">
+						<span>Shadow (Dark)</span><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelShadowColorDark"
 								data-on-change="setMapSetting" data-key="tooltipLabelShadowColorDark" />
 						</span>
@@ -317,8 +357,9 @@
 				</section>
 				<header>Graphs</header>
 				<section>
+					<h5 class="st-title">Graphs</h5>
 					<div>
-						<span>Absolute Time</span><span>
+						<span>Clock Time</span><span>
 							<input type="checkbox" id="settings_plot_absolute_time"
 								data-on-change="setPlotAbsoluteTime" />
 						</span>
@@ -345,8 +386,9 @@
 				</section>
 				<header>Ship Outline</header>
 				<section>
+					<h5 class="st-title">Marker</h5>
 					<div>
-						<span id="icon_scale_label">Marker Size (1.0)</span>
+						<span id="icon_scale_label">Size (1.0)</span>
 						<span>
 							<input type="range" id="settings_icon_scale" min="0.5" max="1.5" step="0.01"
 								data-on-change="setIconScale"
@@ -354,31 +396,28 @@
 						</span>
 					<small class="st-desc">Size of the ship icons on the map</small>
 						</div>
-				</section>
-				<section>
+				
 					<div>
-						<span>Marker Fading</span><span>
+						<span>Fading</span><span>
 							<input type="checkbox" id="settings_fading" data-on-change="setFading" />
 						</span>
-					<small class="st-desc">Fade markers with age</small>
+					<small class="st-desc">Fade icons with age</small>
 						</div>
 				</section>
 				
 				<section>
-					<h5 class="st-title">Ship Outline</h5>
+					<h5 class="st-title">Outline</h5>
 					<div class="third">
 						<span>Border</span><span>
 							<input type="color" class="color-picker" id="settings_shipoutline_border"
 								data-on-change="setMapSetting" data-key="shipoutline_border" />
 						</span>
-						<small class="st-desc">Ship outline stroke</small>
 					</div>
 					<div class="third">
 						<span>Fill</span><span>
 							<input type="color" class="color-picker" id="settings_shipoutline_inner"
 								data-on-change="setMapSetting" data-key="shipoutline_inner" />
 						</span>
-						<small class="st-desc">Ship shape fill</small>
 					</div>
 					
 					<div>
@@ -388,12 +427,12 @@
 								data-on-change="setMapSetting" data-key="shipoutline_opacity"
 								data-on-input="updateSliderDisplay" data-display="shipoutlineOpacity" />
 						</span>
-					<small class="st-desc">Transparency of the ship shape fill</small>
 						</div>
 					
 				</section>
 				<header>Binary Messages</header>
 				<section>
+					<h5 class="st-title">Display</h5>
 					<div>
 						<span>Show on Map</span><span>
 							<select id="settings_binary_messages" data-on-change="setBinaryDisplay">
@@ -431,6 +470,7 @@
 				</section>
 				<header>Station Range</header>
 				<section>
+					<h5 class="st-title">Range</h5>
 					<div class="quarter">
 						<span>Show</span><span>
 							<input type="checkbox" id="settings_show_range" data-on-change="setRangeSwitch" />
@@ -445,10 +485,11 @@
 								<option value="30d">Last 30 Days</option>
 							</select>
 						</span>
+						<small class="st-desc">Period the outer range covers; the inner ring is the last hour</small>
 					</div>
 				</section>
 				<section>
-					<h5 class="st-title">Range (Long Timeframe)</h5>
+					<h5 class="st-title">Colors (Selected Period)</h5>
 					<div class="third">
 						<span>Light</span><span>
 							<input type="color" class="color-picker" id="settings_range_color"
@@ -463,7 +504,7 @@
 					</div>
 					</section>
 				<section>
-					<h5 class="st-title">Range (Short Timeframe)</h5>
+					<h5 class="st-title">Colors (Last Hour)</h5>
 					<div class="third">
 						<span>Light</span><span>
 							<input type="color" class="color-picker" id="settings_range_color_short"
@@ -477,27 +518,12 @@
 						</span>
 					</div>
 				</section>
-				<section>
-					<h5 class="st-title">Distance Rings</h5>
-					<div class="third">
-						<span>Show</span><span>
-							<input type="checkbox" id="settings_distance_circles"
-								data-on-change="setMapSetting" data-key="distance_circles" />
-						</span>
-					<small class="st-desc">Distance circles around the station</small>
-						</div>
-					<div class="third">
-						<span>Color</span><span>
-							<input type="color" class="color-picker" id="settings_distance_circle_color"
-								data-on-change="setMapSettingDistanceColor" />
-						</span>
-					</div>
-				</section>
+				
 				<header>Filter</header>
 				<section>
 					<div class="filter-topbar">
 						<span id="filter_summary">Showing every vessel</span>
-						<button type="button" data-action="resetFilter">Reset</button>
+						<button type="button" class="st-danger" data-action="resetFilter">Reset</button>
 					</div>
 				</section>
 				<section>
@@ -505,8 +531,8 @@
 					<div>
 						<div id="filter_senders" class="filter-checks"></div>
 						<div class="filter-allnone">
-							<button type="button" data-action="setAllFilterItems" data-kind="sender" data-on="1">Select all</button>
-							<button type="button" data-action="setAllFilterItems" data-kind="sender" data-on="0">Unselect all</button>
+							<button type="button" data-action="setAllFilterItems" data-kind="bucket" data-on="1">Select all</button>
+							<button type="button" data-action="setAllFilterItems" data-kind="bucket" data-on="0">Unselect all</button>
 						</div>
 					</div>
 				</section>
@@ -554,7 +580,7 @@
 								data-on-input="updateFilterSeenDisplay" />
 						</span>
 					</div>
-					<div>
+					<div class="half">
 						<span>Validated</span>
 						<span>
 							<select id="filter_validated" data-on-change="setFilterChoice" data-key="validated">
@@ -565,7 +591,7 @@
 							</select>
 						</span>
 					</div>
-					<div>
+					<div class="half">
 						<span title="Vessels whose position reached the receiver through another AIS station rather than directly">Repeated</span>
 						<span>
 							<select id="filter_repeated" data-on-change="setFilterChoice" data-key="repeated">
@@ -579,8 +605,9 @@
 
 				<header>Tracks</header>
 				<section>
+					<h5 class="st-title">Tracks</h5>
 					<div>
-						<span>Show Tracks</span>
+						<span>Draw For</span>
 						<span>
 							<select id="settings_track_visibility" data-on-change="setTrackVisibility">
 								<option value="selected">Selected ships</option>
@@ -591,7 +618,7 @@
 					<small class="st-desc">Which ships draw a track</small>
 						</div>
 					<div>
-						<span id="track_history_label">History (30 min)</span>
+						<span id="track_history_label">Length (30 min)</span>
 						<span>
 							<input type="range" id="settings_track_history" min="0" max="9" step="1"
 								data-on-change="setTrackHistory"
@@ -633,10 +660,9 @@
 								data-on-change="setMapSetting" data-key="track_opacity"
 								data-on-input="updateSliderDisplay" data-display="trackOpacity" />
 						</span>
-					<small class="st-desc">Transparency of ship tracks</small>
 						</div>
 					<div>
-						<span id="track_trash_threshold_label">Dash Threshold (30s)</span>
+						<span id="track_trash_threshold_label">Dash After (30s)</span>
 						<span>
 							<input type="range" id="settings_track_trash_threshold" min="0" max="300" step="10"
 								data-on-change="setMapSetting" data-key="track_trash_threshold"
@@ -647,7 +673,7 @@
 					</section>
 				<section>
 					<h5 class="st-title">Line Colors</h5>
-					<div class="half">
+					<div>
 						<span>Color By</span><span>
 							<select id="settings_track_color_mode" data-on-change="setTrackColorMode">
 								<option value="class">Ship type</option>
@@ -656,13 +682,16 @@
 						</span>
 					<small class="st-desc">Color by ship type or speed</small>
 						</div>
-					<div class="half track-speed-color">
+				</section>
+				<section class="track-speed-color">
+					<h5 class="st-title">Speed Scale</h5>
+					<div>
 						<span>Palette</span><span>
 							<select id="settings_track_speed_palette" data-on-change="setTrackSpeedPalette"></select>
 						</span>
 					<small class="st-desc">Colors from stopped to scale max</small>
 						</div>
-					<div class="half track-speed-color">
+					<div class="half">
 						<span id="track_speed_max_label">Scale Max (20 kts)</span>
 						<span>
 							<input type="range" id="settings_track_speed_max" min="5" max="40" step="1"
@@ -671,23 +700,24 @@
 						</span>
 					<small class="st-desc">Where the color scale ends</small>
 						</div>
-					<div class="half track-speed-color">
-						<span id="track_speed_scale_label">Scale (0 - 20 kts)</span>
+					<div class="half">
+						<span id="track_speed_scale_label">Preview (0 - 20 kts)</span>
 						<div class="speed-legend" id="track_speed_legend"></div>
 					<small class="st-desc">Grey where speed is unknown</small>
 						</div>
-					<div class="track-class-color">
-						<span>Uniform Color</span><span>
-							<input type="color" class="color-picker" id="settings_apply_all_track_color" value="#12a5ed"
-								data-on-change="applyColorToAllTracks" />
-							<button type="button" data-action="resetTrackColorsToDefault"
-								style="margin-left: 10px;">Reset</button>
-						</span>
-					<small class="st-desc">One color for all ship types</small>
-						</div>
+					
 				</section>
 				<section class="track-class-color">
 					<h5 class="st-title">Custom Line Colors</h5>
+					<div class="track-class-color">
+						<span>Set All</span><span>
+							<input type="color" class="color-picker" id="settings_apply_all_track_color" value="#12a5ed"
+								data-on-change="applyColorToAllTracks" />
+							<button type="button" data-action="resetTrackColorsToDefault"
+								style="margin-left: auto;">Reset</button>
+						</span>
+					<small class="st-desc">Pick one color for every type below, or reset them to the defaults</small>
+						</div>
 					<div class="third">
 						<span>Cargo</span><span>
 							<input type="color" class="color-picker" id="settings_track_cargo_color"
@@ -775,14 +805,17 @@
 				</section>
 				<header>Kiosk</header>
 				<section>
+					<h5 class="st-title">Kiosk Mode</h5>
 					<div>
-						<span>Kiosk Mode</span><span>
+						<span>Enabled</span><span>
 							<input type="checkbox" id="settings_kiosk_mode" data-on-change="setKiosk">
 						</span>
 					<small class="st-desc">Unattended display that cycles through ships</small>
 						</div>
 				</section>
 				<section>
+
+				
 					<div>
 						<span id="kiosk_rotation_speed_label">Rotation Speed (5s)</span><span>
 							<input type="range" id="settings_kiosk_rotation_speed" min="3" max="30" step="1"
@@ -793,8 +826,10 @@
 						</div>
 				</section>
 				<section>
+
+				
 					<div>
-						<span>Pan Map</span><span>
+						<span>Center on Ship</span><span>
 							<input type="checkbox" id="settings_kiosk_pan_map" data-on-change="setKioskPanMap">
 						</span>
 					<small class="st-desc">Center the map on each ship shown</small>
@@ -832,6 +867,7 @@
 				<li class="ship noandroid" data-group="lookup" data-action="openAISHubCtx"><i class="public_icon"></i>Find on AISHub</li>
 				<li class="ctx-map" data-group="display" data-action="toggleLabel"><i class="label_icon"></i>Ship labels<span class="ctx-check">✓</span></li>
 				<li class="ctx-map" data-group="display" data-action="toggleRange"><i class="signal_cellular_alt_icon"></i>Station range<span class="ctx-check">✓</span></li>
+				<li class="ctx-map" data-group="display" data-action="toggleTicker"><i class="feed_icon"></i>Event ticker<span class="ctx-check">✓</span></li>
 				<li class="ctx-map" data-group="display" data-action="toggleAttribution"><i class="info_icon"></i>Map attribution<span class="ctx-check">✓</span></li>
 				<li class="ctx-map ctx-replay ctx-replay-map" data-group="tools" data-action="toggleReplaycard"><i class="play_arrow_icon"></i>Replay<span class="ctx-check">✓</span></li>
 				<li class="ctx-map" data-group="tools" data-action="toggleMeasurecard"><i class="straighten_icon"></i>Measure<span class="ctx-check">✓</span></li>
@@ -840,7 +876,6 @@
 				<li class="ctx-map" data-group="tools" data-action="ToggleFireworks"><i class="explosion_icon"></i>Fireworks<span class="ctx-check">✓</span></li>
 				<li class="ctx-charts" data-group="charts" data-action="toggleGraphVisibility" data-graph="signal"><i class="timeline_icon"></i>Signal level graphs<span class="ctx-check">✓</span></li>
 				<li class="ctx-charts" data-group="charts" data-action="toggleGraphVisibility" data-graph="ppm"><i class="timeline_icon"></i>Frequency shift graphs<span class="ctx-check">✓</span></li>
-				<li class="settings" data-group="app" data-action="showServerErrors"><i class="label_icon"></i>Server errors</li>
 				<li class="settings" data-group="app" data-action="openSettings"><i class="build_icon"></i>Settings...</li>
 				<li class="settings noandroid ctx-replay-map" data-group="app" data-action="toggleDarkMode"><i class="brightness_4_icon"></i>Dark mode<span class="ctx-check">✓</span></li>
 			</ul>
@@ -1301,57 +1336,41 @@
 
 				<aside id="statcard">
 					<div class="statcard_inner draggable">
-						<span class="stat-item" title="Class A Moving — click to show or hide" data-action="toggleFilterBucket" data-bucket="am">
+						<span class="stat-item" title="Class A Moving" data-bucket="am">
 							<span class="shipicon" style="background-position: -120px 0px; transform: rotate(45deg) scale(0.65)"></span>
 							<span id="statcard_moving"></span>
 						</span>
-						<span class="stat-item" title="Class A Stationary — click to show or hide" data-action="toggleFilterBucket" data-bucket="as">
+						<span class="stat-item" title="Class A Stationary" data-bucket="as">
 							<span class="shipicon" style="background-position: -120px -20px; transform: scale(0.65)"></span>
 							<span id="statcard_stationary"></span>
 						</span>
-						<span class="stat-item" title="Class B Moving — click to show or hide" data-action="toggleFilterBucket" data-bucket="bm">
+						<span class="stat-item" title="Class B Moving" data-bucket="bm">
 							<span class="shipicon" style="background-position: -20px 0px; transform: rotate(45deg) scale(0.65)"></span>
 							<span id="statcard_class_b_moving"></span>
 						</span>
-						<span class="stat-item" title="Class B Stationary — click to show or hide" data-action="toggleFilterBucket" data-bucket="bs">
+						<span class="stat-item" title="Class B Stationary" data-bucket="bs">
 							<span class="shipicon" style="background-position: -20px -20px; transform: scale(0.65)"></span>
 							<span id="statcard_class_b_stationary"></span>
 						</span>
-						<span class="stat-item" title="Aid-to-Navigation — click to show or hide" data-action="toggleFilterBucket" data-bucket="aton">
+						<span class="stat-item" title="Aid-to-Navigation" data-bucket="aton">
 							<span class="staticon" style="background-position: 0px -20px; transform: scale(0.65)"></span>
 							<span id="statcard_aton"></span>
 						</span>
-						<span class="stat-item" title="Base Station — click to show or hide" data-action="toggleFilterBucket" data-bucket="base">
+						<span class="stat-item" title="Base Station" data-bucket="base">
 							<span class="staticon" style="background-position: -20px -20px; transform: scale(0.65)"></span>
 							<span id="statcard_station"></span>
 						</span>
-						<span class="stat-item" title="SARTE / EPIRB — click to show or hide" data-action="toggleFilterBucket" data-bucket="sarte">
+						<span class="stat-item" title="SARTE / EPIRB" data-bucket="sarte">
 							<span class="staticon" style="background-position: -40px -20px; transform: scale(0.65)"></span>
 							<span id="statcard_sarte"></span>
 						</span>
-						<span class="stat-item" title="Plane/Helicopter — click to show or hide" data-action="toggleFilterBucket" data-bucket="air">
+						<span class="stat-item" title="Plane/Helicopter" data-bucket="air">
 							<span class="helicoptericon" style="background-position: 0px 0px; transform: scale(0.55) rotate(45deg)"></span>
 							<span id="statcard_heli"></span>
 						</span>
 					</div>
 				</aside>
 
-				<div class="floating-menu" id="map-menu" style="width: 300px;">
-					<table>
-						<tr>
-							<td>Map:</td>
-							<td>
-								<select id="baseMapSelector" class="input select">
-								</select>
-							</td>
-						</tr>
-						<tr>
-							<td>Overlays:</td>
-							<td id="overlayContainer">
-							</td>
-						</tr>
-					</table>
-				</div>
 
 				<aside id="measurecard" class="mapcard measurecard-width">
 					<header class="dialog-header">
@@ -1493,15 +1512,14 @@
 							<div><span>Heading</span><span id="shipcard_heading">-</span></div>
 						</div>
 
-						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row shipcard-content-row shipcard-max-only">
+						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row shipcard-content-row shipcard-max-only row-wide-first">
 							<div><span>Destination</span><span id="shipcard_destination"></span></div>
 							<div><span>ETA</span><span id="shipcard_eta"></span></div>
 						</div>
 
-						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row shipcard-content-row shipcard-max-only">
+						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row shipcard-content-row shipcard-max-only row-wide-first">
 							<div><span>Latitude</span><span id="shipcard_lat">-</span></div>
 							<div><span>Longitude</span><span id="shipcard_lon">-</span></div>
-							<div><span>Distance</span><span id="shipcard_distance">-</span></div>
 						</div>
 
 <div id="shipcard_speed_head" class="shipcard-section shipcard-max-only" data-action="toggleShipcardSection"
@@ -1557,7 +1575,7 @@
 							<div><span>Sender</span><span id="shipcard_plane_type">ADSB</span></div>
 						</div>
 						<div data-action="shipcardSelectSelf" data-context-type="plane"
-							class="mapcard-content-row shipcard-content-row shipcard-row-selected">
+							class="mapcard-content-row shipcard-content-row shipcard-row-selected row-wide-first">
 							<div><span>Speed</span><span id="shipcard_plane_speed">-</span></div>
 							<div><span>Heading</span><span id="shipcard_plane_heading">-</span></div>
 						</div>
@@ -1609,8 +1627,9 @@
 							<div><span>Msg type</span><span id="shipcard_msgtypes">-</span></div>
 						</div>
 
-						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row shipcard-content-row shipcard-max-only">
+						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row shipcard-content-row shipcard-max-only row-wide-first">
 							<div><span>In Range</span><span id="shipcard_received_stations"></span></div>
+							<div><span>Distance</span><span id="shipcard_distance">-</span></div>
 						</div>
 					</div>
 
@@ -1655,44 +1674,48 @@
 
 
 
-				<div title="Counters"
-					class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box map-pill nokiosk"
-					style="top: 10px;">
-					<button id="counters-btn" type="button" data-action="toggleStatcard"
+				<div id="maptoolbar" class="map-toolbar nokiosk"></div>
+
+				<div
+					class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box map-pill nokiosk">
+					<button data-label="Vessels" id="counters-btn" title="Vessel counts" type="button" data-action="toggleStatcard"
 						class="btn btn-primary map-button" style="font-size: 10px;">
 						<span id="markerCount">0</span>
 					</button>
-					<button id="table-btn" type="button" data-action="toggleTablecard" class="btn btn-primary map-button">
+					<button data-label="Filters" id="filter-btn" title="Filter vessels" type="button" data-action="openFilterPanel"
+						class="btn btn-primary map-button">
+						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+							<path d="M400-240v-80h160v80H400ZM240-440v-80h480v80H240ZM120-640v-80h720v80H120Z" />
+						</svg>
+					</button>
+					<button data-label="Vessel list" id="table-btn" title="Ship table" type="button" data-action="toggleTablecard"
+						class="btn btn-primary map-button">
 						<svg xmlns="http://www.w3.org/2000/svg" height="12" viewBox="0 -960 960 960" width="12">
 							<path
 								d="M158-200 82-468q-3-12 2.5-28t23.5-22l52-18v-184q0-33 23.5-56.5T240-800h120v-120h240v120h120q33 0 56.5 23.5T800-720v184l52 18q21 8 25 23.5t1 26.5l-76 268q-50 0-91-23.5T640-280q-30 33-71 56.5T480-200q-48 0-89-23.5T320-280q-30 33-71 56.5T158-200ZM80-40v-80h80q42 0 83-13t77-39q36 26 77 38t83 12q42 0 83-12t77-38q36 26 77 39t83 13h80v80h-80q-42 0-82-10t-78-30q-38 20-78.5 30T480-40q-41 0-81.5-10T320-80q-38 20-78 30t-82 10H80Zm160-522 240-78 240 78v-158H240v158Z" />
 						</svg>
 					</button>
-					<button id="ticker-btn" title="Event ticker" type="button" data-action="toggleTicker"
-						class="btn btn-primary map-button color-grey">
-						<i class="feed_icon" style="width:15px;height:15px"></i>
-					</button>
-					<button id="filter-btn" title="Filter vessels" type="button" data-action="openFilterPanel"
-						class="btn btn-primary map-button color-grey">
+					<button data-label="Measure" id="measure-btn" title="Measure distance" type="button" data-action="toggleMeasurecard"
+						class="btn btn-primary map-button">
 						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
-							<path d="M400-240v-80h160v80H400ZM240-440v-80h480v80H240ZM120-640v-80h720v80H120Z" />
+							<path
+								d="M160-240q-33 0-56.5-23.5T80-320v-320q0-33 23.5-56.5T160-720h640q33 0 56.5 23.5T880-640v320q0 33-23.5 56.5T800-240H160Zm0-80h640v-320H680v160h-80v-160h-80v160h-80v-160h-80v160h-80v-160H160v320Z" />
 						</svg>
 					</button>
-					<button title="Replay tracks" type="button" data-action="toggleReplaycard"
-						class="btn btn-primary map-button color-grey ctx-replay">
+					<button data-label="Replay" title="Replay tracks" type="button" data-action="toggleReplaycard"
+						class="btn btn-primary map-button ctx-replay">
 						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
 							<path
 								d="M480-120q-138 0-240.5-91.5T122-440h82q14 104 92.5 172T480-200q117 0 198.5-81.5T760-480q0-117-81.5-198.5T480-760q-69 0-129 32t-101 88h110v80H120v-240h80v94q51-64 124.5-99T480-840q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-480q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-120Zm112-192L440-464v-216h80v184l128 128-56 56Z" />
 						</svg>
 					</button>
-					<button title="Settings" type="button" data-action="mapSettingsContextMenu"
-						class="btn btn-primary map-button color-grey">
+					<button data-label="Map options" title="Map options" type="button" data-action="mapSettingsContextMenu"
+						class="btn btn-primary map-button">
 						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
 							<path
 								d="M240-400q-33 0-56.5-23.5T160-480q0-33 23.5-56.5T240-560q33 0 56.5 23.5T320-480q0 33-23.5 56.5T240-400Zm240 0q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm240 0q-33 0-56.5-23.5T640-480q0-33 23.5-56.5T720-560q33 0 56.5 23.5T800-480q0 33-23.5 56.5T720-400Z" />
 						</svg>
 					</button>
-
 				</div>
 
 				<div id="aiscatcher-logo-control"
@@ -1728,16 +1751,15 @@
 					<span id="map_attributions"></span>
 				</div>
 
-				<div class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box nokiosk"
-					style="bottom: 10px;">
-					<button title="Toggle Community Pane" type="button" id="xchange" data-action="toggleCommunityPane"
-						class="noandroid btn btn-primary map-button fill-red">
-						<svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20">
+				<div class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box map-pill map-bottom nokiosk">
+					<button title="Map layers and styling" type="button" data-action="openMapSettings"
+						class="btn btn-primary map-button">
+						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
 							<path
-								d="M475-160q4 0 8-2t6-4l328-328q12-12 17.5-27t5.5-30q0-16-5.5-30.5T817-607L647-777q-11-12-25.5-17.5T591-800q-15 0-30 5.5T534-777l-11 11 74 75q15 14 22 32t7 38q0 42-28.5 70.5T527-522q-20 0-38.5-7T456-550l-75-74-175 175q-3 3-4.5 6.5T200-435q0 8 6 14.5t14 6.5q4 0 8-2t6-4l136-136 56 56-135 136q-3 3-4.5 6.5T285-350q0 8 6 14t14 6q4 0 8-2t6-4l136-135 56 56-135 136q-3 2-4.5 6t-1.5 8q0 8 6 14t14 6q4 0 7.5-1.5t6.5-4.5l136-135 56 56-136 136q-3 3-4.5 6.5T454-180q0 8 6.5 14t14.5 6Zm-1 80q-37 0-65.5-24.5T375-166q-34-5-57-28t-28-57q-34-5-56.5-28.5T206-336q-38-5-62-33t-24-66q0-20 7.5-38.5T149-506l232-231 131 131q2 3 6 4.5t8 1.5q9 0 15-5.5t6-14.5q0-4-1.5-8t-4.5-6L398-777q-11-12-25.5-17.5T342-800q-15 0-30 5.5T285-777L144-635q-9 9-15 21t-8 24q-2 12 0 24.5t8 23.5l-58 58q-17-23-25-50.5T40-590q2-28 14-54.5T87-692l141-141q24-23 53.5-35t60.5-12q31 0 60.5 12t52.5 35l11 11 11-11q24-23 53.5-35t60.5-12q31 0 60.5 12t52.5 35l169 169q23 23 35 53t12 61q0 31-12 60.5T873-437L545-110q-14 14-32.5 22T474-80Zm-99-560Z" />
+								d="M480-118 120-398l66-50 294 228 294-228 66 50-360 280Zm0-202L120-600l360-280 360 280-360 280Zm0-280Zm0 178 230-178-230-178-230 178 230 178Z" />
 						</svg>
 					</button>
-					<button title="Zoom in" type="button" id="zoom-in" class="btn btn-primary map-button">
+									<button title="Zoom in" type="button" id="zoom-in" class="btn btn-primary map-button">
 						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
 							<path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z" />
 						</svg>
@@ -1747,14 +1769,7 @@
 							<path d="M200-440v-80h560v80H200Z" />
 						</svg>
 					</button>
-					<button title="Map selection and overlays" type="button" data-action="showMapMenu"
-						class="btn btn-primary map-button color-grey">
-						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
-							<path
-								d="M480-118 120-398l66-50 294 228 294-228 66 50-360 280Zm0-202L120-600l360-280 360 280-360 280Zm0-280Zm0 178 230-178-230-178-230 178 230 178Z" />
-						</svg>
-					</button>
-				</div>
+</div>
 			</div>
 		</div>
 	</div>
