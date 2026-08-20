@@ -2132,8 +2132,7 @@ function updateFilterUI() {
     syncDualRange("filter_distance", "distance_min", "distance_max", getDistanceConversion, getDistanceUnit());
 
     const known = station != null && station.lat != null && station.lon != null;
-    const distance = document.getElementById("filter_distance")?.closest("section");
-    if (distance) distance.style.display = known ? "" : "none";
+    document.getElementById("filter_distance")?.closest("section")?.classList.toggle("st-off", !known);
 }
 
 const FILTER_LISTS = { bucket: "filter_senders", class: "filter_classes", status: "filter_statuses" };

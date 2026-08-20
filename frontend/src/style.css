@@ -2787,6 +2787,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     margin: -2px 2px;
 }
 
+.settings_main section.st-off {
+    display: none;
+}
+
 .filter-topbar {
     flex-direction: row !important;
     align-items: center !important;
