@@ -749,8 +749,13 @@ body.ticker-open.ticker-bottom {
     transition: opacity var(--ticker-fade, 1s) ease;
 }
 
-.ticker.ticker-fading .ticker-feed,
-.ticker.ticker-fading .ticker-buckets {
+.ticker.ticker-fading .ticker-feed {
+    opacity: 0;
+}
+
+/* in wide mode the chips are a fixture beside the feed rather than part of the
+   rotation, so fading them blinks numbers that did not change */
+.ticker.ticker-fading:not(.ticker-wide) .ticker-buckets {
     opacity: 0;
 }
 

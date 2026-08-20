@@ -242,6 +242,10 @@ const ACTIONS = {
     // vessel filter
     openFilterPanel: () => openFilterPanel(),
     resetFilter: () => resetFilter(),
+    toggleFilterBucket: (e, d) => {
+        filter.toggle("bucket", d.bucket);
+        applyFilter();
+    },
     toggleFilterItem: (e, d) => {
         filter.toggle(d.kind, d.kind === "bucket" ? d.id : Number(d.id));
         applyFilter();
