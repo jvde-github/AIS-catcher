@@ -431,7 +431,8 @@ export function populate() {
     document.getElementById("shipcard_altitude").innerHTML = ship.altitude != null ? ship.altitude + " m" : null;
 
     document.getElementById("shipcard_speed").innerHTML = ship.speed != null ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
-    document.getElementById("shipcard_distance").innerHTML = ship.distance != null ? (getDistanceVal(ship.distance) + " " + getDistanceUnit() + (ship.repeat > 0 ? " (R)" : "")) : null;
+    document.getElementById("shipcard_distance").innerHTML = ship.distance != null ? getDistanceVal(ship.distance) + " " + getDistanceUnit() : null;
+    document.getElementById("shipcard_repeated").innerHTML = ship.repeat != null ? (ship.repeat > 0 ? "Yes" : "No") : null;
     document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDraughtVal(ship.draught) + " " + getDimUnit() : null;
     document.getElementById("shipcard_dimension").innerHTML = getShipDimension(ship);
     document.getElementById("shipcard_bluesign").innerHTML = ship.maneuver === 2 ? "Set" : (ship.maneuver === 1 ? "Not set" : null);
