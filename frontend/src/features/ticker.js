@@ -197,7 +197,7 @@ export function setCounts(c) {
 function renderBuckets() {
     for (const [bucket, el] of Object.entries(bucketSpans)) {
         const v = (counts.buckets || {})[bucket] || 0;
-        if (el.count) el.count.textContent = v;
+        if (el.count) el.count.textContent = compactCount(v);
         el.item.dataset.zero = v === 0 ? "true" : "false";
         el.item.classList.toggle("stat-off", !!deps.bucketHidden(bucket));
     }
