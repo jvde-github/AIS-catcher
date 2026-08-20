@@ -156,6 +156,7 @@ void Ship::clearFields(uint32_t doomed)
 		hour = ETA_HOUR_UNDEFINED;
 		minute = ETA_MINUTE_UNDEFINED;
 		draught = DRAUGHT_UNDEFINED;
+		setInlandDraught(0);
 	}
 	if (doomed & F_STATIC)
 	{

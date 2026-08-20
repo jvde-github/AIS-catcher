@@ -508,16 +508,23 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship
 		ship.heading = p.Get().getInt();
 		break;
 	case AIS::KEY_DRAUGHT:
-		if (p.Get().getFloat() != 0)
+	{
+		// an inland vessel reports draught twice and the two disagree; the DAC 200
+		// FID 10 value is the finer one, so the type 5 field is dropped once it is heard
+		const float d = p.Get().getFloat();
+		const bool inland = msg->type() == 6 || msg->type() == 8;
+
+		if (d != 0 && (inland || !ship.getInlandDraught()))
 		{
-			const float d = p.Get().getFloat();
 			const bool first = ship.draught == DRAUGHT_UNDEFINED || ship.draught <= 0;
 			changes.addNumeric(ship.mmsi, StaticHistory::DRAUGHT,
 							   first ? (uint8_t)(d * 10 + 0.5f) : (uint8_t)(ship.draught * 10 + 0.5f),
 							   (uint8_t)(d * 10 + 0.5f), ship.last_signal, first);
 			ship.draught = d;
+			ship.setInlandDraught(inland);
 			staticUpdated = true;
 		}
+	}
 		break;
 	case AIS::KEY_COURSE:
 		ship.cog = p.Get().getFloat();

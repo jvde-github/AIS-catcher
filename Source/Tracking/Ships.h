@@ -112,6 +112,7 @@ public:
     void setMsg22(int val) { flags.set(24, 2, val); } // 0=unknown, 1=false, 2=true
     void setOffPosition(int val) { flags.set(26, 2, val); } // 0=unknown, 1=on position, 2=off position
     void setManeuver(int val) { flags.set(28, 2, val); } // 0=not available, 1=no special, 2=special
+    void setInlandDraught(int val) { flags.set(30, 1, val); } // 0=type 5, 1=DAC 200 FID 10
 
     // Getters for PackedInt fields
     int getValidated() const { return flags.get(0, 2); }
@@ -129,4 +130,5 @@ public:
     int getMsg22() const { return flags.get(24, 2); } // 0=unknown, 1=false, 2=true
     int getOffPosition() const { return flags.get(26, 2); } // 0=unknown, 1=on position, 2=off position
     int getManeuver() const { return flags.get(28, 2); } // 0=not available, 1=no special, 2=special
+    int getInlandDraught() const { return flags.get(30, 1); } // 0=type 5, 1=DAC 200 FID 10
 };
