@@ -48,8 +48,14 @@ public:
 	// A vessel flapping cannot crowd out every other vessel's history
 	static const uint32_t MIN_INTERVAL = 10;
 
+	// Nor its own: a status flipping between two transmitters sharing one MMSI
+	// owns as much of a reply as it owns of the ring
+	static const std::size_t MAX_PER_MMSI = 16;
+
 	// flags bit: this entry is the first value seen, not a change
 	static const uint8_t INITIAL = 1;
+
+	static const uint8_t ANY_FIELD = 0;
 
 	void setup(int numeric_entries, int text_entries)
 	{
@@ -90,12 +96,17 @@ public:
 		txt_next = next(txt_next, txt.size());
 	}
 
-	// Newest first, so the reader can stop early; matches the path endpoint.
+	// Newest first, so the reader can stop early; matches the path endpoint. The
+	// budget is spent in the order a card can least afford to lose, draught ahead
+	// of the status it shares the numeric ring with.
 	void writeJSON(JSON::Writer &w, uint32_t mmsi) const
 	{
+		std::size_t left = MAX_PER_MMSI;
+
 		w.beginArray();
-		emit(w, mmsi, num, num_next, writeNum);
-		emit(w, mmsi, txt, txt_next, writeText);
+		emit(w, mmsi, txt, txt_next, writeText, left, ANY_FIELD);
+		emit(w, mmsi, num, num_next, writeNum, left, DRAUGHT);
+		emit(w, mmsi, num, num_next, writeNum, left, STATUS);
 		w.endArray();
 	}
 
@@ -160,15 +171,16 @@ private:
 	// The two rings differ only in what a value looks like, so the walk, the
 	// ownership check and the shared keys live here once.
 	template <typename V, typename F>
-	static void emit(JSON::Writer &w, uint32_t mmsi, const V &ring, std::size_t next_idx, F value)
+	static void emit(JSON::Writer &w, uint32_t mmsi, const V &ring, std::size_t next_idx, F value, std::size_t &left, uint8_t only)
 	{
-		for (std::size_t i = 0, r = prev(next_idx, ring.size()); i < ring.size(); i++, r = prev(r, ring.size()))
+		for (std::size_t i = 0, r = prev(next_idx, ring.size()); i < ring.size() && left; i++, r = prev(r, ring.size()))
 		{
 			const auto &e = ring[r];
-			if (e.mmsi != mmsi || !e.time)
+			if (e.mmsi != mmsi || !e.time || (only != ANY_FIELD && e.field != only))
 				continue;
 
 			writeEntry(w, e, false, value);
+			left--;
 		}
 	}
 
@@ -198,7 +210,11 @@ private:
 		std::size_t n = ring.size() < LOOKBACK ? ring.size() : LOOKBACK;
 		for (std::size_t i = 0, r = prev(next_idx, ring.size()); i < n; i++, r = prev(r, ring.size()))
 			if (ring[r].mmsi == mmsi && ring[r].field == field)
-				return (uint32_t)now - ring[r].time < MIN_INTERVAL;
+			{
+				// a copy relayed late reads as older than the entry it duplicates
+				const int64_t delta = (int64_t)now - (int64_t)ring[r].time;
+				return (delta < 0 ? -delta : delta) < (int64_t)MIN_INTERVAL;
+			}
 		return false;
 	}
 
