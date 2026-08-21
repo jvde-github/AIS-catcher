@@ -1017,8 +1017,8 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     }
 }
 
-/* suppress the focus ring for pointer clicks only; keyboard focus stays visible */
-.map-button:focus:not(:focus-visible) {
+.map-button:hover,
+.map-button:focus {
     outline: none !important;
 }
 
