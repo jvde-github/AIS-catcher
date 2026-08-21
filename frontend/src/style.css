@@ -1022,9 +1022,11 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     outline: none !important;
 }
 
-.map-button:focus-visible {
-    outline: 2px solid var(--color-accent-soft) !important;
-    outline-offset: -2px;
+@media (hover: hover) {
+    .map-button:focus-visible {
+        outline: 2px solid var(--color-accent-soft) !important;
+        outline-offset: -2px;
+    }
 }
 
 .map-button svg {
@@ -2978,7 +2980,9 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
 
 .settings_header .settings_tabs {
     border-bottom: none;
-    padding: 0 0.3rem;
+    /* the swoosh eats 25% of the width at the bottom edge: the last tab needs
+       that much room or its underline is clipped */
+    padding: 0 4.6rem 0 0.3rem;
     align-self: stretch;
     align-items: stretch;
     font-size: var(--fs-base);

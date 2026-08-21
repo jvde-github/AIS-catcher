@@ -363,7 +363,8 @@ function panIfClipped(slot) {
     if (overflow <= 1) return;
 
     slot.scroller.style.setProperty("--pan-distance", -Math.ceil(overflow) + "px");
-    slot.scroller.style.setProperty("--pan-duration", Math.max(4, overflow / PAN_PX_PER_SEC + 3) + "s");
+    const wanted = Math.max(4, overflow / PAN_PX_PER_SEC + 3);
+    slot.scroller.style.setProperty("--pan-duration", Math.min(wanted, SLIDE_MS / 1000) + "s");
     slot.text.classList.add("panning");
 }
 

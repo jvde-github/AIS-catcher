@@ -46,6 +46,7 @@
     background: var(--color-band-accent);
     border-top-right-radius: 25% 50%;
     border-bottom-right-radius: 25% 50%;
+    overflow: hidden;   /* the arrows fade with a rectangle; clip it to the curve */
     color: var(--color-text);
 }
 
