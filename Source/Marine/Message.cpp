@@ -70,7 +70,8 @@ namespace AIS
 		char latDir = lat >= 0 ? 'N' : 'S';
 		char lonDir = lon >= 0 ? 'E' : 'W';
 
-		std::string line = "$GPGLL," + flat + "," + latDir + "," + flon + "," + lonDir + ",,,";
+		// an empty status field reads as "no fix" and is dropped on the way back in
+		std::string line = "$GPGLL," + flat + "," + latDir + "," + flon + "," + lonDir + ",,A,A";
 
 		int c = NMEAchecksum(line);
 

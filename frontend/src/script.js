@@ -1796,7 +1796,7 @@ function updateMarkerCountTooltip() {
             continue;
         }
         const v = shipCounts.buckets[id] || 0;
-        flashNumber(elementId, v);
+        setCount(elementId, v);
         const item = document.getElementById(elementId)?.closest(".stat-item");
         if (item) {
             item.dataset.zero = v === 0 ? "true" : "false";
@@ -1996,26 +1996,13 @@ function updateTablecard() {
     };
 }
 
-function flashNumber(id, newValue) {
-
-    const element = document.getElementById(id);
-    const oldValue = Number(element.dataset.value) || 0;
-
-    if (newValue != oldValue) {
-        element.classList.add("flash-up");
-    }
-
-    element.dataset.value = newValue;
-    element.innerText = compactCount(newValue);
-
-    setTimeout(() => {
-        element.classList.remove("flash-up");
-    }, 500);
+function setCount(id, value) {
+    document.getElementById(id).innerText = compactCount(value);
 }
 
 function updateMarkerCount() {
     if (shipsDB == null) {
-        flashNumber("markerCount", 0);
+        setCount("markerCount", 0);
         return;
     }
     if (replay.isActive()) return;
@@ -2026,7 +2013,7 @@ function updateMarkerCount() {
 
 function renderCounts() {
     const active = filter.isActive();
-    flashNumber("markerCount", active ? shipCounts.shown : shipCounts.total);
+    setCount("markerCount", active ? shipCounts.shown : shipCounts.total);
     const el = document.getElementById("markerCount");
     if (el) {
         el.classList.toggle("count-filtered", active);

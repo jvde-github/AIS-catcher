@@ -99,11 +99,13 @@
     flex-shrink: 0;
 }
 
-.tab:hover,
-.settings_tab:hover,
-.plots-tab:hover,
-.sys-tab:hover {
-    color: var(--color-text-strong);
+@media (hover: hover) {
+    .tab:hover,
+    .settings_tab:hover,
+    .plots-tab:hover,
+    .sys-tab:hover {
+        color: var(--color-text-strong);
+    }
 }
 
 .tab.active,
@@ -167,8 +169,10 @@
     display: flex;
 }
 
-.tab-scroll-btn:hover {
-    color: var(--color-text-strong);
+@media (hover: hover) {
+    .tab-scroll-btn:hover {
+        color: var(--color-text-strong);
+    }
 }
 
 
@@ -282,10 +286,12 @@
     transition: border-color var(--dur-med) ease, box-shadow var(--dur-med) ease;
 }
 
-.input:hover,
-.realtime-filter-input:hover,
-.settings_main select:hover {
-    border-color: var(--color-accent);
+@media (hover: hover) {
+    .input:hover,
+    .realtime-filter-input:hover,
+    .settings_main select:hover {
+        border-color: var(--color-accent);
+    }
 }
 
 .input:focus,
@@ -363,9 +369,11 @@ select.realtime-filter-input,
     border-color: var(--color-knob);
 }
 
-.toggle:hover,
-.settings_main input[type="checkbox"]:hover {
-    box-shadow: 0 0 0 1px var(--color-accent);
+@media (hover: hover) {
+    .toggle:hover,
+    .settings_main input[type="checkbox"]:hover {
+        box-shadow: 0 0 0 1px var(--color-accent);
+    }
 }
 
 /* compact variant, for a toggle sitting inside a header rather than a field */
@@ -434,14 +442,18 @@ select.realtime-filter-input,
     box-shadow: 0 1px 2px var(--color-shadow-soft);
 }
 
-.slider:hover::-webkit-slider-thumb,
-.settings_main input[type="range"]:hover::-webkit-slider-thumb {
-    box-shadow: 0 1px 2px var(--color-shadow-soft), 0 0 0 2px var(--color-accent);
+@media (hover: hover) {
+    .slider:hover::-webkit-slider-thumb,
+    .settings_main input[type="range"]:hover::-webkit-slider-thumb {
+        box-shadow: 0 1px 2px var(--color-shadow-soft), 0 0 0 2px var(--color-accent);
+    }
 }
 
-.slider:hover::-moz-range-thumb,
-.settings_main input[type="range"]:hover::-moz-range-thumb {
-    box-shadow: 0 1px 2px var(--color-shadow-soft), 0 0 0 2px var(--color-accent);
+@media (hover: hover) {
+    .slider:hover::-moz-range-thumb,
+    .settings_main input[type="range"]:hover::-moz-range-thumb {
+        box-shadow: 0 1px 2px var(--color-shadow-soft), 0 0 0 2px var(--color-accent);
+    }
 }
 
 /* Form button — not .map-button or .hub-button. The tab scroller's arrows are
@@ -468,11 +480,13 @@ select.realtime-filter-input,
     transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease;
 }
 
-.btn:hover,
-.settings_main button:not(.tab-scroll-btn):hover,
-.settings_main section div>span[data-action]:hover {
-    border-color: var(--color-accent);
-    background: var(--color-bg);
+@media (hover: hover) {
+    .btn:hover,
+    .settings_main button:not(.tab-scroll-btn):hover,
+    .settings_main section div>span[data-action]:hover {
+        border-color: var(--color-accent);
+        background: var(--color-bg);
+    }
 }
 
 .btn-primary {
@@ -481,9 +495,11 @@ select.realtime-filter-input,
     border-color: var(--color-accent);
 }
 
-.btn-primary:hover {
-    background: var(--color-accent-hover);
-    border-color: var(--color-accent-hover);
+@media (hover: hover) {
+    .btn-primary:hover {
+        background: var(--color-accent-hover);
+        border-color: var(--color-accent-hover);
+    }
 }
 
 
@@ -502,8 +518,10 @@ select.realtime-filter-input,
     transition: box-shadow var(--dur-slow) ease;
 }
 
-.card:hover {
-    box-shadow: var(--shadow-md);
+@media (hover: hover) {
+    .card:hover {
+        box-shadow: var(--shadow-md);
+    }
 }
 
 .card-header {
@@ -622,10 +640,12 @@ select.realtime-filter-input,
     box-shadow: none;
 }
 
-.btn-danger:hover {
-    color: var(--color-danger);
-    background: var(--color-danger-bg);
-    border: none;
+@media (hover: hover) {
+    .btn-danger:hover {
+        color: var(--color-danger);
+        background: var(--color-danger-bg);
+        border: none;
+    }
 }
 
 .btn:disabled,
@@ -897,9 +917,11 @@ select.realtime-filter-input,
     transition: border-color var(--dur-fast), background var(--dur-fast);
 }
 
-.option:hover {
-    border-color: var(--color-field-border);
-    background: var(--color-bg);
+@media (hover: hover) {
+    .option:hover {
+        border-color: var(--color-field-border);
+        background: var(--color-bg);
+    }
 }
 
 .option.selected {
@@ -916,10 +938,12 @@ select.realtime-filter-input,
     box-shadow: none;
 }
 
-.btn-quiet:hover {
-    color: var(--color-text-strong);
-    background: var(--color-surface-alt);
-    border: none;
+@media (hover: hover) {
+    .btn-quiet:hover {
+        color: var(--color-text-strong);
+        background: var(--color-surface-alt);
+        border: none;
+    }
 }
 
 
@@ -1030,8 +1054,10 @@ select.realtime-filter-input,
     transition: opacity var(--dur-fast) ease;
 }
 
-.tooltip-anchor:hover .tooltip {
-    opacity: 1;
+@media (hover: hover) {
+    .tooltip-anchor:hover .tooltip {
+        opacity: 1;
+    }
 }
 
 .tooltip::after {
@@ -1109,8 +1135,10 @@ select.realtime-filter-input,
     transition: opacity var(--dur-fast) ease;
 }
 
-.toast-close:hover {
-    opacity: 1;
+@media (hover: hover) {
+    .toast-close:hover {
+        opacity: 1;
+    }
 }
 
 .toast-success .toast-icon {
@@ -1194,9 +1222,11 @@ select.realtime-filter-input,
     transition: opacity var(--dur-fast) ease;
 }
 
-.dialog-header .close_icon:hover,
-.dialog-header .dialog-header-action:hover {
-    opacity: 0.65;
+@media (hover: hover) {
+    .dialog-header .close_icon:hover,
+    .dialog-header .dialog-header-action:hover {
+        opacity: 0.65;
+    }
 }
 
 /* the action sits left of the close icon, so no trailing gap */

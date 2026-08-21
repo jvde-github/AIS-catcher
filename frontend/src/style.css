@@ -32,10 +32,16 @@ a {
     text-decoration: none;
 }
 
-a:hover,
 a:focus-visible {
     color: var(--color-link-hover);
     text-decoration: underline;
+}
+
+@media (hover: hover) {
+    a:hover {
+        color: var(--color-link-hover);
+        text-decoration: underline;
+    }
 }
 
 .header {
@@ -107,9 +113,11 @@ a:focus-visible {
     transition: var(--transition-hover);
 }
 
-.header-title div i:hover {
-    cursor: pointer;
-    transform: var(--hover-lift);
+@media (hover: hover) {
+    .header-title div i:hover {
+        cursor: pointer;
+        transform: var(--hover-lift);
+    }
 }
 
 .header-title div i.active {
@@ -146,8 +154,10 @@ a:focus-visible {
     border-top: 1px solid var(--color-menu-divider);
 }
 
-.receiver-option:hover {
-    background: var(--color-menu-hover);
+@media (hover: hover) {
+    .receiver-option:hover {
+        background: var(--color-menu-hover);
+    }
 }
 
 .receiver-option.active {
@@ -171,9 +181,11 @@ a:focus-visible {
     }
 }
 
-.header-icon:hover {
-    cursor: pointer;
-    transform: var(--hover-lift);
+@media (hover: hover) {
+    .header-icon:hover {
+        cursor: pointer;
+        transform: var(--hover-lift);
+    }
 }
 
 .header-icon.active {
@@ -332,8 +344,10 @@ a:focus-visible {
     transition: border-color var(--dur-fast) ease;
 }
 
-.chart-sources select:hover {
-    border-color: var(--color-accent);
+@media (hover: hover) {
+    .chart-sources select:hover {
+        border-color: var(--color-accent);
+    }
 }
 
 .graphtab {
@@ -446,9 +460,11 @@ a:focus-visible {
     border-collapse: collapse;
 }
 
-.tabulator .tabulator-header .tabulator-col.tabulator-sortable.tabulator-col-sorter-element:hover {
-    background-color: var(--color-band-accent);
-    background-image: linear-gradient(var(--color-hover), var(--color-hover));
+@media (hover: hover) {
+    .tabulator .tabulator-header .tabulator-col.tabulator-sortable.tabulator-col-sorter-element:hover {
+        background-color: var(--color-band-accent);
+        background-image: linear-gradient(var(--color-hover), var(--color-hover));
+    }
 }
 
 .tabulator .tabulator-header .tabulator-col .tabulator-arrow {
@@ -462,8 +478,10 @@ a:focus-visible {
     border-bottom-color: var(--color-text) !important;
 }
 
-.tabulator-row:hover {
-    background-color: var(--color-selected) !important;
+@media (hover: hover) {
+    .tabulator-row:hover {
+        background-color: var(--color-selected) !important;
+    }
 }
 
 .tabulator-row-odd {
@@ -980,20 +998,22 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     border-top: 1px solid var(--color-border-strong) !important;
 }
 
-/* a tap leaves :hover applied on touch, so an untoggled button kept looking on */
 @media (hover: hover) {
-    .map-button:hover {
-        color: var(--color-highlight) !important;
-        fill: var(--color-highlight) !important;
-        outline: none !important;
-    }
+    /* a tap leaves :hover applied on touch, so an untoggled button kept looking on */
+    @media (hover: hover) {
+        .map-button:hover {
+            color: var(--color-highlight) !important;
+            fill: var(--color-highlight) !important;
+            outline: none !important;
+        }
 
-    .map-button:hover svg {
-        transform: scale(1.2);
-    }
+        .map-button:hover svg {
+            transform: scale(1.2);
+        }
 
-    .map-button.is-active:hover::before {
-        background: var(--color-hover-overlay);
+        .map-button.is-active:hover::before {
+            background: var(--color-hover-overlay);
+        }
     }
 }
 
@@ -1300,8 +1320,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     padding: 0px;
 }
 
-.tablecard_inner table>tbody>tr:hover {
-    background: var(--color-hover);
+@media (hover: hover) {
+    .tablecard_inner table>tbody>tr:hover {
+        background: var(--color-hover);
+    }
 }
 
 .tablecard_inner table th:nth-child(1),
@@ -1399,8 +1421,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     cursor: default;
 }
 
-.table-pager button:not(:disabled):hover {
-    background: var(--color-hover);
+@media (hover: hover) {
+    .table-pager button:not(:disabled):hover {
+        background: var(--color-hover);
+    }
 }
 
 .sort-icon::after {
@@ -1672,8 +1696,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     transition: var(--transition-hover);
 }
 
-.mapcard-content-row:hover {
-    cursor: pointer;
+@media (hover: hover) {
+    .mapcard-content-row:hover {
+        cursor: pointer;
+    }
 }
 
 .mapcard-content-row>div {
@@ -1816,7 +1842,9 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     user-select: none;
 }
 
-.shipcard-section:hover { filter: brightness(0.97); }
+@media (hover: hover) {
+    .shipcard-section:hover { filter: brightness(0.97); }
+}
 
 .shipcard-caret-chip {
     display: inline-flex;
@@ -1830,7 +1858,9 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     flex: none;
 }
 
-.shipcard-section:hover .shipcard-caret-chip { background: var(--color-surface-raised); }
+@media (hover: hover) {
+    .shipcard-section:hover .shipcard-caret-chip { background: var(--color-surface-raised); }
+}
 
 .shipcard-section-caret {
     width: 13px;
@@ -2105,8 +2135,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     background-color: var(--color-text-muted);
 }
 
-#stat_devices .device-row:hover .info_icon {
-    background-color: var(--color-text);
+@media (hover: hover) {
+    #stat_devices .device-row:hover .info_icon {
+        background-color: var(--color-text);
+    }
 }
 
 .stat-panel section div span:first-child {
@@ -2219,8 +2251,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     background-color: var(--color-menu-divider);
 }
 
-.floating-menu li:hover {
-    background-color: var(--color-menu-hover);
+@media (hover: hover) {
+    .floating-menu li:hover {
+        background-color: var(--color-menu-hover);
+    }
 }
 
 .floating-menu li.disabled {
@@ -2413,8 +2447,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     line-height: 1.5;
 }
 
-#overlayContainer label:hover {
-    color: var(--color-accent);
+@media (hover: hover) {
+    #overlayContainer label:hover {
+        color: var(--color-accent);
+    }
 }
 
 /* Meteo Tooltip Styling */
@@ -2442,8 +2478,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     transition: opacity var(--dur-fast) ease;
 }
 
-.settings_header>.close_icon:hover {
-    opacity: 0.65;
+@media (hover: hover) {
+    .settings_header>.close_icon:hover {
+        opacity: 0.65;
+    }
 }
 
 .dialog-title {
@@ -2597,21 +2635,6 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     display: flex;
 }
 
-.flash-up {
-    opacity: 0;
-    animation: flash var(--dur-slow) ease forwards;
-}
-
-@keyframes flash {
-    0% {
-        opacity: 0;
-    }
-
-    100% {
-        opacity: 1;
-    }
-}
-
 .color-picker {
     -webkit-appearance: none;
     border-radius: 0;
@@ -2717,9 +2740,11 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     color: color-mix(in srgb, var(--color-danger) 75%, var(--color-text));
 }
 
-.settings_main section div button.st-danger:hover {
-    border-color: var(--color-danger);
-    background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+@media (hover: hover) {
+    .settings_main section div button.st-danger:hover {
+        border-color: var(--color-danger);
+        background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+    }
 }
 
 .settings_main section div>span[data-action] {
@@ -2745,8 +2770,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     width: auto;
 }
 
-.settings_main section div.filter-allnone button:hover {
-    text-decoration: underline;
+@media (hover: hover) {
+    .settings_main section div.filter-allnone button:hover {
+        text-decoration: underline;
+    }
 }
 
 .filter-check {
@@ -2761,8 +2788,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     border-radius: var(--radius-sm);
 }
 
-.filter-check:hover {
-    background: var(--color-band-accent);
+@media (hover: hover) {
+    .filter-check:hover {
+        background: var(--color-band-accent);
+    }
 }
 
 .settings_main .filter-check input[type="checkbox"] {
@@ -2903,12 +2932,16 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     cursor: pointer;
 }
 
-.dr-track input[type="range"]:hover::-webkit-slider-thumb {
-    box-shadow: 0 1px 2px var(--color-shadow-soft), 0 0 0 2px var(--color-accent);
+@media (hover: hover) {
+    .dr-track input[type="range"]:hover::-webkit-slider-thumb {
+        box-shadow: 0 1px 2px var(--color-shadow-soft), 0 0 0 2px var(--color-accent);
+    }
 }
 
-.dr-track input[type="range"]:hover::-moz-range-thumb {
-    box-shadow: 0 1px 2px var(--color-shadow-soft), 0 0 0 2px var(--color-accent);
+@media (hover: hover) {
+    .dr-track input[type="range"]:hover::-moz-range-thumb {
+        box-shadow: 0 1px 2px var(--color-shadow-soft), 0 0 0 2px var(--color-accent);
+    }
 }
 
 .settings_main button:not(.tab-scroll-btn) {
@@ -3114,11 +3147,13 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     border-radius: var(--radius-md);
 }
 
-.settings_main section div>span[data-action]:hover,
-.settings_main button:not(.tab-scroll-btn):hover,
-.settings_main .color-picker:hover,
-.settings_main select:hover {
-    border-color: var(--color-accent);
+@media (hover: hover) {
+    .settings_main section div>span[data-action]:hover,
+    .settings_main button:not(.tab-scroll-btn):hover,
+    .settings_main .color-picker:hover,
+    .settings_main select:hover {
+        border-color: var(--color-accent);
+    }
 }
 
 /* .band / .band-slot live in components.css, shared with the control hub */
@@ -3237,8 +3272,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     cursor: pointer;
 }
 
-.ship-table-column-dropdown-item:hover {
-    background-color: var(--color-menu-hover);
+@media (hover: hover) {
+    .ship-table-column-dropdown-item:hover {
+        background-color: var(--color-menu-hover);
+    }
 }
 
 .ship-table-column-dropdown-item input {
@@ -3286,9 +3323,11 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     font-size: var(--fs-md);
 }
 
-.column-menu-reset:hover {
-    background-color: var(--color-menu-hover);
-    color: var(--color-accent);
+@media (hover: hover) {
+    .column-menu-reset:hover {
+        background-color: var(--color-menu-hover);
+        color: var(--color-accent);
+    }
 }
 
 .info-panel {
@@ -3374,8 +3413,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     mask-size: 100% 100%;
 }
 
-.header-info-panel .close_icon:hover {
-    transform: var(--hover-lift);
+@media (hover: hover) {
+    .header-info-panel .close_icon:hover {
+        transform: var(--hover-lift);
+    }
 }
 
 .info-panel .content {
@@ -3416,10 +3457,12 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     fill: currentColor;
 }
 
-.quick-link:hover {
-    border-color: var(--color-accent);
-    color: var(--color-text);
-    text-decoration: none;
+@media (hover: hover) {
+    .quick-link:hover {
+        border-color: var(--color-accent);
+        color: var(--color-text);
+        text-decoration: none;
+    }
 }
 
 .quick-link span {
@@ -3450,9 +3493,11 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     border-bottom: none;
 }
 
-.link-list a:hover {
-    color: var(--color-accent);
-    text-decoration: none;
+@media (hover: hover) {
+    .link-list a:hover {
+        color: var(--color-accent);
+        text-decoration: none;
+    }
 }
 
 .link-item {
@@ -3510,8 +3555,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     transition: color var(--dur-med), transform var(--dur-med);
 }
 
-.social-icons a:hover {
-    transform: var(--hover-lift);
+@media (hover: hover) {
+    .social-icons a:hover {
+        transform: var(--hover-lift);
+    }
 }
 
 .social-icons a svg path[fill="#d1d5db"] {
@@ -3728,8 +3775,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     color: var(--color-text-muted);
 }
 
-.filter-chip button:hover {
-    color: var(--color-text-strong);
+@media (hover: hover) {
+    .filter-chip button:hover {
+        color: var(--color-text-strong);
+    }
 }
 
 .filter-chip button i {
@@ -3740,8 +3789,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     flex: 1;
 }
 
-.realtime-clear-btn:hover {
-    opacity: 0.7;
+@media (hover: hover) {
+    .realtime-clear-btn:hover {
+        opacity: 0.7;
+    }
 }
 
 .realtime-clear-btn i {
@@ -3761,9 +3812,11 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     height: 40px;
 }
 
-.realtime-control-btn:hover {
-    background: var(--color-menu-hover);
-    color: var(--color-accent);
+@media (hover: hover) {
+    .realtime-control-btn:hover {
+        background: var(--color-menu-hover);
+        color: var(--color-accent);
+    }
 }
 
 .realtime-control-btn span {
@@ -3790,8 +3843,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     height: 16px;
 }
 
-.realtime-background-toggle:hover {
-    color: var(--color-accent);
+@media (hover: hover) {
+    .realtime-background-toggle:hover {
+        color: var(--color-accent);
+    }
 }
 
 .realtime-panel {
@@ -3824,8 +3879,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     white-space: nowrap;
 }
 
-.signal-table tbody tr:hover {
-    background: var(--color-menu-hover);
+@media (hover: hover) {
+    .signal-table tbody tr:hover {
+        background: var(--color-menu-hover);
+    }
 }
 
 .signal-table tbody td a {
@@ -3833,8 +3890,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     text-decoration: none;
 }
 
-.signal-table tbody td a:hover {
-    text-decoration: underline;
+@media (hover: hover) {
+    .signal-table tbody td a:hover {
+        text-decoration: underline;
+    }
 }
 
 .nmea-cell-content {
@@ -3858,8 +3917,10 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     font-size: var(--fs-base);
 }
 
-.nmea-decoder-icon:hover {
-    background: var(--color-menu-hover);
+@media (hover: hover) {
+    .nmea-decoder-icon:hover {
+        background: var(--color-menu-hover);
+    }
 }
 
 .nmea-decoder-icon i {
@@ -3922,10 +3983,12 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     justify-content: center !important;
 }
 
-.aiscatcher-logo-control:hover {
-    background: rgba(0, 0, 0, 0.2) !important;
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
+@media (hover: hover) {
+    .aiscatcher-logo-control:hover {
+        background: rgba(0, 0, 0, 0.2) !important;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+    }
 }
 
 .aiscatcher-logo-control.disconnected svg path {
@@ -4256,9 +4319,11 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     transition: height 120ms ease;
 }
 
-.replaybar-track:hover::before,
-.replaybar-track:hover .replaybar-fill {
-    height: 6px;
+@media (hover: hover) {
+    .replaybar-track:hover::before,
+    .replaybar-track:hover .replaybar-fill {
+        height: 6px;
+    }
 }
 
 /* the real input sits transparent on top so it keeps native drag behaviour */
@@ -4308,14 +4373,24 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     transition: opacity 120ms ease;
 }
 
-.replaybar-track:hover input[type="range"]:not(:disabled)::-webkit-slider-thumb,
 .replaybar-track input[type="range"]:active::-webkit-slider-thumb {
     opacity: 1;
 }
 
-.replaybar-track:hover input[type="range"]:not(:disabled)::-moz-range-thumb,
+@media (hover: hover) {
+    .replaybar-track:hover input[type="range"]:not(:disabled)::-webkit-slider-thumb {
+        opacity: 1;
+    }
+}
+
 .replaybar-track input[type="range"]:active::-moz-range-thumb {
     opacity: 1;
+}
+
+@media (hover: hover) {
+    .replaybar-track:hover input[type="range"]:not(:disabled)::-moz-range-thumb {
+        opacity: 1;
+    }
 }
 
 .replaybar-speed {

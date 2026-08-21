@@ -332,27 +332,25 @@ function getBinaryMessageList(messages) {
 }
 
 export function showBinaryMessageDialog(featureOrMmsi) {
-    let title, content;
+    let content;
 
     if (typeof featureOrMmsi === 'object') {
         if (!featureOrMmsi.binary_messages || featureOrMmsi.binary_messages.length === 0) {
-            deps.showDialog("Binary Message", "No message content available");
+            deps.showDialog("Binary", "No message content available");
             return;
         }
-        title = "Binary Messages";
         content = getBinaryMessageList(featureOrMmsi.binary_messages);
 
     } else if (typeof featureOrMmsi === 'number' || typeof featureOrMmsi === 'string') {
         const mmsi = Number(featureOrMmsi);
         if (shipBinaryMessages(mmsi).length === 0) {
-            deps.showDialog("Binary Messages", "No binary messages available for this vessel");
+            deps.showDialog("Binary", "No binary messages available for this vessel");
             return;
         }
-        title = `Binary Messages for ${shipLabel(mmsi)}`;
         content = getBinaryMessageList(binaryDB[mmsi].ship_messages);
     }
 
-    deps.showDialog(title, content);
+    deps.showDialog("Binary", content);
     deps.getDialogModal().card.style.maxWidth = "500px";
 }
 
