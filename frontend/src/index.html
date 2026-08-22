@@ -18,6 +18,7 @@
 	<link rel="stylesheet" href="icons.css?hash=" />
 	<link rel="stylesheet" href="components.css?hash=" />
 	<link rel="stylesheet" href="style.css?hash=abc9548e0685c62329b1c38aafe7623c" />
+	<link rel="stylesheet" href="map.css?hash=" />
 	<link rel="stylesheet" href="custom/config.css" />
 
 </head>
@@ -87,7 +88,7 @@
 		<div class="tableside_window settings-bg tabcontent" id="tableside">
 			<div class="settings_header">
 				<div class="hdr-slot">
-					<input type="text" class="input search-box" id="shipSearchSide" placeholder="Search for ships...">
+					<input type="text" class="input search-box" id="shipSearchSide" placeholder="Search for ships..." title="Search for ships">
 				</div>
 				<div class="table-pager" id="tablePager" hidden>
 					<button type="button" data-action="tablePagePrev" title="Previous page" aria-label="Previous page">&#8249;</button>
@@ -151,7 +152,6 @@
 								<option value="dms">Degrees Minutes Seconds</option>
 							</select>
 						</span>
-						<small class="st-desc">Format for coordinates</small>
 					</div>
 					<div class="half">
 						<span>Units</span><span>
@@ -161,7 +161,6 @@
 								<option value="imperial">Imperial</option>
 							</select>
 						</span>
-						<small class="st-desc">Units for measurements</small>
 					</div>
 				</section>
 				<header>Table</header>
@@ -197,7 +196,6 @@
 							<input type="checkbox" id="settings_show_station"
 								data-on-change="setMapSetting" data-key="show_station" />
 						</span>
-					<small class="st-desc">Show the station marker on the map</small>
 						</div>
 					
 				</section>
@@ -244,7 +242,6 @@
 							<input type="checkbox" id="settings_distance_circles"
 								data-on-change="setMapSetting" data-key="distance_circles" />
 						</span>
-					<small class="st-desc">Distance circles around the station</small>
 						</div>
 					<div class="third">
 						<span>Color</span><span>
@@ -255,12 +252,14 @@
 				</section>
 				<section>
 					<div>
-						<span>Dock Top Left</span><span>
-							<input type="checkbox" id="settings_shipcard_top_left"
-								data-on-change="setMapSetting" data-key="shipcard_top_left" />
+						<span>Card Top Left</span><span>
+							<input type="checkbox" id="settings_targetcard_top_left"
+								data-on-change="setMapSetting" data-key="targetcard_top_left" />
 						</span>
-					<small class="st-desc">Open the shipcard in the top left corner</small>
+					<small class="st-desc">Always open the card in the same corner instead of beside the vessel</small>
 						</div>
+				</section>
+				<section>
 					<div>
 						<span>Toolbar</span><span>
 							<select id="settings_map_toolbar" data-on-change="setMapToolbar">
@@ -372,7 +371,6 @@
 							<input type="checkbox" id="settings_show_signal_graphs"
 								data-on-change="setGraphVisibility" data-graph="signal" />
 						</span>
-					<small class="st-desc">Show or hide the signal level plots</small>
 						</div>
 				</section>
 				<section>
@@ -381,7 +379,6 @@
 							<input type="checkbox" id="settings_show_ppm_graphs"
 								data-on-change="setGraphVisibility" data-graph="ppm" />
 						</span>
-					<small class="st-desc">Show or hide the frequency offset plots</small>
 						</div>
 				</section>
 				<header>Ship Outline</header>
@@ -832,7 +829,6 @@
 						<span>Center on Ship</span><span>
 							<input type="checkbox" id="settings_kiosk_pan_map" data-on-change="setKioskPanMap">
 						</span>
-					<small class="st-desc">Center the map on each ship shown</small>
 						</div>
 				</section>
 			</div>
@@ -840,15 +836,15 @@
 
 		<div data-on-contextmenu="mainspaceContextMenu" class="mainspace">
 			<ul class="floating-menu" id="context-menu">
-				<li class="ctx-shipcard" data-group="card" data-action="toggleShipcardPin" id="ctx_shipcard_pin"><i class="push_pin_icon"></i>Pin shipcard position<span class="ctx-check">✓</span></li>
+				<li class="ctx-targetcard" data-group="card" data-action="toggleTargetcardPin" id="ctx_targetcard_pin"><i class="drag_indicator_icon"></i>Pin card position<span class="ctx-check">✓</span></li>
 				<li class="copy-text" data-group="text" data-action="copyTextCtx"><i class="content_copy_icon"></i>Copy to Clipboard</li>
 				<li class="table-menu" data-group="table" data-action="downloadCSV"><i class="cloud_download_icon"></i>Download CSV</li>
 				<li class="station" data-group="focus" data-action="toggleFollowStationCtx"><i class="push_pin_icon"></i><span id="ctx_follow_station">Follow station</span></li>
 				<li class="ctx-map ctx-replay-map" data-group="focus" data-action="unpinCenter" id="ctx_menu_unpin"><i class="undo_icon"></i><span id="ctx_unpin">Release map center</span></li>
 				<li class="ship-map ctx-replay-ship" data-group="focus" data-action="toggleFollowCtx"><i class="push_pin_icon"></i><span id="ctx_follow">Follow vessel</span></li>
 				<li class="ship-map ctx-replay-ship" data-group="focus" data-action="mapResetViewZoomCtx"><i class="zoom_in_icon"></i>Zoom in on vessel</li>
-				<li class="ship-map" data-group="focus" data-action="showShipcardCtx" data-kind="ship"><i class="directions_boat_icon"></i>Ship card</li>
-				<li class="plane-map" data-group="focus" data-action="showShipcardCtx" data-kind="plane"><i class="directions_boat_icon"></i>Plane card</li>
+				<li class="ship-map" data-group="focus" data-action="showTargetcardCtx" data-kind="ship"><i class="directions_boat_icon"></i>Ship card</li>
+				<li class="plane-map" data-group="focus" data-action="showTargetcardCtx" data-kind="plane"><i class="directions_boat_icon"></i>Plane card</li>
 				<li class="ship-map ctx-noalltracks" data-group="tracks" data-action="toggleTrackCtx"><i class="timeline_icon"></i>Track<span class="ctx-check">✓</span></li>
 				<li class="ctx-map" data-group="tracks" data-action="toggleAllTracks"><i class="timeline_icon"></i>All tracks<span class="ctx-check">✓</span></li>
 				<li class="ctx-map noandroid ctx-noalltracks" data-group="tracks" data-action="startBoxSelect"><i class="highlight_alt_icon"></i>Show tracks in area</li>
@@ -869,7 +865,7 @@
 				<li class="ctx-map" data-group="display" data-action="toggleRange"><i class="signal_cellular_alt_icon"></i>Station range<span class="ctx-check">✓</span></li>
 				<li class="ctx-map" data-group="display" data-action="toggleTicker"><i class="feed_icon"></i>Event ticker<span class="ctx-check">✓</span></li>
 				<li class="ctx-map" data-group="display" data-action="toggleAttribution"><i class="info_icon"></i>Map attribution<span class="ctx-check">✓</span></li>
-				<li class="ctx-map ctx-replay ctx-replay-map" data-group="tools" data-action="toggleReplaycard"><i class="play_arrow_icon"></i>Replay<span class="ctx-check">✓</span></li>
+				<li class="ctx-map ctx-replay ctx-replay-map" data-group="tools" data-action="toggleReplaycard"><i class="play_circle_icon"></i>Replay<span class="ctx-check">✓</span></li>
 				<li class="ctx-map" data-group="tools" data-action="toggleMeasurecard"><i class="straighten_icon"></i>Measure<span class="ctx-check">✓</span></li>
 				<li class="ctx-map" data-group="tools" data-action="toggleCommunityPane"><i class="public_icon"></i>Community pane<span class="ctx-check">✓</span></li>
 				<li class="ctx-map" data-group="tools" data-action="toggleKioskMode"><i class="jamboard_kiosk_icon"></i>Kiosk mode<span class="ctx-check">✓</span></li>
@@ -1335,40 +1331,7 @@
 				</div>
 
 				<aside id="statcard">
-					<div class="statcard_inner draggable">
-						<span class="stat-item" title="Class A Moving — click to show or hide" data-action="toggleFilterBucket" data-bucket="am">
-							<span class="shipicon" style="background-position: -120px 0px; transform: rotate(45deg) scale(0.65)"></span>
-							<span id="statcard_moving"></span>
-						</span>
-						<span class="stat-item" title="Class A Stationary — click to show or hide" data-action="toggleFilterBucket" data-bucket="as">
-							<span class="shipicon" style="background-position: -120px -20px; transform: scale(0.65)"></span>
-							<span id="statcard_stationary"></span>
-						</span>
-						<span class="stat-item" title="Class B Moving — click to show or hide" data-action="toggleFilterBucket" data-bucket="bm">
-							<span class="shipicon" style="background-position: -20px 0px; transform: rotate(45deg) scale(0.65)"></span>
-							<span id="statcard_class_b_moving"></span>
-						</span>
-						<span class="stat-item" title="Class B Stationary — click to show or hide" data-action="toggleFilterBucket" data-bucket="bs">
-							<span class="shipicon" style="background-position: -20px -20px; transform: scale(0.65)"></span>
-							<span id="statcard_class_b_stationary"></span>
-						</span>
-						<span class="stat-item" title="Aid-to-Navigation — click to show or hide" data-action="toggleFilterBucket" data-bucket="aton">
-							<span class="staticon" style="background-position: 0px -20px; transform: scale(0.65)"></span>
-							<span id="statcard_aton"></span>
-						</span>
-						<span class="stat-item" title="Base Station — click to show or hide" data-action="toggleFilterBucket" data-bucket="base">
-							<span class="staticon" style="background-position: -20px -20px; transform: scale(0.65)"></span>
-							<span id="statcard_station"></span>
-						</span>
-						<span class="stat-item" title="SARTE / EPIRB — click to show or hide" data-action="toggleFilterBucket" data-bucket="sarte">
-							<span class="staticon" style="background-position: -40px -20px; transform: scale(0.65)"></span>
-							<span id="statcard_sarte"></span>
-						</span>
-						<span class="stat-item" title="Plane/Helicopter — click to show or hide" data-action="toggleFilterBucket" data-bucket="air">
-							<span class="helicoptericon" style="background-position: 0px 0px; transform: scale(0.55) rotate(45deg)"></span>
-							<span id="statcard_heli"></span>
-						</span>
-					</div>
+					<div class="statcard_inner draggable"></div>
 				</aside>
 
 
@@ -1409,18 +1372,13 @@
 
 				</aside>
 
-				<div id="replaybar" role="group" aria-label="Track replay">
+				<div id="replaybar" role="group" aria-label="Track replay"
+					data-on-contextmenu="replayMenu">
 					<button id="replayPlay" data-action="replayToggle" class="replaybar-play"
 						title="Play" aria-label="Play">
-						<svg class="replay-icon-play" viewBox="0 -960 960 960" aria-hidden="true">
-							<path d="M320-200v-560l440 280-440 280Z" />
-						</svg>
-						<svg class="replay-icon-pause" viewBox="0 -960 960 960" aria-hidden="true">
-							<path d="M520-200v-560h240v560H520Zm-320 0v-560h240v560H200Z" />
-						</svg>
-						<svg class="replay-icon-wait" viewBox="0 -960 960 960" aria-hidden="true">
-							<path d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880v80q-133 0-226.5 93.5T160-480q0 133 93.5 226.5T480-160q133 0 226.5-93.5T800-480h80q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z" />
-						</svg>
+						<i class="play_arrow_icon replay-icon-play"></i>
+						<i class="pause_icon replay-icon-pause"></i>
+						<i class="progress_activity_icon replay-icon-wait"></i>
 					</button>
 
 					<span id="replayElapsed" class="replaybar-time">--:--</span>
@@ -1433,114 +1391,107 @@
 
 					<span id="replayRemaining" class="replaybar-time">--:--</span>
 
-					<button id="replaySpeed" data-action="replayCycleSpeed" class="replaybar-speed"
-						title="Playback speed">60&times;</button>
+					<button id="replaySpeed" data-action="replayCycleSpeed"
+						class="replaybar-speed" title="Playback speed (right-click for the list)">60&times;</button>
 
 					<button id="replayLabels" data-action="replayToggleLabels" class="replaybar-labels"
 						title="Show ship labels" aria-label="Show ship labels" aria-pressed="false">
-						<svg class="replay-icon-labels-on" viewBox="0 -960 960 960" aria-hidden="true">
-							<path d="M840-480 666-234q-11 16-28.5 25t-37.5 9H200q-33 0-56.5-23.5T120-280v-400q0-33 23.5-56.5T200-760h400q20 0 37.5 9t28.5 25l174 246Zm-98 0L602-680H200v400h402l140-200Z" />
-						</svg>
-						<svg class="replay-icon-labels-off" viewBox="0 -960 960 960" aria-hidden="true">
-							<path d="M840-480 666-234q-11 16-28.5 25t-37.5 9H200q-33 0-56.5-23.5T120-280v-400q0-33 23.5-56.5T200-760h400q20 0 37.5 9t28.5 25l174 246Zm-98 0L602-680H200v400h402l140-200Z" />
-							<path d="M160-800 800-160" fill="none" stroke="currentColor" stroke-width="70" stroke-linecap="round" />
-						</svg>
+						<i class="label_icon replay-icon-labels-on"></i>
+						<i class="label_off_icon replay-icon-labels-off"></i>
 					</button>
 
 					<button data-action="toggleReplaycard" class="replaybar-close" title="Close replay"
 						aria-label="Close replay">
-						<svg viewBox="0 -960 960 960" aria-hidden="true">
-							<path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" />
-						</svg>
+						<i class="close_icon mapcard-close"></i>
 					</button>
 				</div>
 
-				<aside id="shipcard" class="mapcard shipcard-width shipcard-ismax"
-					data-on-contextmenu="shipcardContextMenu">
-					<header id="shipcard_header" class="mapcard_header">
-						<span data-action="toggleShipcardSize" id="shipcard_header_flag"></span>
-						<span data-action="toggleShipcardSize" id="shipcard_header_title"></span>
-						<span class=""><i id="shipcard_drag_handle"
+				<aside id="targetcard" class="mapcard targetcard-width targetcard-ismax"
+					data-on-contextmenu="targetcardContextMenu">
+					<header id="targetcard_header" class="mapcard_header">
+						<span data-action="toggleTargetcardSize" id="targetcard_header_flag"></span>
+						<span data-action="toggleTargetcardSize" id="targetcard_header_title"></span>
+						<span class=""><i id="targetcard_drag_handle"
 								class="mapcard-header-icon drag_indicator_icon draggable draggable-hide-if-not-active"></i></span>
-						<span><i data-action="toggleShipcardSize" id="shipcard_minmax_button"
+						<span><i data-action="toggleTargetcardSize" id="targetcard_minmax_button"
 								class="mapcard-header-icon keyboard_arrow_up_icon"></i></span>
-						<span><i data-action="shipcardContextMenu"
+						<span><i data-action="targetcardContextMenu"
 								class="mapcard-header-icon more_vert_icon"></i></span>
-						<span><i data-action="showShipcardClose" style="color: red"
+						<span><i data-action="showTargetcardClose"
 								class="mapcard-header-icon close_icon"></i></span>
 					</header>
 
-					<div id="shipcard_content" class="mapcard_content">
+					<div id="targetcard_content" class="mapcard_content">
 
-						<div id="shipcard_vessel_head" class="shipcard-section shipcard-max-only" data-action="toggleShipcardSection"
-							data-section="vessel" data-context-type="ship"><span>Vessel</span><span class="shipcard-caret-chip"><i class="shipcard-section-caret keyboard_arrow_up_icon"></i></span></div>
-						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="vessel" class="mapcard-content-row shipcard-content-row shipcard-max-only">
-							<div><span>MMSI</span><span id="shipcard_mmsi">-</span></div>
-							<div><span>Callsign</span><span id="shipcard_callsign">-</span></div>
-							<div><span id="shipcard_imo_label">IMO</span><span id="shipcard_imo">-</span></div>
+						<div id="targetcard_vessel_head" class="targetcard-section targetcard-max-only" data-action="toggleTargetcardSection"
+							data-section="vessel" data-context-type="ship"><span>Vessel</span><span class="targetcard-caret-chip"><i class="targetcard-section-caret keyboard_arrow_up_icon"></i></span></div>
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="vessel" class="mapcard-content-row targetcard-content-row targetcard-max-only">
+							<div><span>MMSI</span><span id="targetcard_mmsi">-</span></div>
+							<div><span>Callsign</span><span id="targetcard_callsign">-</span></div>
+							<div><span id="targetcard_imo_label">IMO</span><span id="targetcard_imo">-</span></div>
 						</div>
 
-						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="vessel" class="mapcard-content-row shipcard-content-row shipcard-max-only">
-							<div><span>Country</span><span id="shipcard_country"></span></div>
-							<div><span>Sender</span><span id="shipcard_type"></span></div>
-							<div><span>Ship type</span><span id="shipcard_shiptype"></span></div>
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="vessel" class="mapcard-content-row targetcard-content-row targetcard-max-only">
+							<div><span>Country</span><span id="targetcard_country"></span></div>
+							<div><span>Sender</span><span id="targetcard_type"></span></div>
+							<div><span>Ship type</span><span id="targetcard_shiptype"></span></div>
 						</div>
 
-						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="vessel" class="mapcard-content-row shipcard-content-row shipcard-max-only">
-							<div><span>Dimension</span><span id="shipcard_dimension">-</span></div>
-							<div><span>Draught</span><span id="shipcard_draught">-</span></div>
-							<div><span>Blue Sign</span><span id="shipcard_bluesign">-</span></div>
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="vessel" class="mapcard-content-row targetcard-content-row targetcard-max-only">
+							<div><span>Dimension</span><span id="targetcard_dimension">-</span></div>
+							<div><span>Draught</span><span id="targetcard_draught">-</span></div>
+							<div><span>Blue Sign</span><span id="targetcard_bluesign">-</span></div>
 						</div>
 
-						<div id="shipcard_hull_head" class="shipcard-section shipcard-max-only" data-action="toggleShipcardSection"
-							data-section="hull" data-context-type="ship"><span>AIS antenna position</span><span class="shipcard-caret-chip"><i class="shipcard-section-caret keyboard_arrow_down_icon"></i></span></div>
-						<div id="shipcard_hull_section" data-section="hull" data-context-type="ship"
-							class="mapcard-content-row shipcard-content-row shipcard-max-only sec-collapsed">
-							<div id="shipcard_hull_body" class="hist-wrap"></div>
+						<div id="targetcard_hull_head" class="targetcard-section targetcard-max-only" data-action="toggleTargetcardSection"
+							data-section="hull" data-context-type="ship"><span>AIS antenna position</span><span class="targetcard-caret-chip"><i class="targetcard-section-caret keyboard_arrow_down_icon"></i></span></div>
+						<div id="targetcard_hull_section" data-section="hull" data-context-type="ship"
+							class="mapcard-content-row targetcard-content-row targetcard-max-only sec-collapsed">
+							<div id="targetcard_hull_body" class="hist-wrap"></div>
 						</div>
 
-						<div id="shipcard_voyage_head" class="shipcard-section shipcard-max-only" data-action="toggleShipcardSection"
-							data-section="voyage" data-context-type="ship"><span>Voyage</span><span class="shipcard-caret-chip"><i class="shipcard-section-caret keyboard_arrow_up_icon"></i></span></div>
-						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row shipcard-content-row shipcard-max-only row-wide-first">
-							<div><span>Status</span><span id="shipcard_status"></span></div>
-							<div><span>Altitude</span><span id="shipcard_altitude">-</span></div>
+						<div id="targetcard_voyage_head" class="targetcard-section targetcard-max-only" data-action="toggleTargetcardSection"
+							data-section="voyage" data-context-type="ship"><span>Voyage</span><span class="targetcard-caret-chip"><i class="targetcard-section-caret keyboard_arrow_up_icon"></i></span></div>
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row targetcard-content-row targetcard-max-only row-wide-first">
+							<div><span>Status</span><span id="targetcard_status"></span></div>
+							<div><span>Altitude</span><span id="targetcard_altitude">-</span></div>
 						</div>
 
-						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row shipcard-content-row">
-							<div><span>Speed</span><span id="shipcard_speed">-</span></div>
-							<div><span>Course</span><span id="shipcard_cog">-</span></div>
-							<div><span>Heading</span><span id="shipcard_heading">-</span></div>
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row targetcard-content-row">
+							<div><span>Speed</span><span id="targetcard_speed">-</span></div>
+							<div><span>Course</span><span id="targetcard_cog">-</span></div>
+							<div><span>Heading</span><span id="targetcard_heading">-</span></div>
 						</div>
 
-						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row shipcard-content-row shipcard-max-only row-wide-first">
-							<div><span>Destination</span><span id="shipcard_destination"></span></div>
-							<div><span>ETA</span><span id="shipcard_eta"></span></div>
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row targetcard-content-row targetcard-max-only row-wide-first">
+							<div><span>Destination</span><span id="targetcard_destination"></span></div>
+							<div><span>ETA</span><span id="targetcard_eta"></span></div>
 						</div>
 
-						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row shipcard-content-row shipcard-max-only row-wide-first">
-							<div><span>Latitude</span><span id="shipcard_lat">-</span></div>
-							<div><span>Longitude</span><span id="shipcard_lon">-</span></div>
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row targetcard-content-row targetcard-max-only row-wide-first">
+							<div><span>Latitude</span><span id="targetcard_lat">-</span></div>
+							<div><span>Longitude</span><span id="targetcard_lon">-</span></div>
 						</div>
 
-<div id="shipcard_speed_head" class="shipcard-section shipcard-max-only" data-action="toggleShipcardSection"
-							data-section="speed" data-context-type="ship"><span>Speed Chart</span><span class="shipcard-caret-chip"><i class="shipcard-section-caret keyboard_arrow_down_icon"></i></span></div>
-						<div id="shipcard_speed_section" data-section="speed" data-context-type="ship"
-							class="mapcard-content-row shipcard-content-row shipcard-max-only sec-collapsed">
-							<div id="shipcard_speed_body" class="hist-wrap"></div>
+<div id="targetcard_speed_head" class="targetcard-section targetcard-max-only" data-action="toggleTargetcardSection"
+							data-section="speed" data-context-type="ship"><span>Speed Chart</span><span class="targetcard-caret-chip"><i class="targetcard-section-caret keyboard_arrow_down_icon"></i></span></div>
+						<div id="targetcard_speed_section" data-section="speed" data-context-type="ship"
+							class="mapcard-content-row targetcard-content-row targetcard-max-only sec-collapsed">
+							<div id="targetcard_speed_body" class="hist-wrap"></div>
 						</div>
 
-						<div id="shipcard_draught_head" class="shipcard-section shipcard-max-only" data-action="toggleShipcardSection"
-							data-section="draught" data-context-type="ship"><span>Draught Chart</span><span class="shipcard-caret-chip"><i class="shipcard-section-caret keyboard_arrow_down_icon"></i></span></div>
-						<div id="shipcard_draught_section" data-section="draught" data-context-type="ship"
-							class="mapcard-content-row shipcard-content-row shipcard-max-only sec-collapsed">
-							<div id="shipcard_draught_body" class="hist-wrap"></div>
+						<div id="targetcard_draught_head" class="targetcard-section targetcard-max-only" data-action="toggleTargetcardSection"
+							data-section="draught" data-context-type="ship"><span>Draught Chart</span><span class="targetcard-caret-chip"><i class="targetcard-section-caret keyboard_arrow_down_icon"></i></span></div>
+						<div id="targetcard_draught_section" data-section="draught" data-context-type="ship"
+							class="mapcard-content-row targetcard-content-row targetcard-max-only sec-collapsed">
+							<div id="targetcard_draught_body" class="hist-wrap"></div>
 						</div>
 
-						<div id="shipcard_changes_head" class="shipcard-section shipcard-max-only" data-action="toggleShipcardSection"
-							data-section="changes" data-context-type="ship"><span>Reported changes</span><span class="shipcard-caret-chip"><i class="shipcard-section-caret keyboard_arrow_down_icon"></i></span></div>
-						<div id="shipcard_changes_section" data-section="changes" data-context-type="ship"
-							class="mapcard-content-row shipcard-content-row shipcard-max-only sec-collapsed">
-							<div id="shipcard_changes_body" class="hist-wrap"></div>
+						<div id="targetcard_changes_head" class="targetcard-section targetcard-max-only" data-action="toggleTargetcardSection"
+							data-section="changes" data-context-type="ship"><span>Reported changes</span><span class="targetcard-caret-chip"><i class="targetcard-section-caret keyboard_arrow_down_icon"></i></span></div>
+						<div id="targetcard_changes_section" data-section="changes" data-context-type="ship"
+							class="mapcard-content-row targetcard-content-row targetcard-max-only sec-collapsed">
+							<div id="targetcard_changes_body" class="hist-wrap"></div>
 						</div>
 
 
@@ -1562,94 +1513,50 @@
 							<div><span>Model:</span><span id="tech_model">-</span></div>
 							<div><span>Serial:</span><span id="tech_serial">-</span></div>
 						</div>
-						<div data-action="shipcardSelectSelf" data-context-type="plane"
-							class="mapcard-content-row shipcard-content-row shipcard-max-only">
-							<div><span>Callsign</span><span id="shipcard_plane_callsign">-</span></div>
-							<div><span>Country</span><span id="shipcard_plane_country"></span></div>
-							<div><span>ICAO</span><span id="shipcard_plane_hexident">-</span></div>
-						</div>
-						<div data-action="shipcardSelectSelf" data-context-type="plane"
-							class="mapcard-content-row shipcard-content-row shipcard-max-only">
-							<div><span>Category</span><span id="shipcard_plane_category">-</span></div>
-							<div><span>Squawk</span><span id="shipcard_plane_squawk">-</span></div>
-							<div><span>Sender</span><span id="shipcard_plane_type">ADSB</span></div>
-						</div>
-						<div data-action="shipcardSelectSelf" data-context-type="plane"
-							class="mapcard-content-row shipcard-content-row shipcard-row-selected row-wide-first">
-							<div><span>Speed</span><span id="shipcard_plane_speed">-</span></div>
-							<div><span>Heading</span><span id="shipcard_plane_heading">-</span></div>
-						</div>
-						<div data-action="shipcardSelectSelf" data-context-type="plane"
-							class="mapcard-content-row shipcard-content-row shipcard-max-only">
-							<div><span>Latitude</span><span id="shipcard_plane_lat">-</span></div>
-							<div><span>Longitude</span><span id="shipcard_plane_lon">-</span></div>
-							<div><span>Distance</span><span id="shipcard_plane_distance">-</span></div>
-						</div>
-						<div data-action="shipcardSelectSelf" data-context-type="plane"
-							class="mapcard-content-row shipcard-content-row shipcard-row-selected">
-							<div><span>Vert Rate</span><span id="shipcard_plane_vertrate">-</span></div>
-							<div><span>Altitude</span><span id="shipcard_plane_altitude">-</span></div>
-							<div><span>Bearing</span><span id="shipcard_plane_bearing">-</span></div>
-						</div>
-						<div data-action="shipcardSelectSelf" data-context-type="plane"
-							class="mapcard-content-row shipcard-content-row shipcard-max-only">
-							<div><span>Last Signal</span><span id="shipcard_plane_last_signal">-</span></div>
-							<div><span>Messages</span><span id="shipcard_plane_messages">-</span></div>
-							<div><span>Receiver</span><span id="shipcard_plane_last_group"></span></div>
-						</div>
-						<div data-action="shipcardSelectSelf" data-context-type="plane"
-							class="mapcard-content-row shipcard-content-row shipcard-row-selected">
-							<div><span>Downlink</span><span id="shipcard_plane_downlink">-</span></div>
-							<div><span>TC</span><span id="shipcard_plane_TC">-</span></div>
-							<div><span>RSSI</span><span id="shipcard_plane_level">-</span></div>
-						</div>
-						<div data-action="shipcardSelectSelf" data-context-type="plane"
-							class="mapcard-content-row shipcard-content-row shipcard-row-selected">
-							<div><span>Sources</span><span id="shipcard_plane_sources">-</span></div>
-						</div>
-					<div id="shipcard_source_head" class="shipcard-section shipcard-max-only" data-action="toggleShipcardSection"
-							data-section="source" data-context-type="ship"><span>AIS source</span><span class="shipcard-caret-chip"><i class="shipcard-section-caret keyboard_arrow_up_icon"></i></span></div>
-						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row shipcard-content-row shipcard-max-only">
-							<div><span>RSSI</span><span id="shipcard_level">-</span></div>
-							<div><span>Drift</span><span id="shipcard_ppm">-</span></div>
-							<div><span>Bearing</span><span id="shipcard_bearing">-</span></div>
+						<div id="targetcard_plane_rows"></div>
+					<div id="targetcard_source_head" class="targetcard-section targetcard-max-only" data-action="toggleTargetcardSection"
+							data-section="source" data-context-type="ship"><span>AIS source</span><span class="targetcard-caret-chip"><i class="targetcard-section-caret keyboard_arrow_up_icon"></i></span></div>
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row targetcard-content-row targetcard-max-only">
+							<div><span>RSSI</span><span id="targetcard_level">-</span></div>
+							<div><span>Drift</span><span id="targetcard_ppm">-</span></div>
+							<div><span>Bearing</span><span id="targetcard_bearing">-</span></div>
 						</div>
 
-						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row shipcard-content-row shipcard-max-only">
-							<div><span>last signal</span><span id="shipcard_last_signal"></span></div>
-							<div><span>Count</span><span id="shipcard_count">-</span></div>
-							<div><span>Channels</span><span id="shipcard_channels">-</span></div>
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row targetcard-content-row targetcard-max-only">
+							<div><span>last signal</span><span id="targetcard_last_signal"></span></div>
+							<div><span>Count</span><span id="targetcard_count">-</span></div>
+							<div><span>Channels</span><span id="targetcard_channels">-</span></div>
 						</div>
 
-						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row shipcard-content-row shipcard-max-only">
-							<div><span>Receiver</span><span id="shipcard_last_group"></span></div>
-							<div><span>Sources</span><span id="shipcard_sources">-</span></div>
-							<div><span>Msg type</span><span id="shipcard_msgtypes">-</span></div>
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row targetcard-content-row targetcard-max-only">
+							<div><span>Receiver</span><span id="targetcard_last_group"></span></div>
+							<div><span>Sources</span><span id="targetcard_sources">-</span></div>
+							<div><span>Msg type</span><span id="targetcard_msgtypes">-</span></div>
 						</div>
 
-						<div data-action="shipcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row shipcard-content-row shipcard-max-only">
-							<div><span>In Range</span><span id="shipcard_received_stations"></span></div>
-							<div><span>Repeated</span><span id="shipcard_repeated">-</span></div>
-							<div><span>Distance</span><span id="shipcard_distance">-</span></div>
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row targetcard-content-row targetcard-max-only">
+							<div><span>In Range</span><span id="targetcard_received_stations"></span></div>
+							<div><span>Repeated</span><span id="targetcard_repeated">-</span></div>
+							<div><span>Distance</span><span id="targetcard_distance">-</span></div>
 						</div>
 					</div>
 
-<footer id="shipcard_footer" class="mapcard-footer shipcard-max-only">
-						<div id="shipcard_message_option" title="View binary messages"
+<footer id="targetcard_footer" class="mapcard-footer targetcard-max-only">
+						<div id="targetcard_message_option" title="View binary messages"
 							data-action="showBinaryMessageDialogCard" data-context-type="ship" class="noandroid"><i
 								class="mail_icon"></i><span>Messages</span>
 						</div>
-						<div id="shipcard_follow_option" title="Keep the map centred on this vessel"
+						<div id="targetcard_follow_option" title="Keep the map centred on this vessel"
 							data-action="toggleFollowCard" data-context-type="ship"><i
-								class="push_pin_icon"></i><span id="shipcard_follow">Follow</span>
+								class="push_pin_icon"></i><span id="targetcard_follow">Follow</span>
 						</div>
-						<div id="shipcard_realtime_option" title="Track NMEA messages for this vessel"
+						<div id="targetcard_realtime_option" title="Track NMEA messages for this vessel"
 							data-action="openRealtimeForMMSICard" data-context-type="ship"><i
 								class="comment_icon"></i><span>Track NMEA</span>
 						</div>
-						<div id="shipcard_track_option" title="Track of current vessel" data-context-type="ship"
-							data-action="toggleTrackCard"><i id="shipcard_track_icon" class="timeline_icon"></i><span
-								id="shipcard_track">Track</span></div>
+						<div id="targetcard_track_option" title="Track of current vessel" data-context-type="ship"
+							data-action="toggleTrackCard"><i id="targetcard_track_icon" class="timeline_icon"></i><span
+								id="targetcard_track">Track</span></div>
 						<div title="Lookup on commuinity site" data-action="openAISCatcherSiteCard"
 							data-context-type="ship" class="noandroid"><i
 								class="info_icon"></i><span>www.aiscatcher.org</span></div>
@@ -1777,6 +1684,8 @@
 	<div class="bottombar"></div>
 
 	<script src="components.js?hash="></script>
+	<script src="chrome.js?hash="></script>
+	<script src="settings.js?hash="></script>
 	<script src="custom/plugins.js"></script>
 	<script type="module" src="script.js?hash=ed7758b2a2e7264247e5e2cc7d7c416c"></script>
 

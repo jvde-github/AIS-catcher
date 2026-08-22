@@ -1,7 +1,7 @@
 import { settings, isAndroid, isKiosk } from './core/state.js';
-import { ShippingClass } from './core/constants.js';
+import { ShippingClass } from '../shared/core/constants.js';
 import { SPEED_PALETTES, palette as validPalette, bucketColor, speedBucket, paletteCSS } from './core/palette.js';
-import * as filter from './core/filter.js';
+import * as filter from '../shared/core/filter.js';
 import { debounce, decodeHTMLEntities, deriveLabelBackground, copyToClipboard, hexToRgb } from './core/util.js';
 import {
     ships as shipsDB, planes as planesDB, paths, pathsFrom, station,
@@ -23,7 +23,8 @@ import * as replay from './features/replay.js';
 import * as binary from './features/binary.js';
 import * as range from './features/range.js';
 import * as ticker from './features/ticker.js';
-import * as shipcard from './features/shipcard.js';
+import * as planecard from './features/planecard.js';
+import * as targetcard from './features/targetcard.js';
 import {
     getDistanceVal, getDistanceUnit, getDistanceConversion,
     getSpeedVal, getSpeedUnit, getSpeedConversion,
@@ -37,8 +38,8 @@ import {
     getStatusVal, getMmsiTypeVal,
     getStringfromMsgType, getStringfromGroup, getStringfromChannels,
     getShipTypeShort, getShipTypeFull,
-    sanitizeString, formatBytes, isHttpUrl, formatTime, compactCount,
-} from './core/format.js';
+    sanitizeString, formatBytes, isHttpUrl, formatTime, compactCount, getICAO, getICAOFromHexIdent, configure as configureFormat
+} from '../shared/core/format.js';
 
 // Named imports (instead of `import * as ...`) so Vite tree-shakes everything
 // outside this list. Plugins relying on other OL classes via window.ol will
@@ -107,7 +108,7 @@ let realtimeModule = null;
 // AISCatcher.PLUGIN_API_VERSION >= N)`. Public surface is window.AISCatcher
 // (defined below). Bare-global aliases mirror AISCatcher for back-compat but
 // are deprecated.
-//   v4: addShipcardItem() requires a function callback (CSP-clean).
+//   v4: addTargetcardItem() requires a function callback (CSP-clean).
 //   v5: script.js is an ES module; override hooks (setShipFilter,
 //       setRefreshInterval, setShipNameProvider, setCallSignProvider) and
 //       map helpers (addTileLayer, removeTileLayerAll, ...) are on AISCatcher.
@@ -140,6 +141,8 @@ const ACTIONS = {
 
     // replay
     toggleReplaycard: () => toggleReplaycard(),
+    replayMenu: (e) => showContextMenu(e, 0, null, ['ctx-replay-map']),
+    replaySetSpeed: (e, d) => replay.setSpeed(Number(d.speed)),
     replayToggle: () => replayToggle(),
     replayCycleSpeed: () => replay.cycleSpeed(),
     replayToggleLabels: () => replay.toggleLabels(),
@@ -194,7 +197,6 @@ const ACTIONS = {
     updateTrackHistoryDisplay: (e, d, el) => updateSliderDisplay('trackHistory', TRACK_HISTORY_STOPS[el.value]),
 
     // context menu (depends on global context_mmsi/card_mmsi)
-    toggleShipcardPin: () => toggleShipcardPin(),
     toggleTickerSide: () => {
         settings.ticker_bottom = !settings.ticker_bottom;
         const btn = document.getElementById("ticker_side");
@@ -205,7 +207,7 @@ const ACTIONS = {
         }
         saveSettings();
         applyPanels();
-        fitShipcard();
+        fitTargetcard();
     },
     toggleFollowStationCtx: () => toggleFollow("STATION"),
     copyTextCtx: () => copyText(context_mmsi),
@@ -223,7 +225,7 @@ const ACTIONS = {
     toggleTrackCtx: () => toggleTrack(context_mmsi),
     toggleFollowCtx: () => toggleFollow(context_mmsi),
     mapResetViewZoomCtx: () => mapResetViewZoom(13, context_mmsi),
-    showShipcardCtx: (e, d) => showShipcard(d.kind, context_mmsi),
+    showTargetcardCtx: (e, d) => showTargetcard(d.kind, context_mmsi),
     openAISCatcherSiteCtx: () => openExt('aiscatcher', context_mmsi),
     showVesselDetailCtx: () => showVesselDetail(context_mmsi),
     showNMEACtx: () => showNMEA(context_mmsi),
@@ -285,10 +287,11 @@ const ACTIONS = {
     // map tab buttons
     setMeasureMode: () => { measure.setMeasureMode(); showNotification('Shift+click on start point/object'); },
     toggleMeasurecard: () => toggleMeasurecard(),
-    toggleShipcardSize: () => toggleShipcardSize(),
-    shipcardSelectSelf: (e, d, el) => shipcardselect(el),
-    shipcardContextMenu: (e) => showContextMenu(e, card_mmsi, card_type, ['object', 'object-map', 'ctx-shipcard']),
-    showShipcardClose: () => showShipcard(null, null),
+    toggleTargetcardPin: () => toggleTargetcardPin(),
+    toggleTargetcardSize: () => toggleTargetcardSize(),
+    targetcardSelectSelf: (e, d, el) => targetcardselect(el),
+    targetcardContextMenu: (e) => showContextMenu(e, card_mmsi, card_type, ['object', 'object-map', 'ctx-targetcard']),
+    showTargetcardClose: () => showTargetcard(null, null),
     showBinaryMessageDialogCard: () => binary.showBinaryMessageDialog(card_mmsi),
     openRealtimeForMMSICard: async () => {
         if (!realtimeModule) realtimeModule = await import('./tabs/realtime.js');
@@ -313,12 +316,12 @@ const ACTIONS = {
     // info panel
     showAboutFromInfoPanel: () => { toggleInfoPanel(); showAboutDialog(); },
 
-    // dynamically-rendered shipcard items
-    rotateShipcardIcons: () => shipcard.rotateIcons(),
-    techInfo: (e) => { e.stopPropagation(); shipcard.togglePopover("tech_popover", "shipcard_tech_info"); },
-    shiptypeInfo: (e) => { e.stopPropagation(); shipcard.togglePopover("shiptype_popover", "shipcard_shiptype_info"); },
-    shipHistory: (e) => { e.stopPropagation(); shipcard.openSection("changes"); },
-    toggleShipcardSection: (e, d, el) => { e.stopPropagation(); shipcard.toggleSection(el?.dataset.section || d.section); },
+    // dynamically-rendered targetcard items
+    rotateTargetcardIcons: () => targetcard.rotateIcons(),
+    techInfo: (e) => { e.stopPropagation(); targetcard.togglePopover("tech_popover", "targetcard_tech_info"); },
+    shiptypeInfo: (e) => { e.stopPropagation(); targetcard.togglePopover("shiptype_popover", "targetcard_shiptype_info"); },
+    shipHistory: (e) => { e.stopPropagation(); targetcard.openSection("changes"); },
+    toggleTargetcardSection: (e, d, el) => { e.stopPropagation(); targetcard.toggleSection(el?.dataset.section || d.section); },
     showNMEAContextCopy: (e, d) => showContextMenu(e, d.copy || '', 'ship', ['settings', 'copy-text']),
     removeRealtimeFilter: (e, d) => realtimeModule?.removeFilter(d.kind, d.value),
 };
@@ -328,13 +331,16 @@ const ACTIONS = {
 window.AISCatcher = {
     PLUGIN_API_VERSION,
 
-    addShipcardItem: shipcard.addItem,
+    addTargetcardItem: targetcard.addItem,
     ACTIONS,
+
+    addShipcardItem: targetcard.addItem,
+    showShipcard: showTargetcard,
 
     showDialog,
     closeDialog,
     showNotification,
-    showShipcard,
+    showTargetcard,
     showContextMenu,
     openFocus,
 
@@ -368,7 +374,7 @@ window.AISCatcher = {
 };
 
 // Mirror AISCatcher keys onto window so legacy plugins using bare globals
-// (addShipcardItem, card_mmsi, ...) still resolve. Module top-level no
+// (addTargetcardItem, card_mmsi, ...) still resolve. Module top-level no
 // longer leaks to window since script.js is an ES module.
 for (const k of Object.keys(window.AISCatcher)) {
     if (k in window) continue;
@@ -535,6 +541,9 @@ const DEFAULT_SETTINGS = {
         shipoutline_inner: "#808080",
         shipoutline_opacity: 0.9,
         circle_scale: 6.0,
+        targetcard_pinned: false,
+        targetcard_pinned_x: null,
+        targetcard_pinned_y: null,
         dark_mode: false,
         center_radius: 0,
         show_station: true,
@@ -555,14 +564,11 @@ const DEFAULT_SETTINGS = {
         show_track_on_hover: false,
         show_track_on_select: false,
         show_all_tracks: false,
-        shipcard_pinned: false,
-        shipcard_top_left: false,
+        targetcard_top_left: false,
         map_toolbar: "compact",
         show_signal_graphs: true,
         show_ppm_graphs: true,
         plot_absolute_time: true,
-        shipcard_pinned_x: null,
-        shipcard_pinned_y: null,
         kiosk_rotation_speed: 5,
         kiosk_pan_map: true,
         shiptable_columns: ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"],
@@ -573,10 +579,21 @@ const DEFAULT_SETTINGS = {
         binary_exclude: []
 };
 
+configureFormat({
+    units: () => settings.metric,
+    coordinates: () => settings.coordinate_format,
+});
+filter.configure({ state: () => settings });
+
+const settingsStore = window.AISSettings.create({
+    key: context,
+    defaults: DEFAULT_SETTINGS,
+    target: settings,
+    migrate: updateForLegacySettings,
+});
+
 function restoreDefaultSettings() {
-    // In-place mutation: `settings` is imported, the binding is read-only here.
-    for (const k of Object.keys(settings)) delete settings[k];
-    Object.assign(settings, JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
+    settingsStore.applyDefaults();
     settings.track_class_colors = getDefaultTrackColors();
 }
 
@@ -768,8 +785,6 @@ function removeOverlayLayerAll() {
     overlapmaps = {};
 }
 
-const getICAOFromHexIdent = (h) => h.toString(16).toUpperCase().padStart(6, '0')
-const getICAO = (plane) => getICAOFromHexIdent(plane.hexident)
 const includeShip = (ship) => true;
 
 const notificationContainer = document.getElementById("notification-container");
@@ -928,13 +943,17 @@ function selectSettingsSub(groupIdx, subIdx) {
     main.scrollTop = 0;
 }
 
+function syncThemedSettings() {
+    baseMapSelector.value = settings.dark_mode ? settings.map_night : settings.map_day;
+    refreshBaseMapCredit();
+    updateLabelColorRows();
+}
+
 function openSettings() {
     updateSettingsTab();
     updateFilterUI();
-    baseMapSelector.value = settings.dark_mode ? settings.map_night : settings.map_day;
-    refreshBaseMapCredit();
+    syncThemedSettings();
     refreshOverlayCredits();
-    updateLabelColorRows();
     document.querySelector(".settings_window").classList.add("active");
 }
 
@@ -1290,7 +1309,7 @@ const contextMenu = document.getElementById("context-menu");
 let replayPausedByMenu = false;
 
 const MENU_CHECKS = {
-    toggleShipcardPin: () => settings.shipcard_pinned,
+    toggleTargetcardPin: () => settings.targetcard_pinned,
     toggleTrackCtx: () => trackIsShown(context_mmsi),
     toggleAllTracks: () => settings.show_all_tracks,
     toggleTrackCutoff: () => trackCutoff > 0,
@@ -1305,7 +1324,41 @@ const MENU_CHECKS = {
     ToggleFireworks: () => fireworks.isRunning(),
     toggleGraphVisibility: (el) => settings[GRAPH_KINDS[el.dataset.graph].setting],
     toggleDarkMode: () => settings.dark_mode,
+    replayToggleLabels: () => replay.getLabels(),
+    replaySetSpeed: (el) => replay.getSpeed() == el.dataset.speed,
 };
+
+function buildReplayMenuItems() {
+    const anchor = contextMenu.querySelector('li[data-action="toggleReplaycard"]');
+    if (!anchor) return;
+
+    const item = (action, label, icon, extra) => {
+        const li = document.createElement("li");
+        li.className = "ctx-replay-map ctx-replay-ship";
+        li.dataset.group = "replay";
+        li.dataset.action = action;
+        Object.assign(li.dataset, extra || {});
+
+        const glyph = document.createElement("i");
+        if (icon) glyph.className = icon;
+        li.appendChild(glyph);
+        li.appendChild(document.createTextNode(label));
+        const check = document.createElement("span");
+        check.className = "ctx-check";
+        check.textContent = "\u2713";
+        li.appendChild(check);
+        return li;
+    };
+
+    const frag = document.createDocumentFragment();
+    frag.appendChild(item("replayToggleLabels", "Ship labels", "label_icon"));
+    replay.speeds().forEach((s) => {
+        frag.appendChild(item("replaySetSpeed", s + "\u00d7", null, { speed: String(s) }));
+    });
+    contextMenu.insertBefore(frag, anchor.nextSibling);
+}
+
+buildReplayMenuItems();
 
 function applyMenuChecks() {
     contextMenu.querySelectorAll("li[data-action]").forEach((el) => {
@@ -1359,7 +1412,7 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
         replayPausedByMenu = true;
     }
 
-    const classList = ["station", "settings", "plane-map", "ship-map", "plane", "ship", "ctx-map", "copy-text", "table-menu", "ctx-shipcard", "ctx-charts", "ctx-replay-ship", "ctx-replay-map"];
+    const classList = ["station", "settings", "plane-map", "ship-map", "plane", "ship", "ctx-map", "copy-text", "table-menu", "ctx-targetcard", "ctx-charts", "ctx-replay-ship", "ctx-replay-map"];
 
     if (context.includes('object')) {
         context.push(type);
@@ -1420,41 +1473,12 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
     applyMenuChecks();
     applyMenuSeparators();
 
-    contextMenu.style.display = "block";
-
-    if (anchorEl) {
-        // Anchor above the control button (it sits near the bottom edge), so the
-        // menu unfurls upward instead of running off-screen.
-        contextMenu.style.transform = "none";
-        const btn = anchorEl.getBoundingClientRect();
-        const rect = contextMenu.getBoundingClientRect();
-        let left = Math.max(8, btn.right - rect.width);
-        let top = btn.top - rect.height - 8;
-        if (top < 8) top = Math.min(btn.bottom + 8, window.innerHeight - rect.height - 8);
-        contextMenu.style.left = left + "px";
-        contextMenu.style.top = top + "px";
-    } else if (context.includes("center")) {
-        contextMenu.style.left = "50%";
-        contextMenu.style.top = "50%";
-        contextMenu.style.transform = "translate(-50%, -50%)";
-    } else {
-        contextMenu.style.left = event.pageX + 5 + "px";
-        contextMenu.style.top = event.pageY + 5 + "px";
-        contextMenu.style.transform = "none";
-
-        const contextMenuRect = contextMenu.getBoundingClientRect();
-        let viewportWidth = window.innerWidth && window.outerWidth ? Math.min(window.innerWidth, window.outerWidth) : document.documentElement.clientWidth;
-        let viewportHeight = window.innerHeight && window.outerHeight ? Math.min(window.innerHeight, window.outerHeight) : document.documentElement.clientHeight;
-
-        const maxX = viewportWidth - contextMenuRect.width;
-        const maxY = viewportHeight - contextMenuRect.height;
-
-        const adjustedX = Math.max(0, Math.min(event.pageX + 5, maxX));
-        const adjustedY = Math.max(0, Math.min(event.pageY + 5, maxY));
-
-        contextMenu.style.left = adjustedX + "px";
-        contextMenu.style.top = adjustedY + "px";
-    }
+    window.AISComponents.placeMenu(contextMenu, {
+        anchor: anchorEl,
+        center: !anchorEl && context.includes("center"),
+        x: event ? event.pageX : 0,
+        y: event ? event.pageY : 0,
+    });
 
     setTimeout(() => document.addEventListener("click", hideContextMenu), 0);
 }
@@ -1615,16 +1639,16 @@ const handleClick = function (pixel, target, event) {
     } else if (feature && 'ship' in feature) {
         closeDialog();
         closeSettings();
-        showShipcard('ship', feature.ship.mmsi, pixel);
+        showTargetcard('ship', feature.ship.mmsi, pixel);
     }
     else if (feature && 'plane' in feature) {
         closeDialog();
         closeSettings();
-        showShipcard('plane', feature.plane.hexident, pixel);
+        showTargetcard('plane', feature.plane.hexident, pixel);
     }
     else {
         clickTimeout = setTimeout(function () {
-            showShipcard(null, null);
+            showTargetcard(null, null);
             clickTimeout = null;
         }, 300);
     }
@@ -1684,6 +1708,8 @@ function initMap() {
     });
 
     map.getTargetElement().addEventListener('contextmenu', function (evt) {
+
+        if (evt.target.closest('#replaybar')) return;
 
         const f = getFeature(map.getEventPixel(evt), map.getTargetElement())
 
@@ -1769,6 +1795,41 @@ const BUCKET_ELEMENT = {
     sarte: "statcard_sarte",
     air: "statcard_heli",
 };
+
+function bucketChips() {
+    return filter.BUCKETS.map((b) => ({
+        id: b.id,
+        label: b.label + " \u2014 click to show or hide",
+        action: "toggleFilterBucket",
+        icon: b.icon,
+        style: filter.chipStyle(b),
+        countId: BUCKET_ELEMENT[b.id],
+    }));
+}
+
+function buildStatcard() {
+    const box = document.querySelector("#statcard .statcard_inner");
+    if (!box || box.children.length) return;
+
+    for (const chip of bucketChips()) {
+        const item = document.createElement("span");
+        item.className = "stat-item";
+        item.title = chip.label;
+        item.dataset.action = chip.action;
+        item.dataset.bucket = chip.id;
+
+        const icon = document.createElement("span");
+        icon.className = chip.icon;
+        icon.setAttribute("style", chip.style);
+
+        const count = document.createElement("span");
+        if (chip.countId) count.id = chip.countId;
+
+        item.appendChild(icon);
+        item.appendChild(count);
+        box.appendChild(item);
+    }
+}
 
 function shipVisible(entry) {
     if (entry.show === undefined) entry.show = filter.shipPasses(entry.raw);
@@ -1988,7 +2049,7 @@ function updateTablecard() {
     tableBody.onmouseout = function(e) { stopHover(); };
     tableBody.onclick = function(e) {
         const tr = e.target.closest('tr[data-mmsi]');
-        if (tr) showShipcard('ship', parseInt(tr.dataset.mmsi));
+        if (tr) showTargetcard('ship', parseInt(tr.dataset.mmsi));
     };
     tableBody.oncontextmenu = function(e) {
         const tr = e.target.closest('tr[data-mmsi]');
@@ -2134,8 +2195,8 @@ function buildFilterList(boxId, kind) {
     box.dataset.built = "1";
     box.innerHTML = filter.LISTS[kind].items().map((item) => {
         const icon = item.pos
-            ? '<span class="' + (item.icon || "shipicon") + '" style="background-position: ' + item.pos +
-              '; transform: scale(1.15)' + (item.spin ? " rotate(45deg)" : "") + '"></span>'
+            ? '<span class="' + (item.icon || "shipicon") + '" style="' +
+              filter.chipStyle({ ...item, scale: item.scale || 1.15 }) + '"></span>'
             : "";
         return '<label class="filter-check"><input type="checkbox" data-on-change="toggleFilterItem"' +
             ' data-kind="' + kind + '" data-id="' + item.id + '">' + icon +
@@ -2210,7 +2271,7 @@ function resetFilter() {
 
 // ─── map panels ──────────────────────────────────────────────────────────────
 const panels = {
-    shipcard: false,
+    targetcard: false,
     statcard: false,
     table: false,
     measure: false,
@@ -2224,8 +2285,8 @@ function normalisePanels() {
         closeSettings();
     }
 
-    // both of these take the space, and the position, the shipcard occupies
-    if ((panels.replay || panels.measure) && panels.shipcard) showShipcard(null, null);
+    // both of these take the space, and the position, the targetcard occupies
+    if ((panels.replay || panels.measure) && panels.targetcard) showTargetcard(null, null);
 }
 
 function setPanels(patch, opts) {
@@ -2244,26 +2305,26 @@ function panelElements() {
     if (panelEls) return panelEls;
 
     panelEls = {
-        shipcard: document.getElementById("shipcard"),
+        targetcard: document.getElementById("targetcard"),
         statcard: document.getElementById("statcard"),
         measure: document.getElementById("measurecard"),
         replay: document.getElementById("replaybar"),
         table: document.getElementById("tableside"),
         countersBtn: document.getElementById("counters-btn"),
         tableBtn: document.getElementById("table-btn"),
-        popovers: [...document.querySelectorAll("#shipcard .tech-popover")],
+        popovers: [...document.querySelectorAll("#targetcard .tech-popover")],
     };
     return panelEls;
 }
 
-// `reposition: false` when the caller places the shipcard itself straight after.
-// showShipcard knows the pixel that was clicked and this does not - and it must
+// `reposition: false` when the caller places the targetcard itself straight after.
+// showTargetcard knows the pixel that was clicked and this does not - and it must
 // place the card after filling it, since the placement measures its height.
 function applyPanels(opts = {}) {
     const el = panelElements();
     const tickerOn = tickerWanted();
 
-    el.shipcard.classList.toggle("visible", panels.shipcard);
+    el.targetcard.classList.toggle("visible", panels.targetcard);
     el.statcard.style.display = panels.statcard ? "block" : "none";
     el.measure.classList.toggle("visible", panels.measure);
     el.replay.classList.toggle("visible", panels.replay);
@@ -2275,21 +2336,21 @@ function applyPanels(opts = {}) {
     document.body.classList.toggle("table-open", panels.table);
 
     applyToolbarMode();
-    mapChromeCache = null;
+    window.AISChrome.invalidate();
 
     el.countersBtn?.classList.toggle("is-active", panels.statcard);
     el.tableBtn?.classList.toggle("is-active", panels.table);
     updateMeasureIndicator();
 
-    if (!panels.shipcard) shipcard.closePopovers();
+    if (!panels.targetcard) targetcard.closePopovers();
     if (!panels.statcard) resetCardPosition(el.statcard);
     if (!panels.measure) resetCardPosition(el.measure);
 
     ticker.setEnabled(tickerOn);
 
-    if (panels.shipcard && opts.reposition !== false) {
-        positionAside(undefined, el.shipcard);
-        fitShipcard();
+    if (panels.targetcard && opts.reposition !== false) {
+        positionAside(undefined, el.targetcard);
+        fitTargetcard();
     }
 }
 
@@ -2794,44 +2855,44 @@ function updateSpeedLegend() {
         `Preview (0 - ${speedWhole(settings.track_speed_max)} ${getSpeedUnit()})`;
 }
 
-function selectableShipcardRows() {
-    return document.querySelectorAll('#shipcard_content [data-action="shipcardSelectSelf"]');
+function selectableTargetcardRows() {
+    return document.querySelectorAll('#targetcard_content [data-action="targetcardSelectSelf"]');
 }
 
-function shipcardRowKey(row) {
+function targetcardRowKey(row) {
     const el = row.querySelector("[id]");
     return el ? el.id : "";
 }
 
-function shipcardselect(e) {
-    if (isShipcardMax()) {
-        e.classList.toggle("shipcard-max-only");
-        e.classList.toggle("shipcard-row-selected");
-    } else toggleShipcardSize();
+function targetcardselect(e) {
+    if (isTargetcardMax()) {
+        e.classList.toggle("targetcard-max-only");
+        e.classList.toggle("targetcard-row-selected");
+    } else toggleTargetcardSize();
 
     saveSettings();
 }
 
-function toggleShipcardSize() {
-    Array.from(document.getElementsByClassName("shipcard-min-only")).forEach((e) => e.classList.toggle("visible"));
-    Array.from(document.getElementsByClassName("shipcard-max-only")).forEach((e) => e.classList.toggle("hidden"));
+function toggleTargetcardSize() {
+    Array.from(document.getElementsByClassName("targetcard-min-only")).forEach((e) => e.classList.toggle("visible"));
+    Array.from(document.getElementsByClassName("targetcard-max-only")).forEach((e) => e.classList.toggle("hidden"));
 
-    document.getElementById("shipcard").classList.toggle("shipcard-ismax");
-    document.getElementById("shipcard_minmax_button").classList.toggle("keyboard_arrow_down_icon");
-    document.getElementById("shipcard_minmax_button").classList.toggle("keyboard_arrow_up_icon");
+    document.getElementById("targetcard").classList.toggle("targetcard-ismax");
+    document.getElementById("targetcard_minmax_button").classList.toggle("keyboard_arrow_down_icon");
+    document.getElementById("targetcard_minmax_button").classList.toggle("keyboard_arrow_up_icon");
 
-    let e = selectableShipcardRows();
+    let e = selectableTargetcardRows();
 
-    if (isShipcardMax()) {
+    if (isTargetcardMax()) {
         for (let i = 0; i < e.length; i++) {
             if (
-                (e[i].classList.contains("shipcard-max-only") && e[i].classList.contains("shipcard-row-selected")) ||
-                (!e[i].classList.contains("shipcard-max-only") && !e[i].classList.contains("shipcard-row-selected"))
+                (e[i].classList.contains("targetcard-max-only") && e[i].classList.contains("targetcard-row-selected")) ||
+                (!e[i].classList.contains("targetcard-max-only") && !e[i].classList.contains("targetcard-row-selected"))
             )
-                e[i].classList.toggle("shipcard-row-selected");
+                e[i].classList.toggle("targetcard-row-selected");
         }
 
-            const aside = document.getElementById("shipcard");
+            const aside = document.getElementById("targetcard");
         if (aside.style.top && aside.getBoundingClientRect().bottom > window.innerHeight) {
             const db = card_type == "ship" ? shipsDB : card_type == "plane" ? planesDB : null;
 
@@ -2842,11 +2903,11 @@ function toggleShipcardSize() {
         }
     } else {
         for (let i = 0; i < e.length; i++) {
-            if (e[i].classList.contains("shipcard-row-selected")) e[i].classList.toggle("shipcard-row-selected");
+            if (e[i].classList.contains("targetcard-row-selected")) e[i].classList.toggle("targetcard-row-selected");
         }
     }
 
-    fitShipcard();
+    fitTargetcard();
 }
 
 function syncReceiverUI() {
@@ -3154,56 +3215,8 @@ function updateFocusMarker() {
     selectCircleFeature = syncCircleFeature(selectCircleFeature, raw, card_mmsi, selectCircleStyleFunction);
 }
 
-// recomputed only when the chrome moves: hover runs this for every feature the
-// pointer crosses, and the answers change only on resize and panel toggles
-let mapChromeCache = null;
-
-function mapChrome() {
-    if (mapChromeCache) return mapChromeCache;
-
-    const frame = map.getTargetElement().getBoundingClientRect();
-    const rect = (selector) => {
-        const el = document.querySelector(selector);
-        if (!el || !el.offsetParent) return null;
-        const r = el.getBoundingClientRect();
-        return r.width && r.height ? r : null;
-    };
-
-    // the controls float inside the free area, and are gone in toolbar mode
-    let controlsLeft = null;
-    for (const selector of [".map-button-box.map-pill:not(.map-bottom)", ".map-button-box.map-bottom"]) {
-        const r = rect(selector);
-        if (r) controlsLeft = Math.min(controlsLeft ?? Infinity, r.left - frame.left);
-    }
-    const toolbar = rect("#maptoolbar");
-
-    mapChromeCache = {
-        width: frame.width,
-        height: frame.height,
-        top: mapInset("top"),
-        right: mapInset("right"),
-        bottom: mapInset("bottom"),
-        controlsLeft,
-        toolbarTop: toolbar ? toolbar.top - frame.top : null,
-    };
-    return mapChromeCache;
-}
-
-function tooltipBounds(tw, th) {
-    const c = mapChrome();
-    const gap = mapGap();
-
-    const bounds = {
-        minX: gap,
-        minY: c.top,
-        maxX: c.width - tw - c.right,
-        maxY: c.height - th - c.bottom,
-    };
-
-    if (c.controlsLeft != null) bounds.maxX = Math.min(bounds.maxX, c.controlsLeft - tw - gap);
-    if (c.toolbarTop != null) bounds.maxY = Math.min(bounds.maxY, c.toolbarTop - th - gap);
-
-    return bounds;
+function mapFreeBox() {
+    return window.AISChrome.freeBox(map.getTargetElement());
 }
 
 const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
@@ -3212,31 +3225,11 @@ const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
 
     if (pixel) {
         const { offsetWidth: tw, offsetHeight: th } = tooltip;
-        const dist = distance;
-        const bounds = tooltipBounds(tw, th);
-
-        // we position the tooltip top-right of the ship in the direction of the ship's course to minimize overlap with path
-        const calculatePosition = (a) => {
-            const rad = (a + 45) * Math.PI / 180;
-            const s = Math.sin(rad);
-            const c = -Math.cos(rad);
-            let x = pixel[0] + dist * s + (s < 0 ? -tw : 0);
-            let y = pixel[1] + dist * c + (c < 0 ? -th : 0);
-            return { x, y };
-        };
-
-        let pos = calculatePosition(angle);
-        // if it lands outside what is free, we try the opposite side
-        if (pos.x > bounds.maxX || pos.x < bounds.minX || pos.y > bounds.maxY || pos.y < bounds.minY) {
-            pos = calculatePosition(angle + 180);
-        }
-
-        pos.x = Math.min(Math.max(pos.x, bounds.minX), Math.max(bounds.minX, bounds.maxX));
-        pos.y = Math.min(Math.max(pos.y, bounds.minY), Math.max(bounds.minY, bounds.maxY));
+        const at = window.AISChrome.alongCourse(mapFreeBox(), tw, th, pixel, distance, angle);
 
         Object.assign(tooltip.style, {
-            left: `${pos.x}px`,
-            top: `${pos.y}px`,
+            left: `${at.left}px`,
+            top: `${at.top}px`,
             visibility: 'visible'
         });
     }
@@ -3440,7 +3433,7 @@ function persistSettings() {
         settings.lon = center[0];
         settings.zoom = map.getView().getZoom();
     }
-    localStorage[context] = JSON.stringify(settings);
+    settingsStore.save();
     community.notifyCommunityPopupView();
     updateMapURL();
 }
@@ -3460,12 +3453,21 @@ function updateMapURL() {
 
 function saveSettings() {
     const selectedRows = [];
-    selectableShipcardRows().forEach((row) => {
-        if (!row.classList.contains("shipcard-max-only")) selectedRows.push(shipcardRowKey(row));
+    const present = new Set();
+    selectableTargetcardRows().forEach((row) => {
+        const key = targetcardRowKey(row);
+        if (key) present.add(key);
+        if (key && !row.classList.contains("targetcard-max-only")) selectedRows.push(key);
     });
 
-    settings.shipcard_max = isShipcardMax();
-    settings.shipcard_rows = selectedRows.filter(Boolean);
+    // the plane card builds its rows the first time one is opened, so its pins
+    // are not in the DOM to be read back: keep what we cannot see
+    for (const key of settings.targetcard_rows || []) {
+        if (typeof key === "string" && !present.has(key)) selectedRows.push(key);
+    }
+
+    settings.targetcard_max = isTargetcardMax();
+    settings.targetcard_rows = selectedRows.filter(Boolean);
     settings.activeReceiver = activeReceiver;
 
     const filters = realtimeModule?.getFilters();
@@ -3497,6 +3499,18 @@ function updateForLegacySettings() {
         settings.map_overlay.push("Aircraft");
     }
 
+    for (const key of ["max", "pinned", "pinned_x", "pinned_y", "top_left", "rows"]) {
+        const was = "shipcard_" + key;
+        if (was in settings) {
+            if (!(("targetcard_" + key) in settings)) settings["targetcard_" + key] = settings[was];
+            delete settings[was];
+        }
+    }
+    if (Array.isArray(settings.targetcard_rows)) {
+        settings.targetcard_rows = settings.targetcard_rows.map((id) =>
+            typeof id === "string" ? id.replace(/^shipcard_/, "targetcard_") : id);
+    }
+
     if (Array.isArray(settings.map_overlay) && settings.map_overlay.includes("Community Feed")) {
         settings.map_overlay = settings.map_overlay.filter(t => t !== "Community Feed");
         queueMicrotask(() => showDialog("Community feed has moved",
@@ -3505,42 +3519,31 @@ function updateForLegacySettings() {
 }
 
 function loadSettings() {
-    if (!urlParams.has("reset")) {
-        try {
-            const localStorageSettings = localStorage.getItem(context);
-            if (localStorageSettings !== null) {
-                const ls = JSON.parse(localStorageSettings);
-                Object.assign(settings, ls);
-            }
-        } catch (error) {
-            console.log(error);
-            return;
-        }
-    }
+    settingsStore.load(urlParams.has("reset"));
     if (settings.activeReceiver) activeReceiver = settings.activeReceiver;
-    if (!isShipcardMax()) toggleShipcardSize();
+    if (!isTargetcardMax()) toggleTargetcardSize();
 
-    if (Array.isArray(settings.shipcard_rows) && settings.shipcard_rows.every((k) => typeof k === "string")) {
-        const pinned = new Set(settings.shipcard_rows);
+    if (Array.isArray(settings.targetcard_rows) && settings.targetcard_rows.every((k) => typeof k === "string")) {
+        const pinned = new Set(settings.targetcard_rows);
 
-        selectableShipcardRows().forEach((row) => {
-            const on = pinned.has(shipcardRowKey(row));
-            row.classList.toggle("shipcard-max-only", !on);
-            row.classList.toggle("shipcard-row-selected", on);
+        selectableTargetcardRows().forEach((row) => {
+            const on = pinned.has(targetcardRowKey(row));
+            row.classList.toggle("targetcard-max-only", !on);
+            row.classList.toggle("targetcard-row-selected", on);
         });
-        if (settings.shipcard_max != isShipcardMax()) {
-            toggleShipcardSize();
+        if (settings.targetcard_max != isTargetcardMax()) {
+            toggleTargetcardSize();
         }
     } else {
-        settings.shipcard_rows = [];
+        settings.targetcard_rows = [];
     }
 
     settings.android = false;
 }
 
 function convertStringSettingsToActual() {
-    // shipcard_max is written by saveSettings and absent from the defaults
-    const extraBooleans = ['shipcard_max'];
+    // targetcard_max is written by saveSettings and absent from the defaults
+    const extraBooleans = ['targetcard_max'];
 
     for (const key of Object.keys(DEFAULT_SETTINGS).concat(extraBooleans)) {
         const v = settings[key];
@@ -3590,18 +3593,18 @@ function mapResetViewZoom(z, m) {
         view.setZoom(Math.min(view.getMaxZoom(), Math.max(z, view.getZoom() + 1)));
     }
 
-    shipcardMinIfMaxonMobile();
+    targetcardMinIfMaxonMobile();
 }
 
 function mapResetView(z) {
 
     let view = map.getView();
     view.setZoom(Math.min(view.getMaxZoom(), Math.max(z, view.getZoom() + 1)));
-    shipcardMinIfMaxonMobile();
+    targetcardMinIfMaxonMobile();
 }
 
-function shipcardVisible() {
-    return panels.shipcard;
+function targetcardVisible() {
+    return panels.targetcard;
 }
 
 function measurecardVisible() {
@@ -3633,7 +3636,7 @@ function toggleReplaycard() {
         measure.cancel();
 
         // the bar owns the map from the moment it opens
-        showShipcard(null, null);
+        showTargetcard(null, null);
         stopHover();
         setLiveLayersVisible(false);
 
@@ -3816,7 +3819,7 @@ async function ToggleTrackOnMap(m) {
     } else {
         marker_tracks.add(Number(m));
         await fetchTracks();
-        shipcardMinIfMaxonMobile();
+        targetcardMinIfMaxonMobile();
         redrawMap();
     }
 }
@@ -3828,7 +3831,7 @@ async function toggleTrack(m) {
     else {
         ToggleTrackOnMap(m);
     }
-    shipcard.updateTrackOption();
+    targetcard.updateTrackOption();
 
 }
 
@@ -3836,7 +3839,7 @@ async function showTrack(m) {
     if (!marker_tracks.has(Number(m))) {
         ToggleTrackOnMap(m);
     }
-    shipcard.updateTrackOption();
+    targetcard.updateTrackOption();
 
 }
 
@@ -3844,7 +3847,7 @@ async function hideTrack(m) {
     if (marker_tracks.has(Number(m))) {
         ToggleTrackOnMap(m);
     }
-    shipcard.updateTrackOption();
+    targetcard.updateTrackOption();
 
 }
 
@@ -3866,7 +3869,7 @@ function pinVessel(m) {
     saveSettings();
     drawStation();
     applyFixedCenter();
-    shipcard.updateFollowOption();
+    targetcard.updateFollowOption();
     showNotification("Following " + vesselLabel(m));
 }
 
@@ -3875,7 +3878,7 @@ function unpinCenter() {
     settings.fix_center = false;
     saveSettings();
     drawStation();
-    shipcard.updateFollowOption();
+    targetcard.updateFollowOption();
     showNotification("No longer following " + vesselLabel(was));
 }
 
@@ -3897,7 +3900,7 @@ function setTrackVisibility(mode) {
     settings.show_all_tracks = false;
     saveSettings();
     redrawMap();
-    shipcard.updateTrackOption();
+    targetcard.updateTrackOption();
 }
 
 async function showAllTracks() {
@@ -3907,7 +3910,7 @@ async function showAllTracks() {
     select_enabled_track = hover_enabled_track = false;
     await fetchTracks();
     redrawMap();
-    shipcard.updateTrackOption();
+    targetcard.updateTrackOption();
     saveSettings();
 }
 
@@ -3923,7 +3926,7 @@ async function showTracksForMMSIs(mmsis) {
         lastPathFetch = 0;
         await fetchTracks();
         redrawMap();
-        shipcard.updateTrackOption();
+        targetcard.updateTrackOption();
     }
     return mmsis.length;
 }
@@ -3946,7 +3949,7 @@ function deleteAllTracks() {
 
     setPaths(p);
 
-    redrawMap(); shipcard.updateTrackOption();
+    redrawMap(); targetcard.updateTrackOption();
     saveSettings();
 }
 
@@ -3957,7 +3960,7 @@ async function toggleTrackCutoff() {
     lastPathFetch = 0;
     await fetchTracks();
     redrawMap();
-    shipcard.updateTrackOption();
+    targetcard.updateTrackOption();
     showNotification(trackCutoff ? "Tracks now start from " + trackCutoffLabel()
         : "Tracks restored to the full history", "success");
 }
@@ -4058,99 +4061,26 @@ async function fetchTracks() {
     return true;
 }
 
-function isShipcardMax() {
-    let e = document.getElementById("shipcard").classList;
-    return e.contains("shipcard-ismax");
+function isTargetcardMax() {
+    let e = document.getElementById("targetcard").classList;
+    return e.contains("targetcard-ismax");
 }
 
 // Everything time-related about a vessel in one window: the track gives speed,
 // the change log gives draught and what else was edited. Both are fetched here
-// rather than per row, so opening a shipcard still costs nothing.
+// rather than per row, so opening a targetcard still costs nothing.
 let historyMMSI = 0;
 
 // Sections collapse independently of the card's own min/max, which toggles
-// `hidden` on every shipcard-max-only element — hence a class of their own.
+// `hidden` on every targetcard-max-only element — hence a class of their own.
 
-function getCategory(plane) {
-    if (!plane || !plane.category) return "-";
 
-    const categories = {
-        41: "< 7 MT",
-        42: "7 - 34 MT",
-        43: "34 - 136 MT",
-        44: "High vortex",
-        45: "> 136 MT",
-        46: "High perf",
-        47: "Rotorcraft",
-        31: "Glider",
-        32: "LTA",
-        33: "Parachutist",
-        34: "Ultralight",
-        36: "UAV",
-        37: "Space",
-        21: "Emergency",
-        23: "Service"
-    };
 
-    return categories[plane.category] || plane.category.toString();
-}
 
-function populatePlanecard() {
 
-    if (card_type != 'plane') return;
-
-    if (!(card_mmsi in planesDB)) {
-        shipcard.showOutOfRange();
-        return;
-    }
-
-    document
-        .getElementById("shipcard_content")
-        .querySelectorAll("span:nth-child(2)")
-        .forEach((e) => (e.innerHTML = null));
-
-    let plane = planesDB[card_mmsi].raw;
-
-    shipcard.setValidation(plane.validated);
-
-    // Set header
-    document.getElementById("shipcard_header_title").textContent = (plane.callsign || getICAO(plane));
-    document.getElementById("shipcard_header_flag").innerHTML = getFlagStyled(plane.country, CARD_FLAG_STYLE);
-
-    // Populate plane fields
-    document.getElementById("shipcard_plane_country").innerHTML = getCountryName(plane.country);
-    document.getElementById("shipcard_plane_type").innerHTML = "ADSB";
-    document.getElementById("shipcard_plane_callsign").textContent = plane.callsign || "-";
-    document.getElementById("shipcard_plane_hexident").textContent = getICAO(plane);
-    document.getElementById("shipcard_plane_category").textContent = getCategory(plane);
-    document.getElementById("shipcard_plane_squawk").textContent = plane.squawk || "-";
-    document.getElementById("shipcard_plane_speed").innerHTML = plane.speed ? getSpeedVal(plane.speed) + " " + getSpeedUnit() : null;
-
-    document.getElementById("shipcard_plane_altitude").textContent = plane.airborne == 1 ? (plane.altitude ? `${plane.altitude} ft` : "-") : "on ground";
-    document.getElementById("shipcard_plane_lat").innerHTML = plane.lat ? getLatValFormat(plane) : null;
-    document.getElementById("shipcard_plane_lon").innerHTML = plane.lon ? getLonValFormat(plane) : null;
-    document.getElementById("shipcard_plane_vertrate").textContent = plane.vertrate ? `${plane.vertrate} ft/min` : "-";
-    document.getElementById("shipcard_plane_last_signal").textContent = getDeltaTimeVal(planesSince - plane.last_signal);
-    document.getElementById("shipcard_plane_messages").textContent = plane.nMessages || "-";
-    document.getElementById("shipcard_plane_downlink").textContent = getStringfromMsgType(plane.message_types);
-    document.getElementById("shipcard_plane_TC").textContent = getStringfromMsgType(plane.message_subtypes);
-    document.getElementById("shipcard_plane_distance").innerHTML = plane.distance != null ? (getDistanceVal(plane.distance) + " " + getDistanceUnit()) : null;
-
-    document.getElementById("shipcard_plane_last_group").innerHTML = getStringfromGroup(plane.last_group);
-    document.getElementById("shipcard_plane_sources").innerHTML = getStringfromGroup(plane.group_mask);
-
-    [
-        { id: "heading", u: "&deg", d: 0 },
-        { id: "level", u: "dB", d: 1 },
-        { id: "bearing", u: "&deg", d: 0 }
-    ].forEach((el) => (document.getElementById("shipcard_plane_" + el.id).innerHTML = plane[el.id] != null ? Number(plane[el.id]).toFixed(el.d) + " " + el.u : null));
-
-    shipcard.updateTrackOption();
-}
-
-function shipcardMinIfMaxonMobile() {
-    if (shipcardVisible() && window.matchMedia("(max-height: 1000px) and (max-width: 500px)").matches && isShipcardMax()) {
-        toggleShipcardSize();
+function targetcardMinIfMaxonMobile() {
+    if (targetcardVisible() && window.matchMedia("(max-height: 1000px) and (max-width: 500px)").matches && isTargetcardMax()) {
+        toggleTargetcardSize();
     }
 }
 
@@ -4254,7 +4184,7 @@ function applyFixedCenter() {
         const dropped = settings.center_point;
         settings.center_point = "STATION";
         settings.fix_center = false;
-        shipcard.updateFollowOption();
+        targetcard.updateFollowOption();
         showNotification("No longer following " + vesselLabel(dropped) + ": out of range");
         return;
     }
@@ -4280,7 +4210,7 @@ function moveMapCenter(px) {
     });
 }
 
-function adjustMapForShipcard(pixel) {
+function adjustMapForTargetcard(pixel) {
 
     let lat = null, lon = null;
     if (card_type == 'ship' && card_mmsi in shipsDB) {
@@ -4310,70 +4240,28 @@ function adjustMapForShipcard(pixel) {
             pixel = map.getPixelFromCoordinate(shipCoords);
         }
 
-        let card = document.getElementById("shipcard");
-        let shipcardRect = card.getBoundingClientRect();
+        let card = document.getElementById("targetcard");
+        let targetcardRect = card.getBoundingClientRect();
         let mapElement = map.getTargetElement();
         let mapRect = mapElement.getBoundingClientRect();
 
-        let isUnderShipcard = (
-            pixel[0] + mapRect.left >= shipcardRect.left &&
-            pixel[0] + mapRect.left <= shipcardRect.right &&
-            pixel[1] + mapRect.top >= shipcardRect.top &&
-            pixel[1] + mapRect.top <= shipcardRect.bottom
+        let isUnderTargetcard = (
+            pixel[0] + mapRect.left >= targetcardRect.left &&
+            pixel[0] + mapRect.left <= targetcardRect.right &&
+            pixel[1] + mapRect.top >= targetcardRect.top &&
+            pixel[1] + mapRect.top <= targetcardRect.bottom
         );
 
-        if (isUnderShipcard) {
+        if (isUnderTargetcard) {
             moveMapCenter(pixel);
         }
-    }
-}
-
-function pinShipcard() {
-    settings.shipcard_pinned = true;
-    const card = panelElements().shipcard;
-    settings.shipcard_pinned_x = parseInt(card.style.left) || 0;
-    settings.shipcard_pinned_y = parseInt(card.style.top) || 0;
-
-    applyShipcardPinStyling();
-    showNotification("Shipcard pinned to current position");
-    saveSettings();
-}
-
-function unpinShipcard() {
-    settings.shipcard_pinned = false;
-    settings.shipcard_pinned_x = null;
-    settings.shipcard_pinned_y = null;
-
-    applyShipcardPinStyling();
-
-    showNotification("Shipcard unpinned");
-    saveSettings();
-}
-
-function applyShipcardPinStyling() {
-    const card = document.getElementById("shipcard");
-    if (settings.shipcard_pinned) {
-        card.classList.add("pinned");
-        document.getElementById("shipcard_drag_handle").classList.add("opacity-50");
-    }
-    else {
-        card.classList.remove("pinned");
-        document.getElementById("shipcard_drag_handle").classList.remove("opacity-50");
-    }
-}
-
-function toggleShipcardPin() {
-    if (settings.shipcard_pinned) {
-        unpinShipcard();
-    } else {
-        pinShipcard();
     }
 }
 
 // The ticker owns the top strip. A card that starts above it hides the very
 // thing that announced the vessel, so cards begin below it while it is out.
 const cssPxCache = new Map();
-window.addEventListener("resize", () => { cssPxCache.clear(); mapChromeCache = null; });
+window.addEventListener("resize", () => { cssPxCache.clear(); window.AISChrome.invalidate(); });
 
 function cssPx(name, fallback) {
     if (cssPxCache.has(name)) return cssPxCache.get(name);
@@ -4440,19 +4328,24 @@ function tickerAtTop() {
     return document.body.classList.contains("ticker-open") && !settings.ticker_bottom;
 }
 
-// off body: a custom property does not travel back up to the root element
-function mapInset(edge) {
-    const px = parseFloat(getComputedStyle(document.body).getPropertyValue("--map-inset-" + edge));
-    if (!isNaN(px)) return px;
+window.AISChrome.configure({
+    obstacles: [
+        { selector: ".map-button-box.map-pill:not(.map-bottom)", edge: "right" },
+        { selector: ".map-button-box.map-bottom", edge: "right" },
+        { selector: "#maptoolbar", edge: "bottom" },
+    ],
+    fallback: (edge) => {
+        const cls = document.body.classList;
+        let inset = mapGap();
+        if (edge === "top" && cls.contains("ticker-open") && !cls.contains("ticker-bottom")) inset += cssPx("--size-ticker", 44);
+        if (edge === "bottom" && cls.contains("ticker-open") && cls.contains("ticker-bottom")) inset += cssPx("--size-ticker", 44);
+        if (edge === "right" && cls.contains("table-open")) inset += cssPx("--size-panel", 430);
+        return inset;
+    },
+});
 
-    // no @property support: the calc() comes back unresolved, so rebuild the
-    // value from the same facts the CSS derives it from
-    const cls = document.body.classList;
-    let inset = mapGap();
-    if (edge === "top" && cls.contains("ticker-open") && !cls.contains("ticker-bottom")) inset += cssPx("--size-ticker", 44);
-    if (edge === "bottom" && cls.contains("ticker-open") && cls.contains("ticker-bottom")) inset += cssPx("--size-ticker", 44);
-    if (edge === "right" && cls.contains("table-open")) inset += cssPx("--size-panel", 430);
-    return inset;
+function mapInset(edge) {
+    return window.AISChrome.inset(edge);
 }
 
 function tickerInset() {
@@ -4471,7 +4364,7 @@ function mapTopInset() {
 }
 
 function mapGap() {
-    return cssPx("--size-map-gap", 10);
+    return window.AISChrome.gap();
 }
 
 function freeMapWidth() {
@@ -4484,7 +4377,7 @@ function panelTopOffset() {
     if (cardFullBleed()) return 0;
 
     const panel = document.getElementById("tableside");
-    const parent = panelElements().shipcard.offsetParent;
+    const parent = panelElements().targetcard.offsetParent;
     if (!panel || !parent) return 0;
 
     return Math.max(0, Math.round(panel.getBoundingClientRect().top - parent.getBoundingClientRect().top));
@@ -4516,9 +4409,63 @@ function squareFlushCorners(aside) {
     aside.classList.toggle("flush-bottom", aside.offsetTop + aside.offsetHeight >= h);
 }
 
-function fitShipcard() {
-    const aside = panelElements().shipcard;
-    if (!aside || !shipcardVisible()) return;
+function pinTargetcard() {
+    settings.targetcard_pinned = true;
+    const card = panelElements().targetcard;
+    settings.targetcard_pinned_x = parseInt(card.style.left) || 0;
+    settings.targetcard_pinned_y = parseInt(card.style.top) || 0;
+
+    applyTargetcardPinStyling();
+    showNotification("Card pinned to this position");
+    saveSettings();
+}
+
+function unpinTargetcard() {
+    settings.targetcard_pinned = false;
+    settings.targetcard_pinned_x = null;
+    settings.targetcard_pinned_y = null;
+
+    applyTargetcardPinStyling();
+
+    showNotification("Card unpinned");
+    saveSettings();
+}
+
+function applyTargetcardPinStyling() {
+    const card = document.getElementById("targetcard");
+    if (settings.targetcard_pinned) {
+        card.classList.add("pinned");
+        document.getElementById("targetcard_drag_handle").classList.add("opacity-50");
+    }
+    else {
+        card.classList.remove("pinned");
+        document.getElementById("targetcard_drag_handle").classList.remove("opacity-50");
+    }
+}
+
+function toggleTargetcardPin() {
+    if (settings.targetcard_pinned) {
+        unpinTargetcard();
+    } else {
+        pinTargetcard();
+    }
+}
+
+function pinActive() {
+    return settings.targetcard_pinned
+        && settings.targetcard_pinned_x !== null
+        && settings.targetcard_pinned_y !== null
+        && !cardFullBleed();
+}
+
+function clampToFree(aside, left, top) {
+    const box = window.AISChrome.freeBox(aside.offsetParent);
+    return window.AISChrome.clamp(box, aside.offsetWidth, aside.offsetHeight, left, top);
+}
+
+function fitTargetcard() {
+    const aside = panelElements().targetcard;
+    if (!aside || !targetcardVisible()) return;
 
     const margin = cardFullBleed() ? 0 : mapGap();
     const parent = aside.offsetParent;
@@ -4532,7 +4479,7 @@ function fitShipcard() {
 
     if (aside.offsetHeight >= available) {
         aside.style.top = top + "px";
-        if (!settings.shipcard_pinned) aside.style.left = leftWithin(parent, aside, margin) + "px";
+        if (!pinActive()) aside.style.left = leftWithin(parent, aside, margin) + "px";
         aside.classList.add("floating");
         squareFlushCorners(aside);
         return;
@@ -4541,12 +4488,26 @@ function fitShipcard() {
     const overflow = aside.offsetTop + aside.offsetHeight - bottom;
     if (overflow > 0) aside.style.top = Math.max(top, aside.offsetTop - overflow) + "px";
 
+    if (pinActive()) {
+        const at = clampToFree(aside, parseInt(aside.style.left) || 0, parseInt(aside.style.top) || 0);
+        aside.style.left = at.left + "px";
+        aside.style.top = at.top + "px";
+    }
+
     squareFlushCorners(aside);
 }
 
 function positionAside(pixel, aside) {
-
     stopHover();
+
+    if (pinActive()) {
+        const at = clampToFree(aside, settings.targetcard_pinned_x, settings.targetcard_pinned_y);
+        aside.style.left = `${at.left}px`;
+        aside.style.top = `${at.top}px`;
+        aside.classList.add("floating");
+        return;
+    }
+
 
     if (settings.kiosk && settings.kiosk_pan_map && card_type == 'ship' && card_mmsi in shipsDB) {
         moveMapCenter(pixel);
@@ -4554,53 +4515,35 @@ function positionAside(pixel, aside) {
         pixel = [mapSize[0] / 2, mapSize[1] / 2];
     }
 
-    if (settings.shipcard_pinned && settings.shipcard_pinned_x !== null && settings.shipcard_pinned_y !== null) {
-        aside.style.left = `${settings.shipcard_pinned_x}px`;
-        aside.style.top = `${settings.shipcard_pinned_y}px`;
-        aside.classList.add("floating");
-        return;
-    }
 
     aside.style.left = "";
     aside.style.top = "";
     aside.classList.remove("floating");
 
-    if (settings.shipcard_top_left) {
+    if (settings.targetcard_top_left) {
         placeTopLeft(aside);
         squareFlushCorners(aside);
-        adjustMapForShipcard(pixel);
+        adjustMapForTargetcard(pixel);
         return;
     }
 
     let placed = false;
 
     if (pixel) {
-        const margin = 35;
-        let marginRight = panels.table ? cssPx("--size-panel", 430) : 30;
-
         const mapSize = map.getSize();
-        const shipCardRect = aside.getBoundingClientRect();
-        const shipCardWidth = shipCardRect.width;
-        const shipCardHeight = shipCardRect.height;
+        const rect = aside.getBoundingClientRect();
 
-        const rightSpace = mapSize[0] - (pixel[0] + shipCardWidth + margin + marginRight);
-        const leftSpace = pixel[0] - (shipCardWidth + margin);
+        const at = window.AISChrome.beside(
+            { width: mapSize[0], height: mapSize[1] }, rect.width, rect.height, pixel,
+            {
+                margin: 35,
+                reserveRight: panels.table ? cssPx("--size-panel", 430) : 30,
+                topInset: mapTopInset(),
+            });
 
-        if ((rightSpace > 0 || leftSpace > 0) && mapSize[1] > shipCardHeight + 2 * margin) {
-            const top = Math.max(margin, mapTopInset());
-            let topPosition = pixel[1] - (shipCardHeight / 2);
-            topPosition = Math.max(top, Math.min(mapSize[1] - shipCardHeight - margin, topPosition));
-
-            aside.style.top = `${topPosition}px`;
-
-            if (rightSpace >= 0) {
-                aside.style.left = `${pixel[0] + margin}px`;
-            } else if (leftSpace >= 0) {
-                aside.style.left = `${pixel[0] - shipCardWidth - margin}px`;
-            } else {
-                aside.style.left = `${Math.max(0, (mapSize[0] - shipCardWidth) / 2)}px`;
-            }
-
+        if (at) {
+            aside.style.left = `${at.left}px`;
+            aside.style.top = `${at.top}px`;
             aside.classList.add("floating");
             placed = true;
         }
@@ -4610,14 +4553,14 @@ function positionAside(pixel, aside) {
         placeTopLeft(aside);
     }
     squareFlushCorners(aside);
-    adjustMapForShipcard(pixel);
+    adjustMapForTargetcard(pixel);
 }
 
-function showShipcard(type, m, pixel = undefined) {
-    shipcard.resetHistory();
+function showTargetcard(type, m, pixel = undefined) {
+    targetcard.resetHistory();
 
-    const aside = document.getElementById("shipcard");
-    const visible = shipcardVisible();
+    const aside = document.getElementById("targetcard");
+    const visible = targetcardVisible();
 
     let ship = m in shipsDB ? shipsDB[m].raw : null;
     let ship_old = card_mmsi in shipsDB ? shipsDB[card_mmsi].raw : null;
@@ -4631,14 +4574,14 @@ function showShipcard(type, m, pixel = undefined) {
     }
 
     if (m != null && !visible) {
-        setPanels({ shipcard: true, measure: false }, { reposition: false });
+        setPanels({ targetcard: true, measure: false }, { reposition: false });
         select_enabled_track = false;
     } else if (visible && m == null) {
-        setPanels({ shipcard: false });
+        setPanels({ targetcard: false });
     }
 
     if (type !== card_type) {
-        document.querySelectorAll('#shipcard_content [data-context-type]').forEach(element => {
+        document.querySelectorAll('#targetcard_content [data-context-type]').forEach(element => {
             if (element.dataset.contextType === type) {
                 element.style.display = '';
             } else {
@@ -4646,12 +4589,12 @@ function showShipcard(type, m, pixel = undefined) {
             }
         });
 
-        shipcard.displayIcons(type);
+        targetcard.displayIcons(type);
     }
 
     setCard(m, type);
 
-    if (shipcardVisible()) {
+    if (targetcardVisible()) {
         if (settings.show_track_on_select && card_type == 'ship') {
             if (hoverMMSI === m && hover_enabled_track && hoverType == 'ship') {
                 hover_enabled_track = false;
@@ -4663,21 +4606,21 @@ function showShipcard(type, m, pixel = undefined) {
             }
         }
 
-        if (isShipcardMax()) {
-            toggleShipcardSize();
+        if (isTargetcardMax()) {
+            toggleTargetcardSize();
         }
-        if (!visible) shipcardMinIfMaxonMobile();
+        if (!visible) targetcardMinIfMaxonMobile();
         positionAside(pixel, aside);
 
-        if (card_type == 'ship') shipcard.populate();
-        else if (card_type == 'plane') populatePlanecard();
+        if (card_type == 'ship') targetcard.populate();
+        else if (card_type == 'plane') planecard.populate();
 
         // trigger reflow for iPad Safari
         aside.style.display = 'none';
         aside.offsetHeight;
         aside.style.display = '';
 
-        fitShipcard();
+        fitTargetcard();
     }
 
     trackLayer.changed();
@@ -4860,11 +4803,11 @@ async function updateMap() {
         }
     }
 
-    if (shipcardVisible()) {
+    if (targetcardVisible()) {
         if (card_type == "ship")
-            shipcard.populate();
+            targetcard.populate();
         else if (card_type == "plane")
-            populatePlanecard();
+            planecard.populate();
     }
 
     updateMarkerCount();
@@ -5046,6 +4989,7 @@ function updateDarkMode() {
     plotsModule?.updateColors();
     updateMapLayer();
     redrawMap();
+    syncThemedSettings();
 }
 
 document.getElementById('zoom-in').addEventListener('click', function () {
@@ -5267,7 +5211,7 @@ function activateTab(b, a) {
 
 function selectMapTab(m) {
     document.getElementById("map_tab").click();
-    if (m in shipsDB) showShipcard('ship', m);
+    if (m in shipsDB) showTargetcard('ship', m);
 }
 
 // split out so the container can be revealed before initMap() runs
@@ -5494,13 +5438,6 @@ function makeDraggable(dragHandle, dragTarget) {
                 dragTarget.style.bottom = 'auto';
                 dragTarget.style.left = `${newX}px`;
                 dragTarget.style.top = `${newY}px`;
-
-                // Update pinned position if shipcard is pinned
-                if (settings.shipcard_pinned && dragTarget.id === 'shipcard') {
-                    settings.shipcard_pinned_x = newX;
-                    settings.shipcard_pinned_y = newY;
-                    saveSettings();
-                }
             }
         };
 
@@ -5508,6 +5445,12 @@ function makeDraggable(dragHandle, dragTarget) {
             if (isDragging) {
                 isDragging = false;
                 dragTarget.classList.remove('dragging');
+
+                if (dragTarget.id === "targetcard" && settings.targetcard_pinned) {
+                    settings.targetcard_pinned_x = parseInt(dragTarget.style.left) || 0;
+                    settings.targetcard_pinned_y = parseInt(dragTarget.style.top) || 0;
+                    saveSettings();
+                }
             }
 
             dragHandle.releasePointerCapture(e.pointerId);
@@ -5539,13 +5482,14 @@ else {
 addOverlayLayer("Aircraft", planeLayer);
 
 let urlParams = new URLSearchParams(window.location.search);
+buildStatcard();
 restoreDefaultSettings();
 
 community.init({ config, getMap: () => map });
 fireworks.init({ config, extraVector, showDialog, showNotification });
 kiosk.init({
     getMap: () => map,
-    showShipcard,
+    showTargetcard,
     saveSettings,
 });
 measure.init({
@@ -5579,8 +5523,8 @@ boxselect.init({
 });
 let pluginActionCounter = 0;
 
-shipcard.init({
-    fitShipcard,
+targetcard.init({
+    fitTargetcard,
     getReceiver: () => activeReceiver,
     realtimeEnabled: () => config.features.realtime,
     isFollowing,
@@ -5595,12 +5539,18 @@ shipcard.init({
         }
         if (typeof action === 'string' && ACTIONS[action]) return action;
 
-        console.warn('addShipcardItem: action must be a function or a registered ACTIONS key. Got:', action);
+        console.warn('addTargetcardItem: action must be a function or a registered ACTIONS key. Got:', action);
         return null;
     },
 });
 
+planecard.init({
+    isMax: () => isTargetcardMax(),
+    pinnedRows: () => settings.targetcard_rows,
+});
+
 ticker.init({
+    buckets: bucketChips(),
     bucketHidden: (b) => filter.isActive() && filter.isHidden("bucket", b),
     openVessel: (m) => openFocus(m, 14),
 });
@@ -5645,7 +5595,6 @@ updateReceiverSelect(config.receivers);
 console.log("Load settings from URL parameters");
 
 loadSettingsFromURL();
-updateForLegacySettings();
 applyDynamicStyling();
 community.applySharingState();
 
@@ -5686,7 +5635,7 @@ saveSettings();
 setGraphVisibility('signal', settings.show_signal_graphs, false);
 setGraphVisibility('ppm', settings.show_ppm_graphs, false);
 setPlotAbsoluteTime(settings.plot_absolute_time, false);
-shipcard.prepare();
+targetcard.prepare();
 buildSettingsTabs();
 
 for (const [enabled, tab] of [
@@ -5707,7 +5656,6 @@ if (!config.features.replay)
 
 showWelcome();
 kiosk.updateKiosk();
-applyShipcardPinStyling()
 updateAndroid();
 
 if (isAndroid()) showMenu();
@@ -5726,8 +5674,8 @@ window.addEventListener('load', () => {
 // because a window drag fires this continuously and each pass measures.
 window.addEventListener('resize', debounce(() => {
     applyPanels({ reposition: false });
-    fitShipcard();
+    fitTargetcard();
     tablePerPage = 0;
     updateTablecard();
 }, 150));
-
+applyTargetcardPinStyling()

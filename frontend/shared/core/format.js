@@ -2,33 +2,38 @@ import { shipOutlineLocal } from './geo.js';
 // Presentation helpers (distance/speed/coordinate/time/name/ship-type formatters).
 // `getTableShiptype` stays in script.js — it touches the sprite registry.
 
-import { settings } from './state.js';
+let cfg = { units: () => "DEFAULT", coordinates: () => "decimal" };
+
+export function configure(next) {
+    if (next.units) cfg.units = typeof next.units === "function" ? next.units : () => next.units;
+    if (next.coordinates) cfg.coordinates = typeof next.coordinates === "function" ? next.coordinates : () => next.coordinates;
+}
 import { CLASS_A, CLASS_B, BASESTATION, SAR, SARTEPIRB, ATON } from './constants.js';
 
 export const getDistanceConversion = (c) =>
-    settings.metric === "DEFAULT" ? c : settings.metric === "SI" ? c * 1.852 : c * 1.15078;
+    cfg.units() === "DEFAULT" ? c : cfg.units() === "SI" ? c * 1.852 : c * 1.15078;
 export const getDistanceVal = (c) => Number(getDistanceConversion(c)).toFixed(1);
 export const getDistanceUnit = () =>
-    settings.metric === "DEFAULT" ? "nmi" : settings.metric === "SI" ? "km" : "mi";
+    cfg.units() === "DEFAULT" ? "nmi" : cfg.units() === "SI" ? "km" : "mi";
 
 export const getSpeedConversion = (c) =>
-    settings.metric === "DEFAULT" ? c : settings.metric === "SI" ? c * 1.852 : c * 1.151;
+    cfg.units() === "DEFAULT" ? c : cfg.units() === "SI" ? c * 1.852 : c * 1.151;
 export const getSpeedVal = (c) =>
-    settings.metric === "DEFAULT" ? Number(c).toFixed(1)
-        : settings.metric === "SI" ? Number(c * 1.852).toFixed(1)
+    cfg.units() === "DEFAULT" ? Number(c).toFixed(1)
+        : cfg.units() === "SI" ? Number(c * 1.852).toFixed(1)
         : Number(c * 1.151).toFixed(1);
 export const getSpeedUnit = () =>
-    settings.metric === "DEFAULT" ? "kts" : settings.metric === "SI" ? "km/h" : "mph";
+    cfg.units() === "DEFAULT" ? "kts" : cfg.units() === "SI" ? "km/h" : "mph";
 
 export const getDimVal = (c) =>
-    settings.metric === "DEFAULT" || settings.metric === "SI"
+    cfg.units() === "DEFAULT" || cfg.units() === "SI"
         ? Number(c).toFixed(0)
         : Number(c * 3.2808399).toFixed(0);
 export const getDimUnit = () =>
-    settings.metric === "DEFAULT" || settings.metric === "SI" ? "m" : "ft";
+    cfg.units() === "DEFAULT" || cfg.units() === "SI" ? "m" : "ft";
 
 export const getDraughtVal = (c) =>
-    settings.metric === "DEFAULT" || settings.metric === "SI"
+    cfg.units() === "DEFAULT" || cfg.units() === "SI"
         ? Number(c).toFixed(1)
         : Number(c * 3.2808399).toFixed(1);
 
@@ -285,7 +290,7 @@ export function decimalToDDM(l, isLatitude) {
 }
 
 function formatCoordinate(value, isLatitude) {
-    switch (settings.coordinate_format) {
+    switch (cfg.coordinates()) {
         case "dms":
             return decimalToDMS(value, isLatitude);
         case "ddm":
@@ -762,3 +767,6 @@ export function formatBytes(b) {
     if (b >= 1e3) return (b / 1e3).toFixed(1) + " KB";
     return b + " B";
 }
+
+export const getICAOFromHexIdent = (h) => h.toString(16).toUpperCase().padStart(6, '0');
+export const getICAO = (plane) => getICAOFromHexIdent(plane.hexident);

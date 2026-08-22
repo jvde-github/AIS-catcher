@@ -1,0 +1,735 @@
+/* ============================================================================
+   map.css — chrome for a map frontend: the control pills and their buttons.
+   Values come from tokens.css; nothing here knows what the buttons do.
+   ========================================================================= */
+
+.map-button-box.map-bottom {
+    transition: none;
+}
+
+.map-button-box.map-pill:not(.map-bottom) {
+    top: var(--map-inset-top);
+}
+
+.map-button-box.map-bottom {
+    bottom: var(--map-inset-bottom);
+}
+
+.map-toolbar {
+    position: absolute;
+    left: 50%;
+    bottom: var(--map-inset-bottom);
+    z-index: var(--z-map-control);
+    display: none;
+    align-items: stretch;
+    gap: 4px;
+    padding: 5px 8px;
+    border: 2px solid var(--color-pill-border);
+    border-radius: var(--radius-2xl);
+    background: var(--color-surface-alt);
+    box-shadow: var(--shadow-md);
+    color: var(--color-text);
+    fill: var(--color-text);
+    transform: translateX(calc(-50% - var(--map-table) / 2));
+    transition: transform var(--dur-slow) ease-out;
+}
+
+body.toolbar-wide .map-toolbar {
+    display: flex;
+}
+
+body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
+    display: none;
+}
+
+.map-toolbar #counters-btn {
+    font-size: var(--fs-base) !important;
+    font-weight: var(--fw-semibold);
+}
+
+.map-toolbar .map-button {
+    width: auto !important;
+    height: auto !important;
+    flex-direction: column !important;
+    gap: 4px;
+    padding: 6px 16px !important;
+    border-radius: var(--radius-lg) !important;
+    background: none !important;
+    color: inherit !important;
+    fill: currentColor !important;
+}
+
+.map-toolbar .map-button + .map-button {
+    border-top: none !important;
+}
+
+.map-toolbar .mb-label {
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-normal);
+    white-space: nowrap;
+}
+
+.map-toolbar .map-button.is-active {
+    color: var(--color-accent) !important;
+    fill: var(--color-accent) !important;
+    background: var(--color-selected) !important;
+}
+
+/* the ring is sized for the rail's 34px square, not a labelled button */
+.map-toolbar .map-button.is-active::before {
+    display: none;
+}
+
+.map-toolbar .map-button svg {
+    width: 18px !important;
+    height: 18px !important;
+}
+
+@media (hover: hover) {
+    .map-toolbar .map-button:hover { background: var(--color-hover) !important; }
+}
+
+.map-button-box .mb-label {
+    display: none;
+}
+
+.map-button-box {
+    position: absolute;
+    right: var(--size-map-gap);
+    transform: translateX(calc(-1 * var(--map-table)));
+    /* below the map cards: the targetcard covers the controls */
+    z-index: var(--z-map-control);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 2px solid var(--color-pill-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-surface-alt);
+    fill: var(--color-text);
+    color: var(--color-text);
+    box-shadow: var(--shadow-md);
+    transition: transform var(--dur-slow) ease-out;
+}
+
+.map-button-box.map-pill {
+    padding: 4px 0;
+    border-radius: var(--radius-2xl);
+}
+
+.map-button {
+    position: relative;
+    width: var(--size-map-button) !important;
+    height: 34px !important;
+    border: none !important;
+    margin: 0px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background-color: var(--color-surface-alt) !important;
+    fill: var(--color-text) !important;
+    color: var(--color-text) !important;
+    border-radius: 0 !important;
+}
+
+/* Thin divider between stacked buttons within a group */
+.map-button+.map-button {
+    border-top: 1px solid var(--color-border-strong) !important;
+}
+
+@media (hover: hover) {
+    .map-button:hover { color: var(--color-highlight) !important; fill: var(--color-highlight) !important; outline: none !important; }
+    .map-button:hover svg { transform: scale(1.2); }
+    .map-button.is-active:hover::before { background: var(--color-hover-overlay); }
+}
+
+.map-button:hover,
+.map-button:focus {
+    outline: none !important;
+}
+
+@media (hover: hover) {
+    .map-button:focus-visible { outline: 2px solid var(--color-accent-soft) !important; outline-offset: -2px; }
+}
+
+.map-button svg {
+    width: 19px !important;
+    height: 19px !important;
+    transition: transform var(--dur-fast) ease;
+}
+
+.map-button.is-active {
+    color: var(--color-accent) !important;
+    fill: var(--color-accent) !important;
+}
+
+.map-button.is-active::before {
+    content: "";
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-circle);
+    border: 2px solid var(--color-accent);
+}
+
+.map-button.is-active>* {
+    position: relative;
+}
+
+.map-pill .map-button svg {
+    width: 15px !important;
+    height: 15px !important;
+}
+
+/* Replay owns the screen: the map controls have nothing to act on while
+   history is being played back. */
+body.replay-open .map-button-box {
+    display: none;
+}
+
+
+/* --- ticker: a change feed strip; registers its own inset via --map-inset-* --- */
+
+.ticker-side {
+    flex: none;
+    order: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-left: 2px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--color-ticker-muted);
+    opacity: 0.6;
+    cursor: pointer;
+}
+
+.ticker {
+    position: absolute;
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+    top: 0;
+    left: 0;
+    right: var(--map-table);
+    height: var(--size-ticker);
+    display: none;
+    align-items: center;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    gap: 12px;
+    padding: 0 10px;
+    z-index: var(--z-map-control);
+    background: var(--color-ticker-bg);
+    backdrop-filter: blur(8px);
+    border: 0 solid var(--color-ticker-border);
+    border-bottom-width: 2px;
+    color: var(--color-ticker-ink);
+    font-size: var(--fs-sm);
+    box-shadow: var(--shadow-md);
+    transition: right var(--dur-slow) ease-out;
+}
+
+.ticker .stat-item {
+    color: var(--color-ticker-ink);
+}
+
+.ticker.visible {
+    display: flex;
+}
+
+.ticker-count {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    gap: 6px;
+    flex: none;
+    padding: 2px 10px;
+    border-radius: var(--radius-2xl);
+    background: transparent;
+    border: 1px solid var(--color-ticker-accent);
+    color: var(--color-ticker-accent);
+    fill: var(--color-ticker-accent);
+    font-weight: var(--fw-bold);
+    cursor: pointer;
+}
+
+@media (hover: hover) {
+    .ticker-count:hover, .ticker-item:hover { background: var(--color-ticker-hover); }
+    .ticker-side:hover { color: var(--color-ticker-ink); opacity: 1; }
+}
+
+.ticker-feed {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 16px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+}
+
+.ticker-item {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+    min-width: 0;
+    flex: 0 1 auto;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    padding: 2px 6px;
+}
+
+.ticker-buckets {
+    display: none;
+    align-items: center;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    gap: 10px;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* the counters card packs its chips tight and separates them with a hairline;
+   on the ticker they already stand apart, and a left-only border on a rounded
+   chip draws a bracket rather than a divider */
+.ticker-buckets .stat-item + .stat-item {
+    border-left: 0;
+    padding-left: 4px;
+}
+
+.ticker.ticker-idle .ticker-feed {
+    display: none;
+}
+
+.ticker.ticker-idle .ticker-buckets {
+    display: flex;
+}
+
+/* wide enough for both: counts sit beside the feed instead of taking turns */
+.ticker.ticker-wide .ticker-feed {
+    display: flex;
+    order: 2;
+}
+
+.ticker.ticker-wide .ticker-buckets {
+    display: flex;
+    flex: none;
+    order: 1;
+}
+
+.ticker.ticker-wide .ticker-count {
+    order: 0;
+}
+
+.ticker.ticker-wide .ticker-side {
+    order: 3;
+}
+
+.ticker-feed,
+.ticker-buckets {
+    transition: opacity var(--ticker-fade, 1s) ease;
+}
+
+.ticker.ticker-fading .ticker-feed {
+    opacity: 0;
+}
+
+/* in wide mode the chips are a fixture beside the feed rather than part of the
+   rotation, so fading them blinks numbers that did not change */
+.ticker.ticker-fading:not(.ticker-wide) .ticker-buckets {
+    opacity: 0;
+}
+
+/* one line, clipped at the edge: a ticker that wraps stops being a strip */
+.ticker-text {
+    overflow: hidden;
+    white-space: nowrap;
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.ticker-scroller {
+    display: inline-block;
+    white-space: nowrap;
+}
+
+.ticker-text.panning .ticker-scroller {
+    animation: ticker-pan var(--pan-duration, 8s) ease-in-out infinite alternate;
+}
+
+@keyframes ticker-pan {
+    0%, 18% {
+        transform: translateX(0);
+    }
+
+    82%, 100% {
+        transform: translateX(var(--pan-distance, 0));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ticker-text.panning .ticker-scroller { animation: none; }
+    .ticker-text { text-overflow: ellipsis; }
+}
+
+.tk-name {
+    font-weight: var(--fw-bold);
+}
+
+.tk-sep,
+.tk-label,
+.tk-was,
+.tk-arrow {
+    color: var(--color-ticker-muted);
+}
+
+.tk-to {
+    color: var(--color-ticker-accent);
+}
+
+.ticker-scroller > span + span {
+    margin-left: 6px;
+}
+
+.ticker-age {
+    flex: none;
+    color: var(--color-ticker-muted);
+    font-size: var(--fs-xs);
+    white-space: nowrap;
+}
+
+.ticker-dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-circle);
+    background: var(--color-ok-strong);
+}
+
+.ticker-new {
+    background: var(--color-accent);
+}
+
+.ticker.ticker-idle .ticker-dot {
+    background: var(--color-off);
+}
+
+
+/* --- cards: the shell (header, rows, sections, footer) and its content --- */
+
+.mapcard {
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: stretch;
+    z-index: var(--z-float);
+    position: absolute;
+    visibility: hidden;
+    background: var(--color-surface-raised);
+    color: var(--color-text);
+    cursor: auto;
+    border-radius: var(--radius-md);
+}
+
+#targetcard .mapcard_content {
+    border-bottom-left-radius: inherit;
+    border-bottom-right-radius: inherit;
+}
+
+.mapcard.floating {
+    box-shadow: var(--shadow-md);
+}
+
+.mapcard.visible {
+    visibility: visible;
+}
+
+.mapcard_content {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.mapcard_header {
+    flex: 0 0 35px;
+    padding: 5px;
+    margin: 5px;
+    margin-top: 10px;
+    font-size: var(--fs-lg);
+    color: var(--color-text);
+    background-color: var(--color-targetcard-header);
+    align-items: center;
+    display: flex;
+    flex-direction: row;
+    justify-content: stretch;
+}
+
+#targetcard_header_title {
+    flex: 1;
+}
+
+#targetcard_header_flag {
+    flex: 0 1 auto;
+    margin-right: 5px;
+}
+
+#targetcard.mapcard {
+    background: var(--color-targetcard-surface);
+    border-radius: 0;
+}
+
+#targetcard .mapcard_header {
+    margin: 4px;
+}
+
+#targetcard .mapcard-footer {
+    background-color: var(--color-targetcard-footer);
+    border-radius: 0;
+}
+
+.targetcard-validated {
+    border-left: 4px solid var(--color-ok-strong);
+}
+
+.targetcard-not-validated {
+    border-left: 4px solid var(--color-off);
+}
+
+.targetcard-dubious {
+    border-left: 4px solid var(--color-error);
+}
+
+#targetcard_footer>div {
+    position: relative;
+}
+
+/* flush with the card: an inset band leaves a rim of card behind it, which
+   reads as a misprint against the card's rounded corners */
+.mapcard-footer {
+    background-color: var(--color-menu);
+    color: var(--color-text);
+    flex: 0 0 60px;
+    display: flex;
+    flex-direction: row;
+    padding: 0 5px;
+    justify-content: center;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+.mapcard-footer>div {
+    flex: 0 1 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border-radius: var(--radius-lg);
+    transition: var(--transition-hover);
+}
+
+@media (hover: hover) {
+    .mapcard-footer>div:hover { cursor: pointer; background: var(--color-hover-overlay); transform: var(--hover-lift); }
+}
+
+.mapcard-footer>div>i {
+    flex: none;
+    font-size: var(--fs-2xl);
+    padding: 0;
+}
+
+.mapcard-footer>div>span {
+    flex: none;
+    font-size: var(--fs-2xs);
+    line-height: 1;
+    text-align: center;
+}
+
+.mapcard-footer>div.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.mapcard-footer>div.targetcard-icon-active {
+    background: var(--color-hover-overlay);
+    color: var(--color-accent);
+}
+
+.mapcard header>span:first-child {
+    flex: 1 0 0;
+}
+
+.mapcard-header-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 1 0;
+    padding: 0px;
+    border-radius: var(--radius-lg);
+    font-size: var(--fs-3xl);
+    transition: var(--transition-hover);
+    cursor: pointer;
+}
+
+@media (hover: hover) {
+    .mapcard-header-icon:hover { cursor: pointer; transform: var(--hover-lift); }
+}
+
+/* dismiss reads the same wherever it appears, and takes its red from the
+   palette rather than from the markup */
+.close_icon.mapcard-header-icon,
+.mapcard-close {
+    color: var(--color-danger);
+    font-size: var(--size-icon);
+}
+
+.mapcard-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.mapcard-table th,
+.mapcard-table td {
+    line-height: 14px;
+    font-size: var(--fs-2xs);
+    text-align: left;
+    padding: 2px 5px;
+}
+
+.mapcard-table th {
+    color: var(--color-text-muted);
+}
+
+.mapcard-content-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: stretch;
+    padding: 8px 10px;
+    transition: var(--transition-hover);
+}
+
+@media (hover: hover) {
+    .mapcard-content-row:hover { cursor: pointer; }
+    /* inset so the row does not shift */ #targetcard .mapcard-content-row:not(.targetcard-row-selected):hover { box-shadow: inset -3px 0 0 color-mix(in srgb, var(--color-targetcard-edge) 60%, transparent); }
+}
+
+.mapcard-content-row>div {
+    overflow: hidden;
+    flex: 1;
+    display: flex;
+    justify-content: stretch;
+    flex-direction: column;
+}
+
+.mapcard-content-row>div>span:first-child {
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    font-size: var(--fs-2xs);
+    line-height: 13px;
+}
+
+.mapcard-content-row>div>span:last-child {
+    line-height: 18px;
+    font-size: var(--fs-md);
+    text-transform: initial;
+}
+
+.mapcard-content-row>div>span:last-child:empty:after {
+    content: "-";
+}
+
+/* the !importants outrank icons.css, which sets masked icons to display: block */
+.targetcard-tech-icon {
+    font-size: var(--fs-sm) !important;
+    cursor: help;
+    color: var(--color-text-muted);
+    display: inline-block !important;
+    vertical-align: middle;
+    margin-left: 4px;
+    margin-top: -2px;
+    line-height: 1;
+}
+
+.targetcard-min-only {
+    display: none;
+}
+
+.targetcard-min-only.visible {
+    display: inherit;
+}
+
+/* Marks a row as one the collapsed card keeps. Right edge only, so the label
+   column stays flush with every other row. */
+.targetcard-row-selected {
+    display: flex;
+    flex-direction: row;
+    border-right: 3px solid var(--color-targetcard-edge);
+    padding-right: 7px;   /* the border comes out of the padding */
+}
+
+.targetcard-content-row + .targetcard-content-row {
+    border-top: 1px dotted var(--color-rule);
+}
+
+/* Section headings inside the targetcard: a full-width band, set like the field
+   labels around it so the card reads as one type system. Max-only, so a
+   collapsed card stays a single compact block. */
+.targetcard-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 10px;
+    background-color: color-mix(in srgb, var(--color-band-accent) 90%, var(--color-surface-raised));
+    color: var(--color-text-muted);
+    font-size: var(--fs-2xs);
+    font-weight: var(--fw-medium);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    line-height: 14px;
+    cursor: pointer;
+    user-select: none;
+}
+
+@media (hover: hover) {
+    .targetcard-section:hover { filter: brightness(0.97); }
+}
+
+.targetcard-caret-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--color-surface);
+    color: var(--color-text);
+    flex: none;
+}
+
+@media (hover: hover) {
+    .targetcard-section:hover .targetcard-caret-chip { background: var(--color-surface-raised); }
+}
+
+.targetcard-section-caret {
+    width: 13px;
+    height: 13px;
+    flex: none;
+}
+
+@media only screen and (max-width: 500px) {
+    .mapcard { left: 0; top: 0; border-radius: 0px; }
+    .mapcard header { font-size: var(--fs-base); }
+}
+
+@media only screen and (max-height: 800px) {
+    .mapcard { left: 0; top: 0; }
+    .mapcard header { font-size: var(--fs-base); }
+}

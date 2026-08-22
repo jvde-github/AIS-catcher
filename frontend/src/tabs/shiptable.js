@@ -21,7 +21,7 @@ import {
     getDistanceVal, getDistanceUnit, getLatValFormat, getLonValFormat,
     getSpeedVal, getSpeedUnit,
     getStringfromChannels, getStringfromMsgType, getStringfromGroup,
-} from '../core/format.js';
+} from '../../shared/core/format.js';
 
 let table = null;
 let tableFirstTime = true;

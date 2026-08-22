@@ -83,10 +83,72 @@ window.AISComponents = (function () {
         return { wrap: wrap, update: update };
     }
 
+    function sectionHead(section, opts) {
+        var head = document.createElement("div");
+        head.className = opts.sectionClass || "";
+        head.dataset.section = section.key;
+        if (opts.headId) head.id = opts.headId(section.key);
+        Object.keys(opts.attrs || {}).forEach(function (a) {
+            if (a !== "data-action") head.setAttribute(a, opts.attrs[a]);
+        });
+        if (opts.sectionAction) head.dataset.action = opts.sectionAction;
+
+        var label = document.createElement("span");
+        label.textContent = section.label;
+
+        var chip = document.createElement("span");
+        chip.className = opts.caretChipClass || "";
+        var caret = document.createElement("i");
+        caret.className = (opts.caretClass || "") +
+            (section.open ? " keyboard_arrow_up_icon" : " keyboard_arrow_down_icon");
+        chip.appendChild(caret);
+
+        head.appendChild(label);
+        head.appendChild(chip);
+        return head;
+    }
+
+    function fieldRows(mount, rows, opts) {
+        opts = opts || {};
+        var cells = {};
+
+        rows.forEach(function (row) {
+            if (row.section) mount.appendChild(sectionHead(row.section, opts));
+
+            var el = document.createElement("div");
+            el.className = [opts.rowClass, row.cls].filter(Boolean).join(" ");
+            Object.keys(opts.attrs || {}).forEach(function (a) {
+                el.setAttribute(a, opts.attrs[a]);
+            });
+
+            var sec = row.section ? row.section.key : row.sectionKey;
+            if (sec) el.dataset.section = sec;
+
+            row.fields.forEach(function (f) {
+                var pair = document.createElement("div");
+                if (f.spacer) { el.appendChild(pair); return; }
+
+                var label = document.createElement("span");
+                label.textContent = f.label;
+                var value = document.createElement("span");
+                if (opts.idPrefix) value.id = opts.idPrefix + f.key;
+                pair.appendChild(label);
+                pair.appendChild(value);
+                el.appendChild(pair);
+                cells[f.key] = value;
+            });
+
+            mount.appendChild(el);
+        });
+
+        return cells;
+    }
+
     /* --- toast ------------------------------------------------------------ */
 
     var TOAST_TIME = { info: 5000, success: 5000, warning: 7000, error: 9000 };
-    var TOAST_ICON = { info: "i", success: "✓", warning: "!", error: "!" };
+    var TOAST_ICON = { info: "i", success: "✓", warning: "!", error: "\u2715" };
+    var TOAST_MAX = 4;   /* a burst must not become a wall */
 
     /* Shows a transient message. `container` is the stack to append to; if the
        element is missing it is created, so callers need not own one.
@@ -104,8 +166,39 @@ window.AISComponents = (function () {
            neither the stacking gap nor equal-width children */
         container.classList.add("toast-container");
 
+        function alive() { return container.querySelectorAll(".toast:not(.toast-dying)"); }
+
+        var twin = null;
+        var live = alive();
+        for (var t = 0; t < live.length; t++) {
+            if (live[t].dataset.key === type + "|" + message) { twin = live[t]; break; }
+        }
+        if (twin) {
+            var n = (parseInt(twin.dataset.count, 10) || 1) + 1;
+            twin.dataset.count = n;
+            var badge = twin.querySelector(".toast-count");
+            if (!badge) {
+                badge = document.createElement("span");
+                badge.className = "toast-count";
+                twin.insertBefore(badge, twin.querySelector(".toast-close"));
+            }
+            badge.textContent = "\u00d7" + n;
+            if (twin._restart) twin._restart();
+            return twin._dismiss;
+        }
+
+        /* keep the stack readable: retire the oldest once it is full. A culled
+           toast leaves at once rather than over 300ms, or this would spin. */
+        while (live.length >= TOAST_MAX) {
+            var oldest = live[0];
+            if (oldest._dismiss) oldest._dismiss();
+            oldest.remove();
+            live = alive();
+        }
         var el = document.createElement("div");
         el.className = "toast toast-" + type;
+        el.dataset.key = type + "|" + message;
+        el.dataset.count = 1;
 
         if (TOAST_ICON[type]) {
             var icon = document.createElement("span");
@@ -126,17 +219,22 @@ window.AISComponents = (function () {
         container.appendChild(el);
         requestAnimationFrame(function () { el.classList.add("toast-visible"); });
 
-        var timer = setTimeout(dismiss, duration || TOAST_TIME[type]);
+        var life = duration || TOAST_TIME[type];
+        var timer = setTimeout(dismiss, life);
         var closed = false;
+
+        el._restart = function () { clearTimeout(timer); timer = setTimeout(dismiss, life); };
         function dismiss() {
             if (closed) return;
             closed = true;
             clearTimeout(timer);
+            el.classList.add("toast-dying");
             el.classList.remove("toast-visible");
             setTimeout(function () { el.remove(); }, 300);
             if (onClose) onClose();
         }
         close.addEventListener("click", dismiss);
+        el._dismiss = dismiss;
         return dismiss;
     }
 
@@ -223,5 +321,54 @@ window.AISComponents = (function () {
         return api;
     }
 
-    return { tabScroller: tabScroller, toast: toast, TOAST_TIME: TOAST_TIME, modal: modal };
+    /* ---------------------------------------------------------------------
+       floatingMenu — place an already-populated menu and keep it on screen.
+       What the menu contains, and which entries a context shows, stays with
+       the host; only the geometry and the dismiss lifecycle are shared.
+       --------------------------------------------------------------------- */
+    function placeMenu(menu, opts) {
+        opts = opts || {};
+        menu.style.display = "block";
+        menu.style.transform = "none";
+
+        var rect = menu.getBoundingClientRect();
+        var vw = Math.min(window.innerWidth || Infinity, window.outerWidth || Infinity) || document.documentElement.clientWidth;
+        var vh = Math.min(window.innerHeight || Infinity, window.outerHeight || Infinity) || document.documentElement.clientHeight;
+
+        if (opts.anchor) {
+            var btn = opts.anchor.getBoundingClientRect();
+            var top = btn.top - rect.height - 8;
+            if (top < 8) top = Math.min(btn.bottom + 8, vh - rect.height - 8);
+            menu.style.left = Math.max(8, btn.right - rect.width) + "px";
+            menu.style.top = top + "px";
+            return;
+        }
+        if (opts.center) {
+            menu.style.left = "50%";
+            menu.style.top = "50%";
+            menu.style.transform = "translate(-50%, -50%)";
+            return;
+        }
+        menu.style.left = Math.max(0, Math.min(opts.x + 5, vw - rect.width)) + "px";
+        menu.style.top = Math.max(0, Math.min(opts.y + 5, vh - rect.height)) + "px";
+    }
+
+    function dismissOnce(menu, onClose) {
+        function close(e) {
+            menu.style.display = "none";
+            document.removeEventListener("click", close);
+            document.removeEventListener("keydown", key);
+            if (onClose) onClose(e);
+        }
+        function key(e) { if (e.key === "Escape") close(e); }
+        setTimeout(function () {
+            document.addEventListener("click", close);
+            document.addEventListener("keydown", key);
+        }, 0);
+        return close;
+    }
+
+    return { tabScroller: tabScroller, fieldRows: fieldRows, toast: toast,
+             TOAST_TIME: TOAST_TIME, modal: modal,
+             placeMenu: placeMenu, dismissOnce: dismissOnce };
 })();

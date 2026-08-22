@@ -1,6 +1,7 @@
 #!/bin/bash
 
 SRC=frontend/src
+SHARED=frontend/shared
 DIST=frontend/dist
 
 # Function to perform sed replacement based on OS
@@ -24,10 +25,13 @@ rm -rf "$DIST/tabs"
 (cd "$SRC" && npm install --include=dev && npm run build)
 
 mkdir -p "$DIST"
-cp "$SRC/tokens.css" "$DIST/tokens.css"
-cp "$SRC/components.css" "$DIST/components.css"
-cp "$SRC/icons.css" "$DIST/icons.css"
-cp "$SRC/components.js" "$DIST/components.js"
+cp "$SHARED/tokens.css" "$DIST/tokens.css"
+cp "$SHARED/components.css" "$DIST/components.css"
+cp "$SHARED/icons.css" "$DIST/icons.css"
+cp "$SHARED/components.js" "$DIST/components.js"
+cp "$SHARED/chrome.js" "$DIST/chrome.js"
+cp "$SHARED/settings.js" "$DIST/settings.js"
+cp "$SHARED/map.css" "$DIST/map.css"
 cp "$SRC/style.css" "$DIST/style.css"
 cp "$SRC/favicon.ico" "$DIST/favicon.ico"
 cp "$SRC/icons.png" "$DIST/icons.png"
@@ -68,6 +72,9 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     COMP_HASH=$(md5 -q "$DIST/components.css")
     ICONS_HASH=$(md5 -q "$DIST/icons.css")
     COMPJS_HASH=$(md5 -q "$DIST/components.js")
+    CHROMEJS_HASH=$(md5 -q "$DIST/chrome.js")
+    MAPCSS_HASH=$(md5 -q "$DIST/map.css")
+    SETTINGSJS_HASH=$(md5 -q "$DIST/settings.js")
     JS_HASH=$(md5 -q "$DIST/script.js")
     LIB_CSS_HASH=$(md5 -q "$DIST/lib.css")
     FLAG_CSS_HASH=$(md5 -q "$DIST/flag-icons.css")
@@ -77,6 +84,9 @@ else
     COMP_HASH=$(md5sum "$DIST/components.css" | cut -d' ' -f1)
     ICONS_HASH=$(md5sum "$DIST/icons.css" | cut -d' ' -f1)
     COMPJS_HASH=$(md5sum "$DIST/components.js" | cut -d' ' -f1)
+    CHROMEJS_HASH=$(md5sum "$DIST/chrome.js" | cut -d' ' -f1)
+    MAPCSS_HASH=$(md5sum "$DIST/map.css" | cut -d' ' -f1)
+    SETTINGSJS_HASH=$(md5sum "$DIST/settings.js" | cut -d' ' -f1)
     JS_HASH=$(md5sum "$DIST/script.js" | cut -d' ' -f1)
     LIB_CSS_HASH=$(md5sum "$DIST/lib.css" | cut -d' ' -f1)
     FLAG_CSS_HASH=$(md5sum "$DIST/flag-icons.css" | cut -d' ' -f1)
@@ -91,6 +101,9 @@ perform_sed "$DIST/index.html" "s|components\.css?hash=[^\"]*|components.css?has
 # "flag-icons.css" and would stamp it with the wrong hash
 perform_sed "$DIST/index.html" "s|\"icons\.css?hash=[^\"]*|\"icons.css?hash=${ICONS_HASH}|g" ''
 perform_sed "$DIST/index.html" "s|components\.js?hash=[^\"]*|components.js?hash=${COMPJS_HASH}|g" ''
+perform_sed "$DIST/index.html" "s|chrome\.js?hash=[^\"]*|chrome.js?hash=${CHROMEJS_HASH}|g" ''
+perform_sed "$DIST/index.html" "s|map\.css?hash=[^\"]*|map.css?hash=${MAPCSS_HASH}|g" ''
+perform_sed "$DIST/index.html" "s|settings\.js?hash=[^\"]*|settings.js?hash=${SETTINGSJS_HASH}|g" ''
 perform_sed "$DIST/index.html" "s|style\.css?hash=[^\"]*|style.css?hash=${CSS_HASH}|g" ''
 perform_sed "$DIST/index.html" "s|script\.js?hash=[^\"]*|script.js?hash=${JS_HASH}|g" ''
 
@@ -102,10 +115,10 @@ cp -R frontend/control "$DIST/control"
 mkdir -p "$DIST/control/css"
 # same tokens.css the viewer gets; the control server prefixes every path with
 # "control", so the hub cannot reach the viewer's copy — it needs its own
-cp "$SRC/tokens.css" "$DIST/control/css/tokens.css"
-cp "$SRC/components.css" "$DIST/control/css/components.css"
-cp "$SRC/icons.css" "$DIST/control/css/icons.css"
-cp "$SRC/components.js" "$DIST/control/js/components.js"
+cp "$SHARED/tokens.css" "$DIST/control/css/tokens.css"
+cp "$SHARED/components.css" "$DIST/control/css/components.css"
+cp "$SHARED/icons.css" "$DIST/control/css/icons.css"
+cp "$SHARED/components.js" "$DIST/control/js/components.js"
 
 # Cache-bust hub assets (served with a 1-year cache header, like the viewer's)
 for f in css/tokens.css css/icons.css css/components.css js/components.js js/schema.js js/config-manager.js js/wizard.js js/app.js; do

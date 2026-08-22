@@ -18,7 +18,7 @@ import { fromLonLat } from 'ol/proj';
 
 import { settings } from '../core/state.js';
 import { hasValidCoords } from '../core/geo.js';
-import { sanitizeString, formatTime } from '../core/format.js';
+import { sanitizeString, formatTime } from '../../shared/core/format.js';
 
 // { getActiveReceiver, getShipsDB, showDialog, getDialogModal, saveSettings, redrawMap }
 let deps = null;

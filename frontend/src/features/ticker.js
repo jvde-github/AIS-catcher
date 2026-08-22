@@ -1,7 +1,7 @@
-import { CHANGE, CHANGE_LABEL, getChangeVal, sanitizeString, compactCount } from '../core/format.js';
+import { CHANGE, CHANGE_LABEL, getChangeVal, sanitizeString, compactCount } from '../../shared/core/format.js';
 import { debounce, decodeHTMLEntities } from '../core/util.js';
 import { ships } from '../core/store.js';
-import { getShipName } from '../core/format.js';
+import { getShipName } from '../../shared/core/format.js';
 
 const POLL_MS = 10000;
 const SLIDE_MS = 8000;
@@ -137,16 +137,25 @@ function measureSlots() {
 }
 
 function buildBuckets() {
-    const source = document.querySelector("#statcard .statcard_inner");
-    if (!source || !bucketsEl) return;
+    if (!bucketsEl || !deps.buckets) return;
 
-    for (const item of source.children) {
-        const clone = item.cloneNode(true);
-        const count = clone.querySelector("[id]");
-        if (count) count.removeAttribute("id");
+    for (const b of deps.buckets) {
+        const item = document.createElement("span");
+        item.className = "stat-item";
+        item.title = b.label || "";
+        if (b.action) item.dataset.action = b.action;
+        item.dataset.bucket = b.id;
 
-        bucketSpans[clone.dataset.bucket] = { item: clone, count };
-        bucketsEl.appendChild(clone);
+        const icon = document.createElement("span");
+        icon.className = b.icon || "";
+        if (b.style) icon.setAttribute("style", b.style);
+
+        const count = document.createElement("span");
+        item.appendChild(icon);
+        item.appendChild(count);
+
+        bucketSpans[b.id] = { item, count };
+        bucketsEl.appendChild(item);
     }
 }
 

@@ -27,7 +27,7 @@ export default defineConfig({
           // core/ MUST be its own chunk — otherwise lazy tab chunks
           // statically import script.js and the browser instantiates it
           // twice (different URL than the original <script> tag).
-          if (id.includes('/frontend/src/core/')) return 'core';
+          if (id.includes('/frontend/src/core/') || id.includes('/frontend/shared/core/')) return 'core';
           if (id.includes('/frontend/src/overlays/pollingtile')) return 'core';
 
           if (id.includes('node_modules/chart.js') ||

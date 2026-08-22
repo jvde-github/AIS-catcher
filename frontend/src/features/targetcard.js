@@ -1,4 +1,4 @@
-// Sections, footer icons, popovers and field rendering for the shipcard.
+// Sections, footer icons, popovers and field rendering for the targetcard.
 // Placement and open/close stay with the map layout in script.js.
 
 import { ships, cardMmsi, cardType, hoverMmsi, hoverType, markerTracks, clock } from '../core/store.js';
@@ -10,10 +10,10 @@ import {
     getLatValFormat, getLonValFormat, getMmsiTypeVal, getShipName, getShipTypeFull,
     getShipTypeShort, getSpeedUnit, getSpeedVal, getStatusVal, getStringfromChannels,
     getStringfromGroup, getStringfromMsgType,
-} from '../core/format.js';
+} from '../../shared/core/format.js';
 import * as binary from './binary.js';
 
-// { fitShipcard, getReceiver, realtimeEnabled, registerAction, isFollowing,
+// { fitTargetcard, getReceiver, realtimeEnabled, registerAction, isFollowing,
 //   updateFocusMarker, hoverTrackShown, selectTrackShown }
 let deps = null;
 
@@ -24,6 +24,7 @@ export function init(d) { deps = d; }
 const sectionOpen = {
     voyage: true, vessel: true, source: false,
     hull: false, speed: false, draught: false, changes: false,
+    aircraft: true, flight: true, adsb: false,
 };
 
 let historyCache = { mmsi: 0, pts: null, changes: null };
@@ -32,7 +33,7 @@ export function resetHistory() {
     historyCache = { mmsi: 0, pts: null, changes: null };
 
     ["hull", "speed", "draught", "changes"].forEach((k) => {
-        const body = document.getElementById("shipcard_" + k + "_body");
+        const body = document.getElementById("targetcard_" + k + "_body");
         if (body) body.innerHTML = "";
         sectionOpen[k] = false;
         setSectionAvailable(k, true);
@@ -41,6 +42,9 @@ export function resetHistory() {
     sectionOpen.voyage = true;
     sectionOpen.vessel = true;
     sectionOpen.source = false;
+    sectionOpen.aircraft = true;
+    sectionOpen.flight = true;
+    sectionOpen.adsb = false;
     Object.keys(sectionOpen).forEach(applySection);
 }
 
@@ -49,9 +53,9 @@ export function sectionState() { return sectionOpen; }
 export function applySection(key) {
     const open = !!sectionOpen[key];
 
-    document.querySelectorAll('#shipcard_content [data-section="' + key + '"]').forEach((el) => {
-        if (el.classList.contains("shipcard-section")) {
-            const caret = el.querySelector(".shipcard-section-caret");
+    document.querySelectorAll('#targetcard_content [data-section="' + key + '"]').forEach((el) => {
+        if (el.classList.contains("targetcard-section")) {
+            const caret = el.querySelector(".targetcard-section-caret");
             if (caret) {
                 caret.classList.toggle("keyboard_arrow_up_icon", open);
                 caret.classList.toggle("keyboard_arrow_down_icon", !open);
@@ -68,7 +72,7 @@ export function toggleSection(key) {
     sectionOpen[key] = !sectionOpen[key];
     applySection(key);
     if (sectionOpen[key]) fillSection(key);
-    deps.fitShipcard();
+    deps.fitTargetcard();
 }
 
 export function openSection(key) {
@@ -76,8 +80,8 @@ export function openSection(key) {
 }
 
 export function setSectionAvailable(key, available) {
-    const head = document.getElementById("shipcard_" + key + "_head");
-    const body = document.getElementById("shipcard_" + key + "_section");
+    const head = document.getElementById("targetcard_" + key + "_head");
+    const body = document.getElementById("targetcard_" + key + "_section");
 
     if (head) head.classList.toggle("sec-empty", !available);
     if (body && !available) body.classList.add("sec-collapsed");
@@ -88,7 +92,7 @@ export function renderHull(ship) {
     const svg = ship ? getShipDimensionSVG(ship) : "";
 
     setSectionAvailable("hull", !!svg);
-    const body = document.getElementById("shipcard_hull_body");
+    const body = document.getElementById("targetcard_hull_body");
     if (body) body.innerHTML = svg;
 }
 
@@ -99,7 +103,7 @@ export async function fillSection(key) {
     if (key === "hull") return renderHull();
     if (!["speed", "draught", "changes"].includes(key)) return;
 
-    const body = document.getElementById("shipcard_" + key + "_body");
+    const body = document.getElementById("targetcard_" + key + "_body");
     if (!body) return;
 
     if (historyCache.mmsi !== mmsi) {
@@ -130,13 +134,13 @@ export async function fillSection(key) {
         getChangeVal);
 
     body.innerHTML = html || '<span class="dim-note">Nothing recorded yet</span>';
-    deps.fitShipcard();
+    deps.fitTargetcard();
 }
 
 // ─── popovers ────────────────────────────────────────────────────────────────
 
 export function closePopovers() {
-    document.querySelectorAll("#shipcard .tech-popover").forEach((el) => (el.style.display = "none"));
+    document.querySelectorAll("#targetcard .tech-popover").forEach((el) => (el.style.display = "none"));
 }
 
 export function togglePopover(popoverId, iconId) {
@@ -156,21 +160,21 @@ export function togglePopover(popoverId, iconId) {
     };
 
     const iconRect = icon.getBoundingClientRect();
-    const shipcardRect = document.getElementById("shipcard").getBoundingClientRect();
+    const targetcardRect = document.getElementById("targetcard").getBoundingClientRect();
 
     popover.style.display = "block";
 
-    let left = iconRect.left - shipcardRect.left + 20;
-    let top = iconRect.bottom - shipcardRect.top + 5;
+    let left = iconRect.left - targetcardRect.left + 20;
+    let top = iconRect.bottom - targetcardRect.top + 5;
 
     const popoverRect = popover.getBoundingClientRect();
 
     if (iconRect.left + popoverRect.width + 20 > window.innerWidth)
-        left = Math.max(5, iconRect.right - shipcardRect.left - popoverRect.width - 5);
+        left = Math.max(5, iconRect.right - targetcardRect.left - popoverRect.width - 5);
     if (iconRect.bottom + popoverRect.height + 5 > window.innerHeight)
-        top = Math.max(5, iconRect.top - shipcardRect.top - popoverRect.height - 5);
+        top = Math.max(5, iconRect.top - targetcardRect.top - popoverRect.height - 5);
 
-    left = Math.max(5, Math.min(left, shipcardRect.width - popoverRect.width - 5));
+    left = Math.max(5, Math.min(left, targetcardRect.width - popoverRect.width - 5));
     top = Math.max(5, top);
 
     popover.style.left = left + "px";
@@ -182,7 +186,7 @@ export function togglePopover(popoverId, iconId) {
 // ─── footer icons ────────────────────────────────────────────────────────────
 
 const ICON_MAX = 3;
-const ICON_UNAVAILABLE = 'shipcard-icon-unavailable';
+const ICON_UNAVAILABLE = 'targetcard-icon-unavailable';
 
 let iconOffset = { ship: 0, plane: 0 };
 let iconCount = { ship: 0, plane: 0 };
@@ -205,7 +209,7 @@ export function addItem(icon, txt, title, action, contextType = 'ship') {
     if (!name) return;
 
     div.dataset.action = name;
-    document.getElementById("shipcard_footer").appendChild(div);
+    document.getElementById("targetcard_footer").appendChild(div);
 }
 
 function isMoreIcon(icon) {
@@ -214,12 +218,12 @@ function isMoreIcon(icon) {
 
 function iconAvailable(icon, type) {
     if (icon.dataset.contextType !== type) return false;
-    if (icon.id === 'shipcard_realtime_option' && !deps.realtimeEnabled()) return false;
+    if (icon.id === 'targetcard_realtime_option' && !deps.realtimeEnabled()) return false;
     return !icon.classList.contains(ICON_UNAVAILABLE);
 }
 
 export function displayIcons(type) {
-    const icons = [...document.querySelectorAll('#shipcard_footer > div')];
+    const icons = [...document.querySelectorAll('#targetcard_footer > div')];
     const more = icons.filter((icon) => isMoreIcon(icon) && icon.dataset.contextType === type);
     const available = icons.filter((icon) => !isMoreIcon(icon) && iconAvailable(icon, type));
 
@@ -245,14 +249,14 @@ export function prepare() {
     iconOffset = { ship: 0, plane: 0 };
     iconCount = { ship: 0, plane: 0 };
 
-    addItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons', 'ship');
-    addItem('more_horiz', 'More', 'More options', 'rotateShipcardIcons', 'plane');
+    addItem('more_horiz', 'More', 'More options', 'rotateTargetcardIcons', 'ship');
+    addItem('more_horiz', 'More', 'More options', 'rotateTargetcardIcons', 'plane');
 
     displayIcons('ship');
 }
 
 export function updateMessageButton() {
-    const button = document.getElementById("shipcard_message_option");
+    const button = document.getElementById("targetcard_message_option");
     if (!button) return;
 
     const iconElement = button.querySelector('i.mail_icon');
@@ -288,7 +292,7 @@ export function trackOptionString(mmsi) {
 }
 
 export function updateTrackOption() {
-    const trackOptionElement = document.getElementById("shipcard_track_option");
+    const trackOptionElement = document.getElementById("targetcard_track_option");
 
     if (settings.show_all_tracks || cardType == 'plane') {
         trackOptionElement.style.opacity = "0.5";
@@ -299,42 +303,42 @@ export function updateTrackOption() {
     }
 
     if (cardMmsi && cardType == 'ship') {
-        document.getElementById("shipcard_track").innerText = trackOptionString(cardMmsi);
+        document.getElementById("targetcard_track").innerText = trackOptionString(cardMmsi);
     }
 }
 
 export function updateFollowOption() {
-    const option = document.getElementById("shipcard_follow_option");
+    const option = document.getElementById("targetcard_follow_option");
     const following = deps.isFollowing(cardMmsi);
 
-    option.querySelector("#shipcard_follow").innerText = following ? "Unfollow" : "Follow";
+    option.querySelector("#targetcard_follow").innerText = following ? "Unfollow" : "Follow";
     option.title = following ? "Stop centring the map on this vessel" : "Keep the map centred on this vessel";
-    option.classList.toggle("shipcard-icon-active", following);
+    option.classList.toggle("targetcard-icon-active", following);
 }
 
 export function setValidation(v) {
-    document.getElementById("shipcard_header").classList.remove("shipcard-validated", "shipcard-not-validated", "shipcard-dubious");
+    document.getElementById("targetcard_header").classList.remove("targetcard-validated", "targetcard-not-validated", "targetcard-dubious");
 
     switch (v) {
         case 1:
-            document.getElementById("shipcard_header").classList.add("shipcard-validated");
+            document.getElementById("targetcard_header").classList.add("targetcard-validated");
             break;
         case -1:
-            document.getElementById("shipcard_header").classList.add("shipcard-dubious");
+            document.getElementById("targetcard_header").classList.add("targetcard-dubious");
             break;
         default:
-            document.getElementById("shipcard_header").classList.add("shipcard-not-validated");
+            document.getElementById("targetcard_header").classList.add("targetcard-not-validated");
     }
 }
 
 export function showOutOfRange() {
     document
-        .getElementById("shipcard_content")
+        .getElementById("targetcard_content")
         .querySelectorAll("span:nth-child(2)")
         .forEach((e) => (e.innerHTML = null));
-    document.getElementById("shipcard_header_title").innerHTML = "<b style='color:red;'>Out of range</b>";
-    document.getElementById("shipcard_header_flag").innerHTML = "";
-    document.getElementById("shipcard_mmsi").innerHTML = cardMmsi;
+    document.getElementById("targetcard_header_title").innerHTML = "<b style='color:red;'>Out of range</b>";
+    document.getElementById("targetcard_header_flag").innerHTML = "";
+    document.getElementById("targetcard_mmsi").innerHTML = cardMmsi;
 
     deps.updateFocusMarker();
 }
@@ -383,19 +387,19 @@ export function populate() {
 
     let ship = ships[cardMmsi].raw;
 
-    document.getElementById("shipcard_header_flag").innerHTML = getFlagStyled(ship.country, CARD_FLAG_STYLE);
-    document.getElementById("shipcard_header_title").innerHTML = (getShipName(ship) || ship.mmsi);
+    document.getElementById("targetcard_header_flag").innerHTML = getFlagStyled(ship.country, CARD_FLAG_STYLE);
+    document.getElementById("targetcard_header_title").innerHTML = (getShipName(ship) || ship.mmsi);
 
     setValidation(ship.validated);
 
-    ["destination", "mmsi", "count", "received_stations"].forEach((e) => (document.getElementById("shipcard_" + e).innerHTML = ship[e] != null ? ship[e] : "-"));
+    ["destination", "mmsi", "count", "received_stations"].forEach((e) => (document.getElementById("targetcard_" + e).innerHTML = ship[e] != null ? ship[e] : "-"));
 
     if (ship.imo != null) {
-        document.getElementById("shipcard_imo_label").innerHTML = "IMO";
-        document.getElementById("shipcard_imo").innerHTML = ship.imo;
+        document.getElementById("targetcard_imo_label").innerHTML = "IMO";
+        document.getElementById("targetcard_imo").innerHTML = ship.imo;
     } else {
-        document.getElementById("shipcard_imo_label").innerHTML = ship.eni ? "ENI" : "IMO";
-        document.getElementById("shipcard_imo").innerHTML = ship.eni || "-";
+        document.getElementById("targetcard_imo_label").innerHTML = ship.eni ? "ENI" : "IMO";
+        document.getElementById("targetcard_imo").innerHTML = ship.eni || "-";
     }
 
     [
@@ -404,38 +408,38 @@ export function populate() {
         { id: "heading", u: "&deg", d: 0 },
         { id: "level", u: "dB", d: 1 },
         { id: "ppm", u: "ppm", d: 1 },
-    ].forEach((el) => (document.getElementById("shipcard_" + el.id).innerHTML = ship[el.id] != null ? Number(ship[el.id]).toFixed(el.d) + " " + el.u : null));
+    ].forEach((el) => (document.getElementById("targetcard_" + el.id).innerHTML = ship[el.id] != null ? Number(ship[el.id]).toFixed(el.d) + " " + el.u : null));
 
-    document.getElementById("shipcard_country").innerHTML = getCountryName(ship.country);
-    document.getElementById("shipcard_callsign").innerHTML = getCallSign(ship) || null;
-    document.getElementById("shipcard_msgtypes").innerHTML = getStringfromMsgType(ship.msg_type);
+    document.getElementById("targetcard_country").innerHTML = getCountryName(ship.country);
+    document.getElementById("targetcard_callsign").innerHTML = getCallSign(ship) || null;
+    document.getElementById("targetcard_msgtypes").innerHTML = getStringfromMsgType(ship.msg_type);
 
-    document.getElementById("shipcard_last_group").innerHTML = getStringfromGroup(ship.last_group);
-    document.getElementById("shipcard_sources").innerHTML = getStringfromGroup(ship.group_mask);
+    document.getElementById("targetcard_last_group").innerHTML = getStringfromGroup(ship.last_group);
+    document.getElementById("targetcard_sources").innerHTML = getStringfromGroup(ship.group_mask);
 
-    document.getElementById("shipcard_channels").innerHTML = getStringfromChannels(ship.channels);
-    document.getElementById("shipcard_type").innerHTML = getMmsiTypeVal(ship) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_tech_info" data-action="techInfo" title="Technical details"></i>';
+    document.getElementById("targetcard_channels").innerHTML = getStringfromChannels(ship.channels);
+    document.getElementById("targetcard_type").innerHTML = getMmsiTypeVal(ship) + ' <i class="info_icon targetcard-tech-icon" id="targetcard_tech_info" data-action="techInfo" title="Technical details"></i>';
     const shiptype = ship.shiptype ?? null;
-    document.getElementById("shipcard_shiptype").innerHTML = shiptype != null
-        ? getShipTypeShort(shiptype) + ' <i class="info_icon shipcard-tech-icon" id="shipcard_shiptype_info" data-action="shiptypeInfo" title="Ship type details"></i>'
+    document.getElementById("targetcard_shiptype").innerHTML = shiptype != null
+        ? getShipTypeShort(shiptype) + ' <i class="info_icon targetcard-tech-icon" id="targetcard_shiptype_info" data-action="shiptypeInfo" title="Ship type details"></i>'
         : getShipTypeShort(shiptype);
     document.getElementById("shiptype_code").textContent = shiptype != null ? shiptype : "-";
     document.getElementById("shiptype_desc").textContent = shiptype != null
         ? getShipTypeFull(shiptype)
         : "-";
-    document.getElementById("shipcard_status").innerHTML = getStatusVal(ship);
-    document.getElementById("shipcard_last_signal").innerHTML = getDeltaTimeVal(clock - ship.last_signal);
-    document.getElementById("shipcard_eta").innerHTML = ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
-    document.getElementById("shipcard_lat").innerHTML = ship.lat != null ? getLatValFormat(ship) : null;
-    document.getElementById("shipcard_lon").innerHTML = ship.lon != null ? getLonValFormat(ship) : null;
-    document.getElementById("shipcard_altitude").innerHTML = ship.altitude != null ? ship.altitude + " m" : null;
+    document.getElementById("targetcard_status").innerHTML = getStatusVal(ship);
+    document.getElementById("targetcard_last_signal").innerHTML = getDeltaTimeVal(clock - ship.last_signal);
+    document.getElementById("targetcard_eta").innerHTML = ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
+    document.getElementById("targetcard_lat").innerHTML = ship.lat != null ? getLatValFormat(ship) : null;
+    document.getElementById("targetcard_lon").innerHTML = ship.lon != null ? getLonValFormat(ship) : null;
+    document.getElementById("targetcard_altitude").innerHTML = ship.altitude != null ? ship.altitude + " m" : null;
 
-    document.getElementById("shipcard_speed").innerHTML = ship.speed != null ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
-    document.getElementById("shipcard_distance").innerHTML = ship.distance != null ? getDistanceVal(ship.distance) + " " + getDistanceUnit() : null;
-    document.getElementById("shipcard_repeated").innerHTML = ship.repeat != null ? (ship.repeat > 0 ? "Yes" : "No") : null;
-    document.getElementById("shipcard_draught").innerHTML = ship.draught ? getDraughtVal(ship.draught) + " " + getDimUnit() : null;
-    document.getElementById("shipcard_dimension").innerHTML = getShipDimension(ship);
-    document.getElementById("shipcard_bluesign").innerHTML = ship.maneuver === 2 ? "Set" : (ship.maneuver === 1 ? "Not set" : null);
+    document.getElementById("targetcard_speed").innerHTML = ship.speed != null ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
+    document.getElementById("targetcard_distance").innerHTML = ship.distance != null ? getDistanceVal(ship.distance) + " " + getDistanceUnit() : null;
+    document.getElementById("targetcard_repeated").innerHTML = ship.repeat != null ? (ship.repeat > 0 ? "Yes" : "No") : null;
+    document.getElementById("targetcard_draught").innerHTML = ship.draught ? getDraughtVal(ship.draught) + " " + getDimUnit() : null;
+    document.getElementById("targetcard_dimension").innerHTML = getShipDimension(ship);
+    document.getElementById("targetcard_bluesign").innerHTML = ship.maneuver === 2 ? "Set" : (ship.maneuver === 1 ? "Not set" : null);
 
     updateTrackOption();
     updateFollowOption();

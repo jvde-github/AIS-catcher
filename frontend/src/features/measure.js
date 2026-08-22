@@ -13,7 +13,7 @@ import Text from 'ol/style/Text';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { getLength } from 'ol/sphere';
 
-import { getDistanceVal, getDistanceUnit } from '../core/format.js';
+import { getDistanceVal, getDistanceUnit } from '../../shared/core/format.js';
 import { calculateBearing } from '../core/geo.js';
 
 // { getShipsDB, showNotification, ensureMeasurecardVisible }

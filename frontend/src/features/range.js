@@ -12,7 +12,7 @@ import { fromLonLat } from 'ol/proj';
 
 import { settings } from '../core/state.js';
 import { calcOffset1M, createDistanceGeometry } from '../core/geo.js';
-import { getDistanceUnit } from '../core/format.js';
+import { getDistanceUnit } from '../../shared/core/format.js';
 
 // { getConfig, getStation, getActiveReceiver, getHoverFeature, showDialog, saveSettings, redrawMap }
 let deps = null;

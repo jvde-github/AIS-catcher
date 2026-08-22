@@ -1,20 +1,33 @@
-import { settings } from './state.js';
+// The filter object is persisted by the host: this module decides what a
+// filter means, not where it is kept.
+// A host that never calls configure() still gets somewhere to keep its filter,
+// so the module degrades instead of throwing. It must be one object, not a
+// fresh one per call, or every write is dropped.
+const detachedState = {};
+let store = { get: () => detachedState };
+
+export function configure(next) {
+    if (next.state) store.get = next.state;
+}
 import { ShippingClass } from './constants.js';
 
 export const MOVING_KNOTS = 0.5;
 
-// icon and pos address the same sprite sheet the counters card draws from, so a
-// bucket looks the same wherever it is listed; spin marks the under-way sprites,
-// which are drawn at an angle
+export function chipStyle(b) {
+    const scale = b.scale || 0.65;
+    return "background-position: " + b.pos + "; transform: " +
+        (b.spin ? "rotate(45deg) scale(" + scale + ")" : "scale(" + scale + ")");
+}
+
 export const BUCKETS = [
-    { id: "am", label: "Class A moving", icon: "shipicon", pos: "-120px 0px", spin: true },
-    { id: "as", label: "Class A stationary", icon: "shipicon", pos: "-120px -20px" },
-    { id: "bm", label: "Class B moving", icon: "shipicon", pos: "-20px 0px", spin: true },
-    { id: "bs", label: "Class B stationary", icon: "shipicon", pos: "-20px -20px" },
+    { id: "am", label: "Class A Moving", icon: "shipicon", pos: "-120px 0px", spin: true },
+    { id: "as", label: "Class A Stationary", icon: "shipicon", pos: "-120px -20px" },
+    { id: "bm", label: "Class B Moving", icon: "shipicon", pos: "-20px 0px", spin: true },
+    { id: "bs", label: "Class B Stationary", icon: "shipicon", pos: "-20px -20px" },
     { id: "aton", label: "Aid-to-Navigation", icon: "staticon", pos: "0px -20px" },
-    { id: "base", label: "Base station", icon: "staticon", pos: "-20px -20px" },
+    { id: "base", label: "Base Station", icon: "staticon", pos: "-20px -20px" },
     { id: "sarte", label: "SART / EPIRB", icon: "staticon", pos: "-40px -20px" },
-    { id: "air", label: "Plane / helicopter", icon: "helicoptericon", pos: "0px 0px", spin: true },
+    { id: "air", label: "Plane/Helicopter", icon: "helicoptericon", pos: "0px 0px", spin: true, scale: 0.55 },
 ];
 
 export const CLASSES = [
@@ -72,10 +85,10 @@ let revision = 0;
 let summary = { f: null, revision: -1, terms: [], active: false };
 
 function state() {
-    if (!settings.ship_filter || typeof settings.ship_filter !== "object")
-        settings.ship_filter = {};
+    if (!store.get().ship_filter || typeof store.get().ship_filter !== "object")
+        store.get().ship_filter = {};
 
-    const f = settings.ship_filter;
+    const f = store.get().ship_filter;
     for (const k in DEFAULTS)
         if (!(k in f)) f[k] = Array.isArray(DEFAULTS[k]) ? [...DEFAULTS[k]] : DEFAULTS[k];
 
@@ -121,7 +134,7 @@ export function statusOf(ship) {
 }
 
 export function reset() {
-    settings.ship_filter = {};
+    store.get().ship_filter = {};
     revision++;
     state();
 }

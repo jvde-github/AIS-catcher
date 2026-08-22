@@ -15,7 +15,7 @@ import { fromLonLat } from 'ol/proj';
 import { settings } from '../core/state.js';
 import { decodeHTMLEntities } from '../core/util.js';
 import { shipOutlineLocal } from '../core/geo.js';
-import { getSpeedVal, getSpeedUnit, getDeltaTimeVal, getFlagStyled, getShipTypeShort, sanitizeString, TOOLTIP_FLAG_STYLE } from '../core/format.js';
+import { getSpeedVal, getSpeedUnit, getDeltaTimeVal, getFlagStyled, getShipTypeShort, sanitizeString, TOOLTIP_FLAG_STYLE } from '../../shared/core/format.js';
 
 // { getReceiver, spriteFor, iconScale, fadeOpacity, labelText, spriteSheet,
 //   getResolution, hullStyle, setLiveLayers, showNotification, onStateChange }
@@ -103,6 +103,14 @@ export function getSpeed() { return speed; }
 
 export function cycleSpeed() {
     speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
+    deps.onStateChange?.();
+}
+
+export function speeds() { return SPEEDS; }
+
+export function setSpeed(s) {
+    if (!SPEEDS.includes(s)) return;
+    speed = s;
     deps.onStateChange?.();
 }
 

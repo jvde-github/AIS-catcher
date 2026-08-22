@@ -44,6 +44,7 @@
     --ink-600: #4a4a4a;
     --ink-700: #6b7280;
     --ink-800: #9aa0a6;
+    --ink-850: #c9c9c9;
     --ink-900: #dcdcdc;
     --ink-1000: #f8f9fa;
 
@@ -89,6 +90,8 @@
     --color-surface-raised: var(--slate-0);
     --color-band: var(--slate-100);
     --color-band-soft: var(--slate-50);
+    --color-nest-1: var(--slate-50);
+    --color-nest-2: var(--slate-0);
     --color-band-accent: var(--slate-200);
 
     /* ink */
@@ -114,7 +117,7 @@
     --color-hover: rgba(0, 0, 0, 0.05);
     --color-selected: #daebfe;
     --color-track: var(--slate-200);
-    --color-control: var(--slate-0);
+    --color-control: var(--color-nest-2);
 
     /* status */
     /* green-700, not -600: status text on white needs 4.5:1 */
@@ -135,6 +138,9 @@
     --color-brand: var(--blue-600);
     --color-brand-accent: #0e6cd8;
     --color-brand-ink: var(--slate-0);
+    --color-brand-menu: var(--color-menu);
+    --color-brand-menu-ink: var(--color-text);
+    --color-brand-divider: var(--color-border-strong);
 
     /* link */
     --color-link: purple;
@@ -179,9 +185,11 @@
     --color-surface-raised: var(--ink-400);
     --color-band: var(--ink-100);
     --color-band-soft: var(--ink-300);
+    --color-nest-1: #1e1e1e;
+    --color-nest-2: var(--ink-300);
     --color-band-accent: var(--ink-300);
 
-    --color-text: var(--ink-900);
+    --color-text: var(--ink-850);
     --color-text-strong: var(--ink-900);
     --color-text-muted: var(--ink-800);
     --color-text-subtle: var(--ink-700);
@@ -206,16 +214,19 @@
     --color-hover: rgba(255, 255, 255, 0.08);
     --color-selected: #3c3c3c;
     --color-track: #5a5a5a;
-    --color-control: var(--ink-200);
+    --color-control: var(--color-nest-2);
 
     --color-success: var(--green-300);
     --color-warning: var(--amber-400);
     --color-danger: #cf6679;
     --color-info: var(--blue-400);
 
-    --color-brand: #323232;
-    --color-brand-accent: var(--ink-600);
-    --color-brand-ink: var(--ink-1000);
+    --color-brand: var(--ink-300);
+    --color-brand-accent: var(--ink-400);
+    --color-brand-menu: var(--color-brand);
+    --color-brand-menu-ink: var(--color-brand-ink);
+    --color-brand-divider: color-mix(in srgb, var(--color-brand-ink) 18%, transparent);
+    --color-brand-ink: var(--ink-850);
 
     --color-link: var(--blue-400);
     --color-link-hover: var(--green-300);
@@ -270,9 +281,10 @@
 
     /* dark in day mode like the tooltip surfaces; the raised surface in dark */
     --color-ticker-bg: color-mix(in srgb, var(--overlay-bg) 50%, transparent);
+    --color-tooltip-bg: color-mix(in srgb, var(--slate-700) 82%, transparent);
     --color-ticker-ink: var(--overlay-ink);
     --color-ticker-muted: var(--overlay-ink-muted);
-    --color-ticker-border: var(--overlay-border);
+    --color-ticker-border: color-mix(in srgb, var(--overlay-border) 50%, transparent);
     --color-ticker-hover: rgba(255, 255, 255, 0.14);
     --color-ticker-accent: var(--blue-300);
 
@@ -365,6 +377,10 @@
     --size-map-gap: 10px;
     --size-ticker: 44px;
 
+    --size-icon: 24px;
+    --size-icon-sm: 16px;
+    --size-hit: 32px;
+
     --size-map-button: 34px;
     --size-map-controls: calc(var(--size-map-button) + 4px);
     --size-panel-wide: 500px;
@@ -395,17 +411,22 @@
 
     --color-menu: var(--color-surface-alt);
     --color-menu-hover: var(--color-selected);
+    --color-pill-border: var(--color-border-strong);
+    --color-card-border: var(--color-border);
     --color-menu-border: var(--color-border-strong);
     --color-menu-divider: var(--color-border-strong);
 
     --color-tooltip: var(--color-selected);
     --color-tooltip-border: var(--color-surface);
 
-    --color-shipcard-surface: color-mix(in srgb, var(--color-band-accent) 37%, var(--color-surface-raised));
-    --color-shipcard-header: color-mix(in srgb, var(--color-band-accent) 55%, var(--color-surface-raised));
-    --color-shipcard-footer: color-mix(in srgb, var(--color-band-accent) 55%, var(--color-surface-raised));
-    --color-shipcard-selected: rgb(240, 241, 248);
-    --color-shipcard-edge: var(--blue-400);
+    /* Card contract. A host re-theming the card overrides these four, and must
+       also provide the semantic tokens the card reads directly: --color-text,
+       --color-text-muted, --color-text-subtle, --color-band-accent, --color-menu,
+       --color-ok-strong, --color-error, --color-off, --color-hover-overlay. */
+    --color-targetcard-surface: color-mix(in srgb, var(--color-band-accent) 37%, var(--color-surface-raised));
+    --color-targetcard-header: color-mix(in srgb, var(--color-band-accent) 55%, var(--color-surface-raised));
+    --color-targetcard-footer: color-mix(in srgb, var(--color-band-accent) 55%, var(--color-surface-raised));
+    --color-targetcard-edge: var(--blue-400);
     --color-antenna: #c2136b;
     --color-stat-divider: var(--color-border);
 
@@ -439,25 +460,28 @@
     --color-bottombar: #000000;
 
     --color-ticker-bg: color-mix(in srgb, var(--color-surface-raised) 70%, transparent);
+    --color-tooltip-bg: color-mix(in srgb, var(--ink-500) 75%, transparent);
     --color-ticker-ink: var(--color-text);
     --color-ticker-muted: var(--color-text-muted);
-    --color-ticker-border: var(--color-border-strong);
+    --color-ticker-edge: color-mix(in srgb, var(--ink-500) 60%, var(--ink-400));
+    --color-ticker-border: color-mix(in srgb, var(--color-ticker-edge) 70%, transparent);
     --color-ticker-hover: var(--color-hover-overlay);
     --color-ticker-accent: var(--color-accent);
 
     --color-menu: var(--color-surface-raised);
     --color-menu-hover: var(--color-hover);
     --color-menu-border: #111111;
+    --color-pill-border: color-mix(in srgb, var(--ink-500) 30%, var(--ink-400));
+    --color-card-border: var(--color-pill-border);
     --color-menu-divider: #505050;
 
     --color-tooltip: #3c3c3c;
     --color-tooltip-border: #1e1e1e;
 
-    --color-shipcard-surface: var(--ink-500);
-    --color-shipcard-header: #323232;
-    --color-shipcard-footer: #282828;
-    --color-shipcard-selected: #323232;
-    --color-shipcard-edge: var(--blue-400);
+    --color-targetcard-surface: color-mix(in srgb, var(--ink-500) 55%, var(--ink-400));
+    --color-targetcard-header: color-mix(in srgb, var(--color-targetcard-surface) 70%, var(--ink-300));
+    --color-targetcard-footer: color-mix(in srgb, var(--color-targetcard-surface) 45%, var(--ink-300));
+    --color-targetcard-edge: var(--blue-400);
     --color-antenna: #ff5ca3;
     --color-stat-divider: #323232;
 

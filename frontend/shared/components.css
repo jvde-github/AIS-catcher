@@ -512,7 +512,7 @@ select.realtime-filter-input,
     max-width: 42rem;
     margin: 0 auto var(--space-6) auto;
     background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--color-card-border);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-sm);
     overflow: hidden;
@@ -1092,6 +1092,7 @@ select.realtime-filter-input,
     display: flex;
     align-items: center;
     gap: 10px;
+    border-left: 3px solid var(--toast-accent, var(--color-text-muted));
     max-width: min(360px, calc(100vw - 20px));
     padding: 12px 16px;
     border-radius: var(--radius-lg);
@@ -1123,6 +1124,36 @@ select.realtime-filter-input,
 
 .toast-text {
     flex: 1 1 auto;
+    font-weight: var(--fw-normal);
+}
+
+.toast-count {
+    flex: none;
+    min-width: 1.6em;
+    padding: 1px 6px;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--toast-accent) 22%, transparent);
+    color: var(--toast-accent);
+    font-size: var(--fs-2xs);
+    font-weight: var(--fw-bold);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.toast-container .toast.toast-visible:nth-last-child(2) {
+    opacity: 0.66;
+}
+
+.toast-container .toast.toast-visible:nth-last-child(3) {
+    opacity: 0.44;
+}
+
+.toast-container .toast.toast-visible:nth-last-child(n+4) {
+    opacity: 0.3;
+}
+
+.toast-container .toast:not(:last-child) {
+    border-left-color: color-mix(in srgb, var(--toast-accent) 55%, transparent);
 }
 
 .toast-close {
@@ -1142,12 +1173,17 @@ select.realtime-filter-input,
     }
 }
 
+.toast-info    { --toast-accent: var(--color-info, var(--color-accent)); }
+.toast-success { --toast-accent: var(--color-success); }
+.toast-warning { --toast-accent: var(--color-warning); }
+.toast-error   { --toast-accent: var(--color-danger); }
+
 .toast-success .toast-icon {
-    color: var(--color-success-ink);
+    color: var(--color-success);
 }
 
 .toast-warning .toast-icon {
-    color: var(--color-warning-ink);
+    color: var(--color-warning);
 }
 
 .toast-error {
@@ -1264,9 +1300,87 @@ select.realtime-filter-input,
    pick up the full-bleed phone treatment of in-page cards */
 @media (max-width: 640px) {
     .modal-card {
-        border-left: 1px solid var(--color-border);
-        border-right: 1px solid var(--color-border);
+        border-left: 1px solid var(--color-card-border);
+        border-right: 1px solid var(--color-card-border);
         border-radius: var(--radius-xl);
         margin-bottom: 0;
     }
+}
+
+
+.floating-menu {
+    position: fixed;
+    display: none;
+    background-color: var(--color-surface-raised);
+    border: 1px solid var(--color-menu-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    list-style-type: none;
+    padding: 8px 0;
+    /* below dialogs: a menu is opened from the page, and a modal that is up
+       must stay in front of it */
+    z-index: var(--z-menu);
+    font-size: var(--fs-base);
+    color: var(--color-text);
+    width: auto;
+    margin: 0;
+}
+
+.floating-menu li {
+    display: flex;
+    align-items: center;
+    height: 24px;
+    margin: auto;
+    padding: 0 16px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.floating-menu .divider {
+    height: 1px;
+    background-color: var(--color-menu-divider);
+    margin: 0.5rem 0;
+    pointer-events: none;
+}
+
+.floating-menu li .ctx-check {
+    margin-left: auto;
+    padding-left: 24px;
+    color: var(--color-accent);
+    font-weight: var(--fw-bold);
+    visibility: hidden;
+}
+
+.floating-menu li.checked .ctx-check {
+    visibility: visible;
+}
+
+.floating-menu li.group-start {
+    position: relative;
+    margin-top: 17px;
+}
+
+.floating-menu li.group-start::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -9px;
+    height: 1px;
+    background-color: var(--color-menu-divider);
+}
+
+@media (hover: hover) {
+    .floating-menu li:hover { background-color: var(--color-menu-hover); }
+}
+
+.floating-menu li.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.floating-menu i {
+    margin-right: 8px;
+    font-size: var(--fs-lg);
+    width: 16px;
 }

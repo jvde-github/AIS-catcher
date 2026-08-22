@@ -1,4 +1,4 @@
-// Kiosk mode: hides interactive chrome and rotates the shipcard through
+// Kiosk mode: hides interactive chrome and rotates the targetcard through
 // randomly selected visible ships.
 
 import { settings, isKiosk } from '../core/state.js';
@@ -6,7 +6,7 @@ import { ships, clock, cardMmsi, hoverMmsi } from '../core/store.js';
 import { fromLonLat } from 'ol/proj';
 import { containsCoordinate } from 'ol/extent';
 
-// { getMap, showShipcard, saveSettings }
+// { getMap, showTargetcard, saveSettings }
 let deps = null;
 let kioskAnimationInterval = null;
 const DEFAULT_ROTATION_SPEED = 5;
@@ -136,7 +136,7 @@ function showKioskShip(mmsi) {
     const map = deps.getMap();
     const shipCoords = fromLonLat([ship.lon, ship.lat]);
     const pixel = map.getPixelFromCoordinate(shipCoords);
-    deps.showShipcard('ship', mmsi, pixel);
+    deps.showTargetcard('ship', mmsi, pixel);
 }
 
 function showRandomKioskShip() {
