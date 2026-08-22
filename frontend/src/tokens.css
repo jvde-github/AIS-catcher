@@ -347,8 +347,8 @@
     --z-float: 60;
     --z-panel-top: 70;
     --z-scrim: 80;
-    --z-overlay: 90;
-    --z-info: 100;
+    --z-overlay: 122;
+    --z-info: 124;
     --z-menu-scrim: 110;
     --z-menu: 120;
     --z-dialog: 130;
@@ -386,7 +386,7 @@
     --color-alert: var(--red-700);
     --color-ok: rgb(129, 244, 129);
     --color-ok-text: green;
-    --color-ok-strong: #7cfc00;
+    --color-ok-strong: #10b981;
 
     --color-panel: var(--color-surface);
     --color-surface-overlay: var(--color-surface);
@@ -401,8 +401,9 @@
     --color-tooltip: var(--color-selected);
     --color-tooltip-border: var(--color-surface);
 
-    --color-shipcard-header: var(--color-surface-raised);
-    --color-shipcard-footer: var(--color-surface-raised);
+    --color-shipcard-surface: color-mix(in srgb, var(--color-band-accent) 37%, var(--color-surface-raised));
+    --color-shipcard-header: color-mix(in srgb, var(--color-band-accent) 55%, var(--color-surface-raised));
+    --color-shipcard-footer: color-mix(in srgb, var(--color-band-accent) 55%, var(--color-surface-raised));
     --color-shipcard-selected: rgb(240, 241, 248);
     --color-shipcard-edge: var(--blue-400);
     --color-antenna: #c2136b;
@@ -452,6 +453,7 @@
     --color-tooltip: #3c3c3c;
     --color-tooltip-border: #1e1e1e;
 
+    --color-shipcard-surface: var(--ink-500);
     --color-shipcard-header: #323232;
     --color-shipcard-footer: #282828;
     --color-shipcard-selected: #323232;

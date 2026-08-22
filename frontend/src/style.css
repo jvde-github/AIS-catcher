@@ -189,7 +189,7 @@ a:focus-visible {
 }
 
 .header-icon.active {
-    color: var(--color-ok);
+    color: var(--color-active);
 }
 
 .header-menubutton {
@@ -1504,7 +1504,6 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
 }
 
 .mapcard.floating {
-    border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
 }
 
@@ -1554,16 +1553,30 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     margin-right: 5px;
 }
 
+#shipcard.mapcard {
+    background: var(--color-shipcard-surface);
+    border-radius: 0;
+}
+
+#shipcard .mapcard_header {
+    margin: 4px;
+}
+
+#shipcard .mapcard-footer {
+    background-color: var(--color-shipcard-footer);
+    border-radius: 0;
+}
+
 .shipcard-validated {
-    border-left: 10px solid var(--color-ok-strong);
+    border-left: 4px solid var(--color-ok-strong);
 }
 
 .shipcard-not-validated {
-    border-left: 10px solid var(--color-off);
+    border-left: 4px solid var(--color-off);
 }
 
 .shipcard-dubious {
-    border-left: 10px solid var(--color-error);
+    border-left: 4px solid var(--color-error);
 }
 
 .message-badge {
@@ -1602,10 +1615,6 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     padding: 0 5px;
     justify-content: center;
     border-radius: 0 0 var(--radius-md) var(--radius-md);
-}
-
-.mapcard.floating .mapcard-footer {
-    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 .mapcard-footer>div {
@@ -1701,6 +1710,11 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
 @media (hover: hover) {
     .mapcard-content-row:hover {
         cursor: pointer;
+    }
+
+    /* inset so the row does not shift */
+    #shipcard .mapcard-content-row:not(.shipcard-row-selected):hover {
+        box-shadow: inset -3px 0 0 color-mix(in srgb, var(--color-shipcard-edge) 60%, transparent);
     }
 }
 
@@ -1833,7 +1847,7 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     justify-content: space-between;
     gap: 8px;
     padding: 6px 10px;
-    background-color: color-mix(in srgb, var(--color-band-accent) 55%, var(--color-surface-raised));
+    background-color: color-mix(in srgb, var(--color-band-accent) 90%, var(--color-surface-raised));
     color: var(--color-text-muted);
     font-size: var(--fs-2xs);
     font-weight: var(--fw-medium);
@@ -2035,7 +2049,6 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
     .mapcard {
         left: 0;
         top: 0;
-        border-radius: 0px;
     }
 
     .mapcard header {

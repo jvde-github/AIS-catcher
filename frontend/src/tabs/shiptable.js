@@ -361,7 +361,7 @@ export async function update() {
             index: "mmsi",
             rowFormatter: (row) => {
                 const ship = row.getData();
-                row.getElement().style.borderLeft = `10px solid ${validatedColor(ship, "var(--color-ok-strong)", "var(--color-error)", "var(--color-off)")}`;
+                row.getElement().style.borderLeft = `4px solid ${validatedColor(ship, "var(--color-ok-strong)", "var(--color-error)", "var(--color-off)")}`;
             },
             data,
             layout: "fitDataTable",

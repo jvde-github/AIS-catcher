@@ -392,7 +392,7 @@ export function getFlag(country) {
 export const TOOLTIP_FLAG_STYLE =
     "padding: 0px; margin: 0px; margin-right: 6px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 25px; opacity: 70%";
 
-export const CARD_FLAG_STYLE = "padding: 0px; margin: 0px; margin-right: 5px; box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5); font-size: 30px;";
+export const CARD_FLAG_STYLE = "padding: 0px; margin: 0px; margin-right: 5px; box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5); font-size: 26px;";
 
 export function getFlagStyled(country, style) {
     return country
