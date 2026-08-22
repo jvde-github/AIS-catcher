@@ -27,6 +27,12 @@ enum class OutFormat {
     BINARY     = 6,  // bytes — AIS-catcher 0xac binary packet
 };
 
+#if defined(Py_TARGET_ABI3T)
+#define AISCAT_ABI3T 1
+#else
+#define AISCAT_ABI3T 0
+#endif
+
 static bool parse_format(const char *s, OutFormat &out) {
     if (!s) { out = OutFormat::DICTIONARY; return true; }
     if (!std::strcmp(s, "dictionary")) { out = OutFormat::DICTIONARY; return true; }
@@ -69,12 +75,33 @@ static PyObject **g_desc_strs = nullptr;
 static PyObject *convert_value(const JSON::Value &v, bool annotated);
 static PyObject *convert_object(const JSON::JSON &obj, bool annotated);
 
+// Keep ABI-specific mechanics out of the conversion flow.  Both variants use
+// the same conversion semantics; the version-specific build only substitutes
+// faster CPython operations at these two boundaries.
+static PyObject *new_dict_presized(Py_ssize_t size) {
+#if AISCAT_ABI3T
+    (void)size;
+    return PyDict_New();
+#else
+    return _PyDict_NewPresized(size);
+#endif
+}
+
+static int list_set_item_newref(PyObject *list, Py_ssize_t index, PyObject *item) {
+#if AISCAT_ABI3T
+    return PyList_SetItem(list, index, item);
+#else
+    PyList_SET_ITEM(list, index, item);
+    return 0;
+#endif
+}
+
 // In annotated mode each scalar becomes {"value": x, "unit": ..., "description": ..., "text": ...}.
 // Non-scalars (objects, arrays) recurse but are not wrapped themselves.
 static PyObject *wrap_annotated(PyObject *val, int key_index) {
     if (key_index < 0 || key_index >= (int)AIS::KEY_COUNT) return val;
     const AIS::KeyInfo &info = AIS::KeyInfoMap[key_index];
-    PyObject *d = _PyDict_NewPresized(4);
+    PyObject *d = new_dict_presized(4);
     if (!d) { Py_DECREF(val); return nullptr; }
     if (PyDict_SetItem(d, g_key_value, val) < 0) { Py_DECREF(val); Py_DECREF(d); return nullptr; }
     if (g_unit_strs[key_index]) {
@@ -99,7 +126,7 @@ static PyObject *wrap_annotated(PyObject *val, int key_index) {
 
 static PyObject *convert_object(const JSON::JSON &obj, bool annotated) {
     const auto &members = obj.getMembers();
-    PyObject *d = _PyDict_NewPresized((Py_ssize_t)members.size());
+    PyObject *d = new_dict_presized((Py_ssize_t)members.size());
     if (!d) return nullptr;
     bool has_container = false;
     for (const auto &m : members) {
@@ -161,7 +188,10 @@ static PyObject *convert_value(const JSON::Value &v, bool annotated) {
             for (Py_ssize_t i = 0; i < (Py_ssize_t)a.size(); ++i) {
                 PyObject *item = convert_value(a[(size_t)i], annotated);
                 if (!item) { Py_DECREF(L); return nullptr; }
-                PyList_SET_ITEM(L, i, item);
+                if (list_set_item_newref(L, i, item) < 0) {
+                    Py_DECREF(L);
+                    return nullptr;
+                }
             }
             return L;
         }
@@ -173,7 +203,10 @@ static PyObject *convert_value(const JSON::Value &v, bool annotated) {
                 const std::string &s = a[(size_t)i];
                 PyObject *u = PyUnicode_FromStringAndSize(s.data(), (Py_ssize_t)s.size());
                 if (!u) { Py_DECREF(L); return nullptr; }
-                PyList_SET_ITEM(L, i, u);
+                if (list_set_item_newref(L, i, u) < 0) {
+                    Py_DECREF(L);
+                    return nullptr;
+                }
             }
             return L;
         }
@@ -267,14 +300,30 @@ public:
 };
 
 typedef struct {
+#if !AISCAT_ABI3T
     PyObject_HEAD
+#endif
     AIS::NMEA *nmea;
     AIS::JSONAIS *jsonais;
     PySink *sink;
     TAG *tag;
 } DecoderObject;
 
-static int Decoder_init(DecoderObject *self, PyObject *args, PyObject *kwds) {
+#if AISCAT_ABI3T
+static PyTypeObject *DecoderType;
+static freefunc DecoderFree;
+static DecoderObject *decoder_data(PyObject *self) {
+    return static_cast<DecoderObject *>(PyObject_GetTypeData(self, DecoderType));
+}
+#else
+static DecoderObject *decoder_data(PyObject *self) {
+    return reinterpret_cast<DecoderObject *>(self);
+}
+#endif
+
+static int Decoder_init(PyObject *self, PyObject *args, PyObject *kwds) {
+    DecoderObject *data = decoder_data(self);
+    if (!data) return -1;
     static const char *kwlist[] = {"format", "country", nullptr};
     const char *format_str = nullptr;
     int country = 0;
@@ -290,19 +339,19 @@ static int Decoder_init(DecoderObject *self, PyObject *args, PyObject *kwds) {
     }
 
     try {
-        self->nmea = new AIS::NMEA();
-        self->jsonais = new AIS::JSONAIS();
-        self->sink = new PySink();
-        self->sink->format = fmt;
-        self->tag = new TAG();
-        self->tag->clear();
-        if (country) self->tag->mode |= 4;  // enables JSONAIS::COUNTRY (MMSI prefix → country, country_code)
+        data->nmea = new AIS::NMEA();
+        data->jsonais = new AIS::JSONAIS();
+        data->sink = new PySink();
+        data->sink->format = fmt;
+        data->tag = new TAG();
+        data->tag->clear();
+        if (country) data->tag->mode |= 4;  // enables JSONAIS::COUNTRY (MMSI prefix → country, country_code)
         // Clearing mode bit 2 skips the rxtime string the dict formats would only
         // discard (kSkipMask); PySink::Receive adds rxuxtime from the message.
         if (fmt == OutFormat::DICTIONARY || fmt == OutFormat::ANNOTATED)
-            self->tag->mode &= ~2u;
-        self->nmea->out.Connect(self->jsonais);
-        self->jsonais->out.Connect(self->sink);
+            data->tag->mode &= ~2u;
+        data->nmea->out.Connect(data->jsonais);
+        data->jsonais->out.Connect(data->sink);
     } catch (const std::exception &e) {
         PyErr_SetString(PyExc_RuntimeError, e.what());
         return -1;
@@ -313,24 +362,46 @@ static int Decoder_init(DecoderObject *self, PyObject *args, PyObject *kwds) {
     return 0;
 }
 
-static void Decoder_dealloc(DecoderObject *self) {
-    delete self->nmea;
-    delete self->jsonais;
-    delete self->sink;
-    delete self->tag;
-    Py_TYPE(self)->tp_free((PyObject *)self);
+static void Decoder_dealloc(PyObject *self) {
+    DecoderObject *data = decoder_data(self);
+    if (data) {
+        delete data->nmea;
+        delete data->jsonais;
+        delete data->sink;
+        delete data->tag;
+    }
+#if AISCAT_ABI3T
+    DecoderFree(self);
+    // PyType_FromMetaclass creates a heap type. Each instance owns a
+    // reference to that type, which its custom deallocator must release.
+    Py_DECREF(reinterpret_cast<PyObject *>(DecoderType));
+#else
+    Py_TYPE(self)->tp_free(self);
+#endif
 }
 
-static PyObject *Decoder_feed(DecoderObject *self, PyObject *arg) {
+static PyObject *Decoder_feed(PyObject *self, PyObject *arg) {
+    DecoderObject *data_object = decoder_data(self);
+    if (!data_object) return nullptr;
     const char *data = nullptr;
     Py_ssize_t size = 0;
 
     if (PyBytes_Check(arg)) {
+#if AISCAT_ABI3T
+        data = PyBytes_AsString(arg);
+        size = PyBytes_Size(arg);
+#else
         data = PyBytes_AS_STRING(arg);
         size = PyBytes_GET_SIZE(arg);
+#endif
     } else if (PyByteArray_Check(arg)) {
+#if AISCAT_ABI3T
+        data = PyByteArray_AsString(arg);
+        size = PyByteArray_Size(arg);
+#else
         data = PyByteArray_AS_STRING(arg);
         size = PyByteArray_GET_SIZE(arg);
+#endif
     } else if (PyUnicode_Check(arg)) {
         data = PyUnicode_AsUTF8AndSize(arg, &size);
         if (!data) return nullptr;
@@ -341,7 +412,7 @@ static PyObject *Decoder_feed(DecoderObject *self, PyObject *arg) {
 
     RAW r{Format::TXT, (void *)data, (int)size};
     try {
-        self->nmea->Receive(&r, 1, *self->tag);
+        data_object->nmea->Receive(&r, 1, *data_object->tag);
     } catch (const std::exception &e) {
         PyErr_SetString(PyExc_RuntimeError, e.what());
         return nullptr;
@@ -350,18 +421,22 @@ static PyObject *Decoder_feed(DecoderObject *self, PyObject *arg) {
         return nullptr;
     }
     if (PyErr_Occurred()) return nullptr;  // a sink conversion failed
-    return PyLong_FromSsize_t((Py_ssize_t)self->sink->queue.size());
+    return PyLong_FromSsize_t((Py_ssize_t)data_object->sink->queue.size());
 }
 
-static PyObject *Decoder_next(DecoderObject *self, PyObject *Py_UNUSED(ignored)) {
-    if (self->sink->queue.empty()) Py_RETURN_NONE;
-    PyObject *d = self->sink->queue.front();
-    self->sink->queue.pop_front();
+static PyObject *Decoder_next(PyObject *self, PyObject *Py_UNUSED(ignored)) {
+    DecoderObject *data = decoder_data(self);
+    if (!data) return nullptr;
+    if (data->sink->queue.empty()) Py_RETURN_NONE;
+    PyObject *d = data->sink->queue.front();
+    data->sink->queue.pop_front();
     return d;
 }
 
-static PyObject *Decoder_pending(DecoderObject *self, PyObject *Py_UNUSED(ignored)) {
-    return PyLong_FromSsize_t((Py_ssize_t)self->sink->queue.size());
+static PyObject *Decoder_pending(PyObject *self, PyObject *Py_UNUSED(ignored)) {
+    DecoderObject *data = decoder_data(self);
+    if (!data) return nullptr;
+    return PyLong_FromSsize_t((Py_ssize_t)data->sink->queue.size());
 }
 
 static PyMethodDef Decoder_methods[] = {
@@ -375,6 +450,69 @@ static PyMethodDef Decoder_methods[] = {
      "Number of decoded messages waiting in the queue."},
     {nullptr, nullptr, 0, nullptr}
 };
+
+static void core_clear_cache() {
+    if (g_keys) {
+        for (int i = 0; i < (int)AIS::KEY_COUNT; ++i) Py_XDECREF(g_keys[i]);
+        PyMem_Free(g_keys);
+        g_keys = nullptr;
+    }
+    if (g_unit_strs) {
+        for (int i = 0; i < (int)AIS::KEY_COUNT; ++i) Py_XDECREF(g_unit_strs[i]);
+        PyMem_Free(g_unit_strs);
+        g_unit_strs = nullptr;
+    }
+    if (g_desc_strs) {
+        for (int i = 0; i < (int)AIS::KEY_COUNT; ++i) Py_XDECREF(g_desc_strs[i]);
+        PyMem_Free(g_desc_strs);
+        g_desc_strs = nullptr;
+    }
+    Py_CLEAR(g_key_value);
+    Py_CLEAR(g_key_unit);
+    Py_CLEAR(g_key_description);
+    Py_CLEAR(g_key_text);
+}
+
+static int core_init_cache() {
+    g_keys = (PyObject **)PyMem_Calloc((size_t)AIS::KEY_COUNT, sizeof(PyObject *));
+    if (!g_keys) { PyErr_NoMemory(); return -1; }
+    for (int i = 0; i < (int)AIS::KEY_COUNT; ++i) {
+        const AIS::KeyStr &name = AIS::KeyMap[i][JSON_DICT_FULL];
+        g_keys[i] = PyUnicode_InternFromString(name.data());
+        if (!g_keys[i]) { core_clear_cache(); return -1; }
+    }
+
+    g_key_value       = PyUnicode_InternFromString("value");
+    g_key_unit        = PyUnicode_InternFromString("unit");
+    g_key_description = PyUnicode_InternFromString("description");
+    g_key_text        = PyUnicode_InternFromString("text");
+    if (!g_key_value || !g_key_unit || !g_key_description || !g_key_text) {
+        core_clear_cache();
+        return -1;
+    }
+
+    g_unit_strs = (PyObject **)PyMem_Calloc((size_t)AIS::KEY_COUNT, sizeof(PyObject *));
+    g_desc_strs = (PyObject **)PyMem_Calloc((size_t)AIS::KEY_COUNT, sizeof(PyObject *));
+    if (!g_unit_strs || !g_desc_strs) {
+        PyErr_NoMemory();
+        core_clear_cache();
+        return -1;
+    }
+    for (int i = 0; i < (int)AIS::KEY_COUNT; ++i) {
+        const AIS::KeyInfo &info = AIS::KeyInfoMap[i];
+        if (info.unit && info.unit[0]) {
+            g_unit_strs[i] = PyUnicode_InternFromString(info.unit);
+            if (!g_unit_strs[i]) { core_clear_cache(); return -1; }
+        }
+        if (info.description && info.description[0]) {
+            g_desc_strs[i] = PyUnicode_InternFromString(info.description);
+            if (!g_desc_strs[i]) { core_clear_cache(); return -1; }
+        }
+    }
+    return 0;
+}
+
+#if !AISCAT_ABI3T
 
 static PyTypeObject DecoderType = {
     PyVarObject_HEAD_INIT(nullptr, 0)
@@ -407,37 +545,79 @@ PyMODINIT_FUNC PyInit__core(void) {
     PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
 #endif
 
-    g_keys = (PyObject **)PyMem_Calloc((size_t)AIS::KEY_COUNT, sizeof(PyObject *));
-    if (!g_keys) { Py_DECREF(m); return nullptr; }
-    for (int i = 0; i < (int)AIS::KEY_COUNT; ++i) {
-        const AIS::KeyStr &name = AIS::KeyMap[i][JSON_DICT_FULL];
-        g_keys[i] = PyUnicode_InternFromString(name.data());
-    }
-
-    g_key_value       = PyUnicode_InternFromString("value");
-    g_key_unit        = PyUnicode_InternFromString("unit");
-    g_key_description = PyUnicode_InternFromString("description");
-    g_key_text        = PyUnicode_InternFromString("text");
-    if (!g_key_value || !g_key_unit || !g_key_description || !g_key_text) {
-        Py_DECREF(m); return nullptr;
-    }
-
-    g_unit_strs = (PyObject **)PyMem_Calloc((size_t)AIS::KEY_COUNT, sizeof(PyObject *));
-    g_desc_strs = (PyObject **)PyMem_Calloc((size_t)AIS::KEY_COUNT, sizeof(PyObject *));
-    if (!g_unit_strs || !g_desc_strs) { Py_DECREF(m); return nullptr; }
-    for (int i = 0; i < (int)AIS::KEY_COUNT; ++i) {
-        const AIS::KeyInfo &info = AIS::KeyInfoMap[i];
-        if (info.unit && info.unit[0])
-            g_unit_strs[i] = PyUnicode_InternFromString(info.unit);
-        if (info.description && info.description[0])
-            g_desc_strs[i] = PyUnicode_InternFromString(info.description);
-    }
+    if (core_init_cache() < 0) { Py_DECREF(m); return nullptr; }
 
     Py_INCREF(&DecoderType);
     if (PyModule_AddObject(m, "Decoder", (PyObject *)&DecoderType) < 0) {
         Py_DECREF(&DecoderType);
+        core_clear_cache();
         Py_DECREF(m);
         return nullptr;
     }
     return m;
 }
+
+#else
+
+static PyType_Slot Decoder_slots[] = {
+    {Py_tp_dealloc, (void *)Decoder_dealloc},
+    {Py_tp_doc, (void *)"AIS NMEA decoder."},
+    {Py_tp_methods, (void *)Decoder_methods},
+    {Py_tp_init, (void *)Decoder_init},
+    {Py_tp_new, (void *)PyType_GenericNew},
+    {0, nullptr}
+};
+
+static PyType_Spec Decoder_spec = {
+    "aiscat._core.Decoder",
+    -static_cast<int>(sizeof(DecoderObject)),
+    0,
+    Py_TPFLAGS_DEFAULT,
+    Decoder_slots,
+};
+
+static int core_exec(PyObject *module) {
+    PyObject *type = PyType_FromMetaclass(nullptr, module, &Decoder_spec, nullptr);
+    if (!type) return -1;
+    DecoderType = reinterpret_cast<PyTypeObject *>(type);
+    DecoderFree = reinterpret_cast<freefunc>(PyType_GetSlot(DecoderType, Py_tp_free));
+    if (!DecoderFree) {
+        DecoderType = nullptr;
+        Py_DECREF(type);
+        return -1;
+    }
+    if (core_init_cache() < 0) {
+        DecoderFree = nullptr;
+        DecoderType = nullptr;
+        Py_DECREF(type);
+        return -1;
+    }
+    if (PyModule_AddObject(module, "Decoder", type) < 0) {
+        core_clear_cache();
+        DecoderFree = nullptr;
+        DecoderType = nullptr;
+        Py_DECREF(type);
+        return -1;
+    }
+    return 0;
+}
+
+PyABIInfo_VAR(core_abi_info)
+static char core_module_name[] = "aiscat._core";
+static char core_module_doc[] = "AIS-catcher NMEA decoder (C++ binding)";
+
+static PySlot core_slots[] = {
+    PySlot_STATIC_DATA(Py_mod_abi, &core_abi_info),
+    PySlot_STATIC_DATA(Py_mod_name, core_module_name),
+    PySlot_STATIC_DATA(Py_mod_doc, core_module_doc),
+    PySlot_FUNC(Py_mod_exec, core_exec),
+    PySlot_DATA(Py_mod_gil, Py_MOD_GIL_NOT_USED),
+    PySlot_DATA(Py_mod_multiple_interpreters, Py_MOD_MULTIPLE_INTERPRETERS_NOT_SUPPORTED),
+    PySlot_END
+};
+
+PyMODEXPORT_FUNC PyModExport__core(void) {
+    return core_slots;
+}
+
+#endif
