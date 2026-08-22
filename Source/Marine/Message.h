@@ -72,7 +72,7 @@ namespace AIS
 		int length;
 		char channel;
 		long long start_idx, end_idx;
-		int station;
+		int station = 0;
 		int own_mmsi = -1;
 
 		std::vector<std::string> NMEA;
