@@ -57,6 +57,7 @@ option(SQLITE "Include SQLITE support" ON)
 option(OPENSSL "Include OPENSSL support" ON)
 option(NMEA2000 "Include NMEA2000 support" ON)
 option(WEBVIEWER "Include the embedded web UI (WebDB blob + HTTP server)" ON)
+option(STATIC "Fully static build: require and link static (.a) libraries for every enabled dependency" OFF)
 option(ARMV6 "Compile for Raspberry Pi Zero" OFF)
 option(RBIT "Use ARM RBIT instruction for bit reversal" OFF)
 
@@ -222,6 +223,29 @@ if(MSVC)
     set(ADDITIONAL_LIBRARIES ws2_32.lib)
 endif()
 
+# --- Static build setup (must run before the dependency modules are included) ---
+if(STATIC)
+    if(MSVC)
+        message(FATAL_ERROR "STATIC build is not supported with MSVC.")
+    endif()
+    # Make generic find_library() calls in the dependency modules prefer static archives.
+    set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+    # Route the dependency modules that expose a static path through their static branch.
+    set(RTLSDR_STATIC ON)
+    set(HYDRASDR_STATIC ON)
+    # Honored by find_package(OpenSSL)/find_package(ZLIB) where used.
+    set(OPENSSL_USE_STATIC_LIBS TRUE)
+    set(ZLIB_USE_STATIC_LIBS TRUE)
+    # Make pkg_check_modules resolve the full static dependency chain.
+    set(PKG_CONFIG_USE_STATIC_LIBS ON)
+    # Force a fully static executable.
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_CXX_COMPILER MATCHES "musl")
+        message(WARNING "STATIC on a glibc toolchain typically breaks NSS/DNS at runtime; build on musl (Alpine) for a clean fully-static binary.")
+    endif()
+    message(STATUS "STATIC: enabled - linking every enabled dependency from static archives (.a)")
+endif()
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/NMEA2000.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/LibUSB.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/OpenSSL.cmake)
@@ -238,6 +262,41 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/AIRSPYHF.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/HACKRF.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/HYDRASDR.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/ZMQ.cmake)
+
+# --- Static build verification: every enabled dependency must resolve to a static (.a) archive ---
+if(STATIC)
+    # tag -> the resolved library path/list to check (only checked when the feature is enabled)
+    set(_static_checks
+        OPENSSL "${OPENSSL_LIBRARIES}"
+        ZLIB    "${ZLIB_LIBRARIES}"
+        RTLSDR  "${RTLSDR_LIBRARIES}"
+        AIRSPY  "${AIRSPY_LIBRARIES}"
+        AIRSPYHF "${AIRSPYHF_LIBRARIES}"
+        HACKRF  "${HACKRF_LIBRARIES}"
+        HYDRASDR "${HYDRASDR_LIBRARIES}"
+        SDRPLAY "${SDRPLAY_LIBRARIES}"
+        SOAPYSDR "${SOAPYSDR_LIBRARIES}"
+        ZMQ     "${ZMQ_LIBRARIES}"
+        SOXR    "${SOXR_LIBRARIES}"
+        SAMPLERATE "${SAMPLERATE_LIBRARIES}"
+        SQLITE  "${SQLITE_LIBRARIES}"
+        PSQL    "${PQ_LIBRARIES}")
+    while(_static_checks)
+        list(POP_FRONT _static_checks _tag _libs)
+        foreach(_lib IN LISTS _libs)
+            # skip empty entries, imported targets, and bare -l/linker flags
+            if(_lib AND NOT _lib MATCHES "^-" AND NOT TARGET ${_lib} AND EXISTS "${_lib}")
+                if(NOT _lib MATCHES "\\.a$")
+                    message(FATAL_ERROR
+                        "STATIC build: ${_tag} resolved to a non-static library:\n  ${_lib}\n"
+                        "Install its static (.a) package (e.g. openssl-libs-static / zlib-static / a static librtlsdr) "
+                        "or disable this feature (-D${_tag}=OFF).")
+                endif()
+            endif()
+        endforeach()
+    endwhile()
+    message(STATUS "STATIC: all enabled dependencies resolved to static archives.")
+endif()
 
 set(CPP
     Source/Application/Config.cpp
