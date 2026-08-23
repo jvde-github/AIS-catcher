@@ -14,8 +14,10 @@ import { fromLonLat } from 'ol/proj';
 
 import { settings } from '../core/state.js';
 import { decodeHTMLEntities } from '../core/util.js';
-import { shipOutlineLocal } from '../core/geo.js';
-import { getSpeedVal, getSpeedUnit, getDeltaTimeVal, getFlagStyled, getShipTypeShort, sanitizeString, TOOLTIP_FLAG_STYLE } from '../../shared/core/format.js';
+import { shipOutlineLocal } from '../../shared/core/geo.js';
+import { getSpeedVal, getSpeedUnit } from '../core/units.js';
+import { getDeltaTimeVal, getShipTypeShort, sanitizeString, getCountryName } from '../../shared/core/text.js';
+import { flagHTML } from '../../shared/components.js';
 
 // { getReceiver, spriteFor, iconScale, fadeOpacity, labelText, spriteSheet,
 //   getResolution, hullStyle, setLiveLayers, showNotification, onStateChange }
@@ -502,7 +504,7 @@ function sample(s, T) {
 function tooltipHTML(mmsi, s, fix) {
     if (!fix) return '';
     let html = '<div class="tooltip-card">'
-        + getFlagStyled(s.country, TOOLTIP_FLAG_STYLE) + '<div>'
+        + flagHTML(s.country, 'flag-tooltip', getCountryName(s.country)) + '<div>'
         + (s.name || 'MMSI ' + mmsi)
         + '<span class="tooltip-dim"> at </span>' + getSpeedVal(fix.knots || 0) + ' ' + getSpeedUnit();
     let sub = '';

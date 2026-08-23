@@ -3,6 +3,41 @@
    Values come from tokens.css; nothing here knows what the buttons do.
    ========================================================================= */
 
+/* Where the free map starts and ends. Registered as lengths so chrome.js reads
+   back px rather than the calc() a host writes; the defaults leave one gap on
+   every edge, and a host with a ticker, a table or a nav bar overrides the
+   edge it occupies (body.table-open { --map-inset-right: ... }). */
+@property --map-inset-top {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 10px;
+}
+
+@property --map-inset-right {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 10px;
+}
+
+@property --map-inset-bottom {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 10px;
+}
+
+@property --map-inset-left {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 10px;
+}
+
+:root {
+    --map-inset-top: var(--size-map-gap);
+    --map-inset-right: var(--size-map-gap);
+    --map-inset-bottom: var(--size-map-gap);
+    --map-inset-left: var(--size-map-gap);
+}
+
 .map-button-box.map-bottom {
     transition: none;
 }
@@ -34,11 +69,13 @@
     transition: transform var(--dur-slow) ease-out;
 }
 
-body.toolbar-wide .map-toolbar {
+/* the host moves the buttons from the rail into the toolbar when there is
+   room, and marks each element for its part: no body-level state */
+.map-toolbar.open {
     display: flex;
 }
 
-body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
+.map-button-box.map-pill.folded {
     display: none;
 }
 
@@ -179,12 +216,6 @@ body.toolbar-wide .map-button-box.map-pill:not(.map-bottom) {
 .map-pill .map-button svg {
     width: 15px !important;
     height: 15px !important;
-}
-
-/* Replay owns the screen: the map controls have nothing to act on while
-   history is being played back. */
-body.replay-open .map-button-box {
-    display: none;
 }
 
 
@@ -438,7 +469,7 @@ body.replay-open .map-button-box {
     border-radius: var(--radius-md);
 }
 
-#targetcard .mapcard_content {
+.mapcard-target .mapcard-content {
     border-bottom-left-radius: inherit;
     border-bottom-right-radius: inherit;
 }
@@ -451,64 +482,60 @@ body.replay-open .map-button-box {
     visibility: visible;
 }
 
-.mapcard_content {
+.mapcard-content {
     flex: 1;
     overflow: auto;
     display: flex;
     flex-direction: column;
 }
 
-.mapcard_header {
+.mapcard-header {
     flex: 0 0 35px;
     padding: 5px;
     margin: 5px;
     margin-top: 10px;
     font-size: var(--fs-lg);
     color: var(--color-text);
-    background-color: var(--color-targetcard-header);
+    background-color: var(--color-card-header);
     align-items: center;
     display: flex;
     flex-direction: row;
     justify-content: stretch;
 }
 
-#targetcard_header_title {
+.mapcard-title {
     flex: 1;
 }
 
-#targetcard_header_flag {
+.mapcard-flag {
     flex: 0 1 auto;
     margin-right: 5px;
 }
 
-#targetcard.mapcard {
-    background: var(--color-targetcard-surface);
+.mapcard-target {
+    background: var(--color-card-surface);
     border-radius: 0;
 }
 
-#targetcard .mapcard_header {
+.mapcard-target .mapcard-header {
     margin: 4px;
 }
 
-#targetcard .mapcard-footer {
-    background-color: var(--color-targetcard-footer);
+.mapcard-target .mapcard-footer {
+    background-color: var(--color-card-footer);
     border-radius: 0;
 }
 
-.targetcard-validated {
-    border-left: 4px solid var(--color-ok-strong);
+.card-validated {
+    border-left: 4px solid var(--color-success);
 }
 
-.targetcard-not-validated {
+.card-not-validated {
     border-left: 4px solid var(--color-off);
 }
 
-.targetcard-dubious {
-    border-left: 4px solid var(--color-error);
-}
-
-#targetcard_footer>div {
-    position: relative;
+.card-dubious {
+    border-left: 4px solid var(--color-danger);
 }
 
 /* flush with the card: an inset band leaves a rim of card behind it, which
@@ -525,6 +552,7 @@ body.replay-open .map-button-box {
 }
 
 .mapcard-footer>div {
+    position: relative;
     flex: 0 1 100px;
     display: flex;
     flex-direction: column;
@@ -557,12 +585,12 @@ body.replay-open .map-button-box {
     pointer-events: none;
 }
 
-.mapcard-footer>div.targetcard-icon-active {
+.mapcard-footer>div.card-icon-active {
     background: var(--color-hover-overlay);
     color: var(--color-accent);
 }
 
-.mapcard header>span:first-child {
+.mapcard header>span:first-child:not(.mapcard-flag) {
     flex: 1 0 0;
 }
 
@@ -586,8 +614,13 @@ body.replay-open .map-button-box {
    palette rather than from the markup */
 .close_icon.mapcard-header-icon,
 .mapcard-close {
-    color: var(--color-danger);
+    color: var(--color-icon);
     font-size: var(--size-icon);
+}
+
+@media (hover: hover) {
+    .close_icon.mapcard-header-icon:hover,
+    .mapcard-close:hover { color: var(--color-danger); }
 }
 
 .mapcard-table {
@@ -617,7 +650,7 @@ body.replay-open .map-button-box {
 
 @media (hover: hover) {
     .mapcard-content-row:hover { cursor: pointer; }
-    /* inset so the row does not shift */ #targetcard .mapcard-content-row:not(.targetcard-row-selected):hover { box-shadow: inset -3px 0 0 color-mix(in srgb, var(--color-targetcard-edge) 60%, transparent); }
+    /* inset so the row does not shift */ .mapcard-target .mapcard-content-row:not(.card-row-selected):hover { box-shadow: inset -3px 0 0 color-mix(in srgb, var(--color-card-edge) 60%, transparent); }
 }
 
 .mapcard-content-row>div {
@@ -646,7 +679,7 @@ body.replay-open .map-button-box {
 }
 
 /* the !importants outrank icons.css, which sets masked icons to display: block */
-.targetcard-tech-icon {
+.card-tech-icon {
     font-size: var(--fs-sm) !important;
     cursor: help;
     color: var(--color-text-muted);
@@ -657,31 +690,75 @@ body.replay-open .map-button-box {
     line-height: 1;
 }
 
-.targetcard-min-only {
+/* --- card shell: what card.js drives --- */
+
+/* Technical details popover */
+.card-popover {
+    position: absolute;
+    background: var(--color-surface-raised);
+    color: var(--color-text);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    /* Capped by the targetcard's own stacking context (--z-card), so a token above
+       that is a promise the DOM cannot keep. This only has to clear its
+       siblings inside the card. */
+    z-index: var(--z-sticky);
+    min-width: 200px;
+    max-width: 300px;
+    font-size: var(--fs-sm);
+    padding: 8px 12px;
+}
+/* folded by the user, or empty for this vessel. Sections are a maximised-card
+   concept: a minimised card shows its pinned rows whatever section they sit in */
+.card-max .card-collapsed,
+.card-max .card-empty { display: none !important; }
+.card-popover > div {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--color-rule);
+}
+
+.card-popover > div:last-child {
+    border-bottom: none;
+}
+
+.card-popover > div > span:first-child {
+    font-weight: var(--fw-medium);
+    color: var(--color-text-muted);
+}
+
+.card-popover > div > span:last-child {
+    font-weight: var(--fw-bold);
+    margin-left: 12px;
+}
+
+.card-min-only {
     display: none;
 }
 
-.targetcard-min-only.visible {
+.card-min-only.visible {
     display: inherit;
 }
 
 /* Marks a row as one the collapsed card keeps. Right edge only, so the label
    column stays flush with every other row. */
-.targetcard-row-selected {
+.card-row-selected {
     display: flex;
     flex-direction: row;
-    border-right: 3px solid var(--color-targetcard-edge);
+    border-right: 3px solid var(--color-card-edge);
     padding-right: 7px;   /* the border comes out of the padding */
 }
 
-.targetcard-content-row + .targetcard-content-row {
+.card-row + .card-row {
     border-top: 1px dotted var(--color-rule);
 }
 
 /* Section headings inside the targetcard: a full-width band, set like the field
    labels around it so the card reads as one type system. Max-only, so a
    collapsed card stays a single compact block. */
-.targetcard-section {
+.card-section {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -699,10 +776,10 @@ body.replay-open .map-button-box {
 }
 
 @media (hover: hover) {
-    .targetcard-section:hover { filter: brightness(0.97); }
+    .card-section:hover { filter: brightness(0.97); }
 }
 
-.targetcard-caret-chip {
+.card-caret-chip {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -715,10 +792,10 @@ body.replay-open .map-button-box {
 }
 
 @media (hover: hover) {
-    .targetcard-section:hover .targetcard-caret-chip { background: var(--color-surface-raised); }
+    .card-section:hover .card-caret-chip { background: var(--color-surface-raised); }
 }
 
-.targetcard-section-caret {
+.card-section-caret {
     width: 13px;
     height: 13px;
     flex: none;

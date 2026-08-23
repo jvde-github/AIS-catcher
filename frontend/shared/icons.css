@@ -7,8 +7,8 @@
    separate .svg files — a file per icon would need a request each and would
    lose currentColor.
 
-   Ship markers are NOT here: they are a raster sprite (icons.png) driven by
-   background-position, a deliberately different mechanism.
+   The ship-class chips are NOT here: they are raster sheets in sprites.css
+   driven by background-position, a deliberately different mechanism.
 
    To add one: paste the Material Symbols *Outlined* 24px path, add the class
    to the shared block below, and give it a --svg line.

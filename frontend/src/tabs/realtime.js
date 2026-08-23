@@ -306,11 +306,11 @@ function updateFilterDisplay() {
 
 function valueFieldHTML() {
     if (dialogKind === 'channel')
-        return `<select id="realtime_filter_value" class="realtime-filter-input">
+        return `<select id="realtime_filter_value" class="input select realtime-filter-input">
             ${['A', 'B', 'C', 'D'].map((c) => `<option>${c}</option>`).join('')}</select>`;
 
     const hint = dialogKind === 'type' ? 'Message type 1 - 27' : 'MMSI number';
-    return `<input id="realtime_filter_value" class="realtime-filter-input" placeholder="${hint}">`;
+    return `<input id="realtime_filter_value" class="input realtime-filter-input" placeholder="${hint}">`;
 }
 
 function filterDialogHTML() {
@@ -324,7 +324,7 @@ function filterDialogHTML() {
 
     return `<div class="realtime-filter-editor">
         <div class="realtime-filter-row">
-            <select id="realtime_filter_kind" class="realtime-filter-input"
+            <select id="realtime_filter_kind" class="input select realtime-filter-input"
                 data-on-change="realtimeFilterKindChanged">${kinds}</select>
             ${valueFieldHTML()}
             <button class="btn realtime-filter-add" data-action="addRealtimeFilter">Add</button>

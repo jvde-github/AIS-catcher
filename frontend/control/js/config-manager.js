@@ -576,7 +576,7 @@
         state: { unsaved: false },
 
         notify(type, message, duration, onClose) {
-            return window.AISComponents.toast(type, message, duration, undefined, onClose);
+            return window.AISComponents.toast(type, message, { duration, onClose });
         },
 
         notifyWarnings(warnings) {

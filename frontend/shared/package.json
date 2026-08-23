@@ -1,0 +1,14 @@
+{
+  "name": "aiscatcher-shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared frontend for AIS-catcher hosts: tokens, primitives, chrome, card shell, pure AIS helpers",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "devDependencies": {
+    "happy-dom": "^20.11.6"
+  }
+}

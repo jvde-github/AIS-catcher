@@ -13,8 +13,9 @@ import Text from 'ol/style/Text';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { getLength } from 'ol/sphere';
 
-import { getDistanceVal, getDistanceUnit } from '../../shared/core/format.js';
-import { calculateBearing } from '../core/geo.js';
+import { getDistanceVal, getDistanceUnit } from '../core/units.js';
+import { calculateBearing } from '../../shared/core/geo.js';
+import { token } from '../../shared/color.js';
 
 // { getShipsDB, showNotification, ensureMeasurecardVisible }
 let deps = null;
@@ -26,7 +27,7 @@ const measureSource = new VectorSource();
 
 const measureStyle = new Style({
     stroke: new Stroke({
-        color: 'green',
+        color: token('--color-success', 'green'),
         lineDash: [20, 20],
         width: 2,
     })
@@ -49,7 +50,7 @@ const measureLabelStyle = new Style({
             color: 'rgba(255, 255, 255, 1)',
         }),
         backgroundFill: new Fill({
-            color: 'green',
+            color: token('--color-success', 'green'),
         }),
         padding: [3, 3, 3, 3],
         textBaseline: 'bottom',

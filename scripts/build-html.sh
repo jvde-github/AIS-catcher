@@ -19,19 +19,20 @@ perform_sed() {
 
 # Wipe Vite-emitted chunks from prior builds (content-hashed names would
 # otherwise accumulate and bloat WebDB.cpp).
-rm -f "$DIST"/lib-*.js "$DIST"/lib.css "$DIST"/script.js
+rm -f "$DIST"/lib-*.js "$DIST"/lib.css "$DIST"/script.js "$DIST"/components.js "$DIST"/chrome.js "$DIST"/settings.js "$DIST"/tokens.css "$DIST"/icons.css "$DIST"/sprites.css "$DIST"/components.css "$DIST"/map.css
 rm -rf "$DIST/tabs"
 
 (cd "$SRC" && npm install --include=dev && npm run build)
 
+# One stylesheet per host from the shared sheets, in index.css order; the
+# shared JS is bundled by Vite (viewer) or loaded as a module (hub)
+# the order is index.css's; a host that needs only a prefix of it passes a count
+shared_css() {
+    grep -o '"\./[^"]*"' "$SHARED/index.css" | sed 's|^"\./||; s|"$||' | head -n "${1:-99}" | while read -r f; do cat "$SHARED/$f"; echo; done
+}
+
 mkdir -p "$DIST"
-cp "$SHARED/tokens.css" "$DIST/tokens.css"
-cp "$SHARED/components.css" "$DIST/components.css"
-cp "$SHARED/icons.css" "$DIST/icons.css"
-cp "$SHARED/components.js" "$DIST/components.js"
-cp "$SHARED/chrome.js" "$DIST/chrome.js"
-cp "$SHARED/settings.js" "$DIST/settings.js"
-cp "$SHARED/map.css" "$DIST/map.css"
+shared_css > "$DIST/shared.css"
 cp "$SRC/style.css" "$DIST/style.css"
 cp "$SRC/favicon.ico" "$DIST/favicon.ico"
 cp "$SRC/icons.png" "$DIST/icons.png"
@@ -65,47 +66,23 @@ node "$SRC/tools/optimize-flags.mjs" "$DIST/flags/4x3" | while read -r code; do
     echo ".fi-$code{background-image:url(flags/4x3/$code.png)}" >> "$DIST/flag-icons.css"
 done
 
-# Generate hashes from dist file content
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    CSS_HASH=$(md5 -q "$DIST/style.css")
-    TOKENS_HASH=$(md5 -q "$DIST/tokens.css")
-    COMP_HASH=$(md5 -q "$DIST/components.css")
-    ICONS_HASH=$(md5 -q "$DIST/icons.css")
-    COMPJS_HASH=$(md5 -q "$DIST/components.js")
-    CHROMEJS_HASH=$(md5 -q "$DIST/chrome.js")
-    MAPCSS_HASH=$(md5 -q "$DIST/map.css")
-    SETTINGSJS_HASH=$(md5 -q "$DIST/settings.js")
-    JS_HASH=$(md5 -q "$DIST/script.js")
-    LIB_CSS_HASH=$(md5 -q "$DIST/lib.css")
-    FLAG_CSS_HASH=$(md5 -q "$DIST/flag-icons.css")
-else
-    CSS_HASH=$(md5sum "$DIST/style.css" | cut -d' ' -f1)
-    TOKENS_HASH=$(md5sum "$DIST/tokens.css" | cut -d' ' -f1)
-    COMP_HASH=$(md5sum "$DIST/components.css" | cut -d' ' -f1)
-    ICONS_HASH=$(md5sum "$DIST/icons.css" | cut -d' ' -f1)
-    COMPJS_HASH=$(md5sum "$DIST/components.js" | cut -d' ' -f1)
-    CHROMEJS_HASH=$(md5sum "$DIST/chrome.js" | cut -d' ' -f1)
-    MAPCSS_HASH=$(md5sum "$DIST/map.css" | cut -d' ' -f1)
-    SETTINGSJS_HASH=$(md5sum "$DIST/settings.js" | cut -d' ' -f1)
-    JS_HASH=$(md5sum "$DIST/script.js" | cut -d' ' -f1)
-    LIB_CSS_HASH=$(md5sum "$DIST/lib.css" | cut -d' ' -f1)
-    FLAG_CSS_HASH=$(md5sum "$DIST/flag-icons.css" | cut -d' ' -f1)
-fi
+# Everything Vite does not bundle is minified in place; the sources stay readable
+minify() {
+    local f="$1"; shift
+    "$SRC/node_modules/.bin/esbuild" "$f" --minify --log-level=warning --charset=utf8 "$@" --outfile="$f.min" && mv "$f.min" "$f"
+}
 
-# Update hashes in dist/index.html
-perform_sed "$DIST/index.html" "s|lib\.css?hash=[^\"]*|lib.css?hash=${LIB_CSS_HASH}|g" ''
-perform_sed "$DIST/index.html" "s|flag-icons\.css?hash=[^\"]*|flag-icons.css?hash=${FLAG_CSS_HASH}|g" ''
-perform_sed "$DIST/index.html" "s|tokens\.css?hash=[^\"]*|tokens.css?hash=${TOKENS_HASH}|g" ''
-perform_sed "$DIST/index.html" "s|components\.css?hash=[^\"]*|components.css?hash=${COMP_HASH}|g" ''
-# anchored on the opening quote: an unanchored "icons.css" also matches
-# "flag-icons.css" and would stamp it with the wrong hash
-perform_sed "$DIST/index.html" "s|\"icons\.css?hash=[^\"]*|\"icons.css?hash=${ICONS_HASH}|g" ''
-perform_sed "$DIST/index.html" "s|components\.js?hash=[^\"]*|components.js?hash=${COMPJS_HASH}|g" ''
-perform_sed "$DIST/index.html" "s|chrome\.js?hash=[^\"]*|chrome.js?hash=${CHROMEJS_HASH}|g" ''
-perform_sed "$DIST/index.html" "s|map\.css?hash=[^\"]*|map.css?hash=${MAPCSS_HASH}|g" ''
-perform_sed "$DIST/index.html" "s|settings\.js?hash=[^\"]*|settings.js?hash=${SETTINGSJS_HASH}|g" ''
-perform_sed "$DIST/index.html" "s|style\.css?hash=[^\"]*|style.css?hash=${CSS_HASH}|g" ''
-perform_sed "$DIST/index.html" "s|script\.js?hash=[^\"]*|script.js?hash=${JS_HASH}|g" ''
+file_hash() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then md5 -q "$1"; else md5sum "$1" | cut -d' ' -f1; fi
+}
+
+for f in shared.css style.css flag-icons.css; do minify "$DIST/$f"; done
+
+# Cache-bust viewer assets. Anchored on the opening quote: an unanchored
+# "icons.css" would also match "flag-icons.css"
+for f in shared.css style.css script.js lib.css flag-icons.css; do
+    perform_sed "$DIST/index.html" "s|\"${f//./\\.}?hash=[^\"]*|\"${f}?hash=$(file_hash "$DIST/$f")|g" ''
+done
 
 
 # Control hub UI (managed mode -E) — plain static files served by the
@@ -115,20 +92,20 @@ cp -R frontend/control "$DIST/control"
 mkdir -p "$DIST/control/css"
 # same tokens.css the viewer gets; the control server prefixes every path with
 # "control", so the hub cannot reach the viewer's copy — it needs its own
-cp "$SHARED/tokens.css" "$DIST/control/css/tokens.css"
-cp "$SHARED/components.css" "$DIST/control/css/components.css"
-cp "$SHARED/icons.css" "$DIST/control/css/icons.css"
+shared_css 4 > "$DIST/control/css/shared.css"
 cp "$SHARED/components.js" "$DIST/control/js/components.js"
 
+minify "$DIST/control/css/shared.css"
+minify "$DIST/control/js/components.js" --format=esm
+minify "$DIST/control/js/shared-globals.js" --format=esm
+for f in schema.js config-manager.js wizard.js app.js; do minify "$DIST/control/js/$f"; done
+
 # Cache-bust hub assets (served with a 1-year cache header, like the viewer's)
-for f in css/tokens.css css/icons.css css/components.css js/components.js js/schema.js js/config-manager.js js/wizard.js js/app.js; do
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        HASH=$(md5 -q "$DIST/control/$f")
-    else
-        HASH=$(md5sum "$DIST/control/$f" | cut -d' ' -f1)
-    fi
+for f in css/shared.css js/components.js js/shared-globals.js js/schema.js js/config-manager.js js/wizard.js js/app.js; do
+    HASH=$(file_hash "$DIST/control/$f")
     # full path: an unanchored "icons.css" would also match "flag-icons.css"
     perform_sed "$DIST/control/index.html" "s|\"${f}?hash=[^\"]*|\"${f}?hash=${HASH}|g" ''
+    perform_sed "$DIST/control/js/shared-globals.js" "s|\"\./${f#js/}?hash=[^\"]*|\"./${f#js/}?hash=${HASH}|g" ''
 done
 
 echo "Built frontend/dist — baking into WebDB..."

@@ -1,9 +1,8 @@
 /* ============================================================================
    components.css — shared UI components (layer 2)
 
-   One definition per idiom, used by both the viewer and the control hub.
-   Legacy selectors sit alongside each component class so markup can migrate
-   incrementally — drop them from the selector list as it does.
+   One definition per idiom, used by every host. Markup opts in by class;
+   nothing here names a host's own selectors.
 
    Load order:
      viewer  tokens.css -> icons.css -> components.css -> style.css
@@ -15,7 +14,6 @@
    Full-width strip holding a rounded "swoosh" slot. */
 
 .band,
-.settings_header,
 .dialog-header {
     display: flex;
     flex: none;
@@ -25,8 +23,7 @@
     color: var(--color-text);
 }
 
-.band,
-.settings_header {
+.band {
     align-items: stretch;
 }
 
@@ -36,7 +33,6 @@
 }
 
 .band-slot,
-.settings_header .hdr-slot,
 .dialog-title {
     flex: 1 1 0;
     min-width: 0;
@@ -62,7 +58,7 @@
 /* --- tab strip ------------------------------------------------------------ */
 
 .tabs,
-.settings_tabs,
+.settings-tabs,
 .plots-tabs,
 .sys-subtabs {
     display: flex;
@@ -74,7 +70,7 @@
 }
 
 .tabs::-webkit-scrollbar,
-.settings_tabs::-webkit-scrollbar,
+.settings-tabs::-webkit-scrollbar,
 .plots-tabs::-webkit-scrollbar,
 .sys-subtabs::-webkit-scrollbar {
     display: none;
@@ -86,7 +82,7 @@
 }
 
 .tab,
-.settings_tab,
+.settings-tab,
 .plots-tab,
 .sys-tab {
     padding: 0.55rem 0.95rem;
@@ -102,7 +98,7 @@
 
 @media (hover: hover) {
     .tab:hover,
-    .settings_tab:hover,
+    .settings-tab:hover,
     .plots-tab:hover,
     .sys-tab:hover {
         color: var(--color-text-strong);
@@ -110,7 +106,7 @@
 }
 
 .tab.active,
-.settings_tab.active,
+.settings-tab.active,
 .plots-tab.active,
 .sys-tab.active {
     color: var(--color-accent);
@@ -181,16 +177,14 @@
    One config entry: label, control, optional description. The form *engine*
    on top of it (slider, withButton, dependsOn) stays with the hub. */
 
-.fieldset,
-.settings_main section {
+.fieldset {
     display: flex;
     flex-wrap: wrap;
     column-gap: var(--space-3);
     row-gap: var(--space-2);
 }
 
-.field,
-.settings_main section div {
+.field {
     display: flex;
     flex-direction: column;
     /* stretch: a form control normally fills its field. The viewer overrides
@@ -202,8 +196,7 @@
     flex: 1 1 100%;
 }
 
-.field-label,
-.settings_main section div span:first-child {
+.field-label {
     display: block;
     margin-left: 2px;
     text-align: left;
@@ -231,8 +224,7 @@
     border-top: none;
 }
 
-.field-desc,
-.settings_main .st-desc {
+.field-desc {
     display: block;
     margin-top: 2px;
     margin-left: 2px;
@@ -271,10 +263,7 @@
    Width is deliberately unset: the viewer sizes to content, the hub stretches
    to the field. Each frame sets its own. */
 
-.input,
-.realtime-filter-input,
-.settings_main select,
-.settings_main .color-picker {
+.input {
     padding: 8px 12px;
     font-family: inherit;
     font-size: var(--fs-base);
@@ -288,16 +277,12 @@
 }
 
 @media (hover: hover) {
-    .input:hover,
-    .realtime-filter-input:hover,
-    .settings_main select:hover {
+    .input:hover {
         border-color: var(--color-accent);
     }
 }
 
-.input:focus,
-.realtime-filter-input:focus,
-.settings_main select:focus {
+.input:focus {
     outline: none;
     border-color: var(--color-accent);
     box-shadow: 0 0 0 3px var(--color-focus-ring);
@@ -309,9 +294,7 @@
 }
 
 /* native chevron replaced so it can follow the theme */
-.select,
-select.realtime-filter-input,
-.settings_main select {
+.select {
     appearance: none;
     -webkit-appearance: none;
     padding-right: 32px;
@@ -329,8 +312,7 @@ select.realtime-filter-input,
     cursor: pointer;
 }
 
-.toggle,
-.settings_main input[type="checkbox"] {
+.toggle {
     appearance: none;
     -webkit-appearance: none;
     flex: none;
@@ -344,8 +326,7 @@ select.realtime-filter-input,
     transition: background var(--dur-fast) ease;
 }
 
-.toggle::after,
-.settings_main input[type="checkbox"]::after {
+.toggle::after {
     content: "";
     position: absolute;
     top: 2px;
@@ -359,20 +340,17 @@ select.realtime-filter-input,
     transition: transform var(--dur-fast) ease;
 }
 
-.toggle:checked,
-.settings_main input[type="checkbox"]:checked {
+.toggle:checked {
     background: var(--color-accent);
 }
 
-.toggle:checked::after,
-.settings_main input[type="checkbox"]:checked::after {
+.toggle:checked::after {
     transform: translateX(20px);
     border-color: var(--color-knob);
 }
 
 @media (hover: hover) {
-    .toggle:hover,
-    .settings_main input[type="checkbox"]:hover {
+    .toggle:hover {
         box-shadow: 0 0 0 1px var(--color-accent);
     }
 }
@@ -399,8 +377,7 @@ select.realtime-filter-input,
     background: var(--color-on);
 }
 
-.slider,
-.settings_main input[type="range"] {
+.slider {
     -webkit-appearance: none;
     appearance: none;
     height: 24px;
@@ -408,15 +385,13 @@ select.realtime-filter-input,
     cursor: pointer;
 }
 
-.slider::-webkit-slider-runnable-track,
-.settings_main input[type="range"]::-webkit-slider-runnable-track {
+.slider::-webkit-slider-runnable-track {
     height: 8px;
     border-radius: var(--radius-lg);
     background: var(--color-track);
 }
 
-.slider::-webkit-slider-thumb,
-.settings_main input[type="range"]::-webkit-slider-thumb {
+.slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 16px;
     height: 16px;
@@ -426,15 +401,13 @@ select.realtime-filter-input,
     box-shadow: 0 1px 2px var(--color-shadow-soft);
 }
 
-.slider::-moz-range-track,
-.settings_main input[type="range"]::-moz-range-track {
+.slider::-moz-range-track {
     height: 8px;
     border-radius: var(--radius-lg);
     background: var(--color-track);
 }
 
-.slider::-moz-range-thumb,
-.settings_main input[type="range"]::-moz-range-thumb {
+.slider::-moz-range-thumb {
     width: 16px;
     height: 16px;
     border: none;
@@ -444,24 +417,20 @@ select.realtime-filter-input,
 }
 
 @media (hover: hover) {
-    .slider:hover::-webkit-slider-thumb,
-    .settings_main input[type="range"]:hover::-webkit-slider-thumb {
+    .slider:hover::-webkit-slider-thumb {
         box-shadow: 0 1px 2px var(--color-shadow-soft), 0 0 0 2px var(--color-accent);
     }
 }
 
 @media (hover: hover) {
-    .slider:hover::-moz-range-thumb,
-    .settings_main input[type="range"]:hover::-moz-range-thumb {
+    .slider:hover::-moz-range-thumb {
         box-shadow: 0 1px 2px var(--color-shadow-soft), 0 0 0 2px var(--color-accent);
     }
 }
 
 /* Form button — not .map-button or .hub-button. The tab scroller's arrows are
    excluded: they carry their own borderless styling. */
-.btn,
-.settings_main button:not(.tab-scroll-btn),
-.settings_main section div>span[data-action] {
+.btn {
     flex: none;
     box-sizing: border-box;
     display: inline-flex;
@@ -482,9 +451,7 @@ select.realtime-filter-input,
 }
 
 @media (hover: hover) {
-    .btn:hover,
-    .settings_main button:not(.tab-scroll-btn):hover,
-    .settings_main section div>span[data-action]:hover {
+    .btn:hover {
         border-color: var(--color-accent);
         background: var(--color-bg);
     }
@@ -953,7 +920,7 @@ select.realtime-filter-input,
 .icon-hover>i,
 .icon-hover>svg,
 .icon-hover>[class$="_icon"],
-#menubar div>i,
+.menubar div>i,
 .hub-button>svg,
 .hub-button>[class$="_icon"] {
     transition: transform var(--ease) var(--dur-med);
@@ -964,7 +931,7 @@ select.realtime-filter-input,
     .icon-hover:hover>i,
     .icon-hover:hover>svg,
     .icon-hover:hover>[class$="_icon"],
-    #menubar div:hover>i,
+    .menubar div:hover>i,
     .hub-button:hover>svg,
     .hub-button:hover>[class$="_icon"] {
         transform: var(--hover-lift);
@@ -1187,8 +1154,9 @@ select.realtime-filter-input,
 }
 
 .toast-error {
-    background: var(--overlay-danger);
-    border-color: var(--overlay-danger);
+    background: var(--color-danger-bg);
+    border-color: var(--color-danger-border);
+    color: var(--color-danger);
 }
 
 
@@ -1197,9 +1165,6 @@ select.realtime-filter-input,
    headers and settings section headers alike. */
 
 .col-header,
-.settings_main>header,
-.tablecard_inner table thead>tr>th,
-.signal-table thead th,
 .tabulator .tabulator-header .tabulator-col {
     font-size: var(--fs-xs);
     font-weight: var(--fw-semibold);
@@ -1384,3 +1349,19 @@ select.realtime-filter-input,
     font-size: var(--fs-lg);
     width: 16px;
 }
+
+/* --- flag ------------------------------------------------------------------
+   Sizes for the flag() component; the glyph itself comes from flag-icons. */
+
+.flag { display: inline-block; padding: 0; margin: 0; }
+.flag-card { margin-right: 5px; font-size: 26px; box-shadow: var(--shadow-md); }
+.flag-tooltip { margin-right: 6px; font-size: 25px; opacity: .7; box-shadow: var(--shadow-sm); }
+.flag-table { margin-right: 6px; font-size: 16px; box-shadow: var(--shadow-sm); }
+.flag-inline { margin-right: 10px; }
+
+/* --- status text --------------------------------------------------------- */
+
+.status-ok { color: var(--color-success); }
+.status-bad { color: var(--color-danger); }
+.status-warn { color: var(--color-warning); }
+.status-off { color: var(--color-text-muted); }

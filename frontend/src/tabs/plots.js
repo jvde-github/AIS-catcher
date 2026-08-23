@@ -8,7 +8,7 @@ import {
     Tooltip, Legend, Filler,
 } from 'chart.js';
 import Annotation from 'chartjs-plugin-annotation';
-import { getDistanceConversion, getDistanceUnit } from '../../shared/core/format.js';
+import { getDistanceConversion, getDistanceUnit } from '../core/units.js';
 
 Chart.register(
     LineController, ScatterController, PolarAreaController, BarController,

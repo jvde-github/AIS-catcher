@@ -1,30 +1,35 @@
-// Sections, footer icons, popovers and field rendering for the targetcard.
-// Placement and open/close stay with the map layout in script.js.
 
 import { ships, cardMmsi, cardType, hoverMmsi, hoverType, markerTracks, clock } from '../core/store.js';
 import { settings } from '../core/state.js';
-import {
-    CHANGE, getChangeVal, getChangeListHTML, getSpeedHistorySVG, getDraughtChartSVG,
-    getShipDimensionSVG, getShipDimension, getCallSign, getCountryName, getDeltaTimeVal, CARD_FLAG_STYLE,
-    getDimUnit, getDistanceUnit, getDistanceVal, getDraughtVal, getEtaVal, getFlagStyled,
-    getLatValFormat, getLonValFormat, getMmsiTypeVal, getShipName, getShipTypeFull,
-    getShipTypeShort, getSpeedUnit, getSpeedVal, getStatusVal, getStringfromChannels,
-    getStringfromGroup, getStringfromMsgType,
-} from '../../shared/core/format.js';
+import { getChangeVal, getShipDimension, getDimUnit, getDistanceUnit, getDistanceVal, getDraughtVal, getLatValFormat, getLonValFormat, getSpeedUnit, getSpeedVal, u } from '../core/units.js';
+import { CHANGE, getCountryName, getDeltaTimeVal, getEtaVal, getMmsiTypeVal, getShipTypeFull, getShipTypeShort, getStatusVal, getStringfromChannels, getStringfromGroup, getStringfromMsgType } from '../../shared/core/text.js';
+import { getChangeListHTML, getSpeedHistorySVG, getDraughtChartSVG, getShipDimensionSVG } from '../../shared/core/spark.js';
+import { getCallSign, getShipName } from '../core/names.js';
+import { flagHTML } from '../../shared/components.js';
 import * as binary from './binary.js';
 
 // { fitTargetcard, getReceiver, realtimeEnabled, registerAction, isFollowing,
 //   updateFocusMarker, hoverTrackShown, selectTrackShown }
 let deps = null;
+export let card = null;
 
-export function init(d) { deps = d; }
+export function init(d) {
+    deps = d;
+    card = d.card;
+    if (!card) throw new Error("targetcard: no #targetcard to mount on");
+    card.section.reset(SECTION_DEFAULTS);
+    card.el.addEventListener("card:section", (e) => {
+        if (e.detail.open) fillSection(e.detail.key);
+        deps.fitTargetcard();
+    });
+}
 
 // ─── sections ────────────────────────────────────────────────────────────────
 
-const sectionOpen = {
-    voyage: true, vessel: true, source: false,
+export const SECTION_DEFAULTS = {
+    voyage: true, vessel: true, source: true,
     hull: false, speed: false, draught: false, changes: false,
-    aircraft: true, flight: true, adsb: false,
+    aircraft: true, flight: true, adsb: true,
 };
 
 let historyCache = { mmsi: 0, pts: null, changes: null };
@@ -35,63 +40,18 @@ export function resetHistory() {
     ["hull", "speed", "draught", "changes"].forEach((k) => {
         const body = document.getElementById("targetcard_" + k + "_body");
         if (body) body.innerHTML = "";
-        sectionOpen[k] = false;
-        setSectionAvailable(k, true);
+        card.section.available(k, true);
     });
 
-    sectionOpen.voyage = true;
-    sectionOpen.vessel = true;
-    sectionOpen.source = false;
-    sectionOpen.aircraft = true;
-    sectionOpen.flight = true;
-    sectionOpen.adsb = false;
-    Object.keys(sectionOpen).forEach(applySection);
+    card.section.reset(SECTION_DEFAULTS);
 }
 
-export function sectionState() { return sectionOpen; }
-
-export function applySection(key) {
-    const open = !!sectionOpen[key];
-
-    document.querySelectorAll('#targetcard_content [data-section="' + key + '"]').forEach((el) => {
-        if (el.classList.contains("targetcard-section")) {
-            const caret = el.querySelector(".targetcard-section-caret");
-            if (caret) {
-                caret.classList.toggle("keyboard_arrow_up_icon", open);
-                caret.classList.toggle("keyboard_arrow_down_icon", !open);
-            }
-            return;
-        }
-        el.classList.toggle("sec-collapsed", !open);
-    });
-}
-
-export function toggleSection(key) {
-    if (!key) return;
-
-    sectionOpen[key] = !sectionOpen[key];
-    applySection(key);
-    if (sectionOpen[key]) fillSection(key);
-    deps.fitTargetcard();
-}
-
-export function openSection(key) {
-    if (!sectionOpen[key]) toggleSection(key);
-}
-
-export function setSectionAvailable(key, available) {
-    const head = document.getElementById("targetcard_" + key + "_head");
-    const body = document.getElementById("targetcard_" + key + "_section");
-
-    if (head) head.classList.toggle("sec-empty", !available);
-    if (body && !available) body.classList.add("sec-collapsed");
-}
 
 export function renderHull(ship) {
     ship = ship || ships[cardMmsi]?.raw;
-    const svg = ship ? getShipDimensionSVG(ship) : "";
+    const svg = ship ? getShipDimensionSVG(ship, u) : "";
 
-    setSectionAvailable("hull", !!svg);
+    card.section.available("hull", !!svg);
     const body = document.getElementById("targetcard_hull_body");
     if (body) body.innerHTML = svg;
 }
@@ -127,11 +87,10 @@ export async function fillSection(key) {
     const ship = ships[mmsi]?.raw;
     let html = "";
 
-    if (key === "speed") html = getSpeedHistorySVG(historyCache.pts);
-    else if (key === "draught") html = getDraughtChartSVG(historyCache.changes, ship ? ship.draught : null);
+    if (key === "speed") html = getSpeedHistorySVG(historyCache.pts, 10, u);
+    else if (key === "draught") html = getDraughtChartSVG(historyCache.changes, ship ? ship.draught : null, u);
     else html = getChangeListHTML(historyCache.changes,
-        [CHANGE.DESTINATION, CHANGE.ETA, CHANGE.SHIPNAME, CHANGE.CALLSIGN, CHANGE.STATUS],
-        getChangeVal);
+        [CHANGE.DESTINATION, CHANGE.ETA, CHANGE.SHIPNAME, CHANGE.CALLSIGN, CHANGE.STATUS], u);
 
     body.innerHTML = html || '<span class="dim-note">Nothing recorded yet</span>';
     deps.fitTargetcard();
@@ -139,120 +98,22 @@ export async function fillSection(key) {
 
 // ─── popovers ────────────────────────────────────────────────────────────────
 
-export function closePopovers() {
-    document.querySelectorAll("#targetcard .tech-popover").forEach((el) => (el.style.display = "none"));
-}
-
-export function togglePopover(popoverId, iconId) {
-    const popover = document.getElementById(popoverId);
-    const icon = document.getElementById(iconId);
-
-    const wasOpen = popover.style.display === "block";
-    closePopovers();
-    if (wasOpen) return;
-
-    const onOutsideClick = (event) => {
-        if (popover.contains(event.target)) return;
-        event.stopPropagation();
-        event.preventDefault();
-        popover.style.display = "none";
-        document.removeEventListener("click", onOutsideClick, true);
-    };
-
-    const iconRect = icon.getBoundingClientRect();
-    const targetcardRect = document.getElementById("targetcard").getBoundingClientRect();
-
-    popover.style.display = "block";
-
-    let left = iconRect.left - targetcardRect.left + 20;
-    let top = iconRect.bottom - targetcardRect.top + 5;
-
-    const popoverRect = popover.getBoundingClientRect();
-
-    if (iconRect.left + popoverRect.width + 20 > window.innerWidth)
-        left = Math.max(5, iconRect.right - targetcardRect.left - popoverRect.width - 5);
-    if (iconRect.bottom + popoverRect.height + 5 > window.innerHeight)
-        top = Math.max(5, iconRect.top - targetcardRect.top - popoverRect.height - 5);
-
-    left = Math.max(5, Math.min(left, targetcardRect.width - popoverRect.width - 5));
-    top = Math.max(5, top);
-
-    popover.style.left = left + "px";
-    popover.style.top = top + "px";
-
-    setTimeout(() => document.addEventListener("click", onOutsideClick, true), 0);
-}
-
 // ─── footer icons ────────────────────────────────────────────────────────────
 
-const ICON_MAX = 3;
-const ICON_UNAVAILABLE = 'targetcard-icon-unavailable';
-
-let iconOffset = { ship: 0, plane: 0 };
-let iconCount = { ship: 0, plane: 0 };
+const ICON_UNAVAILABLE = 'card-icon-unavailable';
 
 export function addItem(icon, txt, title, action, contextType = 'ship') {
-    const div = document.createElement("div");
-    div.title = title;
-    div.setAttribute("data-context-type", contextType);
-
-    if (icon.startsWith("fa")) icon = "question_mark";
-
-    const i = document.createElement("i");
-    i.className = icon + "_icon";
-    const span = document.createElement("span");
-    span.textContent = txt;
-    div.appendChild(i);
-    div.appendChild(span);
-
     const name = deps.registerAction(action);
     if (!name) return;
-
-    div.dataset.action = name;
-    document.getElementById("targetcard_footer").appendChild(div);
-}
-
-function isMoreIcon(icon) {
-    return !!icon.querySelector('i')?.classList.contains('more_horiz_icon');
-}
-
-function iconAvailable(icon, type) {
-    if (icon.dataset.contextType !== type) return false;
-    if (icon.id === 'targetcard_realtime_option' && !deps.realtimeEnabled()) return false;
-    return !icon.classList.contains(ICON_UNAVAILABLE);
-}
-
-export function displayIcons(type) {
-    const icons = [...document.querySelectorAll('#targetcard_footer > div')];
-    const more = icons.filter((icon) => isMoreIcon(icon) && icon.dataset.contextType === type);
-    const available = icons.filter((icon) => !isMoreIcon(icon) && iconAvailable(icon, type));
-
-    iconCount[type] = available.length;
-    if (iconOffset[type] >= available.length) iconOffset[type] = 0;
-
-    const paged = available.length > ICON_MAX;
-    for (const icon of icons) icon.style.display = more.includes(icon) && paged ? "flex" : "none";
-
-    available
-        .slice(iconOffset[type], iconOffset[type] + ICON_MAX)
-        .forEach((icon) => (icon.style.display = "flex"));
-}
-
-export function rotateIcons() {
-    iconOffset[cardType] += ICON_MAX;
-    if (iconOffset[cardType] >= iconCount[cardType]) iconOffset[cardType] = 0;
-
-    displayIcons(cardType);
+    if (icon.startsWith("fa")) icon = "question_mark";
+    card.footer.add({ icon, label: txt, title, action: name, group: contextType });
 }
 
 export function prepare() {
-    iconOffset = { ship: 0, plane: 0 };
-    iconCount = { ship: 0, plane: 0 };
-
-    addItem('more_horiz', 'More', 'More options', 'rotateTargetcardIcons', 'ship');
-    addItem('more_horiz', 'More', 'More options', 'rotateTargetcardIcons', 'plane');
-
-    displayIcons('ship');
+    card.footer.reset();
+    card.footer.add({ icon: 'more_horiz', label: 'More', title: 'More options', action: 'rotateTargetcardIcons', group: 'ship', more: true });
+    card.footer.add({ icon: 'more_horiz', label: 'More', title: 'More options', action: 'rotateTargetcardIcons', group: 'plane', more: true });
+    card.footer.show('ship');
 }
 
 export function updateMessageButton() {
@@ -276,7 +137,7 @@ export function updateMessageButton() {
     button.classList.toggle(ICON_UNAVAILABLE, count === 0);
 
     // a button without messages must give up its slot, not sit there hidden
-    if (wasAvailable !== (count > 0)) displayIcons(cardType);
+    if (wasAvailable !== (count > 0)) card.footer.show(cardType);
 }
 
 // ─── content ─────────────────────────────────────────────────────────────────
@@ -313,21 +174,21 @@ export function updateFollowOption() {
 
     option.querySelector("#targetcard_follow").innerText = following ? "Unfollow" : "Follow";
     option.title = following ? "Stop centring the map on this vessel" : "Keep the map centred on this vessel";
-    option.classList.toggle("targetcard-icon-active", following);
+    option.classList.toggle("card-icon-active", following);
 }
 
 export function setValidation(v) {
-    document.getElementById("targetcard_header").classList.remove("targetcard-validated", "targetcard-not-validated", "targetcard-dubious");
+    document.getElementById("targetcard_header").classList.remove("card-validated", "card-not-validated", "card-dubious");
 
     switch (v) {
         case 1:
-            document.getElementById("targetcard_header").classList.add("targetcard-validated");
+            document.getElementById("targetcard_header").classList.add("card-validated");
             break;
         case -1:
-            document.getElementById("targetcard_header").classList.add("targetcard-dubious");
+            document.getElementById("targetcard_header").classList.add("card-dubious");
             break;
         default:
-            document.getElementById("targetcard_header").classList.add("targetcard-not-validated");
+            document.getElementById("targetcard_header").classList.add("card-not-validated");
     }
 }
 
@@ -387,7 +248,7 @@ export function populate() {
 
     let ship = ships[cardMmsi].raw;
 
-    document.getElementById("targetcard_header_flag").innerHTML = getFlagStyled(ship.country, CARD_FLAG_STYLE);
+    document.getElementById("targetcard_header_flag").innerHTML = flagHTML(ship.country, 'flag-card', getCountryName(ship.country));
     document.getElementById("targetcard_header_title").innerHTML = (getShipName(ship) || ship.mmsi);
 
     setValidation(ship.validated);
@@ -418,10 +279,10 @@ export function populate() {
     document.getElementById("targetcard_sources").innerHTML = getStringfromGroup(ship.group_mask);
 
     document.getElementById("targetcard_channels").innerHTML = getStringfromChannels(ship.channels);
-    document.getElementById("targetcard_type").innerHTML = getMmsiTypeVal(ship) + ' <i class="info_icon targetcard-tech-icon" id="targetcard_tech_info" data-action="techInfo" title="Technical details"></i>';
+    document.getElementById("targetcard_type").innerHTML = getMmsiTypeVal(ship) + ' <i class="info_icon card-tech-icon" id="targetcard_tech_info" data-action="techInfo" title="Technical details"></i>';
     const shiptype = ship.shiptype ?? null;
     document.getElementById("targetcard_shiptype").innerHTML = shiptype != null
-        ? getShipTypeShort(shiptype) + ' <i class="info_icon targetcard-tech-icon" id="targetcard_shiptype_info" data-action="shiptypeInfo" title="Ship type details"></i>'
+        ? getShipTypeShort(shiptype) + ' <i class="info_icon card-tech-icon" id="targetcard_shiptype_info" data-action="shiptypeInfo" title="Ship type details"></i>'
         : getShipTypeShort(shiptype);
     document.getElementById("shiptype_code").textContent = shiptype != null ? shiptype : "-";
     document.getElementById("shiptype_desc").textContent = shiptype != null

@@ -1,23 +1,14 @@
-// The filter object is persisted by the host: this module decides what a
-// filter means, not where it is kept.
-// A host that never calls configure() still gets somewhere to keep its filter,
-// so the module degrades instead of throwing. It must be one object, not a
-// fresh one per call, or every write is dropped.
-const detachedState = {};
-let store = { get: () => detachedState };
+// What a vessel filter means: the buckets, classes and statuses it can hide,
+// and whether a ship passes. Where the filter object lives is the host's: it
+// hands create() a getter for that object and a clock (server seconds), so
+// two filters can exist on one page and nothing here touches settings.
+//
+//     const f = filter.create({ state: () => settings.ship_filter, now: () => serverTime });
+//     if (f.shipPasses(ship)) ...
 
-export function configure(next) {
-    if (next.state) store.get = next.state;
-}
 import { ShippingClass } from './constants.js';
 
 export const MOVING_KNOTS = 0.5;
-
-export function chipStyle(b) {
-    const scale = b.scale || 0.65;
-    return "background-position: " + b.pos + "; transform: " +
-        (b.spin ? "rotate(45deg) scale(" + scale + ")" : "scale(" + scale + ")");
-}
 
 export const BUCKETS = [
     { id: "am", label: "Class A Moving", icon: "shipicon", pos: "-120px 0px", spin: true },
@@ -73,70 +64,9 @@ const DEFAULTS = {
     repeated: "any",    // any | only | never
 };
 
-let clock = 0;
-
-export function setClock(serverTime) {
-    if (serverTime > 0) clock = serverTime;
-}
-
-// shipPasses runs per vessel per frame during replay, so the summary of what is
-// active is computed once per change rather than rebuilt on every call.
-let revision = 0;
-let summary = { f: null, revision: -1, terms: [], active: false };
-
-function state() {
-    if (!store.get().ship_filter || typeof store.get().ship_filter !== "object")
-        store.get().ship_filter = {};
-
-    const f = store.get().ship_filter;
-    for (const k in DEFAULTS)
-        if (!(k in f)) f[k] = Array.isArray(DEFAULTS[k]) ? [...DEFAULTS[k]] : DEFAULTS[k];
-
-    if (typeof f.repeated === "boolean") f.repeated = f.repeated ? "any" : "never";
-    delete f.relayed;
-    return f;
-}
-
-export function get(key) {
-    const f = state();
-    return key in f ? f[key] : DEFAULTS[key];
-}
-
-export function set(key, value) {
-    state()[key] = value;
-    revision++;
-}
-
-// The three checkbox lists differ only in what they hold.
-export const LISTS = {
-    bucket: { key: "hidden_buckets", items: () => BUCKETS },
-    class: { key: "hidden_classes", items: () => CLASSES },
-    status: { key: "hidden_statuses", items: () => STATUSES },
-};
-
-export function isHidden(kind, id) {
-    return get(LISTS[kind].key).includes(id);
-}
-
-export function toggle(kind, id) {
-    const key = LISTS[kind].key;
-    const hidden = get(key);
-    set(key, isHidden(kind, id) ? hidden.filter((x) => x !== id) : [...hidden, id]);
-}
-
-export function setAll(kind, on) {
-    set(LISTS[kind].key, on ? [] : LISTS[kind].items().map((x) => x.id));
-}
-
 export function statusOf(ship) {
     const s = ship.status;
     return Number.isInteger(s) && s >= 0 && s <= 15 ? s : 15;
-}
-
-export function reset() {
-    store.get().ship_filter = {};
-    revision++;
-    state();
 }
 
 export function moving(ship) {
@@ -160,74 +90,137 @@ export function bucketOf(ship) {
     return bucketFor(ship.shipclass, ship.speed);
 }
 
-function current() {
-    const f = state();
-    if (summary.f !== f || summary.revision !== revision) {
-        const list = describeTerms(f);
-        summary = { f, revision, terms: list, active: list.length > 0 };
-    }
-    return summary;
-}
+// a host that passes no state still gets a working, unsaved filter
+const detached = {};
 
-function describeTerms(f) {
-    const list = [];
-    if (f.hidden_buckets?.length) list.push(hiddenLabel(f.hidden_buckets.length, "group"));
-    if (f.hidden_classes?.length) list.push(hiddenLabel(f.hidden_classes.length, "type"));
-    if (f.hidden_statuses?.length) list.push(hiddenLabel(f.hidden_statuses.length, "status", "es"));
-    if (f.speed_min != null || f.speed_max != null)
-        list.push("speed " + (f.speed_min ?? 0) + "-" + (f.speed_max ?? "∞") + " kn");
-    if (f.seen > 0) list.push("seen < " + f.seen + " min");
-    if (f.distance_min != null || f.distance_max != null)
-        list.push("distance " + (f.distance_min ?? 0) + "-" + (f.distance_max ?? "∞"));
-    if (f.validated && f.validated !== "any") list.push("validated: " + f.validated);
-    if (f.repeated === "only") list.push("repeated only");
-    else if (f.repeated === "never") list.push("no repeated");
-    return list;
-}
+export function create(opts) {
+    const store = (opts && opts.state) || (() => detached);
+    const now = (opts && opts.now) || (() => Math.floor(Date.now() / 1000));
 
-function hiddenLabel(n, what, plural = "s") {
-    return n + " " + what + (n === 1 ? "" : plural) + " hidden";
-}
+    // shipPasses runs per vessel per frame during replay, so the summary of what is
+    // active is computed once per change rather than rebuilt on every call.
+    let revision = 0;
+    let summary = { f: null, revision: -1, terms: [], active: false };
 
-export function isActive() {
-    return current().active;
-}
+    function state() {
+        const f = store();
+        for (const k in DEFAULTS)
+            if (!(k in f)) f[k] = Array.isArray(DEFAULTS[k]) ? [...DEFAULTS[k]] : DEFAULTS[k];
 
-export function describe() {
-    return current().terms;
-}
-
-// The terms a replayed vessel can be judged on: it carries a class and a speed,
-// but no reception data, status or distance.
-export function passesAppearance(ship) {
-    const { active, f } = current();
-    if (!active) return true;
-
-    if (f.hidden_buckets.length && f.hidden_buckets.includes(bucketOf(ship))) return false;
-    if (f.hidden_classes.length && f.hidden_classes.includes(ship.shipclass)) return false;
-    if (f.speed_min != null && !(ship.speed != null && ship.speed >= f.speed_min)) return false;
-    if (f.speed_max != null && !(ship.speed != null && ship.speed <= f.speed_max)) return false;
-
-    return true;
-}
-
-export function shipPasses(ship) {
-    const { active, f } = current();
-    if (!active) return true;
-    if (!passesAppearance(ship)) return false;
-
-    if (f.hidden_statuses.length && f.hidden_statuses.includes(statusOf(ship))) return false;
-
-    if (f.seen > 0 && !(ship.last_signal != null && clock - ship.last_signal <= f.seen * 60)) return false;
-    if (f.distance_min != null && !(ship.distance != null && ship.distance >= f.distance_min)) return false;
-    if (f.distance_max != null && !(ship.distance != null && ship.distance <= f.distance_max)) return false;
-
-    if (f.validated !== "any") {
-        const want = f.validated === "yes" ? 1 : f.validated === "no" ? -1 : 0;
-        if (ship.validated !== want) return false;
+        if (typeof f.repeated === "boolean") f.repeated = f.repeated ? "any" : "never";
+        delete f.relayed;
+        return f;
     }
 
-    if (f.repeated !== "any" && (ship.repeat > 0) !== (f.repeated === "only")) return false;
+    function get(key) {
+        const f = state();
+        return key in f ? f[key] : DEFAULTS[key];
+    }
 
-    return true;
+    function set(key, value) {
+        state()[key] = value;
+        revision++;
+    }
+
+    // The three checkbox lists differ only in what they hold.
+    const LISTS = {
+        bucket: { key: "hidden_buckets", items: () => BUCKETS },
+        class: { key: "hidden_classes", items: () => CLASSES },
+        status: { key: "hidden_statuses", items: () => STATUSES },
+    };
+
+    function isHidden(kind, id) {
+        return get(LISTS[kind].key).includes(id);
+    }
+
+    function toggle(kind, id) {
+        const key = LISTS[kind].key;
+        const hidden = get(key);
+        set(key, isHidden(kind, id) ? hidden.filter((x) => x !== id) : [...hidden, id]);
+    }
+
+    function setAll(kind, on) {
+        set(LISTS[kind].key, on ? [] : LISTS[kind].items().map((x) => x.id));
+    }
+
+    function reset() {
+        const f = store();
+        for (const k of Object.keys(f)) delete f[k];
+        revision++;
+        state();
+    }
+
+    function current() {
+        const f = state();
+        if (summary.f !== f || summary.revision !== revision) {
+            const list = describeTerms(f);
+            summary = { f, revision, terms: list, active: list.length > 0 };
+        }
+        return summary;
+    }
+
+    function describeTerms(f) {
+        const list = [];
+        if (f.hidden_buckets?.length) list.push(hiddenLabel(f.hidden_buckets.length, "group"));
+        if (f.hidden_classes?.length) list.push(hiddenLabel(f.hidden_classes.length, "type"));
+        if (f.hidden_statuses?.length) list.push(hiddenLabel(f.hidden_statuses.length, "status", "es"));
+        if (f.speed_min != null || f.speed_max != null)
+            list.push("speed " + (f.speed_min ?? 0) + "-" + (f.speed_max ?? "∞") + " kn");
+        if (f.seen > 0) list.push("seen < " + f.seen + " min");
+        if (f.distance_min != null || f.distance_max != null)
+            list.push("distance " + (f.distance_min ?? 0) + "-" + (f.distance_max ?? "∞"));
+        if (f.validated && f.validated !== "any") list.push("validated: " + f.validated);
+        if (f.repeated === "only") list.push("repeated only");
+        else if (f.repeated === "never") list.push("no repeated");
+        return list;
+    }
+
+    function hiddenLabel(n, what, plural = "s") {
+        return n + " " + what + (n === 1 ? "" : plural) + " hidden";
+    }
+
+    function isActive() {
+        return current().active;
+    }
+
+    function describe() {
+        return current().terms;
+    }
+
+    // The terms a replayed vessel can be judged on: it carries a class and a speed,
+    // but no reception data, status or distance.
+    function passesAppearance(ship) {
+        const { active, f } = current();
+        if (!active) return true;
+
+        if (f.hidden_buckets.length && f.hidden_buckets.includes(bucketOf(ship))) return false;
+        if (f.hidden_classes.length && f.hidden_classes.includes(ship.shipclass)) return false;
+        if (f.speed_min != null && !(ship.speed != null && ship.speed >= f.speed_min)) return false;
+        if (f.speed_max != null && !(ship.speed != null && ship.speed <= f.speed_max)) return false;
+
+        return true;
+    }
+
+    function shipPasses(ship) {
+        const { active, f } = current();
+        if (!active) return true;
+        if (!passesAppearance(ship)) return false;
+
+        if (f.hidden_statuses.length && f.hidden_statuses.includes(statusOf(ship))) return false;
+
+        if (f.seen > 0 && !(ship.last_signal != null && now() - ship.last_signal <= f.seen * 60)) return false;
+        if (f.distance_min != null && !(ship.distance != null && ship.distance >= f.distance_min)) return false;
+        if (f.distance_max != null && !(ship.distance != null && ship.distance <= f.distance_max)) return false;
+
+        if (f.validated !== "any") {
+            const want = f.validated === "yes" ? 1 : f.validated === "no" ? -1 : 0;
+            if (ship.validated !== want) return false;
+        }
+
+        if (f.repeated !== "any" && (ship.repeat > 0) !== (f.repeated === "only")) return false;
+
+        return true;
+    }
+
+    return { get, set, LISTS, isHidden, toggle, setAll, reset, isActive, describe, passesAppearance, shipPasses };
 }

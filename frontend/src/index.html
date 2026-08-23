@@ -14,11 +14,8 @@
 	<link rel="stylesheet" href="lib.css?hash=fcddc372b683c9753d216d397f31c3ef" />
 	<link rel="stylesheet" href="flag-icons.css?hash=99530c13bfb3d255dc8c976ba302306c" />
 
-	<link rel="stylesheet" href="tokens.css?hash=" />
-	<link rel="stylesheet" href="icons.css?hash=" />
-	<link rel="stylesheet" href="components.css?hash=" />
+	<link rel="stylesheet" href="shared.css?hash=" />
 	<link rel="stylesheet" href="style.css?hash=abc9548e0685c62329b1c38aafe7623c" />
-	<link rel="stylesheet" href="map.css?hash=" />
 	<link rel="stylesheet" href="custom/config.css" />
 
 </head>
@@ -66,7 +63,7 @@
 		</div>
 	</div>
 	<div class="overlay" id="menubar-overlay" data-action="hideMenu"></div>
-	<nav id="menubar" class="nokiosk">
+	<nav id="menubar" class="menubar nokiosk">
 		<div data-action="activateTab" data-tab="map" id="map_tab" title="Live map of received vessels"><i class="map_icon"></i><span>Map</span></div>
 		<div data-action="activateTab" data-tab="stat" id="stat_tab" title="System and receiver statistics"><i class="business_center_icon"></i><span>Statistics</span>
 		</div>
@@ -86,7 +83,7 @@
 		<div class="toast-container" id="notification-container"></div>
 
 		<div class="tableside_window settings-bg tabcontent" id="tableside">
-			<div class="settings_header">
+			<div class="settings-header">
 				<div class="hdr-slot">
 					<input type="text" class="input search-box" id="shipSearchSide" placeholder="Search for ships..." title="Search for ships">
 				</div>
@@ -113,12 +110,12 @@
 			</div>
 		</div>
 
-		<div class="settings_window settings-bg" id="settings">
-			<div class="settings_header">
+		<div class="settings-window settings-bg" id="settings">
+			<div class="settings-header">
 				<div class="hdr-slot"></div>
 				<div data-action="closeSettings" class="close_icon"></div>
 			</div>
-			<div class="settings_main settings-bg">
+			<div class="settings-main settings-bg">
 				<header>System</header>
 				<section>
 					<div class="filter-topbar">
@@ -129,11 +126,9 @@
 				<section>
 					<div class="third noandroid">
 						<span>Plugins</span><span style="cursor: pointer" data-action="showPlugins">Show</span>
-						<small class="st-desc">List the loaded plugins</small>
 					</div>
 					<div class="third">
 						<span>Server Errors</span><span style="cursor: pointer" data-action="showServerErrors">Show</span>
-						<small class="st-desc">Errors reported by the server</small>
 					</div>
 				</section>
 				<section>
@@ -177,12 +172,35 @@
 				<header>Map</header>
 				<section>
 					<h5 class="st-title">Base map</h5>
-					<div>
+					<div class="basemap-row" data-kind="day">
+						<span class="basemap-name">Day map</span>
 						<span class="st-wide">
-							<select id="baseMapSelector" class="input select"></select>
+							<select class="input select basemap-select" data-kind="day"></select>
 						</span>
-					<small id="basemap_credit" class="map-attribution-note"></small>
+					<small class="map-attribution-note basemap-credit"></small>
 					</div>
+					<div class="basemap-row" data-kind="day">
+						<span class="basemap-dim-label">Dimming (50%)</span>
+						<span>
+							<input type="range" class="basemap-dim" data-kind="day" min="0" max="1" step="0.01"
+								data-on-change="setMapOpacity" data-on-input="updateBaseMapDim" />
+						</span>
+					</div>
+					<div class="basemap-row" data-kind="night">
+						<span class="basemap-name">Night map</span>
+						<span class="st-wide">
+							<select class="input select basemap-select" data-kind="night"></select>
+						</span>
+					<small class="map-attribution-note basemap-credit"></small>
+					</div>
+					<div class="basemap-row" data-kind="night">
+						<span class="basemap-dim-label">Dimming (50%)</span>
+						<span>
+							<input type="range" class="basemap-dim" data-kind="night" min="0" max="1" step="0.01"
+								data-on-change="setMapOpacity" data-on-input="updateBaseMapDim" />
+						</span>
+					</div>
+					<small class="st-desc">The night map is used in dark mode. Dimming fades the map so vessels stand out; 0% leaves it as is.</small>
 				</section>
 				<section>
 					<h5 class="st-title">Overlays</h5>
@@ -194,41 +212,30 @@
 					<div class="third">
 						<span>Station Marker</span><span>
 							<input type="checkbox" id="settings_show_station"
-								data-on-change="setMapSetting" data-key="show_station" />
+								data-setting="show_station" />
 						</span>
 						</div>
 					
-				</section>
-				<section>
-					<div>
-						<span id="map_opacity_label">Map Dimming (50%)</span>
-						<span>
-							<input type="range" id="settings_map_opacity" min="0" max="1" step="0.01"
-								data-on-change="setMapOpacity"
-								data-on-input="updateSliderDisplay" data-display="mapOpacity" />
-						</span>
-					<small class="st-desc">Dim the base map to make ships stand out</small>
-						</div>
 				</section>
 				<section>
 					<h5 class="st-title">Highlight Circles</h5>
 					<div class="third">
 						<span>Hover</span><span>
 							<input type="color" class="color-picker" id="settings_shiphover_color"
-								data-on-change="setMapSetting" data-key="shiphover_color" />
+								data-setting="shiphover_color" />
 						</span>
 					</div>
 					<div class="third">
 						<span>Selection</span><span>
 							<input type="color" class="color-picker" id="settings_shipselection_color"
-								data-on-change="setMapSetting" data-key="shipselection_color" />
+								data-setting="shipselection_color" />
 						</span>
 					</div>
 					<div>
 						<span id="circle_scale_label">Width (6.0)</span>
 						<span>
 							<input type="range" id="settings_circle_scale" min="2.0" max="10.0" step="0.5"
-								data-on-change="setMapSetting" data-key="circle_scale"
+								data-setting="circle_scale"
 								data-on-input="updateSliderDisplay" data-display="circleScale" />
 						</span>
 					<small class="st-desc">Border width of the highlight circle</small>
@@ -240,7 +247,7 @@
 					<div class="third">
 						<span>Show</span><span>
 							<input type="checkbox" id="settings_distance_circles"
-								data-on-change="setMapSetting" data-key="distance_circles" />
+								data-setting="distance_circles" />
 						</span>
 						</div>
 					<div class="third">
@@ -254,7 +261,7 @@
 					<div>
 						<span>Card Top Left</span><span>
 							<input type="checkbox" id="settings_targetcard_top_left"
-								data-on-change="setMapSetting" data-key="targetcard_top_left" />
+								data-setting="targetcard_top_left" />
 						</span>
 					<small class="st-desc">Always open the card in the same corner instead of beside the vessel</small>
 						</div>
@@ -277,7 +284,7 @@
 					<h5 class="st-title">Labels</h5>
 					<div>
 						<span>Show</span><span>
-							<select id="settings_show_labels" data-on-change="setMapSetting" data-key="show_labels">
+							<select id="settings_show_labels" data-setting="show_labels">
 								<option value="dynamic">Dynamic</option>
 								<option value="never">Never</option>
 								<option value="always">Always</option>
@@ -290,7 +297,7 @@
 					<div>
 						<span>Declutter</span><span>
 							<input type="checkbox" id="settings_labels_declutter"
-								data-on-change="setMapSetting" data-key="labels_declutter" />
+								data-setting="labels_declutter" />
 						</span>
 						<small class="st-desc">Hide overlapping labels</small>
 					</div>
@@ -300,14 +307,14 @@
 					<div class="half">
 						<span>Always Visible</span><span>
 							<input type="checkbox" id="settings_labels_prioritize_active"
-								data-on-change="setMapSetting" data-key="labels_prioritize_active" />
+								data-setting="labels_prioritize_active" />
 						</span>
 						<small class="st-desc">Its label always wins against declutter</small>
 					</div>
 					<div class="half">
 						<span>Hide Others</span><span>
 							<input type="checkbox" id="settings_labels_active_only"
-								data-on-change="setMapSetting" data-key="labels_active_only" />
+								data-setting="labels_active_only" />
 						</span>
 						<small class="st-desc">Label only the selected ship</small>
 					</div>
@@ -318,39 +325,39 @@
 						<span id="tooltip_font_size_label">Font Size (9)</span>
 						<span>
 							<input type="range" id="settings_tooltipLabelFontsize" min="6" max="16" step="1"
-								data-on-change="setMapSetting" data-key="tooltipLabelFontSize"
+								data-setting="tooltipLabelFontSize"
 								data-on-input="updateSliderDisplay" data-display="tooltipFontSize" />
 						</span>
 					</div>
 					<div>
 						<span>Class Colors</span><span>
 							<input type="checkbox" id="settings_label_class_background"
-								data-on-change="setMapSetting" data-key="label_class_background" />
+								data-setting="label_class_background" />
 						</span>
 						<small class="st-desc">Class color as background, or the fixed colors below</small>
 					</div>
 					<div class="half label-colors">
 						<span>Text (Light)</span><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelColor"
-								data-on-change="setMapSetting" data-key="tooltipLabelColor" />
+								data-setting="tooltipLabelColor" />
 						</span>
 					</div>
 					<div class="half label-colors">
 						<span>Shadow (Light)</span><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelShadowColor"
-								data-on-change="setMapSetting" data-key="tooltipLabelShadowColor" />
+								data-setting="tooltipLabelShadowColor" />
 						</span>
 					</div>
 					<div class="half label-colors">
 						<span>Text (Dark)</span><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelColorDark"
-								data-on-change="setMapSetting" data-key="tooltipLabelColorDark" />
+								data-setting="tooltipLabelColorDark" />
 						</span>
 					</div>
 					<div class="half label-colors">
 						<span>Shadow (Dark)</span><span>
 							<input type="color" class="color-picker" id="settings_tooltipLabelShadowColorDark"
-								data-on-change="setMapSetting" data-key="tooltipLabelShadowColorDark" />
+								data-setting="tooltipLabelShadowColorDark" />
 						</span>
 					</div>
 				</section>
@@ -407,13 +414,13 @@
 					<div class="third">
 						<span>Border</span><span>
 							<input type="color" class="color-picker" id="settings_shipoutline_border"
-								data-on-change="setMapSetting" data-key="shipoutline_border" />
+								data-setting="shipoutline_border" />
 						</span>
 					</div>
 					<div class="third">
 						<span>Fill</span><span>
 							<input type="color" class="color-picker" id="settings_shipoutline_inner"
-								data-on-change="setMapSetting" data-key="shipoutline_inner" />
+								data-setting="shipoutline_inner" />
 						</span>
 					</div>
 					
@@ -421,7 +428,7 @@
 						<span id="shipoutline_opacity_label">Opacity (0.9)</span>
 						<span>
 							<input type="range" id="settings_shipoutline_opacity" min="0" max="1" step="0.01"
-								data-on-change="setMapSetting" data-key="shipoutline_opacity"
+								data-setting="shipoutline_opacity"
 								data-on-input="updateSliderDisplay" data-display="shipoutlineOpacity" />
 						</span>
 						</div>
@@ -645,7 +652,7 @@
 						<span id="track_weight_label">Weight (1)</span>
 						<span>
 							<input type="range" id="settings_track_weight" min="1" max="4" step="1"
-								data-on-change="setMapSetting" data-key="track_weight"
+								data-setting="track_weight"
 								data-on-input="updateSliderDisplay" data-display="trackWeight" />
 						</span>
 					<small class="st-desc">Line width of ship tracks</small>
@@ -654,7 +661,7 @@
 						<span id="track_opacity_label">Opacity (100%)</span>
 						<span>
 							<input type="range" id="settings_track_opacity" min="0.05" max="1" step="0.05"
-								data-on-change="setMapSetting" data-key="track_opacity"
+								data-setting="track_opacity"
 								data-on-input="updateSliderDisplay" data-display="trackOpacity" />
 						</span>
 						</div>
@@ -662,7 +669,7 @@
 						<span id="track_trash_threshold_label">Dash After (30s)</span>
 						<span>
 							<input type="range" id="settings_track_trash_threshold" min="0" max="300" step="10"
-								data-on-change="setMapSetting" data-key="track_trash_threshold"
+								data-setting="track_trash_threshold"
 								data-on-input="updateSliderDisplay" data-display="trackTrashThreshold" />
 						</span>
 					<small class="st-desc">Dash track segments with reception gaps longer than this</small>
@@ -836,44 +843,44 @@
 
 		<div data-on-contextmenu="mainspaceContextMenu" class="mainspace">
 			<ul class="floating-menu" id="context-menu">
-				<li class="ctx-targetcard" data-group="card" data-action="toggleTargetcardPin" id="ctx_targetcard_pin"><i class="drag_indicator_icon"></i>Pin card position<span class="ctx-check">✓</span></li>
-				<li class="copy-text" data-group="text" data-action="copyTextCtx"><i class="content_copy_icon"></i>Copy to Clipboard</li>
-				<li class="table-menu" data-group="table" data-action="downloadCSV"><i class="cloud_download_icon"></i>Download CSV</li>
-				<li class="station" data-group="focus" data-action="toggleFollowStationCtx"><i class="push_pin_icon"></i><span id="ctx_follow_station">Follow station</span></li>
-				<li class="ctx-map ctx-replay-map" data-group="focus" data-action="unpinCenter" id="ctx_menu_unpin"><i class="undo_icon"></i><span id="ctx_unpin">Release map center</span></li>
-				<li class="ship-map ctx-replay-ship" data-group="focus" data-action="toggleFollowCtx"><i class="push_pin_icon"></i><span id="ctx_follow">Follow vessel</span></li>
-				<li class="ship-map ctx-replay-ship" data-group="focus" data-action="mapResetViewZoomCtx"><i class="zoom_in_icon"></i>Zoom in on vessel</li>
-				<li class="ship-map" data-group="focus" data-action="showTargetcardCtx" data-kind="ship"><i class="directions_boat_icon"></i>Ship card</li>
-				<li class="plane-map" data-group="focus" data-action="showTargetcardCtx" data-kind="plane"><i class="directions_boat_icon"></i>Plane card</li>
-				<li class="ship-map ctx-noalltracks" data-group="tracks" data-action="toggleTrackCtx"><i class="timeline_icon"></i>Track<span class="ctx-check">✓</span></li>
-				<li class="ctx-map" data-group="tracks" data-action="toggleAllTracks"><i class="timeline_icon"></i>All tracks<span class="ctx-check">✓</span></li>
-				<li class="ctx-map noandroid ctx-noalltracks" data-group="tracks" data-action="startBoxSelect"><i class="highlight_alt_icon"></i>Show tracks in area</li>
-				<li class="ctx-map ctx-selectedtracks" data-group="tracks" data-action="deleteAllTracks"><i class="remove_circle_outline_icon"></i>Clear tracks</li>
-				<li class="ctx-map ctx-removealltracks" data-group="tracks" data-action="toggleTrackCutoff"><i class="timer_icon"></i><span id="ctx_trackcutoff">Tracks from now</span><span class="ctx-check">✓</span></li>
-								<li class="ship" data-group="vessel" data-action="showVesselDetailCtx"><i class="dns_icon"></i>Vessel database entry</li>
-				<li class="ship noandroid" data-group="vessel" data-action="showNMEACtx"><i class="mail_icon"></i>Last message</li>
-				<li class="ship ctx-realtime" data-group="vessel" data-action="openRealtimeForMMSICtx"><i class="comment_icon"></i>Track NMEA</li>
-				<li class="ship ctx-replay-ship" data-group="copy" data-action="copyTextCtx"><i class="content_copy_icon noandroid"></i>Copy MMSI</li>
-				<li class="plane" data-group="copy" data-action="copyTextICAO"><i class="content_copy_icon noandroid"></i>Copy ICAO</li>
-				<li class="ship ctx-replay-ship" data-group="copy" data-action="copyCoordinatesCtx"><i class="content_paste_icon noandroid"></i>Copy Coordinates</li>
-				<li class="ship" data-group="lookup" data-action="openAISCatcherSiteCtx"><i class="directions_aiscatcher_icon"></i>View on www.aiscatcher.org</li>
-				<li class="ship noandroid" data-group="lookup" data-action="openGoogleSearchCtx"><i class="search_icon"></i>Search on Google</li>
-				<li class="plane noandroid" data-group="lookup" data-action="openGoogleSearchCtx" data-icao="1"><i class="search_icon"></i>Search on Google</li>
-				<li class="ship noandroid" data-group="lookup" data-action="openVesselFinderCtx"><i class="public_icon"></i>Find on VesselFinder</li>
-				<li class="ship noandroid" data-group="lookup" data-action="openAISHubCtx"><i class="public_icon"></i>Find on AISHub</li>
-				<li class="ctx-map" data-group="display" data-action="toggleLabel"><i class="label_icon"></i>Ship labels<span class="ctx-check">✓</span></li>
-				<li class="ctx-map" data-group="display" data-action="toggleRange"><i class="signal_cellular_alt_icon"></i>Station range<span class="ctx-check">✓</span></li>
-				<li class="ctx-map" data-group="display" data-action="toggleTicker"><i class="feed_icon"></i>Event ticker<span class="ctx-check">✓</span></li>
-				<li class="ctx-map" data-group="display" data-action="toggleAttribution"><i class="info_icon"></i>Map attribution<span class="ctx-check">✓</span></li>
-				<li class="ctx-map ctx-replay ctx-replay-map" data-group="tools" data-action="toggleReplaycard"><i class="play_circle_icon"></i>Replay<span class="ctx-check">✓</span></li>
-				<li class="ctx-map" data-group="tools" data-action="toggleMeasurecard"><i class="straighten_icon"></i>Measure<span class="ctx-check">✓</span></li>
-				<li class="ctx-map" data-group="tools" data-action="toggleCommunityPane"><i class="public_icon"></i>Community pane<span class="ctx-check">✓</span></li>
-				<li class="ctx-map" data-group="tools" data-action="toggleKioskMode"><i class="jamboard_kiosk_icon"></i>Kiosk mode<span class="ctx-check">✓</span></li>
-				<li class="ctx-map" data-group="tools" data-action="ToggleFireworks"><i class="explosion_icon"></i>Fireworks<span class="ctx-check">✓</span></li>
-				<li class="ctx-charts" data-group="charts" data-action="toggleGraphVisibility" data-graph="signal"><i class="timeline_icon"></i>Signal level graphs<span class="ctx-check">✓</span></li>
-				<li class="ctx-charts" data-group="charts" data-action="toggleGraphVisibility" data-graph="ppm"><i class="timeline_icon"></i>Frequency shift graphs<span class="ctx-check">✓</span></li>
-				<li class="settings" data-group="app" data-action="openSettings"><i class="build_icon"></i>Settings...</li>
-				<li class="settings noandroid ctx-replay-map" data-group="app" data-action="toggleDarkMode"><i class="brightness_4_icon"></i>Dark mode<span class="ctx-check">✓</span></li>
+				<li data-tags="ctx-targetcard" data-group="card" data-action="toggleTargetcardPin" id="ctx_targetcard_pin"><i class="drag_indicator_icon"></i>Pin card position<span class="ctx-check">✓</span></li>
+				<li data-tags="copy-text" data-group="text" data-action="copyTextCtx"><i class="content_copy_icon"></i>Copy to Clipboard</li>
+				<li data-tags="table-menu" data-group="table" data-action="downloadCSV"><i class="cloud_download_icon"></i>Download CSV</li>
+				<li data-tags="station" data-group="focus" data-action="toggleFollowStationCtx"><i class="push_pin_icon"></i><span id="ctx_follow_station">Follow station</span></li>
+				<li data-tags="ctx-map ctx-replay-map" data-group="focus" data-action="unpinCenter" id="ctx_menu_unpin"><i class="undo_icon"></i><span id="ctx_unpin">Release map center</span></li>
+				<li data-tags="ship-map ctx-replay-ship" data-group="focus" data-action="toggleFollowCtx"><i class="push_pin_icon"></i><span id="ctx_follow">Follow vessel</span></li>
+				<li data-tags="ship-map ctx-replay-ship" data-group="focus" data-action="mapResetViewZoomCtx"><i class="zoom_in_icon"></i>Zoom in on vessel</li>
+				<li data-tags="ship-map" data-group="focus" data-action="showTargetcardCtx" data-kind="ship"><i class="directions_boat_icon"></i>Ship card</li>
+				<li data-tags="plane-map" data-group="focus" data-action="showTargetcardCtx" data-kind="plane"><i class="directions_boat_icon"></i>Plane card</li>
+				<li class="ctx-noalltracks" data-tags="ship-map" data-group="tracks" data-action="toggleTrackCtx"><i class="timeline_icon"></i>Track<span class="ctx-check">✓</span></li>
+				<li data-tags="ctx-map" data-group="tracks" data-action="toggleAllTracks"><i class="timeline_icon"></i>All tracks<span class="ctx-check">✓</span></li>
+				<li class="noandroid ctx-noalltracks" data-tags="ctx-map" data-group="tracks" data-action="startBoxSelect"><i class="highlight_alt_icon"></i>Show tracks in area</li>
+				<li class="ctx-selectedtracks" data-tags="ctx-map" data-group="tracks" data-action="deleteAllTracks"><i class="remove_circle_outline_icon"></i>Clear tracks</li>
+				<li class="ctx-removealltracks" data-tags="ctx-map" data-group="tracks" data-action="toggleTrackCutoff"><i class="timer_icon"></i><span id="ctx_trackcutoff">Tracks from now</span><span class="ctx-check">✓</span></li>
+								<li data-tags="ship" data-group="vessel" data-action="showVesselDetailCtx"><i class="dns_icon"></i>Vessel database entry</li>
+				<li class="noandroid" data-tags="ship" data-group="vessel" data-action="showNMEACtx"><i class="mail_icon"></i>Last message</li>
+				<li class="ctx-realtime" data-tags="ship" data-group="vessel" data-action="openRealtimeForMMSICtx"><i class="comment_icon"></i>Track NMEA</li>
+				<li data-tags="ship ctx-replay-ship" data-group="copy" data-action="copyTextCtx"><i class="content_copy_icon noandroid"></i>Copy MMSI</li>
+				<li data-tags="plane" data-group="copy" data-action="copyTextICAO"><i class="content_copy_icon noandroid"></i>Copy ICAO</li>
+				<li data-tags="ship ctx-replay-ship" data-group="copy" data-action="copyCoordinatesCtx"><i class="content_paste_icon noandroid"></i>Copy Coordinates</li>
+				<li data-tags="ship" data-group="lookup" data-action="openAISCatcherSiteCtx"><i class="directions_aiscatcher_icon"></i>View on www.aiscatcher.org</li>
+				<li class="noandroid" data-tags="ship" data-group="lookup" data-action="openGoogleSearchCtx"><i class="search_icon"></i>Search on Google</li>
+				<li class="noandroid" data-tags="plane" data-group="lookup" data-action="openGoogleSearchCtx" data-icao="1"><i class="search_icon"></i>Search on Google</li>
+				<li class="noandroid" data-tags="ship" data-group="lookup" data-action="openVesselFinderCtx"><i class="public_icon"></i>Find on VesselFinder</li>
+				<li class="noandroid" data-tags="ship" data-group="lookup" data-action="openAISHubCtx"><i class="public_icon"></i>Find on AISHub</li>
+				<li data-tags="ctx-map" data-group="display" data-action="toggleLabel"><i class="label_icon"></i>Ship labels<span class="ctx-check">✓</span></li>
+				<li data-tags="ctx-map" data-group="display" data-action="toggleRange"><i class="signal_cellular_alt_icon"></i>Station range<span class="ctx-check">✓</span></li>
+				<li data-tags="ctx-map" data-group="display" data-action="toggleTicker"><i class="feed_icon"></i>Event ticker<span class="ctx-check">✓</span></li>
+				<li data-tags="ctx-map" data-group="display" data-action="toggleAttribution"><i class="info_icon"></i>Map attribution<span class="ctx-check">✓</span></li>
+				<li class="ctx-replay" data-tags="ctx-map ctx-replay-map" data-group="tools" data-action="toggleReplaycard"><i class="play_circle_icon"></i>Replay<span class="ctx-check">✓</span></li>
+				<li data-tags="ctx-map" data-group="tools" data-action="toggleMeasurecard"><i class="straighten_icon"></i>Measure<span class="ctx-check">✓</span></li>
+				<li data-tags="ctx-map" data-group="tools" data-action="toggleCommunityPane"><i class="public_icon"></i>Community pane<span class="ctx-check">✓</span></li>
+				<li data-tags="ctx-map" data-group="tools" data-action="toggleKioskMode"><i class="jamboard_kiosk_icon"></i>Kiosk mode<span class="ctx-check">✓</span></li>
+				<li data-tags="ctx-map" data-group="tools" data-action="ToggleFireworks"><i class="explosion_icon"></i>Fireworks<span class="ctx-check">✓</span></li>
+				<li data-tags="ctx-charts" data-group="charts" data-action="toggleGraphVisibility" data-graph="signal"><i class="timeline_icon"></i>Signal level graphs<span class="ctx-check">✓</span></li>
+				<li data-tags="ctx-charts" data-group="charts" data-action="toggleGraphVisibility" data-graph="ppm"><i class="timeline_icon"></i>Frequency shift graphs<span class="ctx-check">✓</span></li>
+				<li data-tags="settings" data-group="app" data-action="openSettings"><i class="build_icon"></i>Settings...</li>
+				<li class="noandroid" data-tags="settings ctx-replay-map" data-group="app" data-action="toggleDarkMode"><i class="brightness_4_icon"></i>Dark mode<span class="ctx-check">✓</span></li>
 			</ul>
 
 			<div class="tabcontent addscrollbar" id="about">
@@ -1320,7 +1327,7 @@
 						<svg xmlns="http://www.w3.org/2000/svg" height="12" viewBox="0 -960 960 960" width="12">
 							<path
 								d="M158-200 82-468q-3-12 2.5-28t23.5-22l52-18v-184q0-33 23.5-56.5T240-800h120v-120h240v120h120q33 0 56.5 23.5T800-720v184l52 18q21 8 25 23.5t1 26.5l-76 268q-50 0-91-23.5T640-280q-30 33-71 56.5T480-200q-48 0-89-23.5T320-280q-30 33-71 56.5T158-200ZM80-40v-80h80q42 0 83-13t77-39q36 26 77 38t83 12q42 0 83-12t77-38q36 26 77 39t83 13h80v80h-80q-42 0-82-10t-78-30q-38 20-78.5 30T480-40q-41 0-81.5-10T320-80q-38 20-78 30t-82 10H80Zm160-522 240-78 240 78v-158H240v158Z" />
-						</svg><span id="ticker_counts">0</span>
+						</svg><span class="ticker-count-value">0</span>
 					</div>
 					<div id="ticker_feed" class="ticker-feed"></div>
 					<div id="ticker_buckets" class="ticker-buckets"></div>
@@ -1352,7 +1359,7 @@
 						<div title="close this window" data-action="toggleMeasurecard" class="close_icon"></div>
 					</header>
 
-					<div class="mapcard_content" style="padding: 2px 10px 10px 10px;">
+					<div class="mapcard-content" style="padding: 2px 10px 10px 10px;">
 						<table class="mapcard-table">
 							<thead>
 								<tr>
@@ -1406,100 +1413,100 @@
 					</button>
 				</div>
 
-				<aside id="targetcard" class="mapcard targetcard-width targetcard-ismax"
+				<aside id="targetcard" class="mapcard mapcard-target card-width card-max"
 					data-on-contextmenu="targetcardContextMenu">
-					<header id="targetcard_header" class="mapcard_header">
-						<span data-action="toggleTargetcardSize" id="targetcard_header_flag"></span>
-						<span data-action="toggleTargetcardSize" id="targetcard_header_title"></span>
+					<header id="targetcard_header" class="mapcard-header">
+						<span data-action="toggleTargetcardSize" id="targetcard_header_flag" class="mapcard-flag"></span>
+						<span data-action="toggleTargetcardSize" id="targetcard_header_title" class="mapcard-title"></span>
 						<span class=""><i id="targetcard_drag_handle"
 								class="mapcard-header-icon drag_indicator_icon draggable draggable-hide-if-not-active"></i></span>
 						<span><i data-action="toggleTargetcardSize" id="targetcard_minmax_button"
-								class="mapcard-header-icon keyboard_arrow_up_icon"></i></span>
+								class="card-minmax mapcard-header-icon keyboard_arrow_up_icon"></i></span>
 						<span><i data-action="targetcardContextMenu"
 								class="mapcard-header-icon more_vert_icon"></i></span>
 						<span><i data-action="showTargetcardClose"
 								class="mapcard-header-icon close_icon"></i></span>
 					</header>
 
-					<div id="targetcard_content" class="mapcard_content">
+					<div id="targetcard_content" class="mapcard-content">
 
-						<div id="targetcard_vessel_head" class="targetcard-section targetcard-max-only" data-action="toggleTargetcardSection"
-							data-section="vessel" data-context-type="ship"><span>Vessel</span><span class="targetcard-caret-chip"><i class="targetcard-section-caret keyboard_arrow_up_icon"></i></span></div>
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="vessel" class="mapcard-content-row targetcard-content-row targetcard-max-only">
+						<div id="targetcard_vessel_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
+							data-section="vessel" data-context-type="ship"><span>Vessel</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_up_icon"></i></span></div>
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="vessel" class="mapcard-content-row card-row card-max-only">
 							<div><span>MMSI</span><span id="targetcard_mmsi">-</span></div>
 							<div><span>Callsign</span><span id="targetcard_callsign">-</span></div>
 							<div><span id="targetcard_imo_label">IMO</span><span id="targetcard_imo">-</span></div>
 						</div>
 
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="vessel" class="mapcard-content-row targetcard-content-row targetcard-max-only">
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="vessel" class="mapcard-content-row card-row card-max-only">
 							<div><span>Country</span><span id="targetcard_country"></span></div>
 							<div><span>Sender</span><span id="targetcard_type"></span></div>
 							<div><span>Ship type</span><span id="targetcard_shiptype"></span></div>
 						</div>
 
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="vessel" class="mapcard-content-row targetcard-content-row targetcard-max-only">
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="vessel" class="mapcard-content-row card-row card-max-only">
 							<div><span>Dimension</span><span id="targetcard_dimension">-</span></div>
 							<div><span>Draught</span><span id="targetcard_draught">-</span></div>
 							<div><span>Blue Sign</span><span id="targetcard_bluesign">-</span></div>
 						</div>
 
-						<div id="targetcard_hull_head" class="targetcard-section targetcard-max-only" data-action="toggleTargetcardSection"
-							data-section="hull" data-context-type="ship"><span>AIS antenna position</span><span class="targetcard-caret-chip"><i class="targetcard-section-caret keyboard_arrow_down_icon"></i></span></div>
+						<div id="targetcard_hull_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
+							data-section="hull" data-context-type="ship"><span>AIS antenna position</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_down_icon"></i></span></div>
 						<div id="targetcard_hull_section" data-section="hull" data-context-type="ship"
-							class="mapcard-content-row targetcard-content-row targetcard-max-only sec-collapsed">
+							class="mapcard-content-row card-row card-max-only card-collapsed">
 							<div id="targetcard_hull_body" class="hist-wrap"></div>
 						</div>
 
-						<div id="targetcard_voyage_head" class="targetcard-section targetcard-max-only" data-action="toggleTargetcardSection"
-							data-section="voyage" data-context-type="ship"><span>Voyage</span><span class="targetcard-caret-chip"><i class="targetcard-section-caret keyboard_arrow_up_icon"></i></span></div>
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row targetcard-content-row targetcard-max-only row-wide-first">
+						<div id="targetcard_voyage_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
+							data-section="voyage" data-context-type="ship"><span>Voyage</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_up_icon"></i></span></div>
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row card-row card-max-only row-wide-first">
 							<div><span>Status</span><span id="targetcard_status"></span></div>
 							<div><span>Altitude</span><span id="targetcard_altitude">-</span></div>
 						</div>
 
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row targetcard-content-row">
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row card-row">
 							<div><span>Speed</span><span id="targetcard_speed">-</span></div>
 							<div><span>Course</span><span id="targetcard_cog">-</span></div>
 							<div><span>Heading</span><span id="targetcard_heading">-</span></div>
 						</div>
 
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row targetcard-content-row targetcard-max-only row-wide-first">
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row card-row card-max-only row-wide-first">
 							<div><span>Destination</span><span id="targetcard_destination"></span></div>
 							<div><span>ETA</span><span id="targetcard_eta"></span></div>
 						</div>
 
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row targetcard-content-row targetcard-max-only row-wide-first">
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row card-row card-max-only row-wide-first">
 							<div><span>Latitude</span><span id="targetcard_lat">-</span></div>
 							<div><span>Longitude</span><span id="targetcard_lon">-</span></div>
 						</div>
 
-<div id="targetcard_speed_head" class="targetcard-section targetcard-max-only" data-action="toggleTargetcardSection"
-							data-section="speed" data-context-type="ship"><span>Speed Chart</span><span class="targetcard-caret-chip"><i class="targetcard-section-caret keyboard_arrow_down_icon"></i></span></div>
+<div id="targetcard_speed_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
+							data-section="speed" data-context-type="ship"><span>Speed Chart</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_down_icon"></i></span></div>
 						<div id="targetcard_speed_section" data-section="speed" data-context-type="ship"
-							class="mapcard-content-row targetcard-content-row targetcard-max-only sec-collapsed">
+							class="mapcard-content-row card-row card-max-only card-collapsed">
 							<div id="targetcard_speed_body" class="hist-wrap"></div>
 						</div>
 
-						<div id="targetcard_draught_head" class="targetcard-section targetcard-max-only" data-action="toggleTargetcardSection"
-							data-section="draught" data-context-type="ship"><span>Draught Chart</span><span class="targetcard-caret-chip"><i class="targetcard-section-caret keyboard_arrow_down_icon"></i></span></div>
+						<div id="targetcard_draught_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
+							data-section="draught" data-context-type="ship"><span>Draught Chart</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_down_icon"></i></span></div>
 						<div id="targetcard_draught_section" data-section="draught" data-context-type="ship"
-							class="mapcard-content-row targetcard-content-row targetcard-max-only sec-collapsed">
+							class="mapcard-content-row card-row card-max-only card-collapsed">
 							<div id="targetcard_draught_body" class="hist-wrap"></div>
 						</div>
 
-						<div id="targetcard_changes_head" class="targetcard-section targetcard-max-only" data-action="toggleTargetcardSection"
-							data-section="changes" data-context-type="ship"><span>Reported changes</span><span class="targetcard-caret-chip"><i class="targetcard-section-caret keyboard_arrow_down_icon"></i></span></div>
+						<div id="targetcard_changes_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
+							data-section="changes" data-context-type="ship"><span>Reported changes</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_down_icon"></i></span></div>
 						<div id="targetcard_changes_section" data-section="changes" data-context-type="ship"
-							class="mapcard-content-row targetcard-content-row targetcard-max-only sec-collapsed">
+							class="mapcard-content-row card-row card-max-only card-collapsed">
 							<div id="targetcard_changes_body" class="hist-wrap"></div>
 						</div>
 
 
-						<div id="shiptype_popover" class="tech-popover" style="display: none;">
+						<div id="shiptype_popover" class="card-popover" style="display: none;">
 							<div><span>Type:</span><span id="shiptype_code">-</span></div>
 							<div><span id="shiptype_desc">-</span></div>
 						</div>
-						<div id="tech_popover" class="tech-popover" style="display: none;">
+						<div id="tech_popover" class="card-popover" style="display: none;">
 							<div><span>RAIM:</span><span id="tech_raim">-</span></div>
 							<div><span>DTE:</span><span id="tech_dte">-</span></div>
 							<div><span>Mode:</span><span id="tech_assigned">-</span></div>
@@ -1514,34 +1521,34 @@
 							<div><span>Serial:</span><span id="tech_serial">-</span></div>
 						</div>
 						<div id="targetcard_plane_rows"></div>
-					<div id="targetcard_source_head" class="targetcard-section targetcard-max-only" data-action="toggleTargetcardSection"
-							data-section="source" data-context-type="ship"><span>AIS source</span><span class="targetcard-caret-chip"><i class="targetcard-section-caret keyboard_arrow_up_icon"></i></span></div>
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row targetcard-content-row targetcard-max-only">
+					<div id="targetcard_source_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
+							data-section="source" data-context-type="ship"><span>AIS source</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_up_icon"></i></span></div>
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only">
 							<div><span>RSSI</span><span id="targetcard_level">-</span></div>
 							<div><span>Drift</span><span id="targetcard_ppm">-</span></div>
 							<div><span>Bearing</span><span id="targetcard_bearing">-</span></div>
 						</div>
 
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row targetcard-content-row targetcard-max-only">
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only">
 							<div><span>last signal</span><span id="targetcard_last_signal"></span></div>
 							<div><span>Count</span><span id="targetcard_count">-</span></div>
 							<div><span>Channels</span><span id="targetcard_channels">-</span></div>
 						</div>
 
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row targetcard-content-row targetcard-max-only">
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only">
 							<div><span>Receiver</span><span id="targetcard_last_group"></span></div>
 							<div><span>Sources</span><span id="targetcard_sources">-</span></div>
 							<div><span>Msg type</span><span id="targetcard_msgtypes">-</span></div>
 						</div>
 
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row targetcard-content-row targetcard-max-only">
+						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only">
 							<div><span>In Range</span><span id="targetcard_received_stations"></span></div>
 							<div><span>Repeated</span><span id="targetcard_repeated">-</span></div>
 							<div><span>Distance</span><span id="targetcard_distance">-</span></div>
 						</div>
 					</div>
 
-<footer id="targetcard_footer" class="mapcard-footer targetcard-max-only">
+<footer id="targetcard_footer" class="mapcard-footer card-max-only">
 						<div id="targetcard_message_option" title="View binary messages"
 							data-action="showBinaryMessageDialogCard" data-context-type="ship" class="noandroid"><i
 								class="mail_icon"></i><span>Messages</span>
@@ -1683,9 +1690,6 @@
 	</div>
 	<div class="bottombar"></div>
 
-	<script src="components.js?hash="></script>
-	<script src="chrome.js?hash="></script>
-	<script src="settings.js?hash="></script>
 	<script src="custom/plugins.js"></script>
 	<script type="module" src="script.js?hash=ed7758b2a2e7264247e5e2cc7d7c416c"></script>
 

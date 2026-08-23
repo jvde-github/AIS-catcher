@@ -1,0 +1,8 @@
+/* The shared stylesheets in the order they depend on each other. A host that
+   cannot @import concatenates them in this order (AIS-catcher's build does).
+   The first four are enough for a page without a map. */
+@import "./tokens.css";
+@import "./icons.css";
+@import "./components.css";
+@import "./sprites.css";
+@import "./map.css";

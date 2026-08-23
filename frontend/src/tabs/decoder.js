@@ -1,4 +1,4 @@
-import { sanitizeString } from '../../shared/core/format.js';
+import { sanitizeString } from '../../shared/core/text.js';
 
 export function decode() {
     const input = document.getElementById('decoder_input').value.trim();

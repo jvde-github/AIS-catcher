@@ -11,8 +11,9 @@ import Stroke from 'ol/style/Stroke';
 import { fromLonLat } from 'ol/proj';
 
 import { settings } from '../core/state.js';
-import { calcOffset1M, createDistanceGeometry } from '../core/geo.js';
-import { getDistanceUnit } from '../../shared/core/format.js';
+import { calcOffset1M } from '../../shared/core/geo.js';
+import { rangeGeometry } from '../../shared/markers.js';
+import { getDistanceUnit } from '../core/units.js';
 
 // { getConfig, getStation, getActiveReceiver, getHoverFeature, showDialog, saveSettings, redrawMap }
 let deps = null;
@@ -232,7 +233,7 @@ export function updateDistanceCircles() {
 
     for (const radius of CIRCLE_RADII) {
         const distanceCircle = new OlFeature({
-            geometry: createDistanceGeometry(lat, lon, radius * conv)
+            geometry: rangeGeometry(lat, lon, radius * conv)
         });
 
         distanceCircle.tooltip = radius / 1000 + " " + getDistanceUnit().toUpperCase();

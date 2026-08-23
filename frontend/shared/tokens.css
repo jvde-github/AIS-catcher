@@ -143,8 +143,8 @@
     --color-brand-divider: var(--color-border-strong);
 
     /* link */
-    --color-link: purple;
-    --color-link-hover: blue;
+    --color-link: var(--color-accent);
+    --color-link-hover: var(--color-accent-hover, var(--color-accent));
 
     /* elevation tint */
     --color-shadow: rgba(0, 0, 0, 0.3);
@@ -228,8 +228,8 @@
     --color-brand-divider: color-mix(in srgb, var(--color-brand-ink) 18%, transparent);
     --color-brand-ink: var(--ink-850);
 
-    --color-link: var(--blue-400);
-    --color-link-hover: var(--green-300);
+    --color-link: var(--color-accent);
+    --color-link-hover: var(--color-accent-hover, var(--color-accent));
 
     --color-shadow: rgba(255, 255, 255, 0.1);
     --color-shadow-soft: rgba(255, 255, 255, 0.1);
@@ -397,12 +397,12 @@
     --color-highlight: var(--blue-500);
     /* active/selected element accent */
     --color-active: var(--cyan-500);
-    --color-error: red;
+    --color-error: var(--color-danger);
     /* not --color-danger: this red is deliberately the same in both themes */
     --color-alert: var(--red-700);
-    --color-ok: rgb(129, 244, 129);
-    --color-ok-text: green;
-    --color-ok-strong: #10b981;
+    --color-ok: var(--color-success);
+    --color-ok-text: var(--color-success);
+    --color-ok-strong: var(--color-success);
 
     --color-panel: var(--color-surface);
     --color-surface-overlay: var(--color-surface);
@@ -423,10 +423,10 @@
        also provide the semantic tokens the card reads directly: --color-text,
        --color-text-muted, --color-text-subtle, --color-band-accent, --color-menu,
        --color-ok-strong, --color-error, --color-off, --color-hover-overlay. */
-    --color-targetcard-surface: color-mix(in srgb, var(--color-band-accent) 37%, var(--color-surface-raised));
-    --color-targetcard-header: color-mix(in srgb, var(--color-band-accent) 55%, var(--color-surface-raised));
-    --color-targetcard-footer: color-mix(in srgb, var(--color-band-accent) 55%, var(--color-surface-raised));
-    --color-targetcard-edge: var(--blue-400);
+    --color-card-surface: color-mix(in srgb, var(--color-band-accent) 37%, var(--color-surface-raised));
+    --color-card-header: color-mix(in srgb, var(--color-band-accent) 55%, var(--color-surface-raised));
+    --color-card-footer: color-mix(in srgb, var(--color-band-accent) 55%, var(--color-surface-raised));
+    --color-card-edge: var(--blue-400);
     --color-antenna: #c2136b;
     --color-stat-divider: var(--color-border);
 
@@ -450,9 +450,9 @@
     --color-secondary: var(--cyan-400);
     --color-highlight: var(--blue-400);
     --color-active: var(--blue-400);
-    --color-error: #cf6679;
-    --color-ok: var(--green-300);
-    --color-ok-text: var(--green-300);
+    --color-error: var(--color-danger);
+    --color-ok: var(--color-success);
+    --color-ok-text: var(--color-success);
 
     --color-panel: #191919;
     --color-surface-overlay: #262626;
@@ -478,10 +478,10 @@
     --color-tooltip: #3c3c3c;
     --color-tooltip-border: #1e1e1e;
 
-    --color-targetcard-surface: color-mix(in srgb, var(--ink-500) 55%, var(--ink-400));
-    --color-targetcard-header: color-mix(in srgb, var(--color-targetcard-surface) 70%, var(--ink-300));
-    --color-targetcard-footer: color-mix(in srgb, var(--color-targetcard-surface) 45%, var(--ink-300));
-    --color-targetcard-edge: var(--blue-400);
+    --color-card-surface: color-mix(in srgb, var(--ink-500) 55%, var(--ink-400));
+    --color-card-header: color-mix(in srgb, var(--color-card-surface) 70%, var(--ink-300));
+    --color-card-footer: color-mix(in srgb, var(--color-card-surface) 45%, var(--ink-300));
+    --color-card-edge: var(--blue-400);
     --color-antenna: #ff5ca3;
     --color-stat-divider: #323232;
 

@@ -57,15 +57,15 @@ export function updateSharingState(sharing, sharing_uuid, engine_running) {
 
 function sharingState() {
     const f = liveSharing || deps.config.features || {};
-    if (f.engine_running === false) return { label: "Receiver stopped", color: "gray", state: "stopped" };
-    if (!f.sharing)        return { label: "No", color: "red", state: "off" };
-    if (!f.sharing_uuid)   return { label: "Yes (anonymous)", color: "orange", state: "anon" };
-    return { label: "Yes", color: "green", state: "on" };
+    if (f.engine_running === false) return { label: "Receiver stopped", cls: "status-off", state: "stopped" };
+    if (!f.sharing)        return { label: "No", cls: "status-bad", state: "off" };
+    if (!f.sharing_uuid)   return { label: "Yes (anonymous)", cls: "status-warn", state: "anon" };
+    return { label: "Yes", cls: "status-ok", state: "on" };
 }
 
 export function sharingDisplay() {
     const s = sharingState();
-    return [s.label, s.color];
+    return [s.label, s.cls];
 }
 
 let sharingPosted = null;
