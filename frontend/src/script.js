@@ -1500,10 +1500,9 @@ const BUCKET_ELEMENT = {
 
 function bucketChips() {
     return filter.BUCKETS.map((b) => ({
-        id: b.id,
+        ...b,
         label: b.label + " \u2014 click to show or hide",
         action: "toggleFilterBucket",
-        icon: b.icon,
         countId: BUCKET_ELEMENT[b.id],
     }));
 }
