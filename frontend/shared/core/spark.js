@@ -7,8 +7,11 @@ import { CHANGE, CHANGE_LABEL, getStatusVal, sanitizeString } from './text.js';
 
 let chartSeq = 0;
 
-function stepChartSVG(series, unit, footLeft, footRight, aria) {
+/* The generic step chart behind the speed and draught builders; hosts plot
+   their own series with it. fmt formats the axis maximum (default 1 decimal). */
+export function stepChartSVG(series, unit, footLeft, footRight, aria, fmt) {
     if (series.length < 2) return "";
+    const tick = fmt || ((v) => v.toFixed(1));
 
     const t0 = series[0].t, t1 = Math.max(series[series.length - 1].t, t0 + 1);
     const vmax = Math.max(...series.map((p) => p.v));
@@ -39,7 +42,7 @@ function stepChartSVG(series, unit, footLeft, footRight, aria) {
   <line x1="${L}" y1="${y(0)}" x2="${W - R}" y2="${y(0)}" class="spd-axis"/>
   <line x1="${L}" y1="${T}" x2="${L}" y2="${y(0)}" class="spd-axis"/>
   <line x1="${L}" y1="${y(top)}" x2="${W - R}" y2="${y(top)}" class="spd-grid"/>
-  <text x="${L - 4}" y="${(+y(top) + 3).toFixed(1)}" class="dim-t" text-anchor="end">${vmax.toFixed(1)}</text>
+  <text x="${L - 4}" y="${(+y(top) + 3).toFixed(1)}" class="dim-t" text-anchor="end">${tick(vmax)}</text>
   <text x="${L - 4}" y="${(+y(0) + 3).toFixed(1)}" class="dim-t" text-anchor="end">0</text>
   <polygon points="${area.join(" ")}" fill="url(#${grad})" stroke="none"/>
   <polyline points="${pts.join(" ")}" class="spd-line"/>
