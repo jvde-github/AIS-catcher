@@ -80,7 +80,7 @@ function inside(px, s) {
     return px[0] >= s.left && px[0] <= s.right && px[1] >= s.top && px[1] <= s.bottom;
 }
 
-function reveal(map, lonLat, card, opts) {
+export function reveal(map, lonLat, card, opts) {
     opts = opts || {};
     var size = map.getSize();
     var px = opts.pixel || map.getPixelFromCoordinate(fromLonLat(lonLat));
@@ -113,11 +113,11 @@ export function create(opts) {
         ],
     }, opts.chrome || {}));
 
+    /* the map pane already ends where a side panel begins */
     function freeWidth() {
         var map = getMap();
         var size = map ? map.getSize() : null;
-        var w = size && size[0] > 0 ? size[0] : window.innerWidth;
-        return w - chrome.inset("right") + chrome.gap();
+        return size && size[0] > 0 ? size[0] : window.innerWidth;
     }
 
     /* --- markers ---------------------------------------------------------------- */
@@ -136,7 +136,7 @@ export function create(opts) {
                 dockOffset: function () { return 0; },
                 viewSize: function () { var m = getMap(); return (m && m.getSize()) || [window.innerWidth, window.innerHeight]; },
                 freeWidth: freeWidth,
-                reserveRight: function () { return chrome.inset("right") - chrome.gap() + 30; },
+                reserveRight: function () { return 30; },
                 preferDock: function () { return !!settings().targetcard_top_left; },
                 pinned: function () {
                     var s = settings();
@@ -200,4 +200,15 @@ export function create(opts) {
         panTo: panTo,
         layout: layout,
     };
+}
+
+/* The map pane animates its width when a side panel opens; OpenLayers only
+   learns about a new size when told, so keep telling it until the slide ends. */
+export function trackResize(map, ms) {
+    var until = Date.now() + (ms || 400);
+    var step = function () {
+        map.updateSize();
+        if (Date.now() < until) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
 }

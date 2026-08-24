@@ -1,9 +1,10 @@
 import { settings, isAndroid, isKiosk } from './core/state.js';
 import { ShippingClass } from '../shared/core/constants.js';
-import { SPEED_PALETTES, palette as validPalette, bucketColor, speedBucket, paletteCSS } from './core/palette.js';
+import { SPEED_PALETTES, palette as validPalette, bucketColor, speedBucket, paletteCSS } from '../shared/core/palette.js';
 import * as filter from './core/filter.js';
 import * as components from '../shared/components.js';
 import * as mapui from '../shared/mapui.js';
+import * as tableLib from '../shared/table.js';
 import * as markersLib from '../shared/markers.js';
 import * as panelLib from '../shared/panel.js';
 import * as settingsStorage from '../shared/settings.js';
@@ -91,7 +92,6 @@ const ui = mapui.create({
             let inset = mapGap();
             if (edge === "top" && cls.contains("ticker-open") && !cls.contains("ticker-bottom")) inset += cssPx("--size-ticker", 44);
             if (edge === "bottom" && cls.contains("ticker-open") && cls.contains("ticker-bottom")) inset += cssPx("--size-ticker", 44);
-            if (edge === "right" && cls.contains("table-open")) inset += cssPx("--size-panel", 430);
             return inset;
         },
     },
@@ -109,9 +109,9 @@ const ui = mapui.create({
         layout: {
             fullBleed: () => cardFullBleed(),
             topInset: () => mapTopInset(),
-            dockOffset: () => tickerInset() + panelTopOffset(),
+            dockOffset: () => tickerInset(),
             freeWidth: () => freeMapWidth(),
-            reserveRight: () => (panels.table ? cssPx("--size-panel", 430) : 30),
+            reserveRight: () => 30,
         },
     },
     toolbar: {
@@ -766,6 +766,7 @@ function refreshBaseMapRows() {
 
         const active = (kind === "night") === !!settings.dark_mode;
         baseMapRows().filter((r) => r.dataset.kind === kind).forEach((r) => r.classList.toggle("basemap-active", active));
+        document.querySelector('.basemap-title[data-kind="' + kind + '"]')?.classList.toggle("basemap-active", active);
     }
 }
 
@@ -1550,13 +1551,8 @@ function updateMarkerCountTooltip() {
 }
 
 function updateTableSort(event, dataset, header) {
-    const column = header.getAttribute("data-column");
-    const currentOrder = header.classList.contains("ascending") ? "ascending" : "descending";
-
-    const newOrder = currentOrder === "descending" ? "ascending" : "descending";
-
-    settings.tableside_column = column;
-    settings.tableside_order = newOrder;
+    settings.tableside_column = header.getAttribute("data-column");
+    settings.tableside_order = tableLib.nextOrder(header);
 
     saveSettings();
     tablePage = 0;
@@ -1565,31 +1561,12 @@ function updateTableSort(event, dataset, header) {
 }
 
 function updateSortMarkers() {
-    const allHeaders = document.querySelectorAll("[data-column]");
-
-    allHeaders.forEach((otherHeader) => {
-        otherHeader.classList.remove("ascending");
-        otherHeader.classList.remove("descending");
-
-        if (otherHeader.getAttribute("data-column") === settings.tableside_column) {
-            otherHeader.classList.add(settings.tableside_order);
-        }
-    });
+    tableLib.markSort(document.getElementById("tableside"),
+        settings.tableside_column, settings.tableside_order);
 }
 
-function compareNumber(valueA, valueB) {
-    if (valueA == null) return settings.tableside_order === "ascending" ? 1 : -1;
-    if (valueB == null) return settings.tableside_order === "ascending" ? -1 : 1;
-    return valueA - valueB;
-}
-
-function compareString(valueA, valueB) {
-    if (valueA == null && valueB == null) return 0;
-    if (valueA == null) return 1;
-    if (valueB == null) return -1;
-
-    return (valueA + "").localeCompare(valueB + "");
-}
+const compareString = tableLib.compareString;
+const compareNumber = (a, b) => tableLib.compareNumber(a, b, settings.tableside_order);
 
 document.getElementById('shipSearchSide').addEventListener('input', () => { tablePage = 0; updateTablecard(); });
 
@@ -1599,37 +1576,21 @@ let tablePage = 0;
 let tablePerPage = 0;
 let tableRedrawing = false;
 
-// 0 while the panel has no height yet, which happens on the frame it opens
 function tablePageSize() {
-    const inner = document.querySelector(".tablecard_inner");
-    const head = document.querySelector(".mytable thead");
-    const row = document.querySelector("#tablecardBody tr");
-    const rowHeight = Math.max(18, row ? row.getBoundingClientRect().height : 26);
-    const space = (inner ? inner.getBoundingClientRect().height : 0) -
-        (head ? head.getBoundingClientRect().height : 0);
-
-    return space < rowHeight ? 0 : Math.max(1, Math.floor(space / rowHeight));
+    return tableLib.pageSize(
+        document.querySelector(".tablecard_inner"),
+        document.querySelector(".mytable thead"),
+        document.querySelector("#tablecardBody tr"));
 }
 
-// sub-pixel row heights make the arithmetic above optimistic by a row
 function tableRowsFitting() {
-    const inner = document.querySelector(".tablecard_inner");
-    if (!inner) return 0;
-
-    const bottom = inner.getBoundingClientRect().bottom;
-    return [...document.querySelectorAll("#tablecardBody tr")]
-        .filter((tr) => tr.getBoundingClientRect().bottom <= bottom + 1).length;
+    return tableLib.rowsFitting(
+        document.querySelector(".tablecard_inner"),
+        document.querySelectorAll("#tablecardBody tr"));
 }
 
 function renderTablePager(total, pages) {
-    const pager = document.getElementById("tablePager");
-    pager.hidden = pages < 2;
-    if (pager.hidden) return;
-
-    document.getElementById("tablePageLabel").textContent =
-        `${tablePage + 1} / ${pages} · ${total}`;
-    pager.querySelector('[data-action="tablePagePrev"]').disabled = tablePage === 0;
-    pager.querySelector('[data-action="tablePageNext"]').disabled = tablePage >= pages - 1;
+    tableLib.renderPager(document.getElementById("tablePager"), tablePage, pages, total);
 }
 
 function turnTablePage(step) {
@@ -1703,13 +1664,14 @@ function updateTablecard() {
             (age > TABLE_STALE_SEC ? " stale" : "");
 
         rows.push(`<tr class="${cls.trim()}" data-mmsi="${ship.mmsi}">` +
-            `<td>${flagHTML(ship.country, 'flag-table', getCountryName(ship.country))}${shipName}` +
+            `<td class="col-name"><span class="table-name">${flagHTML(ship.country, "", getCountryName(ship.country))}` +
+            `<span>${shipName}` +
             (ship.repeat > 0 ? `<span class="row-relay" title="Received through another station">&#8635;</span>` : "") +
-            `</td>` +
-            `<td class="num">${dist}</td>` +
-            `<td class="num">${spd}</td>` +
-            `<td>${getTableShiptype(ship)}</td>` +
-            `<td class="num">${getDeltaTimeVal(age)}</td>` +
+            `</span></span></td>` +
+            `<td class="num col-dist">${dist}</td>` +
+            `<td class="num col-spd">${spd}</td>` +
+            `<td class="col-type">${getTableShiptype(ship)}</td>` +
+            `<td class="num col-last">${getDeltaTimeVal(age)}</td>` +
             `</tr>`);
     }
 
@@ -2017,6 +1979,8 @@ function applyPanels(opts = {}) {
 
     applyToolbarMode();
     ui.chrome.invalidate();
+    /* the map pane narrows for the panel — OpenLayers has to be told */
+    if (map) mapui.trackResize(map);
 
     el.countersBtn?.classList.toggle("is-active", panels.statcard);
     el.tableBtn?.classList.toggle("is-active", panels.table);
@@ -3871,11 +3835,21 @@ function applyToolbarMode() {
     ui.toolbar.apply();
 }
 
-const mqFullBleed = window.matchMedia("(max-width: 500px), (max-height: 800px)");
-const mqNarrow = window.matchMedia("(max-width: 750px)");
+const mqShort = window.matchMedia("(max-height: 800px)");
+
+/* Room is a question about the map pane, which a side panel takes its slice
+   out of — the same width the stylesheet asks about with @container mappane. */
+function paneWidth() {
+    const el = document.getElementById("map");
+    return el && el.clientWidth ? el.clientWidth : window.innerWidth;
+}
+
+function paneNarrow() {
+    return paneWidth() <= 750;
+}
 
 function cardFullBleed() {
-    return mqFullBleed.matches;
+    return paneWidth() <= 500 || mqShort.matches;
 }
 
 function tickerAtTop() {
@@ -3887,7 +3861,7 @@ function mapInset(edge) {
 }
 
 function tickerInset() {
-    if (cardFullBleed() || mqNarrow.matches || !tickerAtTop()) return 0;
+    if (cardFullBleed() || paneNarrow() || !tickerAtTop()) return 0;
     return mapInset("top");
 }
 
@@ -3896,7 +3870,7 @@ function mapTopInset() {
 
     // On a narrow screen the card takes the whole top anyway; giving the bar
     // its strip there would cost the card room it has none of to spare.
-    if (mqNarrow.matches) return mapGap();
+    if (paneNarrow()) return mapGap();
 
     return mapInset("top");
 }
@@ -3905,21 +3879,14 @@ function mapGap() {
     return ui.chrome.gap();
 }
 
+/* The map pane already stops where a side panel begins, so its own width is
+   the width on offer. */
 function freeMapWidth() {
+    const el = document.getElementById("map");
+    if (el && el.clientWidth > 0) return el.clientWidth;
+
     const mapSize = map ? map.getSize() : null;
-    const width = mapSize && mapSize[0] > 0 ? mapSize[0] : window.innerWidth;
-    return width - (panels.table ? cssPx("--size-panel", 430) : 0);
-}
-
-// a docked card lines up with the side panels, whatever the header is doing
-function panelTopOffset() {
-    if (cardFullBleed()) return 0;
-
-    const panel = document.getElementById("tableside");
-    const parent = panelElements().targetcard.offsetParent;
-    if (!panel || !parent) return 0;
-
-    return Math.max(0, Math.round(panel.getBoundingClientRect().top - parent.getBoundingClientRect().top));
+    return mapSize && mapSize[0] > 0 ? mapSize[0] : window.innerWidth;
 }
 
 function pinTargetcard() {

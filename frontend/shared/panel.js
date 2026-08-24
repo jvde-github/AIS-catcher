@@ -98,8 +98,8 @@ export function create(opts) {
     }
 
     function build() {
-        adoptClasses(win);
         groupRows();
+        adoptClasses(win);
 
         var parsed = {};
         var current = null;
@@ -189,6 +189,7 @@ export function create(opts) {
 
     var store = null;
     var onChange = null;
+    var bound = false;
 
     function controls() {
         return win.querySelectorAll("[data-setting]");
@@ -212,6 +213,8 @@ export function create(opts) {
     function bind(s, o) {
         store = s;
         onChange = (o && o.onChange) || null;
+        if (bound) { sync(); return; }
+        bound = true;
         win.addEventListener("change", function (e) {
             var el = e.target.closest("[data-setting]");
             if (!el) return;

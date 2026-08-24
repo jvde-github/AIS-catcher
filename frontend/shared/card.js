@@ -330,7 +330,8 @@ export function create(opts) {
             var vs = viewSize();
             var rect = mount.getBoundingClientRect();
             var b = chrome.beside({ width: vs[0], height: vs[1] }, rect.width, rect.height, pixel,
-                { margin: besideMargin, reserveRight: reserveRight(), topInset: topInset() });
+                { margin: besideMargin, reserveRight: reserveRight(), topInset: topInset(),
+                  bottomInset: chrome.inset("bottom") });
             if (b) {
                 mount.style.left = b.left + "px";
                 mount.style.top = b.top + "px";

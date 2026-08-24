@@ -5,8 +5,9 @@
 
 /* Where the free map starts and ends. Registered as lengths so chrome.js reads
    back px rather than the calc() a host writes; the defaults leave one gap on
-   every edge, and a host with a ticker, a table or a nav bar overrides the
-   edge it occupies (body.table-open { --map-inset-right: ... }). */
+   every edge, and a host with a ticker or a nav bar overrides the edge it
+   occupies (body.ticker-open { --map-inset-top: ... }). A side panel is not an
+   inset: it takes its slice out of the map pane itself. */
 @property --map-inset-top {
     syntax: "<length>";
     inherits: true;
@@ -38,10 +39,6 @@
     --map-inset-left: var(--size-map-gap);
 }
 
-.map-button-box.map-bottom {
-    transition: none;
-}
-
 .map-button-box.map-pill:not(.map-bottom) {
     top: var(--map-inset-top);
 }
@@ -65,8 +62,7 @@
     box-shadow: var(--shadow-md);
     color: var(--color-text);
     fill: var(--color-text);
-    transform: translateX(calc(-50% - var(--map-table) / 2));
-    transition: transform var(--dur-slow) ease-out;
+    transform: translateX(-50%);
 }
 
 /* the host moves the buttons from the rail into the toolbar when there is
@@ -133,7 +129,6 @@
 .map-button-box {
     position: absolute;
     right: var(--size-map-gap);
-    transform: translateX(calc(-1 * var(--map-table)));
     /* below the map cards: the targetcard covers the controls */
     z-index: var(--z-map-control);
     display: flex;
@@ -219,6 +214,45 @@
 }
 
 
+/* --- attribution: a foldout that flashes on map moves --- */
+
+
+/* --- attribution: a foldout that flashes on map moves --- */
+
+.map-attribution-foldout {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-slow, 400ms) ease;
+    position: absolute;
+    right: 54px;
+    bottom: var(--map-inset-bottom);
+    max-width: 320px;
+    z-index: var(--z-map-control);
+    padding: 6px 10px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-surface-raised);
+    color: var(--color-text);
+    box-shadow: var(--shadow-md);
+    font-size: var(--fs-2xs);
+    line-height: 1.4;
+}
+
+.map-attribution-foldout.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.map-attribution-foldout a {
+    color: inherit;
+}
+
+.map-attribution-note {
+    font-size: var(--fs-2xs);
+    line-height: 1.4;
+    color: var(--color-text-muted);
+}
+
 /* --- ticker: a change feed strip; registers its own inset via --map-inset-* --- */
 
 .ticker-side {
@@ -239,6 +273,19 @@
     cursor: pointer;
 }
 
+/* Cards ask the pane how much room they have, not the window: with a side
+   panel open the two can differ by the width of the panel. */
+#map {
+    container: mappane / inline-size;
+}
+
+/* A side panel does not float over the map, it takes a slice of it: the map
+   pane narrows and every piece of chrome inside it follows on its own. */
+body.table-open #map {
+    width: calc(100% - var(--size-panel-table));
+    transition: width var(--dur-slow) ease-out;
+}
+
 .ticker {
     position: absolute;
     box-sizing: border-box;
@@ -246,7 +293,7 @@
     -webkit-user-select: none;
     top: 0;
     left: 0;
-    right: var(--map-table);
+    right: 0;
     height: var(--size-ticker);
     display: none;
     align-items: center;
@@ -257,8 +304,10 @@
     z-index: var(--z-map-control);
     background: var(--color-ticker-bg);
     backdrop-filter: blur(8px);
-    border: 0 solid var(--color-ticker-border);
-    border-bottom-width: 2px;
+    border: 2px solid transparent;
+    border-left-width: 0;
+    border-right-width: 0;
+    border-bottom-color: var(--color-ticker-border);
     color: var(--color-ticker-ink);
     font-size: var(--fs-sm);
     box-shadow: var(--shadow-md);
@@ -271,6 +320,25 @@
 
 .ticker.visible {
     display: flex;
+}
+
+body.ticker-bottom .ticker {
+    top: auto;
+    bottom: 0;
+    border-bottom-color: transparent;
+    border-top-color: var(--color-ticker-border);
+}
+
+body.ticker-bottom .ticker-side svg {
+    transform: rotate(180deg);
+}
+
+body.ticker-open:not(.ticker-bottom) {
+    --map-inset-top: calc(var(--size-map-gap) + var(--size-ticker));
+}
+
+body.ticker-open.ticker-bottom {
+    --map-inset-bottom: calc(var(--size-map-gap) + var(--size-ticker));
 }
 
 .ticker-count {
@@ -457,6 +525,8 @@
 .mapcard {
     top: 10px;
     left: 10px;
+    max-width: calc(100% - 20px);
+    max-height: calc(100% - 20px);
     display: flex;
     flex-direction: column;
     justify-content: stretch;
@@ -480,6 +550,71 @@
 
 .mapcard.visible {
     visibility: visible;
+}
+
+.card-width {
+    width: min(400px, 100%);
+}
+
+/* the measure window: wider than a target card, docked to the top left */
+.measurecard-width {
+    width: 450px;
+}
+
+.measurecard {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    top: calc(var(--map-inset-top) + 6px);
+    left: var(--map-inset-left);
+}
+
+@media only screen and (max-width: 500px) {
+    .measurecard {
+        border-radius: 0;
+        box-shadow: none;
+        top: 0;
+        left: 0;
+    }
+
+    .measurecard .mapcard-header {
+        flex-basis: 35px;
+        font-size: var(--fs-base);
+    }
+
+    .measurecard-width {
+        width: 100%;
+    }
+}
+
+/* Too narrow a pane to share: a card spans it edge to edge rather than leaving
+   a sliver of map beside it; maximized it takes the corner too, its content
+   height only capped by the pane. */
+@container mappane (max-width: 500px) {
+    .card-width {
+        width: 100%;
+    }
+
+    .mapcard {
+        max-width: 100%;
+    }
+
+    .mapcard-target {
+        left: 0;
+    }
+
+    .mapcard-target.card-max {
+        top: 0;
+        max-height: 100%;
+        border-radius: 0;
+    }
+}
+
+/* Short screens: a tall card may use the full height. */
+@media only screen and (max-height: 800px) {
+    .mapcard-target.card-max {
+        max-height: 100%;
+    }
 }
 
 .mapcard-content {
@@ -517,10 +652,6 @@
     border-radius: 0;
 }
 
-.mapcard-target .mapcard-header {
-    margin: 4px;
-}
-
 .mapcard-target .mapcard-footer {
     background-color: var(--color-card-footer);
     border-radius: 0;
@@ -536,6 +667,10 @@
 
 .card-dubious {
     border-left: 4px solid var(--color-danger);
+}
+
+.card-warning {
+    border-left: 4px solid var(--color-warning);
 }
 
 /* flush with the card: an inset band leaves a rim of card behind it, which
@@ -758,6 +893,11 @@
 /* Section headings inside the targetcard: a full-width band, set like the field
    labels around it so the card reads as one type system. Max-only, so a
    collapsed card stays a single compact block. */
+.hist-wrap {
+    display: block;
+    width: 100%;
+}
+
 .card-section {
     display: flex;
     align-items: center;
@@ -810,3 +950,189 @@
     .mapcard { left: 0; top: 0; }
     .mapcard header { font-size: var(--fs-base); }
 }
+
+/* --- the settings window: a panel sliding in from the left --- */
+
+.settings-window {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-panel-surface);
+    width: var(--size-panel-wide);
+    height: 100%;
+    top: 0px;
+    left: 0px;
+    position: absolute;
+    /* above the map controls: unlike the ship table, they do not slide aside
+       for this panel, and it goes full width under 750px */
+    z-index: var(--z-panel-top);
+    border-radius: 0;
+    padding: 0px;
+    margin: 0px;
+    transform: translateX(-110%);
+    visibility: hidden;
+    transition: transform var(--dur-slow) ease-out, visibility 0s linear var(--dur-slow);
+}
+
+.settings-window.active {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform var(--dur-slow) ease-out, visibility 0s;
+    box-shadow: var(--shadow-panel);
+}
+
+/* full-bleed only once the panel would leave no map worth seeing — asked of
+   the workspace, like the side table's split */
+@container workspace (max-width: 560px) {
+    .settings-window {
+        width: 100%;
+        transform: translateX(-100%);
+    }
+}
+
+/* spark output: dimension / speed / draught SVGs and the changes list (core/spark.js) */
+.dim-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.dim-hull {
+    fill: var(--color-accent);
+    fill-opacity: .10;
+    stroke: var(--color-accent);
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+}
+
+.dim-axis {
+    stroke: var(--color-text-subtle);
+    stroke-width: .9;
+    stroke-dasharray: 4 4;
+}
+
+.dim-ext { stroke: var(--color-text-subtle); stroke-width: .7; stroke-dasharray: 2 2; }
+.dim-arrow { stroke: var(--color-text-muted); stroke-width: .9; }
+/* Safari has no context-stroke, so the head takes the line colour by class */
+.dim-arrowhead { fill: var(--color-text-muted); }
+
+.dim-t {
+    fill: var(--color-text-muted);
+    font-size: 9.5px;
+    font-family: inherit;
+}
+
+.spd-line {
+    fill: none;
+    stroke: var(--color-accent);
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+}
+
+.spd-axis { stroke: var(--color-text-subtle); stroke-width: .9; }
+.spd-grid { stroke: var(--color-rule); stroke-width: .8; stroke-dasharray: 3 3; }
+
+@media (hover: hover) {
+}
+
+@media (hover: hover) {
+}
+
+
+/* Reported changes as a timeline: a rail down the left, one entry per change,
+   with what it was and what it became. */
+.tl {
+    position: relative;
+    list-style: none;
+    margin: 0;
+    padding: 10px 12px 8px 28px;
+}
+
+.tl::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 14px;
+    bottom: 14px;
+    width: 1px;
+    background: var(--color-rule);
+}
+
+.tl-item {
+    position: relative;
+    padding: 9px 0 11px;
+}
+
+.tl-item + .tl-item { border-top: 1px solid var(--color-rule); }
+
+.tl-dot {
+    position: absolute;
+    left: -17px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-card-surface);
+    border: 2px solid var(--color-card-edge);
+}
+
+.tl-head {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.tl-title {
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    font-size: var(--fs-2xs);
+    letter-spacing: .04em;
+}
+
+.tl-time {
+    color: var(--color-text-subtle);
+    font-size: var(--fs-2xs);
+    white-space: nowrap;
+}
+
+.tl-vals {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.tl-pill {
+    color: var(--color-text);
+    font-size: var(--fs-sm);
+}
+
+.tl-was { color: var(--color-text-subtle); }
+
+.tl-arrow { color: var(--color-text-subtle); font-size: var(--fs-sm); }
+
+.tl-firstseen {
+    color: var(--color-text-subtle);
+    font-size: var(--fs-2xs);
+    font-style: italic;
+}
+
+.chart-grad-top { stop-color: var(--color-accent); stop-opacity: .28; }
+.chart-grad-bottom { stop-color: var(--color-accent); stop-opacity: .02; }
+
+.dim-note {
+    display: block;
+    padding: 10px 2px;
+    color: var(--color-text-muted);
+    font-size: var(--fs-sm);
+    text-align: center;
+}
+
+.dim-origin { fill: var(--color-antenna); }
+.dim-origin-ring { fill: none; stroke: var(--color-antenna); stroke-width: 1; opacity: .5; }
+.dim-origin-line { stroke: var(--color-text-subtle); opacity: .6; }
+.dim-origin-t { fill: var(--color-text-muted); }

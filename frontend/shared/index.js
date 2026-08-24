@@ -1,6 +1,6 @@
-/* The public surface of the shared frontend package. Hosts import from here;
-   the file paths behind it may move, the names below do not without a note
-   in CHANGELOG.md. */
+/* The shared frontend package in one place. Hosts vendor a commit of this
+   directory and import the module paths directly; this barrel exists to name
+   what the package considers public. */
 
 export const VERSION = "1.0.0";
 
@@ -11,6 +11,7 @@ export * as settings from "./settings.js";
 export * as theme from "./theme.js";
 export * as markers from "./markers.js";
 export * as mapui from "./mapui.js";
+export * as table from "./table.js";
 export * as ticker from "./ticker.js";
 export * as toolbar from "./toolbar.js";
 export * as panel from "./panel.js";
@@ -23,3 +24,5 @@ export * as spark from "./core/spark.js";
 export * as filter from "./core/filter.js";
 export * as geo from "./core/geo.js";
 export * as constants from "./core/constants.js";
+export * as palette from "./core/palette.js";
+export * as sprites from "./core/sprites.js";

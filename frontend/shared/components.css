@@ -46,6 +46,13 @@
     color: var(--color-text);
 }
 
+.dialog-title-hint {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-normal);
+    color: var(--color-text-muted);
+    margin-left: 6px;
+}
+
 /* slot variant carrying a title rather than a control */
 .band-title,
 .dialog-title {
@@ -226,7 +233,8 @@
 
 .field-desc {
     display: block;
-    margin-top: 2px;
+    /* a caption sits clear of the control it describes rather than against it */
+    margin-top: 6px;
     margin-left: 2px;
     font-size: var(--fs-sm);
     font-weight: var(--fw-normal);
@@ -1043,8 +1051,9 @@
 
 .toast-container {
     position: absolute;
-    left: 10px;
-    bottom: 10px;
+    /* top left, below whatever claims the top edge of the map */
+    top: var(--map-inset-top, 10px);
+    left: var(--map-inset-left, 10px);
     z-index: var(--z-toast);
     display: flex;
     flex-direction: column;
@@ -1356,7 +1365,6 @@
 .flag { display: inline-block; padding: 0; margin: 0; }
 .flag-card { margin-right: 5px; font-size: 26px; box-shadow: var(--shadow-md); }
 .flag-tooltip { margin-right: 6px; font-size: 25px; opacity: .7; box-shadow: var(--shadow-sm); }
-.flag-table { margin-right: 6px; font-size: 16px; box-shadow: var(--shadow-sm); }
 .flag-inline { margin-right: 10px; }
 
 /* --- status text --------------------------------------------------------- */
@@ -1365,3 +1373,308 @@
 .status-bad { color: var(--color-danger); }
 .status-warn { color: var(--color-warning); }
 .status-off { color: var(--color-text-muted); }
+
+/* --- count chip -------------------------------------------------------------
+   A sprite and its count on one line; used by the ticker and the summary tab. */
+
+.stat-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    padding: 1px 4px;
+}
+
+.stat-item[data-zero="true"] {
+    opacity: 0.35;
+}
+
+.stat-item.stat-off {
+    opacity: 0.4;
+}
+
+.stat-item.stat-off span:last-child {
+    text-decoration: line-through;
+}
+
+.stat-item + .stat-item {
+    border-left: 1px solid var(--color-border-strong);
+    padding-left: 6px;
+}
+
+.stat-item .shipicon,
+.stat-item .staticon,
+.stat-item .helicoptericon {
+    flex-shrink: 0;
+    margin: -4px;
+}
+
+/* --- about panel ------------------------------------------------------------
+   A drawer on the right with a brand band, quick links, a link list and social
+   icons; the scrim behind it dims whatever it covers. */
+
+.info-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: var(--size-panel-narrow);
+    height: 100%;
+    background: var(--color-panel);
+    color: var(--color-text);
+    box-shadow: var(--shadow-panel);
+    font-size: var(--fs-md);
+    transform: translateX(100%);
+    transition: transform var(--dur-slow) ease;
+    z-index: var(--z-info);
+    display: flex;
+    flex-direction: column;
+}
+
+.info-panel.active {
+    transform: translateX(0);
+}
+
+/* dark only: between the band it hangs under and the swoosh inside it, so the
+   tiles read as raised rather than sunk into a darker well. Light mode's panel
+   is already brighter than its brand band. */
+.dark .info-panel {
+    background: var(--color-panel-surface);
+}
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--color-scrim);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--dur-slow), visibility var(--dur-slow);
+    z-index: var(--z-overlay);
+}
+
+.overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* a .band in brand colors: taller, no rule under it */
+.header-info-panel {
+    align-items: center;
+    height: var(--size-header-tall);
+    background: var(--color-brand);
+    border-bottom: none;
+}
+
+.header-info-panel .info-title {
+    background: var(--color-brand-accent);
+    font-size: var(--fs-xl);
+    color: var(--color-brand-ink);
+}
+
+.header-info-panel .close_icon {
+    cursor: pointer;
+    border: none;
+    color: var(--color-brand-ink);
+    margin: 0 10px 0 12px;
+    font-size: var(--fs-xl);
+    padding: 0;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-circle);
+    background: none;
+    transition: var(--transition-hover);
+}
+
+.header-info-panel .close_icon::before {
+    content: "";
+    width: 18px;
+    height: 18px;
+    background-color: currentColor;
+    -webkit-mask-image: var(--svg);
+    mask-image: var(--svg);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+}
+
+@media (hover: hover) {
+    .header-info-panel .close_icon:hover {
+        transform: var(--hover-lift);
+    }
+}
+
+.info-panel .content {
+    padding: 20px 16px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.quick-links {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin-bottom: 22px;
+}
+
+.quick-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    text-decoration: none;
+    color: var(--color-text);
+    padding: 12px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    font-size: var(--fs-sm);
+    transition: background var(--dur-med);
+    cursor: pointer;
+}
+
+.quick-link svg {
+    width: 28px;
+    height: 28px;
+    fill: currentColor;
+}
+
+.quick-link svg path[fill="#d1d5db"] {
+    fill: currentColor;
+}
+
+@media (hover: hover) {
+    .quick-link:hover {
+        border-color: var(--color-accent);
+        color: var(--color-text);
+        text-decoration: none;
+    }
+}
+
+.quick-link span {
+    margin-top: 4px;
+}
+
+.info-panel-section {
+    margin-bottom: 22px;
+}
+
+.link-list {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.link-list a {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--color-border);
+    text-decoration: none;
+    color: var(--color-text);
+    transition: background var(--dur-med);
+}
+
+.link-list a:last-child {
+    border-bottom: none;
+}
+
+@media (hover: hover) {
+    .link-list a:hover {
+        color: var(--color-accent);
+        text-decoration: none;
+    }
+}
+
+.link-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.link-item span {
+    display: inline-flex;
+    align-items: center;
+}
+
+.link-item .arrow_right_alt_icon {
+    margin-left: auto;
+    font-size: var(--fs-2xl);
+    color: var(--color-text-muted);
+}
+
+.social-box {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+}
+
+.social-links {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.social-links > span {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-medium);
+    color: var(--color-text);
+}
+
+.social-links > a {
+    display: inline-flex;
+    gap: 16px;
+}
+
+.social-icons {
+    display: flex;
+    gap: 16px;
+}
+
+.social-icons a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    color: var(--color-icon);
+    transition: color var(--dur-med), transform var(--dur-med);
+}
+
+@media (hover: hover) {
+    .social-icons a:hover {
+        transform: var(--hover-lift);
+    }
+}
+
+.social-icons a svg path[fill="#d1d5db"] {
+    fill: currentColor;
+}
+
+.social-icons a svg {
+    width: 26px;
+    height: 26px;
+}
+
+/* the swatch itself: a flat block of colour, no browser chrome */
+.color-picker {
+    -webkit-appearance: none;
+    border-radius: 0;
+    border: none;
+    width: 100px;
+    height: 20px;
+    cursor: pointer;
+    vertical-align: middle;
+    background-color: transparent;
+}
+
+.color-picker::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.color-picker::-webkit-color-swatch {
+    border: none;
+}

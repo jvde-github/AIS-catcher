@@ -370,7 +370,8 @@
     --size-header: 48px;
     /* tall header variant: the ship table's top offset and the info panel band */
     --size-header-tall: 55px;
-    --size-panel: 430px;
+    /* a table panel only has to hold a 20-character ship name and four numbers */
+    --size-panel-table: 380px;
 
     /* the bar is border-box, so --size-ticker is its whole height; script.js
        reads these too */
@@ -424,6 +425,9 @@
        --color-text-muted, --color-text-subtle, --color-band-accent, --color-menu,
        --color-ok-strong, --color-error, --color-off, --color-hover-overlay. */
     --color-card-surface: color-mix(in srgb, var(--color-band-accent) 37%, var(--color-surface-raised));
+    /* the surface a side panel is made of — settings window and side table
+       alike; a host that wants its own tint overrides this one token */
+    --color-panel-surface: var(--color-card-surface);
     --color-card-header: color-mix(in srgb, var(--color-band-accent) 55%, var(--color-surface-raised));
     --color-card-footer: color-mix(in srgb, var(--color-band-accent) 55%, var(--color-surface-raised));
     --color-card-edge: var(--blue-400);
@@ -479,6 +483,9 @@
     --color-tooltip-border: #1e1e1e;
 
     --color-card-surface: color-mix(in srgb, var(--ink-500) 55%, var(--ink-400));
+    /* A panel is a wall, not a card floating over the map: it sits a shade
+       under the boxes it holds rather than above them. */
+    --color-panel-surface: color-mix(in srgb, var(--ink-300) 50%, var(--ink-400));
     --color-card-header: color-mix(in srgb, var(--color-card-surface) 70%, var(--ink-300));
     --color-card-footer: color-mix(in srgb, var(--color-card-surface) 45%, var(--ink-300));
     --color-card-edge: var(--blue-400);

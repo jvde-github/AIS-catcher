@@ -82,7 +82,7 @@
 	<div class="mainspace-container">
 		<div class="toast-container" id="notification-container"></div>
 
-		<div class="tableside_window settings-bg tabcontent" id="tableside">
+		<div class="tableside_window tabcontent" id="tableside">
 			<div class="settings-header">
 				<div class="hdr-slot">
 					<input type="text" class="input search-box" id="shipSearchSide" placeholder="Search for ships..." title="Search for ships">
@@ -94,15 +94,15 @@
 				</div>
 				<div data-action="hideTablecard" class="close_icon"></div>
 			</div>
-			<div class="settings-bg tablecard_inner">
+			<div class="tablecard_inner">
 				<table class="mytable">
 					<thead>
 						<tr>
-							<th data-column="shipname" class="sort-icon" data-action="updateTableSort">Name</th>
-							<th data-column="distance" class="sort-icon num" data-action="updateTableSort">Dist <span id="table_dist_unit"></span></th>
-							<th data-column="speed" class="sort-icon num" data-action="updateTableSort">Spd <span id="table_spd_unit"></span></th>
-							<th data-column="type" class="sort-icon" data-action="updateTableSort">Type</th>
-							<th data-column="last_signal" class="sort-icon num" data-action="updateTableSort">Last</th>
+							<th data-column="shipname" class="sort-icon col-name" data-action="updateTableSort">Name</th>
+							<th data-column="distance" class="sort-icon num col-dist" data-action="updateTableSort">Dist <span id="table_dist_unit"></span></th>
+							<th data-column="speed" class="sort-icon num col-spd" data-action="updateTableSort">Spd <span id="table_spd_unit"></span></th>
+							<th data-column="type" class="sort-icon col-type" data-action="updateTableSort">Type</th>
+							<th data-column="last_signal" class="sort-icon num col-last" data-action="updateTableSort">Last</th>
 						</tr>
 					</thead>
 					<tbody id="tablecardBody"></tbody>
@@ -110,12 +110,12 @@
 			</div>
 		</div>
 
-		<div class="settings-window settings-bg" id="settings">
+		<div class="settings-window" id="settings">
 			<div class="settings-header">
 				<div class="hdr-slot"></div>
 				<div data-action="closeSettings" class="close_icon"></div>
 			</div>
-			<div class="settings-main settings-bg">
+			<div class="settings-main">
 				<header>System</header>
 				<section>
 					<div class="filter-topbar">
@@ -171,9 +171,8 @@
 				</section>
 				<header>Map</header>
 				<section>
-					<h5 class="st-title">Base map</h5>
+					<h5 class="st-title basemap-title" data-kind="day">Day map</h5>
 					<div class="basemap-row" data-kind="day">
-						<span class="basemap-name">Day map</span>
 						<span class="st-wide">
 							<select class="input select basemap-select" data-kind="day"></select>
 						</span>
@@ -186,8 +185,10 @@
 								data-on-change="setMapOpacity" data-on-input="updateBaseMapDim" />
 						</span>
 					</div>
+				</section>
+				<section>
+					<h5 class="st-title basemap-title" data-kind="night">Night map</h5>
 					<div class="basemap-row" data-kind="night">
-						<span class="basemap-name">Night map</span>
 						<span class="st-wide">
 							<select class="input select basemap-select" data-kind="night"></select>
 						</span>
@@ -200,7 +201,6 @@
 								data-on-change="setMapOpacity" data-on-input="updateBaseMapDim" />
 						</span>
 					</div>
-					<small class="st-desc">The night map is used in dark mode. Dimming fades the map so vessels stand out; 0% leaves it as is.</small>
 				</section>
 				<section>
 					<h5 class="st-title">Overlays</h5>
@@ -1342,7 +1342,7 @@
 				</aside>
 
 
-				<aside id="measurecard" class="mapcard measurecard-width">
+				<aside id="measurecard" class="mapcard measurecard measurecard-width">
 					<header class="dialog-header">
 						<div class="dialog-title">Measure<span class="dialog-title-hint">(shift-click)</span>
 						</div>
@@ -1607,7 +1607,7 @@
 						class="btn btn-primary map-button">
 						<svg xmlns="http://www.w3.org/2000/svg" height="12" viewBox="0 -960 960 960" width="12">
 							<path
-								d="M158-200 82-468q-3-12 2.5-28t23.5-22l52-18v-184q0-33 23.5-56.5T240-800h120v-120h240v120h120q33 0 56.5 23.5T800-720v184l52 18q21 8 25 23.5t1 26.5l-76 268q-50 0-91-23.5T640-280q-30 33-71 56.5T480-200q-48 0-89-23.5T320-280q-30 33-71 56.5T158-200ZM80-40v-80h80q42 0 83-13t77-39q36 26 77 38t83 12q42 0 83-12t77-38q36 26 77 39t83 13h80v80h-80q-42 0-82-10t-78-30q-38 20-78.5 30T480-40q-41 0-81.5-10T320-80q-38 20-78 30t-82 10H80Zm160-522 240-78 240 78v-158H240v158Z" />
+								d="M200-160q-33 0-56.5-23.5T120-240v-480q0-33 23.5-56.5T200-800h560q33 0 56.5 23.5T840-720v480q0 33-23.5 56.5T760-160H200Zm0-80h240v-120H200v120Zm320 0h240v-120H520v120ZM200-440h240v-120H200v120Zm320 0h240v-120H520v120ZM200-640h560v-80H200v80Z" />
 						</svg>
 					</button>
 					<button data-label="Measure" id="measure-btn" title="Measure distance" type="button" data-action="toggleMeasurecard"

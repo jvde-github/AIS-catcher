@@ -72,6 +72,7 @@
 .save_icon,
 .expand_less_icon,
 .login_icon,
+.join_icon,
 .engine_start_icon,
 .engine_stop_icon,
 .engine_restart_icon,
@@ -352,6 +353,10 @@
 
 .expand_less_icon {
     --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="m480-528 184 184 56-56-240-240-240 240 56 56 184-184Z"/%3E%3C/svg%3E');
+}
+
+.join_icon {
+    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"%3E%3Ccircle cx="9" cy="12" r="6"/%3E%3Ccircle cx="15" cy="12" r="6"/%3E%3C/svg%3E');
 }
 
 .login_icon {

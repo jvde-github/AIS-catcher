@@ -6,11 +6,13 @@
    The host declares what occupies each edge in CSS, as registered <length>
    properties on the document body:
 
-   :root            { --map-inset-top: var(--size-map-gap); }
-   body.table-open  { --map-inset-right: calc(var(--size-map-gap) + var(--size-panel)); }
+   :root                { --map-inset-top: var(--size-map-gap); }
+   body.ticker-open     { --map-inset-top: calc(var(--size-map-gap) + var(--size-ticker)); }
 
    so a frontend with a ticker, a nav bar or nothing at all says so in its own
-   stylesheet, and nothing here needs to know which furniture exists.
+   stylesheet, and nothing here needs to know which furniture exists. (A side
+   panel is not an inset: it takes its slice out of the map pane itself, and
+   the pane's own size is what freeBox() measures.)
 
    Controls that float inside that box rather than reserving an edge are named
    through configure({ obstacles }), and freeBox() reports what is left. The
@@ -66,7 +68,8 @@ export function beside(view, w, h, at, opts) {
     if (!(view.height > h + 2 * margin)) return null;
 
     var minTop = Math.max(margin, opts.topInset || 0);
-    var top = Math.max(minTop, Math.min(view.height - h - margin, at[1] - h / 2));
+    var maxTop = view.height - h - Math.max(margin, opts.bottomInset || 0);
+    var top = Math.max(minTop, Math.min(maxTop, at[1] - h / 2));
     var left = rightSpace >= 0 ? at[0] + margin
         : leftSpace >= 0 ? at[0] - w - margin
             : Math.max(0, (view.width - w) / 2);
