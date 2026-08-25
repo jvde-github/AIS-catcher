@@ -77,8 +77,37 @@ namespace Util
 		return number;
 	}
 
-	void Parse::URL(const std::string &url, std::string &protocol, std::string &username, std::string &password, std::string &host, std::string &port, std::string &path)
+	std::string Parse::PercentDecode(const std::string &s)
 	{
+		std::string out;
+		for (size_t i = 0; i < s.size(); i++)
+		{
+			if (s[i] == '%' && i + 2 < s.size() && Util::Convert::isHexDigit(s[i + 1]) && Util::Convert::isHexDigit(s[i + 2]))
+			{
+				out += (char)(Util::Convert::hexDigitValue(s[i + 1]) * 16 + Util::Convert::hexDigitValue(s[i + 2]));
+				i += 2;
+			}
+			else
+				out += s[i];
+		}
+		return out;
+	}
+
+	std::string Parse::URLWithoutCredentials(const std::string &url)
+	{
+		size_t start = url.find("://");
+		start = start == std::string::npos ? 0 : start + 3;
+		size_t end = url.find('/', start);
+		size_t at = url.rfind('@', end == std::string::npos ? std::string::npos : end);
+		if (at == std::string::npos || at < start)
+			return url;
+		return url.substr(0, start) + url.substr(at + 1);
+	}
+
+	void Parse::URL(const std::string &url, std::string &protocol, std::string &username, std::string &password, std::string &host, std::string &port, std::string &path, bool *has_password)
+	{
+		if (has_password)
+			*has_password = false;
 		std::string s = url;
 
 		protocol.clear();
@@ -102,7 +131,7 @@ namespace Util
 			s.resize(idx);
 		}
 
-		size_t at_pos = s.find('@');
+		size_t at_pos = s.rfind('@');
 		if (at_pos != std::string::npos)
 		{
 			std::string userinfo = s.substr(0, at_pos);
@@ -111,12 +140,14 @@ namespace Util
 			size_t colon_pos = userinfo.find(':');
 			if (colon_pos != std::string::npos)
 			{
-				username = userinfo.substr(0, colon_pos);
-				password = userinfo.substr(colon_pos + 1);
+				username = PercentDecode(userinfo.substr(0, colon_pos));
+				password = PercentDecode(userinfo.substr(colon_pos + 1));
+				if (has_password)
+					*has_password = true;
 			}
 			else
 			{
-				username = userinfo;
+				username = PercentDecode(userinfo);
 			}
 		}
 
@@ -129,38 +160,6 @@ namespace Util
 		else
 		{
 			host = s;
-		}
-	}
-
-	void Parse::HTTP_URL(const std::string &url, std::string &protocol, std::string &host, std::string &port, std::string &path)
-	{
-		protocol.clear();
-		host.clear();
-		port.clear();
-		path = "/";
-
-		std::string::size_type idx = url.find("://");
-		if (idx == std::string::npos)
-			return;
-
-		protocol = url.substr(0, idx);
-		idx += 3;
-
-		// Split authority from path first: a ':' in the path is not a port.
-		std::string::size_type pathStart = url.find('/', idx);
-		std::string authority = url.substr(idx, (pathStart != std::string::npos ? pathStart : url.length()) - idx);
-		if (pathStart != std::string::npos)
-			path = url.substr(pathStart);
-
-		std::string::size_type colon = authority.find(':');
-		if (colon != std::string::npos)
-		{
-			host = authority.substr(0, colon);
-			port = authority.substr(colon + 1);
-		}
-		else
-		{
-			host = authority;
 		}
 	}
 
@@ -292,6 +291,10 @@ namespace Util
 		else if (arg == "WSSMQTT")
 		{
 			protocol = PROTOCOL::WSSMQTT;
+		}
+		else if (arg == "WSS")
+		{
+			protocol = PROTOCOL::WSS;
 		}
 		else
 			return false;

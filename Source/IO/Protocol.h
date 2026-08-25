@@ -682,6 +682,8 @@ namespace Protocol
 		int received_ptr = 0;
 
 		std::string path = "/";
+		std::string username, password;
+		bool basic = false;
 		std::string origin;
 		std::string protocols;
 

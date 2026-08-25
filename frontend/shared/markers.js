@@ -65,6 +65,19 @@ export function applyPlaneSprite(plane) {
 }
 
 /* icon scale bucket by vessel length */
+/* radius of a hover/selection ring drawn with base `radiusBase`, in pixels */
+function ringRadius(radiusBase, s) {
+    const iconS = s.icon_scale || 1.0;
+    const circleS = s.circle_scale || 6.0;
+    return radiusBase * iconS * (1 + (circleS - 2.0) * 0.08);
+}
+
+/* outer radius of the selection ring, stroke included: what must stay clear */
+export function selectionRadius(s) {
+    s = s || {};
+    return ringRadius(13, s) + ((s.circle_scale || 6.0) * (s.icon_scale || 1.0)) / 2;
+}
+
 export function iconScale(length) {
     return length >= 100 && length <= 200 ? 0.9 : length > 200 ? 1.1 : 0.75;
 }
@@ -152,48 +165,59 @@ export function create(opts) {
     const isHovered = (ship) => { const h = hover(); return h.type === "ship" && ship.mmsi == h.id; };
     const isSelected = (ship) => { const s = selected(); return s.type === "ship" && ship.mmsi == s.id; };
 
+    /* Style parts are shared between features: a Style per sprite whose Icon
+       is set to the feature's rotation, scale and opacity, a Stroke per
+       colour/width/dash. The keys carry every setting they depend on, so a
+       changed setting simply lands on a new entry. */
+    const CACHE_MAX = 512;
+    function memo(map, key, make) {
+        let v = map.get(key);
+        if (v === undefined) {
+            if (map.size >= CACHE_MAX) map.clear();
+            v = make(); map.set(key, v);
+        }
+        return v;
+    }
+    const iconStyles = new Map();   // sprite -> Style with a mutable Icon
+    const strokes = new Map();
+    const fills = new Map();
+    const stroke = (color, width, dash) => memo(strokes, color + "|" + width + "|" + (dash ? dash.join(",") : ""), () => new Stroke({ color, width, lineDash: dash }));
+    const fill = (color) => memo(fills, color, () => new Fill({ color }));
+
+    function spriteStyle(cx, cy, imgSize) {
+        return memo(iconStyles, cx + "," + cy + "," + imgSize, () => new Style({
+            image: new Icon({ src: sheet, offset: [cx, cy], size: [imgSize, imgSize] }),
+        }));
+    }
+
     function marker(feature) {
         const s = settings();
         const ship = feature.ship;
         const mult = iconScale((ship.to_bow || 0) + (ship.to_stern || 0));
         const highlighted = isHovered(ship) || isSelected(ship);
-
-        return new Style({
-            image: new Icon({
-                src: sheet,
-                rotation: ship.rot,
-                offset: [ship.cx, ship.cy],
-                size: [ship.imgSize, ship.imgSize],
-                scale: s.icon_scale * mult,
-                opacity: highlighted ? 1 : opacity(ship),
-            }),
-        });
+        const style = spriteStyle(ship.cx, ship.cy, ship.imgSize), icon = style.getImage();
+        icon.setRotation(ship.rot);
+        icon.setScale(s.icon_scale * mult);
+        icon.setOpacity(highlighted ? 1 : opacity(ship));
+        return style;
     }
 
     function plane(feature) {
         const s = settings();
         const p = feature.plane;
-        return [new Style({
-            image: new Icon({
-                src: sheet,
-                rotation: p.rot,
-                offset: [p.cx, p.cy],
-                size: [p.imgSize, p.imgSize],
-                scale: s.icon_scale * p.scaling,
-                opacity: 1,
-            }),
-        })];
+        const style = spriteStyle(p.cx, p.cy, p.imgSize), icon = style.getImage();
+        icon.setRotation(p.rot);
+        icon.setScale(s.icon_scale * p.scaling);
+        icon.setOpacity(1);
+        return [style];
     }
 
     function hull(feature) {
         const s = settings();
         const [r, g, b] = hexToRgb(s.shipoutline_inner);
         return new Style({
-            fill: new Fill({ color: `rgba(${r}, ${g}, ${b}, ${s.shipoutline_opacity})` }),
-            stroke: new Stroke({
-                color: feature.ship && isHovered(feature.ship) ? s.shiphover_color : s.shipoutline_border,
-                width: 2,
-            }),
+            fill: fill(`rgba(${r}, ${g}, ${b}, ${s.shipoutline_opacity})`),
+            stroke: stroke(feature.ship && isHovered(feature.ship) ? s.shiphover_color : s.shipoutline_border, 2),
         });
     }
 
@@ -217,9 +241,7 @@ export function create(opts) {
             c = `rgba(${r}, ${g}, ${b}, ${o})`;
         }
 
-        return new Style({
-            stroke: new Stroke({ color: c, width: w, lineDash: feature.isDashed ? [6, 6] : undefined }),
-        });
+        return new Style({ stroke: stroke(c, w, feature.isDashed ? [6, 6] : undefined) });
     }
 
     /* the text part of a label; `cls` picks the class colour in background mode */
@@ -271,10 +293,9 @@ export function create(opts) {
         const s = settings();
         const iconS = s.icon_scale || 1.0;
         const circleS = s.circle_scale || 6.0;
-        const radiusScale = 1 + (circleS - 2.0) * 0.08;
         return new Style({
             image: new CircleStyle({
-                radius: radiusBase * iconS * radiusScale,
+                radius: ringRadius(radiusBase, s),
                 stroke: new Stroke({ color: s[colorKey], width: circleS * iconS }),
             }),
         });

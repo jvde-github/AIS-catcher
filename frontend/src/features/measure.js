@@ -1,256 +1,42 @@
 // Distance/bearing measuring tool: shift-click sets a start point/ship, the
-// next click the end. Owns the measures list, map layer and measurecard table.
+// next click the end. The shared module owns the measures, the layer's
+// content and the card rows; this binds it to the viewer's ships and card.
 
-import OlFeature from 'ol/Feature';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
-import Point from 'ol/geom/Point';
-import LineString from 'ol/geom/LineString';
-import Style from 'ol/style/Style';
-import Stroke from 'ol/style/Stroke';
-import Fill from 'ol/style/Fill';
-import Text from 'ol/style/Text';
-import { fromLonLat, toLonLat } from 'ol/proj';
-import { getLength } from 'ol/sphere';
 
 import { getDistanceVal, getDistanceUnit } from '../core/units.js';
-import { calculateBearing } from '../../shared/core/geo.js';
-import { token } from '../../shared/color.js';
-
-// { getShipsDB, showNotification, ensureMeasurecardVisible }
-let deps = null;
-let measures = [];
-let isMeasuring = false;
-let measureMode = false;
+import * as measureLib from '../../shared/measure.js';
 
 const measureSource = new VectorSource();
-
-const measureStyle = new Style({
-    stroke: new Stroke({
-        color: token('--color-success', 'green'),
-        lineDash: [20, 20],
-        width: 2,
-    })
-});
-
-const measureStyleWhite = new Style({
-    stroke: new Stroke({
-        color: 'white',
-        lineDash: [20, 20],
-        lineDashOffset: 20,
-        width: 2,
-    })
-});
-
-// label for the measure line
-const measureLabelStyle = new Style({
-    text: new Text({
-        font: '14px Calibri,sans-serif',
-        fill: new Fill({
-            color: 'rgba(255, 255, 255, 1)',
-        }),
-        backgroundFill: new Fill({
-            color: token('--color-success', 'green'),
-        }),
-        padding: [3, 3, 3, 3],
-        textBaseline: 'bottom',
-        offsetY: -15,
-    }),
-});
+let measure = null;
 
 export const measureVector = new VectorLayer({
     source: measureSource,
-    style: function (feature) {
-        return measureStyleFunction(feature);
-    },
+    style: (feature) => measure.style(feature),
 });
 
-function measureStyleFunction(feature) {
-    const styles = [];
-    const geometry = feature.getGeometry();
-    const type = geometry.getType();
-    let point, label;
-    if (type === 'LineString') {
-        point = new Point(geometry.getLastCoordinate());
-        label = `${feature.measureDistance} ${getDistanceUnit()}, ${feature.measureBearing} degrees`;
-    }
-    styles.push(measureStyle);
-    styles.push(measureStyleWhite);
-    if (label) {
-        measureLabelStyle.setGeometry(point);
-        measureLabelStyle.getText().setText(label);
-        styles.push(measureLabelStyle);
-    }
-    return styles;
-}
-
+// { getShipsDB, showNotification, ensureMeasurecardVisible, onMeasuresChanged }
 export function init(d) {
-    deps = d;
-
-    const mapcardContent = document.getElementById('measurecardInner');
-
-    mapcardContent.addEventListener('click', (event) => {
-        const row = event.target.closest('tr');
-        if (row) {
-            const measureIndex = row.getAttribute('data-index');
-            if (event.target.classList.contains('visibility_icon')) {
-                measures[measureIndex].visible = !measures[measureIndex].visible;
-                refreshMeasures();
-            } else if (event.target.classList.contains('delete_icon')) {
-                measures.splice(measureIndex, 1);
-                refreshMeasures();
-            }
-        }
+    measure = measureLib.create({
+        source: measureSource,
+        rows: document.getElementById('measurecardInner'),
+        vessel: (mmsi) => {
+            const s = d.getShipsDB()[mmsi];
+            return s ? { lon: s.raw.lon, lat: s.raw.lat, name: s.raw.shipname || s.raw.mmsi } : null;
+        },
+        notify: d.showNotification,
+        ensureCard: d.ensureMeasurecardVisible,
+        onChange: d.onMeasuresChanged,
+        distance: { value: getDistanceVal, unit: getDistanceUnit },
     });
-
-    refreshMeasures();
+    measure.refresh();
 }
 
-export function refreshMeasures() {
-    measureSource.clear();
-
-    const shipsDB = deps.getShipsDB();
-    const mapcardContent = document.getElementById('measurecardInner');
-
-    let content = '';
-    let rowIndex = 0;
-
-    measures = measures.filter(measure => {
-
-        if ((measure.start_type == 'ship' && !(measure.start_value in shipsDB))) {
-            deps.showNotification('Ship out of range for measurement.', 'warning');
-            return false;
-        }
-
-        if (measure.end_type == 'ship' && !(measure.end_value in shipsDB)) {
-            deps.showNotification('Ship out of range for measurement.', 'warning');
-            return false;
-        }
-
-        const pointLabel = (lonlat) => `(${lonlat[1].toFixed(1)},${lonlat[0].toFixed(1)})`;
-
-        let sc = undefined, ss = undefined, from = undefined;
-        if (measure.start_type == 'point') {
-            sc = fromLonLat(measure.start_value);
-            from = pointLabel(measure.start_value);
-        } else {
-            ss = shipsDB[measure.start_value].raw;
-            sc = fromLonLat([ss.lon, ss.lat]);
-            from = ss.shipname || ss.mmsi;
-        }
-
-        let ec = undefined, es = undefined, to = "";
-        if ('end_type' in measure) {
-            if (measure.end_type == 'point') {
-                ec = fromLonLat(measure.end_value);
-                to = pointLabel(measure.end_value);
-            } else {
-                es = shipsDB[measure.end_value].raw;
-                ec = fromLonLat([es.lon, es.lat]);
-                to = es.shipname || es.mmsi;
-            }
-        }
-
-        let distance = 0, bearing = 0;
-
-        if (sc && ec) {
-            const geometry = new LineString([sc, ec]);
-
-            const length = getLength(geometry);
-            distance = getDistanceVal(length / 1852);
-            const coordinates = geometry.getCoordinates();
-            const start = toLonLat(coordinates[0]);
-            const end = toLonLat(coordinates[coordinates.length - 1]);
-            bearing = calculateBearing(start, end).toFixed(0);
-
-            if (measure.visible) {
-                const feature = new OlFeature(geometry);
-                measureSource.addFeature(feature);
-                feature.measureDistance = distance;
-                feature.measureBearing = bearing;
-            }
-        }
-        let icon = measure.visible ? 'visibility' : 'visibility_off';
-
-        content += `<tr data-index="${rowIndex++}"><td style="padding: 2px;"><i style="padding-left:2px; font-size: 15px;" class="${icon}_icon visibility_icon"></i></td><td style="padding: 0px;"><i style="font-size: 15px;" class="delete_icon"></i></td><td>${from}</td><td>${to}</td><td title="${distance} ${getDistanceUnit()}">${distance}</td><td title="${bearing} degrees">${bearing}</td></tr>`;
-
-        return true;
-    });
-
-    mapcardContent.innerHTML = content;
-    deps.onMeasuresChanged();
-}
-
-function startMeasurementAtPoint(t, v) {
-    isMeasuring = true;
-    measures.push({ start_value: v, start_type: t, visible: true });
-    deps.ensureMeasurecardVisible();
-    deps.showNotification('Select end point or object');
-    refreshMeasures();
-    setMeasureMode();
-}
-
-function setMeasureEnd(t, v) {
-    const lastMeasureIndex = measures.length - 1;
-    measures[lastMeasureIndex] = {
-        ...measures[lastMeasureIndex],
-        end_value: v,
-        end_type: t
-    };
-}
-
-function endMeasurement(t, v) {
-    if (isMeasuring) {
-        setMeasureEnd(t, v);
-        deps.showNotification('Measurement added.', 'success');
-        cancel();
-    }
-}
-
-function clearMeasureMode() {
-    measureMode = false;
-    document.getElementById('map').classList.remove('crosshair_cursor');
-}
-
-export function setMeasureMode() {
-    measureMode = true;
-    document.getElementById('map').classList.add('crosshair_cursor');
-}
-
-export function cancel() {
-    isMeasuring = false;
-    clearMeasureMode();
-    refreshMeasures();
-}
-
-export function isActive() {
-    return measureMode || isMeasuring;
-}
-
-export function count() {
-    return measures.length;
-}
-
-// `shipMmsi` is null for a bare map point; `getLonLat` is lazy because the
-// pixel-to-coordinate conversion is only needed in the point case.
-export function handleMapClick(shipMmsi, getLonLat) {
-    measureMode = false;
-
-    if (isMeasuring) {
-        if (shipMmsi != null) endMeasurement("ship", shipMmsi);
-        else endMeasurement("point", getLonLat());
-        return;
-    }
-
-    if (shipMmsi != null) startMeasurementAtPoint("ship", shipMmsi);
-    else startMeasurementAtPoint("point", getLonLat());
-}
-
-export function updateMeasureEnd(shipMmsi, getLonLat) {
-    if (!isMeasuring) return;
-
-    if (shipMmsi != null) setMeasureEnd("ship", shipMmsi);
-    else setMeasureEnd("point", getLonLat());
-
-    refreshMeasures();
-}
+export function refreshMeasures() { measure.refresh(); }
+export function setMeasureMode() { measure.arm(); }
+export function cancel() { measure.cancel(); }
+export function isActive() { return measure.isActive(); }
+export function count() { return measure.count(); }
+export function handleMapClick(shipMmsi, getLonLat) { measure.handleMapClick(shipMmsi, getLonLat); }
+export function updateMeasureEnd(shipMmsi, getLonLat) { measure.updateEnd(shipMmsi, getLonLat); }

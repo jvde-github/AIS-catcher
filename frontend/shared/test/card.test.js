@@ -23,6 +23,10 @@ test("card: rows build sections, toggle, events", () => {
     assert.equal(document.querySelector('#c [data-section="source"]:not(.card-section)').classList.contains("card-collapsed"), false);
     c.section.available("source", false);
     assert.equal(document.querySelector('#c [data-section="source"].card-section').classList.contains("card-empty"), true);
+    assert.equal(document.querySelector('#c [data-section="source"]:not(.card-section)').classList.contains("card-collapsed"), true);
+    c.section.available("source", true);
+    assert.equal(document.querySelector('#c [data-section="source"].card-section').classList.contains("card-empty"), false);
+    assert.equal(document.querySelector('#c [data-section="source"]:not(.card-section)').classList.contains("card-collapsed"), false);
 });
 
 test("card: footer pages only when more than fit", () => {

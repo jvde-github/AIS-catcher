@@ -684,7 +684,7 @@ namespace Protocol
 					fd_set readfds;
 					FD_ZERO(&readfds);
 					FD_SET(sock, &readfds);
-					timeval tv = {0, 0};
+					timeval tv = {timeout > 0 ? timeout : 0, 0};
 					if (select(sock + 1, &readfds, nullptr, nullptr, &tv) > 0)
 						avail = length;
 				}
@@ -1447,6 +1447,7 @@ namespace Protocol
 		{
 			request << "Origin: " << origin << "\r\n";
 		}
+		request << Util::Convert::authorizationHeader(username, password, basic);
 		if (!protocols.empty())
 		{
 			request << "Sec-WebSocket-Protocol: " << protocols << "\r\n";
@@ -1843,6 +1844,13 @@ namespace Protocol
 			break;
 		case AIS::KEY_SETTING_BINARY:
 			binary = Util::Parse::Switch(value);
+			break;
+		case AIS::KEY_SETTING_USERNAME:
+			username = value;
+			break;
+		case AIS::KEY_SETTING_PASSWORD:
+			password = value;
+			basic = true;
 			break;
 		default:
 			return false;

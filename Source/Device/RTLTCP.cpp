@@ -54,6 +54,10 @@ namespace Device
 		case PROTOCOL::WS:
 			session = tcp.add(&ws);
 			break;
+		case PROTOCOL::WSS:
+			session = tcp.add(&tls);
+			session = tls.add(&ws);
+			break;
 		case PROTOCOL::WSMQTT:
 			session = tcp.add(&ws);
 			session = ws.add(&mqtt);
@@ -171,7 +175,8 @@ namespace Device
 		case AIS::KEY_SETTING_URL:
 		{
 			std::string prot, host, port, path, username, password;
-			Util::Parse::URL(arg, prot, username, password, host, port, path);
+			bool has_password;
+			Util::Parse::URL(arg, prot, username, password, host, port, path, &has_password);
 
 			if (!host.empty())
 				SetKey(AIS::KEY_SETTING_HOST, host);
@@ -181,10 +186,16 @@ namespace Device
 				SetKey(AIS::KEY_SETTING_PROTOCOL, prot);
 			if (!username.empty())
 				SetKey(AIS::KEY_SETTING_USERNAME, username);
-			if (!password.empty())
+			if (has_password)
 				SetKey(AIS::KEY_SETTING_PASSWORD, password);
+			ws.setPath(path);
 			break;
 		}
+		case AIS::KEY_SETTING_USERNAME:
+		case AIS::KEY_SETTING_PASSWORD:
+			mqtt.setOptionKey(key, arg);
+			ws.setOptionKey(key, arg);
+			break;
 		case AIS::KEY_SETTING_PROTOCOL:
 		{
 			if (!Util::Parse().Protocol(arg, Protocol))
@@ -198,9 +209,14 @@ namespace Device
 			case PROTOCOL::RTLTCP:
 				setFormat(Format::CU8);
 				break;
+			case PROTOCOL::WS:
+			case PROTOCOL::WSS:
+				if (tcp.getPort().empty())
+					SetKey(AIS::KEY_SETTING_PORT, Protocol == PROTOCOL::WSS ? "443" : "80");
+				setFormat(Format::TXT);
+				break;
 			case PROTOCOL::GPSD:
 			case PROTOCOL::MQTT:
-			case PROTOCOL::WS:
 			case PROTOCOL::WSMQTT:
 			case PROTOCOL::TXT:
 				setFormat(Format::TXT);
@@ -224,7 +240,7 @@ namespace Device
 			fifo.setWait(lossless);
 			break;
 		default:
-			if (!tcp.setOptionKey(key, arg) && !mqtt.setOptionKey(key, arg) && !gpsd.setOptionKey(key, arg) && !rtltcp.setOptionKey(key, arg) && !ws.setOptionKey(key, arg))
+			if (!tcp.setOptionKey(key, arg) && !tls.setOptionKey(key, arg) && !mqtt.setOptionKey(key, arg) && !gpsd.setOptionKey(key, arg) && !rtltcp.setOptionKey(key, arg) && !ws.setOptionKey(key, arg))
 				Device::SetKey(key, arg);
 			break;
 		}

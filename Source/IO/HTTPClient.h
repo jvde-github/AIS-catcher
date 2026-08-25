@@ -79,14 +79,18 @@ namespace IO
 		int parseResponse();
 
 	public:
-		std::string protocol, host, port, path, userpwd;
+		std::string protocol, host, port, path, username, password;
+		bool basic = false;
 		bool secure = false;
 
 		const std::string &getResponse() const { return message; }
 
 		void setUserPwd(const std::string &up)
 		{
-			userpwd = up;
+			size_t colon = up.find(':');
+			username = up.substr(0, colon);
+			password = colon == std::string::npos ? "" : up.substr(colon + 1);
+			basic = true;
 		}
 
 		void setTimeout(int t) { timeout = t; }
@@ -98,7 +102,7 @@ namespace IO
 
 		void setURL(const std::string &url)
 		{
-			Util::Parse::HTTP_URL(url, protocol, host, port, path);
+			Util::Parse::URL(url, protocol, username, password, host, port, path, &basic);
 
 			if (protocol.empty())
 				throw std::runtime_error("Invalid URL, missing protocol.");

@@ -37,6 +37,7 @@ namespace Device
 		Protocol::GPSD gpsd;
 		Protocol::RTLTCP rtltcp;
 		Protocol::WebSocket ws;
+		Protocol::TLS tls;
 		Protocol::ProtocolBase *session = &tcp;
 
 		const int TRANSFER_SIZE = 16384;

@@ -118,7 +118,8 @@ enum class PROTOCOL
 	TLS,
 	TCP,
 	MQTTS,
-	WSSMQTT
+	WSSMQTT,
+	WSS
 };
 
 enum class Type

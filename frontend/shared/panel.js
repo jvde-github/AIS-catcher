@@ -189,7 +189,21 @@ export function create(opts) {
 
     var store = null;
     var onChange = null;
+    var captions = {};     // key -> (value) => text, for captions that need a host format
     var bound = false;
+
+    /* <span data-caption-for="track_weight" data-caption-format="Width ({v})">:
+       kept in step with the control on open, drag and change */
+    function caption(key) {
+        win.querySelectorAll('[data-caption-for="' + key + '"]').forEach(function (el) {
+            var v = store.get(key);
+            el.textContent = captions[key] ? captions[key](v) : (el.dataset.captionFormat || "{v}").replace("{v}", v);
+        });
+    }
+
+    function captionsAll() {
+        win.querySelectorAll("[data-caption-for]").forEach(function (el) { caption(el.dataset.captionFor); });
+    }
 
     function controls() {
         return win.querySelectorAll("[data-setting]");
@@ -208,11 +222,13 @@ export function create(opts) {
             if (el.type === "checkbox") el.checked = !!v;
             else if (v != null) el.value = v;
         });
+        captionsAll();
     }
 
     function bind(s, o) {
         store = s;
         onChange = (o && o.onChange) || null;
+        captions = (o && o.captions) || {};
         if (bound) { sync(); return; }
         bound = true;
         win.addEventListener("change", function (e) {
@@ -220,7 +236,18 @@ export function create(opts) {
             if (!el) return;
             var key = el.dataset.setting, value = readControl(el);
             store.set(key, value);
+            caption(key);
             if (onChange) onChange(key, value, el);
+        });
+        /* a slider being dragged: the value is staged (not saved) so captions
+           and the map follow the thumb; the release above saves it */
+        win.addEventListener("input", function (e) {
+            var el = e.target.closest("[data-setting]");
+            if (!el || el.type !== "range") return;
+            var key = el.dataset.setting, value = readControl(el);
+            if (store.stage) store.stage(key, value); else return;
+            caption(key);
+            if (onChange) onChange(key, value, el, true);
         });
         sync();
     }

@@ -16,6 +16,7 @@ export * as ticker from "./ticker.js";
 export * as toolbar from "./toolbar.js";
 export * as panel from "./panel.js";
 export * as menu from "./menu.js";
+export * as measure from "./measure.js";
 export * as color from "./color.js";
 
 export * as units from "./core/units.js";

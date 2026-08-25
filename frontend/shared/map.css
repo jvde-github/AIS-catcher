@@ -276,7 +276,7 @@
 /* Cards ask the pane how much room they have, not the window: with a side
    panel open the two can differ by the width of the panel. */
 #map {
-    container: mappane / inline-size;
+    container: mappane / size;
 }
 
 /* A side panel does not float over the map, it takes a slice of it: the map
@@ -522,11 +522,14 @@ body.ticker-open.ticker-bottom {
 
 /* --- cards: the shell (header, rows, sections, footer) and its content --- */
 
+/* docked flush in the corner: the map gap is for what floats, a card only
+   moves for what occupies an edge (the inset less the gap: a ticker, the
+   host's bottom chrome) */
 .mapcard {
-    top: 10px;
-    left: 10px;
-    max-width: calc(100% - 20px);
-    max-height: calc(100% - 20px);
+    top: calc(var(--map-inset-top) - var(--size-map-gap));
+    left: 0;
+    max-width: 100%;
+    max-height: calc(100% - var(--map-inset-top) - var(--map-inset-bottom) + 2 * var(--size-map-gap));
     display: flex;
     flex-direction: column;
     justify-content: stretch;
@@ -561,22 +564,13 @@ body.ticker-open.ticker-bottom {
     width: 450px;
 }
 
+/* docked like every card: flush and square, corners only on a roomy pane */
 .measurecard {
-    border-radius: var(--radius-lg);
     overflow: hidden;
-    box-shadow: var(--shadow-lg);
-    top: calc(var(--map-inset-top) + 6px);
-    left: var(--map-inset-left);
+    border-radius: 0;
 }
 
 @media only screen and (max-width: 500px) {
-    .measurecard {
-        border-radius: 0;
-        box-shadow: none;
-        top: 0;
-        left: 0;
-    }
-
     .measurecard .mapcard-header {
         flex-basis: 35px;
         font-size: var(--fs-base);
@@ -655,6 +649,27 @@ body.ticker-open.ticker-bottom {
 .mapcard-target .mapcard-footer {
     background-color: var(--color-card-footer);
     border-radius: 0;
+}
+
+/* A large pane has room to spare: the card takes the map gap like the
+   floating chrome, with the corners and shadow of a floating panel. */
+@container mappane (min-width: 1600px) and (min-height: 850px) {
+    .mapcard {
+        top: var(--map-inset-top);
+        left: var(--map-inset-left);
+        max-height: calc(100% - var(--map-inset-top) - var(--map-inset-bottom));
+        box-shadow: var(--shadow-md);
+    }
+
+    .mapcard-target,
+    .mapcard-target .mapcard-footer {
+        border-radius: var(--radius-md);
+    }
+
+    .measurecard {
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+    }
 }
 
 .card-validated {
@@ -941,13 +956,9 @@ body.ticker-open.ticker-bottom {
     flex: none;
 }
 
-@media only screen and (max-width: 500px) {
-    .mapcard { left: 0; top: 0; border-radius: 0px; }
-    .mapcard header { font-size: var(--fs-base); }
-}
-
-@media only screen and (max-height: 800px) {
-    .mapcard { left: 0; top: 0; }
+/* a phone or a short screen: the card takes the corner (left: 0 is the base rule) */
+@media only screen and (max-width: 500px), only screen and (max-height: 800px) {
+    .mapcard { top: 0; }
     .mapcard header { font-size: var(--fs-base); }
 }
 

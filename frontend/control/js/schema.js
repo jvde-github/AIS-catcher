@@ -1119,6 +1119,7 @@ const receiverSchema = {
             { value: "none", label: "Raw" },
             { value: "rtltcp", label: "RTLTCP" },
             { value: "ws", label: "WS" },
+            { value: "wss", label: "WSS" },
             { value: "wsmqtt", label: "WSMQTT" },
             { value: "mqtt", label: "MQTT" },
             { value: "gpsd", label: "GPSD" },
@@ -1126,7 +1127,7 @@ const receiverSchema = {
             { value: "basestation", label: "BASESTATION" },
             { value: "raw1090", label: "RAW1090" }
         ],
-        tooltip: "Stream format of the remote server",
+        tooltip: "How the remote server is reached and what it sends",
         dependsOn: {
             field: "input",
             value: "RTLTCP"
@@ -1139,8 +1140,8 @@ const receiverSchema = {
         jsonpath: "rtltcp.host",
         placeholder: "e.g., 127.0.0.1",
         dependsOn: {
-            field: "input",
-            value: "RTLTCP"
+            field: "rtltcp_protocol",
+            value: ["txt", "none", "rtltcp", "wsmqtt", "mqtt", "gpsd", "beast", "basestation", "raw1090"]
         },
         width: 75
     },
@@ -1151,10 +1152,34 @@ const receiverSchema = {
         jsonpath: "rtltcp.port",
         placeholder: "e.g., 1234",
         dependsOn: {
-            field: "input",
-            value: "RTLTCP"
+            field: "rtltcp_protocol",
+            value: ["txt", "none", "rtltcp", "wsmqtt", "mqtt", "gpsd", "beast", "basestation", "raw1090"]
         },
         width: 25
+    },
+    rtltcp_url: {
+        name: "rtltcp_url",
+        label: "URL",
+        type: "text",
+        jsonpath: "rtltcp.url",
+        placeholder: "wss://host:port/path?query",
+        tooltip: "Port 443 (wss) or 80 (ws) unless given; user:password@ sends HTTP Basic, token@ a Bearer token",
+        dependsOn: {
+            field: "rtltcp_protocol",
+            value: ["ws", "wss"]
+        }
+    },
+    rtltcp_ssl_verify: {
+        name: "rtltcp_ssl_verify",
+        label: "Verify Certificate",
+        type: "toggle",
+        jsonpath: "rtltcp.ssl_verify",
+        defaultValue: true,
+        width: 25,
+        dependsOn: {
+            field: "rtltcp_protocol",
+            value: "wss"
+        }
     },
     rtltcp_sample_rate: {
         name: "rtltcp_sample_rate",
@@ -1235,7 +1260,7 @@ const receiverSchema = {
         placeholder: "WebSocket sub-protocols",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: "ws"
+            value: ["ws", "wss"]
         }
     },
     rtltcp_binary: {
@@ -1247,7 +1272,7 @@ const receiverSchema = {
         width: 25,
         dependsOn: {
             field: "rtltcp_protocol",
-            value: "ws"
+            value: ["ws", "wss"]
         }
     },
     rtltcp_origin: {
@@ -1258,7 +1283,7 @@ const receiverSchema = {
         placeholder: "Origin header for WebSocket",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: ["ws", "wsmqtt"]
+            value: ["ws", "wss", "wsmqtt"]
         }
     },
     rtltcp_topic: {
@@ -1288,10 +1313,10 @@ const receiverSchema = {
         label: "Username",
         type: "text",
         jsonpath: "rtltcp.username",
-        placeholder: "MQTT username",
+        placeholder: "Username (MQTT, or HTTP Basic for WebSocket)",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: ["mqtt", "wsmqtt"]
+            value: ["mqtt", "wsmqtt", "ws", "wss"]
         }
     },
     rtltcp_password: {
@@ -1299,10 +1324,10 @@ const receiverSchema = {
         label: "Password",
         type: "text",
         jsonpath: "rtltcp.password",
-        placeholder: "MQTT password",
+        placeholder: "Password, or a bearer token with no username",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: ["mqtt", "wsmqtt"]
+            value: ["mqtt", "wsmqtt", "ws", "wss"]
         }
     },
     rtltcp_qos: {

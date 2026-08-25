@@ -384,6 +384,12 @@
 
     --size-map-button: 34px;
     --size-map-controls: calc(var(--size-map-button) + 4px);
+    /* breakpoints; map.css repeats these numbers in @media/@container, which cannot read tokens */
+    --bp-narrow: 500px;           /* a pane too narrow to share: full-bleed cards */
+    --bp-short: 800px;            /* a short screen: a tall card takes the full height */
+    --bp-cramped-height: 1250px;  /* with --bp-narrow: an unfolded card would leave little map, so cards open compact */
+    --bp-roomy-width: 1600px;     /* with --bp-roomy-height: cards keep the map gap */
+    --bp-roomy-height: 850px;
     --size-panel-wide: 500px;
     --size-panel-narrow: 288px;
 }

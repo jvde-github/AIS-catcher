@@ -79,6 +79,7 @@ const MENU_CHECKS = {
     ToggleFireworks: () => fireworks.isRunning(),
     toggleGraphVisibility: (el) => settings[GRAPH_KINDS[el.dataset.graph].setting],
     toggleDarkMode: () => settings.dark_mode,
+    toggleScreenSize: () => !!document.fullscreenElement,
     replayToggleLabels: () => replay.getLabels(),
     replaySetSpeed: (el) => replay.getSpeed() == el.dataset.speed,
 };
@@ -111,9 +112,18 @@ const ui = mapui.create({
             topInset: () => mapTopInset(),
             dockOffset: () => tickerInset(),
             freeWidth: () => freeMapWidth(),
-            reserveRight: () => 30,
+            preferDock: () => !!settings.targetcard_top_left,
+            pinned: () => settings.targetcard_pinned ? { x: settings.targetcard_pinned_x, y: settings.targetcard_pinned_y } : null,
         },
     },
+    /* top-down: Escape closes the first open one; a card taking the stage
+       closes the ones marked stage. The dialog closes itself on Escape. */
+    stack: [
+        { isOpen: () => !!(dialogModal && dialogModal.isOpen()) },
+        { isOpen: () => settingsPanel.isOpen(), close: () => settingsPanel.close(), stage: true },
+        { isOpen: () => document.getElementById("menubar").classList.contains("visible"), close: () => hideMenu(), stage: true },
+        { isOpen: () => targetcardVisible(), close: () => showTargetcard(null, null) },
+    ],
     toolbar: {
         bar: document.getElementById("maptoolbar"),
         rail: document.querySelector(".map-button-box.map-pill:not(.map-bottom)"),
@@ -484,13 +494,6 @@ function _bindDelegatedActions() {
         });
     }
 }
-// the dialog is absent here: its modal component closes itself on Escape
-document.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape") return;
-    if (dialogModal && dialogModal.isOpen()) return;
-    if (settingsPanel.isOpen()) closeSettings();
-    else if (document.getElementById("menubar").classList.contains("visible")) hideMenu();
-});
 
 if (document.body) _bindDelegatedActions();
 else document.addEventListener('DOMContentLoaded', _bindDelegatedActions);
@@ -635,7 +638,8 @@ const DEFAULT_SETTINGS = {
         show_track_on_hover: false,
         show_track_on_select: false,
         show_all_tracks: false,
-        targetcard_top_left: false,
+        targetcard_top_left: true,
+        targetcard_open_max: true,
         map_toolbar: "compact",
         show_signal_graphs: true,
         show_ppm_graphs: true,
@@ -913,8 +917,18 @@ const settingsPanel = panelLib.create({
 function buildSettingsTabs() {
     settingsPanel.build();
     settingsPanel.bind(
-        { get: (k) => settings[k], set: (k, v) => { settings[k] = v; saveSettings(); } },
-        { onChange: (k) => { if (k === "label_class_background") updateLabelColorRows(); redrawMap(); } });
+        { get: (k) => settings[k], set: (k, v) => { settings[k] = v; saveSettings(); }, stage: (k, v) => { settings[k] = v; } },
+        { captions: {
+            circle_scale: (v) => `Width (${parseFloat(v).toFixed(1)})`,
+            shipoutline_opacity: (v) => `Opacity (${parseFloat(v).toFixed(2)})`,
+            track_opacity: (v) => `Opacity (${Math.round(parseFloat(v) * 100)}%)`,
+          },
+          onChange: (k, v, el, staged) => {
+            if (k === "label_class_background") updateLabelColorRows();
+            /* while a slider is dragged the styles re-run; the release rebuilds the features */
+            if (staged) [markerLayer, planeLayer, shapeLayer, trackLayer, labelLayer].forEach((l) => l.changed());
+            else redrawMap();
+        } });
     panelLib.adoptClasses(document);   // column headers outside the window too
     document.querySelectorAll(".tablecard_inner table thead > tr > th, .signal-table thead th")
         .forEach((el) => el.classList.add("col-header"));
@@ -1660,7 +1674,7 @@ function updateTablecard() {
 
         const dist = ship.distance != null ? getDistanceVal(ship.distance) : "-";
         const spd = ship.speed != null ? getSpeedVal(ship.speed) : "-";
-        const cls = (ship.mmsi == card_mmsi && card_type === "ship" ? " selected" : "") +
+        const cls = (isSelectedShip(ship.mmsi) ? " selected" : "") +
             (age > TABLE_STALE_SEC ? " stale" : "");
 
         rows.push(`<tr class="${cls.trim()}" data-mmsi="${ship.mmsi}">` +
@@ -1699,6 +1713,15 @@ function updateTablecard() {
         const tr = e.target.closest('tr[data-mmsi]');
         if (tr) showContextMenu(e, parseInt(tr.dataset.mmsi), "ship", ["object", "object-map"]);
     };
+}
+
+function isSelectedShip(mmsi) {
+    return card_type === "ship" && mmsi == card_mmsi;
+}
+
+function syncTableSelection() {
+    document.querySelectorAll('#tablecardBody tr[data-mmsi]').forEach(tr =>
+        tr.classList.toggle('selected', isSelectedShip(tr.dataset.mmsi)));
 }
 
 function setCount(id, value) {
@@ -1992,10 +2015,7 @@ function applyPanels(opts = {}) {
 
     ticker.setEnabled(tickerOn);
 
-    if (panels.targetcard && opts.reposition !== false) {
-        positionAside(undefined, el.targetcard);
-        fitTargetcard();
-    }
+    if (panels.targetcard && opts.reposition !== false) positionAside(undefined, el.targetcard);
 }
 
 function resetCardPosition(el) {
@@ -2394,12 +2414,7 @@ function initFullScreen() {
 }
 
 function handleFullScreenChange() {
-    let icon = document.getElementById("screentoggle-id");
-    if (document.fullscreenElement) {
-        icon.innerHTML = "fullscreen_exit";
-    } else {
-        icon.innerHTML = "fullscreen";
-    }
+    ui.menu.close?.();
 }
 
 // we calculate the lat/lon for 1m move in direction of heading
@@ -2531,15 +2546,6 @@ function toggleTargetcardSize() {
                 e[i].classList.toggle("card-row-selected");
         }
 
-            const aside = document.getElementById("targetcard");
-        if (aside.style.top && aside.getBoundingClientRect().bottom > window.innerHeight) {
-            const db = card_type == "ship" ? shipsDB : card_type == "plane" ? planesDB : null;
-
-            if (db && card_mmsi in db) {
-                const raw = db[card_mmsi].raw;
-                positionAside(map.getPixelFromCoordinate(ol.proj.fromLonLat([raw.lon, raw.lat])), aside);
-            }
-        }
     } else {
         for (let i = 0; i < e.length; i++) {
             if (e[i].classList.contains("card-row-selected")) e[i].classList.toggle("card-row-selected");
@@ -3240,6 +3246,7 @@ function measurecardVisible() {
 }
 
 function toggleMeasurecard() {
+    if (!panels.measure) ui.dismiss();
     setPanels({ measure: !panels.measure });
 }
 
@@ -3694,9 +3701,7 @@ function isTargetcardMax() {
 }
 
 function targetcardMinIfMaxonMobile() {
-    if (targetcardVisible() && window.matchMedia("(max-height: 1000px) and (max-width: 500px)").matches && isTargetcardMax()) {
-        toggleTargetcardSize();
-    }
+    if (targetcardVisible() && mapui.paneCramped() && isTargetcardMax()) toggleTargetcardSize();
 }
 
 function drawStation() {
@@ -3822,7 +3827,7 @@ function adjustMapForTargetcard(pixel) {
     const raw = db && card_mmsi in db ? db[card_mmsi].raw : null;
     if (!raw || !raw.lat || !raw.lon) return;
 
-    if (ui.reveal([raw.lon, raw.lat], pixel) === "panned") stopHover();
+    if (ui.reveal([raw.lon, raw.lat], pixel, card_type == 'ship' ? { minZoom: 10 } : undefined) === "panned") stopHover();
 }
 
 // The ticker owns the top strip. A card that starts above it hides the very
@@ -3931,12 +3936,16 @@ function positionAside(pixel, aside) {
         pixel = [mapSize[0] / 2, mapSize[1] / 2];
     }
 
-    const how = ui.card.place(pixel);
-    if (how !== "pinned") adjustMapForTargetcard(pixel);
+    /* beside the target the card already leaves it visible; only a docked
+       card may end up covering it */
+    const how = ui.card.open(pixel);
+    if (how === "dock") adjustMapForTargetcard(pixel);
+    return how;
 }
 
 function showTargetcard(type, m, pixel = undefined) {
     targetcard.resetHistory();
+    if (m != null) ui.dismiss();   // a card takes the stage, wherever it was opened from
 
     const aside = document.getElementById("targetcard");
     const visible = targetcardVisible();
@@ -3972,6 +3981,7 @@ function showTargetcard(type, m, pixel = undefined) {
     }
 
     setCard(m, type);
+    syncTableSelection();
 
     if (targetcardVisible()) {
         if (settings.show_track_on_select && card_type == 'ship') {
@@ -3985,10 +3995,11 @@ function showTargetcard(type, m, pixel = undefined) {
             }
         }
 
-        if (isTargetcardMax()) {
-            toggleTargetcardSize();
-        }
-        if (!visible) targetcardMinIfMaxonMobile();
+        /* a fresh card opens at the size the setting asks for, except on a
+           cramped pane which always opens compact; switching ship with the
+           card up keeps the size the user has */
+        const wantMax = settings.targetcard_open_max && !mapui.paneCramped();
+        if (!visible && isTargetcardMax() !== wantMax) toggleTargetcardSize();
         positionAside(pixel, aside);
 
         if (card_type == 'ship') targetcard.populate();
@@ -4220,6 +4231,10 @@ function redrawMap() {
 
 function updateDarkMode() {
     document.documentElement.classList.toggle("dark", settings.dark_mode);
+    document.getElementById("theme-toggle-moon")?.style.setProperty("display", settings.dark_mode ? "none" : "");
+    document.getElementById("theme-toggle-sun")?.style.setProperty("display", settings.dark_mode ? "" : "none");
+    const themeBtn = document.getElementById("theme-toggle-button");
+    if (themeBtn) themeBtn.title = settings.dark_mode ? "Switch to day" : "Switch to night";
     plotsModule?.updateColors();
     updateMapLayer();
     redrawMap();
@@ -4328,13 +4343,7 @@ function updateSettingsTab() {
 
     // Update all slider display values
     updateSliderDisplay('iconScale', settings.icon_scale);
-    updateSliderDisplay('trackWeight', settings.track_weight);
-    updateSliderDisplay('trackOpacity', settings.track_opacity);
     updateSliderDisplay('trackHistory', settings.track_history);
-    updateSliderDisplay('trackTrashThreshold', settings.track_trash_threshold);
-    updateSliderDisplay('tooltipFontSize', settings.tooltipLabelFontSize);
-    updateSliderDisplay('shipoutlineOpacity', settings.shipoutline_opacity);
-    updateSliderDisplay('circleScale', settings.circle_scale || 6.0);
 
     document.getElementById("settings_table_shiptype_use_icon").checked = settings.table_shiptype_use_icon;
     document.getElementById("settings_show_track_on_hover").checked = settings.show_track_on_hover;
@@ -4490,17 +4499,12 @@ function trackHistoryLabel(m) {
     return m < 60 ? m + ' min' : (m / 60) + ' h';
 }
 
+/* sliders the settings panel does not bind (they carry their own change handlers) */
 const SLIDER_DISPLAYS = {
     kioskSpeed: ["kiosk_rotation_speed_label", (v) => `Rotation Speed (${v}s)`],
-    trackWeight: ["track_weight_label", (v) => `Weight (${v})`],
-    trackOpacity: ["track_opacity_label", (v) => `Opacity (${Math.round(parseFloat(v) * 100)}%)`],
     trackHistory: ["track_history_label", (v) => `Length (${trackHistoryLabel(Number(v))})`],
-    trackTrashThreshold: ["track_trash_threshold_label", (v) => `Dash After (${v}s)`],
     trackSpeedMax: ["track_speed_max_label", (v) => `Scale Max (${speedWhole(v)} ${getSpeedUnit()})`],
     iconScale: ["icon_scale_label", (v) => `Size (${parseFloat(v).toFixed(2)})`],
-    tooltipFontSize: ["tooltip_font_size_label", (v) => `Font Size (${v})`],
-    shipoutlineOpacity: ["shipoutline_opacity_label", (v) => `Opacity (${parseFloat(v).toFixed(2)})`],
-    circleScale: ["circle_scale_label", (v) => `Width (${parseFloat(v).toFixed(1)})`],
 };
 
 function updateSliderDisplay(key, value) {

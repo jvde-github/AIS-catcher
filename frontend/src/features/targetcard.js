@@ -28,7 +28,7 @@ export function init(d) {
 
 export const SECTION_DEFAULTS = {
     voyage: true, vessel: true, source: true,
-    hull: false, speed: false, draught: false, changes: false,
+    hull: true, speed: false, draught: false, changes: false,
     aircraft: true, flight: true, adsb: true,
 };
 

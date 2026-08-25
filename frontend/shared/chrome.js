@@ -96,15 +96,19 @@ export function create(opts) {
 
     // an unregistered property comes back as the unresolved calc(), so the host
     // is asked to rebuild the number from the same facts its CSS derives it from
-    function inset(edge, el) {
-        return readInset(getComputedStyle(el || document.body), edge);
-    }
+    var insetCache = [];   // one entry per element asked about, cleared with the free boxes
 
     function insets(el) {
+        for (var i = 0; i < insetCache.length; i++) if (insetCache[i].el === el) return insetCache[i].insets;
         var style = getComputedStyle(el || document.body);
         var out = {};
         EDGES.forEach(function (edge) { out[edge] = readInset(style, edge); });
+        insetCache.push({ el: el, insets: out });
         return out;
+    }
+
+    function inset(edge, el) {
+        return insets(el)[edge];
     }
 
     var pxCache = {};
@@ -172,7 +176,8 @@ export function create(opts) {
        Geometry only. Which side is preferred, whether a panel is pinned and
        what a host does when nothing fits are policy, and stay with the host. */
 
-    function invalidate() { freeCache = []; pxCache = {}; }
+    /* the chrome moved: free boxes and insets are re-measured; the size tokens are constants */
+    function invalidate() { freeCache = []; insetCache = []; }
 
     return {
         inset: inset, px: px, gap: gap, freeBox: freeBox, invalidate: invalidate,

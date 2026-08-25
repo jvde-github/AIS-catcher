@@ -52,8 +52,13 @@
 			<i class="settings_icon small-icon"></i>
 		</div>
 
-		<div title="Toggle full screen mode" data-action="toggleScreenSize" class="header-icon">
-			<i id="screentoggle-id" class="fullscreen_icon small-icon"></i>
+		<div id="theme-toggle-button" title="Switch between day and night" data-action="toggleDarkMode" class="header-icon">
+			<svg id="theme-toggle-moon" xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor">
+				<path d="M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q14 0 27.5 1t26.5 3q-41 29-65.5 75.5T444-660q0 90 63 153t153 63q55 0 100-29t70-77q2 13 3 26.5t1 26.5q0 150-105 255T480-120Zm0-80q88 0 158-48.5T740-375q-20 5-40 8t-40 3q-123 0-209.5-86.5T364-660q0-20 3-40t8-40q-78 32-126.5 102T200-480q0 116 82 198t198 82Zm-10-270Z" />
+			</svg>
+			<svg id="theme-toggle-sun" xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor" style="display:none">
+				<path d="M480-360q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35Zm0 80q-83 0-141.5-58.5T280-480q0-83 58.5-141.5T480-680q83 0 141.5 58.5T680-480q0 83-58.5 141.5T480-280ZM200-440H40v-80h160v80Zm720 0H760v-80h160v80ZM440-760v-160h80v160h-80Zm0 720v-160h80v160h-80ZM256-650l-101-97 57-59 96 100-52 56Zm492 496-97-101 53-55 101 97-57 59Zm-96-550 97-101 59 57-100 96-56-52ZM154-212l101-97 55 53-97 101-59-57Zm326-268Z" />
+			</svg>
 		</div>
 
 		<div id="receiver-btn-wrap" style="display:none; align-items:center;">
@@ -232,11 +237,10 @@
 						</span>
 					</div>
 					<div>
-						<span id="circle_scale_label">Width (6.0)</span>
+						<span id="circle_scale_label" data-caption-for="circle_scale">Width (6.0)</span>
 						<span>
 							<input type="range" id="settings_circle_scale" min="2.0" max="10.0" step="0.5"
-								data-setting="circle_scale"
-								data-on-input="updateSliderDisplay" data-display="circleScale" />
+								data-setting="circle_scale" />
 						</span>
 					<small class="st-desc">Border width of the highlight circle</small>
 					</div>
@@ -258,13 +262,21 @@
 					</div>
 				</section>
 				<section>
+					<h5 class="st-title">Target Card</h5>
 					<div>
-						<span>Card Top Left</span><span>
+						<span>Top Left</span><span>
 							<input type="checkbox" id="settings_targetcard_top_left"
 								data-setting="targetcard_top_left" />
 						</span>
-					<small class="st-desc">Always open the card in the same corner instead of beside the vessel</small>
-						</div>
+						<small class="st-desc">Never place the card beside the vessel, even when there is room</small>
+					</div>
+					<div>
+						<span>Maximized</span><span>
+							<input type="checkbox" id="settings_targetcard_open_max"
+								data-setting="targetcard_open_max" />
+						</span>
+						<small class="st-desc">Open the card unfolded when there is room; small screens open it compact</small>
+					</div>
 				</section>
 				<section>
 					<div>
@@ -322,11 +334,10 @@
 				<section>
 					<h5 class="st-title">Appearance</h5>
 					<div>
-						<span id="tooltip_font_size_label">Font Size (9)</span>
+						<span id="tooltip_font_size_label" data-caption-for="tooltipLabelFontSize" data-caption-format="Font Size ({v})">Font Size (9)</span>
 						<span>
 							<input type="range" id="settings_tooltipLabelFontsize" min="6" max="16" step="1"
-								data-setting="tooltipLabelFontSize"
-								data-on-input="updateSliderDisplay" data-display="tooltipFontSize" />
+								data-setting="tooltipLabelFontSize" />
 						</span>
 					</div>
 					<div>
@@ -425,11 +436,10 @@
 					</div>
 					
 					<div>
-						<span id="shipoutline_opacity_label">Opacity (0.9)</span>
+						<span id="shipoutline_opacity_label" data-caption-for="shipoutline_opacity">Opacity (0.9)</span>
 						<span>
 							<input type="range" id="settings_shipoutline_opacity" min="0" max="1" step="0.01"
-								data-setting="shipoutline_opacity"
-								data-on-input="updateSliderDisplay" data-display="shipoutlineOpacity" />
+								data-setting="shipoutline_opacity" />
 						</span>
 						</div>
 					
@@ -649,28 +659,25 @@
 				<section>
 					<h5 class="st-title">Line Style</h5>
 					<div>
-						<span id="track_weight_label">Weight (1)</span>
+						<span id="track_weight_label" data-caption-for="track_weight" data-caption-format="Weight ({v})">Weight (1)</span>
 						<span>
 							<input type="range" id="settings_track_weight" min="1" max="4" step="1"
-								data-setting="track_weight"
-								data-on-input="updateSliderDisplay" data-display="trackWeight" />
+								data-setting="track_weight" />
 						</span>
 					<small class="st-desc">Line width of ship tracks</small>
 						</div>
 					<div>
-						<span id="track_opacity_label">Opacity (100%)</span>
+						<span id="track_opacity_label" data-caption-for="track_opacity">Opacity (100%)</span>
 						<span>
 							<input type="range" id="settings_track_opacity" min="0.05" max="1" step="0.05"
-								data-setting="track_opacity"
-								data-on-input="updateSliderDisplay" data-display="trackOpacity" />
+								data-setting="track_opacity" />
 						</span>
 						</div>
 					<div>
-						<span id="track_trash_threshold_label">Dash After (30s)</span>
+						<span id="track_trash_threshold_label" data-caption-for="track_trash_threshold" data-caption-format="Dash After ({v}s)">Dash After (30s)</span>
 						<span>
 							<input type="range" id="settings_track_trash_threshold" min="0" max="300" step="10"
-								data-setting="track_trash_threshold"
-								data-on-input="updateSliderDisplay" data-display="trackTrashThreshold" />
+								data-setting="track_trash_threshold" />
 						</span>
 					<small class="st-desc">Dash track segments with reception gaps longer than this</small>
 						</div>
@@ -881,6 +888,7 @@
 				<li data-tags="ctx-charts" data-group="charts" data-action="toggleGraphVisibility" data-graph="ppm"><i class="timeline_icon"></i>Frequency shift graphs<span class="ctx-check">✓</span></li>
 				<li data-tags="settings" data-group="app" data-action="openSettings"><i class="build_icon"></i>Settings...</li>
 				<li class="noandroid" data-tags="settings ctx-replay-map" data-group="app" data-action="toggleDarkMode"><i class="brightness_4_icon"></i>Dark mode<span class="ctx-check">✓</span></li>
+				<li class="noandroid" data-tags="settings ctx-replay-map" data-group="app" data-action="toggleScreenSize"><i class="fullscreen_icon"></i>Full screen<span class="ctx-check">✓</span></li>
 			</ul>
 
 			<div class="tabcontent addscrollbar" id="about">
@@ -1624,7 +1632,7 @@
 								d="M480-120q-138 0-240.5-91.5T122-440h82q14 104 92.5 172T480-200q117 0 198.5-81.5T760-480q0-117-81.5-198.5T480-760q-69 0-129 32t-101 88h110v80H120v-240h80v94q51-64 124.5-99T480-840q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-480q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-120Zm112-192L440-464v-216h80v184l128 128-56 56Z" />
 						</svg>
 					</button>
-					<button data-label="Map options" title="Map options" type="button" data-action="mapSettingsContextMenu"
+					<button data-label="Options" title="Options" type="button" data-action="mapSettingsContextMenu"
 						class="btn btn-primary map-button">
 						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
 							<path

@@ -69,6 +69,7 @@ export function create(opts) {
         all: function () { return values; },
         get: function (k) { return values[k]; },
         set: function (k, v) { values[k] = v; save(); },
+        stage: function (k, v) { values[k] = v; },   // live, unsaved: a slider mid-drag
         assign: function (patch) {
             for (var k in patch) if (Object.prototype.hasOwnProperty.call(patch, k)) values[k] = patch[k];
             save();
