@@ -28,9 +28,16 @@ export const CLASSES = [
     { id: ShippingClass.HIGHSPEED, label: "High-speed craft", pos: "-100px 0px" },
     { id: ShippingClass.SPECIAL, label: "Tug / special craft", pos: "-60px 0px" },
     { id: ShippingClass.FISHING, label: "Fishing", pos: "-140px 0px" },
-    { id: ShippingClass.OTHER, label: "Other", pos: "-120px 0px" },
-    { id: ShippingClass.UNKNOWN, label: "Not reported", pos: "-120px 0px" },
+    { id: ShippingClass.B, label: "Class B / pleasure", pos: "-20px 0px" },
+    { id: ShippingClass.OTHER, label: "Other / not reported", pos: "-120px 0px" },
 ];
+
+/* classes without a checkbox of their own fall to OTHER, so the list
+   partitions the map completely and "cargo only" means it */
+const CLASS_FILTER_IDS = new Set(CLASSES.map((c) => c.id));
+export function classFilterId(shipclass) {
+    return CLASS_FILTER_IDS.has(shipclass) ? shipclass : ShippingClass.OTHER;
+}
 
 export const STATUSES = [
     { id: 0, label: "Under way using engine" },
@@ -194,7 +201,7 @@ export function create(opts) {
         if (!active) return true;
 
         if (f.hidden_buckets.length && f.hidden_buckets.includes(bucketOf(ship))) return false;
-        if (f.hidden_classes.length && f.hidden_classes.includes(ship.shipclass)) return false;
+        if (f.hidden_classes.length && f.hidden_classes.includes(classFilterId(ship.shipclass))) return false;
         if (f.speed_min != null && !(ship.speed != null && ship.speed >= f.speed_min)) return false;
         if (f.speed_max != null && !(ship.speed != null && ship.speed <= f.speed_max)) return false;
 
