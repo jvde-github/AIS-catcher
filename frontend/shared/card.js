@@ -462,9 +462,20 @@ export function create(opts) {
         return how;
     }
 
+    /* runs `fn` (which may rewrite content) and puts the scroll position back:
+       a refresh must not move a card the user has scrolled */
+    function keepScroll(fn) {
+        var c = content();
+        var top = c.scrollTop;
+        var r = fn();
+        c.scrollTop = top;
+        return r;
+    }
+
     return {
         el: mount,
         rows: rows,
+        keepScroll: keepScroll,
         place: place,
         open: openCard,
         fit: fit,

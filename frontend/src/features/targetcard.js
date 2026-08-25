@@ -53,7 +53,7 @@ export function renderHull(ship) {
 
     card.section.available("hull", !!svg);
     const body = document.getElementById("targetcard_hull_body");
-    if (body) body.innerHTML = svg;
+    if (body) card.keepScroll(() => { body.innerHTML = svg; });
 }
 
 export async function fillSection(key) {
@@ -92,7 +92,7 @@ export async function fillSection(key) {
     else html = getChangeListHTML(historyCache.changes,
         [CHANGE.DESTINATION, CHANGE.ETA, CHANGE.SHIPNAME, CHANGE.CALLSIGN, CHANGE.STATUS], u);
 
-    body.innerHTML = html || '<span class="dim-note">Nothing recorded yet</span>';
+    card.keepScroll(() => { body.innerHTML = html || '<span class="dim-note">Nothing recorded yet</span>'; });
     deps.fitTargetcard();
 }
 
@@ -237,7 +237,9 @@ function updateTechDetails(ship) {
     document.getElementById("tech_serial").textContent = ship.serial != null ? ship.serial : "-";
 }
 
-export function populate() {
+export function populate() { card.keepScroll(populateCard); }
+
+function populateCard() {
 
     if (cardType != 'ship') return;
 

@@ -37,7 +37,9 @@ import { hexToRgb, deriveLabelBackground } from "./color.js";
 /* the registry is pure and lives in core/sprites.js so a worker can import
    it without OpenLayers; re-exported here for hosts that use it via markers */
 export { SPRITES, spriteFor, applySprite } from "./core/sprites.js";
-import { applySprite } from "./core/sprites.js";
+import { SPRITES, applySprite } from "./core/sprites.js";
+
+const DEG = Math.PI / 180;
 
 /* ADS-B: the icon follows the emitter category, the size its wake class */
 export function applyPlaneSprite(plane) {
