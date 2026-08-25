@@ -800,7 +800,8 @@ body.ticker-open.ticker-bottom {
 
 @media (hover: hover) {
     .mapcard-content-row:hover { cursor: pointer; }
-    /* inset so the row does not shift */ .mapcard-target .mapcard-content-row:not(.card-row-selected):hover { box-shadow: inset -3px 0 0 color-mix(in srgb, var(--color-card-edge) 60%, transparent); }
+    /* a tint, not an edge bar: the edge bar is the kept-row mark */
+    .mapcard-target .mapcard-content-row:hover { background: var(--color-hover-overlay); }
 }
 
 .mapcard-content-row>div {
@@ -892,13 +893,12 @@ body.ticker-open.ticker-bottom {
     display: inherit;
 }
 
-/* Marks a row as one the collapsed card keeps. Right edge only, so the label
-   column stays flush with every other row. */
+/* Marks a row as one the collapsed card keeps: an accent bar on the left, like
+   the header's, drawn inset so the label column does not shift. */
 .card-row-selected {
     display: flex;
     flex-direction: row;
-    border-right: 3px solid var(--color-card-edge);
-    padding-right: 7px;   /* the border comes out of the padding */
+    box-shadow: inset 3px 0 0 var(--color-card-edge);
 }
 
 .card-row + .card-row {
