@@ -4,6 +4,7 @@ import { SPEED_PALETTES, palette as validPalette, bucketColor, speedBucket, pale
 import * as filter from './core/filter.js';
 import * as components from '../shared/components.js';
 import * as mapui from '../shared/mapui.js';
+import * as tooltipLib from '../shared/tooltip.js';
 import * as tableLib from '../shared/table.js';
 import * as markersLib from '../shared/markers.js';
 import * as panelLib from '../shared/panel.js';
@@ -1371,6 +1372,7 @@ const handleClick = function (pixel, target, event) {
 };
 
 function initMap() {
+    tooltipLib.create({ selector: ".map-pill .map-button" }).prepare();
 
     map = new ol.Map({
 

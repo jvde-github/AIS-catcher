@@ -1147,3 +1147,24 @@ body.ticker-open.ticker-bottom {
 .dim-origin-ring { fill: none; stroke: var(--color-antenna); stroke-width: 1; opacity: .5; }
 .dim-origin-line { stroke: var(--color-text-subtle); opacity: .6; }
 .dim-origin-t { fill: var(--color-text-muted); }
+
+/* one floating label for the icon-only buttons in the rail pills (tooltip.js) */
+#toolbar-tooltip {
+    position: fixed;
+    z-index: var(--z-map-control);
+    padding: 3px 9px;
+    border: 1px solid var(--color-pill-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-alt);
+    color: var(--color-text);
+    font-size: var(--fs-xs);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 120ms ease-out;
+    box-shadow: var(--shadow-md);
+}
+
+#toolbar-tooltip.show {
+    opacity: 1;
+}
