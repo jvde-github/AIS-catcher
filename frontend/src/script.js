@@ -2328,7 +2328,7 @@ async function fetchPlanes() {
 
             p.shipclass = ShippingClass.PLANE;
             p.validated = 1;
-            p.name = p.callsign || p.hexident;
+            p.name = p.callsign || getICAOFromHexIdent(p.hexident);
 
             const hex = p.hexident;
             if (hex in planesDB) {
@@ -2794,7 +2794,7 @@ function getTooltipContentPlane(plane) {
     return '<div class="tooltip-card">' +
         flagHTML(plane.country, 'flag-tooltip', getCountryName(plane.country)) +
         '<div>' +
-        sanitizeString(plane.callsign || plane.hexident || '') +
+        sanitizeString(plane.callsign || getICAO(plane)) +
         '<span class="tooltip-dim"> at </span>' + altitude + '/' + speed + ' kts' +
         '<div class="tooltip-sub">received ' + getDeltaTimeVal(planesSince - plane.last_signal) + ' ago</div>' +
         '</div>' +
