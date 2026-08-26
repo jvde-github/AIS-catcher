@@ -58,6 +58,7 @@ struct Ship
 {
     uint32_t mmsi;
     int count, msg_type, shipclass, mmsi_type, shiptype, heading, status;
+    int region; // Region::find() of the position; derived, not persisted
     int to_port, to_bow, to_starboard, to_stern, IMO, angle, altitude, received_stations;
     int unit_model, unit_serial;
     char month, day, hour, minute;

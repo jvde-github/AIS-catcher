@@ -5,6 +5,7 @@ import { getChangeVal, getShipDimension, getDimUnit, getDistanceUnit, getDistanc
 import { CHANGE, getCountryName, getDeltaTimeVal, getEtaVal, getMmsiTypeVal, getShipTypeFull, getShipTypeShort, getStatusVal, getStringfromChannels, getStringfromGroup, getStringfromMsgType } from '../../shared/core/text.js';
 import { getChangeListHTML, getSpeedHistorySVG, getDraughtChartSVG, getShipDimensionSVG } from '../../shared/core/spark.js';
 import { getCallSign, getShipName } from '../core/names.js';
+import { regionName } from '../core/regions.js';
 import { flagHTML } from '../../shared/components.js';
 import * as binary from './binary.js';
 
@@ -293,6 +294,7 @@ function populateCard() {
     document.getElementById("targetcard_status").innerHTML = getStatusVal(ship);
     document.getElementById("targetcard_last_signal").innerHTML = getDeltaTimeVal(clock - ship.last_signal);
     document.getElementById("targetcard_eta").innerHTML = ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
+    document.getElementById("targetcard_region").innerHTML = regionName(ship.region);
     document.getElementById("targetcard_lat").innerHTML = ship.lat != null ? getLatValFormat(ship) : null;
     document.getElementById("targetcard_lon").innerHTML = ship.lon != null ? getLonValFormat(ship) : null;
     document.getElementById("targetcard_altitude").innerHTML = ship.altitude != null ? ship.altitude + " m" : null;

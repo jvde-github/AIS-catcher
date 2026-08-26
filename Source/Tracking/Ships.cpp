@@ -20,6 +20,7 @@
 
 #include "AIS-catcher.h"
 #include "Ships.h"
+#include "Region.h"
 #include "Writer.h"
 
 void Ship::reset()
@@ -30,6 +31,7 @@ void Ship::reset()
 
 	heading = HEADING_UNDEFINED;
 	status = STATUS_UNDEFINED;
+	region = Region::NONE;
 	to_port = to_bow = to_starboard = to_stern = DIMENSION_UNDEFINED;
 	IMO = IMO_UNDEFINED;
 	angle = ANGLE_UNDEFINED;
@@ -126,6 +128,7 @@ void Ship::clearFields(uint32_t doomed)
 		lon = LON_UNDEFINED;
 		distance = DISTANCE_UNDEFINED;
 		angle = ANGLE_UNDEFINED;
+		region = Region::NONE;
 		setApproximate(0);
 		setValidated(0);
 		setRAIM(0);
@@ -544,6 +547,7 @@ void Ship::writeJSON(JSON::Writer &w, long int delta_time, bool station_known) c
 		.kv_unless("serial", unit_serial, -1)
 		.kv("repeat", getRepeat())
 		.kv("last_signal", delta_time)
+		.kv_unless("region", region, Region::NONE)
 		.endObject();
 }
 
@@ -578,6 +582,7 @@ void Ship::writeCompactDynamic(JSON::Writer &w) const
 		.val(mmsi_type)
 		.val(shipclass)
 		.val(country_code)
+		.val_unless(region, Region::NONE)
 		.endArray();
 }
 
@@ -670,8 +675,9 @@ bool Ship::Load(std::ifstream &file)
 	vin[sizeof(vin) - 1] = '\0';
 	vendorid[sizeof(vendorid) - 1] = '\0';
 
-	// msg vector is not persisted
+	// not persisted: the message list, and the region, which follows from the position
 	msg.clear();
+	region = Region::find(lat, lon);
 	return ok;
 }
 

@@ -16,6 +16,7 @@ Tabulator.registerModule([
 import { getShipDimension, getDimVal, getDimUnit, getDraughtVal, getDistanceVal, getDistanceUnit, getLatValFormat, getLonValFormat, getSpeedVal, getSpeedUnit } from '../core/units.js';
 import { getCountryName, getStatusVal, getMmsiTypeVal, getDeltaTimeVal, getEtaVal, getStringfromChannels, getStringfromMsgType, getStringfromGroup } from '../../shared/core/text.js';
 import { getShipName, getCallSign } from '../core/names.js';
+import { regionName } from '../core/regions.js';
 import { flagHTML } from '../../shared/components.js';
 
 let table = null;
@@ -185,6 +186,11 @@ function buildColumns() {
             },
         },
         {
+            title: "Region", field: "region",
+            sorter: (a, b) => (regionName(a) || "").localeCompare(regionName(b) || ""),
+            formatter: (cell) => regionName(cell.getValue()) || "",
+        },
+        {
             title: "Spd (" + getSpeedUnit() + ")", field: "speed", sorter: "number",
             formatter: (cell) => {
                 const value = cell.getValue();
@@ -288,7 +294,7 @@ function updateColumnVisibility() {
 
 function resetColumns() {
     const settings = window.AISCatcher.settings;
-    settings.shiptable_columns = ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"];
+    settings.shiptable_columns = ["shipname", "mmsi", "imo", "callsign", "shipclass", "region", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"];
     setColumns();
 }
 

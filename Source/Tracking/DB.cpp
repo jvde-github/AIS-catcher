@@ -18,6 +18,7 @@
 #include "AIS-catcher.h"
 #include "DB.h"
 #include "Geodesy.h"
+#include "Region.h"
 #include "Logger.h"
 
 #include <fstream>
@@ -730,6 +731,7 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	if (positionUpdated)
 	{
 		ship.setApproximate(type == 27);
+		ship.region = Region::find(ship.lat, ship.lon);
 
 		if (ship.mmsi == own_mmsi)
 		{

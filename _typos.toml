@@ -13,4 +13,6 @@ extend-exclude = [
     "Source/JSON/JSONAIS.cpp",
     "frontend/",
     "CMakeLists.txt",
+    "Source/Tracking/RegionTree.cpp",
+    "data/regions/",
 ]
