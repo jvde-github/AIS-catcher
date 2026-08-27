@@ -167,6 +167,12 @@ export function reveal(map, lonLat, card, opts) {
 
     var px = opts.pixel || pixelFromView(map, coord, size);
     if (!px) return null;
+
+    /* a focus: the target goes to the middle of the free area, wherever it was */
+    if (opts.center) {
+        panToOn(map, px, center(roomy(best) ? best : whole));
+        return "panned";
+    }
     var mg = opts.margin != null ? opts.margin : 2 * markersLib.selectionRadius(opts.settings);
     var m = { x: Math.min(mg, (whole.right - whole.left) * MARGIN_CAP), y: Math.min(mg, (whole.bottom - whole.top) * MARGIN_CAP) };
     var safe = inset(whole, m);                       // clear of the borders

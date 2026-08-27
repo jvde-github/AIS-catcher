@@ -4270,6 +4270,7 @@ async function openFocus(m, z) {
     if (z) mapResetView(z);
     else mapResetView(14);
 
+    if (ship && ship.lon && ship.lat) ui.reveal([ship.lon, ship.lat], undefined, { center: true });
 }
 
 function updateSettingsTab() {
