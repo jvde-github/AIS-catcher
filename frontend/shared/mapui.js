@@ -77,10 +77,12 @@ function panToOn(map, from, to) {
 }
 
 /* put map coordinate `coord` at pixel `dest` while flying to `zoom` */
-/* a map shown a moment ago has no frame to ask for a pixel; the view's
-   centre and resolution give the same answer */
+/* the pixel of a coordinate under the view as it is now. The map's own
+   answer comes from its last rendered frame, which is stale right after a
+   setCenter and absent on a map that has only just been shown. */
 function pixelFromView(map, coord, size) {
     var view = map.getView();
+    if (view.getRotation()) return map.getPixelFromCoordinate(coord);
     var c = view.getCenter(), res = view.getResolution();
     if (!c || !res) return null;
     return [size[0] / 2 + (coord[0] - c[0]) / res, size[1] / 2 - (coord[1] - c[1]) / res];
@@ -163,7 +165,7 @@ export function reveal(map, lonLat, card, opts) {
         return "panned";
     }
 
-    var px = opts.pixel || map.getPixelFromCoordinate(coord) || pixelFromView(map, coord, size);
+    var px = opts.pixel || pixelFromView(map, coord, size);
     if (!px) return null;
     var mg = opts.margin != null ? opts.margin : 2 * markersLib.selectionRadius(opts.settings);
     var m = { x: Math.min(mg, (whole.right - whole.left) * MARGIN_CAP), y: Math.min(mg, (whole.bottom - whole.top) * MARGIN_CAP) };
