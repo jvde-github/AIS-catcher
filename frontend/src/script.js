@@ -591,7 +591,7 @@ const DEFAULT_SETTINGS = {
         distance_circle_color: '#1c71d8',
         map_day: "OpenStreetMap",
         map_overlay: [],
-        map_night: "Dark Matter (no labels)",
+        map_night: "OpenStreetMap",
         zoom: 3,
         lat: 0,
         lon: 0,
@@ -661,6 +661,7 @@ const settingsStore = settingsStorage.create({
     key: context,
     defaults: DEFAULT_SETTINGS,
     target: settings,
+    version: 2,
     migrate: updateForLegacySettings,
 });
 
@@ -3121,6 +3122,7 @@ function updateForLegacySettings() {
 
 function loadSettings() {
     settingsStore.load(urlParams.has("reset"));
+    if (settingsStore.upgraded()) showNotification("Settings were reset for this version of the viewer");
     if (settings.activeReceiver) activeReceiver = settings.activeReceiver;
     if (!isTargetcardMax()) toggleTargetcardSize();
 

@@ -14,6 +14,7 @@
    var store = create({
        key: "aiscatcher:" + stationId,   // namespaced: one origin, many stations
        defaults: { dark_mode: false, metric: "DEFAULT" },
+       version: 2,                       // optional: an entry saved by an older version is discarded
        migrate: function (s) { ... },    // optional, runs once after load
    });
    store.set("dark_mode", true);         // writes and saves
@@ -29,6 +30,8 @@ export function create(opts) {
     var values = opts.target || {};
     var listeners = [];
     var defaults = opts.defaults || {};
+    var version = opts.version || 0;
+    var upgraded = false;
 
     for (var d in defaults) if (Object.prototype.hasOwnProperty.call(defaults, d)) values[d] = JSON.parse(JSON.stringify(defaults[d]));
 
@@ -39,12 +42,17 @@ export function create(opts) {
             var raw = localStorage.getItem(key);
             if (raw !== null) {
                 var parsed = JSON.parse(raw);
-                if (parsed && typeof parsed === "object")
-                    for (var k in parsed) if (Object.prototype.hasOwnProperty.call(parsed, k)) values[k] = parsed[k];
+                if (parsed && typeof parsed === "object") {
+                    /* an entry without a version is from before versions existed: 1 */
+                    upgraded = version > 0 && (parsed.settings_version || 1) < version;
+                    if (!upgraded)
+                        for (var k in parsed) if (Object.prototype.hasOwnProperty.call(parsed, k)) values[k] = parsed[k];
+                }
             }
         } catch (e) {
             console.warn("settings: ignoring unreadable entry for " + key, e);
         }
+        if (version) values.settings_version = version;
         if (opts.migrate) opts.migrate(values);
         return values;
     }
@@ -52,6 +60,7 @@ export function create(opts) {
     function applyDefaults() {
         for (var k in values) if (Object.prototype.hasOwnProperty.call(values, k)) delete values[k];
         for (var d in defaults) if (Object.prototype.hasOwnProperty.call(defaults, d)) values[d] = JSON.parse(JSON.stringify(defaults[d]));
+        if (version) values.settings_version = version;
     }
 
     function save() {
@@ -76,6 +85,7 @@ export function create(opts) {
         },
         save: save,
         load: load,
+        upgraded: function () { return upgraded; },   // the last load discarded an older entry
         /* in place: other modules hold a reference to this object.
            applyDefaults does not persist — startup fills before it loads,
            and writing there would erase what it is about to read. */
