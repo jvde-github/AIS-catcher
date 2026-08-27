@@ -153,6 +153,7 @@ export function create(opts) {
             caretClass: cls.caret,
             headId: o.headId,
         });
+        markRows();
 
         spec.forEach(function (row) { if (row.section) applySection(row.section.key); });
         return cells;
@@ -444,7 +445,7 @@ export function create(opts) {
 
     function setMax(on) {
         on = !!on;
-        if (on === isMax()) return;
+        if (on === isMax()) { markRows(); return; }
         mount.classList.toggle(cls.max || "card-max", on);
         mount.querySelectorAll("." + cls.minOnly).forEach(function (el) { el.classList.toggle("visible", !on); });
         mount.querySelectorAll("." + cls.maxOnly).forEach(function (el) { el.classList.toggle("hidden", !on); });
@@ -501,7 +502,7 @@ export function create(opts) {
         var set = {};
         keys.forEach(function (k) { if (typeof k === "string") set[k] = true; });
         var rows = keptRows();
-        if (!rows.some(function (row) { return set[rowKey(row)]; })) return false;
+        if (!rows.some(function (row) { return set[rowKey(row)]; })) { markRows(); return false; }
         rows.forEach(function (row) {
             var k = rowKey(row);
             if (k) row.classList.toggle(cls.maxOnly, !set[k]);
@@ -527,6 +528,8 @@ export function create(opts) {
         c.scrollTop = top;
         return r;
     }
+
+    markRows();
 
     return {
         el: mount,
