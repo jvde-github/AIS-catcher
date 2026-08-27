@@ -60,6 +60,7 @@ var DEFAULT_CLASSES = {
     popover: "card-popover",
     max: "card-max",
     minOnly: "card-min-only",
+    rowSelected: "card-row-selected",
 };
 
 var CARET_OPEN = "keyboard_arrow_up_icon";
@@ -70,6 +71,7 @@ export function create(opts) {
 
     var mount = opts.mount;
     var cls = Object.assign({}, DEFAULT_CLASSES, opts.classes || {});
+    var keepRows = opts.keepRows || null;
     var iconMax = opts.iconMax || 3;
     var sectionAction = opts.sectionAction || "toggleSection";
     var open = {};          // section key -> bool
@@ -446,12 +448,66 @@ export function create(opts) {
         mount.classList.toggle(cls.max || "card-max", on);
         mount.querySelectorAll("." + cls.minOnly).forEach(function (el) { el.classList.toggle("visible", !on); });
         mount.querySelectorAll("." + cls.maxOnly).forEach(function (el) { el.classList.toggle("hidden", !on); });
+        markRows();
         var btn = mount.querySelector(".card-minmax");
         if (btn) {
             btn.classList.toggle(CARET_CLOSED, !on);
             btn.classList.toggle(CARET_OPEN, on);
         }
         if (placedHow && mount.offsetParent) fit();   // the card changed height: keep it on the pane
+    }
+
+    /* --- kept rows -------------------------------------------------------------
+       A minimised card keeps the rows without cls.maxOnly; while maximised those
+       carry cls.rowSelected as the mark. The rows are the host's `keepRows`
+       selector, each identified by the first id inside it, so a saved list
+       survives rows being added or moved, and unknown keys are ignored. */
+
+    function keptRows() {
+        return keepRows ? Array.prototype.slice.call(mount.querySelectorAll(keepRows)) : [];
+    }
+
+    function rowKey(row) {
+        var el = row.querySelector("[id]");
+        return el ? el.id : "";
+    }
+
+    function markRows() {
+        var max = isMax();
+        keptRows().forEach(function (row) {
+            row.classList.toggle(cls.rowSelected, max && !row.classList.contains(cls.maxOnly));
+        });
+    }
+
+    /* a click on a row: the maximised card toggles whether the row is kept and
+       answers true; the minimised one answers false so the host can maximise */
+    function keepToggle(row) {
+        if (!isMax()) return false;
+        row.classList.toggle(cls.maxOnly);
+        markRows();
+        return true;
+    }
+
+    function keepState() {
+        return keptRows()
+            .filter(function (row) { return !row.classList.contains(cls.maxOnly); })
+            .map(rowKey).filter(Boolean);
+    }
+
+    /* applies a saved list; one that names none of the current rows is
+       ignored, so a stale save cannot flip the rows the wrong way round */
+    function keepRestore(keys) {
+        if (!Array.isArray(keys)) return false;
+        var set = {};
+        keys.forEach(function (k) { if (typeof k === "string") set[k] = true; });
+        var rows = keptRows();
+        if (!rows.some(function (row) { return set[rowKey(row)]; })) return false;
+        rows.forEach(function (row) {
+            var k = rowKey(row);
+            if (k) row.classList.toggle(cls.maxOnly, !set[k]);
+        });
+        markRows();
+        return true;
     }
 
     /* places the card for a target at `pixel` and fits it to the pane;
@@ -485,6 +541,7 @@ export function create(opts) {
         draggable: draggable,
         isMax: isMax,
         setMax: setMax,
+        keep: { toggle: keepToggle, state: keepState, restore: keepRestore, mark: markRows },
         section: {
             toggle: toggleSection,
             open: function (key) { if (!open[key]) setSection(key, true); },

@@ -107,6 +107,7 @@ const ui = mapui.create({
     card: {
         mount: document.getElementById("targetcard"),
         sectionAction: "toggleTargetcardSection",
+        keepRows: '[data-action="targetcardSelectSelf"]',
         itemAvailable: (el) => el.id !== 'targetcard_realtime_option' || config.features.realtime,
         layout: {
             fullBleed: () => cardFullBleed(),
@@ -2516,44 +2517,13 @@ function updateSpeedLegend() {
         `Preview (0 - ${speedWhole(settings.track_speed_max)} ${getSpeedUnit()})`;
 }
 
-function selectableTargetcardRows() {
-    return document.querySelectorAll('#targetcard_content [data-action="targetcardSelectSelf"]');
-}
-
-function targetcardRowKey(row) {
-    const el = row.querySelector("[id]");
-    return el ? el.id : "";
-}
-
 function targetcardselect(e) {
-    if (isTargetcardMax()) {
-        e.classList.toggle("card-max-only");
-        e.classList.toggle("card-row-selected");
-    } else toggleTargetcardSize();
-
+    if (!ui.card.keep.toggle(e)) toggleTargetcardSize();
     saveSettings();
 }
 
 function toggleTargetcardSize() {
     ui.card.setMax(!ui.card.isMax());
-
-    let e = selectableTargetcardRows();
-
-    if (isTargetcardMax()) {
-        for (let i = 0; i < e.length; i++) {
-            if (
-                (e[i].classList.contains("card-max-only") && e[i].classList.contains("card-row-selected")) ||
-                (!e[i].classList.contains("card-max-only") && !e[i].classList.contains("card-row-selected"))
-            )
-                e[i].classList.toggle("card-row-selected");
-        }
-
-    } else {
-        for (let i = 0; i < e.length; i++) {
-            if (e[i].classList.contains("card-row-selected")) e[i].classList.toggle("card-row-selected");
-        }
-    }
-
     fitTargetcard();
     if (isTargetcardMax()) adjustMapForTargetcard();
 }
@@ -3095,13 +3065,8 @@ function updateMapURL() {
 }
 
 function saveSettings() {
-    const selectedRows = [];
-    selectableTargetcardRows().forEach((row) => {
-        if (!row.classList.contains("card-max-only")) selectedRows.push(targetcardRowKey(row));
-    });
-
     settings.targetcard_max = isTargetcardMax();
-    settings.targetcard_rows = selectedRows.filter(Boolean);
+    settings.targetcard_rows = ui.card.keep.state();
     settings.activeReceiver = activeReceiver;
 
     const filters = realtimeModule?.getFilters();
@@ -3159,17 +3124,8 @@ function loadSettings() {
     if (settings.activeReceiver) activeReceiver = settings.activeReceiver;
     if (!isTargetcardMax()) toggleTargetcardSize();
 
-    if (Array.isArray(settings.targetcard_rows) && settings.targetcard_rows.every((k) => typeof k === "string")) {
-        const pinned = new Set(settings.targetcard_rows);
-
-        selectableTargetcardRows().forEach((row) => {
-            const on = pinned.has(targetcardRowKey(row));
-            row.classList.toggle("card-max-only", !on);
-            row.classList.toggle("card-row-selected", on);
-        });
-        if (settings.targetcard_max != isTargetcardMax()) {
-            toggleTargetcardSize();
-        }
+    if (ui.card.keep.restore(settings.targetcard_rows)) {
+        if (settings.targetcard_max != isTargetcardMax()) toggleTargetcardSize();
     } else {
         settings.targetcard_rows = [];
     }
