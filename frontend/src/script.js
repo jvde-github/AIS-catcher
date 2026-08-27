@@ -3785,7 +3785,7 @@ function adjustMapForTargetcard(pixel) {
     const raw = db && card_mmsi in db ? db[card_mmsi].raw : null;
     if (!raw || !raw.lat || !raw.lon) return;
 
-    if (ui.reveal([raw.lon, raw.lat], pixel, card_type == 'ship' ? { minZoom: 10 } : undefined) === "panned") stopHover();
+    if (ui.reveal([raw.lon, raw.lat], pixel, card_type == 'ship' ? { minZoom: 5 } : undefined) === "panned") stopHover();
 }
 
 // The ticker owns the top strip. A card that starts above it hides the very
