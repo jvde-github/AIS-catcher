@@ -465,10 +465,11 @@ namespace IO
 							 "\r\nContent-Type: " + type + commonHeaders();
 		header += "\r\nDate: " + httpDate(time(nullptr));
 
+		std::string extra_header_sent;
 		if (!extra_header.empty())
 		{
 			header += "\r\n" + extra_header;
-			extra_header.clear();
+			extra_header_sent.swap(extra_header);
 		}
 
 		if (cors)
@@ -477,7 +478,12 @@ namespace IO
 		if (gzip)
 			header += "\r\nContent-Encoding: gzip";
 
-		if (cache)
+		// an extra header that sets Cache-Control speaks for the response
+		bool cache_set = extra_header_sent.find("Cache-Control:") != std::string::npos;
+		if (cache_set)
+		{
+		}
+		else if (cache)
 		{
 			header += "\r\nCache-Control: max-age=31536000, stale-while-revalidate=604800, stale-if-error=604800";
 			header += "\r\nExpires: " + httpDate(time(nullptr) + 31536000);

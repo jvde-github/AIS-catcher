@@ -49,6 +49,9 @@ void Engine::detach()
 #endif
 }
 
+std::function<void(Engine &)> Engine::before_run;
+std::function<void(Engine &)> Engine::after_run;
+
 void Engine::run(WebViewer *viewer, ControlCore *control)
 {
 	attached_viewer = viewer;
@@ -187,6 +190,11 @@ void Engine::run(WebViewer *viewer, ControlCore *control)
 			s->startServing();
 #endif
 
+	// the viewers serve and their streams are wired, the receivers have not started:
+	// a build that adds services attaches them now
+	if (before_run)
+		before_run(*this);
+
 	Debug() << "Starting receivers";
 	for (auto &r : receivers)
 		r->play();
@@ -298,6 +306,9 @@ void Engine::run(WebViewer *viewer, ControlCore *control)
 			}
 		}
 	}
+
+	if (after_run)
+		after_run(*this);
 
 	detach();
 

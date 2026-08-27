@@ -50,6 +50,8 @@ struct TrackingConfig
 	int cutoff = 0;
 	// kilobytes of track storage; 0 keeps the default
 	int track_memory = 0;
+	// ship table size; 0 keeps the default (4096, or 32 times that in server mode)
+	int max_ships = 0;
 };
 
 // Bundles all per-receiver (or aggregate) state: ship DB, counters, history.
@@ -105,6 +107,8 @@ public:
 	// Connect outgoing sinks (ships as source)
 	template <typename T>
 	void connectSink(T &sink) { ships >> sink; }
+
+	DB &database() { return ships; }
 
 	// JSON output
 	void writeHistoryJSON(JSON::Writer &w);

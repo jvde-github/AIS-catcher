@@ -30,6 +30,7 @@
 extern WebViewer *managed_viewer;
 #endif
 #include "Screen.h"
+#include <functional>
 
 class WebViewer;
 class ControlCore;
@@ -42,6 +43,13 @@ extern std::atomic<bool> stop_process;
 // built up by the command line parser or the config reader and then started by run().
 // Managed mode constructs a new one for every start/stop cycle.
 struct Engine {
+	// Called by run() once the viewers serve and before the receivers start:
+	// a build that adds services attaches them here.
+	static std::function<void(Engine &)> before_run;
+	// Called by run() when the main loop has ended, while receivers and viewers are
+	// still alive: a build that added services saves and stops them here.
+	static std::function<void(Engine &)> after_run;
+
 	// Receivers and outputs
 	std::vector<std::unique_ptr<Receiver>> receivers;
 #ifdef HASWEBVIEWER

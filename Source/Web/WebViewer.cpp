@@ -1085,6 +1085,9 @@ void WebViewer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &reque
 		Response(c, "text/plain", std::string("Invalid Tile Request"), false, false, false, 400);
 		return;
 	}
+	else if (extra_request && extra_request(*this, c, r, a, gzip))
+	{
+	}
 	// Static files
 	else if (r.rfind("/", 0) == 0)
 	{
@@ -1185,6 +1188,9 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 		break;
 	case AIS::KEY_SETTING_TRACK_MEMORY:
 		settings.tracking.track_memory = Util::Parse::Integer(arg, 16, 256 * 1024);
+		break;
+	case AIS::KEY_SETTING_MAX_SHIPS:
+		settings.tracking.max_ships = Util::Parse::Integer(arg, 1024, 4 * 1024 * 1024);
 		break;
 	case AIS::KEY_SETTING_REPLAY:
 		settings.replay = Util::Parse::Switch(arg);

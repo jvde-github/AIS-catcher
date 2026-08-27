@@ -413,7 +413,14 @@ set(APP_INCLUDES . ./Source ./Source/Tracking ./Source/DBMS ./Source/Library ./S
 
 # Executable
 
-add_executable(AIS-catcher ${CPP} ${HEADER})
+# A build on top of this one (a hub, a variant) adds its sources here
+add_executable(AIS-catcher ${CPP} ${HEADER} ${EXTRA_SOURCES})
+if(EXTRA_INCLUDES)
+    target_include_directories(AIS-catcher PRIVATE ${EXTRA_INCLUDES})
+endif()
+if(EXTRA_DEFINES)
+    target_compile_definitions(AIS-catcher PRIVATE ${EXTRA_DEFINES})
+endif()
 
 include_directories(
     . ${APP_INCLUDES} ${AIRSPYHF_INCLUDE_DIRS} ${NMEA2000_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${HYDRASDR_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${ZMQ_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOAPYSDR_INCLUDE_DIRS} ${PQ_INCLUDE_DIRS} ${SQLITE_INCLUDE_DIRS} ${PQXX_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS} ${SAMPLERATE_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})

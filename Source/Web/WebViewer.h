@@ -90,6 +90,11 @@ public:
 class WebViewer : public IO::HTTPServer, public Setting
 {
 public:
+	// Extra routes: asked before the static files; return true when the request was answered.
+	std::function<bool(WebViewer &, IO::TCPServerConnection &, const std::string &path, const std::string &arg, bool gzip)> extra_request;
+	int trackerCount() const { return (int)states.size(); }
+	ReceiverTracker *tracker(int i) { return i >= 0 && i < (int)states.size() ? states[i].get() : nullptr; }
+
 	// Every plain value SetKey() writes lives here, so resetSettings() can put
 	// the viewer back to its defaults by assigning a fresh instance. Anything
 	// that is not a setting (bound socket, ship database, serving state) must

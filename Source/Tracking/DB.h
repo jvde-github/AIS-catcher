@@ -80,6 +80,8 @@ class DB : public StreamIn<JSON::JSON>,
 	int nbuckets = 8209;
 	// 0 = unset, resolved at setup: the server-mode default leaves room for the anchor slots
 	int track_memory_kb = 0;
+	// 0 = default sizing
+	int max_ships = 0;
 
 	bool expire_fields = false;
 	std::time_t last_sweep = 0;
@@ -87,6 +89,32 @@ class DB : public StreamIn<JSON::JSON>,
 	static const int SHIP_NIL = SlotTable<Ship, uint32_t>::NIL;
 
 	SlotTable<Ship, uint32_t> ships;
+
+public:
+	// Locked reads for code that lives outside the DB: one ship by MMSI, or all of them.
+	template <typename F>
+	bool withShip(uint32_t mmsi, F f)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		int ptr = ships.find(mmsi);
+		if (ptr == SHIP_NIL)
+			return false;
+		f(ships[ptr], ptr);
+		return true;
+	}
+	// most recently heard first; f returns false to stop the walk
+	template <typename F>
+	void forEachShip(F f)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		ships.forEach([&](int ptr) { return f(ships[ptr], ptr); });
+	}
+	int capacity() const { return ships.capacity(); }
+	// Puts a record in the table under its MMSI, replacing what is there; for
+	// seeding from another source. The region follows from the position.
+	void putShip(const Ship &s);
+
+private:
 	PathStore paths;
 	StaticHistory changes;
 
@@ -179,6 +207,7 @@ public:
 	void setTrackTime(int t) { track_time = t; }
 	void setExpireFields(bool b) { expire_fields = b; }
 	void setTrackMemory(int kb) { if (kb > 0) track_memory_kb = kb; }
+	void setMaxShips(int n) { max_ships = n; }
 	void setShareLatLon(bool b) { latlon_share = b; }
 	bool getShareLatLon() { return latlon_share; }
 

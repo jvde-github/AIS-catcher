@@ -36,9 +36,14 @@ void DB::setup()
 	{
 		nships *= 32;
 		nbuckets = 262147;
-
-		Info() << "DB: internal ship database extended to " << nships << " ships";
 	}
+	if (max_ships > 0)
+	{
+		nships = max_ships;
+		nbuckets = 2 * nships + 1;
+	}
+	if (nships != 4096)
+		Info() << "DB: internal ship database extended to " << nships << " ships";
 
 	ships.setup(nships, nbuckets);
 
@@ -889,6 +894,16 @@ std::string DB::getBinaryMessagesJSON(std::time_t since)
 
 // a recycled slot may still own the evicted ship's track, so every create
 // is paired with a path wipe
+void DB::putShip(const Ship &s)
+{
+	if (s.mmsi == 0)
+		return;
+	std::lock_guard<std::mutex> lock(mtx);
+	int ptr = claimShip(s.mmsi);
+	ships[ptr] = s;
+	ships[ptr].region = isValidCoord(s.lat, s.lon) ? Region::find(s.lat, s.lon) : Region::NONE;
+}
+
 int DB::claimShip(uint32_t mmsi)
 {
 	int ptr = ships.find(mmsi);
