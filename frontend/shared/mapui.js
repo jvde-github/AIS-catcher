@@ -77,6 +77,15 @@ function panToOn(map, from, to) {
 }
 
 /* put map coordinate `coord` at pixel `dest` while flying to `zoom` */
+/* a map shown a moment ago has no frame to ask for a pixel; the view's
+   centre and resolution give the same answer */
+function pixelFromView(map, coord, size) {
+    var view = map.getView();
+    var c = view.getCenter(), res = view.getResolution();
+    if (!c || !res) return null;
+    return [size[0] / 2 + (coord[0] - c[0]) / res, size[1] / 2 - (coord[1] - c[1]) / res];
+}
+
 function flyToOn(map, coord, dest, zoom) {
     var view = map.getView();
     var size = map.getSize();
@@ -154,8 +163,8 @@ export function reveal(map, lonLat, card, opts) {
         return "panned";
     }
 
-    var px = opts.pixel || map.getPixelFromCoordinate(coord);
-    if (!px) return null;          // not rendered yet: nothing to measure against
+    var px = opts.pixel || map.getPixelFromCoordinate(coord) || pixelFromView(map, coord, size);
+    if (!px) return null;
     var mg = opts.margin != null ? opts.margin : 2 * markersLib.selectionRadius(opts.settings);
     var m = { x: Math.min(mg, (whole.right - whole.left) * MARGIN_CAP), y: Math.min(mg, (whole.bottom - whole.top) * MARGIN_CAP) };
     var safe = inset(whole, m);                       // clear of the borders
