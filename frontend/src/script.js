@@ -637,7 +637,7 @@ const DEFAULT_SETTINGS = {
         loadURL: true,
         map_opacity: 0.5,
         layer_opacity: { Aircraft: 1 },
-        basemap_opacity: { "Dark Matter": 1, "Dark Matter (no labels)": 1 },
+        basemap_opacity: { "OpenFreeMap Dark": 1, "OpenFreeMap Dark (no labels)": 1 },
         show_track_on_hover: false,
         show_track_on_select: false,
         show_all_tracks: false,
@@ -4551,11 +4551,20 @@ function addVectorBasemap(title, styleUrl, noLabels) {
                         layer.on('prerender', (evt) => {
                             const ctx = evt.context;
                             ctx.save();
-                            ctx.globalAlpha = layer.getOpacity();
                             ctx.fillStyle = background;
                             ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
                             ctx.restore();
                         });
+                    layer.on('postrender', (evt) => {
+                        const dim = 1 - layer.getOpacity();
+                        if (dim <= 0) return;
+                        const ctx = evt.context;
+                        ctx.save();
+                        ctx.globalAlpha = dim;
+                        ctx.fillStyle = '#000';
+                        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                        ctx.restore();
+                    });
                     layer.getSource()?.setAttributions(OPENFREEMAP_ATTRIBUTION);
                     if (layer === activeTileLayer)
                         document.getElementById("map_attributions").innerHTML = attributionHTML(layer);
