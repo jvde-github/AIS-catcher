@@ -12,6 +12,7 @@
     "flag-icons": "6.6.6",
     "marked": "^17.0.5",
     "ol": "10.9.0",
+    "ol-mapbox-style": "^13.4.3",
     "tabulator-tables": "6.4.0"
   },
   "devDependencies": {

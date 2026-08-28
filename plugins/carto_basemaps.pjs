@@ -1,0 +1,27 @@
+// {"author":"jvde-github","description":"CARTO basemaps (Positron, Dark Matter, Voyager) with your own API key", "version": 4}
+
+// CARTO's raster basemaps need an API key since August 2026. Get one (free) at
+// https://carto.com/basemaps/apikey, paste it below, and drop this file in the
+// plugin folder. The built-in OpenFreeMap styles need no key.
+
+const CARTO_KEY = '';
+
+if (typeof AISCatcher !== 'undefined' && AISCatcher.PLUGIN_API_VERSION >= 4 && CARTO_KEY) {
+    const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ' +
+        '&copy; <a href="https://carto.com/attributions">CARTO</a>';
+
+    const add = (title, style) => AISCatcher.addTileLayer(title, new ol.layer.Tile({
+        source: new ol.source.XYZ({
+            url: 'https://{a-d}.basemaps.cartocdn.com/' + style + '/{z}/{x}/{y}{r}.png?key=' + CARTO_KEY,
+            attributions: attribution,
+            maxZoom: 20
+        })
+    }));
+
+    add('Positron', 'light_all');
+    add('Positron (no labels)', 'light_nolabels');
+    add('Dark Matter', 'dark_all');
+    add('Dark Matter (no labels)', 'dark_nolabels');
+    add('Voyager', 'rastertiles/voyager');
+    add('Voyager (no labels)', 'rastertiles/voyager_nolabels');
+}

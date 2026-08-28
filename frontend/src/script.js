@@ -45,6 +45,7 @@ import OlView from 'ol/View';
 import OlFeature from 'ol/Feature';
 import TileLayer from 'ol/layer/Tile';
 import VectorLayer from 'ol/layer/Vector';
+import VectorTileLayer from 'ol/layer/VectorTile';
 import OSMSource from 'ol/source/OSM';
 import XYZSource from 'ol/source/XYZ';
 import TileWMSSource from 'ol/source/TileWMS';
@@ -146,7 +147,7 @@ const ol = {
     Map: OlMap,
     View: OlView,
     Feature: OlFeature,
-    layer: { Tile: TileLayer, Vector: VectorLayer },
+    layer: { Tile: TileLayer, Vector: VectorLayer, VectorTile: VectorTileLayer },
     source: { OSM: OSMSource, XYZ: XYZSource, TileWMS: TileWMSSource, Vector: VectorSource },
     geom: { Point, LineString, Polygon, Circle: CircleGeom },
     style: { Style, Stroke, Fill, Icon, Circle: CircleStyle, Text },
@@ -4527,53 +4528,54 @@ addTileLayer("OpenStreetMap", new ol.layer.Tile({
     source: new ol.source.OSM({ maxZoom: 19 })
 }));
 
-addTileLayer("Positron", new ol.layer.Tile({
-    source: new ol.source.XYZ({
-        url: 'https://{a-d}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        attributions: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        maxZoom: 20
-    })
-}));
+const LOCAL_LABEL_FONT = ['Arial'];
+const OPENFREEMAP_ATTRIBUTION =
+    '<a href="https://openfreemap.org">OpenFreeMap</a> ' +
+    '<a href="https://www.openmaptiles.org/">&copy; OpenMapTiles</a> ' +
+    'Data from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
-addTileLayer("Positron (no labels)", new ol.layer.Tile({
-    source: new ol.source.XYZ({
-        url: 'https://{a-d}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
-        attributions: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        maxZoom: 20
-    })
-}));
+function addVectorBasemap(title, styleUrl, noLabels) {
+    const layer = new ol.layer.VectorTile({ declutter: true });
+    let applied = false;
+    layer.on('change:visible', () => {
+        if (!layer.getVisible() || applied) return;
+        applied = true;
+        Promise.all([import('ol-mapbox-style'), fetch(styleUrl).then((r) => r.json())])
+            .then(([{ applyStyle }, glStyle]) => {
+                for (const l of glStyle.layers || [])
+                    if (l.layout && l.layout['text-font']) l.layout['text-font'] = LOCAL_LABEL_FONT;
+                if (noLabels) glStyle.layers = (glStyle.layers || []).filter((l) => l.type !== 'symbol');
+                const background = (glStyle.layers || []).find((l) => l.type === 'background')?.paint?.['background-color'];
+                return applyStyle(layer, glStyle, { styleUrl }).then(() => {
+                    if (background)
+                        layer.on('prerender', (evt) => {
+                            const ctx = evt.context;
+                            ctx.save();
+                            ctx.globalAlpha = layer.getOpacity();
+                            ctx.fillStyle = background;
+                            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                            ctx.restore();
+                        });
+                    layer.getSource()?.setAttributions(OPENFREEMAP_ATTRIBUTION);
+                    if (layer === activeTileLayer)
+                        document.getElementById("map_attributions").innerHTML = attributionHTML(layer);
+                    refreshBaseMapRows();
+                });
+            })
+            .catch((err) => {
+                applied = false;
+                console.error('basemap "' + title + '" failed to load:', err);
+            });
+    });
+    addTileLayer(title, layer);
+}
 
-addTileLayer("Dark Matter", new ol.layer.Tile({
-    source: new ol.source.XYZ({
-        url: 'https://{a-d}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        attributions: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        maxZoom: 20
-    })
-}));
-
-addTileLayer("Dark Matter (no labels)", new ol.layer.Tile({
-    source: new ol.source.XYZ({
-        url: 'https://{a-d}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
-        attributions: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        maxZoom: 20
-    })
-}));
-
-addTileLayer("Voyager", new ol.layer.Tile({
-    source: new ol.source.XYZ({
-        url: 'https://{a-d}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        attributions: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        maxZoom: 20
-    })
-}));
-
-addTileLayer("Voyager (no labels)", new ol.layer.Tile({
-    source: new ol.source.XYZ({
-        url: 'https://{a-d}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',
-        attributions: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        maxZoom: 20
-    })
-}));
+addVectorBasemap("OpenFreeMap Positron", 'https://tiles.openfreemap.org/styles/positron');
+addVectorBasemap("OpenFreeMap Positron (no labels)", 'https://tiles.openfreemap.org/styles/positron', true);
+addVectorBasemap("OpenFreeMap Bright", 'https://tiles.openfreemap.org/styles/bright');
+addVectorBasemap("OpenFreeMap Liberty", 'https://tiles.openfreemap.org/styles/liberty');
+addVectorBasemap("OpenFreeMap Dark", 'https://tiles.openfreemap.org/styles/dark');
+addVectorBasemap("OpenFreeMap Dark (no labels)", 'https://tiles.openfreemap.org/styles/dark', true);
 
 addTileLayer("Satellite", new ol.layer.Tile({
     source: new ol.source.XYZ({
