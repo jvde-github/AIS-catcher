@@ -637,7 +637,12 @@ const DEFAULT_SETTINGS = {
         loadURL: true,
         map_opacity: 0.5,
         layer_opacity: { Aircraft: 1 },
-        basemap_opacity: { "OpenFreeMap Dark": 1, "OpenFreeMap Dark (no labels)": 1 },
+        basemap_opacity: {
+            "OpenFreeMap Positron": 1, "OpenFreeMap Positron (no labels)": 1,
+            "OpenFreeMap Bright": 1, "OpenFreeMap Liberty": 1,
+            "OpenFreeMap Dark": 1, "OpenFreeMap Dark (no labels)": 1,
+            "OpenStreetMap": 0.6, "Satellite": 0.6,
+        },
         show_track_on_hover: false,
         show_track_on_select: false,
         show_all_tracks: false,
