@@ -187,6 +187,7 @@ namespace IO
 	class HTTPServer : public IO::TCPServer
 	{
 	public:
+		uint64_t bytesOut() const { return bytes_out.load(std::memory_order_relaxed); }
 		virtual void Request(IO::TCPServerConnection &c, const HTTPRequest &r, bool accept_gzip);
 		// 404 and close; the fallback for any path no subclass handles
 		void NotFound(IO::TCPServerConnection &c);
@@ -288,6 +289,7 @@ namespace IO
 		std::list<IO::SSEConnection> sse;
 		// union of the subscriber masks, read by producers on other threads
 		std::atomic<uint32_t> topics{0};
+		std::atomic<uint64_t> bytes_out{0}; // response bytes written, headers included
 		std::chrono::steady_clock::time_point last_sse_ping{};
 		static const int SSE_PING_INTERVAL = 20;
 		// below this size the gzip header/CPU overhead outweighs the savings

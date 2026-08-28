@@ -502,10 +502,12 @@ namespace IO
 			c.Close();
 			return;
 		}
+		bytes_out += header.length();
 
 		if (c.head_request)
 			return;
 
+		bytes_out += len;
 		if (!Send(c, data, len))
 		{
 			Error() << "Server: closing client socket.";
