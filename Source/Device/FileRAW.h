@@ -40,7 +40,7 @@ namespace Device
 
 		FIFO fifo;
 
-		static const uint32_t BUFFER_SIZE_IQ = 24 * 16 * 16384;
+		static const int SAMPLES_PER_KHZ = 512;
 		static const uint32_t BUFFER_SIZE_TXT = 8192;
 		uint32_t BUFFER_COUNT = 2;
 		int TXT_BLOCK_SIZE = 1;
