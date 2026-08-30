@@ -737,6 +737,12 @@ namespace AIS
 			tag.driver = Type::NONE;
 			tag.hardware.clear();
 		}
+		if (flags & 0x10)
+		{
+			int h = getByte(), l = getByte();
+			if ((h | l) < 0) { warnFail(h < 0 ? h : l, " in quality"); return false; }
+			tag.quality = (uint16_t)((h << 8) | l);
+		}
 
 		int ch = getByte(), lh = getByte(), ll = getByte();
 		if ((ch | lh | ll) < 0) { warnFail(ch < 0 ? ch : (lh < 0 ? lh : ll), " in header"); return false; }

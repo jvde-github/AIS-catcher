@@ -264,6 +264,7 @@ struct TAG
 	long long sample_idx = 0;
 	long long msg_idx_start = 0, msg_idx_end = 0;
 	uint32_t ipv4 = 0;
+	uint16_t quality = 0;
 	uint32_t error = MESSAGE_ERROR_NONE;
 	bool replay = false;
 
@@ -283,6 +284,7 @@ struct TAG
 		previous_signal = (std::time_t)0;
 		shipclass = CLASS_UNKNOWN;
 		ipv4 = 0;
+		quality = 0;
 		error = MESSAGE_ERROR_NONE;
 		shipname[0] = 0;
 	}
