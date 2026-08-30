@@ -50,6 +50,15 @@
     let flowOutputTarget = null;
 
     const iframe = document.getElementById('webviewer-frame');
+    iframe.addEventListener('load', () => {
+        try {
+            const doc = iframe.contentDocument;
+            const title = doc.querySelector('title') || doc.head.appendChild(doc.createElement('title'));
+            const mirror = () => { if (doc.title) document.title = doc.title; };
+            mirror();
+            new MutationObserver(mirror).observe(title, { childList: true, characterData: true, subtree: true });
+        } catch (e) { }
+    });
     const systemOverlay = document.getElementById('system-overlay');
     const systemBody = document.getElementById('system-body');
     const systemTabs = document.getElementById('system-tabs');
