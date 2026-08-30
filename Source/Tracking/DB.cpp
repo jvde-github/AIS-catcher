@@ -766,7 +766,7 @@ static uint64_t hashText(const std::string &s)
 	return h;
 }
 
-enum BinaryKeyKind { BK_SKIP, BK_META, BK_VALUE, BK_TEXT, BK_PERSONS, BK_LOCK };
+enum BinaryKeyKind { BK_SKIP, BK_META, BK_TEXT, BK_PERSONS, BK_VALUE, BK_LOCK };
 
 static BinaryKeyKind binaryKey(int &key, float &scale)
 {
@@ -790,7 +790,8 @@ static BinaryKeyKind binaryKey(int &key, float &scale)
 	case AIS::KEY_SWELLHEIGHT: case AIS::KEY_SWELLPERIOD: case AIS::KEY_SWELLDIR:
 	case AIS::KEY_SEASTATE: case AIS::KEY_WATERTEMP: case AIS::KEY_PRECIPTYPE: case AIS::KEY_SALINITY: case AIS::KEY_ICE: case AIS::KEY_WATER_FLOW:
 		return BK_VALUE;
-	case AIS::KEY_MESSAGE_ID: case AIS::KEY_LAT: case AIS::KEY_LON: case AIS::KEY_STATION_ID: case AIS::KEY_DEST_MMSI: case AIS::KEY_ACK_REQUIRED:
+	case AIS::KEY_DAC: case AIS::KEY_FID: case AIS::KEY_MESSAGE_ID: case AIS::KEY_LAT: case AIS::KEY_LON:
+	case AIS::KEY_STATION_ID: case AIS::KEY_DEST_MMSI: case AIS::KEY_ACK_REQUIRED:
 		return BK_META;
 	case AIS::KEY_TEXT:
 		return BK_TEXT;
@@ -816,7 +817,7 @@ void DB::processBinaryMessage(const JSON::JSON &data)
 	item.type = type;
 	item.mmsi = msg->mmsi();
 	std::string name;
-	bool has[6] = {false};
+	BinaryKeyKind best = BK_SKIP;
 
 	{
 		JSON::Writer w(item.json, 512);
@@ -826,16 +827,13 @@ void DB::processBinaryMessage(const JSON::JSON &data)
 			const JSON::Value &val = p.Get();
 			int key = p.Key();
 			float scale;
-			if (key == AIS::KEY_DAC || key == AIS::KEY_FID)
-			{
-				(key == AIS::KEY_DAC ? item.dac : item.fi) = val.getInt();
-				continue;
-			}
 			BinaryKeyKind k = binaryKey(key, scale);
 			if (k == BK_SKIP)
 				continue;
 			switch (key)
 			{
+			case AIS::KEY_DAC: item.dac = val.getInt(); break;
+			case AIS::KEY_FID: item.fi = val.getInt(); break;
 			case AIS::KEY_MESSAGE_ID: item.sub = val.getInt(); break;
 			case AIS::KEY_LAT: item.lat = val.getFloat(); break;
 			case AIS::KEY_LON: item.lon = val.getFloat(); break;
@@ -847,7 +845,7 @@ void DB::processBinaryMessage(const JSON::JSON &data)
 				name = val.getString();
 				break;
 			}
-			has[k] = true;
+			best = std::max(best, k);
 
 			const AIS::KeyStr &jkey = AIS::KeyMap[key][JSON_DICT_FULL];
 			if (val.isString())
@@ -859,50 +857,45 @@ void DB::processBinaryMessage(const JSON::JSON &data)
 			else if (val.isFloat() || val.isInt())
 				w.kv(jkey, (double)(val.getFloat() * scale));
 		}
-		w.kv("dac", item.dac).kv("fid", item.fi).endObject();
+		w.endObject();
 	}
-
-	if (has[BK_LOCK])
-		item.kind = BinaryItem::LOCK;
-	else if (has[BK_VALUE])
-		item.kind = BinaryItem::METEO;
-	else if (has[BK_PERSONS])
-		item.kind = BinaryItem::PERSONS;
-	else if (has[BK_TEXT])
-		item.kind = BinaryItem::TEXT;
-	else
+	if (best < BK_TEXT)
 		return;
+
+	item.kind = (BinaryItem::Kind)(best - BK_TEXT);
 	item.hash = hashText(name);
-	if (item.kind == BinaryItem::TEXT || item.kind == BinaryItem::PERSONS)
+	if (item.kind <= BinaryItem::PERSONS)
 		item.sender = item.mmsi;
 	if (!isValidCoord(item.lat, item.lon))
 		item.lat = item.lon = LAT_UNDEFINED;
 
-	time_t now = msg->getRxTimeUnix();
 	int n = 0;
-	while (n < MAX_BINARY_MESSAGES && binary_messages[n].used)
+	while (n < MAX_BINARY_MESSAGES && binary_messages[n].count)
 		n++;
-	for (int i = 0; i < n; i++)
+	int i = 0;
+	while (i < n && !binary_messages[i].sameAs(item))
+		i++;
+	bool hit = i < n;
+	if (!hit)
+		i = std::min(n, MAX_BINARY_MESSAGES - 1);
+	std::rotate(binary_messages, binary_messages + i, binary_messages + i + 1);
+
+	BinaryItem &b = binary_messages[0];
+	if (hit)
 	{
-		BinaryItem &b = binary_messages[i];
-		if (!b.sameAs(item))
-			continue;
 		b.json.swap(item.json);
 		b.mmsi = item.mmsi;
 		b.lat = item.lat;
 		b.lon = item.lon;
 		b.count++;
-		b.last = now;
-		std::rotate(binary_messages, binary_messages + i, binary_messages + i + 1);
-		return;
 	}
-	int last = n < MAX_BINARY_MESSAGES ? n : MAX_BINARY_MESSAGES - 1;
-	std::rotate(binary_messages, binary_messages + last, binary_messages + last + 1);
-	BinaryItem &b = binary_messages[0];
-	b = item;
-	b.used = true;
-	b.count = 1;
-	b.first = b.last = now;
+	else
+	{
+		b = item;
+		b.count = 1;
+		b.first = msg->getRxTimeUnix();
+	}
+	b.last = msg->getRxTimeUnix();
 }
 
 std::string DB::getBinaryMessagesJSON(std::time_t since)
@@ -918,7 +911,7 @@ std::string DB::getBinaryMessagesJSON(std::time_t since)
 		for (int i = 0; i < MAX_BINARY_MESSAGES; i++)
 		{
 			const BinaryItem &b = binary_messages[i];
-			if (!b.used || (long int)now - (long int)b.last > time_history || (since > 0 && b.last < since))
+			if (!b.count || (long int)now - (long int)b.last > time_history || (since > 0 && b.last < since))
 				break;
 			char key[64];
 			snprintf(key, sizeof(key), "%d:%d:%d:%d:%u:%u:%016llx", (int)b.kind, b.dac, b.fi, b.sub, b.sender, b.anchor, (unsigned long long)b.hash);
