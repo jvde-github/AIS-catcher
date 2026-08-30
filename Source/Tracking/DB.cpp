@@ -766,7 +766,7 @@ static uint64_t hashText(const std::string &s)
 	return h;
 }
 
-enum BinaryKeyKind { BK_SKIP, BK_META, BK_TEXT, BK_PERSONS, BK_VALUE, BK_LOCK };
+enum BinaryKeyKind { BK_SKIP, BK_META, BK_TEXT, BK_PERSONS, BK_VALUE, BK_ATON, BK_SIGNAL, BK_AREA, BK_LOCK };
 
 static BinaryKeyKind binaryKey(int &key, float &scale)
 {
@@ -791,8 +791,20 @@ static BinaryKeyKind binaryKey(int &key, float &scale)
 	case AIS::KEY_SEASTATE: case AIS::KEY_WATERTEMP: case AIS::KEY_PRECIPTYPE: case AIS::KEY_SALINITY: case AIS::KEY_ICE: case AIS::KEY_WATER_FLOW:
 		return BK_VALUE;
 	case AIS::KEY_DAC: case AIS::KEY_FID: case AIS::KEY_MESSAGE_ID: case AIS::KEY_LAT: case AIS::KEY_LON:
-	case AIS::KEY_STATION_ID: case AIS::KEY_DEST_MMSI: case AIS::KEY_ACK_REQUIRED:
+	case AIS::KEY_STATION_ID: case AIS::KEY_DEST_MMSI: case AIS::KEY_ACK_REQUIRED: case AIS::KEY_LINKAGE_ID:
+	case AIS::KEY_STATION_NAME: case AIS::KEY_NAME: case AIS::KEY_SITE_ID: case AIS::KEY_REPORT_TYPE:
+	case AIS::KEY_UTC_DAY: case AIS::KEY_UTC_HOUR: case AIS::KEY_UTC_MINUTE:
 		return BK_META;
+	case AIS::KEY_ASM_VOLTAGE_DATA: case AIS::KEY_ASM_CURRENT_DATA: case AIS::KEY_ASM_POWER_SUPPLY_TYPE:
+	case AIS::KEY_ASM_LIGHT_STATUS: case AIS::KEY_ASM_BATTERY_STATUS: case AIS::KEY_ASM_OFF_POSITION_STATUS:
+	case AIS::KEY_ANA_INT: case AIS::KEY_ANA_EXT1: case AIS::KEY_ANA_EXT2:
+	case AIS::KEY_RACON: case AIS::KEY_HEALTH: case AIS::KEY_STAT_EXT: case AIS::KEY_OFF_POSITION:
+		return BK_ATON;
+	case AIS::KEY_TRAFFIC_SIGNAL: case AIS::KEY_NEXT_SIGNAL:
+		return BK_SIGNAL;
+	case AIS::KEY_AREA_NOTICE_TYPE: case AIS::KEY_AREA_NOTICE_NAME: case AIS::KEY_AREA_NOTICE_DURATION:
+	case AIS::KEY_AREA_NOTICE_LAT: case AIS::KEY_AREA_NOTICE_LON: case AIS::KEY_AREA_SHAPES:
+		return BK_AREA;
 	case AIS::KEY_TEXT:
 		return BK_TEXT;
 	case AIS::KEY_CREW_COUNT: case AIS::KEY_PASSENGER_COUNT: case AIS::KEY_SHIPBOARD_PERSONNEL_COUNT:
@@ -817,6 +829,7 @@ void DB::processBinaryMessage(const JSON::JSON &data)
 	item.type = type;
 	item.mmsi = msg->mmsi();
 	std::string name;
+	int linkage = 0;
 	BinaryKeyKind best = BK_SKIP;
 
 	{
@@ -838,10 +851,14 @@ void DB::processBinaryMessage(const JSON::JSON &data)
 			case AIS::KEY_LAT: item.lat = val.getFloat(); break;
 			case AIS::KEY_LON: item.lon = val.getFloat(); break;
 			case AIS::KEY_DEST_MMSI: item.anchor = (uint32_t)val.getInt(); break;
+			case AIS::KEY_LINKAGE_ID: linkage = (int)val.getInt(); break;
+			case AIS::KEY_AREA_NOTICE_LAT: item.lat = val.getFloat(); break;
+			case AIS::KEY_AREA_NOTICE_LON: item.lon = val.getFloat(); break;
 			case AIS::KEY_STATION_ID:
 				if (!val.isString())
 					continue;
 			case AIS::KEY_TEXT: case AIS::KEY_LOCK_ID: case AIS::KEY_VESSEL_NAME:
+			case AIS::KEY_STATION_NAME: case AIS::KEY_NAME: case AIS::KEY_AREA_NOTICE_NAME:
 				name = val.getString();
 				break;
 			}
@@ -850,8 +867,8 @@ void DB::processBinaryMessage(const JSON::JSON &data)
 			const AIS::KeyStr &jkey = AIS::KeyMap[key][JSON_DICT_FULL];
 			if (val.isString())
 				w.kv(jkey, val.getString());
-			else if (val.isBool() && val.getBool())
-				w.kv(jkey, true);
+			else if (val.isBool())
+				w.kv(jkey, val.getBool());
 			else if (val.isInt() && scale == 1)
 				w.kv(jkey, (long long)val.getInt());
 			else if (val.isFloat() || val.isInt())
@@ -864,6 +881,8 @@ void DB::processBinaryMessage(const JSON::JSON &data)
 
 	item.kind = (BinaryItem::Kind)(best - BK_TEXT);
 	item.hash = hashText(name);
+	if (item.kind == BinaryItem::AREA)
+		item.sub = linkage;
 	if (item.kind <= BinaryItem::PERSONS)
 		item.sender = item.mmsi;
 	if (!isValidCoord(item.lat, item.lon))
@@ -913,9 +932,8 @@ std::string DB::getBinaryMessagesJSON(std::time_t since)
 			const BinaryItem &b = binary_messages[i];
 			if (!b.count || (long int)now - (long int)b.last > time_history || (since > 0 && b.last < since))
 				break;
-			char key[64];
-			snprintf(key, sizeof(key), "%d:%d:%d:%d:%u:%u:%016llx", (int)b.kind, b.dac, b.fi, b.sub, b.sender, b.anchor, (unsigned long long)b.hash);
-			w.beginObject().kv("key", key).kv("type", b.type).kv("dac", b.dac).kv("fi", b.fi).kv("timestamp", (long long)b.last).kv("first", (long long)b.first).kv("count", b.count).kv_raw("message", b.json).endObject();
+			uint64_t key = b.hash ^ ((uint64_t)b.kind << 48) ^ ((uint64_t)(b.dac & 0x3FF) << 38) ^ ((uint64_t)(b.fi & 0x3F) << 32) ^ ((uint64_t)(uint16_t)b.sub << 24) ^ b.sender ^ ((uint64_t)b.anchor << 8);
+			w.beginObject().kv("key", (long long)(key & 0x1FFFFFFFFFFFFFULL)).kv("type", b.type).kv("dac", b.dac).kv("fi", b.fi).kv("timestamp", (long long)b.last).kv("first", (long long)b.first).kv("count", b.count).kv_raw("message", b.json).endObject();
 		}
 		w.endArray().endObject();
 	}

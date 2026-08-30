@@ -300,19 +300,58 @@ namespace AIS
 	// ITU-R M.1371-5 — area notice / navigation safety (DAC=1, FID=23).
 	void JSONAIS::asm_imo_fid23_area_notice(const AIS::Message &msg, int start)
 	{
-		U(msg, AIS::KEY_AREA_NOTICE_TYPE, start, 7);
-		U(msg, AIS::KEY_AREA_NOTICE_DURATION, start + 7, 13, 0);
-		B(msg, AIS::KEY_AREA_NOTICE_PRIORITY, start + 20, 1);
-		SL(msg, AIS::KEY_AREA_NOTICE_LON1, start + 21, 25, 1 / 600000.0f, 0);
-		SL(msg, AIS::KEY_AREA_NOTICE_LAT1, start + 46, 24, 1 / 600000.0f, 0);
-		SL(msg, AIS::KEY_AREA_NOTICE_LON2, start + 70, 25, 1 / 600000.0f, 0);
-		SL(msg, AIS::KEY_AREA_NOTICE_LAT2, start + 95, 24, 1 / 600000.0f, 0);
-		int text_len = msg.getLength() - (start + 119);
-		if (text_len < 6) text_len = 0;
-		if (text_len > 360) text_len = 360;
-		text_len -= text_len % 6;
-		if (text_len > 0)
-			T(msg, AIS::KEY_AREA_NOTICE_NAME, start + 119, text_len, name);
+		U(msg, AIS::KEY_LINKAGE_ID, start, 10, 0);
+		U(msg, AIS::KEY_AREA_NOTICE_TYPE, start + 10, 7);
+		U(msg, AIS::KEY_MONTH, start + 17, 4, 0);
+		U(msg, AIS::KEY_DAY, start + 21, 5, 0);
+		U(msg, AIS::KEY_HOUR, start + 26, 5, 24);
+		U(msg, AIS::KEY_MINUTE, start + 31, 6, 60);
+		U(msg, AIS::KEY_AREA_NOTICE_DURATION, start + 37, 18, 262143);
+
+		static const float SCALE[4] = { 1, 10, 100, 1000 };
+		datastring.clear();
+		name.clear();
+		char buf[96];
+		for (int i = 0, base = start + 55; i < 10 && base + 87 <= msg.getLength(); i++, base += 87)
+		{
+			unsigned shape = msg.getUint(base, 3);
+			if (shape == 5)
+			{
+				std::string t;
+				msg.getText(base + 3, 84, t);
+				if (!name.empty() && !t.empty())
+					name += ' ';
+				name += t;
+				continue;
+			}
+			if (shape > 2)
+				continue;
+			float factor = SCALE[msg.getUint(base + 3, 2)];
+			float lon = msg.getInt(base + 5, 25) / 60000.0f, lat = msg.getInt(base + 30, 24) / 60000.0f;
+			if (lat < -90 || lat > 90 || lon < -180 || lon > 180)
+				continue;
+			if (datastring.empty())
+			{
+				json.Add(AIS::KEY_AREA_NOTICE_LAT, lat);
+				json.Add(AIS::KEY_AREA_NOTICE_LON, lon);
+			}
+			const char *sep = datastring.empty() ? "" : ";";
+			int n;
+			if (shape == 0)
+				n = snprintf(buf, sizeof(buf), "%sc,%.5f,%.5f,%.0f", sep, lon, lat, msg.getUint(base + 57, 12) * factor);
+			else if (shape == 1)
+				n = snprintf(buf, sizeof(buf), "%sr,%.5f,%.5f,%.0f,%.0f,%u", sep, lon, lat,
+							 msg.getUint(base + 57, 8) * factor, msg.getUint(base + 65, 8) * factor, msg.getUint(base + 73, 9));
+			else
+				n = snprintf(buf, sizeof(buf), "%ss,%.5f,%.5f,%.0f,%u,%u", sep, lon, lat,
+							 msg.getUint(base + 57, 12) * factor, msg.getUint(base + 69, 9), msg.getUint(base + 78, 9));
+			if (n > 0)
+				datastring += buf;
+		}
+		if (!datastring.empty())
+			json.Add(AIS::KEY_AREA_SHAPES, &datastring);
+		if (!name.empty())
+			json.Add(AIS::KEY_AREA_NOTICE_NAME, &name);
 	}
 
 	// ITU-R M.1371-5 — dangerous cargo / IMDG (DAC=1, FID=25).

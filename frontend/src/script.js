@@ -253,6 +253,7 @@ const ACTIONS = {
     setTrackHistory: (e, d, el) => setTrackHistory(TRACK_HISTORY_STOPS[el.value]),
     setBinaryDisplay: (e, d, el) => binary.setBinaryDisplay(el.value),
     setBinaryCategory: (e, d, el) => binary.setBinaryCategory(d.cat, el.checked),
+    setBinaryColorClass: (e, d, el) => binary.setBinaryColorClass(el.checked),
     setRangeColor: (e, d, el) => range.setRangeColor(el.value, d.field),
     setMapSettingDistanceColor: (e, d, el) => { range.removeDistanceCircles(); setMapSetting('distance_circle_color', el.value); },
     setShowTrackOnSelect: (e, d, el) => { settings.show_track_on_select = el.checked; saveSettings(); },
@@ -659,7 +660,8 @@ const DEFAULT_SETTINGS = {
         realtime_filters: [],
         ship_filter: {},
         binary_messages: "highlight",
-        binary_exclude: []
+        binary_color_class: true,
+        binary_exclude: ["aton"]
 };
 
 
@@ -4298,6 +4300,7 @@ function updateSettingsTab() {
     for (const cat of binary.BINARY_CATEGORIES) {
         document.getElementById("settings_binary_cat_" + cat).checked = !settings.binary_exclude.includes(cat);
     }
+    document.getElementById("settings_binary_color_class").checked = settings.binary_color_class;
 
     document.getElementById("settings_range_color").value = settings.range_color;
     document.getElementById("settings_range_timeframe").value = settings.range_timeframe;

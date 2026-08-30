@@ -43,7 +43,7 @@ class DB : public StreamIn<JSON::JSON>,
 {
 	struct BinaryItem
 	{
-		enum Kind : uint8_t { TEXT, PERSONS, METEO, LOCK };
+		enum Kind : uint8_t { TEXT, PERSONS, METEO, ATON, SIGNAL, AREA, LOCK };
 
 		Kind kind = TEXT;
 		int type = 0, dac = -1, fi = -1, sub = 0;

@@ -457,7 +457,13 @@
 						</span>
 					<small class="st-desc">How binary messages appear on the map</small>
 						</div>
-								</section>
+					<div>
+						<span>Colour by category</span><span>
+							<input type="checkbox" id="settings_binary_color_class" data-on-change="setBinaryColorClass" />
+						</span>
+						<small class="st-desc">Badge colour follows the message category</small>
+					</div>
+				</section>
 				<section>
 					<h5 class="st-title">Categories</h5>
 					<div class="third">
@@ -480,6 +486,20 @@
 								data-cat="text" />
 						</span>
 						<small class="st-desc">Safety and text broadcasts</small>
+					</div>
+					<div class="third">
+						<span>Aids to Navigation</span><span>
+							<input type="checkbox" id="settings_binary_cat_aton" data-on-change="setBinaryCategory"
+								data-cat="aton" />
+						</span>
+						<small class="st-desc">AtoN status and monitoring</small>
+					</div>
+					<div class="third">
+						<span>Zones &amp; Notices</span><span>
+							<input type="checkbox" id="settings_binary_cat_zones" data-on-change="setBinaryCategory"
+								data-cat="zones" />
+						</span>
+						<small class="st-desc">Area notices drawn on the map</small>
 					</div>
 				</section>
 				<header>Station Range</header>
