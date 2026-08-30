@@ -58,7 +58,7 @@ function badgeRed() {
 const countText = (count) => new Text({
     text: count.toString(),
     font: 'bold 9px Arial',
-    fill: new Fill({ color: 'white' }),
+    fill: new Fill({ color: 'rgba(255, 255, 255, 0.85)' }),
     textAlign: 'center',
     textBaseline: 'middle'
 });
