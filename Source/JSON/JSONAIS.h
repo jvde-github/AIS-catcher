@@ -39,6 +39,7 @@ namespace AIS {
 		std::string channel, timestamp, datastring, rxtime;
 		std::string eta, text, callsign, shipname, destination, name, vendorid;
 		std::string start_date, end_date, start_time, end_time;
+		std::string lock_id, last_location, last_ata, first_lock, first_lock_eta, second_lock, second_lock_eta, delay_lock;
 
 	protected:
 		void ProcessMsg8Data(const AIS::Message& msg);
@@ -105,6 +106,8 @@ namespace AIS {
 		void T(const AIS::Message& msg, int p, int start, int len, std::string& str);
 		void TIMESTAMP(const AIS::Message& msg, int p, int start, int len, std::string& str);
 		void ETA(const AIS::Message& msg, int p, int start, int len, std::string& str);
+		void seawayName(const AIS::Message& msg, int p, int start, int len, std::string& str);
+		void seawayTime(const AIS::Message& msg, int p, int start, std::string& str);
 
 	public:
 		virtual ~JSONAIS() {}

@@ -1040,70 +1040,15 @@ body.replay-open .map-button-box {
 
 /* Binary Messages Dialog Styling */
 .binary-messages-list {
-    padding: 10px 0;
+    padding: 4px 0;
 }
 
-.binary-message-count {
-    font-size: var(--fs-base);
-    color: var(--color-text);
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--color-border);
-    display: none;
-    /* Hide this since we'll show count in title */
+.binary-messages-list .meteo-tooltip {
+    max-width: none;
 }
 
-.binary-message-item {
-    padding: 12px;
-    margin-bottom: 15px;
-    border-radius: var(--radius-md);
-    background-color: var(--color-surface-alt);
-}
-
-.binary-message-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    font-size: var(--fs-base);
-}
-
-.binary-message-time {
-    font-weight: var(--fw-bold);
-    color: var(--color-text);
-}
-
-.binary-message-source {
-    color: var(--color-active);
-}
-
-.binary-message-details {
-    margin-top: 10px;
-    font-size: var(--fs-base);
-    background-color: var(--color-surface);
-    border-radius: var(--radius-sm);
-}
-
-.binary-raw-data {
-    margin-top: 10px;
-}
-
-.binary-raw-data summary {
-    cursor: pointer;
-    font-size: var(--fs-sm);
-    color: var(--color-text-muted);
-    padding: 5px 0;
-}
-
-.binary-raw-data pre {
-    margin-top: 10px;
-    padding: 10px;
-    background-color: var(--color-surface);
-    border-radius: var(--radius-sm);
-    font-size: var(--fs-sm);
-    overflow-x: auto;
-    white-space: pre-wrap;
-    word-break: break-word;
+.binary-messages-list .meteo-tooltip:first-child {
+    border-top: none;
 }
 
 /* Mobile Adjustments */
@@ -1116,10 +1061,6 @@ body.replay-open .map-button-box {
     .dialog-message {
         padding: 12px 15px;
         font-size: var(--fs-md);
-    }
-
-    .binary-message-item {
-        padding: 8px;
     }
 
     .meteo-tooltip {

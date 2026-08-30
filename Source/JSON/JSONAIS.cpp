@@ -396,7 +396,7 @@ namespace AIS
 			UL(msg, AIS::KEY_WSPEED, rpt + 111, 10, 0.1f, 0);
 			UL(msg, AIS::KEY_WGUST, rpt + 121, 10, 0.1f, 0);
 			U(msg, AIS::KEY_WDIR, rpt + 131, 9, 511);
-			U(msg, AIS::KEY_BAROMETRIC_PRESSURE, rpt + 140, 14, 16383);
+			UL(msg, AIS::KEY_BAROMETRIC_PRESSURE, rpt + 140, 14, 0.1f, 0, 16383);
 			SL(msg, AIS::KEY_AIR_TEMPERATURE, rpt + 154, 10, 0.1f, 0, -512);
 			SL(msg, AIS::KEY_DEW_POINT, rpt + 164, 10, 0.1f, 0, -512);
 			UL(msg, AIS::KEY_VISIBILITY_KM, rpt + 174, 8, 0.1f, 0);
@@ -427,16 +427,95 @@ namespace AIS
 		}
 	}
 
-	// SLS vessel/lock scheduling (DAC=316/366, FID=2) — only message_id exposed.
+	static void trimLeft(std::string &s)
+	{
+		size_t i = 0;
+		while (i < s.size() && s[i] == ' ')
+			i++;
+		s.erase(0, i);
+	}
+
+	void JSONAIS::seawayName(const AIS::Message &msg, int p, int start, int len, std::string &str)
+	{
+		msg.getText(start, len, str);
+		trimLeft(str);
+		if (!str.empty())
+			json.Add(p, &str);
+	}
+
+	void JSONAIS::seawayTime(const AIS::Message &msg, int p, int start, std::string &str)
+	{
+		if (msg.getUint(start, 4) != 0)
+			ETA(msg, p, start, 20, str);
+	}
+
 	void JSONAIS::asm_usa_fid2_sls_lock(const AIS::Message &msg, int start)
 	{
 		U(msg, AIS::KEY_MESSAGE_ID, start + 2, 6);
+		unsigned message_id = msg.getUint(start + 2, 6);
+
+		if (message_id == 1 && msg.getLength() >= start + 128)
+		{
+			U(msg, AIS::KEY_MONTH, start + 8, 4, 0);
+			U(msg, AIS::KEY_DAY, start + 12, 5, 0);
+			U(msg, AIS::KEY_HOUR, start + 17, 5, 24);
+			U(msg, AIS::KEY_MINUTE, start + 22, 6, 60);
+			seawayName(msg, AIS::KEY_LOCK_ID, start + 28, 42, lock_id);
+			SL(msg, AIS::KEY_LON, start + 70, 25, 1 / 60000.0f, 0, 10800000);
+			SL(msg, AIS::KEY_LAT, start + 95, 24, 1 / 60000.0f, 0, 5400000);
+			X(msg, AIS::KEY_SPARE, start + 119, 9);
+
+			int n = (msg.getLength() - (start + 128)) / 120;
+			if (n > 6)
+				n = 6;
+			datastring.clear();
+			for (int i = 0; i < n; i++)
+			{
+				int base = start + 128 + i * 120;
+				msg.getText(base, 90, shipname);
+				trimLeft(shipname);
+				if (shipname.empty())
+					continue;
+				char buf[16];
+				snprintf(buf, sizeof(buf), "%02u-%02uT%02u:%02uZ", msg.getUint(base + 91, 4), msg.getUint(base + 95, 5),
+						 msg.getUint(base + 100, 5), msg.getUint(base + 105, 6));
+				if (!datastring.empty())
+					datastring += ';';
+				datastring += shipname;
+				datastring += msg.getUint(base + 90, 1) ? ",1," : ",0,";
+				datastring += buf;
+			}
+			if (!datastring.empty())
+				json.Add(AIS::KEY_LOCK_SCHEDULE, &datastring);
+		}
+		else if (message_id == 2 && msg.getLength() >= start + 350)
+		{
+			U(msg, AIS::KEY_MONTH, start + 8, 4, 0);
+			U(msg, AIS::KEY_DAY, start + 12, 5, 0);
+			U(msg, AIS::KEY_HOUR, start + 17, 5, 24);
+			U(msg, AIS::KEY_MINUTE, start + 22, 6, 60);
+			seawayName(msg, AIS::KEY_VESSEL_NAME, start + 28, 90, shipname);
+			seawayName(msg, AIS::KEY_LAST_LOCATION, start + 118, 42, last_location);
+			seawayTime(msg, AIS::KEY_LAST_ATA, start + 160, last_ata);
+			seawayName(msg, AIS::KEY_FIRST_LOCK, start + 180, 42, first_lock);
+			seawayTime(msg, AIS::KEY_FIRST_LOCK_ETA, start + 222, first_lock_eta);
+			seawayName(msg, AIS::KEY_SECOND_LOCK, start + 242, 42, second_lock);
+			seawayTime(msg, AIS::KEY_SECOND_LOCK_ETA, start + 284, second_lock_eta);
+			seawayName(msg, AIS::KEY_DELAY_LOCK, start + 304, 42, delay_lock);
+			X(msg, AIS::KEY_SPARE, start + 346, 4);
+		}
 	}
 
-	// SLS specific messages (DAC=316/366, FID=32) — only message_id exposed.
 	void JSONAIS::asm_usa_fid32_sls_specific(const AIS::Message &msg, int start)
 	{
 		U(msg, AIS::KEY_MESSAGE_ID, start + 2, 6);
+		unsigned message_id = msg.getUint(start + 2, 6);
+		if (message_id == 1 && msg.getLength() >= start + 32)
+		{
+			U(msg, AIS::KEY_MAJOR_VERSION, start + 8, 8);
+			U(msg, AIS::KEY_MINOR_VERSION, start + 16, 8);
+			X(msg, AIS::KEY_SPARE, start + 24, 8);
+		}
 	}
 
 	// IALA ASM — VTS targets derived by non-AIS means (DAC=1, FID=16, msg 8).

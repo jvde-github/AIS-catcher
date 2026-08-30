@@ -105,6 +105,7 @@ export const binaryLayer = new VectorLayer({
 
 // the decoder emits `fid` on some paths and `fi` on others
 const fiOf = (m) => (m.fid != null ? m.fid : m.fi);
+const METEO_KEYS = ['wspeed', 'airtemp', 'pressure', 'waterlevel', 'watertemp', 'waveheight', 'swellheight', 'visibility', 'cspeed', 'water_flow'];
 
 export function isInlandMessage(msg) {
     if (!msg.message) return false;
@@ -117,9 +118,17 @@ export function isTextMessage(msg) {
     return msg.message.dac == 1 && (fi == 0 || fi == 29 || fi == 30);
 }
 
-export function isMeteoMessage(msg) {
+export function isLockMessage(msg) {
     if (!msg.message) return false;
-    return msg.message.dac == 1 && fiOf(msg.message) == 31;
+    return (msg.message.dac == 316 || msg.message.dac == 366) && fiOf(msg.message) == 2;
+}
+
+export function isMeteoMessage(msg) {
+    const m = msg.message;
+    if (!m) return false;
+    if (m.dac == 1 && fiOf(m) == 31) return true;
+    if ((m.dac == 316 || m.dac == 366) && fiOf(m) == 1) return true;
+    return METEO_KEYS.some(k => m[k] != null);
 }
 
 export const BINARY_CATEGORIES = ['data', 'inland', 'text'];
@@ -128,6 +137,7 @@ function binaryIncluded(msg) {
     const ex = settings.binary_exclude;
     if (isTextMessage(msg)) return !ex.includes('text');
     if (isInlandMessage(msg)) return !ex.includes('inland');
+    if (isLockMessage(msg)) return !ex.includes('data');
     const hasLocation = msg.message && msg.message.lat && msg.message.lon;
     return hasLocation && !ex.includes('data');
 }
@@ -148,17 +158,17 @@ const meteoRow = (label, value) =>
     `<span style="font-size: 11px; font-weight: bold;">${value}</span></div>`;
 
 // orange caption line shared by the meteo, inland and text tooltips
-const meteoHeader = (time, label, extra = 0) =>
+const meteoHeader = (time, label, extra = 0, count = 0) =>
     `<div style="font-size: 11px; color: #FFA500; padding: 4px 0 3px; margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center;">` +
     `<span style="font-size: 11px;">${time} - ${label}</span>` +
+    (count > 1 ? `<span style="font-size: 10px; opacity: 0.7;">&times;${count}</span>` : '') +
     (extra > 0 ? `<span style="font-size: 10px; opacity: 0.5; font-style: italic;">+${extra} more</span>` : '') +
     '</div>';
 
-const rawDetails = (obj) =>
-    `<details class="binary-raw-data">
-                      <summary>Show Raw Data</summary>
-                      <pre>${sanitizeString(JSON.stringify(obj, null, 2))}</pre>
-                    </details>`;
+const seenLine = (m) => m.count > 1
+    ? `<div style="font-size: 10px; opacity: 0.6;">seen ${m.count} times since ${formatTime(m.first)}</div>`
+    : '';
+
 
 // 360 is the "not available" sentinel for every AIS direction field
 const dirSuffix = (d) => (d != null && d !== 360 ? ` / ${d}&deg;` : '');
@@ -186,11 +196,13 @@ const METEO_ROWS = [
     ['Swell', (m) => m.swellheight != null &&
         `${m.swellheight.toFixed(1)} m${dirSuffix(m.swelldir)}${periodSuffix(m.swellperiod)}`],
     ['Visibility', (m) => m.visibility != null && `${m.visibility.toFixed(1)} nm`],
+    ['Flow', (m) => m.water_flow != null && `${m.water_flow} m&sup3;/s`],
+    ['Station', (m) => m.station_id && sanitizeString(m.station_id)],
 ];
 
 const HYDRO_FIELDS = ['watercurrent', 'currentspeed', 'currentdir', 'watertemp', 'waterlevel'];
 
-export function getBinaryMessageContent(binary, includeRaw = false) {
+export function getBinaryMessageContent(binary) {
     const messages = Array.isArray(binary) ? binary : [binary];
     if (messages.length === 0) return '';
 
@@ -201,41 +213,60 @@ export function getBinaryMessageContent(binary, includeRaw = false) {
 
     let content = '<div class="meteo-tooltip">';
     content += meteoHeader(messages[0].formattedTime,
-        hasHydroData ? 'Meteo & Hydro' : 'Meteo', messages.length - 1);
+        hasHydroData ? 'Meteo & Hydro' : 'Meteo', messages.length - 1, messages[0].count);
 
     for (const [label, format] of METEO_ROWS) {
         const value = format(msg);
         if (value) content += meteoRow(label, value);
     }
 
-    if (includeRaw) content += rawDetails(msg);
-
     content += '</div>';
     return content;
 }
 
-export function getTextMessageTooltip(messages) {
-    const sorted = [...messages].sort((a, b) => b.timestamp - a.timestamp);
-    const m = sorted[0];
-
-    return '<div class="meteo-tooltip">' +
-        meteoHeader(m.formattedTime, 'Text Message', sorted.length - 1) +
-        `<div style="font-size: 11px; font-weight: bold; white-space: pre-wrap;">${sanitizeString(m.message.text || '')}</div>` +
-        '</div>';
+export function getTextMessageContent(binary) {
+    const messages = Array.isArray(binary) ? binary : [binary];
+    if (messages.length === 0) return '';
+    messages.sort((a, b) => b.timestamp - a.timestamp);
+    const msg = messages[0];
+    const m = msg.message;
+    const label = m.type == 6 || fiOf(m) == 30 ? 'Text Message (addressed)' : 'Text Message';
+    let content = '<div class="meteo-tooltip">';
+    content += meteoHeader(msg.formattedTime, label, messages.length - 1, msg.count);
+    content += `<div style="font-size: 11px; font-weight: bold; white-space: pre-wrap;">${sanitizeString(m.text || '')}</div>`;
+    if (m.dest_mmsi) content += meteoRow('To', sanitizeString(String(shipLabel(m.dest_mmsi))));
+    if (m.ack_required) content += meteoRow('Ack', 'requested');
+    content += seenLine(msg);
+    content += '</div>';
+    return content;
 }
 
-function getTextMessageContent(msg) {
-    const m = msg.message;
-    const kind = m.type == 6 || fiOf(m) == 30 ? "Text message (addressed)" : "Text message (broadcast)";
+const lockRows = (m) => {
+    let rows = '';
+    if (m.lock_id) rows += meteoRow('Lock', sanitizeString(m.lock_id));
+    if (m.lock_schedule) {
+        for (const entry of m.lock_schedule.split(';')) {
+            const [vessel, dir, eta] = entry.split(',');
+            rows += meteoRow(sanitizeString(vessel || ''), `${dir === '1' ? 'up' : 'down'} ${sanitizeString(eta || '')}`);
+        }
+    }
+    if (m.vessel_name) rows += meteoRow('Vessel', sanitizeString(m.vessel_name));
+    if (m.last_location) rows += meteoRow('Last', `${sanitizeString(m.last_location)} ${sanitizeString(m.last_ata || '')}`);
+    if (m.first_lock) rows += meteoRow('Next', `${sanitizeString(m.first_lock)} ${sanitizeString(m.first_lock_eta || '')}`);
+    if (m.second_lock) rows += meteoRow('Then', `${sanitizeString(m.second_lock)} ${sanitizeString(m.second_lock_eta || '')}`);
+    if (m.delay_lock) rows += meteoRow('Delay at', sanitizeString(m.delay_lock));
+    return rows;
+};
 
-    let content = '<div class="binary-message-details">';
-    content += `<div><strong>${kind}</strong></div>`;
-    content += `<div style="font-size: var(--fs-lg); margin: 6px 0; white-space: pre-wrap;">${sanitizeString(m.text || '')}</div>`;
-
-    if (m.dest_mmsi) content += `<div><strong>To:</strong> ${sanitizeString(String(shipLabel(m.dest_mmsi)))}</div>`;
-    if (m.ack_required) content += '<div>Acknowledgement requested</div>';
-
-    content += rawDetails(m);
+export function getLockMessageContent(binary) {
+    const messages = Array.isArray(binary) ? binary : [binary];
+    if (messages.length === 0) return '';
+    messages.sort((a, b) => b.timestamp - a.timestamp);
+    const item = messages[0];
+    const m = item.message;
+    let content = '<div class="meteo-tooltip">';
+    content += meteoHeader(item.formattedTime, m.message_id == 2 ? 'Estimated Lock Times' : 'Lockage Order', messages.length - 1, item.count);
+    content += lockRows(m);
     content += '</div>';
     return content;
 }
@@ -255,7 +286,7 @@ export function getInlandMessageContent(binary) {
     const msg = entry.message;
 
     let content = '<div class="meteo-tooltip">';
-    content += meteoHeader(entry.formattedTime, 'Persons on Board');
+    content += meteoHeader(entry.formattedTime, 'Persons on Board', 0, entry.count);
 
     if (msg.crew_count != null) content += meteoRow('Crew', msg.crew_count);
     if (msg.passenger_count != null) content += meteoRow('Passengers', msg.passenger_count);
@@ -277,9 +308,12 @@ export function tooltipSections(messages, includeText = false) {
     const inland = messages.filter(isInlandMessage);
     if (inland.length > 0) content += getInlandMessageContent(inland);
 
+    const locks = messages.filter(isLockMessage);
+    if (locks.length > 0) content += getLockMessageContent(locks);
+
     if (includeText) {
         const text = messages.filter(isTextMessage);
-        if (text.length > 0) content += getTextMessageTooltip(text);
+        if (text.length > 0) content += getTextMessageContent(text);
     }
     return content;
 }
@@ -292,41 +326,21 @@ function getBinaryMessageList(messages) {
         return "<p>No messages available</p>";
     }
 
-    const sortedMessages = [...messages].sort((a, b) => b.timestamp - a.timestamp);
-
+    const sorted = [...messages].sort((a, b) => b.timestamp - a.timestamp);
     let content = '<div class="binary-messages-list">';
-    content += `<div class="binary-message-count">${sortedMessages.length} message${sortedMessages.length > 1 ? 's' : ''} available</div>`;
-
-    sortedMessages.forEach((msg, index) => {
-        if (index > 0) {
-            content += '<hr style="margin: 15px 0; border: 0; border-top: 1px solid rgba(0,0,0,0.1);">';
-        }
-
-        content += '<div class="binary-message-item">';
-        content += `<div class="binary-message-header">
-                      <span class="binary-message-time">${msg.formattedTime || new Date(msg.timestamp * 1000).toLocaleTimeString()}</span>`;
-
+    sorted.forEach((msg) => {
+        let section;
+        if (isMeteoMessage(msg)) section = getBinaryMessageContent(msg);
+        else if (isInlandMessage(msg)) section = getInlandMessageContent(msg);
+        else if (isLockMessage(msg)) section = getLockMessageContent(msg);
+        else if (isTextMessage(msg)) section = getTextMessageContent(msg);
+        else section = '<div class="meteo-tooltip">' + meteoHeader(msg.formattedTime, `DAC ${msg.message?.dac}, FI ${fiOf(msg.message || {})}`, 0, msg.count) + '</div>';
         if (msg.message && msg.message.mmsi) {
-            content += `<span class="binary-message-source"> from ${shipLabel(msg.message.mmsi)}</span>`;
+            const from = `<div style="font-size: 10px; opacity: 0.6; margin-top: 3px;">from ${sanitizeString(String(shipLabel(msg.message.mmsi)))}</div>`;
+            section = section.slice(0, -6) + from + '</div>';
         }
-        content += '</div>';
-
-        if (isMeteoMessage(msg)) {
-            content += getBinaryMessageContent(msg, true);
-        } else if (isInlandMessage(msg)) {
-            content += getInlandMessageContent(msg);
-        } else if (isTextMessage(msg)) {
-            content += getTextMessageContent(msg);
-        } else {
-            content += '<div class="binary-message-details">';
-            content += `<div><strong>Message Type:</strong> ${msg.message ? `DAC ${msg.message.dac}, FI ${msg.message.fid || msg.message.fi}` : 'Unknown'}</div>`;
-            content += rawDetails(msg.message);
-            content += '</div>';
-        }
-
-        content += '</div>';
+        content += section;
     });
-
     content += '</div>';
     return content;
 }
@@ -406,17 +420,17 @@ export async function fetchBinary() {
                     };
                 }
 
-                const exists = binaryDB[mmsi].ship_messages.some(m =>
-                    m.timestamp === msg.timestamp && m.message?.dac === msg.message.dac &&
-                    (m.message?.fid ?? m.message?.fi) === (msg.message.fid ?? msg.message.fi));
-                if (exists) return;
-
                 msg.formattedTime = formatTime(msg.timestamp);
                 if (hasLocation) {
                     msg.message_lat = msg.message.lat;
                     msg.message_lon = msg.message.lon;
                 }
 
+                for (const other in binaryDB) {
+                    const list = binaryDB[other].ship_messages;
+                    const at = list.findIndex(m => m.key === msg.key);
+                    if (at >= 0) list.splice(at, 1);
+                }
                 binaryDB[mmsi].ship_messages.push(msg);
             }
         });

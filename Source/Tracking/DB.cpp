@@ -16,6 +16,7 @@
 */
 
 #include "AIS-catcher.h"
+#include <algorithm>
 #include "DB.h"
 #include "Geodesy.h"
 #include "Region.h"
@@ -56,8 +57,7 @@ void DB::setup()
 	changes.setup(nships, nships / 4);
 
 	for (int i = 0; i < MAX_BINARY_MESSAGES; i++)
-		binary_messages[i].Clear();
-	binary_msg_index = 0;
+		binary_messages[i] = BinaryItem();
 	evict_horizon = 0;
 }
 
@@ -758,105 +758,151 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	return positionUpdated;
 }
 
+static uint64_t hashText(const std::string &s)
+{
+	uint64_t h = 1469598103934665603ULL;
+	for (unsigned char c : s)
+		h = (h ^ c) * 1099511628211ULL;
+	return h;
+}
+
+enum BinaryKeyKind { BK_SKIP, BK_META, BK_VALUE, BK_TEXT, BK_PERSONS, BK_LOCK };
+
+static BinaryKeyKind binaryKey(int &key, float &scale)
+{
+	scale = 1;
+	switch (key)
+	{
+	case AIS::KEY_WIND_SPEED_AVG: key = AIS::KEY_WSPEED; return BK_VALUE;
+	case AIS::KEY_WIND_GUST_SPEED: key = AIS::KEY_WGUST; return BK_VALUE;
+	case AIS::KEY_WIND_DIRECTION_AVG: key = AIS::KEY_WDIR; return BK_VALUE;
+	case AIS::KEY_AIR_TEMPERATURE: key = AIS::KEY_AIRTEMP; return BK_VALUE;
+	case AIS::KEY_DEW_POINT: key = AIS::KEY_DEWPOINT; return BK_VALUE;
+	case AIS::KEY_BAROMETRIC_PRESSURE: key = AIS::KEY_PRESSURE; return BK_VALUE;
+	case AIS::KEY_WATER_TEMPERATURE: key = AIS::KEY_WATERTEMP; return BK_VALUE;
+	case AIS::KEY_VISIBILITY_KM: key = AIS::KEY_VISIBILITY; scale = 1 / 1.852f; return BK_VALUE;
+	case AIS::KEY_WSPEED: case AIS::KEY_WGUST: case AIS::KEY_WDIR: case AIS::KEY_WGUSTDIR:
+	case AIS::KEY_AIRTEMP: case AIS::KEY_HUMIDITY: case AIS::KEY_DEWPOINT: case AIS::KEY_PRESSURE: case AIS::KEY_PRESSURETEND:
+	case AIS::KEY_VISIBILITY: case AIS::KEY_WATERLEVEL: case AIS::KEY_LEVELTREND:
+	case AIS::KEY_CSPEED: case AIS::KEY_CDIR: case AIS::KEY_CSPEED2: case AIS::KEY_CDIR2: case AIS::KEY_CDEPTH2:
+	case AIS::KEY_CSPEED3: case AIS::KEY_CDIR3: case AIS::KEY_CDEPTH3:
+	case AIS::KEY_WAVEHEIGHT: case AIS::KEY_WAVEPERIOD: case AIS::KEY_WAVEDIR:
+	case AIS::KEY_SWELLHEIGHT: case AIS::KEY_SWELLPERIOD: case AIS::KEY_SWELLDIR:
+	case AIS::KEY_SEASTATE: case AIS::KEY_WATERTEMP: case AIS::KEY_PRECIPTYPE: case AIS::KEY_SALINITY: case AIS::KEY_ICE: case AIS::KEY_WATER_FLOW:
+		return BK_VALUE;
+	case AIS::KEY_MESSAGE_ID: case AIS::KEY_LAT: case AIS::KEY_LON: case AIS::KEY_STATION_ID: case AIS::KEY_DEST_MMSI: case AIS::KEY_ACK_REQUIRED:
+		return BK_META;
+	case AIS::KEY_TEXT:
+		return BK_TEXT;
+	case AIS::KEY_CREW_COUNT: case AIS::KEY_PASSENGER_COUNT: case AIS::KEY_SHIPBOARD_PERSONNEL_COUNT:
+		return BK_PERSONS;
+	case AIS::KEY_LOCK_ID: case AIS::KEY_LOCK_SCHEDULE: case AIS::KEY_VESSEL_NAME:
+	case AIS::KEY_LAST_LOCATION: case AIS::KEY_LAST_ATA: case AIS::KEY_FIRST_LOCK: case AIS::KEY_FIRST_LOCK_ETA:
+	case AIS::KEY_SECOND_LOCK: case AIS::KEY_SECOND_LOCK_ETA: case AIS::KEY_DELAY_LOCK:
+		return BK_LOCK;
+	default:
+		return BK_SKIP;
+	}
+}
+
 void DB::processBinaryMessage(const JSON::JSON &data)
 {
 	const AIS::Message *msg = (AIS::Message *)data.binary;
 	int type = msg->type();
-	FLOAT32 loc_lat = LAT_UNDEFINED, loc_lon = LON_UNDEFINED;
-	bool has_content = false;
-
 	if (type != 6 && type != 8)
 		return;
 
-	int dac = -1, fi = -1;
+	BinaryItem item;
+	item.type = type;
+	item.mmsi = msg->mmsi();
+	std::string name;
+	bool has[6] = {false};
 
-	for (const auto &p : data.getMembers())
 	{
-		switch (p.Key())
+		JSON::Writer w(item.json, 512);
+		w.beginObject().kv("mmsi", item.mmsi);
+		for (const auto &p : data.getMembers())
 		{
-		case AIS::KEY_DAC:
-			dac = p.Get().getInt();
-			break;
-		case AIS::KEY_FID:
-			fi = p.Get().getInt();
-			break;
-		case AIS::KEY_LAT:
-			loc_lat = p.Get().getFloat();
-			break;
-		case AIS::KEY_LON:
-			loc_lon = p.Get().getFloat();
-			break;
-		case AIS::KEY_TEXT:
-		{
-			// getText trims the '@'/space padding, so a pure-padding broadcast is
-			// empty. ONWA transponders broadcast their on/off state as text, which
-			// is status rather than anything worth listing.
-			const std::string &t = p.Get().getString();
-			if (!t.empty() && t != "ONWAON" && t != "ONWAOFF")
-				has_content = true;
-			break;
+			const JSON::Value &val = p.Get();
+			int key = p.Key();
+			float scale;
+			if (key == AIS::KEY_DAC || key == AIS::KEY_FID)
+			{
+				(key == AIS::KEY_DAC ? item.dac : item.fi) = val.getInt();
+				continue;
+			}
+			BinaryKeyKind k = binaryKey(key, scale);
+			if (k == BK_SKIP)
+				continue;
+			switch (key)
+			{
+			case AIS::KEY_MESSAGE_ID: item.sub = val.getInt(); break;
+			case AIS::KEY_LAT: item.lat = val.getFloat(); break;
+			case AIS::KEY_LON: item.lon = val.getFloat(); break;
+			case AIS::KEY_DEST_MMSI: item.anchor = (uint32_t)val.getInt(); break;
+			case AIS::KEY_STATION_ID:
+				if (!val.isString())
+					continue;
+			case AIS::KEY_TEXT: case AIS::KEY_LOCK_ID: case AIS::KEY_VESSEL_NAME:
+				name = val.getString();
+				break;
+			}
+			has[k] = true;
+
+			const AIS::KeyStr &jkey = AIS::KeyMap[key][JSON_DICT_FULL];
+			if (val.isString())
+				w.kv(jkey, val.getString());
+			else if (val.isBool() && val.getBool())
+				w.kv(jkey, true);
+			else if (val.isInt() && scale == 1)
+				w.kv(jkey, (long long)val.getInt());
+			else if (val.isFloat() || val.isInt())
+				w.kv(jkey, (double)(val.getFloat() * scale));
 		}
-		case AIS::KEY_CREW_COUNT:
-		case AIS::KEY_PASSENGER_COUNT:
-		case AIS::KEY_SHIPBOARD_PERSONNEL_COUNT:
-		case AIS::KEY_WSPEED:
-		case AIS::KEY_WGUST:
-		case AIS::KEY_WDIR:
-		case AIS::KEY_WGUSTDIR:
-		case AIS::KEY_AIRTEMP:
-		case AIS::KEY_HUMIDITY:
-		case AIS::KEY_DEWPOINT:
-		case AIS::KEY_PRESSURE:
-		case AIS::KEY_PRESSURETEND:
-		case AIS::KEY_VISIBILITY:
-		case AIS::KEY_WATERLEVEL:
-		case AIS::KEY_LEVELTREND:
-		case AIS::KEY_CSPEED:
-		case AIS::KEY_CDIR:
-		case AIS::KEY_CSPEED2:
-		case AIS::KEY_CDIR2:
-		case AIS::KEY_CDEPTH2:
-		case AIS::KEY_CSPEED3:
-		case AIS::KEY_CDIR3:
-		case AIS::KEY_CDEPTH3:
-		case AIS::KEY_WAVEHEIGHT:
-		case AIS::KEY_WAVEPERIOD:
-		case AIS::KEY_WAVEDIR:
-		case AIS::KEY_SWELLHEIGHT:
-		case AIS::KEY_SWELLPERIOD:
-		case AIS::KEY_SWELLDIR:
-		case AIS::KEY_SEASTATE:
-		case AIS::KEY_WATERTEMP:
-		case AIS::KEY_PRECIPTYPE:
-		case AIS::KEY_SALINITY:
-		case AIS::KEY_ICE:
-			has_content = true;
-			break;
-		default:
-			break;
-		}
+		w.kv("dac", item.dac).kv("fid", item.fi).endObject();
 	}
 
-	const bool is_text = dac == 1 && (fi == 0 || fi == 29 || fi == 30);
-	const bool is_stored_type = is_text || (dac == 1 && fi == 31) || (dac == 200 && fi == 55);
-	if (is_stored_type && has_content)
+	if (has[BK_LOCK])
+		item.kind = BinaryItem::LOCK;
+	else if (has[BK_VALUE])
+		item.kind = BinaryItem::METEO;
+	else if (has[BK_PERSONS])
+		item.kind = BinaryItem::PERSONS;
+	else if (has[BK_TEXT])
+		item.kind = BinaryItem::TEXT;
+	else
+		return;
+	item.hash = hashText(name);
+	if (item.kind == BinaryItem::TEXT || item.kind == BinaryItem::PERSONS)
+		item.sender = item.mmsi;
+	if (!isValidCoord(item.lat, item.lon))
+		item.lat = item.lon = LAT_UNDEFINED;
+
+	time_t now = msg->getRxTimeUnix();
+	int n = 0;
+	while (n < MAX_BINARY_MESSAGES && binary_messages[n].used)
+		n++;
+	for (int i = 0; i < n; i++)
 	{
-		BinaryMessage &binmsg = binary_messages[binary_msg_index];
-		binmsg.Clear();
-		binmsg.type = type;
-		binmsg.dac = dac;
-		binmsg.fi = fi;
-		binmsg.json.clear();
-		builder.stringify(data, binmsg.json);
-		binmsg.used = true;
-		if (isValidCoord(loc_lat, loc_lon))
-		{
-			binmsg.lat = loc_lat;
-			binmsg.lon = loc_lon;
-		}
-		binmsg.timestamp = msg->getRxTimeUnix();
-		binary_msg_index = (binary_msg_index + 1) % MAX_BINARY_MESSAGES;
+		BinaryItem &b = binary_messages[i];
+		if (!b.sameAs(item))
+			continue;
+		b.json.swap(item.json);
+		b.mmsi = item.mmsi;
+		b.lat = item.lat;
+		b.lon = item.lon;
+		b.count++;
+		b.last = now;
+		std::rotate(binary_messages, binary_messages + i, binary_messages + i + 1);
+		return;
 	}
+	int last = n < MAX_BINARY_MESSAGES ? n : MAX_BINARY_MESSAGES - 1;
+	std::rotate(binary_messages, binary_messages + last, binary_messages + last + 1);
+	BinaryItem &b = binary_messages[0];
+	b = item;
+	b.used = true;
+	b.count = 1;
+	b.first = b.last = now;
 }
 
 std::string DB::getBinaryMessagesJSON(std::time_t since)
@@ -869,23 +915,14 @@ std::string DB::getBinaryMessagesJSON(std::time_t since)
 
 		w.beginObject().kv("time", now).kv("timeout", time_history).key("messages").beginArray();
 
-		int startIndex = (binary_msg_index + MAX_BINARY_MESSAGES - 1) % MAX_BINARY_MESSAGES;
-
 		for (int i = 0; i < MAX_BINARY_MESSAGES; i++)
 		{
-			int idx = (startIndex - i + MAX_BINARY_MESSAGES) % MAX_BINARY_MESSAGES;
-			const BinaryMessage &msg = binary_messages[idx];
-
-			if (!msg.used)
-				continue;
-
-			if ((long int)now - (long int)msg.timestamp > time_history)
+			const BinaryItem &b = binary_messages[i];
+			if (!b.used || (long int)now - (long int)b.last > time_history || (since > 0 && b.last < since))
 				break;
-
-			if (since > 0 && msg.timestamp < since)
-				break;
-
-			w.beginObject().kv("type", msg.type).kv("dac", msg.dac).kv("fi", msg.fi).kv("timestamp", msg.timestamp).kv_raw("message", msg.json).endObject();
+			char key[64];
+			snprintf(key, sizeof(key), "%d:%d:%d:%d:%u:%u:%016llx", (int)b.kind, b.dac, b.fi, b.sub, b.sender, b.anchor, (unsigned long long)b.hash);
+			w.beginObject().kv("key", key).kv("type", b.type).kv("dac", b.dac).kv("fi", b.fi).kv("timestamp", (long long)b.last).kv("first", (long long)b.first).kv("count", b.count).kv_raw("message", b.json).endObject();
 		}
 		w.endArray().endObject();
 	}

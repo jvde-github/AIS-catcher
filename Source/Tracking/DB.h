@@ -29,6 +29,7 @@
 #include "JSON.h"
 #include "Writer.h"
 
+
 // define CHECK_DB_INTEGRITY to validate ship and path structures once a minute
 
 #include "Ships.h"
@@ -40,25 +41,25 @@ class DB : public StreamIn<JSON::JSON>,
 		   public StreamIn<AIS::GPS>,
 		   public StreamOut<JSON::JSON>
 {
-	struct BinaryMessage
+	struct BinaryItem
 	{
+		enum Kind : uint8_t { METEO, TEXT, PERSONS, LOCK };
+
+		bool used = false;
+		Kind kind = METEO;
+		int type = 0, dac = -1, fi = -1, sub = 0;
+		uint32_t mmsi = 0, anchor = 0;
+		uint32_t sender = 0;
+		uint64_t hash = 0;
+		FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
+		uint32_t count = 0;
+		time_t first = 0, last = 0;
 		std::string json;
-		int type;
-		int dac;
-		int fi;
-		FLOAT32 lat, lon;
-		time_t timestamp = 0;
-		bool used;
 
-		BinaryMessage() { Clear(); }
-
-		void Clear()
+		bool sameAs(const BinaryItem &o) const
 		{
-			used = false;
-			type = dac = fi = -1;
-			lat = LAT_UNDEFINED;
-			lon = LON_UNDEFINED;
-		};
+			return kind == o.kind && sender == o.sender && dac == o.dac && fi == o.fi && sub == o.sub && anchor == o.anchor && hash == o.hash;
+		}
 	};
 
 	JSON::Serializer builder{JSON_DICT_FULL};
@@ -190,9 +191,8 @@ private:
 
 	AIS::Filter filter;
 
-	static const int MAX_BINARY_MESSAGES = 10;
-	BinaryMessage binary_messages[MAX_BINARY_MESSAGES];
-	int binary_msg_index = 0;
+	static const int MAX_BINARY_MESSAGES = 32;
+	BinaryItem binary_messages[MAX_BINARY_MESSAGES];
 
 	void processBinaryMessage(const JSON::JSON &data);
 #ifdef CHECK_DB_INTEGRITY
