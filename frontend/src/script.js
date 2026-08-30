@@ -1403,7 +1403,7 @@ function initMap() {
         value.setVisible(false);
     }
 
-    [trackLayer, rangeLayer, shapeLayer, markerLayer, labelLayer, extraLayer, binaryLayer, measure.measureVector,
+    [trackLayer, rangeLayer, binaryLayer, shapeLayer, markerLayer, labelLayer, extraLayer, measure.measureVector,
      replay.hullLayer, replay.markerLayer].forEach(layer => {
         map.addLayer(layer);
     });
