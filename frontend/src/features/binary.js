@@ -17,6 +17,7 @@ import Text from 'ol/style/Text';
 import { fromLonLat } from 'ol/proj';
 
 import { settings } from '../core/state.js';
+import { hexToRgb } from '../../shared/color.js';
 import { hasValidCoords } from '../../shared/core/geo.js';
 import { sanitizeString, formatTime } from '../../shared/core/text.js';
 
@@ -48,6 +49,12 @@ const binaryAssociatedOutline = new Style({
 
 const binaryStyleCache = new Map();
 
+function badgeRed() {
+    const hex = getComputedStyle(document.documentElement).getPropertyValue('--overlay-danger').trim() || '#e11d48';
+    const [r, g, b] = hexToRgb(hex);
+    return `rgba(${r}, ${g}, ${b}, 0.9)`;
+}
+
 const countText = (count) => new Text({
     text: count.toString(),
     font: 'bold 9px Arial',
@@ -73,7 +80,7 @@ const binaryStyle = function (feature) {
         const badge = new Style({
             image: new CircleStyle({
                 radius: 8,
-                fill: new Fill({ color: 'rgba(220, 0, 0, 0.9)' }),
+                fill: new Fill({ color: badgeRed() }),
                 stroke: new Stroke({ color: 'rgba(255, 255, 255, 0.5)', width: 1 }),
                 displacement: [10, 10]
             }),
@@ -85,7 +92,7 @@ const binaryStyle = function (feature) {
         cached = [new Style({
             image: new CircleStyle({
                 radius: 10,
-                fill: new Fill({ color: 'rgba(220, 0, 0, 0.9)' }),
+                fill: new Fill({ color: badgeRed() }),
                 stroke: new Stroke({ color: 'rgba(255, 255, 255, 0.5)', width: 1.5 })
             }),
             text: countText(count),
