@@ -41,7 +41,7 @@ const binaryAssociatedOutline = new Style({
     image: new CircleStyle({
         radius: 12,
         fill: new Fill({ color: 'rgba(255, 255, 255, 0)' }),
-        stroke: new Stroke({ color: 'white', width: 2 })
+        stroke: new Stroke({ color: 'rgba(255, 255, 255, 0.5)', width: 2 })
     }),
     zIndex: 200
 });
@@ -74,7 +74,7 @@ const binaryStyle = function (feature) {
             image: new CircleStyle({
                 radius: 8,
                 fill: new Fill({ color: 'rgba(220, 0, 0, 0.9)' }),
-                stroke: new Stroke({ color: 'white', width: 1 }),
+                stroke: new Stroke({ color: 'rgba(255, 255, 255, 0.5)', width: 1 }),
                 displacement: [10, 10]
             }),
             text,
@@ -86,7 +86,7 @@ const binaryStyle = function (feature) {
             image: new CircleStyle({
                 radius: 10,
                 fill: new Fill({ color: 'rgba(220, 0, 0, 0.9)' }),
-                stroke: new Stroke({ color: 'white', width: 1.5 })
+                stroke: new Stroke({ color: 'rgba(255, 255, 255, 0.5)', width: 1.5 })
             }),
             text: countText(count),
             zIndex: 100
