@@ -373,6 +373,7 @@ namespace AIS
 			put((unsigned char)((signal_tenths >> 8) & 0xFF));
 			put((unsigned char)(signal_tenths & 0xFF));
 			int ppm_tenths = (int)(tag.ppm * 10.0f);
+			ppm_tenths = ppm_tenths > 127 ? 127 : (ppm_tenths < -127 ? -127 : ppm_tenths);
 			put((unsigned char)(int8_t)ppm_tenths);
 		}
 

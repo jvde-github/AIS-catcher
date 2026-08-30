@@ -721,6 +721,23 @@ namespace AIS
 			tag.ppm = (int8_t)p / 10.0f;
 		}
 
+		int src = station;
+		if (flags & 0x04) // station id carried in the frame
+		{
+			uint32_t id = 0;
+			for (int i = 0; i < 4; i++)
+			{
+				v = getByte();
+				if (v < 0) { warnFail(v, " in station id"); return false; }
+				id = (id << 8) | (uint32_t)v;
+			}
+			src = (int)id;
+			// a multiplexed frame says nothing about the sender's software or hardware
+			tag.version = 0;
+			tag.driver = Type::NONE;
+			tag.hardware.clear();
+		}
+
 		int ch = getByte(), lh = getByte(), ll = getByte();
 		if ((ch | lh | ll) < 0) { warnFail(ch < 0 ? ch : (lh < 0 ? lh : ll), " in header"); return false; }
 		int length_bits = (lh << 8) | ll;
@@ -740,10 +757,8 @@ namespace AIS
 			return false;
 		}
 
-		if (timestamp < 0 || timestamp > INT64_MAX / 1000000)
-			timestamp = 0;
-
-		initMsg((char)ch, station, (int64_t)timestamp * 1000000);
+		// the timestamp is the sender's time of arrival in microseconds (Message::getBinaryNMEA)
+		initMsg((char)ch, src, validTOA((int64_t)timestamp));
 
 		int nbytes = (length_bits + 7) / 8;
 
