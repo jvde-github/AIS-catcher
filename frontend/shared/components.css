@@ -296,6 +296,20 @@
     box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
+.input.invalid,
+.input.invalid:hover,
+.input.invalid:focus {
+    border-color: var(--color-danger);
+    background-color: var(--color-danger-bg);
+    box-shadow: 0 0 0 3px var(--color-danger-border);
+}
+
+.field-hint {
+    margin-top: 4px;
+    font-size: var(--fs-sm, 12px);
+    color: var(--color-danger);
+}
+
 .input::placeholder {
     color: var(--color-text-subtle);
     opacity: 1;

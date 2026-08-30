@@ -981,13 +981,13 @@ const receiverSchema = {
     },
     rtlsdr_bandwidth: {
         name: "rtlsdr_bandwidth",
-        label: "Bandwidth",
+        label: "Bandwidth (Hz)",
         type: "integer-select",
         jsonpath: "rtlsdr.bandwidth",
         defaultValue: 0,
         min: 0,
         max: 1000000,
-        placeholder: "e.g., 0 (Off), 192000",
+        placeholder: "in Hz, e.g. 0 (Off), 192000 or 192K",
         presets: [
             { value: 0, label: "Off" },
             { value: 192000, label: "192K" }
@@ -1000,18 +1000,18 @@ const receiverSchema = {
     },
     rtlsdr_sample_rate: {
         name: "rtlsdr_sample_rate",
-        label: "Sample Rate",
+        label: "Sample Rate (Hz)",
         type: "integer-select",
         jsonpath: "rtlsdr.sample_rate",
         defaultValue: 1536000,
-        min: 225000,
+        min: 96000,
         max: 3200000,
-        placeholder: "e.g., 288000, 1536000",
+        placeholder: "in Hz, e.g. 1536000 or 1536K",
         presets: [
             { value: 288000, label: "288K" },
             { value: 1536000, label: "1536K (default)" }
         ],
-        tooltip: "1536K is recommended; 288K reduces CPU load on small devices",
+        tooltip: "1536000 Hz (1536K) is recommended; 288K reduces CPU load on small devices",
         dependsOn: {
             field: "input",
             value: "RTLSDR"
@@ -1059,13 +1059,13 @@ const receiverSchema = {
     },
     airspyhf_sample_rate: {
         name: "airspyhf_sample_rate",
-        label: "Sample Rate",
+        label: "Sample Rate (Hz)",
         type: "integer-select",
         jsonpath: "airspyhf.sample_rate",
         defaultValue: 192000,
         min: 192000,
         max: 768000,
-        placeholder: "e.g., 192000, 256000, 384000, 768000",
+        placeholder: "in Hz, e.g. 192000 or 192K",
         presets: [
             { value: 192000, label: "192K" },
             { value: 256000, label: "256K" },

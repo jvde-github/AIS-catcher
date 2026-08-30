@@ -721,21 +721,46 @@
                 const parsedCurrent = Utils.parseInteger(currentValue);
                 const isPreset = field.presets && field.presets.some(p => Utils.parseInteger(p.value) === parsedCurrent);
 
+                // Free text so "1536K" can be typed; it is stored and shown as the plain number
+                // (1536000), the unit being whatever the field is in (Hz for rates). A value
+                // below the minimum whose ×1000 fits gets a hint rather than a silent save.
+                const hint = el('div', 'field-hint hidden');
+                const check = (input, raw) => {
+                    let cleaned = raw.replace(/[^0-9kK]/g, '').replace(/[kK](?=.)/g, '');
+                    if (/[kK]$/.test(cleaned)) cleaned = cleaned.slice(0, -1) + (cleaned.length > 1 ? '000' : '');
+                    if (cleaned !== input.value) input.value = cleaned;
+                    const n = parseNumberLike(cleaned);
+                    const inRange = n !== null && (field.min === undefined || n >= field.min) && (field.max === undefined || n <= field.max);
+                    input.classList.toggle('invalid', !inRange);
+                    hint.classList.add('hidden');
+                    if (inRange) return n;
+                    if (n !== null) {
+                        const kFits = field.min !== undefined && n < field.min && n * 1000 >= field.min && (field.max === undefined || n * 1000 <= field.max);
+                        hint.textContent = kFits
+                            ? `${n} is below the minimum ${field.min}. Did you mean ${n}K (${n * 1000})?`
+                            : `Allowed range: ${field.min ?? '…'} – ${field.max ?? '…'}`;
+                        hint.classList.remove('hidden');
+                    }
+                    return null;
+                };
                 const customInput = el('input', Styles.input + (isPreset ? ' hidden' : ''), {
-                    type: 'number',
+                    type: 'text',
+                    inputMode: 'numeric',
                     value: isPreset ? '' : parsedCurrent,
                     placeholder: field.placeholder || 'Enter custom value...',
                     onInput: (e) => {
-                        const n = parseInt(e.target.value, 10);
-                        if (!isNaN(n)) onUpdate(n);
+                        const n = check(e.target, e.target.value);
+                        if (n !== null) onUpdate(Math.round(n));
                     }
                 });
+                if (!isPreset) check(customInput, String(parsedCurrent ?? ''));
 
                 const select = el('div', 'relative', {},
                     el('select', `${Styles.input} ${Styles.select}`, {
                         onChange: (e) => {
                             if (e.target.value === 'custom') {
                                 customInput.classList.remove('hidden');
+                                check(customInput, customInput.value);
                                 customInput.focus();
                             } else {
                                 customInput.classList.add('hidden');
@@ -747,7 +772,7 @@
                         el('option', '', { value: 'custom', selected: !isPreset }, 'Custom Value...')
                     )
                 );
-                return el('div', 'col', {}, select, customInput);
+                return el('div', 'col', {}, select, customInput, hint);
             }
 
             if (type === 'auto-float' || type === 'auto-integer') {
