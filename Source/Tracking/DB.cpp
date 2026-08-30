@@ -862,7 +862,7 @@ void DB::processBinaryMessage(const JSON::JSON &data)
 				name = val.getString();
 				break;
 			}
-			best = std::max(best, k);
+			best = MAX(best, k);
 
 			const AIS::KeyStr &jkey = AIS::KeyMap[key][JSON_DICT_FULL];
 			if (val.isString())
@@ -896,7 +896,7 @@ void DB::processBinaryMessage(const JSON::JSON &data)
 		i++;
 	bool hit = i < n;
 	if (!hit)
-		i = std::min(n, MAX_BINARY_MESSAGES - 1);
+		i = MIN(n, MAX_BINARY_MESSAGES - 1);
 	std::rotate(binary_messages, binary_messages + i, binary_messages + i + 1);
 
 	BinaryItem &b = binary_messages[0];
