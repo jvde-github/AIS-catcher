@@ -755,7 +755,7 @@ namespace AIS
 			return false;
 		}
 
-		bool valid_channel = (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9');
+		bool valid_channel = (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '?';
 		if (!valid_channel)
 		{
 			if (shouldWarn(WARN_BINARY_SHORT))

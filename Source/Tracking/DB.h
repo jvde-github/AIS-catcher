@@ -190,7 +190,7 @@ private:
 
 	AIS::Filter filter;
 
-	static const int MAX_BINARY_MESSAGES = 32;
+	static const int MAX_BINARY_MESSAGES = 256;
 	BinaryItem binary_messages[MAX_BINARY_MESSAGES];
 
 	void processBinaryMessage(const JSON::JSON &data);

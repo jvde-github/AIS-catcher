@@ -766,6 +766,19 @@ static uint64_t hashText(const std::string &s)
 	return h;
 }
 
+static uint64_t hashInt(uint64_t h, int32_t v)
+{
+	for (int i = 0; i < 4; i++)
+		h = (h ^ (uint8_t)(v >> (i * 8))) * 1099511628211ULL;
+	return h;
+}
+
+static uint64_t hashPosition(uint64_t h, FLOAT32 lat, FLOAT32 lon)
+{
+	return hashInt(hashInt(h, (int32_t)(lat * 10000 + (lat < 0 ? -0.5f : 0.5f))),
+				   (int32_t)(lon * 10000 + (lon < 0 ? -0.5f : 0.5f)));
+}
+
 enum BinaryKeyKind { BK_SKIP, BK_META, BK_TEXT, BK_PERSONS, BK_VALUE, BK_ATON, BK_SIGNAL, BK_AREA, BK_LOCK };
 
 static BinaryKeyKind binaryKey(int &key, float &scale)
@@ -887,6 +900,8 @@ void DB::processBinaryMessage(const JSON::JSON &data)
 		item.sender = item.mmsi;
 	if (!isValidCoord(item.lat, item.lon))
 		item.lat = item.lon = LAT_UNDEFINED;
+	else if (name.empty())
+		item.hash = hashPosition(item.hash, item.lat, item.lon);
 
 	int n = 0;
 	while (n < MAX_BINARY_MESSAGES && binary_messages[n].count)

@@ -28,7 +28,7 @@ let deps = null;
 let binaryDB = {};
 let binarySince = 0;
 let binaryTimeout = 1800;
-const binaryMaxPerShip = 50;
+const binaryMaxPerShip = 250;
 
 export function init(d) { deps = d; }
 
