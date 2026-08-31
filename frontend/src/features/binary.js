@@ -718,48 +718,22 @@ function addAreaFeatures(msg) {
 
 const newestCat = (msgs) => categoryOf(msgs.reduce((a, b) => (b.timestamp > a.timestamp ? b : a)));
 
-const GRID_SIZE = 0.01;         // clustering cell, degrees (approx. 1km)
 const SHIP_PROXIMITY = 0.05;    // messages nearer than this badge on the ship
 
-function addMessageToGridCell(msg, mmsi, gridCells) {
-    const msgLat = msg.message_lat;
-    const msgLon = msg.message_lon;
+function addStandaloneFeature(msg, mmsi) {
+    if (!hasValidCoords(msg.message_lat, msg.message_lon)) return;
 
-    if (!hasValidCoords(msgLat, msgLon)) return;
+    const feature = new OlFeature({ geometry: new Point(fromLonLat([msg.message_lon, msg.message_lat])) });
 
-    const gridKey = `${Math.floor(msgLon / GRID_SIZE)},${Math.floor(msgLat / GRID_SIZE)}`;
+    feature.binary = true;
+    feature.binary_count = msg.count || 1;
+    feature.binary_messages = [msg];
+    feature.binary_mmsi_counts = { [mmsi]: msg.count || 1 };
+    feature.is_associated = false;
+    feature.binary_cat = categoryOf(msg);
+    feature.setId(`binary-item-${msg.key}`);
 
-    if (!gridCells[gridKey]) {
-        gridCells[gridKey] = { messages: [], totalLat: 0, totalLon: 0, mmsiCounts: {} };
-    }
-
-    const cell = gridCells[gridKey];
-    cell.messages.push(msg);
-    cell.totalLat += msgLat;
-    cell.totalLon += msgLon;
-    cell.mmsiCounts[mmsi] = (cell.mmsiCounts[mmsi] || 0) + 1;
-}
-
-function createGridCellFeatures(gridCells) {
-    for (const [gridKey, gridData] of Object.entries(gridCells)) {
-        if (gridData.messages.length === 0) continue;
-
-        const avgLat = gridData.totalLat / gridData.messages.length;
-        const avgLon = gridData.totalLon / gridData.messages.length;
-
-        const feature = new OlFeature({ geometry: new Point(fromLonLat([avgLon, avgLat])) });
-
-        feature.binary = true;
-        feature.binary_count = gridData.messages.length;
-        feature.binary_messages = gridData.messages;
-        feature.binary_mmsi_counts = gridData.mmsiCounts;
-        feature.is_associated = false;
-        feature.binary_cat = newestCat(gridData.messages);
-        feature.tooltip = `${gridData.messages.length} binary messages`;
-        feature.setId(`binary-standalone-${gridKey}`);
-
-        binaryVector.addFeature(feature);
-    }
+    binaryVector.addFeature(feature);
 }
 
 export function redrawBinaryMessages() {
@@ -768,7 +742,6 @@ export function redrawBinaryMessages() {
     if (settings.binary_messages === 'off') return;
 
     const shipsDB = deps.getShipsDB();
-    const gridCells = {};
 
     for (const [mmsi, msgData] of Object.entries(binaryDB)) {
         if (!msgData.ship_messages || msgData.ship_messages.length === 0) continue;
@@ -781,11 +754,8 @@ export function redrawBinaryMessages() {
         });
 
         if (!ship || !hasValidCoords(ship.lat, ship.lon)) {
-            // no ship to badge: every located message clusters on its own
-            allMessages.forEach(msg => {
-                if (!msg.message_lat || !msg.message_lon) return;
-                addMessageToGridCell(msg, mmsi, gridCells);
-            });
+            // no ship to badge: every located message stands on its own position
+            allMessages.forEach(msg => addStandaloneFeature(msg, mmsi));
             continue;
         }
 
@@ -801,7 +771,7 @@ export function redrawBinaryMessages() {
 
             const distance = Math.hypot(msg.message_lat - ship.lat, msg.message_lon - ship.lon);
             if (distance <= SHIP_PROXIMITY) shipMessages.push(msg);
-            else addMessageToGridCell(msg, mmsi, gridCells);
+            else addStandaloneFeature(msg, mmsi);
         });
 
         if (shipMessages.length > 0) {
@@ -819,6 +789,4 @@ export function redrawBinaryMessages() {
             binaryVector.addFeature(feature);
         }
     }
-
-    createGridCellFeatures(gridCells);
 }
