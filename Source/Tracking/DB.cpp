@@ -901,7 +901,10 @@ void DB::processBinaryMessage(const JSON::JSON &data)
 	if (!isValidCoord(item.lat, item.lon))
 		item.lat = item.lon = LAT_UNDEFINED;
 	else if (name.empty())
+	{
+		item.positional = true;
 		item.hash = hashPosition(item.hash, item.lat, item.lon);
+	}
 
 	int n = 0;
 	while (n < MAX_BINARY_MESSAGES && binary_messages[n].count)

@@ -53,11 +53,24 @@ class DB : public StreamIn<JSON::JSON>,
 		FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 		uint32_t count = 0;
 		time_t first = 0, last = 0;
+		bool positional = false;
 		std::string json;
+
+		bool near(const BinaryItem &o) const
+		{
+			FLOAT32 dlon = lon - o.lon;
+			if (dlon > 180)
+				dlon -= 360;
+			else if (dlon < -180)
+				dlon += 360;
+			return (lat - o.lat) * (lat - o.lat) + dlon * dlon < 0.0001f * 0.0001f;
+		}
 
 		bool sameAs(const BinaryItem &o) const
 		{
-			return kind == o.kind && sender == o.sender && dac == o.dac && fi == o.fi && sub == o.sub && anchor == o.anchor && hash == o.hash;
+			if (kind != o.kind || sender != o.sender || dac != o.dac || fi != o.fi || sub != o.sub || anchor != o.anchor)
+				return false;
+			return positional && o.positional ? near(o) : hash == o.hash;
 		}
 	};
 
