@@ -22,6 +22,7 @@
 #include <cerrno>
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 
@@ -76,6 +77,36 @@ void BackupManager::stop()
 	}
 }
 
+
+std::string BackupManager::base_dir;
+
+static bool isAbsolutePath(const std::string &p)
+{
+	if (p.empty())
+		return false;
+	if (p[0] == '/' || p[0] == '\\')
+		return true;
+	return p.size() > 2 && p[1] == ':' && (p[2] == '/' || p[2] == '\\');
+}
+
+std::string BackupManager::resolve(const std::string &f)
+{
+	std::string path = f;
+
+	if (path.size() > 1 && path[0] == '~' && (path[1] == '/' || path[1] == '\\'))
+	{
+		const char *home = std::getenv("HOME");
+		if (home && *home)
+			path = std::string(home) + path.substr(1);
+		else
+			Warning() << "Server: no home directory to expand \"" << f << "\"";
+	}
+
+	if (path.empty() || isAbsolutePath(path) || base_dir.empty())
+		return path;
+
+	return base_dir + "/" + path;
+}
 
 bool BackupManager::save(bool include_ships)
 {
