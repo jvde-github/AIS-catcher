@@ -56,7 +56,7 @@ class DB : public StreamIn<JSON::JSON>,
 		bool positional = false;
 		std::string json;
 
-		bool near(const BinaryItem &o) const
+		bool sameSpot(const BinaryItem &o) const
 		{
 			FLOAT32 dlon = lon - o.lon;
 			if (dlon > 180)
@@ -70,7 +70,7 @@ class DB : public StreamIn<JSON::JSON>,
 		{
 			if (kind != o.kind || sender != o.sender || dac != o.dac || fi != o.fi || sub != o.sub || anchor != o.anchor)
 				return false;
-			return positional && o.positional ? near(o) : hash == o.hash;
+			return positional && o.positional ? sameSpot(o) : hash == o.hash;
 		}
 	};
 
