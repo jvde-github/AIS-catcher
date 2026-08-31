@@ -58,7 +58,7 @@ function badgeRed() {
     return `rgba(${r}, ${g}, ${b}, 0.9)`;
 }
 
-const CAT_COLORS = { text: '#7c3aed', inland: '#0f766e', aton: '#d97706', zones: '#0857b1' };
+const CAT_COLORS = { text: '#7c3aed', inland: '#0f766e', aton: '#d97706', zones: '#0857b1', lock: '#4338ca', signal: '#15803d' };
 
 function badgeColor(cat) {
     if (!settings.binary_color_class || !CAT_COLORS[cat]) return badgeRed();
@@ -200,13 +200,15 @@ export function isMeteoMessage(msg) {
     return METEO_KEYS.some(k => m[k] != null);
 }
 
-export const BINARY_CATEGORIES = ['data', 'inland', 'text', 'aton', 'zones'];
+export const BINARY_CATEGORIES = ['data', 'lock', 'signal', 'inland', 'text', 'aton', 'zones'];
 
 function categoryOf(msg) {
     if (isTextMessage(msg)) return 'text';
     if (isInlandMessage(msg)) return 'inland';
     if (isAreaMessage(msg)) return 'zones';
     if (isAtonMessage(msg)) return 'aton';
+    if (isLockMessage(msg)) return 'lock';
+    if (isSignalMessage(msg)) return 'signal';
     return 'data';
 }
 
@@ -214,7 +216,6 @@ function binaryIncluded(msg) {
     const ex = settings.binary_exclude;
     const cat = categoryOf(msg);
     if (cat !== 'data') return !ex.includes(cat);
-    if (isLockMessage(msg) || isSignalMessage(msg)) return !ex.includes('data');
     const hasLocation = msg.message && msg.message.lat && msg.message.lon;
     return hasLocation && !ex.includes('data');
 }
@@ -233,6 +234,8 @@ const meteoRow = (label, value) =>
     `<div style="display: flex; justify-content: space-between; padding: 1px 0; white-space: nowrap;">` +
     `<span style="font-size: 11px; opacity: 0.6; margin-right: 12px;">${label}</span>` +
     `<span style="font-size: 11px; font-weight: bold;">${value}</span></div>`;
+
+const cardOpen = (cat) => `<div class="meteo-tooltip" style="border-left: 3px solid ${badgeColor(cat)}">`;
 
 // orange caption line shared by the meteo, inland and text tooltips
 const meteoHeader = (time, label, extra = 0, count = 0) =>
@@ -290,7 +293,7 @@ export function getBinaryMessageContent(binary) {
     const msg = messages[0].message;
     const hasHydroData = HYDRO_FIELDS.some(f => msg[f] != null);
 
-    let content = '<div class="meteo-tooltip">';
+    let content = cardOpen('data');
     content += meteoHeader(messages[0].formattedTime,
         hasHydroData ? 'Meteo & Hydro' : 'Meteo', messages.length - 1, messages[0].count);
 
@@ -310,7 +313,7 @@ export function getTextMessageContent(binary) {
     const msg = messages[0];
     const m = msg.message;
     const label = m.type == 6 || fiOf(m) == 30 ? 'Text Message (addressed)' : 'Text Message';
-    let content = '<div class="meteo-tooltip">';
+    let content = cardOpen('text');
     content += meteoHeader(msg.formattedTime, label, messages.length - 1, msg.count);
     content += `<div style="font-size: 11px; font-weight: bold; white-space: pre-wrap;">${sanitizeString(m.text || '')}</div>`;
     if (m.dest_mmsi) content += meteoRow('To', sanitizeString(String(shipLabel(m.dest_mmsi))));
@@ -343,7 +346,7 @@ export function getLockMessageContent(binary) {
     messages.sort((a, b) => b.timestamp - a.timestamp);
     const item = messages[0];
     const m = item.message;
-    let content = '<div class="meteo-tooltip">';
+    let content = cardOpen('lock');
     content += meteoHeader(item.formattedTime, m.message_id == 2 ? 'Estimated Lock Times' : 'Lockage Order', messages.length - 1, item.count);
     content += lockRows(m);
     content += '</div>';
@@ -364,7 +367,7 @@ export function getInlandMessageContent(binary) {
 
     const msg = entry.message;
 
-    let content = '<div class="meteo-tooltip">';
+    let content = cardOpen('inland');
     content += meteoHeader(entry.formattedTime, 'Persons on Board', 0, entry.count);
 
     if (msg.crew_count != null) content += meteoRow('Crew', msg.crew_count);
@@ -397,12 +400,12 @@ const ATON_ROWS = [
     ['Status', (m) => m.stat_ext != null && atonValue(m.stat_ext)],
 ];
 
-const binaryCard = (binary, label, rows) => {
+const binaryCard = (binary, label, rows, cat) => {
     const messages = Array.isArray(binary) ? binary : [binary];
     if (messages.length === 0) return '';
     messages.sort((a, b) => b.timestamp - a.timestamp);
     const item = messages[0];
-    return '<div class="meteo-tooltip">' +
+    return cardOpen(cat) +
         meteoHeader(item.formattedTime, label, messages.length - 1, item.count) +
         rows(item.message) + seenLine(item) + '</div>';
 };
@@ -417,7 +420,7 @@ export const getAtonMessageContent = (binary) => binaryCard(binary, 'AtoN Status
         if (value) rows += meteoRow(rowLabel, value);
     }
     return rows;
-});
+}, 'aton');
 
 const SIGNAL_STATES = ['not available', 'emergency: all vessels stop or divert', 'vessels shall not proceed',
     'vessels may proceed, one-way traffic', 'vessels may proceed, two-way traffic',
@@ -430,7 +433,7 @@ export const getSignalMessageContent = (binary) => binaryCard(binary, 'Traffic S
     if (m.next_signal) rows += meteoRow('Next', SIGNAL_STATES[m.next_signal] || `signal ${m.next_signal}`);
     if (m.hour < 24 && m.minute < 60) rows += meteoRow('At', `${pad2(m.hour)}:${pad2(m.minute)} UTC`);
     return rows;
-});
+}, 'signal');
 
 const NOTICE_TYPES = {
     0: 'Caution: marine mammals habitat', 1: 'Caution: marine mammals, reduce speed',
@@ -469,7 +472,7 @@ export const getAreaMessageContent = (binary) => binaryCard(binary, 'Area Notice
         rows += meteoRow('From', `${pad2(m.month)}-${pad2(m.day)} ${pad2(m.hour)}:${pad2(m.minute)} UTC`);
     if (m.area_notice_duration != null) rows += meteoRow('Duration', durationLabel(m.area_notice_duration));
     return rows;
-});
+}, 'zones');
 
 // Meteo/inland/text sections appended to a hover tooltip. Standalone binary
 // features carry no text messages, hence the flag.
@@ -495,16 +498,16 @@ export function tooltipSections(messages, includeText = false) {
     const areas = messages.filter(isAreaMessage);
     if (areas.length > 0) content += getAreaMessageContent(areas);
 
-    if (!content && messages.length > 0) content = genericCard(messages[0]);
-
     if (includeText) {
         const text = messages.filter(isTextMessage);
         if (text.length > 0) content += getTextMessageContent(text);
     }
+
+    if (!content && messages.length > 0) content = genericCard(messages[0]);
     return content;
 }
 
-const genericCard = (msg) => '<div class="meteo-tooltip">' +
+const genericCard = (msg) => cardOpen('data') +
     meteoHeader(msg.formattedTime, `DAC ${msg.message?.dac}, FI ${fiOf(msg.message || {})}`, 0, msg.count) + '</div>';
 
 const shipLabel = (mmsi) =>

@@ -856,6 +856,12 @@ void DB::processBinaryMessage(const JSON::JSON &data)
 			BinaryKeyKind k = binaryKey(key, scale);
 			if (k == BK_SKIP)
 				continue;
+			if (key == AIS::KEY_TEXT && val.isString())
+			{
+				const std::string &t = val.getString();
+				if (t.empty() || t == "ONWAON" || t == "ONWAOFF")
+					continue;
+			}
 			switch (key)
 			{
 			case AIS::KEY_DAC: item.dac = val.getInt(); break;
