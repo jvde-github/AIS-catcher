@@ -412,7 +412,7 @@ namespace AIS
 
 	// Saint Lawrence Seaway meteorological/hydrological messages (DAC=316 CA / 366 US, FID=1).
 	// Sub-messages: 1=weather station, 2=wind, 3=water level, 6=water flow.
-	static const unsigned SLS_WIND_MAX = 1012;
+	static const unsigned SLS_WIND_MAX = 1013;
 
 	void JSONAIS::asm_usa_fid1_sls_meteo(const AIS::Message &msg, int start)
 	{
