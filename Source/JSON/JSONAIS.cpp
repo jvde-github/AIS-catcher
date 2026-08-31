@@ -412,11 +412,22 @@ namespace AIS
 
 	// Saint Lawrence Seaway meteorological/hydrological messages (DAC=316 CA / 366 US, FID=1).
 	// Sub-messages: 1=weather station, 2=wind, 3=water level, 6=water flow.
+	static const unsigned SLS_WIND_MAX = 1012;
+
 	void JSONAIS::asm_usa_fid1_sls_meteo(const AIS::Message &msg, int start)
 	{
 		U(msg, AIS::KEY_MESSAGE_ID, start + 2, 6);
 		unsigned message_id = msg.getUint(start + 2, 6);
 		int rpt = start + 8; // first report starts 8 bits into the payload
+
+		// Wind speed/gust in 1/10 knot. 1023 is the spec's "not available"; stations
+		// without a gust sensor send a constant 1014 instead. Reject the top of the
+		// range rather than reporting it as a 101.4 knot wind.
+		auto wind_speed = [&](int p, int offset) {
+			unsigned u = msg.getUint(offset, 10);
+			if (u <= SLS_WIND_MAX)
+				json.Add(p, u * 0.1f);
+		};
 
 		// Common 111-bit header (timestamp + station ID + position) shared by msgs 1/2/3/6.
 		auto emit_common_header = [&]() {
@@ -432,13 +443,13 @@ namespace AIS
 		if (message_id == 1 && msg.getLength() >= rpt + 192)
 		{
 			emit_common_header();
-			UL(msg, AIS::KEY_WSPEED, rpt + 111, 10, 0.1f, 0);
-			UL(msg, AIS::KEY_WGUST, rpt + 121, 10, 0.1f, 0);
+			wind_speed(AIS::KEY_WSPEED, rpt + 111);
+			wind_speed(AIS::KEY_WGUST, rpt + 121);
 			U(msg, AIS::KEY_WDIR, rpt + 131, 9, 511);
 			UL(msg, AIS::KEY_BAROMETRIC_PRESSURE, rpt + 140, 14, 0.1f, 0, 16383);
 			SL(msg, AIS::KEY_AIR_TEMPERATURE, rpt + 154, 10, 0.1f, 0, -512);
 			SL(msg, AIS::KEY_DEW_POINT, rpt + 164, 10, 0.1f, 0, -512);
-			UL(msg, AIS::KEY_VISIBILITY_KM, rpt + 174, 8, 0.1f, 0);
+			UL(msg, AIS::KEY_VISIBILITY_KM, rpt + 174, 8, 0.1f, 0, 255);
 			SL(msg, AIS::KEY_WATERTEMP, rpt + 182, 10, 0.1f, 0, -512);
 		}
 		else if (message_id == 3 && msg.getLength() >= rpt + 144)
@@ -453,8 +464,8 @@ namespace AIS
 		else if (message_id == 2 && msg.getLength() >= rpt + 144)
 		{
 			emit_common_header();
-			UL(msg, AIS::KEY_WIND_SPEED_AVG, rpt + 111, 10, 0.1f, 0);
-			UL(msg, AIS::KEY_WIND_GUST_SPEED, rpt + 121, 10, 0.1f, 0);
+			wind_speed(AIS::KEY_WIND_SPEED_AVG, rpt + 111);
+			wind_speed(AIS::KEY_WIND_GUST_SPEED, rpt + 121);
 			U(msg, AIS::KEY_WIND_DIRECTION_AVG, rpt + 131, 9, 511);
 			X(msg, AIS::KEY_SPARE, rpt + 140, 4);
 		}
