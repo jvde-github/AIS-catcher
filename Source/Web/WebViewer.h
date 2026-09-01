@@ -92,6 +92,8 @@ class WebViewer : public IO::HTTPServer, public Setting
 public:
 	// Extra routes: asked before the static files; return true when the request was answered.
 	std::function<bool(WebViewer &, IO::TCPServerConnection &, const std::string &path, const std::string &arg, bool gzip)> extra_request;
+	// the tracks for a list of MMSIs, as /api/path.json answers them
+	std::string buildMultiPathJSON(ReceiverTracker *s, const std::string &query);
 	int trackerCount() const { return (int)states.size(); }
 	ReceiverTracker *tracker(int i) { return i >= 0 && i < (int)states.size() ? states[i].get() : nullptr; }
 
@@ -186,7 +188,7 @@ private:
 	std::string buildStatJSON(ReceiverTracker *s);
 	std::string buildOutputStatsJSON();
 	std::string buildSharingStateJSON();
-	std::string buildMultiPathJSON(ReceiverTracker *s, const std::string &query);
+
 	void writeOutputsJSON(JSON::Writer &w);
 
 	// NMEA decoder utility

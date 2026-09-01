@@ -87,7 +87,7 @@ namespace Device
 		}
 		else
 		{
-			fifo.Init(1, BUFFER_SIZE);
+			fifo.Init(text_buffer, BUFFER_SIZE / text_buffer);
 		}
 
 
@@ -195,6 +195,9 @@ namespace Device
 		case AIS::KEY_SETTING_PASSWORD:
 			mqtt.setOptionKey(key, arg);
 			ws.setOptionKey(key, arg);
+			break;
+		case AIS::KEY_SETTING_TEXT_BUFFER:
+			text_buffer = Util::Parse::Integer(arg, 1, 256, "TEXT_BUFFER");
 			break;
 		case AIS::KEY_SETTING_PROTOCOL:
 		{

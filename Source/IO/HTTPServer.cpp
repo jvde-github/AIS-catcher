@@ -444,7 +444,7 @@ namespace IO
 		{
 			common_headers = "\r\nServer: AIS-catcher";
 			common_headers += "\r\nContent-Security-Policy: default-src 'self'; "
-				"script-src 'self'; "
+				"script-src " + csp_script_src + "; "
 				"style-src 'self' 'unsafe-inline'; "
 				"img-src 'self' data: blob: http: https:; "
 				"connect-src 'self' http: https: ws: wss:; "

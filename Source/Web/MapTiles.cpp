@@ -51,6 +51,8 @@ namespace
         {".pbf", "pbf", "application/x-protobuf"},
     };
 
+#ifdef HASSQLITE
+    // only the mbtiles reader asks for this, and that is behind the same guard
     const char *mimeForFormat(const std::string &format)
     {
         if (format == "png")
@@ -61,6 +63,7 @@ namespace
             return "application/x-protobuf";
         return "application/octet-stream";
     }
+#endif
 
     const TileExt *extInfo(const std::string &filename)
     {

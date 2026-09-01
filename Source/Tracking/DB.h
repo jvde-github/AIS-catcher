@@ -98,6 +98,8 @@ class DB : public StreamIn<JSON::JSON>,
 
 	bool expire_fields = false;
 	std::time_t last_sweep = 0;
+	uint16_t quality_mask = 0;
+	uint64_t copies_dropped = 0;
 
 	static const int SHIP_NIL = SlotTable<Ship, uint32_t>::NIL;
 
@@ -115,6 +117,44 @@ public:
 		f(ships[ptr], ptr);
 		return true;
 	}
+
+	// The same, for a list of ships, under ONE lock. Serving a busy station means
+	// looking up a thousand or more vessels, and taking the lock once each puts
+	// that many round-trips against a mutex the decoder is already holding
+	// thousands of times a second. Whatever f does should be short - copy the
+	// fields out and do the work afterwards, not in here.
+	template <typename F>
+	void withShips(const uint32_t *mmsi, size_t n, F f)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		for (size_t i = 0; i < n; i++)
+		{
+			int ptr = ships.find(mmsi[i]);
+			f(i, ptr == SHIP_NIL ? nullptr : &ships[ptr]);
+		}
+	}
+	// Locked write for an operator correction: the record under `mmsi`, mutable.
+	template <typename F>
+	bool withShipMutable(uint32_t mmsi, F f)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		int ptr = ships.find(mmsi);
+		if (ptr == SHIP_NIL)
+			return false;
+		f(ships[ptr]);
+		return true;
+	}
+	// Drops the record: a decode that turned out wrong keeps no memory here. Its
+	// slot is the next one recycled; the path and the change history are untouched.
+	bool deleteShip(uint32_t mmsi)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		int ptr = ships.find(mmsi);
+		if (ptr == SHIP_NIL)
+			return false;
+		ships[ptr].reset();
+		return ships.remove(mmsi);
+	}
 	// most recently heard first; f returns false to stop the walk
 	template <typename F>
 	void forEachShip(F f)
@@ -122,7 +162,30 @@ public:
 		std::lock_guard<std::mutex> lock(mtx);
 		ships.forEach([&](int ptr) { return f(ships[ptr], ptr); });
 	}
+	// the two scope rules fold into one cutoff: 0 passes everything, since
+	// last_signal is never negative
+	template <typename F>
+	void forEachRecent(std::time_t now, bool full, std::time_t since, F f)
+	{
+		std::time_t cutoff = full ? since : MAX(since, now - time_history);
+		ships.forEach([&](int ptr) {
+			const Ship &ship = ships[ptr];
+			if (ship.last_signal < cutoff)
+				return false;
+			
+			f(ptr, ship, (long int)now - (long int)ship.last_signal);
+			return true;
+		});
+	}
 	int capacity() const { return ships.capacity(); }
+	// Quality marks that make a message a copy of one already taken: it is still
+	// delivered, but it does not move a ship, count, or add a path point. Zero
+	// (the default) takes every message.
+	void setQualityMask(uint16_t m) { quality_mask = m; }
+	uint16_t getQualityMask() const { return quality_mask; }
+	// how many messages the mask has turned away, so a gate that is doing
+	// nothing can be told from one that is doing its job
+	uint64_t getCopiesDropped() const { return copies_dropped; }
 	// Puts a record in the table under its MMSI, replacing what is there; for
 	// seeding from another source. The region follows from the position.
 	void putShip(const Ship &s);
@@ -139,21 +202,6 @@ private:
 	void addToPath(int ptr);
 	int claimShip(uint32_t mmsi);
 
-	// the two scope rules fold into one cutoff: 0 passes everything, since
-	// last_signal is never negative
-	template <typename F>
-	void forEachRecent(std::time_t now, bool full, std::time_t since, F f)
-	{
-		std::time_t cutoff = full ? since : MAX(since, now - time_history);
-		ships.forEach([&](int ptr) {
-			const Ship &ship = ships[ptr];
-			if (ship.last_signal < cutoff)
-				return false;
-			
-			f(ptr, ship, (long int)now - (long int)ship.last_signal);
-			return true;
-		});
-	}
 
 	void writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since = 0, std::time_t until = 0);
 	void writeSinglePathGeoJSON(int ptr, JSON::Writer &w, std::time_t floor);

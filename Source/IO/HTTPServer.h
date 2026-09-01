@@ -266,6 +266,7 @@ namespace IO
 		}
 
 		void setFrameAncestors(const std::string &v) { frame_ancestors = v; common_headers.clear(); }
+		void setScriptSrc(const std::string &v) { csp_script_src = v; common_headers.clear(); }
 		void setFrameSrc(const std::string &v) { frame_src = v; common_headers.clear(); }
 
 		// back to the defaults documented below, for a reconfigure
@@ -284,6 +285,10 @@ namespace IO
 		// instance is exposed beyond a trusted network.
 		std::string frame_ancestors = "*";
 		std::string frame_src = "'self'";
+		// What script-src allows. Strict by default; a page whose script is inline
+		// - an operator console served from the binary, say - has to say so, and
+		// needs 'unsafe-inline' rather than a hash if it also uses onclick=.
+		std::string csp_script_src = "'self'";
 		std::string extra_header;
 		std::string common_headers;
 		std::list<IO::SSEConnection> sse;

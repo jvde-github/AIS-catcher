@@ -75,9 +75,9 @@ struct Ship
     void markType(int type) { msg_type |= 1 << type; type_ttl |= 1 << type; }
     void decayAndExpire();
     void clearFields(uint32_t doomed);
-    int getMMSItype();
-    int getShipTypeClassEri();
-    int getShipTypeClass();
+    int getMMSItype() const;
+    int getShipTypeClassEri() const;
+    int getShipTypeClass() const;
     void setType();
     
     bool writeKML(std::string &) const;

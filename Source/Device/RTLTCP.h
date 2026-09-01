@@ -42,6 +42,12 @@ namespace Device
 
 		const int TRANSFER_SIZE = 16384;
 		static const int BUFFER_SIZE = 32 * 16384;
+
+		// Bytes per FIFO block for the text formats. One byte a block makes the
+		// queue do its bookkeeping half a million times a buffer, which a busy
+		// NMEA feed overruns; the block only needs to stay small enough not to
+		// hold back a trickle.
+		int text_buffer = 1;
 		std::vector<char> buffer;
 
 		bool lossless = false;

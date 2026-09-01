@@ -193,7 +193,7 @@ void Ship::clearFields(uint32_t doomed)
 	}
 }
 
-int Ship::getMMSItype()
+int Ship::getMMSItype() const
 {
 	// the MMSI number outranks the message types
 	if ((mmsi > 111000000 && mmsi < 111999999) || (mmsi > 11100000 && mmsi < 11199999))
@@ -243,7 +243,7 @@ int Ship::getMMSItype()
 	return MMSI_OTHER;
 }
 
-int Ship::getShipTypeClassEri()
+int Ship::getShipTypeClassEri() const
 {
 	switch (shiptype)
 	{
@@ -345,7 +345,7 @@ static bool isSARaircraft(uint32_t mmsi)
 		   || (mmsi > 11100000 && mmsi < 11199999 && (mmsi / 10) % 10 == 1);
 }
 
-int Ship::getShipTypeClass()
+int Ship::getShipTypeClass() const
 {
 	switch (mmsi_type)
 	{

@@ -1012,7 +1012,28 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 		station_lon = tag.station_lon;
 	}
 
-	int ptr = claimShip(msg->mmsi());
+	// A copy of a transmission the record already took: counting it again, or
+	// letting it move the ship, would make one transmission look like several.
+	// The message still travels on - a station that heard it did hear it.
+	bool copy = quality_mask && (tag.quality & quality_mask);
+
+	// It must not reorder the table either. claimShip touches the record, which
+	// moves it to the head of a list forEachRecent walks newest-first and stops
+	// at the first entry older than its cutoff - so a ship touched by an echo
+	// but not updated by it sits at the front with a stale stamp and ends the
+	// walk for everything behind it. An unknown ship is left alone entirely: a
+	// record created here would be reset, and a zero stamp at the head does the
+	// same damage.
+	int ptr;
+	if (copy)
+	{
+		copies_dropped++;
+		ptr = ships.find(msg->mmsi());
+		if (ptr == SHIP_NIL)
+			return;
+	}
+	else
+		ptr = claimShip(msg->mmsi());
 
 	// update ship and tag data
 	Ship &ship = ships[ptr];
@@ -1023,9 +1044,9 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 	float lat_old = ship.lat;
 	float lon_old = ship.lon;
 
-	bool newValidPosition = updateShip(data[0], tag, ship) && isValidCoord(ship.lat, ship.lon);
+	bool newValidPosition = !copy && updateShip(data[0], tag, ship) && isValidCoord(ship.lat, ship.lon);
 
-	if (type == 6 || type == 8)
+	if (!copy && (type == 6 || type == 8))
 		processBinaryMessage(data[0]);
 
 	tag.shipclass = ship.shipclass;
