@@ -234,9 +234,7 @@ std::vector<LogMessage> Logger::getLastMessages(int n)
 
 int Logger::addConsoleListener()
 {
-	// Not const: off Linux this is a compile-time false, and a lambda need not
-	// capture something usable in a constant expression - which clang warns
-	// about, on every build, for a capture that is genuinely needed on Linux.
+	// not const: a const compile-time false makes the capture "unneeded" to clang
 #ifdef __linux__
 	bool journal = getenv("JOURNAL_STREAM") != nullptr;
 #else

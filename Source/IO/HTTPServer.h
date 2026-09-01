@@ -285,9 +285,8 @@ namespace IO
 		// instance is exposed beyond a trusted network.
 		std::string frame_ancestors = "*";
 		std::string frame_src = "'self'";
-		// What script-src allows. Strict by default; a page whose script is inline
-		// - an operator console served from the binary, say - has to say so, and
-		// needs 'unsafe-inline' rather than a hash if it also uses onclick=.
+		// what script-src allows; a page with inline script (or onclick=) must
+		// widen this via setScriptSrc
 		std::string csp_script_src = "'self'";
 		std::string extra_header;
 		std::string common_headers;

@@ -77,14 +77,14 @@ std::string DB::getJSONcompact(bool full, std::time_t since)
 
 		// --- Pass 1: dynamic array ---
 		w.key("dynamic").beginArray();
-		forEachRecent(now, full, since, [&](int, const Ship &ship, long int) {
+		forEachRecentUnlocked(now, full, since, [&](int, const Ship &ship, long int) {
 			ship.writeCompactDynamic(w);
 		});
 		w.endArray(); // dynamic
 
 		// --- Pass 2: static array ---
 		w.key("static").beginArray();
-		forEachRecent(now, full, since, [&](int, const Ship &ship, long int) {
+		forEachRecentUnlocked(now, full, since, [&](int, const Ship &ship, long int) {
 			if (since == 0 || ship.last_static_signal >= since)
 				ship.writeCompactStatic(w);
 		});
@@ -111,7 +111,7 @@ std::string DB::getJSON(bool full)
 		w.key("ships").beginArray();
 
 		std::time_t now = time(nullptr);
-		forEachRecent(now, full, 0, [&](int, const Ship &ship, long int delta_time) {
+		forEachRecentUnlocked(now, full, 0, [&](int, const Ship &ship, long int delta_time) {
 			ship.writeJSON(w, delta_time, isValidCoord(station_lat, station_lon));
 		});
 
@@ -170,7 +170,7 @@ std::string DB::getKML()
 	content.assign("<?xml version=\"1.0\" encoding=\"UTF-8\"?><kml xmlns = \"http://www.opengis.net/kml/2.2\"><Document>");
 	std::time_t now = time(nullptr);
 
-	forEachRecent(now, false, 0, [&](int, const Ship &ship, long int) {
+	forEachRecentUnlocked(now, false, 0, [&](int, const Ship &ship, long int) {
 		ship.writeKML(content);
 	});
 
@@ -188,7 +188,7 @@ std::string DB::getGeoJSON()
 		w.beginObject().kv("type", "FeatureCollection").kv("time_span", time_history).key("features").beginArray();
 
 		std::time_t now = time(nullptr);
-		forEachRecent(now, false, 0, [&](int, const Ship &ship, long int) {
+		forEachRecentUnlocked(now, false, 0, [&](int, const Ship &ship, long int) {
 			ship.writeGeoJSON(w, isValidCoord(station_lat, station_lon));
 		});
 		w.endArray().endObject();
@@ -207,7 +207,7 @@ std::string DB::getAllPathJSON()
 
 		std::time_t now = time(nullptr);
 		std::time_t floor = pathFloor(now);
-		forEachRecent(now, false, 0, [&](int ptr, const Ship &ship, long int) {
+		forEachRecentUnlocked(now, false, 0, [&](int ptr, const Ship &ship, long int) {
 			w.key(ship.mmsi);
 			writeSinglePathJSONCompact(ptr, w, floor);
 		});
@@ -259,7 +259,7 @@ std::string DB::getAllPathJSONSince(std::time_t since)
 		JSON::Writer w(content, 65536);
 		w.beginObject();
 
-		forEachRecent(time(nullptr), true, since, [&](int ptr, const Ship &ship, long int) {
+		forEachRecentUnlocked(time(nullptr), true, since, [&](int ptr, const Ship &ship, long int) {
 			if (paths.hasSince(ptr, since))
 			{
 				w.key(ship.mmsi);
@@ -411,7 +411,7 @@ std::string DB::getAllPathGeoJSON()
 
 		std::time_t now = time(nullptr);
 		std::time_t floor = pathFloor(now);
-		forEachRecent(now, false, 0, [&](int ptr, const Ship &, long int) {
+		forEachRecentUnlocked(now, false, 0, [&](int ptr, const Ship &, long int) {
 			writeSinglePathGeoJSON(ptr, w, floor);
 		});
 		w.endArray().endObject().raw("\n\n");
@@ -1012,25 +1012,24 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 		station_lon = tag.station_lon;
 	}
 
-	// A copy of a transmission the record already took: counting it again, or
-	// letting it move the ship, would make one transmission look like several.
-	// The message still travels on - a station that heard it did hear it.
+	// A copy of a transmission the record already took: it must not count, move
+	// the ship, or reorder the table - find() instead of claimShip(), because a
+	// touch without a fresh stamp breaks the newest-first walk. An unknown ship
+	// is not created here either (a reset record at the head does the same
+	// damage), but the message still travels with its cleared tag.
 	bool copy = quality_mask && (tag.quality & quality_mask);
 
-	// It must not reorder the table either. claimShip touches the record, which
-	// moves it to the head of a list forEachRecent walks newest-first and stops
-	// at the first entry older than its cutoff - so a ship touched by an echo
-	// but not updated by it sits at the front with a stale stamp and ends the
-	// walk for everything behind it. An unknown ship is left alone entirely: a
-	// record created here would be reset, and a zero stamp at the head does the
-	// same damage.
 	int ptr;
 	if (copy)
 	{
 		copies_dropped++;
 		ptr = ships.find(msg->mmsi());
 		if (ptr == SHIP_NIL)
+		{
+			lock.unlock();
+			Send(data, len, tag);
 			return;
+		}
 	}
 	else
 		ptr = claimShip(msg->mmsi());

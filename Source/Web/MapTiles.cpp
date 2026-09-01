@@ -52,7 +52,6 @@ namespace
     };
 
 #ifdef HASSQLITE
-    // only the mbtiles reader asks for this, and that is behind the same guard
     const char *mimeForFormat(const std::string &format)
     {
         if (format == "png")

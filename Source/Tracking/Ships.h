@@ -83,6 +83,7 @@ struct Ship
     bool writeKML(std::string &) const;
     bool writeGeoJSON(JSON::Writer &, bool station_known) const;
     void writeJSON(JSON::Writer &, long int delta_time, bool station_known) const;
+    void writeJSONBody(JSON::Writer &, long int delta_time, bool station_known) const;
     void writeCompactDynamic(JSON::Writer &) const;
     void writeCompactStatic(JSON::Writer &) const;
 

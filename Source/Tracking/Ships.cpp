@@ -494,7 +494,16 @@ bool Ship::writeGeoJSON(JSON::Writer &w, bool station_known) const
 
 void Ship::writeJSON(JSON::Writer &w, long int delta_time, bool station_known) const
 {
-	w.beginObject().kv("mmsi", mmsi);
+	w.beginObject();
+	writeJSONBody(w, delta_time, station_known);
+	w.endObject();
+}
+
+// The fields without the enclosing object, so a caller can wrap the canonical
+// set with additions of its own.
+void Ship::writeJSONBody(JSON::Writer &w, long int delta_time, bool station_known) const
+{
+	w.kv("mmsi", mmsi);
 
 	if (isValidCoord(lat, lon))
 	{
@@ -547,8 +556,7 @@ void Ship::writeJSON(JSON::Writer &w, long int delta_time, bool station_known) c
 		.kv_unless("serial", unit_serial, -1)
 		.kv("repeat", getRepeat())
 		.kv("last_signal", delta_time)
-		.kv_unless("region", region, Region::NONE)
-		.endObject();
+		.kv_unless("region", region, Region::NONE);
 }
 
 void Ship::writeCompactDynamic(JSON::Writer &w) const
