@@ -126,6 +126,29 @@ multiple threads at the same time. Create one `Decoder` per worker thread
 instead. Also avoid mutating a `bytearray` in another thread while passing it to
 `feed()`.
 
+### ABI3T builds
+
+Python 3.15+ can also use the free-threaded Stable ABI (`abi3t`). This produces
+one `cp315-abi3.abi3t` wheel that imports on both free-threaded and regular
+CPython 3.15+ builds. It is a portability artifact, not a replacement for the
+version-specific `cp315t` wheel: the latter retains faster CPython APIs and is
+preferred when it is available.
+
+Build the ABI3T variant with a free-threaded Python 3.15+ interpreter; normal
+package builds remain version-specific. ABI3T builds require CMake 3.26 or
+newer so that the extension links against the Stable ABI import library on
+Windows:
+
+```bash
+python -m pip wheel ./python \
+  --config-settings='cmake.version=>=3.26' \
+  --config-settings=wheel.py-api=cp315.cp315t
+```
+
+Check the packaged extension before distributing it: it is `_core.abi3t.so`
+on Unix-like platforms and `_core.pyd` on Windows. The wheel tag must include
+`cp315-abi3.abi3t`.
+
 ```python
 # Manual streaming pattern (for total control)
 import aiscat
