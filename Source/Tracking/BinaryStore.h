@@ -513,9 +513,9 @@ inline int BinaryStore::process(const JSON::JSON &data, FLOAT32 sender_lat, FLOA
 	// everything else belongs to a ship (addressee or sender) and has no marker
 	Item &b = items[h];
 	bool located = isValidCoord(b.lat, b.lon);
-	bool near = located && isValidCoord(sender_lat, sender_lon) &&
-				std::hypot(b.lat - sender_lat, b.lon - sender_lon) <= SNAP_DEG;
-	uint64_t want = (located && !near) ? markerKey(b) : 0;
+	bool onSender = located && isValidCoord(sender_lat, sender_lon) &&
+					std::hypot(b.lat - sender_lat, b.lon - sender_lon) <= SNAP_DEG;
+	uint64_t want = (located && !onSender) ? markerKey(b) : 0;
 	if (b.marker >= 0 && (!want || markers.key(b.marker) != want))
 		unlinkFromMarker(h);
 	if (want && b.marker < 0)
