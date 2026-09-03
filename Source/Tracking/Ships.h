@@ -84,7 +84,7 @@ struct Ship
     bool writeGeoJSON(JSON::Writer &, bool station_known) const;
     void writeJSON(JSON::Writer &, long int delta_time, bool station_known) const;
     void writeJSONBody(JSON::Writer &, long int delta_time, bool station_known) const;
-    void writeCompactDynamic(JSON::Writer &) const;
+    void writeCompactDynamic(JSON::Writer &, unsigned binary_badge = 0) const;
     void writeCompactStatic(JSON::Writer &) const;
 
     // File persistence functions

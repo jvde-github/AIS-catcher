@@ -292,8 +292,8 @@ namespace AIS
 		T(msg, AIS::KEY_BERTH_NAME, start + 14, 84, name);
 		U(msg, AIS::KEY_BERTH_ARRIVAL_TIME, start + 98, 20, 0);
 		U(msg, AIS::KEY_BERTH_DEPARTURE_TIME, start + 118, 20, 0);
-		SL(msg, AIS::KEY_BERTH_LON, start + 138, 25, 1 / 600000.0f, 0);
-		SL(msg, AIS::KEY_BERTH_LAT, start + 163, 24, 1 / 600000.0f, 0);
+		SL(msg, AIS::KEY_BERTH_LON, start + 138, 25, 1 / 60000.0f, 0);
+		SL(msg, AIS::KEY_BERTH_LAT, start + 163, 24, 1 / 60000.0f, 0);
 		X(msg, AIS::KEY_SPARE, start + 187, 1);
 	}
 
@@ -477,18 +477,36 @@ namespace AIS
 		}
 	}
 
-	static void trimLeft(std::string &s)
+	// the TMS packs several names into one field with '@' separators ("B@ N@ D@"): '@' reads as a space, not end-of-text
+	static void seawayText(const AIS::Message &msg, int start, int len, std::string &str)
 	{
-		size_t i = 0;
-		while (i < s.size() && s[i] == ' ')
-			i++;
-		s.erase(0, i);
+		str.clear();
+		bool sp = true;
+		for (int i = 0; i + 6 <= len; i += 6)
+		{
+			unsigned v = msg.getUint(start + i, 6);
+			char c = (char)(v < 32 ? v + 64 : v);
+			if (c == '@')
+				c = ' ';
+			if (c == ' ')
+			{
+				if (!sp)
+					str += ' ';
+				sp = true;
+			}
+			else
+			{
+				str += c;
+				sp = false;
+			}
+		}
+		while (!str.empty() && str.back() == ' ')
+			str.pop_back();
 	}
 
 	void JSONAIS::seawayName(const AIS::Message &msg, int p, int start, int len, std::string &str)
 	{
-		msg.getText(start, len, str);
-		trimLeft(str);
+		seawayText(msg, start, len, str);
 		if (!str.empty())
 			json.Add(p, &str);
 	}
@@ -522,8 +540,7 @@ namespace AIS
 			for (int i = 0; i < n; i++)
 			{
 				int base = start + 128 + i * 120;
-				msg.getText(base, 90, shipname);
-				trimLeft(shipname);
+				seawayText(msg, base, 90, shipname);
 				if (shipname.empty())
 					continue;
 				char buf[16];

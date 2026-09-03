@@ -66,6 +66,9 @@ export function create(opts) {
     let bucketsWidth = 0;
     let shownKey = null;
     let shownAny = false;   // the counts slide waits until something has been up
+    // a clicked event has been seen: it leaves the strip and a repeat of it stays away
+    const dismissed = new Set();
+    const DISMISSED_MAX = 200;
 
     bar.style.setProperty("--ticker-fade", FADE_MS + "ms");
 
@@ -77,7 +80,10 @@ export function create(opts) {
             item.innerHTML = '<span class="ticker-dot"></span>'
                 + '<span class="ticker-text"><span class="ticker-scroller"></span></span>'
                 + '<span class="ticker-age"></span>';
-            item.addEventListener("click", () => { if (item.dataset.id) onSelect(item.dataset.id); });
+            item.addEventListener("click", () => {
+                if (item.dataset.key) dismiss(item.dataset.key);
+                if (item.dataset.id) onSelect(item.dataset.id);
+            });
             item.style.display = "none";
             feedEl.appendChild(item);
             slots.push({
@@ -187,10 +193,21 @@ export function create(opts) {
             : counts.total + " vessels";
     }
 
-    /* newest first; an event already held (by key) is ignored */
+    function dismiss(key) {
+        dismissed.add(key);
+        if (dismissed.size > DISMISSED_MAX) dismissed.delete(dismissed.values().next().value);
+        const before = events.length;
+        events = events.filter((e) => e.key !== key);
+        if (events.length === before) return;
+        cursor = -1;
+        shownKey = null;
+        fadeTo(pick(Date.now()));
+    }
+
+    /* newest first; an event already held (by key) or dismissed is ignored */
     function push(incoming) {
         const held = new Set(events.map((e) => e.key));
-        const fresh = incoming.filter((e) => !held.has(e.key)).sort((a, b) => b.at - a.at);
+        const fresh = incoming.filter((e) => !held.has(e.key) && !dismissed.has(e.key)).sort((a, b) => b.at - a.at);
         if (!fresh.length) return;
         const wasEmpty = !events.length;
         events = fresh.concat(events).slice(0, MAX_EVENTS);
@@ -301,6 +318,7 @@ export function create(opts) {
             slot.age.textContent = ageLabel(Date.now() - event.at);
             slot.dot.className = "ticker-dot" + (event.fresh ? " ticker-new" : "");
             slot.item.dataset.id = event.id != null ? event.id : "";
+            slot.item.dataset.key = event.key;
             slot.item.title = d.text;
         });
     }
@@ -329,5 +347,5 @@ export function create(opts) {
         document.removeEventListener("visibilitychange", onVisibility);
     }
 
-    return { el: bar, push, setCounts, setEnabled, isEnabled, destroy };
+    return { el: bar, push, dismiss, setCounts, setEnabled, isEnabled, destroy };
 }

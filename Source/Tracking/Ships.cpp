@@ -559,7 +559,7 @@ void Ship::writeJSONBody(JSON::Writer &w, long int delta_time, bool station_know
 		.kv_unless("region", region, Region::NONE);
 }
 
-void Ship::writeCompactDynamic(JSON::Writer &w) const
+void Ship::writeCompactDynamic(JSON::Writer &w, unsigned binary_badge) const
 {
 	w.beginArray().val(mmsi);
 	if (isValidCoord(lat, lon))
@@ -591,6 +591,7 @@ void Ship::writeCompactDynamic(JSON::Writer &w) const
 		.val(shipclass)
 		.val(country_code)
 		.val_unless(region, Region::NONE)
+		.val(binary_badge)
 		.endArray();
 }
 

@@ -35,44 +35,13 @@
 #include "Ships.h"
 #include "SlotTable.h"
 #include "PathStore.h"
+#include "BinaryStore.h"
 #include "StaticHistory.h"
 
 class DB : public StreamIn<JSON::JSON>,
 		   public StreamIn<AIS::GPS>,
 		   public StreamOut<JSON::JSON>
 {
-	struct BinaryItem
-	{
-		enum Kind : uint8_t { TEXT, PERSONS, METEO, ATON, SIGNAL, AREA, LOCK };
-
-		Kind kind = TEXT;
-		int type = 0, dac = -1, fi = -1, sub = 0;
-		uint32_t mmsi = 0, anchor = 0;
-		uint32_t sender = 0;
-		uint64_t hash = 0;
-		FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
-		uint32_t count = 0;
-		time_t first = 0, last = 0;
-		bool positional = false;
-		std::string json;
-
-		bool sameSpot(const BinaryItem &o) const
-		{
-			FLOAT32 dlon = lon - o.lon;
-			if (dlon > 180)
-				dlon -= 360;
-			else if (dlon < -180)
-				dlon += 360;
-			return (lat - o.lat) * (lat - o.lat) + dlon * dlon < 0.0001f * 0.0001f;
-		}
-
-		bool sameAs(const BinaryItem &o) const
-		{
-			if (kind != o.kind || sender != o.sender || dac != o.dac || fi != o.fi || sub != o.sub || anchor != o.anchor)
-				return false;
-			return positional && o.positional ? sameSpot(o) : hash == o.hash;
-		}
-	};
 
 	JSON::Serializer builder{JSON_DICT_FULL};
 
@@ -253,10 +222,7 @@ private:
 
 	AIS::Filter filter;
 
-	static const int MAX_BINARY_MESSAGES = 256;
-	BinaryItem binary_messages[MAX_BINARY_MESSAGES];
-
-	void processBinaryMessage(const JSON::JSON &data);
+	BinaryStore binary;
 #ifdef CHECK_DB_INTEGRITY
 	void checkIntegrity();
 	std::time_t last_check = 0;
@@ -337,7 +303,24 @@ public:
 	void setOptionKey(AIS::Keys key, const std::string &arg) { filter.SetOptionKey(key, arg); }
 	void setFilter(const AIS::Filter &f) { filter = f; }
 
-	std::string getBinaryMessagesJSON(std::time_t since = 0);
+	std::string getBinaryMessagesJSON(std::time_t since = 0, uint64_t marker = 0, uint32_t owner = 0);
+	std::string getMapObjectsJSON(uint64_t since = 0);
+	// the ship row's packed badge, for a caller composing its own ship record
+	uint16_t getBinaryBadge(uint32_t mmsi)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		return binary.badge(mmsi, time(nullptr));
+	}
+	// the same from inside a withShip/forEach callback, where the lock is already held
+	uint16_t binaryBadgeHeld(uint32_t mmsi, std::time_t now) const { return binary.badge(mmsi, now); }
+	// the map markers under the lock, for a caller cutting its own tiles; keep f short
+	template <typename F>
+	void withMarkers(std::time_t now, F f)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		binary.forEachMarker(now, f);
+	}
+	int getBinaryTTL() const { return binary.ttl; }
 
 	// Persistence functions for ship database
 	bool Save(std::ofstream &file);

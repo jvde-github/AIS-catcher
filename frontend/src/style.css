@@ -981,16 +981,6 @@ body.replay-open .map-button-box {
     }
 }
 
-/* Meteo Tooltip Styling */
-.meteo-tooltip {
-    margin-top: 0;
-    padding: 4px 8px 6px;
-    max-width: 280px;
-    color: inherit;
-    border-top: 1px solid currentColor;
-    border-top-color: var(--color-rule);
-}
-
 .dialog-title {
     font-size: var(--fs-md);
     font-weight: var(--fw-medium);
@@ -1038,19 +1028,6 @@ body.replay-open .map-button-box {
     box-sizing: border-box;
 }
 
-/* Binary Messages Dialog Styling */
-.binary-messages-list {
-    padding: 4px 0;
-}
-
-.binary-messages-list .meteo-tooltip {
-    max-width: none;
-}
-
-.binary-messages-list .meteo-tooltip:first-child {
-    border-top: none;
-}
-
 /* Mobile Adjustments */
 @media only screen and (max-width: 600px) {
     .dialog-title {
@@ -1061,10 +1038,6 @@ body.replay-open .map-button-box {
     .dialog-message {
         padding: 12px 15px;
         font-size: var(--fs-md);
-    }
-
-    .meteo-tooltip {
-        max-width: 250px;
     }
 }
 

@@ -4,6 +4,7 @@ import { CHANGE, CHANGE_LABEL, sanitizeString } from '../../shared/core/text.js'
 import { decodeHTMLEntities } from '../core/util.js';
 import { ships } from '../core/store.js';
 import { getShipName } from '../core/names.js';
+import { fetchSince, isUrgent, safetyEvent } from '../../shared/binary.js';
 
 const POLL_MS = 10000;
 
@@ -102,5 +103,21 @@ async function poll() {
         })));
     } catch (error) {
         console.log("Failed loading ticker changes:", error);
+    }
+    await pollSafety();
+}
+
+// urgent safety messages go on the strip as they arrive
+let safetySince = 0;
+const shipLabel = (mmsi) => (mmsi in ships ? decodeHTMLEntities(getShipName(ships[mmsi].raw)) : String(mmsi));
+
+async function pollSafety() {
+    try {
+        const { time, messages } = await fetchSince("api/binmsgs.json?receiver=0", Math.max(0, safetySince - 5));
+        const events = messages.filter((m) => m.cat === "safety" && isUrgent(m)).map((m) => safetyEvent(m, shipLabel));
+        if (events.length) bar.push(events);
+        if (time) safetySince = time;
+    } catch (error) {
+        console.log("Failed loading safety messages:", error);
     }
 }

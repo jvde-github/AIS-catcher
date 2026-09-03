@@ -862,7 +862,10 @@ const WebViewer::Route WebViewer::routes[] = {
 	 { return w->planes.getCompactArray(queryInt(a, "since")); }, true},
 	{"/api/binmsgs.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
-	 { return s->getBinaryMessagesJSON(queryInt(a, "since")); }, true},
+	 { return s->getBinaryMessagesJSON(queryInt(a, "since"), strtoull(IO::HTTPRequest::queryParam(a, "marker").c_str(), nullptr, 16), (uint32_t)queryInt(a, "mmsi")); }, true},
+	{"/api/mapobjects.json", nullptr, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 { return s->getMapObjectsJSON((uint64_t)queryInt(a, "since")); }, true},
 	{"/api/history_full.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
 	 { return s->toHistoryJSON(); }, true},

@@ -1692,3 +1692,65 @@
 .color-picker::-webkit-color-swatch {
     border: none;
 }
+
+/* one application message as a card: tooltip section or dialog list entry;
+   the bar's colour is the message kind, set inline by the renderer */
+.meteo-tooltip {
+    margin-top: 0;
+    padding: 4px 8px 6px;
+    max-width: 280px;
+    color: inherit;
+    border-left: 3px solid transparent;
+    border-top: 1px solid currentColor;
+    border-top-color: var(--color-rule);
+}
+
+/* A hover card as a column of bands, each with its own left bar at the card's
+   edge: the vessel's band wears its validity, the message cards their kind, and
+   the bars read as one stripe. */
+#hover-info.tooltip-bands {
+    padding: 0;
+}
+
+.tip-band {
+    border-left: 6px solid var(--band, transparent);
+    padding: 5px 8px;
+    text-align: left;
+}
+
+#hover-info.tooltip-bands .meteo-tooltip {
+    margin: 0;
+    max-width: none;
+    border-left-width: 6px;
+}
+
+/* which way an application message went for the vessel the card is about */
+.msg-dir {
+    display: inline-block;
+    margin-right: 4px;
+    opacity: 0.85;
+}
+
+.binary-messages-list {
+    padding: 4px 0;
+}
+
+.binary-messages-list .meteo-tooltip {
+    max-width: none;
+}
+
+.binary-messages-list .meteo-tooltip:first-child {
+    border-top: none;
+}
+
+@media only screen and (max-width: 600px) {
+    .meteo-tooltip {
+        max-width: 250px;
+    }
+}
+
+/* an urgent safety message in the ticker */
+.tk-alert {
+    color: #dc2626;
+    font-weight: 600;
+}

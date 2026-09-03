@@ -254,6 +254,7 @@ const ACTIONS = {
     setBinaryDisplay: (e, d, el) => binary.setBinaryDisplay(el.value),
     setBinaryCategory: (e, d, el) => binary.setBinaryCategory(d.cat, el.checked),
     setBinaryColorClass: (e, d, el) => binary.setBinaryColorClass(el.checked),
+    setBinaryIdLabels: (e, d, el) => binary.setBinaryIdLabels(el.checked),
     setRangeColor: (e, d, el) => range.setRangeColor(el.value, d.field),
     setMapSettingDistanceColor: (e, d, el) => { range.removeDistanceCircles(); setMapSetting('distance_circle_color', el.value); },
     setShowTrackOnSelect: (e, d, el) => { settings.show_track_on_select = el.checked; saveSettings(); },
@@ -661,6 +662,7 @@ const DEFAULT_SETTINGS = {
         ship_filter: {},
         binary_messages: "highlight",
         binary_color_class: true,
+        binary_id_labels: true,
         binary_exclude: ["aton"]
 };
 
@@ -1405,7 +1407,7 @@ function initMap() {
         value.setVisible(false);
     }
 
-    [trackLayer, rangeLayer, binaryLayer, shapeLayer, markerLayer, labelLayer, extraLayer, measure.measureVector,
+    [trackLayer, rangeLayer, shapeLayer, binaryLayer, markerLayer, labelLayer, extraLayer, measure.measureVector,
      replay.hullLayer, replay.markerLayer].forEach(layer => {
         map.addLayer(layer);
     });
@@ -2165,7 +2167,7 @@ async function fetchShipsBody() {
         "heading", "cog", "speed", "status", "level", "ppm",
         "count", "msg_type", "last_signal", "last_group", "group_mask",
         "flags", "altitude", "received_stations",
-        "mmsi_type", "shipclass", "country", "region"
+        "mmsi_type", "shipclass", "country", "region", "binary"
     ];
 
     const staticKeys = [
@@ -2755,16 +2757,17 @@ function getTooltipContent(ship) {
     const sub = (ship.shiptype ? getShipTypeShort(ship.shiptype) + ' - ' : '') +
         'received ' + getDeltaTimeVal(clock - ship.last_signal) + ' ago';
 
-    let content = '<div class="tooltip-card">' +
+    // the vessel is one band, each message card below it another, their bars in one line
+    let content = '<div class="tip-band"><div class="tooltip-card">' +
         flagHTML(ship.country, 'flag-tooltip', getCountryName(ship.country)) +
         '<div>' +
         (getShipName(ship) || ship.mmsi) +
         '<span class="tooltip-dim"> at </span>' + getSpeedVal(ship.speed) + ' ' + getSpeedUnit() +
         '<div class="tooltip-sub">' + sub + '</div>' +
         '</div>' +
-        '</div>';
+        '</div></div>';
 
-    content += binary.tooltipSections(binary.shipBinaryMessages(ship.mmsi), true);
+    content += binary.shipTooltip(ship);
 
     return content;
 }
@@ -2844,6 +2847,7 @@ function mapFreeBox() {
 const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
 
     tooltip.innerHTML = mmsi;
+    tooltip.classList.toggle('tooltip-bands', typeof mmsi === 'string' && mmsi.includes('tip-band'));
 
     if (pixel) {
         const { offsetWidth: tw, offsetHeight: th } = tooltip;
@@ -2915,9 +2919,12 @@ function toggleAttribution() {
     showAttribution(attributionPinned);
 }
 
+let lastHoverPixel = null;
+
 const startHover = function (type, mmsi, pixel, feature) {
 
     if (type != 'ship' && type != 'tooltip' && type != 'plane') return;
+    lastHoverPixel = pixel;
 
     if (mmsi !== hoverMMSI || hoverType !== type) {
         stopHover();
@@ -3004,35 +3011,11 @@ const handlePointerMove = function (pixel, target) {
         startHover('plane', hexident, pixel, feature);
     }
     else if (feature && feature.binary === true) {
-        // Handle hover for binary features (both ship-associated and standalone)
         if (feature.is_associated && feature.binary_mmsi && feature.binary_mmsi in shipsDB) {
-            // For ship-associated binary features, redirect to ship hover
             startHover('ship', feature.binary_mmsi, pixel, feature);
             return;
-        } else if (feature.binary_messages && feature.binary_messages.length > 0) {
-            // For standalone binary clusters
-            let tooltipContent = `<div class="tooltip-card">`;
-
-            // Find MMSI counts to show in tooltip
-            if (feature.binary_mmsi_counts) {
-                const mmsiEntries = Object.entries(feature.binary_mmsi_counts);
-                if (mmsiEntries.length > 0) {
-                    tooltipContent += '<div style="margin-top: 5px; font-size: 0.9em;">From: ';
-                    mmsiEntries.slice(0, 3).forEach(([mmsi, count], index) => {
-                        const shipName = shipsDB[mmsi]?.raw?.shipname || `MMSI ${mmsi}`;
-                        tooltipContent += `${index > 0 ? ', ' : ''}${shipName} (${count})`;
-                    });
-                    if (mmsiEntries.length > 3) {
-                        tooltipContent += ` and ${mmsiEntries.length - 3} more`;
-                    }
-                    tooltipContent += '</div>';
-                }
-            }
-            tooltipContent += '</div>';
-
-            tooltipContent += binary.tooltipSections(feature.binary_messages);
-
-            startHover('tooltip', tooltipContent, pixel, feature);
+        } else if (feature.binary_object) {
+            startHover('tooltip', binary.markerTooltip(feature), pixel, feature);
         } else {
             startHover('tooltip', "Binary Message", pixel, feature);
         }
@@ -4301,6 +4284,7 @@ function updateSettingsTab() {
         document.getElementById("settings_binary_cat_" + cat).checked = !settings.binary_exclude.includes(cat);
     }
     document.getElementById("settings_binary_color_class").checked = settings.binary_color_class;
+    document.getElementById("settings_binary_id_labels").checked = settings.binary_id_labels;
 
     document.getElementById("settings_range_color").value = settings.range_color;
     document.getElementById("settings_range_timeframe").value = settings.range_timeframe;
@@ -4652,6 +4636,20 @@ binary.init({
     showDialog,
     saveSettings,
     redrawMap,
+    // a marker's tooltip re-renders once its members arrive, if still hovered
+    isHovered: (feature) => hover_feature === feature,
+    isHoveringShip: (mmsi) => hoverType == 'ship' && hoverMMSI == mmsi,
+    rehoverShip: (mmsi) => {
+        const raw = shipsDB[mmsi]?.raw;
+        if (raw && hoverType == 'ship' && hoverMMSI == mmsi) {
+            showTooltipShip(hover_info, getTooltipContent(raw), lastHoverPixel, 15, raw.cog);
+        }
+    },
+    rehover: (feature) => {
+        if (hover_feature === feature && hoverType == 'tooltip') {
+            startHover('tooltip', binary.markerTooltip(feature), lastHoverPixel, feature);
+        }
+    },
 });
 range.init({
     getConfig: () => config,

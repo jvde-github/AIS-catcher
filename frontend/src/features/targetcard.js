@@ -7,7 +7,7 @@ import { getChangeListHTML, getSpeedHistorySVG, getDraughtChartSVG, getShipDimen
 import { getCallSign, getShipName } from '../core/names.js';
 import { regionName } from '../core/regions.js';
 import { flagHTML } from '../../shared/components.js';
-import * as binary from './binary.js';
+import { decodeBadge } from '../../shared/binary.js';
 
 // { fitTargetcard, getReceiver, realtimeEnabled, registerAction, isFollowing,
 //   updateFocusMarker, hoverTrackShown, selectTrackShown }
@@ -124,7 +124,9 @@ export function updateMessageButton() {
     const iconElement = button.querySelector('i.mail_icon');
     if (!iconElement) return;
 
-    const count = binary.shipBinaryMessages(cardMmsi).length;
+    // the row's packed badge says how many, before anything is fetched
+    const word = ships[cardMmsi]?.raw?.binary;
+    const count = word ? decodeBadge(word).count : 0;
     iconElement.querySelector('.message-badge')?.remove();
 
     if (count > 0) {

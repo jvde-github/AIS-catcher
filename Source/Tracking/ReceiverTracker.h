@@ -124,7 +124,8 @@ public:
 
 	std::string getShipsJSON(bool full = false) { return ships.getJSON(full); }
 	std::string getShipsJSONcompact(std::time_t since = 0) { return ships.getJSONcompact(false, since); }
-	std::string getBinaryMessagesJSON(std::time_t since = 0) { return ships.getBinaryMessagesJSON(since); }
+	std::string getBinaryMessagesJSON(std::time_t since = 0, uint64_t marker = 0, uint32_t owner = 0) { return ships.getBinaryMessagesJSON(since, marker, owner); }
+	std::string getMapObjectsJSON(uint64_t since = 0) { return ships.getMapObjectsJSON(since); }
 	std::string getKML() { return ships.getKML(); }
 	std::string getGeoJSON() { return ships.getGeoJSON(); }
 	std::string getAllPathJSON() { return ships.getAllPathJSON(); }
