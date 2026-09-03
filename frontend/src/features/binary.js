@@ -19,8 +19,9 @@ import { settings } from '../core/state.js';
 import { hexToRgb } from '../../shared/color.js';
 import { hasValidCoords } from '../../shared/core/geo.js';
 import { sanitizeString } from '../../shared/core/text.js';
+import { modal } from '../../shared/components.js';
 import * as render from '../../shared/binary.js';
-import { KIND_CAT, AGE_FADE, LAYER_ALPHA, decodeBadge, BINARY_CATEGORIES, CAT_COLORS, decorate, tooltipSections, getBinaryMessageList, cardOpen,
+import { KIND_CAT, AGE_FADE, LAYER_ALPHA, decodeBadge, BINARY_CATEGORIES, CAT_COLORS, decorate, tooltipSections, getBinaryMessageList, getBinaryMessageTabs, cardOpen,
     badgeCanvas, discCanvas, pillCanvas, hatchCanvas, areaRings, ageBucket, isDangerArea, markerHead, markerCaption } from '../../shared/binary.js';
 
 export { BINARY_CATEGORIES };
@@ -220,23 +221,36 @@ export function shipTooltip(ship) {
     return line('');
 }
 
-// a marker feature opens its members; a badge feature or an MMSI opens the vessel's
+// the kinds a vessel's messages are of: the badge's newest at once, the rest once fetched
+export function shipKinds(ship) {
+    if (!ship || !ship.binary) return Promise.resolve([]);
+    const b = decodeBadge(ship.binary);
+    const first = [KIND_CAT[b.kind] || 'data'];
+    if (b.count < 2) return Promise.resolve(first);
+    return hydrateShip(ship).then((messages) => render.kindsOf(messages.filter(shown)) || first);
+}
+
+// a marker feature opens its members in the plain dialog; a badge feature or an
+// MMSI opens the vessel's received and sent tabs in a card of fixed size
+let vesselDialog = null;
+
 export function showBinaryMessageDialog(featureOrMmsi) {
-    const show = (html) => {
-        deps.showDialog("Binary", html || "No message content available");
-        deps.getDialogModal().card.style.maxWidth = "500px";
-    };
+    const empty = "No message content available";
     if (typeof featureOrMmsi === 'object' && featureOrMmsi.binary_object) {
-        hydrate(featureOrMmsi.binary_object).then((messages) => show(messages.length && getBinaryMessageList(messages)));
+        hydrate(featureOrMmsi.binary_object).then((messages) => {
+            deps.showDialog("Binary", messages.length ? getBinaryMessageList(messages) : empty);
+            deps.getDialogModal().card.style.maxWidth = "500px";
+        });
         return;
     }
+    if (!vesselDialog) vesselDialog = modal({ id: "binary-messages", cardClass: "modal-messages", footerLabel: "Close" });
     const mmsi = Number(typeof featureOrMmsi === 'object' ? featureOrMmsi.binary_mmsi : featureOrMmsi);
+    const show = (list) => { vesselDialog.body.innerHTML = getBinaryMessageTabs(list, mmsi, { mmsi }); vesselDialog.open(); };
     const ship = deps.getShipsDB()[mmsi]?.raw;
-    if (!ship || !ship.binary) return show('');
-    hydrateShip(ship).then((messages) => {
-        const list = messages.filter(shown);
-        show(list.length && getBinaryMessageList(list, { mmsi }));
-    });
+    if (!ship || !ship.binary) return show([]);
+    vesselDialog.body.innerHTML = '<p class="dim">Loading…</p>';
+    vesselDialog.open();
+    hydrateShip(ship).then((messages) => show(messages.filter(shown)));
 }
 
 // ─── drawing ─────────────────────────────────────────────────────────────────

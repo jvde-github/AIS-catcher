@@ -634,6 +634,9 @@ body.ticker-open.ticker-bottom {
 
 .mapcard-title {
     flex: 1;
+    display: flex;
+    align-items: center;
+    min-width: 0;
 }
 
 .mapcard-flag {

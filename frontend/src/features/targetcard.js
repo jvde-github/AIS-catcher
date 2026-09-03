@@ -7,7 +7,8 @@ import { getChangeListHTML, getSpeedHistorySVG, getDraughtChartSVG, getShipDimen
 import { getCallSign, getShipName } from '../core/names.js';
 import { regionName } from '../core/regions.js';
 import { flagHTML } from '../../shared/components.js';
-import { decodeBadge } from '../../shared/binary.js';
+import { decodeBadge, glyphsHTML, KIND_CAT } from '../../shared/binary.js';
+import * as binary from './binary.js';
 
 // { fitTargetcard, getReceiver, realtimeEnabled, registerAction, isFollowing,
 //   updateFocusMarker, hoverTrackShown, selectTrackShown }
@@ -115,6 +116,19 @@ export function prepare() {
     card.footer.add({ icon: 'more_horiz', label: 'More', title: 'More options', action: 'rotateTargetcardIcons', group: 'ship', more: true });
     card.footer.add({ icon: 'more_horiz', label: 'More', title: 'More options', action: 'rotateTargetcardIcons', group: 'plane', more: true });
     card.footer.show('ship');
+}
+
+// the name, with one glyph per kind of message the vessel carries: the badge's
+// newest kind at once, the rest once fetched; the glyphs open the messages
+function setTitle(ship) {
+    const title = document.getElementById("targetcard_header_title");
+    const glyphs = (cats) => glyphsHTML(cats, 'data-action="showBinaryMessageDialogCard"');
+    const name = getShipName(ship) || ship.mmsi;
+    title.innerHTML = name;
+    if (!ship.binary) return;
+    const mmsi = cardMmsi;
+    title.innerHTML = name + glyphs([KIND_CAT[decodeBadge(ship.binary).kind] || 'data']);
+    binary.shipKinds(ship).then((cats) => { if (cardMmsi === mmsi && cats.length) title.innerHTML = name + glyphs(cats); });
 }
 
 export function updateMessageButton() {
@@ -254,7 +268,7 @@ function populateCard() {
     let ship = ships[cardMmsi].raw;
 
     document.getElementById("targetcard_header_flag").innerHTML = flagHTML(ship.country, 'flag-card', getCountryName(ship.country));
-    document.getElementById("targetcard_header_title").innerHTML = (getShipName(ship) || ship.mmsi);
+    setTitle(ship);
 
     setValidation(ship.validated);
 

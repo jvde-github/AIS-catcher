@@ -20,6 +20,7 @@ import {
     setCard, setHover, setMarkerTracks,
 } from './core/store.js';
 import { calcOffset1M, hasValidCoords } from '../shared/core/geo.js';
+import { validityBand } from '../shared/binary.js';
 import { init as initRainRadar } from './overlays/rainradar.js';
 import * as fireworks from './overlays/fireworks.js';
 import * as community from './overlays/community.js';
@@ -2757,8 +2758,9 @@ function getTooltipContent(ship) {
     const sub = (ship.shiptype ? getShipTypeShort(ship.shiptype) + ' - ' : '') +
         'received ' + getDeltaTimeVal(clock - ship.last_signal) + ' ago';
 
-    // the vessel is one band, each message card below it another, their bars in one line
-    let content = '<div class="tip-band"><div class="tooltip-card">' +
+    // the vessel is one band wearing its validity, each message card below it
+    // another wearing its kind, their bars in one line
+    let content = '<div class="tip-band" style="--band: ' + validityBand(ship.validated) + '"><div class="tooltip-card">' +
         flagHTML(ship.country, 'flag-tooltip', getCountryName(ship.country)) +
         '<div>' +
         (getShipName(ship) || ship.mmsi) +
@@ -3903,6 +3905,7 @@ function showTargetcard(type, m, pixel = undefined) {
 
     let ship = m in shipsDB ? shipsDB[m].raw : null;
     let ship_old = card_mmsi in shipsDB ? shipsDB[card_mmsi].raw : null;
+    const prev_mmsi = card_mmsi;
 
     if (select_enabled_track && (card_mmsi != m || m == null)) {
         select_enabled_track = false;
@@ -3947,10 +3950,14 @@ function showTargetcard(type, m, pixel = undefined) {
         }
 
         /* a fresh card opens at the size the setting asks for, except on a
-           cramped pane which always opens compact; switching ship with the
+           cramped pane which always opens compact; a target out of range has
+           nothing to show and opens compact too; switching ship with the
            card up keeps the size the user has */
-        const wantMax = settings.targetcard_open_max && !mapui.paneCramped();
+        const known = card_type != 'ship' || ship != null;
+        const wantMax = known && settings.targetcard_open_max && !mapui.paneCramped();
         if (!visible && isTargetcardMax() !== wantMax) toggleTargetcardSize();
+        if (ship && (!visible || prev_mmsi !== m) && !hasValidCoords(ship.lat, ship.lon))
+            showNotification("No position received for " + (getShipName(ship) || m), "info");
         positionAside(pixel, aside);
 
         if (card_type == 'ship') targetcard.populate();

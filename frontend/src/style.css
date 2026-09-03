@@ -636,10 +636,6 @@ body.replay-open .map-button-box {
     text-align: left;
 }
 
-#hover-info div span:not(.tooltip-dim) {
-    font-size: var(--fs-2xl);
-}
-
 .filter-empty {
     display: none;
     position: absolute;

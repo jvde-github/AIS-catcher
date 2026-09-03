@@ -22,6 +22,7 @@
 #include <vector>
 #include <cmath>
 #include <cstdio>
+#include <algorithm>
 
 #include "Common.h"
 #include "AIS.h"
@@ -58,13 +59,18 @@ public:
 		int atype = -1;
 		int marker = -1;    // marker slot when the item stands on its own position
 		int next = -1;      // next member of that marker
-		uint32_t owner = 0; // the ship this item badges on when it has no marker
-		int onext = -1;     // next item of that ship
+		uint32_t owner = 0;   // the ship this item badges on when it has no marker
+		int onext = -1;       // next item of that ship
+		uint32_t sent_by = 0; // the transmitter whose sent chain holds it
+		int snext = -1;       // next item that transmitter sent
 	};
 
+	// what a ship shows: the items about it (addressed to it, or its own
+	// reports) and, on a second chain, everything it transmitted
 	struct OwnerChain
 	{
 		int head = -1;
+		int sent = -1;
 	};
 
 	// A marker is what the map draws: the items of one identity at one spot,
@@ -93,12 +99,15 @@ public:
 	static bool aboutSender(Item::Kind k) { return k != Item::TEXT && k != Item::SAFETY && k != Item::LOCK && k != Item::AREA && k != Item::SIGNAL; }
 	// a located item this close to its sender badges on the sender instead
 	static constexpr float SNAP_DEG = 0.001f;
+	// the most one ship's message list returns
+	enum { MAX_PER_SHIP = 200 };
 
 	void setup(int capacity)
 	{
 		items.setup(capacity, 2 * capacity + 1);
 		markers.setup(capacity, 2 * capacity + 1);
-		owners.setup(capacity, 2 * capacity + 1);
+		// an item can put two ships on record: its owner and its transmitter
+		owners.setup(2 * capacity, 4 * capacity + 1);
 	}
 	// returns the item's slot, or -1 when the message made no item
 	int process(const JSON::JSON &data, FLOAT32 sender_lat, FLOAT32 sender_lon);
@@ -122,7 +131,8 @@ public:
 			linkToOwner(h, owner);
 	}
 
-	// the ship row's packed badge: count (4b) | newest kind (3b) | age bucket (2b)
+	// the ship row's packed badge: count (4b) | newest kind (3b) | age bucket (2b),
+	// over what is about the ship and what it sent, an item on both chains once
 	uint16_t badge(uint32_t mmsi, std::time_t now) const
 	{
 		int c = owners.find(mmsi);
@@ -130,15 +140,19 @@ public:
 			return 0;
 		unsigned n = 0;
 		int newest = -1;
-		for (int p = owners[c].head; p >= 0; p = items[p].onext)
-		{
+		auto tally = [&](int p) {
 			const Item &it = items[p];
 			if ((long int)now - (long int)it.last > ttl)
-				continue;
+				return;
 			n++;
 			if (newest < 0 || it.last > items[newest].last)
 				newest = p;
-		}
+		};
+		for (int p = owners[c].head; p >= 0; p = items[p].onext)
+			tally(p);
+		for (int p = owners[c].sent; p >= 0; p = items[p].snext)
+			if (items[p].owner != mmsi)
+				tally(p);
 		if (!n)
 			return 0;
 		long int age = (long int)now - (long int)items[newest].last;
@@ -310,34 +324,80 @@ private:
 						items[p].onext = it.onext;
 						break;
 					}
-			if (oc.head < 0)
+			if (oc.head < 0 && oc.sent < 0)
 				owners.remove(it.owner);
 		}
 		it.owner = 0;
 		it.onext = -1;
 	}
 
+	void unlinkFromSent(int h)
+	{
+		Item &it = items[h];
+		if (!it.sent_by)
+			return;
+		int c = owners.find(it.sent_by);
+		if (c != owners.NIL)
+		{
+			OwnerChain &oc = owners[c];
+			if (oc.sent == h)
+				oc.sent = it.snext;
+			else
+				for (int p = oc.sent; p >= 0; p = items[p].snext)
+					if (items[p].snext == h)
+					{
+						items[p].snext = it.snext;
+						break;
+					}
+			if (oc.head < 0 && oc.sent < 0)
+				owners.remove(it.sent_by);
+		}
+		it.sent_by = 0;
+		it.snext = -1;
+	}
+
+	// the record of a ship, made when it has none; a recycled record's items lose their ship
+	int claimChains(uint32_t mmsi)
+	{
+		int c = owners.find(mmsi);
+		if (c != owners.NIL)
+			return c;
+		c = owners.create(mmsi);
+		OwnerChain &old = owners[c];
+		for (int p = old.head; p >= 0;)
+		{
+			int n = items[p].onext;
+			items[p].owner = 0;
+			items[p].onext = -1;
+			p = n;
+		}
+		for (int p = old.sent; p >= 0;)
+		{
+			int n = items[p].snext;
+			items[p].sent_by = 0;
+			items[p].snext = -1;
+			p = n;
+		}
+		old.head = old.sent = -1;
+		return c;
+	}
+
 	void linkToOwner(int h, uint32_t owner)
 	{
-		int c = owners.find(owner);
-		if (c == owners.NIL)
-		{
-			c = owners.create(owner);
-			OwnerChain &old = owners[c];
-			// a recycled chain: its items lose their ship
-			for (int p = old.head; p >= 0;)
-			{
-				int n = items[p].onext;
-				items[p].owner = 0;
-				items[p].onext = -1;
-				p = n;
-			}
-			old.head = -1;
-		}
+		int c = claimChains(owner);
 		Item &it = items[h];
 		it.owner = owner;
 		it.onext = owners[c].head;
 		owners[c].head = h;
+	}
+
+	void linkToSent(int h, uint32_t mmsi)
+	{
+		int c = claimChains(mmsi);
+		Item &it = items[h];
+		it.sent_by = mmsi;
+		it.snext = owners[c].sent;
+		owners[c].sent = h;
 	}
 
 	void tombstone(uint64_t key, uint64_t seq)
@@ -502,6 +562,7 @@ inline int BinaryStore::process(const JSON::JSON &data, FLOAT32 sender_lat, FLOA
 		// the recycled slot may still be chained somewhere
 		unlinkFromMarker(h);
 		unlinkFromOwner(h);
+		unlinkFromSent(h);
 		Item &b = items[h];
 		b = item;
 		b.count = 1;
@@ -510,8 +571,14 @@ inline int BinaryStore::process(const JSON::JSON &data, FLOAT32 sender_lat, FLOA
 	}
 
 	// a located item stands on its own marker unless it sits on its sender;
-	// everything else belongs to a ship (addressee or sender) and has no marker
+	// everything else belongs to a ship (addressee or sender) and has no marker.
+	// Whatever it is, the transmitter keeps it on its sent chain.
 	Item &b = items[h];
+	if (b.sent_by != b.mmsi)
+	{
+		unlinkFromSent(h);
+		linkToSent(h, b.mmsi);
+	}
 	bool located = isValidCoord(b.lat, b.lon);
 	bool onSender = located && isValidCoord(sender_lat, sender_lon) &&
 					std::hypot(b.lat - sender_lat, b.lon - sender_lon) <= SNAP_DEG;
@@ -544,11 +611,24 @@ inline void BinaryStore::writeJSON(JSON::Writer &w, std::time_t now, std::time_t
 	}
 	else if (owner_mmsi)
 	{
+		// about the ship and sent by it, an item on both chains once; newest first,
+		// capped so a station addressing hundreds of vessels stays a small answer
 		int c = owners.find(owner_mmsi);
 		if (c != owners.NIL)
+		{
+			std::vector<int> rows;
 			for (int p = owners[c].head; p >= 0; p = items[p].onext)
 				if ((long int)now - (long int)items[p].last <= ttl)
-					row(items[p]);
+					rows.push_back(p);
+			for (int p = owners[c].sent; p >= 0; p = items[p].snext)
+				if (items[p].owner != owner_mmsi && (long int)now - (long int)items[p].last <= ttl)
+					rows.push_back(p);
+			std::sort(rows.begin(), rows.end(), [&](int a, int b) { return items[a].last > items[b].last; });
+			if (rows.size() > (size_t)MAX_PER_SHIP)
+				rows.resize(MAX_PER_SHIP);
+			for (int p : rows)
+				row(items[p]);
+		}
 	}
 	else
 		items.forEach([&](int h) {
@@ -641,28 +721,39 @@ inline void BinaryStore::refresh(std::time_t now)
 		markers.touch(mh);
 
 	// ship chains shed their expired items too, or a busy station's chain grows until its slots recycle
+	auto expired = [&](int p) { return (long int)now - (long int)items[p].last > ttl; };
 	std::vector<uint32_t> stale;
 	owners.forEach([&](int c) {
-		for (int p = owners[c].head; p >= 0; p = items[p].onext)
-			if ((long int)now - (long int)items[p].last > ttl)
-			{
-				stale.push_back(owners.key(c));
-				break;
-			}
+		bool any = false;
+		for (int p = owners[c].head; p >= 0 && !any; p = items[p].onext)
+			any = expired(p);
+		for (int p = owners[c].sent; p >= 0 && !any; p = items[p].snext)
+			any = expired(p);
+		if (any)
+			stale.push_back(owners.key(c));
 		return true;
 	});
-	// outside the walk: unlinking the last item removes the chain itself
+	// outside the walk: unlinking the last item removes the record itself
 	for (uint32_t m : stale)
 	{
 		int c = owners.find(m);
 		if (c == owners.NIL)
 			continue;
-		int p = owners[c].head;
-		while (p >= 0)
+		for (int p = owners[c].head; p >= 0;)
 		{
 			int n = items[p].onext;
-			if ((long int)now - (long int)items[p].last > ttl)
+			if (expired(p))
 				unlinkFromOwner(p);
+			p = n;
+		}
+		c = owners.find(m);
+		if (c == owners.NIL)
+			continue;
+		for (int p = owners[c].sent; p >= 0;)
+		{
+			int n = items[p].snext;
+			if (expired(p))
+				unlinkFromSent(p);
 			p = n;
 		}
 	}
