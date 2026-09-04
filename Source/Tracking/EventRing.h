@@ -25,16 +25,15 @@
 #include "Writer.h"
 
 // What the receiver found worth telling: a safety message, a vessel bound
-// somewhere new or reporting itself not under command or aground. Every event
-// has a place, stamped when it is made, so a reader can go there. One ring per
-// level: a burst of routine events fills its own ring and never pushes out a
-// distress call. The same words from the same sender, heard again while the
+// somewhere new. Every event has a place, stamped when it is made, so a reader
+// can go there. One ring per level: a burst of routine events fills its own
+// ring and never pushes out a distress call. The same words from the same sender, heard again while the
 // earlier event is still live, count on that event instead of becoming another
 // one: a device left transmitting for days is one event that began days ago.
 class EventRing
 {
 public:
-	enum Kind : uint8_t { SAFETY = 1, DESTINATION = 2, STATUS = 3 };
+	enum Kind : uint8_t { SAFETY = 1, DESTINATION = 2 };
 	enum Level : uint8_t { ROUTINE = 0, NOTICE = 1, URGENT = 2, LEVELS = 3 };
 
 	struct Event
@@ -46,7 +45,7 @@ public:
 		uint32_t from = 0, to = 0;
 		FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 		int count = 1;
-		std::string text;
+		std::string text, was; // what the value was, where an event is a change
 	};
 
 	EventRing()
@@ -102,6 +101,8 @@ public:
 				w.kv("lat", e->lat).kv("lon", e->lon);
 			if (e->count > 1)
 				w.kv("count", e->count);
+			if (!e->was.empty())
+				w.kv("was", e->was);
 			w.kv("text", e->text).endObject();
 		}
 		w.endArray();

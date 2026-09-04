@@ -548,7 +548,6 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship
 		const int st = p.Get().getInt();
 		if (ship.status != STATUS_UNDEFINED)
 			changes.addNumeric(ship.mmsi, StaticHistory::STATUS, (uint8_t)ship.status, (uint8_t)st, ship.last_signal);
-		noteStatus(ship, st);
 		ship.status = st;
 	}
 	break;
@@ -832,7 +831,7 @@ static bool settle(Ship &ship, std::time_t now)
 	return quiet;
 }
 
-void DB::note(const Ship &ship, EventRing::Kind kind, EventRing::Level level, std::time_t now, const std::string &text, uint32_t to)
+void DB::note(const Ship &ship, EventRing::Kind kind, EventRing::Level level, std::time_t now, const std::string &text, uint32_t to, const std::string &was)
 {
 	EventRing::Event e;
 	e.kind = kind;
@@ -843,6 +842,7 @@ void DB::note(const Ship &ship, EventRing::Kind kind, EventRing::Level level, st
 	e.lat = ship.lat;
 	e.lon = ship.lon;
 	e.text = text;
+	e.was = was;
 	events.push(e);
 }
 
@@ -874,25 +874,33 @@ void DB::noteSafety(Ship &ship, const JSON::JSON &data)
 	note(ship, EventRing::SAFETY, level, now, text, to);
 }
 
-// the first destination a vessel reports only starts the clock
+// a value that names no place: a vessel leaving or arriving at one is no news
+static bool namesAPlace(const std::string &text)
+{
+	static const char *NOTHING[] = {"UNKNOWN", "UNKNOW", "UNK", "NA", "NONE", "NIL", "NOTAVAILABLE", "NODESTINATION", "NODEST", "TBA", "TBD", "TBN", "UNSPECIFIED"};
+	if (!plausibleText(text))
+		return false;
+	std::string s;
+	for (char c : text)
+		if (std::isalnum((unsigned char)c))
+			s += (char)std::toupper((unsigned char)c);
+	for (const char *w : NOTHING)
+		if (s == w)
+			return false;
+	return true;
+}
+
+// the event is the change, so the first destination a vessel reports only
+// starts the clock, and one that stood for nothing knowable is left alone
 void DB::noteDestination(Ship &ship, const std::string &v)
 {
 	if (v.empty() || v == ship.destination)
 		return;
 	std::time_t now = std::time(nullptr);
-	if (settle(ship, now) || !ship.destination[0] || !plausibleText(v))
+	std::string was = ship.destination;
+	if (settle(ship, now) || !namesAPlace(v) || !namesAPlace(was))
 		return;
-	note(ship, EventRing::DESTINATION, EventRing::ROUTINE, now, v);
-}
-
-void DB::noteStatus(Ship &ship, int status)
-{
-	if (status == ship.status)
-		return;
-	std::time_t now = std::time(nullptr);
-	if (settle(ship, now) || ship.status == STATUS_UNDEFINED || (status != STATUS_NOT_UNDER_COMMAND && status != STATUS_AGROUND))
-		return;
-	note(ship, EventRing::STATUS, EventRing::NOTICE, now, status == STATUS_AGROUND ? "Aground" : "Not under command");
+	note(ship, EventRing::DESTINATION, EventRing::ROUTINE, now, v, 0, was);
 }
 
 std::string DB::getEventsJSON(uint64_t since, int level)
