@@ -880,7 +880,7 @@ void DB::noteSafety(Ship &ship, const JSON::JSON &data)
 // a value that names no place: a vessel leaving or arriving at one is no news
 static bool namesAPlace(const std::string &text)
 {
-	static const char *NOTHING[] = {"UNKNOWN", "UNKNOW", "UNK", "NA", "NONE", "NIL", "NOTAVAILABLE", "NODESTINATION", "NODEST", "TBA", "TBD", "TBN", "UNSPECIFIED"};
+	static const char *NOTHING[] = {"UNKNOWN", "UNK", "NA", "NONE", "NIL", "NOTAVAILABLE", "NODESTINATION", "NODEST", "TBA", "TBD", "TBN", "UNSPECIFIED"};
 	if (!plausibleText(text))
 		return false;
 	std::string s;
