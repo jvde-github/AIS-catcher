@@ -295,9 +295,11 @@ public:
 	std::string getChangesJSON(int mmsi);
 	std::string getRecentChangesJSON(uint32_t since, std::size_t max);
 	void logTextChange(const Ship &ship, int field, const char *old_value, const std::string &value);
-	void note(const Ship &ship, EventRing::Kind kind, EventRing::Level level, std::time_t now, const std::string &text, uint32_t to = 0, const std::string &was = std::string());
+	void note(const Ship &ship, EventRing::Kind kind, EventRing::Level level, std::time_t now, const std::string &text,
+			  const std::string &label = std::string(), uint32_t to = 0, const std::string &was = std::string());
 	void noteSafety(Ship &ship, const JSON::JSON &data);
 	void noteDestination(Ship &ship, const std::string &v);
+	void noteStatus(Ship &ship, int status);
 	std::string getJSON(bool full = false);
 	std::string getJSONcompact(bool full = false, std::time_t since = 0);
 	std::string getPathJSON(uint32_t);

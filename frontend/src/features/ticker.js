@@ -46,9 +46,10 @@ function stopPolling() {
 }
 
 // a first-set name is not news, but a first draught is a reading, and the only
-// baseline the draught chart has to start from; destinations come as events
+// baseline the draught chart has to start from; what the receiver words as an
+// event, a destination or a status, comes on the strip that way instead
 function worthShowing(change) {
-    return (!change.i || change.f === CHANGE.DRAUGHT) && change.f !== CHANGE.DESTINATION;
+    return (!change.i || change.f === CHANGE.DRAUGHT) && change.f !== CHANGE.DESTINATION && change.f !== CHANGE.STATUS;
 }
 
 function describe(change) {

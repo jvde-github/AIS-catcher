@@ -548,6 +548,7 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship
 		const int st = p.Get().getInt();
 		if (ship.status != STATUS_UNDEFINED)
 			changes.addNumeric(ship.mmsi, StaticHistory::STATUS, (uint8_t)ship.status, (uint8_t)st, ship.last_signal);
+		noteStatus(ship, st);
 		ship.status = st;
 	}
 	break;
@@ -831,7 +832,8 @@ static bool settle(Ship &ship, std::time_t now)
 	return quiet;
 }
 
-void DB::note(const Ship &ship, EventRing::Kind kind, EventRing::Level level, std::time_t now, const std::string &text, uint32_t to, const std::string &was)
+void DB::note(const Ship &ship, EventRing::Kind kind, EventRing::Level level, std::time_t now, const std::string &text,
+			  const std::string &label, uint32_t to, const std::string &was)
 {
 	EventRing::Event e;
 	e.kind = kind;
@@ -843,6 +845,7 @@ void DB::note(const Ship &ship, EventRing::Kind kind, EventRing::Level level, st
 	e.lon = ship.lon;
 	e.text = text;
 	e.was = was;
+	e.label = label;
 	events.push(e);
 }
 
@@ -871,7 +874,7 @@ void DB::noteSafety(Ship &ship, const JSON::JSON &data)
 	EventRing::Level level = safetyLevel(ship.mmsi, w);
 	if (level == EventRing::ROUTINE || (level == EventRing::NOTICE && ship.quiet_until > now))
 		return;
-	note(ship, EventRing::SAFETY, level, now, text, to);
+	note(ship, EventRing::SAFETY, level, now, text, std::string(), to);
 }
 
 // a value that names no place: a vessel leaving or arriving at one is no news
@@ -900,7 +903,21 @@ void DB::noteDestination(Ship &ship, const std::string &v)
 	std::string was = ship.destination;
 	if (settle(ship, now) || !namesAPlace(v) || !namesAPlace(was))
 		return;
-	note(ship, EventRing::DESTINATION, EventRing::ROUTINE, now, v, 0, was);
+	note(ship, EventRing::DESTINATION, EventRing::ROUTINE, now, v, "destination", 0, was);
+}
+
+// a vessel's navigation status, named the way the message names it; the status
+// it starts out with, and one going undefined, only start the clock
+void DB::noteStatus(Ship &ship, int status)
+{
+	const std::vector<std::string> &names = AIS::LookupTable_nav_status;
+	if (status == ship.status || status < 0 || status >= (int)names.size())
+		return;
+	std::time_t now = std::time(nullptr);
+	int had = ship.status;
+	if (settle(ship, now) || had < 0 || had >= (int)names.size() || had == STATUS_UNDEFINED || status == STATUS_UNDEFINED)
+		return;
+	note(ship, EventRing::STATUS, EventRing::ROUTINE, now, names[status], "status", 0, names[had]);
 }
 
 std::string DB::getEventsJSON(uint64_t since, int level)

@@ -24,16 +24,17 @@
 #include "Common.h"
 #include "Writer.h"
 
-// What the receiver found worth telling: a safety message, a vessel bound
-// somewhere new. Every event has a place, stamped when it is made, so a reader
-// can go there. One ring per level: a burst of routine events fills its own
+// What the receiver found worth telling: a safety message, or a field of a
+// vessel's record changing. The receiver words it: a change carries the field's
+// name and the value on either side, and a reader only has to lay them out.
+// Every event has a place, stamped when it is made, so a reader can go there. One ring per level: a burst of routine events fills its own
 // ring and never pushes out a distress call. The same words from the same sender, heard again while the
 // earlier event is still live, count on that event instead of becoming another
 // one: a device left transmitting for days is one event that began days ago.
 class EventRing
 {
 public:
-	enum Kind : uint8_t { SAFETY = 1, DESTINATION = 2 };
+	enum Kind : uint8_t { SAFETY = 1, DESTINATION = 2, STATUS = 3 };
 	enum Level : uint8_t { ROUTINE = 0, NOTICE = 1, URGENT = 2, LEVELS = 3 };
 
 	struct Event
@@ -45,7 +46,8 @@ public:
 		uint32_t from = 0, to = 0;
 		FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 		int count = 1;
-		std::string text, was; // what the value was, where an event is a change
+		// a change reads as `label`: `was` -> `text`; a safety message is `text` alone
+		std::string text, was, label;
 	};
 
 	EventRing()
@@ -101,6 +103,8 @@ public:
 				w.kv("lat", e->lat).kv("lon", e->lon);
 			if (e->count > 1)
 				w.kv("count", e->count);
+			if (!e->label.empty())
+				w.kv("label", e->label);
 			if (!e->was.empty())
 				w.kv("was", e->was);
 			w.kv("text", e->text).endObject();

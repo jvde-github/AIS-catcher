@@ -554,10 +554,10 @@ export function create(host) {
 
     const isDistressDevice = (mmsi) => /^97[024]/.test(String(mmsi));
     const isBaseStation = (mmsi) => mmsi >= 2000000 && mmsi <= 9999999;
-    const DESTINATION = 2;
 
-    // a change reads as the field and what it went from and to, the way the
-    // viewer's own changes do; a safety message reads as who said what to whom
+    // The receiver words its events; the strip only lays them out. A change
+    // names its field and the value on either side, a safety message is the
+    // message and who it was for.
     function tickerEvent(e, seen) {
         const label = (m) => String(host.shipLabel(m));
         const who = isDistressDevice(e.from) ? (String(e.from).startsWith('972') ? 'MOB device' : String(e.from).startsWith('974') ? 'EPIRB' : 'AIS-SART')
@@ -565,11 +565,11 @@ export function create(host) {
         const to = e.to ? label(e.to) : '';
         const parts = [];
         let text;
-        if (e.kind === DESTINATION) {
-            parts.push(`<span class="tk-name">${escapeHtml(who)}</span>`, '<span class="tk-sep">·</span>', '<span class="tk-label">destination</span>');
+        if (e.label) {
+            parts.push(`<span class="tk-name">${escapeHtml(who)}</span>`, '<span class="tk-sep">·</span>', `<span class="tk-label">${escapeHtml(e.label)}</span>`);
             if (e.was) parts.push(`<span class="tk-was">${escapeHtml(e.was)}</span>`, '<span class="tk-arrow">&rarr;</span>');
             parts.push(`<span class="tk-to">${escapeHtml(e.text)}</span>`);
-            text = `${who} · destination ${e.was ? e.was + ' → ' : ''}${e.text}`;
+            text = `${who} · ${e.label} ${e.was ? e.was + ' → ' : ''}${e.text}`;
         } else {
             const alert = e.level >= 1;
             const body = e.text + (e.count > 1 ? ` (×${e.count})` : '');
