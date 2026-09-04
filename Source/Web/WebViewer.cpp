@@ -660,7 +660,13 @@ void WebViewer::startServing()
 			   << ", share_loc: " << on(tc.latlon_share)
 			   << (settings.showdecoder ? ", decoder: on" : "")
 			   << (settings.KML ? ", kml: on" : "")
-			   << (settings.GeoJSON ? ", geojson: on" : "");
+			   << (settings.GeoJSON ? ", geojson: on" : "")
+			   << (plugins.dirs().empty() && plugins.loaded().empty()
+					   ? std::string()
+					   : ", plugins: " + std::to_string(plugins.loaded().size()))
+			   << (plugins.errors().empty()
+					   ? std::string()
+					   : " (" + std::to_string(plugins.errors().size()) + " failed)");
 
 		time_start = time(nullptr);
 	}

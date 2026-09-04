@@ -38,6 +38,7 @@ class PluginStore
 	// version 0 means "no declared version" (CSS plugins).
 	std::vector<std::pair<std::string, int>> loaded_list;
 	std::vector<std::string> error_list;
+	std::vector<std::string> dir_list;
 
 public:
 	PluginStore() : code("\n\nfunction loadPlugins() {\n") {}
@@ -59,6 +60,7 @@ public:
 
 	const std::vector<std::pair<std::string, int>> &loaded() const { return loaded_list; }
 	const std::vector<std::string> &errors() const { return error_list; }
+	const std::vector<std::string> &dirs() const { return dir_list; }
 };
 
 // Everything the viewer page needs at startup, emitted as a single JSON blob the

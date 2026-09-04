@@ -102,6 +102,8 @@ void PluginStore::addStyle(const std::string &arg)
 
 void PluginStore::addDir(const std::string &dir)
 {
+	dir_list.push_back(dir);
+
 	const std::vector<std::string> &files_js = Util::Helper::getFilesWithExtension(dir, ".pjs");
 	for (const auto &f : files_js)
 		addPlugin(f);
@@ -111,7 +113,7 @@ void PluginStore::addDir(const std::string &dir)
 		addStyle(f);
 
 	if (files_ss.empty() && files_js.empty())
-		Info() << "Server: no plugin files found in directory.";
+		Info() << "Server: no plugin files found in directory \"" << dir << "\".";
 }
 
 void PluginStore::setAbout(const std::string &path)
@@ -129,6 +131,7 @@ void PluginStore::reset()
 	about_present = false;
 	loaded_list.clear();
 	error_list.clear();
+	dir_list.clear();
 }
 
 // --- FrontendConfig ---
