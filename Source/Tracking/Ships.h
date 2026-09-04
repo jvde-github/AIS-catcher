@@ -69,6 +69,9 @@ struct Ship
     uint64_t last_group, group_mask;
     // types heard since the last sweep; not persisted
     int type_ttl;
+    // until when the vessel makes no events: a destination or status just changed,
+    // or it sent a test; not persisted
+    std::time_t quiet_until;
     Util::PackedInt flags;
 
     void reset();
@@ -84,7 +87,7 @@ struct Ship
     bool writeGeoJSON(JSON::Writer &, bool station_known) const;
     void writeJSON(JSON::Writer &, long int delta_time, bool station_known) const;
     void writeJSONBody(JSON::Writer &, long int delta_time, bool station_known) const;
-    void writeCompactDynamic(JSON::Writer &, unsigned binary_badge = 0) const;
+    void writeCompactDynamic(JSON::Writer &, unsigned binary_badge = 0, unsigned station = 0) const;
     void writeCompactStatic(JSON::Writer &) const;
 
     // File persistence functions

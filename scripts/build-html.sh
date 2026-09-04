@@ -22,7 +22,11 @@ perform_sed() {
 rm -f "$DIST"/lib-*.js "$DIST"/lib.css "$DIST"/script.js "$DIST"/components.js "$DIST"/chrome.js "$DIST"/settings.js "$DIST"/tokens.css "$DIST"/icons.css "$DIST"/sprites.css "$DIST"/components.css "$DIST"/map.css
 rm -rf "$DIST/tabs"
 
-(cd "$SRC" && npm install --include=dev && npm run build)
+# install only when the lockfile is newer than node_modules
+if [ ! -d "$SRC/node_modules" ] || [ "$SRC/package-lock.json" -nt "$SRC/node_modules/.package-lock.json" ]; then
+    (cd "$SRC" && npm install --include=dev --prefer-offline --no-audit --no-fund)
+fi
+(cd "$SRC" && npm run build)
 
 # One stylesheet per host from the shared sheets, in index.css order; the
 # shared JS is bundled by Vite (viewer) or loaded as a module (hub)

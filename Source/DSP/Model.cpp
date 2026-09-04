@@ -759,6 +759,7 @@ namespace AIS
 		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
 		physical >> nmea >> output;
 		nmea.outGPS >> output_gps;
+		nmea.outControl >> output_control;
 
 		nmea.setStation(station);
 		nmea.setOwnMMSI(own_mmsi);

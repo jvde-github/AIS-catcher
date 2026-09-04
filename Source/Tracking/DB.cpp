@@ -17,6 +17,7 @@
 
 #include "AIS-catcher.h"
 #include <algorithm>
+#include <cctype>
 #include "DB.h"
 #include "Geodesy.h"
 #include "Region.h"
@@ -77,7 +78,7 @@ std::string DB::getJSONcompact(bool full, std::time_t since)
 		// --- Pass 1: dynamic array ---
 		w.key("dynamic").beginArray();
 		forEachRecentUnlocked(now, full, since, [&](int, const Ship &ship, long int) {
-			ship.writeCompactDynamic(w, binary.badge(ship.mmsi, now));
+			ship.writeCompactDynamic(w, binary.badge(ship.mmsi, now), stations.idFor(ship.mmsi));
 		});
 		w.endArray(); // dynamic
 
@@ -159,7 +160,7 @@ std::string DB::getShipJSON(int mmsi)
 		JSON::Writer w(content, 1024);
 		w.beginObject();
 		ship.writeJSONBody(w, (long int)now - (long int)ship.last_signal, isValidCoord(station_lat, station_lon));
-		w.kv("binary", binary.badge(ship.mmsi, now)).endObject();
+		w.kv("binary", binary.badge(ship.mmsi, now)).kv("station", stations.idFor(ship.mmsi)).endObject();
 	}
 	return content;
 }
@@ -547,6 +548,7 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship
 		const int st = p.Get().getInt();
 		if (ship.status != STATUS_UNDEFINED)
 			changes.addNumeric(ship.mmsi, StaticHistory::STATUS, (uint8_t)ship.status, (uint8_t)st, ship.last_signal);
+		noteStatus(ship, st);
 		ship.status = st;
 	}
 	break;
@@ -634,10 +636,14 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship
 		copyField(ship.country_code, p.Get().getString());
 		break;
 	case AIS::KEY_DESTINATION:
-		logTextChange(ship, StaticHistory::DESTINATION, ship.destination, p.Get().getString());
-		copyField(ship.destination, p.Get().getString());
+	{
+		const std::string &d = p.Get().getString();
+		logTextChange(ship, StaticHistory::DESTINATION, ship.destination, d);
+		noteDestination(ship, d);
+		copyField(ship.destination, d);
 		staticUpdated = true;
-		break;
+	}
+	break;
 	case AIS::KEY_VIN:
 	{
 		const std::string &s = p.Get().getString();
@@ -770,13 +776,173 @@ std::string DB::getBinaryMessagesJSON(std::time_t since, uint64_t marker, uint32
 	return content;
 }
 
+// a vessel makes no events for this long after a destination or status change,
+// and for this long after saying TEST
+static const int CHANGE_SETTLE_S = 30, TEST_MUTE_S = 300;
+
+static std::string words(const std::string &text)
+{
+	std::string s = " ";
+	for (char c : text)
+		s += std::isalnum((unsigned char)c) ? (char)std::toupper((unsigned char)c) : ' ';
+	return s + ' ';
+}
+
+// nothing a decode gone wrong leaves behind
+static bool plausibleText(const std::string &text)
+{
+	int letters = 0;
+	for (char c : text)
+	{
+		unsigned char u = (unsigned char)c;
+		if (u < 32 || u > 126)
+			return false;
+		if (std::isalpha(u))
+			letters++;
+	}
+	return text.size() >= 3 && letters >= 2;
+}
+
+// A safety message has no priority field: a distress device sending it (AIS-SART
+// 970, man-overboard 972, EPIRB 974) or the words used for something serious say
+// it matters; `s` is the text as words() gives it
+static EventRing::Level safetyLevel(uint32_t from, const std::string &s)
+{
+	auto has = [&](const char *w) { return s.find(std::string(" ") + w + " ") != std::string::npos; };
+	auto wordStarts = [&](const char *w) { return s.find(std::string(" ") + w) != std::string::npos; };
+	uint32_t prefix = from / 1000000;
+	if (prefix == 970 || prefix == 972 || prefix == 974)
+		return has("ACTIVE") || has("MAYDAY") || has("SART") || has("MOB") || has("EPIRB") || has("DISTRESS") || has("HELP") ? EventRing::URGENT : EventRing::ROUTINE;
+	if (has("MAYDAY") || has("SOS") || has("DISTRESS") || has("MOB") || has("OVERBOARD") || has("MAN OVER BOARD") || has("MAN OVERBOARD") ||
+		has("SINKING") || wordStarts("CAPSIZ") || has("FIRE") || has("EMERGENCY"))
+		return EventRing::URGENT;
+	if (has("PAN PAN") || has("PANPAN") || has("SECURITE") || has("ACCIDENT") || has("COLLISION") || has("AGROUND") || has("GROUND") ||
+		has("GROUNDING") || has("DANGER") || has("WARNING") || has("KEEP AWAY") || has("STAY AWAY") || has("KEEP CLEAR") ||
+		has("NOT UNDER COMMAND") || has("NUC"))
+		return EventRing::NOTICE;
+	return EventRing::ROUTINE;
+}
+
+// a change quiets the vessel for a while; true when it already was, so a value
+// flapping between two decodes never gets out
+static bool settle(Ship &ship, std::time_t now)
+{
+	bool quiet = ship.quiet_until > now;
+	ship.quiet_until = MAX(ship.quiet_until, now + CHANGE_SETTLE_S);
+	return quiet;
+}
+
+void DB::note(const Ship &ship, EventRing::Kind kind, EventRing::Level level, std::time_t now, const std::string &text, uint32_t to)
+{
+	EventRing::Event e;
+	e.kind = kind;
+	e.level = level;
+	e.from = ship.mmsi;
+	e.to = to;
+	e.time = now;
+	e.lat = ship.lat;
+	e.lon = ship.lon;
+	e.text = text;
+	events.push(e);
+}
+
+// a test silences its sender for a while: what follows an exercise is the exercise;
+// the quiet after a test or a change holds a notice back, never a distress call
+void DB::noteSafety(Ship &ship, const JSON::JSON &data)
+{
+	std::string text;
+	uint32_t to = 0;
+	for (const auto &p : data.getMembers())
+	{
+		if (p.Key() == AIS::KEY_TEXT)
+			text = p.Get().getString();
+		else if (p.Key() == AIS::KEY_DEST_MMSI)
+			to = (uint32_t)p.Get().getInt();
+	}
+	if (!plausibleText(text))
+		return;
+	std::time_t now = std::time(nullptr);
+	std::string w = words(text);
+	if (w.find(" TEST ") != std::string::npos)
+	{
+		ship.quiet_until = now + TEST_MUTE_S;
+		return;
+	}
+	EventRing::Level level = safetyLevel(ship.mmsi, w);
+	if (level == EventRing::ROUTINE || (level == EventRing::NOTICE && ship.quiet_until > now))
+		return;
+	note(ship, EventRing::SAFETY, level, now, text, to);
+}
+
+// the first destination a vessel reports only starts the clock
+void DB::noteDestination(Ship &ship, const std::string &v)
+{
+	if (v.empty() || v == ship.destination)
+		return;
+	std::time_t now = std::time(nullptr);
+	if (settle(ship, now) || !ship.destination[0] || !plausibleText(v))
+		return;
+	note(ship, EventRing::DESTINATION, EventRing::ROUTINE, now, v);
+}
+
+void DB::noteStatus(Ship &ship, int status)
+{
+	if (status == ship.status)
+		return;
+	std::time_t now = std::time(nullptr);
+	if (settle(ship, now) || ship.status == STATUS_UNDEFINED || (status != STATUS_NOT_UNDER_COMMAND && status != STATUS_AGROUND))
+		return;
+	note(ship, EventRing::STATUS, EventRing::NOTICE, now, status == STATUS_AGROUND ? "Aground" : "Not under command");
+}
+
+std::string DB::getEventsJSON(uint64_t since, int level)
+{
+	std::lock_guard<std::mutex> lock(mtx);
+	content.clear();
+	{
+		JSON::Writer w(content, 4096);
+		std::time_t now = time(nullptr);
+		w.beginObject().kv("time", now).kv("seq", (long long)events.sequence());
+		events.writeSince(w, since, level, now);
+		w.endObject();
+	}
+	return content;
+}
+
+std::string DB::getObjectJSON(const std::string &key)
+{
+	std::lock_guard<std::mutex> lock(mtx);
+	content.clear();
+	{
+		JSON::Writer w(content, 4096);
+		std::time_t now = time(nullptr);
+		if (!key.empty() && key[0] == 's')
+		{
+			w.beginObject().kv("time", now);
+			stations.writeOne(w, std::atoi(key.c_str() + 1));
+			w.endObject();
+		}
+		else
+			binary.writeJSON(w, now, 0, std::strtoull(key.c_str(), nullptr, 16), 0);
+	}
+	return content;
+}
+
 std::string DB::getMapObjectsJSON(uint64_t since)
 {
 	std::lock_guard<std::mutex> lock(mtx);
 	content.clear();
 	{
 		JSON::Writer w(content, 4096);
-		binary.writeMapObjectsJSON(w, time(nullptr), since);
+		std::time_t now = time(nullptr);
+		binary.refresh(now);
+		w.beginObject().kv("time", now).kv("seq", (long long)binary.sequence()).key("objects").beginArray();
+		binary.writeMarkerRows(w, since);
+		stations.writeRows(w, since);
+		w.endArray().key("removed").beginArray();
+		binary.writeRemoved(w, since);
+		stations.writeRemoved(w, since);
+		w.endArray().endObject();
 	}
 	return content;
 }
@@ -862,12 +1028,13 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 
 	bool newValidPosition = !copy && updateShip(data[0], tag, ship) && isValidCoord(ship.lat, ship.lon);
 
-	// application payloads, safety texts and group assignment areas feed the store
 	if (!copy && (type == 6 || type == 8 || type == 12 || type == 14 || type == 23))
 	{
 		int h = binary.process(data[0], ship.lat, ship.lon);
 		if (h >= 0)
 			binary.settle(h, [&](uint32_t m) { return ships.find(m) != SHIP_NIL; });
+		if (type == 12 || type == 14)
+			noteSafety(ship, data[0]);
 	}
 
 	tag.shipclass = ship.shipclass;

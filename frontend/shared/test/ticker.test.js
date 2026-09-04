@@ -14,7 +14,7 @@ test("ticker: slots, chips, counts and push", async (tc) => {
         onSelect: (id) => picked.push(id),
     });
     tc.after(() => t.destroy());
-    assert.equal(document.querySelectorAll("#t .ticker-item").length, 3);
+    assert.equal(document.querySelectorAll("#t .ticker-item").length, 1);
     assert.equal(document.querySelectorAll("#t .ticker-buckets .stat-item").length, 2);
 
     t.setEnabled(true);
@@ -30,4 +30,24 @@ test("ticker: slots, chips, counts and push", async (tc) => {
     assert.equal(shown[0].title, "SHIP · destination X");
     shown[0].click();
     assert.deepEqual(picked, ["42"]);
+});
+
+test("ticker: an urgent event is pinned until dismissed", async (tc) => {
+    document.querySelector("#t .ticker-feed").innerHTML = "";     // the slots of the test before
+    const t = ticker.create({ mount: document.getElementById("t"), buckets: [], onSelect: () => {} });
+    tc.after(() => t.destroy());
+    t.setEnabled(true);
+    t.push([
+        { key: "u", at: Date.now(), id: 1, text: "urgent", html: "urgent", level: 2 },
+        { key: "r", at: Date.now() + 1, id: 2, text: "routine", html: "routine", level: 0 },
+    ]);
+    await new Promise((r) => setTimeout(r, 1100));
+    const up = () => [...document.querySelectorAll("#t .ticker-item")].filter((i) => i.style.display !== "none").map((i) => i.dataset.key);
+    assert.deepEqual(up(), ["u"]);
+    t.advance();
+    await new Promise((r) => setTimeout(r, 1100));
+    assert.deepEqual(up(), ["u"]);
+    document.querySelector('#t .ticker-item[data-key="u"]').click();
+    await new Promise((r) => setTimeout(r, 1100));
+    assert.deepEqual(up(), ["r"]);
 });

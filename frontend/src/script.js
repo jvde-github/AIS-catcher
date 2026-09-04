@@ -29,6 +29,7 @@ import * as measure from './features/measure.js';
 import * as boxselect from './features/boxselect.js';
 import * as replay from './features/replay.js';
 import * as binary from './features/binary.js';
+import * as stations from '../shared/stations.js';
 import * as range from './features/range.js';
 import * as ticker from './features/ticker.js';
 import * as planecard from './features/planecard.js';
@@ -256,6 +257,7 @@ const ACTIONS = {
     setBinaryCategory: (e, d, el) => binary.setBinaryCategory(d.cat, el.checked),
     setBinaryColorClass: (e, d, el) => binary.setBinaryColorClass(el.checked),
     setBinaryIdLabels: (e, d, el) => binary.setBinaryIdLabels(el.checked),
+    setBinaryGroupAreas: (e, d, el) => binary.setBinaryGroupAreas(el.checked),
     setRangeColor: (e, d, el) => range.setRangeColor(el.value, d.field),
     setMapSettingDistanceColor: (e, d, el) => { range.removeDistanceCircles(); setMapSetting('distance_circle_color', el.value); },
     setShowTrackOnSelect: (e, d, el) => { settings.show_track_on_select = el.checked; saveSettings(); },
@@ -664,6 +666,7 @@ const DEFAULT_SETTINGS = {
         binary_messages: "highlight",
         binary_color_class: true,
         binary_id_labels: true,
+        binary_group_areas: false,
         binary_exclude: ["aton"]
 };
 
@@ -957,8 +960,9 @@ function syncThemedSettings() {
     updateLabelColorRows();
 }
 
+// the header icon and the context menu land on the first page, not wherever the panel was left
 function openSettings() {
-    settingsPanel.open();
+    settingsPanel.open("General");
 }
 
 function closeSettings() {
@@ -1356,10 +1360,15 @@ const handleClick = function (pixel, target, event) {
 
     if (feature && 'link' in feature && !included) {
         window.open(feature.link, '_blank');
+    } else if (feature && feature.station_mmsi && feature.station_mmsi in shipsDB) {
+        closeDialog();
+        closeSettings();
+        showTargetcard('ship', feature.station_mmsi, pixel);
+        return;
     } else if (feature && feature.binary === true && !feature.is_associated) {
         closeDialog();
         closeSettings();
-        binary.showBinaryMessageDialog(feature);
+        binary.click(feature);
         return;
     } else if (feature && 'replayMmsi' in feature) {
         closeDialog();
@@ -1420,6 +1429,7 @@ function initMap() {
     });
 
     map.on('moveend', function (evt) {
+        binary.viewChanged(map.getView().getZoom());
         debouncedSaveMapView();
         debouncedDrawMap();
     });
@@ -2168,7 +2178,7 @@ async function fetchShipsBody() {
         "heading", "cog", "speed", "status", "level", "ppm",
         "count", "msg_type", "last_signal", "last_group", "group_mask",
         "flags", "altitude", "received_stations",
-        "mmsi_type", "shipclass", "country", "region", "binary"
+        "mmsi_type", "shipclass", "country", "region", "binary", "station"
     ];
 
     const staticKeys = [
@@ -2263,6 +2273,7 @@ async function fetchShipsBody() {
     capShipsDB();
 
     if (Object.hasOwn(ships, "station")) setStation(ships.station);
+    drawStation();
 
     center = {};
     if (String(settings.center_point).toUpperCase() == "STATION") {
@@ -2959,8 +2970,16 @@ const startHover = function (type, mmsi, pixel, feature) {
     }
 }
 
+// the ring sits on the hovered vessel or plane, or on a hovered map object's marker
+function hoverObjectRaw() {
+    const g = hoverType == 'tooltip' && hover_feature && hover_feature.getGeometry ? hover_feature.getGeometry() : null;
+    if (!g || g.getType() !== 'Point') return null;
+    const [lon, lat] = ol.proj.toLonLat(g.getCoordinates());
+    return { lon, lat };
+}
+
 function updateHoverMarker() {
-    const raw = hoverType == 'ship' ? shipsDB[hoverMMSI]?.raw : hoverType == 'plane' ? planesDB[hoverMMSI]?.raw : null;
+    const raw = hoverType == 'ship' ? shipsDB[hoverMMSI]?.raw : hoverType == 'plane' ? planesDB[hoverMMSI]?.raw : hoverObjectRaw();
     const had = hoverCircleFeature != undefined;
     hoverCircleFeature = syncCircleFeature(hoverCircleFeature, raw, hoverMMSI, hoverCircleStyleFunction);
     if (had && !hoverCircleFeature) {
@@ -3011,6 +3030,10 @@ const handlePointerMove = function (pixel, target) {
     else if (feature && 'plane' in feature && feature.plane.hexident in planesDB) {
         const hexident = feature.plane.hexident;
         startHover('plane', hexident, pixel, feature);
+    }
+    else if (feature && feature.station_mmsi && feature.station_mmsi in shipsDB) {
+        const ship = shipsDB[feature.station_mmsi].raw;
+        startHover('tooltip', binary.stationTooltip(feature, getTooltipContent(ship)), pixel, feature);
     }
     else if (feature && feature.binary === true) {
         if (feature.is_associated && feature.binary_mmsi && feature.binary_mmsi in shipsDB) {
@@ -3657,50 +3680,27 @@ function targetcardMinIfMaxonMobile() {
     if (targetcardVisible() && mapui.paneCramped() && isTargetcardMax()) toggleTargetcardSize();
 }
 
+let stationDrawn = '';
+
 function drawStation() {
-    const hasNoStation = settings.show_station == false || stationCoords() == null;
+    const onVessel = !!binary.ownVessel();
+    const hidden = settings.show_station == false || stationCoords() == null || onVessel;
+    const key = hidden ? '' : `${station.lat},${station.lon},${station.gps}`;
+    if (key === stationDrawn) return;
+    stationDrawn = key;
 
     if (stationFeature) {
         extraVector.removeFeature(stationFeature);
         stationFeature = undefined;
     }
+    if (hidden) return;
 
-    if (hasNoStation) {
-        return;
-    }
-
-    const radius = 10;
-    let svgIconStyle = new ol.style.Style({
-        image: new ol.style.Icon({
-            anchor: [0.5, 0.5],
-            scale: 0.3,
-            color: 'white', //getComputedStyle(document.documentElement).getPropertyValue('--color-secondary'),
-            src: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath fill="white" d="M198-278q-60-58-89-133T80-560q0-74 29-149t89-133l35 35q-50 49-76.5 116.5T130-560q0 63 26.5 130.5T233-313l-35 35Zm92-92q-40-37-59-89.5T212-560q0-48 19-100.5t59-89.5l35 35q-29 29-46 72.5T262-560q0 35 17.5 79.5T325-405l-35 35Zm4 290 133-405q-17-12-27.5-31T389-560q0-38 26.5-64.5T480-651q38 0 64.5 26.5T571-560q0 25-10.5 44T533-485L666-80h-59l-29-90H383l-30 90h-59Zm108-150h156l-78-238-78 238Zm268-140-35-35q29-29 46-72.5t17-82.5q0-35-17.5-79.5T635-715l35-35q39 37 58.5 89.5T748-560q0 47-19.5 100T670-370Zm92 92-35-35q49-49 76-116.5T830-560q0-63-27-130.5T727-807l35-35q60 58 89 133t29 149q0 75-27.5 149.5T762-278Z"/%3E%3C/svg%3E',
-        })
-    });
-
-    let CircleStyle = new ol.style.Style({
-        image: new ol.style.Circle({
-            radius: radius,
-            stroke: new ol.style.Stroke({
-                color: station.gps ? '#2e86ff' : 'white',
-                width: 3
-            }),
-            fill: new ol.style.Fill({
-                color: getComputedStyle(document.documentElement).getPropertyValue('--color-station-fill')
-            }),
-        })
-    });
-
-    stationFeature = new ol.Feature({
-        geometry: new ol.geom.Point(ol.proj.fromLonLat([station.lon, station.lat]))
-    });
-
-    stationFeature.setStyle([CircleStyle, svgIconStyle]);
-    stationFeature.tooltip = station.gps ? "Receiving Station (GPS)" : "Receiving Station";
+    const { canvas, size } = stations.stationCanvas(station.gps);
+    stationFeature = new ol.Feature({ geometry: new ol.geom.Point(ol.proj.fromLonLat([station.lon, station.lat])) });
+    stationFeature.setStyle(new ol.style.Style({ image: new ol.style.Icon({ img: canvas, width: size, height: size }) }));
+    stationFeature.tooltip = stations.stationBand({ name: config.station, gps: station.gps, mmsi: station.mmsi });
     stationFeature.station = true;
     extraVector.addFeature(stationFeature);
-
 }
 
 function followTargetIsStation() {
@@ -3907,6 +3907,12 @@ function showTargetcard(type, m, pixel = undefined) {
     let ship_old = card_mmsi in shipsDB ? shipsDB[card_mmsi].raw : null;
     const prev_mmsi = card_mmsi;
 
+    // a vessel the receiver does not know is out of range: say so, no card
+    if (type == 'ship' && m != null && !ship) {
+        showNotification("MMSI " + m + " is out of range", "error");
+        return;
+    }
+
     if (select_enabled_track && (card_mmsi != m || m == null)) {
         select_enabled_track = false;
 
@@ -3957,7 +3963,7 @@ function showTargetcard(type, m, pixel = undefined) {
         const wantMax = known && settings.targetcard_open_max && !mapui.paneCramped();
         if (!visible && isTargetcardMax() !== wantMax) toggleTargetcardSize();
         if (ship && (!visible || prev_mmsi !== m) && !hasValidCoords(ship.lat, ship.lon))
-            showNotification("No position received for " + (getShipName(ship) || m), "info");
+            showNotification("No position received for " + (getShipName(ship) || m), "error");
         positionAside(pixel, aside);
 
         if (card_type == 'ship') targetcard.populate();
@@ -4288,10 +4294,12 @@ function updateSettingsTab() {
 
     document.getElementById("settings_binary_messages").value = settings.binary_messages;
     for (const cat of binary.BINARY_CATEGORIES) {
-        document.getElementById("settings_binary_cat_" + cat).checked = !settings.binary_exclude.includes(cat);
+        const box = document.getElementById("settings_binary_cat_" + cat);
+        if (box) box.checked = !settings.binary_exclude.includes(cat);
     }
     document.getElementById("settings_binary_color_class").checked = settings.binary_color_class;
     document.getElementById("settings_binary_id_labels").checked = settings.binary_id_labels;
+    document.getElementById("settings_binary_group_areas").checked = settings.binary_group_areas;
 
     document.getElementById("settings_range_color").value = settings.range_color;
     document.getElementById("settings_range_timeframe").value = settings.range_timeframe;
@@ -4637,10 +4645,12 @@ measure.init({
     onMeasuresChanged: () => updateMeasureIndicator(),
 });
 binary.init({
+    map: () => map,
+    getStation: () => station,
+    getStationName: () => config.station,
+    openVessel: (mmsi) => { closeDialog(); closeSettings(); showTargetcard('ship', mmsi); },
     getActiveReceiver: () => activeReceiver,
     getShipsDB: () => shipsDB,
-    getDialogModal: () => dialogModal,
-    showDialog,
     saveSettings,
     redrawMap,
     // a marker's tooltip re-renders once its members arrive, if still hovered

@@ -619,19 +619,6 @@ body.replay-open .map-button-box {
 }
 
 
-.tooltip-card {
-    display: flex;
-    flex-direction: row;
-    /* For flag and text side-by-side */
-    align-items: center;
-    width: 100%;
-    margin-bottom: 5px;
-}
-
-.tooltip-card:last-child {
-    margin-bottom: 0;
-}
-
 #hover-info div div {
     text-align: left;
 }

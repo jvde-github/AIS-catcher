@@ -4,7 +4,7 @@ import { CHANGE, CHANGE_LABEL, sanitizeString } from '../../shared/core/text.js'
 import { decodeHTMLEntities } from '../core/util.js';
 import { ships } from '../core/store.js';
 import { getShipName } from '../core/names.js';
-import { fetchSince, isUrgent, safetyEvent } from '../../shared/binary.js';
+import * as binary from './binary.js';
 
 const POLL_MS = 10000;
 
@@ -22,7 +22,7 @@ export function init(d) {
         mount: document.getElementById("ticker"),
         buckets: d.buckets,
         bucketHidden: d.bucketHidden,
-        onSelect: (id) => d.openVessel(Number(id)),
+        onSelect: (id) => { binary.eventSeen(Number(id)); d.openVessel(Number(id)); },
     });
     document.addEventListener("visibilitychange", () => document.hidden ? stopPolling() : startPolling());
 }
@@ -32,7 +32,6 @@ export function setEnabled(on) {
     if (on) startPolling(); else stopPolling();
 }
 
-export function isEnabled() { return bar.isEnabled(); }
 export function setCounts(c) { bar.setCounts(c); }
 
 function startPolling() {
@@ -46,10 +45,10 @@ function stopPolling() {
     pollTimer = null;
 }
 
-// deliberate: a first-set name or destination is not news, but a first draught
-// is a reading - and the only baseline the draught chart has to start from
+// a first-set name is not news, but a first draught is a reading, and the only
+// baseline the draught chart has to start from; destinations come as events
 function worthShowing(change) {
-    return !change.i || change.f === CHANGE.DRAUGHT;
+    return (!change.i || change.f === CHANGE.DRAUGHT) && change.f !== CHANGE.DESTINATION;
 }
 
 function describe(change) {
@@ -104,20 +103,8 @@ async function poll() {
     } catch (error) {
         console.log("Failed loading ticker changes:", error);
     }
-    await pollSafety();
+    await pollEvents();
 }
 
-// urgent safety messages go on the strip as they arrive
-let safetySince = 0;
-const shipLabel = (mmsi) => (mmsi in ships ? decodeHTMLEntities(getShipName(ships[mmsi].raw)) : String(mmsi));
-
-async function pollSafety() {
-    try {
-        const { time, messages } = await fetchSince("api/binmsgs.json?receiver=0", Math.max(0, safetySince - 5));
-        const events = messages.filter((m) => m.cat === "safety" && isUrgent(m)).map((m) => safetyEvent(m, shipLabel));
-        if (events.length) bar.push(events);
-        if (time) safetySince = time;
-    } catch (error) {
-        console.log("Failed loading safety messages:", error);
-    }
-}
+// the receiver's events: safety texts, destinations, status notices
+const pollEvents = () => binary.pollEvents((events) => bar.push(events));

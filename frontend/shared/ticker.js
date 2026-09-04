@@ -1,9 +1,11 @@
 /* ============================================================================
    ticker.js — a strip of recent events along an edge of the map (layer 2)
 
-   Shows a few events at a time in slots that slide and fade, keeps a row
-   of class-count chips and a total, and pans a line that does not fit.
-   What an event says is the host's: it pushes events already described.
+   Shows one event at a time over the strip's width, sliding and fading,
+   keeps a total and, on a very wide strip, a row of class-count chips
+   beside it, and pans a line that does not fit. What an event says is the
+   host's: it pushes events already described, with a level and whether the
+   user has seen the vessel lately.
 
        const t = AISTicker.create({
            mount: document.getElementById("ticker"),     // .ticker with .ticker-feed etc. inside
@@ -12,12 +14,16 @@
            onSelect: (id) => openVessel(id),
        });
        t.setEnabled(true);
-       t.push([{ key, at, id, text, html, fresh }]);     // at: ms timestamp; fresh: marks a first sighting
+       t.push([{ key, at, id, text, html, fresh, level, demoted }]);   // at: ms; level 0-2 holds longer; demoted surfaces rarely
        // or { key, at, id, fresh, describe: () => ({ text, html }) } to render with current names/units
        t.setCounts({ total, shown, filtered, buckets: { am: 3, ... } });
 
-   Older events surface less often; the newest few hold their slot. The
-   host decides when to poll and what to push; the strip does the rest.
+   Older events surface less often, urgent ones stay fresh longer and hold
+   the strip longer, a demoted one surfaces rarely. An urgent event is pinned:
+   it keeps the strip until tapped away, or until it ages out after ninety
+   minutes. On touch a horizontal drag scrolls a long line under the finger
+   and a vertical flick dismisses; a badge on the count says how many events
+   began while the page was not being looked at.
    ========================================================================= */
 
 import { bucketChip, debounce } from "./components.js";
@@ -28,22 +34,24 @@ const FADE_MS = 1000;
 const MAX_AGE_MS = 30 * 60 * 1000;
 const MAX_EVENTS = 40;
 
-const COUNTS_EVERY = 4;
-// not 0: PERIODS uses 4 and 8, whose slides a phase-0 counts slide would swallow
-const COUNTS_PHASE = 1;
-
 // older events surface less often: shown only when the slide counter lands on
-// their period
+// their period; an urgent event's clock runs slower, a demoted event has none
 const PERIODS = [
     { under: 2 * 60 * 1000, period: 1 },
     { under: 5 * 60 * 1000, period: 2 },
     { under: 15 * 60 * 1000, period: 4 },
 ];
 const OLDEST_PERIOD = 8;
+const LEVEL_SLOWER = [1, 2, 3];      // how much longer an event of each level counts as recent
+const LEVEL_DWELL = [1, 1.5, 2];     // how much longer it holds the strip
+const levelOf = (e) => Math.min(e.level || 0, 2);
 
-const MAX_SLOTS = 3;
-const SLOT_WIDTH = 520;
-const PAN_PX_PER_SEC = 40;
+// the count chips only on a strip this wide, with this much room left for the line
+const CHIPS_MIN_WIDTH = 1400;
+const LINE_MIN_WIDTH = 520;
+
+// the first poll after the page comes back carries what began while it was away
+const AWAY_GRACE_MS = 15000;
 
 export function create(opts) {
     const bar = opts.mount;
@@ -58,63 +66,133 @@ export function create(opts) {
     let slide = 0;
     let slideTimer = null;
     let fadeTimer = null;
+    let dwell = SLIDE_MS;
     let counts = { shown: 0, total: 0, filtered: false };
-    let slots = [];
-    let slotsWanted = 1;
+    let slot = null;
     let bucketSpans = {};
     let wide = false;
     let bucketsWidth = 0;
     let shownKey = null;
-    let shownAny = false;   // the counts slide waits until something has been up
     // a clicked event has been seen: it leaves the strip and a repeat of it stays away
     const dismissed = new Set();
     const DISMISSED_MAX = 200;
+    let unseen = 0, hiddenAt = 0, awayTimer = null;
+    const countEl = bar.querySelector(".ticker-count");
+    const badge = document.createElement("span");
+    badge.className = "ticker-badge";
+    badge.hidden = true;
+    if (countEl) countEl.appendChild(badge);
 
     bar.style.setProperty("--ticker-fade", FADE_MS + "ms");
+    bar.addEventListener("click", () => setUnseen(0));
+    bar.addEventListener("touchstart", () => setUnseen(0), { passive: true });
 
-    function buildSlots() {
+    function setUnseen(n) {
+        unseen = n;
+        if (!n) hiddenAt = 0;
+        badge.textContent = n > 99 ? "99+" : String(n);
+        badge.hidden = n === 0;
+    }
+
+    function buildSlot() {
         if (!feedEl) return;
-        for (let i = 0; i < MAX_SLOTS; i++) {
-            const item = document.createElement("div");
-            item.className = "ticker-item";
-            item.innerHTML = '<span class="ticker-dot"></span>'
-                + '<span class="ticker-text"><span class="ticker-scroller"></span></span>'
-                + '<span class="ticker-age"></span>';
-            item.addEventListener("click", () => {
-                if (item.dataset.key) dismiss(item.dataset.key);
-                if (item.dataset.id) onSelect(item.dataset.id);
-            });
-            item.style.display = "none";
-            feedEl.appendChild(item);
-            slots.push({
-                item,
-                dot: item.querySelector(".ticker-dot"),
-                text: item.querySelector(".ticker-text"),
-                scroller: item.querySelector(".ticker-scroller"),
-                age: item.querySelector(".ticker-age"),
-                shown: false,
-            });
-        }
+        const item = document.createElement("div");
+        item.className = "ticker-item";
+        item.innerHTML = '<span class="ticker-dot"></span>'
+            + '<span class="ticker-text"><span class="ticker-scroller"></span></span>'
+            + '<span class="ticker-age"></span>';
+        slot = {
+            item,
+            dot: item.querySelector(".ticker-dot"),
+            text: item.querySelector(".ticker-text"),
+            scroller: item.querySelector(".ticker-scroller"),
+            age: item.querySelector(".ticker-age"),
+            shown: false,
+            overflow: 0,
+            dragged: false,
+        };
+        item.addEventListener("click", () => {
+            if (slot.dragged) { slot.dragged = false; return; }
+            if (item.dataset.key) dismiss(item.dataset.key);
+            if (item.dataset.id) onSelect(item.dataset.id);
+        });
+        bindTouch();
+        item.style.display = "none";
+        feedEl.appendChild(item);
+    }
+
+    // a plain tap still falls through to the click; a drag does not
+    const FLICK_PX = 40, DRAG_PX = 8;
+    function bindTouch() {
+        let x0 = 0, y0 = 0, base = 0, moved = false;
+        slot.item.addEventListener("touchstart", (e) => {
+            if (e.touches.length !== 1) return;
+            x0 = e.touches[0].clientX;
+            y0 = e.touches[0].clientY;
+            moved = false;
+            base = currentOffset();
+            hold(base);
+            clearTimeout(slideTimer);
+            slideTimer = null;
+        }, { passive: true });
+        slot.item.addEventListener("touchmove", (e) => {
+            if (e.touches.length !== 1) return;
+            const dx = e.touches[0].clientX - x0, dy = e.touches[0].clientY - y0;
+            if (!moved && Math.abs(dx) < DRAG_PX && Math.abs(dy) < DRAG_PX) return;
+            moved = true;
+            if (Math.abs(dx) < Math.abs(dy)) return;
+            if (e.cancelable) e.preventDefault();
+            slot.scroller.style.setProperty("--pan-offset", Math.min(0, Math.max(-slot.overflow, base + dx)) + "px");
+        }, { passive: false });
+        const end = (e) => {
+            const t = e.changedTouches[0];
+            const dx = t.clientX - x0, dy = t.clientY - y0;
+            if (moved && Math.abs(dy) > FLICK_PX && Math.abs(dy) > Math.abs(dx)) {
+                slot.dragged = true;
+                if (slot.item.dataset.key) dismiss(slot.item.dataset.key);
+                return;
+            }
+            slot.dragged = moved;
+            schedule(dwell);
+        };
+        slot.item.addEventListener("touchend", end, { passive: true });
+        slot.item.addEventListener("touchcancel", end, { passive: true });
+    }
+
+    function currentOffset() {
+        const m = getComputedStyle(slot.scroller).transform;
+        const match = m && m !== "none" ? m.match(/matrix\(([^)]+)\)/) : null;
+        return match ? parseFloat(match[1].split(",")[4]) || 0 : 0;
+    }
+
+    function hold(offset) {
+        slot.scroller.style.setProperty("--pan-offset", offset + "px");
+        slot.text.classList.add("held");
+    }
+
+    function release() {
+        slot.text.classList.remove("held");
+        slot.scroller.style.removeProperty("--pan-offset");
     }
 
     // off the bar, not the feed: the feed is display:none while the counts are up
-    function measureSlots() {
-        if (!bar || !feedEl) return;
-    
+    function measure() {
+        if (!feedEl) return;
+
         const style = getComputedStyle(bar);
         const gap = parseFloat(style.columnGap) || 0;
         let taken = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
         let fixed = 0;
-    
+
         for (const child of bar.children) {
             if (child === feedEl || child === bucketsEl) continue;
             if (getComputedStyle(child).display === "none") continue;
             taken += child.getBoundingClientRect().width;
             fixed++;
         }
-    
+
         const width = bar.clientWidth - taken - gap * fixed;
-    
+
         // summed from the chips: the container is flex:1, so its own box is the whole bar
         if (bucketsEl) {
             const chips = [...bucketsEl.children].filter((c) => getComputedStyle(c).display !== "none");
@@ -123,12 +201,10 @@ export function create(opts) {
                 + bucketsGap * Math.max(0, chips.length - 1);
             if (content) bucketsWidth = content;
         }
-    
-        const beside = width - bucketsWidth - gap;
-        wide = beside >= SLOT_WIDTH;
+
+        wide = bar.clientWidth >= CHIPS_MIN_WIDTH && width - bucketsWidth - gap >= LINE_MIN_WIDTH;
         bar.classList.toggle("ticker-wide", wide);
-    
-        slotsWanted = Math.max(1, Math.min(MAX_SLOTS, Math.floor((wide ? beside : width) / SLOT_WIDTH) || 0));
+        bar.classList.toggle("ticker-plain", !wide);
     }
 
     function buildBuckets() {
@@ -147,25 +223,31 @@ export function create(opts) {
         if (isEnabled() === on) return;
         bar.classList.toggle("visible", on);
         if (!on) return suspend();
-        measureSlots();
+        measure();
         renderCounts();
         renderBuckets();
         resume();
     }
 
     function resume() {
-        if (!isEnabled() || document.hidden) return;
-        if (!slideTimer) slideTimer = setInterval(advance, SLIDE_MS);
-        if (events.length && !shownKey) advance();
+        if (!isEnabled() || document.hidden || slideTimer) return;
+        advance();
     }
 
     function suspend() {
-        clearInterval(slideTimer);
+        clearTimeout(slideTimer);
         clearTimeout(fadeTimer);
         slideTimer = fadeTimer = null;
         shownKey = null;
         bar.classList.remove("ticker-fading");
     }
+
+    function schedule(ms) {
+        clearTimeout(slideTimer);
+        slideTimer = setTimeout(() => { slideTimer = null; advance(); }, ms);
+    }
+
+    const dwellFor = (event) => SLIDE_MS * LEVEL_DWELL[levelOf(event)];
 
     function setCounts(c) {
         counts = c;
@@ -204,148 +286,150 @@ export function create(opts) {
         fadeTo(pick(Date.now()));
     }
 
-    /* newest first; an event already held (by key) or dismissed is ignored */
+    const pinned = (e) => (e.level || 0) >= 2 && !e.demoted;
+
+    // newest first; the cap never evicts a pinned event; an urgent arrival takes the strip at once
     function push(incoming) {
         const held = new Set(events.map((e) => e.key));
         const fresh = incoming.filter((e) => !held.has(e.key) && !dismissed.has(e.key)).sort((a, b) => b.at - a.at);
         if (!fresh.length) return;
-        const wasEmpty = !events.length;
-        events = fresh.concat(events).slice(0, MAX_EVENTS);
+        if (hiddenAt) setUnseen(unseen + fresh.filter((e) => e.at > hiddenAt).length);
+        const hadPinned = events.some(pinned);
+        const all = fresh.concat(events);
+        const keep = all.filter(pinned);
+        const rest = all.filter((e) => !pinned(e)).slice(0, Math.max(0, MAX_EVENTS - keep.length));
+        events = all.filter((e) => keep.includes(e) || rest.includes(e));
         cursor = -1;
-        if (wasEmpty && isEnabled()) advance();
+        if (!hadPinned && fresh.some(pinned) && isEnabled() && !document.hidden) advance();
+        else resume();
     }
 
-    function periodFor(age) {
-        for (const p of PERIODS) if (age < p.under) return p.period;
+    function periodFor(event, age) {
+        if (event.demoted) return OLDEST_PERIOD;
+        const slower = LEVEL_SLOWER[levelOf(event)];
+        for (const p of PERIODS) if (age < p.under * slower) return p.period;
         return OLDEST_PERIOD;
     }
-    
+
     function ageLabel(age) {
         const mins = Math.floor(age / 60000);
         return mins < 1 ? "just now" : mins + "m ago";
     }
-    
+
+    const showAge = (event) => { slot.age.textContent = ageLabel(Date.now() - event.at); };
+
     function advance() {
         const now = Date.now();
-        events = events.filter((e) => now - e.at < MAX_AGE_MS);
-    
+        events = events.filter((e) => now - e.at < MAX_AGE_MS * LEVEL_SLOWER[levelOf(e)]);
         fadeTo(pick(now));
     }
-    
+
+    // the next event: pinned ones take turns while any is held; otherwise the
+    // next one due by its period, and failing that the next one at all
     function pick(now) {
-        if (!events.length) return [];
-    
+        if (!events.length) return null;
         slide++;
-    
-        if (!wide && shownAny && slide % COUNTS_EVERY === COUNTS_PHASE) return [];
-    
-        // skip what is already up, or a period-1 event holds its slot every lap
-        const holding = events.length > slotsWanted && shownKey ? new Set(shownKey.split("|")) : null;
-    
-        const picked = [];
-        const sweep = (due) => {
-            for (let i = 0; i < events.length && picked.length < slotsWanted; i++) {
-                cursor = (cursor + 1) % events.length;
-                const event = events[cursor];
-    
-                if (picked.includes(event)) continue;
-                if (holding && holding.has(event.key)) continue;
-                if (due && slide % periodFor(now - event.at) !== 0) continue;
-    
-                picked.push(event);
+        const pool = events.some(pinned) ? events.filter(pinned) : events;
+        const skip = pool.length > 1 ? shownKey : null;
+        const next = (due) => {
+            for (let i = 0; i < pool.length; i++) {
+                cursor = (cursor + 1) % pool.length;
+                const e = pool[cursor];
+                if (e.key !== skip && !(due && slide % periodFor(e, now - e.at))) return e;
             }
+            return null;
         };
-    
-        sweep(true);
-        sweep(false);
-    
-        return picked;
+        return next(true) || next(false);
     }
-    
-    function fadeTo(picked) {
-        const key = picked.map((e) => e.key).join("|");
-    
+
+    function fadeTo(event) {
+        clearTimeout(slideTimer);
+        slideTimer = null;
+        const key = event ? event.key : null;
         if (key === shownKey) {
-            picked.forEach((event, i) => {
-                if (slots[i]) slots[i].age.textContent = ageLabel(Date.now() - event.at);
-            });
+            if (event) { showAge(event); schedule(dwell); }
             return;
         }
         shownKey = key;
-    
+
         bar.classList.add("ticker-fading");
         clearTimeout(fadeTimer);
         fadeTimer = setTimeout(() => {
-            show(picked);
+            fadeTimer = null;
+            const pan = show(event);
+            if (event) {
+                // never shorter than a panning line needs to be read
+                dwell = Math.max(dwellFor(event), pan * 1000 + 2000);
+                schedule(dwell);
+            }
             // two frames: the incoming region is display:none until show() runs
             requestAnimationFrame(() => requestAnimationFrame(() => bar.classList.remove("ticker-fading")));
         }, FADE_MS);
     }
-    
-    const PAN_PX_PER_SEC = 40;
-    
-    function panIfClipped(slot) {
+
+    // a narrow strip pans slower: a phone is read at arm's length
+    const panSpeed = () => (wide ? 40 : 28);
+
+    function panIfClipped() {
         slot.text.classList.remove("panning");
-    
+
         // rects, not scrollWidth: engines disagree on what an inline-block that
         // overflows its clipped parent reports there
         const overflow = slot.scroller.getBoundingClientRect().width - slot.text.getBoundingClientRect().width;
-        if (overflow <= 1) return;
-    
+        slot.overflow = Math.max(0, overflow);
+        if (overflow <= 1) return 0;
+
         slot.scroller.style.setProperty("--pan-distance", -Math.ceil(overflow) + "px");
-        const wanted = Math.max(4, overflow / PAN_PX_PER_SEC + 3);
-        slot.scroller.style.setProperty("--pan-duration", Math.min(wanted, SLIDE_MS / 1000) + "s");
+        const seconds = Math.max(4, overflow / panSpeed() + 3);
+        slot.scroller.style.setProperty("--pan-duration", seconds + "s");
         slot.text.classList.add("panning");
+        return seconds;
     }
 
-    function show(picked) {
-        if (!slots.length) return;
-        bar.classList.toggle("ticker-idle", picked.length === 0);
+    // the seconds the line pans, 0 when it fits
+    function show(event) {
+        if (!slot) return 0;
+        bar.classList.toggle("ticker-idle", !event);
+        if (slot.shown !== !!event) {
+            slot.item.style.display = event ? "flex" : "none";
+            slot.shown = !!event;
+        }
+        if (!event) return 0;
 
-        slots.forEach((slot, i) => {
-            const event = picked[i];
-            if (slot.shown !== !!event) {
-                slot.item.style.display = event ? "flex" : "none";
-                slot.shown = !!event;
-            }
-            if (!event) return;
-            shownAny = true;
-
-            const d = event.describe ? event.describe() : event;
-            const changed = slot.item.title !== d.text;
-            slot.scroller.innerHTML = d.html;
-            if (changed) panIfClipped(slot);
-            slot.age.textContent = ageLabel(Date.now() - event.at);
-            slot.dot.className = "ticker-dot" + (event.fresh ? " ticker-new" : "");
-            slot.item.dataset.id = event.id != null ? event.id : "";
-            slot.item.dataset.key = event.key;
-            slot.item.title = d.text;
-        });
+        const d = event.describe ? event.describe() : event;
+        const changed = slot.item.title !== d.text;
+        slot.scroller.innerHTML = d.html;
+        let pan = 0;
+        if (changed) { release(); pan = panIfClipped(); }
+        showAge(event);
+        slot.dot.className = "ticker-dot" + (event.fresh ? " ticker-new" : "");
+        slot.item.dataset.id = event.id != null ? event.id : "";
+        slot.item.dataset.key = event.key;
+        slot.item.title = d.text;
+        return pan;
     }
 
-    buildSlots();
+    buildSlot();
     buildBuckets();
-    show([]);
+    show(null);
 
-    const onVisibility = () => (document.hidden ? suspend() : resume());
+    const onVisibility = () => {
+        clearTimeout(awayTimer);
+        if (document.hidden) { hiddenAt = Date.now(); suspend(); return; }
+        awayTimer = setTimeout(() => { hiddenAt = 0; }, AWAY_GRACE_MS);
+        resume();
+    };
     document.addEventListener("visibilitychange", onVisibility);
 
-    const observer = new ResizeObserver(debounce(() => {
-        measureSlots();
-        slots.forEach((slot, i) => {
-            if (i >= slotsWanted && slot.shown) {
-                slot.item.style.display = "none";
-                slot.shown = false;
-            }
-        });
-    }, 200));
+    const observer = new ResizeObserver(debounce(measure, 200));
     observer.observe(bar);
 
     function destroy() {
         suspend();
+        clearTimeout(awayTimer);
         observer.disconnect();
         document.removeEventListener("visibilitychange", onVisibility);
     }
 
-    return { el: bar, push, dismiss, setCounts, setEnabled, isEnabled, destroy };
+    return { push, setCounts, setEnabled, isEnabled, advance, destroy };
 }

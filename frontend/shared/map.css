@@ -410,6 +410,11 @@ body.ticker-open.ticker-bottom {
     display: flex;
 }
 
+/* below the chip width the strip is the message alone, idle or not */
+.ticker.ticker-plain .ticker-buckets {
+    display: none;
+}
+
 /* wide enough for both: counts sit beside the feed instead of taking turns */
 .ticker.ticker-wide .ticker-feed {
     display: flex;
@@ -472,9 +477,28 @@ body.ticker-open.ticker-bottom {
     }
 }
 
+/* a finger holds the line where it dragged it */
+.ticker-text.held .ticker-scroller,
+.ticker-text.panning.held .ticker-scroller {
+    animation: none;
+    transform: translateX(var(--pan-offset, 0));
+}
+
 @media (prefers-reduced-motion: reduce) {
     .ticker-text.panning .ticker-scroller { animation: none; }
     .ticker-text { text-overflow: ellipsis; }
+}
+
+/* what arrived while the page was not being looked at */
+.ticker-badge {
+    min-width: 16px;
+    padding: 0 4px;
+    border-radius: var(--radius-2xl);
+    background: var(--color-accent);
+    color: #fff;
+    font-size: var(--fs-xs);
+    line-height: 16px;
+    text-align: center;
 }
 
 .tk-name {
@@ -1200,4 +1224,22 @@ body.ticker-open.ticker-bottom {
 .tooltip-dim {
     color: var(--color-ticker-muted);
     opacity: 0.85;
+}
+
+/* one row of a hover card: a flag beside its text */
+.tooltip-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+.tooltip-card:last-child {
+    margin-bottom: 0;
+}
+
+/* the name on a hover row: each host styles it as its vessel row does */
+.tooltip-name {
+    font-weight: inherit;
 }

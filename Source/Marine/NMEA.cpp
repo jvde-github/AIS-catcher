@@ -516,7 +516,8 @@ namespace AIS
 				CLS_AIS,
 				CLS_TPV,
 				CLS_ERROR,
-				CLS_WARNING
+				CLS_WARNING,
+				CLS_INFO
 			} cls = CLS_UNKNOWN;
 			enum
 			{
@@ -527,6 +528,8 @@ namespace AIS
 
 			bool uuid_match = uuid.empty();
 			const std::string *message = nullptr;
+			const std::string *topic = nullptr;
+			const JSON::JSON *payload = nullptr;
 			const JSON::Value *nmea_array = nullptr;
 			float tpv_lat = 0, tpv_lon = 0;
 			bool has_tpv_coords = false;
@@ -547,6 +550,8 @@ namespace AIS
 						cls = CLS_ERROR;
 					else if (s == "warning")
 						cls = CLS_WARNING;
+					else if (s == "info")
+						cls = CLS_INFO;
 					break;
 				}
 				case AIS::KEY_UUID:
@@ -600,6 +605,13 @@ namespace AIS
 				case AIS::KEY_IPV4:
 					tag.ipv4 = p.Get().getInt();
 					break;
+				case AIS::KEY_TOPIC:
+					topic = &p.Get().getString();
+					break;
+				case AIS::KEY_STATION:
+					if (p.Get().isObject())
+						payload = &p.Get().getObject();
+					break;
 				case AIS::KEY_MESSAGE:
 					message = &p.Get().getString();
 					break;
@@ -640,6 +652,14 @@ namespace AIS
 					Warning() << "[" << driver << "]: " << *message;
 				else
 					Info() << "[" << driver << "]: " << *message;
+			}
+
+			if (topic && payload && uuid_match && *topic == "station")
+			{
+				Control ctl;
+				ctl.topic = AIS::KEY_STATION;
+				ctl.payload = payload;
+				outControl.Send(&ctl, 1, tag);
 			}
 
 			if (cls == CLS_TPV && cfg_GPS && has_tpv_coords && (tpv_lat != 0 || tpv_lon != 0))

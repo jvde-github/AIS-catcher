@@ -124,11 +124,13 @@ function setTitle(ship) {
     const title = document.getElementById("targetcard_header_title");
     const glyphs = (cats) => glyphsHTML(cats, 'data-action="showBinaryMessageDialogCard"');
     const name = getShipName(ship) || ship.mmsi;
-    title.innerHTML = name;
+    // the station the vessel carries, after the message kinds
+    const station = ship.station ? glyphsHTML(['station'], '') : '';
+    title.innerHTML = name + station;
     if (!ship.binary) return;
     const mmsi = cardMmsi;
-    title.innerHTML = name + glyphs([KIND_CAT[decodeBadge(ship.binary).kind] || 'data']);
-    binary.shipKinds(ship).then((cats) => { if (cardMmsi === mmsi && cats.length) title.innerHTML = name + glyphs(cats); });
+    title.innerHTML = name + glyphs([KIND_CAT[decodeBadge(ship.binary).kind] || 'data']) + station;
+    binary.shipKinds(ship).then((cats) => { if (cardMmsi === mmsi && cats.length) title.innerHTML = name + glyphs(cats) + station; });
 }
 
 export function updateMessageButton() {

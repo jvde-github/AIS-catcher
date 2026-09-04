@@ -6,9 +6,10 @@
 import { sanitizeString, formatTime } from './core/text.js';
 import { hasValidCoords } from './core/geo.js';
 import { hexToRgb } from './color.js';
+import { modal } from './components.js';
 
 // server Item::Kind order, as packed into a ship row's badge
-export const KIND_CAT = ['text', 'inland', 'data', 'aton', 'signal', 'zones', 'lock', 'safety'];
+export const KIND_CAT = ['text', 'inland', 'data', 'aton', 'signal', 'zones', 'lock', 'safety', 'station'];
 
 // the packed badge on a ship row: count (4b) | newest kind (3b) | age bucket (2b)
 export const decodeBadge = (v) => ({ count: v & 15, kind: (v >> 4) & 7, age: (v >> 7) & 3 });
@@ -22,7 +23,7 @@ export const BINARY_CATEGORIES = ['data', 'lock', 'signal', 'inland', 'text', 'a
 
 // no red and no green: those mean invalid and validated on the map
 // safety is the one kind that means danger, so it takes the red
-export const CAT_COLORS = { data: '#0891b2', text: '#7c3aed', inland: '#0f766e', aton: '#d97706', zones: '#0857b1', lock: '#4338ca', signal: '#ea580c', safety: '#dc2626' };
+export const CAT_COLORS = { data: '#0891b2', text: '#7c3aed', inland: '#0f766e', aton: '#d97706', zones: '#0857b1', lock: '#4338ca', signal: '#ea580c', safety: '#dc2626', station: '#008000' };
 
 const host = {
     color: (cat) => CAT_COLORS[cat] || CAT_COLORS.data,
@@ -251,34 +252,8 @@ export function isUrgent(msg) {
     return URGENT_WORDS.test(words);
 }
 
-// a ticker event for an urgent safety message: who, to whom, and the words
-export function safetyEvent(msg, shipName) {
-    const sender = msg.sender || msg.message.mmsi;
-    const who = isDistressDevice(sender) ? (String(sender).startsWith('972') ? 'MOB device' : String(sender).startsWith('974') ? 'EPIRB' : 'AIS-SART')
-        : isStation(sender) ? `VTS ${String(shipName(sender)).replace(/^MMSI /, '')}` : shipName(sender);
-    const to = msg.anchor ? ` \u2192 ${shipName(msg.anchor)}` : '';
-    const words = String(msg.message.text || '').trim();
-    return {
-        key: `safety-${msg.key || `${sender}-${msg.timestamp}`}`,
-        at: msg.timestamp * 1000,
-        id: msg.anchor || sender,
-        fresh: true,
-        text: `\u26a0 ${who}${to}: ${words}`,
-        html: `<span class="tk-alert">&#9888; ${text(who)}${to ? '<span class="tk-arrow">&rarr;</span>' + text(shipName(msg.anchor)) : ''}</span>` +
-            `<span class="tk-sep">\u00b7</span><span class="tk-to">${text(words)}</span>`,
-    };
-}
 
-// the display name of a category, for hosts
 export const KIND_LABEL = Object.fromEntries(KINDS.map((k) => [k.cat, k.name]));
-
-// the ship-attached items that changed since `since` (unix seconds), decorated;
-// the host polls this for its ticker
-export async function fetchSince(url, since) {
-    const r = await fetch(url + (since ? `&since=${since}` : ''));
-    const data = await r.json();
-    return { time: data.time || 0, messages: (data.messages || []).filter((m) => m.message && m.message.mmsi).map(decorate) };
-}
 
 export function categoryOf(msg) {
     const k = kindOf(msg);
@@ -315,9 +290,29 @@ export const dirIcon = (m, ctx) => {
 };
 
 // orange caption line of every card
-export const meteoHeader = (time, label, icon = '') =>
-    `<div style="font-size: 11px; color: #FFA500; padding: 4px 0 3px; margin-bottom: 2px;">` +
-    `<span style="font-size: 11px;">${icon}${time} - ${label}</span></div>`;
+// the caption row: the kind's glyph at text height, the time and label, and
+// on a list card a pin to the message's place when it has one
+export const meteoHeader = (time, label, icon = '', cat = null, pin = '') =>
+    `<div class="msg-head" style="color: #FFA500;">${cat ? glyphImg(cat) : ''}` +
+    `<span>${icon}${time} - ${label}</span>${pin}</div>`;
+
+const glyphImg = (cat) => {
+    try { return `<img class="msg-glyph" src="${glyphURL(cat)}" alt="">`; } catch { return ''; }
+};
+
+const PIN_SVG = '<svg viewBox="0 0 24 24"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>';
+
+// where a message belongs: its own point when it carries one, else its sender's marker when that is on the map
+export const messagePlace = (m, ctx) => {
+    if (m.message_lat != null && m.message_lon != null) return [m.message_lat, m.message_lon];
+    const sender = m.sender || (m.message && m.message.mmsi);
+    return sender && ctx && ctx.locate ? ctx.locate(sender) : null;
+};
+
+const pinHTML = (m, ctx) => {
+    const at = ctx && ctx.link ? messagePlace(m, ctx) : null;
+    return at ? `<a href="javascript:void(0)" class="msg-pin" data-lat="${at[0]}" data-lon="${at[1]}" title="Show on the map">${PIN_SVG}</a>` : '';
+};
 
 // who sent it and, for an addressed message, to whom; a vessel's own
 // broadcast in its own card says nothing. Links when the host wants them.
@@ -342,8 +337,9 @@ function card(kind, messages, ctx) {
     const sorted = [...messages].sort((a, b) => b.timestamp - a.timestamp);
     const item = sorted[0], m = item.message;
     const label = kind ? kind.label(m, item) : `DAC ${m.dac}, FI ${fiOf(m)}`;
-    return cardOpen(kind ? kind.cat : 'data') +
-        meteoHeader(item.formattedTime, label, dirIcon(item, ctx)) +
+    const cat = kind ? kind.cat : 'data';
+    return cardOpen(cat) +
+        meteoHeader(item.formattedTime, label, dirIcon(item, ctx), cat, pinHTML(item, ctx)) +
         (kind ? kind.rows(m) : '') + seenLine(item) + routeLine(item, ctx) + '</div>';
 }
 
@@ -371,6 +367,17 @@ export function getBinaryMessageList(messages, ctx = null) {
 
 // which way a message went for the vessel a list is about
 export const isSentBy = (m, mmsi) => (m.sender || (m.message && m.message.mmsi)) === mmsi;
+
+// the dialog every message list opens in, level with the ship card below the header
+export function messageDialog() {
+    const dlg = modal({ id: 'binary-messages', cardClass: 'modal-messages' });
+    const css = getComputedStyle(document.documentElement);
+    const inset = parseFloat(css.getPropertyValue('--map-inset-top')) || 10;
+    const gap = parseFloat(css.getPropertyValue('--size-map-gap')) || 0;
+    const map = document.getElementById('map');
+    dlg.root.style.setProperty('--msg-dialog-top', `${Math.round((map ? map.getBoundingClientRect().top : 0) + inset - gap)}px`);
+    return dlg;
+}
 
 // the tabs switch through one listener on the document: the viewer's content
 // security policy allows no inline handlers, and no host has to wire anything
@@ -409,6 +416,9 @@ export function getBinaryMessageTabs(messages, mmsi, ctx = null) {
 // What a message is, as a small white glyph: waves for a sensor, a padlock for
 // a lock, the AtoN diamond, three lights for a signal, a frame for an area, a
 // figure for persons on board, a bubble for text. `s` is the half size.
+const ANTENNA_D = 'M198-278q-60-58-89-133T80-560q0-74 29-149t89-133l35 35q-50 49-76.5 116.5T130-560q0 63 26.5 130.5T233-313l-35 35Zm92-92q-40-37-59-89.5T212-560q0-48 19-100.5t59-89.5l35 35q-29 29-46 72.5T262-560q0 35 17.5 79.5T325-405l-35 35Zm4 290 133-405q-17-12-27.5-31T389-560q0-38 26.5-64.5T480-651q38 0 64.5 26.5T571-560q0 25-10.5 44T533-485L666-80h-59l-29-90H383l-30 90h-59Zm108-150h156l-78-238-78 238Zm268-140-35-35q29-29 46-72.5t17-82.5q0-35-17.5-79.5T635-715l35-35q39 37 58.5 89.5T748-560q0 47-19.5 100T670-370Zm92 92-35-35q49-49 76-116.5T830-560q0-63-27-130.5T727-807l35-35q60 58 89 133t29 149q0 75-27.5 149.5T762-278Z';
+let antenna = null;
+
 export function kindGlyph(ctx, cat, x, y, s) {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
@@ -456,6 +466,16 @@ export function kindGlyph(ctx, cat, x, y, s) {
     }
     case 'text': {
         ctx.strokeRect(x - s * 0.9, y - s * 0.65, s * 1.8, s * 1.2);
+        break;
+    }
+    case 'station': {
+        // the antenna the viewer has always used, drawn from its path
+        const k = (2.7 * s) / 960;
+        ctx.save();
+        ctx.translate(x - 480 * k, y + 480 * k);
+        ctx.scale(k, k);
+        ctx.fill(antenna || (antenna = new Path2D(ANTENNA_D)));
+        ctx.restore();
         break;
     }
     case 'safety': {
@@ -541,6 +561,8 @@ export const ageText = (t, ref) => { const min = Math.max(0, Math.round((ref - t
 
 // notice types below 80 are cautions and warnings; -1 is no notice at all
 export const isDangerArea = (o) => o.atype != null && o.atype >= 0 && o.atype < 80;
+// a group assignment's rectangle: an area with no notice type
+export const isGroupArea = (o) => !!o.shapes && (o.atype == null || o.atype < 0);
 
 // the head of a marker's hover card: its label or kind, and who sent it
 // the vessel band's colour: its validity, grey when nothing is known
@@ -670,7 +692,7 @@ export function glyphURL(cat) {
 // one disc per kind, as a link the host wires up with `attrs` (an onclick or a data-action)
 export function glyphsHTML(cats, attrs = '') {
     if (!cats.length) return '';
-    const title = cats.map((c) => KIND_LABEL[c] || c).join(', ') + ' \u00b7 show';
+    const title = cats.map((c) => KIND_LABEL[c] || (c === 'station' ? 'Receiving station' : c)).join(', ') + ' \u00b7 show';
     return `<a href="javascript:void(0)" class="msg-count" title="${text(title)}" ${attrs}>` +
         cats.map((c) => `<img src="${glyphURL(c)}" alt="${text(KIND_LABEL[c] || c)}">`).join('') + '</a>';
 }

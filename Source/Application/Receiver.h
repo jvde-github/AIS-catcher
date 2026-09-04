@@ -142,6 +142,7 @@ public:
 	// Receiver output are Messages or JSON
 	Connection<AIS::Message> &Output(int i) { return models[i]->Output().out; }
 	Connection<AIS::GPS> &OutputGPS(int i) { return models[i]->OutputGPS().out; }
+	Connection<AIS::Control> &OutputControl(int i) { return models[i]->OutputControl().out; }
 	Connection<Plane::ADSB> &OutputADSB(int i) { return models[i]->OutputADSB().out; }
 
 	Connection<JSON::JSON> &OutputJSON(int i) { return jsonais[i]->out; }

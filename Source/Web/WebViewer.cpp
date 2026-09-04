@@ -330,6 +330,7 @@ void WebViewer::wireAggregate(const std::vector<std::unique_ptr<Receiver>> &rece
 		states[0]->appendModel(r.Model(j)->getName(), !first_of_device);
 		states[0]->connectJSON(r.OutputJSON(j));
 		states[0]->connectGPS(r.OutputGPS(j));
+		states[0]->connectControl(r.OutputControl(j));
 		r.OutputADSB(j).Connect((StreamIn<Plane::ADSB> *)&planes);
 
 		*device >> raw_counter;
@@ -388,6 +389,7 @@ void WebViewer::attachTrackers(const std::vector<std::unique_ptr<Receiver>> &rec
 
 		tracker->connectJSON(r.OutputJSON(j));
 		tracker->connectGPS(r.OutputGPS(j));
+		tracker->connectControl(r.OutputControl(j));
 
 		// a reclaimed tracker is already set up and was rewired by applySettings()
 		if (serving && fresh)
@@ -866,6 +868,12 @@ const WebViewer::Route WebViewer::routes[] = {
 	{"/api/mapobjects.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 { return s->getMapObjectsJSON((uint64_t)queryInt(a, "since")); }, true},
+	{"/api/object.json", nullptr, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 { return s->getObjectJSON(IO::HTTPRequest::queryParam(a, "key")); }, true},
+	{"/api/events.json", nullptr, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 { return s->getEventsJSON(strtoull(IO::HTTPRequest::queryParam(a, "since").c_str(), nullptr, 10), queryInt(a, "level")); }, true},
 	{"/api/history_full.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
 	 { return s->toHistoryJSON(); }, true},

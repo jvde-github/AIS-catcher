@@ -103,6 +103,7 @@ public:
 	// Connect incoming data sources (ships as sink)
 	void connectJSON(Connection<JSON::JSON> &c) { c.Connect((StreamIn<JSON::JSON> *)&ships); }
 	void connectGPS(Connection<AIS::GPS> &c) { c.Connect((StreamIn<AIS::GPS> *)&ships); }
+	void connectControl(Connection<AIS::Control> &c) { c.Connect((StreamIn<AIS::Control> *)&ships); }
 
 	// Connect outgoing sinks (ships as source)
 	template <typename T>
@@ -126,6 +127,8 @@ public:
 	std::string getShipsJSONcompact(std::time_t since = 0) { return ships.getJSONcompact(false, since); }
 	std::string getBinaryMessagesJSON(std::time_t since = 0, uint64_t marker = 0, uint32_t owner = 0) { return ships.getBinaryMessagesJSON(since, marker, owner); }
 	std::string getMapObjectsJSON(uint64_t since = 0) { return ships.getMapObjectsJSON(since); }
+	std::string getObjectJSON(const std::string &key) { return ships.getObjectJSON(key); }
+	std::string getEventsJSON(uint64_t since, int level) { return ships.getEventsJSON(since, level); }
 	std::string getKML() { return ships.getKML(); }
 	std::string getGeoJSON() { return ships.getGeoJSON(); }
 	std::string getAllPathJSON() { return ships.getAllPathJSON(); }

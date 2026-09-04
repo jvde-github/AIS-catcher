@@ -1724,6 +1724,50 @@
     border-left-width: 6px;
 }
 
+/* a message card's caption row: glyph at text height, time and label, the pin at the end */
+.msg-head {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    padding: 4px 0 3px;
+    margin-bottom: 2px;
+}
+
+.msg-glyph {
+    width: 1em;
+    height: 1em;
+    flex: none;
+}
+
+.msg-pin {
+    margin-left: auto;
+    display: inline-flex;
+    color: inherit;
+    opacity: 0.7;
+}
+
+.msg-pin:hover {
+    opacity: 1;
+}
+
+.msg-pin svg {
+    width: 1.1em;
+    height: 1.1em;
+    fill: currentColor;
+}
+
+/* the hover's last row when more stands behind it than it shows: a thin rule and dots */
+.tip-more {
+    font-size: 11px;
+    line-height: 9px;
+    letter-spacing: 3px;
+    text-align: center;
+    opacity: 0.55;
+    padding: 1px 0 3px;
+    border-top: 1px solid var(--color-rule);
+}
+
 /* which way an application message went for the vessel the card is about */
 .msg-dir {
     display: inline-block;
@@ -1755,16 +1799,34 @@
     font-weight: 600;
 }
 
-/* a vessel's message dialog: a card of fixed size, so switching tabs moves
-   nothing, with no title band; the whole screen on a phone */
+/* the message dialog: fixed width, content height, top from the host's
+   --msg-dialog-top; the whole screen on a phone */
+.modal-overlay:has(.modal-messages) {
+    align-items: flex-start;
+    padding-top: var(--msg-dialog-top, var(--space-4));
+}
+
 .modal-messages {
     width: 28rem;
     max-width: 100%;
-    height: 90vh;
-    max-height: 90vh;
+    max-height: calc(100vh - var(--msg-dialog-top, 0px) - var(--space-4));
 }
 
 .modal-messages .dialog-header {
+    height: 36px;
+    justify-content: flex-end;
+}
+
+/* the cards keep a little air from the header rule and the bottom edge */
+.modal-messages .modal-body {
+    padding: 10px var(--space-4);
+}
+
+.modal-messages .binary-messages-list {
+    padding: 0;
+}
+
+.modal-messages .dialog-title {
     display: none;
 }
 
@@ -1775,16 +1837,38 @@
 
     .modal-messages {
         width: 100%;
-        height: 100%;
         max-height: 100%;
         border-radius: 0;
     }
+
+    .modal-messages .modal-body {
+        padding: var(--space-1) var(--space-4);
+    }
 }
+
+/* a station's number beside its name */
+.station-chip {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.18);
+    font-size: 0.85em;
+    font-weight: var(--fw-medium);
+}
+
+/* the chooser for stations sharing one marker: a band per station */
+.station-pick .tip-band { cursor: pointer; border-radius: 4px; }
+.station-pick .tip-band:hover { background: rgba(127, 127, 127, 0.15); }
 
 /* the message dialog's received and sent tabs */
 .msg-tabbar {
     padding: 0;
     margin-bottom: 8px;
+}
+
+.msg-tabbar .tab {
+    user-select: none;
 }
 
 .msg-tab-n {

@@ -210,5 +210,6 @@ namespace AIS
 		void setOwnMMSI(int m) { own_mmsi = m; }
 
 		Connection<GPS> outGPS;
+		Connection<Control> outControl;
 	};
 }

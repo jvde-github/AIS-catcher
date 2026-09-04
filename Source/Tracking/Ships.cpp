@@ -27,6 +27,7 @@ void Ship::reset()
 {
 	mmsi = count = msg_type = shiptype = group_mask = 0;
 	type_ttl = 0;
+	quiet_until = 0;
 	flags.reset();
 
 	heading = HEADING_UNDEFINED;
@@ -559,7 +560,7 @@ void Ship::writeJSONBody(JSON::Writer &w, long int delta_time, bool station_know
 		.kv_unless("region", region, Region::NONE);
 }
 
-void Ship::writeCompactDynamic(JSON::Writer &w, unsigned binary_badge) const
+void Ship::writeCompactDynamic(JSON::Writer &w, unsigned binary_badge, unsigned station) const
 {
 	w.beginArray().val(mmsi);
 	if (isValidCoord(lat, lon))
@@ -591,7 +592,7 @@ void Ship::writeCompactDynamic(JSON::Writer &w, unsigned binary_badge) const
 		.val(shipclass)
 		.val(country_code)
 		.val_unless(region, Region::NONE)
-		.val(binary_badge)
+		.val(binary_badge).val(station)
 		.endArray();
 }
 

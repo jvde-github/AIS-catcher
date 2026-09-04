@@ -469,6 +469,12 @@
 						</span>
 						<small class="st-desc">Sensors and locks show their id as a pill instead of a count badge</small>
 					</div>
+					<div>
+						<span>Group areas</span><span>
+							<input type="checkbox" id="settings_binary_group_areas" data-on-change="setBinaryGroupAreas" />
+						</span>
+						<small class="st-desc">Rectangles of group assignment commands; a hover shows one anyway</small>
+					</div>
 				</section>
 				<section>
 					<h5 class="st-title">Categories</h5>
@@ -520,6 +526,13 @@
 								data-cat="zones" />
 						</span>
 						<small class="st-desc">Area notices drawn on the map</small>
+					</div>
+					<div class="third">
+						<span>Safety</span><span>
+							<input type="checkbox" id="settings_binary_cat_safety" data-on-change="setBinaryCategory"
+								data-cat="safety" />
+						</span>
+						<small class="st-desc">Safety-related texts and distress beacons</small>
 					</div>
 				</section>
 				<header>Station Range</header>

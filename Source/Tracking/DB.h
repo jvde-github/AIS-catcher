@@ -34,12 +34,15 @@
 
 #include "Ships.h"
 #include "SlotTable.h"
+#include "StationRegistry.h"
 #include "PathStore.h"
 #include "BinaryStore.h"
 #include "StaticHistory.h"
+#include "EventRing.h"
 
 class DB : public StreamIn<JSON::JSON>,
 		   public StreamIn<AIS::GPS>,
+		   public StreamIn<AIS::Control>,
 		   public StreamOut<JSON::JSON>
 {
 
@@ -223,6 +226,8 @@ private:
 	AIS::Filter filter;
 
 	BinaryStore binary;
+	StationRegistry stations;
+	EventRing events;
 #ifdef CHECK_DB_INTEGRITY
 	void checkIntegrity();
 	std::time_t last_check = 0;
@@ -264,6 +269,15 @@ public:
 
 	using StreamIn<JSON::JSON>::Receive;
 	using StreamIn<AIS::GPS>::Receive;
+	using StreamIn<AIS::Control>::Receive;
+
+	void Receive(const AIS::Control *data, int len, TAG &)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		for (int i = 0; i < len; i++)
+			if (data[i].topic == AIS::KEY_STATION && data[i].payload)
+				stations.apply(*data[i].payload, binary.sequence());
+	}
 
 	void Receive(const JSON::JSON *data, int len, TAG &tag);
 	void Receive(const AIS::GPS *data, int len, TAG &tag)
@@ -281,6 +295,10 @@ public:
 	std::string getChangesJSON(int mmsi);
 	std::string getRecentChangesJSON(uint32_t since, std::size_t max);
 	void logTextChange(const Ship &ship, int field, const char *old_value, const std::string &value);
+	void note(const Ship &ship, EventRing::Kind kind, EventRing::Level level, std::time_t now, const std::string &text, uint32_t to = 0);
+	void noteSafety(Ship &ship, const JSON::JSON &data);
+	void noteDestination(Ship &ship, const std::string &v);
+	void noteStatus(Ship &ship, int status);
 	std::string getJSON(bool full = false);
 	std::string getJSONcompact(bool full = false, std::time_t since = 0);
 	std::string getPathJSON(uint32_t);
@@ -305,6 +323,9 @@ public:
 
 	std::string getBinaryMessagesJSON(std::time_t since = 0, uint64_t marker = 0, uint32_t owner = 0);
 	std::string getMapObjectsJSON(uint64_t since = 0);
+	// what stands behind an object key: a marker's members, or a station's record
+	std::string getObjectJSON(const std::string &key);
+	std::string getEventsJSON(uint64_t since, int level);
 	// the ship row's packed badge, for a caller composing its own ship record
 	uint16_t getBinaryBadge(uint32_t mmsi)
 	{
@@ -313,6 +334,13 @@ public:
 	}
 	// the same from inside a withShip/forEach callback, where the lock is already held
 	uint16_t binaryBadgeHeld(uint32_t mmsi, std::time_t now) const { return binary.badge(mmsi, now); }
+	// the station riding a vessel, for callers already inside the locked walk
+	int stationHeld(uint32_t mmsi) const { return stations.idFor(mmsi); }
+	int getStation(uint32_t mmsi)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		return stations.idFor(mmsi);
+	}
 	// the map markers under the lock, for a caller cutting its own tiles; keep f short
 	template <typename F>
 	void withMarkers(std::time_t now, F f)
@@ -321,6 +349,18 @@ public:
 		binary.forEachMarker(now, f);
 	}
 	int getBinaryTTL() const { return binary.ttl; }
+	// every station on record; `riding` says its vessel is on the map, where the
+	// ship row carries it and no object of its own is due
+	template <typename F>
+	void withStations(F f)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		stations.forEach([&](const StationRegistry::Station &s) {
+			int ptr = s.mmsi ? ships.find(s.mmsi) : SHIP_NIL;
+			bool riding = ptr != SHIP_NIL && isValidCoord(ships[ptr].lat, ships[ptr].lon);
+			f(s, riding);
+		});
+	}
 
 	// Persistence functions for ship database
 	bool Save(std::ofstream &file);

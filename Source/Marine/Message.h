@@ -17,6 +17,11 @@
 
 #pragma once
 
+namespace JSON
+{
+	class JSON;
+}
+
 #include <string>
 #include <time.h>
 #include <atomic>
@@ -57,6 +62,14 @@ namespace AIS
 
 		const std::string getNMEA() const;
 		const std::string getJSON() const;
+	};
+
+	// A control line on the input: a topic naming the payload object it carries
+	class Control
+	{
+	public:
+		int topic = 0;
+		const JSON::JSON *payload = nullptr; // valid for the duration of the Send
 	};
 
 	class Message

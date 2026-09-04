@@ -162,8 +162,14 @@ public:
 
 	// ship-attached items (all, one ship's, or one marker's members)
 	void writeJSON(JSON::Writer &w, std::time_t now, std::time_t since, uint64_t marker_key = 0, uint32_t owner_mmsi = 0) const;
-	// markers changed after `since` (a change sequence, not a time) plus removals
-	void writeMapObjectsJSON(JSON::Writer &w, std::time_t now, uint64_t since);
+	// markers changed after `since` (a change sequence, not a time), and the removals;
+	// the caller refreshes first and writes the document around them
+	void writeMarkerRows(JSON::Writer &w, uint64_t since) const;
+	void writeRemoved(JSON::Writer &w, uint64_t since) const;
+	// the change counter, shared with whatever else feeds the object feed
+	uint64_t &sequence() { return next_seq; }
+	// drops expired members, re-aggregates and sequences the markers that changed
+	void refresh(std::time_t now);
 	// every live marker, brought up to date first; f returns false to stop
 	template <typename F>
 	void forEachMarker(std::time_t now, F f)
@@ -406,8 +412,6 @@ private:
 		if (tombstones.size() > 256)
 			tombstones.erase(tombstones.begin(), tombstones.begin() + 64);
 	}
-
-	void refresh(std::time_t now);
 
 	SlotTable<Item, uint64_t> items;
 	SlotTable<Marker, uint64_t> markers;
@@ -759,12 +763,9 @@ inline void BinaryStore::refresh(std::time_t now)
 	}
 }
 
-inline void BinaryStore::writeMapObjectsJSON(JSON::Writer &w, std::time_t now, uint64_t since)
+inline void BinaryStore::writeMarkerRows(JSON::Writer &w, uint64_t since) const
 {
-	refresh(now);
-
 	char id[24];
-	w.beginObject().kv("time", now).kv("seq", (long long)next_seq).key("objects").beginArray();
 	markers.forEach([&](int mh) {
 		const Marker &m = markers[mh];
 		if (m.seq <= since)
@@ -781,12 +782,15 @@ inline void BinaryStore::writeMapObjectsJSON(JSON::Writer &w, std::time_t now, u
 		w.endArray().endObject();
 		return true;
 	});
-	w.endArray().key("removed").beginArray();
+}
+
+inline void BinaryStore::writeRemoved(JSON::Writer &w, uint64_t since) const
+{
+	char id[24];
 	for (const auto &ts : tombstones)
 		if (ts.second > since)
 		{
 			snprintf(id, sizeof(id), "%llx", (unsigned long long)ts.first);
 			w.val(id);
 		}
-	w.endArray().endObject();
 }
