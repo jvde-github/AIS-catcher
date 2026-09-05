@@ -102,7 +102,7 @@ std::string MapTiles::pluginCode(bool overlay, const std::string &sourceOptions)
     ss << (overlay ? "addOverlayLayer" : "addTileLayer")
        << "(\"" << name << "\", new ol.layer.Tile({\n"
        << "    source: new ol.source.XYZ({\n"
-       << "        url: '/tiles/" << layerID << "/{z}/{x}/{y}',\n"
+       << "        url: 'tiles/" << layerID << "/{z}/{x}/{y}',\n"
        << "        attributions: '" << attribution << "',\n"
        << sourceOptions
        << "    })\n"
