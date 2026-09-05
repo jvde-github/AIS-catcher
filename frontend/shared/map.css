@@ -1268,10 +1268,10 @@ body.ticker-open.ticker-bottom {
 .sc-host .sc-tabs .sc-tab:hover { color: var(--color-text); background: none; outline: none; text-decoration: none; }
 .sc-host .sc-tabs .sc-tab[aria-selected="true"] {
     color: var(--color-text);
-    border-bottom-color: var(--color-card-edge);
+    border-bottom-color: var(--color-accent);
 }
 .sc-host .sc-tabs .sc-tab:focus { outline: none; background: none; box-shadow: none; }
-.sc-host .sc-tabs .sc-tab:focus-visible { color: var(--color-card-edge); }
+.sc-host .sc-tabs .sc-tab:focus-visible { color: var(--color-accent); }
 .sc-panels {
     max-height: min(60vh, 520px);
     overflow-y: auto;
@@ -1335,7 +1335,7 @@ body.ticker-open.ticker-bottom {
 }
 .sc-strip .sc-sum-pos { margin-top: 1px; font-size: var(--fs-2xs); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
 .sc-strip .ends > div:last-child { text-align: right; }
-.sc-strip .line { display: flex; align-items: center; gap: 6px; margin: 10px 0 8px; color: var(--color-card-edge); }
+.sc-strip .line { display: flex; align-items: center; gap: 6px; margin: 10px 0 8px; color: var(--color-accent); }
 .sc-strip .line .pip {
     width: 12px; height: 12px; flex: none; box-sizing: border-box;
     border-radius: 50%;

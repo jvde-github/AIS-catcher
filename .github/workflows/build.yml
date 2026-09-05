@@ -109,7 +109,7 @@ jobs:
     strategy:
       matrix:
         distro: ['debian']
-        codename: ['bullseye', 'bookworm', 'trixie']
+        codename: ['bookworm', 'trixie']
         arch: ['amd64', 'arm64', 'armhf']
     steps:
     - name: Checkout Repository
@@ -283,9 +283,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { distro: debian,  codename: bullseye,  arch: amd64  }
-          - { distro: debian,  codename: bullseye,  arch: arm64  }
-          - { distro: debian,  codename: bullseye,  arch: armhf  }
           - { distro: debian,  codename: bookworm,  arch: amd64  }
           - { distro: debian,  codename: bookworm,  arch: arm64  }
           - { distro: debian,  codename: bookworm,  arch: armhf  }

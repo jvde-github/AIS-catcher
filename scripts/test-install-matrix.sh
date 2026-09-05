@@ -17,7 +17,7 @@ LOG_DIR="/tmp/ais-catcher-test-logs"
 mkdir -p "${LOG_DIR}"
 
 # Matrix (must match .github/workflows/build.yml)
-DEBIAN_CODENAMES=(bullseye bookworm trixie)
+DEBIAN_CODENAMES=(bookworm trixie)
 UBUNTU_CODENAMES=(focal jammy noble plucky questing resolute)
 FEDORA_VERSIONS=(43 44)
 ARCHS=(amd64 arm64 armhf)

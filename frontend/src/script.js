@@ -656,7 +656,7 @@ const DEFAULT_SETTINGS = {
         show_all_tracks: false,
         targetcard_top_left: true,
         targetcard_open_max: true,
-        shipcard_style: "classic",
+        shipcard_style: "tabs",
         shipcard_active_tab: "summary",
         map_toolbar: "compact",
         show_signal_graphs: true,
