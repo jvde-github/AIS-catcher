@@ -52,6 +52,7 @@ import OSMSource from 'ol/source/OSM';
 import XYZSource from 'ol/source/XYZ';
 import TileWMSSource from 'ol/source/TileWMS';
 import VectorSource from 'ol/source/Vector';
+import TileGrid from 'ol/tilegrid/TileGrid';
 import Point from 'ol/geom/Point';
 import LineString from 'ol/geom/LineString';
 import Polygon from 'ol/geom/Polygon';
@@ -62,9 +63,9 @@ import Fill from 'ol/style/Fill';
 import Icon from 'ol/style/Icon';
 import CircleStyle from 'ol/style/Circle';
 import Text from 'ol/style/Text';
-import { fromLonLat, toLonLat, transformExtent } from 'ol/proj';
+import { fromLonLat, toLonLat, transformExtent, get as getProjection } from 'ol/proj';
 import { getLength } from 'ol/sphere';
-import { containsCoordinate, getWidth } from 'ol/extent';
+import { containsCoordinate, getWidth, getTopLeft } from 'ol/extent';
 import 'ol/ol.css';
 
 const MENU_CHECKS = {
@@ -152,11 +153,12 @@ const ol = {
     Feature: OlFeature,
     layer: { Tile: TileLayer, Vector: VectorLayer, VectorTile: VectorTileLayer },
     source: { OSM: OSMSource, XYZ: XYZSource, TileWMS: TileWMSSource, Vector: VectorSource },
+    tilegrid: { TileGrid },
     geom: { Point, LineString, Polygon, Circle: CircleGeom },
     style: { Style, Stroke, Fill, Icon, Circle: CircleStyle, Text },
-    proj: { fromLonLat, toLonLat, transformExtent },
+    proj: { fromLonLat, toLonLat, transformExtent, get: getProjection },
     sphere: { getLength },
-    extent: { containsCoordinate, getWidth },
+    extent: { containsCoordinate, getWidth, getTopLeft },
 };
 window.ol = ol;
 
