@@ -8,7 +8,12 @@ export function init(d) {
         mount: document.getElementById("ticker"),
         buckets: d.buckets,
         bucketHidden: d.bucketHidden,
-        onSelect: (id, event) => { binary.eventSeen(Number(id)); d.openVessel(Number(id), event); },
+        selection: {
+            noteSeen: binary.eventSeen,
+            resolveVessel: d.resolveVessel,
+            openVessel: d.openVessel,
+            navigate: d.navigate,
+        },
         // the receiver's events: safety texts, destinations, status and draught notices
         poll: () => binary.pollEvents((events) => bar.push(events)),
     });

@@ -11,7 +11,7 @@
            mount: document.getElementById("ticker"),     // .ticker with .ticker-feed etc. inside
            buckets: BUCKETS,                              // chip spec (core/filter.js BUCKETS)
            bucketHidden: (id) => filter.isHidden("bucket", id),
-           onSelect: (id, event) => openVessel(id, event.lat, event.lon),
+           selection: { noteSeen, resolveVessel, openVessel, navigate },
        });
        t.setEnabled(true);
        t.push([{ key, at, id, text, html, fresh, level, demoted }]);   // at: ms; level 0-2 holds longer; demoted surfaces rarely
@@ -27,6 +27,7 @@
 
 import { bucketChip, debounce } from "./components.js";
 import { compactCount } from "./core/text.js";
+import { createEventSelection } from "./core/event-selection.js";
 
 const SLIDE_MS = 8000;
 const FADE_MS = 1000;
@@ -56,6 +57,7 @@ export function create(opts) {
     const countsEl = bar.querySelector(".ticker-count-value");
     const bucketsEl = bar.querySelector(".ticker-buckets");
     const feedEl = bar.querySelector(".ticker-feed");
+    const selectEvent = opts.selection ? createEventSelection(opts.selection) : null;
     const onSelect = opts.onSelect || function () {};
     const bucketHidden = opts.bucketHidden || function () { return false; };
 
@@ -103,7 +105,9 @@ export function create(opts) {
             if (slot.dragged) { slot.dragged = false; return; }
             const event = slot.event;
             if (item.dataset.key) dismiss(item.dataset.key);
-            if (event) onSelect(event.id == null ? '' : String(event.id), event);
+            if (event && selectEvent) {
+                selectEvent(event).catch((error) => console.warn('Ticker selection failed', error));
+            } else if (event) onSelect(event.id == null ? '' : String(event.id), event);
         });
         bindTouch();
         item.style.display = "none";

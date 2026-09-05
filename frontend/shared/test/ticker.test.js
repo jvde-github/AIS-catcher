@@ -57,3 +57,27 @@ test("ticker: an urgent event is pinned until dismissed", async (tc) => {
     await new Promise((r) => setTimeout(r, 1100));
     assert.deepEqual(up(), ["r"]);
 });
+
+test('ticker: dismissal starts before asynchronous shared selection finishes', async (tc) => {
+    document.querySelector('#t .ticker-feed').innerHTML = '';
+    let finish, opened = false;
+    const t = ticker.create({ mount: document.getElementById('t'), buckets: [], selection: {
+        noteSeen: () => {},
+        resolveVessel: () => new Promise(resolve => { finish = resolve; }),
+        openVessel: () => { opened = true; },
+        navigate: () => {},
+    } });
+    tc.after(() => t.destroy());
+    t.setEnabled(true);
+    t.push([{ key: 'async', id: 42, at: Date.now(), text: 'SHIP', html: 'SHIP' }]);
+    await new Promise(r => setTimeout(r, 1100));
+    const item = document.querySelector('#t .ticker-item');
+    item.click();
+    assert.ok(document.getElementById('t').classList.contains('ticker-fading'));
+    await new Promise(r => setTimeout(r, 1100));
+    assert.equal(item.style.display, 'none');
+    assert.equal(opened, false);
+    finish({ lat: 51, lon: 4 });
+    await new Promise(r => setTimeout(r, 0));
+    assert.equal(opened, true);
+});
