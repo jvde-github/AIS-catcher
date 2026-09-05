@@ -25,6 +25,7 @@
 
 // per poll; a viewer that has been away does not need the whole ring
 
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cerrno>
@@ -236,16 +237,41 @@ void WebViewer::addTileSource(std::shared_ptr<MapTiles> source, const std::strin
 		Error() << "Failed to load " << what << " from: " << path;
 }
 
-void WebViewer::addMBTilesSource(const std::string &filepath, bool overlay)
+// a setting holds one path or several separated by commas (a JSON array
+// arrives joined that way); an empty entry, a blank field in a config, is no source
+static std::vector<std::string> tilePaths(const std::string &list)
+{
+	std::vector<std::string> paths;
+	std::size_t start = 0;
+	while (start <= list.size())
+	{
+		std::size_t end = list.find(',', start);
+		if (end == std::string::npos)
+			end = list.size();
+		std::size_t a = start, b = end;
+		while (a < b && std::isspace((unsigned char)list[a]))
+			a++;
+		while (b > a && std::isspace((unsigned char)list[b - 1]))
+			b--;
+		if (b > a)
+			paths.push_back(list.substr(a, b - a));
+		start = end + 1;
+	}
+	return paths;
+}
+
+void WebViewer::addMBTilesSource(const std::string &filepaths, bool overlay)
 {
 #if HASSQLITE
-	addTileSource(std::make_shared<MBTilesSupport>(), filepath, overlay, "MBTiles");
+	for (const std::string &path : tilePaths(filepaths))
+		addTileSource(std::make_shared<MBTilesSupport>(), path, overlay, "MBTiles");
 #endif
 }
 
-void WebViewer::addFileSystemTilesSource(const std::string &directoryPath, bool overlay)
+void WebViewer::addFileSystemTilesSource(const std::string &directoryPaths, bool overlay)
 {
-	addTileSource(std::make_shared<FileSystemTiles>(), directoryPath, overlay, "FileSystemTiles");
+	for (const std::string &path : tilePaths(directoryPaths))
+		addTileSource(std::make_shared<FileSystemTiles>(), path, overlay, "FileSystemTiles");
 }
 
 long long WebViewer::queryInt(const std::string &query, const char *name)

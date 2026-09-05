@@ -1049,6 +1049,7 @@
                       'replay', 'split',
                       'file', 'backup',
                       'plugin_dir', 'context',
+                      'mbtiles', 'mboverlay', 'fstiles', 'fsoverlay',
                       'realtime', 'msg', 'decoder', 'log', 'geojson', 'prome',
                       'zones'];
         const schema = {};

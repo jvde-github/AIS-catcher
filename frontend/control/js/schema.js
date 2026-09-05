@@ -607,6 +607,50 @@ const webviewerSchema = {
         width: 50,
         tooltip: 'Directory with .pjs/.pss plugins injected into the viewer'
     },
+    mbtiles: {
+        name: 'mbtiles',
+        section: 'MBTiles',
+        restartWebviewer: true,
+        label: 'Map',
+        type: 'list',
+        jsonpath: 'mbtiles',
+        placeholder: '/path/to/map.mbtiles',
+        width: 50,
+        tooltip: 'Base map, one file per line'
+    },
+    mboverlay: {
+        name: 'mboverlay',
+        section: 'MBTiles',
+        restartWebviewer: true,
+        label: 'Overlay',
+        type: 'list',
+        jsonpath: 'mboverlay',
+        placeholder: '/path/to/overlay.mbtiles',
+        width: 50,
+        tooltip: 'Overlay, one file per line'
+    },
+    fstiles: {
+        name: 'fstiles',
+        section: 'Tile directories',
+        restartWebviewer: true,
+        label: 'Map',
+        type: 'list',
+        jsonpath: 'fstiles',
+        placeholder: '/path/to/tiles',
+        width: 50,
+        tooltip: 'Base map, one directory per line'
+    },
+    fsoverlay: {
+        name: 'fsoverlay',
+        section: 'Tile directories',
+        restartWebviewer: true,
+        label: 'Overlay',
+        type: 'list',
+        jsonpath: 'fsoverlay',
+        placeholder: '/path/to/overlay',
+        width: 50,
+        tooltip: 'Overlay, one directory per line'
+    },
     webcontrol_http: {
         name: 'webcontrol_http',
         section: 'Station',

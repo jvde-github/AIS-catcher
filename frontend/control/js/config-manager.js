@@ -295,6 +295,12 @@
                     if (typeof value === 'number' || typeof value === 'boolean') return { value: String(value), status: 'converted' };
                     return { value, status: 'failed' };
                 }
+                case 'list': {
+                    if (Array.isArray(value))
+                        return value.every(v => typeof v === 'string') ? { value, status: 'same' } : { value: value.map(String), status: 'converted' };
+                    if (typeof value === 'string') return { value: value.trim() ? [value.trim()] : [], status: 'converted' };
+                    return { value, status: 'failed' };
+                }
                 case 'zones': {
                     if (Array.isArray(value)) {
                         return value.every(v => typeof v === 'string')
@@ -960,6 +966,19 @@
                 return wrapper;
             }
 
+            if (type === 'list') {
+                // one entry per line; a cleared field removes the key rather than saving [""]
+                const lines = Array.isArray(currentValue) ? currentValue : (currentValue ? [String(currentValue)] : []);
+                return el('textarea', Styles.input, {
+                    rows: Math.max(2, Math.min(lines.length + 1, 6)),
+                    value: lines.join('\n'),
+                    placeholder: field.placeholder || '',
+                    onInput: Utils.debounce((e) => {
+                        const items = e.target.value.split('\n').map(s => s.trim()).filter(Boolean);
+                        onUpdate(items.length ? items : undefined);
+                    }, 200)
+                });
+            }
             const isNumber = type === 'number';
             return el('input', Styles.input, {
                 type: type || 'text',
