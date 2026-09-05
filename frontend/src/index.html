@@ -277,6 +277,14 @@
 						</span>
 						<small class="st-desc">Open the card unfolded when there is room; small screens open it compact</small>
 					</div>
+					<div>
+						<span>Layout</span><span>
+							<select id="settings_shipcard_style" data-setting="shipcard_style">
+								<option value="classic">Accordion (classic)</option>
+								<option value="tabs">Tabbed</option>
+							</select>
+						</span>
+					</div>
 				</section>
 				<section>
 					<div>
@@ -904,6 +912,7 @@
 		<div data-on-contextmenu="mainspaceContextMenu" class="mainspace">
 			<ul class="floating-menu" id="context-menu">
 				<li data-tags="ctx-targetcard" data-group="card" data-action="toggleTargetcardPin" id="ctx_targetcard_pin"><i class="drag_indicator_icon"></i>Pin card position<span class="ctx-check">✓</span></li>
+				<li data-tags="ctx-targetcard" data-group="card" data-action="toggleShipcardStyle"><i class="view_list_icon"></i>Tabbed layout<span class="ctx-check">✓</span></li>
 				<li data-tags="copy-text" data-group="text" data-action="copyTextCtx"><i class="content_copy_icon"></i>Copy to Clipboard</li>
 				<li data-tags="table-menu" data-group="table" data-action="downloadCSV"><i class="cloud_download_icon"></i>Download CSV</li>
 				<li data-tags="station" data-group="focus" data-action="toggleFollowStationCtx"><i class="push_pin_icon"></i><span id="ctx_follow_station">Follow station</span></li>
@@ -1491,78 +1500,7 @@
 
 					<div id="targetcard_content" class="mapcard-content">
 
-						<div id="targetcard_vessel_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
-							data-section="vessel" data-context-type="ship"><span>Vessel</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_up_icon"></i></span></div>
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="vessel" class="mapcard-content-row card-row card-max-only">
-							<div><span>MMSI</span><span id="targetcard_mmsi">-</span></div>
-							<div><span>Callsign</span><span id="targetcard_callsign">-</span></div>
-							<div><span id="targetcard_imo_label">IMO</span><span id="targetcard_imo">-</span></div>
-						</div>
-
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="vessel" class="mapcard-content-row card-row card-max-only">
-							<div><span>Country</span><span id="targetcard_country"></span></div>
-							<div><span>Sender</span><span id="targetcard_type"></span></div>
-							<div><span>Ship type</span><span id="targetcard_shiptype"></span></div>
-						</div>
-
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="vessel" class="mapcard-content-row card-row card-max-only">
-							<div><span>Dimension</span><span id="targetcard_dimension">-</span></div>
-							<div><span>Draught</span><span id="targetcard_draught">-</span></div>
-							<div><span>Blue Sign</span><span id="targetcard_bluesign">-</span></div>
-						</div>
-
-						<div id="targetcard_hull_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
-							data-section="hull" data-context-type="ship"><span>AIS antenna position</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_down_icon"></i></span></div>
-						<div id="targetcard_hull_section" data-section="hull" data-context-type="ship"
-							class="mapcard-content-row card-row card-max-only card-collapsed">
-							<div id="targetcard_hull_body" class="hist-wrap"></div>
-						</div>
-
-						<div id="targetcard_voyage_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
-							data-section="voyage" data-context-type="ship"><span>Voyage</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_up_icon"></i></span></div>
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row card-row card-max-only row-wide-first">
-							<div><span>Status</span><span id="targetcard_status"></span></div>
-							<div><span>Altitude</span><span id="targetcard_altitude">-</span></div>
-						</div>
-
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row card-row">
-							<div><span>Speed</span><span id="targetcard_speed">-</span></div>
-							<div><span>Course</span><span id="targetcard_cog">-</span></div>
-							<div><span>Heading</span><span id="targetcard_heading">-</span></div>
-						</div>
-
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row card-row card-max-only row-wide-first">
-							<div><span>Destination</span><span id="targetcard_destination"></span></div>
-							<div><span>ETA</span><span id="targetcard_eta"></span></div>
-						</div>
-
-						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="voyage" class="mapcard-content-row card-row card-max-only row-wide-first">
-							<div><span>Region</span><span id="targetcard_region"></span></div>
-							<div><span>Latitude</span><span id="targetcard_lat">-</span></div>
-							<div><span>Longitude</span><span id="targetcard_lon">-</span></div>
-						</div>
-
-<div id="targetcard_speed_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
-							data-section="speed" data-context-type="ship"><span>Speed Chart</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_down_icon"></i></span></div>
-						<div id="targetcard_speed_section" data-section="speed" data-context-type="ship"
-							class="mapcard-content-row card-row card-max-only card-collapsed">
-							<div id="targetcard_speed_body" class="hist-wrap"></div>
-						</div>
-
-						<div id="targetcard_draught_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
-							data-section="draught" data-context-type="ship"><span>Draught Chart</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_down_icon"></i></span></div>
-						<div id="targetcard_draught_section" data-section="draught" data-context-type="ship"
-							class="mapcard-content-row card-row card-max-only card-collapsed">
-							<div id="targetcard_draught_body" class="hist-wrap"></div>
-						</div>
-
-						<div id="targetcard_changes_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
-							data-section="changes" data-context-type="ship"><span>Reported changes</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_down_icon"></i></span></div>
-						<div id="targetcard_changes_section" data-section="changes" data-context-type="ship"
-							class="mapcard-content-row card-row card-max-only card-collapsed">
-							<div id="targetcard_changes_body" class="hist-wrap"></div>
-						</div>
-
+						<div id="targetcard_common"></div>
 
 						<div id="shiptype_popover" class="card-popover" style="display: none;">
 							<div><span>Type:</span><span id="shiptype_code">-</span></div>
@@ -1583,16 +1521,17 @@
 							<div><span>Serial:</span><span id="tech_serial">-</span></div>
 						</div>
 						<div id="targetcard_plane_rows"></div>
+					<div id="targetcard_slot_ais">
 					<div id="targetcard_source_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
 							data-section="source" data-context-type="ship"><span>AIS source</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_up_icon"></i></span></div>
 						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only">
 							<div><span>RSSI</span><span id="targetcard_level">-</span></div>
 							<div><span>Drift</span><span id="targetcard_ppm">-</span></div>
-							<div><span>Bearing</span><span id="targetcard_bearing">-</span></div>
+							<div><span>Repeated</span><span id="targetcard_repeated">-</span></div>
 						</div>
 
 						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only">
-							<div><span>last signal</span><span id="targetcard_last_signal"></span></div>
+							<div><span>Last signal</span><span id="targetcard_last_signal"></span></div>
 							<div><span>Count</span><span id="targetcard_count">-</span></div>
 							<div><span>Channels</span><span id="targetcard_channels">-</span></div>
 						</div>
@@ -1605,9 +1544,10 @@
 
 						<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only">
 							<div><span>In Range</span><span id="targetcard_received_stations"></span></div>
-							<div><span>Repeated</span><span id="targetcard_repeated">-</span></div>
+							<div><span>Bearing</span><span id="targetcard_bearing">-</span></div>
 							<div><span>Distance</span><span id="targetcard_distance">-</span></div>
 						</div>
+					</div>
 					</div>
 
 <footer id="targetcard_footer" class="mapcard-footer card-max-only">

@@ -15,7 +15,7 @@ const stationColor = (status) => STATION_COLORS[status] || STATION_COLORS.online
 // the antenna, the edge blue when a GPS places it
 export function stationCanvas(gps, status) {
     const scale = window.devicePixelRatio || 1;
-    const R = 10, SIZE = 2 * (R + 3);
+    const R = 8, SIZE = 2 * (R + 3);
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = SIZE * scale;
     const ctx = canvas.getContext('2d');

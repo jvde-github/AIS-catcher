@@ -557,42 +557,51 @@ void Ship::writeJSONBody(JSON::Writer &w, long int delta_time, bool station_know
 		.kv_unless("serial", unit_serial, -1)
 		.kv("repeat", getRepeat())
 		.kv("last_signal", delta_time)
+		.kv("last_group", last_group)
+		.kv_unless("altitude", altitude, ALT_UNDEFINED)
+		.kv_unless("received_stations", received_stations, RECEIVED_STATIONS_UNDEFINED)
 		.kv_unless("region", region, Region::NONE);
 }
 
-void Ship::writeCompactDynamic(JSON::Writer &w, unsigned binary_badge, unsigned station) const
+void Ship::writeCompactDynamic(JSON::Writer &w, std::time_t now, unsigned binary_badge, unsigned station) const
 {
 	w.beginArray().val(mmsi);
 	if (isValidCoord(lat, lon))
-	{
-		w.val(lat).val(lon);
-		if (distance != DISTANCE_UNDEFINED && angle != ANGLE_UNDEFINED)
-			w.val(distance).val(angle);
-		else
-			w.val_null().val_null();
-	}
+		w.val(lat).val(lon).val_unless(distance, DISTANCE_UNDEFINED);
 	else
-		w.val_null().val_null().val_null().val_null();
+		w.val_null().val_null().val_null();
 
 	w.val_unless(heading, HEADING_UNDEFINED)
 		.val_unless(cog, COG_UNDEFINED)
 		.val_unless(speed, SPEED_UNDEFINED)
 		.val(status)
-		.val_unless(level, LEVEL_UNDEFINED)
+		.val((long long)(now > last_signal ? now - last_signal : 0))
+		.val((unsigned long long)flags.getPackedValue())
+		.val(shipclass)
+		.val(country_code)
+		.val(binary_badge).val(station)
+		.endArray();
+}
+
+// what the ships table lists beyond the map's row: the receiver's measurements
+// and the classification the card and the table word themselves
+void Ship::writeCompactTable(JSON::Writer &w) const
+{
+	w.beginArray().val(mmsi);
+	if (isValidCoord(lat, lon) && distance != DISTANCE_UNDEFINED && angle != ANGLE_UNDEFINED)
+		w.val(angle);
+	else
+		w.val_null();
+	w.val_unless(level, LEVEL_UNDEFINED)
 		.val_unless(ppm, PPM_UNDEFINED)
 		.val(count)
 		.val(msg_type)
-		.val(last_signal)
 		.val(last_group)
 		.val(group_mask)
-		.val((unsigned long long)flags.getPackedValue())
 		.val_unless(altitude, ALT_UNDEFINED)
 		.val_unless(received_stations, RECEIVED_STATIONS_UNDEFINED)
 		.val(mmsi_type)
-		.val(shipclass)
-		.val(country_code)
 		.val_unless(region, Region::NONE)
-		.val(binary_badge).val(station)
 		.endArray();
 }
 

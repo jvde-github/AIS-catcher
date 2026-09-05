@@ -358,6 +358,7 @@ function wireUIEvents() {
 export async function update() {
     const ok = await window.__app__.fetchShips();
     if (!ok) return;
+    await window.__app__.fetchTableRows();
 
     const data = window.__app__.shipsVisible();
 

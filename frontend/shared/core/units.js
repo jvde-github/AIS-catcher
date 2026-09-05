@@ -8,7 +8,7 @@
 // system: "DEFAULT" (nautical), "SI", or anything else for imperial.
 // coordinates: "decimal", "dms" or "ddm".
 
-import { getStatusVal } from './text.js';
+import { getEtaVal, getStatusVal } from './text.js';
 
 export function decimalToDMS(l, isLatitude) {
     const degrees = Math.floor(Math.abs(l));
@@ -92,6 +92,8 @@ export function create(opts) {
     function getChangeVal(change) {
         if (change.f === 2) return getStatusVal({ status: change.to });
         if (change.f === 1) return getDraughtVal(change.to / 10) + " " + getDimUnit();
+        if (change.f === 6 && Array.isArray(change.to))
+            return getEtaVal({ eta_month: change.to[0], eta_day: change.to[1], eta_hour: change.to[2], eta_minute: change.to[3] });
         return String(change.to);
     }
 

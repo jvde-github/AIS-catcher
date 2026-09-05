@@ -22,8 +22,7 @@
    the strip longer, a demoted one surfaces rarely. An urgent event is pinned:
    it keeps the strip until tapped away, or until it ages out after ninety
    minutes. On touch a horizontal drag scrolls a long line under the finger
-   and a vertical flick dismisses; a badge on the count says how many events
-   began while the page was not being looked at.
+   and a vertical flick dismisses.
    ========================================================================= */
 
 import { bucketChip, debounce } from "./components.js";
@@ -50,8 +49,7 @@ const levelOf = (e) => Math.min(e.level || 0, 2);
 const CHIPS_MIN_WIDTH = 1400;
 const LINE_MIN_WIDTH = 520;
 
-// the first poll after the page comes back carries what began while it was away
-const AWAY_GRACE_MS = 15000;
+const POLL_MS = 20000;
 
 export function create(opts) {
     const bar = opts.mount;
@@ -65,6 +63,10 @@ export function create(opts) {
     let cursor = -1;
     let slide = 0;
     let slideTimer = null;
+    // the host's feed, asked while the strip is on screen and enabled
+    const poll = opts.poll || null;
+    const pollMs = opts.pollMs || POLL_MS;
+    let pollTimer = null;
     let fadeTimer = null;
     let dwell = SLIDE_MS;
     let counts = { shown: 0, total: 0, filtered: false };
@@ -76,23 +78,9 @@ export function create(opts) {
     // a clicked event has been seen: it leaves the strip and a repeat of it stays away
     const dismissed = new Set();
     const DISMISSED_MAX = 200;
-    let unseen = 0, hiddenAt = 0, awayTimer = null;
-    const countEl = bar.querySelector(".ticker-count");
-    const badge = document.createElement("span");
-    badge.className = "ticker-badge";
-    badge.hidden = true;
-    if (countEl) countEl.appendChild(badge);
 
     bar.style.setProperty("--ticker-fade", FADE_MS + "ms");
-    bar.addEventListener("click", () => setUnseen(0));
-    bar.addEventListener("touchstart", () => setUnseen(0), { passive: true });
 
-    function setUnseen(n) {
-        unseen = n;
-        if (!n) hiddenAt = 0;
-        badge.textContent = n > 99 ? "99+" : String(n);
-        badge.hidden = n === 0;
-    }
 
     function buildSlot() {
         if (!feedEl) return;
@@ -229,12 +217,23 @@ export function create(opts) {
         resume();
     }
 
+    function startPolling() {
+        if (!poll || !isEnabled() || document.hidden || pollTimer) return;
+        poll();
+        pollTimer = setInterval(poll, pollMs);
+    }
+    function stopPolling() {
+        clearInterval(pollTimer);
+        pollTimer = null;
+    }
     function resume() {
+        startPolling();
         if (!isEnabled() || document.hidden || slideTimer) return;
         advance();
     }
 
     function suspend() {
+        stopPolling();
         clearTimeout(slideTimer);
         clearTimeout(fadeTimer);
         slideTimer = fadeTimer = null;
@@ -293,7 +292,6 @@ export function create(opts) {
         const held = new Set(events.map((e) => e.key));
         const fresh = incoming.filter((e) => !held.has(e.key) && !dismissed.has(e.key)).sort((a, b) => b.at - a.at);
         if (!fresh.length) return;
-        if (hiddenAt) setUnseen(unseen + fresh.filter((e) => e.at > hiddenAt).length);
         const hadPinned = events.some(pinned);
         const all = fresh.concat(events);
         const keep = all.filter(pinned);
@@ -413,12 +411,7 @@ export function create(opts) {
     buildBuckets();
     show(null);
 
-    const onVisibility = () => {
-        clearTimeout(awayTimer);
-        if (document.hidden) { hiddenAt = Date.now(); suspend(); return; }
-        awayTimer = setTimeout(() => { hiddenAt = 0; }, AWAY_GRACE_MS);
-        resume();
-    };
+    const onVisibility = () => { if (document.hidden) suspend(); else resume(); };
     document.addEventListener("visibilitychange", onVisibility);
 
     const observer = new ResizeObserver(debounce(measure, 200));
@@ -426,10 +419,9 @@ export function create(opts) {
 
     function destroy() {
         suspend();
-        clearTimeout(awayTimer);
         observer.disconnect();
         document.removeEventListener("visibilitychange", onVisibility);
     }
 
-    return { push, setCounts, setEnabled, isEnabled, advance, destroy };
+    return { push, setCounts, setEnabled, isEnabled, advance, destroy, pollNow: () => { if (poll) poll(); } };
 }

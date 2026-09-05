@@ -15,6 +15,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <cstdio>
 #include "AIS-catcher.h"
 #include <algorithm>
 #include <cctype>
@@ -55,7 +56,7 @@ void DB::setup()
 	int path_blocks = paths.setup((long)track_memory_kb * 1024, nships);
 	Debug() << "DB: track store " << track_memory_kb << " KB (" << path_blocks << " blocks)";
 
-	changes.setup(nships, nships / 4);
+	changes.setup(nships);
 
 	binary.setup(server_mode ? 65536 : 256);
 	evict_horizon = 0;
@@ -78,7 +79,7 @@ std::string DB::getJSONcompact(bool full, std::time_t since)
 		// --- Pass 1: dynamic array ---
 		w.key("dynamic").beginArray();
 		forEachRecentUnlocked(now, full, since, [&](int, const Ship &ship, long int) {
-			ship.writeCompactDynamic(w, binary.badge(ship.mmsi, now), stations.idFor(ship.mmsi));
+			ship.writeCompactDynamic(w, now, binary.badge(ship.mmsi, now), stations.idFor(ship.mmsi));
 		});
 		w.endArray(); // dynamic
 
@@ -92,6 +93,21 @@ std::string DB::getJSONcompact(bool full, std::time_t since)
 
 		w.endObject();
 		w.raw("\n\n");
+	}
+	return content;
+}
+
+std::string DB::getJSONtable(std::time_t since)
+{
+	std::lock_guard<std::mutex> lock(mtx);
+	std::time_t now = time(nullptr);
+
+	content.clear();
+	{
+		JSON::Writer w(content, 16384);
+		w.beginObject().kv("time", now).key("rows").beginArray();
+		forEachRecentUnlocked(now, false, since, [&](int, const Ship &ship, long int) { ship.writeCompactTable(w); });
+		w.endArray().endObject();
 	}
 	return content;
 }
@@ -126,43 +142,14 @@ std::string DB::getChangesJSON(int mmsi)
 
 	std::string content;
 	JSON::Writer w(content);
-	changes.writeJSON(w, (uint32_t)mmsi);
-	w.finish();
-	return content;
-}
-
-std::string DB::getRecentChangesJSON(uint32_t since, std::size_t max)
-{
-	std::lock_guard<std::mutex> lock(mtx);
-
-	std::string content;
-	JSON::Writer w(content);
-	w.beginObject().kv("time", (int)time(nullptr)).key("changes");
-	changes.writeRecentJSON(w, since, max);
-	w.endObject();
+	changes.writeJSON(w, ships.find((uint32_t)mmsi));
 	w.finish();
 	return content;
 }
 
 std::string DB::getShipJSON(int mmsi)
 {
-	std::lock_guard<std::mutex> lock(mtx);
-
-	int ptr = ships.find(mmsi);
-	if (ptr == SHIP_NIL)
-		return "{}";
-
-	const Ship &ship = ships[ptr];
-	std::time_t now = time(nullptr);
-
-	content.clear();
-	{
-		JSON::Writer w(content, 1024);
-		w.beginObject();
-		ship.writeJSONBody(w, (long int)now - (long int)ship.last_signal, isValidCoord(station_lat, station_lon));
-		w.kv("binary", binary.badge(ship.mmsi, now)).kv("station", stations.idFor(ship.mmsi)).endObject();
-	}
-	return content;
+	return vesselJSON((uint32_t)mmsi, [](JSON::Writer &, const Ship &, int) {});
 }
 
 std::string DB::getKML()
@@ -474,7 +461,7 @@ static bool carriesOwnPosition(int type)
 void DB::logTextChange(const Ship &ship, int field, const char *old_value, const std::string &value)
 {
 	if (old_value[0] && value != old_value)
-		changes.addText(ship.mmsi, (StaticHistory::Field)field, value.c_str(), ship.last_signal);
+		changes.addText(ships.find(ship.mmsi), (StaticStore::Field)field, value.c_str(), ship.last_signal);
 }
 
 void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship, bool allowApproximate, bool &positionUpdated, bool &staticUpdated)
@@ -525,9 +512,11 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship
 		if (d != 0 && (inland || !ship.getInlandDraught()))
 		{
 			const bool first = ship.draught == DRAUGHT_UNDEFINED || ship.draught <= 0;
-			changes.addNumeric(ship.mmsi, StaticHistory::DRAUGHT,
+			changes.addNumeric(ships.find(ship.mmsi), StaticStore::DRAUGHT,
 							   first ? (uint8_t)(d * 10 + 0.5f) : (uint8_t)(ship.draught * 10 + 0.5f),
 							   (uint8_t)(d * 10 + 0.5f), ship.last_signal, first);
+			if (!first)
+				noteDraught(ship, d);
 			ship.draught = d;
 			ship.setInlandDraught(inland);
 			staticUpdated = true;
@@ -547,7 +536,7 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship
 	{
 		const int st = p.Get().getInt();
 		if (ship.status != STATUS_UNDEFINED)
-			changes.addNumeric(ship.mmsi, StaticHistory::STATUS, (uint8_t)ship.status, (uint8_t)st, ship.last_signal);
+			changes.addNumeric(ships.find(ship.mmsi), StaticStore::STATUS, (uint8_t)ship.status, (uint8_t)st, ship.last_signal);
 		noteStatus(ship, st);
 		ship.status = st;
 	}
@@ -611,12 +600,12 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship
 		break;
 	case AIS::KEY_NAME:
 	case AIS::KEY_SHIPNAME:
-		logTextChange(ship, StaticHistory::SHIPNAME, ship.shipname, p.Get().getString());
+		logTextChange(ship, StaticStore::SHIPNAME, ship.shipname, p.Get().getString());
 		copyField(ship.shipname, p.Get().getString());
 		staticUpdated = true;
 		break;
 	case AIS::KEY_CALLSIGN:
-		logTextChange(ship, StaticHistory::CALLSIGN, ship.callsign, p.Get().getString());
+		logTextChange(ship, StaticStore::CALLSIGN, ship.callsign, p.Get().getString());
 		copyField(ship.callsign, p.Get().getString());
 		staticUpdated = true;
 		break;
@@ -638,7 +627,7 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship
 	case AIS::KEY_DESTINATION:
 	{
 		const std::string &d = p.Get().getString();
-		logTextChange(ship, StaticHistory::DESTINATION, ship.destination, d);
+		logTextChange(ship, StaticStore::DESTINATION, ship.destination, d);
 		noteDestination(ship, d);
 		copyField(ship.destination, d);
 		staticUpdated = true;
@@ -724,10 +713,7 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	if (eta_was_set && eta_now_set && (eta_before[0] != ship.month || eta_before[1] != ship.day ||
 									   eta_before[2] != ship.hour || eta_before[3] != ship.minute))
 	{
-		char eta[21];
-		std::snprintf(eta, sizeof(eta), "%02d-%02d %02d:%02d",
-					  (int)ship.month, (int)ship.day, (int)ship.hour, (int)ship.minute);
-		changes.addText(ship.mmsi, StaticHistory::ETA, eta, ship.last_signal);
+		changes.addEta(ships.find(ship.mmsi), (uint8_t)ship.month, (uint8_t)ship.day, (uint8_t)ship.hour, (uint8_t)ship.minute, ship.last_signal);
 	}
 
 	ship.setType();
@@ -906,6 +892,21 @@ void DB::noteDestination(Ship &ship, const std::string &v)
 	note(ship, EventRing::DESTINATION, EventRing::ROUTINE, now, v, "destination", 0, was);
 }
 
+// a vessel's draught, in metres as the message gives it: a change is news, the
+// first reading only a baseline
+void DB::noteDraught(Ship &ship, float d)
+{
+	if (ship.draught == DRAUGHT_UNDEFINED || ship.draught <= 0 || d <= 0 || d == ship.draught)
+		return;
+	std::time_t now = std::time(nullptr);
+	if (settle(ship, now))
+		return;
+	char was[16], to[16];
+	std::snprintf(was, sizeof(was), "%.1f m", ship.draught);
+	std::snprintf(to, sizeof(to), "%.1f m", d);
+	note(ship, EventRing::DRAUGHT, EventRing::ROUTINE, now, to, "draught", 0, was);
+}
+
 // a vessel's navigation status, named the way the message names it; the status
 // it starts out with, and one going undefined, only start the clock
 void DB::noteStatus(Ship &ship, int status)
@@ -993,6 +994,7 @@ int DB::claimShip(uint32_t mmsi)
 		// the recycled record still holds the evicted ship
 		evict_horizon = MAX(evict_horizon, ships[ptr].last_signal);
 		paths.wipe(ptr);
+		changes.wipe(ptr);
 		ships[ptr].reset();
 	}
 	else

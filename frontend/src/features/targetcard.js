@@ -2,6 +2,9 @@
 import { ships, cardMmsi, cardType, hoverMmsi, hoverType, markerTracks, clock } from '../core/store.js';
 import { settings } from '../core/state.js';
 import { getChangeVal, getShipDimension, getDimUnit, getDistanceUnit, getDistanceVal, getDraughtVal, getLatValFormat, getLonValFormat, getSpeedUnit, getSpeedVal, u } from '../core/units.js';
+import * as shipcard from '../../shared/shipcard.js';
+import * as classic from '../../shared/shipcard-classic.js';
+import * as tabs from '../../shared/shipcard-tabs.js';
 import { CHANGE, getCountryName, getDeltaTimeVal, getEtaVal, getMmsiTypeVal, getShipTypeFull, getShipTypeShort, getStatusVal, getStringfromChannels, getStringfromGroup, getStringfromMsgType } from '../../shared/core/text.js';
 import { getChangeListHTML, getSpeedHistorySVG, getDraughtChartSVG, getShipDimensionSVG } from '../../shared/core/spark.js';
 import { getCallSign, getShipName } from '../core/names.js';
@@ -20,6 +23,7 @@ export function init(d) {
     card = d.card;
     if (!card) throw new Error("targetcard: no #targetcard to mount on");
     card.section.reset(SECTION_DEFAULTS);
+    buildLayout(deps.getStyle ? deps.getStyle() : "classic");
     card.el.addEventListener("card:section", (e) => {
         if (e.detail.open) fillSection(e.detail.key);
         deps.fitTargetcard();
@@ -28,13 +32,62 @@ export function init(d) {
 
 // ─── sections ────────────────────────────────────────────────────────────────
 
-export const SECTION_DEFAULTS = {
-    voyage: true, vessel: true, source: true,
-    hull: true, speed: false, draught: false, changes: false,
-    aircraft: true, flight: true, adsb: true,
-};
+export const SECTION_DEFAULTS = { ...classic.SECTIONS, source: true, aircraft: true, flight: true, adsb: true };
+let cells = null, layout = null, style = "classic", slotHome = null;
 
 let historyCache = { mmsi: 0, pts: null, changes: null };
+
+// The card's shape: the classic fold of sections, or the remembered tabs. The
+// receiver's own section rides along - after the body in classic, as the AIS
+// tab otherwise - and the tabbed card stays open, so its chevron goes.
+function buildLayout(s) {
+    style = s === "tabs" ? "tabs" : "classic";
+    const mount = document.getElementById("targetcard_common");
+    const slot = document.getElementById("targetcard_slot_ais");
+    const chevron = document.getElementById("targetcard_minmax_button");
+    if (!slotHome && slot) slotHome = { parent: slot.parentNode, next: slot.nextSibling };
+    mount.innerHTML = "";
+    if (style === "tabs") {
+        layout = tabs.build(mount, "targetcard_", {
+            slot,
+            tab: openTab(),
+            onTab: (t) => { if (t && deps.setTab) deps.setTab(t); showHistory(t); deps.fitTargetcard(); },
+            foldable: () => !!(deps.isCramped && deps.isCramped()),
+        });
+        if (chevron) chevron.style.display = "none";
+        card.setMax(true);
+    } else {
+        if (slot && slotHome) slotHome.parent.insertBefore(slot, slotHome.next);
+        mount.classList.remove("sc-host");
+        if (chevron) chevron.style.display = "";
+        const c = classic.build(card, mount, "targetcard_", { rowAttrs: { "data-action": "targetcardSelectSelf" } });
+        layout = { cells: c, select: () => {}, active: () => null, update: () => {}, scrollTop: () => {} };
+    }
+    cells = layout.cells;
+    document.getElementById("targetcard").classList.toggle("card-tabs", style === "tabs");
+}
+
+export function setStyle(s) {
+    buildLayout(s);
+    if (cardMmsi) {
+        resetHistory();
+        populate();
+        loadVessel(cardMmsi);
+    }
+}
+
+// a fresh card on a cramped pane opens folded, like the classic card opens
+// compact there; otherwise the remembered tab
+function openTab() {
+    if (deps.foldOnOpen && deps.foldOnOpen()) return null;
+    return deps.getTab ? deps.getTab() : tabs.DEFAULT_TAB;
+}
+
+// the tab is the user's; history renders where it is looked at
+function showHistory(tab) {
+    if (tab === "voyage") fillSection("changes");
+    else if (tab === "history") { fillSection("speed"); fillSection("draught"); }
+}
 
 export function resetHistory() {
     historyCache = { mmsi: 0, pts: null, changes: null };
@@ -46,16 +99,74 @@ export function resetHistory() {
     });
 
     card.section.reset(SECTION_DEFAULTS);
+    if (style === "tabs") {
+        // switching ship with the card up on a cramped pane keeps its fold
+        if (!(deps.isCramped && deps.isCramped()) || deps.foldOnOpen()) layout.select(openTab(), false);
+        layout.scrollTop();
+    }
 }
 
 
 export function renderHull(ship) {
     ship = ship || ships[cardMmsi]?.raw;
-    const svg = ship ? getShipDimensionSVG(ship, u) : "";
+    const svg = ship ? shipcard.hull(ship, u) : "";
 
     card.section.available("hull", !!svg);
     const body = document.getElementById("targetcard_hull_body");
+    if (style === "tabs" && body) body.parentElement.hidden = !svg;
     if (body) card.keepScroll(() => { body.innerHTML = svg; });
+}
+
+
+async function fetchHistory(mmsi, kind) {
+    if (historyCache.mmsi !== mmsi) historyCache = { mmsi, pts: null, changes: null };
+    if (historyCache[kind] === null) {
+        const url = (kind === "pts" ? "api/path.json?" : "api/changes.json?") + mmsi + "&receiver=" + deps.getReceiver();
+        const data = await fetch(url).then((r) => r.json());
+        if (historyCache.mmsi !== mmsi) return null;
+        historyCache[kind] = kind === "pts" ? (data[mmsi] || []) : (Array.isArray(data) ? data : []);
+    }
+    return historyCache[kind];
+}
+
+let vessel = { mmsi: 0, data: null, inflight: false };
+
+// The vessel's details and what it has reported changing, in one fetch: on
+// opening, and again with each pull while the card stays on it. The changes
+// section opens by itself when there is anything to show.
+export async function loadVessel(mmsi) {
+    vessel = { mmsi, data: null, inflight: false };
+    await refreshVessel();
+}
+
+async function refreshVessel() {
+    const mmsi = cardMmsi;
+    if (!mmsi || vessel.mmsi !== mmsi || vessel.inflight) return;
+    vessel.inflight = true;
+    let data;
+    try {
+        data = await fetch("api/ship.json?mmsi=" + mmsi + "&receiver=" + deps.getReceiver()).then((r) => r.json());
+    } catch {
+        vessel.inflight = false;
+        return;
+    }
+    vessel.inflight = false;
+    if (cardMmsi !== mmsi || vessel.mmsi !== mmsi || !data || data.mmsi == null) return;
+    vessel.data = data;
+
+    if (historyCache.mmsi !== mmsi) historyCache = { mmsi, pts: null, changes: null };
+    historyCache.changes = Array.isArray(data.changes) ? data.changes : [];
+    if (style === "tabs") {
+        showHistory(layout.active());
+    } else {
+        const isOpen = (key) => !document.getElementById("targetcard_" + key + "_section")?.classList.contains("card-collapsed");
+        if (isOpen("changes")) fillSection("changes");
+        else if (shipcard.hasChanges(historyCache.changes)) card.section.open("changes");
+        if (isOpen("draught")) fillSection("draught");
+        else if (shipcard.hasDraughtChange(historyCache.changes)) card.section.open("draught");
+    }
+
+    card.keepScroll(populateCard);
 }
 
 export async function fillSection(key) {
@@ -68,33 +179,29 @@ export async function fillSection(key) {
     const body = document.getElementById("targetcard_" + key + "_body");
     if (!body) return;
 
-    if (historyCache.mmsi !== mmsi) {
+    const kind = key === "speed" ? "pts" : "changes";
+    let data;
+    if (historyCache.mmsi !== mmsi || historyCache[kind] === null) {
         body.innerHTML = '<span class="dim-note">Loading…</span>';
         try {
-            const receiver = deps.getReceiver();
-            const [p, c] = await Promise.all([
-                fetch("api/path.json?" + mmsi + "&receiver=" + receiver).then((r) => r.json()),
-                fetch("api/changes.json?" + mmsi + "&receiver=" + receiver).then((r) => r.json()),
-            ]);
-            historyCache = { mmsi, pts: p[mmsi] || [], changes: Array.isArray(c) ? c : [] };
+            data = await fetchHistory(mmsi, kind);
         } catch (err) {
             body.innerHTML = '<span class="dim-note">History unavailable</span>';
             return;
         }
-    }
+    } else data = historyCache[kind];
 
     // the card may have moved on while the history was in flight
-    if (cardMmsi !== mmsi) return;
+    if (cardMmsi !== mmsi || !data) return;
 
     const ship = ships[mmsi]?.raw;
     let html = "";
 
-    if (key === "speed") html = getSpeedHistorySVG(historyCache.pts, 10, u);
-    else if (key === "draught") html = getDraughtChartSVG(historyCache.changes, ship ? ship.draught : null, u);
-    else html = getChangeListHTML(historyCache.changes,
-        [CHANGE.DESTINATION, CHANGE.ETA, CHANGE.SHIPNAME, CHANGE.CALLSIGN, CHANGE.STATUS], u);
+    if (key === "speed") html = shipcard.speedChart(data, u);
+    else if (key === "draught") html = shipcard.draughtChart(data, ship ? ship.draught : null, u);
+    else html = shipcard.changeList(data, u);
 
-    card.keepScroll(() => { body.innerHTML = html || '<span class="dim-note">Nothing recorded yet</span>'; });
+    card.keepScroll(() => { body.innerHTML = html || '<span class="dim-note">N/A</span>'; });
     deps.fitTargetcard();
 }
 
@@ -256,7 +363,17 @@ function updateTechDetails(ship) {
     document.getElementById("tech_serial").textContent = ship.serial != null ? ship.serial : "-";
 }
 
-export function populate() { card.keepScroll(populateCard); }
+export function populate() { card.keepScroll(populateCard); refreshVessel(); }
+
+const cardHelpers = {
+    units: u,
+    regionName,
+    callsign: getCallSign,
+    age: (s) => getDeltaTimeVal(clock - s.last_signal),
+    infoIcon: (k) => k === "tech"
+        ? ' <i class="info_icon card-tech-icon" id="targetcard_tech_info" data-action="techInfo" title="Technical details"></i>'
+        : ' <i class="info_icon card-tech-icon" id="targetcard_shiptype_info" data-action="shiptypeInfo" title="Ship type details"></i>',
+};
 
 function populateCard() {
 
@@ -267,62 +384,30 @@ function populateCard() {
         return;
     }
 
-    let ship = ships[cardMmsi].raw;
+    let ship = { ...(vessel.mmsi === cardMmsi && vessel.data ? vessel.data : {}), ...ships[cardMmsi].raw };
 
     document.getElementById("targetcard_header_flag").innerHTML = flagHTML(ship.country, 'flag-card', getCountryName(ship.country));
     setTitle(ship);
-
     setValidation(ship.validated);
+    shipcard.populate(cells, ship, cardHelpers);
+    layout.update(ship, cardHelpers);
 
-    ["destination", "mmsi", "count", "received_stations"].forEach((e) => (document.getElementById("targetcard_" + e).innerHTML = ship[e] != null ? ship[e] : "-"));
-
-    if (ship.imo != null) {
-        document.getElementById("targetcard_imo_label").innerHTML = "IMO";
-        document.getElementById("targetcard_imo").innerHTML = ship.imo;
-    } else {
-        document.getElementById("targetcard_imo_label").innerHTML = ship.eni ? "ENI" : "IMO";
-        document.getElementById("targetcard_imo").innerHTML = ship.eni || "-";
-    }
-
+    ["count", "received_stations"].forEach((e) => (document.getElementById("targetcard_" + e).innerHTML = ship[e] != null ? ship[e] : "-"));
     [
-        { id: "cog", u: "&deg", d: 1 },
         { id: "bearing", u: "&deg", d: 0 },
-        { id: "heading", u: "&deg", d: 0 },
         { id: "level", u: "dB", d: 1 },
         { id: "ppm", u: "ppm", d: 1 },
     ].forEach((el) => (document.getElementById("targetcard_" + el.id).innerHTML = ship[el.id] != null ? Number(ship[el.id]).toFixed(el.d) + " " + el.u : null));
-
-    document.getElementById("targetcard_country").innerHTML = getCountryName(ship.country);
-    document.getElementById("targetcard_callsign").innerHTML = getCallSign(ship) || null;
     document.getElementById("targetcard_msgtypes").innerHTML = getStringfromMsgType(ship.msg_type);
-
     document.getElementById("targetcard_last_group").innerHTML = getStringfromGroup(ship.last_group);
     document.getElementById("targetcard_sources").innerHTML = getStringfromGroup(ship.group_mask);
-
     document.getElementById("targetcard_channels").innerHTML = getStringfromChannels(ship.channels);
-    document.getElementById("targetcard_type").innerHTML = getMmsiTypeVal(ship) + ' <i class="info_icon card-tech-icon" id="targetcard_tech_info" data-action="techInfo" title="Technical details"></i>';
     const shiptype = ship.shiptype ?? null;
-    document.getElementById("targetcard_shiptype").innerHTML = shiptype != null
-        ? getShipTypeShort(shiptype) + ' <i class="info_icon card-tech-icon" id="targetcard_shiptype_info" data-action="shiptypeInfo" title="Ship type details"></i>'
-        : getShipTypeShort(shiptype);
     document.getElementById("shiptype_code").textContent = shiptype != null ? shiptype : "-";
-    document.getElementById("shiptype_desc").textContent = shiptype != null
-        ? getShipTypeFull(shiptype)
-        : "-";
-    document.getElementById("targetcard_status").innerHTML = getStatusVal(ship);
+    document.getElementById("shiptype_desc").textContent = shiptype != null ? getShipTypeFull(shiptype) : "-";
     document.getElementById("targetcard_last_signal").innerHTML = getDeltaTimeVal(clock - ship.last_signal);
-    document.getElementById("targetcard_eta").innerHTML = ship.eta_month != null && ship.eta_hour != null && ship.eta_day != null && ship.eta_minute != null ? getEtaVal(ship) : null;
-    document.getElementById("targetcard_region").innerHTML = regionName(ship.region);
-    document.getElementById("targetcard_lat").innerHTML = ship.lat != null ? getLatValFormat(ship) : null;
-    document.getElementById("targetcard_lon").innerHTML = ship.lon != null ? getLonValFormat(ship) : null;
-    document.getElementById("targetcard_altitude").innerHTML = ship.altitude != null ? ship.altitude + " m" : null;
-
-    document.getElementById("targetcard_speed").innerHTML = ship.speed != null ? getSpeedVal(ship.speed) + " " + getSpeedUnit() : null;
     document.getElementById("targetcard_distance").innerHTML = ship.distance != null ? getDistanceVal(ship.distance) + " " + getDistanceUnit() : null;
     document.getElementById("targetcard_repeated").innerHTML = ship.repeat != null ? (ship.repeat > 0 ? "Yes" : "No") : null;
-    document.getElementById("targetcard_draught").innerHTML = ship.draught ? getDraughtVal(ship.draught) + " " + getDimUnit() : null;
-    document.getElementById("targetcard_dimension").innerHTML = getShipDimension(ship);
-    document.getElementById("targetcard_bluesign").innerHTML = ship.maneuver === 2 ? "Set" : (ship.maneuver === 1 ? "Not set" : null);
 
     updateTrackOption();
     updateFollowOption();

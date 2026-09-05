@@ -69,6 +69,7 @@ import 'ol/ol.css';
 
 const MENU_CHECKS = {
     toggleTargetcardPin: () => settings.targetcard_pinned,
+    toggleShipcardStyle: () => settings.shipcard_style === "tabs",
     toggleTrackCtx: () => trackIsShown(context_mmsi),
     toggleAllTracks: () => settings.show_all_tracks,
     toggleTrackCutoff: () => trackCutoff > 0,
@@ -374,8 +375,9 @@ const ACTIONS = {
     setMeasureMode: () => { measure.setMeasureMode(); showNotification('Shift+click on start point/object'); },
     toggleMeasurecard: () => toggleMeasurecard(),
     toggleTargetcardPin: () => toggleTargetcardPin(),
+    toggleShipcardStyle: () => toggleShipcardStyle(),
     toggleTargetcardSize: () => toggleTargetcardSize(),
-    targetcardSelectSelf: (e, d, el) => targetcardselect(el),
+    targetcardSelectSelf: (e, d, el) => { if (settings.shipcard_style !== "tabs") targetcardselect(el); },
     targetcardContextMenu: (e) => showContextMenu(e, card_mmsi, card_type, ['object', 'object-map', 'ctx-targetcard']),
     showTargetcardClose: () => showTargetcard(null, null),
     showBinaryMessageDialogCard: () => binary.showBinaryMessageDialog(card_mmsi),
@@ -479,6 +481,7 @@ window.__app__ = {
     get selectMapTab() { return selectMapTab; },
     get saveSettings() { return saveSettings; },
     get fetchShips() { return fetchShips; },
+    get fetchTableRows() { return fetchTableRows; },
     get shipsSince() { return clock; },
     get receivers() { return config.receivers || []; },
     get setReceiver() { return onReceiverChange; },
@@ -653,6 +656,8 @@ const DEFAULT_SETTINGS = {
         show_all_tracks: false,
         targetcard_top_left: true,
         targetcard_open_max: true,
+        shipcard_style: "classic",
+        shipcard_active_tab: "summary",
         map_toolbar: "compact",
         show_signal_graphs: true,
         show_ppm_graphs: true,
@@ -942,6 +947,7 @@ function buildSettingsTabs() {
           },
           onChange: (k, v, el, staged) => {
             if (k === "label_class_background") updateLabelColorRows();
+            if (k === "shipcard_style") targetcard.setStyle(v);
             /* while a slider is dragged the styles re-run; the release rebuilds the features */
             if (staged) [markerLayer, planeLayer, shapeLayer, trackLayer, labelLayer].forEach((l) => l.changed());
             else redrawMap();
@@ -2158,6 +2164,26 @@ async function fetchShips(noDoubleFetch = true) {
     }
 }
 
+// The ships table's columns beyond the map's row, pulled only while that tab
+// is open: one full pass on opening, then only ships heard since, merged by MMSI.
+const tableKeys = ["mmsi", "bearing", "level", "ppm", "count", "msg_type", "last_group", "group_mask", "altitude", "received_stations", "mmsi_type", "region"];
+let tableSince = 0;
+
+async function fetchTableRows() {
+    try {
+        const response = await fetch("api/ships_table.json?receiver=" + activeReceiver + (tableSince > 0 ? "&since=" + tableSince : ""));
+        if (!response.ok) return;
+        const data = await response.json();
+        (data.rows || []).forEach((v) => {
+            const s = Object.fromEntries(tableKeys.map((k, i) => [k, v[i]]));
+            if (s.mmsi in shipsDB) Object.assign(shipsDB[s.mmsi].raw, s);
+        });
+        if (data.time) tableSince = data.time - 1;
+    } catch (error) {
+        console.log("failed loading table rows:", error);
+    }
+}
+
 async function fetchShipsBody() {
     let ships = {};
 
@@ -2174,11 +2200,9 @@ async function fetchShipsBody() {
     }
 
     const dynamicKeys = [
-        "mmsi", "lat", "lon", "distance", "bearing",
-        "heading", "cog", "speed", "status", "level", "ppm",
-        "count", "msg_type", "last_signal", "last_group", "group_mask",
-        "flags", "altitude", "received_stations",
-        "mmsi_type", "shipclass", "country", "region", "binary", "station"
+        "mmsi", "lat", "lon", "distance",
+        "heading", "cog", "speed", "status", "age", "flags",
+        "shipclass", "country", "binary", "station"
     ];
 
     const staticKeys = [
@@ -2220,6 +2244,8 @@ async function fetchShipsBody() {
     if (ships.dynamic) {
         ships.dynamic.forEach((v) => {
             const s = Object.fromEntries(dynamicKeys.map((k, i) => [k, v[i]]));
+            s.last_signal = serverTime - (s.age || 0);
+            delete s.age;
 
             const flags = s.flags;
             s.validated = (flags & 3) == 2 ? -1 : flags & 3;
@@ -2546,6 +2572,7 @@ function targetcardselect(e) {
 }
 
 function toggleTargetcardSize() {
+    if (settings.shipcard_style === "tabs") return;   // the tabbed card stays maximised
     ui.card.setMax(!ui.card.isMax());
     fitTargetcard();
     if (isTargetcardMax()) adjustMapForTargetcard();
@@ -2585,6 +2612,7 @@ function onReceiverChange(idx) {
     if (replaycardVisible()) toggleReplaycard();
     activeReceiver = parseInt(idx, 10) || 0;
     setShipsSince(0);
+    tableSince = 0;
     binary.resetSince();
     range.resetUpdateTime();
     lastPathFetch = 0;
@@ -3082,8 +3110,11 @@ function updateMapURL() {
 }
 
 function saveSettings() {
-    settings.targetcard_max = isTargetcardMax();
-    settings.targetcard_rows = ui.card.keep.state();
+    // the tabbed card neither folds nor keeps rows: those stay as classic left them
+    if (settings.shipcard_style !== "tabs") {
+        settings.targetcard_max = isTargetcardMax();
+        settings.targetcard_rows = ui.card.keep.state();
+    }
     settings.activeReceiver = activeReceiver;
 
     const filters = realtimeModule?.getFilters();
@@ -3869,6 +3900,13 @@ function applyTargetcardPinStyling() {
     ui.card.markPinned(settings.targetcard_pinned);
 }
 
+function toggleShipcardStyle() {
+    settings.shipcard_style = settings.shipcard_style === "tabs" ? "classic" : "tabs";
+    targetcard.setStyle(settings.shipcard_style);
+    if (settingsPanel.sync) settingsPanel.sync();
+    saveSettings();
+}
+
 function toggleTargetcardPin() {
     if (settings.targetcard_pinned) unpinTargetcard();
     else pinTargetcard();
@@ -3941,6 +3979,7 @@ function showTargetcard(type, m, pixel = undefined) {
     }
 
     setCard(m, type);
+    if (type == 'ship' && m != null) targetcard.loadVessel(m);
     syncTableSelection();
 
     if (targetcardVisible()) {
@@ -3961,7 +4000,7 @@ function showTargetcard(type, m, pixel = undefined) {
            card up keeps the size the user has */
         const known = card_type != 'ship' || ship != null;
         const wantMax = known && settings.targetcard_open_max && !mapui.paneCramped();
-        if (!visible && isTargetcardMax() !== wantMax) toggleTargetcardSize();
+        if (settings.shipcard_style !== "tabs" && !visible && isTargetcardMax() !== wantMax) toggleTargetcardSize();
         if (ship && (!visible || prev_mmsi !== m) && !hasValidCoords(ship.lat, ship.lon))
             showNotification("No position received for " + (getShipName(ship) || m), "error");
         positionAside(pixel, aside);
@@ -4688,6 +4727,11 @@ let pluginActionCounter = 0;
 targetcard.init({
     fitTargetcard,
     card: ui.card,
+    getStyle: () => settings.shipcard_style,
+    getTab: () => settings.shipcard_active_tab,
+    isCramped: () => mapui.paneCramped(),
+    foldOnOpen: () => mapui.paneCramped() && !targetcardVisible(),
+    setTab: (t) => { settings.shipcard_active_tab = t; saveSettings(); },
     getReceiver: () => activeReceiver,
     realtimeEnabled: () => config.features.realtime,
     isFollowing,
@@ -4777,6 +4821,7 @@ updateReceiverSelect(config.receivers);
 console.log("Load settings from URL parameters");
 
 loadSettingsFromURL();
+targetcard.setStyle(settings.shipcard_style);   // the card was built before the settings were read
 applyDynamicStyling();
 community.applySharingState();
 

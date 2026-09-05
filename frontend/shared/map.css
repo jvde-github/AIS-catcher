@@ -257,13 +257,13 @@
 
 .ticker-side {
     flex: none;
-    order: 1;
+    order: 9;
     display: flex;
     align-items: center;
     justify-content: center;
     width: 16px;
     height: 16px;
-    margin-left: 2px;
+    margin-left: auto;
     padding: 0;
     border: none;
     border-radius: var(--radius-sm);
@@ -431,9 +431,6 @@ body.ticker-open.ticker-bottom {
     order: 0;
 }
 
-.ticker.ticker-wide .ticker-side {
-    order: 3;
-}
 
 .ticker-feed,
 .ticker-buckets {
@@ -490,17 +487,6 @@ body.ticker-open.ticker-bottom {
 }
 
 /* what arrived while the page was not being looked at */
-.ticker-badge {
-    min-width: 16px;
-    padding: 0 4px;
-    border-radius: var(--radius-2xl);
-    background: var(--color-accent);
-    color: #fff;
-    font-size: var(--fs-xs);
-    line-height: 16px;
-    text-align: center;
-}
-
 .tk-name {
     font-weight: var(--fw-bold);
 }
@@ -1083,13 +1069,13 @@ body.ticker-open.ticker-bottom {
     position: relative;
     list-style: none;
     margin: 0;
-    padding: 10px 12px 8px 28px;
+    padding: 10px 12px 8px 20px;
 }
 
 .tl::before {
     content: "";
     position: absolute;
-    left: 15px;
+    left: 8px;
     top: 14px;
     bottom: 14px;
     width: 1px;
@@ -1242,4 +1228,157 @@ body.ticker-open.ticker-bottom {
 /* the name on a hover row: each host styles it as its vessel row does */
 .tooltip-name {
     font-weight: inherit;
+}
+
+/* ---- the ship card as tabs: one view at a time, the tab remembered -------
+   One grid throughout: a small grey label above its value, values one size
+   at medium weight, the panels a notch off the card and the rows not for
+   selecting. */
+.sc-host { --sc-tint: var(--color-card-header); }
+.sc-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 2px 8px 0;
+    border-bottom: 1px solid var(--color-rule);
+}
+/* a host page may style every button (OpenLayers sizes .ol-control buttons);
+   the tabs are plain text on a rule */
+.sc-host .sc-tabs .sc-tab {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 7px 2px 6px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    appearance: none;
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-normal);
+    line-height: normal;
+    text-transform: none;
+    letter-spacing: normal;
+    cursor: pointer;
+}
+.sc-host .sc-tabs .sc-tab:hover { color: var(--color-text); background: none; outline: none; text-decoration: none; }
+.sc-host .sc-tabs .sc-tab[aria-selected="true"] {
+    color: var(--color-text);
+    border-bottom-color: var(--color-card-edge);
+}
+.sc-host .sc-tabs .sc-tab:focus { outline: none; background: none; box-shadow: none; }
+.sc-host .sc-tabs .sc-tab:focus-visible { color: var(--color-card-edge); }
+.sc-panels {
+    max-height: min(60vh, 520px);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.sc-host.sc-folded .sc-panels { display: none; }
+.sc-panel { padding: 4px 0 6px; }
+.sc-panel .card-section { display: none; }
+.sc-panel .card-row { border-bottom: none; }
+.sc-panel .card-row + .card-row { border-top: 1px solid var(--color-rule); }
+.sc-panel .mapcard-content-row, .sc-panel .mapcard-content-row:hover { cursor: default; }
+.sc-panel .mapcard-content-row>div>span:first-child { text-transform: none; }
+.sc-group {
+    padding: 8px 10px;
+    border-top: 1px solid var(--color-rule);
+}
+.sc-panel > .sc-group:first-child { border-top: none; }
+.sc-group-label {
+    font-size: var(--fs-2xs);
+    line-height: 13px;
+    color: var(--color-text-muted);
+}
+.sc-group .hist-wrap { font-size: var(--fs-md); line-height: 18px; }
+.sc-group .dim-note { padding: 0; font-size: var(--fs-sm); line-height: 18px; color: var(--color-text-muted); text-align: left; }
+.card-tabs .card-row-selected { box-shadow: none; }
+.sc-sum-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px 6px;
+    font-size: var(--fs-md);
+    color: var(--color-text);
+}
+.sc-sum-text { min-width: 0; }
+.sc-sum-id {
+    flex: none;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    background: var(--sc-tint);
+    font-size: var(--fs-2xs);
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.sc-sum-sep { margin: 0 6px; color: var(--color-text-muted); }
+.sc-sum-status { font-weight: var(--fw-medium); }
+.sc-strip {
+    margin: 0;
+    padding: 12px 12px 14px;
+    background: var(--sc-tint);
+}
+.sc-strip .ends { display: flex; justify-content: space-between; gap: 16px; }
+.sc-strip .l { font-size: var(--fs-2xs); color: var(--color-text-muted); }
+.sc-strip .v {
+    margin-top: 2px;
+    font-size: var(--fs-md);
+    font-weight: var(--fw-medium);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+.sc-strip .sc-sum-pos { margin-top: 1px; font-size: var(--fs-2xs); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.sc-strip .ends > div:last-child { text-align: right; }
+.sc-strip .line { display: flex; align-items: center; gap: 6px; margin: 10px 0 8px; color: var(--color-card-edge); }
+.sc-strip .line .pip {
+    width: 12px; height: 12px; flex: none; box-sizing: border-box;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    display: grid; place-items: center;
+}
+.sc-strip .line .pip::after { content: ''; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+/* the line is a fixed picture, not progress: solid to the midpoint where it
+   points, dashed on to the destination */
+.sc-strip .line .t { position: relative; flex: 1; height: 10px; }
+.sc-strip .line .t::before {
+    content: ''; position: absolute; left: 0; top: 3.5px; width: 50%; height: 3px;
+    border-radius: 1.5px; background: currentColor;
+}
+.sc-strip .line .t::after {
+    content: ''; position: absolute; left: 50%; top: 0; transform: translateX(-3px);
+    border-left: 8px solid currentColor;
+    border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+}
+.sc-strip .line .t i {
+    position: absolute; left: calc(50% + 7px); right: 0; top: 4px; height: 2px;
+    background: repeating-linear-gradient(90deg, var(--color-text-muted) 0 4px, transparent 4px 8px);
+    opacity: 0.6;
+}
+.sc-strip .line .pin { flex: none; display: inline-flex; }
+.sc-strip .under { display: flex; justify-content: space-between; gap: 16px; font-size: var(--fs-2xs); color: var(--color-text-muted); }
+.sc-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0 12px 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-rule);
+}
+.sc-metrics > div { min-width: 0; }
+.sc-metrics span { display: block; font-size: var(--fs-2xs); color: var(--color-text-muted); }
+.sc-metrics b {
+    display: block; margin-top: 2px;
+    font-size: var(--fs-md); font-weight: var(--fw-medium); font-variant-numeric: tabular-nums;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-tabs .mapcard-footer { flex-basis: 46px; }
+@media (max-width: 520px) {
+    .sc-strip .ends { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; }
+    .sc-strip .ends > div:last-child { text-align: left; }
 }

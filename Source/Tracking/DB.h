@@ -37,7 +37,7 @@
 #include "StationRegistry.h"
 #include "PathStore.h"
 #include "BinaryStore.h"
-#include "StaticHistory.h"
+#include "StaticStore.h"
 #include "EventRing.h"
 
 class DB : public StreamIn<JSON::JSON>,
@@ -79,6 +79,35 @@ class DB : public StreamIn<JSON::JSON>,
 
 public:
 	// Locked reads for code that lives outside the DB: one ship by MMSI, or all of them.
+	// The vessel's record, the same on every host: the ship's body, its
+	// message badge and riding station, and what it has reported changing.
+	// `extra(w, ship, ptr)` writes what only the caller knows - a hub the
+	// stations that heard it, a receiver nothing - before the object closes.
+	template <typename F>
+	std::string vesselJSON(uint32_t mmsi, F extra)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+
+		int ptr = ships.find(mmsi);
+		if (ptr == SHIP_NIL)
+			return "{}";
+
+		const Ship &ship = ships[ptr];
+		std::time_t now = time(nullptr);
+
+		content.clear();
+		{
+			JSON::Writer w(content, 1024);
+			w.beginObject();
+			ship.writeJSONBody(w, (long int)now - (long int)ship.last_signal, isValidCoord(station_lat, station_lon));
+			w.kv("binary", binary.badge(ship.mmsi, now)).kv("station", stations.idFor(ship.mmsi)).key("changes");
+			changes.writeJSON(w, ptr);
+			extra(w, ship, ptr);
+			w.endObject();
+		}
+		return content;
+	}
+
 	template <typename F>
 	bool withShip(uint32_t mmsi, F f)
 	{
@@ -151,7 +180,7 @@ public:
 
 private:
 	PathStore paths;
-	StaticHistory changes;
+	StaticStore changes;
 
 	std::mutex mtx;
 
@@ -293,15 +322,16 @@ public:
 
 	std::string getShipJSON(int mmsi);
 	std::string getChangesJSON(int mmsi);
-	std::string getRecentChangesJSON(uint32_t since, std::size_t max);
 	void logTextChange(const Ship &ship, int field, const char *old_value, const std::string &value);
 	void note(const Ship &ship, EventRing::Kind kind, EventRing::Level level, std::time_t now, const std::string &text,
 			  const std::string &label = std::string(), uint32_t to = 0, const std::string &was = std::string());
 	void noteSafety(Ship &ship, const JSON::JSON &data);
 	void noteDestination(Ship &ship, const std::string &v);
+	void noteDraught(Ship &ship, float d);
 	void noteStatus(Ship &ship, int status);
 	std::string getJSON(bool full = false);
 	std::string getJSONcompact(bool full = false, std::time_t since = 0);
+	std::string getJSONtable(std::time_t since = 0);
 	std::string getPathJSON(uint32_t);
 	std::string getAllPathJSON();
 	std::string getAllPathJSONSince(std::time_t since);

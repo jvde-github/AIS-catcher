@@ -42,7 +42,7 @@ export function stepChartSVG(series, unit, footLeft, footRight, aria, fmt) {
   <line x1="${L}" y1="${y(0)}" x2="${W - R}" y2="${y(0)}" class="spd-axis"/>
   <line x1="${L}" y1="${T}" x2="${L}" y2="${y(0)}" class="spd-axis"/>
   <line x1="${L}" y1="${y(top)}" x2="${W - R}" y2="${y(top)}" class="spd-grid"/>
-  <text x="${L - 4}" y="${(+y(top) + 3).toFixed(1)}" class="dim-t" text-anchor="end">${tick(vmax)}</text>
+  <text x="${L - 4}" y="${(+y(top) + 3).toFixed(1)}" class="dim-t" text-anchor="end">${tick(top)}</text>
   <text x="${L - 4}" y="${(+y(0) + 3).toFixed(1)}" class="dim-t" text-anchor="end">0</text>
   <polygon points="${area.join(" ")}" fill="url(#${grad})" stroke="none"/>
   <polyline points="${pts.join(" ")}" class="spd-line"/>
@@ -69,9 +69,10 @@ export function getDraughtChartSVG(changes, currentDraught, units) {
 
     const secs = scaled[scaled.length - 1].t - scaled[0].t;
     const span = secs < 120 ? secs + " s" : secs < 7200 ? Math.round(secs / 60) + " min" : Math.round(secs / 3600) + " h";
+    const flat = scaled.every((p) => p.v === last.v);
     return stepChartSVG(scaled, u, span + " · " + nChanges + (nChanges === 1 ? " change" : " changes"),
-        "now · " + last.v.toFixed(1) + " " + u,
-        "Draught history, " + nChanges + " changes, now " + last.v.toFixed(1) + " " + u);
+        (flat ? "stayed at " : "now · ") + last.v.toFixed(1) + " " + u,
+        "Draught history, " + nChanges + " changes, " + (flat ? "steady at " : "now ") + last.v.toFixed(1) + " " + u);
 }
 
 export function getChangeListHTML(changes, fields, units) {
@@ -132,10 +133,11 @@ export function getSpeedHistorySVG(pts, sogDiv, units) {
     const span = secs < 120 ? secs + " s" : Math.round(secs / 60) + " min";
     const lastV = series[series.length - 1].v;
     const vmax = Math.max(...series.map((p) => p.v));
+    const flat = series.every((p) => p.v === lastV);
 
     return stepChartSVG(series, unit, span + " of history",
-        "now · " + lastV.toFixed(1) + " " + unit,
-        "Speed history over the last " + span + ", peaking at " + vmax.toFixed(1) + " " + unit);
+        (flat ? "stayed at " : "now · ") + lastV.toFixed(1) + " " + unit,
+        "Speed history over the last " + span + (flat ? ", steady at " : ", peaking at ") + vmax.toFixed(1) + " " + unit);
 }
 
 export function getShipDimensionSVG(ship, units) {

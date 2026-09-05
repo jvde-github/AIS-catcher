@@ -24,7 +24,6 @@
 #include "Logger.h"
 
 // per poll; a viewer that has been away does not need the whole ring
-static const int CHANGES_TICKER_MAX = 60;
 
 #include <cstdio>
 #include <cstdlib>
@@ -862,6 +861,9 @@ const WebViewer::Route WebViewer::routes[] = {
 	{"/api/ships_array.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 { return s->getShipsJSONcompact(queryInt(a, "since")); }, true},
+	{"/api/ships_table.json", nullptr, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 { return s->getShipsTableJSON(queryInt(a, "since")); }, true},
 	{"/api/planes.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &)
 	 { return w->planes.getJSON(); }, true},
@@ -962,6 +964,15 @@ const WebViewer::Route WebViewer::routes[] = {
 		 std::string vessel = s->getShipJSON(mmsi);
 		 return vessel == "{}" ? std::string("{\"error\":\"Vessel not found\"}") : vessel;
 	 }, true},
+	{"/api/ship.json", nullptr, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 {
+		 long long mmsi = queryInt(a, "mmsi");
+		 if (mmsi < 1 || mmsi > 999999999)
+			 return std::string("{\"error\":\"Invalid MMSI\"}");
+		 std::string vessel = s->getShipJSON((int)mmsi);
+		 return vessel == "{}" ? std::string("{\"error\":\"Vessel not found\"}") : vessel;
+	 }, true},
 	{"/api/changes.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 {
@@ -969,17 +980,6 @@ const WebViewer::Route WebViewer::routes[] = {
 		 if (mmsi <= 0)
 			 return std::string("{\"error\":\"Invalid MMSI\"}");
 		 return s->getChangesJSON(mmsi);
-	 }, true},
-	{"/api/changes_recent.json", nullptr, "application/json",
-	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
-	 {
-		 // the rings are walked newest-first, so a caller that wants only the
-		 // latest handful says so rather than being sent the lot to discard
-		 long long max = queryInt(a, "max");
-		 if (max <= 0 || max > CHANGES_TICKER_MAX)
-			 max = CHANGES_TICKER_MAX;
-
-		 return s->getRecentChangesJSON((uint32_t)queryInt(a, "since"), (std::size_t)max);
 	 }, true},
 	{"/api/decode", &WebViewer::Settings::showdecoder, "application/json",
 	 [](WebViewer *, ReceiverTracker *, const std::string &a)

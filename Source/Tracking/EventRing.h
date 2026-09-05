@@ -34,7 +34,7 @@
 class EventRing
 {
 public:
-	enum Kind : uint8_t { SAFETY = 1, DESTINATION = 2, STATUS = 3 };
+	enum Kind : uint8_t { SAFETY = 1, DESTINATION = 2, STATUS = 3, DRAUGHT = 4 };
 	enum Level : uint8_t { ROUTINE = 0, NOTICE = 1, URGENT = 2, LEVELS = 3 };
 
 	struct Event

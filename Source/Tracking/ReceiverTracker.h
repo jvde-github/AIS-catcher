@@ -125,6 +125,7 @@ public:
 
 	std::string getShipsJSON(bool full = false) { return ships.getJSON(full); }
 	std::string getShipsJSONcompact(std::time_t since = 0) { return ships.getJSONcompact(false, since); }
+	std::string getShipsTableJSON(std::time_t since = 0) { return ships.getJSONtable(since); }
 	std::string getBinaryMessagesJSON(std::time_t since = 0, uint64_t marker = 0, uint32_t owner = 0) { return ships.getBinaryMessagesJSON(since, marker, owner); }
 	std::string getMapObjectsJSON(uint64_t since = 0) { return ships.getMapObjectsJSON(since); }
 	std::string getObjectJSON(const std::string &key) { return ships.getObjectJSON(key); }
@@ -142,7 +143,6 @@ public:
 	std::string getMessage(uint32_t mmsi) { return ships.getMessage(mmsi); }
 	std::string getShipJSON(uint32_t mmsi) { return ships.getShipJSON(mmsi); }
 	std::string getChangesJSON(uint32_t mmsi) { return ships.getChangesJSON(mmsi); }
-	std::string getRecentChangesJSON(uint32_t since, std::size_t max) { return ships.getRecentChangesJSON(since, max); }
 };
 
 // How a device names itself. attachEngine() needs this before it has a tracker
