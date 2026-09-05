@@ -825,10 +825,18 @@ void DB::note(const Ship &ship, EventRing::Kind kind, EventRing::Level level, st
 	e.kind = kind;
 	e.level = level;
 	e.from = ship.mmsi;
+	e.from_name = ship.shipname;
+	const int recipient = to ? ships.find(to) : SHIP_NIL;
+	if (recipient != SHIP_NIL) e.to_name = ships[recipient].shipname;
 	e.to = to;
 	e.time = now;
 	e.lat = ship.lat;
 	e.lon = ship.lon;
+	if (!isValidCoord(e.lat, e.lon) && latlon_share && isValidCoord(station_lat, station_lon))
+	{
+		e.lat = station_lat;
+		e.lon = station_lon;
+	}
 	e.text = text;
 	e.was = was;
 	e.label = label;

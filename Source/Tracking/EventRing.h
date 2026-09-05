@@ -25,8 +25,8 @@
 #include "Writer.h"
 
 // What the receiver found worth telling: a safety message, or a field of a
-// vessel's record changing. The receiver words it: a change carries the field's
-// name and the value on either side, and a reader only has to lay them out.
+// vessel's record changing. Structured fields stay inside the ring for repeat
+// detection; ticker-v1 JSON carries fully worded, escaped presentation text.
 // Every event has a place, stamped when it is made, so a reader can go there. One ring per level: a burst of routine events fills its own
 // ring and never pushes out a distress call. The same words from the same sender, heard again while the
 // earlier event is still live, count on that event instead of becoming another
@@ -47,8 +47,42 @@ public:
 		FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 		int count = 1;
 		// a change reads as `label`: `was` -> `text`; a safety message is `text` alone
-		std::string text, was, label;
+		std::string text, was, label, from_name, to_name;
 	};
+
+	// Escape received text before adding the three ticker formatting markers.
+	static std::string escapeText(const std::string &text)
+	{
+		std::string out;
+		for (char c : text)
+		{
+			if (c == '\\' || c == '*' || c == ':' || c == '[' || c == ']') out += '\\';
+			out += c;
+		}
+		return out;
+	}
+
+	static std::string displayName(uint32_t mmsi, const std::string &name)
+	{
+		const std::string id = std::to_string(mmsi);
+		if (id.compare(0, 3, "972") == 0) return "MOB device";
+		if (id.compare(0, 3, "974") == 0) return "EPIRB";
+		if (id.compare(0, 3, "970") == 0) return "AIS-SART";
+		if (mmsi >= 2000000 && mmsi <= 9999999) return "VTS " + (name.empty() ? id : name);
+		return name.empty() ? "MMSI " + id : name;
+	}
+
+	static std::string formatText(const Event &e)
+	{
+		std::string out = e.label.empty() && e.level >= NOTICE ? "⚠ " : "";
+		out += "**" + escapeText(displayName(e.from, e.from_name)) + "**";
+		if (!e.label.empty())
+			return out + " · ::" + escapeText(e.label + (e.was.empty() ? "" : " " + e.was)) + ":: → [[" + escapeText(e.text) + "]]";
+		if (e.to) out += " → **" + escapeText(displayName(e.to, e.to_name)) + "**";
+		out += " · [[" + escapeText(e.text) + "]]";
+		if (e.count > 1) out += " (×" + std::to_string(e.count) + ")";
+		return out;
+	}
 
 	EventRing()
 	{
@@ -96,18 +130,12 @@ public:
 		for (const Event *e : picked)
 		{
 			w.beginObject().kv("seq", (long long)e->seq).kv("t", (long long)e->time).kv("first", (long long)e->first)
-				.kv("kind", (int)e->kind).kv("level", (int)e->level).kv("from", (long long)e->from);
-			if (e->to)
-				w.kv("to", (long long)e->to);
+				.kv("format", "ticker-v1").kv("level", (int)e->level).kv("mmsi", (long long)e->from);
 			if (isValidCoord(e->lat, e->lon))
 				w.kv("lat", e->lat).kv("lon", e->lon);
 			if (e->count > 1)
 				w.kv("count", e->count);
-			if (!e->label.empty())
-				w.kv("label", e->label);
-			if (!e->was.empty())
-				w.kv("was", e->was);
-			w.kv("text", e->text).endObject();
+			w.kv("text", formatText(*e)).endObject();
 		}
 		w.endArray();
 	}

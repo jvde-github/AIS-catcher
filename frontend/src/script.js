@@ -4780,7 +4780,13 @@ planecard.init({});
 ticker.init({
     buckets: bucketChips(),
     bucketHidden: (b) => filter.isActive() && filter.isHidden("bucket", b),
-    openVessel: (m) => openFocus(m, 14),
+    openVessel: (m, event) => {
+        const ship = shipsDB[m]?.raw;
+        if (ship && hasValidCoords(ship.lat, ship.lon)) openFocus(m, 14);
+        else if (hasValidCoords(event?.lat, event?.lon)) {
+            map.getView().animate({ center: fromLonLat([event.lon, event.lat]), zoom: 14 });
+        }
+    },
 });
 
 replay.init({

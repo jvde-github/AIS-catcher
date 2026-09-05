@@ -11,7 +11,7 @@
            mount: document.getElementById("ticker"),     // .ticker with .ticker-feed etc. inside
            buckets: BUCKETS,                              // chip spec (core/filter.js BUCKETS)
            bucketHidden: (id) => filter.isHidden("bucket", id),
-           onSelect: (id) => openVessel(id),
+           onSelect: (id, event) => openVessel(id, event.lat, event.lon),
        });
        t.setEnabled(true);
        t.push([{ key, at, id, text, html, fresh, level, demoted }]);   // at: ms; level 0-2 holds longer; demoted surfaces rarely
@@ -101,8 +101,9 @@ export function create(opts) {
         };
         item.addEventListener("click", () => {
             if (slot.dragged) { slot.dragged = false; return; }
+            const event = slot.event;
             if (item.dataset.key) dismiss(item.dataset.key);
-            if (item.dataset.id) onSelect(item.dataset.id);
+            if (event) onSelect(event.id == null ? '' : String(event.id), event);
         });
         bindTouch();
         item.style.display = "none";
@@ -281,7 +282,6 @@ export function create(opts) {
         events = events.filter((e) => e.key !== key);
         if (events.length === before) return;
         cursor = -1;
-        shownKey = null;
         fadeTo(pick(Date.now()));
     }
 
@@ -387,6 +387,7 @@ export function create(opts) {
     // the seconds the line pans, 0 when it fits
     function show(event) {
         if (!slot) return 0;
+        slot.event = event;
         bar.classList.toggle("ticker-idle", !event);
         if (slot.shown !== !!event) {
             slot.item.style.display = event ? "flex" : "none";
