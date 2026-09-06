@@ -70,7 +70,8 @@ namespace AIS
 		char latDir = lat >= 0 ? 'N' : 'S';
 		char lonDir = lon >= 0 ? 'E' : 'W';
 
-		std::string line = "$GPGLL," + flat + "," + latDir + "," + flon + "," + lonDir + ",,,";
+		// an empty status field reads as "no fix" and is dropped on the way back in
+		std::string line = "$GPGLL," + flat + "," + latDir + "," + flon + "," + lonDir + ",,A,A";
 
 		int c = NMEAchecksum(line);
 
@@ -147,6 +148,12 @@ namespace AIS
 		{
 			w.append_lit(",\"ipv4\":");
 			w.append_int((long long)tag.ipv4);
+		}
+
+		if (tag.quality)
+		{
+			w.append_lit(",\"quality\":");
+			w.append_int((long long)tag.quality);
 		}
 
 		if (tag.mode & 1)
@@ -292,11 +299,11 @@ namespace AIS
 
 		int numBytes = (length + 7) / 8;
 
-		// Reserve worst case directly in `out`: header (≤17) + payload (numBytes)
+		// Reserve worst case directly in `out`: header (≤23) + payload (numBytes)
 		// + optional CRC (2), each byte possibly doubled by escaping, plus the
 		// literal trailing '\n' framing terminator.
 		size_t base = out.size();
-		size_t worst = (17 + (size_t)numBytes + 2) * 2 + 1;
+		size_t worst = (23 + (size_t)numBytes + 2) * 2 + 1;
 		AISC_STRING_RESIZE_UNINIT(out, base + worst);
 
 		char *const p0 = &out[base];
@@ -355,6 +362,10 @@ namespace AIS
 		if (tag.level != LEVEL_UNDEFINED && tag.ppm != PPM_UNDEFINED)
 			flags |= 0x01;
 		flags |= crc ? 0x02 : 0x00;
+		if (station)
+			flags |= 0x04;
+		if (tag.quality)
+			flags |= 0x10;
 		*p++ = (char)flags;
 
 		// 8-byte timestamp (big-endian) as one bulk-escaped sequence.
@@ -372,7 +383,22 @@ namespace AIS
 			put((unsigned char)((signal_tenths >> 8) & 0xFF));
 			put((unsigned char)(signal_tenths & 0xFF));
 			int ppm_tenths = (int)(tag.ppm * 10.0f);
+			ppm_tenths = ppm_tenths > 127 ? 127 : (ppm_tenths < -127 ? -127 : ppm_tenths);
 			put((unsigned char)(int8_t)ppm_tenths);
+		}
+
+		if (flags & 0x04)
+		{
+			uint32_t id = (uint32_t)station;
+			put((unsigned char)((id >> 24) & 0xFF));
+			put((unsigned char)((id >> 16) & 0xFF));
+			put((unsigned char)((id >> 8) & 0xFF));
+			put((unsigned char)(id & 0xFF));
+		}
+		if (flags & 0x10)
+		{
+			put((unsigned char)((tag.quality >> 8) & 0xFF));
+			put((unsigned char)(tag.quality & 0xFF));
 		}
 
 		*p++ = (char)channel;

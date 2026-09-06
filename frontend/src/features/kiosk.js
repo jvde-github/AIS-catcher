@@ -1,12 +1,12 @@
-// Kiosk mode: hides interactive chrome and rotates the shipcard through
+// Kiosk mode: hides interactive chrome and rotates the targetcard through
 // randomly selected visible ships.
 
 import { settings, isKiosk } from '../core/state.js';
+import { ships, clock, cardMmsi, hoverMmsi } from '../core/store.js';
 import { fromLonLat } from 'ol/proj';
 import { containsCoordinate } from 'ol/extent';
 
-// { getMap, getShipsDB, getShipsSince, getCardMmsi, getHoverMmsi,
-//   showShipcard, saveSettings }
+// { getMap, showTargetcard, saveSettings }
 let deps = null;
 let kioskAnimationInterval = null;
 const DEFAULT_ROTATION_SPEED = 5;
@@ -39,6 +39,7 @@ export function setKioskPanMap(enabled) {
 export function toggleKioskMode() {
     settings.kiosk = !settings.kiosk;
     updateKiosk();
+    deps.saveSettings();
 }
 
 const originalDisplayValues = new Map();
@@ -50,19 +51,21 @@ function clearAndHide(element) {
     element.style.display = "none";
 }
 
+// the snapshot is dropped once handed back, or the first value an element ever
+// had stays authoritative forever
 function restoreOriginalDisplay(element) {
     const saved = originalDisplayValues.get(element);
-    if (saved) {
-        element.style.display = saved;
-    } else {
-        element.style.removeProperty('display');
-    }
+    originalDisplayValues.delete(element);
+
+    if (saved) element.style.display = saved;
+    else element.style.removeProperty('display');
 }
 
-export function updateKiosk() {
+// callers that only need the chrome re-hidden must not restart the rotation
+export function updateKiosk(restart = true) {
     const kiosk = isKiosk();
-    if (kiosk) startKioskAnimation();
-    else stopKioskAnimation();
+    if (!kiosk) stopKioskAnimation();
+    else if (restart || !kioskAnimationInterval) startKioskAnimation();
 
     const toHide = document.querySelectorAll(kiosk ? ".nokiosk" : ".kiosk");
     const toShow = document.querySelectorAll(kiosk ? ".kiosk" : ".nokiosk");
@@ -72,12 +75,10 @@ export function updateKiosk() {
 
 function selectRandomShipForKiosk() {
     const map = deps.getMap();
-    const shipsDB = deps.getShipsDB();
-    const shipsSince = deps.getShipsSince();
 
     const mapExtent = map.getView().calculateExtent(map.getSize());
-    const visibleShips = Object.keys(shipsDB).filter(mmsi => {
-        const ship = shipsDB[mmsi].raw;
+    const visibleShips = Object.keys(ships).filter(mmsi => {
+        const ship = ships[mmsi].raw;
         if (!ship.lat || !ship.lon || ship.lat === 0 || ship.lon === 0) {
             return false;
         }
@@ -91,14 +92,14 @@ function selectRandomShipForKiosk() {
     }
 
     const candidates = visibleShips.filter(mmsi =>
-        mmsi != deps.getCardMmsi() && mmsi != deps.getHoverMmsi()
+        mmsi != cardMmsi && mmsi != hoverMmsi
     );
 
     const finalCandidates = candidates.length > 0 ? candidates : visibleShips;
 
     const weights = finalCandidates.map(mmsi => {
-        const ship = shipsDB[mmsi].raw;
-        const timeSinceUpdate = (shipsSince - ship.last_signal) || 3600;
+        const ship = ships[mmsi].raw;
+        const timeSinceUpdate = (clock - ship.last_signal) || 3600;
 
         // Higher weight for more recently updated ships
         if (timeSinceUpdate < 60) return 10;
@@ -121,13 +122,12 @@ function selectRandomShipForKiosk() {
 }
 
 function showKioskShip(mmsi) {
-    const shipsDB = deps.getShipsDB();
-    if (!mmsi || !(mmsi in shipsDB)) {
+    if (!mmsi || !(mmsi in ships)) {
         console.log("Invalid MMSI or ship not found:", mmsi);
         return;
     }
 
-    const ship = shipsDB[mmsi].raw;
+    const ship = ships[mmsi].raw;
     if (!ship.lat || !ship.lon) {
         console.log("Ship has no valid coordinates:", mmsi);
         return;
@@ -136,7 +136,7 @@ function showKioskShip(mmsi) {
     const map = deps.getMap();
     const shipCoords = fromLonLat([ship.lon, ship.lat]);
     const pixel = map.getPixelFromCoordinate(shipCoords);
-    deps.showShipcard('ship', mmsi, pixel);
+    deps.showTargetcard('ship', mmsi, pixel);
 }
 
 function showRandomKioskShip() {

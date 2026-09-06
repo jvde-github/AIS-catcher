@@ -516,7 +516,8 @@ namespace AIS
 				CLS_AIS,
 				CLS_TPV,
 				CLS_ERROR,
-				CLS_WARNING
+				CLS_WARNING,
+				CLS_INFO
 			} cls = CLS_UNKNOWN;
 			enum
 			{
@@ -527,6 +528,8 @@ namespace AIS
 
 			bool uuid_match = uuid.empty();
 			const std::string *message = nullptr;
+			const std::string *topic = nullptr;
+			const JSON::JSON *payload = nullptr;
 			const JSON::Value *nmea_array = nullptr;
 			float tpv_lat = 0, tpv_lon = 0;
 			bool has_tpv_coords = false;
@@ -547,6 +550,8 @@ namespace AIS
 						cls = CLS_ERROR;
 					else if (s == "warning")
 						cls = CLS_WARNING;
+					else if (s == "info")
+						cls = CLS_INFO;
 					break;
 				}
 				case AIS::KEY_UUID:
@@ -600,6 +605,13 @@ namespace AIS
 				case AIS::KEY_IPV4:
 					tag.ipv4 = p.Get().getInt();
 					break;
+				case AIS::KEY_TOPIC:
+					topic = &p.Get().getString();
+					break;
+				case AIS::KEY_STATION:
+					if (p.Get().isObject())
+						payload = &p.Get().getObject();
+					break;
 				case AIS::KEY_MESSAGE:
 					message = &p.Get().getString();
 					break;
@@ -640,6 +652,14 @@ namespace AIS
 					Warning() << "[" << driver << "]: " << *message;
 				else
 					Info() << "[" << driver << "]: " << *message;
+			}
+
+			if (topic && payload && uuid_match && *topic == "station")
+			{
+				Control ctl;
+				ctl.topic = AIS::KEY_STATION;
+				ctl.payload = payload;
+				outControl.Send(&ctl, 1, tag);
 			}
 
 			if (cls == CLS_TPV && cfg_GPS && has_tpv_coords && (tpv_lat != 0 || tpv_lon != 0))
@@ -721,6 +741,29 @@ namespace AIS
 			tag.ppm = (int8_t)p / 10.0f;
 		}
 
+		int src = station;
+		if (flags & 0x04) // station id carried in the frame
+		{
+			uint32_t id = 0;
+			for (int i = 0; i < 4; i++)
+			{
+				v = getByte();
+				if (v < 0) { warnFail(v, " in station id"); return false; }
+				id = (id << 8) | (uint32_t)v;
+			}
+			src = (int)id;
+			// a multiplexed frame says nothing about the sender's software or hardware
+			tag.version = 0;
+			tag.driver = Type::NONE;
+			tag.hardware.clear();
+		}
+		if (flags & 0x10)
+		{
+			int h = getByte(), l = getByte();
+			if ((h | l) < 0) { warnFail(h < 0 ? h : l, " in quality"); return false; }
+			tag.quality = (uint16_t)((h << 8) | l);
+		}
+
 		int ch = getByte(), lh = getByte(), ll = getByte();
 		if ((ch | lh | ll) < 0) { warnFail(ch < 0 ? ch : (lh < 0 ? lh : ll), " in header"); return false; }
 		int length_bits = (lh << 8) | ll;
@@ -732,7 +775,7 @@ namespace AIS
 			return false;
 		}
 
-		bool valid_channel = (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9');
+		bool valid_channel = (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '?';
 		if (!valid_channel)
 		{
 			if (shouldWarn(WARN_BINARY_SHORT))
@@ -740,10 +783,8 @@ namespace AIS
 			return false;
 		}
 
-		if (timestamp < 0 || timestamp > INT64_MAX / 1000000)
-			timestamp = 0;
-
-		initMsg((char)ch, station, (int64_t)timestamp * 1000000);
+		// the timestamp is the sender's time of arrival in microseconds (Message::getBinaryNMEA)
+		initMsg((char)ch, src, validTOA((int64_t)timestamp));
 
 		int nbytes = (length_bits + 7) / 8;
 

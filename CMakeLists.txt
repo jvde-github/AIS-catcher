@@ -57,6 +57,7 @@ option(SQLITE "Include SQLITE support" ON)
 option(OPENSSL "Include OPENSSL support" ON)
 option(NMEA2000 "Include NMEA2000 support" ON)
 option(WEBVIEWER "Include the embedded web UI (WebDB blob + HTTP server)" ON)
+option(STATIC "Fully static build: require and link static (.a) libraries for every enabled dependency" OFF)
 option(ARMV6 "Compile for Raspberry Pi Zero" OFF)
 option(RBIT "Use ARM RBIT instruction for bit reversal" OFF)
 
@@ -69,6 +70,7 @@ if(RBIT)
 endif()
 
 set(NMEA2000_PATH "." CACHE PATH "Path to NMEA2000 library")
+set(PORTS "" CACHE PATH "Path to the libport directory (destination matching)")
 
 # RPATH configuration for bundled libraries
 # Set RPATH_LIBRARY_DIR to enable RPATH (e.g., -DRPATH_LIBRARY_DIR=/usr/lib/ais-catcher)
@@ -222,6 +224,29 @@ if(MSVC)
     set(ADDITIONAL_LIBRARIES ws2_32.lib)
 endif()
 
+# --- Static build setup (must run before the dependency modules are included) ---
+if(STATIC)
+    if(MSVC)
+        message(FATAL_ERROR "STATIC build is not supported with MSVC.")
+    endif()
+    # Make generic find_library() calls in the dependency modules prefer static archives.
+    set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+    # Route the dependency modules that expose a static path through their static branch.
+    set(RTLSDR_STATIC ON)
+    set(HYDRASDR_STATIC ON)
+    # Honored by find_package(OpenSSL)/find_package(ZLIB) where used.
+    set(OPENSSL_USE_STATIC_LIBS TRUE)
+    set(ZLIB_USE_STATIC_LIBS TRUE)
+    # Make pkg_check_modules resolve the full static dependency chain.
+    set(PKG_CONFIG_USE_STATIC_LIBS ON)
+    # Force a fully static executable.
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_CXX_COMPILER MATCHES "musl")
+        message(WARNING "STATIC on a glibc toolchain typically breaks NSS/DNS at runtime; build on musl (Alpine) for a clean fully-static binary.")
+    endif()
+    message(STATUS "STATIC: enabled - linking every enabled dependency from static archives (.a)")
+endif()
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/NMEA2000.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/LibUSB.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/OpenSSL.cmake)
@@ -238,6 +263,41 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/AIRSPYHF.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/HACKRF.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/HYDRASDR.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/ZMQ.cmake)
+
+# --- Static build verification: every enabled dependency must resolve to a static (.a) archive ---
+if(STATIC)
+    # tag -> the resolved library path/list to check (only checked when the feature is enabled)
+    set(_static_checks
+        OPENSSL "${OPENSSL_LIBRARIES}"
+        ZLIB    "${ZLIB_LIBRARIES}"
+        RTLSDR  "${RTLSDR_LIBRARIES}"
+        AIRSPY  "${AIRSPY_LIBRARIES}"
+        AIRSPYHF "${AIRSPYHF_LIBRARIES}"
+        HACKRF  "${HACKRF_LIBRARIES}"
+        HYDRASDR "${HYDRASDR_LIBRARIES}"
+        SDRPLAY "${SDRPLAY_LIBRARIES}"
+        SOAPYSDR "${SOAPYSDR_LIBRARIES}"
+        ZMQ     "${ZMQ_LIBRARIES}"
+        SOXR    "${SOXR_LIBRARIES}"
+        SAMPLERATE "${SAMPLERATE_LIBRARIES}"
+        SQLITE  "${SQLITE_LIBRARIES}"
+        PSQL    "${PQ_LIBRARIES}")
+    while(_static_checks)
+        list(POP_FRONT _static_checks _tag _libs)
+        foreach(_lib IN LISTS _libs)
+            # skip empty entries, imported targets, and bare -l/linker flags
+            if(_lib AND NOT _lib MATCHES "^-" AND NOT TARGET ${_lib} AND EXISTS "${_lib}")
+                if(NOT _lib MATCHES "\\.a$")
+                    message(FATAL_ERROR
+                        "STATIC build: ${_tag} resolved to a non-static library:\n  ${_lib}\n"
+                        "Install its static (.a) package (e.g. openssl-libs-static / zlib-static / a static librtlsdr) "
+                        "or disable this feature (-D${_tag}=OFF).")
+                endif()
+            endif()
+        endforeach()
+    endwhile()
+    message(STATUS "STATIC: all enabled dependencies resolved to static archives.")
+endif()
 
 set(CPP
     Source/Application/Config.cpp
@@ -281,6 +341,8 @@ set(CPP
     Source/IO/TCPServer.cpp
     Source/Tracking/DB.cpp
     Source/Tracking/Ships.cpp
+    Source/Tracking/Region.cpp
+    Source/Tracking/RegionTree.cpp
     Source/Utilities/Parse.cpp
     Source/Utilities/Convert.cpp
     Source/Utilities/Helper.cpp
@@ -342,7 +404,7 @@ if(WEBVIEWER)
 endif()
 
 set(HEADER
-    Source/Application/AIS-catcher.h Source/Web/Prometheus.h Source/Application/Config.h Source/Application/DeviceManager.h Source/Web/WebDB.h Source/Library/Logger.h Source/Web/WebViewer.h Source/Application/Receiver.h Source/Tracking/Ships.h Source/Tracking/DB.h Source/Tracking/PathStore.h Source/Tracking/ReceiverTracker.h Source/Web/FrontendConfig.h Source/Web/BackupManager.h Source/DBMS/PostgreSQL.h Source/DBMS/DatabaseOutput.h Source/DBMS/SQLite.h Source/DBMS/CSV.h Source/IO/HTTPClient.h Source/Web/MapTiles.h Source/Aviation/Beast.h
+    Source/Application/AIS-catcher.h Source/Web/Prometheus.h Source/Application/Config.h Source/Application/DeviceManager.h Source/Web/WebDB.h Source/Library/Logger.h Source/Web/WebViewer.h Source/Application/Receiver.h Source/Tracking/Ships.h Source/Tracking/Region.h Source/Tracking/DB.h Source/Tracking/PathStore.h Source/Tracking/ReceiverTracker.h Source/Web/FrontendConfig.h Source/Web/BackupManager.h Source/DBMS/PostgreSQL.h Source/DBMS/DatabaseOutput.h Source/DBMS/SQLite.h Source/DBMS/CSV.h Source/IO/HTTPClient.h Source/Web/MapTiles.h Source/Aviation/Beast.h
     Source/Device/Device.h Source/Device/FileWAV.h Source/Device/RTLTCP.h Source/Device/UDP.h Source/DSP/Demod.h Source/DSP/Filters.h Source/Marine/AIS.h Source/Marine/Message.h Source/Marine/MessageHistory.h Source/Marine/NMEA.h Source/Library/ZIP.h Source/Library/Signals.h Source/Device/SoapySDR.h Source/JSON/JSONAIS.h Source/JSON/JSON.h Source/Aviation/Basestation.h Source/Aviation/ADSB.h
     Source/Device/AIRSPY.h Source/Library/FIFO.h Source/Device/N2KsktCAN.h Source/Device/HACKRF.h Source/Device/HYDRASDR.h Source/Device/SDRPLAY.h Source/DSP/DSP.h Source/DSP/Model.h Source/Tracking/History.h Source/Tracking/Statistics.h Source/Library/Common.h Source/Library/Stream.h Source/Library/SWAR.h Source/Device/SpyServer.h Source/JSON/Keys.h Source/JSON/Writer.h Source/JSON/Parser.h Source/Tracking/PlaneDB.h
     Source/Device/Serial.h Source/IO/N2KInterface.h Source/Marine/N2K.h Source/IO/N2KStream.h Source/Device/AIRSPYHF.h Source/Device/FileRAW.h Source/Device/RTLSDR.h Source/Device/ZMQ.h Source/DSP/FFT.h Source/IO/MsgOut.h Source/IO/Screen.h Source/IO/File.h Source/IO/StreamCounter.h Source/IO/Network.h Source/IO/HTTPServer.h Source/Utilities/StreamHelpers.h Source/IO/TCPServer.h Source/IO/Protocol.h
@@ -352,7 +414,21 @@ set(APP_INCLUDES . ./Source ./Source/Tracking ./Source/DBMS ./Source/Library ./S
 
 # Executable
 
-add_executable(AIS-catcher ${CPP} ${HEADER})
+# A build on top of this one (a hub, a variant) adds its sources here
+add_executable(AIS-catcher ${CPP} ${HEADER} ${EXTRA_SOURCES})
+if(EXTRA_INCLUDES)
+    target_include_directories(AIS-catcher PRIVATE ${EXTRA_INCLUDES})
+endif()
+if(EXTRA_DEFINES)
+    target_compile_definitions(AIS-catcher PRIVATE ${EXTRA_DEFINES})
+endif()
+
+if(PORTS)
+    add_subdirectory(${PORTS} ${CMAKE_CURRENT_BINARY_DIR}/libport)
+    target_link_libraries(AIS-catcher port)
+    target_compile_definitions(AIS-catcher PRIVATE HASPORTS)
+    message(STATUS "PORTS: destination matching from ${PORTS}")
+endif()
 
 include_directories(
     . ${APP_INCLUDES} ${AIRSPYHF_INCLUDE_DIRS} ${NMEA2000_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${HYDRASDR_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${ZMQ_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOAPYSDR_INCLUDE_DIRS} ${PQ_INCLUDE_DIRS} ${SQLITE_INCLUDE_DIRS} ${PQXX_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS} ${SAMPLERATE_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})

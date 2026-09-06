@@ -33,7 +33,17 @@ if(RTLSDR)
             endif()
 
             include(CheckFunctionExists)
-            set(CMAKE_REQUIRED_LIBRARIES ${RTLSDR_LIBRARIES})
+            if(STATIC)
+                # A static probe must link the FULL transitive chain or the
+                # feature test fails to link and reports a false negative.
+                # librtlsdr's .pc lists a bare "Libs.private: -lusb-1.0" (not
+                # "Requires.private: libusb-1.0"), so pkg-config does not recurse
+                # into libusb's own deps (udev). Append libusb's static chain so
+                # udev et al. are present for the probe link.
+                set(CMAKE_REQUIRED_LIBRARIES ${PKG_RTLSDR_STATIC_LIBRARIES} ${PKG_LIBUSB_STATIC_LIBRARIES})
+            else()
+                set(CMAKE_REQUIRED_LIBRARIES ${RTLSDR_LIBRARIES})
+            endif()
             check_function_exists(rtlsdr_set_bias_tee HASRTLSDR_BIASTEE)
             if(HASRTLSDR_BIASTEE)
                 add_definitions(-DHASRTLSDR_BIASTEE)

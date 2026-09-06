@@ -172,8 +172,34 @@ namespace Device
 
 		if (!is_text)
 		{
-			fifo.Init(BUFFER_SIZE_IQ, BUFFER_COUNT);
-			buffer.resize(BUFFER_SIZE_IQ);
+			int bps;
+			switch (getFormat())
+			{
+			case Format::CU8:
+				bps = sizeof(CU8);
+				break;
+			case Format::CS8:
+				bps = sizeof(CS8);
+				break;
+			case Format::CF32:
+				bps = sizeof(CFLOAT32);
+				break;
+			case Format::F32_FS4:
+				bps = sizeof(FLOAT32);
+				break;
+			case Format::DC16H:
+				bps = sizeof(DC16H);
+				break;
+			case Format::CS16:
+				bps = sizeof(CS16);
+				break;
+			default:
+				throw std::runtime_error("FILE: internal error, unknown sample format.");
+			}
+			int nsamples = MAX(16, (int)getSampleRate() / 1000) * SAMPLES_PER_KHZ;
+
+			fifo.Init(nsamples * bps, BUFFER_COUNT);
+			buffer.resize(nsamples * bps);
 		}
 		else
 		{

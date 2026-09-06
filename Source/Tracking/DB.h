@@ -29,36 +29,23 @@
 #include "JSON.h"
 #include "Writer.h"
 
+
 // define CHECK_DB_INTEGRITY to validate ship and path structures once a minute
 
 #include "Ships.h"
 #include "SlotTable.h"
+#include "StationRegistry.h"
+#include "Port.h"
 #include "PathStore.h"
+#include "BinaryStore.h"
+#include "StaticStore.h"
+#include "EventRing.h"
 
 class DB : public StreamIn<JSON::JSON>,
 		   public StreamIn<AIS::GPS>,
+		   public StreamIn<AIS::Control>,
 		   public StreamOut<JSON::JSON>
 {
-	struct BinaryMessage
-	{
-		std::string json;
-		int type;
-		int dac;
-		int fi;
-		FLOAT32 lat, lon;
-		time_t timestamp = 0;
-		bool used;
-
-		BinaryMessage() { Clear(); }
-
-		void Clear()
-		{
-			used = false;
-			type = dac = fi = -1;
-			lat = LAT_UNDEFINED;
-			lon = LON_UNDEFINED;
-		};
-	};
 
 	JSON::Serializer builder{JSON_DICT_FULL};
 
@@ -79,14 +66,122 @@ class DB : public StreamIn<JSON::JSON>,
 	int nbuckets = 8209;
 	// 0 = unset, resolved at setup: the server-mode default leaves room for the anchor slots
 	int track_memory_kb = 0;
+	// 0 = default sizing
+	int max_ships = 0;
 
 	bool expire_fields = false;
 	std::time_t last_sweep = 0;
+	uint16_t quality_mask = 0;
+	uint64_t copies_dropped = 0;
 
 	static const int SHIP_NIL = SlotTable<Ship, uint32_t>::NIL;
 
 	SlotTable<Ship, uint32_t> ships;
+
+public:
+	// Locked reads for code that lives outside the DB: one ship by MMSI, or all of them.
+	// The vessel's record, the same on every host: the ship's body, its
+	// message badge and riding station, and what it has reported changing.
+	// `extra(w, ship, ptr)` writes what only the caller knows - a hub the
+	// stations that heard it, a receiver nothing - before the object closes.
+	template <typename F>
+	std::string vesselJSON(uint32_t mmsi, F extra)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+
+		int ptr = ships.find(mmsi);
+		if (ptr == SHIP_NIL)
+			return "{}";
+
+		const Ship &ship = ships[ptr];
+		std::time_t now = time(nullptr);
+
+		content.clear();
+		{
+			JSON::Writer w(content, 1024);
+			w.beginObject();
+			ship.writeJSONBody(w, (long int)now - (long int)ship.last_signal, isValidCoord(station_lat, station_lon));
+			w.kv("binary", binary.badge(ship.mmsi, now)).kv("station", stations.idFor(ship.mmsi)).key("changes");
+			changes.writeJSON(w, ptr);
+			extra(w, ship, ptr);
+			w.endObject();
+		}
+		return content;
+	}
+
+	template <typename F>
+	bool withShip(uint32_t mmsi, F f)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		int ptr = ships.find(mmsi);
+		if (ptr == SHIP_NIL)
+			return false;
+		f(ships[ptr], ptr);
+		return true;
+	}
+
+	// A batch of ships under one lock; keep f short - copy fields out, work later.
+	template <typename F>
+	void withShips(const uint32_t *mmsi, size_t n, F f)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		for (size_t i = 0; i < n; i++)
+		{
+			int ptr = ships.find(mmsi[i]);
+			f(i, ptr == SHIP_NIL ? nullptr : &ships[ptr]);
+		}
+	}
+	// Locked write for an operator correction: the record under `mmsi`, mutable.
+	template <typename F>
+	bool withShipMutable(uint32_t mmsi, F f)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		int ptr = ships.find(mmsi);
+		if (ptr == SHIP_NIL)
+			return false;
+		f(ships[ptr]);
+		return true;
+	}
+	// Drops the record; its slot is the next recycled. Path and history untouched.
+	bool deleteShip(uint32_t mmsi)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		int ptr = ships.find(mmsi);
+		if (ptr == SHIP_NIL)
+			return false;
+		ships[ptr].reset();
+		return ships.remove(mmsi);
+	}
+	// most recently heard first; f returns false to stop the walk
+	template <typename F>
+	void forEachShip(F f)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		ships.forEach([&](int ptr) { return f(ships[ptr], ptr); });
+	}
+	// The ships heard since `since`, newest first, under the table's lock. The
+	// window is the caller's own - no time_history clamp - and outside callers
+	// must come through here: the walk follows LRU links the decode path relinks.
+	template <typename F>
+	void forEachRecent(std::time_t now, std::time_t since, F f)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		forEachRecentUnlocked(now, true, since, f);
+	}
+	int capacity() const { return ships.capacity(); }
+	// Quality bits that mark a message as a copy: delivered, but it does not
+	// move a ship, count, or add a path point. Zero (default) takes everything.
+	void setQualityMask(uint16_t m) { quality_mask = m; }
+	uint16_t getQualityMask() const { return quality_mask; }
+	// messages the mask turned away
+	uint64_t getCopiesDropped() const { return copies_dropped; }
+	// Puts a record in the table under its MMSI, replacing what is there; for
+	// seeding from another source. The region follows from the position.
+	void putShip(const Ship &s);
+
+private:
 	PathStore paths;
+	StaticStore changes;
 
 	std::mutex mtx;
 
@@ -96,21 +191,21 @@ class DB : public StreamIn<JSON::JSON>,
 	void addToPath(int ptr);
 	int claimShip(uint32_t mmsi);
 
-	// the two scope rules fold into one cutoff: 0 passes everything, since
-	// last_signal is never negative
+	// the two scope rules fold into one cutoff; 0 passes everything. Caller holds mtx.
 	template <typename F>
-	void forEachRecent(std::time_t now, bool full, std::time_t since, F f)
+	void forEachRecentUnlocked(std::time_t now, bool full, std::time_t since, F f)
 	{
 		std::time_t cutoff = full ? since : MAX(since, now - time_history);
 		ships.forEach([&](int ptr) {
 			const Ship &ship = ships[ptr];
 			if (ship.last_signal < cutoff)
 				return false;
-			
+
 			f(ptr, ship, (long int)now - (long int)ship.last_signal);
 			return true;
 		});
 	}
+
 
 	void writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since = 0, std::time_t until = 0);
 	void writeSinglePathGeoJSON(int ptr, JSON::Writer &w, std::time_t floor);
@@ -148,7 +243,7 @@ class DB : public StreamIn<JSON::JSON>,
 				since = MAX(since, floor);
 				const std::time_t from = since > lookback ? since - lookback : 0;
 
-				forEachRecent(now, true, from, [&](int ptr, const Ship &ship, long int) {
+				forEachRecentUnlocked(now, true, from, [&](int ptr, const Ship &ship, long int) {
 					if (paths.hasSince(ptr, from))
 						emit(w, ptr, ship, since);
 				});
@@ -160,11 +255,9 @@ class DB : public StreamIn<JSON::JSON>,
 
 	AIS::Filter filter;
 
-	static const int MAX_BINARY_MESSAGES = 10;
-	BinaryMessage binary_messages[MAX_BINARY_MESSAGES];
-	int binary_msg_index = 0;
-
-	void processBinaryMessage(const JSON::JSON &data);
+	BinaryStore binary;
+	StationRegistry stations;
+	EventRing events;
 #ifdef CHECK_DB_INTEGRITY
 	void checkIntegrity();
 	std::time_t last_check = 0;
@@ -177,6 +270,7 @@ public:
 	void setTrackTime(int t) { track_time = t; }
 	void setExpireFields(bool b) { expire_fields = b; }
 	void setTrackMemory(int kb) { if (kb > 0) track_memory_kb = kb; }
+	void setMaxShips(int n) { max_ships = n; }
 	void setShareLatLon(bool b) { latlon_share = b; }
 	bool getShareLatLon() { return latlon_share; }
 
@@ -205,6 +299,15 @@ public:
 
 	using StreamIn<JSON::JSON>::Receive;
 	using StreamIn<AIS::GPS>::Receive;
+	using StreamIn<AIS::Control>::Receive;
+
+	void Receive(const AIS::Control *data, int len, TAG &)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		for (int i = 0; i < len; i++)
+			if (data[i].topic == AIS::KEY_STATION && data[i].payload)
+				stations.apply(*data[i].payload, binary.sequence());
+	}
 
 	void Receive(const JSON::JSON *data, int len, TAG &tag);
 	void Receive(const AIS::GPS *data, int len, TAG &tag)
@@ -219,8 +322,18 @@ public:
 	}
 
 	std::string getShipJSON(int mmsi);
+	std::string getChangesJSON(int mmsi);
+	void logTextChange(const Ship &ship, int field, const char *old_value, const std::string &value);
+	void note(const Ship &ship, EventRing::Kind kind, EventRing::Level level, std::time_t now, const std::string &text,
+			  const std::string &label = std::string(), uint32_t to = 0, const std::string &was = std::string());
+	void noteSafety(Ship &ship, const JSON::JSON &data);
+	void noteDestination(Ship &ship, const std::string &v);
+	static void matchPort(Ship &ship, const char *destination);
+	void noteDraught(Ship &ship, float d);
+	void noteStatus(Ship &ship, int status);
 	std::string getJSON(bool full = false);
 	std::string getJSONcompact(bool full = false, std::time_t since = 0);
+	std::string getJSONtable(std::time_t since = 0);
 	std::string getPathJSON(uint32_t);
 	std::string getAllPathJSON();
 	std::string getAllPathJSONSince(std::time_t since);
@@ -241,7 +354,46 @@ public:
 	void setOptionKey(AIS::Keys key, const std::string &arg) { filter.SetOptionKey(key, arg); }
 	void setFilter(const AIS::Filter &f) { filter = f; }
 
-	std::string getBinaryMessagesJSON(std::time_t since = 0);
+	std::string getBinaryMessagesJSON(std::time_t since = 0, uint64_t marker = 0, uint32_t owner = 0);
+	std::string getMapObjectsJSON(uint64_t since = 0, const std::vector<Port> &ports = {});
+	// what stands behind an object key: a marker's members, or a station's record
+	std::string getObjectJSON(const std::string &key);
+	std::string getEventsJSON(uint64_t since, int level);
+	// the ship row's packed badge, for a caller composing its own ship record
+	uint16_t getBinaryBadge(uint32_t mmsi)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		return binary.badge(mmsi, time(nullptr));
+	}
+	// the same from inside a withShip/forEach callback, where the lock is already held
+	uint16_t binaryBadgeHeld(uint32_t mmsi, std::time_t now) const { return binary.badge(mmsi, now); }
+	// the station riding a vessel, for callers already inside the locked walk
+	int stationHeld(uint32_t mmsi) const { return stations.idFor(mmsi); }
+	int getStation(uint32_t mmsi)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		return stations.idFor(mmsi);
+	}
+	// the map markers under the lock, for a caller cutting its own tiles; keep f short
+	template <typename F>
+	void withMarkers(std::time_t now, F f)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		binary.forEachMarker(now, f);
+	}
+	int getBinaryTTL() const { return binary.ttl; }
+	// every station on record; `riding` says its vessel is on the map, where the
+	// ship row carries it and no object of its own is due
+	template <typename F>
+	void withStations(F f)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		stations.forEach([&](const StationRegistry::Station &s) {
+			int ptr = s.mmsi ? ships.find(s.mmsi) : SHIP_NIL;
+			bool riding = ptr != SHIP_NIL && isValidCoord(ships[ptr].lat, ships[ptr].lon);
+			f(s, riding);
+		});
+	}
 
 	// Persistence functions for ship database
 	bool Save(std::ofstream &file);

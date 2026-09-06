@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 ARG RUN_NUMBER=0
 ENV RUN_NUMBER=${RUN_NUMBER}

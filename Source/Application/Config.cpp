@@ -115,8 +115,16 @@ void Config::setManagedViewerfromJSON(const JSON::Value &m)
 		setSettingsFromJSON(*v, *managed_viewer);
 }
 
+static void setConfigBaseDir(const std::string &file_config)
+{
+	const size_t slash = file_config.find_last_of("/\\");
+	BackupManager::setBaseDir(slash == std::string::npos ? "" : file_config.substr(0, slash));
+}
+
 void Config::readManagedViewer(const std::string &file_config)
 {
+	setConfigBaseDir(file_config);
+
 	if (!managed_viewer)
 		return;
 
@@ -343,6 +351,7 @@ void Config::read(const std::string &file_config)
 {
 	if (!file_config.empty())
 	{
+		setConfigBaseDir(file_config);
 		set(Util::Helper::readFile(file_config));
 	}
 }

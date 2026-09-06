@@ -23,6 +23,9 @@
 #include "Helper.h"
 #include "Logger.h"
 
+// per poll; a viewer that has been away does not need the whole ring
+
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cerrno>
@@ -34,8 +37,8 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 	if (!server)
 		return;
 
-	const bool want_nmea = server->sseSubscribed(1);
-	const bool want_signal = server->sseSubscribed(2);
+	const bool want_nmea = server->sseSubscribed(IO::SSE::NMEA);
+	const bool want_signal = server->sseSubscribed(IO::SSE::SIGNAL);
 	if (!want_nmea && !want_signal)
 		return;
 
@@ -91,7 +94,7 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 			w.endArray();
 			w.endObject();
 			w.finish();
-			server->sendSSE(1, "nmea", json);
+			server->sendSSE(IO::SSE::NMEA, "nmea", json);
 		}
 
 		if (want_signal && isValidCoord(tag.lat, tag.lon))
@@ -105,7 +108,7 @@ void SSEStreamer::Receive(const JSON::JSON *data, int len, TAG &tag)
 				.kv("lon", tag.lon)
 				.endObject();
 			w.finish();
-			server->sendSSE(2, "nmea", json);
+			server->sendSSE(IO::SSE::SIGNAL, "nmea", json);
 		}
 	}
 }
@@ -234,16 +237,41 @@ void WebViewer::addTileSource(std::shared_ptr<MapTiles> source, const std::strin
 		Error() << "Failed to load " << what << " from: " << path;
 }
 
-void WebViewer::addMBTilesSource(const std::string &filepath, bool overlay)
+// a setting holds one path or several separated by commas (a JSON array
+// arrives joined that way); an empty entry, a blank field in a config, is no source
+static std::vector<std::string> tilePaths(const std::string &list)
+{
+	std::vector<std::string> paths;
+	std::size_t start = 0;
+	while (start <= list.size())
+	{
+		std::size_t end = list.find(',', start);
+		if (end == std::string::npos)
+			end = list.size();
+		std::size_t a = start, b = end;
+		while (a < b && std::isspace((unsigned char)list[a]))
+			a++;
+		while (b > a && std::isspace((unsigned char)list[b - 1]))
+			b--;
+		if (b > a)
+			paths.push_back(list.substr(a, b - a));
+		start = end + 1;
+	}
+	return paths;
+}
+
+void WebViewer::addMBTilesSource(const std::string &filepaths, bool overlay)
 {
 #if HASSQLITE
-	addTileSource(std::make_shared<MBTilesSupport>(), filepath, overlay, "MBTiles");
+	for (const std::string &path : tilePaths(filepaths))
+		addTileSource(std::make_shared<MBTilesSupport>(), path, overlay, "MBTiles");
 #endif
 }
 
-void WebViewer::addFileSystemTilesSource(const std::string &directoryPath, bool overlay)
+void WebViewer::addFileSystemTilesSource(const std::string &directoryPaths, bool overlay)
 {
-	addTileSource(std::make_shared<FileSystemTiles>(), directoryPath, overlay, "FileSystemTiles");
+	for (const std::string &path : tilePaths(directoryPaths))
+		addTileSource(std::make_shared<FileSystemTiles>(), path, overlay, "FileSystemTiles");
 }
 
 long long WebViewer::queryInt(const std::string &query, const char *name)
@@ -253,7 +281,7 @@ long long WebViewer::queryInt(const std::string &query, const char *name)
 
 ReceiverTracker *WebViewer::getState(int idx)
 {
-	if (idx < 0 || idx >= (int)states.size())
+	if (!settings.split || idx < 0 || idx >= (int)states.size())
 		return states[0].get();
 	return states[idx].get();
 }
@@ -327,6 +355,7 @@ void WebViewer::wireAggregate(const std::vector<std::unique_ptr<Receiver>> &rece
 		states[0]->appendModel(r.Model(j)->getName(), !first_of_device);
 		states[0]->connectJSON(r.OutputJSON(j));
 		states[0]->connectGPS(r.OutputGPS(j));
+		states[0]->connectControl(r.OutputControl(j));
 		r.OutputADSB(j).Connect((StreamIn<Plane::ADSB> *)&planes);
 
 		*device >> raw_counter;
@@ -385,6 +414,7 @@ void WebViewer::attachTrackers(const std::vector<std::unique_ptr<Receiver>> &rec
 
 		tracker->connectJSON(r.OutputJSON(j));
 		tracker->connectGPS(r.OutputGPS(j));
+		tracker->connectControl(r.OutputControl(j));
 
 		// a reclaimed tracker is already set up and was rewired by applySettings()
 		if (serving && fresh)
@@ -411,7 +441,7 @@ void WebViewer::attachEngine(const std::vector<std::unique_ptr<Receiver>> &recei
 		connectable += rp->Count();
 
 	// one tracker per output only pays off when the outputs can be told apart
-	const bool multi = connectable > 1 && !filter.hasIDFilter() && settings.groups_in == 0xFFFFFFFFFFFFFFFF;
+	const bool multi = settings.split && connectable > 1 && !filter.hasIDFilter() && settings.groups_in == 0xFFFFFFFFFFFFFFFF;
 
 	// trackers of the previous run: attachTrackers() takes the ones whose input is
 	// still here, and the rest are dropped when this vector goes out of scope
@@ -655,7 +685,13 @@ void WebViewer::startServing()
 			   << ", share_loc: " << on(tc.latlon_share)
 			   << (settings.showdecoder ? ", decoder: on" : "")
 			   << (settings.KML ? ", kml: on" : "")
-			   << (settings.GeoJSON ? ", geojson: on" : "");
+			   << (settings.GeoJSON ? ", geojson: on" : "")
+			   << (plugins.dirs().empty() && plugins.loaded().empty()
+					   ? std::string()
+					   : ", plugins: " + std::to_string(plugins.loaded().size()))
+			   << (plugins.errors().empty()
+					   ? std::string()
+					   : " (" + std::to_string(plugins.errors().size()) + " failed)");
 
 		time_start = time(nullptr);
 	}
@@ -851,6 +887,9 @@ const WebViewer::Route WebViewer::routes[] = {
 	{"/api/ships_array.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
 	 { return s->getShipsJSONcompact(queryInt(a, "since")); }, true},
+	{"/api/ships_table.json", nullptr, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 { return s->getShipsTableJSON(queryInt(a, "since")); }, true},
 	{"/api/planes.json", nullptr, "application/json",
 	 [](WebViewer *w, ReceiverTracker *, const std::string &)
 	 { return w->planes.getJSON(); }, true},
@@ -859,7 +898,16 @@ const WebViewer::Route WebViewer::routes[] = {
 	 { return w->planes.getCompactArray(queryInt(a, "since")); }, true},
 	{"/api/binmsgs.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
-	 { return s->getBinaryMessagesJSON(queryInt(a, "since")); }, true},
+	 { return s->getBinaryMessagesJSON(queryInt(a, "since"), strtoull(IO::HTTPRequest::queryParam(a, "marker").c_str(), nullptr, 16), (uint32_t)queryInt(a, "mmsi")); }, true},
+	{"/api/mapobjects.json", nullptr, "application/json",
+	 [](WebViewer *w, ReceiverTracker *s, const std::string &a)
+	 { return s->database().getMapObjectsJSON((uint64_t)queryInt(a, "since"), w->getPorts()); }, true},
+	{"/api/object.json", nullptr, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 { return s->getObjectJSON(IO::HTTPRequest::queryParam(a, "key")); }, true},
+	{"/api/events.json", nullptr, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 { return s->getEventsJSON(strtoull(IO::HTTPRequest::queryParam(a, "since").c_str(), nullptr, 10), queryInt(a, "level")); }, true},
 	{"/api/history_full.json", nullptr, "application/json",
 	 [](WebViewer *, ReceiverTracker *s, const std::string &)
 	 { return s->toHistoryJSON(); }, true},
@@ -941,6 +989,23 @@ const WebViewer::Route WebViewer::routes[] = {
 			 return std::string("{\"error\":\"Invalid MMSI\"}");
 		 std::string vessel = s->getShipJSON(mmsi);
 		 return vessel == "{}" ? std::string("{\"error\":\"Vessel not found\"}") : vessel;
+	 }, true},
+	{"/api/ship.json", nullptr, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 {
+		 long long mmsi = queryInt(a, "mmsi");
+		 if (mmsi < 1 || mmsi > 999999999)
+			 return std::string("{\"error\":\"Invalid MMSI\"}");
+		 std::string vessel = s->getShipJSON((int)mmsi);
+		 return vessel == "{}" ? std::string("{\"error\":\"Vessel not found\"}") : vessel;
+	 }, true},
+	{"/api/changes.json", nullptr, "application/json",
+	 [](WebViewer *, ReceiverTracker *s, const std::string &a)
+	 {
+		 int mmsi = parseMMSI(a);
+		 if (mmsi <= 0)
+			 return std::string("{\"error\":\"Invalid MMSI\"}");
+		 return s->getChangesJSON(mmsi);
 	 }, true},
 	{"/api/decode", &WebViewer::Settings::showdecoder, "application/json",
 	 [](WebViewer *, ReceiverTracker *, const std::string &a)
@@ -1025,15 +1090,15 @@ void WebViewer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &reque
 	// SSE routes (upgrade connection, not a normal response)
 	if (r == "/api/sse" && settings.realtime)
 	{
-		upgradeSSE(c, 1u << 1);
+		upgradeSSE(c, 1u << IO::SSE::NMEA);
 	}
 	else if (r == "/api/signal" && settings.realtime)
 	{
-		upgradeSSE(c, 1u << 2);
+		upgradeSSE(c, 1u << IO::SSE::SIGNAL);
 	}
 	else if (r == "/api/log" && settings.showlog)
 	{
-		upgradeSSE(c, 1u << 3, "log", []() -> std::vector<std::string>
+		upgradeSSE(c, 1u << IO::SSE::VIEWER_LOG, "log", []() -> std::vector<std::string>
 				   { return Logger::getInstance().getBacklogJSON(INT_MAX); });
 	}
 	// Prefix-match routes
@@ -1062,6 +1127,9 @@ void WebViewer::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &reque
 		}
 		Response(c, "text/plain", std::string("Invalid Tile Request"), false, false, false, 400);
 		return;
+	}
+	else if (extra_request && extra_request(*this, c, r, a, gzip))
+	{
 	}
 	// Static files
 	else if (r.rfind("/", 0) == 0)
@@ -1098,6 +1166,9 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 
 	switch (key)
 	{
+	case AIS::KEY_SETTING_PORTS:
+		settings.ports = Port::load(arg);
+		break;
 	case AIS::KEY_SETTING_PORT:
 		settings.port_set = true;
 		settings.port = Util::Parse::Integer(arg, 1, 65535);
@@ -1164,9 +1235,16 @@ Setting &WebViewer::SetKey(AIS::Keys key, const std::string &arg)
 	case AIS::KEY_SETTING_TRACK_MEMORY:
 		settings.tracking.track_memory = Util::Parse::Integer(arg, 16, 256 * 1024);
 		break;
+	case AIS::KEY_SETTING_MAX_SHIPS:
+		settings.tracking.max_ships = Util::Parse::Integer(arg, 1024, 4 * 1024 * 1024);
+		break;
 	case AIS::KEY_SETTING_REPLAY:
 		settings.replay = Util::Parse::Switch(arg);
 		frontend.setReplay(settings.replay);
+		break;
+	case AIS::KEY_SETTING_SPLIT:
+		settings.split = Util::Parse::Switch(arg);
+		frontend.setSplit(settings.split);
 		break;
 	case AIS::KEY_SETTING_TRACK_TIME:
 	case AIS::KEY_SETTING_REPLAY_TIME:

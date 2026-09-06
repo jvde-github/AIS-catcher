@@ -102,6 +102,34 @@ public:
 		return h;
 	}
 
+	// Unkeys the slot holding `k` and sends it to the LRU tail, so it is the next
+	// one recycled. The record keeps its data until a create() claims the slot:
+	// as with create(), what clearing means is the caller's business.
+	bool remove(Key k)
+	{
+		int h = find(k);
+		if (h == NIL)
+			return false;
+
+		hashUnlink(h);
+		slots[h].key = 0;
+		slots[h].h_prev = slots[h].h_next = NIL;
+		count--;
+
+		if (h != tail)
+		{
+			lruUnlink(h);
+			slots[h].lru_next = NIL;
+			slots[h].lru_prev = tail;
+			if (tail != NIL)
+				slots[tail].lru_next = h;
+			tail = h;
+			if (head == NIL)
+				head = h;
+		}
+		return true;
+	}
+
 	void touch(int h)
 	{
 		if (h == head)

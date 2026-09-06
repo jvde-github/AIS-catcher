@@ -33,12 +33,16 @@ class BackupManager
 	int interval = -1;
 	std::string filename;
 	ReceiverTracker *tracker = nullptr;
+	static std::string base_dir;
 
 	void run();
 
 public:
+	static void setBaseDir(const std::string &d) { base_dir = d; }
+	static std::string resolve(const std::string &f);
+
 	void setInterval(int minutes) { interval = minutes; }
-	void setFilename(const std::string &f) { filename = f; }
+	void setFilename(const std::string &f) { filename = resolve(f); }
 	void resetSettings()
 	{
 		interval = -1;

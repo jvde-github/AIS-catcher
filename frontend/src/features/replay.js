@@ -7,27 +7,50 @@ import OlFeature from 'ol/Feature';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import Point from 'ol/geom/Point';
+import Polygon from 'ol/geom/Polygon';
 import Style from 'ol/style/Style';
 import Icon from 'ol/style/Icon';
 import { fromLonLat } from 'ol/proj';
 
 import { settings } from '../core/state.js';
 import { decodeHTMLEntities } from '../core/util.js';
-import { calculateBearing } from '../core/geo.js';
-import { getSpeedVal, getSpeedUnit, getDeltaTimeVal, getFlagStyled, getShipTypeShort, sanitizeString } from '../core/format.js';
+import { shipOutlineLocal } from '../../shared/core/geo.js';
+import { getSpeedVal, getSpeedUnit } from '../core/units.js';
+import { getDeltaTimeVal, getShipTypeShort, sanitizeString, getCountryName } from '../../shared/core/text.js';
+import { flagHTML } from '../../shared/components.js';
 
 // { getReceiver, spriteFor, iconScale, fadeOpacity, labelText, spriteSheet,
-//   setLiveLayers, showNotification, onStateChange }
+//   getResolution, hullStyle, setLiveLayers, showNotification, onStateChange }
 let deps = null;
 
 const markerSource = new VectorSource({ features: [] });
 export const markerLayer = new VectorLayer({ source: markerSource });
 
-// mmsi -> { pts, cls, name, len }; pts is oldest-first [lat, lon, t, e, sog]
+const hullSource = new VectorSource({ features: [] });
+export const hullLayer = new VectorLayer({ source: hullSource });
+
+const HULL_ON_PX = 12;
+const HULL_OFF_PX = 10;
+// Ceiling on the OL objects the animation holds, independent of fleet size:
+// the pixel gate means only vessels large on screen ever ask for one.
+const HULL_POOL_MAX = 256;
+
+const DEG = Math.PI / 180;
+const hullPool = [];        // idle { feature, geom, ring } triples
+const hulls = {};           // mmsi -> triple currently on screen
+
+// mmsi -> { pts, cls, name, len, dim }; dim is [bow, stern, port, starboard]
+// relative to the reported position; pts is oldest-first [lat, lon, t, e, sog, cog, hdg]
 let fleet = {};
 // mmsi -> { marker, shown, style, last }
 let features = {};
 let bounds = { now: 0, oldest: 0, newest: 0 };
+// Point encoding the server publishes: 1 is sog in half knots and no angles,
+// 2 adds cog/hdg and moves sog to tenths. Blocks are cached per format.
+let pointFormat = 1;
+let sogDiv = 2;
+let cogDiv = 1;      // 0.1 degree units in format 2
+let underWayUnits = 2;   // 1 knot in the current sog units
 let blocks = new Set();
 let manifest = {};
 let filling = false;
@@ -64,15 +87,32 @@ let lastFrame = 0;
 export function init(d) {
     deps = d;
     markerLayer.setVisible(false);
+    hullLayer.setVisible(false);
+    if (d.hullStyle) hullLayer.setStyle(d.hullStyle);
 }
 
 export function isActive() { return active; }
+
+// the interpolated position being drawn this frame, not the vessel's live fix
+export function fixFor(mmsi) {
+    const fix = features[mmsi]?.fix;
+    return fix ? { lat: fix.lat, lon: fix.lon } : null;
+}
+export function refresh() { if (active) draw(); }
 export function isLoading() { return loading; }
 export function isPlaying() { return playing; }
 export function getSpeed() { return speed; }
 
 export function cycleSpeed() {
     speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
+    deps.onStateChange?.();
+}
+
+export function speeds() { return SPEEDS; }
+
+export function setSpeed(s) {
+    if (!SPEEDS.includes(s)) return;
+    speed = s;
     deps.onStateChange?.();
 }
 
@@ -105,6 +145,10 @@ export async function refreshBounds() {
         bounds = { now: info.now || 0, oldest: info.oldest || 0, newest: info.newest || 0 };
         if (info.block > 0) BLOCK = info.block;
         if (info.granularity > 0 && info.dwell_gap > 0) MAX_INTERP = info.granularity + info.dwell_gap;
+        pointFormat = info.point_format > 0 ? info.point_format : 1;
+        sogDiv = pointFormat >= 2 ? 10 : 2;
+        cogDiv = pointFormat >= 2 ? 10 : 1;
+        underWayUnits = pointFormat >= 2 ? 10 : 2;
     } catch (e) {
         bounds = { now: 0, oldest: 0, newest: 0 };
     }
@@ -138,7 +182,7 @@ async function loadBlock(start) {
 
     const gen = generation;
     const data = await api(
-        `api/replay.json?block=${start / BLOCK}&lookback=${BLOCK_LOOKBACK}`);
+        `api/replay.json?block=${start / BLOCK}&lookback=${BLOCK_LOOKBACK}&pf=${pointFormat}`);
     if (gen !== generation) return false;
     blocks.add(start);
 
@@ -156,7 +200,8 @@ async function loadBlock(start) {
                 name: sanitizeString(m.n || ''),
                 country: sanitizeString(m.f || ''),
                 type: m.t ?? null,
-                len: m.l || 0,
+                dim: m.d || null,
+                len: m.d ? m.d[0] + m.d[1] : 0,
             };
         }
         const merged = mergePoints(s.pts, pts);
@@ -207,8 +252,10 @@ export async function load(at) {
 
         active = true;
         markerSource.clear();
+        hullSource.clear();
         buildFeatures();
         markerLayer.setVisible(true);
+        hullLayer.setVisible(true);
         deps.setLiveLayers(false);
         draw();
 
@@ -320,10 +367,14 @@ export function stop() {
     active = false;
     fleet = {};
     features = {};
+    countSig = "";
     blocks.clear();
     manifest = {};
     markerSource.clear();
     markerLayer.setVisible(false);
+    for (const mmsi in hulls) releaseHull(mmsi);
+    hullSource.clear();
+    hullLayer.setVisible(false);
     deps.setLiveLayers(true);
     deps.onStateChange?.();
 }
@@ -337,13 +388,26 @@ export function seek(time) {
     pump();
 }
 
-const NO_LEG = { brg: null, knots: 0 };
+const NO_LEG = { knots: 0 };
 
-// Course and speed made good from a to b. Bearing comes from the segment being
-// travelled, so the icon always points where the vessel is visibly going.
-// Constant for the segment's lifetime, so the trig runs once per segment, not
-// per frame; the cache keys on the pts array so a block merge (which swaps in
-// a new array) invalidates it.
+const headingOf = (p) => (p[6] != null ? p[6] : null);
+const courseMadeGood = (p) => (p[5] != null ? p[5] / cogDiv : null);
+
+// Icons turn to the course, hulls to the heading — falling back to the course
+// only while the vessel is moving, a stopped vessel's course being noise.
+const courseOf = (p) => courseMadeGood(p) ?? headingOf(p);
+const angleOf = (p) =>
+    headingOf(p) ?? (p[4] != null && p[4] > underWayUnits ? courseMadeGood(p) : null);
+
+// Shortest way round: a vessel swinging through north must not spin 359 degrees.
+function lerpAngle(from, to, f) {
+    let d = ((to - from + 540) % 360) - 180;
+    return (from + d * f + 360) % 360;
+}
+
+// Speed made good from a to b, for vessels whose own report says nothing.
+// Constant for the segment's lifetime, so this runs once per segment rather than
+// per frame; the cache keys on the pts array so a block merge invalidates it.
 function leg(s, a, b) {
     if (a < 0 || b >= s.pts.length || a === b) return NO_LEG;
     if (s.legPts === s.pts && s.legA === a && s.legB === b) return s.legV;
@@ -357,10 +421,7 @@ function leg(s, a, b) {
     s.legPts = s.pts;
     s.legA = a;
     s.legB = b;
-    s.legV = {
-        brg: metres > 1 ? calculateBearing([lonA, latA], [lonB, latB]) : null,
-        knots: (metres / secs) / 0.514444,
-    };
+    s.legV = { knots: (metres / secs) / 0.514444 };
     return s.legV;
 }
 
@@ -371,8 +432,11 @@ function holdAt(s, i, T) {
     const age = T - s.pts[i][3];
     if (age > STALE_DROP) return null;
 
-    const l = i > 0 ? leg(s, i - 1, i) : NO_LEG;
-    return { lat: s.pts[i][0], lon: s.pts[i][1], knots: l.knots, brg: l.brg, age };
+    const sog = s.pts[i][4];
+    const knots = sog != null ? sog / sogDiv : (i > 0 ? leg(s, i - 1, i).knots : 0);
+
+    return { lat: s.pts[i][0], lon: s.pts[i][1], knots, age,
+             hdg: angleOf(s.pts[i]), cog: courseOf(s.pts[i]) };
 }
 
 // index of the first point whose dwell ends at or after T
@@ -399,13 +463,13 @@ function sample(s, T) {
     const i = firstAlive(pts, T);
     const a = T >= pts[i][2] ? i : i - 1;
     const pa = pts[a];
-    // sog is in half-knot units, null when unknown; unknown parks, matching
-    // blocks cached before the field existed
+    // sog units follow the server's point format, null when unknown; unknown
+    // parks, matching blocks cached before the field existed
     const sog = pa[4];
-    const underWay = sog != null && sog > 2;
+    const underWay = sog != null && sog > underWayUnits;
 
     if (T <= pa[3] && !underWay)
-        return { lat: pa[0], lon: pa[1], knots: 0, brg: null };
+        return { lat: pa[0], lon: pa[1], knots: 0, hdg: angleOf(pa), cog: courseOf(pa) };
 
     const b = a + 1;
     if (b < pts.length && pts[b][2] - pa[3] <= MAX_INTERP) {
@@ -413,30 +477,36 @@ function sample(s, T) {
         const span = pts[b][2] - start;
         const f = span > 0 ? Math.max(0, Math.min(1, (T - start) / span)) : 0;
         const l = leg(s, a, b);
+        // turning through the segment reads as a turn, not a snap at the end
+        const between = (of) => {
+            const x = of(pa), y = of(pts[b]);
+            return x != null && y != null ? lerpAngle(x, y, f) : (x ?? y);
+        };
+
         return {
             lat: pa[0] + (pts[b][0] - pa[0]) * f,
             lon: pa[1] + (pts[b][1] - pa[1]) * f,
-            knots: underWay ? sog / 2 : l.knots, brg: l.brg,
+            knots: underWay ? sog / sogDiv : l.knots,
+            hdg: between(angleOf),
+            cog: between(courseOf),
         };
     }
 
     // no next point within reach: hold rather than invent a track never sailed
     if (T <= pa[3]) {
         const l = a > 0 ? leg(s, a - 1, a) : NO_LEG;
-        return { lat: pa[0], lon: pa[1], knots: sog / 2, brg: l.brg };
+        return { lat: pa[0], lon: pa[1], knots: sog / sogDiv, hdg: angleOf(pa), cog: courseOf(pa) };
     }
     return holdAt(s, a, T);
 }
-
-// matches TOOLTIP_FLAG_STYLE on the live map, so the two tooltips look alike
-const FLAG_STYLE = "padding: 0px; margin: 0px; margin-right: 10px; margin-left: 3px; box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); font-size: 26px; opacity: 70%";
 
 // built from the frame being shown, so it follows the replay clock
 function tooltipHTML(mmsi, s, fix) {
     if (!fix) return '';
     let html = '<div class="tooltip-card">'
-        + getFlagStyled(s.country, FLAG_STYLE) + '<div>'
-        + (s.name || 'MMSI ' + mmsi) + ' at ' + getSpeedVal(fix.knots || 0) + ' ' + getSpeedUnit();
+        + flagHTML(s.country, 'flag-tooltip', getCountryName(s.country)) + '<div>'
+        + (s.name || 'MMSI ' + mmsi)
+        + '<span class="tooltip-dim"> at </span>' + getSpeedVal(fix.knots || 0) + ' ' + getSpeedUnit();
     let sub = '';
     if (s.type != null) sub += getShipTypeShort(s.type);
     if (fix.age) sub += (sub ? ' - ' : '') + 'Silent for ' + getDeltaTimeVal(Math.round(fix.age));
@@ -455,10 +525,12 @@ function buildFeatures() {
         marker.set('name', fleet[mmsi].name);
 
         const f = { marker, shown: false, style: null, last: {}, fix: null };
-        // `tooltip` is what the map's pointermove looks for
+        // `tooltip` is what the map's pointermove looks for, `replayMmsi` what
+        // its contextmenu uses to tell a replayed vessel from a live one
         Object.defineProperty(marker, 'tooltip', {
             get: () => tooltipHTML(mmsi, fleet[mmsi] || {}, f.fix),
         });
+        marker.replayMmsi = Number(mmsi);
         features[mmsi] = f;
     }
 }
@@ -467,7 +539,7 @@ function buildFeatures() {
 // animation rate is pure allocation churn, and a frame that changes nothing for
 // a ship touches nothing.
 function place(f, s, fix) {
-    const sp = deps.spriteFor(s.cls, fix.knots, fix.brg);
+    const sp = deps.spriteFor(s.cls, fix.knots, fix.cog);
     const scale = (settings.icon_scale ?? 1) * deps.iconScale(s.len);
     const opacity = fix.age ? deps.fadeOpacity(fix.age) : 1;
     const label = labels ? (s.name || String(f.marker.get('mmsi'))) : '';
@@ -506,27 +578,124 @@ function place(f, s, fix) {
     f.last = { cx: sp.cx, cy: sp.cy, rot: sp.rot, scale, opacity, lat: fix.lat, lon: fix.lon, label };
 }
 
+function takeHull() {
+    const h = hullPool.pop();
+    if (h) return h;
+    const seed = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]];
+    const geom = new Polygon([seed]);
+    const feature = new OlFeature({ geometry: geom });
+    const hull = { feature, geom, flat: geom.getFlatCoordinates(), mmsi: 0 };
+    Object.defineProperty(feature, 'replayMmsi', { get: () => Number(hull.mmsi) });
+    Object.defineProperty(feature, 'tooltip', {
+        get: () => tooltipHTML(hull.mmsi, fleet[hull.mmsi] || {}, features[hull.mmsi]?.fix),
+    });
+    return hull;
+}
+
+function releaseHull(mmsi) {
+    const h = hulls[mmsi];
+    if (!h) return;
+    hullSource.removeFeature(h.feature);
+    delete hulls[mmsi];
+    if (hullPool.length < HULL_POOL_MAX) hullPool.push(h);
+}
+
+// Rotate the precomputed outline into place. No geodesy, no allocation: two
+// trig calls and ten multiply-adds into a buffer that already exists.
+function placeHull(mmsi, s, fix, res) {
+    const local = s.local || (s.local = shipOutlineLocal(s.dim[0], s.dim[1], s.dim[2], s.dim[3]));
+
+    let h = hulls[mmsi];
+    if (!h) {
+        h = hulls[mmsi] = takeHull();
+        h.mmsi = mmsi;
+        hullSource.addFeature(h.feature);
+    }
+
+    const t = fix.hdg * DEG, si = Math.sin(t), co = Math.cos(t);
+    const cosLat = Math.cos(fix.lat * DEG);
+    const k = cosLat > 1e-6 ? 1 / cosLat : 1;      // ground metres -> projected units
+    const c = fromLonLat([fix.lon, fix.lat]);
+    const X = c[0], Y = c[1];
+    const flat = h.flat;
+
+    for (let i = 0; i < 5; i++) {
+        const f = local[i][0], sd = local[i][1];
+        flat[i * 2]     = X + (f * si + sd * co) * k;
+        flat[i * 2 + 1] = Y + (f * co - sd * si) * k;
+    }
+    flat[10] = flat[0];
+    flat[11] = flat[1];
+
+    // the array OL already owns was written in place, so it only needs telling
+    h.geom.changed();
+}
+
+function passes(s, fix) {
+    return deps.filterPasses ? deps.filterPasses(s.cls, fix.knots) : true;
+}
+
+// Counted in the loop that already visits every vessel; only a changed tally
+// reaches the DOM.
+let countSig = "";
+
 function draw() {
     if (!active) return;
+
+    const res = deps.getResolution?.();
+    const buckets = {};
+    let total = 0, shown = 0;
 
     for (const mmsi in fleet) {
         const f = features[mmsi];
         const fix = sample(fleet[mmsi], instant);
         f.fix = fix;
 
-        if (!fix) {
+        let visible = !!fix;
+        if (fix) {
+            const bucket = deps.bucketFor(fleet[mmsi].cls, fix.knots);
+            buckets[bucket] = (buckets[bucket] || 0) + 1;
+            total++;
+            visible = passes(fleet[mmsi], fix);
+        }
+
+        if (!visible) {
             if (f.shown) {
                 markerSource.removeFeature(f.marker);
                 f.shown = false;
             }
+            releaseHull(mmsi);
             continue;
         }
+        shown++;
 
         place(f, fleet[mmsi], fix);
+        hull(mmsi, fleet[mmsi], fix, res);
 
         if (!f.shown) {
             markerSource.addFeature(f.marker);
             f.shown = true;
         }
     }
+
+    const sig = total + ":" + shown + ":" + JSON.stringify(buckets);
+    if (sig !== countSig) {
+        countSig = sig;
+        deps.onCounts?.({ total, shown, buckets });
+    }
+
+    deps.onFrame?.();
+}
+
+// Hulls are drawn by apparent size, not zoom: the fleet runs from 4 m tenders to
+// 365 m tankers, so one zoom threshold would be wrong for most of it. Mercator
+// inflates ground metres by 1/cos(lat), which is why latitude is in the test.
+function hull(mmsi, s, fix, res) {
+    if (!res || !s.dim || fix.hdg == null) return releaseHull(mmsi);
+
+    const px = s.len / (res * Math.cos(fix.lat * DEG));
+    const on = hulls[mmsi] ? px >= HULL_OFF_PX : px >= HULL_ON_PX;
+    if (!on) return releaseHull(mmsi);
+
+    placeHull(mmsi, s, fix, res);
 }

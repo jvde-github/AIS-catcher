@@ -77,9 +77,8 @@ namespace AIS
 				msg.Stamp();
 
 			// Populate Byte array and send msg, exclude 16 FCS bits
-			msg.setChannel(channel);
+			msg.setOrigin(channel, station, own_mmsi);
 			msg.setLength(nBits);
-			msg.setOwnMMSI(own_mmsi);
 			msg.setStartIdx(start_idx);
 			msg.setEndIdx(end_idx);
 

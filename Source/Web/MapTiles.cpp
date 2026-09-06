@@ -51,6 +51,7 @@ namespace
         {".pbf", "pbf", "application/x-protobuf"},
     };
 
+#ifdef HASSQLITE
     const char *mimeForFormat(const std::string &format)
     {
         if (format == "png")
@@ -61,6 +62,7 @@ namespace
             return "application/x-protobuf";
         return "application/octet-stream";
     }
+#endif
 
     const TileExt *extInfo(const std::string &filename)
     {
@@ -100,7 +102,7 @@ std::string MapTiles::pluginCode(bool overlay, const std::string &sourceOptions)
     ss << (overlay ? "addOverlayLayer" : "addTileLayer")
        << "(\"" << name << "\", new ol.layer.Tile({\n"
        << "    source: new ol.source.XYZ({\n"
-       << "        url: '/tiles/" << layerID << "/{z}/{x}/{y}',\n"
+       << "        url: 'tiles/" << layerID << "/{z}/{x}/{y}',\n"
        << "        attributions: '" << attribution << "',\n"
        << sourceOptions
        << "    })\n"

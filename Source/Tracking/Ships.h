@@ -58,31 +58,38 @@ struct Ship
 {
     uint32_t mmsi;
     int count, msg_type, shipclass, mmsi_type, shiptype, heading, status;
+    int region; // Region::find() of the position; derived, not persisted
     int to_port, to_bow, to_starboard, to_stern, IMO, angle, altitude, received_stations;
     int unit_model, unit_serial;
     char month, day, hour, minute;
     float lat, lon, ppm, level, speed, cog, draught, distance;
     std::time_t last_signal, last_direct_signal, last_static_signal;
     char shipname[21], destination[21], callsign[8], country_code[3], vin[9], vendorid[4];
+    char matched_port_code[9]; // UN/LOCODE or US port code; up to 8 characters plus NUL
     std::string msg;
     uint64_t last_group, group_mask;
     // types heard since the last sweep; not persisted
     int type_ttl;
+    // until when the vessel makes no events: a destination or status just changed,
+    // or it sent a test; not persisted
+    std::time_t quiet_until;
     Util::PackedInt flags;
 
     void reset();
     void markType(int type) { msg_type |= 1 << type; type_ttl |= 1 << type; }
     void decayAndExpire();
     void clearFields(uint32_t doomed);
-    int getMMSItype();
-    int getShipTypeClassEri();
-    int getShipTypeClass();
+    int getMMSItype() const;
+    int getShipTypeClassEri() const;
+    int getShipTypeClass() const;
     void setType();
     
     bool writeKML(std::string &) const;
     bool writeGeoJSON(JSON::Writer &, bool station_known) const;
     void writeJSON(JSON::Writer &, long int delta_time, bool station_known) const;
-    void writeCompactDynamic(JSON::Writer &) const;
+    void writeJSONBody(JSON::Writer &, long int delta_time, bool station_known) const;
+    void writeCompactDynamic(JSON::Writer &, std::time_t now, unsigned binary_badge = 0, unsigned station = 0) const;
+    void writeCompactTable(JSON::Writer &) const;
     void writeCompactStatic(JSON::Writer &) const;
 
     // File persistence functions
@@ -91,7 +98,8 @@ struct Ship
 
 private:
     static const int _SHIP_MAGIC = 0x53484950; // "SHIP" in hex
-    static const int _SHIP_VERSION = 4;
+    static const int _SHIP_VERSION = 5;
+    static const int _SHIP_VERSION_UNMATCHED = 4;
     static const int _SHIP_VERSION_LINKED = 3; // trailing slot links, read and discarded
 
 public:
@@ -112,6 +120,7 @@ public:
     void setMsg22(int val) { flags.set(24, 2, val); } // 0=unknown, 1=false, 2=true
     void setOffPosition(int val) { flags.set(26, 2, val); } // 0=unknown, 1=on position, 2=off position
     void setManeuver(int val) { flags.set(28, 2, val); } // 0=not available, 1=no special, 2=special
+    void setInlandDraught(int val) { flags.set(30, 1, val); } // 0=type 5, 1=DAC 200 FID 10
 
     // Getters for PackedInt fields
     int getValidated() const { return flags.get(0, 2); }
@@ -129,4 +138,5 @@ public:
     int getMsg22() const { return flags.get(24, 2); } // 0=unknown, 1=false, 2=true
     int getOffPosition() const { return flags.get(26, 2); } // 0=unknown, 1=on position, 2=off position
     int getManeuver() const { return flags.get(28, 2); } // 0=not available, 1=no special, 2=special
+    int getInlandDraught() const { return flags.get(30, 1); } // 0=type 5, 1=DAC 200 FID 10
 };

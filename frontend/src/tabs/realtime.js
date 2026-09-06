@@ -121,6 +121,7 @@ class RealtimeViewer {
 
     addNmeaMessage(data) {
         if (!this.matches(data)) return;
+        if (!window.__app__.mmsiVisible(data.mmsi)) return;
 
         const rows = this.nmeaContent.getElementsByTagName('tr');
         if (rows.length >= this.maxLines) {
@@ -147,6 +148,7 @@ class RealtimeViewer {
         timeCell.textContent = time;
         timeCell.style.fontSize = '0.85em';
 
+        row.dataset.mmsi = data.mmsi;
         const mmsiCell = document.createElement('td');
 
         const nmeaCell = document.createElement('td');
@@ -229,6 +231,13 @@ class RealtimeViewer {
         for (const f of this.filters) (this.groups[f.kind] ||= []).push(f.value);
     }
 
+    dropHiddenRows() {
+        for (const row of [...this.nmeaContent.getElementsByTagName('tr')]) {
+            const mmsi = row.dataset.mmsi;
+            if (mmsi && !window.__app__.mmsiVisible(Number(mmsi))) row.remove();
+        }
+    }
+
     matches(data) {
         for (const kind in this.groups)
             if (!this.groups[kind].includes(FILTER_KINDS[kind].get(data))) return false;
@@ -297,11 +306,11 @@ function updateFilterDisplay() {
 
 function valueFieldHTML() {
     if (dialogKind === 'channel')
-        return `<select id="realtime_filter_value" class="realtime-filter-input">
+        return `<select id="realtime_filter_value" class="input select realtime-filter-input">
             ${['A', 'B', 'C', 'D'].map((c) => `<option>${c}</option>`).join('')}</select>`;
 
     const hint = dialogKind === 'type' ? 'Message type 1 - 27' : 'MMSI number';
-    return `<input id="realtime_filter_value" class="realtime-filter-input" placeholder="${hint}">`;
+    return `<input id="realtime_filter_value" class="input realtime-filter-input" placeholder="${hint}">`;
 }
 
 function filterDialogHTML() {
@@ -315,7 +324,7 @@ function filterDialogHTML() {
 
     return `<div class="realtime-filter-editor">
         <div class="realtime-filter-row">
-            <select id="realtime_filter_kind" class="realtime-filter-input"
+            <select id="realtime_filter_kind" class="input select realtime-filter-input"
                 data-on-change="realtimeFilterKindChanged">${kinds}</select>
             ${valueFieldHTML()}
             <button class="btn realtime-filter-add" data-action="addRealtimeFilter">Add</button>
@@ -478,6 +487,10 @@ export function clearFilters() {
 export function filterKindChanged() {
     dialogKind = document.getElementById('realtime_filter_kind').value;
     renderFilterDialog();
+}
+
+export function applyVesselFilter() {
+    viewer?.dropHiddenRows();
 }
 
 export function getFilters() {

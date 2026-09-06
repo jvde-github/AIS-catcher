@@ -13,21 +13,21 @@ Tabulator.registerModule([
     SortModule, FilterModule, PageModule, PersistenceModule,
     DownloadModule, ExportModule, FormatModule, InteractionModule,
 ]);
-import {
-    getFlag, getShipName, getCallSign, getCountryName,
-    getStatusVal, getMmsiTypeVal,
-    getShipDimension, getDimVal, getDimUnit, getDraughtVal,
-    getDeltaTimeVal, getEtaVal,
-    getDistanceVal, getDistanceUnit, getLatValFormat, getLonValFormat,
-    getSpeedVal, getSpeedUnit,
-    getStringfromChannels, getStringfromMsgType, getStringfromGroup,
-} from '../core/format.js';
+import { getShipDimension, getDimVal, getDimUnit, getDraughtVal, getDistanceVal, getDistanceUnit, getLatValFormat, getLonValFormat, getSpeedVal, getSpeedUnit } from '../core/units.js';
+import { getCountryName, getStatusVal, getMmsiTypeVal, getDeltaTimeVal, getEtaVal, getStringfromChannels, getStringfromMsgType, getStringfromGroup } from '../../shared/core/text.js';
+import { getShipName, getCallSign } from '../core/names.js';
+import { regionName } from '../core/regions.js';
+import { flagHTML } from '../../shared/components.js';
 
 let table = null;
 let tableFirstTime = true;
 let uiWired = false;
 
-function validatedColor(ship, pos = "green", neg = "red", neutral = "inherited") {
+function validatedClass(ship) {
+    return ship.validated == 1 ? "status-ok" : ship.validated == -1 ? "status-bad" : "";
+}
+
+function validatedColor(ship, pos, neg, neutral = "inherited") {
     return ship.validated == 1 ? pos : ship.validated == -1 ? neg : neutral;
 }
 
@@ -73,7 +73,7 @@ function buildColumns() {
             title: "Shipname", field: "shipname", sorter: "string",
             formatter: (cell) => {
                 const ship = cell.getRow().getData();
-                return getFlag(ship.country) + (getShipName(ship) || ship.mmsi);
+                return flagHTML(ship.country, 'flag-inline', getCountryName(ship.country)) + (getShipName(ship) || ship.mmsi);
             },
         },
         { title: "MMSI", field: "mmsi", sorter: "number" },
@@ -175,15 +175,20 @@ function buildColumns() {
             title: "Lat", field: "lat", sorter: "number",
             formatter: (cell) => {
                 const ship = cell.getRow().getData();
-                return "<div style='color:" + validatedColor(ship) + "'>" + (ship.lat != null ? getLatValFormat(ship) : "") + "</div>";
+                return "<div class='" + validatedClass(ship) + "'>" + (ship.lat != null ? getLatValFormat(ship) : "") + "</div>";
             },
         },
         {
             title: "Lon", field: "lon", sorter: "number",
             formatter: (cell) => {
                 const ship = cell.getRow().getData();
-                return "<div style='color:" + validatedColor(ship) + "'>" + (ship.lon != null ? getLonValFormat(ship) : "") + "</div>";
+                return "<div class='" + validatedClass(ship) + "'>" + (ship.lon != null ? getLonValFormat(ship) : "") + "</div>";
             },
+        },
+        {
+            title: "Region", field: "region",
+            sorter: (a, b) => (regionName(a) || "").localeCompare(regionName(b) || ""),
+            formatter: (cell) => regionName(cell.getValue()) || "",
         },
         {
             title: "Spd (" + getSpeedUnit() + ")", field: "speed", sorter: "number",
@@ -289,7 +294,7 @@ function updateColumnVisibility() {
 
 function resetColumns() {
     const settings = window.AISCatcher.settings;
-    settings.shiptable_columns = ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"];
+    settings.shiptable_columns = ["shipname", "mmsi", "imo", "callsign", "shipclass", "region", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"];
     setColumns();
 }
 
@@ -353,15 +358,16 @@ function wireUIEvents() {
 export async function update() {
     const ok = await window.__app__.fetchShips();
     if (!ok) return;
+    await window.__app__.fetchTableRows();
 
-    const data = Object.values(window.AISCatcher.shipsDB).map((ship) => ship.raw);
+    const data = window.__app__.shipsVisible();
 
     if (table == null) {
         table = new Tabulator("#shipTable", {
             index: "mmsi",
             rowFormatter: (row) => {
                 const ship = row.getData();
-                row.getElement().style.borderLeft = `10px solid ${validatedColor(ship, "var(--color-ok-strong)", "var(--color-error)", "var(--color-off)")}`;
+                row.getElement().style.borderLeft = `4px solid ${validatedColor(ship, "var(--color-success)", "var(--color-danger)", "var(--color-off)")}`;
             },
             data,
             layout: "fitDataTable",

@@ -224,9 +224,9 @@ namespace IO
 		switch (key)
 		{
 		case AIS::KEY_SETTING_URL:
-			url = arg;
-			url_json = JSON::Writer::escape(arg);
-			http.setURL(url);
+			http.setURL(arg);
+			url = Util::Parse::URLWithoutCredentials(arg);
+			url_json = JSON::Writer::escape(url);
 			break;
 		case AIS::KEY_SETTING_USERPWD:
 			http.setUserPwd(arg);

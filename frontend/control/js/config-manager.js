@@ -295,6 +295,12 @@
                     if (typeof value === 'number' || typeof value === 'boolean') return { value: String(value), status: 'converted' };
                     return { value, status: 'failed' };
                 }
+                case 'list': {
+                    if (Array.isArray(value))
+                        return value.every(v => typeof v === 'string') ? { value, status: 'same' } : { value: value.map(String), status: 'converted' };
+                    if (typeof value === 'string') return { value: value.trim() ? [value.trim()] : [], status: 'converted' };
+                    return { value, status: 'failed' };
+                }
                 case 'zones': {
                     if (Array.isArray(value)) {
                         return value.every(v => typeof v === 'string')
@@ -576,7 +582,7 @@
         state: { unsaved: false },
 
         notify(type, message, duration, onClose) {
-            return window.AISComponents.toast(type, message, duration, undefined, onClose);
+            return window.AISComponents.toast(type, message, { duration, onClose });
         },
 
         notifyWarnings(warnings) {
@@ -721,21 +727,46 @@
                 const parsedCurrent = Utils.parseInteger(currentValue);
                 const isPreset = field.presets && field.presets.some(p => Utils.parseInteger(p.value) === parsedCurrent);
 
+                // Free text so "1536K" can be typed; it is stored and shown as the plain number
+                // (1536000), the unit being whatever the field is in (Hz for rates). A value
+                // below the minimum whose ×1000 fits gets a hint rather than a silent save.
+                const hint = el('div', 'field-hint hidden');
+                const check = (input, raw) => {
+                    let cleaned = raw.replace(/[^0-9kK]/g, '').replace(/[kK](?=.)/g, '');
+                    if (/[kK]$/.test(cleaned)) cleaned = cleaned.slice(0, -1) + (cleaned.length > 1 ? '000' : '');
+                    if (cleaned !== input.value) input.value = cleaned;
+                    const n = parseNumberLike(cleaned);
+                    const inRange = n !== null && (field.min === undefined || n >= field.min) && (field.max === undefined || n <= field.max);
+                    input.classList.toggle('invalid', !inRange);
+                    hint.classList.add('hidden');
+                    if (inRange) return n;
+                    if (n !== null) {
+                        const kFits = field.min !== undefined && n < field.min && n * 1000 >= field.min && (field.max === undefined || n * 1000 <= field.max);
+                        hint.textContent = kFits
+                            ? `${n} is below the minimum ${field.min}. Did you mean ${n}K (${n * 1000})?`
+                            : `Allowed range: ${field.min ?? '…'} – ${field.max ?? '…'}`;
+                        hint.classList.remove('hidden');
+                    }
+                    return null;
+                };
                 const customInput = el('input', Styles.input + (isPreset ? ' hidden' : ''), {
-                    type: 'number',
+                    type: 'text',
+                    inputMode: 'numeric',
                     value: isPreset ? '' : parsedCurrent,
                     placeholder: field.placeholder || 'Enter custom value...',
                     onInput: (e) => {
-                        const n = parseInt(e.target.value, 10);
-                        if (!isNaN(n)) onUpdate(n);
+                        const n = check(e.target, e.target.value);
+                        if (n !== null) onUpdate(Math.round(n));
                     }
                 });
+                if (!isPreset) check(customInput, String(parsedCurrent ?? ''));
 
                 const select = el('div', 'relative', {},
                     el('select', `${Styles.input} ${Styles.select}`, {
                         onChange: (e) => {
                             if (e.target.value === 'custom') {
                                 customInput.classList.remove('hidden');
+                                check(customInput, customInput.value);
                                 customInput.focus();
                             } else {
                                 customInput.classList.add('hidden');
@@ -747,7 +778,7 @@
                         el('option', '', { value: 'custom', selected: !isPreset }, 'Custom Value...')
                     )
                 );
-                return el('div', 'col', {}, select, customInput);
+                return el('div', 'col', {}, select, customInput, hint);
             }
 
             if (type === 'auto-float' || type === 'auto-integer') {
@@ -935,6 +966,19 @@
                 return wrapper;
             }
 
+            if (type === 'list') {
+                // one entry per line; a cleared field removes the key rather than saving [""]
+                const lines = Array.isArray(currentValue) ? currentValue : (currentValue ? [String(currentValue)] : []);
+                return el('textarea', Styles.input, {
+                    rows: Math.max(2, Math.min(lines.length + 1, 6)),
+                    value: lines.join('\n'),
+                    placeholder: field.placeholder || '',
+                    onInput: Utils.debounce((e) => {
+                        const items = e.target.value.split('\n').map(s => s.trim()).filter(Boolean);
+                        onUpdate(items.length ? items : undefined);
+                    }, 200)
+                });
+            }
             const isNumber = type === 'number';
             return el('input', Styles.input, {
                 type: type || 'text',

@@ -607,6 +607,50 @@ const webviewerSchema = {
         width: 50,
         tooltip: 'Directory with .pjs/.pss plugins injected into the viewer'
     },
+    mbtiles: {
+        name: 'mbtiles',
+        section: 'MBTiles',
+        restartWebviewer: true,
+        label: 'Map',
+        type: 'list',
+        jsonpath: 'mbtiles',
+        placeholder: '/path/to/map.mbtiles',
+        width: 50,
+        tooltip: 'Base map, one file per line'
+    },
+    mboverlay: {
+        name: 'mboverlay',
+        section: 'MBTiles',
+        restartWebviewer: true,
+        label: 'Overlay',
+        type: 'list',
+        jsonpath: 'mboverlay',
+        placeholder: '/path/to/overlay.mbtiles',
+        width: 50,
+        tooltip: 'Overlay, one file per line'
+    },
+    fstiles: {
+        name: 'fstiles',
+        section: 'Tile directories',
+        restartWebviewer: true,
+        label: 'Map',
+        type: 'list',
+        jsonpath: 'fstiles',
+        placeholder: '/path/to/tiles',
+        width: 50,
+        tooltip: 'Base map, one directory per line'
+    },
+    fsoverlay: {
+        name: 'fsoverlay',
+        section: 'Tile directories',
+        restartWebviewer: true,
+        label: 'Overlay',
+        type: 'list',
+        jsonpath: 'fsoverlay',
+        placeholder: '/path/to/overlay',
+        width: 50,
+        tooltip: 'Overlay, one directory per line'
+    },
     webcontrol_http: {
         name: 'webcontrol_http',
         section: 'Station',
@@ -677,7 +721,18 @@ const webviewerSchema = {
         jsonpath: 'replay',
         defaultValue: true,
         width: 24,
-        tooltip: 'Let visitors animate past tracks'
+        tooltip: 'Visitors can animate tracks'
+    },
+    split: {
+        name: 'split',
+        section: 'Service',
+        restartWebviewer: true,
+        label: 'Per-Receiver Views',
+        type: 'toggle',
+        jsonpath: 'split',
+        defaultValue: true,
+        width: 24,
+        tooltip: 'Visitors can pick one receiver'
     },
     track_time: {
         name: 'track_time',
@@ -744,7 +799,7 @@ const webviewerSchema = {
         jsonpath: 'expire',
         defaultValue: false,
         width: 24,
-        tooltip: 'Clears ship data that is not reconfirmed by fresh messages'
+        tooltip: 'Clear data not reconfirmed by new messages'
     },
     realtime: {
         name: 'realtime',
@@ -777,7 +832,7 @@ const webviewerSchema = {
         jsonpath: 'geojson',
         defaultValue: false,
         width: 24,
-        tooltip: 'Enable the GeoJSON API endpoints'
+        tooltip: 'Enable GeoJSON endpoints'
     },
     prome: {
         name: 'prome',
@@ -788,7 +843,7 @@ const webviewerSchema = {
         jsonpath: 'prome',
         defaultValue: false,
         width: 24,
-        tooltip: 'Serve Prometheus metrics at /metrics'
+        tooltip: 'Metrics served at /metrics'
     },
     log: {
         name: 'log',
@@ -970,13 +1025,13 @@ const receiverSchema = {
     },
     rtlsdr_bandwidth: {
         name: "rtlsdr_bandwidth",
-        label: "Bandwidth",
+        label: "Bandwidth (Hz)",
         type: "integer-select",
         jsonpath: "rtlsdr.bandwidth",
         defaultValue: 0,
         min: 0,
         max: 1000000,
-        placeholder: "e.g., 0 (Off), 192000",
+        placeholder: "in Hz, e.g. 0 (Off), 192000 or 192K",
         presets: [
             { value: 0, label: "Off" },
             { value: 192000, label: "192K" }
@@ -989,18 +1044,18 @@ const receiverSchema = {
     },
     rtlsdr_sample_rate: {
         name: "rtlsdr_sample_rate",
-        label: "Sample Rate",
+        label: "Sample Rate (Hz)",
         type: "integer-select",
         jsonpath: "rtlsdr.sample_rate",
         defaultValue: 1536000,
-        min: 225000,
+        min: 96000,
         max: 3200000,
-        placeholder: "e.g., 288000, 1536000",
+        placeholder: "in Hz, e.g. 1536000 or 1536K",
         presets: [
             { value: 288000, label: "288K" },
             { value: 1536000, label: "1536K (default)" }
         ],
-        tooltip: "1536K is recommended; 288K reduces CPU load on small devices",
+        tooltip: "1536000 Hz (1536K) is recommended; 288K reduces CPU load on small devices",
         dependsOn: {
             field: "input",
             value: "RTLSDR"
@@ -1048,13 +1103,13 @@ const receiverSchema = {
     },
     airspyhf_sample_rate: {
         name: "airspyhf_sample_rate",
-        label: "Sample Rate",
+        label: "Sample Rate (Hz)",
         type: "integer-select",
         jsonpath: "airspyhf.sample_rate",
         defaultValue: 192000,
         min: 192000,
         max: 768000,
-        placeholder: "e.g., 192000, 256000, 384000, 768000",
+        placeholder: "in Hz, e.g. 192000 or 192K",
         presets: [
             { value: 192000, label: "192K" },
             { value: 256000, label: "256K" },
@@ -1108,6 +1163,7 @@ const receiverSchema = {
             { value: "none", label: "Raw" },
             { value: "rtltcp", label: "RTLTCP" },
             { value: "ws", label: "WS" },
+            { value: "wss", label: "WSS" },
             { value: "wsmqtt", label: "WSMQTT" },
             { value: "mqtt", label: "MQTT" },
             { value: "gpsd", label: "GPSD" },
@@ -1115,7 +1171,7 @@ const receiverSchema = {
             { value: "basestation", label: "BASESTATION" },
             { value: "raw1090", label: "RAW1090" }
         ],
-        tooltip: "Stream format of the remote server",
+        tooltip: "How the remote server is reached and what it sends",
         dependsOn: {
             field: "input",
             value: "RTLTCP"
@@ -1128,8 +1184,8 @@ const receiverSchema = {
         jsonpath: "rtltcp.host",
         placeholder: "e.g., 127.0.0.1",
         dependsOn: {
-            field: "input",
-            value: "RTLTCP"
+            field: "rtltcp_protocol",
+            value: ["txt", "none", "rtltcp", "wsmqtt", "mqtt", "gpsd", "beast", "basestation", "raw1090"]
         },
         width: 75
     },
@@ -1140,10 +1196,34 @@ const receiverSchema = {
         jsonpath: "rtltcp.port",
         placeholder: "e.g., 1234",
         dependsOn: {
-            field: "input",
-            value: "RTLTCP"
+            field: "rtltcp_protocol",
+            value: ["txt", "none", "rtltcp", "wsmqtt", "mqtt", "gpsd", "beast", "basestation", "raw1090"]
         },
         width: 25
+    },
+    rtltcp_url: {
+        name: "rtltcp_url",
+        label: "URL",
+        type: "text",
+        jsonpath: "rtltcp.url",
+        placeholder: "wss://host:port/path?query",
+        tooltip: "Port 443 (wss) or 80 (ws) unless given; user:password@ sends HTTP Basic, token@ a Bearer token",
+        dependsOn: {
+            field: "rtltcp_protocol",
+            value: ["ws", "wss"]
+        }
+    },
+    rtltcp_ssl_verify: {
+        name: "rtltcp_ssl_verify",
+        label: "Verify Certificate",
+        type: "toggle",
+        jsonpath: "rtltcp.ssl_verify",
+        defaultValue: true,
+        width: 25,
+        dependsOn: {
+            field: "rtltcp_protocol",
+            value: "wss"
+        }
     },
     rtltcp_sample_rate: {
         name: "rtltcp_sample_rate",
@@ -1224,7 +1304,7 @@ const receiverSchema = {
         placeholder: "WebSocket sub-protocols",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: "ws"
+            value: ["ws", "wss"]
         }
     },
     rtltcp_binary: {
@@ -1236,7 +1316,7 @@ const receiverSchema = {
         width: 25,
         dependsOn: {
             field: "rtltcp_protocol",
-            value: "ws"
+            value: ["ws", "wss"]
         }
     },
     rtltcp_origin: {
@@ -1247,7 +1327,7 @@ const receiverSchema = {
         placeholder: "Origin header for WebSocket",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: ["ws", "wsmqtt"]
+            value: ["ws", "wss", "wsmqtt"]
         }
     },
     rtltcp_topic: {
@@ -1277,10 +1357,10 @@ const receiverSchema = {
         label: "Username",
         type: "text",
         jsonpath: "rtltcp.username",
-        placeholder: "MQTT username",
+        placeholder: "Username (MQTT, or HTTP Basic for WebSocket)",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: ["mqtt", "wsmqtt"]
+            value: ["mqtt", "wsmqtt", "ws", "wss"]
         }
     },
     rtltcp_password: {
@@ -1288,10 +1368,10 @@ const receiverSchema = {
         label: "Password",
         type: "text",
         jsonpath: "rtltcp.password",
-        placeholder: "MQTT password",
+        placeholder: "Password, or a bearer token with no username",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: ["mqtt", "wsmqtt"]
+            value: ["mqtt", "wsmqtt", "ws", "wss"]
         }
     },
     rtltcp_qos: {

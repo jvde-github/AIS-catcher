@@ -87,6 +87,7 @@ namespace AIS
 		Util::PassThrough<Message> output;
 		Util::PassThrough<Plane::ADSB> outputADSB;
 		Util::PassThrough<GPS> output_gps;
+		Util::PassThrough<Control> output_control;
 
 	public:
 		Model() : Setting("Model") {}
@@ -95,6 +96,7 @@ namespace AIS
 
 		StreamOut<Message> &Output() { return output; }
 		StreamOut<GPS> &OutputGPS() { return output_gps; }
+		StreamOut<Control> &OutputControl() { return output_control; }
 		StreamOut<Plane::ADSB> &OutputADSB() { return outputADSB; }
 
 		void setName(const std::string &s) { setting_name = s; }

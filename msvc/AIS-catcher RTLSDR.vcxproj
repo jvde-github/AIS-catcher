@@ -78,6 +78,8 @@
     <ClCompile Include="..\Source\IO\TCPServer.cpp" />
     <ClCompile Include="..\Source\Tracking\DB.cpp" />
     <ClCompile Include="..\Source\Tracking\Ships.cpp" />
+    <ClCompile Include="..\Source\Tracking\Region.cpp" />
+    <ClCompile Include="..\Source\Tracking\RegionTree.cpp" />
     <ClCompile Include="..\Source\Utilities\Parse.cpp" />
     <ClCompile Include="..\Source\Utilities\Convert.cpp" />
     <ClCompile Include="..\Source\Utilities\Helper.cpp" />
@@ -102,6 +104,7 @@
     <ClInclude Include="..\Source\Web\WebViewer.h" />
     <ClInclude Include="..\Source\Application\Receiver.h" />
     <ClInclude Include="..\Source\Tracking\Ships.h" />
+    <ClInclude Include="..\Source\Tracking\Region.h" />
     <ClInclude Include="..\Source\Tracking\DB.h" />
     <ClInclude Include="..\Source\DBMS\PostgreSQL.h" />
     <ClInclude Include="..\Source\IO\HTTPClient.h" />

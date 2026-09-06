@@ -57,23 +57,31 @@ export function updateSharingState(sharing, sharing_uuid, engine_running) {
 
 function sharingState() {
     const f = liveSharing || deps.config.features || {};
-    if (f.engine_running === false) return { label: "Receiver stopped", color: "gray" };
-    if (!f.sharing)        return { label: "No", color: "red" };
-    if (!f.sharing_uuid)   return { label: "Yes (anonymous)", color: "orange" };
-    return { label: "Yes", color: "green" };
+    if (f.engine_running === false) return { label: "Receiver stopped", cls: "status-off", state: "stopped" };
+    if (!f.sharing)        return { label: "No", cls: "status-bad", state: "off" };
+    if (!f.sharing_uuid)   return { label: "Yes (anonymous)", cls: "status-warn", state: "anon" };
+    return { label: "Yes", cls: "status-ok", state: "on" };
 }
 
 export function sharingDisplay() {
     const s = sharingState();
-    return [s.label, s.color];
+    return [s.label, s.cls];
 }
 
+let sharingPosted = null;
+
 export function applySharingState() {
-    const btn = document.getElementById("xchange");
-    if (btn) {
-        btn.classList.remove("fill-red", "fill-orange", "fill-green", "fill-gray");
-        btn.classList.add("fill-" + sharingState().color);
-    }
+    const state = sharingState().state;
+    if (window.parent === window || sharingPosted === state) return;
+
+    sharingPosted = state;
+    try {
+        window.parent.postMessage({ type: "aiscatcher:sharing", state }, window.location.origin);
+    } catch (e) { }
+}
+
+export function isPaneOpen() {
+    return !!(communityPopup && !communityPopup.closed);
 }
 
 export function toggleCommunityPane() {

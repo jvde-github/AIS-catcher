@@ -1,0 +1,935 @@
+/* ============================================================================
+   panel.css — the settings window's body: sections, groups, titles, tabs.
+   Companion to panel.js; the window container itself is in map.css.
+   ========================================================================= */
+
+.settings-main #overlayContainer .overlay-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    column-gap: 12px;
+    /* the credit hugs its name the way a base map's does */
+    row-gap: 0;
+    margin: 0;
+    padding: 8px 2px;
+    border-bottom: 1px solid var(--color-rule);
+}
+
+.settings-main #overlayContainer .overlay-row:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.settings-main #overlayContainer .overlay-row:first-child {
+    padding-top: 0;
+}
+
+.settings-main #overlayContainer .overlay-row > input[type="checkbox"] {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    margin: 0;
+}
+
+.settings-main #overlayContainer .overlay-row > label {
+    grid-column: 1;
+    grid-row: 1;
+    width: auto;
+    margin: 0;
+    font-size: var(--fs-base);
+}
+
+.settings-main section > div.st-group {
+    flex: 1 1 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-self: stretch;
+    align-items: flex-start;
+    column-gap: var(--space-3);
+    row-gap: 14px;
+    margin: 4px 0 2px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: var(--color-nest-2);
+}
+
+.settings-main section > div.st-group > div {
+    flex: 1 1 100%;
+    margin: 0;
+}
+
+.settings-main section > div.st-group > div.third {
+    flex: 0 1 calc(33.333% - 0.5rem);
+    white-space: nowrap;
+}
+
+.settings-main section > div.st-group > div.half {
+    flex: 0 1 calc(50% - 0.375rem);
+}
+
+.settings-main section div > span.st-wide {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.settings-main #overlayContainer .overlay-row > .map-attribution-note {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 6px 0 0;
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+}
+
+/* a base map's credit reads like an overlay's: same size, same tone */
+.settings-main .basemap-credit {
+    /* clear of the picker above it: the credit belongs to that map, but it is
+       a caption, not part of the box */
+    margin: 6px 0 0;
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+}
+
+.settings-main #overlayContainer .overlay-row > .overlay-dim {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 0;
+}
+
+.settings-main #overlayContainer .overlay-dim > span {
+    grid-column: 2;
+    justify-self: end;
+    display: inline;
+    width: auto;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.settings-main #overlayContainer .overlay-row .overlay-dim input[type="range"] {
+    grid-column: 1;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+}
+
+.settings-main #overlayContainer .overlay-row.overlay-off > .overlay-dim {
+    display: none;
+}
+
+.settings-main section div#overlayContainer {
+    display: block;
+    align-self: stretch;
+    margin: 4px 0 2px;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-nest-2);
+}
+
+/* .band / .band-slot / .band-title live in components.css */
+
+/* same treatment as .dialog-header .close_icon in components.css */
+.settings-header>.close_icon {
+    flex: none;
+    align-self: center;
+    display: flex;
+    align-items: center;
+    color: var(--color-icon);
+    font-size: var(--fs-lg);
+    margin: 0 16px 0 12px;
+    cursor: pointer;
+    transition: opacity var(--dur-fast) ease;
+}
+
+@media (hover: hover) {
+    .settings-header>.close_icon:hover {
+        opacity: 0.65;
+    }
+}
+
+.settings-main {
+    overflow: auto;
+    font-size: var(--fs-base);
+    flex: 1 1 auto;
+}
+
+/* --color-control is its own light/dark pair, so no .dark override is needed */
+.settings-main select {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: var(--fs-sm);
+    white-space: nowrap;
+    cursor: pointer;
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+}
+
+/* these two bleed 6px into the padding so their hover tint reaches the edge of
+   the group; a select would only sit crooked in its column */
+.settings-main section div>span[data-action],
+/* one checkbox row: box, sprite and label on a line */
+.filter-check {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: var(--fs-sm);
+    white-space: nowrap;
+    cursor: pointer;
+    padding: 7px 6px;
+    margin: 0 -6px;
+    border-radius: var(--radius-sm);
+}
+
+@media (hover: hover) {
+    .filter-check:hover {
+        background: var(--color-band-accent);
+    }
+}
+
+.filter-check .shipicon,
+.filter-check .staticon,
+.filter-check .helicoptericon {
+    flex: none;
+    margin: -2px 2px;
+}
+
+.settings-main section div.filter-checks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    align-self: stretch;
+    gap: 2px 20px;
+    margin: 4px 0 2px;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-nest-2);
+}
+
+.settings-main section div.filter-checks,
+.settings-main section div#overlayContainer {
+    border: none;
+}
+
+.settings-main section div button.st-danger {
+    border-color: color-mix(in srgb, var(--color-danger) 45%, var(--color-field-border));
+    color: color-mix(in srgb, var(--color-danger) 75%, var(--color-text));
+}
+
+@media (hover: hover) {
+    .settings-main section div button.st-danger:hover {
+        border-color: var(--color-danger);
+        background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+    }
+}
+
+.settings-main section div>span[data-action] {
+    align-self: flex-start;
+    width: fit-content;
+    grid-template-columns: minmax(7rem, max-content);
+}
+
+.settings-main section div.filter-allnone {
+    flex-direction: row;
+    align-self: flex-start;
+    gap: 8px;
+    margin: 6px 0 0;
+}
+
+.settings-main section div.filter-allnone button {
+    padding: 0;
+    font-size: var(--fs-sm);
+    background: none;
+    border: none;
+    box-shadow: none;
+    color: var(--color-accent);
+    cursor: pointer;
+    width: auto;
+}
+
+@media (hover: hover) {
+    .settings-main section div.filter-allnone button:hover {
+        text-decoration: underline;
+    }
+}
+
+.settings-main .filter-check input[type="checkbox"] {
+    appearance: auto;
+    -webkit-appearance: auto;
+    width: 15px;
+    height: 15px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+}
+
+.settings-main .filter-check input[type="checkbox"]::before,
+.settings-main .filter-check input[type="checkbox"]::after {
+    content: none;
+}
+
+.settings-main section.st-off {
+    display: none;
+}
+
+#filter_summary,
+.settings-main section div span.st-note {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-normal);
+    color: var(--color-text-muted);
+    margin-bottom: 0;
+}
+
+/* label on the left, the action on the right */
+.filter-topbar {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.settings-main #filter_summary.filter-on {
+    color: var(--color-accent);
+    font-weight: var(--fw-semibold);
+}
+
+/* the two-thumb range: both inputs overlay one track */
+.dr-track::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 8px;
+    height: 8px;
+    border-radius: var(--radius-lg);
+    background: var(--color-track);
+}
+
+.dr-fill {
+    position: absolute;
+    top: 8px;
+    height: 8px;
+    border-radius: var(--radius-lg);
+    background: var(--color-accent);
+    opacity: 0.25;
+}
+
+.dr-track input[type="range"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 24px;
+    margin: 0;
+    background: none;
+    pointer-events: none;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.dr-track input[type="range"]::-webkit-slider-runnable-track {
+    background: none;
+    border: none;
+    height: 24px;
+}
+
+.dr-track input[type="range"]::-moz-range-track {
+    background: none;
+    border: none;
+    height: 24px;
+}
+
+.dr-track input[type="range"]::-webkit-slider-thumb {
+    pointer-events: auto;
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: 4px;
+    border: none;
+    border-radius: var(--radius-circle);
+    background: var(--color-accent);
+    box-shadow: 0 1px 2px var(--color-shadow-soft);
+    cursor: pointer;
+}
+
+.dr-track input[type="range"]::-moz-range-thumb {
+    pointer-events: auto;
+    width: 16px;
+    height: 16px;
+    border: none;
+    border-radius: var(--radius-circle);
+    background: var(--color-accent);
+    box-shadow: 0 1px 2px var(--color-shadow-soft);
+    cursor: pointer;
+}
+
+@media (hover: hover) {
+    .dr-track input[type="range"]:hover::-webkit-slider-thumb {
+        box-shadow: 0 1px 2px var(--color-shadow-soft), 0 0 0 2px var(--color-accent);
+    }
+}
+
+@media (hover: hover) {
+    .dr-track input[type="range"]:hover::-moz-range-thumb {
+        box-shadow: 0 1px 2px var(--color-shadow-soft), 0 0 0 2px var(--color-accent);
+    }
+}
+
+.settings-main section div.dualrange {
+    align-self: stretch;
+    display: block;
+    margin: 0;
+}
+
+.settings-main section div.dr-track {
+    display: block;
+    position: relative;
+    height: 24px;
+    margin: 0;
+}
+
+.settings-main section div.dr-fill {
+    margin: 0;
+}
+
+.settings-main button:not(.tab-scroll-btn) {
+    background-color: var(--color-control);
+}
+
+/* typography comes from .col-header in components.css */
+.settings-main>header {
+    margin: 18px 16px 4px;
+    padding: 0 0 4px;
+    max-width: none;
+    width: auto;
+    border: none;
+    border-bottom: 1px solid var(--color-border);
+    border-radius: 0;
+    background: none;
+    text-align: left;
+}
+
+/* .tab-scroll-wrap / .tab-scroll-btn live in components.css */
+.settings-nav {
+    position: sticky;
+    top: 0;
+    background: var(--color-panel-surface);
+    --tab-fade: var(--color-panel-surface);
+    z-index: var(--z-base);
+}
+
+.tab-scroll-wrap .settings-tabs {
+    padding: 0 0.3rem 0 0.6rem;
+}
+
+/* .tabs / .tab live in components.css, shared with the control hub */
+
+.settings-header .settings-tabs {
+    border-bottom: none;
+    /* the swoosh eats 25% of the width at the bottom edge: the last tab needs
+       that much room or its underline is clipped */
+    padding: 0 4.6rem 0 0.3rem;
+    align-self: stretch;
+    align-items: stretch;
+    font-size: var(--fs-base);
+    min-width: 0;
+}
+
+/* the header strip sits on the swoosh, so the arrows must fade into that */
+.settings-header .tab-scroll-wrap {
+    flex: 1 1 0;
+    min-width: 0;
+    align-self: stretch;
+    --tab-fade: var(--color-band-accent);
+}
+
+.settings-header .settings-tab {
+    display: flex;
+    align-items: center;
+}
+
+.settings-subtabs .settings-tab {
+    padding: 0.55rem 0.65rem;
+}
+
+/* .fieldset / .field / .field-label / .field-desc live in components.css;
+   these are the viewer's own section chrome */
+.settings-main section div {
+    align-items: flex-start;
+}
+
+.settings-main [hidden] {
+    display: none;
+}
+
+.settings-main section {
+    margin: 0 1.25rem;
+    padding: 1rem 0 0.25rem;
+    font-size: inherit;
+}
+
+@media (max-width: 560px) {
+    .settings-main section {
+        margin: 0 0.5rem;
+    }
+
+    .settings-main section > div.st-group {
+        padding: 8px 9px;
+    }
+}
+
+.settings-main .st-break {
+    flex: 1 1 100%;
+    height: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.settings-main .st-title {
+    flex: 1 1 100%;
+    margin: 0 0 0 2px;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.settings-main section>div.third {
+    flex: 0 1 calc(33.333% - 0.5rem);
+    white-space: nowrap;
+}
+
+.settings-main section>div.half {
+    flex: 0 1 calc(50% - 0.375rem);
+    white-space: nowrap;
+}
+
+.settings-main section>div.quarter {
+    flex: 0 1 calc(25% - 0.5625rem);
+    white-space: nowrap;
+}
+
+.settings-main section>div.threequarter {
+    flex: 1 1 calc(75% - 0.5625rem);
+}
+
+@media (max-width: 480px) {
+
+    .settings-main section>div.half,
+    .settings-main section div.st-group>div.half,
+    .settings-main section>div.threequarter {
+        flex-basis: 100%;
+    }
+
+    .settings-main section>div.third,
+    .settings-main section div.st-group>div.third,
+    .settings-main section>div.quarter {
+        flex-basis: calc(50% - 0.375rem);
+    }
+
+    .settings-main section>div {
+        white-space: normal;
+    }
+
+    .settings-main button {
+        max-width: 100%;
+    }
+}
+
+.settings-main section div span:nth-of-type(2) {
+    padding: 0;
+    border-left: none;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    color: var(--color-text);
+}
+
+/* .input / .select / .toggle / .slider / .btn live in components.css; these are
+   the viewer's own sizing, which differs from the hub's full-width fields */
+.settings-main select {
+    max-width: 100%;
+}
+
+.settings-main button:not(.tab-scroll-btn),
+.settings-main section div>span[data-action] {
+    /* re-asserted after .settings-main section div span:nth-of-type(2), which
+       zeroes padding/border-left for the generic control slot */
+    padding: 8px 16px;
+    border-left: 1px solid var(--color-field-border);
+    width: fit-content;
+    min-width: 7rem;
+    max-width: 100%;
+    text-align: center;
+    margin: 0;
+}
+
+.settings-main select,
+.settings-main input[type="range"] {
+    width: 100%;
+}
+
+/* range-input track/thumb styling is shared with the hub in components.css */
+
+/* Preview of the speed palette: the gradient the map draws tracks with. The
+   generic field rule would make a stretching column of it, hence the sizing.
+   The margins pad the 14px band out to the 28px box of the slider beside it,
+   so both columns' descriptions sit on the same line. */
+.settings-main .speed-legend {
+    flex: 0 0 auto;
+    width: 100%;
+    height: 12px;
+    margin: 7px 0;
+    border: 1px solid var(--color-field-border);
+    border-radius: var(--radius-md);
+}
+
+/* border/radius/shadow come from the shared field styling in components.css */
+.settings-main .color-picker {
+    width: 110px;
+    height: 32px;
+    padding: 4px;
+    background: var(--color-surface-raised);
+}
+
+.settings-main .color-picker::-webkit-color-swatch {
+    border-radius: var(--radius-md);
+}
+
+@media (hover: hover) {
+    .settings-main section div>span[data-action]:hover,
+    .settings-main button:not(.tab-scroll-btn):hover,
+    .settings-main .color-picker:hover,
+    .settings-main select:hover {
+        border-color: var(--color-accent);
+    }
+}
+
+/* .band / .band-slot live in components.css, shared with the control hub */
+.settings-header {
+    flex-direction: row;
+    position: relative;
+    z-index: var(--z-sticky);
+}
+
+.settings-header .hdr-slot {
+    padding: 0;
+}
+
+.tableside_window .settings-header {
+    flex: none;
+    align-items: center;
+    height: var(--size-header);
+    padding-right: 8px;
+}
+
+.tableside_window .settings-header .hdr-slot {
+    padding: 0 20px 0 1rem;
+}
+
+.tableside_window .close_icon {
+    flex: none;
+    cursor: pointer;
+}
+
+.settings-header .search-box {
+    font-size: var(--fs-md);
+    height: 32px;
+    padding: 5px 12px 5px 34px;
+    background-position: 10px center;
+    margin: 0;
+    background-color: var(--color-band-accent);
+    max-width: 320px;
+}
+
+.tableside_window .settings-header .search-box {
+    width: 32px;
+    max-width: none;
+    padding: 5px 0 5px 31px;
+    background-position: 7px center;
+    background-color: transparent;
+    cursor: pointer;
+    transition: width var(--dur-med) ease, background-color var(--dur-med) ease,
+        border-color var(--dur-med) ease, box-shadow var(--dur-med) ease;
+}
+
+.tableside_window .settings-header .search-box:not(:placeholder-shown) {
+    width: min(260px, 100%);
+    padding-right: 12px;
+    background-color: var(--color-band-accent);
+    cursor: text;
+}
+
+.tableside_window .settings-header .search-box:focus {
+    width: min(260px, 100%);
+    padding-right: 12px;
+    background-color: var(--color-band-accent);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
+    cursor: text;
+}
+
+@media (hover: hover) {
+    .tableside_window .settings-header .search-box:hover {
+        background-color: var(--color-band-accent);
+    }
+}
+
+.settings-main .st-title.basemap-active {
+    color: var(--color-accent);
+}
+
+/* the side panel a table lives in: slides in from the right edge */
+.tableside_window {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    background-color: var(--color-panel-surface);
+    width: var(--size-panel-table);
+    height: 100%;
+    top: 0;
+    right: 0px;
+    position: absolute;
+    z-index: var(--z-panel);
+    padding: 0px;
+    margin: 0px;
+    transform: translateX(100%);
+    visibility: hidden;
+    transition: transform var(--dur-slow) ease-out, visibility 0s linear var(--dur-slow);
+}
+
+/* Too narrow a workspace to split: the panel covers the map instead. The
+   question is how much room the workspace has, not the window, so it is asked
+   of the container. */
+@container workspace (max-width: 750px) {
+    .tableside_window {
+        width: 100%;
+    }
+
+    body.table-open #map {
+        width: 100%;
+    }
+}
+
+.tableside_window.active {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform var(--dur-slow) ease-out, visibility 0s;
+    box-shadow: var(--shadow-panel);
+}
+
+@media (max-width: 750px) {
+    .tableside_window {
+        width: 100%;
+        transform: translateX(100%);
+    }
+}
+
+/* the table itself */
+.tablecard_inner {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 10px 10px;
+}
+
+.tablecard_inner table {
+    width: 100%;
+    font-size: var(--fs-2xs);
+    margin: 5px 0;
+    color: var(--color-text);
+}
+
+.tablecard_inner table thead {
+    background-color: var(--color-panel-surface);
+    color: var(--color-text-muted);
+}
+
+.tablecard_inner table thead>tr>th {
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+    padding: 8px 4px;
+    white-space: nowrap;
+    border-collapse: collapse;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.tablecard_inner table>tbody>tr>th,
+.tablecard_inner table>tbody>tr>td {
+    border: none;
+    margin: 0px;
+    padding: 6px 4px;
+}
+
+/* Name cell: flag then name, the name taking whatever is left */
+.table-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.table-name>span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.table-name .flag {
+    flex: none;
+    width: 18px;
+}
+
+.tablecard_inner table>tbody>tr {
+    cursor: pointer;
+}
+
+@media (hover: hover) {
+    .tablecard_inner table>tbody>tr:hover {
+        background: var(--color-hover);
+    }
+}
+
+.tablecard_inner table .col-name {
+    /* absorbs the slack so the rest hold exact px */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tablecard_inner table .col-dist {
+    width: 72px;
+}
+
+.tablecard_inner table .col-spd {
+    width: 68px;
+}
+
+.tablecard_inner table .col-type {
+    width: 40px;
+    text-align: center;
+}
+
+.tablecard_inner table .col-last {
+    width: 72px;
+}
+
+.tablecard_inner table th.num,
+.tablecard_inner table td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.tablecard_inner table>tbody>tr {
+    border-bottom: 1px solid var(--color-border);
+}
+
+.tablecard_inner table>tbody>tr.stale>td {
+    color: var(--color-text-muted);
+}
+
+.tablecard_inner table>tbody>tr.selected {
+    background: var(--color-selected);
+    box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.tablecard_inner table thead th span {
+    font-size: 0.9em;
+    font-weight: var(--fw-normal);
+    opacity: 0.7;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.tablecard_inner .row-relay {
+    margin-left: 4px;
+    color: var(--color-text-muted);
+}
+
+/* pager in a panel band: ‹ 8 / 12 · 224 › */
+/* Sortable column head: the marker keeps its space at all times so the row
+   does not jump when the sort moves to another column. */
+.sort-icon {
+    cursor: pointer;
+}
+
+.sort-icon::after {
+    content: "\25B2";
+    font-size: var(--fs-2xs);
+    margin-left: 2px;
+    vertical-align: middle;
+    color: transparent;
+}
+
+.sort-icon.ascending::after {
+    content: "\25B2";
+    color: var(--color-text);
+}
+
+.sort-icon.descending::after {
+    content: "\25BC";
+    color: var(--color-text);
+}
+
+/* Type column: the ship's own sprite, rotated to its course, a shade smaller
+   than on the map so it sits on a table row. */
+.table-shiptype-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	vertical-align: middle;
+	transform: scale(0.8);
+}
+
+.table-pager[hidden] {
+    display: none;
+}
+
+.table-pager {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: none;
+    font-size: var(--fs-2xs);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-muted);
+}
+
+.table-pager button {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--color-text);
+    font-size: var(--fs-lg);
+    line-height: 1;
+    cursor: pointer;
+}
+
+.table-pager button:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+@media (hover: hover) {
+    .table-pager button:not(:disabled):hover {
+        background: var(--color-hover);
+    }
+}

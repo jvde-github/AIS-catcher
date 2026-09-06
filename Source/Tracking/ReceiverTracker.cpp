@@ -30,6 +30,7 @@ void ReceiverTracker::applyConfig(const TrackingConfig &cfg, const AIS::Filter &
 	ships.setTrackTime(cfg.track_time);
 	ships.setExpireFields(cfg.expire_fields);
 	ships.setTrackMemory(cfg.track_memory);
+	ships.setMaxShips(cfg.max_ships);
 	ships.setFilter(f);
 
 	// applied unconditionally: a config that drops "cutoff" must go back to the

@@ -16,6 +16,7 @@
 */
 
 #include <cctype>
+#include <stdexcept>
 
 #include "Convert.h"
 
@@ -181,6 +182,8 @@ namespace Util
 			return "MQTTS";
 		case PROTOCOL::WSSMQTT:
 			return "WSSMQTT";
+		case PROTOCOL::WSS:
+			return "WSS";
 		}
 		return "";
 	}
@@ -213,6 +216,19 @@ namespace Util
 			break;
 		}
 		return "";
+	}
+
+	std::string Convert::authorizationHeader(const std::string &username, const std::string &password, bool basic)
+	{
+		if (username.empty() && password.empty())
+			return "";
+		for (const std::string *s : {&username, &password})
+			for (char c : *s)
+				if ((unsigned char)c < 0x20 || c == 0x7f)
+					throw std::runtime_error("credentials contain control characters");
+		if (basic)
+			return "Authorization: Basic " + toBase64(username + ":" + password) + "\r\n";
+		return "Authorization: Bearer " + username + "\r\n";
 	}
 
 	std::string Convert::toBase64(const std::string &in)

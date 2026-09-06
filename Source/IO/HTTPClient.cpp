@@ -101,10 +101,7 @@ namespace IO
 	{
 
 		header = "POST " + path + " HTTP/1.1\r\nHost: " + host + ":" + port + "\r\nAccept: */*\r\nConnection: close\r\n";
-		if (!userpwd.empty())
-		{
-			header += "Authorization: Basic " + Util::Convert::toBase64(userpwd) + "\r\n";
-		}
+		header += Util::Convert::authorizationHeader(username, password, basic);
 
 		if (!multipart)
 		{

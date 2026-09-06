@@ -49,6 +49,9 @@ void Engine::detach()
 #endif
 }
 
+std::function<void(Engine &)> Engine::before_run;
+std::function<void(Engine &)> Engine::after_run;
+
 void Engine::run(WebViewer *viewer, ControlCore *control)
 {
 	attached_viewer = viewer;
@@ -92,14 +95,9 @@ void Engine::run(WebViewer *viewer, ControlCore *control)
 		r.setupModel(group, i);
 	}
 
-	// sharing is on by default as soon as there is anything to share with
-	if (!xshare_defined && !comm_feed && (has_server || !msg.empty()))
-	{
-		if (!control)
-			Warning() << "Hint: Use '-X on' to share with aiscatcher.org community (enables community overlay) or '-X off' to disable. Currently ON by default.";
-
-		createCommunityFeed();
-	}
+	// sharing is opt-in via -X: the silent get an encouraging word, not a feed
+	if (!xshare_defined && !comm_feed && (has_server || !msg.empty()) && !control)
+		Warning() << "Hint: support the aiscatcher.org community by sharing your feed with '-X on'. Sharing is currently OFF.";
 
 	if (comm_feed && (control ? !comm_feed->hasUUID() : !xshare_defined))
 	{
@@ -191,6 +189,11 @@ void Engine::run(WebViewer *viewer, ControlCore *control)
 		if (s->isActive())
 			s->startServing();
 #endif
+
+	// the viewers serve and their streams are wired, the receivers have not started:
+	// a build that adds services attaches them now
+	if (before_run)
+		before_run(*this);
 
 	Debug() << "Starting receivers";
 	for (auto &r : receivers)
@@ -303,6 +306,9 @@ void Engine::run(WebViewer *viewer, ControlCore *control)
 			}
 		}
 	}
+
+	if (after_run)
+		after_run(*this);
 
 	detach();
 

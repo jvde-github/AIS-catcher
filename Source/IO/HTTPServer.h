@@ -173,9 +173,21 @@ namespace IO
 		}
 	};
 
+	// One mask carries every server's topics, so the ids may not collide.
+	namespace SSE
+	{
+		const int ACTIVITY = 1;
+		const int STATUS = 2;
+		const int LOG = 3;
+		const int NMEA = 4;
+		const int SIGNAL = 5;
+		const int VIEWER_LOG = 6;
+	}
+
 	class HTTPServer : public IO::TCPServer
 	{
 	public:
+		uint64_t bytesOut() const { return bytes_out.load(std::memory_order_relaxed); }
 		virtual void Request(IO::TCPServerConnection &c, const HTTPRequest &r, bool accept_gzip);
 		// 404 and close; the fallback for any path no subclass handles
 		void NotFound(IO::TCPServerConnection &c);
@@ -183,6 +195,21 @@ namespace IO
 		void Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip = false, bool cache = false, bool cors = false, int status = 200);
 		void Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip = false, bool cache = false, bool cors = false, int status = 200);
 		void ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip = false, bool cache = false, bool cors = false, int status = 200);
+
+		// Serve another server's routes under a path prefix, so one listener can
+		// front both. A server can be mounted once: its subscribers are held by
+		// whichever server fronts it.
+		bool mount(const std::string &prefix, HTTPServer *target)
+		{
+			if (!target || target == this || target->isMounted() || prefix.empty() || prefix[0] != '/')
+				return false;
+
+			mounts.push_back({prefix, target});
+			target->setMountedOn(this);
+			return true;
+		}
+
+		bool isMounted() const { return mounted_on != nullptr; }
 
 		// The sse list is touched only by the Run() thread: every path in reaches it
 		// through processClients() or drainCommands(), so it needs no lock.
@@ -199,6 +226,13 @@ namespace IO
 		void upgradeSSE(IO::TCPServerConnection &c, uint32_t mask, const std::string &topic = "",
 						const std::function<std::vector<std::string>()> &backlog = nullptr)
 		{
+			// Only the loop that owns the socket may hold a subscriber.
+			if (mounted_on && !owns(c))
+			{
+				mounted_on->upgradeSSE(c, mask, topic, backlog);
+				return;
+			}
+
 			cleanupSSE();
 
 			sse.emplace_back(&c, mask);
@@ -211,19 +245,28 @@ namespace IO
 		}
 
 		// Lets a producer skip building a payload nobody is listening for.
-		bool sseSubscribed(int id) const { return (topics.load() >> id) & 1; }
+		bool sseSubscribed(int id) const
+		{
+			if ((topics.load() >> id) & 1)
+				return true;
+			return mounted_on && mounted_on->sseSubscribed(id);
+		}
 
 		// Producers (decode/log threads) only enqueue a pre-formatted frame; the
 		// Run() loop performs the actual fan-out, so no producer writes a socket.
 		void sendSSE(int id, const std::string &event, const std::string &data)
 		{
-			if (!sseSubscribed(id))
+			if (mounted_on)
+				mounted_on->sendSSE(id, event, data);
+
+			if (!((topics.load() >> id) & 1))
 				return;
 
 			post({Command::Derived, id, SSEConnection::frame(event, data)});
 		}
 
 		void setFrameAncestors(const std::string &v) { frame_ancestors = v; common_headers.clear(); }
+		void setScriptSrc(const std::string &v) { csp_script_src = v; common_headers.clear(); }
 		void setFrameSrc(const std::string &v) { frame_src = v; common_headers.clear(); }
 
 		// back to the defaults documented below, for a reconfigure
@@ -242,11 +285,15 @@ namespace IO
 		// instance is exposed beyond a trusted network.
 		std::string frame_ancestors = "*";
 		std::string frame_src = "'self'";
+		// what script-src allows; a page with inline script (or onclick=) must
+		// widen this via setScriptSrc
+		std::string csp_script_src = "'self'";
 		std::string extra_header;
 		std::string common_headers;
 		std::list<IO::SSEConnection> sse;
 		// union of the subscriber masks, read by producers on other threads
 		std::atomic<uint32_t> topics{0};
+		std::atomic<uint64_t> bytes_out{0}; // response bytes written, headers included
 		std::chrono::steady_clock::time_point last_sse_ping{};
 		static const int SSE_PING_INTERVAL = 20;
 		// below this size the gzip header/CPU overhead outweighs the savings
@@ -287,6 +334,13 @@ namespace IO
 		// status the request must be rejected with, with `error` set.
 		int parseHeaders(const std::string &msg, std::size_t header_end, HTTPRequest &r, std::string &error);
 		void reject(IO::TCPServerConnection &c, int status, const std::string &reason);
+		bool dispatchMount(IO::TCPServerConnection &c, const HTTPRequest &r, bool accept_gzip);
+		bool owns(const IO::TCPServerConnection &c) const { return c.owner == this; }
+
+		void setMountedOn(HTTPServer *front) { mounted_on = front; }
+
+		std::vector<std::pair<std::string, HTTPServer *>> mounts;
+		HTTPServer *mounted_on = nullptr;
 		const std::string &commonHeaders();
 
 		ZIP zip;

@@ -50,6 +50,8 @@ struct TrackingConfig
 	int cutoff = 0;
 	// kilobytes of track storage; 0 keeps the default
 	int track_memory = 0;
+	// ship table size; 0 keeps the default (4096, or 32 times that in server mode)
+	int max_ships = 0;
 };
 
 // Bundles all per-receiver (or aggregate) state: ship DB, counters, history.
@@ -101,10 +103,13 @@ public:
 	// Connect incoming data sources (ships as sink)
 	void connectJSON(Connection<JSON::JSON> &c) { c.Connect((StreamIn<JSON::JSON> *)&ships); }
 	void connectGPS(Connection<AIS::GPS> &c) { c.Connect((StreamIn<AIS::GPS> *)&ships); }
+	void connectControl(Connection<AIS::Control> &c) { c.Connect((StreamIn<AIS::Control> *)&ships); }
 
 	// Connect outgoing sinks (ships as source)
 	template <typename T>
 	void connectSink(T &sink) { ships >> sink; }
+
+	DB &database() { return ships; }
 
 	// JSON output
 	void writeHistoryJSON(JSON::Writer &w);
@@ -120,7 +125,11 @@ public:
 
 	std::string getShipsJSON(bool full = false) { return ships.getJSON(full); }
 	std::string getShipsJSONcompact(std::time_t since = 0) { return ships.getJSONcompact(false, since); }
-	std::string getBinaryMessagesJSON(std::time_t since = 0) { return ships.getBinaryMessagesJSON(since); }
+	std::string getShipsTableJSON(std::time_t since = 0) { return ships.getJSONtable(since); }
+	std::string getBinaryMessagesJSON(std::time_t since = 0, uint64_t marker = 0, uint32_t owner = 0) { return ships.getBinaryMessagesJSON(since, marker, owner); }
+	std::string getMapObjectsJSON(uint64_t since = 0) { return ships.getMapObjectsJSON(since); }
+	std::string getObjectJSON(const std::string &key) { return ships.getObjectJSON(key); }
+	std::string getEventsJSON(uint64_t since, int level) { return ships.getEventsJSON(since, level); }
 	std::string getKML() { return ships.getKML(); }
 	std::string getGeoJSON() { return ships.getGeoJSON(); }
 	std::string getAllPathJSON() { return ships.getAllPathJSON(); }
@@ -133,6 +142,7 @@ public:
 	std::string getPathGeoJSON(uint32_t mmsi) { return ships.getPathGeoJSON(mmsi); }
 	std::string getMessage(uint32_t mmsi) { return ships.getMessage(mmsi); }
 	std::string getShipJSON(uint32_t mmsi) { return ships.getShipJSON(mmsi); }
+	std::string getChangesJSON(uint32_t mmsi) { return ships.getChangesJSON(mmsi); }
 };
 
 // How a device names itself. attachEngine() needs this before it has a tracker

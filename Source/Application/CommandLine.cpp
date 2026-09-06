@@ -70,6 +70,7 @@ static void Usage()
 	Info() << "\t[-M xxx - set additional meta data to generate: T = NMEA timestamp, D = decoder related (signal power, ppm) (default: none)]";
 	Info() << "\t[-n show NMEA messages on screen without detail (-o 1)]";
 	Info() << "\t[-N [optional: port][optional settings] - start http server at port, see README for details]";
+	Info() << "\t    -N ports filename - load static port landmarks from a JSON array";
 	Info() << "\t[-o set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON, 4 JSON Sparse, 5 JSON Full (default: 2)]";
 	Info() << "\t[-O MMSI - sets the own mmsi of the receiver]";
 	Info() << "\t[-p xxx - set frequency correction for device in PPM (default: zero)]";

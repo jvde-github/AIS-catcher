@@ -292,27 +292,66 @@ namespace AIS
 		T(msg, AIS::KEY_BERTH_NAME, start + 14, 84, name);
 		U(msg, AIS::KEY_BERTH_ARRIVAL_TIME, start + 98, 20, 0);
 		U(msg, AIS::KEY_BERTH_DEPARTURE_TIME, start + 118, 20, 0);
-		SL(msg, AIS::KEY_BERTH_LON, start + 138, 25, 1 / 600000.0f, 0);
-		SL(msg, AIS::KEY_BERTH_LAT, start + 163, 24, 1 / 600000.0f, 0);
+		SL(msg, AIS::KEY_BERTH_LON, start + 138, 25, 1 / 60000.0f, 0);
+		SL(msg, AIS::KEY_BERTH_LAT, start + 163, 24, 1 / 60000.0f, 0);
 		X(msg, AIS::KEY_SPARE, start + 187, 1);
 	}
 
 	// ITU-R M.1371-5 — area notice / navigation safety (DAC=1, FID=23).
 	void JSONAIS::asm_imo_fid23_area_notice(const AIS::Message &msg, int start)
 	{
-		U(msg, AIS::KEY_AREA_NOTICE_TYPE, start, 7);
-		U(msg, AIS::KEY_AREA_NOTICE_DURATION, start + 7, 13, 0);
-		B(msg, AIS::KEY_AREA_NOTICE_PRIORITY, start + 20, 1);
-		SL(msg, AIS::KEY_AREA_NOTICE_LON1, start + 21, 25, 1 / 600000.0f, 0);
-		SL(msg, AIS::KEY_AREA_NOTICE_LAT1, start + 46, 24, 1 / 600000.0f, 0);
-		SL(msg, AIS::KEY_AREA_NOTICE_LON2, start + 70, 25, 1 / 600000.0f, 0);
-		SL(msg, AIS::KEY_AREA_NOTICE_LAT2, start + 95, 24, 1 / 600000.0f, 0);
-		int text_len = msg.getLength() - (start + 119);
-		if (text_len < 6) text_len = 0;
-		if (text_len > 360) text_len = 360;
-		text_len -= text_len % 6;
-		if (text_len > 0)
-			T(msg, AIS::KEY_AREA_NOTICE_NAME, start + 119, text_len, name);
+		U(msg, AIS::KEY_LINKAGE_ID, start, 10, 0);
+		U(msg, AIS::KEY_AREA_NOTICE_TYPE, start + 10, 7);
+		U(msg, AIS::KEY_MONTH, start + 17, 4, 0);
+		U(msg, AIS::KEY_DAY, start + 21, 5, 0);
+		U(msg, AIS::KEY_HOUR, start + 26, 5, 24);
+		U(msg, AIS::KEY_MINUTE, start + 31, 6, 60);
+		U(msg, AIS::KEY_AREA_NOTICE_DURATION, start + 37, 18, 262143);
+
+		static const float SCALE[4] = { 1, 10, 100, 1000 };
+		datastring.clear();
+		name.clear();
+		char buf[96];
+		for (int i = 0, base = start + 55; i < 10 && base + 87 <= msg.getLength(); i++, base += 87)
+		{
+			unsigned shape = msg.getUint(base, 3);
+			if (shape == 5)
+			{
+				std::string t;
+				msg.getText(base + 3, 84, t);
+				if (!name.empty() && !t.empty())
+					name += ' ';
+				name += t;
+				continue;
+			}
+			if (shape > 2)
+				continue;
+			float factor = SCALE[msg.getUint(base + 3, 2)];
+			float lon = msg.getInt(base + 5, 25) / 60000.0f, lat = msg.getInt(base + 30, 24) / 60000.0f;
+			if (lat < -90 || lat > 90 || lon < -180 || lon > 180)
+				continue;
+			if (datastring.empty())
+			{
+				json.Add(AIS::KEY_AREA_NOTICE_LAT, lat);
+				json.Add(AIS::KEY_AREA_NOTICE_LON, lon);
+			}
+			const char *sep = datastring.empty() ? "" : ";";
+			int n;
+			if (shape == 0)
+				n = snprintf(buf, sizeof(buf), "%sc,%.5f,%.5f,%.0f", sep, lon, lat, msg.getUint(base + 57, 12) * factor);
+			else if (shape == 1)
+				n = snprintf(buf, sizeof(buf), "%sr,%.5f,%.5f,%.0f,%.0f,%u", sep, lon, lat,
+							 msg.getUint(base + 57, 8) * factor, msg.getUint(base + 65, 8) * factor, msg.getUint(base + 73, 9));
+			else
+				n = snprintf(buf, sizeof(buf), "%ss,%.5f,%.5f,%.0f,%u,%u", sep, lon, lat,
+							 msg.getUint(base + 57, 12) * factor, msg.getUint(base + 69, 9), msg.getUint(base + 78, 9));
+			if (n > 0)
+				datastring += buf;
+		}
+		if (!datastring.empty())
+			json.Add(AIS::KEY_AREA_SHAPES, &datastring);
+		if (!name.empty())
+			json.Add(AIS::KEY_AREA_NOTICE_NAME, &name);
 	}
 
 	// ITU-R M.1371-5 — dangerous cargo / IMDG (DAC=1, FID=25).
@@ -373,11 +412,22 @@ namespace AIS
 
 	// Saint Lawrence Seaway meteorological/hydrological messages (DAC=316 CA / 366 US, FID=1).
 	// Sub-messages: 1=weather station, 2=wind, 3=water level, 6=water flow.
+	static const unsigned SLS_WIND_MAX = 1013;
+
 	void JSONAIS::asm_usa_fid1_sls_meteo(const AIS::Message &msg, int start)
 	{
 		U(msg, AIS::KEY_MESSAGE_ID, start + 2, 6);
 		unsigned message_id = msg.getUint(start + 2, 6);
 		int rpt = start + 8; // first report starts 8 bits into the payload
+
+		// Wind speed/gust in 1/10 knot. 1023 is the spec's "not available"; stations
+		// without a gust sensor send a constant 1014 instead. Reject the top of the
+		// range rather than reporting it as a 101.4 knot wind.
+		auto wind_speed = [&](int p, int offset) {
+			unsigned u = msg.getUint(offset, 10);
+			if (u <= SLS_WIND_MAX)
+				json.Add(p, u * 0.1f);
+		};
 
 		// Common 111-bit header (timestamp + station ID + position) shared by msgs 1/2/3/6.
 		auto emit_common_header = [&]() {
@@ -393,13 +443,13 @@ namespace AIS
 		if (message_id == 1 && msg.getLength() >= rpt + 192)
 		{
 			emit_common_header();
-			UL(msg, AIS::KEY_WSPEED, rpt + 111, 10, 0.1f, 0);
-			UL(msg, AIS::KEY_WGUST, rpt + 121, 10, 0.1f, 0);
+			wind_speed(AIS::KEY_WSPEED, rpt + 111);
+			wind_speed(AIS::KEY_WGUST, rpt + 121);
 			U(msg, AIS::KEY_WDIR, rpt + 131, 9, 511);
-			U(msg, AIS::KEY_BAROMETRIC_PRESSURE, rpt + 140, 14, 16383);
+			UL(msg, AIS::KEY_BAROMETRIC_PRESSURE, rpt + 140, 14, 0.1f, 0, 16383);
 			SL(msg, AIS::KEY_AIR_TEMPERATURE, rpt + 154, 10, 0.1f, 0, -512);
 			SL(msg, AIS::KEY_DEW_POINT, rpt + 164, 10, 0.1f, 0, -512);
-			UL(msg, AIS::KEY_VISIBILITY_KM, rpt + 174, 8, 0.1f, 0);
+			UL(msg, AIS::KEY_VISIBILITY_KM, rpt + 174, 8, 0.1f, 0, 255);
 			SL(msg, AIS::KEY_WATERTEMP, rpt + 182, 10, 0.1f, 0, -512);
 		}
 		else if (message_id == 3 && msg.getLength() >= rpt + 144)
@@ -414,8 +464,8 @@ namespace AIS
 		else if (message_id == 2 && msg.getLength() >= rpt + 144)
 		{
 			emit_common_header();
-			UL(msg, AIS::KEY_WIND_SPEED_AVG, rpt + 111, 10, 0.1f, 0);
-			UL(msg, AIS::KEY_WIND_GUST_SPEED, rpt + 121, 10, 0.1f, 0);
+			wind_speed(AIS::KEY_WIND_SPEED_AVG, rpt + 111);
+			wind_speed(AIS::KEY_WIND_GUST_SPEED, rpt + 121);
 			U(msg, AIS::KEY_WIND_DIRECTION_AVG, rpt + 131, 9, 511);
 			X(msg, AIS::KEY_SPARE, rpt + 140, 4);
 		}
@@ -427,16 +477,112 @@ namespace AIS
 		}
 	}
 
-	// SLS vessel/lock scheduling (DAC=316/366, FID=2) — only message_id exposed.
+	// the TMS packs several names into one field with '@' separators ("B@ N@ D@"): '@' reads as a space, not end-of-text
+	static void seawayText(const AIS::Message &msg, int start, int len, std::string &str)
+	{
+		str.clear();
+		bool sp = true;
+		for (int i = 0; i + 6 <= len; i += 6)
+		{
+			unsigned v = msg.getUint(start + i, 6);
+			char c = (char)(v < 32 ? v + 64 : v);
+			if (c == '@')
+				c = ' ';
+			if (c == ' ')
+			{
+				if (!sp)
+					str += ' ';
+				sp = true;
+			}
+			else
+			{
+				str += c;
+				sp = false;
+			}
+		}
+		while (!str.empty() && str.back() == ' ')
+			str.pop_back();
+	}
+
+	void JSONAIS::seawayName(const AIS::Message &msg, int p, int start, int len, std::string &str)
+	{
+		seawayText(msg, start, len, str);
+		if (!str.empty())
+			json.Add(p, &str);
+	}
+
+	void JSONAIS::seawayTime(const AIS::Message &msg, int p, int start, std::string &str)
+	{
+		if (msg.getUint(start, 4) != 0)
+			ETA(msg, p, start, 20, str);
+	}
+
 	void JSONAIS::asm_usa_fid2_sls_lock(const AIS::Message &msg, int start)
 	{
 		U(msg, AIS::KEY_MESSAGE_ID, start + 2, 6);
+		unsigned message_id = msg.getUint(start + 2, 6);
+
+		if (message_id == 1 && msg.getLength() >= start + 128)
+		{
+			U(msg, AIS::KEY_MONTH, start + 8, 4, 0);
+			U(msg, AIS::KEY_DAY, start + 12, 5, 0);
+			U(msg, AIS::KEY_HOUR, start + 17, 5, 24);
+			U(msg, AIS::KEY_MINUTE, start + 22, 6, 60);
+			seawayName(msg, AIS::KEY_LOCK_ID, start + 28, 42, lock_id);
+			SL(msg, AIS::KEY_LON, start + 70, 25, 1 / 60000.0f, 0, 10800000);
+			SL(msg, AIS::KEY_LAT, start + 95, 24, 1 / 60000.0f, 0, 5400000);
+			X(msg, AIS::KEY_SPARE, start + 119, 9);
+
+			int n = (msg.getLength() - (start + 128)) / 120;
+			if (n > 6)
+				n = 6;
+			datastring.clear();
+			for (int i = 0; i < n; i++)
+			{
+				int base = start + 128 + i * 120;
+				seawayText(msg, base, 90, shipname);
+				if (shipname.empty())
+					continue;
+				char buf[16];
+				snprintf(buf, sizeof(buf), "%02u-%02uT%02u:%02uZ", msg.getUint(base + 91, 4), msg.getUint(base + 95, 5),
+						 msg.getUint(base + 100, 5), msg.getUint(base + 105, 6));
+				if (!datastring.empty())
+					datastring += ';';
+				datastring += shipname;
+				datastring += msg.getUint(base + 90, 1) ? ",1," : ",0,";
+				datastring += buf;
+			}
+			if (!datastring.empty())
+				json.Add(AIS::KEY_LOCK_SCHEDULE, &datastring);
+		}
+		else if (message_id == 2 && msg.getLength() >= start + 350)
+		{
+			U(msg, AIS::KEY_MONTH, start + 8, 4, 0);
+			U(msg, AIS::KEY_DAY, start + 12, 5, 0);
+			U(msg, AIS::KEY_HOUR, start + 17, 5, 24);
+			U(msg, AIS::KEY_MINUTE, start + 22, 6, 60);
+			seawayName(msg, AIS::KEY_VESSEL_NAME, start + 28, 90, shipname);
+			seawayName(msg, AIS::KEY_LAST_LOCATION, start + 118, 42, last_location);
+			seawayTime(msg, AIS::KEY_LAST_ATA, start + 160, last_ata);
+			seawayName(msg, AIS::KEY_FIRST_LOCK, start + 180, 42, first_lock);
+			seawayTime(msg, AIS::KEY_FIRST_LOCK_ETA, start + 222, first_lock_eta);
+			seawayName(msg, AIS::KEY_SECOND_LOCK, start + 242, 42, second_lock);
+			seawayTime(msg, AIS::KEY_SECOND_LOCK_ETA, start + 284, second_lock_eta);
+			seawayName(msg, AIS::KEY_DELAY_LOCK, start + 304, 42, delay_lock);
+			X(msg, AIS::KEY_SPARE, start + 346, 4);
+		}
 	}
 
-	// SLS specific messages (DAC=316/366, FID=32) — only message_id exposed.
 	void JSONAIS::asm_usa_fid32_sls_specific(const AIS::Message &msg, int start)
 	{
 		U(msg, AIS::KEY_MESSAGE_ID, start + 2, 6);
+		unsigned message_id = msg.getUint(start + 2, 6);
+		if (message_id == 1 && msg.getLength() >= start + 32)
+		{
+			U(msg, AIS::KEY_MAJOR_VERSION, start + 8, 8);
+			U(msg, AIS::KEY_MINOR_VERSION, start + 16, 8);
+			X(msg, AIS::KEY_SPARE, start + 24, 8);
+		}
 	}
 
 	// IALA ASM — VTS targets derived by non-AIS means (DAC=1, FID=16, msg 8).

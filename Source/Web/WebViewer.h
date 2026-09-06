@@ -90,6 +90,14 @@ public:
 class WebViewer : public IO::HTTPServer, public Setting
 {
 public:
+	// Extra routes: asked before the static files; return true when the request was answered.
+	std::function<bool(WebViewer &, IO::TCPServerConnection &, const std::string &path, const std::string &arg, bool gzip)> extra_request;
+	// the tracks for a list of MMSIs, as /api/path.json answers them
+	std::string buildMultiPathJSON(ReceiverTracker *s, const std::string &query);
+	const std::vector<Port> &getPorts() const { return settings.ports; }
+	int trackerCount() const { return (int)states.size(); }
+	ReceiverTracker *tracker(int i) { return i >= 0 && i < (int)states.size() ? states[i].get() : nullptr; }
+
 	// Every plain value SetKey() writes lives here, so resetSettings() can put
 	// the viewer back to its defaults by assigning a fresh instance. Anything
 	// that is not a setting (bound socket, ship database, serving state) must
@@ -111,8 +119,10 @@ public:
 		bool GeoJSON = false;
 		bool supportPrometheus = false;
 		bool replay = true;
+		bool split = true;
 
 		std::string station, station_link;
+		std::vector<Port> ports;
 
 		TrackingConfig tracking;
 	};
@@ -180,7 +190,7 @@ private:
 	std::string buildStatJSON(ReceiverTracker *s);
 	std::string buildOutputStatsJSON();
 	std::string buildSharingStateJSON();
-	std::string buildMultiPathJSON(ReceiverTracker *s, const std::string &query);
+
 	void writeOutputsJSON(JSON::Writer &w);
 
 	// NMEA decoder utility

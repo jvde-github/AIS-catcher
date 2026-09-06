@@ -109,7 +109,8 @@ namespace IO
 
 					if (request.method == "GET" || request.method == "POST")
 					{
-						Request(c, request, request.accept_gzip);
+						if (!dispatchMount(c, request, request.accept_gzip))
+							Request(c, request, request.accept_gzip);
 					}
 					else
 					{
@@ -167,6 +168,36 @@ namespace IO
 	void HTTPServer::Request(IO::TCPServerConnection &c, const HTTPRequest &, bool)
 	{
 		NotFound(c);
+	}
+
+	bool HTTPServer::dispatchMount(IO::TCPServerConnection &c, const HTTPRequest &r, bool accept_gzip)
+	{
+		const std::string path = r.path();
+
+		for (const auto &m : mounts)
+		{
+			const std::string &prefix = m.first;
+			if (path.rfind(prefix, 0) != 0)
+				continue;
+
+			// What a mount serves is relative, so the browser must believe it is
+			// inside a directory.
+			if (path.size() == prefix.size())
+			{
+				setExtraHeader("Location: " + prefix + "/");
+				Response(c, "text/plain", std::string(), false, false, false, 301);
+				return true;
+			}
+
+			if (path[prefix.size()] != '/')
+				continue;
+
+			HTTPRequest sub = r;
+			sub.target = r.target.substr(prefix.size());
+			m.second->Request(c, sub, accept_gzip);
+			return true;
+		}
+		return false;
 	}
 
 	int HTTPServer::parseHeaders(const std::string &msg, std::size_t header_end, HTTPRequest &r, std::string &error)
@@ -413,7 +444,7 @@ namespace IO
 		{
 			common_headers = "\r\nServer: AIS-catcher";
 			common_headers += "\r\nContent-Security-Policy: default-src 'self'; "
-				"script-src 'self'; "
+				"script-src " + csp_script_src + "; "
 				"style-src 'self' 'unsafe-inline'; "
 				"img-src 'self' data: blob: http: https:; "
 				"connect-src 'self' http: https: ws: wss:; "
@@ -434,10 +465,11 @@ namespace IO
 							 "\r\nContent-Type: " + type + commonHeaders();
 		header += "\r\nDate: " + httpDate(time(nullptr));
 
+		std::string extra_header_sent;
 		if (!extra_header.empty())
 		{
 			header += "\r\n" + extra_header;
-			extra_header.clear();
+			extra_header_sent.swap(extra_header);
 		}
 
 		if (cors)
@@ -446,7 +478,12 @@ namespace IO
 		if (gzip)
 			header += "\r\nContent-Encoding: gzip";
 
-		if (cache)
+		// an extra header that sets Cache-Control speaks for the response
+		bool cache_set = extra_header_sent.find("Cache-Control:") != std::string::npos;
+		if (cache_set)
+		{
+		}
+		else if (cache)
 		{
 			header += "\r\nCache-Control: max-age=31536000, stale-while-revalidate=604800, stale-if-error=604800";
 			header += "\r\nExpires: " + httpDate(time(nullptr) + 31536000);
@@ -465,10 +502,12 @@ namespace IO
 			c.Close();
 			return;
 		}
+		bytes_out += header.length();
 
 		if (c.head_request)
 			return;
 
+		bytes_out += len;
 		if (!Send(c, data, len))
 		{
 			Error() << "Server: closing client socket.";

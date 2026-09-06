@@ -5,6 +5,7 @@ export default defineConfig({
   // ASCII-only output — prevents esbuild from emitting literal Unicode into
   // `new RegExp()` string args, which V8 rejects as invalid ranges.
   esbuild: { charset: 'ascii' },
+  resolve: { alias: { ol: path.resolve(__dirname, 'node_modules/ol') } },
   build: {
     outDir: path.resolve(__dirname, '../dist'),
     emptyOutDir: false,
@@ -27,7 +28,7 @@ export default defineConfig({
           // core/ MUST be its own chunk — otherwise lazy tab chunks
           // statically import script.js and the browser instantiates it
           // twice (different URL than the original <script> tag).
-          if (id.includes('/frontend/src/core/')) return 'core';
+          if (id.includes('/frontend/src/core/') || id.includes('/frontend/shared/')) return 'core';
           if (id.includes('/frontend/src/overlays/pollingtile')) return 'core';
 
           if (id.includes('node_modules/chart.js') ||
@@ -35,6 +36,8 @@ export default defineConfig({
           if (id.includes('node_modules/ol/')) return 'ol';
           if (id.includes('node_modules/tabulator-tables')) return 'tabulator';
           if (id.includes('node_modules/marked')) return 'marked';
+          if (id.includes('node_modules/ol-mapbox-style') || id.includes('node_modules/@maplibre') ||
+              id.includes('node_modules/mapbox-to-css-font')) return 'mapbox-style';
         },
       },
     },

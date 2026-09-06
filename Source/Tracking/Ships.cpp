@@ -20,16 +20,23 @@
 
 #include "AIS-catcher.h"
 #include "Ships.h"
+
+#ifdef HASPORTS
+#include "libport.h"
+#endif
+#include "Region.h"
 #include "Writer.h"
 
 void Ship::reset()
 {
 	mmsi = count = msg_type = shiptype = group_mask = 0;
 	type_ttl = 0;
+	quiet_until = 0;
 	flags.reset();
 
 	heading = HEADING_UNDEFINED;
 	status = STATUS_UNDEFINED;
+	region = Region::NONE;
 	to_port = to_bow = to_starboard = to_stern = DIMENSION_UNDEFINED;
 	IMO = IMO_UNDEFINED;
 	angle = ANGLE_UNDEFINED;
@@ -56,6 +63,7 @@ void Ship::reset()
 
 	memset(shipname, 0, sizeof(shipname));
 	memset(destination, 0, sizeof(destination));
+	memset(matched_port_code, 0, sizeof(matched_port_code));
 	memset(callsign, 0, sizeof(callsign));
 	memset(country_code, 0, sizeof(country_code));
 	memset(vin, 0, sizeof(vin));
@@ -126,6 +134,7 @@ void Ship::clearFields(uint32_t doomed)
 		lon = LON_UNDEFINED;
 		distance = DISTANCE_UNDEFINED;
 		angle = ANGLE_UNDEFINED;
+		region = Region::NONE;
 		setApproximate(0);
 		setValidated(0);
 		setRAIM(0);
@@ -151,11 +160,13 @@ void Ship::clearFields(uint32_t doomed)
 	if (doomed & F_VOYAGE)
 	{
 		memset(destination, 0, sizeof(destination));
+		memset(matched_port_code, 0, sizeof(matched_port_code));
 		month = ETA_MONTH_UNDEFINED;
 		day = ETA_DAY_UNDEFINED;
 		hour = ETA_HOUR_UNDEFINED;
 		minute = ETA_MINUTE_UNDEFINED;
 		draught = DRAUGHT_UNDEFINED;
+		setInlandDraught(0);
 	}
 	if (doomed & F_STATIC)
 	{
@@ -189,7 +200,7 @@ void Ship::clearFields(uint32_t doomed)
 	}
 }
 
-int Ship::getMMSItype()
+int Ship::getMMSItype() const
 {
 	// the MMSI number outranks the message types
 	if ((mmsi > 111000000 && mmsi < 111999999) || (mmsi > 11100000 && mmsi < 11199999))
@@ -239,7 +250,7 @@ int Ship::getMMSItype()
 	return MMSI_OTHER;
 }
 
-int Ship::getShipTypeClassEri()
+int Ship::getShipTypeClassEri() const
 {
 	switch (shiptype)
 	{
@@ -341,7 +352,7 @@ static bool isSARaircraft(uint32_t mmsi)
 		   || (mmsi > 11100000 && mmsi < 11199999 && (mmsi / 10) % 10 == 1);
 }
 
-int Ship::getShipTypeClass()
+int Ship::getShipTypeClass() const
 {
 	switch (mmsi_type)
 	{
@@ -490,7 +501,16 @@ bool Ship::writeGeoJSON(JSON::Writer &w, bool station_known) const
 
 void Ship::writeJSON(JSON::Writer &w, long int delta_time, bool station_known) const
 {
-	w.beginObject().kv("mmsi", mmsi);
+	w.beginObject();
+	writeJSONBody(w, delta_time, station_known);
+	w.endObject();
+}
+
+// The fields without the enclosing object, so a caller can wrap the canonical
+// set with additions of its own.
+void Ship::writeJSONBody(JSON::Writer &w, long int delta_time, bool station_known) const
+{
+	w.kv("mmsi", mmsi);
 
 	if (isValidCoord(lat, lon))
 	{
@@ -543,40 +563,68 @@ void Ship::writeJSON(JSON::Writer &w, long int delta_time, bool station_known) c
 		.kv_unless("serial", unit_serial, -1)
 		.kv("repeat", getRepeat())
 		.kv("last_signal", delta_time)
-		.endObject();
+		.kv("last_group", last_group)
+		.kv_unless("altitude", altitude, ALT_UNDEFINED)
+		.kv_unless("received_stations", received_stations, RECEIVED_STATIONS_UNDEFINED)
+		.kv_unless("region", region, Region::NONE);
+
+	if (matched_port_code[0])
+	{
+		w.key("matched_port").beginObject().kv("code", matched_port_code);
+#ifdef HASPORTS
+		libport::Info port;
+		if (libport::lookup(matched_port_code, port))
+		{
+			w.kv("country", port.country).kv("name", port.name).kv("size", port.size);
+			if (port.has_position)
+				w.kv("lat", port.lat).kv("lon", port.lon);
+		}
+		else
+#endif
+			w.kv("country", "").kv("name", "");
+		w.endObject();
+	}
 }
 
-void Ship::writeCompactDynamic(JSON::Writer &w) const
+void Ship::writeCompactDynamic(JSON::Writer &w, std::time_t now, unsigned binary_badge, unsigned station) const
 {
 	w.beginArray().val(mmsi);
 	if (isValidCoord(lat, lon))
-	{
-		w.val(lat).val(lon);
-		if (distance != DISTANCE_UNDEFINED && angle != ANGLE_UNDEFINED)
-			w.val(distance).val(angle);
-		else
-			w.val_null().val_null();
-	}
+		w.val(lat).val(lon).val_unless(distance, DISTANCE_UNDEFINED);
 	else
-		w.val_null().val_null().val_null().val_null();
+		w.val_null().val_null().val_null();
 
 	w.val_unless(heading, HEADING_UNDEFINED)
 		.val_unless(cog, COG_UNDEFINED)
 		.val_unless(speed, SPEED_UNDEFINED)
 		.val(status)
-		.val_unless(level, LEVEL_UNDEFINED)
+		.val((long long)(now > last_signal ? now - last_signal : 0))
+		.val((unsigned long long)flags.getPackedValue())
+		.val(shipclass)
+		.val(country_code)
+		.val(binary_badge).val(station)
+		.endArray();
+}
+
+// what the ships table lists beyond the map's row: the receiver's measurements
+// and the classification the card and the table word themselves
+void Ship::writeCompactTable(JSON::Writer &w) const
+{
+	w.beginArray().val(mmsi);
+	if (isValidCoord(lat, lon) && distance != DISTANCE_UNDEFINED && angle != ANGLE_UNDEFINED)
+		w.val(angle);
+	else
+		w.val_null();
+	w.val_unless(level, LEVEL_UNDEFINED)
 		.val_unless(ppm, PPM_UNDEFINED)
 		.val(count)
 		.val(msg_type)
-		.val(last_signal)
 		.val(last_group)
 		.val(group_mask)
-		.val((unsigned long long)flags.getPackedValue())
 		.val_unless(altitude, ALT_UNDEFINED)
 		.val_unless(received_stations, RECEIVED_STATIONS_UNDEFINED)
 		.val(mmsi_type)
-		.val(shipclass)
-		.val(country_code)
+		.val_unless(region, Region::NONE)
 		.endArray();
 }
 
@@ -629,17 +677,18 @@ bool Ship::Save(std::ofstream &file) const
 		&& W(shipclass) && W(mmsi_type)
 		&& W(shipname) && W(destination) && W(callsign) && W(country_code) && W(vin)
 		&& W(vendorid) && W(unit_model) && W(unit_serial)
-		&& W(last_group));
+		&& W(last_group) && W(matched_port_code));
 }
 
 bool Ship::Load(std::ifstream &file)
 {
 	int magic = 0, version = 0;
+	memset(matched_port_code, 0, sizeof(matched_port_code));
 
 	if (!R(magic) || !R(version) || magic != _SHIP_MAGIC)
 		return false;
 
-	if (version != _SHIP_VERSION && version != _SHIP_VERSION_LINKED)
+	if (version != _SHIP_VERSION && version != _SHIP_VERSION_UNMATCHED && version != _SHIP_VERSION_LINKED)
 		return false;
 
 	bool ok = (bool)(R(mmsi) && R(count) && R(msg_type) && R(shiptype) && R(group_mask) && R(flags)
@@ -660,17 +709,21 @@ bool Ship::Load(std::ifstream &file)
 		int discard[3];
 		ok = (bool)R(discard);
 	}
+	if (ok && version == _SHIP_VERSION)
+		ok = (bool)R(matched_port_code);
 
 	// the file holds raw bytes: everything downstream reads these as C strings
 	shipname[sizeof(shipname) - 1] = '\0';
 	destination[sizeof(destination) - 1] = '\0';
+	matched_port_code[sizeof(matched_port_code) - 1] = '\0';
 	callsign[sizeof(callsign) - 1] = '\0';
 	country_code[sizeof(country_code) - 1] = '\0';
 	vin[sizeof(vin) - 1] = '\0';
 	vendorid[sizeof(vendorid) - 1] = '\0';
 
-	// msg vector is not persisted
+	// not persisted: the message list, and the region, which follows from the position
 	msg.clear();
+	region = Region::find(lat, lon);
 	return ok;
 }
 

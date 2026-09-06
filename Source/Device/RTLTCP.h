@@ -37,10 +37,15 @@ namespace Device
 		Protocol::GPSD gpsd;
 		Protocol::RTLTCP rtltcp;
 		Protocol::WebSocket ws;
+		Protocol::TLS tls;
 		Protocol::ProtocolBase *session = &tcp;
 
 		const int TRANSFER_SIZE = 16384;
 		static const int BUFFER_SIZE = 32 * 16384;
+
+		// bytes per FIFO block for the text formats; one byte a block overruns
+		// on a busy NMEA feed (-gt TEXT_BUFFER, 1-256)
+		int text_buffer = 1;
 		std::vector<char> buffer;
 
 		bool lossless = false;
