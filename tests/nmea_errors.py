@@ -107,7 +107,7 @@ class Errors(unittest.TestCase):
                 self.assertEqual(self.decode(sentence(p).encode()), [])
 
     def test_map_and_counters(self):
-        for policy, only_errors, enabled, expected in [(None, False, False, 6), ('all', True, False, 6), (None, False, True, 3), ('all', False, True, 2), ('none', False, True, 6), ('checksum', False, True, 4), ('undersized,checksum', False, True, 3), ('none', True, True, 4), ('oversized', True, True, 3), (None, True, True, 1), ('all', True, True, 0)]:
+        for policy, only_errors, enabled, expected in [(None, False, False, 6), ('all', True, False, 6), (None, False, True, 6), ('all', False, True, 2), ('none', False, True, 6), ('checksum', False, True, 4), ('undersized,checksum', False, True, 3), ('none', True, True, 4), ('oversized', True, True, 3), (None, True, True, 4), ('all', True, True, 0)]:
             with self.subTest(policy=policy, only_errors=only_errors, enabled=enabled), tempfile.TemporaryFile() as log:
                 with socket.socket() as sock:
                     sock.bind(('127.0.0.1', 0))
@@ -149,7 +149,7 @@ class Errors(unittest.TestCase):
                     proc.communicate(timeout=5)
 
     def test_output_filter(self):
-        for enabled, policy, only, expected in [(False, 'all', True, 6), (True, None, False, 3), (True, 'all', False, 2), (True, 'none', True, 4)]:
+        for enabled, policy, only, expected in [(False, 'all', True, 6), (True, None, False, 6), (True, 'all', False, 2), (True, 'none', True, 4), (True, None, True, 4), (True, 'undersized,checksum', False, 3)]:
             for fmt in ('NMEA', 'JSON_FULL'):
                 with self.subTest(enabled=enabled, policy=policy, only=only, fmt=fmt), tempfile.TemporaryDirectory() as tmp:
                     out = pathlib.Path(tmp) / 'filtered'

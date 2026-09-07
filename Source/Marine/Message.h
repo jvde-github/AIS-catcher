@@ -374,7 +374,7 @@ namespace AIS
 		DuplicateHistory duplicate_history;
 
 		bool remove_empty = false;
-		uint16_t error_mask = MESSAGE_QUALITY_DEFAULT_EXCLUDE;
+		uint16_t error_mask = 0;
 		bool only_errors = false;
 
 	public:

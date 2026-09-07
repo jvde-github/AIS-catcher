@@ -77,7 +77,7 @@ The Statistics tab counts flagged messages and each error category, including
 messages excluded from vessel updates. Error flags are independent of filtering:
 
 ```sh
-AIS-catcher -N 8100 FILTER on EXCLUDE_ERRORS undersized,checksum  # default exclusions when filtering
+AIS-catcher -N 8100 FILTER on EXCLUDE_ERRORS undersized,checksum  # exclude undersized and bad-checksum reports
 AIS-catcher -N 8100 FILTER on EXCLUDE_ERRORS all                 # also exclude oversized
 AIS-catcher -N 8100 FILTER on EXCLUDE_ERRORS none                # include flagged messages
 AIS-catcher -N 8100 FILTER on ONLY_ERRORS on EXCLUDE_ERRORS none # only flagged messages
@@ -85,16 +85,16 @@ AIS-catcher -N 8100 FILTER on ONLY_ERRORS on EXCLUDE_ERRORS none # only flagged 
 
 These options belong to the shared message filter and work for map, file, network
 and database outputs. They take effect only with `FILTER on`; with filtering off,
-quality flags alone do not exclude messages. The default exclusions for an enabled
-filter are `undersized,checksum`.
+quality flags alone do not exclude messages. The default is `EXCLUDE_ERRORS none`, so enabling
+the filter alone does not exclude flagged messages.
 
 For example, `-f errors.nmea FILTER on ONLY_ERRORS on EXCLUDE_ERRORS none` saves
 only flagged messages. The web-server JSON setting is `"exclude_errors": "undersized,checksum"`.
 Values are comma-separated, case-insensitive names: `undersized`, `oversized`,
 `checksum`, or the standalone values `all` and `none`. Exclusions prevent all
 vessel-state and track updates; diagnostic outputs and error counters remain
-available. Oversized reports are accepted by the default error policy for compatibility with feeds
-that append nonstandard trailers.
+available. Use `undersized,checksum` to retain oversized reports from feeds that append
+nonstandard trailers.
 
 `ONLY_ERRORS` defaults to `off`. With filtering enabled it rejects unflagged
 messages; `EXCLUDE_ERRORS` still applies. Map statistics still count messages
