@@ -1257,8 +1257,8 @@ namespace AIS
 
 		json.Add(AIS::KEY_SCALED, true);
 
-		if (tag.error != MESSAGE_ERROR_NONE)
-			json.Add(AIS::KEY_ERROR, (int)tag.error);
+		if (tag.quality)
+			json.Add(AIS::KEY_QUALITY, (int)tag.quality);
 
 		json.Add(AIS::KEY_CHANNEL, &channel);
 

@@ -2636,6 +2636,25 @@ async function fetchStatistics() {
 }
 
 function updateStat(stat, tf) {
+    const errors = stat[tf].errors || {};
+    const errorCount = document.getElementById("stat_" + tf + "_error_flagged");
+    const icon = document.createElement("i");
+    icon.className = "info_icon";
+    icon.setAttribute("aria-hidden", "true");
+    errorCount.replaceChildren((errors.flagged || 0).toLocaleString(), icon);
+    const errorRow = errorCount.parentElement;
+    errorRow.onclick = () => showDialogPlain(objectToTableHtml({
+        "Errors": (errors.flagged || 0).toLocaleString(),
+        "Undersized payload": (errors.undersized || 0).toLocaleString(),
+        "Oversized payload": (errors.oversized || 0).toLocaleString(),
+        "Invalid checksum": (errors.checksum || 0).toLocaleString(),
+    }));
+    errorRow.onkeydown = (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            errorRow.click();
+        }
+    };
     [0, 1, 2, 3].forEach((e) => (document.getElementById("stat_" + tf + "_channel" + e).innerText = stat[tf].channel[e].toLocaleString()));
 
     document.getElementById("stat_" + tf + "_count").innerText = stat[tf].count.toLocaleString();

@@ -770,7 +770,7 @@ namespace IO
 	{
 		AIS::Message &ais = *((AIS::Message *)data[0].binary);
 
-		if (filter.include(ais))
+		if (filter.include(ais, tag) == AIS::Filter::Result::Included)
 		{
 
 			switch (ais.type())

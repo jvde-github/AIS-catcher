@@ -172,11 +172,6 @@ namespace AIS
 		"Data Terminal Not Ready",
 	};
 
-	const std::vector<std::string> LookupTable_message_error_types = {
-		"None",
-		"Undefined Error",
-		"NMEA Checksum Error"};
-
 	const std::vector<std::string> LookupTable_epfd_types = {
 		"Undefined",
 		"GPS",

@@ -82,7 +82,8 @@ namespace AIS
 			msg.setStartIdx(start_idx);
 			msg.setEndIdx(end_idx);
 
-			if (msg.validate())
+			tag.quality &= ~MESSAGE_QUALITY_CHECKSUM;
+			if (msg.validate(tag))
 			{
 				msg.buildNMEA(tag);
 				Send(&msg, 1, tag);

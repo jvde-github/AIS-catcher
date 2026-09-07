@@ -189,7 +189,7 @@ namespace AIS
 			std::memset(data, 0, sizeof(data));
 		}
 
-		bool validate();
+		bool validate(TAG &tag);
 
 		unsigned type() const
 		{
@@ -374,6 +374,8 @@ namespace AIS
 		DuplicateHistory duplicate_history;
 
 		bool remove_empty = false;
+		uint16_t error_mask = MESSAGE_QUALITY_DEFAULT_EXCLUDE;
+		bool only_errors = false;
 
 	public:
 		bool SetOptionKey(AIS::Keys key, const std::string &arg);
@@ -382,6 +384,7 @@ namespace AIS
 		bool hasIDFilter() const { return !ID_allowed.empty() || !MMSI_allowed.empty(); }
 		std::string getAllowed();
 		bool includeGPS() const { return on ? GPS : true; }
-		bool include(const Message &msg);
+		enum class Result { NotIncluded, Included, IncludedWithError };
+		Result include(const Message &msg, const TAG &tag);
 	};
 }

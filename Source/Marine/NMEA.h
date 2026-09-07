@@ -53,7 +53,7 @@ namespace AIS
 			std::string sentence;
 			uint64_t timestamp = 0;
 			uint32_t match_key = 0;
-			uint32_t message_error = 0;
+			uint16_t message_quality = 0;
 			uint16_t data_offset = 0;
 			uint16_t data_len = 0;
 			uint8_t count = 0;
@@ -65,7 +65,7 @@ namespace AIS
 				sentence.clear();
 				timestamp = (uint64_t)rx;
 				match_key = 0;
-				message_error = 0;
+				message_quality = 0;
 				data_offset = 0;
 				data_len = 0;
 				count = 0;

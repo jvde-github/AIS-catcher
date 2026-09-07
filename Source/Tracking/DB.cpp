@@ -1034,11 +1034,26 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 	const AIS::Message *msg = (AIS::Message *)data[0].binary;
 	int type = msg->type();
 
-	if (type < 1 || type > 28 || msg->mmsi() == 0)
+	if (type < 1 || type > 28)
 		return;
 
-	if (!filter.include(*msg))
+	const auto result = filter.include(*msg, tag);
+	if (result == AIS::Filter::Result::NotIncluded)
 		return;
+
+	// Diagnostics still reach the counters and sinks, without touching any
+	// vessel, position, path or coverage state.
+	if (result == AIS::Filter::Result::IncludedWithError)
+	{
+		tag.validated = false;
+		tag.lat = LAT_UNDEFINED;
+		tag.lon = LON_UNDEFINED;
+		tag.distance = DISTANCE_UNDEFINED;
+		tag.angle = ANGLE_UNDEFINED;
+		tag.previous_signal = msg->getRxTimeUnix();
+		Send(data, len, tag);
+		return;
+	}
 	
 	std::unique_lock<std::mutex> lock(mtx);
 

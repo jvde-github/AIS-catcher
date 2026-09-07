@@ -838,11 +838,13 @@ body.replay-open .map-button-box {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
-#stat_devices .device-row {
+#stat_devices .device-row,
+.stat-error-row {
     cursor: pointer;
 }
 
-#stat_devices .device-value {
+#stat_devices .device-value,
+.stat-error-row .device-value {
     position: relative;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -850,7 +852,8 @@ body.replay-open .map-button-box {
     padding-right: 34px;
 }
 
-#stat_devices .device-value .info_icon {
+#stat_devices .device-value .info_icon,
+.stat-error-row .info_icon {
     position: absolute;
     right: 12px;
     top: 50%;
@@ -859,7 +862,8 @@ body.replay-open .map-button-box {
 }
 
 @media (hover: hover) {
-    #stat_devices .device-row:hover .info_icon {
+    #stat_devices .device-row:hover .info_icon,
+    .stat-error-row:hover .info_icon {
         background-color: var(--color-text);
     }
 }

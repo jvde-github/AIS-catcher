@@ -181,7 +181,7 @@ namespace IO
 
 			for (int i = 0; i < len; i++)
 			{
-				if (!filter.include(data[i]))
+				if (filter.include(data[i], tag) != AIS::Filter::Result::Included)
 					continue;
 
 				formatInto(data[i], tag);
@@ -198,7 +198,7 @@ namespace IO
 			for (int i = 0; i < len; i++)
 			{
 				const AIS::Message &msg = *(AIS::Message *)data[i].binary;
-				if (!filter.include(msg))
+				if (filter.include(msg, tag) != AIS::Filter::Result::Included)
 					continue;
 
 				json.clear();

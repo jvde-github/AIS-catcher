@@ -652,7 +652,7 @@ namespace IO
 		const JSON::JSON &json = data[0];
 		const AIS::Message &msg = *(AIS::Message *)json.binary;
 
-		if (!filter.include(msg))
+		if (filter.include(msg, tag) != AIS::Filter::Result::Included)
 			return;
 
 		// nothing below the statistics is enabled: no entry to build or queue

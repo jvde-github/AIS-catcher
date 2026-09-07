@@ -70,3 +70,50 @@ vessel destination matching.
 - Forum: [here](https://github.com/jvde-github/AIS-catcher/discussions)
 - Bug Reports: [here](https://github.com/jvde-github/AIS-catcher/issues)
 
+
+### Flagged messages and filters
+
+The Statistics tab counts flagged messages and each error category, including
+messages excluded from vessel updates. Error flags are independent of filtering:
+
+```sh
+AIS-catcher -N 8100 FILTER on EXCLUDE_ERRORS undersized,checksum  # default exclusions when filtering
+AIS-catcher -N 8100 FILTER on EXCLUDE_ERRORS all                 # also exclude oversized
+AIS-catcher -N 8100 FILTER on EXCLUDE_ERRORS none                # include flagged messages
+AIS-catcher -N 8100 FILTER on ONLY_ERRORS on EXCLUDE_ERRORS none # only flagged messages
+```
+
+These options belong to the shared message filter and work for map, file, network
+and database outputs. They take effect only with `FILTER on`; with filtering off,
+quality flags alone do not exclude messages. The default exclusions for an enabled
+filter are `undersized,checksum`.
+
+For example, `-f errors.nmea FILTER on ONLY_ERRORS on EXCLUDE_ERRORS none` saves
+only flagged messages. The web-server JSON setting is `"exclude_errors": "undersized,checksum"`.
+Values are comma-separated, case-insensitive names: `undersized`, `oversized`,
+`checksum`, or the standalone values `all` and `none`. Exclusions prevent all
+vessel-state and track updates; diagnostic outputs and error counters remain
+available. Oversized reports are accepted by the default error policy for compatibility with feeds
+that append nonstandard trailers.
+
+`ONLY_ERRORS` defaults to `off`. With filtering enabled it rejects unflagged
+messages; `EXCLUDE_ERRORS` still applies. Map statistics still count messages
+rejected by `EXCLUDE_ERRORS`; messages rejected by other filters, including
+`ONLY_ERRORS`, are not counted. Other outputs forward only included messages.
+
+Exact-length checks cover fixed-length types 1–5, 9, 11, 18, 19, 23, 27 and 28.
+Messages below their per-type minimum are rejected; zero-length messages remain valid.
+Unparseable sentences,
+unknown types, MMSI zero, and payloads too short to identify a sender are still rejected.
+`CRC_CHECK on` remains an explicit ingress rejection option: messages rejected
+there cannot reach viewer statistics. Leave it off to count checksum failures
+while excluding them from the map.
+
+JSON `quality` and the binary quality word use identical flags: checksum
+`0x0200`, undersized `0x0400`, oversized `0x0800`. Reception-quality marks use
+bits 0–5; updating them must preserve the error mask `0x0E00`.
+Only `quality` carries diagnostic
+flags; the legacy JSON `error` field is no longer read or emitted. Plain NMEA
+cannot carry these flags when its checksum is regenerated.
+Statistics backups retain the counters (format v4); older v1–v3 statistics can
+still be loaded.

@@ -420,20 +420,37 @@ namespace AIS
 		return (int)(out.size() - base);
 	}
 
-	bool Message::validate()
+	bool Message::validate(TAG &tag)
 	{
+		tag.quality &= ~(MESSAGE_QUALITY_UNDERSIZED | MESSAGE_QUALITY_OVERSIZED);
 		if (getLength() == 0)
 			return true;
-		if (getLength() > MAX_AIS_LENGTH)
+		if (getLength() < 38 || getLength() > MAX_AIS_LENGTH)
 			return false;
-
-		const int ml[28] = {149, 149, 149, 168, 418, 88, 72, 56, 168, 70, 168, 72, 40, 40, 88, 92, 80, 168, 312, 70, 271, 145, 154, 160, 72, 60, 96, 168};
-
 		if (type() < 1 || type() > 28)
 			return false;
-		if (getLength() < ml[type() - 1])
+
+		const int minimum[28] = {149, 149, 149, 168, 418, 88, 72, 56, 168, 70, 168, 72, 40, 40, 88, 92, 80, 168, 312, 70, 271, 145, 154, 160, 72, 60, 96, 168};
+		if (getLength() < minimum[type() - 1])
 			return false;
 
+		if (mmsi() == 0)
+			return false;
+
+		int expected = 0;
+		switch (type())
+		{
+		case 1: case 2: case 3: case 4: case 9: case 11: case 18: case 28:
+			expected = 168; break;
+		case 5: expected = 424; break;
+		case 19: expected = 312; break;
+		case 23: expected = 160; break;
+		case 27: expected = 96; break;
+		}
+		if (expected && getLength() < expected)
+			tag.quality |= MESSAGE_QUALITY_UNDERSIZED;
+		if (expected && getLength() > expected)
+			tag.quality |= MESSAGE_QUALITY_OVERSIZED;
 		return true;
 	}
 
@@ -845,6 +862,29 @@ namespace AIS
 	{
 		switch (key)
 		{
+		case AIS::KEY_SETTING_EXCLUDE_ERRORS:
+		{
+			std::vector<std::string> names;
+			Util::Parse::Split(arg, ',', names);
+			uint32_t mask = 0;
+			if (names.empty() || arg.empty() || arg.back() == ',')
+				throw std::runtime_error("EXCLUDE_ERRORS requires undersized, oversized, checksum, all or none");
+			for (auto name : names)
+			{
+				Util::Convert::toLower(name);
+				if (name == "undersized") mask |= MESSAGE_QUALITY_UNDERSIZED;
+				else if (name == "oversized") mask |= MESSAGE_QUALITY_OVERSIZED;
+				else if (name == "checksum") mask |= MESSAGE_QUALITY_CHECKSUM;
+				else if (name == "all" && names.size() == 1) mask = MESSAGE_QUALITY_ERRORS;
+				else if (name == "none" && names.size() == 1) mask = 0;
+				else throw std::runtime_error("Invalid EXCLUDE_ERRORS value: " + name);
+			}
+			error_mask = mask;
+			return true;
+		}
+		case AIS::KEY_SETTING_ONLY_ERRORS:
+			only_errors = Util::Parse::Switch(arg);
+			return true;
 		case AIS::KEY_SETTING_ALLOW_TYPE:
 		{
 			std::stringstream ss(arg);
@@ -985,10 +1025,17 @@ namespace AIS
 		if (!on)
 			return "";
 
-		std::string ret;
+		std::string ret = "exclude_errors {";
+		std::string errors;
+		if (error_mask & MESSAGE_QUALITY_UNDERSIZED) errors += "undersized,";
+		if (error_mask & MESSAGE_QUALITY_OVERSIZED) errors += "oversized,";
+		if (error_mask & MESSAGE_QUALITY_CHECKSUM) errors += "checksum,";
+		if (!errors.empty()) errors.pop_back();
+		ret += (errors.empty() ? "none" : errors) + "}";
+		if (only_errors) ret += ", only_errors ON";
 
 		if (!GPS)
-			ret += "gps OFF";
+			ret += ", gps OFF";
 
 		if (allow != all)
 		{
@@ -1042,13 +1089,13 @@ namespace AIS
 		return ret;
 	}
 
-	bool Filter::include(const Message &msg)
+	Filter::Result Filter::include(const Message &msg, const TAG &tag)
 	{
 		if (own_interval && msg.isOwn())
 		{
 			if (msg.getRxTimeUnix() - last_VDO < own_interval)
 			{
-				return false;
+				return Result::NotIncluded;
 			}
 			last_VDO = msg.getRxTimeUnix();
 		}
@@ -1063,7 +1110,7 @@ namespace AIS
 			{
 				if (!position_history.check(msg.mmsi(), (uint32_t)msg.getRxTimeUnix(), position_interval))
 				{
-					return false;
+					return Result::NotIncluded;
 				}
 				old_position = true;
 			}
@@ -1073,20 +1120,20 @@ namespace AIS
 		{
 			if (!duplicate_history.check(msg.getHash(), (uint32_t)msg.getRxTimeUnix(), unique_interval))
 			{
-				return false;
+				return Result::NotIncluded;
 			}
 		}
 
 		if (!on)
-			return true;
+			return Result::Included;
 
 		if (!AIS)
-			return false;
+			return Result::NotIncluded;
 
 		if (remove_empty)
 		{
 			if (msg.getLength() == 0)
-				return false;
+				return Result::NotIncluded;
 		}
 
 		bool ID_ok = true;
@@ -1105,7 +1152,7 @@ namespace AIS
 		}
 		if (!ID_ok)
 		{
-			return false;
+			return Result::NotIncluded;
 		}
 
 		bool CH_ok = true;
@@ -1124,7 +1171,7 @@ namespace AIS
 
 		if (!CH_ok)
 		{
-			return false;
+			return Result::NotIncluded;
 		}
 
 		bool MMSI_ok = true;
@@ -1143,7 +1190,7 @@ namespace AIS
 
 		if (!MMSI_ok)
 		{
-			return false;
+			return Result::NotIncluded;
 		}
 
 		if (!MMSI_blocked.empty())
@@ -1152,7 +1199,7 @@ namespace AIS
 			{
 				if (msg.mmsi() == mmsi)
 				{
-					return false;
+					return Result::NotIncluded;
 				}
 			}
 		}
@@ -1165,9 +1212,13 @@ namespace AIS
 
 		if (!(type_ok && repeat_ok))
 		{
-			return false;
+			return Result::NotIncluded;
 		}
 
-		return true;
+		if (only_errors && !(tag.quality & MESSAGE_QUALITY_ERRORS))
+			return Result::NotIncluded;
+		if (tag.quality & error_mask)
+			return Result::IncludedWithError;
+		return Result::Included;
 	}
 }

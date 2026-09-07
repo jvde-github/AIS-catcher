@@ -234,9 +234,19 @@ const int AIRBORNE_UNDEFINED = 2;
 const int CRC_UNDEFINED = -1;
 const int CPR_POSITION_UNDEFINED = -1;
 
-const int MESSAGE_ERROR_NONE = 0;
-const int MESSAGE_ERROR_NOTOK = 1;
-const int MESSAGE_ERROR_NMEA_CHECKSUM = 2;
+// Message quality flags use the same bit assignments in JSON and binary output.
+const uint16_t MESSAGE_QUALITY_PLAUSIBLE = 1 << 0;
+const uint16_t MESSAGE_QUALITY_CONFIRMED = 1 << 1;
+const uint16_t MESSAGE_QUALITY_SUSPECT = 1 << 2;
+const uint16_t MESSAGE_QUALITY_DUPLICATE = 1 << 3;
+const uint16_t MESSAGE_QUALITY_ECHO = 1 << 4;
+const uint16_t MESSAGE_QUALITY_LATE = 1 << 5;
+// Bits 6–8 are reserved. Error flags keep their binary wire assignments.
+const uint16_t MESSAGE_QUALITY_CHECKSUM = 1 << 9;
+const uint16_t MESSAGE_QUALITY_UNDERSIZED = 1 << 10;
+const uint16_t MESSAGE_QUALITY_OVERSIZED = 1 << 11;
+const uint16_t MESSAGE_QUALITY_ERRORS = MESSAGE_QUALITY_CHECKSUM | MESSAGE_QUALITY_UNDERSIZED | MESSAGE_QUALITY_OVERSIZED;
+const uint16_t MESSAGE_QUALITY_DEFAULT_EXCLUDE = MESSAGE_QUALITY_UNDERSIZED | MESSAGE_QUALITY_CHECKSUM;
 
 struct TAG
 {
@@ -265,7 +275,6 @@ struct TAG
 	long long msg_idx_start = 0, msg_idx_end = 0;
 	uint32_t ipv4 = 0;
 	uint16_t quality = 0;
-	uint32_t error = MESSAGE_ERROR_NONE;
 	bool replay = false;
 
 	void clear()
@@ -285,7 +294,6 @@ struct TAG
 		shipclass = CLASS_UNKNOWN;
 		ipv4 = 0;
 		quality = 0;
-		error = MESSAGE_ERROR_NONE;
 		shipname[0] = 0;
 	}
 };

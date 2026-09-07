@@ -80,7 +80,7 @@ namespace IO
 		for (int i = 0; i < len; i++)
 		{
 			const AIS::Message &msg = *(AIS::Message *)data[i].binary;
-			if (filter.include(msg))
+			if (filter.include(msg, tag) == AIS::Filter::Result::Included)
 			{
 				const std::lock_guard<std::mutex> lock(msg_list_mutex);
 				count(msg);

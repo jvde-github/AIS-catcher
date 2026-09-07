@@ -42,13 +42,14 @@ class MessageStatistics {
 	std::mutex mtx;
 
 	static const int _MAGIC = 0x4f82b;
-	static const int _VERSION = 3;
+	static const int _VERSION = 4;
 	static const int _RADAR_BUCKETS = 18;
 
 	int _LONG_RANGE_CUTOFF = LONG_RANGE_CUTOFF_DEFAULT;
 
 	int _count, _exclude, _vessels;
 	int _msg[28];
+	int _errors[4]; // flagged messages, undersized, oversized, checksum
 	int _channel[4];
 
 	float _level_min, _level_max, _ppm, _distance;
@@ -68,6 +69,7 @@ public:
 		std::lock_guard<std::mutex> l{ this->mtx };
 
 		std::memset(_msg, 0, sizeof(_msg));
+		std::memset(_errors, 0, sizeof(_errors));
 		std::memset(_channel, 0, sizeof(_channel));
 		std::memset(_radarA, 0, sizeof(_radarA));
 		std::memset(_radarB, 0, sizeof(_radarB));
@@ -87,6 +89,10 @@ public:
 		if (m.type() > 28 || m.type() < 1) return;
 
 		_count++;
+		if (tag.quality & MESSAGE_QUALITY_ERRORS) _errors[0]++;
+		if (tag.quality & MESSAGE_QUALITY_UNDERSIZED) _errors[1]++;
+		if (tag.quality & MESSAGE_QUALITY_OVERSIZED) _errors[2]++;
+		if (tag.quality & MESSAGE_QUALITY_CHECKSUM) _errors[3]++;
 		if (new_vessel) _vessels++;
 
 		_msg[m.type() - 1]++;
@@ -137,6 +143,10 @@ public:
 		w.beginObject();
 		w.kv("count", empty ? 0 : _count);
 		w.kv("vessels", empty ? 0 : _vessels);
+		w.key("errors").beginObject();
+		const char *names[] = {"flagged", "undersized", "oversized", "checksum"};
+		for (int i = 0; i < 4; i++) w.kv(names[i], empty ? 0 : _errors[i]);
+		w.endObject();
 		if (empty || !has_level) {
 			w.kv_null("level_min");
 			w.kv_null("level_max");
@@ -216,16 +226,17 @@ public:
 		return (bool)(W(magic) && W(version) && W(_count) && W(_vessels)
 			&& W(_msg) && W(_channel)
 			&& W(_level_min) && W(_level_max) && W(_ppm) && W(_distance)
-			&& W(_radarA) && W(_radarB));
+			&& W(_radarA) && W(_radarB) && W(_errors));
 	}
 
 	bool Load(std::ifstream& file) {
 		std::lock_guard<std::mutex> l{ this->mtx };
 
+		std::memset(_errors, 0, sizeof(_errors));
 		int magic = 0, version = 0;
 		if (!(R(magic) && R(version) && R(_count))) return false;
 		if (magic != _MAGIC) return false;
-		if (version != 1 && version != 2 && version != _VERSION) return false;
+		if (version != 1 && version != 2 && version != 3 && version != _VERSION) return false;
 
 		if (version >= 2 && !R(_vessels)) return false;
 		if (version < 2) _vessels = 0;
@@ -237,7 +248,7 @@ public:
 
 		return (bool)(R(_channel)
 			&& R(_level_min) && R(_level_max) && R(_ppm) && R(_distance)
-			&& R(_radarA) && R(_radarB));
+			&& R(_radarA) && R(_radarB) && (version < 4 || R(_errors)));
 	}
 
 #undef W

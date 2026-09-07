@@ -108,7 +108,7 @@ namespace AIS
 		{
 			if (matches(aivdm, it))
 			{
-				tag.error |= it.message_error;
+				tag.quality |= it.message_quality;
 				addline(it);
 				if (!cfg_regenerate)
 					msg.pushNMEA(it.sentence);
@@ -116,7 +116,7 @@ namespace AIS
 			}
 		}
 
-		if (parts == aivdm.count && msg.validate())
+		if (parts == aivdm.count && msg.validate(tag))
 		{
 			if (cfg_regenerate)
 				msg.buildNMEA(tag, aivdm.match_key & 0x0F);
@@ -440,26 +440,26 @@ namespace AIS
 
 		int src = (mctx.station == -1) ? station : mctx.station;
 		int fillbits = fillbits_ch - '0';
-		uint32_t message_error = 0;
+		uint16_t message_quality = 0;
 
 		if (checksum != cs)
 		{
 			warnAIS(WARN_NMEA_CHECKSUM, "checksum mismatch", data, len);
 			if (cfg_crc_check)
 				return true;
-			message_error = MESSAGE_ERROR_NMEA_CHECKSUM;
+			message_quality = MESSAGE_QUALITY_CHECKSUM;
 		}
 
 		// Single-part: decode and send directly, no aivdm construction
 		if (p[7] == '1')
 		{
-			tag.error = message_error;
+			tag.quality |= message_quality;
 
 			initMsg(channel_ch, src, mctx.toa, mctx.ssc, mctx.ssc + mctx.sl);
 			msg.appendPayload(q, (int)(payload_end - q));
 			msg.reduceLength(fillbits);
 
-			if (msg.validate())
+			if (msg.validate(tag))
 			{
 				if (cfg_regenerate)
 					msg.buildNMEA(tag);
@@ -489,7 +489,7 @@ namespace AIS
 		aivdm.data_offset = (int)(q - data);
 		aivdm.data_len = (int)(payload_end - q);
 		aivdm.fillbits = fillbits;
-		aivdm.message_error = message_error;
+		aivdm.message_quality = message_quality;
 
 		splitChecksum = cs;
 		aivdm.sentence.assign(data, len);
@@ -571,6 +571,9 @@ namespace AIS
 				case AIS::KEY_DBM:
 				case AIS::KEY_RSSI:
 					tag.level = p.Get().getFloat(LEVEL_UNDEFINED);
+					break;
+				case AIS::KEY_QUALITY:
+					tag.quality |= (uint16_t)p.Get().getInt();
 					break;
 				case AIS::KEY_PPM:
 				case AIS::KEY_FO:
@@ -817,10 +820,11 @@ namespace AIS
 					Warning() << "binary: CRC mismatch";
 				if (cfg_crc_check)
 					return false;
+				tag.quality |= MESSAGE_QUALITY_CHECKSUM;
 			}
 		}
 
-		if (!msg.validate())
+		if (!msg.validate(tag))
 		{
 			if (shouldWarn(WARN_BINARY_VALIDATION))
 				Warning() << "binary: message validation failed (type " << msg.type() << ", length " << msg.getLength() << ")";
