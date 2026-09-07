@@ -33,7 +33,7 @@ test('switching an overlapping port ignores a late response from the previous po
     select.value = '1';
     select.dispatchEvent(new Event('change', { bubbles: true }));
     await tick();
-    assert.equal(document.querySelector('#port-ships .dialog-title').textContent, '→ Antwerp');
+    assert.equal(document.querySelector('#port-ships .dialog-title').textContent, 'Destination: Antwerp');
     assert.equal(document.querySelectorAll('.port-ship-count').length, 1);
     assert.equal(document.querySelector('.port-ship-count').textContent, '0 out of 0');
     first({ ships, total: 12 });

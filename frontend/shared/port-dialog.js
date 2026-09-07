@@ -31,7 +31,7 @@ export function createPortDialog(host) {
         const load = async port => {
             const request = {};
             dlg.root._portRequest = request;
-            dlg.setTitle(`→ ${port.label || port.code || 'Port'}`);
+            dlg.setTitle(`Destination: ${port.label || port.code || 'Port'}`);
             count.textContent = '';
             results.innerHTML = '<p class="dim" role="status">Loading ships…</p>';
             const code = port.code || String(port.id || '').replace(/^p/, '');
