@@ -540,7 +540,7 @@ export function create(host) {
     const strip = events.create(host);
 
     return {
-        vector, layer, setReceiverMarker,
+        vector, layer, setReceiverMarker, openPorts,
         applyDelta, applyTile, prune, clear, redraw, restyle,
         setViewZoom: (z) => { viewZoom = Math.round(z); },
         shipBadge, stationBadge,

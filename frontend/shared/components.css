@@ -1904,3 +1904,7 @@
 .port-ship-list table { border-collapse: collapse; table-layout: fixed; }
 .port-ship-link { display: block; max-width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .port-ship-link:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
+.modal-port-ships .modal-body { padding: 0 10px 10px; background: var(--color-panel-surface); }
+.port-ship-count { flex: none; margin: 0 10px; font-size: var(--fs-sm); color: var(--color-text-muted); }
+.port-ship-list .table-name .port-ship-link { min-width: 0; }

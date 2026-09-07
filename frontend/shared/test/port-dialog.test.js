@@ -5,7 +5,7 @@ setupDom('');
 const { createPortDialog } = await import('../port-dialog.js');
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 const port = { code: 'NLRTM', label: 'Rotterdam' };
-const ships = Array.from({ length: 12 }, (_, i) => ({ mmsi: 244000001 + i, shipname: i ? `Ship ${i}` : '<img src=x onerror=alert(1)>', speed: i ? 0 : null, timestamp: 0 }));
+const ships = Array.from({ length: 12 }, (_, i) => ({ mmsi: 244000001 + i, shipname: i ? `Ship ${i}` : '<img src=x onerror=alert(1)>', country: 'NL', shipclass: 0, cog: 90, speed: i ? 0 : null, timestamp: 0 }));
 
 test('port dialog caps the list, escapes names, preserves zero speed and opens a ship', async () => {
     const opened = [], urls = [];
@@ -15,7 +15,10 @@ test('port dialog caps the list, escapes names, preserves zero speed and opens a
     assert.equal(document.querySelectorAll('#port-ships tbody tr').length, 10);
     assert.equal(document.querySelector('#port-ships img'), null);
     assert.match(document.querySelector('#port-ships tbody').textContent, /<img src=x onerror=alert\(1\)>/);
-    assert.match(document.querySelector('#port-ships tbody').textContent, /0\.0 kn/);
+    assert.match(document.querySelector('#port-ships tbody').textContent, /0\.0/);
+    assert.equal(document.querySelector('.port-ship-count').textContent, '10 out of 12');
+    assert.equal(document.querySelectorAll('#port-ships .fi-nl').length, 10);
+    assert.equal(document.querySelectorAll('#port-ships .table-shiptype-icon').length, 10);
     document.querySelector('.port-ship-link').click();
     assert.deepEqual(opened, [244000001]);
     assert.ok(document.getElementById('port-ships').classList.contains('hidden'));
@@ -30,7 +33,9 @@ test('switching an overlapping port ignores a late response from the previous po
     select.value = '1';
     select.dispatchEvent(new Event('change', { bubbles: true }));
     await tick();
-    assert.equal(document.querySelector('#port-ships .dialog-title').textContent, 'Antwerp');
+    assert.equal(document.querySelector('#port-ships .dialog-title').textContent, '→ Antwerp');
+    assert.equal(document.querySelectorAll('.port-ship-count').length, 1);
+    assert.equal(document.querySelector('.port-ship-count').textContent, '0 out of 0');
     first({ ships, total: 12 });
     await pending;
     assert.match(document.querySelector('.port-results').textContent, /No ships currently/);
