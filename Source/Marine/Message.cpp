@@ -866,8 +866,8 @@ namespace AIS
 		{
 			std::vector<std::string> names;
 			Util::Parse::Split(arg, ',', names);
-			uint32_t mask = 0;
-			if (names.empty() || arg.empty() || arg.back() == ',')
+			uint16_t mask = 0;
+			if (names.empty())
 				throw std::runtime_error("EXCLUDE_ERRORS requires undersized, oversized, checksum, all or none");
 			for (auto name : names)
 			{

@@ -1050,6 +1050,10 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 		tag.lon = LON_UNDEFINED;
 		tag.distance = DISTANCE_UNDEFINED;
 		tag.angle = ANGLE_UNDEFINED;
+		tag.shipname[0] = 0;
+		tag.shipclass = CLASS_UNKNOWN;
+		tag.speed = SPEED_UNDEFINED;
+		// Equal timestamps prevent History from counting a new vessel.
 		tag.previous_signal = msg->getRxTimeUnix();
 		Send(data, len, tag);
 		return;
