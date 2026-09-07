@@ -47,10 +47,10 @@ export function createPortDialog(host) {
                     const speed = typeof ship.speed === 'number' && ship.speed >= 0 ? `${ship.speed.toFixed(1)} kn` : '—';
                     const age = ship.timestamp > 0 ? text(getDeltaTimeVal(Math.max(0, now - ship.timestamp))) : '—';
                     const when = ship.timestamp > 0 ? text(formatDateTime(ship.timestamp)) : '';
-                    return `<tr><td><button type="button" class="port-ship-link" data-mmsi="${id}">${name}</button><small class="dim">${id}</small></td><td>${speed}</td><td title="${when}">${age}</td></tr>`;
+                    return `<tr data-mmsi="${id}"><td class="col-name" title="${name} · MMSI ${id}"><button type="button" class="port-ship-link">${name}</button></td><td class="num col-spd">${speed}</td><td class="num col-last" title="${when}">${age}</td></tr>`;
                 }).join('');
                 results.innerHTML = heading + `<p class="dim">${ships.length} of ${text(data.total ?? ships.length)} ships · latest reports first</p>` +
-                    `<table class="port-ships-table"><thead><tr><th scope="col">Vessel</th><th scope="col">Speed</th><th scope="col">Last report</th></tr></thead><tbody>${rows}</tbody></table>`;
+                    `<div class="tablecard_inner port-ship-list"><table><thead><tr><th scope="col" class="col-name">Vessel</th><th scope="col" class="num col-spd">Speed</th><th scope="col" class="num col-last" title="Last report">Last</th></tr></thead><tbody>${rows}</tbody></table></div>`;
             } catch (_) {
                 if (dlg.root._portRequest === request && dlg.isOpen())
                     results.innerHTML = '<p role="status">Could not load ships for this port.</p><button type="button" class="btn port-retry">Try again</button>';
@@ -65,7 +65,7 @@ export function createPortDialog(host) {
         };
         dlg.body.onclick = e => {
             if (e.target.closest('.port-retry')) { load(selected); return; }
-            const link = e.target.closest('.port-ship-link');
+            const link = e.target.closest('.port-ship-list tr[data-mmsi]');
             if (link) { dlg.close(); host.openVessel(Number(link.dataset.mmsi)); }
         };
         dlg.open();
