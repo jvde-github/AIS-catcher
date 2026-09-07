@@ -52,6 +52,10 @@ void DB::setup()
 	if (nships != 4096)
 		Info() << "DB: internal ship database extended to " << nships << " ships";
 
+	ships.forEach([&](int ptr) {
+		notifyPort(ships[ptr].mmsi, ships[ptr].matched_port_code, "");
+		return true;
+	});
 	ships.setup(nships, nbuckets);
 
 	if (track_memory_kb == 0)
@@ -782,6 +786,16 @@ static std::string words(const std::string &text)
 
 void DB::matchPort(Ship &ship, const char *destination)
 {
+	char before[sizeof(ship.matched_port_code)];
+	std::memcpy(before, ship.matched_port_code, sizeof(before));
+	resolvePort(ship, destination);
+	notifyPort(ship.mmsi, before, ship.matched_port_code);
+}
+
+// Pure matching for temporary load records and bulk corrections. Their callers
+// notify only when the final record is installed in the live table.
+void DB::resolvePort(Ship &ship, const char *destination)
+{
 	memset(ship.matched_port_code, 0, sizeof(ship.matched_port_code));
 #ifdef HASPORTS
 	libport::Match m = libport::match(destination, ship.lat, ship.lon);
@@ -1007,7 +1021,10 @@ void DB::putShip(const Ship &s)
 		return;
 	std::lock_guard<std::mutex> lock(mtx);
 	int ptr = claimShip(s.mmsi);
+	char before[sizeof(s.matched_port_code)];
+	std::memcpy(before, ships[ptr].matched_port_code, sizeof(before));
 	ships[ptr] = s;
+	notifyPort(s.mmsi, before, s.matched_port_code);
 	ships[ptr].region = isValidCoord(s.lat, s.lon) ? Region::find(s.lat, s.lon) : Region::NONE;
 }
 
@@ -1021,6 +1038,7 @@ int DB::claimShip(uint32_t mmsi)
 		evict_horizon = MAX(evict_horizon, ships[ptr].last_signal);
 		paths.wipe(ptr);
 		changes.wipe(ptr);
+		notifyPort(ships[ptr].mmsi, ships[ptr].matched_port_code, "");
 		ships[ptr].reset();
 	}
 	else
@@ -1185,7 +1203,11 @@ void DB::tick(std::time_t now)
 	last_sweep = now;
 
 	ships.forEach([&](int ptr) {
-		ships[ptr].decayAndExpire();
+		Ship &ship = ships[ptr];
+		char before[sizeof(ship.matched_port_code)];
+		std::memcpy(before, ship.matched_port_code, sizeof(before));
+		ship.decayAndExpire();
+		notifyPort(ship.mmsi, before, ship.matched_port_code);
 		return true;
 	});
 }
@@ -1274,8 +1296,7 @@ bool DB::Load(std::ifstream &file)
 			Error() << "DB: Failed to read ship " << i << " from backup file";
 			return false;
 		}
-		if (!temp_ships[i].matched_port_code[0] && temp_ships[i].destination[0])
-			matchPort(temp_ships[i], temp_ships[i].destination);
+		resolvePort(temp_ships[i], temp_ships[i].destination);
 
 		// Not persisted; treat all loaded ships as having static data
 		temp_ships[i].last_static_signal = temp_ships[i].last_signal;
@@ -1302,7 +1323,10 @@ bool DB::Load(std::ifstream &file)
 	for (int i = 0; i < ship_count; i++)
 	{
 		int ptr = claimShip(temp_ships[i].mmsi);
+		char before[sizeof(ships[ptr].matched_port_code)];
+		std::memcpy(before, ships[ptr].matched_port_code, sizeof(before));
 		ships[ptr] = temp_ships[i];
+		notifyPort(ships[ptr].mmsi, before, ships[ptr].matched_port_code);
 	}
 
 	Info() << "DB: Restored " << ship_count << " ships from backup";

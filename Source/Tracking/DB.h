@@ -21,6 +21,7 @@
 #include <memory>
 #include <mutex>
 #include <vector>
+#include <functional>
 
 #include "AIS.h"
 #include "JSONAIS.h"
@@ -78,7 +79,42 @@ class DB : public StreamIn<JSON::JSON>,
 
 	SlotTable<Ship, uint32_t> ships;
 
+	using PortObserver = std::function<void(uint32_t, const char *, const char *)>;
+	PortObserver port_observer;
+	static void resolvePort(Ship &ship, const char *destination);
+	void matchPort(Ship &ship, const char *destination);
+	// Called under mtx; observers must be short and must not call back into DB.
+	void notifyPort(uint32_t mmsi, const char *before, const char *after)
+	{
+		if (port_observer && std::strcmp(before, after) != 0)
+			port_observer(mmsi, before, after);
+	}
+
 public:
+	// Registration and the initial matched ships are delivered under one lock,
+	// so updates cannot be lost between seeding an index and subscribing.
+	void setPortCallback(PortObserver observer)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		port_observer = std::move(observer);
+		if (!port_observer) return;
+		ships.forEach([&](int ptr) {
+			const Ship &ship = ships[ptr];
+			if (ship.matched_port_code[0])
+				port_observer(ship.mmsi, "", ship.matched_port_code);
+			return true;
+		});
+	}
+	// Retry after a first position makes a destination resolvable.
+	bool rematchPort(uint32_t mmsi)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		int ptr = ships.find(mmsi);
+		if (ptr == SHIP_NIL || !isValidCoord(ships[ptr].lat, ships[ptr].lon)) return false;
+		matchPort(ships[ptr], ships[ptr].destination);
+		return true;
+	}
+
 	// Locked reads for code that lives outside the DB: one ship by MMSI, or all of them.
 	// The vessel's record, the same on every host: the ship's body, its
 	// message badge and riding station, and what it has reported changing.
@@ -139,7 +175,14 @@ public:
 		int ptr = ships.find(mmsi);
 		if (ptr == SHIP_NIL)
 			return false;
-		f(ships[ptr]);
+		Ship &ship = ships[ptr];
+		char before[sizeof(ship.matched_port_code)], destination[sizeof(ship.destination)];
+		std::memcpy(before, ship.matched_port_code, sizeof(before));
+		std::memcpy(destination, ship.destination, sizeof(destination));
+		f(ship);
+		if (std::strcmp(destination, ship.destination) != 0)
+			resolvePort(ship, ship.destination);
+		notifyPort(ship.mmsi, before, ship.matched_port_code);
 		return true;
 	}
 	// Drops the record; its slot is the next recycled. Path and history untouched.
@@ -149,6 +192,7 @@ public:
 		int ptr = ships.find(mmsi);
 		if (ptr == SHIP_NIL)
 			return false;
+		notifyPort(mmsi, ships[ptr].matched_port_code, "");
 		ships[ptr].reset();
 		return ships.remove(mmsi);
 	}
@@ -328,7 +372,6 @@ public:
 			  const std::string &label = std::string(), uint32_t to = 0, const std::string &was = std::string());
 	void noteSafety(Ship &ship, const JSON::JSON &data);
 	void noteDestination(Ship &ship, const std::string &v);
-	static void matchPort(Ship &ship, const char *destination);
 	void noteDraught(Ship &ship, float d);
 	void noteStatus(Ship &ship, int status);
 	std::string getJSON(bool full = false);

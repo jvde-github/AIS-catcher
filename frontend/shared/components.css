@@ -1895,3 +1895,15 @@
 .msg-count:hover img {
     filter: brightness(1.2);
 }
+
+/* Ships reporting a clicked port as their destination. */
+.modal-port-ships { max-width: 38rem; }
+.port-choice { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+.port-choice select { flex: 1; min-width: 0; }
+.port-ships-table { width: 100%; border-collapse: collapse; }
+.port-ships-table th, .port-ships-table td { padding: var(--space-2); text-align: left; border-bottom: 1px solid var(--color-border); }
+.port-ships-table th { color: var(--color-text-muted); font-weight: 500; }
+.port-ships-table td:not(:first-child) { white-space: nowrap; }
+.port-ships-table small { display: block; }
+.port-ship-link { padding: 0; border: 0; background: none; color: var(--color-text); font: inherit; text-align: left; text-decoration: underline; cursor: pointer; overflow-wrap: anywhere; }
+.port-ship-link:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }

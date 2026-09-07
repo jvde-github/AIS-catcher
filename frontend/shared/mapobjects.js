@@ -28,6 +28,7 @@ import { KIND_CAT, CAT_COLORS, AGE_FADE, LAYER_ALPHA, MAP_MARKER_RADIUS, decodeB
 import { stationCanvas, stationBadgeCanvas, stationBand } from './stations.js';
 
 import { portStyles, portBand } from './ports.js';
+import { createPortDialog } from './port-dialog.js';
 
 const HOVER_DWELL_MS = 500;
 
@@ -45,11 +46,13 @@ const bandOf = (o) => stationBand(stationInfo(o));
      options() -> {display, colorClass, idLabels, groupAreas, hidden(cat), focus: row | null}
      isHovered(feature), rehover(feature), isHoveringShip(mmsi), rehoverShip(mmsi)
      openVessel(mmsi)
+     portShipsUrl(code)?                  optional: defaults to ships_port.json?code=…
      openStation(id)?                    optional: without it a station click flies to it
      pickStation(feature, html)?         optional: offer the bands of stations sharing one marker, true when handled
      map()?                              the OL map, for flying to a place
    } */
 export function create(host) {
+    const openPorts = createPortDialog(host);
     render.init({ color: (cat) => colorOf(cat), shipLabel: host.shipLabel, shipLink: host.shipLink });
 
     const objectsDB = new Map();   // id -> row
@@ -521,7 +524,7 @@ export function create(host) {
         if (!o) return false;
         const stack = feature.object_stack || [o];
         const stations = stack.filter((m) => catOf(m) === 'station'), markers = stack.filter((m) => !['station', 'port'].includes(catOf(m)));
-        // Ports are hover-only; do not open an empty dialog or pass the click through.
+        if (catOf(o) === 'port') { openPorts(stack.filter(m => catOf(m) === 'port')); return true; }
         if (!stations.length && !markers.length) return true;
         if (stations.length === 1 && !markers.length) { openStation(stationId(stations[0])); return true; }
         const picks = stations.length ? '<div class="station-pick">' + stations.map(bandOf).join('') + '</div>' : '';
