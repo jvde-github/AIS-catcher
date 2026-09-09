@@ -882,6 +882,28 @@ namespace AIS
 			error_mask = mask;
 			return true;
 		}
+		case AIS::KEY_SETTING_EXCLUDE_QUALITY:
+		{
+			std::vector<std::string> names;
+			Util::Parse::Split(arg, ',', names);
+			uint16_t mask = 0;
+			if (names.empty())
+				throw std::runtime_error("EXCLUDE_QUALITY requires plausible, confirmed, suspect, duplicate, echo, late or none");
+			for (auto name : names)
+			{
+				Util::Convert::toLower(name);
+				if (name == "plausible") mask |= MESSAGE_QUALITY_PLAUSIBLE;
+				else if (name == "confirmed") mask |= MESSAGE_QUALITY_CONFIRMED;
+				else if (name == "suspect") mask |= MESSAGE_QUALITY_SUSPECT;
+				else if (name == "duplicate") mask |= MESSAGE_QUALITY_DUPLICATE;
+				else if (name == "echo") mask |= MESSAGE_QUALITY_ECHO;
+				else if (name == "late") mask |= MESSAGE_QUALITY_LATE;
+				else if (name == "none" && names.size() == 1) mask = 0;
+				else throw std::runtime_error("Invalid EXCLUDE_QUALITY value: " + name);
+			}
+			quality_mask = mask;
+			return true;
+		}
 		case AIS::KEY_SETTING_ONLY_ERRORS:
 			only_errors = Util::Parse::Switch(arg);
 			return true;
@@ -1033,6 +1055,19 @@ namespace AIS
 		if (!errors.empty()) errors.pop_back();
 		ret += (errors.empty() ? "none" : errors) + "}";
 		if (only_errors) ret += ", only_errors ON";
+
+		if (quality_mask)
+		{
+			std::string marks;
+			if (quality_mask & MESSAGE_QUALITY_PLAUSIBLE) marks += "plausible,";
+			if (quality_mask & MESSAGE_QUALITY_CONFIRMED) marks += "confirmed,";
+			if (quality_mask & MESSAGE_QUALITY_SUSPECT) marks += "suspect,";
+			if (quality_mask & MESSAGE_QUALITY_DUPLICATE) marks += "duplicate,";
+			if (quality_mask & MESSAGE_QUALITY_ECHO) marks += "echo,";
+			if (quality_mask & MESSAGE_QUALITY_LATE) marks += "late,";
+			marks.pop_back();
+			ret += ", exclude_quality {" + marks + "}";
+		}
 
 		if (!GPS)
 			ret += ", gps OFF";
@@ -1214,6 +1249,11 @@ namespace AIS
 		{
 			return Result::NotIncluded;
 		}
+
+		// reception marks are not decode errors: a message the sender already
+		// delivered is dropped outright, not forwarded as a diagnostic
+		if (tag.quality & quality_mask)
+			return Result::NotIncluded;
 
 		if (only_errors && !(tag.quality & MESSAGE_QUALITY_ERRORS))
 			return Result::NotIncluded;

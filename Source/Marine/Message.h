@@ -375,6 +375,7 @@ namespace AIS
 
 		bool remove_empty = false;
 		uint16_t error_mask = 0;
+		uint16_t quality_mask = 0;
 		bool only_errors = false;
 
 	public:
