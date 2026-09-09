@@ -241,7 +241,8 @@ const uint16_t MESSAGE_QUALITY_SUSPECT = 1 << 2;
 const uint16_t MESSAGE_QUALITY_DUPLICATE = 1 << 3;
 const uint16_t MESSAGE_QUALITY_ECHO = 1 << 4;
 const uint16_t MESSAGE_QUALITY_LATE = 1 << 5;
-// Bits 6–8 are reserved. Error flags keep their binary wire assignments.
+const uint16_t MESSAGE_QUALITY_DENSE = 1 << 6;
+// Bits 7–8 are reserved. Error flags keep their binary wire assignments.
 const uint16_t MESSAGE_QUALITY_CHECKSUM = 1 << 9;
 const uint16_t MESSAGE_QUALITY_UNDERSIZED = 1 << 10;
 const uint16_t MESSAGE_QUALITY_OVERSIZED = 1 << 11;

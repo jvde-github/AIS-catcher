@@ -888,7 +888,7 @@ namespace AIS
 			Util::Parse::Split(arg, ',', names);
 			uint16_t mask = 0;
 			if (names.empty())
-				throw std::runtime_error("EXCLUDE_QUALITY requires plausible, confirmed, suspect, duplicate, echo, late or none");
+				throw std::runtime_error("EXCLUDE_QUALITY requires plausible, confirmed, suspect, duplicate, echo, late, dense or none");
 			for (auto name : names)
 			{
 				Util::Convert::toLower(name);
@@ -898,6 +898,7 @@ namespace AIS
 				else if (name == "duplicate") mask |= MESSAGE_QUALITY_DUPLICATE;
 				else if (name == "echo") mask |= MESSAGE_QUALITY_ECHO;
 				else if (name == "late") mask |= MESSAGE_QUALITY_LATE;
+				else if (name == "dense") mask |= MESSAGE_QUALITY_DENSE;
 				else if (name == "none" && names.size() == 1) mask = 0;
 				else throw std::runtime_error("Invalid EXCLUDE_QUALITY value: " + name);
 			}
@@ -1065,6 +1066,7 @@ namespace AIS
 			if (quality_mask & MESSAGE_QUALITY_DUPLICATE) marks += "duplicate,";
 			if (quality_mask & MESSAGE_QUALITY_ECHO) marks += "echo,";
 			if (quality_mask & MESSAGE_QUALITY_LATE) marks += "late,";
+			if (quality_mask & MESSAGE_QUALITY_DENSE) marks += "dense,";
 			marks.pop_back();
 			ret += ", exclude_quality {" + marks + "}";
 		}
