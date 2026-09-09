@@ -103,7 +103,7 @@ rejected by `EXCLUDE_ERRORS`; messages rejected by other filters, including
 
 Exact-length checks cover fixed-length types 1–5, 9, 11, 18, 19, 23, 27 and 28.
 Messages below their per-type minimum are rejected; zero-length messages remain valid.
-Unparseable sentences,
+Unparsable sentences,
 unknown types and payloads too short to identify a sender are still rejected.
 MMSI zero is now rejected at validation for every output, rather than only by the map.
 `CRC_CHECK on` remains an explicit ingress rejection option: messages rejected
