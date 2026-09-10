@@ -1422,7 +1422,7 @@ body.ticker-open.ticker-bottom {
     padding: 14px 12px 16px;
     background: var(--sc-tint);
 }
-.sc-strip .ends { display: flex; justify-content: space-between; gap: 16px; }
+.sc-strip .ends { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; }
 .sc-strip .l { font-size: var(--fs-2xs); color: var(--color-text-muted); }
 .sc-strip .v {
     margin-top: 2px;
@@ -1434,6 +1434,8 @@ body.ticker-open.ticker-bottom {
 .sc-strip .sc-sum-pos { margin-top: 1px; font-size: var(--fs-2xs); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
 .sc-strip .sc-sum-reported { margin-top: 1px; font-size: var(--fs-2xs); color: var(--color-text-muted); overflow-wrap: anywhere; }
 .sc-strip .sc-sum-link { cursor: pointer; }
+.sc-port-link { cursor: pointer; }
+.sc-port-link:hover { text-decoration: underline; }
 .sc-strip .v.sc-sum-link:hover { text-decoration: underline; }
 .sc-strip .ends > div:last-child { text-align: right; }
 .sc-strip .line { display: flex; align-items: center; gap: 6px; margin: 10px 0 8px; color: var(--color-accent); }
@@ -1495,3 +1497,18 @@ body.ticker-open.ticker-bottom {
 @media (max-width: 520px) {
     .sc-strip .ends { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; }
 }
+
+/* Reception by the equipment, not a human read receipt. */
+.msg-acknowledged { color: var(--color-success, #16a34a); font-weight: 700; margin-left: .3em; }
+
+/* Show the latest record, with an unobtrusive control for the rest. */
+.sc-history-preview:not(.is-expanded) .tl-item ~ .tl-item { display: none; }
+/* scoped to its group: a host that mounts the card inside an OpenLayers control gets
+   OL's `.ol-control button` (a white 1.375em square), which outranks a lone class */
+.sc-history-preview .sc-more-pill { display: block; width: auto; height: auto; margin: 3px auto 0; padding: 0 12px 3px; border: 1px solid var(--color-rule); border-radius: 999px; background: transparent; color: var(--color-text-muted); font: inherit; line-height: 1.1; cursor: pointer; }
+.sc-history-preview .sc-more-pill:hover { color: var(--color-text); background: var(--color-card-surface); }
+.sc-history-preview .sc-more-pill:focus-visible { outline: 2px solid var(--color-card-edge); outline-offset: 2px; }
+.sc-history-preview .sc-more-pill[hidden], .sc-history-preview[hidden] { display: none; }
+
+.visit-dot-inside { background: linear-gradient(90deg, var(--color-card-edge) 50%, var(--color-card-surface) 50%); }
+.visit-dot-completed { background: var(--color-card-edge); }

@@ -1,0 +1,77 @@
+import {build as buildCard} from '../../shipcard-tabs.js';
+import {create as createUnits} from '../../core/units.js';
+import {populate} from '../../shipcard.js';
+import {create} from '../../mapobjects.js';
+const assert = (ok, message) => { if (!ok) throw Error(message); };
+(async () => {
+    let hovered = true, fetches = 0;
+    const definition = {type:'Feature', id:'test-place', properties:{name:'Port with island',place_type:'port'},
+        geometry:{type:'Polygon', coordinates:[[[4,51],[5,51],[5,52],[4,52],[4,51]],[[4.2,51.2],[4.2,51.4],[4.4,51.4],[4.4,51.2],[4.2,51.2]]]}};
+    const objects = create({options:()=>({display:'off',places:true}),shipLabel:()=>'',shipLink:()=>'',
+        isHovered:()=>hovered, fetchJSON:async url=>{if(url.startsWith('ships_place.json'))return {ships:[],total:0,counts:{inside:0,left:0,arrived:0,visits:0,expected:0}}; fetches++; return definition;}});
+    objects.applyDelta({place_version:'one', objects:[{id:'place-0',kind:10,runtime_id:0,uuid:'test-place',lat:51.5,lon:4.5,label:'Port with island',code:'NLRTM',place_type:'port',has_geometry:true}]},true);
+    objects.redraw();
+    const marker = objects.vector.getFeatureById('mo-place-0');
+    assert(marker,'Place marker appears when binary messages are disabled');
+    assert(objects.vector.getFeatures().length===1,'Boundary is absent by default');
+    objects.tooltip(marker);
+    await new Promise(r=>setTimeout(r,20));
+    assert(fetches===1,'Hover fetches boundary');
+    const polygon=objects.vector.getFeatures().find(f=>f.getGeometry().getType()==='Polygon');
+    assert(polygon && polygon.getGeometry().getCoordinates().length===2,'Hover retains polygon holes');
+    objects.tooltip(marker);
+    await new Promise(r=>setTimeout(r,20));
+    assert(fetches===1,'Repeated hover uses cache');
+    hovered=false;
+    await new Promise(r=>setTimeout(r,300));
+    assert(objects.vector.getFeatures().length===1,'Leaving marker hides polygon');
+    objects.click(marker);
+    await new Promise(r=>setTimeout(r,0));
+    assert(document.querySelectorAll('#port-ships [role="tab"]').length===5,'Port marker opens five activity tabs');
+    assert(document.querySelector('#port-ships .dialog-title').textContent==='Port with island','Place dialog uses the marker name');
+    document.querySelector('#port-ships .close_icon').click();
+    objects.applyDelta({objects:[],removed:['place-0']},false);objects.redraw();
+    assert(!objects.vector.getFeatureById('mo-place-0'),'Deletion removes marker');
+    objects.applyDelta({objects:[{id:'place-1',kind:10,runtime_id:1,place_type:'berth',lat:51.5,lon:4.5,label:'Quay'}]},false);
+    objects.redraw(); objects.click(objects.vector.getFeatureById('mo-place-1'));
+    await new Promise(r=>setTimeout(r,0));
+    assert(document.querySelectorAll('#port-ships [role="tab"]').length===4,'Berth has no Expected tab');
+    document.querySelector('#port-ships .close_icon').click();
+    assert(!document.getElementById('tablePlaceSelect') && !document.getElementById('filterPlaceSelect'),'Side-table and settings place selectors are removed');
+    const mount = document.createElement('div'); document.body.appendChild(mount);
+    const card = buildCard(mount, 'visits-test-');
+    const ship = {mmsi:123456789, time:3900, visits:[
+        {name:'Port <one>', entered:100, exited:220, inside:false},
+        {name:'Port <one>', entered:300, exited:null, inside:true}
+    ]};
+    populate(card.cells, ship, {units:createUnits()});
+    card.update(ship, {units:createUnits()});
+    card.select('history');
+    assert(!card.cells.places,'Voyage tab does not repeat a Places row');
+    assert(mount.querySelector('.sc-sum-region').textContent==='Port <one>','Summary derives current location from visits');
+    assert(mount.querySelectorAll('[id$="panel_history"] .place-visit').length===2,'History tab shows repeat visits');
+    assert(mount.textContent.includes('2 min') && mount.textContent.includes('1 h 0 min'),'Visit durations are displayed');
+    assert(mount.textContent.includes('Port <one>'),'Place name is rendered as text');
+    await new Promise(r=>setTimeout(r,0));
+    assert(!mount.querySelector('[id$="panel_voyage"] .place-visit'),'Voyage contains no visit history');
+    const historyLabels=[...mount.querySelectorAll('[id$="panel_history"] > .sc-group > .sc-group-label')].map(e=>e.textContent);
+    assert(historyLabels.join(',')==='Visits,Reported changes,Speed,Draught','History puts visits and changes before charts');
+    const groups=mount.querySelectorAll('.sc-history-preview');
+    assert(groups.length===2 && !mount.querySelector('details'),'History groups use no chevrons');
+    assert(!groups[0].hidden && groups[1].hidden,'Only sections with records are shown');
+    assert(!mount.querySelector('[id$="latest_visit"]'),'Summary omits the visit preview');
+    const more=groups[0].querySelector('.sc-more-pill');
+    assert(!more.hidden && more.getAttribute('aria-expanded')==='false','Multiple visits have a collapsed more pill');
+    more.click();
+    populate(card.cells, ship, {units:createUnits()});
+    await new Promise(r=>setTimeout(r,0));
+    assert(groups[0].classList.contains('is-expanded') && more.hidden,'Live updates retain expanded visits and keep the more pill hidden');
+    const columns=mount.querySelectorAll('[id$="visits"] .place-visit-times > div');
+    assert(columns.length===6 && columns[0].firstElementChild.textContent==='Entry' && columns[1].firstElementChild.textContent==='Exit' && columns[2].firstElementChild.textContent==='Duration','Entry and exit each have a label above a time');
+    card.update({...ship, mmsi:987654321}, {units:createUnits()});
+    assert(!groups[0].classList.contains('is-expanded') && !more.hidden,'A different vessel starts with one item and offers the rest');
+    populate(card.cells, {...ship, visits:[]}, {units:createUnits()});
+    await new Promise(r=>setTimeout(r,0));
+    assert(groups[0].hidden,'Visits section disappears when records are cleared');
+    window.placeMapTestsPassed=true;
+})().catch(e=>{window.placeMapTestsError=e.message; throw e;});

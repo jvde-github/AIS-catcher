@@ -99,6 +99,7 @@
 				</div>
 				<div data-action="hideTablecard" class="close_icon"></div>
 			</div>
+
 			<div class="tablecard_inner">
 				<table class="mytable">
 					<thead>
@@ -214,13 +215,23 @@
 					</div>
 				</section>
 				<section>
+					<h5 class="st-title">Map Objects</h5>
 					<div class="third">
 						<span>Station Marker</span><span>
 							<input type="checkbox" id="settings_show_station"
 								data-setting="show_station" />
 						</span>
-						</div>
-					
+					</div>
+					<div class="third">
+						<span>Ports</span><span>
+							<input type="checkbox" id="settings_show_ports" data-setting="show_ports" />
+						</span>
+					</div>
+					<div class="third">
+						<span>Places</span><span>
+							<input type="checkbox" id="settings_show_places" data-setting="show_places" />
+						</span>
+					</div>
 				</section>
 				<section>
 					<h5 class="st-title">Highlight Circles</h5>
@@ -478,7 +489,7 @@
 						<small class="st-desc">Sensors and locks show their id as a pill instead of a count badge</small>
 					</div>
 					<div>
-						<span>Group areas</span><span>
+						<span>Group places</span><span>
 							<input type="checkbox" id="settings_binary_group_areas" data-on-change="setBinaryGroupAreas" />
 						</span>
 						<small class="st-desc">Rectangles of group assignment commands; a hover shows one anyway</small>
@@ -611,7 +622,8 @@
 						</div>
 					</div>
 				</section>
-				<section>
+
+                <section>
 					<h5 class="st-title">Vessel type</h5>
 					<div>
 						<div id="filter_classes" class="filter-checks"></div>
@@ -923,7 +935,7 @@
 				<li data-tags="plane-map" data-group="focus" data-action="showTargetcardCtx" data-kind="plane"><i class="directions_boat_icon"></i>Plane card</li>
 				<li class="ctx-noalltracks" data-tags="ship-map" data-group="tracks" data-action="toggleTrackCtx"><i class="timeline_icon"></i>Track<span class="ctx-check">✓</span></li>
 				<li data-tags="ctx-map" data-group="tracks" data-action="toggleAllTracks"><i class="timeline_icon"></i>All tracks<span class="ctx-check">✓</span></li>
-				<li class="noandroid ctx-noalltracks" data-tags="ctx-map" data-group="tracks" data-action="startBoxSelect"><i class="highlight_alt_icon"></i>Show tracks in area</li>
+				<li class="noandroid ctx-noalltracks" data-tags="ctx-map" data-group="tracks" data-action="startBoxSelect"><i class="highlight_alt_icon"></i>Show tracks in place</li>
 				<li class="ctx-selectedtracks" data-tags="ctx-map" data-group="tracks" data-action="deleteAllTracks"><i class="remove_circle_outline_icon"></i>Clear tracks</li>
 				<li class="ctx-removealltracks" data-tags="ctx-map" data-group="tracks" data-action="toggleTrackCutoff"><i class="timer_icon"></i><span id="ctx_trackcutoff">Tracks from now</span><span class="ctx-check">✓</span></li>
 								<li data-tags="ship" data-group="vessel" data-action="showVesselDetailCtx"><i class="dns_icon"></i>Vessel database entry</li>

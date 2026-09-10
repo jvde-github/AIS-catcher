@@ -1,3 +1,4 @@
+import {placeFeature} from './places.js';
 // Map objects on either host: the rows a transport delivers, the viewer's
 // since-feed or the site's tiles, kept by id, aged, drawn, hovered and opened
 // through one kind table. Message markers, areas and receiving stations are
@@ -6,6 +7,8 @@
 // vessel lookup, hover bookkeeping and what a click opens.
 
 import Feature from 'ol/Feature.js';
+import GeoJSON from 'ol/format/GeoJSON.js';
+import { sanitizeString } from './core/text.js';
 import Point from 'ol/geom/Point.js';
 import Polygon from 'ol/geom/Polygon.js';
 import Fill from 'ol/style/Fill.js';
@@ -13,7 +16,6 @@ import Stroke from 'ol/style/Stroke.js';
 import Style from 'ol/style/Style.js';
 import Icon from 'ol/style/Icon.js';
 import CircleStyle from 'ol/style/Circle.js';
-import Text from 'ol/style/Text.js';
 import VectorLayer from 'ol/layer/Vector.js';
 import VectorSource from 'ol/source/Vector.js';
 import { fromLonLat } from 'ol/proj.js';
@@ -22,17 +24,21 @@ import { hexToRgb } from './color.js';
 import { hasValidCoords } from './core/geo.js';
 import * as events from './events.js';
 import * as render from './binary.js';
-import { KIND_CAT, CAT_COLORS, AGE_FADE, LAYER_ALPHA, MAP_MARKER_RADIUS, decodeBadge, decorate, tooltipSections, getBinaryMessageList, getBinaryMessageTabs,
+import { KIND_CAT, CAT_COLORS, AGE_FADE, LAYER_ALPHA, decodeBadge, decorate, tooltipSections, getBinaryMessageList, getBinaryMessageTabs,
     cardOpen, badgeCanvas, discCanvas, pillCanvas, hatchCanvas, areaRings, ageBucket, isDangerArea, isGroupArea, markerHead, markerCaption,
     messageDialog, kindsOf, glyphsHTML, KIND_LABEL } from './binary.js';
 import { stationCanvas, stationBadgeCanvas, stationBand } from './stations.js';
 
+import { objectPillCanvas, PILL_SLOT_WIDTH } from './object-pill.js';
 import { portStyles, portBand } from './ports.js';
 import { createPortDialog } from './port-dialog.js';
 
 const HOVER_DWELL_MS = 500;
 
-const catOf = (o) => o.kind === 9 ? 'port' : KIND_CAT[o.kind] || 'data';
+// a custom place named for the water it covers gets the waterway glyph; other custom places the generic one
+const WATERWAY = /strait|channel|passage|canal|waterway|fairway|river|sound|estuary|tss|separation/i;
+const placeGlyph = (o) => o.place_type === 'custom' && WATERWAY.test(o.category || '') ? 'waterway' : o.place_type || 'place';
+const catOf = (o) => (o.kind === 9 || (o.kind === 10 && o.place_type === 'port')) ? 'port' : o.kind === 10 ? 'place' : KIND_CAT[o.kind] || 'data';
 const statusOf = (o) => (o.online === false ? 'offline' : 'online');
 const stationId = (o) => Number(String(o.id).slice(1));
 const stationInfo = (o) => ({ name: o.label, id: stationId(o), country: o.country, mmsi: o.mmsi, status: statusOf(o) });
@@ -43,7 +49,7 @@ const bandOf = (o) => stationBand(stationInfo(o));
      objectUrl(key), shipMessagesUrl(mmsi), eventsUrl(sinceSeq)
      ship(mmsi) -> {mmsi, lat, lon, name, binary} | null
      shipLabel(mmsi), shipLink(mmsi)      names in cards
-     options() -> {display, colorClass, idLabels, groupAreas, hidden(cat), focus: row | null}
+     options() -> {display, colorClass, idLabels, groupAreas, areas, hidden(cat), focus: row | null}
      isHovered(feature), rehover(feature), isHoveringShip(mmsi), rehoverShip(mmsi)
      openVessel(mmsi)
      portShipsUrl(code)?                  optional: defaults to ships_port.json?code=…
@@ -65,6 +71,20 @@ export function create(host) {
     const layer = new VectorLayer({ source: vector, style: styleOf, opacity: LAYER_ALPHA, properties: { interactive: true } });
     // The local receiver shares the object layer's draw order, but its
     // visibility and lifetime are independent of received binary messages.
+    const boundaries = new Map();
+    const boundaryRequests = new Map();
+    let hoverBoundary = null;
+    let boundaryWatch = null;
+    const placeObjects = new Map();
+    let placeVersion = '';
+    const placeFormat = new GeoJSON();
+    function setPlaces(collection) {
+        // Definitions are metadata; boundaries are fetched only on hover.
+        if (collection.place_version && collection.place_version !== placeVersion) {
+            placeVersion = collection.place_version;
+            boundaries.clear();
+        }
+    }
     let receiverMarker = null;
     function setReceiverMarker(feature) {
         if (receiverMarker) vector.removeFeature(receiverMarker);
@@ -81,10 +101,30 @@ export function create(host) {
     /* ---- rows ------------------------------------------------------------- */
 
     function applyDelta(data, reset) {
-        if (reset) { objectsDB.clear(); hydrated.clear(); }
+        let placesChanged = reset || (data.place_version !== undefined && data.place_version !== placeVersion);
+        if (data.place_version !== undefined && data.place_version !== placeVersion) {
+            placeVersion = data.place_version; boundaries.clear(); hoverBoundary = null;
+        }
+        if (reset) { objectsDB.clear(); hydrated.clear(); placeObjects.clear(); }
         if (data.time) serverTime = data.time;
-        for (const o of data.objects || []) objectsDB.set(o.id, o);
-        for (const id of data.removed || []) { objectsDB.delete(id); hydrated.delete(id); }
+        if (data.ports_complete) {
+            const ports = new Set((data.objects || []).filter(o => o.kind === 9).map(o => o.id));
+            for (const [id, o] of objectsDB) if (o.kind === 9 && !ports.has(id)) {
+                objectsDB.delete(id); hydrated.delete(id);
+            }
+        }
+        for (const o of data.objects || []) {
+            if (o.kind === 10) {
+                placeObjects.set(o.id, placeFeature(o));
+                placesChanged = true;
+            }
+            objectsDB.set(o.id, o);
+        }
+        for (const id of data.removed || []) { placesChanged = placeObjects.delete(id) || placesChanged; objectsDB.delete(id); hydrated.delete(id); }
+        if (placesChanged) {
+            const collection = {type:'FeatureCollection', features:[...placeObjects.values()], place_version:placeVersion};
+            setPlaces(collection); host.onPlacesChanged?.(collection);
+        }
         prune();
     }
 
@@ -95,6 +135,11 @@ export function create(host) {
     function applyTile(key, data) {
         if (data.time) serverTime = data.time;
         if (data.ttl) ttl = data.ttl;
+        // a tile names the catalogue its places came from, as a delta does: the
+        // place dialog sends it back, and boundaries cached under an older one are stale
+        if (data.place_version !== undefined && data.place_version !== placeVersion) {
+            placeVersion = data.place_version; boundaries.clear(); hoverBoundary = null;
+        }
         const now = new Set();
         for (const o of data.objects || []) {
             if (!hasValidCoords(o.lat, o.lon)) continue;
@@ -123,7 +168,7 @@ export function create(host) {
         }
     }
 
-    function clear() { objectsDB.clear(); hydrated.clear(); tileIds.clear(); listedBy.clear(); }
+    function clear() { clearInterval(boundaryWatch); clearInterval(hoverWatch); boundaries.clear(); hoverBoundary = null; objectsDB.clear(); hydrated.clear(); tileIds.clear(); listedBy.clear(); placeObjects.clear(); }
 
     /* ---- features --------------------------------------------------------- */
 
@@ -141,7 +186,7 @@ export function create(host) {
         add(point(ship.lat, ship.lon), id, { binary: true, is_associated: true, binary_mmsi: ship.mmsi, ...props });
     }
 
-    const markerProps = (o) => ({ binary_cat: catOf(o), binary_label: o.label || '', binary_age: catOf(o) === 'port' ? 0 : ageBucket(o.t, serverTime), binary_status: '' });
+    const markerProps = (o) => ({ binary_cat: catOf(o), binary_label: o.label || '', binary_age: (catOf(o) === 'port' || o.kind === 10) ? 0 : ageBucket(o.t, serverTime), binary_status: '' });
     const stationProps = (status) => ({ binary_cat: 'station', binary_label: '', binary_age: 0, binary_status: status });
 
     // a station whose vessel is on the map rides it as a badge; true when it does
@@ -160,11 +205,13 @@ export function create(host) {
         vector.clear();
         if (receiverMarker) vector.addFeature(receiverMarker);
         const opt = host.options();
-        if (opt.display === 'off') return;
+        if (hoverBoundary) vector.addFeature(hoverBoundary);
         const rows = opt.focus ? [objectsDB.get(opt.focus.id) || opt.focus] : objectsDB.values();
         const standing = [];
         for (const o of rows) {
             const cat = catOf(o);
+            if (o.kind === 10 && cat !== 'port' && opt.places === false) continue;
+            if (opt.display === 'off' && cat !== 'port' && o.kind !== 10) continue;
             if (!opt.focus && ((opt.hidden && opt.hidden(cat)) || (o.z != null && o.z > viewZoom))) continue;
             if (cat === 'station') {
                 if (!placeStationBadge(o) && hasValidCoords(o.lat, o.lon)) standing.push(o);
@@ -173,17 +220,28 @@ export function create(host) {
             // areas are drawn, not hovered: the pointer answers to the glyph at the centre
             if (o.shapes)
                 areaRings(o.shapes).forEach((ring, i) =>
-                    add(new Feature({ geometry: new Polygon([ring.map((ll) => fromLonLat(ll))]) }), `mo-area-${o.id}-${i}`,
+                    add(new Feature({ geometry: new Polygon([ring.map((ll) => fromLonLat(ll))]) }), `mo-place-${o.id}-${i}`,
                         { is_area: true, is_danger: isDangerArea(o), is_group: isGroupArea(o), binary_object: o }));
             if (hasValidCoords(o.lat, o.lon)) standing.push(o);
         }
-        // points standing on their own: those within an icon of each other share one marker
         for (const stack of stackObjects(standing)) {
-            const o = stack[0];
-            const props = catOf(o) === 'station'
-                ? stationProps(stack.some((m) => catOf(m) === 'station' && statusOf(m) === 'online') ? 'online' : 'offline')
-                : markerProps(o);
-            add(point(o.lat, o.lon), `mo-${o.id}`, { binary: true, is_associated: false, binary_object: o, ...props, object_stack: stack.length > 1 ? stack : null });
+            const anchor = stack[0];
+            const slots = [];
+            for (const o of stack) {
+                const cat = catOf(o);
+                const glyph = o.kind === 10 ? placeGlyph(o) : cat;
+                let slot = slots.find((s) => s.cat === cat && s.glyph === glyph);
+                if (!slot) slots.push(slot = { cat, glyph, members: [] });
+                slot.members.push(o);
+            }
+            slots.forEach((slot, index) => {
+                const o = slot.members.reduce((a, b) => ((b.t || 0) > (a.t || 0) ? b : a));
+                const props = slot.cat === 'station' ? stationProps(slot.members.some((m) => statusOf(m) === 'online') ? 'online' : 'offline') : markerProps(o);
+                add(point(anchor.lat, anchor.lon), `mo-${o.id}`, {
+                    binary: true, is_associated: false, binary_object: o, object_stack: slot.members, ...props,
+                    pill_index: index, pill_count: slots.length,
+                });
+            });
         }
     }
 
@@ -237,7 +295,7 @@ export function create(host) {
     /* ---- styles ----------------------------------------------------------- */
 
     const styleCache = new Map();
-    const areaCache = new Map();
+    const placeCache = new Map();
     const iconOf = ({ canvas, size, width, height }) => new Icon({ img: canvas, width: width || size, height: height || size });
 
     const highlightRing = new Style({
@@ -245,8 +303,8 @@ export function create(host) {
         zIndex: 200
     });
 
-    function areaStyle(danger) {
-        let cached = areaCache.get(danger);
+    function placeStyle(danger) {
+        let cached = placeCache.get(danger);
         if (cached) return cached;
         const c = hexToRgb(danger ? '#e11d48' : '#0857b1');
         const ctx = document.createElement('canvas').getContext('2d');
@@ -255,7 +313,7 @@ export function create(host) {
             stroke: new Stroke({ color: `rgba(${c[0]}, ${c[1]}, ${c[2]}, 0.8)`, width: 1.5 }),
             zIndex: 1
         })];
-        areaCache.set(danger, cached);
+        placeCache.set(danger, cached);
         return cached;
     }
 
@@ -279,18 +337,24 @@ export function create(host) {
         const opt = host.options();
         if (feature.is_area) {
             if (feature.is_group && !opt.groupAreas && hoveredArea !== feature.binary_object.id) return null;
-            return areaStyle(!!feature.is_danger);
+            return placeStyle(!!feature.is_danger);
         }
         const isBadge = !!feature.is_associated;
         const cat = ['station', 'port'].includes(feature.binary_cat) || opt.colorClass !== false ? feature.binary_cat : 'data';
-        const label = (!isBadge && cat !== 'station' && cat !== 'port' && opt.idLabels && feature.binary_label) || '';
+        const isPlace = feature.binary_object?.kind === 10;
+        const glyph = isPlace ? placeGlyph(feature.binary_object) : cat;
+        const label = (!isPlace && !isBadge && cat !== 'station' && cat !== 'port' && opt.idLabels && feature.binary_label) || '';
         const age = feature.binary_age || 0, fade = AGE_FADE[age];
         const highlight = isBadge && opt.display === 'highlight';
-        const stacked = feature.object_stack ? feature.object_stack.length : 1;
-        const key = `${cat}:${isBadge ? 'b' : 'm'}:${highlight}:${label}:${age}:${feature.binary_status || ''}:${stacked}`;
+        const stacked = feature.pill_count || 1, slot = feature.pill_index || 0;
+        const key = `${cat}:${glyph}:${isBadge ? 'b' : 'm'}:${highlight}:${label}:${age}:${feature.binary_status || ''}:${stacked}:${slot}`;
         let cached = styleCache.get(key);
         if (cached) return cached;
-        if (isBadge) {
+        if (!isBadge && stacked > 1) {
+            const image = iconOf(objectPillCanvas(cat, feature.binary_status, kindRgb(cat), fade, slot, stacked, glyph));
+            image.setDisplacement([(slot - (stacked - 1) / 2) * PILL_SLOT_WIDTH, 0]);
+            cached = [new Style({ image, zIndex: 101 })];
+        } else if (isBadge) {
             const canvas = cat === 'station' ? stationBadgeCanvas(feature.binary_status) : badgeCanvas(cat, kindRgb(cat), fade);
             const mark = new Style({ image: iconOf(canvas), zIndex: 201 });
             cached = highlight ? [highlightRing, mark] : [mark];
@@ -303,19 +367,7 @@ export function create(host) {
             icon.setOpacity(fade);
             cached = [new Style({ image: icon, zIndex: 100 })];
         } else {
-            cached = [new Style({ image: iconOf(discCanvas(cat, kindRgb(cat), fade)), zIndex: 100 })];
-        }
-        // One shared count badge, perched above/right of the marker without
-        // moving its geographic anchor or clipping it to the icon's canvas.
-        if (!isBadge && stacked > 1) {
-            const img = cached[0].getImage();
-            const x = label ? img.getWidth() / 2 - 2 : MAP_MARKER_RADIUS;
-            const y = label ? img.getHeight() / 2 - 2 : MAP_MARKER_RADIUS;
-            cached.push(new Style({
-                image: new CircleStyle({ radius: 6, displacement: [x, y], fill: new Fill({ color: '#333' }), stroke: new Stroke({ color: 'white', width: 1.5 }) }),
-                text: new Text({ text: stacked > 9 ? '9+' : String(stacked), font: 'bold 9px sans-serif', offsetX: x, offsetY: -y + 0.5, fill: new Fill({ color: 'white' }) }),
-                zIndex: 102,
-            }));
+            cached = [new Style({ image: iconOf(discCanvas(glyph, kindRgb(cat), fade)), zIndex: 100 })];
         }
         styleCache.set(key, cached);
         return cached;
@@ -366,8 +418,10 @@ export function create(host) {
     if (typeof document !== 'undefined')
         document.addEventListener('click', (e) => {
             if (!e.target.closest) return;
-            const pick = e.target.closest('#binary-messages .station-pick .tip-band[data-station]');
+            const pick = e.target.closest('#binary-messages .object-pick .tip-band[data-station]');
             if (pick) { messageDialog().close(); openStation(Number(pick.dataset.station)); return; }
+            const port = e.target.closest('#binary-messages .port-pick .tip-band[data-code]');
+            if (port) { messageDialog().close(); openPorts([objectsDB.get('p' + port.dataset.code) || { code: port.dataset.code }]); return; }
             const pin = e.target.closest('#binary-messages .msg-pin');
             if (pin) { messageDialog().close(); flyTo(Number(pin.dataset.lat), Number(pin.dataset.lon)); return; }
             if (e.target.closest('#binary-messages a')) messageDialog().close();
@@ -429,18 +483,47 @@ export function create(host) {
     // a thin rule with dots: more stands behind what the hover shows
     const MORE_ROW = '<div class="tip-more">···</div>';
 
-    // the hover of a marker, or of what shares it: every station as its band, the
-    // first message marker as its card, and one row of dots for the messages behind
-    // that; the click shows it all
+    const HOVER_BANDS = 6;
     function tooltip(feature) {
         const members = feature.object_stack || [feature.binary_object];
-        const stations = members.filter((o) => catOf(o) === 'station'), markers = members.filter((o) => !['station', 'port'].includes(catOf(o)));
-        const more = markers.reduce((n, o) => n + (o.count || 1), 0) - 1;
-        return stations.map(bandOf).join('') + members.filter(o => catOf(o) === 'port').map(portBand).join('') + (markers.length ? markerTip(markers[0], feature) : '') + (more > 0 ? MORE_ROW : '');
+        for (const o of members) if (o.kind === 10 && o.has_geometry) revealPlace(feature, o);
+        const stations = members.filter((o) => catOf(o) === 'station'), ports = members.filter((o) => catOf(o) === 'port'), markers = members.filter((o) => !['station', 'port'].includes(catOf(o)));
+        const more = markers.reduce((n, o) => n + (o.count || 1), 0) - 1 + Math.max(0, ports.length - HOVER_BANDS);
+        return stations.map(bandOf).join('') + ports.slice(0, HOVER_BANDS).map(portBand).join('') + (markers.length ? markerTip(markers[0], feature) : '') + (more > 0 ? MORE_ROW : '');
     }
 
     // the head at once, the members after a dwell
+    function revealPlace(marker, row) {
+        const version = placeVersion;
+        const key = version + ':' + row.runtime_id;
+        const show = data => {
+            if (!host.isHovered(marker) || placeVersion !== version || !data?.geometry || data.geometry.type === 'Point') return;
+            if (hoverBoundary) vector.removeFeature(hoverBoundary);
+            hoverBoundary = placeFormat.readFeature(data, {featureProjection:'EPSG:3857'});
+            hoverBoundary.setStyle(new Style({stroke:new Stroke({color:'#1767a2',width:1.5}), fill:new Fill({color:'#1767a218'}), zIndex:-10}));
+            vector.addFeature(hoverBoundary);
+            clearInterval(boundaryWatch);
+            boundaryWatch = setInterval(() => {
+                if (host.isHovered(marker)) return;
+                clearInterval(boundaryWatch);
+                if (hoverBoundary) vector.removeFeature(hoverBoundary);
+                hoverBoundary = null;
+            }, 250);
+        };
+        if (boundaries.has(key)) { show(boundaries.get(key)); return; }
+        if (boundaryRequests.has(key)) return;
+        const url = host.placeGeometryUrl?.(row.runtime_id, version) ||
+            'place.json?id=' + row.runtime_id + '&version=' + encodeURIComponent(version);
+        const request = host.fetchJSON(url).then(data => {
+            if (placeVersion !== version || !data?.geometry) return;
+            boundaries.set(key, data);
+            if (boundaries.size > 64) boundaries.delete(boundaries.keys().next().value);
+            show(data);
+        }).catch(() => {}).finally(() => boundaryRequests.delete(key));
+        boundaryRequests.set(key, request);
+    }
     function markerTip(o, feature) {
+        if (o.kind === 10) return `<div class="tip-band"><div class="tooltip-card"><span class="tooltip-name">${sanitizeString(o.label || "Place")}</span></div></div>`;
         if (isGroupArea(o)) revealArea(feature, o);
         const head = markerHead(o, host.shipLabel, colorOf(catOf(o)));
         const have = hydrated.get(o.id);
@@ -507,6 +590,7 @@ export function create(host) {
 
     function showVesselMessages(mmsi, badgeWord) {
         const dlg = messageDialog();
+        dlg.setTitle('');
         const show = (html) => { dlg.body.innerHTML = html; dlg.open(); };
         const tabs = (list) => show(getBinaryMessageTabs(list, mmsi, listCtx({ mmsi })));
         if (!badgeWord) return tabs([]);
@@ -514,9 +598,6 @@ export function create(host) {
         hydrateShip(mmsi, badgeWord).then((messages) => tabs(messages.filter(shownBy())));
     }
 
-    // a badge opens its vessel, a lone station opens; the members of a shared marker
-    // go in one dialog, the stations as bands to pick, the messages as cards, unless
-    // the host offers a station-only pick its own way
     function click(feature) {
         if (feature.station_mmsi) { host.openVessel(feature.station_mmsi); return true; }
         if (feature.is_associated) { if (feature.binary_mmsi) host.openVessel(feature.binary_mmsi); return true; }
@@ -524,12 +605,35 @@ export function create(host) {
         if (!o) return false;
         const stack = feature.object_stack || [o];
         const stations = stack.filter((m) => catOf(m) === 'station'), markers = stack.filter((m) => !['station', 'port'].includes(catOf(m)));
-        if (catOf(o) === 'port') { openPorts(stack.filter(m => catOf(m) === 'port')); return true; }
+        if (o.kind === 10) {
+            const places = stack.filter(m => m.kind === 10);
+            if (places.length === 1) openPorts([{...o, place_version:placeVersion}]);
+            else {
+                const dlg = messageDialog(); dlg.setTitle('Places');
+                dlg.body.innerHTML = '<div class="object-pick">' + places.map((p, i) => '<button type="button" class="btn" data-place-pick="' + i + '">' + sanitizeString(p.label || 'Place') + '</button>').join('') + '</div>';
+                dlg.body.onclick = e => {
+                    const button = e.target.closest('[data-place-pick]');
+                    if (button) { dlg.close(); openPorts([{...places[Number(button.dataset.placePick)], place_version:placeVersion}]); }
+                };
+                dlg.open();
+            }
+            return true;
+        }
+        if (catOf(o) === 'port') {
+            const ports = stack.filter((m) => catOf(m) === 'port');
+            if (ports.length === 1) { openPorts(ports); return true; }
+            const dlg = messageDialog();
+            dlg.setTitle('Ports');
+            dlg.body.innerHTML = '<div class="object-pick port-pick">' + ports.map(portBand).join('') + '</div>';
+            dlg.open();
+            return true;
+        }
         if (!stations.length && !markers.length) return true;
         if (stations.length === 1 && !markers.length) { openStation(stationId(stations[0])); return true; }
-        const picks = stations.length ? '<div class="station-pick">' + stations.map(bandOf).join('') + '</div>' : '';
+        const picks = stations.length ? '<div class="object-pick">' + stations.map(bandOf).join('') + '</div>' : '';
         if (!markers.length && host.pickStation && host.pickStation(feature, picks)) return true;
         const dlg = messageDialog();
+        dlg.setTitle(stations.length && !markers.length ? 'Stations' : '');
         dlg.body.innerHTML = picks + (markers.length ? '<p class="dim">Loading…</p>' : '');
         dlg.open();
         if (markers.length)
@@ -540,7 +644,7 @@ export function create(host) {
     const strip = events.create(host);
 
     return {
-        vector, layer, setReceiverMarker, openPorts,
+        vector, layer, setReceiverMarker, openPorts, setPlaces,
         applyDelta, applyTile, prune, clear, redraw, restyle,
         setViewZoom: (z) => { viewZoom = Math.round(z); },
         shipBadge, stationBadge,

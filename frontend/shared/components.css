@@ -986,6 +986,11 @@
     to { transform: rotate(360deg); }
 }
 
+.loading-indicator { flex: none; box-sizing: border-box; border-width: 2px; }
+@media (prefers-reduced-motion: reduce) {
+    .loading-indicator { animation: none; }
+}
+
 
 /* --- status dot ------------------------------------------------------------ */
 
@@ -1801,7 +1806,8 @@
 
 /* the message dialog: fixed width, content height, top from the host's
    --msg-dialog-top; the whole screen on a phone */
-.modal-overlay:has(.modal-messages) {
+.modal-overlay:has(.modal-messages),
+.modal-overlay:has(.modal-port-ships) {
     align-items: flex-start;
     padding-top: var(--msg-dialog-top, var(--space-4));
 }
@@ -1831,7 +1837,8 @@
 }
 
 @media (max-width: 600px), (max-height: 600px) {
-    .modal-overlay:has(.modal-messages) {
+    .modal-overlay:has(.modal-messages),
+.modal-overlay:has(.modal-port-ships) {
         padding: 0;
     }
 
@@ -1858,8 +1865,8 @@
 }
 
 /* the chooser for stations sharing one marker: a band per station */
-.station-pick .tip-band { cursor: pointer; border-radius: 4px; }
-.station-pick .tip-band:hover { background: rgba(127, 127, 127, 0.15); }
+.object-pick .tip-band { cursor: pointer; border-radius: 4px; }
+.object-pick .tip-band:hover { background: rgba(127, 127, 127, 0.15); }
 
 /* the message dialog's received and sent tabs */
 .msg-tabbar {
@@ -1896,11 +1903,17 @@
     filter: brightness(1.2);
 }
 
-/* Ships reporting a clicked port as their destination. */
-.modal-port-ships { max-width: min(38rem, calc(100vw - 2 * var(--space-4))); min-width: 0; box-sizing: border-box; }
-.port-choice { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
-.port-choice select { flex: 1; min-width: 0; }
-.modal-port-ships .port-ship-list { padding: 0; }
+/* Place activity shares the message dialog’s stable top edge. */
+.modal-port-ships { max-height: calc(100dvh - var(--msg-dialog-top, 0px) - var(--space-4)); max-width: min(38rem, calc(100vw - 2 * var(--space-4))); min-width: 0; box-sizing: border-box; }
+.modal-port-ships .port-ship-list { padding: 0; min-height: 10rem; }
+.port-status { padding: var(--space-6) var(--space-3); text-align: center; color: var(--color-text-muted); font-size: var(--fs-sm); }
+.port-loading { display: inline-flex; align-items: center; justify-content: center; min-height: 4rem; opacity: 0; animation: port-loading-reveal 0.15s ease-out 0.4s forwards; }
+.port-loading .spinner { box-sizing: border-box; border-width: 2px; }
+@keyframes port-loading-reveal { to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+    .port-loading { animation-duration: 0s; }
+    .port-loading .spinner { animation: none; }
+}
 .port-ship-list table { border-collapse: collapse; table-layout: fixed; }
 .port-ship-link { display: block; max-width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .port-ship-link:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
@@ -1908,3 +1921,21 @@
 .modal-port-ships .modal-body { padding: 0 10px 10px; background: var(--color-panel-surface); }
 .port-ship-count { flex: none; margin: 0 10px; font-size: var(--fs-sm); color: var(--color-text-muted); }
 .port-ship-list .table-name .port-ship-link { min-width: 0; }
+
+.place-visits { text-align: left; white-space: normal; }
+.place-visit-name { font-size: var(--fs-base); font-weight: 500; overflow-wrap: anywhere; }
+.place-visit-times { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, .65fr); gap: .65em; margin-top: .6em; }
+.place-visit-times > div { display: flex; flex-direction: column; gap: .2em; min-width: 0; }
+.place-visit-times > div > span:first-child { color: var(--color-text-muted); font-size: var(--fs-2xs); }
+.place-visit-times > div > span:last-child { font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.place-visit-status { font-size: var(--fs-2xs); color: var(--color-text-subtle); text-align: right; }
+
+.place-dialog-tabs { display: flex; gap: 0; margin: 0 -10px; padding: 0 8px; background: var(--color-card-header); border-bottom: 1px solid var(--color-rule); }
+.place-dialog-tabs > button { flex: 1; min-width: 0; min-height: 40px; margin: 0; padding: 10px 4px 8px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; box-shadow: none; appearance: none; color: var(--color-text-muted); font: inherit; font-size: var(--fs-sm); cursor: pointer; white-space: nowrap; }
+.place-dialog-tabs > button[aria-selected="true"] { color: var(--color-text); border-bottom-color: var(--color-accent); }
+.place-dialog-tabs > button:hover { color: var(--color-text); }
+.place-dialog-tabs > button:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -3px; }
+.place-tab-count { font-size: var(--fs-2xs); color: var(--color-text-muted); }
+.place-dialog-note { font-size: var(--fs-2xs); color: var(--color-text-muted); padding: 6px 0; }
+.place-dialog-note:empty { display: none; }
+.port-ship-list td { overflow-wrap: anywhere; }

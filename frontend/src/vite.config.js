@@ -17,7 +17,7 @@ export default defineConfig({
     // 500 KB warning rather than chase a split that wouldn't help load time.
     chunkSizeWarningLimit: 700,
     rollupOptions: {
-      input: { script: path.resolve(__dirname, 'script.js') },
+      input: { script: path.resolve(__dirname, 'bootstrap.js'), 'control-app': path.resolve(__dirname, '../control/js/app.js') },
       output: {
         format: 'es',
         entryFileNames: '[name].js',
@@ -25,6 +25,10 @@ export default defineConfig({
         assetFileNames: (assetInfo) =>
           assetInfo.name?.endsWith('.css') ? 'lib.css' : (assetInfo.name ?? 'asset'),
         manualChunks(id) {
+          // Bootstrap and the viewer share configuration code without either
+          // importing the other's entry point (which would run startup twice).
+          if (id.includes('vite/preload-helper')) return 'preload';
+          if (id.endsWith('/features/server-config.js')) return 'configuration';
           // core/ MUST be its own chunk — otherwise lazy tab chunks
           // statically import script.js and the browser instantiates it
           // twice (different URL than the original <script> tag).

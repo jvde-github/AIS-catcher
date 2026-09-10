@@ -40,7 +40,6 @@ std::atomic<bool> stop;
 std::atomic<bool> stop_process;
 
 #ifdef HASWEBVIEWER
-WebViewer *managed_viewer = nullptr;
 #endif
 
 void StopRequest()

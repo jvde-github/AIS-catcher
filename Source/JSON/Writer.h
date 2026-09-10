@@ -375,6 +375,7 @@ namespace JSON
 			std::string out;
 			Writer w(out, s.n + 16);
 			w.val(s);
+			w.finish();
 			return out;
 		}
 

@@ -9,6 +9,7 @@
     "test": "node --test test/*.test.js"
   },
   "devDependencies": {
-    "happy-dom": "^20.11.6"
+    "happy-dom": "^20.11.6",
+    "ol": "10.9.0"
   }
 }

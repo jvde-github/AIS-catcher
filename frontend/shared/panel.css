@@ -657,6 +657,8 @@
 
 .tableside_window .settings-header .search-box {
     width: 32px;
+    border-color: transparent;
+    box-shadow: none;
     max-width: none;
     padding: 5px 0 5px 31px;
     background-position: 7px center;
@@ -668,6 +670,7 @@
 
 .tableside_window .settings-header .search-box:not(:placeholder-shown) {
     width: min(260px, 100%);
+    border-color: var(--color-accent);
     padding-right: 12px;
     background-color: var(--color-band-accent);
     cursor: text;
@@ -933,3 +936,7 @@
         background: var(--color-hover);
     }
 }
+
+
+/* Viewer shortcut to the shared area filter, beside the compact search control. */
+.tableside_window .settings-header .hdr-slot { display: flex; align-items: center; gap: var(--space-1); min-width: 0; }

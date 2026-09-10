@@ -6,6 +6,7 @@
    builds the cells and hands them here to be filled. A cell key may map to
    several elements when a layout shows a value more than once.
    ========================================================================= */
+import { visitListHTML } from './visits.js';
 import { decodeHTMLEntities } from './components.js';
 import { CHANGE, getCountryName, getEtaVal, getMmsiTypeVal, getShipTypeShort, getStatusVal, sanitizeString } from './core/text.js';
 import { getChangeListHTML, getDraughtChartSVG, getShipDimensionSVG, getSpeedHistorySVG } from './core/spark.js';
@@ -14,6 +15,27 @@ export const CHANGE_LIST_FIELDS = [CHANGE.DESTINATION, CHANGE.ETA, CHANGE.SHIPNA
 export const MATCHED_PORT_FIELDS = [
     { key: 'matched_code', label: 'Code' }, { key: 'matched_country', label: 'Country' }, { key: 'matched_name', label: 'Port' },
 ];
+
+// a resolved destination is a place on the map as much as a list of ships: the
+// map goes there first when the port has a position, then the dialog opens
+export function setPortLink(el, port, openPort, goTo) {
+    const active = typeof port?.code === 'string' && port.code.trim() !== '' && typeof openPort === 'function';
+    const open = () => {
+        if (typeof goTo === 'function' && Number.isFinite(port.lat) && Number.isFinite(port.lon)) goTo(port.lat, port.lon);
+        openPort(port);
+    };
+    el.classList.toggle('sc-port-link', active);
+    el.onclick = active ? (event) => { event.stopPropagation(); open(); } : null;
+    el.onkeydown = active ? (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            event.stopPropagation();
+            open();
+        }
+    } : null;
+    if (active) { el.setAttribute('role', 'button'); el.tabIndex = 0; }
+    else { el.removeAttribute('role'); el.removeAttribute('tabindex'); }
+}
 
 /* Fills the common cells. `h` carries the host's units, `regionName(region)`,
    `infoIcon(kind)` for the sender and ship-type details, and optionally
@@ -51,10 +73,16 @@ export function populate(cells, ship, h) {
     text('matched_code', hasMatch ? match.code : null);
     text('matched_country', hasMatch ? match.country : null);
     text('matched_name', hasMatch ? match.name : null);
+    for (const key of ['matched_code', 'matched_name']) {
+        each(key).forEach(el => setPortLink(el, match, h.openPort, h.goTo));
+    }
     each('matched_code').forEach(el => { el.parentElement.parentElement.hidden = !hasMatch; });
     html('lat', ship.lat != null ? u.getLatValFormat(ship) : null);
     html('lon', ship.lon != null ? u.getLonValFormat(ship) : null);
     text('region', h.regionName ? h.regionName(ship.region) : ship.region);
+    html('visits', visitListHTML(ship.visits, ship.time));
+    each('visits').forEach(el => el.closest('.card-row')?.classList.toggle('hidden', !Array.isArray(ship.visits)));
+
 }
 
 export const hull = (ship, u) => getShipDimensionSVG(ship, u);

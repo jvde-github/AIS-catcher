@@ -1,52 +1,75 @@
 /*
-	Copyright(c) 2021-2026 jvde.github@gmail.com
+        Copyright(c) 2021-2026 jvde.github@gmail.com
 
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
 
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
 
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 // Single source of truth for all JSON keys.
 // This file is included multiple times with different X() macro definitions
 // to generate the enum, KeyMap array, and KeyInfoMap array.
 //
-// X(enum_name, full, minimal, sparse, aprs, setting, input, unit, description, lookup)
+// X(enum_name, full, minimal, sparse, aprs, setting, input, unit, description,
+// lookup)
 //
 // To add a new key: add one X() line here. That's it.
 
-X(KEY_CLASS, "class", "class", "class", "", "", "class", "", "AIS message class", nullptr)
-X(KEY_DEVICE, "device", "device", "device", "", "", "device", "", "Device identifier", nullptr)
-X(KEY_DRIVER, "driver", "driver", "driver", "", "", "driver", "", "Numeric device driver identifier used to receive this message.", nullptr)
-X(KEY_QUALITY, "quality", "quality", "quality", "", "", "quality", "", "Quality flags: checksum=512, undersized=1024, oversized=2048; reception-quality marks use bits 0-5", nullptr)
-X(KEY_SCALED, "scaled", "", "scaled", "", "", "", "", "Scaled-output flag (true=engineering units).", nullptr)
-X(KEY_CHANNEL, "channel", "channel", "channel", "", "", "", "", "VHF channel (A or B).", nullptr)
-X(KEY_HARDWARE, "hardware", "hardware", "hardware", "", "", "hardware", "", "Hardware/device product name reported by the driver.", nullptr)
+X(KEY_CLASS, "class", "class", "class", "", "", "class", "",
+  "AIS message class", nullptr)
+X(KEY_DEVICE, "device", "device", "device", "", "", "device", "",
+  "Device identifier", nullptr)
+X(KEY_DRIVER, "driver", "driver", "driver", "", "", "driver", "",
+  "Numeric device driver identifier used to receive this message.", nullptr)
+X(KEY_QUALITY, "quality", "quality", "quality", "", "", "quality", "",
+  "Quality flags: checksum=512, undersized=1024, oversized=2048; "
+  "reception-quality marks use bits 0-5",
+  nullptr)
+X(KEY_SCALED, "scaled", "", "scaled", "", "", "", "",
+  "Scaled-output flag (true=engineering units).", nullptr)
+X(KEY_CHANNEL, "channel", "channel", "channel", "", "", "", "",
+  "VHF channel (A or B).", nullptr)
+X(KEY_HARDWARE, "hardware", "hardware", "hardware", "", "", "hardware", "",
+  "Hardware/device product name reported by the driver.", nullptr)
 X(KEY_IPV4, "ipv4", "ipv4", "ipv4", "", "", "ipv4", "", "", nullptr)
-X(KEY_SIGNAL_POWER, "signalpower", "signalpower", "signalpower", "", "", "signalpower", "dB", "Signal power level", nullptr)
-X(KEY_DBM, "", "", "", "", "", "dbm", "dB", "Signal power level (alias)", nullptr)
-X(KEY_RSSI, "", "", "", "", "", "rssi", "dB", "Signal power level (alias)", nullptr)
-X(KEY_PPM, "ppm", "ppm", "ppm", "", "", "ppm", "ppm", "Estimated frequency offset of the receiver during decoding.", nullptr)
+X(KEY_SIGNAL_POWER, "signalpower", "signalpower", "signalpower", "", "",
+  "signalpower", "dB", "Signal power level", nullptr)
+X(KEY_DBM, "", "", "", "", "", "dbm", "dB", "Signal power level (alias)",
+  nullptr)
+X(KEY_RSSI, "", "", "", "", "", "rssi", "dB", "Signal power level (alias)",
+  nullptr)
+X(KEY_PPM, "ppm", "ppm", "ppm", "", "", "ppm", "ppm",
+  "Estimated frequency offset of the receiver during decoding.", nullptr)
 X(KEY_FO, "", "", "", "", "", "fo", "", "Frequency offset (alias)", nullptr)
-X(KEY_RXTIME, "rxtime", "rxtime", "rxtime", "rxtime", "", "", "", "Host receive time (YYYYMMDDHHMMSS, UTC).", nullptr)
-X(KEY_RXUXTIME, "rxuxtime", "rxuxtime", "rxuxtime", "rxuxtime", "", "rxuxtime", "", "Host receive time (Unix epoch s).", nullptr)
-X(KEY_NMEA, "nmea", "nmea", "nmea", "", "", "nmea", "", "Original NMEA sentence(s).", nullptr)
-X(KEY_ETA, "eta", "", "eta", "", "", "", "", "Estimated time of arrival (UTC; MM-DD HH:MM).", nullptr)
-X(KEY_SHIPTYPE_TEXT, "shiptype_text", "", "shiptype_text", "", "", "", "", "Ship type as human-readable text (decoded from `shiptype` lookup).", nullptr)
-X(KEY_AID_TYPE_TEXT, "aid_type_text", "", "aid_type_text", "", "", "", "", "Aid-to-Navigation type text.", nullptr)
+X(KEY_RXTIME, "rxtime", "rxtime", "rxtime", "rxtime", "", "", "",
+  "Host receive time (YYYYMMDDHHMMSS, UTC).", nullptr)
+X(KEY_RXUXTIME, "rxuxtime", "rxuxtime", "rxuxtime", "rxuxtime", "", "rxuxtime",
+  "", "Host receive time (Unix epoch s).", nullptr)
+X(KEY_NMEA, "nmea", "nmea", "nmea", "", "", "nmea", "",
+  "Original NMEA sentence(s).", nullptr)
+X(KEY_ETA, "eta", "", "eta", "", "", "", "",
+  "Estimated time of arrival (UTC; MM-DD HH:MM).", nullptr)
+X(KEY_SHIPTYPE_TEXT, "shiptype_text", "", "shiptype_text", "", "", "", "",
+  "Ship type as human-readable text (decoded from `shiptype` lookup).", nullptr)
+X(KEY_AID_TYPE_TEXT, "aid_type_text", "", "aid_type_text", "", "", "", "",
+  "Aid-to-Navigation type text.", nullptr)
 X(KEY_SAMPLE_START_COUNT, "ssc", "", "ssc", "", "", "ssc", "", "", nullptr)
 X(KEY_SAMPLE_LENGTH, "sl", "", "sl", "", "", "sl", "", "", nullptr)
-X(KEY_STATION_ID, "station_id", "", "station_id", "", "", "station_id", "", "Station identifier (SLS: 7-char ASCII; else numeric).", nullptr)
-X(KEY_VERSION, "version", "", "version", "", "", "version", "", "AIS-catcher version that produced this output.", nullptr)
-X(KEY_TOA, "toa", "", "toa", "", "", "toa", "s", "Time of arrival (Unix epoch s).", nullptr)
+X(KEY_STATION_ID, "station_id", "", "station_id", "", "", "station_id", "",
+  "Station identifier (SLS: 7-char ASCII; else numeric).", nullptr)
+X(KEY_VERSION, "version", "", "version", "", "", "version", "",
+  "AIS-catcher version that produced this output.", nullptr)
+X(KEY_TOA, "toa", "", "toa", "", "", "toa", "s",
+  "Time of arrival (Unix epoch s).", nullptr)
 X(KEY_SETTING_ABOUT, "", "", "", "", "about", "", "", "", nullptr)
 X(KEY_SETTING_ADDRESS, "", "", "", "", "address", "", "", "", nullptr)
 X(KEY_SETTING_ACTIVE, "", "", "", "", "active", "", "", "", nullptr)
@@ -56,6 +79,8 @@ X(KEY_SETTING_AIRSPY, "", "", "", "", "airspy", "", "", "", nullptr)
 X(KEY_SETTING_AIRSPYHF, "", "", "", "", "airspyhf", "", "", "", nullptr)
 X(KEY_SETTING_ALLOW_TYPE, "", "", "", "", "allow_type", "", "", "", nullptr)
 X(KEY_SETTING_ANTENNA, "", "", "", "", "antenna", "", "", "", nullptr)
+X(KEY_SETTING_PLACES, "", "", "", "", "places", "", "",
+  "Directory containing geographic place definitions.", nullptr)
 X(KEY_SETTING_ATON, "", "", "", "", "aton", "", "", "", nullptr)
 X(KEY_SETTING_AUTHOR, "", "", "", "", "author", "", "", "", nullptr)
 X(KEY_SETTING_BACKUP, "", "", "", "", "backup", "", "", "", nullptr)
@@ -78,20 +103,33 @@ X(KEY_SETTING_CONTEXT, "", "", "", "", "context", "", "", "", nullptr)
 X(KEY_SETTING_CONN_STR, "", "", "", "", "conn_str", "", "", "", nullptr)
 X(KEY_SETTING_CRC_CHECK, "", "", "", "", "crc_check", "", "", "", nullptr)
 X(KEY_SETTING_CUTOFF, "", "", "", "", "cutoff", "", "", "", nullptr)
-X(KEY_SETTING_EXCLUDE_ERRORS, "", "", "", "", "exclude_errors", "", "", "Errors excluded when FILTER is on: undersized, oversized, checksum, all or none", nullptr)
-X(KEY_SETTING_EXCLUDE_QUALITY, "", "", "", "", "exclude_quality", "", "", "Reception marks excluded when FILTER is on: plausible, confirmed, suspect, duplicate, echo, late, dense or none", nullptr)
-X(KEY_SETTING_ONLY_ERRORS, "", "", "", "", "only_errors", "", "", "Only flagged messages pass when FILTER is on; error exclusions still apply", nullptr)
-X(KEY_SETTING_TRACK_MEMORY, "", "", "", "", "track_memory", "", "KB", "Memory budget for ship tracks", nullptr)
-X(KEY_SETTING_MAX_SHIPS, "", "", "", "", "max_ships", "", "", "Ship table size", nullptr)
-X(KEY_SETTING_TRACK_TIME, "", "", "", "", "track_time", "", "sec", "How far back tracks and replay reach, 0 for no limit", nullptr)
+X(KEY_SETTING_EXCLUDE_ERRORS, "", "", "", "", "exclude_errors", "", "",
+  "Errors excluded when FILTER is on: undersized, oversized, checksum, all or "
+  "none",
+  nullptr)
+X(KEY_SETTING_EXCLUDE_QUALITY, "", "", "", "", "exclude_quality", "", "",
+  "Reception marks excluded when FILTER is on: plausible, confirmed, suspect, "
+  "duplicate, echo, late, dense or none",
+  nullptr)
+X(KEY_SETTING_ONLY_ERRORS, "", "", "", "", "only_errors", "", "",
+  "Only flagged messages pass when FILTER is on; error exclusions still apply",
+  nullptr)
+X(KEY_SETTING_TRACK_MEMORY, "", "", "", "", "track_memory", "", "KB",
+  "Memory budget for ship tracks", nullptr)
+X(KEY_SETTING_MAX_SHIPS, "", "", "", "", "max_ships", "", "", "Ship table size",
+  nullptr)
+X(KEY_SETTING_TRACK_TIME, "", "", "", "", "track_time", "", "sec",
+  "How far back tracks and replay reach, 0 for no limit", nullptr)
 X(KEY_SETTING_DECODER, "", "", "", "", "decoder", "", "", "", nullptr)
 X(KEY_SETTING_DESCRIPTION, "", "", "", "", "description", "", "", "", nullptr)
 X(KEY_SETTING_DESC, "", "", "", "", "desc", "", "", "", nullptr)
 X(KEY_SETTING_DD_TRAIN, "", "", "", "", "dd_train", "", "", "", nullptr)
 X(KEY_SETTING_DD_WEIGHT, "", "", "", "", "dd_weight", "", "", "", nullptr)
 X(KEY_SETTING_DEVICE, "", "", "", "", "device", "", "", "", nullptr)
-X(KEY_SETTING_DEVICE_SETTING, "", "", "", "", "device_setting", "", "", "", nullptr)
-X(KEY_SETTING_DISABLE_XONXOFF, "", "", "", "", "disable_xonxoff", "", "", "", nullptr)
+X(KEY_SETTING_DEVICE_SETTING, "", "", "", "", "device_setting", "", "", "",
+  nullptr)
+X(KEY_SETTING_DISABLE_XONXOFF, "", "", "", "", "disable_xonxoff", "", "", "",
+  nullptr)
 X(KEY_SETTING_DROOP, "", "", "", "", "droop", "", "", "", nullptr)
 X(KEY_SETTING_DUMP, "", "", "", "", "dump", "", "", "", nullptr)
 X(KEY_SETTING_DUMP_FILE, "", "", "", "", "dump_file", "", "", "", nullptr)
@@ -102,13 +140,20 @@ X(KEY_SETTING_ENGINES, "", "", "", "", "engines", "", "", "", nullptr)
 X(KEY_SETTING_FILE, "", "", "", "", "file", "", "", "", nullptr)
 X(KEY_SETTING_FILTER, "", "", "", "", "filter", "", "", "", nullptr)
 X(KEY_SETTING_FLOWCONTROL, "", "", "", "", "flowcontrol", "", "", "", nullptr)
-X(KEY_SETTING_OWN_INTERVAL, "", "", "", "", "own_interval", "", "seconds", "Minimum interval for own vessel messages", nullptr)
-X(KEY_SETTING_CAPACITY, "", "", "", "", "capacity", "", "", "Maximum number of targets kept in the CSV state table", nullptr)
-X(KEY_SETTING_RETENTION, "", "", "", "", "retention", "", "days", "Days of history a database output keeps, 0 for all", nullptr)
-X(KEY_SETTING_DB, "", "", "", "", "db", "", "", "Write messages to a database", nullptr)
-X(KEY_SETTING_POSITION, "", "", "", "", "position", "", "", "Log position reports to the database", nullptr)
-X(KEY_SETTING_POSITION_INTERVAL, "", "", "", "", "position_interval", "", "seconds", "Minimum interval for position messages per MMSI", nullptr)
-X(KEY_SETTING_UNIQUE, "", "", "", "", "unique", "", "seconds", "Filter duplicate messages within interval", nullptr)
+X(KEY_SETTING_OWN_INTERVAL, "", "", "", "", "own_interval", "", "seconds",
+  "Minimum interval for own vessel messages", nullptr)
+X(KEY_SETTING_CAPACITY, "", "", "", "", "capacity", "", "",
+  "Maximum number of targets kept in the CSV state table", nullptr)
+X(KEY_SETTING_RETENTION, "", "", "", "", "retention", "", "days",
+  "Days of history a database output keeps, 0 for all", nullptr)
+X(KEY_SETTING_DB, "", "", "", "", "db", "", "", "Write messages to a database",
+  nullptr)
+X(KEY_SETTING_POSITION, "", "", "", "", "position", "", "",
+  "Log position reports to the database", nullptr)
+X(KEY_SETTING_POSITION_INTERVAL, "", "", "", "", "position_interval", "",
+  "seconds", "Minimum interval for position messages per MMSI", nullptr)
+X(KEY_SETTING_UNIQUE, "", "", "", "", "unique", "", "seconds",
+  "Filter duplicate messages within interval", nullptr)
 X(KEY_SETTING_FORMAT, "", "", "", "", "format", "", "", "", nullptr)
 X(KEY_SETTING_FP_DS, "", "", "", "", "fp_ds", "", "", "", nullptr)
 X(KEY_SETTING_FREQOFFSET, "", "", "", "", "freqoffset", "", "", "", nullptr)
@@ -130,7 +175,8 @@ X(KEY_SETTING_HOST, "", "", "", "", "host", "", "", "", nullptr)
 X(KEY_SETTING_HTTP, "", "", "", "", "http", "", "", "", nullptr)
 X(KEY_SETTING_HYDRASDR, "", "", "", "", "hydrasdr", "", "", "", nullptr)
 X(KEY_SETTING_ID, "", "", "", "", "id", "", "", "", nullptr)
-X(KEY_SETTING_INCLUDE_SAMPLE_START, "", "", "", "", "include_sample_start", "", "", "", nullptr)
+X(KEY_SETTING_INCLUDE_SAMPLE_START, "", "", "", "", "include_sample_start", "",
+  "", "", nullptr)
 X(KEY_SETTING_INPUT, "", "", "", "", "input", "", "", "", nullptr)
 X(KEY_SETTING_INTERFACE, "", "", "", "", "interface", "", "", "", nullptr)
 X(KEY_SETTING_IP_BIND, "", "", "", "", "ip_bind", "", "", "", nullptr)
@@ -157,7 +203,8 @@ X(KEY_SETTING_META, "", "", "", "", "meta", "", "", "", nullptr)
 X(KEY_SETTING_MIXER, "", "", "", "", "mixer", "", "", "", nullptr)
 X(KEY_SETTING_MODE, "", "", "", "", "mode", "", "", "", nullptr)
 X(KEY_SETTING_MODEL, "", "", "", "", "model", "", "", "", nullptr)
-X(KEY_SETTING_MODEL_SETTING, "", "", "", "", "model_setting", "", "", "", nullptr)
+X(KEY_SETTING_MODEL_SETTING, "", "", "", "", "model_setting", "", "", "",
+  nullptr)
 X(KEY_SETTING_MODEL_TYPE, "", "", "", "", "type", "", "", "", nullptr)
 X(KEY_SETTING_MESSAGE, "", "", "", "", "message", "", "", "", nullptr)
 X(KEY_SETTING_MSG, "", "", "", "", "msg", "", "", "", nullptr)
@@ -178,7 +225,6 @@ X(KEY_SETTING_PLUGIN_DIR, "", "", "", "", "plugin_dir", "", "", "", nullptr)
 X(KEY_SETTING_PORT, "", "", "", "", "port", "", "", "", nullptr)
 X(KEY_SETTING_PORT_MIN, "", "", "", "", "port_min", "", "", "", nullptr)
 X(KEY_SETTING_PORT_MAX, "", "", "", "", "port_max", "", "", "", nullptr)
-X(KEY_SETTING_PORTS, "ports", "", "", "", "ports", "", "", "Static port landmarks JSON file.", nullptr)
 X(KEY_SETTING_PREAMP, "", "", "", "", "preamp", "", "", "", nullptr)
 X(KEY_SETTING_PRINT, "", "", "", "", "print", "", "", "", nullptr)
 X(KEY_SETTING_PROBE, "", "", "", "", "probe", "", "", "", nullptr)
@@ -192,8 +238,10 @@ X(KEY_SETTING_REAL_MODE, "", "", "", "", "real_mode", "", "", "", nullptr)
 X(KEY_SETTING_REALTIME, "", "", "", "", "realtime", "", "", "", nullptr)
 X(KEY_SETTING_RECEIVER, "", "", "", "", "receiver", "", "", "", nullptr)
 X(KEY_SETTING_REMOVE_EMPTY, "", "", "", "", "remove_empty", "", "", "", nullptr)
-X(KEY_SETTING_REPLAY, "", "", "", "", "replay", "", "", "Offer track replay in the viewer", nullptr)
-X(KEY_SETTING_REPLAY_TIME, "", "", "", "", "replay_time", "", "sec", "Alias of track_time", nullptr)
+X(KEY_SETTING_REPLAY, "", "", "", "", "replay", "", "",
+  "Offer track replay in the viewer", nullptr)
+X(KEY_SETTING_REPLAY_TIME, "", "", "", "", "replay_time", "", "sec",
+  "Alias of track_time", nullptr)
 X(KEY_SETTING_RESET, "", "", "", "", "reset", "", "", "", nullptr)
 X(KEY_SETTING_RESPONSE, "", "", "", "", "response", "", "", "", nullptr)
 X(KEY_SETTING_REUSE_PORT, "", "", "", "", "reuse_port", "", "", "", nullptr)
@@ -206,9 +254,11 @@ X(KEY_SETTING_SAR, "", "", "", "", "sar", "", "", "", nullptr)
 X(KEY_SETTING_SCREEN, "", "", "", "", "screen", "", "", "", nullptr)
 X(KEY_SETTING_SDRPLAY, "", "", "", "", "sdrplay", "", "", "", nullptr)
 X(KEY_SETTING_SENSITIVITY, "", "", "", "", "sensitivity", "", "", "", nullptr)
-X(KEY_SETTING_SENSITIVITY_HIGH, "", "", "", "", "sensitivity_high", "", "", "", nullptr)
+X(KEY_SETTING_SENSITIVITY_HIGH, "", "", "", "", "sensitivity_high", "", "", "",
+  nullptr)
 X(KEY_SETTING_SERIAL, "", "", "", "", "serial", "", "", "", nullptr)
-X(KEY_SETTING_SERIAL_INIT_SEQUENCE, "", "", "", "", "init_seq", "", "", "", nullptr)
+X(KEY_SETTING_SERIAL_INIT_SEQUENCE, "", "", "", "", "init_seq", "", "", "",
+  nullptr)
 X(KEY_SETTING_SERIALPORT, "", "", "", "", "serialport", "", "", "", nullptr)
 X(KEY_SETTING_SERVER, "", "", "", "", "server", "", "", "", nullptr)
 X(KEY_SETTING_SERVER_MODE, "", "", "", "", "server_mode", "", "", "", nullptr)
@@ -220,18 +270,23 @@ X(KEY_SETTING_SHARING_KEY, "", "", "", "", "sharing_key", "", "", "", nullptr)
 X(KEY_SETTING_SHARING_ZONE, "", "", "", "", "sharing_zone", "", "", "", nullptr)
 X(KEY_SETTING_SOAPYSDR, "", "", "", "", "soapysdr", "", "", "", nullptr)
 X(KEY_SETTING_SOXR, "", "", "", "", "soxr", "", "", "", nullptr)
-X(KEY_SETTING_SPLIT, "", "", "", "", "split", "", "", "Show data per receiver next to the aggregate", nullptr)
+X(KEY_SETTING_SPLIT, "", "", "", "", "split", "", "",
+  "Show data per receiver next to the aggregate", nullptr)
 X(KEY_SETTING_SPYSERVER, "", "", "", "", "spyserver", "", "", "", nullptr)
 X(KEY_SETTING_SRC, "", "", "", "", "src", "", "", "", nullptr)
 X(KEY_SETTING_STATION, "", "", "", "", "station", "", "", "", nullptr)
-X(KEY_SETTING_STATS_ON_CLOSE, "", "", "", "", "stats_on_close", "", "", "", nullptr)
+X(KEY_SETTING_STATS_ON_CLOSE, "", "", "", "", "stats_on_close", "", "", "",
+  nullptr)
 X(KEY_SETTING_STATION_LINK, "", "", "", "", "station_link", "", "", "", nullptr)
 X(KEY_SETTING_STAMP, "", "", "", "", "stamp", "", "", "", nullptr)
 X(KEY_SETTING_STATION_ID, "", "", "", "", "station_id", "", "", "", nullptr)
 X(KEY_SETTING_STATIONID, "", "", "", "", "stationid", "", "", "", nullptr)
-X(KEY_SETTING_STATE, "", "", "", "", "state", "", "", "Keep a latest-known row per MMSI in the database", nullptr)
-X(KEY_SETTING_STATIC, "", "", "", "", "static", "", "", "Log static and voyage reports to the database", nullptr)
-X(KEY_SETTING_STATS, "", "", "", "", "stats", "", "", "Log hourly reception statistics to the database", nullptr)
+X(KEY_SETTING_STATE, "", "", "", "", "state", "", "",
+  "Keep a latest-known row per MMSI in the database", nullptr)
+X(KEY_SETTING_STATIC, "", "", "", "", "static", "", "",
+  "Log static and voyage reports to the database", nullptr)
+X(KEY_SETTING_STATS, "", "", "", "", "stats", "", "",
+  "Log hourly reception statistics to the database", nullptr)
 X(KEY_SETTING_STREAM, "", "", "", "", "stream", "", "", "", nullptr)
 X(KEY_SETTING_STYLE, "", "", "", "", "style", "", "", "", nullptr)
 X(KEY_SETTING_SUBSCRIBE, "", "", "", "", "subscribe", "", "", "", nullptr)
@@ -241,11 +296,13 @@ X(KEY_SETTING_TCP_LISTENER, "", "", "", "", "tcp_listener", "", "", "", nullptr)
 X(KEY_SETTING_TEST, "", "", "", "", "test", "", "", "", nullptr)
 X(KEY_SETTING_TIMEOUT, "", "", "", "", "timeout", "", "", "", nullptr)
 X(KEY_SETTING_TEXT_BUFFER, "", "", "", "", "text_buffer", "", "", "", nullptr)
-X(KEY_SETTING_TIMEOUT_NOMSG, "", "", "", "", "timeout_only_when_idle", "", "", "", nullptr)
+X(KEY_SETTING_TIMEOUT_NOMSG, "", "", "", "", "timeout_only_when_idle", "", "",
+  "", nullptr)
 X(KEY_SETTING_THRESHOLD, "", "", "", "", "threshold", "", "", "", nullptr)
 X(KEY_SETTING_TOPIC, "", "", "", "", "topic", "", "", "", nullptr)
 X(KEY_SETTING_TUNER, "", "", "", "", "tuner", "", "", "", nullptr)
-X(KEY_SETTING_TXT_BLOCK_SIZE, "", "", "", "", "txt_block_size", "", "", "", nullptr)
+X(KEY_SETTING_TXT_BLOCK_SIZE, "", "", "", "", "txt_block_size", "", "", "",
+  nullptr)
 X(KEY_SETTING_UDP, "", "", "", "", "udp", "", "", "", nullptr)
 X(KEY_SETTING_UDPSERVER, "", "", "", "", "udpserver", "", "", "", nullptr)
 X(KEY_SETTING_URL, "", "", "", "", "url", "", "", "", nullptr)
@@ -265,400 +322,841 @@ X(KEY_SETTING_VP, "", "", "", "", "vp", "", "", "", nullptr)
 X(KEY_SETTING_VS, "", "", "", "", "vs", "", "", "", nullptr)
 X(KEY_SETTING_WARNINGS, "", "", "", "", "warnings", "", "", "", nullptr)
 X(KEY_SETTING_WAVFILE, "", "", "", "", "wavfile", "", "", "", nullptr)
-X(KEY_SETTING_WEBCONTROL_HTTP, "", "", "", "", "webcontrol_http", "", "", "", nullptr)
+X(KEY_SETTING_WEBCONTROL_HTTP, "", "", "", "", "webcontrol_http", "", "", "",
+  nullptr)
 X(KEY_SETTING_WIZARD, "", "", "", "", "wizard", "", "", "", nullptr)
-X(KEY_SETTING_LEGACY_CONFIG, "", "", "", "", "legacy_config", "", "", "", nullptr)
-X(KEY_SETTING_FRAME_ANCESTORS, "", "", "", "", "frame_ancestors", "", "", "", nullptr)
+X(KEY_SETTING_LEGACY_CONFIG, "", "", "", "", "legacy_config", "", "", "",
+  nullptr)
+X(KEY_SETTING_FRAME_ANCESTORS, "", "", "", "", "frame_ancestors", "", "", "",
+  nullptr)
 X(KEY_SETTING_QOS, "", "", "", "", "qos", "", "", "", nullptr)
 X(KEY_SETTING_ZLIB, "", "", "", "", "zlib", "", "", "", nullptr)
 X(KEY_SETTING_ZMQ, "", "", "", "", "zmq", "", "", "", nullptr)
 X(KEY_SETTING_AIS, "", "", "", "", "ais", "", "", "", nullptr)
-X(KEY_SETTING_ALLOW_CHANNEL, "", "", "", "", "allow_channel", "", "", "", nullptr)
+X(KEY_SETTING_ALLOW_CHANNEL, "", "", "", "", "allow_channel", "", "", "",
+  nullptr)
 X(KEY_SETTING_ALLOW_MMSI, "", "", "", "", "allow_mmsi", "", "", "", nullptr)
 X(KEY_SETTING_ALLOW_REPEAT, "", "", "", "", "allow_repeat", "", "", "", nullptr)
 X(KEY_SETTING_BLOCK_MMSI, "", "", "", "", "block_mmsi", "", "", "", nullptr)
 X(KEY_SETTING_BLOCK_REPEAT, "", "", "", "", "block_repeat", "", "", "", nullptr)
 X(KEY_SETTING_DOWNSAMPLE, "", "", "", "", "downsample", "", "", "", nullptr)
-X(KEY_SETTING_SELECT_CHANNEL, "", "", "", "", "select_channel", "", "", "", nullptr)
+X(KEY_SETTING_SELECT_CHANNEL, "", "", "", "", "select_channel", "", "", "",
+  nullptr)
 X(KEY_SETTING_SELECT_ID, "", "", "", "", "select_id", "", "", "", nullptr)
 X(KEY_SETTING_SELECT_MMSI, "", "", "", "", "select_mmsi", "", "", "", nullptr)
-X(KEY_SETTING_SELECT_REPEAT, "", "", "", "", "select_repeat", "", "", "", nullptr)
+X(KEY_SETTING_SELECT_REPEAT, "", "", "", "", "select_repeat", "", "", "",
+  nullptr)
 X(KEY_SETTING_ZONE, "", "", "", "", "zone", "", "", "", nullptr)
-X(KEY_ACCURACY, "accuracy", "", "accuracy", "", "", "", "", "Position accuracy (1=DGPS <10m; 0=GNSS >10m).", nullptr)
-X(KEY_ACK_REQUIRED, "ack_required", "", "ack_required", "", "", "", "", "Acknowledgement required flag (1 = receiver must reply with type 7/13).", nullptr)
-X(KEY_ADDITIONAL_FLAG, "additional_flag", "", "", "", "", "", "", "AtoN Dimension Type Additional Data Flag (type 28).", nullptr)
-X(KEY_ADDRESSED, "addressed", "", "", "", "", "", "", "Addressed flag (0=broadcast; 1=addressed to a specific MMSI).", nullptr)
-X(KEY_AI_AVAILABLE, "ai_available", "", "", "", "", "", "", "Application Identifier available flag (1 = ASM application data follows).", nullptr)
-X(KEY_AID_TYPE, "aid_type", "", "", "", "", "", "", "Type of Aid to Navigation (e.g.; Light; Buoy; Beacon).", &LookupTable_aid_types)
-X(KEY_AIRTEMP, "airtemp", "", "", "", "", "", "Celsius", "Air temperature", nullptr)
-X(KEY_AIS_VERSION, "ais_version", "", "", "", "", "", "", "AIS version.", &LookupTable_ais_version)
+X(KEY_ACCURACY, "accuracy", "", "accuracy", "", "", "", "",
+  "Position accuracy (1=DGPS <10m; 0=GNSS >10m).", nullptr)
+X(KEY_ACK_REQUIRED, "ack_required", "", "ack_required", "", "", "", "",
+  "Acknowledgement required flag (1 = receiver must reply with type 7/13).",
+  nullptr)
+X(KEY_ADDITIONAL_FLAG, "additional_flag", "", "", "", "", "", "",
+  "AtoN Dimension Type Additional Data Flag (type 28).", nullptr)
+X(KEY_ADDRESSED, "addressed", "", "", "", "", "", "",
+  "Addressed flag (0=broadcast; 1=addressed to a specific MMSI).", nullptr)
+X(KEY_AI_AVAILABLE, "ai_available", "", "", "", "", "", "",
+  "Application Identifier available flag (1 = ASM application data follows).",
+  nullptr)
+X(KEY_AID_TYPE, "aid_type", "", "", "", "", "", "",
+  "Type of Aid to Navigation (e.g.; Light; Buoy; Beacon).",
+  &LookupTable_aid_types)
+X(KEY_AIRTEMP, "airtemp", "", "", "", "", "", "Celsius", "Air temperature",
+  nullptr)
+X(KEY_AIS_VERSION, "ais_version", "", "", "", "", "", "", "AIS version.",
+  &LookupTable_ais_version)
 X(KEY_ALT, "alt", "", "", "", "", "", "meter", "Altitude", nullptr)
-X(KEY_ALT_SENSOR, "alt_sensor", "", "", "", "", "", "", "Altitude sensor (type 9; 0=GNSS, 1=barometric source).", nullptr)
-X(KEY_ANA_INT, "ana_int", "", "", "", "", "", "V", "Internal analogue voltage (Inland AIS RTA monitoring; 0.05 V step).", nullptr)
-X(KEY_ANA_EXT1, "ana_ext1", "", "", "", "", "", "V", "External analogue input 1 (Inland AIS RTA monitoring).", nullptr)
-X(KEY_ANA_EXT2, "ana_ext2", "", "", "", "", "", "V", "External analogue input 2 (Inland AIS RTA monitoring).", nullptr)
-X(KEY_ASM_BATTERY_STATUS, "asm_battery_status", "", "", "", "", "", "", "Battery status (Zeni Lite Buoy monitoring ASM, DAC=431 FID=0).", nullptr)
-X(KEY_ASM_CURRENT_DATA, "asm_current_data", "", "", "", "", "", "", "Current sensor data (Zeni Lite Buoy monitoring ASM, DAC=431 FID=0).", nullptr)
-X(KEY_ASM_LIGHT_STATUS, "asm_light_status", "", "", "", "", "", "", "Light status (Zeni Lite Buoy monitoring ASM, DAC=431 FID=0).", nullptr)
-X(KEY_ASM_OFF_POSITION_STATUS, "asm_off_position_status", "", "", "", "", "", "", "Off-position status (Zeni Lite Buoy monitoring ASM, DAC=431 FID=0).", nullptr)
-X(KEY_ASM_POWER_SUPPLY_TYPE, "asm_power_supply_type", "", "", "", "", "", "", "Power supply type (Zeni Lite Buoy monitoring ASM, DAC=431 FID=0).", nullptr)
-X(KEY_ASM_SUB_APP_ID, "asm_sub_app_id", "", "", "", "", "", "", "ASM sub-app ID (DAC=431 FID=0 Zeni Lite Buoy).", nullptr)
-X(KEY_ASM_VOLTAGE_DATA, "asm_voltage_data", "", "", "", "", "", "", "Voltage sensor data (Zeni Lite Buoy monitoring ASM, DAC=431 FID=0).", nullptr)
-X(KEY_ASSIGNED, "assigned", "", "", "", "", "", "", "Assigned-mode flag (0=Autonomous; 1=Assigned).", nullptr)
-X(KEY_ATON_STATION_TYPE, "aton_station_type", "", "", "", "", "", "", "AtoN station type (type 28).", &LookupTable_aton_station_types)
-X(KEY_ATON_STATUS, "aton_status", "", "", "", "", "", "", "AtoN status bits (per IALA R0126).", nullptr)
-X(KEY_AUTH_FLAG, "auth_flag", "", "", "", "", "", "", "Authentication flag (type 28).", nullptr)
-X(KEY_BAND, "band", "", "", "", "", "", "", "Band flag (Can use any marine channel).", nullptr)
-X(KEY_BAND_A, "band_a", "", "", "", "", "", "", "Channel A band flag (type 22; 0=default; 1=12.5 kHz channel allowed).", nullptr)
-X(KEY_BAND_B, "band_b", "", "", "", "", "", "", "Channel B band flag (type 22; 0=default; 1=12.5 kHz channel allowed).", nullptr)
-X(KEY_BEAM, "beam", "", "", "", "", "", "meters", "Vessel beam (Inland AIS static/voyage related data; 0.1 m units).", nullptr)
-X(KEY_CALLSIGN, "callsign", "", "callsign", "callsign", "", "", "", "Call Sign", nullptr)
-X(KEY_CDEPTH2, "cdepth2", "", "", "", "", "", "meters", "Measurement depth #2.", nullptr)
-X(KEY_CDEPTH3, "cdepth3", "", "", "", "", "", "meters", "Measurement depth #3.", nullptr)
-X(KEY_CDIR, "cdir", "", "", "", "", "", "degrees", "Surface current direction (from true north).", nullptr)
-X(KEY_CDIR2, "cdir2", "", "", "", "", "", "degrees", "Current direction #2 (from true north).", nullptr)
-X(KEY_CDIR3, "cdir3", "", "", "", "", "", "degrees", "Current direction at depth 3 (degrees from true north).", nullptr)
-X(KEY_CHANNEL_A, "channel_a", "", "", "", "", "", "", "VHF Channel Number A.", nullptr)
-X(KEY_CHANNEL_B, "channel_b", "", "", "", "", "", "", "VHF Channel Number B.", nullptr)
-X(KEY_CHARTED_STATUS, "charted_status", "", "", "", "", "", "", "AtoN charted status (type 28).", nullptr)
+X(KEY_ALT_SENSOR, "alt_sensor", "", "", "", "", "", "",
+  "Altitude sensor (type 9; 0=GNSS, 1=barometric source).", nullptr)
+X(KEY_ANA_INT, "ana_int", "", "", "", "", "", "V",
+  "Internal analogue voltage (Inland AIS RTA monitoring; 0.05 V step).",
+  nullptr)
+X(KEY_ANA_EXT1, "ana_ext1", "", "", "", "", "", "V",
+  "External analogue input 1 (Inland AIS RTA monitoring).", nullptr)
+X(KEY_ANA_EXT2, "ana_ext2", "", "", "", "", "", "V",
+  "External analogue input 2 (Inland AIS RTA monitoring).", nullptr)
+X(KEY_ASM_BATTERY_STATUS, "asm_battery_status", "", "", "", "", "", "",
+  "Battery status (Zeni Lite Buoy monitoring ASM, DAC=431 FID=0).", nullptr)
+X(KEY_ASM_CURRENT_DATA, "asm_current_data", "", "", "", "", "", "",
+  "Current sensor data (Zeni Lite Buoy monitoring ASM, DAC=431 FID=0).",
+  nullptr)
+X(KEY_ASM_LIGHT_STATUS, "asm_light_status", "", "", "", "", "", "",
+  "Light status (Zeni Lite Buoy monitoring ASM, DAC=431 FID=0).", nullptr)
+X(KEY_ASM_OFF_POSITION_STATUS, "asm_off_position_status", "", "", "", "", "",
+  "", "Off-position status (Zeni Lite Buoy monitoring ASM, DAC=431 FID=0).",
+  nullptr)
+X(KEY_ASM_POWER_SUPPLY_TYPE, "asm_power_supply_type", "", "", "", "", "", "",
+  "Power supply type (Zeni Lite Buoy monitoring ASM, DAC=431 FID=0).", nullptr)
+X(KEY_ASM_SUB_APP_ID, "asm_sub_app_id", "", "", "", "", "", "",
+  "ASM sub-app ID (DAC=431 FID=0 Zeni Lite Buoy).", nullptr)
+X(KEY_ASM_VOLTAGE_DATA, "asm_voltage_data", "", "", "", "", "", "",
+  "Voltage sensor data (Zeni Lite Buoy monitoring ASM, DAC=431 FID=0).",
+  nullptr)
+X(KEY_ASSIGNED, "assigned", "", "", "", "", "", "",
+  "Assigned-mode flag (0=Autonomous; 1=Assigned).", nullptr)
+X(KEY_ATON_STATION_TYPE, "aton_station_type", "", "", "", "", "", "",
+  "AtoN station type (type 28).", &LookupTable_aton_station_types)
+X(KEY_ATON_STATUS, "aton_status", "", "", "", "", "", "",
+  "AtoN status bits (per IALA R0126).", nullptr)
+X(KEY_AUTH_FLAG, "auth_flag", "", "", "", "", "", "",
+  "Authentication flag (type 28).", nullptr)
+X(KEY_BAND, "band", "", "", "", "", "", "",
+  "Band flag (Can use any marine channel).", nullptr)
+X(KEY_BAND_A, "band_a", "", "", "", "", "", "",
+  "Channel A band flag (type 22; 0=default; 1=12.5 kHz channel allowed).",
+  nullptr)
+X(KEY_BAND_B, "band_b", "", "", "", "", "", "",
+  "Channel B band flag (type 22; 0=default; 1=12.5 kHz channel allowed).",
+  nullptr)
+X(KEY_BEAM, "beam", "", "", "", "", "", "meters",
+  "Vessel beam (Inland AIS static/voyage related data; 0.1 m units).", nullptr)
+X(KEY_CALLSIGN, "callsign", "", "callsign", "callsign", "", "", "", "Call Sign",
+  nullptr)
+X(KEY_CDEPTH2, "cdepth2", "", "", "", "", "", "meters", "Measurement depth #2.",
+  nullptr)
+X(KEY_CDEPTH3, "cdepth3", "", "", "", "", "", "meters", "Measurement depth #3.",
+  nullptr)
+X(KEY_CDIR, "cdir", "", "", "", "", "", "degrees",
+  "Surface current direction (from true north).", nullptr)
+X(KEY_CDIR2, "cdir2", "", "", "", "", "", "degrees",
+  "Current direction #2 (from true north).", nullptr)
+X(KEY_CDIR3, "cdir3", "", "", "", "", "", "degrees",
+  "Current direction at depth 3 (degrees from true north).", nullptr)
+X(KEY_CHANNEL_A, "channel_a", "", "", "", "", "", "", "VHF Channel Number A.",
+  nullptr)
+X(KEY_CHANNEL_B, "channel_b", "", "", "", "", "", "", "VHF Channel Number B.",
+  nullptr)
+X(KEY_CHARTED_STATUS, "charted_status", "", "", "", "", "", "",
+  "AtoN charted status (type 28).", nullptr)
 X(KEY_CLOUD_AMOUNT_LOW, "cloud_amount_low", "", "", "", "", "", "", "", nullptr)
-X(KEY_CLOUD_BASE_HEIGHT, "cloud_base_height", "", "", "", "", "", "", "", nullptr)
-X(KEY_CLOUD_COVER_TOTAL, "cloud_cover_total", "", "", "", "", "", "percentage", "Total cloud cover.", nullptr)
+X(KEY_CLOUD_BASE_HEIGHT, "cloud_base_height", "", "", "", "", "", "", "",
+  nullptr)
+X(KEY_CLOUD_COVER_TOTAL, "cloud_cover_total", "", "", "", "", "", "percentage",
+  "Total cloud cover.", nullptr)
 X(KEY_CLOUD_TYPE_HIGH, "cloud_type_high", "", "", "", "", "", "", "", nullptr)
 X(KEY_CLOUD_TYPE_LOW, "cloud_type_low", "", "", "", "", "", "", "", nullptr)
-X(KEY_CLOUD_TYPE_MIDDLE, "cloud_type_middle", "", "", "", "", "", "", "", nullptr)
-X(KEY_COUNTRY, "country", "", "", "", "", "country", "", "Flag country name derived from MMSI MID.", nullptr)
-X(KEY_COUNTRY_CODE, "country_code", "", "", "", "", "", "", "ISO-3166 alpha-2 country code derived from MMSI MID.", nullptr)
-X(KEY_COURSE, "course", "", "", "course", "", "", "degrees", "Course over Ground (COG)", nullptr)
-X(KEY_COURSE_Q, "course_q", "", "", "", "", "", "", "Course quality flag (Inland AIS; 0=low/default, 1=high).", nullptr)
-X(KEY_CS, "cs", "", "", "", "", "", "", "Class B unit type flag (false=SOTDMA, true=Carrier Sense).", nullptr)
-X(KEY_CSPEED, "cspeed", "", "", "", "", "", "knots", "Surface current speed.", nullptr)
-X(KEY_CSPEED2, "cspeed2", "", "", "", "", "", "knots", "Current speed #2.", nullptr)
-X(KEY_CSPEED3, "cspeed3", "", "", "", "", "", "knots", "Current speed #3.", nullptr)
-X(KEY_CREW_COUNT, "crew_count", "", "", "", "", "", "", "Number of crew on board (IMO Circ.289 §15 number of persons ASM).", nullptr)
-X(KEY_DAC, "dac", "", "", "", "", "", "", "Designated Area Code (with FID identifies ASM).", nullptr)
-X(KEY_DATA, "data", "", "", "", "", "", "", "Raw binary payload (hex; no specific decoder).", nullptr)
+X(KEY_CLOUD_TYPE_MIDDLE, "cloud_type_middle", "", "", "", "", "", "", "",
+  nullptr)
+X(KEY_COUNTRY, "country", "", "", "", "", "country", "",
+  "Flag country name derived from MMSI MID.", nullptr)
+X(KEY_COUNTRY_CODE, "country_code", "", "", "", "", "", "",
+  "ISO-3166 alpha-2 country code derived from MMSI MID.", nullptr)
+X(KEY_COURSE, "course", "", "", "course", "", "", "degrees",
+  "Course over Ground (COG)", nullptr)
+X(KEY_COURSE_Q, "course_q", "", "", "", "", "", "",
+  "Course quality flag (Inland AIS; 0=low/default, 1=high).", nullptr)
+X(KEY_CS, "cs", "", "", "", "", "", "",
+  "Class B unit type flag (false=SOTDMA, true=Carrier Sense).", nullptr)
+X(KEY_CSPEED, "cspeed", "", "", "", "", "", "knots", "Surface current speed.",
+  nullptr)
+X(KEY_CSPEED2, "cspeed2", "", "", "", "", "", "knots", "Current speed #2.",
+  nullptr)
+X(KEY_CSPEED3, "cspeed3", "", "", "", "", "", "knots", "Current speed #3.",
+  nullptr)
+X(KEY_CREW_COUNT, "crew_count", "", "", "", "", "", "",
+  "Number of crew on board (IMO Circ.289 §15 number of persons ASM).", nullptr)
+X(KEY_DAC, "dac", "", "", "", "", "", "",
+  "Designated Area Code (with FID identifies ASM).", nullptr)
+X(KEY_DATA, "data", "", "", "", "", "", "",
+  "Raw binary payload (hex; no specific decoder).", nullptr)
 X(KEY_DAY, "day", "", "", "", "", "", "", "Day (UTC)", nullptr)
-X(KEY_DEST_MMSI, "dest_mmsi", "", "", "", "", "", "", "Destination MMSI", nullptr)
+X(KEY_DEST_MMSI, "dest_mmsi", "", "", "", "", "", "", "Destination MMSI",
+  nullptr)
 X(KEY_DEST1, "dest1", "", "", "", "", "", "", "", nullptr)
 X(KEY_DEST2, "dest2", "", "", "", "", "", "", "", nullptr)
-X(KEY_DESTINATION, "destination", "", "destination", "destination", "", "", "", "Destination", nullptr)
+X(KEY_DESTINATION, "destination", "", "destination", "destination", "", "", "",
+  "Destination", nullptr)
 X(KEY_DEWPOINT, "dewpoint", "", "", "", "", "", "celsius", "Dew Point", nullptr)
-X(KEY_DIM_TYPE, "dim_type", "", "", "", "", "", "", "AtoN Dimensions Type (type 28; defines meaning of Dimensions A/B).", &LookupTable_aton_dim_type)
-X(KEY_DISPLAY, "display", "", "", "", "", "", "", "Display flag (0=No display; 1=Has display).", nullptr)
-X(KEY_DRAUGHT, "draught", "", "", "draught", "", "", "meters", "Draught", nullptr)
-X(KEY_DSC, "dsc", "", "", "", "", "", "", "DSC Flag (1 = attached to VHF voice radio with DSC).", nullptr)
-X(KEY_DTE, "dte", "", "", "", "", "", "", "Data terminal equipment ready.", &LookupTable_dte_types)
-X(KEY_EMMA_SEVERITY, "emma_severity", "", "", "", "", "", "", "EMMA warning severity (0=unknown, 1=slight, 2=medium, 3=strong/heavy).", &LookupTable_emma_severity)
-X(KEY_EMMA_WARNING_TYPE, "emma_warning_type", "", "", "", "", "", "", "EMMA warning type (Inland AIS; DAC 200 FID 23; 0=unknown .. 9=forest fire).", &LookupTable_emma_warning_types)
-X(KEY_END_DATE, "end_date", "", "", "", "", "", "", "End date (YYYYMMDD format; Inland AIS).", nullptr)
-X(KEY_END_LAT, "end_lat", "", "", "", "", "", "degrees", "End latitude (EMMA warning DAC 200 FID 23).", nullptr)
-X(KEY_END_LON, "end_lon", "", "", "", "", "", "degrees", "End longitude (EMMA warning DAC 200 FID 23).", nullptr)
-X(KEY_END_TIME, "end_time", "", "", "", "", "", "", "End time (HHMM UTC; Inland AIS).", nullptr)
-X(KEY_EPFD, "epfd", "", "epfd", "", "", "", "", "Electronic Position Fixing Device", &LookupTable_epfd_types)
-X(KEY_EPFD_TEXT, "epfd_text", "", "epfd_text", "", "", "", "", "Electronic Position Fixing Device", nullptr)
-X(KEY_FID, "fid", "", "", "", "", "", "", "Functional Identifier (6-bit; with DAC identifies the ASM payload type).", nullptr)
-X(KEY_GAUGE1_ID, "gauge1_id", "", "", "", "", "", "", "Water level gauge station 1 ID (Inland AIS; DAC 200 FID 24).", nullptr)
-X(KEY_GAUGE1_LEVEL, "gauge1_level", "", "", "", "", "", "cm", "Water level at gauge 1 (Inland AIS; DAC 200 FID 24; relative to datum).", nullptr)
-X(KEY_GAUGE2_ID, "gauge2_id", "", "", "", "", "", "", "Water level gauge station 2 ID (Inland AIS; DAC 200 FID 24).", nullptr)
-X(KEY_GAUGE2_LEVEL, "gauge2_level", "", "", "", "", "", "cm", "Water level at gauge 2 (Inland AIS; DAC 200 FID 24; relative to datum).", nullptr)
-X(KEY_GAUGE3_ID, "gauge3_id", "", "", "", "", "", "", "Water level gauge station 3 ID (Inland AIS; DAC 200 FID 24).", nullptr)
-X(KEY_GAUGE3_LEVEL, "gauge3_level", "", "", "", "", "", "cm", "Water level at gauge 3 (Inland AIS; DAC 200 FID 24; relative to datum).", nullptr)
-X(KEY_GAUGE4_ID, "gauge4_id", "", "", "", "", "", "", "Water level gauge station 4 ID (Inland AIS; DAC 200 FID 24).", nullptr)
-X(KEY_GAUGE4_LEVEL, "gauge4_level", "", "", "", "", "", "cm", "Water level at gauge 4 (Inland AIS; DAC 200 FID 24; relative to datum).", nullptr)
-X(KEY_SIGNAL_FORM, "signal_form", "", "", "", "", "", "", "Signal station light configuration form.", nullptr)
-X(KEY_SIGNAL_ORIENTATION, "signal_orientation", "", "", "", "", "", "degrees", "Orientation of the signal station.", nullptr)
-X(KEY_SIGNAL_IMPACT, "signal_impact", "", "", "", "", "", "", "Direction of impact of the signal.", nullptr)
-X(KEY_SIGNAL_STATUS, "signal_status", "", "", "", "", "", "", "Raw signal light status.", nullptr)
-X(KEY_GNSS, "gnss", "", "", "", "", "", "", "Position latency (type 27; 0=reported position latency <5s, 1=>5s = default). Previously named GNSS position status in pre-M.1371-6 revisions.", nullptr)
-X(KEY_HAZARD, "hazard", "", "", "", "", "", "", "Hazardous cargo (Inland AIS).", &LookupTable_hazard_types)
-X(KEY_HEADING, "heading", "", "heading", "heading", "", "", "degrees", "True Heading (HDG)", nullptr)
-X(KEY_HEADING_Q, "heading_q", "", "", "", "", "", "", "Heading quality flag (Inland AIS; 0=low/default, 1=high).", nullptr)
-X(KEY_UN_LOCODE, "un_locode", "", "", "", "", "", "", "UN location code (UN/LOCODE, 3x6-bit ASCII; Inland AIS).", nullptr)
-X(KEY_TERMINAL_CODE, "terminal_code", "", "", "", "", "", "", "Terminal code (5x6-bit ASCII; Inland AIS ETA/RTA).", nullptr)
-X(KEY_RTA, "rta", "", "", "", "", "", "", "Recommended time of arrival (UTC; MM-DD HH:MM; Inland AIS DAC 200 FID 22).", nullptr)
-X(KEY_TUGBOATS, "tugboats", "", "", "", "", "", "", "Number of assisting tugboats (Inland AIS DAC 200 FID 21; 0-6).", nullptr)
-X(KEY_AIR_DRAUGHT, "air_draught", "", "", "", "", "", "m", "Maximum present static air draught.", nullptr)
-X(KEY_LAST_PORT, "last_port", "", "", "", "", "", "", "Last port of call (UN/LOCODE; IMO Circ.289 FID 24).", nullptr)
-X(KEY_NEXT_PORT, "next_port", "", "", "", "", "", "", "Next port of call (UN/LOCODE; IMO Circ.289 FID 24).", nullptr)
-X(KEY_SECOND_PORT, "second_port", "", "", "", "", "", "", "Second next port of call (UN/LOCODE; IMO Circ.289 FID 24).", nullptr)
-X(KEY_LOCK_STATUS, "lock_status", "", "", "", "", "", "", "Lock/bridge/terminal status (Inland AIS DAC 200 FID 22; 0=operational, 1=limited, 2=out of order).", nullptr)
-X(KEY_HEALTH, "health", "", "", "", "", "", "", "Health status.", &LookupTable_health)
+X(KEY_DIM_TYPE, "dim_type", "", "", "", "", "", "",
+  "AtoN Dimensions Type (type 28; defines meaning of Dimensions A/B).",
+  &LookupTable_aton_dim_type)
+X(KEY_DISPLAY, "display", "", "", "", "", "", "",
+  "Display flag (0=No display; 1=Has display).", nullptr)
+X(KEY_DRAUGHT, "draught", "", "", "draught", "", "", "meters", "Draught",
+  nullptr)
+X(KEY_DSC, "dsc", "", "", "", "", "", "",
+  "DSC Flag (1 = attached to VHF voice radio with DSC).", nullptr)
+X(KEY_DTE, "dte", "", "", "", "", "", "", "Data terminal equipment ready.",
+  &LookupTable_dte_types)
+X(KEY_EMMA_SEVERITY, "emma_severity", "", "", "", "", "", "",
+  "EMMA warning severity (0=unknown, 1=slight, 2=medium, 3=strong/heavy).",
+  &LookupTable_emma_severity)
+X(KEY_EMMA_WARNING_TYPE, "emma_warning_type", "", "", "", "", "", "",
+  "EMMA warning type (Inland AIS; DAC 200 FID 23; 0=unknown .. 9=forest fire).",
+  &LookupTable_emma_warning_types)
+X(KEY_END_DATE, "end_date", "", "", "", "", "", "",
+  "End date (YYYYMMDD format; Inland AIS).", nullptr)
+X(KEY_END_LAT, "end_lat", "", "", "", "", "", "degrees",
+  "End latitude (EMMA warning DAC 200 FID 23).", nullptr)
+X(KEY_END_LON, "end_lon", "", "", "", "", "", "degrees",
+  "End longitude (EMMA warning DAC 200 FID 23).", nullptr)
+X(KEY_END_TIME, "end_time", "", "", "", "", "", "",
+  "End time (HHMM UTC; Inland AIS).", nullptr)
+X(KEY_EPFD, "epfd", "", "epfd", "", "", "", "",
+  "Electronic Position Fixing Device", &LookupTable_epfd_types)
+X(KEY_EPFD_TEXT, "epfd_text", "", "epfd_text", "", "", "", "",
+  "Electronic Position Fixing Device", nullptr)
+X(KEY_FID, "fid", "", "", "", "", "", "",
+  "Functional Identifier (6-bit; with DAC identifies the ASM payload type).",
+  nullptr)
+X(KEY_GAUGE1_ID, "gauge1_id", "", "", "", "", "", "",
+  "Water level gauge station 1 ID (Inland AIS; DAC 200 FID 24).", nullptr)
+X(KEY_GAUGE1_LEVEL, "gauge1_level", "", "", "", "", "", "cm",
+  "Water level at gauge 1 (Inland AIS; DAC 200 FID 24; relative to datum).",
+  nullptr)
+X(KEY_GAUGE2_ID, "gauge2_id", "", "", "", "", "", "",
+  "Water level gauge station 2 ID (Inland AIS; DAC 200 FID 24).", nullptr)
+X(KEY_GAUGE2_LEVEL, "gauge2_level", "", "", "", "", "", "cm",
+  "Water level at gauge 2 (Inland AIS; DAC 200 FID 24; relative to datum).",
+  nullptr)
+X(KEY_GAUGE3_ID, "gauge3_id", "", "", "", "", "", "",
+  "Water level gauge station 3 ID (Inland AIS; DAC 200 FID 24).", nullptr)
+X(KEY_GAUGE3_LEVEL, "gauge3_level", "", "", "", "", "", "cm",
+  "Water level at gauge 3 (Inland AIS; DAC 200 FID 24; relative to datum).",
+  nullptr)
+X(KEY_GAUGE4_ID, "gauge4_id", "", "", "", "", "", "",
+  "Water level gauge station 4 ID (Inland AIS; DAC 200 FID 24).", nullptr)
+X(KEY_GAUGE4_LEVEL, "gauge4_level", "", "", "", "", "", "cm",
+  "Water level at gauge 4 (Inland AIS; DAC 200 FID 24; relative to datum).",
+  nullptr)
+X(KEY_SIGNAL_FORM, "signal_form", "", "", "", "", "", "",
+  "Signal station light configuration form.", nullptr)
+X(KEY_SIGNAL_ORIENTATION, "signal_orientation", "", "", "", "", "", "degrees",
+  "Orientation of the signal station.", nullptr)
+X(KEY_SIGNAL_IMPACT, "signal_impact", "", "", "", "", "", "",
+  "Direction of impact of the signal.", nullptr)
+X(KEY_SIGNAL_STATUS, "signal_status", "", "", "", "", "", "",
+  "Raw signal light status.", nullptr)
+X(KEY_GNSS, "gnss", "", "", "", "", "", "",
+  "Position latency (type 27; 0=reported position latency <5s, 1=>5s = "
+  "default). Previously named GNSS position status in pre-M.1371-6 revisions.",
+  nullptr)
+X(KEY_HAZARD, "hazard", "", "", "", "", "", "", "Hazardous cargo (Inland AIS).",
+  &LookupTable_hazard_types)
+X(KEY_HEADING, "heading", "", "heading", "heading", "", "", "degrees",
+  "True Heading (HDG)", nullptr)
+X(KEY_HEADING_Q, "heading_q", "", "", "", "", "", "",
+  "Heading quality flag (Inland AIS; 0=low/default, 1=high).", nullptr)
+X(KEY_UN_LOCODE, "un_locode", "", "", "", "", "", "",
+  "UN location code (UN/LOCODE, 3x6-bit ASCII; Inland AIS).", nullptr)
+X(KEY_TERMINAL_CODE, "terminal_code", "", "", "", "", "", "",
+  "Terminal code (5x6-bit ASCII; Inland AIS ETA/RTA).", nullptr)
+X(KEY_RTA, "rta", "", "", "", "", "", "",
+  "Recommended time of arrival (UTC; MM-DD HH:MM; Inland AIS DAC 200 FID 22).",
+  nullptr)
+X(KEY_TUGBOATS, "tugboats", "", "", "", "", "", "",
+  "Number of assisting tugboats (Inland AIS DAC 200 FID 21; 0-6).", nullptr)
+X(KEY_AIR_DRAUGHT, "air_draught", "", "", "", "", "", "m",
+  "Maximum present static air draught.", nullptr)
+X(KEY_LAST_PORT, "last_port", "", "", "", "", "", "",
+  "Last port of call (UN/LOCODE; IMO Circ.289 FID 24).", nullptr)
+X(KEY_NEXT_PORT, "next_port", "", "", "", "", "", "",
+  "Next port of call (UN/LOCODE; IMO Circ.289 FID 24).", nullptr)
+X(KEY_SECOND_PORT, "second_port", "", "", "", "", "", "",
+  "Second next port of call (UN/LOCODE; IMO Circ.289 FID 24).", nullptr)
+X(KEY_LOCK_STATUS, "lock_status", "", "", "", "", "", "",
+  "Lock/bridge/terminal status (Inland AIS DAC 200 FID 22; 0=operational, "
+  "1=limited, 2=out of order).",
+  nullptr)
+X(KEY_HEALTH, "health", "", "", "", "", "", "", "Health status.",
+  &LookupTable_health)
 X(KEY_HOUR, "hour", "", "", "", "", "", "", "Hour (UTC)", nullptr)
-X(KEY_HUMIDITY, "humidity", "", "", "", "", "", "percentage", "Relative humidity.", nullptr)
-X(KEY_IALA_MRN, "iala_mrn", "", "", "", "", "", "", "IALA AtoN Maritime Resource Name (type 28; 17-bit identifier).", nullptr)
+X(KEY_HUMIDITY, "humidity", "", "", "", "", "", "percentage",
+  "Relative humidity.", nullptr)
+X(KEY_IALA_MRN, "iala_mrn", "", "", "", "", "", "",
+  "IALA AtoN Maritime Resource Name (type 28; 17-bit identifier).", nullptr)
 X(KEY_ICE, "ice", "", "", "", "", "", "", "Ice status (Yes/No).", nullptr)
-X(KEY_ICE_ACCRETION_CAUSE, "ice_accretion_cause", "", "", "", "", "", "", "", nullptr)
-X(KEY_ICE_ACCRETION_RATE, "ice_accretion_rate", "", "", "", "", "", "", "Rate of Ice Accretion.", nullptr)
+X(KEY_ICE_ACCRETION_CAUSE, "ice_accretion_cause", "", "", "", "", "", "", "",
+  nullptr)
+X(KEY_ICE_ACCRETION_RATE, "ice_accretion_rate", "", "", "", "", "", "",
+  "Rate of Ice Accretion.", nullptr)
 X(KEY_ICE_BEARING, "ice_bearing", "", "", "", "", "", "", "", nullptr)
-X(KEY_ICE_CONCENTRATION, "ice_concentration", "", "", "", "", "", "", "", nullptr)
-X(KEY_ICE_DEPOSIT_THICKNESS, "ice_deposit_thickness", "", "", "", "", "", "", "", nullptr)
+X(KEY_ICE_CONCENTRATION, "ice_concentration", "", "", "", "", "", "", "",
+  nullptr)
+X(KEY_ICE_DEPOSIT_THICKNESS, "ice_deposit_thickness", "", "", "", "", "", "",
+  "", nullptr)
 X(KEY_ICE_DEVELOPMENT, "ice_development", "", "", "", "", "", "", "", nullptr)
 X(KEY_ICE_SITUATION, "ice_situation", "", "", "", "", "", "", "", nullptr)
 X(KEY_ICE_TYPE_AMOUNT, "ice_type_amount", "", "", "", "", "", "", "", nullptr)
 X(KEY_IMO, "imo", "", "", "", "", "", "", "IMO ship ID number.", nullptr)
-X(KEY_INCREMENT1, "increment1", "", "", "", "", "", "", "Slot increment for first reservation (type 16/20).", nullptr)
-X(KEY_INCREMENT2, "increment2", "", "", "", "", "", "", "Slot increment for second reservation (type 16/20).", nullptr)
-X(KEY_INCREMENT3, "increment3", "", "", "", "", "", "", "Slot increment for third reservation (type 20).", nullptr)
-X(KEY_INCREMENT4, "increment4", "", "", "", "", "", "", "Slot increment for fourth reservation (type 20).", nullptr)
-X(KEY_INTERVAL, "interval", "", "", "", "", "", "", "Reporting Interval.", &LookupTable_interval_types)
+X(KEY_INCREMENT1, "increment1", "", "", "", "", "", "",
+  "Slot increment for first reservation (type 16/20).", nullptr)
+X(KEY_INCREMENT2, "increment2", "", "", "", "", "", "",
+  "Slot increment for second reservation (type 16/20).", nullptr)
+X(KEY_INCREMENT3, "increment3", "", "", "", "", "", "",
+  "Slot increment for third reservation (type 20).", nullptr)
+X(KEY_INCREMENT4, "increment4", "", "", "", "", "", "",
+  "Slot increment for fourth reservation (type 20).", nullptr)
+X(KEY_INTERVAL, "interval", "", "", "", "", "", "", "Reporting Interval.",
+  &LookupTable_interval_types)
 X(KEY_LAT, "lat", "", "lat", "lat", "", "lat", "degrees", "Latitude", nullptr)
-X(KEY_LENGTH, "length", "", "length", "length", "", "", "meters", "Overall length of vessel", nullptr)
-X(KEY_LEVELTREND, "leveltrend", "", "", "", "", "", "", "Water Level Trend.", nullptr)
+X(KEY_LENGTH, "length", "", "length", "length", "", "", "meters",
+  "Overall length of vessel", nullptr)
+X(KEY_LEVELTREND, "leveltrend", "", "", "", "", "", "", "Water Level Trend.",
+  nullptr)
 X(KEY_LIGHT, "light", "", "", "", "", "", "", "", nullptr)
-X(KEY_LOADED, "loaded", "", "", "", "", "", "", "Loaded/unloaded (Inland AIS).", &LookupTable_loaded_types)
+X(KEY_LOADED, "loaded", "", "", "", "", "", "", "Loaded/unloaded (Inland AIS).",
+  &LookupTable_loaded_types)
 X(KEY_LON, "lon", "", "lon", "lon", "", "lon", "degrees", "Longitude", nullptr)
-X(KEY_MANEUVER, "maneuver", "", "", "", "", "", "", "Maneuver indicator.", &LookupTable_maneuver_types)
-X(KEY_MAX_VALUE, "max_value", "", "", "", "", "", "", "Maximum parameter value (EMMA warning DAC 200 FID 23).", nullptr)
-X(KEY_MIN_VALUE, "min_value", "", "", "", "", "", "", "Minimum parameter value (EMMA warning DAC 200 FID 23).", nullptr)
+X(KEY_MANEUVER, "maneuver", "", "", "", "", "", "", "Maneuver indicator.",
+  &LookupTable_maneuver_types)
+X(KEY_MAX_VALUE, "max_value", "", "", "", "", "", "",
+  "Maximum parameter value (EMMA warning DAC 200 FID 23).", nullptr)
+X(KEY_MIN_VALUE, "min_value", "", "", "", "", "", "",
+  "Minimum parameter value (EMMA warning DAC 200 FID 23).", nullptr)
 X(KEY_MINUTE, "minute", "", "", "", "", "", "", "Minute (UTC)", nullptr)
 X(KEY_MMSI, "mmsi", "mmsi", "mmsi", "mmsi", "", "mmsi", "", "MMSI", nullptr)
-X(KEY_MMSI1, "mmsi1", "", "", "", "", "", "", "Destination MMSI (slot 1; type 7/13/15/16).", nullptr)
-X(KEY_MMSI2, "mmsi2", "", "", "", "", "", "", "Destination MMSI (slot 2; type 7/13/15/16).", nullptr)
-X(KEY_MMSI3, "mmsi3", "", "", "", "", "", "", "Destination MMSI (slot 3; type 7/13/15).", nullptr)
-X(KEY_MMSI4, "mmsi4", "", "", "", "", "", "", "Destination MMSI (slot 4; type 7/13).", nullptr)
-X(KEY_MMSISEQ1, "mmsiseq1", "", "", "", "", "", "", "Sequence number for mmsi1 acknowledgement (type 7/13).", nullptr)
-X(KEY_MMSISEQ2, "mmsiseq2", "", "", "", "", "", "", "Sequence number for mmsi2 acknowledgement (type 7/13).", nullptr)
-X(KEY_MMSISEQ3, "mmsiseq3", "", "", "", "", "", "", "Sequence number for mmsi3 acknowledgement (type 7/13).", nullptr)
-X(KEY_MMSISEQ4, "mmsiseq4", "", "", "", "", "", "", "Sequence number for mmsi4 acknowledgement (type 7/13).", nullptr)
+X(KEY_MMSI1, "mmsi1", "", "", "", "", "", "",
+  "Destination MMSI (slot 1; type 7/13/15/16).", nullptr)
+X(KEY_MMSI2, "mmsi2", "", "", "", "", "", "",
+  "Destination MMSI (slot 2; type 7/13/15/16).", nullptr)
+X(KEY_MMSI3, "mmsi3", "", "", "", "", "", "",
+  "Destination MMSI (slot 3; type 7/13/15).", nullptr)
+X(KEY_MMSI4, "mmsi4", "", "", "", "", "", "",
+  "Destination MMSI (slot 4; type 7/13).", nullptr)
+X(KEY_MMSISEQ1, "mmsiseq1", "", "", "", "", "", "",
+  "Sequence number for mmsi1 acknowledgement (type 7/13).", nullptr)
+X(KEY_MMSISEQ2, "mmsiseq2", "", "", "", "", "", "",
+  "Sequence number for mmsi2 acknowledgement (type 7/13).", nullptr)
+X(KEY_MMSISEQ3, "mmsiseq3", "", "", "", "", "", "",
+  "Sequence number for mmsi3 acknowledgement (type 7/13).", nullptr)
+X(KEY_MMSISEQ4, "mmsiseq4", "", "", "", "", "", "",
+  "Sequence number for mmsi4 acknowledgement (type 7/13).", nullptr)
 X(KEY_MSSI_TEXT, "mmsi_text", "", "", "", "", "", "", "", nullptr)
 X(KEY_MODEL, "model", "", "", "", "", "", "", "Unit Model Code.", nullptr)
 X(KEY_MONTH, "month", "", "", "", "", "", "", "UTC Month.", nullptr)
-X(KEY_MOTHERSHIP_MMSI, "mothership_mmsi", "", "", "", "", "", "", "MMSI of the mother ship (for auxiliary craft).", nullptr)
-X(KEY_MSG22, "msg22", "", "", "", "", "", "", "Message 22 flag (Unit can accept channel assignment).", nullptr)
-X(KEY_MESSAGE_ID, "message_id", "", "", "", "", "", "", "ASM sub-message ID (e.g. SLS: 1=weather, 2=wind, 3=water, 6=flow).", nullptr)
-X(KEY_MAJOR_VERSION, "major_version", "", "", "", "", "", "", "Major revision of the message specification in use (St Lawrence Seaway version ASM, DAC 316/366 FID 32).", nullptr)
-X(KEY_MINOR_VERSION, "minor_version", "", "", "", "", "", "", "Minor revision of the message specification in use (St Lawrence Seaway version ASM, DAC 316/366 FID 32).", nullptr)
-X(KEY_VESSEL_NAME, "vessel_name", "", "", "", "", "", "", "Name of the vessel a message is about, as opposed to the sender (St Lawrence Seaway estimated lock times ASM).", nullptr)
-X(KEY_LOCK_ID, "lock_id", "", "", "", "", "", "", "Lock identifier, e.g. SLS_L01 (St Lawrence Seaway lockage order ASM).", nullptr)
-X(KEY_LOCK_SCHEDULE, "lock_schedule", "", "", "", "", "", "", "Next lockages as vessel,direction,eta;... with direction 1=upbound 0=downbound and eta MM-DDTHH:MMZ (St Lawrence Seaway lockage order ASM).", nullptr)
-X(KEY_LAST_LOCATION, "last_location", "", "", "", "", "", "", "Identifier of the vessel's last location (St Lawrence Seaway estimated lock times ASM).", nullptr)
-X(KEY_LAST_ATA, "last_ata", "", "", "", "", "", "", "Actual time of arrival at the last location, MM-DDTHH:MMZ (St Lawrence Seaway estimated lock times ASM).", nullptr)
-X(KEY_FIRST_LOCK, "first_lock", "", "", "", "", "", "", "Identifier of the next lock (St Lawrence Seaway estimated lock times ASM).", nullptr)
-X(KEY_FIRST_LOCK_ETA, "first_lock_eta", "", "", "", "", "", "", "Estimated time of arrival at the next lock, MM-DDTHH:MMZ (St Lawrence Seaway estimated lock times ASM).", nullptr)
-X(KEY_SECOND_LOCK, "second_lock", "", "", "", "", "", "", "Identifier of the lock after next (St Lawrence Seaway estimated lock times ASM).", nullptr)
-X(KEY_SECOND_LOCK_ETA, "second_lock_eta", "", "", "", "", "", "", "Estimated time of arrival at the lock after next, MM-DDTHH:MMZ (St Lawrence Seaway estimated lock times ASM).", nullptr)
-X(KEY_DELAY_LOCK, "delay_lock", "", "", "", "", "", "", "Identifier of the first lock currently delaying a vessel (St Lawrence Seaway estimated lock times ASM).", nullptr)
-X(KEY_MESSAGE, "message", "message", "message", "", "", "message", "", "Freeform message string.", nullptr)
-X(KEY_NAME, "name", "", "", "", "", "name", "", "Name of the Aid to Navigation.", nullptr)
-X(KEY_NE_LAT, "ne_lat", "", "", "", "", "", "degrees", "North East Latitude", nullptr)
-X(KEY_NE_LON, "ne_lon", "", "", "", "", "", "degrees", "North East Longitude", nullptr)
-X(KEY_NUMBER1, "number1", "", "", "", "", "", "", "Reserved consecutive slots, reservation 1.", nullptr)
-X(KEY_NUMBER2, "number2", "", "", "", "", "", "", "Reserved consecutive slots, reservation 2.", nullptr)
-X(KEY_NUMBER3, "number3", "", "", "", "", "", "", "Number of reserved consecutive slots, reservation 3 (type 20).", nullptr)
-X(KEY_NUMBER4, "number4", "", "", "", "", "", "", "Number of reserved consecutive slots, reservation 4 (type 20).", nullptr)
-X(KEY_OFF_POSITION, "off_position", "", "", "", "", "", "", "Off-Position Indicator (0=On position; 1=Off position).", nullptr)
-X(KEY_OFFSET1, "offset1", "", "", "", "", "", "", "Slot offset for first reservation (type 16/20 assignment/reservation).", nullptr)
-X(KEY_OFFSET1_1, "offset1_1", "", "", "", "", "", "", "Reply slot offset for first requested message of station 1 (type 15).", nullptr)
-X(KEY_OFFSET1_2, "offset1_2", "", "", "", "", "", "", "Reply slot offset for second requested message of station 1 (type 15).", nullptr)
-X(KEY_OFFSET2, "offset2", "", "", "", "", "", "", "Slot offset for second reservation (type 16/20).", nullptr)
-X(KEY_OFFSET2_1, "offset2_1", "", "", "", "", "", "", "Reply slot offset for first requested message of station 2 (type 15).", nullptr)
-X(KEY_OFFSET3, "offset3", "", "", "", "", "", "", "Slot offset for third reservation (type 20).", nullptr)
-X(KEY_OFFSET4, "offset4", "", "", "", "", "", "", "Slot offset for fourth reservation (type 20).", nullptr)
-X(KEY_ON_STATION_STATUS, "on_station_status", "", "", "", "", "", "", "AtoN on-station status (type 28).", &LookupTable_aton_on_station_status)
-X(KEY_PARTNO, "partno", "", "", "partno", "", "", "", "Part Number (0 or 1) for Type 24 messages.", nullptr)
-X(KEY_PASSENGER_COUNT, "passenger_count", "", "", "", "", "", "", "Number of passengers on board (IMO Circ.289 §15 number of persons ASM).", nullptr)
-X(KEY_PERSONS, "persons", "", "", "", "", "", "", "Number of persons on board.", nullptr)
-X(KEY_POWER, "power", "", "", "", "", "", "", "Transmit power flag (type 22; 0=high power, 1=low power).", nullptr)
-X(KEY_PRECIPTYPE, "preciptype", "", "", "", "", "", "", "Precipitation Type (e.g.; Rain; Snow).", &LookupTable_precipation_types)
+X(KEY_MOTHERSHIP_MMSI, "mothership_mmsi", "", "", "", "", "", "",
+  "MMSI of the mother ship (for auxiliary craft).", nullptr)
+X(KEY_MSG22, "msg22", "", "", "", "", "", "",
+  "Message 22 flag (Unit can accept channel assignment).", nullptr)
+X(KEY_MESSAGE_ID, "message_id", "", "", "", "", "", "",
+  "ASM sub-message ID (e.g. SLS: 1=weather, 2=wind, 3=water, 6=flow).", nullptr)
+X(KEY_MAJOR_VERSION, "major_version", "", "", "", "", "", "",
+  "Major revision of the message specification in use (St Lawrence Seaway "
+  "version ASM, DAC 316/366 FID 32).",
+  nullptr)
+X(KEY_MINOR_VERSION, "minor_version", "", "", "", "", "", "",
+  "Minor revision of the message specification in use (St Lawrence Seaway "
+  "version ASM, DAC 316/366 FID 32).",
+  nullptr)
+X(KEY_VESSEL_NAME, "vessel_name", "", "", "", "", "", "",
+  "Name of the vessel a message is about, as opposed to the sender (St "
+  "Lawrence Seaway estimated lock times ASM).",
+  nullptr)
+X(KEY_LOCK_ID, "lock_id", "", "", "", "", "", "",
+  "Lock identifier, e.g. SLS_L01 (St Lawrence Seaway lockage order ASM).",
+  nullptr)
+X(KEY_LOCK_SCHEDULE, "lock_schedule", "", "", "", "", "", "",
+  "Next lockages as vessel,direction,eta;... with direction 1=upbound "
+  "0=downbound and eta MM-DDTHH:MMZ (St Lawrence Seaway lockage order ASM).",
+  nullptr)
+X(KEY_LAST_LOCATION, "last_location", "", "", "", "", "", "",
+  "Identifier of the vessel's last location (St Lawrence Seaway estimated lock "
+  "times ASM).",
+  nullptr)
+X(KEY_LAST_ATA, "last_ata", "", "", "", "", "", "",
+  "Actual time of arrival at the last location, MM-DDTHH:MMZ (St Lawrence "
+  "Seaway estimated lock times ASM).",
+  nullptr)
+X(KEY_FIRST_LOCK, "first_lock", "", "", "", "", "", "",
+  "Identifier of the next lock (St Lawrence Seaway estimated lock times ASM).",
+  nullptr)
+X(KEY_FIRST_LOCK_ETA, "first_lock_eta", "", "", "", "", "", "",
+  "Estimated time of arrival at the next lock, MM-DDTHH:MMZ (St Lawrence "
+  "Seaway estimated lock times ASM).",
+  nullptr)
+X(KEY_SECOND_LOCK, "second_lock", "", "", "", "", "", "",
+  "Identifier of the lock after next (St Lawrence Seaway estimated lock times "
+  "ASM).",
+  nullptr)
+X(KEY_SECOND_LOCK_ETA, "second_lock_eta", "", "", "", "", "", "",
+  "Estimated time of arrival at the lock after next, MM-DDTHH:MMZ (St Lawrence "
+  "Seaway estimated lock times ASM).",
+  nullptr)
+X(KEY_DELAY_LOCK, "delay_lock", "", "", "", "", "", "",
+  "Identifier of the first lock currently delaying a vessel (St Lawrence "
+  "Seaway estimated lock times ASM).",
+  nullptr)
+X(KEY_MESSAGE, "message", "message", "message", "", "", "message", "",
+  "Freeform message string.", nullptr)
+X(KEY_NAME, "name", "", "", "", "", "name", "",
+  "Name of the Aid to Navigation.", nullptr)
+X(KEY_NE_LAT, "ne_lat", "", "", "", "", "", "degrees", "North East Latitude",
+  nullptr)
+X(KEY_NE_LON, "ne_lon", "", "", "", "", "", "degrees", "North East Longitude",
+  nullptr)
+X(KEY_NUMBER1, "number1", "", "", "", "", "", "",
+  "Reserved consecutive slots, reservation 1.", nullptr)
+X(KEY_NUMBER2, "number2", "", "", "", "", "", "",
+  "Reserved consecutive slots, reservation 2.", nullptr)
+X(KEY_NUMBER3, "number3", "", "", "", "", "", "",
+  "Number of reserved consecutive slots, reservation 3 (type 20).", nullptr)
+X(KEY_NUMBER4, "number4", "", "", "", "", "", "",
+  "Number of reserved consecutive slots, reservation 4 (type 20).", nullptr)
+X(KEY_OFF_POSITION, "off_position", "", "", "", "", "", "",
+  "Off-Position Indicator (0=On position; 1=Off position).", nullptr)
+X(KEY_OFFSET1, "offset1", "", "", "", "", "", "",
+  "Slot offset for first reservation (type 16/20 assignment/reservation).",
+  nullptr)
+X(KEY_OFFSET1_1, "offset1_1", "", "", "", "", "", "",
+  "Reply slot offset for first requested message of station 1 (type 15).",
+  nullptr)
+X(KEY_OFFSET1_2, "offset1_2", "", "", "", "", "", "",
+  "Reply slot offset for second requested message of station 1 (type 15).",
+  nullptr)
+X(KEY_OFFSET2, "offset2", "", "", "", "", "", "",
+  "Slot offset for second reservation (type 16/20).", nullptr)
+X(KEY_OFFSET2_1, "offset2_1", "", "", "", "", "", "",
+  "Reply slot offset for first requested message of station 2 (type 15).",
+  nullptr)
+X(KEY_OFFSET3, "offset3", "", "", "", "", "", "",
+  "Slot offset for third reservation (type 20).", nullptr)
+X(KEY_OFFSET4, "offset4", "", "", "", "", "", "",
+  "Slot offset for fourth reservation (type 20).", nullptr)
+X(KEY_ON_STATION_STATUS, "on_station_status", "", "", "", "", "", "",
+  "AtoN on-station status (type 28).", &LookupTable_aton_on_station_status)
+X(KEY_PARTNO, "partno", "", "", "partno", "", "", "",
+  "Part Number (0 or 1) for Type 24 messages.", nullptr)
+X(KEY_PASSENGER_COUNT, "passenger_count", "", "", "", "", "", "",
+  "Number of passengers on board (IMO Circ.289 §15 number of persons ASM).",
+  nullptr)
+X(KEY_PERSONS, "persons", "", "", "", "", "", "", "Number of persons on board.",
+  nullptr)
+X(KEY_POWER, "power", "", "", "", "", "", "",
+  "Transmit power flag (type 22; 0=high power, 1=low power).", nullptr)
+X(KEY_PRECIPTYPE, "preciptype", "", "", "", "", "", "",
+  "Precipitation Type (e.g.; Rain; Snow).", &LookupTable_precipation_types)
 X(KEY_PRESENT_WEATHER, "present_weather", "", "", "", "", "", "", "", nullptr)
 X(KEY_PAST_WEATHER_1, "past_weather_1", "", "", "", "", "", "", "", nullptr)
 X(KEY_PAST_WEATHER_2, "past_weather_2", "", "", "", "", "", "", "", nullptr)
-X(KEY_PRESSURE_CHARACTERISTIC, "pressure_characteristic", "", "", "", "", "", "", "", nullptr)
-X(KEY_PRESSURE, "pressure", "", "", "", "", "", "hPa", "Atmospheric pressure", nullptr)
-X(KEY_PRESSURETEND, "pressuretend", "", "", "", "", "", "", "Pressure tendency (IMO Circ.289).", &LookupTable_pressuretend)
-X(KEY_PRESSURETEND_WMO, "pressuretend_wmo", "", "", "", "", "", "", "Pressure tendency (WMO FM-13 table 0200).", &LookupTable_pressuretend_wmo)
-X(KEY_PRECISION, "precision", "", "", "", "", "", "", "Position precision indicator (3-bit; vendor-specific within ASM payloads).", nullptr)
+X(KEY_PRESSURE_CHARACTERISTIC, "pressure_characteristic", "", "", "", "", "",
+  "", "", nullptr)
+X(KEY_PRESSURE, "pressure", "", "", "", "", "", "hPa", "Atmospheric pressure",
+  nullptr)
+X(KEY_PRESSURETEND, "pressuretend", "", "", "", "", "", "",
+  "Pressure tendency (IMO Circ.289).", &LookupTable_pressuretend)
+X(KEY_PRESSURETEND_WMO, "pressuretend_wmo", "", "", "", "", "", "",
+  "Pressure tendency (WMO FM-13 table 0200).", &LookupTable_pressuretend_wmo)
+X(KEY_PRECISION, "precision", "", "", "", "", "", "",
+  "Position precision indicator (3-bit; vendor-specific within ASM payloads).",
+  nullptr)
 X(KEY_QUIET, "quiet", "", "", "", "", "", "minutes", "Quiet Time", nullptr)
-X(KEY_RADIO, "radio", "", "", "", "", "", "", "Radio status (19-bit SOTDMA/ITDMA state).", nullptr)
-X(KEY_RAIM, "raim", "", "", "", "", "", "", "RAIM flag (EPFD integrity monitoring in use).", nullptr)
-X(KEY_RECEIVED_STATIONS, "received_stations", "", "", "", "", "", "", "Stations received in last frame.", nullptr)
-X(KEY_REGIONAL, "regional", "", "", "", "", "", "", "Regional reserved field (local authority).", nullptr)
-X(KEY_REPEAT, "repeat", "", "repeat", "", "", "", "", "Repeat indicator (0..3; 3=do not repeat).", nullptr)
-X(KEY_REPORT_TYPE, "report_type", "", "", "", "", "", "", "Report/sub-message ID (depends on ASM).", nullptr)
-X(KEY_RACON, "racon", "", "", "", "", "", "", "RACON status.", &LookupTable_racon_status)
-X(KEY_RESERVED, "reserved", "", "", "", "", "", "", "Reserved bit field (set by transmitter; ignored by receivers per spec).", nullptr)
-X(KEY_RESTRICTED_USE, "restricted_use", "", "", "", "", "", "", "AtoN restricted use indicator (type 28).", &LookupTable_aton_restricted_use)
-X(KEY_RETRANSMIT, "retransmit", "", "", "", "", "", "", "Retransmit flag", nullptr)
-X(KEY_REQUESTED_DAC, "requested_dac", "", "", "", "", "", "", "Designated Area Code", nullptr)
-X(KEY_REQUESTED_FID, "requested_fid", "", "", "", "", "", "", "Requested Functional Identifier", nullptr)
+X(KEY_RADIO, "radio", "", "", "", "", "", "",
+  "Radio status (19-bit SOTDMA/ITDMA state).", nullptr)
+X(KEY_RAIM, "raim", "", "", "", "", "", "",
+  "RAIM flag (EPFD integrity monitoring in use).", nullptr)
+X(KEY_RECEIVED_STATIONS, "received_stations", "", "", "", "", "", "",
+  "Stations received in last frame.", nullptr)
+X(KEY_REGIONAL, "regional", "", "", "", "", "", "",
+  "Regional reserved field (local authority).", nullptr)
+X(KEY_REPEAT, "repeat", "", "repeat", "", "", "", "",
+  "Repeat indicator (0..3; 3=do not repeat).", nullptr)
+X(KEY_REPORT_TYPE, "report_type", "", "", "", "", "", "",
+  "Report/sub-message ID (depends on ASM).", nullptr)
+X(KEY_RACON, "racon", "", "", "", "", "", "", "RACON status.",
+  &LookupTable_racon_status)
+X(KEY_RESERVED, "reserved", "", "", "", "", "", "",
+  "Reserved bit field (set by transmitter; ignored by receivers per spec).",
+  nullptr)
+X(KEY_RESTRICTED_USE, "restricted_use", "", "", "", "", "", "",
+  "AtoN restricted use indicator (type 28).", &LookupTable_aton_restricted_use)
+X(KEY_RETRANSMIT, "retransmit", "", "", "", "", "", "", "Retransmit flag",
+  nullptr)
+X(KEY_REQUESTED_DAC, "requested_dac", "", "", "", "", "", "",
+  "Designated Area Code", nullptr)
+X(KEY_REQUESTED_FID, "requested_fid", "", "", "", "", "", "",
+  "Requested Functional Identifier", nullptr)
 X(KEY_REL_WIND_DIR, "rel_wind_dir", "", "", "", "", "", "", "", nullptr)
 X(KEY_REL_WIND_SPEED, "rel_wind_speed", "", "", "", "", "", "", "", nullptr)
-X(KEY_SALINITY, "salinity", "", "", "", "", "", "percentage", "Salinity", nullptr)
-X(KEY_SEASTATE, "seastate", "", "", "", "", "", "", "Sea state (Beaufort Scale).", &LookupTable_seastate_types)
-X(KEY_SECOND, "second", "", "", "", "", "", "", "UTC second (0..59; 60=N/A; 61=manual; 62=dead reckoning; 63=inoperative).", nullptr)
+X(KEY_SALINITY, "salinity", "", "", "", "", "", "percentage", "Salinity",
+  nullptr)
+X(KEY_SEASTATE, "seastate", "", "", "", "", "", "",
+  "Sea state (Beaufort Scale).", &LookupTable_seastate_types)
+X(KEY_SECOND, "second", "", "", "", "", "", "",
+  "UTC second (0..59; 60=N/A; 61=manual; 62=dead reckoning; 63=inoperative).",
+  nullptr)
 X(KEY_SEQNO, "seqno", "", "", "", "", "", "", "Sequence Number", nullptr)
-X(KEY_SERIAL, "serial", "", "", "", "", "", "", "Unit serial number (type 24B vendor information).", nullptr)
-X(KEY_SHIP_TYPE, "ship_type", "", "ship_type", "", "", "", "", "Ship type code (used by ship-static ASMs; same enumeration as `shiptype`).", nullptr)
-X(KEY_SHIPNAME, "shipname", "", "shipname", "shipname", "", "", "", "Vessel Name", nullptr)
-X(KEY_SHIPTYPE, "shiptype", "", "shiptype", "shiptype", "", "", "", "Ship Type", &LookupTable_ship_types)
-X(KEY_SHIPBOARD_PERSONNEL_COUNT, "shipboard_personnel_count", "", "", "", "", "", "", "Other shipboard personnel count (IMO Circ.289 §15 number of persons ASM).", nullptr)
-X(KEY_SITE_ID, "site_id", "", "", "", "", "", "", "Site identifier (IMO Circ.289 §12 environmental sensor ASM).", nullptr)
-X(KEY_SENSOR_DESCRIPTION, "sensor_description", "", "", "", "", "", "", "Sensor description text (IMO Circ.289 §12 environmental sensor ASM).", nullptr)
-X(KEY_FORECAST_WSPEED, "forecast_wspeed", "", "", "", "", "", "knots", "Forecast wind speed (St Lawrence Seaway wind information ASM).", nullptr)
-X(KEY_FORECAST_WGUST, "forecast_wgust", "", "", "", "", "", "knots", "Forecast wind gust (St Lawrence Seaway wind information ASM).", nullptr)
-X(KEY_FORECAST_WDIR, "forecast_wdir", "", "", "", "", "", "degrees", "Forecast wind direction (St Lawrence Seaway wind information ASM).", nullptr)
-X(KEY_FORECAST_DAY, "forecast_day", "", "", "", "", "", "", "Forecast UTC day.", nullptr)
-X(KEY_FORECAST_HOUR, "forecast_hour", "", "", "", "", "", "", "Forecast UTC hour.", nullptr)
-X(KEY_FORECAST_MINUTE, "forecast_minute", "", "", "", "", "", "", "Forecast UTC minute.", nullptr)
-X(KEY_FORECAST_DURATION, "forecast_duration", "", "", "", "", "", "minutes", "Forecast validity duration.", nullptr)
-X(KEY_SLOT_NUMBER, "slot_number", "", "", "", "", "", "", "TDMA slot number used.", nullptr)
-X(KEY_SLOT_TIMEOUT, "slot_timeout", "", "", "", "", "", "", "Frames until new slot (0=next).", nullptr)
-X(KEY_SLOT_OFFSET, "slot_offset", "", "", "", "", "", "", "Offset (slots) to next transmission slot.", nullptr)
-X(KEY_SPARE, "spare", "", "", "", "", "", "", "Spare/unused bits (reserved for future use; transmitted as zero).", nullptr)
-X(KEY_START_DATE, "start_date", "", "", "", "", "", "", "Start date (YYYYMMDD format; Inland AIS).", nullptr)
-X(KEY_START_LON, "start_lon", "", "", "", "", "", "degrees", "Start longitude (EMMA warning DAC 200 FID 23).", nullptr)
-X(KEY_START_LAT, "start_lat", "", "", "", "", "", "degrees", "Start latitude (EMMA warning DAC 200 FID 23).", nullptr)
-X(KEY_START_TIME, "start_time", "", "", "", "", "", "", "Start time (HHMM UTC; Inland AIS).", nullptr)
-X(KEY_SPEED, "speed", "", "speed", "speed", "", "", "knots", "Speed over Ground (SOG)", nullptr)
-X(KEY_SPEED_Q, "speed_q", "", "", "", "", "", "", "Speed quality flag (Inland AIS; 0=low/default, 1=high).", nullptr)
-X(KEY_STATION_TYPE, "station_type", "", "", "", "", "", "", "Station Type (e.g.; Base Station; Class B; SAR).", &LookupTable_station_types)
-X(KEY_STATION_NAME, "station_name", "", "", "", "", "", "", "Station Name", nullptr)
-X(KEY_STATUS, "status", "", "status", "status", "", "", "", "Navigation Status", &LookupTable_nav_status)
-X(KEY_STATUS_TEXT, "status_text", "", "status_text", "", "", "", "", "Navigation status text.", nullptr)
-X(KEY_STAT_EXT, "stat_ext", "", "stat_ext", "", "", "", "", "External digital input status (IALA AtoN monitoring ASM; 8-bit).", nullptr)
-X(KEY_SW_LAT, "sw_lat", "", "", "", "", "", "degrees", "South West Latitude", nullptr)
-X(KEY_SW_LON, "sw_lon", "", "", "", "", "", "degrees", "South West Longitude", nullptr)
+X(KEY_SERIAL, "serial", "", "", "", "", "", "",
+  "Unit serial number (type 24B vendor information).", nullptr)
+X(KEY_SHIP_TYPE, "ship_type", "", "ship_type", "", "", "", "",
+  "Ship type code (used by ship-static ASMs; same enumeration as `shiptype`).",
+  nullptr)
+X(KEY_SHIPNAME, "shipname", "", "shipname", "shipname", "", "", "",
+  "Vessel Name", nullptr)
+X(KEY_SHIPTYPE, "shiptype", "", "shiptype", "shiptype", "", "", "", "Ship Type",
+  &LookupTable_ship_types)
+X(KEY_SHIPBOARD_PERSONNEL_COUNT, "shipboard_personnel_count", "", "", "", "",
+  "", "",
+  "Other shipboard personnel count (IMO Circ.289 §15 number of persons ASM).",
+  nullptr)
+X(KEY_SITE_ID, "site_id", "", "", "", "", "", "",
+  "Site identifier (IMO Circ.289 §12 environmental sensor ASM).", nullptr)
+X(KEY_SENSOR_DESCRIPTION, "sensor_description", "", "", "", "", "", "",
+  "Sensor description text (IMO Circ.289 §12 environmental sensor ASM).",
+  nullptr)
+X(KEY_FORECAST_WSPEED, "forecast_wspeed", "", "", "", "", "", "knots",
+  "Forecast wind speed (St Lawrence Seaway wind information ASM).", nullptr)
+X(KEY_FORECAST_WGUST, "forecast_wgust", "", "", "", "", "", "knots",
+  "Forecast wind gust (St Lawrence Seaway wind information ASM).", nullptr)
+X(KEY_FORECAST_WDIR, "forecast_wdir", "", "", "", "", "", "degrees",
+  "Forecast wind direction (St Lawrence Seaway wind information ASM).", nullptr)
+X(KEY_FORECAST_DAY, "forecast_day", "", "", "", "", "", "", "Forecast UTC day.",
+  nullptr)
+X(KEY_FORECAST_HOUR, "forecast_hour", "", "", "", "", "", "",
+  "Forecast UTC hour.", nullptr)
+X(KEY_FORECAST_MINUTE, "forecast_minute", "", "", "", "", "", "",
+  "Forecast UTC minute.", nullptr)
+X(KEY_FORECAST_DURATION, "forecast_duration", "", "", "", "", "", "minutes",
+  "Forecast validity duration.", nullptr)
+X(KEY_SLOT_NUMBER, "slot_number", "", "", "", "", "", "",
+  "TDMA slot number used.", nullptr)
+X(KEY_SLOT_TIMEOUT, "slot_timeout", "", "", "", "", "", "",
+  "Frames until new slot (0=next).", nullptr)
+X(KEY_SLOT_OFFSET, "slot_offset", "", "", "", "", "", "",
+  "Offset (slots) to next transmission slot.", nullptr)
+X(KEY_SPARE, "spare", "", "", "", "", "", "",
+  "Spare/unused bits (reserved for future use; transmitted as zero).", nullptr)
+X(KEY_START_DATE, "start_date", "", "", "", "", "", "",
+  "Start date (YYYYMMDD format; Inland AIS).", nullptr)
+X(KEY_START_LON, "start_lon", "", "", "", "", "", "degrees",
+  "Start longitude (EMMA warning DAC 200 FID 23).", nullptr)
+X(KEY_START_LAT, "start_lat", "", "", "", "", "", "degrees",
+  "Start latitude (EMMA warning DAC 200 FID 23).", nullptr)
+X(KEY_START_TIME, "start_time", "", "", "", "", "", "",
+  "Start time (HHMM UTC; Inland AIS).", nullptr)
+X(KEY_SPEED, "speed", "", "speed", "speed", "", "", "knots",
+  "Speed over Ground (SOG)", nullptr)
+X(KEY_SPEED_Q, "speed_q", "", "", "", "", "", "",
+  "Speed quality flag (Inland AIS; 0=low/default, 1=high).", nullptr)
+X(KEY_STATION_TYPE, "station_type", "", "", "", "", "", "",
+  "Station Type (e.g.; Base Station; Class B; SAR).",
+  &LookupTable_station_types)
+X(KEY_STATION_NAME, "station_name", "", "", "", "", "", "", "Station Name",
+  nullptr)
+X(KEY_STATUS, "status", "", "status", "status", "", "", "", "Navigation Status",
+  &LookupTable_nav_status)
+X(KEY_STATUS_TEXT, "status_text", "", "status_text", "", "", "", "",
+  "Navigation status text.", nullptr)
+X(KEY_STAT_EXT, "stat_ext", "", "stat_ext", "", "", "", "",
+  "External digital input status (IALA AtoN monitoring ASM; 8-bit).", nullptr)
+X(KEY_SW_LAT, "sw_lat", "", "", "", "", "", "degrees", "South West Latitude",
+  nullptr)
+X(KEY_SW_LON, "sw_lon", "", "", "", "", "", "degrees", "South West Longitude",
+  nullptr)
 X(KEY_SWELLDIR, "swelldir", "", "", "", "", "", "", "Swell direction.", nullptr)
-X(KEY_SWELLHEIGHT, "swellheight", "", "", "", "", "", "meter", "Swell height", nullptr)
-X(KEY_SWELLPERIOD, "swellperiod", "", "", "", "", "", "seconds", "Swell period", nullptr)
-X(KEY_SYNC_STATE, "sync_state", "", "", "", "", "", "", "TDMA sync state.", &LookupTable_sync_state)
+X(KEY_SWELLHEIGHT, "swellheight", "", "", "", "", "", "meter", "Swell height",
+  nullptr)
+X(KEY_SWELLPERIOD, "swellperiod", "", "", "", "", "", "seconds", "Swell period",
+  nullptr)
+X(KEY_SYNC_STATE, "sync_state", "", "", "", "", "", "", "TDMA sync state.",
+  &LookupTable_sync_state)
 X(KEY_TEXT, "text", "", "", "", "", "", "", "Text description", nullptr)
-X(KEY_TEXT_SEQUENCE, "text_sequence", "", "", "", "", "", "", "Text sequence number (multi-part messages).", nullptr)
-X(KEY_TIMEOUT1, "timeout1", "", "", "", "", "", "minutes", "Allocation timeout for reservation 1 (type 20).", nullptr)
-X(KEY_TIMEOUT2, "timeout2", "", "", "", "", "", "minutes", "Allocation timeout for reservation 2 (type 20).", nullptr)
-X(KEY_TIMEOUT3, "timeout3", "", "", "", "", "", "minutes", "Allocation timeout for reservation 3 (type 20).", nullptr)
-X(KEY_TIMEOUT4, "timeout4", "", "", "", "", "", "minutes", "Allocation timeout for reservation 4 (type 20).", nullptr)
-X(KEY_TIMESTAMP, "timestamp", "", "", "", "", "", "", "Timestamp (host receive time, ISO-8601).", nullptr)
-X(KEY_TO_BOW, "to_bow", "", "to_bow", "ref_front", "", "", "meter", "Dimension to Bow", nullptr)
-X(KEY_TO_PORT, "to_port", "", "to_port", "ref_left", "", "", "meter", "Dimension to Port", nullptr)
-X(KEY_TO_STARBOARD, "to_starboard", "", "to_starboard", "", "", "", "meter", "Dimension to Starboard", nullptr)
-X(KEY_TO_STERN, "to_stern", "", "to_stern", "", "", "", "meter", "Dimension to Stern", nullptr)
-X(KEY_TURN, "turn", "", "turn", "", "", "", "degrees per minute", "Rate of Turn (ROT)", nullptr)
-X(KEY_TURN_UNSCALED, "turn_unscaled", "", "turn_unscaled", "", "", "", "", "Raw ROT field (-128..127; 128=N/A).", nullptr)
-X(KEY_TXRX, "txrx", "", "", "", "", "", "", "Transmit/Receive mode.", &LookupTable_txrx_types)
-X(KEY_TYPE, "type", "", "", "msgtype", "", "", "", "Message Type", &LookupTable_message_types)
-X(KEY_TYPE1_1, "type1_1", "", "", "", "", "", "", "First requested message type from station 1 (type 15 interrogation).", nullptr)
-X(KEY_TYPE1_2, "type1_2", "", "", "", "", "", "", "Second requested message type from station 1 (type 15 interrogation).", nullptr)
-X(KEY_TYPE2_1, "type2_1", "", "", "", "", "", "", "First requested message type from station 2 (type 15 interrogation).", nullptr)
-X(KEY_UTC_DAY, "utc_day", "", "", "", "", "", "", "UTC day reported in payload (1..31; 0=not available).", nullptr)
-X(KEY_UTC_HOUR, "utc_hour", "", "", "", "", "", "", "UTC hour reported in payload (0..23; 24=not available).", nullptr)
-X(KEY_UTC_MINUTE, "utc_minute", "", "", "", "", "", "", "UTC minute reported in payload (0..59; 60=not available).", nullptr)
+X(KEY_TEXT_SEQUENCE, "text_sequence", "", "", "", "", "", "",
+  "Text sequence number (multi-part messages).", nullptr)
+X(KEY_TIMEOUT1, "timeout1", "", "", "", "", "", "minutes",
+  "Allocation timeout for reservation 1 (type 20).", nullptr)
+X(KEY_TIMEOUT2, "timeout2", "", "", "", "", "", "minutes",
+  "Allocation timeout for reservation 2 (type 20).", nullptr)
+X(KEY_TIMEOUT3, "timeout3", "", "", "", "", "", "minutes",
+  "Allocation timeout for reservation 3 (type 20).", nullptr)
+X(KEY_TIMEOUT4, "timeout4", "", "", "", "", "", "minutes",
+  "Allocation timeout for reservation 4 (type 20).", nullptr)
+X(KEY_TIMESTAMP, "timestamp", "", "", "", "", "", "",
+  "Timestamp (host receive time, ISO-8601).", nullptr)
+X(KEY_TO_BOW, "to_bow", "", "to_bow", "ref_front", "", "", "meter",
+  "Dimension to Bow", nullptr)
+X(KEY_TO_PORT, "to_port", "", "to_port", "ref_left", "", "", "meter",
+  "Dimension to Port", nullptr)
+X(KEY_TO_STARBOARD, "to_starboard", "", "to_starboard", "", "", "", "meter",
+  "Dimension to Starboard", nullptr)
+X(KEY_TO_STERN, "to_stern", "", "to_stern", "", "", "", "meter",
+  "Dimension to Stern", nullptr)
+X(KEY_TURN, "turn", "", "turn", "", "", "", "degrees per minute",
+  "Rate of Turn (ROT)", nullptr)
+X(KEY_TURN_UNSCALED, "turn_unscaled", "", "turn_unscaled", "", "", "", "",
+  "Raw ROT field (-128..127; 128=N/A).", nullptr)
+X(KEY_TXRX, "txrx", "", "", "", "", "", "", "Transmit/Receive mode.",
+  &LookupTable_txrx_types)
+X(KEY_TYPE, "type", "", "", "msgtype", "", "", "", "Message Type",
+  &LookupTable_message_types)
+X(KEY_TYPE1_1, "type1_1", "", "", "", "", "", "",
+  "First requested message type from station 1 (type 15 interrogation).",
+  nullptr)
+X(KEY_TYPE1_2, "type1_2", "", "", "", "", "", "",
+  "Second requested message type from station 1 (type 15 interrogation).",
+  nullptr)
+X(KEY_TYPE2_1, "type2_1", "", "", "", "", "", "",
+  "First requested message type from station 2 (type 15 interrogation).",
+  nullptr)
+X(KEY_UTC_DAY, "utc_day", "", "", "", "", "", "",
+  "UTC day reported in payload (1..31; 0=not available).", nullptr)
+X(KEY_UTC_HOUR, "utc_hour", "", "", "", "", "", "",
+  "UTC hour reported in payload (0..23; 24=not available).", nullptr)
+X(KEY_UTC_MINUTE, "utc_minute", "", "", "", "", "", "",
+  "UTC minute reported in payload (0..59; 60=not available).", nullptr)
 X(KEY_UUID, "uuid", "", "", "", "", "uuid", "", "", nullptr)
-X(KEY_TRANSMISSION_CONTROL, "transmission_control", "", "", "", "", "", "", "Transmission control for AIS satellite broadcast message (type 4/11; 0=stop msg 27 within base coverage, 1=transmit msg 27).", nullptr)
-X(KEY_VDES_CAPABILITIES, "vdes_capabilities", "", "", "", "", "", "", "VDES capabilities (type 24B; 2-bit; AIS only / VDES ASM / +VDE-TER / +VDE-SAT).", &LookupTable_vdes_capabilities)
-X(KEY_VENDORID, "vendorid", "", "", "vendorid", "", "", "", "Vendor ID", nullptr)
-X(KEY_VIN, "vin", "", "", "", "", "", "", "Vessel ID (8-char Inland AIS European Number of Vessel; ERI ENI).", nullptr)
-X(KEY_VIRTUAL_AID, "virtual_aid", "", "", "", "", "", "", "Virtual Aid flag (0=Real; 1=Virtual/Simulated).", nullptr)
-X(KEY_VTS_TARGET_ID_TYPE, "vts_target_id_type", "", "", "", "", "", "", "VTS target ID type.", &LookupTable_vts_target_id_type)
-X(KEY_VTS_TARGET_ID, "vts_target_id", "", "", "", "", "", "", "VTS target identifier (interpretation per vts_target_id_type).", nullptr)
-X(KEY_VTS_TARGET_LAT, "vts_target_lat", "", "", "", "", "", "degrees", "VTS target latitude (IMO Circ.289 §6).", nullptr)
-X(KEY_VTS_TARGET_LON, "vts_target_lon", "", "", "", "", "", "degrees", "VTS target longitude (IMO Circ.289 §6).", nullptr)
-X(KEY_VTS_TARGET_COG, "vts_target_cog", "", "", "", "", "", "degrees", "VTS target course over ground (IMO Circ.289 §6).", nullptr)
-X(KEY_VTS_TARGET_TIMESTAMP, "vts_target_timestamp", "", "", "", "", "", "", "VTS target report UTC second (0..59; IMO Circ.289 §6).", nullptr)
-X(KEY_VTS_TARGET_SOG, "vts_target_sog", "", "", "", "", "", "knots", "VTS target speed over ground (IMO Circ.289 §6).", nullptr)
-X(KEY_VISGREATER, "visgreater", "", "", "", "", "", "", "Visibility-greater-than flag (1=exceeds `visibility`).", nullptr)
-X(KEY_VISIBILITY, "visibility", "", "", "", "", "", "nm", "Horizontal visibility (0.1 NM units; IMO Circ.289 weather/hydro ASM).", nullptr)
-X(KEY_VISIBILITY_KM, "visibility_km", "", "", "", "", "", "km", "Horizontal visibility (0.1 km units; St Lawrence Seaway weather ASM).", nullptr)
-X(KEY_WATERLEVEL, "waterlevel", "", "", "", "", "", "", "Water Level (deviation from local chart datum).", nullptr)
-X(KEY_WATER_LEVEL_TYPE, "water_level_type", "", "", "", "", "", "", "Water level type (St Lawrence Seaway water level ASM).", nullptr)
-X(KEY_REFERENCE_DATUM, "reference_datum", "", "", "", "", "", "", "Reference datum (St Lawrence Seaway water level ASM).", nullptr)
-X(KEY_READING_TYPE, "reading_type", "", "", "", "", "", "", "Reading type (St Lawrence Seaway sensor ASM).", nullptr)
-X(KEY_WIND_SPEED_AVG, "wind_speed_avg", "", "", "", "", "", "knots", "Average wind speed (St Lawrence Seaway weather ASM).", nullptr)
-X(KEY_WIND_DIRECTION_AVG, "wind_direction_avg", "", "", "", "", "", "degrees", "Average wind direction (St Lawrence Seaway weather ASM).", nullptr)
-X(KEY_WIND_GUST_SPEED, "wind_gust_speed", "", "", "", "", "", "knots", "Wind gust speed (St Lawrence Seaway weather ASM).", nullptr)
-X(KEY_AIR_TEMPERATURE, "air_temperature", "", "", "", "", "", "celsius", "Air temperature (St Lawrence Seaway weather ASM).", nullptr)
-X(KEY_RELATIVE_HUMIDITY, "relative_humidity", "", "", "", "", "", "percentage", "Relative humidity (St Lawrence Seaway weather ASM).", nullptr)
-X(KEY_BAROMETRIC_PRESSURE, "barometric_pressure", "", "", "", "", "", "hPa", "Barometric pressure in hPa (St Lawrence Seaway weather ASM).", nullptr)
-X(KEY_PRESSURE_TENDENCY, "pressure_tendency", "", "", "", "", "", "", "Barometric pressure tendency (St Lawrence Seaway weather ASM).", nullptr)
-X(KEY_DEW_POINT, "dew_point", "", "", "", "", "", "celsius", "Dew point (St Lawrence Seaway weather ASM).", nullptr)
-X(KEY_WATER_TEMPERATURE, "water_temperature", "", "", "", "", "", "celsius", "Water temperature (St Lawrence Seaway weather ASM).", nullptr)
-X(KEY_WATERTEMP, "watertemp", "", "", "", "", "", "Celsius", "Water temperature", nullptr)
-X(KEY_WATER_FLOW, "water_flow", "", "", "", "", "", "", "Water flow (St Lawrence Seaway water flow ASM).", nullptr)
-X(KEY_WAVEDIR, "wavedir", "", "", "", "", "", "degrees", "Wave direction (from true north).", nullptr)
-X(KEY_WEATHER_REPORT_TYPE, "weather_report_type", "", "", "", "", "", "", "Weather report type/sub-message identifier (St Lawrence Seaway ASM).", nullptr)
-X(KEY_WAVEHEIGHT, "waveheight", "", "", "", "", "", "meters", "Wave height", nullptr)
-X(KEY_WAVEPERIOD, "waveperiod", "", "", "", "", "", "seconds", "Wave period", nullptr)
+X(KEY_TRANSMISSION_CONTROL, "transmission_control", "", "", "", "", "", "",
+  "Transmission control for AIS satellite broadcast message (type 4/11; 0=stop "
+  "msg 27 within base coverage, 1=transmit msg 27).",
+  nullptr)
+X(KEY_VDES_CAPABILITIES, "vdes_capabilities", "", "", "", "", "", "",
+  "VDES capabilities (type 24B; 2-bit; AIS only / VDES ASM / +VDE-TER / "
+  "+VDE-SAT).",
+  &LookupTable_vdes_capabilities)
+X(KEY_VENDORID, "vendorid", "", "", "vendorid", "", "", "", "Vendor ID",
+  nullptr)
+X(KEY_VIN, "vin", "", "", "", "", "", "",
+  "Vessel ID (8-char Inland AIS European Number of Vessel; ERI ENI).", nullptr)
+X(KEY_VIRTUAL_AID, "virtual_aid", "", "", "", "", "", "",
+  "Virtual Aid flag (0=Real; 1=Virtual/Simulated).", nullptr)
+X(KEY_VTS_TARGET_ID_TYPE, "vts_target_id_type", "", "", "", "", "", "",
+  "VTS target ID type.", &LookupTable_vts_target_id_type)
+X(KEY_VTS_TARGET_ID, "vts_target_id", "", "", "", "", "", "",
+  "VTS target identifier (interpretation per vts_target_id_type).", nullptr)
+X(KEY_VTS_TARGET_LAT, "vts_target_lat", "", "", "", "", "", "degrees",
+  "VTS target latitude (IMO Circ.289 §6).", nullptr)
+X(KEY_VTS_TARGET_LON, "vts_target_lon", "", "", "", "", "", "degrees",
+  "VTS target longitude (IMO Circ.289 §6).", nullptr)
+X(KEY_VTS_TARGET_COG, "vts_target_cog", "", "", "", "", "", "degrees",
+  "VTS target course over ground (IMO Circ.289 §6).", nullptr)
+X(KEY_VTS_TARGET_TIMESTAMP, "vts_target_timestamp", "", "", "", "", "", "",
+  "VTS target report UTC second (0..59; IMO Circ.289 §6).", nullptr)
+X(KEY_VTS_TARGET_SOG, "vts_target_sog", "", "", "", "", "", "knots",
+  "VTS target speed over ground (IMO Circ.289 §6).", nullptr)
+X(KEY_VISGREATER, "visgreater", "", "", "", "", "", "",
+  "Visibility-greater-than flag (1=exceeds `visibility`).", nullptr)
+X(KEY_VISIBILITY, "visibility", "", "", "", "", "", "nm",
+  "Horizontal visibility (0.1 NM units; IMO Circ.289 weather/hydro ASM).",
+  nullptr)
+X(KEY_VISIBILITY_KM, "visibility_km", "", "", "", "", "", "km",
+  "Horizontal visibility (0.1 km units; St Lawrence Seaway weather ASM).",
+  nullptr)
+X(KEY_WATERLEVEL, "waterlevel", "", "", "", "", "", "",
+  "Water Level (deviation from local chart datum).", nullptr)
+X(KEY_WATER_LEVEL_TYPE, "water_level_type", "", "", "", "", "", "",
+  "Water level type (St Lawrence Seaway water level ASM).", nullptr)
+X(KEY_REFERENCE_DATUM, "reference_datum", "", "", "", "", "", "",
+  "Reference datum (St Lawrence Seaway water level ASM).", nullptr)
+X(KEY_READING_TYPE, "reading_type", "", "", "", "", "", "",
+  "Reading type (St Lawrence Seaway sensor ASM).", nullptr)
+X(KEY_WIND_SPEED_AVG, "wind_speed_avg", "", "", "", "", "", "knots",
+  "Average wind speed (St Lawrence Seaway weather ASM).", nullptr)
+X(KEY_WIND_DIRECTION_AVG, "wind_direction_avg", "", "", "", "", "", "degrees",
+  "Average wind direction (St Lawrence Seaway weather ASM).", nullptr)
+X(KEY_WIND_GUST_SPEED, "wind_gust_speed", "", "", "", "", "", "knots",
+  "Wind gust speed (St Lawrence Seaway weather ASM).", nullptr)
+X(KEY_AIR_TEMPERATURE, "air_temperature", "", "", "", "", "", "celsius",
+  "Air temperature (St Lawrence Seaway weather ASM).", nullptr)
+X(KEY_RELATIVE_HUMIDITY, "relative_humidity", "", "", "", "", "", "percentage",
+  "Relative humidity (St Lawrence Seaway weather ASM).", nullptr)
+X(KEY_BAROMETRIC_PRESSURE, "barometric_pressure", "", "", "", "", "", "hPa",
+  "Barometric pressure in hPa (St Lawrence Seaway weather ASM).", nullptr)
+X(KEY_PRESSURE_TENDENCY, "pressure_tendency", "", "", "", "", "", "",
+  "Barometric pressure tendency (St Lawrence Seaway weather ASM).", nullptr)
+X(KEY_DEW_POINT, "dew_point", "", "", "", "", "", "celsius",
+  "Dew point (St Lawrence Seaway weather ASM).", nullptr)
+X(KEY_WATER_TEMPERATURE, "water_temperature", "", "", "", "", "", "celsius",
+  "Water temperature (St Lawrence Seaway weather ASM).", nullptr)
+X(KEY_WATERTEMP, "watertemp", "", "", "", "", "", "Celsius",
+  "Water temperature", nullptr)
+X(KEY_WATER_FLOW, "water_flow", "", "", "", "", "", "",
+  "Water flow (St Lawrence Seaway water flow ASM).", nullptr)
+X(KEY_WAVEDIR, "wavedir", "", "", "", "", "", "degrees",
+  "Wave direction (from true north).", nullptr)
+X(KEY_WEATHER_REPORT_TYPE, "weather_report_type", "", "", "", "", "", "",
+  "Weather report type/sub-message identifier (St Lawrence Seaway ASM).",
+  nullptr)
+X(KEY_WAVEHEIGHT, "waveheight", "", "", "", "", "", "meters", "Wave height",
+  nullptr)
+X(KEY_WAVEPERIOD, "waveperiod", "", "", "", "", "", "seconds", "Wave period",
+  nullptr)
 X(KEY_WDIR, "wdir", "", "", "", "", "", "degrees", "Wind direction", nullptr)
-X(KEY_WIND_DIRECTION, "wind_direction", "", "", "", "", "", "degrees", "Wind direction (EMMA warning DAC 200 FID 23).", nullptr)
+X(KEY_WIND_DIRECTION, "wind_direction", "", "", "", "", "", "degrees",
+  "Wind direction (EMMA warning DAC 200 FID 23).", nullptr)
 X(KEY_WGUST, "wgust", "", "", "", "", "", "knots", "Gust speed", nullptr)
-X(KEY_WGUSTDIR, "wgustdir", "", "", "", "", "", "", "Wind Gust direction", nullptr)
+X(KEY_WGUSTDIR, "wgustdir", "", "", "", "", "", "", "Wind Gust direction",
+  nullptr)
 X(KEY_WSPEED, "wspeed", "", "", "", "", "", "m/s", "Wind speed", nullptr)
 X(KEY_YEAR, "year", "", "", "", "", "", "", "Year (UTC)", nullptr)
-X(KEY_ZONESIZE, "zonesize", "", "", "", "", "", "", "Size of transitional zone.", nullptr)
-X(KEY_ASM_VERSION, "asm_version", "", "", "", "", "", "", "ASM version indicator", nullptr)
-X(KEY_UN_COUNTRY, "un_country", "", "", "", "", "", "", "UN country code (2x6-bit ASCII)", nullptr)
-X(KEY_FAIRWAY_SECTION, "fairway_section", "", "", "", "", "", "", "Fairway section number", nullptr)
-X(KEY_OBJECT_CODE, "object_code", "", "", "", "", "", "", "Object code (5x6-bit ASCII)", nullptr)
-X(KEY_FAIRWAY_HECTOMETRE, "fairway_hectometre", "", "", "", "", "", "", "Fairway hectometre", nullptr)
-X(KEY_BRIDGE_CLEARANCE, "bridge_clearance", "", "", "", "", "", "cm", "Bridge clearance from water surface", nullptr)
-X(KEY_MEASUREMENT_AGE, "measurement_age", "", "", "", "", "", "minutes", "Age of measurement", nullptr)
-X(KEY_CLEARANCE_ACCURACY, "clearance_accuracy", "", "", "", "", "", "cm", "Bridge clearance accuracy (+/- cm)", nullptr)
-X(KEY_LINKAGE_ID, "linkage_id", "", "", "", "", "", "", "Message linkage ID", nullptr)
-X(KEY_SENDER_CLASSIFICATION, "sender_classification", "", "", "", "", "", "", "Sender classification.", &LookupTable_sender_classification)
-X(KEY_ROUTE_TYPE, "route_type", "", "", "", "", "", "", "Route type (IMO Circ.289).", &LookupTable_route_types)
-X(KEY_DURATION_MINUTES, "duration_minutes", "", "", "", "", "", "minutes", "Route validity duration", nullptr)
-X(KEY_WAYPOINT_COUNT, "waypoint_count", "", "", "", "", "", "", "Number of waypoints", nullptr)
-X(KEY_WAYPOINTS, "waypoints", "", "", "", "", "", "", "Waypoints list (lat,lon;...)", nullptr)
-X(KEY_TIDAL, "tidal", "", "", "", "", "", "", "Tidal current predictions (lat,lon,dir_deg,speed_kn;... per point; -1 = n/a; IMO Circ.289 FID 32).", nullptr)
-X(KEY_TRAFFIC_SIGNAL, "traffic_signal", "", "", "", "", "", "", "Marine traffic signal in service (IMO Circ.289 FID 19; Table 8.2 code).", nullptr)
-X(KEY_NEXT_SIGNAL, "next_signal", "", "", "", "", "", "", "Expected next marine traffic signal (IMO Circ.289 FID 19).", nullptr)
-X(KEY_TARGETS, "targets", "", "", "", "", "", "", "VTS-generated/synthetic targets (id,lat,lon,cog,sog;... per target; IMO Circ.289 FID 17).", nullptr)
-X(KEY_PLANNED_SPEED, "planned_speed", "", "", "", "", "", "kn", "Planned speed for the final route leg (STM route; DAC 265 FID 1).", nullptr)
-X(KEY_STEERING_MODE, "steering_mode", "", "", "", "", "", "", "Steering mode (STM route; DAC 265 FID 1; 0=manual, 1=heading, 2=track).", nullptr)
-X(KEY_SENSOR_REPORT_TYPE, "sensor_report_type", "", "", "", "", "", "", "Sensor report type (IMO Circ.289 Table 12.4)", nullptr)
-X(KEY_ALT_UNIT, "altitude_unit", "altitude_unit", "altitude_unit", "", "", "", "", "", nullptr)
-X(KEY_VELOCITY_TYPE, "velocity_type", "velocity_type", "velocity_type", "", "", "", "", "", nullptr)
-X(KEY_GROUND_SPEED, "ground_speed", "ground_speed", "ground_speed", "speed", "", "", "", "", nullptr)
-X(KEY_VERTICAL_RATE, "vertical_rate", "vertical_rate", "vertical_rate", "", "", "", "", "", nullptr)
-X(KEY_TRUE_AIRSPEED, "true_airspeed", "true_airspeed", "true_airspeed", "", "", "", "", "", nullptr)
-X(KEY_INDICATED_AIRSPEED, "indicated_airspeed", "indicated_airspeed", "indicated_airspeed", "", "", "", "", "", nullptr)
+X(KEY_ZONESIZE, "zonesize", "", "", "", "", "", "",
+  "Size of transitional zone.", nullptr)
+X(KEY_ASM_VERSION, "asm_version", "", "", "", "", "", "",
+  "ASM version indicator", nullptr)
+X(KEY_UN_COUNTRY, "un_country", "", "", "", "", "", "",
+  "UN country code (2x6-bit ASCII)", nullptr)
+X(KEY_FAIRWAY_SECTION, "fairway_section", "", "", "", "", "", "",
+  "Fairway section number", nullptr)
+X(KEY_OBJECT_CODE, "object_code", "", "", "", "", "", "",
+  "Object code (5x6-bit ASCII)", nullptr)
+X(KEY_FAIRWAY_HECTOMETRE, "fairway_hectometre", "", "", "", "", "", "",
+  "Fairway hectometre", nullptr)
+X(KEY_BRIDGE_CLEARANCE, "bridge_clearance", "", "", "", "", "", "cm",
+  "Bridge clearance from water surface", nullptr)
+X(KEY_MEASUREMENT_AGE, "measurement_age", "", "", "", "", "", "minutes",
+  "Age of measurement", nullptr)
+X(KEY_CLEARANCE_ACCURACY, "clearance_accuracy", "", "", "", "", "", "cm",
+  "Bridge clearance accuracy (+/- cm)", nullptr)
+X(KEY_LINKAGE_ID, "linkage_id", "", "", "", "", "", "", "Message linkage ID",
+  nullptr)
+X(KEY_SENDER_CLASSIFICATION, "sender_classification", "", "", "", "", "", "",
+  "Sender classification.", &LookupTable_sender_classification)
+X(KEY_ROUTE_TYPE, "route_type", "", "", "", "", "", "",
+  "Route type (IMO Circ.289).", &LookupTable_route_types)
+X(KEY_DURATION_MINUTES, "duration_minutes", "", "", "", "", "", "minutes",
+  "Route validity duration", nullptr)
+X(KEY_WAYPOINT_COUNT, "waypoint_count", "", "", "", "", "", "",
+  "Number of waypoints", nullptr)
+X(KEY_WAYPOINTS, "waypoints", "", "", "", "", "", "",
+  "Waypoints list (lat,lon;...)", nullptr)
+X(KEY_TIDAL, "tidal", "", "", "", "", "", "",
+  "Tidal current predictions (lat,lon,dir_deg,speed_kn;... per point; -1 = "
+  "n/a; IMO Circ.289 FID 32).",
+  nullptr)
+X(KEY_TRAFFIC_SIGNAL, "traffic_signal", "", "", "", "", "", "",
+  "Marine traffic signal in service (IMO Circ.289 FID 19; Table 8.2 code).",
+  nullptr)
+X(KEY_NEXT_SIGNAL, "next_signal", "", "", "", "", "", "",
+  "Expected next marine traffic signal (IMO Circ.289 FID 19).", nullptr)
+X(KEY_TARGETS, "targets", "", "", "", "", "", "",
+  "VTS-generated/synthetic targets (id,lat,lon,cog,sog;... per target; IMO "
+  "Circ.289 FID 17).",
+  nullptr)
+X(KEY_PLANNED_SPEED, "planned_speed", "", "", "", "", "", "kn",
+  "Planned speed for the final route leg (STM route; DAC 265 FID 1).", nullptr)
+X(KEY_STEERING_MODE, "steering_mode", "", "", "", "", "", "",
+  "Steering mode (STM route; DAC 265 FID 1; 0=manual, 1=heading, 2=track).",
+  nullptr)
+X(KEY_SENSOR_REPORT_TYPE, "sensor_report_type", "", "", "", "", "", "",
+  "Sensor report type (IMO Circ.289 Table 12.4)", nullptr)
+X(KEY_ALT_UNIT, "altitude_unit", "altitude_unit", "altitude_unit", "", "", "",
+  "", "", nullptr)
+X(KEY_VELOCITY_TYPE, "velocity_type", "velocity_type", "velocity_type", "", "",
+  "", "", "", nullptr)
+X(KEY_GROUND_SPEED, "ground_speed", "ground_speed", "ground_speed", "speed", "",
+  "", "", "", nullptr)
+X(KEY_VERTICAL_RATE, "vertical_rate", "vertical_rate", "vertical_rate", "", "",
+  "", "", "", nullptr)
+X(KEY_TRUE_AIRSPEED, "true_airspeed", "true_airspeed", "true_airspeed", "", "",
+  "", "", "", nullptr)
+X(KEY_INDICATED_AIRSPEED, "indicated_airspeed", "indicated_airspeed",
+  "indicated_airspeed", "", "", "", "", "", nullptr)
 X(KEY_CPR_ODD, "cpr_odd", "cpr_odd", "cpr_odd", "", "", "", "", "", nullptr)
 X(KEY_CPR_LAT, "cpr_lat", "cpr_lat", "cpr_lat", "lat", "", "", "", "", nullptr)
 X(KEY_CPR_LON, "cpr_lon", "cpr_lon", "cpr_lon", "lon", "", "", "", "", nullptr)
 X(KEY_DF, "df", "df", "df", "", "", "", "", "", nullptr)
 X(KEY_DF_TEXT, "df_text", "df_text", "df_text", "", "", "", "", "", nullptr)
 X(KEY_SIGNAL, "signal", "signal", "signal", "", "", "", "", "", nullptr)
-X(KEY_VS, "vertical_status", "vertical_status", "vertical_status", "", "", "", "", "", nullptr)
+X(KEY_VS, "vertical_status", "vertical_status", "vertical_status", "", "", "",
+  "", "", nullptr)
 X(KEY_CC, "cross_link", "cross_link", "cross_link", "", "", "", "", "", nullptr)
-X(KEY_SL, "sensitivity", "sensitivity", "sensitivity", "", "", "", "", "", nullptr)
+X(KEY_SL, "sensitivity", "sensitivity", "sensitivity", "", "", "", "", "",
+  nullptr)
 X(KEY_RI, "reply_info", "reply_info", "reply_info", "", "", "", "", "", nullptr)
-X(KEY_FS, "flight_status", "flight_status", "flight_status", "", "", "", "", "", nullptr)
-X(KEY_DR, "downlink_request", "downlink_request", "downlink_request", "", "", "", "", "", nullptr)
+X(KEY_FS, "flight_status", "flight_status", "flight_status", "", "", "", "", "",
+  nullptr)
+X(KEY_DR, "downlink_request", "downlink_request", "downlink_request", "", "",
+  "", "", "", nullptr)
 X(KEY_CA, "capability", "capability", "capability", "", "", "", "", "", nullptr)
-X(KEY_CA_TEXT, "capability_text", "capability_text", "capability_text", "", "", "", "", "", nullptr)
+X(KEY_CA_TEXT, "capability_text", "capability_text", "capability_text", "", "",
+  "", "", "", nullptr)
 X(KEY_AA, "address", "address", "address", "", "", "", "", "", nullptr)
-X(KEY_IID, "interrogator", "interrogator", "interrogator", "", "", "", "", "", nullptr)
-X(KEY_RAW_MESSAGE, "raw_message", "raw_message", "raw_message", "", "", "", "", "", nullptr)
+X(KEY_IID, "interrogator", "interrogator", "interrogator", "", "", "", "", "",
+  nullptr)
+X(KEY_RAW_MESSAGE, "raw_message", "raw_message", "raw_message", "", "", "", "",
+  "", nullptr)
 X(KEY_ICAO, "icao", "icao", "icao", "", "", "", "", "", nullptr)
-X(KEY_TYPE_TEXT, "type_text", "type_text", "type_text", "", "", "", "", "", nullptr)
-X(KEY_WAKE_VORTEX, "wake_vortex", "wake_vortex", "wake_vortex", "", "", "", "", "", nullptr)
-X(KEY_BERTH_TYPE, "berth_type", "", "", "", "", "", "", "Berthing/mooring facility type (IMO Circ.289 DAC 1 FID 20).", nullptr)
-X(KEY_BERTH_NUMBER, "berth_number", "", "", "", "", "", "", "Berth/mooring number (IMO Circ.289 DAC 1 FID 20).", nullptr)
-X(KEY_BERTH_NAME, "berth_name", "", "", "", "", "", "", "Berth/mooring name (IMO Circ.289 DAC 1 FID 20).", nullptr)
-X(KEY_BERTH_ARRIVAL_TIME, "berth_arrival_time", "", "", "", "", "", "UTC", "Estimated arrival time (IMO Circ.289 DAC 1 FID 20).", nullptr)
-X(KEY_BERTH_DEPARTURE_TIME, "berth_departure_time", "", "", "", "", "", "UTC", "Expected departure time (IMO Circ.289 DAC 1 FID 20).", nullptr)
-X(KEY_BERTH_LON, "berth_lon", "", "", "", "", "", "degrees", "Berth longitude (IMO Circ.289 DAC 1 FID 20).", nullptr)
-X(KEY_BERTH_LAT, "berth_lat", "", "", "", "", "", "degrees", "Berth latitude (IMO Circ.289 DAC 1 FID 20).", nullptr)
-X(KEY_AREA_NOTICE_TYPE, "area_notice_type", "", "", "", "", "", "", "Area notice type (IMO Circ.289 DAC 1 FID 23).", nullptr)
-X(KEY_AREA_NOTICE_NAME, "area_notice_name", "", "", "", "", "", "", "Area notice name/description (IMO Circ.289 DAC 1 FID 23).", nullptr)
-X(KEY_AREA_NOTICE_DURATION, "area_notice_duration", "", "", "", "", "", "minutes", "Area notice duration (IMO Circ.289 DAC 1 FID 23).", nullptr)
-X(KEY_AREA_NOTICE_LAT, "area_notice_lat", "", "", "", "", "", "", "Latitude of the first sub-area (anchor for the map badge; IMO Circ.289 area notice).", nullptr)
-X(KEY_AREA_NOTICE_LON, "area_notice_lon", "", "", "", "", "", "", "Longitude of the first sub-area (IMO Circ.289 area notice).", nullptr)
-X(KEY_AREA_SHAPES, "area_shapes", "", "", "", "", "", "", "Sub-areas as shape records: c,lon,lat,radius_m (circle/point), r,lon,lat,east_m,north_m,orientation (rectangle), s,lon,lat,radius_m,left,right (sector), separated by ; (IMO Circ.289 area notice).", nullptr)
-X(KEY_CARGO_HAZARD_CLASS, "cargo_hazard_class", "", "", "", "", "", "", "IMDG hazard class (IMO Circ.289 DAC 1 FID 25).", nullptr)
-X(KEY_CARGO_HAZARD_CATEGORY, "cargo_hazard_category", "", "", "", "", "", "", "IMDG sub-class category (IMO Circ.289 DAC 1 FID 25).", nullptr)
-X(KEY_CARGO_HAZARD_ID, "cargo_hazard_id", "", "", "", "", "", "", "UN hazmat ID number (IMO Circ.289 DAC 1 FID 25).", nullptr)
-X(KEY_CARGO_HAZARD_QUANTITY, "cargo_hazard_quantity", "", "", "", "", "", "tonnes", "Total hazard quantity on board (IMO Circ.289 DAC 1 FID 25).", nullptr)
-X(KEY_CARGO_HAZARD_REPORT_TYPE, "cargo_hazard_report_type", "", "", "", "", "", "", "Cargo hazard report type (IMO Circ.289 DAC 1 FID 25).", nullptr)
-X(KEY_TOPIC, "topic", "", "", "", "", "topic", "", "Control line: the payload it carries.", nullptr)
-X(KEY_STATION, "station", "", "", "", "", "station", "", "Control line: a receiving station record.", nullptr)
-X(KEY_ID, "id", "", "", "", "", "id", "", "Identifier of a control record.", nullptr)
-X(KEY_ONLINE, "online", "", "", "", "", "online", "", "Whether a station is connected.", nullptr)
-X(KEY_LAST_SEEN, "last", "", "", "", "", "last", "s", "When a station last sent.", nullptr)
-X(KEY_RATE, "rate", "", "", "", "", "rate", "msg/s", "Message rate of a station.", nullptr)
-X(KEY_SEQ, "seq", "", "", "", "", "seq", "", "Change sequence of a control record.", nullptr)
-X(KEY_GONE, "gone", "", "", "", "", "gone", "", "The record is withdrawn.", nullptr)
+X(KEY_TYPE_TEXT, "type_text", "type_text", "type_text", "", "", "", "", "",
+  nullptr)
+X(KEY_WAKE_VORTEX, "wake_vortex", "wake_vortex", "wake_vortex", "", "", "", "",
+  "", nullptr)
+X(KEY_BERTH_TYPE, "berth_type", "", "", "", "", "", "",
+  "Berthing/mooring facility type (IMO Circ.289 DAC 1 FID 20).", nullptr)
+X(KEY_BERTH_NUMBER, "berth_number", "", "", "", "", "", "",
+  "Berth/mooring number (IMO Circ.289 DAC 1 FID 20).", nullptr)
+X(KEY_BERTH_NAME, "berth_name", "", "", "", "", "", "",
+  "Berth/mooring name (IMO Circ.289 DAC 1 FID 20).", nullptr)
+X(KEY_BERTH_ARRIVAL_TIME, "berth_arrival_time", "", "", "", "", "", "UTC",
+  "Estimated arrival time (IMO Circ.289 DAC 1 FID 20).", nullptr)
+X(KEY_BERTH_DEPARTURE_TIME, "berth_departure_time", "", "", "", "", "", "UTC",
+  "Expected departure time (IMO Circ.289 DAC 1 FID 20).", nullptr)
+X(KEY_BERTH_LON, "berth_lon", "", "", "", "", "", "degrees",
+  "Berth longitude (IMO Circ.289 DAC 1 FID 20).", nullptr)
+X(KEY_BERTH_LAT, "berth_lat", "", "", "", "", "", "degrees",
+  "Berth latitude (IMO Circ.289 DAC 1 FID 20).", nullptr)
+X(KEY_AREA_NOTICE_TYPE, "area_notice_type", "", "", "", "", "", "",
+  "Area notice type (IMO Circ.289 DAC 1 FID 23).", nullptr)
+X(KEY_AREA_NOTICE_NAME, "area_notice_name", "", "", "", "", "", "",
+  "Area notice name/description (IMO Circ.289 DAC 1 FID 23).", nullptr)
+X(KEY_AREA_NOTICE_DURATION, "area_notice_duration", "", "", "", "", "",
+  "minutes", "Area notice duration (IMO Circ.289 DAC 1 FID 23).", nullptr)
+X(KEY_AREA_NOTICE_LAT, "area_notice_lat", "", "", "", "", "", "",
+  "Latitude of the first sub-area (anchor for the map badge; IMO Circ.289 area "
+  "notice).",
+  nullptr)
+X(KEY_AREA_NOTICE_LON, "area_notice_lon", "", "", "", "", "", "",
+  "Longitude of the first sub-area (IMO Circ.289 area notice).", nullptr)
+X(KEY_AREA_SHAPES, "area_shapes", "", "", "", "", "", "",
+  "Sub-areas as shape records: c,lon,lat,radius_m (circle/point), "
+  "r,lon,lat,east_m,north_m,orientation (rectangle), "
+  "s,lon,lat,radius_m,left,right (sector), separated by ; (IMO Circ.289 area "
+  "notice).",
+  nullptr)
+X(KEY_CARGO_HAZARD_CLASS, "cargo_hazard_class", "", "", "", "", "", "",
+  "IMDG hazard class (IMO Circ.289 DAC 1 FID 25).", nullptr)
+X(KEY_CARGO_HAZARD_CATEGORY, "cargo_hazard_category", "", "", "", "", "", "",
+  "IMDG sub-class category (IMO Circ.289 DAC 1 FID 25).", nullptr)
+X(KEY_CARGO_HAZARD_ID, "cargo_hazard_id", "", "", "", "", "", "",
+  "UN hazmat ID number (IMO Circ.289 DAC 1 FID 25).", nullptr)
+X(KEY_CARGO_HAZARD_QUANTITY, "cargo_hazard_quantity", "", "", "", "", "",
+  "tonnes", "Total hazard quantity on board (IMO Circ.289 DAC 1 FID 25).",
+  nullptr)
+X(KEY_CARGO_HAZARD_REPORT_TYPE, "cargo_hazard_report_type", "", "", "", "", "",
+  "", "Cargo hazard report type (IMO Circ.289 DAC 1 FID 25).", nullptr)
+X(KEY_TOPIC, "topic", "", "", "", "", "topic", "",
+  "Control line: the payload it carries.", nullptr)
+X(KEY_STATION, "station", "", "", "", "", "station", "",
+  "Control line: a receiving station record.", nullptr)
+X(KEY_ID, "id", "", "", "", "", "id", "", "Identifier of a control record.",
+  nullptr)
+X(KEY_ONLINE, "online", "", "", "", "", "online", "",
+  "Whether a station is connected.", nullptr)
+X(KEY_LAST_SEEN, "last", "", "", "", "", "last", "s",
+  "When a station last sent.", nullptr)
+X(KEY_RATE, "rate", "", "", "", "", "rate", "msg/s",
+  "Message rate of a station.", nullptr)
+X(KEY_SEQ, "seq", "", "", "", "", "seq", "",
+  "Change sequence of a control record.", nullptr)
+X(KEY_GONE, "gone", "", "", "", "", "gone", "", "The record is withdrawn.",
+  nullptr)
 
 X(KEY_PORT_CODE, "code", "", "", "", "", "", "", "Port identifier.", nullptr)
-X(KEY_PORT_SIZE, "size", "", "", "", "", "", "", "Port size: 0 unknown or very small, 1 small, 2 medium, 3 large.", nullptr)
+X(KEY_PORT_PARENT, "parent_unlocode", "", "", "", "parent_unlocode", "", "",
+  "Optional parent port UN/LOCODE.", nullptr)
+X(KEY_PORT_SIZE, "size", "", "", "", "size", "", "",
+  "Port size: 0 unknown or very small, 1 small, 2 medium, 3 large.", nullptr)
+
+// Persistent geographic place definitions (GeoJSON), read with
+// JSON_DICT_SETTING. Shared structural fields use KEY_SETTING_ID and
+// KEY_SETTING_MODEL_TYPE.
+X(KEY_PLACE_NAME, "", "", "", "", "name", "", "", "Place name", nullptr)
+X(KEY_PLACE_GEOMETRY, "", "", "", "", "geometry", "", "",
+  "Place definition metadata", nullptr)
+X(KEY_PLACE_COORDINATES, "", "", "", "", "coordinates", "", "",
+  "Place definition metadata", nullptr)
+X(KEY_PLACE_PROPERTIES, "", "", "", "", "properties", "", "",
+  "Place definition metadata", nullptr)
+X(KEY_PLACE_PLACE_TYPE, "", "", "", "", "place_type", "", "",
+  "Place definition metadata", nullptr)
+X(KEY_PLACE_UNLOCODE, "", "", "", "", "unlocode", "", "",
+  "Place definition metadata", nullptr)
+X(KEY_PLACE_CATEGORY, "", "", "", "", "category", "", "",
+  "Place definition metadata", nullptr)
+X(KEY_PLACE_SCHEMA_VERSION, "", "", "", "", "schema_version", "", "",
+  "Place definition metadata", nullptr)
+X(KEY_PLACE_REVISION, "", "", "", "", "revision", "", "",
+  "Place definition metadata", nullptr)
+X(KEY_PLACE_PORT_UNLOCODE, "", "", "", "", "port_unlocode", "", "",
+  "Geographic metadata", nullptr)
+
+X(KEY_PLACE_FEATURES, "", "", "", "", "features", "", "", "GeoJSON features", nullptr)

@@ -549,7 +549,7 @@ const webviewerSchema = {
     station: {
         name: 'station',
         section: 'Station',
-        restartWebviewer: true,
+
         label: 'Station',
         type: 'text',
         jsonpath: 'station',
@@ -560,7 +560,7 @@ const webviewerSchema = {
     station_link: {
         name: 'station_link',
         section: 'Station',
-        restartWebviewer: true,
+
         label: 'Station Link',
         type: 'text',
         width: 50,
@@ -571,7 +571,7 @@ const webviewerSchema = {
     lat: {
         name: 'lat',
         section: 'Location',
-        restartWebviewer: true,
+
         label: 'Latitude',
         type: 'number',
         jsonpath: 'lat',
@@ -585,7 +585,7 @@ const webviewerSchema = {
     lon: {
         name: 'lon',
         section: 'Location',
-        restartWebviewer: true,
+
         label: 'Longitude',
         type: 'number',
         jsonpath: 'lon',
@@ -596,10 +596,16 @@ const webviewerSchema = {
         width: 50,
         tooltip: 'Station longitude in decimal degrees'
     },
+    places: {
+        name: 'places', section: 'Storage',
+        label: 'Place Directory', type: 'text', jsonpath: 'places',
+        placeholder: '/etc/AIS-catcher/places', width: 100,
+        tooltip: 'Directory containing saved port, berth, anchorage, and custom area definitions'
+    },
     plugin_dir: {
         name: 'plugin_dir',
         section: 'Storage',
-        restartWebviewer: true,
+
         label: 'Plugin Directory',
         type: 'text',
         jsonpath: 'plugin_dir',
@@ -610,7 +616,7 @@ const webviewerSchema = {
     mbtiles: {
         name: 'mbtiles',
         section: 'MBTiles',
-        restartWebviewer: true,
+
         label: 'Map',
         type: 'list',
         jsonpath: 'mbtiles',
@@ -621,7 +627,7 @@ const webviewerSchema = {
     mboverlay: {
         name: 'mboverlay',
         section: 'MBTiles',
-        restartWebviewer: true,
+
         label: 'Overlay',
         type: 'list',
         jsonpath: 'mboverlay',
@@ -632,7 +638,7 @@ const webviewerSchema = {
     fstiles: {
         name: 'fstiles',
         section: 'Tile directories',
-        restartWebviewer: true,
+
         label: 'Map',
         type: 'list',
         jsonpath: 'fstiles',
@@ -643,7 +649,7 @@ const webviewerSchema = {
     fsoverlay: {
         name: 'fsoverlay',
         section: 'Tile directories',
-        restartWebviewer: true,
+
         label: 'Overlay',
         type: 'list',
         jsonpath: 'fsoverlay',
@@ -654,7 +660,7 @@ const webviewerSchema = {
     webcontrol_http: {
         name: 'webcontrol_http',
         section: 'Station',
-        restartWebviewer: true,
+
         label: 'Web Control Link',
         type: 'text',
         jsonpath: 'webcontrol_http',
@@ -666,7 +672,7 @@ const webviewerSchema = {
     file: {
         name: 'file',
         section: 'Backup',
-        restartWebviewer: true,
+
         label: 'Backup File',
         type: 'text',
         jsonpath: 'file',
@@ -676,20 +682,20 @@ const webviewerSchema = {
     backup: {
         name: 'backup',
         section: 'Backup',
-        restartWebviewer: true,
+
         label: 'Minutes',
         type: 'number',
         jsonpath: 'backup',
         defaultValue: 10,
-        min: 5,
+        min: 0,
         max: 2880,
         width: 25,
-        tooltip: 'How often the statistics file is written'
+        tooltip: 'Minutes between backups: 0 disables periodic writes; otherwise at least 5. The file is still saved on shutdown.'
     },
     history: {
         name: 'history',
         section: 'Retention',
-        restartWebviewer: true,
+
         label: 'Ship Timeout (s)',
         type: 'number',
         jsonpath: 'history',
@@ -702,7 +708,7 @@ const webviewerSchema = {
     track_memory: {
         name: 'track_memory',
         section: 'Tracks',
-        restartWebviewer: true,
+
         label: 'Track Memory (KB)',
         type: 'number',
         jsonpath: 'track_memory',
@@ -715,7 +721,7 @@ const webviewerSchema = {
     replay: {
         name: 'replay',
         section: 'Service',
-        restartWebviewer: true,
+
         label: 'Replay',
         type: 'toggle',
         jsonpath: 'replay',
@@ -726,7 +732,7 @@ const webviewerSchema = {
     split: {
         name: 'split',
         section: 'Service',
-        restartWebviewer: true,
+
         label: 'Per-Receiver Views',
         type: 'toggle',
         jsonpath: 'split',
@@ -737,7 +743,7 @@ const webviewerSchema = {
     track_time: {
         name: 'track_time',
         section: 'Tracks',
-        restartWebviewer: true,
+
         label: 'Max Track Age (s)',
         type: 'number',
         jsonpath: 'track_time',
@@ -750,7 +756,7 @@ const webviewerSchema = {
     context: {
         name: 'context',
         section: 'Storage',
-        restartWebviewer: true,
+
         label: 'Context',
         type: 'text',
         jsonpath: 'context',
@@ -771,7 +777,7 @@ const webviewerSchema = {
     share_loc: {
         name: 'share_loc',
         section: 'Location',
-        restartWebviewer: true,
+
         label: 'Location',
         type: 'toggle',
         jsonpath: 'share_loc',
@@ -782,7 +788,7 @@ const webviewerSchema = {
     use_gps: {
         name: 'use_gps',
         section: 'Location',
-        restartWebviewer: true,
+
         label: 'Use GPS',
         type: 'toggle',
         jsonpath: 'use_gps',
@@ -793,7 +799,7 @@ const webviewerSchema = {
     expire: {
         name: 'expire',
         section: 'Retention',
-        restartWebviewer: true,
+
         label: 'Expire',
         type: 'toggle',
         jsonpath: 'expire',
@@ -804,7 +810,7 @@ const webviewerSchema = {
     realtime: {
         name: 'realtime',
         section: 'Features',
-        restartWebviewer: true,
+
         label: 'Realtime',
         type: 'toggle',
         jsonpath: 'realtime',
@@ -815,7 +821,7 @@ const webviewerSchema = {
     msg: {
         name: 'msg',
         section: 'Features',
-        restartWebviewer: true,
+
         label: 'Msgs',
         type: 'toggle',
         jsonpath: 'msg',
@@ -826,7 +832,7 @@ const webviewerSchema = {
     geojson: {
         name: 'geojson',
         section: 'Service',
-        restartWebviewer: true,
+
         label: 'GeoJSON',
         type: 'toggle',
         jsonpath: 'geojson',
@@ -837,7 +843,7 @@ const webviewerSchema = {
     prome: {
         name: 'prome',
         section: 'Service',
-        restartWebviewer: true,
+
         label: 'Prometheus',
         type: 'toggle',
         jsonpath: 'prome',
@@ -848,7 +854,7 @@ const webviewerSchema = {
     log: {
         name: 'log',
         section: 'Features',
-        restartWebviewer: true,
+
         label: 'Show Log',
         type: 'toggle',
         jsonpath: 'log',
@@ -859,7 +865,7 @@ const webviewerSchema = {
     decoder: {
         name: 'decoder',
         section: 'Features',
-        restartWebviewer: true,
+
         label: 'Decoder',
         type: 'toggle',
         jsonpath: 'decoder',
@@ -870,7 +876,7 @@ const webviewerSchema = {
     zones: {
         name: 'zone',
         section: 'Zones',
-        restartWebviewer: true,
+
         label: 'Zones',
         type: 'zones',
         jsonpath: 'zone',
@@ -914,18 +920,14 @@ const sharingSchema = {
     }
 };
 
-// Two flags drive the embedded viewer after a save:
-//   restartWebviewer - applied on save while the receiver is stopped, else on
-//                      its next start; the frame reload follows the same rule
-//   reloadWebviewer  - takes effect when the engine restarts, so the frame is
-//                      reloaded once it is running again
+// Viewer settings are applied through the versioned configuration feed.
 const receiverSchema = {
     input: {
         name: "input",
         label: "Device Type",
         type: "select",
         jsonpath: "input",
-        reloadWebviewer: true,
+
         options: [
             { value: "", label: "Select Device" },
             { value: "RTLSDR", label: "RTLSDR" },
@@ -967,7 +969,7 @@ const receiverSchema = {
         type: "text",
         jsonpath: "serial",
         placeholder: "Optional Serial Key",
-        reloadWebviewer: true,
+
         tooltip: "Pick a device by serial number",
         dependsOn: {
             field: "input",
@@ -980,7 +982,7 @@ const receiverSchema = {
         type: "toggle",
         jsonpath: "active",
         defaultValue: true,
-        reloadWebviewer: true,
+
         width: 25
     },
     engines: {
@@ -989,7 +991,7 @@ const receiverSchema = {
         type: "engines",
         jsonpath: "engines",
         defaultValue: undefined,
-        reloadWebviewer: true,
+
         advanced: "Engines",
         options: [
             { value: "auto", label: "Auto" },
@@ -1585,7 +1587,7 @@ const receiverSchema = {
         type: "zones",
         jsonpath: "zone",
         defaultValue: [],
-        reloadWebviewer: true,
+
         tooltip: "Routes this receiver to outputs sharing a zone"
     }
 };

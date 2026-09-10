@@ -388,7 +388,7 @@ export function activate(filterMMSI = null) {
     document.addEventListener('keydown', keydownHandler);
 }
 
-export function deactivate() {
+export function deactivate(force = false) {
     if (keydownHandler) {
         document.removeEventListener('keydown', keydownHandler);
         keydownHandler = null;
@@ -398,7 +398,7 @@ export function deactivate() {
     savedState = { isPaused: viewer.isPaused };
     window.__app__.saveSettings();
 
-    if (viewer.isPaused || !viewer.backgroundStreaming) {
+    if (force || viewer.isPaused || !viewer.backgroundStreaming) {
         viewer.disconnect();
         viewer = null;
     }

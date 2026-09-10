@@ -1,8 +1,10 @@
+import {createPlaceEditor} from './places-editor.js';
 
 (function () {
     'use strict';
 
     let auth = 'login';
+    let placeEditor = null;
     let hasPassword = true;
     // the viewer is mounted on this server, so one exposed port serves both
     const VIEWER_PATH = '/viewer/';
@@ -64,6 +66,7 @@
     const systemTabs = document.getElementById('system-tabs');
     const systemSubtabs = document.getElementById('system-subtabs');
     let currentSystemTab = null;
+    let placeReturnTab = 'viewer';
     const loadedTabs = new Set();
     let flowResizeObserver = null;
     let flowRenderId = 0;
@@ -73,6 +76,7 @@
     const SYSTEM_TABS = {
         input: { label: 'Input', nav: 'input' },
         output: { label: 'Output', nav: 'output' },
+        places: { label: 'Places', nav: 'control-panel' },
         flow: { label: 'Flow', nav: 'control-panel' },
         status: { label: 'Status', nav: 'control-panel' },
         viewer: { label: 'Map', nav: 'control-panel' },
@@ -356,7 +360,6 @@
     let reloadUntil = 0;
     let reloadSawDown = false;
     let overlayRestartBtn = null;
-    let pendingViewerReload = false;
     let lastUptime = Infinity;
 
     function restartTimedOut() {
@@ -391,14 +394,10 @@
                 reloadSawDown = true;
             }
         }
-        const reloadFrame = pendingViewerReload && fell;
-        if (reloadFrame) pendingViewerReload = false;
 
         if (data.viewer && (!viewerLoaded || data.viewer !== port)) {
             port = data.viewer;
             clearOverlayMessages();
-            loadWebviewer();
-        } else if (reloadFrame && viewerLoaded) {
             loadWebviewer();
         }
         return data;
@@ -460,16 +459,10 @@
         }, 10000);
     }
 
-    window.hubConfigSaved = function (kind, opts) {
-        // a running receiver picks the settings up when it restarts
-        if (opts && opts.reloadWebviewer) pendingViewerReload = true;
-        if (opts && opts.restartWebviewer) {
-            if (engineRunning) pendingViewerReload = true;
-            else if (viewerLoaded) loadWebviewer();
-        }
-
-        if (kind === 'viewer' && !engineRunning) {
-            App.notify('info', 'Map viewer settings applied', 5000);
+    window.hubConfigSaved = function (kind) {
+        // Viewer polls configuration versions and applies changes in place.
+        if (kind === 'viewer') {
+            App.notify('info', 'Map settings saved; the viewer updates automatically', 5000);
         } else {
             App.notify('info', (engineRunning ? 'Restart' : 'Start') + ' the receiver to apply the new configuration', 8000);
             pendingApply = true;
@@ -611,10 +604,15 @@
         return window.AISComponents.tabScroller(el);
     }
 
+    function hasUnsaved() {
+        if (currentSystemTab === 'places') return !!placeEditor?.unsaved();
+        return typeof App !== 'undefined' && !!App.state?.unsaved;
+    }
     function confirmDiscardUnsaved(verb) {
-        if (typeof App === 'undefined' || !App.state || !App.state.unsaved) return true;
+        if (!hasUnsaved()) return true;
         if (!confirm(`You have unsaved changes. Are you sure you want to ${verb} without saving?`)) return false;
-        App.setUnsaved(false);
+        if (currentSystemTab === 'places') placeEditor.cancel();
+        else App.setUnsaved(false);
         return true;
     }
 
@@ -846,11 +844,12 @@
         if (!force && tab === currentSystemTab) return true;
 
         // Guard against losing unsaved edits when leaving an editable tab.
-        if (!force && typeof App !== 'undefined' && App.state && App.state.unsaved) {
+        if (!force && hasUnsaved()) {
             if (!confirmDiscardUnsaved('switch')) return false;
             loadedTabs.delete(currentSystemTab);
         }
 
+        if (tab === 'places' && currentSystemTab && currentSystemTab !== 'places') placeReturnTab = currentSystemTab;
         currentSystemTab = tab;
         const grouped = SYSTEM_GROUP.indexOf(tab) !== -1;
         if (grouped) lastSystemLeaf = tab;
@@ -886,6 +885,13 @@
             }
         } else if (tab === 'viewer') {
             if (!loadedTabs.has(tab)) { loadedTabs.add(tab); loadViewerConfig(); }
+        } else if (tab === 'places') {
+            if (!loadedTabs.has(tab)) {
+                loadedTabs.add(tab);
+                placeEditor?.destroy();
+                placeEditor = createPlaceEditor(document.getElementById('sys-places-body'), {onCancelSetup: () => switchSystemTab(placeReturnTab), onEnabled: () => { loadedTabs.clear(); loadedTabs.add('places'); }});
+            }
+            requestAnimationFrame(() => placeEditor.resize());
         } else if (tab === 'flow') {
             loadDataFlow();
         } else if (tab === 'config') {
@@ -903,10 +909,12 @@
         // one fresh config fetch per panel open; the tabs share it from here
         ConfigStore.invalidate();
         loadedTabs.clear();
+        placeEditor?.destroy();
         systemBody.innerHTML = `
             <div id="status-message" class="hidden"></div>
             <div class="sys-pane hidden" data-pane="input"><div id="sys-input-body"></div></div>
             <div class="sys-pane hidden" data-pane="output"><div id="sys-output-body"></div></div>
+            <div class="sys-pane hidden" data-pane="places"><div id="sys-places-body"></div></div>
             <div class="sys-pane hidden" data-pane="flow">
                 <p class="t-small t-muted">Signal routing between inputs and outputs based on shared zones.</p>
                 <div id="flow-loading" class="t-center t-subtle sys-empty">Loading&hellip;</div>
@@ -1048,7 +1056,7 @@
                       'history', 'track_memory', 'track_time', 'expire',
                       'replay', 'split',
                       'file', 'backup',
-                      'plugin_dir', 'context',
+                      'places', 'plugin_dir', 'context',
                       'mbtiles', 'mboverlay', 'fstiles', 'fsoverlay',
                       'realtime', 'msg', 'decoder', 'log', 'geojson', 'prome',
                       'zones'];
@@ -1415,7 +1423,7 @@
         const headerSave = document.getElementById('system-save');
         headerSave.addEventListener('click', async () => {
             headerSave.disabled = true;
-            try { await App.saveDirty(); } finally { headerSave.disabled = false; }
+            try { if (currentSystemTab === 'places') await placeEditor.save(); else await App.saveDirty(); } finally { headerSave.disabled = false; }
         });
         systemOverlay.addEventListener('click', e => {
             if (e.target === systemOverlay) closeSystem();

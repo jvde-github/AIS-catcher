@@ -17,5 +17,6 @@ const instance = shared.create({
 });
 
 export const {
-    get, set, LISTS, isHidden, toggle, setAll, reset, isActive, describe, passesAppearance, shipPasses,
+    get, set, LISTS, isHidden, toggle, setAll, reset, passesAppearance,
+    isActive, describe, shipPasses,
 } = instance;

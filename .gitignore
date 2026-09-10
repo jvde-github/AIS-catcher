@@ -14,3 +14,7 @@ debian/ais-catcher/
 frontend/src/node_modules/
 frontend/shared/node_modules/
 frontend/dist/
+
+__pycache__/
+/data/places/
+*.code-workspace

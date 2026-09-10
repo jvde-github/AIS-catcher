@@ -1,603 +1,652 @@
 /*
-	Copyright(c) 2021-2026 jvde.github@gmail.com
+        Copyright(c) 2021-2026 jvde.github@gmail.com
 
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
 
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
 
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <fstream>
 #include <chrono>
-#include <random>
 #include <cstring>
+#include <fstream>
+#include <random>
 #ifndef _WIN32
 #include <climits>
 #include <cstdlib>
 #endif
 
-#include "ControlCore.h"
-#include "SHA256.h"
 #include "Common.h"
-#include "Logger.h"
-#include "Helper.h"
-#include "Parse.h"
-#include "Keys.h"
-#include "Parser.h"
-#include "Writer.h"
-#include "Engine.h"
 #include "Config.h"
+#include "ControlCore.h"
 #include "DeviceManager.h"
+#include "Engine.h"
+#include "Helper.h"
+#include "Keys.h"
+#include "Logger.h"
+#include "Parse.h"
+#include "Parser.h"
+#include "SHA256.h"
+#include "Writer.h"
+#ifdef HASWEBVIEWER
+#include "WebViewer.h"
+#endif
 
 ControlCore::~ControlCore() {}
 
-ControlCore::ControlCore(const std::string &file, int port_override, const std::string &bind) : config_file(file), bind_address(bind)
-{
-	if (!std::ifstream(config_file).good())
-		createDefaultConfig();
+ControlCore::ControlCore(const std::string &file, int port_override,
+                         const std::string &bind)
+    : config_file(file), bind_address(bind) {
+  if (!std::ifstream(config_file).good())
+    createDefaultConfig();
 
-	addViewerDefaults();
-	readManagedFields(port_override);
+  refreshPlaces(Util::Helper::readFile(config_file));
+  addViewerDefaults();
+  readManagedFields(port_override);
 
-	auto_retry = desired;
+  auto_retry = desired;
 }
 
-void ControlCore::createDefaultConfig()
-{
-	const std::string content =
-		"{\n"
-		"  \"config\": \"aiscatcher\",\n"
-		"  \"version\": 1,\n"
-		"  \"engine\": \"off\",\n"
-		"  \"sharing\": true,\n"
-		"  \"control\": {\n"
-		"    \"wizard\": true,\n"
-		"    \"viewer\": { \"share_loc\": true, \"realtime\": true, \"decoder\": true, \"log\": false,\n"
-		"                 \"file\": " + JSON::Writer::escape(config_file + ".stats") + " }\n"
-		"  }\n"
-		"}\n";
+void ControlCore::createDefaultConfig() {
+  const std::string content =
+      "{\n"
+      "  \"config\": \"aiscatcher\",\n"
+      "  \"version\": 1,\n"
+      "  \"engine\": \"off\",\n"
+      "  \"sharing\": true,\n"
+      "  \"control\": {\n"
+      "    \"wizard\": true,\n"
+      "    \"viewer\": { \"share_loc\": true, \"realtime\": true, \"decoder\": "
+      "true, \"log\": false,\n"
+      "                 \"file\": " +
+      JSON::Writer::escape(config_file + ".stats") +
+      " }\n"
+      "  }\n"
+      "}\n";
 
-	std::string error;
-	if (!writeFileAtomic(config_file, content, error))
-		throw std::runtime_error("Control: cannot create config file \"" + config_file + "\": " + error);
+  std::string error;
+  if (!writeFileAtomic(config_file, content, error))
+    throw std::runtime_error("Control: cannot create config file \"" +
+                             config_file + "\": " + error);
 
-	Info() << "Control: created default config file " << config_file;
+  Info() << "Control: created default config file " << config_file;
 }
 
-void ControlCore::readManagedFields(int port_override)
-{
-	try
-	{
-		JSON::Parser parser(JSON_DICT_SETTING);
-		JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
+void ControlCore::readManagedFields(int port_override) {
+  try {
+    JSON::Parser parser(JSON_DICT_SETTING);
+    JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
 
-		for (const auto &m : doc.getMembers())
-		{
-			switch (m.Key())
-			{
-			case AIS::KEY_SETTING_ENGINE:
-				desired = Util::Parse::Switch(m.Get().to_string());
-				break;
-			case AIS::KEY_SETTING_CONTROL:
-				if (!m.Get().isObject())
-					throw std::runtime_error("control section needs to be an object");
+    for (const auto &m : doc.getMembers()) {
+      switch (m.Key()) {
+      case AIS::KEY_SETTING_ENGINE:
+        desired = Util::Parse::Switch(m.Get().to_string());
+        break;
+      case AIS::KEY_SETTING_CONTROL:
+        if (!m.Get().isObject())
+          throw std::runtime_error("control section needs to be an object");
 
-				applyAuthFields(m.Get());
-				break;
-			}
-		}
-	}
-	catch (const std::exception &e)
-	{
-		Error() << "Control: config file invalid, engine not started: " << e.what();
-		desired = false;
-	}
+        applyAuthFields(m.Get());
+        break;
+      }
+    }
+  } catch (const std::exception &e) {
+    Error() << "Control: config file invalid, engine not started: " << e.what();
+    desired = false;
+  }
 
-	if (port_override > 0)
-		control_port = port_override;
+  if (port_override > 0)
+    control_port = port_override;
 }
 
-void ControlCore::startEngine()
-{
-	command_seq++;
-	{
-		std::lock_guard<std::mutex> lock(mtx);
-		resetRetry();
-		if (desired)
-			return;
-		desired = true;
-		restart_pending = false;
-		status_epoch++;
-	}
-	persistEngineField(true);
-	cv.notify_all();
+void ControlCore::startEngine() {
+  command_seq++;
+  {
+    std::lock_guard<std::mutex> lock(mtx);
+    resetRetry();
+    if (desired)
+      return;
+    desired = true;
+    restart_pending = false;
+    status_epoch++;
+  }
+  persistEngineField(true);
+  cv.notify_all();
 }
 
-void ControlCore::stopEngine()
-{
-	command_seq++;
-	{
-		std::lock_guard<std::mutex> lock(mtx);
-		desired = false;
-		restart_pending = false;
-		resetRetry();
-		status_epoch++;
-	}
-	persistEngineField(false);
-	StopRequest();
+void ControlCore::stopEngine() {
+  command_seq++;
+  {
+    std::lock_guard<std::mutex> lock(mtx);
+    desired = false;
+    restart_pending = false;
+    resetRetry();
+    status_epoch++;
+  }
+  persistEngineField(false);
+  StopRequest();
 }
 
-void ControlCore::restartEngine()
-{
-	command_seq++;
-	bool running;
-	{
-		std::lock_guard<std::mutex> lock(mtx);
-		desired = true;
-		running = (state == EngineState::Running);
-		restart_pending = running;
-		resetRetry();
-		auto_retry = running;
-		status_epoch++;
-	}
-	persistEngineField(true);
+void ControlCore::restartEngine() {
+  command_seq++;
+  bool running;
+  {
+    std::lock_guard<std::mutex> lock(mtx);
+    desired = true;
+    running = (state == EngineState::Running);
+    restart_pending = running;
+    resetRetry();
+    auto_retry = running;
+    status_epoch++;
+  }
+  persistEngineField(true);
 
-	if (running)
-		StopRequest();
-	else
-		cv.notify_all();
+  if (running)
+    StopRequest();
+  else
+    cv.notify_all();
 }
 
-ControlCore::EngineState ControlCore::getEngineState()
-{
-	std::lock_guard<std::mutex> lock(mtx);
-	return state;
+ControlCore::EngineState ControlCore::getEngineState() {
+  std::lock_guard<std::mutex> lock(mtx);
+  return state;
 }
 
-long long ControlCore::getUptime()
-{
-	std::lock_guard<std::mutex> lock(mtx);
+long long ControlCore::getUptime() {
+  std::lock_guard<std::mutex> lock(mtx);
 
-	if (state != EngineState::Running)
-		return 0;
+  if (state != EngineState::Running)
+    return 0;
 
-	return (long long)(std::time(nullptr) - engine_start_time);
+  return (long long)(std::time(nullptr) - engine_start_time);
 }
 
-std::string ControlCore::getConfig()
-{
-	std::lock_guard<std::mutex> lock(file_mtx);
-	return Util::Helper::readFile(config_file);
+std::string ControlCore::getConfig() {
+  std::lock_guard<std::mutex> lock(file_mtx);
+  return Util::Helper::readFile(config_file);
 }
 
-bool ControlCore::setConfig(const std::string &json, std::string &error)
-{
-	if (!validate(json, error))
-		return false;
+bool ControlCore::setConfig(const std::string &json, std::string &error) {
+  if (!validate(json, error))
+    return false;
 
-	std::lock_guard<std::mutex> lock(file_mtx);
+  std::lock_guard<std::mutex> lock(file_mtx);
 
-	try
-	{
-		std::string ignore;
-		writeFileAtomic(config_file + ".bak", Util::Helper::readFile(config_file), ignore);
-	}
-	catch (const std::exception &)
-	{
-	}
+  try {
+    std::string ignore;
+    writeFileAtomic(config_file + ".bak", Util::Helper::readFile(config_file),
+                    ignore);
+  } catch (const std::exception &) {
+  }
 
-	if (!writeFileAtomic(config_file, json, error))
-		return false;
+  if (!writeFileAtomic(config_file, json, error))
+    return false;
 
-	refreshAuthFields(json);
+  refreshAuthFields(json);
+  refreshPlaces(json);
 
-	config_dirty = true;
+  config_dirty = true;
 
-	return true;
+  return true;
 }
 
-static bool isSameFile(const std::string &a, const std::string &b)
-{
+static bool isSameFile(const std::string &a, const std::string &b) {
 #ifdef _WIN32
-	return a == b;
+  return a == b;
 #else
-	char ra[PATH_MAX], rb[PATH_MAX];
-	if (!realpath(a.c_str(), ra) || !realpath(b.c_str(), rb))
-		return a == b;
-	return strcmp(ra, rb) == 0;
+  char ra[PATH_MAX], rb[PATH_MAX];
+  if (!realpath(a.c_str(), ra) || !realpath(b.c_str(), rb))
+    return a == b;
+  return strcmp(ra, rb) == 0;
 #endif
 }
 
 // Reads the pre-managed-mode config file recorded by the installer in
 // control.legacy_config; only that one path is ever served, never the
 // active config itself.
-bool ControlCore::readLegacyConfig(std::string &content)
-{
-	std::string path;
+bool ControlCore::readLegacyConfig(std::string &content) {
+  std::string path;
 
-	try
-	{
-		std::lock_guard<std::mutex> lock(file_mtx);
+  try {
+    std::lock_guard<std::mutex> lock(file_mtx);
 
-		JSON::Parser parser(JSON_DICT_SETTING);
-		JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
+    JSON::Parser parser(JSON_DICT_SETTING);
+    JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
 
-		const JSON::Value *v = doc.root[AIS::KEY_SETTING_CONTROL];
-		if (!v || !v->isObject())
-			return false;
+    const JSON::Value *v = doc.root[AIS::KEY_SETTING_CONTROL];
+    if (!v || !v->isObject())
+      return false;
 
-		for (const auto &c : v->getObject().getMembers())
-			if (c.Key() == AIS::KEY_SETTING_LEGACY_CONFIG)
-				path = c.Get().to_string();
-	}
-	catch (const std::exception &)
-	{
-		return false;
-	}
+    for (const auto &c : v->getObject().getMembers())
+      if (c.Key() == AIS::KEY_SETTING_LEGACY_CONFIG)
+        path = c.Get().to_string();
+  } catch (const std::exception &) {
+    return false;
+  }
 
-	if (path.empty() || isSameFile(path, config_file))
-		return false;
+  if (path.empty() || isSameFile(path, config_file))
+    return false;
 
-	try
-	{
-		content = Util::Helper::readFile(path);
+  try {
+    content = Util::Helper::readFile(path);
 
-		// syntactically valid JSON only; old configs may hold retired keys
-		JSON::Parser parser(JSON_DICT_SETTING);
-		parser.setSkipUnknown(true);
-		parser.parse(content);
-	}
-	catch (const std::exception &)
-	{
-		return false;
-	}
+    // syntactically valid JSON only; old configs may hold retired keys
+    JSON::Parser parser(JSON_DICT_SETTING);
+    parser.setSkipUnknown(true);
+    parser.parse(content);
+  } catch (const std::exception &) {
+    return false;
+  }
 
-	return true;
+  return true;
 }
 
-void ControlCore::applyAuthFields(const JSON::Value &control)
-{
-	bool wizard = false;
-	LogLevel level = LogLevel::DEBUG;
+void ControlCore::applyAuthFields(const JSON::Value &control) {
+  bool wizard = false;
+  LogLevel level = LogLevel::DEBUG;
 
-	for (const auto &c : control.getObject().getMembers())
-	{
-		if (c.Key() == AIS::KEY_SETTING_PASSWORD)
-			password_hash = c.Get().to_string();
-		else if (c.Key() == AIS::KEY_SETTING_SALT)
-			password_salt = c.Get().to_string();
-		else if (c.Key() == AIS::KEY_SETTING_WIZARD)
-			wizard = Util::Parse::Switch(c.Get().to_string());
-		else if (c.Key() == AIS::KEY_SETTING_LEVEL)
-		{
-			if (!Logger::parseLevel(c.Get().to_string(), level))
-			{
-				Warning() << "Control: invalid log level \"" << c.Get().to_string() << "\", using DEBUG";
-				level = LogLevel::DEBUG;
-			}
-		}
-	}
+  for (const auto &c : control.getObject().getMembers()) {
+    if (c.Key() == AIS::KEY_SETTING_PASSWORD)
+      password_hash = c.Get().to_string();
+    else if (c.Key() == AIS::KEY_SETTING_SALT)
+      password_salt = c.Get().to_string();
+    else if (c.Key() == AIS::KEY_SETTING_WIZARD)
+      wizard = Util::Parse::Switch(c.Get().to_string());
+    else if (c.Key() == AIS::KEY_SETTING_LEVEL) {
+      if (!Logger::parseLevel(c.Get().to_string(), level)) {
+        Warning() << "Control: invalid log level \"" << c.Get().to_string()
+                  << "\", using DEBUG";
+        level = LogLevel::DEBUG;
+      }
+    }
+  }
 
-	wizard_flag = wizard;
-	Logger::getInstance().setMinLevel(level);
+  wizard_flag = wizard;
+  Logger::getInstance().setMinLevel(level);
 }
 
-void ControlCore::refreshAuthFields(const std::string &json)
-{
-	try
-	{
-		JSON::Parser parser(JSON_DICT_SETTING);
-		JSON::Document doc = parser.parse(json);
+void ControlCore::refreshAuthFields(const std::string &json) {
+  try {
+    JSON::Parser parser(JSON_DICT_SETTING);
+    JSON::Document doc = parser.parse(json);
 
-		const JSON::Value *v = doc.root[AIS::KEY_SETTING_CONTROL];
-		std::lock_guard<std::mutex> lock(mtx);
-		if (v && v->isObject())
-			applyAuthFields(*v);
-		else
-		{
-			wizard_flag = false;
-			Logger::getInstance().setMinLevel(LogLevel::DEBUG);
-		}
-	}
-	catch (const std::exception &)
-	{
-	}
+    const JSON::Value *v = doc.root[AIS::KEY_SETTING_CONTROL];
+    std::lock_guard<std::mutex> lock(mtx);
+    if (v && v->isObject())
+      applyAuthFields(*v);
+    else {
+      wizard_flag = false;
+      Logger::getInstance().setMinLevel(LogLevel::DEBUG);
+    }
+  } catch (const std::exception &) {
+  }
 }
 
-bool ControlCore::wizardPending()
-{
-	std::lock_guard<std::mutex> lock(mtx);
-	return wizard_flag;
+bool ControlCore::wizardPending() {
+  std::lock_guard<std::mutex> lock(mtx);
+  return wizard_flag;
 }
 
-bool ControlCore::hasPassword()
-{
-	std::lock_guard<std::mutex> lock(mtx);
-	return !password_hash.empty();
+bool ControlCore::hasPassword() {
+  std::lock_guard<std::mutex> lock(mtx);
+  return !password_hash.empty();
 }
 
-bool ControlCore::verifyPassword(const std::string &password)
-{
-	std::lock_guard<std::mutex> lock(mtx);
+bool ControlCore::verifyPassword(const std::string &password) {
+  std::lock_guard<std::mutex> lock(mtx);
 
-	if (password_hash.empty())
-		return false;
+  if (password_hash.empty())
+    return false;
 
-	const std::string computed = Util::SHA256::hex(password_salt + password);
-	if (computed.size() != password_hash.size())
-		return false;
+  const std::string computed = Util::SHA256::hex(password_salt + password);
+  if (computed.size() != password_hash.size())
+    return false;
 
-	unsigned char diff = 0;
-	for (size_t i = 0; i < computed.size(); i++)
-		diff |= (unsigned char)(computed[i] ^ password_hash[i]);
+  unsigned char diff = 0;
+  for (size_t i = 0; i < computed.size(); i++)
+    diff |= (unsigned char)(computed[i] ^ password_hash[i]);
 
-	return diff == 0;
+  return diff == 0;
 }
 
-std::string ControlCore::randomHex(size_t length)
-{
-	static const char *digits = "0123456789abcdef";
+std::string ControlCore::randomHex(size_t length) {
+  static const char *digits = "0123456789abcdef";
 
-	std::random_device rd;
-	std::string s;
-	while (s.size() < length)
-	{
-		uint32_t r = rd();
-		for (int j = 28; j >= 0 && s.size() < length; j -= 4)
-			s += digits[(r >> j) & 0xF];
-	}
-	return s;
+  std::random_device rd;
+  std::string s;
+  while (s.size() < length) {
+    uint32_t r = rd();
+    for (int j = 28; j >= 0 && s.size() < length; j -= 4)
+      s += digits[(r >> j) & 0xF];
+  }
+  return s;
 }
 
-void ControlCore::setPassword(const std::string &password)
-{
-	std::string salt = randomHex(32);
-	std::string hash = Util::SHA256::hex(salt + password);
+void ControlCore::setPassword(const std::string &password) {
+  std::string salt = randomHex(32);
+  std::string hash = Util::SHA256::hex(salt + password);
 
-	{
-		std::lock_guard<std::mutex> lock(mtx);
-		password_salt = salt;
-		password_hash = hash;
-	}
+  {
+    std::lock_guard<std::mutex> lock(mtx);
+    password_salt = salt;
+    password_hash = hash;
+  }
 
-	persistControlAuth(hash, salt);
+  persistControlAuth(hash, salt);
 }
 
-void ControlCore::mutateConfig(const char *what, const std::function<bool(JSON::Document &)> &fn)
-{
-	std::lock_guard<std::mutex> lock(file_mtx);
+void ControlCore::mutateConfig(
+    const char *what, const std::function<bool(JSON::Document &)> &fn) {
+  std::lock_guard<std::mutex> lock(file_mtx);
 
-	try
-	{
-		JSON::Parser parser(JSON_DICT_SETTING);
-		JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
+  try {
+    JSON::Parser parser(JSON_DICT_SETTING);
+    JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
 
-		if (!fn(doc))
-			return;
+    if (!fn(doc))
+      return;
 
-		std::string out;
-		JSON::Serializer serializer(JSON_DICT_SETTING);
-		serializer.stringify(doc.root, out);
+    std::string out;
+    JSON::Serializer serializer(JSON_DICT_SETTING);
+    serializer.stringify(doc.root, out);
 
-		std::string error;
-		if (!writeFileAtomic(config_file, out, error))
-			Error() << "Control: cannot " << what << ": " << error;
-	}
-	catch (const std::exception &e)
-	{
-		Error() << "Control: cannot " << what << ": " << e.what();
-	}
+    std::string error;
+    if (!writeFileAtomic(config_file, out, error))
+      Error() << "Control: cannot " << what << ": " << error;
+  } catch (const std::exception &e) {
+    Error() << "Control: cannot " << what << ": " << e.what();
+  }
 }
 
-void ControlCore::persistControlAuth(const std::string &hash, const std::string &salt)
-{
-	mutateConfig("persist password", [&](JSON::Document &doc)
-	{
-		const JSON::Value *v = doc.root[AIS::KEY_SETTING_CONTROL];
-		if (v && v->isObject())
-		{
-			JSON::Value control = *v;
-			control.getObject().Set(AIS::KEY_SETTING_PASSWORD, hash, doc.pool);
-			control.getObject().Set(AIS::KEY_SETTING_SALT, salt, doc.pool);
-		}
-		else
-		{
-			JSON::JSON *control = doc.pool.addObject();
-			control->Add(AIS::KEY_SETTING_PASSWORD, hash, doc.pool);
-			control->Add(AIS::KEY_SETTING_SALT, salt, doc.pool);
+void ControlCore::persistControlAuth(const std::string &hash,
+                                     const std::string &salt) {
+  mutateConfig("persist password", [&](JSON::Document &doc) {
+    const JSON::Value *v = doc.root[AIS::KEY_SETTING_CONTROL];
+    if (v && v->isObject()) {
+      JSON::Value control = *v;
+      control.getObject().Set(AIS::KEY_SETTING_PASSWORD, hash, doc.pool);
+      control.getObject().Set(AIS::KEY_SETTING_SALT, salt, doc.pool);
+    } else {
+      JSON::JSON *control = doc.pool.addObject();
+      control->Add(AIS::KEY_SETTING_PASSWORD, hash, doc.pool);
+      control->Add(AIS::KEY_SETTING_SALT, salt, doc.pool);
 
-			JSON::Value nv;
-			nv.setObject(control);
-			doc.root.Set(AIS::KEY_SETTING_CONTROL, nv);
-		}
-		return true;
-	});
+      JSON::Value nv;
+      nv.setObject(control);
+      doc.root.Set(AIS::KEY_SETTING_CONTROL, nv);
+    }
+    return true;
+  });
 }
 
-std::string ControlCore::getDeviceListJSON()
-{
-	// hardware comes and goes between engine runs, so the list the UI shows must
-	// be rescanned; enumerating can disturb a device being opened or streaming
-	// (the SDRplay API in particular) and clears the claimed flags, so leave the
-	// list alone for the whole engine session, device open through close
-	std::lock_guard<std::mutex> lock(scan_mtx);
+std::string ControlCore::getDeviceListJSON() {
+  // hardware comes and goes between engine runs, so the list the UI shows must
+  // be rescanned; enumerating can disturb a device being opened or streaming
+  // (the SDRplay API in particular) and clears the claimed flags, so leave the
+  // list alone for the whole engine session, device open through close
+  std::lock_guard<std::mutex> lock(scan_mtx);
 
-	if (!engine_busy)
-	{
-		if (!scanner)
-			scanner.reset(new DeviceManager());
+  if (!engine_busy) {
+    if (!scanner)
+      scanner.reset(new DeviceManager());
 
-		scanner->refreshDevices();
-	}
+    scanner->refreshDevices();
+  }
 
-	return DeviceManager::getDeviceListJSON();
+  return DeviceManager::getDeviceListJSON();
 }
 
-std::string ControlCore::getSerialListJSON()
-{
-	std::string s;
-	JSON::Writer w(s);
-	w.beginArray();
-	for (const auto &path : Device::SerialPort::getDevicePathsCopy())
-		w.val(path);
-	w.endArray().finish();
-	return s;
+std::string ControlCore::getSerialListJSON() {
+  std::string s;
+  JSON::Writer w(s);
+  w.beginArray();
+  for (const auto &path : Device::SerialPort::getDevicePathsCopy())
+    w.val(path);
+  w.endArray().finish();
+  return s;
 }
 
-bool ControlCore::validate(const std::string &json, std::string &error)
-{
-	try
-	{
-		Engine scratch;
-		Config c(scratch, true);
-		c.set(json);
-	}
-	catch (const std::exception &e)
-	{
-		error = e.what();
-		return false;
-	}
-	return true;
+bool ControlCore::validate(const std::string &json, std::string &error) {
+  try {
+    Engine scratch;
+    Config c(scratch);
+    c.set(json);
+  } catch (const std::exception &e) {
+    error = e.what();
+    return false;
+  }
+  return true;
 }
 
-bool ControlCore::writeFileAtomic(const std::string &path, const std::string &content, std::string &error)
-{
-	if (content.empty() || content.back() != '\n')
-		return Util::Helper::writeFileAtomic(path, content + "\n", error);
+bool ControlCore::writeFileAtomic(const std::string &path,
+                                  const std::string &content,
+                                  std::string &error) {
+  if (content.empty() || content.back() != '\n')
+    return Util::Helper::writeFileAtomic(path, content + "\n", error);
 
-	return Util::Helper::writeFileAtomic(path, content, error);
+  return Util::Helper::writeFileAtomic(path, content, error);
 }
 
-// a configuration written before the viewer had a "viewer" section gets the defaults once
-void ControlCore::addViewerDefaults()
-{
-	const struct { AIS::Keys key; std::string value; } defaults[] = {
-		{AIS::KEY_SETTING_SHARE_LOC, "on"},
-		{AIS::KEY_SETTING_REALTIME, "on"},
-		{AIS::KEY_SETTING_DECODER, "on"},
-		{AIS::KEY_SETTING_LOG, "off"},
-		{AIS::KEY_SETTING_FILE, config_file + ".stats"}};
+// a configuration written before the viewer had a "viewer" section gets the
+// defaults once
+void ControlCore::addViewerDefaults() {
+  // the statistics file sits beside the configuration; the viewer resolves a
+  // relative name against the configuration's directory, so only the name
+  const auto slash = config_file.find_last_of("/\\");
+  const std::string stats =
+      (slash == std::string::npos ? config_file : config_file.substr(slash + 1)) +
+      ".stats";
+  const struct {
+    AIS::Keys key;
+    std::string value;
+  } defaults[] = {{AIS::KEY_SETTING_SHARE_LOC, "on"},
+                  {AIS::KEY_SETTING_REALTIME, "on"},
+                  {AIS::KEY_SETTING_DECODER, "on"},
+                  {AIS::KEY_SETTING_LOG, "off"},
+                  {AIS::KEY_SETTING_FILE, stats}};
 
-	mutateConfig("add viewer defaults", [&](JSON::Document &doc)
-	{
-		const JSON::Value *ctrl = doc.root[AIS::KEY_SETTING_CONTROL];
-		if (!ctrl || !ctrl->isObject())
-			return false;
+  mutateConfig("add viewer defaults", [&](JSON::Document &doc) {
+    const JSON::Value *ctrl = doc.root[AIS::KEY_SETTING_CONTROL];
+    if (!ctrl || !ctrl->isObject())
+      return false;
 
-		const JSON::Value *v = ctrl->getObject()[AIS::KEY_SETTING_VIEWER];
-		JSON::JSON *viewer = v && v->isObject() ? const_cast<JSON::JSON *>(&v->getObject()) : doc.pool.addObject();
+    const JSON::Value *v = ctrl->getObject()[AIS::KEY_SETTING_VIEWER];
+    JSON::JSON *viewer = v && v->isObject()
+                             ? const_cast<JSON::JSON *>(&v->getObject())
+                             : doc.pool.addObject();
 
-		bool changed = false;
-		for (const auto &d : defaults)
-			if (!(*viewer)[d.key])
-			{
-				viewer->Set(d.key, d.value, doc.pool);
-				changed = true;
-			}
+    bool changed = false;
+    for (const auto &d : defaults)
+      if (!(*viewer)[d.key]) {
+        viewer->Set(d.key, d.value, doc.pool);
+        changed = true;
+      }
 
-		if (changed && !v)
-		{
-			JSON::Value val;
-			val.setObject(viewer);
-			const_cast<JSON::JSON &>(ctrl->getObject()).Set(AIS::KEY_SETTING_VIEWER, val);
-		}
+    if (changed && !v) {
+      JSON::Value val;
+      val.setObject(viewer);
+      const_cast<JSON::JSON &>(ctrl->getObject())
+          .Set(AIS::KEY_SETTING_VIEWER, val);
+    }
 
-		return changed;
-	});
+    return changed;
+  });
 }
 
-void ControlCore::persistEngineField(bool on)
-{
-	mutateConfig("persist engine state", [on](JSON::Document &doc)
-	{
-		doc.root.Set(AIS::KEY_SETTING_ENGINE, on ? "on" : "off", doc.pool);
-		return true;
-	});
+void ControlCore::persistEngineField(bool on) {
+  mutateConfig("persist engine state", [on](JSON::Document &doc) {
+    doc.root.Set(AIS::KEY_SETTING_ENGINE, on ? "on" : "off", doc.pool);
+    return true;
+  });
 }
 
-bool ControlCore::engineDesired()
-{
-	std::lock_guard<std::mutex> lock(mtx);
-	return desired;
+bool ControlCore::engineDesired() {
+  std::lock_guard<std::mutex> lock(mtx);
+  return desired;
 }
 
-uint32_t ControlCore::statusStamp()
-{
-	std::lock_guard<std::mutex> lock(mtx);
-	uint32_t bits = (state == EngineState::Running ? 1 : 0) | (desired ? 2 : 0) |
-					((desired && auto_retry && state != EngineState::Running) ? 4 : 0);
-	return (status_epoch << 3) | bits;
+uint32_t ControlCore::statusStamp() {
+  std::lock_guard<std::mutex> lock(mtx);
+  uint32_t bits =
+      (state == EngineState::Running ? 1 : 0) | (desired ? 2 : 0) |
+      ((desired && auto_retry && state != EngineState::Running) ? 4 : 0);
+  return (status_epoch << 3) | bits;
 }
 
-bool ControlCore::engineRetrying()
-{
-	std::lock_guard<std::mutex> lock(mtx);
-	return desired && auto_retry && state != EngineState::Running;
+bool ControlCore::engineRetrying() {
+  std::lock_guard<std::mutex> lock(mtx);
+  return desired && auto_retry && state != EngineState::Running;
 }
 
-void ControlCore::reportRunning()
-{
-	std::lock_guard<std::mutex> lock(mtx);
-	state = EngineState::Running;
-	engine_start_time = std::time(nullptr);
-	auto_retry = false;
-	status_epoch++;
+void ControlCore::reportRunning() {
+  std::lock_guard<std::mutex> lock(mtx);
+  state = EngineState::Running;
+  engine_start_time = std::time(nullptr);
+  auto_retry = false;
+  status_epoch++;
 }
 
-void ControlCore::reportStopped()
-{
-	std::lock_guard<std::mutex> lock(mtx);
-	bool was_running = state == EngineState::Running;
-	bool healthy = was_running && std::time(nullptr) - engine_start_time >= RETRY_HEALTHY_UPTIME;
-	state = EngineState::Stopped;
-	status_epoch++;
+void ControlCore::reportStopped() {
+  std::lock_guard<std::mutex> lock(mtx);
+  bool was_running = state == EngineState::Running;
+  bool healthy = was_running &&
+                 std::time(nullptr) - engine_start_time >= RETRY_HEALTHY_UPTIME;
+  state = EngineState::Stopped;
+  status_epoch++;
 
-	if (restart_pending)
-		restart_pending = false;
-	else if (desired)
-	{
-		if (was_running || auto_retry)
-		{
-			if (healthy)
-				retry_delay = 0;
-			retry_delay = retry_delay ? MIN(retry_delay * 2, RETRY_DELAY_MAX) : RETRY_DELAY_FIRST;
-			auto_retry = true;
-			retry_pending = true;
-		}
-		else
-		{
-			desired = false;
-			resetRetry();
-		}
-	}
+  if (restart_pending)
+    restart_pending = false;
+  else if (desired) {
+    if (was_running || auto_retry) {
+      if (healthy)
+        retry_delay = 0;
+      retry_delay = retry_delay ? MIN(retry_delay * 2, RETRY_DELAY_MAX)
+                                : RETRY_DELAY_FIRST;
+      auto_retry = true;
+      retry_pending = true;
+    } else {
+      desired = false;
+      resetRetry();
+    }
+  }
 }
 
-void ControlCore::engineFailed()
-{
-	std::lock_guard<std::mutex> lock(mtx);
-	restart_pending = false;
+void ControlCore::engineFailed() {
+  std::lock_guard<std::mutex> lock(mtx);
+  restart_pending = false;
 }
 
-void ControlCore::waitForCommand()
-{
-	std::unique_lock<std::mutex> lock(mtx);
-	cv.wait_for(lock, std::chrono::milliseconds(250), [this]
-				{ return desired; });
+void ControlCore::waitForCommand() {
+  std::unique_lock<std::mutex> lock(mtx);
+  cv.wait_for(lock, std::chrono::milliseconds(250), [this] { return desired; });
 }
 
-int ControlCore::consumeRetryDelay()
-{
-	std::lock_guard<std::mutex> lock(mtx);
-	if (!retry_pending)
-		return 0;
-	retry_pending = false;
-	return retry_delay;
+int ControlCore::consumeRetryDelay() {
+  std::lock_guard<std::mutex> lock(mtx);
+  if (!retry_pending)
+    return 0;
+  retry_pending = false;
+  return retry_delay;
+}
+
+#ifdef HASWEBVIEWER
+void ControlCore::syncViewer(WebViewer &viewer) {
+  auto places = getPlaces();
+  const bool changed = places && places->consumeChanged();
+  if (changed || places != viewer.getPlaceCatalogue())
+    viewer.setPlaceCatalogue(std::move(places));
+  if (!consumeConfigChanged())
+    return;
+  try {
+    viewer.updateManagedConfig(getConfig());
+  } catch (const std::exception &e) {
+    Error() << "Control: viewer settings not applied: " << e.what();
+  }
+}
+#endif
+
+std::string ControlCore::defaultPlaceDirectory() const {
+  const auto slash = config_file.find_last_of("/\\");
+  return (slash == std::string::npos ? "." : config_file.substr(0, slash)) +
+         "/places";
+}
+
+void ControlCore::refreshPlaces(const std::string &json) {
+  std::string directory = defaultPlaceDirectory();
+  bool enabled = false;
+  try {
+    JSON::Parser parser(JSON_DICT_SETTING);
+    auto doc = parser.parse(json);
+    const auto *control = doc.root[AIS::KEY_SETTING_CONTROL];
+    const auto *viewer = control && control->isObject()
+                             ? control->getObject()[AIS::KEY_SETTING_VIEWER]
+                             : nullptr;
+    const auto *path = viewer && viewer->isObject()
+                           ? viewer->getObject()[AIS::KEY_SETTING_PLACES]
+                           : nullptr;
+    if (path && path->isString() && !path->getString().empty()) {
+      directory = path->getString();
+      enabled = true;
+    }
+  } catch (const std::exception &e) {
+    Warning() << "Places: " << e.what();
+  }
+  std::lock_guard<std::mutex> lock(place_mtx);
+  if (!enabled)
+    place_store.reset();
+  else if (!place_store || directory != place_directory)
+    place_store = std::make_shared<PlaceCatalogue>(directory);
+  place_directory = directory;
+  place_enabled = enabled;
+}
+
+std::shared_ptr<PlaceCatalogue> ControlCore::getPlaces() {
+  std::lock_guard<std::mutex> lock(place_mtx);
+  return place_store;
+}
+std::string ControlCore::placeSettings() {
+  std::lock_guard<std::mutex> lock(place_mtx);
+  return "{\"enabled\":" + std::string(place_enabled ? "true" : "false") +
+         ",\"directory\":" + JSON::Writer::escape(place_directory) + "}";
+}
+bool ControlCore::enablePlaces(std::string &error) {
+  std::lock_guard<std::mutex> lock(file_mtx);
+  try {
+    JSON::Parser parser(JSON_DICT_SETTING);
+    auto doc = parser.parse(Util::Helper::readFile(config_file));
+    const auto ensure = [&](JSON::JSON &parent, AIS::Keys key) -> JSON::JSON & {
+      const auto *existing = parent[key];
+      if (existing && existing->isObject())
+        return const_cast<JSON::JSON &>(existing->getObject());
+      auto *obj = doc.pool.addObject();
+      JSON::Value v;
+      v.setObject(obj);
+      parent.Set(key, v);
+      return *obj;
+    };
+    auto &control = ensure(doc.root, AIS::KEY_SETTING_CONTROL);
+    auto &viewer = ensure(control, AIS::KEY_SETTING_VIEWER);
+    const auto *path = viewer[AIS::KEY_SETTING_PLACES];
+    if (!path || !path->isString() || path->getString().empty())
+      viewer.Set(AIS::KEY_SETTING_PLACES, defaultPlaceDirectory(), doc.pool);
+    std::string out;
+    JSON::Serializer serializer(JSON_DICT_SETTING);
+    serializer.stringify(doc.root, out);
+    if (!writeFileAtomic(config_file, out, error))
+      return false;
+    refreshPlaces(out);
+    config_dirty = true;
+    return true;
+  } catch (const std::exception &e) {
+    error = e.what();
+    return false;
+  }
 }

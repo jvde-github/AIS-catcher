@@ -36,30 +36,14 @@ Prefer a traditional AIS receiver over an SDR but want the same advantages? We r
 To join, ensure you're on the latest version, visit [www.aiscatcher.org](https://www.aiscatcher.org), and [add](https://www.aiscatcher.org/addstation) your station. Upon registration, you'll receive a personal sharing key. Simply run AIS-catcher on the command line with "-X" followed by your sharing key to share your station's raw AIS data with the community hub. This activates a "Community Feed" in your station's web viewer, accessible under map layers and some other features.
 
 
-## Port landmarks
+## Places
 
-Add `-N ports ports.json` to the viewer options (for example,
-`-N 8100 ports ports.json`). The file is a JSON array:
-
-```json
-[
-  {"code": "NLRTM", "name": "Rotterdam", "country": "NL", "lat": 51.95, "lon": 4.14, "size": 3}
-]
-```
-
-Each entry needs a unique uppercase code of up to eight characters, a name,
-a two-letter uppercase country code, and numeric latitude/longitude. Invalid
-records or duplicate codes stop configuration with an error. The file is read
-at configuration time; no ports are added when the option is omitted.
-
-Ports appear as dark blue circles with a white border and anchor on the existing map-object
-layer. Hover shows the name and country. Hub uses the same option and its
-existing map-object tile placement, prioritising larger ports. Optional `size`
-sets the earliest website zoom: `3` (large) at 7, `2` (medium) at 9, `1` (small)
-at 11, and `0` (very small/unknown, the default) at 12. Crowded ports can appear
-later; all become eligible at zoom 12. The standalone viewer shows all supplied
-ports regardless of size. These are static landmarks, independent of
-vessel destination matching.
+Ports, berths, anchorages and custom areas live in an editable place catalogue:
+a directory of GeoJSON files. Point the standalone viewer at one with
+`-N 8100 PLACES /path/to/places`; a managed installation keeps a `places`
+directory beside its configuration and edits it from the Places tab. Ships in
+a place, visits and port-bound traffic follow from the catalogue. See
+[docs/places.md](docs/places.md) for the file format and rules.
 
 ## Links
 

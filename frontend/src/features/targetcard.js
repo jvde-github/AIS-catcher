@@ -3,6 +3,7 @@ import { ships, cardMmsi, cardType, hoverMmsi, hoverType, markerTracks, clock } 
 import { settings } from '../core/state.js';
 import { getChangeVal, getShipDimension, getDimUnit, getDistanceUnit, getDistanceVal, getDraughtVal, getLatValFormat, getLonValFormat, getSpeedUnit, getSpeedVal, u } from '../core/units.js';
 import * as shipcard from '../../shared/shipcard.js';
+import { beginLoading } from '../../shared/loading.js';
 import * as classic from '../../shared/shipcard-classic.js';
 import * as tabs from '../../shared/shipcard-tabs.js';
 import { CHANGE, getCountryName, getDeltaTimeVal, getEtaVal, getMmsiTypeVal, getShipTypeFull, getShipTypeShort, getStatusVal, getStringfromChannels, getStringfromGroup, getStringfromMsgType } from '../../shared/core/text.js';
@@ -11,7 +12,7 @@ import { getCallSign, getShipName } from '../core/names.js';
 import { regionName } from '../core/regions.js';
 import { flagHTML } from '../../shared/components.js';
 import { decodeBadge, glyphsHTML, KIND_CAT } from '../../shared/binary.js';
-import * as binary from './binary.js';
+import * as mapObjects from './mapobjects.js';
 
 // { fitTargetcard, getReceiver, realtimeEnabled, registerAction, isFollowing,
 //   updateFocusMarker, hoverTrackShown, selectTrackShown, goTo }
@@ -86,8 +87,7 @@ function openTab() {
 
 // the tab is the user's; history renders where it is looked at
 function showHistory(tab) {
-    if (tab === "voyage") fillSection("changes");
-    else if (tab === "history") { fillSection("speed"); fillSection("draught"); }
+    if (tab === "history") { fillSection("changes"); fillSection("speed"); fillSection("draught"); }
 }
 
 export function resetHistory() {
@@ -131,11 +131,13 @@ async function fetchHistory(mmsi, kind) {
 }
 
 let vessel = { mmsi: 0, data: null, inflight: false };
+let stopVesselLoading = () => {};
 
 // The vessel's details and what it has reported changing, in one fetch: on
 // opening, and again with each pull while the card stays on it. The changes
 // section opens by itself when there is anything to show.
 export async function loadVessel(mmsi) {
+    stopVesselLoading();
     vessel = { mmsi, data: null, inflight: false };
     await refreshVessel();
 }
@@ -143,16 +145,20 @@ export async function loadVessel(mmsi) {
 async function refreshVessel() {
     const mmsi = cardMmsi;
     if (!mmsi || vessel.mmsi !== mmsi || vessel.inflight) return;
-    vessel.inflight = true;
+    const request = vessel;
+    request.inflight = true;
+    const finishLoading = request.data ? () => {} : beginLoading(card.el, 'Loading vessel', document.getElementById('targetcard_header'));
+    stopVesselLoading = finishLoading;
     let data;
     try {
         data = await fetch("api/ship.json?mmsi=" + mmsi + "&receiver=" + deps.getReceiver()).then((r) => r.json());
     } catch {
-        vessel.inflight = false;
         return;
+    } finally {
+        request.inflight = false;
+        finishLoading();
     }
-    vessel.inflight = false;
-    if (cardMmsi !== mmsi || vessel.mmsi !== mmsi || !data || data.mmsi == null) return;
+    if (cardMmsi !== mmsi || vessel !== request || !data || data.mmsi == null) return;
     vessel.data = data;
 
     if (historyCache.mmsi !== mmsi) historyCache = { mmsi, pts: null, changes: null };
@@ -238,7 +244,7 @@ function setTitle(ship) {
     if (!ship.binary) return;
     const mmsi = cardMmsi;
     title.innerHTML = name + glyphs([KIND_CAT[decodeBadge(ship.binary).kind] || 'data']) + station;
-    binary.shipKinds(ship).then((cats) => { if (cardMmsi === mmsi && cats.length) title.innerHTML = name + glyphs(cats) + station; });
+    mapObjects.shipKinds(ship).then((cats) => { if (cardMmsi === mmsi && cats.length) title.innerHTML = name + glyphs(cats) + station; });
 }
 
 export function updateMessageButton() {
@@ -372,6 +378,7 @@ const cardHelpers = {
     callsign: getCallSign,
     age: (s) => getDeltaTimeVal(clock - s.last_signal),
     goTo: (lat, lon) => deps.goTo && deps.goTo(lat, lon),
+    openPort: (port) => mapObjects.openPorts([{ code: port.code, label: port.name }]),
     infoIcon: (k) => k === "tech"
         ? ' <i class="info_icon card-tech-icon" id="targetcard_tech_info" data-action="techInfo" title="Technical details"></i>'
         : ' <i class="info_icon card-tech-icon" id="targetcard_shiptype_info" data-action="shiptypeInfo" title="Ship type details"></i>',

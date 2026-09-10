@@ -22,6 +22,6 @@ export function portStyles() {
 
 export function portBand(p) {
     const text = v => sanitizeString(String(v || ''));
-    return `<div class="tip-band" style="--band: ${PORT_COLOR}"><div class="tooltip-card"><div>` +
+    return `<div class="tip-band" data-code="${text(p.code)}" style="--band: ${PORT_COLOR}"><div class="tooltip-card"><div>` +
         `<span class="tooltip-name">${text(p.label)}</span> · ${text(p.country)}</div></div></div>`;
 }

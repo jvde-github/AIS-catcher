@@ -301,6 +301,7 @@ endif()
 
 set(CPP
     Source/Application/Config.cpp
+    Source/Tracking/PlaceCatalogue.cpp
     Source/Control/ControlCore.cpp
     Source/Control/ControlServer.cpp
     Source/Application/DeviceManager.cpp
@@ -399,6 +400,8 @@ if(WEBVIEWER)
         Source/Web/BackupManager.cpp
         Source/Web/FrontendConfig.cpp
         Source/Web/WebDB.cpp
+        Source/Web/ViewerConfiguration.cpp
+        Source/Web/ViewerSettings.cpp
         Source/Web/WebViewer.cpp
         Source/Tracking/ReceiverTracker.cpp)
 endif()

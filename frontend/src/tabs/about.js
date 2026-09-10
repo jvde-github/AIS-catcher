@@ -1,13 +1,14 @@
 import { marked } from 'marked';
 
-let loaded = false;
+let loadedVersion = null;
 
 export async function setup() {
-    if (loaded) return;
+    const version = window.AISCatcher.config.about_version || "initial";
+    if (loadedVersion === version) return;
 
     let text;
     try {
-        const response = await fetch("about.md");
+        const response = await fetch("about.md", {cache: "no-store"});
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         text = await response.text();
     } catch (error) {
@@ -16,5 +17,5 @@ export async function setup() {
     }
 
     document.getElementById("about_content").innerHTML = marked.parse(text);
-    loaded = true;
+    loadedVersion = version;
 }

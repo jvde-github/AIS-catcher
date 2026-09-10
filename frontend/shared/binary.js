@@ -1,3 +1,4 @@
+import { ANCHOR_SVG } from './icons.js';
 // Application-specific (binary) AIS messages, the part that is the same on the
 // viewer and the site: which DAC/FI payload is what, and the HTML a message or
 // a list of them renders to. The host says how a category is coloured and how a
@@ -7,6 +8,7 @@ import { sanitizeString, formatTime, formatDateTime } from './core/text.js';
 import { hasValidCoords } from './core/geo.js';
 import { hexToRgb } from './color.js';
 import { modal } from './components.js';
+import { acknowledgedMessages } from './acknowledgements.js';
 
 // server Item::Kind order, as packed into a ship row's badge
 export const KIND_CAT = ['text', 'inland', 'data', 'aton', 'signal', 'zones', 'lock', 'safety', 'station'];
@@ -199,10 +201,16 @@ const PERSONS_ROWS = [
     ['Personnel', (m) => m.shipboard_personnel_count != null && m.shipboard_personnel_count],
 ];
 
+const ACK_NOTE = '<div style="font-size: 11px; opacity: 0.6;">Reception acknowledged by AIS equipment</div>';
+
 // Every kind in one place: how a message is recognised (first match wins, in
 // this order), what the card is called, and what its rows are. `label` and
 // `rows` take the message payload; `label` also gets the whole item.
 const KINDS = [
+    { cat: 'safety', name: 'Safety acknowledgement', test: (m, item) => item.type === 13,
+      label: () => 'Safety message acknowledgement', rows: () => ACK_NOTE },
+    { cat: 'text', name: 'Binary acknowledgement', test: (m, item) => item.type === 7,
+      label: () => 'Binary message acknowledgement', rows: () => ACK_NOTE },
     { cat: 'safety', name: 'Safety message',
       // types 12 and 14
       test: (m, item) => item.type == 12 || item.type == 14,
@@ -334,15 +342,23 @@ const seenLine = (m) => m.count > 1
     ? `<div style="font-size: 10px; opacity: 0.6;">seen ${m.count} times since ${formatDateTime(m.first)}</div>`
     : '';
 
+// The caption of a message no kind claims: its application id when the payload or the
+// store's row carries one, else what the message type is (a type 6 with no data at all).
+const unknownLabel = (m, item) => {
+    const dac = m.dac != null ? m.dac : item.dac, fi = fiOf(m) != null ? fiOf(m) : item.fi;
+    if (dac != null && fi != null && (dac || fi)) return `DAC ${dac}, FI ${fi}`;
+    return item.type == 6 ? 'Binary Message (addressed), no application data' : item.type == 8 ? 'Binary Message, no application data' : `Message type ${item.type}`;
+};
+
 // One card for a kind: the newest of `messages` gives the caption and rows.
 // `ctx.mmsi` names the vessel the card is about.
 function card(kind, messages, ctx) {
     const sorted = [...messages].sort((a, b) => b.timestamp - a.timestamp);
     const item = sorted[0], m = item.message;
-    const label = kind ? kind.label(m, item) : `DAC ${m.dac}, FI ${fiOf(m)}`;
+    const label = kind ? kind.label(m, item) : unknownLabel(m, item);
     const cat = kind ? kind.cat : 'data';
     return cardOpen(cat) +
-        meteoHeader(item.formattedTime, label, dirIcon(item, ctx), cat, pinHTML(item, ctx)) +
+        meteoHeader(item.formattedTime, label + (ctx?.acknowledged?.has(item) ? ' <span class="msg-acknowledged" role="img" aria-label="Reception acknowledged" title="Reception acknowledged by AIS equipment; does not indicate that a person read it">&#10003;</span>' : ''), dirIcon(item, ctx), cat, pinHTML(item, ctx)) +
         (kind ? kind.rows(m) : '') + seenLine(item) + routeLine(item, ctx) + '</div>';
 }
 
@@ -363,7 +379,7 @@ export function tooltipSections(messages, includeText = false, ctx = null) {
 // every message as its own card, newest first; the route lines link
 export function getBinaryMessageList(messages, ctx = null) {
     if (!messages || messages.length === 0) return '<p>No messages available</p>';
-    const linked = { ...(ctx || {}), mmsi: 0, link: true };
+    const linked = { ...(ctx || {}), acknowledged: ctx?.acknowledged || acknowledgedMessages(messages), mmsi: 0, link: true };
     const sorted = [...messages].sort((a, b) => b.timestamp - a.timestamp);
     return '<div class="binary-messages-list">' + sorted.map((msg) => card(kindOf(msg), [msg], linked)).join('') + '</div>';
 }
@@ -401,6 +417,7 @@ function bindTabs() {
 // the side with anything in front, an empty side simply empty.
 export function getBinaryMessageTabs(messages, mmsi, ctx = null) {
     bindTabs();
+    ctx = { ...(ctx || {}), acknowledged: acknowledgedMessages(messages || []) };
     const sent = (messages || []).filter((m) => isSentBy(m, mmsi));
     const received = (messages || []).filter((m) => !isSentBy(m, mmsi));
     const front = !received.length && sent.length ? 'sent' : 'received';
@@ -416,11 +433,13 @@ export function getBinaryMessageTabs(messages, mmsi, ctx = null) {
 
 // ─── marks on the map ────────────────────────────────────────────────────────
 
-// What a message is, as a small white glyph: waves for a sensor, a padlock for
-// a lock, the AtoN diamond, three lights for a signal, a frame for an area, a
-// figure for persons on board, a bubble for text. `s` is the half size.
+// What a message is, as a small white glyph: a thermometer for a sensor, a
+// padlock for a lock, the AtoN diamond, three lights for a signal, a frame for
+// an area, a figure for persons on board, a bubble for text. `s` is the half size.
 const ANTENNA_D = 'M198-278q-60-58-89-133T80-560q0-74 29-149t89-133l35 35q-50 49-76.5 116.5T130-560q0 63 26.5 130.5T233-313l-35 35Zm92-92q-40-37-59-89.5T212-560q0-48 19-100.5t59-89.5l35 35q-29 29-46 72.5T262-560q0 35 17.5 79.5T325-405l-35 35Zm4 290 133-405q-17-12-27.5-31T389-560q0-38 26.5-64.5T480-651q38 0 64.5 26.5T571-560q0 25-10.5 44T533-485L666-80h-59l-29-90H383l-30 90h-59Zm108-150h156l-78-238-78 238Zm268-140-35-35q29-29 46-72.5t17-82.5q0-35-17.5-79.5T635-715l35-35q39 37 58.5 89.5T748-560q0 47-19.5 100T670-370Zm92 92-35-35q49-49 76-116.5T830-560q0-63-27-130.5T727-807l35-35q60 58 89 133t29 149q0 75-27.5 149.5T762-278Z';
 let antenna = null;
+
+let placeAnchor;
 
 export function kindGlyph(ctx, cat, x, y, s) {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
@@ -429,6 +448,52 @@ export function kindGlyph(ctx, cat, x, y, s) {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     switch (cat) {
+    case 'anchorage': {
+        const k = (2.7 * s) / 960;
+        ctx.save();
+        ctx.translate(x - 480 * k, y + 480 * k);
+        ctx.scale(k, k);
+        placeAnchor ||= new Path2D(ANCHOR_SVG.match(/ d="([^"]+)"/)[1]);
+        ctx.fill(placeAnchor);
+        ctx.restore();
+        break;
+    }
+    case 'berth': {
+        // Mooring bollard: broad head, short stem and quay edge.
+        ctx.fillRect(x - s * .85, y - s * .65, s * 1.7, s * .55);
+        ctx.fillRect(x - s * .3, y - s * .1, s * .6, s * .9);
+        ctx.beginPath();
+        ctx.moveTo(x - s, y + s * .85);
+        ctx.lineTo(x + s, y + s * .85);
+        ctx.stroke();
+        break;
+    }
+    case 'waterway': {
+        // three swells across the marker
+        for (let i = -1; i <= 1; i++) {
+            const yy = y + i * s * .6;
+            ctx.beginPath();
+            ctx.moveTo(x - s, yy);
+            ctx.bezierCurveTo(x - s * .5, yy - s * .45, x - s * .2, yy + s * .45, x, yy);
+            ctx.bezierCurveTo(x + s * .2, yy - s * .45, x + s * .5, yy + s * .45, x + s, yy);
+            ctx.stroke();
+        }
+        break;
+    }
+    case 'place':
+    case 'custom': {
+        ctx.beginPath();
+        ctx.moveTo(x, y - s);
+        ctx.lineTo(x + s, y);
+        ctx.lineTo(x, y + s);
+        ctx.lineTo(x - s, y);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, y, s * .2, 0, 2 * Math.PI);
+        ctx.fill();
+        break;
+    }
     case 'lock': {
         ctx.beginPath();
         ctx.arc(x, y - s * 0.25, s * 0.55, Math.PI, 0);
@@ -479,6 +544,23 @@ export function kindGlyph(ctx, cat, x, y, s) {
         ctx.scale(k, k);
         ctx.fill(antenna || (antenna = new Path2D(ANTENNA_D)));
         ctx.restore();
+        break;
+    }
+    case 'data': {
+        // a thermometer: the tube with its rounded top, the bulb, the column inside
+        const w = s * .55, top = y - s * .95, bulb = y + s * .5, r = s * .45;
+        ctx.lineWidth = Math.max(1, s * .22);
+        ctx.beginPath();
+        ctx.moveTo(x - w / 2, top + w / 2);
+        ctx.arc(x, top + w / 2, w / 2, Math.PI, 0);
+        ctx.lineTo(x + w / 2, bulb - r * .8);
+        ctx.arc(x, bulb, r, -Math.PI * .3, Math.PI * 1.3);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, bulb, r * .55, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillRect(x - s * .1, y - s * .3, s * .2, bulb - (y - s * .3));
         break;
     }
     case 'safety': {
@@ -679,14 +761,14 @@ export function pillCanvas(label, color) {
 const glyphUrls = new Map();
 
 // a kind's disc as a data URL, for a card header or a cell
-// the disc as an image for a card header; its edge is grey on the light theme, where white would vanish
+// Card-header discs use a subtle black edge in day mode and a white edge in dark mode.
 export function glyphURL(cat) {
     const dark = document.documentElement.classList.contains('dark');
     const key = cat + (dark ? ':dark' : ':light');
     let url = glyphUrls.get(key);
     if (!url) {
         const [r, g, b] = hexToRgb(CAT_COLORS[cat] || CAT_COLORS.data);
-        url = discCanvas(cat, [r, g, b], 1, dark ? undefined : 'rgba(0, 0, 0, 0.15)').canvas.toDataURL();
+        url = discCanvas(cat, [r, g, b], 1, dark ? undefined : 'rgba(0, 0, 0, 0.35)').canvas.toDataURL();
         glyphUrls.set(key, url);
     }
     return url;

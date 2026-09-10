@@ -800,6 +800,10 @@ setup_aiscatcher_user() {
 setup_configuration() {
     log "INFO" "Setting up configuration files"
     mkdir -p "$CONFIG_DIR" || error_exit "Failed to create config directory"
+    if [[ "$MANAGED" == true ]]; then
+        mkdir -p "$CONFIG_DIR/places" || error_exit "Failed to create places directory"
+        chmod 750 "$CONFIG_DIR/places"
+    fi
 
     # Managed mode on a machine with a pre-existing legacy config: seed the
     # managed config with its path so the setup wizard can offer to import

@@ -466,31 +466,41 @@ namespace JSON
 		}
 		case TokenType::FloatingPoint:
 		{
-			double val = 0.0;
+			// One integer mantissa with a decimal exponent: while the mantissa stays
+			// below 2^53 and the power of ten is exact, a single IEEE division or
+			// multiplication is correctly rounded on every platform.
 			const char *s = tokenStart;
 			bool neg = (*s == '-');
 			if (neg)
 				s++;
+			const char *digits = s;
 
-			double int_part = 0.0;
+			uint64_t mantissa = 0;
+			int exp10 = 0;
+			bool exact = true;
 			while (s < tokenEnd && *s >= '0' && *s <= '9')
 			{
-				int_part = int_part * 10 + (*s - '0');
+				if (mantissa < 100000000000000000ULL)
+					mantissa = mantissa * 10 + (*s - '0');
+				else
+					exact = false;
 				s++;
 			}
-			val = int_part;
 
 			if (s < tokenEnd && *s == '.')
 			{
 				s++;
-				double frac = 0.0, div = 1.0;
 				while (s < tokenEnd && *s >= '0' && *s <= '9')
 				{
-					frac = frac * 10 + (*s - '0');
-					div *= 10.0;
+					if (mantissa < 100000000000000000ULL)
+					{
+						mantissa = mantissa * 10 + (*s - '0');
+						exp10--;
+					}
+					else
+						exact = false;
 					s++;
 				}
-				val += frac * (1.0 / div);
 			}
 
 			if (s < tokenEnd && (*s == 'e' || *s == 'E'))
@@ -510,14 +520,21 @@ namespace JSON
 						exp = exp * 10 + (*s - '0');
 					s++;
 				}
-
-				static const double pow10_table[] = {1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15};
-				double scale = (exp <= 15) ? pow10_table[exp] : std::pow(10.0, exp);
-				if (eneg)
-					val /= scale;
-				else
-					val *= scale;
+				exp10 += eneg ? -exp : exp;
 			}
+
+			static const double pow10_table[] = {1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22};
+			double val;
+			if (exact && mantissa <= 9007199254740992ULL && exp10 >= -22 && exp10 <= 22)
+			{
+				val = (double)mantissa;
+				if (exp10 < 0)
+					val /= pow10_table[-exp10];
+				else
+					val *= pow10_table[exp10];
+			}
+			else
+				val = std::strtod(std::string(digits, tokenEnd).c_str(), nullptr);
 
 			v.setFloat(neg ? -val : val);
 			break;

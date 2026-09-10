@@ -7,6 +7,7 @@ import { hasValidCoords } from '../../shared/core/geo.js';
 import { sanitizeString } from '../../shared/core/text.js';
 import { BINARY_CATEGORIES } from '../../shared/binary.js';
 import * as mapobjects from '../../shared/mapobjects.js';
+import { needsMapObjects, objectKindVisible } from '../../shared/object-visibility.js';
 import { stationBand } from '../../shared/stations.js';
 
 export { BINARY_CATEGORIES };
@@ -41,7 +42,8 @@ const objects = mapobjects.create({
         colorClass: settings.binary_color_class,
         idLabels: settings.binary_id_labels,
         groupAreas: settings.binary_group_areas,
-        hidden: (cat) => settings.binary_exclude.includes(cat),
+        places: objectKindVisible(settings, 'place'),
+        hidden: cat => !objectKindVisible(settings, cat),
     }),
     isHovered: (f) => deps.isHovered(f), rehover: (f) => deps.rehover(f),
     isHoveringShip: (m) => deps.isHoveringShip(m), rehoverShip: (m) => deps.rehoverShip(m),
@@ -49,8 +51,9 @@ const objects = mapobjects.create({
     map: () => deps.map(),
 });
 
-export const binaryLayer = objects.layer;
+export const objectLayer = objects.layer;
 export const setReceiverMarker = objects.setReceiverMarker;
+export const openPorts = objects.openPorts;
 
 export function init(d) {
     deps = d;
@@ -61,6 +64,7 @@ export function init(d) {
 // ─── settings ────────────────────────────────────────────────────────────────
 
 export const binaryAnyShown = () => BINARY_CATEGORIES.some((c) => !settings.binary_exclude.includes(c));
+export const objectsAnyShown = () => needsMapObjects(settings, binaryAnyShown());
 
 function set(key, value) {
     settings[key] = value;
@@ -78,7 +82,7 @@ export function setBinaryCategory(cat, on) {
     if (!on) excluded.push(cat);
     settings.binary_exclude = excluded;
     deps.saveSettings();
-    if (binaryLayer.isVisible() && binaryAnyShown()) fetchBinary().then(() => deps.redrawMap());
+    if (objectLayer.isVisible() && objectsAnyShown()) fetchObjects().then(() => deps.redrawMap());
     else { objects.clear(); objectsSince = 0; deps.redrawMap(); }
 }
 
@@ -87,7 +91,7 @@ export function resetSince() { objectsSince = 0; objects.resetEvents(); }
 // ─── transport ───────────────────────────────────────────────────────────────
 
 // the objects that changed since the last poll; the client keeps the rest and ages them
-export async function fetchBinary() {
+export async function fetchObjects() {
     try {
         const data = await api(`mapobjects.json?since=${objectsSince}`);
         objects.applyDelta(data, !objectsSince);

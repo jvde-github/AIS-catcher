@@ -40,7 +40,6 @@ protected:
 
     bool isValidCoordinate(int z, int x, int y) const;
 
-    std::string pluginCode(bool overlay, const std::string &sourceOptions) const;
 
 public:
     MapTiles();
@@ -50,7 +49,8 @@ public:
 
     // Empty result means no such tile.
     virtual const std::vector<unsigned char> &getTile(int z, int x, int y, std::string &contentType) = 0;
-    virtual std::string generatePluginCode(bool overlay) const = 0;
+    std::string json(bool overlay) const;
+    virtual std::vector<double> resolutions() const { return {}; }
 
     const std::string &getName() const { return name; }
     const std::string &getAttribution() const { return attribution; }
@@ -58,6 +58,7 @@ public:
     int getMaxZoom() const { return maxZoom; }
     const std::string &getFormat() const { return format; }
     const std::string &getLayerID() const { return layerID; }
+    void setLayerID(const std::string &id) { layerID = id; }
 };
 
 #ifdef HASSQLITE
@@ -71,12 +72,12 @@ private:
     int getMBTilesZoom(int olZoom) const;
 
 public:
+    std::vector<double> resolutions() const override;
     MBTilesSupport();
     ~MBTilesSupport() override;
 
     bool open(const std::string &filename) override;
     const std::vector<unsigned char> &getTile(int z, int x, int y, std::string &contentType) override;
-    std::string generatePluginCode(bool overlay) const override;
 };
 #endif
 
@@ -98,5 +99,4 @@ public:
 
     bool open(const std::string &directoryPath) override;
     const std::vector<unsigned char> &getTile(int z, int x, int y, std::string &contentType) override;
-    std::string generatePluginCode(bool overlay) const override;
 };

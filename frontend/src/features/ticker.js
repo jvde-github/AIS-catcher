@@ -1,5 +1,5 @@
 import * as strip from '../../shared/ticker.js';
-import * as binary from './binary.js';
+import * as mapObjects from './mapobjects.js';
 
 let bar = null;
 
@@ -9,13 +9,13 @@ export function init(d) {
         buckets: d.buckets,
         bucketHidden: d.bucketHidden,
         selection: {
-            noteSeen: binary.eventSeen,
+            noteSeen: mapObjects.eventSeen,
             resolveVessel: d.resolveVessel,
             openVessel: d.openVessel,
             navigate: d.navigate,
         },
         // the receiver's events: safety texts, destinations, status and draught notices
-        poll: () => binary.pollEvents((events) => bar.push(events)),
+        poll: () => mapObjects.pollEvents((events) => bar.push(events)),
     });
 }
 

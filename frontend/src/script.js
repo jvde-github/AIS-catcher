@@ -1,3 +1,6 @@
+import { currentPlaceIds } from '../shared/visits.js';
+import {initialServerConfig, createViewerConfig, applyServerFeatures} from "./features/server-config.js";
+import {createServerMaps} from "./features/server-maps.js";
 import { settings, isAndroid, isKiosk } from './core/state.js';
 import { ShippingClass } from '../shared/core/constants.js';
 import { SPEED_PALETTES, palette as validPalette, bucketColor, speedBucket, paletteCSS } from '../shared/core/palette.js';
@@ -28,7 +31,7 @@ import * as kiosk from './features/kiosk.js';
 import * as measure from './features/measure.js';
 import * as boxselect from './features/boxselect.js';
 import * as replay from './features/replay.js';
-import * as binary from './features/binary.js';
+import * as mapObjects from './features/mapobjects.js';
 import * as stations from '../shared/stations.js';
 import * as range from './features/range.js';
 import * as ticker from './features/ticker.js';
@@ -162,21 +165,7 @@ const ol = {
 };
 window.ol = ol;
 
-// window.__SERVER_CONFIG__ is set by /custom/plugins.js (emitted by the C++
-// side). Defaulted here so the frontend works standalone (e.g. Vite dev).
-const config = window.__SERVER_CONFIG__ || {
-    build: { version: 'unknown', describe: 'unknown' },
-    context: 'aiscatcher',
-    station: '',
-    webcontrol_http: '',
-    features: {
-        share_location: false, save_messages: false, replay: true,
-        realtime: false, log: false, decoder: false,
-        managed: false, about_md: false,
-    },
-    receivers: [],
-    plugins: { loaded: [], errors: [] }, // loaded: [{ name, version }, ...]
-};
+const config = initialServerConfig();
 
 let plotsModule = null;
 let shipTableModule = null;
@@ -256,11 +245,11 @@ const ACTIONS = {
         el.type === 'checkbox' ? el.checked :
         (el.type === 'range' || el.type === 'number') ? Number(el.value) : el.value),
     setTrackHistory: (e, d, el) => setTrackHistory(TRACK_HISTORY_STOPS[el.value]),
-    setBinaryDisplay: (e, d, el) => binary.setBinaryDisplay(el.value),
-    setBinaryCategory: (e, d, el) => binary.setBinaryCategory(d.cat, el.checked),
-    setBinaryColorClass: (e, d, el) => binary.setBinaryColorClass(el.checked),
-    setBinaryIdLabels: (e, d, el) => binary.setBinaryIdLabels(el.checked),
-    setBinaryGroupAreas: (e, d, el) => binary.setBinaryGroupAreas(el.checked),
+    setBinaryDisplay: (e, d, el) => mapObjects.setBinaryDisplay(el.value),
+    setBinaryCategory: (e, d, el) => mapObjects.setBinaryCategory(d.cat, el.checked),
+    setBinaryColorClass: (e, d, el) => mapObjects.setBinaryColorClass(el.checked),
+    setBinaryIdLabels: (e, d, el) => mapObjects.setBinaryIdLabels(el.checked),
+    setBinaryGroupAreas: (e, d, el) => mapObjects.setBinaryGroupAreas(el.checked),
     setRangeColor: (e, d, el) => range.setRangeColor(el.value, d.field),
     setMapSettingDistanceColor: (e, d, el) => { range.removeDistanceCircles(); setMapSetting('distance_circle_color', el.value); },
     setShowTrackOnSelect: (e, d, el) => { settings.show_track_on_select = el.checked; saveSettings(); },
@@ -382,7 +371,7 @@ const ACTIONS = {
     targetcardSelectSelf: (e, d, el) => { if (settings.shipcard_style !== "tabs") targetcardselect(el); },
     targetcardContextMenu: (e) => showContextMenu(e, card_mmsi, card_type, ['object', 'object-map', 'ctx-targetcard']),
     showTargetcardClose: () => showTargetcard(null, null),
-    showBinaryMessageDialogCard: () => binary.showBinaryMessageDialog(card_mmsi),
+    showBinaryMessageDialogCard: () => mapObjects.showBinaryMessageDialog(card_mmsi),
     openRealtimeForMMSICard: async () => {
         if (!realtimeModule) realtimeModule = await import('./tabs/realtime.js');
         realtimeModule.openForMMSI(card_mmsi);
@@ -525,7 +514,7 @@ let interval,
     planesLastCleanup = 0,
     hover_feature = undefined,
     logViewer = null,
-    tab_title_station = config.station,
+    tab_title_station = decodeHTMLEntities(config.station),
     tab_title_count = null,
     context_mmsi = null,
     context_type = null,
@@ -544,7 +533,7 @@ let hover_enabled_track = false,
     select_enabled_track = false;
 
 let center;
-const context = config.context;
+let context = config.context;
 if (typeof window.loadPlugins === 'undefined') {
     window.loadPlugins = function () { };
 }
@@ -633,6 +622,8 @@ const DEFAULT_SETTINGS = {
         dark_mode: false,
         center_radius: 0,
         show_station: true,
+        show_ports: true,
+        show_places: true,
         ticker: true,
         ticker_bottom: true,
         metric: "DEFAULT",
@@ -1038,7 +1029,7 @@ const markerLayer = new ol.layer.Vector({
     style: markerStyle
 })
 
-const binaryLayer = binary.binaryLayer;
+const objectLayer = mapObjects.objectLayer;
 
 const planeLayer = new ol.layer.Vector({
     source: planeVector,
@@ -1052,12 +1043,14 @@ const shapeLayer = new ol.layer.Vector({
 });
 
 const extraLayer = new ol.layer.Vector({
-    source: extraVector
+    source: extraVector,
+    updateWhileAnimating: true
 });
 
 const trackLayer = new ol.layer.Vector({
     source: trackVector,
-    style: trackStyleFunction
+    style: trackStyleFunction,
+    updateWhileAnimating: true
 });
 
 const rangeLayer = range.rangeLayer;
@@ -1376,7 +1369,7 @@ const handleClick = function (pixel, target, event) {
     } else if (feature && feature.binary === true && !feature.is_associated) {
         closeDialog();
         closeSettings();
-        binary.click(feature);
+        mapObjects.click(feature);
         return;
     } else if (feature && 'replayMmsi' in feature) {
         closeDialog();
@@ -1425,7 +1418,7 @@ function initMap() {
         value.setVisible(false);
     }
 
-    [trackLayer, rangeLayer, shapeLayer, binaryLayer, markerLayer, labelLayer, extraLayer, measure.measureVector,
+    [trackLayer, rangeLayer, shapeLayer, objectLayer, markerLayer, labelLayer, extraLayer, measure.measureVector,
      replay.hullLayer, replay.markerLayer].forEach(layer => {
         map.addLayer(layer);
     });
@@ -1437,13 +1430,13 @@ function initMap() {
     });
 
     map.on('moveend', function (evt) {
-        binary.viewChanged(map.getView().getZoom());
+        mapObjects.viewChanged(map.getView().getZoom());
         debouncedSaveMapView();
         debouncedDrawMap();
     });
 
     map.on('pointermove', function (evt) {
-        if (evt.dragging) return;
+        if (evt.dragging) { map.getTargetElement().style.cursor = ''; return; }
         const pixel = map.getEventPixel(evt.originalEvent);
         handlePointerMove(pixel, evt.originalEvent.target);
     });
@@ -1453,6 +1446,7 @@ function initMap() {
     });
 
     map.getTargetElement().addEventListener('pointerleave', function () {
+        map.getTargetElement().style.cursor = '';
         stopHover();
     });
 
@@ -2204,7 +2198,7 @@ async function fetchShipsBody() {
     const dynamicKeys = [
         "mmsi", "lat", "lon", "distance",
         "heading", "cog", "speed", "status", "age", "flags",
-        "shipclass", "country", "binary", "station"
+        "shipclass", "country", "binary", "station", "place_ids"
     ];
 
     const staticKeys = [
@@ -2215,8 +2209,9 @@ async function fetchShipsBody() {
         "eni", "vendorid", "model", "serial"
     ];
 
+    await serverConfig.update(ships.config_version);
     const serverTime = ships.time || 0;
-    const isIncremental = shipsSince > 0;
+    const isIncremental = shipsSince > 0 && ships.full !== true;
 
     if (!isIncremental) {
         setShips({});
@@ -2246,6 +2241,9 @@ async function fetchShipsBody() {
     if (ships.dynamic) {
         ships.dynamic.forEach((v) => {
             const s = Object.fromEntries(dynamicKeys.map((k, i) => [k, v[i]]));
+            s.place_visits = s.place_ids || [];
+            s.place_ids = currentPlaceIds(s.place_visits);
+            s.place_version = ships.place_version || "";
             s.last_signal = serverTime - (s.age || 0);
             delete s.age;
 
@@ -2300,7 +2298,7 @@ async function fetchShipsBody() {
 
     capShipsDB();
 
-    if (Object.hasOwn(ships, "station")) setStation(ships.station);
+    setStation(ships.station || {});
     drawStation();
 
     center = {};
@@ -2615,7 +2613,7 @@ function onReceiverChange(idx) {
     activeReceiver = parseInt(idx, 10) || 0;
     setShipsSince(0);
     tableSince = 0;
-    binary.resetSince();
+    mapObjects.resetSince();
     range.resetUpdateTime();
     lastPathFetch = 0;
     setPaths({});
@@ -2829,7 +2827,7 @@ function getTooltipContent(ship) {
         '</div>' +
         '</div></div>';
 
-    content += binary.shipTooltip(ship);
+    content += mapObjects.shipTooltip(ship);
 
     return content;
 }
@@ -3054,14 +3052,28 @@ const normalizePixel = (coord) => {
 };
 
 function getFeature(pixel, target) {
-    const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
-        function (feature) { if ('ship' in feature || 'plane' in feature || 'tooltip' in feature || 'binary' in feature) { return feature; } }, { hitTolerance: 10 });
-
-    return feature;
+    if (target.closest('.ol-control')) return undefined;
+    let boundary;
+    const coordinate = map.getCoordinateFromPixel(pixel);
+    const tolerance = 6 * map.getView().getResolution();
+    const feature = map.forEachFeatureAtPixel(pixel, feature => {
+        if (feature.placeDefinition) {
+            const closest = feature.getGeometry().getClosestPoint(coordinate);
+            if (Math.hypot(closest[0] - coordinate[0], closest[1] - coordinate[1]) <= tolerance)
+                boundary = boundary || feature;
+            return undefined;
+        }
+        if ('ship' in feature || 'plane' in feature || 'tooltip' in feature || 'binary' in feature)
+            return feature;
+    }, { hitTolerance: 10 });
+    return feature || boundary;
 }
 
 const handlePointerMove = function (pixel, target) {
     const feature = getFeature(pixel, target);
+    const mapElement = map.getTargetElement();
+    const cursor = feature?.binary && !measure.isActive() && !map.getView().getInteracting() && mapElement.matches(':hover') ? 'pointer' : '';
+    if (mapElement.style.cursor !== cursor) mapElement.style.cursor = cursor;
 
     if (feature) {
         const geometry = feature.getGeometry();
@@ -3082,14 +3094,14 @@ const handlePointerMove = function (pixel, target) {
     }
     else if (feature && feature.station_mmsi && feature.station_mmsi in shipsDB) {
         const ship = shipsDB[feature.station_mmsi].raw;
-        startHover('tooltip', binary.stationTooltip(feature, getTooltipContent(ship)), pixel, feature);
+        startHover('tooltip', mapObjects.stationTooltip(feature, getTooltipContent(ship)), pixel, feature);
     }
     else if (feature && feature.binary === true) {
         if (feature.is_associated && feature.binary_mmsi && feature.binary_mmsi in shipsDB) {
             startHover('ship', feature.binary_mmsi, pixel, feature);
             return;
         } else if (feature.binary_object) {
-            startHover('tooltip', binary.markerTooltip(feature), pixel, feature);
+            startHover('tooltip', mapObjects.markerTooltip(feature), pixel, feature);
         } else {
             startHover('tooltip', "Binary Message", pixel, feature);
         }
@@ -3286,7 +3298,7 @@ function replaycardVisible() {
 // the same vessel twice. Exiting just puts them back and lets the normal
 // refresh rebuild from shipsDB.
 function setLiveLayersVisible(on) {
-    [markerLayer, trackLayer, labelLayer, shapeLayer, binaryLayer]
+    [markerLayer, trackLayer, labelLayer, shapeLayer, objectLayer]
         .forEach(l => l.setVisible(on));
     planeLayer.setVisible(on && Array.isArray(settings.map_overlay) && settings.map_overlay.includes("Aircraft"));
 }
@@ -3735,14 +3747,14 @@ function targetcardMinIfMaxonMobile() {
 let stationDrawn = '';
 
 function drawStation() {
-    const onVessel = !!binary.ownVessel();
+    const onVessel = !!mapObjects.ownVessel();
     const hidden = settings.show_station == false || stationCoords() == null || onVessel;
     const key = hidden ? '' : `${station.lat},${station.lon},${station.gps}`;
     if (key === stationDrawn) return;
     stationDrawn = key;
 
     if (stationFeature) {
-        binary.setReceiverMarker(null);
+        mapObjects.setReceiverMarker(null);
         stationFeature = undefined;
     }
     if (hidden) return;
@@ -3752,7 +3764,7 @@ function drawStation() {
     stationFeature.setStyle(new ol.style.Style({ image: new ol.style.Icon({ img: canvas, width: size, height: size }) }));
     stationFeature.tooltip = stations.stationBand({ name: config.station, gps: station.gps, mmsi: station.mmsi });
     stationFeature.station = true;
-    binary.setReceiverMarker(stationFeature);
+    mapObjects.setReceiverMarker(stationFeature);
 }
 
 function followTargetIsStation() {
@@ -4069,7 +4081,7 @@ async function updateMap() {
     await Promise.all([
         fetchTracks(),
         planeLayer.getVisible() ? fetchPlanes() : Promise.resolve(true),
-        (binaryLayer.isVisible() && binary.binaryAnyShown()) ? binary.fetchBinary() : Promise.resolve(true),
+        (objectLayer.isVisible() && mapObjects.objectsAnyShown()) ? mapObjects.fetchObjects() : Promise.resolve(true),
         range.fetchRange(),
     ]);
 
@@ -4143,7 +4155,7 @@ function redrawMap() {
     }
     measure.refreshMeasures();
 
-    binary.redrawBinaryMessages();
+    mapObjects.redrawBinaryMessages();
 
     if (planeLayer.getVisible()) {
 
@@ -4363,7 +4375,7 @@ function updateSettingsTab() {
     document.getElementById("settings_show_labels").value = settings.show_labels.toLowerCase();
 
     document.getElementById("settings_binary_messages").value = settings.binary_messages;
-    for (const cat of binary.BINARY_CATEGORIES) {
+    for (const cat of mapObjects.BINARY_CATEGORIES) {
         const box = document.getElementById("settings_binary_cat_" + cat);
         if (box) box.checked = !settings.binary_exclude.includes(cat);
     }
@@ -4454,7 +4466,7 @@ function activateTab(b, a) {
 
     if (a == "log") {
         import('./tabs/log.js').then(({ LogViewer }) => {
-            if (settings.tab !== 'log' || logViewer) return;
+            if (settings.tab !== 'log' || !config.features.log || logViewer) return;
             logViewer = new LogViewer();
             logViewer.connect();
         }).catch((err) => console.error('Failed to load log tab module:', err));
@@ -4467,7 +4479,7 @@ function activateTab(b, a) {
     if (a == "realtime" && config.features.realtime) {
         import('./tabs/realtime.js').then((m) => {
             realtimeModule = m;
-            if (settings.tab !== 'realtime') return;
+            if (settings.tab !== 'realtime' || !config.features.realtime) return;
             m.activate();
         }).catch((err) => console.error('Failed to load realtime tab module:', err));
     } else if (a != 'realtime') {
@@ -4494,6 +4506,7 @@ function resolveTab() {
     if (settings.tab == "settings") settings.tab = "stat";
 
     // Check if requested tab is disabled and redirect to map
+    if (settings.tab === "about" && !config.features.about_md) settings.tab = "map";
     if (settings.tab == "realtime" && !config.features.realtime) {
         settings.tab = "map";
     }
@@ -4714,7 +4727,7 @@ measure.init({
     ensureMeasurecardVisible: () => { if (!measurecardVisible()) toggleMeasurecard(); },
     onMeasuresChanged: () => updateMeasureIndicator(),
 });
-binary.init({
+mapObjects.init({
     map: () => map,
     getStation: () => station,
     getStationName: () => config.station,
@@ -4734,7 +4747,7 @@ binary.init({
     },
     rehover: (feature) => {
         if (hover_feature === feature && hoverType == 'tooltip') {
-            startHover('tooltip', binary.markerTooltip(feature), lastHoverPixel, feature);
+            startHover('tooltip', mapObjects.markerTooltip(feature), lastHoverPixel, feature);
         }
     },
 });
@@ -4846,6 +4859,58 @@ replay.init({
     onFrame: applyFixedCenter,
 });
 
+const applyServerMaps = createServerMaps({
+    ol, basemaps: () => basemaps, overlays: () => overlapmaps, getMap: () => map,
+    refresh: () => {
+        for (const kind of Object.keys(BASEMAP_KEYS)) {
+            const select = baseMapSelect(kind);
+            select.replaceChildren(...Object.keys(basemaps).map(name => new Option(name, name)));
+            const key = BASEMAP_KEYS[kind];
+            if (!(settings[key] in basemaps)) settings[key] = Object.keys(basemaps)[0];
+        }
+        Object.keys(overlapmaps).forEach(addOverlayCheckbox);
+        refreshBaseMapRows();
+        setMapOpacity();
+        triggerMapLayer();
+    },
+});
+
+const serverConfig = createViewerConfig({
+    current: config,
+    applyMaps: applyServerMaps,
+    applyRuntime: async (next, {receiversChanged, restartChanged, aboutChanged}) => {
+        if (!next.features.realtime) realtimeModule?.deactivate(true);
+        if (receiversChanged) updateReceiverSelect(next.receivers);
+        context = next.context;
+        tab_title_station = decodeHTMLEntities(next.station);
+        updateTitle();
+        community.updateSharingState(next.features.sharing, next.features.sharing_uuid);
+        const oldTab = settings.tab;
+        if (resolveTab() !== oldTab) selectTab();
+        if (!next.features.replay && replay.isActive()) replay.stop();
+        if (aboutChanged && settings.tab === "about")
+            import("./tabs/about.js").then(m => m.setup()).catch(console.error);
+        if (restartChanged && next.restart_required?.length)
+            showNotification(next.restart_required.join(", ") + ": required to apply these settings", "info");
+        updateSettingsTab();
+        redrawMap();
+    },
+    pluginsChanged: () => {
+        showDialog('Plugins changed', '<p>Reload the viewer to apply the updated plugins.</p><button type="button" class="btn btn-primary" id="reload-viewer-plugins">Reload</button>');
+        document.getElementById('reload-viewer-plugins').addEventListener('click', () => {
+            saveSettings();
+            updateMapURL();
+            if (card_type === "ship" && card_mmsi) {
+                const url = new URL(location.href);
+                url.searchParams.set("mmsi", card_mmsi);
+                history.replaceState(null, "", url);
+            }
+            location.reload();
+        });
+    },
+});
+applyServerMaps(config.maps);
+
 console.log("Starting plugin code");
 
 window.loadPlugins && window.loadPlugins();
@@ -4864,6 +4929,7 @@ setTargetcardStyle(settings.shipcard_style);   // the card was built before the 
 applyDynamicStyling();
 community.applySharingState();
 
+
 if (config.features.managed) {
     const pollSharingState = async () => {
         if (document.hidden) return;
@@ -4871,6 +4937,7 @@ if (config.features.managed) {
             const r = await fetch("api/sharing_state.json");
             if (!r.ok) return;
             const s = await r.json();
+            await serverConfig.update(s.config_version);
             community.updateSharingState(s.sharing, s.sharing_uuid, s.engine_running);
         } catch (e) { /* transient */ }
     };
@@ -4904,21 +4971,7 @@ setPlotAbsoluteTime(settings.plot_absolute_time, false);
 targetcard.prepare();
 buildSettingsTabs();
 
-for (const [enabled, tab] of [
-    [config.features.about_md, "about"],
-    [config.features.realtime, "realtime"],
-    [config.features.log, "log"],
-    [config.features.decoder, "decoder"],
-    [config.webcontrol_http, "webcontrol"],
-]) {
-    if (!enabled) {
-        document.getElementById(tab + "_tab").style.display = "none";
-        document.getElementById(tab + "_tab_mini").style.display = "none";
-    }
-}
-
-if (!config.features.replay)
-    document.querySelectorAll('.ctx-replay').forEach(el => { el.style.display = "none"; });
+applyServerFeatures(config);
 
 showWelcome();
 announceStickyState();

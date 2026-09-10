@@ -3,6 +3,7 @@
 // is {name, id, country, mmsi, status}, status online or offline.
 
 import { sanitizeString } from './core/text.js';
+import { decodeHTMLEntities } from './components.js';
 import { hexToRgb } from './color.js';
 import { discCanvas, badgeCanvas } from './binary.js';
 
@@ -27,5 +28,5 @@ export function stationBand(s) {
     const chip = s.id ? `<span class="station-chip">${text(s.id)}</span>` : '';
     const pick = s.id ? ` data-station="${Number(s.id)}"` : '';
     return `<div class="tip-band"${pick} style="--band: ${stationColor(s.status)}"><div class="tooltip-card">${flag}` +
-        `<div><span class="tooltip-name">${text(s.name || 'Receiving station')}</span>${chip}</div></div></div>`;
+        `<div><span class="tooltip-name">${text(decodeHTMLEntities(s.name) || 'Receiving station')}</span>${chip}</div></div></div>`;
 }

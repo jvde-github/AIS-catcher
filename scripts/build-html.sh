@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 SRC=frontend/src
 SHARED=frontend/shared
@@ -100,17 +101,22 @@ shared_css 4 > "$DIST/control/css/shared.css"
 cp "$SHARED/components.js" "$DIST/control/js/components.js"
 
 minify "$DIST/control/css/shared.css"
+minify "$DIST/control/css/locations.css"
 minify "$DIST/control/js/components.js" --format=esm
 minify "$DIST/control/js/shared-globals.js" --format=esm
-for f in schema.js config-manager.js wizard.js app.js; do minify "$DIST/control/js/$f"; done
+for f in schema.js config-manager.js wizard.js; do minify "$DIST/control/js/$f"; done
 
 # Cache-bust hub assets (served with a 1-year cache header, like the viewer's)
-for f in css/shared.css js/components.js js/shared-globals.js js/schema.js js/config-manager.js js/wizard.js js/app.js; do
+for f in css/shared.css css/locations.css js/components.js js/shared-globals.js js/schema.js js/config-manager.js js/wizard.js; do
     HASH=$(file_hash "$DIST/control/$f")
     # full path: an unanchored "icons.css" would also match "flag-icons.css"
     perform_sed "$DIST/control/index.html" "s|\"${f}?hash=[^\"]*|\"${f}?hash=${HASH}|g" ''
     perform_sed "$DIST/control/js/shared-globals.js" "s|\"\./${f#js/}?hash=[^\"]*|\"./${f#js/}?hash=${HASH}|g" ''
 done
 
+HASH=$(file_hash "$DIST/control-app.js")
+perform_sed "$DIST/control/index.html" "s|control-app.js?hash=[^\"]*|control-app.js?hash=${HASH}|g" ''
+# The editor source is bundled with the viewer's OpenLayers chunk.
+rm -f "$DIST/places-editor.js" "$DIST/control/js/places-editor.js" "$DIST/control/js/ports-editor.js" "$DIST/control/js/locations.js" "$DIST/control/js/app.js"
 echo "Built frontend/dist — baking into WebDB..."
 ./scripts/build-web-db.sh "$DIST"

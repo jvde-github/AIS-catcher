@@ -1,0 +1,67 @@
+
+#sys-places-body {container-type:inline-size;min-width:0;flex:1 1 0;min-height:0;display:flex;flex-direction:column;gap:var(--space-2)}
+.place-setup {max-width:430px;border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:var(--space-6);background:var(--color-surface);color:var(--color-text-strong);box-shadow:0 12px 40px #0002}
+.place-setup::backdrop{background:#0f172a66}
+.place-setup h3{margin:0 0 12px;font-size:var(--fs-xl)}
+.place-setup p{font-size:var(--fs-base);line-height:1.6}
+.place-setup code{display:block;overflow-wrap:anywhere;background:var(--color-surface-alt);padding:10px;border-radius:var(--radius-md);font-size:var(--fs-sm)}
+.place-top {display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap}
+.place-actions {position:sticky;top:0;z-index:5;background:var(--color-surface);padding:10px 0;border-bottom:1px solid var(--color-border);flex-shrink:0}
+.place-actions {flex-wrap:nowrap;gap:var(--space-2)}
+.place-toolbar-main {display:flex;gap:var(--space-1);min-width:0;overflow-x:auto;align-items:center}
+.place-menu {position:relative}
+.place-menu summary {list-style:none;cursor:pointer}
+.place-menu summary::-webkit-details-marker {display:none}
+.place-menu-items {position:absolute;left:0;top:calc(100% + 4px);z-index:6;display:flex;flex-direction:column;gap:2px;padding:6px;min-width:170px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);box-shadow:0 8px 24px #0003}
+.place-menu-items .btn {justify-content:flex-start;text-align:left;width:100%}
+.place-toolbar-end {display:flex;gap:var(--space-1);align-items:center;margin-left:auto;flex-shrink:0}
+#sys-places-body [hidden] {display:none!important}
+/* the grid fills the pane; a minmax(0,1fr) row is what lets the list scroll inside it rather than grow the pane */
+.place-workspace {display:grid;grid-template-columns:250px minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:var(--space-4);flex:1;min-height:0}
+.place-sidebar {order:0;overflow:auto;min-width:0;display:flex;flex-direction:column;gap:var(--space-3);min-height:0}
+.place-list {flex:1;overflow:auto;border:1px solid var(--color-border);border-radius:var(--radius-lg);min-height:0}
+.place-list button {display:block;text-align:left;width:100%;padding:9px 11px;border:0;border-bottom:1px solid var(--color-border);border-radius:0;background:var(--color-surface);color:var(--color-text-strong);font:inherit;font-size:var(--fs-base)}
+.place-list button[aria-selected=true] {background:var(--color-surface-alt);color:var(--color-accent)}
+.place-list small {display:block;font-size:var(--fs-xs);color:var(--color-text-muted);margin-top:2px}
+.place-list .place-draft {border-left:3px solid var(--color-accent)}
+.place-fields {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3);margin:0;padding:0;border:0;min-width:0}
+.place-fields label[hidden] {display:none}
+.place-fields label {font-size:var(--fs-sm);font-weight:var(--fw-medium);color:var(--color-text-muted);display:flex;flex-direction:column;gap:var(--space-1)}
+.place-map-wrap {order:1;flex:1;position:relative;min-height:0;border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;background:#263238}
+.place-map {position:absolute;inset:0}
+/* the map rail and its tooltip, self-contained: the hub does not load the viewer's map.css */
+.place-map-tools {position:absolute;right:12px;top:12px;z-index:2;display:flex;align-items:center;flex-wrap:wrap;padding:0 4px;max-width:calc(100% - 24px);border:2px solid var(--color-pill-border);border-radius:var(--radius-2xl);background:var(--color-surface-alt);box-shadow:var(--shadow-md);color:var(--color-text);fill:var(--color-text)}
+.place-map-tools .map-button {position:relative;display:flex;align-items:center;justify-content:center;width:36px;height:34px;margin:0;padding:0;border:0;border-left:1px solid var(--color-border-strong);border-radius:0;background:transparent;color:inherit;fill:inherit;cursor:pointer;line-height:0}
+.place-map-tools .map-button.no-line {border-left:0}
+.place-map-tools .map-button svg {display:block;width:18px;height:18px;fill:currentColor;transition:transform var(--dur-fast) ease}
+.place-map-tools .map-button:focus-visible {outline:2px solid var(--color-accent-soft);outline-offset:-2px}
+.place-map-tools .map-button.is-active {color:var(--color-accent);fill:var(--color-accent)}
+.place-map-tools .map-button.is-active::before {content:"";position:absolute;width:26px;height:26px;border-radius:50%;border:2px solid var(--color-accent)}
+.place-map-tools .map-button.is-active>* {position:relative}
+.place-map-tools .map-button:disabled {opacity:.35;pointer-events:none}
+.place-map-tools .map-button[hidden] {display:none}
+.place-map-tools .sep {width:1px;height:20px;margin:0 4px;background:var(--color-border-strong)}
+@media (hover:hover){.place-map-tools .map-button:hover{color:var(--color-highlight);fill:var(--color-highlight)}.place-map-tools .map-button:hover svg{transform:scale(1.2)}}
+#toolbar-tooltip {position:fixed;z-index:1000;padding:3px 9px;border:1px solid var(--color-pill-border);border-radius:var(--radius-lg);background:var(--color-surface-alt);color:var(--color-text);font-size:var(--fs-xs);white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 120ms ease-out;box-shadow:var(--shadow-md)}
+#toolbar-tooltip.show {opacity:1}
+.place-paste {position:absolute;left:12px;right:12px;top:58px;z-index:2;display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md)}
+.place-paste textarea {width:100%;min-height:130px;font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical}
+.place-paste-actions {display:flex;gap:5px}
+.place-map-wrap:fullscreen {border:0;border-radius:0}
+.place-attribution {position:absolute;bottom:0;right:0;background:var(--color-surface);padding:2px 6px;font-size:10px;color:var(--color-text)}
+.place-attribution a {color:inherit}
+.place-help {font-size:var(--fs-sm);color:var(--color-text-muted);line-height:1.5;margin:0}
+.place-detail {min-width:0;min-height:0;display:flex;flex-direction:column;gap:var(--space-2)}
+.place-inspector {position:sticky;top:0;z-index:4;background:var(--color-surface)}
+.place-summary {display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-bottom:var(--space-2)}
+.place-summary strong {font-size:var(--fs-base);color:var(--color-text-strong)}
+.place-summary small {display:block;font-size:var(--fs-sm);color:var(--color-text-muted);margin-top:4px}
+.place-feedback {font-size:var(--fs-sm);min-height:18px;color:var(--color-text-muted)}
+.place-feedback:empty {display:none} /* nothing to say: the map takes the line */
+.place-feedback[data-error=true] {color:var(--color-danger)}
+.place-busy:before {content:'';display:inline-block;width:11px;height:11px;border:2px solid var(--color-border);border-top-color:var(--color-accent);border-radius:50%;animation:place-spin 1s linear infinite;margin-right:7px;vertical-align:-2px}
+@keyframes place-spin {to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.place-busy:before{animation:none}}
+@container(max-width:750px){.place-workspace{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.place-sidebar{order:0;min-height:min-content}.place-map-wrap{min-height:300px}.place-list{min-height:100px;max-height:150px}.place-summary{align-items:flex-start;flex-wrap:wrap}.place-detail{min-height:500px}.place-toolbar-end{flex-wrap:wrap}}
+
+

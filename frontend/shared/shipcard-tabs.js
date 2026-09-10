@@ -2,7 +2,7 @@
 // Compact mode shows the live metrics; the handle expands or collapses details.
 import { decodeHTMLEntities, fieldRows } from './components.js';
 import { build as buildTabs, metrics } from './card-tabs.js';
-import { MATCHED_PORT_FIELDS } from './shipcard.js';
+import { MATCHED_PORT_FIELDS, setPortLink } from './shipcard.js';
 import { CLASS_A, CLASS_B } from './core/constants.js';
 import { getEtaVal, getMmsiTypeVal, getShipTypeShort, getStatusVal } from './core/text.js';
 
@@ -19,13 +19,28 @@ function el(tag, cls, attrs) {
     return e;
 }
 
-function group(panel, label, id) {
-    const g = el('div', 'sc-group');
+function group(panel, label, id, expandable = false) {
+    const g = el('div', 'sc-group' + (expandable ? ' sc-history-preview' : ''));
     const l = el('div', 'sc-group-label');
     l.textContent = label;
     const body = el('div', 'hist-wrap', { id });
-    g.appendChild(l);
-    g.appendChild(body);
+    g.append(l, body);
+    if (expandable) {
+        const more = el('button', 'sc-more-pill', {type:'button', 'aria-controls':id, 'aria-expanded':'false', 'aria-label':'Show all ' + label.toLowerCase()});
+        more.textContent = '…';
+        more.hidden = g.hidden = true;
+        more.onclick = () => {
+            g.classList.add('is-expanded');
+            more.setAttribute('aria-expanded', 'true');
+            more.hidden = true;
+        };
+        g.appendChild(more);
+        new body.ownerDocument.defaultView.MutationObserver(() => {
+            const count = body.querySelectorAll('.tl-item').length;
+            g.hidden = count === 0;
+            more.hidden = count < 2 || g.classList.contains('is-expanded');
+        }).observe(body, {childList:true, subtree:true});
+    }
     panel.appendChild(g);
     return body;
 }
@@ -79,7 +94,8 @@ export function build(mount, prefix, o) {
         { fields: [{ key: 'speed', label: 'Speed' }, { key: 'cog', label: 'Course' }, { key: 'heading', label: 'Heading' }] },
         { fields: [{ key: 'lat', label: 'Latitude' }, { key: 'lon', label: 'Longitude' }, { key: 'region', label: 'Region' }] },
     ]);
-    group(panelEls.voyage, 'Reported changes', prefix + 'changes_body');
+    cells.visits = group(panelEls.history, 'Visits', prefix + 'visits', true);
+    group(panelEls.history, 'Reported changes', prefix + 'changes_body', true);
 
     // AIS: the host's own section, whole
     if (o.slot) panelEls.ais.appendChild(o.slot);
@@ -96,7 +112,17 @@ export function build(mount, prefix, o) {
 
     /* Summary from the record: nothing inferred, an absence is N/A; only a
        missing ETA drops its line */
+    let displayedMmsi;
     function update(ship, h) {
+        if (ship.mmsi !== displayedMmsi) {
+            displayedMmsi = ship.mmsi;
+            for (const group of panelEls.history.querySelectorAll('.sc-history-preview')) {
+                group.classList.remove('is-expanded');
+                const more = group.querySelector('.sc-more-pill');
+                more.setAttribute('aria-expanded', 'false');
+                more.hidden = group.querySelectorAll('.tl-item').length < 2;
+            }
+        }
         const u = h.units;
         const set = (e, v) => { e.textContent = v == null || v === '' ? 'N/A' : String(v); };
         const vessel = ship.mmsi_type === CLASS_A || ship.mmsi_type === CLASS_B;
@@ -110,7 +136,8 @@ export function build(mount, prefix, o) {
         const hasPos = ship.lat != null && ship.lon != null;
         summary.pos.innerHTML = hasPos ? u.getLatValFormat(ship) + ', ' + u.getLonValFormat(ship) : 'N/A';
         const region = hasPos && ship.region != null ? (h.regionName ? h.regionName(ship.region) : ship.region) : null;
-        summary.region.textContent = region && region !== '-' ? region : '';
+        const places = ship.visits?.filter(v => v.inside) || [];
+        summary.region.textContent = places?.length ? places[0].name : region && region !== '-' ? region : '';
         summary.region.hidden = !summary.region.textContent;
         const dest = ship.destination && String(ship.destination).trim();
         const port = ship.matched_port;
@@ -120,13 +147,9 @@ export function build(mount, prefix, o) {
         summary.reported.textContent = portName && dest ? decodeHTMLEntities(dest) : '';
         summary.reported.hidden = !summary.reported.textContent;
         const goTo = portName && h.goTo && typeof port.lat === 'number' && typeof port.lon === 'number' ? () => h.goTo(port.lat, port.lon) : null;
-        for (const e of [summary.dest, summary.pin]) {
-            e.classList.toggle('sc-sum-link', !!goTo);
-            e.onclick = goTo;
-        }
-        summary.dest.onkeydown = goTo ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goTo(); } } : null;
-        if (goTo) { summary.dest.setAttribute('role', 'button'); summary.dest.tabIndex = 0; }
-        else { summary.dest.removeAttribute('role'); summary.dest.removeAttribute('tabindex'); }
+        setPortLink(summary.dest, port, h.openPort, h.goTo);
+        summary.pin.classList.toggle('sc-sum-link', !!goTo);
+        summary.pin.onclick = goTo;
         const age = h.age ? h.age(ship) : null;
         summary.seen.textContent = age ? 'Last received ' + age + ' ago' : 'Last received unknown';
         const hasEta = ship.eta_month != null && ship.eta_day != null && ship.eta_hour != null && ship.eta_minute != null;

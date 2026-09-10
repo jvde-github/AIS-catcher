@@ -37,7 +37,6 @@
         const target = mgr.config.isList ? mgr.data[index] : mgr.data;
         if (!target) return;
         fn(target);
-        if (mgr.hasViewerFields) mgr.reloadWebviewer = true;
         mgr.markDirty();
         mgr.render();
     }
@@ -1092,9 +1091,6 @@
             this.container = document.getElementById(config.containerId);
             this.fields = Object.values(config.schema);
             this.data = config.isList ? [] : {};
-            this.hasViewerFields = this.fields.some(f => f.reloadWebviewer || f.restartWebviewer);
-            this.reloadWebviewer = false;
-            this.restartWebviewer = false;
             this.dirty = false;
 
             if (!this.container) return;
@@ -1353,8 +1349,6 @@
             const target = this.config.isList ? this.data[index] : this.data;
             if (field.jsonpath) Utils.setNested(target, field.jsonpath, value);
             else target[field.name] = value;
-            if (field.reloadWebviewer) this.reloadWebviewer = true;
-            if (field.restartWebviewer) this.restartWebviewer = true;
             this.markDirty();
             this.updateDynamicButtons(index);
         }
@@ -1369,7 +1363,6 @@
             });
             this.data.push(newItem);
             this.render();
-            if (this.hasViewerFields) this.reloadWebviewer = true;
             this.markDirty();
         }
 
@@ -1377,7 +1370,6 @@
             if (confirm(`Are you sure you want to remove this ${this.config.title}?`)) {
                 this.data.splice(index, 1);
                 this.render();
-                if (this.hasViewerFields) this.reloadWebviewer = true;
                 this.markDirty();
             }
         }
@@ -1476,10 +1468,7 @@
                 App.setUnsaved([...ManagerRegistry.values()].some(m => m.dirty));
                 App.notify('success', 'Configuration saved successfully');
                 if (global.hubConfigSaved)
-                    global.hubConfigSaved(this.config.nestedPath ? 'viewer' : 'engine',
-                        { reloadWebviewer: this.reloadWebviewer, restartWebviewer: this.restartWebviewer });
-                this.reloadWebviewer = false;
-                this.restartWebviewer = false;
+                    global.hubConfigSaved(this.config.nestedPath ? 'viewer' : 'engine');
             } catch (e) {
                 console.error(e);
                 App.notify('error', 'Failed to save configuration: ' + e.message);

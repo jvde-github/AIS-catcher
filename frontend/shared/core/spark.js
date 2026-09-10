@@ -86,7 +86,8 @@ export function getChangeListHTML(changes, fields, units) {
     const seen = {};
     const events = rows.map((r) => {
         const to = text(r, r.to);
-        const from = r.from != null && !r.i ? text(r, r.from) : seen[r.f];
+        const crossing = r.f === CHANGE.PLACE_ENTER || r.f === CHANGE.PLACE_EXIT;
+        const from = crossing ? undefined : r.from != null && !r.i ? text(r, r.from) : seen[r.f];
         seen[r.f] = to;
         return { t: r.t, f: r.f, initial: !!r.i, from, to };
     });

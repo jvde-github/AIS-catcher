@@ -83,20 +83,18 @@ private:
 #ifdef HASWEBVIEWER
 	void setServerfromJSON(const JSON::Value &m);
 #endif
-	bool dry_run = false;
 	void setReceiverfromJSON(const std::vector<JSON::Member> &m, bool unspecAllowed);
 	void setReceiverFromArray(const JSON::Member &m);
 	void setSharing(const std::vector<JSON::Member> &members);
 
 public:
-	// dry: parse for validation only, without touching the managed viewer
-	Config(Engine &engine, bool dry = false) : _engine(engine), dry_run(dry) {}
+	Config(Engine &engine) : _engine(engine) {}
 
 	void read(const std::string &file_config);
 	void set(const std::string &str);
 
 	// skip: one extra key the caller already consumed, e.g. the "type" selector
 	static void setSettingsFromJSON(const JSON::Value &m, Setting &s, int skip = -1);
-	static void setManagedViewerfromJSON(const JSON::Value &m);
-	static void readManagedViewer(const std::string &file_config);
+	// relative paths in a config file resolve against the file's directory
+	static void setConfigBaseDir(const std::string &file_config);
 };

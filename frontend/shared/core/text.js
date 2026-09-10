@@ -14,8 +14,8 @@ export function compactCount(n) {
 }
 
 // Field ids shared with StaticHistory on the server.
-export const CHANGE = { DRAUGHT: 1, STATUS: 2, SHIPNAME: 3, CALLSIGN: 4, DESTINATION: 5, ETA: 6 };
-export const CHANGE_LABEL = { 1: "Draught", 2: "Status", 3: "Name", 4: "Callsign", 5: "Destination", 6: "ETA" };
+export const CHANGE = { DRAUGHT: 1, STATUS: 2, SHIPNAME: 3, CALLSIGN: 4, DESTINATION: 5, ETA: 6, PLACE_ENTER: 7, PLACE_EXIT: 8 };
+export const CHANGE_LABEL = { 1: "Draught", 2: "Status", 3: "Name", 4: "Callsign", 5: "Destination", 6: "ETA", 7: "Entered place", 8: "Left place" };
 
 const ETA_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
