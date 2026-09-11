@@ -248,7 +248,7 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
         if (entry && entry >= cutoff &&
             (!arrived || entry > arrived->entryTime()))
           arrived = &v;
-        if (v.inside() || ((entry || exit) && std::max(entry, exit) >= cutoff))
+        if (v.inside() || ((entry || exit) && MAX(entry, exit) >= cutoff))
           add(3, slot, &v, entry ? entry : exit);
       }
       if (inside)

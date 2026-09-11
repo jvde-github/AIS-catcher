@@ -121,9 +121,9 @@ double cross(Point a, Point b, Point c) {
   return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
 }
 bool on(Point a, Point b, Point p) {
-  return std::abs(cross(a, b, p)) < 1e-12 && p.x >= std::min(a.x, b.x) &&
-         p.x <= std::max(a.x, b.x) && p.y >= std::min(a.y, b.y) &&
-         p.y <= std::max(a.y, b.y);
+  return std::abs(cross(a, b, p)) < 1e-12 && p.x >= MIN(a.x, b.x) &&
+         p.x <= MAX(a.x, b.x) && p.y >= MIN(a.y, b.y) &&
+         p.y <= MAX(a.y, b.y);
 }
 bool intersects(Point a, Point b, Point c, Point d) {
   return ((cross(a, b, c) > 0) != (cross(a, b, d) > 0) &&
@@ -355,10 +355,10 @@ PlaceCatalogue::Place PlaceCatalogue::validate(const std::string &json,
         points.push_back({static_cast<float>(p.x), static_cast<float>(p.y)});
       if (compiled.rings.empty()) {
         for (const auto &p : points) {
-          compiled.xmin = std::min(compiled.xmin, p.x);
-          compiled.xmax = std::max(compiled.xmax, p.x);
-          compiled.ymin = std::min(compiled.ymin, p.y);
-          compiled.ymax = std::max(compiled.ymax, p.y);
+          compiled.xmin = MIN(compiled.xmin, p.x);
+          compiled.xmax = MAX(compiled.xmax, p.x);
+          compiled.ymin = MIN(compiled.ymin, p.y);
+          compiled.ymax = MAX(compiled.ymax, p.y);
         }
       }
       compiled.rings.push_back(std::move(points));
@@ -385,10 +385,10 @@ PlaceCatalogue::Place PlaceCatalogue::validate(const std::string &json,
       e.size += (j == 0 ? 1 : -1) * std::abs(size) / 2;
       if (j == 0)
         for (const auto &p : ring) {
-          e.xmin = std::min(e.xmin, static_cast<double>(p.x));
-          e.xmax = std::max(e.xmax, static_cast<double>(p.x));
-          e.ymin = std::min(e.ymin, static_cast<double>(p.y));
-          e.ymax = std::max(e.ymax, static_cast<double>(p.y));
+          e.xmin = MIN(e.xmin, static_cast<double>(p.x));
+          e.xmax = MAX(e.xmax, static_cast<double>(p.x));
+          e.ymin = MIN(e.ymin, static_cast<double>(p.y));
+          e.ymax = MAX(e.ymax, static_cast<double>(p.y));
         }
     }
   }
@@ -401,8 +401,8 @@ PlaceCatalogue::Place PlaceCatalogue::validate(const std::string &json,
   for (const auto &part : parts) {
     double ymin = 90, ymax = -90;
     for (const auto &p : part[0]) {
-      ymin = std::min(ymin, p.y);
-      ymax = std::max(ymax, p.y);
+      ymin = MIN(ymin, p.y);
+      ymax = MAX(ymax, p.y);
     }
     double y = (ymin + ymax) / 2;
     std::vector<double> xs;
@@ -721,7 +721,7 @@ void PlaceIndex::match(double lat, double lon,
                        std::array<uint32_t, 5> &ids) const {
   ids.fill(UINT32_MAX);
   const auto all = matchAll(lat, lon);
-  std::copy_n(all.begin(), std::min(all.size(), ids.size()), ids.begin());
+  std::copy_n(all.begin(), MIN(all.size(), ids.size()), ids.begin());
 }
 
 std::vector<uint32_t> PlaceIndex::matchAll(double lat, double lon) const {
@@ -808,7 +808,7 @@ void PlaceIndex::Entry::writeSummary(JSON::Writer &w, uint64_t sequence, int min
   // every place appears from the zoom of its size class: a port by its own, a
   // berth or anchorage by its port's, a custom area by the size it was given
   static const int zooms[] = {12, 11, 9, 7};
-  w.kv("z", std::max(zooms[markerSize], minZoom));
+  w.kv("z", MAX(zooms[markerSize], minZoom));
   if (metadata->type == "port")
     w.kv("country", metadata->code.substr(0, 2));
   w.kv("revision", revision)
