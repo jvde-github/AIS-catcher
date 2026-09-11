@@ -93,9 +93,14 @@ void Config::setSettingsFromJSON(const JSON::Value &m, Setting &s, int skip) {
 }
 
 void Config::setConfigBaseDir(const std::string &file_config) {
+#ifdef HASWEBVIEWER
   const size_t slash = file_config.find_last_of("/\\");
   BackupManager::setBaseDir(
       slash == std::string::npos ? "" : file_config.substr(0, slash));
+#else
+  // only the viewer writes a backup file, so there is no base directory to set
+  (void)file_config;
+#endif
 }
 
 #ifdef HASWEBVIEWER

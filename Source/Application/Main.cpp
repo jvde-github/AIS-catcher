@@ -47,6 +47,8 @@ void StopRequest()
 	stop = true;
 }
 #ifdef _WIN32
+#include <windows.h>
+
 BOOL WINAPI consoleHandler(DWORD signal)
 {
 	if (signal == CTRL_C_EVENT)

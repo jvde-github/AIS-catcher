@@ -21,18 +21,19 @@
 #include "Keys.h"
 
 #include <chrono>
+#include <thread>
 #include <complex>
 #include <cstdint>
 #include <ctime>
 #include <string>
 
-#ifdef _WIN32
-#include <windows.h>
-#define SleepSystem(x) Sleep(x)
-#else
+// windows.h used to come in here for Sleep() alone, and its min/max macros then
+// swallowed std::min/std::max in every file that included this one
+#define SleepSystem(x) std::this_thread::sleep_for(std::chrono::milliseconds(x))
+
+#ifndef _WIN32
 #include <unistd.h>
 #include <signal.h>
-#define SleepSystem(x) usleep(x * 1000)
 #endif
 
 #ifdef DEBUG
