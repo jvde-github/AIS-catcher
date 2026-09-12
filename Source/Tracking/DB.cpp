@@ -253,7 +253,8 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
         if (v.inside() || ((entry || exit) && MAX(entry, exit) >= cutoff))
           add(3, slot, &v, entry ? entry : exit);
       }
-      if (inside)
+      // present means heard lately, the same rule the export applies
+      if (inside && now - ships[slot].last_signal <= VISIT_SILENT)
         add(0, slot, inside, ships[slot].last_signal);
       if (left)
         add(1, slot, left, left->exitTime());
