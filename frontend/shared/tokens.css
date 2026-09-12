@@ -221,8 +221,9 @@
     --color-danger: #cf6679;
     --color-info: var(--blue-400);
 
-    --color-brand: var(--ink-300);
-    --color-brand-accent: var(--ink-400);
+    /* half a step above ink-300/ink-400: the bar reads less black */
+    --color-brand: #262626;
+    --color-brand-accent: #333333;
     --color-brand-menu: var(--color-brand);
     --color-brand-menu-ink: var(--color-brand-ink);
     --color-brand-divider: color-mix(in srgb, var(--color-brand-ink) 18%, transparent);

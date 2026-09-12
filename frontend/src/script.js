@@ -3865,7 +3865,7 @@ function applyMenuLabels() {
             box: document.querySelector(".header-title"),
             title: document.querySelector(".header-title > span"),
             pill: document.getElementById("menubar_mini"),
-            names: () => settings.menu_labels === "names",
+            mode: () => settings.menu_labels,
         });
     header.apply();
 }
