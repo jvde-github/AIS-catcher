@@ -245,7 +245,9 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
           inside = &v;
         if (exit && exit >= cutoff && (!left || exit > left->exitTime()))
           left = &v;
-        if (entry && entry >= cutoff &&
+        // An arrival is a ship that is still here: one that has since left is
+        // a departure and nothing else, so the two lists never name it twice.
+        if (v.inside() && entry && entry >= cutoff &&
             (!arrived || entry > arrived->entryTime()))
           arrived = &v;
         if (v.inside() || ((entry || exit) && MAX(entry, exit) >= cutoff))
@@ -1458,7 +1460,7 @@ bool DB::Load(std::ifstream &file) {
   if (!file.read((char *)&version, sizeof(int)))
     return false;
 
-  if (magic != _DB_MAGIC || (version != 1 && version != _DB_VERSION)) {
+  if (magic != _DB_MAGIC || version < 1 || version > _DB_VERSION) {
     Warning() << "DB: Invalid backup file format. Magic: " << std::hex << magic
               << ", Version: " << version;
     return false;
@@ -1516,7 +1518,7 @@ bool DB::Load(std::ifstream &file) {
                             auto it = slots.find(key);
                             return it == slots.end() ? -1 : it->second;
                           },
-                          ship_count))
+                          ship_count, version))
     return false;
   restored.remap(place_markers.index().get());
 
@@ -1595,7 +1597,14 @@ void DB::setPlaces(std::shared_ptr<const PlaceIndex> next) {
 // Caller holds mtx. Only accepted positions can confirm crossings.
 void DB::updatePlaceEvents(int ptr, std::time_t now) {
   auto &ship = ships[ptr];
-  visits.update(ptr, place_markers.containing(ship.lat, ship.lon), now,
+  // Stopped, not merely slow: a ship at anchor swings with the tide at up to
+  // a knot, so one that is already slow and says it is anchored or moored
+  // counts as stopped. No speed at all is no evidence of stopping.
+  const bool stopped =
+      ship.speed != SPEED_UNDEFINED &&
+      (ship.speed < 0.5f ||
+       (ship.speed < 1.0f && (ship.status == 1 || ship.status == 5)));
+  visits.update(ptr, place_markers.containing(ship.lat, ship.lon), now, stopped,
                 place_markers.index().get(),
                 [&](const VisitTracker::Visit &visit, bool entering,
                     std::time_t observed) {

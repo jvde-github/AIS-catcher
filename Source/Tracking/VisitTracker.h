@@ -21,6 +21,7 @@
 #include "RelationshipIndex.h"
 #include "Writer.h"
 #include <algorithm>
+#include <ctime>
 #include <fstream>
 #include <tuple>
 #include <unordered_set>
@@ -32,20 +33,45 @@ public:
   struct Visit {
     std::shared_ptr<const PlaceMetadata> place;
     uint32_t id = UINT32_MAX;
-    // Pending crossings use their corresponding timestamp tentatively. Public
-    // serializers expose only confirmed times through entryTime()/exitTime().
+    // Both ends are stamped whenever anything is known: an observed crossing,
+    // or else the moment containment was established and the last moment it
+    // held. The SEEN bits say which, so entryTime()/exitTime() still expose
+    // only crossings while the raw stamps keep every visit a bounded interval
+    // that (mmsi, place, entered) identifies. A pending crossing parks its
+    // tentative time in the matching stamp until it confirms.
     uint32_t entered = 0, exited = 0;
-    enum : uint8_t { INSIDE = 1, PENDING = 2 };
+    // Minutes stopped inside, with the seconds not yet carried into them.
+    // Saturating: a ship moored for 45 days stops counting.
+    uint16_t idle = 0;
+    enum : uint8_t {
+      INSIDE = 1,
+      PENDING = 2,
+      ENTRY_SEEN = 4,
+      EXIT_SEEN = 8,
+      SEEN = ENTRY_SEEN | EXIT_SEEN
+    };
     uint8_t flags = 0;
+    uint8_t carry = 0;
     bool empty() const { return !place; }
     bool hasRuntimeId() const { return !empty() && id != UINT32_MAX; }
     bool inside() const { return flags & INSIDE; }
     bool pending() const { return flags & PENDING; }
     bool confirmed() const { return inside() != pending(); }
     bool active() const { return inside() || pending(); }
-    uint32_t entryTime() const { return pending() && inside() ? 0 : entered; }
-    uint32_t exitTime() const { return pending() && !inside() ? 0 : exited; }
+    uint32_t entryTime() const { return flags & ENTRY_SEEN ? entered : 0; }
+    uint32_t exitTime() const { return flags & EXIT_SEEN ? exited : 0; }
     uint32_t pendingTime() const { return inside() ? entered : exited; }
+    // A crossing, an interval, or confirmed presence: anything to say. A
+    // tentative entry is nothing yet and says nothing until it confirms.
+    bool worth() const {
+      return !empty() && (confirmed() || (!pending() && (entered || exited)));
+    }
+    void accrue(uint32_t seconds) {
+      carry += seconds % 60;
+      const uint32_t minutes = idle + seconds / 60 + carry / 60;
+      carry %= 60;
+      idle = minutes > UINT16_MAX ? UINT16_MAX : minutes;
+    }
     void cancelPending() {
       if (pending())
         (inside() ? entered : exited) = 0;
@@ -53,7 +79,7 @@ public:
     }
     void baseline(bool remains) {
       cancelPending();
-      flags = remains ? INSIDE : 0;
+      flags = (flags & SEEN) | (remains ? INSIDE : 0);
     }
   };
   struct Record {
@@ -146,6 +172,11 @@ public:
   template <class F> void forEach(uint32_t id, F f) const {
     membership.forEach(id, f);
   }
+  template <class F> void forEachVisit(uint32_t slot, F f) const {
+    for (const auto &v : records.at(slot).visits)
+      if (v.worth())
+        f(v);
+  }
 
   // Operator edits/reloads/restores establish containment without crossings.
   // Existing entry times survive when the ship is still in the same place.
@@ -155,9 +186,14 @@ public:
       return;
     auto &r = records.at(slot);
     bool dirty = false;
+    // an end nobody saw is the last moment the ship was known to be inside
+    const uint32_t held = r.last ? r.last : uint32_t(now);
     for (auto &v : r.visits)
       if (!v.empty() && v.active()) {
-        v.baseline(!gap && has(inside, v.id));
+        const bool remains = !gap && has(inside, v.id);
+        v.baseline(remains);
+        if (!remains && v.entered && !v.exited)
+          v.exited = held;
         // a tentative entry that never confirmed leaves nothing to show
         if (!v.active() && !v.entered && !v.exited) {
           v = Visit{};
@@ -167,15 +203,18 @@ public:
     if (index)
       for (auto id : inside)
         if (!findActive(r, id))
-          if (auto *v = allocate(r, id, *index, dirty))
+          if (auto *v = allocate(r, id, *index, dirty)) {
             v->baseline(true);
+            v->entered = uint32_t(now);
+          }
     r.last = now;
     if (dirty)
       reindex(slot);
   }
   template <class Emit>
   void update(uint32_t slot, const std::vector<uint32_t> &inside,
-              std::time_t now, const PlaceIndex *index, Emit emit) {
+              std::time_t now, bool stopped, const PlaceIndex *index,
+              Emit emit) {
     if (!validTime(now))
       return;
     auto &r = records.at(slot);
@@ -185,19 +224,26 @@ public:
       baseline(slot, inside, now, index, r.last != 0);
       return;
     }
+    // Only observed time counts: the gap branch above returns first, so a
+    // ship nobody heard from never accrues the silence as idle.
+    const uint32_t elapsed = now - r.last;
     r.last = now;
     bool dirty = false;
     for (auto &v : r.visits)
       if (!v.empty() && v.active()) {
+        if (stopped && v.inside())
+          v.accrue(elapsed);
         const bool observedInside = has(inside, v.id);
         if (observedInside == v.confirmed()) {
           v.baseline(observedInside); // reversal cancels the tentative time
         } else if (!v.pending()) {
-          v.flags = (observedInside ? Visit::INSIDE : 0) | Visit::PENDING;
+          v.flags = (v.flags & Visit::SEEN) |
+                    (observedInside ? Visit::INSIDE : 0) | Visit::PENDING;
           (observedInside ? v.entered : v.exited) = now;
         } else if (now - v.pendingTime() >= 10) {
           const auto observed = v.pendingTime();
           v.flags &= ~Visit::PENDING;
+          v.flags |= v.inside() ? Visit::ENTRY_SEEN : Visit::EXIT_SEEN;
           emit(v, v.inside(), observed);
         }
         if (!v.active() && !v.entered && !v.exited) {
@@ -234,7 +280,12 @@ public:
           if (it != byUUID.end())
             v.place = it->second->metadata;
           if (id == UINT32_MAX) {
+            // a place that vanished ends its visits where the ship was last
+            // heard, so the interval stays bounded like a gap-ended one
+            const bool held = v.confirmed();
             v.baseline(false);
+            if (held && v.entered && !v.exited)
+              v.exited = records[slot].last;
             if (!v.entered && !v.exited) {
               v = Visit{};
               dirty = true;
@@ -277,6 +328,7 @@ public:
       w.kv("name", v.place->name)
           .kv("inside", v.inside())
           .kv("pending", v.pending())
+          .kv("idle", (long long)v.idle)
           .key("entered");
       if (v.entryTime())
         w.val(v.entryTime());
@@ -312,11 +364,7 @@ public:
   // A sparse section keyed by MMSI. Shared metadata is written once, and each
   // visit stores a table offset, never a process-local catalogue ID.
   template <class MMSI> bool save(std::ofstream &out, MMSI mmsi) const {
-    // Keep confirmed baselines even when their entry time is unknown, but
-    // discard tentative entries and inactive records with no confirmed times.
-    const auto retained = [](const Visit &v) {
-      return !v.empty() && (v.confirmed() || v.entryTime() || v.exitTime());
-    };
+    const auto retained = [](const Visit &v) { return v.worth(); };
     std::vector<std::shared_ptr<const PlaceMetadata>> table;
     std::unordered_map<const PlaceMetadata *, uint32_t> offsets;
     uint32_t count = 0;
@@ -354,17 +402,20 @@ public:
       for (const auto &v : records[s].visits)
         if (retained(v)) {
           put(out, offsets.at(v.place.get()));
-          int64_t entry = v.entryTime(), exit = v.exitTime();
+          // A tentative exit is not persisted: the ship is inside until it
+          // confirms, and a backup saying otherwise would refuse to load.
+          int64_t entry = v.entered, exit = v.pending() ? 0 : v.exited;
           put(out, entry);
           put(out, exit);
-          uint8_t state = v.confirmed() ? 1 : 0;
+          uint8_t state = (v.confirmed() ? 1 : 0) | (v.flags & Visit::SEEN);
           put(out, state);
+          put(out, v.idle);
         }
     }
     return bool(out);
   }
   template <class Find>
-  bool load(std::ifstream &in, Find find, uint32_t maxShips) {
+  bool load(std::ifstream &in, Find find, uint32_t maxShips, int version) {
     uint32_t n = 0;
     if (!get(in, n) || uint64_t(n) > uint64_t(maxShips) * 5)
       return false;
@@ -388,6 +439,10 @@ public:
     if (!get(in, count) || count > maxShips)
       return false;
     std::unordered_set<uint32_t> seen;
+    // A visit with no entry time has no identity. Restoring re-establishes
+    // containment as a coverage gap does: one still inside is stamped with this
+    // moment, one already over is dropped.
+    const uint32_t restored_at = uint32_t(std::time(nullptr));
     for (uint32_t i = 0; i < count; ++i) {
       uint32_t key;
       uint8_t countVisits;
@@ -401,17 +456,34 @@ public:
         uint32_t offset;
         int64_t entry, exit;
         uint8_t state;
+        uint16_t idle = 0;
         if (!get(in, offset) || offset >= table.size() || !get(in, entry) ||
-            !get(in, exit) || !get(in, state) || state > 1 || entry < 0 ||
+            !get(in, exit) || !get(in, state) ||
+            (version >= 3 && !get(in, idle)) ||
+            (state & ~uint8_t(Visit::INSIDE | Visit::SEEN)) || entry < 0 ||
             exit < 0 || uint64_t(entry) > UINT32_MAX ||
             uint64_t(exit) > UINT32_MAX || (exit && entry > exit) ||
-            (state && exit))
+            ((state & Visit::INSIDE) && exit))
           return false;
+        // `entry` stays as written: the SEEN bits below read it, so a
+        // re-established containment gains a time without claiming a crossing.
+        int64_t stamp = entry;
+        if (!entry) {
+          if (!(state & Visit::INSIDE))
+            continue;
+          stamp = restored_at;
+        }
         auto &v = records[slot].visits[j];
         v.place = table[offset];
-        v.entered = entry;
+        v.entered = stamp;
         v.exited = exit;
-        v.flags = state ? Visit::INSIDE : 0;
+        v.idle = idle;
+        // Before the stamps carried their own SEEN bits only crossings were
+        // written, so there a time that is present is a time that was seen.
+        v.flags = (state & Visit::INSIDE) |
+                  (version >= 3 ? (state & Visit::SEEN)
+                                : uint8_t((entry ? Visit::ENTRY_SEEN : 0) |
+                                          (exit ? Visit::EXIT_SEEN : 0)));
       }
     }
     return true;

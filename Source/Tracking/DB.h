@@ -156,6 +156,17 @@ public:
       f(i, ptr == SHIP_NIL ? nullptr : &ships[ptr]);
     }
   }
+  // Chunked like withShips so the exporter never holds the lock for a whole
+  // pass. A visit's metadata lives only as long as the lock.
+  template <typename F> void withVisits(const uint32_t *mmsi, size_t n, F f) {
+    std::lock_guard<std::mutex> lock(mtx);
+    for (size_t i = 0; i < n; i++) {
+      const int ptr = ships.find(mmsi[i]);
+      if (ptr != SHIP_NIL)
+        visits.forEachVisit(
+            ptr, [&](const VisitTracker::Visit &v) { f(mmsi[i], v); });
+    }
+  }
   // Locked write for an operator correction: the record under `mmsi`, mutable.
   template <typename F> bool withShipMutable(uint32_t mmsi, F f) {
     std::lock_guard<std::mutex> lock(mtx);
@@ -458,5 +469,5 @@ public:
 
 private:
   static const int _DB_MAGIC = 0x41495346;
-  static const int _DB_VERSION = 2;
+  static const int _DB_VERSION = 3;
 };
