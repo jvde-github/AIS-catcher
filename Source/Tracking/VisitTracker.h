@@ -89,11 +89,11 @@ public:
   static_assert(sizeof(Visit) <= 32, "Visit storage must stay compact");
   static_assert(sizeof(Record) <= 168, "Five visits must remain bounded");
 
-  // Silence a visit survives. Heard inside the same place again within it, the
-  // ship never left; heard outside, it crossed somewhere in between and the
-  // later fix bounds the departure. Past it nothing can be said, so the visit
-  // ends where the ship was last known. The same span decides whether a vessel
-  // still counts as present, so a stay and its ship agree on when it is over.
+  // How close two fixes must be for the crossing between them to be an event
+  // worth timing. Inside and then outside within it: the ship left, and the
+  // later fix says near enough when. Further apart, or after any silence at
+  // all, we know only that it went - never when. Silence itself ends nothing,
+  // because a Class B can fall quiet for hours in a berth it never leaves.
   static const uint32_t SILENT = 3600;
   // The longest interval that counts as watched. A visit tolerates a silence
   // far longer than any one sample, and none of that gap is time the ship was
@@ -191,8 +191,11 @@ public:
 
   // Operator edits/reloads/restores establish containment without crossings.
   // Existing entry times survive when the ship is still in the same place.
+  // Containment as found, without a crossing: what the ship is inside now
+  // continues, and what it is no longer inside ended at the last moment it was
+  // known to be there. Nothing here invents a time nobody observed.
   void baseline(uint32_t slot, const std::vector<uint32_t> &inside,
-                std::time_t now, const PlaceIndex *index, bool gap = false) {
+                std::time_t now, const PlaceIndex *index) {
     if (now < 0 || uint64_t(now) > UINT32_MAX)
       return;
     auto &r = records.at(slot);
@@ -201,7 +204,7 @@ public:
     const uint32_t held = r.last ? r.last : uint32_t(now);
     for (auto &v : r.visits)
       if (!v.empty() && v.active()) {
-        const bool remains = !gap && has(inside, v.id);
+        const bool remains = has(inside, v.id);
         v.baseline(remains);
         if (!remains && v.entered && !v.exited)
           v.exited = held;
@@ -231,8 +234,11 @@ public:
     auto &r = records.at(slot);
     if (r.last && now <= r.last)
       return;
+    // Too long since the last fix for a crossing to be timed: take the places
+    // as found. A ship still inside is still on the same visit, however long
+    // it was quiet; one that has moved on ended its visit when last seen.
     if (!r.last || now - r.last > SILENT) {
-      baseline(slot, inside, now, index, r.last != 0);
+      baseline(slot, inside, now, index);
       return;
     }
     const uint32_t elapsed = now - r.last;
