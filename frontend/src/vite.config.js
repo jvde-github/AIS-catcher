@@ -5,7 +5,10 @@ export default defineConfig({
   // ASCII-only output — prevents esbuild from emitting literal Unicode into
   // `new RegExp()` string args, which V8 rejects as invalid ranges.
   esbuild: { charset: 'ascii' },
-  resolve: { alias: { ol: path.resolve(__dirname, 'node_modules/ol') } },
+  resolve: { alias: {
+    ol: path.resolve(__dirname, 'node_modules/ol'),
+    'ol-mapbox-style': path.resolve(__dirname, 'node_modules/ol-mapbox-style/src/index.js'),
+  } },
   build: {
     outDir: path.resolve(__dirname, '../dist'),
     emptyOutDir: false,

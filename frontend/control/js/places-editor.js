@@ -16,7 +16,8 @@ const TOOL_ICONS = {
     fullscreen: 'M120-120v-200h80v120h120v80H120Zm520 0v-80h120v-120h80v200H640ZM120-640v-200h200v80H200v120h-80Zm640 0v-120H640v-80h200v200h-80Z',
     fullscreen_exit: 'M240-120v-120H120v-80h200v200h-80Zm400 0v-200h200v80H720v120h-80ZM120-640v-80h120v-120h80v200H120Zm520 0v-200h80v120h120v80H640Z',
     add: 'M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z',
-    remove: 'M200-440v-80h560v80H200Z'
+    remove: 'M200-440v-80h560v80H200Z',
+    delete: 'M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z'
 };
 const toolSvg = icon => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="24" height="24" aria-hidden="true"><path d="${TOOL_ICONS[icon]}"/></svg>`;
 const tool = (name, label, icon) => `<button type="button" class="map-button" data-do="${name}" title="${label}">${toolSvg(icon)}</button>`;
@@ -52,7 +53,7 @@ export function createPlaceEditor(host, options = {}) {
       <div class="place-top place-actions" role="group" aria-label="Place actions">
         <div class="place-toolbar-main">
           <button class="btn" data-do="new">New place</button>
-          <details class="place-menu"><summary class="btn" aria-label="More actions">More</summary>
+          <details class="place-menu"><summary class="btn" aria-label="More actions" title="More actions">…</summary>
             <div class="place-menu-items">
               <button class="btn" data-do="import">Import…</button>
               <button class="btn" data-do="export">Export</button>
@@ -87,7 +88,7 @@ export function createPlaceEditor(host, options = {}) {
         <div class="place-feedback" role="status" aria-live="polite"></div>
         </div>
       <div class="place-map-wrap"><div class="place-map"></div>
-        <div class="place-map-tools" role="toolbar" aria-label="Map tools">${tool('draw', 'Draw polygon', 'pentagon')}${tool('point', 'Set point', 'add_location_alt')}<span class="sep"></span>${tool('undo', 'Undo', 'undo')}${tool('redo', 'Redo', 'redo')}<span class="sep"></span>${tool('fit', 'Fit place', 'fit_screen')}<span class="sep"></span>${tool('import-shape', 'Import shape', 'upload')}${tool('export-shape', 'Export shape', 'download')}${tool('paste-shape', 'Paste shape', 'content_paste')}<span class="sep"></span>${tool('fullscreen', 'Full screen', 'fullscreen')}<span class="sep"></span>${tool('zoom-in', 'Zoom in', 'add')}${tool('zoom-out', 'Zoom out', 'remove')}</div>
+        <div class="place-map-tools" role="toolbar" aria-label="Map tools">${tool('draw', 'Draw polygon', 'pentagon')}${tool('point', 'Set point', 'add_location_alt')}${tool('delete-part', 'Delete part', 'delete')}<span class="sep"></span>${tool('undo', 'Undo', 'undo')}${tool('redo', 'Redo', 'redo')}<span class="sep"></span>${tool('fit', 'Fit place', 'fit_screen')}<span class="sep"></span>${tool('import-shape', 'Import shape', 'upload')}${tool('export-shape', 'Export shape', 'download')}${tool('paste-shape', 'Paste shape', 'content_paste')}<span class="sep"></span>${tool('fullscreen', 'Full screen', 'fullscreen')}<span class="sep"></span>${tool('zoom-in', 'Zoom in', 'add')}${tool('zoom-out', 'Zoom out', 'remove')}</div>
         <div class="place-paste" hidden><textarea data-paste rows="7" spellcheck="false" placeholder="Paste GeoJSON: a geometry, a Feature, or a collection holding one"></textarea>
           <div class="place-paste-actions"><button class="btn" data-do="paste-apply">Apply</button><button class="btn" data-do="paste-close">Close</button></div></div>
         <div class="place-attribution">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</div>
@@ -99,7 +100,7 @@ export function createPlaceEditor(host, options = {}) {
     const input = name => q(`[data-field="${name}"]`);
     let placeSettings = null, catalogueVersion = '';
     let records = [], draft = null, original = null, busy = false, dead = false, draw = null, undo = [],
-        redo = [], unsaved = false, editingMode = false;
+        redo = [], unsaved = false, editingMode = false, deleteArmed = false;
     const editing = new VectorSource();
     // every other place nearby, in the accent blue, so a new outline is drawn against its neighbours
     const context = new VectorSource();
@@ -116,7 +117,6 @@ export function createPlaceEditor(host, options = {}) {
         target: q('.place-map'),
         controls: [],
         layers: [
-            new TileLayer({source: new OSM(), opacity: 0.6}),
             new TileLayer({
                 className: 'place-seamark', // its own canvas: sharing one with the base map left it unrendered
                 source: new XYZ({
@@ -133,6 +133,40 @@ export function createPlaceEditor(host, options = {}) {
         ],
         view: new View({center: fromLonLat([4.4, 51.95]), zoom: 10})
     });
+    // OpenFreeMap Positron, labelled in English where OpenStreetMap has the name and in the Latin
+    // spelling otherwise; the plain OSM tiles stand in if the style cannot be loaded
+    const basemapStyle = 'https://tiles.openfreemap.org/styles/positron';
+    Promise.all([import('ol/layer/VectorTile.js'), import('ol-mapbox-style'), fetch(basemapStyle).then(r => r.json())])
+        .then(([{default: VectorTileLayer}, {applyStyle}, style]) => {
+            const english = ['coalesce', ['get', 'name:en'], ['get', 'name_int'], ['get', 'name:latin'], ['get', 'name']];
+            for (const l of style.layers || []) {
+                if (!l.layout?.['text-field'])
+                    continue;
+                l.layout['text-font'] = ['Arial'];
+                if (JSON.stringify(l.layout['text-field']).includes('name'))
+                    l.layout['text-field'] = english;
+            }
+            const background = style.layers?.find(l => l.type === 'background')?.paint?.['background-color'];
+            const base = new VectorTileLayer({className: 'place-base', declutter: true});
+            return applyStyle(base, style, {styleUrl: basemapStyle}).then(() => {
+                if (background)
+                    base.on('prerender', e => {
+                        e.context.save();
+                        e.context.fillStyle = background;
+                        e.context.fillRect(0, 0, e.context.canvas.width, e.context.canvas.height);
+                        e.context.restore();
+                    });
+                if (dead)
+                    return;
+                map.getLayers().insertAt(0, base);
+                q('.place-attribution').innerHTML = '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+            });
+        })
+        .catch(err => {
+            console.error('Places map: OpenFreeMap failed, using OpenStreetMap tiles', err);
+            if (!dead)
+                map.getLayers().insertAt(0, new TileLayer({source: new OSM(), opacity: 0.6}));
+        });
     const modify = new Modify({source: editing, style: handleStyle});
     map.addInteraction(modify);
     const resize = new ResizeObserver(() => map.updateSize());
@@ -155,7 +189,7 @@ export function createPlaceEditor(host, options = {}) {
             q(`[data-do="${action}"]`).hidden = !draft;
         q('[data-do="edit"]').hidden = !draft || editingMode;
         q('[data-do="delete"]').hidden = !original;
-        for (const action of ['draw', 'point', 'undo', 'redo', 'import-shape', 'paste-shape'])
+        for (const action of ['draw', 'point', 'delete-part', 'undo', 'redo', 'import-shape', 'paste-shape'])
             q(`[data-do="${action}"]`).hidden = !editingMode;
         q('[data-do="export-shape"]').hidden = !draft?.geometry;
         tidyTools();
@@ -175,9 +209,12 @@ export function createPlaceEditor(host, options = {}) {
             q(`[data-do="${action}"]`).disabled = busy || !draft || (action === 'delete' && !original);
         q('[data-do="fit"]').disabled = busy || !draft?.geometry;
         q('[data-do="export-shape"]').disabled = busy || !draft?.geometry;
+        q('[data-do="delete-part"]').disabled = busy || !draft?.geometry;
         q('[data-do="undo"]').disabled = busy || !undo.length;
         q('[data-do="redo"]').disabled = busy || !redo.length;
-        modify.setActive(!busy && editingMode && !!draft && !draw);
+        if (busy || !editingMode || !draft?.geometry)
+            armDelete(false);
+        modify.setActive(!busy && editingMode && !!draft && !draw && !deleteArmed);
     }
     // dividers only between groups that still show buttons; a hairline only between two visible buttons
     function tidyTools() {
@@ -359,6 +396,114 @@ export function createPlaceEditor(host, options = {}) {
         draft.geometry = geometry(editing.getFeatures()[0]);
         checkpoint(beforeModify);
         status('Boundary changed. Save to apply.');
+    });
+    const doomed = new VectorSource();
+    let hoverPart = null;
+    map.addLayer(new VectorLayer({
+        className: 'place-doomed',
+        source: doomed,
+        style: new Style({stroke: new Stroke({color: '#dc2626', width: 3}), fill: new Fill({color: 'rgba(220, 38, 38, 0.25)'})})
+    }));
+    function armDelete(on) {
+        if (deleteArmed === !!on)
+            return;
+        deleteArmed = !!on;
+        setTool('delete-part', deleteArmed ? 'Cancel delete' : 'Delete part', deleteArmed);
+        q('.place-map-wrap').classList.toggle('is-deleting', deleteArmed);
+        if (!deleteArmed) {
+            doomed.clear();
+            hoverPart = null;
+        }
+        modify.setActive(!deleteArmed && !busy && editingMode && !!draft && !draw);
+        if (deleteArmed)
+            status('Click a part to delete it. Escape cancels.');
+    }
+    function parts() {
+        const g = draft?.geometry;
+        return g?.type === 'MultiPolygon' ? g.coordinates : g?.type === 'Polygon' ? [g.coordinates] : [];
+    }
+    // deleting the last part leaves the place without a shape, the state a new place starts in
+    function removePart(index, ring = 0) {
+        const before = clone(draft), list = parts();
+        if (!list[index])
+            return;
+        if (ring)
+            list[index].splice(ring, 1);
+        else
+            list.splice(index, 1);
+        draft.geometry = !list.length ? null :
+            list.length === 1 ? {type: 'Polygon', coordinates: list[0]} : {type: 'MultiPolygon', coordinates: list};
+        renderGeometry();
+        checkpoint(before);
+        buttons();
+        status(ring ? 'Hole removed. Save to apply.' :
+               draft.geometry ? 'Part deleted. Save to apply.' :
+                                'Shape cleared. Draw a new boundary, or press Cancel.');
+    }
+    function partAt(coordinate, pixel) {
+        const g = draft?.geometry;
+        if (g?.type === 'Point') {
+            const p = map.getPixelFromCoordinate(fromLonLat(g.coordinates));
+            return p && Math.hypot(p[0] - pixel[0], p[1] - pixel[1]) <= 16 ? 0 : -1;
+        }
+        const list = parts();
+        for (let i = 0; i < list.length; i++)
+            if (format.readGeometry({type: 'Polygon', coordinates: list[i]}, {featureProjection: 'EPSG:3857'})
+                    .intersectsCoordinate(coordinate))
+                return i;
+        return -1;
+    }
+    // OpenLayers keeps a ring at three corners, so Alt-clicking one of those takes the ring itself
+    function minimalRingAt(pixel) {
+        const list = parts();
+        for (let i = 0; i < list.length; i++)
+            for (let r = 0; r < list[i].length; r++)
+                if (list[i][r].length === 4)
+                    for (const corner of list[i][r]) {
+                        const p = map.getPixelFromCoordinate(fromLonLat(corner));
+                        if (p && Math.hypot(p[0] - pixel[0], p[1] - pixel[1]) <= 12)
+                            return [i, r];
+                    }
+        return null;
+    }
+    map.on('singleclick', e => {
+        if (!draft || !editingMode || busy || draw)
+            return;
+        if (deleteArmed) {
+            const index = partAt(e.coordinate, e.pixel);
+            armDelete(false);
+            if (index < 0) {
+                status('Nothing deleted: click inside a part.');
+                return;
+            }
+            if (draft.geometry.type === 'Point') {
+                const before = clone(draft);
+                draft.geometry = null;
+                renderGeometry();
+                checkpoint(before);
+                buttons();
+                status('Point cleared. Set a new point, or press Cancel.');
+                return;
+            }
+            removePart(index);
+            return;
+        }
+        if (e.originalEvent.altKey) {
+            const hit = minimalRingAt(e.pixel);
+            if (hit)
+                removePart(hit[0], hit[1]);
+        }
+    });
+    map.on('pointermove', e => {
+        if (!deleteArmed || e.dragging)
+            return;
+        const index = draft?.geometry?.type === 'Point' ? -1 : partAt(e.coordinate, e.pixel);
+        if (index === hoverPart)
+            return;
+        hoverPart = index;
+        doomed.clear();
+        if (index >= 0)
+            doomed.addFeature(read({type: 'Feature', properties: {}, geometry: {type: 'Polygon', coordinates: parts()[index]}}));
     });
     for (const key of ['name', 'place_type', 'unlocode', 'parent_unlocode', 'port_unlocode', 'category', 'size'])
         input(key).addEventListener(['place_type', 'size'].includes(key) ? 'change' : 'input', () => {
@@ -572,7 +717,7 @@ export function createPlaceEditor(host, options = {}) {
             if (!draft || busy) return;
             editingMode = true;
             buttons();
-            status('Drag an edge to add a corner; Alt-click a corner removes it.');
+            status('Drag an edge to add a corner; Alt-click a corner removes it; the trash tool deletes a whole part.');
         },
         async new () {
             if (!discard() || !await ensureConfigured())
@@ -594,6 +739,7 @@ export function createPlaceEditor(host, options = {}) {
         draw(shape = 'Polygon') {
             if (!draft || !editingMode)
                 return;
+            armDelete(false);
             if (draw) {
                 stopDraw();
                 return;
@@ -631,6 +777,7 @@ export function createPlaceEditor(host, options = {}) {
             renderGeometry();
             fields();
             dirty(true);
+            status('Undone. Save to apply.');
         },
         redo() {
             if (!redo.length)
@@ -641,6 +788,7 @@ export function createPlaceEditor(host, options = {}) {
             renderGeometry();
             fields();
             dirty(true);
+            status('Redone. Save to apply.');
         },
         save: () => save(),
         delete: () => save(true),
@@ -654,6 +802,12 @@ export function createPlaceEditor(host, options = {}) {
                 fileMode = 'place';
                 q('[data-file]').click();
             }
+        },
+        'delete-part': () => {
+            if (!draft?.geometry || !editingMode)
+                return;
+            stopDraw();
+            armDelete(!deleteArmed);
         },
         'import-shape': () => { fileMode = 'shape'; q('[data-file]').click(); },
         'paste-shape': () => {
@@ -777,10 +931,25 @@ export function createPlaceEditor(host, options = {}) {
             status(e.message, true);
         }
     });
+    const closeMenu = e => {
+        const menu = q('.place-menu');
+        if (menu.open && !menu.contains(e.target))
+            menu.open = false;
+    };
+    document.addEventListener('pointerdown', closeMenu);
     const key = e => {
-        if (e.key === 'Escape' && draw) {
+        if (e.key !== 'Escape')
+            return;
+        if (q('.place-menu').open) {
+            e.stopPropagation();
+            q('.place-menu').open = false;
+        } else if (draw) {
             e.stopPropagation();
             stopDraw();
+        } else if (deleteArmed) {
+            e.stopPropagation();
+            armDelete(false);
+            status('');
         }
     };
     host.addEventListener('keydown', key);
@@ -792,6 +961,7 @@ export function createPlaceEditor(host, options = {}) {
         unsaved: () => unsaved,
         destroy() {
             dead = true;
+            document.removeEventListener('pointerdown', closeMenu);
             document.removeEventListener('fullscreenchange', onFullscreen);
             resize.disconnect();
             stopDraw();

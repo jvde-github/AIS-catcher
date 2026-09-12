@@ -8,12 +8,15 @@
 .place-top {display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap}
 .place-actions {position:sticky;top:0;z-index:5;background:var(--color-surface);padding:10px 0;border-bottom:1px solid var(--color-border);flex-shrink:0}
 .place-actions {flex-wrap:nowrap;gap:var(--space-2)}
-.place-toolbar-main {display:flex;gap:var(--space-1);min-width:0;overflow-x:auto;align-items:center}
+.place-toolbar-main {display:flex;gap:var(--space-1);min-width:0;flex-wrap:wrap;align-items:center}
 .place-menu {position:relative}
 .place-menu summary {list-style:none;cursor:pointer}
 .place-menu summary::-webkit-details-marker {display:none}
 .place-menu-items {position:absolute;left:0;top:calc(100% + 4px);z-index:6;display:flex;flex-direction:column;gap:2px;padding:6px;min-width:170px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);box-shadow:0 8px 24px #0003}
-.place-menu-items .btn {justify-content:flex-start;text-align:left;width:100%}
+.place-menu-items .btn {justify-content:flex-start;text-align:left;width:100%;border:0;border-radius:var(--radius-md);background:transparent;box-shadow:none;font-weight:400}
+.place-menu-items .btn:hover:not(:disabled) {background:var(--color-hover)}
+.place-menu-items .btn:focus-visible {outline:2px solid var(--color-accent-soft);outline-offset:-2px}
+.place-map-wrap.is-deleting .ol-viewport {cursor:crosshair}
 .place-toolbar-end {display:flex;gap:var(--space-1);align-items:center;margin-left:auto;flex-shrink:0}
 #sys-places-body [hidden] {display:none!important}
 /* the grid fills the pane; a minmax(0,1fr) row is what lets the list scroll inside it rather than grow the pane */
