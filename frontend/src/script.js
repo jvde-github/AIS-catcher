@@ -7,6 +7,7 @@ import { SPEED_PALETTES, palette as validPalette, bucketColor, speedBucket, pale
 import * as filter from './core/filter.js';
 import * as components from '../shared/components.js';
 import * as mapui from '../shared/mapui.js';
+import * as headerLib from '../shared/header.js';
 import * as tooltipLib from '../shared/tooltip.js';
 import * as tableLib from '../shared/table.js';
 import * as markersLib from '../shared/markers.js';
@@ -241,6 +242,7 @@ const ACTIONS = {
     setGraphVisibility: (e, d, el) => setGraphVisibility(d.graph, el.checked),
     setPlotAbsoluteTime: (e, d, el) => setPlotAbsoluteTime(el.checked),
     setMapToolbar: (e, d, el) => { settings.map_toolbar = el.value; saveSettings(); applyToolbarMode(); },
+    setMenuLabels: (e, d, el) => { settings.menu_labels = el.value; saveSettings(); applyMenuLabels(); },
     setMapSetting: (e, d, el) => setMapSetting(d.key,
         el.type === 'checkbox' ? el.checked :
         (el.type === 'range' || el.type === 'number') ? Number(el.value) : el.value),
@@ -652,6 +654,7 @@ const DEFAULT_SETTINGS = {
         shipcard_style: "tabs",
         shipcard_active_tab: "summary",
         map_toolbar: "compact",
+        menu_labels: "icons",
         show_signal_graphs: true,
         show_ppm_graphs: true,
         plot_absolute_time: true,
@@ -961,7 +964,8 @@ function syncThemedSettings() {
 
 // the header icon and the context menu land on the first page, not wherever the panel was left
 function openSettings() {
-    settingsPanel.open("General");
+    if (settingsPanel.isOpen()) settingsPanel.close();
+    else settingsPanel.open("General");
 }
 
 function closeSettings() {
@@ -2028,6 +2032,7 @@ function applyPanels(opts = {}) {
     document.body.classList.toggle("table-open", panels.table);
 
     applyToolbarMode();
+    applyMenuLabels();
     ui.chrome.invalidate();
     /* the map pane narrows for the panel — OpenLayers has to be told */
     if (map) mapui.trackResize(map);
@@ -3853,6 +3858,18 @@ window.addEventListener("resize", () => ui.chrome.invalidate());
 
 const cssPx = ui.chrome.px;
 
+let header = null;
+function applyMenuLabels() {
+    if (!header)
+        header = headerLib.create({
+            box: document.querySelector(".header-title"),
+            title: document.querySelector(".header-title > span"),
+            pill: document.getElementById("menubar_mini"),
+            names: () => settings.menu_labels === "names",
+        });
+    header.apply();
+}
+
 function applyToolbarMode() {
     ui.toolbar.apply();
 }
@@ -4362,6 +4379,7 @@ async function openFocus(m, z) {
 function updateSettingsTab() {
     document.getElementById("settings_darkmode").checked = settings.dark_mode;
     document.getElementById("settings_map_toolbar").value = settings.map_toolbar;
+    document.getElementById("settings_menu_labels").value = settings.menu_labels;
     document.getElementById("settings_coordinate_format").value = settings.coordinate_format;
     document.getElementById("settings_metric").value = getMetrics().toLowerCase();
     document.getElementById("settings_fading").checked = settings.fading;
@@ -4972,6 +4990,7 @@ targetcard.prepare();
 buildSettingsTabs();
 
 applyServerFeatures(config);
+applyMenuLabels();
 
 showWelcome();
 announceStickyState();

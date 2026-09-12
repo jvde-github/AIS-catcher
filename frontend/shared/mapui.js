@@ -243,6 +243,7 @@ export function create(opts) {
         toolbar = toolbarLib.create(Object.assign({
             wantWide: function () { return settings().map_toolbar === "wide"; },
             freeWidth: freeWidth,
+            gap: chrome.gap,
             reserve: function () { return chrome.px("--size-map-controls", 44) + chrome.gap() * 2; },
             onChange: function () { chrome.invalidate(); },
         }, opts.toolbar));

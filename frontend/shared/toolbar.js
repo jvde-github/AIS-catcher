@@ -23,6 +23,7 @@ export function create(opts) {
     var wantWide = opts.wantWide || function () { return false; };
     var freeWidth = opts.freeWidth || function () { return window.innerWidth; };
     var reserve = opts.reserve || function () { return 0; };   // px the bar must leave beside it
+    var gap = opts.gap || function () { return 0; };
     var onChange = opts.onChange || function () {};
 
     var barWidth = 0;
@@ -58,21 +59,35 @@ export function create(opts) {
         return freeWidth() >= barWidth + 2 * reserve();
     }
 
+    /* a short pane: the rail sheds buttons from the bottom, sparing those marked
+       data-keep, until it ends a gap above the bottom pill */
+    function fitRail(btns) {
+        var bottom = rail.parentElement && rail.parentElement.querySelector(".map-pill.map-bottom");
+        var pane = rail.offsetParent;
+        var g = gap();
+        var end = bottom && bottom.offsetParent ? bottom.offsetTop : (pane ? pane.clientHeight : window.innerHeight) - g;
+        var limit = end - rail.offsetTop - g;
+        var spare = btns.filter(function (b) { return !b.hasAttribute("data-keep"); }).reverse();
+        for (var i = 0; i < spare.length && rail.offsetHeight > limit; i++) spare[i].classList.add("fit-hidden");
+    }
+
     function apply() {
         if (!bar || !rail) return false;
         var btns = buttons();
         label(btns);
         measure(btns);
 
+        btns.forEach(function (btn) { btn.classList.remove("fit-hidden"); });
         var wide = !!wantWide() && fits();
-        if (wide === applied) return wide;
-        applied = wide;
-
-        var host = wide ? bar : rail;
-        btns.forEach(function (btn) { host.appendChild(btn); });
-        bar.classList.toggle("open", wide);
-        rail.classList.toggle("folded", wide);
-        onChange(wide);
+        if (wide !== applied) {
+            applied = wide;
+            var host = wide ? bar : rail;
+            btns.forEach(function (btn) { host.appendChild(btn); });
+            bar.classList.toggle("open", wide);
+            rail.classList.toggle("folded", wide);
+            onChange(wide);
+        }
+        if (!wide) fitRail(btns);
         return wide;
     }
 

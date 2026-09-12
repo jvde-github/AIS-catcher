@@ -1,0 +1,105 @@
+/* --- the header's tab pill: names or icons, and what fits (header.js) -------
+   .header in every selector, so these win over a host's own rules whatever the
+   load order. A host sets --header-divider to the colour behind the pill. */
+
+.header .header-title {
+    --header-gap: 64px;
+    --header-title-gap: 44px;
+    padding-right: var(--header-gap);
+    min-width: 0;
+}
+
+.header .header-title > span:first-child {
+    padding-right: var(--header-title-gap);
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.header .header-title.no-pill > span:first-child {
+    padding-right: 15px;
+}
+
+.header .fit-hidden {
+    display: none !important;
+}
+
+/* the hidden title still sets the bar's height */
+.header .header-title > span:first-child.fit-hidden {
+    display: block !important;
+    visibility: hidden;
+    width: 0;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+#menubar_mini .mb-name {
+    display: none;
+}
+
+#menubar_mini.labels {
+    gap: 0;
+    padding: 10px 4px;
+}
+
+#menubar_mini.labels i {
+    -webkit-mask-image: none;
+    mask-image: none;
+    background-color: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: var(--fs-lg);
+    margin: 0;
+    padding: 0 16px;
+    font-style: normal;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    line-height: 1;
+    color: color-mix(in srgb, currentColor 68%, transparent);
+}
+
+#menubar_mini.labels i.active {
+    color: inherit;
+}
+
+#menubar_mini.labels .mb-name {
+    display: inline;
+    padding: 0;
+    line-height: 1;
+}
+
+#menubar_mini.labels > * + * {
+    border-left: 1px solid var(--header-divider, currentColor);
+}
+
+#menubar_mini.labels a:has(.active)::after {
+    display: none;
+}
+
+.header .header-menubutton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header .header-menubutton > div {
+    padding: 0;
+    margin: 0;
+    line-height: 0;
+}
+
+/* phones: a smaller title and a lower bar. A host that offsets content by the
+   bar's height switches at the same width. */
+@media only screen and (max-width: 480px) {
+    .header .header-title > span:first-child {
+        padding-top: 12px;
+        padding-bottom: 10px;
+        font-size: var(--fs-xl);
+    }
+
+    .header .header-menubutton {
+        font-size: 22px;
+    }
+}

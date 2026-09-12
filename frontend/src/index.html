@@ -29,18 +29,18 @@
 			<span data-action="headerClick">AIS-catcher</span>
 
 			<div id="menubar_mini" class="showflex">
-				<i id="map_tab_mini" title="Live map of received vessels" data-action="activateTab" data-tab="map" class="map_icon"></i>
+				<i id="map_tab_mini" title="Live map of received vessels" data-action="activateTab" data-tab="map" class="map_icon"><span class="mb-name">Map</span></i>
 				<i id="stat_tab_mini" title="System and receiver statistics" data-action="activateTab" data-tab="stat"
-					class="business_center_icon"></i>
-				<i id="plots_tab_mini" title="Graphs of message and vessel counts over time" data-action="activateTab" data-tab="plots" class="leaderboard_icon"></i>
-				<i id="ships_tab_mini" title="Searchable table of received vessels" data-action="activateTab" data-tab="ships" class="table_icon"></i>
+					class="business_center_icon"><span class="mb-name">Statistics</span></i>
+				<i id="plots_tab_mini" title="Graphs of message and vessel counts over time" data-action="activateTab" data-tab="plots" class="leaderboard_icon"><span class="mb-name">Plots</span></i>
+				<i id="ships_tab_mini" title="Searchable table of received vessels" data-action="activateTab" data-tab="ships" class="table_icon"><span class="mb-name">Ships</span></i>
 				<i id="realtime_tab_mini" title="Live stream of received NMEA messages" data-action="activateTab" data-tab="realtime"
-					class="timer_icon"></i>
-				<i id="log_tab_mini" title="Application log" data-action="activateTab" data-tab="log" class="terminal_icon"></i>
+					class="timer_icon"><span class="mb-name">NMEA</span></i>
+				<i id="log_tab_mini" title="Application log" data-action="activateTab" data-tab="log" class="terminal_icon"><span class="mb-name">Log</span></i>
 				<i id="decoder_tab_mini" title="Decode raw NMEA sentences" data-action="activateTab" data-tab="decoder"
-					class="comment_icon"></i>
-				<i id="about_tab_mini" title="About this station" data-action="activateTab" data-tab="about" class="info_icon"></i>
-				<i id="webcontrol_tab_mini" title="Open Web Control" data-action="openWebControl" class="play_circle_icon"></i>
+					class="comment_icon"><span class="mb-name">Decoder</span></i>
+				<i id="about_tab_mini" title="About this station" data-action="activateTab" data-tab="about" class="info_icon"><span class="mb-name">About</span></i>
+				<i id="webcontrol_tab_mini" title="Open Web Control" data-action="openWebControl" class="play_circle_icon"><span class="mb-name">Control</span></i>
 			</div>
 		</div>
 
@@ -142,6 +142,15 @@
 						<span>Dark Mode</span><span>
 							<input type="checkbox" id="settings_darkmode" data-on-change="setDarkMode" />
 						</span>
+					</div>
+					<div>
+						<span>Header tabs</span><span>
+							<select id="settings_menu_labels" data-on-change="setMenuLabels">
+								<option value="icons">Icons</option>
+								<option value="names">Names</option>
+							</select>
+						</span>
+						<small class="st-desc">The tab pill beside the title shows names instead of icons</small>
 					</div>
 				</section>
 				<section>
@@ -1612,7 +1621,7 @@
 
 				<div
 					class="ol-control ol-unselectable ol-control-custom button-control-box map-button-box map-pill nokiosk">
-					<button data-label="Vessels" id="counters-btn" title="Vessel counts" type="button" data-action="toggleStatcard"
+					<button data-label="Vessels" id="counters-btn" data-keep title="Vessel counts" type="button" data-action="toggleStatcard"
 						class="btn btn-primary map-button" style="font-size: 10px;">
 						<span id="markerCount">0</span>
 					</button>
@@ -1643,7 +1652,7 @@
 								d="M480-120q-138 0-240.5-91.5T122-440h82q14 104 92.5 172T480-200q117 0 198.5-81.5T760-480q0-117-81.5-198.5T480-760q-69 0-129 32t-101 88h110v80H120v-240h80v94q51-64 124.5-99T480-840q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-480q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-120Zm112-192L440-464v-216h80v184l128 128-56 56Z" />
 						</svg>
 					</button>
-					<button data-label="Options" title="Options" type="button" data-action="mapSettingsContextMenu"
+					<button data-label="Options" data-keep title="Options" type="button" data-action="mapSettingsContextMenu"
 						class="btn btn-primary map-button">
 						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
 							<path

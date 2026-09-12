@@ -164,6 +164,11 @@
     border-radius: 0 !important;
 }
 
+/* a rail button shed by toolbar.js when the pane is too short */
+.map-pill .map-button.fit-hidden {
+    display: none !important;
+}
+
 /* Thin divider between stacked buttons within a group */
 .map-button+.map-button {
     border-top: 1px solid var(--color-border-strong) !important;
