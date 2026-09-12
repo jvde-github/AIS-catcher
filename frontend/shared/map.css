@@ -169,9 +169,10 @@
     display: none !important;
 }
 
-/* Thin divider between stacked buttons within a group */
+/* Thin divider between stacked buttons within a group, inset from the edges */
 .map-button+.map-button {
     border-top: 1px solid var(--color-border-strong) !important;
+    border-image: linear-gradient(to right, transparent 7px, var(--color-border-strong) 7px calc(100% - 7px), transparent calc(100% - 7px)) 1 !important;
 }
 
 @media (hover: hover) {
