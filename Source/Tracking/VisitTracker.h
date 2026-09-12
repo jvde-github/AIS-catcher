@@ -89,6 +89,17 @@ public:
   static_assert(sizeof(Visit) <= 32, "Visit storage must stay compact");
   static_assert(sizeof(Record) <= 168, "Five visits must remain bounded");
 
+  // Silence a visit survives. Heard inside the same place again within it, the
+  // ship never left; heard outside, it crossed somewhere in between and the
+  // later fix bounds the departure. Past it nothing can be said, so the visit
+  // ends where the ship was last known. The same span decides whether a vessel
+  // still counts as present, so a stay and its ship agree on when it is over.
+  static const uint32_t SILENT = 3600;
+  // The longest interval that counts as watched. A visit tolerates a silence
+  // far longer than any one sample, and none of that gap is time the ship was
+  // seen lying still - idle is what was observed, never what was assumed.
+  static const uint32_t SAMPLE = 600;
+
 private:
   template <class T> static bool put(std::ofstream &out, const T &value) {
     return bool(
@@ -220,18 +231,16 @@ public:
     auto &r = records.at(slot);
     if (r.last && now <= r.last)
       return;
-    if (!r.last || now - r.last > 600) {
+    if (!r.last || now - r.last > SILENT) {
       baseline(slot, inside, now, index, r.last != 0);
       return;
     }
-    // Only observed time counts: the gap branch above returns first, so a
-    // ship nobody heard from never accrues the silence as idle.
     const uint32_t elapsed = now - r.last;
     r.last = now;
     bool dirty = false;
     for (auto &v : r.visits)
       if (!v.empty() && v.active()) {
-        if (stopped && v.inside())
+        if (stopped && v.inside() && elapsed <= SAMPLE)
           v.accrue(elapsed);
         const bool observedInside = has(inside, v.id);
         if (observedInside == v.confirmed()) {

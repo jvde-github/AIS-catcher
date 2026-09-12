@@ -156,9 +156,10 @@ public:
       f(i, ptr == SHIP_NIL ? nullptr : &ships[ptr]);
     }
   }
-  // A ship silent this long has stopped being present. Shared by the place
-  // dialog, the visits export and the loader's sweep, which must agree.
-  static const std::time_t VISIT_SILENT = 3600;
+  // A ship silent this long has stopped being present - the same span a visit
+  // survives, so a stay and its ship never disagree about when it ended.
+  // Shared by the place dialog, the visits export and the loader's sweep.
+  static const std::time_t VISIT_SILENT = VisitTracker::SILENT;
   // Chunked like withShips so the exporter never holds the lock for a whole
   // pass. A visit's metadata lives only as long as the lock.
   template <typename F> void withVisits(const uint32_t *mmsi, size_t n, F f) {
