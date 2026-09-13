@@ -9,8 +9,16 @@ const POINTS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 const compass = bearing => Number.isFinite(bearing)
     ? POINTS[Math.round(((bearing % 360) + 360) % 360 / 45) % 8] : '';
 
-const away = row => typeof row.range === 'number'
-    ? `${row.range.toFixed(1)} nm<span class="nearby-bearing">${compass(row.bearing)}</span>` : '—';
+/* an arrow points where the letters only name: the compass point stays as the
+   label, for a reader who cannot see which way it turned */
+const away = row => {
+    if (typeof row.range !== 'number') return '—';
+    const nm = `${row.range.toFixed(1)} nm`;
+    if (!Number.isFinite(row.bearing)) return nm;
+    const deg = Math.round(((row.bearing % 360) + 360) % 360);
+    const point = compass(deg);
+    return `${nm}<span class="nearby-bearing" style="transform: rotate(${deg}deg)" title="${point}" aria-label="${point}">&#8593;</span>`;
+};
 
 const TABS = [
     { key: 'ships', label: 'Ships' },
@@ -35,7 +43,9 @@ export function createNearbyDialog(host) {
         close.setAttribute('aria-label', 'Close nearby');
         close.tabIndex = 0;
         close.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dlg.close(); } };
-        const count = document.createElement('span');
+        // the dialog is reused between openings: take the count that is already
+        // there, or a fresh one adds itself beside the last on every open
+        const count = dlg.root.querySelector('.port-ship-count') || document.createElement('span');
         count.className = 'port-ship-count';
         count.setAttribute('aria-live', 'polite');
         close.before(count);
@@ -68,7 +78,7 @@ export function createNearbyDialog(host) {
             if (!rows.length) {
                 body.innerHTML = '';
                 status.hidden = false;
-                status.innerHTML = '<p>Nothing within 99 nm.</p>';
+                status.innerHTML = '<p>No ' + (selected === 'places' ? 'ports' : selected) + ' within 99 nm.</p>';
                 return;
             }
             const now = answer.time || Math.floor(Date.now() / 1000);
@@ -110,19 +120,17 @@ export function createNearbyDialog(host) {
                 if (dlg.root._nearbyRequest !== request || !dlg.isOpen()) return;
                 if (data?.error) throw new Error(data.error);
                 answer = data;
+                /* every tab stays, a zero included: "Stations 0" says there is
+                   nothing within reach, where a missing tab only looks broken */
                 for (const button of dlg.body.querySelectorAll('[data-nearby-tab]')) {
                     const rows = data[button.dataset.nearbyTab];
-                    const total = Array.isArray(rows) ? rows.length : 0;
-                    button.querySelector('.place-tab-count').textContent = total ? ` ${compactCount(total)}` : '';
-                    button.hidden = !total;
+                    button.querySelector('.place-tab-count').textContent =
+                        ` ${compactCount(Array.isArray(rows) ? rows.length : 0)}`;
                 }
                 strip.update();
+                // but open on one that has something to show
                 const first = TABS.find(tab => (data[tab.key] || []).length);
-                if (!first) {
-                    status.innerHTML = '<p>Nothing within 99 nm of here.</p>';
-                    return;
-                }
-                if (!(answer[selected] || []).length) selected = first.key;
+                if (first && !(answer[selected] || []).length) selected = first.key;
                 draw();
             } catch (error) {
                 if (dlg.root._nearbyRequest === request && dlg.isOpen())

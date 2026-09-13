@@ -1919,8 +1919,12 @@
    column is worth clips "13 Sept, 18:30" against the table's edge. */
 .port-ship-list table.dated .col-last { width: 116px; }
 
-/* nearby: the same table, with a compass point, a feeding dot and a kind */
-.nearby-bearing { margin-left: .35em; opacity: .55; font-size: .9em; }
+/* nearby: the same table, with a bearing arrow, a feeding dot and a kind.
+   Only the ships rows carry a sprite, so without a height the three tabs
+   change weight as you switch between them. */
+.port-ship-list table > tbody > tr > td { height: 32px; }
+.nearby-bearing { display: inline-block; margin-left: .45em; opacity: .6;
+    font-size: 1.05em; line-height: 1; vertical-align: -1px; }
 .port-ship-list .nearby-kind { text-transform: capitalize; opacity: .75; }
 .nearby-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
     margin-right: .45em; vertical-align: middle;
