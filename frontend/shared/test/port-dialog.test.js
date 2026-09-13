@@ -24,6 +24,15 @@ test('port dialog caps the list, escapes names, preserves zero speed and opens a
     assert.ok(document.getElementById('port-ships').classList.contains('hidden'));
 });
 
+test('a place with no outline offers only what it can answer', async () => {
+    const open = createPortDialog({ fetchJSON: async () => ({ time: 1, has_geometry: false, total: 0,
+        counts: {inside:0,left:0,arrived:0,visits:0,closest:2,expected:0}, ships: [] }), openVessel() {} });
+    await open([{ code: 'NLVLI', label: 'Vlissingen', has_geometry: false }]);
+    assert.deepEqual([...document.querySelectorAll('#port-ships [role=tab]')].map(b => b.dataset.placeTab),
+                     ['closest', 'expected']);
+    assert.equal(document.querySelector('#port-ships .sc-tab[aria-selected=true]')?.dataset.placeTab, 'closest');
+});
+
 test('opening another port while one loads ignores the late response of the first', async () => {
     let first;
     const open = createPortDialog({ fetchJSON: url => url.includes('NLRTM') ? new Promise(resolve => { first = resolve; }) : Promise.resolve({ ships: [], total: 0 }), openVessel() {} });
@@ -69,8 +78,8 @@ test('failed requests can be retried and a response does not reopen a closed dia
     await open([{runtime_id:0,place_version:'v1',place_type:'berth',label:'Quay'}]);
     assert.equal(document.querySelectorAll('#port-ships [role=tab]').length,5);
     assert.equal(document.querySelector('[data-place-tab=expected]'), null);
-    // a count of zero hides its tab; the one being read and Closest stay
-    assert.equal(document.querySelector('[data-place-tab=left]').hidden, true);
+    // a quiet hour is not a reason to take a tab away: a drawn place keeps them
+    assert.equal(document.querySelector('[data-place-tab=left]').hidden, false);
     assert.equal(document.querySelector('[data-place-tab=inside]').hidden, false);
     assert.equal(document.querySelector('[data-place-tab=closest]').hidden, false);
     assert.match(urls[0], /tab=inside.*id=0&version=v1/);

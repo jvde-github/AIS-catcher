@@ -11,10 +11,13 @@ export function createPortDialog(host) {
         const isPort = !place.place_type || place.place_type === 'port';
         // Closest answers for every place, including the thousands that are a
         // point and can never hold a visit; Expected reads a port's reported
-        // destinations. A place opened by code alone has no runtime id, so it
-        // starts on what is around it rather than on what claims to be coming.
-        const tabs = ['Inside', 'Left', 'Arrived', 'Visits', 'Closest', ...(isPort ? ['Expected'] : [])];
-        let selected = Number.isInteger(place.runtime_id) ? 'inside' : 'closest';
+        // destinations. Whether the four visit tabs are worth showing follows
+        // from the outline, which the marker row already knows - a count of
+        // zero is a quiet hour, not a reason to take a tab away mid-read.
+        const drawn = place.has_geometry !== false;
+        const tabs = [...(drawn ? ['Inside', 'Left', 'Arrived', 'Visits'] : []),
+                      'Closest', ...(isPort ? ['Expected'] : [])];
+        let selected = drawn && Number.isInteger(place.runtime_id) ? 'inside' : 'closest';
         const dlg = modal({id:'port-ships', title:place.label || place.code || 'Place', cardClass:'modal-port-ships'});
         dlg.setTitle(place.label || place.code || 'Place');
         dlg.card.setAttribute('role', 'dialog');
@@ -67,14 +70,15 @@ export function createPortDialog(host) {
                 if (dlg.root._portRequest !== request || !dlg.isOpen()) return;
                 if (data?.error) throw new Error(data.error);
                 if (!Array.isArray(data?.ships)) throw new Error('Invalid ship list');
+                const visitTabs = ['inside', 'left', 'arrived', 'visits'];
                 for (const button of dlg.body.querySelectorAll('[data-place-tab]')) {
                     const tab = button.dataset.placeTab;
                     const total = data.counts?.[tab];
                     button.querySelector('.place-tab-count').textContent = total == null ? '' : ` ${total}`;
-                    // a tab with nothing in it is noise - except the one being
-                    // read, which must not vanish under the reader, and Closest,
-                    // which is the fallback when a place holds nothing at all
-                    button.hidden = total === 0 && tab !== selected && tab !== 'closest';
+                    // opened by code, the outline was unknown until this answer:
+                    // drop the tabs a place without one can never fill
+                    if (data.has_geometry === false && visitTabs.includes(tab))
+                        button.hidden = true;
                 }
                 const ships = data.ships.slice(0, 10);
                 count.textContent = `${ships.length} out of ${data.total ?? ships.length}`;
