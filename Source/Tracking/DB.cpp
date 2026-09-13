@@ -201,6 +201,15 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
   if (id != UINT32_MAX && (!place || version != index->version))
     return "{\"error\":\"Place changed; reopen its marker.\"}";
   const bool port = place ? place->metadata->type == "port" : !code.empty();
+  // A port, a berth or an anchorage is somewhere a vessel stops, so its list is
+  // vessels that have lain still in it: an aid to navigation moored there by
+  // definition, a base station on the quay and a ship merely steaming through
+  // are all noise. A custom area is usually a stretch of water rather than a
+  // destination, where passing through is the whole of what happens.
+  const bool berthing = !place || place->metadata->type != "custom";
+  auto vessel = [](const Ship &s) {
+    return s.shipclass < CLASS_PLANE; // planes, stations, aids, EPIRBs are not
+  };
   // closest is everyone's - a place with no outline can answer nothing else -
   // and expected is a port's, because it reads reported destinations
   const char *tabs[] = {"inside", "left", "arrived", "visits", "closest",
@@ -258,7 +267,8 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
           add(3, slot, &v, entry ? entry : exit);
       }
       // present means heard lately, the same rule the export applies
-      if (inside && now - ships[slot].last_signal <= VISIT_SILENT)
+      if (inside && now - ships[slot].last_signal <= VISIT_SILENT &&
+          (!berthing || (vessel(ships[slot]) && inside->idle > 0)))
         add(0, slot, inside, ships[slot].last_signal);
       if (left)
         add(1, slot, left, left->exitTime());
@@ -288,7 +298,7 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
                                      ? 3
                                      : place->markerSize];
     forEachRecentUnlocked(now, false, 0, [&](int ptr, const Ship &ship, long) {
-      if (!isValidCoord(ship.lat, ship.lon))
+      if (!isValidCoord(ship.lat, ship.lon) || (berthing && !vessel(ship)))
         return;
       float range;
       int bearing;

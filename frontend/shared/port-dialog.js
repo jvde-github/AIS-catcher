@@ -1,6 +1,6 @@
 // One place dialog on either host, backed by observed visits and destinations.
 import { modal, flagHTML } from './components.js';
-import { sanitizeString, formatDateTime, getDeltaTimeVal } from './core/text.js';
+import { sanitizeString, formatDateTime, getDeltaTimeVal, compactCount } from './core/text.js';
 import { spriteFor } from './core/sprites.js';
 const text = value => sanitizeString(String(value ?? ''));
 const timeHTML = value => value > 0 ? `<span title="${text(formatDateTime(value))}">${text(new Date(value * 1000).toLocaleString([], {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))}</span>` : 'Unknown';
@@ -74,14 +74,16 @@ export function createPortDialog(host) {
                 for (const button of dlg.body.querySelectorAll('[data-place-tab]')) {
                     const tab = button.dataset.placeTab;
                     const total = data.counts?.[tab];
-                    button.querySelector('.place-tab-count').textContent = total == null ? '' : ` ${total}`;
+                    // a busy place runs to five figures; the tab has room for four
+                    button.querySelector('.place-tab-count').textContent = total == null ? '' : ` ${compactCount(total)}`;
+                    if (total != null) button.title = `${total.toLocaleString()} ${tab}`;
                     // opened by code, the outline was unknown until this answer:
                     // drop the tabs a place without one can never fill
                     if (data.has_geometry === false && visitTabs.includes(tab))
                         button.hidden = true;
                 }
                 const ships = data.ships.slice(0, 10);
-                count.textContent = `${ships.length} out of ${data.total ?? ships.length}`;
+                count.textContent = `${ships.length} out of ${compactCount(data.total ?? ships.length)}`;
                 count.title = 'Newest first';
                 dlg.body.querySelector('.place-dialog-note').textContent = selected === 'expected' && !data.has_geometry
                     ? 'No port boundary: ships already in port cannot be excluded.'
