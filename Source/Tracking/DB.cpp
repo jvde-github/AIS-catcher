@@ -361,6 +361,10 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
   w.endArray();
   w.kv("place_version", index ? index->version : std::string());
   w.endObject();
+  // trim the backing string here, not in the writer's destructor: that runs
+  // after `out` has been moved into the return value, and it would then be
+  // measuring a pointer into the old buffer against the moved-from one
+  w.finish();
   return out;
 }
 
