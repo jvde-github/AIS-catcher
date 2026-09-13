@@ -1,5 +1,5 @@
 // One place dialog on either host, backed by observed visits and destinations.
-import { modal, flagHTML } from './components.js';
+import { modal, flagHTML, tabScroller } from './components.js';
 import { sanitizeString, formatDateTime, getDeltaTimeVal, compactCount } from './core/text.js';
 import { spriteFor } from './core/sprites.js';
 const text = value => sanitizeString(String(value ?? ''));
@@ -41,6 +41,7 @@ export function createPortDialog(host) {
             `<button type="button" class="sc-tab" role="tab" id="place-tab-${label.toLowerCase()}" data-place-tab="${label.toLowerCase()}" aria-controls="place-results">${label}<span class="place-tab-count"></span></button>`).join('') + '</div>' +
             '<div class="place-dialog-note"></div><div id="place-results" class="port-results" role="tabpanel" aria-live="polite"><div class="tablecard_inner port-ship-list"><table><thead></thead><tbody></tbody></table><div class="port-status"></div></div></div>';
         const results = dlg.body.querySelector('.port-results'), body = results.querySelector('tbody'), status = results.querySelector('.port-status');
+        const strip = tabScroller(dlg.body.querySelector('.place-dialog-tabs'), 'place-dialog-tabs-wrap');
         const load = async () => {
             const request = {};
             dlg.root._portRequest = request;
@@ -82,6 +83,7 @@ export function createPortDialog(host) {
                     if (data.has_geometry === false && visitTabs.includes(tab))
                         button.hidden = true;
                 }
+                strip.update(); // the counts have just changed every label's width
                 const ships = data.ships.slice(0, 10);
                 count.textContent = `${ships.length} out of ${compactCount(data.total ?? ships.length)}`;
                 count.title = 'Newest first';

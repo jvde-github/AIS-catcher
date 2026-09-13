@@ -1941,8 +1941,14 @@
 .place-visit-times > div > span:last-child { font-size: var(--fs-sm); overflow-wrap: anywhere; }
 .place-visit-status { font-size: var(--fs-2xs); color: var(--color-text-subtle); text-align: right; }
 
-.place-dialog-tabs { display: flex; gap: 0; margin: 0 -10px; padding: 0 8px; background: var(--color-card-header); border-bottom: 1px solid var(--color-rule); }
-.place-dialog-tabs > button { flex: 1; min-width: 0; min-height: 40px; margin: 0; padding: 10px 4px 8px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; box-shadow: none; appearance: none; color: var(--color-text-muted); font: inherit; font-size: var(--fs-sm); cursor: pointer; white-space: nowrap; }
+/* Six tabs and a five-figure count do not share a dialog's width: the strip
+   scrolls, with the same fading arrows the settings tabs use, rather than
+   squeezing every label until the names run into their numbers. */
+.place-dialog-tabs { display: flex; gap: 0; margin: 0 -10px; padding: 0 8px; background: var(--color-card-header); border-bottom: 1px solid var(--color-rule); overflow-x: auto; scrollbar-width: none; }
+.place-dialog-tabs::-webkit-scrollbar { display: none; }
+.place-dialog-tabs-wrap { --tab-fade: var(--color-card-header); margin: 0 -10px; }
+.place-dialog-tabs-wrap .place-dialog-tabs { margin: 0; }
+.place-dialog-tabs > button { flex: 0 0 auto; min-width: 0; min-height: 40px; margin: 0; padding: 10px 11px 8px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; box-shadow: none; appearance: none; color: var(--color-text-muted); font: inherit; font-size: var(--fs-sm); cursor: pointer; white-space: nowrap; }
 .place-dialog-tabs > button[aria-selected="true"] { color: var(--color-text); border-bottom-color: var(--color-accent); }
 .place-dialog-tabs > button:hover { color: var(--color-text); }
 .place-dialog-tabs > button:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -3px; }

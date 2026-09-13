@@ -1,6 +1,6 @@
 // One nearby dialog on either host, over one answer: the hub returns ships,
 // stations and places at once and the tabs choose which of the three to show.
-import { modal, flagHTML } from './components.js';
+import { modal, flagHTML, tabScroller } from './components.js';
 import { sanitizeString, getDeltaTimeVal, compactCount } from './core/text.js';
 import { spriteFor } from './core/sprites.js';
 
@@ -46,6 +46,7 @@ export function createNearbyDialog(host) {
         const results = dlg.body.querySelector('.port-results');
         const body = results.querySelector('tbody');
         const status = results.querySelector('.port-status');
+        const strip = tabScroller(dlg.body.querySelector('.place-dialog-tabs'), 'place-dialog-tabs-wrap');
         let selected = 'ships';
         let answer = null;
 
@@ -115,6 +116,7 @@ export function createNearbyDialog(host) {
                     button.querySelector('.place-tab-count').textContent = total ? ` ${compactCount(total)}` : '';
                     button.hidden = !total;
                 }
+                strip.update();
                 const first = TABS.find(tab => (data[tab.key] || []).length);
                 if (!first) {
                     status.innerHTML = '<p>Nothing within 99 nm of here.</p>';
