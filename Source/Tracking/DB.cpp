@@ -289,16 +289,19 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
   // Closest: what lies around the place, whether or not it has an outline. For
   // a drawn place the ships already inside it are left out, so this answers
   // "what is just outside" - the question an outline drawn too tight raises.
-  // The reach follows the port's own size class, since a village quay and an
-  // ore terminal do not mean the same thing by "near".
+  // The reach is not fixed but is however far it takes to find ten, because a
+  // quiet inland quay with nothing within five miles would otherwise have
+  // nothing to say at all. It stops at a horizon no station reaches past, and
+  // every row carries its range, so a distant answer says plainly that it is
+  // distant. Ships only, wherever the place is: what lies near is asked about
+  // the traffic, and a buoy or a mast is near by construction, never news.
   if (place && isValidCoord((float)place->lat, (float)place->lon)) {
-    static const float REACH_NM[] = {2.0f, 3.0f, 5.0f, 8.0f};
-    const float reach = REACH_NM[place->markerSize < 0 ? 0
-                                 : place->markerSize > 3
-                                     ? 3
-                                     : place->markerSize];
+    static const float HORIZON_NM = 99.0f;
+    float reach = HORIZON_NM; // closes onto the tenth once ten are in hand
+    std::vector<Row> nearest;
+    nearest.reserve(11);
     forEachRecentUnlocked(now, false, 0, [&](int ptr, const Ship &ship, long) {
-      if (!isValidCoord(ship.lat, ship.lon) || (berthing && !vessel(ship)))
+      if (!isValidCoord(ship.lat, ship.lon) || !vessel(ship))
         return;
       float range;
       int bearing;
@@ -309,17 +312,19 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
       for (const auto &v : visits.record(ptr).visits)
         if (!v.empty() && v.id == place->id && v.inside())
           return; // inside is its own tab
-      ++counts[4];
-      if (selected != 4)
-        return;
-      rows.push_back({(uint32_t)ptr, nullptr, ship.last_signal, range});
-      std::sort(rows.begin(), rows.end(), [&](const Row &a, const Row &b) {
+      nearest.push_back({(uint32_t)ptr, nullptr, ship.last_signal, range});
+      std::sort(nearest.begin(), nearest.end(), [&](const Row &a, const Row &b) {
         return a.range != b.range ? a.range < b.range
                                   : ships[a.slot].mmsi < ships[b.slot].mmsi;
       });
-      if (rows.size() > 10)
-        rows.pop_back();
+      if (nearest.size() > 10) {
+        nearest.pop_back();
+        reach = nearest.back().range; // nothing farther can join now
+      }
     });
+    counts[4] = nearest.size();
+    if (selected == 4)
+      rows = nearest;
   }
   std::string out;
   JSON::Writer w(out);
