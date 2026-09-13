@@ -104,6 +104,7 @@ export function createPlaceEditor(host, options = {}) {
     const editing = new VectorSource();
     // every other place nearby, in the accent blue, so a new outline is drawn against its neighbours
     const context = new VectorSource();
+    const markers = new VectorSource(); // a dot per catalogue entry; see refreshMarkers
     const shapes = new globalThis.Map(); // uuid:revision -> the full feature, fetched once (Map here is OpenLayers')
     const blue = getComputedStyle(host).getPropertyValue('--color-accent').trim() || '#0b5cad';
     const orange = '#f28c00'; // the shape being edited
@@ -113,6 +114,12 @@ export function createPlaceEditor(host, options = {}) {
         fill: new Fill({color: 'rgba(242, 140, 0, 0.22)'})});
     const contextStyle = new Style({image:new CircleStyle({radius:4,fill:new Fill({color:blue})}),stroke: new Stroke({color: blue, width: 1.5}),
         fill: new Fill({color: 'rgba(11, 92, 173, 0.12)'})});
+    // a dot per place, sized by the port's own size class - the 0..3 that decides
+    // from which zoom the viewer shows its marker - so the big ports read first
+    const markerStyles = [3, 4.5, 6, 7.5].map(radius => new Style({
+        image: new CircleStyle({radius, fill: new Fill({color: 'rgba(11, 92, 173, 0.55)'}),
+                                stroke: new Stroke({color: '#fff', width: 1})})}));
+    const markerStyle = f => markerStyles[Math.min(3, Math.max(0, f.get('size') | 0))];
     const map = new Map({
         target: q('.place-map'),
         controls: [],
@@ -125,6 +132,7 @@ export function createPlaceEditor(host, options = {}) {
                 }),
                 opacity: 0.5
             }),
+            new VectorLayer({className: 'place-markers', source: markers, style: markerStyle}),
             new VectorLayer({className: 'place-context', source: context, style: contextStyle}),
             new VectorLayer({
                 source: editing,
@@ -326,9 +334,27 @@ export function createPlaceEditor(host, options = {}) {
         if (draft?.geometry)
             editing.addFeature(read(draft));
     }
+    // A dot for every entry in the catalogue, from the summary rows: a port point
+    // has no geometry to fetch, so with thousands of them this stays one pass
+    // over a list that is already in hand. Rebuilt only when the catalogue moves.
+    let markedVersion = null;
+    function refreshMarkers() {
+        if (markedVersion === catalogueVersion && markers.getFeatures().length === records.length)
+            return;
+        markedVersion = catalogueVersion;
+        markers.clear();
+        for (const r of records) {
+            // the summary's geometry is the marker point, for a polygon too
+            const at = r.geometry?.coordinates;
+            if (r.geometry?.type === 'Point' && Number.isFinite(at?.[0]) && Number.isFinite(at?.[1]))
+                markers.addFeature(read(r));
+        }
+    }
+
     // the other places that have a shape, minus the one being edited; each shape
     // is fetched once per revision and kept
     async function refreshContext() {
+        refreshMarkers();
         const wanted = records.filter(r => r.has_geometry && Number.isInteger(r.runtime_id) && r.id !== draft?.id);
         const version = catalogueVersion;
         const features = await Promise.all(wanted.map(async r => {
@@ -467,7 +493,18 @@ export function createPlaceEditor(host, options = {}) {
         return null;
     }
     map.on('singleclick', e => {
-        if (!draft || !editingMode || busy || draw)
+        if (!draft || !editingMode) {
+            // not editing: the map is a way to pick a place, the way its row is
+            if (busy)
+                return;
+            const hit = map.forEachFeatureAtPixel(e.pixel, f => f.getId(),
+                                                  {hitTolerance: 6, layerFilter: l => l.getClassName() === 'place-markers'});
+            const found = hit && records.find(r => r.id === hit);
+            if (found)
+                select(found).then(() => { if (draft?.id === found.id) actions.edit(); });
+            return;
+        }
+        if (busy || draw)
             return;
         if (deleteArmed) {
             const index = partAt(e.coordinate, e.pixel);
