@@ -194,6 +194,16 @@ std::string DB::getShipJSON(int mmsi) {
 // answer. A vessel, a receiver and a harbour all ask the same question about
 // their own position, and the ship walk is the expensive one, so it is asked
 // once rather than again on every tab.
+// isValidCoord only turns away (0,0) and the two sentinels: it passes a NaN,
+// and it never asks whether the position is on the globe at all. A record
+// seeded from elsewhere can hold either, and both have to be refused before a
+// distance is taken from them - a NaN range compares false against everything,
+// which makes a sort on it intransitive and so undefined.
+static bool placedOnGlobe(float lat, float lon) {
+  return isValidCoord(lat, lon) && lat >= -90.0f && lat <= 90.0f &&
+         lon >= -180.0f && lon <= 180.0f; // false for a NaN, as written
+}
+
 std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
                               int skip_station) {
   static const float HORIZON_NM = 99.0f;
@@ -236,12 +246,15 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
   float reach = HORIZON_NM;
   forEachRecentUnlocked(now, false, 0, [&](int ptr, const Ship &ship, long) {
     if (ship.mmsi == skip || ship.shipclass >= CLASS_PLANE ||
-        !isValidCoord(ship.lat, ship.lon))
+        !placedOnGlobe(ship.lat, ship.lon))
       return;
     float range;
     int bearing;
     off(ship.lat, ship.lon, range, bearing);
-    if (range > reach)
+    // isValidCoord passes a NaN position, so this is written to reject one:
+    // `range > reach` would not, and a NaN in the list makes the comparator
+    // intransitive, which is undefined behaviour in std::sort
+    if (!(range <= reach))
       return;
     consider(ships_near, reach, (uint32_t)ptr, range, bearing);
   });
@@ -249,12 +262,12 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
 
   reach = HORIZON_NM;
   stations.forEach([&](const StationRegistry::Station &s) {
-    if (!s.id || s.id == skip_station || !isValidCoord(s.lat, s.lon))
+    if (!s.id || s.id == skip_station || !placedOnGlobe(s.lat, s.lon))
       return;
     float range;
     int bearing;
     off(s.lat, s.lon, range, bearing);
-    if (range > reach)
+    if (!(range <= reach))
       return;
     consider(stations_near, reach, (uint32_t)s.id, range, bearing);
   });
@@ -264,13 +277,12 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
   const auto &index = place_markers.index();
   if (index)
     for (const auto &entry : index->entries) {
-      if (entry.id == UINT32_MAX ||
-          !isValidCoord((float)entry.lat, (float)entry.lon))
+      if (entry.id == UINT32_MAX || !placedOnGlobe((float)entry.lat, (float)entry.lon))
         continue;
       float range;
       int bearing;
       off((float)entry.lat, (float)entry.lon, range, bearing);
-      if (range > reach)
+      if (!(range <= reach))
         continue;
       consider(places_near, reach, entry.id, range, bearing);
     }
@@ -461,13 +473,13 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
     std::vector<Row> nearest;
     nearest.reserve(11);
     forEachRecentUnlocked(now, false, 0, [&](int ptr, const Ship &ship, long) {
-      if (!isValidCoord(ship.lat, ship.lon) || !vessel(ship))
+      if (!placedOnGlobe(ship.lat, ship.lon) || !vessel(ship))
         return;
       float range;
       int bearing;
       Util::Geodesy::distanceBearing((float)place->lat, (float)place->lon,
                                      ship.lat, ship.lon, range, bearing);
-      if (range > reach)
+      if (!(range <= reach)) // a NaN position too; see getNearbyJSON
         return;
       for (const auto &v : visits.record(ptr).visits)
         if (!v.empty() && v.id == place->id && v.inside())
