@@ -1919,8 +1919,7 @@
    column is worth clips "13 Sept, 18:30" against the table's edge. */
 .port-ship-list table.dated .col-last { width: 116px; }
 
-/* nearby: the same table, with a compass point beside the distance, a dot for
-   a station that is still feeding, and the kind of place a row is */
+/* nearby: the same table, with a compass point, a feeding dot and a kind */
 .nearby-bearing { margin-left: .35em; opacity: .55; font-size: .9em; }
 .port-ship-list .nearby-kind { text-transform: capitalize; opacity: .75; }
 .nearby-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;

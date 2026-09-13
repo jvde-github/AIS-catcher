@@ -900,8 +900,7 @@ const WebViewer::Route WebViewer::routes[] = {
      [](WebViewer *, ReceiverTracker *s, const std::string &a) {
        return placeShipsJSON(s, a);
      }, true},
-    // what lies around a point: ships, stations and places in one answer. The
-    // anchor names itself so it does not turn up as its own nearest neighbour.
+    // the anchor names itself so it is not its own nearest neighbour
     {"/api/nearby.json", nullptr, "application/json",
      [](WebViewer *, ReceiverTracker *s, const std::string &a) {
        return nearbyJSON(s, a);

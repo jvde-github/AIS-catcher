@@ -1,7 +1,5 @@
-// What lies around a point, on either host. A vessel, a receiver and a harbour
-// all ask the same question about their own position, so they open the same
-// dialog: the hub answers ships, stations and places at once and the tabs only
-// choose which of the three to show.
+// One nearby dialog on either host, over one answer: the hub returns ships,
+// stations and places at once and the tabs choose which of the three to show.
 import { modal, flagHTML } from './components.js';
 import { sanitizeString, getDeltaTimeVal, compactCount } from './core/text.js';
 import { spriteFor } from './core/sprites.js';
@@ -11,8 +9,6 @@ const POINTS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 const compass = bearing => Number.isFinite(bearing)
     ? POINTS[Math.round(((bearing % 360) + 360) % 360 / 45) % 8] : '';
 
-/* the distance is what the list is sorted by, so it leads; the bearing rides
-   along because "two miles" says much less than "two miles north" */
 const away = row => typeof row.range === 'number'
     ? `${row.range.toFixed(1)} nm<span class="nearby-bearing">${compass(row.bearing)}</span>` : '—';
 
@@ -117,8 +113,6 @@ export function createNearbyDialog(host) {
                     const rows = data[button.dataset.nearbyTab];
                     const total = Array.isArray(rows) ? rows.length : 0;
                     button.querySelector('.place-tab-count').textContent = total ? ` ${compactCount(total)}` : '';
-                    /* a host with no station network, or a stretch of sea with
-                       no harbour in it, has nothing to put behind the tab */
                     button.hidden = !total;
                 }
                 const first = TABS.find(tab => (data[tab.key] || []).length);

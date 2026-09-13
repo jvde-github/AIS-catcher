@@ -190,22 +190,15 @@ std::string DB::getShipJSON(int mmsi) {
 
 // Cross-index read: visit membership supplies observed ships; destination
 // membership supplies expected ships. Only the ten newest rows are retained.
-// What lies around a point: the nearest ships, the nearest stations and the
-// nearest places, in one answer. A vessel, a receiver and a harbour all ask the
-// same question about their own position, so it is asked once and answered
-// three ways rather than fetched again on every tab.
-//
-// The three walks share one rule with the place dialog's Closest: keep the ten
-// nearest, let the reach close onto the tenth as soon as ten are in hand, and
-// give up at a horizon no station hears past. Ships only among the vessels - a
-// buoy or a shore mast is near by construction, and the stations have a list of
-// their own.
+// What lies around a point: the nearest ships, stations and places in one
+// answer. A vessel, a receiver and a harbour all ask the same question about
+// their own position, and the ship walk is the expensive one, so it is asked
+// once rather than again on every tab.
 std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
                               int skip_station) {
   static const float HORIZON_NM = 99.0f;
   static const size_t KEEP = 10;
-  // the point comes off the wire, so it is checked as such: the comparison
-  // reads the right way round for a NaN, which no range test would catch
+  // written this way round so a NaN fails it; a plain range test would pass one
   if (!isValidCoord(lat, lon) || !(lat >= -90.0f && lat <= 90.0f) ||
       !(lon >= -180.0f && lon <= 180.0f))
     return "{\"error\":\"Invalid position\"}";
@@ -458,12 +451,10 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
   // Closest: what lies around the place, whether or not it has an outline. For
   // a drawn place the ships already inside it are left out, so this answers
   // "what is just outside" - the question an outline drawn too tight raises.
-  // The reach is not fixed but is however far it takes to find ten, because a
-  // quiet inland quay with nothing within five miles would otherwise have
-  // nothing to say at all. It stops at a horizon no station reaches past, and
-  // every row carries its range, so a distant answer says plainly that it is
-  // distant. Ships only, wherever the place is: what lies near is asked about
-  // the traffic, and a buoy or a mast is near by construction, never news.
+  // The reach is however far it takes to find ten, because a quiet inland quay
+  // with nothing within five miles would otherwise have nothing to say at all.
+  // Ships only, wherever the place is: a buoy or a mast is near by
+  // construction, never news.
   if (place && isValidCoord((float)place->lat, (float)place->lon)) {
     static const float HORIZON_NM = 99.0f;
     float reach = HORIZON_NM; // closes onto the tenth once ten are in hand

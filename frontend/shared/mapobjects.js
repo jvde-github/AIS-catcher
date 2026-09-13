@@ -60,8 +60,7 @@ const bandOf = (o) => stationBand(stationInfo(o));
    } */
 export function create(host) {
     const openPorts = createPortDialog(host);
-    // a place found by looking around opens the place dialog it would have
-    // opened from the map, so there is one answer to "what is this harbour"
+    // a place found by looking around opens the dialog the map would have opened
     const openNearby = createNearbyDialog({ ...host, openPlace: (place) => openPorts([place]) });
     render.init({ color: (cat) => colorOf(cat), shipLabel: host.shipLabel, shipLink: host.shipLink });
 
