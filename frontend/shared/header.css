@@ -90,16 +90,3 @@
     line-height: 0;
 }
 
-/* phones: a smaller title and a lower bar. A host that offsets content by the
-   bar's height switches at the same width. */
-@media only screen and (max-width: 480px) {
-    .header .header-title > span:first-child {
-        padding-top: 12px;
-        padding-bottom: 10px;
-        font-size: var(--fs-xl);
-    }
-
-    .header .header-menubutton {
-        font-size: 22px;
-    }
-}
