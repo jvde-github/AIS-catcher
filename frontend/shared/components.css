@@ -1915,6 +1915,9 @@
     .port-loading .spinner { animation: none; }
 }
 .port-ship-list table { border-collapse: collapse; table-layout: fixed; }
+/* Inside counts in seconds, Arrived and Left name a day: the 72px the narrow
+   column is worth clips "13 Sept, 18:30" against the table's edge. */
+.port-ship-list table.dated .col-last { width: 116px; }
 .port-ship-link { display: block; max-width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .port-ship-link:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 

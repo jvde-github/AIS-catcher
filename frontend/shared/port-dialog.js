@@ -9,8 +9,12 @@ export function createPortDialog(host) {
     return function openPlaces(places) {
         const place = places[0];
         const isPort = !place.place_type || place.place_type === 'port';
-        const tabs = ['Inside', 'Left', 'Arrived', 'Visits', ...(isPort ? ['Expected'] : [])];
-        let selected = Number.isInteger(place.runtime_id) ? 'inside' : 'expected';
+        // Closest answers for every place, including the thousands that are a
+        // point and can never hold a visit; Expected reads a port's reported
+        // destinations. A place opened by code alone has no runtime id, so it
+        // starts on what is around it rather than on what claims to be coming.
+        const tabs = ['Inside', 'Left', 'Arrived', 'Visits', 'Closest', ...(isPort ? ['Expected'] : [])];
+        let selected = Number.isInteger(place.runtime_id) ? 'inside' : 'closest';
         const dlg = modal({id:'port-ships', title:place.label || place.code || 'Place', cardClass:'modal-port-ships'});
         dlg.setTitle(place.label || place.code || 'Place');
         dlg.card.setAttribute('role', 'dialog');
@@ -43,9 +47,12 @@ export function createPortDialog(host) {
                 button.setAttribute('aria-selected', String(active)); button.tabIndex = active ? 0 : -1;
             });
             results.setAttribute('aria-labelledby', 'place-tab-' + selected);
+            // Arrived and Left put a date where Inside puts "2s", and the column
+            // is pinned narrow: say which it is so the width can follow.
+            results.querySelector('table')?.classList.toggle('dated', selected === 'arrived' || selected === 'left');
             results.querySelector('thead').innerHTML = '<tr><th scope="col" class="col-name">Name</th>' + (visitRows
                 ? '<th scope="col">Entry</th><th scope="col">Exit</th><th scope="col">Duration</th>'
-                : '<th scope="col" class="num col-spd">Spd <span class="dim">kts</span></th><th scope="col" class="col-type">Type</th><th scope="col" class="num col-last">' + ({arrived:'Arrived',left:'Left'}[selected] || 'Last') + '</th>') + '</tr>';
+                : '<th scope="col" class="num col-spd">Spd <span class="dim">kts</span></th><th scope="col" class="col-type">Type</th><th scope="col" class="num col-last">' + ({arrived:'Arrived',left:'Left',closest:'Range'}[selected] || 'Last') + '</th>') + '</tr>';
             count.textContent = '';
             results.setAttribute('aria-busy', 'true'); body.innerHTML = '';
             status.hidden = false;
@@ -61,8 +68,13 @@ export function createPortDialog(host) {
                 if (data?.error) throw new Error(data.error);
                 if (!Array.isArray(data?.ships)) throw new Error('Invalid ship list');
                 for (const button of dlg.body.querySelectorAll('[data-place-tab]')) {
-                    const total = data.counts?.[button.dataset.placeTab];
+                    const tab = button.dataset.placeTab;
+                    const total = data.counts?.[tab];
                     button.querySelector('.place-tab-count').textContent = total == null ? '' : ` ${total}`;
+                    // a tab with nothing in it is noise - except the one being
+                    // read, which must not vanish under the reader, and Closest,
+                    // which is the fallback when a place holds nothing at all
+                    button.hidden = total === 0 && tab !== selected && tab !== 'closest';
                 }
                 const ships = data.ships.slice(0, 10);
                 count.textContent = `${ships.length} out of ${data.total ?? ships.length}`;
@@ -74,7 +86,7 @@ export function createPortDialog(host) {
                 const now = data.time || Math.floor(Date.now() / 1000);
                 body.innerHTML = ships.map(ship => {
                     const id = Number(ship.mmsi), name = text(ship.shipname || `MMSI ${id}`);
-                    const first = `<td class="col-name" title="${name} · MMSI ${id}"><span class="table-name">${flagHTML(ship.country)}<button type="button" class="port-ship-link">${name}</button></span></td>`;
+                    const first = `<td class="col-name" title="${name} · MMSI ${id}"><span class="table-name">${flagHTML(ship.country)}<button type="button" class="port-ship-link" translate="no">${name}</button></span></td>`;
                     if (visitRows) {
                         const end = ship.exited ?? (ship.inside && !ship.pending ? now : null);
                         const duration = ship.pending ? '—' : ship.entered && end != null ? getDeltaTimeVal(Math.max(0, end - ship.entered)) : 'Unknown';
@@ -83,7 +95,10 @@ export function createPortDialog(host) {
                     const speed = typeof ship.speed === 'number' && ship.speed >= 0 ? ship.speed.toFixed(1) : '—';
                     const sprite = spriteFor(ship.shipclass, ship.speed, ship.cog);
                     const icon = `<span class="table-shiptype-icon"><span class="sprites" style="background-position: -${sprite.cx}px -${sprite.cy}px; width: 20px; height: 20px; transform: rotate(${sprite.rot}rad)" title="${text(sprite.hint)}"></span></span>`;
-                    const when = selected === 'arrived' ? timeHTML(ship.entered) : selected === 'left' ? timeHTML(ship.exited) : ship.timestamp > 0 ? text(getDeltaTimeVal(Math.max(0, now - ship.timestamp))) : '—';
+                    const when = selected === 'arrived' ? timeHTML(ship.entered)
+                        : selected === 'left' ? timeHTML(ship.exited)
+                        : selected === 'closest' ? (typeof ship.range === 'number' ? text(ship.range.toFixed(1) + ' nm') : '—')
+                        : ship.timestamp > 0 ? text(getDeltaTimeVal(Math.max(0, now - ship.timestamp))) : '—';
                     return `<tr data-mmsi="${id}">${first}<td class="num col-spd">${speed}</td><td class="col-type">${icon}</td><td class="num col-last">${when}</td></tr>`;
                 }).join('');
                 status.innerHTML = ''; status.hidden = true;

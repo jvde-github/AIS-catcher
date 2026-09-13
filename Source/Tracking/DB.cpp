@@ -201,8 +201,11 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
   if (id != UINT32_MAX && (!place || version != index->version))
     return "{\"error\":\"Place changed; reopen its marker.\"}";
   const bool port = place ? place->metadata->type == "port" : !code.empty();
-  const char *tabs[] = {"inside", "left", "arrived", "visits", "expected"};
-  const int ntabs = port ? 5 : 4;
+  // closest is everyone's - a place with no outline can answer nothing else -
+  // and expected is a port's, because it reads reported destinations
+  const char *tabs[] = {"inside", "left", "arrived", "visits", "closest",
+                        "expected"};
+  const int ntabs = port ? 6 : 5;
   int selected = -1;
   for (int i = 0; i < ntabs; ++i)
     if (tab == tabs[i])
@@ -212,11 +215,12 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
   const std::string destination = place ? place->metadata->code : code;
   const auto now = time(nullptr);
   const auto cutoff = hours ? now - hours * 3600LL : 0;
-  std::array<size_t, 5> counts{};
+  std::array<size_t, 6> counts{};
   struct Row {
     uint32_t slot;
     const VisitTracker::Visit *visit;
     std::time_t stamp;
+    float range; // nautical miles, closest only; negative elsewhere
   };
   std::vector<Row> rows;
   rows.reserve(11);
@@ -225,7 +229,7 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
     ++counts[kind];
     if (kind != selected)
       return;
-    rows.push_back({slot, visit, stamp});
+    rows.push_back({slot, visit, stamp, -1.0f});
     std::sort(rows.begin(), rows.end(), [&](const Row &a, const Row &b) {
       return a.stamp != b.stamp ? a.stamp > b.stamp
                                 : ships[a.slot].mmsi < ships[b.slot].mmsi;
@@ -268,9 +272,45 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
         for (const auto &v : visits.record(slot).visits)
           if (!v.empty() && v.id == place->id && v.inside())
             return true;
-      add(4, slot, nullptr, ships[slot].last_signal);
+      add(5, slot, nullptr, ships[slot].last_signal);
       return true;
     });
+
+  // Closest: what lies around the place, whether or not it has an outline. For
+  // a drawn place the ships already inside it are left out, so this answers
+  // "what is just outside" - the question an outline drawn too tight raises.
+  // The reach follows the port's own size class, since a village quay and an
+  // ore terminal do not mean the same thing by "near".
+  if (place && isValidCoord((float)place->lat, (float)place->lon)) {
+    static const float REACH_NM[] = {2.0f, 3.0f, 5.0f, 8.0f};
+    const float reach = REACH_NM[place->markerSize < 0 ? 0
+                                 : place->markerSize > 3
+                                     ? 3
+                                     : place->markerSize];
+    forEachRecentUnlocked(now, false, 0, [&](int ptr, const Ship &ship, long) {
+      if (!isValidCoord(ship.lat, ship.lon))
+        return;
+      float range;
+      int bearing;
+      Util::Geodesy::distanceBearing((float)place->lat, (float)place->lon,
+                                     ship.lat, ship.lon, range, bearing);
+      if (range > reach)
+        return;
+      for (const auto &v : visits.record(ptr).visits)
+        if (!v.empty() && v.id == place->id && v.inside())
+          return; // inside is its own tab
+      ++counts[4];
+      if (selected != 4)
+        return;
+      rows.push_back({(uint32_t)ptr, nullptr, ship.last_signal, range});
+      std::sort(rows.begin(), rows.end(), [&](const Row &a, const Row &b) {
+        return a.range != b.range ? a.range < b.range
+                                  : ships[a.slot].mmsi < ships[b.slot].mmsi;
+      });
+      if (rows.size() > 10)
+        rows.pop_back();
+    });
+  }
   std::string out;
   JSON::Writer w(out);
   w.beginObject()
@@ -291,6 +331,8 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
         .kv("country", s.country_code)
         .kv("shipclass", s.shipclass)
         .kv("timestamp", (long long)s.last_signal);
+    if (row.range >= 0)
+      w.kv("range", row.range);
     if (s.speed == SPEED_UNDEFINED)
       w.kv_null("speed");
     else

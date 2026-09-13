@@ -11,7 +11,7 @@ test('port dialog caps the list, escapes names, preserves zero speed and opens a
     const opened = [], urls = [];
     const open = createPortDialog({ fetchJSON: async url => { urls.push(url); return { ships, total: 12 }; }, openVessel: id => opened.push(id) });
     await open([port]);
-    assert.deepEqual(urls, ['ships_place.json?tab=expected&hours=0&code=NLRTM']);
+    assert.deepEqual(urls, ['ships_place.json?tab=closest&hours=0&code=NLRTM']);
     assert.equal(document.querySelectorAll('#port-ships tbody tr').length, 10);
     assert.equal(document.querySelector('#port-ships img'), null);
     assert.match(document.querySelector('#port-ships tbody').textContent, /<img src=x onerror=alert\(1\)>/);
@@ -32,7 +32,7 @@ test('opening another port while one loads ignores the late response of the firs
     assert.equal(document.querySelectorAll('#port-ships thead th').length, 4);
     assert.ok(document.querySelector('.port-loading .spinner'));
     assert.doesNotMatch(document.querySelector('.port-results').textContent, /Loading/);
-    assert.equal(document.querySelectorAll('#port-ships [role=tab]').length, 5);
+    assert.equal(document.querySelectorAll('#port-ships [role=tab]').length, 6); // + Closest
     open([{ code: 'BEANR', label: 'Antwerp' }]);
     await tick();
     assert.equal(document.querySelector('#port-ships .dialog-title').firstChild.textContent, 'Antwerp');
@@ -67,7 +67,12 @@ test('failed requests can be retried and a response does not reopen a closed dia
     const urls=[];
     const open=createPortDialog({fetchJSON:async url=>{urls.push(url);return {time:200,has_geometry:true,total:1,counts:{inside:1,left:0,arrived:1,visits:1},ships:[{mmsi:123,shipname:'Berth ship',entered:100,exited:null,inside:true}]};},openVessel(){}});
     await open([{runtime_id:0,place_version:'v1',place_type:'berth',label:'Quay'}]);
-    assert.equal(document.querySelectorAll('#port-ships [role=tab]').length,4);
+    assert.equal(document.querySelectorAll('#port-ships [role=tab]').length,5);
+    assert.equal(document.querySelector('[data-place-tab=expected]'), null);
+    // a count of zero hides its tab; the one being read and Closest stay
+    assert.equal(document.querySelector('[data-place-tab=left]').hidden, true);
+    assert.equal(document.querySelector('[data-place-tab=inside]').hidden, false);
+    assert.equal(document.querySelector('[data-place-tab=closest]').hidden, false);
     assert.match(urls[0], /tab=inside.*id=0&version=v1/);
     document.querySelector('[data-place-tab=visits]').click(); await tick();
     assert.match(urls.at(-1), /tab=visits/);
