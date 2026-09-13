@@ -512,8 +512,13 @@ export function create(host) {
         };
         if (boundaries.has(key)) { show(boundaries.get(key)); return; }
         if (boundaryRequests.has(key)) return;
-        const url = host.placeGeometryUrl?.(row.runtime_id, version) ||
-            'place.json?id=' + row.runtime_id + '&version=' + encodeURIComponent(version);
+        // A host that cannot serve an outline says so by answering nothing, and
+        // is not asked: the fetch is swallowed on failure, so without this it
+        // would 404 quietly on every hover for a boundary nobody can draw.
+        const url = 'placeGeometryUrl' in host
+            ? host.placeGeometryUrl(row.runtime_id, version)
+            : 'place.json?id=' + row.runtime_id + '&version=' + encodeURIComponent(version);
+        if (!url) return;
         const request = host.fetchJSON(url).then(data => {
             if (placeVersion !== version || !data?.geometry) return;
             boundaries.set(key, data);
