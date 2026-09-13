@@ -190,6 +190,175 @@ std::string DB::getShipJSON(int mmsi) {
 
 // Cross-index read: visit membership supplies observed ships; destination
 // membership supplies expected ships. Only the ten newest rows are retained.
+// What lies around a point: the nearest ships, the nearest stations and the
+// nearest places, in one answer. A vessel, a receiver and a harbour all ask the
+// same question about their own position, so it is asked once and answered
+// three ways rather than fetched again on every tab.
+//
+// The three walks share one rule with the place dialog's Closest: keep the ten
+// nearest, let the reach close onto the tenth as soon as ten are in hand, and
+// give up at a horizon no station hears past. Ships only among the vessels - a
+// buoy or a shore mast is near by construction, and the stations have a list of
+// their own.
+std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
+                              int skip_station) {
+  static const float HORIZON_NM = 99.0f;
+  static const size_t KEEP = 10;
+  // the point comes off the wire, so it is checked as such: the comparison
+  // reads the right way round for a NaN, which no range test would catch
+  if (!isValidCoord(lat, lon) || !(lat >= -90.0f && lat <= 90.0f) ||
+      !(lon >= -180.0f && lon <= 180.0f))
+    return "{\"error\":\"Invalid position\"}";
+  std::lock_guard<std::mutex> lock(mtx);
+  const auto now = time(nullptr);
+
+  struct Near {
+    uint32_t key; // ship slot, station id, or place runtime id
+    float range;
+    int bearing;
+  };
+  // ties break on the key so two answers to the same question agree
+  auto nearer = [](const Near &a, const Near &b) {
+    return a.range != b.range ? a.range < b.range : a.key < b.key;
+  };
+  auto consider = [&](std::vector<Near> &list, float &reach, uint32_t key,
+                      float range, int bearing) {
+    list.push_back({key, range, bearing});
+    std::sort(list.begin(), list.end(), nearer);
+    if (list.size() > KEEP) {
+      list.pop_back();
+      reach = list.back().range; // nothing farther can join now
+    }
+  };
+  auto off = [&](float plat, float plon, float &range, int &bearing) {
+    Util::Geodesy::distanceBearing(lat, lon, plat, plon, range, bearing);
+  };
+
+  std::vector<Near> ships_near, stations_near, places_near;
+  ships_near.reserve(KEEP + 1);
+  stations_near.reserve(KEEP + 1);
+  places_near.reserve(KEEP + 1);
+  size_t ship_total = 0, station_total = 0, place_total = 0;
+
+  float reach = HORIZON_NM;
+  forEachRecentUnlocked(now, false, 0, [&](int ptr, const Ship &ship, long) {
+    if (ship.mmsi == skip || ship.shipclass >= CLASS_PLANE ||
+        !isValidCoord(ship.lat, ship.lon))
+      return;
+    float range;
+    int bearing;
+    off(ship.lat, ship.lon, range, bearing);
+    if (range > reach)
+      return;
+    consider(ships_near, reach, (uint32_t)ptr, range, bearing);
+  });
+  ship_total = ships_near.size();
+
+  reach = HORIZON_NM;
+  stations.forEach([&](const StationRegistry::Station &s) {
+    if (!s.id || s.id == skip_station || !isValidCoord(s.lat, s.lon))
+      return;
+    float range;
+    int bearing;
+    off(s.lat, s.lon, range, bearing);
+    if (range > reach)
+      return;
+    consider(stations_near, reach, (uint32_t)s.id, range, bearing);
+  });
+  station_total = stations_near.size();
+
+  reach = HORIZON_NM;
+  const auto &index = place_markers.index();
+  if (index)
+    for (const auto &entry : index->entries) {
+      if (entry.id == UINT32_MAX ||
+          !isValidCoord((float)entry.lat, (float)entry.lon))
+        continue;
+      float range;
+      int bearing;
+      off((float)entry.lat, (float)entry.lon, range, bearing);
+      if (range > reach)
+        continue;
+      consider(places_near, reach, entry.id, range, bearing);
+    }
+  place_total = places_near.size();
+
+  std::string out;
+  JSON::Writer w(out);
+  w.beginObject()
+      .kv("time", (long long)now)
+      .kv("lat", lat)
+      .kv("lon", lon)
+      .key("counts")
+      .beginObject()
+      .kv("ships", (unsigned long long)ship_total)
+      .kv("stations", (unsigned long long)station_total)
+      .kv("places", (unsigned long long)place_total)
+      .endObject();
+
+  w.key("ships").beginArray();
+  for (const auto &row : ships_near) {
+    const Ship &s = ships[row.key];
+    w.beginObject()
+        .kv("mmsi", s.mmsi)
+        .kv("shipname", s.shipname)
+        .kv("country", s.country_code)
+        .kv("shipclass", s.shipclass)
+        .kv("timestamp", (long long)s.last_signal)
+        .kv("range", row.range)
+        .kv("bearing", row.bearing);
+    if (s.speed == SPEED_UNDEFINED)
+      w.kv_null("speed");
+    else
+      w.kv("speed", s.speed);
+    if (s.cog == COG_UNDEFINED)
+      w.kv_null("cog");
+    else
+      w.kv("cog", s.cog);
+    w.endObject();
+  }
+  w.endArray();
+
+  w.key("stations").beginArray();
+  for (const auto &row : stations_near) {
+    const auto *s = stations.find((int)row.key);
+    if (!s)
+      continue;
+    w.beginObject()
+        .kv("id", s->id)
+        .kv("name", s->name)
+        .kv("country", s->country)
+        .kv("online", s->online)
+        .kv("last", (long long)s->last)
+        .kv("range", row.range)
+        .kv("bearing", row.bearing)
+        .endObject();
+  }
+  w.endArray();
+
+  w.key("places").beginArray();
+  for (const auto &row : places_near) {
+    const auto *entry = index->find(row.key);
+    if (!entry)
+      continue;
+    w.beginObject()
+        .kv("runtime_id", entry->id)
+        .kv("label", entry->metadata->name)
+        .kv("place_type", entry->metadata->type)
+        .kv("code", entry->metadata->code)
+        .kv("has_geometry", entry->polygons && !entry->polygons->empty())
+        .kv("range", row.range)
+        .kv("bearing", row.bearing);
+    if (entry->metadata->type == "port")
+      w.kv("country", entry->metadata->code.substr(0, 2));
+    w.endObject();
+  }
+  w.endArray();
+  w.kv("place_version", index ? index->version : std::string());
+  w.endObject();
+  return out;
+}
+
 std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
                                   const std::string &code,
                                   const std::string &tab, unsigned hours) {

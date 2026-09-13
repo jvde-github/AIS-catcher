@@ -32,6 +32,7 @@ import { stationCanvas, stationBadgeCanvas, stationBand } from './stations.js';
 import { objectPillCanvas, PILL_SLOT_WIDTH } from './object-pill.js';
 import { portStyles, portBand } from './ports.js';
 import { createPortDialog } from './port-dialog.js';
+import { createNearbyDialog } from './nearby-dialog.js';
 
 const HOVER_DWELL_MS = 500;
 
@@ -59,6 +60,9 @@ const bandOf = (o) => stationBand(stationInfo(o));
    } */
 export function create(host) {
     const openPorts = createPortDialog(host);
+    // a place found by looking around opens the place dialog it would have
+    // opened from the map, so there is one answer to "what is this harbour"
+    const openNearby = createNearbyDialog({ ...host, openPlace: (place) => openPorts([place]) });
     render.init({ color: (cat) => colorOf(cat), shipLabel: host.shipLabel, shipLink: host.shipLink });
 
     const objectsDB = new Map();   // id -> row
@@ -649,7 +653,7 @@ export function create(host) {
     const strip = events.create(host);
 
     return {
-        vector, layer, setReceiverMarker, openPorts, setPlaces,
+        vector, layer, setReceiverMarker, openPorts, openNearby, setPlaces,
         applyDelta, applyTile, prune, clear, redraw, restyle,
         setViewZoom: (z) => { viewZoom = Math.round(z); },
         shipBadge, stationBadge,

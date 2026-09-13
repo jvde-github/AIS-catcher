@@ -54,6 +54,7 @@ const objects = mapobjects.create({
 export const objectLayer = objects.layer;
 export const setReceiverMarker = objects.setReceiverMarker;
 export const openPorts = objects.openPorts;
+export const openNearby = objects.openNearby;
 
 export function init(d) {
     deps = d;

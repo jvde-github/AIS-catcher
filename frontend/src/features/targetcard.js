@@ -227,6 +227,13 @@ export function addItem(icon, txt, title, action, contextType = 'ship') {
 
 export function prepare() {
     card.footer.reset();
+    // what lies around this vessel: the same dialog a place or a station opens
+    addItem('near_me', 'Nearby', 'Ships, stations and ports nearest this vessel', () => {
+        const raw = ships[cardMmsi]?.raw;
+        if (!raw || !Number.isFinite(raw.lat) || !Number.isFinite(raw.lon)) return;
+        mapObjects.openNearby({ lat: raw.lat, lon: raw.lon, mmsi: Number(cardMmsi),
+                                title: getShipName(raw) || 'MMSI ' + cardMmsi });
+    }, 'ship');
     card.footer.add({ icon: 'more_horiz', label: 'More', title: 'More options', action: 'rotateTargetcardIcons', group: 'ship', more: true });
     card.footer.add({ icon: 'more_horiz', label: 'More', title: 'More options', action: 'rotateTargetcardIcons', group: 'plane', more: true });
     card.footer.show('ship');

@@ -1918,6 +1918,15 @@
 /* Inside counts in seconds, Arrived and Left name a day: the 72px the narrow
    column is worth clips "13 Sept, 18:30" against the table's edge. */
 .port-ship-list table.dated .col-last { width: 116px; }
+
+/* nearby: the same table, with a compass point beside the distance, a dot for
+   a station that is still feeding, and the kind of place a row is */
+.nearby-bearing { margin-left: .35em; opacity: .55; font-size: .9em; }
+.port-ship-list .nearby-kind { text-transform: capitalize; opacity: .75; }
+.nearby-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    margin-right: .45em; vertical-align: middle;
+    background: var(--color-text-muted, #9ca3af); }
+.nearby-dot.on { background: var(--color-ok, #15803d); }
 .port-ship-link { display: block; max-width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .port-ship-link:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 

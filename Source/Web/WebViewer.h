@@ -97,6 +97,7 @@ public:
       extra_request;
   // the tracks for a list of MMSIs, as /api/path.json answers them
   static std::string placeShipsJSON(ReceiverTracker *s, const std::string &query);
+  static std::string nearbyJSON(ReceiverTracker *s, const std::string &query);
   std::string buildMultiPathJSON(ReceiverTracker *s, const std::string &query);
   int trackerCount() const { return (int)states.size(); }
   ReceiverTracker *tracker(int i) {

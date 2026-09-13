@@ -145,6 +145,12 @@ public:
 			f(kv.second);
 	}
 
+	const Station *find(int id) const
+	{
+		auto it = stations.find(id);
+		return it == stations.end() ? nullptr : &it->second;
+	}
+
 	int idFor(uint32_t mmsi) const
 	{
 		auto it = by_mmsi.find(mmsi);

@@ -452,6 +452,8 @@ public:
   std::string getPlaceShipsJSON(uint32_t id, const std::string &version,
                                const std::string &code, const std::string &tab,
                                unsigned hours);
+  std::string getNearbyJSON(float lat, float lon, uint32_t skip,
+                            int skip_station);
   std::string getChangesJSON(int mmsi);
   void logTextChange(const Ship &ship, int field, const char *old_value,
                      const std::string &value);

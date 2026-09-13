@@ -47,6 +47,7 @@
 .timeline_icon,
 .jamboard_kiosk_icon,
 .zoom_in_icon,
+.near_me_icon,
 .menu_icon,
 .directions_boat_icon,
 .directions_aiscatcher_icon,
@@ -242,6 +243,10 @@
 
 .jamboard_kiosk_icon {
     --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M250-120v-60h200v-140H140q-24 0-42-18t-18-42v-400q0-24 18-42t42-18h680q24 0 42 18t18 42v400q0 24-18 42t-42 18H510v140h200v60H250ZM140-380h680v-400H140v400Zm0 0v-400 400Z"/%3E%3C/svg%3E');
+}
+
+.near_me_icon {
+    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"%3E%3Cpath d="M21 3 3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/%3E%3C/svg%3E');
 }
 
 .zoom_in_icon {

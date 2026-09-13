@@ -900,6 +900,12 @@ const WebViewer::Route WebViewer::routes[] = {
      [](WebViewer *, ReceiverTracker *s, const std::string &a) {
        return placeShipsJSON(s, a);
      }, true},
+    // what lies around a point: ships, stations and places in one answer. The
+    // anchor names itself so it does not turn up as its own nearest neighbour.
+    {"/api/nearby.json", nullptr, "application/json",
+     [](WebViewer *, ReceiverTracker *s, const std::string &a) {
+       return nearbyJSON(s, a);
+     }, true},
     {"/api/ships_port.json", nullptr, "application/json",
      [](WebViewer *, ReceiverTracker *s, const std::string &a) {
        std::string code = IO::HTTPRequest::queryParam(a, "code");
@@ -1076,6 +1082,17 @@ void WebViewer::Request(IO::TCPServerConnection &c,
     }
   } else
     NotFound(c);
+}
+
+std::string WebViewer::nearbyJSON(ReceiverTracker *s, const std::string &query) {
+  const auto lat = IO::HTTPRequest::queryParam(query, "lat");
+  const auto lon = IO::HTTPRequest::queryParam(query, "lon");
+  if (lat.empty() || lon.empty())
+    return "{\"error\":\"lat and lon are required\"}";
+  return s->database().getNearbyJSON((float)atof(lat.c_str()),
+                                     (float)atof(lon.c_str()),
+                                     (uint32_t)queryInt(query, "mmsi"),
+                                     (int)queryInt(query, "station"));
 }
 
 std::string WebViewer::placeShipsJSON(ReceiverTracker *s, const std::string &query) {
