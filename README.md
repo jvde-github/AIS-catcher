@@ -43,7 +43,7 @@ a directory of GeoJSON files. Point the standalone viewer at one with
 `-N 8100 PLACES /path/to/places`; a managed installation keeps a `places`
 directory beside its configuration and edits it from the Places tab. Ships in
 a place, visits and port-bound traffic follow from the catalogue. See
-[docs/places.md](docs/places.md) for the file format and rules.
+[the Places documentation](https://jvde-github.github.io/AIS-catcher-docs/configuration/output/places/) for the file format and rules.
 
 ## Links
 

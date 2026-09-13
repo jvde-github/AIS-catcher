@@ -1213,6 +1213,28 @@ void DB::install(int ptr, const Ship &s) {
   destinations.match(ptr, ship);
 }
 
+// Every scan leans on the LRU being the recency order: readers stop at the first
+// record older than their cutoff, and Load refuses a backup that is not
+// chronological. A create puts its record at the front whatever its age, so
+// after a seed the order is rebuilt here - touching oldest first leaves the
+// newest at the front. Slot indices are stable and the caller holds mtx.
+void DB::restoreOrder() {
+  std::vector<int> order;
+  order.reserve(ships.size());
+  ships.forEach([&](int ptr) {
+    order.push_back(ptr);
+    return true;
+  });
+  // ties broken the other way round: the pass ends newest first, MMSI rising
+  std::sort(order.begin(), order.end(), [&](int a, int b) {
+    return ships[a].last_signal != ships[b].last_signal
+               ? ships[a].last_signal < ships[b].last_signal
+               : ships[a].mmsi > ships[b].mmsi;
+  });
+  for (size_t i = 0; i < order.size(); i++)
+    ships.touch(order[i]);
+}
+
 void DB::putShip(const Ship &s) {
   if (s.mmsi == 0)
     return;
@@ -1513,13 +1535,15 @@ bool DB::Load(std::ifstream &file) {
   for (int i = 0; i < ship_count; ++i)
     if (!slots.emplace(temp_ships[i].mmsi, i).second)
       return false;
-  if (version >= 2 && !restored.load(
-                          file,
-                          [&](uint32_t key) {
-                            auto it = slots.find(key);
-                            return it == slots.end() ? -1 : it->second;
-                          },
-                          ship_count, version))
+  if (version >= 2 &&
+      !restored.load(
+          file,
+          [&](uint32_t key) {
+            auto it = slots.find(key);
+            return it == slots.end() ? -1 : it->second;
+          },
+          [&](size_t slot) { return temp_ships[slot].last_signal; }, ship_count,
+          version))
     return false;
   restored.remap(place_markers.index().get());
 

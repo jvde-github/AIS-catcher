@@ -234,6 +234,62 @@ public:
   // seeding from another source. The region follows from the position.
   void putShip(const Ship &s);
 
+  struct SeedCount {
+    int created = 0;
+    int present = 0; // already in the table, left untouched
+    int full = 0;    // refused: the table is at its seeding ceiling
+  };
+
+  // Hands out blank records during a seed; only DB makes one.
+  class Seeder {
+    DB &db;
+    SeedCount &count;
+    const int ceiling;
+
+  public:
+    Seeder(DB &d, SeedCount &c)
+        : db(d), count(c), ceiling(d.ships.capacity() - d.ships.capacity() / 10) {
+    }
+    // A ship the table holds was heard here, and a file is older than what it
+    // said itself, so it is left alone.
+    template <typename Fill> void add(uint32_t mmsi, Fill fill) {
+      if (mmsi < 1 || mmsi > 999999999)
+        return;
+      if (db.ships.find(mmsi) != SHIP_NIL) {
+        count.present++;
+        return;
+      }
+      // creation recycles the LRU tail: a full table would drop ships the
+      // network is still hearing, and raise the eviction horizon with them
+      if (db.ships.size() >= ceiling) {
+        count.full++;
+        return;
+      }
+      const int ptr = db.claimShip(mmsi);
+      Ship &ship = db.ships[ptr];
+      ship.reset();
+      ship.mmsi = mmsi;
+      fill(ship);
+      ship.setType();
+      db.locate(ptr);
+      db.destinations.match(ptr, ship);
+      count.created++;
+    }
+  };
+
+  // Seeding from another source in one locked pass: `body(seeder)` walks the
+  // caller's records and calls seeder.add(mmsi, fill) for each. Nothing outside
+  // observes the table until it returns, so the order is restored at the end.
+  template <typename Body> void seedShips(Body body, SeedCount &count) {
+    std::lock_guard<std::mutex> lock(mtx);
+    Seeder seeder(*this, count);
+    body(seeder);
+    if (count.created) {
+      restoreOrder();
+      full_refresh_at = time(nullptr);
+    }
+  }
+
 private:
   PathStore paths;
   StaticStore changes;
@@ -247,6 +303,7 @@ private:
   bool updateShip(const JSON::JSON &, TAG &, Ship &);
   void addToPath(int ptr);
   int claimShip(uint32_t mmsi);
+  void restoreOrder();
 
   // the two scope rules fold into one cutoff; 0 passes everything. Caller holds
   // mtx.

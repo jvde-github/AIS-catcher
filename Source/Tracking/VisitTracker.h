@@ -429,8 +429,12 @@ public:
     }
     return bool(out);
   }
-  template <class Find>
-  bool load(std::ifstream &in, Find find, uint32_t maxShips, int version) {
+  // `heard` gives a restored ship's last signal: the last moment anyone knew
+  // where it was, and so the last moment a visit it was inside can be anchored
+  // to. Restarting is not an observation and must not be stamped as one.
+  template <class Find, class Heard>
+  bool load(std::ifstream &in, Find find, Heard heard, uint32_t maxShips,
+            int version) {
     uint32_t n = 0;
     if (!get(in, n) || uint64_t(n) > uint64_t(maxShips) * 5)
       return false;
@@ -454,10 +458,6 @@ public:
     if (!get(in, count) || count > maxShips)
       return false;
     std::unordered_set<uint32_t> seen;
-    // A visit with no entry time has no identity. Restoring re-establishes
-    // containment as a coverage gap does: one still inside is stamped with this
-    // moment, one already over is dropped.
-    const uint32_t restored_at = uint32_t(std::time(nullptr));
     for (uint32_t i = 0; i < count; ++i) {
       uint32_t key;
       uint8_t countVisits;
@@ -467,6 +467,7 @@ public:
       int slot = find(key);
       if (slot < 0 || size_t(slot) >= records.size())
         return false;
+      const uint32_t known = uint32_t(heard(slot));
       for (uint8_t j = 0; j < countVisits; ++j) {
         uint32_t offset;
         int64_t entry, exit;
@@ -480,13 +481,14 @@ public:
             uint64_t(exit) > UINT32_MAX || (exit && entry > exit) ||
             ((state & Visit::INSIDE) && exit))
           return false;
-        // `entry` stays as written: the SEEN bits below read it, so a
-        // re-established containment gains a time without claiming a crossing.
+        // A visit with no entry time has no identity. One still inside is
+        // anchored to the last moment the ship was known to be there, which is
+        // a bound anybody can check; one already over left nothing to show.
         int64_t stamp = entry;
         if (!entry) {
-          if (!(state & Visit::INSIDE))
+          if (!(state & Visit::INSIDE) || !known)
             continue;
-          stamp = restored_at;
+          stamp = known;
         }
         auto &v = records[slot].visits[j];
         v.place = table[offset];

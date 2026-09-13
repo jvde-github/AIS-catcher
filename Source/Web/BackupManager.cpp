@@ -74,6 +74,15 @@ void BackupManager::stop()
 		cv.notify_all();
 		if (thread.joinable())
 			thread.join();
+
+		// Shutdown is the most valuable moment to write, and the one the
+		// interval loop skips: everything since the last tick exists only in
+		// memory. Restoring a stale file does not merely lose those ships - it
+		// reopens visits that have already ended and leaves the ones in between
+		// for the loader to sweep, so one continuous stay comes back as several.
+		// The thread is joined here, so nothing else is writing.
+		if (tracker && !filename.empty() && !save())
+			Error() << "Server: failed to write backup on shutdown: " << filename;
 	}
 }
 
