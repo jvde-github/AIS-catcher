@@ -63,10 +63,8 @@ namespace Util
 			float dlat = lat2 - lat1, dlon = lon2 - lon1;
 			float a = sin(dlat / 2) * sin(dlat / 2) + cos(lat1) * cos(lat2) * sin(dlon / 2) * sin(dlon / 2);
 			// a is a squared chord and cannot exceed 1, but at the antipodes
-			// rounding puts it just past, and asin(sqrt(a)) is NaN there. How
-			// the compiler contracts the products decides whether it happens,
-			// so it shows on one build and not another. A NaN argument still
-			// gives a NaN distance: callers check the position, not the answer.
+			// rounding puts it just past and asin(sqrt(a)) is NaN there. A NaN
+			// argument still gives a NaN distance: callers check the position.
 			if (a > 1.0f)
 				a = 1.0f;
 			distance = 2 * EarthRadius * NauticalMilePerKm * asin(sqrt(a));

@@ -194,11 +194,9 @@ std::string DB::getShipJSON(int mmsi) {
 // answer. A vessel, a receiver and a harbour all ask the same question about
 // their own position, and the ship walk is the expensive one, so it is asked
 // once rather than again on every tab.
-// isValidCoord only turns away (0,0) and the two sentinels: it passes a NaN,
-// and it never asks whether the position is on the globe at all. A record
-// seeded from elsewhere can hold either, and both have to be refused before a
-// distance is taken from them - a NaN range compares false against everything,
-// which makes a sort on it intransitive and so undefined.
+// isValidCoord turns away (0,0) and the two sentinels and nothing else: a
+// seeded record can hold a NaN, or a position nowhere on the globe. A NaN range
+// then compares false against everything, which makes the sort intransitive.
 static bool placedOnGlobe(float lat, float lon) {
   return isValidCoord(lat, lon) && lat >= -90.0f && lat <= 90.0f &&
          lon >= -180.0f && lon <= 180.0f; // false for a NaN, as written
@@ -251,10 +249,7 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
     float range;
     int bearing;
     off(ship.lat, ship.lon, range, bearing);
-    // isValidCoord passes a NaN position, so this is written to reject one:
-    // `range > reach` would not, and a NaN in the list makes the comparator
-    // intransitive, which is undefined behaviour in std::sort
-    if (!(range <= reach))
+    if (!(range <= reach)) // a NaN fails this, where `>` would let it through
       return;
     consider(ships_near, reach, (uint32_t)ptr, range, bearing);
   });
@@ -361,9 +356,8 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
   w.endArray();
   w.kv("place_version", index ? index->version : std::string());
   w.endObject();
-  // trim the backing string here, not in the writer's destructor: that runs
-  // after `out` has been moved into the return value, and it would then be
-  // measuring a pointer into the old buffer against the moved-from one
+  // here, not in the destructor: that runs after `out` has been moved into the
+  // return value, leaving finish() to measure against a buffer it no longer has
   w.finish();
   return out;
 }
@@ -483,7 +477,7 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
       int bearing;
       Util::Geodesy::distanceBearing((float)place->lat, (float)place->lon,
                                      ship.lat, ship.lon, range, bearing);
-      if (!(range <= reach)) // a NaN position too; see getNearbyJSON
+      if (!(range <= reach))
         return;
       for (const auto &v : visits.record(ptr).visits)
         if (!v.empty() && v.id == place->id && v.inside())
