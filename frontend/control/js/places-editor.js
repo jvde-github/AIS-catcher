@@ -25,7 +25,8 @@ let toolTips = null;
 import TileLayer from 'ol/layer/Tile.js';
 import VectorLayer from 'ol/layer/Vector.js';
 import Map from 'ol/Map.js';
-import {fromLonLat} from 'ol/proj.js';
+import Point from 'ol/geom/Point.js';
+import {fromLonLat, toLonLat} from 'ol/proj.js';
 import OSM from 'ol/source/OSM.js';
 import XYZ from 'ol/source/XYZ.js';
 import VectorSource from 'ol/source/Vector.js';
@@ -33,6 +34,7 @@ import Fill from 'ol/style/Fill.js';
 import CircleStyle from 'ol/style/Circle.js';
 import Stroke from 'ol/style/Stroke.js';
 import Style from 'ol/style/Style.js';
+import Text from 'ol/style/Text.js';
 import View from 'ol/View.js';
 
 
@@ -111,9 +113,51 @@ export function createPlaceEditor(host, options = {}) {
     const handleStyle = new Style({image: new CircleStyle({radius: 5,
         fill: new Fill({color: orange}), stroke: new Stroke({color: '#fff', width: 2})})});
     const activeStyle = new Style({image:new CircleStyle({radius:6,fill:new Fill({color:orange})}),stroke: new Stroke({color: orange, width: 2.5}),
-        fill: new Fill({color: 'rgba(242, 140, 0, 0.22)'})});
+        fill: new Fill({color: 'rgba(242, 140, 0, 0.22)'}), declutterMode: 'none'});
     const contextStyle = new Style({image:new CircleStyle({radius:4,fill:new Fill({color:blue})}),stroke: new Stroke({color: blue, width: 1.5}),
         fill: new Fill({color: 'rgba(11, 92, 173, 0.12)'})});
+    // Every corner of the shape being edited says where it is. White on the
+    // same orange as the outline, so a label reads against the sea, the land
+    // and the shape's own fill alike.
+    //
+    // The layer declutters, which is what thins them: a hundred-point outline
+    // zoomed out would otherwise stack its labels into an unreadable block, and
+    // the corner handles must stay visible through it, so they decline to take
+    // part. Zooming in gives every corner its own again.
+    const coordinateLabel = (coordinate) => {
+        const [lon, lat] = toLonLat(coordinate);
+        return new Style({
+            geometry: new Point(coordinate),
+            text: new Text({
+                text: lat.toFixed(5) + '\n' + lon.toFixed(5),
+                font: '10px ui-monospace, SFMono-Regular, Menlo, monospace',
+                textAlign: 'center',
+                offsetY: -18,
+                fill: new Fill({color: '#fff'}),
+                backgroundFill: new Fill({color: orange}),
+                backgroundStroke: new Stroke({color: 'rgba(0, 0, 0, 0.35)', width: 1}),
+                padding: [2, 4, 2, 4],
+            }),
+        });
+    };
+    const corners = (coordinates, out = []) => {
+        if (typeof coordinates[0] === 'number') out.push(coordinates);
+        else for (const part of coordinates) corners(part, out);
+        return out;
+    };
+    const activeStyleFn = (feature) => {
+        const geometry = feature.getGeometry();
+        if (!geometry || typeof geometry.getCoordinates !== 'function') return activeStyle;
+        const seen = new Set();
+        const styles = [activeStyle];
+        for (const corner of corners(geometry.getCoordinates())) {
+            const key = corner[0] + ':' + corner[1]; // a ring closes on its first point
+            if (seen.has(key)) continue;
+            seen.add(key);
+            styles.push(coordinateLabel(corner));
+        }
+        return styles;
+    };
     // a dot per place, sized by the port's own size class - the 0..3 that decides
     // from which zoom the viewer shows its marker - so the big ports read first
     const markerStyles = [3, 4.5, 6, 7.5].map(radius => new Style({
@@ -136,7 +180,8 @@ export function createPlaceEditor(host, options = {}) {
             new VectorLayer({className: 'place-context', source: context, style: contextStyle}),
             new VectorLayer({
                 source: editing,
-                style: activeStyle
+                style: activeStyleFn,
+                declutter: true
             })
         ],
         view: new View({center: fromLonLat([4.4, 51.95]), zoom: 10})
