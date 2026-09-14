@@ -175,7 +175,7 @@ namespace Device
 		case AIS::KEY_SETTING_URL:
 		{
 			std::string prot, host, port, path, username, password;
-			bool has_password;
+			bool has_password = false;
 			Util::Parse::URL(arg, prot, username, password, host, port, path, &has_password);
 
 			if (!host.empty())

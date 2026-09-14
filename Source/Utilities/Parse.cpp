@@ -106,13 +106,9 @@ namespace Util
 
 	void Parse::URL(const std::string &url, std::string &protocol, std::string &username, std::string &password, std::string &host, std::string &port, std::string &path, bool *has_password)
 	{
-		if (has_password)
-			*has_password = false;
 		std::string s = url;
 
 		protocol.clear();
-		username.clear();
-		password.clear();
 		host.clear();
 		port.clear();
 		path = "/";
@@ -134,6 +130,10 @@ namespace Util
 		size_t at_pos = s.rfind('@');
 		if (at_pos != std::string::npos)
 		{
+			username.clear();
+			password.clear();
+			if (has_password)
+				*has_password = false;
 			std::string userinfo = s.substr(0, at_pos);
 			s = s.substr(at_pos + 1);
 
