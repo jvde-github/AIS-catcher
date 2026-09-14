@@ -70,7 +70,7 @@ export function createNearbyDialog(host) {
             const heads = {
                 ships: '<th scope="col" class="col-name">Name</th><th scope="col" class="num col-spd">Spd <span class="dim">kts</span></th><th scope="col" class="col-type">Type</th><th scope="col" class="num col-last">Range</th>',
                 stations: '<th scope="col" class="col-name">Station</th><th scope="col">Heard</th><th scope="col" class="num col-last">Range</th>',
-                places: '<th scope="col" class="col-name">Place</th><th scope="col">Kind</th><th scope="col" class="num col-last">Range</th>',
+                places: '<th scope="col" class="col-name">Port</th><th scope="col">LOCODE</th><th scope="col" class="num col-last">Range</th>',
             };
             results.querySelector('thead').innerHTML = '<tr>' + heads[selected] + '</tr>';
             const rows = answer?.[selected] || [];
@@ -96,9 +96,12 @@ export function createNearbyDialog(host) {
                     const dot = `<span class="nearby-dot${row.online ? ' on' : ''}" title="${row.online ? 'Online' : 'Offline'}"></span>`;
                     return `<tr data-station="${id}"><td class="col-name" title="${name} · ID ${id}"><span class="table-name">${flagHTML(row.country)}<button type="button" class="port-ship-link" translate="no">${name}</button></span></td><td>${dot}${heard}</td><td class="num col-last">${away(row)}</td></tr>`;
                 }
-                const name = text(row.label || row.code || 'Place');
-                const kind = text(row.place_type === 'custom' ? 'area' : row.place_type || 'place');
-                return `<tr data-place="${row.runtime_id}"><td class="col-name" title="${name}${row.code ? ' · ' + text(row.code) : ''}"><span class="table-name">${flagHTML(row.country)}<button type="button" class="port-ship-link" translate="no">${name}</button></span></td><td class="nearby-kind">${kind}</td><td class="num col-last">${away(row)}</td></tr>`;
+                const name = text(row.label || row.code || 'Port');
+                /* a port inside a larger one says whose it is: the codes are
+                   what a reader quotes, and the parent is what places it */
+                const parent = row.parent_code && row.parent_code !== row.code
+                    ? `<span class="nearby-parent">${text(row.parent_code)}</span>` : '';
+                return `<tr data-place="${row.runtime_id}"><td class="col-name" title="${name}${row.code ? ' · ' + text(row.code) : ''}"><span class="table-name">${flagHTML(row.country)}<button type="button" class="port-ship-link" translate="no">${name}</button></span></td><td class="nearby-kind" translate="no">${text(row.code || '—')}${parent}</td><td class="num col-last">${away(row)}</td></tr>`;
             }).join('');
             status.innerHTML = '';
             status.hidden = true;

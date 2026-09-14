@@ -272,7 +272,11 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
   const auto &index = place_markers.index();
   if (index)
     for (const auto &entry : index->entries) {
-      if (entry.id == UINT32_MAX || !placedOnGlobe((float)entry.lat, (float)entry.lon))
+      // ports only, a port inside a larger one included: an anchorage or a
+      // berth is a part of a port rather than an answer to "which port is
+      // near", and a waterway is not a destination at all
+      if (entry.id == UINT32_MAX || entry.metadata->type != "port" ||
+          !placedOnGlobe((float)entry.lat, (float)entry.lon))
         continue;
       float range;
       int bearing;
@@ -346,6 +350,7 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
         .kv("label", entry->metadata->name)
         .kv("place_type", entry->metadata->type)
         .kv("code", entry->metadata->code)
+        .kv("parent_code", entry->metadata->parentCode)
         .kv("has_geometry", entry->polygons && !entry->polygons->empty())
         .kv("range", row.range)
         .kv("bearing", row.bearing);
