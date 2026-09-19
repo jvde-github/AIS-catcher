@@ -679,7 +679,7 @@ void PlaceCatalogue::rebuild() {
   auto next = std::make_shared<PlaceIndex>();
   static const auto epoch =
       std::chrono::system_clock::now().time_since_epoch().count();
-  static std::atomic<unsigned long long> serial{0};
+  static std::atomic<uint32_t> serial{0};
   next->version = std::to_string(epoch) + "-" + std::to_string(++serial);
   next->entries.resize(nextNumber);
   for (const auto &pair : places) {

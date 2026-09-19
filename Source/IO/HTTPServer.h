@@ -293,7 +293,7 @@ namespace IO
 		std::list<IO::SSEConnection> sse;
 		// union of the subscriber masks, read by producers on other threads
 		std::atomic<uint32_t> topics{0};
-		std::atomic<uint64_t> bytes_out{0}; // response bytes written, headers included
+		std::atomic<std::size_t> bytes_out{0}; // response bytes written, headers included
 		std::chrono::steady_clock::time_point last_sse_ping{};
 		static const int SSE_PING_INTERVAL = 20;
 		// below this size the gzip header/CPU overhead outweighs the savings
