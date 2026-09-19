@@ -100,6 +100,18 @@ jobs:
     - name: Build
       run: cmake --build build -j$(nproc)
 
+  armv6:
+    name: Raspberry Pi OS 32-bit (armv6)
+    needs: bakeHTML
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v6
+      with:
+        ref: ${{ env.CHECKOUT_REF }}
+    - name: Cross-compile and link for armv6
+      run: docker run --rm -v "$PWD":/src:ro debian:trixie bash /src/scripts/check-armv6.sh
+
   build_debian:
     needs: pre_build_checks
     runs-on: ubuntu-latest
