@@ -592,7 +592,7 @@ jobs:
   publish_manifest:
     name: Publish build manifest
     runs-on: ubuntu-22.04
-    needs: [bakeHTML, pre_build_checks, warnings, build_debian, build_ubuntu, build_fedora, test_install, Docker, Windows]
+    needs: [bakeHTML, pre_build_checks, warnings, armv6, build_debian, build_ubuntu, build_fedora, test_install, Docker, Windows]
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'release'
     steps:
     - name: Checkout
