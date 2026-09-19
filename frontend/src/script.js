@@ -403,7 +403,7 @@ const ACTIONS = {
     shiptypeInfo: (e) => { e.stopPropagation(); ui.card.popover.toggle(document.getElementById("shiptype_popover"), document.getElementById("targetcard_shiptype_info")); },
     shipHistory: (e) => { e.stopPropagation(); ui.card.section.open("changes"); },
     toggleTargetcardSection: (e, d, el) => { e.stopPropagation(); ui.card.section.toggle(el?.dataset.section || d.section); },
-    showNMEAContextCopy: (e, d) => showContextMenu(e, d.copy || '', 'ship', ['settings', 'copy-text']),
+    showNMEAContextCopy: (e, d) => showContextMenu(e, d.copy || '', 'ship', ['copy-text']),
     removeRealtimeFilter: (e, d) => realtimeModule?.removeFilter(d.kind, d.value),
 };
 

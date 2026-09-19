@@ -374,7 +374,7 @@ export function dismissOnce(menu, onClose, opts) {
     function close(e) {
         menu.style.display = "none";
         document.removeEventListener("click", onClick, !!opts.capture);
-        document.removeEventListener("keydown", key);
+        document.removeEventListener("keydown", key, true);
         if (onClose) onClose(e);
     }
     function onClick(e) {
@@ -382,10 +382,14 @@ export function dismissOnce(menu, onClose, opts) {
         if (opts.swallow) { e.stopPropagation(); e.preventDefault(); }
         close(e);
     }
-    function key(e) { if (e.key === "Escape") close(e); }
+    function key(e) {
+        if (e.key !== "Escape") return;
+        e.stopPropagation();
+        close(e);
+    }
     setTimeout(function () {
         document.addEventListener("click", onClick, !!opts.capture);
-        document.addEventListener("keydown", key);
+        document.addEventListener("keydown", key, true);
     }, 0);
     return close;
 }

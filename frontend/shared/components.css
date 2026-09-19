@@ -1310,9 +1310,7 @@
     box-shadow: var(--shadow-md);
     list-style-type: none;
     padding: 8px 0;
-    /* below dialogs: a menu is opened from the page, and a modal that is up
-       must stay in front of it */
-    z-index: var(--z-menu);
+    z-index: var(--z-context-menu);
     font-size: var(--fs-base);
     color: var(--color-text);
     width: auto;
