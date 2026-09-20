@@ -665,6 +665,10 @@ build_ais_catcher_from_source() {
     
     cd ../..
     install -m 755 AIS-catcher/build/AIS-catcher /usr/bin/AIS-catcher || error_exit "Failed to install AIS-catcher executable"
+
+    # If a package installation has been present, it should be removed after building from source. 
+    # This ensures compatiblity when switching between pre-packaged installation and source builds. Otherwise apt install may be confused why the ais-catcher package exist but has been replaced by an installation which is built from source (-which may be either a newer or older version).
+    apt remove -y ais-catcher || error_exit "Failed to remove preexisting AIS-catcher package"
 }
 
 # Install additional files (plugins, DBMS, README, LICENSE) from source
