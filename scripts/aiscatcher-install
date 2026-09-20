@@ -304,6 +304,13 @@ interactive_feature_select() {
     fi
 
     echo
+    # MANAGED must override WEBVIEWER if the necessary feature is disabled.
+    if [[ "${OPTION_MANAGED}" == ON && "${FEATURE_WEBVIEWER}" != ON ]]; then
+        FEATURE_WEBVIEWER=ON
+        log "INFO" "Managed Mode requires Embedded web UI. The feature WEBVIEWER was enabled automatically."
+    fi
+
+
     echo -e "${COLOR_BOLD_BLUE}Selected features:${COLOR_RESET}"
     local f vname
     for f in "${FEATURES[@]}"; do
