@@ -38,6 +38,7 @@ Options:
   -p, --package              Install from pre-built package (faster, recommended)
   -i, --interactive          Source build with interactive feature selection (forces source path)
   -b, --branch               Specify git branch to clone (default: main)
+  -L, --legacy               Use older source code dated by a given commit (the argument must be followed by a commit ID to determine the timestamp) 
   -M, --managed              Run the service in managed mode (-E ${MANAGED_CONFIG_FILE} ${MANAGED_BIND})
   --no-systemd               Skip systemd service installation (useful for containers)
   --no-user                  Skip user creation and run as root (useful for containers)
@@ -122,6 +123,8 @@ SET_AUTO_RESTART=""
 INSTALL_REQUESTED=false
 TMP_DIR=""
 DEB_TMP_DIR=""
+OPTION_LEGACY=OFF
+COMMIT_ID=""
 
 # User-facing CMake feature toggles (defaults mirror CMakeLists.txt option() lines).
 # Infrastructure libs (SOXR, SAMPLERATE, ZLIB, OPENSSL) and link-style toggles
@@ -566,8 +569,18 @@ install_sdr_libraries_from_source() {
 build_ais_catcher_from_source() {
     log "INFO" "Building AIS-catcher from branch: ${BRANCH}"
 
-    git clone https://github.com/jvde-github/AIS-catcher.git --depth 1 --branch "${BRANCH}" || error_exit "Failed to download AIS-catcher (branch: ${BRANCH})"
-    cd AIS-catcher
+    if [[ ${OPTION_LEGACY} == ON ]]; then
+        # Selects the source code version detemined by the time of a choosen commit. 
+        log "INFO" "Cloning AIS-catcher repository dated at commit ID: ${COMMIT_ID}"
+        git clone https://github.com/jvde-github/AIS-catcher.git --branch "${BRANCH}" || error_exit "Failed to download AIS-catcher (branch: ${BRANCH})"
+        cd AIS-catcher
+        git checkout "${COMMIT_ID}" || error_exit "Failed to set git version. The given commit ID ("${COMMIT_ID}") was not found."
+    else
+        # Defaults to clone the latest commit from "EDGE" realese.
+        log "INFO" "Cloning AIS-catcher reposertory of the latest realese ("EDGE")"
+        git clone https://github.com/jvde-github/AIS-catcher.git --depth 1 --branch "${BRANCH}" || error_exit "Failed to download AIS-catcher (branch: ${BRANCH})"
+        cd AIS-catcher
+    fi
 
     # Set environment variables to find custom libraries
     export PKG_CONFIG_PATH="${LIB_DIR}/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
@@ -1103,6 +1116,17 @@ parse_arguments() {
                     error_exit "Option -b/--branch requires a branch name argument"
                 fi
                 ;;
+            -L|--legacy)
+                if [[ -n "${2:-}" && "${2:0:1}" != "-" ]]; then
+                    OPTION_LEGACY=ON
+                    COMMIT_ID="$2"
+                    INSTALL_REQUESTED=true
+                    log "INFO" "Legacy installation requested, building with source code by the time of commit: ${COMMIT_ID}"
+                    shift 2
+                else
+                    error_exit "Option -L/--legacy requires a commit ID argument to select a version (-L must be followed by the SHA/hash identifier for a chosen commit)"
+                fi
+                ;;
             -M|--managed)
                 log "INFO" "Managed mode service requested (-E ${MANAGED_CONFIG_FILE} ${MANAGED_BIND})"
                 MANAGED=true
@@ -1161,6 +1185,11 @@ parse_arguments() {
     # Warn if --branch is ignored because --package was also specified
     if [[ "$INSTALL_PACKAGE" == true && "$BRANCH" != "main" ]]; then
         log "WARN" "--branch is ignored when --package is used (pre-built packages are always Edge)"
+    fi
+
+    # Warn if --legacy is ignored because --package was also specified
+    if [[ "$INSTALL_PACKAGE" == true && "$OPTION_LEGACY" != OFF ]]; then
+        log "WARN" "--legacy is ignored when --package is specified (Legacy installation of a given commit ID requires building from source)"
     fi
 
     # --interactive only makes sense for source builds; the .deb is pre-baked.
