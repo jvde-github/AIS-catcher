@@ -57,7 +57,7 @@ struct Engine {
 	std::vector<std::unique_ptr<IO::OutputMessage>> msg;
 
 	// Community feed output, owned by msg; set up at most once
-	IO::OutputMessage *comm_feed = nullptr;
+	IO::HubStreamer *comm_feed = nullptr;
 
 	// Screen and statistics
 	IO::ScreenOutput screen;
@@ -107,19 +107,8 @@ struct Engine {
 	}
 
 	IO::OutputMessage &createCommunityFeed() {
-		msg.push_back(std::unique_ptr<IO::OutputMessage>(new IO::TCPClientStreamer()));
-		comm_feed = msg.back().get();
-		comm_feed->SetKey(AIS::KEY_SETTING_HOST, AISCATCHER_URL)
-			.SetKey(AIS::KEY_SETTING_PORT, AISCATCHER_PORT)
-			.SetKey(AIS::KEY_SETTING_DESCRIPTION, "Community Feed")
-			.SetKey(AIS::KEY_SETTING_MSGFORMAT, "COMMUNITY_HUB")
-			.SetKey(AIS::KEY_SETTING_FILTER, "on")
-			.SetKey(AIS::KEY_SETTING_GPS, "off")
-			.SetKey(AIS::KEY_SETTING_REMOVE_EMPTY, "on")
-			.SetKey(AIS::KEY_SETTING_KEEP_ALIVE, "on")
-			.SetKey(AIS::KEY_SETTING_RESET, "180")
-			.SetKey(AIS::KEY_SETTING_OWN_INTERVAL, "10")
-			.SetKey(AIS::KEY_SETTING_INCLUDE_SAMPLE_START, "on");
+		comm_feed = new IO::HubStreamer();
+		msg.push_back(std::unique_ptr<IO::OutputMessage>(comm_feed));
 		return *comm_feed;
 	}
 

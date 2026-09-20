@@ -203,10 +203,8 @@ void Engine::run(WebViewer *viewer, ControlCore *control) {
   }
 
   const int SLEEP = 50;
-#ifdef HASWEBVIEWER
   const int TICK_INTERVAL = 60;
-  int tick_countdown = 0;
-#endif
+  std::time_t next_tick = 0;
   auto time_start = high_resolution_clock::now();
   auto time_timeout_start = time_start;
   auto time_last = time_start;
@@ -230,15 +228,19 @@ void Engine::run(WebViewer *viewer, ControlCore *control) {
 #ifdef HASWEBVIEWER
     if (control && viewer)
       control->syncViewer(*viewer);
+#endif
     // above the verbose/timeout shortcut below or it never runs by default
-    if (--tick_countdown <= 0) {
-      tick_countdown = TICK_INTERVAL * 1000 / SLEEP;
+    std::time_t tick_now = std::time(nullptr);
+    if (tick_now >= next_tick) {
+      next_tick = tick_now + TICK_INTERVAL;
 
-      std::time_t tick_now = std::time(nullptr);
+      if (comm_feed)
+        comm_feed->tick();
+#ifdef HASWEBVIEWER
       for (auto v : viewers)
         v->tick(tick_now);
-    }
 #endif
+    }
 
     if (!oneverbose && !timeout)
       continue;

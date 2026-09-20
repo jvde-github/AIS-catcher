@@ -200,6 +200,36 @@ namespace IO
 		}
 	};
 
+	class HubStreamer : public OutputMessage
+	{
+		Protocol::TCP tcp;
+		Protocol::Hub hub;
+		Protocol::ProtocolBase *connection = nullptr;
+
+		static const int KEEPALIVE_TICKS = 5;
+		std::mutex mtx;
+		int idle_ticks = 0;
+
+		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
+		{
+			std::lock_guard<std::mutex> lock(mtx);
+
+			idle_ticks = 0;
+			if (connection && connection->send(data, len) == 0 && len > 0)
+				stats.dropped++;
+		}
+
+	public:
+		HubStreamer();
+		~HubStreamer() { Stop(); }
+
+		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
+
+		void Start() override;
+		void Stop() override;
+		void tick();
+	};
+
 	class TCPlistenerStreamer : public OutputMessage, public IO::TCPServer
 	{
 		int port = 5010;

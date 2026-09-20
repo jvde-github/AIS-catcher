@@ -527,6 +527,74 @@ namespace IO
 		return *this;
 	}
 
+	HubStreamer::HubStreamer() : OutputMessage("Hub")
+	{
+		SetKey(AIS::KEY_SETTING_DESCRIPTION, "Community Feed")
+			.SetKey(AIS::KEY_SETTING_MSGFORMAT, "COMMUNITY_HUB")
+			.SetKey(AIS::KEY_SETTING_FILTER, "on")
+			.SetKey(AIS::KEY_SETTING_GPS, "off")
+			.SetKey(AIS::KEY_SETTING_REMOVE_EMPTY, "on")
+			.SetKey(AIS::KEY_SETTING_OWN_INTERVAL, "10")
+			.SetKey(AIS::KEY_SETTING_INCLUDE_SAMPLE_START, "on");
+	}
+
+	void HubStreamer::Start()
+	{
+		tcp.setStats(&stats);
+		tcp.setOptionKey(AIS::KEY_SETTING_HOST, AISCATCHER_URL);
+		tcp.setOptionKey(AIS::KEY_SETTING_PORT, AISCATCHER_PORT);
+		tcp.setOptionKey(AIS::KEY_SETTING_PERSIST, "on");
+		tcp.setOptionKey(AIS::KEY_SETTING_TIMEOUT, "0");
+		tcp.setOptionKey(AIS::KEY_SETTING_KEEP_ALIVE, "on");
+		tcp.setOptionKey(AIS::KEY_SETTING_RESET, "180");
+
+		hub.setUUID(uuid);
+		connection = tcp.add(&hub);
+
+		connection->connect();
+		for (int i = 0; i < 40 && !connection->isConnected(); i++)
+			SleepSystem(50);
+
+		bool ready = tcp.getState() == Protocol::TCP::READY;
+		Info() << "Hub feed: open socket for host: " << AISCATCHER_URL << ", port: " << AISCATCHER_PORT << ", " << startInfo() << ", status: " << (ready ? "connected" : "pending");
+	}
+
+	void HubStreamer::Stop()
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+
+		if (connection)
+			connection->disconnect();
+	}
+
+	void HubStreamer::tick()
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+
+		if (!connection)
+			return;
+
+		hub.detectClose();
+		if (!connection->isConnected())
+			return;
+
+		if (++idle_ticks >= KEEPALIVE_TICKS)
+		{
+			idle_ticks = 0;
+			hub.keepAlive();
+		}
+	}
+
+	Setting &HubStreamer::SetKey(AIS::Keys key, const std::string &arg)
+	{
+		if (key == AIS::KEY_SETTING_UUID)
+		{
+			setUUID(arg);
+			return *this;
+		}
+		return OutputMessage::SetKey(key, arg);
+	}
+
 	void TCPlistenerStreamer::Start()
 	{
 		Info() << "TCP listener: open at port " << port << ", " << startInfo();
