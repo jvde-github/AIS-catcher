@@ -112,7 +112,6 @@ INSTALL_PACKAGE=false
 INTERACTIVE=false
 SKIP_SYSTEMD=false
 SKIP_USER=false
-MANAGED=false
 BRANCH="main"
 SERVICE_STATE=""
 SERVICE_START_FAILED=false
@@ -123,8 +122,14 @@ SET_AUTO_RESTART=""
 INSTALL_REQUESTED=false
 TMP_DIR=""
 DEB_TMP_DIR=""
+
+# User-facing installation option toggles.
+OPTION_MANAGED=OFF
 OPTION_LEGACY=OFF
 COMMIT_ID=""
+
+# Options that may be toggled in the interactive feature selection (does not affect CMakelists.txt).
+readonly OPTIONS=(MANAGED LEGACY)
 
 # User-facing CMake feature toggles (defaults mirror CMakeLists.txt option() lines).
 # Infrastructure libs (SOXR, SAMPLERATE, ZLIB, OPENSSL) and link-style toggles
@@ -143,6 +148,7 @@ FEATURE_PSQL=ON
 FEATURE_SQLITE=ON
 FEATURE_WEBVIEWER=ON
 
+# Features that may be added to CMakelists.txt
 readonly FEATURES=(RTLSDR AIRSPY AIRSPYHF HACKRF HYDRASDR SDRPLAY SOAPYSDR ZMQ NMEA2000 PSQL SQLITE WEBVIEWER)
 
 # Color constants (using ANSI escape codes)
@@ -239,8 +245,27 @@ prompt_yes_no() {
     done
 }
 
+# Prompt for an answer specifying the commit ID with a default; echoes COMMIT_ID.
+# Args: $1 label, $2 default (if COMMIT_ID was given as an argument)
+prompt_commit_id() {
+    local label="$1" default="$2"
+    local suffix
+    suffix="["$default"]"
+
+    while true; do
+        local answer
+        read -r -p "$(printf "${COLOR_BOLD}%s${COLOR_RESET} %s: " "$label" "$suffix")" answer
+        # shellcheck disable=SC2155  # locale lowercasing needs ${var,,}
+        local lower="${answer,,}"
+        case "${lower:-${default,,}}" in
+            "") echo "Commit ID must not be empty." >&2 ;;
+            *) echo "${lower:-${default,,}}"; return 0 ;;
+        esac
+    done
+}
+
 # Walk the user through per-feature toggles.
-# Sets the FEATURE_* globals from current defaults, and aborts if the user
+# Sets the FEATURE_* and OPTIONS_* globals from current defaults, and aborts if the user
 # rejects the summary. Requires a TTY.
 interactive_feature_select() {
     [[ -t 0 ]] || error_exit "Interactive mode requires a TTY (stdin is not a terminal)"
@@ -267,8 +292,16 @@ interactive_feature_select() {
     FEATURE_SQLITE=$(prompt_yes_no   "  SQLite (offline map tiles and -D output)" "$FEATURE_SQLITE")
 
     echo
-    echo -e "${COLOR_BOLD}Other${COLOR_RESET}"
+    echo -e "${COLOR_BOLD}User interfaces${COLOR_RESET}"
     FEATURE_WEBVIEWER=$(prompt_yes_no "  Embedded web UI (-N)"                "$FEATURE_WEBVIEWER")
+    OPTION_MANAGED=$(prompt_yes_no "  Managed Mode"                           "$OPTION_MANAGED")
+
+    echo
+    echo -e "${COLOR_BOLD}Source-code version${COLOR_RESET}"
+    OPTION_LEGACY=$(prompt_yes_no "  Build AIS-catcher from legacy source-code" "$OPTION_LEGACY")
+    if [[ "${OPTION_LEGACY}" == ON ]]; then
+        COMMIT_ID=$(prompt_commit_id  "  Commit ID (SHA from a github commit)" "$COMMIT_ID")
+    fi
 
     echo
     echo -e "${COLOR_BOLD_BLUE}Selected features:${COLOR_RESET}"
@@ -277,6 +310,16 @@ interactive_feature_select() {
         vname="FEATURE_$f"
         printf "  %-12s %s\n" "$f" "${!vname}"
     done
+
+    for f in "${OPTIONS[@]}"; do
+        vname="OPTION_$f"
+        printf "  %-12s %s\n" "$f" "${!vname}"
+    done
+    
+    if [[ "${OPTION_LEGACY}" == ON ]]; then
+        printf "  %-12s %s\n" "COMMIT ID:" "${COMMIT_ID}"
+    fi
+
     echo
     local confirm
     read -r -p "Proceed with these settings? [Y/n]: " confirm
@@ -813,7 +856,7 @@ setup_aiscatcher_user() {
 setup_configuration() {
     log "INFO" "Setting up configuration files"
     mkdir -p "$CONFIG_DIR" || error_exit "Failed to create config directory"
-    if [[ "$MANAGED" == true ]]; then
+    if [[ "$OPTION_MANAGED" == ON ]]; then
         mkdir -p "$CONFIG_DIR/places" || error_exit "Failed to create places directory"
         chmod 750 "$CONFIG_DIR/places"
     fi
@@ -822,7 +865,7 @@ setup_configuration() {
     # managed config with its path so the setup wizard can offer to import
     # the configured output channels. Must run before the legacy default
     # config is (re)created below, so a fresh install does not qualify.
-    if [[ "$MANAGED" == true && ! -f "$MANAGED_CONFIG_FILE" && -f "$CONFIG_FILE" ]]; then
+    if [[ "$OPTION_MANAGED" == ON && ! -f "$MANAGED_CONFIG_FILE" && -f "$CONFIG_FILE" ]]; then
         log "INFO" "Existing config.json found; the setup wizard will offer to import its outputs"
         cat << EOF | tee "$MANAGED_CONFIG_FILE" > /dev/null || error_exit "Failed to create aiscatcher.json"
 {
@@ -956,7 +999,7 @@ SupplementaryGroups=plugdev dialout"
     fi
 
     local exec_start="/usr/bin/AIS-catcher -G level debug -o 0 -C ${CONFIG_FILE} @${CMD_FILE}"
-    if [ "$MANAGED" = true ]; then
+    if [ "$OPTION_MANAGED" = ON ]; then
         exec_start="/usr/bin/AIS-catcher -E ${MANAGED_CONFIG_FILE} ${MANAGED_BIND}"
     fi
 
@@ -1032,7 +1075,7 @@ verify_service_active() {
     log "ERROR" "$SERVICE_NAME did not stay running after start"
     systemctl status "$SERVICE_NAME" --no-pager -l 2>/dev/null | tail -n 15 || true
     journalctl -u "$SERVICE_NAME" -n 20 --no-pager 2>/dev/null || true
-    if [[ "$MANAGED" == true ]]; then
+    if [[ "$OPTION_MANAGED" == ON ]]; then
         local ctrl_port="${MANAGED_BIND##*:}"
         log "ERROR" "Managed mode could not start — control port ${ctrl_port} or viewer port $((ctrl_port + 1)) may already be in use"
         log "ERROR" "Free the port(s), then run: systemctl restart ${SERVICE_NAME}"
@@ -1071,7 +1114,7 @@ restore_service_state() {
             log "INFO" "$SERVICE_NAME start command issued"
             # Only verify the managed default-start (the script's own decision);
             # a plain restore of the user's prior state is taken at face value.
-            if [[ "$MANAGED" == true ]]; then
+            if [[ "$OPTION_MANAGED" == ON ]]; then
                 verify_service_active || SERVICE_START_FAILED=true
             fi
         else
@@ -1129,7 +1172,7 @@ parse_arguments() {
                 ;;
             -M|--managed)
                 log "INFO" "Managed mode service requested (-E ${MANAGED_CONFIG_FILE} ${MANAGED_BIND})"
-                MANAGED=true
+                OPTION_MANAGED=ON
                 INSTALL_REQUESTED=true
                 shift
                 ;;
@@ -1262,7 +1305,7 @@ display_installation_summary() {
         if [ "$SERVICE_START_FAILED" = true ]; then
             echo ""
             echo -e "  ${COLOR_YELLOW}⚠ The service was started but did not stay running.${COLOR_RESET}"
-            if [ "$MANAGED" = true ]; then
+            if [ "$OPTION_MANAGED" = ON ]; then
                 local status_port="${MANAGED_BIND##*:}"
                 echo -e "    Control port ${status_port} or viewer port $((status_port + 1)) may already be in use."
             fi
@@ -1338,7 +1381,7 @@ display_installation_summary() {
     fi
     
     echo -e "${COLOR_BOLD}CONFIGURATION:${COLOR_RESET}"
-    if [ "$MANAGED" = true ]; then
+    if [ "$OPTION_MANAGED" = ON ]; then
         echo "  • Managed mode: configure everything from the hub, not by hand"
         echo -e "    config file: ${COLOR_YELLOW}${MANAGED_CONFIG_FILE}${COLOR_RESET}"
         echo ""
@@ -1356,7 +1399,7 @@ display_installation_summary() {
     echo ""
 
     echo -e "${COLOR_BOLD}WEB INTERFACE:${COLOR_RESET}"
-    if [ "$MANAGED" = true ]; then
+    if [ "$OPTION_MANAGED" = ON ]; then
         local ctrl_port="${MANAGED_BIND##*:}"
         echo "  • Control hub (configuration and control):"
         echo -e "    ${COLOR_CYAN}http://localhost:${ctrl_port}${COLOR_RESET}"
@@ -1454,7 +1497,7 @@ main() {
         setup_systemd_service
 
         # Managed installs (-M) are enabled and started by default, regardless of prior state.
-        if [ "$MANAGED" = true ]; then
+        if [ "$OPTION_MANAGED" = ON ]; then
             log "INFO" "Managed mode: enabling and starting ${SERVICE_NAME} by default"
             SERVICE_STATE="true,true"
         fi
