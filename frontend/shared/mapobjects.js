@@ -26,7 +26,7 @@ import * as events from './events.js';
 import * as render from './binary.js';
 import { KIND_CAT, CAT_COLORS, AGE_FADE, LAYER_ALPHA, decodeBadge, decorate, tooltipSections, getBinaryMessageList, getBinaryMessageTabs,
     cardOpen, badgeCanvas, discCanvas, pillCanvas, hatchCanvas, areaRings, ageBucket, isDangerArea, isGroupArea, markerHead, markerCaption,
-    messageDialog, kindsOf, glyphsHTML, KIND_LABEL } from './binary.js';
+    messageDialog, kindsOf, glyphsHTML, KIND_LABEL, showsShipBadge } from './binary.js';
 import { stationCanvas, stationBadgeCanvas, stationBand } from './stations.js';
 
 import { objectPillCanvas, PILL_SLOT_WIDTH } from './object-pill.js';
@@ -53,7 +53,10 @@ const bandOf = (o) => stationBand(stationInfo(o));
      options() -> {display, colorClass, idLabels, groupAreas, areas, hidden(cat), focus: row | null}
      isHovered(feature), rehover(feature), isHoveringShip(mmsi), rehoverShip(mmsi)
      openVessel(mmsi)
-     portShipsUrl(code)?                  optional: defaults to ships_port.json?code=…
+     hoverVessel(mmsi)?, unhoverVessel(mmsi)?  side-list hover on a loaded vessel
+     placeShipsUrl(params)?               optional: defaults to ships_place.json?…
+     placeListLimit?, placeListLink(place, tab)?  capped website preview and full-page link
+     setTableOpen(on)?                    opens the side table through the host's layout
      openStation(id)?                    optional: without it a station click flies to it
      pickStation(feature, html)?         optional: offer the bands of stations sharing one marker, true when handled
      map()?                              the OL map, for flying to a place
@@ -61,7 +64,7 @@ const bandOf = (o) => stationBand(stationInfo(o));
 export function create(host) {
     const openPorts = createPortDialog(host);
     // a place found by looking around opens the dialog the map would have opened
-    const openNearby = createNearbyDialog({ ...host, openPlace: (place) => openPorts([place]) });
+    const openNearby = createNearbyDialog({ ...host, openPlace: (place) => openPorts([place]), openStation });
     render.init({ color: (cat) => colorOf(cat), shipLabel: host.shipLabel, shipLink: host.shipLink });
 
     const objectsDB = new Map();   // id -> row
@@ -281,7 +284,7 @@ export function create(host) {
     }
 
     function shipBadge(ship) {
-        if (!ship.binary || !hasValidCoords(ship.lat, ship.lon)) return;
+        if (!showsShipBadge(ship.binary) || !hasValidCoords(ship.lat, ship.lon)) return;
         const b = decodeBadge(ship.binary);
         const cat = KIND_CAT[b.kind] || 'data';
         const opt = host.options();
@@ -398,9 +401,9 @@ export function create(host) {
     // a vessel's messages, fetched once per badge value, shared by hover, title and
     // dialog; the cache keeps the vessels looked at most recently
     const HYDRATED_SHIPS_MAX = 200;
-    function hydrateShip(mmsi, badgeWord) {
+    function hydrateShip(mmsi, badgeWord, refresh = false) {
         const have = hydratedShips.get(mmsi);
-        if (have && have.badge === badgeWord) return have.promise;
+        if (have && have.badge === badgeWord && (!refresh || !have.messages)) return have.promise;
         const entry = { badge: badgeWord, messages: null, promise: null };
         entry.promise = host.fetchJSON(host.shipMessagesUrl(mmsi)).then(items)
             .then((messages) => { entry.messages = messages; return messages; })
@@ -579,7 +582,7 @@ export function create(host) {
 
     // the kinds a vessel's messages are of: the badge's newest at once, the rest once fetched
     function shipKinds(ship) {
-        if (!ship || !ship.binary) return Promise.resolve([]);
+        if (!ship || !showsShipBadge(ship.binary)) return Promise.resolve([]);
         const b = decodeBadge(ship.binary);
         const first = [KIND_CAT[b.kind] || 'data'];
         if (b.count < 2) return Promise.resolve(first);
@@ -592,7 +595,8 @@ export function create(host) {
         if (!ship) return;
         const station = ship.station ? glyphsHTML(['station'], stationAttrs) : '';
         if (!ship.binary) { if (station) apply(station); return; }
-        apply(glyphsHTML([KIND_CAT[decodeBadge(ship.binary).kind] || 'data'], attrs) + station);
+        const first = showsShipBadge(ship.binary) ? [KIND_CAT[decodeBadge(ship.binary).kind] || 'data'] : [];
+        apply(glyphsHTML(first, attrs) + station);
         shipKinds(ship).then((cats) => { if (cats.length) apply(glyphsHTML(cats, attrs) + station); });
     }
 
@@ -603,7 +607,9 @@ export function create(host) {
         const tabs = (list) => show(getBinaryMessageTabs(list, mmsi, listCtx({ mmsi })));
         if (!badgeWord) return tabs([]);
         show('<p class="dim">Loading…</p>');
-        hydrateShip(mmsi, badgeWord).then((messages) => tabs(messages.filter(shownBy())));
+        // Receipts and AtoN status do not change the badge word. Fetch details on
+        // explicit open, while hover/title rendering keeps using the cache.
+        hydrateShip(mmsi, badgeWord, true).then((messages) => tabs(messages.filter(shownBy())));
     }
 
     function click(feature) {
@@ -651,8 +657,19 @@ export function create(host) {
 
     const strip = events.create(host);
 
+    // A ship card may only carry a visit ID or destination code. Fill in the
+    // same metadata as a marker, without resolving a stale ID in a new catalogue.
+    function openPlace(ref) {
+        const runtime = Number.isInteger(ref.runtime_id);
+        const place = [...objectsDB.values()].find(row => runtime
+            ? ref.place_version === placeVersion && row.runtime_id === ref.runtime_id
+            : ref.code && row.code === ref.code && (row.kind === 9 || row.place_type === 'port'));
+        openPorts([{...ref, ...place, label: place?.label || ref.label || ref.name,
+            place_version: place ? placeVersion : ref.place_version}]);
+    }
+
     return {
-        vector, layer, setReceiverMarker, openPorts, openNearby, setPlaces,
+        vector, layer, setReceiverMarker, openPorts, openPlace, openNearby, setPlaces,
         applyDelta, applyTile, prune, clear, redraw, restyle,
         setViewZoom: (z) => { viewZoom = Math.round(z); },
         shipBadge, stationBadge,

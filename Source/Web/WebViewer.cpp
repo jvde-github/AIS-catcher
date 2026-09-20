@@ -1096,10 +1096,13 @@ std::string WebViewer::nearbyJSON(ReceiverTracker *s, const std::string &query) 
 
 std::string WebViewer::placeShipsJSON(ReceiverTracker *s, const std::string &query) {
   const auto param = [&](const char *key) { return IO::HTTPRequest::queryParam(query, key); };
-  const auto idText = param("id"), hoursText = param("hours");
+  const auto idText = param("id"), hoursText = param("hours"),
+             offsetText = param("offset"), limitText = param("limit");
   auto digits = [](const std::string &v) { return !v.empty() && v.find_first_not_of("0123456789") == std::string::npos; };
   if ((!idText.empty() && (!digits(idText) || idText.size() > 10 || std::strtoull(idText.c_str(), nullptr, 10) >= UINT32_MAX)) ||
-      (!hoursText.empty() && (!digits(hoursText) || hoursText.size() > 4)))
+      (!hoursText.empty() && (!digits(hoursText) || hoursText.size() > 4)) ||
+      (!offsetText.empty() && (!digits(offsetText) || offsetText.size() > 8)) ||
+      (!limitText.empty() && (!digits(limitText) || limitText.size() > 3)))
     return "{\"error\":\"Invalid place query\"}";
   auto code = param("code");
   if (code.size() > 8) return "{\"error\":\"Invalid port code\"}";
@@ -1110,5 +1113,7 @@ std::string WebViewer::placeShipsJSON(ReceiverTracker *s, const std::string &que
   }
   return s->database().getPlaceShipsJSON(idText.empty() ? UINT32_MAX : std::strtoul(idText.c_str(), nullptr, 10),
       param("version"), code, param("tab").empty() ? "inside" : param("tab"),
-      hoursText.empty() ? 24 : std::strtoul(hoursText.c_str(), nullptr, 10));
+      hoursText.empty() ? 24 : std::strtoul(hoursText.c_str(), nullptr, 10),
+      offsetText.empty() ? 0 : std::strtoul(offsetText.c_str(), nullptr, 10),
+      limitText.empty() ? 10 : std::strtoul(limitText.c_str(), nullptr, 10));
 }

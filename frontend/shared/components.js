@@ -33,7 +33,7 @@ var ARROW = {
    fade-out arrow buttons at each end, shown only when there is more to
    scroll to. Works whether `nav` is already in the DOM or still detached.
 
-   Returns { wrap, update } — call update() after changing the strip's
+   Returns { wrap, update, destroy } — call update() after changing the strip's
    contents, since neither scroll nor resize fires for that. */
 export function tabScroller(nav, extraClass) {
     var wrap = document.createElement("div");
@@ -75,8 +75,10 @@ export function tabScroller(nav, extraClass) {
         }
     }, { passive: false });
 
+    var observer;
     if (typeof ResizeObserver !== "undefined") {
-        new ResizeObserver(update).observe(nav);
+        observer = new ResizeObserver(update);
+        observer.observe(nav);
     } else {
         var wasConnected = false;
         var onResize = function () {
@@ -91,7 +93,11 @@ export function tabScroller(nav, extraClass) {
     }
 
     update();
-    return { wrap: wrap, update: update };
+    return { wrap: wrap, update: update, destroy: function () {
+        if (observer) observer.disconnect();
+        if (onResize) window.removeEventListener("resize", onResize);
+        nav.removeEventListener("scroll", update);
+    } };
 }
 
 function sectionHead(section, opts) {

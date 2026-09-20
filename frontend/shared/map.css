@@ -144,8 +144,14 @@
 }
 
 .map-button-box.map-pill {
+    --size-map-button: 30px;
     padding: 4px 0;
     border-radius: var(--radius-2xl);
+}
+
+.map-pill .map-button.is-active::before {
+    width: 24px;
+    height: 24px;
 }
 
 .map-button {
@@ -1243,8 +1249,10 @@ body.ticker-open.ticker-bottom {
    at medium weight, the panels a notch off the card and the rows not for
    selecting. */
 .sc-host { --sc-tint: var(--color-card-header); }
-.sc-host { --sc-tab-background: color-mix(in srgb, var(--color-card-header) 94%, var(--color-text) 6%); }
-.dark .sc-host { --sc-tab-background: var(--color-menu); }
+.sc-host,
+.settings-window > .settings-header { --sc-tab-background: color-mix(in srgb, var(--color-card-header) 94%, var(--color-text) 6%); }
+.dark .sc-host,
+.dark .settings-window > .settings-header { --sc-tab-background: var(--color-menu); }
 .sc-tabs {
     display: flex;
     gap: 0;
@@ -1253,7 +1261,9 @@ body.ticker-open.ticker-bottom {
 }
 /* a host page may style every button (OpenLayers sizes .ol-control buttons);
    the tabs are plain text on a rule */
-.sc-host .sc-tabs .sc-tab {
+.sc-host .sc-tabs .sc-tab,
+.settings-window > .settings-header .settings-tab {
+    box-sizing: border-box;
     /* Equal padding around each label, rather than equal-width columns. */
     flex: 1 0 auto;
     min-width: 0;
@@ -1281,13 +1291,20 @@ body.ticker-open.ticker-bottom {
 @container mappane (max-width: 360px) {
     .sc-host .sc-tabs .sc-tab { font-size: min(var(--fs-sm), 13px); }
 }
-.sc-host .sc-tabs .sc-tab:hover { color: var(--color-text); background: none; outline: none; text-decoration: none; }
-.sc-host .sc-tabs .sc-tab[aria-selected="true"] {
+.sc-host .sc-tabs .sc-tab:hover,
+.settings-window > .settings-header .settings-tab:hover { color: var(--color-text); background: none; outline: none; text-decoration: none; }
+.sc-host .sc-tabs .sc-tab[aria-selected="true"],
+.settings-window > .settings-header .settings-tab.active {
     color: var(--color-text);
     border-bottom-color: var(--color-accent);
 }
-.sc-host .sc-tabs .sc-tab:focus { outline: none; background: none; box-shadow: none; }
-.sc-host .sc-tabs .sc-tab:focus-visible { color: var(--color-accent); }
+.settings-window > .settings-header .settings-tab.active {
+    border-bottom-color: var(--color-text-muted);
+}
+.sc-host .sc-tabs .sc-tab:focus,
+.settings-window > .settings-header .settings-tab:focus { outline: none; background: none; box-shadow: none; }
+.sc-host .sc-tabs .sc-tab:focus-visible,
+.settings-window > .settings-header .settings-tab:focus-visible { color: var(--color-accent); }
 /* The compact mobile card has no selected tab. Summary's triangle offers
    expansion without giving its preview the full selected-tab underline. */
 @media (max-height: 1250px) {

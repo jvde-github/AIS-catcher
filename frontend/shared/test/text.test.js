@@ -12,6 +12,10 @@ test("text: compact counts", () => {
     assert.equal(text.compactCount(999), "999");
     assert.equal(text.compactCount(1234), "1.2K");
     assert.equal(text.compactCount(34000), "34K");
+    assert.equal(text.compactCount(10222), "10.2K");
+    assert.equal(text.compactCount(99960), "100K");
+    assert.equal(text.compactCount(123456), "123K");
+    assert.equal(text.compactCount(999500), "1M");
     assert.equal(text.compactCount(2500000), "2.5M");
 });
 

@@ -14,6 +14,7 @@
        });
        panel.build();
        panel.open("Map");
+       panel.isOpen("Map");   // open on this tab (omit the title for any tab)
 
    `groups` maps page names (the <header> text) to tabs: [name, label]. Pages
    not listed get a tab of their own, after the listed ones.
@@ -62,6 +63,7 @@ export function create(opts) {
     var skipGrouping = opts.skipGrouping || ".st-group, .filter-checks";
 
     var groups = [];
+    var selectedTitle = null;
     var subNav = null, subWrap = null;
     var scrollers = [];
 
@@ -151,6 +153,7 @@ export function create(opts) {
     function selectGroup(idx) {
         var group = groups[idx];
         if (!group) return;
+        selectedTitle = group.title;
         win.querySelectorAll(".settings-tabs:not(.settings-subtabs) .settings-tab").forEach(function (t, i) {
             t.classList.toggle("active", i === idx);
             t.setAttribute("aria-selected", i === idx);
@@ -252,7 +255,10 @@ export function create(opts) {
         sync();
     }
 
-    function isOpen() { return win.classList.contains("active"); }
+    function isOpen(title) {
+        return win.classList.contains("active") &&
+            (title == null || selectedTitle === title);
+    }
 
     function open(title) {
         sync();

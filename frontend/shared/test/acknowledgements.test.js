@@ -33,3 +33,54 @@ test('matches across Sent/Received tabs with accessible reception check', () => 
     document.body.innerHTML = binary.getBinaryMessageTabs(messages, 222);
     assert.equal(document.querySelector('[data-pane="received"] .msg-acknowledged').textContent, '✓');
 });
+
+test('binary acknowledgments keep their own detail category without contributing ship glyphs', () => {
+    const receipt = binary.decorate(ack({ type: 7 }));
+    const message = binary.decorate(sent({ type: 6 }));
+    assert.equal(receipt.cat, 'ack');
+    assert.equal(binary.KIND_LABEL.ack, 'Acknowledgments');
+    assert.deepEqual(binary.kindsOf([receipt]), []);
+    assert.deepEqual(binary.kindsOf([message, receipt]), ['text']);
+    assert.equal(binary.BINARY_CATEGORIES.includes('ack'), false);
+    assert.equal(binary.categoryOf(ack()), 'safety');
+    document.body.innerHTML = binary.getBinaryMessageTabs([message, receipt], 111);
+    assert.match(document.querySelector('[data-pane="received"]').textContent, /Binary message acknowledgement/);
+    assert.equal(document.querySelector('[data-pane="sent"] .msg-acknowledged').textContent, '✓');
+});
+
+test('binary acknowledgments remain in cached ship hover previews without adding glyphs', async () => {
+    const { create } = await import('../mapobjects.js');
+    let fetched = 0;
+    const messages = [sent({ type: 6 }), ack({ type: 7 })];
+    const objects = create({
+        options: () => ({}), shipLabel: id => String(id),
+        shipMessagesUrl: id => 'messages/' + id,
+        fetchJSON: async () => { fetched++; return { messages }; },
+    });
+    const ship = {mmsi:111, binary:1};
+    await objects.hydrateShip(ship.mmsi, ship.binary);
+    const html = objects.shipTooltip(ship);
+    assert.match(html, /Binary message acknowledgement/);
+    assert.deepEqual(await objects.shipKinds(ship), ['text']);
+    assert.equal(fetched, 1);
+});
+
+test('opening message details refreshes acknowledgments even when the badge stays unchanged', async () => {
+    const { create } = await import('../mapobjects.js');
+    let fetched = 0, messages = [sent({ type: 6 })];
+    const objects = create({
+        options: () => ({}), shipLabel: id => String(id), ship: () => null,
+        shipMessagesUrl: id => 'messages/' + id,
+        fetchJSON: async () => { fetched++; return { messages }; },
+    });
+    await objects.hydrateShip(111, 1);
+    messages = [...messages, ack({ type: 7 })];
+    await objects.hydrateShip(111, 1); // ordinary hover still reuses the cache
+    assert.equal(fetched, 1);
+    objects.showVesselMessages(111, 1);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(fetched, 2);
+    const dialog = document.getElementById('binary-messages');
+    assert.match(dialog.textContent, /Binary message acknowledgement/);
+    assert.equal(dialog.querySelector('[data-pane="sent"] .msg-acknowledged').textContent, '✓');
+});

@@ -71,10 +71,12 @@ node "$SRC/tools/optimize-flags.mjs" "$DIST/flags/4x3" | while read -r code; do
     echo ".fi-$code{background-image:url(flags/4x3/$code.png)}" >> "$DIST/flag-icons.css"
 done
 
-# Everything Vite does not bundle is minified in place; the sources stay readable
+# Everything Vite does not bundle is minified in place; the sources stay readable.
+# Keep Unicode escaped so CSS spacers (such as flag-icons' NBSP) cannot show as
+# stray characters when a browser decodes a stylesheet with a legacy charset.
 minify() {
     local f="$1"; shift
-    "$SRC/node_modules/.bin/esbuild" "$f" --minify --log-level=warning --charset=utf8 "$@" --outfile="$f.min" && mv "$f.min" "$f"
+    "$SRC/node_modules/.bin/esbuild" "$f" --minify --log-level=warning --charset=ascii "$@" --outfile="$f.min" && mv "$f.min" "$f"
 }
 
 file_hash() {

@@ -9,9 +9,10 @@ import * as tabs from '../../shared/shipcard-tabs.js';
 import { CHANGE, getCountryName, getDeltaTimeVal, getEtaVal, getMmsiTypeVal, getShipTypeFull, getShipTypeShort, getStatusVal, getStringfromChannels, getStringfromGroup, getStringfromMsgType } from '../../shared/core/text.js';
 import { getChangeListHTML, getSpeedHistorySVG, getDraughtChartSVG, getShipDimensionSVG } from '../../shared/core/spark.js';
 import { getCallSign, getShipName } from '../core/names.js';
+import { decodeHTMLEntities } from '../core/util.js';
 import { regionName } from '../core/regions.js';
 import { flagHTML } from '../../shared/components.js';
-import { decodeBadge, glyphsHTML, KIND_CAT } from '../../shared/binary.js';
+import { decodeBadge, glyphsHTML, KIND_CAT, showsShipBadge } from '../../shared/binary.js';
 import * as mapObjects from './mapobjects.js';
 
 // { fitTargetcard, getReceiver, realtimeEnabled, registerAction, isFollowing,
@@ -222,18 +223,19 @@ export function addItem(icon, txt, title, action, contextType = 'ship') {
     const name = deps.registerAction(action);
     if (!name) return;
     if (icon.startsWith("fa")) icon = "question_mark";
-    card.footer.add({ icon, label: txt, title, action: name, group: contextType });
+    return card.footer.add({ icon, label: txt, title, action: name, group: contextType });
 }
 
 export function prepare() {
     card.footer.reset();
-    // what lies around this vessel: the same dialog a place or a station opens
-    addItem('near_me', 'Nearby', 'Ships, stations and ports nearest this vessel', () => {
+    const nearby = addItem('near_me', 'Nearby', 'Ships, stations and ports nearest this vessel', () => {
         const raw = ships[cardMmsi]?.raw;
         if (!raw || !Number.isFinite(raw.lat) || !Number.isFinite(raw.lon)) return;
         mapObjects.openNearby({ lat: raw.lat, lon: raw.lon, mmsi: Number(cardMmsi),
-                                title: getShipName(raw) || 'MMSI ' + cardMmsi });
+                                title: decodeHTMLEntities(getShipName(raw)) || 'MMSI ' + cardMmsi,
+                                country: raw.country, shiptype: raw.shiptype, status: raw.status });
     }, 'ship');
+    document.getElementById('targetcard_track_option').after(nearby);
     card.footer.add({ icon: 'more_horiz', label: 'More', title: 'More options', action: 'rotateTargetcardIcons', group: 'ship', more: true });
     card.footer.add({ icon: 'more_horiz', label: 'More', title: 'More options', action: 'rotateTargetcardIcons', group: 'plane', more: true });
     card.footer.show('ship');
@@ -250,7 +252,8 @@ function setTitle(ship) {
     title.innerHTML = name + station;
     if (!ship.binary) return;
     const mmsi = cardMmsi;
-    title.innerHTML = name + glyphs([KIND_CAT[decodeBadge(ship.binary).kind] || 'data']) + station;
+    const first = showsShipBadge(ship.binary) ? [KIND_CAT[decodeBadge(ship.binary).kind] || 'data'] : [];
+    title.innerHTML = name + glyphs(first) + station;
     mapObjects.shipKinds(ship).then((cats) => { if (cardMmsi === mmsi && cats.length) title.innerHTML = name + glyphs(cats) + station; });
 }
 
@@ -385,7 +388,7 @@ const cardHelpers = {
     callsign: getCallSign,
     age: (s) => getDeltaTimeVal(clock - s.last_signal),
     goTo: (lat, lon) => deps.goTo && deps.goTo(lat, lon),
-    openPort: (port) => mapObjects.openPorts([{ code: port.code, label: port.name }]),
+    openPort: (port) => mapObjects.openPlace(port),
     infoIcon: (k) => k === "tech"
         ? ' <i class="info_icon card-tech-icon" id="targetcard_tech_info" data-action="techInfo" title="Technical details"></i>'
         : ' <i class="info_icon card-tech-icon" id="targetcard_shiptype_info" data-action="shiptypeInfo" title="Ship type details"></i>',

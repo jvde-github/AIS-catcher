@@ -11,10 +11,13 @@ import { modal } from './components.js';
 import { acknowledgedMessages } from './acknowledgements.js';
 
 // server Item::Kind order, as packed into a ship row's badge
-export const KIND_CAT = ['text', 'inland', 'data', 'aton', 'signal', 'zones', 'lock', 'safety', 'station'];
+export const KIND_CAT = ['text', 'inland', 'data', 'aton', 'signal', 'zones', 'lock', 'safety', 'station', 'ack'];
 
-// the packed badge on a ship row: count (4b) | newest kind (3b) | age bucket (2b)
-export const decodeBadge = (v) => ({ count: v & 15, kind: (v >> 4) & 7, age: (v >> 7) & 3 });
+// count (4b) | newest kind (3b) | age bucket (2b) | binary acknowledgment (1b)
+export const decodeBadge = (v) => ({ count: v & 15, kind: v & 512 ? 9 : (v >> 4) & 7, age: (v >> 7) & 3 });
+
+// Keep status/receipts available to hovers and dialogs without a vessel badge.
+export const showsShipBadge = (v) => !!v && !(v & 512) && ((v >> 4) & 7) !== 3;
 
 // fade per age bucket (fresh, past 15 min, past 30 min), the stations' steps
 export const AGE_FADE = [1, 0.75, 0.5];
@@ -28,7 +31,7 @@ export const BINARY_CATEGORIES = ['data', 'lock', 'signal', 'inland', 'text', 'a
 
 // no red and no green: those mean invalid and validated on the map
 // safety is the one kind that means danger, so it takes the red
-export const CAT_COLORS = { data: '#0891b2', text: '#7c3aed', inland: '#0f766e', aton: '#d97706', zones: '#0857b1', lock: '#4338ca', signal: '#ea580c', safety: '#dc2626', station: '#008000' };
+export const CAT_COLORS = { data: '#0891b2', text: '#7c3aed', inland: '#0f766e', aton: '#d97706', zones: '#0857b1', lock: '#4338ca', signal: '#ea580c', safety: '#dc2626', station: '#008000', ack: '#64748b' };
 
 const host = {
     color: (cat) => CAT_COLORS[cat] || CAT_COLORS.data,
@@ -209,7 +212,8 @@ const ACK_NOTE = '<div style="font-size: 11px; opacity: 0.6;">Reception acknowle
 const KINDS = [
     { cat: 'safety', name: 'Safety acknowledgement', test: (m, item) => item.type === 13,
       label: () => 'Safety message acknowledgement', rows: () => ACK_NOTE },
-    { cat: 'text', name: 'Binary acknowledgement', test: (m, item) => item.type === 7,
+    // Message details only: this category is excluded from ship badges.
+    { cat: 'ack', name: 'Acknowledgments', test: (m, item) => item.type === 7,
       label: () => 'Binary message acknowledgement', rows: () => ACK_NOTE },
     { cat: 'safety', name: 'Safety message',
       // types 12 and 14
@@ -536,6 +540,14 @@ export function kindGlyph(ctx, cat, x, y, s) {
         ctx.strokeRect(x - s * 0.9, y - s * 0.65, s * 1.8, s * 1.2);
         break;
     }
+    case 'ack': {
+        ctx.beginPath();
+        ctx.moveTo(x - s * 0.9, y);
+        ctx.lineTo(x - s * 0.25, y + s * 0.65);
+        ctx.lineTo(x + s * 0.9, y - s * 0.75);
+        ctx.stroke();
+        break;
+    }
     case 'station': {
         // the antenna the viewer has always used, drawn from its path
         const k = (2.7 * s) / 960;
@@ -782,9 +794,10 @@ export function glyphsHTML(cats, attrs = '') {
         cats.map((c) => `<img src="${glyphURL(c)}" alt="${text(KIND_LABEL[c] || c)}">`).join('') + '</a>';
 }
 
-// the kinds behind a badge word and, once fetched, behind a vessel's messages: newest first, no repeats
+// The kinds behind a vessel badge: newest first, no repeats. Acknowledgments
+// and AtoN status stay in details without adding a glyph beside the ship's name.
 export function kindsOf(messages) {
     const cats = [];
-    for (const m of [...messages].sort((x, y) => y.timestamp - x.timestamp)) if (!cats.includes(m.cat)) cats.push(m.cat);
+    for (const m of messages.filter(m => m.cat !== 'ack' && m.cat !== 'aton').sort((x, y) => y.timestamp - x.timestamp)) if (!cats.includes(m.cat)) cats.push(m.cat);
     return cats;
 }

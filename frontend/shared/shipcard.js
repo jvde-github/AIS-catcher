@@ -16,10 +16,12 @@ export const MATCHED_PORT_FIELDS = [
     { key: 'matched_code', label: 'Code' }, { key: 'matched_country', label: 'Country' }, { key: 'matched_name', label: 'Port' },
 ];
 
-// a resolved destination is a place on the map as much as a list of ships: the
-// map goes there first when the port has a position, then the dialog opens
+// Identified destinations use a code; current visits use a versioned place ID.
+// Move to the place when its position is known, then open its sidebar.
 export function setPortLink(el, port, openPort, goTo) {
-    const active = typeof port?.code === 'string' && port.code.trim() !== '' && typeof openPort === 'function';
+    const identified = typeof port?.code === 'string' && port.code.trim() !== '' ||
+        Number.isInteger(port?.runtime_id) && port.runtime_id >= 0 && typeof port.place_version === 'string' && port.place_version !== '';
+    const active = identified && typeof openPort === 'function';
     const open = () => {
         if (typeof goTo === 'function' && Number.isFinite(port.lat) && Number.isFinite(port.lon)) goTo(port.lat, port.lon);
         openPort(port);

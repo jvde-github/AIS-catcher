@@ -10,9 +10,12 @@ import * as mapui from '../shared/mapui.js';
 import * as headerLib from '../shared/header.js';
 import * as tooltipLib from '../shared/tooltip.js';
 import * as tableLib from '../shared/table.js';
+import { createPanelSwitch } from '../shared/side-table.js';
 import * as markersLib from '../shared/markers.js';
 import * as panelLib from '../shared/panel.js';
 import * as settingsStorage from '../shared/settings.js';
+import { createSearch } from '../shared/search.js';
+import { createLocalSearch } from './features/search.js';
 import { debounce, decodeHTMLEntities, copyToClipboard } from './core/util.js';
 import {
     ships as shipsDB, planes as planesDB, paths, pathsFrom, station,
@@ -94,6 +97,8 @@ const MENU_CHECKS = {
     replaySetSpeed: (el) => replay.getSpeed() == el.dataset.speed,
 };
 
+let searchPanel = null;
+
 const ui = mapui.create({
     map: () => map,
     settings: () => settings,
@@ -131,6 +136,7 @@ const ui = mapui.create({
        closes the ones marked stage. The dialog closes itself on Escape. */
     stack: [
         { isOpen: () => !!(dialogModal && dialogModal.isOpen()) },
+        { isOpen: () => searchPanel?.isOpen(), close: () => searchPanel.close(true), stage: true },
         { isOpen: () => settingsPanel.isOpen(), close: () => settingsPanel.close(), stage: true },
         { isOpen: () => document.getElementById("menubar").classList.contains("visible"), close: () => hideMenu(), stage: true },
         { isOpen: () => targetcardVisible(), close: () => showTargetcard(null, null) },
@@ -319,6 +325,7 @@ const ACTIONS = {
     openAISHubCtx: () => openExt('aishub', context_mmsi),
     showServerErrors: () => showServerErrors(),
     openSettings: () => openSettings(),
+    toggleSearch: () => searchPanel.toggle(),
     toggleDarkMode: () => toggleDarkMode(),
 
     // vessel filter
@@ -925,6 +932,7 @@ const settingsPanel = panelLib.create({
     groups: SETTINGS_TAB_GROUPS,
     skipGrouping: ".st-group, .filter-checks, #overlayContainer",
     onOpen: () => {
+        searchPanel?.close();
         updateSettingsTab();
         updateFilterUI();
         syncThemedSettings();
@@ -1613,13 +1621,15 @@ function updateSortMarkers() {
 const compareString = tableLib.compareString;
 const compareNumber = (a, b) => tableLib.compareNumber(a, b, settings.tableside_order);
 
-document.getElementById('shipSearchSide').addEventListener('input', () => { tablePage = 0; updateTablecard(); });
-
 const TABLE_STALE_SEC = 600;
 
 let tablePage = 0;
 let tablePerPage = 0;
 let tableRedrawing = false;
+const tableHover = tableLib.bindVesselHover(document.getElementById('tablecardBody'), {
+    enter: id => { if (shipsDB?.[id]) startHover('ship', Number(id)); },
+    leave: id => { if (hoverType === 'ship' && hoverMMSI === Number(id)) stopHover(); },
+});
 
 function tablePageSize() {
     return tableLib.pageSize(
@@ -1634,8 +1644,8 @@ function tableRowsFitting() {
         document.querySelectorAll("#tablecardBody tr"));
 }
 
-function renderTablePager(total, pages) {
-    tableLib.renderPager(document.getElementById("tablePager"), tablePage, pages, total);
+function renderTablePager(total, perPage) {
+    tableLib.renderPager(document.getElementById("tablePager"), { page: tablePage, perPage, total });
 }
 
 function turnTablePage(step) {
@@ -1645,10 +1655,9 @@ function turnTablePage(step) {
 
 function updateTablecard() {
     if (!document.getElementById("tableside").classList.contains("active")) return;
+    if (document.getElementById("tableside").dataset.context) return;
 
     const tableBody = document.getElementById("tablecardBody");
-    tableBody.innerHTML = "";
-
     if (shipsDB == null) return;
 
     let shipKeys = Object.keys(shipsDB);
@@ -1672,16 +1681,11 @@ function updateTablecard() {
         });
     }
 
-    const nameQuery = document.getElementById('shipSearchSide').value.toLowerCase();
-
     document.getElementById("table_dist_unit").textContent = getDistanceUnit();
     document.getElementById("table_spd_unit").textContent = getSpeedUnit();
 
-    const shown = shipKeys.filter((key) => {
-        if (!(key in shipsDB) || !shipVisible(shipsDB[key])) return false;
-        if (!nameQuery) return true;
-        return String(getShipName(shipsDB[key].raw) || shipsDB[key].raw.mmsi).toLowerCase().includes(nameQuery);
-    });
+    const shown = shipKeys.filter(key => key in shipsDB && shipVisible(shipsDB[key]));
+    document.getElementById('tableside_title').textContent = 'In view (' + compactCount(shown.length) + ')';
 
     const perPage = tablePerPage || tablePageSize();
     if (!perPage) {
@@ -1697,31 +1701,21 @@ function updateTablecard() {
     const pages = Math.max(1, Math.ceil(shown.length / perPage));
     tablePage = Math.min(Math.max(0, tablePage), pages - 1);
 
-    const rows = [];
-    for (const key of shown.slice(tablePage * perPage, (tablePage + 1) * perPage)) {
+    const rows = shown.slice(tablePage * perPage, (tablePage + 1) * perPage).map(key => {
         const ship = shipsDB[key].raw;
-        const shipName = String(getShipName(ship) || ship.mmsi);
         const age = clock - ship.last_signal;
-
-        const dist = ship.distance != null ? getDistanceVal(ship.distance) : "-";
-        const spd = ship.speed != null ? getSpeedVal(ship.speed) : "-";
-        const cls = (isSelectedShip(ship.mmsi) ? " selected" : "") +
-            (age > TABLE_STALE_SEC ? " stale" : "");
-
-        rows.push(`<tr class="${cls.trim()}" data-mmsi="${ship.mmsi}">` +
-            `<td class="col-name"><span class="table-name">${flagHTML(ship.country, "", getCountryName(ship.country))}` +
-            `<span>${shipName}` +
-            (ship.repeat > 0 ? `<span class="row-relay" title="Received through another station">&#8635;</span>` : "") +
-            `</span></span></td>` +
-            `<td class="num col-dist">${dist}</td>` +
-            `<td class="num col-spd">${spd}</td>` +
-            `<td class="col-type">${getTableShiptype(ship)}</td>` +
-            `<td class="num col-last">${getDeltaTimeVal(age)}</td>` +
-            `</tr>`);
-    }
-
-    tableBody.innerHTML = rows.join('');
-    renderTablePager(shown.length, pages);
+        return {
+            mmsi: ship.mmsi, name: decodeHTMLEntities(getShipName(ship)) || ship.mmsi,
+            country: ship.country, countryName: getCountryName(ship.country),
+            distance: ship.distance != null ? getDistanceVal(ship.distance) : '—',
+            speed: ship.speed != null ? getSpeedVal(ship.speed) : '—',
+            typeHTML: getTableShiptype(ship), lastHTML: tableLib.durationHTML(age),
+            selected: isSelectedShip(ship.mmsi), stale: age > TABLE_STALE_SEC, relay: ship.repeat > 0,
+        };
+    });
+    tableBody.innerHTML = tableLib.renderVesselRows(rows, { distance: true });
+    tableHover.sync();
+    renderTablePager(shown.length, perPage);
 
     const fits = tableRowsFitting();
     if (fits && fits !== perPage && rows.length === perPage && !tableRedrawing) {
@@ -1731,11 +1725,6 @@ function updateTablecard() {
         tableRedrawing = false;
     }
 
-    tableBody.onmouseover = function(e) {
-        const tr = e.target.closest('tr[data-mmsi]');
-        if (tr) startHover('ship', parseInt(tr.dataset.mmsi));
-    };
-    tableBody.onmouseout = function(e) { stopHover(); };
     tableBody.onclick = function(e) {
         const tr = e.target.closest('tr[data-mmsi]');
         if (tr) showTargetcard('ship', parseInt(tr.dataset.mmsi));
@@ -1835,12 +1824,44 @@ function applyFilter() {
 }
 
 function openFilterPanel() {
-    openSettingsTab("Filter");
+    if (settingsPanel.isOpen("Filter")) settingsPanel.close();
+    else openSettingsTab("Filter");
 }
 
 function openSettingsTab(title) {
     settingsPanel.open(title);
 }
+
+searchPanel = createSearch({
+    root: document.getElementById('search-panel'),
+    scrim: document.getElementById('search-scrim'),
+    triggers: [document.getElementById('header-search-button')],
+    storageKey: 'viewerSearchType',
+    types: [
+        { id: 'all', label: 'Everything', placeholder: 'Search vessels, stations and places…' },
+        { id: 'ships', label: 'Vessels', placeholder: 'Name, MMSI, callsign or IMO…' },
+        { id: 'stations', label: 'Stations', placeholder: 'Station name or identifier…' },
+        { id: 'ports', label: 'Places', placeholder: 'Place name or UN/LOCODE…' },
+    ],
+    search: createLocalSearch({receiver: () => activeReceiver, ships: () => shipsDB, shipName: getShipName, callSign: getCallSign}),
+    onOpen: () => {
+        if (settings.tab !== 'map') selectMapTab();
+        ui.dismiss();
+        showTargetcard(null, null);
+        setPanels({table: false, measure: false});
+    },
+    onSelect: async result => {
+        if (result.type === 'ship') {
+            await openFocus(result.id);
+        } else {
+            if (hasValidCoords(result.lat, result.lon)) {
+                map.getView().animate({center: fromLonLat([result.lon, result.lat]), zoom: 12, duration: 500});
+            }
+            if (result.type === 'port' || result.type === 'place') mapObjects.openPorts([result.object]);
+        }
+    },
+    onError: () => showNotification('Could not open the search result', 'error'),
+});
 
 function updateFilterUI() {
     const set = (id, value) => {
@@ -1974,6 +1995,12 @@ const panels = {
     replay: false,
 };
 
+const panelSwitch = createPanelSwitch({
+    workspace: document.querySelector('.mainspace-container'),
+    card: { isOpen: () => panels.targetcard, close: () => showTargetcard(null, null) },
+    table: { isOpen: () => panels.table, close: () => hideTablecard() },
+});
+
 function normalisePanels() {
     if (panels.replay) {
         panels.table = false;
@@ -1986,6 +2013,7 @@ function normalisePanels() {
 }
 
 function setPanels(patch, opts) {
+    if (patch.table) panelSwitch.opening('table');
     Object.assign(panels, patch);
     normalisePanels();
     applyPanels(opts);
@@ -2079,8 +2107,14 @@ function toggleTablecard() {
 }
 
 function hideTablecard() {
+    tableHover.clear();
     if (panels.table) toggleTablecard();
 }
+
+document.getElementById('tableside').addEventListener('table:overview', () => {
+    tablePerPage = 0;
+    updateTablecard();
+});
 
 function setFading(b) {
     if (b != settings.fading) {
@@ -2614,6 +2648,7 @@ function selectReceiver(idx) {
 }
 
 function onReceiverChange(idx) {
+    searchPanel.close();
     if (replaycardVisible()) toggleReplaycard();
     activeReceiver = parseInt(idx, 10) || 0;
     setShipsSince(0);
@@ -4011,6 +4046,8 @@ function showTargetcard(type, m, pixel = undefined) {
         return;
     }
 
+    if (m != null) panelSwitch.opening('card');
+
     if (select_enabled_track && (card_mmsi != m || m == null)) {
         select_enabled_track = false;
 
@@ -4364,7 +4401,7 @@ async function openFocus(m, z) {
     selectMapTab(m);
 
     let ship = shipsDB[m] && shipsDB[m].raw;
-    if (ship && ship.lon && ship.lat) {
+    if (ship && hasValidCoords(ship.lat, ship.lon)) {
         let shipCoords = ol.proj.fromLonLat([ship.lon, ship.lat]);
         let view = map.getView();
         view.setCenter(shipCoords);
@@ -4373,7 +4410,7 @@ async function openFocus(m, z) {
     if (z) mapResetView(z);
     else mapResetView(14);
 
-    if (ship && ship.lon && ship.lat) ui.reveal([ship.lon, ship.lat], undefined, { center: true });
+    if (ship && hasValidCoords(ship.lat, ship.lon)) ui.reveal([ship.lon, ship.lat], undefined, { center: true });
 }
 
 function updateSettingsTab() {
@@ -4446,6 +4483,7 @@ function activateTab(b, a) {
         return;
     }
 
+    searchPanel?.close();
     hideMenu();
     closeSettings();
 
@@ -4750,6 +4788,12 @@ mapObjects.init({
     getStation: () => station,
     getStationName: () => config.station,
     openVessel: (mmsi) => { closeDialog(); closeSettings(); showTargetcard('ship', mmsi); },
+    hoverVessel: (mmsi) => { if (shipsDB?.[mmsi]) startHover('ship', mmsi); },
+    unhoverVessel: (mmsi) => { if (hoverType === 'ship' && hoverMMSI === mmsi) stopHover(); },
+    setTableOpen: (on) => {
+        if (on) closeSettings();
+        setPanels({ table: on, ...(on ? { replay: false } : {}) });
+    },
     getActiveReceiver: () => activeReceiver,
     getShipsDB: () => shipsDB,
     saveSettings,

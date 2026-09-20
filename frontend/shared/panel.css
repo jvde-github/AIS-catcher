@@ -438,21 +438,19 @@
 
 .settings-header .settings-tabs {
     border-bottom: none;
-    /* the swoosh eats 25% of the width at the bottom edge: the last tab needs
-       that much room or its underline is clipped */
-    padding: 0 4.6rem 0 0.3rem;
+    padding: 0 0.3rem;
     align-self: stretch;
     align-items: stretch;
     font-size: var(--fs-base);
     min-width: 0;
 }
 
-/* the header strip sits on the swoosh, so the arrows must fade into that */
+/* Scroll arrows blend into the flat header surface. */
 .settings-header .tab-scroll-wrap {
     flex: 1 1 0;
     min-width: 0;
     align-self: stretch;
-    --tab-fade: var(--color-band-accent);
+    --tab-fade: var(--color-panel-surface);
 }
 
 .settings-header .settings-tab {
@@ -623,10 +621,36 @@
     flex-direction: row;
     position: relative;
     z-index: var(--z-sticky);
+    background: var(--color-panel-surface);
 }
 
 .settings-header .hdr-slot {
     padding: 0;
+    background: transparent;
+    border-radius: 0;
+}
+
+/* Primary settings tabs use the ship-card tab treatment from map.css. */
+.settings-window > .settings-header {
+    background: var(--sc-tab-background);
+    border-radius: 0;
+}
+
+.settings-window > .settings-header > .close_icon {
+    margin: 0 16px;
+}
+
+.settings-window > .settings-header .tab-scroll-wrap {
+    --tab-fade: var(--sc-tab-background);
+}
+
+.settings-window > .settings-header .settings-tabs {
+    gap: 0;
+    padding: 2px 8px 0;
+}
+
+.settings-window > .settings-header .settings-tab {
+    justify-content: center;
 }
 
 .tableside_window .settings-header {
@@ -697,6 +721,8 @@
 
 /* the side panel a table lives in: slides in from the right edge */
 .tableside_window {
+    --vessel-row-height: 28px;
+    --vessel-font-size: var(--fs-2xs);
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
@@ -714,24 +740,156 @@
     transition: transform var(--dur-slow) ease-out, visibility 0s linear var(--dur-slow);
 }
 
-/* Too narrow a workspace to split: the panel covers the map instead. The
-   question is how much room the workspace has, not the window, so it is asked
-   of the container. */
-@container workspace (max-width: 750px) {
-    .tableside_window {
-        width: 100%;
-    }
-
-    body.table-open #map {
-        width: 100%;
-    }
-}
-
 .tableside_window.active {
     transform: translateX(0);
     visibility: visible;
     transition: transform var(--dur-slow) ease-out, visibility 0s;
     box-shadow: var(--shadow-panel);
+}
+
+/* Too narrow a workspace to split: the panel covers the map and switches
+   instantly. Measure the workspace rather than the window. */
+@container workspace (max-width: 750px) {
+    .tableside_window,
+    .tableside_window.active {
+        width: 100%;
+        transition: none;
+    }
+
+    body.table-open #map {
+        width: 100%;
+        transition: none;
+    }
+}
+
+/* A place uses the same panel as In view; the overview keeps its DOM/state. */
+.tableside_window[data-context] > :not(.side-table-context) {
+    display: none;
+}
+
+.side-table-context {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    color: var(--color-text);
+}
+
+.place-panel-header {
+    flex: none;
+    padding: 6px 12px 8px;
+    background: var(--color-panel-surface);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.place-panel-actions,
+.tableside_window > .table-overview-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+}
+
+.place-panel-actions {
+    margin-bottom: 2px;
+}
+
+.place-overview {
+    justify-self: start;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+    padding: 6px 0;
+    color: var(--color-accent);
+    font-size: var(--fs-xs);
+}
+
+.table-collapse {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 28px;
+    padding: 6px 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-accent);
+    font: inherit;
+    font-size: var(--fs-xs);
+    cursor: pointer;
+}
+.place-overview:hover,
+.table-collapse:hover { text-decoration: underline; }
+.table-collapse:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+
+.place-panel-actions .table-collapse,
+.table-overview-header .table-collapse { grid-column: 3; justify-self: end; }
+
+.place-panel-heading { display: flex; align-items: center; gap: 10px; }
+.place-panel-label { min-width: 0; }
+.place-panel-heading .place-panel-flag { flex: none; width: 24px; height: 18px; }
+.place-panel-kind { margin-top: 2px; color: var(--color-text-muted); font-size: var(--fs-xs); line-height: 1.35; }
+.place-panel-heading h2 {
+    font-size: var(--fs-base);
+    font-weight: var(--fw-semibold);
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.side-table-context .place-dialog-tabs-wrap {
+    flex: none;
+    margin: 0;
+    --tab-fade: var(--color-panel-surface);
+}
+
+.side-table-context .place-dialog-tabs { background: var(--color-panel-surface); }
+.side-table-context .place-dialog-tabs > button { min-height: 34px; padding: 7px 9px 6px; font-size: var(--fs-xs); }
+
+.side-table-context .place-dialog-note {
+    padding: 8px 14px;
+    flex: none;
+}
+
+.side-table-context .port-results {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+}
+
+.side-table-context .port-ship-list table.dated .col-last { width: 100px; }
+.side-table-context .port-ship-list table.visits .col-name { width: 35%; }
+.port-ship-list .place-time { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.side-table-label { grid-column: 2; color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-normal); }
+.side-table-context table.nearby .col-last { width: 82px; }
+.side-table-context .nearby-heard { width: 72px; }
+.side-table-context .nearby-code { width: 100px; }
+
+.table-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+    justify-content: space-between;
+    box-sizing: border-box;
+    padding: 4px 10px;
+    border-top: 1px solid var(--color-border);
+    min-height: 32px;
+}
+
+.table-footer .table-count { margin: 0; font-size: var(--fs-2xs); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.table-footer .table-pager { margin: 0; }
+.port-list-preview .port-results { flex: 0 1 auto; }
+.table-more { padding: 5px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-accent); font-size: var(--fs-xs); text-decoration: none; white-space: nowrap; }
+.table-more:hover { background: var(--color-card-footer); }
+
+/* The list stays dense; larger workspaces get a little air. */
+@media (min-width: 1200px) and (min-height: 800px) {
+    .tableside_window { --vessel-row-height: 32px; --vessel-font-size: var(--fs-xs); }
 }
 
 @media (max-width: 750px) {
@@ -777,6 +935,26 @@
     margin: 0px;
     padding: 6px 4px;
 }
+
+/* Both the viewport and place lists use these exact row metrics. */
+.tableside_window .tablecard_inner { padding: 0 10px; min-width: 0; overflow: auto; }
+.tableside_window .tablecard_inner table {
+    table-layout: fixed;
+    border-collapse: collapse;
+    margin: 0;
+    font-size: var(--vessel-font-size);
+    line-height: 1.35;
+}
+.tableside_window .tablecard_inner table > tbody > tr > td {
+    box-sizing: border-box;
+    height: var(--vessel-row-height);
+    padding: 3px 4px;
+}
+.tableside_window .tablecard_inner thead th { font-size: var(--fs-2xs); }
+.tableside_window .tablecard_inner .table-name { gap: 6px; }
+.tableside_window .vessel-link { min-width: 0; }
+.tableside_window > .settings-header { min-height: 40px; height: 40px; }
+.tableside_window > .table-overview-header { box-sizing: border-box; padding: 6px 12px; }
 
 /* Name cell: flag then name, the name taking whatever is left */
 .table-name {
@@ -829,6 +1007,17 @@
 
 .tablecard_inner table .col-last {
     width: 72px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.table-duration {
+    display: inline-block;
+    max-width: 100%;
+    vertical-align: bottom;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tablecard_inner table th.num,
@@ -864,7 +1053,6 @@
     color: var(--color-text-muted);
 }
 
-/* pager in a panel band: ‹ 8 / 12 · 224 › */
 /* Sortable column head: the marker keeps its space at all times so the row
    does not jump when the sort moves to another column. */
 .sort-icon {

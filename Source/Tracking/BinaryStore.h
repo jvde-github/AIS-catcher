@@ -140,17 +140,25 @@ public:
 
   // the ship row's packed badge: count (4b) | newest kind (3b) | age bucket
   // (2b), over what is about the ship and what it sent, an item on both chains
-  // once
+  // once. Badge-worthy messages come first; a ship with none keeps the summary
+  // of its acknowledgments and AtoN status, for hovers. Bit 9 marks a binary
+  // acknowledgment, for which the frontend draws no badge.
   uint16_t badge(uint32_t mmsi, std::time_t now) const {
     int c = owners.find(mmsi);
     if (c == owners.NIL)
       return 0;
-    unsigned n = 0;
-    int newest = -1;
+    unsigned n = 0, quiet_n = 0;
+    int newest = -1, quiet_newest = -1;
     auto tally = [&](int p) {
       const Item &it = items[p];
       if ((long int)now - (long int)it.last > ttl)
         return;
+      if (it.type == 7 || it.kind == Item::ATON) {
+        ++quiet_n;
+        if (quiet_newest < 0 || it.last > items[quiet_newest].last)
+          quiet_newest = p;
+        return;
+      }
       n++;
       if (newest < 0 || it.last > items[newest].last)
         newest = p;
@@ -160,12 +168,16 @@ public:
     for (int p = owners[c].sent; p >= 0; p = items[p].snext)
       if (items[p].owner != mmsi)
         tally(p);
-    if (!n)
-      return 0;
+    if (!n) {
+      if (!quiet_n)
+        return 0;
+      n = quiet_n;
+      newest = quiet_newest;
+    }
     long int age = (long int)now - (long int)items[newest].last;
     unsigned bucket = age > 1800 ? 2 : age > 900 ? 1 : 0;
     return (uint16_t)(MIN(n, 15u) | ((unsigned)items[newest].kind << 4) |
-                      (bucket << 7));
+                      (bucket << 7) | (items[newest].type == 7 ? 1u << 9 : 0));
   }
 
   // ship-attached items (all, one ship's, or one marker's members)

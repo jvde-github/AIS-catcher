@@ -48,6 +48,9 @@ const objects = mapobjects.create({
     isHovered: (f) => deps.isHovered(f), rehover: (f) => deps.rehover(f),
     isHoveringShip: (m) => deps.isHoveringShip(m), rehoverShip: (m) => deps.rehoverShip(m),
     openVessel: (m) => deps.openVessel(m),
+    hoverVessel: (m) => deps.hoverVessel(m),
+    unhoverVessel: (m) => deps.unhoverVessel(m),
+    setTableOpen: (on) => deps.setTableOpen(on),
     map: () => deps.map(),
 });
 
@@ -55,6 +58,12 @@ export const objectLayer = objects.layer;
 export const setReceiverMarker = objects.setReceiverMarker;
 export const openPorts = objects.openPorts;
 export const openNearby = objects.openNearby;
+
+export async function openPlace(ref) {
+    // Current visits remain clickable when place markers are switched off.
+    await fetchObjects();
+    objects.openPlace(ref);
+}
 
 export function init(d) {
     deps = d;

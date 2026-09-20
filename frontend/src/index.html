@@ -44,6 +44,10 @@
 			</div>
 		</div>
 
+		<button type="button" id="header-search-button" title="Search vessels, stations and places" aria-label="Search vessels, stations and places" data-action="toggleSearch" class="header-icon">
+			<i class="search_icon small-icon" aria-hidden="true"></i>
+		</button>
+
 		<div title="About" data-action="toggleInfoPanel" class="header-icon">
 			<i class="info_icon small-icon"></i>
 		</div>
@@ -86,18 +90,13 @@
 
 	<div class="mainspace-container">
 		<div class="toast-container" id="notification-container"></div>
+		<div class="search-scrim" id="search-scrim" hidden></div>
+		<div id="search-panel" hidden></div>
 
 		<div class="tableside_window tabcontent" id="tableside">
-			<div class="settings-header">
-				<div class="hdr-slot">
-					<input type="text" class="input search-box" id="shipSearchSide" placeholder="Search for ships..." title="Search for ships">
-				</div>
-				<div class="table-pager" id="tablePager" hidden>
-					<button type="button" data-action="tablePagePrev" title="Previous page" aria-label="Previous page">&#8249;</button>
-					<span id="tablePageLabel"></span>
-					<button type="button" data-action="tablePageNext" title="Next page" aria-label="Next page">&#8250;</button>
-				</div>
-				<div data-action="hideTablecard" class="close_icon"></div>
+			<div class="settings-header table-overview-header">
+				<span id="tableside_title" class="side-table-label">In view</span>
+				<button type="button" data-action="hideTablecard" class="table-collapse" title="Close sidebar" aria-label="Close sidebar">Close <span aria-hidden="true">→</span></button>
 			</div>
 
 			<div class="tablecard_inner">
@@ -114,6 +113,14 @@
 					<tbody id="tablecardBody"></tbody>
 				</table>
 			</div>
+			<footer class="table-footer">
+				<span class="table-count" aria-live="polite"></span>
+				<div class="table-pager" id="tablePager">
+					<button type="button" data-action="tablePagePrev" title="Previous page" aria-label="Previous page">&#8249;</button>
+					<span id="tablePageLabel"></span>
+					<button type="button" data-action="tablePageNext" title="Next page" aria-label="Next page">&#8250;</button>
+				</div>
+			</footer>
 		</div>
 
 		<div class="settings-window" id="settings">
@@ -1582,10 +1589,6 @@
 							data-action="showBinaryMessageDialogCard" data-context-type="ship" class="noandroid"><i
 								class="mail_icon"></i><span>Messages</span>
 						</div>
-						<div id="targetcard_follow_option" title="Keep the map centred on this vessel"
-							data-action="toggleFollowCard" data-context-type="ship"><i
-								class="push_pin_icon"></i><span id="targetcard_follow">Follow</span>
-						</div>
 						<div id="targetcard_realtime_option" title="Track NMEA messages for this vessel"
 							data-action="openRealtimeForMMSICard" data-context-type="ship"><i
 								class="comment_icon"></i><span>Track NMEA</span>
@@ -1593,6 +1596,10 @@
 						<div id="targetcard_track_option" title="Track of current vessel" data-context-type="ship"
 							data-action="toggleTrackCard"><i id="targetcard_track_icon" class="timeline_icon"></i><span
 								id="targetcard_track">Track</span></div>
+						<div id="targetcard_follow_option" title="Keep the map centred on this vessel"
+							data-action="toggleFollowCard" data-context-type="ship"><i
+								class="push_pin_icon"></i><span id="targetcard_follow">Follow</span>
+						</div>
 						<div title="Look up on the community site" data-action="openAISCatcherSiteCard"
 							data-context-type="ship" class="noandroid"><i
 								class="info_icon"></i><span>Community</span></div>

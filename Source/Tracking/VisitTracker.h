@@ -43,6 +43,9 @@ public:
     // Minutes stopped inside, with the seconds not yet carried into them.
     // Saturating: a ship moored for 45 days stops counting.
     uint16_t idle = 0;
+    // A stay is a call from this much idle, the line visit_kind draws in the
+    // hub's database.
+    static const uint16_t CALL_MINUTES = 15;
     enum : uint8_t {
       INSIDE = 1,
       PENDING = 2,
@@ -58,6 +61,15 @@ public:
     bool pending() const { return flags & PENDING; }
     bool confirmed() const { return inside() != pending(); }
     bool active() const { return inside() || pending(); }
+    // At a port, an anchorage or a berth a stay is a call once the ship lay
+    // still long enough; elsewhere passing through is the whole of it.
+    bool call() const {
+      return idle >= CALL_MINUTES ||
+             (place->type != "port" && place->type != "anchorage" &&
+              place->type != "berth");
+    }
+    // What history keeps: the stay under way, and the calls before it.
+    bool shown() const { return active() || call(); }
     uint32_t entryTime() const { return flags & ENTRY_SEEN ? entered : 0; }
     uint32_t exitTime() const { return flags & EXIT_SEEN ? exited : 0; }
     uint32_t pendingTime() const { return inside() ? entered : exited; }
@@ -316,7 +328,7 @@ public:
     std::array<const Visit *, 5> ordered;
     size_t count = 0;
     for (const auto &v : records.at(slot).visits)
-      if (!v.empty())
+      if (!v.empty() && v.shown())
         ordered[count++] = &v;
     // The summary uses the first inside visit; keep smallest-place preference.
     // Five entries at most: an insertion sort, which also keeps GCC from

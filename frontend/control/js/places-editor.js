@@ -186,40 +186,16 @@ export function createPlaceEditor(host, options = {}) {
         ],
         view: new View({center: fromLonLat([4.4, 51.95]), zoom: 10})
     });
-    // OpenFreeMap Positron, labelled in English where OpenStreetMap has the name and in the Latin
-    // spelling otherwise; the plain OSM tiles stand in if the style cannot be loaded
-    const basemapStyle = 'https://tiles.openfreemap.org/styles/positron';
-    Promise.all([import('ol/layer/VectorTile.js'), import('ol-mapbox-style'), fetch(basemapStyle).then(r => r.json())])
-        .then(([{default: VectorTileLayer}, {applyStyle}, style]) => {
-            const english = ['coalesce', ['get', 'name:en'], ['get', 'name_int'], ['get', 'name:latin'], ['get', 'name']];
-            for (const l of style.layers || []) {
-                if (!l.layout?.['text-field'])
-                    continue;
-                l.layout['text-font'] = ['Arial'];
-                if (JSON.stringify(l.layout['text-field']).includes('name'))
-                    l.layout['text-field'] = english;
-            }
-            const background = style.layers?.find(l => l.type === 'background')?.paint?.['background-color'];
-            const base = new VectorTileLayer({className: 'place-base', declutter: true});
-            return applyStyle(base, style, {styleUrl: basemapStyle}).then(() => {
-                if (background)
-                    base.on('prerender', e => {
-                        e.context.save();
-                        e.context.fillStyle = background;
-                        e.context.fillRect(0, 0, e.context.canvas.width, e.context.canvas.height);
-                        e.context.restore();
-                    });
-                if (dead)
-                    return;
-                map.getLayers().insertAt(0, base);
-                q('.place-attribution').innerHTML = '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
-            });
-        })
-        .catch(err => {
-            console.error('Places map: OpenFreeMap failed, using OpenStreetMap tiles', err);
-            if (!dead)
-                map.getLayers().insertAt(0, new TileLayer({source: new OSM(), opacity: 0.6}));
-        });
+    // OpenStreetMap, dimmed a little so the outlines drawn over it stand out
+    const base = new TileLayer({className: 'place-base', source: new OSM()});
+    base.on('postrender', e => {
+        e.context.save();
+        e.context.setTransform(1, 0, 0, 1, 0, 0);
+        e.context.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        e.context.fillRect(0, 0, e.context.canvas.width, e.context.canvas.height);
+        e.context.restore();
+    });
+    map.getLayers().insertAt(0, base);
     const modify = new Modify({source: editing, style: handleStyle});
     map.addInteraction(modify);
     const resize = new ResizeObserver(() => map.updateSize());

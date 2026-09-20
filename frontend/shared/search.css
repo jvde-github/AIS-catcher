@@ -1,0 +1,256 @@
+/* The search box is summoned from the toolbar and dims the map while it is
+up, so what you type is the only thing on screen that matters. */
+.map-search {
+    position: absolute;
+    top: calc(var(--map-inset-top, 8px) + 2px);
+    /* centred by margins rather than a transform: ol.css puts its own
+    transform on .ol-control and would fight one here */
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    transform: none;
+    z-index: 1000;
+    display: none;
+}
+
+body.search-open .map-search {
+    display: block;
+}
+
+.search-scrim {
+    position: absolute;
+    inset: 0;
+    background: var(--color-scrim);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--dur-slow), visibility var(--dur-slow);
+    z-index: 999;
+}
+
+body.search-open .search-scrim {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* the panel: one card holding the field, the type chips and the results */
+/* the same surface as the measure card: raised, rounded, its own border */
+.map-search {
+    width: min(520px, calc(100% - 20px));
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-card-footer);
+    box-shadow: var(--shadow-lg);
+    color: var(--color-text);
+    overflow: hidden;
+}
+
+.search-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--color-card-footer);
+}
+
+.search-field .search-glyph {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    color: var(--color-text-muted);
+}
+
+/* Reserve the input's status slot; the shared ring appears after 400 ms. */
+.search-spinner { display: inline-flex; flex: none; width: 16px; height: 16px; }
+
+/* the two share one 16px slot: swapping them must not move the text */
+.map-search .search-field button {
+    position: absolute;
+    right: 14px;
+}
+
+.map-search.is-loading #clear-search {
+    visibility: hidden;
+}
+
+.map-search .search-field input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    box-shadow: none;
+    background: none;
+    color: inherit;
+    font-size: var(--fs-md);
+}
+
+.search-field:focus-within {
+    border-color: var(--color-accent);
+}
+
+.search-field input::placeholder {
+    color: var(--color-text-muted);
+}
+
+.map-search .search-field button {
+    display: flex;
+    width: auto;
+    height: auto;
+    flex: none;
+    padding: 2px;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+}
+
+.map-search .search-field button svg {
+    width: 18px;
+    height: 18px;
+}
+
+.search-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 0 2px 12px;
+    border-bottom: 1px solid var(--color-rule);
+}
+
+/* ol.css styles every button inside an .ol-control; these are not zoom
+buttons, so they need to outrank it */
+.map-search .search-chip {
+    flex: 0 0 auto;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    line-height: 1.35;
+    white-space: nowrap;
+    padding: 6px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: none;
+    color: var(--color-text-muted);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+    transition: var(--transition-hover);
+}
+
+@media (hover: hover) {
+    .map-search .search-chip:hover {
+        color: var(--color-text);
+        border-color: var(--color-border-strong);
+    }
+}
+
+/* selection is shown by the accent, not by a filled chip */
+.map-search .search-chip.is-on {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
+.search-results {
+    max-height: 46vh;
+    overflow-y: auto;
+    margin-top: 6px;
+}
+
+.search-results.hidden {
+    display: none;
+}
+
+.search-result {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 8px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+}
+
+.search-result + .search-result {
+    border-top: 1px solid var(--color-rule);
+}
+
+@media (hover: hover) {
+    .search-result:hover { background: var(--color-hover); }
+}
+
+.search-result > i,
+.search-result > .search-port-icon {
+    flex: none;
+    font-size: 20px;
+    color: var(--color-text-muted);
+}
+
+.search-port-icon,
+.search-port-icon > svg {
+    display: block;
+    width: 20px;
+    height: 20px;
+}
+
+.search-port-icon path {
+    fill: currentColor;
+}
+
+.search-result-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.search-result-title {
+    font-size: var(--fs-base);
+    font-weight: var(--fw-medium);
+    color: var(--color-text-strong);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.search-result-sub {
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+}
+
+/* Wide enough for the card to sit with air either side: keep it a card.
+Narrower than that and it spans the width, square, like a sheet. */
+@media only screen and (max-width: 500px) {
+    .map-search {
+        top: 0;
+        width: 100%;
+        border-width: 0 0 1px;
+        border-radius: 0;
+        box-shadow: none;
+    }
+}
+
+.search-empty {
+    padding: 14px;
+    text-align: center;
+    font-size: var(--fs-sm);
+    color: var(--color-text-muted);
+}
+
+
+/* Keep these independent of host button/input rules and HTML utility classes. */
+.map-search { box-sizing: border-box; }
+.map-search[hidden], .search-scrim[hidden], .map-search [hidden] { display: none; }
+.map-search .search-field button[hidden] { display: none; }
+.map-search .search-glyph { width: 18px; height: 18px; }
+.map-search .search-field input { padding: 0; margin: 0; }
+.map-search input::-webkit-search-cancel-button { display: none; }
+.map-search .search-result { outline: none; }
+.map-search .search-result[aria-selected="true"] { background: var(--color-hover); }
+.map-search .search-result > .shipicon { flex: none; }
+.map-search .search-result-sub { overflow-wrap: anywhere; }
+.map-search .search-status { padding: 8px 8px 0; font-size: var(--fs-sm); color: var(--color-text-muted); }
+.map-search .search-status:empty { display: none; }
+.map-search .search-results { max-height: min(46vh, calc(100dvh - var(--size-topbar, 54px) - 170px)); }
+.header button.header-icon { padding: 0; border: 0; color: inherit; background: transparent; cursor: pointer; }
+.header button.header-icon:focus-visible { outline: 2px solid currentColor; outline-offset: -4px; }

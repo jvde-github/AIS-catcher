@@ -27,6 +27,10 @@ export function create(opts) {
     function show(btn) {
         var text = btn.dataset.label || btn.getAttribute("aria-label");
         if (!text) return;
+        // A fullscreen element paints above the body, including fixed children.
+        // Keep the tooltip in the same top-layer subtree as its button.
+        var container = document.fullscreenElement || document.body;
+        if (tip.parentElement !== container) container.appendChild(tip);
         tip.textContent = text;
         tip.classList.add("show");
 
@@ -35,7 +39,7 @@ export function create(opts) {
         var left, top;
         if (below) {
             left = Math.max(margin, Math.min(window.innerWidth - w - margin, r.left + r.width / 2 - w / 2));
-            top = r.bottom + margin;
+            top = r.bottom + h + margin <= window.innerHeight ? r.bottom + margin : r.top - h - margin;
         } else {
             left = r.left - w - margin;
             if (left < margin) left = r.right + margin;
@@ -57,6 +61,14 @@ export function create(opts) {
         if (e.target.closest(selector)) hide();
     });
     document.addEventListener("pointerdown", hide, true);
+    document.addEventListener("focusin", function (e) {
+        var btn = e.target.closest(selector);
+        if (btn && btn.matches(":focus-visible")) show(btn);
+    });
+    document.addEventListener("focusout", function (e) {
+        if (e.target.closest(selector)) hide();
+    });
+    document.addEventListener("fullscreenchange", hide);
 
     return { prepare: prepare, hide: hide };
 }

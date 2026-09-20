@@ -71,7 +71,7 @@ export function build(mount, prefix, o) {
         '<div class="sc-strip">' +
         '<div class="ends"><div><div class="l">Current location</div><div class="v sc-sum-region"></div><div class="sc-sum-pos"></div></div>' +
         '<div><div class="l sc-sum-dest-label">Reported destination</div><div class="v sc-sum-dest"></div><div class="sc-sum-reported"></div></div></div>' +
-        '<div class="line" aria-hidden="true"><span class="pip"></span><span class="t"><i></i></span><span class="pin sc-sum-pin">' + PIN + '</span></div>' +
+        '<div class="line"><span class="pip" aria-hidden="true"></span><span class="t" aria-hidden="true"><i></i></span><span class="pin sc-sum-pin">' + PIN + '</span></div>' +
         '<div class="under"><span class="sc-sum-seen"></span><span class="sc-sum-eta"></span></div>' +
         '</div>';
     const q = (c) => mount.querySelector('.' + c);
@@ -139,6 +139,8 @@ export function build(mount, prefix, o) {
         const places = ship.visits?.filter(v => v.inside) || [];
         summary.region.textContent = places?.length ? places[0].name : region && region !== '-' ? region : '';
         summary.region.hidden = !summary.region.textContent;
+        const currentPlace = places.length ? {...places[0], runtime_id: places[0].id, place_version: ship.place_version, lat: ship.lat, lon: ship.lon} : null;
+        setPortLink(summary.region, currentPlace, h.openPort, h.goTo);
         const dest = ship.destination && String(ship.destination).trim();
         const port = ship.matched_port;
         const portName = port && typeof port.name === 'string' && port.name.trim() ? port.name.trim() : null;
@@ -146,10 +148,9 @@ export function build(mount, prefix, o) {
         set(summary.dest, portName || decodeHTMLEntities(dest));
         summary.reported.textContent = portName && dest ? decodeHTMLEntities(dest) : '';
         summary.reported.hidden = !summary.reported.textContent;
-        const goTo = portName && h.goTo && typeof port.lat === 'number' && typeof port.lon === 'number' ? () => h.goTo(port.lat, port.lon) : null;
         setPortLink(summary.dest, port, h.openPort, h.goTo);
-        summary.pin.classList.toggle('sc-sum-link', !!goTo);
-        summary.pin.onclick = goTo;
+        setPortLink(summary.pin, port, h.openPort, h.goTo);
+        summary.pin.setAttribute('aria-label', portName ? 'Open ' + portName : 'Destination');
         const age = h.age ? h.age(ship) : null;
         summary.seen.textContent = age ? 'Last received ' + age + ' ago' : 'Last received unknown';
         const hasEta = ship.eta_month != null && ship.eta_day != null && ship.eta_hour != null && ship.eta_minute != null;
