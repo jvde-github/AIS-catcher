@@ -1256,6 +1256,7 @@ parse_arguments() {
 delete_previous_binary() {
     # If a package installation has been present, it should be removed after building from source. 
     # This ensures compatiblity when switching between pre-packaged installation and source builds. Otherwise apt install may be confused why the ais-catcher package exist but has been replaced by an installation which is built from source (-which may be either a newer or older version).
+    log "INFO" "A pre-built AIS-catcher package is no longer used and will be removed (if present)"
     apt remove -y ais-catcher || error_exit "Failed to remove preexisting AIS-catcher package"
 }
 
