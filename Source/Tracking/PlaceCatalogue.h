@@ -51,6 +51,9 @@ struct PlaceIndex {
     int markerSize = 0;
     long revision = 0;
     void writeSummary(JSON::Writer &, uint64_t sequence, int minZoom = -1) const;
+    // the zoom a terminal or a berth appears from, 0 for a place that goes by its size
+    static const int TERMINAL_ZOOM = 12, BERTH_ZOOM = 14;
+    int closeZoom() const;
   };
   std::string version;
   std::vector<Entry> entries;              // runtime ID order

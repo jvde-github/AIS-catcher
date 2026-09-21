@@ -246,14 +246,14 @@ PlaceCatalogue::Place PlaceCatalogue::validate(const std::string &json,
       if (m.parentCode == m.code)
         throw std::runtime_error("A port cannot be its own parent");
     }
-  } else if (m.type == "berth" || m.type == "anchorage") {
+  } else if (m.type == "berth" || m.type == "terminal" || m.type == "anchorage") {
     m.code = code(KEY_PLACE_PORT_UNLOCODE);
   } else if (m.type == "custom")
     m.category = text(p, KEY_PLACE_CATEGORY, 60);
   else
     throw std::runtime_error("Unknown place type");
   if (p[KEY_PLACE_UNLOCODE] && m.type != "port")
-    throw std::runtime_error("Use port_unlocode for a berth or anchorage");
+    throw std::runtime_error("Use port_unlocode for a berth, a terminal or an anchorage");
 
   const auto &g = object(doc.root, KEY_PLACE_GEOMETRY);
   const auto &coords = field(g, KEY_PLACE_COORDINATES);
@@ -805,16 +805,26 @@ void PlaceIndex::Entry::writeSummary(JSON::Writer &w, uint64_t sequence, int min
       .kv("code", metadata->code)
       .kv("parent_unlocode", metadata->parentCode)
       .kv("has_geometry", !polygons->empty());
-  // every place appears from the zoom of its size class: a port by its own, a
-  // berth or anchorage by its port's, a custom area by the size it was given
+  // every place appears from the zoom of its size class: a port by its own, an
+  // anchorage by its port's, a custom area by the size it was given; a terminal
+  // and a berth only close in, where there is room for them
   static const int zooms[] = {12, 11, 9, 7};
-  w.kv("z", MAX(zooms[markerSize], minZoom));
+  const int close = closeZoom();
+  w.kv("z", MAX(close ? close : zooms[markerSize], minZoom));
   if (metadata->type == "port")
     w.kv("country", metadata->code.substr(0, 2));
   w.kv("revision", revision)
       .kv("category", metadata->category)
       .kv("size", markerSize)
       .endObject();
+}
+
+int PlaceIndex::Entry::closeZoom() const {
+  if (metadata->type == "berth")
+    return BERTH_ZOOM;
+  if (metadata->type == "terminal")
+    return TERMINAL_ZOOM;
+  return 0;
 }
 
 std::string PlaceIndex::normalized(const std::string &text) {

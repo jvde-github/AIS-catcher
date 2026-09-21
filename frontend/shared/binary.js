@@ -472,6 +472,20 @@ export function kindGlyph(ctx, cat, x, y, s) {
         ctx.stroke();
         break;
     }
+    case 'terminal': {
+        // Quay crane: two legs, a boom reaching over the water and its hoist.
+        ctx.beginPath();
+        ctx.moveTo(x - s * .55, y + s * .9);
+        ctx.lineTo(x - s * .55, y - s * .55);
+        ctx.moveTo(x + s * .15, y + s * .9);
+        ctx.lineTo(x + s * .15, y - s * .55);
+        ctx.moveTo(x - s, y - s * .55);
+        ctx.lineTo(x + s, y - s * .55);
+        ctx.moveTo(x + s * .7, y - s * .55);
+        ctx.lineTo(x + s * .7, y + s * .2);
+        ctx.stroke();
+        break;
+    }
     case 'waterway': {
         // three swells across the marker
         for (let i = -1; i <= 1; i++) {

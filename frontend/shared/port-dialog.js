@@ -45,7 +45,7 @@ export function createPortDialog(host) {
         let page = 0, perPage = 10, total = 0, shown = 0, selectedMmsi = null, loading = false;
         const kind = place.place_type === 'custom' && place.category
             ? String(place.category).replace(/_/g, ' ').replace(/^./, c => c.toUpperCase())
-            : {port:'Port', anchorage:'Anchorage', berth:'Berth', custom:'Area'}[place.place_type || 'port'] || 'Place';
+            : {port:'Port', anchorage:'Anchorage', terminal:'Terminal', berth:'Berth', custom:'Area'}[place.place_type || 'port'] || 'Place';
         root.setAttribute('aria-labelledby', 'port-ships-title');
         root.innerHTML = '<header class="place-panel-header">' +
             '<div class="place-panel-actions"><button type="button" class="place-overview">← In view</button><span class="side-table-label"></span><button type="button" class="table-collapse place-close" title="Close sidebar" aria-label="Close sidebar">Close <span aria-hidden="true">→</span></button></div>' +

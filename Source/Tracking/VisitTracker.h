@@ -61,12 +61,12 @@ public:
     bool pending() const { return flags & PENDING; }
     bool confirmed() const { return inside() != pending(); }
     bool active() const { return inside() || pending(); }
-    // At a port, an anchorage or a berth a stay is a call once the ship lay
-    // still long enough; elsewhere passing through is the whole of it.
+    // At a port, an anchorage, a terminal or a berth a stay is a call once the
+    // ship lay still long enough; elsewhere passing through is the whole of it.
     bool call() const {
       return idle >= CALL_MINUTES ||
              (place->type != "port" && place->type != "anchorage" &&
-              place->type != "berth");
+              place->type != "terminal" && place->type != "berth");
     }
     // What history keeps: the stay under way, and the calls before it.
     bool shown() const { return active() || call(); }
