@@ -138,10 +138,14 @@ public:
       linkToOwner(h, owner);
   }
 
+  // a receipt for a message, carrying no content of its own: binary (7) and
+  // safety related (13)
+  static bool isAck(int type) { return type == 7 || type == 13; }
+
   // the ship row's packed badge: count (4b) | newest kind (3b) | age bucket
   // (2b), over what is about the ship and what it sent, an item on both chains
   // once. Badge-worthy messages come first; a ship with none keeps the summary
-  // of its acknowledgments and AtoN status, for hovers. Bit 9 marks a binary
+  // of its acknowledgments and AtoN status, for hovers. Bit 9 marks an
   // acknowledgment, for which the frontend draws no badge.
   uint16_t badge(uint32_t mmsi, std::time_t now) const {
     int c = owners.find(mmsi);
@@ -153,7 +157,7 @@ public:
       const Item &it = items[p];
       if ((long int)now - (long int)it.last > ttl)
         return;
-      if (it.type == 7 || it.kind == Item::ATON) {
+      if (isAck(it.type) || it.kind == Item::ATON) {
         ++quiet_n;
         if (quiet_newest < 0 || it.last > items[quiet_newest].last)
           quiet_newest = p;
@@ -177,7 +181,7 @@ public:
     long int age = (long int)now - (long int)items[newest].last;
     unsigned bucket = age > 1800 ? 2 : age > 900 ? 1 : 0;
     return (uint16_t)(MIN(n, 15u) | ((unsigned)items[newest].kind << 4) |
-                      (bucket << 7) | (items[newest].type == 7 ? 1u << 9 : 0));
+                      (bucket << 7) | (isAck(items[newest].type) ? 1u << 9 : 0));
   }
 
   // ship-attached items (all, one ship's, or one marker's members)
@@ -535,7 +539,7 @@ inline int BinaryStore::process(const JSON::JSON &data, FLOAT32 sender_lat,
       type != 14 && type != 23)
     return -1;
 
-  const bool ack = type == 7 || type == 13;
+  const bool ack = isAck(type);
   const int offset = 40 + 32 * ack_index;
   if (ack && (ack_index < 0 || ack_index > 3 ||
               msg->getLength() < offset + 32 || !msg->getUint(offset, 30)))

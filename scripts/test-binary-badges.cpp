@@ -103,8 +103,16 @@ int main() {
   assert(store.badge(111, 3000) == (3 | (1 << 9)));
   assert(messages(store, 111, 3000).find("\"type\":7") != std::string::npos);
 
-  // This policy is specifically for type 7, not safety acknowledgments.
+  // A safety acknowledgment is a receipt like a binary one: it says a message
+  // arrived, not that anything is wrong, so neither vessel is badged for it.
   receive(store, 13, 555, 666, 3000);
+  // bit 9 is what the frontend reads; the kind bits below it are its own
+  assert(store.badge(555, 3000) == (1 | (BinaryStore::Item::SAFETY << 4) | (1 << 9)));
+  assert(store.badge(666, 3000) == (1 | (BinaryStore::Item::SAFETY << 4) | (1 << 9)));
+  assert(messages(store, 555, 3000).find("\"type\":13") != std::string::npos);
+
+  // a real safety message badges both vessels, and counts alone
+  receive(store, 12, 555, 666, 3000, "AGROUND IN CHANNEL");
   assert(store.badge(555, 3000) == (1 | (BinaryStore::Item::SAFETY << 4)));
   assert(store.badge(666, 3000) == (1 | (BinaryStore::Item::SAFETY << 4)));
 
