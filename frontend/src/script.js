@@ -283,6 +283,7 @@ const ACTIONS = {
     updateTrackHistoryDisplay: (e, d, el) => updateSliderDisplay('trackHistory', TRACK_HISTORY_STOPS[el.value]),
 
     // context menu (depends on global context_mmsi/card_mmsi)
+    openEventHistory: () => { closeSettings(); mapObjects.openEventHistory(); },
     toggleTickerSide: () => {
         settings.ticker_bottom = !settings.ticker_bottom;
         const btn = document.getElementById("ticker_side");
@@ -4788,6 +4789,7 @@ mapObjects.init({
     getStation: () => station,
     getStationName: () => config.station,
     openVessel: (mmsi) => { closeDialog(); closeSettings(); showTargetcard('ship', mmsi); },
+    navigate: ({ lat, lon }) => ui.reveal([lon, lat], undefined, { minZoom: 8, center: true }),
     hoverVessel: (mmsi) => { if (shipsDB?.[mmsi]) startHover('ship', mmsi); },
     unhoverVessel: (mmsi) => { if (hoverType === 'ship' && hoverMMSI === mmsi) stopHover(); },
     setTableOpen: (on) => {

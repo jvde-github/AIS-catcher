@@ -759,8 +759,17 @@ const WebViewer::Route WebViewer::routes[] = {
        return s->getObjectJSON(IO::HTTPRequest::queryParam(a, "key"));
      },
      true},
+    // `before` selects the history page: everything the rings still hold, not
+    // just what the live feed's horizon reaches
     {"/api/events.json", nullptr, "application/json",
      [](WebViewer *, ReceiverTracker *s, const std::string &a) {
+       const std::string before = IO::HTTPRequest::queryParam(a, "before");
+       if (!before.empty()) {
+         long long limit = queryInt(a, "limit");
+         return s->getEventHistoryJSON(
+             strtoull(before.c_str(), nullptr, 10), queryInt(a, "level"),
+             limit > 0 ? (int)limit : 25);
+       }
        return s->getEventsJSON(
            strtoull(IO::HTTPRequest::queryParam(a, "since").c_str(), nullptr,
                     10),

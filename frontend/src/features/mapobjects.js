@@ -7,6 +7,7 @@ import { hasValidCoords } from '../../shared/core/geo.js';
 import { sanitizeString } from '../../shared/core/text.js';
 import { BINARY_CATEGORIES } from '../../shared/binary.js';
 import * as mapobjects from '../../shared/mapobjects.js';
+import { createEventHistory } from '../../shared/events-history.js';
 import { needsMapObjects, objectKindVisible } from '../../shared/object-visibility.js';
 import { stationBand } from '../../shared/stations.js';
 
@@ -58,6 +59,16 @@ export const objectLayer = objects.layer;
 export const setReceiverMarker = objects.setReceiverMarker;
 export const openPorts = objects.openPorts;
 export const openNearby = objects.openNearby;
+
+// the ticker's history: the same side table, a page of the rings at a time
+export const openEventHistory = createEventHistory({
+    fetchJSON: (url) => api(url),
+    historyUrl: (before, level, limit) => `events.json?before=${before}&level=${level}&limit=${limit}`,
+    openVessel: (m) => deps.openVessel(m),
+    navigate: (pos) => deps.navigate(pos),
+    setTableOpen: (on) => deps.setTableOpen(on),
+    map: () => deps.map(),
+});
 
 export async function openPlace(ref) {
     // Current visits remain clickable when place markers are switched off.

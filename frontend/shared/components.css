@@ -1959,3 +1959,100 @@
 .place-dialog-note { font-size: var(--fs-2xs); color: var(--color-text-muted); padding: 6px 0; }
 .place-dialog-note:empty { display: none; }
 .port-ship-list td { overflow-wrap: anywhere; }
+
+/* --- past events in the side table: one row per event, newest first --- */
+.ev-history-scroll {
+    /* what pageSize() measures against before a row exists */
+    --vessel-row-height: 44px;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.ev-history {
+    display: flex;
+    flex-direction: column;
+}
+
+/* an empty status line still carries its padding, and would push the last
+   row past the edge */
+.ev-history-scroll .port-status:empty {
+    display: none;
+}
+
+.ev-row {
+    display: grid;
+    grid-template-columns: 16px 1fr auto;
+    gap: var(--space-2);
+    align-items: start;
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.ev-row-active {
+    cursor: pointer;
+}
+
+@media (hover: hover) {
+    .ev-row-active:hover { background: var(--color-hover); }
+}
+
+/* one mark per row: a triangle once it is worth attention, a dot when not */
+.ev-row-mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 18px;
+    color: var(--color-text-muted);
+}
+
+.ev-row-mark.ev-l1 { color: var(--color-warning); }
+.ev-row-mark.ev-l2 { color: var(--color-danger); }
+
+.ev-row-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.ev-row-body {
+    min-width: 0;
+}
+
+.ev-row-text {
+    display: block;
+    font-size: var(--fs-sm);
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.ev-row-meta {
+    display: block;
+    margin-top: 2px;
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+}
+
+.ev-row-age {
+    font-size: var(--fs-xs);
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    padding-top: 2px;
+}
+
+/* a row that arrived while the panel was open, fading back to the rest */
+.ev-row-new {
+    animation: ev-row-flash 2s ease-out;
+}
+
+@keyframes ev-row-flash {
+    from { background: var(--color-accent-bg); }
+    to { background: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ev-row-new { animation: none; }
+}

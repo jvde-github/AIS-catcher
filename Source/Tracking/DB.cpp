@@ -1422,6 +1422,20 @@ std::string DB::getEventsJSON(uint64_t since, int level) {
   return content;
 }
 
+std::string DB::getEventHistoryJSON(uint64_t before, int level, int limit) {
+  std::lock_guard<std::mutex> lock(mtx);
+  content.clear();
+  {
+    JSON::Writer w(content, 8192);
+    w.beginObject()
+        .kv("time", (long long)time(nullptr))
+        .kv("seq", (long long)events.sequence());
+    events.writeBefore(w, before, level, limit);
+    w.endObject();
+  }
+  return content;
+}
+
 std::string DB::getObjectJSON(const std::string &key) {
   std::lock_guard<std::mutex> lock(mtx);
   content.clear();

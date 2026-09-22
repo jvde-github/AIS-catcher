@@ -285,6 +285,24 @@
     cursor: pointer;
 }
 
+/* the feed takes the free space, so this lands against the bar-position arrow */
+.ticker-history {
+    flex: none;
+    order: 8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--color-ticker-muted);
+    opacity: 0.6;
+    cursor: pointer;
+}
+
 /* Cards ask the pane how much room they have, not the window: with a side
    panel open the two can differ by the width of the panel. */
 #map {
@@ -371,7 +389,7 @@ body.ticker-open.ticker-bottom {
 
 @media (hover: hover) {
     .ticker-count:hover, .ticker-item:hover { background: var(--color-ticker-hover); }
-    .ticker-side:hover { color: var(--color-ticker-ink); opacity: 1; }
+    .ticker-side:hover, .ticker-history:hover { color: var(--color-ticker-ink); opacity: 1; }
 }
 
 .ticker-feed {

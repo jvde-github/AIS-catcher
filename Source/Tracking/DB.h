@@ -499,6 +499,7 @@ public:
   // what stands behind an object key: a marker's members, or a station's record
   std::string getObjectJSON(const std::string &key);
   std::string getEventsJSON(uint64_t since, int level);
+  std::string getEventHistoryJSON(uint64_t before, int level, int limit);
   // the ship row's packed badge from inside a withShip/forEach callback, where
   // the lock is already held
   uint16_t binaryBadgeHeld(uint32_t mmsi, std::time_t now) const {
