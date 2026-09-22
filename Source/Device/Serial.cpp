@@ -542,9 +542,10 @@ namespace Device
 		}
 #endif
 #ifndef _WIN32
-		for (const std::string &device_path : {"/dev/serial0", "/dev/serial1"})
+		static const char *const gpio_ports[] = {"/dev/serial0", "/dev/serial1"};
+		for (const char *device_path : gpio_ports)
 		{
-			if (access(device_path.c_str(), F_OK) != 0)
+			if (access(device_path, F_OK) != 0)
 				continue;
 
 			uint64_t handle = device_list.size();
