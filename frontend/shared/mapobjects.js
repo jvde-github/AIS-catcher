@@ -38,7 +38,7 @@ const HOVER_DWELL_MS = 500;
 
 // a custom place named for the water it covers gets the waterway glyph; other custom places the generic one
 const WATERWAY = /strait|channel|passage|canal|waterway|fairway|river|sound|estuary|tss|separation/i;
-const placeGlyph = (o) => o.place_type === 'custom' && WATERWAY.test(o.category || '') ? 'waterway' : o.place_type || 'place';
+const placeGlyph = (o) => o.place_type === 'area' && WATERWAY.test(o.category || '') ? 'waterway' : o.place_type || 'place';
 const catOf = (o) => (o.kind === 9 || (o.kind === 10 && o.place_type === 'port')) ? 'port' : o.kind === 10 ? 'place' : KIND_CAT[o.kind] || 'data';
 const statusOf = (o) => (o.online === false ? 'offline' : 'online');
 const stationId = (o) => Number(String(o.id).slice(1));

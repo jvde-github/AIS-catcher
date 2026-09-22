@@ -38,6 +38,7 @@ import Text from 'ol/style/Text.js';
 import View from 'ol/View.js';
 
 
+const code = p => p?.codes?.unlocode?.[0] || p?.codes?.own?.[0] || '';
 const format = new GeoJSON();
 const read = f => format.readFeature(f, {featureProjection: 'EPSG:3857'});
 const geometry = f =>
@@ -79,11 +80,11 @@ export function createPlaceEditor(host, options = {}) {
             </div>
           </div>
         <fieldset class="place-fields" disabled hidden>
-          <label>Type<select class="input select" data-field="place_type"><option value="port">Port</option><option value="berth">Berth</option><option value="anchorage">Anchorage</option><option value="custom">Custom</option></select></label>
+          <label>Type<select class="input select" data-field="place_type"><option value="port">Port</option><option value="berth">Berth</option><option value="anchorage">Anchorage</option><option value="section">Section</option><option value="terminal">Terminal</option><option value="mooring">Mooring</option><option value="marina">Marina</option><option value="area">Area</option></select></label>
           <label>Name<input class="input" data-field="name" maxlength="120" placeholder="Place name"></label>
           <label data-row="unlocode">UN/LOCODE<input class="input" data-field="unlocode" maxlength="5" placeholder="NLRTM"></label>
-          <label data-row="parent_unlocode">Parent port (optional)<input class="input" data-field="parent_unlocode" list="place-ports" maxlength="5" placeholder="NLRTM"></label>
-          <label data-row="port_unlocode">Port UN/LOCODE<input class="input" data-field="port_unlocode" list="place-ports" maxlength="5" placeholder="NLRTM"><datalist id="place-ports"></datalist></label>
+          <label data-row="part_of">Parent<select class="input" data-field="part_of"><option value="">Unknown</option><option value="none">No parent</option></select></label>
+
           <label data-row="category">Category<input class="input" data-field="category" list="place-categories" maxlength="60" placeholder="VTS, restricted place…"><datalist id="place-categories"></datalist></label>
           <label data-row="size">Marker from zoom<select class="input select" data-field="size"><option value="0">12 · very small</option><option value="1">11 · small</option><option value="2">9 · medium</option><option value="3">7 · large</option></select></label>
         </fieldset>
@@ -227,9 +228,9 @@ export function createPlaceEditor(host, options = {}) {
         const props = draft?.properties;
         q('[data-place-name]').textContent = props?.name || (draft ? 'New place' : 'Select a place');
         const typeLabel = props && [...input('place_type').options].find(o => o.value === props.place_type)?.textContent;
-        const portCode = props?.unlocode || props?.port_unlocode;
-        const portName = props?.port_unlocode && records.find(f => f.properties.place_type === 'port' && f.properties.unlocode === portCode)?.properties.name;
-        const location = portCode ? [portCode, portName].filter(Boolean).join(' ') : props?.category;
+        const portCode = code(props);
+        const portName = records.find(f => f.id === props?.part_of)?.properties.name;
+        const location = portCode ? [portCode, portName].filter(Boolean).join(' ') : props?.attributes?.area_subtype;
         q('[data-place-description]').textContent = props ? [typeLabel, location].filter(Boolean).join(' · ') : 'Choose a place from the list.';
         q('.place-feedback').classList.toggle('place-busy', busy);
         for (const b of host.querySelectorAll('button[data-do]'))
@@ -281,18 +282,19 @@ export function createPlaceEditor(host, options = {}) {
     }
     function fields() {
         const p = draft?.properties || {};
-        for (const key of ['name', 'place_type', 'unlocode', 'parent_unlocode', 'port_unlocode', 'category'])
-            input(key).value = p[key] || (key === 'place_type' ? 'port' : '');
-        input('size').value = String(Number.isInteger(p.size) ? p.size : 0);
+        input('name').value = p.name || '';
+        input('place_type').value = p.place_type || 'port';
+        input('unlocode').value = (p.codes?.unlocode || []).join(', ');
+        datalists(p.part_of === null ? 'none' : p.part_of || '');
+        input('category').value = p.attributes?.area_subtype || '';
+        input('size').value = String(p.size || 0);
         typeFields();
         buttons();
     }
     function typeFields() {
         const type = input('place_type').value;
-        for (const key of ['unlocode', 'parent_unlocode', 'port_unlocode', 'category'])
-            q(`[data-row="${key}"]`).hidden = ['unlocode', 'parent_unlocode'].includes(key) ? type !== 'port' :
-                key === 'category'                               ? type !== 'custom' :
-                                                                   !['berth', 'anchorage'].includes(type);
+        q('[data-row="unlocode"]').hidden = type !== 'port';
+        q('[data-row="category"]').hidden = type !== 'area';
     }
     function list() {
         const list = q('.place-list');
@@ -312,7 +314,7 @@ export function createPlaceEditor(host, options = {}) {
         }
         for (const f of records
                  .filter(
-                     f => (f.properties.name + ' ' + (f.properties.unlocode || ''))
+                     f => (f.properties.name + ' ' + (code(f.properties)))
                               .toLowerCase()
                               .includes(search))
                  .sort((a, b) => a.properties.name.localeCompare(b.properties.name)).slice(0, 200)) {
@@ -322,10 +324,10 @@ export function createPlaceEditor(host, options = {}) {
             b.setAttribute('aria-selected', String(f.id === draft?.id));
             b.textContent = f.properties.name;
             const small = document.createElement('small');
-            const parent = records.find(p => f.properties.port_unlocode && p.properties.unlocode === f.properties.port_unlocode);
+            const parent = records.find(p => p.id === f.properties.part_of);
             small.textContent = parent ?
                 `${parent.properties.name} › ${f.properties.place_type}` :
-                `${f.properties.place_type}${(f.properties.unlocode || f.properties.port_unlocode) ? ' · ' + (f.properties.unlocode || f.properties.port_unlocode) : ''}`;
+                `${f.properties.place_type}${(code(f.properties)) ? ' · ' + (code(f.properties)) : ''}`;
             b.appendChild(small);
             b.onclick = () => select(f);
             list.appendChild(b);
@@ -342,13 +344,15 @@ export function createPlaceEditor(host, options = {}) {
         }
     }
     // the port and category suggestions follow the records, not the search box
-    function datalists() {
-        q('#place-ports').replaceChildren(...records.filter(f => f.properties.place_type === 'port')
-            .map(f => new Option(f.properties.name, f.properties.unlocode)));
-        q('#place-categories')
-            .replaceChildren(...[...new Set(records.filter(f => f.properties.place_type === 'custom')
-                                                .map(f => f.properties.category))]
-                                 .map(c => new Option(c, c)));
+    function datalists(selected = input('part_of').value) {
+        const parents = records.filter(f => f.id !== draft?.id && !f.properties.redirect_to)
+            .map(f => new Option(f.properties.name, f.id));
+        input('part_of').replaceChildren(new Option('Unknown', ''), new Option('No parent', 'none'), ...parents);
+        if (selected && ![...input('part_of').options].some(o => o.value === selected))
+            input('part_of').add(new Option(selected, selected));
+        input('part_of').value = selected;
+        const subtypes = [...new Set(records.map(f => f.properties.attributes?.area_subtype).filter(Boolean))];
+        q('#place-categories').replaceChildren(...subtypes.map(v => new Option(v, v)));
     }
     function renderGeometry() {
         editing.clear();
@@ -563,26 +567,27 @@ export function createPlaceEditor(host, options = {}) {
         if (index >= 0)
             doomed.addFeature(read({type: 'Feature', properties: {}, geometry: {type: 'Polygon', coordinates: parts()[index]}}));
     });
-    for (const key of ['name', 'place_type', 'unlocode', 'parent_unlocode', 'port_unlocode', 'category', 'size'])
-        input(key).addEventListener(['place_type', 'size'].includes(key) ? 'change' : 'input', () => {
+    for (const key of ['name', 'place_type', 'unlocode', 'part_of', 'category', 'size'])
+        input(key).addEventListener(['place_type', 'part_of', 'size'].includes(key) ? 'change' : 'input', () => {
             if (!draft)
                 return;
-            const before = clone(draft), p = draft.properties;
-            p[key] = key === 'size' ? Number(input(key).value) :
-                ['unlocode', 'parent_unlocode', 'port_unlocode'].includes(key) ? input(key).value.toUpperCase() : input(key).value;
-            if (key === 'parent_unlocode' && !p[key]) delete p[key];
-            if (key === 'place_type') {
-                for (const k of ['unlocode', 'parent_unlocode', 'port_unlocode', 'category'])
-                    delete p[k];
-            }
+            const before = clone(draft), p = draft.properties, value = input(key).value;
+            if (key === 'unlocode') {
+                p.codes ||= {};
+                p.codes.unlocode = value.toUpperCase().split(/[,;\s]+/).filter(Boolean);
+            } else if (key === 'part_of') {
+                if (value) p.part_of = value === 'none' ? null : value;
+                else delete p.part_of;
+            } else if (key === 'category') {
+                p.attributes ||= {};
+                p.attributes.area_subtype = value;
+            } else
+                p[key] = key === 'size' ? Number(value) : value;
+            if (key === 'place_type' && value !== 'port' && p.codes)
+                delete p.codes.unlocode;
             checkpoint(before);
             if (key === 'place_type')
                 fields();
-            const row = q('.place-list .place-draft');
-            if (row && (key === 'name' || key === 'place_type')) {
-                row.firstChild.textContent = p.name || 'New place';
-                row.querySelector('small').textContent = p.place_type;
-            }
         });
     input('search').addEventListener('input', list);
     async function request(path, body) {
@@ -785,7 +790,7 @@ export function createPlaceEditor(host, options = {}) {
             draft = {
                 type: 'Feature',
                 id: uuid(),
-                properties: {schema_version: 1, revision: 0, name: '', place_type: 'port'},
+                properties: {schema_version: 2, revision: 0, name: '', place_type: 'port'},
                 geometry: null
             };
             list();
@@ -952,6 +957,8 @@ export function createPlaceEditor(host, options = {}) {
                 return;
             if (f.type !== 'Feature' || !['Point', 'Polygon', 'MultiPolygon'].includes(f.geometry?.type))
                 throw Error('Import one place Feature.');
+            if (![1, 2].includes(f.properties?.schema_version))
+                throw Error('Import a place file of schema 1 or 2.');
             read(f);
             select(null, true);
             editingMode = true;
@@ -972,10 +979,10 @@ export function createPlaceEditor(host, options = {}) {
                 original = {...full, runtime_id: existing.runtime_id};
             }
             draft.properties = {
-                schema_version: 1,
+                schema_version: 2,
                 name: 'Imported place',
-                place_type: 'custom',
-                category: 'Imported',
+                place_type: 'area',
+                attributes: {area_subtype:'imported'},
                 ...draft.properties,
                 revision: original?.properties.revision || 0
             };
@@ -1028,4 +1035,3 @@ export function createPlaceEditor(host, options = {}) {
         }
     };
 }
-

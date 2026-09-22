@@ -114,8 +114,8 @@ export function createNearbyDialog(host) {
                 const name = text(row.label || row.code || 'Port');
                 /* a port inside a larger one says whose it is: the codes are
                    what a reader quotes, and the parent is what places it */
-                const parent = row.parent_code && row.parent_code !== row.code
-                    ? `<span class="nearby-parent">${text(row.parent_code)}</span>` : '';
+                const parent = row.parent_name
+                    ? `<span class="nearby-parent">${text(row.parent_name)}</span>` : '';
                 return `<tr data-place="${text(row.runtime_id)}"><td class="col-name" title="${name}${row.code ? ' · ' + text(row.code) : ''}"><span class="table-name">${flagHTML(row.country)}<button type="button" class="vessel-link port-ship-link" translate="no">${name}</button></span></td><td class="nearby-kind" translate="no">${text(row.code || '—')}${parent}</td><td class="num col-last">${away(row)}</td></tr>`;
             }).join('');
             status.innerHTML = '';

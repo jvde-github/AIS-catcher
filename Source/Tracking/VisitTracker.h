@@ -65,8 +65,7 @@ public:
     // ship lay still long enough; elsewhere passing through is the whole of it.
     bool call() const {
       return idle >= CALL_MINUTES ||
-             (place->type != "port" && place->type != "anchorage" &&
-              place->type != "terminal" && place->type != "berth");
+             !place->requiresStop();
     }
     // What history keeps: the stay under way, and the calls before it.
     bool shown() const { return active() || call(); }
@@ -145,7 +144,9 @@ private:
   }
   Visit *allocate(Record &r, uint32_t id, const PlaceIndex &index,
                   bool &dirty) {
-    // Lowest rank wins: empty, oldest completed, pending exit, largest inside.
+    // Lowest rank wins: empty, oldest completed, pending exit, then what lies
+    // within a port before the port itself, largest inside. Five visits are kept
+    // however deep the nesting, so the port call is the one that survives.
     auto rank = [&](const Visit &v) {
       const auto *entry = index.find(v.id);
       const int category = v.empty()     ? 0
@@ -153,6 +154,7 @@ private:
                            : !v.inside() ? 2
                                          : 3;
       return std::make_tuple(category, category == 1 ? v.exited : 0u,
+                             category >= 2 && entry ? entry->rootPort : false,
                              category >= 2 && entry ? -entry->size : 0.,
                              category >= 2 ? UINT32_MAX - v.id : 0u);
     };
@@ -162,8 +164,8 @@ private:
     const auto *old = index.find(chosen->id), *next = index.find(id);
     // Pending exits yield to current containment regardless of polygon size.
     if (chosen->inside() && old &&
-        std::make_pair(old->size, old->id) <
-            std::make_pair(next->size, next->id))
+        std::make_tuple(!old->rootPort, old->size, old->id) <
+            std::make_tuple(!next->rootPort, next->size, next->id))
       return nullptr;
     *chosen = Visit{};
     chosen->id = id;
@@ -410,7 +412,7 @@ public:
     put(out, n);
     for (const auto &p : table)
       for (const auto *str : {&p->uuid, &p->name, &p->type, &p->code,
-                              &p->parentCode, &p->category}) {
+                              &p->partOf, &p->category}) {
         uint32_t len = str->size();
         put(out, len);
         out.write(str->data(), len);
@@ -453,7 +455,7 @@ public:
     std::vector<std::shared_ptr<const PlaceMetadata>> table;
     for (uint32_t i = 0; i < n; ++i) {
       auto p = std::make_shared<PlaceMetadata>();
-      for (auto *str : {&p->uuid, &p->name, &p->type, &p->code, &p->parentCode,
+      for (auto *str : {&p->uuid, &p->name, &p->type, &p->code, &p->partOf,
                         &p->category}) {
         uint32_t len;
         if (!get(in, len) || len > 128 * 1024)
@@ -462,6 +464,8 @@ public:
         if (len && !in.read(&(*str)[0], len))
           return false;
       }
+      if (p->partOf.size() != 36) p->partOf.clear();
+      if (p->type == "custom") p->type = "area";
       if (p->uuid.size() != 36)
         return false;
       table.push_back(p);

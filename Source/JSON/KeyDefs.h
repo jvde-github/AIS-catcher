@@ -1160,3 +1160,13 @@ X(KEY_PLACE_PORT_UNLOCODE, "", "", "", "", "port_unlocode", "", "",
   "Geographic metadata", nullptr)
 
 X(KEY_PLACE_FEATURES, "", "", "", "", "features", "", "", "GeoJSON features", nullptr)
+
+X(KEY_PLACE_PART_OF, "", "", "", "", "part_of", "", "", "Place metadata", nullptr)
+X(KEY_PLACE_SERVES, "", "", "", "", "serves", "", "", "Place metadata", nullptr)
+X(KEY_PLACE_CODES, "", "", "", "", "codes", "", "", "Place metadata", nullptr)
+X(KEY_PLACE_ALIASES, "", "", "", "", "aliases", "", "", "Place metadata", nullptr)
+X(KEY_PLACE_ATTRIBUTES, "", "", "", "", "attributes", "", "", "Place metadata", nullptr)
+X(KEY_PLACE_AREA_SUBTYPE, "", "", "", "", "area_subtype", "", "", "Place metadata", nullptr)
+X(KEY_PLACE_REDIRECT, "", "", "", "", "redirect_to", "", "", "Place metadata", nullptr)
+X(KEY_PLACE_NUMBER, "", "", "", "", "no", "", "", "Place metadata", nullptr)
+X(KEY_PLACE_COUNTRY, "", "", "", "", "country", "", "", "Place metadata", nullptr)

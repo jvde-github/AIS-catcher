@@ -30,6 +30,7 @@ namespace JSON
 	private:
 		int dict = 0;
 		bool skipUnknownKeys = false;
+		bool preserveUnknownKeys = false;
 
 		const char *p_start = nullptr;
 		const char *p = nullptr;
@@ -108,6 +109,7 @@ namespace JSON
 		void parse_into(JSON &target, Pool &pool, const std::string &j);
 		void parse_into(Document &doc, const std::string &j) { parse_into(doc.root, doc.pool, j); }
 		void setSkipUnknown(bool b) { skipUnknownKeys = b; }
+		void setPreserveUnknown(bool b) { preserveUnknownKeys = b; }
 		void setMap(int d) { dict = d; }
 		void setMaxDepth(int d) { max_depth = d; }
 	};

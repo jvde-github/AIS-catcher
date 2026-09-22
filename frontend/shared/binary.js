@@ -498,8 +498,11 @@ export function kindGlyph(ctx, cat, x, y, s) {
         }
         break;
     }
+    case 'section':
+    case 'marina':
+    case 'mooring':
     case 'place':
-    case 'custom': {
+    case 'area': {
         ctx.beginPath();
         ctx.moveTo(x, y - s);
         ctx.lineTo(x + s, y);

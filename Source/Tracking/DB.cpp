@@ -343,17 +343,19 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
     const auto *entry = index->find(row.key);
     if (!entry)
       continue;
+    const auto *parent = index->find(entry->parent);
     w.beginObject()
         .kv("runtime_id", entry->id)
         .kv("label", entry->metadata->name)
         .kv("place_type", entry->metadata->type)
         .kv("code", entry->metadata->code)
-        .kv("parent_code", entry->metadata->parentCode)
+        .kv("part_of", entry->metadata->partOf)
+        .kv("parent_name", parent ? parent->metadata->name : std::string())
         .kv("has_geometry", entry->polygons && !entry->polygons->empty())
         .kv("range", row.range)
         .kv("bearing", row.bearing);
     if (entry->metadata->type == "port")
-      w.kv("country", entry->metadata->code.substr(0, 2));
+      w.kv("country", entry->metadata->country);
     w.endObject();
   }
   w.endArray();
@@ -384,7 +386,7 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
   // definition, a base station on the quay and a ship merely steaming through
   // are all noise. A custom area is usually a stretch of water rather than a
   // destination, where passing through is the whole of what happens.
-  const bool berthing = !place || place->metadata->type != "custom";
+  const bool berthing = !place || place->metadata->requiresStop();
   auto vessel = [](const Ship &s) {
     return s.shipclass < CLASS_PLANE; // planes, stations, aids, EPIRBs are not
   };

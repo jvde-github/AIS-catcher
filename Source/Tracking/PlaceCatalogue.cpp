@@ -41,18 +41,19 @@ namespace {
 using namespace AIS;
 // The telemetry writer uses six decimal places. Place files must round-trip
 // their original doubles so editing does not move or collapse vertices.
-void preciseValue(const JSON::Value &v, JSON::Writer &w) {
+void preciseValue(const JSON::Value &v, JSON::Writer &w, const JSON::Pool &pool) {
   if (v.isObject()) {
     w.beginObject();
     for (const auto &m : v.getObject().getMembers()) {
-      w.key(AIS::KeyMap[m.Key()][JSON_DICT_SETTING]);
-      preciseValue(m.Get(), w);
+      if (m.Key() < 0) w.key(pool.extraName(m.Key()));
+      else w.key(AIS::KeyMap[m.Key()][JSON_DICT_SETTING]);
+      preciseValue(m.Get(), w, pool);
     }
     w.endObject();
   } else if (v.isArray()) {
     w.beginArray();
     for (const auto &item : v.getArray())
-      preciseValue(item, w);
+      preciseValue(item, w, pool);
     w.endArray();
   } else if (v.isArrayString()) {
     w.beginArray();
@@ -199,16 +200,126 @@ std::vector<Ring> polygon(const JSON::Value &v, size_t &count) {
     throw std::runtime_error("Polygon is empty");
   return rings;
 }
+
+// A schema 1 file, as every earlier release wrote it, is read as schema 2: the
+// code moves under codes, a custom area becomes an area, and the port it named
+// is resolved to that port's UUID once every file is loaded. The file on disk
+// is left as it is until the place is next saved.
+std::string upgradeLegacy(const std::string &json, std::string &parentCode) {
+  JSON::Parser parser(JSON_DICT_SETTING);
+  parser.setPreserveUnknown(true);
+  auto doc = parser.parse(json);
+  const auto *properties = doc.root[KEY_PLACE_PROPERTIES];
+  if (!properties || !properties->isObject())
+    return json;
+  const auto &p = properties->getObject();
+  const auto *version = p[KEY_PLACE_SCHEMA_VERSION];
+  if (!version || !version->isInt() || version->getInt() != 1)
+    return json;
+  const auto nameOf = [&](int key) {
+    return key < 0 ? doc.pool.extraName(key)
+                   : std::string(AIS::KeyMap[key][JSON_DICT_SETTING].p);
+  };
+  const auto optional = [&](const JSON::JSON &o, int key) {
+    const auto *v = o[key];
+    return v && v->isString() ? v->getString() : std::string();
+  };
+  const std::string type = optional(p, KEY_PLACE_PLACE_TYPE);
+  const std::string code = optional(p, KEY_PLACE_UNLOCODE);
+  std::string category = optional(p, KEY_PLACE_CATEGORY);
+  parentCode = type == "port" ? optional(p, KEY_PORT_PARENT)
+                              : optional(p, KEY_PLACE_PORT_UNLOCODE);
+  const JSON::JSON *details = nullptr;
+  for (const auto &m : p.getMembers())
+    if (nameOf(m.Key()) == "details" && m.Get().isObject())
+      details = &m.Get().getObject();
+  std::string terminal, own;
+  std::vector<std::pair<std::string, const JSON::Value *>> source, attributes;
+  if (details)
+    for (const auto &m : details->getMembers()) {
+      const std::string key = nameOf(m.Key());
+      if (key == "terminal" && m.Get().isString())
+        terminal = m.Get().getString();
+      else if (key == "code" && m.Get().isString())
+        own = m.Get().getString();
+      else if (key == "source" || key == "url" || key == "osm" || key == "confidence")
+        source.emplace_back(key, &m.Get());
+      else
+        attributes.emplace_back(key, &m.Get());
+    }
+  for (auto &c : category)
+    c = std::tolower(c);
+  std::string out;
+  JSON::Writer w(out);
+  w.beginObject();
+  for (const auto &m : doc.root.getMembers()) {
+    const std::string name = nameOf(m.Key());
+    w.key(name);
+    if (name != "properties") {
+      preciseValue(m.Get(), w, doc.pool);
+      continue;
+    }
+    w.beginObject();
+    for (const auto &q : p.getMembers()) {
+      const std::string key = nameOf(q.Key());
+      if (key == "unlocode" || key == "port_unlocode" || key == "parent_unlocode" ||
+          key == "category" || key == "details")
+        continue;
+      w.key(key);
+      if (key == "schema_version")
+        w.val(2);
+      else if (key == "place_type" && type == "custom")
+        w.val("area");
+      else
+        preciseValue(q.Get(), w, doc.pool);
+    }
+    if (!code.empty() || !own.empty()) {
+      w.key("codes").beginObject();
+      if (!code.empty())
+        w.key("unlocode").beginArray().val(code).endArray();
+      if (!own.empty())
+        w.key("own").beginArray().val("local:" + own).endArray();
+      w.endObject();
+    }
+    if (validID(terminal)) {
+      w.kv("part_of", terminal);
+      parentCode.clear();
+    }
+    if (!category.empty() || !attributes.empty()) {
+      w.key("attributes").beginObject();
+      if (!category.empty())
+        w.kv("area_subtype", category);
+      for (const auto &item : attributes) {
+        w.key(item.first);
+        preciseValue(*item.second, w, doc.pool);
+      }
+      w.endObject();
+    }
+    if (!source.empty()) {
+      w.key("geometry_source").beginObject();
+      for (const auto &item : source) {
+        w.key(item.first);
+        preciseValue(*item.second, w, doc.pool);
+      }
+      w.endObject();
+    }
+    w.endObject();
+  }
+  w.endObject();
+  w.finish();
+  return out;
+}
 } // namespace
 
 PlaceCatalogue::Place PlaceCatalogue::validate(const std::string &json,
                                                bool saving) {
   if (json.size() > 131072)
     throw std::runtime_error("Place file exceeds 128 KiB");
-  JSON::Parser parser(JSON_DICT_SETTING);
-  parser.setSkipUnknown(true);
-  auto doc = parser.parse(json);
   Place a;
+  const std::string upgraded = upgradeLegacy(json, a.legacyParent);
+  JSON::Parser parser(JSON_DICT_SETTING);
+  parser.setPreserveUnknown(true);
+  auto doc = parser.parse(upgraded);
   auto metadata = std::make_shared<PlaceMetadata>();
   auto &m = *metadata;
   if (text(doc.root, KEY_SETTING_MODEL_TYPE) != "Feature")
@@ -219,7 +330,7 @@ PlaceCatalogue::Place PlaceCatalogue::validate(const std::string &json,
   const auto &p = object(doc.root, KEY_PLACE_PROPERTIES);
   text(p, KEY_PLACE_NAME);
   const auto &version = field(p, KEY_PLACE_SCHEMA_VERSION);
-  if (!version.isInt() || version.getInt() != 1)
+  if (!version.isInt() || version.getInt() != 2)
     throw std::runtime_error("Unsupported place schema version");
   const auto &rev = field(p, KEY_PLACE_REVISION);
   if (!rev.isInt() || rev.getInt() < 0 || rev.getInt() > 2147483646)
@@ -227,33 +338,76 @@ PlaceCatalogue::Place PlaceCatalogue::validate(const std::string &json,
   a.revision = rev.getInt();
   m.name = text(p, KEY_PLACE_NAME);
   m.type = text(p, KEY_PLACE_PLACE_TYPE);
-  const auto code = [&](int key) -> std::string {
-    const std::string value = text(p, key, 5);
-    if (value.size() != 5)
-      throw std::runtime_error(
-          "UN/LOCODE needs five characters, for example NLRTM");
-    for (size_t i = 0; i < 5; ++i)
-      if (!((value[i] >= 'A' && value[i] <= 'Z') ||
-            (i > 1 && value[i] >= '0' && value[i] <= '9')))
-        throw std::runtime_error(
-            "Use an uppercase UN/LOCODE, for example NLRTM");
-    return value;
+  const std::set<std::string> types{"port", "section", "terminal", "berth",
+                                    "anchorage", "mooring", "marina", "area"};
+  if (!types.count(m.type)) throw std::runtime_error("Unknown place type");
+  auto optionalText = [&](const JSON::JSON &obj, int key, size_t limit) {
+    return obj[key] ? text(obj, key, limit) : std::string();
   };
-  if (m.type == "port") {
-    m.code = code(KEY_PLACE_UNLOCODE);
-    if (p[KEY_PORT_PARENT]) {
-      m.parentCode = code(KEY_PORT_PARENT);
-      if (m.parentCode == m.code)
-        throw std::runtime_error("A port cannot be its own parent");
+  auto strings = [&](const JSON::Value &value, size_t limit, bool uuids) {
+    std::vector<std::string> result;
+    for (const auto &v : array(value)) {
+      if (!v.isString() || v.getString().empty() || v.getString().size() > 120 ||
+          (uuids && !validID(v.getString())) || result.size() >= limit)
+        throw std::runtime_error("Invalid place list");
+      if (std::find(result.begin(), result.end(), v.getString()) != result.end())
+        throw std::runtime_error("Duplicate place list value");
+      result.push_back(v.getString());
     }
-  } else if (m.type == "berth" || m.type == "terminal" || m.type == "anchorage") {
-    m.code = code(KEY_PLACE_PORT_UNLOCODE);
-  } else if (m.type == "custom")
-    m.category = text(p, KEY_PLACE_CATEGORY, 60);
-  else
-    throw std::runtime_error("Unknown place type");
-  if (p[KEY_PLACE_UNLOCODE] && m.type != "port")
-    throw std::runtime_error("Use port_unlocode for a berth, a terminal or an anchorage");
+    return result;
+  };
+  if (p[KEY_PLACE_PORT_UNLOCODE] || p[KEY_PORT_PARENT] || p[KEY_PLACE_UNLOCODE] || p[KEY_PLACE_CATEGORY])
+    throw std::runtime_error("Use codes and part_of in schema 2");
+  for (const auto &member : p.getMembers())
+    if (member.Key() < 0 && doc.pool.extraName(member.Key()) == "details")
+      throw std::runtime_error("Migrate details to schema 2 properties");
+  if (const auto *parent = p[KEY_PLACE_PART_OF]) {
+    if (parent->getType() != JSON::Value::Type::EMPTY) {
+      m.partOf = text(p, KEY_PLACE_PART_OF, 36);
+      if (!validID(m.partOf) || m.partOf == m.uuid)
+        throw std::runtime_error("Invalid parent UUID");
+    }
+  }
+  if (const auto *redirect = p[KEY_PLACE_REDIRECT])
+    if (redirect->getType() != JSON::Value::Type::EMPTY)
+      a.compiled.redirect = text(p, KEY_PLACE_REDIRECT, 36);
+  if (!a.compiled.redirect.empty() &&
+      (!validID(a.compiled.redirect) || a.compiled.redirect == m.uuid))
+    throw std::runtime_error("Invalid redirect UUID");
+  if (const auto *n = p[KEY_PLACE_NUMBER]) {
+    if (!n->isInt() || n->getInt() <= 0 || n->getInt() > 2147483646)
+      throw std::runtime_error("Invalid place number");
+    a.compiled.number = n->getInt();
+  }
+  if (p[KEY_PLACE_CODES]) {
+    const auto &codes = object(p, KEY_PLACE_CODES);
+    for (const auto &member : codes.getMembers()) strings(member.Get(), 32, false);
+    if (codes[KEY_PLACE_UNLOCODE]) {
+      a.compiled.codes = strings(*codes[KEY_PLACE_UNLOCODE], 32, false);
+      if (m.type != "port") throw std::runtime_error("Only a port designates a UN/LOCODE");
+      for (const auto &code : a.compiled.codes) {
+        if (code.size() != 5) throw std::runtime_error("UN/LOCODE needs five characters");
+        for (size_t i = 0; i < code.size(); ++i)
+          if (!((code[i] >= 'A' && code[i] <= 'Z') ||
+                (i > 1 && code[i] >= '0' && code[i] <= '9')))
+            throw std::runtime_error("Invalid UN/LOCODE");
+      }
+      if (!a.compiled.codes.empty()) m.code = a.compiled.codes.front();
+    }
+  }
+  m.country = optionalText(p, KEY_PLACE_COUNTRY, 2);
+  if (!m.country.empty() && (m.country.size() != 2 ||
+      m.country[0] < 'A' || m.country[0] > 'Z' || m.country[1] < 'A' || m.country[1] > 'Z'))
+    throw std::runtime_error("Country needs two uppercase letters");
+  if (m.country.empty() && !m.code.empty()) m.country = m.code.substr(0, 2);
+  if (p[KEY_PLACE_ALIASES]) a.compiled.aliases = strings(*p[KEY_PLACE_ALIASES], 64, false);
+  if (p[KEY_PLACE_SERVES]) a.compiled.serves = strings(*p[KEY_PLACE_SERVES], 64, true);
+  if (p[KEY_PLACE_ATTRIBUTES]) {
+    const auto &attrs = object(p, KEY_PLACE_ATTRIBUTES);
+    m.category = optionalText(attrs, KEY_PLACE_AREA_SUBTYPE, 60);
+  }
+  if (m.type == "area" && m.category.empty())
+    throw std::runtime_error("An area needs attributes.area_subtype");
 
   const auto &g = object(doc.root, KEY_PLACE_GEOMETRY);
   const auto &coords = field(g, KEY_PLACE_COORDINATES);
@@ -344,7 +498,7 @@ PlaceCatalogue::Place PlaceCatalogue::validate(const std::string &json,
   } else
     throw std::runtime_error(
         "Only Point, Polygon and MultiPolygon places are supported");
-  PlaceIndex::Entry e;
+  PlaceIndex::Entry e = std::move(a.compiled);
   e.id = UINT32_MAX;
   const auto compile = [&](const std::vector<Ring> &rings) {
     PlaceIndex::Part compiled;
@@ -442,8 +596,9 @@ PlaceCatalogue::Place PlaceCatalogue::validate(const std::string &json,
   JSON::Writer writer(canonical);
   writer.beginObject();
   for (const auto &member : doc.root.getMembers()) {
-    writer.key(AIS::KeyMap[member.Key()][JSON_DICT_SETTING]);
-    preciseValue(member.Get(), writer);
+    if (member.Key() < 0) writer.key(doc.pool.extraName(member.Key()));
+    else writer.key(AIS::KeyMap[member.Key()][JSON_DICT_SETTING]);
+    preciseValue(member.Get(), writer, doc.pool);
   }
   writer.endObject();
   writer.finish();
@@ -461,6 +616,7 @@ PlaceCatalogue::PlaceCatalogue(const std::string &dir) : directory(dir) {
   if (result != 0 && errno != EEXIST)
     Warning() << "Places: cannot create " << directory;
   std::set<std::string> loadedCodes, loadedIDs;
+  std::set<uint32_t> loadedNumbers;
   size_t totalVertices = 0, totalBytes = 0;
   for (const auto &file : Util::Helper::getFilesInDirectory(directory)) {
     if (file.size() < 9 || file.substr(file.size() - 8) != ".geojson")
@@ -471,12 +627,13 @@ PlaceCatalogue::PlaceCatalogue(const std::string &dir) : directory(dir) {
       if (!input || input.tellg() > 268435456)
         throw std::runtime_error("Place file unreadable or too large");
       JSON::Parser parser(JSON_DICT_SETTING);
-      parser.setSkipUnknown(true);
+      parser.setPreserveUnknown(true);
       auto doc = parser.parse(Util::Helper::readFile(path));
       const bool collection =
           text(doc.root, KEY_SETTING_MODEL_TYPE) == "FeatureCollection";
       std::vector<Place> loaded;
       std::set<std::string> fileIDs, fileCodes;
+      std::set<uint32_t> fileNumbers;
       size_t fileVertices = 0, fileBytes = 0;
       const auto load = [&](const std::string &value) {
         auto a = validate(value);
@@ -487,11 +644,13 @@ PlaceCatalogue::PlaceCatalogue(const std::string &dir) : directory(dir) {
         if (loadedIDs.count(a.compiled.metadata->uuid))
           throw std::runtime_error("Duplicate place UUID: " +
                                    a.compiled.metadata->uuid);
-        if (!fileIDs.insert(a.compiled.metadata->uuid).second ||
-            (a.compiled.metadata->type == "port" &&
-             (!fileCodes.insert(a.compiled.metadata->code).second ||
-              loadedCodes.count(a.compiled.metadata->code))))
-          throw std::runtime_error("Duplicate place UUID or port code");
+        if (!fileIDs.insert(a.compiled.metadata->uuid).second)
+          throw std::runtime_error("Duplicate place UUID");
+        if (a.compiled.number && (!fileNumbers.insert(a.compiled.number).second || loadedNumbers.count(a.compiled.number)))
+          throw std::runtime_error("Duplicate place number");
+        if (a.compiled.redirect.empty()) for (const auto &code : a.compiled.codes)
+          if (!fileCodes.insert(code).second || loadedCodes.count(code))
+            throw std::runtime_error("Duplicate designated port code: " + code);
         if (!a.compiled.polygons->empty()) {
           fileBytes += a.compiled.feature->size();
           for (const auto &part : *a.compiled.polygons)
@@ -509,7 +668,7 @@ PlaceCatalogue::PlaceCatalogue(const std::string &dir) : directory(dir) {
         for (const auto &value : array(field(doc.root, KEY_PLACE_FEATURES))) {
           std::string json;
           JSON::Writer w(json);
-          preciseValue(value, w);
+          preciseValue(value, w, doc.pool);
           w.finish();
           load(json);
         }
@@ -519,6 +678,7 @@ PlaceCatalogue::PlaceCatalogue(const std::string &dir) : directory(dir) {
       totalBytes += fileBytes;
       loadedCodes.insert(fileCodes.begin(), fileCodes.end());
       loadedIDs.insert(fileIDs.begin(), fileIDs.end());
+      loadedNumbers.insert(fileNumbers.begin(), fileNumbers.end());
       for (auto &a : loaded)
         places.push_back(std::move(a));
 
@@ -527,13 +687,42 @@ PlaceCatalogue::PlaceCatalogue(const std::string &dir) : directory(dir) {
       Warning() << "Places: skipped " << file << ": " << e.what();
     }
   }
-  // References may resolve through an external port catalogue, or later.
-  // Keep the definition even if its parent has not been installed yet.
+  // the port a schema 1 file named, by code, is one of the ports just loaded
+  std::unordered_map<std::string, std::string> portByCode;
+  for (const auto &a : places)
+    if (a.compiled.redirect.empty())
+      for (const auto &code : a.compiled.codes)
+        portByCode.emplace(code, a.compiled.metadata->uuid);
+  for (auto &a : places) {
+    if (a.legacyParent.empty())
+      continue;
+    const auto it = portByCode.find(a.legacyParent);
+    if (it == portByCode.end()) {
+      Warning() << "Places: " << a.compiled.metadata->name << " names port "
+                << a.legacyParent << ", which is not drawn here";
+      continue;
+    }
+    JSON::Parser parser(JSON_DICT_SETTING);
+    parser.setPreserveUnknown(true);
+    auto doc = parser.parse(*a.compiled.feature);
+    JSON::Value properties = *doc.root[KEY_PLACE_PROPERTIES];
+    properties.getObject().Set(KEY_PLACE_PART_OF, it->second, doc.pool);
+    JSON::Value root;
+    root.setObject(&doc.root);
+    std::string linked;
+    JSON::Writer writer(linked);
+    preciseValue(root, writer, doc.pool);
+    writer.finish();
+    auto resolved = validate(linked);
+    a.compiled = std::move(resolved.compiled);
+    a.legacyParent.clear();
+  }
   std::sort(places.begin(), places.end(), [](const Place &a, const Place &b) {
     return a.compiled.metadata->uuid < b.compiled.metadata->uuid;
   });
   for (auto &entry : places)
     entry.number = static_cast<uint32_t>(nextNumber++);
+  if (!places.empty()) check(places.front(), true);
   rebuild();
   Info() << "Places: loaded " << places.size() << " definitions from "
          << directory;
@@ -568,6 +757,31 @@ bool PlaceCatalogue::save(const std::string &json, bool remove,
         (remove && old == places.end()))
       throw std::runtime_error(
           "Place changed elsewhere. Reload before saving or deleting.");
+    if (old != places.end() && old->compiled.number &&
+        a.compiled.number != old->compiled.number)
+      throw std::runtime_error("A place keeps its number");
+    if (!remove && !a.compiled.number) {
+      // a place gets its number the first time it is saved, and keeps it
+      uint32_t number = 0;
+      for (const auto &p : places)
+        number = MAX(number, p.compiled.number);
+      if (number >= 2147483646)
+        throw std::runtime_error("Place number space exhausted");
+      JSON::Parser parser(JSON_DICT_SETTING);
+      parser.setPreserveUnknown(true);
+      auto doc = parser.parse(*a.compiled.feature);
+      JSON::Value no;
+      no.setInt(number + 1);
+      JSON::Value properties = *doc.root[KEY_PLACE_PROPERTIES];
+      properties.getObject().Set(KEY_PLACE_NUMBER, no);
+      JSON::Value root;
+      root.setObject(&doc.root);
+      std::string numbered;
+      JSON::Writer writer(numbered);
+      preciseValue(root, writer, doc.pool);
+      writer.finish();
+      a = validate(numbered, true);
+    }
     a.file = old == places.end() ? a.compiled.metadata->uuid + ".geojson"
                                  : old->file;
     a.collectionFile = old != places.end() && old->collectionFile;
@@ -650,12 +864,35 @@ void PlaceCatalogue::check(const Place &candidate, bool replacing) const {
     if (replacing &&
         p.compiled.metadata->uuid == candidate.compiled.metadata->uuid)
       continue;
-    if (candidate.compiled.metadata->type == "port" &&
-        p.compiled.metadata->type == "port" &&
-        p.compiled.metadata->code == candidate.compiled.metadata->code)
-      throw std::runtime_error("Duplicate port code: " +
-                               candidate.compiled.metadata->code);
+    if (candidate.compiled.number && candidate.compiled.number == p.compiled.number)
+      throw std::runtime_error("Duplicate place number");
+    if (candidate.compiled.redirect.empty() && p.compiled.redirect.empty())
+      for (const auto &code : candidate.compiled.codes)
+        if (std::find(p.compiled.codes.begin(), p.compiled.codes.end(), code) != p.compiled.codes.end())
+          throw std::runtime_error("Duplicate designated port code: " + code);
     count(p);
+  }
+  std::unordered_map<std::string, const PlaceIndex::Entry *> links;
+  for (const auto &p : places) links[p.compiled.metadata->uuid] = &p.compiled;
+  links[candidate.compiled.metadata->uuid] = &candidate.compiled;
+  for (const auto &start : links) {
+    for (int relation = 0; relation < 3; ++relation) {
+      std::set<std::string> seen;
+      auto current = start.second;
+      while (current) {
+        if (!seen.insert(current->metadata->uuid).second)
+          throw std::runtime_error("Place relationship cycle");
+        const auto &next = relation == 1 || (relation == 2 && !current->redirect.empty()) ? current->redirect : current->metadata->partOf;
+        auto it = links.find(next);
+        current = it == links.end() ? nullptr : it->second;
+      }
+    }
+  }
+  for (const auto &record : links) for (const auto &uuid : record.second->serves) {
+    auto it = links.find(uuid);
+    if (uuid == record.first ||
+        (it != links.end() && it->second->metadata->type != "port"))
+      throw std::runtime_error("Serves must reference ports");
   }
   if (vertices > 4000000 || bytes > 268435456)
     throw std::runtime_error(
@@ -688,25 +925,45 @@ void PlaceCatalogue::rebuild() {
     e.id = a.number;
     next->entries[a.number] = std::move(e);
   }
-  for (size_t i = 0; i < next->entries.size(); ++i) {
-    const auto &e = next->entries[i];
-    if (e.id == UINT32_MAX)
-      continue;
-    if (!e.polygons->empty())
-      next->polygonCandidates.push_back(i);
+  for (auto &e : next->entries) {
+    if (e.id == UINT32_MAX) continue;
+    next->byUUID.emplace(e.metadata->uuid, e.id);
+    if (!e.redirect.empty()) continue;
+    if (!e.polygons->empty()) next->polygonCandidates.push_back(e.id);
+    for (const auto &code : e.codes) next->byCode.emplace(PlaceIndex::normalized(code), e.id);
     if (e.metadata->type == "port") {
-      next->byCode.emplace(PlaceIndex::normalized(e.metadata->code), e.id);
       next->byName[PlaceIndex::normalized(e.metadata->name)].push_back(e.id);
+      for (const auto &alias : e.aliases) {
+        auto &ids = next->byName[PlaceIndex::normalized(alias)];
+        if (std::find(ids.begin(), ids.end(), e.id) == ids.end()) ids.push_back(e.id);
+      }
     }
   }
-  // a berth or anchorage appears on the map when its port does: it takes the
-  // port's size class, so every writer derives the same zoom for both
   for (auto &e : next->entries) {
-    if (e.id == UINT32_MAX || e.metadata->type == "port" || e.metadata->type == "custom")
+    if (!e.metadata)
       continue;
-    const auto it = next->byCode.find(PlaceIndex::normalized(e.metadata->code));
-    if (it != next->byCode.end())
-      e.markerSize = next->entries[it->second].markerSize;
+    const auto it = next->byUUID.find(e.redirect.empty() ? e.metadata->partOf
+                                                         : e.redirect);
+    if (it != next->byUUID.end())
+      e.parent = it->second;
+  }
+  // a place within a port appears on the map when its port does: it takes the
+  // port's size class, so every writer derives the same zoom for both. A port
+  // that is part of no other port is the one a call is counted at.
+  for (auto &e : next->entries) {
+    if (!e.metadata)
+      continue;
+    const bool port = e.metadata->type == "port";
+    e.rootPort = port;
+    for (auto ancestor = next->find(e.parent); ancestor;
+         ancestor = next->find(ancestor->parent))
+      if (ancestor->metadata->type == "port") {
+        if (port)
+          e.rootPort = false;
+        else if (e.metadata->type != "area")
+          e.markerSize = ancestor->markerSize;
+        break;
+      }
   }
   std::sort(next->polygonCandidates.begin(), next->polygonCandidates.end(),
             [&](uint32_t a, uint32_t b) {
@@ -803,16 +1060,18 @@ void PlaceIndex::Entry::writeSummary(JSON::Writer &w, uint64_t sequence, int min
       .kv("label", metadata->name)
       .kv("place_type", metadata->type)
       .kv("code", metadata->code)
-      .kv("parent_unlocode", metadata->parentCode)
+      .kv("part_of", metadata->partOf)
+      .kv("no", number)
+      .kv("redirect_to", redirect)
       .kv("has_geometry", !polygons->empty());
   // every place appears from the zoom of its size class: a port by its own, an
-  // anchorage by its port's, a custom area by the size it was given; a terminal
+  // anchorage by its port's, an area by the size it was given; a terminal
   // and a berth only close in, where there is room for them
   static const int zooms[] = {12, 11, 9, 7};
   const int close = closeZoom();
   w.kv("z", MAX(close ? close : zooms[markerSize], minZoom));
   if (metadata->type == "port")
-    w.kv("country", metadata->code.substr(0, 2));
+    w.kv("country", metadata->country);
   w.kv("revision", revision)
       .kv("category", metadata->category)
       .kv("size", markerSize)
@@ -822,9 +1081,19 @@ void PlaceIndex::Entry::writeSummary(JSON::Writer &w, uint64_t sequence, int min
 int PlaceIndex::Entry::closeZoom() const {
   if (metadata->type == "berth")
     return BERTH_ZOOM;
-  if (metadata->type == "terminal")
+  if (metadata->type == "terminal" || metadata->type == "mooring")
     return TERMINAL_ZOOM;
   return 0;
+}
+
+bool PlaceIndex::belongsTo(uint32_t child, uint32_t ancestor) const {
+  for (size_t n = 0; n < entries.size(); ++n) {
+    if (child == ancestor) return true;
+    const auto *p = find(child);
+    if (!p || p->parent == UINT32_MAX) return false;
+    child = p->parent;
+  }
+  return false;
 }
 
 std::string PlaceIndex::normalized(const std::string &text) {

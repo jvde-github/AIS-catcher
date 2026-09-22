@@ -33,7 +33,8 @@ struct PlacePoint {
   float x, y;
 };
 struct PlaceMetadata {
-  std::string uuid, name, type, code, parentCode, category;
+  std::string uuid, name, type, code, partOf, category, country;
+  bool requiresStop() const { return type != "area"; }
 };
 struct PlaceIndex {
   struct Part {
@@ -49,7 +50,11 @@ struct PlaceIndex {
     double xmin = 180, xmax = -180, ymin = 90, ymax = -90, size = 0;
     double lat = 0, lon = 0;
     int markerSize = 0;
+    bool rootPort = false;
     long revision = 0;
+    uint32_t number = 0, parent = UINT32_MAX;
+    std::string redirect;
+    std::vector<std::string> codes, aliases, serves;
     void writeSummary(JSON::Writer &, uint64_t sequence, int minZoom = -1) const;
     // the zoom a terminal or a berth appears from, 0 for a place that goes by its size
     static const int TERMINAL_ZOOM = 12, BERTH_ZOOM = 14;
@@ -58,7 +63,7 @@ struct PlaceIndex {
   std::string version;
   std::vector<Entry> entries;              // runtime ID order
   std::vector<uint32_t> polygonCandidates; // offsets, smallest polygon first
-  std::unordered_map<std::string, uint32_t> byCode;
+  std::unordered_map<std::string, uint32_t> byCode, byUUID;
   std::unordered_map<std::string, std::vector<uint32_t>> byName;
   // Deleted records leave empty slots until a directory reload.
   const Entry *find(uint32_t id) const {
@@ -75,6 +80,7 @@ struct PlaceIndex {
         visit(entry);
     }
   }
+  bool belongsTo(uint32_t child, uint32_t ancestor) const;
   static std::string normalized(const std::string &text);
   const Entry *matchDestination(const std::string &text) const;
   const Entry *findPort(const std::string &code) const;
@@ -90,6 +96,7 @@ class PlaceCatalogue {
     bool collectionFile = false;
     uint32_t number = UINT32_MAX;
     long revision = 0;
+    std::string legacyParent; // the port a schema 1 file named, until resolved
     PlaceIndex::Entry compiled;
   };
   std::string directory;
