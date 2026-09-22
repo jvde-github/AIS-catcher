@@ -289,7 +289,14 @@ namespace Device
 		serial_fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_CLOEXEC | O_NONBLOCK);
 		if (serial_fd == -1)
 		{
-			throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ".");
+			std::string reason = std::string(strerror(errno));
+			if (errno == EACCES)
+				reason += ". Add the user running AIS-catcher to the group owning " + port + ", usually dialout";
+			else if (errno == ENOENT)
+				reason += ". Check the device name, and that a container was given it";
+			else if (errno == EBUSY)
+				reason += ". Another program holds it: a serial console (serial-getty) or ModemManager";
+			throw std::runtime_error("Failed to open serial port " + port + " at baudrate " + std::to_string(baudrate) + ": " + reason);
 		}
 
 		// Clear O_NONBLOCK after opening to allow normal blocking behavior for reads
@@ -532,6 +539,17 @@ namespace Device
 			uint64_t handle = device_list.size();
 			device_list.push_back(device_path);
 			DeviceList.push_back(Description("Serial", "USB Serial", name, handle, Type::SERIALPORT));
+		}
+#endif
+#ifndef _WIN32
+		for (const std::string &device_path : {"/dev/serial0", "/dev/serial1"})
+		{
+			if (access(device_path.c_str(), F_OK) != 0)
+				continue;
+
+			uint64_t handle = device_list.size();
+			device_list.push_back(device_path);
+			DeviceList.push_back(Description("Serial", "GPIO Serial", device_path, handle, Type::SERIALPORT));
 		}
 #endif
 	}
