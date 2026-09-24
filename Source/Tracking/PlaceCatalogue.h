@@ -34,7 +34,7 @@ struct PlacePoint {
 };
 struct PlaceMetadata {
   std::string uuid, name, type, code, partOf, category, country;
-  bool requiresStop() const { return type != "area"; }
+  bool requiresStop() const { return type != "area" && type != "water"; }
 };
 struct PlaceIndex {
   struct Part {

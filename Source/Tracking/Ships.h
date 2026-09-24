@@ -24,6 +24,7 @@
 
 #include "Common.h"
 #include "PackedInt.h"
+#include "VisitTracker.h"
 
 namespace JSON {
 class Writer;
@@ -61,7 +62,6 @@ const uint32_t F_SIGNAL = 1 << 11;
 struct Ship {
   uint32_t mmsi;
   int count, msg_type, shipclass, mmsi_type, shiptype, heading, status;
-  int region; // Region::find() of the position; derived, not persisted
   int to_port, to_bow, to_starboard, to_stern, IMO, angle, altitude,
       received_stations;
   int unit_model, unit_serial;
@@ -96,11 +96,9 @@ struct Ship {
   void writeJSON(JSON::Writer &, long int delta_time, bool station_known) const;
   void writeJSONBody(JSON::Writer &, long int delta_time,
                      bool station_known) const;
-  void writeCompactDynamic(JSON::Writer &, std::time_t now,
-                           unsigned binary_badge = 0, unsigned station = 0,
-                           const std::array<uint64_t, 5> &place_ids = {
-                               {UINT64_MAX, UINT64_MAX, UINT64_MAX, UINT64_MAX,
-                                UINT64_MAX}}) const;
+  void writeCompactDynamic(
+      JSON::Writer &, std::time_t now, unsigned binary_badge, unsigned station,
+      const std::array<uint64_t, VisitTracker::SLOTS> &place_ids) const;
   void writeCompactTable(JSON::Writer &) const;
   void writeCompactStatic(JSON::Writer &) const;
 

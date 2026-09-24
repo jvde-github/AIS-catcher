@@ -26,7 +26,7 @@ export function spec() {
         { cls: MAX, fields: MATCHED_PORT_FIELDS },
         { cls: MAX + ' row-wide-first', fields: [{ key: 'status', label: 'Status' }, { key: 'altitude', label: 'Altitude' }] },
         { fields: [{ key: 'speed', label: 'Speed' }, { key: 'cog', label: 'Course' }, { key: 'heading', label: 'Heading' }] },
-        { cls: MAX, fields: [{ key: 'lat', label: 'Latitude' }, { key: 'lon', label: 'Longitude' }, { key: 'region', label: 'Region' }] },
+        { cls: MAX, fields: [{ key: 'lat', label: 'Latitude' }, { key: 'lon', label: 'Longitude' }] },
         { section: { key: 'visits', label: 'Visits', open: false }, fields: [{ key: 'visits', label: '' }] },
         { section: { key: 'changes', label: 'Voyage history', open: false }, cls: MAX, fields: [] },
         { section: { key: 'speed', label: 'Speed chart', open: false }, cls: MAX, fields: [] },

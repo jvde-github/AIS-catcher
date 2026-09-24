@@ -21,7 +21,6 @@
 #include "AIS-catcher.h"
 #include "Ships.h"
 
-#include "Region.h"
 #include "Writer.h"
 
 void Ship::reset() {
@@ -32,7 +31,6 @@ void Ship::reset() {
 
   heading = HEADING_UNDEFINED;
   status = STATUS_UNDEFINED;
-  region = Region::NONE;
   to_port = to_bow = to_starboard = to_stern = DIMENSION_UNDEFINED;
   IMO = IMO_UNDEFINED;
   angle = ANGLE_UNDEFINED;
@@ -135,7 +133,6 @@ void Ship::clearFields(uint32_t doomed) {
     lon = LON_UNDEFINED;
     distance = DISTANCE_UNDEFINED;
     angle = ANGLE_UNDEFINED;
-    region = Region::NONE;
     setApproximate(0);
     setValidated(0);
     setRAIM(0);
@@ -578,13 +575,12 @@ void Ship::writeJSONBody(JSON::Writer &w, long int delta_time,
       .kv("last_group", last_group)
       .kv_unless("altitude", altitude, ALT_UNDEFINED)
       .kv_unless("received_stations", received_stations,
-                 RECEIVED_STATIONS_UNDEFINED)
-      .kv_unless("region", region, Region::NONE);
+                 RECEIVED_STATIONS_UNDEFINED);
 }
 
 void Ship::writeCompactDynamic(JSON::Writer &w, std::time_t now,
                                unsigned binary_badge, unsigned station,
-                               const std::array<uint64_t, 5> &place_ids) const {
+                               const std::array<uint64_t, VisitTracker::SLOTS> &place_ids) const {
   w.beginArray().val(mmsi);
   if (isValidCoord(lat, lon))
     w.val(lat).val(lon).val_unless(distance, DISTANCE_UNDEFINED);
@@ -628,7 +624,6 @@ void Ship::writeCompactTable(JSON::Writer &w) const {
       .val_unless(altitude, ALT_UNDEFINED)
       .val_unless(received_stations, RECEIVED_STATIONS_UNDEFINED)
       .val(mmsi_type)
-      .val_unless(region, Region::NONE)
       .endArray();
 }
 
@@ -719,10 +714,8 @@ bool Ship::Load(std::ifstream &file) {
   vin[sizeof(vin) - 1] = '\0';
   vendorid[sizeof(vendorid) - 1] = '\0';
 
-  // not persisted: the message list, and the region, which follows from the
-  // position
+  // not persisted: the message list
   msg.clear();
-  region = Region::find(lat, lon);
   return ok;
 }
 

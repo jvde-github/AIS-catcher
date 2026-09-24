@@ -34,7 +34,7 @@ export function createLocalSearch(host) {
                     const kind = object.place_type || 'port';
                     rows.push({type: kind === 'port' ? 'port' : 'place', id: object.runtime_id ?? object.code,
                         code: object.code, name: object.label, lat: object.lat, lon: object.lon,
-                        kindLabel: ({port: 'Port', terminal: 'Terminal', berth: 'Berth', anchorage: 'Anchorage', custom: 'Region'})[kind] || 'Place',
+                        kindLabel: ({port: 'Port', terminal: 'Terminal', berth: 'Berth', anchorage: 'Anchorage', custom: 'Area', area: 'Area', water: 'Water'})[kind] || 'Place',
                         object: {...object, place_version: data.place_version}});
                 }
             }

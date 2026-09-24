@@ -668,7 +668,7 @@ const DEFAULT_SETTINGS = {
         plot_absolute_time: true,
         kiosk_rotation_speed: 5,
         kiosk_pan_map: true,
-        shiptable_columns: ["shipname", "mmsi", "imo", "callsign", "shipclass", "region", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"],
+        shiptable_columns: ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"],
         realtime_background_streaming: false,
         realtime_filters: [],
         ship_filter: {},
@@ -2202,7 +2202,7 @@ async function fetchShips(noDoubleFetch = true) {
 
 // The ships table's columns beyond the map's row, pulled only while that tab
 // is open: one full pass on opening, then only ships heard since, merged by MMSI.
-const tableKeys = ["mmsi", "bearing", "level", "ppm", "count", "msg_type", "last_group", "group_mask", "altitude", "received_stations", "mmsi_type", "region"];
+const tableKeys = ["mmsi", "bearing", "level", "ppm", "count", "msg_type", "last_group", "group_mask", "altitude", "received_stations", "mmsi_type"];
 let tableSince = 0;
 
 async function fetchTableRows() {

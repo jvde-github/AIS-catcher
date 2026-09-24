@@ -36,9 +36,10 @@ import { createNearbyDialog } from './nearby-dialog.js';
 
 const HOVER_DWELL_MS = 500;
 
-// a custom place named for the water it covers gets the waterway glyph; other custom places the generic one
+// a water, or a custom place named for the water it covers, gets the waterway glyph; other custom places the generic one
 const WATERWAY = /strait|channel|passage|canal|waterway|fairway|river|sound|estuary|tss|separation/i;
-const placeGlyph = (o) => o.place_type === 'area' && WATERWAY.test(o.category || '') ? 'waterway' : o.place_type || 'place';
+const SECTION_ZOOM = 13; // same minimum as PlaceIndex::Entry::SECTION_ZOOM
+const placeGlyph = (o) => o.place_type === 'water' || (o.place_type === 'area' && WATERWAY.test(o.category || '')) ? 'waterway' : o.place_type || 'place';
 const catOf = (o) => (o.kind === 9 || (o.kind === 10 && o.place_type === 'port')) ? 'port' : o.kind === 10 ? 'place' : KIND_CAT[o.kind] || 'data';
 const statusOf = (o) => (o.online === false ? 'offline' : 'online');
 const stationId = (o) => Number(String(o.id).slice(1));
@@ -216,6 +217,8 @@ export function create(host) {
         const standing = [];
         for (const o of rows) {
             const cat = catOf(o);
+            if (o.kind === 10 && (o.place_type === 'berth' || o.place_type === 'water') && !opt.focus) continue;
+            if (o.kind === 10 && o.place_type === 'section' && viewZoom < SECTION_ZOOM && !opt.focus) continue;
             if (o.kind === 10 && cat !== 'port' && opt.places === false) continue;
             if (opt.display === 'off' && cat !== 'port' && o.kind !== 10) continue;
             if (!opt.focus && ((opt.hidden && opt.hidden(cat)) || (o.z != null && o.z > viewZoom))) continue;

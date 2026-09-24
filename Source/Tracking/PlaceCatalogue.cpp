@@ -338,8 +338,9 @@ PlaceCatalogue::Place PlaceCatalogue::validate(const std::string &json,
   a.revision = rev.getInt();
   m.name = text(p, KEY_PLACE_NAME);
   m.type = text(p, KEY_PLACE_PLACE_TYPE);
-  const std::set<std::string> types{"port", "section", "terminal", "berth",
-                                    "anchorage", "mooring", "marina", "area"};
+  const std::set<std::string> types{"port",      "section", "terminal",
+                                    "berth",     "anchorage", "mooring",
+                                    "marina",    "area",    "water"};
   if (!types.count(m.type)) throw std::runtime_error("Unknown place type");
   auto optionalText = [&](const JSON::JSON &obj, int key, size_t limit) {
     return obj[key] ? text(obj, key, limit) : std::string();
@@ -406,8 +407,8 @@ PlaceCatalogue::Place PlaceCatalogue::validate(const std::string &json,
     const auto &attrs = object(p, KEY_PLACE_ATTRIBUTES);
     m.category = optionalText(attrs, KEY_PLACE_AREA_SUBTYPE, 60);
   }
-  if (m.type == "area" && m.category.empty())
-    throw std::runtime_error("An area needs attributes.area_subtype");
+  if ((m.type == "area" || m.type == "water") && m.category.empty())
+    throw std::runtime_error("An area or water needs attributes.area_subtype");
 
   const auto &g = object(doc.root, KEY_PLACE_GEOMETRY);
   const auto &coords = field(g, KEY_PLACE_COORDINATES);

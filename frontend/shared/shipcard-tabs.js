@@ -92,7 +92,7 @@ export function build(mount, prefix, o) {
         { fields: MATCHED_PORT_FIELDS },
         { cls: 'row-wide-first', fields: [{ key: 'status', label: 'Status' }, { key: 'altitude', label: 'Altitude' }] },
         { fields: [{ key: 'speed', label: 'Speed' }, { key: 'cog', label: 'Course' }, { key: 'heading', label: 'Heading' }] },
-        { fields: [{ key: 'lat', label: 'Latitude' }, { key: 'lon', label: 'Longitude' }, { key: 'region', label: 'Region' }] },
+        { fields: [{ key: 'lat', label: 'Latitude' }, { key: 'lon', label: 'Longitude' }] },
     ]);
     cells.visits = group(panelEls.history, 'Visits', prefix + 'visits', true);
     group(panelEls.history, 'Reported changes', prefix + 'changes_body', true);
@@ -135,9 +135,8 @@ export function build(mount, prefix, o) {
         summary.id.textContent = ship.imo != null ? 'IMO ' + ship.imo : ship.eni ? 'ENI ' + decodeHTMLEntities(ship.eni) : ship.mmsi != null ? 'MMSI ' + ship.mmsi : '';
         const hasPos = ship.lat != null && ship.lon != null;
         summary.pos.innerHTML = hasPos ? u.getLatValFormat(ship) + ', ' + u.getLonValFormat(ship) : 'N/A';
-        const region = hasPos && ship.region != null ? (h.regionName ? h.regionName(ship.region) : ship.region) : null;
         const places = ship.visits?.filter(v => v.inside) || [];
-        summary.region.textContent = places?.length ? places[0].name : region && region !== '-' ? region : '';
+        summary.region.textContent = places?.length ? places[0].name : '';
         summary.region.hidden = !summary.region.textContent;
         const currentPlace = places.length ? {...places[0], runtime_id: places[0].id, place_version: ship.place_version, lat: ship.lat, lon: ship.lon} : null;
         setPortLink(summary.region, currentPlace, h.openPort, h.goTo);

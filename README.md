@@ -38,7 +38,7 @@ To join, ensure you're on the latest version, visit [www.aiscatcher.org](https:/
 
 ## Places
 
-Ports, terminals, berths, anchorages and custom areas live in an editable place catalogue:
+Ports, terminals, berths, anchorages, waters (seas, lakes, rivers) and custom areas live in an editable place catalogue:
 a directory of GeoJSON files. Point the standalone viewer at one with
 `-N 8100 PLACES /path/to/places`; a managed installation keeps a `places`
 directory beside its configuration and edits it from the Places tab. Ships in

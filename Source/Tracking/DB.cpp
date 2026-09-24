@@ -24,7 +24,6 @@
 
 #include "Geodesy.h"
 #include "Logger.h"
-#include "Region.h"
 
 #include <fstream>
 #include <unordered_map>
@@ -1205,7 +1204,6 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship) {
 
   if (positionUpdated) {
     ship.setApproximate(type == 27);
-    ship.region = Region::find(ship.lat, ship.lon);
 
     if (ship.mmsi == own_mmsi) {
       updateStation(ship.lat, ship.lon);
@@ -1479,8 +1477,8 @@ std::string DB::getMapObjectsJSON(uint64_t since) {
 
 // a recycled slot may still own the evicted ship's track, so every create
 // is paired with a path wipe
-// a record from elsewhere replaces what the slot holds; distance, region and
-// the relationships follow from its fields. Caller holds mtx.
+// a record from elsewhere replaces what the slot holds; distance and the
+// relationships follow from its fields. Caller holds mtx.
 void DB::install(int ptr, const Ship &s) {
   Ship &ship = ships[ptr];
   ship = s;
@@ -1908,7 +1906,7 @@ void DB::updatePlaceEvents(int ptr, std::time_t now) {
                 place_markers.index().get(),
                 [&](const VisitTracker::Visit &visit, bool entering,
                     std::time_t observed) {
-                  if (visit.place->type != "port")
+                  if (visit.place->type != "port" && visit.place->type != "water")
                     return;
                   EventRing::Event e;
                   e.kind =
@@ -1966,14 +1964,11 @@ void DB::updateStation(float lat, float lon) {
   full_refresh_at = time(nullptr);
 }
 
-// Caller holds mtx. What follows from a ship's position: distance, region and
-// the places it is in.
+// Caller holds mtx. What follows from a ship's position: distance and the
+// places it is in.
 void DB::locate(int ptr) {
   Ship &ship = ships[ptr];
   updateDistance(ship);
-  ship.region = isValidCoord(ship.lat, ship.lon)
-                    ? Region::find(ship.lat, ship.lon)
-                    : Region::NONE;
   refreshPlaceMembership(ptr);
 }
 

@@ -231,7 +231,7 @@ public:
   // messages the mask turned away
   uint64_t getCopiesDropped() const { return copies_dropped; }
   // Puts a record in the table under its MMSI, replacing what is there; for
-  // seeding from another source. The region follows from the position.
+  // seeding from another source. The places follow from the position.
   void putShip(const Ship &s);
 
   struct SeedCount {
@@ -536,5 +536,5 @@ public:
 
 private:
   static const int _DB_MAGIC = 0x41495346;
-  static const int _DB_VERSION = 3;
+  static const int _DB_VERSION = 4;
 };

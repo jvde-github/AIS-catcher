@@ -10,7 +10,6 @@ import { CHANGE, getCountryName, getDeltaTimeVal, getEtaVal, getMmsiTypeVal, get
 import { getChangeListHTML, getSpeedHistorySVG, getDraughtChartSVG, getShipDimensionSVG } from '../../shared/core/spark.js';
 import { getCallSign, getShipName } from '../core/names.js';
 import { decodeHTMLEntities } from '../core/util.js';
-import { regionName } from '../core/regions.js';
 import { flagHTML } from '../../shared/components.js';
 import { decodeBadge, glyphsHTML, KIND_CAT, showsShipBadge } from '../../shared/binary.js';
 import * as mapObjects from './mapobjects.js';
@@ -384,7 +383,6 @@ export function populate() { card.keepScroll(populateCard); refreshVessel(); }
 
 const cardHelpers = {
     units: u,
-    regionName,
     callsign: getCallSign,
     age: (s) => getDeltaTimeVal(clock - s.last_signal),
     goTo: (lat, lon) => deps.goTo && deps.goTo(lat, lon),

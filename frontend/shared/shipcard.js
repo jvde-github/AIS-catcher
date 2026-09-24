@@ -39,8 +39,7 @@ export function setPortLink(el, port, openPort, goTo) {
     else { el.removeAttribute('role'); el.removeAttribute('tabindex'); }
 }
 
-/* Fills the common cells. `h` carries the host's units, `regionName(region)`,
-   `infoIcon(kind)` for the sender and ship-type details, and optionally
+/* Fills the common cells. `h` carries the host's units, `infoIcon(kind)` for the sender and ship-type details, and optionally
    `callsign(ship)` where a host words an absent callsign itself. */
 export function populate(cells, ship, h) {
     const u = h.units;
@@ -81,7 +80,6 @@ export function populate(cells, ship, h) {
     each('matched_code').forEach(el => { el.parentElement.parentElement.hidden = !hasMatch; });
     html('lat', ship.lat != null ? u.getLatValFormat(ship) : null);
     html('lon', ship.lon != null ? u.getLonValFormat(ship) : null);
-    text('region', h.regionName ? h.regionName(ship.region) : ship.region);
     html('visits', visitListHTML(ship.visits, ship.time));
     each('visits').forEach(el => el.closest('.card-row')?.classList.toggle('hidden', !Array.isArray(ship.visits)));
 
