@@ -555,6 +555,7 @@ namespace IO
 		for (int i = 0; i < 40 && !connection->isConnected(); i++)
 			SleepSystem(50);
 
+		last_send = std::time(nullptr);
 		bool ready = tcp.getState() == Protocol::TCP::READY;
 		Info() << "Hub feed: open socket for host: " << AISCATCHER_URL << ", port: " << AISCATCHER_PORT << ", " << startInfo() << ", status: " << (ready ? "connected" : "pending");
 	}
@@ -567,7 +568,7 @@ namespace IO
 			connection->disconnect();
 	}
 
-	void HubStreamer::tick()
+	void HubStreamer::tickSecond(std::time_t now)
 	{
 		std::lock_guard<std::mutex> lock(mtx);
 
@@ -578,9 +579,9 @@ namespace IO
 		if (!connection->isConnected())
 			return;
 
-		if (++idle_ticks >= KEEPALIVE_TICKS)
+		if (now - last_send >= KEEPALIVE_S)
 		{
-			idle_ticks = 0;
+			last_send = now;
 			hub.keepAlive();
 		}
 	}

@@ -460,7 +460,7 @@ void WebViewer::attachEngine(AIS::Model &model, Connection<JSON::JSON> &json,
   endAttach();
 }
 
-void WebViewer::tick(std::time_t now) {
+void WebViewer::tickMinute(std::time_t now) {
   std::lock_guard<std::recursive_mutex> lock(state_mtx);
 
   for (auto &s : states)
