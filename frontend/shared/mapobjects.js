@@ -217,7 +217,7 @@ export function create(host) {
         const standing = [];
         for (const o of rows) {
             const cat = catOf(o);
-            if (o.kind === 10 && (o.place_type === 'berth' || o.place_type === 'water') && !opt.focus) continue;
+            if (o.kind === 10 && o.place_type === 'berth' && !opt.focus) continue;
             if (o.kind === 10 && o.place_type === 'section' && viewZoom < SECTION_ZOOM && !opt.focus) continue;
             if (o.kind === 10 && cat !== 'port' && opt.places === false) continue;
             if (opt.display === 'off' && cat !== 'port' && o.kind !== 10) continue;
@@ -231,6 +231,8 @@ export function create(host) {
                 areaRings(o.shapes).forEach((ring, i) =>
                     add(new Feature({ geometry: new Polygon([ring.map((ll) => fromLonLat(ll))]) }), `mo-place-${o.id}-${i}`,
                         { is_area: true, is_danger: isDangerArea(o), is_group: isGroupArea(o), binary_object: o }));
+            // a water is its outline when focused and nothing otherwise: a sea has no marker
+            if (o.kind === 10 && o.place_type === 'water') continue;
             if (hasValidCoords(o.lat, o.lon)) standing.push(o);
         }
         for (const stack of stackObjects(standing)) {
