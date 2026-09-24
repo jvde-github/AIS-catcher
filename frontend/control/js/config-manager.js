@@ -316,7 +316,7 @@
 
     const ConfigNormalizer = {
         arraySchemas: CHANNEL_REGISTRY.reduce((m, c) => { m[c.configKey] = c.schema; return m; }, {}),
-        topLevelSchemas: [sharingSchema, generalSettingsSchema],
+        topLevelSchemas: [sharingSchema, generalSettingsSchema, screenSchema],
 
         receiverKeys: ['serial', 'input', 'verbose', 'model', 'engines', 'meta', 'own_mmsi',
             'rtlsdr', 'rtltcp', 'airspy', 'airspyhf', 'hydrasdr', 'sdrplay', 'serialport',

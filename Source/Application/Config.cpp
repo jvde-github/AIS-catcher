@@ -236,6 +236,7 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members,
     switch (m.Key()) {
     case AIS::KEY_SETTING_ENGINES:
     case AIS::KEY_SETTING_MODEL:
+    case AIS::KEY_SETTING_NMEA_CHANNEL:
       break; // pass 3
     case AIS::KEY_SETTING_SERIAL:
     case AIS::KEY_SETTING_INPUT:
@@ -278,9 +279,13 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members,
     }
   }
 
-  // engines are applied once the input format is known
+  // the NMEA designation follows the channel choice, in whichever order the
+  // two keys were written; engines are applied once the input format is known
   for (const auto &m : members) {
-    if (m.Key() == AIS::KEY_SETTING_ENGINES) {
+    if (m.Key() == AIS::KEY_SETTING_NMEA_CHANNEL) {
+      _engine.receivers.back()->SetKey(AIS::KEY_SETTING_NMEA_CHANNEL,
+                                       m.Get().to_string());
+    } else if (m.Key() == AIS::KEY_SETTING_ENGINES) {
       if (!m.Get().isArray())
         throw std::runtime_error(
             "\"engines\" must be an array, e.g. [ { \"type\": \"v2_base\", "
@@ -363,6 +368,7 @@ void Config::set(const std::string &str) {
   // invalid config
   for (const auto &m : doc.getMembers())
     if (m.Key() == AIS::KEY_SETTING_CHANNEL ||
+        m.Key() == AIS::KEY_SETTING_NMEA_CHANNEL ||
         m.Key() == AIS::KEY_SETTING_ENGINES)
       throw std::runtime_error(std::string("Config file: \"") +
                                AIS::KeyMap[m.Key()][JSON_DICT_SETTING] +

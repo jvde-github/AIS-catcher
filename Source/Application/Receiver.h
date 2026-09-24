@@ -96,6 +96,9 @@ public:
 		case AIS::KEY_SETTING_CHANNEL:
 			setChannel(arg, "");
 			break;
+		case AIS::KEY_SETTING_NMEA_CHANNEL:
+			setChannel(channelModeString(), arg);
+			break;
 		case AIS::KEY_SETTING_META:
 			setTags(arg);
 			break;
@@ -133,6 +136,20 @@ public:
 
 	// Model
 	void setChannel(std::string mode, std::string NMEA);
+
+	// the mode as -c spells it, so a designation can re-apply it
+	std::string channelModeString() const
+	{
+		switch (ChannelMode)
+		{
+		case AIS::Mode::CD:
+			return "CD";
+		case AIS::Mode::X:
+			return "X";
+		default:
+			return "AB";
+		}
+	}
 	void setTags(const std::string &s);
 	void removeTags(const std::string &s);
 	void clearTags() { tag.mode = 0; }

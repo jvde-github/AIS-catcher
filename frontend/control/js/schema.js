@@ -963,6 +963,21 @@ const receiverSchema = {
             value: ["RTLSDR", "AIRSPY", "AIRSPYHF", "HACKRF", "HYDRASDR"]
         }
     },
+    nmea_channel: {
+        name: "nmea_channel",
+        label: "Report As",
+        type: "select",
+        jsonpath: "nmea_channel",
+        options: [
+            { value: "", label: "CD" },
+            { value: "AB", label: "AB" }
+        ],
+        tooltip: "Channel letters in the NMEA output; AB for software that only knows A and B",
+        dependsOn: {
+            field: "channel",
+            value: "CD"
+        }
+    },
     serial: {
         name: "serial",
         label: "Serial Key",
@@ -1579,7 +1594,7 @@ const receiverSchema = {
         jsonpath: "verbose",
         defaultValue: false,
         width: 25,
-        tooltip: "Print received messages and statistics in the log"
+        tooltip: "Log message counts at the interval set under Output › Screen"
     },
     zones: {
         name: "zone",
@@ -1614,6 +1629,37 @@ const generalSettingsSchema = {
         defaultValue: false,
         width: 50,
         tooltip: 'Watchdog: counts only while input is idle'
+    }
+};
+
+// The process's standard output: the journal under systemd, the container log
+// under Docker. Managed mode keeps it silent unless set here; the levels are
+// those of the command line's -o.
+const screenSchema = {
+    screen: {
+        name: 'screen',
+        label: 'Screen Output',
+        type: 'select',
+        defaultValue: '0',
+        options: [
+            { value: '0', label: 'Off' },
+            { value: '1', label: 'NMEA' },
+            { value: '2', label: 'NMEA + details' },
+            { value: '3', label: 'JSON with NMEA' },
+            { value: '4', label: 'JSON (compact)' },
+            { value: '5', label: 'JSON (full)' }
+        ],
+        tooltip: 'Messages written to standard output: the journal under systemd, the container log under Docker'
+    },
+    verbose_time: {
+        name: 'verbose_time',
+        label: 'Verbose Interval (seconds)',
+        type: 'number',
+        defaultValue: 3,
+        min: 1,
+        max: 3600,
+        advanced: true,
+        tooltip: 'How often a receiver with Verbose on logs its message counts; one interval for all receivers'
     }
 };
 

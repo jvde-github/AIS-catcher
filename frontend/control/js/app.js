@@ -594,7 +594,8 @@ import {createPlaceEditor} from './places-editor.js';
             value: c.key === 'tcp_listener' ? 'tcp-server' : c.key,
             label: c.label, schema: c.schema, configKey: c.configKey,
             flowLabel: c.flowLabel, statType: c.statType, statTypes: c.statTypes
-        }))
+        })),
+        { value: 'screen', label: 'Screen', schema: screenSchema }
     ];
 
     const OUTPUT_TAB_ACTIVE = 'sys-tab active';
@@ -1312,6 +1313,10 @@ import {createPlaceEditor} from './places-editor.js';
                         active: cfg.sharing === true,
                         sub: 'sharing'
                     });
+
+                // stdout takes every receiver; "0" and "none" are the silent levels
+                if (cfg.screen !== undefined && !['0', 'none'].includes(String(cfg.screen).toLowerCase()))
+                    outputs.push({ label: 'Screen', zones: [], active: true, sub: 'screen' });
 
                 OUTPUT_TYPES.forEach(({ value, configKey, flowLabel }) => {
                     if (!configKey) return;

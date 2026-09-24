@@ -137,8 +137,7 @@ void Engine::run(WebViewer *viewer, ControlCore *control) {
     for (auto &o : msg)
       o->Connect(r);
 
-    if (!control)
-      screen.Connect(r);
+    screen.Connect(r);
 
     if (r.verbose || timeout_nomsg)
       stat[i].connect(r);
@@ -150,8 +149,7 @@ void Engine::run(WebViewer *viewer, ControlCore *control) {
             << " receivers)";
     for (auto &o : msg)
       o->setExclusive(true);
-    if (!control)
-      screen.setExclusive(true);
+    screen.setExclusive(true);
   } else {
     Debug() << "Mutex: single receiver, all sinks lock-free";
   }
