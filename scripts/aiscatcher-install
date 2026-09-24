@@ -407,7 +407,8 @@ pkg_update() {
 
 pkg_install() {
     if [[ "$PKG_MANAGER" == "apt" ]]; then
-        apt-get install -y "$@"
+        DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold "$@"
     else
         dnf -y install "$@"
     fi
@@ -710,12 +711,13 @@ download_and_install_pkg() {
         fi
     else
         # Use --allow-downgrades to handle version conflicts and better error handling
-        if apt-get install -y --allow-downgrades "$DEB_TMP_DIR/$package"; then
+        local apt_opts=(-y --allow-downgrades -o Dpkg::Options::=--force-confnew)
+        if DEBIAN_FRONTEND=noninteractive apt-get install "${apt_opts[@]}" "$DEB_TMP_DIR/$package"; then
             install_success=true
             log "INFO" "Package installed successfully"
         else
             log "WARN" "Standard package installation failed, trying with additional flags..."
-            if apt-get install -y --allow-downgrades --allow-change-held-packages "$DEB_TMP_DIR/$package"; then
+            if DEBIAN_FRONTEND=noninteractive apt-get install "${apt_opts[@]}" --allow-change-held-packages "$DEB_TMP_DIR/$package"; then
                 install_success=true
                 log "INFO" "Package installed successfully with additional flags"
             fi
