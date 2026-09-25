@@ -579,7 +579,7 @@ std::string WebViewer::buildStatJSON(ReceiverTracker *s) {
   w.kv("sharing", comm_feed != nullptr);
   w.kv("sharing_uuid", comm_feed != nullptr && comm_feed->hasUUID());
   w.kv("engine_running", engine_attached);
-  std::string link = "https://www.aiscatcher.org";
+  std::string link = "https://www.aiscatcher.org/livemap";
   if (settings.tracking.latlon_share &&
       settings.tracking.lat != LAT_UNDEFINED &&
       settings.tracking.lon != LON_UNDEFINED)
