@@ -54,6 +54,28 @@ def test_decode_type1():
     print(msg)
 
 
+def test_decode_annotated_type1():
+    dec = aiscat.Decoder(format="annotated")
+    assert dec.feed(SAMPLE_A) == 1
+    msg = dec.next()
+
+    assert msg["type"]["value"] == 1
+    assert msg["type"]["text"] == "Position report"
+    assert msg["mmsi"]["value"] == 366730000
+    assert abs(msg["lat"]["value"] - 37.803802) < 1e-3
+    assert msg["lat"]["unit"] == "degrees"
+    assert "description" in msg["lat"]
+    assert dec.next() is None
+
+
+def test_feed_supported_input_types():
+    for payload in (SAMPLE_A, bytearray(SAMPLE_A), SAMPLE_A.decode("ascii")):
+        dec = aiscat.Decoder()
+        assert dec.feed(payload) == 1
+        assert dec.next()["mmsi"] == 366730000
+        assert dec.next() is None
+
+
 def test_decode_two_sentences():
     dec = aiscat.Decoder()
     dec.feed(SAMPLE_A + SAMPLE_B)
@@ -205,6 +227,8 @@ def test_nmea_tag_decoders_from_multiple_threads():
 
 if __name__ == "__main__":
     test_decode_type1()
+    test_decode_annotated_type1()
+    test_feed_supported_input_types()
     test_decode_two_sentences()
     test_decode_max_length_type26()
     test_import_does_not_enable_gil()
