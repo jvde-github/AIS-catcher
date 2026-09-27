@@ -89,7 +89,12 @@ namespace AIS
 				Send(&msg, 1, tag);
 			}
 			else
+			{
+				msg.buildNMEA(tag);
 				Debug() << "AIS: invalid message of type " << msg.type() << " and length " << msg.getLength();
+				for (const auto &s : msg.sentences())
+					Debug() << "AIS: " << s;
+			}
 
 			return true;
 		}
