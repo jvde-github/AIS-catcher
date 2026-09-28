@@ -4762,6 +4762,56 @@ addOverlayLayer("NOAA", new ol.layer.Tile({
     })
 }));
 
+// the Spanish Navy's hydrographic office: Spain, the Canaries and a few Portuguese cells. The
+// chart comes whole, land and all, so the layer keeps to where it has one.
+addOverlayLayer("ENC Spain (IHM)", new ol.layer.Tile({
+    extent: ol.proj.transformExtent([-21, 19.3, 6.3, 47], 'EPSG:4326', 'EPSG:3857'),
+    source: new ol.source.XYZ({
+        url: 'https://ideihm.covam.es/ihmcache/wmts/1.0.0/RasterENC/default/googlemapscompatible/{z}/{y}/{x}.png',
+        attributions: 'Charts: &copy; <a href="https://ideihm.covam.es/">Instituto Hidrogr&aacute;fico de la Marina</a>, <a href="https://ideihm.covam.es/portal/licencias/">licence</a>, not for navigation'
+    })
+}));
+
+// more official charts, free for any use: each draws its chart whole, land and all, so it keeps
+// to where it has one
+const chartExtent = (lonlat) => ol.proj.transformExtent(lonlat, 'EPSG:4326', 'EPSG:3857');
+const chartWMS = (url, layers, attributions) => new ol.source.TileWMS({
+    url, params: { 'LAYERS': layers, 'FORMAT': 'image/png', 'TRANSPARENT': 'true', 'VERSION': '1.3.0' }, attributions
+});
+
+addOverlayLayer("Charts Norway (Kartverket)", new ol.layer.Tile({
+    extent: chartExtent([-15, 53.7, 44.3, 81.8]),
+    source: new ol.source.XYZ({
+        url: 'https://cache.kartverket.no/v1/wmts/1.0.0/sjokartraster/default/webmercator/{z}/{y}/{x}.png',
+        attributions: 'Charts: &copy; <a href="https://www.kartverket.no/">Kartverket</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>)'
+    })
+}));
+
+addOverlayLayer("Charts Finland (Traficom)", new ol.layer.Tile({
+    extent: chartExtent([19, 59.3, 32, 70.1]),
+    source: new ol.source.XYZ({
+        url: 'https://julkinen.traficom.fi/rasteripalvelu/wmts/rest/Traficom:Merikarttasarjat%20public/default/WGS84_Pseudo-Mercator/WGS84_Pseudo-Mercator:{z}/{y}/{x}?format=image/png',
+        attributions: 'Charts: &copy; <a href="https://www.traficom.fi/">Traficom</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>)'
+    })
+}));
+
+addOverlayLayer("ENC Canada (CHS)", new ol.layer.Tile({
+    extent: chartExtent([-141, 39.4, -32.2, 84]),
+    source: chartWMS('https://egisp.dfo-mpo.gc.ca/arcgis/rest/services/chs/ENC_MaritimeChartService/MapServer/exts/MaritimeChartService/WMSServer',
+        '0,1,2,3,4,5,6,7,8,9,10,11,12', 'Charts: &copy; <a href="https://www.charts.gc.ca/">Canadian Hydrographic Service</a>, contains information licensed under the <a href="https://open.canada.ca/en/open-government-licence-canada">Open Government Licence – Canada</a>')
+}));
+
+addOverlayLayer("Inland ENC Germany (WSV)", new ol.layer.Tile({
+    extent: chartExtent([6.0, 47.5, 15.1, 55.1]),
+    source: chartWMS('https://via.bund.de/wsv/ienc/wms', 'IENC', 'Charts: &copy; <a href="https://www.elwis.de/">WSV</a> (<a href="https://www.govdata.de/dl-de/zero-2-0">DL-DE Zero 2.0</a>)')
+}));
+
+addOverlayLayer("Inland ENC Netherlands (RWS)", new ol.layer.Tile({
+    extent: chartExtent([3.13, 50.76, 7.22, 53.6]),
+    source: chartWMS('https://geo.rijkswaterstaat.nl/arcgis/rest/services/ENC/mcs_inland/MapServer/exts/MaritimeChartService/WMSServer',
+        '0,1,2,3,4,5,6,7,8,9,10', 'Charts: &copy; <a href="https://www.rijkswaterstaat.nl/">Rijkswaterstaat</a> (<a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>)')
+}));
+
 initRainRadar(addOverlayLayer);
 
 
