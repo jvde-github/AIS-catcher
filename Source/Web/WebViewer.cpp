@@ -583,7 +583,7 @@ std::string WebViewer::buildStatJSON(ReceiverTracker *s) {
   if (settings.tracking.latlon_share &&
       settings.tracking.lat != LAT_UNDEFINED &&
       settings.tracking.lon != LON_UNDEFINED)
-    link += "/?&zoom=10&lat=" + std::to_string(settings.tracking.lat) +
+    link += "?zoom=10&lat=" + std::to_string(settings.tracking.lat) +
             "&lon=" + std::to_string(settings.tracking.lon);
   w.kv("sharing_link", link);
 
