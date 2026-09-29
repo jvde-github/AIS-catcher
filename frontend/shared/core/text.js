@@ -39,21 +39,17 @@ export const formatDateTime = (timestamp) =>
     new Date(timestamp * 1000).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 export const getDeltaTimeVal = (s) => {
-    // negative would fall through every branch below and return 
-    if (s < 0) s = 0;
-
-    const days = Math.floor(s / (24 * 3600));
-    const hours = Math.floor((s % (24 * 3600)) / 3600);
+    // Two units, the largest first: 2d 3h, 10h 26m, 1m 10s; under a minute the seconds
+    // alone. A zero second unit still shows (1d 0h), so a span always reads the same way.
+    s = s > 0 ? Math.floor(s) : 0;
+    const days = Math.floor(s / 86400);
+    const hours = Math.floor((s % 86400) / 3600);
     const minutes = Math.floor((s % 3600) / 60);
     const seconds = s % 60;
-
-    let result = '';
-    if (days > 0) result += `${days}d `;
-    if (hours > 0 || days > 0) result += `${hours}h `;
-    if (minutes > 0 || hours > 0 || days > 0) result += `${minutes}m `;
-    if (seconds > 0 || (days === 0 && hours === 0 && minutes === 0)) result += `${seconds}s`;
-
-    return result.trim();
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
 };
 
 

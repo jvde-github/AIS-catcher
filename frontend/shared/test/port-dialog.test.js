@@ -199,7 +199,6 @@ test('visit times distinguish observed crossings from bounds and minimum duratio
         {entered:100, observed_until:400, inside:true},
         {entered:null, observed_until:400, inside:true},
         {entered:500, observed_until:400, inside:true},
-        {entered_before:100, observed_until:400, inside:true, pending:true},
     ];
     const open = createPortDialog({fetchJSON:async () => ({time:9999, total:cases.length,
         ships:cases.map((v,i) => ({...v, mmsi:244000001+i, shipname:'Visit '+i}))}), openVessel(){}});
@@ -208,20 +207,18 @@ test('visit times distinguish observed crossings from bounds and minimum duratio
     const cells = [...document.querySelectorAll('#port-ships tbody tr')].map(row => [...row.children].map(td => td.textContent));
     assert.ok(cells[0][1].startsWith('< '));
     assert.equal(cells[0][2], '—');
-    assert.equal(cells[0][3], '> 5m'); // uses observed_until, never the wall clock
+    assert.equal(cells[0][3], '> 5m 0s'); // uses observed_until, never the wall clock
     assert.ok(!/^[<>]/.test(cells[1][1]));
     assert.ok(!/^[<>]/.test(cells[1][2]));
-    assert.equal(cells[1][3], '5m');
+    assert.equal(cells[1][3], '5m 0s');
     assert.ok(cells[2][2].startsWith('> '));
-    assert.equal(cells[2][3], '> 5m');
+    assert.equal(cells[2][3], '> 5m 0s');
     assert.ok(cells[3][1].startsWith('< '));
-    assert.equal(cells[3][3], '> 5m');
-    assert.equal(cells[4][3], '> 5m');
+    assert.equal(cells[3][3], '> 5m 0s');
+    assert.equal(cells[4][3], '> 5m 0s');
     assert.equal(cells[5][1], 'Unknown');
     assert.equal(cells[5][3], 'Unknown');
     assert.equal(cells[6][3], 'Unknown');
-    assert.equal(cells[7][1], 'Confirming…');
-    assert.equal(cells[7][3], '—');
     document.querySelector('.place-close').click();
 });
 

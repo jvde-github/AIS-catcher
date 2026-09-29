@@ -17,7 +17,6 @@ function timeHTML(value, now, bound = '') {
 }
 
 function visitDuration(ship) {
-    if (ship.pending) return '—';
     const start = ship.entered ?? ship.entered_before;
     const end = ship.inside ? ship.observed_until : ship.exited ?? ship.exited_after;
     if (!(start > 0) || !(end >= start)) return 'Unknown';
@@ -43,9 +42,9 @@ export function createPortDialog(host) {
         const listLimit = Number.isInteger(host.placeListLimit) ? Math.max(0, Math.min(100, host.placeListLimit)) : 0;
         root.classList.toggle('port-list-preview', listLimit > 0);
         let page = 0, perPage = 10, total = 0, shown = 0, selectedMmsi = null, loading = false;
-        const kind = (place.place_type === 'area' || place.place_type === 'water') && place.category
+        const kind = ['guardzone', 'sector', 'water'].includes(place.place_type) && place.category
             ? String(place.category).replace(/_/g, ' ').replace(/^./, c => c.toUpperCase())
-            : {port:'Port', anchorage:'Anchorage', terminal:'Terminal', berth:'Berth', area:'Area',section:'Section',marina:'Marina',mooring:'Mooring',water:'Water'}[place.place_type || 'port'] || 'Place';
+            : {port:'Port', anchorage:'Anchorage', terminal:'Terminal', berth:'Berth', guardzone:'Guard zone', sector:'Sector', section:'Section',marina:'Marina',mooring:'Mooring',water:'Water'}[place.place_type || 'port'] || 'Place';
         root.setAttribute('aria-labelledby', 'port-ships-title');
         root.innerHTML = '<header class="place-panel-header">' +
             '<div class="place-panel-actions"><button type="button" class="place-overview">← In view</button><span class="side-table-label"></span><button type="button" class="table-collapse place-close" title="Close sidebar" aria-label="Close sidebar">Close <span aria-hidden="true">→</span></button></div>' +
@@ -57,7 +56,9 @@ export function createPortDialog(host) {
         root.querySelector('#port-ships-title').textContent = place.label || place.code || 'Place';
         root.querySelector('.side-table-label').textContent = kind;
         const code = String(place.code || '').trim().toUpperCase();
-        const country = /^[A-Z]{2}[A-Z0-9]{3}$/.test(code) ? code.slice(0, 2) : '';
+        const explicitCountry = String(place.country || '').trim().toUpperCase();
+        const country = /^[A-Z]{2}$/.test(explicitCountry) ? explicitCountry
+            : (!place.place_type || place.place_type === 'port') && /^[A-Z]{2}[A-Z0-9]{3}$/.test(code) ? code.slice(0, 2) : '';
         const countryName = country ? getCountryName(country) : '';
         const detail = root.querySelector('.place-panel-kind');
         detail.textContent = [countryName, code].filter(Boolean).join(' · ');
@@ -157,8 +158,8 @@ export function createPortDialog(host) {
                     return { ...ship, id, name: ship.shipname || `MMSI ${id}`, selected: id === selectedMmsi };
                 });
                 body.innerHTML = visitRows ? rows.map(ship => {
-                    const entry = ship.pending && ship.inside ? 'Confirming…' : timeHTML(ship.entered ?? ship.entered_before, now, ship.entered ? '' : '<');
-                    const exit = ship.inside ? '—' : ship.pending ? 'Confirming…' : timeHTML(ship.exited ?? ship.exited_after, now, ship.exited ? '' : '>');
+                    const entry = timeHTML(ship.entered ?? ship.entered_before, now, ship.entered ? '' : '<');
+                    const exit = ship.inside ? '—' : timeHTML(ship.exited ?? ship.exited_after, now, ship.exited ? '' : '>');
                     return `<tr data-mmsi="${ship.id}" class="${ship.selected ? 'selected' : ''}">${vesselNameCell(ship)}<td>${entry}</td><td>${exit}</td><td>${visitDuration(ship)}</td></tr>`;
                 }).join('') : renderVesselRows(rows.map(ship => {
                     const sprite = spriteFor(ship.shipclass, ship.speed, ship.cog);

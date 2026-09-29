@@ -580,7 +580,7 @@ void Ship::writeJSONBody(JSON::Writer &w, long int delta_time,
 
 void Ship::writeCompactDynamic(JSON::Writer &w, std::time_t now,
                                unsigned binary_badge, unsigned station,
-                               const std::array<uint64_t, VisitTracker::SLOTS> &place_ids) const {
+                               const std::array<uint32_t, VisitTracker::SLOTS> &place_ids) const {
   w.beginArray().val(mmsi);
   if (isValidCoord(lat, lon))
     w.val(lat).val(lon).val_unless(distance, DISTANCE_UNDEFINED);
@@ -599,9 +599,9 @@ void Ship::writeCompactDynamic(JSON::Writer &w, std::time_t now,
       .val(station)
       .beginArray();
   for (auto id : place_ids) {
-    if (id == UINT64_MAX)
+    if (id == UINT32_MAX)
       break;
-    w.val((unsigned long long)id);
+    w.val(id);
   }
   w.endArray().endArray();
 }

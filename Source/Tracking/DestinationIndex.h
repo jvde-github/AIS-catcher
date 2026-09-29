@@ -103,7 +103,7 @@ public:
     if (const auto *entry = places ? places->findPort(key) : nullptr) {
       w.kv("country", key.substr(0, 2))
           .kv("name", entry->metadata->name)
-          .kv("size", entry->markerSize)
+          .kv("rank", entry->markerSize)
           .kv("lat", entry->lat).kv("lon", entry->lon);
       w.endObject();
       return;

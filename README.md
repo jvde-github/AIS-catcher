@@ -36,15 +36,6 @@ Prefer a traditional AIS receiver over an SDR but want the same advantages? We r
 To join, ensure you're on the latest version, visit [www.aiscatcher.org](https://www.aiscatcher.org), and [add](https://www.aiscatcher.org/addstation) your station. Upon registration, you'll receive a personal sharing key. Simply run AIS-catcher on the command line with "-X" followed by your sharing key to share your station's raw AIS data with the community hub. This activates a "Community Feed" in your station's web viewer, accessible under map layers and some other features.
 
 
-## Places
-
-Ports, terminals, berths, anchorages, waters (seas, lakes, rivers) and custom areas live in an editable place catalogue:
-a directory of GeoJSON files. Point the standalone viewer at one with
-`-N 8100 PLACES /path/to/places`; a managed installation keeps a `places`
-directory beside its configuration and edits it from the Places tab. Ships in
-a place, visits and port-bound traffic follow from the catalogue. See
-[the Places documentation](https://jvde-github.github.io/AIS-catcher-docs/configuration/output/places/) for the file format and rules.
-
 ## Links
 
 - Documentation: [here](https://jvde-github.github.io/AIS-catcher-docs/)

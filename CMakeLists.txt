@@ -302,6 +302,7 @@ endif()
 set(CPP
     Source/Application/Config.cpp
     Source/Tracking/PlaceCatalogue.cpp
+    Source/Tracking/PlaceGeometry.cpp
     Source/Control/ControlCore.cpp
     Source/Control/ControlServer.cpp
     Source/Application/DeviceManager.cpp

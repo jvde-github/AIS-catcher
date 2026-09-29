@@ -1171,3 +1171,4 @@ X(KEY_PLACE_AREA_SUBTYPE, "", "", "", "", "area_subtype", "", "", "Place metadat
 X(KEY_PLACE_REDIRECT, "", "", "", "", "redirect_to", "", "", "Place metadata", nullptr)
 X(KEY_PLACE_NUMBER, "", "", "", "", "no", "", "", "Place metadata", nullptr)
 X(KEY_PLACE_COUNTRY, "", "", "", "", "country", "", "", "Place metadata", nullptr)
+X(KEY_PLACE_RANK, "", "", "", "", "rank", "", "", "Place metadata", nullptr)

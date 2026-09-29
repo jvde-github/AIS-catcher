@@ -1,4 +1,3 @@
-import { currentPlaceIds } from '../shared/visits.js';
 import {initialServerConfig, createViewerConfig, applyServerFeatures} from "./features/server-config.js";
 import {createServerMaps} from "./features/server-maps.js";
 import { settings, isAndroid, isKiosk } from './core/state.js';
@@ -2281,8 +2280,7 @@ async function fetchShipsBody() {
     if (ships.dynamic) {
         ships.dynamic.forEach((v) => {
             const s = Object.fromEntries(dynamicKeys.map((k, i) => [k, v[i]]));
-            s.place_visits = s.place_ids || [];
-            s.place_ids = currentPlaceIds(s.place_visits);
+            s.place_ids = s.place_ids || [];
             s.place_version = ships.place_version || "";
             s.last_signal = serverTime - (s.age || 0);
             delete s.age;

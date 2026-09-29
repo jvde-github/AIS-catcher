@@ -1,4 +1,4 @@
-import {placeFeature} from '../../shared/places.js';
+import {placeFeature, importPlace} from '../../shared/places.js';
 import GeoJSON from 'ol/format/GeoJSON.js';
 import Draw from 'ol/interaction/Draw.js';
 import Modify from 'ol/interaction/Modify.js';
@@ -80,13 +80,13 @@ export function createPlaceEditor(host, options = {}) {
             </div>
           </div>
         <fieldset class="place-fields" disabled hidden>
-          <label>Type<select class="input select" data-field="place_type"><option value="port">Port</option><option value="berth">Berth</option><option value="anchorage">Anchorage</option><option value="section">Section</option><option value="terminal">Terminal</option><option value="mooring">Mooring</option><option value="marina">Marina</option><option value="area">Area</option></select></label>
+          <label>Type<select class="input select" data-field="place_type"><option value="port">Port</option><option value="berth">Berth</option><option value="anchorage">Anchorage</option><option value="section">Section</option><option value="terminal">Terminal</option><option value="mooring">Mooring</option><option value="marina">Marina</option><option value="guardzone">Guard zone</option><option value="sector">Sector</option><option value="water">Water</option></select></label>
           <label>Name<input class="input" data-field="name" maxlength="120" placeholder="Place name"></label>
           <label data-row="unlocode">UN/LOCODE<input class="input" data-field="unlocode" maxlength="5" placeholder="NLRTM"></label>
           <label data-row="part_of">Parent<select class="input" data-field="part_of"><option value="">Unknown</option><option value="none">No parent</option></select></label>
 
-          <label data-row="category">Category<input class="input" data-field="category" list="place-categories" maxlength="60" placeholder="VTS, restricted place…"><datalist id="place-categories"></datalist></label>
-          <label data-row="size">Marker from zoom<select class="input select" data-field="size"><option value="0">12 · very small</option><option value="1">11 · small</option><option value="2">9 · medium</option><option value="3">7 · large</option></select></label>
+          <label data-row="category">Category<input class="input" data-field="category" list="place-categories" maxlength="60"><datalist id="place-categories"></datalist></label>
+          <label data-row="rank">Marker from zoom<select class="input select" data-field="rank"><option value="0">12 · very small</option><option value="1">11 · small</option><option value="2">9 · medium</option><option value="3">7 · large</option></select></label>
         </fieldset>
         <div class="place-feedback" role="status" aria-live="polite"></div>
         </div>
@@ -159,12 +159,12 @@ export function createPlaceEditor(host, options = {}) {
         }
         return styles;
     };
-    // a dot per place, sized by the port's own size class - the 0..3 that decides
+    // a dot per place, sized by the port's own rank - the 0..3 that decides
     // from which zoom the viewer shows its marker - so the big ports read first
     const markerStyles = [3, 4.5, 6, 7.5].map(radius => new Style({
         image: new CircleStyle({radius, fill: new Fill({color: 'rgba(11, 92, 173, 0.55)'}),
                                 stroke: new Stroke({color: '#fff', width: 1})})}));
-    const markerStyle = f => markerStyles[Math.min(3, Math.max(0, f.get('size') | 0))];
+    const markerStyle = f => markerStyles[Math.min(3, Math.max(0, f.get('rank') | 0))];
     const map = new Map({
         target: q('.place-map'),
         controls: [],
@@ -230,7 +230,7 @@ export function createPlaceEditor(host, options = {}) {
         const typeLabel = props && [...input('place_type').options].find(o => o.value === props.place_type)?.textContent;
         const portCode = code(props);
         const portName = records.find(f => f.id === props?.part_of)?.properties.name;
-        const location = portCode ? [portCode, portName].filter(Boolean).join(' ') : props?.attributes?.area_subtype;
+        const location = portCode ? [portCode, portName].filter(Boolean).join(' ') : props?.category;
         q('[data-place-description]').textContent = props ? [typeLabel, location].filter(Boolean).join(' · ') : 'Choose a place from the list.';
         q('.place-feedback').classList.toggle('place-busy', busy);
         for (const b of host.querySelectorAll('button[data-do]'))
@@ -286,15 +286,18 @@ export function createPlaceEditor(host, options = {}) {
         input('place_type').value = p.place_type || 'port';
         input('unlocode').value = (p.codes?.unlocode || []).join(', ');
         datalists(p.part_of === null ? 'none' : p.part_of || '');
-        input('category').value = p.attributes?.area_subtype || '';
-        input('size').value = String(p.size || 0);
+        input('category').value = p.category || '';
+        input('rank').value = String(p.rank || 0);
         typeFields();
         buttons();
     }
     function typeFields() {
         const type = input('place_type').value;
         q('[data-row="unlocode"]').hidden = type !== 'port';
-        q('[data-row="category"]').hidden = type !== 'area';
+        // a label shown in place of the type name, for the types that have one
+        const hints = {guardzone: 'restricted, wind farm, fairway…', sector: 'VTS, pilotage…', water: 'sea, strait, lake, river…'};
+        q('[data-row="category"]').hidden = !(type in hints);
+        input('category').placeholder = hints[type] || '';
     }
     function list() {
         const list = q('.place-list');
@@ -351,7 +354,7 @@ export function createPlaceEditor(host, options = {}) {
         if (selected && ![...input('part_of').options].some(o => o.value === selected))
             input('part_of').add(new Option(selected, selected));
         input('part_of').value = selected;
-        const subtypes = [...new Set(records.map(f => f.properties.attributes?.area_subtype).filter(Boolean))];
+        const subtypes = [...new Set(records.map(f => f.properties.category).filter(Boolean))];
         q('#place-categories').replaceChildren(...subtypes.map(v => new Option(v, v)));
     }
     function renderGeometry() {
@@ -567,8 +570,8 @@ export function createPlaceEditor(host, options = {}) {
         if (index >= 0)
             doomed.addFeature(read({type: 'Feature', properties: {}, geometry: {type: 'Polygon', coordinates: parts()[index]}}));
     });
-    for (const key of ['name', 'place_type', 'unlocode', 'part_of', 'category', 'size'])
-        input(key).addEventListener(['place_type', 'part_of', 'size'].includes(key) ? 'change' : 'input', () => {
+    for (const key of ['name', 'place_type', 'unlocode', 'part_of', 'category', 'rank'])
+        input(key).addEventListener(['place_type', 'part_of', 'rank'].includes(key) ? 'change' : 'input', () => {
             if (!draft)
                 return;
             const before = clone(draft), p = draft.properties, value = input(key).value;
@@ -578,11 +581,10 @@ export function createPlaceEditor(host, options = {}) {
             } else if (key === 'part_of') {
                 if (value) p.part_of = value === 'none' ? null : value;
                 else delete p.part_of;
-            } else if (key === 'category') {
-                p.attributes ||= {};
-                p.attributes.area_subtype = value;
-            } else
-                p[key] = key === 'size' ? Number(value) : value;
+            } else if (key === 'category' && !value)
+                delete p.category;
+            else
+                p[key] = key === 'rank' ? Number(value) : value;
             if (key === 'place_type' && value !== 'port' && p.codes)
                 delete p.codes.unlocode;
             checkpoint(before);
@@ -790,7 +792,7 @@ export function createPlaceEditor(host, options = {}) {
             draft = {
                 type: 'Feature',
                 id: uuid(),
-                properties: {schema_version: 2, revision: 0, name: '', place_type: 'port'},
+                properties: {schema_version: 3, revision: 0, name: '', place_type: 'port'},
                 geometry: null
             };
             list();
@@ -952,13 +954,18 @@ export function createPlaceEditor(host, options = {}) {
         try {
             if (file.size > 131072)
                 throw Error('Place file exceeds 128 KiB');
-            const f = JSON.parse(await file.text());
+            let f = JSON.parse(await file.text());
             if (dead)
                 return;
+            if (f.type === 'FeatureCollection' && f.features?.length === 1)
+                f = f.features[0];
             if (f.type !== 'Feature' || !['Point', 'Polygon', 'MultiPolygon'].includes(f.geometry?.type))
                 throw Error('Import one place Feature.');
-            if (![1, 2].includes(f.properties?.schema_version))
-                throw Error('Import a place file of schema 1 or 2.');
+            // any Feature will do: what is recognised in it is carried over
+            const ports = Object.fromEntries(records.filter(r => r.properties.place_type === 'port')
+                .flatMap(r => (r.properties.codes?.unlocode || []).map(c => [c, r.id])));
+            const imported = importPlace(f.properties, ports);
+            f.properties = imported.properties;
             read(f);
             select(null, true);
             editingMode = true;
@@ -978,20 +985,16 @@ export function createPlaceEditor(host, options = {}) {
                 if (!full.geometry) throw Error('Place changed or removed elsewhere. Reload the list.');
                 original = {...full, runtime_id: existing.runtime_id};
             }
-            draft.properties = {
-                schema_version: 2,
-                name: 'Imported place',
-                place_type: 'area',
-                attributes: {area_subtype:'imported'},
-                ...draft.properties,
-                revision: original?.properties.revision || 0
-            };
+            // the catalogue keeps a place's revision and number, not the file's
+            draft.properties.revision = original?.properties.revision || 0;
+            if (original?.properties.no) draft.properties.no = original.properties.no;
+            else delete draft.properties.no;
             renderGeometry();
             list();
             fields();
             dirty(true);
             fit();
-            status('Imported for review. Save to apply.');
+            status(['Imported for review. Save to apply.', ...imported.notes].join(' '));
         } catch (e) {
             status(e.message, true);
         }

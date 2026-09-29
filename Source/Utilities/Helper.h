@@ -43,6 +43,6 @@ namespace Util
 		static std::string getOS();
 		static std::string getHardware();
 		static uint16_t CRC16(const uint8_t *data, size_t length);
-		static bool isUUID(const std::string &s);
+		static bool isUUID(const std::string &s, bool lowercase = false);
 	};
 }

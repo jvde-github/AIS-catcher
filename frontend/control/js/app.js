@@ -1051,18 +1051,8 @@ import {createPlaceEditor} from './places-editor.js';
     }
 
     function loadViewerConfig() {
-        // every viewer setting except the port, which follows the control port
-        const keys = ['station', 'station_link', 'webcontrol_http',
-                      'lat', 'lon', 'share_loc', 'use_gps',
-                      'history', 'track_memory', 'track_time', 'expire',
-                      'replay', 'split',
-                      'file', 'backup',
-                      'places', 'plugin_dir', 'context',
-                      'mbtiles', 'mboverlay', 'fstiles', 'fsoverlay',
-                      'realtime', 'msg', 'decoder', 'log', 'geojson', 'prome',
-                      'zones'];
         const schema = {};
-        keys.forEach(k => { schema[k] = Object.assign({}, webviewerSchema[k]); });
+        MANAGED_VIEWER_KEYS.forEach(k => { schema[k] = Object.assign({}, webviewerSchema[k]); });
         schema.use_gps.label = 'GPS';
         createSimpleConfigManager({
             schema: schema,

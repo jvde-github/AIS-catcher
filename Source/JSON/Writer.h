@@ -22,6 +22,11 @@
 #include <memory>
 #include <cstring>
 #include <cstdio>
+#include <cmath>
+#include <iomanip>
+#include <locale>
+#include <sstream>
+#include <stdexcept>
 #include <type_traits>
 
 #include "Common.h"
@@ -748,6 +753,28 @@ namespace JSON
 		}
 		Writer &key(unsigned k) { return key((unsigned long long)k); }
 
+		// The shortest decimal that reads back as exactly v, in the "C" locale.
+		// For data that must round-trip; telemetry uses val(double).
+		Writer &val_exact(double v)
+		{
+			if (!std::isfinite(v))
+				throw std::runtime_error("Non-finite number");
+			std::string text;
+			for (int digits = 15; digits <= 17; ++digits)
+			{
+				std::ostringstream out;
+				out.imbue(std::locale::classic());
+				out << std::setprecision(digits) << v;
+				text = out.str();
+				std::istringstream in(text);
+				in.imbue(std::locale::classic());
+				double back = 0;
+				if (in >> back && back == v)
+					break;
+			}
+			return raw_val(text);
+		}
+
 		// Like val() but for already-serialised JSON fragments. Honors need_sep.
 		Writer &raw_val(const char *raw, size_t rawlen)
 		{
@@ -782,6 +809,8 @@ namespace JSON
 	private:
 		int dict = 0;
 		bool stringify_enhanced = false;
+		const Pool *pool = nullptr; // names unknown keys; without it they are dropped
+		bool exact = false;
 
 		// Separate: folding these into write_value's chain lets GCC rebuild a jump table.
 		void write_value_container(const Value &v, Writer &w)
@@ -823,7 +852,7 @@ namespace JSON
 			else if (t == Value::Type::STRING)
 				w.val(v.getString());
 			else if (t == Value::Type::FLOAT)
-				w.val(v.getFloat());
+				exact ? w.val_exact(v.getFloat()) : w.val(v.getFloat());
 			else if (t == Value::Type::BOOL)
 				w.val(v.getBool());
 			else
@@ -858,6 +887,12 @@ namespace JSON
 			w.beginObject();
 			for (const Member &p : object.getMembers())
 			{
+				if (p.Key() < 0 && pool)
+				{
+					w.key(pool->extraName(p.Key()));
+					write_value(p.Get(), w);
+					continue;
+				}
 				if (p.Key() < 0 || p.Key() >= AIS::KEY_COUNT)
 					continue;
 				const AIS::KeyStr &key = AIS::KeyMap[p.Key()][dict];
@@ -897,6 +932,8 @@ namespace JSON
 		}
 
 		void setMap(int d) { dict = d; }
+		void setPool(const Pool *p) { pool = p; }
+		void setExactFloats(bool b) { exact = b; }
 		void setStringifyEnhanced(bool enhanced) { stringify_enhanced = enhanced; }
 		bool getStringifyEnhanced() const { return stringify_enhanced; }
 	};

@@ -26,57 +26,49 @@
 #include <tuple>
 #include <unordered_set>
 
-// Ten records are the only per-ship visit/crossing state. Metadata is shared;
-// a historical visit never retains polygon geometry. Caller holds the DB lock.
+// Where each ship is and has been: ten visits per ship, one place each. A
+// visit names its place by runtime id and nothing else; a place that leaves
+// the catalogue takes its visits with it. The DB feeds only validated
+// positions, so every fix here is a ship. Caller holds the DB lock.
 class VisitTracker {
 public:
   static const size_t SLOTS = 10;
+  // A fix this long after the last cannot time a crossing: the places are
+  // taken as found.
+  static const uint32_t SILENT = 3600;
+  // Longest interval counted as idle; both fixes must say stopped.
+  static const uint32_t SAMPLE = 600;
+  // A crossing holds this long before it counts.
+  static const uint32_t CONFIRM = 10;
+
   struct Visit {
-    std::shared_ptr<const PlaceMetadata> place;
+    // ENTERING and LEAVING are crossings seen once, waiting for the next fix
+    // to agree. Nobody outside sees an ENTERING visit; a LEAVING one is still
+    // inside.
+    enum State : uint8_t { FREE, ENTERING, INSIDE, LEAVING, DONE };
+    enum : uint8_t { ENTRY_SEEN = 4, EXIT_SEEN = 8 }; // as the backup has them
     uint32_t id = UINT32_MAX;
-    // Both ends are stamped whenever anything is known: an observed crossing,
-    // or else the moment containment was established and the last moment it
-    // held. The SEEN bits say which, so entryTime()/exitTime() still expose
-    // only crossings while the raw stamps keep every visit a bounded interval
-    // that (mmsi, place, entered) identifies. A pending crossing parks its
-    // tentative time in the matching stamp until it confirms.
+    // Observed crossings when seen, else bounds: the first and the last fix
+    // known inside. LEAVING parks its tentative exit in exited.
     uint32_t entered = 0, exited = 0;
-    // Minutes stopped inside, with the seconds not yet carried into them.
-    // Saturating: a ship moored for 45 days stops counting.
-    uint16_t idle = 0;
-    // A stay is a call from this much idle, the line visit_kind draws in the
-    // hub's database.
-    static const uint16_t CALL_MINUTES = 15;
-    enum : uint8_t {
-      INSIDE = 1,
-      PENDING = 2,
-      ENTRY_SEEN = 4,
-      EXIT_SEEN = 8,
-      SEEN = ENTRY_SEEN | EXIT_SEEN
-    };
-    uint8_t flags = 0;
-    uint8_t carry = 0;
-    bool empty() const { return !place; }
-    bool hasRuntimeId() const { return !empty() && id != UINT32_MAX; }
-    bool inside() const { return flags & INSIDE; }
-    bool pending() const { return flags & PENDING; }
-    bool confirmed() const { return inside() != pending(); }
-    bool active() const { return inside() || pending(); }
-    // At a port, an anchorage, a terminal or a berth a stay is a call once the
-    // ship lay still long enough; elsewhere passing through is the whole of it.
-    bool call() const {
-      return idle >= CALL_MINUTES ||
-             !place->requiresStop();
+    uint16_t idle = 0; // minutes stopped inside, saturating
+    uint8_t state = FREE, seen = 0, carry = 0;
+    static const uint16_t CALL_MINUTES = 1;
+
+    bool empty() const { return state == FREE; }
+    bool live() const { return !empty() && state != DONE; }
+    bool inside() const { return state == INSIDE || state == LEAVING; }
+    // shown, saved and exported: everything but a crossing still in doubt
+    bool settled() const { return !empty() && state != ENTERING; }
+    uint32_t entryTime() const { return seen & ENTRY_SEEN ? entered : 0; }
+    uint32_t exitTime() const { return seen & EXIT_SEEN ? exited : 0; }
+    // a call: the ship lay still for it, or the place is one nobody stops at
+    bool call(bool requiresStop) const {
+      return idle >= CALL_MINUTES || !requiresStop;
     }
-    // What history keeps: the stay under way, and the calls before it.
-    bool shown() const { return active() || call(); }
-    uint32_t entryTime() const { return flags & ENTRY_SEEN ? entered : 0; }
-    uint32_t exitTime() const { return flags & EXIT_SEEN ? exited : 0; }
-    uint32_t pendingTime() const { return inside() ? entered : exited; }
-    // A crossing, an interval, or confirmed presence: anything to say. A
-    // tentative entry is nothing yet and says nothing until it confirms.
-    bool worth() const {
-      return !empty() && (confirmed() || (!pending() && (entered || exited)));
+    // the stay under way, and the calls before it
+    bool shown(bool requiresStop) const {
+      return settled() && (inside() || call(requiresStop));
     }
     void accrue(uint32_t seconds) {
       carry += seconds % 60;
@@ -84,33 +76,14 @@ public:
       carry %= 60;
       idle = minutes > UINT16_MAX ? UINT16_MAX : minutes;
     }
-    void cancelPending() {
-      if (pending())
-        (inside() ? entered : exited) = 0;
-      flags &= ~PENDING;
-    }
-    void baseline(bool remains) {
-      cancelPending();
-      flags = (flags & SEEN) | (remains ? INSIDE : 0);
-    }
   };
   struct Record {
     std::array<Visit, SLOTS> visits;
-    uint32_t last = 0;
+    uint32_t last = 0;    // the last fix
+    bool stopped = false; // the last fix said stopped
   };
-  static_assert(sizeof(Visit) <= 32, "Visit storage must stay compact");
-  static_assert(sizeof(Record) <= 328, "Ten visits must remain bounded");
-
-  // How close two fixes must be for the crossing between them to be an event
-  // worth timing. Inside and then outside within it: the ship left, and the
-  // later fix says near enough when. Further apart, or after any silence at
-  // all, we know only that it went - never when. Silence itself ends nothing,
-  // because a Class B can fall quiet for hours in a berth it never leaves.
-  static const uint32_t SILENT = 3600;
-  // The longest interval that counts as watched. A visit tolerates a silence
-  // far longer than any one sample, and none of that gap is time the ship was
-  // seen lying still - idle is what was observed, never what was assumed.
-  static const uint32_t SAMPLE = 600;
+  static_assert(sizeof(Visit) <= 20, "Visit storage must stay compact");
+  static_assert(sizeof(Record) <= 208, "Ten visits must remain bounded");
 
 private:
   template <class T> static bool put(std::ofstream &out, const T &value) {
@@ -121,7 +94,7 @@ private:
     return bool(in.read(reinterpret_cast<char *>(&value), sizeof(value)));
   }
   std::vector<Record> records;
-  RelationshipIndex<uint32_t, SLOTS> membership;
+  RelationshipIndex<uint32_t, SLOTS> membership; // place -> ships with a visit
   // Zero is the unknown-time sentinel; unsigned seconds end in February 2106.
   static bool validTime(std::time_t now) {
     return now > 0 && uint64_t(now) <= UINT32_MAX;
@@ -130,49 +103,68 @@ private:
     std::array<uint32_t, SLOTS> ids;
     size_t count = 0;
     for (const auto &v : records[slot].visits)
-      if (v.hasRuntimeId())
+      if (!v.empty())
         ids[count++] = v.id;
     membership.replace(slot, ids.data(), count);
   }
   static bool has(const std::vector<uint32_t> &ids, uint32_t id) {
     return std::find(ids.begin(), ids.end(), id) != ids.end();
   }
-  static Visit *findActive(Record &r, uint32_t id) {
+  static Visit *live(Record &r, uint32_t id) {
     for (auto &v : r.visits)
-      if (!v.empty() && v.id == id && v.active())
+      if (v.live() && v.id == id)
         return &v;
     return nullptr;
   }
-  Visit *allocate(Record &r, uint32_t id, const PlaceIndex &index,
-                  bool &dirty) {
-    // Lowest rank wins: empty, oldest completed, pending exit, then what lies
-    // within a port before the port itself, largest inside. Ten visits are kept
-    // however deep the nesting, so the port call is the one that survives.
-    auto rank = [&](const Visit &v) {
-      const auto *entry = index.find(v.id);
-      const int category = v.empty()     ? 0
-                           : !v.active() ? 1
-                           : !v.inside() ? 2
-                                         : 3;
-      return std::make_tuple(category, category == 1 ? v.exited : 0u,
-                             category >= 2 && entry ? entry->rootPort : false,
-                             category >= 2 && entry ? -entry->size : 0.,
-                             category >= 2 ? UINT32_MAX - v.id : 0u);
+  static void end(Visit &v, uint32_t at) {
+    v.state = Visit::DONE;
+    v.exited = at;
+  }
+  // Reading order: the berth before the terminal before the port before the
+  // water, the smaller first within a kind.
+  static bool reads(const PlaceIndex::Entry &a, const PlaceIndex::Entry &b) {
+    return std::make_tuple(a.metadata->rank(), a.size, a.id) <
+           std::make_tuple(b.metadata->rank(), b.size, b.id);
+  }
+  // A fresh visit to `id` in a free slot, else the oldest completed stay's,
+  // else the slot of the live one telling least, if the new place tells more.
+  static Visit *allocate(Record &r, uint32_t id, const PlaceIndex &index) {
+    Visit *slot = nullptr, *least = nullptr;
+    for (auto &v : r.visits) {
+      if (v.empty()) {
+        slot = &v;
+        break;
+      }
+      if (v.state == Visit::DONE) {
+        if (!slot || v.exited < slot->exited)
+          slot = &v;
+      } else if (!least || !index.find(v.id) ||
+                 reads(*index.find(least->id), *index.find(v.id)))
+        least = &v;
+    }
+    if (!slot) {
+      const auto *fresh = index.find(id), *held = index.find(least->id);
+      if (held && !(fresh && reads(*fresh, *held)))
+        return nullptr;
+      slot = least;
+    }
+    *slot = Visit{};
+    slot->id = id;
+    return slot;
+  }
+  // insertion sort: at most ten entries, and GCC warns on std::sort here
+  static void sortForReading(const Visit **v, size_t count,
+                             const PlaceIndex *index) {
+    const auto before = [&](const Visit *a, const Visit *b) {
+      if (a->inside() != b->inside())
+        return a->inside();
+      const auto *x = index ? index->find(a->id) : nullptr,
+                 *y = index ? index->find(b->id) : nullptr;
+      return a->inside() && x && y && reads(*x, *y);
     };
-    auto chosen = std::min_element(
-        r.visits.begin(), r.visits.end(),
-        [&](const Visit &a, const Visit &b) { return rank(a) < rank(b); });
-    const auto *old = index.find(chosen->id), *next = index.find(id);
-    // Pending exits yield to current containment regardless of polygon size.
-    if (chosen->inside() && old &&
-        std::make_tuple(!old->rootPort, old->size, old->id) <
-            std::make_tuple(!next->rootPort, next->size, next->id))
-      return nullptr;
-    *chosen = Visit{};
-    chosen->id = id;
-    chosen->place = next->metadata;
-    dirty = true;
-    return &*chosen;
+    for (size_t i = 1; i < count; ++i)
+      for (size_t j = i; j > 0 && before(v[j], v[j - 1]); --j)
+        std::swap(v[j], v[j - 1]);
   }
 
 public:
@@ -186,13 +178,25 @@ public:
     records.at(slot) = Record{};
   }
   const Record &record(uint32_t slot) const { return records.at(slot); }
-  std::array<uint64_t, SLOTS> packed(uint32_t slot) const {
-    std::array<uint64_t, SLOTS> ids;
-    ids.fill(UINT64_MAX);
+  bool insideOf(uint32_t slot, uint32_t id) const {
+    for (const auto &v : records.at(slot).visits)
+      if (v.inside() && v.id == id)
+        return true;
+    return false;
+  }
+  // the places the ship is inside, in reading order; UINT32_MAX ends the list
+  std::array<uint32_t, SLOTS> insideIds(uint32_t slot,
+                                        const PlaceIndex *index) const {
+    std::array<const Visit *, SLOTS> ordered;
     size_t count = 0;
     for (const auto &v : records.at(slot).visits)
-      if (v.hasRuntimeId())
-        ids[count++] = uint64_t(v.id) * 2 + v.inside();
+      if (v.inside())
+        ordered[count++] = &v;
+    sortForReading(ordered.data(), count, index);
+    std::array<uint32_t, SLOTS> ids;
+    ids.fill(UINT32_MAX);
+    for (size_t i = 0; i < count; ++i)
+      ids[i] = ordered[i]->id;
     return ids;
   }
   template <class F> void forEach(uint32_t id, F f) const {
@@ -200,46 +204,45 @@ public:
   }
   template <class F> void forEachVisit(uint32_t slot, F f) const {
     for (const auto &v : records.at(slot).visits)
-      if (v.worth())
+      if (v.settled())
         f(v);
   }
 
-  // Operator edits/reloads/restores establish containment without crossings.
-  // Existing entry times survive when the ship is still in the same place.
-  // Containment as found, without a crossing: what the ship is inside now
-  // continues, and what it is no longer inside ended at the last moment it was
-  // known to be there. Nothing here invents a time nobody observed.
-  void baseline(uint32_t slot, const std::vector<uint32_t> &inside,
-                std::time_t now, const PlaceIndex *index) {
-    if (now < 0 || uint64_t(now) > UINT32_MAX)
+  // Containment as found, without crossings: a restore, a catalogue change, a
+  // fix after silence. Stays still inside continue, the rest ended at the
+  // last fix inside.
+  void refresh(uint32_t slot, const std::vector<uint32_t> &inside,
+               std::time_t now, const PlaceIndex *index) {
+    if (!validTime(now))
       return;
     auto &r = records.at(slot);
-    bool dirty = false;
-    // an end nobody saw is the last moment the ship was known to be inside
-    const uint32_t held = r.last ? r.last : uint32_t(now);
-    for (auto &v : r.visits)
-      if (!v.empty() && v.active()) {
-        const bool remains = has(inside, v.id);
-        v.baseline(remains);
-        if (!remains && v.entered && !v.exited)
-          v.exited = held;
-        // a tentative entry that never confirmed leaves nothing to show
-        if (!v.active() && !v.entered && !v.exited) {
-          v = Visit{};
-          dirty = true;
-        }
+    const uint32_t at = r.last ? r.last : uint32_t(now);
+    for (auto &v : r.visits) {
+      if (!v.live())
+        continue;
+      if (v.state == Visit::ENTERING)
+        v = Visit{};
+      else if (!has(inside, v.id))
+        end(v, at);
+      else if (v.state == Visit::LEAVING) {
+        v.state = Visit::INSIDE;
+        v.exited = 0;
       }
+    }
     if (index)
       for (auto id : inside)
-        if (!findActive(r, id))
-          if (auto *v = allocate(r, id, *index, dirty)) {
-            v->baseline(true);
+        if (!live(r, id))
+          if (auto *v = allocate(r, id, *index)) {
+            v->state = Visit::INSIDE;
             v->entered = uint32_t(now);
           }
-    r.last = now;
-    if (dirty)
-      reindex(slot);
+    r.last = std::max(r.last, uint32_t(now));
+    r.stopped = false;
+    reindex(slot);
   }
+
+  // One fix. A crossing holds for CONFIRM seconds before it counts, and the
+  // next fix can still cancel it. Emit gets each confirmed crossing.
   template <class Emit>
   void update(uint32_t slot, const std::vector<uint32_t> &inside,
               std::time_t now, bool stopped, const PlaceIndex *index,
@@ -249,115 +252,109 @@ public:
     auto &r = records.at(slot);
     if (r.last && now <= r.last)
       return;
-    // Too long since the last fix for a crossing to be timed: take the places
-    // as found. A ship still inside is still on the same visit, however long
-    // it was quiet; one that has moved on ended its visit when last seen.
     if (!r.last || now - r.last > SILENT) {
-      baseline(slot, inside, now, index);
+      refresh(slot, inside, now, index);
+      r.stopped = stopped;
       return;
     }
     const uint32_t elapsed = now - r.last;
+    const bool watchedStop = stopped && r.stopped && elapsed <= SAMPLE;
     r.last = now;
-    bool dirty = false;
-    for (auto &v : r.visits)
-      if (!v.empty() && v.active()) {
-        if (stopped && v.inside() && elapsed <= SAMPLE)
-          v.accrue(elapsed);
-        const bool observedInside = has(inside, v.id);
-        if (observedInside == v.confirmed()) {
-          v.baseline(observedInside); // reversal cancels the tentative time
-        } else if (!v.pending()) {
-          v.flags = (v.flags & Visit::SEEN) |
-                    (observedInside ? Visit::INSIDE : 0) | Visit::PENDING;
-          (observedInside ? v.entered : v.exited) = now;
-        } else if (now - v.pendingTime() >= 10) {
-          const auto observed = v.pendingTime();
-          v.flags &= ~Visit::PENDING;
-          v.flags |= v.inside() ? Visit::ENTRY_SEEN : Visit::EXIT_SEEN;
-          emit(v, v.inside(), observed);
-        }
-        if (!v.active() && !v.entered && !v.exited) {
+    r.stopped = stopped;
+    for (auto &v : r.visits) {
+      if (!v.live())
+        continue;
+      const bool in = has(inside, v.id);
+      if (watchedStop && in)
+        v.accrue(elapsed);
+      if (v.state == Visit::ENTERING) {
+        if (!in)
           v = Visit{};
-          dirty = true;
+        else if (now - v.entered >= CONFIRM) {
+          v.state = Visit::INSIDE;
+          v.seen |= Visit::ENTRY_SEEN;
+          emit(v, true, v.entered);
         }
+      } else if (v.state == Visit::INSIDE) {
+        if (!in) {
+          v.state = Visit::LEAVING;
+          v.exited = now;
+        }
+      } else if (in) {
+        v.state = Visit::INSIDE;
+        v.exited = 0;
+      } else if (now - v.exited >= CONFIRM) {
+        v.state = Visit::DONE;
+        v.seen |= Visit::EXIT_SEEN;
+        emit(v, false, v.exited);
       }
+    }
     if (index)
       for (auto id : inside)
-        if (!findActive(r, id))
-          if (auto *v = allocate(r, id, *index, dirty)) {
-            v->flags = Visit::INSIDE | Visit::PENDING;
+        if (!live(r, id))
+          if (auto *v = allocate(r, id, *index)) {
+            v->state = Visit::ENTERING;
             v->entered = now;
           }
-    if (dirty)
-      reindex(slot);
+    reindex(slot);
   }
-  // Map every retained reference by UUID, including completed visits. A visit
-  // follows its place's current name and type; only the UUID is identity.
-  void remap(const PlaceIndex *index) {
-    std::unordered_map<std::string, const PlaceIndex::Entry *> byUUID;
-    if (index)
-      for (const auto &e : index->entries)
-        if (e.metadata)
-          byUUID.emplace(e.metadata->uuid, &e);
-    for (size_t slot = 0; slot < records.size(); ++slot) {
-      bool dirty = false;
-      for (auto &v : records[slot].visits)
-        if (!v.empty()) {
-          auto it = byUUID.find(v.place->uuid);
-          const auto id = it == byUUID.end() ? UINT32_MAX : it->second->id;
-          dirty |= v.id != id;
+
+  // A new catalogue: a visit follows its place by UUID, through redirects,
+  // and a place that is gone takes its visits with it.
+  void remap(const PlaceIndex *from, const PlaceIndex *to) {
+    for (uint32_t slot = 0; slot < records.size(); ++slot) {
+      auto &r = records[slot];
+      bool changed = false;
+      for (auto &v : r.visits) {
+        if (v.empty())
+          continue;
+        const auto *old = from ? from->find(v.id) : nullptr;
+        const auto *entry = old && to ? to->resolve(old->metadata->uuid) : nullptr;
+        const uint32_t id = entry ? entry->id : UINT32_MAX;
+        if (id == v.id)
+          continue;
+        changed = true;
+        if (id == UINT32_MAX)
+          v = Visit{};
+        else
           v.id = id;
-          if (it != byUUID.end())
-            v.place = it->second->metadata;
-          if (id == UINT32_MAX) {
-            // a place that vanished ends its visits where the ship was last
-            // heard, so the interval stays bounded like a gap-ended one
-            const bool held = v.confirmed();
-            v.baseline(false);
-            if (held && v.entered && !v.exited)
-              v.exited = records[slot].last;
-            if (!v.entered && !v.exited) {
-              v = Visit{};
-              dirty = true;
-            }
+      }
+      if (!changed)
+        continue;
+      // two stays now at one place are one, from the earlier entry
+      for (auto &a : r.visits)
+        for (auto &b : r.visits)
+          if (&a != &b && a.live() && b.live() && a.id == b.id &&
+              (a.entered < b.entered || (a.entered == b.entered && &a < &b))) {
+            a.idle = std::max(a.idle, b.idle);
+            b = Visit{};
           }
-        }
-      if (dirty)
-        reindex(slot);
+      reindex(slot);
     }
   }
+
   void writeVisits(JSON::Writer &w, uint32_t slot,
                    const PlaceIndex *index) const {
     std::array<const Visit *, SLOTS> ordered;
     size_t count = 0;
-    for (const auto &v : records.at(slot).visits)
-      if (!v.empty() && v.shown())
-        ordered[count++] = &v;
-    // The summary uses the first inside visit; keep smallest-place preference.
-    // Ten entries at most: an insertion sort, which also keeps GCC from
-    // reasoning about std::sort's 16-element threshold against a small array.
-    const auto before = [&](const Visit *a, const Visit *b) {
-      if (a->inside() != b->inside())
-        return a->inside();
-      const auto *x = index ? index->find(a->id) : nullptr,
-                 *y = index ? index->find(b->id) : nullptr;
-      return a->inside() && x && y &&
-             std::make_pair(x->size, x->id) < std::make_pair(y->size, y->id);
-    };
-    for (size_t i = 1; i < count; ++i)
-      for (size_t j = i; j > 0 && before(ordered[j], ordered[j - 1]); --j)
-        std::swap(ordered[j], ordered[j - 1]);
+    if (index)
+      for (const auto &v : records.at(slot).visits)
+        if (const auto *e = v.empty() ? nullptr : index->find(v.id))
+          if (v.shown(e->metadata->requiresStop()))
+            ordered[count++] = &v;
+    sortForReading(ordered.data(), count, index);
     w.key("visits").beginArray();
     for (size_t i = 0; i < count; ++i) {
       const auto &v = *ordered[i];
-      w.beginObject().key("id");
-      if (v.hasRuntimeId())
-        w.val(v.id);
-      else
-        w.val_null();
-      w.kv("name", v.place->name)
+      const auto &m = *index->find(v.id)->metadata;
+      w.beginObject()
+          .kv("id", v.id)
+          .kv("name", m.name)
+          .kv("uuid", m.uuid)
+          .kv("place_type", m.type())
+          .kv("code", m.code)
+          .kv("country", m.country)
           .kv("inside", v.inside())
-          .kv("pending", v.pending())
           .kv("idle", (long long)v.idle)
           .key("entered");
       if (v.entryTime())
@@ -373,152 +370,163 @@ public:
     }
     w.endArray();
   }
-  void writeChanges(JSON::Writer &w, uint32_t slot) const {
-    for (const auto &v : records.at(slot).visits)
-      if (!v.empty()) {
-        for (int exiting = 0; exiting < 2; ++exiting) {
-          const auto t = exiting ? v.exitTime() : v.entryTime();
-          if (t)
-            w.beginObject()
-                .kv("t", (long long)t)
-                .kv("f", exiting ? 8 : 7)
-                .kv("to", v.place->name)
-                .kv("place_id", v.place->uuid)
-                .kv("place_type", v.place->type)
-                .kv("unlocode", v.place->code)
-                .endObject();
-        }
+  void writeChanges(JSON::Writer &w, uint32_t slot,
+                    const PlaceIndex *index) const {
+    if (!index)
+      return;
+    for (const auto &v : records.at(slot).visits) {
+      const auto *e = v.settled() ? index->find(v.id) : nullptr;
+      if (!e)
+        continue;
+      for (int exiting = 0; exiting < 2; ++exiting) {
+        const auto t = exiting ? v.exitTime() : v.entryTime();
+        if (t)
+          w.beginObject()
+              .kv("t", (long long)t)
+              .kv("f", exiting ? 8 : 7)
+              .kv("to", e->metadata->name)
+              .kv("place_id", e->metadata->uuid)
+              .kv("place_type", e->metadata->type())
+              .kv("unlocode", e->metadata->code)
+              .endObject();
       }
+    }
   }
 
-  // A sparse section keyed by MMSI. Shared metadata is written once, and each
-  // visit stores a table offset, never a process-local catalogue ID.
-  template <class MMSI> bool save(std::ofstream &out, MMSI mmsi) const {
-    const auto retained = [](const Visit &v) { return v.worth(); };
-    std::vector<std::shared_ptr<const PlaceMetadata>> table;
-    std::unordered_map<const PlaceMetadata *, uint32_t> offsets;
+  // The places as a UUID table, then per ship its visits by table offset.
+  template <class MMSI>
+  bool save(std::ofstream &out, const PlaceIndex *index, MMSI mmsi) const {
+    std::vector<uint32_t> offsets(index ? index->entries.size() : 0,
+                                  UINT32_MAX);
+    std::vector<uint32_t> table;
+    const auto kept = [&](const Visit &v) {
+      return v.settled() && v.id < offsets.size();
+    };
     uint32_t count = 0;
-    for (size_t s = 0; s < records.size(); ++s) {
+    for (const auto &r : records) {
       bool any = false;
-      for (const auto &v : records[s].visits)
-        if (retained(v)) {
+      for (const auto &v : r.visits)
+        if (kept(v)) {
           any = true;
-          if (offsets.emplace(v.place.get(), table.size()).second)
-            table.push_back(v.place);
+          if (offsets[v.id] == UINT32_MAX) {
+            offsets[v.id] = table.size();
+            table.push_back(v.id);
+          }
         }
-      if (any)
-        ++count;
+      count += any;
     }
     uint32_t n = table.size();
     put(out, n);
-    for (const auto &p : table)
-      for (const auto *str : {&p->uuid, &p->name, &p->type, &p->code,
-                              &p->partOf, &p->category}) {
-        uint32_t len = str->size();
-        put(out, len);
-        out.write(str->data(), len);
-      }
+    for (auto id : table) {
+      const auto &uuid = index->entries[id].metadata->uuid;
+      uint32_t len = uuid.size();
+      put(out, len);
+      out.write(uuid.data(), len);
+    }
     put(out, count);
     for (size_t s = 0; s < records.size(); ++s) {
       uint8_t nvisits = 0;
       for (const auto &v : records[s].visits)
-        if (retained(v))
-          ++nvisits;
+        nvisits += kept(v);
       if (!nvisits)
         continue;
       uint32_t key = mmsi(s);
       put(out, key);
       put(out, nvisits);
       for (const auto &v : records[s].visits)
-        if (retained(v)) {
-          put(out, offsets.at(v.place.get()));
-          // A tentative exit is not persisted: the ship is inside until it
-          // confirms, and a backup saying otherwise would refuse to load.
-          int64_t entry = v.entered, exit = v.pending() ? 0 : v.exited;
+        if (kept(v)) {
+          put(out, offsets[v.id]);
+          // an exit under way is saved as still inside
+          int64_t entry = v.entered,
+                  exit = v.state == Visit::DONE ? v.exited : 0;
           put(out, entry);
           put(out, exit);
-          uint8_t state = (v.confirmed() ? 1 : 0) | (v.flags & Visit::SEEN);
+          uint8_t state = (v.inside() ? 1 : 0) | v.seen;
           put(out, state);
           put(out, v.idle);
         }
     }
     return bool(out);
   }
-  // `heard` gives a restored ship's last signal: the last moment anyone knew
-  // where it was, and so the last moment a visit it was inside can be anchored
-  // to. Restarting is not an observation and must not be stamped as one.
+  // Visits from a backup, their places resolved against the catalogue as it
+  // is. `heard` gives a restored ship's last signal, never the restart time.
   template <class Find, class Heard>
-  bool load(std::ifstream &in, Find find, Heard heard, uint32_t maxShips,
-            int version) {
+  bool load(std::ifstream &in, const PlaceIndex *index, Find find, Heard heard,
+            uint32_t maxShips, int version) {
     uint32_t n = 0;
     if (!get(in, n) || uint64_t(n) > uint64_t(maxShips) * SLOTS)
       return false;
-    std::vector<std::shared_ptr<const PlaceMetadata>> table;
-    for (uint32_t i = 0; i < n; ++i) {
-      auto p = std::make_shared<PlaceMetadata>();
-      for (auto *str : {&p->uuid, &p->name, &p->type, &p->code, &p->partOf,
-                        &p->category}) {
+    std::vector<uint32_t> ids(n, UINT32_MAX);
+    // before version 5 the table also carried name, type, code, part_of and
+    // category
+    const int strings = version >= 5 ? 1 : 6;
+    for (uint32_t i = 0; i < n; ++i)
+      for (int k = 0; k < strings; ++k) {
         uint32_t len;
+        std::string text;
         if (!get(in, len) || len > 128 * 1024)
           return false;
-        str->resize(len);
-        if (len && !in.read(&(*str)[0], len))
+        text.resize(len);
+        if (len && !in.read(&text[0], len))
           return false;
+        if (k == 0) {
+          if (len != 36)
+            return false;
+          if (const auto *e = index ? index->resolve(text) : nullptr)
+            ids[i] = e->id;
+        }
       }
-      if (p->partOf.size() != 36) p->partOf.clear();
-      if (p->type == "custom") p->type = "area";
-      if (p->uuid.size() != 36)
-        return false;
-      table.push_back(p);
-    }
     uint32_t count;
     if (!get(in, count) || count > maxShips)
       return false;
-    std::unordered_set<uint32_t> seen;
+    std::unordered_set<uint32_t> keys;
     for (uint32_t i = 0; i < count; ++i) {
       uint32_t key;
       uint8_t countVisits;
-      if (!get(in, key) || !seen.insert(key).second || !get(in, countVisits) ||
+      if (!get(in, key) || !keys.insert(key).second || !get(in, countVisits) ||
           !countVisits || countVisits > SLOTS)
         return false;
       int slot = find(key);
       if (slot < 0 || size_t(slot) >= records.size())
         return false;
       const uint32_t known = uint32_t(heard(slot));
+      size_t next = 0;
       for (uint8_t j = 0; j < countVisits; ++j) {
         uint32_t offset;
         int64_t entry, exit;
         uint8_t state;
         uint16_t idle = 0;
-        if (!get(in, offset) || offset >= table.size() || !get(in, entry) ||
+        if (!get(in, offset) || offset >= ids.size() || !get(in, entry) ||
             !get(in, exit) || !get(in, state) ||
             (version >= 3 && !get(in, idle)) ||
-            (state & ~uint8_t(Visit::INSIDE | Visit::SEEN)) || entry < 0 ||
-            exit < 0 || uint64_t(entry) > UINT32_MAX ||
+            (state & ~uint8_t(1 | Visit::ENTRY_SEEN | Visit::EXIT_SEEN)) ||
+            entry < 0 || exit < 0 || uint64_t(entry) > UINT32_MAX ||
             uint64_t(exit) > UINT32_MAX || (exit && entry > exit) ||
-            ((state & Visit::INSIDE) && exit))
+            ((state & 1) && exit))
           return false;
-        // A visit with no entry time has no identity. One still inside is
-        // anchored to the last moment the ship was known to be there, which is
-        // a bound anybody can check; one already over left nothing to show.
+        if (ids[offset] == UINT32_MAX)
+          continue; // the place is gone
+        // no entry time: anchor one still inside to the last signal, drop the
+        // rest
         int64_t stamp = entry;
         if (!entry) {
-          if (!(state & Visit::INSIDE) || !known)
+          if (!(state & 1) || !known)
             continue;
           stamp = known;
         }
-        auto &v = records[slot].visits[j];
-        v.place = table[offset];
+        auto &v = records[slot].visits[next++];
+        v.id = ids[offset];
         v.entered = stamp;
         v.exited = exit;
         v.idle = idle;
-        // Before the stamps carried their own SEEN bits only crossings were
-        // written, so there a time that is present is a time that was seen.
-        v.flags = (state & Visit::INSIDE) |
-                  (version >= 3 ? (state & Visit::SEEN)
-                                : uint8_t((entry ? Visit::ENTRY_SEEN : 0) |
-                                          (exit ? Visit::EXIT_SEEN : 0)));
+        v.state = state & 1 ? Visit::INSIDE : Visit::DONE;
+        // before version 3 only observed crossings were written
+        v.seen = version >= 3
+                     ? uint8_t(state & (Visit::ENTRY_SEEN | Visit::EXIT_SEEN))
+                     : uint8_t((entry ? Visit::ENTRY_SEEN : 0) |
+                               (exit ? Visit::EXIT_SEEN : 0));
       }
+      reindex(slot);
     }
     return true;
   }

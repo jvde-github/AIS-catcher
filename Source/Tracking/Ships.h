@@ -98,7 +98,7 @@ struct Ship {
                      bool station_known) const;
   void writeCompactDynamic(
       JSON::Writer &, std::time_t now, unsigned binary_badge, unsigned station,
-      const std::array<uint64_t, VisitTracker::SLOTS> &place_ids) const;
+      const std::array<uint32_t, VisitTracker::SLOTS> &place_ids) const;
   void writeCompactTable(JSON::Writer &) const;
   void writeCompactStatic(JSON::Writer &) const;
 

@@ -27,7 +27,10 @@ test("text: ETA handles not-available markers", () => {
 test("text: delta time", () => {
     assert.equal(text.getDeltaTimeVal(0), "0s");
     assert.equal(text.getDeltaTimeVal(61), "1m 1s");
-    assert.equal(text.getDeltaTimeVal(90061), "1d 1h 1m 1s");
+    assert.equal(text.getDeltaTimeVal(90061), "1d 1h");
+    assert.equal(text.getDeltaTimeVal(3661), "1h 1m");
+    assert.equal(text.getDeltaTimeVal(86400), "1d 0h");
+    assert.equal(text.getDeltaTimeVal(59), "59s");
     assert.equal(text.getDeltaTimeVal(-5), "0s");
 });
 

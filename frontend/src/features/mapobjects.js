@@ -129,7 +129,7 @@ export async function fetchObjects() {
 // the module stacks what overlaps at the view's zoom, so it has to know it
 let viewZoom = null;
 export function viewChanged(zoom) {
-    const z = Math.round(zoom);
+    const z = Math.floor(zoom);
     if (z === viewZoom) return;
     viewZoom = z;
     objects.setViewZoom(z);

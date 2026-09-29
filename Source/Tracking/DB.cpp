@@ -23,6 +23,7 @@
 #include <cstdio>
 
 #include "Geodesy.h"
+#include "PositionCheck.h"
 #include "Logger.h"
 
 #include <fstream>
@@ -98,7 +99,7 @@ std::string DB::getJSONcompact(bool full, std::time_t since,
         now, full, since, [&](int ptr, const Ship &ship, long int) {
           ship.writeCompactDynamic(w, now, binary.badge(ship.mmsi, now),
                                    stations.idFor(ship.mmsi),
-                                   visits.packed(ptr));
+                                   visits.insideIds(ptr, place_markers.index().get()));
         });
     w.endArray(); // dynamic
 
@@ -272,7 +273,7 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
       // ports only, a port inside a larger one included: an anchorage or a
       // berth is a part of a port rather than an answer to "which port is
       // near", and a waterway is not a destination at all
-      if (entry.id == UINT32_MAX || entry.metadata->type != "port" ||
+      if (!entry.live() || !entry.metadata->is(PlaceKind::Port) ||
           !placedOnGlobe((float)entry.lat, (float)entry.lon))
         continue;
       float range;
@@ -346,14 +347,14 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
     w.beginObject()
         .kv("runtime_id", entry->id)
         .kv("label", entry->metadata->name)
-        .kv("place_type", entry->metadata->type)
+        .kv("place_type", entry->metadata->type())
         .kv("code", entry->metadata->code)
         .kv("part_of", entry->metadata->partOf)
         .kv("parent_name", parent ? parent->metadata->name : std::string())
         .kv("has_geometry", entry->polygons && !entry->polygons->empty())
         .kv("range", row.range)
         .kv("bearing", row.bearing);
-    if (entry->metadata->type == "port")
+    if (entry->metadata->is(PlaceKind::Port))
       w.kv("country", entry->metadata->country);
     w.endObject();
   }
@@ -379,7 +380,7 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
             : nullptr;
   if (id != UINT32_MAX && (!place || version != index->version))
     return "{\"error\":\"Place changed; reopen its marker.\"}";
-  const bool port = place ? place->metadata->type == "port" : !code.empty();
+  const bool port = place ? place->metadata->is(PlaceKind::Port) : !code.empty();
   // A port, a berth or an anchorage is somewhere a vessel stops, so its list is
   // vessels that have lain still in it: an aid to navigation moored there by
   // definition, a base station on the quay and a ship merely steaming through
@@ -439,7 +440,7 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
                                 *arrived = nullptr;
       for (const auto &v : visits.record(slot).visits) {
         // a stay that is over and was never a call is not history
-        if (v.empty() || v.id != place->id || !v.shown())
+        if (v.id != place->id || !v.shown(berthing))
           continue;
         const auto entry = v.entryTime(), exit = v.exitTime();
         if (v.inside() && (!inside || entry > inside->entryTime()))
@@ -468,10 +469,8 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
     });
   if (port)
     destinations.forEach(destination, [&](uint32_t slot) {
-      if (place)
-        for (const auto &v : visits.record(slot).visits)
-          if (!v.empty() && v.id == place->id && v.inside())
-            return true;
+      if (place && visits.insideOf(slot, place->id))
+        return true;
       add(5, slot, nullptr, ships[slot].last_signal);
       return true;
     });
@@ -500,9 +499,8 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
                                      ship.lat, ship.lon, range, bearing);
       if (!(range <= HORIZON_NM))
         return;
-      for (const auto &v : visits.record(ptr).visits)
-        if (!v.empty() && v.id == place->id && v.inside())
-          return; // inside is its own tab
+      if (visits.insideOf(ptr, place->id))
+        return; // inside is its own tab
       ++counts[4];
       if (selected != 4) return;
       nearest.push_back({(uint32_t)ptr, nullptr, ship.last_signal, range});
@@ -563,13 +561,13 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
         w.kv_null("exited");
       // An unobserved crossing is told as a bound beside the exact fields. A
       // pending crossing is not a settled bound.
-      if (!v.entryTime() && v.entered && !(v.pending() && v.inside()))
+      if (!v.entryTime() && v.entered)
         w.kv("entered_before", v.entered);
-      if (!v.exitTime() && v.exited && !v.inside() && !v.pending())
+      if (!v.exitTime() && v.exited && !v.inside())
         w.kv("exited_after", v.exited);
-      if (v.inside() && !v.pending())
+      if (v.inside())
         w.kv("observed_until", visits.record(row.slot).last);
-      w.kv("inside", v.inside()).kv("pending", v.pending());
+      w.kv("inside", v.inside());
     }
     w.endObject();
   }
@@ -1596,13 +1594,25 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag) {
 
   float lat_old = ship.lat;
   float lon_old = ship.lon;
+  const bool stopped_old =
+      ship.speed != SPEED_UNDEFINED && ship.speed < 0.5f;
 
   bool newValidPosition = !copy && updateShip(data[0], tag, ship) &&
                           isValidCoord(ship.lat, ship.lon);
+  // only a validated position reaches the visits and the track
+  bool validated = false;
   if (newValidPosition) {
-    updatePlaceEvents(ptr, msg->getRxTimeUnix());
-    destinations.position(ptr, ship);
+    const auto verdict = PositionCheck::judge(
+        isValidCoord(lat_old, lon_old), lat_old, lon_old, stopped_old,
+        (long)(msg->getRxTimeUnix() - tag.previous_signal), ship.lat, ship.lon,
+        type == 9);
+    validated = verdict == PositionCheck::VALIDATED;
+    ship.setValidated(verdict);
   }
+  if (validated)
+    updatePlaceEvents(ptr, msg->getRxTimeUnix());
+  if (newValidPosition)
+    destinations.position(ptr, ship);
 
   if (!copy && (type == 6 || type == 7 || type == 8 || type == 12 ||
                 type == 13 || type == 14 || type == 23)) {
@@ -1622,11 +1632,11 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag) {
 
   tag.distance = DISTANCE_UNDEFINED;
   tag.angle = ANGLE_UNDEFINED;
-  tag.validated = false;
+  tag.validated = validated;
 
   if (newValidPosition) {
-    if (type == 1 || type == 2 || type == 3 || type == 18 || type == 19 ||
-        type == 9)
+    if (validated && (type == 1 || type == 2 || type == 3 || type == 18 ||
+                      type == 19 || type == 9))
       addToPath(ptr);
 
     if (isValidCoord(station_lat, station_lon)) {
@@ -1639,14 +1649,6 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag) {
 
     tag.lat = ship.lat;
     tag.lon = ship.lon;
-
-    if (isValidCoord(lat_old, lon_old)) {
-      // flat earth approximation, roughly 10 nmi
-      float d = (ship.lat - lat_old) * (ship.lat - lat_old) +
-                (ship.lon - lon_old) * (ship.lon - lon_old);
-      tag.validated = d < 0.1675;
-      ship.setValidated(tag.validated ? 1 : 2);
-    }
   } else if (isValidCoord(lat_old, lon_old)) {
     tag.lat = lat_old;
     tag.lon = lon_old;
@@ -1693,7 +1695,7 @@ void DB::tick(std::time_t now) {
     const bool hadPosition = isValidCoord(ship.lat, ship.lon);
     ship.decayAndExpire();
     if (hadPosition && !isValidCoord(ship.lat, ship.lon)) {
-      visits.baseline(ptr, {}, now, place_markers.index().get());
+      visits.refresh(ptr, {}, now, place_markers.index().get());
       full_refresh_at = now;
     }
     if (std::strcmp(destination, ship.destination))
@@ -1739,7 +1741,8 @@ bool DB::Save(std::ofstream &file) {
     ptr = ships.prev(ptr);
   }
 
-  if (!visits.save(file, [&](size_t slot) { return ships[slot].mmsi; }))
+  if (!visits.save(file, place_markers.index().get(),
+                   [&](size_t slot) { return ships[slot].mmsi; }))
     return false;
 
   Debug() << "DB: Saved " << ships_written << " ships to backup";
@@ -1810,7 +1813,7 @@ bool DB::Load(std::ifstream &file) {
       return false;
   if (version >= 2 &&
       !restored.load(
-          file,
+          file, place_markers.index().get(),
           [&](uint32_t key) {
             auto it = slots.find(key);
             return it == slots.end() ? -1 : it->second;
@@ -1818,7 +1821,6 @@ bool DB::Load(std::ifstream &file) {
           [&](size_t slot) { return temp_ships[slot].last_signal; }, ship_count,
           version))
     return false;
-  restored.remap(place_markers.index().get());
 
   // All validated, now apply to DB
   for (int i = 0; i < ship_count; i++) {
@@ -1872,9 +1874,9 @@ void DB::setPlaces(std::shared_ptr<const PlaceIndex> next) {
   std::lock_guard<std::mutex> lock(mtx);
   if (next == place_markers.index())
     return;
+  visits.remap(place_markers.index().get(), next.get());
   const auto changedBounds =
       place_markers.adopt(std::move(next), binary.sequence());
-  visits.remap(place_markers.index().get());
   full_refresh_at = time(nullptr);
   destinations.setPlaces(place_markers.index(), ships);
   // a few edited outlines: only the ships inside them; a reload: everyone
@@ -1892,7 +1894,8 @@ void DB::setPlaces(std::shared_ptr<const PlaceIndex> next) {
   });
 }
 
-// Caller holds mtx. Only accepted positions can confirm crossings.
+// Caller holds mtx. Only validated positions come here, so the tracker never
+// sees a single damaged sentence.
 void DB::updatePlaceEvents(int ptr, std::time_t now) {
   auto &ship = ships[ptr];
   // Stopped, not merely slow: a ship at anchor swings with the tide at up to
@@ -1902,21 +1905,27 @@ void DB::updatePlaceEvents(int ptr, std::time_t now) {
       ship.speed != SPEED_UNDEFINED &&
       (ship.speed < 0.5f ||
        (ship.speed < 1.0f && (ship.status == 1 || ship.status == 5)));
+  const auto *index = place_markers.index().get();
   visits.update(ptr, place_markers.containing(ship.lat, ship.lon), now, stopped,
-                place_markers.index().get(),
+                index,
                 [&](const VisitTracker::Visit &visit, bool entering,
-                    std::time_t observed) {
-                  if (visit.place->type != "port" && visit.place->type != "water")
+                    uint32_t observed) {
+                  const auto *entry = index->find(visit.id);
+                  if (!entry || !entry->metadata->announced())
                     return;
                   EventRing::Event e;
                   e.kind =
                       entering ? EventRing::PLACE_ENTER : EventRing::PLACE_EXIT;
+                  // a guard zone is what the user asked to be told about;
+                  // ports, sectors and waters are crossed all day
+                  if (entry->metadata->is(PlaceKind::GuardZone))
+                    e.level = EventRing::NOTICE;
                   e.time = observed;
                   e.from = ship.mmsi;
                   e.from_name = ship.shipname;
                   e.lat = ship.lat;
                   e.lon = ship.lon;
-                  e.text = visit.place->name;
+                  e.text = entry->metadata->name;
                   events.push(e);
                 });
 }
@@ -1925,7 +1934,7 @@ void DB::writeVoyageChanges(JSON::Writer &w, int ptr) const {
   w.beginArray();
   changes.writeEntries(w, ptr);
   if (ptr != SHIP_NIL)
-    visits.writeChanges(w, ptr);
+    visits.writeChanges(w, ptr, place_markers.index().get());
   w.endArray();
 }
 
@@ -1974,6 +1983,6 @@ void DB::locate(int ptr) {
 
 void DB::refreshPlaceMembership(int ptr) {
   const Ship &ship = ships[ptr];
-  visits.baseline(ptr, place_markers.containing(ship.lat, ship.lon),
+  visits.refresh(ptr, place_markers.containing(ship.lat, ship.lon),
                   ship.last_signal, place_markers.index().get());
 }

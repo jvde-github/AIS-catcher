@@ -419,22 +419,21 @@ namespace Util
 		return files;
 	}
 
-	bool Helper::isUUID(const std::string &s)
+	bool Helper::isUUID(const std::string &s, bool lowercase)
 	{
 		if (s.size() != 36)
 			return false;
 		for (int i = 0; i < 36; i++)
 		{
+			const char c = s[i];
 			if (i == 8 || i == 13 || i == 18 || i == 23)
 			{
-				if (s[i] != '-')
+				if (c != '-')
 					return false;
 			}
-			else
-			{
-				if (!isxdigit(s[i]))
-					return false;
-			}
+			else if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
+					   (!lowercase && c >= 'A' && c <= 'F')))
+				return false;
 		}
 		return true;
 	}

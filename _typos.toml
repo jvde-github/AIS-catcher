@@ -14,5 +14,4 @@ extend-exclude = [
     "frontend/",
     "CMakeLists.txt",
     "Source/Tracking/RegionTree.cpp",
-    "data/regions/",
 ]

@@ -32,6 +32,11 @@ export const BINARY_CATEGORIES = ['data', 'lock', 'signal', 'inland', 'text', 'a
 // no red and no green: those mean invalid and validated on the map
 // safety is the one kind that means danger, so it takes the red
 export const CAT_COLORS = { data: '#0891b2', text: '#7c3aed', inland: '#0f766e', aton: '#d97706', zones: '#0857b1', lock: '#4338ca', signal: '#ea580c', safety: '#dc2626', station: '#008000', ack: '#64748b' };
+// Places other than ports share the "data" hue on the map, shaded by size: the larger the
+// place, the darker its dot. Sections and anchorages, then terminals and marinas, then berths.
+export const PLACE_SHADES = { section: '#0b6a86', anchorage: '#0b6a86', guardzone: '#0b6a86', sector: '#0b6a86', water: '#0b6a86',
+    terminal: '#0891b2', marina: '#0891b2', mooring: '#3fb2d3', berth: '#3fb2d3' };
+export const placeColor = (type) => PLACE_SHADES[type] || CAT_COLORS.data;
 
 const host = {
     color: (cat) => CAT_COLORS[cat] || CAT_COLORS.data,
@@ -502,7 +507,7 @@ export function kindGlyph(ctx, cat, x, y, s) {
     case 'marina':
     case 'mooring':
     case 'place':
-    case 'area': {
+    case 'guardzone': {
         ctx.beginPath();
         ctx.moveTo(x, y - s);
         ctx.lineTo(x + s, y);
