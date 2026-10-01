@@ -142,10 +142,7 @@ jobs:
     - name: Map architecture
       id: arch
       run: |
-        case "${{ matrix.arch }}" in
-          armhf) echo "platform=linux/arm/v7" >> $GITHUB_OUTPUT ;;
-          *)     echo "platform=linux/${{ matrix.arch }}" >> $GITHUB_OUTPUT ;;
-        esac
+        echo "platform=linux/${{ matrix.arch }}" >> $GITHUB_OUTPUT ;;
 
     - name: Build package
       run: |
