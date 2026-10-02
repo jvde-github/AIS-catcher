@@ -73,6 +73,15 @@ struct Stay {
   bool end_seen;              // false: closed on silence, at the last report, not on a departure
 };
 
+// a bounded copy into one of the text arrays: what fits, always terminated
+template <size_t N> inline void copyText(char (&dst)[N], const char *src) {
+  const size_t n = src ? std::strlen(src) : 0;
+  const size_t m = n < N - 1 ? n : N - 1;
+  if (m)
+    std::memcpy(dst, src, m);
+  dst[m] = '\0';
+}
+
 struct Event {
   uint64_t seq = 0; // assigned when sent; the process start time is the epoch
 
@@ -153,8 +162,8 @@ private:
 public:
   // the string values point at the arrays, so an event can be copied whole
   void setText(const char *was, const char *now) {
-    std::strncpy(from_s, was ? was : "", sizeof(from_s) - 1);
-    std::strncpy(to_s, now ? now : "", sizeof(to_s) - 1);
+    copyText(from_s, was);
+    copyText(to_s, now);
     from.setCString(from_s);
     to.setCString(to_s);
   }

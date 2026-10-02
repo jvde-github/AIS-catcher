@@ -74,7 +74,7 @@ public:
     a.lat0 = ship.lat;
     a.lon0 = ship.lon;
     a.draught_in = ship.draught;
-    std::strncpy(a.destination_in, ship.destination, sizeof(a.destination_in) - 1);
+    copyText(a.destination_in, ship.destination);
     return a;
   }
 
@@ -127,7 +127,7 @@ public:
       } else
         s.heading = -1;
       s.draught_in = a->draught_in;
-      std::strncpy(s.destination_in, a->destination_in, sizeof(s.destination_in) - 1);
+      copyText(s.destination_in, a->destination_in);
       s.start_seen = a->start_seen;
     } else {
       s.lat = ship.lat;
@@ -137,10 +137,14 @@ public:
       s.start_seen = false;
     }
     s.draught_out = ship.draught;
-    std::strncpy(s.destination_out, ship.destination, sizeof(s.destination_out) - 1);
-    if (ship.month != ETA_MONTH_UNDEFINED && ship.day != ETA_DAY_UNDEFINED)
-      std::snprintf(s.eta, sizeof(s.eta), "%02d-%02d %02d:%02d", (int)ship.month,
+    copyText(s.destination_out, ship.destination);
+    if (ship.month != ETA_MONTH_UNDEFINED && ship.day != ETA_DAY_UNDEFINED) {
+      // via a roomy buffer: the fields are bytes, the compiler cannot know their range
+      char eta[32];
+      std::snprintf(eta, sizeof(eta), "%02d-%02d %02d:%02d", (int)ship.month,
                     (int)ship.day, (int)ship.hour, (int)ship.minute);
+      copyText(s.eta, eta);
+    }
   }
 
 private:
