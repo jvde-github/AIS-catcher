@@ -401,6 +401,8 @@ private:
   Tracking::RestStore rest;
   std::time_t last_rest_sweep = 0;
   static bool stillTest(const Ship &ship);
+  // a crossing the tracker confirmed or inferred, told on the stream
+  void crossing(int ptr, const VisitTracker::Visit &v, bool entering, uint32_t observed);
   void updateRest(int ptr, std::time_t now, bool still_before, std::time_t previous);
   void endRest(int ptr, std::time_t t, bool seen);
   void sweepRest(std::time_t now);

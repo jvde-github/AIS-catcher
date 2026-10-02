@@ -125,7 +125,8 @@ public:
       last_seq = e.seq;
       if (!shown(e.kind))
         continue;
-      if ((e.kind == Kind::ENTER || e.kind == Kind::LEAVE) && !e.crossing.announced)
+      if ((e.kind == Kind::ENTER || e.kind == Kind::LEAVE) &&
+          (!e.crossing.announced || !e.crossing.seen))
         continue;
       Entry n;
       n.seq = e.seq;

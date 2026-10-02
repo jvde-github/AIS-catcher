@@ -211,8 +211,14 @@ public:
   // Containment as found, without crossings: a restore, a catalogue change, a
   // fix after silence. Stays still inside continue, the rest ended at the
   // last fix inside.
+  // The places as found, with no crossing seen: a first fix, a fix after an
+  // hour of silence, a catalogue change. A visit the ship is no longer in
+  // ended when it was last seen; a place it is in now began now. Emit hears
+  // both, as inferences (entryTime and exitTime stay 0), so a record of the
+  // visits can be kept outside; the ticker shows only what was seen.
+  template <class Emit>
   void refresh(uint32_t slot, const std::vector<uint32_t> &inside,
-               std::time_t now, const PlaceIndex *index) {
+               std::time_t now, const PlaceIndex *index, Emit emit) {
     if (!validTime(now))
       return;
     auto &r = records.at(slot);
@@ -222,9 +228,10 @@ public:
         continue;
       if (v.state == Visit::ENTERING)
         v = Visit{};
-      else if (!has(inside, v.id))
+      else if (!has(inside, v.id)) {
         end(v, at);
-      else if (v.state == Visit::LEAVING) {
+        emit(v, false, at);
+      } else if (v.state == Visit::LEAVING) {
         v.state = Visit::INSIDE;
         v.exited = 0;
       }
@@ -235,6 +242,7 @@ public:
           if (auto *v = allocate(r, id, *index)) {
             v->state = Visit::INSIDE;
             v->entered = uint32_t(now);
+            emit(*v, true, v->entered);
           }
     r.last = std::max(r.last, uint32_t(now));
     r.stopped = false;
@@ -253,7 +261,7 @@ public:
     if (r.last && now <= r.last)
       return;
     if (!r.last || now - r.last > SILENT) {
-      refresh(slot, inside, now, index);
+      refresh(slot, inside, now, index, emit);
       r.stopped = stopped;
       return;
     }

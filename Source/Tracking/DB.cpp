@@ -1897,7 +1897,10 @@ void DB::tick(std::time_t now) {
     const bool hadPosition = isValidCoord(ship.lat, ship.lon);
     ship.decayAndExpire();
     if (hadPosition && !isValidCoord(ship.lat, ship.lon)) {
-      visits.refresh(ptr, {}, now, place_markers.index().get());
+      visits.refresh(ptr, {}, now, place_markers.index().get(),
+                     [&](const VisitTracker::Visit &v, bool entering, uint32_t at) {
+                       crossing(ptr, v, entering, at);
+                     });
       full_refresh_at = now;
     }
     if (std::strcmp(destination, ship.destination))
@@ -2108,29 +2111,31 @@ void DB::updatePlaceEvents(int ptr, std::time_t now) {
   visits.update(ptr, place_markers.containing(ship.lat, ship.lon), now, stopped,
                 index,
                 [&](const VisitTracker::Visit &visit, bool entering,
-                    uint32_t observed) {
-                  const auto *entry = index->find(visit.id);
-                  if (!entry)
-                    return;
-                  // every crossing goes on the stream; a guard zone is what
-                  // the user asked to be told about, so the ticker shows that
-                  // one, while ports, sectors and waters are crossed all day
-                  Tracking::Event e = event(
-                      ship,
-                      entering ? Tracking::Kind::ENTER : Tracking::Kind::LEAVE,
-                      entry->metadata->is(PlaceKind::GuardZone)
-                          ? Tracking::Level::NOTICE
-                          : Tracking::Level::ROUTINE,
-                      observed);
-                  e.crossing.place = visit.id;
-                  e.crossing.number = entry->number;
-                  e.crossing.revision = entry->revision;
-                  e.crossing.seen =
-                      entering ? visit.entryTime() != 0 : visit.exitTime() != 0;
-                  e.crossing.announced = entry->metadata->announced();
-                  e.crossing.name = entry->metadata->name.c_str();
-                  emit(e, ptr);
-                });
+                    uint32_t observed) { crossing(ptr, visit, entering, observed); });
+}
+
+// Caller holds mtx. Every crossing goes on the stream, seen or inferred; a
+// guard zone is what the user asked to be told about, so the ticker shows a
+// seen crossing of one, while ports, sectors and waters are crossed all day.
+void DB::crossing(int ptr, const VisitTracker::Visit &visit, bool entering,
+                  uint32_t observed) {
+  const auto *index = place_markers.index().get();
+  const auto *entry = index ? index->find(visit.id) : nullptr;
+  if (!entry)
+    return;
+  const Ship &ship = ships[ptr];
+  Tracking::Event e =
+      event(ship, entering ? Tracking::Kind::ENTER : Tracking::Kind::LEAVE,
+            entry->metadata->is(PlaceKind::GuardZone) ? Tracking::Level::NOTICE
+                                                      : Tracking::Level::ROUTINE,
+            observed);
+  e.crossing.place = visit.id;
+  e.crossing.number = entry->number;
+  e.crossing.revision = entry->revision;
+  e.crossing.seen = entering ? visit.entryTime() != 0 : visit.exitTime() != 0;
+  e.crossing.announced = entry->metadata->announced();
+  e.crossing.name = entry->metadata->name.c_str();
+  emit(e, ptr);
 }
 
 void DB::writeVoyageChanges(JSON::Writer &w, int ptr) const {
@@ -2187,5 +2192,8 @@ void DB::locate(int ptr) {
 void DB::refreshPlaceMembership(int ptr) {
   const Ship &ship = ships[ptr];
   visits.refresh(ptr, place_markers.containing(ship.lat, ship.lon),
-                  ship.last_signal, place_markers.index().get());
+                 ship.last_signal, place_markers.index().get(),
+                 [&](const VisitTracker::Visit &v, bool entering, uint32_t at) {
+                   crossing(ptr, v, entering, at);
+                 });
 }
