@@ -44,8 +44,11 @@ export function attach({ mount, panels, enabled, active, select, defaultTab = 's
         if (!d.touch && d.source.hasPointerCapture(d.id)) d.source.releasePointerCapture(d.id);
         if (!d.moved) return;
         suppressClick = true;
+        // a finger that wandered a little on a tap is still a tap: it toggles, it does not snap back
+        const tap = !cancelled && Math.abs(d.dy) < 14 && d.source === handle;
         const threshold = Math.min(48, d.full * 0.3);
-        const target = cancelled ? d.original : d.original == null
+        const target = tap ? (d.original == null ? defaultTab : null)
+            : cancelled ? d.original : d.original == null
             ? (d.dy >= threshold ? defaultTab : null)
             : (d.dy <= -threshold ? null : d.original);
         settling = true;
@@ -94,8 +97,12 @@ export function attach({ mount, panels, enabled, active, select, defaultTab = 's
             e.stopImmediatePropagation();
             return;
         }
-        if (e.currentTarget !== handle || !enabled() || settling) return;
-        select(active() == null ? defaultTab : null);
+        if (!enabled() || settling) return;
+        if (e.currentTarget === handle) { select(active() == null ? defaultTab : null); return; }
+        // folded: a tap on the card's figures opens it too; tabs, links and buttons keep their own job
+        if (e.currentTarget === mount && active() == null &&
+            !e.target.closest('.sc-tabs, a, button, input, select, textarea, [contenteditable], [role="button"]'))
+            select(defaultTab);
     }
     const listeners = {
         pointerdown: pointerDown,
@@ -105,7 +112,9 @@ export function attach({ mount, panels, enabled, active, select, defaultTab = 's
         lostpointercapture: e => { if (e.target === drag?.source) finish(true); },
         click,
     };
-    const surfaces = footer ? [handle, footer] : [handle];
+    // the handle, the button bar and the header all take a drag: a pull down anywhere on the folded card opens it
+    const header = card?.querySelector('.mapcard-header');
+    const surfaces = [handle, footer, header].filter(Boolean);
     // Capture clicks before inline or delegated action handlers see a drag's click.
     for (const surface of surfaces)
         for (const [type, listener] of Object.entries(listeners)) surface.addEventListener(type, listener, true);
@@ -114,7 +123,8 @@ export function attach({ mount, panels, enabled, active, select, defaultTab = 's
     const contentListeners = {
         touchstart(e) {
             if (!drag) suppressClick = false;
-            if (e.touches.length !== 1 || e.target.closest('.sc-tabs, a, button, input, select, textarea, [contenteditable], svg, canvas, .hist-wrap')) return;
+            // the compass dials are pictures, not controls: a drag may start on them
+            if (e.touches.length !== 1 || e.target.closest('.sc-tabs, a, button, input, select, textarea, [contenteditable], svg:not(.sc-dir), canvas, .hist-wrap')) return;
             if (window.getSelection()?.toString()) return;
             const touch = e.touches[0];
             pointerDown({ isPrimary: true, button: 0, pointerId: touch.identifier,

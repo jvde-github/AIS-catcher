@@ -35,7 +35,7 @@ export function createNearbyDialog(host) {
         const shell = createSideTable(host, 'nearby'), root = shell.root;
         root.setAttribute('aria-labelledby', 'nearby-title');
         root.innerHTML = '<header class="place-panel-header">' +
-            '<div class="place-panel-actions"><button type="button" class="place-overview">← In view</button><span class="side-table-label">Nearby</span><button type="button" class="table-collapse place-close" title="Close sidebar" aria-label="Close sidebar">Close <span aria-hidden="true">→</span></button></div>' +
+            '<div class="place-panel-actions"><button type="button" class="place-overview"><svg class="sp-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>In view</button><span class="side-table-label">Nearby</span><button type="button" class="table-collapse place-close" title="Close sidebar" aria-label="Close sidebar">Close <span aria-hidden="true">→</span></button></div>' +
             '<div class="place-panel-heading"><div class="place-panel-label"><h2 id="nearby-title"></h2><div class="place-panel-kind"></div></div></div></header>' +
             '<div class="sc-tabs place-dialog-tabs" role="tablist" aria-label="Nearby">' + TABS.map(tab =>
             `<button type="button" class="sc-tab" role="tab" id="nearby-tab-${tab.key}" data-nearby-tab="${tab.key}" aria-controls="nearby-results">${tab.label}<span class="place-tab-count"></span></button>`).join('') + '</div>' +
@@ -80,7 +80,7 @@ export function createNearbyDialog(host) {
             }
             results.setAttribute('aria-labelledby', 'nearby-tab-' + selected);
             const heads = {
-                ships: '<th scope="col" class="col-name">Name</th><th scope="col" class="num col-spd">Spd <span class="dim">kts</span></th><th scope="col" class="col-type">Type</th><th scope="col" class="num col-last">Range</th>',
+                ships: '<th scope="col" class="col-name">Name</th><th scope="col" class="num col-spd">Spd <span class="dim">kn</span></th><th scope="col" class="col-type">Type</th><th scope="col" class="num col-last">Range</th>',
                 stations: '<th scope="col" class="col-name">Station</th><th scope="col" class="nearby-heard">Heard</th><th scope="col" class="num col-last">Range</th>',
                 places: '<th scope="col" class="col-name">Port</th><th scope="col" class="nearby-code">LOCODE</th><th scope="col" class="num col-last">Range</th>',
             };

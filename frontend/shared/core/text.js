@@ -25,7 +25,7 @@ export const getEtaVal = (ship) => {
         ? ship.eta_day + " " + ETA_MONTHS[ship.eta_month - 1]
         : "";
     const time = ship.eta_hour >= 0 && ship.eta_hour <= 23 && ship.eta_minute >= 0 && ship.eta_minute <= 59
-        ? ("0" + ship.eta_hour).slice(-2) + ":" + ("0" + ship.eta_minute).slice(-2) + "Z"
+        ? ("0" + ship.eta_hour).slice(-2) + ":" + ("0" + ship.eta_minute).slice(-2) + " UTC"
         : "";
     return date && time ? date + " " + time : (date || time || "-");
 };
@@ -89,6 +89,18 @@ const STATUS_STRINGS = [
     "AIS-SART is active",
     "Undefined",
 ];
+
+// the same statuses in a word or two, for pills and narrow columns
+const STATUS_SHORT = [
+    "Under way", "At anchor", "Not under command", "Restricted", "Constrained", "Moored",
+    "Aground", "Fishing", "Sailing", "Reserved for HSC", "Reserved for WIG",
+    "Towing", "Pushing", "Reserved", "SART active", "Not set",
+];
+
+export function getStatusShort(ship) {
+    const s = ship.status;
+    return STATUS_SHORT[Number.isInteger(s) && s >= 0 && s <= 15 ? s : 15];
+}
 
 export function getStatusVal(ship) {
     // 15 is "undefined" in the standard, so a missing or out-of-range status

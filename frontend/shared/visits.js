@@ -19,6 +19,7 @@ export function visitListHTML(visits, serverTime) {
         const stateLabel = status || (v.inside ? 'Inside' : 'Completed');
         return '<li class="tl-item place-visit"><div class="tl-head"><span class="tl-dot visit-dot-' + state + '" role="img" aria-label="' + stateLabel + '" title="' + stateLabel + '"></span>' +
             '<strong class="place-visit-name">' + sanitizeString(v.name) + '</strong>' +
+            (elapsed != null ? '<span class="place-visit-badge">' + duration(elapsed) + '</span>' : '') +
             (status ? '<span class="place-visit-status">' + status + '</span>' : '') + '</div>' +
             '<div class="place-visit-times"><div><span>Entry</span><span>' + stamp(v.entered) + '</span></div>' +
             '<div><span>Exit</span><span>' + (v.inside ? '—' : stamp(v.exited)) + '</span></div>' +

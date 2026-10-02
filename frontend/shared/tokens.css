@@ -385,7 +385,7 @@
     --size-hit: 32px;
 
     --size-map-button: 34px;
-    --size-map-controls: calc(var(--size-map-button) + 4px);
+    --size-map-controls: 44px;   /* the rail: 36px buttons in a 4px padded pill */
     /* breakpoints; map.css repeats these numbers in @media/@container, which cannot read tokens */
     --bp-narrow: 500px;           /* a pane too narrow to share: full-bleed cards */
     --bp-short: 800px;            /* a short screen: a tall card takes the full height */

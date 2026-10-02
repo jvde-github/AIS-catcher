@@ -45,7 +45,7 @@ export function create(opts) {
             : units() === "SI" ? Number(c * 1.852).toFixed(1)
             : Number(c * 1.151).toFixed(1);
     const getSpeedUnit = () =>
-        units() === "DEFAULT" ? "kts" : units() === "SI" ? "km/h" : "mph";
+        units() === "DEFAULT" ? "kn" : units() === "SI" ? "km/h" : "mph";
 
     const getDimVal = (c) =>
         units() === "DEFAULT" || units() === "SI"
@@ -76,6 +76,15 @@ export function create(opts) {
         }
     }
 
+    // a position to read at a glance: two decimals with the hemisphere (about a kilometre)
+    // in decimal mode; the degree formats keep their own form
+    const getPositionShort = (ship) => {
+        if (ship.lat == null || ship.lon == null) return null;
+        if (coords() === "dms" || coords() === "ddm") return formatCoordinate(ship.lat, true) + "  " + formatCoordinate(ship.lon, false);
+        const h = (v, pos, neg) => Math.abs(Number(v)).toFixed(2) + "\u00b0 " + (v < 0 ? neg : pos);
+        return h(ship.lat, "N", "S") + ", " + h(ship.lon, "E", "W");
+    };
+
     const getLatValFormat = (ship) => {
         const prefix = ship.approx ? "<i>" : "";
         const suffix = ship.approx ? "</i>" : "";
@@ -101,7 +110,7 @@ export function create(opts) {
         getDistanceConversion, getDistanceVal, getDistanceUnit,
         getSpeedConversion, getSpeedVal, getSpeedUnit,
         getDimVal, getDimUnit, getDraughtVal, getShipDimension,
-        formatCoordinate, getLatValFormat, getLonValFormat,
+        formatCoordinate, getLatValFormat, getLonValFormat, getPositionShort,
         getChangeVal,
     };
 }

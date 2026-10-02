@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include <functional>
 
 #include "Common.h"
 #include "Keys.h"
@@ -104,7 +105,8 @@ public:
 	}
 
 	// the rows that changed after `since`, in the object feed's row shape; kind 8 is a station
-	void writeRows(JSON::Writer &w, uint64_t since) const
+	// `heard` says when a station last delivered a message, when the host counts that
+	void writeRows(JSON::Writer &w, uint64_t since, const std::function<std::time_t(int)> &heard = nullptr) const
 	{
 		char id[24];
 		for (const auto &kv : stations)
@@ -116,15 +118,19 @@ public:
 			w.beginObject().kv("id", id).kv("kind", 8).kv("seq", (long long)s.seq)
 				.kv("lat", s.lat).kv("lon", s.lon).kv("label", s.name).kv("count", 0)
 				.kv("t", (long long)s.last).kv("first", (long long)s.last);
-			writeFields(w, s.mmsi, s.online, s.rate, s.country);
+			writeFields(w, s.mmsi, s.online, s.rate, s.country, heard ? heard(s.id) : 0);
 			w.endObject();
 		}
 	}
 
 	// the station part of a row, after the fields every object row has
-	static void writeFields(JSON::Writer &w, uint32_t mmsi, bool online, float rate, const std::string &country)
+	// heard: the station's last message, 0 when the host cannot tell; a connected station
+	// that has gone quiet is drawn apart from one that is receiving
+	static void writeFields(JSON::Writer &w, uint32_t mmsi, bool online, float rate, const std::string &country, std::time_t heard = 0)
 	{
 		w.kv("ttl", KEEP_S).kv("mmsi", mmsi).kv("online", online).kv("rate", rate).kv("country", country);
+		if (heard > 0)
+			w.kv("heard", (long long)heard);
 	}
 
 	void writeRemoved(JSON::Writer &w, uint64_t since) const
@@ -157,14 +163,21 @@ public:
 		return it == by_mmsi.end() ? 0 : it->second;
 	}
 
-	bool writeOne(JSON::Writer &w, int id) const
+	// the record behind a station's key; one riding a vessel answers with that vessel's
+	// position, so a card or a search lands where the map draws it, and says so
+	bool writeOne(JSON::Writer &w, int id, bool riding = false, FLOAT32 at_lat = LAT_UNDEFINED, FLOAT32 at_lon = LON_UNDEFINED, std::time_t heard = 0) const
 	{
 		auto it = stations.find(id);
 		if (it == stations.end())
 			return false;
 		const Station &s = it->second;
-		w.key("station").beginObject().kv("id", s.id).kv("name", s.name).kv("lat", s.lat).kv("lon", s.lon)
-			.kv("mmsi", s.mmsi).kv("online", s.online).kv("last", (long long)s.last).kv("rate", s.rate).kv("country", s.country).endObject();
+		w.key("station").beginObject().kv("id", s.id).kv("name", s.name).kv("lat", riding ? at_lat : s.lat).kv("lon", riding ? at_lon : s.lon)
+			.kv("mmsi", s.mmsi).kv("online", s.online).kv("last", (long long)s.last).kv("rate", s.rate).kv("country", s.country);
+		if (heard > 0)
+			w.kv("heard", (long long)heard);
+		if (riding)
+			w.kv("riding", true);
+		w.endObject();
 		return true;
 	}
 

@@ -27,7 +27,7 @@ export function objectPillCanvas(cat, status, rgb, fade, index, count, glyph = c
     ctx.arcTo(x, y + h, x, y, r);
     ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
-    const fill = cat === 'port' ? [7, 80, 120] : cat === 'station' ? (status === 'offline' ? [239, 68, 68] : [0, 128, 0]) : rgb;
+    const fill = cat === 'port' ? [7, 80, 120] : cat === 'station' ? (status === 'offline' ? [239, 68, 68] : status === 'connected' ? [249, 115, 22] : [0, 128, 0]) : rgb;
     ctx.fillStyle = `rgba(${fill.join(',')},${MAP_MARKER_FILL_ALPHA * fade})`;
     ctx.fill();
     ctx.strokeStyle = `rgba(255,255,255,${MAP_MARKER_BORDER_ALPHA * fade})`;

@@ -1553,3 +1553,361 @@ body.ticker-open.ticker-bottom {
 
 .visit-dot-inside { background: linear-gradient(90deg, var(--color-card-edge) 50%, var(--color-card-surface) 50%); }
 .visit-dot-completed { background: var(--color-card-edge); }
+
+/* ==========================================================================
+   Vessel card refresh (tabbed layout): one radius for the free corners,
+   a header strip with a short status bar, equal tabs, larger values with
+   small units, a status pill, an inset route block and a quiet footer.
+   Colours come from the theme tokens, so day and night follow.
+   ========================================================================== */
+.mapcard.card-tabs {
+    --vc-radius: 14px;
+    --vc-head: color-mix(in srgb, var(--color-card-surface) 94%, var(--color-text) 6%);
+    --vc-inset: color-mix(in srgb, var(--color-card-surface) 96%, var(--color-text) 4%);
+    --vc-line: color-mix(in srgb, var(--color-text) 10%, transparent);
+    --vc-line-strong: color-mix(in srgb, var(--color-text) 17%, transparent);
+    --vc-hover: color-mix(in srgb, var(--color-text) 6%, transparent);
+    overflow: hidden;
+    /* one radius; the host squares a corner that sits in a corner of the pane */
+    border-radius: var(--vc-radius);
+    font-variant-numeric: tabular-nums;
+}
+.mapcard.card-tabs .mapcard-content { border-radius: 0; }
+.mapcard-target.card-tabs.card-max, .mapcard-target.card-tabs .mapcard-footer { border-radius: var(--vc-radius); }
+.mapcard-target.card-tabs .mapcard-footer { border-top-left-radius: 0; border-top-right-radius: 0; }
+.mapcard.card-tabs button.sc-drag-handle { border-radius: 0; }
+
+/* header: a strip of its own, the status as a short rounded bar before the flag */
+.mapcard.card-tabs .mapcard-header {
+    margin: 0;
+    padding: 10px 6px 10px 14px;
+    flex: 0 0 auto;
+    gap: 10px;
+    background: var(--vc-head);
+    border-left: 0 !important;
+}
+.mapcard.card-tabs .mapcard-header::before {
+    content: '';
+    flex: none;
+    width: 3px;
+    height: 26px;
+    border-radius: 2px;
+    background: var(--color-off, var(--color-text-muted));
+}
+.mapcard.card-tabs .mapcard-header.card-validated::before { background: var(--color-success); }
+.mapcard.card-tabs .mapcard-header.card-dubious::before { background: var(--color-danger); }
+.mapcard.card-tabs .mapcard-header.card-warning::before { background: var(--color-warning); }
+.mapcard.card-tabs .mapcard-flag { margin: 0; }
+.mapcard.card-tabs .mapcard-flag .flag-card { border-radius: 4px; box-shadow: 0 0 0 1px var(--vc-line-strong); }
+.mapcard.card-tabs .mapcard-title { font-size: 15px; font-weight: 600; letter-spacing: 0.03em; }
+.mapcard.card-tabs .mapcard-header-icon { width: 20px; height: 20px; font-size: 17.5px; margin: 8px 3px; color: var(--color-text-muted); }
+/* the header's icons sit close together: no flex gap between them */
+.mapcard.card-tabs .mapcard-header > .mapcard-title ~ span + span { margin-left: -6px; }
+.mapcard.card-tabs .mapcard-header { gap: 6px; }
+.mapcard.card-tabs .mapcard-header > .mapcard-flag { margin-right: 4px; }
+@media (hover: hover) { .mapcard.card-tabs .mapcard-header-icon:hover { color: var(--color-text); transform: none; } }
+
+/* tabs: equal columns on a rule, the chosen one in text colour over an accent line */
+.mapcard.card-tabs .sc-tabs { padding: 0 8px; background: var(--color-card-surface); border-bottom: 1px solid var(--vc-line-strong); }
+.mapcard.card-tabs .sc-host .sc-tabs .sc-tab {
+    flex: 1 1 0;
+    min-height: 44px;
+    margin-bottom: -1px;
+    padding: 0 4px;
+    font-size: 12px;
+}
+.mapcard.card-tabs .sc-host .sc-tabs .sc-tab[aria-selected="true"] { color: var(--color-text); font-weight: 600; border-bottom-color: var(--color-accent); }
+
+/* values larger, labels and units small and muted */
+.mapcard.card-tabs .sc-metrics { padding: 14px 10px 12px; }
+.mapcard.card-tabs .sc-metrics > div > span:first-child,
+.mapcard.card-tabs .sc-panel .mapcard-content-row > div > span:first-child { font-size: 10.5px; line-height: 13px; }
+.mapcard.card-tabs .sc-metrics .sc-metric-value { margin-top: 3px; font-size: 14px; line-height: 17.5px; font-weight: 500; }
+.mapcard.card-tabs .sc-panel .mapcard-content-row > div > span:last-child { margin-top: 3px; font-size: 13px; line-height: 16.5px; font-weight: 500; }
+.sc-unit { font-size: 10.5px; font-weight: 400; color: var(--color-text-muted); }
+.sc-dirline { display: inline-flex; align-items: center; gap: 5px; }
+.sc-dir { width: 15px; height: 15px; flex: none; color: var(--color-accent); }
+.sc-dir--muted { color: var(--color-text-muted); }
+
+/* type and status: the type in weight, the status a coloured pill, the number a mono chip */
+.mapcard.card-tabs .sc-sum-line { margin: 0 16px; padding: 12px 0 14px; border-top: 1px solid var(--vc-line); align-items: center; }
+.mapcard.card-tabs .sc-sum-text { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.mapcard.card-tabs .sc-sum-type { font-size: 13px; font-weight: 600; }
+.mapcard.card-tabs .sc-sum-sep { display: none; }
+.sc-pill { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 10.5px; font-weight: 600; white-space: nowrap; }
+.sc-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.sc-pill--ok { color: var(--color-success); background: color-mix(in srgb, var(--color-success) 14%, transparent); }
+.sc-pill--warn { color: var(--color-warning); background: color-mix(in srgb, var(--color-warning) 16%, transparent); }
+.sc-pill--bad { color: var(--color-danger); background: color-mix(in srgb, var(--color-danger) 13%, transparent); }
+.sc-pill--off { color: var(--color-text-muted); background: var(--vc-hover, rgba(128,128,128,.12)); }
+.sc-pill[hidden] { display: none; }
+.mapcard.card-tabs .sc-sum-id { padding: 4px 8px; border-radius: 6px; background: var(--vc-hover); color: var(--color-text); font-family: var(--font-mono, ui-monospace, Menlo, monospace); font-size: 10.5px; }
+
+/* the route: an inset block, places in weight, a ring, a solid run to the ship, dashes on to the pin */
+.mapcard.card-tabs .sc-strip { padding: 14px 16px 12px; background: var(--vc-inset); }
+.mapcard.card-tabs .sc-strip .l { font-size: 10.5px; }
+.mapcard.card-tabs .sc-strip .v { margin-top: 3px; font-size: 14px; font-weight: 600; }
+.mapcard.card-tabs .sc-strip .sc-sum-pos { margin-top: 2px; font-family: var(--font-mono, ui-monospace, Menlo, monospace); font-size: 10px; }
+.mapcard.card-tabs .sc-strip .line { margin: 12px 0 10px; gap: 4px; }
+.mapcard.card-tabs .sc-strip .line .pip { width: 10px; height: 10px; border-width: 2px; }
+.mapcard.card-tabs .sc-strip .line .pip::after { display: none; }
+.mapcard.card-tabs .sc-strip .line .t { height: 12px; }
+.mapcard.card-tabs .sc-strip .line .t::before { top: 4.5px; width: calc(50% - 6px); }
+.mapcard.card-tabs .sc-strip .line .t::after {
+    left: 50%; top: 0; width: 12px; height: 12px; border: 0; border-radius: 50%; transform: translateX(-6px);
+    background: currentColor; box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+.mapcard.card-tabs .sc-strip .line .t i {
+    left: calc(50% + 10px); top: 5px; height: 0; background: none; opacity: 1;
+    border-top: 2px dashed var(--vc-line-strong);
+}
+.mapcard.card-tabs .sc-strip .line .pin svg { width: 16px; height: 16px; stroke-width: 2; }
+.mapcard.card-tabs .sc-strip .under { align-items: center; font-size: 11px; }
+.mapcard.card-tabs .sc-strip .under b { color: var(--color-text); font-weight: 500; }
+.sc-sum-seen { display: inline-flex; align-items: center; gap: 6px; }
+.sc-sum-seen::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--color-success); }
+.sc-sum-seen[data-fresh="stale"]::before { background: var(--color-warning); }
+.sc-sum-seen[data-fresh="lost"]::before { background: var(--color-danger); }
+
+/* detail rows: three to a line, a hairline between lines, inset from the edges */
+.mapcard.card-tabs .sc-panel .mapcard-content-row { padding: 12px 10px; }
+.mapcard.card-tabs .sc-panel .card-row + .card-row::before { left: 16px; right: 16px; background: var(--vc-line); }
+.mapcard.card-tabs .sc-group { padding: 12px 16px 14px; border-top: 1px solid var(--vc-line); }
+.mapcard.card-tabs .sc-group-label { font-size: 10.5px; line-height: 13px; margin-bottom: 6px; }
+.mapcard.card-tabs .sc-panel[data-tab="vessel"] .sc-group,
+.mapcard.card-tabs .sc-panel[id$="_panel_vessel"] .sc-group { background: var(--vc-inset); }
+
+/* history: section titles as small capitals */
+.mapcard.card-tabs .sc-panel[id$="_panel_history"] .sc-group-label { font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* footer: on the card, a rule above, icon over label */
+.mapcard.card-tabs .mapcard-footer {
+    flex: 0 0 auto;
+    min-height: 0;
+    padding: 6px;
+    background: var(--color-card-surface);
+    border-top: 1px solid var(--vc-line-strong);
+}
+.mapcard.card-tabs .mapcard-footer > div { min-height: 52px; gap: 4px; border-radius: 10px; }
+@media (hover: hover) { .mapcard.card-tabs .mapcard-footer > div:hover { background: var(--vc-hover); transform: none; } }
+.mapcard.card-tabs .mapcard-footer > div > i { font-size: 17.5px; }
+.mapcard.card-tabs .mapcard-footer > div > span { font-size: 10.5px; }
+.mapcard.card-tabs .mapcard-header .close_icon.mapcard-header-icon { font-size: 17.5px; }
+/* Voyage: the destination line leads */
+.mapcard.card-tabs .sc-panel[id$="_panel_voyage"] .row-wide-first:first-child > div > span:last-child { font-size: 14px; font-weight: 600; letter-spacing: 0.02em; }
+
+/* ---- Voyage: destination with a pin and the ETA on the right; status pill; position box ---- */
+.mapcard.card-tabs .sc-panel[id$="_panel_voyage"] > .row-wide-first:first-child { padding-left: 38px; }
+.mapcard.card-tabs .sc-panel[id$="_panel_voyage"] > .row-wide-first:first-child::after {
+    content: ''; position: absolute; left: 16px; top: 50%; width: 18px; height: 18px; margin-top: -2px;
+    background: var(--color-accent);
+    -webkit-mask: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3E%3Cpath d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/%3E%3Ccircle cx="12" cy="10" r="2.5"/%3E%3C/svg%3E') center / contain no-repeat;
+            mask: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3E%3Cpath d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/%3E%3Ccircle cx="12" cy="10" r="2.5"/%3E%3C/svg%3E') center / contain no-repeat;
+}
+.mapcard.card-tabs .sc-panel[id$="_panel_voyage"] > .row-wide-first:first-child > div:last-child { text-align: right; }
+.mapcard.card-tabs .sc-panel .sc-pill { margin-top: 2px; font-size: 11px; height: 24px; }
+.mapcard.card-tabs .sc-pos {
+    display: flex !important; align-items: center; gap: 8px;
+    margin: 10px 16px 14px; padding: 8px 4px 8px 4px !important;
+    border-radius: 10px; background: var(--vc-inset) !important;
+}
+.mapcard.card-tabs .sc-pos::before { display: none; }
+.mapcard.card-tabs .sc-pos > div { flex: 0 1 auto; }
+.mapcard.card-tabs .sc-pos > div > span:last-child { font-family: var(--font-mono, ui-monospace, Menlo, monospace); font-size: 12px !important; font-weight: 400 !important; }
+.mapcard.card-tabs .sc-pos > div + div > span:first-child { visibility: hidden; }
+.mapcard.card-tabs .sc-host .sc-copy {
+    width: 36px; height: 36px; margin: 0 0 0 auto; padding: 0; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    border: 0; border-radius: 8px; background: transparent; color: var(--color-text-muted); cursor: pointer;
+}
+.mapcard.card-tabs .sc-host .sc-copy:hover { background: var(--vc-hover); color: var(--color-text); }
+.mapcard.card-tabs .sc-host .sc-copy.is-done { color: var(--color-success); }
+
+/* ---- AIS: two tiles over the reception figures ---- */
+.sc-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 14px 16px 6px; }
+.sc-tile { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--vc-line, var(--color-rule)); background: var(--vc-inset, transparent); }
+.sc-tile__label { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; color: var(--color-text-muted); }
+.sc-tile__value { font-size: 19px; font-weight: 500; line-height: 1.15; }
+.sc-tile--seen .sc-tile__label::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--color-text-muted); }
+.sc-tile--seen[data-fresh="live"] { border-color: transparent; background: color-mix(in srgb, var(--color-success) 13%, transparent); }
+.sc-tile--seen[data-fresh="live"] .sc-tile__label { color: var(--color-success); }
+.sc-tile--seen[data-fresh="live"] .sc-tile__label::before { background: var(--color-success); }
+.sc-tile--seen[data-fresh="stale"] .sc-tile__label::before { background: var(--color-warning); }
+.sc-tile--seen[data-fresh="lost"] .sc-tile__label::before { background: var(--color-danger); }
+
+/* ---- History: a rail of dots, a duration badge, old value struck through, the new one in green ---- */
+.mapcard.card-tabs .sc-group .tl { padding: 4px 0 0 22px; }
+.mapcard.card-tabs .sc-group .tl::before { left: 5px; top: 14px; bottom: 8px; width: 2px; border-radius: 1px; background: var(--vc-line-strong); }
+.mapcard.card-tabs .sc-group .tl-item { padding: 6px 0 12px; }
+.mapcard.card-tabs .sc-group .tl-item + .tl-item { border-top: 0; }
+.mapcard.card-tabs .sc-group .tl-dot {
+    left: -22px; top: 13px; transform: none; width: 10px; height: 10px; box-sizing: border-box;
+    border: 2px solid var(--color-accent); background: var(--color-card-surface);
+}
+.mapcard.card-tabs .place-visits .tl-dot { border: 0; background: var(--color-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent); }
+.mapcard.card-tabs .sc-group .tl-head { align-items: center; }
+.mapcard.card-tabs .place-visit-name { flex: 1; font-size: 14px; font-weight: 600; }
+.mapcard.card-tabs .place-visit-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--vc-hover); color: var(--color-text); font-size: 10.5px; white-space: nowrap; }
+.mapcard.card-tabs .place-visit-times { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 8px; }
+.mapcard.card-tabs .place-visit-times > div:nth-child(3) { display: none; }
+.mapcard.card-tabs .place-visit-times > div > span:first-child { font-size: 10.5px; }
+.mapcard.card-tabs .place-visit-times > div > span:last-child { font-size: 11.5px; }
+.mapcard.card-tabs .sc-group .tl-title { font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: none; color: var(--color-text); }
+.mapcard.card-tabs .sc-group .tl-time { font-size: 10.5px; color: var(--color-text-muted); }
+.mapcard.card-tabs .sc-group .tl-vals { gap: 8px; margin-top: 8px; }
+.mapcard.card-tabs .sc-group .tl-pill { padding: 3px 9px; border-radius: 6px; font-size: 11.5px; font-weight: 600; color: var(--color-success); background: color-mix(in srgb, var(--color-success) 13%, transparent); }
+.mapcard.card-tabs .sc-group .tl-pill.tl-was { font-weight: 400; color: var(--color-text-muted); background: var(--vc-hover); text-decoration: line-through; text-decoration-color: var(--vc-line-strong); }
+.mapcard.card-tabs .sc-history-preview .sc-more-pill {
+    display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 0 22px; height: 32px; padding: 0 12px;
+    border: 1px solid var(--vc-line-strong); border-radius: 8px; background: transparent;
+    color: var(--color-text); font-size: 11px; line-height: 1;
+}
+.mapcard.card-tabs .sc-history-preview .sc-more-pill:hover { background: var(--vc-hover); }
+.mapcard.card-tabs .sc-history-preview .sc-more-pill[hidden] { display: none; }
+
+/* ---- Phone, folded: the tabs stay (a tap opens one), with a grab handle under the actions ---- */
+@media (max-height: 1250px) {
+    @container mappane (max-width: 500px) {
+        /* room between the expand arrow and its label */
+        .mapcard.card-tabs .sc-host.sc-folded .sc-tabs .sc-tab[data-tab="summary"] { padding-left: 16px; }
+        .mapcard.card-tabs .sc-host.sc-folded .sc-tabs .sc-tab[data-tab="summary"]::before { left: 2px; }
+        /* the docked card of the mock: a touch tighter */
+        .mapcard.card-tabs .sc-host.sc-folded .sc-metrics { padding-top: 10px; padding-bottom: 10px; }
+        .mapcard.card-tabs .sc-host.sc-folded .sc-metrics > div > span:first-child { font-size: 10px; }
+        .mapcard.card-tabs .mapcard-footer > div { min-height: 50px; }
+        .mapcard.card-tabs button.sc-drag-handle { height: 26px; flex-basis: 26px; border-top: 1px solid var(--vc-line); background: var(--vc-inset); }
+        .mapcard.card-tabs button.sc-drag-handle::before { width: 36px; height: 4px; opacity: 1; background: var(--vc-line-strong); }
+    }
+}
+/* the tiles say it already */
+.mapcard.card-tabs .sc-panel[id$="_panel_ais"] div:has(> [id$="_last_signal"]),
+.mapcard.card-tabs .sc-panel[id$="_panel_ais"] div:has(> [id$="_count"]) { display: none; }
+
+/* ---- Vessel: numbers in mono, a swatch for the type, small units, faint dashes, a line under each cell ---- */
+.mapcard.card-tabs .sc-panel[id$="_panel_vessel"] > .mapcard-content-row { column-gap: 14px; padding: 0 16px !important; }
+.mapcard.card-tabs .sc-panel[id$="_panel_vessel"] > .mapcard-content-row::before { display: none; }
+.mapcard.card-tabs .sc-panel[id$="_panel_vessel"] > .mapcard-content-row > div { padding: 12px 0; border-bottom: 1px solid var(--vc-line); }
+.mapcard.card-tabs .sc-panel[id$="_panel_vessel"] > .mapcard-content-row:last-of-type > div { border-bottom: 0; }
+.mapcard.card-tabs .sc-panel[id$="_panel_vessel"] [id$="_mmsi"],
+.mapcard.card-tabs .sc-panel[id$="_panel_vessel"] [id$="_callsign"],
+.mapcard.card-tabs .sc-panel[id$="_panel_vessel"] [id$="_imo"] { font-family: var(--font-mono, ui-monospace, Menlo, monospace); font-size: 12.5px !important; font-weight: 400 !important; }
+.mapcard.card-tabs .sc-empty { color: transparent !important; position: relative; }
+.mapcard.card-tabs .sc-empty::after { content: '—'; position: absolute; left: 0; color: var(--color-text-subtle, var(--color-text-muted)); }
+.sc-swatch { display: inline-block; width: 9px; height: 9px; margin-right: 7px; border-radius: 2px; vertical-align: 1px; background: #2b7fc0; }
+.sc-swatch[data-type="cargo"] { background: #2f9a55; }
+.sc-swatch[data-type="tanker"] { background: #c2562a; }
+.sc-swatch[data-type="passenger"] { background: #7b5ce0; }
+.sc-swatch[data-type="fishing"] { background: #d99a1e; }
+.sc-swatch[data-type="highspeed"] { background: #c9a50c; }
+.sc-swatch[data-type="special"] { background: #0f8a7e; }
+.dark .sc-swatch[data-type="cargo"] { background: #6fd08c; }
+.dark .sc-swatch[data-type="tanker"] { background: #e8875f; }
+.dark .sc-swatch[data-type="passenger"] { background: #b79cff; }
+.dark .sc-swatch[data-type="fishing"] { background: #f0b450; }
+
+/* the antenna block: inset, a legend on the right of its title */
+.mapcard.card-tabs .sc-panel[id$="_panel_vessel"] .sc-group { border-top: 1px solid var(--vc-line); }
+.mapcard.card-tabs .sc-panel[id$="_panel_vessel"] .sc-group-label { display: flex; justify-content: space-between; align-items: center; }
+.sc-legend { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: var(--color-text-muted); text-transform: none; letter-spacing: 0; }
+.sc-legend::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--color-antenna); }
+.dim-keel { stroke: var(--color-accent); stroke-opacity: .3; stroke-dasharray: 4 4; }
+.dim-end { fill: var(--color-text-subtle, var(--color-text-muted)); font-size: 8.5px; letter-spacing: 1px; }
+.dim-cap { fill: var(--color-text-muted); font-size: 10.5px; font-family: inherit; }
+
+/* footer: the outlined Material Symbols (Apache 2.0, as the filled set), on the tabbed card only */
+.mapcard.card-tabs .mapcard-footer .timeline_icon { --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"%3E%3Cpath d="M109.91-240Q81-240 60.5-260.59 40-281.18 40-310.09t20.49-49.41q20.5-20.5 49.28-20.5 5.23 0 10.23.5t13 2.5l200-200q-2-8-2.5-13t-.5-10.23q0-28.78 20.59-49.28Q371.18-670 400.09-670t49.41 20.63q20.5 20.64 20.5 49.61 0 1.76-3 22.76l110 110q8-2 13-2.5t10-.5q5 0 10 .5t13 2.5l160-160q-2-8-2.5-13t-.5-10.23q0-28.78 20.59-49.28Q821.18-720 850.09-720t49.41 20.59q20.5 20.59 20.5 49.5t-20.49 49.41q-20.5 20.5-49.28 20.5-5.23 0-10.23-.5t-13-2.5L667-423q2 8 2.5 13t.5 10.23q0 28.78-20.59 49.28Q628.82-330 599.91-330t-49.41-20.49q-20.5-20.5-20.5-49.28 0-5.23.5-10.23t2.5-13L423-533q-8 2-13 2.5t-10.25.5q-1.75 0-22.75-3L177-333q2 8 2.5 13t.5 10.23q0 28.78-20.59 49.28Q138.82-240 109.91-240Z"/%3E%3C/svg%3E'); }
+.mapcard.card-tabs .mapcard-footer .near_me_icon { --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"%3E%3Cpath d="M527-120 413-413 120-527v-43l720-270-270 720h-43Zm18-114 192-503-502 192 224 86 86 225Zm-86-225Z"/%3E%3C/svg%3E'); }
+.mapcard.card-tabs .mapcard-footer .push_pin_icon { --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"%3E%3Cpath d="m634-448 86 77v60H510v241l-30 30-30-30v-241H240v-60l80-77v-332h-50v-60h414v60h-50v332Zm-313 77h312l-59-55v-354H380v354l-59 55Zm156 0Z"/%3E%3C/svg%3E'); }
+.mapcard.card-tabs .mapcard-footer .mail_icon { --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"%3E%3Cpath d="M140-160q-24 0-42-18t-18-42v-520q0-24 18-42t42-18h680q24 0 42 18t18 42v520q0 24-18 42t-42 18H140Zm340-302L140-685v465h680v-465L480-462Zm0-60 336-218H145l335 218ZM140-685v-55 520-465Z"/%3E%3C/svg%3E'); }
+.mapcard.card-tabs .mapcard-footer .comment_icon { --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"%3E%3Cpath d="M240-400h480v-60H240v60Zm0-130h480v-60H240v60Zm0-130h480v-60H240v60ZM880-80 720-240H140q-24 0-42-18t-18-42v-520q0-24 18-42t42-18h680q24 0 42 18t18 42v740ZM140-300h606l74 80v-600H140v520Zm0 0v-520 520Z"/%3E%3C/svg%3E'); }
+.mapcard.card-tabs .mapcard-footer .info_icon { --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"%3E%3Cpath d="M453-280h60v-240h-60v240Zm50.5-323.2q9.5-9.2 9.5-22.8 0-14.45-9.48-24.22-9.48-9.78-23.5-9.78t-23.52 9.78Q447-640.45 447-626q0 13.6 9.48 22.8 9.48 9.2 23.5 9.2t23.52-9.2ZM480.27-80q-82.74 0-155.5-31.5Q252-143 197.5-197.5t-86-127.34Q80-397.68 80-480.5t31.5-155.66Q143-709 197.5-763t127.34-85.5Q397.68-880 480.5-880t155.66 31.5Q709-817 763-763t85.5 127Q880-563 880-480.27q0 82.74-31.5 155.5Q817-252 763-197.68q-54 54.31-127 86Q563-80 480.27-80Zm.23-60Q622-140 721-239.5t99-241Q820-622 721.19-721T480-820q-141 0-240.5 98.81T140-480q0 141 99.5 240.5t241 99.5Zm-.5-340Z"/%3E%3C/svg%3E'); }
+.mapcard.card-tabs .mapcard-footer .search_icon { --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"%3E%3Cpath d="M796-121 533-384q-30 26-70 40.5T378-329q-108 0-183-75t-75-181q0-106 75-181t182-75q106 0 180.5 75T632-585q0 43-14 83t-42 75l264 262-44 44ZM377-389q81 0 138-57.5T572-585q0-81-57-138.5T377-781q-82 0-139.5 57.5T180-585q0 81 57.5 138.5T377-389Z"/%3E%3C/svg%3E'); }
+.mapcard.card-tabs .mapcard-footer .more_horiz_icon { --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"%3E%3Cpath d="M207.86-432Q188-432 174-446.14t-14-34Q160-500 174.14-514t34-14Q228-528 242-513.86t14 34Q256-460 241.86-446t-34 14Zm272 0Q460-432 446-446.14t-14-34Q432-500 446.14-514t34-14Q500-528 514-513.86t14 34Q528-460 513.86-446t-34 14Zm272 0Q732-432 718-446.14t-14-34Q704-500 718.14-514t34-14Q772-528 786-513.86t14 34Q800-460 785.86-446t-34 14Z"/%3E%3C/svg%3E'); }
+.mapcard.card-tabs .mapcard-footer > div > i { width: 22px; height: 22px; }
+/* location and destination share the row by their length, as in the mock: a short
+   one leaves the long one room, and only a pair too long for the line wraps */
+.mapcard.card-tabs .sc-strip .ends { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.mapcard.card-tabs .sc-strip .ends > div { flex: 0 1 auto; min-width: 0; }
+.mapcard.card-tabs .sc-strip .ends > div:last-child { margin-left: auto; }
+
+/* review round: Follow is a crosshair, the pill and tag one height, one rule under the stats,
+   the coordinates as the main value without an area, no made-up progress */
+.mapcard.card-tabs .mapcard-footer .push_pin_icon { --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"%3E%3Cpath d="M450-42v-75q-137-14-228-105T117-450H42v-60h75q14-137 105-228t228-105v-75h60v75q137 14 228 105t105 228h75v60h-75q-14 137-105 228T510-117v75h-60Zm244.5-223.5Q784-355 784-480t-89.5-214.5Q605-784 480-784t-214.5 89.5Q176-605 176-480t89.5 214.5Q355-176 480-176t214.5-89.5Zm-321-108Q330-417 330-480t43.5-106.5Q417-630 480-630t106.5 43.5Q630-543 630-480t-43.5 106.5Q543-330 480-330t-106.5-43.5ZM544-416q26-26 26-64t-26-64q-26-26-64-26t-64 26q-26 26-26 64t26 64q26 26 64 26t64-26Zm-64-64Z"/%3E%3C/svg%3E'); }
+.mapcard.card-tabs .sc-sum-line .sc-pill, .mapcard.card-tabs .sc-sum-id { height: 24px; box-sizing: border-box; display: inline-flex; align-items: center; padding-top: 0; padding-bottom: 0; }
+.mapcard.card-tabs .sc-sum-line { border-top: 0; }
+.mapcard.card-tabs .sc-metrics::before { height: 1px; left: 16px; right: 16px; background: var(--vc-line); }
+.mapcard.card-tabs .sc-strip .sc-sum-pos.v { margin-top: 3px; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--color-text); }
+.mapcard.card-tabs .sc-strip .line { display: none; }
+.mapcard.card-tabs .sc-strip .ends { margin-bottom: 12px; }
+.mapcard.card-tabs .mapcard-footer > div.card-icon-active { color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
+
+/* the ETA keeps to one line beside the destination; the voyage block on Summary a shade lighter */
+.mapcard.card-tabs .sc-panel[id$="_panel_voyage"] > .row-wide-first:first-child > div:last-child { flex: none; white-space: nowrap; }
+.mapcard.card-tabs .sc-panel[id$="_panel_voyage"] > .row-wide-first:first-child > div:last-child > span:last-child { font-size: 13px; font-weight: 600; letter-spacing: 0; white-space: nowrap; }
+.mapcard.card-tabs .sc-strip { background: color-mix(in srgb, var(--color-card-surface) 98%, var(--color-text) 2%); }
+/* the tabbed card a little wider by default; narrow panes still take it edge to edge */
+.mapcard-target.card-tabs.card-width { width: min(440px, 100%); }
+@container mappane (max-width: 500px) { .mapcard-target.card-tabs.card-width { width: 100%; } }
+/* the compass dials stay in the background: both a light muted tone */
+.sc-dir, .sc-dir--muted { color: color-mix(in srgb, var(--color-text-muted) 65%, transparent); }
+
+/* the folded figures show they can be tapped */
+@media (max-height: 1250px) {
+    @container mappane (max-width: 500px) {
+        .mapcard.card-tabs .sc-host.sc-folded .sc-head { cursor: pointer; }
+    }
+}
+/* card content is read and tapped, not selected: no stray highlights from a tap or a drag */
+.mapcard { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.mapcard input, .mapcard textarea, .mapcard [contenteditable] { -webkit-user-select: text; user-select: text; }
+
+/* ==========================================================================
+   Map rails refresh: a surface pill with a soft shadow, square tap targets
+   with rounded corners, no rules between them, the active tool tinted rather
+   than ringed, and the vessel count with its caption.
+   ========================================================================== */
+.map-button-box, .map-button-box.map-pill {
+    --size-map-button: 36px;
+    gap: 2px;
+    padding: 4px;
+    border: 0;
+    border-radius: 16px;
+    background-color: var(--color-surface-raised, var(--color-surface-alt));
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16), 0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+.map-button-box .map-button {
+    height: 36px !important;
+    border-radius: 10px !important;
+    background-color: transparent !important;
+    color: var(--color-text) !important;
+    fill: var(--color-text) !important;
+    transition: background-color .12s, color .12s;
+}
+.map-button-box .map-button + .map-button { border-top: 0 !important; border-image: none !important; }
+.map-pill .map-button svg { width: 19px !important; height: 19px !important; }
+@media (hover: hover) {
+    .map-button-box .map-button:hover { background-color: color-mix(in srgb, var(--color-text) 7%, transparent) !important; color: var(--color-text) !important; fill: var(--color-text) !important; }
+    .map-button-box .map-button:hover svg { transform: none; }
+}
+.map-button-box .map-button.is-active {
+    background-color: color-mix(in srgb, var(--color-accent) 14%, transparent) !important;
+    color: var(--color-accent) !important; fill: var(--color-accent) !important;
+}
+.map-button-box .map-button.is-active::before { display: none; }
+/* the count: the number in weight, "in view" small under it; found by its #markerCount
+   (both hosts have it, their button ids differ), the caption drawn here so no host needs markup */
+.map-button-box .map-button:has(> #markerCount) { height: auto !important; min-height: 40px; flex-direction: column !important; gap: 1px; padding: 4px 0 !important; font-size: 13px !important; font-weight: 700; line-height: 1.1; }
+.map-button-box .map-button:has(> #markerCount)::after { content: "in view"; font-size: 8.5px; font-weight: 400; color: var(--color-text-muted); }
+/* a little more air between the rail and the side panel */
+.map-button-box { right: 12px; }
+/* the website's footer icons too: the same outlined set */
+.mapcard.card-tabs .mapcard-footer .database_icon { --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"%3E%3Cpath d="M480-120q-151 0-255.5-46.5T120-280v-400q0-66 105.5-113T480-840q149 0 254.5 47T840-680v400q0 67-104.5 113.5T480-120Zm0-488q86 0 176.5-26.5T773-694q-27-32-117.5-59T480-780q-88 0-177 26t-117 60q28 35 116 60.5T480-608Zm-1 214q42 0 84-4.5t80.5-13.5q38.5-9 73.5-22t63-29v-155q-29 16-64 29t-74 22q-39 9-80 14t-83 5q-42 0-84-5t-80.5-14q-38.5-9-73-22T180-618v155q27 16 61 29t72.5 22q38.5 9 80.5 13.5t85 4.5Zm1 214q48 0 99-8.5t93.5-22.5q42.5-14 72-31t35.5-35v-125q-28 16-63 28.5T643.5-352q-38.5 9-80 13.5T479-334q-43 0-85-4.5T313.5-352q-38.5-9-72.5-21.5T180-402v126q5 17 34 34.5t72 31q43 13.5 94 22t100 8.5Z"/%3E%3C/svg%3E'); }
+.mapcard.card-tabs .mapcard-footer .zoom_in_icon { --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"%3E%3Cpath d="M796-121 533-384q-30 26-69.96 40.5Q423.08-329 378-329q-108.16 0-183.08-75Q120-479 120-585t75-181q75-75 181.5-75t181 75Q632-691 632-584.85 632-542 618-502q-14 40-42 75l264 262-44 44ZM377-389q81.25 0 138.13-57.5Q572-504 572-585t-56.87-138.5Q458.25-781 377-781q-82.08 0-139.54 57.5Q180-666 180-585t57.46 138.5Q294.92-389 377-389Zm-31-85v-82h-82v-60h82v-81h60v81h81v60h-81v82h-60Z"/%3E%3C/svg%3E'); }
+.mapcard.card-tabs .mapcard-footer .station_icon { --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"%3E%3Cpath d="M198-278q-60-58-89-133T80-560q0-74 29-149t89-133l35 35q-50 49-76.5 116.5T130-560q0 63 26.5 130.5T233-313l-35 35Zm92-92q-40-37-59-89.5T212-560q0-48 19-100.5t59-89.5l35 35q-29 29-46 72.5T262-560q0 35 17.5 79.5T325-405l-35 35Zm4 290 133-405q-17-12-27.5-31T389-560q0-38 26.5-64.5T480-651q38 0 64.5 26.5T571-560q0 25-10.5 44T533-485L666-80h-59l-29-90H383l-30 90h-59Zm108-150h156l-78-238-78 238Zm268-140-35-35q29-29 46-72.5t17-82.5q0-35-17.5-79.5T635-715l35-35q39 37 58.5 89.5T748-560q0 47-19.5 100T670-370Zm92 92-35-35q49-49 76-116.5T830-560q0-63-27-130.5T727-807l35-35q60 58 89 133t29 149q0 75-27.5 149.5T762-278Z"/%3E%3C/svg%3E'); }
+
+/* a card's corner is square wherever one of its sides lies on the pane's edge (card.js marks the
+   flush sides); only corners with both sides free keep the rounding */
+.mapcard.mapcard-target.flush-left { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.mapcard.mapcard-target.flush-top { border-top-left-radius: 0; border-top-right-radius: 0; }
+.mapcard.mapcard-target.flush-right { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.mapcard.mapcard-target.flush-bottom { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }

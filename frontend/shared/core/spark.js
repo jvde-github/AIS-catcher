@@ -148,14 +148,12 @@ export function getShipDimensionSVG(ship, units) {
     const loa = a + b, beam = c + d;
     if (loa <= 0 || beam <= 0) return "";
 
-    const W = 280, HULL_W = 175;
-    const MAX_HALF = 30;
+    const W = 300, HULL_W = 220;
+    const MAX_HALF = 32;
     const k = Math.min(HULL_W / loa, MAX_HALF / Math.max(c, d));
-    // Centre the scaled hull, including wide vessels whose beam limits k.
-    // Dimension annotations keep their existing offsets from its edges.
-    const LEFT = (W - loa * k) / 2;
-    const BEAM_X = LEFT - 16, BEAM_LABEL = LEFT - 20;
-    const MID = 34 + c * k;
+    // the hull a little left of centre: its side distances take the room on the right
+    const LEFT = (W - 40 - loa * k) / 2;
+    const MID = 40 + c * k;
 
     const ox = LEFT + b * k;
     const px = (f) => (ox + f * k).toFixed(1);
@@ -166,25 +164,20 @@ export function getShipDimensionSVG(ship, units) {
     const u = units.getDimUnit();
     const lbl = (v) => units.getDimVal(v) + " " + u;
 
-    // A hull too short or too thin to hold a label puts that pair outside it.
     const hullL = +px(-b), hullR = +px(a);
     const hullTopY = +py(-c), hullBotY = +py(d);
-    const SIDE_X = hullR + 12, SIDE_LABEL = SIDE_X + 6;
+    const SIDE_X = hullR + 14, SIDE_LABEL = SIDE_X + 7;
 
+    // a side distance labels the middle of its own span; a thin hull pushes them apart
     const thin = hullBotY - hullTopY < 26;
-    const portY = thin ? hullTopY - 3 : hullTopY + 8;
-    const stbdY = thin ? hullBotY + 10 : hullBotY - 2;
+    const portY = thin ? hullTopY - 3 : (hullTopY + +py(0)) / 2 + 4;
+    const stbdY = thin ? hullBotY + 10 : (+py(0) + hullBotY) / 2 + 4;
 
-    const tight = hullR - hullL < 44;
-    const sternX = tight ? hullL - 3 : hullL, sternAnchor = tight ? "end" : "start";
-    const bowX = tight ? hullR + 3 : hullR, bowAnchor = tight ? "start" : "end";
-
-    const GAP = 9;                               // the same clearance top and bottom
-    const yArrow = 22, yLabel = 16;
-    const hullTop = MID - c * k, hullBottom = MID + d * k;
-    const yLoa = +(hullBottom + GAP).toFixed(1);
-    const yLoaLabel = +(yLoa + 14).toFixed(1);
-    const H = +(yLoaLabel + 6).toFixed(1);
+    const yArrow = 24, yLabel = 17;
+    // the stern and bow labels inside the hull when it is big enough to hold them
+    const roomy = hullR - hullL > 120 && hullBotY - hullTopY > 34;
+    const yCap = +(hullBotY + 30).toFixed(1);
+    const H = +(yCap + 8).toFixed(1);
 
     return `<svg viewBox="0 0 ${W} ${H}" class="dim-svg" role="img" aria-label="Hull outline, ${lbl(loa)} by ${lbl(beam)}, reported position ${lbl(a)} from the bow and ${lbl(b)} from the stern">
   <defs>
@@ -193,35 +186,30 @@ export function getShipDimensionSVG(ship, units) {
     </marker>
   </defs>
 
-  <line x1="${px(-b)}" y1="${yArrow + 4}" x2="${px(-b)}" y2="${py(-c)}" class="dim-ext"/>
-  <line x1="${px(0)}"  y1="${yArrow + 4}" x2="${px(0)}"  y2="${py(0)}"  class="dim-ext"/>
-  <line x1="${px(a)}"  y1="${yArrow + 4}" x2="${px(a)}"  y2="${py(0)}"  class="dim-ext"/>
+  <line x1="${px(-b)}" y1="${yArrow - 6}" x2="${px(-b)}" y2="${yCap - 14}" class="dim-ext"/>
+  <line x1="${px(0)}"  y1="${yArrow - 6}" x2="${px(0)}"  y2="${py(0)}"  class="dim-ext"/>
+  <line x1="${px(a)}"  y1="${yArrow - 6}" x2="${px(a)}"  y2="${yCap - 14}" class="dim-ext"/>
   <line x1="${px(-b)}" y1="${yArrow}" x2="${px(0)}" y2="${yArrow}" class="dim-arrow" marker-start="url(#dimArrow)" marker-end="url(#dimArrow)"/>
   <line x1="${px(0)}"  y1="${yArrow}" x2="${px(a)}" y2="${yArrow}" class="dim-arrow" marker-start="url(#dimArrow)" marker-end="url(#dimArrow)"/>
-  <text x="${sternX.toFixed(1)}" y="${yLabel}" class="dim-t" text-anchor="${sternAnchor}">${lbl(b)}</text>
-  <text x="${bowX.toFixed(1)}" y="${yLabel}" class="dim-t" text-anchor="${bowAnchor}">${lbl(a)}</text>
+  <text x="${px(-b / 2)}" y="${yLabel}" class="dim-t" text-anchor="middle">${lbl(b)}</text>
+  <text x="${px(a / 2)}" y="${yLabel}" class="dim-t" text-anchor="middle">${lbl(a)}</text>
 
   <polygon points="${ring}" class="dim-hull"/>
+  <line x1="${px(-b)}" y1="${py((d - c) / 2)}" x2="${(hullR - 10).toFixed(1)}" y2="${py((d - c) / 2)}" class="dim-keel"/>
+  ${roomy ? `<text x="${(hullL + 12).toFixed(1)}" y="${(hullBotY - 9).toFixed(1)}" class="dim-end">STERN</text>
+  <text x="${(hullR - 0.18 * (hullR - hullL)).toFixed(1)}" y="${(hullBotY - 9).toFixed(1)}" class="dim-end" text-anchor="end">BOW</text>` : ""}
 
-  <line x1="${BEAM_X}" y1="${py(-c)}" x2="${px(-b)}" y2="${py(-c)}" class="dim-ext"/>
-  <line x1="${BEAM_X}" y1="${py(d)}"  x2="${px(-b)}" y2="${py(d)}"  class="dim-ext"/>
-  <line x1="${BEAM_X}" y1="${py(-c)}" x2="${BEAM_X}" y2="${py(d)}" class="dim-arrow" marker-start="url(#dimArrow)" marker-end="url(#dimArrow)"/>
-  <text x="${BEAM_LABEL}" y="${(+py(0) + 3).toFixed(1)}" class="dim-t" text-anchor="end">${lbl(beam)}</text>
-
-  <line x1="${px(0.8 * loa - b)}" y1="${py(-c)}" x2="${SIDE_X}" y2="${py(-c)}" class="dim-ext"/>
-  <line x1="${px(0)}"             y1="${py(0)}"  x2="${SIDE_X}" y2="${py(0)}"  class="dim-ext"/>
-  <line x1="${px(0.8 * loa - b)}" y1="${py(d)}"  x2="${SIDE_X}" y2="${py(d)}"  class="dim-ext"/>
+  <line x1="${px(0)}"  y1="${py(0)}"  x2="${SIDE_X + 4}" y2="${py(0)}"  class="dim-ext"/>
+  <line x1="${hullR - 30}" y1="${py(-c)}" x2="${SIDE_X + 4}" y2="${py(-c)}" class="dim-ext"/>
+  <line x1="${hullR - 30}" y1="${py(d)}"  x2="${SIDE_X + 4}" y2="${py(d)}"  class="dim-ext"/>
   <line x1="${SIDE_X}" y1="${py(-c)}" x2="${SIDE_X}" y2="${py(0)}" class="dim-arrow" marker-start="url(#dimArrow)" marker-end="url(#dimArrow)"/>
   <line x1="${SIDE_X}" y1="${py(0)}"  x2="${SIDE_X}" y2="${py(d)}" class="dim-arrow" marker-start="url(#dimArrow)" marker-end="url(#dimArrow)"/>
   <text x="${SIDE_LABEL}" y="${portY.toFixed(1)}" class="dim-t">${lbl(c)}</text>
   <text x="${SIDE_LABEL}" y="${stbdY.toFixed(1)}" class="dim-t">${lbl(d)}</text>
 
-  <circle cx="${px(0)}" cy="${py(0)}" r="6.5" class="dim-origin-ring"/>
-  <circle cx="${px(0)}" cy="${py(0)}" r="3.2" class="dim-origin"/>
+  <circle cx="${px(0)}" cy="${py(0)}" r="7.5" class="dim-origin-ring"/>
+  <circle cx="${px(0)}" cy="${py(0)}" r="3.6" class="dim-origin"/>
 
-  <line x1="${px(-b)}" y1="${py(d)}" x2="${px(-b)}" y2="${yLoa + 4}" class="dim-ext"/>
-  <line x1="${px(a)}"  y1="${py(0)}" x2="${px(a)}"  y2="${yLoa + 4}" class="dim-ext"/>
-  <line x1="${px(-b)}" y1="${yLoa}" x2="${px(a)}" y2="${yLoa}" class="dim-arrow" marker-start="url(#dimArrow)" marker-end="url(#dimArrow)"/>
-  <text x="${px((a - b) / 2)}" y="${yLoaLabel}" class="dim-t" text-anchor="middle">${lbl(loa)} overall</text>
+  <text x="${px((a - b) / 2)}" y="${yCap}" class="dim-cap" text-anchor="middle">${lbl(loa)} length · ${lbl(beam)} beam</text>
 </svg>`;
 }

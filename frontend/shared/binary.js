@@ -74,13 +74,13 @@ const PRESSURE_TEND = ['steady', 'decreasing', 'increasing'];
 const METEO_KEYS = ['wspeed', 'airtemp', 'pressure', 'waterlevel', 'watertemp', 'waveheight', 'swellheight', 'visibility', 'cspeed', 'water_flow', 'humidity'];
 const HYDRO_KEYS = ['watercurrent', 'currentspeed', 'currentdir', 'watertemp', 'waterlevel'];
 const METEO_ROWS = [
-    ['Wind', (m) => m.wspeed != null && `${m.wspeed.toFixed(1)} kts${dirSuffix(m.wdir)}`],
+    ['Wind', (m) => m.wspeed != null && `${m.wspeed.toFixed(1)} kn${dirSuffix(m.wdir)}`],
     ['Air', (m) => m.airtemp != null && `${m.airtemp.toFixed(1)}&deg;C`],
-    ['Gust', (m) => m.wgust != null && `${m.wgust.toFixed(1)} kts${dirSuffix(m.wgustdir)}`],
+    ['Gust', (m) => m.wgust != null && `${m.wgust.toFixed(1)} kn${dirSuffix(m.wgustdir)}`],
     ['Humidity', (m) => m.humidity != null && `${m.humidity}%`],
     ['Pressure', (m) => m.pressure != null && m.pressure > 799 &&
         `${m.pressure.toFixed(1)} hPa` + (m.pressuretend != null ? ` (${PRESSURE_TEND[m.pressuretend]})` : '')],
-    ['Current', (m) => { const v = m.watercurrent || m.currentspeed; return v != null && `${v.toFixed(1)} kts${dirSuffix(m.currentdir || m.currentdirection)}`; }],
+    ['Current', (m) => { const v = m.watercurrent || m.currentspeed; return v != null && `${v.toFixed(1)} kn${dirSuffix(m.currentdir || m.currentdirection)}`; }],
     ['Water Level', (m) => m.waterlevel != null && `${m.waterlevel.toFixed(2)} m`],
     ['Water', (m) => m.watertemp != null && `${m.watertemp.toFixed(1)}&deg;C`],
     ['Wave', (m) => m.waveheight != null && `${m.waveheight.toFixed(1)} m${dirSuffix(m.wavedir)}${periodSuffix(m.waveperiod)}`],

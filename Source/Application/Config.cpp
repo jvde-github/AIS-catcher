@@ -242,6 +242,9 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members,
     case AIS::KEY_SETTING_INPUT:
     case AIS::KEY_SETTING_ACTIVE:
       break; // consumed by pass 1
+    case AIS::KEY_SETTING_DESCRIPTION:
+    case AIS::KEY_SETTING_DESC:
+      break; // a name for people, as on an output; the program has no use for it
     case AIS::KEY_SETTING_ZONE:
       if (!m.Get().isArray())
         throw std::runtime_error("\"zone\" must be an array of strings");

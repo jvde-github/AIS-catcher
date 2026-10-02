@@ -4,7 +4,20 @@ import { decodeHTMLEntities, fieldRows } from './components.js';
 import { build as buildTabs, metrics } from './card-tabs.js';
 import { MATCHED_PORT_FIELDS, setPortLink } from './shipcard.js';
 import { CLASS_A, CLASS_B } from './core/constants.js';
-import { getEtaVal, getMmsiTypeVal, getShipTypeShort, getStatusVal } from './core/text.js';
+import { getEtaVal, getMmsiTypeVal, getShipTypeFull, getShipTypeShort, getStatusShort, getStatusVal } from './core/text.js';
+
+// 0 under way, 8 sailing: moving; 1 anchor, 5 moored: still; 2-4, 6 not under command, restricted, constrained, aground
+const statusTone = (st) => (st === 0 || st === 8 ? 'ok' : st === 1 || st === 5 ? 'warn' : st === 2 || st === 3 || st === 4 || st === 6 ? 'bad' : 'off');
+
+// the ship type's swatch: the classes the map tells apart, the rest one colour
+const swatchType = (cls) => ({ 2: 'cargo', 6: 'tanker', 4: 'passenger', 8: 'fishing', 7: 'highspeed', 5: 'special' })[cls] || 'other';
+
+const ageToSeconds = (text) => {
+    if (!text) return null;
+    let n = 0, any = false;
+    for (const [, v, u] of String(text).matchAll(/(\d+)\s*([dhms])/g)) { n += Number(v) * { d: 86400, h: 3600, m: 60, s: 1 }[u]; any = true; }
+    return any ? n : null;
+};
 
 export const TABS = [['summary', 'Summary'], ['vessel', 'Vessel'], ['voyage', 'Voyage'], ['ais', 'AIS'], ['history', 'History']];
 export const DEFAULT_TAB = 'summary';
@@ -26,8 +39,8 @@ function group(panel, label, id, expandable = false) {
     const body = el('div', 'hist-wrap', { id });
     g.append(l, body);
     if (expandable) {
-        const more = el('button', 'sc-more-pill', {type:'button', 'aria-controls':id, 'aria-expanded':'false', 'aria-label':'Show all ' + label.toLowerCase()});
-        more.textContent = '…';
+        const more = el('button', 'sc-more-pill', {type:'button', 'aria-controls':id, 'aria-expanded':'false'});
+        more.innerHTML = 'Show earlier ' + label.toLowerCase().replace(/^reported /, '') + '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         more.hidden = g.hidden = true;
         more.onclick = () => {
             g.classList.add('is-expanded');
@@ -85,7 +98,10 @@ export function build(mount, prefix, o) {
         { fields: [{ key: 'country', label: 'Country' }, { key: 'type', label: 'Sender' }, { key: 'shiptype', label: 'Ship type' }] },
         { fields: [{ key: 'dimension', label: 'Dimension' }, { key: 'draught', label: 'Draught' }, { key: 'bluesign', label: 'Blue sign' }] },
     ]);
-    group(panelEls.vessel, 'Antenna position', prefix + 'hull_body');
+    const hullBody = group(panelEls.vessel, 'Antenna position', prefix + 'hull_body');
+    const legend = el('span', 'sc-legend');
+    legend.textContent = 'GPS antenna';
+    hullBody.previousElementSibling.appendChild(legend);
 
     rows(panelEls.voyage, [
         { cls: 'row-wide-first', fields: [{ key: 'destination', label: 'Destination' }, { key: 'eta', label: 'ETA' }] },
@@ -94,10 +110,28 @@ export function build(mount, prefix, o) {
         { fields: [{ key: 'speed', label: 'Speed' }, { key: 'cog', label: 'Course' }, { key: 'heading', label: 'Heading' }] },
         { fields: [{ key: 'lat', label: 'Latitude' }, { key: 'lon', label: 'Longitude' }] },
     ]);
-    cells.visits = group(panelEls.history, 'Visits', prefix + 'visits', true);
+    // the position as one line in a box, with a copy button
+    const posRow = panelEls.voyage.lastElementChild;
+    posRow.classList.add('sc-pos');
+    const posLabel = posRow.querySelector(':scope > div > span:first-child');
+    if (posLabel) posLabel.textContent = 'Position';
+    const copy = el('button', 'sc-copy', { type: 'button', 'aria-label': 'Copy position', title: 'Copy position' });
+    copy.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></g></svg>';
+    copy.onclick = (e) => {
+        e.stopPropagation();
+        const txt = [...posRow.querySelectorAll(':scope > div > span:last-child')].map(x => x.textContent.trim()).join(' ');
+        navigator.clipboard?.writeText(txt).then(() => { copy.classList.add('is-done'); setTimeout(() => copy.classList.remove('is-done'), 1200); }, () => {});
+    };
+    posRow.appendChild(copy);
+    const tiles = el('div', 'sc-tiles');
+    tiles.innerHTML = '<div class="sc-tile sc-tile--seen"><span class="sc-tile__label">Last signal</span><span class="sc-tile__value"></span></div>' +
+        '<div class="sc-tile"><span class="sc-tile__label">Messages</span><span class="sc-tile__value"></span></div>';
+    const tileSeen = tiles.children[0], tileCount = tiles.children[1];
+    cells.visits = group(panelEls.history, 'Port visits', prefix + 'visits', true);
     group(panelEls.history, 'Reported changes', prefix + 'changes_body', true);
 
     // AIS: the host's own section, whole
+    panelEls.ais.appendChild(tiles);
     if (o.slot) panelEls.ais.appendChild(o.slot);
     else panelEls.ais.innerHTML = '<span class="dim-note">No reception data</span>';
 
@@ -128,16 +162,27 @@ export function build(mount, prefix, o) {
         const vessel = ship.mmsi_type === CLASS_A || ship.mmsi_type === CLASS_B;
         const sender = getMmsiTypeVal(ship);
         set(summary.type, ship.shiptype ? getShipTypeShort(ship.shiptype) : vessel ? null : sender);
+        // the short type in the line, the full wording on hover (as the status pill does)
+        summary.type.title = ship.shiptype ? getShipTypeFull(ship.shiptype) : '';
         const status = Number.isInteger(ship.status) && ship.status >= 0 && ship.status < 15 ? getStatusVal(ship) : null;
-        summary.status.textContent = status || '';
+        // the pill says it in a word or two; the full wording on hover and on the Voyage tab
+        summary.status.textContent = status ? getStatusShort(ship) : '';
+        summary.status.title = status || '';
         summary.sep.hidden = summary.status.hidden = !status;
+        // the navigational status as a pill: moving green, lying still amber, in trouble red
+        summary.status.className = 'sc-sum-status sc-pill sc-pill--' + statusTone(ship.status);
         // the vessel's registry number, the MMSI when it has none
         summary.id.textContent = ship.imo != null ? 'IMO ' + ship.imo : ship.eni ? 'ENI ' + decodeHTMLEntities(ship.eni) : ship.mmsi != null ? 'MMSI ' + ship.mmsi : '';
         const hasPos = ship.lat != null && ship.lon != null;
-        summary.pos.innerHTML = hasPos ? u.getLatValFormat(ship) + ', ' + u.getLonValFormat(ship) : 'N/A';
+        if (!hasPos) summary.pos.textContent = 'N/A';
+        // the degree formats come back as markup (&deg;), so set it as such; the values are numbers
+        else if (u.getPositionShort) summary.pos.innerHTML = u.getPositionShort(ship);
+        else summary.pos.innerHTML = u.getLatValFormat(ship) + ', ' + u.getLonValFormat(ship);
         const places = ship.visits?.filter(v => v.inside) || [];
         summary.region.textContent = places?.length ? places[0].name : '';
         summary.region.hidden = !summary.region.textContent;
+        // no area name: the coordinates are the main value, not a grey footnote
+        summary.pos.classList.toggle('v', summary.region.hidden);
         const currentPlace = places.length ? {...places[0], runtime_id: places[0].id, place_version: ship.place_version, lat: ship.lat, lon: ship.lon} : null;
         setPortLink(summary.region, currentPlace, h.openPort, h.goTo);
         const dest = ship.destination && String(ship.destination).trim();
@@ -150,10 +195,63 @@ export function build(mount, prefix, o) {
         setPortLink(summary.dest, port, h.openPort, h.goTo);
         setPortLink(summary.pin, port, h.openPort, h.goTo);
         summary.pin.setAttribute('aria-label', portName ? 'Open ' + portName : 'Destination');
+        // Vessel: a swatch in the ship type's colour, units small, absent values a faint dash
+        const typeCell = panelEls.vessel.querySelector('[id$="_shiptype"]');
+        if (typeCell) typeCell.title = ship.shiptype != null ? getShipTypeFull(ship.shiptype) : '';
+        if (typeCell && ship.shiptype != null) {
+            let sw = typeCell.querySelector('.sc-swatch');
+            if (!sw) { sw = el('span', 'sc-swatch'); typeCell.prepend(sw); }
+            // the host's track colour for this class; else the card's own palette
+            sw.dataset.type = swatchType(ship.shipclass);
+            sw.style.background = (h.typeColor && h.typeColor(ship)) || '';
+        }
+        for (const key of ['dimension', 'draught']) {
+            const c = panelEls.vessel.querySelector(`[id$="_${key}"]`);
+            const m = c && /^(.*\d)\s+([a-zA-Z]+)$/.exec(c.textContent.trim());
+            if (m) {
+                c.textContent = m[1].replace(/\s*x\s*/i, ' × ') + ' ';
+                const unit = el('span', 'sc-unit');
+                unit.textContent = m[2];
+                c.appendChild(unit);
+            }
+        }
+        for (const c of panelEls.vessel.querySelectorAll('.mapcard-content-row > div > span:last-child, .sc-pos > div > span:last-child'))
+            c.classList.toggle('sc-empty', /^(-|N\/A)?$/.test(c.textContent.trim()));
+        // Voyage: the ETA on one line, its time zone small like a unit
+        const etaCell = panelEls.voyage.querySelector('[id$="_eta"]');
+        const etaM = etaCell && /^(.*\d)\s+UTC$/.exec(etaCell.textContent.trim());
+        if (etaM) {
+            etaCell.textContent = etaM[1] + ' ';
+            const z = el('span', 'sc-unit');
+            z.textContent = 'UTC';
+            etaCell.appendChild(z);
+        }
+        // Voyage: the status as the same pill as on Summary
+        const voyStatus = panelEls.voyage.querySelector('[id$="status"]');
+        if (voyStatus) {
+            voyStatus.innerHTML = '';
+            if (status) { const pill = el('span', 'sc-pill sc-pill--' + statusTone(ship.status)); pill.textContent = status; voyStatus.appendChild(pill); }
+            else voyStatus.textContent = 'N/A';
+        }
         const age = h.age ? h.age(ship) : null;
         summary.seen.textContent = age ? 'Last received ' + age + ' ago' : 'Last received unknown';
+        // a dot that says how fresh: under 3 minutes live, under 30 stale, else lost
+        // seconds from the host when it says them, else read back from the age it shows ("2d 3h", "1m 10s", "25s")
+        const secs = h.ageSeconds ? h.ageSeconds(ship) : ageToSeconds(age);
+        summary.seen.dataset.fresh = secs == null ? 'lost' : secs < 180 ? 'live' : secs < 1800 ? 'stale' : 'lost';
+        // AIS tiles: how long ago, coloured the same way, and how many messages
+        tileSeen.dataset.fresh = summary.seen.dataset.fresh;
+        // "25s" reads as 25 with "s ago" small; "1m 10s" stays whole with "ago" small
+        const m = age && /^(\d+)s$/.exec(age);
+        tileSeen.lastChild.innerHTML = '';
+        if (age) { tileSeen.lastChild.append((m ? m[1] : age) + ' '); const unit = el('span', 'sc-unit'); unit.textContent = (m ? 's ' : '') + 'ago'; tileSeen.lastChild.appendChild(unit); }
+        else tileSeen.lastChild.textContent = 'N/A';
+        tileCount.lastChild.innerHTML = '';
+        if (ship.count != null) { tileCount.lastChild.append(String(ship.count) + ' '); const unit = el('span', 'sc-unit'); unit.textContent = 'received'; tileCount.lastChild.appendChild(unit); }
+        else tileCount.lastChild.textContent = 'N/A';
         const hasEta = ship.eta_month != null && ship.eta_day != null && ship.eta_hour != null && ship.eta_minute != null;
-        summary.eta.textContent = hasEta ? 'ETA ' + getEtaVal(ship) : '';
+        summary.eta.innerHTML = '';
+        if (hasEta) { const b = document.createElement('b'); b.textContent = getEtaVal(ship); summary.eta.append('ETA ', b); }
         summary.eta.hidden = !hasEta;
     }
 

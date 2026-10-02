@@ -16,12 +16,16 @@
 */
 
 #include <chrono>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <random>
 #ifndef _WIN32
 #include <climits>
 #include <cstdlib>
+#include <unistd.h>
+#else
+#include <windows.h>
 #endif
 
 #include "Common.h"
@@ -55,7 +59,46 @@ ControlCore::ControlCore(const std::string &file, int port_override,
   auto_retry = desired;
 }
 
+// the machine's name, so a fresh station is not called "My Station"
+static std::string machineName() {
+  char name[256] = {0};
+#ifdef _WIN32
+  DWORD size = sizeof(name);
+  if (!GetComputerNameA(name, &size))
+    return "";
+#else
+  if (gethostname(name, sizeof(name) - 1) != 0)
+    return "";
+#endif
+  std::string s(name);
+  // a local domain adds nothing for visitors
+  const auto dot = s.find('.');
+  if (dot != std::string::npos && dot > 0)
+    s.erase(dot);
+  return s;
+}
+
+// the statistics backup beside the configuration, as a full path so the
+// settings show where it lives (/etc/AIS-catcher for an installed service)
+static std::string statsPath(const std::string &config_file) {
+  const auto slash = config_file.find_last_of("/\\");
+  const std::string dir = slash == std::string::npos ? "." : config_file.substr(0, slash);
+  const std::string name =
+      (slash == std::string::npos ? config_file : config_file.substr(slash + 1)) + ".stats";
+#ifdef _WIN32
+  char full[_MAX_PATH];
+  if (_fullpath(full, dir.c_str(), sizeof(full)))
+    return std::string(full) + "\\" + name;
+#else
+  char full[PATH_MAX];
+  if (realpath(dir.c_str(), full))
+    return std::string(full) + "/" + name;
+#endif
+  return name;
+}
+
 void ControlCore::createDefaultConfig() {
+  const std::string host = machineName();
   const std::string content =
       "{\n"
       "  \"config\": \"aiscatcher\",\n"
@@ -65,10 +108,13 @@ void ControlCore::createDefaultConfig() {
       "  \"control\": {\n"
       "    \"wizard\": true,\n"
       "    \"viewer\": { \"share_loc\": true, \"realtime\": true, \"decoder\": "
-      "true, \"log\": false,\n"
+      "true, \"log\": false,\n" +
+      (host.empty() ? std::string()
+                    : "                 \"station\": " + JSON::Writer::escape(host) + ",\n") +
+      "                 \"station_link\": \"https://www.aiscatcher.org/stations\",\n"
       "                 \"file\": " +
-      JSON::Writer::escape(config_file + ".stats") +
-      " }\n"
+      JSON::Writer::escape(statsPath(config_file)) +
+      ", \"backup\": 10 }\n"
       "  }\n"
       "}\n";
 
@@ -438,12 +484,8 @@ bool ControlCore::writeFileAtomic(const std::string &path,
 // a configuration written before the viewer had a "viewer" section gets the
 // defaults once
 void ControlCore::addViewerDefaults() {
-  // the statistics file sits beside the configuration; the viewer resolves a
-  // relative name against the configuration's directory, so only the name
-  const auto slash = config_file.find_last_of("/\\");
-  const std::string stats =
-      (slash == std::string::npos ? config_file : config_file.substr(slash + 1)) +
-      ".stats";
+  // the statistics file sits beside the configuration
+  const std::string stats = statsPath(config_file);
   const struct {
     AIS::Keys key;
     std::string value;
@@ -469,6 +511,18 @@ void ControlCore::addViewerDefaults() {
         viewer->Set(d.key, d.value, doc.pool);
         changed = true;
       }
+
+    // no viewer section at all (the installer's seed when it imports a legacy
+    // config): the station basics a fresh config gets too; an existing section
+    // keeps what its owner left out
+    if (!v) {
+      const std::string host = machineName();
+      if (!host.empty())
+        viewer->Set(AIS::KEY_SETTING_STATION, host, doc.pool);
+      viewer->Set(AIS::KEY_SETTING_STATION_LINK,
+                  std::string("https://www.aiscatcher.org/stations"), doc.pool);
+      viewer->Set(AIS::KEY_SETTING_BACKUP, std::string("10"), doc.pool);
+    }
 
     if (changed && !v) {
       JSON::Value val;

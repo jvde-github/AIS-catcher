@@ -7,7 +7,7 @@ const ChannelFields = {
     host: () => ({
         name: 'host',
         section: 'Connection',
-        label: 'Host',
+        label: 'Address',
         type: 'text',
         defaultValue: '127.0.0.1',
         placeholder: 'e.g., 192.168.1.101',
@@ -32,10 +32,11 @@ const ChannelFields = {
     }),
     link: () => ({
         name: 'link',
+        tooltip: 'Your page at this service, opened from Flow',
         section: 'Label',
-        label: 'Link',
+        label: 'Web Page',
         type: 'text',
-        placeholder: 'Optional link, e.g. https://example.com',
+        placeholder: 'https://…',
         width: 50
     }),
     active: () => ({
@@ -54,7 +55,7 @@ const ChannelFields = {
         type: 'toggle',
         defaultValue: false,
         width: 50,
-        tooltip: 'Drops a message identical to one seen in the last 3 seconds'
+        tooltip: 'Skip repeats within 3 seconds'
     }),
     msgformat: (defaultValue = 'NMEA') => ({
         name: 'msgformat',
@@ -78,7 +79,7 @@ const ChannelFields = {
         section: 'Filter',
         label: 'Downsample Position',
         type: 'switch-integer',
-        tooltip: 'Off forwards every position; on keeps at most one per vessel within the seconds set (0-3600)',
+        tooltip: 'At most one position per vessel per interval',
         width: 50,
         defaultValue: false,
         defaultInteger: 60,
@@ -88,11 +89,12 @@ const ChannelFields = {
     }),
     zones: () => ({
         name: 'zone',
+        tooltip: 'Limit to inputs in these zones',
         section: 'Zones',
         label: 'Zones',
         type: 'zones',
         defaultValue: [],
-        hint: 'No zones — receives from all inputs'
+        hint: 'All inputs'
     })
 };
 
@@ -108,7 +110,7 @@ const sdrGainFields = (prefix, inputValue) => ({
             { value: "linearity", label: "Linearity" },
             { value: "sensitivity", label: "Sensitivity" }
         ],
-        tooltip: "Free sets LNA, mixer and VGA individually",
+        tooltip: "Free sets each stage",
         dependsOn: {
             field: "input",
             value: inputValue
@@ -197,7 +199,7 @@ const sdrGainFields = (prefix, inputValue) => ({
         label: "Bias tee",
         type: "toggle",
         jsonpath: `${prefix}.biastee`,
-        tooltip: "Powers an external LNA over the cable",
+        tooltip: "Power an external LNA",
         defaultValue: false,
         width: 25,
         dependsOn: {
@@ -212,6 +214,7 @@ const httpSchema = {
     link: ChannelFields.link(),
     url: {
         name: 'url',
+        tooltip: 'Address to post to',
         section: 'Connection',
         label: 'URL',
         type: 'text',
@@ -281,7 +284,7 @@ const httpSchema = {
             { value: 'AIRFRAMES', label: 'AIRFRAMES' },
             { value: 'NMEA', label: 'NMEA' }
         ],
-        tooltip: 'Submission format expected by the server'
+        tooltip: 'Format the server expects'
     },
     unique: ChannelFields.unique(),
     position_interval: ChannelFields.position_interval(),
@@ -301,7 +304,7 @@ const udpSchema = {
         type: 'toggle',
         defaultValue: false,
         width: 25,
-        tooltip: 'Allow sending to broadcast addresses'
+        tooltip: 'Allow broadcast addresses'
     },
     msgformat: ChannelFields.msgformat(),
     unique: ChannelFields.unique(),
@@ -322,7 +325,7 @@ const tcpSchema = {
         type: 'toggle',
         defaultValue: true,
         width: 25,
-        tooltip: 'Reconnect automatically after failures'
+        tooltip: 'Retry after failures'
     },
     keep_alive: {
         name: 'keep_alive',
@@ -364,6 +367,7 @@ const dbSchema = {
     link: ChannelFields.link(),
     type: {
         name: 'type',
+        tooltip: 'Where messages are stored',
         section: 'Connection',
         label: 'Database',
         type: 'select',
@@ -383,7 +387,7 @@ const dbSchema = {
         type: 'text',
         jsonpath: 'conn_str',
         placeholder: 'ais.db  ·  dbname=ais  ·  /var/log/ais',
-        tooltip: 'File for SQLite, libpq connection string for PostgreSQL, directory for CSV',
+        tooltip: 'File, connection string or folder',
         width: 60
     },
     retention: {
@@ -394,7 +398,7 @@ const dbSchema = {
         jsonpath: 'retention',
         min: 0,
         defaultValue: 0,
-        tooltip: 'Days of history kept, pruned daily; 0 keeps everything'
+        tooltip: 'Days kept, 0 for all'
     },
     capacity: {
         name: 'capacity',
@@ -405,7 +409,7 @@ const dbSchema = {
         max: 1000000,
         defaultValue: 8192,
         advanced: true,
-        tooltip: 'CSV only: how many targets the state file keeps before the least recently heard is dropped',
+        tooltip: 'CSV: targets kept in the state file',
         dependsOn: {
             field: 'type',
             value: 'csv'
@@ -418,7 +422,7 @@ const dbSchema = {
         type: 'number',
         jsonpath: 'station_id',
         min: 0,
-        tooltip: 'Stamped on every row so several feeders can share one database'
+        tooltip: 'Lets several feeders share a database'
     },
     active: ChannelFields.active(),
     state: {
@@ -429,7 +433,7 @@ const dbSchema = {
         jsonpath: 'state',
         defaultValue: true,
         width: 25,
-        tooltip: 'Latest values per MMSI, one row per vessel'
+        tooltip: 'Latest values per vessel'
     },
     stats: {
         name: 'stats',
@@ -439,7 +443,7 @@ const dbSchema = {
         jsonpath: 'stats',
         defaultValue: true,
         width: 25,
-        tooltip: 'Hourly reception statistics, one row per hour'
+        tooltip: 'Hourly reception statistics'
     },
     position: {
         name: 'position',
@@ -449,7 +453,7 @@ const dbSchema = {
         jsonpath: 'position',
         defaultValue: false,
         width: 25,
-        tooltip: 'Log every position report; grows with traffic'
+        tooltip: 'Every position report'
     },
     dbstatic: {
         name: 'static',
@@ -459,7 +463,7 @@ const dbSchema = {
         jsonpath: 'static',
         defaultValue: false,
         width: 25,
-        tooltip: 'Log static and voyage reports; grows with traffic'
+        tooltip: 'Static and voyage reports'
     },
     nmea: {
         name: 'nmea',
@@ -469,10 +473,11 @@ const dbSchema = {
         jsonpath: 'nmea',
         defaultValue: false,
         width: 25,
-        tooltip: 'Store the raw sentences with each message'
+        tooltip: 'Keep raw sentences'
     },
     interval: {
         name: 'interval',
+        tooltip: 'Seconds between writes',
         label: 'Write Interval (seconds)',
         type: 'number',
         jsonpath: 'interval',
@@ -491,6 +496,7 @@ const mqttSchema = {
     link: ChannelFields.link(),
     url: {
         name: 'url',
+        tooltip: 'Broker address',
         section: 'Connection',
         label: 'URL',
         type: 'text',
@@ -504,10 +510,11 @@ const mqttSchema = {
         type: 'text',
         placeholder: 'ais/data',
         defaultValue: 'ais/data',
-        tooltip: 'Supports %mmsi%, %type% and %channel% placeholders'
+        tooltip: 'Accepts %mmsi%, %type%, %channel%'
     },
     client_id: {
         name: 'client_id',
+        tooltip: 'Name the broker sees',
         section: 'Connection',
         label: 'Client ID',
         type: 'text',
@@ -516,6 +523,7 @@ const mqttSchema = {
     },
     qos: {
         name: 'qos',
+        tooltip: 'Delivery guarantee',
         section: 'Connection',
         label: 'QoS',
         type: 'select',
@@ -555,7 +563,7 @@ const webviewerSchema = {
         jsonpath: 'station',
         defaultValue: 'My Station',
         width: 100,
-        tooltip: 'Station name shown in the web viewer'
+        tooltip: 'Shown in the viewer'
     },
     station_link: {
         name: 'station_link',
@@ -566,7 +574,7 @@ const webviewerSchema = {
         width: 50,
         jsonpath: 'station_link',
         placeholder: 'https://...',
-        tooltip: 'External website linked from the station name'
+        tooltip: 'Linked from the station name'
     },
     lat: {
         name: 'lat',
@@ -580,7 +588,7 @@ const webviewerSchema = {
         min: -90,
         max: 90,
         width: 50,
-        tooltip: 'Station latitude in decimal degrees'
+        tooltip: 'Decimal degrees'
     },
     lon: {
         name: 'lon',
@@ -594,13 +602,13 @@ const webviewerSchema = {
         min: -180,
         max: 180,
         width: 50,
-        tooltip: 'Station longitude in decimal degrees'
+        tooltip: 'Decimal degrees'
     },
     places: {
         name: 'places', section: 'Storage',
         label: 'Place Directory', type: 'text', jsonpath: 'places',
         placeholder: '/etc/AIS-catcher/places', width: 100,
-        tooltip: 'Directory containing saved port, berth, anchorage, and custom area definitions'
+        tooltip: 'Folder with place definitions'
     },
     plugin_dir: {
         name: 'plugin_dir',
@@ -611,7 +619,7 @@ const webviewerSchema = {
         jsonpath: 'plugin_dir',
         placeholder: '/path/to/plugins',
         width: 50,
-        tooltip: 'Directory with .pjs/.pss plugins injected into the viewer'
+        tooltip: 'Folder with viewer plugins'
     },
     mbtiles: {
         name: 'mbtiles',
@@ -667,7 +675,7 @@ const webviewerSchema = {
         defaultValue: '',
         placeholder: 'http://127.0.0.1:8110',
         width: 50,
-        tooltip: 'URL of this Web Control, linked from the viewer menu'
+        tooltip: 'Linked from the viewer menu'
     },
     file: {
         name: 'file',
@@ -677,7 +685,7 @@ const webviewerSchema = {
         type: 'text',
         jsonpath: 'file',
         width: 75,
-        tooltip: 'Keeps statistics across restarts, empty to disable'
+        tooltip: 'Keeps statistics across restarts'
     },
     backup: {
         name: 'backup',
@@ -690,7 +698,7 @@ const webviewerSchema = {
         min: 0,
         max: 2880,
         width: 25,
-        tooltip: 'Minutes between backups: 0 disables periodic writes; otherwise at least 5. The file is still saved on shutdown.'
+        tooltip: 'Minutes between backups (0 off, else 5+)'
     },
     history: {
         name: 'history',
@@ -703,7 +711,7 @@ const webviewerSchema = {
         min: 5,
         max: 43200,
         width: 50,
-        tooltip: 'Hides ships with no messages for this long'
+        tooltip: 'Hide ships silent this long'
     },
     track_memory: {
         name: 'track_memory',
@@ -716,7 +724,7 @@ const webviewerSchema = {
         min: 16,
         max: 262144,
         width: 50,
-        tooltip: 'More memory keeps longer track history'
+        tooltip: 'More memory, longer tracks'
     },
     replay: {
         name: 'replay',
@@ -751,7 +759,7 @@ const webviewerSchema = {
         min: 0,
         max: 604800,
         width: 50,
-        tooltip: 'How far back tracks and replay reach, 0 for no limit'
+        tooltip: 'Track and replay length, 0 for no limit'
     },
     context: {
         name: 'context',
@@ -762,7 +770,7 @@ const webviewerSchema = {
         jsonpath: 'context',
         defaultValue: 'settings',
         width: 100,
-        tooltip: 'Browser storage key; separates viewers'
+        tooltip: 'Keeps viewers apart'
     },
     active: {
         name: 'active',
@@ -783,7 +791,7 @@ const webviewerSchema = {
         jsonpath: 'share_loc',
         defaultValue: false,
         width: 24,
-        tooltip: 'Show station location and range on the map'
+        tooltip: 'Station and range on the map'
     },
     use_gps: {
         name: 'use_gps',
@@ -794,7 +802,7 @@ const webviewerSchema = {
         jsonpath: 'use_gps',
         defaultValue: true,
         width: 24,
-        tooltip: 'Let GPS update the station location'
+        tooltip: 'Use GPS for the location'
     },
     expire: {
         name: 'expire',
@@ -805,7 +813,7 @@ const webviewerSchema = {
         jsonpath: 'expire',
         defaultValue: false,
         width: 24,
-        tooltip: 'Clear data not reconfirmed by new messages'
+        tooltip: 'Drop data not seen again'
     },
     realtime: {
         name: 'realtime',
@@ -827,7 +835,7 @@ const webviewerSchema = {
         jsonpath: 'msg',
         defaultValue: false,
         width: 24,
-        tooltip: 'Keep recent NMEA per ship for the ship card'
+        tooltip: 'Recent NMEA on the ship card'
     },
     geojson: {
         name: 'geojson',
@@ -875,13 +883,14 @@ const webviewerSchema = {
     },
     zones: {
         name: 'zone',
+        tooltip: 'Limit to inputs in these zones',
         section: 'Zones',
 
         label: 'Zones',
         type: 'zones',
         jsonpath: 'zone',
         defaultValue: [],
-        hint: 'No zones — receives from all inputs'
+        hint: 'All inputs'
     }
 };
 
@@ -891,7 +900,7 @@ const sharingSchema = {
         label: 'Enable Sharing',
         type: 'toggle',
         defaultValue: false,
-        tooltip: 'Share messages with the community map'
+        tooltip: 'Share with the community map'
     },
     sharing_key: {
         name: 'sharing_key',
@@ -913,37 +922,46 @@ const sharingSchema = {
     },
     sharing_zone: {
         name: 'sharing_zone',
+        tooltip: 'Limit to inputs in these zones',
         label: 'Zones',
         type: 'zones',
         defaultValue: [],
-        hint: 'No zones — receives from all inputs'
+        hint: 'All inputs'
     }
 };
 
 // Viewer settings are applied through the versioned configuration feed.
 const receiverSchema = {
+    description: {
+        name: "description",
+        label: "Description",
+        type: "text",
+        placeholder: "e.g. Mast antenna",
+    },
     input: {
         name: "input",
+        tooltip: "Kind of receiver",
         label: "Device Type",
         type: "select",
         jsonpath: "input",
 
         options: [
-            { value: "", label: "Select Device" },
-            { value: "RTLSDR", label: "RTLSDR" },
-            { value: "AIRSPY", label: "AIRSPY" },
-            { value: "AIRSPYHF", label: "AIRSPYHF" },
-            { value: "HACKRF", label: "HACKRF" },
+            { value: "", label: "Select a device" },
+            { value: "RTLSDR", label: "RTL-SDR" },
+            { value: "AIRSPY", label: "Airspy" },
+            { value: "AIRSPYHF", label: "Airspy HF+" },
+            { value: "HACKRF", label: "HackRF" },
             { value: "HYDRASDR", label: "HydraSDR" },
-            { value: "SERIALPORT", label: "SERIAL" },
-            { value: "UDPSERVER", label: "UDP Server" },
-            { value: "RTLTCP", label: "TCP Client" },
-            { value: "SPYSERVER", label: "SPYSERVER" },
-            { value: "NMEA2000", label: "NMEA2000" }
+            { value: "SERIALPORT", label: "Serial (NMEA receiver)" },
+            { value: "UDPSERVER", label: "UDP (NMEA over the network)" },
+            { value: "RTLTCP", label: "Network client (RTL-TCP, TCP, MQTT)" },
+            { value: "SPYSERVER", label: "SpyServer" },
+            { value: "NMEA2000", label: "NMEA 2000" }
         ],
         withButton: {
             onClick: "openDeviceSelectionModal",
-            icon: SEARCH_ICON
+            icon: SEARCH_ICON,
+            text: "Find devices"
         },
         onChange: "clearSerial"
     },
@@ -957,7 +975,7 @@ const receiverSchema = {
             { value: "AB", label: "AB" },
             { value: "CD", label: "CD" }
         ],
-        tooltip: "AB is standard, CD the long-range pair",
+        tooltip: "AB standard, CD long range",
         dependsOn: {
             field: "input",
             value: ["RTLSDR", "AIRSPY", "AIRSPYHF", "HACKRF", "HYDRASDR"]
@@ -972,7 +990,7 @@ const receiverSchema = {
             { value: "", label: "CD" },
             { value: "AB", label: "AB" }
         ],
-        tooltip: "Channel letters in the NMEA output; AB for software that only knows A and B",
+        tooltip: "Channel letters in NMEA output",
         dependsOn: {
             field: "channel",
             value: "CD"
@@ -1014,14 +1032,14 @@ const receiverSchema = {
             { value: "v1_high", label: "AIS Engine v1 High" },
             { value: "v2_base", label: "AIS Engine v2 Base (experimental)" }
         ],
-        tooltip: "A second engine compares decoders and doubles CPU",
+        tooltip: "A second engine doubles CPU",
         settings: [
             {
                 name: "fp_ds",
                 label: "Fixed-point downsampling",
                 type: "toggle",
                 types: ["v1_base", "v1_high", "v2_base"],
-                tooltip: "Integer downsampling of 1536K input: less CPU on low-end hardware"
+                tooltip: "Less CPU on small devices"
             }
         ]
     },
@@ -1053,7 +1071,7 @@ const receiverSchema = {
             { value: 0, label: "Off" },
             { value: 192000, label: "192K" }
         ],
-        tooltip: "Tuner filter bandwidth; Off uses the device default",
+        tooltip: "Off uses the device default",
         dependsOn: {
             field: "input",
             value: "RTLSDR"
@@ -1072,7 +1090,7 @@ const receiverSchema = {
             { value: 288000, label: "288K" },
             { value: 1536000, label: "1536K (default)" }
         ],
-        tooltip: "1536000 Hz (1536K) is recommended; 288K reduces CPU load on small devices",
+        tooltip: "1536K recommended; 288K saves CPU",
         dependsOn: {
             field: "input",
             value: "RTLSDR"
@@ -1086,7 +1104,7 @@ const receiverSchema = {
         min: -150,
         max: 150,
         defaultValue: 0,
-        tooltip: "Correct the dongle frequency error in ppm",
+        tooltip: "Frequency correction",
         dependsOn: {
             field: "input",
             value: "RTLSDR"
@@ -1097,7 +1115,7 @@ const receiverSchema = {
         label: "Bias tee",
         type: "toggle",
         jsonpath: "rtlsdr.biastee",
-        tooltip: "Powers an external LNA over the cable",
+        tooltip: "Power an external LNA",
         defaultValue: false,
         width: 25,
         dependsOn: {
@@ -1120,6 +1138,7 @@ const receiverSchema = {
     },
     airspyhf_sample_rate: {
         name: "airspyhf_sample_rate",
+        tooltip: "Higher costs more CPU",
         label: "Sample Rate (Hz)",
         type: "integer-select",
         jsonpath: "airspyhf.sample_rate",
@@ -1188,7 +1207,7 @@ const receiverSchema = {
             { value: "basestation", label: "BASESTATION" },
             { value: "raw1090", label: "RAW1090" }
         ],
-        tooltip: "How the remote server is reached and what it sends",
+        tooltip: "How the server is reached",
         dependsOn: {
             field: "input",
             value: "RTLTCP"
@@ -1196,6 +1215,7 @@ const receiverSchema = {
     },
     rtltcp_host: {
         name: "rtltcp_host",
+        tooltip: "Server address",
         label: "Host",
         type: "text",
         jsonpath: "rtltcp.host",
@@ -1208,6 +1228,7 @@ const receiverSchema = {
     },
     rtltcp_port: {
         name: "rtltcp_port",
+        tooltip: "Server port",
         label: "Port",
         type: "number",
         jsonpath: "rtltcp.port",
@@ -1224,7 +1245,7 @@ const receiverSchema = {
         type: "text",
         jsonpath: "rtltcp.url",
         placeholder: "wss://host:port/path?query",
-        tooltip: "Port 443 (wss) or 80 (ws) unless given; user:password@ sends HTTP Basic, token@ a Bearer token",
+        tooltip: "user:password@ or token@ for login",
         dependsOn: {
             field: "rtltcp_protocol",
             value: ["ws", "wss"]
@@ -1232,6 +1253,7 @@ const receiverSchema = {
     },
     rtltcp_ssl_verify: {
         name: "rtltcp_ssl_verify",
+        tooltip: "Check the server's certificate",
         label: "Verify Certificate",
         type: "toggle",
         jsonpath: "rtltcp.ssl_verify",
@@ -1244,6 +1266,7 @@ const receiverSchema = {
     },
     rtltcp_sample_rate: {
         name: "rtltcp_sample_rate",
+        tooltip: "Must match the server",
         label: "Sample Rate (Hz)",
         type: "number",
         jsonpath: "rtltcp.sample_rate",
@@ -1259,6 +1282,7 @@ const receiverSchema = {
     },
     rtltcp_bandwidth: {
         name: "rtltcp_bandwidth",
+        tooltip: "0 uses the default",
         label: "Bandwidth (Hz)",
         type: "number",
         jsonpath: "rtltcp.bandwidth",
@@ -1274,6 +1298,7 @@ const receiverSchema = {
     },
     rtltcp_freqoffset: {
         name: "rtltcp_freqoffset",
+        tooltip: "Frequency correction",
         label: "Frequency Offset (PPM)",
         type: "number",
         jsonpath: "rtltcp.freqoffset",
@@ -1303,6 +1328,7 @@ const receiverSchema = {
     },
     rtltcp_rtlagc: {
         name: "rtltcp_rtlagc",
+        tooltip: "Automatic gain on the dongle",
         label: "RTL AGC",
         type: "toggle",
         jsonpath: "rtltcp.rtlagc",
@@ -1315,6 +1341,7 @@ const receiverSchema = {
     },
     rtltcp_protocols: {
         name: "rtltcp_protocols",
+        tooltip: "Subprotocols to offer the server",
         label: "Protocols",
         type: "text",
         jsonpath: "rtltcp.protocols",
@@ -1326,6 +1353,7 @@ const receiverSchema = {
     },
     rtltcp_binary: {
         name: "rtltcp_binary",
+        tooltip: "Server sends binary frames",
         label: "Binary Mode",
         type: "toggle",
         jsonpath: "rtltcp.binary",
@@ -1338,6 +1366,7 @@ const receiverSchema = {
     },
     rtltcp_origin: {
         name: "rtltcp_origin",
+        tooltip: "Origin header to send",
         label: "Origin",
         type: "text",
         jsonpath: "rtltcp.origin",
@@ -1349,6 +1378,7 @@ const receiverSchema = {
     },
     rtltcp_topic: {
         name: "rtltcp_topic",
+        tooltip: "Topic to subscribe to",
         label: "Topic",
         type: "text",
         jsonpath: "rtltcp.topic",
@@ -1360,6 +1390,7 @@ const receiverSchema = {
     },
     rtltcp_client_id: {
         name: "rtltcp_client_id",
+        tooltip: "Name the broker sees",
         label: "Client ID",
         type: "text",
         jsonpath: "rtltcp.client_id",
@@ -1371,6 +1402,7 @@ const receiverSchema = {
     },
     rtltcp_username: {
         name: "rtltcp_username",
+        tooltip: "Login name",
         label: "Username",
         type: "text",
         jsonpath: "rtltcp.username",
@@ -1382,6 +1414,7 @@ const receiverSchema = {
     },
     rtltcp_password: {
         name: "rtltcp_password",
+        tooltip: "Login password",
         label: "Password",
         type: "text",
         jsonpath: "rtltcp.password",
@@ -1393,6 +1426,7 @@ const receiverSchema = {
     },
     rtltcp_qos: {
         name: "rtltcp_qos",
+        tooltip: "Delivery guarantee",
         label: "QoS Level",
         type: "select",
         jsonpath: "rtltcp.qos",
@@ -1409,13 +1443,15 @@ const receiverSchema = {
     },
     serialport_port: {
         name: "serialport_port",
+        tooltip: "Where the receiver is plugged in",
         label: "Port",
         type: "text",
         jsonpath: "serialport.port",
         placeholder: "e.g., /dev/tty0",
         withButton: {
             onClick: "openSerialDeviceModal",
-            icon: SEARCH_ICON
+            icon: SEARCH_ICON,
+            text: "Find ports"
         },
         dependsOn: {
             field: "input",
@@ -1435,7 +1471,7 @@ const receiverSchema = {
             { value: "57600", label: "57600" },
             { value: "115200", label: "115200" }
         ],
-        tooltip: "38400 is standard for AIS equipment",
+        tooltip: "38400 for most AIS receivers",
         dependsOn: {
             field: "input",
             value: "SERIALPORT"
@@ -1445,7 +1481,7 @@ const receiverSchema = {
         name: "serialport_init_seq",
         label: "Init Sequence",
         type: "text",
-        tooltip: "Commands sent to the device on open",
+        tooltip: "Sent when the port opens",
         jsonpath: "serialport.init_seq",
         dependsOn: {
             field: "input",
@@ -1458,7 +1494,7 @@ const receiverSchema = {
         type: "text",
         jsonpath: "serialport.dump_file",
         placeholder: "e.g., /var/log/ais-serial.log",
-        tooltip: "Append raw bytes to this file (also enables dump)",
+        tooltip: "Write raw data to this file",
         advanced: true,
         dependsOn: {
             field: "input",
@@ -1471,7 +1507,7 @@ const receiverSchema = {
         type: "text",
         jsonpath: "udpserver.server",
         placeholder: "e.g., 127.0.0.1",
-        tooltip: "Local address the UDP server listens on",
+        tooltip: "Address to listen on",
         dependsOn: {
             field: "input",
             value: "UDPSERVER"
@@ -1480,6 +1516,7 @@ const receiverSchema = {
     },
     udpserver_port: {
         name: "udpserver_port",
+        tooltip: "Port to listen on",
         label: "Port",
         type: "number",
         jsonpath: "udpserver.port",
@@ -1492,6 +1529,7 @@ const receiverSchema = {
     },
     hackrf_lna: {
         name: "hackrf_lna",
+        tooltip: "RF gain in dB",
         label: "LNA Gain",
         type: "number",
         jsonpath: "hackrf.lna",
@@ -1508,6 +1546,7 @@ const receiverSchema = {
     },
     hackrf_vga: {
         name: "hackrf_vga",
+        tooltip: "Baseband gain in dB",
         label: "VGA Gain",
         type: "number",
         jsonpath: "hackrf.vga",
@@ -1537,6 +1576,7 @@ const receiverSchema = {
     },
     spyserver_gain: {
         name: "spyserver_gain",
+        tooltip: "Gain set on the server",
         label: "Tuner Gain",
         type: "number",
         jsonpath: "spyserver.gain",
@@ -1552,6 +1592,7 @@ const receiverSchema = {
     },
     spyserver_host: {
         name: "spyserver_host",
+        tooltip: "Server address",
         label: "Host",
         type: "text",
         jsonpath: "spyserver.host",
@@ -1564,6 +1605,7 @@ const receiverSchema = {
     },
     spyserver_port: {
         name: "spyserver_port",
+        tooltip: "Server port",
         label: "Port",
         type: "number",
         jsonpath: "spyserver.port",
@@ -1594,7 +1636,7 @@ const receiverSchema = {
         jsonpath: "verbose",
         defaultValue: false,
         width: 25,
-        tooltip: "Log message counts at the interval set under Output › Screen"
+        tooltip: "Log message counts"
     },
     zones: {
         name: "zone",
@@ -1603,7 +1645,7 @@ const receiverSchema = {
         jsonpath: "zone",
         defaultValue: [],
 
-        tooltip: "Routes this receiver to outputs sharing a zone"
+        tooltip: "Sends only to outputs in these zones"
     }
 };
 
@@ -1619,7 +1661,7 @@ const generalSettingsSchema = {
         max: 3600,
         step: 1,
         unit: 's',
-        tooltip: 'Stop the receiver after this many seconds'
+        tooltip: 'Stop after this many seconds'
     },
     timeout_only_when_idle: {
         name: 'timeout_only_when_idle',
@@ -1628,7 +1670,7 @@ const generalSettingsSchema = {
         jsonpath: 'timeout_only_when_idle',
         defaultValue: false,
         width: 50,
-        tooltip: 'Watchdog: counts only while input is idle'
+        tooltip: 'Counts only while idle'
     }
 };
 
@@ -1649,7 +1691,7 @@ const screenSchema = {
             { value: '4', label: 'JSON (compact)' },
             { value: '5', label: 'JSON (full)' }
         ],
-        tooltip: 'Messages written to standard output: the journal under systemd, the container log under Docker'
+        tooltip: 'Messages printed to the console or log'
     },
     verbose_time: {
         name: 'verbose_time',
@@ -1659,7 +1701,7 @@ const screenSchema = {
         min: 1,
         max: 3600,
         advanced: true,
-        tooltip: 'How often a receiver with Verbose on logs its message counts; one interval for all receivers'
+        tooltip: 'How often Verbose logs its counts'
     }
 };
 
@@ -1671,7 +1713,7 @@ const CHANNEL_REGISTRY = [
     { key: 'tcp', label: 'TCP Client', schema: tcpSchema, configKey: 'tcp', flowLabel: 'TCP', statType: 'TCP Client', essentials: ['host', 'port'] },
     { key: 'tcp_listener', label: 'TCP Server', schema: tcpServerSchema, configKey: 'tcp_listener', flowLabel: 'TCP Server', statType: 'TCP Listener', essentials: ['port'] },
     // one channel, three backends: each reports stats under its own type name
-    { key: 'db', label: 'Database', schema: dbSchema, configKey: 'db', flowLabel: 'Database', statTypes: ['PostgreSQL', 'SQLite', 'CSV'], essentials: ['conn_str'] },
+    { key: 'db', label: 'Database', schema: dbSchema, configKey: 'db', flowLabel: 'Database', statTypes: ['PostgreSQL', 'SQLite', 'CSV'], essentials: ['type', 'conn_str'] },
     { key: 'server', label: 'Viewer', schema: webviewerSchema, configKey: 'server', flowLabel: 'Webviewer', essentials: ['port'] }
 ];
 
