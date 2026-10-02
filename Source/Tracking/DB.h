@@ -509,6 +509,8 @@ public:
   void noteSafety(Ship &ship, const JSON::JSON &data);
   void noteDestination(Ship &ship, const std::string &v);
   void noteDraught(Ship &ship, float d);
+  void noteText(const Ship &ship, Tracking::Kind kind, const char *old_value,
+                const std::string &value);
   void noteStatus(Ship &ship, int status);
   std::string getJSON(bool full = false);
   std::string getJSONcompact(bool full = false, std::time_t since = 0,

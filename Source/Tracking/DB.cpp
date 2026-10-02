@@ -1078,12 +1078,14 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg,
   case AIS::KEY_SHIPNAME:
     logTextChange(ship, StaticStore::SHIPNAME, ship.shipname,
                   p.Get().getString());
+    noteText(ship, Tracking::Kind::NAME, ship.shipname, p.Get().getString());
     copyField(ship.shipname, p.Get().getString());
     staticUpdated = true;
     break;
   case AIS::KEY_CALLSIGN:
     logTextChange(ship, StaticStore::CALLSIGN, ship.callsign,
                   p.Get().getString());
+    noteText(ship, Tracking::Kind::CALLSIGN, ship.callsign, p.Get().getString());
     copyField(ship.callsign, p.Get().getString());
     staticUpdated = true;
     break;
@@ -1535,6 +1537,17 @@ void DB::noteDestination(Ship &ship, const std::string &v) {
   Tracking::Event e = event(ship, Tracking::Kind::DESTINATION,
                             Tracking::Level::ROUTINE, now);
   e.setText(was.c_str(), v.c_str());
+  queue(e);
+}
+
+// a name or a callsign that differs from the last heard; the first is
+// initialisation, as the static store takes it
+void DB::noteText(const Ship &ship, Tracking::Kind kind, const char *old_value,
+                  const std::string &value) {
+  if (!old_value[0] || value == old_value)
+    return;
+  Tracking::Event e = event(ship, kind, Tracking::Level::ROUTINE, std::time(nullptr));
+  e.setText(old_value, value.c_str());
   queue(e);
 }
 
