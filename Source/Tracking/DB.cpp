@@ -23,6 +23,7 @@
 #include <cstdio>
 
 #include "Geodesy.h"
+#include <cstdlib>
 #include "PositionCheck.h"
 #include "Logger.h"
 
@@ -51,6 +52,12 @@ void DB::setup() {
   destinations.setup(nships);
   ships.setup(nships, nbuckets);
   visits.setup(nships);
+  nships_ = nships;
+  if (std::getenv("AIS_EVENTS_TRACE")) {
+    fixes_wanted = true;
+    events >> tracer;
+  }
+  sampler.enable(fixes_wanted, nships);
 
   if (track_memory_kb == 0)
     track_memory_kb = server_mode ? 4096 : 1024;
@@ -1233,6 +1240,9 @@ std::string DB::getBinaryMessagesJSON(std::time_t since, uint64_t marker,
 // a vessel makes no events for this long after a destination or status change,
 // and for this long after saying TEST
 static const int CHANGE_SETTLE_S = 30, TEST_MUTE_S = 300;
+// the one definition of lying still, shared with the visits and the sampler
+static const float REST_STILL_KN = 0.5f, REST_MOVE_KN = 1.0f, REST_DRIFT_M = 350.0f;
+static const int REST_TOLD_S = 60, REST_SILENT_S = 6 * 3600;
 
 static std::string words(const std::string &text) {
   std::string s = " ";
@@ -1320,6 +1330,150 @@ void DB::emit(Tracking::Event &e) {
   events.Send(&e, 1, event_tag);
 }
 
+// Caller holds mtx. The changes a report brought, told once the record holds
+// all of it, so each rests on the fix as it now is
+void DB::flushEvents(int ptr) {
+  for (Tracking::Event &e : pending) {
+    const Ship &ship = ships[ptr];
+    e.lat = ship.lat;
+    e.lon = ship.lon;
+    e.speed = ship.speed;
+    e.cog = ship.cog;
+    e.heading = ship.heading;
+    e.draught = ship.draught;
+    emit(e, ptr);
+  }
+  pending.clear();
+}
+
+void DB::emit(Tracking::Event &e, int ptr) {
+  if (ptr != SHIP_NIL && e.kind != Tracking::Kind::FIX)
+    sampleFix(ptr, e.t, true);
+  emit(e);
+}
+
+void DB::setFixes(bool on) {
+  fixes_wanted = on;
+  if (nships_)
+    sampler.enable(on, nships_);
+}
+
+// Caller holds mtx. The sampler's word on this report; `force` tells it
+// whatever it says, because another event rests on it.
+void DB::sampleFix(int ptr, std::time_t t, bool force) {
+  if (!sampler.enabled())
+    return;
+  const Ship &ship = ships[ptr];
+  if (!isValidCoord(ship.lat, ship.lon))
+    return;
+  FixSampler::Fix now;
+  now.t = (uint32_t)t;
+  now.lat = ship.lat;
+  now.lon = ship.lon;
+  now.speed = ship.speed;
+  now.cog = ship.cog;
+  now.heading = ship.heading;
+  const bool resting = ship.idle_since != 0;
+  FixSampler::Fix turn;
+  FixSampler::Verdict v =
+      sampler.judge(ptr, now.t, now.lat, now.lon, now.speed, resting, turn);
+  if (v == FixSampler::TURN) {
+    // the previous report was the turn: told with its own time and position
+    Tracking::Event e = event(ship, Tracking::Kind::FIX, Tracking::Level::ROUTINE, turn.t);
+    e.lat = turn.lat;
+    e.lon = turn.lon;
+    e.speed = turn.speed;
+    e.cog = turn.cog;
+    e.heading = turn.heading;
+    emit(e);
+    sampler.keep(ptr, turn);
+    v = sampler.judge(ptr, now.t, now.lat, now.lon, now.speed, resting, turn);
+  }
+  if (force) {
+    const FixSampler::Fix &k = sampler.lastKept(ptr);
+    if (k.t == now.t && k.lat == now.lat && k.lon == now.lon)
+      return; // already told
+    v = FixSampler::NOW;
+  }
+  if (v == FixSampler::NOW) {
+    Tracking::Event e = event(ship, Tracking::Kind::FIX, Tracking::Level::ROUTINE, t);
+    emit(e);
+    sampler.keep(ptr, now);
+  } else
+    sampler.note(ptr, now);
+}
+
+// Stopped, not merely slow: a ship at anchor swings with the tide at up to a
+// knot, so one that is already slow and says it is anchored or moored counts
+// as still. No speed at all is no evidence of anything.
+bool DB::stillTest(const Ship &ship) {
+  return ship.speed != SPEED_UNDEFINED &&
+         (ship.speed < REST_STILL_KN ||
+          (ship.speed < REST_MOVE_KN && (ship.status == 1 || ship.status == 5)));
+}
+
+// Caller holds mtx, on a validated position. Rest begins at the second still
+// report in a row, dated from the first; it is told once a minute has passed;
+// it ends at a report under way, or one that drifted from where the ship lay.
+void DB::updateRest(int ptr, std::time_t now, bool still_before,
+                    std::time_t previous) {
+  Ship &ship = ships[ptr];
+  const bool still = stillTest(ship);
+  const bool moving = ship.speed != SPEED_UNDEFINED && ship.speed >= REST_MOVE_KN;
+  if (ship.idle_since == 0) {
+    if (still && still_before && previous > 0 &&
+        now - previous <= (std::time_t)Tracking::RestStore::SAMPLE_S) {
+      ship.idle_since = previous;
+      ship.rest_told = false;
+      Tracking::RestStore::Accumulator &a = rest.open(ptr, ship);
+      Tracking::RestStore::add(a, ship, (uint32_t)(now - previous));
+    }
+    return;
+  }
+  Tracking::RestStore::Accumulator *a = rest.find(ptr);
+  if (moving || (a && a->drift(ship) > REST_DRIFT_M)) {
+    endRest(ptr, now, true);
+    return;
+  }
+  if (!a) {
+    // restored at rest: counting begins now
+    a = &rest.open(ptr, ship);
+    a->start_seen = false;
+  }
+  Tracking::RestStore::add(*a, ship, previous > 0 ? (uint32_t)(now - previous) : 0);
+  if (!ship.rest_told && now - ship.idle_since >= REST_TOLD_S) {
+    Tracking::Event e = event(ship, Tracking::Kind::STOP, Tracking::Level::ROUTINE,
+                              ship.idle_since);
+    emit(e, ptr);
+    ship.rest_told = true;
+  }
+}
+
+// Caller holds mtx. The rest ends at `t`: a departure seen, or silence judged
+// at the last report. A rest never told ends without a word.
+void DB::endRest(int ptr, std::time_t t, bool seen) {
+  Ship &ship = ships[ptr];
+  if (ship.rest_told) {
+    Tracking::Event e = event(ship, Tracking::Kind::MOVE, Tracking::Level::ROUTINE, t);
+    Tracking::RestStore::fill(e.stay, rest.find(ptr), ship, seen);
+    emit(e, ptr);
+  }
+  ship.idle_since = 0;
+  ship.rest_told = false;
+  rest.close(ptr);
+}
+
+// Caller holds mtx. Six hours without a report closes a rest at the last one.
+void DB::sweepRest(std::time_t now) {
+  std::vector<int> silent;
+  rest.forEach([&](int slot, const Tracking::RestStore::Accumulator &) {
+    if (now - ships[slot].last_signal > REST_SILENT_S)
+      silent.push_back(slot);
+  });
+  for (int slot : silent)
+    endRest(slot, ships[slot].last_signal, false);
+}
+
 // a test silences its sender for a while: what follows an exercise is the
 // exercise; the quiet after a test or a change holds a notice back, never a
 // distress call
@@ -1349,7 +1503,7 @@ void DB::noteSafety(Ship &ship, const JSON::JSON &data) {
   const int recipient = to ? ships.find(to) : SHIP_NIL;
   e.safety.to_name = recipient != SHIP_NIL ? ships[recipient].shipname : nullptr;
   e.to.setString(&text);
-  emit(e);
+  emit(e, ships.find(ship.mmsi));
 }
 
 // a value that names no place: a vessel leaving or arriving at one is no news
@@ -1381,7 +1535,7 @@ void DB::noteDestination(Ship &ship, const std::string &v) {
   Tracking::Event e = event(ship, Tracking::Kind::DESTINATION,
                             Tracking::Level::ROUTINE, now);
   e.setText(was.c_str(), v.c_str());
-  emit(e);
+  queue(e);
 }
 
 // a vessel's draught, in metres as the message gives it: a change is news, the
@@ -1397,7 +1551,7 @@ void DB::noteDraught(Ship &ship, float d) {
                             Tracking::Level::ROUTINE, now);
   e.from.setFloat(ship.draught);
   e.to.setFloat(d);
-  emit(e);
+  queue(e);
 }
 
 // a vessel's navigation status, named the way the message names it; the status
@@ -1415,7 +1569,7 @@ void DB::noteStatus(Ship &ship, int status) {
                             Tracking::Level::ROUTINE, now);
   e.from.setInt(had);
   e.to.setInt(status);
-  emit(e);
+  queue(e);
 }
 
 std::string DB::getEventsJSON(uint64_t since, int level) {
@@ -1542,6 +1696,8 @@ int DB::claimShip(uint32_t mmsi) {
     paths.wipe(ptr);
     changes.wipe(ptr);
     visits.erase(ptr);
+    sampler.wipe(ptr);
+    rest.close(ptr);
     destinations.erase(ptr);
     ships[ptr].reset();
   } else
@@ -1615,6 +1771,7 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag) {
   float lon_old = ship.lon;
   const bool stopped_old =
       ship.speed != SPEED_UNDEFINED && ship.speed < 0.5f;
+  const bool still_before = stillTest(ship);
 
   bool newValidPosition = !copy && updateShip(data[0], tag, ship) &&
                           isValidCoord(ship.lat, ship.lon);
@@ -1628,8 +1785,13 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag) {
     validated = verdict == PositionCheck::VALIDATED;
     ship.setValidated(verdict);
   }
-  if (validated)
+  // what the report changed on the record, now that it is whole
+  if (!pending.empty())
+    flushEvents(ptr);
+  if (validated) {
+    updateRest(ptr, msg->getRxTimeUnix(), still_before, tag.previous_signal);
     updatePlaceEvents(ptr, msg->getRxTimeUnix());
+  }
   if (newValidPosition)
     destinations.position(ptr, ship);
 
@@ -1655,8 +1817,10 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag) {
 
   if (newValidPosition) {
     if (validated && (type == 1 || type == 2 || type == 3 || type == 18 ||
-                      type == 19 || type == 9))
+                      type == 19 || type == 9)) {
       addToPath(ptr);
+      sampleFix(ptr, ship.last_signal, false);
+    }
 
     if (isValidCoord(station_lat, station_lon)) {
       Util::Geodesy::distanceBearing(station_lat, station_lon, ship.lat,
@@ -1689,11 +1853,17 @@ void DB::tick(std::time_t now) {
   bool check_due = false;
 #endif
   bool sweep_due = expire_fields && now - last_sweep >= time_history;
+  bool rest_due = now - last_rest_sweep >= 60;
 
-  if (!check_due && !sweep_due)
+  if (!check_due && !sweep_due && !rest_due)
     return;
 
   std::lock_guard<std::mutex> lock(mtx);
+
+  if (rest_due) {
+    last_rest_sweep = now;
+    sweepRest(now);
+  }
 
 #ifdef CHECK_DB_INTEGRITY
   if (check_due) {
@@ -1846,6 +2016,8 @@ bool DB::Load(std::ifstream &file) {
     int ptr = claimShip(temp_ships[i].mmsi);
     visits.restore(ptr, restored.record(i));
     install(ptr, temp_ships[i]);
+    if (ships[ptr].idle_since)
+      rest.open(ptr, ships[ptr]).start_seen = false;
   }
 
   full_refresh_at = time(nullptr);
@@ -1917,13 +2089,8 @@ void DB::setPlaces(std::shared_ptr<const PlaceIndex> next) {
 // sees a single damaged sentence.
 void DB::updatePlaceEvents(int ptr, std::time_t now) {
   auto &ship = ships[ptr];
-  // Stopped, not merely slow: a ship at anchor swings with the tide at up to
-  // a knot, so one that is already slow and says it is anchored or moored
-  // counts as stopped. No speed at all is no evidence of stopping.
-  const bool stopped =
-      ship.speed != SPEED_UNDEFINED &&
-      (ship.speed < 0.5f ||
-       (ship.speed < 1.0f && (ship.status == 1 || ship.status == 5)));
+  // the rest detector's word, so a visit's idle minutes and a stay agree
+  const bool stopped = ship.idle_since != 0;
   const auto *index = place_markers.index().get();
   visits.update(ptr, place_markers.containing(ship.lat, ship.lon), now, stopped,
                 index,
@@ -1943,12 +2110,13 @@ void DB::updatePlaceEvents(int ptr, std::time_t now) {
                           : Tracking::Level::ROUTINE,
                       observed);
                   e.crossing.place = visit.id;
+                  e.crossing.number = entry->number;
                   e.crossing.revision = entry->revision;
                   e.crossing.seen =
                       entering ? visit.entryTime() != 0 : visit.exitTime() != 0;
                   e.crossing.announced = entry->metadata->announced();
                   e.crossing.name = entry->metadata->name.c_str();
-                  emit(e);
+                  emit(e, ptr);
                 });
 }
 

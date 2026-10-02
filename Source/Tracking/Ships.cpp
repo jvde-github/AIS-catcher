@@ -27,6 +27,8 @@ void Ship::reset() {
   mmsi = count = msg_type = shiptype = group_mask = 0;
   type_ttl = 0;
   quiet_until = 0;
+  idle_since = 0;
+  rest_told = false;
   flags.reset();
 
   heading = HEADING_UNDEFINED;
@@ -672,7 +674,7 @@ bool Ship::Save(std::ofstream &file) const {
                 W(last_signal) && W(last_direct_signal) && W(shipclass) &&
                 W(mmsi_type) && W(shipname) && W(destination) && W(callsign) &&
                 W(country_code) && W(vin) && W(vendorid) && W(unit_model) &&
-                W(unit_serial) && W(last_group));
+                W(unit_serial) && W(last_group) && W(idle_since) && W(rest_told));
 }
 
 bool Ship::Load(std::ifstream &file) {
@@ -681,8 +683,9 @@ bool Ship::Load(std::ifstream &file) {
   if (!R(magic) || !R(version) || magic != _SHIP_MAGIC)
     return false;
 
-  if (version != _SHIP_VERSION && version != _SHIP_VERSION_MATCHED &&
-      version != _SHIP_VERSION_UNMATCHED && version != _SHIP_VERSION_LINKED)
+  if (version != _SHIP_VERSION && version != _SHIP_VERSION_PREVIOUS &&
+      version != _SHIP_VERSION_MATCHED && version != _SHIP_VERSION_UNMATCHED &&
+      version != _SHIP_VERSION_LINKED)
     return false;
 
   bool ok =
@@ -697,6 +700,11 @@ bool Ship::Load(std::ifstream &file) {
              R(callsign) && R(country_code) && R(vin) && R(vendorid) &&
              R(unit_model) && R(unit_serial) && R(last_group));
 
+  // the rest arrived with version 7; a record from before is under way
+  idle_since = 0;
+  rest_told = false;
+  if (ok && version >= _SHIP_VERSION)
+    ok = (bool)(R(idle_since) && R(rest_told));
   if (ok && version == _SHIP_VERSION_LINKED) {
     int discard[3];
     ok = (bool)R(discard);

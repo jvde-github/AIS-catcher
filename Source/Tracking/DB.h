@@ -32,7 +32,10 @@
 
 #include "BinaryStore.h"
 #include "DestinationIndex.h"
+#include "EventJSON.h"
 #include "EventRing.h"
+#include "FixSampler.h"
+#include "Rest.h"
 #include "PathStore.h"
 #include "PlaceMarkers.h"
 #include "Ships.h"
@@ -386,6 +389,21 @@ private:
   EventRing ring;
   uint64_t event_seq = 0; // the stream's sequence; the process start is the epoch
   TAG event_tag;
+  // which positions become fix events; nothing until a host asks for fixes
+  FixSampler sampler;
+  bool fixes_wanted = false;
+  int nships_ = 0;
+  // AIS_EVENTS_TRACE: every event as a JSON line on stderr
+  Tracking::EventTrace tracer;
+  void sampleFix(int ptr, std::time_t t, bool force);
+  // the one definition of lying still: the record says since when, this holds
+  // what the ship did meanwhile
+  Tracking::RestStore rest;
+  std::time_t last_rest_sweep = 0;
+  static bool stillTest(const Ship &ship);
+  void updateRest(int ptr, std::time_t now, bool still_before, std::time_t previous);
+  void endRest(int ptr, std::time_t t, bool seen);
+  void sweepRest(std::time_t now);
 #ifdef CHECK_DB_INTEGRITY
   void checkIntegrity();
   std::time_t last_check = 0;
@@ -480,6 +498,14 @@ public:
   Tracking::Event event(const Ship &ship, Tracking::Kind kind,
                         Tracking::Level level, std::time_t now) const;
   void emit(Tracking::Event &e);
+  // with the slot known: a fix is told first, so the line passes through the event
+  void emit(Tracking::Event &e, int ptr);
+  // changes noted while a record is being updated wait until it is whole
+  std::vector<Tracking::Event> pending;
+  void queue(const Tracking::Event &e) { pending.push_back(e); }
+  void flushEvents(int ptr);
+  // fixes are sampled only while a subscriber wants them: the hub's journal, an output
+  void setFixes(bool on);
   void noteSafety(Ship &ship, const JSON::JSON &data);
   void noteDestination(Ship &ship, const std::string &v);
   void noteDraught(Ship &ship, float d);

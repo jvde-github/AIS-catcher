@@ -70,6 +70,7 @@ struct Stay {
   char destination_in[21], destination_out[21];
   char eta[12];
   bool start_seen;            // false: the stay was already under way when counting began
+  bool end_seen;              // false: closed on silence, at the last report, not on a departure
 };
 
 struct Event {
@@ -87,7 +88,8 @@ struct Event {
 
   union {
     struct {
-      uint32_t place;     // the place's runtime id; a subscriber resolves number and name
+      uint32_t place;     // the place's runtime id
+      uint32_t number;    // the place's number, the stable one its file carries; 0 when it has none
       long revision;      // the place's revision it was judged against
       bool seen;          // a crossing observed, not inferred from containment
       bool announced;     // the place asked to be told about: a guard zone, not a sector crossed all day
@@ -114,6 +116,41 @@ struct Event {
 
   Event() { std::memset(&stay, 0, sizeof(stay)); from.setNull(); to.setNull(); }
 
+  // a copy carries its own arrays: a value that pointed at the source's text
+  // points at the copy's, so a queued event survives the one it was made from
+  Event(const Event &o) { assign(o); }
+  Event &operator=(const Event &o) {
+    if (this != &o)
+      assign(o);
+    return *this;
+  }
+
+private:
+  void assign(const Event &o) {
+    seq = o.seq;
+    t = o.t;
+    mmsi = o.mmsi;
+    lat = o.lat;
+    lon = o.lon;
+    speed = o.speed;
+    cog = o.cog;
+    draught = o.draught;
+    heading = o.heading;
+    kind = o.kind;
+    level = o.level;
+    std::memcpy(&stay, &o.stay, sizeof(stay));
+    std::memcpy(from_s, o.from_s, sizeof(from_s));
+    std::memcpy(to_s, o.to_s, sizeof(to_s));
+    name = o.name;
+    from = o.from;
+    to = o.to;
+    if (from.isCString() && from.getCString() == o.from_s)
+      from.setCString(from_s);
+    if (to.isCString() && to.getCString() == o.to_s)
+      to.setCString(to_s);
+  }
+
+public:
   // the string values point at the arrays, so an event can be copied whole
   void setText(const char *was, const char *now) {
     std::strncpy(from_s, was ? was : "", sizeof(from_s) - 1);

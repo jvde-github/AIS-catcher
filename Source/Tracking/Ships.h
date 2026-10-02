@@ -77,6 +77,10 @@ struct Ship {
   // until when the vessel makes no events: a destination or status just
   // changed, or it sent a test; not persisted
   std::time_t quiet_until;
+  // lying still since this report, 0 under way; told once a minute passed.
+  // Saved with the record, so a restart continues a rest rather than starting one
+  std::time_t idle_since;
+  bool rest_told;
   Util::PackedInt flags;
 
   void reset();
@@ -108,7 +112,8 @@ struct Ship {
 
 private:
   static const int _SHIP_MAGIC = 0x53484950; // "SHIP" in hex
-  static const int _SHIP_VERSION = 6;
+  static const int _SHIP_VERSION = 7;
+  static const int _SHIP_VERSION_PREVIOUS = 6; // before the rest on the record
   static const int _SHIP_VERSION_MATCHED =
       5; // trailing code, read and discarded
   static const int _SHIP_VERSION_UNMATCHED = 4;
