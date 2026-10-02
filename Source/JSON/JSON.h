@@ -39,6 +39,7 @@ namespace JSON
 			INT,
 			FLOAT,
 			STRING,
+			CSTRING, // a C string the caller owns: an event's text while it is in flight
 			OBJECT,
 			ARRAY_STRING,
 			ARRAY,
@@ -54,6 +55,7 @@ namespace JSON
 			long int i;
 			double f;
 			std::string *s;
+			const char *cs;
 			std::vector<std::string> *as;
 			std::vector<Value> *a;
 			JSON *o;
@@ -70,6 +72,11 @@ namespace JSON
 			static const std::string empty;
 			return isString() ? *data.s : empty;
 		}
+		// the characters of either string type; "" otherwise
+		const char *getCString() const
+		{
+			return isString() ? data.s->c_str() : (isCString() && data.cs ? data.cs : "");
+		}
 		const JSON &getObject() const { return *data.o; }
 		JSON &getObject() { return *data.o; }
 
@@ -79,6 +86,7 @@ namespace JSON
 		bool isArray() const { return type == Type::ARRAY; }
 		bool isArrayString() const { return type == Type::ARRAY_STRING; }
 		bool isString() const { return type == Type::STRING; }
+		bool isCString() const { return type == Type::CSTRING; }
 		bool isFloat() const { return type == Type::FLOAT; }
 		bool isInt() const { return type == Type::INT; }
 
@@ -113,6 +121,11 @@ namespace JSON
 		{
 			data.s = v;
 			type = Type::STRING;
+		}
+		void setCString(const char *v)
+		{
+			data.cs = v;
+			type = Type::CSTRING;
 		}
 		void setObject(JSON *v)
 		{

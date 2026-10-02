@@ -1258,7 +1258,7 @@ static bool plausibleText(const std::string &text) {
 // A safety message has no priority field: a distress device sending it
 // (AIS-SART 970, man-overboard 972, EPIRB 974) or the words used for something
 // serious say it matters; `s` is the text as words() gives it
-static EventRing::Level safetyLevel(uint32_t from, const std::string &s) {
+static Tracking::Level safetyLevel(uint32_t from, const std::string &s) {
   auto has = [&](const char *w) {
     return s.find(std::string(" ") + w + " ") != std::string::npos;
   };
@@ -1269,18 +1269,18 @@ static EventRing::Level safetyLevel(uint32_t from, const std::string &s) {
   if (prefix == 970 || prefix == 972 || prefix == 974)
     return has("ACTIVE") || has("MAYDAY") || has("SART") || has("MOB") ||
                    has("EPIRB") || has("DISTRESS") || has("HELP")
-               ? EventRing::URGENT
-               : EventRing::ROUTINE;
+               ? Tracking::Level::URGENT
+               : Tracking::Level::ROUTINE;
   if (has("MAYDAY") || has("SOS") || has("DISTRESS") || has("MOB") ||
       has("OVERBOARD") || has("MAN OVER BOARD") || has("MAN OVERBOARD") ||
       has("SINKING") || wordStarts("CAPSIZ") || has("FIRE") || has("EMERGENCY"))
-    return EventRing::URGENT;
+    return Tracking::Level::URGENT;
   if (has("PAN PAN") || has("PANPAN") || has("SECURITE") || has("ACCIDENT") ||
       has("COLLISION") || has("AGROUND") || has("GROUND") || has("GROUNDING") ||
       has("DANGER") || has("WARNING") || has("KEEP AWAY") || has("STAY AWAY") ||
       has("KEEP CLEAR") || has("NOT UNDER COMMAND") || has("NUC"))
-    return EventRing::NOTICE;
-  return EventRing::ROUTINE;
+    return Tracking::Level::NOTICE;
+  return Tracking::Level::ROUTINE;
 }
 
 // a change quiets the vessel for a while; true when it already was, so a value
@@ -1291,19 +1291,14 @@ static bool settle(Ship &ship, std::time_t now) {
   return quiet;
 }
 
-void DB::note(const Ship &ship, EventRing::Kind kind, EventRing::Level level,
-              std::time_t now, const std::string &text,
-              const std::string &label, uint32_t to, const std::string &was) {
-  EventRing::Event e;
+Tracking::Event DB::event(const Ship &ship, Tracking::Kind kind,
+                          Tracking::Level level, std::time_t now) const {
+  Tracking::Event e;
   e.kind = kind;
   e.level = level;
-  e.from = ship.mmsi;
-  e.from_name = ship.shipname;
-  const int recipient = to ? ships.find(to) : SHIP_NIL;
-  if (recipient != SHIP_NIL)
-    e.to_name = ships[recipient].shipname;
-  e.to = to;
-  e.time = now;
+  e.t = now;
+  e.mmsi = ship.mmsi;
+  e.name = ship.shipname;
   e.lat = ship.lat;
   e.lon = ship.lon;
   if (!isValidCoord(e.lat, e.lon) && latlon_share &&
@@ -1311,10 +1306,18 @@ void DB::note(const Ship &ship, EventRing::Kind kind, EventRing::Level level,
     e.lat = station_lat;
     e.lon = station_lon;
   }
-  e.text = text;
-  e.was = was;
-  e.label = label;
-  events.push(e);
+  e.speed = ship.speed;
+  e.cog = ship.cog;
+  e.heading = ship.heading;
+  e.draught = ship.draught;
+  return e;
+}
+
+// Caller holds mtx: Send runs every subscriber in this thread, under the lock
+// the record was read under, so a subscriber does little and never calls back
+void DB::emit(Tracking::Event &e) {
+  e.seq = ++event_seq;
+  events.Send(&e, 1, event_tag);
 }
 
 // a test silences its sender for a while: what follows an exercise is the
@@ -1337,11 +1340,16 @@ void DB::noteSafety(Ship &ship, const JSON::JSON &data) {
     ship.quiet_until = now + TEST_MUTE_S;
     return;
   }
-  EventRing::Level level = safetyLevel(ship.mmsi, w);
-  if (level == EventRing::ROUTINE ||
-      (level == EventRing::NOTICE && ship.quiet_until > now))
+  Tracking::Level level = safetyLevel(ship.mmsi, w);
+  if (level == Tracking::Level::ROUTINE ||
+      (level == Tracking::Level::NOTICE && ship.quiet_until > now))
     return;
-  note(ship, EventRing::SAFETY, level, now, text, std::string(), to);
+  Tracking::Event e = event(ship, Tracking::Kind::SAFETY, level, now);
+  e.safety.to = to;
+  const int recipient = to ? ships.find(to) : SHIP_NIL;
+  e.safety.to_name = recipient != SHIP_NIL ? ships[recipient].shipname : nullptr;
+  e.to.setString(&text);
+  emit(e);
 }
 
 // a value that names no place: a vessel leaving or arriving at one is no news
@@ -1370,8 +1378,10 @@ void DB::noteDestination(Ship &ship, const std::string &v) {
   std::string was = ship.destination;
   if (settle(ship, now) || !namesAPlace(v) || !namesAPlace(was))
     return;
-  note(ship, EventRing::DESTINATION, EventRing::ROUTINE, now, v, "destination",
-       0, was);
+  Tracking::Event e = event(ship, Tracking::Kind::DESTINATION,
+                            Tracking::Level::ROUTINE, now);
+  e.setText(was.c_str(), v.c_str());
+  emit(e);
 }
 
 // a vessel's draught, in metres as the message gives it: a change is news, the
@@ -1383,11 +1393,11 @@ void DB::noteDraught(Ship &ship, float d) {
   std::time_t now = std::time(nullptr);
   if (settle(ship, now))
     return;
-  char was[16], to[16];
-  std::snprintf(was, sizeof(was), "%.1f m", ship.draught);
-  std::snprintf(to, sizeof(to), "%.1f m", d);
-  note(ship, EventRing::DRAUGHT, EventRing::ROUTINE, now, to, "draught", 0,
-       was);
+  Tracking::Event e = event(ship, Tracking::Kind::DRAUGHT,
+                            Tracking::Level::ROUTINE, now);
+  e.from.setFloat(ship.draught);
+  e.to.setFloat(d);
+  emit(e);
 }
 
 // a vessel's navigation status, named the way the message names it; the status
@@ -1401,8 +1411,11 @@ void DB::noteStatus(Ship &ship, int status) {
   if (settle(ship, now) || had < 0 || had >= (int)names.size() ||
       had == STATUS_UNDEFINED || status == STATUS_UNDEFINED)
     return;
-  note(ship, EventRing::STATUS, EventRing::ROUTINE, now, names[status],
-       "status", 0, names[had]);
+  Tracking::Event e = event(ship, Tracking::Kind::STATUS,
+                            Tracking::Level::ROUTINE, now);
+  e.from.setInt(had);
+  e.to.setInt(status);
+  emit(e);
 }
 
 std::string DB::getEventsJSON(uint64_t since, int level) {
@@ -1411,8 +1424,8 @@ std::string DB::getEventsJSON(uint64_t since, int level) {
   {
     JSON::Writer w(content, 4096);
     std::time_t now = time(nullptr);
-    w.beginObject().kv("time", now).kv("seq", (long long)events.sequence());
-    events.writeSince(w, since, level, now);
+    w.beginObject().kv("time", now).kv("seq", (long long)ring.sequence());
+    ring.writeSince(w, since, level, now);
     w.endObject();
   }
   return content;
@@ -1425,8 +1438,8 @@ std::string DB::getEventHistoryJSON(uint64_t before, int level, int limit) {
     JSON::Writer w(content, 8192);
     w.beginObject()
         .kv("time", (long long)time(nullptr))
-        .kv("seq", (long long)events.sequence());
-    events.writeBefore(w, before, level, limit);
+        .kv("seq", (long long)ring.sequence());
+    ring.writeBefore(w, before, level, limit);
     w.endObject();
   }
   return content;
@@ -1917,22 +1930,25 @@ void DB::updatePlaceEvents(int ptr, std::time_t now) {
                 [&](const VisitTracker::Visit &visit, bool entering,
                     uint32_t observed) {
                   const auto *entry = index->find(visit.id);
-                  if (!entry || !entry->metadata->announced())
+                  if (!entry)
                     return;
-                  EventRing::Event e;
-                  e.kind =
-                      entering ? EventRing::PLACE_ENTER : EventRing::PLACE_EXIT;
-                  // a guard zone is what the user asked to be told about;
-                  // ports, sectors and waters are crossed all day
-                  if (entry->metadata->is(PlaceKind::GuardZone))
-                    e.level = EventRing::NOTICE;
-                  e.time = observed;
-                  e.from = ship.mmsi;
-                  e.from_name = ship.shipname;
-                  e.lat = ship.lat;
-                  e.lon = ship.lon;
-                  e.text = entry->metadata->name;
-                  events.push(e);
+                  // every crossing goes on the stream; a guard zone is what
+                  // the user asked to be told about, so the ticker shows that
+                  // one, while ports, sectors and waters are crossed all day
+                  Tracking::Event e = event(
+                      ship,
+                      entering ? Tracking::Kind::ENTER : Tracking::Kind::LEAVE,
+                      entry->metadata->is(PlaceKind::GuardZone)
+                          ? Tracking::Level::NOTICE
+                          : Tracking::Level::ROUTINE,
+                      observed);
+                  e.crossing.place = visit.id;
+                  e.crossing.revision = entry->revision;
+                  e.crossing.seen =
+                      entering ? visit.entryTime() != 0 : visit.exitTime() != 0;
+                  e.crossing.announced = entry->metadata->announced();
+                  e.crossing.name = entry->metadata->name.c_str();
+                  emit(e);
                 });
 }
 

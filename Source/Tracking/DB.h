@@ -382,13 +382,20 @@ private:
   BinaryStore binary;
   StationRegistry stations;
   std::function<std::time_t(int)> station_heard; // set by the host, see setStationHeard
-  EventRing events;
+  // the ticker's view of the event stream, wired in the constructor
+  EventRing ring;
+  uint64_t event_seq = 0; // the stream's sequence; the process start is the epoch
+  TAG event_tag;
 #ifdef CHECK_DB_INTEGRITY
   void checkIntegrity();
   std::time_t last_check = 0;
 #endif
 
 public:
+  // every judgement the database makes about a vessel, told once; whoever
+  // holds a view subscribes with >> (the ring here, the host wires the rest)
+  StreamOut<Tracking::Event> events;
+  DB() { events >> ring; }
   void setup();
   template <typename F> void configure(F apply) {
     std::lock_guard<std::mutex> lock(mtx);
@@ -468,10 +475,11 @@ public:
   std::string getChangesJSON(int mmsi);
   void logTextChange(const Ship &ship, int field, const char *old_value,
                      const std::string &value);
-  void note(const Ship &ship, EventRing::Kind kind, EventRing::Level level,
-            std::time_t now, const std::string &text,
-            const std::string &label = std::string(), uint32_t to = 0,
-            const std::string &was = std::string());
+  // an event with the fix block filled from the record; emit() gives it its
+  // sequence and sends it on `events`
+  Tracking::Event event(const Ship &ship, Tracking::Kind kind,
+                        Tracking::Level level, std::time_t now) const;
+  void emit(Tracking::Event &e);
   void noteSafety(Ship &ship, const JSON::JSON &data);
   void noteDestination(Ship &ship, const std::string &v);
   void noteDraught(Ship &ship, float d);
