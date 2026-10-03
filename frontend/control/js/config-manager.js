@@ -63,7 +63,7 @@
     const getZoneCss = zone => `var(--${getZoneColor(zone)})`;
 
     function zoneChip(zone, onRemove) {
-        return el('span', `chip ${getZoneColor(zone)}`, {},
+        return el('span', `chip ${getZoneColor(zone)}`, { style: `--z:${getZoneCss(zone)}` },
             zone,
             el('button', 'sys-dismiss', { type: 'button', onClick: onRemove }, '×')
         );
@@ -609,8 +609,15 @@
             if (!bool) ManagerRegistry.forEach(m => { m.dirty = false; });
             this.state.unsaved = bool;
             const statusEl = document.getElementById('status-message');
+            // the settings footer, where a tab has one: the marker and the Save button follow the edits
+            const footer = document.getElementById('st-footer');
+            if (footer) {
+                footer.querySelector('.st-dirty').hidden = !bool;
 
-            if (statusEl) {
+                footer.querySelector('[data-st-save]').disabled = !bool;
+            }
+
+            if (statusEl && !footer) {
                 if (bool) {
                     statusEl.className = 'alert alert-warning sys-status-alert';
                     statusEl.innerHTML = `
@@ -626,7 +633,7 @@
                 btn.className = bool ? Styles.saveActive : Styles.saveInactive;
             });
             const headerSave = document.getElementById('system-save');
-            if (headerSave) headerSave.classList.toggle('hidden', !bool);
+            if (headerSave) headerSave.classList.toggle('hidden', !bool || !!footer);
             window.onbeforeunload = bool ? () => true : null;
         },
 
@@ -934,8 +941,8 @@
                 const zones = Array.isArray(currentValue) ? [...currentValue] : [];
 
                 const wrapper = el('div', 'col col-tight');
-                const badgesDiv = el('div', 'row row-wrap row-tight');
-                const manageBtn = el('button', 'chip sys-chip-btn', {
+                const badgesDiv = el('div', 'row row-wrap row-tight st-zones');
+                const manageBtn = el('button', 'chip sys-chip-btn st-zones__add', {
                     type: 'button',
                     onClick: () => openZoneModal(zones, (updated) => {
                         zones.length = 0;
@@ -943,7 +950,7 @@
                         onUpdate([...zones]);
                         renderZoneBadges();
                     })
-                }, Icons.plus('icon-sm'), 'Add Zone');
+                }, Icons.plus('icon-sm'), 'Add');
 
                 function renderZoneBadges() {
                     badgesDiv.innerHTML = '';
@@ -1024,8 +1031,9 @@
                     : ActionRegistry[field.withButton.onClick] || (() => { });
                 inputEl = el('div', 'row', {},
                     el('div', 'grow', {}, inputEl),
-                    el('button', Styles.buttonPrimary, { type: 'button', onClick: () => action(index, containerId) },
-                        el('span', '', { innerHTML: field.withButton.icon || 'Action' }))
+                    el('button', Styles.buttonPrimary + (field.withButton.text ? ' btn-labelled' : ''), { type: 'button', onClick: () => action(index, containerId), title: field.withButton.text || null },
+                        el('span', '', { innerHTML: field.withButton.icon || 'Action' }),
+                        field.withButton.text ? el('span', '', {}, field.withButton.text) : null)
                 );
             }
 
@@ -1148,8 +1156,115 @@
             }
         }
 
+        // the fields of one item, in their sections, with the collapsible "advanced" groups
+        renderFields(item, index) {
+            const innerFields = el('div', 'fieldset');
+            const activeField = this.config.isList ? this.fields.find(f => f.name === 'active') : null;
+            // `advanced` puts a field in a collapsible section; a string names it
+            const sections = new Map();
+            const syncs = [];
+            const syncAdvanced = () => syncs.forEach(f => f());
+            const refresh = () => { Renderer.updateVisibility(innerFields, item); syncAdvanced(); };
+
+            // Section all fields of a schema or none: an unsectioned one trailing a block reads as part of it.
+            const ordered = [];
+            const bySection = new Map();
+            this.fields.forEach(f => {
+                const key = (!f.advanced && f.section) || null;
+                if (key === null) return ordered.push(f);
+                if (!bySection.has(key)) bySection.set(key, []);
+                bySection.get(key).push(f);
+            });
+            const rank = k => { const i = SECTION_ORDER.indexOf(k); return i === -1 ? SECTION_ORDER.length : i; };
+            [...bySection.keys()].sort((a, b) => rank(a) - rank(b))
+                .forEach(k => ordered.push(bySection.get(k)));
+
+            let currentSection = null;
+            ordered.flat().forEach(field => {
+                if (activeField && field.name === 'active') return;
+                if (field.section && field.section !== currentSection && !field.advanced) {
+                    currentSection = field.section;
+                    innerFields.appendChild(el('h5', Styles.section, {}, field.section));
+                }
+                const fieldEl = Renderer.renderField(field, index, item,
+                    (fld, val) => this.updateValue(index, fld, val),
+                    refresh,
+                    this.config.containerId
+                );
+                if (!field.advanced) return innerFields.appendChild(fieldEl);
+                const title = typeof field.advanced === 'string' ? field.advanced : 'Advanced';
+                if (!sections.has(title)) sections.set(title, el('div', 'fieldset full'));
+                sections.get(title).appendChild(fieldEl);
+            });
+
+            this.advancedOpen = this.advancedOpen || new Set();
+            sections.forEach((body, title) => {
+                const key = `${index}|${title}`;
+                const open = this.advancedOpen.has(key);
+                const chevron = el('span', 'sys-rotates' + (open ? ' rotate-90' : ''), { innerHTML: '&#9656;' });
+                body.classList.toggle('hidden', !open);
+                const btn = el('button', 'row row-tight t-small t-subtle clickable', {
+                    type: 'button',
+                    onClick: () => {
+                        const nowOpen = !this.advancedOpen.has(key);
+                        if (nowOpen) this.advancedOpen.add(key); else this.advancedOpen.delete(key);
+                        body.classList.toggle('hidden', !nowOpen);
+                        chevron.classList.toggle('rotate-90', nowOpen);
+                    }
+                }, chevron, title);
+                const row = el('div', 'full', {}, btn);
+                innerFields.appendChild(row);
+                innerFields.appendChild(body);
+                syncs.push(() => {
+                    const any = Array.from(body.children).some(c => !c.classList.contains('hidden'));
+                    row.classList.toggle('hidden', !any);
+                });
+            });
+            return { node: innerFields, refresh };
+        }
+
         render() {
+            // the JSON pane may sit inside the container (moved under .st-main below): take it out
+            // before clearing, so it keeps its open state and content
+            const kept = this.container.querySelector('[data-json-section]');
+            if (kept) this.container.parentElement.appendChild(kept);
             this.container.innerHTML = '';
+            const variant = this.config.variant;
+            if ((variant === 'outputs' || variant === 'inputs') && this.config.isList) {
+                if (variant === 'outputs') this.renderOutputs(); else this.renderInputs();
+                this.renderControls();
+                // the JSON view goes under the selected input, not under the whole split
+                const json = variant === 'inputs' && this.container.parentElement.querySelector('[data-json-section]');
+                const main = json && this.container.querySelector('.st-main');
+                if (main) main.appendChild(json);
+                this.config.onChange?.(this);
+                return;
+            }
+            // a page whose few settings are all essential: no Advanced group at all
+            if (variant === 'plain' && !this.config.isList) {
+                this.container.className = 'st';
+                const { node, refresh } = this.renderSplit(this.data, 0, { essentials: new Set(this.fields.map(f => f.name)), key: 'plain', flat: { title: null } });
+                this.container.appendChild(node);
+                refresh();
+                this.renderControls();
+                this.config.onChange?.(this);
+                return;
+            }
+            if (variant === 'pages' && !this.config.isList) {
+                this.renderPages();
+                this.renderControls();
+                const json = this.container.parentElement.querySelector('[data-json-section]');
+                const main = json && this.container.querySelector('.st-main');
+                if (main) main.appendChild(json);
+                this.config.onChange?.(this);
+                return;
+            }
+            if (variant === 'community' && !this.config.isList) {
+                this.renderCommunity();
+                this.renderControls();
+                this.config.onChange?.(this);
+                return;
+            }
             const items = this.config.isList ? this.data : [this.data];
 
             items.forEach((item, index) => {
@@ -1193,76 +1308,378 @@
                 }
 
                 const fieldsDiv = el('div', Styles.cardBody);
-                const innerFields = el('div', 'fieldset');
-                // `advanced` puts a field in a collapsible section; a string names it
-                const sections = new Map();
-                const syncs = [];
-                const syncAdvanced = () => syncs.forEach(f => f());
-                const refresh = () => { Renderer.updateVisibility(innerFields, item); syncAdvanced(); };
-
-                // Section all fields of a schema or none: an unsectioned one trailing a block reads as part of it.
-                const ordered = [];
-                const bySection = new Map();
-                this.fields.forEach(f => {
-                    const key = (!f.advanced && f.section) || null;
-                    if (key === null) return ordered.push(f);
-                    if (!bySection.has(key)) bySection.set(key, []);
-                    bySection.get(key).push(f);
-                });
-                const rank = k => { const i = SECTION_ORDER.indexOf(k); return i === -1 ? SECTION_ORDER.length : i; };
-                [...bySection.keys()].sort((a, b) => rank(a) - rank(b))
-                    .forEach(k => ordered.push(bySection.get(k)));
-
-                let currentSection = null;
-                ordered.flat().forEach(field => {
-                    if (activeField && field.name === 'active') return;
-                    if (field.section && field.section !== currentSection && !field.advanced) {
-                        currentSection = field.section;
-                        innerFields.appendChild(el('h5', Styles.section, {}, field.section));
-                    }
-                    const fieldEl = Renderer.renderField(field, index, item,
-                        (fld, val) => this.updateValue(index, fld, val),
-                        refresh,
-                        this.config.containerId
-                    );
-                    if (!field.advanced) return innerFields.appendChild(fieldEl);
-                    const title = typeof field.advanced === 'string' ? field.advanced : 'Advanced';
-                    if (!sections.has(title)) sections.set(title, el('div', 'fieldset full'));
-                    sections.get(title).appendChild(fieldEl);
-                });
-
-                this.advancedOpen = this.advancedOpen || new Set();
-                sections.forEach((body, title) => {
-                    const key = `${index}|${title}`;
-                    const open = this.advancedOpen.has(key);
-                    const chevron = el('span', 'sys-rotates' + (open ? ' rotate-90' : ''), { innerHTML: '&#9656;' });
-                    body.classList.toggle('hidden', !open);
-                    const btn = el('button', 'row row-tight t-small t-subtle clickable', {
-                        type: 'button',
-                        onClick: () => {
-                            const nowOpen = !this.advancedOpen.has(key);
-                            if (nowOpen) this.advancedOpen.add(key); else this.advancedOpen.delete(key);
-                            body.classList.toggle('hidden', !nowOpen);
-                            chevron.classList.toggle('rotate-90', nowOpen);
-                        }
-                    }, chevron, title);
-                    const row = el('div', 'full', {}, btn);
-                    innerFields.appendChild(row);
-                    innerFields.appendChild(body);
-                    syncs.push(() => {
-                        const any = Array.from(body.children).some(c => !c.classList.contains('hidden'));
-                        row.classList.toggle('hidden', !any);
-                    });
-                });
-                fieldsDiv.appendChild(innerFields);
-
+                const { node, refresh } = this.renderFields(item, index);
+                fieldsDiv.appendChild(node);
                 wrapper.appendChild(fieldsDiv);
                 this.container.appendChild(wrapper);
-
                 refresh();
             });
 
             this.renderControls();
+            this.config.onChange?.(this);
+        }
+
+        // ---- essentials and Advanced: the few fields most people need in a card, the rest collapsed
+        fieldValue(item, f) { return f.jsonpath ? Utils.getNested(item, f.jsonpath) : item[f.name]; }
+        // a value counts as changed when it differs from the schema's default; empty and unset are alike
+        isChanged(item, f) {
+            const norm = v => (v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length)) ? null : JSON.stringify(v);
+            const v = this.fieldValue(item, f);
+            return v !== undefined && norm(v) !== norm(f.defaultValue);
+        }
+        renderSplit(item, index, { essentials = new Set(), exclude = new Set(), key = 'main', onZones = null, flat = null, bare = false, sectionOf = null, order = null, sumNames = false } = {}) {
+            const panel = el('div', 'st-panel');
+            // flat: the essentials as a plain titled section with its action on the right, no card around them
+            const card = el('div', flat ? 'st-flat__fields fieldset' : 'st-card fieldset');
+            const rows = el('div', 'st-adv__body st-secs');
+            // Advanced in titled sections, two settings to a row; a field's section is the schema's,
+            // else what the host says (the receiver's fields have none), else Zones or Other
+            const sections = new Map();
+            const sectionFor = field => {
+                const name = sectionOf?.(field) || field.section || (field.type === 'zones' ? 'Zones' : null) || this.config.groupOf?.(field) || 'Other';
+                if (!sections.has(name)) {
+                    const grid = el('div', 'st-sec__grid fieldset');
+                    const sec = el('section', 'st-sec', {}, el('h4', 'st-section__title', {}, name), grid);
+                    sections.set(name, { sec, grid });
+                    rows.appendChild(sec);
+                }
+                return sections.get(name).grid;
+            };
+            const sum = el('span', 'st-adv__sum');
+            this.advOpen = this.advOpen || new Set();
+            const openKey = `${key}|${index}`;
+            const adv = el('details', 'st-adv', this.advOpen.has(openKey) ? { open: '' } : {},
+                el('summary', '', { innerHTML: '<svg class="st-adv__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Advanced settings' }, sum),
+                rows);
+            adv.addEventListener('toggle', () => { if (adv.open) this.advOpen.add(openKey); else this.advOpen.delete(openKey); });
+            const advanced = [];
+            const refresh = () => {
+                Renderer.updateVisibility(panel, item);
+                // the summary counts the settings that differ from their defaults, among those that apply
+                const shown = advanced.filter(({ node }) => !node.classList.contains('hidden'));
+                const changed = shown.filter(({ f }) => this.isChanged(item, f)).length;
+                const zones = shown.map(({ f }) => f).find(f => f.type === 'zones');
+                const zoneList = zones ? (this.fieldValue(item, zones) || []) : [];
+                sum.innerHTML = '';
+                if (sumNames) {
+                    // what is inside, then whether any of it differs: "Zones, JSON · all defaults"
+                    const names = [...sections.entries()].filter(([, v]) => !v.sec.hidden && [...v.grid.children].some(c => !c.classList.contains('hidden'))).map(([n]) => n);
+                    if (rows.querySelector('[data-json-section]')) names.push('JSON');
+                    if (names.length) sum.appendChild(document.createTextNode(names.join(', ') + ' · '));
+                    sum.appendChild(changed ? el('b', '', {}, `${changed} changed`) : document.createTextNode('all defaults'));
+                }
+                // only how much differs from the defaults; nothing when all are at their defaults
+                else if (changed) sum.appendChild(el('b', '', {}, `${changed} changed`));
+                // the zones as the pills they are everywhere else, in their own colours: under the
+                // header when the caller has a place for them, else on the summary line
+                if (onZones) onZones(zoneList);
+                else zoneList.forEach(z => {
+                    const pill = el('span', 'st-chip st-chip--zone', {}, z);
+                    pill.style.setProperty('--z', getZoneCss(z));
+                    sum.appendChild(pill);
+                });
+                adv.hidden = !shown.length;
+                for (const { sec, grid } of sections.values())
+                    sec.hidden = ![...grid.children].some(c => !c.classList.contains('hidden'));
+                for (const { node, f } of advanced) {
+                    const ch = this.isChanged(item, f);
+                    node.classList.toggle('st-opt--changed', ch);
+                    if (node._reset) node._reset.hidden = !ch;
+                }
+            };
+            const fields = order ? order.map(n => this.fields.find(f => f.name === n)).filter(Boolean) : this.fields;
+            fields.forEach(field => {
+                if (exclude.has(field.name) || field.name === 'active') return;
+                const node = Renderer.renderField(field, index, item,
+                    (fld, val) => this.updateValue(index, fld, val), refresh, this.config.containerId);
+                if (essentials.has(field.name)) return card.appendChild(node);
+                // one setting per line: label and help on the left, the control on the right;
+                // lists and the engines take the whole line under their label; zones sit on the right as pills
+                const simple = ['text', 'number', 'select', 'toggle', 'password', 'integer-select', 'off-number', 'switch-integer', 'zones'].includes(field.type);
+                node.classList.add('st-opt');
+                node.dataset.stField = field.name;
+                if (!simple) node.classList.add('st-opt--wide');
+                // a switch needs little room: its help can run almost the whole line
+                if (field.type === 'toggle') node.classList.add('st-opt--switch');
+                // a field without a label of its own (the engines list) is titled by its group
+                if (!field.label && typeof field.advanced === 'string')
+                    node.prepend(el('label', Styles.label, {}, field.advanced));
+                // a way back to the default when changed; without a default the key is removed, as a cleared field does
+                node._reset = el('button', 'st-reset', { type: 'button', hidden: '', onClick: () => {
+                    this.updateValue(index, field, field.defaultValue === undefined ? (field.type === 'zones' ? [] : undefined) : JSON.parse(JSON.stringify(field.defaultValue)));
+                    this.render();
+                } }, 'Reset');
+                (node.querySelector(':scope > .field-label') || node).appendChild(node._reset);
+                node.removeAttribute('style');
+                sectionFor(field).appendChild(node);
+                advanced.push({ node, f: field });
+            });
+            if (card.children.length) {
+                if (flat) {
+                    const action = flat.action ? el('button', 'st-btn st-btn--sm', { type: 'button', onClick: flat.action.onClick,
+                        innerHTML: '<svg class="st-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>' }, flat.action.label) : null;
+                    panel.appendChild(el('div', 'st-flat' + (flat.title ? '' : ' st-flat--bare'), {},
+                        flat.title || action ? el('div', 'st-flat__head', {}, flat.title ? el('h3', 'st-section__title', {}, flat.title) : el('span'), action) : null, card));
+                } else panel.appendChild(card);
+            }
+            // bare: the sections themselves, no Advanced fold around them (a page of its own)
+            if (bare) panel.appendChild(rows); else panel.appendChild(adv);
+            return { node: panel, refresh };
+        }
+
+        // ---- one settings object split over pages: a nav on the left, the page's sections on the right
+        renderPages() {
+            const pages = this.config.pages;
+            if (!pages.some(p => p.key === this.page)) this.page = pages[0].key;
+            const page = pages.find(p => p.key === this.page);
+            this.container.className = 'st st-split st-pages';
+            const nav = el('nav', 'st-nav', { 'aria-label': this.config.title }, el('span', 'st-nav__title', {}, this.config.title));
+            pages.forEach(p => nav.appendChild(el('button', 'st-nav__item st-nav__item--2', { type: 'button', 'aria-current': p.key === this.page ? 'true' : null,
+                onClick: () => { this.page = p.key; this.render(); this.container.querySelector('.st-main')?.scrollTo(0, 0); } },
+                el('span', 'st-nav__stack', {}, el('span', 'st-nav__label', {}, p.label)))));
+            const main = el('div', 'st-main',  {},
+                el('div', 'st-main__head', {}, el('div', '', {}, el('h2', 'st-main__title', {}, page.label))));
+            const keep = new Set(page.fields);
+            const exclude = new Set(this.fields.map(f => f.name).filter(n => !keep.has(n)));
+            const { node, refresh } = this.renderSplit(this.data, 0, { exclude, key: 'page-' + page.key, bare: true, order: page.fields,
+                sectionOf: f => page.sections && page.sections[f.name] });
+            page.extra?.(node, this);
+            main.appendChild(node);
+            this.container.append(nav, main);
+            refresh();
+        }
+
+        // ---- the Input tab: a list of inputs on the left, the selected one on the right
+        renderInputs() {
+            this.container.className = 'st st-split';
+            const describe = this.config.describe || ((item, i) => ({ title: `${item.input || 'Input'} #${item.serial || i + 1}`, sub: '', desc: '' }));
+            this.selected = Math.min(this.selected ?? 0, Math.max(0, this.data.length - 1));
+            const nav = el('nav', 'st-nav', { 'aria-label': 'Inputs' }, el('span', 'st-nav__title', {}, 'Inputs'));
+            this.data.forEach((item, i) => {
+                const d = describe(item, i);
+                const b = el('button', 'st-nav__item st-nav__item--2', { type: 'button', 'aria-current': i === this.selected ? 'true' : null,
+                    onClick: () => { this.selected = i; this.render(); } },
+                    // the list shows only the name: the one given, or the device's own
+                    el('span', 'st-nav__stack', {}, el('span', 'st-nav__label', {}, d.title)),
+                    this.isActive(item) ? el('span', 'st-nav__dot', { title: 'Active' }) : el('span', 'st-nav__dot st-nav__dot--off', { title: 'Off' }));
+                nav.appendChild(b);
+            });
+            nav.appendChild(el('button', 'st-nav__add', { type: 'button', onClick: () => this.addItem(),
+                innerHTML: '<svg class="st-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add input' }));
+            const main = el('div', 'st-main');
+            if (!this.data.length) {
+                main.appendChild(el('div', 'st-empty', {}, el('strong', '', {}, 'No inputs yet'),
+                    el('span', '', {}, 'Add an input to tell AIS-catcher where to receive from.')));
+            } else {
+                const index = this.selected, item = this.data[index], d = describe(item, index);
+                const activeField = this.fields.find(f => f.name === 'active');
+                // the title is the name: a field that reads as a heading, its placeholder the device's own name
+                const descField = this.fields.find(f => f.name === 'description');
+                const fallbackTitle = () => describe({ ...item, description: '' }, index, this.data).title;
+                const title = el('input', 'st-title-input', { type: 'text', value: item.description || '', placeholder: fallbackTitle(),
+                    'aria-label': 'Name', spellcheck: 'false', autocomplete: 'off',
+                    onInput: e => descField && this.updateValue(index, descField, e.target.value) });
+                // where this input's messages go: its zones, and how many outputs take them (a link to Flow)
+                const routing = el('div', 'st-routing');
+                const paintRouting = this.routingLine(routing, 'out', item);
+                const head = el('div', 'st-main__head', {},
+                    el('div', 'st-main__headtext', {}, el('div', 'st-title-edit', {}, title), routing),
+                    el('div', 'st-main__actions', {},
+                        activeField ? el('label', 'st-switch', {},
+                            el('input', '', { type: 'checkbox', checked: this.isActive(item), onChange: e => { this.updateValue(index, activeField, e.target.checked); this.render(); } }),
+                            el('span', 'st-switch__track'), 'Active') : null,
+                        this.menu(d.title, index)));
+                main.appendChild(head);
+                const ess = this.config.essentials || new Set();
+                const serialPort = item.input === 'SERIALPORT';
+                const find = serialPort ? { label: 'Find ports', name: 'openSerialDeviceModal' } : { label: 'Find devices', name: 'openDeviceSelectionModal' };
+                const { node, refresh } = this.renderSplit(item, index, { essentials: ess, key: 'input', onZones: paintRouting,
+                    // settings that cannot apply to this kind of input stay out (engines decode radio only)
+                    exclude: new Set(['description', ...(this.config.excludeFor ? this.config.excludeFor(item) : [])]),
+                    flat: { title: 'Device' } });
+                // Find ports sits on the port line (it fills the port); Find devices on the type line, as it
+                // sets the type and the serial together
+                const target = node.querySelector(`[data-field="${serialPort ? 'serialport_port' : 'input'}"]`);
+                const ctrl = target && [...target.children].find(c => c.matches('input, select') || c.querySelector('input, select'));
+                if (ctrl) {
+                    const btn = el('button', 'st-btn', { type: 'button', onClick: () => ActionRegistry[find.name](index, this.config.containerId),
+                        innerHTML: '<svg class="st-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>' }, find.label);
+                    const row = el('div', 'st-inline');
+                    ctrl.replaceWith(row);
+                    row.append(ctrl, btn);
+                }
+                node.dataset.receiverCard = index;
+                main.appendChild(node);
+                // the title and the list follow the device and serial as they change
+                node._sync = () => {
+                    const nd = describe(item, index);
+                    title.placeholder = fallbackTitle();
+                    const navItem = nav.querySelectorAll('.st-nav__item')[index];
+                    navItem.querySelector('.st-nav__label').textContent = nd.title;
+
+                };
+                this.container.append(nav, main);
+                refresh();
+                return;
+            }
+            this.container.append(nav, main);
+        }
+
+        // The routing line: "Sends to" (an input) or "Receives from" (an output), the zones as pills, and
+        // a link counting the other side that matches, which opens Flow. Returns a painter for the zones.
+        routingLine(box, dir, item) {
+            let seq = 0;
+            return zones => {
+                const mine = ++seq;
+                const path = dir === 'out' ? 'M5 12h14M13 6l6 6-6 6' : 'M19 12H5M11 6l-6 6 6 6';
+                const parts = [el('span', 'st-routing__label', { innerHTML: `<svg class="st-routing__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>` + (dir === 'out' ? 'Sends to' : 'Receives from') })];
+                zones.forEach(z => { const p = el('span', 'st-zone', {}, z); p.style.setProperty('--z', getZoneCss(z)); parts.push(p); });
+                if (!zones.length) parts.push(el('span', 'st-zone st-zone--all', {}, dir === 'out' ? 'All outputs' : 'All inputs'));
+                const sep = () => el('span', 'st-routing__sep', { 'aria-hidden': 'true' }, '·');
+                const link = el('button', 'st-routing__link', { type: 'button', onClick: () => this.config.openFlow?.() }, '…');
+                parts.push(sep(), link);
+                box.replaceChildren(...parts);
+                Promise.resolve(this.config.routing ? this.config.routing(item, dir) : null).then(n => {
+                    if (mine !== seq) return;
+                    const what = dir === 'out' ? 'output' : 'input';
+                    if (n === null || n === undefined) link.remove();
+                    else link.textContent = n === 0 ? `no ${what}s` : n === 1 ? `1 ${what}` : `${n} ${what}s`;
+                });
+            };
+        }
+
+        // the ⋯ menu of an input or output: Duplicate, and Delete behind a confirmation
+        menu(name, index) {
+            return el('details', 'st-menu', {},
+                el('summary', 'st-icon-btn', { 'aria-label': `More actions for ${name}`, title: 'More actions',
+                    innerHTML: '<svg class="st-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>' }),
+                el('div', 'st-menu__items', {},
+                    el('button', 'st-menu__item', { type: 'button', onClick: () => this.duplicateItem(index) }, 'Duplicate'),
+                    el('button', 'st-menu__item st-menu__item--danger', { type: 'button', onClick: () => this.removeItem(index) }, 'Delete…')));
+        }
+
+        // ---- Community: laid out like an input. The page header holds the switch (with its status)
+        // and the routing line; below, the sharing key and Advanced.
+        renderCommunity() {
+            this.container.className = 'st';
+            const item = this.data;
+            const f = name => this.fields.find(x => x.name === name);
+            const on = Utils.toBoolean(item.sharing);
+            const head = this.container.closest('.st-main')?.querySelector('.st-main__head');
+            head?.querySelectorAll('.st-head-extra').forEach(e => e.remove());
+            const routing = el('div', 'st-routing st-head-extra');
+            const box = el('input', '', { type: 'checkbox', checked: on, 'aria-label': 'Share with the community map',
+                onChange: e => { this.updateValue(0, f('sharing'), e.target.checked); paintNotes(); this.config.onChange?.(this); } });
+            const sw = el('label', 'st-switch st-switch--lg', {}, box, el('span', 'st-switch__track'));
+            if (head) {
+                // title and routing as a page header, ruled off from the sections below
+                head.classList.add('st-main__head--page');
+                head.firstElementChild.appendChild(routing);
+            }
+            const keyBtnLabel = () => (item.sharing_key || '').trim() ? 'Edit station details' : 'Get a key';
+            // only while sharing without a key: an amber warning at the top, where the red one sits when off
+            const anon = el('div', 'st-warn-note', { role: 'note' },
+                el('span', 'st-warn-note__icon', { innerHTML: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>' }),
+                el('span', '', {}, 'Without a key your station is shown as anonymous.'));
+            // switched off: no key warning, a red line asking to share instead
+            const off = el('div', 'st-warn-note st-warn-note--bad', { role: 'note' },
+                el('span', 'st-warn-note__icon', { innerHTML: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>' }),
+                el('span', '', {}, 'Not sharing. Switch on to support the community map.'));
+            const paintNotes = () => {
+                const sharing = box.checked;
+                off.hidden = sharing;
+                anon.hidden = !sharing || !!(key.value || '').trim();
+            };
+            const keyBtn = el('button', 'st-btn', { type: 'button', onClick: () => ActionRegistry.openSharingManagement(0, this.config.containerId) },
+                el('span', '', {}, keyBtnLabel()),
+                el('span', '', { innerHTML: '<svg class="st-icon" style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>' }));
+            const key = el('input', 'st-input st-input--mono', { id: 'st-share-key', type: 'text', value: item.sharing_key || '',
+                placeholder: 'Paste your key', spellcheck: 'false', autocomplete: 'off',
+                onInput: e => { this.updateValue(0, f('sharing_key'), e.target.value.trim()); keyBtn.firstChild.textContent = keyBtnLabel(); paintNotes(); } });
+            // data-field: where openSharingManagement looks for the key
+            const card = el('div', 'st-field st-share-key', { dataset: { field: 'sharing_key' } },
+                el('label', 'st-label', { for: 'st-share-key' }, 'Sharing Key ', el('span', 'st-help', {}, '(optional)')),
+                el('div', 'st-inline', {}, key, keyBtn));
+            paintNotes();
+            const { node, refresh } = this.renderSplit(item, 0, { exclude: new Set(['sharing', 'sharing_key', '_create_key_button']), key: 'community', onZones: this.routingLine(routing, 'in', item) });
+            // one section: the red note when off, the switch, the key; Advanced in a section of its own
+            node.classList.add('st-community');
+            const adv = node.querySelector(':scope > .st-adv');
+            const share = el('section', 'st-page__sec', {}, off, anon,
+                el('div', 'st-share-toggle', {}, el('span', 'st-share-toggle__label', {}, 'Share with the Community Map'), sw),
+                card);
+            node.prepend(share);
+            if (adv) node.appendChild(el('section', 'st-page__sec st-page__sec--adv', {}, adv));
+            this.container.appendChild(node);
+            refresh();
+        }
+
+        // ---- the Output tab's rows: one collapsible row per output, its form inside
+        isActive(item) {
+            const f = this.fields.find(x => x.name === 'active');
+            return f ? Utils.toBoolean(item.active !== undefined ? item.active : f.defaultValue) : true;
+        }
+        outputName(item) { return (item.description || '').trim(); }
+        // the collapsed row says only the name; format and address are inside
+        outputMeta() { return []; }
+        renderOutputs() {
+            this.openItems = this.openItems || new WeakSet();
+            this.freshItems = this.freshItems || new WeakSet();
+            const list = el('ul', 'st-outputs');
+            if (!this.data.length) {
+                list.appendChild(el('li', 'st-empty', {},
+                    el('strong', '', {}, `No ${this.config.title} outputs yet`),
+                    el('span', '', {}, `Add one to forward messages over ${this.config.title}.`)));
+            }
+            this.data.forEach((item, index) => {
+                const open = this.openItems.has(item);
+                const li = el('li', 'st-out', { dataset: { open: String(open), off: String(!this.isActive(item)), receiverCard: index } });
+                const name = this.outputName(item);
+                const nameEl = el('span', 'st-out__name' + (name ? '' : ' st-out__name--empty'), {},
+                    name || `Unnamed ${this.config.title} output`);
+                const expand = el('button', 'st-out__expand', { type: 'button', 'aria-expanded': String(open),
+                    onClick: () => {
+                        if (this.openItems.has(item)) this.openItems.delete(item); else this.openItems.add(item);
+                        this.render();
+                    } },
+                    el('span', 'st-out__chev', { innerHTML: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>' }),
+                    nameEl,
+                    // a zoned output says so in its header: a small tinted box with a dot per zone, the zone
+                    // pill in miniature (a bare coloured dot would read as status, as it does elsewhere)
+                    ...(Array.isArray(item.zone) ? item.zone : []).map(z => {
+                        const d = el('span', 'st-zone-dot', { title: `Zone ${z}`, 'aria-label': `zone ${z}` });
+                        d.style.setProperty('--z', getZoneCss(z));
+                        return d;
+                    }),
+                    this.freshItems.has(item) ? el('span', 'st-chip st-chip--new', {}, 'New') : null);
+                const meta = el('span', 'st-out__meta', {}, ...this.outputMeta(item).map(t => el('span', 'st-num', {}, t)));
+                const activeField = this.fields.find(f => f.name === 'active');
+                const sw = activeField ? el('label', 'st-switch', { title: 'Active' },
+                    el('input', '', { type: 'checkbox', checked: this.isActive(item),
+                        onChange: e => { this.updateValue(index, activeField, e.target.checked); li.dataset.off = String(!e.target.checked); } }),
+                    el('span', 'st-switch__track'),
+                    el('span', 'st-sr', {}, 'Active')) : null;
+                const menu = this.menu(name || 'this output', index);
+                li.appendChild(el('div', 'st-out__row', {}, expand, meta, sw, menu));
+                if (open) {
+                    const routing = el('div', 'st-routing st-routing--body');
+                    const { node, refresh } = this.config.essentials
+                        ? this.renderSplit(item, index, { essentials: this.config.essentials, key: 'output', flat: { title: null }, onZones: this.routingLine(routing, 'in', item) })
+                        : this.renderFields(item, index);
+                    if (this.config.essentials) node.prepend(routing);
+                    li.appendChild(el('div', 'st-out__body', {}, node));
+                    // the name and the summary follow the form as it is typed in
+                    li._sync = () => {
+                        const n = this.outputName(item);
+                        nameEl.textContent = n || `Unnamed ${this.config.title} output`;
+                        nameEl.classList.toggle('st-out__name--empty', !n);
+                        meta.replaceChildren(...this.outputMeta(item).map(t => el('span', 'st-num', {}, t)));
+                    };
+                    list.appendChild(li);
+                    refresh();
+                } else list.appendChild(li);
+            });
+            this.container.appendChild(list);
         }
 
         renderControls() {
@@ -1274,7 +1691,7 @@
 
             const btnGroup = el('div', `${containerIdClass} row row-wrap row-end sys-pane-inner sys-actions`);
 
-            if (this.config.isList) {
+            if (this.config.isList && this.config.variant !== 'outputs' && this.config.variant !== 'inputs') {
                 btnGroup.appendChild(el('button', 'btn sys-save', {
                     type: 'button', onClick: () => this.addItem()
                 },
@@ -1282,10 +1699,12 @@
                     'Add Item'));
             }
 
-            btnGroup.appendChild(el('button',
-                App.state.unsaved ? Styles.saveActive : Styles.saveInactive, {
-                type: 'button', dataset: { saveBtn: 'true' }, onClick: () => this.save()
-            }, 'Save'));
+            if (!document.getElementById('st-footer'))
+                btnGroup.appendChild(el('button',
+                    App.state.unsaved ? Styles.saveActive : Styles.saveInactive, {
+                    type: 'button', dataset: { saveBtn: 'true' }, onClick: () => this.save()
+                }, 'Save'));
+            if (!btnGroup.children.length) btnGroup.classList.add('hidden');
 
             const jsonSection = this.container.parentElement.querySelector('[data-json-section]');
             if (jsonSection) {
@@ -1315,15 +1734,18 @@
                 // shared pane across sub-tabs: re-point the toggle at this manager
                 const section = existingPre.closest('[data-json-section]');
                 const btn = section && section.querySelector('button');
-                if (btn) btn.onclick = toggle;
+                if (btn) btn.onclick = () => { toggle(); btn.setAttribute('aria-expanded', String(!document.getElementById(contentId).classList.contains('hidden'))); };
                 return;
             }
 
-            const toggleDiv = el('div', 'sys-pane-inner sys-json-sep', { dataset: { jsonSection: '' } });
-            const btn = el('button', 'row t-muted clickable', { type: 'button' });
-            btn.onclick = toggle;
+            // the same disclosure row as "Advanced settings": a chevron that turns, a quiet label, a rule above
+            const toggleDiv = el('div', 'st st-json sys-pane-inner', { dataset: { jsonSection: '' } });
+            const btn = el('button', 'st-json__toggle', { type: 'button', 'aria-expanded': 'false' });
+            btn.onclick = () => { toggle(); btn.setAttribute('aria-expanded', String(!document.getElementById(contentId).classList.contains('hidden'))); };
 
-            const chevron = Icons.chevronDown('icon-sm t-subtle sys-rotates', { id: chevronId });
+            const chevron = el('svg', 'st-adv__chev', { id: chevronId, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+                'stroke-width': '2.2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' },
+                el('path', '', { d: 'M9 6l6 6-6 6' }));
 
             btn.appendChild(chevron);
             btn.appendChild(el('span', '', {}, 'JSON'));
@@ -1351,6 +1773,10 @@
             else target[field.name] = value;
             this.markDirty();
             this.updateDynamicButtons(index);
+            if (this.config.variant === 'outputs' || this.config.variant === 'inputs') {
+                this.container.querySelector(`[data-receiver-card="${index}"]`)?._sync?.();
+                this.config.onChange?.(this);
+            }
         }
 
         addItem() {
@@ -1362,12 +1788,29 @@
                 }
             });
             this.data.push(newItem);
+            if (this.config.variant === 'inputs') this.selected = this.data.length - 1;
+            this.openItems?.add(newItem);
+            this.freshItems?.add(newItem);
+            this.render();
+            this.markDirty();
+        }
+
+        duplicateItem(index) {
+            const copy = JSON.parse(JSON.stringify(this.data[index]));
+            if (copy.description) copy.description += ' (copy)';
+            this.data.splice(index + 1, 0, copy);
+            if (this.config.variant === 'inputs') this.selected = index + 1;
+            this.openItems?.add(copy);
+            this.freshItems?.add(copy);
             this.render();
             this.markDirty();
         }
 
         removeItem(index) {
-            if (confirm(`Are you sure you want to remove this ${this.config.title}?`)) {
+            const name = this.config.variant === 'outputs' ? this.outputName(this.data[index])
+                : this.config.variant === 'inputs' && this.config.describe ? this.config.describe(this.data[index], index).title : '';
+            const what = this.config.variant === 'inputs' ? 'input' : `${this.config.title} output`;
+            if (confirm(name ? `Delete the ${what} “${name}”?` : `Are you sure you want to remove this ${this.config.title}?`)) {
                 this.data.splice(index, 1);
                 this.render();
                 this.markDirty();
@@ -1439,6 +1882,8 @@
                 saveBtn.textContent = 'Saving...';
                 saveBtn.disabled = true;
             }
+            // the rows saved are rows like any other now
+            this.freshItems = new WeakSet();
 
             try {
                 // read-modify-write against a fresh copy so other sections keep
@@ -1482,6 +1927,7 @@
     }
 
     global.App = App;
+    global.ConfigManagers = ManagerRegistry;
     global.Utils = Utils;
     global.ConfigStore = ConfigStore;
     global.ZoneColors = { badge: getZoneColor, css: getZoneCss };

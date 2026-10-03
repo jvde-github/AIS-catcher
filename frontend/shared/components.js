@@ -353,16 +353,23 @@ export function placeMenu(menu, opts) {
     menu.style.display = "block";
     menu.style.transform = "none";
 
-    var rect = menu.getBoundingClientRect();
     var vw = Math.min(window.innerWidth || Infinity, window.outerWidth || Infinity) || document.documentElement.clientWidth;
     var vh = Math.min(window.innerHeight || Infinity, window.outerHeight || Infinity) || document.documentElement.clientHeight;
+    // never taller than the window less a margin top and bottom; a longer menu scrolls inside
+    var M = 12;
+    menu.style.maxHeight = Math.max(120, vh - 2 * M) + "px";
+    menu.style.overflowY = "auto";
+    var rect = menu.getBoundingClientRect();
+    var clampTop = function (t) { return Math.max(M, Math.min(t, vh - rect.height - M)); };
+    var clampLeft = function (l) { return Math.max(M, Math.min(l, vw - rect.width - M)); };
 
     if (opts.anchor) {
         var btn = opts.anchor.getBoundingClientRect();
+        // above the button when it fits, else below; either way moved up until it fits
         var top = btn.top - rect.height - 8;
-        if (top < 8) top = Math.min(btn.bottom + 8, vh - rect.height - 8);
-        menu.style.left = Math.max(8, btn.right - rect.width) + "px";
-        menu.style.top = top + "px";
+        if (top < M) top = btn.bottom + 8;
+        menu.style.left = clampLeft(btn.right - rect.width) + "px";
+        menu.style.top = clampTop(top) + "px";
         return;
     }
     if (opts.center) {
@@ -371,8 +378,8 @@ export function placeMenu(menu, opts) {
         menu.style.transform = "translate(-50%, -50%)";
         return;
     }
-    menu.style.left = Math.max(0, Math.min(opts.x + 5, vw - rect.width)) + "px";
-    menu.style.top = Math.max(0, Math.min(opts.y + 5, vh - rect.height)) + "px";
+    menu.style.left = clampLeft(opts.x + 5) + "px";
+    menu.style.top = clampTop(opts.y + 5) + "px";
 }
 
 export function dismissOnce(menu, onClose, opts) {

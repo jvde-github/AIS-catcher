@@ -48,7 +48,7 @@ export function createPortDialog(host) {
             : {port:'Port', anchorage:'Anchorage', terminal:'Terminal', berth:'Berth', area:'Area',section:'Section',marina:'Marina',mooring:'Mooring',water:'Water'}[place.place_type || 'port'] || 'Place';
         root.setAttribute('aria-labelledby', 'port-ships-title');
         root.innerHTML = '<header class="place-panel-header">' +
-            '<div class="place-panel-actions"><button type="button" class="place-overview">← In view</button><span class="side-table-label"></span><button type="button" class="table-collapse place-close" title="Close sidebar" aria-label="Close sidebar">Close <span aria-hidden="true">→</span></button></div>' +
+            '<div class="place-panel-actions"><button type="button" class="place-overview"><svg class="sp-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>In view</button><span class="side-table-label"></span><span class="sp-spacer"></span><button type="button" class="table-collapse place-close" title="Close sidebar" aria-label="Close sidebar">Close <span aria-hidden="true">→</span></button></div>' +
             '<div class="place-panel-heading"><div class="place-panel-label"><h2 id="port-ships-title"></h2><div class="place-panel-kind"></div></div></div></header>' +
             '<div class="sc-tabs place-dialog-tabs" role="tablist" aria-label="Place activity">' + tabs.map(label =>
             `<button type="button" class="sc-tab" role="tab" id="place-tab-${label.toLowerCase()}" data-place-tab="${label.toLowerCase()}" aria-controls="place-results">${label === 'Closest' ? 'Nearby' : label}<span class="place-tab-count"></span></button>`).join('') + '</div>' +
@@ -60,8 +60,12 @@ export function createPortDialog(host) {
         const country = /^[A-Z]{2}[A-Z0-9]{3}$/.test(code) ? code.slice(0, 2) : '';
         const countryName = country ? getCountryName(country) : '';
         const detail = root.querySelector('.place-panel-kind');
-        detail.textContent = [countryName, code].filter(Boolean).join(' · ');
-        detail.hidden = !detail.textContent;
+        // as on the place page: the code in mono, then the country in words
+        for (const [text, cls] of [[code, 'sp-code-plain'], [countryName, '']]) {
+            if (!text) continue;
+            const part = document.createElement('span'); part.className = cls; part.textContent = text; detail.append(part);
+        }
+        detail.hidden = !countryName && !code;
         if (country) root.querySelector('.place-panel-heading').prepend(flag(country, 'place-panel-flag', countryName));
         const results = root.querySelector('.port-results'), body = results.querySelector('tbody'), status = results.querySelector('.port-status');
         const hover = bindVesselHover(body, {
@@ -104,7 +108,7 @@ export function createPortDialog(host) {
             results.querySelector('table').classList.toggle('visits', visitRows);
             results.querySelector('thead').innerHTML = '<tr><th scope="col" class="col-name">Name</th>' + (visitRows
                 ? '<th scope="col">Entry</th><th scope="col">Exit</th><th scope="col">Duration</th>'
-                : '<th scope="col" class="num col-spd">Spd <span class="dim">kts</span></th><th scope="col" class="col-type">Type</th><th scope="col" class="num col-last">' + ({arrived:'Arrived',left:'Left',closest:'Range'}[selected] || 'Last') + '</th>') + '</tr>';
+                : '<th scope="col" class="num col-spd">Spd <span class="dim">kn</span></th><th scope="col" class="col-type">Type</th><th scope="col" class="num col-last">' + ({arrived:'Arrived',left:'Left',closest:'Range'}[selected] || 'Last') + '</th>') + '</tr>';
             results.setAttribute('aria-busy', 'true');
             if (!refresh) {
                 hover.clear();

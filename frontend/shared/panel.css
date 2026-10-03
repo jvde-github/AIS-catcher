@@ -721,8 +721,8 @@
 
 /* the side panel a table lives in: slides in from the right edge */
 .tableside_window {
-    --vessel-row-height: 28px;
-    --vessel-font-size: var(--fs-2xs);
+    --vessel-row-height: 36px;
+    --vessel-font-size: 12px;
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
@@ -865,7 +865,7 @@
 .side-table-context .port-ship-list table.visits .col-name { width: 35%; }
 .port-ship-list .place-time { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .side-table-label { grid-column: 2; color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-normal); }
-.side-table-context table.nearby .col-last { width: 82px; }
+.side-table-context table.nearby .col-last { width: 96px; }
 .side-table-context .nearby-heard { width: 72px; }
 .side-table-context .nearby-code { width: 100px; }
 
@@ -886,11 +886,6 @@
 .port-list-preview .port-results { flex: 0 1 auto; }
 .table-more { padding: 5px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-accent); font-size: var(--fs-xs); text-decoration: none; white-space: nowrap; }
 .table-more:hover { background: var(--color-card-footer); }
-
-/* The list stays dense; larger workspaces get a little air. */
-@media (min-width: 1200px) and (min-height: 800px) {
-    .tableside_window { --vessel-row-height: 32px; --vessel-font-size: var(--fs-xs); }
-}
 
 @media (max-width: 750px) {
     .tableside_window {
@@ -1128,3 +1123,150 @@
 
 /* Viewer shortcut to the shared area filter, beside the compact search control. */
 .tableside_window .settings-header .hdr-slot { display: flex; align-items: center; gap: var(--space-1); min-width: 0; }
+
+
+/* side panel flags: slightly rounded with a hairline edge, like the ship card's */
+.tableside_window .flag.fi { border-radius: 2px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 14%, transparent); }
+.tableside_window .place-panel-flag.fi { border-radius: 4px; }
+
+/* ==========================================================================
+   Side panels (In view, port, nearby, past events), after the mock and one size
+   down from the ship card's old scale: a title with a count chip and an ×,
+   a filter field, a quiet sticky head, 36px rows, mono numbers, an amber dot on
+   stale times, pill tabs that wrap, bordered page buttons.
+   ========================================================================== */
+.tableside_window {
+    --sp-line: color-mix(in srgb, var(--color-text) 8%, transparent);
+    --sp-line-strong: color-mix(in srgb, var(--color-text) 14%, transparent);
+    --sp-hover: color-mix(in srgb, var(--color-text) 4%, transparent);
+    --sp-soft: color-mix(in srgb, var(--color-accent) 12%, transparent);
+    font-variant-numeric: tabular-nums;
+}
+
+/* header: title, count, × ; place panels: back link left, × right */
+.tableside_window > .table-overview-header,
+.tableside_window .place-panel-actions { display: flex; align-items: center; gap: 8px; }
+.sp-count { padding: 1px 7px; border-radius: 999px; background: var(--sp-hover); color: var(--color-text); font-size: 10.5px; font-weight: 600; box-shadow: inset 0 0 0 1px var(--sp-line-strong); }
+.sp-count:empty { display: none; }
+.sp-spacer { flex: 1; }
+.tableside_window .table-collapse,
+.tableside_window .place-panel-actions .table-collapse {
+    margin-left: auto; width: 32px; height: 32px; padding: 0; gap: 0;
+    font-size: 0; color: var(--color-text-muted); border-radius: 8px;
+}
+.tableside_window .table-collapse > * { display: none; }
+.tableside_window .table-collapse::before {
+    content: ''; width: 16px; height: 16px; background: currentColor;
+    -webkit-mask: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round"%3E%3Cpath d="M6 6l12 12M18 6L6 18"/%3E%3C/svg%3E') center / contain no-repeat;
+            mask: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round"%3E%3Cpath d="M6 6l12 12M18 6L6 18"/%3E%3C/svg%3E') center / contain no-repeat;
+}
+.tableside_window .table-collapse:hover { text-decoration: none; background: var(--sp-hover); color: var(--color-text); }
+.tableside_window .place-overview:hover { text-decoration: none; background: var(--sp-soft); }
+.sp-chev { width: 14px; height: 14px; flex: none; }
+
+/* filter field */
+.sp-filter { position: relative; display: flex; align-items: center; margin: 0 16px 8px; }
+.sp-filter svg { position: absolute; left: 10px; width: 14px; height: 14px; color: var(--color-text-muted); pointer-events: none; }
+.sp-filter input {
+    width: 100%; height: 32px; padding: 0 10px 0 30px; box-sizing: border-box;
+    border: 1px solid var(--sp-line-strong); border-radius: 8px;
+    background: color-mix(in srgb, var(--color-panel-surface) 96%, var(--color-text) 4%); color: var(--color-text); font: inherit; font-size: 12.5px;
+}
+.sp-filter input::placeholder { color: var(--color-text-muted); }
+.sp-filter input:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--sp-soft); }
+
+/* activity tabs as pills that wrap; the chosen one tinted, its count in a chip */
+.tableside_window .place-dialog-tabs {
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 10px; border-bottom: 1px solid var(--sp-line-strong); background: transparent;
+}
+.tableside_window .place-dialog-tabs > button.sc-tab {
+    flex: none; height: 28px; min-height: 0; padding: 0 9px; display: inline-flex; align-items: center; gap: 5px;
+    border: 1px solid var(--sp-line-strong); border-radius: 999px; background: transparent;
+    color: var(--color-text); font-size: 12px; font-weight: 400;
+}
+.tableside_window .place-dialog-tabs > button.sc-tab:hover { background: var(--sp-hover); }
+.tableside_window .place-dialog-tabs > button.sc-tab[aria-selected="true"] { border-color: transparent; background: var(--sp-soft); color: var(--color-accent); font-weight: 600; }
+.tableside_window .place-tab-count { color: var(--color-text-muted); font-size: 11px; }
+.tableside_window .place-dialog-tabs > button[aria-selected="true"] .place-tab-count {
+    padding: 0 5px; border-radius: 999px; background: var(--color-accent); color: var(--color-panel-surface); font-weight: 700; line-height: 16px;
+}
+
+/* the table: edge to edge, a quiet sticky head, mono numbers, stale times marked */
+.tableside_window .tablecard_inner { padding: 0; margin: 0; }
+.tableside_window table thead th {
+    position: sticky; top: 0; z-index: 1; height: 30px;
+    background: var(--color-panel-surface); border-bottom: 1px solid var(--sp-line-strong);
+    font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-muted);
+}
+.tableside_window table thead th span { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.tableside_window table thead th.ascending, .tableside_window table thead th.descending { color: var(--color-text); }
+.tableside_window table tr.stale .table-duration { display: inline-flex; align-items: center; gap: 4px; color: var(--color-warning); }
+.tableside_window table tr.stale .table-duration::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+/* footer: the range left, bordered page buttons right */
+.tableside_window .table-footer { padding: 6px 10px 6px 16px; border-top: 1px solid var(--sp-line-strong); min-height: 46px; }
+.tableside_window .table-footer .table-count { font-size: 12px; }
+.tableside_window .table-pager { display: flex; align-items: center; gap: 6px; }
+.tableside_window .table-pager > span { min-width: 46px; text-align: center; font-size: 12px; color: var(--color-text); }
+.tableside_window .table-pager button {
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; padding: 0;
+    border: 1px solid var(--sp-line-strong); border-radius: 8px; background: transparent; color: var(--color-text); font-size: 16px; line-height: 1; cursor: pointer;
+}
+.tableside_window .table-pager button:hover:not(:disabled) { background: var(--sp-hover); }
+.tableside_window .table-pager button:disabled { opacity: .4; cursor: default; }
+.tableside_window .table-more { height: 32px; display: inline-flex; align-items: center; padding: 0 10px 0 12px; border: 1px solid var(--sp-line-strong); border-radius: 8px; font-size: 12.5px; font-weight: 500; }
+.tableside_window .table-more:hover { background: var(--sp-soft); }
+.tableside_window .table-more:empty, .tableside_window .table-more[hidden] { display: none; }
+/* the same, specific enough to beat the shared row metrics above */
+.tableside_window .tablecard_inner table > thead > tr > th { font-size: 10px; padding: 0 4px; }
+.tableside_window .tablecard_inner table > thead > tr > th:first-child,
+.tableside_window .tablecard_inner table > tbody > tr > td:first-child { padding-left: 16px; }
+.tableside_window .tablecard_inner table > thead > tr > th:last-child,
+.tableside_window .tablecard_inner table > tbody > tr > td:last-child { padding-right: 16px; }
+.tableside_window .tablecard_inner table > tbody > tr > td { border-bottom: 1px solid var(--sp-line); }
+/* tighter numeric columns: the type an icon's width, the times as wide as "11m 54s"; the name takes the rest */
+.tableside_window .tablecard_inner table .col-type { width: 34px; padding-left: 2px; padding-right: 2px; }
+.tableside_window .tablecard_inner table .col-spd { width: 56px; }
+.tableside_window .tablecard_inner table .col-dist { width: 56px; }
+.tableside_window .tablecard_inner table .col-last { width: 62px; }
+
+/* review round: one count, number heads aligned with their values, digits in the text face,
+   a hover that says "click me", no Dist column without a station position */
+body.table-open .map-button-box .map-button:has(> #markerCount) { display: none !important; }
+.tableside_window.no-dist .col-dist { display: none; }
+.tableside_window .tablecard_inner table > thead > tr > th.num { text-align: right; }
+.tableside_window .tablecard_inner table > thead > tr > th.col-type { text-align: center; }
+.tableside_window table td.col-spd, .tableside_window table td.col-dist, .tableside_window table td.col-last {
+    font-family: inherit; font-size: 12px; font-variant-numeric: tabular-nums;
+}
+.tableside_window .tablecard_inner table > tbody > tr { cursor: pointer; }
+.tableside_window .tablecard_inner table > tbody > tr:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.tableside_window .tablecard_inner table > tbody > tr.selected { background: color-mix(in srgb, var(--color-accent) 10%, transparent); box-shadow: inset 3px 0 0 var(--color-accent); }
+/* number heads: the sort arrow goes before the word and only when sorted, so the word ends on the column's right edge */
+.tableside_window .tablecard_inner table > thead > tr > th.num.sort-icon::after { content: none; }
+.tableside_window .tablecard_inner table > thead > tr > th.num.ascending::before { content: "\25B2"; margin-right: 2px; font-size: var(--fs-2xs); }
+.tableside_window .tablecard_inner table > thead > tr > th.num.descending::before { content: "\25BC"; margin-right: 2px; font-size: var(--fs-2xs); }
+
+/* first row of every side panel: back, what this is, close - one small-caps line.
+   A place then reads as on its page: flag and name, a line of code and country under them. */
+.tableside_window > .table-overview-header .side-table-label,
+.tableside_window .place-panel-actions > .side-table-label {
+    display: inline; color: var(--color-text-muted); font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+}
+.tableside_window > .table-overview-header { padding: 4px 6px 4px 16px; border: 0; background: transparent; }
+.tableside_window .place-overview {
+    display: inline-flex; align-items: center; gap: 3px; height: 28px; padding: 0 6px 0 2px;
+    border-radius: 8px; font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+}
+.tableside_window .place-overview .sp-chev { width: 12px; height: 12px; }
+.tableside_window .place-panel-actions { gap: 2px; margin-bottom: 4px; }
+.tableside_window .place-panel-actions > .side-table-label:not(:first-child)::before { content: '/'; margin-right: 8px; opacity: .5; }
+.tableside_window .place-panel-actions > .side-table-label:empty { display: none; }
+.tableside_window .place-panel-header { padding: 4px 6px 12px 12px; border-bottom: 0; }
+.tableside_window .place-panel-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 0 10px 0 4px; }
+.tableside_window .place-panel-label { display: contents; }
+.tableside_window .place-panel-heading .place-panel-flag { width: 28px; height: 20px; border-radius: 3px; flex: none; }
+.tableside_window .place-panel-heading h2 { flex: 1 1 0; min-width: 0; margin: 0; font-size: 18px; font-weight: 700; line-height: 1.2; }
+.tableside_window .place-panel-kind { display: flex; align-items: center; flex: 0 0 100%; margin: 0; gap: 0; font-size: 12px; color: var(--color-text-muted); }
+.tableside_window .place-panel-kind > span + span::before { content: '\2022'; margin: 0 7px; opacity: .7; }
+.tableside_window .place-panel-kind .sp-code-plain { font-family: var(--font-mono, ui-monospace, Menlo, monospace); color: var(--color-text); }

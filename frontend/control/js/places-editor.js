@@ -19,13 +19,43 @@ const TOOL_ICONS = {
     remove: 'M200-440v-80h560v80H200Z',
     delete: 'M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z'
 };
-const toolSvg = icon => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="24" height="24" aria-hidden="true"><path d="${TOOL_ICONS[icon]}"/></svg>`;
-const tool = (name, label, icon) => `<button type="button" class="map-button" data-do="${name}" title="${label}">${toolSvg(icon)}</button>`;
+const toolSvg = icon => `<svg class="pe-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="${TOOL_ICONS[icon]}"/></svg>`;
+// a map tool: an icon with a tooltip, or with `text` a labelled one (the toggles)
+const tool = (name, label, icon, text) => text
+    ? `<button type="button" class="pe-tool" data-do="${name}" aria-pressed="false" aria-label="${label}">${toolSvg(icon)}<span class="pe-tool__label">${text}</span></button>`
+    : `<button type="button" class="pe-tool pe-tool--icon" data-do="${name}" title="${label}">${toolSvg(icon)}</button>`;
+const sep = '<span class="pe-toolbar__sep" aria-hidden="true"></span>';
+// line icons in the style of the design: 24-unit grid, stroked
+const ICON = {
+    plus: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+    dots: '<svg class="pe-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
+    search: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
+    chevron: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
+    trash: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+    anchor: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="2"/><path d="M12 7v14M5 13a7 7 0 0 0 14 0M8 10h8"/></svg>',
+    area: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l7-3 9 5-3 10-11-1z"/></svg>',
+    streets: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
+    light: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z" fill="currentColor" fill-opacity=".15"/></svg>',
+    satellite: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>',
+};
+// the three backgrounds, each with the credit its source asks for
+const OSM_CREDIT = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
+const BASEMAPS = {
+    streets: {label: 'Streets', dim: 0.1, credit: OSM_CREDIT},
+    light: {label: 'Light', url: ESRI + 'Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', maxZoom: 16,
+            credit: 'Tiles © Esri — Esri, HERE, Garmin, ' + OSM_CREDIT},
+    satellite: {label: 'Satellite', url: ESRI + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', maxZoom: 19,
+                credit: 'Imagery © Esri — Esri, Maxar, Earthstar Geographics and the GIS User Community'},
+};
+const BASEMAP_KEY = 'places.basemap';
+const AREA_TYPES = new Set(['area', 'section']);
 let toolTips = null;
 import TileLayer from 'ol/layer/Tile.js';
 import VectorLayer from 'ol/layer/Vector.js';
 import Map from 'ol/Map.js';
 import Point from 'ol/geom/Point.js';
+import MultiPoint from 'ol/geom/MultiPoint.js';
 import {fromLonLat, toLonLat} from 'ol/proj.js';
 import OSM from 'ol/source/OSM.js';
 import XYZ from 'ol/source/XYZ.js';
@@ -52,74 +82,103 @@ const uuid = () => {
     return `${s.slice(0, 8)}-${s.slice(8, 12)}-${s.slice(12, 16)}-${s.slice(16, 20)}-${s.slice(20)}`;
 };
 export function createPlaceEditor(host, options = {}) {
+    host.classList.add('pe');
+    const segments = Object.entries(BASEMAPS).map(([key, b]) =>
+        `<button class="pe-segment" type="button" role="radio" aria-checked="false" data-basemap="${key}">${ICON[key]}${b.label}</button>`).join('');
     host.innerHTML = `
-      <div class="place-top place-actions" role="group" aria-label="Place actions">
-        <div class="place-toolbar-main">
-          <button class="btn" data-do="new">New place</button>
-          <details class="place-menu"><summary class="btn" aria-label="More actions" title="More actions">…</summary>
-            <div class="place-menu-items">
-              <button class="btn" data-do="import">Import…</button>
-              <button class="btn" data-do="export">Export</button>
-              <button class="btn" data-do="view-json">View GeoJSON</button>
-              <button class="btn" data-do="reload">Reload</button>
-            </div>
-          </details>
-        </div>
-      </div>
-      <div class="place-workspace"><aside class="place-sidebar">
-        <input class="input" data-field="search" aria-label="Search places" placeholder="Search places…">
-        <div class="place-list" role="listbox" aria-label="Saved places"></div>
-      </aside><section class="place-detail">
-        <div class="place-inspector">
-          <div class="place-summary"><div><strong data-place-name>Select a place</strong><small data-place-description>Choose a place from the list.</small></div>
-            <div class="place-toolbar-end">
-              <button class="btn" data-do="delete" hidden>Delete</button>
-              <button class="btn" data-do="edit" hidden>Edit</button>
-              <button class="btn" data-do="cancel" hidden>Cancel</button>
-              <button class="btn btn-primary" data-do="save" hidden>Save</button>
-            </div>
+      <div class="pe-body place-workspace">
+        <aside class="pe-sidebar place-sidebar">
+          <div class="pe-sidebar__actions">
+            <button class="pe-btn pe-btn--primary" type="button" data-do="new">${ICON.plus}New place</button>
+            <details class="pe-menu place-menu"><summary class="pe-icon-btn pe-icon-btn--outline" aria-label="Import, export and other place actions" title="More actions">${ICON.dots}</summary>
+              <div class="pe-menu__items place-menu-items">
+                <button class="pe-menu__item" type="button" data-do="import">Import…</button>
+                <button class="pe-menu__item" type="button" data-do="export">Export</button>
+                <button class="pe-menu__item" type="button" data-do="view-json">View GeoJSON</button>
+                <button class="pe-menu__item" type="button" data-do="reload">Reload</button>
+              </div>
+            </details>
           </div>
-        <fieldset class="place-fields" disabled hidden>
-          <label>Type<select class="input select" data-field="place_type"><option value="port">Port</option><option value="berth">Berth</option><option value="anchorage">Anchorage</option><option value="section">Section</option><option value="terminal">Terminal</option><option value="mooring">Mooring</option><option value="marina">Marina</option><option value="area">Area</option></select></label>
-          <label>Name<input class="input" data-field="name" maxlength="120" placeholder="Place name"></label>
-          <label data-row="unlocode">UN/LOCODE<input class="input" data-field="unlocode" maxlength="5" placeholder="NLRTM"></label>
-          <label data-row="part_of">Parent<select class="input" data-field="part_of"><option value="">Unknown</option><option value="none">No parent</option></select></label>
-
-          <label data-row="category">Category<input class="input" data-field="category" list="place-categories" maxlength="60" placeholder="VTS, restricted place…"><datalist id="place-categories"></datalist></label>
-          <label data-row="size">Marker from zoom<select class="input select" data-field="size"><option value="0">12 · very small</option><option value="1">11 · small</option><option value="2">9 · medium</option><option value="3">7 · large</option></select></label>
-        </fieldset>
-        <div class="place-feedback" role="status" aria-live="polite"></div>
-        </div>
-      <div class="place-map-wrap"><div class="place-map"></div>
-        <div class="place-map-tools" role="toolbar" aria-label="Map tools">${tool('draw', 'Draw polygon', 'pentagon')}${tool('point', 'Set point', 'add_location_alt')}${tool('delete-part', 'Delete part', 'delete')}<span class="sep"></span>${tool('undo', 'Undo', 'undo')}${tool('redo', 'Redo', 'redo')}<span class="sep"></span>${tool('fit', 'Fit place', 'fit_screen')}<span class="sep"></span>${tool('import-shape', 'Import shape', 'upload')}${tool('export-shape', 'Export shape', 'download')}${tool('paste-shape', 'Paste shape', 'content_paste')}<span class="sep"></span>${tool('fullscreen', 'Full screen', 'fullscreen')}<span class="sep"></span>${tool('zoom-in', 'Zoom in', 'add')}${tool('zoom-out', 'Zoom out', 'remove')}</div>
-        <div class="place-paste" hidden><textarea data-paste rows="7" spellcheck="false" placeholder="Paste GeoJSON: a geometry, a Feature, or a collection holding one"></textarea>
-          <div class="place-paste-actions"><button class="btn" data-do="paste-apply">Apply</button><button class="btn" data-do="paste-close">Close</button></div></div>
-        <div class="place-attribution">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</div>
-      </div></section></div><input type="file" data-file accept=".geojson,.json,application/geo+json,application/json" hidden>`;
+          <div class="pe-search">${ICON.search}<input class="pe-input" type="search" data-field="search" aria-label="Search places" placeholder="Search places" autocomplete="off"></div>
+          <div class="pe-list place-list" role="listbox" aria-label="Saved places"></div>
+          <span class="pe-sidebar__count" data-count></span>
+        </aside>
+        <section class="pe-editor place-detail">
+          <div class="pe-empty" data-empty><strong>No place selected</strong><span>Pick a place from the list or on the map, or create a new one.</span></div>
+          <fieldset class="pe-form place-fields" disabled hidden>
+            <label class="pe-field" data-col="1"><span class="pe-label">Name</span><input class="pe-input" data-field="name" maxlength="120" placeholder="Place name"></label>
+            <label class="pe-field" data-col="2"><span class="pe-label">Type</span><span class="pe-select-wrap"><select class="pe-select" data-field="place_type"><option value="port">Port</option><option value="berth">Berth</option><option value="anchorage">Anchorage</option><option value="section">Section</option><option value="terminal">Terminal</option><option value="mooring">Mooring</option><option value="marina">Marina</option><option value="area">Area</option></select>${ICON.chevron}</span></label>
+            <label class="pe-field" data-col="3" data-row="unlocode"><span class="pe-label">UN/LOCODE</span><input class="pe-input pe-input--mono" data-field="unlocode" maxlength="5" placeholder="NLRTM" spellcheck="false" autocomplete="off"></label>
+            <label class="pe-field" data-col="1" data-line="2" data-row="part_of"><span class="pe-label">Parent</span><span class="pe-select-wrap"><select class="pe-select" data-field="part_of"><option value="">Unknown</option><option value="none">No parent</option></select>${ICON.chevron}</span></label>
+            <label class="pe-field" data-col="2" data-line="2" data-row="category"><span class="pe-label">Category</span><input class="pe-input" data-field="category" list="place-categories" maxlength="60" placeholder="VTS, restricted place…"><datalist id="place-categories"></datalist></label>
+            <label class="pe-field" data-col="3" data-line="2" data-row="size"><span class="pe-label">Marker from zoom</span><span class="pe-select-wrap"><select class="pe-select" data-field="size"><option value="0">12 · very small</option><option value="1">11 · small</option><option value="2">9 · medium</option><option value="3">7 · large</option></select>${ICON.chevron}</span></label>
+          </fieldset>
+          <div class="pe-map place-map-wrap">
+            <div class="pe-map__canvas place-map"></div>
+            <div class="pe-toolbar pe-toolbar--tools" role="toolbar" aria-label="Shape tools">${tool('draw', 'Draw a boundary', 'pentagon', 'Draw')}${tool('point', 'Set a point', 'add_location_alt', 'Point')}${tool('delete-part', 'Delete a part', 'delete')}${sep}${tool('undo', 'Undo', 'undo')}${tool('redo', 'Redo', 'redo')}${sep}${tool('import-shape', 'Import shape', 'upload')}${tool('export-shape', 'Export shape', 'download')}${tool('paste-shape', 'Paste shape', 'content_paste')}</div>
+            <div class="pe-toolbar pe-toolbar--view" role="toolbar" aria-label="Map view">${tool('fit', 'Fit to shape', 'fit_screen')}${tool('fullscreen', 'Full screen', 'fullscreen')}${sep}${tool('zoom-in', 'Zoom in', 'add')}${tool('zoom-out', 'Zoom out', 'remove')}</div>
+            <div class="pe-paste place-paste" hidden><textarea class="pe-input" data-paste rows="7" spellcheck="false" placeholder="Paste GeoJSON: a geometry, a Feature, or a collection holding one"></textarea>
+              <div class="pe-paste__actions"><button class="pe-btn" type="button" data-do="paste-close">Close</button><button class="pe-btn pe-btn--primary" type="button" data-do="paste-apply">Apply</button></div></div>
+            <div class="pe-map__hint" aria-live="polite" hidden><strong><span data-points>0</span> <span data-points-word>points</span></strong><span class="pe-map__hint-sep" aria-hidden="true"></span><span data-hint></span></div>
+            <div class="pe-toolbar pe-toolbar--layers" role="radiogroup" aria-label="Map style">${segments}</div>
+            <div class="pe-attribution place-attribution"></div>
+          </div>
+        </section>
+      </div>
+      <footer class="pe-footer">
+        <button class="pe-btn pe-btn--danger" type="button" data-do="delete" hidden>${ICON.trash}<span class="pe-btn__label">Delete place</span></button>
+        <span class="pe-footer__spacer"></span>
+        <span class="pe-feedback place-feedback" role="status" aria-live="polite"></span>
+        <span class="pe-dirty" role="status" hidden>Unsaved changes</span>
+        <button class="pe-btn" type="button" data-do="cancel" hidden>Cancel</button>
+        <button class="pe-btn pe-btn--primary" type="button" data-do="edit" hidden>Edit place</button>
+        <button class="pe-btn pe-btn--primary" type="button" data-do="save" hidden>Save place</button>
+      </footer>
+      <input type="file" data-file accept=".geojson,.json,application/geo+json,application/json" hidden>`;
     if (!toolTips)
-        toolTips = tooltip.create({selector: '.place-map-tools .map-button', placement: 'below'});
+        toolTips = tooltip.create({selector: '.pe-toolbar .pe-tool--icon', placement: 'below'});
     toolTips.prepare(host);
     const q = s => host.querySelector(s);
     const input = name => q(`[data-field="${name}"]`);
     let placeSettings = null, catalogueVersion = '';
     let records = [], draft = null, original = null, busy = false, dead = false, draw = null, undo = [],
-        redo = [], unsaved = false, editingMode = false, deleteArmed = false;
+        redo = [], unsaved = false, editingMode = false, deleteArmed = false, drawType = null;
     const editing = new VectorSource();
-    // every other place nearby, in the accent blue, so a new outline is drawn against its neighbours
+    // every other place nearby, in a quiet slate, so a new outline is drawn against its neighbours
     const context = new VectorSource();
     const markers = new VectorSource(); // a dot per catalogue entry; see refreshMarkers
     const shapes = new globalThis.Map(); // uuid:revision -> the full feature, fetched once (Map here is OpenLayers')
-    const blue = getComputedStyle(host).getPropertyValue('--color-accent').trim() || '#0b5cad';
-    const orange = '#f28c00'; // the shape being edited
-    const handleStyle = new Style({image: new CircleStyle({radius: 5,
-        fill: new Fill({color: orange}), stroke: new Stroke({color: '#fff', width: 2})})});
-    const activeStyle = new Style({image:new CircleStyle({radius:6,fill:new Fill({color:orange})}),stroke: new Stroke({color: orange, width: 2.5}),
-        fill: new Fill({color: 'rgba(242, 140, 0, 0.22)'}), declutterMode: 'none'});
-    const contextStyle = new Style({image:new CircleStyle({radius:4,fill:new Fill({color:blue})}),stroke: new Stroke({color: blue, width: 1.5}),
-        fill: new Fill({color: 'rgba(11, 92, 173, 0.12)'})});
-    // Every corner of the shape being edited says where it is. White on the
-    // same orange as the outline, so a label reads against the sea, the land
-    // and the shape's own fill alike.
+    // The shape's colours come from the stylesheet, so they follow day and night:
+    // read them once here and again whenever the theme flips
+    let S = null;
+    function makeStyles() {
+        const css = getComputedStyle(host), v = n => css.getPropertyValue(n).trim();
+        const t = {stroke: v('--pe-shape-stroke') || '#2563c9', fill: v('--pe-shape-fill') || 'rgba(37,99,201,.16)',
+                   vertexFill: v('--pe-vertex-fill') || '#f8f8fa', vertexStroke: v('--pe-vertex-stroke') || '#2563c9',
+                   halo: v('--pe-vertex-active-halo') || 'rgba(37,99,201,.25)', midpoint: v('--pe-midpoint-fill') || 'rgba(28,30,33,.6)',
+                   context: v('--pe-context-stroke') || '#64748b', contextFill: v('--pe-context-fill') || 'rgba(100,116,139,.12)',
+                   marker: v('--pe-marker-fill') || 'rgba(100,116,139,.6)', danger: v('--color-danger') || '#c62828'};
+        S = {
+            t,
+            // the outline; a point place is a filled dot in the same blue
+            shape: new Style({stroke: new Stroke({color: t.stroke, width: 2.2, lineJoin: 'round'}), fill: new Fill({color: t.fill}),
+                              image: new CircleStyle({radius: 7, fill: new Fill({color: t.stroke}), stroke: new Stroke({color: t.vertexFill, width: 2.5})}),
+                              declutterMode: 'none'}),
+            vertex: new CircleStyle({radius: 5, fill: new Fill({color: t.vertexFill}), stroke: new Stroke({color: t.vertexStroke, width: 2})}),
+            midpoint: new CircleStyle({radius: 2.5, fill: new Fill({color: t.midpoint})}),
+            // the corner under the pointer or being dragged
+            handle: [new Style({image: new CircleStyle({radius: 12, fill: new Fill({color: t.halo})})}),
+                     new Style({image: new CircleStyle({radius: 7, fill: new Fill({color: t.stroke}), stroke: new Stroke({color: t.vertexFill, width: 2.5})})})],
+            context: new Style({image: new CircleStyle({radius: 4, fill: new Fill({color: t.context})}), stroke: new Stroke({color: t.context, width: 1.5}),
+                                fill: new Fill({color: t.contextFill})}),
+            markers: [3, 4.5, 6, 7.5].map(radius => new Style({image: new CircleStyle({radius, fill: new Fill({color: t.marker}),
+                                                                                       stroke: new Stroke({color: '#fff', width: 1})})})),
+            doomed: new Style({stroke: new Stroke({color: t.danger, width: 3}), fill: new Fill({color: 'rgba(220, 38, 38, 0.25)'})}),
+        };
+    }
+    makeStyles();
+    // Every corner of the shape being edited says where it is, white on the
+    // outline's blue, so a label reads against the sea, the land and the fill.
     //
     // The layer declutters, which is what thins them: a hundred-point outline
     // zoomed out would otherwise stack its labels into an unreadable block, and
@@ -133,10 +192,9 @@ export function createPlaceEditor(host, options = {}) {
                 text: lat.toFixed(5) + '\n' + lon.toFixed(5),
                 font: '10px ui-monospace, SFMono-Regular, Menlo, monospace',
                 textAlign: 'center',
-                offsetY: -18,
+                offsetY: -20,
                 fill: new Fill({color: '#fff'}),
-                backgroundFill: new Fill({color: orange}),
-                backgroundStroke: new Stroke({color: 'rgba(0, 0, 0, 0.35)', width: 1}),
+                backgroundFill: new Fill({color: S.t.stroke}),
                 padding: [2, 4, 2, 4],
             }),
         });
@@ -146,25 +204,41 @@ export function createPlaceEditor(host, options = {}) {
         else for (const part of coordinates) corners(part, out);
         return out;
     };
+    // the rings of a polygon or multipolygon, in map coordinates
+    const rings = g => g.getType() === 'Polygon' ? g.getCoordinates() : g.getType() === 'MultiPolygon' ? g.getCoordinates().flat() : [];
     const activeStyleFn = (feature) => {
         const geometry = feature.getGeometry();
-        if (!geometry || typeof geometry.getCoordinates !== 'function') return activeStyle;
-        const seen = new Set();
-        const styles = [activeStyle];
-        for (const corner of corners(geometry.getCoordinates())) {
-            const key = corner[0] + ':' + corner[1]; // a ring closes on its first point
-            if (seen.has(key)) continue;
-            seen.add(key);
-            styles.push(coordinateLabel(corner));
-        }
+        if (!geometry || typeof geometry.getCoordinates !== 'function') return S.shape;
+        const styles = [S.shape];
+        if (!editingMode || geometry.getType() === 'Point') return styles;
+        // while editing, every corner is a handle and every edge has a midpoint to drag from
+        const seen = new Set(), vertices = [], mids = [];
+        for (const ring of rings(geometry))
+            for (let i = 0; i + 1 < ring.length; i++) {
+                const a = ring[i], b = ring[i + 1];
+                mids.push([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]);
+                const key = a[0] + ':' + a[1]; // a ring closes on its first point
+                if (seen.has(key)) continue;
+                seen.add(key);
+                vertices.push(a);
+            }
+        styles.push(new Style({geometry: new MultiPoint(mids), image: S.midpoint}),
+                    new Style({geometry: new MultiPoint(vertices), image: S.vertex}));
+        for (const corner of vertices) styles.push(coordinateLabel(corner));
         return styles;
     };
+    // the corners of the draft, for the count on the map
+    function pointCount() {
+        const g = draft?.geometry;
+        if (!g) return 0;
+        if (g.type === 'Point') return 1;
+        const seen = new Set();
+        for (const c of corners(g.coordinates)) seen.add(c[0] + ':' + c[1]);
+        return seen.size;
+    }
     // a dot per place, sized by the port's own size class - the 0..3 that decides
     // from which zoom the viewer shows its marker - so the big ports read first
-    const markerStyles = [3, 4.5, 6, 7.5].map(radius => new Style({
-        image: new CircleStyle({radius, fill: new Fill({color: 'rgba(11, 92, 173, 0.55)'}),
-                                stroke: new Stroke({color: '#fff', width: 1})})}));
-    const markerStyle = f => markerStyles[Math.min(3, Math.max(0, f.get('size') | 0))];
+    const markerStyle = f => S.markers[Math.min(3, Math.max(0, f.get('size') | 0))];
     const map = new Map({
         target: q('.place-map'),
         controls: [],
@@ -178,7 +252,7 @@ export function createPlaceEditor(host, options = {}) {
                 opacity: 0.5
             }),
             new VectorLayer({className: 'place-markers', source: markers, style: markerStyle}),
-            new VectorLayer({className: 'place-context', source: context, style: contextStyle}),
+            new VectorLayer({className: 'place-context', source: context, style: () => S.context}),
             new VectorLayer({
                 source: editing,
                 style: activeStyleFn,
@@ -187,20 +261,54 @@ export function createPlaceEditor(host, options = {}) {
         ],
         view: new View({center: fromLonLat([4.4, 51.95]), zoom: 10})
     });
-    // OpenStreetMap, dimmed a little so the outlines drawn over it stand out
-    const base = new TileLayer({className: 'place-base', source: new OSM()});
+    // the background: streets, a light grey canvas or satellite imagery, kept per browser
+    const base = new TileLayer({className: 'place-base'});
+    let basemap = 'streets';
+    try { if (BASEMAPS[localStorage.getItem(BASEMAP_KEY)]) basemap = localStorage.getItem(BASEMAP_KEY); } catch { /* private mode */ }
+    // the street map is dimmed a little so the outlines drawn over it stand out
     base.on('postrender', e => {
+        const dim = BASEMAPS[basemap].dim;
+        if (!dim) return;
         e.context.save();
         e.context.setTransform(1, 0, 0, 1, 0, 0);
-        e.context.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        e.context.fillStyle = `rgba(0, 0, 0, ${dim})`;
         e.context.fillRect(0, 0, e.context.canvas.width, e.context.canvas.height);
         e.context.restore();
     });
+    function setBasemap(key, remember = true) {
+        if (!BASEMAPS[key]) return;
+        basemap = key;
+        const b = BASEMAPS[key];
+        base.setSource(b.url ? new XYZ({url: b.url, maxZoom: b.maxZoom, crossOrigin: 'anonymous'}) : new OSM());
+        for (const seg of host.querySelectorAll('.pe-segment')) {
+            const on = seg.dataset.basemap === key;
+            seg.setAttribute('aria-checked', String(on));
+            seg.tabIndex = on ? 0 : -1;
+        }
+        q('.pe-attribution').innerHTML = b.credit + ' · Seamarks © <a href="https://www.openseamap.org" target="_blank" rel="noopener">OpenSeaMap</a>';
+        if (remember) try { localStorage.setItem(BASEMAP_KEY, key); } catch { /* private mode */ }
+    }
+    setBasemap(basemap, false);
     map.getLayers().insertAt(0, base);
-    const modify = new Modify({source: editing, style: handleStyle});
+    const modify = new Modify({source: editing, style: () => S.handle});
     map.addInteraction(modify);
     const resize = new ResizeObserver(() => map.updateSize());
     resize.observe(q('.place-map-wrap'));
+    // day and night: the hub flips a class on <html>; the shape follows
+    const themeWatch = new MutationObserver(() => {
+        makeStyles();
+        for (const layer of map.getLayers().getArray()) layer.changed();
+    });
+    themeWatch.observe(document.documentElement, {attributes: true, attributeFilter: ['class', 'data-theme']});
+    host.querySelector('.pe-toolbar--layers').addEventListener('keydown', e => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        const keys = Object.keys(BASEMAPS), next = keys[(keys.indexOf(basemap) + (e.key === 'ArrowRight' ? 1 : keys.length - 1)) % keys.length];
+        setBasemap(next);
+        q(`.pe-segment[data-basemap="${next}"]`).focus();
+    });
+    for (const seg of host.querySelectorAll('.pe-segment'))
+        seg.addEventListener('click', () => setBasemap(seg.dataset.basemap));
     function status(message, error = false) {
         q('.place-feedback').textContent = message;
         q('.place-feedback').dataset.error = error;
@@ -210,7 +318,8 @@ export function createPlaceEditor(host, options = {}) {
         buttons();
     }
     function buttons() {
-        q('.place-fields').hidden = !editingMode;
+        q('[data-empty]').hidden = !!draft;
+        q('.place-fields').hidden = !draft;
         input('search').hidden = false;
         q('.place-list').hidden = false;
         for (const action of ['save', 'cancel'])
@@ -225,17 +334,12 @@ export function createPlaceEditor(host, options = {}) {
         tidyTools();
         if (!editingMode) q('.place-paste').hidden = true;
         q('.place-fields').disabled = !editingMode || busy;
-        const props = draft?.properties;
-        q('[data-place-name]').textContent = props?.name || (draft ? 'New place' : 'Select a place');
-        const typeLabel = props && [...input('place_type').options].find(o => o.value === props.place_type)?.textContent;
-        const portCode = code(props);
-        const portName = records.find(f => f.id === props?.part_of)?.properties.name;
-        const location = portCode ? [portCode, portName].filter(Boolean).join(' ') : props?.attributes?.area_subtype;
-        q('[data-place-description]').textContent = props ? [typeLabel, location].filter(Boolean).join(' · ') : 'Choose a place from the list.';
+        q('.pe-dirty').hidden = !unsaved;
+        q('[data-count]').textContent = records.length === 1 ? '1 saved place' : `${records.length.toLocaleString()} saved places`;
         q('.place-feedback').classList.toggle('place-busy', busy);
         for (const b of host.querySelectorAll('button[data-do]'))
             b.disabled = busy;
-        for (const action of ['save', 'cancel', 'delete', 'draw', 'export', 'view-json'])
+        for (const action of ['save', 'cancel', 'delete', 'draw', 'point', 'export', 'view-json'])
             q(`[data-do="${action}"]`).disabled = busy || !draft || (action === 'delete' && !original);
         q('[data-do="fit"]').disabled = busy || !draft?.geometry;
         q('[data-do="export-shape"]').disabled = busy || !draft?.geometry;
@@ -245,40 +349,63 @@ export function createPlaceEditor(host, options = {}) {
         if (busy || !editingMode || !draft?.geometry)
             armDelete(false);
         modify.setActive(!busy && editingMode && !!draft && !draw && !deleteArmed);
+        hint();
     }
-    // dividers only between groups that still show buttons; a hairline only between two visible buttons
+    // the line on the map: how many corners, and what a click does now
+    function hint() {
+        const box = q('.pe-map__hint');
+        box.hidden = !editingMode || !draft;
+        if (box.hidden) return;
+        const n = pointCount();
+        q('[data-points]').textContent = n.toLocaleString();
+        q('[data-points-word]').textContent = n === 1 ? 'point' : 'points';
+        q('[data-hint]').textContent =
+            draw ? (drawType === 'Point' ? 'Click the map to place the point · Esc cancels' :
+                                           'Click to add corners · double-click or the first corner finishes · Esc cancels') :
+            deleteArmed ? 'Click a part to delete it · Esc cancels' :
+            !draft.geometry ? 'Draw a boundary or set a point to begin' :
+            draft.geometry.type === 'Point' ? 'Drag the point to move it' :
+            'Drag a corner to move · drag an edge to add · Alt-click to remove';
+    }
+    // dividers only between groups that still show buttons; a toolbar with none left disappears
     function tidyTools() {
-        let seen = false, prev = null, lastSep = null;
-        for (const el of q('.place-map-tools').children) {
-            if (el.classList.contains('sep')) {
-                el.hidden = !seen;
-                if (seen) { lastSep = el; prev = 'sep'; }
-                seen = false;
-                continue;
+        for (const bar of host.querySelectorAll('.pe-toolbar--tools, .pe-toolbar--view')) {
+            let seen = false, lastSep = null, any = false;
+            for (const el of bar.children) {
+                if (el.classList.contains('pe-toolbar__sep')) {
+                    el.hidden = !seen;
+                    if (seen) lastSep = el;
+                    seen = false;
+                    continue;
+                }
+                if (!el.hidden) seen = any = true;
             }
-            if (el.hidden)
-                continue;
-            el.classList.toggle('no-line', prev !== 'btn');
-            seen = true; prev = 'btn';
+            if (!seen && lastSep)
+                lastSep.hidden = true;
+            bar.hidden = !any;
         }
-        if (!seen && lastSep)
-            lastSep.hidden = true;
+        q('[data-do="draw"]').setAttribute('aria-pressed', String(!!draw && drawType !== 'Point'));
+        q('[data-do="point"]').setAttribute('aria-pressed', String(!!draw && drawType === 'Point'));
+        q('[data-do="delete-part"]').setAttribute('aria-pressed', String(deleteArmed));
     }
     function setTool(name, label, active, icon) {
         const b = q(`[data-do="${name}"]`);
         b.dataset.label = label;
         b.setAttribute('aria-label', label);
-        b.classList.toggle('is-active', !!active);
+        b.setAttribute('aria-pressed', String(!!active));
         if (icon)
-            b.innerHTML = toolSvg(icon);
+            b.querySelector('svg').outerHTML = toolSvg(icon);
     }
     function stopDraw() {
         if (draw) {
             map.removeInteraction(draw);
             draw = null;
         }
-        setTool('draw', 'Draw polygon', false);
+        drawType = null;
+        setTool('draw', 'Draw a boundary', false);
+        setTool('point', 'Set a point', false);
         modify.setActive(editingMode && !!draft && !busy);
+        if (draft) buttons();
     }
     function fields() {
         const p = draft?.properties || {};
@@ -296,52 +423,48 @@ export function createPlaceEditor(host, options = {}) {
         q('[data-row="unlocode"]').hidden = type !== 'port';
         q('[data-row="category"]').hidden = type !== 'area';
     }
+    const typeLabel = t => [...input('place_type').options].find(o => o.value === t)?.textContent || t || 'Place';
+    // one row: an icon tile, the name over its type, the code at the end
+    function row(name, meta, codeText, type, selected) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.role = 'option';
+        b.className = 'pe-place';
+        b.setAttribute('aria-selected', String(selected));
+        if (selected) b.setAttribute('aria-current', 'true');
+        b.innerHTML = `<span class="pe-place__icon">${AREA_TYPES.has(type) ? ICON.area : ICON.anchor}</span>` +
+            '<span class="pe-place__text"><span class="pe-place__name"></span><span class="pe-place__meta"></span></span>' +
+            '<span class="pe-place__code"></span>';
+        b.querySelector('.pe-place__name').textContent = name;
+        b.querySelector('.pe-place__meta').textContent = meta + (selected && editingMode ? ' · editing' : '');
+        b.querySelector('.pe-place__code').textContent = codeText || '';
+        return b;
+    }
+    function note(text) {
+        const p = document.createElement('p');
+        p.className = 'pe-list__note';
+        p.textContent = text;
+        return p;
+    }
     function list() {
         const list = q('.place-list');
         list.replaceChildren();
         const search = input('search').value.toLowerCase();
-        if (draft && !original) {
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.role = 'option';
-            b.className = 'place-draft';
-            b.setAttribute('aria-selected', 'true');
-            b.textContent = draft.properties.name || 'New place';
-            const small = document.createElement('small');
-            small.textContent = draft.properties.place_type;
-            b.appendChild(small);
-            list.appendChild(b);
-        }
-        for (const f of records
-                 .filter(
-                     f => (f.properties.name + ' ' + (code(f.properties)))
-                              .toLowerCase()
-                              .includes(search))
-                 .sort((a, b) => a.properties.name.localeCompare(b.properties.name)).slice(0, 200)) {
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.role = 'option';
-            b.setAttribute('aria-selected', String(f.id === draft?.id));
-            b.textContent = f.properties.name;
-            const small = document.createElement('small');
+        if (draft && !original)
+            list.appendChild(row(draft.properties.name || 'New place', typeLabel(draft.properties.place_type), code(draft.properties),
+                                 draft.properties.place_type, true));
+        const matches = records.filter(f => (f.properties.name + ' ' + code(f.properties)).toLowerCase().includes(search));
+        for (const f of matches.sort((a, b) => a.properties.name.localeCompare(b.properties.name)).slice(0, 200)) {
             const parent = records.find(p => p.id === f.properties.part_of);
-            small.textContent = parent ?
-                `${parent.properties.name} › ${f.properties.place_type}` :
-                `${f.properties.place_type}${(code(f.properties)) ? ' · ' + (code(f.properties)) : ''}`;
-            b.appendChild(small);
+            const meta = typeLabel(f.properties.place_type) + (parent ? ' · ' + parent.properties.name : '');
+            const b = row(f.properties.name, meta, code(f.properties), f.properties.place_type, f.id === draft?.id);
             b.onclick = () => select(f);
             list.appendChild(b);
         }
-        if (records.length > 200) {
-            const hint = document.createElement('p'); hint.textContent = 'Showing up to 200 matches. Search to narrow the list.'; list.appendChild(hint);
-        }
-        if (!list.childNodes.length) {
-            const text = document.createElement('p');
-            text.className = 'place-help';
-            text.style.padding = '10px';
-            text.textContent = records.length ? 'No matching places.' : 'No saved places yet.';
-            list.appendChild(text);
-        }
+        if (matches.length > 200)
+            list.appendChild(note(`Showing 200 of ${matches.length.toLocaleString()}. Search to narrow the list.`));
+        if (!list.childNodes.length)
+            list.appendChild(note(records.length ? 'No matching places.' : 'No saved places yet.'));
     }
     // the port and category suggestions follow the records, not the search box
     function datalists(selected = input('part_of').value) {
@@ -349,13 +472,14 @@ export function createPlaceEditor(host, options = {}) {
             .map(f => new Option(f.properties.name, f.id));
         input('part_of').replaceChildren(new Option('Unknown', ''), new Option('No parent', 'none'), ...parents);
         if (selected && ![...input('part_of').options].some(o => o.value === selected))
-            input('part_of').add(new Option(selected, selected));
+            input('part_of').add(new Option('Not in this catalogue · ' + selected.slice(0, 8), selected)); // a parent held elsewhere
         input('part_of').value = selected;
         const subtypes = [...new Set(records.map(f => f.properties.attributes?.area_subtype).filter(Boolean))];
         q('#place-categories').replaceChildren(...subtypes.map(v => new Option(v, v)));
     }
     function renderGeometry() {
         editing.clear();
+        hint();
         if (draft?.geometry)
             editing.addFeature(read(draft));
     }
@@ -453,21 +577,20 @@ export function createPlaceEditor(host, options = {}) {
     map.addLayer(new VectorLayer({
         className: 'place-doomed',
         source: doomed,
-        style: new Style({stroke: new Stroke({color: '#dc2626', width: 3}), fill: new Fill({color: 'rgba(220, 38, 38, 0.25)'})})
+        style: () => S.doomed
     }));
     function armDelete(on) {
         if (deleteArmed === !!on)
             return;
         deleteArmed = !!on;
-        setTool('delete-part', deleteArmed ? 'Cancel delete' : 'Delete part', deleteArmed);
+        setTool('delete-part', deleteArmed ? 'Cancel delete' : 'Delete a part', deleteArmed);
         q('.place-map-wrap').classList.toggle('is-deleting', deleteArmed);
         if (!deleteArmed) {
             doomed.clear();
             hoverPart = null;
         }
         modify.setActive(!deleteArmed && !busy && editingMode && !!draft && !draw);
-        if (deleteArmed)
-            status('Click a part to delete it. Escape cancels.');
+        hint();
     }
     function parts() {
         const g = draft?.geometry;
@@ -632,7 +755,7 @@ export function createPlaceEditor(host, options = {}) {
             fields();
             dirty(false);
             fit();
-            status(`${records.length} saved places`);
+            status('');
         } catch (e) {
             if (!dead)
                 status(e.message, true);
@@ -750,6 +873,7 @@ export function createPlaceEditor(host, options = {}) {
         list();
         fields();
         dirty(false);
+        editing.changed();
         status('');
     }
     function definitionText() {
@@ -779,8 +903,10 @@ export function createPlaceEditor(host, options = {}) {
         edit() {
             if (!draft || busy) return;
             editingMode = true;
+            list();
             buttons();
-            status('Drag an edge to add a corner; Alt-click a corner removes it; the trash tool deletes a whole part.');
+            editing.changed();
+            status('');
         },
         async new () {
             if (!discard() || !await ensureConfigured())
@@ -798,7 +924,7 @@ export function createPlaceEditor(host, options = {}) {
             dirty(true);
             actions.draw();
         },
-        point() { stopDraw(); actions.draw('Point'); },
+        point() { const was = draw && drawType === 'Point'; stopDraw(); if (!was) actions.draw('Point'); },
         draw(shape = 'Polygon') {
             if (!draft || !editingMode)
                 return;
@@ -807,11 +933,13 @@ export function createPlaceEditor(host, options = {}) {
                 stopDraw();
                 return;
             }
-            draw = new Draw({type: shape, stopClick: true, style: [activeStyle, handleStyle]});
+            draw = new Draw({type: shape, stopClick: true, style: [S.shape, ...S.handle]});
+            drawType = shape;
             map.addInteraction(draw);
             modify.setActive(false);
-            setTool('draw', 'Cancel drawing', true);
-            status('Click corners on the map; double-click or the first corner finishes. Escape cancels.');
+            setTool(shape === 'Point' ? 'point' : 'draw', 'Cancel drawing', true);
+            buttons();
+            status('');
             draw.on('drawend', e => {
                 const before = clone(draft);
                 const next = geometry(e.feature);
@@ -1029,6 +1157,7 @@ export function createPlaceEditor(host, options = {}) {
             document.removeEventListener('pointerdown', closeMenu);
             document.removeEventListener('fullscreenchange', onFullscreen);
             resize.disconnect();
+            themeWatch.disconnect();
             stopDraw();
             map.setTarget(null);
             map.dispose();

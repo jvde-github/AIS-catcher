@@ -23,7 +23,7 @@ export function build(mount, prefix, options) {
         group.className = 'sc-group';
         const label = document.createElement('div');
         label.className = 'sc-group-label';
-        label.textContent = section === 'activity' ? 'Activity (last 7 days)' : 'Messages (last 30 min)';
+        label.textContent = section === 'activity' ? 'Activity (last 24 hours)' : 'Messages (last 30 min)';
         group.appendChild(label);
         original.filter(e => e.dataset.section === section && !e.classList.contains('card-section'))
             .forEach(e => group.appendChild(e));

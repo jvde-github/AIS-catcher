@@ -701,25 +701,6 @@ body.replay-open .map-button-box {
     opacity: 0.5;
 }
 
-#targetcard.flush-left {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-}
-
-#targetcard.flush-top {
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-}
-
-#targetcard.flush-right {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-}
-
-#targetcard.flush-bottom {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-}
 
 .message-badge {
     position: absolute;
@@ -2086,3 +2067,4 @@ body.replay-open .map-button-box {
     }
 
 }
+

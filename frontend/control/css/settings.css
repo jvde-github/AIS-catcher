@@ -1,0 +1,453 @@
+/* Settings › Output and Flow, and the save footer every config tab shares.
+   Every class is .st-; the colours are the shared tokens, day and night. */
+.st {
+  color: var(--color-text-strong);
+  font-variant-numeric: tabular-nums;
+}
+.st, .st * {box-sizing:border-box}
+.st button, .st input, .st select {font:inherit}
+.st button {color:inherit;cursor:pointer}
+.st :focus-visible {outline:2px solid var(--color-accent);outline-offset:2px}
+/* zones never borrow the status colours: in the hub the palette's green and rose become indigo and
+   fuchsia, so a zone chip or route is never read as "ok" or "failed" (the viewer keeps its own) */
+:root, html.dark {--zone-2: #4f46e5; --zone-5: #c026d3}
+.st-footer[hidden] {display:none}
+.st-sr {position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.st .st-icon {width:18px;height:18px;flex-shrink:0}
+.st-spacer {flex:1}
+.st [hidden] {display:none!important}
+
+/* ---- buttons ---- */
+.st .st-btn {height:40px;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--color-field-border);border-radius:10px;background:var(--color-surface-raised);color:var(--color-text-strong);font-size:14px;white-space:nowrap;box-shadow:none}
+.st .st-btn:hover:not(:disabled) {background:var(--color-hover)}
+.st .st-btn--primary {border-color:transparent;background:var(--color-accent);color:var(--color-accent-ink);font-weight:600}
+.st .st-btn--primary:hover:not(:disabled) {background:var(--color-accent);filter:brightness(1.08)}
+.st .st-btn--primary:disabled {opacity:.45;cursor:default;filter:none}
+.st .st-btn--sm {height:34px;padding:0 12px;font-size:13px}
+.st .st-icon-btn {width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:10px;background:transparent;color:var(--color-text-muted)}
+.st .st-icon-btn:hover {background:var(--color-hover);color:var(--color-text-strong)}
+
+/* ---- footer: replaces the yellow banner and the header's save icon ---- */
+.st-footer {flex-shrink:0;display:flex;align-items:center;gap:10px;padding:14px var(--space-5, 20px) 0;border-top:1px solid var(--color-border)}
+.st-dirty {white-space:nowrap;display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--color-warning)}
+.st-dirty::before {content:"";width:7px;height:7px;border-radius:50%;background:var(--color-warning-ink)}
+#system-body:has(#st-footer:not([hidden])) #status-message, #system-save {display:none!important}
+
+/* ---- status and chips ---- */
+.st-status {display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.st-status::before {content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.st-status--ok {color:var(--color-success)}
+.st-status--bad {color:var(--color-danger)}
+.st-status--off {color:var(--color-text-muted)}
+.st-chip {display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.st-chip--zone {color:var(--z);background:color-mix(in srgb, var(--z) 13%, transparent)}
+.st-chip--all {background:var(--color-hover);color:var(--color-text-muted);font-weight:500}
+.st-chip--new {background:var(--color-accent-tint);color:var(--color-accent)}
+.st-num {font-family:var(--font-mono);font-size:12.5px;color:var(--color-text)}
+
+/* ==================== OUTPUT ==================== */
+.sys-pane[data-pane="output"] {padding:0;overflow:hidden}
+#sys-output-body.st-split, #sys-group.st-split {flex:1;min-height:0;display:grid;grid-template-columns:200px minmax(0,1fr)}
+.st-nav {display:flex;flex-direction:column;gap:2px;padding:4px 12px 16px;border-right:1px solid var(--color-border);overflow-y:auto}
+.st-nav__title {padding:4px 10px 8px;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.st .st-nav__item {height:38px;padding:0 10px;display:flex;align-items:center;gap:8px;flex-shrink:0;border:0;border-radius:9px;background:transparent;color:var(--color-text);font-size:14px;text-align:left}
+.st .st-nav__item:hover {background:var(--color-hover)}
+.st .st-nav__item[aria-current="true"] {background:var(--color-accent-tint);color:var(--color-accent);font-weight:600}
+.st-nav__label {flex:1}
+.st-nav__count {min-width:22px;height:20px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:var(--color-hover);color:var(--color-text-muted);font-size:11.5px;font-weight:600}
+.st-nav__item[aria-current="true"] .st-nav__count {background:var(--color-surface-raised);color:var(--color-accent)}
+.st-nav__dot {width:7px;height:7px;border-radius:50%;background:var(--color-success)}
+
+.st-main {overflow-y:auto;padding:4px 24px 24px}
+.st-main__head {display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px}
+.st-main__title {margin:0 0 4px;font-size:19px;font-weight:650;color:var(--color-text-strong)}
+.st-main__desc {margin:0;font-size:13.5px;color:var(--color-text-muted)}
+
+.st-outputs {list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.st-empty {display:flex;flex-direction:column;align-items:center;gap:4px;padding:28px 16px;border:1px dashed var(--color-field-border);border-radius:12px;color:var(--color-text-muted);text-align:center;font-size:13.5px}
+.st-empty strong {color:var(--color-text-strong);font-size:15px}
+.st-out {border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface-raised)}
+.st-out__row {display:flex;align-items:center;gap:12px;padding:8px 8px 8px 14px}
+.st .st-out__expand {flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:4px 0;border:0;background:transparent;text-align:left}
+.st-out__chev {flex-shrink:0;display:flex;width:16px;height:16px;color:var(--color-text-muted);transition:transform .15s}
+.st-out__chev svg {width:16px;height:16px}
+.st-out[data-open="true"] .st-out__chev {transform:rotate(90deg)}
+.st-out__name {font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--color-text-strong)}
+.st-out__name--empty {color:var(--color-text-muted);font-weight:500;font-style:italic}
+.st-out__meta {display:flex;align-items:center;gap:10px;margin-left:auto;padding-right:4px;min-width:0;overflow:hidden}
+.st-out__meta .st-num {white-space:nowrap}
+.st-out[data-open="true"] {border-color:var(--color-focus-ring);box-shadow:0 0 0 3px var(--color-accent-tint)}
+.st-out[data-off="true"] .st-out__name {color:var(--color-text-muted)}
+.st-switch {display:inline-flex;align-items:center;cursor:pointer;position:relative}
+.st-switch input {position:absolute;opacity:0;width:1px;height:1px}
+.st-switch__track {position:relative;width:36px;height:22px;border-radius:999px;background:var(--color-track);transition:background .15s}
+.st-switch__track::after {content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.st-switch input:checked + .st-switch__track {background:var(--color-accent)}
+.st-switch input:checked + .st-switch__track::after {transform:translateX(14px)}
+.st-switch input:focus-visible + .st-switch__track {outline:2px solid var(--color-accent);outline-offset:2px}
+.st-menu {position:relative}
+.st-menu summary {list-style:none}
+.st-menu summary::-webkit-details-marker {display:none}
+.st-menu__items {position:absolute;right:0;top:calc(100% + 4px);z-index:6;display:flex;flex-direction:column;gap:2px;min-width:160px;padding:6px;border-radius:12px;background:var(--color-surface-raised);box-shadow:var(--shadow-menu)}
+.st .st-menu__item {height:34px;padding:0 12px;display:flex;align-items:center;border:0;border-radius:8px;background:transparent;font-size:14px;text-align:left}
+.st .st-menu__item:hover {background:var(--color-hover)}
+.st .st-menu__item--danger {color:var(--color-danger)}
+
+/* the schema's fields, inside an output and on the single-setting types */
+.st-out__body {padding:14px 20px 18px 42px;border-top:1px solid var(--color-border)}
+.st-main .fieldset {column-gap:12px;row-gap:4px}
+.st-main .field {margin-bottom:10px}
+.st-main .field-section {margin:10px 0 2px 0;padding-top:14px;border-top:1px solid var(--color-border);font-size:11.5px;letter-spacing:.06em;color:var(--color-text-muted)}
+.st-main .field-section:first-child {margin-top:0;padding-top:0;border-top:0}
+.st-main .field-label {margin:0 0 6px;font-size:13px;font-weight:500;color:var(--color-text)}
+.st-main .field-desc {margin-top:5px;font-size:12.5px;color:var(--color-text-muted)}
+.st-main .input, .st-main .select, .st-main select.input {height:40px;padding:0 12px;border:1px solid var(--color-field-border);border-radius:10px;background-color:var(--color-surface-alt);color:var(--color-text-strong);font-size:14px;box-shadow:none}
+.st-main .input:hover {border-color:var(--color-field-border)}
+.st-main .input:focus, .st-main .select:focus {outline:none;border-color:var(--color-accent);box-shadow:0 0 0 3px var(--color-focus-ring);background-color:var(--color-surface-raised)}
+.st-main .input[data-field-name="host"], .st-main .input[type="number"] {font-family:var(--font-mono);font-size:13.5px}
+.st-main > #hub-output-container > .card {border:1px solid var(--color-border);border-radius:12px;box-shadow:none}
+
+/* ==================== FLOW ==================== */
+.sys-pane.st-flowpage {padding:4px 24px 24px}
+.st-flowpage__intro {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px 16px;margin-bottom:18px}
+.st-flowpage__intro p {margin:0;color:var(--color-text-muted);font-size:13.5px}
+.st-filter {display:flex;flex-wrap:wrap;gap:6px}
+.st .st-filter__btn {height:32px;padding:0 12px;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--color-field-border);border-radius:999px;background:var(--color-surface-raised);color:var(--color-text);font-size:13px}
+.st-filter__btn i {width:8px;height:8px;border-radius:50%}
+.st .st-filter__btn[aria-pressed="true"] {border-color:transparent;background:var(--color-text-strong);color:var(--color-surface-raised);font-weight:600}
+.st-flow__note {padding:40px 0;text-align:center;color:var(--color-text-muted)}
+.st-flow__note.hidden, .st-flow.hidden {display:none}
+
+/* inputs · routes · outputs; fixed card heights so the curves land on the card centres */
+.st-flow {display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,.45fr) minmax(0,1.1fr);align-items:start;container-type:inline-size}
+.st-col__title {height:20px;margin:0 0 12px;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.st-col__group {height:22px;margin:0 0 8px;display:flex;align-items:center;font-size:12.5px;color:var(--color-text-muted)}
+.st-stack {display:flex;flex-direction:column;gap:12px}
+.st-stack--out {gap:8px}
+.st-stack--out + .st-col__group {margin-top:16px}
+.st-node {position:relative;display:flex;flex-direction:column;justify-content:center;gap:6px;padding:0 14px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface-raised);cursor:pointer;transition:opacity .15s,border-color .15s}
+.st-node:hover {border-color:var(--color-field-border)}
+.st-node--in {height:92px}
+.st-node--out {height:64px}
+.st-node__top {display:flex;align-items:center;gap:8px;min-width:0}
+.st-node__name {font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--color-text-strong);text-decoration:none}
+a.st-node__name:hover {text-decoration:underline}
+.st-node__sub {font-size:12.5px;color:var(--color-text-muted);margin-top:-4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-node__bottom {display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden}
+.st-node__stats {display:flex;gap:10px;min-width:0;overflow:hidden;white-space:nowrap}
+.st-node__link {width:14px;height:14px;flex-shrink:0;color:var(--color-text-muted)}
+.st-node[data-dim="true"] {opacity:.4}
+.st-node--in::after, .st-node--zone::before {content:"";position:absolute;top:50%;width:10px;height:10px;margin-top:-5px;border-radius:50%;background:var(--color-surface-raised);border:2px solid var(--color-field-border)}
+.st-node--in::after {right:-6px}
+.st-node--zone::before {left:-6px}
+.st-routes {display:block;width:100%;overflow:visible}
+.st-route {fill:none;stroke-width:2.5;stroke-linecap:round;opacity:.85;transition:opacity .15s}
+.st-route[data-dim="true"] {opacity:.12}
+
+/* ---- narrow ---- */
+@container (max-width: 640px) {
+  .st-flow {grid-template-columns:1fr;gap:16px}
+  .st-routes {display:none}
+  .st-node--in::after, .st-node--zone::before {display:none}
+}
+@media (max-width: 760px) {
+  #sys-output-body.st-split {grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+  .st-nav {flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--color-border);padding:0 12px 8px}
+  .st-nav__title {display:none}
+  .st-main {padding:16px}
+  .st-out__body {padding-left:16px}
+  .st-flow {grid-template-columns:1fr;gap:16px}
+  .st-routes {display:none}
+  .st-node--in::after, .st-node--zone::before {display:none}
+}
+@media (max-width: 600px) {
+  .st-out__meta {display:none}
+  .st-main__head {flex-direction:column;align-items:flex-start}
+}
+
+/* ==================== INPUT + COMMUNITY: essentials and Advanced ==================== */
+.sys-pane[data-pane="input"] {padding:0;overflow:hidden}
+#sys-input-body {flex:1;min-height:0;display:flex;flex-direction:column}
+#hub-receivers-container.st-split, #viewer-config-container.st-split {flex:1;min-height:0;display:grid;grid-template-columns:220px minmax(0,1fr)}
+#sys-input-body > .sys-actions, #sys-input-body > [data-json-section] {flex-shrink:0}
+.st-main__actions {display:flex;align-items:center;gap:6px}
+.st-main__head {align-items:flex-start}
+/* the routing line under an input's title */
+.st-routing {display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;min-height:28px;margin-top:8px;font-size:12.5px}
+.st-routing__label {display:inline-flex;align-items:center;gap:6px;margin-right:2px;color:var(--color-text-muted);font-weight:500}
+.st-routing__icon {width:14px;height:14px}
+.st-routing__sep {color:var(--color-field-border)}
+.st .st-routing__link {padding:0;border:0;background:none;color:var(--color-accent);font-size:12.5px;font-weight:600}
+.st-routing__link::after {content:" ›"}
+.st-routing__link:hover {text-decoration:underline}
+.st-zone {display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:6px;font-weight:600;white-space:nowrap;color:var(--z);background:color-mix(in srgb, var(--z) 13%, transparent)}
+.st-zone::before {content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.st-zone--all {--z:var(--color-text);background:var(--color-hover);font-weight:500}
+.st-zone--all::before {display:none}
+/* a find button with its word, as in "Find ports" */
+.st-main .btn-labelled {width:auto;padding:0 14px;gap:8px;display:inline-flex;align-items:center;white-space:nowrap}
+.st-main__actions .st-switch {gap:8px;font-size:12.5px;color:var(--color-text-muted)}
+
+.st .st-nav__item--2 {height:auto;min-height:52px;padding:8px 10px;align-items:flex-start}
+.st-nav__stack {flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.st-nav__stack .st-nav__label {white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-nav__item--2 .st-nav__dot {margin-top:6px}
+.st .st-nav__item--2:not(:has(.st-nav__sub)) {min-height:38px}
+.st-main > [data-json-section] {margin-top:16px;padding:12px 0 0;max-width:none}
+.st-nav__dot--off {background:transparent;box-shadow:inset 0 0 0 1.5px var(--color-field-border)}
+.st .st-nav__add {margin-top:6px;height:38px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px dashed var(--color-field-border);border-radius:9px;background:transparent;color:var(--color-accent);font-size:13.5px;font-weight:600}
+.st .st-nav__add:hover {background:var(--color-accent-tint)}
+
+.st-panel {display:flex;flex-direction:column;gap:16px}
+.st-card {display:flex;flex-direction:column;gap:14px;padding:18px;border:1px solid var(--color-border);border-radius:14px;background:var(--color-surface-raised)}
+.st-card.fieldset {flex-direction:row;flex-wrap:wrap;column-gap:12px;row-gap:4px;padding-bottom:8px}
+.st-field {display:flex;flex-direction:column;gap:6px}
+.st-label {font-size:13px;color:var(--color-text)}
+.st-help {font-size:12.5px;color:var(--color-text-muted)}
+.st .st-input {width:100%;height:40px;padding:0 12px;border:1px solid var(--color-field-border);border-radius:10px;background:var(--color-surface-alt);color:var(--color-text-strong);font-size:14px}
+.st .st-input::placeholder {color:var(--color-text-muted)}
+.st .st-input:focus {outline:none;border-color:var(--color-accent);box-shadow:0 0 0 3px var(--color-focus-ring);background:var(--color-surface-raised)}
+.st .st-input--mono {font-family:var(--font-mono);font-size:13.5px}
+.st-inline {display:flex;gap:8px}
+.st-inline .st-input {flex:1;min-width:0}
+
+.st-switch--lg .st-switch__track {width:44px;height:26px}
+.st-switch--lg .st-switch__track::after {width:20px;height:20px}
+.st-switch--lg input:checked + .st-switch__track::after {transform:translateX(18px)}
+
+/* Advanced: a plain disclosure row, not a box (grey is kept for the fields you type in) */
+.st-adv {border-top:1px solid var(--color-border)}
+.st-adv > summary {list-style:none;display:flex;align-items:center;gap:8px;min-height:48px;margin:0 -8px;padding:0 8px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;color:var(--color-text)}
+.st-adv > summary::-webkit-details-marker {display:none}
+.st-adv > summary:hover {background:var(--color-hover);color:var(--color-accent)}
+.st-adv__chev {width:16px;height:16px;color:currentColor;transition:transform .15s}
+.st-adv[open] > summary {color:var(--color-text-strong);font-weight:600}
+.st-adv[open] > summary .st-adv__chev {transform:rotate(90deg)}
+.st-adv__sum {margin-left:auto;font-size:12.5px;font-weight:400;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.st-adv__sum b {color:var(--color-warning);font-weight:600}
+.st-adv__body {display:flex;flex-direction:column;border-top:1px solid var(--color-border)}
+/* one setting per row: the schema's label and description on the left, its control on the right */
+.st-main .st-adv__body .field.st-opt {display:grid;grid-template-columns:minmax(0,1fr) clamp(160px, 30%, 240px);column-gap:24px;row-gap:3px;align-items:center;margin:0;padding:10px 0;border-bottom:0}
+.st-main .st-adv__body .field.st-opt:last-child {border-bottom:0}
+.st-main .st-adv__body .field.st-opt.hidden {display:none}
+.st-opt > .field-label {grid-column:1;grid-row:1;margin:0!important;font-size:14px!important;font-weight:500!important;color:var(--color-text-strong)!important}
+.st-opt > .field-desc {grid-column:1;grid-row:2;margin:0!important}
+.st-opt > :not(.field-label):not(.field-desc) {grid-column:2;grid-row:1 / span 2;justify-self:stretch;min-width:0}
+.st-opt > label:not(.field-label), .st-opt > .toggle-slot {justify-self:end}
+.st-opt--wide {grid-template-columns:1fr!important}
+.st-opt--wide > :not(.field-label):not(.field-desc) {grid-column:1;grid-row:auto;margin-top:6px}
+/* a changed setting shows only its Reset link, no dot as well */
+.st .st-reset {padding:0;border:0;background:transparent;color:var(--color-accent);font-size:12.5px;font-weight:600}
+.st-opt > .st-reset {grid-column:2!important;grid-row:3!important;justify-self:end!important;margin-top:4px}
+.st-opt--wide > .st-reset {grid-column:1!important;grid-row:auto!important;justify-self:start!important}
+@media (max-width: 760px) {
+  #hub-receivers-container.st-split, #viewer-config-container.st-split {grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+  .st-opt > :not(.field-label):not(.field-desc) {grid-column:1;grid-row:auto;justify-self:start}
+}
+
+/* ---- calmer input header: the title is the name field ---- */
+.st-main__headtext {flex:1;min-width:0}
+.st-title-edit {display:flex;align-items:center;margin:0 0 2px -8px}
+.st .st-title-input {width:100%;max-width:520px;height:38px;padding:0 8px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--color-text-strong);font-size:20px;font-weight:650}
+.st .st-title-input::placeholder {color:var(--color-text-strong);opacity:1}
+.st .st-title-input:hover {border-color:var(--color-border)}
+.st .st-title-input:focus {outline:none;border-color:var(--color-accent);box-shadow:0 0 0 3px var(--color-focus-ring);background:var(--color-surface-raised)}
+.st .st-title-input:focus::placeholder {color:var(--color-text-muted)}
+.st-main__headtext .st-routing {margin-top:2px}
+.st-main__headtext .st-zone {height:22px;padding:0 8px;font-size:12px}
+/* the essentials as a flat section: no card, type and port side by side, the find action in its header */
+.st-flat {display:flex;flex-direction:column;gap:12px;padding:20px 0 4px;border-top:1px solid var(--color-border)}
+.st-flat__head {display:flex;align-items:center;justify-content:space-between}
+.st-section__title {margin:0;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.st-flat__fields > .field.hidden {display:none}
+.st-flat__fields .row > .btn-icon {display:none}
+.st-flat__fields .row > .grow {flex:1}
+/* a switch sits at the right edge of its row, like the mock's */
+.st-main .st-adv__body .field.st-opt:not(.st-opt--wide):has(> * input[type="checkbox"]:only-of-type) > :not(.field-label):not(.field-desc):not(.st-reset) {justify-self:end;width:auto}
+
+/* the JSON view's toggle, on every hub tab: the same disclosure row as Advanced settings */
+.st-json {border-top:1px solid var(--color-border);margin-top:16px;padding-top:0}
+.st .st-json__toggle {width:100%;display:flex;align-items:center;gap:8px;min-height:48px;margin:0 -8px;padding:0 8px;border:0;border-radius:8px;background:transparent;font-size:14px;font-weight:500;color:var(--color-text);text-align:left}
+.st .st-json__toggle:hover {background:var(--color-hover);color:var(--color-accent)}
+.st-json__toggle[aria-expanded="true"] {color:var(--color-text-strong);font-weight:600}
+.st-json__toggle .st-adv__chev.rotate-90 {transform:rotate(90deg)}
+.st-json .sys-json-pre {margin:4px 0 12px}
+/* the device type spans the Device section; what that device needs pairs up below it */
+
+/* ---- Advanced in titled sections, two settings to a row ---- */
+.st-secs {display:flex;flex-direction:column}
+.st-sec {padding:16px 0 4px;border-bottom:1px solid var(--color-border)}
+.st-sec:last-child {border-bottom:0}
+.st-sec[hidden] {display:none}
+.st-sec > .st-section__title {margin-bottom:14px}
+.st-main .st-sec__grid > .field.hidden {display:none}
+
+/* the essentials of an output: name on its own half row, host wide and port narrow */
+.st-flat--bare {border-top:0;padding-top:4px}
+.st-out__body .st-panel {gap:8px}
+
+/* sections and essentials follow the schema's widths: a field with width 50 takes half a row,
+   one without takes the whole row (the inline style renderField sets) */
+.st-main .st-sec__grid.fieldset, .st-flat__fields.fieldset {display:flex;flex-wrap:wrap;column-gap:.75rem;row-gap:16px}
+.st-main .st-sec__grid > .field, .st-flat__fields > .field {margin:0;min-width:0}
+@media (max-width: 600px) {.st-main .st-sec__grid > .field, .st-flat__fields > .field {flex:1 1 100%!important}}
+
+/* Advanced: grouped under section titles, one setting per line */
+.st-main .st-sec__grid.fieldset {display:flex;flex-direction:column;row-gap:0}
+.st-main .st-sec__grid > .field.st-opt {flex:1 1 100%;width:100%}
+.st-sec > .st-section__title {margin-bottom:2px}
+.st-main .st-adv__body .st-sec__grid > .field.st-opt:last-child {border-bottom:0}
+.st-opt > .field-label {display:flex;align-items:center;gap:7px}
+.st-opt > :not(.field-label):not(.field-desc) {align-self:center}
+
+/* Reset sits right after the setting's name; help gets the room the control does not need */
+.st-opt > .field-label .st-reset {margin-left:6px}
+.st-main .st-adv__body .field.st-opt.st-opt--switch {grid-template-columns:minmax(0,1fr) auto}
+.st-opt > .field-desc {max-width:62ch}
+
+/* a full-width setting (engines, zones) starts under its label, at the left edge */
+.st-main .st-adv__body .field.st-opt--wide > :not(.field-label):not(.field-desc) {justify-self:stretch;width:100%;margin-top:8px}
+/* a switch with a value (downsampling): the switch stays at the right like any switch, and when on,
+   its slider runs the full width under the label, as Tuner Gain's does */
+.st-main .st-adv__body .field.st-opt:not(.st-opt--wide) > div:has(> .toggle-slot + .slider-row) {display:contents}
+.st-main .st-adv__body .field.st-opt:not(.st-opt--wide) > div > .toggle-slot {grid-column:2;grid-row:1 / span 2;justify-self:end;align-self:center}
+.st-main .st-adv__body .field.st-opt:not(.st-opt--wide) > div > .slider-row {grid-column:1 / -1;grid-row:3;margin-top:10px}
+.st-main .st-adv__body .field.st-opt:has(> div > .toggle-slot + .slider-row) {grid-template-columns:minmax(0,1fr) auto}
+
+.st-routing--body {margin:0 0 4px}
+.st-routing--body .st-zone {height:22px;padding:0 8px;font-size:12px}
+
+/* a zoned output's header: one small dot per zone, in its colour */
+.st-zone-dot {flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:4px;color:var(--z);background:color-mix(in srgb, var(--z) 15%, transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--z) 35%, transparent)}
+.st-zone-dot::before {content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.st-zone-dot + .st-zone-dot {margin-left:-6px}
+/* an open output shows its zones on the routing line inside; the header dots are then redundant */
+.st-out[data-open="true"] .st-zone-dot {display:none}
+/* a field alone on its line takes the whole line; fields that share one still split it by their widths */
+.st-flat__fields > .field {flex-grow:1!important}
+
+.st-nav__dot--bad {background:var(--color-danger)}
+/* every dot in the same place, whether or not a count stands before it */
+.st-nav__item .st-nav__dot {margin-left:6px}
+
+
+/* Community header: status and switch on the right, like an input's Active */
+.st-main__head > div:first-child .st-routing {margin-top:6px}
+.st-share-key {margin-top:4px}
+
+/* ==================== SYSTEM ==================== */
+/* Status, Log, Configuration, Access, Wizard and License behind one left nav */
+#sys-group.hidden {display:none}
+.sys-group__main {display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.sys-group__main > .sys-pane {padding:0}
+.sys-group__main .sys-pane-inner {margin:0;padding:0;max-width:42rem}
+@media (max-width: 700px) {
+  #sys-group.st-split {grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+  #sys-group .st-nav {flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--color-border);padding:0 8px 8px}
+  #sys-group .st-nav__title {display:none}
+}
+
+.st-sys {display:flex;flex-direction:column;gap:14px;max-width:760px}
+.st-sc {border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface-raised);padding:18px 20px}
+.st-sc h3 {margin:0;font-size:15px;font-weight:650;color:var(--color-text-strong)}
+.st-sc__head {display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+
+.st-recv {display:flex;align-items:center;gap:16px}
+.st-recv__icon {width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:11px;background:var(--color-accent-tint);color:var(--color-accent)}
+.st-recv__icon svg {width:24px;height:24px}
+.st-recv__body {flex:1;min-width:0}
+.st-recv__title {display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.st-recv__line {display:flex;flex-wrap:wrap;align-items:center;gap:4px 0;margin-top:5px;font-size:13px;color:var(--color-text-muted)}
+.st-recv__line > *:not(:empty) ~ *:not(:empty)::before {content:"·";margin:0 7px;color:var(--color-field-border)}
+.st-recv__line > span:empty {display:none}
+.st .st-link {padding:0;border:0;background:none;color:var(--color-accent);font-size:13px;font-weight:600}
+.st .st-link:hover {text-decoration:underline}
+.st-recv__line > .st-link::before {font-weight:400}
+.st-state::before {content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.st-state--running {background:color-mix(in srgb, var(--color-success) 14%, transparent);color:var(--color-success)}
+.st-state--starting, .st-state--retrying {background:color-mix(in srgb, var(--color-warning-ink) 18%, transparent);color:var(--color-warning)}
+.st-state--stopped {background:var(--color-hover);color:var(--color-text-muted)}
+@media (max-width: 560px) {
+  .st-recv {flex-wrap:wrap}
+  #hub-engine-btn {width:100%}
+}
+
+.st-facts {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 24px;margin:0}
+.st-facts > div {min-width:0}
+.st-facts > div[hidden] {display:none}
+.st-facts dt {margin:0 0 3px;font-size:12px;color:var(--color-text-muted)}
+.st-facts dd {margin:0;font-size:14px;font-weight:500;color:var(--color-text-strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-facts__mono {font-family:var(--font-mono);font-size:13px!important}
+@media (max-width: 480px) { .st-facts {grid-template-columns:1fr} }
+
+/* zones in a settings row: tinted pills with a quiet ×, a dashed Add */
+.st-main .st-zones {gap:6px}
+.st-main .st-zones .chip {height:24px;padding:0 4px 0 10px;display:inline-flex;align-items:center;gap:4px;border:0;border-radius:6px;font-size:12.5px;font-weight:600;color:var(--z);background:color-mix(in srgb, var(--z) 13%, transparent)}
+.st-main .st-zones .chip .sys-dismiss {width:18px;height:18px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:4px;background:transparent;color:inherit;opacity:.65;font-size:14px;line-height:1}
+.st-main .st-zones .chip .sys-dismiss:hover {opacity:1;background:color-mix(in srgb, var(--z) 18%, transparent)}
+.st-main .st-zones .st-zones__add {height:24px;padding:0 10px;gap:5px;border:1px dashed var(--color-field-border)!important;border-radius:6px;background:transparent;color:var(--color-accent);font-size:12.5px;font-weight:600}
+.st-main .st-zones .st-zones__add:hover {opacity:1;background:var(--color-accent-tint)}
+.st-main .st-zones .st-zones__add svg {width:12px;height:12px}
+.st-opt:not(.st-opt--wide) .st-zones {justify-content:flex-end}
+
+/* a warning under a field: amber tint, icon, no shouting */
+.st-warn-note {display:flex;align-items:flex-start;gap:8px;margin-top:8px;padding:8px 12px;border-radius:9px;background:color-mix(in srgb, var(--color-warning-ink) 14%, transparent);color:var(--color-warning);font-size:12.5px;line-height:1.45}
+.st-warn-note__icon {display:flex;flex-shrink:0;margin-top:1px}
+.st-warn-note__icon svg {width:15px;height:15px}
+.st-warn-note--bad {background:color-mix(in srgb, var(--color-danger) 11%, transparent);color:var(--color-danger)}
+
+/* the count after Input and Output in the top tabs */
+#system-tabs .sys-tab {gap:7px}
+.sys-tab__count {min-width:20px;height:18px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:color-mix(in srgb, currentColor 12%, transparent);font-size:11px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.st-opt:not(.st-opt--wide) .st-zones + .t-italic {align-self:flex-end;text-align:right;font-style:normal}
+
+/* the box may grow to 1200px; settings keep a reading width, Places, Flow and Log take it all */
+#hub-receivers-container > .st-main > *, #sys-output-body > .st-main > *, #viewer-config-container > .st-main > * {max-width:820px}
+#hub-receivers-container > .st-main > [data-json-section], #sys-output-body > .st-main > [data-json-section], #viewer-config-container > .st-main > [data-json-section] {margin-left:0;margin-right:0}
+
+/* ==================== MAP: one settings object over pages ==================== */
+.sys-pane[data-pane="viewer"] {padding:0;overflow:hidden}
+.sys-pane[data-pane="viewer"] > div {flex:1;min-height:0;display:flex;flex-direction:column}
+#viewer-config-container + .sys-actions.hidden {display:none}
+.st-pages .st-adv__body {border-top:0}
+.st-pages .st-sec:first-child {padding-top:0}
+@media (max-width: 760px) {
+  #viewer-config-container .st-nav {flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--color-border);padding:0 8px 8px}
+  #viewer-config-container .st-nav__title {display:none}
+  #viewer-config-container .st-nav__item--2 {min-height:38px;flex-shrink:0}
+}
+/* Community: the sharing switch as the first row */
+.st-share-toggle {display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px}
+.st-share-toggle__label {font-size:15px;font-weight:600;color:var(--color-text-strong)}
+/* three weights: a firm rule under the page title, a light one between sections, none between
+   the settings inside a section (space does that) */
+.st-main .st-adv__body .st-sec {padding:18px 0 12px;border-bottom:1px solid var(--color-border)}
+.st-main .st-adv__body .st-sec:last-child {border-bottom:0}
+.st-main .st-adv__body .st-sec > .st-section__title {margin-bottom:4px}
+/* the same firm rule under an input's title */
+#hub-receivers-container .st-main > .st-panel > .st-flat:first-child {border-top:0;padding-top:0}
+
+/* ==================== COMMUNITY: header, one section, Advanced (8-pt spacing) ==================== */
+.st-main__head--page {margin-bottom:0!important}
+.st-panel.st-community {gap:0}
+.st-community > .st-page__sec {display:flex;flex-direction:column;gap:16px;padding:24px 0;border-bottom:1px solid var(--color-border)}
+.st-community > .st-page__sec:last-child {border-bottom:0}
+.st-community > .st-page__sec--adv {padding:8px 0}
+.st-community .st-adv {border-top:0}
+.st-community .st-share-toggle {margin:0}
+.st-community .st-share-toggle__label {font-size:15px;font-weight:600}
+.st-community .st-share-key {display:flex;flex-direction:column;gap:8px}
+.st-community .st-adv__body [data-json-section] {margin:8px 0 0;padding:0;max-width:none}
+.st-community > .st-page__sec > .st-warn-note {margin:0}
+/* JSON inside Community's Advanced: its own light rule only, no gap above */
+.st-community .st-adv__body > .st-sec:last-of-type {border-bottom:0}
+.st-community .st-adv__body > [data-json-section] {margin-top:0;border-top:1px solid var(--color-border)}
+
+/* every page header alike: title (and routing line), then a firm rule close under it */
+.st .st-main__head {padding-bottom:12px;margin-bottom:20px;border-bottom:2px solid var(--color-border-strong)}
+.st .st-main__head .st-routing {min-height:24px}
+.st .st-main__head > div:first-child .st-routing {margin-top:4px}
+.st-main__title {margin-bottom:0}
+.st-inline > .input, .st-inline > .select, .st-inline > div:not(.st-btn) {flex:1;min-width:0}
+.st-inline > .st-btn {flex-shrink:0}
+.st-community > .st-page__sec > .st-warn-note[hidden] {display:none}

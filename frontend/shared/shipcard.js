@@ -64,9 +64,14 @@ export function populate(cells, ship, h) {
 
     text('status', getStatusVal(ship));
     text('altitude', ship.altitude != null ? Number(ship.altitude).toFixed(0) + ' m' : null);
-    text('speed', ship.speed != null ? u.getSpeedVal(ship.speed) + ' ' + u.getSpeedUnit() : null);
-    text('cog', ship.cog != null ? Number(ship.cog).toFixed(1) + '°' : null);
-    text('heading', ship.heading != null ? Number(ship.heading).toFixed(0) + '°' : null);
+    // the unit smaller than its number, the course and heading with an arrow turned their way
+    html('speed', ship.speed != null ? u.getSpeedVal(ship.speed) + ' <span class="sc-unit">' + u.getSpeedUnit() + '</span>' : null);
+    // a small compass: a fixed ring, the arrow inside turned to the bearing
+    const arrow = (deg, muted) => '<svg class="sc-dir' + (muted ? ' sc-dir--muted' : '') + '" viewBox="0 0 24 24" aria-hidden="true">' +
+        '<circle cx="12" cy="12" r="10.5" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".45"/>' +
+        '<g style="transform: rotate(' + deg + 'deg); transform-origin: 12px 12px"><path d="M12 18V6.5M8 10.5l4-4 4 4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg>';
+    html('cog', ship.cog != null ? '<span class="sc-dirline">' + Number(ship.cog).toFixed(1) + '°' + arrow(Number(ship.cog)) + '</span>' : null);
+    html('heading', ship.heading != null && ship.heading !== 511 ? '<span class="sc-dirline">' + Number(ship.heading).toFixed(0) + '°' + arrow(Number(ship.heading), true) + '</span>' : null);
     text('destination', decodeHTMLEntities(ship.destination));
     text('eta', ship.eta_month != null && ship.eta_day != null && ship.eta_hour != null && ship.eta_minute != null ? getEtaVal(ship) : null);
     const match = ship.matched_port;

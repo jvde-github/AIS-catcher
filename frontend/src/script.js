@@ -151,6 +151,8 @@ const ui = mapui.create({
     menu: {
         mount: document.getElementById("context-menu"),
         checks: MENU_CHECKS,
+        groupLabels: { focus: "Map", tracks: "Tracks", vessel: "Details", lookup: "Open on", display: "Display",
+                       tools: "Tools", card: "Card", replay: "Replay", charts: "Charts", app: "App" },
         before: document.querySelector('#context-menu li[data-action="toggleReplaycard"]')?.nextSibling,
     },
 });
@@ -621,7 +623,7 @@ const DEFAULT_SETTINGS = {
         tooltipLabelShadowColorDark: "#000000",
         tooltipLabelFontSize: 9,
         shiphover_color: "#FFA500",
-        shipselection_color: "#943b3e",
+        shipselection_color: "#2563eb",
         shipoutline_border: "#A9A9A9",
         shipoutline_inner: "#808080",
         shipoutline_opacity: 0.9,
@@ -1209,11 +1211,18 @@ function showContextMenu(event, mmsi, type, context, anchorEl) {
         (el.classList.contains("ctx-noalltracks") && settings.show_all_tracks) ||
         (el.classList.contains("ctx-removealltracks") && !(settings.show_all_tracks || marker_tracks.size > 0 || trackCutoff)) ||
         (el.classList.contains("ctx-selectedtracks") && (settings.show_all_tracks || marker_tracks.size === 0)) ||
-        (el.id === "ctx_menu_unpin" && !(settings.fix_center && unpinContext && !unpinCovered));
+        (el.id === "ctx_menu_unpin" && !(settings.fix_center && unpinContext && !unpinCovered)) ||
+        // from the card's own menu the card is already open
+        (el.dataset.action === "showTargetcardCtx" && context.includes("ctx-targetcard"));
 
     ui.menu.open({
         tags: context,
         show: (el, byTag) => byTag && !hidden(el),
+        meta: (() => {
+            const pos = context.includes("ship") ? vesselPosition(context_mmsi) : null;
+            return context.includes("ship") ? { copyTextCtx: String(context_mmsi),
+                copyCoordinatesCtx: pos ? Number(pos.lat).toFixed(2) + ", " + Number(pos.lon).toFixed(2) : "" } : {};
+        })(),
         anchor: anchorEl,
         center: context.includes("center"),
         x: event ? event.pageX : 0,
@@ -1646,7 +1655,14 @@ function tableRowsFitting() {
 }
 
 function renderTablePager(total, perPage) {
-    tableLib.renderPager(document.getElementById("tablePager"), { page: tablePage, perPage, total });
+    const pager = document.getElementById("tablePager");
+    tableLib.renderPager(pager, { page: tablePage, perPage, total });
+    // one page needs no paging: just how many vessels
+    if (total <= perPage) {
+        pager.hidden = true;
+        const count = pager.parentElement.querySelector('.table-count');
+        if (count) count.textContent = total === 1 ? '1 vessel' : total.toLocaleString() + ' vessels';
+    }
 }
 
 function turnTablePage(step) {
@@ -1685,8 +1701,17 @@ function updateTablecard() {
     document.getElementById("table_dist_unit").textContent = getDistanceUnit();
     document.getElementById("table_spd_unit").textContent = getSpeedUnit();
 
-    const shown = shipKeys.filter(key => key in shipsDB && shipVisible(shipsDB[key]));
-    document.getElementById('tableside_title').textContent = 'In view (' + compactCount(shown.length) + ')';
+    // the filter field narrows the list by name or MMSI
+    const query = (document.getElementById('tableside_filter')?.value || '').trim().toLowerCase();
+    const matches = (key) => {
+        if (!query) return true;
+        const ship = shipsDB[key].raw;
+        return String(ship.mmsi).startsWith(query) || (decodeHTMLEntities(getShipName(ship)) || '').toLowerCase().includes(query);
+    };
+    const shown = shipKeys.filter(key => key in shipsDB && shipVisible(shipsDB[key]) && matches(key));
+    document.getElementById('tableside_count').textContent = compactCount(shown.length);
+    // without a station position every distance is a dash: drop the column, the names get the room
+    document.getElementById('tableside').classList.toggle('no-dist', !shown.some(k => shipsDB[k].raw.distance != null));
 
     const perPage = tablePerPage || tablePageSize();
     if (!perPage) {
@@ -1735,6 +1760,8 @@ function updateTablecard() {
         if (tr) showContextMenu(e, parseInt(tr.dataset.mmsi), "ship", ["object", "object-map"]);
     };
 }
+
+document.getElementById('tableside_filter')?.addEventListener('input', () => { tablePage = 0; updateTablecard(); });
 
 function isSelectedShip(mmsi) {
     return card_type === "ship" && mmsi == card_mmsi;
@@ -2880,7 +2907,7 @@ function getTooltipContentPlane(plane) {
         flagHTML(plane.country, 'flag-tooltip', getCountryName(plane.country)) +
         '<div>' +
         sanitizeString(plane.callsign || getICAO(plane)) +
-        '<span class="tooltip-dim"> at </span>' + altitude + '/' + speed + ' kts' +
+        '<span class="tooltip-dim"> at </span>' + altitude + '/' + speed + ' kn' +
         '<div class="tooltip-sub">received ' + getDeltaTimeVal(planesSince - plane.last_signal) + ' ago</div>' +
         '</div>' +
         '</div>';

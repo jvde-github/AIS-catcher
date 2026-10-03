@@ -38,6 +38,7 @@
 #include "Ships.h"
 #include "SlotTable.h"
 #include "StaticStore.h"
+#include <functional>
 #include "StationRegistry.h"
 #include "VisitTracker.h"
 
@@ -228,6 +229,9 @@ public:
   // move a ship, count, or add a path point. Zero (default) takes everything.
   void setQualityMask(uint16_t m) { quality_mask = m; }
   uint16_t getQualityMask() const { return quality_mask; }
+  // a host that counts each station's messages says when one was last heard; station
+  // records and rows carry it, so a connected but silent station can be drawn as such
+  void setStationHeard(std::function<std::time_t(int)> f) { station_heard = std::move(f); }
   // messages the mask turned away
   uint64_t getCopiesDropped() const { return copies_dropped; }
   // Puts a record in the table under its MMSI, replacing what is there; for
@@ -372,6 +376,7 @@ private:
 
   BinaryStore binary;
   StationRegistry stations;
+  std::function<std::time_t(int)> station_heard; // set by the host, see setStationHeard
   EventRing events;
 #ifdef CHECK_DB_INTEGRITY
   void checkIntegrity();

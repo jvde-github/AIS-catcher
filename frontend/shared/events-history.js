@@ -46,7 +46,7 @@ export function createEventHistory(host) {
         root.setAttribute('aria-label', 'Past events');
         root.innerHTML = '<header class="place-panel-header">' +
             '<div class="place-panel-actions">' +
-            '<button type="button" class="place-overview">&larr; In view</button>' +
+            '<button type="button" class="place-overview"><svg class=\"sp-chev\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M15 6l-6 6 6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>In view</button>' +
             '<span class="side-table-label">Past events</span>' +
             '<button type="button" class="table-collapse place-close" title="Close sidebar" aria-label="Close sidebar">Close <span aria-hidden="true">&rarr;</span></button>' +
             '</div></header>' +

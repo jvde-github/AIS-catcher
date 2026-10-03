@@ -27,7 +27,7 @@ import * as render from './binary.js';
 import { KIND_CAT, CAT_COLORS, AGE_FADE, LAYER_ALPHA, decodeBadge, decorate, tooltipSections, getBinaryMessageList, getBinaryMessageTabs,
     cardOpen, badgeCanvas, discCanvas, pillCanvas, hatchCanvas, areaRings, ageBucket, isDangerArea, isGroupArea, markerHead, markerCaption,
     messageDialog, kindsOf, glyphsHTML, KIND_LABEL, showsShipBadge } from './binary.js';
-import { stationCanvas, stationBadgeCanvas, stationBand } from './stations.js';
+import { stationCanvas, stationBadgeCanvas, stationBand, stationStatus } from './stations.js';
 
 import { objectPillCanvas, PILL_SLOT_WIDTH } from './object-pill.js';
 import { portStyles, portBand } from './ports.js';
@@ -41,7 +41,11 @@ const WATERWAY = /strait|channel|passage|canal|waterway|fairway|river|sound|estu
 const SECTION_ZOOM = 13; // same minimum as PlaceIndex::Entry::SECTION_ZOOM
 const placeGlyph = (o) => o.place_type === 'water' || (o.place_type === 'area' && WATERWAY.test(o.category || '')) ? 'waterway' : o.place_type || 'place';
 const catOf = (o) => (o.kind === 9 || (o.kind === 10 && o.place_type === 'port')) ? 'port' : o.kind === 10 ? 'place' : KIND_CAT[o.kind] || 'data';
-const statusOf = (o) => (o.online === false ? 'offline' : 'online');
+// the server's clock once a feed has told it; the status of a station is judged against it
+let serverClock = () => Date.now() / 1000;
+const statusOf = (o) => stationStatus(o, serverClock());
+const STATUS_RANK = { online: 0, connected: 1, offline: 2 };
+const bestStatus = (members) => members.map(statusOf).reduce((a, b) => (STATUS_RANK[b] < STATUS_RANK[a] ? b : a), 'offline');
 const stationId = (o) => Number(String(o.id).slice(1));
 const stationInfo = (o) => ({ name: o.label, id: stationId(o), country: o.country, mmsi: o.mmsi, status: statusOf(o) });
 const bandOf = (o) => stationBand(stationInfo(o));
@@ -73,6 +77,7 @@ export function create(host) {
     const hydrating = new Map();   // id -> in-flight promise
     const hydratedShips = new Map(); // mmsi -> { badge, messages, promise }
     let serverTime = 0, ttl = 2700, viewZoom = 0;
+    serverClock = () => serverTime || Date.now() / 1000;
 
     const vector = new VectorSource({ features: [] });
     const layer = new VectorLayer({ source: vector, style: styleOf, opacity: LAYER_ALPHA, properties: { interactive: true } });
@@ -247,7 +252,7 @@ export function create(host) {
             }
             slots.forEach((slot, index) => {
                 const o = slot.members.reduce((a, b) => ((b.t || 0) > (a.t || 0) ? b : a));
-                const props = slot.cat === 'station' ? stationProps(slot.members.some((m) => statusOf(m) === 'online') ? 'online' : 'offline') : markerProps(o);
+                const props = slot.cat === 'station' ? stationProps(bestStatus(slot.members)) : markerProps(o);
                 add(point(anchor.lat, anchor.lon), `mo-${o.id}`, {
                     binary: true, is_associated: false, binary_object: o, object_stack: slot.members, ...props,
                     pill_index: index, pill_count: slots.length,
@@ -549,20 +554,33 @@ export function create(host) {
     }
 
     // a ship row carries the number of the station riding it; its record comes by one fetch and stays
-    const stationRecords = new Map();
+    // and is asked for again after a minute: whether it is receiving is a five-minute question
+    const stationRecords = new Map(); // id -> { record, at }, at 0 while a fetch is out
+    function ridingStationRecord(id, mmsi) {
+        const have = stationRecords.get(id);
+        if (have && (have.at === 0 || Date.now() - have.at < 60000)) return have.record;
+        const kept = have ? have.record : null;
+        stationRecords.set(id, { record: kept, at: 0 });
+        // a lookup that fails keeps what was known and waits out the minute like any other: this is asked per ship per render
+        const failed = () => stationRecords.set(id, { record: kept, at: Date.now() });
+        host.fetchJSON(host.objectUrl('s' + id))
+            .then((data) => {
+                if (!data || !data.station) { failed(); return; }
+                stationRecords.set(id, { record: data.station, at: Date.now() });
+                if (mmsi) host.rehoverShip(mmsi);
+            })
+            .catch(failed);
+        return kept;
+    }
     function ridingStationBand(ship) {
         const id = ship.station;
         if (!id) return '';
-        const rec = stationRecords.get(id);
-        if (rec) return stationBand({ name: rec.name, id, country: rec.country, mmsi: rec.mmsi, status: rec.online === false ? 'offline' : 'online' });
-        if (!stationRecords.has(id)) {
-            stationRecords.set(id, null);
-            host.fetchJSON(host.objectUrl('s' + id))
-                .then((data) => { if (data && data.station) { stationRecords.set(id, data.station); host.rehoverShip(ship.mmsi); } })
-                .catch(() => stationRecords.delete(id));
-        }
+        const rec = ridingStationRecord(id, ship.mmsi);
+        if (rec) return stationBand({ name: rec.name, id, country: rec.country, mmsi: rec.mmsi, status: statusOf(rec) });
         return stationBand({ name: 'Receiving station', id });
     }
+    // the status of the station riding a vessel, for the host's badge on it; online until its record is in
+    const ridingStationStatus = (id) => { const rec = id ? ridingStationRecord(id, 0) : null; return rec ? statusOf(rec) : 'online'; };
 
     // the vessel tooltip's message section: the badge word draws a line at once, the items follow after a dwell
     function shipTooltip(ship) {
@@ -677,7 +695,7 @@ export function create(host) {
         vector, layer, setReceiverMarker, openPorts, openPlace, openNearby, setPlaces,
         applyDelta, applyTile, prune, clear, redraw, restyle,
         setViewZoom: (z) => { viewZoom = Math.round(z); },
-        shipBadge, stationBadge,
+        shipBadge, stationBadge, ridingStationStatus,
         hydrateShip, tooltip, ridingStationBand, shipTooltip, shipKinds, titleGlyphs, showVesselMessages, click,
         pollEvents: strip.pollEvents, resetEvents: strip.resetEvents, noteSeen: strip.noteSeen,
     };

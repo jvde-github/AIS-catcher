@@ -90,3 +90,33 @@
     line-height: 0;
 }
 
+
+/* --- header: the menu button keeps its own darker square; the hull's bow ends with a clear gap before the icons, and the open tab is a filled segment
+   in the pill rather than a colour change; no dividers between tabs */
+.header .header-title { margin-right: 14px; }
+.header #menubar_mini { padding: 4px; display: flex; align-items: center; gap: 2px; }
+.header #menubar_mini i {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 7px 14px; border-radius: 999px;
+}
+.header #menubar_mini i.active {
+    color: var(--color-brand-ink);
+    background-color: color-mix(in srgb, var(--color-brand-ink) 20%, transparent);
+}
+.header #menubar_mini.labels i { height: auto; }
+.header #menubar_mini.labels > * + * { border-left: 0; }
+/* the icon moves to a pseudo-element, so the tab itself can carry the filled background
+   (a mask on the tab would clip that background to the icon's shape) */
+.header #menubar_mini:not(.labels) i {
+    -webkit-mask-image: none; mask-image: none;
+    background-color: transparent;
+    width: auto; height: auto; color: inherit;
+}
+.header #menubar_mini:not(.labels) i::before {
+    content: ''; display: block; width: 1em; height: 1em; background-color: currentColor;
+    -webkit-mask: var(--svg) center / 100% 100% no-repeat; mask: var(--svg) center / 100% 100% no-repeat;
+}
+.header #menubar_mini:not(.labels) i:not(.active) { color: color-mix(in srgb, var(--color-brand-ink) 75%, transparent); }
+.header #menubar_mini:not(.labels) i.active { background-color: color-mix(in srgb, var(--color-brand-ink) 20%, transparent); }
+/* the filled segment marks the open tab in both modes; the old underline goes */
+.header #menubar_mini a:has(.active)::after { display: none; }

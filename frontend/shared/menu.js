@@ -26,6 +26,8 @@ export function create(opts) {
     var mount = opts.mount;
     var checks = opts.checks || {};
     var closer = null;
+    // the rows the host added: the Cancel row and the section labels are the menu's own and belong to no group
+    var ITEMS = "li:not(.ctx-cancel):not(.ctx-label)";
 
     function tagsOf(li) {
         return li.dataset.tags ? li.dataset.tags.split(/\s+/) : [];
@@ -76,19 +78,31 @@ export function create(opts) {
         });
     }
 
-    /* a hairline between runs of different groups, only where a run has
-       more than one item: a lone item between two lone items is not a group */
+    /* sections: a run of items of one group, ruled off from the run before and,
+       when the host names the group, headed by a small label */
     function applySeparators() {
         var runs = [];
-        mount.querySelectorAll("li").forEach(function (li) {
+        mount.querySelectorAll("li.ctx-label").forEach(function (l) { l.remove(); });
+        mount.querySelectorAll(ITEMS).forEach(function (li) {
             li.classList.remove("group-start");
             if (li.style.display === "none") return;
             var last = runs[runs.length - 1];
             if (last && last.group === li.dataset.group) last.items.push(li);
             else runs.push({ group: li.dataset.group, items: [li] });
         });
-        for (var i = 1; i < runs.length; i++) {
-            if (runs[i - 1].items.length > 1 || runs[i].items.length > 1) runs[i].items[0].classList.add("group-start");
+        var labels = opts.groupLabels || {};
+        for (var i = 0; i < runs.length; i++) {
+            var first = runs[i].items[0];
+            var name = runs.length > 1 ? labels[runs[i].group] : null;
+            if (name) {
+                var l = document.createElement("li");
+                l.className = "ctx-label";
+                l.setAttribute("role", "presentation");
+                l.textContent = name;
+                first.before(l);
+                first = l;
+            }
+            if (i > 0) first.classList.add("group-start");
         }
     }
 
@@ -96,7 +110,7 @@ export function create(opts) {
         o = o || {};
         close();
         var tags = o.tags || [];
-        mount.querySelectorAll("li").forEach(function (li) {
+        mount.querySelectorAll(ITEMS).forEach(function (li) {
             var own = tagsOf(li);
             var byTag = own.length === 0 || own.some(function (t) { return tags.indexOf(t) >= 0; });
             var v = o.show ? o.show(li, byTag) : undefined;
@@ -105,6 +119,22 @@ export function create(opts) {
 
         applyChecks();
         applySeparators();
+        // a Cancel row at the end; only phones show it (a sheet needs a way out besides tapping the map)
+        if (!mount.querySelector("li.ctx-cancel")) {
+            var cancel = document.createElement("li");
+            cancel.className = "ctx-cancel";
+            cancel.textContent = "Cancel";
+            mount.appendChild(cancel);
+        }
+        mount.querySelector("li.ctx-cancel").style.display = "";
+        // a value beside its copy item (the MMSI, the position), from the host
+        mount.querySelectorAll("li[data-action]").forEach(function (li) {
+            var m = li.querySelector(".ctx-meta");
+            var v = o.meta && o.meta[li.dataset.action];
+            if (!v) { if (m) m.remove(); return; }
+            if (!m) { m = document.createElement("span"); m.className = "ctx-meta"; li.appendChild(m); }
+            m.textContent = v;
+        });
 
         placeMenu(mount, { anchor: o.anchor, center: !o.anchor && !!o.center, x: o.x || 0, y: o.y || 0 });
 

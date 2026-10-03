@@ -104,12 +104,13 @@ cp "$SHARED/components.js" "$DIST/control/js/components.js"
 
 minify "$DIST/control/css/shared.css"
 minify "$DIST/control/css/locations.css"
+minify "$DIST/control/css/settings.css"
 minify "$DIST/control/js/components.js" --format=esm
 minify "$DIST/control/js/shared-globals.js" --format=esm
 for f in schema.js config-manager.js wizard.js; do minify "$DIST/control/js/$f"; done
 
 # Cache-bust hub assets (served with a 1-year cache header, like the viewer's)
-for f in css/shared.css css/locations.css js/components.js js/shared-globals.js js/schema.js js/config-manager.js js/wizard.js; do
+for f in css/shared.css css/locations.css css/settings.css js/components.js js/shared-globals.js js/schema.js js/config-manager.js js/wizard.js; do
     HASH=$(file_hash "$DIST/control/$f")
     # full path: an unanchored "icons.css" would also match "flag-icons.css"
     perform_sed "$DIST/control/index.html" "s|\"${f}?hash=[^\"]*|\"${f}?hash=${HASH}|g" ''

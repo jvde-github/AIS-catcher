@@ -20,7 +20,7 @@ test("text: compact counts", () => {
 });
 
 test("text: ETA handles not-available markers", () => {
-    assert.equal(text.getEtaVal({ eta_month: 3, eta_day: 4, eta_hour: 7, eta_minute: 5 }), "4 Mar 07:05Z");
+    assert.equal(text.getEtaVal({ eta_month: 3, eta_day: 4, eta_hour: 7, eta_minute: 5 }), "4 Mar 07:05 UTC");
     assert.equal(text.getEtaVal({ eta_month: 0, eta_day: 0, eta_hour: 24, eta_minute: 60 }), "-");
 });
 

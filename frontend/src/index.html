@@ -96,9 +96,14 @@
 		<div class="tableside_window tabcontent" id="tableside">
 			<div class="settings-header table-overview-header">
 				<span id="tableside_title" class="side-table-label">In view</span>
+				<span id="tableside_count" class="sp-count"></span>
 				<button type="button" data-action="hideTablecard" class="table-collapse" title="Close sidebar" aria-label="Close sidebar">Close <span aria-hidden="true">→</span></button>
 			</div>
 
+			<div class="sp-filter">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></g></svg>
+				<input id="tableside_filter" type="search" placeholder="Filter by name or MMSI" autocomplete="off" spellcheck="false" aria-label="Filter vessels in view">
+			</div>
 			<div class="tablecard_inner">
 				<table class="mytable">
 					<thead>
@@ -940,17 +945,15 @@
 
 		<div data-on-contextmenu="mainspaceContextMenu" class="mainspace">
 			<ul class="floating-menu" id="context-menu">
-				<li data-tags="ctx-targetcard" data-group="card" data-action="toggleTargetcardPin" id="ctx_targetcard_pin"><i class="drag_indicator_icon"></i>Pin card position<span class="ctx-check">✓</span></li>
-				<li data-tags="ctx-targetcard" data-group="card" data-action="toggleShipcardStyle"><i class="view_list_icon"></i>Tabbed layout<span class="ctx-check">✓</span></li>
 				<li data-tags="copy-text" data-group="text" data-action="copyTextCtx"><i class="content_copy_icon"></i>Copy to Clipboard</li>
 				<li data-tags="table-menu" data-group="table" data-action="downloadCSV"><i class="cloud_download_icon"></i>Download CSV</li>
 				<li data-tags="station" data-group="focus" data-action="toggleFollowStationCtx"><i class="push_pin_icon"></i><span id="ctx_follow_station">Follow station</span></li>
 				<li data-tags="ctx-map ctx-replay-map" data-group="focus" data-action="unpinCenter" id="ctx_menu_unpin"><i class="undo_icon"></i><span id="ctx_unpin">Release map center</span></li>
 				<li data-tags="ship-map ctx-replay-ship" data-group="focus" data-action="toggleFollowCtx"><i class="push_pin_icon"></i><span id="ctx_follow">Follow vessel</span></li>
 				<li data-tags="ship-map ctx-replay-ship" data-group="focus" data-action="mapResetViewZoomCtx"><i class="zoom_in_icon"></i>Zoom in on vessel</li>
+				<li class="ctx-noalltracks" data-tags="ship-map" data-group="focus" data-action="toggleTrackCtx"><i class="timeline_icon"></i>Show track<span class="ctx-check">✓</span></li>
 				<li data-tags="ship-map" data-group="focus" data-action="showTargetcardCtx" data-kind="ship"><i class="directions_boat_icon"></i>Ship card</li>
 				<li data-tags="plane-map" data-group="focus" data-action="showTargetcardCtx" data-kind="plane"><i class="directions_boat_icon"></i>Plane card</li>
-				<li class="ctx-noalltracks" data-tags="ship-map" data-group="tracks" data-action="toggleTrackCtx"><i class="timeline_icon"></i>Track<span class="ctx-check">✓</span></li>
 				<li data-tags="ctx-map" data-group="tracks" data-action="toggleAllTracks"><i class="timeline_icon"></i>All tracks<span class="ctx-check">✓</span></li>
 				<li class="noandroid ctx-noalltracks" data-tags="ctx-map" data-group="tracks" data-action="startBoxSelect"><i class="highlight_alt_icon"></i>Show tracks in place</li>
 				<li class="ctx-selectedtracks" data-tags="ctx-map" data-group="tracks" data-action="deleteAllTracks"><i class="remove_circle_outline_icon"></i>Clear tracks</li>
@@ -958,14 +961,16 @@
 								<li data-tags="ship" data-group="vessel" data-action="showVesselDetailCtx"><i class="dns_icon"></i>Vessel database entry</li>
 				<li class="noandroid" data-tags="ship" data-group="vessel" data-action="showNMEACtx"><i class="mail_icon"></i>Last message</li>
 				<li class="ctx-realtime" data-tags="ship" data-group="vessel" data-action="openRealtimeForMMSICtx"><i class="comment_icon"></i>Track NMEA</li>
-				<li data-tags="ship ctx-replay-ship" data-group="copy" data-action="copyTextCtx"><i class="content_copy_icon noandroid"></i>Copy MMSI</li>
-				<li data-tags="plane" data-group="copy" data-action="copyTextICAO"><i class="content_copy_icon noandroid"></i>Copy ICAO</li>
-				<li data-tags="ship ctx-replay-ship" data-group="copy" data-action="copyCoordinatesCtx"><i class="content_paste_icon noandroid"></i>Copy Coordinates</li>
-				<li data-tags="ship" data-group="lookup" data-action="openAISCatcherSiteCtx"><i class="directions_aiscatcher_icon"></i>View on Community</li>
-				<li class="noandroid" data-tags="ship" data-group="lookup" data-action="openGoogleSearchCtx"><i class="search_icon"></i>Search on Google</li>
-				<li class="noandroid" data-tags="plane" data-group="lookup" data-action="openGoogleSearchCtx" data-icao="1"><i class="search_icon"></i>Search on Google</li>
-				<li class="noandroid" data-tags="ship" data-group="lookup" data-action="openVesselFinderCtx"><i class="public_icon"></i>Find on VesselFinder</li>
-				<li class="noandroid" data-tags="ship" data-group="lookup" data-action="openAISHubCtx"><i class="public_icon"></i>Find on AISHub</li>
+				<li data-tags="ship ctx-replay-ship" data-group="vessel" data-action="copyTextCtx"><i class="content_copy_icon noandroid"></i>Copy MMSI</li>
+				<li data-tags="plane" data-group="vessel" data-action="copyTextICAO"><i class="content_copy_icon noandroid"></i>Copy ICAO</li>
+				<li data-tags="ship ctx-replay-ship" data-group="vessel" data-action="copyCoordinatesCtx"><i class="content_copy_icon noandroid"></i>Copy coordinates</li>
+				<li data-tags="ship" data-group="lookup" data-action="openAISCatcherSiteCtx"><i class="public_icon"></i>Community map</li>
+				<li class="noandroid" data-tags="ship" data-group="lookup" data-action="openGoogleSearchCtx"><i class="search_icon"></i>Google</li>
+				<li class="noandroid" data-tags="plane" data-group="lookup" data-action="openGoogleSearchCtx" data-icao="1"><i class="search_icon"></i>Google</li>
+				<li class="noandroid" data-tags="ship" data-group="lookup" data-action="openVesselFinderCtx"><i class="public_icon"></i>VesselFinder</li>
+				<li class="noandroid" data-tags="ship" data-group="lookup" data-action="openAISHubCtx"><i class="public_icon"></i>AISHub</li>
+				<li data-tags="ctx-targetcard" data-group="card" data-action="toggleShipcardStyle"><i class="view_list_icon"></i>Tabbed layout<span class="ctx-check">✓</span></li>
+				<li data-tags="ctx-targetcard" data-group="card" data-action="toggleTargetcardPin" id="ctx_targetcard_pin"><i class="push_pin_icon ctx-pin"></i>Pin card position<span class="ctx-check">✓</span></li>
 				<li data-tags="ctx-map" data-group="display" data-action="toggleLabel"><i class="label_icon"></i>Ship labels<span class="ctx-check">✓</span></li>
 				<li data-tags="ctx-map" data-group="display" data-action="toggleRange"><i class="signal_cellular_alt_icon"></i>Station range<span class="ctx-check">✓</span></li>
 				<li data-tags="ctx-map" data-group="display" data-action="toggleTicker"><i class="feed_icon"></i>Event ticker<span class="ctx-check">✓</span></li>

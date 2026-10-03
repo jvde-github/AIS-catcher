@@ -54,12 +54,25 @@ export function calcMove(coordinate, delta, distance) {
 // position (the antenna) and metres to starboard of it. Fixed for the life of
 // the vessel, so the animation can precompute it once and only rotate.
 export function shipOutlineLocal(to_bow, to_stern, to_port, to_starboard) {
-    const L = to_bow + to_stern;
+    // [forward, starboard] in metres from the reported position: a square stern, straight sides
+    // for two thirds of the length, then each side sweeps in a smooth curve to a pointed stem on
+    // the centreline (a quadratic whose control point lies on that side, 60% of the way to the bow)
+    const L = to_bow + to_stern, mid = 0.5 * (to_starboard - to_port);
+    const shoulder = to_bow - 0.33 * L, ctrl = shoulder + 0.6 * (to_bow - shoulder);
+    const bow = (side) => {
+        const pts = [];
+        for (let i = 1; i <= 10; i++) {
+            const t = i / 10, u = 1 - t;
+            pts.push([u * u * shoulder + 2 * u * t * ctrl + t * t * to_bow, u * u * side + 2 * u * t * side + t * t * mid]);
+        }
+        return pts;
+    };
     return [
-        [-to_stern, to_starboard],                       // A  stern, starboard quarter
-        [-to_stern, -to_port],                           // B  stern, port quarter
-        [0.8 * L - to_stern, -to_port],                  // C  shoulder, port
-        [to_bow, 0.5 * (to_starboard - to_port)],        // D  bow
-        [0.8 * L - to_stern, to_starboard],              // E  shoulder, starboard
+        [-to_stern, to_starboard],                       // stern, starboard corner
+        [-to_stern, -to_port],                           // stern, port corner
+        [shoulder, -to_port],                            // port shoulder
+        ...bow(-to_port),                                // port bow, ending on the stem
+        ...bow(to_starboard).reverse().slice(1),         // back down the starboard bow
+        [shoulder, to_starboard],                        // starboard shoulder
     ];
 }

@@ -1,5 +1,5 @@
 
-import { ships, cardMmsi, cardType, hoverMmsi, hoverType, markerTracks, clock } from '../core/store.js';
+import { ships, cardMmsi, cardType, markerTracks, clock } from '../core/store.js';
 import { settings } from '../core/state.js';
 import { getChangeVal, getShipDimension, getDimUnit, getDistanceUnit, getDistanceVal, getDraughtVal, getLatValFormat, getLonValFormat, getSpeedUnit, getSpeedVal, u } from '../core/units.js';
 import * as shipcard from '../../shared/shipcard.js';
@@ -286,12 +286,8 @@ export function updateMessageButton() {
 
 
 export function trackOptionString(mmsi) {
-    const hover_track = hoverType == 'ship' && mmsi == hoverMmsi && deps.hoverTrackShown();
-    const select_track = cardType == 'ship' && mmsi == cardMmsi && deps.selectTrackShown();
-    const track_shown = markerTracks.has(Number(mmsi));
-
-    if (hover_track || select_track) return "Show Track";
-    return track_shown ? "Hide Track" : "Show Track";
+    // one word; the button's tint says whether the track is on the map
+    return "Track";
 }
 
 export function updateTrackOption() {
@@ -307,6 +303,9 @@ export function updateTrackOption() {
 
     if (cardMmsi && cardType == 'ship') {
         document.getElementById("targetcard_track").innerText = trackOptionString(cardMmsi);
+        const shown = markerTracks.has(Number(cardMmsi));
+        trackOptionElement.classList.toggle("card-icon-active", shown);
+        trackOptionElement.title = shown ? "Hide the track" : "Show the track";
     }
 }
 
@@ -385,6 +384,9 @@ const cardHelpers = {
     units: u,
     callsign: getCallSign,
     age: (s) => getDeltaTimeVal(clock - s.last_signal),
+    ageSeconds: (s) => (s.last_signal != null ? clock - s.last_signal : null),
+    // the ship type's colour: the one its tracks are drawn in
+    typeColor: (s) => (settings.track_class_colors || {})[s.shipclass] || null,
     goTo: (lat, lon) => deps.goTo && deps.goTo(lat, lon),
     openPort: (port) => mapObjects.openPlace(port),
     infoIcon: (k) => k === "tech"

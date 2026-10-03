@@ -86,7 +86,7 @@
     /* surface */
     --color-bg: var(--slate-50);
     --color-surface: var(--slate-0);
-    --color-surface-alt: var(--slate-100);
+    --color-surface-alt: #f5f6f8;
     --color-surface-raised: var(--slate-0);
     --color-band: var(--slate-100);
     --color-band-soft: var(--slate-50);
@@ -95,37 +95,39 @@
     --color-band-accent: var(--slate-200);
 
     /* ink */
-    --color-text: rgb(66, 66, 66);
-    --color-text-strong: var(--slate-700);
-    --color-text-muted: var(--slate-500);
+    --color-text: #3f4650;
+    --color-text-strong: #1c1e21;
+    --color-text-muted: #5f6670;
     --color-text-subtle: var(--slate-400);
-    --color-icon: var(--slate-600);
+    --color-icon: #2f353d;
 
     /* line */
-    --color-border: var(--slate-200);
-    --color-border-strong: #cccccc;
-    --color-field-border: var(--slate-300);
+    --color-border: #e3e5e9;
+    --color-border-strong: #c9cdd4;
+    --color-field-border: #d4d6da;
     --color-rule: rgba(128, 128, 128, 0.25);
 
     /* interactive */
-    --color-accent: var(--blue-600);
+    --color-accent: #2563c9;
     --color-accent-hover: var(--blue-700);
     --color-accent-ink: var(--slate-0);
     --color-accent-soft: #93c5fd;
     --color-accent-bg: #eff6ff;
+    /* the accent as a wash behind a selected row or an active nav entry */
+    --color-accent-tint: color-mix(in srgb, var(--color-accent) 10%, transparent);
     --color-focus-ring: color-mix(in srgb, var(--color-accent) 25%, transparent);
-    --color-hover: rgba(0, 0, 0, 0.05);
+    --color-hover: rgba(15, 23, 42, 0.05);
     --color-selected: #daebfe;
-    --color-track: var(--slate-200);
+    --color-track: #cacdd2;
     --color-control: var(--color-nest-2);
 
     /* status */
     /* green-700, not -600: status text on white needs 4.5:1 */
-    --color-success: var(--green-700);
+    --color-success: #1e7a3a;
     --color-success-ink: var(--emerald-400);
-    --color-warning: var(--amber-700);
-    --color-warning-ink: var(--amber-400);
-    --color-danger: var(--red-700);
+    --color-warning: #9a6200;
+    --color-warning-ink: #d99a1e;
+    --color-danger: #c62828;
     --color-danger-bg: #fff1f2;
     --color-danger-border: #fecdd3;
     --color-warning-bg: #fffbeb;
@@ -181,29 +183,34 @@
 
     --color-bg: var(--ink-100);
     --color-surface: var(--ink-200);
-    --color-surface-alt: var(--ink-300);
-    --color-surface-raised: var(--ink-400);
+    --color-surface-alt: #262628;
+    --color-surface-raised: #2a2a2c;
     --color-band: var(--ink-100);
     --color-band-soft: var(--ink-300);
     --color-nest-1: #1e1e1e;
     --color-nest-2: var(--ink-300);
     --color-band-accent: var(--ink-300);
 
-    --color-text: var(--ink-850);
-    --color-text-strong: var(--ink-900);
-    --color-text-muted: var(--ink-800);
+    --color-text: #c4c4c9;
+    --color-text-strong: #ececee;
+    --color-text-muted: #9c9ca2;
     --color-text-subtle: var(--ink-700);
-    --color-icon: var(--ink-800);
+    --color-icon: #d4d4d8;
 
-    --color-border: var(--ink-500);
-    --color-border-strong: var(--ink-600);
-    --color-field-border: #464646;
+    --color-border: #34363b;
+    --color-border-strong: #4a4d53;
+    --color-field-border: #474749;
     --color-rule: rgba(200, 200, 200, 0.16);
 
-    --color-accent: var(--blue-400);
+    --color-accent: #5b9bf0;
     --color-accent-hover: var(--blue-300);
-    --color-accent-ink: #06121f;
+    --color-accent-ink: #1c1e21;
     --color-accent-soft: #2c5480;
+    --color-accent-tint: color-mix(in srgb, var(--color-accent) 16%, transparent);
+    --color-focus-ring: color-mix(in srgb, var(--color-accent) 35%, transparent);
+    --color-warning-ink: #f0b450;
+    --shadow-float: 0 4px 14px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.06);
+    --shadow-menu: 0 12px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.06);
     --color-accent-bg: #0c2440;
     --color-danger-bg: #3f1418;
     --color-danger-border: #6b2129;
@@ -211,14 +218,14 @@
     --color-warning-border: #6b5312;
     --color-info-bg: #0c2440;
     --color-info-border: #1e4976;
-    --color-hover: rgba(255, 255, 255, 0.08);
+    --color-hover: rgba(255, 255, 255, 0.06);
     --color-selected: #3c3c3c;
-    --color-track: #5a5a5a;
+    --color-track: #595959;
     --color-control: var(--color-nest-2);
 
-    --color-success: var(--green-300);
-    --color-warning: var(--amber-400);
-    --color-danger: #cf6679;
+    --color-success: #6fd18c;
+    --color-warning: #f2c26e;
+    --color-danger: #ff8a80;
     --color-info: var(--blue-400);
 
     /* half a step above ink-300/ink-400: the bar reads less black */
@@ -339,6 +346,9 @@
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
     --shadow-md: 0 2px 8px var(--color-shadow);
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.18);
+    /* a floating control and a menu: the hairline ring keeps the edge on any ground */
+    --shadow-float: 0 4px 14px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(15, 23, 42, 0.08);
+    --shadow-menu: 0 12px 32px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.08);
     --shadow-overlay: 0 20px 50px rgba(0, 0, 0, 0.28);
     /* edge glow for the sliding side panels */
     --shadow-panel: 0 0 15px -5px var(--color-shadow);
@@ -385,7 +395,7 @@
     --size-hit: 32px;
 
     --size-map-button: 34px;
-    --size-map-controls: calc(var(--size-map-button) + 4px);
+    --size-map-controls: 44px;   /* the rail: 36px buttons in a 4px padded pill */
     /* breakpoints; map.css repeats these numbers in @media/@container, which cannot read tokens */
     --bp-narrow: 500px;           /* a pane too narrow to share: full-bleed cards */
     --bp-short: 800px;            /* a short screen: a tall card takes the full height */

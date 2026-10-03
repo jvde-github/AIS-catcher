@@ -6,7 +6,7 @@ test("units: nautical by default", () => {
     const u = create();
     assert.equal(u.getDistanceVal(10), "10.0");
     assert.equal(u.getDistanceUnit(), "nmi");
-    assert.equal(u.getSpeedUnit(), "kts");
+    assert.equal(u.getSpeedUnit(), "kn");
     assert.equal(u.getDimUnit(), "m");
 });
 
@@ -22,7 +22,7 @@ test("units: SI and imperial conversions", () => {
 test("units: system can be a live callable", () => {
     let sys = "DEFAULT";
     const u = create({ system: () => sys });
-    assert.equal(u.getSpeedUnit(), "kts");
+    assert.equal(u.getSpeedUnit(), "kn");
     sys = "SI";
     assert.equal(u.getSpeedUnit(), "km/h");
 });

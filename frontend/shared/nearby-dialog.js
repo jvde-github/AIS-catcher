@@ -15,7 +15,7 @@ const compass = bearing => Number.isFinite(bearing)
    label, for a reader who cannot see which way it turned */
 const away = row => {
     if (typeof row.range !== 'number') return '—';
-    const nm = `${row.range.toFixed(1)} nm`;
+    const nm = row.range.toFixed(1);   /* the unit is in the column header */
     if (!Number.isFinite(row.bearing)) return nm;
     const deg = Math.round(((row.bearing % 360) + 360) % 360);
     const point = compass(deg);
@@ -35,7 +35,7 @@ export function createNearbyDialog(host) {
         const shell = createSideTable(host, 'nearby'), root = shell.root;
         root.setAttribute('aria-labelledby', 'nearby-title');
         root.innerHTML = '<header class="place-panel-header">' +
-            '<div class="place-panel-actions"><button type="button" class="place-overview">← In view</button><span class="side-table-label">Nearby</span><button type="button" class="table-collapse place-close" title="Close sidebar" aria-label="Close sidebar">Close <span aria-hidden="true">→</span></button></div>' +
+            '<div class="place-panel-actions"><button type="button" class="place-overview"><svg class="sp-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>In view</button><span class="side-table-label">Nearby</span><button type="button" class="table-collapse place-close" title="Close sidebar" aria-label="Close sidebar">Close <span aria-hidden="true">→</span></button></div>' +
             '<div class="place-panel-heading"><div class="place-panel-label"><h2 id="nearby-title"></h2><div class="place-panel-kind"></div></div></div></header>' +
             '<div class="sc-tabs place-dialog-tabs" role="tablist" aria-label="Nearby">' + TABS.map(tab =>
             `<button type="button" class="sc-tab" role="tab" id="nearby-tab-${tab.key}" data-nearby-tab="${tab.key}" aria-controls="nearby-results">${tab.label}<span class="place-tab-count"></span></button>`).join('') + '</div>' +
@@ -80,9 +80,9 @@ export function createNearbyDialog(host) {
             }
             results.setAttribute('aria-labelledby', 'nearby-tab-' + selected);
             const heads = {
-                ships: '<th scope="col" class="col-name">Name</th><th scope="col" class="num col-spd">Spd <span class="dim">kts</span></th><th scope="col" class="col-type">Type</th><th scope="col" class="num col-last">Range</th>',
-                stations: '<th scope="col" class="col-name">Station</th><th scope="col" class="nearby-heard">Heard</th><th scope="col" class="num col-last">Range</th>',
-                places: '<th scope="col" class="col-name">Port</th><th scope="col" class="nearby-code">LOCODE</th><th scope="col" class="num col-last">Range</th>',
+                ships: '<th scope="col" class="col-name">Name</th><th scope="col" class="num col-spd">Spd <span class="dim">kn</span></th><th scope="col" class="col-type">Type</th><th scope="col" class="num col-last">Range <span class="dim">nm</span></th>',
+                stations: '<th scope="col" class="col-name">Station</th><th scope="col" class="nearby-heard">Heard</th><th scope="col" class="num col-last">Range <span class="dim">nm</span></th>',
+                places: '<th scope="col" class="col-name">Port</th><th scope="col" class="nearby-code">LOCODE</th><th scope="col" class="num col-last">Range <span class="dim">nm</span></th>',
             };
             results.querySelector('thead').innerHTML = '<tr>' + heads[selected] + '</tr>';
             const rows = answer?.[selected] || [];
@@ -112,11 +112,7 @@ export function createNearbyDialog(host) {
                     return `<tr data-station="${id}" class="${selectedId === 'stations:' + id ? 'selected' : ''}"><td class="col-name" title="${name} · ID ${id}"><span class="table-name">${flagHTML(row.country)}<button type="button" class="vessel-link port-ship-link" translate="no">${name}</button></span></td><td>${dot}${heard}</td><td class="num col-last">${away(row)}</td></tr>`;
                 }
                 const name = text(row.label || row.code || 'Port');
-                /* a port inside a larger one says whose it is: the codes are
-                   what a reader quotes, and the parent is what places it */
-                const parent = row.parent_name
-                    ? `<span class="nearby-parent">${text(row.parent_name)}</span>` : '';
-                return `<tr data-place="${text(row.runtime_id)}"><td class="col-name" title="${name}${row.code ? ' · ' + text(row.code) : ''}"><span class="table-name">${flagHTML(row.country)}<button type="button" class="vessel-link port-ship-link" translate="no">${name}</button></span></td><td class="nearby-kind" translate="no">${text(row.code || '—')}${parent}</td><td class="num col-last">${away(row)}</td></tr>`;
+                return `<tr data-place="${text(row.runtime_id)}"><td class="col-name" title="${name}${row.code ? ' · ' + text(row.code) : ''}"><span class="table-name">${flagHTML(row.country)}<button type="button" class="vessel-link port-ship-link" translate="no">${name}</button></span></td><td class="nearby-kind" translate="no">${text(row.code || '—')}</td><td class="num col-last">${away(row)}</td></tr>`;
             }).join('');
             status.innerHTML = '';
             status.hidden = true;

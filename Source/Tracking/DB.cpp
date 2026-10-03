@@ -1441,8 +1441,14 @@ std::string DB::getObjectJSON(const std::string &key) {
     JSON::Writer w(content, 4096);
     std::time_t now = time(nullptr);
     if (!key.empty() && key[0] == 's') {
+      const int id = std::atoi(key.c_str() + 1);
+      // a station riding a vessel is where that vessel is, as the map draws it
+      const StationRegistry::Station *s = stations.find(id);
+      const int ptr = s && s->mmsi ? ships.find(s->mmsi) : SHIP_NIL;
+      const bool riding = ptr != SHIP_NIL && isValidCoord(ships[ptr].lat, ships[ptr].lon);
       w.beginObject().kv("time", now);
-      stations.writeOne(w, std::atoi(key.c_str() + 1));
+      stations.writeOne(w, id, riding, riding ? ships[ptr].lat : LAT_UNDEFINED, riding ? ships[ptr].lon : LON_UNDEFINED,
+                        station_heard ? station_heard(id) : 0);
       w.endObject();
     } else
       binary.writeJSON(w, now, 0, std::strtoull(key.c_str(), nullptr, 16), 0);
@@ -1464,7 +1470,7 @@ std::string DB::getMapObjectsJSON(uint64_t since) {
         .key("objects")
         .beginArray();
     binary.writeMarkerRows(w, since);
-    stations.writeRows(w, since);
+    stations.writeRows(w, since, station_heard);
     place_markers.writeRows(w, since);
     w.endArray().key("removed").beginArray();
     binary.writeRemoved(w, since);

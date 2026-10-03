@@ -48,7 +48,9 @@ test('opening another port while one loads ignores the late response of the firs
     await tick();
     assert.equal(document.querySelector('#port-ships-title').textContent, 'Antwerp');
     assert.equal(document.querySelector('#port-ships .side-table-label').textContent, 'Port');
-    assert.equal(document.querySelector('#port-ships .place-panel-kind').textContent, 'Belgium · BEANR');
+    // as on the place page: the code in mono, then the country in words
+    assert.equal(document.querySelector('#port-ships .place-panel-kind .sp-code-plain').textContent, 'BEANR');
+    assert.equal(document.querySelector('#port-ships .place-panel-kind').lastChild.textContent, 'Belgium');
     assert.equal(document.querySelectorAll('.port-ship-count').length, 1);
     assert.equal(document.querySelector('.port-ship-count').textContent, '0 of 0');
     assert.equal(document.querySelector('.port-results').getAttribute('aria-busy'), 'false');

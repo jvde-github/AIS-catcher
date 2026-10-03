@@ -99,8 +99,10 @@ export function shipOutlineGeometry(ship) {
     const { to_bow, to_stern, to_port, to_starboard } = ship;
     if (to_bow == null || to_stern == null || to_port == null || to_starboard == null) return null;
 
-    if (heading == null) {
-        if (ship.cog == null || !(ship.speed > 1)) return null;
+    // true heading; without one (absent, or 511 "not available") the course while moving faster
+    // than half a knot; neither: no hull, the marker alone shows the vessel
+    if (heading == null || heading === 511) {
+        if (ship.cog == null || !(ship.speed > 0.5)) return null;
         heading = ship.cog;
     }
 
@@ -138,7 +140,7 @@ const SETTING_DEFAULTS = {
     shipoutline_opacity: 0.3,
     shipoutline_border: "#12a5ed",
     shiphover_color: "#ff0000",
-    shipselection_color: "#ff0000",
+    shipselection_color: "#2563eb",
     track_weight: 2,
     track_opacity: 1,
     track_class_colors: {},
@@ -183,7 +185,9 @@ export function create(opts) {
     const iconStyles = new Map();   // sprite -> Style with a mutable Icon
     const strokes = new Map();
     const fills = new Map();
-    const stroke = (color, width, dash) => memo(strokes, color + "|" + width + "|" + (dash ? dash.join(",") : ""), () => new Stroke({ color, width, lineDash: dash }));
+    // `join` is optional: a round join comes with round caps
+    const stroke = (color, width, dash, join) => memo(strokes, color + "|" + width + "|" + (dash ? dash.join(",") : "") + "|" + (join || ""),
+        () => new Stroke(join ? { color, width, lineDash: dash, lineJoin: join, lineCap: join === "round" ? "round" : undefined } : { color, width, lineDash: dash }));
     const fill = (color) => memo(fills, color, () => new Fill({ color }));
 
     function spriteStyle(cx, cy, imgSize) {
@@ -216,10 +220,12 @@ export function create(opts) {
 
     function hull(feature) {
         const s = settings();
+        // the colours set in the settings: outline, fill and its opacity
         const [r, g, b] = hexToRgb(s.shipoutline_inner);
         return new Style({
             fill: fill(`rgba(${r}, ${g}, ${b}, ${s.shipoutline_opacity})`),
-            stroke: stroke(feature.ship && isHovered(feature.ship) ? s.shiphover_color : s.shipoutline_border, 2),
+            // round joins soften the stern corners and the stem; a slightly heavier line than before
+            stroke: stroke(feature.ship && isHovered(feature.ship) ? s.shiphover_color : s.shipoutline_border, 3, undefined, "round"),
         });
     }
 
@@ -254,14 +260,18 @@ export function create(opts) {
             overflow: true,
             offsetY: 25,
             offsetX: 25,
-            font: s.tooltipLabelFontSize + "px Arial",
+            font: "600 " + s.tooltipLabelFontSize + "px system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif",
         });
 
         if (s.label_class_background) {
             const base = s.track_class_colors[cls] || "#12a5ed";
             text.setFill(new Fill({ color: `rgba(255, 255, 255, ${op})` }));
-            text.setBackgroundFill(new Fill({ color: deriveLabelBackground(base, 0.88 * op) }));
-            text.setPadding([2, 4, 2, 4]);
+            const bg = deriveLabelBackground(base, 0.88 * op);
+            text.setBackgroundFill(new Fill({ color: bg }));
+            // a stroke in the same colour with round joins rounds the box's corners
+            // the stroke itself adds half its width all round, so the padding stays small
+            text.setBackgroundStroke(new Stroke({ color: bg, width: 5, lineJoin: "round" }));
+            text.setPadding([0, 1.5, 0, 1.5]);   // 1.5 + half the 5px stroke = 4px each side
         } else {
             const [lr, lg, lb] = hexToRgb(s.dark_mode ? s.tooltipLabelColorDark : s.tooltipLabelColor);
             const [sr, sg, sb] = hexToRgb(s.dark_mode ? s.tooltipLabelShadowColorDark : s.tooltipLabelShadowColor);
@@ -291,25 +301,27 @@ export function create(opts) {
         };
     }
 
-    function ring(radiusBase, colorKey) {
+    /* a soft halo under a thinner ring, in the colour of that setting */
+    function haloRing(radiusBase, colorKey) {
         const s = settings();
-        const iconS = s.icon_scale || 1.0;
-        const circleS = s.circle_scale || 6.0;
-        return new Style({
-            image: new CircleStyle({
-                radius: ringRadius(radiusBase, s),
-                stroke: new Stroke({ color: s[colorKey], width: circleS * iconS }),
-            }),
-        });
+        const iconS = s.icon_scale || 1.0, circleS = s.circle_scale || 6.0;
+        const hex = /^#([0-9a-f]{6})$/i.exec(s[colorKey] || '');
+        const rgb = hex ? [0, 2, 4].map(i => parseInt(hex[1].slice(i, i + 2), 16)) : [37, 99, 235];
+        const r = ringRadius(radiusBase, s);
+        return [
+            new Style({ image: new CircleStyle({ radius: r, stroke: new Stroke({ color: [...rgb, 0.22], width: circleS * iconS * 2.2 }) }) }),
+            new Style({ image: new CircleStyle({ radius: r, stroke: new Stroke({ color: s[colorKey], width: Math.max(2, circleS * iconS * 0.5) }) }) }),
+        ];
     }
 
     function hoverRing() {
-        return ring(16, "shiphover_color");
+        return haloRing(16, "shiphover_color");
     }
 
     /* the selection ring redraws the selected vessel's icon on top of it */
     function selectRing() {
-        const styles = [ring(13, "shipselection_color")];
+        // a soft halo under a thinner ring: selected, not alarmed
+        const styles = haloRing(13, "shipselection_color");
         const sel = selected();
         const v = lookup(sel.type, sel.id);
         if (v && v.imgSize) {

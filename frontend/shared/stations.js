@@ -1,6 +1,7 @@
 // Receiving stations on the map, the part both hosts share: the marker, the
 // badge on the vessel that carries a receiver, and the hover band. A station
-// is {name, id, country, mmsi, status}, status online or offline.
+// is {name, id, country, mmsi, status}, status online (receiving), connected (nothing
+// heard for five minutes) or offline.
 
 import { sanitizeString } from './core/text.js';
 import { decodeHTMLEntities } from './components.js';
@@ -9,8 +10,20 @@ import { discCanvas, badgeCanvas } from './binary.js';
 
 const text = (v) => sanitizeString(String(v));
 
-const STATION_COLORS = { online: '#008000', offline: '#ef4444' };
+const STATION_COLORS = { online: '#008000', connected: '#f97316', offline: '#ef4444' };
 const stationColor = (status) => STATION_COLORS[status] || STATION_COLORS.online;
+
+// how long a station may go without a message and still count as receiving
+export const HEARD_WINDOW = 300;
+
+// the status of a station record or row: offline when not connected; connected when the
+// host says when it was last heard and that is over five minutes ago; online otherwise,
+// which is also what a host without that figure gets
+export function stationStatus(o, now = Date.now() / 1000) {
+    if (!o || o.online === false) return 'offline';
+    if (!(o.heard > 0)) return 'online';
+    return now - o.heard < HEARD_WINDOW ? 'online' : 'connected';
+}
 
 // a station standing on its own position: the filled disc with a white edge and
 // the antenna, the edge blue when a GPS places it
