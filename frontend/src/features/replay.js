@@ -34,6 +34,8 @@ const HULL_OFF_PX = 10;
 // Ceiling on the OL objects the animation holds, independent of fleet size:
 // the pixel gate means only vessels large on screen ever ask for one.
 const HULL_POOL_MAX = 256;
+// the outline's point count is the same for every vessel; the pooled buffers are cut to it
+const HULL_POINTS = shipOutlineLocal(1, 1, 1, 1).length;
 
 const DEG = Math.PI / 180;
 const hullPool = [];        // idle { feature, geom, ring } triples
@@ -581,7 +583,8 @@ function place(f, s, fix) {
 function takeHull() {
     const h = hullPool.pop();
     if (h) return h;
-    const seed = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]];
+    const seed = [];
+    for (let i = 0; i <= HULL_POINTS; i++) seed.push([0, 0]);      // the ring, closed
     const geom = new Polygon([seed]);
     const feature = new OlFeature({ geometry: geom });
     const hull = { feature, geom, flat: geom.getFlatCoordinates(), mmsi: 0 };
@@ -601,7 +604,7 @@ function releaseHull(mmsi) {
 }
 
 // Rotate the precomputed outline into place. No geodesy, no allocation: two
-// trig calls and ten multiply-adds into a buffer that already exists.
+// trig calls and a few multiply-adds per point into a buffer that already exists.
 function placeHull(mmsi, s, fix, res) {
     const local = s.local || (s.local = shipOutlineLocal(s.dim[0], s.dim[1], s.dim[2], s.dim[3]));
 
@@ -619,13 +622,13 @@ function placeHull(mmsi, s, fix, res) {
     const X = c[0], Y = c[1];
     const flat = h.flat;
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < HULL_POINTS; i++) {
         const f = local[i][0], sd = local[i][1];
         flat[i * 2]     = X + (f * si + sd * co) * k;
         flat[i * 2 + 1] = Y + (f * co - sd * si) * k;
     }
-    flat[10] = flat[0];
-    flat[11] = flat[1];
+    flat[HULL_POINTS * 2] = flat[0];
+    flat[HULL_POINTS * 2 + 1] = flat[1];
 
     // the array OL already owns was written in place, so it only needs telling
     h.geom.changed();
