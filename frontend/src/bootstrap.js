@@ -1,4 +1,4 @@
-import {loadInitialServerConfig} from './features/server-config.js';
+import {loadInitialServerConfig} from './features/server-config/server-config.js';
 
 async function start() {
     await loadInitialServerConfig();

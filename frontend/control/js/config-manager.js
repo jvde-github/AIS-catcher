@@ -1,14 +1,18 @@
+// The hub's configuration layer: the store, the normaliser, the managers that
+// draw and save a section, and the helpers the wizard and the app share.
+// Callbacks the app provides (hubAuthRequired, hubConfigSaved, highlightJson)
+// are read from window when called, so the app may define them after load.
+import * as AISComponents from '@aiscatcher/ui/components.js';
+import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } from './schema.js';
 
-(function (global) {
-    'use strict';
 
     const ManagerRegistry = new Map();
 
     // Session may expire mid-edit: route 401s through the login modal so the
     // user can sign in again without losing unsaved edits.
     function authFailed(r) {
-        if (r.status === 401 && typeof global.hubAuthRequired === 'function')
-            global.hubAuthRequired();
+        if (r.status === 401 && typeof window.hubAuthRequired === 'function')
+            window.hubAuthRequired();
         return r.status === 401;
     }
 
@@ -90,7 +94,7 @@
 
 
     function openZoneModal(currentZones, onUpdate) {
-        const modal = window.AISComponents.modal({
+        const modal = AISComponents.modal({
             id: 'cm-zone-modal',
             title: 'Manage Zones',
             cardClass: 'modal-sm',
@@ -465,7 +469,7 @@
 
     function pickerAction({ id, title, endpoint, extract, renderRow, apply }) {
         return (index, containerId) => {
-            const modal = window.AISComponents.modal({ id, title, footerLabel: 'Close' });
+            const modal = AISComponents.modal({ id, title, footerLabel: 'Close' });
             const list = modal.body;
             list.innerHTML = '<div class="t-center t-muted sys-empty">Loading...</div>';
             modal.open();
@@ -581,7 +585,7 @@
         state: { unsaved: false },
 
         notify(type, message, duration, onClose) {
-            return window.AISComponents.toast(type, message, { duration, onClose });
+            return AISComponents.toast(type, message, { duration, onClose });
         },
 
         notifyWarnings(warnings) {
@@ -1725,7 +1729,7 @@
             const contentId = 'json-content-' + this.config.containerId;
             const chevronId = 'chevron-' + this.config.containerId;
             const toggle = () => {
-                global.toggleJsonContent(contentId, chevronId);
+                toggleJsonContent(contentId, chevronId);
                 if (this.jsonStale) this.updateJsonDebug();
             };
 
@@ -1869,7 +1873,7 @@
             const cfg = {};
             this.applyDataTo(cfg);
             const text = JSON.stringify(cfg, null, 2);
-            if (typeof global.highlightJson === 'function') pre.innerHTML = global.highlightJson(text);
+            if (typeof window.highlightJson === 'function') pre.innerHTML = window.highlightJson(text);
             else pre.textContent = text;
         }
 
@@ -1912,8 +1916,8 @@
                 this.dirty = false;
                 App.setUnsaved([...ManagerRegistry.values()].some(m => m.dirty));
                 App.notify('success', 'Configuration saved successfully');
-                if (global.hubConfigSaved)
-                    global.hubConfigSaved(this.config.nestedPath ? 'viewer' : 'engine');
+                if (window.hubConfigSaved)
+                    window.hubConfigSaved(this.config.nestedPath ? 'viewer' : 'engine');
             } catch (e) {
                 console.error(e);
                 App.notify('error', 'Failed to save configuration: ' + e.message);
@@ -1926,16 +1930,13 @@
         }
     }
 
-    global.App = App;
-    global.ConfigManagers = ManagerRegistry;
-    global.Utils = Utils;
-    global.ConfigStore = ConfigStore;
-    global.ZoneColors = { badge: getZoneColor, css: getZoneCss };
-    global.normalizeConfig = (cfg) => ConfigNormalizer.normalize(cfg);
-    global.createSimpleConfigManager = (config) => { config.isList = false; return new ConfigManager(config); };
-    global.createChannelManager = (config) => { config.isList = true; return new ConfigManager(config); };
+    export { App, ManagerRegistry as ConfigManagers, Utils, ConfigStore };
+    export const ZoneColors = { badge: getZoneColor, css: getZoneCss };
+    export const normalizeConfig = (cfg) => ConfigNormalizer.normalize(cfg);
+    export const createSimpleConfigManager = (config) => { config.isList = false; return new ConfigManager(config); };
+    export const createChannelManager = (config) => { config.isList = true; return new ConfigManager(config); };
 
-    global.toggleJsonContent = (contentId, chevronId) => {
+    export const toggleJsonContent = (contentId, chevronId) => {
         const c = document.getElementById(contentId);
         const i = document.getElementById(chevronId);
         if (c) {
@@ -1944,4 +1945,3 @@
         }
     };
 
-})(window);

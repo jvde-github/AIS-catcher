@@ -1,4 +1,8 @@
 import {createPlaceEditor} from './places-editor.js';
+import * as AISComponents from '@aiscatcher/ui/components.js';
+import { App, ConfigStore, ConfigManagers, ZoneColors, createSimpleConfigManager, createChannelManager } from './config-manager.js';
+import { SetupWizard } from './wizard.js';
+import { webviewerSchema, sharingSchema, receiverSchema, screenSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
 
 (function () {
     'use strict';
@@ -584,7 +588,7 @@ import {createPlaceEditor} from './places-editor.js';
     }
 
     function loadWebviewer() {
-        iframe.src = iframe.src;
+        iframe.setAttribute('src', iframe.src);   // reloads the frame
         viewerLoaded = true;
         clearOverlayMessages();
     }
@@ -605,7 +609,7 @@ import {createPlaceEditor} from './places-editor.js';
             title: 'Receiver',
             variant: 'inputs',
             essentials: INPUT_ESSENTIALS,
-            describe: (item, i) => describeInput(item, i, window.ConfigManagers?.get('hub-receivers-container')?.data),
+            describe: (item, i) => describeInput(item, i, ConfigManagers?.get('hub-receivers-container')?.data),
             routing: inputRouting,
             excludeFor: item => SDR_INPUTS.has(item.input) ? [] : ['engines'],
             groupOf: inputGroup,
@@ -714,7 +718,7 @@ import {createPlaceEditor} from './places-editor.js';
         });
     }
     function enableTabScroll(el) {
-        return window.AISComponents.tabScroller(el);
+        return AISComponents.tabScroller(el);
     }
 
     function hasUnsaved() {
@@ -785,7 +789,7 @@ import {createPlaceEditor} from './places-editor.js';
             nav.appendChild(btn);
         });
         host.querySelector('[data-st-add]').addEventListener('click', () => {
-            const m = window.ConfigManagers?.get('hub-output-container');
+            const m = ConfigManagers?.get('hub-output-container');
             if (m && m.config.isList) m.addItem();
         });
         ConfigStore.fetch().then(paintOutputNav).catch(() => {});
@@ -1392,7 +1396,7 @@ import {createPlaceEditor} from './places-editor.js';
             const l = MAP_LABELS[k];
             if (l) { schema[k].label = l[0]; schema[k].tooltip = l[1]; }
         });
-        const keepPage = window.ConfigManagers?.get('viewer-config-container')?.page;
+        const keepPage = ConfigManagers?.get('viewer-config-container')?.page;
         const mgr = createSimpleConfigManager({
             schema: schema,
             containerId: 'viewer-config-container',

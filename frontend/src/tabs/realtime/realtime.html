@@ -1,0 +1,42 @@
+<div class="tabcontent addscrollbar can-copy" id="realtime">
+	<div class="realtime-viewer">
+		<div class="realtime-tabs">
+			<label class="realtime-background-toggle" title="Keep streaming when tab is hidden">
+				<input type="checkbox" id="realtime_background_streaming"
+					data-on-change="toggleBackgroundStreaming">
+				<span>Background</span>
+			</label>
+			<div class="realtime-spacer"></div>
+			<button id="realtime_filter_button" class="btn-quiet realtime-control-btn"
+				data-action="openRealtimeFilters" title="Filters">
+				<span class="filter_alt_icon"></span>
+				<span id="realtime_filter_count" class="realtime-filter-count"></span>
+			</button>
+			<button id="realtime_pause_button" class="btn-quiet realtime-control-btn" data-action="toggleRealtimePause"
+				title="Pause/Resume stream">
+				<span class="pause_icon"></span>
+			</button>
+			<button class="btn-quiet realtime-control-btn" data-action="clearRealtimeTable" title="Clear table">
+				<span class="delete_icon"></span>
+			</button>
+		</div>
+		<div class="realtime-filter-bar" id="realtime_filter_display" style="display: none;">
+			<i class="filter_list_icon"></i>
+			<div id="realtime_mmsi_filters" class="filter-chips"></div>
+		</div>
+		<div id="realtime_content" class="realtime-panel">
+			<table class="signal-table">
+				<thead>
+					<tr>
+						<th>Ch</th>
+						<th>Type</th>
+						<th>Time</th>
+						<th>MMSI</th>
+						<th>NMEA</th>
+					</tr>
+				</thead>
+				<tbody id="realtime_nmea_content"></tbody>
+			</table>
+		</div>
+	</div>
+</div>

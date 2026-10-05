@@ -1,8 +1,10 @@
 #!/bin/bash
 set -e
 
+FRONTEND=frontend
 SRC=frontend/src
-SHARED=frontend/shared
+UI_CSS=frontend/packages/ui/css
+NM=frontend/node_modules
 DIST=frontend/dist
 
 # Function to perform sed replacement based on OS
@@ -20,32 +22,34 @@ perform_sed() {
 
 # Wipe Vite-emitted chunks from prior builds (content-hashed names would
 # otherwise accumulate and bloat WebDB.cpp).
-rm -f "$DIST"/lib-*.js "$DIST"/lib.css "$DIST"/script.js "$DIST"/components.js "$DIST"/chrome.js "$DIST"/settings.js "$DIST"/tokens.css "$DIST"/icons.css "$DIST"/sprites.css "$DIST"/components.css "$DIST"/map.css
+rm -f "$DIST"/lib-*.js "$DIST"/lib.css "$DIST"/shared.css "$DIST"/style.css "$DIST"/script.js "$DIST"/control-shared.js "$DIST"/components.js "$DIST"/chrome.js "$DIST"/settings.js "$DIST"/tokens.css "$DIST"/icons.css "$DIST"/sprites.css "$DIST"/components.css "$DIST"/map.css
 rm -rf "$DIST/tabs"
 
 # install only when the lockfile is newer than node_modules
-if [ ! -d "$SRC/node_modules" ] || [ "$SRC/package-lock.json" -nt "$SRC/node_modules/.package-lock.json" ]; then
-    (cd "$SRC" && npm install --include=dev --prefer-offline --no-audit --no-fund)
+if [ ! -d "$NM" ] || [ "$FRONTEND/package-lock.json" -nt "$NM/.package-lock.json" ]; then
+    (cd "$FRONTEND" && npm install --include=dev --prefer-offline --no-audit --no-fund)
 fi
 (cd "$SRC" && npm run build)
 
-# One stylesheet per host from the shared sheets, in index.css order; the
-# shared JS is bundled by Vite (viewer) or loaded as a module (hub)
-# the order is index.css's; a host that needs only a prefix of it passes a count
+# The viewer's stylesheets are imports, bundled into lib.css by Vite. The hub
+# takes the first sheets of the ui package concatenated in index.css order; a
+# host that needs only a prefix of it passes a count
 shared_css() {
-    grep -o '"\./[^"]*"' "$SHARED/index.css" | sed 's|^"\./||; s|"$||' | head -n "${1:-99}" | while read -r f; do cat "$SHARED/$f"; echo; done
+    grep -o '"\./[^"]*"' "$UI_CSS/index.css" | sed 's|^"\./||; s|"$||' | head -n "${1:-99}" | while read -r f; do cat "$UI_CSS/$f"; echo; done
 }
 
 mkdir -p "$DIST"
-shared_css > "$DIST/shared.css"
-cp "$SRC/style.css" "$DIST/style.css"
 cp "$SRC/favicon.ico" "$DIST/favicon.ico"
+# icons.png is the pre-coloured sheet KML, GeoJSON and outside pages load; the map draws from the tinted one
 cp "$SRC/icons.png" "$DIST/icons.png"
-cp "$SRC/index.html" "$DIST/index.html"
+cp "$SRC/icons-tint.png" "$DIST/icons-tint.png"
+cp "$SRC/icons-tint-2x.png" "$DIST/icons-tint-2x.png"
+# the page: the shell plus each feature's markup from its folder
+node "$SRC/tools/assemble-html.mjs" "$SRC/index.html" "$DIST/index.html"
 
 # Generate flag-icons.css (fix relative paths: url(../flags/) → url(flags/))
 sed 's|url(\.\./flags/|url(flags/|g' \
-    "$SRC/node_modules/flag-icons/css/flag-icons.min.css" \
+    "$NM/flag-icons/css/flag-icons.min.css" \
     > "$DIST/flag-icons.css"
 
 # Copy only the 4x3 flag SVGs for country codes the app can emit (AIS MID
@@ -58,7 +62,7 @@ mkdir -p "$DIST/flags/4x3"
     grep -oE "\{'[A-Z]', *'[A-Z]'\}" Source/Aviation/ADSB.cpp \
         | sed -E "s/\{'([A-Z])', *'([A-Z])'\}/\1\2/"
 } | tr '[:upper:]' '[:lower:]' | sort -u | while read -r code; do
-    svg="$SRC/node_modules/flag-icons/flags/4x3/$code.svg"
+    svg="$NM/flag-icons/flags/4x3/$code.svg"
     if [ -f "$svg" ]; then
         cp "$svg" "$DIST/flags/4x3/"
     else
@@ -76,18 +80,19 @@ done
 # stray characters when a browser decodes a stylesheet with a legacy charset.
 minify() {
     local f="$1"; shift
-    "$SRC/node_modules/.bin/esbuild" "$f" --minify --log-level=warning --charset=ascii "$@" --outfile="$f.min" && mv "$f.min" "$f"
+    "$NM/.bin/esbuild" "$f" --minify --log-level=warning --charset=ascii "$@" --outfile="$f.min" && mv "$f.min" "$f"
 }
 
 file_hash() {
     if [[ "$OSTYPE" == "darwin"* ]]; then md5 -q "$1"; else md5sum "$1" | cut -d' ' -f1; fi
 }
 
-for f in shared.css style.css flag-icons.css; do minify "$DIST/$f"; done
+# lib.css again: Vite minified it, this keeps non-ASCII escaped like the others
+for f in lib.css flag-icons.css; do minify "$DIST/$f"; done
 
 # Cache-bust viewer assets. Anchored on the opening quote: an unanchored
 # "icons.css" would also match "flag-icons.css"
-for f in shared.css style.css script.js lib.css flag-icons.css; do
+for f in script.js lib.css flag-icons.css; do
     perform_sed "$DIST/index.html" "s|\"${f//./\\.}?hash=[^\"]*|\"${f}?hash=$(file_hash "$DIST/$f")|g" ''
 done
 
@@ -100,26 +105,21 @@ mkdir -p "$DIST/control/css"
 # same tokens.css the viewer gets; the control server prefixes every path with
 # "control", so the hub cannot reach the viewer's copy — it needs its own
 shared_css 4 > "$DIST/control/css/shared.css"
-cp "$SHARED/components.js" "$DIST/control/js/components.js"
 
 minify "$DIST/control/css/shared.css"
 minify "$DIST/control/css/locations.css"
 minify "$DIST/control/css/settings.css"
-minify "$DIST/control/js/components.js" --format=esm
-minify "$DIST/control/js/shared-globals.js" --format=esm
-for f in schema.js config-manager.js wizard.js; do minify "$DIST/control/js/$f"; done
 
 # Cache-bust hub assets (served with a 1-year cache header, like the viewer's)
-for f in css/shared.css css/locations.css css/settings.css js/components.js js/shared-globals.js js/schema.js js/config-manager.js js/wizard.js; do
+for f in css/shared.css css/locations.css css/settings.css; do
     HASH=$(file_hash "$DIST/control/$f")
     # full path: an unanchored "icons.css" would also match "flag-icons.css"
     perform_sed "$DIST/control/index.html" "s|\"${f}?hash=[^\"]*|\"${f}?hash=${HASH}|g" ''
-    perform_sed "$DIST/control/js/shared-globals.js" "s|\"\./${f#js/}?hash=[^\"]*|\"./${f#js/}?hash=${HASH}|g" ''
 done
 
+# The hub is one bundle, control-app.js; its sources under control/js are all in it.
 HASH=$(file_hash "$DIST/control-app.js")
 perform_sed "$DIST/control/index.html" "s|control-app.js?hash=[^\"]*|control-app.js?hash=${HASH}|g" ''
-# The editor source is bundled with the viewer's OpenLayers chunk.
-rm -f "$DIST/places-editor.js" "$DIST/control/js/places-editor.js" "$DIST/control/js/ports-editor.js" "$DIST/control/js/locations.js" "$DIST/control/js/app.js"
+rm -rf "$DIST/control/js" "$DIST/places-editor.js"
 echo "Built frontend/dist — baking into WebDB..."
 ./scripts/build-web-db.sh "$DIST"

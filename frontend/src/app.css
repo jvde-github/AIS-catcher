@@ -1,0 +1,25 @@
+/* The viewer's stylesheet, in cascade order: the libraries', the ui package's,
+   the viewer's own. Vite bundles the chain into lib.css; @import keeps the
+   order, where separate imports from a module would not. */
+@import "ol/ol.css";
+@import "tabulator-tables/dist/css/tabulator.min.css";
+@import "@aiscatcher/ui/css/index.css";
+@import "./style.css";
+/* the features' own sheets, after the viewer's */
+@import "./features/receiver/receiver.css";
+@import "./tabs/realtime/realtime.css";
+@import "./tabs/plots/plots.css";
+@import "./features/about/about.css";
+@import "./features/tablecard/tablecard.css";
+@import "./features/ticker/ticker.css";
+@import "./features/measure/measure.css";
+@import "./features/hover/hover.css";
+@import "./features/filter/filter.css";
+@import "./features/counts/counts.css";
+@import "./features/settings/settings.css";
+@import "./dialog.css";
+@import "./tabs/log/log.css";
+@import "./tabs/shiptable/shiptable.css";
+@import "./features/targetcard/targetcard.css";
+@import "./tabs/decoder/decoder.css";
+@import "./features/replay/replay.css";

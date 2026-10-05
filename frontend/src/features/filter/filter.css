@@ -1,0 +1,32 @@
+/* The notice over a map the filter has emptied. */
+
+.filter-empty {
+    display: none;
+    position: absolute;
+    top: calc(var(--map-inset-top) + 50px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: var(--z-card);
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px 8px 16px;
+    border-radius: var(--radius-2xl);
+    background: var(--overlay-bg);
+    color: var(--overlay-ink);
+    box-shadow: var(--shadow-md);
+    font-size: var(--fs-sm);
+}
+
+.filter-empty.visible {
+    display: flex;
+}
+
+.filter-empty button {
+    padding: 2px 12px;
+    border: none;
+    border-radius: var(--radius-2xl);
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+}

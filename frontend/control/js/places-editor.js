@@ -1,9 +1,10 @@
-import {placeFeature} from '../../shared/places.js';
+import {placeFeature} from '@aiscatcher/core/places.js';
 import GeoJSON from 'ol/format/GeoJSON.js';
 import Draw from 'ol/interaction/Draw.js';
 import Modify from 'ol/interaction/Modify.js';
 import { shapeFromGeoJSON } from './shape.js';
-import * as tooltip from '../../shared/tooltip.js';
+import * as tooltip from '@aiscatcher/ui/tooltip.js';
+import { ConfigStore } from './config-manager.js';
 const TOOL_ICONS = {
     pentagon: 'M298-200h364l123-369-305-213-305 213 123 369Zm-58 80L80-600l400-280 400 280-160 480H240Zm240-371Z',
     add_location_alt: 'M480-80Q319-217 239.5-334.5T160-552q0-150 96.5-239T480-880h20q10 0 20 2v81q-10-2-19.5-2.5T480-800q-101 0-170.5 69.5T240-552q0 71 59 162.5T480-186q122-112 181-203.5T720-552v-8h80v8q0 100-79.5 217.5T480-80Zm56.5-423.5Q560-527 560-560t-23.5-56.5Q513-640 480-640t-56.5 23.5Q400-593 400-560t23.5 56.5Q447-480 480-480t56.5-23.5ZM480-560Zm240-80h80v-120h120v-80H800v-120h-80v120H600v80h120v120Z',
@@ -804,7 +805,7 @@ export function createPlaceEditor(host, options = {}) {
                     b.disabled = true;
                 try {
                     placeSettings = await request('/api/places/enable', {});
-                    window.ConfigStore?.invalidate();
+                    ConfigStore?.invalidate();
                     options.onEnabled?.();
                     finish(true);
                 } catch (e) {

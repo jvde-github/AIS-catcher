@@ -1,0 +1,27 @@
+{
+  "name": "@aiscatcher/ui",
+  "version": "1.0.0",
+  "description": "AIS-catcher frontend, the DOM part: design tokens and stylesheets, components, cards, panels, tables, search, ticker.",
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jvde-github/AIS-catcher.git",
+    "directory": "frontend/packages/ui"
+  },
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./*": "./*"
+  },
+  "files": [
+    "*.js",
+    "css/*",
+    "material-icons.LICENSE.txt"
+  ],
+  "dependencies": {
+    "@aiscatcher/core": "1.0.0"
+  }
+}

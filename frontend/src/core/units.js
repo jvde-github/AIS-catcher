@@ -1,4 +1,4 @@
-import * as units from '../../shared/core/units.js';
+import * as units from '@aiscatcher/core/units.js';
 import { settings } from './state.js';
 
 export const u = units.create({

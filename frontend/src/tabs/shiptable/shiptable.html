@@ -1,0 +1,30 @@
+<div class="tabcontent" id="ships" style="display: none;">
+	<div class="tablesection">
+		<div class="search-container">
+			<input type="text" class="input search-box" id="shipSearch" placeholder="Search for ships...">
+			<button class="btn ship-table-columns-btn" type="button" id="shipTableFilterBtn"
+				data-action="openFilterPanel" title="Filter vessels">
+				<svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor">
+					<path d="M400-240v-80h160v80H400ZM240-440v-80h480v80H240ZM120-640v-80h720v80H120Z" />
+				</svg>
+				<span>Filter</span>
+			</button>
+			<div class="ship-table-column-dropdown">
+				<button class="btn ship-table-columns-btn" type="button" id="shipTableColumnDropdownToggle">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+						stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect x="3" y="3" width="18" height="18" rx="2" />
+						<path d="M12 3v18" />
+					</svg>
+					<span>Columns</span>
+					<svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none"
+						stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<polyline points="6 9 12 15 18 9" />
+					</svg>
+				</button>
+				<div class="ship-table-column-dropdown-menu" id="shipTableColumnVisibilityMenu"></div>
+			</div>
+		</div>
+		<div id="shipTable"></div>
+	</div>
+</div>

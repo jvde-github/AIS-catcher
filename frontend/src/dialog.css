@@ -1,0 +1,61 @@
+/* The dialog: its title, its message and the key-value tables it shows. */
+
+.dialog-title {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-medium);
+    color: var(--color-text-muted);
+}
+
+.kv-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-md);
+}
+
+.kv-table td {
+    padding: 6px 14px;
+    border-top: 1px solid var(--color-border);
+    vertical-align: top;
+}
+
+.kv-table tr:first-child td {
+    border-top: none;
+}
+
+.kv-table .kv-key {
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    padding-left: 0;
+    border-right: 1px solid var(--color-border);
+}
+
+.kv-table .kv-value {
+    overflow-wrap: anywhere;
+}
+
+.kv-empty {
+    color: var(--color-text-muted);
+}
+
+.dialog-message {
+    padding: 15px 20px 25px;
+    font-size: var(--fs-base);
+    user-select: text;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    box-sizing: border-box;
+}
+
+/* Mobile Adjustments */
+@media only screen and (max-width: 600px) {
+    .dialog-title {
+        font-size: var(--fs-lg);
+        padding: 12px 15px;
+    }
+
+    .dialog-message {
+        padding: 12px 15px;
+        font-size: var(--fs-md);
+    }
+}

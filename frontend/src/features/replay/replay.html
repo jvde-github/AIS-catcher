@@ -1,0 +1,33 @@
+<div id="replaybar" role="group" aria-label="Track replay"
+	data-on-contextmenu="replayMenu">
+	<button id="replayPlay" data-action="replayToggle" class="replaybar-play"
+		title="Play" aria-label="Play">
+		<i class="play_arrow_icon replay-icon-play"></i>
+		<i class="pause_icon replay-icon-pause"></i>
+		<i class="progress_activity_icon replay-icon-wait"></i>
+	</button>
+
+	<span id="replayElapsed" class="replaybar-time">--:--</span>
+
+	<div class="replaybar-track" id="replayTrack">
+		<div class="replaybar-fill" id="replayFill"></div>
+		<input id="replayScrub" type="range" min="0" max="1000" value="0" step="1"
+			data-on-input="replaySeek" aria-label="Replay position">
+	</div>
+
+	<span id="replayRemaining" class="replaybar-time">--:--</span>
+
+	<button id="replaySpeed" data-action="replayCycleSpeed"
+		class="replaybar-speed" title="Playback speed (right-click for the list)">60&times;</button>
+
+	<button id="replayLabels" data-action="replayToggleLabels" class="replaybar-labels"
+		title="Show ship labels" aria-label="Show ship labels" aria-pressed="false">
+		<i class="label_icon replay-icon-labels-on"></i>
+		<i class="label_off_icon replay-icon-labels-off"></i>
+	</button>
+
+	<button data-action="toggleReplaycard" class="replaybar-close" title="Close replay"
+		aria-label="Close replay">
+		<i class="close_icon mapcard-close"></i>
+	</button>
+</div>

@@ -1,6 +1,9 @@
+// The setup wizard: a first configuration in a few steps, or one imported from
+// a pre-managed-mode config file. The app's auth and password hooks are read
+// from window when called.
+import { App, ConfigStore, Utils, normalizeConfig } from './config-manager.js';
+import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
 
-(function (global) {
-    'use strict';
 
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -208,7 +211,7 @@
             body: JSON.stringify(cfg, null, 2)
         }).then(r => {
             ConfigStore.invalidate();
-            if (r.status === 401 && global.hubAuthRequired) global.hubAuthRequired();
+            if (r.status === 401 && window.hubAuthRequired) window.hubAuthRequired();
             if (!r.ok) return r.json().catch(() => null).then(b => { throw new Error((b && b.error) || 'Save failed'); });
             return r.json();
         });
@@ -223,7 +226,7 @@
             })
             .catch(e => {
                 console.error('Could not clear the wizard flag:', e);
-                if (global.App && App.notify) App.notify('error', 'Could not save the wizard state');
+                if (App && App.notify) App.notify('error', 'Could not save the wizard state');
             });
     }
 
@@ -260,11 +263,11 @@
         close(true);
         // cancelling must not bypass the password requirement: hand over to
         // the set-password modal
-        if (pwState.needed && global.hubPasswordBackstop) {
-            global.hubPasswordBackstop();
+        if (pwState.needed && window.hubPasswordBackstop) {
+            window.hubPasswordBackstop();
             return;
         }
-        if (global.App && App.notify) App.notify('info', 'Setup cancelled — run the wizard anytime from the System panel');
+        if (App && App.notify) App.notify('info', 'Setup cancelled — run the wizard anytime from the System panel');
     }
 
     // A step is hidden when a checked import covers it (its coveredBy matches
@@ -375,7 +378,7 @@
         body.innerHTML = '<h3>' + esc(step.title) + '</h3><p class="wz-intro">' + esc(step.intro) + '</p><div id="wz-devices" class="col wz-options"><div class="wz-loading">Scanning devices&hellip;</div></div>';
 
         const getJSON = url => fetch(url).then(r => {
-            if (r.status === 401 && global.hubAuthRequired) global.hubAuthRequired();
+            if (r.status === 401 && window.hubAuthRequired) window.hubAuthRequired();
             if (!r.ok) throw new Error();
             return r.json();
         });
@@ -486,7 +489,7 @@
                 if (!res.status) { stepError(res.error || 'Could not set the password.'); return; }
                 const wasSetup = pwState.setup;
                 pwState = { needed: false, setup: false };
-                if (global.hubAuthGranted) global.hubAuthGranted();
+                if (window.hubAuthGranted) window.hubAuthGranted();
                 // before setup the legacy config was not accessible yet
                 if (wasSetup) fetchLegacy();
                 gotoStep(1);
@@ -680,16 +683,16 @@
             .then(data => {
                 if (!data.status) throw new Error(data.error || 'save failed');
                 close(false);
-                if (global.App && App.notify) App.notify('success', 'Configuration saved');
+                if (App && App.notify) App.notify('success', 'Configuration saved');
                 if (startAfter)
                     return fetch('/api/status').then(r => { if (!r.ok) throw new Error(); return r.json(); })
                         .then(st => fetch('/api/engine', { method: 'POST', body: st.engine === 'running' ? 'restart' : 'start' }))
                         .then(r => r.json())
                         .then(res => {
-                            if (!res.status && global.App && App.notify)
+                            if (!res.status && App && App.notify)
                                 App.notify('error', 'Could not start the receiver: ' + (res.error || 'request failed'));
                         })
-                        .catch(() => { if (global.App && App.notify) App.notify('error', 'Could not start the receiver'); });
+                        .catch(() => { if (App && App.notify) App.notify('error', 'Could not start the receiver'); });
             })
             .catch(e => {
                 nextBtn.disabled = false;
@@ -709,5 +712,4 @@
         }
     };
 
-    global.SetupWizard = SetupWizard;
-})(window);
+    export { SetupWizard };

@@ -1,0 +1,30 @@
+/* The receiver dialog's list. */
+
+.receiver-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.receiver-option {
+    padding: 10px 4px;
+    font-size: var(--fs-base);
+    color: var(--color-text);
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    overflow-wrap: anywhere;
+}
+
+.receiver-option + .receiver-option {
+    border-top: 1px solid var(--color-menu-divider);
+}
+
+@media (hover: hover) {
+    .receiver-option:hover {
+        background: var(--color-menu-hover);
+    }
+}
+
+.receiver-option.active {
+    color: var(--color-accent);
+    font-weight: var(--fw-semibold);
+}

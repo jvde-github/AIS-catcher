@@ -1,0 +1,811 @@
+<!-- The settings panel. A control that holds a setting carries data-setting="key": the panel
+     (packages/ui/panel.js) keeps it and the setting in step, and settings.js names what else the
+     change means in SETTING_EFFECTS. A control whose change is more than a setting keeps a
+     data-on-change action. -->
+<div class="settings-window" id="settings">
+	<div class="settings-header">
+		<div class="hdr-slot"></div>
+		<div data-action="closeSettings" class="close_icon"></div>
+	</div>
+	<div class="settings-main">
+		<header>System</header>
+		<section>
+			<div class="filter-topbar">
+				<span class="st-note">Restore all settings</span>
+				<button type="button" class="st-danger" data-action="applyDefaultSettings">Reset</button>
+			</div>
+		</section>
+		<section>
+			<div class="third noandroid">
+				<span>Plugins</span><span style="cursor: pointer" data-action="showPlugins">Show</span>
+			</div>
+			<div class="third">
+				<span>Server Errors</span><span style="cursor: pointer" data-action="showServerErrors">Show</span>
+			</div>
+		</section>
+		<section>
+			<div class="noandroid">
+				<span>Dark Mode</span><span>
+					<input type="checkbox" id="settings_darkmode" data-setting="dark_mode" />
+				</span>
+			</div>
+			<div>
+				<span>Header tabs</span><span>
+					<select id="settings_menu_labels" data-setting="menu_labels">
+						<option value="icons">Icons</option>
+						<option value="names">Names</option>
+						<option value="adaptive">Names if they fit</option>
+					</select>
+				</span>
+				<small class="st-desc">The tab pill beside the title shows tab names, icons, or names while they fit</small>
+			</div>
+		</section>
+		<section>
+			<div class="half">
+				<span>Coordinate Format</span><span>
+					<select id="settings_coordinate_format" data-setting="coordinate_format">
+						<option value="decimal">Decimal Degrees</option>
+						<option value="ddm">Degrees Decimal Minutes</option>
+						<option value="dms">Degrees Minutes Seconds</option>
+					</select>
+				</span>
+			</div>
+			<div class="half">
+				<span>Units</span><span>
+					<select id="settings_metric" data-on-change="setMetrics">
+						<option value="default">Nautical</option>
+						<option value="metric">Metric</option>
+						<option value="imperial">Imperial</option>
+					</select>
+				</span>
+			</div>
+		</section>
+		<header>Table</header>
+		<section>
+			<h5 class="st-title">Table</h5>
+			<div>
+				<span>Ship Type Icon</span><span>
+					<input type="checkbox" id="settings_table_shiptype_use_icon" data-setting="table_shiptype_use_icon" />
+				</span>
+			<small class="st-desc">Draw the type instead of naming it</small>
+				</div>
+		</section>
+		<header>Map</header>
+		<section>
+			<h5 class="st-title basemap-title" data-kind="day">Day map</h5>
+			<div class="basemap-row" data-kind="day">
+				<span class="st-wide">
+					<select class="input select basemap-select" data-kind="day"></select>
+				</span>
+			<small class="map-attribution-note basemap-credit"></small>
+			</div>
+			<div class="basemap-row" data-kind="day">
+				<span class="basemap-dim-label">Dimming (50%)</span>
+				<span>
+					<input type="range" class="basemap-dim" data-kind="day" min="0" max="1" step="0.01"
+						data-on-change="setMapOpacity" data-on-input="updateBaseMapDim" />
+				</span>
+			</div>
+		</section>
+		<section>
+			<h5 class="st-title basemap-title" data-kind="night">Night map</h5>
+			<div class="basemap-row" data-kind="night">
+				<span class="st-wide">
+					<select class="input select basemap-select" data-kind="night"></select>
+				</span>
+			<small class="map-attribution-note basemap-credit"></small>
+			</div>
+			<div class="basemap-row" data-kind="night">
+				<span class="basemap-dim-label">Dimming (50%)</span>
+				<span>
+					<input type="range" class="basemap-dim" data-kind="night" min="0" max="1" step="0.01"
+						data-on-change="setMapOpacity" data-on-input="updateBaseMapDim" />
+				</span>
+			</div>
+		</section>
+		<section>
+			<h5 class="st-title">Overlays</h5>
+			<div>
+				<div id="overlayContainer"></div>
+			</div>
+		</section>
+		<section>
+			<h5 class="st-title">Map Objects</h5>
+			<div class="third">
+				<span>Station Marker</span><span>
+					<input type="checkbox" id="settings_show_station"
+						data-setting="show_station" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Ports</span><span>
+					<input type="checkbox" id="settings_show_ports" data-setting="show_ports" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Places</span><span>
+					<input type="checkbox" id="settings_show_places" data-setting="show_places" />
+				</span>
+			</div>
+		</section>
+		<section>
+			<h5 class="st-title">Highlight Circles</h5>
+			<div class="third">
+				<span>Hover</span><span>
+					<input type="color" class="color-picker" id="settings_shiphover_color"
+						data-setting="shiphover_color" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Selection</span><span>
+					<input type="color" class="color-picker" id="settings_shipselection_color"
+						data-setting="shipselection_color" />
+				</span>
+			</div>
+			<div>
+				<span id="circle_scale_label" data-caption-for="circle_scale">Width (6.0)</span>
+				<span>
+					<input type="range" id="settings_circle_scale" min="2.0" max="10.0" step="0.5"
+						data-setting="circle_scale" />
+				</span>
+			<small class="st-desc">Border width of the highlight circle</small>
+			</div>
+			
+		</section>
+		<section>
+			<h5 class="st-title">Distance Rings</h5>
+			<div class="third">
+				<span>Show</span><span>
+					<input type="checkbox" id="settings_distance_circles"
+						data-setting="distance_circles" />
+				</span>
+				</div>
+			<div class="third">
+				<span>Color</span><span>
+					<input type="color" class="color-picker" id="settings_distance_circle_color" data-setting="distance_circle_color" />
+				</span>
+			</div>
+		</section>
+		<section>
+			<h5 class="st-title">Target Card</h5>
+			<div>
+				<span>Top Left</span><span>
+					<input type="checkbox" id="settings_targetcard_top_left"
+						data-setting="targetcard_top_left" />
+				</span>
+				<small class="st-desc">Never place the card beside the vessel, even when there is room</small>
+			</div>
+			<div>
+				<span>Maximized</span><span>
+					<input type="checkbox" id="settings_targetcard_open_max"
+						data-setting="targetcard_open_max" />
+				</span>
+				<small class="st-desc">Open the card unfolded when there is room; small screens open it compact</small>
+			</div>
+			<div>
+				<span>Layout</span><span>
+					<select id="settings_shipcard_style" data-setting="shipcard_style">
+						<option value="classic">Accordion (classic)</option>
+						<option value="tabs">Tabbed</option>
+					</select>
+				</span>
+			</div>
+		</section>
+		<section>
+			<div>
+				<span>Toolbar</span><span>
+					<select id="settings_map_toolbar" data-setting="map_toolbar">
+						<option value="compact">Compact</option>
+						<option value="wide">Wide bar</option>
+					</select>
+				</span>
+				<small class="st-desc">A labelled bar along the bottom, on wide screens</small>
+			</div>
+
+
+		</section>
+		<header>Ship Labels</header>
+		<section>
+			<h5 class="st-title">Labels</h5>
+			<div>
+				<span>Show</span><span>
+					<select id="settings_show_labels" data-setting="show_labels">
+						<option value="dynamic">Dynamic</option>
+						<option value="never">Never</option>
+						<option value="always">Always</option>
+					</select>
+				</span>
+				<small class="st-desc">Determines when labels are visible</small>
+			</div>
+		</section>
+		<section>
+			<div>
+				<span>Declutter</span><span>
+					<input type="checkbox" id="settings_labels_declutter"
+						data-setting="labels_declutter" />
+				</span>
+				<small class="st-desc">Hide overlapping labels</small>
+			</div>
+		</section>
+		<section>
+			<h5 class="st-title">Selected Ship</h5>
+			<div class="half">
+				<span>Always Visible</span><span>
+					<input type="checkbox" id="settings_labels_prioritize_active"
+						data-setting="labels_prioritize_active" />
+				</span>
+				<small class="st-desc">Its label always wins against declutter</small>
+			</div>
+			<div class="half">
+				<span>Hide Others</span><span>
+					<input type="checkbox" id="settings_labels_active_only"
+						data-setting="labels_active_only" />
+				</span>
+				<small class="st-desc">Label only the selected ship</small>
+			</div>
+		</section>
+		<section>
+			<h5 class="st-title">Appearance</h5>
+			<div>
+				<span id="tooltip_font_size_label" data-caption-for="tooltipLabelFontSize" data-caption-format="Font Size ({v})">Font Size (9)</span>
+				<span>
+					<input type="range" id="settings_tooltipLabelFontsize" min="6" max="16" step="1"
+						data-setting="tooltipLabelFontSize" />
+				</span>
+			</div>
+			<div>
+				<span>Class Colors</span><span>
+					<input type="checkbox" id="settings_label_class_background"
+						data-setting="label_class_background" />
+				</span>
+				<small class="st-desc">Class color as background, or the fixed colors below</small>
+			</div>
+			<div class="half label-colors">
+				<span>Text (Light)</span><span>
+					<input type="color" class="color-picker" id="settings_tooltipLabelColor"
+						data-setting="tooltipLabelColor" />
+				</span>
+			</div>
+			<div class="half label-colors">
+				<span>Shadow (Light)</span><span>
+					<input type="color" class="color-picker" id="settings_tooltipLabelShadowColor"
+						data-setting="tooltipLabelShadowColor" />
+				</span>
+			</div>
+			<div class="half label-colors">
+				<span>Text (Dark)</span><span>
+					<input type="color" class="color-picker" id="settings_tooltipLabelColorDark"
+						data-setting="tooltipLabelColorDark" />
+				</span>
+			</div>
+			<div class="half label-colors">
+				<span>Shadow (Dark)</span><span>
+					<input type="color" class="color-picker" id="settings_tooltipLabelShadowColorDark"
+						data-setting="tooltipLabelShadowColorDark" />
+				</span>
+			</div>
+		</section>
+		<header>Graphs</header>
+		<section>
+			<h5 class="st-title">Graphs</h5>
+			<div>
+				<span>Clock Time</span><span>
+					<input type="checkbox" id="settings_plot_absolute_time" data-setting="plot_absolute_time" />
+				</span>
+			<small class="st-desc">Label the time axis with the clock instead of minutes ago</small>
+				</div>
+		</section>
+		<section>
+			<div>
+				<span>Signal Level</span><span>
+					<input type="checkbox" id="settings_show_signal_graphs" data-setting="show_signal_graphs" />
+				</span>
+				</div>
+		</section>
+		<section>
+			<div>
+				<span>Frequency Offset</span><span>
+					<input type="checkbox" id="settings_show_ppm_graphs" data-setting="show_ppm_graphs" />
+				</span>
+				</div>
+		</section>
+		<header>Ship Outline</header>
+		<section>
+			<h5 class="st-title">Marker</h5>
+			<div>
+				<span data-caption-for="icon_scale">Size (1.0)</span>
+				<span>
+					<input type="range" id="settings_icon_scale" min="0.5" max="1.5" step="0.01" data-setting="icon_scale" />
+				</span>
+			<small class="st-desc">Size of the ship icons on the map</small>
+				</div>
+			<div>
+				<span>Aircraft Color</span><span>
+					<select id="settings_plane_palette" data-setting="plane_palette">
+						<option value="classic">Orange flying, grey on the ground</option>
+						<option value="orange">Altitude, orange</option>
+						<option value="pastel">Altitude, colours</option>
+					</select>
+				</span>
+			<small class="st-desc">One orange for every flying aircraft; by altitude in one orange, warm when low and pale when high; or by altitude in a range of colours. Aircraft on the ground are grey</small>
+				</div>
+		
+			<div>
+				<span>Fading</span><span>
+					<input type="checkbox" id="settings_fading" data-setting="fading" />
+				</span>
+			<small class="st-desc">Fade icons with age</small>
+				</div>
+		</section>
+		
+		<section>
+			<h5 class="st-title">Outline</h5>
+			<div class="third">
+				<span>Border</span><span>
+					<input type="color" class="color-picker" id="settings_shipoutline_border"
+						data-setting="shipoutline_border" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Fill</span><span>
+					<input type="color" class="color-picker" id="settings_shipoutline_inner"
+						data-setting="shipoutline_inner" />
+				</span>
+			</div>
+			
+			<div>
+				<span id="shipoutline_opacity_label" data-caption-for="shipoutline_opacity">Opacity (0.9)</span>
+				<span>
+					<input type="range" id="settings_shipoutline_opacity" min="0" max="1" step="0.01"
+						data-setting="shipoutline_opacity" />
+				</span>
+				</div>
+			
+		</section>
+		<header>Binary Messages</header>
+		<section>
+			<h5 class="st-title">Display</h5>
+			<div>
+				<span>Show on Map</span><span>
+					<select id="settings_binary_messages" data-setting="binary_messages">
+						<option value="off">Off</option>
+						<option value="badge">Badge</option>
+						<option value="highlight">Badge + highlight</option>
+					</select>
+				</span>
+			<small class="st-desc">How binary messages appear on the map</small>
+				</div>
+			<div>
+				<span>Colour by category</span><span>
+					<input type="checkbox" id="settings_binary_color_class" data-setting="binary_color_class" />
+				</span>
+				<small class="st-desc">Badge colour follows the message category</small>
+			</div>
+			<div>
+				<span>Identifier labels</span><span>
+					<input type="checkbox" id="settings_binary_id_labels" data-setting="binary_id_labels" />
+				</span>
+				<small class="st-desc">Sensors and locks show their id as a pill instead of a count badge</small>
+			</div>
+			<div>
+				<span>Group places</span><span>
+					<input type="checkbox" id="settings_binary_group_areas" data-setting="binary_group_areas" />
+				</span>
+				<small class="st-desc">Rectangles of group assignment commands; a hover shows one anyway</small>
+			</div>
+		</section>
+		<section>
+			<h5 class="st-title">Categories</h5>
+			<div class="third">
+				<span>Meteo &amp; Sensors</span><span>
+					<input type="checkbox" id="settings_binary_cat_data" data-on-change="setBinaryCategory"
+						data-cat="data" />
+				</span>
+				<small class="st-desc">Weather and sensor reports</small>
+			</div>
+			<div class="third">
+				<span>Locks</span><span>
+					<input type="checkbox" id="settings_binary_cat_lock" data-on-change="setBinaryCategory"
+						data-cat="lock" />
+				</span>
+				<small class="st-desc">Lock schedules and lockage reports</small>
+			</div>
+			<div class="third">
+				<span>Traffic Signals</span><span>
+					<input type="checkbox" id="settings_binary_cat_signal" data-on-change="setBinaryCategory"
+						data-cat="signal" />
+				</span>
+				<small class="st-desc">Signal status at locks and ports</small>
+			</div>
+			<div class="third">
+				<span>Inland AIS</span><span>
+					<input type="checkbox" id="settings_binary_cat_inland" data-on-change="setBinaryCategory"
+						data-cat="inland" />
+				</span>
+				<small class="st-desc">Inland waterway messages</small>
+			</div>
+			<div class="third">
+				<span>Text Messages</span><span>
+					<input type="checkbox" id="settings_binary_cat_text" data-on-change="setBinaryCategory"
+						data-cat="text" />
+				</span>
+				<small class="st-desc">Safety and text broadcasts</small>
+			</div>
+			<div class="third">
+				<span>Aids to Navigation</span><span>
+					<input type="checkbox" id="settings_binary_cat_aton" data-on-change="setBinaryCategory"
+						data-cat="aton" />
+				</span>
+				<small class="st-desc">AtoN status and monitoring</small>
+			</div>
+			<div class="third">
+				<span>Zones &amp; Notices</span><span>
+					<input type="checkbox" id="settings_binary_cat_zones" data-on-change="setBinaryCategory"
+						data-cat="zones" />
+				</span>
+				<small class="st-desc">Area notices drawn on the map</small>
+			</div>
+			<div class="third">
+				<span>Safety</span><span>
+					<input type="checkbox" id="settings_binary_cat_safety" data-on-change="setBinaryCategory"
+						data-cat="safety" />
+				</span>
+				<small class="st-desc">Safety-related texts and distress beacons</small>
+			</div>
+		</section>
+		<header>Station Range</header>
+		<section>
+			<h5 class="st-title">Range</h5>
+			<div class="quarter">
+				<span>Show</span><span>
+					<input type="checkbox" id="settings_show_range" data-on-change="setRangeSwitch" />
+				</span>
+			</div>
+			<div class="threequarter">
+				<span>Time Period</span>
+				<span>
+					<select id="settings_range_timeframe" data-setting="range_timeframe">
+						<option value="24h">Last 24 Hours</option>
+						<option value="7d">Last 7 Days</option>
+						<option value="30d">Last 30 Days</option>
+					</select>
+				</span>
+				<small class="st-desc">Period the outer range covers; the inner ring is the last hour</small>
+			</div>
+		</section>
+		<section>
+			<h5 class="st-title">Colors (Selected Period)</h5>
+			<div class="third">
+				<span>Light</span><span>
+					<input type="color" class="color-picker" id="settings_range_color" data-setting="range_color" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Dark</span><span>
+					<input type="color" class="color-picker" id="settings_range_color_dark" data-setting="range_color_dark" />
+				</span>
+			</div>
+			</section>
+		<section>
+			<h5 class="st-title">Colors (Last Hour)</h5>
+			<div class="third">
+				<span>Light</span><span>
+					<input type="color" class="color-picker" id="settings_range_color_short" data-setting="range_color_short" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Dark</span><span>
+					<input type="color" class="color-picker" id="settings_range_color_dark_short" data-setting="range_color_dark_short" />
+				</span>
+			</div>
+		</section>
+		
+		<header>Filter</header>
+		<section>
+			<div class="filter-topbar">
+				<span id="filter_summary">Showing every vessel</span>
+				<button type="button" class="st-danger" data-action="resetFilter">Reset</button>
+			</div>
+		</section>
+		<section>
+			<h5 class="st-title">Sender</h5>
+			<div>
+				<div id="filter_senders" class="filter-checks"></div>
+				<div class="filter-allnone">
+					<button type="button" data-action="setAllFilterItems" data-kind="bucket" data-on="1">Select all</button>
+					<button type="button" data-action="setAllFilterItems" data-kind="bucket" data-on="0">Unselect all</button>
+				</div>
+			</div>
+		</section>
+
+                <section>
+			<h5 class="st-title">Vessel type</h5>
+			<div>
+				<div id="filter_classes" class="filter-checks"></div>
+				<div class="filter-allnone">
+					<button type="button" data-action="setAllFilterItems" data-kind="class" data-on="1">Select all</button>
+					<button type="button" data-action="setAllFilterItems" data-kind="class" data-on="0">Unselect all</button>
+				</div>
+			</div>
+		</section>
+		<section>
+			<h5 class="st-title" id="filter_speed_title">Speed</h5>
+			<div>
+				<div class="dualrange" id="filter_speed" data-key="speed" data-min="0" data-max="40" data-step="1"
+					data-title="filter_speed_title" data-label="Speed"></div>
+			</div>
+		</section>
+		<section>
+			<h5 class="st-title" id="filter_distance_title">Distance</h5>
+			<div>
+				<div class="dualrange" id="filter_distance" data-key="distance" data-min="0" data-max="100" data-step="1"
+					data-title="filter_distance_title" data-label="Distance"></div>
+			</div>
+		</section>
+		<section>
+			<h5 class="st-title">Navigation status</h5>
+			<div>
+				<div id="filter_statuses" class="filter-checks"></div>
+				<div class="filter-allnone">
+					<button type="button" data-action="setAllFilterItems" data-kind="status" data-on="1">Select all</button>
+					<button type="button" data-action="setAllFilterItems" data-kind="status" data-on="0">Unselect all</button>
+				</div>
+			</div>
+		</section>
+		<section>
+			<h5 class="st-title">Reception</h5>
+			<div>
+				<span id="filter_seen_label">Seen within (any)</span>
+				<span>
+					<input type="range" id="filter_seen" min="0" max="120" step="5"
+						data-on-change="setFilterNumber" data-key="seen"
+						data-on-input="updateFilterSeenDisplay" />
+				</span>
+			</div>
+			<div class="half">
+				<span>Validated</span>
+				<span>
+					<select id="filter_validated" data-on-change="setFilterChoice" data-key="validated">
+						<option value="any">Any</option>
+						<option value="yes">Validated only</option>
+						<option value="no">Not validated</option>
+						<option value="pending">Pending</option>
+					</select>
+				</span>
+			</div>
+			<div class="half">
+				<span title="Vessels whose position reached the receiver through another AIS station rather than directly">Repeated</span>
+				<span>
+					<select id="filter_repeated" data-on-change="setFilterChoice" data-key="repeated">
+						<option value="any">All</option>
+						<option value="only">Repeated only</option>
+						<option value="never">Not repeated</option>
+					</select>
+				</span>
+			</div>
+		</section>
+
+		<header>Tracks</header>
+		<section>
+			<h5 class="st-title">Tracks</h5>
+			<div>
+				<span>Draw For</span>
+				<span>
+					<select id="settings_track_visibility" data-on-change="setTrackVisibility">
+						<option value="selected">Selected ships</option>
+						<option value="all">All ships</option>
+						<option value="none">None</option>
+					</select>
+				</span>
+			<small class="st-desc">Which ships draw a track</small>
+				</div>
+			<div>
+				<span id="track_history_label">Length (30 min)</span>
+				<span>
+					<input type="range" id="settings_track_history" min="0" max="9" step="1"
+						data-on-change="setTrackHistory"
+						data-on-input="updateTrackHistoryDisplay" />
+				</span>
+			<small class="st-desc">Maximum age drawn; the server may hold less</small>
+				</div>
+		</section>
+		<section>
+			<h5 class="st-title">Auto Show Track</h5>
+			<div class="third">
+				<span>Selection</span><span>
+					<input type="checkbox" id="settings_show_track_on_select" data-setting="show_track_on_select" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Hover</span><span>
+					<input type="checkbox" id="settings_show_track_on_hover" data-setting="show_track_on_hover" />
+				</span>
+			</div>
+		</section>
+		<section>
+			<h5 class="st-title">Line Style</h5>
+			<div>
+				<span id="track_weight_label" data-caption-for="track_weight" data-caption-format="Weight ({v})">Weight (1)</span>
+				<span>
+					<input type="range" id="settings_track_weight" min="1" max="4" step="1"
+						data-setting="track_weight" />
+				</span>
+			<small class="st-desc">Line width of ship tracks</small>
+				</div>
+			<div>
+				<span id="track_opacity_label" data-caption-for="track_opacity">Opacity (100%)</span>
+				<span>
+					<input type="range" id="settings_track_opacity" min="0.05" max="1" step="0.05"
+						data-setting="track_opacity" />
+				</span>
+				</div>
+			<div>
+				<span id="track_trash_threshold_label" data-caption-for="track_trash_threshold" data-caption-format="Dash After ({v}s)">Dash After (30s)</span>
+				<span>
+					<input type="range" id="settings_track_trash_threshold" min="0" max="300" step="10"
+						data-setting="track_trash_threshold" />
+				</span>
+			<small class="st-desc">Dash track segments with reception gaps longer than this</small>
+				</div>
+			</section>
+		<section>
+			<h5 class="st-title">Line Colors</h5>
+			<div>
+				<span>Color By</span><span>
+					<select id="settings_track_color_mode" data-setting="track_color_mode">
+						<option value="class">Ship type</option>
+						<option value="speed">Speed</option>
+					</select>
+				</span>
+			<small class="st-desc">Color by ship type or speed</small>
+				</div>
+		</section>
+		<section class="track-speed-color">
+			<h5 class="st-title">Speed Scale</h5>
+			<div>
+				<span>Palette</span><span>
+					<select id="settings_track_speed_palette" data-setting="track_speed_palette"></select>
+				</span>
+			<small class="st-desc">Colors from stopped to scale max</small>
+				</div>
+			<div class="half">
+				<span data-caption-for="track_speed_max">Scale Max (20 kts)</span>
+				<span>
+					<input type="range" id="settings_track_speed_max" min="5" max="40" step="1" data-setting="track_speed_max" />
+				</span>
+			<small class="st-desc">Where the color scale ends</small>
+				</div>
+			<div class="half">
+				<span id="track_speed_scale_label">Preview (0 - 20 kts)</span>
+				<div class="speed-legend" id="track_speed_legend"></div>
+			<small class="st-desc">Grey where speed is unknown</small>
+				</div>
+			
+		</section>
+		<section class="track-class-color">
+			<h5 class="st-title">Custom Line Colors</h5>
+			<div class="track-class-color">
+				<span>Set All</span><span>
+					<input type="color" class="color-picker" id="settings_apply_all_track_color" value="#12a5ed"
+						data-on-change="applyColorToAllTracks" />
+					<button type="button" data-action="resetTrackColorsToDefault"
+						style="margin-left: auto;">Reset</button>
+				</span>
+			<small class="st-desc">Pick one color for every type below, or reset them to the defaults</small>
+				</div>
+			<div class="third">
+				<span>Cargo</span><span>
+					<input type="color" class="color-picker" id="settings_track_cargo_color"
+						data-on-change="setTrackClassColor" data-shipclass="CARGO" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Class B</span><span>
+					<input type="color" class="color-picker" id="settings_track_b_color"
+						data-on-change="setTrackClassColor" data-shipclass="B" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Passenger</span><span>
+					<input type="color" class="color-picker" id="settings_track_passenger_color"
+						data-on-change="setTrackClassColor" data-shipclass="PASSENGER" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Tanker</span><span>
+					<input type="color" class="color-picker" id="settings_track_tanker_color"
+						data-on-change="setTrackClassColor" data-shipclass="TANKER" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Fishing</span><span>
+					<input type="color" class="color-picker" id="settings_track_fishing_color"
+						data-on-change="setTrackClassColor" data-shipclass="FISHING" />
+				</span>
+			</div>
+			<div class="third">
+				<span>High Speed</span><span>
+					<input type="color" class="color-picker" id="settings_track_highspeed_color"
+						data-on-change="setTrackClassColor" data-shipclass="HIGHSPEED" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Special</span><span>
+					<input type="color" class="color-picker" id="settings_track_special_color"
+						data-on-change="setTrackClassColor" data-shipclass="SPECIAL" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Aid-to-Navigation</span><span>
+					<input type="color" class="color-picker" id="settings_track_aton_color"
+						data-on-change="setTrackClassColor" data-shipclass="ATON" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Base Stations</span><span>
+					<input type="color" class="color-picker" id="settings_track_station_color"
+						data-on-change="setTrackClassColor" data-shipclass="STATION" />
+				</span>
+			</div>
+			<div class="third">
+				<span>SAR/EPIRB</span><span>
+					<input type="color" class="color-picker" id="settings_track_sartepirb_color"
+						data-on-change="setTrackClassColor" data-shipclass="SARTEPIRB" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Aircraft</span><span>
+					<input type="color" class="color-picker" id="settings_track_plane_color"
+						data-on-change="setTrackClassColor" data-shipclass="PLANE" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Helicopters</span><span>
+					<input type="color" class="color-picker" id="settings_track_helicopter_color"
+						data-on-change="setTrackClassColor" data-shipclass="HELICOPTER" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Other</span><span>
+					<input type="color" class="color-picker" id="settings_track_other_color"
+						data-on-change="setTrackClassColor" data-shipclass="OTHER" />
+				</span>
+			</div>
+			<div class="third">
+				<span>Unknown</span><span>
+					<input type="color" class="color-picker" id="settings_track_unknown_color"
+						data-on-change="setTrackClassColor" data-shipclass="UNKNOWN" />
+				</span>
+			</div>
+		</section>
+		<header>Kiosk</header>
+		<section>
+			<h5 class="st-title">Kiosk Mode</h5>
+			<div>
+				<span>Enabled</span><span>
+					<input type="checkbox" id="settings_kiosk_mode" data-setting="kiosk">
+				</span>
+			<small class="st-desc">Unattended display that cycles through ships</small>
+				</div>
+		</section>
+		<section>
+
+		
+			<div>
+				<span id="kiosk_rotation_speed_label" data-caption-for="kiosk_rotation_speed" data-caption-format="Rotation Speed ({v}s)">Rotation Speed (5s)</span><span>
+					<input type="range" id="settings_kiosk_rotation_speed" min="3" max="30" step="1" data-setting="kiosk_rotation_speed">
+				</span>
+			<small class="st-desc">Seconds each ship is shown</small>
+				</div>
+		</section>
+		<section>
+
+		
+			<div>
+				<span>Center on Ship</span><span>
+					<input type="checkbox" id="settings_kiosk_pan_map" data-setting="kiosk_pan_map">
+				</span>
+				</div>
+		</section>
+	</div>
+</div>

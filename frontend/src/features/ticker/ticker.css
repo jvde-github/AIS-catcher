@@ -1,0 +1,12 @@
+/* The ticker's height on a phone. */
+
+@media only screen and (max-width: 500px) {
+    body.ticker-open:not(.ticker-bottom)     :root {
+        --size-ticker: 36px;
+    }
+}
+@media only screen and (max-width: 500px) {
+    :root {
+        --size-ticker: 36px;
+    }
+}

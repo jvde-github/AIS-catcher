@@ -1,9 +1,10 @@
+// The hub's configuration schema: what each section holds, how it is shown and checked.
 
-const SEARCH_ICON = `<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
+export const SEARCH_ICON = `<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
         <path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/>
     </svg>`;
 
-const ChannelFields = {
+export const ChannelFields = {
     host: () => ({
         name: 'host',
         section: 'Connection',
@@ -98,7 +99,7 @@ const ChannelFields = {
     })
 };
 
-const sdrGainFields = (prefix, inputValue) => ({
+export const sdrGainFields = (prefix, inputValue) => ({
     [`${prefix}_gain_mode`]: {
         name: `${prefix}_gain_mode`,
         label: "Gain Mode",
@@ -209,7 +210,7 @@ const sdrGainFields = (prefix, inputValue) => ({
     }
 });
 
-const httpSchema = {
+export const httpSchema = {
     description: ChannelFields.description(),
     link: ChannelFields.link(),
     url: {
@@ -291,7 +292,7 @@ const httpSchema = {
     zones: ChannelFields.zones()
 };
 
-const udpSchema = {
+export const udpSchema = {
     description: ChannelFields.description(),
     link: ChannelFields.link(),
     host: ChannelFields.host(),
@@ -312,7 +313,7 @@ const udpSchema = {
     zones: ChannelFields.zones()
 };
 
-const tcpSchema = {
+export const tcpSchema = {
     description: ChannelFields.description(),
     link: ChannelFields.link(),
     host: ChannelFields.host(),
@@ -342,7 +343,7 @@ const tcpSchema = {
     zones: ChannelFields.zones()
 };
 
-const tcpServerSchema = {
+export const tcpServerSchema = {
     description: ChannelFields.description(),
     link: ChannelFields.link(),
     port: {
@@ -362,7 +363,7 @@ const tcpServerSchema = {
 };
 
 // One channel for every backend: type picks the class, the rest is shared.
-const dbSchema = {
+export const dbSchema = {
     description: ChannelFields.description(),
     link: ChannelFields.link(),
     type: {
@@ -491,7 +492,7 @@ const dbSchema = {
     zones: ChannelFields.zones()
 };
 
-const mqttSchema = {
+export const mqttSchema = {
     description: ChannelFields.description(),
     link: ChannelFields.link(),
     url: {
@@ -541,7 +542,7 @@ const mqttSchema = {
     zones: ChannelFields.zones()
 };
 
-const webviewerSchema = {
+export const webviewerSchema = {
     port: {
         name: 'port',
         section: 'Connection',
@@ -894,7 +895,7 @@ const webviewerSchema = {
     }
 };
 
-const sharingSchema = {
+export const sharingSchema = {
     sharing: {
         name: 'sharing',
         label: 'Enable Sharing',
@@ -931,7 +932,7 @@ const sharingSchema = {
 };
 
 // Viewer settings are applied through the versioned configuration feed.
-const receiverSchema = {
+export const receiverSchema = {
     description: {
         name: "description",
         label: "Description",
@@ -1649,7 +1650,7 @@ const receiverSchema = {
     }
 };
 
-const generalSettingsSchema = {
+export const generalSettingsSchema = {
     timeout: {
         name: 'timeout',
         label: 'Timeout (seconds)',
@@ -1677,7 +1678,7 @@ const generalSettingsSchema = {
 // The process's standard output: the journal under systemd, the container log
 // under Docker. Managed mode keeps it silent unless set here; the levels are
 // those of the command line's -o.
-const screenSchema = {
+export const screenSchema = {
     screen: {
         name: 'screen',
         label: 'Screen Output',
@@ -1705,7 +1706,7 @@ const screenSchema = {
     }
 };
 
-const CHANNEL_REGISTRY = [
+export const CHANNEL_REGISTRY = [
     { key: 'receiver', label: 'Receiver', schema: receiverSchema, configKey: 'receiver' },
     { key: 'udp', label: 'UDP', schema: udpSchema, configKey: 'udp', flowLabel: 'UDP', statType: 'UDP', essentials: ['host', 'port'] },
     { key: 'http', label: 'HTTP', schema: httpSchema, configKey: 'http', flowLabel: 'HTTP', statType: 'HTTP', essentials: ['url'] },
@@ -1717,7 +1718,7 @@ const CHANNEL_REGISTRY = [
     { key: 'server', label: 'Viewer', schema: webviewerSchema, configKey: 'server', flowLabel: 'Webviewer', essentials: ['port'] }
 ];
 
-function channelTitle(label, item) {
+export function channelTitle(label, item) {
     if (item && item.host && item.port) return label + ' · ' + item.host + ':' + item.port;
     if (item && item.url) return label + ' · ' + item.url;
     if (item && item.host) return label + ' · ' + item.host;

@@ -1,0 +1,96 @@
+<div class="tabcontent addscrollbar" id="plots" style="display: none;">
+	<div class="plots-tabs" id="plots_modes" style="display: none;">
+		<div class="plots-tab active" data-action="setPlotsMode" data-mode="overview">Overview</div>
+		<div class="plots-tab" data-action="setPlotsMode" data-mode="compare">Compare</div>
+	</div>
+	<div class="chart-sources" id="chart_sources" style="display: none;">
+		<label>Source A<select id="chart_source_a"></select></label>
+		<label>Source B<select id="chart_source_b"></select></label>
+	</div>
+	<div class="graphtab" data-on-contextmenu="plotsContextMenu">
+		<div class="graph-panel compare-panel">
+			<header>Messages per Minute — A vs B</header>
+			<canvas id="chart-compare-minutes"></canvas>
+		</div>
+		<div class="graph-panel compare-panel">
+			<header>Messages per Hour — A vs B</header>
+			<canvas id="chart-compare-hours"></canvas>
+		</div>
+		<div class="graph-panel compare-panel">
+			<header>Message Gain per Minute — B vs A</header>
+			<canvas id="chart-compare-gain-minute"></canvas>
+		</div>
+		<div class="graph-panel compare-panel">
+			<header>Message Gain per Hour — B vs A</header>
+			<canvas id="chart-compare-gain-hour"></canvas>
+		</div>
+		<div class="graph-panel compare-panel">
+			<header>Vessels per Minute — A vs B</header>
+			<canvas id="chart-compare-vessels-minute"></canvas>
+		</div>
+		<div class="graph-panel compare-panel">
+			<header>Vessels per Hour — A vs B</header>
+			<canvas id="chart-compare-vessels-hour"></canvas>
+		</div>
+		<div class="graph-panel">
+			<header>Messages per Second</header>
+			<canvas id="chart-seconds"></canvas>
+		</div>
+		<div class="graph-panel">
+			<header>Messages per Minute</header>
+			<canvas id="chart-minutes"></canvas>
+		</div>
+		<div class="graph-panel">
+			<header>Messages per Hour</header>
+			<canvas id="chart-hours"></canvas>
+		</div>
+		<div class="graph-panel">
+			<header>Messages per Day</header>
+			<canvas id="chart-days"></canvas>
+		</div>
+		<div class="graph-panel">
+			<header>Vessels per Minute</header>
+			<canvas id="chart-vessels-minute"></canvas>
+		</div>
+		<div class="graph-panel">
+			<header>Vessels per Hour</header>
+			<canvas id="chart-vessels-hour"></canvas>
+		</div>
+		<div class="graph-panel">
+			<header>Vessels per Day</header>
+			<canvas id="chart-vessels-day"></canvas>
+		</div>
+		<div class="graph-panel">
+			<header>Frequency Shift (avg PPM per minute)</header>
+			<canvas id="chart-ppm-minute"></canvas>
+		</div>
+		<div class="graph-panel">
+			<header>Frequency Shift (avg PPM per hour)</header>
+			<canvas id="chart-ppm"></canvas>
+		</div>
+		<div class="graph-panel">
+			<header>Signal Level (Min/Max dB per minute)</header>
+			<canvas id="chart-level"></canvas>
+		</div>
+		<div class="graph-panel">
+			<header>Signal Level (Min/Max dB per hour)</header>
+			<canvas id="chart-level-hour"></canvas>
+		</div>
+		<div class="graph-panel">
+			<header>Distance (Max <span class="distunit">NMi</span> per Hour)</header>
+			<canvas id="chart-distance-hour"></canvas>
+		</div>
+		<div class="graph-panel">
+			<header>Distance (Max <span class="distunit">NMi</span> per Day)</header>
+			<canvas id="chart-distance-day"></canvas>
+		</div>
+		<div class="graph-panel">
+			<header>Max Distance Last Hour (<span class="distunit">NMi</span>)</header>
+			<canvas id="chart-radar-hour"></canvas>
+		</div>
+		<div class="graph-panel">
+			<header>Max Distance Last Day (<span class="distunit">NMi</span>)</header>
+			<canvas id="chart-radar-day"></canvas>
+		</div>
+	</div>
+</div>
