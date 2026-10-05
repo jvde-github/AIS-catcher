@@ -349,7 +349,10 @@ int Ship::getShipTypeClass() const {
     if ((shiptype >= 1500 && shiptype <= 1920) ||
         (shiptype >= 8000 && shiptype <= 8510))
       return getShipTypeClassEri();
-    return mmsi_type == MMSI_CLASS_B ? CLASS_B : CLASS_UNKNOWN;
+    if (mmsi_type == MMSI_CLASS_B)
+      return CLASS_B;
+    // a type that was reported and has no class of its own is "other"; unknown is a vessel that reported none
+    return shiptype > 0 ? CLASS_OTHER : CLASS_UNKNOWN;
   case MMSI_BASESTATION:
     return CLASS_STATION;
   case MMSI_SAR:
