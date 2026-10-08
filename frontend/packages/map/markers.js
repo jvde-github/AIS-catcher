@@ -273,7 +273,12 @@ export function create(opts) {
             c = `rgba(${r}, ${g}, ${b}, ${o})`;
         }
 
-        return new Style({ stroke: stroke(c, w, feature.isDashed ? [6, 6] : undefined) });
+        const line = new Style({ stroke: stroke(c, w, feature.isDashed ? [6, 6] : undefined) });
+        if (feature.isDashed) return line;
+        // a dark line under the track, a little wider than it: a thin coloured line alone is lost
+        // on water of a like tone, and a dark edge reads on a light map and a dimmed one alike
+        const edge = (0.45 * (highlighted || !(o < 1) ? 1 : o)).toFixed(2);
+        return [new Style({ stroke: stroke(`rgba(0, 0, 0, ${edge})`, w + 2, undefined, "round"), zIndex: -1 }), line];
     }
 
     /* the text part of a label; `cls` picks the class colour in background mode */
