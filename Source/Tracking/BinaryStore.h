@@ -626,10 +626,15 @@ inline int BinaryStore::process(const JSON::JSON &data, FLOAT32 sender_lat,
       case AIS::KEY_TEXT:
       case AIS::KEY_VESSEL_NAME:
       case AIS::KEY_BERTH_NAME:
-      case AIS::KEY_STATION_NAME:
       case AIS::KEY_NAME:
       case AIS::KEY_AREA_NOTICE_NAME:
         name = val.getString();
+        break;
+      // a sensor site's name is its pill text when it sends no station id
+      case AIS::KEY_STATION_NAME:
+        name = val.getString();
+        if (item.label.empty())
+          item.label = name;
         break;
       case AIS::KEY_AREA_SHAPES:
         if (val.isString())
@@ -724,7 +729,7 @@ inline int BinaryStore::process(const JSON::JSON &data, FLOAT32 sender_lat,
            z = item.label.find_last_not_of(' ');
     item.label = a == std::string::npos
                      ? ""
-                     : item.label.substr(a, std::min<size_t>(z - a + 1, 8));
+                     : item.label.substr(a, std::min<size_t>(z - a + 1, 16));
   }
 
   std::time_t now = msg->getRxTimeUnix();

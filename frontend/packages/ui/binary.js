@@ -66,17 +66,20 @@ export const meteoRow = (label, value) =>
 const rowsOf = (m, table) => table.map(([label, format]) => { const v = format(m); return v ? meteoRow(label, v) : ''; }).join('');
 
 const PRESSURE_TEND = ['steady', 'decreasing', 'increasing'];
-const METEO_KEYS = ['wspeed', 'airtemp', 'pressure', 'waterlevel', 'watertemp', 'waveheight', 'swellheight', 'visibility', 'cspeed', 'water_flow', 'humidity'];
+const METEO_KEYS = ['wspeed', 'airtemp', 'pressure', 'waterlevel', 'watertemp', 'waveheight', 'swellheight', 'visibility', 'cspeed', 'water_flow', 'humidity', 'air_gap'];
 const HYDRO_KEYS = ['watercurrent', 'currentspeed', 'currentdir', 'watertemp', 'waterlevel'];
 const METEO_ROWS = [
     ['Wind', (m) => m.wspeed != null && `${m.wspeed.toFixed(1)} kn${dirSuffix(m.wdir)}`],
     ['Air', (m) => m.airtemp != null && `${m.airtemp.toFixed(1)}&deg;C`],
     ['Gust', (m) => m.wgust != null && `${m.wgust.toFixed(1)} kn${dirSuffix(m.wgustdir)}`],
+    ['Dew Point', (m) => m.dewpoint != null && `${m.dewpoint.toFixed(1)}&deg;C`],
     ['Humidity', (m) => m.humidity != null && `${m.humidity}%`],
     ['Pressure', (m) => m.pressure != null && m.pressure > 799 &&
         `${m.pressure.toFixed(1)} hPa` + (m.pressuretend != null ? ` (${PRESSURE_TEND[m.pressuretend]})` : '')],
     ['Current', (m) => { const v = m.watercurrent || m.currentspeed; return v != null && `${v.toFixed(1)} kn${dirSuffix(m.currentdir || m.currentdirection)}`; }],
     ['Water Level', (m) => m.waterlevel != null && `${m.waterlevel.toFixed(2)} m`],
+    ['Air Gap', (m) => m.air_gap != null && `${m.air_gap.toFixed(2)} m`],
+    ['Salinity', (m) => m.salinity != null && `${m.salinity.toFixed(1)} &permil;`],
     ['Water', (m) => m.watertemp != null && `${m.watertemp.toFixed(1)}&deg;C`],
     ['Wave', (m) => m.waveheight != null && `${m.waveheight.toFixed(1)} m${dirSuffix(m.wavedir)}${periodSuffix(m.waveperiod)}`],
     ['Swell', (m) => m.swellheight != null && `${m.swellheight.toFixed(1)} m${dirSuffix(m.swelldir)}${periodSuffix(m.swellperiod)}`],
