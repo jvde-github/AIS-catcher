@@ -329,9 +329,15 @@ export function modal(opts) {
     }
 
     closeBtn.addEventListener("click", close);
-    /* mousedown, not click: a text selection ending on the scrim must not dismiss */
-    root.addEventListener("mousedown", function (e) {
-        if (e.target === root) close();
+    /* a click that began on the scrim dismisses: a text selection ending on it must
+       not, nor the tap that opened the dialog, whose mouse events land on the new scrim */
+    var pressed = false;
+    root.addEventListener("pointerdown", function (e) {
+        pressed = e.target === root;
+    });
+    root.addEventListener("click", function (e) {
+        if (pressed && e.target === root) close();
+        pressed = false;
     });
 
     var api = {
