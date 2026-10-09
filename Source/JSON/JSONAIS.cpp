@@ -763,7 +763,13 @@ namespace AIS
 	}
 
 	// IMO SN.1/Circ.289 Annex §12 Table 12.1 — environmental (DAC=1, FID=26).
-	// Only the first sensor report's common header is exposed; per-sensor bodies not decoded.
+	// 1 to 8 sensor reports of 112 bits (Table 12.3). Reports for the site of the first
+	// report are merged into one flat record: the Canadian Coast Guard sends one site per
+	// message (station ID + location + water level/salinity, or weather + wind).
+	// Water level and air gap use 0.01 m steps: the circular says 0.1 m, but its
+	// ±327.67 m and 81.91 m ranges only fit 0.01 m, and CHS gauge readings confirm it.
+	static const int ENV_REPORT_BITS = 112;
+
 	void JSONAIS::asm_imo_fid26_environmental(const AIS::Message &msg, int start)
 	{
 		if (msg.getLength() < start + 27) return;
@@ -772,6 +778,54 @@ namespace AIS
 		U(msg, AIS::KEY_HOUR, start + 9, 5, 24);
 		U(msg, AIS::KEY_MINUTE, start + 14, 6, 60);
 		U(msg, AIS::KEY_SITE_ID, start + 20, 7);
+
+		// value in [min, max] scaled by a + b; the spec reserves several codes outside it
+		auto ranged = [&](int p, int offset, int len, unsigned min, unsigned max, float a, float b) {
+			unsigned u = msg.getUint(offset, len);
+			if (u >= min && u <= max)
+				json.Add(p, u * a + b);
+		};
+
+		unsigned site = msg.getUint(start + 20, 7);
+		for (int rpt = start; rpt + ENV_REPORT_BITS <= msg.getLength(); rpt += ENV_REPORT_BITS)
+		{
+			if (msg.getUint(rpt + 20, 7) != site) continue;
+			int body = rpt + 27;
+			switch (msg.getUint(rpt, 4))
+			{
+			case 0: // Table 12.5 site location
+				SL(msg, AIS::KEY_LON, body, 28, 1 / 600000.0f, 0, 108600000);
+				SL(msg, AIS::KEY_LAT, body + 28, 27, 1 / 600000.0f, 0, 54600000);
+				break;
+			case 1: // Table 12.6 station ID
+				T(msg, AIS::KEY_STATION_ID, body, 84, name);
+				break;
+			case 2: // Table 12.7 wind
+				U(msg, AIS::KEY_WSPEED, body, 7, 122);
+				U(msg, AIS::KEY_WGUST, body + 7, 7, 122);
+				ranged(AIS::KEY_WDIR, body + 14, 9, 0, 359, 1, 0);
+				ranged(AIS::KEY_WGUSTDIR, body + 23, 9, 0, 359, 1, 0);
+				break;
+			case 3: // Table 12.8 water level
+				SL(msg, AIS::KEY_WATERLEVEL, body + 1, 16, 0.01f, 0, -32768);
+				U(msg, AIS::KEY_LEVELTREND, body + 17, 2, 3);
+				break;
+			case 8: // Table 12.13 salinity
+				ranged(AIS::KEY_WATERTEMP, body, 10, 0, 600, 0.1f, -10.0f);
+				ranged(AIS::KEY_SALINITY, body + 36, 9, 0, 501, 0.1f, 0);
+				break;
+			case 9: // Table 12.14 weather
+				SL(msg, AIS::KEY_AIRTEMP, body, 11, 0.1f, 0, -1024);
+				ranged(AIS::KEY_VISIBILITY, body + 16, 8, 0, 241, 0.1f, 0);
+				SL(msg, AIS::KEY_DEWPOINT, body + 24, 10, 0.1f, 0, 501);
+				ranged(AIS::KEY_PRESSURE, body + 37, 9, 1, 401, 1, 799);
+				U(msg, AIS::KEY_PRESSURETEND, body + 46, 2, 3);
+				break;
+			case 10: // Table 12.15 air gap
+				ranged(AIS::KEY_AIR_GAP, body + 13, 13, 1, 8191, 0.01f, 0);
+				break;
+			}
+		}
 	}
 
 	// Legacy IMO SN/Circ.236 meteo/hydro (DAC=1, FID=11) — superseded by FID=31.

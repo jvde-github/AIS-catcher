@@ -293,6 +293,7 @@ private:
     case AIS::KEY_SALINITY:
     case AIS::KEY_ICE:
     case AIS::KEY_WATER_FLOW:
+    case AIS::KEY_AIR_GAP:
       return BK_VALUE;
     case AIS::KEY_DAC:
     case AIS::KEY_FID:
@@ -579,6 +580,10 @@ inline int BinaryStore::process(const JSON::JSON &data, FLOAT32 sender_lat,
         item.fi = val.getInt();
         break;
       case AIS::KEY_MESSAGE_ID:
+        item.sub = val.getInt();
+        break;
+      // sensor site within the transmitter (FID 26/33): two sites can share a name
+      case AIS::KEY_SITE_ID:
         item.sub = val.getInt();
         break;
       case AIS::KEY_LAT:

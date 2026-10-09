@@ -550,6 +550,8 @@ X(KEY_TUGBOATS, "tugboats", "", "", "", "", "", "",
   "Number of assisting tugboats (Inland AIS DAC 200 FID 21; 0-6).", nullptr)
 X(KEY_AIR_DRAUGHT, "air_draught", "", "", "", "", "", "m",
   "Maximum present static air draught.", nullptr)
+X(KEY_AIR_GAP, "air_gap", "", "", "", "", "", "m",
+  "Vertical clearance from the water surface to a bridge sensor (IMO 289 FID 26).", nullptr)
 X(KEY_LAST_PORT, "last_port", "", "", "", "", "", "",
   "Last port of call (UN/LOCODE; IMO Circ.289 FID 24).", nullptr)
 X(KEY_NEXT_PORT, "next_port", "", "", "", "", "", "",
