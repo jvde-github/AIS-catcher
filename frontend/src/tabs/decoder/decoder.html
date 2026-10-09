@@ -1,0 +1,18 @@
+<div class="tabcontent addscrollbar" id="decoder" style="display: none;">
+	<div class="decoder-container">
+		<div class="decoder-panel">
+			<h3>NMEA Decoder</h3>
+			<p>Paste NMEA sentences below (one per line) and click "Decode" to see detailed AIS message
+				information.</p>
+			<textarea id="decoder_input"
+				placeholder="Paste NMEA sentences here, one per line&#10;e.g. !AIVDM,1,1,,A,…"
+				rows="6"></textarea>
+			<div class="decoder-buttons">
+				<button data-action="decodeNMEA" class="btn btn-primary">Decode</button>
+				<button data-action="clearDecoder" class="btn">Clear</button>
+			</div>
+			<div id="decoder_status" class="decoder-status"></div>
+		</div>
+		<div class="decoder-output" id="decoder_output"></div>
+	</div>
+</div>

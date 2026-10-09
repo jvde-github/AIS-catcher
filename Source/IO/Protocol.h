@@ -540,6 +540,70 @@ namespace Protocol
 		GPSD() : ProtocolBase("GPSD") {};
 	};
 
+	class Hub : public ProtocolBase
+	{
+		std::string uuid;
+		bool connected = false;
+
+		enum Flags : unsigned char
+		{
+			HELLO = 0x01,
+			BYE = 0x02
+		};
+
+		// 0xAB version flags [uuidlen uuid] '\n'
+		void sendControl(unsigned char flags)
+		{
+			std::string frame;
+			frame += (char)0xab;
+			frame += (char)0x00;
+			frame += (char)flags;
+
+			if (flags & HELLO)
+			{
+				frame += (char)uuid.size();
+				frame += uuid;
+			}
+			frame += '\n';
+
+			if (prev)
+				prev->send(frame.data(), (int)frame.size());
+		}
+
+		void onConnect() override
+		{
+			connected = true;
+			if (!uuid.empty())
+				sendControl(HELLO);
+			ProtocolBase::onConnect();
+		}
+
+		void onDisconnect() override
+		{
+			connected = false;
+			ProtocolBase::onDisconnect();
+		}
+
+	public:
+		Hub() : ProtocolBase("Hub") {};
+
+		void setUUID(const std::string &u) { uuid = u; }
+		void keepAlive() { sendControl(0); }
+
+		void detectClose()
+		{
+			char discard[64];
+			read(discard, sizeof(discard), 0, false);
+		}
+
+		void disconnect() override
+		{
+			if (connected)
+				sendControl(BYE);
+			ProtocolBase::disconnect();
+		}
+	};
+
 	class RTLTCP : public ProtocolBase
 	{
 

@@ -1,0 +1,44 @@
+<ul class="floating-menu" id="context-menu">
+	<li data-tags="copy-text" data-group="text" data-action="copyTextCtx"><i class="content_copy_icon"></i>Copy to Clipboard</li>
+	<li data-tags="table-menu" data-group="table" data-action="downloadCSV"><i class="cloud_download_icon"></i>Download CSV</li>
+	<li data-tags="station" data-group="focus" data-action="toggleFollowStationCtx"><i class="push_pin_icon"></i><span id="ctx_follow_station">Follow station</span></li>
+	<li data-tags="ctx-map ctx-replay-map" data-group="focus" data-action="unpinCenter" id="ctx_menu_unpin"><i class="undo_icon"></i><span id="ctx_unpin">Release map center</span></li>
+	<li data-tags="ship-map ctx-replay-ship" data-group="focus" data-action="toggleFollowCtx"><i class="push_pin_icon"></i><span id="ctx_follow">Follow vessel</span></li>
+	<li data-tags="ship-map ctx-replay-ship" data-group="focus" data-action="mapResetViewZoomCtx"><i class="zoom_in_icon"></i>Zoom in on vessel</li>
+	<li class="ctx-noalltracks" data-tags="ship-map" data-group="focus" data-action="toggleTrackCtx"><i class="timeline_icon"></i>Show track<span class="ctx-check">✓</span></li>
+	<li data-tags="ship-map" data-group="focus" data-action="showTargetcardCtx" data-kind="ship"><i class="directions_boat_icon"></i>Ship card</li>
+	<li data-tags="plane-map" data-group="focus" data-action="showTargetcardCtx" data-kind="plane"><i class="directions_boat_icon"></i>Plane card</li>
+	<li data-tags="ctx-map" data-group="tracks" data-action="toggleAllTracks"><i class="timeline_icon"></i>All tracks<span class="ctx-check">✓</span></li>
+	<li class="noandroid ctx-noalltracks" data-tags="ctx-map" data-group="tracks" data-action="startBoxSelect"><i class="highlight_alt_icon"></i>Show tracks in place</li>
+	<li class="ctx-selectedtracks" data-tags="ctx-map" data-group="tracks" data-action="deleteAllTracks"><i class="remove_circle_outline_icon"></i>Clear tracks</li>
+	<li class="ctx-removealltracks" data-tags="ctx-map" data-group="tracks" data-action="toggleTrackCutoff"><i class="timer_icon"></i><span id="ctx_trackcutoff">Tracks from now</span><span class="ctx-check">✓</span></li>
+					<li data-tags="ship" data-group="vessel" data-action="showVesselDetailCtx"><i class="dns_icon"></i>Vessel database entry</li>
+	<li class="noandroid" data-tags="ship" data-group="vessel" data-action="showNMEACtx"><i class="mail_icon"></i>Last message</li>
+	<li class="ctx-realtime" data-tags="ship" data-group="vessel" data-action="openRealtimeForMMSICtx"><i class="comment_icon"></i>Track NMEA</li>
+	<li data-tags="ship ctx-replay-ship" data-group="vessel" data-action="copyTextCtx"><i class="content_copy_icon noandroid"></i>Copy MMSI</li>
+	<li data-tags="plane" data-group="vessel" data-action="copyTextICAO"><i class="content_copy_icon noandroid"></i>Copy ICAO</li>
+	<li data-tags="ship ctx-replay-ship" data-group="vessel" data-action="copyCoordinatesCtx"><i class="content_copy_icon noandroid"></i>Copy coordinates</li>
+	<li data-tags="ship" data-group="lookup" data-action="openAISCatcherSiteCtx"><i class="public_icon"></i>Community map</li>
+	<li class="noandroid" data-tags="ship" data-group="lookup" data-action="openGoogleSearchCtx"><i class="search_icon"></i>Google</li>
+	<li class="noandroid" data-tags="plane" data-group="lookup" data-action="openGoogleSearchCtx" data-icao="1"><i class="search_icon"></i>Google</li>
+	<li class="noandroid" data-tags="ship" data-group="lookup" data-action="openVesselFinderCtx"><i class="public_icon"></i>VesselFinder</li>
+	<li class="noandroid" data-tags="ship" data-group="lookup" data-action="openAISHubCtx"><i class="public_icon"></i>AISHub</li>
+	<li data-tags="ctx-targetcard" data-group="card" data-action="toggleShipcardStyle"><i class="view_list_icon"></i>Tabbed layout<span class="ctx-check">✓</span></li>
+	<li data-tags="ctx-targetcard" data-group="card" data-action="toggleTargetcardPin" id="ctx_targetcard_pin"><i class="push_pin_icon ctx-pin"></i>Pin card position<span class="ctx-check">✓</span></li>
+	<li data-tags="ctx-map" data-group="display" data-action="toggleLabel"><i class="label_icon"></i>Ship labels<span class="ctx-check">✓</span></li>
+	<li data-tags="ctx-map" data-group="display" data-action="toggleRange"><i class="signal_cellular_alt_icon"></i>Station range<span class="ctx-check">✓</span></li>
+	<li data-tags="ctx-map" data-group="display" data-action="toggleTicker"><i class="feed_icon"></i>Event ticker<span class="ctx-check">✓</span></li>
+	<li data-tags="ctx-map" data-group="display" data-action="toggleAttribution"><i class="info_icon"></i>Map attribution<span class="ctx-check">✓</span></li>
+	<li class="ctx-replay" data-tags="ctx-map ctx-replay-map" data-group="tools" data-action="toggleReplaycard"><i class="play_circle_icon"></i>Replay<span class="ctx-check">✓</span></li>
+	<li data-tags="ctx-map" data-group="tools" data-action="toggleMeasurecard"><i class="straighten_icon"></i>Measure<span class="ctx-check">✓</span></li>
+	<li data-tags="ctx-map" data-group="tools" data-action="toggleCommunityPane"><i class="public_icon"></i>Community pane<span class="ctx-check">✓</span></li>
+	<li data-tags="ctx-map" data-group="tools" data-action="toggleKioskMode"><i class="jamboard_kiosk_icon"></i>Kiosk mode<span class="ctx-check">✓</span></li>
+	<li data-tags="ctx-map" data-group="tools" data-action="ToggleFireworks"><i class="explosion_icon"></i>Fireworks<span class="ctx-check">✓</span></li>
+	<li data-tags="ctx-charts" data-group="charts" data-action="toggleGraphVisibility" data-graph="signal"><i class="timeline_icon"></i>Signal level graphs<span class="ctx-check">✓</span></li>
+	<li data-tags="ctx-charts" data-group="charts" data-action="toggleGraphVisibility" data-graph="ppm"><i class="timeline_icon"></i>Frequency shift graphs<span class="ctx-check">✓</span></li>
+	<li data-tags="settings" data-group="app" data-action="openSettings"><i class="build_icon"></i>Settings...</li>
+	<li class="noandroid" data-tags="settings ctx-replay-map" data-group="app" data-action="toggleDarkMode"><i class="brightness_4_icon"></i>Dark mode<span class="ctx-check">✓</span></li>
+	<li class="noandroid" data-tags="settings ctx-replay-map" data-group="app" data-action="toggleScreenSize"><i class="fullscreen_icon"></i>Full screen<span class="ctx-check">✓</span></li>
+	<li data-tags="settings" data-group="app" data-action="showReceiverDialog" id="ctx_receiver"><i class="radio_icon"></i><span id="ctx_receiver_label">Receiver…</span></li>
+	<li data-tags="settings" data-group="app" data-action="toggleInfoPanel"><i class="info_icon"></i>About AIS-catcher</li>
+</ul>

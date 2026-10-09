@@ -1,0 +1,6 @@
+/* The about tab's page. */
+
+.aboutpage {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+}

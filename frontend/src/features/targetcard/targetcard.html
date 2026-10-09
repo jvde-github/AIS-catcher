@@ -1,0 +1,103 @@
+<aside id="targetcard" class="mapcard mapcard-target card-width card-max"
+	data-on-contextmenu="targetcardContextMenu">
+	<header id="targetcard_header" class="mapcard-header">
+		<span data-action="toggleTargetcardSize" id="targetcard_header_flag" class="mapcard-flag"></span>
+		<span data-action="toggleTargetcardSize" id="targetcard_header_title" class="mapcard-title"></span>
+		<span class=""><i id="targetcard_drag_handle"
+				class="mapcard-header-icon drag_indicator_icon draggable draggable-hide-if-not-active"></i></span>
+		<span><i data-action="toggleTargetcardSize" id="targetcard_minmax_button"
+				class="card-minmax mapcard-header-icon keyboard_arrow_up_icon"></i></span>
+		<span><i data-action="targetcardContextMenu"
+				class="mapcard-header-icon more_vert_icon"></i></span>
+		<span><i data-action="showTargetcardClose"
+				class="mapcard-header-icon close_icon"></i></span>
+	</header>
+
+	<div id="targetcard_content" class="mapcard-content">
+
+		<div id="targetcard_common" data-context-type="ship"></div>
+
+		<div id="shiptype_popover" class="card-popover" style="display: none;">
+			<div><span>Type:</span><span id="shiptype_code">-</span></div>
+			<div><span id="shiptype_desc">-</span></div>
+		</div>
+		<div id="tech_popover" class="card-popover" style="display: none;">
+			<div><span>RAIM:</span><span id="tech_raim">-</span></div>
+			<div><span>DTE:</span><span id="tech_dte">-</span></div>
+			<div><span>Mode:</span><span id="tech_assigned">-</span></div>
+			<div><span>Display:</span><span id="tech_display">-</span></div>
+			<div><span>DSC:</span><span id="tech_dsc">-</span></div>
+			<div><span>Band:</span><span id="tech_band">-</span></div>
+			<div><span>MSG22:</span><span id="tech_msg22">-</span></div>
+			<div><span>Off-Pos:</span><span id="tech_off_position">-</span></div>
+			<div><span>Maneuver:</span><span id="tech_maneuver">-</span></div>
+			<div><span>Vendor:</span><span id="tech_vendor">-</span></div>
+			<div><span>Model:</span><span id="tech_model">-</span></div>
+			<div><span>Serial:</span><span id="tech_serial">-</span></div>
+		</div>
+		<div id="targetcard_plane_rows"></div>
+	<div id="targetcard_slot_ais">
+	<div id="targetcard_source_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
+			data-section="source" data-context-type="ship"><span>AIS source</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_up_icon"></i></span></div>
+		<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only">
+			<div><span>RSSI</span><span id="targetcard_level">-</span></div>
+			<div><span>Drift</span><span id="targetcard_ppm">-</span></div>
+			<div><span>Repeated</span><span id="targetcard_repeated">-</span></div>
+		</div>
+
+		<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only">
+			<div><span>Last signal</span><span id="targetcard_last_signal"></span></div>
+			<div><span>Count</span><span id="targetcard_count">-</span></div>
+			<div><span>Channels</span><span id="targetcard_channels">-</span></div>
+		</div>
+
+		<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only">
+			<div><span>Receiver</span><span id="targetcard_last_group"></span></div>
+			<div><span>Sources</span><span id="targetcard_sources">-</span></div>
+			<div><span>Msg type</span><span id="targetcard_msgtypes">-</span></div>
+		</div>
+
+		<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only">
+			<div><span>In Range</span><span id="targetcard_received_stations"></span></div>
+			<div><span>Bearing</span><span id="targetcard_bearing">-</span></div>
+			<div><span>Distance</span><span id="targetcard_distance">-</span></div>
+		</div>
+	</div>
+	</div>
+
+<footer id="targetcard_footer" class="mapcard-footer card-max-only">
+		<div id="targetcard_message_option" title="View binary messages"
+			data-action="showBinaryMessageDialogCard" data-context-type="ship" class="noandroid"><i
+				class="mail_icon"></i><span>Messages</span>
+		</div>
+		<div id="targetcard_realtime_option" title="Track NMEA messages for this vessel"
+			data-action="openRealtimeForMMSICard" data-context-type="ship"><i
+				class="comment_icon"></i><span>Track NMEA</span>
+		</div>
+		<div id="targetcard_track_option" title="Track of current vessel" data-context-type="ship"
+			data-action="toggleTrackCard"><i id="targetcard_track_icon" class="timeline_icon"></i><span
+				id="targetcard_track">Track</span></div>
+		<div id="targetcard_follow_option" title="Keep the map centred on this vessel"
+			data-action="toggleFollowCard" data-context-type="ship"><i
+				class="push_pin_icon"></i><span id="targetcard_follow">Follow</span>
+		</div>
+		<div title="Look up on the community site" data-action="openAISCatcherSiteCard"
+			data-context-type="ship" class="noandroid"><i
+				class="info_icon"></i><span>Community</span></div>
+
+		<div title="Search on FlightAware" data-action="openFlightAwareCard"
+			data-context-type="plane">
+			<i class="search_icon"></i><span>FlightAware</span>
+		</div>
+
+		<div title="Search on PlaneSpotters" data-action="openPlaneSpottersCard"
+			data-context-type="plane">
+			<i class="search_icon"></i><span>PlaneSpotters</span>
+		</div>
+		<div title="Search on ADS-B Exchange" data-action="openADSBExchangeCard"
+			data-context-type="plane">
+			<i class="search_icon"></i><span>ADS-B Exchange</span>
+		</div>
+
+	</footer>
+</aside>

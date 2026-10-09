@@ -1,0 +1,95 @@
+/* The plots tab: the mode tabs, the compare sources, the grid of graphs. */
+
+.plots-tabs {
+    margin: 4px 25px 0;
+}
+
+#plots .compare-panel {
+    display: none;
+}
+
+#plots.compare-mode .compare-panel {
+    display: block;
+}
+
+#plots.compare-mode .graph-panel:not(.compare-panel) {
+    display: none;
+}
+
+.chart-sources {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 18px;
+    margin: 14px 25px 0;
+    color: var(--color-text-muted);
+    font-size: var(--fs-sm);
+}
+
+.chart-sources label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chart-sources select {
+    background: var(--color-surface-raised);
+    color: var(--color-text);
+    border: 1px solid var(--color-field-border);
+    border-radius: var(--radius-md);
+    padding: 4px 8px;
+    font-size: var(--fs-sm);
+    cursor: pointer;
+    transition: border-color var(--dur-fast) ease;
+}
+
+@media (hover: hover) {
+    .chart-sources select:hover {
+        border-color: var(--color-accent);
+    }
+}
+
+.graphtab {
+    padding: 15px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    column-gap: 15px;
+    row-gap: 15px;
+    margin: 10px;
+}
+
+@media only screen and (max-width: 2250px) {
+    .graphtab {
+        grid-template-columns: 1fr 1fr 1fr;
+        padding: 5px;
+    }
+}
+
+@media only screen and (max-width: 1500px) {
+    .graphtab {
+        grid-template-columns: 1fr 1fr;
+        padding: 5px;
+    }
+}
+
+@media only screen and (max-width: 800px) {
+    .graphtab {
+        grid-template-columns: 1fr;
+        padding: 0px;
+    }
+}
+
+.graph-panel {
+    padding: 10px;
+    overflow: auto;
+    background-color: var(--color-surface);
+    margin: 0px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: none;
+}
+
+.graph-panel>canvas {
+    width: 100%;
+    height: 100%;
+}

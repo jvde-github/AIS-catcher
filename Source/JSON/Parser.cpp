@@ -607,14 +607,18 @@ namespace JSON
 		while (is_match(TokenType::String))
 		{
 			int idx = search();
-			if (idx < 0 && !skipUnknownKeys)
+			if (preserveUnknownKeys && (idx < 0 || tokenString() != AIS::KeyMap[idx][dict].p))
+				idx = pool->extraKey(tokenString());
+			if (idx < 0 && !skipUnknownKeys && !preserveUnknownKeys)
 				error_parser("\"" + tokenString() + "\" is not an allowed \"key\"");
+			if (preserveUnknownKeys && (*o)[idx])
+				error_parser("duplicate object key");
 
 			next();
 			must_match(TokenType::Colon, "expected \':\'");
 			next();
 
-			if (idx < 0)
+			if (idx < 0 && !preserveUnknownKeys)
 				skip_value();
 			else
 				o->Add(idx, parse_value(pool));

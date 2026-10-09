@@ -1,0 +1,232 @@
+<div class="tabcontent addscrollbar" id="stat" style="display: none;">
+	<div class="stat-tab">
+		<div class="stat-panel stat-panel-page">
+			<header>System</header>
+			<section class="noandroid">
+				<div><span>Station</span><span id="stat_station"></span></div>
+				<div title="feeding aiscatcher.org"><span>Feeding Hub</span><span id="stat_sharing"></span>
+				</div>
+			</section>
+			<section class="noandroid">
+				<div><span>OS</span><span id="stat_os"></span></div>
+				<div><span>Hardware</span><span id="stat_hardware"></span></div>
+				<div title="refresh rate of web viewer"><span>Refresh</span><span
+						id="stat_update_time"></span></div>
+				<div title="number of TCP clients to web viewer"><span>Connections</span><span
+						id="stat_tcp_clients"></span></div>
+			</section>
+			<section class="noandroid" id="stat_devices"></section>
+			<section class="noandroid">
+				<div><span>Version</span><span id="stat_build_describe"></span></div>
+				<div><span>Build date</span><span id="stat_build_date"></span></div>
+				<div><span>Memory</span><span id="stat_memory"></span></div>
+				<div><span>Track history</span><span id="stat_track"></span></div>
+			</section>
+
+			<section>
+				<div><span>Running time</span><span id="stat_run_time"></span></div>
+				<div><span>Message rate</span><span id="stat_msg_rate"></span></div>
+				<div><span></span><span id="stat_msg_min_rate"></span></div>
+			</section>
+
+		</div>
+		<div class="stat-panel">
+			<header>Data Throughput</header>
+
+			<section>
+				<div><span>Bytes received</span><span id="stat_received"></span></div>
+			</section>
+
+			<div id="output_stats"></div>
+		</div>
+
+
+		<div class="stat-panel">
+			<header>This Session</header>
+
+			<section>
+				<div><span>Total messages</span><span id="stat_session_count"></span></div>
+				<div class="stat-error-row" role="button" tabindex="0" title="Show error details"><span>Errors</span><span class="device-value" id="stat_session_error_flagged"></span></div>
+				<div><span>Vessels seen</span><span id="stat_session_vessel_count"></span></div>
+				<div><span>Max Distance</span><span id="stat_session_dist"></span></div>
+			</section>
+			<section>
+				<div><span>Channel A</span><span id="stat_session_channel0"></span></div>
+				<div><span>Channel B</span><span id="stat_session_channel1"></span></div>
+				<div><span>Channel C</span><span id="stat_session_channel2"></span></div>
+				<div><span>Channel D</span><span id="stat_session_channel3"></span></div>
+			</section>
+			<section>
+				<div title="Msg 1, 2 3"><span>Class A position</span><span id="stat_session_msg123"></span>
+				</div>
+				<div title="Msg 5"><span>Class A static</span><span id="stat_session_msg5"></span></div>
+				<div title="Msg 18"><span>Class B position</span><span id="stat_session_msg18"></span></div>
+				<div title="Msg 19"><span>Class B extended</span><span id="stat_session_msg19"></span></div>
+				<div title="Msg 24"><span>Class B static</span><span id="stat_session_msg24"></span></div>
+			</section>
+			<section>
+				<div title="Msg 6. 8"><span>Binary</span><span id="stat_session_msg68"></span></div>
+				<div title="Msg 4"><span>Base station</span><span id="stat_session_msg4"></span></div>
+				<div title="Msg 9"><span>SAR aircraft</span><span id="stat_session_msg9"></span></div>
+				<div title="Msg 12, 14"><span>Safety related</span><span id="stat_session_msg1214"></span>
+				</div>
+				<div title="Msg 21"><span>Aid-to-Navigation</span><span id="stat_session_msg21"></span>
+				</div>
+				<div title="Msg 27"><span>Long range</span><span id="stat_session_msg27"></span></div>
+				<div title="Msg 7, 10, 11, 13. 15, 16, 17, 20, 22, 23, 25, 26"><span>Other</span><span
+						id="stat_session_msgother"></span></div>
+			</section>
+		</div>
+
+		<div class="stat-panel">
+			<header>Total Messages</header>
+
+			<section>
+				<div><span>Total messages</span><span id="stat_total_count"></span></div>
+				<div class="stat-error-row" role="button" tabindex="0" title="Show error details"><span>Errors</span><span class="device-value" id="stat_total_error_flagged"></span></div>
+				<div><span>Vessels seen</span><span id="stat_total_vessel_count"></span></div>
+				<div><span>Max Distance</span><span id="stat_total_dist"></span></div>
+			</section>
+			<section>
+				<div><span>Channel A</span><span id="stat_total_channel0"></span></div>
+				<div><span>Channel B</span><span id="stat_total_channel1"></span></div>
+				<div><span>Channel C</span><span id="stat_total_channel2"></span></div>
+				<div><span>Channel D</span><span id="stat_total_channel3"></span></div>
+			</section>
+			<section>
+				<div title="Msg 1, 2 3"><span>Class A position</span><span id="stat_total_msg123"></span>
+				</div>
+				<div title="Msg 5"><span>Class A static</span><span id="stat_total_msg5"></span></div>
+				<div title="Msg 18"><span>Class B position</span><span id="stat_total_msg18"></span></div>
+				<div title="Msg 19"><span>Class B extended</span><span id="stat_total_msg19"></span></div>
+				<div title="Msg 24"><span>Class B static</span><span id="stat_total_msg24"></span></div>
+			</section>
+			<section>
+				<div title="Msg 6. 8"><span>Binary</span><span id="stat_total_msg68"></span></div>
+				<div title="Msg 4"><span>Base station</span><span id="stat_total_msg4"></span></div>
+				<div title="Msg 9"><span>SAR aircraft</span><span id="stat_total_msg9"></span></div>
+				<div title="Msg 12, 14"><span>Safety related</span><span id="stat_total_msg1214"></span>
+				</div>
+				<div title="Msg 21"><span>Aid-to-Navigation</span><span id="stat_total_msg21"></span></div>
+				<div title="Msg 27"><span>Long range</span><span id="stat_total_msg27"></span></div>
+				<div title="Msg 7, 10, 11, 13. 15, 16, 17, 20, 22, 23, 25, 26"><span>Other</span><span
+						id="stat_total_msgother"></span></div>
+			</section>
+		</div>
+
+		<div class="stat-panel">
+			<header>Previous Minute</header>
+			<section>
+				<div><span>Total messages</span><span id="stat_last_minute_count"></span></div>
+				<div class="stat-error-row" role="button" tabindex="0" title="Show error details"><span>Errors</span><span class="device-value" id="stat_last_minute_error_flagged"></span></div>
+				<div><span>Vessels seen</span><span id="stat_last_minute_vessel_count"></span></div>
+				<div><span>Max Distance</span><span id="stat_last_minute_dist"></span></div>
+			</section>
+			<section>
+				<div><span>Channel A</span><span id="stat_last_minute_channel0"></span></div>
+				<div><span>Channel B</span><span id="stat_last_minute_channel1"></span></div>
+				<div><span>Channel C</span><span id="stat_last_minute_channel2"></span></div>
+				<div><span>Channel D</span><span id="stat_last_minute_channel3"></span></div>
+			</section>
+			<section>
+				<div title="Msg 1, 2 3"><span>Class A position</span><span
+						id="stat_last_minute_msg123"></span></div>
+				<div title="Msg 5"><span>Class A static</span><span id="stat_last_minute_msg5"></span></div>
+				<div title="Msg 18"><span>Class B position</span><span id="stat_last_minute_msg18"></span>
+				</div>
+				<div title="Msg 19"><span>Class B extended</span><span id="stat_last_minute_msg19"></span>
+				</div>
+				<div title="Msg 24"><span>Class B static</span><span id="stat_last_minute_msg24"></span>
+				</div>
+			</section>
+			<section>
+				<div title="Msg 6. 8"><span>Binary</span><span id="stat_last_minute_msg68"></span></div>
+				<div title="Msg 4"><span>Base station</span><span id="stat_last_minute_msg4"></span></div>
+				<div title="Msg 9"><span>SAR aircraft</span><span id="stat_last_minute_msg9"></span></div>
+				<div title="Msg 12, 14"><span>Safety related</span><span
+						id="stat_last_minute_msg1214"></span></div>
+				<div title="Msg 21"><span>Aid-to-Navigation</span><span id="stat_last_minute_msg21"></span>
+				</div>
+				<div title="Msg 27"><span>Long range</span><span id="stat_last_minute_msg27"></span></div>
+				<div title="Msg 7, 10, 11, 13. 15, 16, 17, 20, 22, 23, 25, 26"><span>Other</span><span
+						id="stat_last_minute_msgother"></span></div>
+			</section>
+		</div>
+
+		<div class="stat-panel">
+			<header>Previous Hour</header>
+			<section>
+				<div><span>Total messages</span><span id="stat_last_hour_count"></span></div>
+				<div class="stat-error-row" role="button" tabindex="0" title="Show error details"><span>Errors</span><span class="device-value" id="stat_last_hour_error_flagged"></span></div>
+				<div><span>Vessels seen</span><span id="stat_last_hour_vessel_count"></span></div>
+				<div><span>Max Distance</span><span id="stat_last_hour_dist"></span></div>
+			</section>
+			<section>
+				<div><span>Channel A</span><span id="stat_last_hour_channel0"></span></div>
+				<div><span>Channel B</span><span id="stat_last_hour_channel1"></span></div>
+				<div><span>Channel C</span><span id="stat_last_hour_channel2"></span></div>
+				<div><span>Channel D</span><span id="stat_last_hour_channel3"></span></div>
+			</section>
+			<section>
+				<div title="Msg 1, 2 3"><span>Class A position</span><span
+						id="stat_last_hour_msg123"></span></div>
+				<div title="Msg 5"><span>Class A static</span><span id="stat_last_hour_msg5"></span></div>
+				<div title="Msg 18"><span>Class B position</span><span id="stat_last_hour_msg18"></span>
+				</div>
+				<div title="Msg 19"><span>Class B extended</span><span id="stat_last_hour_msg19"></span>
+				</div>
+				<div title="Msg 24"><span>Class B static</span><span id="stat_last_hour_msg24"></span></div>
+			</section>
+			<section>
+				<div title="Msg 6. 8"><span>Binary</span><span id="stat_last_hour_msg68"></span></div>
+				<div title="Msg 4"><span>Base station</span><span id="stat_last_hour_msg4"></span></div>
+				<div title="Msg 9"><span>SAR aircraft</span><span id="stat_last_hour_msg9"></span></div>
+				<div title="Msg 12, 14"><span>Safety related</span><span id="stat_last_hour_msg1214"></span>
+				</div>
+				<div title="Msg 21"><span>Aid-to-Navigation</span><span id="stat_last_hour_msg21"></span>
+				</div>
+				<div title="Msg 27"><span>Long range</span><span id="stat_last_hour_msg27"></span></div>
+				<div title="Msg 7, 10, 11, 13. 15, 16, 17, 20, 22, 23, 25, 26"><span>Other</span><span
+						id="stat_last_hour_msgother"></span></div>
+			</section>
+		</div>
+
+		<div class="stat-panel">
+			<header>Previous Day</header>
+			<section>
+				<div><span>Total messages</span><span id="stat_last_day_count"></span></div>
+				<div class="stat-error-row" role="button" tabindex="0" title="Show error details"><span>Errors</span><span class="device-value" id="stat_last_day_error_flagged"></span></div>
+				<div><span>Vessels seen</span><span id="stat_last_day_vessel_count"></span></div>
+				<div><span>Max Distance</span><span id="stat_last_day_dist"></span></div>
+			</section>
+			<section>
+				<div><span>Channel A</span><span id="stat_last_day_channel0"></span></div>
+				<div><span>Channel B</span><span id="stat_last_day_channel1"></span></div>
+				<div><span>Channel C</span><span id="stat_last_day_channel2"></span></div>
+				<div><span>Channel D</span><span id="stat_last_day_channel3"></span></div>
+			</section>
+			<section>
+				<div title="Msg 1, 2 3"><span>Class A position</span><span id="stat_last_day_msg123"></span>
+				</div>
+				<div title="Msg 5"><span>Class A static</span><span id="stat_last_day_msg5"></span></div>
+				<div title="Msg 18"><span>Class B position</span><span id="stat_last_day_msg18"></span>
+				</div>
+				<div title="Msg 19"><span>Class B extended</span><span id="stat_last_day_msg19"></span>
+				</div>
+				<div title="Msg 24"><span>Class B static</span><span id="stat_last_day_msg24"></span></div>
+			</section>
+			<section>
+				<div title="Msg 6. 8"><span>Binary</span><span id="stat_last_day_msg68"></span></div>
+				<div title="Msg 4"><span>Base station</span><span id="stat_last_day_msg4"></span></div>
+				<div title="Msg 9"><span>SAR aircraft</span><span id="stat_last_day_msg9"></span></div>
+				<div title="Msg 12, 14"><span>Safety related</span><span id="stat_last_day_msg1214"></span>
+				</div>
+				<div title="Msg 21"><span>Aid-to-Navigation</span><span id="stat_last_day_msg21"></span>
+				</div>
+				<div title="Msg 27"><span>Long range</span><span id="stat_last_day_msg27"></span></div>
+				<div title="Msg 7, 10, 11, 13. 15, 16, 17, 20, 22, 23, 25, 26"><span>Other</span><span
+						id="stat_last_day_msgother"></span></div>
+			</section>
+		</div>
+	</div>
+</div>

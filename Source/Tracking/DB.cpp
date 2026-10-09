@@ -24,7 +24,6 @@
 
 #include "Geodesy.h"
 #include "Logger.h"
-#include "Region.h"
 
 #include <fstream>
 #include <unordered_map>
@@ -188,8 +187,6 @@ std::string DB::getShipJSON(int mmsi) {
   return vesselJSON((uint32_t)mmsi, [](JSON::Writer &, const Ship &, int) {});
 }
 
-// Cross-index read: visit membership supplies observed ships; destination
-// membership supplies expected ships. Only the ten newest rows are retained.
 // What lies around a point: the nearest ships, stations and places in one
 // answer. A vessel, a receiver and a harbour all ask the same question about
 // their own position, and the ship walk is the expensive one, so it is asked
@@ -345,17 +342,19 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
     const auto *entry = index->find(row.key);
     if (!entry)
       continue;
+    const auto *parent = index->find(entry->parent);
     w.beginObject()
         .kv("runtime_id", entry->id)
         .kv("label", entry->metadata->name)
         .kv("place_type", entry->metadata->type)
         .kv("code", entry->metadata->code)
-        .kv("parent_code", entry->metadata->parentCode)
+        .kv("part_of", entry->metadata->partOf)
+        .kv("parent_name", parent ? parent->metadata->name : std::string())
         .kv("has_geometry", entry->polygons && !entry->polygons->empty())
         .kv("range", row.range)
         .kv("bearing", row.bearing);
     if (entry->metadata->type == "port")
-      w.kv("country", entry->metadata->code.substr(0, 2));
+      w.kv("country", entry->metadata->country);
     w.endObject();
   }
   w.endArray();
@@ -369,7 +368,10 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
 
 std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
                                   const std::string &code,
-                                  const std::string &tab, unsigned hours) {
+                                  const std::string &tab, unsigned hours,
+                                  unsigned offset, unsigned limit) {
+  if (!limit || limit > 100 || offset > 10000000)
+    return "{\"error\":\"Invalid place pagination\"}";
   std::lock_guard<std::mutex> lock(mtx);
   const auto &index = place_markers.index();
   const auto *place =
@@ -383,7 +385,7 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
   // definition, a base station on the quay and a ship merely steaming through
   // are all noise. A custom area is usually a stretch of water rather than a
   // destination, where passing through is the whole of what happens.
-  const bool berthing = !place || place->metadata->type != "custom";
+  const bool berthing = !place || place->metadata->requiresStop();
   auto vessel = [](const Ship &s) {
     return s.shipclass < CLASS_PLANE; // planes, stations, aids, EPIRBs are not
   };
@@ -409,26 +411,35 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
     float range; // nautical miles, closest only; negative elsewhere
   };
   std::vector<Row> rows;
-  rows.reserve(11);
+  const size_t keep = (size_t)offset + limit;
+  rows.reserve(std::min<size_t>(keep + 1, 101));
+  const auto newer = [&](const Row &a, const Row &b) {
+    if (a.stamp != b.stamp) return a.stamp > b.stamp;
+    if (ships[a.slot].mmsi != ships[b.slot].mmsi)
+      return ships[a.slot].mmsi < ships[b.slot].mmsi;
+    // Repeat visits can share a timestamp; their retained slot breaks ties.
+    return a.visit < b.visit;
+  };
+  // Keep only the prefix needed for this page, with the oldest row on top.
   auto add = [&](int kind, uint32_t slot, const VisitTracker::Visit *visit,
                  std::time_t stamp) {
     ++counts[kind];
     if (kind != selected)
       return;
     rows.push_back({slot, visit, stamp, -1.0f});
-    std::sort(rows.begin(), rows.end(), [&](const Row &a, const Row &b) {
-      return a.stamp != b.stamp ? a.stamp > b.stamp
-                                : ships[a.slot].mmsi < ships[b.slot].mmsi;
-    });
-    if (rows.size() > 10)
+    std::push_heap(rows.begin(), rows.end(), newer);
+    if (rows.size() > keep) {
+      std::pop_heap(rows.begin(), rows.end(), newer);
       rows.pop_back();
+    }
   };
   if (place)
     visits.forEach(place->id, [&](uint32_t slot) {
       const VisitTracker::Visit *inside = nullptr, *left = nullptr,
                                 *arrived = nullptr;
       for (const auto &v : visits.record(slot).visits) {
-        if (v.empty() || v.id != place->id)
+        // a stay that is over and was never a call is not history
+        if (v.empty() || v.id != place->id || !v.shown())
           continue;
         const auto entry = v.entryTime(), exit = v.exitTime();
         if (v.inside() && (!inside || entry > inside->entryTime()))
@@ -440,8 +451,10 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
         if (v.inside() && entry && entry >= cutoff &&
             (!arrived || entry > arrived->entryTime()))
           arrived = &v;
-        if (v.inside() || ((entry || exit) && MAX(entry, exit) >= cutoff))
-          add(3, slot, &v, entry ? entry : exit);
+        // An interval remains useful when its ends are observation bounds.
+        const auto stamp = MAX(v.entered, v.exited);
+        if (v.inside() || (stamp && stamp >= cutoff))
+          add(3, slot, &v, v.entered ? v.entered : v.exited);
       }
       // present means heard lately, the same rule the export applies
       if (inside && now - ships[slot].last_signal <= VISIT_SILENT &&
@@ -466,15 +479,18 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
   // Closest: what lies around the place, whether or not it has an outline. For
   // a drawn place the ships already inside it are left out, so this answers
   // "what is just outside" - the question an outline drawn too tight raises.
-  // The reach is however far it takes to find ten, because a quiet inland quay
-  // with nothing within five miles would otherwise have nothing to say at all.
+  // The full set within the horizon supplies the count; retain the nearest
+  // prefix needed by the requested page.
   // Ships only, wherever the place is: a buoy or a mast is near by
   // construction, never news.
   if (place && isValidCoord((float)place->lat, (float)place->lon)) {
     static const float HORIZON_NM = 99.0f;
-    float reach = HORIZON_NM; // closes onto the tenth once ten are in hand
     std::vector<Row> nearest;
-    nearest.reserve(11);
+    nearest.reserve(std::min<size_t>(keep + 1, 101));
+    const auto nearer = [&](const Row &a, const Row &b) {
+      return a.range != b.range ? a.range < b.range
+                                : ships[a.slot].mmsi < ships[b.slot].mmsi;
+    };
     forEachRecentUnlocked(now, false, 0, [&](int ptr, const Ship &ship, long) {
       if (!placedOnGlobe(ship.lat, ship.lon) || !vessel(ship))
         return;
@@ -482,25 +498,26 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
       int bearing;
       Util::Geodesy::distanceBearing((float)place->lat, (float)place->lon,
                                      ship.lat, ship.lon, range, bearing);
-      if (!(range <= reach))
+      if (!(range <= HORIZON_NM))
         return;
       for (const auto &v : visits.record(ptr).visits)
         if (!v.empty() && v.id == place->id && v.inside())
           return; // inside is its own tab
+      ++counts[4];
+      if (selected != 4) return;
       nearest.push_back({(uint32_t)ptr, nullptr, ship.last_signal, range});
-      std::sort(nearest.begin(), nearest.end(), [&](const Row &a, const Row &b) {
-        return a.range != b.range ? a.range < b.range
-                                  : ships[a.slot].mmsi < ships[b.slot].mmsi;
-      });
-      if (nearest.size() > 10) {
+      std::push_heap(nearest.begin(), nearest.end(), nearer);
+      if (nearest.size() > keep) {
+        std::pop_heap(nearest.begin(), nearest.end(), nearer);
         nearest.pop_back();
-        reach = nearest.back().range; // nothing farther can join now
       }
     });
-    counts[4] = nearest.size();
-    if (selected == 4)
-      rows = nearest;
+    if (selected == 4) {
+      std::sort_heap(nearest.begin(), nearest.end(), nearer);
+      rows = std::move(nearest);
+    }
   }
+  if (selected != 4) std::sort_heap(rows.begin(), rows.end(), newer);
   std::string out;
   JSON::Writer w(out);
   w.beginObject()
@@ -508,12 +525,15 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
       .kv("tab", tab)
       .kv("has_geometry", place && place->polygons && !place->polygons->empty())
       .kv("total", (unsigned long long)counts[selected])
+      .kv("offset", offset)
+      .kv("limit", limit)
       .key("counts")
       .beginObject();
   for (int i = 0; i < ntabs; ++i)
     w.kv(tabs[i], (unsigned long long)counts[i]);
   w.endObject().key("ships").beginArray();
-  for (const auto &row : rows) {
+  for (size_t i = std::min<size_t>(offset, rows.size()); i < rows.size(); ++i) {
+    const auto &row = rows[i];
     const auto &s = ships[row.slot];
     w.beginObject()
         .kv("mmsi", s.mmsi)
@@ -541,6 +561,14 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
         w.kv("exited", v.exitTime());
       else
         w.kv_null("exited");
+      // An unobserved crossing is told as a bound beside the exact fields. A
+      // pending crossing is not a settled bound.
+      if (!v.entryTime() && v.entered && !(v.pending() && v.inside()))
+        w.kv("entered_before", v.entered);
+      if (!v.exitTime() && v.exited && !v.inside() && !v.pending())
+        w.kv("exited_after", v.exited);
+      if (v.inside() && !v.pending())
+        w.kv("observed_until", visits.record(row.slot).last);
       w.kv("inside", v.inside()).kv("pending", v.pending());
     }
     w.endObject();
@@ -1176,7 +1204,6 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship) {
 
   if (positionUpdated) {
     ship.setApproximate(type == 27);
-    ship.region = Region::find(ship.lat, ship.lon);
 
     if (ship.mmsi == own_mmsi) {
       updateStation(ship.lat, ship.lon);
@@ -1393,6 +1420,20 @@ std::string DB::getEventsJSON(uint64_t since, int level) {
   return content;
 }
 
+std::string DB::getEventHistoryJSON(uint64_t before, int level, int limit) {
+  std::lock_guard<std::mutex> lock(mtx);
+  content.clear();
+  {
+    JSON::Writer w(content, 8192);
+    w.beginObject()
+        .kv("time", (long long)time(nullptr))
+        .kv("seq", (long long)events.sequence());
+    events.writeBefore(w, before, level, limit);
+    w.endObject();
+  }
+  return content;
+}
+
 std::string DB::getObjectJSON(const std::string &key) {
   std::lock_guard<std::mutex> lock(mtx);
   content.clear();
@@ -1400,8 +1441,14 @@ std::string DB::getObjectJSON(const std::string &key) {
     JSON::Writer w(content, 4096);
     std::time_t now = time(nullptr);
     if (!key.empty() && key[0] == 's') {
+      const int id = std::atoi(key.c_str() + 1);
+      // a station riding a vessel is where that vessel is, as the map draws it
+      const StationRegistry::Station *s = stations.find(id);
+      const int ptr = s && s->mmsi ? ships.find(s->mmsi) : SHIP_NIL;
+      const bool riding = ptr != SHIP_NIL && isValidCoord(ships[ptr].lat, ships[ptr].lon);
       w.beginObject().kv("time", now);
-      stations.writeOne(w, std::atoi(key.c_str() + 1));
+      stations.writeOne(w, id, riding, riding ? ships[ptr].lat : LAT_UNDEFINED, riding ? ships[ptr].lon : LON_UNDEFINED,
+                        station_heard ? station_heard(id) : 0);
       w.endObject();
     } else
       binary.writeJSON(w, now, 0, std::strtoull(key.c_str(), nullptr, 16), 0);
@@ -1423,7 +1470,7 @@ std::string DB::getMapObjectsJSON(uint64_t since) {
         .key("objects")
         .beginArray();
     binary.writeMarkerRows(w, since);
-    stations.writeRows(w, since);
+    stations.writeRows(w, since, station_heard);
     place_markers.writeRows(w, since);
     w.endArray().key("removed").beginArray();
     binary.writeRemoved(w, since);
@@ -1436,8 +1483,8 @@ std::string DB::getMapObjectsJSON(uint64_t since) {
 
 // a recycled slot may still own the evicted ship's track, so every create
 // is paired with a path wipe
-// a record from elsewhere replaces what the slot holds; distance, region and
-// the relationships follow from its fields. Caller holds mtx.
+// a record from elsewhere replaces what the slot holds; distance and the
+// relationships follow from its fields. Caller holds mtx.
 void DB::install(int ptr, const Ship &s) {
   Ship &ship = ships[ptr];
   ship = s;
@@ -1865,7 +1912,7 @@ void DB::updatePlaceEvents(int ptr, std::time_t now) {
                 place_markers.index().get(),
                 [&](const VisitTracker::Visit &visit, bool entering,
                     std::time_t observed) {
-                  if (visit.place->type != "port")
+                  if (visit.place->type != "port" && visit.place->type != "water")
                     return;
                   EventRing::Event e;
                   e.kind =
@@ -1923,14 +1970,11 @@ void DB::updateStation(float lat, float lon) {
   full_refresh_at = time(nullptr);
 }
 
-// Caller holds mtx. What follows from a ship's position: distance, region and
-// the places it is in.
+// Caller holds mtx. What follows from a ship's position: distance and the
+// places it is in.
 void DB::locate(int ptr) {
   Ship &ship = ships[ptr];
   updateDistance(ship);
-  ship.region = isValidCoord(ship.lat, ship.lon)
-                    ? Region::find(ship.lat, ship.lon)
-                    : Region::NONE;
   refreshPlaceMembership(ptr);
 }
 

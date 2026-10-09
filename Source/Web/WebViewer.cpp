@@ -460,7 +460,7 @@ void WebViewer::attachEngine(AIS::Model &model, Connection<JSON::JSON> &json,
   endAttach();
 }
 
-void WebViewer::tick(std::time_t now) {
+void WebViewer::tickMinute(std::time_t now) {
   std::lock_guard<std::recursive_mutex> lock(state_mtx);
 
   for (auto &s : states)
@@ -579,11 +579,11 @@ std::string WebViewer::buildStatJSON(ReceiverTracker *s) {
   w.kv("sharing", comm_feed != nullptr);
   w.kv("sharing_uuid", comm_feed != nullptr && comm_feed->hasUUID());
   w.kv("engine_running", engine_attached);
-  std::string link = "https://www.aiscatcher.org";
+  std::string link = "https://www.aiscatcher.org/livemap";
   if (settings.tracking.latlon_share &&
       settings.tracking.lat != LAT_UNDEFINED &&
       settings.tracking.lon != LON_UNDEFINED)
-    link += "/?&zoom=10&lat=" + std::to_string(settings.tracking.lat) +
+    link += "?zoom=10&lat=" + std::to_string(settings.tracking.lat) +
             "&lon=" + std::to_string(settings.tracking.lon);
   w.kv("sharing_link", link);
 
@@ -759,8 +759,17 @@ const WebViewer::Route WebViewer::routes[] = {
        return s->getObjectJSON(IO::HTTPRequest::queryParam(a, "key"));
      },
      true},
+    // `before` selects the history page: everything the rings still hold, not
+    // just what the live feed's horizon reaches
     {"/api/events.json", nullptr, "application/json",
      [](WebViewer *, ReceiverTracker *s, const std::string &a) {
+       const std::string before = IO::HTTPRequest::queryParam(a, "before");
+       if (!before.empty()) {
+         long long limit = queryInt(a, "limit");
+         return s->getEventHistoryJSON(
+             strtoull(before.c_str(), nullptr, 10), queryInt(a, "level"),
+             limit > 0 ? (int)limit : 25);
+       }
        return s->getEventsJSON(
            strtoull(IO::HTTPRequest::queryParam(a, "since").c_str(), nullptr,
                     10),
@@ -1096,10 +1105,13 @@ std::string WebViewer::nearbyJSON(ReceiverTracker *s, const std::string &query) 
 
 std::string WebViewer::placeShipsJSON(ReceiverTracker *s, const std::string &query) {
   const auto param = [&](const char *key) { return IO::HTTPRequest::queryParam(query, key); };
-  const auto idText = param("id"), hoursText = param("hours");
+  const auto idText = param("id"), hoursText = param("hours"),
+             offsetText = param("offset"), limitText = param("limit");
   auto digits = [](const std::string &v) { return !v.empty() && v.find_first_not_of("0123456789") == std::string::npos; };
   if ((!idText.empty() && (!digits(idText) || idText.size() > 10 || std::strtoull(idText.c_str(), nullptr, 10) >= UINT32_MAX)) ||
-      (!hoursText.empty() && (!digits(hoursText) || hoursText.size() > 4)))
+      (!hoursText.empty() && (!digits(hoursText) || hoursText.size() > 4)) ||
+      (!offsetText.empty() && (!digits(offsetText) || offsetText.size() > 8)) ||
+      (!limitText.empty() && (!digits(limitText) || limitText.size() > 3)))
     return "{\"error\":\"Invalid place query\"}";
   auto code = param("code");
   if (code.size() > 8) return "{\"error\":\"Invalid port code\"}";
@@ -1110,5 +1122,7 @@ std::string WebViewer::placeShipsJSON(ReceiverTracker *s, const std::string &que
   }
   return s->database().getPlaceShipsJSON(idText.empty() ? UINT32_MAX : std::strtoul(idText.c_str(), nullptr, 10),
       param("version"), code, param("tab").empty() ? "inside" : param("tab"),
-      hoursText.empty() ? 24 : std::strtoul(hoursText.c_str(), nullptr, 10));
+      hoursText.empty() ? 24 : std::strtoul(hoursText.c_str(), nullptr, 10),
+      offsetText.empty() ? 0 : std::strtoul(offsetText.c_str(), nullptr, 10),
+      limitText.empty() ? 10 : std::strtoul(limitText.c_str(), nullptr, 10));
 }

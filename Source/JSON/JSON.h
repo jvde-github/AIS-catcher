@@ -212,6 +212,7 @@ namespace JSON
 		std::deque<JSON> objects;
 		std::deque<std::string> strings;
 		std::deque<std::vector<Value>> arrays;
+		std::vector<std::string> extraKeys; // unknown keys, kept by a document reader that asks
 
 		size_t objectCount = 0;
 		size_t stringCount = 0;
@@ -226,6 +227,15 @@ namespace JSON
 		}
 
 	public:
+		int extraKey(const std::string &name)
+		{
+			for (size_t i = 0; i < extraKeys.size(); ++i)
+				if (extraKeys[i] == name) return -1 - (int)i;
+			extraKeys.push_back(name);
+			return -(int)extraKeys.size();
+		}
+		const std::string &extraName(int key) const { return extraKeys.at(-1 - key); }
+
 		JSON *addObject()
 		{
 			auto &obj = acquire(objects, objectCount);
@@ -259,6 +269,7 @@ namespace JSON
 			objectCount = 0;
 			stringCount = 0;
 			arrayCount = 0;
+			extraKeys.clear();
 		}
 	};
 

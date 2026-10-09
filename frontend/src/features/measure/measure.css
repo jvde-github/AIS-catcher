@@ -1,0 +1,7 @@
+/* The measure card under a top ticker on a phone. */
+
+@media only screen and (max-width: 500px) {
+    body.ticker-open:not(.ticker-bottom) #measurecard {
+        top: 0;
+    }
+}

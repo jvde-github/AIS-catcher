@@ -53,11 +53,11 @@ public:
     };
     if (snapshot)
       for (const auto &old : snapshot->entries) {
-        if (old.id == UINT32_MAX)
+        if (old.id == UINT32_MAX || !old.redirect.empty())
           continue;
         const auto *replacement = next ? next->find(old.id) : nullptr;
         const bool same =
-            replacement && replacement->metadata->uuid == old.metadata->uuid;
+            replacement && replacement->redirect.empty() && replacement->metadata->uuid == old.metadata->uuid;
         if (!same)
           removed.emplace_back(old.id, ++sequence);
         if (!same || old.polygons != replacement->polygons)
@@ -68,7 +68,7 @@ public:
     sequences.resize(next ? next->entries.size() : 0);
     if (next)
       for (const auto &entry : next->entries) {
-        if (entry.id == UINT32_MAX)
+        if (entry.id == UINT32_MAX || !entry.redirect.empty())
           continue;
         const auto *old = snapshot ? snapshot->find(entry.id) : nullptr;
         const bool same = old && old->metadata->uuid == entry.metadata->uuid;
@@ -79,7 +79,8 @@ public:
       }
     removed.erase(std::remove_if(removed.begin(), removed.end(),
                                  [&](const std::pair<uint32_t, uint64_t> &r) {
-                                   return next && next->find(r.first);
+                                   const auto *entry = next ? next->find(r.first) : nullptr;
+                                   return entry && entry->redirect.empty();
                                  }),
                   removed.end());
     if (sequence != start)
@@ -91,7 +92,7 @@ public:
   void writeRows(JSON::Writer &w, uint64_t since) const {
     if (snapshot && (!since || since < latest))
       for (const auto &entry : snapshot->entries) {
-        if (entry.id == UINT32_MAX)
+        if (entry.id == UINT32_MAX || !entry.redirect.empty())
           continue;
         const auto sequence = sequences[entry.id];
         if (!since || sequence > since)

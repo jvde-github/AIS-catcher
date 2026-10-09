@@ -3,18 +3,22 @@
 
 import { settings } from '../core/state.js';
 import { fromLonLat, toLonLat } from 'ol/proj';
+import { map } from '../map.js';
+import { config } from '../core/config.js';
+import { register } from '../actions.js';
 
 const COMMUNITY_NS = 'aiscatcher-mapsync';
 const COMMUNITY_ORIGIN = 'https://www.aiscatcher.org';
 const COMMUNITY_EPS_LATLON = 1e-4;
 const COMMUNITY_EPS_ZOOM = 0.01;
 
-let deps = null; // { config, getMap }
 let communityPopup = null;
 let communityLastApplied = null;
 
-export function init(d) {
-    deps = d;
+export function init() {
+    register({
+        toggleCommunityPane: () => toggleCommunityPane(),
+    });
 
     window.addEventListener('message', (ev) => {
         if (!communityPopup || ev.source !== communityPopup) return;
@@ -24,7 +28,7 @@ export function init(d) {
         const v = { lat: +m.lat, lon: +m.lon, zoom: +m.zoom };
         if (!viewSane(v)) return;
         if (viewNear(v, communityLastApplied)) return;
-        const view = deps.getMap().getView();
+        const view = map.getView();
         view.setCenter(fromLonLat([v.lon, v.lat]));
         view.setZoom(v.zoom);
         communityLastApplied = v;
@@ -56,7 +60,7 @@ export function updateSharingState(sharing, sharing_uuid, engine_running) {
 }
 
 function sharingState() {
-    const f = liveSharing || deps.config.features || {};
+    const f = liveSharing || config.features || {};
     if (f.engine_running === false) return { label: "Receiver stopped", cls: "status-off", state: "stopped" };
     if (!f.sharing)        return { label: "No", cls: "status-bad", state: "off" };
     if (!f.sharing_uuid)   return { label: "Yes (anonymous)", cls: "status-warn", state: "anon" };
@@ -90,7 +94,7 @@ export function toggleCommunityPane() {
         communityPopup = null;
         return;
     }
-    const view = deps.getMap().getView();
+    const view = map.getView();
     const [lon, lat] = toLonLat(view.getCenter());
     const zoom = view.getZoom();
     const url = `${COMMUNITY_ORIGIN}/livemap?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}&zoom=${zoom.toFixed(2)}`;

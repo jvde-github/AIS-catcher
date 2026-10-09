@@ -1,7 +1,7 @@
-import * as shared from '../../shared/core/filter.js';
+import * as shared from '@aiscatcher/core/filter.js';
 import { settings } from './state.js';
 
-export { MOVING_KNOTS, BUCKETS, CLASSES, STATUSES, moving, bucketFor, bucketOf } from '../../shared/core/filter.js';
+export { MOVING_KNOTS, BUCKETS, CLASSES, STATUSES, moving, bucketFor, bucketOf } from '@aiscatcher/core/filter.js';
 
 let clock = 0;
 export function setClock(serverTime) {
@@ -20,3 +20,10 @@ export const {
     get, set, LISTS, isHidden, toggle, setAll, reset, passesAppearance,
     isActive, describe, shipPasses,
 } = instance;
+
+// whether a vessel passes the filter; the verdict stays on the entry until the
+// vessel's data or the filter changes (both clear entry.show)
+export function visible(entry) {
+    if (entry.show === undefined) entry.show = shipPasses(entry.raw);
+    return entry.show;
+}

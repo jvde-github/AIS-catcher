@@ -7,17 +7,16 @@ import Stroke from 'ol/style/Stroke';
 import Fill from 'ol/style/Fill';
 import CircleStyle from 'ol/style/Circle';
 import { fromLonLat } from 'ol/proj';
+import { extraVector } from '../map.js';
+import { config } from '../core/config.js';
+import { register } from '../actions.js';
+import { showDialog, showNotification } from '../dialog.js';
 
-let deps = null; // { config, extraVector, showDialog, showNotification }
 let evtSource = null;
 let active = false;
 let connected = false;
 let consecutiveErrors = 0;
 const MAX_CONSECUTIVE_ERRORS = 5;
-
-export function init(d) {
-    deps = d;
-}
 
 export function isRunning() {
     return active;
@@ -30,14 +29,14 @@ export function toggle() {
 
 export function start() {
     if (active) return;
-    if (!deps.config.features.realtime) {
-        deps.showDialog("Error", "Cannot run Firework Mode. Please ensure that AIS-catcher is running with -N REALTIME on.");
+    if (!config.features.realtime) {
+        showDialog("Error", "Cannot run Firework Mode. Please ensure that AIS-catcher is running with -N REALTIME on.");
         return;
     }
     active = true;
     connected = false;
     consecutiveErrors = 0;
-    deps.showNotification("Fireworks Mode started");
+    showNotification("Fireworks Mode started");
     openStream();
 }
 
@@ -70,7 +69,7 @@ function openStream() {
         consecutiveErrors++;
         if (!connected || consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
             stop();
-            deps.showDialog("Error", "Problem running Firework Mode, cannot reach server. Please ensure that AIS-catcher is running with -N REALTIME on.");
+            showDialog("Error", "Problem running Firework Mode, cannot reach server. Please ensure that AIS-catcher is running with -N REALTIME on.");
         }
     };
 
@@ -92,7 +91,7 @@ export function stop() {
     if (!active) return;
     active = false;
     closeStream();
-    deps.showNotification("Fireworks Mode stopped");
+    showNotification("Fireworks Mode stopped");
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -125,9 +124,13 @@ function addMarker(lat, lon, ch) {
     });
 
     marker.setStyle(style);
-    deps.extraVector.addFeature(marker);
+    extraVector.addFeature(marker);
 
     setTimeout(function () {
-        deps.extraVector.removeFeature(marker);
+        extraVector.removeFeature(marker);
     }, 1000);
 }
+
+register({
+    ToggleFireworks: () => toggle(),
+});

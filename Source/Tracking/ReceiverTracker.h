@@ -157,6 +157,9 @@ public:
   std::string getEventsJSON(uint64_t since, int level) {
     return ships.getEventsJSON(since, level);
   }
+  std::string getEventHistoryJSON(uint64_t before, int level, int limit) {
+    return ships.getEventHistoryJSON(before, level, limit);
+  }
   std::string getKML() { return ships.getKML(); }
   std::string getGeoJSON() { return ships.getGeoJSON(); }
   std::string getAllPathJSON() { return ships.getAllPathJSON(); }

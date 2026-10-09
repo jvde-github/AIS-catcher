@@ -238,7 +238,7 @@ public:
   // for good: unbinds, writes the statistics file and joins the server thread
   void shutdown();
   // periodic maintenance; handlers gate on the timestamp and must not block
-  void tick(std::time_t now);
+  void tickMinute(std::time_t now);
   // Managed mode reads its settings from the hub's config file: the
   // "control"."viewer" section of `configJSON`. prepare builds the next
   // configuration beside the current one, so a section that fails to parse

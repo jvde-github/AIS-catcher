@@ -1,0 +1,5 @@
+/* The tooltip that follows the pointer on the map. */
+
+#hover-info div div {
+    text-align: left;
+}

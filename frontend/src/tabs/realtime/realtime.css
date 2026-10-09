@@ -1,0 +1,355 @@
+/* The realtime tab: its tabs, its filter bar and chips, its controls, the
+   message table and the NMEA cells. */
+
+.pulsating {
+    animation: pulse-streaming 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-streaming {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+}
+
+#realtime_content {
+    background: var(--color-surface-raised);
+    color: var(--color-text);
+}
+
+.realtime-viewer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.realtime-tabs {
+    display: flex;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-4) 0 var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+    align-items: center;
+}
+
+.realtime-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    background: var(--color-surface-raised);
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text);
+    font-size: var(--fs-base);
+}
+
+.realtime-filter-bar i.filter_list_icon {
+    font-size: var(--fs-lg);
+    color: var(--color-text-muted);
+}
+
+.realtime-filter-bar .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1;
+}
+
+/* .realtime-filter-input joins .input / .select in components.css; the add and
+   clear buttons are .btn. All three sit on the control surface. */
+.realtime-filter-input,
+.realtime-filter-add,
+.realtime-filter-clear {
+    background-color: var(--color-control);
+    color: var(--color-text-strong);
+}
+
+/* primary affordance of the row: accent-bordered even at rest */
+.realtime-filter-add {
+    border-color: var(--color-accent);
+}
+
+.realtime-filter-row {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+}
+
+.realtime-filter-row .realtime-filter-input:nth-child(2) {
+    flex: 1;
+}
+
+.realtime-filter-active {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+}
+
+.realtime-filter-active .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1;
+}
+
+.realtime-filter-none,
+.realtime-filter-hint {
+    margin-top: var(--space-4);
+    color: var(--color-text-muted);
+    font-size: var(--fs-md);
+}
+
+.realtime-control-btn span.realtime-filter-count {
+    display: none;
+    position: absolute;
+    top: 3px;
+    right: 1px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    border-radius: var(--radius-full);
+    font-size: var(--fs-2xs);
+    font-weight: var(--fw-semibold);
+}
+
+.realtime-control-btn.active span.realtime-filter-count {
+    display: flex;
+    background: var(--color-accent);
+    color: var(--color-surface);
+}
+
+.filter-chip-kind {
+    color: var(--color-text-muted);
+    font-size: var(--fs-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: var(--space-1) var(--space-2);
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+    font-size: var(--fs-md);
+}
+
+/* one inline icon-button idiom for the chip remove and table clear */
+.filter-chip button,
+.realtime-clear-btn {
+    padding: 0;
+    margin-left: 3px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity var(--dur-med) ease;
+    color: var(--color-alert);
+    width: 20px;
+    height: 20px;
+}
+
+.filter-chip button {
+    color: var(--color-text-muted);
+}
+
+@media (hover: hover) {
+    .filter-chip button:hover {
+        color: var(--color-text-strong);
+    }
+}
+
+.filter-chip button i {
+    font-size: var(--fs-sm);
+}
+
+.realtime-spacer {
+    flex: 1;
+}
+
+@media (hover: hover) {
+    .realtime-clear-btn:hover {
+        opacity: 0.7;
+    }
+}
+
+.realtime-clear-btn i {
+    font-size: var(--fs-base);
+}
+
+/* chrome from .btn-quiet; a fixed square with its own hover accent */
+.realtime-control-btn {
+    position: relative;
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--dur-med) ease, color var(--dur-med) ease;
+    width: 40px;
+    height: 40px;
+}
+
+@media (hover: hover) {
+    .realtime-control-btn:hover {
+        background: var(--color-menu-hover);
+        color: var(--color-accent);
+    }
+}
+
+.realtime-control-btn span {
+    font-size: var(--fs-2xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.realtime-background-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: var(--space-4);
+    font-size: var(--fs-base);
+    cursor: pointer;
+    color: var(--color-text);
+    user-select: none;
+}
+
+.realtime-background-toggle input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+}
+
+@media (hover: hover) {
+    .realtime-background-toggle:hover {
+        color: var(--color-accent);
+    }
+}
+
+.realtime-panel {
+    flex: 1;
+    overflow: auto;
+    padding: var(--space-4);
+}
+
+.signal-table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-base);
+}
+
+/* typography comes from .col-header in components.css */
+.signal-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--color-surface-raised);
+    padding: var(--space-3);
+    text-align: left;
+    border-bottom: 2px solid var(--color-border-strong);
+}
+
+.signal-table tbody td {
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text);
+    white-space: nowrap;
+}
+
+@media (hover: hover) {
+    .signal-table tbody tr:hover {
+        background: var(--color-menu-hover);
+    }
+}
+
+.signal-table tbody td a {
+    color: var(--color-accent);
+    text-decoration: none;
+}
+
+@media (hover: hover) {
+    .signal-table tbody td a:hover {
+        text-decoration: underline;
+    }
+}
+
+.nmea-cell-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.nmea-decoder-icon {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    background: transparent;
+    transition: background var(--dur-med) ease;
+    font-size: var(--fs-base);
+}
+
+@media (hover: hover) {
+    .nmea-decoder-icon:hover {
+        background: var(--color-menu-hover);
+    }
+}
+
+.nmea-decoder-icon i {
+    font-size: var(--fs-base);
+}
+
+.nmea-text {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    white-space: nowrap;
+}
+
+.channel-indicator {
+    display: flex;
+    gap: 2px;
+}
+
+.channel-box {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background-color: var(--color-off);
+    color: transparent;
+    text-align: center;
+    line-height: 16px;
+    font-size: var(--fs-2xs);
+    font-weight: var(--fw-bold);
+    border-radius: var(--radius-sm);
+}
+
+.channel-box.active {
+    background-color: var(--color-on);
+    color: var(--color-accent-ink);
+}
+
+.nmea-mmsi {
+    display: inline-block;
+    padding: 2px 6px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: var(--fs-sm);
+}

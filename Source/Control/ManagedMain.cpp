@@ -111,6 +111,9 @@ static void runEngine(ControlCore &core, ControlServer &server,
   EngineSessionGuard session(core);
   Engine engine;
   Config c(engine);
+  // stdout is the journal or the container log here: silent unless "screen"
+  // in the config says otherwise, where the command line prints NMEA by default
+  engine.screen.setScreen("0");
 
   try {
     engine.receivers.back()->getDeviceManager().refreshDevices();

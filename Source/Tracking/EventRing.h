@@ -124,6 +124,9 @@ public:
 
   uint64_t sequence() const { return next_seq; }
 
+  // the most one history page returns
+  enum { MAX_PAGE = 100 };
+
   // the events after `since` of at least `level`, newest last; the horizon runs
   // from an event's onset, longer per level: a repeat counts on an event, it
   // does not make old news current
@@ -138,6 +141,64 @@ public:
               [](const Event *a, const Event *b) { return a->seq < b->seq; });
     if ((int)picked.size() > LIMIT)
       picked.erase(picked.begin(), picked.end() - LIMIT);
+    writeList(w, picked);
+  }
+
+  // One page of the events before `before`, of at least `level`, newest first;
+  // a `before` of zero starts at the newest. No horizon: this reaches everything
+  // the rings still hold. Paging runs on `seq`, so events arriving mid-read
+  // never shift a page. `oldest` is the next `before`; `more` says whether
+  // asking again is worth it.
+  void writeBefore(JSON::Writer &w, uint64_t before, int level,
+                   int limit) const {
+    if (before == 0)
+      before = UINT64_MAX;
+    std::vector<const Event *> picked;
+    size_t retained = 0;
+    for (int l = MAX(0, MIN(level, LEVELS - 1)); l < LEVELS; l++) {
+      retained += rings[l].size();
+      for (const Event &e : rings[l])
+        if (e.seq < before)
+          picked.push_back(&e);
+    }
+    std::sort(picked.begin(), picked.end(),
+              [](const Event *a, const Event *b) { return a->seq > b->seq; });
+
+    limit = MAX(1, MIN(limit, (int)MAX_PAGE));
+    const bool more = (int)picked.size() > limit;
+    if (more)
+      picked.resize(limit);
+
+    w.kv("retained", (long long)retained).kv("more", more);
+    if (!picked.empty())
+      w.kv("oldest", (long long)picked.back()->seq);
+    writeList(w, picked);
+  }
+
+private:
+  enum { COLLAPSE_S = 4 * 3600, HORIZON_S = 600, LIMIT = 50 };
+
+  static const char *kindName(Kind k) {
+    switch (k) {
+    case SAFETY:
+      return "safety";
+    case DESTINATION:
+      return "destination";
+    case STATUS:
+      return "status";
+    case DRAUGHT:
+      return "draught";
+    case PLACE_ENTER:
+      return "place_enter";
+    case PLACE_EXIT:
+      return "place_exit";
+    }
+    return "safety";
+  }
+
+  // the array both readers end with, so a history row and a ticker row are the
+  // same object
+  void writeList(JSON::Writer &w, const std::vector<const Event *> &picked) const {
     w.key("events").beginArray();
     for (const Event *e : picked) {
       w.beginObject()
@@ -146,9 +207,8 @@ public:
           .kv("first", (long long)e->first)
           .kv("format", "ticker-v1")
           .kv("level", (int)e->level)
+          .kv("kind", kindName(e->kind))
           .kv("mmsi", (long long)e->from);
-      if (e->kind == PLACE_ENTER || e->kind == PLACE_EXIT)
-        w.kv("kind", e->kind == PLACE_ENTER ? "place_enter" : "place_exit");
       if (isValidCoord(e->lat, e->lon))
         w.kv("lat", e->lat).kv("lon", e->lon);
       if (e->count > 1)
@@ -158,8 +218,6 @@ public:
     w.endArray();
   }
 
-private:
-  enum { COLLAPSE_S = 4 * 3600, HORIZON_S = 600, LIMIT = 50 };
   static size_t capacity(int level) {
     static const size_t c[LEVELS] = {128, 64, 64};
     return c[level];

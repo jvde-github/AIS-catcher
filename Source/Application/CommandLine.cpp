@@ -238,6 +238,18 @@ static bool isOption(const std::string &s)
 	return s.length() >= 2 && s[0] == '-' && std::isalpha((unsigned char)s[1]);
 }
 
+static bool isNumber(const std::string &s)
+{
+	if (s.empty())
+		return false;
+
+	for (char c : s)
+		if (!std::isdigit((unsigned char)c))
+			return false;
+
+	return true;
+}
+
 // Assign the positional arguments to keys, then hand any remaining key/value
 // pairs to parseSettings. The caller has already asserted the argument count.
 static void setDeviceArgs(Setting &dev, std::initializer_list<AIS::Keys> keys, char *argv[], int ptr, int count, int argc)
@@ -347,14 +359,19 @@ static void parseCLI(int argc, char *argv[], Engine &engine, Config &c, int &cb)
 			if (engine.servers.size() == 0)
 				engine.servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
 
-			if (count % 2 == 1)
 			{
-				// -N port creates a new server assuming the previous one is complete (i.e. has a port set)
-				if (engine.servers.back()->isPortSet())
-					engine.servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
-				engine.servers.back()->SetKey(AIS::KEY_SETTING_PORT, arg1);
+				int port = isNumber(arg1) ? 1 : 0;
+				Assert((count - port) % 2 == 0, param, "usage: -N [port] [key value]..., with a value that has spaces in quotes, e.g. -N 8100 station \"my station\".");
+
+				if (port)
+				{
+					// -N port creates a new server assuming the previous one is complete (i.e. has a port set)
+					if (engine.servers.back()->isPortSet())
+						engine.servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
+					engine.servers.back()->SetKey(AIS::KEY_SETTING_PORT, arg1);
+				}
+				parseSettings(*engine.servers.back(), argv, ptr + port, argc);
 			}
-			parseSettings(*engine.servers.back(), argv, ptr + (count % 2), argc);
 #else
 			throw std::runtime_error("WebViewer support not compiled in.");
 #endif

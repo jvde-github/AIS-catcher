@@ -11,8 +11,8 @@ debian/changelog
 debian/debhelper-build-stamp
 debian/files
 debian/ais-catcher/
-frontend/src/node_modules/
-frontend/shared/node_modules/
+frontend/node_modules/
+frontend/**/node_modules/
 frontend/dist/
 
 __pycache__/

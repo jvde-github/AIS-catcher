@@ -1,12 +1,13 @@
-# Marine regions
+# Marine waters
 
-Which sea, gulf, strait or lake a vessel is in. One `.geojson` file per region;
-`scripts/regions/build_regions.py` turns the directory into
-`Source/Tracking/RegionTree.cpp` (a ~150 KB lookup table) and
-`frontend/src/core/regionNames.js` (the names the ship card shows).
-`Region::find(lat, lon)` answers in one binary search.
+Which sea, gulf, strait or lake a vessel is in. One `.geojson` file per water;
+`scripts/waters/build_waters.py <out dir>` turns the directory into place files
+of type `water` (one per water, the kind in `attributes.area_subtype`) for a
+place catalogue: the hub's `data/places`, or any viewer's `places` directory.
+The receiver then tracks a water like any other place: a vessel's current water
+is the smallest one it is in, and crossing from one into the next is an event.
 
-## Adding or fixing a region
+## Adding or fixing a water
 
 1. Draw the polygon (geojson.io, QGIS, by hand) in WGS84 lat/lon. It need not be
    precise: only the edge where it meets another region is followed closely.
@@ -19,21 +20,21 @@ Which sea, gulf, strait or lake a vessel is in. One `.geojson` file per region;
      CC0/CC-BY; say which).
    - `min_cell` (optional, degrees) - how sharp its edge against other regions
      is. Defaults: seas 0.5, lakes/rivers/canals 1/32 (~3 km).
-3. From the repo root: `python3 scripts/regions/build_regions.py` (needs
+3. From the repo root: `python3 scripts/waters/build_waters.py <out dir>` (needs
    `pip install shapely`; a slightly self-intersecting polygon is repaired and
-   reported). Commit the geojson and both generated files.
+   reported). Commit the geojson here and the place files where they are used.
 
-## How the table is built
+## How the outlines are built
 
-The world is split into quadrants where a region's edge crosses the cell. A
-shoreline is followed only to 0.5 degrees (lakes 1/16), so a position well
-inland - a river or canal without a polygon - reads as no region rather than
-the nearest sea; where two regions meet, the edge is as sharp as the finest
-`min_cell` of the regions involved. A cell is assigned the **highest id** among
-the regions that cover at least 10% of it, so a specific waterway added later
-wins over the sea around it without editing the sea. That is why contributed
-regions start at 2000, and why a port that lies behind the coastline reads as
-no region until someone adds its waterway.
+The waters are simplified as one coverage. Where two overlap the smaller wins,
+so a strait or bay added later takes its water from the sea around it without
+the sea being edited. The shared edges are simplified once for both sides, so
+borders between seas stay consistent. Along a coast nothing competes, so an
+outline may run wider than the shoreline: onto land, never into a neighbour's
+water. The tolerance grows with the water's size, from about 2 km for a bay to
+60 km for an ocean, and an outline is coarsened further until it fits the
+catalogue's 2,000 vertices per place. Inland positions with no water drawn, a
+river or canal without a polygon, are in no water.
 
 ## Layout and ids
 

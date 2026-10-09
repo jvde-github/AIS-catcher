@@ -1,0 +1,6 @@
+/* The side table. */
+
+/* five columns rather than four: the viewer's table needs the wider panel */
+:root {
+    --size-panel-table: 430px;
+}

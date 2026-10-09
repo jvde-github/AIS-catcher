@@ -1,0 +1,29 @@
+{
+  "name": "@aiscatcher/map",
+  "version": "1.0.0",
+  "description": "AIS-catcher frontend, the map part: markers, hulls and tracks, map chrome, map objects, measuring, ports. Needs OpenLayers.",
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jvde-github/AIS-catcher.git",
+    "directory": "frontend/packages/map"
+  },
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./*": "./*"
+  },
+  "files": [
+    "*.js"
+  ],
+  "dependencies": {
+    "@aiscatcher/core": "1.0.0",
+    "@aiscatcher/ui": "1.0.0"
+  },
+  "peerDependencies": {
+    "ol": "10.9.0"
+  }
+}

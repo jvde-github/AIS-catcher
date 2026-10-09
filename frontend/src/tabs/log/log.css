@@ -1,0 +1,65 @@
+/* The log tab. */
+
+.log-viewer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.log-state-indicator {
+    padding: var(--space-2) var(--space-4);
+    color: var(--color-text-muted);
+    font-size: var(--fs-base);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.log-content-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-4);
+}
+
+.log-content {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--fs-base);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.log-entry {
+    display: flex;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+    align-items: flex-start;
+}
+
+.log-entry.info {
+    color: var(--color-text);
+}
+
+.log-entry.warning {
+    background-color: var(--color-log-warn);
+    color: var(--overlay-ink);
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+}
+
+.log-entry.error {
+    background-color: var(--color-log-error);
+    color: var(--overlay-ink);
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+}
+
+.log-entry.error .timestamp,
+.log-entry.warning .timestamp {
+    color: var(--color-log-ink);
+}
+
+.log-entry.info .timestamp {
+    color: var(--color-timestamp);
+}

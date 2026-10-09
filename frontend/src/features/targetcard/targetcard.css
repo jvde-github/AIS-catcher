@@ -1,0 +1,193 @@
+/* The vessel card and its summary tab. Imported by app.css after style.css. */
+/* Targetcard styling */
+
+.pinned {
+    /* glass edge over the blurred map; an inset ring, not a border, so pinning
+       cannot grow the box and push a full-height card off a small screen */
+    backdrop-filter: blur(10px);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.opacity-50 {
+    opacity: 0.5;
+}
+
+
+.message-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background-color: var(--color-alert);
+    color: var(--overlay-ink);
+    border-radius: var(--radius-circle);
+    min-width: 16px;
+    height: 16px;
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 2px;
+    box-sizing: border-box;
+    box-shadow: 0 1px 2px var(--color-shadow);
+    z-index: var(--z-map-label);
+    pointer-events: none;
+}
+
+@media (hover: hover) {
+}
+
+@media (hover: hover) {
+}
+
+@media (hover: hover) {
+}
+
+/* a row whose first field needs the room of two columns, so the field beside it
+   still lines up with the third column of the rows above and below */
+.row-wide-first>div:first-child { flex: 2; }
+
+
+
+/* Summary tab */
+.stat-tab {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: 25px;
+    row-gap: 25px;
+    max-width: min(calc(100% - 30px), 3000px);
+    margin: 0 auto;
+    margin-top: 10px;
+    justify-content: center;
+}
+
+@media only screen and (max-width: 2250px) {
+    .stat-tab {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        padding: 5px;
+    }
+}
+
+@media only screen and (max-width: 1500px) {
+    .stat-tab {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 5px;
+    }
+}
+
+@media only screen and (max-width: 750px) {
+    .stat-tab {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        padding: 0px;
+    }
+}
+
+.stat-panel-page {
+    max-width: 750px;
+    width: 100%;
+}
+
+.stat-panel {
+    margin: 0px;
+    background-color: var(--color-surface);
+    padding: 0px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: none;
+}
+
+#output_stats {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+@media only screen and (max-width: 750px) {
+    #output_stats {
+        max-height: none;
+        overflow-y: visible;
+    }
+}
+
+.stat-panel section {
+    padding: 10px;
+    margin: 0 auto;
+    font-size: var(--fs-base);
+}
+
+.stat-panel section div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+#stat_devices .device-row,
+.stat-error-row {
+    cursor: pointer;
+}
+
+#stat_devices .device-value,
+.stat-error-row .device-value {
+    position: relative;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 34px;
+}
+
+#stat_devices .device-value .info_icon,
+.stat-error-row .info_icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: var(--color-text-muted);
+}
+
+@media (hover: hover) {
+    #stat_devices .device-row:hover .info_icon,
+    .stat-error-row:hover .info_icon {
+        background-color: var(--color-text);
+    }
+}
+
+.stat-panel section div span:first-child {
+    text-align: right;
+    color: var(--color-text-muted);
+    padding: 5px 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-panel section div span:last-child {
+    text-align: left;
+    color: var(--color-text);
+    padding: 5px 20px;
+    /*font-weight: 550;*/
+    overflow-x: auto;
+    white-space: nowrap;
+    border-left: solid 1px var(--color-stat-divider);
+    scrollbar-width: thin;
+}
+
+.stat-panel section div span:last-child:empty:after {
+    content: "-";
+}
+
+.blue {
+    color: var(--color-secondary);
+}
+
+.green {
+    color: var(--color-success);
+}
+
+.red {
+    color: var(--color-danger);
+}
+
+.grey {
+    color: var(--color-text-muted);
+}
+
+.lightgrey {
+    color: var(--color-text-subtle);
+}

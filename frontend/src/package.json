@@ -1,25 +1,20 @@
 {
-  "name": "ais-catcher-lib",
+  "name": "@aiscatcher/viewer",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
-    "lint": "eslint script.js core tabs overlays features"
+    "build": "vite build"
   },
   "dependencies": {
-    "chart.js": "^4.5.1",
-    "chartjs-plugin-annotation": "^3.1.0",
+    "chart.js": "4.5.1",
+    "chartjs-plugin-annotation": "3.1.0",
     "flag-icons": "6.6.6",
-    "marked": "^17.0.5",
+    "marked": "17.0.6",
     "ol": "10.9.0",
-    "ol-mapbox-style": "^13.4.3",
-    "tabulator-tables": "6.4.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.0.0",
-    "eslint": "^9.0.0",
-    "globals": "^15.0.0",
-    "sharp": "^0.35.0",
-    "vite": "^5.0.0"
+    "ol-mapbox-style": "13.4.3",
+    "tabulator-tables": "6.4.0",
+    "@aiscatcher/core": "1.0.0",
+    "@aiscatcher/ui": "1.0.0",
+    "@aiscatcher/map": "1.0.0"
   }
 }

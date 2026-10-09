@@ -1,0 +1,64 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { setupDom } from './dom.js';
+setupDom('');
+const { createPortDialog, placeIdentity } = await import('../port-dialog.js');
+const { tableCoversMap } = await import('../side-table.js');
+const port = { code: 'NLRTM', label: 'Rotterdam', runtime_id: 7, place_version: 'v1' };
+const answer = { time: 1, total: 0, ships: [], counts: { inside: 12, left: 1234, arrived: 10222, visits: 34000, closest: 3, expected: 0 } };
+
+test('a host card takes the place, and opens the table later on the tab it names', async () => {
+    const urls = [], taken = [];
+    let later = null;
+    const open = createPortDialog({ fetchJSON: async url => { urls.push(url); return answer; }, openVessel() {},
+        openPlaceCard: (place, openTable) => { taken.push(place.code); later = openTable; return true; } });
+    await open([port]);
+    assert.deepEqual(taken, ['NLRTM']);
+    assert.deepEqual(urls, []);                                  // the card asks for its own counts; the table has not opened
+    assert.equal(document.getElementById('port-ships'), null);
+    await later('arrived');
+    assert.match(urls[0], /tab=arrived/);
+    assert.equal(document.querySelector('#port-ships .sc-tab[aria-selected=true]').dataset.placeTab, 'arrived');
+    await later('no-such-tab');                                  // an unknown tab falls back to the place's own first tab
+    assert.equal(document.querySelector('#port-ships .sc-tab[aria-selected=true]').dataset.placeTab, 'inside');
+});
+
+test('a host that declines leaves the click to the table', async () => {
+    const open = createPortDialog({ fetchJSON: async () => answer, openVessel() {}, openPlaceCard: () => false });
+    await open([port]);
+    assert.equal(document.querySelector('#port-ships-title').textContent, 'Rotterdam');
+});
+
+test('the capped preview shows each tab\'s count, written short', async () => {
+    const open = createPortDialog({ fetchJSON: async () => answer, openVessel() {}, placeListLimit: 5 });
+    await open([port]);
+    const counts = Object.fromEntries([...document.querySelectorAll('#port-ships [data-place-tab]')]
+        .map(b => [b.dataset.placeTab, b.querySelector('.place-tab-count').textContent.trim()]));
+    assert.deepEqual(counts, { inside: '12', left: '1.2K', arrived: '10.2K', visits: '34K', closest: '3', expected: '0' });
+    assert.equal(document.querySelector('#place-tab-arrived').title, '10,222 arrived');
+});
+
+test('a place is named the same on the card and in the table', () => {
+    assert.deepEqual(placeIdentity({ code: 'beanr', label: 'Antwerp' }),
+        { name: 'Antwerp', kind: 'Port', code: 'BEANR', country: 'BE', countryName: 'Belgium' });
+    assert.equal(placeIdentity({ place_type: 'custom', category: 'traffic_lane', label: 'Dover' }).kind, 'Traffic lane');
+    assert.equal(placeIdentity({ place_type: 'berth' }).name, 'Place');
+});
+
+test('the table covers the map at the panel stylesheet\'s width', () => {
+    assert.equal(tableCoversMap({ clientWidth: 750 }), true);
+    assert.equal(tableCoversMap({ clientWidth: 751 }), false);
+});
+
+test('a heading that links to its page says so with an arrow; plain text does not', async () => {
+    const linked = createPortDialog({ fetchJSON: async () => answer, openVessel() {}, placePageUrl: place => '/port/' + place.code });
+    await linked([port]);
+    const link = document.querySelector('#port-ships-title a');
+    assert.equal(link.getAttribute('href'), '/port/NLRTM');
+    assert.equal(link.querySelector('.place-panel-arrow').textContent, '↗');
+    assert.equal(link.querySelector('.place-panel-arrow').getAttribute('aria-hidden'), 'true');
+    const plain = createPortDialog({ fetchJSON: async () => answer, openVessel() {} });
+    await plain([port]);
+    assert.equal(document.querySelector('#port-ships-title').textContent, 'Rotterdam');
+    assert.equal(document.querySelector('#port-ships .place-panel-arrow'), null);
+});

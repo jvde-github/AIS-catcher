@@ -1,0 +1,262 @@
+/* chrome, focus and placeholder come from .input; only the glyph and the
+   compact sizing live here */
+.search-box {
+    width: 100%;
+    height: 38px;
+    padding: 5px 12px 5px 36px;
+    margin: 2px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 12px center;
+    background-size: 15px;
+    max-width: 500px;
+    font-size: var(--fs-md);
+}
+
+.ship-table-column-dropdown {
+    position: relative;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+/* chrome from .btn; compact sizing to match the search box beside it */
+.ship-table-columns-btn {
+    gap: 7px;
+    height: 38px;
+    padding: 0 12px;
+}
+
+@media (max-width: 700px) {
+    .ship-table-columns-btn span {
+        display: none;
+    }
+
+    .ship-table-columns-btn {
+        gap: 4px;
+        padding: 0 10px;
+    }
+}
+
+#shipTableFilterBtn {
+    margin-left: auto;
+}
+
+.search-container .search-box {
+    margin-right: 12px;
+}
+
+#shipTableFilterBtn.filter-on {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+}
+
+.ship-table-columns-btn .chevron {
+    color: var(--color-text-muted);
+}
+
+.ship-table-column-dropdown-menu {
+    display: none;
+    position: fixed;
+    background-color: var(--color-surface-raised);
+    color: var(--color-text);
+    font-size: var(--fs-md);
+    min-width: 220px;
+    border: 1px solid var(--color-menu-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    z-index: var(--z-panel);
+}
+
+/* typography comes from .col-header in components.css */
+.column-menu-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--color-menu-border);
+}
+
+.column-menu-list {
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 6px;
+}
+
+.ship-table-column-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+}
+
+@media (hover: hover) {
+    .ship-table-column-dropdown-item:hover {
+        background-color: var(--color-menu-hover);
+    }
+}
+
+.ship-table-column-dropdown-item input {
+    margin: 0;
+    width: 15px;
+    height: 15px;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+}
+
+.dark .tabulator .tabulator-footer {
+    background: var(--color-surface-alt);
+    color: var(--color-text);
+    border-top: 1px solid var(--color-border);
+}
+
+.dark .tabulator .tabulator-footer .tabulator-page,
+.dark .tabulator .tabulator-footer .tabulator-page-size {
+    background: var(--color-control);
+    color: var(--color-text);
+    border-color: var(--color-field-border);
+}
+
+.dark .tabulator .tabulator-footer .tabulator-page.active {
+    color: var(--color-highlight);
+}
+
+.dark .tabulator .tabulator-footer .tabulator-paginator>label {
+    color: var(--color-text);
+}
+
+.column-menu-footer {
+    border-top: 1px solid var(--color-menu-border);
+    padding: 8px;
+}
+
+/* chrome from .btn-quiet; full-width row inside the menu */
+.column-menu-reset {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    font-size: var(--fs-md);
+}
+
+@media (hover: hover) {
+    .column-menu-reset:hover {
+        background-color: var(--color-menu-hover);
+        color: var(--color-accent);
+    }
+}
+
+/* The ships tab's table. Imported by app.css after style.css. */
+/* Table styling */
+
+#shipTable {
+    max-height: calc(100vh - 135px);
+    max-width: 100vw;
+}
+
+.tabulator {
+    border-color: var(--color-border);
+}
+
+.tabulator .tabulator-cell {
+    border: none;
+    border-bottom: 1px solid var(--color-border);
+    padding: 6px 14px;
+    /* fixed rowHeight is 37px; line-height fills it so single-line content
+       is vertically centered (cells are inline-block, so text would otherwise
+       sit at the top) */
+    line-height: 24px;
+    font-size: var(--fs-sm);
+    vertical-align: middle;
+    color: var(--color-text);
+}
+
+/* keep inline icons (flags, ship-type markers) centered with the text */
+.tabulator .tabulator-cell img,
+.tabulator .tabulator-cell svg,
+.tabulator .tabulator-cell span {
+    vertical-align: middle;
+}
+
+.tabulator .tabulator-header {
+    border: none;
+}
+
+/* typography comes from .col-header in components.css */
+.tabulator .tabulator-header .tabulator-col {
+    background-color: var(--color-band-accent);
+    border: none;
+    padding: 8px 14px;
+    border-collapse: collapse;
+}
+
+@media (hover: hover) {
+    .tabulator .tabulator-header .tabulator-col.tabulator-sortable.tabulator-col-sorter-element:hover {
+        background-color: var(--color-band-accent);
+        background-image: linear-gradient(var(--color-hover), var(--color-hover));
+    }
+}
+
+.tabulator .tabulator-header .tabulator-col .tabulator-arrow {
+    border-top-color: var(--color-text-muted) !important;
+    border-bottom-color: var(--color-text-muted) !important;
+}
+
+.tabulator .tabulator-header .tabulator-col[aria-sort="ascending"] .tabulator-arrow,
+.tabulator .tabulator-header .tabulator-col[aria-sort="descending"] .tabulator-arrow {
+    border-top-color: var(--color-text) !important;
+    border-bottom-color: var(--color-text) !important;
+}
+
+@media (hover: hover) {
+    .tabulator-row:hover {
+        background-color: var(--color-selected) !important;
+    }
+}
+
+.tabulator-row-odd {
+    background-color: var(--color-surface);
+}
+
+.tabulator-row-even {
+    background-color: var(--color-surface-alt) !important;
+}
+
+.tablesection {
+    font-size: var(--fs-md);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    margin: 10px auto;
+    color: var(--color-text);
+    background-color: var(--color-surface);
+    width: fit-content;
+}
+
+.search-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding-left: 12px;
+    padding-right: 8px;
+    position: sticky;
+    left: 0;
+    box-sizing: border-box;
+    width: 100%;
+    overflow: visible;
+}
+
+.mytable {
+    height: auto;
+    width: 100%;
+    table-layout: fixed;
+    box-sizing: border-box;
+    border-collapse: collapse;
+}
+
+.mytable>tbody>tr>td {
+    padding: 5px 4px;
+}

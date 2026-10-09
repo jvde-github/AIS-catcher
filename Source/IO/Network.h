@@ -16,6 +16,7 @@
 */
 
 #pragma once
+#include <ctime>
 #include <list>
 #include <thread>
 #include <mutex>
@@ -198,6 +199,36 @@ namespace IO
 				stats.dropped++;
 			return r;
 		}
+	};
+
+	class HubStreamer : public OutputMessage
+	{
+		Protocol::TCP tcp;
+		Protocol::Hub hub;
+		Protocol::ProtocolBase *connection = nullptr;
+
+		static const int KEEPALIVE_S = 300;
+		std::mutex mtx;
+		std::time_t last_send = 0;
+
+		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
+		{
+			std::lock_guard<std::mutex> lock(mtx);
+
+			last_send = std::time(nullptr);
+			if (connection && connection->send(data, len) == 0 && len > 0)
+				stats.dropped++;
+		}
+
+	public:
+		HubStreamer();
+		~HubStreamer() { Stop(); }
+
+		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
+
+		void Start() override;
+		void Stop() override;
+		void tickSecond(std::time_t now);
 	};
 
 	class TCPlistenerStreamer : public OutputMessage, public IO::TCPServer

@@ -38,6 +38,7 @@
 #include "Ships.h"
 #include "SlotTable.h"
 #include "StaticStore.h"
+#include <functional>
 #include "StationRegistry.h"
 #include "VisitTracker.h"
 
@@ -228,10 +229,13 @@ public:
   // move a ship, count, or add a path point. Zero (default) takes everything.
   void setQualityMask(uint16_t m) { quality_mask = m; }
   uint16_t getQualityMask() const { return quality_mask; }
+  // a host that counts each station's messages says when one was last heard; station
+  // records and rows carry it, so a connected but silent station can be drawn as such
+  void setStationHeard(std::function<std::time_t(int)> f) { station_heard = std::move(f); }
   // messages the mask turned away
   uint64_t getCopiesDropped() const { return copies_dropped; }
   // Puts a record in the table under its MMSI, replacing what is there; for
-  // seeding from another source. The region follows from the position.
+  // seeding from another source. The places follow from the position.
   void putShip(const Ship &s);
 
   struct SeedCount {
@@ -372,6 +376,7 @@ private:
 
   BinaryStore binary;
   StationRegistry stations;
+  std::function<std::time_t(int)> station_heard; // set by the host, see setStationHeard
   EventRing events;
 #ifdef CHECK_DB_INTEGRITY
   void checkIntegrity();
@@ -451,7 +456,8 @@ public:
   std::string getShipJSON(int mmsi);
   std::string getPlaceShipsJSON(uint32_t id, const std::string &version,
                                const std::string &code, const std::string &tab,
-                               unsigned hours);
+                               unsigned hours, unsigned offset = 0,
+                               unsigned limit = 10);
   std::string getNearbyJSON(float lat, float lon, uint32_t skip,
                             int skip_station);
   std::string getChangesJSON(int mmsi);
@@ -498,6 +504,7 @@ public:
   // what stands behind an object key: a marker's members, or a station's record
   std::string getObjectJSON(const std::string &key);
   std::string getEventsJSON(uint64_t since, int level);
+  std::string getEventHistoryJSON(uint64_t before, int level, int limit);
   // the ship row's packed badge from inside a withShip/forEach callback, where
   // the lock is already held
   uint16_t binaryBadgeHeld(uint32_t mmsi, std::time_t now) const {
@@ -534,5 +541,5 @@ public:
 
 private:
   static const int _DB_MAGIC = 0x41495346;
-  static const int _DB_VERSION = 3;
+  static const int _DB_VERSION = 4;
 };

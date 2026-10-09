@@ -26,10 +26,11 @@
 #include <tuple>
 #include <unordered_set>
 
-// Five records are the only per-ship visit/crossing state. Metadata is shared;
+// Ten records are the only per-ship visit/crossing state. Metadata is shared;
 // a historical visit never retains polygon geometry. Caller holds the DB lock.
 class VisitTracker {
 public:
+  static const size_t SLOTS = 10;
   struct Visit {
     std::shared_ptr<const PlaceMetadata> place;
     uint32_t id = UINT32_MAX;
@@ -43,6 +44,9 @@ public:
     // Minutes stopped inside, with the seconds not yet carried into them.
     // Saturating: a ship moored for 45 days stops counting.
     uint16_t idle = 0;
+    // A stay is a call from this much idle, the line visit_kind draws in the
+    // hub's database.
+    static const uint16_t CALL_MINUTES = 15;
     enum : uint8_t {
       INSIDE = 1,
       PENDING = 2,
@@ -58,6 +62,14 @@ public:
     bool pending() const { return flags & PENDING; }
     bool confirmed() const { return inside() != pending(); }
     bool active() const { return inside() || pending(); }
+    // At a port, an anchorage, a terminal or a berth a stay is a call once the
+    // ship lay still long enough; elsewhere passing through is the whole of it.
+    bool call() const {
+      return idle >= CALL_MINUTES ||
+             !place->requiresStop();
+    }
+    // What history keeps: the stay under way, and the calls before it.
+    bool shown() const { return active() || call(); }
     uint32_t entryTime() const { return flags & ENTRY_SEEN ? entered : 0; }
     uint32_t exitTime() const { return flags & EXIT_SEEN ? exited : 0; }
     uint32_t pendingTime() const { return inside() ? entered : exited; }
@@ -83,11 +95,11 @@ public:
     }
   };
   struct Record {
-    std::array<Visit, 5> visits;
+    std::array<Visit, SLOTS> visits;
     uint32_t last = 0;
   };
   static_assert(sizeof(Visit) <= 32, "Visit storage must stay compact");
-  static_assert(sizeof(Record) <= 168, "Five visits must remain bounded");
+  static_assert(sizeof(Record) <= 328, "Ten visits must remain bounded");
 
   // How close two fixes must be for the crossing between them to be an event
   // worth timing. Inside and then outside within it: the ship left, and the
@@ -109,13 +121,13 @@ private:
     return bool(in.read(reinterpret_cast<char *>(&value), sizeof(value)));
   }
   std::vector<Record> records;
-  RelationshipIndex<uint32_t, 5> membership;
+  RelationshipIndex<uint32_t, SLOTS> membership;
   // Zero is the unknown-time sentinel; unsigned seconds end in February 2106.
   static bool validTime(std::time_t now) {
     return now > 0 && uint64_t(now) <= UINT32_MAX;
   }
   void reindex(uint32_t slot) {
-    std::array<uint32_t, 5> ids;
+    std::array<uint32_t, SLOTS> ids;
     size_t count = 0;
     for (const auto &v : records[slot].visits)
       if (v.hasRuntimeId())
@@ -133,7 +145,9 @@ private:
   }
   Visit *allocate(Record &r, uint32_t id, const PlaceIndex &index,
                   bool &dirty) {
-    // Lowest rank wins: empty, oldest completed, pending exit, largest inside.
+    // Lowest rank wins: empty, oldest completed, pending exit, then what lies
+    // within a port before the port itself, largest inside. Ten visits are kept
+    // however deep the nesting, so the port call is the one that survives.
     auto rank = [&](const Visit &v) {
       const auto *entry = index.find(v.id);
       const int category = v.empty()     ? 0
@@ -141,6 +155,7 @@ private:
                            : !v.inside() ? 2
                                          : 3;
       return std::make_tuple(category, category == 1 ? v.exited : 0u,
+                             category >= 2 && entry ? entry->rootPort : false,
                              category >= 2 && entry ? -entry->size : 0.,
                              category >= 2 ? UINT32_MAX - v.id : 0u);
     };
@@ -150,8 +165,8 @@ private:
     const auto *old = index.find(chosen->id), *next = index.find(id);
     // Pending exits yield to current containment regardless of polygon size.
     if (chosen->inside() && old &&
-        std::make_pair(old->size, old->id) <
-            std::make_pair(next->size, next->id))
+        std::make_tuple(!old->rootPort, old->size, old->id) <
+            std::make_tuple(!next->rootPort, next->size, next->id))
       return nullptr;
     *chosen = Visit{};
     chosen->id = id;
@@ -171,8 +186,8 @@ public:
     records.at(slot) = Record{};
   }
   const Record &record(uint32_t slot) const { return records.at(slot); }
-  std::array<uint64_t, 5> packed(uint32_t slot) const {
-    std::array<uint64_t, 5> ids;
+  std::array<uint64_t, SLOTS> packed(uint32_t slot) const {
+    std::array<uint64_t, SLOTS> ids;
     ids.fill(UINT64_MAX);
     size_t count = 0;
     for (const auto &v : records.at(slot).visits)
@@ -313,14 +328,14 @@ public:
   }
   void writeVisits(JSON::Writer &w, uint32_t slot,
                    const PlaceIndex *index) const {
-    std::array<const Visit *, 5> ordered;
+    std::array<const Visit *, SLOTS> ordered;
     size_t count = 0;
     for (const auto &v : records.at(slot).visits)
-      if (!v.empty())
+      if (!v.empty() && v.shown())
         ordered[count++] = &v;
     // The summary uses the first inside visit; keep smallest-place preference.
-    // Five entries at most: an insertion sort, which also keeps GCC from
-    // reasoning about std::sort's 16-element threshold against a 5-slot array.
+    // Ten entries at most: an insertion sort, which also keeps GCC from
+    // reasoning about std::sort's 16-element threshold against a small array.
     const auto before = [&](const Visit *a, const Visit *b) {
       if (a->inside() != b->inside())
         return a->inside();
@@ -398,7 +413,7 @@ public:
     put(out, n);
     for (const auto &p : table)
       for (const auto *str : {&p->uuid, &p->name, &p->type, &p->code,
-                              &p->parentCode, &p->category}) {
+                              &p->partOf, &p->category}) {
         uint32_t len = str->size();
         put(out, len);
         out.write(str->data(), len);
@@ -436,12 +451,12 @@ public:
   bool load(std::ifstream &in, Find find, Heard heard, uint32_t maxShips,
             int version) {
     uint32_t n = 0;
-    if (!get(in, n) || uint64_t(n) > uint64_t(maxShips) * 5)
+    if (!get(in, n) || uint64_t(n) > uint64_t(maxShips) * SLOTS)
       return false;
     std::vector<std::shared_ptr<const PlaceMetadata>> table;
     for (uint32_t i = 0; i < n; ++i) {
       auto p = std::make_shared<PlaceMetadata>();
-      for (auto *str : {&p->uuid, &p->name, &p->type, &p->code, &p->parentCode,
+      for (auto *str : {&p->uuid, &p->name, &p->type, &p->code, &p->partOf,
                         &p->category}) {
         uint32_t len;
         if (!get(in, len) || len > 128 * 1024)
@@ -450,6 +465,8 @@ public:
         if (len && !in.read(&(*str)[0], len))
           return false;
       }
+      if (p->partOf.size() != 36) p->partOf.clear();
+      if (p->type == "custom") p->type = "area";
       if (p->uuid.size() != 36)
         return false;
       table.push_back(p);
@@ -462,7 +479,7 @@ public:
       uint32_t key;
       uint8_t countVisits;
       if (!get(in, key) || !seen.insert(key).second || !get(in, countVisits) ||
-          !countVisits || countVisits > 5)
+          !countVisits || countVisits > SLOTS)
         return false;
       int slot = find(key);
       if (slot < 0 || size_t(slot) >= records.size())
