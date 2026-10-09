@@ -329,8 +329,10 @@ export function modal(opts) {
     }
 
     closeBtn.addEventListener("click", close);
-    /* mousedown, not click: a text selection ending on the scrim must not dismiss */
-    root.addEventListener("mousedown", function (e) {
+    /* pointerdown, not click: a text selection ending on the scrim must not dismiss.
+       Not mousedown either: after a tap, the browser sends a compatibility mousedown
+       that lands on the scrim the tap just opened, and closes it at once */
+    root.addEventListener("pointerdown", function (e) {
         if (e.target === root) close();
     });
 
