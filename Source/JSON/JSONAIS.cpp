@@ -798,7 +798,7 @@ namespace AIS
 				SL(msg, AIS::KEY_LAT, body + 28, 27, 1 / 600000.0f, 0, 54600000);
 				break;
 			case 1: // Table 12.6 station ID
-				T(msg, AIS::KEY_STATION_ID, body, 84, name);
+				T(msg, AIS::KEY_STATION_NAME, body, 84, name);
 				break;
 			case 2: // Table 12.7 wind
 				U(msg, AIS::KEY_WSPEED, body, 7, 122);

@@ -82,7 +82,7 @@ const METEO_ROWS = [
     ['Swell', (m) => m.swellheight != null && `${m.swellheight.toFixed(1)} m${dirSuffix(m.swelldir)}${periodSuffix(m.swellperiod)}`],
     ['Visibility', (m) => m.visibility != null && `${m.visibility.toFixed(1)} nm`],
     ['Flow', (m) => m.water_flow != null && `${m.water_flow} m&sup3;/s`],
-    ['Station', (m) => m.station_id && text(m.station_id)],
+    ['Station', (m) => { const v = m.station_id || m.station_name; return v && text(v); }],
 ];
 
 const ATON_KEYS = ['asm_voltage_data', 'asm_light_status', 'asm_battery_status', 'asm_off_position_status',
