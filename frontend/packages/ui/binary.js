@@ -63,7 +63,7 @@ export const meteoRow = (label, value) =>
     `<span style="font-size: 11px; opacity: 0.6; margin-right: 12px;">${label}</span>` +
     `<span style="font-size: 11px; font-weight: bold;">${value}</span></div>`;
 
-const rowsOf = (m, table) => table.map(([label, format]) => { const v = format(m); return v ? meteoRow(label, v) : ''; }).join('');
+const rowsOf = (m, table) => table.map(([label, format]) => { const v = format(m); return v ? meteoRow(typeof label === 'function' ? label(m) : label, v) : ''; }).join('');
 
 const PRESSURE_TEND = ['steady', 'decreasing', 'increasing'];
 const METEO_KEYS = ['wspeed', 'airtemp', 'pressure', 'waterlevel', 'watertemp', 'waveheight', 'swellheight', 'visibility', 'cspeed', 'water_flow', 'humidity', 'air_gap'];
@@ -106,6 +106,19 @@ const ATON_ROWS = [
     ['Ext 2', (m) => m.ana_ext2 != null && text(m.ana_ext2)],
     ['Status', (m) => m.stat_ext != null && text(m.stat_ext)],
 ];
+
+// Inland AIS (DAC 200): bridge clearance (FI 25) and gauge levels (FI 24, 26)
+const cm = (v) => (Math.abs(v) >= 100 ? `${(v / 100).toFixed(2)} m` : `${v} cm`);
+const GAUGE_REFERENCES = ['', 'reference 1', 'reference 2', 'reference 3', 'zero point'];
+const gaugeRow = (n) => [(m) => `Gauge ${m[`gauge${n}_id`]}`, (m) => m[`gauge${n}_id`] != null && m[`gauge${n}_level`] != null &&
+    cm(m[`gauge${n}_level`]) + (GAUGE_REFERENCES[m[`gauge${n}_reference`]] ? ` (${GAUGE_REFERENCES[m[`gauge${n}_reference`]]})` : '')];
+const CLEARANCE_ROWS = [
+    ['Bridge', (m) => m.object_id && text(m.object_id)],
+    ['River km', (m) => m.fairway_hectometre != null && (m.fairway_hectometre / 10).toFixed(1)],
+    ['Clearance', (m) => m.bridge_clearance != null && cm(m.bridge_clearance) + (m.clearance_accuracy ? ` &plusmn; ${m.clearance_accuracy} cm` : '')],
+    ['Measured', (m) => m.measurement_age != null && (m.measurement_age < 120 ? `${m.measurement_age} min ago` : `${Math.round(m.measurement_age / 60)} h ago`)],
+];
+const LEVEL_ROWS = [['Country', (m) => m.un_country && text(m.un_country)], ...[1, 2, 3, 4].map(gaugeRow)];
 
 const SIGNAL_STATES = ['not available', 'emergency: all vessels stop or divert', 'vessels shall not proceed',
     'vessels may proceed, one-way traffic', 'vessels may proceed, two-way traffic', 'proceed only on specific orders'];
@@ -244,6 +257,12 @@ const KINDS = [
     { cat: 'lock', name: 'Lock',
       test: (m) => ((m.dac == 316 || m.dac == 366) && fiOf(m) == 2) || (m.dac == 200 && [21, 22].includes(fiOf(m))) || (m.dac == 1 && [20, 32].includes(fiOf(m))),
       label: lockLabel, rows: (m) => rowsOf(m, LOCK_ROWS) + lockExtras(m) },
+    { cat: 'data', name: 'Bridge clearance',
+      test: (m) => m.bridge_clearance != null,
+      label: () => 'Bridge Clearance', rows: (m) => rowsOf(m, CLEARANCE_ROWS) },
+    { cat: 'data', name: 'Water level',
+      test: (m) => m.dac == 200 && [24, 26].includes(fiOf(m)),
+      label: () => 'Water Level', rows: (m) => rowsOf(m, LEVEL_ROWS) },
     { cat: 'signal', name: 'Traffic signal',
       test: (m) => m.traffic_signal != null,
       label: () => 'Traffic Signal', rows: (m) => rowsOf(m, SIGNAL_ROWS) },

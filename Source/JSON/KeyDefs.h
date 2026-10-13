@@ -1000,6 +1000,18 @@ X(KEY_MEASUREMENT_AGE, "measurement_age", "", "", "", "", "", "minutes",
   "Age of measurement", nullptr)
 X(KEY_CLEARANCE_ACCURACY, "clearance_accuracy", "", "", "", "", "", "cm",
   "Bridge clearance accuracy (+/- cm)", nullptr)
+X(KEY_OBJECT_ID, "object_id", "", "", "", "", "", "",
+  "ISRS location code without the UN location (Inland AIS; DAC 200 FID 25).",
+  nullptr)
+X(KEY_GAUGE1_REFERENCE, "gauge1_reference", "", "", "", "", "", "",
+  "Water level reference of gauge 1 (Inland AIS; DAC 200 FID 26).",
+  nullptr)
+X(KEY_GAUGE2_REFERENCE, "gauge2_reference", "", "", "", "", "", "",
+  "Water level reference of gauge 2 (Inland AIS; DAC 200 FID 26).",
+  nullptr)
+X(KEY_GAUGE3_REFERENCE, "gauge3_reference", "", "", "", "", "", "",
+  "Water level reference of gauge 3 (Inland AIS; DAC 200 FID 26).",
+  nullptr)
 X(KEY_LINKAGE_ID, "linkage_id", "", "", "", "", "", "", "Message linkage ID",
   nullptr)
 X(KEY_SENDER_CLASSIFICATION, "sender_classification", "", "", "", "", "", "",

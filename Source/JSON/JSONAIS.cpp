@@ -685,6 +685,14 @@ namespace AIS
 		U(msg, AIS::KEY_BRIDGE_CLEARANCE, start + 79, 14, 0);
 		U(msg, AIS::KEY_MEASUREMENT_AGE, start + 93, 10, 722);
 		U(msg, AIS::KEY_CLEARANCE_ACCURACY, start + 103, 5, 0);
+
+		// ISRS location code without the UN location, which is not transmitted
+		char numbers[8];
+		snprintf(numbers, sizeof(numbers), "%05u", msg.getUint(start + 15, 17) % 100000);
+		object_id = text + numbers + name;
+		snprintf(numbers, sizeof(numbers), "%05u", msg.getUint(start + 62, 17) % 100000);
+		object_id += numbers;
+		json.Add(AIS::KEY_OBJECT_ID, &object_id);
 	}
 
 	// IMO SN.1/Circ.289 Annex §10 Table 10.1 — weather observation from ship (DAC=1, FID=21).
@@ -1031,6 +1039,27 @@ namespace AIS
 		}
 	}
 
+	// Inland AIS (CESNI ES-RIS) — water level (DAC=200, FID=26). 168-bit, 1 slot.
+	void JSONAIS::asm_inland_fid26_water_level(const AIS::Message &msg, int start)
+	{
+		static const int id_key[] = {AIS::KEY_GAUGE1_ID, AIS::KEY_GAUGE2_ID, AIS::KEY_GAUGE3_ID};
+		static const int reference_key[] = {AIS::KEY_GAUGE1_REFERENCE, AIS::KEY_GAUGE2_REFERENCE, AIS::KEY_GAUGE3_REFERENCE};
+		static const int level_key[] = {AIS::KEY_GAUGE1_LEVEL, AIS::KEY_GAUGE2_LEVEL, AIS::KEY_GAUGE3_LEVEL};
+
+		U(msg, AIS::KEY_ASM_VERSION, start, 3);
+		T(msg, AIS::KEY_UN_COUNTRY, start + 3, 12, text);
+		for (int i = 0; i < 3; i++) {
+			int offset = start + 15 + i * 31;
+			unsigned gauge = msg.getUint(offset, 11);
+			int level = msg.getInt(offset + 14, 17);
+
+			if (gauge == 0 || level == -65536) continue;
+			json.Add(id_key[i], (int)gauge);
+			json.Add(reference_key[i], (int)msg.getUint(offset + 11, 3));
+			json.Add(level_key[i], level);
+		}
+	}
+
 	// CCNR VTT 1.2 Table 2.16 — signal station status (DAC=200, FID=40). 168-bit, 1 slot.
 	void JSONAIS::asm_inland_fid40_signal_status(const AIS::Message &msg, int start)
 	{
@@ -1227,6 +1256,7 @@ namespace AIS
 		else if (dac == 200 && fid == 55)                      asm_inland_fid55_persons(msg, start);
 		else if (dac == 1 && fid == 31)                        asm_imo_fid31_meteo_hydro(msg, start);
 		else if (dac == 200 && fid == 25)                      asm_inland_fid25_bridge_clearance(msg, start);
+		else if (dac == 200 && fid == 26)                      asm_inland_fid26_water_level(msg, start);
 		else if (dac == 1 && fid == 21)                        asm_imo_fid21_weather_ship(msg, start);
 		else if (dac == 1 && fid == 29)                        asm_imo_fid29_text_description(msg, start);
 		else if (dac == 1 && fid == 27)                        asm_imo_fid27_route(msg, start);

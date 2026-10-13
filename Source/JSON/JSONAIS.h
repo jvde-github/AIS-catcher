@@ -38,7 +38,7 @@ namespace AIS {
 
 		std::string channel, timestamp, datastring, rxtime;
 		std::string eta, text, callsign, shipname, destination, name, vendorid;
-		std::string start_date, end_date, start_time, end_time;
+		std::string start_date, end_date, start_time, end_time, object_id;
 		std::string lock_id, last_location, last_ata, first_lock, first_lock_eta, second_lock, second_lock_eta, delay_lock;
 
 	protected:
@@ -67,6 +67,7 @@ namespace AIS {
 		void asm_inland_fid22_rta(const AIS::Message& msg, int start);
 		void asm_inland_fid23_emma_warning(const AIS::Message& msg, int start);
 		void asm_inland_fid24_water_level(const AIS::Message& msg, int start);
+		void asm_inland_fid26_water_level(const AIS::Message& msg, int start);
 		void asm_inland_fid55_persons(const AIS::Message& msg, int start);
 		void asm_uk_fid10_aton_monitor(const AIS::Message& msg, int start);
 		void asm_uk_fid20_buoy_position(const AIS::Message& msg, int start);

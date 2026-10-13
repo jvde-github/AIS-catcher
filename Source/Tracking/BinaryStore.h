@@ -294,6 +294,20 @@ private:
     case AIS::KEY_ICE:
     case AIS::KEY_WATER_FLOW:
     case AIS::KEY_AIR_GAP:
+    case AIS::KEY_BRIDGE_CLEARANCE:
+    case AIS::KEY_CLEARANCE_ACCURACY:
+    case AIS::KEY_MEASUREMENT_AGE:
+    case AIS::KEY_GAUGE1_ID:
+    case AIS::KEY_GAUGE1_LEVEL:
+    case AIS::KEY_GAUGE1_REFERENCE:
+    case AIS::KEY_GAUGE2_ID:
+    case AIS::KEY_GAUGE2_LEVEL:
+    case AIS::KEY_GAUGE2_REFERENCE:
+    case AIS::KEY_GAUGE3_ID:
+    case AIS::KEY_GAUGE3_LEVEL:
+    case AIS::KEY_GAUGE3_REFERENCE:
+    case AIS::KEY_GAUGE4_ID:
+    case AIS::KEY_GAUGE4_LEVEL:
       return BK_VALUE;
     case AIS::KEY_DAC:
     case AIS::KEY_FID:
@@ -316,6 +330,8 @@ private:
     case AIS::KEY_UN_COUNTRY:
     case AIS::KEY_UN_LOCODE:
     case AIS::KEY_FAIRWAY_SECTION:
+    case AIS::KEY_OBJECT_CODE:
+    case AIS::KEY_OBJECT_ID:
     case AIS::KEY_TERMINAL_CODE:
     case AIS::KEY_FAIRWAY_HECTOMETRE:
     case AIS::KEY_TUGBOATS:
@@ -550,7 +566,7 @@ inline int BinaryStore::process(const JSON::JSON &data, FLOAT32 sender_lat,
     item.anchor = msg->getUint(offset, 30);
   item.type = type;
   item.mmsi = msg->mmsi();
-  std::string name;
+  std::string name, object;
   int linkage = 0;
   KeyKind best = BK_SKIP;
   // a rectangle's corners, for the areas that come as two points (type 23)
@@ -640,6 +656,20 @@ inline int BinaryStore::process(const JSON::JSON &data, FLOAT32 sender_lat,
         if (val.isString())
           item.shapes = val.getString();
         break;
+      // an inland reading is identified by the object it names
+      case AIS::KEY_UN_COUNTRY:
+      case AIS::KEY_OBJECT_CODE:
+        if (val.isString())
+          object += val.getString() + ' ';
+        break;
+      case AIS::KEY_FAIRWAY_SECTION:
+      case AIS::KEY_FAIRWAY_HECTOMETRE:
+      case AIS::KEY_GAUGE1_ID:
+      case AIS::KEY_GAUGE2_ID:
+      case AIS::KEY_GAUGE3_ID:
+      case AIS::KEY_GAUGE4_ID:
+        object += std::to_string(val.getInt()) + ' ';
+        break;
       case AIS::KEY_AREA_NOTICE_TYPE:
         item.atype = val.getInt();
         break;
@@ -667,6 +697,8 @@ inline int BinaryStore::process(const JSON::JSON &data, FLOAT32 sender_lat,
   }
   if (best < BK_TEXT)
     return -1;
+  if (name.empty() && item.dac == 200 && (item.fi == 24 || item.fi == 25 || item.fi == 26))
+    name = object;
 
   item.kind = (Item::Kind)(best - BK_TEXT);
   // safety-related messages (12, 14) are their own kind
