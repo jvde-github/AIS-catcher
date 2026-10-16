@@ -46,7 +46,6 @@ FILES = [
     "Library/Signals.h",
     "Library/Stream.h",
     "Library/SWAR.h",
-    "Library/TCP.h",
     "Library/ZIP.h",
     "Utilities/Convert.h",
     "Utilities/Convert.cpp",
