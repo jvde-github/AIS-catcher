@@ -38,6 +38,16 @@ namespace AIS
 		}
 	}
 
+	// nanoseconds since the epoch as decimal seconds, to the microsecond as these fields always were
+	static void appendSeconds(JSON::Writer &w, int64_t ns)
+	{
+		int64_t us = (ns + 500) / 1000;
+		if ((us % 1000000) != 0)
+			w.append_float((double)us / 1000000.0);
+		else
+			w.append_int(us / 1000000);
+	}
+
 	static int NMEAchecksum(const std::string &s)
 	{
 		int check = 0;
@@ -122,19 +132,15 @@ namespace AIS
 		if (tag.mode & 2)
 		{
 			w.append_lit(",\"rxuxtime\":");
-			if ((rxtime % 1000000) != 0)
-				w.append_float((double)rxtime / 1000000.0);
-			else
-				w.append_int(rxtime / 1000000);
+			appendSeconds(w, rxtime);
 		}
 
 		if (toa != 0)
 		{
 			w.append_lit(",\"toa\":");
-			if ((toa % 1000000) != 0)
-				w.append_float((double)toa / 1000000.0);
-			else
-				w.append_int(toa / 1000000);
+			appendSeconds(w, toa);
+			w.append_lit(",\"toa_ns\":");
+			w.append_int(toa);
 		}
 
 		if (!uuid.empty())
@@ -254,7 +260,7 @@ namespace AIS
 			w.append_lit("s:");
 			w.append(src, srcLen);
 			w.append_lit(",c:");
-			w.append_float((double)rxtime / 1000000.0);
+			appendSeconds(w, rxtime);
 
 			if (total > 1)
 			{
@@ -368,10 +374,12 @@ namespace AIS
 			flags |= 0x10;
 		*p++ = (char)flags;
 
-		// 8-byte timestamp (big-endian) as one bulk-escaped sequence.
+		// 8-byte timestamp (big-endian) as one bulk-escaped sequence, in microseconds:
+		// readers reject frames with flag bits they do not know, so nanoseconds (flag
+		// 0x20, which NMEA.cpp reads) wait until the hub ingress takes them
 		unsigned char ts_buf[8];
 		{
-			long long ts = (long long)rxtime;
+			long long ts = (long long)(rxtime / 1000);
 			for (int i = 0; i < 8; i++)
 				ts_buf[i] = (unsigned char)((ts >> ((7 - i) * 8)) & 0xFF);
 		}

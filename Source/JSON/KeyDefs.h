@@ -1185,3 +1185,6 @@ X(KEY_PLACE_AREA_SUBTYPE, "", "", "", "", "area_subtype", "", "", "Place metadat
 X(KEY_PLACE_REDIRECT, "", "", "", "", "redirect_to", "", "", "Place metadata", nullptr)
 X(KEY_PLACE_NUMBER, "", "", "", "", "no", "", "", "Place metadata", nullptr)
 X(KEY_PLACE_COUNTRY, "", "", "", "", "country", "", "", "Place metadata", nullptr)
+
+X(KEY_TOA_NS, "toa_ns", "", "toa_ns", "", "", "toa_ns", "ns",
+  "Time of arrival as whole nanoseconds since the Unix epoch; exact where `toa` is rounded.", nullptr)

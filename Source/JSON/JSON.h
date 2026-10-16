@@ -20,6 +20,7 @@
 #include <vector>
 #include <deque>
 #include <string>
+#include <cstdint>
 
 #include "Common.h"
 
@@ -51,7 +52,7 @@ namespace JSON
 		union Data
 		{
 			bool b;
-			long int i;
+			int64_t i;
 			double f;
 			std::string *s;
 			std::vector<std::string> *as;
@@ -61,7 +62,9 @@ namespace JSON
 
 	public:
 		double getFloat(double d = 0.0f) const { return isFloat() ? data.f : (isInt() ? (double)(data.i) : d); }
-		long int getInt(long int d = 0) const { return isInt() ? data.i : d; }
+		long int getInt(long int d = 0) const { return isInt() ? (long int)data.i : d; }
+		// the full 64 bits: a long is 32 bits on Windows, too short for e.g. nanoseconds since the epoch
+		int64_t getInt64(int64_t d = 0) const { return isInt() ? data.i : d; }
 		bool getBool(bool d = false) const { return isBool() ? data.b : d; }
 		const std::vector<std::string> &getStringArray() const { return *data.as; }
 		const std::vector<Value> &getArray() const { return *data.a; }
@@ -87,7 +90,7 @@ namespace JSON
 			data.f = v;
 			type = Type::FLOAT;
 		}
-		void setInt(long int v)
+		void setInt(int64_t v)
 		{
 			data.i = v;
 			type = Type::INT;
@@ -137,7 +140,7 @@ namespace JSON
 
 	public:
 		Member(int p, Value v) : key(p), value(v) {}
-		Member(int p, long int v) : key(p) { value.setInt(v); }
+		Member(int p, int64_t v) : key(p) { value.setInt(v); }
 		Member(int p, double v) : key(p) { value.setFloat(v); }
 		Member(int p, bool v) : key(p) { value.setBool(v); }
 		Member(int p, std::string *v) : key(p) { value.setString(v); }
@@ -181,7 +184,8 @@ namespace JSON
 		const Value *operator[](int p) const { return getValue(p); }
 
 		void Add(int p) { members.emplace_back(p); }
-		void Add(int p, int v) { members.emplace_back(p, (long int)v); }
+		void Add(int p, int v) { members.emplace_back(p, (int64_t)v); }
+		void Add(int p, int64_t v) { members.emplace_back(p, v); }
 		void Add(int p, double v) { members.emplace_back(p, v); }
 		void Add(int p, bool v) { members.emplace_back(p, v); }
 		void Add(int p, JSON *v) { members.emplace_back(p, v); }

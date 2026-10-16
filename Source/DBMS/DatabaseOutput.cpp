@@ -639,7 +639,7 @@ namespace IO
 		if (v.isString())
 			return v.getString();
 		if (v.isInt())
-			return std::to_string(v.getInt());
+			return std::to_string(v.getInt64());
 		if (v.isFloat())
 			return std::to_string(v.getFloat());
 		if (v.isBool())

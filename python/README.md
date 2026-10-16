@@ -85,7 +85,8 @@ def iter_decode(
 Each decoded message carries two timestamps:
 
 - **`rxuxtime`** — the time aiscat decoded the message (i.e. now).
-- **`toa`** — the time (if any) carried in the input. For JSON input that's the `toa` or `rxuxtime` field (`toa` wins if both are present); for NMEA it's the tag-block `c:` field. Omitted from the output if the input had none.
+- **`toa`** — the time of arrival at the first receiver, if the input carried one, in seconds since the epoch to the microsecond. For JSON input it comes from `toa_ns`, else `toa`, else `rxuxtime`, whichever is present first in that order; for NMEA it's the tag-block `c:` field. Omitted from the output if the input had none.
+- **`toa_ns`** — the same time of arrival as an `int` of nanoseconds since the epoch, present whenever `toa` is. A float cannot hold today's epoch to better than about 0.24 µs; `toa_ns` keeps every digit when the input sent `toa_ns`, and equals `toa` in whole microseconds otherwise.
 
 ### Output formats
 

@@ -162,7 +162,7 @@ static PyObject *convert_value(const JSON::Value &v, bool annotated) {
         case T::BOOL:
             return PyBool_FromLong(v.getBool());
         case T::INT:
-            return PyLong_FromLong(v.getInt());
+            return PyLong_FromLongLong(v.getInt64());
         case T::FLOAT:
             return PyFloat_FromDouble(v.getFloat());
         case T::STRING: {
@@ -216,7 +216,7 @@ public:
                     d = convert_object(data[i], format == OutFormat::ANNOTATED);
                     auto *msg = static_cast<const AIS::Message *>(data[i].binary);
                     if (d && msg) {
-                        PyObject *f = PyFloat_FromDouble((double)msg->getRxTimeMicros() / 1000000.0);
+                        PyObject *f = PyFloat_FromDouble(AIS::toSeconds(msg->getRxTimeNanos()));
                         if (f && format == OutFormat::ANNOTATED)
                             f = wrap_annotated(f, AIS::KEY_RXUXTIME);
                         if (!f || PyDict_SetItem(d, g_keys[AIS::KEY_RXUXTIME], f) < 0) {

@@ -27,9 +27,43 @@
 namespace AIS
 {
 	// Accept upstream timestamps only between 2000-01-01 and 2050-01-01, otherwise treat as unset (#596).
-	static inline int64_t validTOA(int64_t toa_us)
+	static inline int64_t validTOA(int64_t toa_ns)
 	{
-		return (toa_us > 946684800000000LL && toa_us < 2524608000000000LL) ? toa_us : 0;
+		return (toa_ns > 946684800000000000LL && toa_ns < 2524608000000000000LL) ? toa_ns : 0;
+	}
+
+	// decimal seconds to the microsecond: a double holds about 0.24 us today, finer digits
+	// would be noise. Exact times come as toa_ns
+	static inline int64_t toaFromSeconds(double s)
+	{
+		if (!(s > 0 && s < 9e9))
+			return 0;
+		double whole = std::floor(s);
+		return validTOA((int64_t)whole * 1000000000LL + (int64_t)std::llround((s - whole) * 1e6) * 1000);
+	}
+
+	static inline int64_t toaFromMicros(int64_t us)
+	{
+		return (us > 0 && us < 9000000000000000LL) ? validTOA(us * 1000) : 0;
+	}
+
+	// toa_ns: an integer, or a string of digits from senders whose numbers are doubles
+	static int64_t toaFromNanos(const JSON::Value &v)
+	{
+		if (v.isInt())
+			return validTOA(v.getInt64());
+
+		const std::string &s = v.getString();
+		if (s.empty() || s.size() > 19)
+			return 0;
+		int64_t ns = 0;
+		for (char c : s)
+		{
+			if (c < '0' || c > '9' || ns > (INT64_MAX - (c - '0')) / 10)
+				return 0;
+			ns = ns * 10 + (c - '0');
+		}
+		return validTOA(ns);
 	}
 
 	void NMEA::reset()
@@ -533,7 +567,17 @@ namespace AIS
 			const JSON::Value *nmea_array = nullptr;
 			float tpv_lat = 0, tpv_lon = 0;
 			bool has_tpv_coords = false;
-			bool saw_toa = false;
+
+			// the most exact upstream time wins, whatever the order of the fields
+			int toa_rank = 0;
+			auto offerTOA = [&](int rank, int64_t ns)
+			{
+				if (rank > toa_rank && ns)
+				{
+					mctx.toa = ns;
+					toa_rank = rank;
+				}
+			};
 
 			for (const auto &p : jsonDoc.getMembers())
 			{
@@ -580,12 +624,13 @@ namespace AIS
 					tag.ppm = p.Get().getFloat(PPM_UNDEFINED);
 					break;
 				case AIS::KEY_RXUXTIME:
-					if (!saw_toa)
-						mctx.toa = validTOA((int64_t)std::llround(p.Get().getFloat() * 1000000.0));
+					offerTOA(1, toaFromSeconds(p.Get().getFloat()));
 					break;
 				case AIS::KEY_TOA:
-					mctx.toa = validTOA((int64_t)std::llround(p.Get().getFloat() * 1000000.0));
-					saw_toa = true;
+					offerTOA(2, toaFromSeconds(p.Get().getFloat()));
+					break;
+				case AIS::KEY_TOA_NS:
+					offerTOA(3, toaFromNanos(p.Get()));
 					break;
 				case AIS::KEY_STATION_ID:
 					mctx.station = p.Get().getInt();
@@ -786,8 +831,9 @@ namespace AIS
 			return false;
 		}
 
-		// the timestamp is the sender's time of arrival in microseconds (Message::getBinaryNMEA)
-		initMsg((char)ch, src, validTOA((int64_t)timestamp));
+		// the sender's time of arrival (Message::getBinaryNMEA): nanoseconds when flag 0x20 is set,
+		// from senders before it the sender's own stamp in microseconds
+		initMsg((char)ch, src, (flags & 0x20) ? validTOA((int64_t)timestamp) : toaFromMicros((int64_t)timestamp));
 
 		int nbytes = (length_bits + 7) / 8;
 
@@ -919,13 +965,13 @@ namespace AIS
 						char *end;
 						double ts = strtod(val, &end);
 						if (end > val)
-							mctx.toa = validTOA((int64_t)std::llround(ts * 1000000.0));
+							mctx.toa = toaFromSeconds(ts);
 					}
 					else
 					{
 						int64_t raw;
 						if (parse_uint(val, vLen, raw))
-							mctx.toa = validTOA(raw > 100000000000LL ? raw : (raw * 1000000));
+							mctx.toa = raw > 100000000000LL ? toaFromMicros(raw) : toaFromSeconds((double)raw);
 					}
 					break;
 				}

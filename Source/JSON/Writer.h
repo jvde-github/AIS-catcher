@@ -819,7 +819,7 @@ namespace JSON
 		{
 			const Value::Type t = v.getType();
 			if (t == Value::Type::INT)
-				w.val((long long)v.getInt());
+				w.val(v.getInt64());
 			else if (t == Value::Type::STRING)
 				w.val(v.getString());
 			else if (t == Value::Type::FLOAT)

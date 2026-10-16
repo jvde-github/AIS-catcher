@@ -46,6 +46,12 @@ namespace AIS
 #define MAX_AIS_FRAME_LENGTH (MAX_AIS_LENGTH + 16 + 7)
 #define MAX_AIS_FRAME_BYTES ((MAX_AIS_FRAME_LENGTH + 7) / 8)
 
+	// nanoseconds since the epoch as the decimal seconds of rxuxtime and toa: to the microsecond
+	inline double toSeconds(int64_t ns)
+	{
+		return (double)((ns + 500) / 1000) / 1000000.0;
+	}
+
 	class GPS
 	{
 		float lat = 0, lon = 0;
@@ -80,8 +86,8 @@ namespace AIS
 		static int nextSeqId();
 
 		uint8_t data[MAX_AIS_FRAME_BYTES + 4]; // Includes FCS/closing-flag capture and read padding.
-		int64_t rxtime; // microseconds since epoch
-		int64_t toa; // time of arrival in seconds since epoch
+		int64_t rxtime; // nanoseconds since epoch: when this instance stamped the message
+		int64_t toa;	// nanoseconds since epoch: when the first receiver heard it, carried from upstream; 0 if none
 		int length;
 		char channel;
 		long long start_idx, end_idx;
@@ -125,8 +131,8 @@ namespace AIS
 		void Stamp()
 		{
 			auto now = std::chrono::system_clock::now();
-			auto us = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch());
-			rxtime = us.count();
+			auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch());
+			rxtime = ns.count();
 		}
 
 		int getNMEAJSON(std::string &out, const TAG &tag, bool include_ss = false, const std::string &uid = "", const char *suffix = nullptr) const;
@@ -135,23 +141,23 @@ namespace AIS
 
 		std::string getRxTime() const
 		{
-			std::time_t t = (std::time_t)(rxtime / 1000000);
+			std::time_t t = (std::time_t)(rxtime / 1000000000);
 			return Util::Convert::toTimeStr(t);
 		}
 
 		std::time_t getRxTimeUnix() const
 		{
-			return (std::time_t)(rxtime / 1000000);
+			return (std::time_t)(rxtime / 1000000000);
 		}
 
-		int64_t getRxTimeMicros() const
-  		{
-      		return rxtime;
-  		}
-
-		void setTOA(int64_t t)
+		int64_t getRxTimeNanos() const
 		{
-			toa = t;
+			return rxtime;
+		}
+
+		void setTOA(int64_t ns)
+		{
+			toa = ns;
 		}
 
 		int64_t getTOA() const
@@ -161,12 +167,7 @@ namespace AIS
 
 		void setRxTimeUnix(std::time_t t)
 		{
-			rxtime = (int64_t)t * 1000000;
-		}
-
-		void setRxTimeMicros(int64_t t)
-		{
-			rxtime = t;
+			rxtime = (int64_t)t * 1000000000;
 		}
 
 		void setStartIdx(long long s)
