@@ -50,6 +50,17 @@ namespace Protocol
 
 	void TCP::disconnect()
 	{
+		// closed first: a goodbye a layer sends from onDisconnect() has nowhere to go
+		bool was_ready = state == READY;
+		state = DISCONNECTED;
+		reconnect_delay = jittered(RECONNECT_TIME * 1000, 20) / 1000.0;
+		addresses.reset();
+		next_address = nullptr;
+
+		if (was_ready && sock != -1 && !pending.empty())
+			::send(sock, pending.data(), (int)pending.size(), 0);
+		pending.clear();
+
 		if (sock != -1)
 		{
 			if (stats)
@@ -59,21 +70,16 @@ namespace Protocol
 			Net::closeSocket(sock);
 		}
 
-		if (state == READY)
+		if (was_ready)
 			Debug() << "TCP (" << host << ":" << port << "): Disconnected.";
 
 		sock = -1;
-		state = DISCONNECTED;
-
 		bytes_sent = 0;
 		bytes_received = 0;
 	}
 
-	bool TCP::connect()
+	struct addrinfo TCP::lookupHints()
 	{
-		state = DISCONNECTED;
-		stamp = time(nullptr);
-
 		struct addrinfo h;
 
 		std::memset(&h, 0, sizeof(h));
@@ -84,20 +90,51 @@ namespace Protocol
 #ifndef _WIN32
 		h.ai_flags = AI_ADDRCONFIG;
 #endif
+		return h;
+	}
 
-		AddressInfo ai(host, port, &h);
-		if (!ai.isSuccess())
+	bool TCP::connect()
+	{
+		disconnect();
+		stamp = Clock::now();
+
+		if (!resolver.start(host, port, lookupHints()))
 		{
 			if (stats)
 				stats->connect_fail++;
 
-			Error() << "TCP (" << host << ":" << port << "): getaddrinfo failed: " << ai.getErrorMessage();
+			Error() << "TCP (" << host << ":" << port << "): cannot start a lookup.";
 			return false;
 		}
 
-		last_error.clear();
-		for (struct addrinfo *p = ai.get(); p != nullptr; p = p->ai_next)
+		state = RESOLVING;
+		return true;
+	}
+
+	bool TCP::connectResolved(std::unique_ptr<AddressInfo> ai)
+	{
+		if (!ai->isSuccess())
 		{
+			if (stats)
+				stats->connect_fail++;
+
+			Error() << "TCP (" << host << ":" << port << "): getaddrinfo failed: " << ai->getErrorMessage();
+			return false;
+		}
+
+		addresses = std::move(ai);
+		next_address = addresses->get();
+		last_error.clear();
+		return tryNextAddress();
+	}
+
+	bool TCP::tryNextAddress()
+	{
+		while (next_address)
+		{
+			struct addrinfo *p = next_address;
+			next_address = p->ai_next;
+
 			if (connectAddress(p))
 				return true;
 		}
@@ -106,19 +143,19 @@ namespace Protocol
 			stats->connect_fail++;
 
 		Error() << "TCP (" << host << ":" << port << "): " << last_error;
-
-		return persistent;
+		addresses.reset();
+		state = DISCONNECTED;
+		return false;
 	}
 
-	// One connect attempt against a single addrinfo entry.
-	// Returns true if this attempt owns a live socket (READY, or CONNECTING in persistent mode).
-	// Returns false if this address failed — sock is closed and reset to -1 so the caller can try the next.
+	// One connect attempt against a single addrinfo entry. Returns true if this attempt
+	// owns a live socket (READY, or CONNECTING with the connect in progress). Returns false
+	// if this address failed: sock is closed and reset to -1 so the caller can try the next.
 	bool TCP::connectAddress(struct addrinfo *p)
 	{
-		auto fail = [this, p](const char *op, const char *why = nullptr) -> bool
+		auto fail = [this, p](const char *op) -> bool
 		{
-			last_error = std::string(op) + " " + Net::addressString(p) + ": " +
-						 (why ? std::string(why) : Net::errorString(Net::lastError()));
+			last_error = std::string(op) + " " + Net::addressString(p) + ": " + Net::errorString(Net::lastError());
 			if (sock != -1)
 			{
 				Net::closeSocket(sock);
@@ -150,78 +187,29 @@ namespace Protocol
 				Debug() << "TCP (" << host << ":" << port << "): user timeout not applied: " << Net::errorString(Net::lastError());
 		}
 
-		if (persistent)
-		{
-			if (!Net::setNonBlocking(sock))
-			{
-				return fail("set non-blocking");
-			}
-		}
-		else if (timeout > 0)
-		{
-			// Non-persistent mode keeps the socket blocking. Cap blocking I/O (and the
-			// synchronous ::connect) via SO_SNDTIMEO / SO_RCVTIMEO so a dead host can't
-			// hang us for the OS default. Best-effort: Windows applies these to connect,
-			// Linux also does for blocking sockets; other POSIX may not.
-#ifdef _WIN32
-			DWORD tv_ms = (DWORD)timeout * 1000;
-			if (setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char *)&tv_ms, sizeof(tv_ms)) ||
-				setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv_ms, sizeof(tv_ms)))
-				return fail("socket timeout");
-#else
-			struct timeval tv = {timeout, 0};
-			if (setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) ||
-				setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)))
-				return fail("socket timeout");
-#endif
-		}
+		if (!Net::setNonBlocking(sock))
+			return fail("set non-blocking");
 
-		stamp = time(nullptr);
+		stamp = Clock::now();
 		int r = ::connect(sock, p->ai_addr, (int)p->ai_addrlen);
 
 		if (r != -1)
 		{
-			state = READY;
-			randomizeResetInterval();
-
-			Debug() << "TCP (" << host << ":" << port << "): connected.";
-
-			if (stats)
-			{
-				stats->connect_ok++;
-				stats->connected = true;
-			}
-
-			in_connect = true;
-			onConnect();
-			in_connect = false;
-
-			bytes_sent = 0;
-			bytes_received = 0;
-
+			ready();
 			return true;
 		}
 		if (!Net::connectInProgress(Net::lastError()))
 			return fail("connect");
 
-		// Non-blocking connect in progress.
-		int elapsed = (int)std::difftime(time(nullptr), stamp);
-		if (isConnected(MAX(timeout - elapsed, 0)))
-			return true;
-
-		// isConnected() may have internally detected async failure and reset sock to -1.
-		// In that case fall through so the caller tries the next address.
-		if (sock == -1)
-			return false;
-
-		if (persistent)
-			return true;
-
-		// errno still holds EINPROGRESS from ::connect(), which would misreport this.
-		return fail("connect", "timed out");
+		// one look now catches a refusal already in, as on localhost, so the next address
+		// is tried without a wait; a layer that gave up in onConnect() is not a refusal
+		state = CONNECTING;
+		checkConnecting();
+		return !(state == CONNECTING && sock == -1);
 	}
 
-	bool TCP::isConnected(int t)
+	// a refusal closes the socket for the next address, the reason kept for the log
+	bool TCP::checkConnecting()
 	{
 		if (state == READY)
 			return true;
@@ -229,7 +217,7 @@ namespace Protocol
 		if (sock == -1)
 			return false;
 
-		fd_set fdr, fdw;
+		fd_set fdr, fdw, fde;
 
 		FD_ZERO(&fdr);
 		FD_SET(sock, &fdr);
@@ -237,47 +225,56 @@ namespace Protocol
 		FD_ZERO(&fdw);
 		FD_SET(sock, &fdw);
 
-		timeval to = {t, 1}; // t seconds and 1 microsecond
+		// Winsock reports a failed connect in the exception set
+		FD_ZERO(&fde);
+		FD_SET(sock, &fde);
 
-		if (select(sock + 1, &fdr, &fdw, nullptr, &to) > 0)
+		timeval to = {0, 1};
+
+		if (select(sock + 1, &fdr, &fdw, &fde, &to) <= 0)
+			return false;
+
+		int error = -1;
+		socklen_t len = sizeof(error);
+
+		if (getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&error, &len) != 0)
+			error = -1;
+
+		if (error != 0)
 		{
-			int error = -1;
-			socklen_t len = sizeof(error);
-
-			if (getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&error, &len) != 0)
-			{
-				Error() << "TCP (" << host << ":" << port << "): getsockopt failed.";
-				disconnect();
-				return false;
-			}
-
-			if (error != 0)
-			{
-				Error() << "TCP (" << host << ":" << port << "): " << strerror(error) << " (" << error << ").";
-				disconnect();
-				return false;
-			}
-
-			state = READY;
-			randomizeResetInterval();
-
-			Debug() << "TCP (" << host << ":" << port << "): connected.";
-
-			if (stats)
-			{
-				stats->connect_ok++;
-				stats->connected = true;
-			}
-
-			in_connect = true;
-			onConnect();
-			in_connect = false;
-
-			return true;
+			giveUp((error > 0 ? std::string(strerror(error)) : std::string("getsockopt failed")) + " (" + std::to_string(error) + ")");
+			return false;
 		}
 
-		state = CONNECTING;
-		return false;
+		ready();
+		return true;
+	}
+
+	void TCP::giveUp(const std::string &why)
+	{
+		last_error = why;
+		Debug() << "TCP (" << host << ":" << port << "): " << why << (next_address ? ", trying the next address." : "");
+		Net::closeSocket(sock);
+		sock = -1;
+	}
+
+	void TCP::ready()
+	{
+		state = READY;
+		randomizeResetInterval();
+
+		Debug() << "TCP (" << host << ":" << port << "): connected.";
+
+		if (stats)
+		{
+			stats->connect_ok++;
+			stats->connected = true;
+		}
+
+		bytes_sent = 0;
+		bytes_received = 0;
+
+		onConnect();
 	}
 
 	void TCP::randomizeResetInterval()
@@ -285,57 +282,100 @@ namespace Protocol
 		if (reset_time <= 0)
 			return;
 
-		long base = (long)reset_time * 60;
-		long span = base / 10; // ±10%
+		reset_interval = jittered((long)reset_time * 60, 10);
+		Debug() << "TCP (" << host << ":" << port << "): reset in " << reset_interval << "s.";
+	}
+
+	long TCP::jittered(long base, int percent)
+	{
+		long span = base * percent / 100;
 
 		static thread_local std::mt19937 gen(std::random_device{}());
 		std::uniform_int_distribution<long> dist(-span, span);
 
-		reset_interval = base + dist(gen);
-		Debug() << "TCP (" << host << ":" << port << "): reset in " << reset_interval << "s.";
+		return base + dist(gen);
 	}
 
 	void TCP::updateState()
 	{
-		if (state == READY && reset_time > 0 && std::difftime(time(nullptr), stamp) > reset_interval)
+		Clock::time_point now = Clock::now();
+
+		switch (state)
 		{
-			Debug() << "TCP (" << host << ":" << port << "): reset interval reached, refreshing connection.";
-			reconnect();
+		case RESOLVING:
+		{
+			std::unique_ptr<AddressInfo> ai = resolver.take();
+			if (ai)
+			{
+				state = DISCONNECTED;
+				connectResolved(std::move(ai));
+
+				// the pause counts from the failure, not from the start of the lookup
+				if (state == DISCONNECTED)
+					stamp = now;
+			}
+			else if (secondsSince(stamp) > LOOKUP_TIME)
+			{
+				Warning() << "TCP (" << host << ":" << port << "): lookup not finished after " << LOOKUP_TIME << " s, still waiting.";
+				stamp = now;
+			}
+			break;
 		}
 
-		else if (state == DISCONNECTED)
+		case CONNECTING:
 		{
-			if (std::difftime(time(nullptr), stamp) > RECONNECT_TIME)
+			if (checkConnecting())
+				break;
+
+			if (sock != -1)
+			{
+				if (secondsSince(stamp) <= (timeout > 0 ? timeout : RECONNECT_TIME))
+					break;
+
+				giveUp("connect timed out");
+			}
+
+			if (!tryNextAddress())
+				stamp = now;
+			break;
+		}
+
+		case READY:
+			if (reset_time > 0 && secondsSince(stamp) > reset_interval)
+			{
+				Debug() << "TCP (" << host << ":" << port << "): reset interval reached, refreshing connection.";
+				reconnect();
+			}
+			break;
+
+		case DISCONNECTED:
+			if (secondsSince(stamp) > reconnect_delay)
 			{
 				Warning() << "TCP (" << host << ":" << port << "): not connected, reconnecting.";
 				reconnect();
 			}
+			break;
 		}
+	}
 
-		else if (state == CONNECTING)
-		{
-			bool connected = isConnected(0);
+	void TCP::poll()
+	{
+		updateState();
 
-			if (!connected && std::difftime(time(nullptr), stamp) > RECONNECT_TIME)
-			{
-				if (stats)
-					stats->connect_fail++;
-				Warning() << "TCP (" << host << ":" << port << "): timeout connecting to server, reconnect.";
-				reconnect();
-
-				return;
-			}
-		}
+		if (state == READY)
+			flushPending();
 	}
 
 	int TCP::send(const void *data, int length)
 	{
-		updateState();
-
 		if (state != READY)
-			return persistent ? 0 : -1;
+			return 0;
 
-		const char *p = (const char *)data;
+		return sendKept(data, length);
+	}
+
+	int TCP::sendSome(const char *p, int length, bool &progress)
+	{
 		int total = 0;
 		while (total < length)
 		{
@@ -353,21 +393,15 @@ namespace Protocol
 					bytes_sent += total;
 					if (stats)
 						stats->bytes_out += total;
-					return handleNetworkError("send", error_code, 0);
+					handleNetworkError("send", error_code);
+					return -1;
 				}
 			}
-			if (!waitSendReady())
-			{
-				Debug() << "TCP (" << host << ":" << port << "): stalled at " << total << "/" << length << " bytes";
-				disconnect();
-				bytes_sent += total;
-				if (stats)
-					stats->bytes_out += total;
-				return -1;
-			}
+			break;
 		}
 
 		bytes_sent += total;
+		progress = total > 0;
 
 		if (stats)
 			stats->bytes_out += total;
@@ -375,25 +409,24 @@ namespace Protocol
 		return total;
 	}
 
+	// nothing, not an error, while the connection is down: it is being made again
 	int TCP::read(void *data, int length, int timeout, bool wait)
 	{
-		updateState();
-
 		if (state != READY)
-			return persistent ? 0 : -1;
+			return 0;
 
 		char *buffer = (char *)data;
 		int total_received = 0;
 		int remaining_length = length;
 		int remaining_time = timeout = MAX(timeout, 0);
 
-		time_t start_time = time(nullptr);
+		Clock::time_point start_time = Clock::now();
 
 		while (remaining_length > 0)
 		{
 			if (timeout)
 			{
-				int elapsed = (int)std::difftime(time(nullptr), start_time);
+				int elapsed = (int)secondsSince(start_time);
 				remaining_time = MAX(timeout - elapsed, 0);
 				if (remaining_time <= 0)
 					break;
@@ -414,7 +447,8 @@ namespace Protocol
 				if (error_code == EINTR)
 					break;
 
-				return handleNetworkError("select()", error_code, total_received);
+				handleNetworkError("select()", error_code);
+				return total_received;
 			}
 
 			if (select_result == 0 || (!FD_ISSET(sock, &readfds) && !FD_ISSET(sock, &exceptfds)))
@@ -424,13 +458,8 @@ namespace Protocol
 
 			if (received == 0) // peer performed orderly shutdown (EOF), not an error
 			{
-				if (persistent)
-				{
-					Debug() << "TCP (" << host << ":" << port << "): connection closed by peer, reconnecting.";
-					reconnect();
-				}
-				else
-					disconnect();
+				Debug() << "TCP (" << host << ":" << port << "): connection closed by peer.";
+				disconnect();
 				break;
 			}
 
@@ -446,7 +475,8 @@ namespace Protocol
 						break;
 				}
 
-				return handleNetworkError("receive", error_code, total_received);
+				handleNetworkError("receive", error_code);
+				return total_received;
 			}
 
 			total_received += received;
@@ -572,6 +602,9 @@ namespace Protocol
 			return;
 		}
 
+		// a write that did not finish is retried from the kept copy, not the caller's buffer
+		SSL_set_mode(ssl, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+
 		// Set SNI (Server Name Indication) hostname
 		SSL_set_tlsext_host_name(ssl, getHost().c_str());
 
@@ -588,6 +621,7 @@ namespace Protocol
 		SSL_set_bio(ssl, bio, bio);
 
 		tls_state = TLS_HANDSHAKING;
+		handshake_deadline = Clock::now() + std::chrono::seconds(HANDSHAKE_TIME);
 		performHandshake();
 	}
 
@@ -613,18 +647,33 @@ namespace Protocol
 
 		handshake_complete = false;
 		tls_state = TLS_DISCONNECTED;
+		pending.clear();
 	}
 
 	bool TLS::isConnected()
 	{
-		bool prev_connected = prev ? prev->isConnected() : false;
+		return prev && prev->isConnected() && handshake_complete;
+	}
 
-		if (prev_connected && !handshake_complete)
+	void TLS::poll()
+	{
+		ProtocolBase::poll();
+
+		if (!prev || !prev->isConnected())
+			return;
+
+		if (handshake_complete)
 		{
-			updateState();
+			flushPending();
+			return;
 		}
 
-		return prev_connected && handshake_complete;
+		updateState();
+		if (ssl && !handshake_complete && Clock::now() > handshake_deadline)
+		{
+			Error() << "TLS (" << getHost() << ":" << getPort() << "): handshake not finished after " << HANDSHAKE_TIME << " s, disconnecting";
+			disconnect();
+		}
 	}
 
 	int TLS::send(const void *data, int length)
@@ -632,28 +681,28 @@ namespace Protocol
 		if (!isConnected())
 			return 0;
 
+		return sendKept(data, length);
+	}
+
+	// a record goes whole or not at all; progress when part of it went out
+	int TLS::sendSome(const char *data, int length, bool &progress)
+	{
 		uint64_t before = BIO_number_written(SSL_get_wbio(ssl));
-
 		int sent = SSL_write(ssl, data, length);
-		if (sent <= 0)
-		{
-			int error = SSL_get_error(ssl, sent);
-			if ((error == SSL_ERROR_WANT_WRITE || error == SSL_ERROR_WANT_READ) &&
-				waitSendReady(error == SSL_ERROR_WANT_READ ? POLLIN : POLLOUT))
-				sent = SSL_write(ssl, data, length);
-		}
-
+		uint64_t written = BIO_number_written(SSL_get_wbio(ssl)) - before;
 		if (stats)
-			stats->bytes_out += BIO_number_written(SSL_get_wbio(ssl)) - before;
+			stats->bytes_out += written;
 
+		progress = written > 0;
 		if (sent > 0)
-			return sent;
+			return length;
 
 		int error = SSL_get_error(ssl, sent);
+		if (error == SSL_ERROR_WANT_WRITE || error == SSL_ERROR_WANT_READ)
+			return 0;
+
 		if (error == SSL_ERROR_ZERO_RETURN)
 			Warning() << "TLS (" << getHost() << ":" << getPort() << "): Connection closed by peer";
-		else if (error == SSL_ERROR_WANT_WRITE || error == SSL_ERROR_WANT_READ)
-			Debug() << "TLS (" << getHost() << ":" << getPort() << "): still blocked after the retry";
 		else
 			Error() << "TLS (" << getHost() << ":" << getPort() << "): Send error: " << getSSLErrorString(error);
 		disconnect();
@@ -965,7 +1014,7 @@ namespace Protocol
 		createPacket(PacketType::SUBSCRIBE, 2);
 		pushVariableLength(packet_length);
 
-		pushInt(packet_id++);
+		pushInt(nextPacketId());
 		pushString(topic);
 		pushByte(qos);
 	}
@@ -982,7 +1031,8 @@ namespace Protocol
 			length += 2 + username.length();
 			flags |= 0x80;
 		}
-		if (!password.empty())
+		// a password goes with a user name, never alone (MQTT 3.1.1 3.1.2.9)
+		if (!password.empty() && !username.empty())
 		{
 			length += 2 + password.length();
 			flags |= 0x40;
@@ -1001,124 +1051,71 @@ namespace Protocol
 
 		if (!username.empty())
 			pushString(username);
-		if (!password.empty())
+		if (!password.empty() && !username.empty())
 			pushString(password);
 	}
 
-	int MQTT::readRemainingLength()
+	bool MQTT::sendConnect()
 	{
-		int length = 0;
-		int shift = 0;
-		uint8_t b;
-
-		do
-		{
-			if (shift >= 28)
-				return -1;
-
-			if (prev->read((char *)&b, 1, 5, true) != 1)
-				return -1;
-
-			length |= (b & 127) << shift;
-			shift += 7;
-
-		} while ((b & 128) != 0);
-
-		return length;
-	}
-
-	void MQTT::performHandshake()
-	{
-
-		uint8_t b;
-		int length;
-
 		Debug() << "MQTT: Starting Handshake with broker " << getHost() << ":" << getPort();
 
 		connected = false;
 		if (!prev)
-			return;
+			return false;
 
 		connectPacket();
 
-		if (prev->send(packet.data(), packet.size()) < 0)
+		if (prev->send(packet.data(), packet.size()) <= 0)
 		{
 			Error() << "MQTT: Failed to send CONNECT packet";
 			disconnect();
-			return;
+			return false;
 		}
-		int l = readPacket(b, length);
-		if (!l || packet.size() < 2 || (b & 0xF0) != (uint8_t)(PacketType::CONNACK))
-		{
-			Error() << "MQTT: failed to read CONNACK packet";
-			disconnect();
-			return;
-		}
+		return true;
+	}
 
-		if (packet[1] != 0)
+	bool MQTT::connackAccepted(uint8_t code)
+	{
+		switch (code)
 		{
-			switch (packet[1])
-			{
-			case 0x01:
-				Error() << "MQTT: Connection Refused - Unacceptable Protocol Version. Server does not support requested MQTT protocol level.";
-				break;
-			case 0x02:
-				Error() << "MQTT: Connection Refused - Identifier Rejected. Client identifier is valid UTF-8 but not allowed by server.";
-				break;
-			case 0x03:
-				Error() << "MQTT: Connection Refused - Server Unavailable. Network connected but MQTT service unavailable.";
-				break;
-			case 0x04:
-				Error() << "MQTT: Connection Refused - Bad Username or Password. Malformed credentials.";
-				break;
-			case 0x05:
-				Error() << "MQTT: Connection Refused - Not Authorized. Client lacks authorization to connect.";
-				break;
-			default:
-				Error() << "MQTT: Connection Refused - Unknown Return Code: 0x" << std::hex << (int)packet[1];
-			}
-			disconnect();
-			return;
+		case 0x00:
+			return true;
+		case 0x01:
+			Error() << "MQTT: Connection Refused - Unacceptable Protocol Version. Server does not support requested MQTT protocol level.";
+			break;
+		case 0x02:
+			Error() << "MQTT: Connection Refused - Identifier Rejected. Client identifier is valid UTF-8 but not allowed by server.";
+			break;
+		case 0x03:
+			Error() << "MQTT: Connection Refused - Server Unavailable. Network connected but MQTT service unavailable.";
+			break;
+		case 0x04:
+			Error() << "MQTT: Connection Refused - Bad Username or Password. Malformed credentials.";
+			break;
+		case 0x05:
+			Error() << "MQTT: Connection Refused - Not Authorized. Client lacks authorization to connect.";
+			break;
+		default:
+			Error() << "MQTT: Connection Refused - Unknown Return Code: 0x" << std::hex << (int)code;
 		}
+		return false;
+	}
 
+	bool MQTT::finishHandshake()
+	{
 		if (subscribe)
 		{
 			subscribePacket();
 
-			if (prev->send((char *)packet.data(), packet.size()) < 0)
+			if (prev->send((char *)packet.data(), packet.size()) <= 0)
 			{
 				Error() << "MQTT: Failed to send SUBSCRIBE packet";
 				disconnect();
-				return;
+				return false;
 			}
 		}
 		Debug() << "MQTT: Connected to broker " << (subscribe ? "and subscribed" : "");
 		connected = true;
-	}
-	bool MQTT::readPacket(uint8_t &type, int &length)
-	{
-		if (prev->read(&type, 1, 5, true) != 1)
-			return false;
-
-		length = readRemainingLength();
-
-		if (length < 0)
-			return false;
-
-		// Protection against DoS via large packet allocation (limit to 1MB)
-		const int MAX_MQTT_PACKET_SIZE = 1024 * 1024;
-		if (length > MAX_MQTT_PACKET_SIZE)
-		{
-			Error() << "MQTT: Packet size " << length << " exceeds maximum " << MAX_MQTT_PACKET_SIZE;
-			disconnect();
-			return false;
-		}
-
-		packet.resize(length);
-
-		if (prev->read(packet.data(), length, 5, true) != length)
-			return false;
-
 		return true;
 	}
 
@@ -1126,10 +1123,57 @@ namespace Protocol
 	{
 		buffer_ptr = 0;
 
-		performHandshake();
+		connack_len = 0;
+		connack_deadline = Clock::now() + std::chrono::seconds(5);
+		awaiting_connack = sendConnect();
+	}
 
-		if (connected)
+	void MQTT::poll()
+	{
+		ProtocolBase::poll();
+
+		if (!awaiting_connack || !prev || !prev->isConnected())
+			return;
+
+		// a CONNACK is four bytes; only those are read, the rest is left for read()
+		int len = prev->read(connack + connack_len, 4 - connack_len, 0, false);
+		if (len > 0)
+			connack_len += len;
+
+		if (len >= 0 && connack_len < 4 && Clock::now() < connack_deadline)
+			return;
+
+		awaiting_connack = false;
+
+		if (connack_len < 4 || (connack[0] & 0xF0) != (uint8_t)(PacketType::CONNACK) || connack[1] != 2)
+		{
+			Error() << "MQTT: failed to read CONNACK packet";
+			disconnect();
+			return;
+		}
+
+		if (!connackAccepted(connack[3]))
+		{
+			disconnect();
+			return;
+		}
+
+		if (finishHandshake())
 			ProtocolBase::onConnect();
+	}
+
+	// a DISCONNECT before the socket goes (MQTT 3.1.1 3.14)
+	void MQTT::disconnect()
+	{
+		if (connected && prev)
+		{
+			connected = false;
+			createPacket(PacketType::DISCONNECT, 0);
+			pushVariableLength(0);
+			prev->send(packet.data(), packet.size());
+		}
+
+		ProtocolBase::disconnect();
 	}
 
 	void MQTT::onDisconnect()
@@ -1137,6 +1181,7 @@ namespace Protocol
 		ProtocolBase::onDisconnect();
 
 		connected = false;
+		awaiting_connack = false;
 	}
 
 	bool MQTT::setOptionKey(AIS::Keys key, const std::string &value)
@@ -1193,7 +1238,7 @@ namespace Protocol
 		pushString(tpc);
 
 		if (qos > 0)
-			pushInt(packet_id++);
+			pushInt(nextPacketId());
 
 		packet.insert(packet.end(), (char *)str, (char *)str + length);
 
@@ -1389,22 +1434,55 @@ namespace Protocol
 	{
 		buffer_ptr = 0;
 		received_ptr = 0;
+		close_sent = false;
 
 		buffer.resize(16384);
 		received.resize(16384);
 
-		if (!performHandshake())
+		if (sendUpgrade())
 		{
-			Error() << "WebSocket: Handshake failed.";
-			disconnect();
+			upgrading = true;
+			upgrade_deadline = Clock::now() + std::chrono::seconds(5);
 			return;
 		}
 
+		Error() << "WebSocket: Handshake failed.";
+		disconnect();
+	}
+
+	void WebSocket::finishUpgrade()
+	{
 		connected = true;
 		Debug() << "WebSocket: Connected to " << getHost() << ":" << getPort() << path;
 		ProtocolBase::onConnect();
 	}
-	bool WebSocket::performHandshake()
+
+	void WebSocket::poll()
+	{
+		ProtocolBase::poll();
+
+		if (!upgrading || !prev || !prev->isConnected())
+			return;
+
+		int r = readUpgrade(0);
+		if (r == 0 && Clock::now() < upgrade_deadline)
+			return;
+
+		upgrading = false;
+
+		if (r > 0)
+		{
+			finishUpgrade();
+			return;
+		}
+
+		if (r == 0)
+			Error() << "WebSocket: No response to handshake request.";
+		Error() << "WebSocket: Handshake failed.";
+		disconnect();
+	}
+
+	bool WebSocket::sendUpgrade()
 	{
 		if (!prev)
 		{
@@ -1432,15 +1510,18 @@ namespace Protocol
 			key[i] = (char)dis(gen);
 		}
 #endif
-		std::string secWebSocketKey = Util::Convert::toBase64(key);
+		upgrade_key = Util::Convert::toBase64(key);
+		upgrade_reply.clear();
 
 		// Build the handshake request
 		std::ostringstream request;
 		request << "GET " << path << " HTTP/1.1\r\n";
-		request << "Host: " << getHost() << "\r\n";
+		// the port goes with the host unless it is the scheme's default (RFC 6455 4.1)
+		std::string port = getPort();
+		request << "Host: " << getHost() << (port == "80" || port == "443" ? "" : ":" + port) << "\r\n";
 		request << "Upgrade: websocket\r\n";
 		request << "Connection: Upgrade\r\n";
-		request << "Sec-WebSocket-Key: " << secWebSocketKey << "\r\n";
+		request << "Sec-WebSocket-Key: " << upgrade_key << "\r\n";
 		request << "Sec-WebSocket-Version: 13\r\n";
 
 		if (!origin.empty())
@@ -1463,41 +1544,48 @@ namespace Protocol
 			return false;
 		}
 
-		// Read the response — headers may arrive across multiple TCP segments,
-		// so accumulate until we see the end-of-headers marker.
-		std::string response_str;
+		return true;
+	}
+
+	// 1 once the reply is in and accepted, 0 while more is to come, -1 on failure; a read
+	// that waits would hold out for a full chunk, which a short reply never fills
+	int WebSocket::readUpgrade(int t)
+	{
 		const size_t MAX_HEADER_SIZE = 16384;
 		const std::string HEADER_END = "\r\n\r\n";
-		size_t header_end_pos = std::string::npos;
 
-		while (response_str.size() < MAX_HEADER_SIZE)
+		char chunk[2048];
+		int len = prev->read(chunk, sizeof(chunk), t, false);
+		if (len < 0)
 		{
-			char chunk[2048];
-			int len = prev->read(chunk, sizeof(chunk), 5, true);
-			if (len <= 0)
-			{
-				Error() << "WebSocket: No response to handshake request.";
-				return false;
-			}
-
-			// Track scan start so we don't re-scan the entire string each iteration,
-			// while still catching the marker if it straddles two reads.
-			size_t scan_from = response_str.size() >= 3 ? response_str.size() - 3 : 0;
-			response_str.append(chunk, len);
-
-			header_end_pos = response_str.find(HEADER_END, scan_from);
-			if (header_end_pos != std::string::npos)
-				break;
+			Error() << "WebSocket: connection lost before the upgrade reply.";
+			return -1;
 		}
+		if (len == 0)
+			return 0;
 
-		if (header_end_pos == std::string::npos)
+		// Track scan start so we don't re-scan the entire reply on each read,
+		// while still catching the marker if it straddles two reads.
+		size_t scan_from = upgrade_reply.size() >= 3 ? upgrade_reply.size() - 3 : 0;
+		upgrade_reply.append(chunk, len);
+
+		size_t header_end = upgrade_reply.find(HEADER_END, scan_from);
+		if (header_end != std::string::npos)
+			return checkUpgrade(header_end + HEADER_END.size()) ? 1 : -1;
+
+		if (upgrade_reply.size() >= MAX_HEADER_SIZE)
 		{
 			Error() << "WebSocket: Handshake response headers exceeded " << MAX_HEADER_SIZE << " bytes.";
-			return false;
+			return -1;
 		}
+		return 0;
+	}
+
+	bool WebSocket::checkUpgrade(size_t body_start)
+	{
+		std::string &response_str = upgrade_reply;
 
 		// Preserve any frame bytes that arrived after the headers for the frame parser.
-		size_t body_start = header_end_pos + HEADER_END.size();
 		if (body_start < response_str.size())
 		{
 			size_t extra = response_str.size() - body_start;
@@ -1514,7 +1602,7 @@ namespace Protocol
 		if (response_str.find("HTTP/1.1 101") == std::string::npos &&
 			response_str.find("HTTP/1.0 101") == std::string::npos)
 		{
-			Error() << "WebSocket: Invalid handshake response.";
+			Error() << "WebSocket (" << getHost() << ":" << getPort() << "): upgrade refused: " << response_str.substr(0, response_str.find("\r\n"));
 			return false;
 		}
 		Util::Convert::toLower(rs_lower);
@@ -1552,7 +1640,7 @@ namespace Protocol
 		}
 
 		// Compute the expected accept key
-		std::string expected_accept_key = Util::Convert::toBase64(sha1Hash(secWebSocketKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"));
+		std::string expected_accept_key = Util::Convert::toBase64(sha1Hash(upgrade_key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"));
 
 		accept_key.erase(std::remove_if(accept_key.begin(), accept_key.end(), ::isspace), accept_key.end());
 		expected_accept_key.erase(std::remove_if(expected_accept_key.begin(), expected_accept_key.end(), ::isspace), expected_accept_key.end());
@@ -1560,6 +1648,30 @@ namespace Protocol
 		if (accept_key != expected_accept_key)
 		{
 			Error() << "WebSocket: Invalid Sec-WebSocket-Accept value: '" << accept_key << "' expected: '" << expected_accept_key << "'";
+			return false;
+		}
+
+		// the server may take one of the protocols offered, and nothing else (RFC 6455 4.1)
+		std::string chosen;
+		std::istringstream proto_stream(response_str);
+		while (std::getline(proto_stream, line))
+		{
+			std::string lower(line);
+			Util::Convert::toLower(lower);
+
+			if (lower.find("sec-websocket-protocol:") == 0)
+			{
+				chosen = line.substr(line.find(":") + 1);
+				chosen.erase(std::remove_if(chosen.begin(), chosen.end(), ::isspace), chosen.end());
+			}
+		}
+
+		std::string offered = protocols;
+		offered.erase(std::remove_if(offered.begin(), offered.end(), ::isspace), offered.end());
+
+		if (!chosen.empty() && ("," + offered + ",").find("," + chosen + ",") == std::string::npos)
+		{
+			Error() << "WebSocket: server chose protocol '" << chosen << "', which was not offered.";
 			return false;
 		}
 
@@ -1659,7 +1771,13 @@ namespace Protocol
 			return populateData(data, data_len);
 		}
 
-		getFrames(data, data_len, t, wait);
+		// a waiting read underneath would hold out to fill the whole frame buffer
+		const Clock::time_point deadline = Clock::now() + std::chrono::seconds(MAX(t, 0));
+		do
+		{
+			if (getFrames(data, data_len, wait ? MIN(t, 1) : t, false) < 0)
+				break;
+		} while (wait && received_ptr < data_len && Clock::now() < deadline && isConnected());
 
 		return populateData(data, data_len);
 	}
@@ -1728,6 +1846,8 @@ namespace Protocol
 
 			switch ((OPCODE)(buffer[0] & 0x0F))
 			{
+			// the fragments of a message go up as they come (RFC 6455 5.4)
+			case OPCODE::CONTINUATION:
 			case OPCODE::TEXT:
 			case OPCODE::BINARY:
 
@@ -1768,6 +1888,7 @@ namespace Protocol
 					frame.push_back(buffer[ptr + i] ^ close_key[i % 4]);
 				prev->send(frame.data(), frame.size());
 
+				close_sent = true;
 				disconnect();
 				break;
 			}
@@ -1817,7 +1938,6 @@ namespace Protocol
 		}
 	}
 
-	// prev->isConnected() must run first: it drives the reconnect and re-handshake
 	bool WebSocket::isConnected()
 	{
 		bool prev_connected = prev && prev->isConnected();
@@ -1825,9 +1945,32 @@ namespace Protocol
 		return prev_connected && connected;
 	}
 
+	// a Close before the socket goes (RFC 6455 7.1.2)
+	void WebSocket::disconnect()
+	{
+		if (connected && !close_sent && prev)
+		{
+			close_sent = true;
+
+			uint8_t key[4];
+			randomMaskingKey(key);
+
+			frame.resize(0);
+			frame.push_back(0x80 | (uint8_t)OPCODE::CLOSE);
+			frame.push_back(0x80 | 2);
+			frame.insert(frame.end(), key, key + 4);
+			frame.push_back(0x03 ^ key[0]);
+			frame.push_back(0xE8 ^ key[1]);
+			prev->send(frame.data(), (int)frame.size());
+		}
+
+		ProtocolBase::disconnect();
+	}
+
 	void WebSocket::onDisconnect()
 	{
 		connected = false;
+		upgrading = false;
 
 		ProtocolBase::onDisconnect();
 	}

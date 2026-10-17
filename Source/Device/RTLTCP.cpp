@@ -79,6 +79,9 @@ namespace Device
 			throw std::runtime_error("RTLTCP: cannot open connection with " + tcp.getHost() + ":" + tcp.getPort());
 		}
 
+		if (!session->waitConnected(2))
+			Warning() << "RTLTCP: not connected to " << tcp.getHost() << ":" << tcp.getPort() << ", retrying every 10 s.";
+
 		Device::Play();
 
 		if (getFormat() != Format::TXT && getFormat() != Format::BASESTATION && getFormat() != Format::BEAST && getFormat() != Format::RAW1090)
@@ -120,6 +123,12 @@ namespace Device
 
 		while (isStreaming())
 		{
+			session->poll();
+			if (!session->isConnected())
+			{
+				SleepSystem(50);
+				continue;
+			}
 
 			int len = session->read(buffer.data(), TRANSFER_SIZE, 1);
 

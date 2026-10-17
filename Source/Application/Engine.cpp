@@ -201,10 +201,12 @@ void Engine::run(WebViewer *viewer, ControlCore *control) {
   }
 
   const int SLEEP = 50;
-  std::time_t next_second = 0, next_minute = 0;
+  std::time_t next_minute = 0;
   auto time_start = high_resolution_clock::now();
   auto time_timeout_start = time_start;
   auto time_last = time_start;
+  // steady: high_resolution_clock is the wall clock on libstdc++
+  auto next_poll = steady_clock::now();
   bool oneverbose = false, iscallback = true;
 
   for (auto &r : receivers) {
@@ -226,14 +228,17 @@ void Engine::run(WebViewer *viewer, ControlCore *control) {
     if (control && viewer)
       control->syncViewer(*viewer);
 #endif
+    // outputs make and keep their connections here, off the decoding thread;
+    // paced, as the loop runs unthrottled for a file input
+    auto poll_now = steady_clock::now();
+    if (poll_now >= next_poll) {
+      next_poll = poll_now + milliseconds(SLEEP);
+      for (auto &o : msg)
+        o->poll();
+    }
+
     // above the verbose/timeout shortcut below or it never runs by default
     std::time_t tick_now = std::time(nullptr);
-    if (tick_now >= next_second) {
-      next_second = tick_now + 1;
-
-      if (comm_feed)
-        comm_feed->tickSecond(tick_now);
-    }
     if (tick_now >= next_minute) {
       next_minute = tick_now + 60;
 #ifdef HASWEBVIEWER

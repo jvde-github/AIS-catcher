@@ -474,15 +474,14 @@ namespace IO
 		tcp.setStats(&stats);
 		tcp.setOptionKey(AIS::KEY_SETTING_HOST, host);
 		tcp.setOptionKey(AIS::KEY_SETTING_PORT, port);
-		tcp.setOptionKey(AIS::KEY_SETTING_PERSIST, Util::Convert::toString(persistent));
-		tcp.setOptionKey(AIS::KEY_SETTING_TIMEOUT, persistent ? "0" : "10");
+		tcp.setOptionKey(AIS::KEY_SETTING_TIMEOUT, std::to_string(persistent ? 0 : CONNECT_TIMEOUT));
 		tcp.setOptionKey(AIS::KEY_SETTING_KEEP_ALIVE, Util::Convert::toString(keep_alive));
 		if (reset > 0)
 			tcp.setOptionKey(AIS::KEY_SETTING_RESET, std::to_string(reset));
 
 		connection = &tcp;
 
-		if (connection->connect() && tcp.getState() == Protocol::TCP::READY)
+		if (connection->connect() && connection->waitConnected(persistent ? 2 : 0))
 			Info() << info << "connected";
 		else if (persistent)
 			Info() << info << "pending";
@@ -495,8 +494,27 @@ namespace IO
 
 	void TCPClientStreamer::Stop()
 	{
+		std::lock_guard<std::mutex> lock(mtx);
 		if (connection)
 			connection->disconnect();
+	}
+
+	void TCPClientStreamer::poll()
+	{
+		std::unique_lock<std::mutex> lock(mtx, std::try_to_lock);
+		if (!lock.owns_lock() || !connection)
+			return;
+
+		connection->poll();
+		if (connection->isConnected())
+			connection->drain();
+
+		if (!persistent && !connection->isConnected() && !connection->isConnecting() && !stop_requested)
+		{
+			Critical() << "TCP feed: connection lost, requesting termination.";
+			stop_requested = true;
+			StopRequest();
+		}
 	}
 
 	Setting &TCPClientStreamer::SetKey(AIS::Keys key, const std::string &arg)
@@ -543,7 +561,6 @@ namespace IO
 		tcp.setStats(&stats);
 		tcp.setOptionKey(AIS::KEY_SETTING_HOST, AISCATCHER_URL);
 		tcp.setOptionKey(AIS::KEY_SETTING_PORT, AISCATCHER_PORT);
-		tcp.setOptionKey(AIS::KEY_SETTING_PERSIST, "on");
 		tcp.setOptionKey(AIS::KEY_SETTING_TIMEOUT, "0");
 		tcp.setOptionKey(AIS::KEY_SETTING_KEEP_ALIVE, "on");
 		tcp.setOptionKey(AIS::KEY_SETTING_RESET, "180");
@@ -552,11 +569,9 @@ namespace IO
 		connection = tcp.add(&hub);
 
 		connection->connect();
-		for (int i = 0; i < 40 && !connection->isConnected(); i++)
-			SleepSystem(50);
+		bool ready = connection->waitConnected(2);
 
-		last_send = std::time(nullptr);
-		bool ready = tcp.getState() == Protocol::TCP::READY;
+		last_send = Protocol::Clock::now();
 		Info() << "Hub feed: open socket for host: " << AISCATCHER_URL << ", port: " << AISCATCHER_PORT << ", " << startInfo() << ", status: " << (ready ? "connected" : "pending");
 	}
 
@@ -568,20 +583,25 @@ namespace IO
 			connection->disconnect();
 	}
 
-	void HubStreamer::tickSecond(std::time_t now)
+	void HubStreamer::poll()
 	{
-		std::lock_guard<std::mutex> lock(mtx);
-
-		if (!connection)
+		std::unique_lock<std::mutex> lock(mtx, std::try_to_lock);
+		if (!lock.owns_lock() || !connection)
 			return;
 
-		hub.detectClose();
+		connection->poll();
+
+		if (Protocol::secondsSince(last_tick) < 1)
+			return;
+		last_tick = Protocol::Clock::now();
+
+		connection->drain();
 		if (!connection->isConnected())
 			return;
 
-		if (now - last_send >= KEEPALIVE_S)
+		if (Protocol::secondsSince(last_send) >= KEEPALIVE_S)
 		{
-			last_send = now;
+			last_send = Protocol::Clock::now();
 			hub.keepAlive();
 		}
 	}
@@ -626,14 +646,25 @@ namespace IO
 
 	void MQTTStreamer::Stop()
 	{
+		std::lock_guard<std::mutex> lock(mtx);
 		session->disconnect();
+	}
+
+	void MQTTStreamer::poll()
+	{
+		std::unique_lock<std::mutex> lock(mtx, std::try_to_lock);
+		if (!lock.owns_lock())
+			return;
+
+		session->poll();
+		if (session->isConnected())
+			session->drain();
 	}
 
 	void MQTTStreamer::Start()
 	{
 		const std::string info = Util::Convert::toString(protocol) + " feed: " + session->getHost() + ", port: " + session->getPort() + ", " + startInfo();
 
-		tcp.setOptionKey(AIS::KEY_SETTING_PERSIST, "on");
 		tcp.setStats(&stats);
 		tls.setStats(&stats);
 
@@ -674,11 +705,8 @@ namespace IO
 			break;
 		}
 
-		if (!session->connect())
-		{
-			throw std::runtime_error("MQTT: cannot connect to " + session->getHost() + " port " + session->getPort());
-		}
-		Info() << info;
+		session->connect();
+		Info() << info << ", status: " << (session->waitConnected(2) ? "connected" : "pending");
 	}
 
 	Setting &MQTTStreamer::SetKey(AIS::Keys key, const std::string &arg)
