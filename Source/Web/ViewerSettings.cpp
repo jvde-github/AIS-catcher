@@ -15,7 +15,7 @@
         along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "Config.h"
+#include "Application/Config.h"
 #include "Logger.h"
 #include "WebViewer.h"
 #include <algorithm>
