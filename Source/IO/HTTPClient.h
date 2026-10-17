@@ -75,7 +75,6 @@ namespace IO
 		const void *getMessagePtr(bool gzip) const { return gzip ? zip.getOutputPtr() : message.c_str(); }
 		size_t getMessageLength(bool gzip) const { return gzip ? zip.getOutputLength() : message.length(); }
 		void createHeader(bool gzip, bool multipart);
-		bool sendAll(const void *data, int length);
 		int parseResponse();
 
 	public:

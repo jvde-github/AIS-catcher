@@ -117,20 +117,6 @@ namespace IO
 		header += "Content-Length: " + std::to_string(getMessageLength(gzip)) + "\r\n\r\n";
 	}
 
-	bool HTTPClient::sendAll(const void *data, int length)
-	{
-		const char *p = (const char *)data;
-		while (length > 0)
-		{
-			int sent = connection->send(p, length);
-			if (sent <= 0)
-				return false;
-			p += sent;
-			length -= sent;
-		}
-		return true;
-	}
-
 	int HTTPClient::Post(const std::string &msg, bool gzip, bool multipart, const std::string &copyname)
 	{
 		if (multipart) gzip = false;
@@ -140,7 +126,6 @@ namespace IO
 		// Set up protocol chain: TCP -> TLS (if secure)
 		tcp.setOptionKey(AIS::KEY_SETTING_HOST, host);
 		tcp.setOptionKey(AIS::KEY_SETTING_PORT, port);
-		tcp.setOptionKey(AIS::KEY_SETTING_PERSIST, "false");
 		tcp.setOptionKey(AIS::KEY_SETTING_TIMEOUT, std::to_string(timeout));
 
 		if (secure)
@@ -152,7 +137,7 @@ namespace IO
 			connection = &tcp;
 		}
 
-		if (!connection->connect())
+		if (!connection->connect() || !connection->waitConnected())
 		{
 			Error() << "HTTP Client [" << host << "]: error connecting to server.";
 			connection->disconnect();
@@ -163,7 +148,7 @@ namespace IO
 		buffer.resize(8192); // Start with 8KB buffer
 
 		// Send header
-		if (!sendAll(header.c_str(), (int)header.length()))
+		if (!connection->sendAll(header.c_str(), (int)header.length()))
 		{
 			Error() << "HTTP Client [" << host << "]: write failed";
 			connection->disconnect();
@@ -171,7 +156,7 @@ namespace IO
 		}
 
 		// Send body
-		if (!sendAll(getMessagePtr(gzip), (int)getMessageLength(gzip)))
+		if (!connection->sendAll(getMessagePtr(gzip), (int)getMessageLength(gzip)))
 		{
 			Error() << "HTTP Client [" << host << "]: write failed";
 			connection->disconnect();
@@ -198,6 +183,9 @@ namespace IO
 			}
 			else if (bytes_read == 0)
 			{
+				// one request per connection: a close is the end of the reply
+				if (!connection->isConnected())
+					break;
 				emptyReads++;
 			}
 			else

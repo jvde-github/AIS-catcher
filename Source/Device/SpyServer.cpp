@@ -42,7 +42,7 @@ namespace Device
 		Debug() << "Connecting to SpyServer...";
 		client.setOptionKey(AIS::KEY_SETTING_TIMEOUT, std::to_string(timeout));
 
-		if (!client.connect()) // host, port, false, timeout))
+		if (!client.connect() || !client.waitConnected())
 			throw std::runtime_error("SPYSERVER: cannot open connection.");
 
 		if (!sendHandshake())
@@ -118,8 +118,9 @@ namespace Device
 
 		while (size > 0 && maxzero >= 0)
 		{
+			// a lost connection ends the stream: the handshake is not made again
 			int len = client.read(data, size, timeout, false);
-			if (len < 0)
+			if (len < 0 || !client.isConnected())
 				return false;
 			if (len == 0)
 				maxzero--;
@@ -267,8 +268,7 @@ namespace Device
 		ch->BodySize = args.size();
 
 		std::memcpy(bytes.data() + sizeof(CommandHeader), args.data(), args.size());
-		int len = client.send(bytes.data(), bytes.size());
-		if (len != bytes.size())
+		if (!client.sendAll(bytes.data(), bytes.size()))
 			return false;
 
 		SleepSystem(100);

@@ -169,23 +169,26 @@ namespace IO
 		int reset = -1;
 		bool stop_requested = false;
 
+		// sendFormatted() on the decoding thread only sends; poll() on the engine's main
+		// loop makes and keeps the connection, and only tries the lock
+		std::mutex mtx;
+		static const int CONNECT_TIMEOUT = 10;
+
 		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
 		{
-			if (SendTo(data, len) < 0 && !persistent && !stop_requested)
-			{
-				Critical() << "TCP feed: requesting termination.";
-				stop_requested = true;
-				StopRequest();
-			}
+			std::lock_guard<std::mutex> lock(mtx);
+			SendTo(data, len);
 		}
 
 	public:
 		TCPClientStreamer() : OutputMessage("TCP Client") { fmt = MessageFormat::NMEA; }
+		~TCPClientStreamer() { Stop(); }
 
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 
 		void Start() override;
 		void Stop() override;
+		void poll() override;
 
 		int SendTo(const char *data, int len)
 		{
@@ -193,9 +196,9 @@ namespace IO
 				return -1;
 
 			int r = connection->send(data, len);
-			// send() returns 0 when the message could not be sent (socket would block
-			// or persistent reconnect in progress); there is no queue, so it is dropped.
-			if (r == 0 && len > 0)
+			// 0: not sent (socket full or connection down), -1: the connection failed
+			// under it; there is no queue, so it is dropped either way
+			if (r <= 0 && len > 0)
 				stats.dropped++;
 			return r;
 		}
@@ -208,15 +211,18 @@ namespace IO
 		Protocol::ProtocolBase *connection = nullptr;
 
 		static const int KEEPALIVE_S = 300;
+
+		// as the TCP output: sends on the decoding thread, the connection and the
+		// keep-alive from poll()
 		std::mutex mtx;
-		std::time_t last_send = 0;
+		Protocol::Clock::time_point last_send, last_tick;
 
 		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
 		{
 			std::lock_guard<std::mutex> lock(mtx);
 
-			last_send = std::time(nullptr);
-			if (connection && connection->send(data, len) == 0 && len > 0)
+			last_send = Protocol::Clock::now();
+			if (connection && connection->send(data, len) <= 0 && len > 0)
 				stats.dropped++;
 		}
 
@@ -228,7 +234,7 @@ namespace IO
 
 		void Start() override;
 		void Stop() override;
-		void tickSecond(std::time_t now);
+		void poll() override;
 	};
 
 	class TCPlistenerStreamer : public OutputMessage, public IO::TCPServer
@@ -265,18 +271,25 @@ namespace IO
 		Util::TemplateString topic_template;
 		std::string topic_buf;
 
+		// as the TCP output: sends on the decoding thread, the connection from poll()
+		std::mutex mtx;
+
 		void sendFormatted(const char *data, int len, const AIS::Message *msg, TAG &tag) override
 		{
+			std::lock_guard<std::mutex> lock(mtx);
+
+			int sent;
 			if (session == &mqtt && msg)
 			{
 				topic_template.write(tag, *msg, topic_buf);
-				mqtt.send(data, len, topic_buf);
+				sent = mqtt.send(data, len, topic_buf);
 			}
 			else
-				session->send(data, len);
-		}
+				sent = session->send(data, len);
 
-		void batchDone(TAG &) override { session->read(nullptr, 0, 0, false); }
+			if (sent <= 0 && len > 0)
+				stats.dropped++;
+		}
 
 	public:
 		MQTTStreamer() : OutputMessage("MQTT"), topic_template("ais/data")
@@ -284,9 +297,11 @@ namespace IO
 			fmt = MessageFormat::JSON_FULL;
 			forward_gps = false;
 		}
+		~MQTTStreamer() { Stop(); }
 
 		void Start() override;
 		void Stop() override;
+		void poll() override;
 
 		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
 	};

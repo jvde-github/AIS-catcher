@@ -21,6 +21,8 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
+#include <memory>
+#include <chrono>
 #include <array>
 #include <vector>
 #include <functional>
@@ -43,6 +45,14 @@
 
 namespace Protocol
 {
+	// steady clock: a wall clock that steps would fire or hold every deadline at once
+	typedef std::chrono::steady_clock Clock;
+
+	inline double secondsSince(Clock::time_point t)
+	{
+		return std::chrono::duration<double>(Clock::now() - t).count();
+	}
+
 	class AddressInfo
 	{
 	public:
@@ -87,6 +97,63 @@ namespace Protocol
 		std::string msg;
 	};
 
+	// a lookup on a thread of its own, detached: it shares only the job, so a lookup
+	// nobody collects still finishes and frees its result
+	class Resolver
+	{
+		struct Job
+		{
+			std::mutex mtx;
+			bool done = false;
+			std::unique_ptr<AddressInfo> result;
+		};
+		std::shared_ptr<Job> job;
+
+	public:
+		// a lookup still running is waited for: another thread would hang on the same
+		// nameserver, and they would pile up
+		bool start(const std::string &host, const std::string &service, const struct addrinfo &hints)
+		{
+			if (job)
+				return true;
+
+			std::shared_ptr<Job> j = std::make_shared<Job>();
+			job = j;
+
+			try
+			{
+				std::thread([j, host, service, hints]()
+							{
+					std::unique_ptr<AddressInfo> r(new AddressInfo(host, service, &hints));
+					std::lock_guard<std::mutex> lock(j->mtx);
+					j->result = std::move(r);
+					j->done = true; })
+					.detach();
+			}
+			catch (const std::system_error &)
+			{
+				job.reset();
+				return false;
+			}
+			return true;
+		}
+
+		std::unique_ptr<AddressInfo> take()
+		{
+			std::unique_ptr<AddressInfo> r;
+			if (!job)
+				return r;
+			{
+				std::lock_guard<std::mutex> lock(job->mtx);
+				if (!job->done)
+					return r;
+				r = std::move(job->result);
+			}
+			job.reset();
+			return r;
+		}
+	};
+
 	class ProtocolBase
 	{
 
@@ -96,20 +163,70 @@ namespace Protocol
 
 		std::string layer = "*";
 
+		// Nothing in a layer waits: connect(), send(), read() and isConnected() return at
+		// once, and poll(), called by the owner from a loop of its own, moves the
+		// connection on a step at a time. A caller that can wait loops poll() through
+		// waitConnected() and sendAll().
+
 		// One stall budget for every layer, so back-pressure behaves the same
 		// whether or not TLS is in the chain.
 		static const int SEND_STALL_MS = 500;
 
-		// False if the peer stayed blocked for the whole budget. `events` is POLLIN
-		// when TLS wants a read before it can write.
-		bool waitSendReady(short events = POLLOUT)
+		// what the layer could not send now, sent ahead of anything else
+		std::string pending;
+		std::chrono::steady_clock::time_point pending_since;
+
+		// what the peer takes without waiting, or -1 after an error the layer handled;
+		// progress when some went out even if none of the caller's bytes count, as for
+		// a TLS record
+		virtual int sendSome(const char *data, int length, bool &progress) { return -1; }
+
+		// true once nothing is kept back; a peer that takes none of it for the stall
+		// budget is disconnected
+		bool flushPending()
 		{
-			if (Net::waitReady(getSocket(), events, SEND_STALL_MS))
+			if (pending.empty())
 				return true;
 
-			Warning() << getLayer() << " (" << getHost() << ":" << getPort()
-					  << "): send blocked for " << SEND_STALL_MS << " ms, disconnecting";
+			bool progress = false;
+			int sent = sendSome(pending.data(), (int)pending.size(), progress);
+			if (sent < 0)
+				return false;
+
+			pending.erase(0, sent);
+			if (pending.empty())
+				return true;
+
+			std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+			if (progress || sent > 0)
+				pending_since = now;
+			else if (now - pending_since > std::chrono::milliseconds(SEND_STALL_MS))
+			{
+				Warning() << getLayer() << " (" << getHost() << ":" << getPort()
+						  << "): send blocked for " << SEND_STALL_MS << " ms, disconnecting";
+				disconnect();
+			}
 			return false;
+		}
+
+		// never waits: what is not taken now is kept and goes out first, and a message
+		// that comes while some is still kept is dropped
+		int sendKept(const void *data, int length)
+		{
+			if (!flushPending())
+				return 0;
+
+			bool progress = false;
+			int sent = sendSome((const char *)data, length, progress);
+			if (sent < 0)
+				return -1;
+
+			if (sent < length)
+			{
+				pending.assign((const char *)data + sent, length - sent);
+				pending_since = std::chrono::steady_clock::now();
+			}
+			return length;
 		}
 
 	public:
@@ -120,6 +237,60 @@ namespace Protocol
 		ProtocolBase *getNext() { return next; }
 
 		const std::string &getLayer() { return layer; }
+
+		// one step for each layer, from the bottom up
+		virtual void poll()
+		{
+			if (prev)
+				prev->poll();
+		}
+
+		virtual bool sendDone()
+		{
+			return pending.empty() && (!prev || prev->sendDone());
+		}
+
+		virtual bool isConnecting()
+		{
+			return prev && prev->isConnecting();
+		}
+
+		// until it is up or nothing is under way any more, each address and handshake
+		// getting the layer's own time; or for the seconds a quick look can spare
+		bool waitConnected(int seconds = 0)
+		{
+			std::chrono::steady_clock::time_point until = std::chrono::steady_clock::now() + std::chrono::seconds(seconds);
+			while (true)
+			{
+				poll();
+				if (isConnected())
+					return true;
+				if (!isConnecting() || (seconds > 0 && std::chrono::steady_clock::now() >= until))
+					return false;
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			}
+		}
+
+		// for an owner that never reads: how a close by the peer is seen
+		void drain()
+		{
+			char discard[64];
+			read(discard, sizeof(discard), 0, false);
+		}
+
+		// the whole message, stepping the connection until it is all out
+		bool sendAll(const void *data, int length)
+		{
+			if (send(data, length) <= 0 && length > 0)
+				return false;
+
+			while (isConnected() && !sendDone())
+			{
+				poll();
+				std::this_thread::sleep_for(std::chrono::milliseconds(2));
+			}
+			return isConnected();
+		}
 
 		virtual void disconnect()
 		{
@@ -212,11 +383,14 @@ namespace Protocol
 	class TCP : public ProtocolBase
 	{
 		const int RECONNECT_TIME = 10;
+		// a lookup still running after this is logged
+		const int LOOKUP_TIME = 30;
 
 	public:
 		enum State
 		{
 			DISCONNECTED,
+			RESOLVING,
 			CONNECTING,
 			READY
 		};
@@ -224,18 +398,13 @@ namespace Protocol
 		TCP() : ProtocolBase("TCP") {};
 		void disconnect() override;
 		bool connect() override;
+		void poll() override;
 
 		int read(void *data, int length, int t, bool wait) override;
 		int send(const void *data, int length) override;
 
-		bool isConnected() override
-		{
-			if (state == READY)
-				return true;
-
-			updateState();
-			return state == READY;
-		}
+		bool isConnected() override { return state == READY; }
+		bool isConnecting() override { return state == RESOLVING || state == CONNECTING; }
 
 		bool setOptionKey(AIS::Keys key, const std::string &value) override
 		{
@@ -249,9 +418,6 @@ namespace Protocol
 				break;
 			case AIS::KEY_SETTING_RESET:
 				reset_time = Util::Parse::Integer(value, 0, 3600);
-				break;
-			case AIS::KEY_SETTING_PERSIST:
-				persistent = Util::Parse::Switch(value);
 				break;
 			case AIS::KEY_SETTING_TIMEOUT:
 				timeout = Util::Parse::Integer(value, 0, 3600);
@@ -267,7 +433,7 @@ namespace Protocol
 
 		std::string getValues() override
 		{
-			return "host " + host + " port " + port + " timeout " + std::to_string(timeout) + " persist " + Util::Convert::toString(persistent) + " keep_alive " + Util::Convert::toString(keep_alive);
+			return "host " + host + " port " + port + " timeout " + std::to_string(timeout) + " keep_alive " + Util::Convert::toString(keep_alive);
 		}
 
 		std::string getHost() override
@@ -295,10 +461,10 @@ namespace Protocol
 		std::string host;
 		std::string port;
 
-		bool persistent = true;
 		int reset_time = -1;
 		// Captured at the point of failure: closeSocket() would overwrite errno.
 		std::string last_error;
+		// a connect attempt not through after this many seconds is given up on (0: RECONNECT_TIME)
 		int timeout = 0;
 		bool keep_alive = true;
 
@@ -309,59 +475,51 @@ namespace Protocol
 
 		int sock = -1;
 		State state = DISCONNECTED;
-		time_t stamp = 0;
-		time_t last_reconnect = 0;
-		bool in_connect = false;
+		Clock::time_point stamp;
 
 		long reset_interval = 0; // jittered reset deadline in seconds, measured from stamp
+		// jittered too, so stations that lost the same server do not all come back at once
+		double reconnect_delay = RECONNECT_TIME;
+
+		// the addresses the lookup gave, tried in turn
+		Resolver resolver;
+		std::unique_ptr<AddressInfo> addresses;
+		struct addrinfo *next_address = nullptr;
 
 		void updateState();
 		void randomizeResetInterval();
-		bool isConnected(int t);
+		static long jittered(long base, int percent);
+		bool checkConnecting();
+		void giveUp(const std::string &why);
+		void ready();
 		bool connectAddress(struct addrinfo *p);
+		bool connectResolved(std::unique_ptr<AddressInfo> ai);
+		bool tryNextAddress();
+		static struct addrinfo lookupHints();
 
-		bool reconnect()
+		int sendSome(const char *data, int length, bool &progress) override;
+
+		// from the top of the chain down, so the layers above say their goodbyes
+		void reconnect()
 		{
-			// reconnecting from within an onConnect() handshake recurses without bound
-			if (in_connect)
-			{
-				disconnect();
-				return false;
-			}
-
 			if (stats)
 				stats->reconnects++;
 
-			last_reconnect = time(nullptr);
-
 			Debug() << "TCP: Reconnecting to " << host << ":" << port;
-			disconnect();
-			return connect();
+
+			ProtocolBase *top = this;
+			while (top->getNext())
+				top = top->getNext();
+			top->disconnect();
+
+			connect();
 		}
 
-		int handleNetworkError(const char *operation, int error_code, int partial_bytes_processed)
+		void handleNetworkError(const char *operation, int error_code)
 		{
 			Error() << "TCP (" << host << ":" << port << "): " << operation << " error " << error_code
-					<< " (" << Net::errorString(error_code) << ")." << (persistent ? " Reconnecting." : " Failed.");
-
-			if (persistent)
-			{
-				if (std::difftime(time(nullptr), last_reconnect) > RECONNECT_TIME)
-					reconnect();
-				else
-				{
-					disconnect();
-					stamp = time(nullptr);
-				}
-			}
-			else
-			{
-				if (stats)
-					stats->connect_fail++;
-				disconnect();
-			}
-
-			return partial_bytes_processed > 0 ? partial_bytes_processed : (persistent ? 0 : -1);
+					<< " (" << Net::errorString(error_code) << ").";
+			disconnect();
 		}
 	};
 
@@ -386,6 +544,12 @@ namespace Protocol
 			TLS_CONNECTED
 		} tls_state = TLS_DISCONNECTED;
 
+		// a peer that accepts the socket and then says nothing
+		static const int HANDSHAKE_TIME = 15;
+		Clock::time_point handshake_deadline;
+
+		int sendSome(const char *data, int length, bool &progress) override;
+
 	public:
 		TLS() : ProtocolBase("TLS")
 		{
@@ -403,6 +567,8 @@ namespace Protocol
 		void onConnect() override;
 		void onDisconnect() override;
 		bool isConnected() override;
+		bool isConnecting() override { return tls_state == TLS_HANDSHAKING || ProtocolBase::isConnecting(); }
+		void poll() override;
 		int send(const void *data, int length) override;
 
 		int read(void *data, int length, int timeout = 0, bool wait = false) override;
@@ -477,10 +643,23 @@ namespace Protocol
 		std::string client_id;
 
 		int qos = 0;
-		int packet_id = 1;
+		int packet_id = 0;
+
+		// never zero (MQTT 3.1.1 2.3.1)
+		int nextPacketId()
+		{
+			if (++packet_id > 65535)
+				packet_id = 1;
+			return packet_id;
+		}
 
 		bool connected = false;
 		bool subscribe = false;
+
+		bool awaiting_connack = false;
+		Clock::time_point connack_deadline;
+		uint8_t connack[4];
+		int connack_len = 0;
 
 		void pushVariableLength(int length);
 		void pushByte(uint8_t byte);
@@ -489,16 +668,19 @@ namespace Protocol
 		void pushString(const std::string &str);
 		void subscribePacket();
 		void connectPacket();
-		int readRemainingLength();
-		void performHandshake();
-		bool readPacket(uint8_t &type, int &length);
+		bool sendConnect();
+		bool connackAccepted(uint8_t code);
+		bool finishHandshake();
 
 	public:
 		MQTT() : ProtocolBase("MQTT") {};
 		void onConnect() override;
 		void onDisconnect() override;
+		void disconnect() override;
+		void poll() override;
 		bool setOptionKey(AIS::Keys key, const std::string &value) override;
 		bool isConnected() override;
+		bool isConnecting() override { return awaiting_connack || ProtocolBase::isConnecting(); }
 		int send(const void *str, int length, const std::string &tpc);
 		int send(const void *str, int length) override;
 		int read(void *data, int data_len, int t = 1, bool wait = false) override;
@@ -589,12 +771,6 @@ namespace Protocol
 
 		void setUUID(const std::string &u) { uuid = u; }
 		void keepAlive() { sendControl(0); }
-
-		void detectClose()
-		{
-			char discard[64];
-			read(discard, sizeof(discard), 0, false);
-		}
 
 		void disconnect() override
 		{
@@ -751,7 +927,16 @@ namespace Protocol
 		std::string origin;
 		std::string protocols;
 
-		bool performHandshake();
+		// the upgrade under way: the key sent and the reply so far
+		std::string upgrade_key, upgrade_reply;
+		bool upgrading = false;
+		bool close_sent = false;
+		Clock::time_point upgrade_deadline;
+
+		bool sendUpgrade();
+		int readUpgrade(int t);
+		bool checkUpgrade(size_t body_start);
+		void finishUpgrade();
 
 		int getFrames(void *data, int length, int t = 1, bool wait = false);
 		int populateData(void *data, int length);
@@ -765,7 +950,10 @@ namespace Protocol
 
 		void onConnect() override;
 		void onDisconnect() override;
+		void disconnect() override;
 		bool isConnected() override;
+		bool isConnecting() override { return upgrading || ProtocolBase::isConnecting(); }
+		void poll() override;
 
 		int send(const void *data, int length) override;
 		int read(void *data, int length, int t = 1, bool wait = false) override;

@@ -167,6 +167,10 @@ namespace IO
 
 		virtual void Start() {}
 		virtual void Stop() {}
+
+		// from the engine's main loop: the decoding thread only ever sends
+		virtual void poll() {}
+
 		bool hasUUID() const { return !uuid.empty(); }
 		void Connect(Receiver &r);
 
