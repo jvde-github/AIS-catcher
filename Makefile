@@ -139,4 +139,4 @@ clean:
 	rm -f AIS-catcher
 
 install:
-	cp AIS-catcher /usr/local/bin/AIS-catcher
+	cp AIS-catcher /usr/bin/AIS-catcher
