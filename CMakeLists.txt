@@ -221,7 +221,7 @@ endif()
 
 # Define the libraries for inclusion
 if(MSVC)
-    set(ADDITIONAL_LIBRARIES ws2_32.lib)
+    set(ADDITIONAL_LIBRARIES ws2_32.lib crypt32.lib)
 endif()
 
 # --- Static build setup (must run before the dependency modules are included) ---

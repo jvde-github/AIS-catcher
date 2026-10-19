@@ -40,6 +40,17 @@
 #include <openssl/pem.h>
 #endif
 
+#if defined(HASOPENSSL) && defined(_WIN32)
+// after the OpenSSL headers: wincrypt.h defines macros that clash with OpenSSL's type names
+#include <wincrypt.h>
+#undef X509_NAME
+#undef X509_EXTENSIONS
+#undef X509_CERT_PAIR
+#undef PKCS7_SIGNER_INFO
+#undef OCSP_REQUEST
+#undef OCSP_RESPONSE
+#endif
+
 namespace Protocol
 {
 	const int ProtocolBase::SEND_STALL_MS;
@@ -558,6 +569,36 @@ namespace Protocol
 	}
 #endif
 
+#ifdef _WIN32
+	// The Windows build ships OpenSSL from vcpkg, whose compiled-in certificate directory
+	// is not on a user's machine, so the default verify paths find nothing. Read the
+	// system ROOT store once instead; it follows Windows Update. SSL_CERT_FILE and
+	// SSL_CERT_DIR stay honoured through the default paths added after these.
+	static const std::vector<X509 *> &windowsCACertificates()
+	{
+		static std::vector<X509 *> certs;
+		static std::once_flag flag;
+
+		std::call_once(flag, []()
+					   {
+						   HCERTSTORE store = CertOpenSystemStoreW(0, L"ROOT");
+						   if (store)
+						   {
+							   for (PCCERT_CONTEXT c = CertEnumCertificatesInStore(store, nullptr); c; c = CertEnumCertificatesInStore(store, c))
+							   {
+								   const unsigned char *der = c->pbCertEncoded;
+								   if (X509 *x = d2i_X509(nullptr, &der, (long)c->cbCertEncoded))
+									   certs.push_back(x);
+							   }
+							   CertCloseStore(store, 0);
+						   }
+
+						   Info() << "TLS: loaded " << certs.size() << " certificates from the Windows ROOT store"; });
+
+		return certs;
+	}
+#endif
+
 	void TLS::onConnect()
 	{
 		// Create SSL context
@@ -575,15 +616,20 @@ namespace Protocol
 		if (verify_certificates)
 		{
 			SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, nullptr);
+#if defined(__ANDROID__) || defined(_WIN32)
 #ifdef __ANDROID__
 			const std::vector<X509 *> &cas = androidCACertificates();
+#else
+			const std::vector<X509 *> &cas = windowsCACertificates();
+#endif
 			if (cas.empty())
 				Error() << "TLS: no system CA certificates found, verification will fail";
 
 			X509_STORE *store = SSL_CTX_get_cert_store(ctx);
 			for (X509 *c : cas)
 				X509_STORE_add_cert(store, c);
-#else
+#endif
+#ifndef __ANDROID__
 			SSL_CTX_set_default_verify_paths(ctx);
 #endif
 		}
