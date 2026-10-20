@@ -15,7 +15,10 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <algorithm>
+
 #include "Prometheus.h"
+#include "Logger.h"
 
 const std::string ShippingClassNames[] = {
 	"Other",							  // CLASS_OTHER
@@ -49,6 +52,7 @@ void PrometheusCounter::Clear()
 
 	_count = 0;
 	_distance = 0;
+	_dropped = 0;
 
 	mtx.unlock();
 }
@@ -61,25 +65,71 @@ void PrometheusCounter::Add(const AIS::Message &m, const TAG &tag)
 	if (tag.shipclass < 0 || tag.shipclass > 13)
 		return;
 
-	const char *speed = tag.speed < 0 ? "Unknown" : (tag.speed > 0.5 ? "Moving" : "Stationary");
-	char ch = m.getChannel();
+	bool has_ppm = tag.ppm < 1000, has_level = tag.level < 1000;
 
-	auto labels = [&](std::string &out) {
-		out += "type=\"" + std::to_string(m.type()) + "\",mmsi=\"" + std::to_string(m.mmsi()) + "\",station_id=\"" + std::to_string(m.getStation()) + "\",speed=\"" + speed + "\",shipclass=\"" + ShippingClassNames[tag.shipclass] + "\",channel=\"" + std::string(1, ch) + "\"";
-	};
-
-	if (tag.ppm < 1000)
+	if (has_ppm || has_level)
 	{
-		ppm += "ais_msg_ppm{";
-		labels(ppm);
-		ppm += "} " + std::to_string(tag.ppm) + "\n";
-	}
+		if (samples.empty())
+			samples.resize(SLOTS);
 
-	if (tag.level < 1000)
-	{
-		level += "ais_msg_level{";
-		labels(level);
-		level += "} " + std::to_string(tag.level) + "\n";
+		uint32_t mmsi = m.mmsi();
+		int station = m.getStation();
+		char ch = m.getChannel() ? m.getChannel() : '?';
+
+		// MAX_USED < SLOTS, so a free slot always ends the probe
+		Sample *s = nullptr;
+		uint32_t h = (mmsi ^ ((uint32_t)station << 20)) * 2654435761u;
+		for (int i = h >> (32 - SLOT_BITS);; i = (i + 1) & (SLOTS - 1))
+		{
+			Sample &e = samples[i];
+
+			if (!e.channel[0])
+			{
+				if (used < MAX_USED)
+				{
+					used++;
+					e.mmsi = mmsi;
+					e.station = station;
+					s = &e;
+				}
+				break;
+			}
+			if (e.mmsi == mmsi && e.station == station)
+			{
+				s = &e;
+				break;
+			}
+		}
+
+		if (!s && !_warned)
+		{
+			Warning() << "Prometheus: more than " << (int)MAX_USED << " ships between two scrapes, ais_msg_ppm and ais_msg_level leave out the rest (ais_stat_samples_dropped); scrape more often";
+			_warned = true;
+		}
+
+		int c = 0;
+		while (s && c < 4 && s->channel[c] && s->channel[c] != ch)
+			c++;
+
+		if (!s || c == 4)
+			_dropped++;
+		else
+		{
+			s->channel[c] = ch;
+			s->types[c] |= 1u << (m.type() - 1);
+			s->speed = tag.speed < 0 ? 0 : (tag.speed > 0.5 ? 1 : 2);
+			s->shipclass = (uint8_t)tag.shipclass;
+			if (has_ppm)
+			{
+				s->ppm[c] = tag.ppm;
+				s->has_ppm |= 1 << c;
+			}
+			if (has_level)
+			{
+				s->level[c] = tag.level;
+				s->has_level |= 1 << c;
+			}
+		}
 	}
 
 	_count++;
@@ -99,17 +149,14 @@ void PrometheusCounter::Receive(const JSON::JSON *json, int len, TAG &tag)
 	AIS::Message &data = *((AIS::Message *)json[0].binary);
 
 	mtx.lock();
-
-	if (ppm.size() <= 32768 && level.size() <= 32768)
-		Add(data, tag);
-
+	Add(data, tag);
 	mtx.unlock();
 }
 
 void PrometheusCounter::resetSamples()
 {
-	ppm = "# HELP ais_msg_ppm\n# TYPE ais_msg_ppm gauge\n";
-	level = "# HELP ais_msg_level\n# TYPE ais_msg_level gauge\n";
+	std::fill(samples.begin(), samples.end(), Sample());
+	used = 0;
 }
 
 void PrometheusCounter::Reset()
@@ -148,8 +195,32 @@ std::string PrometheusCounter::toPrometheus()
 		element += "ais_stat_count_type_" + type + " " + std::to_string(_msg[i]) + "\n";
 	}
 
+	element += "# HELP ais_stat_samples_dropped Messages left out of ais_msg_ppm and ais_msg_level: more ships between scrapes than the table holds\n";
+	element += "# TYPE ais_stat_samples_dropped counter\n";
+	element += "ais_stat_samples_dropped " + std::to_string(_dropped) + "\n";
+
+	static const char *speeds[] = {"Unknown", "Moving", "Stationary"};
+
+	auto write = [&](const std::string &name, bool ppm) {
+		element += "# HELP " + name + "\n# TYPE " + name + " gauge\n";
+		for (const Sample &s : samples)
+			for (int c = 0; c < 4 && s.channel[c]; c++)
+			{
+				if (!(((ppm ? s.has_ppm : s.has_level) >> c) & 1))
+					continue;
+
+				std::string rest = "\",mmsi=\"" + std::to_string(s.mmsi) + "\",station_id=\"" + std::to_string(s.station) + "\",speed=\"" + speeds[s.speed] + "\",shipclass=\"" + ShippingClassNames[s.shipclass] + "\",channel=\"" + std::string(1, s.channel[c]) + "\"} " + std::to_string(ppm ? s.ppm[c] : s.level[c]) + "\n";
+
+				for (int t = 1; t <= 28; t++)
+					if ((s.types[c] >> (t - 1)) & 1)
+						element += name + "{type=\"" + std::to_string(t) + rest;
+			}
+	};
+
+	write("ais_msg_ppm", true);
+	write("ais_msg_level", false);
+
 	// drain must share the lock with the read or samples in between are lost
-	element += ppm + level;
 	resetSamples();
 	mtx.unlock();
 	return element;

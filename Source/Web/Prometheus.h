@@ -16,9 +16,11 @@
 */
 
 #pragma once
+#include <cstdint>
 #include <iostream>
 #include <string.h>
 #include <mutex>
+#include <vector>
 
 #include "AIS-catcher.h"
 #include "JSONAIS.h"
@@ -31,9 +33,25 @@ class PrometheusCounter : public StreamIn<JSON::JSON> {
 	unsigned int _channel[4];
 
 	float _distance;
+	unsigned int _dropped;
 
-	std::string ppm;
-	std::string level;
+	struct Sample {
+		uint32_t mmsi;
+		int station;
+		char channel[4];
+		uint32_t types[4];
+		float ppm[4], level[4];
+		uint8_t has_ppm, has_level;
+		uint8_t speed, shipclass;
+	};
+
+	static const int SLOT_BITS = 10;
+	static const int SLOTS = 1 << SLOT_BITS;
+	static const int MAX_USED = SLOTS * 3 / 4;
+
+	std::vector<Sample> samples;
+	int used = 0;
+	bool _warned = false;
 
 	void Add(const AIS::Message& m, const TAG& tag);
 	void Clear();
