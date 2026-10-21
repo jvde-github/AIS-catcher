@@ -178,6 +178,7 @@ export function applyMenuLabels() {
             box: document.querySelector(".header-title"),
             title: document.querySelector(".header-title > span"),
             pill: document.getElementById("menubar_mini"),
+            chip: document.getElementById("header-focus"),
             mode: () => settings.menu_labels,
         });
     header.apply();

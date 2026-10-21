@@ -48,6 +48,7 @@ public:
     bool showdecoder = false;
     bool KML = false;
     bool GeoJSON = false;
+    bool PlaceGeometry = true;
     bool supportPrometheus = false;
     bool replay = true;
     bool split = true;

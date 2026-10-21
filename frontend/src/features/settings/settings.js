@@ -219,7 +219,7 @@ function updateForLegacySettings() {
 export function loadSettings() {
     settingsStore.load(urlParams.has("reset"));
     if (settingsStore.upgraded()) showNotification("Settings were reset for this version of the viewer");
-    if (settings.activeReceiver) setReceiver(settings.activeReceiver);
+    if (Number.isInteger(settings.focusStation)) setReceiver(settings.focusStation);
     settings.android = false;
 }
 
@@ -284,7 +284,7 @@ export function applyDefaultSettings() {
 
 export function saveSettings() {
     for (const fn of hooks.save) fn();
-    settings.activeReceiver = receiver;
+    settings.focusStation = receiver;
 
     persistSettings();
 

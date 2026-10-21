@@ -176,7 +176,7 @@ namespace AIS
 				w.append_float(tag.ppm);
 		}
 
-		if (getStation())
+		if (getStation() >= 0)
 		{
 			w.append_lit(",\"station_id\":");
 			w.append_int((long long)getStation());

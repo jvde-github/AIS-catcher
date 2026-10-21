@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <functional>
+
 #include <string>
 #include <unordered_map>
 #include <mutex>
@@ -39,11 +41,21 @@ public:
 
 	void Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r, bool accept_gzip) override;
 
+	// The site's answers, set before start(): what the stations are doing now,
+	// for the Stations tab; where the API tester reaches the site's server on
+	// a port, false when there is none; the ports the servers listen on
+	void setStationsLive(std::function<std::string()> f) { stations_live = std::move(f); }
+	void setServerAddress(std::function<bool(int, std::string &)> f) { server_address = std::move(f); }
+	void setServerPorts(std::function<std::vector<int>()> f) { server_ports = std::move(f); }
+
 protected:
 	void processClients() override;
 
 private:
 	ControlCore &core;
+	std::function<std::string()> stations_live;
+	std::function<bool(int, std::string &)> server_address;
+	std::function<std::vector<int>()> server_ports;
 
 	// The endpoints that answer without a session, method null meaning any.
 	// Everything else is private: a mistake here locks an endpoint down

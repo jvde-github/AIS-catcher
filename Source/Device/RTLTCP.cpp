@@ -86,11 +86,11 @@ namespace Device
 
 		if (getFormat() != Format::TXT && getFormat() != Format::BASESTATION && getFormat() != Format::BEAST && getFormat() != Format::RAW1090)
 		{
-			fifo.Init(BUFFER_SIZE);
+			fifo.Init(BUFFER_SIZE, 2 * buffer_count);
 		}
 		else
 		{
-			fifo.Init(text_buffer, BUFFER_SIZE / text_buffer);
+			fifo.Init(text_buffer, buffer_count * (BUFFER_SIZE / text_buffer));
 		}
 
 
@@ -208,6 +208,9 @@ namespace Device
 		case AIS::KEY_SETTING_TEXT_BUFFER:
 			text_buffer = Util::Parse::Integer(arg, 1, 256, "TEXT_BUFFER");
 			break;
+		case AIS::KEY_SETTING_BUFFER_COUNT:
+			buffer_count = Util::Parse::Integer(arg, 1, 100, "BUFFER_COUNT");
+			break;
 		case AIS::KEY_SETTING_PROTOCOL:
 		{
 			if (!Util::Parse().Protocol(arg, Protocol))
@@ -262,7 +265,7 @@ namespace Device
 	std::string RTLTCP::Get()
 	{
 		Protocol::ProtocolBase *p = session;
-		std::string str = "protocol " + Util::Convert::toString(Protocol) + " lossless " + Util::Convert::toString(lossless) + " " + Device::Get() + "\n";
+		std::string str = "protocol " + Util::Convert::toString(Protocol) + " lossless " + Util::Convert::toString(lossless) + " buffer_count " + std::to_string(buffer_count) + " " + Device::Get() + "\n";
 		while (p)
 		{
 			str += "  " + p->getLayer() + ": " + p->getValues() + "\n";

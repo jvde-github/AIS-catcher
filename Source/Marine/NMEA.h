@@ -35,7 +35,7 @@ namespace AIS
 	class NMEA : public SimpleStreamInOut<RAW, Message>
 	{
 		Message msg;
-		int station = 0;
+		int station = -1; // the input's station, on a message that carries none of its own
 		std::string uuid;
 
 		enum class ParseState

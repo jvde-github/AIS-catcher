@@ -32,28 +32,7 @@
 
 #include "Device/Device.h"
 
-// Tracking/DB config accumulated during Set(), applied to all ReceiverTrackers
-// in attachEngine().
-struct TrackingConfig {
-  // keep every member resettable by assigning a default-constructed copy
-  float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
-  bool latlon_share = false;
-  bool server_mode = false;
-  bool msg_save = false;
-  bool use_gps = true;
-  uint32_t own_mmsi = 0;
-  int time_history = 30 * 60;
-  // oldest track and replay data served, 0 is unlimited
-  int track_time = 3600;
-  bool expire_fields = false;
-  // 0 means "not configured": LONG_RANGE_CUTOFF_DEFAULT is used instead
-  int cutoff = 0;
-  // kilobytes of track storage; 0 keeps the default
-  int track_memory = 0;
-  // ship table size; 0 keeps the default (4096, or 32 times that in server
-  // mode)
-  int max_ships = 0;
-};
+#include "TrackingConfig.h"
 
 // Bundles all per-receiver (or aggregate) state: ship DB, counters, history.
 // states[0] is always "All" (aggregate). states[1..N] are per receiver/model

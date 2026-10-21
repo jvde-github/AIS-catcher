@@ -25,14 +25,16 @@
 
 #include "CommandLine.h"
 #include "Receiver.h"
+#include "Engine.h"
+#include "Config.h"
+#include "Site.h"
 #ifdef HASWEBVIEWER
 #include "WebViewer.h"
 #endif
-#include "Engine.h"
-#include "Config.h"
 #include "JSON.h"
 #include "JSON/Parser.h"
 #include "N2KStream.h"
+#include "Helper.h"
 #include "Logger.h"
 #include "Screen.h"
 #include "File.h"
@@ -70,6 +72,7 @@ static void Usage()
 	Info() << "\t[-M xxx - set additional meta data to generate: T = NMEA timestamp, D = decoder related (signal power, ppm) (default: none)]";
 	Info() << "\t[-n show NMEA messages on screen without detail (-o 1)]";
 	Info() << "\t[-N [optional: port][optional settings] - start http server at port, see README for details]";
+	Info() << "\t[-J port [key value]... - a server on the site's tracker: serve api,mcp,system,ui,geojson,metrics; public on; bind address; filter terms; keys as an entry of \"services\" in the configuration file]";
 	Info() << "\t[-o set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON, 4 JSON Sparse, 5 JSON Full (default: 2)]";
 	Info() << "\t[-O MMSI - sets the own mmsi of the receiver]";
 	Info() << "\t[-p xxx - set frequency correction for device in PPM (default: zero)]";
@@ -80,6 +83,7 @@ static void Usage()
 	Info() << "\t[-T xx - auto terminate run with SDR after xxx seconds (default: off)]";
 	Info() << "\t[-u xxx.xx.xx.xx yyy - UDP destination address and port (default: off)]";
 	Info() << "\t[-v [option: xx] - enable verbose mode, optional to provide update frequency of xx seconds (default: false)]";
+	Info() << "\t[-W url [key value]... - events to a webhook (http, https), or the station's state to Home Assistant over MQTT (mqtt, mqtts, ws, wss); keys as in the configuration file, lists comma-separated]";
 	Info() << "\t[-X connect to AIS community feed at www.aiscatcher.org (default: off)]";
 	Info() << "\t[-Q publish data to MQTT server]";
 	Info() << "\t[-Z lat lon - set receiver location (latitude and longitude in decimal degrees)]";
@@ -207,11 +211,11 @@ static void parseSettings(Setting &s, char *argv[], int ptr, int argc)
 		std::string arg = argv[ptr++];
 
 		Util::Convert::toUpper(option);
-		AIS::Keys key = AIS::lookupSettingKey(option);
+		AIS::Keys key;
 
 		try
 		{
-			if (key != (AIS::Keys)-1)
+			if (AIS::lookupSettingKey(option, key))
 				s.SetKey(key, arg);
 			else
 			{
@@ -356,8 +360,8 @@ static void parseCLI(int argc, char *argv[], Engine &engine, Config &c, int &cb)
 		case 'N':
 #ifdef HASWEBVIEWER
 			Assert(count > 0, param, "requires at least one parameter");
-			if (engine.servers.size() == 0)
-				engine.servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
+			if (engine.viewers.empty())
+				engine.viewers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
 
 			{
 				int port = isNumber(arg1) ? 1 : 0;
@@ -365,15 +369,35 @@ static void parseCLI(int argc, char *argv[], Engine &engine, Config &c, int &cb)
 
 				if (port)
 				{
-					// -N port creates a new server assuming the previous one is complete (i.e. has a port set)
-					if (engine.servers.back()->isPortSet())
-						engine.servers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
-					engine.servers.back()->SetKey(AIS::KEY_SETTING_PORT, arg1);
+					// -N port starts a new viewer once the one before has its port
+					if (engine.viewers.back()->isPortSet())
+						engine.viewers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
+					engine.viewers.back()->SetKey(AIS::KEY_SETTING_PORT, arg1);
 				}
-				parseSettings(*engine.servers.back(), argv, ptr + port, argc);
+				parseSettings(*engine.viewers.back(), argv, ptr + port, argc);
 			}
 #else
-			throw std::runtime_error("WebViewer support not compiled in.");
+			throw std::runtime_error("Option -N needs a build with the web viewer (cmake -DWEBVIEWER=ON).");
+#endif
+			break;
+		case 'J':
+#ifdef HASAPI
+			Assert(count >= 1 && count % 2 == 1, param, "requires a port, then key value pairs, e.g. -J 8100 serve api,mcp");
+			{
+				std::vector<std::pair<std::string, std::string>> settings;
+				for (int k = 2; k + 1 <= count; k += 2)
+					settings.emplace_back(argv[ptr + k], argv[ptr + k + 1]);
+				try
+				{
+					c.serverFromArgs(arg1, settings);
+				}
+				catch (const std::exception &e)
+				{
+					throw std::runtime_error("-J " + arg1 + ": " + e.what());
+				}
+			}
+#else
+			throw std::runtime_error("Option -J needs a build with the API (cmake -DAPI=ON).");
 #endif
 			break;
 		case 'S':
@@ -646,6 +670,26 @@ static void parseCLI(int argc, char *argv[], Engine &engine, Config &c, int &cb)
 				parseSettings(h, argv, ptr + (count % 2), argc);
 			}
 			break;
+		case 'W':
+#ifdef HASDELIVERY
+			Assert(count >= 1 && count % 2 == 1, param, "requires a url, then key value pairs, e.g. -W https://example.com/hook EVENTS safety SECRET whsec_...");
+			{
+				std::vector<std::pair<std::string, std::string>> settings;
+				for (int k = 2; k + 1 <= count; k += 2)
+					settings.emplace_back(argv[ptr + k], argv[ptr + k + 1]);
+				try
+				{
+					c.deliveryFromArgs(arg1, settings);
+				}
+				catch (const std::exception &e)
+				{
+					throw std::runtime_error("-W " + arg1 + ": " + e.what());
+				}
+			}
+#else
+			throw std::runtime_error("Option -W needs a build with webhooks and the MQTT state (cmake -DDELIVERY=ON).");
+#endif
+			break;
 		case 'Z':
 			Assert(count == 2, param, "Location Setting requires two parameters (lat/lon)");
 			receiver.SetKey(AIS::KEY_SETTING_LAT, arg1).SetKey(AIS::KEY_SETTING_LON, arg2);
@@ -740,9 +784,9 @@ static void parseCLI(int argc, char *argv[], Engine &engine, Config &c, int &cb)
 		Usage();
 }
 
-
 int run(const std::vector<std::string> &args, int &cb)
 {
+	Site site;
 	Engine engine;
 	Config c(engine);
 
@@ -759,11 +803,13 @@ int run(const std::vector<std::string> &args, int &cb)
 		argv.push_back(nullptr);
 
 		parseCLI((int)storage.size(), argv.data(), engine, c, cb);
+		c.finish();
 
 		if (engine.list_devices || engine.list_support || engine.list_options || engine.no_run)
 			return 0;
 
-		engine.run();
+		site.start();
+		engine.run(site);
 	}
 	catch (std::exception const &e)
 	{

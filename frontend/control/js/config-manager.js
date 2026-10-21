@@ -4,9 +4,13 @@
 // are read from window when called, so the app may define them after load.
 import * as AISComponents from '@aiscatcher/ui/components.js';
 import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } from './schema.js';
+import { migrateConfig } from './config-migrate.js';
+import { moreMenu } from './dom.js';
+import { ICONS } from './icons.js';
 
 
     const ManagerRegistry = new Map();
+    const anyDirty = () => [...ManagerRegistry.values()].some(m => m.dirty);
 
     // Session may expire mid-edit: route 401s through the login modal so the
     // user can sign in again without losing unsaved edits.
@@ -20,19 +24,72 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
     // own copy to mutate. Invalidated on save and on every panel open.
     const ConfigStore = {
         promise: null,
+        // the configuration as last read or saved: what a page draws from between fetches, never changed
+        cached: null,
         fetch(fresh) {
             if (fresh || !this.promise) {
                 const p = fetch('/api/config').then(r => {
                     if (!r.ok) throw new Error(authFailed(r) ? 'Authentication required' : 'Failed to fetch configuration');
                     return r.json();
-                });
+                }).then(cfg => (this.cached = migrateConfig(cfg)));
                 p.catch(() => { if (this.promise === p) this.promise = null; });
                 this.promise = p;
             }
             return this.promise.then(cfg => JSON.parse(JSON.stringify(cfg)));
         },
-        invalidate() { this.promise = null; }
+        invalidate() { this.promise = null; },
+        // One write of the file: a fresh copy, changed by `change`, normalised and posted. Resolves
+        // to the configuration as saved; rejects with the server's reason, after asking for the
+        // password again when the session has expired.
+        async save(change) {
+            Utils.flushDebounces();
+            const cfg = await this.fetch(true);
+            change(cfg);
+            if (!cfg.config) cfg.config = 'aiscatcher';
+            if (!cfg.version) cfg.version = 1;
+            const { warnings } = ConfigNormalizer.normalize(cfg);
+            if (warnings.length) App.notifyWarnings(warnings);
+            const res = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg) });
+            if (!res.ok) {
+                authFailed(res);
+                const body = await res.json().catch(() => null);
+                throw new Error(body && body.error ? body.error : `the server answered ${res.status}`);
+            }
+            this.invalidate();
+            this.cached = JSON.parse(JSON.stringify(cfg));
+            return cfg;
+        }
     };
+
+    // A page drawn by its own code, which the footer saves as it does the managers: `save` writes
+    // its edits, `data` says what it holds. The page marks its edits with `touched`, writes them
+    // with `write` and leaves the registry with `destroy`.
+    function registerEditor(id, { save, data }) {
+        const editor = {
+            dirty: false,
+            get data() { return data(); },
+            save,
+            touched() {
+                editor.dirty = true;
+                App.setUnsaved(true);
+            },
+            // `change` applied to the file; false, with the reason shown, when the save failed
+            async write(change, what) {
+                try {
+                    await ConfigStore.save(change);
+                } catch (e) {
+                    App.notify('error', `Could not save ${what}: ${e.message}`);
+                    return false;
+                }
+                editor.dirty = false;
+                App.setUnsaved(anyDirty());
+                return true;
+            },
+            destroy() { if (ManagerRegistry.get(id) === editor) ManagerRegistry.delete(id); }
+        };
+        ManagerRegistry.set(id, editor);
+        return editor;
+    }
 
 
     function applyToManager(containerId, index, fn) {
@@ -346,7 +403,7 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
                     changed = true;
                 }
             };
-            canonMsg(cfg.control && cfg.control.viewer);
+            if (Array.isArray(cfg.services)) cfg.services.forEach(canonMsg);
             if (Array.isArray(cfg.server)) cfg.server.forEach(canonMsg);
 
             const receiverCfg = {};
@@ -376,6 +433,10 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
 
             for (const r of cfg.receiver) {
                 if (!r || typeof r !== 'object') continue;
+                if (typeof r.input === 'string' && r.input !== r.input.toUpperCase()) {
+                    r.input = r.input.toUpperCase();
+                    changed = true;
+                }
                 if ('sensitivity_high' in r) {
                     if (Utils.toBoolean(r.sensitivity_high) && !('engines' in r)) r.engines = [{ type: 'v1_high' }];
                     delete r.sensitivity_high;
@@ -546,9 +607,6 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
         return (card || scope || document).querySelector(`[data-field="${name}"] input`);
     }
 
-    const SECTION_ORDER = ['Label', 'Connection', 'Station', 'Location', 'Format',
-        'Options', 'Tracks', 'Retention', 'Service', 'Backup', 'Storage', 'Features', 'Filter', 'Zones'];
-
     const Styles = {
         input: 'input',
         select: 'select',
@@ -558,21 +616,14 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
         sliderDisplay: 'slider-value',
         label: 'field-label',
         description: 'field-desc',
-        section: 'field-section',
         button: 'btn',
         buttonPrimary: 'btn btn-icon',
-        card: 'card',
-        cardHeader: 'card-header',
-        cardBody: 'card-body',
         deleteBtn: 'btn btn-danger',
         saveActive: 'btn btn-primary sys-save',
         saveInactive: 'btn is-disabled sys-save',
     };
 
     const Icons = {
-        chevronDown: (cls = 'icon-sm', attrs = {}) => el('svg', cls, Object.assign({ fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, attrs),
-            el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 9l-7 7-7-7' })
-        ),
         delete: () => el('svg', 'icon-md', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
             el('path', '', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
         ),
@@ -643,7 +694,8 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
 
         // at most one tab can hold unsaved edits, but a tab may span several managers
         async saveDirty() {
-            for (const m of ManagerRegistry.values())
+            Utils.flushDebounces();
+            for (const m of [...ManagerRegistry.values()])
                 if (m.dirty) await m.save();
         }
     };
@@ -1104,11 +1156,13 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
             this.fields = Object.values(config.schema);
             this.data = config.isList ? [] : {};
             this.dirty = false;
+            this.loaded = false;
 
             if (!this.container) return;
 
             ManagerRegistry.set(config.containerId, this);
-            this.load();
+            // settles once the data is drawn, or the page says it could not be read
+            this.ready = this.load();
         }
 
         load() {
@@ -1117,7 +1171,8 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
                 el('div', 'spinner icon-lg center-block'),
                 el('p', 't-muted', {}, 'Loading...')));
 
-            this.loadData().then(() => {
+            return this.loadData().then(() => {
+                this.loaded = true;
                 this.render();
                 this.updateJsonDebug();
             }).catch(() => {
@@ -1136,12 +1191,9 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
 
             const { warnings } = ConfigNormalizer.normalize(fullConfig);
             if (warnings.length) App.notifyWarnings(warnings);
-            if (this.config.nestedPath)
-                this.data = this.getNested(fullConfig) || (this.config.isList ? [] : {});
-            else
-                this.data = this.config.channelType
-                    ? (fullConfig[this.config.channelType] || (this.config.isList ? [] : {}))
-                    : fullConfig;
+            this.data = this.config.channelType
+                ? (fullConfig[this.config.channelType] || (this.config.isList ? [] : {}))
+                : fullConfig;
             if (!this.config.isList) {
                 // replay_time became track_time; migrate once or the server-side
                 // alias fights the new key
@@ -1160,73 +1212,6 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
             }
         }
 
-        // the fields of one item, in their sections, with the collapsible "advanced" groups
-        renderFields(item, index) {
-            const innerFields = el('div', 'fieldset');
-            const activeField = this.config.isList ? this.fields.find(f => f.name === 'active') : null;
-            // `advanced` puts a field in a collapsible section; a string names it
-            const sections = new Map();
-            const syncs = [];
-            const syncAdvanced = () => syncs.forEach(f => f());
-            const refresh = () => { Renderer.updateVisibility(innerFields, item); syncAdvanced(); };
-
-            // Section all fields of a schema or none: an unsectioned one trailing a block reads as part of it.
-            const ordered = [];
-            const bySection = new Map();
-            this.fields.forEach(f => {
-                const key = (!f.advanced && f.section) || null;
-                if (key === null) return ordered.push(f);
-                if (!bySection.has(key)) bySection.set(key, []);
-                bySection.get(key).push(f);
-            });
-            const rank = k => { const i = SECTION_ORDER.indexOf(k); return i === -1 ? SECTION_ORDER.length : i; };
-            [...bySection.keys()].sort((a, b) => rank(a) - rank(b))
-                .forEach(k => ordered.push(bySection.get(k)));
-
-            let currentSection = null;
-            ordered.flat().forEach(field => {
-                if (activeField && field.name === 'active') return;
-                if (field.section && field.section !== currentSection && !field.advanced) {
-                    currentSection = field.section;
-                    innerFields.appendChild(el('h5', Styles.section, {}, field.section));
-                }
-                const fieldEl = Renderer.renderField(field, index, item,
-                    (fld, val) => this.updateValue(index, fld, val),
-                    refresh,
-                    this.config.containerId
-                );
-                if (!field.advanced) return innerFields.appendChild(fieldEl);
-                const title = typeof field.advanced === 'string' ? field.advanced : 'Advanced';
-                if (!sections.has(title)) sections.set(title, el('div', 'fieldset full'));
-                sections.get(title).appendChild(fieldEl);
-            });
-
-            this.advancedOpen = this.advancedOpen || new Set();
-            sections.forEach((body, title) => {
-                const key = `${index}|${title}`;
-                const open = this.advancedOpen.has(key);
-                const chevron = el('span', 'sys-rotates' + (open ? ' rotate-90' : ''), { innerHTML: '&#9656;' });
-                body.classList.toggle('hidden', !open);
-                const btn = el('button', 'row row-tight t-small t-subtle clickable', {
-                    type: 'button',
-                    onClick: () => {
-                        const nowOpen = !this.advancedOpen.has(key);
-                        if (nowOpen) this.advancedOpen.add(key); else this.advancedOpen.delete(key);
-                        body.classList.toggle('hidden', !nowOpen);
-                        chevron.classList.toggle('rotate-90', nowOpen);
-                    }
-                }, chevron, title);
-                const row = el('div', 'full', {}, btn);
-                innerFields.appendChild(row);
-                innerFields.appendChild(body);
-                syncs.push(() => {
-                    const any = Array.from(body.children).some(c => !c.classList.contains('hidden'));
-                    row.classList.toggle('hidden', !any);
-                });
-            });
-            return { node: innerFields, refresh };
-        }
-
         render() {
             // the JSON pane may sit inside the container (moved under .st-main below): take it out
             // before clearing, so it keeps its open state and content
@@ -1234,93 +1219,24 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
             if (kept) this.container.parentElement.appendChild(kept);
             this.container.innerHTML = '';
             const variant = this.config.variant;
-            if ((variant === 'outputs' || variant === 'inputs') && this.config.isList) {
-                if (variant === 'outputs') this.renderOutputs(); else this.renderInputs();
-                this.renderControls();
-                // the JSON view goes under the selected input, not under the whole split
-                const json = variant === 'inputs' && this.container.parentElement.querySelector('[data-json-section]');
-                const main = json && this.container.querySelector('.st-main');
-                if (main) main.appendChild(json);
-                this.config.onChange?.(this);
-                return;
-            }
-            // a page whose few settings are all essential: no Advanced group at all
-            if (variant === 'plain' && !this.config.isList) {
-                this.container.className = 'st';
-                const { node, refresh } = this.renderSplit(this.data, 0, { essentials: new Set(this.fields.map(f => f.name)), key: 'plain', flat: { title: null } });
-                this.container.appendChild(node);
-                refresh();
-                this.renderControls();
-                this.config.onChange?.(this);
-                return;
-            }
-            if (variant === 'pages' && !this.config.isList) {
-                this.renderPages();
-                this.renderControls();
-                const json = this.container.parentElement.querySelector('[data-json-section]');
-                const main = json && this.container.querySelector('.st-main');
-                if (main) main.appendChild(json);
-                this.config.onChange?.(this);
-                return;
-            }
-            if (variant === 'community' && !this.config.isList) {
-                this.renderCommunity();
-                this.renderControls();
-                this.config.onChange?.(this);
-                return;
-            }
-            const items = this.config.isList ? this.data : [this.data];
-
-            items.forEach((item, index) => {
-                const activeField = this.config.isList ? this.fields.find(f => f.name === 'active') : null;
-                const isActive = activeField
-                    ? Utils.toBoolean(item.active !== undefined ? item.active : activeField.defaultValue)
-                    : true;
-
-                const wrapper = el('div', Styles.card, { dataset: { receiverCard: index } });
-
-                if (this.config.isList) {
-                    const toggleInput = activeField ? el('input', 'toggle toggle-sm toggle-on', {
-                        type: 'checkbox',
-                        checked: isActive,
-                        onChange: e => this.updateValue(index, activeField, e.target.checked)
-                    }) : null;
-
-                    const header = el('div', Styles.cardHeader, {},
-                        el('div', 'row', {},
-                            el('span', 'badge', {}, `${index + 1}`),
-                            el('h4', 'card-title', {}, this.config.title)
-                        ),
-                        el('div', 'row', {},
-                            activeField ? el('label', 'row row-tight clickable', {},
-                                el('span', 't-small t-subtle', {}, 'Active'),
-                                toggleInput
-                            ) : null,
-                            el('button', Styles.deleteBtn, {
-                                type: 'button',
-                                title: 'Remove Item',
-                                onClick: () => this.removeItem(index)
-                            }, Icons.delete())
-                        )
-                    );
-                    wrapper.appendChild(header);
-                } else if (this.config.title) {
-                    const header = el('div', Styles.cardHeader, {},
-                        el('h4', 'card-title', {}, this.config.title)
-                    );
-                    wrapper.appendChild(header);
-                }
-
-                const fieldsDiv = el('div', Styles.cardBody);
-                const { node, refresh } = this.renderFields(item, index);
-                fieldsDiv.appendChild(node);
-                wrapper.appendChild(fieldsDiv);
-                this.container.appendChild(wrapper);
-                refresh();
-            });
-
+            if (variant === 'inputs') this.renderInputs();
+            else if (variant === 'outputs') this.renderOutputs();
+            else if (variant === 'community') this.renderCommunity();
+            else this.renderPlain();
             this.renderControls();
+            // the JSON view goes under the selected input, not under the whole split
+            const json = variant === 'inputs' && this.container.parentElement.querySelector('[data-json-section]');
+            const main = json && this.container.querySelector('.st-main');
+            if (main) main.appendChild(json);
             this.config.onChange?.(this);
+        }
+
+        // a page whose few settings are all essential: no Advanced group at all
+        renderPlain() {
+            this.container.className = 'st';
+            const { node, refresh } = this.renderSplit(this.data, 0, { essentials: new Set(this.fields.map(f => f.name)), key: 'plain', flat: { title: null } });
+            this.container.appendChild(node);
+            refresh();
         }
 
         // ---- essentials and Advanced: the few fields most people need in a card, the rest collapsed
@@ -1331,16 +1247,19 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
             const v = this.fieldValue(item, f);
             return v !== undefined && norm(v) !== norm(f.defaultValue);
         }
-        renderSplit(item, index, { essentials = new Set(), exclude = new Set(), key = 'main', onZones = null, flat = null, bare = false, sectionOf = null, order = null, sumNames = false } = {}) {
+        // The essentials up front (`flat`: a plain section under its title, no card around them),
+        // then `lead` (the blocks the page puts before the rest), then the other settings in titled
+        // sections: in an Advanced fold, or open when the page has seven settings or fewer, as a
+        // fold would hide half of very little.
+        renderSplit(item, index, { essentials = new Set(), exclude = new Set(), key = 'main', onZones = null, flat = null, lead = [] } = {}) {
             const panel = el('div', 'st-panel');
-            // flat: the essentials as a plain titled section with its action on the right, no card around them
             const card = el('div', flat ? 'st-flat__fields fieldset' : 'st-card fieldset');
             const rows = el('div', 'st-adv__body st-secs');
-            // Advanced in titled sections, two settings to a row; a field's section is the schema's,
-            // else what the host says (the receiver's fields have none), else Zones or Other
+            // a field's section is the schema's, else what the host says (the receiver's fields have
+            // none), else Zones or Other
             const sections = new Map();
             const sectionFor = field => {
-                const name = sectionOf?.(field) || field.section || (field.type === 'zones' ? 'Zones' : null) || this.config.groupOf?.(field) || 'Other';
+                const name = field.section || (field.type === 'zones' ? 'Zones' : null) || this.config.groupOf?.(field) || 'Other';
                 if (!sections.has(name)) {
                     const grid = el('div', 'st-sec__grid fieldset');
                     const sec = el('section', 'st-sec', {}, el('h4', 'st-section__title', {}, name), grid);
@@ -1349,31 +1268,38 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
                 }
                 return sections.get(name).grid;
             };
+            const fields = this.fields.filter(f => !exclude.has(f.name) && f.name !== 'active');
+            const folded = fields.filter(f => !essentials.has(f.name));
+            // how many settings apply to the item as it is; a choice that changes it draws the page again
+            const applying = list => list.filter(f => this.applies(f, item)).length;
+            const isFlat = () => applying(fields) + lead.length <= 7;
+            const flatAll = isFlat();
             const sum = el('span', 'st-adv__sum');
-            this.advOpen = this.advOpen || new Set();
-            const openKey = `${key}|${index}`;
-            const adv = el('details', 'st-adv', this.advOpen.has(openKey) ? { open: '' } : {},
-                el('summary', '', { innerHTML: '<svg class="st-adv__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Advanced settings' }, sum),
-                rows);
-            adv.addEventListener('toggle', () => { if (adv.open) this.advOpen.add(openKey); else this.advOpen.delete(openKey); });
+            let adv = null;
+            if (!flatAll && folded.length) {
+                this.advOpen = this.advOpen || new Set();
+                const openKey = `${key}|${index}`;
+                adv = el('details', 'st-adv', this.advOpen.has(openKey) ? { open: '' } : {},
+                    el('summary', '', { innerHTML: '<svg class="st-adv__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Advanced settings' }, sum),
+                    rows);
+                adv.addEventListener('toggle', () => {
+                    if (adv.open) this.advOpen.add(openKey); else this.advOpen.delete(openKey);
+                });
+            }
             const advanced = [];
             const refresh = () => {
+                if (isFlat() !== flatAll) return this.render();
                 Renderer.updateVisibility(panel, item);
                 // the summary counts the settings that differ from their defaults, among those that apply
                 const shown = advanced.filter(({ node }) => !node.classList.contains('hidden'));
                 const changed = shown.filter(({ f }) => this.isChanged(item, f)).length;
                 const zones = shown.map(({ f }) => f).find(f => f.type === 'zones');
-                const zoneList = zones ? (this.fieldValue(item, zones) || []) : [];
+                // the zones are edited in Flow: without a field for them, the row says them
+                const zoneList = zones ? (this.fieldValue(item, zones) || [])
+                    : Array.isArray(item.zone) ? item.zone : Array.isArray(item.sharing_zone) ? item.sharing_zone : [];
                 sum.innerHTML = '';
-                if (sumNames) {
-                    // what is inside, then whether any of it differs: "Zones, JSON · all defaults"
-                    const names = [...sections.entries()].filter(([, v]) => !v.sec.hidden && [...v.grid.children].some(c => !c.classList.contains('hidden'))).map(([n]) => n);
-                    if (rows.querySelector('[data-json-section]')) names.push('JSON');
-                    if (names.length) sum.appendChild(document.createTextNode(names.join(', ') + ' · '));
-                    sum.appendChild(changed ? el('b', '', {}, `${changed} changed`) : document.createTextNode('all defaults'));
-                }
                 // only how much differs from the defaults; nothing when all are at their defaults
-                else if (changed) sum.appendChild(el('b', '', {}, `${changed} changed`));
+                if (changed) sum.appendChild(el('b', '', {}, `${changed} changed`));
                 // the zones as the pills they are everywhere else, in their own colours: under the
                 // header when the caller has a place for them, else on the summary line
                 if (onZones) onZones(zoneList);
@@ -1382,7 +1308,7 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
                     pill.style.setProperty('--z', getZoneCss(z));
                     sum.appendChild(pill);
                 });
-                adv.hidden = !shown.length;
+                if (adv) adv.hidden = !shown.length;
                 for (const { sec, grid } of sections.values())
                     sec.hidden = ![...grid.children].some(c => !c.classList.contains('hidden'));
                 for (const { node, f } of advanced) {
@@ -1391,9 +1317,7 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
                     if (node._reset) node._reset.hidden = !ch;
                 }
             };
-            const fields = order ? order.map(n => this.fields.find(f => f.name === n)).filter(Boolean) : this.fields;
             fields.forEach(field => {
-                if (exclude.has(field.name) || field.name === 'active') return;
                 const node = Renderer.renderField(field, index, item,
                     (fld, val) => this.updateValue(index, fld, val), refresh, this.config.containerId);
                 if (essentials.has(field.name)) return card.appendChild(node);
@@ -1419,114 +1343,98 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
                 advanced.push({ node, f: field });
             });
             if (card.children.length) {
-                if (flat) {
-                    const action = flat.action ? el('button', 'st-btn st-btn--sm', { type: 'button', onClick: flat.action.onClick,
-                        innerHTML: '<svg class="st-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>' }, flat.action.label) : null;
-                    panel.appendChild(el('div', 'st-flat' + (flat.title ? '' : ' st-flat--bare'), {},
-                        flat.title || action ? el('div', 'st-flat__head', {}, flat.title ? el('h3', 'st-section__title', {}, flat.title) : el('span'), action) : null, card));
-                } else panel.appendChild(card);
+                if (flat) panel.appendChild(el('div', 'st-flat' + (flat.title ? '' : ' st-flat--bare'), {},
+                    flat.title ? el('div', 'st-flat__head', {}, el('h3', 'st-section__title', {}, flat.title)) : null, card));
+                else panel.appendChild(card);
             }
-            // bare: the sections themselves, no Advanced fold around them (a page of its own)
-            if (bare) panel.appendChild(rows); else panel.appendChild(adv);
+            panel.append(...lead);
+            if (adv) panel.appendChild(adv);
+            else if (folded.length) panel.appendChild(rows);
             return { node: panel, refresh };
         }
 
-        // ---- one settings object split over pages: a nav on the left, the page's sections on the right
-        renderPages() {
-            const pages = this.config.pages;
-            if (!pages.some(p => p.key === this.page)) this.page = pages[0].key;
-            const page = pages.find(p => p.key === this.page);
-            this.container.className = 'st st-split st-pages';
-            const nav = el('nav', 'st-nav', { 'aria-label': this.config.title }, el('span', 'st-nav__title', {}, this.config.title));
-            pages.forEach(p => nav.appendChild(el('button', 'st-nav__item st-nav__item--2', { type: 'button', 'aria-current': p.key === this.page ? 'true' : null,
-                onClick: () => { this.page = p.key; this.render(); this.container.querySelector('.st-main')?.scrollTo(0, 0); } },
-                el('span', 'st-nav__stack', {}, el('span', 'st-nav__label', {}, p.label)))));
-            const main = el('div', 'st-main',  {},
-                el('div', 'st-main__head', {}, el('div', '', {}, el('h2', 'st-main__title', {}, page.label))));
-            const keep = new Set(page.fields);
-            const exclude = new Set(this.fields.map(f => f.name).filter(n => !keep.has(n)));
-            const { node, refresh } = this.renderSplit(this.data, 0, { exclude, key: 'page-' + page.key, bare: true, order: page.fields,
-                sectionOf: f => page.sections && page.sections[f.name] });
-            page.extra?.(node, this);
-            main.appendChild(node);
-            this.container.append(nav, main);
-            refresh();
+        // the name, a field under the title: the title shows it, or the device's own name until one is given
+        nameField(item, field, index, fallback, title) {
+            const input = el('input', 'input', { type: 'text', value: item.description || '', placeholder: fallback(), spellcheck: 'false', autocomplete: 'off',
+                onInput: e => { this.updateValue(index, field, e.target.value); title.textContent = e.target.value.trim() || fallback(); } });
+            return el('div', 'st-stations__row st-name', {}, el('label', 'field st-stations__field st-stations__grow', {}, el('span', 'field-label', {}, 'Name'), input));
         }
 
-        // ---- the Input tab: a list of inputs on the left, the selected one on the right
+        // the Find button beside the control it fills: Find ports on the port line, Find devices
+        // on the type line, as it sets the type and the serial together
+        addFindButton(node, item, index) {
+            const serialPort = item.input === 'SERIALPORT';
+            const find = serialPort ? { label: 'Find ports', name: 'openSerialDeviceModal' } : { label: 'Find devices', name: 'openDeviceSelectionModal' };
+            const target = node.querySelector(`[data-field="${serialPort ? 'serialport_port' : 'input'}"]`);
+            const ctrl = target && [...target.children].find(c => c.matches('input, select') || c.querySelector('input, select'));
+            if (!ctrl) return;
+            const btn = el('button', 'st-btn', { type: 'button', onClick: () => ActionRegistry[find.name](index, this.config.containerId),
+                innerHTML: ICONS.search }, find.label);
+            const row = el('div', 'st-inline');
+            ctrl.replaceWith(row);
+            row.append(ctrl, btn);
+        }
+
+        // the station the antenna is, picked from the list, under the device
+        stationSection(item, index) {
+            const stationField = this.config.stationPicker && this.fields.find(f => f.name === 'station');
+            if (!stationField) return null;
+            const picker = this.config.stationPicker(item.station, id => this.updateValue(index, stationField, id));
+            const desc = stationField.description || stationField.tooltip;
+            return el('div', 'st-flat st-stpick__section', {},
+                el('div', 'st-flat__head', {}, el('h3', 'st-section__title', {}, 'Station'), this.config.stationDocs?.()),
+                picker, desc ? el('p', Styles.description, {}, desc) : null);
+        }
+
+        // The head of a page of one item: its name as the title, the routing line (`dir`) where the
+        // host counts routes, the docs, the Active switch and the ⋯ menu; under it the field that
+        // names it. `fallback` is the title while no name is given.
+        focusHead(item, index, { title: text, fallback, dir }) {
+            const activeField = this.fields.find(f => f.name === 'active');
+            const descField = this.fields.find(f => f.name === 'description');
+            const title = el('h2', 'st-main__title', {}, text);
+            const routing = this.config.routing ? el('div', 'st-routing') : null;
+            const head = el('div', 'st-main__head', {},
+                el('div', 'st-main__headtext', {}, title, routing),
+                el('div', 'st-main__actions', {},
+                    this.config.docs ? this.config.docs(item) : null,
+                    activeField ? el('label', 'st-switch', {},
+                        el('input', '', { type: 'checkbox', checked: this.isActive(item), onChange: e => { this.updateValue(index, activeField, e.target.checked); this.render(); } }),
+                        el('span', 'st-switch__track'), 'Active') : null,
+                    this.menu(text, index)));
+            const name = descField ? this.nameField(item, descField, index, fallback, title) : null;
+            return { head, name, title, onZones: routing ? this.routingLine(routing, dir, item) : null };
+        }
+
+        // ---- the Input tab: the selected input; the host's list says which
         renderInputs() {
-            this.container.className = 'st st-split';
-            const describe = this.config.describe || ((item, i) => ({ title: `${item.input || 'Input'} #${item.serial || i + 1}`, sub: '', desc: '' }));
+            this.container.className = 'st st-single';
             this.selected = Math.min(this.selected ?? 0, Math.max(0, this.data.length - 1));
-            const nav = el('nav', 'st-nav', { 'aria-label': 'Inputs' }, el('span', 'st-nav__title', {}, 'Inputs'));
-            this.data.forEach((item, i) => {
-                const d = describe(item, i);
-                const b = el('button', 'st-nav__item st-nav__item--2', { type: 'button', 'aria-current': i === this.selected ? 'true' : null,
-                    onClick: () => { this.selected = i; this.render(); } },
-                    // the list shows only the name: the one given, or the device's own
-                    el('span', 'st-nav__stack', {}, el('span', 'st-nav__label', {}, d.title)),
-                    this.isActive(item) ? el('span', 'st-nav__dot', { title: 'Active' }) : el('span', 'st-nav__dot st-nav__dot--off', { title: 'Off' }));
-                nav.appendChild(b);
-            });
-            nav.appendChild(el('button', 'st-nav__add', { type: 'button', onClick: () => this.addItem(),
-                innerHTML: '<svg class="st-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add input' }));
             const main = el('div', 'st-main');
             if (!this.data.length) {
                 main.appendChild(el('div', 'st-empty', {}, el('strong', '', {}, 'No inputs yet'),
                     el('span', '', {}, 'Add an input to tell AIS-catcher where to receive from.')));
             } else {
-                const index = this.selected, item = this.data[index], d = describe(item, index);
-                const activeField = this.fields.find(f => f.name === 'active');
-                // the title is the name: a field that reads as a heading, its placeholder the device's own name
-                const descField = this.fields.find(f => f.name === 'description');
-                const fallbackTitle = () => describe({ ...item, description: '' }, index, this.data).title;
-                const title = el('input', 'st-title-input', { type: 'text', value: item.description || '', placeholder: fallbackTitle(),
-                    'aria-label': 'Name', spellcheck: 'false', autocomplete: 'off',
-                    onInput: e => descField && this.updateValue(index, descField, e.target.value) });
-                // where this input's messages go: its zones, and how many outputs take them (a link to Flow)
-                const routing = el('div', 'st-routing');
-                const paintRouting = this.routingLine(routing, 'out', item);
-                const head = el('div', 'st-main__head', {},
-                    el('div', 'st-main__headtext', {}, el('div', 'st-title-edit', {}, title), routing),
-                    el('div', 'st-main__actions', {},
-                        activeField ? el('label', 'st-switch', {},
-                            el('input', '', { type: 'checkbox', checked: this.isActive(item), onChange: e => { this.updateValue(index, activeField, e.target.checked); this.render(); } }),
-                            el('span', 'st-switch__track'), 'Active') : null,
-                        this.menu(d.title, index)));
-                main.appendChild(head);
-                const ess = this.config.essentials || new Set();
-                const serialPort = item.input === 'SERIALPORT';
-                const find = serialPort ? { label: 'Find ports', name: 'openSerialDeviceModal' } : { label: 'Find devices', name: 'openDeviceSelectionModal' };
-                const { node, refresh } = this.renderSplit(item, index, { essentials: ess, key: 'input', onZones: paintRouting,
+                const index = this.selected, item = this.data[index];
+                // the title follows the name, the device's own name until one is given; the routing
+                // line says where this input's messages go
+                const fallback = () => this.config.describe({ ...item, description: '' }, index, this.data).title;
+                const { head, name, title, onZones } = this.focusHead(item, index,
+                    { title: this.config.describe(item, index, this.data).title, fallback, dir: 'out' });
+                main.append(head, ...(name ? [name] : []));
+                const station = this.stationSection(item, index);
+                const { node, refresh } = this.renderSplit(item, index, { essentials: this.config.essentials || new Set(), key: 'input', onZones,
                     // settings that cannot apply to this kind of input stay out (engines decode radio only)
-                    exclude: new Set(['description', ...(this.config.excludeFor ? this.config.excludeFor(item) : [])]),
-                    flat: { title: 'Device' } });
-                // Find ports sits on the port line (it fills the port); Find devices on the type line, as it
-                // sets the type and the serial together
-                const target = node.querySelector(`[data-field="${serialPort ? 'serialport_port' : 'input'}"]`);
-                const ctrl = target && [...target.children].find(c => c.matches('input, select') || c.querySelector('input, select'));
-                if (ctrl) {
-                    const btn = el('button', 'st-btn', { type: 'button', onClick: () => ActionRegistry[find.name](index, this.config.containerId),
-                        innerHTML: '<svg class="st-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>' }, find.label);
-                    const row = el('div', 'st-inline');
-                    ctrl.replaceWith(row);
-                    row.append(ctrl, btn);
-                }
+                    exclude: new Set(['description', ...(station ? ['station'] : []), ...(this.config.excludeFor ? this.config.excludeFor(item) : [])]),
+                    flat: { title: 'Device' }, lead: station ? [station] : [] });
+                this.addFindButton(node, item, index);
                 node.dataset.receiverCard = index;
                 main.appendChild(node);
-                // the title and the list follow the device and serial as they change
-                node._sync = () => {
-                    const nd = describe(item, index);
-                    title.placeholder = fallbackTitle();
-                    const navItem = nav.querySelectorAll('.st-nav__item')[index];
-                    navItem.querySelector('.st-nav__label').textContent = nd.title;
-
-                };
-                this.container.append(nav, main);
+                // the title and the name's placeholder follow the device and serial as they change
+                node._sync = () => { if (!(item.description || '').trim()) title.textContent = fallback(); if (name) name.querySelector('input').placeholder = fallback(); };
                 refresh();
-                return;
             }
-            this.container.append(nav, main);
+            this.container.append(main);
         }
 
         // The routing line: "Sends to" (an input) or "Receives from" (an output), the zones as pills, and
@@ -1538,10 +1446,10 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
                 const path = dir === 'out' ? 'M5 12h14M13 6l6 6-6 6' : 'M19 12H5M11 6l-6 6 6 6';
                 const parts = [el('span', 'st-routing__label', { innerHTML: `<svg class="st-routing__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>` + (dir === 'out' ? 'Sends to' : 'Receives from') })];
                 zones.forEach(z => { const p = el('span', 'st-zone', {}, z); p.style.setProperty('--z', getZoneCss(z)); parts.push(p); });
-                if (!zones.length) parts.push(el('span', 'st-zone st-zone--all', {}, dir === 'out' ? 'All outputs' : 'All inputs'));
                 const sep = () => el('span', 'st-routing__sep', { 'aria-hidden': 'true' }, '·');
                 const link = el('button', 'st-routing__link', { type: 'button', onClick: () => this.config.openFlow?.() }, '…');
-                parts.push(sep(), link);
+                if (zones.length) parts.push(sep());
+                parts.push(link);
                 box.replaceChildren(...parts);
                 Promise.resolve(this.config.routing ? this.config.routing(item, dir) : null).then(n => {
                     if (mine !== seq) return;
@@ -1554,12 +1462,7 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
 
         // the ⋯ menu of an input or output: Duplicate, and Delete behind a confirmation
         menu(name, index) {
-            return el('details', 'st-menu', {},
-                el('summary', 'st-icon-btn', { 'aria-label': `More actions for ${name}`, title: 'More actions',
-                    innerHTML: '<svg class="st-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>' }),
-                el('div', 'st-menu__items', {},
-                    el('button', 'st-menu__item', { type: 'button', onClick: () => this.duplicateItem(index) }, 'Duplicate'),
-                    el('button', 'st-menu__item st-menu__item--danger', { type: 'button', onClick: () => this.removeItem(index) }, 'Delete…')));
+            return moreMenu(`More actions for ${name}`, [['Duplicate', () => this.duplicateItem(index)], ['Delete…', () => this.removeItem(index), true]]);
         }
 
         // ---- Community: laid out like an input. The page header holds the switch (with its status)
@@ -1584,11 +1487,11 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
             // only while sharing without a key: an amber warning at the top, where the red one sits when off
             const anon = el('div', 'st-warn-note', { role: 'note' },
                 el('span', 'st-warn-note__icon', { innerHTML: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>' }),
-                el('span', '', {}, 'Without a key your station is shown as anonymous.'));
+                el('span', '', {}, 'Without a key the station is anonymous.'));
             // switched off: no key warning, a red line asking to share instead
-            const off = el('div', 'st-warn-note st-warn-note--bad', { role: 'note' },
-                el('span', 'st-warn-note__icon', { innerHTML: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>' }),
-                el('span', '', {}, 'Not sharing. Switch on to support the community map.'));
+            const off = el('div', 'st-warn-note st-warn-note--quiet', { role: 'note' },
+                el('span', 'st-warn-note__icon', { innerHTML: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>' }),
+                el('span', '', {}, 'Not sharing with the community map.'));
             const paintNotes = () => {
                 const sharing = box.checked;
                 off.hidden = sharing;
@@ -1605,10 +1508,11 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
                 el('label', 'st-label', { for: 'st-share-key' }, 'Sharing Key ', el('span', 'st-help', {}, '(optional)')),
                 el('div', 'st-inline', {}, key, keyBtn));
             paintNotes();
-            const { node, refresh } = this.renderSplit(item, 0, { exclude: new Set(['sharing', 'sharing_key', '_create_key_button']), key: 'community', onZones: this.routingLine(routing, 'in', item) });
+            const { node, refresh } = this.renderSplit(item, 0, { exclude: new Set(['sharing', 'sharing_key', '_create_key_button', ...(this.config.excludeFor ? this.config.excludeFor(item) : [])]),
+                key: 'community', onZones: this.routingLine(routing, 'in', item) });
             // one section: the red note when off, the switch, the key; Advanced in a section of its own
             node.classList.add('st-community');
-            const adv = node.querySelector(':scope > .st-adv');
+            const adv = node.querySelector(':scope > .st-adv, :scope > .st-adv__body');
             const share = el('section', 'st-page__sec', {}, off, anon,
                 el('div', 'st-share-toggle', {}, el('span', 'st-share-toggle__label', {}, 'Share with the Community Map'), sw),
                 card);
@@ -1627,20 +1531,21 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
         // the collapsed row says only the name; format and address are inside
         outputMeta() { return []; }
         renderOutputs() {
+            const focus = this.config.focus?.();
+            if (focus !== undefined && focus !== null) return this.renderOutputFocus(focus);
             this.openItems = this.openItems || new WeakSet();
             this.freshItems = this.freshItems || new WeakSet();
             const list = el('ul', 'st-outputs');
             if (!this.data.length) {
-                list.appendChild(el('li', 'st-empty', {},
-                    el('strong', '', {}, `No ${this.config.title} outputs yet`),
-                    el('span', '', {}, `Add one to forward messages over ${this.config.title}.`)));
+                const [what, how] = this.config.empty || [`No ${this.config.title} outputs yet`, `Add one to forward messages over ${this.config.title}.`];
+                list.appendChild(el('li', 'st-empty', {}, el('strong', '', {}, what), el('span', '', {}, how)));
             }
             this.data.forEach((item, index) => {
                 const open = this.openItems.has(item);
                 const li = el('li', 'st-out', { dataset: { open: String(open), off: String(!this.isActive(item)), receiverCard: index } });
                 const name = this.outputName(item);
-                const nameEl = el('span', 'st-out__name' + (name ? '' : ' st-out__name--empty'), {},
-                    name || `Unnamed ${this.config.title} output`);
+                const unnamed = () => (this.config.nameOf ? this.config.nameOf(item) : `Unnamed ${this.config.title} output`);
+                const nameEl = el('span', 'st-out__name' + (name ? '' : ' st-out__name--empty'), {}, name || unnamed());
                 const expand = el('button', 'st-out__expand', { type: 'button', 'aria-expanded': String(open),
                     onClick: () => {
                         if (this.openItems.has(item)) this.openItems.delete(item); else this.openItems.add(item);
@@ -1667,15 +1572,15 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
                 li.appendChild(el('div', 'st-out__row', {}, expand, meta, sw, menu));
                 if (open) {
                     const routing = el('div', 'st-routing st-routing--body');
-                    const { node, refresh } = this.config.essentials
-                        ? this.renderSplit(item, index, { essentials: this.config.essentials, key: 'output', flat: { title: null }, onZones: this.routingLine(routing, 'in', item) })
-                        : this.renderFields(item, index);
-                    if (this.config.essentials) node.prepend(routing);
+                    const { node, refresh } = this.renderSplit(item, index, { essentials: this.config.essentials || new Set(), key: 'output', flat: { title: null },
+                        onZones: this.config.routing ? this.routingLine(routing, 'in', item) : null });
+                    if (this.config.routing) node.prepend(routing);
+                    this.config.extra?.(node, item, index);
                     li.appendChild(el('div', 'st-out__body', {}, node));
                     // the name and the summary follow the form as it is typed in
                     li._sync = () => {
                         const n = this.outputName(item);
-                        nameEl.textContent = n || `Unnamed ${this.config.title} output`;
+                        nameEl.textContent = n || unnamed();
                         nameEl.classList.toggle('st-out__name--empty', !n);
                         meta.replaceChildren(...this.outputMeta(item).map(t => el('span', 'st-num', {}, t)));
                     };
@@ -1686,6 +1591,26 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
             this.container.appendChild(list);
         }
 
+        // ---- one output as a page: its name as the title, where it takes from, then its settings
+        renderOutputFocus(index) {
+            this.container.className = 'st';
+            const item = this.data[index];
+            if (!item) {
+                this.container.appendChild(el('div', 'st-empty', {}, el('strong', '', {}, `No ${this.config.title} output here`),
+                    el('span', '', {}, 'It was deleted. Pick another one from the list.')));
+                return;
+            }
+            const fallback = () => this.config.nameOf ? this.config.nameOf({ ...item, description: '' }) : `${this.config.title} output`;
+            const { head, name, title, onZones } = this.focusHead(item, index, { title: this.outputName(item) || fallback(), fallback, dir: 'in' });
+            const { node, refresh } = this.renderSplit(item, index, { essentials: this.config.essentials || new Set(), key: 'output',
+                exclude: new Set(['description', ...(this.config.excludeFor ? this.config.excludeFor(item) : [])]),
+                flat: { title: null }, onZones });
+            node.dataset.receiverCard = index;
+            node._sync = () => { if (!this.outputName(item)) title.textContent = fallback(); if (name) name.querySelector('input').placeholder = fallback(); };
+            this.container.append(head, ...(name ? [name] : []), node);
+            refresh();
+        }
+
         renderControls() {
             const containerIdClass = `controls-${this.config.containerId}`;
             const existing = this.container.parentElement.querySelector('.' + containerIdClass);
@@ -1694,14 +1619,6 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
             this.ensureJsonUI();
 
             const btnGroup = el('div', `${containerIdClass} row row-wrap row-end sys-pane-inner sys-actions`);
-
-            if (this.config.isList && this.config.variant !== 'outputs' && this.config.variant !== 'inputs') {
-                btnGroup.appendChild(el('button', 'btn sys-save', {
-                    type: 'button', onClick: () => this.addItem()
-                },
-                    Icons.plus(),
-                    'Add Item'));
-            }
 
             if (!document.getElementById('st-footer'))
                 btnGroup.appendChild(el('button',
@@ -1775,6 +1692,13 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
             const target = this.config.isList ? this.data[index] : this.data;
             if (field.jsonpath) Utils.setNested(target, field.jsonpath, value);
             else target[field.name] = value;
+            // a kind of device chosen: its settings start at their defaults, as a new row's other settings do
+            if (this.fields.some(f => f.dependsOn && f.dependsOn.field === field.name))
+                this.fields.forEach(f => {
+                    if (f.defaultValue === undefined || this.fieldValue(target, f) !== undefined || !this.applies(f, target)) return;
+                    const v = JSON.parse(JSON.stringify(f.defaultValue));
+                    if (f.jsonpath) Utils.setNested(target, f.jsonpath, v); else target[f.name] = v;
+                });
             this.markDirty();
             this.updateDynamicButtons(index);
             if (this.config.variant === 'outputs' || this.config.variant === 'inputs') {
@@ -1786,7 +1710,7 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
         addItem() {
             const newItem = {};
             this.fields.forEach(f => {
-                if (f.defaultValue !== undefined) {
+                if (f.defaultValue !== undefined && this.applies(f, newItem)) {
                     if (f.jsonpath) Utils.setNested(newItem, f.jsonpath, f.defaultValue);
                     else newItem[f.name] = f.defaultValue;
                 }
@@ -1812,7 +1736,7 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
 
         removeItem(index) {
             const name = this.config.variant === 'outputs' ? this.outputName(this.data[index])
-                : this.config.variant === 'inputs' && this.config.describe ? this.config.describe(this.data[index], index).title : '';
+                : this.config.variant === 'inputs' ? this.config.describe(this.data[index], index, this.data).title : '';
             const what = this.config.variant === 'inputs' ? 'input' : `${this.config.title} output`;
             if (confirm(name ? `Delete the ${what} “${name}”?` : `Are you sure you want to remove this ${this.config.title}?`)) {
                 this.data.splice(index, 1);
@@ -1837,19 +1761,40 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
             });
         }
 
-        getNested(obj) {
-            return Utils.getNested(obj, this.config.nestedPath.join('.'));
+        // whether a field applies to an item, as its chain of dependsOn says; with `onlyKind`, only
+        // the links on the kind of device count (an Airspy keeps its VGA while the gain mode is not free)
+        applies(field, item, onlyKind = false, depth = 0) {
+            const dep = field.dependsOn;
+            if (!dep || depth > 6) return true;
+            const parent = this.fields.find(f => f.name === dep.field);
+            if (parent && !this.applies(parent, item, onlyKind, depth + 1)) return false;
+            if (onlyKind && dep.field !== 'input') return true;
+            let val = parent ? this.fieldValue(item, parent) : item[dep.field];
+            if (val === undefined && parent) val = parent.defaultValue;
+            const v = String(val).toLowerCase();
+            return Array.isArray(dep.value) ? dep.value.some(x => String(x).toLowerCase() === v) : String(dep.value).toLowerCase() === v;
         }
 
-        setNested(obj) {
-            Utils.setNested(obj, this.config.nestedPath.join('.'), this.data);
+        // a row as it is saved: the settings of another kind of device leave with it, and a block they leave empty
+        pruneFor(item) {
+            const out = JSON.parse(JSON.stringify(item));
+            this.fields.forEach(f => {
+                if (!f.jsonpath || !f.dependsOn || this.applies(f, item, true)) return;
+                const path = f.jsonpath.split('.');
+                let o = out;
+                for (let i = 0; i < path.length - 1 && o; i++) o = o[path[i]];
+                if (o && typeof o === 'object') delete o[path[path.length - 1]];
+                if (path.length > 1) {
+                    const block = out[path[0]];
+                    if (block && typeof block === 'object' && !Array.isArray(block) && !Object.keys(block).length) delete out[path[0]];
+                }
+            });
+            return out;
         }
 
         applyDataTo(target, { forSave = false } = {}) {
-            if (this.config.nestedPath) {
-                this.setNested(target);
-            } else if (this.config.channelType) {
-                target[this.config.channelType] = this.data;
+            if (this.config.channelType) {
+                target[this.config.channelType] = forSave && this.config.isList ? this.data.map(i => this.pruneFor(i)) : this.data;
             } else {
                 this.fields.forEach(f => {
                     if (forSave && f.skipSave) return;
@@ -1878,59 +1823,27 @@ import { sharingSchema, generalSettingsSchema, screenSchema, CHANNEL_REGISTRY } 
         }
 
         async save() {
-            Utils.flushDebounces();
-
-            const saveBtn = this.container.parentElement.querySelector(`.controls-${this.config.containerId} [data-save-btn]`);
-
-            if (saveBtn) {
-                saveBtn.textContent = 'Saving...';
-                saveBtn.disabled = true;
-            }
             // the rows saved are rows like any other now
             this.freshItems = new WeakSet();
-
             try {
-                // read-modify-write against a fresh copy so other sections keep
-                // any changes made outside this manager
-                const fullConfig = await ConfigStore.fetch(true);
-                this.applyDataTo(fullConfig, { forSave: true });
-
-                if (!fullConfig.config) fullConfig.config = 'aiscatcher';
-                if (!fullConfig.version) fullConfig.version = 1;
-
-                const { warnings } = ConfigNormalizer.normalize(fullConfig);
-                if (warnings.length) App.notifyWarnings(warnings);
-
-                const saveRes = await fetch('/api/config', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(fullConfig)
-                });
-
-                if (!saveRes.ok) {
-                    authFailed(saveRes);
-                    const body = await saveRes.json().catch(() => null);
-                    throw new Error(body && body.error ? body.error : 'Save failed');
-                }
-                ConfigStore.invalidate();
-                this.dirty = false;
-                App.setUnsaved([...ManagerRegistry.values()].some(m => m.dirty));
-                App.notify('success', 'Configuration saved successfully');
-                if (window.hubConfigSaved)
-                    window.hubConfigSaved(this.config.nestedPath ? 'viewer' : 'engine');
+                await ConfigStore.save(cfg => this.applyDataTo(cfg, { forSave: true }));
             } catch (e) {
-                console.error(e);
-                App.notify('error', 'Failed to save configuration: ' + e.message);
-            } finally {
-                if (saveBtn) {
-                    saveBtn.textContent = 'Save';
-                    saveBtn.disabled = false;
-                }
+                App.notify('error', 'Could not save the configuration: ' + e.message);
+                return;
             }
+            this.dirty = false;
+            App.setUnsaved(anyDirty());
+            App.notify('success', 'Configuration saved');
+            window.hubConfigSaved?.();
+        }
+
+        // out of the registry, as its page is gone
+        destroy() {
+            if (ManagerRegistry.get(this.config.containerId) === this) ManagerRegistry.delete(this.config.containerId);
         }
     }
 
-    export { App, ManagerRegistry as ConfigManagers, Utils, ConfigStore };
+    export { App, ManagerRegistry as ConfigManagers, Utils, ConfigStore, Renderer, registerEditor };
     export const ZoneColors = { badge: getZoneColor, css: getZoneCss };
     export const normalizeConfig = (cfg) => ConfigNormalizer.normalize(cfg);
     export const createSimpleConfigManager = (config) => { config.isList = false; return new ConfigManager(config); };

@@ -12,6 +12,9 @@ import * as replay from '../replay/replay.js';
 import { updateMarkerCount } from '../counts/counts.js';
 import { updateTablecard } from '../tablecard/tablecard.js';
 import { register } from '../../actions.js';
+import { receiver } from '../../data.js';
+import { focusLabel } from '../../core/config.js';
+import { resetFocus } from '../receiver/receiver.js';
 
 export function applyFilter() {
     saveSettings();
@@ -54,10 +57,11 @@ export function updateFilterUI() {
 
     const summary = document.getElementById("filter_summary");
     if (summary) {
-        summary.textContent = filter.isActive()
-            ? shipCounts.shown + " of " + shipCounts.total + " vessels shown"
-            : "Showing every vessel";
-        summary.classList.toggle("filter-on", filter.isActive());
+        // the station looked through, then what the filter leaves of its vessels
+        const through = focusLabel(receiver);
+        const shown = filter.isActive() ? shipCounts.shown + " of " + shipCounts.total + " vessels shown" : "";
+        summary.textContent = through ? through + ": " + (shown || "every vessel shown") : shown || "Showing every vessel";
+        summary.classList.toggle("filter-on", filter.isActive() || !!through);
     }
 
     for (const [kind, box] of Object.entries(FILTER_LISTS)) {
@@ -152,8 +156,10 @@ function setFilterValue(key, value) {
     applyFilter();
 }
 
+// every vessel again, through every station
 function resetFilter() {
     filter.reset();
+    resetFocus();
     applyFilter();
 }
 

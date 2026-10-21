@@ -39,7 +39,7 @@ const HOVER_DWELL_MS = 500;
 // a water, or a custom place named for the water it covers, gets the waterway glyph; other custom places the generic one
 const WATERWAY = /strait|channel|passage|canal|waterway|fairway|river|sound|estuary|tss|separation/i;
 const SECTION_ZOOM = 13; // same minimum as PlaceIndex::Entry::SECTION_ZOOM
-const placeGlyph = (o) => o.place_type === 'water' || (o.place_type === 'area' && WATERWAY.test(o.category || '')) ? 'waterway' : o.place_type || 'place';
+const placeGlyph = (o) => o.place_type === 'water' || o.place_type === 'sector' || (o.place_type === 'guardzone' && WATERWAY.test(o.category || '')) ? 'waterway' : o.place_type || 'place';
 const catOf = (o) => (o.kind === 9 || (o.kind === 10 && o.place_type === 'port')) ? 'port' : o.kind === 10 ? 'place' : KIND_CAT[o.kind] || 'data';
 // the server's clock once a feed has told it; the status of a station is judged against it
 let serverClock = () => Date.now() / 1000;
@@ -383,7 +383,7 @@ export function create(host) {
             icon.setOpacity(fade);
             cached = [new Style({ image: icon, zIndex: 100 })];
         } else {
-            cached = [new Style({ image: iconOf(discCanvas(glyph, kindRgb(cat), fade)), zIndex: 100 })];
+            cached = [new Style({ image: iconOf(discCanvas(glyph, isPlace && opt.colorClass !== false ? hexToRgb(render.placeColor(feature.binary_object.place_type)) : kindRgb(cat), fade)), zIndex: 100 })];
         }
         styleCache.set(key, cached);
         return cached;
@@ -616,7 +616,7 @@ export function create(host) {
     // when fetched, and the station the vessel carries; the attrs wire the clicks
     function titleGlyphs(ship, attrs, apply, stationAttrs = '') {
         if (!ship) return;
-        const station = ship.station ? glyphsHTML(['station'], stationAttrs) : '';
+        const station = ship.station != null ? glyphsHTML(['station'], stationAttrs) : '';
         if (!ship.binary) { if (station) apply(station); return; }
         const first = showsShipBadge(ship.binary) ? [KIND_CAT[decodeBadge(ship.binary).kind] || 'data'] : [];
         apply(glyphsHTML(first, attrs) + station);
@@ -691,10 +691,18 @@ export function create(host) {
             place_version: place ? placeVersion : ref.place_version}]);
     }
 
+    // the stations on the map that say where they are: only those that share it have a row with a position
+    function stations() {
+        const out = [];
+        for (const o of objectsDB.values())
+            if (o.kind === 8 && hasValidCoords(o.lat, o.lon)) out.push({ ...stationInfo(o), lat: o.lat, lon: o.lon, label: o.label || '' });
+        return out;
+    }
+
     return {
-        vector, layer, setReceiverMarker, openPorts, openPlace, openNearby, setPlaces,
+        vector, layer, setReceiverMarker, openPorts, openPlace, openNearby, setPlaces, stations,
         applyDelta, applyTile, prune, clear, redraw, restyle,
-        setViewZoom: (z) => { viewZoom = Math.round(z); },
+        setViewZoom: (z) => { viewZoom = Math.floor(z); },
         shipBadge, stationBadge, ridingStationStatus,
         hydrateShip, tooltip, ridingStationBand, shipTooltip, shipKinds, titleGlyphs, showVesselMessages, click,
         pollEvents: strip.pollEvents, resetEvents: strip.resetEvents, noteSeen: strip.noteSeen,

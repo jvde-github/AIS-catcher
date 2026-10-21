@@ -33,7 +33,7 @@ export const ChannelFields = {
     }),
     link: () => ({
         name: 'link',
-        tooltip: 'Your page at this service, opened from Flow',
+        tooltip: 'Your page at this service, linked from Statistics',
         section: 'Label',
         label: 'Web Page',
         type: 'text',
@@ -80,7 +80,7 @@ export const ChannelFields = {
         section: 'Filter',
         label: 'Downsample Position',
         type: 'switch-integer',
-        tooltip: 'At most one position per vessel per interval',
+        tooltip: 'One position per vessel per interval',
         width: 50,
         defaultValue: false,
         defaultInteger: 60,
@@ -423,7 +423,7 @@ export const dbSchema = {
         type: 'number',
         jsonpath: 'station_id',
         min: 0,
-        tooltip: 'Lets several feeders share a database'
+        tooltip: 'Overrides the station on every row'
     },
     active: ChannelFields.active(),
     state: {
@@ -559,12 +559,11 @@ export const webviewerSchema = {
         name: 'station',
         section: 'Station',
 
-        label: 'Station',
+        label: 'Map title',
         type: 'text',
         jsonpath: 'station',
-        defaultValue: 'My Station',
         width: 100,
-        tooltip: 'Shown in the viewer'
+        tooltip: 'Above the map; the only station\'s name when empty'
     },
     station_link: {
         name: 'station_link',
@@ -938,6 +937,16 @@ export const receiverSchema = {
         label: "Description",
         type: "text",
         placeholder: "e.g. Mast antenna",
+    },
+    station: {
+        name: "station",
+        label: "Station",
+        type: "number",
+        jsonpath: "station",
+        min: 1,
+        step: 1,
+        placeholder: "its own",
+        tooltip: "Where this antenna stands"
     },
     input: {
         name: "input",
@@ -1706,6 +1715,83 @@ export const screenSchema = {
     }
 };
 
+// One entry of "stations": a place where an antenna stands, shared by every
+// receiver that names its number and by every view
+export const stationSchema = {
+    id: {
+        name: 'id', label: 'Number', type: 'number', jsonpath: 'id', min: 0, step: 1, width: 25,
+        tooltip: 'Inputs refer to it by this; 0 is the default station'
+    },
+    name: { name: 'name', label: 'Name', type: 'text', jsonpath: 'name', placeholder: 'e.g. Harbour mast', width: 75 },
+    lat: {
+        name: 'lat', label: 'Latitude', type: 'number', jsonpath: 'lat', step: 0.0001, min: -90, max: 90, width: 33,
+        tooltip: 'Decimal degrees'
+    },
+    lon: { name: 'lon', label: 'Longitude', type: 'number', jsonpath: 'lon', step: 0.0001, min: -180, max: 180, width: 33, tooltip: 'Decimal degrees' },
+    alt: { name: 'alt', label: 'Altitude', type: 'number', jsonpath: 'alt', step: 1, min: -1000, max: 20000, width: 33, tooltip: 'Height of the antenna in metres' },
+    mmsi: {
+        name: 'mmsi', label: 'Vessel MMSI', type: 'number', jsonpath: 'mmsi', step: 1, min: 1, max: 999999999, width: 50,
+        tooltip: 'The vessel it is on'
+    },
+    gps: {
+        name: 'gps', label: 'Use GPS', type: 'toggle', jsonpath: 'gps', defaultValue: true, width: 50,
+        tooltip: 'Moved by GPS on its inputs'
+    },
+    share_loc: {
+        name: 'share_loc', label: 'Show position', type: 'toggle', jsonpath: 'share_loc', defaultValue: false, width: 50,
+        tooltip: 'Off keeps it on this machine'
+    }
+};
+
+// Events posted to an address as they happen, signed when it has a secret
+export const webhookSchema = {
+    description: ChannelFields.description(),
+    url: {
+        name: 'url', section: 'Connection', label: 'URL', type: 'text', width: 75,
+        placeholder: 'https://homeassistant.local:8123/api/webhook/ais',
+        tooltip: 'Each event is posted here as JSON'
+    },
+    active: ChannelFields.active(),
+    events: {
+        name: 'events', section: 'Events', label: 'Events', type: 'list', width: 50, defaultValue: [],
+        placeholder: 'safety',
+        tooltip: 'One per line; empty sends every kind'
+    },
+    batch: {
+        name: 'batch', section: 'Events', label: 'One request for several', type: 'toggle', defaultValue: false, width: 50,
+        tooltip: 'Several events per request'
+    },
+    secret: {
+        name: 'secret', section: 'Security', label: 'Signing secret', type: 'password', width: 75,
+        placeholder: 'whsec_…',
+        tooltip: 'Signs each request (Standard Webhooks)'
+    }
+};
+
+// The station's state on an MQTT broker, for Home Assistant
+export const mqttStateSchema = {
+    url: {
+        name: 'url', section: 'Broker', label: 'Broker', type: 'text', jsonpath: 'url', width: 75,
+        placeholder: 'mqtt://homeassistant.local:1883',
+        tooltip: 'mqtt://, mqtts://, ws:// or wss://'
+    },
+    username: { name: 'username', section: 'Broker', label: 'User', type: 'text', jsonpath: 'username', width: 50 },
+    password: { name: 'password', section: 'Broker', label: 'Password', type: 'password', jsonpath: 'password', width: 50 },
+    topic: {
+        name: 'topic', section: 'Topics', label: 'Topic', type: 'text', jsonpath: 'topic', defaultValue: 'ais-catcher', width: 50,
+        tooltip: 'Prefix of every topic'
+    },
+    discovery: {
+        name: 'discovery', section: 'Topics', label: 'Home Assistant discovery', type: 'toggle', jsonpath: 'discovery', defaultValue: true, width: 50,
+        tooltip: 'Home Assistant finds them by itself'
+    },
+    watch: {
+        name: 'watch', section: 'Vessels', label: 'Watched vessels', type: 'list', jsonpath: 'watch', defaultValue: [], width: 50,
+        placeholder: '244123456',
+        tooltip: 'MMSIs to track, one per line'
+    }
+};
+
 export const CHANNEL_REGISTRY = [
     { key: 'receiver', label: 'Receiver', schema: receiverSchema, configKey: 'receiver' },
     { key: 'udp', label: 'UDP', schema: udpSchema, configKey: 'udp', flowLabel: 'UDP', statType: 'UDP', essentials: ['host', 'port'] },
@@ -1715,7 +1801,20 @@ export const CHANNEL_REGISTRY = [
     { key: 'tcp_listener', label: 'TCP Server', schema: tcpServerSchema, configKey: 'tcp_listener', flowLabel: 'TCP Server', statType: 'TCP Listener', essentials: ['port'] },
     // one channel, three backends: each reports stats under its own type name
     { key: 'db', label: 'Database', schema: dbSchema, configKey: 'db', flowLabel: 'Database', statTypes: ['PostgreSQL', 'SQLite', 'CSV'], essentials: ['type', 'conn_str'] },
-    { key: 'server', label: 'Viewer', schema: webviewerSchema, configKey: 'server', flowLabel: 'Webviewer', essentials: ['port'] }
+    // the web viewer: a map on a port of its own, fed by the messages as an output is, with its own ship database
+    { key: 'server', label: 'Web viewer', schema: webviewerSchema, configKey: 'server', flowLabel: 'Web viewer', essentials: ['port'] }
+];
+
+// The outputs as the Outputs pages and Flow list them: the community map, the kinds kept in lists
+// (each with its value in the rail, its name in Flow and the type its statistics report), the screen
+export const OUTPUT_TYPES = [
+    { value: 'sharing', label: 'Community', schema: sharingSchema },
+    ...CHANNEL_REGISTRY.filter(c => c.key !== 'receiver').map(c => ({
+        value: c.key === 'tcp_listener' ? 'tcp-server' : c.key, label: c.label,
+        schema: c.schema, configKey: c.configKey, essentials: c.essentials,
+        flowLabel: c.flowLabel, statType: c.statType, statTypes: c.statTypes
+    })),
+    { value: 'screen', label: 'Screen', schema: screenSchema }
 ];
 
 export function channelTitle(label, item) {

@@ -645,6 +645,13 @@ namespace Protocol
 		int qos = 0;
 		int packet_id = 0;
 
+		// a last will, retained, and the keep-alive that lets the broker notice
+		// it is due; none unless set
+		std::string will_topic, will_message;
+		int keepalive = 0;
+		Clock::time_point last_sent;
+		int publish(const void *str, int length, const std::string &tpc, bool retain);
+
 		// never zero (MQTT 3.1.1 2.3.1)
 		int nextPacketId()
 		{
@@ -683,6 +690,15 @@ namespace Protocol
 		bool isConnecting() override { return awaiting_connack || ProtocolBase::isConnecting(); }
 		int send(const void *str, int length, const std::string &tpc);
 		int send(const void *str, int length) override;
+		// a message the broker keeps for whoever subscribes later
+		int sendRetained(const std::string &payload, const std::string &tpc) { return publish(payload.data(), (int)payload.size(), tpc, true); }
+		// what the broker publishes, retained, when this connection dies
+		void setWill(const std::string &tpc, const std::string &message, int keepalive_s = 60)
+		{
+			will_topic = tpc;
+			will_message = message;
+			keepalive = keepalive_s;
+		}
 		int read(void *data, int data_len, int t = 1, bool wait = false) override;
 
 		std::string getValues() override;

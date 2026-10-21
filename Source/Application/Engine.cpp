@@ -22,6 +22,12 @@
 
 #include "ControlCore.h"
 #include "Engine.h"
+#include "Site.h"
+#ifdef HASWEBVIEWER
+#include "WebViewer.h"
+#endif
+
+#include <algorithm>
 #include "Logger.h"
 
 using namespace std::chrono;
@@ -30,6 +36,10 @@ static std::string alignModelName(const std::string &name) {
   return "[" + name + "] " +
          std::string(name.length() < 37 ? 37 - name.length() : 0, ' ');
 }
+
+Engine::Engine() { receivers.push_back(std::unique_ptr<Receiver>(new Receiver())); }
+
+Engine::~Engine() { detach(); }
 
 void Engine::detach() {
   if (detached)
@@ -40,19 +50,180 @@ void Engine::detach() {
     r->stop();
 
 #ifdef HASWEBVIEWER
-  if (attached_viewer)
-    attached_viewer->detachEngine();
-
-  for (auto &s : servers)
-    s->shutdown();
+  for (auto &v : viewers)
+    v->shutdown();
 #endif
+
+  // the site lets go of the outputs before they go
+  if (site)
+    site->detachEngine();
 }
 
 std::function<void(Engine &)> Engine::before_run;
 std::function<void(Engine &)> Engine::after_run;
 
-void Engine::run(WebViewer *viewer, ControlCore *control) {
-  attached_viewer = viewer;
+// how many receivers name each station: one no receiver names takes GPS from every input
+void Engine::countStationInputs() {
+  StationRegistry counted;
+  for (auto s : stations.ordered()) {
+    s.inputs = 0;
+    for (const auto &r : receivers)
+      s.inputs += r->getStation() == s.id;
+    counted.define(s);
+  }
+  stations = counted;
+}
+
+// Stations told again while the engine runs: the configured ones as the file
+// now has them; one a receiver still names, or a receiver's own, as it was;
+// then the site hears of them. Which receiver uses which station changes only
+// with a restart.
+void Engine::refreshStations(const StationRegistry &configured) {
+  const auto named = [&](int id) {
+    for (const auto &r : receivers)
+      if (r->getStation() == id)
+        return true;
+    return false;
+  };
+  StationRegistry next;
+  for (auto s : configured.ordered()) {
+    // a configured station without a position keeps the one its receiver gave it
+    const StationRegistry::Station *had = stations.find(s.id);
+    if (!isValidCoord(s.lat, s.lon) && had) {
+      s.lat = had->lat;
+      s.lon = had->lon;
+    }
+    next.define(s);
+  }
+  for (const auto &s : stations.ordered())
+    if (!configured.find(s.id) && named(s.id))
+      next.define(s);
+  stations = next;
+  countStationInputs();
+  if (site)
+    site->publishStations(stations);
+}
+
+// what a receiver is called on the status pages: its own name, else its device's
+static std::string receiverLabel(const Receiver &r, Device::Device *device) {
+  if (!r.getDescription().empty() || !device)
+    return r.getDescription();
+  const std::string &serial = device->getSerial();
+  if (serial == ".")
+    return "Console";
+  return device->getProduct() + (serial.empty() ? "" : " " + serial);
+}
+
+#ifdef HASAPI
+// what the site's system service says of each receiver: its station, its
+// input, whether it streams, and the messages its models decoded
+void Engine::publishReceivers() {
+  std::vector<ReceiverState> states;
+  for (std::size_t k = 0; k < receivers.size(); k++) {
+    Receiver &r = *receivers[k];
+    Device::Device *device = r.getDeviceManager().getDevice();
+    ReceiverState s;
+    s.index = (int)k + 1;
+    s.station = r.getStation();
+    if (device) {
+      s.input = device->getProduct();
+      s.streaming = device->isStreaming();
+      s.lost = device->isLost();
+    }
+    s.label = receiverLabel(r, device);
+    if (k < stat.size())
+      for (auto &c : stat[k].statistics)
+        s.messages += c->getCount();
+    states.push_back(s);
+  }
+  site->publishReceivers(states);
+}
+#endif
+
+// Every receiver stands at a station: the one the configuration names, or the
+// default station, 0. A station without a position takes its first receiver's
+// with one; a receiver takes its station's.
+void Engine::resolveStations() {
+  std::vector<int> listed;
+  stations.forEach([&](const StationRegistry::Station &s) { listed.push_back(s.id); });
+  const bool configured = !listed.empty();
+  bool at_default = false;
+  for (const auto &r : receivers)
+    at_default |= r->getStation() == 0;
+  if (at_default && !stations.find(0))
+    stations.define(defaultStation(!configured));
+  for (std::size_t k = 0; k < receivers.size(); k++) {
+    Receiver &r = *receivers[k];
+    const int id = r.getStation();
+    // Config::finish() saw to it that the configuration defines it
+    const StationRegistry::Station *found = stations.find(id);
+    if (!found)
+      throw std::logic_error("station " + std::to_string(id) + " was not resolved");
+    StationRegistry::Station s = *found;
+    if (isValidCoord(s.lat, s.lon)) {
+      if (r.hasPosition() && (r.getLat() != s.lat || r.getLon() != s.lon))
+        Warning() << "Receiver " << k + 1 << ": the position of station " << id
+                  << " is used, not the receiver's own";
+    } else if (r.hasPosition()) {
+      s.lat = r.getLat();
+      s.lon = r.getLon();
+      stations.define(s);
+    }
+    // once stations are configured, the receivers' messages say which station heard them
+    const bool named = std::find(listed.begin(), listed.end(), id) != listed.end();
+    r.placeAtStation(named ? s.name : std::string(), s.lat, s.lon, configured);
+  }
+  countStationInputs();
+  site->publishStations(stations);
+  if (receivers.size() < 2 && !configured)
+    return;
+  for (std::size_t k = 0; k < receivers.size(); k++) {
+    const Receiver &r = *receivers[k];
+    const StationRegistry::Station *s = stations.find(r.getStation());
+    Info() << "Receiver " << k + 1 << ": station " << r.getStation() << " \""
+           << (s ? s->name : std::string()) << "\""
+           << (r.hasPosition() ? " at " + std::to_string(r.getLat()) + ", " + std::to_string(r.getLon())
+                               : std::string(", no position"));
+  }
+}
+
+// The default station the configuration does not list, as a viewer section
+// describes it (-N STATION, LAT, LON, SHARE_LOC, USE_GPS, OWN_MMSI): named
+// after the one receiver standing on it when that has a name of its own, else
+// as the section says; placed where the first such receiver with a position
+// of its own is, else where the section puts it.
+StationRegistry::Station Engine::defaultStation(bool alone) const {
+  StationRegistry::Station s;
+  s.id = 0;
+  s.share_loc = station_defaults.share_loc;
+  s.gps = station_defaults.gps;
+  s.mmsi = alone ? station_defaults.mmsi : 0;
+  s.alt = station_defaults.alt;
+  std::size_t unnamed = 0;
+  for (const auto &r : receivers) {
+    if (r->getStation() != 0)
+      continue;
+    if (++unnamed == 1)
+      s.name = r->getDescription();
+    else
+      s.name.clear();
+    if (!isValidCoord(s.lat, s.lon) && r->hasPosition()) {
+      s.lat = r->getLat();
+      s.lon = r->getLon();
+    }
+  }
+  if (s.name.empty())
+    s.name = station_defaults.name.empty() ? "Station 0" : station_defaults.name;
+  if (!isValidCoord(s.lat, s.lon) && station_defaults.placed()) {
+    s.lat = station_defaults.lat;
+    s.lon = station_defaults.lon;
+  }
+  return s;
+}
+
+void Engine::run(Site &on, ControlCore *control) {
+  site = &on;
+  resolveStations();
 
   // -------------
   // set up the receiver and open the device
@@ -60,17 +231,13 @@ void Engine::run(WebViewer *viewer, ControlCore *control) {
   stat.resize(receivers.size());
   msg_count.resize(receivers.size(), 0);
 
+  // the tracker and the web viewers read the decoders' tags
   bool has_server = false;
+#ifdef HASAPI
+  has_server = on.tracker() || site_config.wantsTracker();
+#endif
 #ifdef HASWEBVIEWER
-  // every viewer this run feeds, owned or not. The managed viewer differs only
-  // in that it outlives the engine, so the caller starts and closes it.
-  std::vector<WebViewer *> viewers;
-  for (auto &s : servers)
-    viewers.push_back(s.get());
-  if (viewer)
-    viewers.push_back(viewer);
-
-  has_server = !viewers.empty();
+  has_server |= !viewers.empty();
 #endif
   bool has_http = false;
   for (auto &o : msg)
@@ -96,6 +263,11 @@ void Engine::run(WebViewer *viewer, ControlCore *control) {
     r.setupModel(group, i);
   }
 
+  on.configure(site_config);
+#ifdef HASAPI
+  Tracker *tracker = on.tracker();
+#endif
+
   // sharing is opt-in via -X: the silent get an encouraging word, not a feed
   if (!xshare_defined && !comm_feed && (has_server || !msg.empty()) && !control)
     Warning() << "Hint: support the aiscatcher.org community by sharing your "
@@ -118,15 +290,27 @@ void Engine::run(WebViewer *viewer, ControlCore *control) {
     Info() << "Community feed sharing: "
            << (comm_feed ? "enabled." : "disabled.");
 
-  // zone-based output filtering: GROUPS_IN from zone overlap. The viewers do
-  // this for themselves in attachEngine().
+  // Zones are routes. An output with zones takes the receivers that share one; once any receiver
+  // is in a zone, an output without zones takes only the receivers without one. Narrowing only:
+  // what an output already keeps out, as the community feed keeps out network inputs, stays out.
+  // A web viewer takes the receivers in its zones itself, every one when it has none.
+  bool any_zoned = false;
+  const uint64_t unzoned = resolveUnzoned(receivers, any_zoned);
   for (auto &o : msg) {
-    if (o->zones.empty())
+    uint64_t mask;
+    if (!o->zones.empty()) {
+      mask = resolveZones(receivers, o->zones);
+      if (!mask)
+        Warning() << "Output has zone filter but no matching receivers — will "
+                     "receive nothing";
+    } else if (any_zoned) {
+      mask = unzoned;
+      if (!mask)
+        Warning() << "Output without zones while every receiver has one — "
+                     "will receive nothing";
+    } else
       continue;
-    uint64_t mask = resolveZones(receivers, o->zones);
-    if (!mask)
-      Warning() << "Output has zone filter but no matching receivers — will "
-                   "receive nothing";
+    mask &= o->StreamIn<AIS::Message>::getGroupsIn();
     o->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(mask));
   }
 
@@ -139,8 +323,8 @@ void Engine::run(WebViewer *viewer, ControlCore *control) {
 
     screen.Connect(r);
 
-    if (r.verbose || timeout_nomsg)
-      stat[i].connect(r);
+    // the site's system service counts each receiver's messages too
+    stat[i].connect(r);
   }
 
   if (receivers.size() > 1) {
@@ -154,16 +338,51 @@ void Engine::run(WebViewer *viewer, ControlCore *control) {
     Debug() << "Mutex: single receiver, all sinks lock-free";
   }
 
+  // what the site's status pages say of this session: its devices, a model
+  // line per device, its outputs and the community feed
+  {
+    Site::EngineFacts facts;
+    for (auto &r : receivers) {
+      Device::Device *device = r->getDeviceManager().getDevice();
+      if (!device)
+        continue;
+      Site::DeviceFacts d;
+      d.product = device->getProduct();
+      d.vendor = device->getVendor().empty() ? "-" : device->getVendor();
+      d.serial = device->getSerial().empty() ? "-" : device->getSerial();
+      d.sample_rate = device->getRateDescription();
+      d.label = receiverLabel(*r, device);
+      for (int j = 0; j < r->Count(); j++)
+        d.model += (j ? "\n" : "") + r->Model(j)->getName();
+      facts.devices.push_back(d);
+      *device >> on.received();
+    }
+    for (auto &o : msg)
+      facts.outputs.push_back(o.get());
+    facts.sharing = comm_feed != nullptr;
+    facts.sharing_uuid = comm_feed != nullptr && comm_feed->hasUUID();
+    on.attachEngine(facts);
+  }
+
 #ifdef HASWEBVIEWER
-  // before attachEngine(), so the trackers are built with these already applied
-  for (auto *v : viewers) {
+  // before attachEngine(), so the viewers' trackers are built with these already applied
+  for (auto &v : viewers) {
     v->setOutputChannels(msg);
     v->setCommFeed(comm_feed);
     v->setOwnVessel(own_mmsi);
-  }
-
-  for (auto *v : viewers)
     v->attachEngine(receivers);
+  }
+#endif
+
+#ifdef HASAPI
+  if (tracker)
+    for (auto &r : receivers)
+      for (int j = 0; j < r->Count(); j++) {
+        r->OutputJSON(j).Connect(&tracker->json());
+        r->OutputGPS(j).Connect(&tracker->gps());
+        r->OutputControl(j).Connect(&tracker->control());
+        r->OutputADSB(j).Connect(&tracker->adsb());
+      }
 #endif
 
   if (control)
@@ -176,13 +395,11 @@ void Engine::run(WebViewer *viewer, ControlCore *control) {
     o->Start();
 
 #ifdef HASWEBVIEWER
-  // the engine owns only the servers it built; the managed viewer is already
-  // serving and is started and closed by the caller
-  for (auto &s : servers)
-    s->startServing();
+  for (auto &v : viewers)
+    v->startServing();
 #endif
 
-  // the viewers serve and their streams are wired, the receivers have not
+  // the servers serve and the tracker is wired, the receivers have not
   // started: a build that adds services attaches them now
   if (before_run)
     before_run(*this);
@@ -201,7 +418,9 @@ void Engine::run(WebViewer *viewer, ControlCore *control) {
   }
 
   const int SLEEP = 50;
+#ifdef HASWEBVIEWER
   std::time_t next_minute = 0;
+#endif
   auto time_start = high_resolution_clock::now();
   auto time_timeout_start = time_start;
   auto time_last = time_start;
@@ -215,19 +434,29 @@ void Engine::run(WebViewer *viewer, ControlCore *control) {
   }
 
   Debug() << "Entering main loop";
+#ifdef HASAPI
+  auto next_status = steady_clock::now();
+#endif
   while (!stop) {
     for (auto &r : receivers)
       stop = stop || !(r->getDeviceManager().getDevice()->isActive());
+
+#ifdef HASAPI
+    // the site's system pages, about once a second, and once more when a
+    // receiver stops the session, so its loss is told
+    if (stop || steady_clock::now() >= next_status) {
+      next_status = steady_clock::now() + seconds(1);
+      publishReceivers();
+    }
+#endif
 
     // for non-callback devices (WAV file), the isStreaming() poll above pumps
     // the data, so the loop must run unthrottled
     if (iscallback)
       std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP));
 
-#ifdef HASWEBVIEWER
-    if (control && viewer)
-      control->syncViewer(*viewer);
-#endif
+    if (loop_hook)
+      loop_hook();
     // outputs make and keep their connections here, off the decoding thread;
     // paced, as the loop runs unthrottled for a file input
     auto poll_now = steady_clock::now();
@@ -237,15 +466,15 @@ void Engine::run(WebViewer *viewer, ControlCore *control) {
         o->poll();
     }
 
+#ifdef HASWEBVIEWER
     // above the verbose/timeout shortcut below or it never runs by default
-    std::time_t tick_now = std::time(nullptr);
+    const std::time_t tick_now = std::time(nullptr);
     if (tick_now >= next_minute) {
       next_minute = tick_now + 60;
-#ifdef HASWEBVIEWER
-      for (auto v : viewers)
+      for (auto &v : viewers)
         v->tickMinute(tick_now);
-#endif
     }
+#endif
 
     if (!oneverbose && !timeout)
       continue;

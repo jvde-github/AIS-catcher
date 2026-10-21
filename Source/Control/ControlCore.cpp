@@ -37,9 +37,7 @@
 #include "Parser.h"
 #include "SHA256.h"
 #include "Writer.h"
-#ifdef HASWEBVIEWER
-#include "WebViewer.h"
-#endif
+#include "PlaceCatalogue.h"
 #ifdef _WIN32
 // after the project's headers: winsock2.h has to come before windows.h
 #include <windows.h>
@@ -54,7 +52,7 @@ ControlCore::ControlCore(const std::string &file, int port_override,
     createDefaultConfig();
 
   refreshPlaces(Util::Helper::readFile(config_file));
-  addViewerDefaults();
+  addMainDefaults();
   readManagedFields(port_override);
 
   auto_retry = desired;
@@ -98,27 +96,11 @@ static std::string statsPath(const std::string &config_file) {
   return name;
 }
 
+// what a fresh configuration starts from; the main server, the tracking backup and the default station come
+// with addMainDefaults(), as for an imported one
 void ControlCore::createDefaultConfig() {
-  const std::string host = machineName();
-  const std::string content =
-      "{\n"
-      "  \"config\": \"aiscatcher\",\n"
-      "  \"version\": 1,\n"
-      "  \"engine\": \"off\",\n"
-      "  \"sharing\": true,\n"
-      "  \"control\": {\n"
-      "    \"wizard\": true,\n"
-      "    \"viewer\": { \"share_loc\": true, \"realtime\": true, \"decoder\": "
-      "true, \"log\": false,\n" +
-      (host.empty() ? std::string()
-                    : "                 \"station\": " + JSON::Writer::escape(host) + ",\n") +
-      "                 \"station_link\": \"https://www.aiscatcher.org/stations\",\n"
-      "                 \"file\": " +
-      JSON::Writer::escape(statsPath(config_file)) +
-      ", \"backup\": 10 }\n"
-      "  }\n"
-      "}\n";
-
+  const std::string content = "{ \"config\": \"aiscatcher\", \"version\": 1, \"engine\": \"off\", \"sharing\": true, "
+                              "\"control\": { \"wizard\": true } }\n";
   std::string error;
   if (!writeFileAtomic(config_file, content, error))
     throw std::runtime_error("Control: cannot create config file \"" +
@@ -390,46 +372,38 @@ void ControlCore::setPassword(const std::string &password) {
   persistControlAuth(hash, salt);
 }
 
-void ControlCore::mutateConfig(
-    const char *what, const std::function<bool(JSON::Document &)> &fn) {
+bool ControlCore::mutateConfig(const char *what, const std::function<bool(JSON::Document &)> &fn,
+                               std::string *error) {
   std::lock_guard<std::mutex> lock(file_mtx);
-
+  std::string why;
   try {
     JSON::Parser parser(JSON_DICT_SETTING);
     JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
 
     if (!fn(doc))
-      return;
+      return true;
 
     std::string out;
     JSON::Serializer serializer(JSON_DICT_SETTING);
     serializer.stringify(doc.root, out);
 
-    std::string error;
-    if (!writeFileAtomic(config_file, out, error))
-      Error() << "Control: cannot " << what << ": " << error;
+    if (writeFileAtomic(config_file, out, why))
+      return true;
   } catch (const std::exception &e) {
-    Error() << "Control: cannot " << what << ": " << e.what();
+    why = e.what();
   }
+  Error() << "Control: cannot " << what << ": " << why;
+  if (error)
+    *error = why;
+  return false;
 }
 
 void ControlCore::persistControlAuth(const std::string &hash,
                                      const std::string &salt) {
   mutateConfig("persist password", [&](JSON::Document &doc) {
-    const JSON::Value *v = doc.root[AIS::KEY_SETTING_CONTROL];
-    if (v && v->isObject()) {
-      JSON::Value control = *v;
-      control.getObject().Set(AIS::KEY_SETTING_PASSWORD, hash, doc.pool);
-      control.getObject().Set(AIS::KEY_SETTING_SALT, salt, doc.pool);
-    } else {
-      JSON::JSON *control = doc.pool.addObject();
-      control->Add(AIS::KEY_SETTING_PASSWORD, hash, doc.pool);
-      control->Add(AIS::KEY_SETTING_SALT, salt, doc.pool);
-
-      JSON::Value nv;
-      nv.setObject(control);
-      doc.root.Set(AIS::KEY_SETTING_CONTROL, nv);
-    }
+    JSON::JSON &control = doc.root.object(AIS::KEY_SETTING_CONTROL, doc.pool);
+    control.Set(AIS::KEY_SETTING_PASSWORD, hash, doc.pool);
+    control.Set(AIS::KEY_SETTING_SALT, salt, doc.pool);
     return true;
   });
 }
@@ -461,11 +435,15 @@ std::string ControlCore::getSerialListJSON() {
   return s;
 }
 
+std::string ControlCore::defaultStatsFile() const { return statsPath(config_file); }
+
 bool ControlCore::validate(const std::string &json, std::string &error) {
   try {
     Engine scratch;
     Config c(scratch);
+    c.setManaged(getControlPort(), getViewerPort(), getBindAddress());
     c.set(json);
+    c.finish();
   } catch (const std::exception &e) {
     error = e.what();
     return false;
@@ -482,57 +460,49 @@ bool ControlCore::writeFileAtomic(const std::string &path,
   return Util::Helper::writeFileAtomic(path, content, error);
 }
 
-// a configuration written before the viewer had a "viewer" section gets the
-// defaults once
-void ControlCore::addViewerDefaults() {
-  // the statistics file sits beside the configuration
-  const std::string stats = statsPath(config_file);
-  const struct {
-    AIS::Keys key;
-    std::string value;
-  } defaults[] = {{AIS::KEY_SETTING_SHARE_LOC, "on"},
-                  {AIS::KEY_SETTING_REALTIME, "on"},
-                  {AIS::KEY_SETTING_DECODER, "on"},
-                  {AIS::KEY_SETTING_LOG, "off"},
-                  {AIS::KEY_SETTING_FILE, stats}};
-
-  mutateConfig("add viewer defaults", [&](JSON::Document &doc) {
+// A configuration without a main server under "services" nor a viewer
+// section (a fresh one, or the installer's seed when it imports a legacy
+// config) gets the main server with the map's defaults, the tracking backup
+// beside the configuration, and the default station named after the machine.
+// A viewer section from before stays for the panel to move.
+void ControlCore::addMainDefaults() {
+  mutateConfig("add main defaults", [&](JSON::Document &doc) {
     const JSON::Value *ctrl = doc.root[AIS::KEY_SETTING_CONTROL];
-    if (!ctrl || !ctrl->isObject())
+    if (ctrl && ctrl->isObject() && ctrl->getObject()[AIS::KEY_SETTING_VIEWER])
       return false;
+    std::vector<JSON::Value> &services = doc.root.array(AIS::KEY_SETTING_SERVICES, doc.pool);
+    for (const auto &entry : services) {
+      const JSON::Value *main = entry.isObject() ? entry.getObject()[AIS::KEY_SETTING_MAIN] : nullptr;
+      if (main && Util::Parse::Switch(main->to_string()))
+        return false;
+    }
 
-    const JSON::Value *v = ctrl->getObject()[AIS::KEY_SETTING_VIEWER];
-    JSON::JSON *viewer = v && v->isObject()
-                             ? const_cast<JSON::JSON *>(&v->getObject())
-                             : doc.pool.addObject();
+    JSON::JSON *main = doc.pool.addObject();
+    main->Add(AIS::KEY_SETTING_MAIN, true);
+    main->Add(AIS::KEY_SETTING_REALTIME, true);
+    main->Add(AIS::KEY_SETTING_DECODER, true);
+    main->Add(AIS::KEY_SETTING_LOG, false);
+    main->Add(AIS::KEY_SETTING_STATION_LINK, std::string("https://www.aiscatcher.org/stations"), doc.pool);
+    JSON::Value entry;
+    entry.setObject(main);
+    services.insert(services.begin(), entry);
 
-    bool changed = false;
-    for (const auto &d : defaults)
-      if (!(*viewer)[d.key]) {
-        viewer->Set(d.key, d.value, doc.pool);
-        changed = true;
-      }
+    JSON::JSON &tracking = doc.root.object(AIS::KEY_SETTING_TRACKING, doc.pool);
+    if (!tracking[AIS::KEY_SETTING_FILE])
+      tracking.Set(AIS::KEY_SETTING_FILE, statsPath(config_file), doc.pool);
 
-    // no viewer section at all (the installer's seed when it imports a legacy
-    // config): the station basics a fresh config gets too; an existing section
-    // keeps what its owner left out
-    if (!v) {
+    if (!doc.root[AIS::KEY_SETTING_STATIONS]) {
+      JSON::JSON *station = doc.pool.addObject();
+      station->Add(AIS::KEY_SETTING_ID, 0);
       const std::string host = machineName();
       if (!host.empty())
-        viewer->Set(AIS::KEY_SETTING_STATION, host, doc.pool);
-      viewer->Set(AIS::KEY_SETTING_STATION_LINK,
-                  std::string("https://www.aiscatcher.org/stations"), doc.pool);
-      viewer->Set(AIS::KEY_SETTING_BACKUP, std::string("10"), doc.pool);
+        station->Add(AIS::KEY_SETTING_NAME, host, doc.pool);
+      station->Add(AIS::KEY_SETTING_SHARE_LOC, true);
+      JSON::Value one;
+      one.setObject(station);
+      doc.root.array(AIS::KEY_SETTING_STATIONS, doc.pool).push_back(one);
     }
-
-    if (changed && !v) {
-      JSON::Value val;
-      val.setObject(viewer);
-      const_cast<JSON::JSON &>(ctrl->getObject())
-          .Set(AIS::KEY_SETTING_VIEWER, val);
-    }
-
-    return changed;
+    return true;
   });
 }
 
@@ -612,22 +582,6 @@ int ControlCore::consumeRetryDelay() {
   return retry_delay;
 }
 
-#ifdef HASWEBVIEWER
-void ControlCore::syncViewer(WebViewer &viewer) {
-  auto places = getPlaces();
-  const bool changed = places && places->consumeChanged();
-  if (changed || places != viewer.getPlaceCatalogue())
-    viewer.setPlaceCatalogue(std::move(places));
-  if (!consumeConfigChanged())
-    return;
-  try {
-    viewer.updateManagedConfig(getConfig());
-  } catch (const std::exception &e) {
-    Error() << "Control: viewer settings not applied: " << e.what();
-  }
-}
-#endif
-
 std::string ControlCore::defaultPlaceDirectory() const {
   const auto slash = config_file.find_last_of("/\\");
   return (slash == std::string::npos ? "." : config_file.substr(0, slash)) +
@@ -640,13 +594,13 @@ void ControlCore::refreshPlaces(const std::string &json) {
   try {
     JSON::Parser parser(JSON_DICT_SETTING);
     auto doc = parser.parse(json);
+    const auto *tracking = doc.root[AIS::KEY_SETTING_TRACKING];
+    const auto *path = tracking && tracking->isObject() ? tracking->getObject()[AIS::KEY_SETTING_PLACES] : nullptr;
+    // a file from before has it under the viewer section
     const auto *control = doc.root[AIS::KEY_SETTING_CONTROL];
-    const auto *viewer = control && control->isObject()
-                             ? control->getObject()[AIS::KEY_SETTING_VIEWER]
-                             : nullptr;
-    const auto *path = viewer && viewer->isObject()
-                           ? viewer->getObject()[AIS::KEY_SETTING_PLACES]
-                           : nullptr;
+    const auto *viewer = control && control->isObject() ? control->getObject()[AIS::KEY_SETTING_VIEWER] : nullptr;
+    if (!path && viewer && viewer->isObject())
+      path = viewer->getObject()[AIS::KEY_SETTING_PLACES];
     if (path && path->isString() && !path->getString().empty()) {
       directory = path->getString();
       enabled = true;
@@ -669,39 +623,24 @@ std::shared_ptr<PlaceCatalogue> ControlCore::getPlaces() {
 }
 std::string ControlCore::placeSettings() {
   std::lock_guard<std::mutex> lock(place_mtx);
-  return "{\"enabled\":" + std::string(place_enabled ? "true" : "false") +
-         ",\"directory\":" + JSON::Writer::escape(place_directory) + "}";
+  std::string out;
+  JSON::Writer w(out);
+  w.beginObject().kv("enabled", place_enabled).kv("directory", place_directory).endObject().finish();
+  return out;
 }
+
 bool ControlCore::enablePlaces(std::string &error) {
-  std::lock_guard<std::mutex> lock(file_mtx);
-  try {
-    JSON::Parser parser(JSON_DICT_SETTING);
-    auto doc = parser.parse(Util::Helper::readFile(config_file));
-    const auto ensure = [&](JSON::JSON &parent, AIS::Keys key) -> JSON::JSON & {
-      const auto *existing = parent[key];
-      if (existing && existing->isObject())
-        return const_cast<JSON::JSON &>(existing->getObject());
-      auto *obj = doc.pool.addObject();
-      JSON::Value v;
-      v.setObject(obj);
-      parent.Set(key, v);
-      return *obj;
-    };
-    auto &control = ensure(doc.root, AIS::KEY_SETTING_CONTROL);
-    auto &viewer = ensure(control, AIS::KEY_SETTING_VIEWER);
-    const auto *path = viewer[AIS::KEY_SETTING_PLACES];
-    if (!path || !path->isString() || path->getString().empty())
-      viewer.Set(AIS::KEY_SETTING_PLACES, defaultPlaceDirectory(), doc.pool);
-    std::string out;
-    JSON::Serializer serializer(JSON_DICT_SETTING);
-    serializer.stringify(doc.root, out);
-    if (!writeFileAtomic(config_file, out, error))
+  const bool written = mutateConfig("enable places", [&](JSON::Document &doc) {
+    JSON::JSON &tracking = doc.root.object(AIS::KEY_SETTING_TRACKING, doc.pool);
+    const JSON::Value *path = tracking[AIS::KEY_SETTING_PLACES];
+    if (path && path->isString() && !path->getString().empty())
       return false;
-    refreshPlaces(out);
-    config_dirty = true;
+    tracking.Set(AIS::KEY_SETTING_PLACES, defaultPlaceDirectory(), doc.pool);
     return true;
-  } catch (const std::exception &e) {
-    error = e.what();
+  }, &error);
+  if (!written)
     return false;
-  }
+  refreshPlaces(getConfig());
+  config_dirty = true;
+  return true;
 }

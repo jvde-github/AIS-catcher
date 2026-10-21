@@ -96,6 +96,8 @@ namespace Device {
 		// Play state plus health. Virtual dispatch is deliberate: the overrides poll
 		// the hardware, and that poll is what sets `lost`.
 		bool isActive() { return isStreaming() && !lost; }
+		// it stopped by itself: unplugged, the connection gone
+		bool isLost() const { return lost; }
 		virtual bool isReplay() { return false; }
 
 		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }

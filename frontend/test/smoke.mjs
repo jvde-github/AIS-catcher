@@ -86,17 +86,30 @@ async function viewer(url) {
 async function hub(url) {
     console.log('hub ' + url);
     const page = await open(url);
-    check('hub rendered', await page.until("!!document.querySelector('#nav-btn-control')"));
+    check('hub rendered', await page.until("!!document.querySelector('#nav-btn-settings')"));
     await wait(1000);
-    // the system tabs live in a panel the Control button opens; they are built then, not before
-    const opened = await page.click('#nav-btn-control, [data-view="control-panel"]');
+    // the pages and their rail are built when the Settings button opens the panel
+    const opened = await page.click('#nav-btn-settings');
     await wait(1500);
-    check('control panel opens', opened && (await page.evaluate("document.querySelectorAll('.sys-pane').length")) > 0);
-    for (const tab of await page.evaluate("[...document.querySelectorAll('[data-tab]')].map(e => e.dataset.tab).filter((t, i, a) => a.indexOf(t) === i)")) {
-        const before = page.errors.length;
-        await page.click(`[data-tab="${tab}"]`);
+    check('settings panel opens', opened && (await page.evaluate("document.querySelectorAll('#settings-rail .st-rail__sec').length")) > 0);
+    // every section the rail lists, and every item it shows under the open one; the rail is
+    // drawn again after each click, so each is found by its place
+    const sections = await page.evaluate("document.querySelectorAll('#settings-rail .st-rail__sec').length");
+    for (let i = 0; i < sections; i++) {
+        const sec = `#settings-rail .st-rail__group:nth-child(${i + 1})`;
+        const label = await page.evaluate(`document.querySelector('${sec} .st-rail__sec').textContent`);
+        let before = page.errors.length;
+        await page.click(`${sec} .st-rail__sec`);
         await wait(800);
-        check('tab ' + tab, page.errors.length === before, page.errors.slice(before).join(' | '));
+        check('page ' + label, page.errors.length === before, page.errors.slice(before).join(' | '));
+        const items = await page.evaluate(`document.querySelectorAll('${sec} .st-rail__item').length`);
+        for (let j = 0; j < items; j++) {
+            const name = await page.evaluate(`document.querySelectorAll('${sec} .st-rail__item')[${j}].textContent`);
+            before = page.errors.length;
+            await page.evaluate(`document.querySelectorAll('${sec} .st-rail__item')[${j}].click()`);
+            await wait(600);
+            check('page ' + label + ' › ' + name, page.errors.length === before, page.errors.slice(before).join(' | '));
+        }
     }
     check('no script errors', page.errors.length === 0, page.errors.join(' | '));
     check('every asset loaded', page.failed.length === 0, page.failed.join(' | '));

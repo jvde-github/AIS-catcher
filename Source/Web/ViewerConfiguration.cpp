@@ -192,6 +192,9 @@ Setting &ViewerConfiguration::SetKey(AIS::Keys key, const std::string &arg)
 	case AIS::KEY_SETTING_GEOJSON:
 		values.GeoJSON = Util::Parse::Switch(arg);
 		break;
+	case AIS::KEY_SETTING_PLACE_GEOMETRY:
+		values.PlaceGeometry = Util::Parse::Switch(arg);
+		break;
 	case AIS::KEY_SETTING_OWN_MMSI:
 		values.tracking.own_mmsi = Util::Parse::Integer(arg, 0, 999999999);
 		break;

@@ -145,6 +145,33 @@ public:
     }
   }
 
+  // another's figures counted in: the counts add up, the extremes take the extreme
+  void add(MessageStatistics &o) {
+    if (&o == this)
+      return;
+    std::lock(mtx, o.mtx);
+    std::lock_guard<std::mutex> a{mtx, std::adopt_lock}, b{o.mtx, std::adopt_lock};
+    _count += o._count;
+    _exclude += o._exclude;
+    _vessels += o._vessels;
+    for (int i = 0; i < 28; i++)
+      _msg[i] += o._msg[i];
+    for (int i = 0; i < 4; i++) {
+      _errors[i] += o._errors[i];
+      _channel[i] += o._channel[i];
+    }
+    _level_min = MIN(_level_min, o._level_min);
+    _level_max = MAX(_level_max, o._level_max);
+    _ppm += o._ppm;
+    _distance = MAX(_distance, o._distance);
+    _distance_sum += o._distance_sum;
+    _distance_count += o._distance_count;
+    for (int i = 0; i < _RADAR_BUCKETS; i++) {
+      _radarA[i] = MAX(_radarA[i], o._radarA[i]);
+      _radarB[i] = MAX(_radarB[i], o._radarB[i]);
+    }
+  }
+
   void writeJSON(JSON::Writer &w, bool empty = false) {
     std::lock_guard<std::mutex> l{this->mtx};
 
@@ -289,6 +316,7 @@ class Counter : public StreamIn<JSON::JSON> {
 public:
   void setCutOff(int c) { stat.setCutoff(c); }
   void Clear() { stat.Clear(); }
+  void add(Counter &o) { stat.add(o.stat); }
 
   bool Load(std::ifstream &file) { return stat.Load(file); }
   bool Save(std::ofstream &file) { return stat.Save(file); }

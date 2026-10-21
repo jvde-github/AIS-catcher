@@ -74,7 +74,7 @@ void PrometheusCounter::Add(const AIS::Message &m, const TAG &tag)
 		// the scrape walks the table in the order last heard, so `last` must follow every touch
 		Sample &s = samples[h];
 		s.last = now;
-		s.station = m.getStation();
+		s.station = m.getStationOrDefault();
 		const char ch = m.getChannel() ? m.getChannel() : '?';
 		int c = 0;
 		while (c < 4 && s.channel[c] && s.channel[c] != ch)

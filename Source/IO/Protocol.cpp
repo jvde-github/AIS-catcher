@@ -1072,6 +1072,13 @@ namespace Protocol
 		int length = 12 + client_id.length();
 		uint8_t flags = 0x02;
 
+		// the will, retained at QoS 0 (MQTT 3.1.1 3.1.2.5-3.1.2.7)
+		if (!will_topic.empty())
+		{
+			length += 2 + will_topic.length() + 2 + will_message.length();
+			flags |= 0x04 | 0x20;
+		}
+
 		if (!username.empty())
 		{
 			length += 2 + username.length();
@@ -1090,10 +1097,15 @@ namespace Protocol
 		pushByte(0x04); // MQTT 3.1.1
 		pushByte(flags);
 
-		// keep alive is off
-		pushInt(0);
+		// off unless a will needs the broker to notice the connection is gone
+		pushInt(keepalive);
 
 		pushString(client_id);
+		if (!will_topic.empty())
+		{
+			pushString(will_topic);
+			pushString(will_message);
+		}
 
 		if (!username.empty())
 			pushString(username);
@@ -1177,6 +1189,22 @@ namespace Protocol
 	void MQTT::poll()
 	{
 		ProtocolBase::poll();
+
+		// with a keep-alive: a ping when quiet for half of it, and what the
+		// broker says back is read and let go
+		if (connected && keepalive > 0 && !subscribe && prev && prev->isConnected())
+		{
+			if (Clock::now() - last_sent >= std::chrono::seconds(keepalive / 2))
+			{
+				createPacket(PacketType::PINGREQ, 0);
+				pushVariableLength(0);
+				if (prev->send(packet.data(), packet.size()) > 0)
+					last_sent = Clock::now();
+			}
+			char sink[64];
+			while (prev->read(sink, sizeof(sink), 0, false) > 0)
+				;
+		}
 
 		if (!awaiting_connack || !prev || !prev->isConnected())
 			return;
@@ -1267,6 +1295,11 @@ namespace Protocol
 
 	int MQTT::send(const void *str, int length, const std::string &tpc)
 	{
+		return publish(str, length, tpc, false);
+	}
+
+	int MQTT::publish(const void *str, int length, const std::string &tpc, bool retain)
+	{
 		if (!isConnected())
 			return 0;
 
@@ -1276,7 +1309,8 @@ namespace Protocol
 			return -1;
 		}
 
-		createPacket(PacketType::PUBLISH, qos << 1);
+		last_sent = Clock::now();
+		createPacket(PacketType::PUBLISH, (qos << 1) | (retain ? 1 : 0));
 
 		int packet_length = 2 + tpc.length() + length + (qos > 0 ? 2 : 0);
 

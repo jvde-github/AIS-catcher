@@ -81,6 +81,8 @@ X(KEY_SETTING_ALLOW_TYPE, "", "", "", "", "allow_type", "", "", "", nullptr)
 X(KEY_SETTING_ANTENNA, "", "", "", "", "antenna", "", "", "", nullptr)
 X(KEY_SETTING_PLACES, "", "", "", "", "places", "", "",
   "Directory containing geographic place definitions.", nullptr)
+X(KEY_SETTING_PLACE_GEOMETRY, "", "", "", "", "place_geometry", "", "",
+  "Serve each place's outline to the map; off keeps the outlines private to this installation.", nullptr)
 X(KEY_SETTING_ATON, "", "", "", "", "aton", "", "", "", nullptr)
 X(KEY_SETTING_AUTHOR, "", "", "", "", "author", "", "", "", nullptr)
 X(KEY_SETTING_BACKUP, "", "", "", "", "backup", "", "", "", nullptr)
@@ -211,6 +213,7 @@ X(KEY_SETTING_MSG, "", "", "", "", "msg", "", "", "", nullptr)
 X(KEY_SETTING_MSGFORMAT, "", "", "", "", "msgformat", "", "", "", nullptr)
 X(KEY_SETTING_MSG_OUTPUT, "", "", "", "", "msg_output", "", "", "", nullptr)
 X(KEY_SETTING_MSGS, "", "", "", "", "msgs", "", "", "", nullptr)
+X(KEY_SETTING_NAME, "", "", "", "", "name", "", "", "A name: of a station, a key or a place.", nullptr)
 X(KEY_SETTING_MQTT, "", "", "", "", "mqtt", "", "", "", nullptr)
 X(KEY_SETTING_NMEA, "", "", "", "", "nmea", "", "", "", nullptr)
 X(KEY_SETTING_NMEA2000, "", "", "", "", "nmea2000", "", "", "", nullptr)
@@ -276,6 +279,39 @@ X(KEY_SETTING_SPLIT, "", "", "", "", "split", "", "",
 X(KEY_SETTING_SPYSERVER, "", "", "", "", "spyserver", "", "", "", nullptr)
 X(KEY_SETTING_SRC, "", "", "", "", "src", "", "", "", nullptr)
 X(KEY_SETTING_STATION, "", "", "", "", "station", "", "", "", nullptr)
+X(KEY_SETTING_STATIONS, "", "", "", "", "stations", "", "",
+  "The receiving stations of this installation: id, name, position and altitude; 0 is the default station, where inputs stand that name none.", nullptr)
+X(KEY_SETTING_ALT, "", "", "", "", "alt", "", "", "Altitude of a station's antenna in metres.", nullptr)
+X(KEY_SETTING_MMSI, "", "", "", "", "mmsi", "", "", "The vessel a station rides: it is where that vessel reports.", nullptr)
+X(KEY_SETTING_TRACKING, "", "", "", "", "tracking", "", "",
+  "How the site keeps ships: backup file and interval, history, track time, table size.", nullptr)
+X(KEY_SETTING_SERVICES, "", "", "", "", "services", "", "", "The site's servers: a port each and what it serves.", nullptr)
+X(KEY_SETTING_SERVE, "", "", "", "", "serve", "", "", "What a server serves, such as api.", nullptr)
+X(KEY_SETTING_MAIN, "", "", "", "", "main", "", "", "Managed mode's server beside the control panel, on its port: one entry of services, the map always on.", nullptr)
+X(KEY_SETTING_BIND, "", "", "", "", "bind", "", "", "Address a server listens on; 127.0.0.1 unless set.", nullptr)
+X(KEY_SETTING_KEYS, "", "", "", "", "keys", "", "", "The keys a server accepts: a name, the SHA-256 of the key and its scopes.", nullptr)
+X(KEY_SETTING_SHA256, "", "", "", "", "sha256", "", "", "SHA-256 of a key, in hex: the key itself is never stored.", nullptr)
+X(KEY_SETTING_SCOPES, "", "", "", "", "scopes", "", "", "What a key may do: data, system.", nullptr)
+X(KEY_SETTING_PUBLIC, "", "", "", "", "public", "", "", "A server whose data anyone may read without a key.", nullptr)
+X(KEY_SETTING_WEBHOOKS, "", "", "", "", "webhooks", "", "", "Addresses each event is posted to as it happens.", nullptr)
+X(KEY_SETTING_EVENTS, "", "", "", "", "events", "", "", "The kinds of event a webhook posts: safety, destination, status, draught, place_enter, place_exit, system.", nullptr)
+X(KEY_SETTING_SECRET, "", "", "", "", "secret", "", "", "A webhook's signing secret, as Standard Webhooks has it (whsec_...).", nullptr)
+X(KEY_SETTING_BATCH, "", "", "", "", "batch", "", "", "A webhook posts what came together in one request.", nullptr)
+X(KEY_SETTING_MQTT_STATE, "", "", "", "", "mqtt_state", "", "", "The station's state on an MQTT broker, retained, with Home Assistant discovery.", nullptr)
+X(KEY_SETTING_DISCOVERY, "", "", "", "", "discovery", "", "", "Announce the state to Home Assistant through MQTT discovery.", nullptr)
+X(KEY_SETTING_WATCH, "", "", "", "", "watch", "", "", "Vessels whose position is published, by MMSI.", nullptr)
+X(KEY_SETTING_HIDDEN_BUCKETS, "", "", "", "", "hidden_buckets", "", "", "Filter: groups left out: am, as, bm, bs, aton, base, sarte, air.", nullptr)
+X(KEY_SETTING_HIDDEN_CLASSES, "", "", "", "", "hidden_classes", "", "", "Filter: ship classes left out, by number.", nullptr)
+X(KEY_SETTING_HIDDEN_STATUSES, "", "", "", "", "hidden_statuses", "", "", "Filter: navigational statuses left out, 0 to 15.", nullptr)
+X(KEY_SETTING_SPEED_MIN, "", "", "", "", "speed_min", "", "knots", "Filter: lowest speed.", nullptr)
+X(KEY_SETTING_SPEED_MAX, "", "", "", "", "speed_max", "", "knots", "Filter: highest speed.", nullptr)
+X(KEY_SETTING_SEEN, "", "", "", "", "seen", "", "min", "Filter: heard within this many minutes; 0 is any age.", nullptr)
+X(KEY_SETTING_DISTANCE_MIN, "", "", "", "", "distance_min", "", "nmi", "Filter: nearest distance from the station.", nullptr)
+X(KEY_SETTING_DISTANCE_MAX, "", "", "", "", "distance_max", "", "nmi", "Filter: farthest distance from the station.", nullptr)
+X(KEY_SETTING_VALIDATED, "", "", "", "", "validated", "", "", "Filter: any, yes, no or pending.", nullptr)
+X(KEY_SETTING_REPEATED, "", "", "", "", "repeated", "", "", "Filter: any, only or never.", nullptr)
+X(KEY_SETTING_MMSI_ALLOW, "", "", "", "", "mmsi_allow", "", "", "Filter: only these MMSIs.", nullptr)
+X(KEY_SETTING_MMSI_DENY, "", "", "", "", "mmsi_deny", "", "", "Filter: never these MMSIs.", nullptr)
 X(KEY_SETTING_STATS_ON_CLOSE, "", "", "", "", "stats_on_close", "", "", "",
   nullptr)
 X(KEY_SETTING_STATION_LINK, "", "", "", "", "station_link", "", "", "", nullptr)
@@ -1152,9 +1188,8 @@ X(KEY_PORT_SIZE, "size", "", "", "", "size", "", "",
   "Port size: 0 unknown or very small, 1 small, 2 medium, 3 large.", nullptr)
 
 // Persistent geographic place definitions (GeoJSON), read with
-// JSON_DICT_SETTING. Shared structural fields use KEY_SETTING_ID and
-// KEY_SETTING_MODEL_TYPE.
-X(KEY_PLACE_NAME, "", "", "", "", "name", "", "", "Place name", nullptr)
+// JSON_DICT_SETTING. Shared structural fields use KEY_SETTING_ID,
+// KEY_SETTING_NAME and KEY_SETTING_MODEL_TYPE.
 X(KEY_PLACE_GEOMETRY, "", "", "", "", "geometry", "", "",
   "Place definition metadata", nullptr)
 X(KEY_PLACE_COORDINATES, "", "", "", "", "coordinates", "", "",
@@ -1188,3 +1223,4 @@ X(KEY_PLACE_COUNTRY, "", "", "", "", "country", "", "", "Place metadata", nullpt
 
 X(KEY_TOA_NS, "toa_ns", "", "toa_ns", "", "", "toa_ns", "ns",
   "Time of arrival as whole nanoseconds since the Unix epoch; exact where `toa` is rounded.", nullptr)
+X(KEY_PLACE_RANK, "", "", "", "", "rank", "", "", "Place metadata", nullptr)

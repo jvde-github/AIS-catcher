@@ -113,12 +113,24 @@ public:
     }
   }
 
-private:
+  // a change as kept: the numbers of a numeric field, else the new value, an
+  // ETA as its four bytes
   struct Entry {
     uint32_t time, first;
     uint8_t field, flags, from, to;
     char value[24];
   };
+  // a ship's changes, the newest first
+  template <typename F> void forEachEntry(int ptr, F f) const {
+    if (slot(ptr) && ref[ptr] != NIL) {
+      const Block &b = blocks[ref[ptr]];
+      for (std::size_t i = 0; i < b.count; i++)
+        f(b.at(b.count - 1 - i));
+    }
+  }
+  static bool isNumeric(uint8_t field) { return numeric(field); }
+
+private:
 
   struct Block {
     Entry e[SLOTS];

@@ -10,7 +10,6 @@ import {
     setShips, setPlanes, setPaths, setPathsFrom, setStation, setShipsSince, setPlanesSince, setClock,
 } from './core/store.js';
 import { ShippingClass } from '@aiscatcher/core/constants.js';
-import { currentPlaceIds } from '@aiscatcher/core/visits.js';
 import { sanitizeString, getICAOFromHexIdent } from '@aiscatcher/core/text.js';
 import { redraw } from './map.js';
 
@@ -23,7 +22,8 @@ export function init(d) {
 
 // ─── the receiver ────────────────────────────────────────────────────────────
 
-export let receiver = 0;
+// the station the page looks through; -1 is all of them
+export let receiver = -1;
 
 export function setReceiver(idx) {
     receiver = idx;
@@ -31,7 +31,8 @@ export function setReceiver(idx) {
 
 // another receiver: everything fetched so far was the old one's
 export function switchReceiver(idx) {
-    receiver = parseInt(idx, 10) || 0;
+    const n = parseInt(idx, 10);
+    receiver = Number.isInteger(n) ? n : -1;
     setShipsSince(0);
     tableSince = 0;
     lastPathFetch = 0;
@@ -105,7 +106,7 @@ async function fetchShipsBody() {
     const dynamicKeys = [
         "mmsi", "lat", "lon", "distance",
         "heading", "cog", "speed", "status", "age", "flags",
-        "shipclass", "country", "binary", "station", "place_ids"
+        "shipclass", "country", "binary", "station", "place_ids", "stations"
     ];
 
     const staticKeys = [
@@ -148,8 +149,8 @@ async function fetchShipsBody() {
     if (ships.dynamic) {
         ships.dynamic.forEach((v) => {
             const s = Object.fromEntries(dynamicKeys.map((k, i) => [k, v[i]]));
-            s.place_visits = s.place_ids || [];
-            s.place_ids = currentPlaceIds(s.place_visits);
+            s.place_ids = s.place_ids || [];
+            s.stations = s.stations || [];
             s.place_version = ships.place_version || "";
             s.last_signal = serverTime - (s.age || 0);
             delete s.age;

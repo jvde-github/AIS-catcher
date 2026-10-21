@@ -117,6 +117,7 @@ void Receiver::setupDevice()
 	tag.version = VERSION_NUMBER;
 	tag.station_lat = station_lat;
 	tag.station_lon = station_lon;
+	tag.station_id = station;
 
 	if (!deviceManager.openDevice(sample_rate, bandwidth, ppm, frequency, tag))
 		throw std::runtime_error("Receiver: cannot set up device.");
@@ -216,6 +217,9 @@ void Receiver::setupModel(int &group, int idx)
 	// build the decoder models
 	for (auto &m : models)
 	{
+		// with stations configured, the station is the station_id its messages carry, unless the decoder names one
+		if (stamp_station)
+			m->setDefaultStation(station);
 		m->setDesignation(ChannelNMEA);
 		m->setMode(ChannelMode);
 		m->setOwnMMSI(own_mmsi);
@@ -300,6 +304,23 @@ void OutputStatistics::connect(Receiver &r)
 		r.Output(i).Connect((StreamIn<AIS::Message> *)statistics[i].get());
 		r.OutputADSB(i).Connect((StreamIn<Plane::ADSB> *)statistics[i].get());
 	}
+}
+
+uint64_t resolveUnzoned(const std::vector<std::unique_ptr<Receiver>> &receivers, bool &any_zoned)
+{
+	uint64_t mask = 0;
+	any_zoned = false;
+
+	for (const auto &r : receivers)
+		for (int i = 0; i < r->Count(); i++)
+		{
+			if (r->hasZone(i))
+				any_zoned = true;
+			else
+				mask |= r->getGroupMask(i);
+		}
+
+	return mask;
 }
 
 uint64_t resolveZones(const std::vector<std::unique_ptr<Receiver>> &receivers, const std::vector<std::string> &zones)

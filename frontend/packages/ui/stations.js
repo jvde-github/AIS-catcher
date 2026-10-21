@@ -34,6 +34,16 @@ export function stationCanvas(gps, status) {
 // the badge on the vessel a station rides
 export const stationBadgeCanvas = (status) => badgeCanvas('station', hexToRgb(stationColor(status)), 1);
 
+// the stations that heard a vessel as boxes, the latest first and marked: the
+// first `max`, then a dotted box when there are more; `label` names a station by its id
+export function stationBoxes(ids, label, max = 3) {
+    if (!ids || !ids.length) return '';
+    const more = ids.length > max ? '<span class="station-box station-etc">···</span>' : '';
+    return ids.slice(0, max).map((id, i) => i
+        ? `<span class="station-box">${text(label(id))}</span>`
+        : `<span class="station-box station-last" title="Heard it last">${text(label(id))}</span>`).join('') + more;
+}
+
 // the hover band, one line: flag, name and number
 export function stationBand(s) {
     const cc = String(s.country || '').trim().toLowerCase();

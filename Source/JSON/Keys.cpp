@@ -31,7 +31,7 @@ namespace AIS
 #undef X
 	};
 
-	Keys lookupSettingKey(const std::string &option)
+	bool lookupSettingKey(const std::string &option, Keys &key)
 	{
 		static std::unordered_map<std::string, Keys> map;
 		if (map.empty())
@@ -45,7 +45,10 @@ namespace AIS
 		}
 
 		auto it = map.find(option);
-		return it != map.end() ? it->second : (Keys)-1;
+		if (it == map.end())
+			return false;
+		key = it->second;
+		return true;
 	}
 
 	const std::vector<std::string> LookupTable_aid_types = {

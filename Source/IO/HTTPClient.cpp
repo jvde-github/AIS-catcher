@@ -40,8 +40,18 @@ namespace IO
 			std::streampos bodyStart;
 
 			// Parse headers
+			content_type.clear();
 			while (std::getline(iss, line) && line != "\r" && !line.empty())
 			{
+				std::string name = line.substr(0, line.find(':'));
+				Util::Convert::toLower(name);
+				if (name == "content-type" && line.size() > 13)
+				{
+					content_type = line.substr(13);
+					content_type.erase(0, content_type.find_first_not_of(' '));
+					if (!content_type.empty() && content_type.back() == '\r')
+						content_type.pop_back();
+				}
 				if (line.find("Transfer-Encoding:") != std::string::npos)
 				{
 					if (line.find("chunked") == std::string::npos)
@@ -102,6 +112,7 @@ namespace IO
 
 		header = "POST " + path + " HTTP/1.1\r\nHost: " + host + ":" + port + "\r\nAccept: */*\r\nConnection: close\r\n";
 		header += Util::Convert::authorizationHeader(username, password, basic);
+		header += extra_headers;
 
 		if (!multipart)
 		{
@@ -122,7 +133,22 @@ namespace IO
 		if (multipart) gzip = false;
 		createMessageBody(msg, gzip, multipart, copyname);
 		createHeader(gzip, multipart);
+		return exchange(true, gzip);
+	}
 
+	// one GET, its reply's body in getResponse() and its type in content_type
+	int HTTPClient::Get()
+	{
+		message.clear();
+		header = "GET " + path + " HTTP/1.1\r\nHost: " + host + ":" + port + "\r\nAccept: */*\r\nConnection: close\r\n";
+		header += Util::Convert::authorizationHeader(username, password, basic);
+		header += extra_headers;
+		header += "\r\n";
+		return exchange(false, false);
+	}
+
+	int HTTPClient::exchange(bool body, bool gzip)
+	{
 		// Set up protocol chain: TCP -> TLS (if secure)
 		tcp.setOptionKey(AIS::KEY_SETTING_HOST, host);
 		tcp.setOptionKey(AIS::KEY_SETTING_PORT, port);
@@ -156,7 +182,7 @@ namespace IO
 		}
 
 		// Send body
-		if (!connection->sendAll(getMessagePtr(gzip), (int)getMessageLength(gzip)))
+		if (body && !connection->sendAll(getMessagePtr(gzip), (int)getMessageLength(gzip)))
 		{
 			Error() << "HTTP Client [" << host << "]: write failed";
 			connection->disconnect();

@@ -388,6 +388,13 @@ export function placeMenu(menu, opts) {
     menu.style.top = clampTop(opts.y + 5) + "px";
 }
 
+/* A Mac takes a control-click for a right-click: the context menu opens on it,
+   and some browsers then send the click as well, which is not one */
+export function isSecondaryClick(e) {
+    var nav = typeof navigator !== "undefined" ? navigator : null;
+    return !!(e && e.ctrlKey && e.button === 0 && nav && /Mac|iPhone|iPad/.test(nav.platform || nav.userAgent || ""));
+}
+
 export function dismissOnce(menu, onClose, opts) {
     opts = opts || {};
     function close(e) {
@@ -397,6 +404,7 @@ export function dismissOnce(menu, onClose, opts) {
         if (onClose) onClose(e);
     }
     function onClick(e) {
+        if (isSecondaryClick(e)) return;
         if (opts.keepInside && menu.contains(e.target)) return;
         if (opts.swallow) { e.stopPropagation(); e.preventDefault(); }
         close(e);

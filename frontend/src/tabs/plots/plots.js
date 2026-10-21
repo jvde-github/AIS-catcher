@@ -9,7 +9,7 @@ import {
 } from 'chart.js';
 import Annotation from 'chartjs-plugin-annotation';
 import { getDistanceConversion, getDistanceUnit } from '../../core/units.js';
-import { config } from '../../core/config.js';
+import { config, stationLabel } from '../../core/config.js';
 import { receiver } from '../../data.js';
 import { register } from '../../actions.js';
 
@@ -418,11 +418,6 @@ function receivers() {
     return config.receivers || [];
 }
 
-function receiverLabel(idx) {
-    const r = receivers().find((x) => x.idx === idx);
-    return r ? r.label : `Receiver ${idx}`;
-}
-
 export function setMode(next) {
     if (next !== "compare") next = "overview";
     if (next === mode) return;
@@ -580,9 +575,9 @@ function timeShift(a, b, f) {
 function updateChartCompare(a, b, f, key, c, srcA, srcB) {
     if (!c) return;
     const shift = timeShift(a, b, f);
-    c.data.datasets[0].label = receiverLabel(srcA);
+    c.data.datasets[0].label = stationLabel(srcA);
     c.data.datasets[0].data = series(a, f, key);
-    c.data.datasets[1].label = receiverLabel(srcB);
+    c.data.datasets[1].label = stationLabel(srcB);
     c.data.datasets[1].data = series(b, f, key).map((p) => ({ x: p.x + shift, y: p.y }));
     setTimeAxis(c, a && a[f]);
     c.update();
@@ -600,7 +595,7 @@ function updateChartGain(a, b, f, c, srcA, srcB) {
     const totalB = shared.reduce((s, p) => s + other.get(p.x), 0);
     const average = totalA > 0 ? (100 * (totalB - totalA)) / totalA : 0;
 
-    c.data.datasets[0].label = receiverLabel(srcB) + " vs " + receiverLabel(srcA);
+    c.data.datasets[0].label = stationLabel(srcB) + " vs " + stationLabel(srcA);
     c.data.datasets[0].data = shared.map((p) => ({ x: p.x, y: (100 * (other.get(p.x) - p.y)) / p.y }));
 
     // with nothing to compare against, an average of 0 would read as parity

@@ -23,45 +23,8 @@
 
 #include "AIS-catcher.h"
 
+#include "PluginStore.h"
 #include "ReceiverTracker.h"
-
-// The JS and CSS the station owner adds on top of the built-in viewer, plus the
-// "about" text. Loading is best-effort: a broken plugin is reported to the
-// frontend through the manifest rather than taking the viewer down.
-class PluginStore {
-  std::string code;
-  mutable std::string revision;
-  std::string stylesheets;
-  std::string about = "This content can be set by the station owner";
-  bool about_present = false;
-
-  // version 0 means "no declared version" (CSS plugins).
-  std::vector<std::pair<std::string, int>> loaded_list;
-  std::vector<std::string> error_list;
-  std::vector<std::string> dir_list;
-
-public:
-  PluginStore() : code("\n\nfunction loadPlugins() {\n") {}
-
-  void addPlugin(const std::string &path);
-  void addStyle(const std::string &path);
-  void addDir(const std::string &dir);
-  // generated rather than read from disk (map tile sources)
-  void setAbout(const std::string &path);
-
-  // the function body render() emits, closing brace not included
-  const std::string &getCode() const { return code; }
-  const std::string &version() const;
-  const std::string &getStylesheets() const { return stylesheets; }
-  const std::string &getAbout() const { return about; }
-  bool isAboutPresent() const { return about_present; }
-
-  const std::vector<std::pair<std::string, int>> &loaded() const {
-    return loaded_list;
-  }
-  const std::vector<std::string> &errors() const { return error_list; }
-  const std::vector<std::string> &dirs() const { return dir_list; }
-};
 
 // Browser-facing settings, served as versioned JSON for startup and live
 // updates. An embedded snapshot remains available for older clients and offline

@@ -76,6 +76,7 @@ namespace Util
 		static std::string toString(MessageFormat out);
 
 		static std::string toBase64(const std::string &s);
+		static bool fromBase64(const std::string &s, std::string &out);
 		static std::string authorizationHeader(const std::string &username, const std::string &password, bool basic);
 		static std::string IPV4toString(uint32_t ipv4)
 		{

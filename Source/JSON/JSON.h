@@ -40,6 +40,7 @@ namespace JSON
 			INT,
 			FLOAT,
 			STRING,
+			CSTRING, // a C string the caller owns: an event's text while it is in flight
 			OBJECT,
 			ARRAY_STRING,
 			ARRAY,
@@ -55,6 +56,7 @@ namespace JSON
 			int64_t i;
 			double f;
 			std::string *s;
+			const char *cs;
 			std::vector<std::string> *as;
 			std::vector<Value> *a;
 			JSON *o;
@@ -68,10 +70,16 @@ namespace JSON
 		bool getBool(bool d = false) const { return isBool() ? data.b : d; }
 		const std::vector<std::string> &getStringArray() const { return *data.as; }
 		const std::vector<Value> &getArray() const { return *data.a; }
+		std::vector<Value> &getArray() { return *data.a; }
 		const std::string &getString() const
 		{
 			static const std::string empty;
 			return isString() ? *data.s : empty;
+		}
+		// the characters of either string type; "" otherwise
+		const char *getCString() const
+		{
+			return isString() ? data.s->c_str() : (isCString() && data.cs ? data.cs : "");
 		}
 		const JSON &getObject() const { return *data.o; }
 		JSON &getObject() { return *data.o; }
@@ -82,8 +90,10 @@ namespace JSON
 		bool isArray() const { return type == Type::ARRAY; }
 		bool isArrayString() const { return type == Type::ARRAY_STRING; }
 		bool isString() const { return type == Type::STRING; }
+		bool isCString() const { return type == Type::CSTRING; }
 		bool isFloat() const { return type == Type::FLOAT; }
 		bool isInt() const { return type == Type::INT; }
+		bool isNull() const { return type == Type::EMPTY; }
 
 		void setFloat(double v)
 		{
@@ -116,6 +126,11 @@ namespace JSON
 		{
 			data.s = v;
 			type = Type::STRING;
+		}
+		void setCString(const char *v)
+		{
+			data.cs = v;
+			type = Type::CSTRING;
 		}
 		void setObject(JSON *v)
 		{
@@ -150,6 +165,7 @@ namespace JSON
 
 		int Key() const { return key; }
 		const Value &Get() const { return value; }
+		Value &Get() { return value; }
 	};
 
 	class Pool;
@@ -181,7 +197,22 @@ namespace JSON
 			return nullptr;
 		}
 
+		Value *getValue(int p)
+		{
+			for (auto &o : members)
+				if (o.Key() == p)
+					return &o.Get();
+
+			return nullptr;
+		}
+
 		const Value *operator[](int p) const { return getValue(p); }
+		Value *operator[](int p) { return getValue(p); }
+
+		// the object or the array under a key, made when there is none or the
+		// key holds something else
+		JSON &object(int p, Pool &pool);
+		std::vector<Value> &array(int p, Pool &pool);
 
 		void Add(int p) { members.emplace_back(p); }
 		void Add(int p, int v) { members.emplace_back(p, (int64_t)v); }
@@ -287,6 +318,28 @@ namespace JSON
 		Value val;
 		val.setString(pool.addString(v));
 		Set(p, val);
+	}
+
+	inline JSON &JSON::object(int p, Pool &pool)
+	{
+		Value *v = getValue(p);
+		if (v && v->isObject())
+			return v->getObject();
+		Value made;
+		made.setObject(pool.addObject());
+		Set(p, made);
+		return made.getObject();
+	}
+
+	inline std::vector<Value> &JSON::array(int p, Pool &pool)
+	{
+		Value *v = getValue(p);
+		if (v && v->isArray())
+			return v->getArray();
+		Value made;
+		made.setArray(pool.addArray());
+		Set(p, made);
+		return made.getArray();
 	}
 
 	// Document: owns a root JSON and its pool

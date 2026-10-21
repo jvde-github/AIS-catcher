@@ -53,7 +53,7 @@ import { init as initContextMenu, MENU_CHECKS, showContextMenu } from './feature
 import { redrawMap } from './fleet.js';
 import { init as initHover, stopHover, handlePointerMove, handleClick, getFeature } from './features/hover/hover.js';
 import * as replaybar from './features/replay/replaybar.js';
-import { init as initReceiver } from './features/receiver/receiver.js';
+import { init as initReceiver, openStation, syncFocus } from './features/receiver/receiver.js';
 import { updateDarkMode, setDarkMode } from './features/theme/theme.js';
 import { init as initFollow, openFocus } from './features/follow/follow.js';
 import { installPluginApi, loadPlugins } from './plugin-api.js';
@@ -120,7 +120,7 @@ initPanels({ ui });
 mapRenderer(redrawMap);
 initHover({ ui });
 initFollow({ ui });
-initReceiver({ closeSearch: () => searchPanel.close() });
+initReceiver({ closeSearch: () => searchPanel.close(), onFocus: () => updateFilterUI() });
 
 initContextMenu({ menu: ui.menu });
 
@@ -265,6 +265,7 @@ searchPanel = createSearch({
                 map.getView().animate({center: ol.proj.fromLonLat([result.lon, result.lat]), zoom: 12, duration: 500});
             }
             if (result.type === 'port' || result.type === 'place') mapObjects.openPorts([result.object]);
+            else if (result.type === 'station') openStation(Number(result.id));
         }
     },
     onError: () => showNotification('Could not open the search result', 'error'),
@@ -480,10 +481,11 @@ onSettingsSave(saveCardLayout);
 
 community.init();
 measure.init();
-range.init();
+range.init(mapObjects.stationsOnMap);
 boxselect.init();
 mapObjects.init({
     navigate: ({ lat, lon }) => ui.reveal([lon, lat], undefined, { minZoom: 8, center: true }),
+    openStation,
     setTableOpen: (on) => {
         if (on) closeSettings();
         setPanels({ table: on, ...(on ? { replay: false } : {}) });
@@ -549,6 +551,7 @@ const serverConfig = createViewerConfig({
         if (restartChanged && next.restart_required?.length)
             showNotification(next.restart_required.join(", ") + ": required to apply these settings", "info");
         updateSettingsTab();
+        syncFocus(true);
         redrawMap();
     },
     pluginsChanged: () => {
@@ -600,6 +603,7 @@ applyPanels();
 console.log("Load settings from URL parameters");
 
 loadSettingsFromURL();
+syncFocus(false);
 setTargetcardStyle(settings.shipcard_style);   // the card was built before the settings were read
 applyDynamicStyling();
 community.applySharingState();

@@ -804,7 +804,7 @@ namespace AIS
 		if (!uuid.empty())
 			result += " uuid " + uuid;
 		int station = nmea.getStation();
-		if (station != 0)
+		if (station >= 0)
 			result += " ID " + std::to_string(station);
 		result += " crc_check " + Util::Convert::toString(nmea.getCRCcheck()) + " VDO " + Util::Convert::toString(nmea.getVDO()) + Model::Get();
 		return result;

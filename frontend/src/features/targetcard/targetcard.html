@@ -39,6 +39,9 @@
 	<div id="targetcard_slot_ais">
 	<div id="targetcard_source_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
 			data-section="source" data-context-type="ship"><span>AIS source</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_up_icon"></i></span></div>
+		<div id="targetcard_stations_row" data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only" hidden>
+			<div><span>Stations</span><span id="targetcard_stations"></span></div>
+		</div>
 		<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only">
 			<div><span>RSSI</span><span id="targetcard_level">-</span></div>
 			<div><span>Drift</span><span id="targetcard_ppm">-</span></div>

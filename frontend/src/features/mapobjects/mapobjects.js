@@ -58,6 +58,7 @@ const objects = mapobjects.create({
     openVessel,
     hoverVessel, unhoverVessel,
     setTableOpen: (on) => deps.setTableOpen(on),
+    openStation: (id) => deps.openStation(id),
     map: () => map,
 });
 
@@ -65,6 +66,7 @@ export const objectLayer = objects.layer;
 export const setReceiverMarker = objects.setReceiverMarker;
 export const openPorts = objects.openPorts;
 export const openNearby = objects.openNearby;
+export const stationsOnMap = () => objects.stations();
 
 // the ticker's history: the same side table, a page of the rings at a time
 export const openEventHistory = createEventHistory({
@@ -73,6 +75,7 @@ export const openEventHistory = createEventHistory({
     openVessel,
     navigate: (pos) => deps.navigate(pos),
     setTableOpen: (on) => deps.setTableOpen(on),
+    openStation: (id) => deps.openStation(id),
     map: () => map,
 });
 
@@ -137,7 +140,7 @@ export async function fetchObjects() {
 // the module stacks what overlaps at the view's zoom, so it has to know it
 let viewZoom = null;
 export function viewChanged(zoom) {
-    const z = Math.round(zoom);
+    const z = Math.floor(zoom);
     if (z === viewZoom) return;
     viewZoom = z;
     objects.setViewZoom(z);

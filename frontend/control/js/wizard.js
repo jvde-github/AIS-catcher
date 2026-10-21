@@ -226,7 +226,7 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
             })
             .catch(e => {
                 console.error('Could not clear the wizard flag:', e);
-                if (App && App.notify) App.notify('error', 'Could not save the wizard state');
+                App.notify('error', 'Could not save the wizard state');
             });
     }
 
@@ -267,7 +267,7 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
             window.hubPasswordBackstop();
             return;
         }
-        if (App && App.notify) App.notify('info', 'Setup cancelled — run the wizard anytime from the System panel');
+        App.notify('info', 'Setup cancelled — run the wizard anytime from the System panel');
     }
 
     // A step is hidden when a checked import covers it (its coveredBy matches
@@ -367,7 +367,7 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
             '<h2>' + esc(step.title) + '</h2>' +
             '<p class="wz-sub">&copy; 2021-2026 jvde.github@gmail.com</p>' +
             '<p>This wizard sets up a simple receiving station in a few steps: pick an input device and choose where to share your data. ' +
-            'Every step can be skipped and all settings can be changed later under <b>Input</b> and <b>Output</b>.</p>' +
+            'Every step can be skipped and all settings can be changed later under <b>Settings</b>.</p>' +
             '<p class="wz-fineprint">AIS-catcher is a research and educational tool provided under the ' +
             '<a href="https://github.com/jvde-github/AIS-catcher/blob/main/LICENSE" target="_blank" rel="noopener">GNU GPL v3 license</a>. ' +
             'It is not reliable for navigation or safety of life or property. Radio reception regulations vary by region; check your local rules before use.</p>' +
@@ -683,16 +683,16 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
             .then(data => {
                 if (!data.status) throw new Error(data.error || 'save failed');
                 close(false);
-                if (App && App.notify) App.notify('success', 'Configuration saved');
+                App.notify('success', 'Configuration saved');
                 if (startAfter)
                     return fetch('/api/status').then(r => { if (!r.ok) throw new Error(); return r.json(); })
                         .then(st => fetch('/api/engine', { method: 'POST', body: st.engine === 'running' ? 'restart' : 'start' }))
                         .then(r => r.json())
                         .then(res => {
-                            if (!res.status && App && App.notify)
+                            if (!res.status)
                                 App.notify('error', 'Could not start the receiver: ' + (res.error || 'request failed'));
                         })
-                        .catch(() => { if (App && App.notify) App.notify('error', 'Could not start the receiver'); });
+                        .catch(() => { App.notify('error', 'Could not start the receiver'); });
             })
             .catch(e => {
                 nextBtn.disabled = false;

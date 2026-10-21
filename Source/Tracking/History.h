@@ -16,10 +16,13 @@
 */
 
 #pragma once
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <string.h>
 #include <memory>
+#include <utility>
+#include <vector>
 
 #include "Statistics.h"
 #include "Writer.h"
@@ -62,6 +65,36 @@ public:
 
 		start = end = 0;
 		create((long int)time(nullptr) / (long int)INTERVAL);
+	}
+
+	// Several histories as one, in place of this one's: the slots of one time
+	// add up, and the newest N times stay. The parts must not change meanwhile.
+	void combine(const std::vector<History*>& parts) {
+		std::lock_guard<std::mutex> l{ this->mtx };
+
+		std::vector<std::pair<long int, MessageStatistics*>> slots;
+		for (History* h : parts)
+			for (int idx = h->start;; idx = (idx + 1) % N) {
+				slots.push_back(std::make_pair(h->history[idx].time, &h->history[idx].stat));
+				if (idx == h->end) break;
+			}
+		std::stable_sort(slots.begin(), slots.end(),
+			[](const std::pair<long int, MessageStatistics*>& a, const std::pair<long int, MessageStatistics*>& b) { return a.first < b.first; });
+
+		start = end = 0;
+		if (slots.empty()) {
+			create((long int)time(nullptr) / (long int)INTERVAL);
+			return;
+		}
+		create(slots.front().first);
+		for (const auto& s : slots) {
+			if (s.first > history[end].time) {
+				end = (end + 1) % N;
+				create(s.first);
+				if (start == end) start = (start + 1) % N;
+			}
+			history[end].stat.add(*s.second);
+		}
 	}
 
 	void Receive(const JSON::JSON* j, int len, TAG& tag) {

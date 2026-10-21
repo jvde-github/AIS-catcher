@@ -76,7 +76,7 @@ namespace AIS
 	class Model : public Setting
 	{
 	protected:
-		int station = 0;
+		int station = -1; // what its messages carry as station_id: the ID setting, else the input's station; -1 for none
 		int own_mmsi = -1;
 
 		Mode mode = Mode::AB;
@@ -105,6 +105,8 @@ namespace AIS
 
 		void setMode(Mode m) { mode = m; }
 		void setOwnMMSI(int m) { own_mmsi = m; }
+		// the station of the input, when the decoder has no ID of its own
+		void setDefaultStation(int s) { if (station < 0) station = s; }
 		void setDesignation(const std::string &s) { designation = s; }
 		virtual Setting &SetKey(AIS::Keys key, const std::string &arg)
 		{

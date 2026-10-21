@@ -100,7 +100,7 @@ namespace IO
 						json += ", timestamp: ";
 						json += msg.getRxTime();
 					}
-					if (msg.getStation())
+					if (msg.getStation() >= 0)
 					{
 						json += ", ID: ";
 						json += std::to_string(msg.getStation());
@@ -167,6 +167,7 @@ namespace IO
 
 		virtual void Start() {}
 		virtual void Stop() {}
+		const std::string &getType() const { return type; }
 
 		// from the engine's main loop: the decoding thread only ever sends
 		virtual void poll() {}
@@ -227,11 +228,12 @@ namespace IO
 			batchDone(tag);
 		}
 
-		void writeJSON(JSON::Writer &w) const
+		// `label`: its name when it has no description, "UDP #1"; never where it sends, as a map may show it
+		void writeJSON(JSON::Writer &w, const std::string &label) const
 		{
 			w.beginObject()
 				.kv("type", type)
-				.kv("description", description);
+				.kv("description", description.empty() ? label : description);
 			if (!link.empty())
 				w.kv("link", link);
 			w.key("stats");

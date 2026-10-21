@@ -23,6 +23,8 @@
 #include <cstdio>
 
 #include "Geodesy.h"
+#include <cstdlib>
+#include "PositionCheck.h"
 #include "Logger.h"
 
 #include <fstream>
@@ -50,6 +52,12 @@ void DB::setup() {
   destinations.setup(nships);
   ships.setup(nships, nbuckets);
   visits.setup(nships);
+  nships_ = nships;
+  if (std::getenv("AIS_EVENTS_TRACE") && !tracing) {
+    fixes_wanted = tracing = true;
+    events >> tracer;
+  }
+  sampler.enable(fixes_wanted, nships);
 
   if (track_memory_kb == 0)
     track_memory_kb = server_mode ? 4096 : 1024;
@@ -64,13 +72,29 @@ void DB::setup() {
   evict_horizon = 0;
 }
 
+// the ships a reader is shown; under the lock
+int DB::keptCount(const Keep &keep) {
+  if (!keep)
+    return ships.size();
+  int count = 0;
+  ships.forEach([&](int ptr) {
+    count += keep(ships[ptr]);
+    return true;
+  });
+  return count;
+}
+
 std::string DB::getJSONcompact(bool full, std::time_t since,
-                               const std::string &configVersion) {
+                               const std::string &configVersion, const Keep &keep,
+                               const StationRegistry::Station *at,
+                               bool list_stations) {
   std::lock_guard<std::mutex> lock(mtx);
 
   if (since <= full_refresh_at)
     since = 0;
   std::time_t now = time(nullptr);
+
+  const int count = keptCount(keep);
 
   content.clear();
   {
@@ -80,10 +104,13 @@ std::string DB::getJSONcompact(bool full, std::time_t since,
         .kv("config_version", configVersion)
         .kv("place_version", place_markers.version())
         .kv("full", since == 0)
-        .kv("count", ships.size())
+        .kv("count", count)
         .kv("time", now)
         .kv("timeout", time_history);
-    if (latlon_share && isValidCoord(station_lat, station_lon))
+    if (at) {
+      if (isValidCoord(at->lat, at->lon))
+        w.key("station").beginObject().kv("lat", at->lat).kv("lon", at->lon).kv("mmsi", at->mmsi).kv("gps", false).endObject();
+    } else if (latlon_share && isValidCoord(station_lat, station_lon))
       w.key("station")
           .beginObject()
           .kv("lat", station_lat)
@@ -96,9 +123,12 @@ std::string DB::getJSONcompact(bool full, std::time_t since,
     w.key("dynamic").beginArray();
     forEachRecentUnlocked(
         now, full, since, [&](int ptr, const Ship &ship, long int) {
+          if (keep && !keep(ship))
+            return;
           ship.writeCompactDynamic(w, now, binary.badge(ship.mmsi, now),
                                    stations.idFor(ship.mmsi),
-                                   visits.packed(ptr));
+                                   visits.insideIds(ptr, place_markers.index().get()),
+                                   list_stations);
         });
     w.endArray(); // dynamic
 
@@ -106,7 +136,7 @@ std::string DB::getJSONcompact(bool full, std::time_t since,
     w.key("static").beginArray();
     forEachRecentUnlocked(now, full, since,
                           [&](int, const Ship &ship, long int) {
-                            if (since == 0 || ship.last_static_signal >= since)
+                            if ((since == 0 || ship.last_static_signal >= since) && (!keep || keep(ship)))
                               ship.writeCompactStatic(w);
                           });
     w.endArray(); // static
@@ -117,7 +147,7 @@ std::string DB::getJSONcompact(bool full, std::time_t since,
   return content;
 }
 
-std::string DB::getJSONtable(std::time_t since) {
+std::string DB::getJSONtable(std::time_t since, const Keep &keep) {
   std::lock_guard<std::mutex> lock(mtx);
   if (since <= full_refresh_at)
     since = 0;
@@ -133,21 +163,29 @@ std::string DB::getJSONtable(std::time_t since) {
         .beginArray();
     forEachRecentUnlocked(
         now, false, since,
-        [&](int, const Ship &ship, long int) { ship.writeCompactTable(w); });
+        [&](int, const Ship &ship, long int) {
+          if (!keep || keep(ship))
+            ship.writeCompactTable(w);
+        });
     w.endArray().endObject();
   }
   return content;
 }
 
-std::string DB::getJSON(bool full) {
+std::string DB::getJSON(bool full, const StationRegistry::Station *at, const Keep &keep) {
   std::lock_guard<std::mutex> lock(mtx);
+
+  const int count = keptCount(keep);
 
   content.clear();
   {
     JSON::Writer w(content, 65536);
-    w.beginObject().kv("count", ships.size());
+    w.beginObject().kv("count", count);
 
-    if (latlon_share)
+    if (at) {
+      if (isValidCoord(at->lat, at->lon))
+        w.key("station").beginObject().kv("lat", at->lat).kv("lon", at->lon).kv("mmsi", at->mmsi).kv("gps", false).endObject();
+    } else if (latlon_share)
       w.key("station")
           .beginObject()
           .kv("lat", station_lat)
@@ -161,6 +199,8 @@ std::string DB::getJSON(bool full) {
     std::time_t now = time(nullptr);
     forEachRecentUnlocked(
         now, full, 0, [&](int ptr, const Ship &ship, long int delta_time) {
+          if (keep && !keep(ship))
+            return;
           w.beginObject();
           ship.writeJSONBody(w, delta_time,
                              isValidCoord(station_lat, station_lon));
@@ -200,7 +240,8 @@ static bool placedOnGlobe(float lat, float lon) {
 }
 
 std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
-                              int skip_station) {
+                              int skip_station, const Keep &keep,
+                              bool with_stations) {
   static const float HORIZON_NM = 99.0f;
   static const size_t KEEP = 10;
   // written this way round so a NaN fails it; a plain range test would pass one
@@ -241,7 +282,7 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
   float reach = HORIZON_NM;
   forEachRecentUnlocked(now, false, 0, [&](int ptr, const Ship &ship, long) {
     if (ship.mmsi == skip || ship.shipclass >= CLASS_PLANE ||
-        !placedOnGlobe(ship.lat, ship.lon))
+        !placedOnGlobe(ship.lat, ship.lon) || (keep && !keep(ship)))
       return;
     float range;
     int bearing;
@@ -254,7 +295,7 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
 
   reach = HORIZON_NM;
   stations.forEach([&](const StationRegistry::Station &s) {
-    if (!s.id || s.id == skip_station || !placedOnGlobe(s.lat, s.lon))
+    if (!with_stations || s.id == skip_station || !placedOnGlobe(s.lat, s.lon))
       return;
     float range;
     int bearing;
@@ -272,7 +313,7 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
       // ports only, a port inside a larger one included: an anchorage or a
       // berth is a part of a port rather than an answer to "which port is
       // near", and a waterway is not a destination at all
-      if (entry.id == UINT32_MAX || entry.metadata->type != "port" ||
+      if (!entry.live() || !entry.metadata->is(PlaceKind::Port) ||
           !placedOnGlobe((float)entry.lat, (float)entry.lon))
         continue;
       float range;
@@ -331,6 +372,9 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
         .kv("country", s->country)
         .kv("online", s->online)
         .kv("last", (long long)s->last)
+        // the station's last message where the host counts it: fresher than
+        // last, which the station list refreshes only every few minutes
+        .kv("heard", (long long)(station_heard ? station_heard(s->id) : 0))
         .kv("range", row.range)
         .kv("bearing", row.bearing)
         .endObject();
@@ -346,14 +390,14 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
     w.beginObject()
         .kv("runtime_id", entry->id)
         .kv("label", entry->metadata->name)
-        .kv("place_type", entry->metadata->type)
+        .kv("place_type", entry->metadata->type())
         .kv("code", entry->metadata->code)
         .kv("part_of", entry->metadata->partOf)
         .kv("parent_name", parent ? parent->metadata->name : std::string())
         .kv("has_geometry", entry->polygons && !entry->polygons->empty())
         .kv("range", row.range)
         .kv("bearing", row.bearing);
-    if (entry->metadata->type == "port")
+    if (entry->metadata->is(PlaceKind::Port))
       w.kv("country", entry->metadata->country);
     w.endObject();
   }
@@ -369,7 +413,7 @@ std::string DB::getNearbyJSON(float lat, float lon, uint32_t skip,
 std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
                                   const std::string &code,
                                   const std::string &tab, unsigned hours,
-                                  unsigned offset, unsigned limit) {
+                                  unsigned offset, unsigned limit, const Keep &visible) {
   if (!limit || limit > 100 || offset > 10000000)
     return "{\"error\":\"Invalid place pagination\"}";
   std::lock_guard<std::mutex> lock(mtx);
@@ -379,7 +423,7 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
             : nullptr;
   if (id != UINT32_MAX && (!place || version != index->version))
     return "{\"error\":\"Place changed; reopen its marker.\"}";
-  const bool port = place ? place->metadata->type == "port" : !code.empty();
+  const bool port = place ? place->metadata->is(PlaceKind::Port) : !code.empty();
   // A port, a berth or an anchorage is somewhere a vessel stops, so its list is
   // vessels that have lain still in it: an aid to navigation moored there by
   // definition, a base station on the quay and a ship merely steaming through
@@ -435,11 +479,13 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
   };
   if (place)
     visits.forEach(place->id, [&](uint32_t slot) {
+      if (visible && !visible(ships[slot]))
+        return true;
       const VisitTracker::Visit *inside = nullptr, *left = nullptr,
                                 *arrived = nullptr;
       for (const auto &v : visits.record(slot).visits) {
         // a stay that is over and was never a call is not history
-        if (v.empty() || v.id != place->id || !v.shown())
+        if (v.id != place->id || !v.shown(berthing))
           continue;
         const auto entry = v.entryTime(), exit = v.exitTime();
         if (v.inside() && (!inside || entry > inside->entryTime()))
@@ -468,10 +514,10 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
     });
   if (port)
     destinations.forEach(destination, [&](uint32_t slot) {
-      if (place)
-        for (const auto &v : visits.record(slot).visits)
-          if (!v.empty() && v.id == place->id && v.inside())
-            return true;
+      if (visible && !visible(ships[slot]))
+        return true;
+      if (place && visits.insideOf(slot, place->id))
+        return true;
       add(5, slot, nullptr, ships[slot].last_signal);
       return true;
     });
@@ -492,6 +538,8 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
                                 : ships[a.slot].mmsi < ships[b.slot].mmsi;
     };
     forEachRecentUnlocked(now, false, 0, [&](int ptr, const Ship &ship, long) {
+      if (visible && !visible(ship))
+        return;
       if (!placedOnGlobe(ship.lat, ship.lon) || !vessel(ship))
         return;
       float range;
@@ -500,9 +548,8 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
                                      ship.lat, ship.lon, range, bearing);
       if (!(range <= HORIZON_NM))
         return;
-      for (const auto &v : visits.record(ptr).visits)
-        if (!v.empty() && v.id == place->id && v.inside())
-          return; // inside is its own tab
+      if (visits.insideOf(ptr, place->id))
+        return; // inside is its own tab
       ++counts[4];
       if (selected != 4) return;
       nearest.push_back({(uint32_t)ptr, nullptr, ship.last_signal, range});
@@ -563,13 +610,13 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
         w.kv_null("exited");
       // An unobserved crossing is told as a bound beside the exact fields. A
       // pending crossing is not a settled bound.
-      if (!v.entryTime() && v.entered && !(v.pending() && v.inside()))
+      if (!v.entryTime() && v.entered)
         w.kv("entered_before", v.entered);
-      if (!v.exitTime() && v.exited && !v.inside() && !v.pending())
+      if (!v.exitTime() && v.exited && !v.inside())
         w.kv("exited_after", v.exited);
-      if (v.inside() && !v.pending())
+      if (v.inside())
         w.kv("observed_until", visits.record(row.slot).last);
-      w.kv("inside", v.inside()).kv("pending", v.pending());
+      w.kv("inside", v.inside());
     }
     w.endObject();
   }
@@ -579,7 +626,7 @@ std::string DB::getPlaceShipsJSON(uint32_t id, const std::string &version,
   return out;
 }
 
-std::string DB::getKML() {
+std::string DB::getKML(const Keep &keep) {
   std::lock_guard<std::mutex> lock(mtx);
 
   content.assign("<?xml version=\"1.0\" encoding=\"UTF-8\"?><kml xmlns = "
@@ -587,14 +634,15 @@ std::string DB::getKML() {
   std::time_t now = time(nullptr);
 
   forEachRecentUnlocked(now, false, 0, [&](int, const Ship &ship, long int) {
-    ship.writeKML(content);
+    if (!keep || keep(ship))
+      ship.writeKML(content);
   });
 
   content += "</Document></kml>";
   return content;
 }
 
-std::string DB::getGeoJSON() {
+std::string DB::getGeoJSON(const Keep &keep) {
   std::lock_guard<std::mutex> lock(mtx);
 
   content.clear();
@@ -608,14 +656,15 @@ std::string DB::getGeoJSON() {
 
     std::time_t now = time(nullptr);
     forEachRecentUnlocked(now, false, 0, [&](int, const Ship &ship, long int) {
-      ship.writeGeoJSON(w, isValidCoord(station_lat, station_lon));
+      if (!keep || keep(ship))
+        ship.writeGeoJSON(w, isValidCoord(station_lat, station_lon));
     });
     w.endArray().endObject();
   }
   return content;
 }
 
-std::string DB::getAllPathJSON() {
+std::string DB::getAllPathJSON(const Keep &keep) {
   std::lock_guard<std::mutex> lock(mtx);
 
   content.clear();
@@ -627,6 +676,8 @@ std::string DB::getAllPathJSON() {
     std::time_t floor = pathFloor(now);
     forEachRecentUnlocked(now, false, 0,
                           [&](int ptr, const Ship &ship, long int) {
+                            if (keep && !keep(ship))
+                              return;
                             w.key(ship.mmsi);
                             writeSinglePathJSONCompact(ptr, w, floor);
                           });
@@ -670,7 +721,7 @@ void DB::writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since,
   w.endArray();
 }
 
-std::string DB::getAllPathJSONSince(std::time_t since) {
+std::string DB::getAllPathJSONSince(std::time_t since, const Keep &keep) {
   std::lock_guard<std::mutex> lock(mtx);
 
   since = MAX(since, pathFloor(time(nullptr)));
@@ -682,7 +733,7 @@ std::string DB::getAllPathJSONSince(std::time_t since) {
 
     forEachRecentUnlocked(time(nullptr), true, since,
                           [&](int ptr, const Ship &ship, long int) {
-                            if (paths.hasSince(ptr, since)) {
+                            if (paths.hasSince(ptr, since) && (!keep || keep(ship))) {
                               w.key(ship.mmsi);
                               writeSinglePathJSONCompact(ptr, w, since);
                             }
@@ -739,10 +790,12 @@ std::string DB::getReplayInfoJSON(std::time_t block) {
 // Per-ship styling, sent once so the chunks stay geometry. Read straight off
 // the record rather than through the static-signal gate: a name captured hours
 // ago is what a replay of that period wants.
-std::string DB::getReplayShipsJSON(std::time_t since, std::time_t lookback) {
+std::string DB::getReplayShipsJSON(std::time_t since, std::time_t lookback, const Keep &keep) {
   return getReplayObjectJSON(
       since, lookback, 0,
-      [](JSON::Writer &w, int, const Ship &ship, std::time_t) {
+      [&keep](JSON::Writer &w, int, const Ship &ship, std::time_t) {
+        if (keep && !keep(ship))
+          return;
         w.key(ship.mmsi)
             .beginObject()
             .kv("c", ship.shipclass)
@@ -771,9 +824,16 @@ std::string DB::getReplayShipsJSON(std::time_t since, std::time_t lookback) {
 
 std::string DB::getReplayJSON(std::time_t since, std::time_t until,
                               std::time_t lookback) {
+  return getReplayJSON(since, until, Keep(), lookback);
+}
+
+std::string DB::getReplayJSON(std::time_t since, std::time_t until, const Keep &keep,
+                              std::time_t lookback) {
   return getReplayObjectJSON(since, lookback, until,
-                             [this, until](JSON::Writer &w, int ptr,
-                                           const Ship &ship, std::time_t from) {
+                             [this, until, &keep](JSON::Writer &w, int ptr,
+                                                  const Ship &ship, std::time_t from) {
+                               if (keep && !keep(ship))
+                                 return;
                                w.key(ship.mmsi);
                                writeSinglePathJSONCompact(ptr, w, from, until);
                              });
@@ -786,6 +846,16 @@ static void walkPath(const PathStore &paths, int ptr, std::time_t floor,
        PathStore::isPoint(r) && (std::time_t)paths.at(r).end() >= floor;
        r = paths.at(r).prev)
     emit(paths.at(r));
+}
+
+bool DB::forEachTrackPoint(uint32_t mmsi, std::time_t since,
+                           const std::function<void(const PathStore::Point &)> &f) {
+  std::lock_guard<std::mutex> lock(mtx);
+  const int ptr = ships.find(mmsi);
+  if (ptr == SHIP_NIL)
+    return false;
+  walkPath(paths, ptr, MAX(since, pathFloor(time(nullptr))), f);
+  return true;
 }
 
 void DB::writeSinglePathGeoJSON(int ptr, JSON::Writer &w, std::time_t floor) {
@@ -860,7 +930,7 @@ std::string DB::getPathGeoJSON(uint32_t mmsi) {
   return content;
 }
 
-std::string DB::getAllPathGeoJSON() {
+std::string DB::getAllPathGeoJSON(const Keep &keep) {
   std::lock_guard<std::mutex> lock(mtx);
 
   content.clear();
@@ -873,8 +943,9 @@ std::string DB::getAllPathGeoJSON() {
 
     std::time_t now = time(nullptr);
     std::time_t floor = pathFloor(now);
-    forEachRecentUnlocked(now, false, 0, [&](int ptr, const Ship &, long int) {
-      writeSinglePathGeoJSON(ptr, w, floor);
+    forEachRecentUnlocked(now, false, 0, [&](int ptr, const Ship &ship, long int) {
+      if (!keep || keep(ship))
+        writeSinglePathGeoJSON(ptr, w, floor);
     });
     w.endArray().endObject().raw("\n\n");
   }
@@ -968,9 +1039,13 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg,
       staticUpdated = true;
     }
     break;
-  case AIS::KEY_HEADING:
-    ship.heading = p.Get().getInt();
+  case AIS::KEY_HEADING: {
+    // the field is nine bits: 0-359 a heading, 511 "not available", the rest
+    // not a heading at all - a transponder that sends 496 has none to give
+    const int h = p.Get().getInt();
+    ship.heading = h >= 0 && h < 360 ? h : HEADING_UNDEFINED;
     break;
+  }
   case AIS::KEY_DRAUGHT: {
     // an inland vessel reports draught twice and the two disagree; the DAC 200
     // FID 10 value is the finer one, so the type 5 field is dropped once it is
@@ -1073,12 +1148,14 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg,
   case AIS::KEY_SHIPNAME:
     logTextChange(ship, StaticStore::SHIPNAME, ship.shipname,
                   p.Get().getString());
+    noteText(ship, Tracking::Kind::NAME, ship.shipname, p.Get().getString());
     copyField(ship.shipname, p.Get().getString());
     staticUpdated = true;
     break;
   case AIS::KEY_CALLSIGN:
     logTextChange(ship, StaticStore::CALLSIGN, ship.callsign,
                   p.Get().getString());
+    noteText(ship, Tracking::Kind::CALLSIGN, ship.callsign, p.Get().getString());
     copyField(ship.callsign, p.Get().getString());
     staticUpdated = true;
     break;
@@ -1157,6 +1234,7 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship) {
   ship.count++;
   ship.group_mask |= tag.group;
   ship.last_group = tag.group;
+  ship.heardBy(tag.station_id, msg->getRxTimeUnix());
 
   std::time_t prev_signal = ship.last_signal;
   ship.last_signal = msg->getRxTimeUnix();
@@ -1235,6 +1313,12 @@ std::string DB::getBinaryMessagesJSON(std::time_t since, uint64_t marker,
 // a vessel makes no events for this long after a destination or status change,
 // and for this long after saying TEST
 static const int CHANGE_SETTLE_S = 30, TEST_MUTE_S = 300;
+// a safety text broadcast again and again is told again after this long: sooner
+// while a distress call goes on
+static const int SAFETY_REPEAT_S = 1800, SAFETY_URGENT_REPEAT_S = 600;
+// the one definition of lying still, shared with the visits and the sampler
+static const float REST_STILL_KN = 0.5f, REST_MOVE_KN = 1.0f, REST_DRIFT_M = 350.0f;
+static const int REST_TOLD_S = 60, REST_SILENT_S = 6 * 3600;
 
 static std::string words(const std::string &text) {
   std::string s = " ";
@@ -1260,7 +1344,7 @@ static bool plausibleText(const std::string &text) {
 // A safety message has no priority field: a distress device sending it
 // (AIS-SART 970, man-overboard 972, EPIRB 974) or the words used for something
 // serious say it matters; `s` is the text as words() gives it
-static EventRing::Level safetyLevel(uint32_t from, const std::string &s) {
+static Tracking::Level safetyLevel(uint32_t from, const std::string &s) {
   auto has = [&](const char *w) {
     return s.find(std::string(" ") + w + " ") != std::string::npos;
   };
@@ -1271,18 +1355,18 @@ static EventRing::Level safetyLevel(uint32_t from, const std::string &s) {
   if (prefix == 970 || prefix == 972 || prefix == 974)
     return has("ACTIVE") || has("MAYDAY") || has("SART") || has("MOB") ||
                    has("EPIRB") || has("DISTRESS") || has("HELP")
-               ? EventRing::URGENT
-               : EventRing::ROUTINE;
+               ? Tracking::Level::URGENT
+               : Tracking::Level::ROUTINE;
   if (has("MAYDAY") || has("SOS") || has("DISTRESS") || has("MOB") ||
       has("OVERBOARD") || has("MAN OVER BOARD") || has("MAN OVERBOARD") ||
       has("SINKING") || wordStarts("CAPSIZ") || has("FIRE") || has("EMERGENCY"))
-    return EventRing::URGENT;
+    return Tracking::Level::URGENT;
   if (has("PAN PAN") || has("PANPAN") || has("SECURITE") || has("ACCIDENT") ||
       has("COLLISION") || has("AGROUND") || has("GROUND") || has("GROUNDING") ||
       has("DANGER") || has("WARNING") || has("KEEP AWAY") || has("STAY AWAY") ||
       has("KEEP CLEAR") || has("NOT UNDER COMMAND") || has("NUC"))
-    return EventRing::NOTICE;
-  return EventRing::ROUTINE;
+    return Tracking::Level::NOTICE;
+  return Tracking::Level::ROUTINE;
 }
 
 // a change quiets the vessel for a while; true when it already was, so a value
@@ -1293,19 +1377,14 @@ static bool settle(Ship &ship, std::time_t now) {
   return quiet;
 }
 
-void DB::note(const Ship &ship, EventRing::Kind kind, EventRing::Level level,
-              std::time_t now, const std::string &text,
-              const std::string &label, uint32_t to, const std::string &was) {
-  EventRing::Event e;
+Tracking::Event DB::event(const Ship &ship, Tracking::Kind kind,
+                          Tracking::Level level, std::time_t now) const {
+  Tracking::Event e;
   e.kind = kind;
   e.level = level;
-  e.from = ship.mmsi;
-  e.from_name = ship.shipname;
-  const int recipient = to ? ships.find(to) : SHIP_NIL;
-  if (recipient != SHIP_NIL)
-    e.to_name = ships[recipient].shipname;
-  e.to = to;
-  e.time = now;
+  e.t = now;
+  e.mmsi = ship.mmsi;
+  e.name = ship.shipname;
   e.lat = ship.lat;
   e.lon = ship.lon;
   if (!isValidCoord(e.lat, e.lon) && latlon_share &&
@@ -1313,10 +1392,162 @@ void DB::note(const Ship &ship, EventRing::Kind kind, EventRing::Level level,
     e.lat = station_lat;
     e.lon = station_lon;
   }
-  e.text = text;
-  e.was = was;
-  e.label = label;
-  events.push(e);
+  e.speed = ship.speed;
+  e.cog = ship.cog;
+  e.heading = ship.heading;
+  e.draught = ship.draught;
+  return e;
+}
+
+// Caller holds mtx: Send runs every subscriber in this thread, under the lock
+// the record was read under, so a subscriber does little and never calls back
+void DB::emit(Tracking::Event &e) {
+  e.seq = ++event_seq;
+  events.Send(&e, 1, event_tag);
+}
+
+// Caller holds mtx. The changes a report brought, told once the record holds
+// all of it, so each rests on the fix as it now is
+void DB::flushEvents(int ptr) {
+  for (Tracking::Event &e : pending) {
+    const Ship &ship = ships[ptr];
+    e.lat = ship.lat;
+    e.lon = ship.lon;
+    e.speed = ship.speed;
+    e.cog = ship.cog;
+    e.heading = ship.heading;
+    e.draught = ship.draught;
+    emit(e, ptr);
+  }
+  pending.clear();
+}
+
+void DB::emit(Tracking::Event &e, int ptr) {
+  if (ptr != SHIP_NIL && e.kind != Tracking::Kind::FIX)
+    sampleFix(ptr, e.t, true);
+  emit(e);
+}
+
+void DB::setFixes(bool on) {
+  fixes_wanted = on;
+  if (nships_)
+    sampler.enable(on, nships_);
+}
+
+// Caller holds mtx. The sampler's word on this report; `force` tells it
+// whatever it says, because another event rests on it.
+void DB::sampleFix(int ptr, std::time_t t, bool force) {
+  if (!sampler.enabled())
+    return;
+  const Ship &ship = ships[ptr];
+  if (!isValidCoord(ship.lat, ship.lon))
+    return;
+  FixSampler::Fix now;
+  now.t = (uint32_t)t;
+  now.lat = ship.lat;
+  now.lon = ship.lon;
+  now.speed = ship.speed;
+  now.cog = ship.cog;
+  now.heading = ship.heading;
+  const bool resting = ship.idle_since != 0;
+  FixSampler::Fix turn;
+  FixSampler::Verdict v =
+      sampler.judge(ptr, now.t, now.lat, now.lon, now.speed, resting, turn);
+  if (v == FixSampler::TURN) {
+    // the previous report was the turn: told with its own time and position
+    Tracking::Event e = event(ship, Tracking::Kind::FIX, Tracking::Level::ROUTINE, turn.t);
+    e.lat = turn.lat;
+    e.lon = turn.lon;
+    e.speed = turn.speed;
+    e.cog = turn.cog;
+    e.heading = turn.heading;
+    emit(e);
+    sampler.keep(ptr, turn);
+    v = sampler.judge(ptr, now.t, now.lat, now.lon, now.speed, resting, turn);
+  }
+  if (force) {
+    const FixSampler::Fix &k = sampler.lastKept(ptr);
+    if (k.t == now.t && k.lat == now.lat && k.lon == now.lon)
+      return; // already told
+    v = FixSampler::NOW;
+  }
+  if (v == FixSampler::NOW) {
+    Tracking::Event e = event(ship, Tracking::Kind::FIX, Tracking::Level::ROUTINE, t);
+    emit(e);
+    sampler.keep(ptr, now);
+  } else
+    sampler.note(ptr, now);
+}
+
+// Stopped, not merely slow: a ship at anchor swings with the tide at up to a
+// knot, so one that is already slow and says it is anchored or moored counts
+// as still. No speed at all is no evidence of anything.
+bool DB::stillTest(const Ship &ship) {
+  return ship.speed != SPEED_UNDEFINED &&
+         (ship.speed < REST_STILL_KN ||
+          (ship.speed < REST_MOVE_KN && (ship.status == 1 || ship.status == 5)));
+}
+
+// Caller holds mtx, on a validated position. Rest begins at the second still
+// report in a row, dated from the first; it is told once a minute has passed;
+// it ends at a report under way, or one that drifted from where the ship lay.
+void DB::updateRest(int ptr, std::time_t now, bool still_before,
+                    std::time_t previous) {
+  Ship &ship = ships[ptr];
+  const bool still = stillTest(ship);
+  const bool moving = ship.speed != SPEED_UNDEFINED && ship.speed >= REST_MOVE_KN;
+  if (ship.idle_since == 0) {
+    if (still && still_before && previous > 0 &&
+        now - previous <= (std::time_t)Tracking::RestStore::SAMPLE_S) {
+      ship.idle_since = previous;
+      ship.rest_told = false;
+      Tracking::RestStore::Accumulator &a = rest.open(ptr, ship);
+      Tracking::RestStore::add(a, ship, (uint32_t)(now - previous));
+    }
+    return;
+  }
+  Tracking::RestStore::Accumulator *a = rest.find(ptr);
+  if (moving || (a && a->drift(ship) > REST_DRIFT_M)) {
+    endRest(ptr, now, true);
+    return;
+  }
+  if (!a) {
+    // restored at rest: counting begins now
+    a = &rest.open(ptr, ship);
+    a->start_seen = false;
+  }
+  Tracking::RestStore::add(*a, ship, previous > 0 ? (uint32_t)(now - previous) : 0);
+  if (!ship.rest_told && now - ship.idle_since >= REST_TOLD_S) {
+    Tracking::Event e = event(ship, Tracking::Kind::STOP, Tracking::Level::ROUTINE,
+                              ship.idle_since);
+    emit(e, ptr);
+    ship.rest_told = true;
+  }
+}
+
+// Caller holds mtx. The rest ends at `t`: a departure seen, or silence judged
+// at the last report. A rest never told ends without a word.
+void DB::endRest(int ptr, std::time_t t, bool seen) {
+  Ship &ship = ships[ptr];
+  if (ship.rest_told) {
+    Tracking::Event e = event(ship, Tracking::Kind::MOVE, Tracking::Level::ROUTINE, t);
+    Tracking::RestStore::fill(e.stay, rest.find(ptr), ship, seen);
+    emit(e, ptr);
+  }
+  ship.idle_since = 0;
+  ship.rest_told = false;
+  rest.close(ptr);
+}
+
+// Caller holds mtx. Six hours without a report closes a rest at the last one.
+void DB::sweepRest(std::time_t now) {
+  std::vector<int> silent;
+  rest.forEach([&](int slot, const Tracking::RestStore::Accumulator &) {
+    if (now - ships[slot].last_signal > REST_SILENT_S)
+      silent.push_back(slot);
+  });
+  for (int slot : silent)
+    endRest(slot, ships[slot].last_signal, false);
 }
 
 // a test silences its sender for a while: what follows an exercise is the
@@ -1339,11 +1570,44 @@ void DB::noteSafety(Ship &ship, const JSON::JSON &data) {
     ship.quiet_until = now + TEST_MUTE_S;
     return;
   }
-  EventRing::Level level = safetyLevel(ship.mmsi, w);
-  if (level == EventRing::ROUTINE ||
-      (level == EventRing::NOTICE && ship.quiet_until > now))
+  Tracking::Level level = safetyLevel(ship.mmsi, w);
+  if (level == Tracking::Level::ROUTINE ||
+      (level == Tracking::Level::NOTICE && ship.quiet_until > now))
     return;
-  note(ship, EventRing::SAFETY, level, now, text, std::string(), to);
+  Tracking::Event e = event(ship, Tracking::Kind::SAFETY, level, now);
+  e.repeat = safetyRepeat(ship.mmsi, w, level, now);
+  e.safety.to = to;
+  const int recipient = to ? ships.find(to) : SHIP_NIL;
+  e.safety.to_name = recipient != SHIP_NIL ? ships[recipient].shipname : nullptr;
+  e.to.setString(&text);
+  emit(e, ships.find(ship.mmsi));
+}
+
+// Whether this text from this sender was told within the wait: a beacon or a
+// coast station repeats its message every minute or so for hours. A repeat
+// still reaches the ticker, which counts it; the journal, and the API,
+// webhooks and MQTT it feeds, take it once per wait. The last SAFETY_TOLD
+// texts are remembered, by a hash of their words.
+bool DB::safetyRepeat(uint32_t mmsi, const std::string &words, Tracking::Level level, std::time_t now) {
+  uint32_t sum = 2166136261u;
+  for (unsigned char c : words) {
+    sum ^= c;
+    sum *= 16777619u;
+  }
+  const std::time_t wait = level == Tracking::Level::URGENT ? SAFETY_URGENT_REPEAT_S : SAFETY_REPEAT_S;
+  for (auto &t : safety_told)
+    if (t.mmsi == mmsi && t.sum == sum) {
+      if (now - t.at < wait)
+        return true;
+      t.at = now;
+      return false;
+    }
+  SafetyTold &t = safety_told[safety_next];
+  t.mmsi = mmsi;
+  t.sum = sum;
+  t.at = now;
+  safety_next = (safety_next + 1) % SAFETY_TOLD;
+  return false;
 }
 
 // a value that names no place: a vessel leaving or arriving at one is no news
@@ -1372,8 +1636,21 @@ void DB::noteDestination(Ship &ship, const std::string &v) {
   std::string was = ship.destination;
   if (settle(ship, now) || !namesAPlace(v) || !namesAPlace(was))
     return;
-  note(ship, EventRing::DESTINATION, EventRing::ROUTINE, now, v, "destination",
-       0, was);
+  Tracking::Event e = event(ship, Tracking::Kind::DESTINATION,
+                            Tracking::Level::ROUTINE, now);
+  e.setText(was.c_str(), v.c_str());
+  queue(e);
+}
+
+// a name or a callsign that differs from the last heard; the first is
+// initialisation, as the static store takes it
+void DB::noteText(const Ship &ship, Tracking::Kind kind, const char *old_value,
+                  const std::string &value) {
+  if (!old_value[0] || value == old_value)
+    return;
+  Tracking::Event e = event(ship, kind, Tracking::Level::ROUTINE, std::time(nullptr));
+  e.setText(old_value, value.c_str());
+  queue(e);
 }
 
 // a vessel's draught, in metres as the message gives it: a change is news, the
@@ -1385,11 +1662,11 @@ void DB::noteDraught(Ship &ship, float d) {
   std::time_t now = std::time(nullptr);
   if (settle(ship, now))
     return;
-  char was[16], to[16];
-  std::snprintf(was, sizeof(was), "%.1f m", ship.draught);
-  std::snprintf(to, sizeof(to), "%.1f m", d);
-  note(ship, EventRing::DRAUGHT, EventRing::ROUTINE, now, to, "draught", 0,
-       was);
+  Tracking::Event e = event(ship, Tracking::Kind::DRAUGHT,
+                            Tracking::Level::ROUTINE, now);
+  e.from.setFloat(ship.draught);
+  e.to.setFloat(d);
+  queue(e);
 }
 
 // a vessel's navigation status, named the way the message names it; the status
@@ -1403,32 +1680,36 @@ void DB::noteStatus(Ship &ship, int status) {
   if (settle(ship, now) || had < 0 || had >= (int)names.size() ||
       had == STATUS_UNDEFINED || status == STATUS_UNDEFINED)
     return;
-  note(ship, EventRing::STATUS, EventRing::ROUTINE, now, names[status],
-       "status", 0, names[had]);
+  Tracking::Event e = event(ship, Tracking::Kind::STATUS,
+                            Tracking::Level::ROUTINE, now);
+  e.from.setInt(had);
+  e.to.setInt(status);
+  queue(e);
 }
 
-std::string DB::getEventsJSON(uint64_t since, int level) {
+std::string DB::getEventsJSON(uint64_t since, int level, const Keep &keep) {
   std::lock_guard<std::mutex> lock(mtx);
   content.clear();
   {
     JSON::Writer w(content, 4096);
     std::time_t now = time(nullptr);
-    w.beginObject().kv("time", now).kv("seq", (long long)events.sequence());
-    events.writeSince(w, since, level, now);
+    w.beginObject().kv("time", now).kv("seq", (long long)ring.sequence());
+    ring.writeSince(w, since, level, now, [&](uint32_t m) { return keepHeld(m, keep); });
     w.endObject();
   }
   return content;
 }
 
-std::string DB::getEventHistoryJSON(uint64_t before, int level, int limit) {
+std::string DB::getEventHistoryJSON(uint64_t before, int level, int limit,
+                                    const Keep &keep) {
   std::lock_guard<std::mutex> lock(mtx);
   content.clear();
   {
     JSON::Writer w(content, 8192);
     w.beginObject()
         .kv("time", (long long)time(nullptr))
-        .kv("seq", (long long)events.sequence());
-    events.writeBefore(w, before, level, limit);
+        .kv("seq", (long long)ring.sequence());
+    ring.writeBefore(w, before, level, limit, [&](uint32_t m) { return keepHeld(m, keep); });
     w.endObject();
   }
   return content;
@@ -1456,7 +1737,7 @@ std::string DB::getObjectJSON(const std::string &key) {
   return content;
 }
 
-std::string DB::getMapObjectsJSON(uint64_t since) {
+std::string DB::getMapObjectsJSON(uint64_t since, bool with_stations, const std::function<bool(int)> &shown) {
   std::lock_guard<std::mutex> lock(mtx);
   content.clear();
   {
@@ -1470,11 +1751,13 @@ std::string DB::getMapObjectsJSON(uint64_t since) {
         .key("objects")
         .beginArray();
     binary.writeMarkerRows(w, since);
-    stations.writeRows(w, since, station_heard);
+    if (with_stations)
+      stations.writeRows(w, since, station_heard, shown);
     place_markers.writeRows(w, since);
     w.endArray().key("removed").beginArray();
     binary.writeRemoved(w, since);
-    stations.writeRemoved(w, since);
+    if (with_stations)
+      stations.writeRemoved(w, since);
     place_markers.writeRemoved(w, since);
     w.endArray().endObject();
   }
@@ -1531,6 +1814,8 @@ int DB::claimShip(uint32_t mmsi) {
     paths.wipe(ptr);
     changes.wipe(ptr);
     visits.erase(ptr);
+    sampler.wipe(ptr);
+    rest.close(ptr);
     destinations.erase(ptr);
     ships[ptr].reset();
   } else
@@ -1540,7 +1825,7 @@ int DB::claimShip(uint32_t mmsi) {
 }
 
 void DB::Receive(const JSON::JSON *data, int len, TAG &tag) {
-  std::lock_guard<std::mutex> configurationLock(configuration_mtx);
+  std::lock_guard<std::recursive_mutex> configurationLock(configuration_mtx);
   const AIS::Message *msg = (AIS::Message *)data[0].binary;
   int type = msg->type();
 
@@ -1602,13 +1887,31 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag) {
 
   float lat_old = ship.lat;
   float lon_old = ship.lon;
+  const bool stopped_old =
+      ship.speed != SPEED_UNDEFINED && ship.speed < REST_STILL_KN;
+  const bool still_before = stillTest(ship);
 
   bool newValidPosition = !copy && updateShip(data[0], tag, ship) &&
                           isValidCoord(ship.lat, ship.lon);
+  // only a validated position reaches the visits and the track
+  bool validated = false;
   if (newValidPosition) {
-    updatePlaceEvents(ptr, msg->getRxTimeUnix());
-    destinations.position(ptr, ship);
+    const auto verdict = PositionCheck::judge(
+        isValidCoord(lat_old, lon_old), lat_old, lon_old, stopped_old,
+        (long)(msg->getRxTimeUnix() - tag.previous_signal), ship.lat, ship.lon,
+        type == 9);
+    validated = verdict == PositionCheck::VALIDATED;
+    ship.setValidated(verdict);
   }
+  // what the report changed on the record, now that it is whole
+  if (!pending.empty())
+    flushEvents(ptr);
+  if (validated) {
+    updateRest(ptr, msg->getRxTimeUnix(), still_before, tag.previous_signal);
+    updatePlaceEvents(ptr, msg->getRxTimeUnix());
+  }
+  if (newValidPosition)
+    destinations.position(ptr, ship);
 
   if (!copy && (type == 6 || type == 7 || type == 8 || type == 12 ||
                 type == 13 || type == 14 || type == 23)) {
@@ -1628,16 +1931,23 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag) {
 
   tag.distance = DISTANCE_UNDEFINED;
   tag.angle = ANGLE_UNDEFINED;
-  tag.validated = false;
+  tag.validated = validated;
 
   if (newValidPosition) {
-    if (type == 1 || type == 2 || type == 3 || type == 18 || type == 19 ||
-        type == 9)
+    if (validated && (type == 1 || type == 2 || type == 3 || type == 18 ||
+                      type == 19 || type == 9)) {
       addToPath(ptr);
+      sampleFix(ptr, ship.last_signal, false);
+    }
 
-    if (isValidCoord(station_lat, station_lon)) {
-      Util::Geodesy::distanceBearing(station_lat, station_lon, ship.lat,
-                                     ship.lon, ship.distance, ship.angle);
+    // measured from the station that heard it; the tracker's own position
+    // stands in for a receiver that has none
+    const bool own = isValidCoord(tag.station_lat, tag.station_lon);
+    const float from_lat = own ? tag.station_lat : station_lat;
+    const float from_lon = own ? tag.station_lon : station_lon;
+    if (isValidCoord(from_lat, from_lon)) {
+      Util::Geodesy::distanceBearing(from_lat, from_lon, ship.lat, ship.lon,
+                                     ship.distance, ship.angle);
 
       tag.distance = ship.distance;
       tag.angle = ship.angle;
@@ -1645,14 +1955,6 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag) {
 
     tag.lat = ship.lat;
     tag.lon = ship.lon;
-
-    if (isValidCoord(lat_old, lon_old)) {
-      // flat earth approximation, roughly 10 nmi
-      float d = (ship.lat - lat_old) * (ship.lat - lat_old) +
-                (ship.lon - lon_old) * (ship.lon - lon_old);
-      tag.validated = d < 0.1675;
-      ship.setValidated(tag.validated ? 1 : 2);
-    }
   } else if (isValidCoord(lat_old, lon_old)) {
     tag.lat = lat_old;
     tag.lon = lon_old;
@@ -1674,11 +1976,17 @@ void DB::tick(std::time_t now) {
   bool check_due = false;
 #endif
   bool sweep_due = expire_fields && now - last_sweep >= time_history;
+  bool rest_due = now - last_rest_sweep >= 60;
 
-  if (!check_due && !sweep_due)
+  if (!check_due && !sweep_due && !rest_due)
     return;
 
   std::lock_guard<std::mutex> lock(mtx);
+
+  if (rest_due) {
+    last_rest_sweep = now;
+    sweepRest(now);
+  }
 
 #ifdef CHECK_DB_INTEGRITY
   if (check_due) {
@@ -1699,7 +2007,10 @@ void DB::tick(std::time_t now) {
     const bool hadPosition = isValidCoord(ship.lat, ship.lon);
     ship.decayAndExpire();
     if (hadPosition && !isValidCoord(ship.lat, ship.lon)) {
-      visits.baseline(ptr, {}, now, place_markers.index().get());
+      visits.refresh(ptr, {}, now, place_markers.index().get(),
+                     [&](const VisitTracker::Visit &v, bool entering, uint32_t at) {
+                       crossing(ptr, v, entering, at);
+                     });
       full_refresh_at = now;
     }
     if (std::strcmp(destination, ship.destination))
@@ -1708,9 +2019,28 @@ void DB::tick(std::time_t now) {
   });
 }
 
-bool DB::Save(std::ofstream &file) {
+void DB::takeSnapshot(Snapshot &s) {
   std::lock_guard<std::mutex> lock(mtx);
+  s.ships = ships;
+  s.visits = visits;
+  s.destinations = destinations;
+  s.places = place_markers.index();
+}
 
+bool DB::Save(std::ofstream &file) {
+  if (snapshot_save) {
+    bool ok = false;
+    withSnapshot([&](const Snapshot &s) {
+      ok = writeTable(file, s.ships, s.visits, s.places.get());
+    });
+    return ok;
+  }
+  std::lock_guard<std::mutex> lock(mtx);
+  return writeTable(file, ships, visits, place_markers.index().get());
+}
+
+bool DB::writeTable(std::ofstream &file, const SlotTable<Ship, uint32_t> &table,
+                    const VisitTracker &visits, const PlaceIndex *places) {
   // Write magic number and version
   int magic = _DB_MAGIC;
   int version = _DB_VERSION;
@@ -1721,16 +2051,16 @@ bool DB::Save(std::ofstream &file) {
     return false;
 
   // Write ship count first
-  int count = ships.size();
+  int count = table.size();
   if (!file.write((const char *)&count, sizeof(int)))
     return false;
 
   // Find the last ship by going count steps from first
-  int ptr = ships.front();
+  int ptr = table.front();
   for (int i = 1; i < count; i++) {
     if (ptr == SHIP_NIL)
       break;
-    ptr = ships.next(ptr);
+    ptr = table.next(ptr);
   }
 
   // Write ships from last ship backwards to first
@@ -1739,13 +2069,13 @@ bool DB::Save(std::ofstream &file) {
     if (ptr == SHIP_NIL)
       break;
 
-    if (!ships[ptr].Save(file))
+    if (!table[ptr].Save(file))
       return false;
 
-    ptr = ships.prev(ptr);
+    ptr = table.prev(ptr);
   }
 
-  if (!visits.save(file, [&](size_t slot) { return ships[slot].mmsi; }))
+  if (!visits.save(file, places, [&](size_t slot) { return table[slot].mmsi; }))
     return false;
 
   Debug() << "DB: Saved " << ships_written << " ships to backup";
@@ -1816,7 +2146,7 @@ bool DB::Load(std::ifstream &file) {
       return false;
   if (version >= 2 &&
       !restored.load(
-          file,
+          file, place_markers.index().get(),
           [&](uint32_t key) {
             auto it = slots.find(key);
             return it == slots.end() ? -1 : it->second;
@@ -1824,13 +2154,14 @@ bool DB::Load(std::ifstream &file) {
           [&](size_t slot) { return temp_ships[slot].last_signal; }, ship_count,
           version))
     return false;
-  restored.remap(place_markers.index().get());
 
   // All validated, now apply to DB
   for (int i = 0; i < ship_count; i++) {
     int ptr = claimShip(temp_ships[i].mmsi);
     visits.restore(ptr, restored.record(i));
     install(ptr, temp_ships[i]);
+    if (ships[ptr].idle_since)
+      rest.open(ptr, ships[ptr]).start_seen = false;
   }
 
   full_refresh_at = time(nullptr);
@@ -1878,9 +2209,9 @@ void DB::setPlaces(std::shared_ptr<const PlaceIndex> next) {
   std::lock_guard<std::mutex> lock(mtx);
   if (next == place_markers.index())
     return;
+  visits.remap(place_markers.index().get(), next.get());
   const auto changedBounds =
       place_markers.adopt(std::move(next), binary.sequence());
-  visits.remap(place_markers.index().get());
   full_refresh_at = time(nullptr);
   destinations.setPlaces(place_markers.index(), ships);
   // a few edited outlines: only the ships inside them; a reload: everyone
@@ -1898,40 +2229,48 @@ void DB::setPlaces(std::shared_ptr<const PlaceIndex> next) {
   });
 }
 
-// Caller holds mtx. Only accepted positions can confirm crossings.
+// Caller holds mtx. Only validated positions come here, so the tracker never
+// sees a single damaged sentence.
 void DB::updatePlaceEvents(int ptr, std::time_t now) {
   auto &ship = ships[ptr];
-  // Stopped, not merely slow: a ship at anchor swings with the tide at up to
-  // a knot, so one that is already slow and says it is anchored or moored
-  // counts as stopped. No speed at all is no evidence of stopping.
-  const bool stopped =
-      ship.speed != SPEED_UNDEFINED &&
-      (ship.speed < 0.5f ||
-       (ship.speed < 1.0f && (ship.status == 1 || ship.status == 5)));
+  // the rest detector's word, so a visit's idle minutes and a stay agree
+  const bool stopped = ship.idle_since != 0;
+  const auto *index = place_markers.index().get();
   visits.update(ptr, place_markers.containing(ship.lat, ship.lon), now, stopped,
-                place_markers.index().get(),
+                index,
                 [&](const VisitTracker::Visit &visit, bool entering,
-                    std::time_t observed) {
-                  if (visit.place->type != "port" && visit.place->type != "water")
-                    return;
-                  EventRing::Event e;
-                  e.kind =
-                      entering ? EventRing::PLACE_ENTER : EventRing::PLACE_EXIT;
-                  e.time = observed;
-                  e.from = ship.mmsi;
-                  e.from_name = ship.shipname;
-                  e.lat = ship.lat;
-                  e.lon = ship.lon;
-                  e.text = visit.place->name;
-                  events.push(e);
-                });
+                    uint32_t observed) { crossing(ptr, visit, entering, observed); });
+}
+
+// Caller holds mtx. Every crossing goes on the stream, seen or inferred; a
+// guard zone is what the user asked to be told about, so the ticker shows a
+// seen crossing of one, while ports, sectors and waters are crossed all day.
+void DB::crossing(int ptr, const VisitTracker::Visit &visit, bool entering,
+                  uint32_t observed) {
+  const auto *index = place_markers.index().get();
+  const auto *entry = index ? index->find(visit.id) : nullptr;
+  if (!entry)
+    return;
+  const Ship &ship = ships[ptr];
+  Tracking::Event e =
+      event(ship, entering ? Tracking::Kind::ENTER : Tracking::Kind::LEAVE,
+            entry->metadata->is(PlaceKind::GuardZone) ? Tracking::Level::NOTICE
+                                                      : Tracking::Level::ROUTINE,
+            observed);
+  e.crossing.place = visit.id;
+  e.crossing.number = entry->number;
+  e.crossing.revision = entry->revision;
+  e.crossing.seen = entering ? visit.entryTime() != 0 : visit.exitTime() != 0;
+  e.crossing.announced = entry->metadata->announced();
+  e.crossing.name = entry->metadata->name.c_str();
+  emit(e, ptr);
 }
 
 void DB::writeVoyageChanges(JSON::Writer &w, int ptr) const {
   w.beginArray();
   changes.writeEntries(w, ptr);
   if (ptr != SHIP_NIL)
-    visits.writeChanges(w, ptr);
+    visits.writeChanges(w, ptr, place_markers.index().get());
   w.endArray();
 }
 
@@ -1970,6 +2309,17 @@ void DB::updateStation(float lat, float lon) {
   full_refresh_at = time(nullptr);
 }
 
+void DB::measureFrom(const std::function<bool(const Ship &, float &, float &)> &origin) {
+  std::lock_guard<std::mutex> lock(mtx);
+  ships.forEach([&](int ptr) {
+    Ship &ship = ships[ptr];
+    float lat, lon;
+    if (isValidCoord(ship.lat, ship.lon) && origin(ship, lat, lon))
+      Util::Geodesy::distanceBearing(lat, lon, ship.lat, ship.lon, ship.distance, ship.angle);
+    return true;
+  });
+}
+
 // Caller holds mtx. What follows from a ship's position: distance and the
 // places it is in.
 void DB::locate(int ptr) {
@@ -1980,6 +2330,9 @@ void DB::locate(int ptr) {
 
 void DB::refreshPlaceMembership(int ptr) {
   const Ship &ship = ships[ptr];
-  visits.baseline(ptr, place_markers.containing(ship.lat, ship.lon),
-                  ship.last_signal, place_markers.index().get());
+  visits.refresh(ptr, place_markers.containing(ship.lat, ship.lon),
+                 ship.last_signal, place_markers.index().get(),
+                 [&](const VisitTracker::Visit &v, bool entering, uint32_t at) {
+                   crossing(ptr, v, entering, at);
+                 });
 }

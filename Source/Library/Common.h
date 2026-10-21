@@ -272,6 +272,7 @@ struct TAG
 	Type driver = Type::NONE;
 	FLOAT32 station_lat = LAT_UNDEFINED;
 	FLOAT32 station_lon = LON_UNDEFINED;
+	int station_id = 0; // the receiving station, for tracking only: outputs carry the message's own
 	long long sample_idx = 0;
 	long long msg_idx_start = 0, msg_idx_end = 0;
 	uint32_t ipv4 = 0;

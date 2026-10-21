@@ -29,6 +29,8 @@ class PlaceMarkers {
   std::vector<uint64_t> sequences;
   std::vector<std::pair<uint32_t, uint64_t>> removed;
   uint64_t latest = 0; // newest row or removal; an older cursor skips the walk
+  mutable std::vector<uint32_t>
+      hits; // reused by every lookup, read before the next
 
 public:
   using Bounds = std::array<double, 4>;
@@ -37,8 +39,12 @@ public:
     static const std::string none;
     return snapshot ? snapshot->version : none;
   }
-  std::vector<uint32_t> containing(double lat, double lon) const {
-    return snapshot ? snapshot->matchAll(lat, lon) : std::vector<uint32_t>();
+  const std::vector<uint32_t> &containing(double lat, double lon) const {
+    if (snapshot)
+      snapshot->matchAll(lat, lon, hits);
+    else
+      hits.clear();
+    return hits;
   }
 
   std::vector<Bounds> adopt(std::shared_ptr<const PlaceIndex> next,
@@ -53,11 +59,11 @@ public:
     };
     if (snapshot)
       for (const auto &old : snapshot->entries) {
-        if (old.id == UINT32_MAX || !old.redirect.empty())
+        if (!old.live())
           continue;
         const auto *replacement = next ? next->find(old.id) : nullptr;
-        const bool same =
-            replacement && replacement->redirect.empty() && replacement->metadata->uuid == old.metadata->uuid;
+        const bool same = replacement && replacement->live() &&
+                          replacement->metadata->uuid == old.metadata->uuid;
         if (!same)
           removed.emplace_back(old.id, ++sequence);
         if (!same || old.polygons != replacement->polygons)
@@ -68,19 +74,22 @@ public:
     sequences.resize(next ? next->entries.size() : 0);
     if (next)
       for (const auto &entry : next->entries) {
-        if (entry.id == UINT32_MAX || !entry.redirect.empty())
+        if (!entry.live())
           continue;
         const auto *old = snapshot ? snapshot->find(entry.id) : nullptr;
         const bool same = old && old->metadata->uuid == entry.metadata->uuid;
-        if (!same || *old->feature != *entry.feature)
+        // the summary carries the inherited country too
+        if (!same || *old->feature != *entry.feature ||
+            old->metadata->country != entry.metadata->country)
           sequences[entry.id] = ++sequence;
         if (!same || old->polygons != entry.polygons)
           bounds(entry);
       }
     removed.erase(std::remove_if(removed.begin(), removed.end(),
                                  [&](const std::pair<uint32_t, uint64_t> &r) {
-                                   const auto *entry = next ? next->find(r.first) : nullptr;
-                                   return entry && entry->redirect.empty();
+                                   const auto *entry =
+                                       next ? next->find(r.first) : nullptr;
+                                   return entry && entry->live();
                                  }),
                   removed.end());
     if (sequence != start)
@@ -92,7 +101,7 @@ public:
   void writeRows(JSON::Writer &w, uint64_t since) const {
     if (snapshot && (!since || since < latest))
       for (const auto &entry : snapshot->entries) {
-        if (entry.id == UINT32_MAX || !entry.redirect.empty())
+        if (!entry.live())
           continue;
         const auto sequence = sequences[entry.id];
         if (!since || sequence > since)

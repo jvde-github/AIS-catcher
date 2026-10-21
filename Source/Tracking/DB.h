@@ -32,7 +32,10 @@
 
 #include "BinaryStore.h"
 #include "DestinationIndex.h"
+#include "EventJSON.h"
 #include "EventRing.h"
+#include "FixSampler.h"
+#include "Rest.h"
 #include "PathStore.h"
 #include "PlaceMarkers.h"
 #include "Ships.h"
@@ -88,6 +91,70 @@ class DB : public StreamIn<JSON::JSON>,
   std::time_t full_refresh_at = 0; // older ship deltas require a full response
 
   void updateDistance(Ship &ship);
+
+public:
+  // Distances again from an origin per ship, for a host whose stations each
+  // have a position; `origin` false leaves a ship as it is
+  void measureFrom(const std::function<bool(const Ship &, float &, float &)> &origin);
+  // A ship's track back to `since`, never past what is served, newest point
+  // first, under the lock; false when the ship is not known
+  bool forEachTrackPoint(uint32_t mmsi, std::time_t since,
+                         const std::function<void(const PathStore::Point &)> &f);
+  // how long a ship stays on the map after its last message, in seconds
+  int timeHistory() const { return time_history; }
+  // a client holding ship data older than this must start over
+  std::time_t fullRefreshAt() {
+    std::lock_guard<std::mutex> lock(mtx);
+    return full_refresh_at;
+  }
+  // the places ships are matched against, null without a catalogue
+  std::shared_ptr<const PlaceIndex> placeIndex() {
+    std::lock_guard<std::mutex> lock(mtx);
+    return place_markers.index();
+  }
+  // Under the lock, each settled visit with its ship and its place: all of
+  // them, or a place's (`place` a runtime id), or a ship's
+  template <typename F> void forEachVisit(F f) {
+    std::lock_guard<std::mutex> lock(mtx);
+    const auto *index = place_markers.index().get();
+    if (!index)
+      return;
+    ships.forEach([&](int ptr) {
+      visits.forEachVisit(ptr, [&](const VisitTracker::Visit &v) {
+        if (const auto *e = index->find(v.id))
+          f(ships[ptr], v, *e);
+      });
+      return true;
+    });
+  }
+  // a ship's reported changes, newest first, and the port its destination names
+  template <typename F> bool forEachChangeOf(uint32_t mmsi, F f) {
+    std::lock_guard<std::mutex> lock(mtx);
+    const int ptr = ships.find(mmsi);
+    if (ptr == SHIP_NIL)
+      return false;
+    changes.forEachEntry(ptr, f);
+    return true;
+  }
+  std::string matchedPort(uint32_t mmsi) {
+    std::lock_guard<std::mutex> lock(mtx);
+    return matchedPortHeld(mmsi);
+  }
+  template <typename F> bool forEachVisitOf(uint32_t mmsi, F f) {
+    std::lock_guard<std::mutex> lock(mtx);
+    const int ptr = ships.find(mmsi);
+    if (ptr == SHIP_NIL)
+      return false;
+    const auto *index = place_markers.index().get();
+    if (index)
+      visits.forEachVisit(ptr, [&](const VisitTracker::Visit &v) {
+        if (const auto *e = index->find(v.id))
+          f(ships[ptr], v, *e);
+      });
+    return true;
+  }
+
+private:
   void updateStation(float lat, float lon);
   void locate(int ptr);
   void install(int ptr, const Ship &s);
@@ -97,6 +164,44 @@ class DB : public StreamIn<JSON::JSON>,
 
 public:
   void setPlaces(std::shared_ptr<const PlaceIndex> next);
+
+  // What a dump needs, copied under the lock in one go so the file is written
+  // with the lock released: the ships in their recency order, their visits,
+  // the port each is bound for, and the places the visits refer to. A
+  // standalone receiver's table is a few MB; the hub's 500,000 ships are some
+  // 220 MB, kept between dumps so the copy allocates nothing under the lock.
+  struct Snapshot {
+    SlotTable<Ship, uint32_t> ships;
+    VisitTracker visits;
+    DestinationIndex destinations;
+    std::shared_ptr<const PlaceIndex> places;
+    // the port a ship in slot `ptr` is bound for, as the table held it
+    const std::string &matchedPort(int ptr) const { return destinations.code(ptr); }
+  };
+  // The kept copy, handed to f with the table's lock released. The first dump
+  // to arrive refreshes it under that lock; one that arrives while another is
+  // still reading shares the copy as it is, a few seconds old at most, which
+  // both the backup and an export can live with - and nobody waits for a copy
+  // that is already there. The backup uses it when told to (setSnapshotSave),
+  // an exporter whenever it likes.
+  template <typename F> void withSnapshot(F f) {
+    struct Reading {
+      DB &db;
+      Reading(DB &d) : db(d) {
+        std::lock_guard<std::mutex> lock(db.snapshot_mtx);
+        if (db.snapshot_readers++ == 0)
+          db.takeSnapshot(db.snapshot);
+      }
+      ~Reading() {
+        std::lock_guard<std::mutex> lock(db.snapshot_mtx);
+        db.snapshot_readers--;
+      }
+    } reading(*this);
+    f(static_cast<const Snapshot &>(snapshot));
+  }
+  // Save() copies the table and writes the file outside the lock. Off by
+  // default: the file is written under the lock, and no copy is ever kept.
+  void setSnapshotSave(bool b) { snapshot_save = b; }
 
   // For consumers already holding mtx through withShip/withShips/forEach.
   const std::string &matchedPortHeld(uint32_t mmsi) const {
@@ -130,7 +235,7 @@ public:
                          isValidCoord(station_lat, station_lon));
       destinations.writeMatched(w, ptr);
       w.kv("binary", binary.badge(ship.mmsi, now))
-          .kv("station", stations.idFor(ship.mmsi))
+          .kv_unless("station", stations.idFor(ship.mmsi), -1)
           .key("changes");
       writeVoyageChanges(w, ptr);
       extra(w, ship, ptr);
@@ -162,16 +267,21 @@ public:
   // Shared by the place dialog, the visits export and the loader's sweep.
   static const std::time_t VISIT_SILENT = VisitTracker::SILENT;
   // Chunked like withShips so the exporter never holds the lock for a whole
-  // pass. A visit's metadata lives only as long as the lock.
+  // pass. The place's metadata lives only as long as the lock.
   template <typename F> void withVisits(const uint32_t *mmsi, size_t n, F f) {
     std::lock_guard<std::mutex> lock(mtx);
+    const auto *index = place_markers.index().get();
+    if (!index)
+      return;
     for (size_t i = 0; i < n; i++) {
       const int ptr = ships.find(mmsi[i]);
       if (ptr == SHIP_NIL)
         continue;
       const std::time_t heard = ships[ptr].last_signal;
-      visits.forEachVisit(
-          ptr, [&](const VisitTracker::Visit &v) { f(mmsi[i], v, heard); });
+      visits.forEachVisit(ptr, [&](const VisitTracker::Visit &v) {
+        if (const auto *entry = index->find(v.id))
+          f(mmsi[i], v, *entry->metadata, heard);
+      });
     }
   }
   // Locked write for an operator correction: the record under `mmsi`, mutable.
@@ -300,6 +410,14 @@ private:
 
   std::mutex mtx;
 
+  Snapshot snapshot;
+  std::mutex snapshot_mtx; // guards the reader count; the copy itself is read-only while anyone reads
+  int snapshot_readers = 0;
+  bool snapshot_save = false;
+  void takeSnapshot(Snapshot &s);
+  static bool writeTable(std::ofstream &file, const SlotTable<Ship, uint32_t> &table,
+                         const VisitTracker &visits, const PlaceIndex *places);
+
   void updateFields(const JSON::Member &p, const AIS::Message *msg, Ship &ship,
                     bool allowApproximate, bool &positionUpdated,
                     bool &staticUpdated);
@@ -325,6 +443,7 @@ private:
     });
   }
 
+  int keptCount(const std::function<bool(const Ship &)> &keep);
   void writeSinglePathJSONCompact(int ptr, JSON::Writer &w,
                                   std::time_t since = 0, std::time_t until = 0);
   void writeSinglePathGeoJSON(int ptr, JSON::Writer &w, std::time_t floor);
@@ -377,20 +496,82 @@ private:
   BinaryStore binary;
   StationRegistry stations;
   std::function<std::time_t(int)> station_heard; // set by the host, see setStationHeard
-  EventRing events;
+  // the ticker's view of the event stream, wired in the constructor
+  EventRing ring;
+  uint64_t event_seq = 0; // the stream's sequence; the process start is the epoch
+  TAG event_tag;
+  // which positions become fix events; nothing until a host asks for fixes
+  FixSampler sampler;
+  bool fixes_wanted = false;
+  int nships_ = 0;
+  // AIS_EVENTS_TRACE: every event as a JSON line on stderr
+  Tracking::EventTrace tracer;
+  bool tracing = false;
+  void sampleFix(int ptr, std::time_t t, bool force);
+  // the one definition of lying still: the record says since when, this holds
+  // what the ship did meanwhile
+  Tracking::RestStore rest;
+  std::time_t last_rest_sweep = 0;
+  static bool stillTest(const Ship &ship);
+  // a crossing the tracker confirmed or inferred, told on the stream
+  void crossing(int ptr, const VisitTracker::Visit &v, bool entering, uint32_t observed);
+  void updateRest(int ptr, std::time_t now, bool still_before, std::time_t previous);
+  void endRest(int ptr, std::time_t t, bool seen);
+  void sweepRest(std::time_t now);
 #ifdef CHECK_DB_INTEGRITY
   void checkIntegrity();
   std::time_t last_check = 0;
 #endif
 
+  // an event with the fix block filled from the record; emit() gives it its
+  // sequence and sends it on `events`
+  Tracking::Event event(const Ship &ship, Tracking::Kind kind,
+                        Tracking::Level level, std::time_t now) const;
+  void emit(Tracking::Event &e);
+  // with the slot known: a fix is told first, so the line passes through the event
+  void emit(Tracking::Event &e, int ptr);
+  // changes noted while a record is being updated wait until it is whole
+  std::vector<Tracking::Event> pending;
+  void queue(const Tracking::Event &e) { pending.push_back(e); }
+  void flushEvents(int ptr);
+  void noteSafety(Ship &ship, const JSON::JSON &data);
+  // the safety texts told lately: a broadcast repeated is marked a repeat until a while has passed
+  struct SafetyTold {
+    uint32_t mmsi = 0, sum = 0;
+    std::time_t at = 0;
+  };
+  static const int SAFETY_TOLD = 64;
+  SafetyTold safety_told[SAFETY_TOLD];
+  int safety_next = 0;
+  bool safetyRepeat(uint32_t mmsi, const std::string &words, Tracking::Level level, std::time_t now);
+  void noteDestination(Ship &ship, const std::string &v);
+  void noteDraught(Ship &ship, float d);
+  void noteText(const Ship &ship, Tracking::Kind kind, const char *old_value,
+                const std::string &value);
+  void noteStatus(Ship &ship, int status);
+  void logTextChange(const Ship &ship, int field, const char *old_value,
+                     const std::string &value);
+
+  // serializes configuration with input and downstream sinks; reentrant, as a
+  // whole reconfiguration may hold it while the setters take it too
+  std::recursive_mutex configuration_mtx;
+
 public:
+  // every judgement the database makes about a vessel, told once; whoever
+  // holds a view subscribes with >> (the ring here, the host wires the rest)
+  StreamOut<Tracking::Event> events;
+  DB() { events >> ring; }
+  // sizes the table from the settings and empties it: before the first message
   void setup();
+  // settings changed while messages flow: `apply` runs with input held and the table locked
+  // input waits while the lock is held: the web viewer holds it across a
+  // whole reconfiguration of its tables
+  std::unique_lock<std::recursive_mutex> pauseInput() { return std::unique_lock<std::recursive_mutex>(configuration_mtx); }
   template <typename F> void configure(F apply) {
+    std::lock_guard<std::recursive_mutex> configurationLock(configuration_mtx);
     std::lock_guard<std::mutex> lock(mtx);
     apply();
   }
-  std::mutex configuration_mtx; // serializes configuration with input and
-                                // downstream sinks
   void tick(std::time_t now);
   void setTimeHistory(int t) {
     if (time_history != t)
@@ -436,6 +617,28 @@ public:
   using StreamIn<AIS::GPS>::Receive;
   using StreamIn<AIS::Control>::Receive;
 
+  // The stations a host keeps itself, as the control feed would tell them; a
+  // station no longer listed goes
+  void setStations(const std::vector<StationRegistry::Station> &list) {
+    std::lock_guard<std::mutex> lock(mtx);
+    std::vector<int> gone;
+    stations.forEach([&](const StationRegistry::Station &s) {
+      if (std::none_of(list.begin(), list.end(), [&](const StationRegistry::Station &n) { return n.id == s.id; }))
+        gone.push_back(s.id);
+    });
+    for (int id : gone) {
+      StationRegistry::Station s;
+      s.id = id;
+      stations.put(s, true, binary.sequence());
+    }
+    for (const auto &s : list)
+      stations.define(s, binary.sequence());
+  }
+  void setStation(const StationRegistry::Station &s) {
+    std::lock_guard<std::mutex> lock(mtx);
+    stations.define(s, binary.sequence());
+  }
+
   void Receive(const AIS::Control *data, int len, TAG &) {
     std::lock_guard<std::mutex> lock(mtx);
     for (int i = 0; i < len; i++)
@@ -445,7 +648,7 @@ public:
 
   void Receive(const JSON::JSON *data, int len, TAG &tag);
   void Receive(const AIS::GPS *data, int len, TAG &tag) {
-    std::lock_guard<std::mutex> configurationLock(configuration_mtx);
+    std::lock_guard<std::recursive_mutex> configurationLock(configuration_mtx);
     if (use_gps) {
       std::lock_guard<std::mutex> lock(mtx);
       updateStation(data[0].getLat(), data[0].getLon());
@@ -454,39 +657,46 @@ public:
   }
 
   std::string getShipJSON(int mmsi);
+  // Which ships a reader sees, for a host that shows only some: a station's,
+  // or what a server's filter lets through. Empty keeps every one.
+  typedef std::function<bool(const Ship &)> Keep;
+
   std::string getPlaceShipsJSON(uint32_t id, const std::string &version,
                                const std::string &code, const std::string &tab,
                                unsigned hours, unsigned offset = 0,
-                               unsigned limit = 10);
+                               unsigned limit = 10, const Keep &keep = Keep());
+  // `skip` and `skip_station` are the vessel and the station asking, 0 and -1
+  // for none; `with_stations` false keeps the stations, and so where they stand, out
   std::string getNearbyJSON(float lat, float lon, uint32_t skip,
-                            int skip_station);
+                            int skip_station, const Keep &keep = Keep(),
+                            bool with_stations = true);
   std::string getChangesJSON(int mmsi);
-  void logTextChange(const Ship &ship, int field, const char *old_value,
-                     const std::string &value);
-  void note(const Ship &ship, EventRing::Kind kind, EventRing::Level level,
-            std::time_t now, const std::string &text,
-            const std::string &label = std::string(), uint32_t to = 0,
-            const std::string &was = std::string());
-  void noteSafety(Ship &ship, const JSON::JSON &data);
-  void noteDestination(Ship &ship, const std::string &v);
-  void noteDraught(Ship &ship, float d);
-  void noteStatus(Ship &ship, int status);
-  std::string getJSON(bool full = false);
+  // fixes are sampled only while a subscriber wants them: the hub's journal, an output
+  void setFixes(bool on);
+  // `at`, when given, is the station the page draws, in place of the DB's own
+  std::string getJSON(bool full = false, const StationRegistry::Station *at = nullptr, const Keep &keep = Keep());
+  // `at`, when given, is the station the page draws, in place of the DB's own;
+  // `list_stations` ends each row with the stations that heard the ship
   std::string getJSONcompact(bool full = false, std::time_t since = 0,
-                             const std::string &configVersion = "");
-  std::string getJSONtable(std::time_t since = 0);
+                             const std::string &configVersion = "",
+                             const Keep &keep = Keep(),
+                             const StationRegistry::Station *at = nullptr,
+                             bool list_stations = false);
+  std::string getJSONtable(std::time_t since = 0, const Keep &keep = Keep());
   std::string getPathJSON(uint32_t);
-  std::string getAllPathJSON();
-  std::string getAllPathJSONSince(std::time_t since);
+  std::string getAllPathJSON(const Keep &keep = Keep());
+  std::string getAllPathJSONSince(std::time_t since, const Keep &keep = Keep());
   std::string getReplayInfoJSON(std::time_t block);
-  std::string getReplayShipsJSON(std::time_t since, std::time_t lookback);
+  std::string getReplayShipsJSON(std::time_t since, std::time_t lookback, const Keep &keep = Keep());
+  std::string getReplayJSON(std::time_t since, std::time_t until, const Keep &keep,
+                            std::time_t lookback);
   std::string getReplayJSON(std::time_t since, std::time_t until,
                             std::time_t lookback);
   std::string getPathGeoJSON(uint32_t);
-  std::string getAllPathGeoJSON();
+  std::string getAllPathGeoJSON(const Keep &keep = Keep());
   std::string getMessage(uint32_t);
-  std::string getKML();
-  std::string getGeoJSON();
+  std::string getKML(const Keep &keep = Keep());
+  std::string getGeoJSON(const Keep &keep = Keep());
 
   int getCount() { return ships.size(); }
   int getMaxCount() { return ships.capacity(); }
@@ -496,21 +706,35 @@ public:
   void setOptionKey(AIS::Keys key, const std::string &arg) {
     filter.SetOptionKey(key, arg);
   }
-  void setFilter(const AIS::Filter &f) { filter = f; }
+  // which messages the table keeps, from the next message on
+  void setFilter(const AIS::Filter &f) {
+    std::lock_guard<std::recursive_mutex> lock(configuration_mtx);
+    filter = f;
+  }
 
   std::string getBinaryMessagesJSON(std::time_t since = 0, uint64_t marker = 0,
                                     uint32_t owner = 0);
-  std::string getMapObjectsJSON(uint64_t since = 0);
+  // `shown` leaves out a station the reader does not see
+  std::string getMapObjectsJSON(uint64_t since = 0, bool with_stations = true,
+                                const std::function<bool(int)> &shown = nullptr);
   // what stands behind an object key: a marker's members, or a station's record
   std::string getObjectJSON(const std::string &key);
-  std::string getEventsJSON(uint64_t since, int level);
-  std::string getEventHistoryJSON(uint64_t before, int level, int limit);
+  std::string getEventsJSON(uint64_t since, int level, const Keep &keep = Keep());
+  std::string getEventHistoryJSON(uint64_t before, int level, int limit,
+                                  const Keep &keep = Keep());
+  // a vessel the reader may see; under the lock
+  bool keepHeld(uint32_t mmsi, const Keep &keep) const {
+    if (!keep)
+      return true;
+    const int ptr = ships.find(mmsi);
+    return ptr != SHIP_NIL && keep(ships[ptr]);
+  }
   // the ship row's packed badge from inside a withShip/forEach callback, where
   // the lock is already held
   uint16_t binaryBadgeHeld(uint32_t mmsi, std::time_t now) const {
     return binary.badge(mmsi, now);
   }
-  // the station riding a vessel, for callers already inside the locked walk
+  // the station riding a vessel, -1 for none, for callers already inside the locked walk
   int stationHeld(uint32_t mmsi) const { return stations.idFor(mmsi); }
   int getStation(uint32_t mmsi) {
     std::lock_guard<std::mutex> lock(mtx);
@@ -541,5 +765,5 @@ public:
 
 private:
   static const int _DB_MAGIC = 0x41495346;
-  static const int _DB_VERSION = 4;
+  static const int _DB_VERSION = 5;
 };

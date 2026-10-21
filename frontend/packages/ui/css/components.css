@@ -2057,6 +2057,44 @@
 /* the duration as a badge beside the place: shown in the vessel card's history, not elsewhere */
 .place-visit-badge { display: none; }
 
+/* --- picker: one of many, the button that shows it and the list under it (picker.js) --- */
+.pick { position: relative; width: 100%; }
+.pick .pick__btn {
+    width: 100%; min-height: 52px; padding: 8px 12px; display: flex; align-items: center; gap: 10px;
+    border: 1px solid var(--color-field-border); border-radius: 10px;
+    background: var(--color-surface-raised); color: var(--color-text-strong); font: inherit; text-align: left; cursor: pointer;
+}
+.pick .pick__btn:hover { background: var(--color-hover); }
+.pick .pick__btn[aria-expanded="true"] { border-color: var(--color-accent); }
+.pick .pick__btn--warn { border-color: var(--color-warning-ink); }
+.pick__num {
+    flex-shrink: 0; min-width: 22px; height: 22px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 11px; background: var(--color-hover); color: var(--color-text); font-size: 11.5px; font-weight: 650;
+}
+.pick__opt .pick__num { margin-top: 1px; }
+.pick__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pick__name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pick__sub { font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pick__tag { flex-shrink: 0; margin-top: 2px; font-size: 11.5px; font-style: normal; font-weight: 500; color: var(--color-text-muted); }
+.pick__chev { flex-shrink: 0; width: 16px; height: 16px; color: var(--color-text-muted); }
+.pick .pick__panel {
+    position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 8; display: flex; flex-direction: column; align-items: stretch;
+    padding: 6px; border-radius: 12px; background: var(--color-surface-raised); box-shadow: var(--shadow-menu);
+}
+.pick__panel[hidden] { display: none; }
+.pick .pick__search { width: 100%; margin: 0 0 6px; }
+.pick .pick__list { max-height: 340px; overflow: auto; display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
+.pick .pick__opt {
+    width: 100%; padding: 8px 10px; display: flex; align-items: flex-start; gap: 10px; border: 0; border-radius: 8px;
+    background: transparent; color: var(--color-text-strong); font: inherit; text-align: left; cursor: pointer;
+}
+.pick .pick__opt:hover, .pick .pick__opt:focus-visible { background: var(--color-hover); outline: none; }
+.pick .pick__opt[aria-selected="true"] { background: var(--color-accent-tint); }
+.pick__opt .pick__name { font-weight: 500; }
+.pick__opt .pick__sub { white-space: normal; }
+.pick__sep { flex-shrink: 0; height: 1px; margin: 4px 6px; background: var(--color-border); }
+.pick__empty { padding: 8px 10px; color: var(--color-text-muted); font-size: 13px; }
+
 /* ==========================================================================
    Context menu: a rounded panel, quiet outline icons, small section labels,
    values beside copy items, an arrow on links that leave the viewer,

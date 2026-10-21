@@ -30,6 +30,10 @@ namespace JSON
 		case Value::Type::STRING:
 			str += *data.s;
 			break;
+		case Value::Type::CSTRING:
+			if (data.cs)
+				str += data.cs;
+			break;
 		case Value::Type::BOOL:
 			str += data.b ? "true" : "false";
 			break;

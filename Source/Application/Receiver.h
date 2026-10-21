@@ -53,8 +53,17 @@ class Receiver : public Setting
 
 	int sample_rate = 0, bandwidth = 0, ppm = 0, own_mmsi = -1;
 	int receiver_index = -1;
+	// a name for people, shown instead of the device's own in the viewer and the stats
+	std::string description;
 	FLOAT32 station_lat = LAT_UNDEFINED;
 	FLOAT32 station_lon = LON_UNDEFINED;
+	// the station it stands at, 0 (the default station) when the configuration
+	// names none; whether its messages carry the number is the run's to say:
+	// they do once stations are configured
+	int station = 0;
+	bool stamp_station = false;
+	// the name of a station the configuration lists, empty for the default one it does not
+	std::string station_name;
 
 	//  Models
 	std::vector<std::unique_ptr<AIS::Model>> models;
@@ -82,6 +91,22 @@ public:
 	DeviceManager& getDeviceManager() { return deviceManager; }
 
 	// Settings
+	const std::string &getDescription() const { return description; }
+
+	int getStation() const { return station; }
+	const std::string &getStationName() const { return station_name; }
+	bool hasPosition() const { return isValidCoord(station_lat, station_lon); }
+	FLOAT32 getLat() const { return station_lat; }
+	FLOAT32 getLon() const { return station_lon; }
+	// its station's name, where the station puts it, and whether its messages carry the station's number
+	void placeAtStation(const std::string &name, FLOAT32 lat, FLOAT32 lon, bool stamp)
+	{
+		station_name = name;
+		station_lat = lat;
+		station_lon = lon;
+		stamp_station = stamp;
+	}
+
 	Setting &SetKey(AIS::Keys key, const std::string &arg) override
 	{
 		switch (key)
@@ -126,6 +151,13 @@ public:
 			break;
 		case AIS::KEY_SETTING_LON:
 			station_lon = Util::Parse::Float(arg);
+			break;
+		case AIS::KEY_SETTING_DESCRIPTION:
+		case AIS::KEY_SETTING_DESC:
+			description = arg;
+			break;
+		case AIS::KEY_SETTING_STATION:
+			station = Util::Parse::Integer(arg, 0, 2147483647);
 			break;
 		default:
 			throw std::runtime_error(getName() + ": unknown setting \"" + AIS::KeyMap[key][JSON_DICT_SETTING] + "\"");
@@ -181,6 +213,11 @@ public:
 					return true;
 		return false;
 	}
+	// whether a model output is in any zone, its receiver's or its engine's own
+	bool hasZone(int i) const
+	{
+		return !zones.empty() || (i < (int)engine_zones.size() && !engine_zones[i].empty());
+	}
 	uint64_t getGroupMask() const {
 		uint64_t mask = 0;
 		for (int i = 0; i < (int)jsonais.size(); i++)
@@ -199,3 +236,5 @@ public:
 // Zone-based filtering: the group mask of every model output that overlaps one of
 // the zones. An empty mask means the filter matches no receiver at all.
 uint64_t resolveZones(const std::vector<std::unique_ptr<Receiver>> &receivers, const std::vector<std::string> &zones);
+// The group mask of every model output in no zone at all; any_zoned says whether some are in one.
+uint64_t resolveUnzoned(const std::vector<std::unique_ptr<Receiver>> &receivers, bool &any_zoned);

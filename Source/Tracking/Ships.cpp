@@ -23,10 +23,25 @@
 
 #include "Writer.h"
 
+void Ship::heardBy(int station, std::time_t t) {
+  if (station < 0 || !t)
+    return;
+  int i = 0;
+  while (i < HEARD - 1 && heard[i].station != station && heard[i].last)
+    i++;
+  for (; i > 0; i--)
+    heard[i] = heard[i - 1];
+  heard[0].station = station;
+  heard[0].last = (uint32_t)t;
+}
+
 void Ship::reset() {
+  heard.fill(Heard{0, 0});
   mmsi = count = msg_type = shiptype = group_mask = 0;
   type_ttl = 0;
   quiet_until = 0;
+  idle_since = 0;
+  rest_told = false;
   flags.reset();
 
   heading = HEADING_UNDEFINED;
@@ -582,8 +597,9 @@ void Ship::writeJSONBody(JSON::Writer &w, long int delta_time,
 }
 
 void Ship::writeCompactDynamic(JSON::Writer &w, std::time_t now,
-                               unsigned binary_badge, unsigned station,
-                               const std::array<uint64_t, VisitTracker::SLOTS> &place_ids) const {
+                               unsigned binary_badge, int riding,
+                               const std::array<uint32_t, VisitTracker::SLOTS> &place_ids,
+                               bool list_stations) const {
   w.beginArray().val(mmsi);
   if (isValidCoord(lat, lon))
     w.val(lat).val(lon).val_unless(distance, DISTANCE_UNDEFINED);
@@ -599,14 +615,24 @@ void Ship::writeCompactDynamic(JSON::Writer &w, std::time_t now,
       .val(shipclass)
       .val(country_code)
       .val(binary_badge)
-      .val(station)
+      .val_unless(riding, -1) // the station riding the vessel
       .beginArray();
   for (auto id : place_ids) {
-    if (id == UINT64_MAX)
+    if (id == UINT32_MAX)
       break;
-    w.val((unsigned long long)id);
+    w.val(id);
   }
-  w.endArray().endArray();
+  w.endArray();
+  // the stations that heard it lately, the latest first
+  if (list_stations) {
+    w.beginArray();
+    forEachHeard([&](int station, std::time_t t) {
+      if (t + ROW_WINDOW >= last_signal)
+        w.val(station);
+    });
+    w.endArray();
+  }
+  w.endArray();
 }
 
 // what the ships table lists beyond the map's row: the receiver's measurements
@@ -661,6 +687,33 @@ void Ship::writeCompactStatic(JSON::Writer &w) const {
 #define W(x) file.write((const char *)&(x), sizeof(x))
 #define R(x) file.read((char *)&(x), sizeof(x))
 
+// the station list: how many, then each station with when it last heard the ship
+static bool saveHeardList(std::ofstream &file, const std::array<Ship::Heard, Ship::HEARD> &heard) {
+  uint8_t n = 0;
+  while (n < Ship::HEARD && heard[n].last)
+    n++;
+  if (!W(n))
+    return false;
+  for (uint8_t i = 0; i < n; i++)
+    if (!W(heard[i].station) || !W(heard[i].last))
+      return false;
+  return true;
+}
+
+static bool loadHeardList(std::ifstream &file, std::array<Ship::Heard, Ship::HEARD> &heard) {
+  uint8_t n = 0;
+  if (!R(n))
+    return false;
+  for (uint8_t i = 0; i < n; i++) {
+    Ship::Heard h;
+    if (!R(h.station) || !R(h.last))
+      return false;
+    if (i < Ship::HEARD)
+      heard[i] = h;
+  }
+  return true;
+}
+
 bool Ship::Save(std::ofstream &file) const {
   int magic = _SHIP_MAGIC;
   int version = _SHIP_VERSION;
@@ -675,7 +728,8 @@ bool Ship::Save(std::ofstream &file) const {
                 W(last_signal) && W(last_direct_signal) && W(shipclass) &&
                 W(mmsi_type) && W(shipname) && W(destination) && W(callsign) &&
                 W(country_code) && W(vin) && W(vendorid) && W(unit_model) &&
-                W(unit_serial) && W(last_group));
+                 W(unit_serial) && W(last_group) && W(idle_since) && W(rest_told) &&
+                 saveHeardList(file, heard));
 }
 
 bool Ship::Load(std::ifstream &file) {
@@ -684,8 +738,9 @@ bool Ship::Load(std::ifstream &file) {
   if (!R(magic) || !R(version) || magic != _SHIP_MAGIC)
     return false;
 
-  if (version != _SHIP_VERSION && version != _SHIP_VERSION_MATCHED &&
-      version != _SHIP_VERSION_UNMATCHED && version != _SHIP_VERSION_LINKED)
+  if (version != _SHIP_VERSION && version != _SHIP_VERSION_RESTED && version != _SHIP_VERSION_PREVIOUS &&
+      version != _SHIP_VERSION_MATCHED && version != _SHIP_VERSION_UNMATCHED &&
+      version != _SHIP_VERSION_LINKED)
     return false;
 
   bool ok =
@@ -700,6 +755,15 @@ bool Ship::Load(std::ifstream &file) {
              R(callsign) && R(country_code) && R(vin) && R(vendorid) &&
              R(unit_model) && R(unit_serial) && R(last_group));
 
+  // the rest arrived with version 7, the station list with 8; a record from
+  // before is under way and heard by none
+  idle_since = 0;
+  rest_told = false;
+  if (ok && version >= _SHIP_VERSION_RESTED)
+    ok = (bool)(R(idle_since) && R(rest_told));
+  heard.fill(Heard{0, 0});
+  if (ok && version == _SHIP_VERSION)
+    ok = loadHeardList(file, heard);
   if (ok && version == _SHIP_VERSION_LINKED) {
     int discard[3];
     ok = (bool)R(discard);

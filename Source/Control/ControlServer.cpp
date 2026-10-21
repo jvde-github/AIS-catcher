@@ -21,6 +21,11 @@
 #include "Helper.h"
 #include "Logger.h"
 #include "Parser.h"
+#include "SHA256.h"
+#include "HTTPClient.h"
+#ifdef HASAPI
+#include "Routes.h"
+#endif
 #include "WebDB.h"
 #include "Writer.h"
 
@@ -195,7 +200,15 @@ std::string ControlServer::statusJSON(const char *auth, bool authenticated) {
     static const std::string os = Util::Helper::getOS();
     static const std::string hardware = Util::Helper::getHardware();
 
+    if (server_ports) {
+      w.key("listening").beginArray();
+      for (int p : server_ports())
+        w.val(p);
+      w.endArray();
+    }
     w.kv("has_password", core.hasPassword())
+        .kv("bind", core.getBindAddress())
+        .kv("stats_file", core.defaultStatsFile())
         .kv("version", VERSION_DESCRIBE)
         .kv("build_date", __DATE__)
         .kv("os", os)
@@ -287,6 +300,46 @@ void ControlServer::serveStatic(IO::TCPServerConnection &c,
   }
 #endif
   NotFound(c);
+}
+
+#ifdef HASAPI
+// a path a route of the routes table describes, a {name} standing for one segment
+static bool routeMatches(const char *pattern, const std::string &path) {
+  std::size_t j = 0;
+  for (const char *p = pattern; *p;) {
+    if (*p == '{') {
+      while (*p && *p != '}')
+        p++;
+      if (*p)
+        p++;
+      const std::size_t from = j;
+      while (j < path.size() && path[j] != '/')
+        j++;
+      if (j == from)
+        return false;
+    } else if (j < path.size() && path[j] == *p) {
+      j++;
+      p++;
+    } else
+      return false;
+  }
+  return j == path.size();
+}
+#endif
+
+// what the API tester asks for: a route of /api/v1, or one of the feeds
+static bool tryable(const std::string &target) {
+  const std::string path = target.substr(0, target.find('?'));
+  static const char *FEEDS[] = {"/geojson", "/allpath.geojson", "/metrics"};
+  for (const char *feed : FEEDS)
+    if (path == feed)
+      return true;
+#ifdef HASAPI
+  for (const auto &r : Services::routes())
+    if (routeMatches(r.path, path))
+      return true;
+#endif
+  return false;
 }
 
 void ControlServer::Request(IO::TCPServerConnection &c,
@@ -397,7 +450,7 @@ void ControlServer::Request(IO::TCPServerConnection &c,
     std::string error;
     auto places = core.getPlaces();
     if (!places) {
-      sendError(c, "Enable places in the viewer configuration first", 403);
+      sendError(c, "Places are off: turn them on under Places first", 403);
       return;
     }
     if (places->save(r.body, path == "/api/places/delete", error))
@@ -437,6 +490,58 @@ void ControlServer::Request(IO::TCPServerConnection &c,
       return;
     }
     sendOK(c);
+  } else if (path == "/api/key" && r.method == "POST") {
+    // a key for a server's API: given once, the configuration keeps its SHA-256
+    const std::string key = ControlCore::randomHex(48);
+    std::string out;
+    JSON::Writer w(out);
+    w.beginObject().kv("key", key).kv("sha256", Util::SHA256::hex(key)).endObject().finish();
+    Response(c, "application/json", out);
+#ifdef HASAPI
+  } else if (path == "/api/openapi" && r.method == "GET") {
+    // what the API tester lists: every route of every service, as a server describes its own
+    std::string out;
+    JSON::Writer w(out);
+    Services::writeOpenAPI(w, {"api", "system"});
+    w.finish();
+    Response(c, "application/json", out, accept_gzip);
+#endif
+  } else if (path.compare(0, 9, "/api/try/") == 0 && (r.method == "GET" || r.method == "POST")) {
+    // The API tester: a request made here on the station to one of its servers,
+    // with the key the panel sends, answered as that server answers it. Only
+    // the site's servers: the port must be one of them; a route the routes
+    // table lists or a feed, none of which streams; a POST only to MCP.
+    const std::string rest = r.target.substr(9);
+    const std::size_t slash = rest.find('/');
+    const int port = slash == std::string::npos ? 0 : std::atoi(rest.substr(0, slash).c_str());
+    std::string host;
+    if (port <= 0 || !server_address || !server_address(port, host)) {
+      sendError(c, "Nothing serves on port " + std::to_string(port) + ": a server not saved yet, or one whose port another program has (see the log)", 404);
+      return;
+    }
+    const std::string target = rest.substr(slash);
+    if (r.method == "POST" ? target != "/mcp" : !tryable(target)) {
+      sendError(c, r.method == "POST" ? "The tester posts only to /mcp" : "The tester asks only for the routes of /api/v1 and the feeds", 405);
+      return;
+    }
+    IO::HTTPClient client;
+    try {
+      client.setURL("http://" + host + ":" + std::to_string(port) + target);
+    } catch (const std::exception &e) {
+      sendError(c, e.what());
+      return;
+    }
+    client.setTimeout(3);
+    if (!r.authorization.empty())
+      client.extra_headers = "Authorization: " + r.authorization + "\r\n";
+    const int status = r.method == "POST" ? client.Post(r.body) : client.Get();
+    if (status < 100) {
+      sendError(c, "The server on port " + std::to_string(port) + " did not answer: " + IO::httpStatusString(status), 502);
+      return;
+    }
+    Response(c, client.content_type.empty() ? "application/json" : client.content_type, client.getResponse(), accept_gzip, false, false, status);
+  } else if (path == "/api/stations/live" && r.method == "GET") {
+    Response(c, "application/json", stations_live ? stations_live() : std::string("{\"stations\":[]}"));
   } else if (path == "/api/devices" && r.method == "GET") {
     Response(c, "application/json", core.getDeviceListJSON());
   } else if (path == "/api/serial" && r.method == "GET") {

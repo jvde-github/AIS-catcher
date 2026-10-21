@@ -285,6 +285,15 @@ public:
         });
     }
 
+    // every aircraft still kept, heard since `since` (0: all), under the lock;
+    // f(plane, heard) runs inside it, so keep it short
+    template <typename F>
+    void forEachAircraft(std::time_t since, F f)
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        forEachRecent(std::time(nullptr), since, f);
+    }
+
     std::string getJSON()
     {
         std::lock_guard<std::mutex> lock(mtx);

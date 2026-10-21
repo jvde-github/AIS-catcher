@@ -61,9 +61,9 @@ void WebViewer::resetSettings(int port) {
 void WebViewer::applySettings(ApplyMode mode) {
   std::lock_guard<std::recursive_mutex> lock(state_mtx);
   configuration.prepare();
-  std::vector<std::unique_lock<std::mutex>> inputs;
+  std::vector<std::unique_lock<std::recursive_mutex>> inputs;
   for (auto &s : states)
-    inputs.emplace_back(s->database().configuration_mtx);
+    inputs.push_back(s->database().pauseInput());
 
   const bool firstStart = !initialized;
   const Settings previous = settings;

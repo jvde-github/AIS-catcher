@@ -41,3 +41,21 @@ test("menu: show() overrides the tag rule; setLabel", () => {
     m.setLabel("a", "Aa");
     assert.equal(document.querySelector('#m li[data-action="a"] span').textContent, "Aa");
 });
+
+test("menu: the click a Mac sends after a control-click leaves the menu open", async () => {
+    const m = menu.create({ mount: document.getElementById("m") });
+    m.add([{ action: "copy", label: "Copy" }]);
+    const had = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    Object.defineProperty(globalThis, "navigator", { value: { platform: "MacIntel" }, configurable: true });
+    try {
+        m.open({ x: 0, y: 0 });
+        await new Promise((r) => setTimeout(r, 0));     // the menu listens from the next tick
+        document.body.dispatchEvent(new MouseEvent("click", { bubbles: true, ctrlKey: true, button: 0 }));
+        assert.equal(m.isOpen(), true);
+        document.body.dispatchEvent(new MouseEvent("click", { bubbles: true, button: 0 }));
+        assert.equal(m.isOpen(), false);
+    } finally {
+        if (had) Object.defineProperty(globalThis, "navigator", had);
+        else delete globalThis.navigator;
+    }
+});

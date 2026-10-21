@@ -29,18 +29,12 @@
 
 #include "AIS-catcher.h"
 
-#ifdef HASWEBVIEWER
-#include "WebViewer.h"
-#endif
 #include "CommandLine.h"
 #include "ManagedMain.h"
 #include "Logger.h"
 
 std::atomic<bool> stop;
 std::atomic<bool> stop_process;
-
-#ifdef HASWEBVIEWER
-#endif
 
 void StopRequest()
 {
@@ -126,7 +120,6 @@ static void expandResponseFiles(int argc, char *argv[],
 		expandResponseFiles((int)tok_argv.size(), tok_argv.data(), out, depth + 1);
 	}
 }
-
 
 int main(int argc, char *argv[])
 {

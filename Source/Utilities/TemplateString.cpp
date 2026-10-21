@@ -114,7 +114,7 @@ namespace Util
 					w.append_float((double)tag.ppm);
 				break;
 			case Segment::STATION:
-				w.append_int((long long)msg.getStation());
+				w.append_int((long long)msg.getStationOrDefault());
 				break;
 			case Segment::TYPE:
 				w.append_int((long long)msg.type());

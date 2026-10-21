@@ -37,6 +37,17 @@ namespace IO
 
 	const int HTTPServer::SSE_PING_INTERVAL;
 
+	// the numeric address a client connects from; empty when the socket cannot tell
+	static std::string peerOf(SOCKET s)
+	{
+		struct sockaddr_storage a;
+		socklen_t len = sizeof(a);
+		char host[NI_MAXHOST];
+		if (getpeername(s, (SOCKADDR *)&a, &len) != 0 || getnameinfo((SOCKADDR *)&a, len, host, sizeof(host), nullptr, 0, NI_NUMERICHOST) != 0)
+			return std::string();
+		return host;
+	}
+
 	// HTTP Server
 	void HTTPServer::processClients()
 	{
@@ -109,6 +120,7 @@ namespace IO
 
 					if (request.method == "GET" || request.method == "POST")
 					{
+						request.peer = peerOf(c.sock);
 						if (!dispatchMount(c, request, request.accept_gzip))
 							Request(c, request, request.accept_gzip);
 					}
@@ -315,6 +327,10 @@ namespace IO
 			{
 				r.forwarded_host = value;
 			}
+			else if (key == "AUTHORIZATION")
+			{
+				r.authorization = value;
+			}
 			else if (key == "CONNECTION")
 			{
 				connection = value;
@@ -438,8 +454,9 @@ namespace IO
 
 	// Headers identical for every response, rebuilt only when the frame_*
 	// settings change.
-	const std::string &HTTPServer::commonHeaders()
+	std::string HTTPServer::commonHeaders()
 	{
+		std::lock_guard<std::mutex> lock(headers_mtx);
 		if (common_headers.empty())
 		{
 			common_headers = "\r\nServer: AIS-catcher";

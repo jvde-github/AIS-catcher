@@ -73,7 +73,7 @@ public:
     Stop();
     cb = Logger::getInstance().addLogListener([this](const LogMessage &msg) {
       if (server)
-        server->sendSSE(3, "log", msg.toJSON());
+        server->sendSSE(IO::SSE::VIEWER_LOG, "log", msg.toJSON());
     });
   }
 
@@ -286,6 +286,7 @@ public:
   }
 
   bool isPortSet() { return configuration.values.port_set; }
+  int getPort() const { return configuration.values.port; }
   int getBoundPort() { return bound_port; }
 
   // 0 leaves the port unset, so startServing() reports it rather than binding

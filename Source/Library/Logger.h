@@ -72,14 +72,22 @@ public:
 
     std::vector<LogMessage> getLastMessages(int n);
 
-    std::vector<std::string> getBacklogJSON(int n, uint32_t since = 0)
+    // the last `n` lines as JSON, or the first `n` after line `since`; `last`,
+    // when given, takes the number of the last line handed out and stays as it is without one
+    std::vector<std::string> getBacklogJSON(int n, uint32_t since = 0, uint32_t *last = nullptr)
     {
         std::vector<std::string> backlog;
         for (auto &m : getLastMessages(since ? INT_MAX : n))
         {
             uint32_t after = m.seq - since;
+            if ((int)backlog.size() >= n)
+                break;
             if (!since || (after != 0 && after < 0x80000000u))
+            {
                 backlog.push_back(m.toJSON());
+                if (last)
+                    *last = m.seq;
+            }
         }
         return backlog;
     }

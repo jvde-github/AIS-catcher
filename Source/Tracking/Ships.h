@@ -72,11 +72,52 @@ struct Ship {
       vendorid[4];
   std::string msg;
   uint64_t last_group, group_mask;
+  // The stations that heard the ship, the most recent first: numbers from the
+  // station registry, never a receiver's place in the list; a slot without a
+  // time is empty
+  struct Heard {
+    int32_t station;
+    uint32_t last;
+  };
+  static const int HEARD = 4;
+  std::array<Heard, HEARD> heard;
+  void heardBy(int station, std::time_t t);
+  // how long a station counts a ship as one it hears: a filter's stations, a
+  // station's vessels
+  static const int STATION_WINDOW = 3600;
+  // the stations a ship's map row lists: those within a minute of its last
+  // message, as the hub's tiles list them
+  static const int ROW_WINDOW = 60;
+  // Each station that heard the ship and when, the most recent first. A ship
+  // without a station on record, as a backup from before stations restores
+  // one, was heard at the default station, 0, at its last signal.
+  template <typename F> void forEachHeard(F f) const {
+    if (!heard[0].last) {
+      if (last_signal)
+        f(0, last_signal);
+      return;
+    }
+    for (const auto &h : heard) {
+      if (!h.last)
+        break;
+      f((int)h.station, (std::time_t)h.last);
+    }
+  }
+  // whether `station` heard the ship at `since` or later
+  bool heardSince(int station, std::time_t since) const {
+    bool heard_it = false;
+    forEachHeard([&](int s, std::time_t t) { heard_it |= s == station && t >= since; });
+    return heard_it;
+  }
   // types heard since the last sweep; not persisted
   int type_ttl;
   // until when the vessel makes no events: a destination or status just
   // changed, or it sent a test; not persisted
   std::time_t quiet_until;
+  // lying still since this report, 0 under way; told once a minute passed.
+  // Saved with the record, so a restart continues a rest rather than starting one
+  std::time_t idle_since;
+  bool rest_told;
   Util::PackedInt flags;
 
   void reset();
@@ -97,8 +138,9 @@ struct Ship {
   void writeJSONBody(JSON::Writer &, long int delta_time,
                      bool station_known) const;
   void writeCompactDynamic(
-      JSON::Writer &, std::time_t now, unsigned binary_badge, unsigned station,
-      const std::array<uint64_t, VisitTracker::SLOTS> &place_ids) const;
+      JSON::Writer &, std::time_t now, unsigned binary_badge, int riding,
+      const std::array<uint32_t, VisitTracker::SLOTS> &place_ids,
+      bool list_stations) const;
   void writeCompactTable(JSON::Writer &) const;
   void writeCompactStatic(JSON::Writer &) const;
 
@@ -108,7 +150,9 @@ struct Ship {
 
 private:
   static const int _SHIP_MAGIC = 0x53484950; // "SHIP" in hex
-  static const int _SHIP_VERSION = 6;
+  static const int _SHIP_VERSION = 8;
+  static const int _SHIP_VERSION_RESTED = 7;   // the rest, no station list
+  static const int _SHIP_VERSION_PREVIOUS = 6; // before the rest on the record
   static const int _SHIP_VERSION_MATCHED =
       5; // trailing code, read and discarded
   static const int _SHIP_VERSION_UNMATCHED = 4;

@@ -3,3 +3,24 @@
 import { initialServerConfig } from '../features/server-config/server-config.js';
 
 export const config = initialServerConfig();
+
+// the page has stations to tell apart: its picker lists them
+export function severalStations() {
+    return (config.receivers || []).length >= 2;
+}
+
+// a station's name as the page's station picker lists it
+export function stationLabel(id) {
+    const r = (config.receivers || []).find((x) => x.idx === id);
+    return r ? r.label : "Station " + id;
+}
+
+// the station a page looks through, by name; empty when it looks through all
+export function focusLabel(id) {
+    return id >= 0 && severalStations() ? stationLabel(id) : "";
+}
+
+// the stations that heard a ship, by name, the latest first
+export function stationNames(ids) {
+    return (ids || []).map((id) => stationLabel(id)).join(", ");
+}

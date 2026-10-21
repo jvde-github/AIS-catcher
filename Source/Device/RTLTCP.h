@@ -46,6 +46,9 @@ namespace Device
 		// bytes per FIFO block for the text formats; one byte a block overruns
 		// on a busy NMEA feed (-gt TEXT_BUFFER, 1-256)
 		int text_buffer = 1;
+		// the FIFO holds this many times its default size (-gt BUFFER_COUNT, 1-100):
+		// what arrives while the consumer is held up longer than the FIFO lasts is lost
+		int buffer_count = 1;
 		std::vector<char> buffer;
 
 		bool lossless = false;

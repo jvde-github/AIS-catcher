@@ -153,5 +153,30 @@ namespace Util
 			s.update(data.data(), data.size());
 			return s.finish();
 		}
+
+		// the digest as its 32 bytes
+		static std::string raw(const std::string &data)
+		{
+			const std::string h = hex(data);
+			std::string out(32, '\0');
+			for (int i = 0; i < 32; i++)
+				out[i] = (char)std::stoi(h.substr(i * 2, 2), nullptr, 16);
+			return out;
+		}
+
+		// HMAC-SHA256 (RFC 2104), 32 bytes
+		static std::string hmac(std::string key, const std::string &message)
+		{
+			if (key.size() > 64)
+				key = raw(key);
+			key.resize(64, '\0');
+			std::string inner(64, '\0'), outer(64, '\0');
+			for (int i = 0; i < 64; i++)
+			{
+				inner[i] = (char)(key[i] ^ 0x36);
+				outer[i] = (char)(key[i] ^ 0x5c);
+			}
+			return raw(outer + raw(inner + message));
+		}
 	};
 }

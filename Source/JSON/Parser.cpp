@@ -274,16 +274,50 @@ namespace JSON
 				{
 					if (p + 4 >= pend)
 						error("line ends in string literal unicode escape sequence", (int)(p - p_start));
-					int cp = 0;
-					for (int i = 1; i <= 4; i++)
+					auto hex4 = [&](const char *q)
 					{
-						int d = Util::Convert::hexValue(p[i]);
-						if (d < 0)
-							error("illegal unicode escape sequence", (int)(p - p_start));
-						cp = (cp << 4) | d;
-					}
-					ch = (char)cp;
+						int v = 0;
+						for (int i = 0; i < 4; i++)
+						{
+							int d = Util::Convert::hexValue(q[i]);
+							if (d < 0)
+								error("illegal unicode escape sequence", (int)(p - p_start));
+							v = (v << 4) | d;
+						}
+						return v;
+					};
+					unsigned cp = hex4(p + 1);
 					p += 4;
+					// a surrogate pair is one code point spread over two escapes
+					if (cp >= 0xD800 && cp <= 0xDBFF && p + 6 < pend && p[1] == '\\' && p[2] == 'u')
+					{
+						unsigned lo = hex4(p + 3);
+						if (lo >= 0xDC00 && lo <= 0xDFFF)
+						{
+							cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00);
+							p += 6;
+						}
+					}
+					// the code point as UTF-8, as the rest of the text is
+					if (cp < 0x80)
+						ch = (char)cp;
+					else
+					{
+						if (cp < 0x800)
+							escapedText += (char)(0xC0 | (cp >> 6));
+						else
+						{
+							if (cp < 0x10000)
+								escapedText += (char)(0xE0 | (cp >> 12));
+							else
+							{
+								escapedText += (char)(0xF0 | (cp >> 18));
+								escapedText += (char)(0x80 | ((cp >> 12) & 0x3F));
+							}
+							escapedText += (char)(0x80 | ((cp >> 6) & 0x3F));
+						}
+						ch = (char)(0x80 | (cp & 0x3F));
+					}
 					break;
 				}
 				default:

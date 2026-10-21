@@ -15,8 +15,9 @@ env:
   # Where build outputs are attached: the published GitHub Release on a `release` event,
   # otherwise the rolling `Edge` pre-release on pushes to main.
   RELEASE_TARGET: ${{ github.event_name == 'release' && github.event.release.tag_name || 'Edge' }}
-  # Build the tagged commit on a release, otherwise the tip of main.
-  CHECKOUT_REF: ${{ github.event_name == 'release' && github.event.release.tag_name || 'main' }}
+  # Build the tagged commit on a release, the pull request's own commit on a pull request,
+  # otherwise the tip of main, which includes the bake commit pushed by the first job.
+  CHECKOUT_REF: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
 
 jobs:
   bakeHTML:

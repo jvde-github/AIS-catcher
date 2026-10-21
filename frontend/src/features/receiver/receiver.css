@@ -1,30 +1,117 @@
-/* The receiver dialog's list. */
-
-.receiver-list {
-    display: flex;
-    flex-direction: column;
-}
-
-.receiver-option {
-    padding: 10px 4px;
+/* the station in focus, beside the title: a click shows all stations again */
+.header-focus {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 30vw;
+    margin: auto 6px auto 10px;
+    padding: 6px 10px 6px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 0;
+    border-radius: var(--radius-2xl);
+    background: var(--color-brand-accent);
+    color: var(--color-brand-ink);
+    font: inherit;
     font-size: var(--fs-base);
-    color: var(--color-text);
+    line-height: 18px;
     cursor: pointer;
-    border-radius: var(--radius-md);
-    overflow-wrap: anywhere;
 }
 
-.receiver-option + .receiver-option {
-    border-top: 1px solid var(--color-menu-divider);
+.header-focus[hidden] {
+    display: none;
 }
 
-@media (hover: hover) {
-    .receiver-option:hover {
-        background: var(--color-menu-hover);
-    }
+#header-focus-label {
+    min-width: 0;
+    max-width: 12em;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
-.receiver-option.active {
+/* where the name does not fit the header gives the station's number */
+.header-focus-id {
+    display: none;
+}
+
+.header-focus.fit-short #header-focus-label {
+    display: none;
+}
+
+.header-focus.fit-short .header-focus-id {
+    display: inline;
+}
+
+/* and with no room at all the ticker carries the chip */
+.ticker-focus {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 14em;
+    padding: 2px 8px 2px 10px;
+    border: 0;
+    border-radius: var(--radius-2xl);
+    background: var(--color-brand-accent);
+    color: var(--color-brand-ink);
+    font: inherit;
+    font-weight: var(--fw-bold);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.ticker-focus[hidden] {
+    display: none;
+}
+
+#ticker_focus_label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.header-focus-x {
+    flex: none;
+    font-size: var(--fs-lg);
+    opacity: 0.8;
+}
+
+/* a station opened from the map */
+.station-card .tip-band {
+    margin-bottom: 8px;
+}
+
+.station-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+
+/* the stations that heard a vessel, boxed as on the hub's map: the hover and
+   the ship card */
+.station-box {
+    display: inline-block;
+    white-space: nowrap;
+    padding: 1px 5px;
+    margin: 1px 2px;
+    line-height: 1.25;
+    background-color: var(--color-card-footer);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+.station-box.station-last {
+    background-color: var(--color-accent-tint);
+    border-color: var(--color-accent);
     color: var(--color-accent);
-    font-weight: var(--fw-semibold);
+}
+
+.station-box.station-etc {
+    border-style: dashed;
+    padding: 1px 4px;
+    letter-spacing: 1px;
 }

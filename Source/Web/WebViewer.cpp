@@ -16,6 +16,8 @@
 */
 
 #include "WebViewer.h"
+
+#include <map>
 #include "PlaceCatalogue.h"
 #include "Device/Device.h"
 #include "Helper.h"
@@ -241,7 +243,9 @@ Names namesFor(Receiver &r, int j, std::size_t receiver_count) {
   Device::Device *device = r.getDeviceManager().getDevice();
 
   Names n;
-  n.label = deviceLabel(device);
+  n.label = !r.getStationName().empty() ? r.getStationName()
+            : !r.getDescription().empty() ? r.getDescription()
+                                          : deviceLabel(device);
   if (r.Count() > 1)
     n.label = receiver_count > 1 ? n.label + " " + r.Model(j)->getName()
                                  : r.Model(j)->getName();
@@ -563,9 +567,11 @@ int WebViewer::parseMMSI(const std::string &query) {
 void WebViewer::writeOutputsJSON(JSON::Writer &w) {
   w.kv("tcp_clients", numberOfClients());
   w.key("outputs").beginArray();
+  // each output by its type and number, never its address: a public map shows them
   if (msg_channels) {
+    std::map<std::string, int> nth;
     for (auto &o : *msg_channels)
-      o->writeJSON(w);
+      o->writeJSON(w, o->getType() + " #" + std::to_string(++nth[o->getType()]));
   }
   w.endArray();
 }
@@ -791,7 +797,7 @@ const WebViewer::Route WebViewer::routes[] = {
        return w->buildStatJSON(s);
      },
      true},
-    {"/api/place.json", nullptr, "application/json",
+    {"/api/place.json", &WebViewer::Settings::PlaceGeometry, "application/json",
      [](WebViewer *w, ReceiverTracker *, const std::string &q) {
        auto places = w->getPlaceCatalogue();
        const auto id = IO::HTTPRequest::queryParam(q, "id");

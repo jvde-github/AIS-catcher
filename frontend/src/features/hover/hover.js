@@ -9,9 +9,10 @@ import {
 } from '../../core/store.js';
 import { getShipName } from '../../core/names.js';
 import { getSpeedVal, getSpeedUnit } from '../../core/units.js';
-import { getDeltaTimeVal, getCountryName, getShipTypeShort, sanitizeString, getICAO } from '@aiscatcher/core/text.js';
-import { debounce, flagHTML } from '@aiscatcher/ui/components.js';
-import { validityBand } from '@aiscatcher/ui/binary.js';
+import { getDeltaTimeVal, getCountryName, sanitizeString, getICAO } from '@aiscatcher/core/text.js';
+import { debounce, flagHTML, isSecondaryClick } from '@aiscatcher/ui/components.js';
+import { vesselBand } from '@aiscatcher/ui/vessel-tooltip.js';
+import { severalStations, stationLabel } from '../../core/config.js';
 import { toLonLat } from 'ol/proj';
 import { getWidth } from 'ol/extent';
 import { map, markers, syncCircleFeature, shapeLayer, trackLayer } from '../../map.js';
@@ -39,6 +40,8 @@ let hoverCircleFeature = undefined;
 
 let clickTimeout = undefined;
 export const handleClick = function (pixel, target, event) {
+    // the click a Mac sends after a control-click belongs to the context menu
+    if (isSecondaryClick(event.originalEvent)) return;
     const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
         function (feature) { if ('ship' in feature || 'plane' in feature || 'link' in feature || 'binary' in feature || 'replayMmsi' in feature) { return feature; } }, { hitTolerance: 10 });
 
@@ -90,24 +93,15 @@ export const handleClick = function (pixel, target, event) {
     }
 };
 
+// the vessel's band, then a band for each kind of message it sent
 export function getTooltipContent(ship) {
-    const sub = (ship.shiptype ? getShipTypeShort(ship.shiptype) + ' - ' : '') +
-        'received ' + getDeltaTimeVal(clock - ship.last_signal) + ' ago';
-
-    // the vessel is one band wearing its validity, each message card below it
-    // another wearing its kind, their bars in one line
-    let content = '<div class="tip-band" style="--band: ' + validityBand(ship.validated) + '"><div class="tooltip-card">' +
-        flagHTML(ship.country, 'flag-tooltip', getCountryName(ship.country)) +
-        '<div>' +
-        (getShipName(ship) || ship.mmsi) +
-        '<span class="tooltip-dim"> at </span>' + getSpeedVal(ship.speed) + ' ' + getSpeedUnit() +
-        '<div class="tooltip-sub">' + sub + '</div>' +
-        '</div>' +
-        '</div></div>';
-
-    content += mapObjects.shipTooltip(ship);
-
-    return content;
+    return vesselBand(ship, {
+        name: getShipName(ship) || ship.mmsi,
+        speed: ship.speed != null ? getSpeedVal(ship.speed) + ' ' + getSpeedUnit() : null,
+        age: clock - ship.last_signal,
+        // the stations that heard it, where the page has several
+        label: severalStations() ? stationLabel : null,
+    }) + mapObjects.shipTooltip(ship);
 }
 
 function getTooltipContentPlane(plane) {

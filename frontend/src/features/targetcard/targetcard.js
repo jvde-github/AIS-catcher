@@ -13,6 +13,8 @@ import { flagHTML, decodeHTMLEntities } from '@aiscatcher/ui/components.js';
 import { decodeBadge, glyphsHTML, KIND_CAT, showsShipBadge } from '@aiscatcher/ui/binary.js';
 import * as mapObjects from '../mapobjects/mapobjects.js';
 import { receiver } from '../../data.js';
+import { severalStations, stationLabel } from '../../core/config.js';
+import { stationBoxes } from '@aiscatcher/ui/stations.js';
 import { nameAction } from '../../actions.js';
 import { saveSettings } from '../settings/settings.js';
 import { paneCramped } from '@aiscatcher/map/mapui.js';
@@ -255,7 +257,7 @@ function setTitle(ship) {
     const glyphs = (cats) => glyphsHTML(cats, 'data-action="showBinaryMessageDialogCard"');
     const name = getShipName(ship) || ship.mmsi;
     // the station the vessel carries, after the message kinds
-    const station = ship.station ? glyphsHTML(['station'], '') : '';
+    const station = ship.station != null ? glyphsHTML(['station'], '') : '';
     title.innerHTML = name + station;
     if (!ship.binary) return;
     const mmsi = cardMmsi;
@@ -429,6 +431,11 @@ function populateCard() {
     document.getElementById("targetcard_last_group").innerHTML = getStringfromGroup(ship.last_group);
     document.getElementById("targetcard_sources").innerHTML = getStringfromGroup(ship.group_mask);
     document.getElementById("targetcard_channels").innerHTML = getStringfromChannels(ship.channels);
+    // the stations that heard it, where the page has several; a viewer that keeps
+    // no stations sends none
+    const stations = ship.stations || [];
+    document.getElementById("targetcard_stations_row").hidden = !severalStations() || !stations.length;
+    document.getElementById("targetcard_stations").innerHTML = stationBoxes(stations, stationLabel, stations.length);
     const shiptype = ship.shiptype ?? null;
     document.getElementById("shiptype_code").textContent = shiptype != null ? shiptype : "-";
     document.getElementById("shiptype_desc").textContent = shiptype != null ? getShipTypeFull(shiptype) : "-";

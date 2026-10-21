@@ -21,7 +21,6 @@ import * as replay from '../replay/replay.js';
 import * as community from '../../overlays/community.js';
 import * as fireworks from '../../overlays/fireworks.js';
 import { register } from '../../actions.js';
-import { receiverLabel, hasReceiverChoice } from '../receiver/receiver.js';
 
 export let context_mmsi = null;
 export let context_type = null;
@@ -46,6 +45,7 @@ export const MENU_CHECKS = {
     ToggleFireworks: () => fireworks.isRunning(),
     toggleGraphVisibility: (el) => settings[GRAPH_KINDS[el.dataset.graph].setting],
     toggleDarkMode: () => settings.dark_mode,
+    // one station in focus rather than all of them: the item says so in the accent, as a switch that is on
     toggleScreenSize: () => !!document.fullscreenElement,
     replayToggleLabels: () => replay.getLabels(),
     replaySetSpeed: (el) => replay.getSpeed() == el.dataset.speed,
@@ -158,13 +158,11 @@ export function showContextMenu(event, mmsi, type, context, anchorEl) {
     const unpinContext = context.includes("ctx-map") || context.includes("ctx-replay-map");
     document.getElementById("ctx_unpin").innerText =
         isFollowing("STATION") ? "Unfollow station" : "Unfollow " + vesselLabel(settings.center_point);
-    document.getElementById("ctx_receiver_label").innerText = "Receiver: " + receiverLabel() + "\u2026";
     document.getElementById("ctx_follow").innerText = isFollowing(context_mmsi) ? "Unfollow vessel" : "Follow vessel";
     document.getElementById("ctx_follow_station").innerText = isFollowing("STATION") ? "Unfollow station" : "Follow station";
     document.getElementById("ctx_trackcutoff").innerText = trackCutoff ? "Tracks from " + trackCutoffLabel() : "Tracks from now";
 
     const hidden = (el) =>
-        (el.id === "ctx_receiver" && !hasReceiverChoice()) ||
         (el.classList.contains("ctx-realtime") && !config.features.realtime) ||
         (el.classList.contains("ctx-replay") && !config.features.replay) ||
         (el.classList.contains("noandroid") && isAndroid()) ||

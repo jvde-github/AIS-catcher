@@ -91,7 +91,7 @@ namespace AIS
 		int length;
 		char channel;
 		long long start_idx, end_idx;
-		int station = 0;
+		int station = -1; // the station that heard it, as the input stamps it; -1 for none
 		int own_mmsi = -1;
 
 		std::vector<std::string> NMEA;
@@ -318,6 +318,9 @@ namespace AIS
 			own_mmsi = o;
 		}
 		int getStation() const { return station; }
+		// the station as outputs write it: a message no station is stamped on
+		// comes from the default station, 0
+		int getStationOrDefault() const { return station < 0 ? 0 : station; }
 		void setOwnMMSI(int m) { own_mmsi = m; }
 		void buildNMEA(TAG &tag, int id = -1);
 		bool isOwn() const { return own_mmsi == mmsi(); }

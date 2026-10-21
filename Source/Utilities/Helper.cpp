@@ -35,6 +35,7 @@
 #endif
 
 #include "Helper.h"
+#include <cstdlib>
 #include "Convert.h"
 
 namespace Util
@@ -419,23 +420,38 @@ namespace Util
 		return files;
 	}
 
-	bool Helper::isUUID(const std::string &s)
+	bool Helper::isUUID(const std::string &s, bool lowercase)
 	{
 		if (s.size() != 36)
 			return false;
 		for (int i = 0; i < 36; i++)
 		{
+			const char c = s[i];
 			if (i == 8 || i == 13 || i == 18 || i == 23)
 			{
-				if (s[i] != '-')
+				if (c != '-')
 					return false;
 			}
-			else
-			{
-				if (!isxdigit(s[i]))
-					return false;
-			}
+			else if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
+					   (!lowercase && c >= 'A' && c <= 'F')))
+				return false;
 		}
 		return true;
+	}
+
+	std::string Helper::resolvePath(const std::string &f, const std::string &base)
+	{
+		std::string path = f;
+		if (path.size() > 1 && path[0] == '~' && (path[1] == '/' || path[1] == '\\'))
+		{
+			const char *home = std::getenv("HOME");
+			if (home && *home)
+				path = std::string(home) + path.substr(1);
+		}
+		const bool absolute = (!path.empty() && (path[0] == '/' || path[0] == '\\')) ||
+							  (path.size() > 2 && path[1] == ':' && (path[2] == '/' || path[2] == '\\'));
+		if (path.empty() || absolute || base.empty())
+			return path;
+		return base + "/" + path;
 	}
 }

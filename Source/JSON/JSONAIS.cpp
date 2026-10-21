@@ -1366,7 +1366,7 @@ namespace AIS
 			if (tag.ppm != PPM_UNDEFINED) json.Add(AIS::KEY_PPM, tag.ppm);
 		}
 
-		if (msg.getStation())
+		if (msg.getStation() >= 0)
 		{
 			json.Add(AIS::KEY_STATION_ID, msg.getStation());
 		}

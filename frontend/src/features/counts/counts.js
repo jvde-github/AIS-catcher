@@ -8,6 +8,8 @@ import { bucketChip } from '@aiscatcher/ui/components.js';
 import * as replay from '../replay/replay.js';
 import * as ticker from '../ticker/ticker.js';
 import { panels } from '../../panels.js';
+import { receiver } from '../../data.js';
+import { focusLabel } from '../../core/config.js';
 
 const BUCKET_ELEMENT = {
     am: "statcard_moving",
@@ -102,15 +104,18 @@ function updateFilterIndicator() {
     const btn = document.getElementById("filter-btn");
     if (!btn) return;
 
+    // the station looked through filters too: it is the Filter tab's first choice
     const active = filter.isActive();
-    btn.classList.toggle("is-active", active);
-    btn.title = active
-        ? "Filter: " + filter.describe().join(" \u00b7 ") + " (" + shipCounts.shown + " of " + shipCounts.total + ")"
+    const through = focusLabel(receiver);
+    const parts = (through ? [through] : []).concat(active ? filter.describe() : []);
+    btn.classList.toggle("is-active", parts.length > 0);
+    btn.title = parts.length
+        ? "Filter: " + parts.join(" \u00b7 ") + (active ? " (" + shipCounts.shown + " of " + shipCounts.total + ")" : "")
         : "Filter vessels";
 
     const tableBtn = document.getElementById("shipTableFilterBtn");
     if (tableBtn) {
-        tableBtn.classList.toggle("filter-on", active);
+        tableBtn.classList.toggle("filter-on", parts.length > 0);
         tableBtn.title = btn.title;
     }
 

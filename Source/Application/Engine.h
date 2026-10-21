@@ -20,19 +20,17 @@
 #include <memory>
 #include <vector>
 
-#include "Receiver.h"
-#include "Network.h"
-#ifdef HASWEBVIEWER
-#include "WebViewer.h"
-
-// The viewer of managed mode (-E), null otherwise. It outlives the engine, so
-// it is not part of Engine; the config reader applies "control"."viewer" to it.
-#endif
-#include "Screen.h"
 #include <functional>
 
-class WebViewer;
+#include "Receiver.h"
+#include "StationRegistry.h"
+#include "SiteConfig.h"
+#include "Network.h"
+#include "Screen.h"
+
 class ControlCore;
+class Site;
+class WebViewer;
 
 // stop ends the running engine, stop_process the managed-mode loop around it
 extern std::atomic<bool> stop;
@@ -42,22 +40,39 @@ extern std::atomic<bool> stop_process;
 // built up by the command line parser or the config reader and then started by run().
 // Managed mode constructs a new one for every start/stop cycle.
 struct Engine {
-	// Called by run() once the viewers serve and before the receivers start:
+	// Called by run() once the servers serve and before the receivers start:
 	// a build that adds services attaches them here.
 	static std::function<void(Engine &)> before_run;
-	// Called by run() when the main loop has ended, while receivers and viewers are
+	// Called by run() when the main loop has ended, while the receivers are
 	// still alive: a build that added services saves and stops them here.
 	static std::function<void(Engine &)> after_run;
 
 	// Receivers and outputs
 	std::vector<std::unique_ptr<Receiver>> receivers;
-#ifdef HASWEBVIEWER
-	std::vector<std::unique_ptr<WebViewer>> servers;
-#endif
 	std::vector<std::unique_ptr<IO::OutputMessage>> msg;
+
+#ifdef HASWEBVIEWER
+	// the web viewers of -N and "server": each keeps its own ship table, fed
+	// like an output by the receivers in its zones
+	std::vector<std::unique_ptr<WebViewer>> viewers;
+#endif
 
 	// Community feed output, owned by msg; set up at most once
 	IO::HubStreamer *comm_feed = nullptr;
+
+	// The receiving stations: those the configuration defines, and the default
+	// station, 0, when a receiver names none and the file does not list it
+	StationRegistry stations;
+	// what managed mode's configuration says of the default station, for when
+	// it does not list it
+	StationDefaults station_defaults;
+	// managed mode's save: the stations as the file now has them, while the engine runs
+	void refreshStations(const StationRegistry &configured);
+
+	// what the configuration says of the site, which outlives the engine
+	SiteConfig site_config;
+	// called on each pass of the run loop: managed mode applies settings changes here
+	std::function<void()> loop_hook;
 
 	// Screen and statistics
 	IO::ScreenOutput screen;
@@ -83,19 +98,18 @@ struct Engine {
 	int exit_code = 0;
 	int nrec = 0;
 
-	Engine() {
-		receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-	}
+	// out of line, as the web viewers are only declared here
+	Engine();
 
-	// The viewer outlives the engine, so detaching must happen even when run()
+	// The site outlives the engine, so detaching must happen even when run()
 	// threw halfway or was never called at all.
-	~Engine() { detach(); }
+	~Engine();
 
-	// Open the devices, wire up the outputs and run until stopped.
-	void run(WebViewer *viewer = nullptr, ControlCore *control = nullptr);
+	// Open the devices, wire up the outputs and the site, and run until stopped.
+	void run(Site &site, ControlCore *control = nullptr);
 
-	// Stop the receivers, close the servers and drop the viewer's references
-	// into this object. Idempotent.
+	// Stop the receivers and drop the site's references into this object.
+	// Idempotent.
 	void detach();
 
 	// Each device option on the command line / in config defines a new receiver,
@@ -113,7 +127,16 @@ struct Engine {
 	}
 
 private:
-	// the viewer run() was handed, kept so detach() can reach it
-	WebViewer *attached_viewer = nullptr;
 	bool detached = false;
+	// the site of the run, from its start
+	Site *site = nullptr;
+
+	void resolveStations();
+	void countStationInputs();
+	// the default station the configuration does not list; it rides a vessel
+	// only when it is the only station
+	StationRegistry::Station defaultStation(bool alone) const;
+#ifdef HASAPI
+	void publishReceivers();
+#endif
 };

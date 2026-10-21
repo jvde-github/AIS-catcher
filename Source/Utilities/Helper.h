@@ -43,6 +43,9 @@ namespace Util
 		static std::string getOS();
 		static std::string getHardware();
 		static uint16_t CRC16(const uint8_t *data, size_t length);
-		static bool isUUID(const std::string &s);
+		static bool isUUID(const std::string &s, bool lowercase = false);
+		// a file named in a configuration: ~/ is the home directory, and a
+		// relative name is in `base`, the configuration's directory, when there is one
+		static std::string resolvePath(const std::string &path, const std::string &base);
 	};
 }

@@ -1,10 +1,12 @@
-import {placeFeature} from '@aiscatcher/core/places.js';
+import {placeFeature, importPlace} from '@aiscatcher/core/places.js';
 import GeoJSON from 'ol/format/GeoJSON.js';
 import Draw from 'ol/interaction/Draw.js';
 import Modify from 'ol/interaction/Modify.js';
 import { shapeFromGeoJSON } from './shape.js';
 import * as tooltip from '@aiscatcher/ui/tooltip.js';
 import { ConfigStore } from './config-manager.js';
+import { addBasemap } from './basemap.js';
+import { DOCS, docLink } from './docs.js';
 const TOOL_ICONS = {
     pentagon: 'M298-200h364l123-369-305-213-305 213 123 369Zm-58 80L80-600l400-280 400 280-160 480H240Zm240-371Z',
     add_location_alt: 'M480-80Q319-217 239.5-334.5T160-552q0-150 96.5-239T480-880h20q10 0 20 2v81q-10-2-19.5-2.5T480-800q-101 0-170.5 69.5T240-552q0 71 59 162.5T480-186q122-112 181-203.5T720-552v-8h80v8q0 100-79.5 217.5T480-80Zm56.5-423.5Q560-527 560-560t-23.5-56.5Q513-640 480-640t-56.5 23.5Q400-593 400-560t23.5 56.5Q447-480 480-480t56.5-23.5ZM480-560Zm240-80h80v-120h120v-80H800v-120h-80v120H600v80h120v120Z',
@@ -35,31 +37,14 @@ const ICON = {
     trash: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
     anchor: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="2"/><path d="M12 7v14M5 13a7 7 0 0 0 14 0M8 10h8"/></svg>',
     area: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l7-3 9 5-3 10-11-1z"/></svg>',
-    streets: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
-    light: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z" fill="currentColor" fill-opacity=".15"/></svg>',
-    satellite: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>',
 };
-// the three backgrounds, each with the credit its source asks for
-const OSM_CREDIT = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
-const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
-const BASEMAPS = {
-    streets: {label: 'Streets', dim: 0.1, credit: OSM_CREDIT},
-    light: {label: 'Light', url: ESRI + 'Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', maxZoom: 16,
-            credit: 'Tiles © Esri — Esri, HERE, Garmin, ' + OSM_CREDIT},
-    satellite: {label: 'Satellite', url: ESRI + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', maxZoom: 19,
-                credit: 'Imagery © Esri — Esri, Maxar, Earthstar Geographics and the GIS User Community'},
-};
-const BASEMAP_KEY = 'places.basemap';
-const AREA_TYPES = new Set(['area', 'section']);
+const AREA_TYPES = new Set(['section', 'guardzone', 'sector', 'water']);
 let toolTips = null;
-import TileLayer from 'ol/layer/Tile.js';
 import VectorLayer from 'ol/layer/Vector.js';
 import Map from 'ol/Map.js';
 import Point from 'ol/geom/Point.js';
 import MultiPoint from 'ol/geom/MultiPoint.js';
 import {fromLonLat, toLonLat} from 'ol/proj.js';
-import OSM from 'ol/source/OSM.js';
-import XYZ from 'ol/source/XYZ.js';
 import VectorSource from 'ol/source/Vector.js';
 import Fill from 'ol/style/Fill.js';
 import CircleStyle from 'ol/style/Circle.js';
@@ -84,8 +69,6 @@ const uuid = () => {
 };
 export function createPlaceEditor(host, options = {}) {
     host.classList.add('pe');
-    const segments = Object.entries(BASEMAPS).map(([key, b]) =>
-        `<button class="pe-segment" type="button" role="radio" aria-checked="false" data-basemap="${key}">${ICON[key]}${b.label}</button>`).join('');
     host.innerHTML = `
       <div class="pe-body place-workspace">
         <aside class="pe-sidebar place-sidebar">
@@ -108,11 +91,11 @@ export function createPlaceEditor(host, options = {}) {
           <div class="pe-empty" data-empty><strong>No place selected</strong><span>Pick a place from the list or on the map, or create a new one.</span></div>
           <fieldset class="pe-form place-fields" disabled hidden>
             <label class="pe-field" data-col="1"><span class="pe-label">Name</span><input class="pe-input" data-field="name" maxlength="120" placeholder="Place name"></label>
-            <label class="pe-field" data-col="2"><span class="pe-label">Type</span><span class="pe-select-wrap"><select class="pe-select" data-field="place_type"><option value="port">Port</option><option value="berth">Berth</option><option value="anchorage">Anchorage</option><option value="section">Section</option><option value="terminal">Terminal</option><option value="mooring">Mooring</option><option value="marina">Marina</option><option value="area">Area</option></select>${ICON.chevron}</span></label>
+            <label class="pe-field" data-col="2"><span class="pe-label">Type</span><span class="pe-select-wrap"><select class="pe-select" data-field="place_type"><option value="port">Port</option><option value="berth">Berth</option><option value="anchorage">Anchorage</option><option value="section">Section</option><option value="terminal">Terminal</option><option value="mooring">Mooring</option><option value="marina">Marina</option><option value="guardzone">Guard zone</option><option value="sector">Sector</option><option value="water">Water</option></select>${ICON.chevron}</span></label>
             <label class="pe-field" data-col="3" data-row="unlocode"><span class="pe-label">UN/LOCODE</span><input class="pe-input pe-input--mono" data-field="unlocode" maxlength="5" placeholder="NLRTM" spellcheck="false" autocomplete="off"></label>
             <label class="pe-field" data-col="1" data-line="2" data-row="part_of"><span class="pe-label">Parent</span><span class="pe-select-wrap"><select class="pe-select" data-field="part_of"><option value="">Unknown</option><option value="none">No parent</option></select>${ICON.chevron}</span></label>
-            <label class="pe-field" data-col="2" data-line="2" data-row="category"><span class="pe-label">Category</span><input class="pe-input" data-field="category" list="place-categories" maxlength="60" placeholder="VTS, restricted place…"><datalist id="place-categories"></datalist></label>
-            <label class="pe-field" data-col="3" data-line="2" data-row="size"><span class="pe-label">Marker from zoom</span><span class="pe-select-wrap"><select class="pe-select" data-field="size"><option value="0">12 · very small</option><option value="1">11 · small</option><option value="2">9 · medium</option><option value="3">7 · large</option></select>${ICON.chevron}</span></label>
+            <label class="pe-field" data-col="2" data-line="2" data-row="category"><span class="pe-label">Category</span><input class="pe-input" data-field="category" list="place-categories" maxlength="60"><datalist id="place-categories"></datalist></label>
+            <label class="pe-field" data-col="3" data-line="2" data-row="rank"><span class="pe-label">Marker from zoom</span><span class="pe-select-wrap"><select class="pe-select" data-field="rank"><option value="0">12 · very small</option><option value="1">11 · small</option><option value="2">9 · medium</option><option value="3">7 · large</option></select>${ICON.chevron}</span></label>
           </fieldset>
           <div class="pe-map place-map-wrap">
             <div class="pe-map__canvas place-map"></div>
@@ -121,8 +104,6 @@ export function createPlaceEditor(host, options = {}) {
             <div class="pe-paste place-paste" hidden><textarea class="pe-input" data-paste rows="7" spellcheck="false" placeholder="Paste GeoJSON: a geometry, a Feature, or a collection holding one"></textarea>
               <div class="pe-paste__actions"><button class="pe-btn" type="button" data-do="paste-close">Close</button><button class="pe-btn pe-btn--primary" type="button" data-do="paste-apply">Apply</button></div></div>
             <div class="pe-map__hint" aria-live="polite" hidden><strong><span data-points>0</span> <span data-points-word>points</span></strong><span class="pe-map__hint-sep" aria-hidden="true"></span><span data-hint></span></div>
-            <div class="pe-toolbar pe-toolbar--layers" role="radiogroup" aria-label="Map style">${segments}</div>
-            <div class="pe-attribution place-attribution"></div>
           </div>
         </section>
       </div>
@@ -140,6 +121,7 @@ export function createPlaceEditor(host, options = {}) {
         toolTips = tooltip.create({selector: '.pe-toolbar .pe-tool--icon', placement: 'below'});
     toolTips.prepare(host);
     const q = s => host.querySelector(s);
+    q('.pe-sidebar').append(docLink(DOCS.places));
     const input = name => q(`[data-field="${name}"]`);
     let placeSettings = null, catalogueVersion = '';
     let records = [], draft = null, original = null, busy = false, dead = false, draw = null, undo = [],
@@ -237,21 +219,13 @@ export function createPlaceEditor(host, options = {}) {
         for (const c of corners(g.coordinates)) seen.add(c[0] + ':' + c[1]);
         return seen.size;
     }
-    // a dot per place, sized by the port's own size class - the 0..3 that decides
+    // a dot per place, sized by the port's own rank - the 0..3 that decides
     // from which zoom the viewer shows its marker - so the big ports read first
-    const markerStyle = f => S.markers[Math.min(3, Math.max(0, f.get('size') | 0))];
+    const markerStyle = f => S.markers[Math.min(3, Math.max(0, f.get('rank') | 0))];
     const map = new Map({
         target: q('.place-map'),
         controls: [],
         layers: [
-            new TileLayer({
-                className: 'place-seamark', // its own canvas: sharing one with the base map left it unrendered
-                source: new XYZ({
-                    url: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
-                    attributions: 'Map data: &copy; <a href="https://www.openseamap.org">OpenSeaMap</a>'
-                }),
-                opacity: 0.5
-            }),
             new VectorLayer({className: 'place-markers', source: markers, style: markerStyle}),
             new VectorLayer({className: 'place-context', source: context, style: () => S.context}),
             new VectorLayer({
@@ -262,35 +236,8 @@ export function createPlaceEditor(host, options = {}) {
         ],
         view: new View({center: fromLonLat([4.4, 51.95]), zoom: 10})
     });
-    // the background: streets, a light grey canvas or satellite imagery, kept per browser
-    const base = new TileLayer({className: 'place-base'});
-    let basemap = 'streets';
-    try { if (BASEMAPS[localStorage.getItem(BASEMAP_KEY)]) basemap = localStorage.getItem(BASEMAP_KEY); } catch { /* private mode */ }
-    // the street map is dimmed a little so the outlines drawn over it stand out
-    base.on('postrender', e => {
-        const dim = BASEMAPS[basemap].dim;
-        if (!dim) return;
-        e.context.save();
-        e.context.setTransform(1, 0, 0, 1, 0, 0);
-        e.context.fillStyle = `rgba(0, 0, 0, ${dim})`;
-        e.context.fillRect(0, 0, e.context.canvas.width, e.context.canvas.height);
-        e.context.restore();
-    });
-    function setBasemap(key, remember = true) {
-        if (!BASEMAPS[key]) return;
-        basemap = key;
-        const b = BASEMAPS[key];
-        base.setSource(b.url ? new XYZ({url: b.url, maxZoom: b.maxZoom, crossOrigin: 'anonymous'}) : new OSM());
-        for (const seg of host.querySelectorAll('.pe-segment')) {
-            const on = seg.dataset.basemap === key;
-            seg.setAttribute('aria-checked', String(on));
-            seg.tabIndex = on ? 0 : -1;
-        }
-        q('.pe-attribution').innerHTML = b.credit + ' · Seamarks © <a href="https://www.openseamap.org" target="_blank" rel="noopener">OpenSeaMap</a>';
-        if (remember) try { localStorage.setItem(BASEMAP_KEY, key); } catch { /* private mode */ }
-    }
-    setBasemap(basemap, false);
-    map.getLayers().insertAt(0, base);
+    // the background the panel's maps share, under the shapes
+    addBasemap(map, q('.place-map-wrap'));
     const modify = new Modify({source: editing, style: () => S.handle});
     map.addInteraction(modify);
     const resize = new ResizeObserver(() => map.updateSize());
@@ -301,15 +248,6 @@ export function createPlaceEditor(host, options = {}) {
         for (const layer of map.getLayers().getArray()) layer.changed();
     });
     themeWatch.observe(document.documentElement, {attributes: true, attributeFilter: ['class', 'data-theme']});
-    host.querySelector('.pe-toolbar--layers').addEventListener('keydown', e => {
-        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-        e.preventDefault();
-        const keys = Object.keys(BASEMAPS), next = keys[(keys.indexOf(basemap) + (e.key === 'ArrowRight' ? 1 : keys.length - 1)) % keys.length];
-        setBasemap(next);
-        q(`.pe-segment[data-basemap="${next}"]`).focus();
-    });
-    for (const seg of host.querySelectorAll('.pe-segment'))
-        seg.addEventListener('click', () => setBasemap(seg.dataset.basemap));
     function status(message, error = false) {
         q('.place-feedback').textContent = message;
         q('.place-feedback').dataset.error = error;
@@ -414,15 +352,18 @@ export function createPlaceEditor(host, options = {}) {
         input('place_type').value = p.place_type || 'port';
         input('unlocode').value = (p.codes?.unlocode || []).join(', ');
         datalists(p.part_of === null ? 'none' : p.part_of || '');
-        input('category').value = p.attributes?.area_subtype || '';
-        input('size').value = String(p.size || 0);
+        input('category').value = p.category || '';
+        input('rank').value = String(p.rank || 0);
         typeFields();
         buttons();
     }
     function typeFields() {
         const type = input('place_type').value;
         q('[data-row="unlocode"]').hidden = type !== 'port';
-        q('[data-row="category"]').hidden = type !== 'area';
+        // a label shown in place of the type name, for the types that have one
+        const hints = {guardzone: 'restricted, wind farm, fairway…', sector: 'VTS, pilotage…', water: 'sea, strait, lake, river…'};
+        q('[data-row="category"]').hidden = !(type in hints);
+        input('category').placeholder = hints[type] || '';
     }
     const typeLabel = t => [...input('place_type').options].find(o => o.value === t)?.textContent || t || 'Place';
     // one row: an icon tile, the name over its type, the code at the end
@@ -475,7 +416,7 @@ export function createPlaceEditor(host, options = {}) {
         if (selected && ![...input('part_of').options].some(o => o.value === selected))
             input('part_of').add(new Option('Not in this catalogue · ' + selected.slice(0, 8), selected)); // a parent held elsewhere
         input('part_of').value = selected;
-        const subtypes = [...new Set(records.map(f => f.properties.attributes?.area_subtype).filter(Boolean))];
+        const subtypes = [...new Set(records.map(f => f.properties.category).filter(Boolean))];
         q('#place-categories').replaceChildren(...subtypes.map(v => new Option(v, v)));
     }
     function renderGeometry() {
@@ -691,8 +632,8 @@ export function createPlaceEditor(host, options = {}) {
         if (index >= 0)
             doomed.addFeature(read({type: 'Feature', properties: {}, geometry: {type: 'Polygon', coordinates: parts()[index]}}));
     });
-    for (const key of ['name', 'place_type', 'unlocode', 'part_of', 'category', 'size'])
-        input(key).addEventListener(['place_type', 'part_of', 'size'].includes(key) ? 'change' : 'input', () => {
+    for (const key of ['name', 'place_type', 'unlocode', 'part_of', 'category', 'rank'])
+        input(key).addEventListener(['place_type', 'part_of', 'rank'].includes(key) ? 'change' : 'input', () => {
             if (!draft)
                 return;
             const before = clone(draft), p = draft.properties, value = input(key).value;
@@ -702,11 +643,10 @@ export function createPlaceEditor(host, options = {}) {
             } else if (key === 'part_of') {
                 if (value) p.part_of = value === 'none' ? null : value;
                 else delete p.part_of;
-            } else if (key === 'category') {
-                p.attributes ||= {};
-                p.attributes.area_subtype = value;
-            } else
-                p[key] = key === 'size' ? Number(value) : value;
+            } else if (key === 'category' && !value)
+                delete p.category;
+            else
+                p[key] = key === 'rank' ? Number(value) : value;
             if (key === 'place_type' && value !== 'port' && p.codes)
                 delete p.codes.unlocode;
             checkpoint(before);
@@ -805,7 +745,7 @@ export function createPlaceEditor(host, options = {}) {
                     b.disabled = true;
                 try {
                     placeSettings = await request('/api/places/enable', {});
-                    ConfigStore?.invalidate();
+                    ConfigStore.invalidate();
                     options.onEnabled?.();
                     finish(true);
                 } catch (e) {
@@ -917,7 +857,7 @@ export function createPlaceEditor(host, options = {}) {
             draft = {
                 type: 'Feature',
                 id: uuid(),
-                properties: {schema_version: 2, revision: 0, name: '', place_type: 'port'},
+                properties: {schema_version: 3, revision: 0, name: '', place_type: 'port'},
                 geometry: null
             };
             list();
@@ -1081,13 +1021,18 @@ export function createPlaceEditor(host, options = {}) {
         try {
             if (file.size > 131072)
                 throw Error('Place file exceeds 128 KiB');
-            const f = JSON.parse(await file.text());
+            let f = JSON.parse(await file.text());
             if (dead)
                 return;
+            if (f.type === 'FeatureCollection' && f.features?.length === 1)
+                f = f.features[0];
             if (f.type !== 'Feature' || !['Point', 'Polygon', 'MultiPolygon'].includes(f.geometry?.type))
                 throw Error('Import one place Feature.');
-            if (![1, 2].includes(f.properties?.schema_version))
-                throw Error('Import a place file of schema 1 or 2.');
+            // any Feature will do: what is recognised in it is carried over
+            const ports = Object.fromEntries(records.filter(r => r.properties.place_type === 'port')
+                .flatMap(r => (r.properties.codes?.unlocode || []).map(c => [c, r.id])));
+            const imported = importPlace(f.properties, ports);
+            f.properties = imported.properties;
             read(f);
             select(null, true);
             editingMode = true;
@@ -1107,20 +1052,16 @@ export function createPlaceEditor(host, options = {}) {
                 if (!full.geometry) throw Error('Place changed or removed elsewhere. Reload the list.');
                 original = {...full, runtime_id: existing.runtime_id};
             }
-            draft.properties = {
-                schema_version: 2,
-                name: 'Imported place',
-                place_type: 'area',
-                attributes: {area_subtype:'imported'},
-                ...draft.properties,
-                revision: original?.properties.revision || 0
-            };
+            // the catalogue keeps a place's revision and number, not the file's
+            draft.properties.revision = original?.properties.revision || 0;
+            if (original?.properties.no) draft.properties.no = original.properties.no;
+            else delete draft.properties.no;
             renderGeometry();
             list();
             fields();
             dirty(true);
             fit();
-            status('Imported for review. Save to apply.');
+            status(['Imported for review. Save to apply.', ...imported.notes].join(' '));
         } catch (e) {
             status(e.message, true);
         }

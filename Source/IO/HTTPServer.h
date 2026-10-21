@@ -134,6 +134,8 @@ namespace IO
 		std::string host;
 		std::string origin;
 		std::string forwarded_host;
+		std::string authorization;
+		std::string peer; // the client's numeric address, as its socket has it
 		bool keep_alive = true;
 		bool accept_gzip = false;
 		bool expect_continue = false;
@@ -265,9 +267,25 @@ namespace IO
 			post({Command::Derived, id, SSEConnection::frame(event, data)});
 		}
 
-		void setFrameAncestors(const std::string &v) { frame_ancestors = v; common_headers.clear(); }
-		void setScriptSrc(const std::string &v) { csp_script_src = v; common_headers.clear(); }
-		void setFrameSrc(const std::string &v) { frame_src = v; common_headers.clear(); }
+		// the policy's parts; set while the server answers, so under a lock of their own
+		void setFrameAncestors(const std::string &v)
+		{
+			std::lock_guard<std::mutex> lock(headers_mtx);
+			frame_ancestors = v;
+			common_headers.clear();
+		}
+		void setScriptSrc(const std::string &v)
+		{
+			std::lock_guard<std::mutex> lock(headers_mtx);
+			csp_script_src = v;
+			common_headers.clear();
+		}
+		void setFrameSrc(const std::string &v)
+		{
+			std::lock_guard<std::mutex> lock(headers_mtx);
+			frame_src = v;
+			common_headers.clear();
+		}
 
 		// back to the defaults documented below, for a reconfigure
 		void resetFrameAncestors()
@@ -283,6 +301,7 @@ namespace IO
 		// self-hosted on a LAN and is commonly iframed by a control app on a
 		// different port. Tighten with the `frame_ancestors` setting if the
 		// instance is exposed beyond a trusted network.
+		std::mutex headers_mtx;
 		std::string frame_ancestors = "*";
 		std::string frame_src = "'self'";
 		// what script-src allows; a page with inline script (or onclick=) must
@@ -341,7 +360,7 @@ namespace IO
 
 		std::vector<std::pair<std::string, HTTPServer *>> mounts;
 		HTTPServer *mounted_on = nullptr;
-		const std::string &commonHeaders();
+		std::string commonHeaders();
 
 		ZIP zip;
 

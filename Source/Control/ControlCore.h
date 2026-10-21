@@ -31,8 +31,6 @@
 #include "PlaceCatalogue.h"
 #include "JSON.h"
 
-class WebViewer;
-
 class DeviceManager;
 
 class ChannelActivity : public StreamIn<AIS::Message> {
@@ -72,11 +70,6 @@ public:
   std::string getDeviceListJSON();
   std::string getSerialListJSON();
 
-#ifdef HASWEBVIEWER
-  // A new places directory or a saved viewer section reaches the viewer through
-  // whoever runs the loop, engine or hub, so settings apply while serving
-  void syncViewer(WebViewer &viewer);
-#endif
   int getViewerPort() const {
     return control_port < 65535 ? control_port + 1 : 0;
   }
@@ -94,6 +87,8 @@ public:
   ChannelActivity &getChannelActivity() { return channel_activity; }
 
   int getControlPort() const { return control_port; }
+  // where the tracking backup goes when "tracking" names no file
+  std::string defaultStatsFile() const;
   const std::string &getConfigFile() const { return config_file; }
   const std::string &getBindAddress() const { return bind_address; }
 
@@ -177,7 +172,7 @@ private:
   std::atomic<bool> viewer_serving{false};
 
   void createDefaultConfig();
-  void addViewerDefaults();
+  void addMainDefaults();
   void readManagedFields(int port_override);
   void applyAuthFields(const JSON::Value &control);
   void refreshAuthFields(const std::string &json);
@@ -185,10 +180,11 @@ private:
   bool writeFileAtomic(const std::string &path, const std::string &content,
                        std::string &error);
   // Read-modify-write of the config file under file_mtx. The callback returns
-  // false to leave the file untouched; any failure is logged as "cannot
-  // <what>".
-  void mutateConfig(const char *what,
-                    const std::function<bool(JSON::Document &)> &fn);
+  // false to leave the file untouched; a failure is logged as "cannot <what>",
+  // said in `error` too when given, and returns false.
+  bool mutateConfig(const char *what,
+                    const std::function<bool(JSON::Document &)> &fn,
+                    std::string *error = nullptr);
   void persistEngineField(bool on);
   void persistControlAuth(const std::string &hash, const std::string &salt);
 };

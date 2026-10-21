@@ -32,7 +32,8 @@
 
 // Receiving stations told to the tracker over the control channel: one record
 // per station id, sequenced on the object feed's counter so the feed lists a
-// station only when it changed. A withdrawn station leaves a tombstone.
+// station only when it changed. A withdrawn station leaves a tombstone. The
+// registry keeps the order stations were first told in, the configuration's.
 class StationRegistry
 {
 public:
@@ -44,7 +45,11 @@ public:
 		int id = 0;
 		std::string name, country; // country as a two-letter code
 		FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
-		uint32_t mmsi = 0;
+		float alt = ALTITUDE_UNDEFINED; // metres, of the antenna
+		uint32_t mmsi = 0; // the vessel the station rides, when it moves with one
+		bool gps = true;   // GPS fixes move it; a station on a vessel follows the vessel instead
+		int inputs = 0;    // how many receivers name it: with none, GPS from every input moves it
+		bool share_loc = false; // its position may leave this machine: servers, the API, the map
 		bool online = false;
 		std::time_t last = 0;
 		float rate = 0;
@@ -73,7 +78,17 @@ public:
 			default: break;
 			}
 		}
-		if (s.id <= 0)
+		put(s, gone, next_seq);
+	}
+
+	// A station from the configuration, kept the same way as one the control feed tells
+	void define(const Station &s, uint64_t &next_seq) { put(s, false, next_seq); }
+	// the same, sequenced on the registry's own counter, for a registry that feeds no object feed
+	void define(const Station &s) { put(s, false, own_seq); }
+
+	void put(Station s, bool gone, uint64_t &next_seq)
+	{
+		if (s.id < 0)
 			return;
 		auto it = stations.find(s.id);
 		if (gone)
@@ -82,6 +97,7 @@ public:
 				return;
 			unmap(it->second);
 			stations.erase(it);
+			order.erase(std::remove(order.begin(), order.end(), s.id), order.end());
 			tombstones.push_back(std::make_pair(s.id, ++next_seq));
 			return;
 		}
@@ -89,14 +105,17 @@ public:
 		{
 			Station &cur = it->second;
 			// what only says the station is alive rides along without a new sequence number
-			if (cur.lat == s.lat && cur.lon == s.lon && cur.name == s.name && cur.country == s.country && cur.mmsi == s.mmsi && cur.online == s.online)
+			if (cur.lat == s.lat && cur.lon == s.lon && cur.alt == s.alt && cur.name == s.name && cur.country == s.country && cur.mmsi == s.mmsi && cur.gps == s.gps && cur.share_loc == s.share_loc && cur.online == s.online)
 			{
 				cur.last = s.last;
 				cur.rate = s.rate;
+				cur.inputs = s.inputs;
 				return;
 			}
 			unmap(cur);
 		}
+		else
+			order.push_back(s.id);
 		s.seq = ++next_seq;
 		if (s.mmsi)
 			by_mmsi[s.mmsi] = s.id;
@@ -106,13 +125,15 @@ public:
 
 	// the rows that changed after `since`, in the object feed's row shape; kind 8 is a station
 	// `heard` says when a station last delivered a message, when the host counts that
-	void writeRows(JSON::Writer &w, uint64_t since, const std::function<std::time_t(int)> &heard = nullptr) const
+	// `shown` leaves out a station the reader does not see
+	void writeRows(JSON::Writer &w, uint64_t since, const std::function<std::time_t(int)> &heard = nullptr,
+				   const std::function<bool(int)> &shown = nullptr) const
 	{
 		char id[24];
 		for (const auto &kv : stations)
 		{
 			const Station &s = kv.second;
-			if (s.seq <= since)
+			if (s.seq <= since || (shown && !shown(s.id)))
 				continue;
 			snprintf(id, sizeof(id), "s%d", s.id);
 			w.beginObject().kv("id", id).kv("kind", 8).kv("seq", (long long)s.seq)
@@ -144,11 +165,21 @@ public:
 			}
 	}
 
+	// by id
 	template <typename F>
 	void forEach(F f) const
 	{
 		for (const auto &kv : stations)
 			f(kv.second);
+	}
+	// in the order they were first told
+	std::vector<Station> ordered() const
+	{
+		std::vector<Station> out;
+		out.reserve(order.size());
+		for (int id : order)
+			out.push_back(stations.at(id));
+		return out;
 	}
 
 	const Station *find(int id) const
@@ -157,10 +188,11 @@ public:
 		return it == stations.end() ? nullptr : &it->second;
 	}
 
+	// the station riding a vessel, -1 for none
 	int idFor(uint32_t mmsi) const
 	{
 		auto it = by_mmsi.find(mmsi);
-		return it == by_mmsi.end() ? 0 : it->second;
+		return it == by_mmsi.end() ? -1 : it->second;
 	}
 
 	// the record behind a station's key; one riding a vessel answers with that vessel's
@@ -190,6 +222,8 @@ private:
 	}
 
 	std::map<int, Station> stations;
+	std::vector<int> order; // the ids, in the order first told
 	std::map<uint32_t, int> by_mmsi;
 	std::vector<std::pair<int, uint64_t>> tombstones;
+	uint64_t own_seq = 0;
 };
