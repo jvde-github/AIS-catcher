@@ -15,7 +15,9 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <vector>
 
 #include "Prometheus.h"
 #include "Logger.h"
@@ -37,97 +39,63 @@ const std::string ShippingClassNames[] = {
 	"Search and Rescue Transponder EPIRB" // CLASS_SARTEPIRB
 };
 
-PrometheusCounter::PrometheusCounter()
-{
-	Reset();
-	Clear();
-}
-
-void PrometheusCounter::Clear()
-{
-
-	mtx.lock();
-	std::memset(_msg, 0, sizeof(_msg));
-	std::memset(_channel, 0, sizeof(_channel));
-
-	_count = 0;
-	_distance = 0;
-	_dropped = 0;
-
-	mtx.unlock();
-}
-
 void PrometheusCounter::Add(const AIS::Message &m, const TAG &tag)
 {
-
 	if (m.type() > 28 || m.type() < 1)
 		return;
 	if (tag.shipclass < 0 || tag.shipclass > 13)
 		return;
 
-	bool has_ppm = tag.ppm < 1000, has_level = tag.level < 1000;
+	const bool has_ppm = tag.ppm < 1000, has_level = tag.level < 1000;
 
-	if (has_ppm || has_level)
+	if (scraped && (has_ppm || has_level))
 	{
-		if (samples.empty())
-			samples.resize(SLOTS);
-
-		uint32_t mmsi = m.mmsi();
-		int station = m.getStation();
-		char ch = m.getChannel() ? m.getChannel() : '?';
-
-		// MAX_USED < SLOTS, so a free slot always ends the probe
-		Sample *s = nullptr;
-		uint32_t h = (mmsi ^ ((uint32_t)station << 20)) * 2654435761u;
-		for (int i = h >> (32 - SLOT_BITS);; i = (i + 1) & (SLOTS - 1))
+		const std::time_t now = std::time(nullptr);
+		const uint64_t key = (uint64_t)m.mmsi() + 1; // 0 marks an empty slot
+		int h = samples.find(key);
+		if (h == samples.NIL)
 		{
-			Sample &e = samples[i];
-
-			if (!e.channel[0])
+			h = samples.create(key);
+			// the vessel heard longest ago gives way; losing one heard within the window is a drop
+			if (samples[h].last && now - samples[h].last < WINDOW)
 			{
-				if (used < MAX_USED)
+				_dropped++;
+				if (now - warned >= WARN_EVERY)
 				{
-					used++;
-					e.mmsi = mmsi;
-					e.station = station;
-					s = &e;
+					Warning() << "Prometheus: more than " << (int)CAPACITY << " vessels heard within five minutes, ais_msg_ppm and ais_msg_level leave out the ones heard longest ago (ais_stat_samples_dropped)";
+					warned = now;
 				}
-				break;
 			}
-			if (e.mmsi == mmsi && e.station == station)
-			{
-				s = &e;
-				break;
-			}
+			samples[h] = Sample();
 		}
+		else
+			samples.touch(h);
 
-		if (!s && !_warned)
-		{
-			Warning() << "Prometheus: more than " << (int)MAX_USED << " ships between two scrapes, ais_msg_ppm and ais_msg_level leave out the rest (ais_stat_samples_dropped); scrape more often";
-			_warned = true;
-		}
-
+		// the scrape walks the table in the order last heard, so `last` must follow every touch
+		Sample &s = samples[h];
+		s.last = now;
+		s.station = m.getStation();
+		const char ch = m.getChannel() ? m.getChannel() : '?';
 		int c = 0;
-		while (s && c < 4 && s->channel[c] && s->channel[c] != ch)
+		while (c < 4 && s.channel[c] && s.channel[c] != ch)
 			c++;
 
-		if (!s || c == 4)
+		if (c == 4)
 			_dropped++;
 		else
 		{
-			s->channel[c] = ch;
-			s->types[c] |= 1u << (m.type() - 1);
-			s->speed = tag.speed < 0 ? 0 : (tag.speed > 0.5 ? 1 : 2);
-			s->shipclass = (uint8_t)tag.shipclass;
+			s.channel[c] = ch;
+			s.speed = tag.speed < 0 ? 0 : (tag.speed > 0.5 ? 1 : 2);
+			s.shipclass = (uint8_t)tag.shipclass;
 			if (has_ppm)
 			{
-				s->ppm[c] = tag.ppm;
-				s->has_ppm |= 1 << c;
+				s.ppm[c] = tag.ppm;
+				s.ppm_type[c] = (uint8_t)m.type();
 			}
 			if (has_level)
 			{
-				s->level[c] = tag.level;
-				s->has_level |= 1 << c;
+				s.level[c] = tag.level;
+				s.level_type[c] = (uint8_t)m.type();
 			}
 		}
 	}
@@ -139,52 +107,67 @@ void PrometheusCounter::Add(const AIS::Message &m, const TAG &tag)
 		_channel[m.getChannel() - 'A']++;
 
 	if (tag.distance > _distance)
-	{
 		_distance = tag.distance;
-	}
 }
 
 void PrometheusCounter::Receive(const JSON::JSON *json, int len, TAG &tag)
 {
 	AIS::Message &data = *((AIS::Message *)json[0].binary);
 
-	mtx.lock();
+	std::lock_guard<std::mutex> lock(mtx);
 	Add(data, tag);
-	mtx.unlock();
-}
-
-void PrometheusCounter::resetSamples()
-{
-	std::fill(samples.begin(), samples.end(), Sample());
-	used = 0;
-}
-
-void PrometheusCounter::Reset()
-{
-	mtx.lock();
-	resetSamples();
-	mtx.unlock();
 }
 
 std::string PrometheusCounter::toPrometheus()
 {
-	mtx.lock();
+	// copied under the lock, written outside it
+	struct Row
+	{
+		uint32_t mmsi;
+		Sample s;
+	};
+	std::vector<Row> rows;
+	unsigned int count, msg[28], channel[4], dropped;
+	float distance;
+	const std::time_t now = std::time(nullptr);
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		if (!scraped)
+		{
+			samples.setup(CAPACITY, BUCKETS);
+			scraped = true;
+		}
+		count = _count;
+		dropped = _dropped;
+		distance = _distance;
+		std::memcpy(msg, _msg, sizeof(msg));
+		std::memcpy(channel, _channel, sizeof(channel));
+		rows.reserve(samples.size());
+		// newest first, so the first vessel outside the window ends the walk
+		samples.forEach([&](int h) {
+			if (now - samples[h].last >= WINDOW)
+				return false;
+			rows.push_back({(uint32_t)(samples.key(h) - 1), samples[h]});
+			return true;
+		});
+	}
+
 	std::string element;
 
 	element += "# HELP ais_stat_count Total number of messages\n";
 	element += "# TYPE ais_stat_count counter\n";
-	element += "ais_stat_count " + std::to_string(_count) + "\n";
+	element += "ais_stat_count " + std::to_string(count) + "\n";
 
 	element += "# HELP ais_stat_distance Longest distance\n";
 	element += "# TYPE ais_stat_distance gauge\n";
-	element += "ais_stat_distance " + std::to_string(_distance) + "\n";
+	element += "ais_stat_distance " + std::to_string(distance) + "\n";
 
 	for (int i = 0; i < 4; i++)
 	{
 		std::string ch(1, i + 'A');
 		element += "# HELP ais_stat_count_channel_" + ch + " Total number of messages on channel " + ch + "\n";
 		element += "# TYPE ais_stat_count_channel_" + ch + " counter\n";
-		element += "ais_stat_count_channel_" + ch + " " + std::to_string(_channel[i]) + "\n";
+		element += "ais_stat_count_channel_" + ch + " " + std::to_string(channel[i]) + "\n";
 	}
 
 	for (int i = 0; i < 28; i++)
@@ -192,36 +175,38 @@ std::string PrometheusCounter::toPrometheus()
 		std::string type = std::to_string(i + 1);
 		element += "# HELP ais_stat_count_type_" + type + " Total number of messages of type " + type + "\n";
 		element += "# TYPE ais_stat_count_type_" + type + " counter\n";
-		element += "ais_stat_count_type_" + type + " " + std::to_string(_msg[i]) + "\n";
+		element += "ais_stat_count_type_" + type + " " + std::to_string(msg[i]) + "\n";
 	}
-
-	element += "# HELP ais_stat_samples_dropped Messages left out of ais_msg_ppm and ais_msg_level: more ships between scrapes than the table holds\n";
-	element += "# TYPE ais_stat_samples_dropped counter\n";
-	element += "ais_stat_samples_dropped " + std::to_string(_dropped) + "\n";
 
 	static const char *speeds[] = {"Unknown", "Moving", "Stationary"};
 
-	auto write = [&](const std::string &name, bool ppm) {
-		element += "# HELP " + name + "\n# TYPE " + name + " gauge\n";
-		for (const Sample &s : samples)
-			for (int c = 0; c < 4 && s.channel[c]; c++)
+	auto write = [&](const char *name, bool ppm) {
+		element += std::string("# HELP ") + name + "\n# TYPE " + name + " gauge\n";
+		char line[256];
+		// in the order heard: the walk collected them newest first
+		for (auto it = rows.rbegin(); it != rows.rend(); ++it)
+		{
+			const Row &r = *it;
+			for (int c = 0; c < 4 && r.s.channel[c]; c++)
 			{
-				if (!(((ppm ? s.has_ppm : s.has_level) >> c) & 1))
+				const float value = ppm ? r.s.ppm[c] : r.s.level[c];
+				if (value == (ppm ? PPM_UNDEFINED : LEVEL_UNDEFINED))
 					continue;
-
-				std::string rest = "\",mmsi=\"" + std::to_string(s.mmsi) + "\",station_id=\"" + std::to_string(s.station) + "\",speed=\"" + speeds[s.speed] + "\",shipclass=\"" + ShippingClassNames[s.shipclass] + "\",channel=\"" + std::string(1, s.channel[c]) + "\"} " + std::to_string(ppm ? s.ppm[c] : s.level[c]) + "\n";
-
-				for (int t = 1; t <= 28; t++)
-					if ((s.types[c] >> (t - 1)) & 1)
-						element += name + "{type=\"" + std::to_string(t) + rest;
+				const int n = snprintf(line, sizeof(line), "%s{type=\"%d\",mmsi=\"%u\",station_id=\"%d\",speed=\"%s\",shipclass=\"%s\",channel=\"%c\"} %f\n",
+									   name, ppm ? r.s.ppm_type[c] : r.s.level_type[c], (unsigned)r.mmsi, r.s.station, speeds[r.s.speed],
+									   ShippingClassNames[r.s.shipclass].c_str(), r.s.channel[c], (double)value);
+				if (n > 0 && n < (int)sizeof(line))
+					element.append(line, n);
 			}
+		}
 	};
 
 	write("ais_msg_ppm", true);
 	write("ais_msg_level", false);
 
-	// drain must share the lock with the read or samples in between are lost
-	resetSamples();
-	mtx.unlock();
+	element += "# HELP ais_stat_samples_dropped Messages left out of ais_msg_ppm and ais_msg_level: more vessels heard within five minutes than the table holds, or a vessel on more than four channels\n";
+	element += "# TYPE ais_stat_samples_dropped counter\n";
+	element += "ais_stat_samples_dropped " + std::to_string(dropped) + "\n";
+
 	return element;
 }

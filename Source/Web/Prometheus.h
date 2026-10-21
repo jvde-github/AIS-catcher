@@ -17,54 +17,57 @@
 
 #pragma once
 #include <cstdint>
-#include <iostream>
-#include <string.h>
+#include <ctime>
 #include <mutex>
-#include <vector>
+#include <string>
 
 #include "AIS-catcher.h"
 #include "JSONAIS.h"
+#include "SlotTable.h"
 
 class PrometheusCounter : public StreamIn<JSON::JSON> {
 	std::mutex mtx;
 
-	unsigned int _count;
-	unsigned int _msg[28];
-	unsigned int _channel[4];
+	unsigned int _count = 0;
+	unsigned int _msg[28] = {};
+	unsigned int _channel[4] = {};
+	float _distance = 0;
+	unsigned int _dropped = 0;
 
-	float _distance;
-	unsigned int _dropped;
-
+	// A vessel as heard from any receiver or station: per channel the latest ppm
+	// and level, each with the type of the message that carried it, and the
+	// station of the latest message for the station_id label
 	struct Sample {
-		uint32_t mmsi;
-		int station;
 		char channel[4];
-		uint32_t types[4];
+		uint8_t ppm_type[4], level_type[4];
 		float ppm[4], level[4];
-		uint8_t has_ppm, has_level;
+		std::time_t last;
+		int station;
 		uint8_t speed, shipclass;
+
+		Sample() : channel(), ppm_type(), level_type(), last(0), station(0), speed(0), shipclass(0)
+		{
+			for (int c = 0; c < 4; c++) {
+				ppm[c] = PPM_UNDEFINED;
+				level[c] = LEVEL_UNDEFINED;
+			}
+		}
 	};
 
-	static const int SLOT_BITS = 10;
-	static const int SLOTS = 1 << SLOT_BITS;
-	static const int MAX_USED = SLOTS * 3 / 4;
+	static const int CAPACITY = 768, BUCKETS = 1024;
+	// seconds a vessel's values are written after it was last heard: as long as
+	// Prometheus waits before it takes a series to be gone
+	static const int WINDOW = 300;
+	static const int WARN_EVERY = 3600;
 
-	std::vector<Sample> samples;
-	int used = 0;
-	bool _warned = false;
+	SlotTable<Sample, uint64_t> samples;
+	// vessels are kept only once something reads the metrics
+	bool scraped = false;
+	std::time_t warned = 0;
 
-	void Add(const AIS::Message& m, const TAG& tag);
-	void Clear();
-	void resetSamples(); // caller must hold mtx
+	void Add(const AIS::Message &m, const TAG &tag);
 
 public:
-	PrometheusCounter();
-	virtual ~PrometheusCounter() {}
-
-	void Reset();
-
-	int getCount() { return _count; }
-
-	void Receive(const JSON::JSON* json, int len, TAG& tag);
+	void Receive(const JSON::JSON *json, int len, TAG &tag);
 	std::string toPrometheus();
 };
