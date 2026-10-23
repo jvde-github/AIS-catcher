@@ -1800,9 +1800,7 @@ export const CHANNEL_REGISTRY = [
     { key: 'tcp', label: 'TCP Client', schema: tcpSchema, configKey: 'tcp', flowLabel: 'TCP', statType: 'TCP Client', essentials: ['host', 'port'] },
     { key: 'tcp_listener', label: 'TCP Server', schema: tcpServerSchema, configKey: 'tcp_listener', flowLabel: 'TCP Server', statType: 'TCP Listener', essentials: ['port'] },
     // one channel, three backends: each reports stats under its own type name
-    { key: 'db', label: 'Database', schema: dbSchema, configKey: 'db', flowLabel: 'Database', statTypes: ['PostgreSQL', 'SQLite', 'CSV'], essentials: ['type', 'conn_str'] },
-    // the web viewer: a map on a port of its own, fed by the messages as an output is, with its own ship database
-    { key: 'server', label: 'Web viewer', schema: webviewerSchema, configKey: 'server', flowLabel: 'Web viewer', essentials: ['port'] }
+    { key: 'db', label: 'Database', schema: dbSchema, configKey: 'db', flowLabel: 'Database', statTypes: ['PostgreSQL', 'SQLite', 'CSV'], essentials: ['type', 'conn_str'] }
 ];
 
 // The outputs as the Outputs pages and Flow list them: the community map, the kinds kept in lists

@@ -15,6 +15,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <algorithm>
 #include "Message.h"
 #include "Parse.h"
 #include "Helper.h"
@@ -1028,6 +1029,15 @@ namespace AIS
 			}
 			return true;
 		}
+		case AIS::KEY_SETTING_STATIONS:
+		{
+			std::stringstream ss(arg);
+			std::string id_str;
+			stations_allowed.clear();
+			while (getline(ss, id_str, ','))
+				stations_allowed.push_back(Util::Parse::Integer(id_str, 0, 2147483647));
+			return true;
+		}
 		case AIS::KEY_SETTING_REMOVE_EMPTY:
 			remove_empty = Util::Parse::Switch(arg);
 			return true;
@@ -1087,6 +1097,14 @@ namespace AIS
 			if (!ret.empty())
 				ret += ", ";
 			ret += "allowed {" + getAllowed() + "}";
+		}
+
+		if (!stations_allowed.empty())
+		{
+			std::string ids;
+			for (int id : stations_allowed)
+				ids += (ids.empty() ? "" : ",") + std::to_string(id);
+			ret += ", stations {" + ids + "}";
 		}
 
 		if (own_interval > 0)
@@ -1236,6 +1254,14 @@ namespace AIS
 		if (!MMSI_ok)
 		{
 			return Result::NotIncluded;
+		}
+
+		// the station the message names, as a feed from a hub carries them, else the input's
+		if (!stations_allowed.empty())
+		{
+			const int at = msg.getStation() >= 0 ? msg.getStation() : tag.station_id;
+			if (std::find(stations_allowed.begin(), stations_allowed.end(), at) == stations_allowed.end())
+				return Result::NotIncluded;
 		}
 
 		if (!MMSI_blocked.empty())

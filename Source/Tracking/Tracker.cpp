@@ -95,6 +95,11 @@ void Tracker::configure(const TrackingConfig &next)
 			db.configure(live);
 	}
 
+	{
+		std::lock_guard<std::mutex> lock(stations_mtx);
+		fixed_at.lat = next.fixed ? next.lat : LAT_UNDEFINED;
+		fixed_at.lon = next.fixed ? next.lon : LON_UNDEFINED;
+	}
 	std::lock_guard<std::mutex> lock(figures_mtx);
 	cutoff = next.cutoff > 0 ? next.cutoff : LONG_RANGE_CUTOFF_DEFAULT;
 	figures.setCutoff(cutoff);
@@ -112,24 +117,30 @@ void Tracker::setRestartRequired(const std::string &what, bool pending)
 		restart_required.erase(it);
 }
 
+// what the ship table took, behind its filter: the figures, then the taps
 void Tracker::Router::Receive(const JSON::JSON *data, int len, TAG &tag)
 {
-	std::lock_guard<std::mutex> lock(tracker->figures_mtx);
-	tracker->figures.Receive(data, len, tag);
-	// a message of no station counts in the figures of everything only
-	const int id = tag.station_id;
-	if (id < 0)
-		return;
-	tracker->last_heard[id] = std::time(nullptr);
-	auto it = tracker->station_figures.find(id);
-	if (it == tracker->station_figures.end())
 	{
-		if (tracker->station_figures.size() >= MAX_STATIONS)
-			return;
-		it = tracker->station_figures.emplace(id, std::unique_ptr<Figures>(new Figures())).first;
-		it->second->setCutoff(tracker->cutoff);
+		std::lock_guard<std::mutex> lock(tracker->figures_mtx);
+		tracker->figures.Receive(data, len, tag);
+		// a message of no station counts in the figures of everything only
+		const int id = tag.station_id;
+		if (id >= 0)
+		{
+			tracker->last_heard[id] = std::time(nullptr);
+			auto it = tracker->station_figures.find(id);
+			if (it == tracker->station_figures.end() && tracker->station_figures.size() < MAX_STATIONS)
+			{
+				it = tracker->station_figures.emplace(id, std::unique_ptr<Figures>(new Figures())).first;
+				it->second->setCutoff(tracker->cutoff);
+			}
+			if (it != tracker->station_figures.end())
+				it->second->Receive(data, len, tag);
+		}
 	}
-	it->second->Receive(data, len, tag);
+	std::lock_guard<std::mutex> lock(tracker->taps_mtx);
+	for (auto *tap : tracker->taps)
+		tap->Receive(data, len, tag);
 }
 
 void Tracker::usePlaces(const std::string &directory)
@@ -192,13 +203,8 @@ void Tracker::Intake::Receive(const JSON::JSON *data, int len, TAG &tag)
 {
 	// a copy: the receiver's tag goes on to other readers as it came
 	TAG t = tag;
-	tracker->place(t);
+	tracker->place((const AIS::Message *)data[0].binary, t);
 	tracker->db.Receive(data, len, t);
-	{
-		std::lock_guard<std::mutex> lock(tracker->taps_mtx);
-		for (auto *tap : tracker->taps)
-			tap->Receive(data, len, t);
-	}
 
 	// a position report moves a station riding its vessel
 	const AIS::Message *msg = (const AIS::Message *)data[0].binary;
@@ -220,13 +226,22 @@ void Tracker::GpsIntake::Receive(const AIS::GPS *data, int len, TAG &tag)
 void Tracker::AdsbIntake::Receive(const Plane::ADSB *data, int len, TAG &tag)
 {
 	TAG t = tag;
-	tracker->place(t);
+	tracker->place(nullptr, t);
 	tracker->plane_db.Receive(data, len, t);
 }
 
-void Tracker::place(TAG &tag)
+void Tracker::place(const AIS::Message *msg, TAG &tag)
 {
 	std::lock_guard<std::mutex> lock(stations_mtx);
+	// a message from a station the configuration lists, as a feed from a hub carries them, counts there
+	if (msg && msg->getStation() >= 0 && msg->getStation() != tag.station_id && stations.count(msg->getStation()))
+		tag.station_id = msg->getStation();
+	if (isValidCoord(fixed_at.lat, fixed_at.lon))
+	{
+		tag.station_lat = fixed_at.lat;
+		tag.station_lon = fixed_at.lon;
+		return;
+	}
 	auto it = stations.find(tag.station_id);
 	if (it != stations.end() && isValidCoord(it->second.now.lat, it->second.now.lon))
 	{

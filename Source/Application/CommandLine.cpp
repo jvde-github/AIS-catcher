@@ -28,9 +28,6 @@
 #include "Engine.h"
 #include "Config.h"
 #include "Site.h"
-#ifdef HASWEBVIEWER
-#include "WebViewer.h"
-#endif
 #include "JSON.h"
 #include "JSON/Parser.h"
 #include "N2KStream.h"
@@ -71,8 +68,7 @@ static void Usage()
 	Info() << "\t[-m xx - run specific decoding model (default: 2), see README for more details]";
 	Info() << "\t[-M xxx - set additional meta data to generate: T = NMEA timestamp, D = decoder related (signal power, ppm) (default: none)]";
 	Info() << "\t[-n show NMEA messages on screen without detail (-o 1)]";
-	Info() << "\t[-N [optional: port][optional settings] - start http server at port, see README for details]";
-	Info() << "\t[-J port [key value]... - a server on the site's tracker: serve api,mcp,system,ui,geojson,metrics; public on; bind address; filter terms; keys as an entry of \"services\" in the configuration file]";
+	Info() << "\t[-N [optional: port][optional settings] - a web server at port: the map, and api, mcp, system, geojson or metrics switched on; with a message filter it keeps ships of its own, see README for details]";
 	Info() << "\t[-o set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON, 4 JSON Sparse, 5 JSON Full (default: 2)]";
 	Info() << "\t[-O MMSI - sets the own mmsi of the receiver]";
 	Info() << "\t[-p xxx - set frequency correction for device in PPM (default: zero)]";
@@ -242,6 +238,7 @@ static bool isOption(const std::string &s)
 	return s.length() >= 2 && s[0] == '-' && std::isalpha((unsigned char)s[1]);
 }
 
+#ifdef HASWEBVIEWER
 static bool isNumber(const std::string &s)
 {
 	if (s.empty())
@@ -253,6 +250,7 @@ static bool isNumber(const std::string &s)
 
 	return true;
 }
+#endif
 
 // Assign the positional arguments to keys, then hand any remaining key/value
 // pairs to parseSettings. The caller has already asserted the argument count.
@@ -360,44 +358,24 @@ static void parseCLI(int argc, char *argv[], Engine &engine, Config &c, int &cb)
 		case 'N':
 #ifdef HASWEBVIEWER
 			Assert(count > 0, param, "requires at least one parameter");
-			if (engine.viewers.empty())
-				engine.viewers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
-
 			{
-				int port = isNumber(arg1) ? 1 : 0;
+				// -N port starts a server; -N key value adds to the last one
+				const int port = isNumber(arg1) ? 1 : 0;
 				Assert((count - port) % 2 == 0, param, "usage: -N [port] [key value]..., with a value that has spaces in quotes, e.g. -N 8100 station \"my station\".");
-
-				if (port)
-				{
-					// -N port starts a new viewer once the one before has its port
-					if (engine.viewers.back()->isPortSet())
-						engine.viewers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
-					engine.viewers.back()->SetKey(AIS::KEY_SETTING_PORT, arg1);
-				}
-				parseSettings(*engine.viewers.back(), argv, ptr + port, argc);
-			}
-#else
-			throw std::runtime_error("Option -N needs a build with the web viewer (cmake -DWEBVIEWER=ON).");
-#endif
-			break;
-		case 'J':
-#ifdef HASAPI
-			Assert(count >= 1 && count % 2 == 1, param, "requires a port, then key value pairs, e.g. -J 8100 serve api,mcp");
-			{
 				std::vector<std::pair<std::string, std::string>> settings;
-				for (int k = 2; k + 1 <= count; k += 2)
+				for (int k = 1 + port; k + 1 <= count; k += 2)
 					settings.emplace_back(argv[ptr + k], argv[ptr + k + 1]);
 				try
 				{
-					c.serverFromArgs(arg1, settings);
+					c.viewerFromArgs(port ? arg1 : std::string(), settings);
 				}
 				catch (const std::exception &e)
 				{
-					throw std::runtime_error("-J " + arg1 + ": " + e.what());
+					throw std::runtime_error("-N " + arg1 + ": " + e.what());
 				}
 			}
 #else
-			throw std::runtime_error("Option -J needs a build with the API (cmake -DAPI=ON).");
+			throw std::runtime_error("Option -N needs a build with the web viewer (cmake -DWEBVIEWER=ON).");
 #endif
 			break;
 		case 'S':

@@ -35,7 +35,7 @@ namespace Services
 	{
 	public:
 		ApiV1(Tracker &tracker, std::function<StationRegistry()> stations, const ServerSpec &spec = ServerSpec())
-			: tracker(tracker), stations(std::move(stations)), filter(spec.filter), outlines(spec.place_geometry), services(spec.serve) {}
+			: tracker(tracker), stations(std::move(stations)), filter(spec.filter), outlines(spec.place_geometry), services(spec.served()) {}
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;

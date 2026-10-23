@@ -27,7 +27,7 @@ import {
     ol, map, create as createMap, renderer as mapRenderer, markerLayer, shapeLayer, extraLayer, trackLayer,
     labelLayer, basemaps, overlapmaps, addOverlayLayer, baseMapsChanged,
 } from './map.js';
-import { init as initData, receiver, refresh } from './data.js';
+import { init as initData, focus, refresh } from './data.js';
 import {
     settingsPanel, effects as settingsEffects, onSave as onSettingsSave, onOpen as onSettingsOpen,
     onDefaults as onSettingsDefaults, saveSettings, saveMapView, updateMapURL, loadSettings, loadSettingsFromURL,
@@ -53,7 +53,7 @@ import { init as initContextMenu, MENU_CHECKS, showContextMenu } from './feature
 import { redrawMap } from './fleet.js';
 import { init as initHover, stopHover, handlePointerMove, handleClick, getFeature } from './features/hover/hover.js';
 import * as replaybar from './features/replay/replaybar.js';
-import { init as initReceiver, openStation, syncFocus } from './features/receiver/receiver.js';
+import { init as initStation, openStation, syncFocus } from './features/station/station.js';
 import { updateDarkMode, setDarkMode } from './features/theme/theme.js';
 import { init as initFollow, openFocus } from './features/follow/follow.js';
 import { installPluginApi, loadPlugins } from './plugin-api.js';
@@ -120,7 +120,7 @@ initPanels({ ui });
 mapRenderer(redrawMap);
 initHover({ ui });
 initFollow({ ui });
-initReceiver({ closeSearch: () => searchPanel.close(), onFocus: () => updateFilterUI() });
+initStation({ closeSearch: () => searchPanel.close(), onFocus: () => updateFilterUI() });
 
 initContextMenu({ menu: ui.menu });
 
@@ -250,7 +250,7 @@ searchPanel = createSearch({
         { id: 'stations', label: 'Stations', placeholder: 'Station name or identifier…' },
         { id: 'ports', label: 'Places', placeholder: 'Place name or UN/LOCODE…' },
     ],
-    search: createLocalSearch({receiver: () => receiver, ships: () => shipsDB, shipName: getShipName, callSign: getCallSign}),
+    search: createLocalSearch({focus: () => focus, ships: () => shipsDB, shipName: getShipName, callSign: getCallSign}),
     onOpen: () => {
         if (settings.tab !== 'map') selectMapTab();
         ui.dismiss();

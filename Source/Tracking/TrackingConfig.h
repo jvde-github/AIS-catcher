@@ -27,6 +27,9 @@
 struct TrackingConfig {
   // keep every member resettable by assigning a default-constructed copy
   float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
+  // every message is measured from lat and lon, whichever station heard it:
+  // a web viewer with ships of its own measures from where its section says
+  bool fixed = false;
   bool latlon_share = false;
   bool server_mode = false;
   bool msg_save = false;
@@ -43,4 +46,11 @@ struct TrackingConfig {
   // ship table size; 0 keeps the default (4096, or 32 times that in server
   // mode)
   int max_ships = 0;
+
+  bool operator==(const TrackingConfig &o) const {
+    return lat == o.lat && lon == o.lon && fixed == o.fixed && latlon_share == o.latlon_share && server_mode == o.server_mode &&
+           msg_save == o.msg_save && use_gps == o.use_gps && own_mmsi == o.own_mmsi && time_history == o.time_history &&
+           track_time == o.track_time && expire_fields == o.expire_fields && cutoff == o.cutoff &&
+           track_memory == o.track_memory && max_ships == o.max_ships;
+  }
 };

@@ -61,7 +61,7 @@ namespace Services
 		EngineWriter engine;
 		std::function<int()> clients; // the server's own connections
 		// the station the page draws: the one in focus, or the only one, when it shares where it is
-		bool drawnStation(int focus, StationRegistry::Station &at);
+		bool drawnStation(const std::vector<int> &focus, StationRegistry::Station &at);
 		void openTiles(const std::vector<std::string> &lists, bool overlay, bool mbtiles);
 		bool tile(const std::string &path, Response &response);
 
@@ -71,14 +71,14 @@ namespace Services
 		std::string title();
 		std::string configVersion();
 		bool viewerData(const Request &request, Response &response);
-		std::string statJSON(int focus, const DB::Keep &keep);
-		// The station the page looks through, by the `receiver` it sends: a
-		// station's number, -1 for all. Its ships are those it heard within the
-		// time a ship stays on the map.
-		int focusOf(const Request &request);
-		// whose figures the page reads: the station in focus, else the server's
+		std::string statJSON(const std::vector<int> &focus, const DB::Keep &keep);
+		// The stations the page looks through, by the `stations` it sends: their
+		// numbers, separated by commas; none, or -1, for all. Its ships are those
+		// they heard within the time a ship stays on the map.
+		std::vector<int> focusOf(const Request &request);
+		// whose figures the page reads: the stations in focus, else the server's
 		// stations; empty for everything
-		std::vector<int> figuresOf(int focus) const;
-		DB::Keep keepFor(int focus);
+		std::vector<int> figuresOf(const std::vector<int> &focus) const;
+		DB::Keep keepFor(const std::vector<int> &focus);
 	};
 }

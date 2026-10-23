@@ -46,14 +46,12 @@ namespace Services
 
 		bool open();
 		const ServerSpec &spec() const { return spec_; }
+		Tracker &reads() { return tracker; }
 		// New settings on the same port and address: the services and streams
 		// are built again, the listener, its connections and a mount stay
 		void reconfigure(const ServerSpec &spec);
 
 		void Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r, bool accept_gzip) override;
-
-		// the services this build offers
-		static bool known(const std::string &service);
 
 		// A program built on AIS-catcher answers requests of its own here,
 		// before the services: true when it did. Set before the server serves.

@@ -10,7 +10,7 @@ import {
 import Annotation from 'chartjs-plugin-annotation';
 import { getDistanceConversion, getDistanceUnit } from '../../core/units.js';
 import { config, stationLabel } from '../../core/config.js';
-import { receiver } from '../../data.js';
+import { focus } from '../../data.js';
 import { register } from '../../actions.js';
 
 Chart.register(
@@ -414,8 +414,8 @@ let sourceA = null;
 let sourceB = null;
 let updateToken = 0;
 
-function receivers() {
-    return config.receivers || [];
+function stationsListed() {
+    return config.stations || [];
 }
 
 export function setMode(next) {
@@ -423,17 +423,17 @@ export function setMode(next) {
     if (next === mode) return;
     mode = next;
     if (mode === "compare") {
-        if (sourceA === null) sourceA = receiver;
+        if (sourceA === null) sourceA = focus;
         if (sourceB === null) {
-            const other = receivers().find((r) => r.idx !== sourceA);
-            sourceB = other ? other.idx : sourceA;
+            const other = stationsListed().find((s) => s.id !== sourceA);
+            sourceB = other ? other.id : sourceA;
         }
     }
     update();
 }
 
 function applyMode() {
-    const multi = receivers().length > 1;
+    const multi = stationsListed().length > 1;
     if (!multi) mode = "overview";
 
     const tabs = document.getElementById("plots_modes");
@@ -457,7 +457,7 @@ function buildSourceSelectors() {
     const selB = document.getElementById("chart_source_b");
     if (!selA || !selB) return;
 
-    const list = receivers();
+    const list = stationsListed();
     if (selA.options.length !== list.length) {
         selA.innerHTML = "";
         selB.innerHTML = "";
@@ -474,7 +474,7 @@ function buildSourceSelectors() {
 
 async function fetchHistory(idx) {
     try {
-        const response = await fetch("api/history_full.json?receiver=" + idx);
+        const response = await fetch("api/history_full.json?stations=" + idx);
         if (!response.ok) return null;
         return await response.json();
     } catch (error) {
@@ -772,7 +772,7 @@ export async function update() {
         return;
     }
 
-    const b = await fetchHistory(receiver);
+    const b = await fetchHistory(focus);
     if (!b || token !== updateToken) return;
 
     updateChartMulti(b, "second", charts.chart_seconds);

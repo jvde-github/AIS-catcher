@@ -943,7 +943,6 @@ import { createLogConsole } from './log-console.js';
         ['http', 'HTTP', 'Post batches to a web address'],
         ['mqtt', 'MQTT', 'Publish to a broker'],
         ['db', 'Database', 'SQLite, PostgreSQL or CSV files'],
-        ['server', 'Web viewer', 'A map on a port of its own, with its own ships'],
         ['screen', 'Screen', 'Print the messages in the log']
     ];
     function renderOutputAdd() {

@@ -9,7 +9,7 @@ import { cardMmsi as card_mmsi, cardType as card_type, markerTracks as marker_tr
 import { getICAOFromHexIdent } from '@aiscatcher/core/text.js';
 import { copyToClipboard } from '@aiscatcher/ui/components.js';
 import { isAttributionPinned } from '../../map.js';
-import { receiver, trackCutoff } from '../../data.js';
+import { focus, trackCutoff } from '../../data.js';
 import { showDialog, showDialogPlain, showNotification, objectToTableHtml } from '../../dialog.js';
 import { trackIsShown, toggleTrack, trackCutoffLabel } from '../../tracks.js';
 import { vesselPosition, vesselLabel, isFollowing, toggleFollow, mapResetViewZoom } from '../follow/follow.js';
@@ -104,7 +104,7 @@ async function showJSONTableDialog(url, m, copyContext) {
 
 export async function showNMEA(m) {
     if (config.features.save_messages) {
-        await showJSONTableDialog("api/message", m + "&receiver=" + receiver, true);
+        await showJSONTableDialog("api/message", m + "&stations=" + focus, true);
     } else if (config.features.managed) {
         showDialog("Error", 'Enable the "Msgs" setting in the viewer configuration of the control panel.');
     } else {
@@ -113,7 +113,7 @@ export async function showNMEA(m) {
 }
 
 export async function showVesselDetail(m) {
-    await showJSONTableDialog("api/vessel", m + "&receiver=" + receiver, false);
+    await showJSONTableDialog("api/vessel", m + "&stations=" + focus, false);
 }
 
 export async function copyText(m) {

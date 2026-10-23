@@ -21,7 +21,7 @@ export function initialServerConfig() {
         realtime: false, log: false, decoder: false,
         managed: false, about_md: false,
     },
-    receivers: [],
+    stations: [],
     plugins: { loaded: [], errors: [] }, // loaded: [{ name, version }, ...]
 };
 }
@@ -53,7 +53,7 @@ export function createViewerConfig({current, applyMaps, applyRuntime, pluginsCha
         },
         apply:async (next, previous) => {
             const changes = {
-                receiversChanged:changed(previous.receivers,next.receivers),
+                stationsChanged:changed(previous.stations,next.stations),
                 restartChanged:changed(previous.restart_required,next.restart_required),
                 aboutChanged:previous.about_version !== next.about_version,
             };

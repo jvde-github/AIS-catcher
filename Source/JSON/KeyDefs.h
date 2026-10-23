@@ -285,7 +285,10 @@ X(KEY_SETTING_MMSI, "", "", "", "", "mmsi", "", "", "The vessel a station rides:
 X(KEY_SETTING_TRACKING, "", "", "", "", "tracking", "", "",
   "How the site keeps ships: backup file and interval, history, track time, table size.", nullptr)
 X(KEY_SETTING_SERVICES, "", "", "", "", "services", "", "", "The site's servers: a port each and what it serves.", nullptr)
-X(KEY_SETTING_SERVE, "", "", "", "", "serve", "", "", "What a server serves, such as api.", nullptr)
+X(KEY_SETTING_UI, "", "", "", "", "ui", "", "", "A server serves the map; on unless set off.", nullptr)
+X(KEY_SETTING_API, "", "", "", "", "api", "", "", "A server serves /api/v1.", nullptr)
+X(KEY_SETTING_MCP, "", "", "", "", "mcp", "", "", "A server serves the MCP endpoint.", nullptr)
+X(KEY_SETTING_METRICS, "", "", "", "", "metrics", "", "", "A server serves /metrics for Prometheus; prome says the same.", nullptr)
 X(KEY_SETTING_MAIN, "", "", "", "", "main", "", "", "Managed mode's server beside the control panel, on its port: one entry of services, the map always on.", nullptr)
 X(KEY_SETTING_BIND, "", "", "", "", "bind", "", "", "Address a server listens on; 127.0.0.1 unless set.", nullptr)
 X(KEY_SETTING_KEYS, "", "", "", "", "keys", "", "", "The keys a server accepts: a name, the SHA-256 of the key and its scopes.", nullptr)

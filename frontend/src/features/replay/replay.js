@@ -18,7 +18,7 @@ import { getDeltaTimeVal, getShipTypeShort, sanitizeString, getCountryName } fro
 import { flagHTML, decodeHTMLEntities } from '@aiscatcher/ui/components.js';
 import { spriteFor, iconScale, fadeCurve } from '@aiscatcher/map/markers.js';
 import { map, markers } from '../../map.js';
-import { receiver } from '../../data.js';
+import { focus } from '../../data.js';
 import { register } from '../../actions.js';
 import * as filter from '../../core/filter.js';
 import { setCounts } from '../../core/store.js';
@@ -147,7 +147,7 @@ export function getInstant() { return instant; }
 
 function api(path) {
     const sep = path.includes('?') ? '&' : '?';
-    return fetch(`${path}${sep}receiver=${receiver}`).then((r) => {
+    return fetch(`${path}${sep}stations=${focus}`).then((r) => {
         if (!r.ok) throw new Error(`${path} -> ${r.status}`);
         return r.json();
     });

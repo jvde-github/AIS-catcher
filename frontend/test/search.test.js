@@ -74,7 +74,7 @@ test('local search covers off-map vessels, identifiers, and configured places wi
         ]})};
     };
     try {
-        const search = createLocalSearch({receiver: () => receiver, ships: () => ({
+        const search = createLocalSearch({focus: () => receiver, ships: () => ({
             a: {show: false, raw: {mmsi: 123456789, shipname: 'DEMO VESSEL', callsign: 'ABC123', imo: 9876543, lat: -30, lon: -70}},
             b: {raw: {mmsi: 987654321, shipname: 'A &amp; B', callsign: 'A&amp;B'}},
         }), shipName: s => s.shipname, callSign: s => s.callsign});
@@ -90,7 +90,7 @@ test('local search covers off-map vessels, identifiers, and configured places wi
         assert.equal((await search('GREEU', 'ports'))[0].name, 'Éleusina');
         assert.equal((await search('anchorage', 'ports'))[0].type, 'place');
         assert.equal((await search('north', 'stations'))[0].id, '14');
-        assert.deepEqual(requests, ['api/mapobjects.json?since=0&receiver=3']);
+        assert.deepEqual(requests, ['api/mapobjects.json?since=0&stations=3']);
         receiver = 5;
         globalThis.fetch = async () => { receiver = 4; return {ok: true, json: async () => ({objects: []})}; };
         assert.deepEqual(await search('demo', 'all'), []);

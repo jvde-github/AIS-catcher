@@ -23,16 +23,16 @@ export function init(d) {
 // ─── the receiver ────────────────────────────────────────────────────────────
 
 // the station the page looks through; -1 is all of them
-export let receiver = -1;
+export let focus = -1;
 
-export function setReceiver(idx) {
-    receiver = idx;
+export function setFocus(id) {
+    focus = id;
 }
 
-// another receiver: everything fetched so far was the old one's
-export function switchReceiver(idx) {
-    const n = parseInt(idx, 10);
-    receiver = Number.isInteger(n) ? n : -1;
+// another station: everything fetched so far was the old one's
+export function switchFocus(id) {
+    const n = parseInt(id, 10);
+    focus = Number.isInteger(n) ? n : -1;
     setShipsSince(0);
     tableSince = 0;
     lastPathFetch = 0;
@@ -75,7 +75,7 @@ let tableSince = 0;
 
 export async function fetchTableRows() {
     try {
-        const response = await fetch("api/ships_table.json?receiver=" + receiver + (tableSince > 0 ? "&since=" + tableSince : ""));
+        const response = await fetch("api/ships_table.json?stations=" + focus + (tableSince > 0 ? "&since=" + tableSince : ""));
         if (!response.ok) return;
         const data = await response.json();
         (data.rows || []).forEach((v) => {
@@ -92,7 +92,7 @@ async function fetchShipsBody() {
     let ships = {};
 
     try {
-        const response = await fetch("api/ships_array.json?receiver=" + receiver + (shipsSince > 0 ? "&since=" + shipsSince : ""));
+        const response = await fetch("api/ships_array.json?stations=" + focus + (shipsSince > 0 ? "&since=" + shipsSince : ""));
         if (!response.ok) {
             console.log("failed loading ships: HTTP " + response.status);
             return false;
@@ -366,7 +366,7 @@ export async function fetchTracks() {
                 sinceParam = pathsFrom ? "&since=" + pathsFrom : "";
                 lastFullPathFetch = Date.now();
             }
-            a = await fetch("api/allpath.json?receiver=" + receiver + sinceParam);
+            a = await fetch("api/allpath.json?stations=" + focus + sinceParam);
         } else {
             // a vessel gone from the store takes its track with it
             for (const mmsi of markerTracks) {
@@ -379,7 +379,7 @@ export async function fetchTracks() {
             if (wanted.length === 0) return true;
             const mmsi_str = wanted.join(",");
             setPathsFrom(0);
-            a = await fetch("api/path.json?" + mmsi_str + "&receiver=" + receiver);
+            a = await fetch("api/path.json?" + mmsi_str + "&stations=" + focus);
         }
 
         const newPaths = await a.json();

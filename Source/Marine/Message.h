@@ -365,6 +365,7 @@ namespace AIS
 		std::vector<int> ID_allowed;
 		std::vector<int> MMSI_allowed;
 		std::vector<int> MMSI_blocked;
+		std::vector<int> stations_allowed; // the receiving stations, as the tag says which heard it
 		std::string allowed_channels;
 
 		long int last_VDO = 0;

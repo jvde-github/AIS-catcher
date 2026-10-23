@@ -111,12 +111,22 @@ public:
 	void configure(const SiteConfig &cfg);
 #ifdef HASAPI
 	Tracker *tracker() { return tracker_.get(); }
+	// a tracker to keep: the site's or a server's own
+	bool anyTracker() const { return tracker_ || !own.empty(); }
+	// the trackers of servers' own, for the engine to feed through their zones and groups
+	struct OwnTracker
+	{
+		Tracker *tracker;
+		TrackerSpec spec;
+	};
+	std::vector<OwnTracker> ownTrackers();
 	// the server on a port, to mount it elsewhere; null when none listens there
 	Services::Server *server(int port);
 	bool serverAddress(int port, std::string &host);
 	std::vector<int> serverPorts();
 #else
 	Tracker *tracker() { return nullptr; }
+	bool anyTracker() const { return false; }
 #endif
 	// a shared catalogue was edited: its new edition reaches the ships
 	void refreshPlaces();
@@ -153,6 +163,25 @@ private:
 #ifdef HASAPI
 	std::unique_ptr<Tracker> tracker_;
 	std::vector<std::unique_ptr<Services::Server>> servers;
+	// A server's own tracker, behind its filter, with a backup of its own. Made
+	// with its server; changed settings wait for the next engine, as the running
+	// one feeds it, and one the configuration dropped stays until that engine
+	// detaches.
+	struct Own
+	{
+		int port = 0;
+		std::string bind;
+		TrackerSpec spec;
+		std::unique_ptr<Tracker> tracker;
+		std::string backup_path;
+		std::time_t last_backup = 0;
+		bool retired = false;
+	};
+	std::vector<std::unique_ptr<Own>> own;
+	Own *ownFor(const ServerSpec &spec);
+	std::unique_ptr<Own> makeOwn(const ServerSpec &spec);
+	void restoreInto(Tracker &t, const std::string &file, std::string &path);
+	bool engineAttached();
 #endif
 #ifdef HASDELIVERY
 	std::unique_ptr<Webhooks> webhooks;

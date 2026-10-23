@@ -63,6 +63,12 @@ option(STATIC "Fully static build: require and link static (.a) libraries for ev
 option(ARMV6 "Compile for Raspberry Pi Zero" OFF)
 option(RBIT "Use ARM RBIT instruction for bit reversal" OFF)
 
+# the web viewer (-N and the ui service) reads the site's tracker
+if(WEBVIEWER AND NOT API)
+    message(STATUS "WEBVIEWER needs the tracker: API switched on")
+    set(API ON)
+endif()
+
 if(WEBVIEWER)
     add_definitions(-DHASWEBVIEWER)
 endif()
@@ -424,18 +430,11 @@ if(API)
     endif()
 endif()
 
-# the web viewer of -N and "server", each with its own ship table behind the
-# message stream, and the pages every viewer and the control panel serve
+# the pages the ui service and the control panel serve
 if(WEBVIEWER)
     list(APPEND CPP
         Source/Web/WebDB.cpp
-        Source/Web/PluginStore.cpp
-        Source/Web/BackupManager.cpp
-        Source/Web/FrontendConfig.cpp
-        Source/Web/ViewerConfiguration.cpp
-        Source/Web/ViewerSettings.cpp
-        Source/Web/WebViewer.cpp
-        Source/Tracking/ReceiverTracker.cpp)
+        Source/Web/PluginStore.cpp)
 endif()
 
 set(HEADER
@@ -444,7 +443,7 @@ set(HEADER
     Source/Device/AIRSPY.h Source/Library/FIFO.h Source/Device/N2KsktCAN.h Source/Device/HACKRF.h Source/Device/HYDRASDR.h Source/Device/SDRPLAY.h Source/DSP/DSP.h Source/DSP/Model.h Source/Tracking/History.h Source/Tracking/Statistics.h Source/Library/Common.h Source/Library/Stream.h Source/Library/SWAR.h Source/Device/SpyServer.h Source/JSON/Keys.h Source/JSON/Writer.h Source/JSON/Parser.h Source/Tracking/PlaneDB.h
     Source/Device/Serial.h Source/IO/N2KInterface.h Source/Marine/N2K.h Source/IO/N2KStream.h Source/Device/AIRSPYHF.h Source/Device/FileRAW.h Source/Device/RTLSDR.h Source/Device/ZMQ.h Source/DSP/FFT.h Source/IO/MsgOut.h Source/IO/Screen.h Source/IO/File.h Source/IO/StreamCounter.h Source/IO/Network.h Source/IO/HTTPServer.h Source/Utilities/StreamHelpers.h Source/IO/TCPServer.h Source/IO/Protocol.h
     Source/Utilities/Parse.h Source/Utilities/Convert.h Source/Utilities/Helper.h Source/Utilities/PackedInt.h Source/Utilities/TemplateString.h Source/IO/OutputStats.h
-    Source/Application/CommandLine.h Source/Application/Engine.h Source/Application/SiteKeys.h Source/Control/ControlCore.h Source/Control/ControlServer.h Source/Control/ManagedMain.h Source/Site/Site.h Source/Site/SiteConfig.h Source/Services/ApiV1.h Source/Services/Http.h Source/Services/JournalJSON.h Source/Services/Mcp.h Source/Services/Routes.h Source/Services/Server.h Source/Services/Streams.h Source/Services/System.h Source/Services/Ui.h Source/Delivery/MqttState.h Source/Delivery/Webhooks.h Source/Tracking/BinaryStore.h Source/Tracking/DestinationIndex.h Source/Tracking/Event.h Source/Tracking/EventJSON.h Source/Tracking/EventRing.h Source/Tracking/Figures.h Source/Tracking/FixSampler.h Source/Tracking/Journal.h Source/Tracking/PlaceCatalogue.h Source/Tracking/PlaceGeometry.h Source/Tracking/PlaceMarkers.h Source/Tracking/PositionCheck.h Source/Tracking/ReceiverTracker.h Source/Tracking/RelationshipIndex.h Source/Tracking/Rest.h Source/Tracking/SlotTable.h Source/Tracking/StaticStore.h Source/Tracking/StationRegistry.h Source/Tracking/SystemFacts.h Source/Tracking/Tracker.h Source/Tracking/TrackingConfig.h Source/Tracking/ViewFilter.h Source/Tracking/VisitTracker.h Source/Web/BackupManager.h Source/Web/FrontendConfig.h Source/Web/PluginStore.h Source/Web/ViewerConfiguration.h Source/Web/WebViewer.h)
+    Source/Application/CommandLine.h Source/Application/Engine.h Source/Application/SiteKeys.h Source/Control/ControlCore.h Source/Control/ControlServer.h Source/Control/ManagedMain.h Source/Site/Site.h Source/Site/SiteConfig.h Source/Services/ApiV1.h Source/Services/Http.h Source/Services/JournalJSON.h Source/Services/Mcp.h Source/Services/Routes.h Source/Services/Server.h Source/Services/Streams.h Source/Services/System.h Source/Services/Ui.h Source/Delivery/MqttState.h Source/Delivery/Webhooks.h Source/Tracking/BinaryStore.h Source/Tracking/DestinationIndex.h Source/Tracking/Event.h Source/Tracking/EventJSON.h Source/Tracking/EventRing.h Source/Tracking/Figures.h Source/Tracking/FixSampler.h Source/Tracking/Journal.h Source/Tracking/PlaceCatalogue.h Source/Tracking/PlaceGeometry.h Source/Tracking/PlaceMarkers.h Source/Tracking/PositionCheck.h Source/Tracking/RelationshipIndex.h Source/Tracking/Rest.h Source/Tracking/SlotTable.h Source/Tracking/StaticStore.h Source/Tracking/StationRegistry.h Source/Tracking/SystemFacts.h Source/Tracking/Tracker.h Source/Tracking/TrackingConfig.h Source/Tracking/ViewFilter.h Source/Tracking/VisitTracker.h Source/Web/PluginStore.h )
 
 set(APP_INCLUDES . ./Source ./Source/Tracking ./Source/DBMS ./Source/Library ./Source/Marine ./Source/Aviation ./Source/DSP ./Source/Application ./Source/Web ./Source/Control ./Source/IO ./Source/JSON ./Source/Utilities ./Source/Site ./Source/Services ./Source/Delivery)
 

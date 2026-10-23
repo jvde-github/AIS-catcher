@@ -8,7 +8,7 @@ import { bucketChip } from '@aiscatcher/ui/components.js';
 import * as replay from '../replay/replay.js';
 import * as ticker from '../ticker/ticker.js';
 import { panels } from '../../panels.js';
-import { receiver } from '../../data.js';
+import { focus } from '../../data.js';
 import { focusLabel } from '../../core/config.js';
 
 const BUCKET_ELEMENT = {
@@ -106,7 +106,7 @@ function updateFilterIndicator() {
 
     // the station looked through filters too: it is the Filter tab's first choice
     const active = filter.isActive();
-    const through = focusLabel(receiver);
+    const through = focusLabel(focus);
     const parts = (through ? [through] : []).concat(active ? filter.describe() : []);
     btn.classList.toggle("is-active", parts.length > 0);
     btn.title = parts.length

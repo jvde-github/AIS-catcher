@@ -34,6 +34,8 @@ void Site::publishStations(const StationRegistry &resolved)
 	std::lock_guard<std::mutex> lock(site_mtx);
 	if (tracker_)
 		tracker_->setStations(resolved);
+	for (auto &o : own)
+		o->tracker->setStations(resolved);
 #endif
 }
 
@@ -88,6 +90,9 @@ void Site::detachEngine()
 #ifdef HASAPI
 	if (was)
 		systemEvent(Tracking::Level::NOTICE, "engine_stopped", "The engine stopped");
+	// the trackers the configuration dropped while this engine fed them
+	std::lock_guard<std::mutex> lock(site_mtx);
+	own.erase(std::remove_if(own.begin(), own.end(), [](const std::unique_ptr<Own> &x) { return x->retired; }), own.end());
 #else
 	(void)was;
 #endif
@@ -229,7 +234,7 @@ void Site::start()
 // under site_mtx: the heartbeat runs once started and there is a tracker to keep
 void Site::launch()
 {
-	if (!started || heartbeat.joinable() || !tracker())
+	if (!started || heartbeat.joinable() || !anyTracker())
 		return;
 	{
 		std::lock_guard<std::mutex> lock(mtx);
@@ -268,7 +273,8 @@ void Site::configure(const SiteConfig &cfg)
 	// a viewer that shows a vessel's last message needs it kept
 	TrackingConfig tracking = cfg.tracking;
 	for (const auto &spec : cfg.servers)
-		tracking.msg_save |= spec.viewer.msg;
+		if (!spec.tracking.own)
+			tracking.msg_save |= spec.viewer.msg;
 	if (cfg.wantsTracker() && !tracker_)
 	{
 		tracker_.reset(new Tracker());
@@ -277,30 +283,10 @@ void Site::configure(const SiteConfig &cfg)
 			tracker_->useCatalogue(cfg.catalogue);
 		else
 			tracker_->usePlaces(cfg.places);
-		backup_file = backup_path = cfg.backup_file;
-		if (!cfg.backup_file.empty())
-		{
-			Tracker::Restored r = tracker_->restore(cfg.backup_file);
-			// A viewer backup of an earlier version is read once and never
-			// written over, so that version still finds it: backups go beside it
-			if (r == Tracker::FOREIGN)
-			{
-				backup_path = cfg.backup_file + ".tracking";
-				r = tracker_->restore(backup_path);
-				if (r == Tracker::MISSING && tracker_->importViewerBackup(cfg.backup_file))
-				{
-					Info() << "Tracker: imported the viewer's statistics and ships from " << cfg.backup_file << "; backups go to " << backup_path;
-					r = Tracker::RESTORED;
-				}
-			}
-			if (r == Tracker::RESTORED)
-				Info() << "Tracker: restored from " << backup_path;
-			else
-				Info() << "Tracker: no backup restored from " << backup_path;
-		}
+		backup_file = cfg.backup_file;
+		restoreInto(*tracker_, cfg.backup_file, backup_path);
 		last_backup = std::time(nullptr);
 		tracker_->setStations(stationsSnapshot());
-		launch();
 	}
 	else if (tracker_)
 	{
@@ -313,15 +299,47 @@ void Site::configure(const SiteConfig &cfg)
 		tracker_->setRestartRequired("Backup file (service restart)", cfg.backup_file != backup_file);
 	}
 
-	// A server on the same port and address takes the new settings in place, so
-	// its connections and a mount stay; the others close before the new ones
-	// open, so a server that moves to another address finds its port free
+	// the servers' own trackers: one stays while its server keeps the same settings
+	const bool fed = engineAttached();
+	for (auto &o : own)
+		o->retired = true;
+	for (const auto &spec : cfg.servers)
+	{
+		if (!spec.tracking.own)
+			continue;
+		Own *o = ownFor(spec);
+		if (o && o->spec != spec.tracking)
+		{
+			if (fed)
+				o->tracker->setRestartRequired("Own ships (service restart)", true);
+			else
+				o = nullptr;
+		}
+		if (o)
+		{
+			o->retired = false;
+			continue;
+		}
+		own.erase(std::remove_if(own.begin(), own.end(), [&](const std::unique_ptr<Own> &x) { return x->port == spec.port && x->bind == spec.bind; }), own.end());
+		own.push_back(makeOwn(spec));
+	}
+	if (!fed)
+		own.erase(std::remove_if(own.begin(), own.end(), [](const std::unique_ptr<Own> &x) { return x->retired; }), own.end());
+	launch();
+
+	// A server on the same port and address, reading the same tracker, takes the
+	// new settings in place, so its connections and a mount stay; the others close
+	// before the new ones open, so a server that moves to another address finds
+	// its port free
+	const auto trackerOf = [&](const ServerSpec &spec) -> Tracker & {
+		return spec.tracking.own ? *ownFor(spec)->tracker : *tracker_;
+	};
 	std::vector<std::unique_ptr<Services::Server>> kept(cfg.servers.size());
 	for (std::size_t i = 0; i < cfg.servers.size(); i++)
 	{
 		const ServerSpec &spec = cfg.servers[i];
 		auto it = std::find_if(servers.begin(), servers.end(), [&](const std::unique_ptr<Services::Server> &s) {
-			return s && s->spec().port == spec.port && s->spec().bind == spec.bind;
+			return s && s->spec().port == spec.port && s->spec().bind == spec.bind && &s->reads() == &trackerOf(spec);
 		});
 		if (it == servers.end())
 			continue;
@@ -337,7 +355,7 @@ void Site::configure(const SiteConfig &cfg)
 			servers.push_back(std::move(kept[i]));
 			continue;
 		}
-		std::unique_ptr<Services::Server> s(new Services::Server(cfg.servers[i], *tracker_, [this] { return publicStations(); },
+		std::unique_ptr<Services::Server> s(new Services::Server(cfg.servers[i], trackerOf(cfg.servers[i]), [this] { return publicStations(); },
 																 [this](JSON::Writer &w, EnginePart part) { writeEngine(w, part); },
 																 [this] { return systemFacts(); }));
 		if (s->open())
@@ -362,6 +380,77 @@ void Site::configure(const SiteConfig &cfg)
 }
 
 #ifdef HASAPI
+// under site_mtx: a tracker's backup is read once, when it is made
+void Site::restoreInto(Tracker &t, const std::string &file, std::string &path)
+{
+	path = file;
+	if (file.empty())
+		return;
+	Tracker::Restored r = t.restore(file);
+	// A viewer backup of an earlier version is read once and never written
+	// over, so that version still finds it: backups go beside it
+	if (r == Tracker::FOREIGN)
+	{
+		path = file + ".tracking";
+		r = t.restore(path);
+		if (r == Tracker::MISSING && t.importViewerBackup(file))
+		{
+			Info() << "Tracker: imported the viewer's statistics and ships from " << file << "; backups go to " << path;
+			r = Tracker::RESTORED;
+		}
+	}
+	if (r == Tracker::RESTORED)
+		Info() << "Tracker: restored from " << path;
+	else
+		Info() << "Tracker: no backup restored from " << path;
+}
+
+bool Site::engineAttached()
+{
+	std::lock_guard<std::mutex> lock(engine_mtx);
+	return engine_running;
+}
+
+// under site_mtx
+Site::Own *Site::ownFor(const ServerSpec &spec)
+{
+	for (auto &o : own)
+		if (o->port == spec.port && o->bind == spec.bind)
+			return o.get();
+	return nullptr;
+}
+
+// under site_mtx: a server's own tracker, behind its filter
+std::unique_ptr<Site::Own> Site::makeOwn(const ServerSpec &spec)
+{
+	std::unique_ptr<Own> o(new Own());
+	o->port = spec.port;
+	o->bind = spec.bind;
+	o->spec = spec.tracking;
+	o->tracker.reset(new Tracker());
+	TrackingConfig t = spec.tracking.tracking;
+	t.msg_save |= spec.viewer.msg;
+	o->tracker->configure(t);
+	AIS::Filter filter;
+	for (const auto &term : spec.tracking.filter)
+		filter.SetOptionKey((AIS::Keys)term.first, term.second);
+	o->tracker->setFilter(filter);
+	Info() << "Server on port " << spec.port << ": ships of its own" << (filter.isOn() ? ", " + filter.Get() : std::string());
+	restoreInto(*o->tracker, spec.tracking.backup_file, o->backup_path);
+	o->last_backup = std::time(nullptr);
+	o->tracker->setStations(stationsSnapshot());
+	return o;
+}
+
+std::vector<Site::OwnTracker> Site::ownTrackers()
+{
+	std::lock_guard<std::mutex> lock(site_mtx);
+	std::vector<OwnTracker> out;
+	for (auto &o : own)
+		out.push_back(OwnTracker{o->tracker.get(), o->spec});
+	return out;
+}
+
 // the ports the servers listen on: a server whose port was taken is not among them
 std::vector<int> Site::serverPorts()
 {
@@ -410,6 +499,9 @@ void Site::refreshPlaces()
 void Site::backup()
 {
 #ifdef HASAPI
+	for (auto &o : own)
+		if (!o->backup_path.empty() && !o->tracker->save(o->backup_path))
+			Error() << "Tracker: backup to " << o->backup_path << " failed";
 	if (!tracker_ || backup_path.empty())
 		return;
 	const bool ok = tracker_->save(backup_path);
@@ -425,18 +517,28 @@ void Site::beat(std::time_t now)
 {
 #ifdef HASAPI
 	std::lock_guard<std::mutex> lock(site_mtx);
-	if (!tracker_)
+	if (!tracker_ && own.empty())
 		return;
 	if (now - last_tick >= 60)
 	{
-		tracker_->tick(now);
+		if (tracker_)
+			tracker_->tick(now);
+		for (auto &o : own)
+			o->tracker->tick(now);
 		last_tick = now;
 	}
-	if (config.backup_minutes > 0 && now - last_backup >= config.backup_minutes * 60)
+	if (tracker_ && config.backup_minutes > 0 && now - last_backup >= config.backup_minutes * 60)
 	{
 		backup();
 		last_backup = now;
 	}
+	for (auto &o : own)
+		if (!o->backup_path.empty() && o->spec.backup_minutes > 0 && now - o->last_backup >= o->spec.backup_minutes * 60)
+		{
+			if (!o->tracker->save(o->backup_path))
+				Error() << "Tracker: backup to " << o->backup_path << " failed";
+			o->last_backup = now;
+		}
 #ifdef HASDELIVERY
 	if (mqtt_state)
 		mqtt_state->poll(now);

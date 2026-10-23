@@ -78,15 +78,6 @@ namespace Services
 		};
 	}
 
-	bool Server::known(const std::string &service)
-	{
-#ifdef HASWEBVIEWER
-		if (service == "ui")
-			return true;
-#endif
-		return service == "api" || service == "system" || service == "mcp" || service == "geojson" || service == "metrics";
-	}
-
 	Server::Server(const ServerSpec &spec, Tracker &tracker, std::function<StationRegistry()> stations,
 				   EngineWriter engine, std::function<SystemFacts()> system)
 		: spec_(spec), tracker(tracker), stations(std::move(stations)), engine(std::move(engine)), system(std::move(system))
@@ -114,56 +105,46 @@ namespace Services
 	// under services_mtx, or before the server runs
 	void Server::build()
 	{
-		const auto offers = [&](const char *name) {
-			return std::find(spec_.serve.begin(), spec_.serve.end(), name) != spec_.serve.end();
-		};
 		// the pages that may frame this server's: any, unless the viewer's settings say
 		setFrameAncestors(spec_.viewer.frame_ancestors.empty() ? "*" : spec_.viewer.frame_ancestors);
-		// the viewer's GeoJSON and Prometheus switches are these services under their old names
-		const bool ui = offers("ui");
-		const bool geojson = offers("geojson") || (ui && spec_.viewer.geojson);
-		const bool prome = offers("metrics") || (ui && spec_.viewer.prome);
 		PrometheusCounter *counter = nullptr;
-		if (prome)
+		if (spec_.metrics)
 		{
 			counter = new PrometheusCounter();
 			metrics.reset(counter);
 			tracker.addTap(counter);
 		}
-		if (geojson || prome)
-			services.push_back(std::unique_ptr<Service>(new Feeds(tracker, spec_, counter, geojson)));
-		for (const auto &name : spec_.serve)
+		if (spec_.geojson || spec_.metrics)
+			services.push_back(std::unique_ptr<Service>(new Feeds(tracker, spec_, counter, spec_.geojson)));
+		if (spec_.api)
+			services.push_back(std::unique_ptr<Service>(new ApiV1(tracker, stations, spec_)));
+		if (spec_.mcp)
 		{
-			if (name == "api")
-				services.push_back(std::unique_ptr<Service>(new ApiV1(tracker, stations, spec_)));
-			else if (name == "mcp")
-			{
-				// the installation's tools when the server offers the system
-				std::function<SystemFacts()> facts;
-				if (offers("system"))
-					facts = system ? system : [] { return SystemFacts(); };
-				services.push_back(std::unique_ptr<Service>(new Mcp(tracker, stations, spec_, facts, engine)));
-			}
-			else if (name == "system")
-				services.push_back(std::unique_ptr<Service>(new System(tracker, system ? system : [] { return SystemFacts(); }, engine)));
-#ifdef HASWEBVIEWER
-			else if (name == "ui")
-			{
-				// the page shows the GeoJSON link when the server offers it
-				ServerSpec page = spec_;
-				page.viewer.geojson = geojson;
-				page.viewer.prome = prome;
-				services.push_back(std::unique_ptr<Service>(new Ui(tracker, stations, page, engine, [this] { return numberOfClients(); })));
-				if (spec_.viewer.realtime)
-				{
-					messages.reset(new MessageStream(*this, !spec_.viewer.decoder));
-					tracker.addTap(messages.get());
-				}
-				if (spec_.viewer.log)
-					log = std::make_shared<LogStream>(*this);
-			}
-#endif
+			// the installation's tools when the server offers the system
+			std::function<SystemFacts()> facts;
+			if (spec_.system)
+				facts = system ? system : [] { return SystemFacts(); };
+			services.push_back(std::unique_ptr<Service>(new Mcp(tracker, stations, spec_, facts, engine)));
 		}
+		if (spec_.system)
+			services.push_back(std::unique_ptr<Service>(new System(tracker, system ? system : [] { return SystemFacts(); }, engine)));
+#ifdef HASWEBVIEWER
+		if (spec_.ui)
+		{
+			// the page shows the GeoJSON link when the server offers it
+			ServerSpec page = spec_;
+			page.viewer.geojson = spec_.geojson;
+			page.viewer.prome = spec_.metrics;
+			services.push_back(std::unique_ptr<Service>(new Ui(tracker, stations, page, engine, [this] { return numberOfClients(); })));
+			if (spec_.viewer.realtime)
+			{
+				messages.reset(new MessageStream(*this, !spec_.viewer.decoder));
+				tracker.addTap(messages.get());
+			}
+			if (spec_.viewer.log)
+				log = std::make_shared<LogStream>(*this);
+		}
+#endif
 	}
 
 	// the streams stop before what they write to goes
@@ -188,7 +169,7 @@ namespace Services
 			return false;
 		}
 		std::string list;
-		for (const auto &s : spec_.serve)
+		for (const auto &s : spec_.served())
 			list += (list.empty() ? "" : ", ") + s;
 		Info() << "Server: " << spec_.bind << ":" << spec_.port << " offers " << list;
 		return true;

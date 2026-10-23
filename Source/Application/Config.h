@@ -92,19 +92,25 @@ public:
 	static IO::OutputMessage *newDatabaseOutput(const std::string &type);
 
 private:
-#ifdef HASWEBVIEWER
-	void setServerfromJSON(const JSON::Value &m);
-#endif
 	void setStationsFromJSON(const JSON::Value &v);
 #ifdef HASAPI
 	// a server's or a webhook's "filter": the viewer's filter terms
 	static void viewFilterFromJSON(const JSON::Value &v, ViewFilter &filter);
 	static void trackingFromJSON(const JSON::Value &v, SiteConfig &site);
 	// `main_port` and `main_bind`: the server beside the control panel, for the entry marked "main"; none outside managed mode
-	static void servicesFromJSON(const JSON::Value &v, SiteConfig &site, int main_port = 0, const std::string &main_bind = "");
+	static void servicesFromJSON(const JSON::Value &v, SiteConfig &site, StationRegistry *registry, int main_port = 0, const std::string &main_bind = "");
 	// the parts of a configuration a site reads as they stand: "tracking", "services", "webhooks", "mqtt_state"
-	static void siteFromJSON(const JSON::JSON &root, SiteConfig &site, int main_port = 0, const std::string &main_bind = "");
-	static void managedViewer(const JSON::Value &viewer, int port, const std::string &bind, SiteConfig &site, StationDefaults &defaults);
+	static void siteFromJSON(const JSON::JSON &root, SiteConfig &site, StationDefaults *defaults, StationRegistry *registry, int main_port = 0, const std::string &main_bind = "");
+	static void managedViewer(const JSON::Value &viewer, int port, const std::string &bind, SiteConfig &site, StationDefaults &defaults, StationRegistry *registry);
+	// a server as a viewer section writes it (-N, "server", the old viewer section) or an entry of "services"
+	struct ServerEntry;
+	static bool serverKey(ServerEntry &e, int key, const std::string &value, const JSON::Value *json, StationDefaults *defaults);
+	static void serverDone(ServerEntry &e, SiteConfig &site, StationDefaults *defaults, StationRegistry *registry, const std::string &where);
+	static void serversFromJSON(const JSON::Value &v, SiteConfig &site, StationDefaults *defaults, StationRegistry *registry);
+	// the -N being read: its settings gather until the next -N port or the end
+	std::string pending_port;
+	std::vector<std::pair<int, std::string>> viewer_args;
+	void flushViewer();
 #endif
 #ifdef HASDELIVERY
 	static void webhooksFromJSON(const JSON::Value &v, SiteConfig &site);
@@ -131,8 +137,8 @@ public:
 	// key is read, from the command line and the files it names
 	void finish();
 #ifdef HASAPI
-	// -J port [key value]...: a server of the site, with the keys an entry of "services" takes
-	void serverFromArgs(const std::string &port, const std::vector<std::pair<std::string, std::string>> &settings);
+	// -N [port] [key value]...: a web server; a port starts one, the keys that follow are its settings
+	void viewerFromArgs(const std::string &port, const std::vector<std::pair<std::string, std::string>> &settings);
 #endif
 #ifdef HASDELIVERY
 	// -W url [key value]...: a webhook for an http:// or https:// address, else the station's state on an MQTT
@@ -145,7 +151,7 @@ public:
 #ifdef HASAPI
 	// managed mode's site: the main server beside the control panel, the other servers, the tracking and the
 	// deliveries, and what the configuration says of the default station
-	static void managedSite(const JSON::JSON &root, int control_port, int viewer_port, const std::string &bind, SiteConfig &site, StationDefaults &defaults);
+	static void managedSite(const JSON::JSON &root, int control_port, int viewer_port, const std::string &bind, SiteConfig &site, StationDefaults &defaults, StationRegistry *registry);
 #endif
 	// the "stations" block of a configuration, into a registry
 	static void stationsFromJSON(const JSON::Value &v, StationRegistry &into);

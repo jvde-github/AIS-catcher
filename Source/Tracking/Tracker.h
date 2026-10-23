@@ -47,6 +47,8 @@ public:
 	// message; a later one applies what changes while messages flow, and a
 	// change of the table's size waits for a restart, as restartRequired says.
 	void configure(const TrackingConfig &cfg);
+	// a tracker of a server's own takes what passes a filter on the message stream
+	void setFilter(const AIS::Filter &f) { db.setFilter(f); }
 	// the settings in force
 	TrackingConfig trackingConfig()
 	{
@@ -251,7 +253,8 @@ private:
 	};
 
 	// the tag a message is measured with: the station where it is now
-	void place(TAG &tag);
+	// the station the message is counted at: the one it names, when listed, else the input's; and where it was heard
+	void place(const AIS::Message *msg, TAG &tag);
 	// false when the fix belongs to no station, and the tracker's own position takes it
 	bool moveByGPS(int id, FLOAT32 lat, FLOAT32 lon);
 	void follow(uint32_t mmsi, FLOAT32 lat, FLOAT32 lon);
@@ -283,6 +286,7 @@ private:
 	std::map<int, std::time_t> last_heard;
 
 	std::mutex stations_mtx;
+	Position fixed_at; // where every message is measured from, when the configuration fixes it
 	std::map<int, Station> stations;
 	std::map<uint32_t, int> riders;
 	bool registry_set = false;

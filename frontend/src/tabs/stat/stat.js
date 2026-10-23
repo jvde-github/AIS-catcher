@@ -4,7 +4,7 @@
 import { getDistanceVal, getDistanceUnit } from '../../core/units.js';
 import { getDeltaTimeVal, sanitizeString, formatBytes, isHttpUrl } from '@aiscatcher/core/text.js';
 import { decodeHTMLEntities } from '@aiscatcher/ui/components.js';
-import { receiver, onRefresh, refreshIntervalMs } from '../../data.js';
+import { focus, onRefresh, refreshIntervalMs } from '../../data.js';
 import { showDialogPlain, objectToTableHtml } from '../../dialog.js';
 import * as community from '../../overlays/community.js';
 
@@ -18,7 +18,7 @@ export function init(d) {
 // fetches main statistics from the server
 async function fetchStatistics() {
     try {
-        const response = await fetch("api/stat.json?receiver=" + receiver);
+        const response = await fetch("api/stat.json?stations=" + focus);
         if (!response.ok) return;
         return await response.json();
     } catch (error) {

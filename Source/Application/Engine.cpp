@@ -23,9 +23,6 @@
 #include "ControlCore.h"
 #include "Engine.h"
 #include "Site.h"
-#ifdef HASWEBVIEWER
-#include "WebViewer.h"
-#endif
 
 #include <algorithm>
 #include "Logger.h"
@@ -48,11 +45,6 @@ void Engine::detach() {
 
   for (auto &r : receivers)
     r->stop();
-
-#ifdef HASWEBVIEWER
-  for (auto &v : viewers)
-    v->shutdown();
-#endif
 
   // the site lets go of the outputs before they go
   if (site)
@@ -190,8 +182,8 @@ void Engine::resolveStations() {
 // The default station the configuration does not list, as a viewer section
 // describes it (-N STATION, LAT, LON, SHARE_LOC, USE_GPS, OWN_MMSI): named
 // after the one receiver standing on it when that has a name of its own, else
-// as the section says; placed where the first such receiver with a position
-// of its own is, else where the section puts it.
+// as the section says, else not at all; placed where the first such receiver
+// with a position of its own is, else where the section puts it.
 StationRegistry::Station Engine::defaultStation(bool alone) const {
   StationRegistry::Station s;
   s.id = 0;
@@ -213,7 +205,7 @@ StationRegistry::Station Engine::defaultStation(bool alone) const {
     }
   }
   if (s.name.empty())
-    s.name = station_defaults.name.empty() ? "Station 0" : station_defaults.name;
+    s.name = station_defaults.name;
   if (!isValidCoord(s.lat, s.lon) && station_defaults.placed()) {
     s.lat = station_defaults.lat;
     s.lon = station_defaults.lon;
@@ -231,13 +223,10 @@ void Engine::run(Site &on, ControlCore *control) {
   stat.resize(receivers.size());
   msg_count.resize(receivers.size(), 0);
 
-  // the tracker and the web viewers read the decoders' tags
+  // the trackers read the decoders' tags
   bool has_server = false;
 #ifdef HASAPI
-  has_server = on.tracker() || site_config.wantsTracker();
-#endif
-#ifdef HASWEBVIEWER
-  has_server |= !viewers.empty();
+  has_server = on.tracker() || site_config.wantsTracker() || !site_config.servers.empty();
 #endif
   bool has_http = false;
   for (auto &o : msg)
@@ -293,25 +282,26 @@ void Engine::run(Site &on, ControlCore *control) {
   // Zones are routes. An output with zones takes the receivers that share one; once any receiver
   // is in a zone, an output without zones takes only the receivers without one. Narrowing only:
   // what an output already keeps out, as the community feed keeps out network inputs, stays out.
-  // A web viewer takes the receivers in its zones itself, every one when it has none.
+  // A server's own tracker is routed the same way.
   bool any_zoned = false;
   const uint64_t unzoned = resolveUnzoned(receivers, any_zoned);
-  for (auto &o : msg) {
-    uint64_t mask;
-    if (!o->zones.empty()) {
-      mask = resolveZones(receivers, o->zones);
+  const auto route = [&](const std::vector<std::string> &zones, uint64_t groups_in, const char *what) {
+    uint64_t mask = groups_in;
+    if (!zones.empty()) {
+      mask &= resolveZones(receivers, zones);
       if (!mask)
-        Warning() << "Output has zone filter but no matching receivers — will "
-                     "receive nothing";
+        Warning() << what << " has zone filter but no matching receivers — will receive nothing";
     } else if (any_zoned) {
-      mask = unzoned;
+      mask &= unzoned;
       if (!mask)
-        Warning() << "Output without zones while every receiver has one — "
-                     "will receive nothing";
-    } else
+        Warning() << what << " without zones while every receiver has one — will receive nothing";
+    }
+    return mask;
+  };
+  for (auto &o : msg) {
+    if (o->zones.empty() && !any_zoned)
       continue;
-    mask &= o->StreamIn<AIS::Message>::getGroupsIn();
-    o->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(mask));
+    o->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(route(o->zones, o->StreamIn<AIS::Message>::getGroupsIn(), "Output")));
   }
 
   for (int i = 0; i < (int)receivers.size(); i++) {
@@ -364,25 +354,23 @@ void Engine::run(Site &on, ControlCore *control) {
     on.attachEngine(facts);
   }
 
-#ifdef HASWEBVIEWER
-  // before attachEngine(), so the viewers' trackers are built with these already applied
-  for (auto &v : viewers) {
-    v->setOutputChannels(msg);
-    v->setCommFeed(comm_feed);
-    v->setOwnVessel(own_mmsi);
-    v->attachEngine(receivers);
-  }
-#endif
-
 #ifdef HASAPI
-  if (tracker)
+  // the site's tracker takes every receiver; a server's own takes those in its zones and groups
+  const auto feed = [&](Tracker *t, uint64_t mask) {
     for (auto &r : receivers)
       for (int j = 0; j < r->Count(); j++) {
-        r->OutputJSON(j).Connect(&tracker->json());
-        r->OutputGPS(j).Connect(&tracker->gps());
-        r->OutputControl(j).Connect(&tracker->control());
-        r->OutputADSB(j).Connect(&tracker->adsb());
+        if (!r->Output(j).canConnect(mask))
+          continue;
+        r->OutputJSON(j).Connect(&t->json());
+        r->OutputGPS(j).Connect(&t->gps());
+        r->OutputControl(j).Connect(&t->control());
+        r->OutputADSB(j).Connect(&t->adsb());
       }
+  };
+  if (tracker)
+    feed(tracker, GROUPS_ALL);
+  for (const auto &own : on.ownTrackers())
+    feed(own.tracker, route(own.spec.zones, own.spec.groups_in, "Web viewer"));
 #endif
 
   if (control)
@@ -393,11 +381,6 @@ void Engine::run(Site &on, ControlCore *control) {
 
   for (auto &o : msg)
     o->Start();
-
-#ifdef HASWEBVIEWER
-  for (auto &v : viewers)
-    v->startServing();
-#endif
 
   // the servers serve and the tracker is wired, the receivers have not
   // started: a build that adds services attaches them now
@@ -418,9 +401,6 @@ void Engine::run(Site &on, ControlCore *control) {
   }
 
   const int SLEEP = 50;
-#ifdef HASWEBVIEWER
-  std::time_t next_minute = 0;
-#endif
   auto time_start = high_resolution_clock::now();
   auto time_timeout_start = time_start;
   auto time_last = time_start;
@@ -465,16 +445,6 @@ void Engine::run(Site &on, ControlCore *control) {
       for (auto &o : msg)
         o->poll();
     }
-
-#ifdef HASWEBVIEWER
-    // above the verbose/timeout shortcut below or it never runs by default
-    const std::time_t tick_now = std::time(nullptr);
-    if (tick_now >= next_minute) {
-      next_minute = tick_now + 60;
-      for (auto &v : viewers)
-        v->tickMinute(tick_now);
-    }
-#endif
 
     if (!oneverbose && !timeout)
       continue;

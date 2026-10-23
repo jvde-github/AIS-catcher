@@ -32,10 +32,20 @@ test('the viewer section without station keys: GPS as the engine took it, 0,0 is
     assert.equal(gps.tracking, undefined);
 });
 
-test('the server section stays as it is: its web viewers are outputs, not servers of services', () => {
-    const cfg = migrateConfig({ server: [{ port: 8100, geojson: true, zone: ['north'] }], services: [{ main: true }] });
-    assert.deepEqual(cfg.server, [{ port: 8100, geojson: true, zone: ['north'] }]);
-    assert.deepEqual(cfg.services, [{ main: true }]);
+test('the server section: each web viewer is a server of services, with ships of its own behind a filter or zones', () => {
+    const cfg = migrateConfig({ server: [
+        { port: 8100, geojson: true, prome: true, station: 'Home', lat: 52, lon: 4.3, share_loc: true, realtime: true, split: true, ip_bind: '0.0.0.0', file: '/var/lib/ais.bin', backup: 10 },
+        { port: 8200, filter: true, allow_type: '1,2,3', unique: true, file: '/var/lib/a.bin', history: 3600 },
+        { port: 8300, zone: ['north'], groups_in: 3 },
+        { port: 8400, active: false }], services: [{ main: true }] });
+    assert.equal(cfg.server, undefined);
+    // the unfiltered viewer's tracking is the site's, its station is station 0, its title stays
+    assert.deepEqual(cfg.tracking, { file: '/var/lib/ais.bin', backup: 10 });
+    assert.deepEqual(cfg.stations, [{ id: 0, name: 'Home', lat: 52, lon: 4.3, gps: true, share_loc: true }]);
+    assert.deepEqual(cfg.services, [{ main: true },
+        { port: 8100, geojson: true, metrics: true, station: 'Home', realtime: true, bind: '0.0.0.0' },
+        { port: 8200, tracking: { allow_type: '1,2,3', unique: true, file: '/var/lib/a.bin', history: 3600 } },
+        { port: 8300, tracking: { zone: ['north'], groups_in: 3 } }]);
 });
 
 test('a viewer section of a long-used station: keys a server of the site has no use for are left behind', () => {

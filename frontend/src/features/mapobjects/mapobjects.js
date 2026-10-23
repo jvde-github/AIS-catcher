@@ -9,7 +9,7 @@ import { BINARY_CATEGORIES } from '@aiscatcher/ui/binary.js';
 import * as mapobjects from '@aiscatcher/map/mapobjects.js';
 import { createEventHistory } from '@aiscatcher/ui/events-history.js';
 import { map, redraw } from '../../map.js';
-import { receiver } from '../../data.js';
+import { focus } from '../../data.js';
 import { ships, station } from '../../core/store.js';
 import { config } from '../../core/config.js';
 import { saveSettings, closeSettings } from '../settings/settings.js';
@@ -35,7 +35,7 @@ const shipLink = (mmsi) => {
     return `<a href="javascript:void(0)" style="color: inherit; text-decoration: underline;" onclick="closeDialog(); openFocus(${Number(mmsi)})">${label}</a>`;
 };
 
-const api = (query) => fetch(`api/${query}&receiver=${receiver}`).then((r) => r.json());
+const api = (query) => fetch(`api/${query}&stations=${focus}`).then((r) => r.json());
 
 // the module is built once, at load, so the layer exists before the map does; every
 // hook reaches for the host through `deps`, which init() fills in

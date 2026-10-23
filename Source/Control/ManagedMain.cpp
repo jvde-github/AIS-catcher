@@ -61,8 +61,7 @@ static void usePanelPlaces(ControlCore &core, SiteConfig &site) {
 }
 
 // What a save says: the site with the place editor's catalogue, and the
-// stations. The web viewers of "server" sections are the engine's: they come
-// and go with it.
+// stations.
 struct Saved {
   SiteConfig site;
   StationRegistry stations;
@@ -73,9 +72,10 @@ static Saved readSaved(ControlCore &core) {
   auto doc = parser.parse(core.getConfig());
   Saved saved;
   StationDefaults defaults;
-  Config::managedSite(doc.root, core.getControlPort(), core.getViewerPort(), core.getBindAddress(), saved.site, defaults);
+  // the listed stations first: a server's station_id describes one only where the file does not
   if (const auto *v = doc.root[AIS::KEY_SETTING_STATIONS])
     Config::stationsFromJSON(*v, saved.stations);
+  Config::managedSite(doc.root, core.getControlPort(), core.getViewerPort(), core.getBindAddress(), saved.site, defaults, &saved.stations);
   usePanelPlaces(core, saved.site);
   return saved;
 }

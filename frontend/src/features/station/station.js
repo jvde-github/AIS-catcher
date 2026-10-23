@@ -1,11 +1,11 @@
-// The station the viewer looks through, when the server has several: the card a
+// The station the page looks through, when the server has several: the card a
 // station on the map opens, the filter's choice of one, the header chip that goes
 // back to all of them, and what a switch resets.
 
 import { config, severalStations, stationLabel } from '../../core/config.js';
 import { stationBand } from '@aiscatcher/ui/stations.js';
 import { createPicker } from '@aiscatcher/ui/picker.js';
-import { receiver, switchReceiver, refresh } from '../../data.js';
+import { focus, switchFocus, refresh } from '../../data.js';
 import { ships } from '../../core/store.js';
 import { getDistanceVal, getDistanceUnit, getLatValFormat, getLonValFormat } from '../../core/units.js';
 import { showDialog, closeDialog, objectToTableHtml } from '../../dialog.js';
@@ -25,27 +25,27 @@ export function init(d) {
 }
 
 // the station shown, as the header chip names it
-function receiverLabel() {
-    return stationLabel(receiver);
+function focusName() {
+    return stationLabel(focus);
 }
 
 // the menu offers a choice only when there is one
-export function hasReceiverChoice() {
+export function hasStationChoice() {
     return severalStations();
 }
 
 // a station the server lets the page look through alone
-const offered = (id) => (config.receivers || []).some((r) => r.idx === id);
+const offered = (id) => (config.stations || []).some((s) => s.id === id);
 
-function selectReceiver(idx) {
+function selectStation(id) {
     closeDialog();
-    onReceiverChange(idx);
+    onStationChange(id);
 }
 
-export function onReceiverChange(idx) {
+export function onStationChange(id) {
     deps.closeSearch();
     if (replaycardVisible()) replaybar.toggleReplaycard();
-    switchReceiver(idx);
+    switchFocus(id);
     mapObjects.resetSince();
     range.resetUpdateTime();
     showFocus();
@@ -55,16 +55,16 @@ export function onReceiverChange(idx) {
 // after the settings or the server's list of stations changed: a focus on one
 // the server no longer offers goes back to all of them
 export function syncFocus(live) {
-    if (receiver >= 0 && !offered(receiver)) {
-        if (live) onReceiverChange(-1);
-        else switchReceiver(-1);
+    if (focus >= 0 && !offered(focus)) {
+        if (live) onStationChange(-1);
+        else switchFocus(-1);
     }
     showFocus();
 }
 
 // back to all stations, as the filter's Reset has it
 export function resetFocus() {
-    if (receiver >= 0) onReceiverChange(-1);
+    if (focus >= 0) onStationChange(-1);
 }
 
 // the station in focus, wherever the page shows it
@@ -82,12 +82,12 @@ function updateFocusChip() {
     const chip = document.getElementById("header-focus");
     if (!chip) return;
     const label = document.getElementById("header-focus-label");
-    const hidden = receiver < 0 || !hasReceiverChoice();
-    const text = hidden ? "" : receiverLabel();
+    const hidden = focus < 0 || !hasStationChoice();
+    const text = hidden ? "" : focusName();
     if (chip.hidden === hidden && label.textContent === text) return;
     chip.hidden = hidden;
     label.textContent = text;
-    document.getElementById("header-focus-id").textContent = hidden ? "" : String(receiver);
+    document.getElementById("header-focus-id").textContent = hidden ? "" : String(focus);
     chip.title = "Showing " + (text || "one station") + ": click to show all stations";
     applyMenuLabels(); // the tab pill has less room or more, and the chip with it
 }
@@ -98,7 +98,7 @@ function placeFocusChip() {
     const alt = document.getElementById("ticker_focus");
     if (!chip || !alt) return;
     alt.hidden = chip.hidden || !chip.classList.contains("fit-hidden");
-    document.getElementById("ticker_focus_label").textContent = alt.hidden ? "" : receiverLabel();
+    document.getElementById("ticker_focus_label").textContent = alt.hidden ? "" : focusName();
     alt.title = chip.title;
 }
 
@@ -110,22 +110,22 @@ let picker = null;
 // what the map knows of it
 function pickerOptions() {
     const onMap = new Map(mapObjects.stationsOnMap().map((s) => [s.id, s]));
-    const listed = (config.receivers || []).filter((r) => r.idx >= 0);
+    const listed = (config.stations || []).filter((s) => s.id >= 0);
     return [{ value: -1, name: "All stations", sub: listed.length + " stations", group: "all" },
-        ...listed.map((r) => ({ value: r.idx, badge: r.idx, name: r.label, sub: STATUS_TEXT[onMap.get(r.idx)?.status], group: "one" }))];
+        ...listed.map((s) => ({ value: s.id, badge: s.id, name: s.name, sub: STATUS_TEXT[onMap.get(s.id)?.status], group: "one" }))];
 }
 
 function updateFilterPicker() {
     const section = document.getElementById("filter_station_section");
     if (!section) return;
-    section.hidden = !hasReceiverChoice();
+    section.hidden = !hasStationChoice();
     if (section.hidden) return;
     if (!picker) {
-        picker = createPicker({ label: "Stations", value: receiver, options: pickerOptions, empty: "No station by that name",
-            onPick: (idx) => onReceiverChange(idx) });
+        picker = createPicker({ label: "Stations", value: focus, options: pickerOptions, empty: "No station by that name",
+            onPick: (id) => onStationChange(id) });
         document.getElementById("filter_station").append(picker.el);
     }
-    picker.set(receiver);
+    picker.set(focus);
 }
 
 // ─── a station from the map ──────────────────────────────────────────────────
@@ -141,7 +141,7 @@ export async function openStation(id) {
     if (!s) return;
     let stat = null;
     try {
-        stat = await (await fetch("api/stat.json?receiver=" + id)).json();
+        stat = await (await fetch("api/stat.json?stations=" + id)).json();
     } catch {
         // the card without figures
     }
@@ -157,15 +157,15 @@ export async function openStation(id) {
     }
 
     let actions = "";
-    if (offered(id) && hasReceiverChoice())
-        actions = receiver === id
-            ? '<button type="button" class="btn btn-primary" data-action="selectReceiver" data-idx="-1">Show all stations</button>'
-            : `<button type="button" class="btn btn-primary" data-action="selectReceiver" data-idx="${Number(id)}">Show only this station</button>`;
+    if (offered(id) && hasStationChoice())
+        actions = focus === id
+            ? '<button type="button" class="btn btn-primary" data-action="selectStation" data-id="-1">Show all stations</button>'
+            : `<button type="button" class="btn btn-primary" data-action="selectStation" data-id="${Number(id)}">Show only this station</button>`;
 
     showDialog("Station", '<div class="station-card">' + stationBand(s) + objectToTableHtml(rows) +
         (actions ? '<div class="station-card-actions">' + actions + '</div>' : '') + '</div>');
 }
 
 register({
-    selectReceiver: (e, d) => selectReceiver(d.idx),
+    selectStation: (e, d) => selectStation(d.id),
 });

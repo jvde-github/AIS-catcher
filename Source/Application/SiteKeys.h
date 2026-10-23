@@ -29,9 +29,20 @@ namespace SiteKeys
 {
 	// the options of a server's map pages
 	bool viewer(int key, const std::string &arg, ViewerOptions &o);
-	// how the site keeps ships: the tracking, the backup file and its interval,
-	// the places; a file or directory resolves against base_dir
-	bool tracking(int key, const std::string &arg, SiteConfig &site, const std::string &base_dir);
+	// how a tracker keeps ships: the tracking, the backup file and its interval,
+	// the places; a file or directory resolves against base_dir. The target is
+	// the site's tracker or a server's own, which keeps no places.
+	struct TrackingTarget
+	{
+		TrackingConfig &tracking;
+		std::string &backup_file;
+		int &backup_minutes;
+		std::string *places;
+		TrackingTarget(SiteConfig &site) : tracking(site.tracking), backup_file(site.backup_file), backup_minutes(site.backup_minutes), places(&site.places) {}
+		TrackingTarget(TrackerSpec &own) : tracking(own.tracking), backup_file(own.backup_file), backup_minutes(own.backup_minutes), places(nullptr) {}
+	};
+	bool tracking(int key, const std::string &arg, TrackingTarget target, const std::string &base_dir);
+	bool isTracking(int key);
 	// what a viewer section says of the default station
 	bool station(int key, const std::string &arg, StationDefaults &d);
 }

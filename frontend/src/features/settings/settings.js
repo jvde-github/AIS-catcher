@@ -19,7 +19,7 @@ import {
     map, redraw, markerLayer, planeLayer, shapeLayer, trackLayer, labelLayer,
     updateMapLayer, refreshBaseMapRows, refreshOverlayCredits,
 } from '../../map.js';
-import { receiver, setReceiver, fetchTracks, resetTrackCursor, trackWindowStart } from '../../data.js';
+import { focus, setFocus, fetchTracks, resetTrackCursor, trackWindowStart } from '../../data.js';
 import { showDialog, showNotification } from '../../dialog.js';
 import * as community from '../../overlays/community.js';
 import * as range from '../range/range.js';
@@ -219,7 +219,7 @@ function updateForLegacySettings() {
 export function loadSettings() {
     settingsStore.load(urlParams.has("reset"));
     if (settingsStore.upgraded()) showNotification("Settings were reset for this version of the viewer");
-    if (Number.isInteger(settings.focusStation)) setReceiver(settings.focusStation);
+    if (Number.isInteger(settings.focusStation)) setFocus(settings.focusStation);
     settings.android = false;
 }
 
@@ -284,7 +284,7 @@ export function applyDefaultSettings() {
 
 export function saveSettings() {
     for (const fn of hooks.save) fn();
-    settings.focusStation = receiver;
+    settings.focusStation = focus;
 
     persistSettings();
 

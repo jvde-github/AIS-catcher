@@ -9,7 +9,7 @@ const plain = value => String(value ?? '').includes('&') ? decodeHTMLEntities(va
 export function createLocalSearch(host) {
     let kept = null;
     return async (query, type, signal) => {
-        const receiver = host.receiver();
+        const focus = host.focus();
         const rows = [];
         if (type === 'all' || type === 'ships') {
             for (const entry of Object.values(host.ships() || {})) {
@@ -19,12 +19,12 @@ export function createLocalSearch(host) {
             }
         }
         if (type !== 'ships') {
-            let data = kept && kept.receiver === receiver && Date.now() - kept.at < 60000 ? kept.data : null;
+            let data = kept && kept.focus === focus && Date.now() - kept.at < 60000 ? kept.data : null;
             if (!data) {
-                const response = await fetch('api/mapobjects.json?since=0&receiver=' + receiver, {signal});
+                const response = await fetch('api/mapobjects.json?since=0&stations=' + focus, {signal});
                 if (!response.ok) throw new Error('Could not load stations and places');
                 data = await response.json();
-                kept = {receiver, at: Date.now(), data};
+                kept = {focus, at: Date.now(), data};
             }
             for (const object of data.objects || []) {
                 if ((type === 'all' || type === 'stations') && object.kind === 8) {
@@ -39,7 +39,7 @@ export function createLocalSearch(host) {
                 }
             }
         }
-        if (receiver !== host.receiver()) return [];
+        if (focus !== host.focus()) return [];
         const needle = normalize(query), terms = needle.split(/\s+/);
         return rows.map(row => {
             const fields = [row.name, row.id, row.code, row.callsign, row.imo > 0 ? row.imo : '', row.mmsi, row.country].map(normalize);

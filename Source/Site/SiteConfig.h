@@ -26,6 +26,7 @@
 
 #include <memory>
 
+#include "Common.h"
 #include "Message.h"
 #include "TrackingConfig.h"
 #include "ViewFilter.h"
@@ -67,13 +68,37 @@ struct ApiKey
 	bool operator==(const ApiKey &o) const { return name == o.name && sha256 == o.sha256 && scopes == o.scopes; }
 };
 
-// One server of the site: a port, an address, the services it offers and
-// the ships it shows of all the site keeps.
+// A tracker of a server's own, behind a filter on the message stream: which
+// receivers feed it (zones, or the group mask), what passes (the terms of
+// AIS::Filter, as given), what it keeps and where it backs up. A server
+// without one reads the site's tracker.
+struct TrackerSpec
+{
+	bool own = false;
+	std::vector<std::pair<int, std::string>> filter; // (key, value) in the order given
+	std::vector<std::string> zones;
+	uint64_t groups_in = GROUPS_ALL;
+	TrackingConfig tracking;
+	std::string backup_file;
+	int backup_minutes = 10;
+
+	bool operator==(const TrackerSpec &o) const
+	{
+		return own == o.own && filter == o.filter && zones == o.zones && groups_in == o.groups_in &&
+			   tracking == o.tracking && backup_file == o.backup_file && backup_minutes == o.backup_minutes;
+	}
+	bool operator!=(const TrackerSpec &o) const { return !(*this == o); }
+};
+
+// One server of the site: a port, an address, the services it offers, the
+// tracker it reads and the ships it shows of all that tracker keeps.
 struct ServerSpec
 {
 	int port = 0;
 	std::string bind = "127.0.0.1";
-	std::vector<std::string> serve;
+	// what it serves: the map unless switched off, the rest when switched on
+	bool ui = true, api = false, mcp = false, system = false, geojson = false, metrics = false;
+	TrackerSpec tracking;
 	ViewFilter filter;
 	bool place_geometry = true; // serve the outlines of places, not only their markers
 	ViewerOptions viewer;
@@ -84,10 +109,25 @@ struct ServerSpec
 	// managed mode's server beside the control panel: its port and address are the panel's
 	bool main = false;
 
+	// the services by name, as the index and the log list them
+	std::vector<std::string> served() const
+	{
+		std::vector<std::string> out;
+		if (ui) out.push_back("ui");
+		if (api) out.push_back("api");
+		if (mcp) out.push_back("mcp");
+		if (system) out.push_back("system");
+		if (geojson) out.push_back("geojson");
+		if (metrics) out.push_back("metrics");
+		return out;
+	}
+	bool serves() const { return ui || api || mcp || system || geojson || metrics; }
+
 	bool operator==(const ServerSpec &o) const
 	{
-		return port == o.port && bind == o.bind && serve == o.serve && filter == o.filter && place_geometry == o.place_geometry &&
-			   viewer == o.viewer && keys == o.keys && open == o.open && main == o.main;
+		return port == o.port && bind == o.bind && ui == o.ui && api == o.api && mcp == o.mcp && system == o.system &&
+			   geojson == o.geojson && metrics == o.metrics && tracking == o.tracking && filter == o.filter &&
+			   place_geometry == o.place_geometry && viewer == o.viewer && keys == o.keys && open == o.open && main == o.main;
 	}
 	bool operator!=(const ServerSpec &o) const { return !(*this == o); }
 };
@@ -101,12 +141,9 @@ inline bool localBind(const std::string &bind)
 // what others could read beyond this machine is guarded, or said to be open
 inline void checkServerAccess(const ServerSpec &spec, const std::string &where)
 {
-	const auto offers = [&](const char *name) {
-		return std::find(spec.serve.begin(), spec.serve.end(), name) != spec.serve.end();
-	};
-	if (!localBind(spec.bind) && spec.keys.empty() && !spec.open && (offers("api") || offers("mcp") || offers("system")))
+	if (!localBind(spec.bind) && spec.keys.empty() && !spec.open && (spec.api || spec.mcp || spec.system))
 		throw std::runtime_error(where + " listens beyond this machine: give it \"keys\", or say \"public\": true for data anyone may read.");
-	if (offers("system") && spec.open && spec.keys.empty() && !localBind(spec.bind))
+	if (spec.system && spec.open && spec.keys.empty() && !localBind(spec.bind))
 		throw std::runtime_error(where + " is public: its \"system\" service needs \"keys\".");
 }
 
@@ -171,5 +208,12 @@ struct SiteConfig
 	MqttStateSpec mqtt_state;
 
 	// a tracker is kept for whatever reads it: a server, a webhook, the MQTT state
-	bool wantsTracker() const { return !servers.empty() || !webhooks.empty() || mqtt_state.any(); }
+	// the site's tracker: a server reads it unless it has a tracker of its own
+	bool wantsTracker() const
+	{
+		for (const auto &s : servers)
+			if (!s.tracking.own)
+				return true;
+		return !webhooks.empty() || mqtt_state.any();
+	}
 };

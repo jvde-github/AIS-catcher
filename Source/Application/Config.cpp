@@ -28,9 +28,6 @@
 #include "Event.h"
 #include "Server.h"
 #endif
-#ifdef HASWEBVIEWER
-#include "WebViewer.h"
-#endif
 
 IO::OutputMessage *Config::newDatabaseOutput(const std::string &type) {
   if (type == "postgres" || type == "postgresql" || type == "psql")
@@ -170,6 +167,7 @@ void Config::setStationsFromJSON(const JSON::Value &v) {
   stationsFromJSON(v, _engine.stations);
 }
 
+#ifdef HASAPI
 // one value or a list of them; a text value is split at its commas
 static void addEach(const JSON::Value &v, std::vector<std::string> &out) {
   if (v.isNull())
@@ -180,6 +178,7 @@ static void addEach(const JSON::Value &v, std::vector<std::string> &out) {
     if (!p.empty())
       out.push_back(p);
 }
+#endif
 
 #ifdef HASAPI
 // "tracking": { "file": "/var/lib/aiscatcher/tracking.bin", "backup": 10, "history": 1800 }
@@ -230,39 +229,250 @@ static void keysFromJSON(const JSON::Value &v, std::vector<ApiKey> &out) {
   }
 }
 
+// A server, from whichever section writes one: -N, a "server" section, managed
+// mode's old viewer section, or an entry of "services". The terms of the
+// message filter, the zones and the groups make it a tracker of its own; the
+// tracking keys go to that tracker when it has one, else to the site's.
+struct Config::ServerEntry {
+  ServerSpec spec;
+  std::vector<std::pair<int, std::string>> tracking_terms, station_terms;
+  std::vector<int> station_ids; // the stations the server shows, and describes when the file does not list them
+  AIS::Filter probe; // tells a filter term from the rest, and whether the filter is switched on
+  std::vector<std::string> dropped;
+};
+
+// one key of a server; `json` is its value where the file has one, for the keys that take an object
+bool Config::serverKey(ServerEntry &e, int key, const std::string &value, const JSON::Value *json, StationDefaults *defaults) {
+  (void)defaults;
+  ServerSpec &spec = e.spec;
+  TrackerSpec &own = spec.tracking;
+  switch (key) {
+  case AIS::KEY_SETTING_PORT: spec.port = Util::Parse::Integer(value, 1, 65535); return true;
+  case AIS::KEY_SETTING_IP_BIND:
+  case AIS::KEY_SETTING_BIND: spec.bind = value; return true;
+  case AIS::KEY_SETTING_UI: spec.ui = Util::Parse::Switch(value); return true;
+  case AIS::KEY_SETTING_API: spec.api = Util::Parse::Switch(value); return true;
+  case AIS::KEY_SETTING_MCP: spec.mcp = Util::Parse::Switch(value); return true;
+  case AIS::KEY_SETTING_SYSTEM: spec.system = Util::Parse::Switch(value); return true;
+  case AIS::KEY_SETTING_GEOJSON: spec.geojson = Util::Parse::Switch(value); return true;
+  case AIS::KEY_SETTING_PROME:
+  case AIS::KEY_SETTING_METRICS: spec.metrics = Util::Parse::Switch(value); return true;
+  case AIS::KEY_SETTING_PLACE_GEOMETRY: spec.place_geometry = Util::Parse::Switch(value); return true;
+  case AIS::KEY_SETTING_PUBLIC: spec.open = Util::Parse::Switch(value); return true;
+  case AIS::KEY_SETTING_MAIN: spec.main = Util::Parse::Switch(value); return true;
+  case AIS::KEY_SETTING_DESCRIPTION: return true; // the panel's name for it
+  case AIS::KEY_SETTING_STATION_ID: {
+    std::vector<std::string> parts;
+    Util::Parse::Split(value, ',', parts);
+    for (const auto &p : parts)
+      if (!p.empty())
+        e.station_ids.push_back((int)Util::Parse::Integer(p, 0, 2147483647));
+    return true;
+  }
+  case AIS::KEY_SETTING_KEYS:
+    if (!json)
+      throw ConfigError("\"keys\" is set in the configuration file.");
+    keysFromJSON(*json, spec.keys);
+    return true;
+  case AIS::KEY_SETTING_FILTER:
+    // which ships the server shows, as an object; a switch is the message filter's
+    if (json && json->isObject()) {
+      viewFilterFromJSON(*json, spec.filter);
+      return true;
+    }
+    break;
+  case AIS::KEY_SETTING_TRACKING: {
+    // a tracker of its own: its filter, zones and groups, and what it keeps
+    if (!json || !json->isObject())
+      throw ConfigError("a server's \"tracking\" must be an object.");
+    for (const auto &m : json->getObject().getMembers()) {
+      const int k = m.Key();
+      const std::string v = text(m.Get());
+      if (k == AIS::KEY_SETTING_ZONE || k == AIS::KEY_SETTING_GROUPS_IN || SiteKeys::isTracking(k)) {
+        serverKey(e, k, v, &m.Get(), nullptr);
+        continue;
+      }
+      if (!e.probe.SetOptionKey((AIS::Keys)k, v))
+        throw ConfigError("field \"" + keyName(k) + "\" is not allowed in a server's \"tracking\".");
+      own.filter.emplace_back(k, v);
+    }
+    // a term in "tracking" is meant: the switch is on
+    if (!e.probe.isOn() && !own.filter.empty()) {
+      e.probe.SetOptionKey(AIS::KEY_SETTING_FILTER, "on");
+      own.filter.emplace_back((int)AIS::KEY_SETTING_FILTER, "on");
+    }
+    return true;
+  }
+  case AIS::KEY_SETTING_ZONE:
+    Util::Parse::Split(value, ',', own.zones);
+    return true;
+  case AIS::KEY_SETTING_GROUPS_IN:
+    own.groups_in = (uint64_t)Util::Parse::Integer(value, 0, 0x7FFFFFFFFFFFFFFFLL);
+    return true;
+  // what the web viewer of before took and this server has no use for
+  case AIS::KEY_SETTING_PORT_MIN:
+  case AIS::KEY_SETTING_PORT_MAX:
+  case AIS::KEY_SETTING_SPLIT:
+  case AIS::KEY_SETTING_CDN:
+  case AIS::KEY_SETTING_ZLIB:
+  case AIS::KEY_SETTING_REUSE_PORT:
+  case AIS::KEY_SETTING_STATS_ON_CLOSE:
+  case AIS::KEY_SETTING_MSGS:
+    e.dropped.push_back(keyName(key));
+    return true;
+  default:
+    break;
+  }
+  // a viewer's option, a tracking key (the position is the station's too), a station key, a filter term
+  bool taken = SiteKeys::viewer(key, value, spec.viewer);
+  if (SiteKeys::isTracking(key)) {
+    e.tracking_terms.emplace_back(key, value);
+    taken = true;
+  }
+  if (defaults) {
+    StationDefaults probe;
+    if (SiteKeys::station(key, value, probe)) {
+      e.station_terms.emplace_back(key, value);
+      taken = true;
+    }
+  }
+  if (!taken && e.probe.SetOptionKey((AIS::Keys)key, value)) {
+    own.filter.emplace_back(key, value);
+    taken = true;
+  }
+  return taken;
+}
+
+// the entry is complete: it keeps ships of its own when its filter is on or it
+// picks receivers, else it reads the site's tracker and configures that
+void Config::serverDone(ServerEntry &e, SiteConfig &site, StationDefaults *defaults, StationRegistry *registry, const std::string &where) {
+  ServerSpec &spec = e.spec;
+  TrackerSpec &own = spec.tracking;
+  own.own = e.probe.isOn() || !own.zones.empty() || own.groups_in != GROUPS_ALL;
+  StationDefaults at;
+  for (const auto &t : e.station_terms)
+    SiteKeys::station(t.first, t.second, at);
+  if (!e.station_ids.empty()) {
+    // the server shows these stations; what the section says of a station
+    // describes the first of them, where "stations" does not list it
+    for (int id : e.station_ids)
+      if (std::find(spec.filter.stations.begin(), spec.filter.stations.end(), id) == spec.filter.stations.end())
+        spec.filter.stations.push_back(id);
+    if (registry)
+      for (std::size_t i = 0; i < e.station_ids.size(); i++) {
+        const int id = e.station_ids[i];
+        if (registry->find(id))
+          continue;
+        StationRegistry::Station s;
+        s.id = id;
+        s.name = i == 0 && !at.name.empty() ? at.name : "Station " + std::to_string(id);
+        if (i == 0) {
+          if (at.placed()) {
+            s.lat = at.lat;
+            s.lon = at.lon;
+          }
+          s.alt = at.alt;
+          s.mmsi = at.mmsi;
+          s.share_loc = at.share_loc;
+        }
+        // GPS moves it only when the section says so, as a listed station has it
+        bool gps = false;
+        for (const auto &t : e.station_terms)
+          if (t.first == AIS::KEY_SETTING_USE_GPS)
+            gps = Util::Parse::Switch(t.second);
+        s.gps = gps;
+        registry->define(s);
+      }
+  }
+  if (own.own) {
+    own.tracking.msg_save = spec.viewer.msg;
+    for (const auto &t : e.tracking_terms)
+      SiteKeys::tracking(t.first, t.second, SiteKeys::TrackingTarget(own), base_dir);
+    // what the section says of the station is this tracker's, unless it names
+    // the station: it measures from there, shares it or not, follows GPS or its own vessel
+    if (e.station_ids.empty()) {
+      own.tracking.fixed = at.placed();
+      own.tracking.lat = at.placed() ? at.lat : LAT_UNDEFINED;
+      own.tracking.lon = at.placed() ? at.lon : LON_UNDEFINED;
+      own.tracking.latlon_share = at.share_loc;
+      own.tracking.use_gps = at.gps;
+      own.tracking.own_mmsi = at.mmsi;
+    }
+  } else {
+    if (defaults && e.station_ids.empty())
+      for (const auto &t : e.station_terms)
+        SiteKeys::station(t.first, t.second, *defaults);
+    if (site.tracking_set) {
+      if (!e.tracking_terms.empty())
+        Warning() << where << ": the configuration's \"tracking\" says how ships are kept; the server's tracking settings are not used";
+    } else {
+      const std::string file = site.backup_file;
+      for (const auto &t : e.tracking_terms)
+        SiteKeys::tracking(t.first, t.second, SiteKeys::TrackingTarget(site), base_dir);
+      if (!file.empty() && site.backup_file != file)
+        Warning() << where << ": the backup file is now " << site.backup_file << ", not " << file << ": one tracker, one file";
+    }
+    own.filter.clear();
+  }
+  for (const auto &d : e.dropped)
+    Warning() << where << ": \"" << d << "\" has no effect and can go";
+  if (!spec.serves())
+    throw ConfigError(where + " serves nothing: the map is switched off and nothing else is on.");
+  try {
+    checkServerAccess(spec, where);
+  } catch (const std::exception &ex) {
+    throw ConfigError(ex.what());
+  }
+  for (const auto &other : site.servers)
+    if (other.port == spec.port)
+      throw ConfigError("two servers on port " + std::to_string(spec.port) + ".");
+  site.servers.push_back(spec);
+}
+
 // Managed mode's viewer section, from before the main server was an entry of
 // "services": a server with the map on the port beside the control panel, the
 // tracking, and what the section says of the default station. The panel moves
 // it into "services", "tracking" and "stations" when it saves.
 void Config::managedViewer(const JSON::Value &viewer, int port, const std::string &bind, SiteConfig &site,
-                           StationDefaults &defaults) {
-  ServerSpec spec;
-  spec.port = port;
-  spec.bind = bind;
-  spec.serve = {"ui"};
-  spec.viewer.managed = true;
+                           StationDefaults &defaults, StationRegistry *registry) {
+  ServerEntry e;
+  e.spec.port = port;
+  e.spec.bind = bind;
+  e.spec.main = true;
+  e.spec.viewer.managed = true;
   if (viewer.isObject())
-    for (const auto &m : viewer.getObject().getMembers()) {
-      const JSON::Value &v = m.Get();
-      switch (m.Key()) {
-      // which ships the map shows, as a server's filter; a switch here is the old message filter
-      case AIS::KEY_SETTING_FILTER:
-        if (v.isObject())
-          viewFilterFromJSON(v, spec.filter);
-        break;
-      case AIS::KEY_SETTING_PLACE_GEOMETRY:
-        spec.place_geometry = Util::Parse::Switch(text(v));
-        break;
-      default: {
-        // the keys a viewer has; what else the section holds is the panel's
-        const std::string value = text(v);
-        SiteKeys::viewer(m.Key(), value, spec.viewer);
-        SiteKeys::tracking(m.Key(), value, site, base_dir);
-        SiteKeys::station(m.Key(), value, defaults);
+    for (const auto &m : viewer.getObject().getMembers())
+      serverKey(e, m.Key(), text(m.Get()), &m.Get(), &defaults); // what else the section holds is the panel's
+  serverDone(e, site, &defaults, registry, "the main server");
+}
+
+// "server": [ { "port": 8100, "station": "Home", "lat": 52.1, "lon": 4.3, "filter": true, "allow_type": "1,2,3" } ]
+// the web viewer as its section wrote it: a server on the site's tracker, or on one of its own behind its filter
+void Config::serversFromJSON(const JSON::Value &v, SiteConfig &site, StationDefaults *defaults, StationRegistry *registry) {
+  const auto one = [&](const JSON::Value &entry) {
+    if (!entry.isObject())
+      throw ConfigError("each entry of \"server\" must be an object.");
+    ServerEntry e;
+    bool active = true;
+    for (const auto &m : entry.getObject().getMembers()) {
+      if (m.Key() == AIS::KEY_SETTING_ACTIVE) {
+        active = Util::Parse::Switch(m.Get().to_string());
+        continue;
       }
-      }
+      if (!serverKey(e, m.Key(), text(m.Get()), &m.Get(), defaults))
+        throw ConfigError("field \"" + keyName(m.Key()) + "\" is not allowed in \"server\".");
     }
-  site.servers.push_back(spec);
+    if (!active)
+      return;
+    if (!e.spec.port)
+      throw ConfigError("a \"server\" needs a \"port\".");
+    serverDone(e, site, defaults, registry, "the web viewer on port " + std::to_string(e.spec.port));
+  };
+  if (v.isArray())
+    for (const auto &entry : v.getArray())
+      one(entry);
+  else
+    one(v);
 }
 
 // Managed mode's site as its configuration says now: the server beside the
@@ -270,16 +480,16 @@ void Config::managedViewer(const JSON::Value &viewer, int port, const std::strin
 // of a file from before), the other servers, the tracking when the file has
 // it, and the webhooks and MQTT state
 void Config::managedSite(const JSON::JSON &root, int control_port, int viewer_port, const std::string &bind,
-                         SiteConfig &site, StationDefaults &defaults) {
+                         SiteConfig &site, StationDefaults &defaults, StationRegistry *registry) {
   ofFile([&] {
     SiteConfig file;
-    siteFromJSON(root, file, viewer_port, bind);
+    siteFromJSON(root, file, &defaults, registry, viewer_port, bind);
     SiteConfig made;
     const auto main = std::find_if(file.servers.begin(), file.servers.end(), [](const ServerSpec &s) { return s.main; });
     if (main == file.servers.end()) {
       const JSON::Value *control = root[AIS::KEY_SETTING_CONTROL];
       const JSON::Value *viewer = control && control->isObject() ? control->getObject()[AIS::KEY_SETTING_VIEWER] : nullptr;
-      managedViewer(viewer ? *viewer : JSON::Value(), viewer_port, bind, made, defaults);
+      managedViewer(viewer ? *viewer : JSON::Value(), viewer_port, bind, made, defaults, registry);
     } else
       defaults.name = main->viewer.station;
     for (const auto &spec : file.servers) {
@@ -442,90 +652,62 @@ void Config::mqttStateFromJSON(const JSON::Value &v, SiteConfig &site) {
 }
 #endif
 
-// -J port [key value]... on the command line: a server of "services", written
-// as the file would have it and read by the same code; a filter term goes into
-// its "filter"
-void Config::serverFromArgs(const std::string &port, const std::vector<std::pair<std::string, std::string>> &settings) {
-  std::string json;
-  JSON::Writer w(json);
-  w.beginObject().key("services").beginArray().beginObject().kv("port", port);
-  bool filtered = false;
-  for (int pass = 0; pass < 2; pass++) {
-    for (const auto &setting : settings) {
-      std::string name = setting.first;
-      Util::Convert::toUpper(name);
-      AIS::Keys key;
-      if (!AIS::lookupSettingKey(name, key))
-        throw ConfigError("unknown setting \"" + setting.first + "\".");
-      const std::string term = keyName(key);
-      if (ViewFilter::isKey(term) != (pass == 1))
-        continue;
-      if (pass == 1 && !filtered) {
-        w.key("filter").beginObject();
-        filtered = true;
-      }
-      w.kv(term, setting.second);
-    }
+// -N [port] [key value]... on the command line: a port starts a server, the
+// keys that follow, on this -N or the next without a port, are its settings;
+// the server is made once every key is in
+void Config::viewerFromArgs(const std::string &port, const std::vector<std::pair<std::string, std::string>> &settings) {
+  if (!port.empty()) {
+    flushViewer();
+    pending_port = port;
   }
-  if (filtered)
-    w.endObject();
-  w.endObject().endArray().endObject();
-  w.finish();
-
-  JSON::Parser parser(JSON_DICT_SETTING);
-  auto doc = parser.parse(json);
-  servicesFromJSON(*doc.root[AIS::KEY_SETTING_SERVICES], _engine.site_config);
+  for (const auto &setting : settings) {
+    std::string name = setting.first;
+    Util::Convert::toUpper(name);
+    AIS::Keys key;
+    if (!AIS::lookupSettingKey(name, key))
+      throw ConfigError("unknown setting \"" + setting.first + "\".");
+    viewer_args.emplace_back((int)key, setting.second);
+  }
 }
 
-// "services": [ { "port": 8100, "bind": "0.0.0.0", "serve": ["api"] } ]
-void Config::servicesFromJSON(const JSON::Value &v, SiteConfig &site, int main_port, const std::string &main_bind) {
+void Config::flushViewer() {
+  if (pending_port.empty()) {
+    if (!viewer_args.empty())
+      Warning() << "-N: settings without a port are not used";
+    viewer_args.clear();
+    return;
+  }
+  try {
+    ServerEntry e;
+    e.spec.port = Util::Parse::Integer(pending_port, 1, 65535);
+    for (const auto &a : viewer_args)
+      if (!serverKey(e, a.first, a.second, nullptr, &_engine.station_defaults))
+        throw ConfigError("\"" + keyName(a.first) + "\" is not a setting of -N.");
+    serverDone(e, _engine.site_config, &_engine.station_defaults, &_engine.stations, "-N " + pending_port);
+  } catch (const ConfigError &e) {
+    throw std::runtime_error("-N " + pending_port + ": " + e.what());
+  }
+  pending_port.clear();
+  viewer_args.clear();
+}
+
+// "services": [ { "port": 8100, "bind": "0.0.0.0", "api": true, "filter": { "stations": [3] },
+//                 "tracking": { "allow_type": "1,2,3", "file": "class-a.bin" } } ]
+// the map unless "ui" is false, the other services when switched on
+void Config::servicesFromJSON(const JSON::Value &v, SiteConfig &site, StationRegistry *registry, int main_port, const std::string &main_bind) {
   if (!v.isArray())
     throw ConfigError("\"services\" must be an array of server objects.");
   for (const auto &item : v.getArray()) {
     if (!item.isObject())
       throw ConfigError("each entry of \"services\" must be an object.");
-    ServerSpec spec;
+    ServerEntry e;
+    ServerSpec &spec = e.spec;
     bool port_given = false;
     for (const auto &m : item.getObject().getMembers()) {
-      switch (m.Key()) {
-      case AIS::KEY_SETTING_PORT:
-        spec.port = Util::Parse::Integer(m.Get().to_string(), 1, 65535);
+      if (m.Key() == AIS::KEY_SETTING_PORT)
         port_given = true;
-        break;
-      case AIS::KEY_SETTING_MAIN:
-        spec.main = Util::Parse::Switch(m.Get().to_string());
-        break;
-      case AIS::KEY_SETTING_DESCRIPTION: // the panel's name for it
-        break;
-      case AIS::KEY_SETTING_BIND:
-        spec.bind = m.Get().to_string();
-        break;
-      case AIS::KEY_SETTING_SERVE: {
-        std::vector<std::string> names;
-        addEach(m.Get(), names);
-        for (const auto &name : names) {
-          if (!Services::Server::known(name))
-            throw ConfigError("unknown service \"" + name + "\".");
-          spec.serve.push_back(name);
-        }
-        break;
-      }
-      case AIS::KEY_SETTING_FILTER:
-        viewFilterFromJSON(m.Get(), spec.filter);
-        break;
-      case AIS::KEY_SETTING_PLACE_GEOMETRY:
-        spec.place_geometry = Util::Parse::Switch(m.Get().to_string());
-        break;
-      case AIS::KEY_SETTING_KEYS:
-        keysFromJSON(m.Get(), spec.keys);
-        break;
-      case AIS::KEY_SETTING_PUBLIC:
-        spec.open = Util::Parse::Switch(m.Get().to_string());
-        break;
-      default:
-        if (!SiteKeys::viewer(m.Key(), text(m.Get()), spec.viewer))
-          throw ConfigError("field \"" + keyName(m.Key()) + "\" is not allowed in a server.");
-      }
+      if (!serverKey(e, m.Key(), text(m.Get()), &m.Get(), nullptr))
+        throw ConfigError("field \"" + keyName(m.Key()) + "\" is not allowed in a server.");
     }
     // the main server is the control panel's: its port and address, the map always on
     if (spec.main) {
@@ -539,33 +721,24 @@ void Config::servicesFromJSON(const JSON::Value &v, SiteConfig &site, int main_p
       spec.port = main_port;
       spec.bind = main_bind;
       spec.viewer.managed = true;
-      if (std::find(spec.serve.begin(), spec.serve.end(), "ui") == spec.serve.end())
-        spec.serve.insert(spec.serve.begin(), "ui");
-    } else {
-      if (!spec.port)
-        throw ConfigError("a server needs a \"port\".");
-      if (spec.serve.empty())
-        throw ConfigError("the server on port " + std::to_string(spec.port) + " serves nothing: \"serve\" is empty.");
-    }
-    try {
-      checkServerAccess(spec, spec.main ? "the main server" : "the server on port " + std::to_string(spec.port));
-    } catch (const std::exception &e) {
-      throw ConfigError(e.what());
-    }
-    for (const auto &other : site.servers)
-      if (other.port == spec.port)
-        throw ConfigError("two servers on port " + std::to_string(spec.port) + ".");
-    site.servers.push_back(spec);
+      spec.ui = true;
+    } else if (!spec.port)
+      throw ConfigError("a server needs a \"port\".");
+    serverDone(e, site, nullptr, registry, spec.main ? "the main server" : "the server on port " + std::to_string(spec.port));
   }
 }
 
 // The parts of a configuration a site reads as they stand, without an engine:
 // managed mode applies them as the panel saves them
-void Config::siteFromJSON(const JSON::JSON &root, SiteConfig &site, int main_port, const std::string &main_bind) {
+void Config::siteFromJSON(const JSON::JSON &root, SiteConfig &site, StationDefaults *defaults, StationRegistry *registry, int main_port, const std::string &main_bind) {
+  // the tracking first: a web viewer's tracking settings yield to it
+  if (const JSON::Value *t = root[AIS::KEY_SETTING_TRACKING])
+    trackingFromJSON(*t, site);
   for (const auto &m : root.getMembers()) {
     switch (m.Key()) {
-    case AIS::KEY_SETTING_TRACKING: trackingFromJSON(m.Get(), site); break;
-    case AIS::KEY_SETTING_SERVICES: servicesFromJSON(m.Get(), site, main_port, main_bind); break;
+    case AIS::KEY_SETTING_TRACKING: break;
+    case AIS::KEY_SETTING_SERVICES: servicesFromJSON(m.Get(), site, registry, main_port, main_bind); break;
+    case AIS::KEY_SETTING_SERVER: serversFromJSON(m.Get(), site, defaults, registry); break;
 #ifdef HASDELIVERY
     case AIS::KEY_SETTING_WEBHOOKS: webhooksFromJSON(m.Get(), site); break;
     case AIS::KEY_SETTING_MQTT_STATE: mqttStateFromJSON(m.Get(), site); break;
@@ -573,23 +746,6 @@ void Config::siteFromJSON(const JSON::JSON &root, SiteConfig &site, int main_por
     default: break;
     }
   }
-}
-#endif
-
-#ifdef HASWEBVIEWER
-void Config::setServerfromJSON(const JSON::Value &m) {
-  auto add = [this](const JSON::Value &v) {
-    if (!isActiveObject(v))
-      return;
-    _engine.viewers.push_back(std::unique_ptr<WebViewer>(new WebViewer()));
-    setSettingsFromJSON(v, *_engine.viewers.back());
-  };
-
-  if (m.isArray())
-    for (const auto &v : m.getArray())
-      add(v);
-  else
-    add(m);
 }
 #endif
 
@@ -907,9 +1063,8 @@ void Config::set(const std::string &str) {
     case AIS::KEY_SETTING_TCP_LISTENER:
       addOutputsFromJSON<IO::TCPlistenerStreamer>(m, "TCP Listener", "0");
       break;
-    case AIS::KEY_SETTING_SERVER:
+    case AIS::KEY_SETTING_SERVER: // the site's, read below
 #ifdef HASWEBVIEWER
-      setServerfromJSON(m.Get());
       break;
 #else
       throw std::runtime_error("Config file: \"server\" needs a build with the web viewer (cmake -DWEBVIEWER=ON).");
@@ -982,26 +1137,17 @@ void Config::set(const std::string &str) {
 
 #ifdef HASAPI
   if (managed)
-    managedSite(doc.root, control_port, viewer_port, bind, _engine.site_config, _engine.station_defaults);
+    managedSite(doc.root, control_port, viewer_port, bind, _engine.site_config, _engine.station_defaults, &_engine.stations);
   else
-    ofFile([&] { siteFromJSON(doc.root, _engine.site_config); });
+    ofFile([&] { siteFromJSON(doc.root, _engine.site_config, &_engine.station_defaults, &_engine.stations); });
 #endif
 }
 
-// Once every key is read: the web viewers and the site's servers each on a
-// port of their own, and every station a receiver names one the configuration
-// defines.
+// Once every key is read: the last -N becomes its server, and every station a
+// receiver names is one the configuration defines.
 void Config::finish() {
-#ifdef HASWEBVIEWER
-  for (const auto &v : _engine.viewers) {
-    if (!v->isPortSet())
-      continue;
-    if (managed && v->getPort() == control_port)
-      throw std::runtime_error("A web viewer on port " + std::to_string(control_port) + ", the control panel's.");
-    for (const auto &s : _engine.site_config.servers)
-      if (v->getPort() == s.port)
-        throw std::runtime_error("Two servers on port " + std::to_string(s.port) + ": a web viewer and a server of \"services\".");
-  }
+#ifdef HASAPI
+  flushViewer();
 #endif
 
   // a station a receiver names is one the configuration defines; the default station, 0, is there always

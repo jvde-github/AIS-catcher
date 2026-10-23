@@ -306,9 +306,6 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
                     if (type) (pools[type] = pools[type] || []).push(o);
                 });
                 outputs.forEach(o => {
-                    // a web viewer reports the programs reading it
-                    if (o.type === 'server' && o.active)
-                        return putStats(o.stats, [`${stat.tcp_clients} connection${stat.tcp_clients === 1 ? '' : 's'}`]);
                     const m = o.active && pools[o.type] && pools[o.type].shift();
                     if (!m) return putStats(o.stats, []);
                     putStats(o.stats, statParts(o.type, m.stats));

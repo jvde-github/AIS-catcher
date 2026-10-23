@@ -58,9 +58,7 @@ namespace SiteKeys
 		case AIS::KEY_SETTING_LOG: o.log = Util::Parse::Switch(arg); break;
 		case AIS::KEY_SETTING_DECODER: o.decoder = Util::Parse::Switch(arg); break;
 		case AIS::KEY_SETTING_REPLAY: o.replay = Util::Parse::Switch(arg); break;
-		case AIS::KEY_SETTING_GEOJSON: o.geojson = Util::Parse::Switch(arg); break;
 		case AIS::KEY_SETTING_KML: o.kml = Util::Parse::Switch(arg); break;
-		case AIS::KEY_SETTING_PROME: o.prome = Util::Parse::Switch(arg); break;
 		case AIS::KEY_SETTING_MSG:
 		case AIS::KEY_SETTING_MESSAGE:
 			o.msg = Util::Parse::Switch(arg);
@@ -77,16 +75,19 @@ namespace SiteKeys
 		return true;
 	}
 
-	bool tracking(int key, const std::string &arg, SiteConfig &site, const std::string &base_dir)
+	bool tracking(int key, const std::string &arg, TrackingTarget target, const std::string &base_dir)
 	{
-		TrackingConfig &t = site.tracking;
+		TrackingConfig &t = target.tracking;
 		switch (key)
 		{
-		case AIS::KEY_SETTING_FILE: site.backup_file = Util::Helper::resolvePath(arg, base_dir); break;
-		case AIS::KEY_SETTING_PLACES: site.places = Util::Helper::resolvePath(arg, base_dir); break;
+		case AIS::KEY_SETTING_FILE: target.backup_file = Util::Helper::resolvePath(arg, base_dir); break;
+		case AIS::KEY_SETTING_PLACES:
+			if (target.places)
+				*target.places = Util::Helper::resolvePath(arg, base_dir);
+			break;
 		case AIS::KEY_SETTING_BACKUP:
-			site.backup_minutes = integer(key, arg, 0, 2 * 24 * 60);
-			if (site.backup_minutes > 0 && site.backup_minutes < 5)
+			target.backup_minutes = integer(key, arg, 0, 2 * 24 * 60);
+			if (target.backup_minutes > 0 && target.backup_minutes < 5)
 				throw std::runtime_error("\"backup\" is 0 (off) or at least 5 minutes.");
 			break;
 		case AIS::KEY_SETTING_HISTORY: t.time_history = integer(key, arg, 5, 12 * 3600); break;
@@ -104,6 +105,20 @@ namespace SiteKeys
 		default: return false;
 		}
 		return true;
+	}
+
+	bool isTracking(int key)
+	{
+		switch (key)
+		{
+		case AIS::KEY_SETTING_FILE: case AIS::KEY_SETTING_PLACES: case AIS::KEY_SETTING_BACKUP: case AIS::KEY_SETTING_HISTORY:
+		case AIS::KEY_SETTING_TRACK_TIME: case AIS::KEY_SETTING_REPLAY_TIME: case AIS::KEY_SETTING_TRACK_MEMORY:
+		case AIS::KEY_SETTING_MAX_SHIPS: case AIS::KEY_SETTING_CUTOFF: case AIS::KEY_SETTING_EXPIRE:
+		case AIS::KEY_SETTING_SERVER_MODE: case AIS::KEY_SETTING_LAT: case AIS::KEY_SETTING_LON:
+			return true;
+		default:
+			return false;
+		}
 	}
 
 	bool station(int key, const std::string &arg, StationDefaults &d)

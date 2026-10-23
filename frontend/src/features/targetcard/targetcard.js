@@ -12,7 +12,7 @@ import { getCallSign, getShipName } from '../../core/names.js';
 import { flagHTML, decodeHTMLEntities } from '@aiscatcher/ui/components.js';
 import { decodeBadge, glyphsHTML, KIND_CAT, showsShipBadge } from '@aiscatcher/ui/binary.js';
 import * as mapObjects from '../mapobjects/mapobjects.js';
-import { receiver } from '../../data.js';
+import { focus } from '../../data.js';
 import { severalStations, stationLabel } from '../../core/config.js';
 import { stationBoxes } from '@aiscatcher/ui/stations.js';
 import { nameAction } from '../../actions.js';
@@ -132,7 +132,7 @@ export function renderHull(ship) {
 async function fetchHistory(mmsi, kind) {
     if (historyCache.mmsi !== mmsi) historyCache = { mmsi, pts: null, changes: null };
     if (historyCache[kind] === null) {
-        const url = (kind === "pts" ? "api/path.json?" : "api/changes.json?") + mmsi + "&receiver=" + receiver;
+        const url = (kind === "pts" ? "api/path.json?" : "api/changes.json?") + mmsi + "&stations=" + focus;
         const data = await fetch(url).then((r) => r.json());
         if (historyCache.mmsi !== mmsi) return null;
         historyCache[kind] = kind === "pts" ? (data[mmsi] || []) : (Array.isArray(data) ? data : []);
@@ -161,7 +161,7 @@ async function refreshVessel() {
     stopVesselLoading = finishLoading;
     let data;
     try {
-        data = await fetch("api/ship.json?mmsi=" + mmsi + "&receiver=" + receiver).then((r) => r.json());
+        data = await fetch("api/ship.json?mmsi=" + mmsi + "&stations=" + focus).then((r) => r.json());
     } catch {
         return;
     } finally {

@@ -35,12 +35,11 @@ export function openButton(href) {
 // the services, as the Services overview has them in its columns
 export const SERVICE_COLUMNS = SERVICES.map(({ key, label, path }) => ({ key, label, path }));
 
-// what a server serves, the viewer's old GeoJSON and Prometheus switches counted; `builtIn`: one
-// that always serves the map, as the main server and a viewer of the `server` section do
+// what a server serves: the map unless switched off, the rest when switched on, Prometheus under
+// its old name too; `builtIn`: the main server, the map always on
 export function servedKeys(data, builtIn = false) {
-    const listed = k => Array.isArray(data.serve) && data.serve.includes(k);
-    const viewer = builtIn || listed('ui');
-    return SERVICES.filter(s => (builtIn && s.key === 'ui') || listed(s.key) || (viewer && s.legacy && on(data[s.legacy]))).map(s => s.key);
+    const map = builtIn || data.ui === undefined || on(data.ui);
+    return SERVICES.filter(s => s.key === 'ui' ? map : on(data[s.key]) || (s.legacy && on(data[s.legacy]))).map(s => s.key);
 }
 
 // a server as the panel names it: Main, its description, or its port
@@ -134,10 +133,10 @@ export function renderServing(host, data, { builtIn = false, bind, touched, rere
     const served = servedKeys(data, builtIn);
     const has = k => served.includes(k);
     const set = (k, value) => {
-        const list = SERVICES.map(s => s.key).filter(x => x === k ? value : has(x)).filter(x => !(builtIn && x === 'ui'));
-        // the services list says it now, not the viewer's old switches
+        // the switch says it now, not Prometheus's old name; the map is on unless said otherwise
         SERVICES.forEach(s => { if (s.legacy) delete data[s.legacy]; });
-        if (list.length || !builtIn) data.serve = list; else delete data.serve;
+        if (k === 'ui') { if (value) delete data.ui; else data.ui = false; }
+        else if (value) data[k] = true; else delete data[k];
         touched();
         rerender();
     };
@@ -310,7 +309,7 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
     }
 
     function add() {
-        state.list.push({ port: freePort(), serve: ['api'] });
+        state.list.push({ port: freePort(), ui: false, api: true });
         touched();
         return state.list.length - 1;
     }
@@ -328,7 +327,7 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         const s = state.list[i];
         if (s.main) return box.append(openButton('/viewer/'));
         const at = address(s);
-        const serve = s.serve || [];
+        const serve = servedKeys(s);
         if (at && (serve.includes('ui') || serve.includes('api')))
             box.append(openButton(at + (serve.includes('ui') ? '/' : '/api/v1')));
         box.append(moreMenu('More actions', [['Delete…', () => {
@@ -384,7 +383,7 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         renderServing(main, s, { bind: s.bind, touched, rerender });
 
         // ---- what its map adds, as the main server's
-        if ((s.serve || []).includes('ui'))
+        if (servedKeys(s).includes('ui'))
             renderViewerFields(main, s, viewerFields, touched);
 
         renderShows(main, s, { stations: stations(), touched, rerender });
@@ -413,7 +412,7 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
             if (p === state.viewerPort || p === state.controlPort) return [i, `Port ${p} is the ${p === state.viewerPort ? 'main server' : 'control panel'}'s.`];
             if (seen.has(p)) return [i, `Two servers on port ${p}.`];
             seen.add(p);
-            if (!(s.serve || []).length) return [i, `The server on port ${p} serves nothing: switch on what it offers.`];
+            if (!servedKeys(s).length) return [i, `The server on port ${p} serves nothing: switch on what it offers.`];
         }
         return null;
     }

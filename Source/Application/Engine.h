@@ -30,7 +30,6 @@
 
 class ControlCore;
 class Site;
-class WebViewer;
 
 // stop ends the running engine, stop_process the managed-mode loop around it
 extern std::atomic<bool> stop;
@@ -50,12 +49,6 @@ struct Engine {
 	// Receivers and outputs
 	std::vector<std::unique_ptr<Receiver>> receivers;
 	std::vector<std::unique_ptr<IO::OutputMessage>> msg;
-
-#ifdef HASWEBVIEWER
-	// the web viewers of -N and "server": each keeps its own ship table, fed
-	// like an output by the receivers in its zones
-	std::vector<std::unique_ptr<WebViewer>> viewers;
-#endif
 
 	// Community feed output, owned by msg; set up at most once
 	IO::HubStreamer *comm_feed = nullptr;
@@ -98,7 +91,6 @@ struct Engine {
 	int exit_code = 0;
 	int nrec = 0;
 
-	// out of line, as the web viewers are only declared here
 	Engine();
 
 	// The site outlives the engine, so detaching must happen even when run()

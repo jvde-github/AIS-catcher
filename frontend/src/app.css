@@ -6,7 +6,7 @@
 @import "@aiscatcher/ui/css/index.css";
 @import "./style.css";
 /* the features' own sheets, after the viewer's */
-@import "./features/receiver/receiver.css";
+@import "./features/station/station.css";
 @import "./tabs/realtime/realtime.css";
 @import "./tabs/plots/plots.css";
 @import "./features/about/about.css";

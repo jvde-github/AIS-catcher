@@ -17,6 +17,7 @@
 
 
 #include "Ui.h"
+#include "Parse.h"
 #include "AIS-catcher.h"
 #include "HTTPServer.h"
 #include "Helper.h"
@@ -213,8 +214,11 @@ namespace Services
 		return true;
 	}
 
-	bool Ui::drawnStation(int focus, StationRegistry::Station &at)
+	bool Ui::drawnStation(const std::vector<int> &focus, StationRegistry::Station &at)
 	{
+		// a tracker that measures from a position of its own draws that: the ship table does it
+		if (tracker.trackingConfig().fixed)
+			return false;
 		const StationRegistry registry = stations();
 		int only = -1, count = 0;
 		registry.forEach([&](const StationRegistry::Station &s) {
@@ -223,7 +227,7 @@ namespace Services
 			only = s.id;
 			count++;
 		});
-		const int id = focus >= 0 ? focus : count == 1 ? only : -1;
+		const int id = focus.size() == 1 ? focus[0] : count == 1 ? only : -1;
 		const StationRegistry::Station *s = id >= 0 ? registry.find(id) : nullptr;
 		if (!s || !s->share_loc)
 			return false;
@@ -234,29 +238,43 @@ namespace Services
 		return true;
 	}
 
-	std::vector<int> Ui::figuresOf(int focus) const
+	std::vector<int> Ui::figuresOf(const std::vector<int> &focus) const
 	{
-		return focus >= 0 ? std::vector<int>(1, focus) : filter.stations;
+		return focus.empty() ? filter.stations : focus;
 	}
 
-	// the station the page looks through, -1 for all of them
-	int Ui::focusOf(const Request &request)
+	// the stations the page looks through, among the server's; none for all of them
+	std::vector<int> Ui::focusOf(const Request &request)
 	{
-		const int id = (int)toInt(request.param("receiver"), -1);
-		if (id < 0 || !filter.allowsStation(id))
-			return -1;
-		return stations().find(id) ? id : -1;
+		std::vector<int> ids;
+		const StationRegistry registry = stations();
+		std::vector<std::string> parts;
+		Util::Parse::Split(request.param("stations"), ',', parts);
+		for (const auto &p : parts)
+		{
+			const int id = (int)toInt(p, -1);
+			if (id >= 0 && filter.allowsStation(id) && registry.find(id) && std::find(ids.begin(), ids.end(), id) == ids.end())
+				ids.push_back(id);
+		}
+		return ids;
 	}
 
-	DB::Keep Ui::keepFor(int focus)
+	DB::Keep Ui::keepFor(const std::vector<int> &focus)
 	{
 		const bool scoped = filter.any();
-		if (focus < 0 && !scoped)
+		if (focus.empty() && !scoped)
 			return DB::Keep();
 		const std::time_t now = std::time(nullptr), from = now - tracker.ships().timeHistory();
 		const ViewFilter within = filter;
 		return [focus, from, now, scoped, within](const Ship &s) {
-			return (!scoped || within.passes(s, now)) && (focus < 0 || s.heardSince(focus, from));
+			if (scoped && !within.passes(s, now))
+				return false;
+			if (focus.empty())
+				return true;
+			for (int id : focus)
+				if (s.heardSince(id, from))
+					return true;
+			return false;
 		};
 	}
 
@@ -266,7 +284,7 @@ namespace Services
 		const std::string &p = request.path;
 		DB &db = tracker.ships();
 		const auto since = [&]() { return (std::time_t)toInt(request.param("since")); };
-		const int focus = focusOf(request);
+		const std::vector<int> focus = focusOf(request);
 		const DB::Keep keep = keepFor(focus);
 		// one vessel, when the focus shows it
 		const auto shows = [&](int mmsi) {
@@ -386,7 +404,7 @@ namespace Services
 		else if (p == "/api/ships.json" || p == "/ships.json" || p == "/api/ships_full.json")
 		{
 			StationRegistry::Station at;
-			const bool drawn = drawnStation(-1, at);
+			const bool drawn = drawnStation(std::vector<int>(), at);
 			response = Response::json(db.getJSON(p == "/api/ships_full.json", drawn ? &at : nullptr, keep));
 		}
 		else if (p == "/api/output_stats.json")
@@ -532,7 +550,7 @@ namespace Services
 
 	// The stat page: the figures of what the page looks through, and what the
 	// site knows of itself and of the running engine.
-	std::string Ui::statJSON(int focus, const DB::Keep &keep)
+	std::string Ui::statJSON(const std::vector<int> &focus, const DB::Keep &keep)
 	{
 		DB &db = tracker.ships();
 		int vessels = 0;
@@ -630,14 +648,10 @@ namespace Services
 		else
 			w.kv("sharing", false).kv("sharing_uuid", false);
 		w.endObject()
-			.key("receivers").beginArray();
-		// the page's receiver picker chooses a station to look through
-		if (picker.size() > 1)
-		{
-			w.beginObject().kv("idx", -1).kv("label", "All").endObject();
-			for (const auto &s : picker)
-				w.beginObject().kv("idx", s.id).kv("label", s.name).endObject();
-		}
+			.key("stations").beginArray();
+		// the stations the page may look through, by number and name
+		for (const auto &s : picker)
+			w.beginObject().kv("id", s.id).kv("name", s.name).endObject();
 		w.endArray()
 			.key("plugins").beginObject().key("loaded").beginArray();
 		for (const auto &p : plugins.loaded())
