@@ -87,6 +87,9 @@ struct Ship {
   void decayAndExpire();
   void clearFields(uint32_t doomed);
   int getMMSItype() const;
+  // the class of an ERI ship type code, -1 for a code outside the table
+  // (8000, "type unknown", included)
+  static int eriClass(int code);
   int getShipTypeClassEri() const;
   int getShipTypeClass() const;
   void setType();

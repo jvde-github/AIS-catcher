@@ -231,8 +231,8 @@ int Ship::getMMSItype() const {
   return MMSI_OTHER;
 }
 
-int Ship::getShipTypeClassEri() const {
-  switch (shiptype) {
+int Ship::eriClass(int code) {
+  switch (code) {
   // Cargo cases
   case 8030:
   case 8010:
@@ -321,8 +321,13 @@ int Ship::getShipTypeClassEri() const {
   case 1920:
     return CLASS_HIGHSPEED;
   default:
-    return CLASS_OTHER;
+    return -1;
   }
+}
+
+int Ship::getShipTypeClassEri() const {
+  const int c = eriClass(shiptype);
+  return c < 0 ? CLASS_OTHER : c;
 }
 
 static bool isSARaircraft(uint32_t mmsi) {
