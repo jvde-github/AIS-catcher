@@ -102,35 +102,43 @@ function placeFocusChip() {
     alt.title = chip.title;
 }
 
-// ─── the filter's station ─────────────────────────────────────────────────────
+// ─── the station picked from a list ───────────────────────────────────────────
 
-let picker = null;
+const pickers = []; // every dropdown bound to the focus: the filter's, the statistics', the plots'
 
 // all stations, then each the page offers, in the order of the configuration, with
 // what the map knows of it
-function pickerOptions() {
-    const onMap = new Map(mapObjects.stationsOnMap().map((s) => [s.id, s]));
+export function focusOptions() {
+    const onMap = new Map(mapObjects.stationsAll().map((s) => [s.id, s]));
     const listed = (config.stations || []).filter((s) => s.id >= 0);
     return [{ value: -1, name: "All stations", sub: listed.length + " stations", group: "all" },
         ...listed.map((s) => ({ value: s.id, badge: s.id, name: s.name, sub: STATUS_TEXT[onMap.get(s.id)?.status], group: "one" }))];
 }
 
+// a dropdown bound to the focus, in `host`: a pick there is a pick everywhere
+export function mountFocusPicker(host) {
+    const p = createPicker({ label: "Stations", value: focus, options: focusOptions, empty: "No station by that name",
+        onPick: (id) => onStationChange(id) });
+    host.append(p.el);
+    pickers.push(p);
+    return p;
+}
+
+let filterPicker = null;
+
 function updateFilterPicker() {
     const section = document.getElementById("filter_station_section");
     if (!section) return;
     section.hidden = !hasStationChoice();
-    if (section.hidden) return;
-    if (!picker) {
-        picker = createPicker({ label: "Stations", value: focus, options: pickerOptions, empty: "No station by that name",
-            onPick: (id) => onStationChange(id) });
-        document.getElementById("filter_station").append(picker.el);
-    }
-    picker.set(focus);
+    if (!section.hidden && !filterPicker)
+        filterPicker = mountFocusPicker(document.getElementById("filter_station"));
+    for (const p of pickers)
+        p.set(focus);
 }
 
 // ─── a station from the map ──────────────────────────────────────────────────
 
-const STATUS_TEXT = { online: "Receiving", connected: "Connected, nothing heard for five minutes", offline: "Offline" };
+export const STATUS_TEXT = { online: "Receiving", connected: "Connected, nothing heard for five minutes", offline: "Offline" };
 
 const count = (n) => (Number(n) || 0).toLocaleString();
 

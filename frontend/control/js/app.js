@@ -786,9 +786,9 @@ import { createLogConsole } from './log-console.js';
             docs: item => docLink(inputDocs(item.input)),
             stationDocs: () => docLink(DOCS.stations),
             // a station made here is new to the pages that list the stations
-            stationPicker: (value, onPick) => createStationPicker(value, {
+            stationPicker: (value, onPick, opts = {}) => createStationPicker(value, {
                 stations: stationRecords, onPick,
-                onCreated: () => { unload('stations'); unload('services'); rail.render(); }
+                onCreated: () => { unload('stations'); unload('services'); rail.render(); }, ...opts
             }),
             openFlow: () => selectPage('flow'),
             // the rail follows: a new input, a deleted one, a name typed in

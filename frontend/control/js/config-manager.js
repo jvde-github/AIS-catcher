@@ -749,7 +749,8 @@ import { ICONS } from './icons.js';
     }
 
     const Renderer = {
-        createInput(field, currentValue, onUpdate, index = 0, containerId = '', dataContext = null) {
+        // host: the options of the manager drawing the field, for what a control needs from its page
+        createInput(field, currentValue, onUpdate, index = 0, containerId = '', dataContext = null, host = null) {
             const type = field.type;
 
             if (type === 'select') {
@@ -882,6 +883,7 @@ import { ICONS } from './icons.js';
                 const list = Array.isArray(currentValue) && currentValue.length
                     ? currentValue.map(e => (e && typeof e === 'object') ? { ...e } : {})
                     : [{}];
+                const stationPicker = host?.stationPicker;
 
                 const wrapper = el('div', 'col');
                 const rows = el('div', 'col col-loose');
@@ -920,7 +922,7 @@ import { ICONS } from './icons.js';
                             el('option', '', { value: o.value, selected: type === o.value }, o.label)));
 
                         const shown = (field.settings || []).filter(st => !st.types || st.types.includes(type)).map(st => st.name);
-                        const tuned = Object.keys(entry.settings || {}).some(k => !shown.includes(k));
+                        const tuned = Object.keys(entry.settings || {}).some(k => k !== 'station' && !shown.includes(k));
                         const row = el('div', 'box col', {},
                             el('div', 'row', {},
                                 el('div', 'grow relative', {}, select),
@@ -932,6 +934,18 @@ import { ICONS } from './icons.js';
                                     style: list.length < 2 ? 'visibility:hidden' : '',
                                     onClick: () => { list.splice(i, 1); push(); render(); }
                                 }, Icons.delete())));
+
+                        // an engine may carry a station of its own, so two engines of one input are told apart
+                        if (stationPicker && (list.length > 1 || entry.settings?.station !== undefined)) {
+                            const picked = id => {
+                                if (id === undefined) {
+                                    if (entry.settings) { delete entry.settings.station; if (!Object.keys(entry.settings).length) delete entry.settings; }
+                                } else (entry.settings = entry.settings || {}).station = id;
+                                push();
+                            };
+                            row.appendChild(el('div', 'col', {}, el('span', 't-small t-subtle', {}, 'Station'),
+                                stationPicker(entry.settings?.station, picked, { none: 'Same as the input' })));
+                        }
 
                         // the receiver's zones apply to every engine, shown greyed
                         if (list.length > 1 || (Array.isArray(entry.zone) && entry.zone.length)) {
@@ -1069,7 +1083,7 @@ import { ICONS } from './icons.js';
             });
         },
 
-        renderField(field, index, dataContext, onUpdateCallback, onDependencyCheck, containerId = '') {
+        renderField(field, index, dataContext, onUpdateCallback, onDependencyCheck, containerId = '', host = null) {
             let val = field.jsonpath ? Utils.getNested(dataContext, field.jsonpath) : dataContext[field.name];
             if (val === undefined) val = field.defaultValue;
 
@@ -1079,7 +1093,7 @@ import { ICONS } from './icons.js';
                     onClick: () => (typeof field.onClick === 'function' ? field.onClick : ActionRegistry[field.onClick])?.(index, containerId)
                 }, field.buttonIcon && el('span', '', { innerHTML: field.buttonIcon }),
                 typeof field.buttonLabel === 'function' ? field.buttonLabel(dataContext) : (field.buttonLabel || 'Action'))
-                : this.createInput(field, val, newValue => { onUpdateCallback(field, newValue); onDependencyCheck(); }, index, containerId, dataContext);
+                : this.createInput(field, val, newValue => { onUpdateCallback(field, newValue); onDependencyCheck(); }, index, containerId, dataContext, host);
 
             if (field.withButton && field.type !== 'button') {
                 const action = typeof field.withButton.onClick === 'function'
@@ -1175,10 +1189,11 @@ import { ICONS } from './icons.js';
                 this.loaded = true;
                 this.render();
                 this.updateJsonDebug();
-            }).catch(() => {
+            }).catch((e) => {
+                console.error('Configuration page failed:', e);
                 this.container.textContent = '';
                 this.container.appendChild(el('div', 't-center sys-empty', {},
-                    el('p', 't-muted', {}, 'Failed to load configuration'),
+                    el('p', 't-muted', {}, 'Failed to load configuration' + (e && e.message ? ': ' + e.message : '')),
                     el('button', 'btn btn-primary', {
                         type: 'button', onClick: () => this.load()
                     }, 'Retry')));
@@ -1319,7 +1334,7 @@ import { ICONS } from './icons.js';
             };
             fields.forEach(field => {
                 const node = Renderer.renderField(field, index, item,
-                    (fld, val) => this.updateValue(index, fld, val), refresh, this.config.containerId);
+                    (fld, val) => this.updateValue(index, fld, val), refresh, this.config.containerId, this.config);
                 if (essentials.has(field.name)) return card.appendChild(node);
                 // one setting per line: label and help on the left, the control on the right;
                 // lists and the engines take the whole line under their label; zones sit on the right as pills

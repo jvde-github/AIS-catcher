@@ -44,8 +44,11 @@ async function createStation(id, name) {
 // position comes from. `stations()` gives the stations, the default one first. onPick(id) with a
 // number, or undefined for the default station; onCreated after a station is made, so the pages
 // that list the stations read them again.
-export function createStationPicker(value, { stations, onPick, onCreated } = {}) {
-    let current = value === undefined || value === null || value === '' ? 0 : Number(value);
+// `none`: the words for no station of its own, as an engine that takes the input's; the picker then
+// starts there when nothing is set, and a pick of it is onPick(undefined)
+export function createStationPicker(value, { stations, onPick, onCreated, none } = {}) {
+    const unset = value === undefined || value === null || value === '';
+    let current = unset ? (none ? -1 : 0) : Number(value);
     const warn = el('div', 'st-stpick__warn', { hidden: true });
 
     const option = (s, several, group) => ({ value: Number(s.id), badge: Number(s.id), name: stationLabel(s, several), sub: where(s),
@@ -55,7 +58,7 @@ export function createStationPicker(value, { stations, onPick, onCreated } = {})
         value: current,
         options: () => {
             const [own, ...rest] = stations();
-            return [option(own, rest.length > 0, 'own'),
+            return [...(none ? [{ value: -1, name: none, group: 'none' }] : []), option(own, rest.length > 0, 'own'),
                 ...[...rest].sort((a, b) => Number(a.id) - Number(b.id)).map(s => option(s, true, 'listed'))];
         },
         shown: id => ({ badge: id, name: `Station ${id}`, sub: 'Not under Stations', warn: true }),
@@ -63,12 +66,12 @@ export function createStationPicker(value, { stations, onPick, onCreated } = {})
         onPick: id => {
             current = id;
             paintWarn();
-            onPick?.(id === 0 ? undefined : id);
+            onPick?.(none ? (id === -1 ? undefined : id) : (id === 0 ? undefined : id));
         }
     });
 
     function paintWarn() {
-        warn.hidden = stations().some(s => Number(s.id) === current);
+        warn.hidden = current === -1 || stations().some(s => Number(s.id) === current);
         if (warn.hidden) return warn.replaceChildren();
         const id = current;
         warn.replaceChildren(el('span', 'st-stpick__warnicon', { html: WARN }),

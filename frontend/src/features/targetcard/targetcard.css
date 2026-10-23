@@ -191,3 +191,13 @@
 .lightgrey {
     color: var(--color-text-subtle);
 }
+
+/* the station picked on the Statistics tab, and the card of every station */
+#stat_focus_pick {
+    display: block;
+    max-width: 440px;
+}
+
+#stat_stations .stat-station-row {
+    cursor: pointer;
+}

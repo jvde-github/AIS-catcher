@@ -130,8 +130,11 @@ public:
 		std::lock_guard<std::mutex> lock(stations_mtx);
 		std::map<uint32_t, int> out;
 		for (const auto &r : riders)
-			if (shown.find(r.second))
+		{
+			const StationRegistry::Station *s = shown.find(r.second);
+			if (s && s->share_loc)
 				out.insert(r);
+		}
 		return out;
 	}
 

@@ -10,7 +10,12 @@ import {
 import Annotation from 'chartjs-plugin-annotation';
 import { getDistanceConversion, getDistanceUnit } from '../../core/units.js';
 import { config, stationLabel } from '../../core/config.js';
+
+// a station's name on a chart; the whole site when all stations are meant
+const seriesName = (id) => (id < 0 ? "All stations" : stationLabel(id));
 import { focus } from '../../data.js';
+import { createPicker } from '@aiscatcher/ui/picker.js';
+import { focusOptions, mountFocusPicker } from '../../features/station/station.js';
 import { register } from '../../actions.js';
 
 Chart.register(
@@ -410,8 +415,8 @@ const plot_gain = {
 };
 
 let mode = "overview";
-let sourceA = null;
-let sourceB = null;
+let sourceB = null; // what the station in focus is compared with; -1 for all stations
+let pickerA = null, pickerB = null;
 let updateToken = 0;
 
 function stationsListed() {
@@ -422,12 +427,10 @@ export function setMode(next) {
     if (next !== "compare") next = "overview";
     if (next === mode) return;
     mode = next;
-    if (mode === "compare") {
-        if (sourceA === null) sourceA = focus;
-        if (sourceB === null) {
-            const other = stationsListed().find((s) => s.id !== sourceA);
-            sourceB = other ? other.id : sourceA;
-        }
+    if (mode === "compare" && sourceB === null) {
+        // another station to start with; all of them when the focus is on none
+        const other = stationsListed().find((s) => s.id !== focus);
+        sourceB = focus < 0 || !other ? -1 : other.id;
     }
     update();
 }
@@ -444,32 +447,28 @@ function applyMode() {
     }
 
     const bar = document.getElementById("chart_sources");
-    if (bar) bar.style.display = mode === "compare" ? "flex" : "none";
+    if (bar) bar.style.display = multi ? "flex" : "none";
+    const other = document.getElementById("chart_source_b_label");
+    if (other) other.style.display = mode === "compare" ? "" : "none";
 
     const plots = document.getElementById("plots");
     if (plots) plots.classList.toggle("compare-mode", mode === "compare");
 
-    if (mode === "compare") buildSourceSelectors();
+    if (multi) buildSourceSelectors();
 }
 
+// the station in focus on the left, as every tab has it; what it is compared with on the right
 function buildSourceSelectors() {
-    const selA = document.getElementById("chart_source_a");
-    const selB = document.getElementById("chart_source_b");
-    if (!selA || !selB) return;
-
-    const list = stationsListed();
-    if (selA.options.length !== list.length) {
-        selA.innerHTML = "";
-        selB.innerHTML = "";
-        for (const r of list) {
-            selA.appendChild(new Option(r.label, r.idx));
-            selB.appendChild(new Option(r.label, r.idx));
-        }
-        selA.onchange = () => { sourceA = parseInt(selA.value, 10) || 0; update(); };
-        selB.onchange = () => { sourceB = parseInt(selB.value, 10) || 0; update(); };
+    const hostA = document.getElementById("chart_source_a");
+    const hostB = document.getElementById("chart_source_b");
+    if (!hostA || !hostB) return;
+    if (!pickerA) pickerA = mountFocusPicker(hostA);
+    if (!pickerB) {
+        pickerB = createPicker({ label: "Stations", value: sourceB === null ? -1 : sourceB, options: focusOptions,
+            empty: "No station by that name", onPick: (id) => { sourceB = id; update(); } });
+        hostB.append(pickerB.el);
     }
-    selA.value = String(sourceA);
-    selB.value = String(sourceB);
+    if (sourceB !== null) pickerB.set(sourceB);
 }
 
 async function fetchHistory(idx) {
@@ -575,9 +574,9 @@ function timeShift(a, b, f) {
 function updateChartCompare(a, b, f, key, c, srcA, srcB) {
     if (!c) return;
     const shift = timeShift(a, b, f);
-    c.data.datasets[0].label = stationLabel(srcA);
+    c.data.datasets[0].label = seriesName(srcA);
     c.data.datasets[0].data = series(a, f, key);
-    c.data.datasets[1].label = stationLabel(srcB);
+    c.data.datasets[1].label = seriesName(srcB);
     c.data.datasets[1].data = series(b, f, key).map((p) => ({ x: p.x + shift, y: p.y }));
     setTimeAxis(c, a && a[f]);
     c.update();
@@ -595,7 +594,7 @@ function updateChartGain(a, b, f, c, srcA, srcB) {
     const totalB = shared.reduce((s, p) => s + other.get(p.x), 0);
     const average = totalA > 0 ? (100 * (totalB - totalA)) / totalA : 0;
 
-    c.data.datasets[0].label = stationLabel(srcB) + " vs " + stationLabel(srcA);
+    c.data.datasets[0].label = seriesName(srcB) + " vs " + seriesName(srcA);
     c.data.datasets[0].data = shared.map((p) => ({ x: p.x, y: (100 * (other.get(p.x) - p.y)) / p.y }));
 
     // with nothing to compare against, an average of 0 would read as parity
@@ -759,7 +758,7 @@ export async function update() {
     });
 
     if (mode === "compare") {
-        const a = sourceA, cmpIdx = sourceB;
+        const a = focus, cmpIdx = sourceB === null ? -1 : sourceB;
         const [ha, hb] = await Promise.all([fetchHistory(a), fetchHistory(cmpIdx)]);
         if (!ha || !hb || token !== updateToken) return;
 

@@ -67,6 +67,7 @@ export const setReceiverMarker = objects.setReceiverMarker;
 export const openPorts = objects.openPorts;
 export const openNearby = objects.openNearby;
 export const stationsOnMap = () => objects.stations();
+export const stationsAll = () => objects.stationsAll();
 
 // the ticker's history: the same side table, a page of the rings at a time
 export const openEventHistory = createEventHistory({

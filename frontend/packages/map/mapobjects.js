@@ -691,6 +691,14 @@ export function create(host) {
             place_version: place ? placeVersion : ref.place_version}]);
     }
 
+    // every station the map lists, with how it is doing, where it is or not
+    function stationsAll() {
+        const out = [];
+        for (const o of objectsDB.values())
+            if (o.kind === 8) out.push({ ...stationInfo(o), rate: o.rate, heard: o.heard });
+        return out;
+    }
+
     // the stations on the map that say where they are: only those that share it have a row with a position
     function stations() {
         const out = [];
@@ -700,7 +708,7 @@ export function create(host) {
     }
 
     return {
-        vector, layer, setReceiverMarker, openPorts, openPlace, openNearby, setPlaces, stations,
+        vector, layer, setReceiverMarker, openPorts, openPlace, openNearby, setPlaces, stations, stationsAll,
         applyDelta, applyTile, prune, clear, redraw, restyle,
         setViewZoom: (z) => { viewZoom = Math.floor(z); },
         shipBadge, stationBadge, ridingStationStatus,

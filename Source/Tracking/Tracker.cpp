@@ -311,7 +311,7 @@ void Tracker::publish(std::vector<int> moved)
 		{
 			const StationRegistry::Station *s = shown.find(id);
 			auto it = stations.find(id);
-			if (!s || it == stations.end())
+			if (!s || !s->share_loc || it == stations.end())
 				continue;
 			const Position &p = it->second.now;
 			if (std::fabs(s->lat - p.lat) < 0.0005f && std::fabs(s->lon - p.lon) < 0.0005f)
@@ -337,15 +337,24 @@ void Tracker::setStations(const StationRegistry &registry)
 		shown = StationRegistry();
 		for (const auto &s : registry.ordered())
 		{
-			// a station that keeps its position home is not on the map at all
-			if (!s.share_loc)
-				continue;
 			StationRegistry::Station copy = s;
-			auto it = stations.find(s.id);
-			if (it != stations.end() && isValidCoord(it->second.now.lat, it->second.now.lon))
+			if (!s.share_loc)
 			{
-				copy.lat = it->second.now.lat;
-				copy.lon = it->second.now.lon;
+				// a station that keeps its position home is listed by name and how
+				// it is doing, never where it is nor which vessel it rides
+				copy.lat = LAT_UNDEFINED;
+				copy.lon = LON_UNDEFINED;
+				copy.alt = ALTITUDE_UNDEFINED;
+				copy.mmsi = 0;
+			}
+			else
+			{
+				auto it = stations.find(s.id);
+				if (it != stations.end() && isValidCoord(it->second.now.lat, it->second.now.lon))
+				{
+					copy.lat = it->second.now.lat;
+					copy.lon = it->second.now.lon;
+				}
 			}
 			copy.online = true;
 			shown.define(copy);
