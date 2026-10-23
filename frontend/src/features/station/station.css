@@ -78,17 +78,6 @@
     opacity: 0.8;
 }
 
-/* a station opened from the map */
-.station-card .tip-band {
-    margin-bottom: 8px;
-}
-
-.station-card-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 12px;
-}
-
 /* the stations that heard a vessel, boxed as on the hub's map: the hover and
    the ship card */
 .station-box {

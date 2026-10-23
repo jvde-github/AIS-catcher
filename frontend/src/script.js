@@ -53,7 +53,7 @@ import { init as initContextMenu, MENU_CHECKS, showContextMenu } from './feature
 import { redrawMap } from './fleet.js';
 import { init as initHover, stopHover, handlePointerMove, handleClick, getFeature } from './features/hover/hover.js';
 import * as replaybar from './features/replay/replaybar.js';
-import { init as initStation, openStation, syncFocus } from './features/station/station.js';
+import { init as initStation, openStation, syncFocus, closeStationcard, stationcardVisible, setStationcardStyle } from './features/station/station.js';
 import { updateDarkMode, setDarkMode } from './features/theme/theme.js';
 import { init as initFollow, openFocus } from './features/follow/follow.js';
 import { installPluginApi, loadPlugins } from './plugin-api.js';
@@ -94,6 +94,7 @@ const ui = mapui.create({
         { isOpen: () => searchPanel?.isOpen(), close: () => searchPanel.close(true), stage: true },
         { isOpen: () => settingsPanel.isOpen(), close: () => settingsPanel.close(), stage: true },
         { isOpen: () => document.getElementById("menubar").classList.contains("visible"), close: () => hideMenu(), stage: true },
+        { isOpen: () => stationcardVisible(), close: () => closeStationcard() },
         { isOpen: () => targetcardVisible(), close: () => closeTargetcard() },
     ],
     toolbar: {
@@ -115,12 +116,26 @@ const ui = mapui.create({
 initCard({
     ui,
     stopHover: () => stopHover(),
+    closeStationcard: () => closeStationcard(),
 });
 initPanels({ ui });
 mapRenderer(redrawMap);
 initHover({ ui });
 initFollow({ ui });
-initStation({ closeSearch: () => searchPanel.close(), onFocus: () => updateFilterUI() });
+initStation({
+    closeSearch: () => searchPanel.close(),
+    onFocus: () => updateFilterUI(),
+    ui,
+    cardLayout: {
+        fullBleed: () => cardFullBleed(),
+        topInset: () => mapTopInset(),
+        dockOffset: () => tickerInset(),
+        freeWidth: () => freeMapWidth(),
+        preferDock: () => !!settings.targetcard_top_left,
+    },
+    closeTargetcard: () => closeTargetcard(),
+    openStatistics: () => document.getElementById("stat_tab")?.click(),
+});
 
 initContextMenu({ menu: ui.menu });
 
@@ -462,7 +477,7 @@ settingsEffects({
     table_shiptype_use_icon: () => { refresh(); loadedTab('ships')?.reset(); },
     metric: () => { refresh(); loadedTab('ships')?.reset(); },
     plot_absolute_time: (v) => loadedTab('plots')?.setAbsoluteTime(v),
-    shipcard_style: (v) => setTargetcardStyle(v),
+    shipcard_style: (v) => { setTargetcardStyle(v); setStationcardStyle(v); },
     show_signal_graphs: (v) => setGraphVisibility('signal', v, false),
     show_ppm_graphs: (v) => setGraphVisibility('ppm', v, false),
     kiosk: () => { kiosk.updateKiosk(); applyPanels(); },
@@ -604,7 +619,8 @@ console.log("Load settings from URL parameters");
 
 loadSettingsFromURL();
 syncFocus(false);
-setTargetcardStyle(settings.shipcard_style);   // the card was built before the settings were read
+setTargetcardStyle(settings.shipcard_style);   // the cards were built before the settings were read
+setStationcardStyle(settings.shipcard_style);
 applyDynamicStyling();
 community.applySharingState();
 

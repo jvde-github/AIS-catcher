@@ -695,7 +695,7 @@ export function create(host) {
     function stationsAll() {
         const out = [];
         for (const o of objectsDB.values())
-            if (o.kind === 8) out.push({ ...stationInfo(o), rate: o.rate, heard: o.heard });
+            if (o.kind === 8) out.push({ ...stationInfo(o), lat: o.lat, lon: o.lon, rate: o.rate, heard: o.heard });
         return out;
     }
 

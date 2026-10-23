@@ -1,13 +1,16 @@
 <div class="tabcontent addscrollbar" id="stat" style="display: none;">
-	<div class="stat-tab">
-		<div class="stat-panel stat-panel-page stat-focus" id="stat_focus_panel" hidden>
-			<header>Station</header>
-			<section><div id="stat_focus_pick"></div></section>
-		</div>
-		<div class="stat-panel stat-panel-page" id="stat_stations_panel" hidden>
+	<div class="sheet-tabs" id="stat_modes" style="display: none;">
+		<div class="sheet-tab active" data-action="setStatMode" data-mode="overview">Overview</div>
+		<div class="sheet-tab" data-action="setStatMode" data-mode="stations">Stations</div>
+		<div class="sheet-scope" id="stat_scope"></div>
+	</div>
+	<div class="stat-tab" id="stat_stations_sheet" style="display: none;">
+		<div class="stat-panel stat-panel-page">
 			<header>Stations</header>
-			<div id="stat_stations"></div>
+			<div class="station-list" id="stat_stations"></div>
 		</div>
+	</div>
+	<div class="stat-tab" id="stat_overview">
 		<div class="stat-panel stat-panel-page">
 			<header>System</header>
 			<section class="noandroid">

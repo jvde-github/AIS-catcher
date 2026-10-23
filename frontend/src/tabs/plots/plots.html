@@ -1,11 +1,11 @@
 <div class="tabcontent addscrollbar" id="plots" style="display: none;">
-	<div class="plots-tabs" id="plots_modes" style="display: none;">
-		<div class="plots-tab active" data-action="setPlotsMode" data-mode="overview">Overview</div>
-		<div class="plots-tab" data-action="setPlotsMode" data-mode="compare">Compare</div>
+	<div class="sheet-tabs" id="plots_modes" style="display: none;">
+		<div class="sheet-tab active" data-action="setPlotsMode" data-mode="overview">Overview</div>
+		<div class="sheet-tab" data-action="setPlotsMode" data-mode="compare">Compare</div>
+		<div class="sheet-scope" id="plots_scope"></div>
 	</div>
 	<div class="chart-sources" id="chart_sources" style="display: none;">
-		<label>Station<span id="chart_source_a"></span></label>
-		<label id="chart_source_b_label">Compared with<span id="chart_source_b"></span></label>
+		<span>Compared with</span><span id="chart_source_b"></span>
 	</div>
 	<div class="graphtab" data-on-contextmenu="plotsContextMenu">
 		<div class="graph-panel compare-panel">

@@ -9,7 +9,8 @@ import { showDialogPlain, objectToTableHtml } from '../../dialog.js';
 import * as community from '../../overlays/community.js';
 import { config } from '../../core/config.js';
 import { clock } from '../../core/store.js';
-import { hasStationChoice, mountFocusPicker, onStationChange, STATUS_TEXT } from '../../features/station/station.js';
+import { hasStationChoice, mountFocusPicker, onStationChange } from '../../features/station/station.js';
+import { register } from '../../actions.js';
 import { stationsAll } from '../../features/mapobjects/mapobjects.js';
 
 // { onStation(name): the station's name as the statistics give it }
@@ -107,48 +108,59 @@ function renderDevices(stat) {
     }
 }
 
-// the station the figures are of, picked on top; with all of them, a card of each
-let focusPicker = null;
+// The sheets of the tab: the figures, or every station; the station the figures
+// are of is picked at the strip's end, as on the plots.
+let mode = "overview", scopePicker = null;
 
-function syncFocusPanel() {
-    const panel = document.getElementById("stat_focus_panel"), card = document.getElementById("stat_stations_panel");
-    if (!panel || !card) return;
-    const several = hasStationChoice();
-    panel.hidden = !several;
-    if (several && !focusPicker) focusPicker = mountFocusPicker(document.getElementById("stat_focus_pick"));
-    card.hidden = !(several && focus < 0);
-    if (!card.hidden) renderStations();
+export function setMode(next) {
+    mode = next === "stations" ? "stations" : "overview";
+    applyMode();
 }
 
-// one row a station: how it is doing, its rate and when it last delivered; a click looks through it
+function applyMode() {
+    const strip = document.getElementById("stat_modes");
+    if (!strip) return;
+    const several = hasStationChoice();
+    if (!several) mode = "overview";
+    strip.style.display = several ? "flex" : "none";
+    if (several && !scopePicker) scopePicker = mountFocusPicker(document.getElementById("stat_scope"), { scope: true });
+    for (const tab of strip.querySelectorAll(".sheet-tab"))
+        tab.classList.toggle("active", tab.dataset.mode === mode);
+    document.getElementById("stat_overview").style.display = mode === "overview" ? "" : "none";
+    const sheet = document.getElementById("stat_stations_sheet");
+    sheet.style.display = mode === "stations" ? "" : "none";
+    if (mode === "stations") renderStations();
+}
+
+const ROW_STATUS = { online: "Receiving", connected: "Quiet for five minutes", offline: "Offline" };
+
+// one row a station: how it is doing, its rate and when it last delivered; a
+// click looks through it, back on the figures
 function renderStations() {
     const byId = new Map(stationsAll().map((s) => [s.id, s]));
     const host = document.getElementById("stat_stations");
     host.replaceChildren();
     for (const s of config.stations || []) {
         const o = byId.get(s.id);
-        const parts = [STATUS_TEXT[o?.status] || "No data yet"];
-        if (o && o.rate > 0) parts.push(Number(o.rate).toFixed(1) + " msg/s");
-        if (o && o.heard > 0) parts.push(getDeltaTimeVal(clock - o.heard) + " ago");
-        const name = document.createElement("span");
-        name.textContent = s.name || "Station " + s.id;
-        const value = document.createElement("span");
-        value.className = "device-value";
-        value.textContent = parts.join(" · ");
-        const row = document.createElement("div");
-        row.className = "device-row stat-station-row" + (o?.status === "offline" ? " status-bad" : "");
+        const cell = (cls, text) => { const e = document.createElement("span"); e.className = cls; e.textContent = text; return e; };
+        const dot = cell("station-row__dot", "");
+        if (o?.status) dot.dataset.status = o.status;
+        const name = cell("station-row__name", s.name || "Station " + s.id);
+        if (s.name) { const n = document.createElement("small"); n.textContent = s.id; name.append(n); }
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "station-row" + (focus === s.id ? " station-row--current" : "");
         row.title = "Show this station's figures";
-        row.setAttribute("role", "button");
-        row.append(name, value);
-        row.onclick = () => onStationChange(s.id);
-        const section = document.createElement("section");
-        section.append(row);
-        host.append(section);
+        row.append(dot, name, cell("station-row__status", ROW_STATUS[o?.status] || "No data yet"),
+            cell("station-row__rate", o && o.rate > 0 ? Number(o.rate).toFixed(1) + " msg/s" : ""),
+            cell("station-row__heard", o && o.heard > 0 ? getDeltaTimeVal(clock - o.heard) + " ago" : ""));
+        row.onclick = () => { onStationChange(s.id); setMode("overview"); };
+        host.append(row);
     }
 }
 
 async function updateStatistics() {
-    syncFocusPanel();
+    applyMode();
     const stat = await fetchStatistics();
 
     if (stat) {
@@ -241,3 +253,7 @@ async function updateStatistics() {
 }
 
 onRefresh("stat", updateStatistics);
+
+register({
+    setStatMode: (e, d) => setMode(d.mode),
+});

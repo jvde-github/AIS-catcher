@@ -3,25 +3,34 @@
 // back to all of them, and what a switch resets.
 
 import { config, severalStations, stationLabel } from '../../core/config.js';
-import { stationBand } from '@aiscatcher/ui/stations.js';
 import { createPicker } from '@aiscatcher/ui/picker.js';
-import { focus, switchFocus, refresh } from '../../data.js';
-import { ships } from '../../core/store.js';
+import * as cardTabs from '@aiscatcher/ui/stationcard-tabs.js';
+import { flagHTML } from '@aiscatcher/ui/components.js';
+import { stepChartSVG } from '@aiscatcher/core/spark.js';
+import { getCountryName, getDeltaTimeVal } from '@aiscatcher/core/text.js';
+import { paneCramped } from '@aiscatcher/map/mapui.js';
+import { focus, switchFocus, refresh, onRefresh } from '../../data.js';
+import { ships, clock } from '../../core/store.js';
+import { settings } from '../../core/state.js';
 import { getDistanceVal, getDistanceUnit, getLatValFormat, getLonValFormat } from '../../core/units.js';
-import { showDialog, closeDialog, objectToTableHtml } from '../../dialog.js';
+import { closeDialog } from '../../dialog.js';
 import { replaycardVisible, applyMenuLabels } from '../../panels.js';
 import * as replaybar from '../replay/replaybar.js';
 import * as mapObjects from '../mapobjects/mapobjects.js';
 import * as range from '../range/range.js';
 import { register } from '../../actions.js';
 
-// { closeSearch(), onFocus(): another station is in focus }
-let deps = { closeSearch: () => {}, onFocus: () => {} };
+// { closeSearch(), onFocus(): another station is in focus, ui: the map UI the
+//   card is placed by, cardLayout: the ship card's layout options, closeTargetcard(),
+//   openStatistics(): the statistics tab }
+let deps = { closeSearch: () => {}, onFocus: () => {}, closeTargetcard: () => {}, openStatistics: () => {} };
 
 export function init(d) {
     deps = d;
     // the header gives the chip room or not; without it the ticker carries the station
     document.getElementById("header-focus")?.addEventListener("fit", placeFocusChip);
+    if (d.ui) buildCard();
+    onRefresh(refreshStationcard);
 }
 
 // the station shown, as the header chip names it
@@ -49,6 +58,7 @@ export function onStationChange(id) {
     mapObjects.resetSince();
     range.resetUpdateTime();
     showFocus();
+    shipsItem();
     refresh();
 }
 
@@ -115,10 +125,12 @@ export function focusOptions() {
         ...listed.map((s) => ({ value: s.id, badge: s.id, name: s.name, sub: STATUS_TEXT[onMap.get(s.id)?.status], group: "one" }))];
 }
 
-// a dropdown bound to the focus, in `host`: a pick there is a pick everywhere
-export function mountFocusPicker(host) {
+// a dropdown bound to the focus, in `host`: a pick there is a pick everywhere;
+// `scope` draws it small, as the scope at the end of a tab's strip
+export function mountFocusPicker(host, { scope = false } = {}) {
     const p = createPicker({ label: "Stations", value: focus, options: focusOptions, empty: "No station by that name",
         onPick: (id) => onStationChange(id) });
+    if (scope) p.el.classList.add("pick--scope");
     host.append(p.el);
     pickers.push(p);
     return p;
@@ -139,41 +151,159 @@ function updateFilterPicker() {
 // ─── a station from the map ──────────────────────────────────────────────────
 
 export const STATUS_TEXT = { online: "Receiving", connected: "Connected, nothing heard for five minutes", offline: "Offline" };
+const HEADER_CLASS = { online: "card-validated", connected: "card-warning", offline: "card-dubious" };
 
 const count = (n) => (Number(n) || 0).toLocaleString();
+const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+const onMap = (s) => Number.isFinite(s.lat) && Number.isFinite(s.lon) && Math.abs(s.lat) <= 90 && Math.abs(s.lon) <= 180;
+const stationRow = (id) => mapObjects.stationsAll().find((x) => x.id === id);
 
-// what the map knows of a station and what its own figures say, with the choice
-// to look through it alone or, when it is the one in focus, through all again
-export async function openStation(id) {
-    const s = mapObjects.stationsOnMap().find((x) => x.id === id);
-    if (!s) return;
-    let stat = null;
-    try {
-        stat = await (await fetch("api/stat.json?stations=" + id)).json();
-    } catch {
-        // the card without figures
+/* The card a station opens, as the website's station card: its figures, a day
+   of activity and the last half hour of messages, in the ship card's style.
+   While it is open the page looks through that station, as the website shows
+   that station's ships; the close goes back to what was in focus before. */
+let card = null, cardStation = null, focusBefore = -1, cardLayout = null, cardTab = "summary", figuresAt = 0, shipsEl = null;
+
+export function stationcardVisible() {
+    return cardStation !== null;
+}
+
+function sectionDefaults() {
+    const open = cardLayout !== null || !paneCramped();
+    return { stats: true, activity: open, msgrate: open };
+}
+
+function buildCard() {
+    card = deps.ui.createCard({ mount: document.getElementById("stationcard"), sectionAction: "toggleStationcardSection", layout: deps.cardLayout });
+    card.el.addEventListener("card:section", () => card.fit());
+    const item = (icon, label, title, action) => card.footer.add({ icon, label, title, action, group: "station" });
+    shipsEl = item("directions_boat", "Ships", "Show only the vessels this station hears", "stationcardShips");
+    item("leaderboard", "Statistics", "This station's figures", "stationcardStatistics");
+    item("near_me", "Nearby", "Ships, stations and ports nearest this station", "stationcardNearby");
+    card.footer.show("station");
+    setStationcardStyle(settings.shipcard_style);
+}
+
+// the ship card's style, tabs or the classic fold, on this card too
+export function setStationcardStyle(style) {
+    if (!card) return;
+    cardLayout?.destroy();
+    cardLayout = null;
+    const tabbed = style === "tabs";
+    card.el.classList.toggle("card-tabs", tabbed);
+    if (tabbed) {
+        cardLayout = cardTabs.build(document.getElementById("stationcard_content"), "stationcard_", {
+            tab: paneCramped() ? null : cardTab,
+            foldable: () => paneCramped(),
+            onTab: (t) => { if (t) cardTab = t; card.fit(); },
+        });
+        card.setMax(true);
     }
+    card.section.reset(sectionDefaults());
+    if (cardStation !== null) card.fit();
+}
 
-    const rows = { Status: STATUS_TEXT[s.status] || STATUS_TEXT.online };
-    if (s.mmsi) rows["On board"] = ships[s.mmsi]?.raw?.shipname || "MMSI " + s.mmsi;
-    else rows.Position = getLatValFormat(s) + "  " + getLonValFormat(s);
-    if (stat) {
-        rows["Vessels now"] = count(stat.vessel_count);
-        rows["Message rate"] = (Number(stat.msg_rate) || 0).toFixed(1) + " msg/s";
-        rows["Messages since start"] = count(stat.session?.count);
-        if (stat.session?.dist > 0) rows["Furthest since start"] = getDistanceVal(stat.session.dist) + " " + getDistanceUnit();
-    }
+export async function openStation(id, pixel) {
+    const s = stationRow(id);
+    if (!s || !card) return;
+    deps.ui.dismiss();
+    deps.closeTargetcard();
+    if (cardStation === null) focusBefore = focus;
+    cardStation = id;
+    fillRows(s);
+    card.el.classList.add("visible");
+    card.section.reset(sectionDefaults());
+    cardLayout?.select(paneCramped() ? null : cardTab, false);
+    card.open(pixel);
+    if (offered(id) && hasStationChoice() && focus !== id) onStationChange(id);
+    shipsItem();
+    await fillFigures(id);
+}
 
-    let actions = "";
-    if (offered(id) && hasStationChoice())
-        actions = focus === id
-            ? '<button type="button" class="btn btn-primary" data-action="selectStation" data-id="-1">Show all stations</button>'
-            : `<button type="button" class="btn btn-primary" data-action="selectStation" data-id="${Number(id)}">Show only this station</button>`;
+export function closeStationcard() {
+    if (cardStation === null) return;
+    const was = cardStation;
+    cardStation = null;
+    card.el.classList.remove("visible");
+    if (focus === was && focusBefore !== was) onStationChange(focusBefore);
+    focusBefore = -1;
+}
 
-    showDialog("Station", '<div class="station-card">' + stationBand(s) + objectToTableHtml(rows) +
-        (actions ? '<div class="station-card-actions">' + actions + '</div>' : '') + '</div>');
+// the name and the flag over the figures the map objects carry
+function fillRows(s) {
+    const header = document.getElementById("stationcard_header");
+    document.getElementById("stationcard_header_title").textContent = (s.name || "Station " + s.id).toUpperCase();
+    document.getElementById("stationcard_header_flag").innerHTML = s.country ? flagHTML(s.country, "flag-card", getCountryName(s.country)) : "";
+    header.classList.remove("card-validated", "card-warning", "card-dubious");
+    header.classList.add(HEADER_CLASS[s.status] || "card-dubious");
+    set("stationcard_station_id", s.id);
+    set("stationcard_status", STATUS_TEXT[s.status] || "No data yet");
+    set("stationcard_ago", s.heard > 0 ? getDeltaTimeVal(clock - s.heard) + " ago" : "-");
+    const aboard = s.mmsi ? ships[s.mmsi]?.raw?.shipname || "MMSI " + s.mmsi : null;
+    set("stationcard_where_label", aboard ? "On board" : "Position");
+    set("stationcard_where", aboard || (onMap(s) ? getLatValFormat(s) + "  " + getLonValFormat(s) : "-"));
+}
+
+const json = (url) => fetch(url).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+
+// the station's own figures and histories from the server
+async function fillFigures(id) {
+    figuresAt = Date.now();
+    const [stat, history] = await Promise.all([json("api/stat.json?stations=" + id), json("api/history_full.json?stations=" + id)]);
+    if (cardStation !== id) return;
+    set("stationcard_ships", stat ? count(stat.vessel_count) : "-");
+    set("stationcard_messages", stat ? count(stat.session?.count) : "-");
+    set("stationcard_rate", stat ? (Number(stat.msg_rate) || 0).toFixed(1) + " msg/s" : "-");
+    set("stationcard_furthest", stat?.session?.dist > 0 ? getDistanceVal(stat.session.dist) + " " + getDistanceUnit() : "-");
+    chart("activity", "stationcard_timeline", history?.hour, 24, "msg/h", "24 h of messages", "Messages per hour over the last 24 hours");
+    chart("msgrate", "stationcard_msgrate", history?.minute, 30, "msg/min", "30 min of messages", "Messages per minute over the last 30 minutes");
+    card.fit();
+}
+
+// the last `n` buckets of a history as the step chart the website draws
+function chart(section, id, src, n, unit, foot, aria) {
+    const pts = src && Array.isArray(src.stat) && Array.isArray(src.time)
+        ? src.time.map((t, i) => ({ t: src.now + t * src.interval, v: Number(src.stat[i]?.count) || 0 })).sort((a, b) => a.t - b.t).slice(-n)
+        : [];
+    const ok = pts.length >= 2;
+    card.section.available(section, ok);
+    document.getElementById(id).innerHTML = ok
+        ? stepChartSVG(pts, unit, foot, "now \u00b7 " + Math.round(pts[pts.length - 1].v) + " " + unit, aria, (v) => String(Math.round(v)))
+        : "";
+}
+
+// every refresh: the rows from the map objects, the figures every half minute
+function refreshStationcard() {
+    if (cardStation === null) return;
+    const s = stationRow(cardStation);
+    if (!s) { closeStationcard(); return; }
+    fillRows(s);
+    if (Date.now() - figuresAt > 30000) fillFigures(cardStation);
+}
+
+// the footer's Ships item: the station's vessels alone, or all of them again
+function shipsItem() {
+    if (!shipsEl) return;
+    const can = cardStation !== null && offered(cardStation) && hasStationChoice();
+    shipsEl.style.display = can ? "" : "none";
+    const span = shipsEl.querySelector("span");
+    if (span) span.textContent = focus === cardStation ? "All ships" : "Ships";
 }
 
 register({
     selectStation: (e, d) => selectStation(d.id),
+    closeStationcard: () => closeStationcard(),
+    toggleStationcardSection: (e, dataset, el) => { e.stopPropagation(); card?.section.toggle(el?.dataset.section || dataset.section); },
+    stationcardShips: () => {
+        if (cardStation === null) return;
+        onStationChange(focus === cardStation ? (focusBefore === cardStation ? -1 : focusBefore) : cardStation);
+    },
+    stationcardStatistics: () => {
+        if (cardStation !== null && focus !== cardStation && offered(cardStation)) onStationChange(cardStation);
+        deps.openStatistics();
+    },
+    stationcardNearby: () => {
+        const s = cardStation !== null ? stationRow(cardStation) : null;
+        if (s && onMap(s)) mapObjects.openNearby({ lat: s.lat, lon: s.lon, title: s.name || "Station " + s.id, country: s.country });
+    },
 });

@@ -1,0 +1,35 @@
+<aside id="stationcard" class="mapcard mapcard-target card-width card-max">
+	<header id="stationcard_header" class="mapcard-header">
+		<span class="mapcard-flag" id="stationcard_header_flag"></span>
+		<span class="mapcard-title" id="stationcard_header_title" translate="no"></span>
+		<span><i data-action="closeStationcard" class="mapcard-header-icon close_icon"></i></span>
+	</header>
+
+	<div class="mapcard-content" id="stationcard_content">
+		<div class="card-section" data-action="toggleStationcardSection" data-section="stats"><span>Statistics</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_up_icon"></i></span></div>
+		<div data-section="stats" class="mapcard-content-row card-row">
+			<div><span>Ships</span><span id="stationcard_ships">-</span></div>
+			<div><span>Rate</span><span id="stationcard_rate">-</span></div>
+			<div><span>Messages</span><span id="stationcard_messages">-</span></div>
+		</div>
+		<div data-section="stats" class="mapcard-content-row card-row">
+			<div><span>ID</span><span id="stationcard_station_id">-</span></div>
+			<div><span>Status</span><span id="stationcard_status">-</span></div>
+			<div><span>Last message</span><span id="stationcard_ago">-</span></div>
+		</div>
+		<div data-section="stats" class="mapcard-content-row card-row">
+			<div><span id="stationcard_where_label">Position</span><span id="stationcard_where">-</span></div>
+			<div><span>Furthest</span><span id="stationcard_furthest">-</span></div>
+		</div>
+		<div class="card-section" data-action="toggleStationcardSection" data-section="activity"><span>Activity (last 24 hours)</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_up_icon"></i></span></div>
+		<div data-section="activity" class="mapcard-content-row card-row">
+			<div id="stationcard_timeline" class="hist-wrap"></div>
+		</div>
+		<div class="card-section" data-action="toggleStationcardSection" data-section="msgrate"><span>Messages (last 30 min)</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_up_icon"></i></span></div>
+		<div data-section="msgrate" class="mapcard-content-row card-row">
+			<div id="stationcard_msgrate" class="hist-wrap"></div>
+		</div>
+	</div>
+
+	<footer id="stationcard_footer" class="mapcard-footer card-max-only"></footer>
+</aside>

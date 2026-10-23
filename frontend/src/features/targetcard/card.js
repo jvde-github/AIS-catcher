@@ -193,7 +193,10 @@ export function updateFocusMarker() {
 
 export function showTargetcard(type, m, pixel = undefined) {
     targetcard.resetHistory();
-    if (m != null) deps.ui.dismiss();   // a card takes the stage, wherever it was opened from
+    if (m != null) {
+        deps.ui.dismiss();   // a card takes the stage, wherever it was opened from
+        deps.closeStationcard?.();
+    }
 
     const aside = document.getElementById("targetcard");
     const visible = targetcardVisible();

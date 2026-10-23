@@ -442,14 +442,12 @@ function applyMode() {
     const tabs = document.getElementById("plots_modes");
     if (tabs) {
         tabs.style.display = multi ? "flex" : "none";
-        for (const tab of tabs.children)
+        for (const tab of tabs.querySelectorAll(".sheet-tab"))
             tab.classList.toggle("active", tab.dataset.mode === mode);
     }
 
     const bar = document.getElementById("chart_sources");
-    if (bar) bar.style.display = multi ? "flex" : "none";
-    const other = document.getElementById("chart_source_b_label");
-    if (other) other.style.display = mode === "compare" ? "" : "none";
+    if (bar) bar.style.display = multi && mode === "compare" ? "flex" : "none";
 
     const plots = document.getElementById("plots");
     if (plots) plots.classList.toggle("compare-mode", mode === "compare");
@@ -457,15 +455,16 @@ function applyMode() {
     if (multi) buildSourceSelectors();
 }
 
-// the station in focus on the left, as every tab has it; what it is compared with on the right
+// the station in focus at the strip's end, as every tab has it; what it is compared with under it
 function buildSourceSelectors() {
-    const hostA = document.getElementById("chart_source_a");
+    const hostA = document.getElementById("plots_scope");
     const hostB = document.getElementById("chart_source_b");
     if (!hostA || !hostB) return;
-    if (!pickerA) pickerA = mountFocusPicker(hostA);
+    if (!pickerA) pickerA = mountFocusPicker(hostA, { scope: true });
     if (!pickerB) {
         pickerB = createPicker({ label: "Stations", value: sourceB === null ? -1 : sourceB, options: focusOptions,
             empty: "No station by that name", onPick: (id) => { sourceB = id; update(); } });
+        pickerB.el.classList.add("pick--scope");
         hostB.append(pickerB.el);
     }
     if (sourceB !== null) pickerB.set(sourceB);
