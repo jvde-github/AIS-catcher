@@ -934,6 +934,18 @@ void DB::logTextChange(const Ship &ship, int field, const char *old_value,
                     value.c_str(), ship.last_signal);
 }
 
+// an IMO number has seven digits, the last the sum of the other six weighted
+// 7 down to 2, mod 10; the type 5 field also carries flag-state numbers (from
+// 10,000,000) and the odd corrupted value, neither of which is one
+static bool isIMO(int imo) {
+  if (imo < 1000000 || imo > 9999999)
+    return false;
+  int sum = 0;
+  for (int w = 2, n = imo / 10; w <= 7; w++, n /= 10)
+    sum += (n % 10) * w;
+  return sum % 10 == imo % 10;
+}
+
 void DB::updateFields(const JSON::Member &p, const AIS::Message *msg,
                       Ship &ship, bool allowApproximate, bool &positionUpdated,
                       bool &staticUpdated) {
@@ -953,7 +965,8 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg,
     }
     break;
   case AIS::KEY_IMO:
-    ship.IMO = p.Get().getInt();
+    if (isIMO(p.Get().getInt()))
+      ship.IMO = p.Get().getInt();
     staticUpdated = true;
     break;
   case AIS::KEY_MONTH:
@@ -1174,6 +1187,23 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship) {
   const bool eta_was_set =
       ship.month != ETA_MONTH_UNDEFINED || ship.day != ETA_DAY_UNDEFINED ||
       ship.hour != ETA_HOUR_UNDEFINED || ship.minute != ETA_MINUTE_UNDEFINED;
+
+  // a type 5 says what the ship has now: an IMO number or ETA it leaves out
+  // (the decoder drops "not available") is gone, so a wrong value heard once
+  // does not stay for as long as the ship keeps sending static reports
+  if (type == 5) {
+    if (ship.IMO != IMO_UNDEFINED) {
+      ship.IMO = IMO_UNDEFINED;
+      staticUpdated = true;
+    }
+    if (eta_was_set) {
+      ship.month = ETA_MONTH_UNDEFINED;
+      ship.day = ETA_DAY_UNDEFINED;
+      ship.hour = ETA_HOUR_UNDEFINED;
+      ship.minute = ETA_MINUTE_UNDEFINED;
+      staticUpdated = true;
+    }
+  }
 
   for (const auto &p : data.getMembers())
     updateFields(p, msg, ship, allowApproxLatLon, positionUpdated,
