@@ -1017,6 +1017,17 @@ static bool isIMO(int imo) {
   return sum % 10 == imo % 10;
 }
 
+// an ENI has eight digits, the first three the authority that issued it, and
+// a seagoing vessel's is 9 followed by its IMO number; 00000000 is none
+static bool isENI(const std::string &eni) {
+  if (eni.size() != 8 || eni == "00000000")
+    return false;
+  for (char c : eni)
+    if (c < '0' || c > '9')
+      return false;
+  return eni[0] != '9' || isIMO(std::atoi(eni.c_str() + 1));
+}
+
 void DB::updateFields(const JSON::Member &p, const AIS::Message *msg,
                       Ship &ship, bool allowApproximate, bool &positionUpdated,
                       bool &staticUpdated) {
@@ -1029,12 +1040,18 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg,
       positionUpdated = true;
     }
     break;
-  case AIS::KEY_SHIPTYPE:
-    if (p.Get().getInt()) {
-      ship.shiptype = p.Get().getInt();
+  case AIS::KEY_SHIPTYPE: {
+    // the inland static report (DAC 200 FID 10) carries an ERI code, which
+    // counts only when it is one of the table's: 876 is no ship type, and 8000
+    // ("type unknown") fills an empty type but never replaces one
+    const int t = p.Get().getInt();
+    const bool inland = msg->type() == 6 || msg->type() == 8;
+    if (t && (!inland || Ship::eriClass(t) >= 0 || (t == 8000 && !ship.shiptype))) {
+      ship.shiptype = t;
       staticUpdated = true;
     }
     break;
+  }
   case AIS::KEY_IMO:
     if (isIMO(p.Get().getInt()))
       ship.IMO = p.Get().getInt();
@@ -1198,16 +1215,16 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg,
     staticUpdated = true;
   } break;
   case AIS::KEY_VIN: {
-    const std::string &s = p.Get().getString();
-    if (s.size() <
-        sizeof(ship.vin)) // worst case (no spaces stripped) still fits
-    {
-      size_t n = 0;
-      for (char c : s)
-        if (c != ' ')
-          ship.vin[n++] = c;
-      ship.vin[n] = '\0';
-    }
+    // every inland static report carries the ENI, so one that is not an ENI
+    // clears what an earlier report left
+    std::string eni;
+    for (char c : p.Get().getString())
+      if (c != ' ')
+        eni += c;
+    if (isENI(eni))
+      std::memcpy(ship.vin, eni.c_str(), sizeof(ship.vin));
+    else
+      ship.vin[0] = '\0';
     staticUpdated = true;
     break;
   }
