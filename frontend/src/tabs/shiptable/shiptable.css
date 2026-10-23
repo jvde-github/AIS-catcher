@@ -205,8 +205,8 @@
 
 .tabulator .tabulator-header .tabulator-col[aria-sort="ascending"] .tabulator-arrow,
 .tabulator .tabulator-header .tabulator-col[aria-sort="descending"] .tabulator-arrow {
-    border-top-color: var(--color-text) !important;
-    border-bottom-color: var(--color-text) !important;
+    border-top-color: var(--color-accent) !important;
+    border-bottom-color: var(--color-accent) !important;
 }
 
 @media (hover: hover) {
