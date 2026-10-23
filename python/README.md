@@ -215,9 +215,9 @@ AIS-catcher's internal meta fields (SDR signal levels, decoder version, the orig
 Each scalar becomes `{value, unit?, description?, text?}` (the optional fields included only when defined for that key):
 
 ```python
-{'type':   {'value': 1,    'description': 'Message Type', 'text': 'Position report'},
- 'status': {'value': 0,    'description': 'Navigation Status', 'text': 'Under way using engine'},
- 'speed':  {'value': 10.4, 'unit': 'knots', 'description': 'Speed over Ground (SOG)'},
+{'type':   {'value': 1,    'description': 'Message type', 'text': 'Position report'},
+ 'status': {'value': 0,    'description': 'Navigation status', 'text': 'Under way using engine'},
+ 'speed':  {'value': 10.4, 'unit': 'knots', 'description': 'Speed over ground (SOG)'},
  'lon':    {'value': 6.701442, 'unit': 'degrees', 'description': 'Longitude'},
  ...}
 ```
@@ -275,31 +275,31 @@ Message 1 — Position report
 
 Field          Value                                     Unit                Description
 -------------  ----------------------------------------  ------------------  -------------------------------------------------------------------------
-channel        B                                                             VHF channel (A or B).
-type           1 (Position report)                                           Message Type
-repeat         0                                                             Repeat indicator (0..3; 3=do not repeat).
+channel        B                                                             AIS channel letter from the NMEA sentence (A or B; C/D for channels 75/76)
+type           1 (Position report)                                           Message type
+repeat         0                                                             Repeat indicator (0..3; 3=do not repeat)
 mmsi           244009864                                                     MMSI
-country        Netherlands                                                   Flag country name derived from MMSI MID.
-country_code   NL                                                            ISO-3166 alpha-2 country code derived from MMSI MID.
-status         0 (Under way using engine)                                    Navigation Status
-status_text    Under way using engine                                        Navigation status text.
-turn_unscaled  0                                                             Raw ROT field (-128..127; 128=N/A).
-turn           0                                         degrees per minute  Rate of Turn (ROT)
-speed          10.400001                                 knots               Speed over Ground (SOG)
-accuracy       true                                                          Position accuracy (1=DGPS <10m; 0=GNSS >10m).
+country        Netherlands                                                   Flag country name derived from MMSI MID
+country_code   NL                                                            ISO-3166 alpha-2 country code derived from MMSI MID
+status         0 (Under way using engine)                                    Navigation status
+status_text    Under way using engine                                        Navigation status text
+turn_unscaled  0                                                             Raw ROT field (-128..127; ±127=turning faster than 5°/30 s without turn indicator, -128=not available)
+turn           0                                         degrees per minute  Rate of turn (ROT; positive=right; 127/-127=turning right/left faster than 5°/30 s, no turn indicator)
+speed          10.400001                                 knots               Speed over ground (SOG)
+accuracy       true                                                          Position accuracy (true=DGPS <10 m, false=GNSS >10 m)
 lon            6.701442                                  degrees             Longitude
 lat            51.338295                                 degrees             Latitude
-course         295.100006                                degrees             Course over Ground (COG)
-heading        295                                       degrees             True Heading (HDG)
-second         16                                                            UTC second (0..59; 60=N/A; 61=manual; 62=dead reckoning; 63=inoperative).
-maneuver       0 (Not available (default))                                   Maneuver indicator.
-power          false                                                         Transmit power flag (type 22; 0=high power, 1=low power).
-raim           false                                                         RAIM flag (EPFD integrity monitoring in use).
-radio          66245                                                         Radio status (19-bit SOTDMA/ITDMA state).
-sync_state     0 (UTC direct)                                                TDMA sync state.
-slot_timeout   4                                                             Frames until new slot (0=next).
-slot_number    709                                                           TDMA slot number used.
-rxuxtime       1777805849.119 (2026-05-03 10:57:29 UTC)                      Host receive time (Unix epoch s).
+course         295.100006                                degrees             Course over ground (COG)
+heading        295                                       degrees             True heading (HDG)
+second         16                                                            UTC second (0..59; 61=manual input; 62=dead reckoning; 63=inoperative; omitted when not available)
+maneuver       0 (Not available (default))                                   Maneuver indicator
+power          false                                                         Transmit power flag (false=high power, true=low power)
+raim           false                                                         RAIM flag (true=EPFD integrity monitoring in use)
+radio          66245                                                         Communication state (19 bits for types 1-4, 11 and 26, 0 if absent; types 9 and 18 include the SOTDMA/ITDMA selector as a 20th, top bit)
+sync_state     0 (UTC direct)                                                TDMA sync state
+slot_timeout   4                                                             Frames left before the slot changes (SOTDMA; 0=last transmission in this slot)
+slot_number    709                                                           TDMA slot number used
+rxuxtime       1777805849.119 (2026-05-03 10:57:29 UTC)                      Host receive time (Unix epoch s)
 ```
 
 ## Type hints

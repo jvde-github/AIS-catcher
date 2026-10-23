@@ -126,19 +126,19 @@ namespace AIS
 	// ITU-R M.1371-6 Table 84 (msg 28), 4-bit AtoN Dimensions Type.
 	const std::vector<std::string> LookupTable_aton_dim_type = {
 		"Default (msg 21 dimensions)",
-		"AtoN Height and Structural Area",
-		"AtoN Swing Circle",
-		"Mobile AtoN Vector",
-		"AtoN Area-Polygon",
-		"AtoN Area-Circle",
-		"AtoN Boundary Line 1",
-		"AtoN Area-Sector",
-		"AtoN Boundary Line 2",
-		"AtoN Area-Quadrilateral",
-		"AtoN Large Boundary Line 1",
-		"AtoN Large Area-Sector",
-		"AtoN Large Boundary Line 2",
-		"AtoN Large Area-Quadrilateral",
+		"AtoN height and structural area",
+		"AtoN swing circle",
+		"Mobile AtoN vector",
+		"AtoN area-polygon",
+		"AtoN area-circle",
+		"AtoN boundary line 1",
+		"AtoN area-sector",
+		"AtoN boundary line 2",
+		"AtoN area-quadrilateral",
+		"AtoN large boundary line 1",
+		"AtoN large area-sector",
+		"AtoN large boundary line 2",
+		"AtoN large area-quadrilateral",
 		"Reserved",
 		"Reserved",
 	};
@@ -167,11 +167,6 @@ namespace AIS
 		"Reserved", "Reserved", "Reserved", "Reserved", "Reserved",
 	};
 
-	const std::vector<std::string> LookupTable_dte_types = {
-		"Data Terminal Ready",
-		"Data Terminal Not Ready",
-	};
-
 	const std::vector<std::string> LookupTable_epfd_types = {
 		"Undefined",
 		"GPS",
@@ -194,17 +189,17 @@ namespace AIS
 
 	const std::vector<std::string> LookupTable_interval_types = {
 		"As given by the autonomous mode",
-		"10 Minutes",
-		"6 Minutes",
-		"3 Minutes",
-		"1 Minute",
-		"30 Seconds",
-		"15 Seconds",
-		"10 Seconds",
-		"5 Seconds",
-		"Next Shorter Reporting Interval",
-		"Next Longer Reporting Interval",
-		"Reserved",
+		"10 minutes",
+		"6 minutes",
+		"3 minutes",
+		"1 minute",
+		"30 seconds",
+		"15 seconds",
+		"10 seconds",
+		"5 seconds",
+		"Next shorter reporting interval",
+		"Next longer reporting interval",
+		"2 seconds (not applicable to Class B CS)",
 		"Reserved",
 		"Reserved",
 		"Reserved",
@@ -395,7 +390,7 @@ namespace AIS
 		"TxA/TxB, RxA/RxB (default)",
 		"TxA, RxA/RxB",
 		"TxB, RxA/RxB",
-		"Reserved for Future Use",
+		"Reserved for future use",
 	};
 
 	const std::vector<std::string> LookupTable_sync_state = {
@@ -412,13 +407,14 @@ namespace AIS
 		"RACON error",
 	};
 
+	// CCNR VTT 1.2 Table 2.7: number of blue cones/lights, 4 = B-flag, 5 = unknown (default).
 	const std::vector<std::string> LookupTable_hazard_types = {
-		"Not available (default)",
-		"Blue cones / lights: 1",
-		"Blue cones / lights: 2",
-		"Blue cones / lights: 3",
-		"B-Flag",
-		"Unknown",
+		"0 blue cones/lights",
+		"1 blue cone/light",
+		"2 blue cones/lights",
+		"3 blue cones/lights",
+		"B-flag",
+		"Unknown (default)",
 	};
 
 	const std::vector<std::string> LookupTable_loaded_types = {
@@ -554,16 +550,16 @@ namespace AIS
 	};
 
 	const std::vector<std::string> LookupTable_emma_warning_types = {
-		"Unknown/Default",
+		"Unknown/default",
 		"Wind",
 		"Rain",
 		"Snow/Ice",
 		"Thunderstorm",
 		"Fog",
-		"Low Temperature",
-		"High Temperature",
+		"Low temperature",
+		"High temperature",
 		"Flood",
-		"Forest Fire",
+		"Forest fire",
 	};
 
 	const std::vector<std::string> LookupTable_emma_severity = {
