@@ -232,7 +232,7 @@ void MqttState::announce()
 	stations().forEach([&](const StationRegistry::Station &s) {
 		const std::string id = std::to_string(s.id), topic = t + "/station/" + id;
 		// "Station" in front, so a station named after its receiver reads apart from the receiver
-		const std::string label = s.name.compare(0, 8, "Station ") == 0 ? s.name : "Station " + s.name;
+		const std::string label = s.name.empty() ? "Station " + id : s.name.compare(0, 8, "Station ") == 0 ? s.name : "Station " + s.name;
 		entity("binary_sensor", "station_" + id, label + " online", topic, "{{ 'ON' if value_json.online else 'OFF' }}",
 			   [&](JSON::Writer &w) { w.kv("device_class", "connectivity").kv("json_attributes_topic", topic); });
 		entity("sensor", "station_" + id + "_vessels", label + " vessels", topic, "{{ value_json.vessels }}",

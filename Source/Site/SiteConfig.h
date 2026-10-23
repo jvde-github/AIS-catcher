@@ -79,13 +79,10 @@ struct TrackerSpec
 	std::vector<std::string> zones;
 	uint64_t groups_in = GROUPS_ALL;
 	TrackingConfig tracking;
-	std::string backup_file;
-	int backup_minutes = 10;
 
 	bool operator==(const TrackerSpec &o) const
 	{
-		return own == o.own && filter == o.filter && zones == o.zones && groups_in == o.groups_in &&
-			   tracking == o.tracking && backup_file == o.backup_file && backup_minutes == o.backup_minutes;
+		return own == o.own && filter == o.filter && zones == o.zones && groups_in == o.groups_in && tracking == o.tracking;
 	}
 	bool operator!=(const TrackerSpec &o) const { return !(*this == o); }
 };
@@ -99,7 +96,8 @@ struct ServerSpec
 	// what it serves: the map unless switched off, the rest when switched on
 	bool ui = true, api = false, mcp = false, system = false, geojson = false, metrics = false;
 	TrackerSpec tracking;
-	ViewFilter filter;
+	ViewFilter view;			 // which ships it shows of what its tracker keeps
+	std::vector<int> stations;	 // the stations station_id names: its view and its live streams keep to them
 	bool place_geometry = true; // serve the outlines of places, not only their markers
 	ViewerOptions viewer;
 	// with keys, a request to the api, system or mcp service names one; a
@@ -126,7 +124,7 @@ struct ServerSpec
 	bool operator==(const ServerSpec &o) const
 	{
 		return port == o.port && bind == o.bind && ui == o.ui && api == o.api && mcp == o.mcp && system == o.system &&
-			   geojson == o.geojson && metrics == o.metrics && tracking == o.tracking && filter == o.filter &&
+			   geojson == o.geojson && metrics == o.metrics && tracking == o.tracking && view == o.view && stations == o.stations &&
 			   place_geometry == o.place_geometry && viewer == o.viewer && keys == o.keys && open == o.open && main == o.main;
 	}
 	bool operator!=(const ServerSpec &o) const { return !(*this == o); }
@@ -142,7 +140,7 @@ inline bool localBind(const std::string &bind)
 inline void checkServerAccess(const ServerSpec &spec, const std::string &where)
 {
 	if (!localBind(spec.bind) && spec.keys.empty() && !spec.open && (spec.api || spec.mcp || spec.system))
-		throw std::runtime_error(where + " listens beyond this machine: give it \"keys\", or say \"public\": true for data anyone may read.");
+		throw std::runtime_error(where + " listens beyond this machine: give it \"keys\", say \"public\": true for data anyone may read, or bind it to 127.0.0.1.");
 	if (spec.system && spec.open && spec.keys.empty() && !localBind(spec.bind))
 		throw std::runtime_error(where + " is public: its \"system\" service needs \"keys\".");
 }
@@ -167,12 +165,12 @@ struct WebhookSpec
 {
 	std::string url, secret;
 	std::vector<std::string> events; // the kinds; every kind when empty
-	ViewFilter filter;				 // a ship's event only when the ship passes
+	ViewFilter view;  				 // a ship's event only when the ship passes
 	bool batch = false;
 
 	bool operator==(const WebhookSpec &o) const
 	{
-		return url == o.url && secret == o.secret && events == o.events && filter == o.filter && batch == o.batch;
+		return url == o.url && secret == o.secret && events == o.events && view == o.view && batch == o.batch;
 	}
 };
 

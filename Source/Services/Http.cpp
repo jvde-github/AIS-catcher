@@ -117,11 +117,19 @@ namespace Services
 		return true;
 	}
 
-	Response Response::json(const std::string &body, int status)
+	Response Response::json(std::string body, int status)
 	{
 		Response r;
 		r.status = status;
-		r.body = body;
+		r.body = std::move(body);
+		return r;
+	}
+
+	Response Response::json(std::shared_ptr<const std::string> body, int status)
+	{
+		Response r;
+		r.status = status;
+		r.shared = std::move(body);
 		return r;
 	}
 
@@ -136,17 +144,23 @@ namespace Services
 		return r;
 	}
 
-	std::string isoTime(std::time_t t)
+	IsoTime isoTimeText(std::time_t t)
 	{
-		char buf[24];
+		IsoTime out;
 		struct tm tm;
 #ifdef _WIN32
 		gmtime_s(&tm, &t);
 #else
 		gmtime_r(&t, &tm);
 #endif
-		std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &tm);
-		return buf;
+		if (!std::strftime(out.text, sizeof(out.text), "%Y-%m-%dT%H:%M:%SZ", &tm))
+			out.text[0] = 0;
+		return out;
+	}
+
+	std::string isoTime(std::time_t t)
+	{
+		return isoTimeText(t).text;
 	}
 
 	void beginList(JSON::Writer &w)

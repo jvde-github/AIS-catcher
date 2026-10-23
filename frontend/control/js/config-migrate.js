@@ -11,6 +11,7 @@ import { on } from './dom.js';
 import { num, validPos } from './stations.js';
 
 const STATION_KEYS = ['station', 'lat', 'lon', 'alt', 'share_loc', 'use_gps', 'own_mmsi'];
+const SITE_ONLY = ['file', 'backup', 'places'];
 const TRACKING_KEYS = ['file', 'backup', 'history', 'track_time', 'replay_time', 'track_memory', 'max_ships', 'cutoff',
     'expire', 'server_mode', 'places'];
 // what the viewer section took that means nothing on a server of the site: its own port and
@@ -33,25 +34,34 @@ const VIEWER_DROPPED = ['port_min', 'port_max', 'split', 'cdn', 'msgs', 'zlib', 
 function serverFromViewer(v, cfg) {
     const entry = {};
     const own = {};
-    const filtered = on(v.filter) || ('zone' in v && String(v.zone).length) || ('groups_in' in v);
-    if (!filtered && STATION_KEYS.some(k => k in v)) {
+    // a viewer switched off stays a server switched off, with its settings, and changes nothing of the site's
+    const off = v.active !== undefined && !on(v.active);
+    // filtered as the station reads it: a filter with a term, or receivers picked; `filter` alone lets every message through
+    const terms = FILTER_KEYS.some(k => k !== 'filter' && k in v);
+    const filtered = (on(v.filter) && terms) || ('zone' in v && String(v.zone).length) || ('groups_in' in v);
+    if (!filtered && !off && STATION_KEYS.some(k => k in v)) {
         const list = Array.isArray(cfg.stations) ? cfg.stations : (cfg.stations = []);
         if (!list.some(s => Number(s.id) === 0)) list.unshift(stationFromViewer(v));
     }
     for (const [k, value] of Object.entries(v)) {
         if (VIEWER_DROPPED.includes(k) || k === 'active') continue;
-        if (k === 'ip_bind') { if (value && value !== '127.0.0.1') entry.bind = value; continue; }
+        if (k === 'ip_bind') continue; // below: the viewer of before listened on every interface unless it said otherwise
         if (k === 'prome') { if (on(value)) entry.metrics = true; continue; }
         if (FILTER_KEYS.includes(k) || ROUTE_KEYS.includes(k)) { if (filtered && k !== 'filter') own[k] = value; continue; }
         if (TRACKING_KEYS.includes(k)) {
-            if (filtered) own[k] = value;
+            // the backup and the places are the site's: a tracker of a server's own has neither
+            if (filtered) { if (!SITE_ONLY.includes(k)) own[k] = value; }
+            else if (off) entry[k] = value;
             else { const t = cfg.tracking && typeof cfg.tracking === 'object' ? cfg.tracking : (cfg.tracking = {}); if (!(k in t)) t[k] = value; }
             continue;
         }
-        if (!filtered && STATION_KEYS.includes(k) && k !== 'station') continue;
+        if (!filtered && !off && STATION_KEYS.includes(k) && k !== 'station') continue;
         entry[k] = value;
     }
+    const bind = v.ip_bind ? String(v.ip_bind) : '0.0.0.0';
+    if (bind !== '127.0.0.1') entry.bind = bind;
     if (filtered) entry.tracking = own;
+    if (off) entry.active = false;
     return entry;
 }
 
@@ -95,9 +105,17 @@ export function migrateConfig(cfg) {
     if (cfg.server) {
         const list = Array.isArray(cfg.services) ? cfg.services : (cfg.services = []);
         for (const v of Array.isArray(cfg.server) ? cfg.server : [cfg.server])
-            if (v && typeof v === 'object' && (v.active === undefined || on(v.active))) list.push(serverFromViewer(v, cfg));
+            if (v && typeof v === 'object') list.push(serverFromViewer(v, cfg));
         delete cfg.server;
     }
+    // which ships a server or a webhook shows was its `filter` object; it is its `view`
+    for (const list of [cfg.services, cfg.webhooks])
+        if (Array.isArray(list))
+            for (const e of list)
+                if (e && e.filter && typeof e.filter === 'object' && !Array.isArray(e.filter)) {
+                    if (!e.view) e.view = e.filter;
+                    delete e.filter;
+                }
     // the main server first
     if (Array.isArray(cfg.services)) {
         const i = cfg.services.findIndex(s => s && s.main === true);

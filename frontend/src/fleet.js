@@ -3,6 +3,7 @@
 // labels and track legs from the store; the entry hands redrawMap to map.js
 // as its renderer.
 
+import { refreshStationcard } from './features/station/station.js';
 import { fromLonLat } from 'ol/proj';
 import OlFeature from 'ol/Feature';
 import Point from 'ol/geom/Point';
@@ -245,7 +246,7 @@ export function redrawMap() {
     drawStation();
     applyFixedCenter();
     range.updateDistanceCircles();
-
+    refreshStationcard();
 }
 
 onRefresh("map", updateMap);

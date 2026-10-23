@@ -101,7 +101,10 @@ public:
   bool forEachTrackPoint(uint32_t mmsi, std::time_t since,
                          const std::function<void(const PathStore::Point &)> &f);
   // how long a ship stays on the map after its last message, in seconds
-  int timeHistory() const { return time_history; }
+  int timeHistory() {
+    std::lock_guard<std::mutex> lock(mtx);
+    return time_history;
+  }
   // a client holding ship data older than this must start over
   std::time_t fullRefreshAt() {
     std::lock_guard<std::mutex> lock(mtx);
@@ -444,8 +447,9 @@ private:
   }
 
   int keptCount(const std::function<bool(const Ship &)> &keep);
+  // `carry_floor`: a windowed walk's point from before the window is left out when it ends before this
   void writeSinglePathJSONCompact(int ptr, JSON::Writer &w,
-                                  std::time_t since = 0, std::time_t until = 0);
+                                  std::time_t since = 0, std::time_t until = 0, std::time_t carry_floor = 0);
   void writeSinglePathGeoJSON(int ptr, JSON::Writer &w, std::time_t floor);
 
   // Oldest time any path data is served: the track_time cap, never reaching
@@ -464,11 +468,11 @@ private:
   // `until` is the window end, 0 for an unbounded one.
   template <typename F>
   std::string getReplayObjectJSON(std::time_t since, std::time_t lookback,
-                                  std::time_t until, F emit) {
+                                  std::time_t until, F emit, std::time_t oldest = 0) {
     std::lock_guard<std::mutex> lock(mtx);
 
     const std::time_t now = time(nullptr);
-    const std::time_t floor = pathFloor(now);
+    const std::time_t floor = MAX(pathFloor(now), oldest);
 
     content.clear();
     {
@@ -478,7 +482,7 @@ private:
       // a window that ends before the cutoff serves nothing
       if (until <= 0 || until >= floor) {
         since = MAX(since, floor);
-        const std::time_t from = since > lookback ? since - lookback : 0;
+        const std::time_t from = MAX(since > lookback ? since - lookback : 0, oldest);
 
         forEachRecentUnlocked(now, true, from,
                               [&](int ptr, const Ship &ship, long int) {
@@ -646,6 +650,10 @@ public:
         stations.apply(*data[i].payload, binary.sequence());
   }
 
+  // what the filter makes of a message: dropped, stored, or counted alone
+  enum Admission { DROP, STORE, COUNT };
+  Admission admit(const AIS::Message *msg, TAG &tag);
+  void count(const JSON::JSON *data, int len, TAG &tag);
   void Receive(const JSON::JSON *data, int len, TAG &tag);
   void Receive(const AIS::GPS *data, int len, TAG &tag) {
     std::lock_guard<std::recursive_mutex> configurationLock(configuration_mtx);
@@ -683,30 +691,37 @@ public:
                              const StationRegistry::Station *at = nullptr,
                              bool list_stations = false);
   std::string getJSONtable(std::time_t since = 0, const Keep &keep = Keep());
-  std::string getPathJSON(uint32_t);
-  std::string getAllPathJSON(const Keep &keep = Keep());
+  // `oldest`: a view's cap on how far back tracks go, over the tracker's own
+  std::string getPathJSON(uint32_t, std::time_t oldest = 0);
+  std::string getAllPathJSON(const Keep &keep = Keep(), std::time_t oldest = 0);
   std::string getAllPathJSONSince(std::time_t since, const Keep &keep = Keep());
-  std::string getReplayInfoJSON(std::time_t block);
-  std::string getReplayShipsJSON(std::time_t since, std::time_t lookback, const Keep &keep = Keep());
+  std::string getReplayInfoJSON(std::time_t block, std::time_t oldest = 0);
+  std::string getReplayShipsJSON(std::time_t since, std::time_t lookback, const Keep &keep = Keep(), std::time_t oldest = 0);
   std::string getReplayJSON(std::time_t since, std::time_t until, const Keep &keep,
-                            std::time_t lookback);
+                            std::time_t lookback, std::time_t oldest = 0);
   std::string getReplayJSON(std::time_t since, std::time_t until,
                             std::time_t lookback);
-  std::string getPathGeoJSON(uint32_t);
-  std::string getAllPathGeoJSON(const Keep &keep = Keep());
+  std::string getPathGeoJSON(uint32_t, std::time_t oldest = 0);
+  std::string getAllPathGeoJSON(const Keep &keep = Keep(), std::time_t oldest = 0);
   std::string getMessage(uint32_t);
   std::string getKML(const Keep &keep = Keep());
   std::string getGeoJSON(const Keep &keep = Keep());
 
-  int getCount() { return ships.size(); }
-  int getMaxCount() { return ships.capacity(); }
+  int getCount() {
+    std::lock_guard<std::mutex> lock(mtx);
+    return ships.size();
+  }
+  int getMaxCount() {
+    std::lock_guard<std::mutex> lock(mtx);
+    return ships.capacity();
+  }
 
   void setServerMode(bool b) { server_mode = b; }
   void setMsgSave(bool b) { msg_save = b; }
   void setOptionKey(AIS::Keys key, const std::string &arg) {
     filter.SetOptionKey(key, arg);
   }
-  // which messages the table keeps, from the next message on
+  // which messages the table keeps, from the next message on; see admit()
   void setFilter(const AIS::Filter &f) {
     std::lock_guard<std::recursive_mutex> lock(configuration_mtx);
     filter = f;

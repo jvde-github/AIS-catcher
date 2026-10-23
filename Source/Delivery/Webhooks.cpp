@@ -97,11 +97,11 @@ bool Webhooks::wanted(const Hook &hook, const Journal::Entry &e)
 	if (!hook.spec.events.empty() && std::find(hook.spec.events.begin(), hook.spec.events.end(), kind) == hook.spec.events.end())
 		return false;
 	// a ship's event goes when the ship passes the webhook's filter; one no longer kept does not
-	if (e.event.kind == Tracking::Kind::SYSTEM || !hook.spec.filter.any())
+	if (e.event.kind == Tracking::Kind::SYSTEM || !hook.spec.view.any())
 		return true;
 	bool passes = false;
 	const std::time_t now = std::time(nullptr);
-	tracker.ships().withShip(e.event.from, [&](const Ship &s, int) { passes = hook.spec.filter.passes(s, now); });
+	tracker.ships().withShip(e.event.from, [&](const Ship &s, int) { passes = hook.spec.view.passes(s, now); });
 	return passes;
 }
 

@@ -507,6 +507,8 @@ namespace Protocol
 
 #ifdef HASOPENSSL
 
+	const int TLS::HANDSHAKE_TIME;
+
 	// Initialize OpenSSL library exactly once (thread-safe)
 	// Note: OpenSSL 1.1.0+ handles initialization automatically.
 	// No cleanup needed - OS handles it at process exit.

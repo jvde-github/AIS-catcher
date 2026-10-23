@@ -440,11 +440,10 @@ void ControlServer::Request(IO::TCPServerConnection &c,
       sendError(c, "Invalid place ID");
     }
   } else if (path == "/api/places" && r.method == "GET") {
+    static const std::string none = "{\"place_version\":\"\",\"objects\":[]}";
     auto places = core.getPlaces();
-    Response(c, "application/json",
-             places ? places->collection()
-                    : std::string("{\"place_version\":\"\",\"objects\":[]}"),
-             accept_gzip);
+    const auto list = places ? places->collection() : nullptr;
+    Response(c, "application/json", list ? *list : none, accept_gzip);
   } else if ((path == "/api/places/save" || path == "/api/places/delete") &&
              r.method == "POST") {
     std::string error;
@@ -454,7 +453,7 @@ void ControlServer::Request(IO::TCPServerConnection &c,
       return;
     }
     if (places->save(r.body, path == "/api/places/delete", error))
-      Response(c, "application/json", places->collection(), accept_gzip);
+      Response(c, "application/json", *places->collection(), accept_gzip);
     else
       sendError(c, error);
   } else if (path == "/api/config" && r.method == "GET") {

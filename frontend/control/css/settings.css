@@ -464,6 +464,9 @@ a.st-node__name:hover {text-decoration:underline}
 .st-flat__head > .st-doc {margin-right:-10px}
 .pe-sidebar > .st-doc {align-self:flex-start;margin-top:4px}
 .st-svcs__head {display:flex;align-items:center;justify-content:space-between;gap:12px}
+/* a server's map page: its rows as the Advanced settings rows, in a section like Serves; More folds the rest */
+.st-main .st-srv__page {display:flex;flex-direction:column}
+.st-main .st-srv__more {margin-top:18px}
 .st-svcs__head > .st-doc {margin-right:-10px}
 
 /* the Services tab: what a server serves, who may read it, its keys */

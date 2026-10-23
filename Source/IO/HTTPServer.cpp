@@ -186,30 +186,36 @@ namespace IO
 	{
 		const std::string path = r.path();
 
-		for (const auto &m : mounts)
+		// the mount is looked up under the lock and answered outside it: a mounted
+		// server is never removed, only replaced
+		std::string prefix;
+		HTTPServer *target = nullptr;
 		{
-			const std::string &prefix = m.first;
-			if (path.rfind(prefix, 0) != 0)
-				continue;
+			std::lock_guard<std::mutex> lock(mounts_mtx);
+			for (const auto &m : mounts)
+				if (path.rfind(m.first, 0) == 0 && (path.size() == m.first.size() || path[m.first.size()] == '/'))
+				{
+					prefix = m.first;
+					target = m.second;
+					break;
+				}
+		}
+		if (!target)
+			return false;
 
-			// What a mount serves is relative, so the browser must believe it is
-			// inside a directory.
-			if (path.size() == prefix.size())
-			{
-				setExtraHeader("Location: " + prefix + "/");
-				Response(c, "text/plain", std::string(), false, false, false, 301);
-				return true;
-			}
-
-			if (path[prefix.size()] != '/')
-				continue;
-
-			HTTPRequest sub = r;
-			sub.target = r.target.substr(prefix.size());
-			m.second->Request(c, sub, accept_gzip);
+		// What a mount serves is relative, so the browser must believe it is
+		// inside a directory.
+		if (path.size() == prefix.size())
+		{
+			setExtraHeader("Location: " + prefix + "/");
+			Response(c, "text/plain", std::string(), false, false, false, 301);
 			return true;
 		}
-		return false;
+
+		HTTPRequest sub = r;
+		sub.target = r.target.substr(prefix.size());
+		target->Request(c, sub, accept_gzip);
+		return true;
 	}
 
 	int HTTPServer::parseHeaders(const std::string &msg, std::size_t header_end, HTTPRequest &r, std::string &error)

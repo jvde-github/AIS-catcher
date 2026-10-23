@@ -21,6 +21,11 @@
 #include "Logger.h"
 
 #include <algorithm>
+#include <cstdio>
+#ifdef __GLIBC__
+#include <malloc.h>
+#endif
+#include <fstream>
 #include <chrono>
 #include <map>
 
@@ -154,7 +159,7 @@ void Site::systemEvent(Tracking::Level level, const std::string &what, const std
 
 void Site::systemEventLocked(Tracking::Level level, const std::string &what, const std::string &text, int station, int receiver)
 {
-	if (!tracker_)
+	if (!tracker_ && own.empty())
 		return;
 	EventRing::Entry e;
 	e.kind = Tracking::Kind::SYSTEM;
@@ -164,7 +169,10 @@ void Site::systemEventLocked(Tracking::Level level, const std::string &what, con
 	e.text = text;
 	e.station = station;
 	e.receiver = receiver;
-	tracker_->journal().append(e);
+	if (tracker_)
+		tracker_->journal().append(e);
+	for (auto &o : own)
+		o->tracker->journal().append(e);
 }
 #endif
 
@@ -299,47 +307,46 @@ void Site::configure(const SiteConfig &cfg)
 		tracker_->setRestartRequired("Backup file (service restart)", cfg.backup_file != backup_file);
 	}
 
-	// the servers' own trackers: one stays while its server keeps the same settings
+	// The servers' own trackers, one a port. One stays while its server keeps the
+	// same settings; while an engine feeds them, one with changed settings stays
+	// too and waits for the next engine, as a new one does, since this engine was
+	// wired at its start. A tracker that goes is destroyed once the servers
+	// reading it have closed, and before any new one is made, so two never
+	// share the memory.
 	const bool fed = engineAttached();
 	for (auto &o : own)
 		o->retired = true;
+	std::vector<const ServerSpec *> wanted;
 	for (const auto &spec : cfg.servers)
 	{
 		if (!spec.tracking.own)
 			continue;
 		Own *o = ownFor(spec);
-		if (o && o->spec != spec.tracking)
-		{
-			if (fed)
-				o->tracker->setRestartRequired("Own ships (service restart)", true);
-			else
-				o = nullptr;
-		}
-		if (o)
+		if (o && (fed || o->spec == spec.tracking))
 		{
 			o->retired = false;
+			o->tracker->setRestartRequired("Own ships (service restart)", o->spec != spec.tracking);
 			continue;
 		}
-		own.erase(std::remove_if(own.begin(), own.end(), [&](const std::unique_ptr<Own> &x) { return x->port == spec.port && x->bind == spec.bind; }), own.end());
-		own.push_back(makeOwn(spec));
+		wanted.push_back(&spec);
 	}
-	if (!fed)
-		own.erase(std::remove_if(own.begin(), own.end(), [](const std::unique_ptr<Own> &x) { return x->retired; }), own.end());
-	launch();
 
 	// A server on the same port and address, reading the same tracker, takes the
 	// new settings in place, so its connections and a mount stay; the others close
 	// before the new ones open, so a server that moves to another address finds
-	// its port free
-	const auto trackerOf = [&](const ServerSpec &spec) -> Tracker & {
-		return spec.tracking.own ? *ownFor(spec)->tracker : *tracker_;
+	// its port free and a tracker that goes has no reader left
+	const auto trackerOf = [&](const ServerSpec &spec) -> Tracker * {
+		if (!spec.tracking.own)
+			return tracker_.get();
+		Own *o = ownFor(spec);
+		return o && !o->retired ? o->tracker.get() : nullptr;
 	};
 	std::vector<std::unique_ptr<Services::Server>> kept(cfg.servers.size());
 	for (std::size_t i = 0; i < cfg.servers.size(); i++)
 	{
 		const ServerSpec &spec = cfg.servers[i];
 		auto it = std::find_if(servers.begin(), servers.end(), [&](const std::unique_ptr<Services::Server> &s) {
-			return s && s->spec().port == spec.port && s->spec().bind == spec.bind && &s->reads() == &trackerOf(spec);
+			return s && s->spec().port == spec.port && s->spec().bind == spec.bind && &s->reads() == trackerOf(spec);
 		});
 		if (it == servers.end())
 			continue;
@@ -348,6 +355,15 @@ void Site::configure(const SiteConfig &cfg)
 		kept[i] = std::move(*it);
 	}
 	servers.clear();
+	if (!fed)
+		own.erase(std::remove_if(own.begin(), own.end(), [](const std::unique_ptr<Own> &x) { return x->retired; }), own.end());
+	for (const ServerSpec *spec : wanted)
+	{
+		own.push_back(makeOwn(*spec));
+		if (fed)
+			own.back()->tracker->setRestartRequired("Own ships (service restart)", true);
+	}
+	launch();
 	for (std::size_t i = 0; i < cfg.servers.size(); i++)
 	{
 		if (kept[i])
@@ -355,7 +371,7 @@ void Site::configure(const SiteConfig &cfg)
 			servers.push_back(std::move(kept[i]));
 			continue;
 		}
-		std::unique_ptr<Services::Server> s(new Services::Server(cfg.servers[i], trackerOf(cfg.servers[i]), [this] { return publicStations(); },
+		std::unique_ptr<Services::Server> s(new Services::Server(cfg.servers[i], *trackerOf(cfg.servers[i]), [this] { return publicStations(); },
 																 [this](JSON::Writer &w, EnginePart part) { writeEngine(w, part); },
 																 [this] { return systemFacts(); }));
 		if (s->open())
@@ -377,9 +393,37 @@ void Site::configure(const SiteConfig &cfg)
 		mqtt_state->configure(cfg.mqtt_state);
 	}
 #endif
+#ifdef __GLIBC__
+	// glibc keeps what the replaced servers, trackers and places freed
+	malloc_trim(0);
+#endif
 }
 
 #ifdef HASAPI
+// `to` as a whole copy of `from`, unless `to` is there already: a copy made on an
+// earlier start is the one of before the upgrade
+static bool keepCopy(const std::string &from, const std::string &to)
+{
+	if (std::ifstream(to, std::ios::binary))
+		return true;
+	const std::string tmp = to + ".tmp";
+	{
+		std::ifstream in(from, std::ios::binary);
+		std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
+		if (!in || !out || !(out << in.rdbuf()) || !out.flush())
+		{
+			std::remove(tmp.c_str());
+			return false;
+		}
+	}
+	if (std::rename(tmp.c_str(), to.c_str()) != 0)
+	{
+		std::remove(tmp.c_str());
+		return false;
+	}
+	return true;
+}
+
 // under site_mtx: a tracker's backup is read once, when it is made
 void Site::restoreInto(Tracker &t, const std::string &file, std::string &path)
 {
@@ -387,15 +431,22 @@ void Site::restoreInto(Tracker &t, const std::string &file, std::string &path)
 	if (file.empty())
 		return;
 	Tracker::Restored r = t.restore(file);
-	// A viewer backup of an earlier version is read once and never written
-	// over, so that version still finds it: backups go beside it
+	// A backup of an earlier version is copied once, beside it, for that version
+	// to be given back; then it is imported, and written over in this version's
+	// format from the next backup on. Without the copy it is left as it is.
 	if (r == Tracker::FOREIGN)
 	{
-		path = file + ".tracking";
-		r = t.restore(path);
-		if (r == Tracker::MISSING && t.importViewerBackup(file))
+		const std::string kept = file + ".before-upgrade";
+		if (!keepCopy(file, kept))
 		{
-			Info() << "Tracker: imported the viewer's statistics and ships from " << file << "; backups go to " << path;
+			Error() << "Tracker: " << file << " is a backup of an earlier version and could not be copied to " << kept
+					<< "; it is left as it is and nothing is backed up until it can be";
+			path.clear();
+			return;
+		}
+		if (t.importViewerBackup(file))
+		{
+			Info() << "Tracker: copied the backup of an earlier version to " << kept << ", which is not written again, and imported its statistics and ships";
 			r = Tracker::RESTORED;
 		}
 	}
@@ -415,7 +466,7 @@ bool Site::engineAttached()
 Site::Own *Site::ownFor(const ServerSpec &spec)
 {
 	for (auto &o : own)
-		if (o->port == spec.port && o->bind == spec.bind)
+		if (o->port == spec.port)
 			return o.get();
 	return nullptr;
 }
@@ -425,7 +476,6 @@ std::unique_ptr<Site::Own> Site::makeOwn(const ServerSpec &spec)
 {
 	std::unique_ptr<Own> o(new Own());
 	o->port = spec.port;
-	o->bind = spec.bind;
 	o->spec = spec.tracking;
 	o->tracker.reset(new Tracker());
 	TrackingConfig t = spec.tracking.tracking;
@@ -436,8 +486,6 @@ std::unique_ptr<Site::Own> Site::makeOwn(const ServerSpec &spec)
 		filter.SetOptionKey((AIS::Keys)term.first, term.second);
 	o->tracker->setFilter(filter);
 	Info() << "Server on port " << spec.port << ": ships of its own" << (filter.isOn() ? ", " + filter.Get() : std::string());
-	restoreInto(*o->tracker, spec.tracking.backup_file, o->backup_path);
-	o->last_backup = std::time(nullptr);
 	o->tracker->setStations(stationsSnapshot());
 	return o;
 }
@@ -495,13 +543,10 @@ void Site::refreshPlaces()
 #endif
 }
 
-// under site_mtx; a backup that starts failing is an event, once
+// under site_mtx: the site's tracker alone; a backup that starts failing is an event, once
 void Site::backup()
 {
 #ifdef HASAPI
-	for (auto &o : own)
-		if (!o->backup_path.empty() && !o->tracker->save(o->backup_path))
-			Error() << "Tracker: backup to " << o->backup_path << " failed";
 	if (!tracker_ || backup_path.empty())
 		return;
 	const bool ok = tracker_->save(backup_path);
@@ -532,13 +577,6 @@ void Site::beat(std::time_t now)
 		backup();
 		last_backup = now;
 	}
-	for (auto &o : own)
-		if (!o->backup_path.empty() && o->spec.backup_minutes > 0 && now - o->last_backup >= o->spec.backup_minutes * 60)
-		{
-			if (!o->tracker->save(o->backup_path))
-				Error() << "Tracker: backup to " << o->backup_path << " failed";
-			o->last_backup = now;
-		}
 #ifdef HASDELIVERY
 	if (mqtt_state)
 		mqtt_state->poll(now);

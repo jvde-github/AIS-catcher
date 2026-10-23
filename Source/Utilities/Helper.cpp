@@ -217,7 +217,15 @@ namespace Util
 #endif
 	}
 
+	static std::string detectHardware();
+
 	std::string Helper::getHardware()
+	{
+		static const std::string hardware = detectHardware();
+		return hardware;
+	}
+
+	static std::string detectHardware()
 	{
 #ifdef _WIN32
 

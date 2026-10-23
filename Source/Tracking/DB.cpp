@@ -664,7 +664,7 @@ std::string DB::getGeoJSON(const Keep &keep) {
   return content;
 }
 
-std::string DB::getAllPathJSON(const Keep &keep) {
+std::string DB::getAllPathJSON(const Keep &keep, std::time_t oldest) {
   std::lock_guard<std::mutex> lock(mtx);
 
   content.clear();
@@ -673,7 +673,7 @@ std::string DB::getAllPathJSON(const Keep &keep) {
     w.beginObject();
 
     std::time_t now = time(nullptr);
-    std::time_t floor = pathFloor(now);
+    std::time_t floor = MAX(pathFloor(now), oldest);
     forEachRecentUnlocked(now, false, 0,
                           [&](int ptr, const Ship &ship, long int) {
                             if (keep && !keep(ship))
@@ -692,7 +692,7 @@ std::string DB::getAllPathJSON(const Keep &keep) {
 // first point wholly before the window — where the vessel was when it opened —
 // without which a chunk cannot draw a ship that last reported before it began.
 void DB::writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since,
-                                    std::time_t until) {
+                                    std::time_t until, std::time_t carry_floor) {
   auto emit = [&](const PathStore::Point &p) {
     w.beginArray()
         .val(p.lat)
@@ -710,7 +710,7 @@ void DB::writeSinglePathJSONCompact(int ptr, JSON::Writer &w, std::time_t since,
        r = paths.at(r).prev) {
     const PathStore::Point &p = paths.at(r);
     if ((std::time_t)p.end() < since) {
-      if (until > 0)
+      if (until > 0 && (std::time_t)p.end() >= carry_floor)
         emit(p);
       break;
     }
@@ -743,7 +743,7 @@ std::string DB::getAllPathJSONSince(std::time_t since, const Keep &keep) {
   return content;
 }
 
-std::string DB::getReplayInfoJSON(std::time_t block) {
+std::string DB::getReplayInfoJSON(std::time_t block, std::time_t oldest_shown) {
   std::lock_guard<std::mutex> lock(mtx);
 
   content.clear();
@@ -769,7 +769,7 @@ std::string DB::getReplayInfoJSON(std::time_t block) {
     });
 
     // the client only asks for blocks within the bounds it is given
-    std::time_t cutoff = pathFloor(now);
+    std::time_t cutoff = MAX(pathFloor(now), oldest_shown);
     if (oldest && (std::time_t)oldest < cutoff)
       oldest = (uint32_t)cutoff;
 
@@ -790,7 +790,7 @@ std::string DB::getReplayInfoJSON(std::time_t block) {
 // Per-ship styling, sent once so the chunks stay geometry. Read straight off
 // the record rather than through the static-signal gate: a name captured hours
 // ago is what a replay of that period wants.
-std::string DB::getReplayShipsJSON(std::time_t since, std::time_t lookback, const Keep &keep) {
+std::string DB::getReplayShipsJSON(std::time_t since, std::time_t lookback, const Keep &keep, std::time_t oldest) {
   return getReplayObjectJSON(
       since, lookback, 0,
       [&keep](JSON::Writer &w, int, const Ship &ship, std::time_t) {
@@ -819,7 +819,7 @@ std::string DB::getReplayShipsJSON(std::time_t since, std::time_t lookback, cons
               .endArray();
 
         w.endObject();
-      });
+      }, oldest);
 }
 
 std::string DB::getReplayJSON(std::time_t since, std::time_t until,
@@ -828,15 +828,15 @@ std::string DB::getReplayJSON(std::time_t since, std::time_t until,
 }
 
 std::string DB::getReplayJSON(std::time_t since, std::time_t until, const Keep &keep,
-                              std::time_t lookback) {
+                              std::time_t lookback, std::time_t oldest) {
   return getReplayObjectJSON(since, lookback, until,
-                             [this, until, &keep](JSON::Writer &w, int ptr,
-                                                  const Ship &ship, std::time_t from) {
+                             [this, until, oldest, &keep](JSON::Writer &w, int ptr,
+                                                          const Ship &ship, std::time_t from) {
                                if (keep && !keep(ship))
                                  return;
                                w.key(ship.mmsi);
-                               writeSinglePathJSONCompact(ptr, w, from, until);
-                             });
+                               writeSinglePathJSONCompact(ptr, w, from, until, oldest);
+                             }, oldest);
 }
 
 template <typename F>
@@ -887,7 +887,7 @@ void DB::writeSinglePathGeoJSON(int ptr, JSON::Writer &w, std::time_t floor) {
   w.endArray().endObject().endObject();
 }
 
-std::string DB::getPathJSON(uint32_t mmsi) {
+std::string DB::getPathJSON(uint32_t mmsi, std::time_t oldest) {
   std::lock_guard<std::mutex> lock(mtx);
   int ptr = ships.find(mmsi);
 
@@ -895,14 +895,14 @@ std::string DB::getPathJSON(uint32_t mmsi) {
   {
     JSON::Writer w(content, 1024);
     if (ptr != SHIP_NIL)
-      writeSinglePathJSONCompact(ptr, w, pathFloor(time(nullptr)));
+      writeSinglePathJSONCompact(ptr, w, MAX(pathFloor(time(nullptr)), oldest));
     else
       w.beginArray().endArray();
   }
   return content;
 }
 
-std::string DB::getPathGeoJSON(uint32_t mmsi) {
+std::string DB::getPathGeoJSON(uint32_t mmsi, std::time_t oldest) {
   std::lock_guard<std::mutex> lock(mtx);
   int ptr = ships.find(mmsi);
 
@@ -910,7 +910,7 @@ std::string DB::getPathGeoJSON(uint32_t mmsi) {
   {
     JSON::Writer w(content, 1024);
     if (ptr != SHIP_NIL)
-      writeSinglePathGeoJSON(ptr, w, pathFloor(time(nullptr)));
+      writeSinglePathGeoJSON(ptr, w, MAX(pathFloor(time(nullptr)), oldest));
     else
       w.beginObject()
           .kv("type", "Feature")
@@ -930,7 +930,7 @@ std::string DB::getPathGeoJSON(uint32_t mmsi) {
   return content;
 }
 
-std::string DB::getAllPathGeoJSON(const Keep &keep) {
+std::string DB::getAllPathGeoJSON(const Keep &keep, std::time_t oldest) {
   std::lock_guard<std::mutex> lock(mtx);
 
   content.clear();
@@ -942,7 +942,7 @@ std::string DB::getAllPathGeoJSON(const Keep &keep) {
         .beginArray();
 
     std::time_t now = time(nullptr);
-    std::time_t floor = pathFloor(now);
+    std::time_t floor = MAX(pathFloor(now), oldest);
     forEachRecentUnlocked(now, false, 0, [&](int ptr, const Ship &ship, long int) {
       if (!keep || keep(ship))
         writeSinglePathGeoJSON(ptr, w, floor);
@@ -1854,20 +1854,14 @@ int DB::claimShip(uint32_t mmsi) {
   return ptr;
 }
 
-void DB::Receive(const JSON::JSON *data, int len, TAG &tag) {
+// The table's filter, once per message and before the message reaches the
+// readers of the stream. A diagnostic is let through with its tag marked, so it
+// counts in the figures without touching any vessel, position, path or coverage.
+DB::Admission DB::admit(const AIS::Message *msg, TAG &tag) {
   std::lock_guard<std::recursive_mutex> configurationLock(configuration_mtx);
-  const AIS::Message *msg = (AIS::Message *)data[0].binary;
-  int type = msg->type();
-
-  if (type < 1 || type > 28)
-    return;
-
   const auto result = filter.include(*msg, tag);
   if (result == AIS::Filter::Result::NotIncluded)
-    return;
-
-  // Diagnostics still reach the counters and sinks, without touching any
-  // vessel, position, path or coverage state.
+    return DROP;
   if (result == AIS::Filter::Result::IncludedWithError) {
     tag.validated = false;
     tag.lat = LAT_UNDEFINED;
@@ -1879,9 +1873,23 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag) {
     tag.speed = SPEED_UNDEFINED;
     // Equal timestamps prevent History from counting a new vessel.
     tag.previous_signal = msg->getRxTimeUnix();
-    Send(data, len, tag);
-    return;
+    return COUNT;
   }
+  return STORE;
+}
+
+void DB::count(const JSON::JSON *data, int len, TAG &tag) {
+  Send(data, len, tag);
+}
+
+void DB::Receive(const JSON::JSON *data, int len, TAG &tag) {
+  std::lock_guard<std::recursive_mutex> configurationLock(configuration_mtx);
+  const AIS::Message *msg = (AIS::Message *)data[0].binary;
+  int type = msg->type();
+
+  if (type < 1 || type > 28)
+    return;
+
 
   std::unique_lock<std::mutex> lock(mtx);
 

@@ -124,6 +124,7 @@ export const DEFAULT_SETTINGS = {
         map_opacity: 0.5,
         layer_opacity: { Aircraft: 1 },
         basemap_opacity: {
+            "AIS-catcher Light": 1, "AIS-catcher Light (no labels)": 1, "AIS-catcher Dark": 1,
             "OpenFreeMap Positron": 1, "OpenFreeMap Positron (no labels)": 1,
             "OpenFreeMap Bright": 1, "OpenFreeMap Liberty": 1,
             "OpenFreeMap Dark": 1, "OpenFreeMap Dark (no labels)": 1,

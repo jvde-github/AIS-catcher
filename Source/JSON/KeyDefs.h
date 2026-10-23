@@ -286,6 +286,7 @@ X(KEY_SETTING_TRACKING, "", "", "", "", "tracking", "", "",
   "How the site keeps ships: backup file and interval, history, track time, table size.", nullptr)
 X(KEY_SETTING_SERVICES, "", "", "", "", "services", "", "", "The site's servers: a port each and what it serves.", nullptr)
 X(KEY_SETTING_UI, "", "", "", "", "ui", "", "", "A server serves the map; on unless set off.", nullptr)
+X(KEY_SETTING_VIEW, "", "", "", "", "view", "", "", "Which ships a server, webhook or MQTT state shows of what its tracker keeps.", nullptr)
 X(KEY_SETTING_API, "", "", "", "", "api", "", "", "A server serves /api/v1.", nullptr)
 X(KEY_SETTING_MCP, "", "", "", "", "mcp", "", "", "A server serves the MCP endpoint.", nullptr)
 X(KEY_SETTING_METRICS, "", "", "", "", "metrics", "", "", "A server serves /metrics for Prometheus; prome says the same.", nullptr)

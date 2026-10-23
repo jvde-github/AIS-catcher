@@ -163,18 +163,15 @@ private:
 #ifdef HASAPI
 	std::unique_ptr<Tracker> tracker_;
 	std::vector<std::unique_ptr<Services::Server>> servers;
-	// A server's own tracker, behind its filter, with a backup of its own. Made
-	// with its server; changed settings wait for the next engine, as the running
-	// one feeds it, and one the configuration dropped stays until that engine
-	// detaches.
+	// A server's own tracker, behind its filter; the site's tracker alone has a
+	// backup. Made with its server; changed settings wait for the next engine, as
+	// the running one feeds it, and one the configuration dropped stays until
+	// that engine detaches.
 	struct Own
 	{
 		int port = 0;
-		std::string bind;
 		TrackerSpec spec;
 		std::unique_ptr<Tracker> tracker;
-		std::string backup_path;
-		std::time_t last_backup = 0;
 		bool retired = false;
 	};
 	std::vector<std::unique_ptr<Own>> own;

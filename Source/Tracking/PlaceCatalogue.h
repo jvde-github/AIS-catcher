@@ -78,7 +78,13 @@ struct PlaceIndex {
     std::shared_ptr<const std::vector<Part>>
         polygons; // ordered by minimum longitude
     std::shared_ptr<const PlaceMetadata> metadata;
-    std::shared_ptr<const std::string> feature;
+    // The place as GeoJSON is read from its file when asked for, not kept: the
+    // file, and the size and hash of the text served, which a file changed since
+    // no longer matches. A place whose text is not its file's whole text (one of
+    // a collection, or one read as an older schema) keeps that text here instead.
+    std::shared_ptr<const std::string> path, text;
+    uint64_t hash = 0;
+    size_t bytes = 0;
     double xmin = 180, xmax = -180, ymin = 90, ymax = -90, size = 0;
     double lat = 0, lon = 0;
     int markerSize = 0;
@@ -89,6 +95,8 @@ struct PlaceIndex {
     std::vector<std::string> codes, aliases;
     void writeSummary(JSON::Writer &, uint64_t sequence,
                       int minZoom = -1) const;
+    // the place's GeoJSON as loaded or saved; false when its file changed since
+    bool readFeature(std::string &out) const;
     // Detail classes have their own minimum zoom; other places use their size.
     static const int TERMINAL_ZOOM = 12, SECTION_ZOOM = 13, BERTH_ZOOM = 14;
     int closeZoom() const;
@@ -183,9 +191,10 @@ class PlaceCatalogue {
   size_t vertices = 0, bytes = 0;
   std::mutex mutex;
   std::shared_ptr<const PlaceIndex> index;
-  std::string collectionJSON; // the collection as served, built once per index
+  std::shared_ptr<const std::string> collectionJSON; // the collection as served, built once per index
   uint32_t nextNumber = 0;
   size_t skipped = 0;
+  bool drifted = false; // a file changed on disk since it was loaded, said once
   std::atomic<bool> changed{
       false}; // set by save(), consumed by the viewer that serves the store
   void rebuild();
@@ -195,11 +204,11 @@ class PlaceCatalogue {
   void erase(const std::string &uuid);
   static JSON::Document parse(const std::string &json);
   static Place validate(JSON::JSON &root, JSON::Pool &pool,
-                        bool saving = false);
+                        bool saving = false, bool keepText = false);
 
 public:
   explicit PlaceCatalogue(const std::string &directory);
-  std::string collection();
+  std::shared_ptr<const std::string> collection();
   std::string feature(uint32_t id, const std::string &version);
   void writeStatus(JSON::Writer &writer);
   std::shared_ptr<const PlaceIndex> snapshot();

@@ -82,10 +82,33 @@ const JSON::JSON &object(const JSON::JSON &o, int key) {
 }
 const size_t BUDGET_VERTICES = 4000000, BUDGET_BYTES = 268435456;
 const size_t FEATURE_BYTES = 524288;
+// FNV-1a over the text a place is served as: what tells that its file changed
+uint64_t placeHash(const char *s, size_t n) {
+  uint64_t h = 14695981039346656037ull;
+  for (size_t i = 0; i < n; ++i) {
+    h ^= (unsigned char)s[i];
+    h *= 1099511628211ull;
+  }
+  return h;
+}
+// a place served from its file, the whole file
+void fromFile(PlaceIndex::Entry &e, const std::string &path, const std::string &content) {
+  e.path = std::make_shared<const std::string>(path);
+  e.text.reset();
+  e.bytes = content.size();
+  e.hash = placeHash(content.data(), content.size());
+}
+// a place that keeps its text, as long as the text and no longer
+void fromText(PlaceIndex::Entry &e, const std::string &text) {
+  e.text = std::make_shared<const std::string>(text.data(), text.size());
+  e.bytes = text.size();
+  e.hash = placeHash(text.data(), text.size());
+}
 void footprint(const PlaceIndex::Entry &e, size_t &vertices, size_t &bytes) {
   if (e.polygons->empty())
     return;
-  bytes += e.feature->size();
+  if (e.text)
+    bytes += e.text->size();
   for (const auto &part : *e.polygons)
     for (const auto &ring : part.rings) {
       vertices += ring.size();
@@ -307,7 +330,8 @@ JSON::Document PlaceCatalogue::parse(const std::string &json) {
 
 // Validates and compiles one parsed feature.
 PlaceCatalogue::Place PlaceCatalogue::validate(JSON::JSON &root,
-                                               JSON::Pool &pool, bool saving) {
+                                               JSON::Pool &pool, bool saving,
+                                               bool keepText) {
   Place a;
   auto metadata = std::make_shared<PlaceMetadata>();
   auto &m = *metadata;
@@ -413,14 +437,17 @@ PlaceCatalogue::Place PlaceCatalogue::validate(JSON::JSON &root,
     revision.setInt(a.compiled.revision);
     props.getObject().Set(KEY_PLACE_REVISION, revision);
   }
-  std::string canonical;
-  JSON::Writer writer(canonical);
-  faithful(pool).stringify(root, writer);
-  writer.finish();
-  if (canonical.size() > FEATURE_BYTES)
-    throw std::runtime_error("Place file exceeds 512 KiB");
-  a.compiled.feature =
-      std::make_shared<const std::string>(std::move(canonical));
+  // the text is made when it is kept or written; a place served from its file
+  // has none in memory
+  if (saving || keepText) {
+    std::string canonical;
+    JSON::Writer writer(canonical);
+    faithful(pool).stringify(root, writer);
+    writer.finish();
+    if (canonical.size() > FEATURE_BYTES)
+      throw std::runtime_error("Place file exceeds 512 KiB");
+    fromText(a.compiled, canonical);
+  }
   return a;
 }
 
@@ -432,34 +459,40 @@ PlaceCatalogue::PlaceCatalogue(const std::string &dir) : directory(dir) {
 #endif
   if (result != 0 && errno != EEXIST)
     Warning() << "Places: cannot create " << directory;
-  for (const auto &file : Util::Helper::getFilesInDirectory(directory)) {
+  const auto files = Util::Helper::getFilesInDirectory(directory);
+  places.reserve(files.size());
+  for (const auto &file : files) {
     if (file.size() < 9 || file.substr(file.size() - 8) != ".geojson")
       continue;
     std::vector<std::string> added;
     try {
       const std::string path = directory + "/" + file;
-      std::ifstream input(path, std::ios::binary | std::ios::ate);
-      if (!input || input.tellg() > 268435456)
-        throw std::runtime_error("Place file unreadable or too large");
+      const std::string content = Util::Helper::readFile(path);
       JSON::Parser parser(JSON_DICT_SETTING);
       parser.setPreserveUnknown(true);
-      auto doc = parser.parse(Util::Helper::readFile(path));
+      auto doc = parser.parse(content);
       const bool collection =
           text(doc.root, KEY_SETTING_MODEL_TYPE) == "FeatureCollection";
+      // A file that is one place serves it as written. Any other place keeps
+      // its text: one of a collection, one read as an older schema, and one in a
+      // file past the limit, which is held to the text it compacts to.
+      const bool whole = !collection && content.size() <= FEATURE_BYTES;
       const auto load = [&](JSON::JSON &feature) {
         std::string parentCode;
         const std::string upgraded =
             upgradeOlderSchema(feature, doc.pool, parentCode);
         Place a;
         if (upgraded.empty())
-          a = validate(feature, doc.pool);
+          a = validate(feature, doc.pool, false, !whole);
         else {
           JSON::Parser older(JSON_DICT_SETTING);
           older.setPreserveUnknown(true);
           auto current = older.parse(upgraded);
-          a = validate(current.root, current.pool);
+          a = validate(current.root, current.pool, false, true);
           a.parentCode = parentCode;
         }
+        if (!a.compiled.text)
+          fromFile(a.compiled, path, content);
         a.file = file;
         a.collectionFile = collection;
         if (a.revision < 1)
@@ -484,6 +517,7 @@ PlaceCatalogue::PlaceCatalogue(const std::string &dir) : directory(dir) {
       Warning() << "Places: skipped " << file << ": " << e.what();
     }
   }
+  places.shrink_to_fit();
   // a schema 1 place named its port by code, one of the ports just loaded
   for (auto &place : places) {
     if (place.parentCode.empty())
@@ -494,12 +528,15 @@ PlaceCatalogue::PlaceCatalogue(const std::string &dir) : directory(dir) {
                 << place.parentCode << ", which is not drawn here";
     } else {
       try {
+        std::string kept;
+        if (!place.compiled.readFeature(kept))
+          throw std::runtime_error("its text is not kept");
         JSON::Parser parser(JSON_DICT_SETTING);
         parser.setPreserveUnknown(true);
-        auto doc = parser.parse(*place.compiled.feature);
+        auto doc = parser.parse(kept);
         JSON::Value properties = *doc.root[KEY_PLACE_PROPERTIES];
         properties.getObject().Set(KEY_PLACE_PART_OF, port->second, doc.pool);
-        place.compiled = validate(doc.root, doc.pool).compiled;
+        place.compiled = validate(doc.root, doc.pool, false, true).compiled;
       } catch (const std::exception &e) {
         Warning() << "Places: " << place.compiled.metadata->name
                   << " keeps no parent: " << e.what();
@@ -518,10 +555,11 @@ PlaceCatalogue::PlaceCatalogue(const std::string &dir) : directory(dir) {
          << directory;
 }
 
-std::string PlaceCatalogue::collection() {
+std::shared_ptr<const std::string> PlaceCatalogue::collection() {
   std::lock_guard<std::mutex> lock(mutex);
-  if (collectionJSON.empty()) {
-    JSON::Writer w(collectionJSON);
+  if (!collectionJSON) {
+    std::string out;
+    JSON::Writer w(out, places.size() * 384);
     w.beginObject()
         .kv("place_version", index->version)
         .key("objects")
@@ -531,6 +569,9 @@ std::string PlaceCatalogue::collection() {
     }
     w.endArray().endObject();
     w.finish();
+    collectionJSON = out.capacity() - out.size() > out.size() / 4
+                         ? std::make_shared<const std::string>(out.data(), out.size())
+                         : std::make_shared<const std::string>(std::move(out));
   }
   return collectionJSON;
 }
@@ -574,7 +615,7 @@ bool PlaceCatalogue::save(const std::string &json, bool remove,
           return true;
         }
         return Util::Helper::writeFileAtomic(
-            path, *value.compiled.feature + "\n", error);
+            path, *value.compiled.text + "\n", error);
       }
       std::string output;
       JSON::Writer w(output);
@@ -588,9 +629,13 @@ bool PlaceCatalogue::save(const std::string &json, bool remove,
           continue;
         if (p.compiled.metadata->uuid == value.compiled.metadata->uuid) {
           if (!deleting)
-            w.raw_val(*value.compiled.feature);
-        } else
-          w.raw_val(*p.compiled.feature);
+            w.raw_val(*value.compiled.text);
+        } else {
+          std::string other;
+          if (!p.compiled.readFeature(other))
+            throw std::runtime_error("A place in this file changed on disk. Reload the places first.");
+          w.raw_val(other);
+        }
       }
       w.endArray().endObject();
       w.finish();
@@ -609,6 +654,9 @@ bool PlaceCatalogue::save(const std::string &json, bool remove,
       a.revision = a.compiled.revision;
       if (!write(a, false))
         return false;
+      // a place in a file of its own is served from it from now on
+      if (!a.collectionFile)
+        fromFile(a.compiled, path, *a.compiled.text + "\n");
       if (!old)
         ++nextNumber;
       insert(std::move(a), old);
@@ -709,12 +757,43 @@ void PlaceCatalogue::erase(const std::string &uuid) {
     byUUID[places[i].compiled.metadata->uuid] = i;
 }
 
+// under the lock, so the file and the index are read as of the same save
 std::string PlaceCatalogue::feature(uint32_t id, const std::string &version) {
   std::lock_guard<std::mutex> lock(mutex);
   if (version != index->version)
     return "{}";
   const auto *p = index->find(id);
-  return p ? *p->feature : "{}";
+  std::string out;
+  if (!p)
+    return "{}";
+  if (p->readFeature(out))
+    return out;
+  if (!drifted) {
+    drifted = true;
+    Warning() << "Places: " << (p->path ? *p->path : p->metadata->name)
+              << " changed on disk since the places were loaded: reload them to serve it";
+  }
+  return "{}";
+}
+
+bool PlaceIndex::Entry::readFeature(std::string &out) const {
+  if (text) {
+    out = *text;
+    return true;
+  }
+  if (!path)
+    return false;
+  std::ifstream in(*path, std::ios::binary);
+  // one byte past the size tells a file that grew
+  std::string data(bytes + 1, '\0');
+  in.read(&data[0], (std::streamsize)data.size());
+  if (in.gcount() != (std::streamsize)bytes)
+    return false;
+  data.resize(bytes);
+  if (placeHash(data.data(), data.size()) != hash)
+    return false;
+  out.swap(data);
+  return true;
 }
 
 std::shared_ptr<const PlaceIndex> PlaceCatalogue::snapshot() {
@@ -786,7 +865,7 @@ void PlaceCatalogue::rebuild() {
             });
   next->buildGrid();
   index = std::move(next);
-  collectionJSON.clear();
+  collectionJSON.reset();
 }
 
 void PlaceIndex::buildGrid() {

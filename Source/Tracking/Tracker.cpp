@@ -39,7 +39,6 @@ Tracker::Tracker()
 		auto it = last_heard.find(id);
 		return it == last_heard.end() ? (std::time_t)0 : it->second;
 	});
-	db.setup();
 }
 
 namespace
@@ -129,7 +128,8 @@ void Tracker::Router::Receive(const JSON::JSON *data, int len, TAG &tag)
 		{
 			tracker->last_heard[id] = std::time(nullptr);
 			auto it = tracker->station_figures.find(id);
-			if (it == tracker->station_figures.end() && tracker->station_figures.size() < MAX_STATIONS)
+			// figures of its own for a listed station: a feed naming hundreds stays bounded
+			if (it == tracker->station_figures.end() && tracker->listed.count(id) && tracker->station_figures.size() < MAX_STATIONS)
 			{
 				it = tracker->station_figures.emplace(id, std::unique_ptr<Figures>(new Figures())).first;
 				it->second->setCutoff(tracker->cutoff);
@@ -138,9 +138,6 @@ void Tracker::Router::Receive(const JSON::JSON *data, int len, TAG &tag)
 				it->second->Receive(data, len, tag);
 		}
 	}
-	std::lock_guard<std::mutex> lock(tracker->taps_mtx);
-	for (auto *tap : tracker->taps)
-		tap->Receive(data, len, tag);
 }
 
 void Tracker::usePlaces(const std::string &directory)
@@ -203,11 +200,24 @@ void Tracker::Intake::Receive(const JSON::JSON *data, int len, TAG &tag)
 {
 	// a copy: the receiver's tag goes on to other readers as it came
 	TAG t = tag;
-	tracker->place((const AIS::Message *)data[0].binary, t);
-	tracker->db.Receive(data, len, t);
+	const AIS::Message *msg = (const AIS::Message *)data[0].binary;
+	tracker->place(msg, t);
+	// the filter once: what passes reaches the table, then, with the position
+	// and distance the table wrote to the tag, the readers of the stream
+	const DB::Admission admission = tracker->db.admit(msg, t);
+	if (admission == DB::DROP)
+		return;
+	if (admission == DB::COUNT)
+		tracker->db.count(data, len, t);
+	else
+		tracker->db.Receive(data, len, t);
+	{
+		std::lock_guard<std::mutex> lock(tracker->taps_mtx);
+		for (auto *tap : tracker->taps)
+			tap->Receive(data, len, t);
+	}
 
 	// a position report moves a station riding its vessel
-	const AIS::Message *msg = (const AIS::Message *)data[0].binary;
 	if (!msg || !isValidCoord(t.lat, t.lon))
 		return;
 	switch (msg->type())
@@ -233,7 +243,8 @@ void Tracker::AdsbIntake::Receive(const Plane::ADSB *data, int len, TAG &tag)
 void Tracker::place(const AIS::Message *msg, TAG &tag)
 {
 	std::lock_guard<std::mutex> lock(stations_mtx);
-	// a message from a station the configuration lists, as a feed from a hub carries them, counts there
+	// a message from a station the configuration lists, as a feed from a hub carries them, counts
+	// there; one a foreign feed names stays at its input's, so no station appears unasked
 	if (msg && msg->getStation() >= 0 && msg->getStation() != tag.station_id && stations.count(msg->getStation()))
 		tag.station_id = msg->getStation();
 	if (isValidCoord(fixed_at.lat, fixed_at.lon))
@@ -330,6 +341,12 @@ void Tracker::publish(std::vector<int> moved)
 void Tracker::setStations(const StationRegistry &registry)
 {
 	std::vector<StationRegistry::Station> list;
+	{
+		std::lock_guard<std::mutex> lock(figures_mtx);
+		listed.clear();
+		for (const auto &s : registry.ordered())
+			listed.insert(s.id);
+	}
 	{
 		std::lock_guard<std::mutex> lock(stations_mtx);
 		applyStations(registry);

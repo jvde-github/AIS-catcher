@@ -9,25 +9,26 @@ import { renderApiTester } from './api-tester.js';
 import { DOCS, docLink, outputDocs } from './docs.js';
 import { webviewerSchema, webhookSchema, mqttStateSchema } from './schema.js';
 
-// the map's settings on a server that serves it; the labels name the option, for the owner
+// the map's settings on a server that serves it, named by what a visitor sees; the page's own
+// come first, what only an owner looks for (links, tiles, plugins) folds away under More
 const MAP_LABELS = {
-    webcontrol_http: ['Control Link', 'Opens from the viewer menu'],
-    station: ['Map title', 'Above the map; the only station\'s name when empty'],
-    station_link: ['Station page', 'Linked from the title'],
-    replay: ['Replay recent tracks', 'Scrub back in time on the map'],
-    realtime: ['Live NMEA', 'Stream received messages to the viewer'],
-    msg: ['Last Message', 'Recent NMEA on the ship card'],
-    decoder: ['NMEA Decoder', 'A tab to decode messages by hand'],
-    log: ['Log Tab', 'Show the receiver log in the viewer'],
-    mbtiles: ['MBTiles Maps', 'Base maps from .mbtiles files, one per line'],
-    mboverlay: ['MBTiles Overlays', 'Overlays from .mbtiles files, one per line'],
-    fstiles: ['Tile Folder Maps', 'Base maps from folders of tiles, one per line'],
-    fsoverlay: ['Tile Folder Overlays', 'Overlays from folders of tiles, one per line'],
-    plugin_dir: ['Plugin Directory', 'Folder with viewer plugins'],
-    context: ['Context', 'Keeps settings of viewers apart']
+    station: ['Title', 'Above the map; the only station\'s name when empty'],
+    station_link: ['Title links to', 'A page about the station, opened from the title'],
+    realtime: ['Realtime tab', 'Messages as they arrive'],
+    replay: ['Replay', 'Scrub back through recent tracks on the map'],
+    msg: ['Last message on the ship card', 'The vessel\'s latest NMEA'],
+    decoder: ['Decoder tab', 'Decode a pasted NMEA sentence'],
+    log: ['Log tab', 'What the station is doing'],
+    webcontrol_http: ['Control panel link', 'Opened from the map\'s menu'],
+    mbtiles: ['MBTiles maps', 'Base maps from .mbtiles files, one per line'],
+    mboverlay: ['MBTiles overlays', 'Overlays from .mbtiles files, one per line'],
+    fstiles: ['Tile folder maps', 'Base maps from folders of tiles, one per line'],
+    fsoverlay: ['Tile folder overlays', 'Overlays from folders of tiles, one per line'],
+    plugin_dir: ['Plugin folder', 'Plugins the map loads'],
+    context: ['Settings name', 'Keeps a visitor\'s settings for this map apart from another map\'s']
 };
-const MAP_SECTIONS = { realtime: 'Map', replay: 'Map', msg: 'Map', decoder: 'Map', log: 'Map',
-    station: 'Links', station_link: 'Links', webcontrol_http: 'Links', mbtiles: 'Map tiles', mboverlay: 'Map tiles', fstiles: 'Map tiles', fsoverlay: 'Map tiles', plugin_dir: 'Plugins', context: 'Plugins' };
+const MAP_SECTIONS = { station: 'Map page', station_link: 'Map page', realtime: 'Map page', replay: 'Map page', msg: 'Map page', decoder: 'Map page', log: 'Map page',
+    webcontrol_http: 'Links', mbtiles: 'Map tiles', mboverlay: 'Map tiles', fstiles: 'Map tiles', fsoverlay: 'Map tiles', plugin_dir: 'Plugins', context: 'Plugins' };
 const MAP_FIELDS = Object.keys(MAP_SECTIONS).map(name => {
     const l = MAP_LABELS[name];
     return { field: { ...webviewerSchema[name], ...(l ? { label: l[0], tooltip: l[1] } : {}) }, section: MAP_SECTIONS[name] };
@@ -40,13 +41,15 @@ const OWN_PAGES = ['overview', 'ha', 'webhooks'];
 const withMain = list => (list.some(s => s && s.main === true) ? list : [{ main: true }, ...list]);
 const listOf = v => (Array.isArray(v) ? v : []);
 
-// a server's filter in a few words, for the Overview
-function showsText(filter, choices) {
-    if (!filter || typeof filter !== 'object') return 'Every ship';
+// what a server shows in a few words, for the Overview: its stations (station_id, else its view's), and
+// whether its view limits more
+function showsText(view, choices, stationId) {
+    const v = view && typeof view === 'object' ? view : {};
+    const raw = stationId ?? v.stations;
+    const ids = (Array.isArray(raw) ? raw : raw === undefined || raw === null || raw === '' ? [] : String(raw).split(',')).map(x => String(x).trim()).filter(Boolean);
     const parts = [];
-    if (Array.isArray(filter.stations) && filter.stations.length)
-        parts.push(filter.stations.map(k => choices.find(c => String(c.key) === String(k))?.label || 'station ' + k).join(', '));
-    if (Object.keys(filter).some(k => k !== 'stations')) parts.push('filtered');
+    if (ids.length) parts.push(ids.map(k => choices.find(c => String(c.key) === k)?.label || 'station ' + k).join(', '));
+    if (Object.keys(v).some(k => k !== 'stations')) parts.push('limited');
     return parts.length ? parts.join(' · ') : 'Every ship';
 }
 
@@ -67,7 +70,8 @@ export function servicesRailItems(cfg, section, { port, add }) {
     const ha = live.ha || cfg.mqtt_state;
     const hooks = live.hooks || cfg.webhooks;
     return [{ key: 'overview', label: 'Overview' },
-        ...withMain(live.servers || listOf(cfg.services)).map((sv, i) => ({ key: sv.main ? 'main' : 'srv' + i, label: serverName(sv) + (sv.main && port ? ' · ' + port : '') })),
+        ...withMain(live.servers || listOf(cfg.services)).map((sv, i) => ({ key: sv.main ? 'main' : 'srv' + i, label: serverName(sv) + (sv.main && port ? ' · ' + port : ''),
+            dot: sv.main ? undefined : sv.active !== false })),
         { key: 'add', label: '+ Add server', onClick: add },
         { key: 'tester', label: 'Try the API' },
         { key: 'ha', label: 'Home Assistant', dot: !!(ha && ha.url) },
@@ -107,7 +111,7 @@ export function createServicesSection(pane, { select, follow, changed, stations,
             ...editor.state.list.map((sv, i) => ({ key: sv.main ? 'main' : 'srv' + i, title: serverName(sv),
                 actions: box => {
                     box.append(docLink(DOCS.services));
-                    editor.actions(box, i, { deleted: () => { page = 'main'; drawServers(); } });
+                    editor.actions(box, i, { deleted: () => { page = 'main'; drawServers(); }, rerender: drawServers });
                 },
                 render: (main, title) => editor.renderDetail(main, i, { title, rerender: drawServers }) })),
             { key: 'tester', title: 'Try the API',
@@ -146,11 +150,11 @@ export function createServicesSection(pane, { select, follow, changed, stations,
             const choices = stations();
             const servers = loaded ? editor.state.list : withMain(listOf(cfg.services));
             const rows = servers.map((sv, i) => (sv.main
-                ? { key: 'main', name: 'Main', addr: `${bind}:${port() || '–'}`, served: servedKeys(sv, true), readers: readersOf(sv, bind), filter: sv.filter }
+                ? { key: 'main', name: 'Main', addr: `${bind}:${port() || '–'}`, served: servedKeys(sv, true), readers: readersOf(sv, bind), view: sv.view, ids: sv.station_id }
                 : { key: 'srv' + i, name: serverName(sv), addr: `${sv.bind || '127.0.0.1'}:${sv.port ?? '–'}`,
-                    served: servedKeys(sv), readers: readersOf(sv, sv.bind || '127.0.0.1'), filter: sv.filter }));
-            // what each shows says something once there are stations to choose from, or a filter set in the file
-            const showsCol = choices.length >= 2 || rows.some(r => r.filter && Object.keys(r.filter).length);
+                    served: sv.active === false ? [] : servedKeys(sv), readers: sv.active === false ? 'Switched off' : readersOf(sv, sv.bind || '127.0.0.1'), view: sv.view, ids: sv.station_id }));
+            // what each shows says something once there are stations to choose from, or a view set in the file
+            const showsCol = choices.length >= 2 || rows.some(r => (r.view && Object.keys(r.view).length) || r.ids !== undefined);
             const table = el('table', 'st-svcgrid', {},
                 el('tr', '', {}, ['Server', ...SERVICE_COLUMNS.map(c => c.label), 'Who can read it', ...(showsCol ? ['Shows'] : [])].map(t => el('th', '', { text: t }))),
                 rows.map(r => el('tr', '', {},
@@ -161,7 +165,7 @@ export function createServicesSection(pane, { select, follow, changed, stations,
                         return el('td', 'st-svcgrid__ck' + (on ? ' is-on' : ''), { text: on ? '✓' : '·', title: c.label + (on ? ' at ' + c.path : ': off') });
                     }),
                     el('td', '', { text: r.readers }),
-                    showsCol ? el('td', '', { text: showsText(r.filter, choices) }) : null)));
+                    showsCol ? el('td', '', { text: showsText(r.view, choices, r.ids) }) : null)));
             const haCfg = (ha?.loaded ? ha.data : cfg.mqtt_state) || {};
             const hookList = (hooks?.loaded ? hooks.data : cfg.webhooks) || [];
             const more = el('div', 'st-svcmore', {},

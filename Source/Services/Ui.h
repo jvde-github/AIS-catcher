@@ -48,8 +48,8 @@ namespace Services
 		std::function<StationRegistry()> stations;
 		bool outlines; // a place's outline is served, not only its marker
 		ViewerOptions options;
-		// the server's filter: the page sees nothing outside it, and only its stations
-		ViewFilter filter;
+		// the server's view: the page sees nothing outside it, and only its stations
+		ViewFilter view;
 		// what the station owner adds to the page, and the map tiles it serves
 		PluginStore plugins;
 		struct Tiles

@@ -186,13 +186,13 @@ namespace Services
 				w.kv_null("binary_messages");
 			kvOr(w, "station_aboard", aboard, aboard >= 0);
 
-			w.kv("last_seen", isoTime(s.last_signal)).kv("age_s", (long long)(now > s.last_signal ? now - s.last_signal : 0));
+			w.kv("last_seen", isoTimeText(s.last_signal).text).kv("age_s", (long long)(now > s.last_signal ? now - s.last_signal : 0));
 			w.key("stations").beginArray();
 			for (const auto &h : s.heard)
 			{
 				if (!h.last)
 					break;
-				w.beginObject().kv("id", h.station).kv("last_heard", isoTime((std::time_t)h.last)).endObject();
+				w.beginObject().kv("id", h.station).kv("last_heard", isoTimeText((std::time_t)h.last).text).endObject();
 			}
 			w.endArray();
 			if (extra)
@@ -363,11 +363,11 @@ namespace Services
 
 	bool ApiV1::shows(uint32_t mmsi)
 	{
-		if (!filter.any())
+		if (!view.any())
 			return true;
 		const std::time_t now = std::time(nullptr);
 		bool passes = false;
-		tracker.ships().withShip(mmsi, [&](const Ship &s, int) { passes = filter.passes(s, now); });
+		tracker.ships().withShip(mmsi, [&](const Ship &s, int) { passes = view.passes(s, now); });
 		return passes;
 	}
 
@@ -481,7 +481,7 @@ namespace Services
 		const std::time_t now = std::time(nullptr);
 		std::map<int, int> vessels;
 		tracker.ships().forEachRecent(now, now - Ship::STATION_WINDOW, [&](int, const Ship &s, long) {
-			if (!filter.passes(s, now))
+			if (!view.passes(s, now))
 				return;
 			s.forEachHeard([&](int station, std::time_t t) {
 				if (t >= now - Ship::STATION_WINDOW)
@@ -493,7 +493,7 @@ namespace Services
 		beginList(w);
 		std::size_t count = 0;
 		registry.forEach([&](const StationRegistry::Station &s) {
-			if (!filter.allowsStation(s.id))
+			if (!view.allowsStation(s.id))
 				return;
 			w.beginObject();
 			writeStation(w, s, tracker.stationPosition(s.id));
@@ -508,7 +508,7 @@ namespace Services
 
 	Response ApiV1::station(int id)
 	{
-		if (!filter.allowsStation(id))
+		if (!view.allowsStation(id))
 			return Response::problem(404, "Not found", "No station " + std::to_string(id) + ".");
 		const StationRegistry registry = stations();
 		const StationRegistry::Station *s = registry.find(id);
@@ -527,9 +527,9 @@ namespace Services
 	// server shows: all of them, or its stations' added up
 	Response ApiV1::statistics(int station)
 	{
-		if (station >= 0 && !filter.allowsStation(station))
+		if (station >= 0 && !view.allowsStation(station))
 			return Response::problem(404, "Not found", "Station " + std::to_string(station) + " has heard nothing yet.");
-		std::vector<int> ids = station >= 0 ? std::vector<int>(1, station) : filter.stations;
+		std::vector<int> ids = station >= 0 ? std::vector<int>(1, station) : view.stations;
 		std::string label = ids.empty() ? "all" : "";
 		for (int id : ids)
 			label += (label.empty() ? "" : ",") + std::to_string(id);
@@ -668,7 +668,7 @@ namespace Services
 				return Response::problem(400, "Bad request", error);
 			if (p.first != "limit" && !searched)
 			{
-				if (!ViewFilter::isKey(p.first))
+				if (!ViewFilter::isKey(p.first) || p.first == "track_time")
 					return Response::problem(400, "Bad request", "\"" + p.first + "\" is not a parameter of this list.");
 				try
 				{
@@ -698,7 +698,7 @@ namespace Services
 		std::size_t count = 0;
 		bool complete = true;
 		db.forEachRecent(now, cutoff, [&](int, const Ship &s, long) {
-			if (!complete || !filter.passes(s, now) || (narrowed && !query.passes(s, now)) || (search.any() && !search.passes(s)))
+			if (!complete || !view.passes(s, now) || (narrowed && !query.passes(s, now)) || (search.any() && !search.passes(s)))
 				return;
 			if ((long long)count >= limit)
 			{
@@ -777,7 +777,7 @@ namespace Services
 		std::string out;
 		bool found = false;
 		db.withShip(mmsi, [&](const Ship &s, int) {
-			if (!filter.passes(s, now))
+			if (!view.passes(s, now))
 				return;
 			auto r = aboard.find(s.mmsi);
 			JSON::Writer w(out);
@@ -803,6 +803,7 @@ namespace Services
 			return Response::problem(404, "Not found", "No vessel " + std::to_string(mmsi) + " is known.");
 
 		std::vector<PathStore::Point> points;
+		since = std::max(since, view.trackFloor(std::time(nullptr)));
 		if (!tracker.ships().forEachTrackPoint(mmsi, since, [&](const PathStore::Point &p) { points.push_back(p); }))
 			return Response::problem(404, "Not found", "No vessel " + std::to_string(mmsi) + " is known.");
 		std::reverse(points.begin(), points.end());
@@ -921,7 +922,7 @@ namespace Services
 		const std::time_t now = std::time(nullptr);
 		int inside = 0;
 		tracker.ships().forEachVisit([&](const Ship &s, const VisitTracker::Visit &v, const PlaceIndex::Entry &at) {
-			if (at.id == e->id && insideNow(s, v, at, now) && filter.passes(s, now))
+			if (at.id == e->id && insideNow(s, v, at, now) && view.passes(s, now))
 				inside++;
 		});
 
@@ -933,12 +934,13 @@ namespace Services
 		// the outline as drawn, from the place's file; its other properties stay home
 		w.key("outline");
 		bool written = false;
-		if (outlines && !e->polygons->empty())
+		std::string feature;
+		if (outlines && !e->polygons->empty() && e->readFeature(feature))
 			try
 			{
 				JSON::Parser parser(JSON_DICT_SETTING);
 				parser.setPreserveUnknown(true);
-				auto doc = parser.parse(*e->feature);
+				auto doc = parser.parse(feature);
 				if (const JSON::Value *g = doc.root[AIS::KEY_PLACE_GEOMETRY])
 				{
 					JSON::Serializer serializer(JSON_DICT_SETTING);
@@ -970,7 +972,7 @@ namespace Services
 		beginList(w);
 		std::size_t count = 0;
 		tracker.ships().forEachVisit([&](const Ship &s, const VisitTracker::Visit &v, const PlaceIndex::Entry &at) {
-			if (at.id != e->id || !insideNow(s, v, at, now) || !filter.passes(s, now))
+			if (at.id != e->id || !insideNow(s, v, at, now) || !view.passes(s, now))
 				return;
 			w.beginObject().kv("mmsi", (long long)s.mmsi).kv("name", s.shipname);
 			writeVisit(w, v, at);
@@ -1003,7 +1005,7 @@ namespace Services
 		std::vector<Row> rows;
 		// the stays under way, and those that ended within the window
 		tracker.ships().forEachVisit([&](const Ship &s, const VisitTracker::Visit &v, const PlaceIndex::Entry &at) {
-			if (at.id != e->id || !visitShown(v, at) || !filter.passes(s, now))
+			if (at.id != e->id || !visitShown(v, at) || !view.passes(s, now))
 				return;
 			if (!v.inside() && (std::time_t)MAX(v.entered, v.exited) < since)
 				return;
@@ -1033,7 +1035,7 @@ namespace Services
 	// Aircraft carry no station: a server that shows only some stations shows none
 	bool ApiV1::aircraftShown(Response &refusal)
 	{
-		if (filter.stations.empty())
+		if (view.stations.empty())
 			return true;
 		refusal = Response::problem(404, "Not found", "Aircraft are not kept by station, and this server shows only some stations.");
 		return false;

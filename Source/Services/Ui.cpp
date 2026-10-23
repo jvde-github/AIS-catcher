@@ -73,7 +73,7 @@ namespace Services
 
 	Ui::Ui(Tracker &tracker, std::function<StationRegistry()> stations, const ServerSpec &spec,
 		   EngineWriter engine, std::function<int()> clients)
-		: tracker(tracker), stations(std::move(stations)), outlines(spec.place_geometry), options(spec.viewer), filter(spec.filter),
+		: tracker(tracker), stations(std::move(stations)), outlines(spec.place_geometry), options(spec.viewer), view(spec.view),
 		  engine(std::move(engine)), clients(std::move(clients))
 	{
 		for (const auto &p : options.plugins)
@@ -222,7 +222,7 @@ namespace Services
 		const StationRegistry registry = stations();
 		int only = -1, count = 0;
 		registry.forEach([&](const StationRegistry::Station &s) {
-			if (!filter.allowsStation(s.id))
+			if (!view.allowsStation(s.id))
 				return;
 			only = s.id;
 			count++;
@@ -240,20 +240,23 @@ namespace Services
 
 	std::vector<int> Ui::figuresOf(const std::vector<int> &focus) const
 	{
-		return focus.empty() ? filter.stations : focus;
+		return focus.empty() ? view.stations : focus;
 	}
 
 	// the stations the page looks through, among the server's; none for all of them
 	std::vector<int> Ui::focusOf(const Request &request)
 	{
 		std::vector<int> ids;
+		const std::string asked = request.param("stations");
+		if (asked.empty())
+			return ids;
 		const StationRegistry registry = stations();
 		std::vector<std::string> parts;
-		Util::Parse::Split(request.param("stations"), ',', parts);
+		Util::Parse::Split(asked, ',', parts);
 		for (const auto &p : parts)
 		{
 			const int id = (int)toInt(p, -1);
-			if (id >= 0 && filter.allowsStation(id) && registry.find(id) && std::find(ids.begin(), ids.end(), id) == ids.end())
+			if (id >= 0 && view.allowsStation(id) && registry.find(id) && std::find(ids.begin(), ids.end(), id) == ids.end())
 				ids.push_back(id);
 		}
 		return ids;
@@ -261,11 +264,11 @@ namespace Services
 
 	DB::Keep Ui::keepFor(const std::vector<int> &focus)
 	{
-		const bool scoped = filter.any();
+		const bool scoped = view.any();
 		if (focus.empty() && !scoped)
 			return DB::Keep();
 		const std::time_t now = std::time(nullptr), from = now - tracker.ships().timeHistory();
-		const ViewFilter within = filter;
+		const ViewFilter within = view;
 		return [focus, from, now, scoped, within](const Ship &s) {
 			if (scoped && !within.passes(s, now))
 				return false;
@@ -286,6 +289,8 @@ namespace Services
 		const auto since = [&]() { return (std::time_t)toInt(request.param("since")); };
 		const std::vector<int> focus = focusOf(request);
 		const DB::Keep keep = keepFor(focus);
+		// how far back the view lets tracks go
+		const std::time_t oldest = view.trackFloor(std::time(nullptr));
 		// one vessel, when the focus shows it
 		const auto shows = [&](int mmsi) {
 			bool ok = !keep;
@@ -306,7 +311,7 @@ namespace Services
 			response = Response::json(db.getJSONtable(since(), keep));
 		else if (p == "/api/planes_array.json")
 			// aircraft are not kept by station: a server of some stations has none
-			response = Response::json(filter.stations.empty() ? tracker.planes().getCompactArray(since()) : noPlanes("values"));
+			response = Response::json(view.stations.empty() ? tracker.planes().getCompactArray(since()) : noPlanes("values"));
 		else if (p == "/api/ship.json" || p == "/api/vessel")
 		{
 			const int mmsi = toMMSI(p == "/api/vessel" ? bare(request.query) : request.param("mmsi"));
@@ -330,27 +335,27 @@ namespace Services
 			{
 				const int mmsi = toMMSI(item);
 				if (mmsi > 0 && shows(mmsi))
-					w.key((unsigned)mmsi).raw_val(db.getPathJSON(mmsi));
+					w.key((unsigned)mmsi).raw_val(db.getPathJSON(mmsi, oldest));
 			}
 			w.endObject();
 			w.finish();
 			response = Response::json(out);
 		}
 		else if (p == "/api/allpath.json")
-			response = Response::json(since() > 0 ? db.getAllPathJSONSince(since(), keep) : db.getAllPathJSON(keep));
+			response = Response::json(since() > 0 ? db.getAllPathJSONSince(std::max(since(), oldest), keep) : db.getAllPathJSON(keep, oldest));
 		else if (p == "/api/mapobjects.json")
 		{
 			// the stations the server shows; its other objects are every vessel's broadcasts
 			std::function<bool(int)> shown;
-			if (!filter.stations.empty())
-				shown = [this](int id) { return filter.allowsStation(id); };
+			if (!view.stations.empty())
+				shown = [this](int id) { return view.allowsStation(id); };
 			response = Response::json(db.getMapObjectsJSON((uint64_t)toInt(request.param("since")), true, shown));
 		}
 		else if (p == "/api/object.json")
 		{
 			const std::string key = request.param("key");
 			const bool station = !key.empty() && key[0] == 's';
-			response = Response::json(station && !filter.allowsStation(std::atoi(key.c_str() + 1)) ? std::string("{}") : db.getObjectJSON(key));
+			response = Response::json(station && !view.allowsStation(std::atoi(key.c_str() + 1)) ? std::string("{}") : db.getObjectJSON(key));
 		}
 		else if (p == "/api/binmsgs.json")
 		{
@@ -421,7 +426,7 @@ namespace Services
 			response = Response::json(out);
 		}
 		else if (p == "/api/planes.json")
-			response = Response::json(filter.stations.empty() ? tracker.planes().getJSON() : noPlanes("planes"));
+			response = Response::json(view.stations.empty() ? tracker.planes().getJSON() : noPlanes("planes"));
 		else if (p == "/api/places.json")
 			response = Response::json(tracker.placesCollection());
 		else if (p == "/api/ships_port.json")
@@ -440,10 +445,10 @@ namespace Services
 		else if (p == "/api/path.geojson")
 		{
 			const int mmsi = toMMSI(bare(request.query));
-			response = Response::json(mmsi > 0 && shows(mmsi) ? db.getPathGeoJSON(mmsi) : std::string("{}"));
+			response = Response::json(mmsi > 0 && shows(mmsi) ? db.getPathGeoJSON(mmsi, oldest) : std::string("{}"));
 		}
 		else if (p == "/api/allpath.geojson")
-			response = Response::json(db.getAllPathGeoJSON(keep));
+			response = Response::json(db.getAllPathGeoJSON(keep, oldest));
 		else if (p == "/kml" && options.kml)
 		{
 			response = Response::json(db.getKML(keep));
@@ -484,9 +489,9 @@ namespace Services
 									 : msg.empty() ? std::string("{\"error\":\"Message not found\"}") : decodeNMEA(msg, false));
 		}
 		else if (p == "/api/replay_info.json" && options.replay)
-			response = Response::json(db.getReplayInfoJSON(REPLAY_BLOCK));
+			response = Response::json(db.getReplayInfoJSON(REPLAY_BLOCK, oldest));
 		else if (p == "/api/replay_ships.json" && options.replay)
-			response = Response::json(db.getReplayShipsJSON((std::time_t)toInt(request.param("since")), (std::time_t)toInt(request.param("lookback")), keep));
+			response = Response::json(db.getReplayShipsJSON((std::time_t)toInt(request.param("since")), (std::time_t)toInt(request.param("lookback")), keep, oldest));
 		else if (p == "/api/replay.json" && options.replay)
 		{
 			const long long block = toInt(request.param("block"));
@@ -498,7 +503,7 @@ namespace Services
 				long long lookback = toInt(request.param("lookback"));
 				if (lookback < 0 || lookback > MAX_REPLAY_LOOKBACK)
 					lookback = 0;
-				response = Response::json(db.getReplayJSON(from, from + REPLAY_BLOCK - 1, keep, (std::time_t)lookback));
+				response = Response::json(db.getReplayJSON(from, from + REPLAY_BLOCK - 1, keep, (std::time_t)lookback, oldest));
 				// a dwell inside the block can still grow for DWELL_GAP after it ends; past that only eviction changes it
 				response.cache = (block + 1) * REPLAY_BLOCK + (long long)PathStore::DWELL_GAP <= (long long)std::time(nullptr);
 			}
@@ -580,7 +585,7 @@ namespace Services
 			.kv("vessel_count", keep ? vessels : db.getCount()).kv("vessel_max", db.getMaxCount())
 			.kv("build_date", __DATE__).kv("build_version", VERSION).kv("build_describe", VERSION_DESCRIBE)
 			.kv("memory", (unsigned long long)Util::Helper::getMemoryConsumption())
-			.kv("track_time", tracking.track_time)
+			.kv("track_time", view.track_time > 0 && (tracking.track_time <= 0 || view.track_time < tracking.track_time) ? view.track_time : tracking.track_time)
 			.kv("track_memory", tracking.track_memory > 0 ? tracking.track_memory : (tracking.server_mode ? 4096 : 1024));
 		w.endObject();
 		w.finish();
@@ -602,7 +607,7 @@ namespace Services
 		std::string only;
 		int count = 0;
 		stations().forEach([&](const StationRegistry::Station &s) {
-			if (!filter.allowsStation(s.id))
+			if (!view.allowsStation(s.id))
 				return;
 			only = s.name;
 			count++;
@@ -618,7 +623,7 @@ namespace Services
 		bool sharing = false;
 		for (const auto &s : stations().ordered())
 		{
-			if (!filter.allowsStation(s.id))
+			if (!view.allowsStation(s.id))
 				continue;
 			picker.push_back(s);
 			sharing |= s.share_loc;

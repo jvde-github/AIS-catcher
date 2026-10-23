@@ -1926,3 +1926,28 @@ body.ticker-open.ticker-bottom {
 .mapcard.mapcard-target.flush-top { border-top-left-radius: 0; border-top-right-radius: 0; }
 .mapcard.mapcard-target.flush-right { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .mapcard.mapcard-target.flush-bottom { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+
+/* --- a station's activity strip (station-activity.js): a slot an hour or two, coloured by state --- */
+.station-activity-widget { container-type: inline-size; min-width: 0; width: 100%; color: var(--color-text-muted); }
+.station-activity-widget .station-activity { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 14px; }
+.station-activity-widget .station-activity.one-day { grid-template-columns: minmax(0, 1fr); }
+.station-activity-widget .activity-day { min-width: 0; }
+.station-activity-widget .one-day .activity-slots { gap: 2px; }
+.station-activity-widget .activity-ends { display: flex; justify-content: space-between; font-size: 11px; margin-top: 6px; }
+.station-activity-widget .activity-day > span { display: block; font-size: 11px; margin: 0 0 9px; white-space: nowrap; }
+.station-activity-widget .activity-slots { display: flex; height: 24px; gap: 1px; }
+.station-activity-widget .activity-slots i { flex: 1; min-width: 0; border-radius: 1px; background: var(--color-success); }
+.station-activity-widget .activity-legend { display: flex; gap: 10px 20px; flex-wrap: wrap; padding-top: 14px; font-size: 11px; }
+.station-activity-widget .activity-legend span { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.station-activity-widget .activity-legend i { width: 7px; height: 7px; border-radius: 1px; background: var(--color-success); }
+.station-activity-widget i.quiet { background: var(--color-warning); }
+.station-activity-widget i.offline { background: var(--color-danger); }
+.station-activity-widget i.no-data { background: var(--color-border); }
+.station-activity-widget i.system-error { background: var(--color-info); }
+.station-activity-widget .activity-empty { margin: 0; font-size: 12px; }
+@container (max-width: 420px) {
+    .station-activity-widget .station-activity { gap: 6px; }
+    .station-activity-widget .activity-day > span { font-size: 9px; }
+    .station-activity-widget .activity-slots { gap: .5px; }
+    .station-activity-widget .activity-legend { gap: 7px 12px; font-size: 10px; }
+}

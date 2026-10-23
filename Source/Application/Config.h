@@ -98,18 +98,23 @@ private:
 	static void viewFilterFromJSON(const JSON::Value &v, ViewFilter &filter);
 	static void trackingFromJSON(const JSON::Value &v, SiteConfig &site);
 	// `main_port` and `main_bind`: the server beside the control panel, for the entry marked "main"; none outside managed mode
-	static void servicesFromJSON(const JSON::Value &v, SiteConfig &site, StationRegistry *registry, int main_port = 0, const std::string &main_bind = "");
+	static void servicesFromJSON(const JSON::Value &v, SiteConfig &site, StationDefaults *defaults, StationRegistry *registry, int main_port = 0, const std::string &main_bind = "");
 	// the parts of a configuration a site reads as they stand: "tracking", "services", "webhooks", "mqtt_state"
 	static void siteFromJSON(const JSON::JSON &root, SiteConfig &site, StationDefaults *defaults, StationRegistry *registry, int main_port = 0, const std::string &main_bind = "");
 	static void managedViewer(const JSON::Value &viewer, int port, const std::string &bind, SiteConfig &site, StationDefaults &defaults, StationRegistry *registry);
 	// a server as a viewer section writes it (-N, "server", the old viewer section) or an entry of "services"
 	struct ServerEntry;
-	static bool serverKey(ServerEntry &e, int key, const std::string &value, const JSON::Value *json, StationDefaults *defaults);
+	static bool serverKey(ServerEntry &e, int key, const std::string &value, const JSON::Value *json);
 	static void serverDone(ServerEntry &e, SiteConfig &site, StationDefaults *defaults, StationRegistry *registry, const std::string &where);
 	static void serversFromJSON(const JSON::Value &v, SiteConfig &site, StationDefaults *defaults, StationRegistry *registry);
 	// the -N being read: its settings gather until the next -N port or the end
-	std::string pending_port;
-	std::vector<std::pair<int, std::string>> viewer_args;
+	// the -N servers as the command line gives them, made once every argument is
+	// read: a file read after them says how the site keeps ships
+	struct PendingServer {
+		std::string port;
+		std::vector<std::pair<int, std::string>> args;
+	};
+	std::vector<PendingServer> pending_servers;
 	void flushViewer();
 #endif
 #ifdef HASDELIVERY

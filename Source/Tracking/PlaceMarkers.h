@@ -79,7 +79,7 @@ public:
         const auto *old = snapshot ? snapshot->find(entry.id) : nullptr;
         const bool same = old && old->metadata->uuid == entry.metadata->uuid;
         // the summary carries the inherited country too
-        if (!same || *old->feature != *entry.feature ||
+        if (!same || old->hash != entry.hash ||
             old->metadata->country != entry.metadata->country)
           sequences[entry.id] = ++sequence;
         if (!same || old->polygons != entry.polygons)

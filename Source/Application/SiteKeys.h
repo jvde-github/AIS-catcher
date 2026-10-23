@@ -32,15 +32,17 @@ namespace SiteKeys
 	// how a tracker keeps ships: the tracking, the backup file and its interval,
 	// the places; a file or directory resolves against base_dir. The target is
 	// the site's tracker or a server's own, which keeps no places.
+	// the site keeps a backup and reads places; a server's own tracker does neither
 	struct TrackingTarget
 	{
 		TrackingConfig &tracking;
-		std::string &backup_file;
-		int &backup_minutes;
+		std::string *backup_file;
+		int *backup_minutes;
 		std::string *places;
-		TrackingTarget(SiteConfig &site) : tracking(site.tracking), backup_file(site.backup_file), backup_minutes(site.backup_minutes), places(&site.places) {}
-		TrackingTarget(TrackerSpec &own) : tracking(own.tracking), backup_file(own.backup_file), backup_minutes(own.backup_minutes), places(nullptr) {}
+		TrackingTarget(SiteConfig &site) : tracking(site.tracking), backup_file(&site.backup_file), backup_minutes(&site.backup_minutes), places(&site.places) {}
+		TrackingTarget(TrackerSpec &own) : tracking(own.tracking), backup_file(nullptr), backup_minutes(nullptr), places(nullptr) {}
 	};
+	// false for a tracking key the target has no place for
 	bool tracking(int key, const std::string &arg, TrackingTarget target, const std::string &base_dir);
 	bool isTracking(int key);
 	// what a viewer section says of the default station

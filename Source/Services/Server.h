@@ -68,8 +68,12 @@ namespace Services
 		// held through every request, answer included: an answer may point into a service
 		std::mutex services_mtx;
 		std::vector<std::unique_ptr<Service>> services;
-		// the viewer's live streams, when it offers them
+		// the viewer's live streams, when it offers them, and what reads the tracker
+		// for them: the stream itself, or a gate to the server's stations before it
 		std::unique_ptr<StreamIn<JSON::JSON>> messages, metrics;
+		std::vector<std::unique_ptr<StreamIn<JSON::JSON>>> gates;
+		std::vector<StreamIn<JSON::JSON> *> tapped;
+		void tap(StreamIn<JSON::JSON> *reader);
 		std::shared_ptr<void> log;
 
 		// The wrong keys of each address that sent one lately: STRIKES in a

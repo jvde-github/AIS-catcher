@@ -435,6 +435,17 @@ export function setMode(next) {
     update();
 }
 
+// the other station is never the one in focus, and one the server no longer lists goes
+function settleSourceB() {
+    if (sourceB === null) return;
+    if (sourceB >= 0 && !stationsListed().some((s) => s.id === sourceB)) sourceB = -1;
+    if (sourceB === focus) {
+        const other = stationsListed().find((s) => s.id !== focus);
+        sourceB = focus < 0 ? (other ? other.id : -1) : -1;
+    }
+    if (pickerB) pickerB.set(sourceB);
+}
+
 function applyMode() {
     const multi = stationsListed().length > 1;
     if (!multi) mode = "overview";
@@ -757,6 +768,7 @@ export async function update() {
     });
 
     if (mode === "compare") {
+        settleSourceB();
         const a = focus, cmpIdx = sourceB === null ? -1 : sourceB;
         const [ha, hb] = await Promise.all([fetchHistory(a), fetchHistory(cmpIdx)]);
         if (!ha || !hb || token !== updateToken) return;

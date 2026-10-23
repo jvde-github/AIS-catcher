@@ -239,17 +239,18 @@ struct Config::ServerEntry {
   std::vector<int> station_ids; // the stations the server shows, and describes when the file does not list them
   AIS::Filter probe; // tells a filter term from the rest, and whether the filter is switched on
   std::vector<std::string> dropped;
+  bool network_default = false; // a -N or server section: every interface, unless it says otherwise
+  bool bind_given = false;
 };
 
 // one key of a server; `json` is its value where the file has one, for the keys that take an object
-bool Config::serverKey(ServerEntry &e, int key, const std::string &value, const JSON::Value *json, StationDefaults *defaults) {
-  (void)defaults;
+bool Config::serverKey(ServerEntry &e, int key, const std::string &value, const JSON::Value *json) {
   ServerSpec &spec = e.spec;
   TrackerSpec &own = spec.tracking;
   switch (key) {
   case AIS::KEY_SETTING_PORT: spec.port = Util::Parse::Integer(value, 1, 65535); return true;
   case AIS::KEY_SETTING_IP_BIND:
-  case AIS::KEY_SETTING_BIND: spec.bind = value; return true;
+  case AIS::KEY_SETTING_BIND: spec.bind = value; e.bind_given = true; return true;
   case AIS::KEY_SETTING_UI: spec.ui = Util::Parse::Switch(value); return true;
   case AIS::KEY_SETTING_API: spec.api = Util::Parse::Switch(value); return true;
   case AIS::KEY_SETTING_MCP: spec.mcp = Util::Parse::Switch(value); return true;
@@ -274,12 +275,16 @@ bool Config::serverKey(ServerEntry &e, int key, const std::string &value, const 
       throw ConfigError("\"keys\" is set in the configuration file.");
     keysFromJSON(*json, spec.keys);
     return true;
+  case AIS::KEY_SETTING_VIEW:
+    // which ships the server shows of what its tracker keeps
+    if (!json)
+      throw ConfigError("\"view\" is set in the configuration file.");
+    viewFilterFromJSON(*json, spec.view);
+    return true;
   case AIS::KEY_SETTING_FILTER:
-    // which ships the server shows, as an object; a switch is the message filter's
-    if (json && json->isObject()) {
-      viewFilterFromJSON(*json, spec.filter);
-      return true;
-    }
+    // the message filter is a switch with its terms beside it; the ships shown are the view's
+    if (json && json->isObject())
+      throw ConfigError("the ships a server shows are its \"view\"; \"filter\" is the switch of the message filter, with its terms beside it.");
     break;
   case AIS::KEY_SETTING_TRACKING: {
     // a tracker of its own: its filter, zones and groups, and what it keeps
@@ -289,7 +294,7 @@ bool Config::serverKey(ServerEntry &e, int key, const std::string &value, const 
       const int k = m.Key();
       const std::string v = text(m.Get());
       if (k == AIS::KEY_SETTING_ZONE || k == AIS::KEY_SETTING_GROUPS_IN || SiteKeys::isTracking(k)) {
-        serverKey(e, k, v, &m.Get(), nullptr);
+        serverKey(e, k, v, &m.Get());
         continue;
       }
       if (!e.probe.SetOptionKey((AIS::Keys)k, v))
@@ -318,7 +323,7 @@ bool Config::serverKey(ServerEntry &e, int key, const std::string &value, const 
   case AIS::KEY_SETTING_REUSE_PORT:
   case AIS::KEY_SETTING_STATS_ON_CLOSE:
   case AIS::KEY_SETTING_MSGS:
-    e.dropped.push_back(keyName(key));
+    e.dropped.push_back("\"" + keyName(key) + "\" has no effect and can go");
     return true;
   default:
     break;
@@ -329,12 +334,10 @@ bool Config::serverKey(ServerEntry &e, int key, const std::string &value, const 
     e.tracking_terms.emplace_back(key, value);
     taken = true;
   }
-  if (defaults) {
-    StationDefaults probe;
-    if (SiteKeys::station(key, value, probe)) {
-      e.station_terms.emplace_back(key, value);
-      taken = true;
-    }
+  StationDefaults probe;
+  if (SiteKeys::station(key, value, probe)) {
+    e.station_terms.emplace_back(key, value);
+    taken = true;
   }
   if (!taken && e.probe.SetOptionKey((AIS::Keys)key, value)) {
     own.filter.emplace_back(key, value);
@@ -348,16 +351,29 @@ bool Config::serverKey(ServerEntry &e, int key, const std::string &value, const 
 void Config::serverDone(ServerEntry &e, SiteConfig &site, StationDefaults *defaults, StationRegistry *registry, const std::string &where) {
   ServerSpec &spec = e.spec;
   TrackerSpec &own = spec.tracking;
-  own.own = e.probe.isOn() || !own.zones.empty() || own.groups_in != GROUPS_ALL;
+  // only a filter makes a tracker of its own: one that keeps messages out, or
+  // picks the receivers that feed it; a view, a station and the tracking do not
+  bool terms = false;
+  for (const auto &t : own.filter)
+    terms |= t.first != AIS::KEY_SETTING_FILTER;
+  const bool routed = !own.zones.empty() || own.groups_in != GROUPS_ALL;
+  if (e.probe.isOn() && !terms && !routed)
+    e.dropped.push_back("a filter without terms lets every message through: the server reads the site's tracker");
+  if (!e.probe.isOn() && terms)
+    e.dropped.push_back("filter terms without \"filter\" on are not used");
+  own.own = (e.probe.isOn() && terms) || routed;
+  if (own.own && spec.main)
+    throw ConfigError(where + " shows every ship the station hears: give the filter, zones or groups to another server.");
   StationDefaults at;
   for (const auto &t : e.station_terms)
     SiteKeys::station(t.first, t.second, at);
   if (!e.station_ids.empty()) {
     // the server shows these stations; what the section says of a station
     // describes the first of them, where "stations" does not list it
+    spec.stations = e.station_ids;
     for (int id : e.station_ids)
-      if (std::find(spec.filter.stations.begin(), spec.filter.stations.end(), id) == spec.filter.stations.end())
-        spec.filter.stations.push_back(id);
+      if (std::find(spec.view.stations.begin(), spec.view.stations.end(), id) == spec.view.stations.end())
+        spec.view.stations.push_back(id);
     if (registry)
       for (std::size_t i = 0; i < e.station_ids.size(); i++) {
         const int id = e.station_ids[i];
@@ -386,18 +402,28 @@ void Config::serverDone(ServerEntry &e, SiteConfig &site, StationDefaults *defau
   }
   if (own.own) {
     own.tracking.msg_save = spec.viewer.msg;
+    // backups and places are the site's: one file, one catalogue
     for (const auto &t : e.tracking_terms)
-      SiteKeys::tracking(t.first, t.second, SiteKeys::TrackingTarget(own), base_dir);
+      if (!SiteKeys::tracking(t.first, t.second, SiteKeys::TrackingTarget(own), base_dir))
+        e.dropped.push_back("\"" + keyName(t.first) + "\" is the site's: a server with ships of its own keeps no backup and reads no places");
     // what the section says of the station is this tracker's, unless it names
     // the station: it measures from there, shares it or not, follows GPS or its own vessel
-    if (e.station_ids.empty()) {
-      own.tracking.fixed = at.placed();
-      own.tracking.lat = at.placed() ? at.lat : LAT_UNDEFINED;
-      own.tracking.lon = at.placed() ? at.lon : LON_UNDEFINED;
-      own.tracking.latlon_share = at.share_loc;
-      own.tracking.use_gps = at.gps;
-      own.tracking.own_mmsi = at.mmsi;
-    }
+    if (e.station_ids.empty())
+      for (const auto &t : e.station_terms)
+        switch (t.first) {
+        case AIS::KEY_SETTING_LAT:
+        case AIS::KEY_SETTING_LON:
+          own.tracking.fixed = at.placed();
+          if (at.placed()) {
+            own.tracking.lat = at.lat;
+            own.tracking.lon = at.lon;
+          }
+          break;
+        case AIS::KEY_SETTING_SHARE_LOC: own.tracking.latlon_share = at.share_loc; break;
+        case AIS::KEY_SETTING_USE_GPS: own.tracking.use_gps = at.gps; break;
+        case AIS::KEY_SETTING_OWN_MMSI: own.tracking.own_mmsi = at.mmsi; break;
+        default: break; // its name and height are the station list's
+        }
   } else {
     if (defaults && e.station_ids.empty())
       for (const auto &t : e.station_terms)
@@ -415,9 +441,14 @@ void Config::serverDone(ServerEntry &e, SiteConfig &site, StationDefaults *defau
     own.filter.clear();
   }
   for (const auto &d : e.dropped)
-    Warning() << where << ": \"" << d << "\" has no effect and can go";
+    Warning() << where << ": " << d;
   if (!spec.serves())
     throw ConfigError(where + " serves nothing: the map is switched off and nothing else is on.");
+  // the map of before listens on every interface; the API, MCP and System only with keys or public
+  if (e.network_default && !e.bind_given && (spec.api || spec.mcp || spec.system) && spec.keys.empty() && !spec.open) {
+    spec.bind = "127.0.0.1";
+    Info() << where << ": the API, MCP and System keep this server on this machine; give it keys, public on, or bind 0.0.0.0 to open it";
+  }
   try {
     checkServerAccess(spec, where);
   } catch (const std::exception &ex) {
@@ -442,7 +473,7 @@ void Config::managedViewer(const JSON::Value &viewer, int port, const std::strin
   e.spec.viewer.managed = true;
   if (viewer.isObject())
     for (const auto &m : viewer.getObject().getMembers())
-      serverKey(e, m.Key(), text(m.Get()), &m.Get(), &defaults); // what else the section holds is the panel's
+      serverKey(e, m.Key(), text(m.Get()), &m.Get()); // what else the section holds is the panel's
   serverDone(e, site, &defaults, registry, "the main server");
 }
 
@@ -453,13 +484,15 @@ void Config::serversFromJSON(const JSON::Value &v, SiteConfig &site, StationDefa
     if (!entry.isObject())
       throw ConfigError("each entry of \"server\" must be an object.");
     ServerEntry e;
+    e.spec.bind = "0.0.0.0"; // the viewer of before listened on every interface
+    e.network_default = true;
     bool active = true;
     for (const auto &m : entry.getObject().getMembers()) {
       if (m.Key() == AIS::KEY_SETTING_ACTIVE) {
         active = Util::Parse::Switch(m.Get().to_string());
         continue;
       }
-      if (!serverKey(e, m.Key(), text(m.Get()), &m.Get(), defaults))
+      if (!serverKey(e, m.Key(), text(m.Get()), &m.Get()))
         throw ConfigError("field \"" + keyName(m.Key()) + "\" is not allowed in \"server\".");
     }
     if (!active)
@@ -475,38 +508,29 @@ void Config::serversFromJSON(const JSON::Value &v, SiteConfig &site, StationDefa
     one(v);
 }
 
-// Managed mode's site as its configuration says now: the server beside the
-// control panel (the entry of "services" marked main, else the viewer section
-// of a file from before), the other servers, the tracking when the file has
-// it, and the webhooks and MQTT state
+// Managed mode's site as its configuration says now: the servers, the tracking
+// and the webhooks and MQTT state as the file has them, and, where no entry of
+// "services" is marked main, the viewer section of a file from before as the
+// server beside the control panel, read into the same site so what it says of
+// the tracking and the station counts like any server's
 void Config::managedSite(const JSON::JSON &root, int control_port, int viewer_port, const std::string &bind,
                          SiteConfig &site, StationDefaults &defaults, StationRegistry *registry) {
   ofFile([&] {
-    SiteConfig file;
-    siteFromJSON(root, file, &defaults, registry, viewer_port, bind);
     SiteConfig made;
-    const auto main = std::find_if(file.servers.begin(), file.servers.end(), [](const ServerSpec &s) { return s.main; });
-    if (main == file.servers.end()) {
-      const JSON::Value *control = root[AIS::KEY_SETTING_CONTROL];
-      const JSON::Value *viewer = control && control->isObject() ? control->getObject()[AIS::KEY_SETTING_VIEWER] : nullptr;
-      managedViewer(viewer ? *viewer : JSON::Value(), viewer_port, bind, made, defaults, registry);
-    } else
-      defaults.name = main->viewer.station;
-    for (const auto &spec : file.servers) {
+    siteFromJSON(root, made, &defaults, registry, viewer_port, bind);
+    for (const auto &spec : made.servers)
       if (!spec.main && (spec.port == control_port || spec.port == viewer_port))
         throw ConfigError("the server on port " + std::to_string(spec.port) + " takes the " +
                           (spec.port == control_port ? "control panel's" : "viewer's") + " port.");
-      made.servers.push_back(spec);
-    }
-    if (file.tracking_set) {
-      made.tracking = file.tracking;
-      made.tracking_set = true;
-      made.backup_file = file.backup_file;
-      made.backup_minutes = file.backup_minutes;
-      made.places = file.places;
-    }
-    made.webhooks = file.webhooks;
-    made.mqtt_state = file.mqtt_state;
+    const auto main = std::find_if(made.servers.begin(), made.servers.end(), [](const ServerSpec &s) { return s.main; });
+    if (main == made.servers.end()) {
+      const JSON::Value *control = root[AIS::KEY_SETTING_CONTROL];
+      const JSON::Value *viewer = control && control->isObject() ? control->getObject()[AIS::KEY_SETTING_VIEWER] : nullptr;
+      managedViewer(viewer ? *viewer : JSON::Value(), viewer_port, bind, made, defaults, registry);
+      // first, as the panel lists it
+      std::rotate(made.servers.begin(), made.servers.end() - 1, made.servers.end());
+    } else
+      defaults.name = main->viewer.station;
     site = made;
   });
 }
@@ -515,11 +539,11 @@ void Config::managedSite(const JSON::JSON &root, int control_port, int viewer_po
 // an unset bound as null
 void Config::viewFilterFromJSON(const JSON::Value &v, ViewFilter &filter) {
   if (!v.isObject())
-    throw ConfigError("a \"filter\" must be an object.");
+    throw ConfigError("a \"view\" must be an object.");
   for (const auto &m : v.getObject().getMembers()) {
     const std::string key = keyName(m.Key());
     if (!ViewFilter::isKey(key))
-      throw ConfigError("\"" + key + "\" is not a filter term.");
+      throw ConfigError("\"" + key + "\" is not a term of a view.");
     const JSON::Value &value = m.Get();
     try {
       if (value.isArray())
@@ -531,7 +555,7 @@ void Config::viewFilterFromJSON(const JSON::Value &v, ViewFilter &filter) {
       else if (!value.isNull())
         filter.set(key, value.to_string());
     } catch (const std::exception &e) {
-      throw ConfigError(std::string("filter: ") + e.what());
+      throw ConfigError(std::string("view: ") + e.what());
     }
   }
 }
@@ -553,7 +577,9 @@ void Config::webhooksFromJSON(const JSON::Value &v, SiteConfig &site) {
       case AIS::KEY_SETTING_URL: hook.url = m.Get().to_string(); break;
       case AIS::KEY_SETTING_SECRET: hook.secret = m.Get().to_string(); break;
       case AIS::KEY_SETTING_BATCH: hook.batch = Util::Parse::Switch(m.Get().to_string()); break;
-      case AIS::KEY_SETTING_FILTER: viewFilterFromJSON(m.Get(), hook.filter); break;
+      case AIS::KEY_SETTING_VIEW: viewFilterFromJSON(m.Get(), hook.view); break;
+      case AIS::KEY_SETTING_FILTER:
+        throw ConfigError("the ships a webhook reports on are its \"view\".");
       case AIS::KEY_SETTING_EVENTS:
         addEach(m.Get(), hook.events);
         for (const auto &e : hook.events)
@@ -654,47 +680,53 @@ void Config::mqttStateFromJSON(const JSON::Value &v, SiteConfig &site) {
 
 // -N [port] [key value]... on the command line: a port starts a server, the
 // keys that follow, on this -N or the next without a port, are its settings;
-// the server is made once every key is in
+// the servers are made once every argument is in, so a file read after them
+// has said how the site keeps ships
 void Config::viewerFromArgs(const std::string &port, const std::vector<std::pair<std::string, std::string>> &settings) {
+  // a port starts a server, unless the last -N has none yet: then that one takes it
   if (!port.empty()) {
-    flushViewer();
-    pending_port = port;
-  }
+    if (pending_servers.empty() || !pending_servers.back().port.empty())
+      pending_servers.push_back(PendingServer{port, {}});
+    else
+      pending_servers.back().port = port;
+  } else if (pending_servers.empty())
+    pending_servers.push_back(PendingServer{std::string(), {}});
   for (const auto &setting : settings) {
     std::string name = setting.first;
     Util::Convert::toUpper(name);
     AIS::Keys key;
     if (!AIS::lookupSettingKey(name, key))
-      throw ConfigError("unknown setting \"" + setting.first + "\".");
-    viewer_args.emplace_back((int)key, setting.second);
+      throw ConfigError("-N " + pending_servers.back().port + ": unknown setting \"" + setting.first + "\".");
+    pending_servers.back().args.emplace_back((int)key, setting.second);
   }
 }
 
 void Config::flushViewer() {
-  if (pending_port.empty()) {
-    if (!viewer_args.empty())
+  for (const auto &p : pending_servers) {
+    if (p.port.empty()) {
       Warning() << "-N: settings without a port are not used";
-    viewer_args.clear();
-    return;
+      continue;
+    }
+    try {
+      ServerEntry e;
+      e.spec.bind = "0.0.0.0"; // as -N always did: every interface, unless bind says otherwise
+      e.network_default = true;
+      e.spec.port = Util::Parse::Integer(p.port, 1, 65535);
+      for (const auto &a : p.args)
+        if (!serverKey(e, a.first, a.second, nullptr))
+          throw ConfigError("\"" + keyName(a.first) + "\" is not a setting of -N.");
+      serverDone(e, _engine.site_config, &_engine.station_defaults, &_engine.stations, "-N " + p.port);
+    } catch (const std::exception &ex) {
+      throw std::runtime_error("-N " + p.port + ": " + ex.what());
+    }
   }
-  try {
-    ServerEntry e;
-    e.spec.port = Util::Parse::Integer(pending_port, 1, 65535);
-    for (const auto &a : viewer_args)
-      if (!serverKey(e, a.first, a.second, nullptr, &_engine.station_defaults))
-        throw ConfigError("\"" + keyName(a.first) + "\" is not a setting of -N.");
-    serverDone(e, _engine.site_config, &_engine.station_defaults, &_engine.stations, "-N " + pending_port);
-  } catch (const ConfigError &e) {
-    throw std::runtime_error("-N " + pending_port + ": " + e.what());
-  }
-  pending_port.clear();
-  viewer_args.clear();
+  pending_servers.clear();
 }
 
 // "services": [ { "port": 8100, "bind": "0.0.0.0", "api": true, "filter": { "stations": [3] },
 //                 "tracking": { "allow_type": "1,2,3", "file": "class-a.bin" } } ]
 // the map unless "ui" is false, the other services when switched on
-void Config::servicesFromJSON(const JSON::Value &v, SiteConfig &site, StationRegistry *registry, int main_port, const std::string &main_bind) {
+void Config::servicesFromJSON(const JSON::Value &v, SiteConfig &site, StationDefaults *defaults, StationRegistry *registry, int main_port, const std::string &main_bind) {
   if (!v.isArray())
     throw ConfigError("\"services\" must be an array of server objects.");
   for (const auto &item : v.getArray()) {
@@ -702,13 +734,23 @@ void Config::servicesFromJSON(const JSON::Value &v, SiteConfig &site, StationReg
       throw ConfigError("each entry of \"services\" must be an object.");
     ServerEntry e;
     ServerSpec &spec = e.spec;
-    bool port_given = false;
+    bool port_given = false, active = true;
     for (const auto &m : item.getObject().getMembers()) {
+      if (m.Key() == AIS::KEY_SETTING_ACTIVE) {
+        active = Util::Parse::Switch(text(m.Get()));
+        continue;
+      }
       if (m.Key() == AIS::KEY_SETTING_PORT)
         port_given = true;
-      if (!serverKey(e, m.Key(), text(m.Get()), &m.Get(), nullptr))
+      if (!serverKey(e, m.Key(), text(m.Get()), &m.Get()))
         throw ConfigError("field \"" + keyName(m.Key()) + "\" is not allowed in a server.");
     }
+    // switched off: its settings are kept, and read so a mistake shows, but it opens no port
+    // and makes no tracker; the main server always serves
+    if (spec.main && !active)
+      throw ConfigError("the main server always serves: \"active\" is for the other servers.");
+    if (!active)
+      continue;
     // the main server is the control panel's: its port and address, the map always on
     if (spec.main) {
       if (!main_port)
@@ -724,7 +766,9 @@ void Config::servicesFromJSON(const JSON::Value &v, SiteConfig &site, StationReg
       spec.ui = true;
     } else if (!spec.port)
       throw ConfigError("a server needs a \"port\".");
-    serverDone(e, site, nullptr, registry, spec.main ? "the main server" : "the server on port " + std::to_string(spec.port));
+    else if (main_port && spec.port == main_port)
+      throw ConfigError("the server on port " + std::to_string(spec.port) + " takes the viewer's port.");
+    serverDone(e, site, defaults, registry, spec.main ? "the main server" : "the server on port " + std::to_string(spec.port));
   }
 }
 
@@ -737,7 +781,7 @@ void Config::siteFromJSON(const JSON::JSON &root, SiteConfig &site, StationDefau
   for (const auto &m : root.getMembers()) {
     switch (m.Key()) {
     case AIS::KEY_SETTING_TRACKING: break;
-    case AIS::KEY_SETTING_SERVICES: servicesFromJSON(m.Get(), site, registry, main_port, main_bind); break;
+    case AIS::KEY_SETTING_SERVICES: servicesFromJSON(m.Get(), site, defaults, registry, main_port, main_bind); break;
     case AIS::KEY_SETTING_SERVER: serversFromJSON(m.Get(), site, defaults, registry); break;
 #ifdef HASDELIVERY
     case AIS::KEY_SETTING_WEBHOOKS: webhooksFromJSON(m.Get(), site); break;

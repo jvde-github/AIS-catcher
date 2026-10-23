@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <ctime>
 #include <map>
+#include <set>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -104,10 +105,11 @@ public:
 	void setPlaces(std::shared_ptr<const PlaceIndex> index);
 	void refreshPlaces();
 	// every place, as the viewer's places.json lists them
-	std::string placesCollection()
+	std::shared_ptr<const std::string> placesCollection()
 	{
+		static const std::shared_ptr<const std::string> none = std::make_shared<const std::string>("{\"place_version\":\"\",\"objects\":[]}");
 		const std::shared_ptr<PlaceCatalogue> c = placeCatalogue();
-		return c ? c->collection() : "{\"place_version\":\"\",\"objects\":[]}";
+		return c ? c->collection() : none;
 	}
 	// one place's file as written, by its number in the index of `version`
 	std::string placeFeature(uint32_t number, const std::string &version)
@@ -256,7 +258,7 @@ private:
 	};
 
 	// the tag a message is measured with: the station where it is now
-	// the station the message is counted at: the one it names, when listed, else the input's; and where it was heard
+	// the station the message is counted at: the one it names when listed, else the input's; and where it was heard
 	void place(const AIS::Message *msg, TAG &tag);
 	// false when the fix belongs to no station, and the tracker's own position takes it
 	bool moveByGPS(int id, FLOAT32 lat, FLOAT32 lon);
@@ -301,5 +303,6 @@ private:
 	std::mutex figures_mtx;
 	Figures figures;
 	std::map<int, std::unique_ptr<Figures>> station_figures;
+	std::set<int> listed; // under figures_mtx: the stations the registry lists, each with figures of its own
 	int cutoff = LONG_RANGE_CUTOFF_DEFAULT;
 };

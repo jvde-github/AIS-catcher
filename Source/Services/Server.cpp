@@ -24,7 +24,7 @@
 #include "SHA256.h"
 #include "Logger.h"
 #include "Mcp.h"
-#include "Prometheus.h"
+#include "Feeds.h"
 #ifdef HASWEBVIEWER
 #include "Streams.h"
 #include "Ui.h"
@@ -34,47 +34,20 @@ namespace Services
 {
 	namespace
 	{
-		// The ships as GeoJSON (/geojson, their tracks at /allpath.geojson) and the
-		// message counts for Prometheus (/metrics), as other tools read them, through
-		// the server's filter
-		class Feeds : public Service
+		// the messages of some stations only, on to a stream
+		class StationGate : public StreamIn<JSON::JSON>
 		{
 		public:
-			Feeds(Tracker &tracker, const ServerSpec &spec, PrometheusCounter *metrics, bool geojson)
-				: tracker(tracker), filter(spec.filter), metrics(metrics), geojson(geojson) {}
-
-			int scope(const Request &request) const override
+			StationGate(std::vector<int> stations, StreamIn<JSON::JSON> *next) : stations(std::move(stations)), next(next) {}
+			void Receive(const JSON::JSON *data, int len, TAG &tag) override
 			{
-				return request.path == "/metrics" || request.path == "/geojson" || request.path == "/allpath.geojson" ? (int)ApiKey::DATA : NOT_MINE;
-			}
-
-			bool handle(const Request &request, Response &response) override
-			{
-				if (request.method != "GET")
-					return false;
-				if (metrics && request.path == "/metrics")
-				{
-					response.type = "text/plain";
-					response.body = metrics->toPrometheus();
-					return true;
-				}
-				if (!geojson || (request.path != "/geojson" && request.path != "/allpath.geojson"))
-					return false;
-				DB::Keep keep;
-				if (filter.any())
-				{
-					const ViewFilter within = filter;
-					keep = [within](const Ship &s) { return within.passes(s, std::time(nullptr)); };
-				}
-				response.body = request.path == "/geojson" ? tracker.ships().getGeoJSON(keep) : tracker.ships().getAllPathGeoJSON(keep);
-				return true;
+				if (std::find(stations.begin(), stations.end(), tag.station_id) != stations.end())
+					next->Receive(data, len, tag);
 			}
 
 		private:
-			Tracker &tracker;
-			ViewFilter filter;
-			PrometheusCounter *metrics;
-			bool geojson;
+			std::vector<int> stations;
+			StreamIn<JSON::JSON> *next;
 		};
 	}
 
@@ -112,7 +85,7 @@ namespace Services
 		{
 			counter = new PrometheusCounter();
 			metrics.reset(counter);
-			tracker.addTap(counter);
+			tap(counter);
 		}
 		if (spec_.geojson || spec_.metrics)
 			services.push_back(std::unique_ptr<Service>(new Feeds(tracker, spec_, counter, spec_.geojson)));
@@ -139,7 +112,7 @@ namespace Services
 			if (spec_.viewer.realtime)
 			{
 				messages.reset(new MessageStream(*this, !spec_.viewer.decoder));
-				tracker.addTap(messages.get());
+				tap(messages.get());
 			}
 			if (spec_.viewer.log)
 				log = std::make_shared<LogStream>(*this);
@@ -147,13 +120,25 @@ namespace Services
 #endif
 	}
 
+	// a live stream reads the tracker; on a server that names its stations, only theirs
+	void Server::tap(StreamIn<JSON::JSON> *reader)
+	{
+		if (!spec_.stations.empty())
+		{
+			gates.emplace_back(new StationGate(spec_.stations, reader));
+			reader = gates.back().get();
+		}
+		tapped.push_back(reader);
+		tracker.addTap(reader);
+	}
+
 	// the streams stop before what they write to goes
 	void Server::drop()
 	{
-		if (messages)
-			tracker.removeTap(messages.get());
-		if (metrics)
-			tracker.removeTap(metrics.get());
+		for (auto *t : tapped)
+			tracker.removeTap(t);
+		tapped.clear();
+		gates.clear();
 		log.reset();
 		services.clear();
 		messages.reset();
@@ -310,6 +295,6 @@ namespace Services
 		else if (response.raw)
 			ResponseRaw(c, response.type, response.raw, (int)response.raw_size, response.gzipped, response.cache, false, response.status);
 		else
-			Response(c, response.type, response.body, accept_gzip, response.cache, false, response.status);
+			Response(c, response.type, response.shared ? *response.shared : response.body, accept_gzip, response.cache, false, response.status);
 	}
 }

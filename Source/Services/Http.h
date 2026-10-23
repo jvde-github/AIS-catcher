@@ -20,6 +20,7 @@
 
 #include <ctime>
 #include <functional>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -53,6 +54,9 @@ namespace Services
 		int status = 200;
 		std::string type = "application/json";
 		std::string body;
+		// a body kept elsewhere and shared, sent in place of body: only for what goes
+		// straight to the client, as a caller reading body finds it empty
+		std::shared_ptr<const std::string> shared;
 		// one more header line, such as WWW-Authenticate
 		std::string header;
 		// a body that lives elsewhere, as stored: compressed or not, and whether it may be cached
@@ -66,11 +70,17 @@ namespace Services
 
 		// RFC 9457 problem details, with a title that stays the same for a kind of problem
 		static Response problem(int status, const std::string &title, const std::string &detail);
-		static Response json(const std::string &body, int status = 200);
+		static Response json(std::string body, int status = 200);
+		static Response json(std::shared_ptr<const std::string> body, int status = 200);
 	};
 
 	// UTC, to the second: 2026-10-19T14:02:11Z
 	std::string isoTime(std::time_t t);
+	struct IsoTime
+	{
+		char text[24];
+	};
+	IsoTime isoTimeText(std::time_t t);
 	// a time as a query gives it: that form, or seconds since 1970; false when neither
 	bool parseTime(const std::string &s, std::time_t &out);
 

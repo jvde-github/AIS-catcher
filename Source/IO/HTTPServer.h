@@ -19,6 +19,7 @@
 #include <list>
 #include <thread>
 #include <mutex>
+#include <atomic>
 #include <chrono>
 #include <time.h>
 
@@ -200,12 +201,20 @@ namespace IO
 
 		// Serve another server's routes under a path prefix, so one listener can
 		// front both. A server can be mounted once: its subscribers are held by
-		// whichever server fronts it.
+		// whichever server fronts it. Mounting while this server answers is safe.
 		bool mount(const std::string &prefix, HTTPServer *target)
 		{
 			if (!target || target == this || target->isMounted() || prefix.empty() || prefix[0] != '/')
 				return false;
 
+			std::lock_guard<std::mutex> lock(mounts_mtx);
+			for (auto &m : mounts)
+				if (m.first == prefix)
+				{
+					m.second = target;
+					target->setMountedOn(this);
+					return true;
+				}
 			mounts.push_back({prefix, target});
 			target->setMountedOn(this);
 			return true;
@@ -229,9 +238,10 @@ namespace IO
 						const std::function<std::vector<std::string>()> &backlog = nullptr)
 		{
 			// Only the loop that owns the socket may hold a subscriber.
-			if (mounted_on && !owns(c))
+			HTTPServer *front = mounted_on;
+			if (front && !owns(c))
 			{
-				mounted_on->upgradeSSE(c, mask, topic, backlog);
+				front->upgradeSSE(c, mask, topic, backlog);
 				return;
 			}
 
@@ -251,15 +261,17 @@ namespace IO
 		{
 			if ((topics.load() >> id) & 1)
 				return true;
-			return mounted_on && mounted_on->sseSubscribed(id);
+			HTTPServer *front = mounted_on;
+			return front && front->sseSubscribed(id);
 		}
 
 		// Producers (decode/log threads) only enqueue a pre-formatted frame; the
 		// Run() loop performs the actual fan-out, so no producer writes a socket.
 		void sendSSE(int id, const std::string &event, const std::string &data)
 		{
-			if (mounted_on)
-				mounted_on->sendSSE(id, event, data);
+			HTTPServer *front = mounted_on;
+			if (front)
+				front->sendSSE(id, event, data);
 
 			if (!((topics.load() >> id) & 1))
 				return;
@@ -359,7 +371,8 @@ namespace IO
 		void setMountedOn(HTTPServer *front) { mounted_on = front; }
 
 		std::vector<std::pair<std::string, HTTPServer *>> mounts;
-		HTTPServer *mounted_on = nullptr;
+		std::mutex mounts_mtx;
+		std::atomic<HTTPServer *> mounted_on{nullptr};
 		std::string commonHeaders();
 
 		ZIP zip;

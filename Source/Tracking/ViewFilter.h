@@ -42,6 +42,7 @@ struct ViewFilter
 	bool has_speed_min = false, has_speed_max = false;
 	float speed_min = 0, speed_max = 0; // knots
 	int seen = 0;                       // minutes; 0 is any age
+	int track_time = 0;                 // seconds of track served; 0 is what the tracker keeps
 	bool has_distance_min = false, has_distance_max = false;
 	float distance_min = 0, distance_max = 0; // nautical miles, from the station that heard the ship
 	std::string validated = "any";            // any | yes | no | pending
@@ -57,6 +58,8 @@ struct ViewFilter
 
 	bool passes(const Ship &s, std::time_t now) const;
 	bool any() const { return *this != ViewFilter(); }
+	// the oldest time a track is served from, 0 when the view does not cap it
+	std::time_t trackFloor(std::time_t now) const { return track_time > 0 && now > track_time ? now - (std::time_t)track_time : 0; }
 	bool allowsStation(int id) const { return stations.empty() || std::find(stations.begin(), stations.end(), id) != stations.end(); }
 
 	bool operator==(const ViewFilter &o) const;

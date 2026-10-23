@@ -22,6 +22,7 @@
 #include <memory>
 #include <cstring>
 #include <cstdio>
+#include <cstdlib>
 #include <cmath>
 #include <iomanip>
 #include <locale>
@@ -759,6 +760,23 @@ namespace JSON
 		{
 			if (!std::isfinite(v))
 				throw std::runtime_error("Non-finite number");
+			// snprintf and strtod follow the C library's locale, "C" unless the program
+			// sets another; a decimal comma tells one, and the streams write it then
+			char text[32];
+			int n = 0;
+			for (int digits = 15; digits <= 17; ++digits)
+			{
+				n = std::snprintf(text, sizeof(text), "%.*g", digits, v);
+				if (n > 0 && n < (int)sizeof(text) && std::strtod(text, nullptr) == v)
+					break;
+			}
+			if (n <= 0 || n >= (int)sizeof(text) || std::memchr(text, ',', (size_t)n))
+				return val_exact_classic(v);
+			return raw_val(text, (size_t)n);
+		}
+
+		Writer &val_exact_classic(double v)
+		{
 			std::string text;
 			for (int digits = 15; digits <= 17; ++digits)
 			{

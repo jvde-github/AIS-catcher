@@ -523,7 +523,86 @@ const OPENFREEMAP_ATTRIBUTION =
     '<a href="https://www.openmaptiles.org/">&copy; OpenMapTiles</a> ' +
     'Data from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
-function addVectorBasemap(title, styleUrl, noLabels) {
+// AIS-catcher's own base maps: an OpenFreeMap style in the blues of aiscatcher.org. Every colour of the
+// style goes through a tone curve on its lightness: land and labels on one, the water on another, the roads on a third,
+// the sea lighter than the land by day and by night, and the other layers keep their order of light and dark.
+const CHART_TONES = {
+    light: {
+        land: [[0, [40, 52, 74]], [0.5, [107, 122, 144]], [0.86, [230, 235, 242]], [0.94, [246, 248, 251]], [1, [255, 255, 255]]],
+        water: [[0, [150, 178, 214]], [0.78, [204, 219, 237]], [1, [218, 229, 242]]],
+    },
+    dark: {
+        land: [[0, [18, 20, 24]], [0.05, [30, 33, 38]], [0.12, [42, 46, 53]], [0.4, [132, 138, 148]], [1, [228, 230, 234]]],
+        water: [[0, [24, 32, 44]], [0.11, [38, 48, 64]], [1, [84, 98, 118]]],
+        // roads and rails close to the land, so they guide without taking over the map
+        roads: [[0, [24, 27, 32]], [0.25, [44, 48, 55]], [1, [70, 75, 84]]],
+    },
+};
+
+function parseColor(text) {
+    if (typeof text !== 'string') return null;
+    const t = text.trim();
+    let m = t.match(/^#([0-9a-f]{3,8})$/i);
+    if (m) {
+        let h = m[1];
+        if (h.length === 3 || h.length === 4) h = h.split('').map((c) => c + c).join('');
+        if (h.length !== 6 && h.length !== 8) return null;
+        const n = (i) => parseInt(h.slice(i, i + 2), 16);
+        return [n(0), n(2), n(4), h.length === 8 ? n(6) / 255 : 1];
+    }
+    m = t.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/i);
+    if (m) return [+m[1], +m[2], +m[3], m[4] === undefined ? 1 : +m[4]];
+    m = t.match(/^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*(?:,\s*([\d.]+)\s*)?\)$/i);
+    if (m) {
+        const h = +m[1] / 360, sat = +m[2] / 100, l = +m[3] / 100;
+        const q = l < 0.5 ? l * (1 + sat) : l + sat - l * sat, p = 2 * l - q;
+        const ch = (x) => { x = (x + 1) % 1; return 255 * (x < 1 / 6 ? p + (q - p) * 6 * x : x < 1 / 2 ? q : x < 2 / 3 ? p + (q - p) * (2 / 3 - x) * 6 : p); };
+        return [ch(h + 1 / 3), ch(h), ch(h - 1 / 3), m[4] === undefined ? 1 : +m[4]];
+    }
+    return null;
+}
+
+function toneColor(text, curve) {
+    const c = parseColor(text);
+    if (!c) return text;
+    const l = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255;
+    let i = 1;
+    while (i < curve.length - 1 && l > curve[i][0]) i++;
+    const [l0, a] = curve[i - 1], [l1, b] = curve[i];
+    const f = l1 > l0 ? Math.min(1, Math.max(0, (l - l0) / (l1 - l0))) : 0;
+    const rgb = a.map((v, k) => Math.round(v + (b[k] - v) * f));
+    return c[3] < 1 ? `rgba(${rgb.join(',')},${c[3]})` : `rgb(${rgb.join(',')})`;
+}
+
+// every colour of a paint value: a plain colour, an expression or the stops of an old style function
+function toneValue(value, curve) {
+    if (typeof value === 'string') return toneColor(value, curve);
+    if (Array.isArray(value)) return value.map((v) => toneValue(v, curve));
+    if (value && typeof value === 'object') {
+        const out = {};
+        for (const k in value) out[k] = toneValue(value[k], curve);
+        return out;
+    }
+    return value;
+}
+
+// the names our maps keep: towns, cities, states and countries; streets, villages, shields and the rest go
+const CHART_LABELS = /^(label|place)_(town|city|state|country)/;
+
+function toneStyle(glStyle, tones) {
+    glStyle.layers = (glStyle.layers || []).filter((l) => l.type !== 'symbol' || CHART_LABELS.test(l.id));
+    for (const l of glStyle.layers) {
+        // towns from zoom 8, so a wide view names only the cities
+        if (l.type === 'symbol' && /town/.test(l.id)) l.minzoom = Math.max(l.minzoom || 0, 8);
+        const water = /^water/.test(l.id) && l.type !== 'symbol';
+        const road = /^(highway|road|aeroway|railway|tunnel|bridge)/.test(l.id) && l.type !== 'symbol';
+        const curve = water ? tones.water : road && tones.roads ? tones.roads : tones.land;
+        for (const k in l.paint || {})
+            if (/color/.test(k)) l.paint[k] = toneValue(l.paint[k], curve);
+    }
+}
+
+function addVectorBasemap(title, styleUrl, noLabels, tones) {
     const layer = new VectorTileLayer({ declutter: true });
     let applied = false;
     layer.on('change:visible', () => {
@@ -534,6 +613,7 @@ function addVectorBasemap(title, styleUrl, noLabels) {
                 for (const l of glStyle.layers || [])
                     if (l.layout && l.layout['text-font']) l.layout['text-font'] = LOCAL_LABEL_FONT;
                 if (noLabels) glStyle.layers = (glStyle.layers || []).filter((l) => l.type !== 'symbol');
+                if (tones) toneStyle(glStyle, tones);
                 const background = (glStyle.layers || []).find((l) => l.type === 'background')?.paint?.['background-color'];
                 return applyStyle(layer, glStyle, { styleUrl }).then(() => {
                     if (background)
@@ -568,6 +648,9 @@ function addVectorBasemap(title, styleUrl, noLabels) {
     addTileLayer(title, layer);
 }
 
+addVectorBasemap("AIS-catcher Light", 'https://tiles.openfreemap.org/styles/positron', false, CHART_TONES.light);
+addVectorBasemap("AIS-catcher Light (no labels)", 'https://tiles.openfreemap.org/styles/positron', true, CHART_TONES.light);
+addVectorBasemap("AIS-catcher Dark", 'https://tiles.openfreemap.org/styles/dark', false, CHART_TONES.dark);
 addVectorBasemap("OpenFreeMap Positron", 'https://tiles.openfreemap.org/styles/positron');
 addVectorBasemap("OpenFreeMap Positron (no labels)", 'https://tiles.openfreemap.org/styles/positron', true);
 addVectorBasemap("OpenFreeMap Bright", 'https://tiles.openfreemap.org/styles/bright');

@@ -5,11 +5,12 @@
 import { config, severalStations, stationLabel } from '../../core/config.js';
 import { createPicker } from '@aiscatcher/ui/picker.js';
 import * as cardTabs from '@aiscatcher/ui/stationcard-tabs.js';
+import { renderStationActivity } from '@aiscatcher/ui/station-activity.js';
 import { flagHTML } from '@aiscatcher/ui/components.js';
 import { stepChartSVG } from '@aiscatcher/core/spark.js';
 import { getCountryName, getDeltaTimeVal } from '@aiscatcher/core/text.js';
 import { paneCramped } from '@aiscatcher/map/mapui.js';
-import { focus, switchFocus, refresh, onRefresh } from '../../data.js';
+import { focus, switchFocus, refresh } from '../../data.js';
 import { ships, clock } from '../../core/store.js';
 import { settings } from '../../core/state.js';
 import { getDistanceVal, getDistanceUnit, getLatValFormat, getLonValFormat } from '../../core/units.js';
@@ -30,7 +31,6 @@ export function init(d) {
     // the header gives the chip room or not; without it the ticker carries the station
     document.getElementById("header-focus")?.addEventListener("fit", placeFocusChip);
     if (d.ui) buildCard();
-    onRefresh(refreshStationcard);
 }
 
 // the station shown, as the header chip names it
@@ -122,7 +122,7 @@ export function focusOptions() {
     const onMap = new Map(mapObjects.stationsAll().map((s) => [s.id, s]));
     const listed = (config.stations || []).filter((s) => s.id >= 0);
     return [{ value: -1, name: "All stations", sub: listed.length + " stations", group: "all" },
-        ...listed.map((s) => ({ value: s.id, badge: s.id, name: s.name, sub: STATUS_TEXT[onMap.get(s.id)?.status], group: "one" }))];
+        ...listed.map((s) => ({ value: s.id, badge: s.id, name: s.name || stationLabel(s.id), sub: STATUS_TEXT[onMap.get(s.id)?.status], group: "one" }))];
 }
 
 // a dropdown bound to the focus, in `host`: a pick there is a pick everywhere;
@@ -255,9 +255,45 @@ async function fillFigures(id) {
     set("stationcard_messages", stat ? count(stat.session?.count) : "-");
     set("stationcard_rate", stat ? (Number(stat.msg_rate) || 0).toFixed(1) + " msg/s" : "-");
     set("stationcard_furthest", stat?.session?.dist > 0 ? getDistanceVal(stat.session.dist) + " " + getDistanceUnit() : "-");
-    chart("activity", "stationcard_timeline", history?.hour, 24, "msg/h", "24 h of messages", "Messages per hour over the last 24 hours");
+    activity(history?.hour, stationRow(id)?.status);
     chart("msgrate", "stationcard_msgrate", history?.minute, 30, "msg/min", "30 min of messages", "Messages per minute over the last 30 minutes");
     card.fit();
+}
+
+// The last day as the website's strip, from the station's messages per hour: an hour
+// it heard messages in is receiving, one the program ran through without any is
+// connected and quiet, an hour before the program's history is no data; the hour
+// running now is not active while the station is offline
+function timelineFromHours(src, status, nowSec) {
+    if (!src || !Array.isArray(src.stat) || !Array.isArray(src.time) || !src.time.length) return null;
+    const step = Number(src.interval) || 3600;
+    const counts = new Map();
+    src.time.forEach((t, i) => {
+        const start = Math.floor((src.now + t * step) / 3600) * 3600;
+        counts.set(start, (counts.get(start) || 0) + (Number(src.stat[i]?.count) || 0));
+    });
+    const current = Math.floor(nowSec / 3600) * 3600;
+    const timeline = {};
+    for (const back of [1, 0]) {
+        const midnight = Math.floor(nowSec / 86400) * 86400 - back * 86400;
+        const date = new Date(midnight * 1000).toISOString().slice(0, 10);
+        timeline[date] = Array.from({ length: 24 }, (_, h) => {
+            const start = midnight + h * 3600;
+            if (start === current && status === "offline") return "not_active";
+            if (!counts.has(start)) return "no_data";
+            return counts.get(start) > 0 ? "active" : "connected";
+        });
+    }
+    return timeline;
+}
+
+function activity(src, status) {
+    const now = clock || Math.floor(Date.now() / 1000);
+    const timeline = timelineFromHours(src, status, now);
+    card.section.available("activity", !!timeline);
+    const host = document.getElementById("stationcard_timeline");
+    if (timeline) renderStationActivity(host, timeline, { lastDay: true, now: now * 1000, states: ["active", "connected", "not_active", "no_data"] });
+    else host.textContent = "";
 }
 
 // the last `n` buckets of a history as the step chart the website draws
@@ -272,8 +308,8 @@ function chart(section, id, src, n, unit, foot, aria) {
         : "";
 }
 
-// every refresh: the rows from the map objects, the figures every half minute
-function refreshStationcard() {
+// with the map's refresh: the rows from the map objects, the figures every half minute
+export function refreshStationcard() {
     if (cardStation === null) return;
     const s = stationRow(cardStation);
     if (!s) { closeStationcard(); return; }

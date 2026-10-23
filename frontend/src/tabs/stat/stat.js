@@ -7,11 +7,7 @@ import { decodeHTMLEntities } from '@aiscatcher/ui/components.js';
 import { focus, onRefresh, refreshIntervalMs } from '../../data.js';
 import { showDialogPlain, objectToTableHtml } from '../../dialog.js';
 import * as community from '../../overlays/community.js';
-import { config } from '../../core/config.js';
-import { clock } from '../../core/store.js';
-import { hasStationChoice, mountFocusPicker, onStationChange } from '../../features/station/station.js';
-import { register } from '../../actions.js';
-import { stationsAll } from '../../features/mapobjects/mapobjects.js';
+import { hasStationChoice, mountFocusPicker } from '../../features/station/station.js';
 
 // { onStation(name): the station's name as the statistics give it }
 let deps = { onStation: () => {} };
@@ -108,59 +104,20 @@ function renderDevices(stat) {
     }
 }
 
-// The sheets of the tab: the figures, or every station; the station the figures
-// are of is picked at the strip's end, as on the plots.
-let mode = "overview", scopePicker = null;
+// with several stations, the station the figures are of, picked at the end of
+// the tab's row, as on the plots
+let scopePicker = null;
 
-export function setMode(next) {
-    mode = next === "stations" ? "stations" : "overview";
-    applyMode();
-}
-
-function applyMode() {
+function syncScope() {
     const strip = document.getElementById("stat_modes");
     if (!strip) return;
     const several = hasStationChoice();
-    if (!several) mode = "overview";
     strip.style.display = several ? "flex" : "none";
     if (several && !scopePicker) scopePicker = mountFocusPicker(document.getElementById("stat_scope"), { scope: true });
-    for (const tab of strip.querySelectorAll(".sheet-tab"))
-        tab.classList.toggle("active", tab.dataset.mode === mode);
-    document.getElementById("stat_overview").style.display = mode === "overview" ? "" : "none";
-    const sheet = document.getElementById("stat_stations_sheet");
-    sheet.style.display = mode === "stations" ? "" : "none";
-    if (mode === "stations") renderStations();
-}
-
-const ROW_STATUS = { online: "Receiving", connected: "Quiet for five minutes", offline: "Offline" };
-
-// one row a station: how it is doing, its rate and when it last delivered; a
-// click looks through it, back on the figures
-function renderStations() {
-    const byId = new Map(stationsAll().map((s) => [s.id, s]));
-    const host = document.getElementById("stat_stations");
-    host.replaceChildren();
-    for (const s of config.stations || []) {
-        const o = byId.get(s.id);
-        const cell = (cls, text) => { const e = document.createElement("span"); e.className = cls; e.textContent = text; return e; };
-        const dot = cell("station-row__dot", "");
-        if (o?.status) dot.dataset.status = o.status;
-        const name = cell("station-row__name", s.name || "Station " + s.id);
-        if (s.name) { const n = document.createElement("small"); n.textContent = s.id; name.append(n); }
-        const row = document.createElement("button");
-        row.type = "button";
-        row.className = "station-row" + (focus === s.id ? " station-row--current" : "");
-        row.title = "Show this station's figures";
-        row.append(dot, name, cell("station-row__status", ROW_STATUS[o?.status] || "No data yet"),
-            cell("station-row__rate", o && o.rate > 0 ? Number(o.rate).toFixed(1) + " msg/s" : ""),
-            cell("station-row__heard", o && o.heard > 0 ? getDeltaTimeVal(clock - o.heard) + " ago" : ""));
-        row.onclick = () => { onStationChange(s.id); setMode("overview"); };
-        host.append(row);
-    }
 }
 
 async function updateStatistics() {
-    applyMode();
+    syncScope();
     const stat = await fetchStatistics();
 
     if (stat) {
@@ -254,6 +211,3 @@ async function updateStatistics() {
 
 onRefresh("stat", updateStatistics);
 
-register({
-    setStatMode: (e, d) => setMode(d.mode),
-});

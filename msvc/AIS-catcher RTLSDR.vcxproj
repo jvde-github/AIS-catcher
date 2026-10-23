@@ -23,18 +23,13 @@
     <ClCompile Include="..\Source\Control\ControlCore.cpp" />
     <ClCompile Include="..\Source\Control\ControlServer.cpp" />
     <ClCompile Include="..\Source\Application\DeviceManager.cpp" />
-    <ClCompile Include="..\Source\Web\BackupManager.cpp" />
     <ClCompile Include="..\Source\Application\Engine.cpp" />
-    <ClCompile Include="..\Source\Web\FrontendConfig.cpp" />
-    <ClCompile Include="..\Source\Tracking\ReceiverTracker.cpp" />
     <ClCompile Include="..\Source\Application\CommandLine.cpp" />
     <ClCompile Include="..\Source\Application\Main.cpp" />
     <ClCompile Include="..\Source\Control\ManagedMain.cpp" />
     <ClCompile Include="..\Source\Web\MapTiles.cpp" />
-    <ClCompile Include="..\Source\Web\Prometheus.cpp" />
     <ClCompile Include="..\Source\Application\Receiver.cpp" />
     <ClCompile Include="..\Source\Web\WebDB.cpp" />
-    <ClCompile Include="..\Source\Web\WebViewer.cpp" />
     <ClCompile Include="..\Source\DBMS\PostgreSQL.cpp" />
     <ClCompile Include="..\Source\Device\AIRSPY.cpp" />
     <ClCompile Include="..\Source\Device\AIRSPYHF.cpp" />
@@ -94,6 +89,8 @@
     <ClCompile Include="..\Source\Services\Mcp.cpp" />
     <ClCompile Include="..\Source\Services\Routes.cpp" />
     <ClCompile Include="..\Source\Services\Server.cpp" />
+    <ClCompile Include="..\Source\Services\Feeds.cpp" />
+    <ClCompile Include="..\Source\Services\Prometheus.cpp" />
     <ClCompile Include="..\Source\Services\Streams.cpp" />
     <ClCompile Include="..\Source\Services\System.cpp" />
     <ClCompile Include="..\Source\Services\Ui.cpp" />
@@ -104,25 +101,18 @@
     <ClCompile Include="..\Source\Tracking\Tracker.cpp" />
     <ClCompile Include="..\Source\Tracking\ViewFilter.cpp" />
     <ClCompile Include="..\Source\Web\PluginStore.cpp" />
-    <ClCompile Include="..\Source\Web\ViewerConfiguration.cpp" />
-    <ClCompile Include="..\Source\Web\ViewerSettings.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Source\Application\AIS-catcher.h" />
-    <ClInclude Include="..\Source\Web\Prometheus.h" />
     <ClInclude Include="..\Source\Application\Config.h" />
     <ClInclude Include="..\Source\Control\ControlCore.h" />
     <ClInclude Include="..\Source\Control\ControlServer.h" />
     <ClInclude Include="..\Source\Application\CommandLine.h" />
     <ClInclude Include="..\Source\Control\ManagedMain.h" />
-    <ClInclude Include="..\Source\Web\BackupManager.h" />
     <ClInclude Include="..\Source\Application\Engine.h" />
-    <ClInclude Include="..\Source\Web\FrontendConfig.h" />
-    <ClInclude Include="..\Source\Tracking\ReceiverTracker.h" />
     <ClInclude Include="..\Source\Application\DeviceManager.h" />
     <ClInclude Include="..\Source\Web\WebDB.h" />
     <ClInclude Include="..\Source\Library\Logger.h" />
-    <ClInclude Include="..\Source\Web\WebViewer.h" />
     <ClInclude Include="..\Source\Application\Receiver.h" />
     <ClInclude Include="..\Source\Tracking\Ships.h" />
     <ClInclude Include="..\Source\Tracking\DB.h" />
@@ -202,6 +192,8 @@
     <ClInclude Include="..\Source\Services\Mcp.h" />
     <ClInclude Include="..\Source\Services\Routes.h" />
     <ClInclude Include="..\Source\Services\Server.h" />
+    <ClInclude Include="..\Source\Services\Feeds.h" />
+    <ClInclude Include="..\Source\Services\Prometheus.h" />
     <ClInclude Include="..\Source\Services\Streams.h" />
     <ClInclude Include="..\Source\Services\System.h" />
     <ClInclude Include="..\Source\Services\Ui.h" />
@@ -231,7 +223,6 @@
     <ClInclude Include="..\Source\Tracking\ViewFilter.h" />
     <ClInclude Include="..\Source\Tracking\VisitTracker.h" />
     <ClInclude Include="..\Source\Web\PluginStore.h" />
-    <ClInclude Include="..\Source\Web\ViewerConfiguration.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

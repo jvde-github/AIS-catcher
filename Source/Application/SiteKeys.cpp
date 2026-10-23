@@ -80,14 +80,21 @@ namespace SiteKeys
 		TrackingConfig &t = target.tracking;
 		switch (key)
 		{
-		case AIS::KEY_SETTING_FILE: target.backup_file = Util::Helper::resolvePath(arg, base_dir); break;
+		case AIS::KEY_SETTING_FILE:
+			if (!target.backup_file)
+				return false;
+			*target.backup_file = Util::Helper::resolvePath(arg, base_dir);
+			break;
 		case AIS::KEY_SETTING_PLACES:
-			if (target.places)
-				*target.places = Util::Helper::resolvePath(arg, base_dir);
+			if (!target.places)
+				return false;
+			*target.places = Util::Helper::resolvePath(arg, base_dir);
 			break;
 		case AIS::KEY_SETTING_BACKUP:
-			target.backup_minutes = integer(key, arg, 0, 2 * 24 * 60);
-			if (target.backup_minutes > 0 && target.backup_minutes < 5)
+			if (!target.backup_minutes)
+				return false;
+			*target.backup_minutes = integer(key, arg, 0, 2 * 24 * 60);
+			if (*target.backup_minutes > 0 && *target.backup_minutes < 5)
 				throw std::runtime_error("\"backup\" is 0 (off) or at least 5 minutes.");
 			break;
 		case AIS::KEY_SETTING_HISTORY: t.time_history = integer(key, arg, 5, 12 * 3600); break;
