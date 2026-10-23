@@ -94,7 +94,6 @@ namespace AIS
 	extern const std::vector<std::string> LookupTable_aton_restricted_use;
 	extern const std::vector<std::string> LookupTable_aton_dim_type;
 	extern const std::vector<std::string> LookupTable_vdes_capabilities;
-	extern const std::vector<std::string> LookupTable_dte_types;
 	extern const std::vector<std::string> LookupTable_epfd_types;
 	extern const std::vector<std::string> LookupTable_interval_types;
 	extern const std::vector<std::string> LookupTable_maneuver_types;
