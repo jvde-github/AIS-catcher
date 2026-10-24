@@ -16,6 +16,7 @@
 */
 
 #include "MqttState.h"
+#include <algorithm>
 #include "AIS-catcher.h"
 #include "JournalJSON.h"
 #include "Logger.h"
@@ -221,6 +222,12 @@ void MqttState::announce()
 	});
 	entity("binary_sensor", "engine", "Receiving", t + "/state", "{{ 'ON' if value_json.engine_running else 'OFF' }}",
 		   [](JSON::Writer &w) { w.kv("device_class", "running"); });
+	entity("sensor", "range_24h", "Range, last 24 hours", t + "/state", "{{ value_json.range_24h_nm }}", [](JSON::Writer &w) {
+		w.kv("unit_of_measurement", "NM").kv("state_class", "measurement").kv("icon", "mdi:radar");
+	});
+	entity("sensor", "range_record", "Range record", t + "/state", "{{ value_json.range_record_nm }}", [](JSON::Writer &w) {
+		w.kv("unit_of_measurement", "NM").kv("icon", "mdi:trophy");
+	});
 	entity("event", "events", "Events", t + "/event", "", [](JSON::Writer &w) {
 		w.key("event_types").beginArray();
 		for (const auto &k : Tracking::kindNames())
@@ -237,6 +244,8 @@ void MqttState::announce()
 			   [&](JSON::Writer &w) { w.kv("device_class", "connectivity").kv("json_attributes_topic", topic); });
 		entity("sensor", "station_" + id + "_vessels", label + " vessels", topic, "{{ value_json.vessels }}",
 			   [](JSON::Writer &w) { w.kv("unit_of_measurement", "vessels").kv("state_class", "measurement").kv("icon", "mdi:ferry"); });
+		entity("sensor", "station_" + id + "_range_24h", label + " range, last 24 hours", topic, "{{ value_json.range_24h_nm }}",
+			   [](JSON::Writer &w) { w.kv("unit_of_measurement", "NM").kv("state_class", "measurement").kv("icon", "mdi:radar"); });
 	});
 	for (const auto &r : facts().receivers)
 	{
@@ -273,16 +282,31 @@ void MqttState::publishState(std::time_t now, bool always)
 	for (const auto &r : f.receivers)
 		per_minute += r.per_minute;
 
+	// the farthest validated position of the last 24 hours, and of all time; 0 for none
+	float range_24h = 0, range_record = 0;
+	const auto ranges = [](Figures &fig, float &day, float &record) {
+		day = 0;
+		fig.hour.forEachSlot([&](long int, MessageStatistics &st, bool empty) {
+			if (!empty)
+				day = MAX(day, st.maxDistance());
+		});
+		record = MAX(0.0f, fig.total.maxDistance());
+	};
+	tracker.withAll([&](Figures &fig) { ranges(fig, range_24h, range_record); });
+
 	const std::string t = spec.topic;
 	retain(t + "/state", json([&](JSON::Writer &w) {
 			   w.beginObject().kv("vessels", vessels).kv("messages_per_minute", (unsigned long long)per_minute)
-				   .kv("engine_running", f.running).kv("receivers", (long long)f.receivers.size()).endObject();
+				   .kv("engine_running", f.running).kv("receivers", (long long)f.receivers.size())
+				   .kv("range_24h_nm", range_24h).kv("range_record_nm", range_record).endObject();
 		   }),
 		   always);
 	stations().forEach([&](const StationRegistry::Station &s) {
 		const std::time_t last = tracker.lastHeard(s.id);
+		float day = 0, record = 0;
+		tracker.withStation(s.id, [&](Figures &fig) { ranges(fig, day, record); });
 		retain(t + "/station/" + std::to_string(s.id), json([&](JSON::Writer &w) {
-				   w.beginObject().kv("name", s.name).kv("online", last > 0 && now - last < ONLINE_S).kv("vessels", heard[s.id]);
+				   w.beginObject().kv("name", s.name).kv("online", last > 0 && now - last < ONLINE_S).kv("vessels", heard[s.id]).kv("range_24h_nm", day);
 				   if (last)
 					   w.kv("last_heard", Services::isoTime(last));
 				   w.endObject();

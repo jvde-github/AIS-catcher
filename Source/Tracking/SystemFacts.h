@@ -48,6 +48,10 @@ enum EnginePart
 	ENGINE_OUTPUT_LIST
 };
 
+// a station whose receivers stream and that has heard nothing for this long is
+// quiet: the health warns, and the journal says so once
+const int STATION_QUIET_S = 900;
+
 // What the site knows of itself and of the engine running against it: what
 // the system service and the MQTT state tell
 struct SystemFacts

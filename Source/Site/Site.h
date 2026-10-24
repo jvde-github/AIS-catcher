@@ -18,11 +18,15 @@
 
 #pragma once
 
+#include <atomic>
+
 #include <condition_variable>
 #include <ctime>
 #include <deque>
 #include <functional>
 #include <mutex>
+#include <set>
+#include <map>
 #include <thread>
 #include <vector>
 
@@ -154,6 +158,11 @@ private:
 	void systemEvent(Tracking::Level level, const std::string &what, const std::string &text, int station = -1, int receiver = -1);
 	void systemEventLocked(Tracking::Level level, const std::string &what, const std::string &text, int station = -1, int receiver = -1);
 	bool backup_failing = false;
+	// the stations of this installation's receivers: which are quiet, and the
+	// day each was last told to hear far; under site_mtx
+	std::set<int> quiet_stations;
+	std::map<int, std::time_t> far_told;
+	void watchStations(std::time_t now, bool daily);
 #endif
 	ByteCounter bytes;
 	const std::time_t born = std::time(nullptr); // the process's run time counts from here
@@ -161,6 +170,19 @@ private:
 	std::mutex site_mtx;
 	SiteConfig config;
 #ifdef HASAPI
+	// the journal moving on wakes the heartbeat, for the MQTT state's events;
+	// made before the tracker, so it outlives the journal that pings it
+	struct JournalPing : public StreamIn<uint64_t>
+	{
+		Site &site;
+		explicit JournalPing(Site &site) : site(site) {}
+		void Receive(const uint64_t *, int, TAG &) override
+		{
+			if (site.events_wanted)
+				site.poke();
+		}
+	} journal_ping{*this};
+	std::atomic<bool> events_wanted{false};
 	std::unique_ptr<Tracker> tracker_;
 	std::vector<std::unique_ptr<Services::Server>> servers;
 	// A server's own tracker, behind its filter; the site's tracker alone has a
@@ -187,13 +209,16 @@ private:
 	std::time_t last_tick = 0, last_backup = 0;
 	std::string backup_file; // the file the configuration named when the tracker was made
 	std::string backup_path; // where backups go: that file, or one beside a viewer backup of an earlier version
-	void beat(std::time_t now);
+	// the seconds to the next beat
+	int beat(std::time_t now);
 	void backup();
 
 	std::thread heartbeat;
 	std::mutex mtx;
 	std::condition_variable cv;
-	bool started = false, running = false;
+	bool started = false, running = false, poked = false;
 	void launch();
 	void loop();
+	// the next beat now; takes mtx alone
+	void poke();
 };

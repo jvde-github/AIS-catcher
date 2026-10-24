@@ -38,6 +38,10 @@ namespace Services
 	extern const int N_VALIDATED;
 	extern const char *const BINARY_KINDS[];
 	extern const int N_BINARY_KINDS;
+	// a name's place in one of these tables, -1 when it is none of them
+	int indexOf(const char *const *names, int n, const std::string &name);
+	// a table's names as a message lists them: "a, b or c"
+	std::string listed(const char *const *names, int n);
 
 	// One parameter of a route: in the path or the query, the members of its
 	// JSON Schema, what it means. A list takes several values separated by commas.

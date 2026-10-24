@@ -258,8 +258,13 @@ bool Config::serverKey(ServerEntry &e, int key, const std::string &value, const 
   case AIS::KEY_SETTING_GEOJSON: spec.geojson = Util::Parse::Switch(value); return true;
   case AIS::KEY_SETTING_PROME:
   case AIS::KEY_SETTING_METRICS: spec.metrics = Util::Parse::Switch(value); return true;
-  case AIS::KEY_SETTING_PLACE_GEOMETRY: spec.place_geometry = Util::Parse::Switch(value); return true;
   case AIS::KEY_SETTING_PUBLIC: spec.open = Util::Parse::Switch(value); return true;
+  case AIS::KEY_SETTING_PLACE_GEOMETRY:
+    // a term of the view, which -N has no object for
+    if (json)
+      throw ConfigError("\"place_geometry\" is a term of the server's \"view\".");
+    spec.view.place_geometry = Util::Parse::Switch(value);
+    return true;
   case AIS::KEY_SETTING_MAIN: spec.main = Util::Parse::Switch(value); return true;
   case AIS::KEY_SETTING_DESCRIPTION: return true; // the panel's name for it
   case AIS::KEY_SETTING_STATION_ID: {
@@ -695,29 +700,35 @@ void Config::viewerFromArgs(const std::string &port, const std::vector<std::pair
     std::string name = setting.first;
     Util::Convert::toUpper(name);
     AIS::Keys key;
+    // the command line names the -N it came with
     if (!AIS::lookupSettingKey(name, key))
-      throw ConfigError("-N " + pending_servers.back().port + ": unknown setting \"" + setting.first + "\".");
+      throw ConfigError("unknown setting \"" + setting.first + "\".");
     pending_servers.back().args.emplace_back((int)key, setting.second);
   }
 }
 
+// the port comes first or as PORT; a -N with none starts nothing, as the
+// viewer of before refused it
 void Config::flushViewer() {
   for (const auto &p : pending_servers) {
-    if (p.port.empty()) {
-      Warning() << "-N: settings without a port are not used";
-      continue;
-    }
+    std::string where = p.port.empty() ? "-N" : "-N " + p.port;
     try {
       ServerEntry e;
       e.spec.bind = "0.0.0.0"; // as -N always did: every interface, unless bind says otherwise
       e.network_default = true;
-      e.spec.port = Util::Parse::Integer(p.port, 1, 65535);
+      if (!p.port.empty())
+        e.spec.port = Util::Parse::Integer(p.port, 1, 65535);
       for (const auto &a : p.args)
         if (!serverKey(e, a.first, a.second, nullptr))
           throw ConfigError("\"" + keyName(a.first) + "\" is not a setting of -N.");
-      serverDone(e, _engine.site_config, &_engine.station_defaults, &_engine.stations, "-N " + p.port);
+      if (!e.spec.port)
+        throw ConfigError("no port: give one, as -N 8100 or -N PORT 8100.");
+      where = "-N " + std::to_string(e.spec.port);
+      serverDone(e, _engine.site_config, &_engine.station_defaults, &_engine.stations, where);
     } catch (const std::exception &ex) {
-      throw std::runtime_error("-N " + p.port + ": " + ex.what());
+      // a message that names the server already keeps its own words
+      const std::string what = ex.what();
+      throw std::runtime_error(what.compare(0, where.size(), where) == 0 ? what : where + ": " + what);
     }
   }
   pending_servers.clear();

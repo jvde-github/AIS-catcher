@@ -18,6 +18,7 @@
 
 #include "ViewFilter.h"
 #include "Ships.h"
+#include "Parse.h"
 
 #include <cstdlib>
 #include <sstream>
@@ -28,7 +29,7 @@ const float ViewFilter::MOVING_KNOTS = 0.5f;
 namespace
 {
 	const char *const KEYS[] = {"stations", "hidden_buckets", "hidden_classes", "hidden_statuses", "speed_min", "speed_max",
-								"seen", "track_time", "distance_min", "distance_max", "validated", "repeated", "mmsi_allow", "mmsi_deny"};
+								"seen", "track_time", "place_geometry", "distance_min", "distance_max", "validated", "repeated", "mmsi_allow", "mmsi_deny"};
 	const char *const BUCKETS[] = {"am", "as", "bm", "bs", "aton", "base", "sarte", "air"};
 
 	std::vector<std::string> split(const std::string &s)
@@ -99,6 +100,8 @@ void ViewFilter::set(const std::string &key, const std::string &value)
 		has_speed_max = true, speed_max = real(key, value);
 	else if (key == "seen")
 		seen = (int)whole(key, value, 0, 7 * 24 * 60);
+	else if (key == "place_geometry")
+		place_geometry = Util::Parse::Switch(value);
 	else if (key == "track_time")
 		track_time = (int)whole(key, value, 0, 7 * 24 * 3600);
 	else if (key == "distance_min")
@@ -207,7 +210,8 @@ bool ViewFilter::operator==(const ViewFilter &o) const
 {
 	return stations == o.stations && hidden_buckets == o.hidden_buckets && hidden_classes == o.hidden_classes &&
 		   hidden_statuses == o.hidden_statuses && has_speed_min == o.has_speed_min && has_speed_max == o.has_speed_max &&
-		   speed_min == o.speed_min && speed_max == o.speed_max && seen == o.seen && track_time == o.track_time && has_distance_min == o.has_distance_min &&
+		   speed_min == o.speed_min && speed_max == o.speed_max && seen == o.seen && track_time == o.track_time && place_geometry == o.place_geometry &&
+		   has_distance_min == o.has_distance_min &&
 		   has_distance_max == o.has_distance_max && distance_min == o.distance_min && distance_max == o.distance_max &&
 		   validated == o.validated && repeated == o.repeated && mmsi_allow == o.mmsi_allow && mmsi_deny == o.mmsi_deny;
 }

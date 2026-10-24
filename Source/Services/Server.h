@@ -68,31 +68,16 @@ namespace Services
 		// held through every request, answer included: an answer may point into a service
 		std::mutex services_mtx;
 		std::vector<std::unique_ptr<Service>> services;
-		// the viewer's live streams, when it offers them, and what reads the tracker
-		// for them: the stream itself, or a gate to the server's stations before it
+		// the listeners on the tracker's messages: the viewer's live stream, the Prometheus counter
 		std::unique_ptr<StreamIn<JSON::JSON>> messages, metrics;
-		std::vector<std::unique_ptr<StreamIn<JSON::JSON>>> gates;
 		std::vector<StreamIn<JSON::JSON> *> tapped;
 		void tap(StreamIn<JSON::JSON> *reader);
 		std::shared_ptr<void> log;
 
-		// The wrong keys of each address that sent one lately: STRIKES in a
-		// minute close the server to that address's keys until the minute is
-		// out. At most PEERS addresses are remembered, the least recent dropped.
-		enum { STRIKES = 30, STRIKE_S = 60, PEERS = 32 };
-		struct Strikes
-		{
-			std::string peer;
-			std::time_t since, last; // the minute's start, the latest
-			int count;
-			Strikes(const std::string &peer, std::time_t now) : peer(peer), since(now), last(now), count(0) {}
-		};
-		std::vector<Strikes> strikes;
-		Strikes *strikesOf(const std::string &peer, std::time_t now, bool add);
 
 		void build();
 		void drop();
 		const ApiKey *keyOf(const std::string &authorization) const;
-		bool admit(int scope, const Services::Request &request, const ApiKey *key, Services::Response &response);
+		bool admit(int scope, const Services::Request &request, const ApiKey *key, Services::Response &response) const;
 	};
 }

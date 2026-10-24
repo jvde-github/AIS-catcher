@@ -22,8 +22,15 @@
 #include "Stream.h"
 #include "JSON/Writer.h"
 
+namespace Services
+{
+    struct UiFormat;
+}
+
 class PlaneDB : public StreamIn<Plane::ADSB>
 {
+    // the viewer's lists of the aircraft, written from the table under its lock
+    friend struct Services::UiFormat;
     std::mutex mtx;
 
     static const int CPR_CACHE_SIZE = 3;
@@ -292,47 +299,5 @@ public:
     {
         std::lock_guard<std::mutex> lock(mtx);
         forEachRecent(std::time(nullptr), since, f);
-    }
-
-    std::string getJSON()
-    {
-        std::lock_guard<std::mutex> lock(mtx);
-
-        std::time_t now = std::time(nullptr);
-
-        content.clear();
-        {
-            JSON::Writer w(content, 32768);
-
-            w.beginObject().kv("count", table.size()).kv("time", (long long)now).key("planes").beginArray();
-
-            forEachRecent(now, 0, [&](const Plane::ADSB &plane, std::time_t rx) {
-                plane.writeJSON(w, (long int)(now - rx));
-            });
-
-            w.endArray().kv("error", false).endObject().raw("\n\n");
-        }
-        return content;
-    }
-
-    std::string getCompactArray(std::time_t since = 0)
-    {
-        std::lock_guard<std::mutex> lock(mtx);
-
-        std::time_t now = std::time(nullptr);
-
-        content.clear();
-        {
-            JSON::Writer w(content, 32768);
-
-            w.beginObject().kv("count", table.size()).kv("time", (long long)now).key("values").beginArray();
-
-            forEachRecent(now, since, [&](const Plane::ADSB &plane, std::time_t rx) {
-                plane.writeCompact(w, rx);
-            });
-
-            w.endArray().kv("error", false).endObject().raw("\n\n");
-        }
-        return content;
     }
 };

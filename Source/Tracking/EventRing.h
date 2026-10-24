@@ -58,49 +58,6 @@ public:
     std::string text, was, label, from_name, to_name;
   };
 
-  // Escape received text before adding the three ticker formatting markers.
-  static std::string escapeText(const std::string &text) {
-    std::string out;
-    for (char c : text) {
-      if (c == '\\' || c == '*' || c == ':' || c == '[' || c == ']')
-        out += '\\';
-      out += c;
-    }
-    return out;
-  }
-
-  static std::string displayName(uint32_t mmsi, const std::string &name) {
-    const std::string id = std::to_string(mmsi);
-    if (id.compare(0, 3, "972") == 0)
-      return "MOB device";
-    if (id.compare(0, 3, "974") == 0)
-      return "EPIRB";
-    if (id.compare(0, 3, "970") == 0)
-      return "AIS-SART";
-    if (mmsi >= 2000000 && mmsi <= 9999999)
-      return "VTS " + (name.empty() ? id : name);
-    return name.empty() ? "MMSI " + id : name;
-  }
-
-  static std::string formatText(const Entry &e) {
-    std::string out = e.label.empty() && e.level >= Level::NOTICE ? "⚠ " : "";
-    out += "**" + escapeText(displayName(e.from, e.from_name)) + "**";
-    if (e.kind == Kind::ENTER || e.kind == Kind::LEAVE)
-      return out +
-             (e.kind == Kind::ENTER ? " · ::entered:: [[" : " · ::left:: [[") +
-             escapeText(e.text) + "]]";
-    if (!e.label.empty())
-      return out + " · ::" +
-             escapeText(e.label + (e.was.empty() ? "" : " " + e.was)) +
-             ":: → [[" + escapeText(e.text) + "]]";
-    if (e.to)
-      out += " → **" + escapeText(displayName(e.to, e.to_name)) + "**";
-    out += " · [[" + escapeText(e.text) + "]]";
-    if (e.count > 1)
-      out += " (×" + std::to_string(e.count) + ")";
-    return out;
-  }
-
   EventRing() {
     for (int l = 0; l < LEVELS; l++)
       rings[l].reserve(capacity(l));
@@ -193,8 +150,7 @@ public:
   // does not make old news current
   // `keep` says which senders the reader may see
   template <typename K>
-  void writeSince(JSON::Writer &w, uint64_t since, int level,
-                  std::time_t now, K keep) const {
+  std::vector<const Entry *> since(uint64_t since, int level, std::time_t now, K keep) const {
     std::vector<const Entry *> picked;
     for (int l = MAX(0, MIN(level, LEVELS - 1)); l < LEVELS; l++)
       for (const Entry &e : rings[l])
@@ -204,21 +160,21 @@ public:
               [](const Entry *a, const Entry *b) { return a->seq < b->seq; });
     if ((int)picked.size() > LIMIT)
       picked.erase(picked.begin(), picked.end() - LIMIT);
-    writeList(w, picked);
+    return picked;
   }
 
   // One page of the events before `before`, of at least `level`, newest first;
   // a `before` of zero starts at the newest. No horizon: this reaches everything
   // the rings still hold. Paging runs on `seq`, so events arriving mid-read
-  // never shift a page. `oldest` is the next `before`; `more` says whether
-  // asking again is worth it.
+  // never shift a page. `retained` is what the rings hold; `more` says whether
+  // asking again is worth it, and the last one's seq is the next `before`.
   template <typename K>
-  void writeBefore(JSON::Writer &w, uint64_t before, int level,
-                   int limit, K keep) const {
+  std::vector<const Entry *> before(uint64_t before, int level, int limit, K keep,
+                                    size_t &retained, bool &more) const {
     if (before == 0)
       before = UINT64_MAX;
     std::vector<const Entry *> picked;
-    size_t retained = 0;
+    retained = 0;
     for (int l = MAX(0, MIN(level, LEVELS - 1)); l < LEVELS; l++) {
       retained += rings[l].size();
       for (const Entry &e : rings[l])
@@ -229,14 +185,10 @@ public:
               [](const Entry *a, const Entry *b) { return a->seq > b->seq; });
 
     limit = MAX(1, MIN(limit, (int)MAX_PAGE));
-    const bool more = (int)picked.size() > limit;
+    more = (int)picked.size() > limit;
     if (more)
       picked.resize(limit);
-
-    w.kv("retained", (long long)retained).kv("more", more);
-    if (!picked.empty())
-      w.kv("oldest", (long long)picked.back()->seq);
-    writeList(w, picked);
+    return picked;
   }
 
 private:
@@ -268,28 +220,6 @@ private:
       r[head[l]] = e;
       head[l] = (head[l] + 1) % capacity(l);
     }
-  }
-
-  // the array both readers end with, so a history row and a ticker row are the
-  // same object
-  void writeList(JSON::Writer &w, const std::vector<const Entry *> &picked) const {
-    w.key("events").beginArray();
-    for (const Entry *e : picked) {
-      w.beginObject()
-          .kv("seq", (long long)e->seq)
-          .kv("t", (long long)e->time)
-          .kv("first", (long long)e->first)
-          .kv("format", "ticker-v1")
-          .kv("level", (int)e->level)
-          .kv("kind", Tracking::journalName(e->kind))
-          .kv("mmsi", (long long)e->from);
-      if (isValidCoord(e->lat, e->lon))
-        w.kv("lat", e->lat).kv("lon", e->lon);
-      if (e->count > 1)
-        w.kv("count", e->count);
-      w.kv("text", formatText(*e)).endObject();
-    }
-    w.endArray();
   }
 
   static size_t capacity(int level) {

@@ -53,4 +53,6 @@ namespace Services
 
 	// NMEA as the decoder tab shows it: each message it holds, decoded
 	std::string decodeNMEA(const std::string &nmea, bool enhanced = true);
+	// the first message the NMEA holds as one object; empty when it holds none
+	std::string decodeMessage(const std::string &nmea);
 }

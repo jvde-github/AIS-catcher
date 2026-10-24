@@ -34,7 +34,7 @@
 // is not), the vessels and message rate, each station and receiver, the
 // watched vessels' positions, and each event as it happens. With discovery on,
 // Home Assistant finds the sensors by itself. Polled from the site's
-// heartbeat; the connection never blocks it.
+// heartbeat, which the journal wakes for an event; the connection never blocks it.
 //
 //   <topic>/availability        online | offline                    retained
 //   <topic>/state               vessels, message rate, engine        retained
@@ -51,8 +51,10 @@ public:
 
 	// a new broker or topic connects again; the same keeps the connection
 	void configure(const MqttStateSpec &spec);
-	// about once a second
+	// on the site's heartbeat, and at once when the journal moves on
 	void poll(std::time_t now);
+	// the connection is under way and wants a step soon: connecting, or with something left to send
+	bool busy() { return link && (!link->mqtt.isConnected() || link->session->isConnecting() || !link->session->sendDone()); }
 
 private:
 	Tracker &tracker;

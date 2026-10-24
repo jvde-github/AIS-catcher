@@ -24,7 +24,7 @@
 namespace
 {
 	const uint32_t TRACKER_MAGIC = 0x54524b52; // "TRKR"
-	const uint32_t TRACKER_VERSION = 2; // 2 adds the stations' last fixes
+	const uint32_t TRACKER_VERSION = 3; // 2 adds the stations' last fixes, 3 each figures' week and levels
 }
 
 Tracker::Tracker()
@@ -413,17 +413,20 @@ void Tracker::applyStations(const StationRegistry &registry)
 }
 
 // what a restored ship, or one heard before a move, is measured from: where
-// the station that last heard it is now
+// the station that last heard it is now, when it shares where that is. Any
+// other keeps a distance only from the tracker's own position, when shared,
+// so a station's share_loc going off takes its distances away at once.
 void Tracker::remeasure()
 {
 	std::map<int, std::pair<FLOAT32, FLOAT32>> at;
 	{
 		std::lock_guard<std::mutex> lock(stations_mtx);
 		for (const auto &s : stations)
-			if (isValidCoord(s.second.now.lat, s.second.now.lon))
+			if (s.second.share_loc && isValidCoord(s.second.now.lat, s.second.now.lon))
 				at[s.first] = std::make_pair(s.second.now.lat, s.second.now.lon);
 	}
-	if (at.empty())
+	const bool clear = !db.getShareLatLon();
+	if (at.empty() && !clear)
 		return;
 	db.measureFrom([&](const Ship &ship, float &lat, float &lon) {
 		if (!ship.heard[0].last)
@@ -434,7 +437,7 @@ void Tracker::remeasure()
 		lat = it->second.first;
 		lon = it->second.second;
 		return true;
-	});
+	}, clear);
 }
 
 Tracker::Position Tracker::stationPosition(int id)
@@ -465,13 +468,13 @@ bool Tracker::save(const std::string &file)
 			const uint32_t n = (uint32_t)station_figures.size();
 			ok = f.write((const char *)&TRACKER_MAGIC, sizeof(TRACKER_MAGIC)) &&
 				 f.write((const char *)&TRACKER_VERSION, sizeof(TRACKER_VERSION)) &&
-				 figures.save(f) && f.write((const char *)&n, sizeof(n));
+				 figures.save(f) && figures.saveProfile(f) && f.write((const char *)&n, sizeof(n));
 			for (auto &s : station_figures)
 			{
 				if (!ok)
 					break;
 				const int32_t id = s.first;
-				ok = f.write((const char *)&id, sizeof(id)) && s.second->save(f);
+				ok = f.write((const char *)&id, sizeof(id)) && s.second->save(f) && s.second->saveProfile(f);
 			}
 		}
 		ok = ok && db.Save(f) && events.save(f);
@@ -517,7 +520,7 @@ Tracker::Restored Tracker::restore(const std::string &file)
 	}
 	{
 		std::lock_guard<std::mutex> lock(figures_mtx);
-		if (!figures.load(f) || !f.read((char *)&n, sizeof(n)))
+		if (!figures.load(f) || (version >= 3 && !figures.loadProfile(f)) || !f.read((char *)&n, sizeof(n)))
 			return DAMAGED;
 		station_figures.clear();
 		for (uint32_t i = 0; i < n; i++)
@@ -525,7 +528,7 @@ Tracker::Restored Tracker::restore(const std::string &file)
 			int32_t id = 0;
 			std::unique_ptr<Figures> s(new Figures());
 			s->setCutoff(cutoff);
-			if (!f.read((char *)&id, sizeof(id)) || !s->load(f))
+			if (!f.read((char *)&id, sizeof(id)) || !s->load(f) || (version >= 3 && !s->loadProfile(f)))
 				return DAMAGED;
 			// -1 is no station: its figures are not kept apart
 			if (id >= 0 && station_figures.size() < MAX_STATIONS)

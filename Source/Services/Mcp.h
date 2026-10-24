@@ -36,12 +36,11 @@ namespace Services
 	class Mcp : public Service
 	{
 	public:
-		Mcp(Tracker &tracker, std::function<StationRegistry()> stations, const ServerSpec &spec,
-			std::function<SystemFacts()> facts = nullptr, EngineWriter engine = nullptr)
-			: api(tracker, std::move(stations), spec), keyed(!spec.keys.empty())
+		// the installation's tools when the server offers the system
+		explicit Mcp(const Context &context) : api(context), keyed(!context.spec.keys.empty())
 		{
-			if (facts)
-				system.reset(new System(tracker, std::move(facts), std::move(engine)));
+			if (context.spec.system)
+				system.reset(new System(context));
 		}
 
 		int scope(const Request &request) const override;

@@ -43,6 +43,7 @@ struct ViewFilter
 	float speed_min = 0, speed_max = 0; // knots
 	int seen = 0;                       // minutes; 0 is any age
 	int track_time = 0;                 // seconds of track served; 0 is what the tracker keeps
+	bool place_geometry = true;         // a place's outline is served, not only its marker
 	bool has_distance_min = false, has_distance_max = false;
 	float distance_min = 0, distance_max = 0; // nautical miles, from the station that heard the ship
 	std::string validated = "any";            // any | yes | no | pending

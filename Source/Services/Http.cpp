@@ -17,6 +17,7 @@
 
 
 #include "Http.h"
+#include "Parse.h"
 
 #include <cctype>
 #include <cstdio>
@@ -168,6 +169,21 @@ namespace Services
 		w.beginObject().key("data").beginArray();
 	}
 
+	Response badLimit()
+	{
+		return Response::problem(400, "Bad request", "limit must be between 1 and " + std::to_string(LIST_MAX) + ".");
+	}
+
+	Response badCursor()
+	{
+		return Response::problem(400, "Bad request", "cursor must be what a previous page gave in meta.next or meta.poll.");
+	}
+
+	Response gone(const std::string &why)
+	{
+		return Response::problem(410, "Gone", why + " Start again without cursor.");
+	}
+
 	void beginMeta(JSON::Writer &w, std::size_t count, const std::string &next)
 	{
 		w.endArray().key("meta").beginObject().kv("count", (long long)count).kv("complete", next.empty());
@@ -211,9 +227,10 @@ namespace Services
 				return false;
 			const std::size_t end = s.find('_', pos + 1);
 			const std::string part = s.substr(pos + 1, end == std::string::npos ? std::string::npos : end - pos - 1);
-			if (part.empty() || part.size() > 18 || part.find_first_not_of("0123456789") != std::string::npos)
+			long long v = 0;
+			if (!Util::Parse::Digits(part, v))
 				return false;
-			out.push_back(std::atoll(part.c_str()));
+			out.push_back(v);
 			pos = end == std::string::npos ? s.size() : end;
 		}
 		return pos == s.size() && out.size() == n;
@@ -221,9 +238,10 @@ namespace Services
 
 	bool parseTime(const std::string &s, std::time_t &out)
 	{
-		if (!s.empty() && s.size() <= 10 && s.find_first_not_of("0123456789") == std::string::npos)
+		long long seconds = 0;
+		if (Util::Parse::Digits(s, seconds, 10))
 		{
-			out = (std::time_t)std::atoll(s.c_str());
+			out = (std::time_t)seconds;
 			return true;
 		}
 		int y, mo, d, h, mi, sec;

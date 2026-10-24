@@ -84,3 +84,9 @@ test('a web viewer switched off is a server switched off, keeping its settings a
     assert.equal(cfg.tracking, undefined);
     assert.equal(cfg.stations, undefined);
 });
+
+test('the place_geometry of a server moves into its view', () => {
+    const cfg = migrateConfig({ services: [{ main: true, place_geometry: false }, { port: 8120, place_geometry: true, view: { seen: 10 } }] });
+    assert.deepEqual(cfg.services[0], { main: true, view: { place_geometry: false } });
+    assert.deepEqual(cfg.services[1], { port: 8120, view: { seen: 10, place_geometry: true } });
+});

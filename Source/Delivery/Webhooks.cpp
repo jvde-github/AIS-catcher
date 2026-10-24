@@ -35,7 +35,7 @@ namespace
 		return failures <= 0 ? 0 : failures > n ? 3600 : steps[failures - 1];
 	}
 
-	const std::size_t BATCH_MAX = 100;
+	const std::size_t BATCH_MAX = 100, READ_MAX = 500;
 
 	// a Standard Webhooks secret is whsec_ and the key in base64; any other is the key itself
 	std::string keyOf(const std::string &secret)
@@ -75,7 +75,7 @@ void Webhooks::configure(const std::vector<WebhookSpec> &specs)
 	{
 		running = false;
 		lock.unlock();
-		cv.notify_all();
+		wake();
 		worker.join();
 	}
 }
@@ -86,9 +86,28 @@ void Webhooks::stop()
 		std::lock_guard<std::mutex> lock(mtx);
 		running = false;
 	}
-	cv.notify_all();
+	wake();
 	if (worker.joinable())
 		worker.join();
+}
+
+void Webhooks::wake()
+{
+	{
+		std::lock_guard<std::mutex> lock(wake_mtx);
+		woken = true;
+	}
+	woken_cv.notify_all();
+}
+
+void Webhooks::sleep(std::time_t due)
+{
+	std::unique_lock<std::mutex> lock(wake_mtx);
+	if (due)
+		woken_cv.wait_for(lock, std::chrono::seconds(MAX((std::time_t)0, due - std::time(nullptr))), [this] { return woken; });
+	else
+		woken_cv.wait(lock, [this] { return woken; });
+	woken = false;
 }
 
 bool Webhooks::wanted(const Hook &hook, const Journal::Entry &e)
@@ -151,11 +170,20 @@ bool Webhooks::deliver(Hook &hook, const std::vector<Journal::Entry> &events)
 void Webhooks::loop()
 {
 	std::unique_lock<std::mutex> lock(mtx);
-	bool more = false; // a delivery went through: more may be waiting, so no pause
+	bool more = false; // a delivery went through, or a read came back full: more may be waiting, so no pause
 	while (running)
 	{
 		if (!more)
-			cv.wait_for(lock, std::chrono::seconds(1));
+		{
+			// the soonest retry; without one, only the journal or a new configuration wakes it
+			std::time_t due = 0;
+			for (const auto &h : hooks)
+				if (h.retry_at && (!due || h.retry_at < due))
+					due = h.retry_at;
+			lock.unlock();
+			sleep(due);
+			lock.lock();
+		}
 		more = false;
 		if (!running)
 			break;
@@ -165,7 +193,7 @@ void Webhooks::loop()
 			if (hooks[i].retry_at > now)
 				continue;
 			std::vector<Journal::Entry> entries;
-			if (!tracker.journal().since(hooks[i].cursor, 500, entries))
+			if (!tracker.journal().since(hooks[i].cursor, READ_MAX, entries))
 			{
 				Warning() << "Webhook " << hooks[i].spec.url << ": events were dropped before they could be sent";
 				hooks[i].cursor = tracker.journal().newest();
@@ -186,11 +214,13 @@ void Webhooks::loop()
 				if (!hooks[i].spec.batch || due.size() >= BATCH_MAX)
 					break;
 			}
-			hooks[i].cursor = std::max(hooks[i].cursor, passed);
+			hooks[i].cursor = MAX(hooks[i].cursor, passed);
 			if (due.empty())
 			{
 				if (!entries.empty())
-					hooks[i].cursor = std::max(hooks[i].cursor, entries.back().seq);
+					hooks[i].cursor = MAX(hooks[i].cursor, entries.back().seq);
+				// a full read of events it does not want: the rest are read at once
+				more |= entries.size() >= READ_MAX;
 				continue;
 			}
 			// sent without the lock, so the status pages and a new configuration are not held up

@@ -17,6 +17,7 @@
 
 
 #include "Ui.h"
+#include "UiFormat.h"
 #include "Parse.h"
 #include "AIS-catcher.h"
 #include "HTTPServer.h"
@@ -71,10 +72,9 @@ namespace Services
 		}
 	}
 
-	Ui::Ui(Tracker &tracker, std::function<StationRegistry()> stations, const ServerSpec &spec,
-		   EngineWriter engine, std::function<int()> clients)
-		: tracker(tracker), stations(std::move(stations)), outlines(spec.place_geometry), options(spec.viewer), view(spec.view),
-		  engine(std::move(engine)), clients(std::move(clients))
+	Ui::Ui(const Context &context, std::function<int()> clients)
+		: tracker(context.tracker), spec(context.spec), stations(context.stations), options(context.spec.viewer), view(context.spec.view),
+		  engine(context.engine), clients(std::move(clients))
 	{
 		for (const auto &p : options.plugins)
 			plugins.addPlugin(p);
@@ -199,7 +199,11 @@ namespace Services
 		if (request.path.compare(0, 7, "/tiles/") == 0)
 			return tile(request.path, response);
 		if (request.path.compare(0, 5, "/api/") == 0 || request.path == "/kml" || request.path == "/ships.json" || request.path == "/stat.json")
-			return viewerData(request, response);
+		{
+			const bool answered = viewerData(request, response);
+			response.cors = true;
+			return answered;
+		}
 
 		auto it = WebDB::files.find(request.path == "/" ? "index.html" : request.path.substr(1));
 		if (it == WebDB::files.end())
@@ -305,23 +309,23 @@ namespace Services
 		{
 			StationRegistry::Station at;
 			const bool drawn = drawnStation(focus, at);
-			response = Response::json(db.getJSONcompact(false, since(), configVersion(), keep, drawn ? &at : nullptr, true));
+			response = Response::json(UiFormat::shipsCompact(db, false, since(), configVersion(), keep, drawn ? &at : nullptr, true));
 		}
 		else if (p == "/api/ships_table.json")
-			response = Response::json(db.getJSONtable(since(), keep));
+			response = Response::json(UiFormat::shipsTable(db, since(), keep));
 		else if (p == "/api/planes_array.json")
 			// aircraft are not kept by station: a server of some stations has none
-			response = Response::json(view.stations.empty() ? tracker.planes().getCompactArray(since()) : noPlanes("values"));
+			response = Response::json(view.stations.empty() ? UiFormat::planesCompact(tracker.planes(), since()) : noPlanes("values"));
 		else if (p == "/api/ship.json" || p == "/api/vessel")
 		{
 			const int mmsi = toMMSI(p == "/api/vessel" ? bare(request.query) : request.param("mmsi"));
-			const std::string vessel = mmsi > 0 && shows(mmsi) ? db.getShipJSON(mmsi) : std::string("{}");
+			const std::string vessel = mmsi > 0 && shows(mmsi) ? UiFormat::ship(db, mmsi) : std::string("{}");
 			response = Response::json(mmsi < 0 ? "{\"error\":\"Invalid MMSI\"}" : vessel == "{}" ? "{\"error\":\"Vessel not found\"}" : vessel);
 		}
 		else if (p == "/api/changes.json")
 		{
 			const int mmsi = toMMSI(bare(request.query));
-			response = Response::json(mmsi < 0 ? std::string("{\"error\":\"Invalid MMSI\"}") : shows(mmsi) ? db.getChangesJSON(mmsi) : std::string("[]"));
+			response = Response::json(mmsi < 0 ? std::string("{\"error\":\"Invalid MMSI\"}") : shows(mmsi) ? UiFormat::changes(db, mmsi) : std::string("[]"));
 		}
 		else if (p == "/api/path.json")
 		{
@@ -335,33 +339,33 @@ namespace Services
 			{
 				const int mmsi = toMMSI(item);
 				if (mmsi > 0 && shows(mmsi))
-					w.key((unsigned)mmsi).raw_val(db.getPathJSON(mmsi, oldest));
+					w.key((unsigned)mmsi).raw_val(UiFormat::path(db, mmsi, oldest));
 			}
 			w.endObject();
 			w.finish();
 			response = Response::json(out);
 		}
 		else if (p == "/api/allpath.json")
-			response = Response::json(since() > 0 ? db.getAllPathJSONSince(std::max(since(), oldest), keep) : db.getAllPathJSON(keep, oldest));
+			response = Response::json(since() > 0 ? UiFormat::allPathsSince(db, MAX(since(), oldest), keep) : UiFormat::allPaths(db, keep, oldest));
 		else if (p == "/api/mapobjects.json")
 		{
 			// the stations the server shows; its other objects are every vessel's broadcasts
 			std::function<bool(int)> shown;
 			if (!view.stations.empty())
 				shown = [this](int id) { return view.allowsStation(id); };
-			response = Response::json(db.getMapObjectsJSON((uint64_t)toInt(request.param("since")), true, shown));
+			response = Response::json(UiFormat::mapObjects(db, (uint64_t)toInt(request.param("since")), true, shown));
 		}
 		else if (p == "/api/object.json")
 		{
 			const std::string key = request.param("key");
 			const bool station = !key.empty() && key[0] == 's';
-			response = Response::json(station && !view.allowsStation(std::atoi(key.c_str() + 1)) ? std::string("{}") : db.getObjectJSON(key));
+			response = Response::json(station && !view.allowsStation(std::atoi(key.c_str() + 1)) ? std::string("{}") : UiFormat::object(db, key));
 		}
 		else if (p == "/api/binmsgs.json")
 		{
 			const uint32_t mmsi = (uint32_t)toInt(request.param("mmsi"));
 			response = Response::json(mmsi && !shows((int)mmsi) ? std::string("{\"messages\":[]}")
-													 : db.getBinaryMessagesJSON(since(), std::strtoull(request.param("marker").c_str(), nullptr, 16), mmsi));
+													 : UiFormat::binaryMessages(db, since(), std::strtoull(request.param("marker").c_str(), nullptr, 16), mmsi));
 		}
 		else if (p == "/api/events.json")
 		{
@@ -371,16 +375,16 @@ namespace Services
 			if (!before.empty())
 			{
 				const long long limit = toInt(request.param("limit"));
-				response = Response::json(db.getEventHistoryJSON(std::strtoull(before.c_str(), nullptr, 10), level, limit > 0 ? (int)limit : 25, keep));
+				response = Response::json(UiFormat::eventHistory(db, std::strtoull(before.c_str(), nullptr, 10), level, limit > 0 ? (int)limit : 25, keep));
 			}
 			else
-				response = Response::json(db.getEventsJSON(std::strtoull(request.param("since").c_str(), nullptr, 10), level, keep));
+				response = Response::json(UiFormat::events(db, std::strtoull(request.param("since").c_str(), nullptr, 10), level, keep));
 		}
 		else if (p == "/api/history_full.json")
 		{
 			std::string out;
 			JSON::Writer w(out);
-			const auto write = [&](Figures &f) { f.writeHistoryJSON(w); };
+			const auto write = [&](Figures &f) { UiFormat::history(w, f); };
 			const std::vector<int> of = figuresOf(focus);
 			if (of.empty())
 				tracker.withAll(write);
@@ -410,7 +414,7 @@ namespace Services
 		{
 			StationRegistry::Station at;
 			const bool drawn = drawnStation(std::vector<int>(), at);
-			response = Response::json(db.getJSON(p == "/api/ships_full.json", drawn ? &at : nullptr, keep));
+			response = Response::json(UiFormat::ships(db, p == "/api/ships_full.json", drawn ? &at : nullptr, keep));
 		}
 		else if (p == "/api/output_stats.json")
 		{
@@ -426,7 +430,7 @@ namespace Services
 			response = Response::json(out);
 		}
 		else if (p == "/api/planes.json")
-			response = Response::json(view.stations.empty() ? tracker.planes().getJSON() : noPlanes("planes"));
+			response = Response::json(view.stations.empty() ? UiFormat::planes(tracker.planes()) : noPlanes("planes"));
 		else if (p == "/api/places.json")
 			response = Response::json(tracker.placesCollection());
 		else if (p == "/api/ships_port.json")
@@ -439,19 +443,12 @@ namespace Services
 					c -= 'a' - 'A';
 				valid &= (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 			}
-			response = Response::json(valid ? db.getPlaceShipsJSON(UINT32_MAX, "", code, "expected", 24, 0, 10, keep)
+			response = Response::json(valid ? UiFormat::placeShips(db, UINT32_MAX, "", code, "expected", 24, 0, 10, keep)
 								  : std::string("{\"error\":\"code must be 1-8 letters or digits\"}"));
 		}
-		else if (p == "/api/path.geojson")
-		{
-			const int mmsi = toMMSI(bare(request.query));
-			response = Response::json(mmsi > 0 && shows(mmsi) ? db.getPathGeoJSON(mmsi, oldest) : std::string("{}"));
-		}
-		else if (p == "/api/allpath.geojson")
-			response = Response::json(db.getAllPathGeoJSON(keep, oldest));
 		else if (p == "/kml" && options.kml)
 		{
-			response = Response::json(db.getKML(keep));
+			response = Response::json(UiFormat::kml(db, keep));
 			response.type = "application/vnd.google-earth.kml+xml";
 		}
 		else if ((p == "/api/sse" || p == "/api/signal") && options.realtime)
@@ -481,17 +478,20 @@ namespace Services
 					response = Response::json("{\"error\":\"Decoding failed\"}");
 				}
 		}
-		else if (p == "/api/message" && options.msg)
+		else if (p == "/api/message")
 		{
+			// the vessel's last message, decoded from the NMEA kept for it, as one
+			// object; none is kept without msg
 			const int mmsi = toMMSI(bare(request.query));
-			const std::string msg = mmsi > 0 && shows(mmsi) ? db.getMessage(mmsi) : std::string();
+			const std::string msg = options.msg && mmsi > 0 && shows(mmsi) ? UiFormat::message(db, mmsi) : std::string();
+			const std::string decoded = msg.empty() ? std::string() : decodeMessage(msg);
 			response = Response::json(mmsi < 0 ? std::string("{\"error\":\"Invalid MMSI\"}")
-									 : msg.empty() ? std::string("{\"error\":\"Message not found\"}") : decodeNMEA(msg, false));
+									 : decoded.empty() ? std::string("{\"error\":\"Message not found\"}") : decoded);
 		}
 		else if (p == "/api/replay_info.json" && options.replay)
-			response = Response::json(db.getReplayInfoJSON(REPLAY_BLOCK, oldest));
+			response = Response::json(UiFormat::replayInfo(db, REPLAY_BLOCK, oldest));
 		else if (p == "/api/replay_ships.json" && options.replay)
-			response = Response::json(db.getReplayShipsJSON((std::time_t)toInt(request.param("since")), (std::time_t)toInt(request.param("lookback")), keep, oldest));
+			response = Response::json(UiFormat::replayShips(db, (std::time_t)toInt(request.param("since")), (std::time_t)toInt(request.param("lookback")), keep, oldest));
 		else if (p == "/api/replay.json" && options.replay)
 		{
 			const long long block = toInt(request.param("block"));
@@ -503,17 +503,17 @@ namespace Services
 				long long lookback = toInt(request.param("lookback"));
 				if (lookback < 0 || lookback > MAX_REPLAY_LOOKBACK)
 					lookback = 0;
-				response = Response::json(db.getReplayJSON(from, from + REPLAY_BLOCK - 1, keep, (std::time_t)lookback, oldest));
+				response = Response::json(UiFormat::replay(db, from, from + REPLAY_BLOCK - 1, keep, (std::time_t)lookback, oldest));
 				// a dwell inside the block can still grow for DWELL_GAP after it ends; past that only eviction changes it
 				response.cache = (block + 1) * REPLAY_BLOCK + (long long)PathStore::DWELL_GAP <= (long long)std::time(nullptr);
 			}
 		}
-		else if (p == "/api/place.json" && outlines)
+		else if (p == "/api/place.json" && view.place_geometry)
 		{
 			// a missing or malformed id is no place, not place 0
 			const std::string id = request.param("id");
-			const bool digits = !id.empty() && id.size() <= 10 && id.find_first_not_of("0123456789") == std::string::npos;
-			const unsigned long long number = digits ? std::strtoull(id.c_str(), nullptr, 10) : UINT32_MAX;
+			long long n = 0;
+			const unsigned long long number = Util::Parse::Digits(id, n, 10) ? (unsigned long long)n : UINT32_MAX;
 			response = Response::json(number < UINT32_MAX ? tracker.placeFeature((uint32_t)number, request.param("version")) : "{}");
 		}
 		else if (p == "/api/ships_place.json")
@@ -521,7 +521,8 @@ namespace Services
 			const std::string id = request.param("id"), hours = request.param("hours"), offset = request.param("offset"),
 							  limit = request.param("limit");
 			const auto digits = [](const std::string &v, std::size_t most) {
-				return !v.empty() && v.size() <= most && v.find_first_not_of("0123456789") == std::string::npos;
+				long long n = 0;
+				return Util::Parse::Digits(v, n, most);
 			};
 			std::string code = request.param("code");
 			bool valid = (id.empty() || (digits(id, 10) && std::strtoull(id.c_str(), nullptr, 10) < UINT32_MAX)) &&
@@ -534,7 +535,7 @@ namespace Services
 				valid &= (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 			}
 			response = Response::json(!valid ? std::string("{\"error\":\"Invalid place query\"}")
-								   : db.getPlaceShipsJSON(id.empty() ? UINT32_MAX : (uint32_t)std::strtoul(id.c_str(), nullptr, 10),
+								   : UiFormat::placeShips(db, id.empty() ? UINT32_MAX : (uint32_t)std::strtoul(id.c_str(), nullptr, 10),
 														  request.param("version"), code, request.param("tab").empty() ? "inside" : request.param("tab"),
 														  hours.empty() ? 24 : (unsigned)std::strtoul(hours.c_str(), nullptr, 10),
 														  offset.empty() ? 0 : (unsigned)std::strtoul(offset.c_str(), nullptr, 10),
@@ -545,7 +546,7 @@ namespace Services
 			// `station` is the one asking, left out of the answer; none when not given
 			const std::string lat = request.param("lat"), lon = request.param("lon");
 			response = Response::json(lat.empty() || lon.empty() ? std::string("{\"error\":\"lat and lon are required\"}")
-													   : db.getNearbyJSON((float)std::atof(lat.c_str()), (float)std::atof(lon.c_str()),
+													   : UiFormat::nearby(db, (float)std::atof(lat.c_str()), (float)std::atof(lon.c_str()),
 																		  (uint32_t)toInt(request.param("mmsi")), (int)toInt(request.param("station"), -1), keep));
 		}
 		else
@@ -565,7 +566,7 @@ namespace Services
 		std::string out;
 		JSON::Writer w(out);
 		w.beginObject();
-		const auto write = [&](Figures &f) { f.writeCountersJSON(w); };
+		const auto write = [&](Figures &f) { UiFormat::counters(w, f); };
 		const std::vector<int> of = figuresOf(focus);
 		if (of.empty())
 			tracker.withAll(write);
@@ -573,7 +574,7 @@ namespace Services
 		{
 			// stations that have heard nothing yet count nothing
 			std::unique_ptr<Figures> none(new Figures());
-			none->writeCountersJSON(w);
+			UiFormat::counters(w, *none);
 		}
 		// the running engine's devices, outputs and community feed, as the site knows them
 		w.kv("tcp_clients", clients ? clients() : 0);
@@ -646,7 +647,7 @@ namespace Services
 			.kv("context", options.context).kv("station", name).kv("webcontrol_http", options.webcontrol_http)
 			.key("features").beginObject().kv("share_location", sharing).kv("save_messages", options.msg).kv("replay", options.replay)
 			.kv("realtime", options.realtime).kv("log", options.log).kv("decoder", options.decoder).kv("managed", options.managed)
-			.kv("places", (bool)tracker.places()).kv("geojson", options.geojson).kv("kml", options.kml).kv("about_md", plugins.isAboutPresent());
+			.kv("places", (bool)tracker.places()).kv("outlines", view.place_geometry).kv("geojson", spec.geojson).kv("kml", options.kml).kv("about_md", plugins.isAboutPresent());
 		// the community feed, as the running engine has it
 		if (engine)
 			engine(w, ENGINE_SHARING);

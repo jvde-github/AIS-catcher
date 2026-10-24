@@ -39,7 +39,7 @@ struct ViewerOptions
 {
 	// frame_ancestors: the pages that may frame the server's, its CSP's frame-ancestors; any when empty
 	std::string station, station_link, webcontrol_http, context = "settings", frame_ancestors, about;
-	bool realtime = false, log = false, decoder = false, replay = true, msg = false, geojson = false, kml = false, prome = false;
+	bool realtime = false, log = false, decoder = false, replay = true, msg = false, kml = false;
 	bool managed = false; // the viewer of managed mode, beside its control panel
 	std::vector<std::string> mbtiles, mboverlay, fstiles, fsoverlay, plugins, styles, plugin_dirs;
 
@@ -47,7 +47,7 @@ struct ViewerOptions
 	{
 		return station == o.station && station_link == o.station_link && webcontrol_http == o.webcontrol_http && context == o.context &&
 			   frame_ancestors == o.frame_ancestors && about == o.about && realtime == o.realtime && log == o.log &&
-			   decoder == o.decoder && replay == o.replay && msg == o.msg && geojson == o.geojson && kml == o.kml && prome == o.prome &&
+			   decoder == o.decoder && replay == o.replay && msg == o.msg && kml == o.kml &&
 			   mbtiles == o.mbtiles && mboverlay == o.mboverlay && fstiles == o.fstiles && fsoverlay == o.fsoverlay &&
 			   plugins == o.plugins && styles == o.styles && plugin_dirs == o.plugin_dirs && managed == o.managed;
 	}
@@ -97,8 +97,7 @@ struct ServerSpec
 	bool ui = true, api = false, mcp = false, system = false, geojson = false, metrics = false;
 	TrackerSpec tracking;
 	ViewFilter view;			 // which ships it shows of what its tracker keeps
-	std::vector<int> stations;	 // the stations station_id names: its view and its live streams keep to them
-	bool place_geometry = true; // serve the outlines of places, not only their markers
+	std::vector<int> stations;	 // the stations station_id names, which its view keeps to
 	ViewerOptions viewer;
 	// with keys, a request to the api, system or mcp service names one; a
 	// public server lets anyone read its data, never its system
@@ -125,7 +124,7 @@ struct ServerSpec
 	{
 		return port == o.port && bind == o.bind && ui == o.ui && api == o.api && mcp == o.mcp && system == o.system &&
 			   geojson == o.geojson && metrics == o.metrics && tracking == o.tracking && view == o.view && stations == o.stations &&
-			   place_geometry == o.place_geometry && viewer == o.viewer && keys == o.keys && open == o.open && main == o.main;
+			   viewer == o.viewer && keys == o.keys && open == o.open && main == o.main;
 	}
 	bool operator!=(const ServerSpec &o) const { return !(*this == o); }
 };

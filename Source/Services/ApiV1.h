@@ -35,8 +35,8 @@ namespace Services
 	class ApiV1 : public Service
 	{
 	public:
-		ApiV1(Tracker &tracker, std::function<StationRegistry()> stations, const ServerSpec &spec = ServerSpec())
-			: tracker(tracker), stations(std::move(stations)), view(spec.view), outlines(spec.place_geometry), services(spec.served()) {}
+		explicit ApiV1(const Context &context)
+			: tracker(context.tracker), stations(context.stations), view(context.spec.view), services(context.spec.served()) {}
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
@@ -44,8 +44,7 @@ namespace Services
 	private:
 		Tracker &tracker;
 		std::function<StationRegistry()> stations;
-		ViewFilter view;
-		bool outlines; // a place's outline is served, not only its marker
+		const ViewFilter &view;
 		std::vector<std::string> services; // what the server offers beside this, for the index
 
 		Response index();

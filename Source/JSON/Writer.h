@@ -696,6 +696,12 @@ namespace JSON
 		{
 			return v == sentinel ? kv_null(k) : kv(k, v);
 		}
+		// Writes kv(k, v) when the value is known, kv_null(k) when it is not.
+		template <typename T>
+		Writer &kv_or_null(KeyRef k, T v, bool known)
+		{
+			return known ? kv(k, v) : kv_null(k);
+		}
 
 		// Writes "key":raw  — caller-supplied raw must be valid JSON.
 		Writer &kv_raw(KeyRef k, const char *raw, size_t rawlen)

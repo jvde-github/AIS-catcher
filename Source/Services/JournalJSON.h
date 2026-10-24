@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <functional>
 
 #include "Http.h"
@@ -72,5 +73,73 @@ namespace Services
 		if (isValidCoord(v.lat, v.lon))
 			w.kv("lat", v.lat).kv("lon", v.lon);
 		w.endObject();
+	}
+
+	// A page of the journal's events that `keep` passes, at `path`: without a
+	// cursor the newest, with one the oldest after it. The journal is read a
+	// chunk at a time until the page is full, and an event passed over still
+	// moves the cursor.
+	inline Response pageEvents(const Request &request, const Journal &journal, const std::string &path,
+							   const std::function<bool(const Journal::Entry &)> &keep)
+	{
+		long long limit = 0;
+		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
+			return badLimit();
+		const uint64_t epoch = journal.epoch();
+		const std::string from = request.param("cursor");
+		const std::size_t want = (std::size_t)limit, chunk = std::max<std::size_t>(want, 256);
+		std::vector<Journal::Entry> page, read;
+		uint64_t last = journal.newest();
+		if (from.empty())
+		{
+			// back from the newest until the page is full or nothing older is kept
+			for (uint64_t hi = last, lo = journal.beforeOldest(); page.size() < want && hi > lo;)
+			{
+				const uint64_t start = hi - lo > chunk ? hi - chunk : lo;
+				if (!journal.since(start, (std::size_t)(hi - start), read))
+					break;
+				for (auto e = read.rbegin(); e != read.rend() && page.size() < want; ++e)
+					if (keep(*e))
+						page.push_back(*e);
+				hi = start;
+			}
+			std::reverse(page.begin(), page.end());
+		}
+		else
+		{
+			std::vector<long long> c;
+			if (!parseCursor(from, "evt", 2, c))
+				return badCursor();
+			if ((uint64_t)c[0] != epoch || (uint64_t)c[1] > last)
+				return gone("The journal started again since this cursor was given.");
+			last = (uint64_t)c[1];
+			while (page.size() < want)
+			{
+				if (!journal.since(last, chunk, read))
+					return gone("The events after this cursor are no longer kept.");
+				if (read.empty())
+					break;
+				for (const auto &e : read)
+				{
+					last = e.seq;
+					if (keep(e))
+					{
+						page.push_back(e);
+						if (page.size() == want)
+							break;
+					}
+				}
+			}
+		}
+		std::string out;
+		JSON::Writer w(out);
+		beginList(w);
+		for (const auto &e : page)
+			writeEvent(w, e, epoch);
+		const std::string poll = path + "?cursor=" + eventId(epoch, last) + "&limit=" + std::to_string(limit);
+		beginMeta(w, page.size(), last < journal.newest() ? poll : std::string());
+		w.kv("poll", poll).endObject().endObject();
+		w.finish();
+		return Response::json(out);
 	}
 }

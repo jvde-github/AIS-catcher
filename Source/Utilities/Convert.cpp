@@ -294,6 +294,12 @@ namespace Util
 			c = (char)tolower((unsigned char)c);
 	}
 
+	std::string Convert::toLowerCopy(std::string s)
+	{
+		toLower(s);
+		return s;
+	}
+
 	// not using the complex class functions to be independent of internal representation
 	void Convert::toFloat(CU8 *in, CFLOAT32 *out, int len)
 	{

@@ -17,6 +17,8 @@
 
 
 #include "ApiV1.h"
+#include "Convert.h"
+#include "Parse.h"
 #include "JournalJSON.h"
 #include "Routes.h"
 
@@ -37,33 +39,6 @@ namespace Services
 {
 	namespace
 	{
-		const long long LIST_MAX = 1000;
-
-		bool number(const std::string &s, long long &out)
-		{
-			if (s.empty() || s.size() > 10 || s.find_first_not_of("0123456789") != std::string::npos)
-				return false;
-			out = std::atoll(s.c_str());
-			return true;
-		}
-
-		std::string lower(std::string s)
-		{
-			std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-			return s;
-		}
-
-		Response badCursor()
-		{
-			return Response::problem(400, "Bad request", "cursor must be what a previous page gave in meta.next or meta.poll.");
-		}
-
-		// what a cursor pointed at is gone: the client starts over
-		Response gone(const std::string &why)
-		{
-			return Response::problem(410, "Gone", why + " Start again without cursor.");
-		}
-
 		// a station and where it is now, as far as the site lets it be told:
 		// configured, by GPS on its input, or riding its vessel
 		void writeStation(JSON::Writer &w, const StationRegistry::Station &s, const Tracker::Position &at, int vessels)
@@ -92,31 +67,6 @@ namespace Services
 		int classOf(const Ship &s) { return s.shipclass >= 0 && s.shipclass < N_VESSEL_CLASSES ? s.shipclass : 0; }
 		int validatedOf(const Ship &s) { return s.getValidated() == 1 || s.getValidated() == 2 ? s.getValidated() : 0; }
 
-		int indexOf(const char *const *names, int n, const std::string &name)
-		{
-			for (int i = 0; i < n; i++)
-				if (name == names[i])
-					return i;
-			return -1;
-		}
-
-		std::string listed(const char *const *names, int n)
-		{
-			std::string out;
-			for (int i = 0; i < n; i++)
-				out += std::string(i == 0 ? "" : i == n - 1 ? " or " : ", ") + names[i];
-			return out;
-		}
-
-		template <typename T>
-		void kvOr(JSON::Writer &w, const char *key, T v, bool known)
-		{
-			if (known)
-				w.kv(key, v);
-			else
-				w.kv_null(key);
-		}
-
 		// a two-bit field as the ship keeps it: 0 unknown, 1 one way, 2 the other
 		void triState(JSON::Writer &w, const char *key, int v, bool when2)
 		{
@@ -134,36 +84,36 @@ namespace Services
 			w.beginObject().kv("mmsi", (long long)s.mmsi);
 			textOrNull(w, "name", s.shipname);
 			textOrNull(w, "callsign", s.callsign);
-			kvOr(w, "imo", s.IMO, s.IMO != IMO_UNDEFINED);
+			w.kv_or_null("imo", s.IMO, s.IMO != IMO_UNDEFINED);
 			textOrNull(w, "eni", s.vin);
 			textOrNull(w, "destination", s.destination);
 			w.kv("class", VESSEL_CLASSES[classOf(s)]);
-			kvOr(w, "ship_type", s.shiptype, s.shiptype > 0);
+			w.kv_or_null("ship_type", s.shiptype, s.shiptype > 0);
 			w.kv("mmsi_type", s.mmsi_type >= 0 && s.mmsi_type < N_MMSI_TYPES ? MMSI_TYPES[s.mmsi_type] : "other");
-			kvOr(w, "country", s.country_code, s.country_code[0] != 0);
+			w.kv_or_null("country", s.country_code, s.country_code[0] != 0);
 
 			const bool placed = isValidCoord(s.lat, s.lon);
-			kvOr(w, "lat", s.lat, placed);
-			kvOr(w, "lon", s.lon, placed);
-			kvOr(w, "distance_nm", s.distance, placed && s.distance != DISTANCE_UNDEFINED);
-			kvOr(w, "bearing_deg", s.angle, placed && s.distance != DISTANCE_UNDEFINED && s.angle != ANGLE_UNDEFINED);
-			kvOr(w, "speed_kn", s.speed, s.speed != SPEED_UNDEFINED);
-			kvOr(w, "course_deg", s.cog, s.cog != COG_UNDEFINED);
-			kvOr(w, "heading_deg", s.heading, s.heading != HEADING_UNDEFINED);
-			kvOr(w, "nav_status", s.status >= 0 && s.status < N_NAV_STATUSES ? NAV_STATUSES[s.status] : "", s.status >= 0 && s.status < N_NAV_STATUSES);
+			w.kv_or_null("lat", s.lat, placed);
+			w.kv_or_null("lon", s.lon, placed);
+			w.kv_or_null("distance_nm", s.distance, placed && s.distance != DISTANCE_UNDEFINED);
+			w.kv_or_null("bearing_deg", s.angle, placed && s.distance != DISTANCE_UNDEFINED && s.angle != ANGLE_UNDEFINED);
+			w.kv_or_null("speed_kn", s.speed, s.speed != SPEED_UNDEFINED);
+			w.kv_or_null("course_deg", s.cog, s.cog != COG_UNDEFINED);
+			w.kv_or_null("heading_deg", s.heading, s.heading != HEADING_UNDEFINED);
+			w.kv_or_null("nav_status", s.status >= 0 && s.status < N_NAV_STATUSES ? NAV_STATUSES[s.status] : "", s.status >= 0 && s.status < N_NAV_STATUSES);
 
-			kvOr(w, "to_bow_m", s.to_bow, s.to_bow != DIMENSION_UNDEFINED);
-			kvOr(w, "to_stern_m", s.to_stern, s.to_stern != DIMENSION_UNDEFINED);
-			kvOr(w, "to_port_m", s.to_port, s.to_port != DIMENSION_UNDEFINED);
-			kvOr(w, "to_starboard_m", s.to_starboard, s.to_starboard != DIMENSION_UNDEFINED);
-			kvOr(w, "draught_m", s.draught, s.draught != DRAUGHT_UNDEFINED);
+			w.kv_or_null("to_bow_m", s.to_bow, s.to_bow != DIMENSION_UNDEFINED);
+			w.kv_or_null("to_stern_m", s.to_stern, s.to_stern != DIMENSION_UNDEFINED);
+			w.kv_or_null("to_port_m", s.to_port, s.to_port != DIMENSION_UNDEFINED);
+			w.kv_or_null("to_starboard_m", s.to_starboard, s.to_starboard != DIMENSION_UNDEFINED);
+			w.kv_or_null("draught_m", s.draught, s.draught != DRAUGHT_UNDEFINED);
 			if (s.month != ETA_MONTH_UNDEFINED || s.day != ETA_DAY_UNDEFINED || s.hour != ETA_HOUR_UNDEFINED || s.minute != ETA_MINUTE_UNDEFINED)
 			{
 				w.key("eta").beginObject();
-				kvOr(w, "month", (int)s.month, s.month != ETA_MONTH_UNDEFINED);
-				kvOr(w, "day", (int)s.day, s.day != ETA_DAY_UNDEFINED);
-				kvOr(w, "hour", (int)s.hour, s.hour != ETA_HOUR_UNDEFINED);
-				kvOr(w, "minute", (int)s.minute, s.minute != ETA_MINUTE_UNDEFINED);
+				w.kv_or_null("month", (int)s.month, s.month != ETA_MONTH_UNDEFINED);
+				w.kv_or_null("day", (int)s.day, s.day != ETA_DAY_UNDEFINED);
+				w.kv_or_null("hour", (int)s.hour, s.hour != ETA_HOUR_UNDEFINED);
+				w.kv_or_null("minute", (int)s.minute, s.minute != ETA_MINUTE_UNDEFINED);
 				w.endObject();
 			}
 			else
@@ -193,13 +143,13 @@ namespace Services
 			triState(w, "special_manoeuvre", s.getManeuver(), true);
 			w.endObject();
 			textOrNull(w, "vendor_id", s.vendorid);
-			kvOr(w, "model", s.unit_model, s.unit_model >= 0);
-			kvOr(w, "serial", s.unit_serial, s.unit_serial >= 0);
+			w.kv_or_null("model", s.unit_model, s.unit_model >= 0);
+			w.kv_or_null("serial", s.unit_serial, s.unit_serial >= 0);
 
-			kvOr(w, "level_db", s.level, s.level != LEVEL_UNDEFINED);
-			kvOr(w, "ppm", s.ppm, s.ppm != PPM_UNDEFINED);
-			kvOr(w, "altitude_m", s.altitude, s.altitude != ALT_UNDEFINED);
-			kvOr(w, "received_stations", s.received_stations, s.received_stations != RECEIVED_STATIONS_UNDEFINED);
+			w.kv_or_null("level_db", s.level, s.level != LEVEL_UNDEFINED);
+			w.kv_or_null("ppm", s.ppm, s.ppm != PPM_UNDEFINED);
+			w.kv_or_null("altitude_m", s.altitude, s.altitude != ALT_UNDEFINED);
+			w.kv_or_null("received_stations", s.received_stations, s.received_stations != RECEIVED_STATIONS_UNDEFINED);
 			w.kv("messages", s.count).key("message_types").beginArray();
 			for (int t = 0; t < 32; t++)
 				if (s.msg_type & (1 << t))
@@ -215,7 +165,7 @@ namespace Services
 			}
 			else
 				w.kv_null("binary_messages");
-			kvOr(w, "station_aboard", aboard, aboard >= 0);
+			w.kv_or_null("station_aboard", aboard, aboard >= 0);
 
 			w.kv("last_seen", isoTimeText(s.last_signal).text).kv("age_s", (long long)(now > s.last_signal ? now - s.last_signal : 0));
 			w.key("stations").beginArray();
@@ -242,17 +192,17 @@ namespace Services
 				w.kv("from", e.from / 10.0).kv("to", e.to / 10.0);
 			else if (e.field == StaticStore::STATUS)
 			{
-				kvOr(w, "from", e.from < N_NAV_STATUSES ? NAV_STATUSES[e.from] : "", e.from < N_NAV_STATUSES);
-				kvOr(w, "to", e.to < N_NAV_STATUSES ? NAV_STATUSES[e.to] : "", e.to < N_NAV_STATUSES);
+				w.kv_or_null("from", e.from < N_NAV_STATUSES ? NAV_STATUSES[e.from] : "", e.from < N_NAV_STATUSES);
+				w.kv_or_null("to", e.to < N_NAV_STATUSES ? NAV_STATUSES[e.to] : "", e.to < N_NAV_STATUSES);
 			}
 			else if (e.field == StaticStore::ETA)
 			{
 				const uint8_t *v = (const uint8_t *)e.value;
 				w.kv_null("from").key("to").beginObject();
-				kvOr(w, "month", (int)v[0], v[0] != ETA_MONTH_UNDEFINED);
-				kvOr(w, "day", (int)v[1], v[1] != ETA_DAY_UNDEFINED);
-				kvOr(w, "hour", (int)v[2], v[2] != ETA_HOUR_UNDEFINED);
-				kvOr(w, "minute", (int)v[3], v[3] != ETA_MINUTE_UNDEFINED);
+				w.kv_or_null("month", (int)v[0], v[0] != ETA_MONTH_UNDEFINED);
+				w.kv_or_null("day", (int)v[1], v[1] != ETA_DAY_UNDEFINED);
+				w.kv_or_null("hour", (int)v[2], v[2] != ETA_HOUR_UNDEFINED);
+				w.kv_or_null("minute", (int)v[3], v[3] != ETA_MINUTE_UNDEFINED);
 				w.endObject();
 			}
 			else
@@ -267,8 +217,8 @@ namespace Services
 		{
 			const PlaceMetadata &m = *e.metadata;
 			w.key("place").beginObject().kv("uuid", m.uuid).kv("name", m.name).kv("type", m.type());
-			kvOr(w, "unlocode", m.code, !m.code.empty());
-			kvOr(w, "country", m.country, !m.country.empty());
+			w.kv_or_null("unlocode", m.code, !m.code.empty());
+			w.kv_or_null("country", m.country, !m.country.empty());
 			w.endObject();
 		}
 
@@ -305,19 +255,19 @@ namespace Services
 			char icao[8], code[8];
 			snprintf(icao, sizeof(icao), "%06X", p.hexident & 0xFFFFFF);
 			w.beginObject().kv("icao", icao);
-			kvOr(w, "callsign", p.callsign, p.callsign[0] != 0 && p.callsign[0] != ' ');
-			kvOr(w, "country", std::string(p.country_code, 2), p.country_code[0] != ' ' && p.country_code[0] != 0);
+			w.kv_or_null("callsign", p.callsign, p.callsign[0] != 0 && p.callsign[0] != ' ');
+			w.kv_or_null("country", std::string(p.country_code, 2), p.country_code[0] != ' ' && p.country_code[0] != 0);
 			const bool placed = isValidCoord(p.lat, p.lon);
-			kvOr(w, "lat", p.lat, placed);
-			kvOr(w, "lon", p.lon, placed);
-			kvOr(w, "distance_nm", p.distance, placed && p.distance != DISTANCE_UNDEFINED);
-			kvOr(w, "bearing_deg", p.angle, placed && p.distance != DISTANCE_UNDEFINED && p.angle != ANGLE_UNDEFINED);
-			kvOr(w, "altitude_ft", p.altitude, p.altitude != ALTITUDE_UNDEFINED);
-			kvOr(w, "ground_speed_kn", p.speed, p.speed != SPEED_UNDEFINED);
-			kvOr(w, "track_deg", p.heading, p.heading != HEADING_UNDEFINED);
-			kvOr(w, "vertical_rate_fpm", p.vertrate, p.vertrate != VERT_RATE_UNDEFINED);
+			w.kv_or_null("lat", p.lat, placed);
+			w.kv_or_null("lon", p.lon, placed);
+			w.kv_or_null("distance_nm", p.distance, placed && p.distance != DISTANCE_UNDEFINED);
+			w.kv_or_null("bearing_deg", p.angle, placed && p.distance != DISTANCE_UNDEFINED && p.angle != ANGLE_UNDEFINED);
+			w.kv_or_null("altitude_ft", p.altitude, p.altitude != ALTITUDE_UNDEFINED);
+			w.kv_or_null("ground_speed_kn", p.speed, p.speed != SPEED_UNDEFINED);
+			w.kv_or_null("track_deg", p.heading, p.heading != HEADING_UNDEFINED);
+			w.kv_or_null("vertical_rate_fpm", p.vertrate, p.vertrate != VERT_RATE_UNDEFINED);
 			snprintf(code, sizeof(code), "%04d", p.squawk);
-			kvOr(w, "squawk", code, p.squawk != SQUAWK_UNDEFINED && p.squawk >= 0 && p.squawk <= 7777);
+			w.kv_or_null("squawk", code, p.squawk != SQUAWK_UNDEFINED && p.squawk >= 0 && p.squawk <= 7777);
 			if (p.airborne == 0 || p.airborne == 1)
 				w.kv("on_ground", p.airborne == 0);
 			else
@@ -331,7 +281,7 @@ namespace Services
 			}
 			else
 				w.kv_null("category");
-			kvOr(w, "level_db", p.signalLevel, p.signalLevel != LEVEL_UNDEFINED);
+			w.kv_or_null("level_db", p.signalLevel, p.signalLevel != LEVEL_UNDEFINED);
 			w.kv("messages", (long long)p.nMessages).kv("last_seen", isoTime(heard)).kv("age_s", (long long)(now > heard ? now - heard : 0));
 			w.endObject();
 		}
@@ -370,19 +320,117 @@ namespace Services
 			return r;
 		}
 
-		// The viewer's rules for a place's lists. A place where a stay needs a stop
-		// lists as inside only the vessels that have lain still in it: a ship
-		// steaming through, an aid or a base station is not news there.
-		bool insideNow(const Ship &s, const VisitTracker::Visit &v, const PlaceIndex::Entry &e, std::time_t now)
+		// the usual vessels an hour, by UTC weekday and hour; null for an hour never heard in
+		void writeWeek(JSON::Writer &w, const Figures &f)
 		{
-			if (!v.inside() || now - s.last_signal > DB::VISIT_SILENT)
-				return false;
-			return !e.metadata->requiresStop() || (s.shipclass < CLASS_PLANE && v.idle > 0);
+			static const char *const DAYS[] = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"};
+			w.key("week").beginObject();
+			for (int d = 0; d < 7; d++)
+			{
+				w.key(DAYS[d]).beginArray();
+				for (int h = 0; h < 24; h++)
+					if (f.week_hours[d][h])
+						w.val((float)f.week_vessels[d][h] / f.week_hours[d][h]);
+					else
+						w.val_null();
+				w.endArray();
+			}
+			w.endObject();
 		}
-		// a stay that is over and was never a call is not history
-		bool visitShown(const VisitTracker::Visit &v, const PlaceIndex::Entry &e)
+
+		void writeLevels(JSON::Writer &w, const char *key, const Figures::Levels &l)
 		{
-			return v.shown(e.metadata->requiresStop());
+			w.key(key).beginArray();
+			for (int b = 0; b < Figures::LEVEL_BANDS; b++)
+			{
+				w.beginObject().kv("from_nm", b * Figures::LEVEL_BAND_NM);
+				if (b + 1 < Figures::LEVEL_BANDS)
+					w.kv("to_nm", (b + 1) * Figures::LEVEL_BAND_NM);
+				else
+					w.kv_null("to_nm");
+				if (l.n[b])
+					w.kv("level_db", (float)(l.sum[b] / l.n[b]));
+				else
+					w.kv_null("level_db");
+				w.kv("messages", (long long)l.n[b]).endObject();
+			}
+			w.endArray();
+		}
+
+		// The figures as /api/v1 names them, as members of an object the caller
+		// opened. `vessels` is counted only by the slots of a history.
+		void writeFigures(JSON::Writer &w, const MessageStatistics::Values &v, bool empty, bool vessels)
+		{
+			const int c = v.count - v.exclude;
+			const bool has_level = !empty && c > 0 && v.level_min <= v.level_max;
+
+			w.kv("messages", empty ? 0 : v.count);
+			if (vessels)
+				w.kv("vessels", empty ? 0 : v.vessels);
+			else
+				w.kv_null("vessels");
+			w.key("errors").beginObject();
+			const char *names[] = {"flagged", "undersized", "oversized", "checksum"};
+			for (int i = 0; i < 4; i++)
+				w.kv(names[i], empty ? 0 : v.errors[i]);
+			w.endObject();
+			if (has_level)
+				w.kv("level_min_db", v.level_min).kv("level_max_db", v.level_max).kv("ppm", v.ppm / c);
+			else
+				w.kv_null("level_min_db").kv_null("level_max_db").kv_null("ppm");
+			if (!empty && v.distance > 0)
+				w.kv("max_distance_nm", v.distance);
+			else
+				w.kv_null("max_distance_nm");
+			w.kv("active_minutes", empty ? 0 : v.active_minutes);
+			w.key("furthest").beginArray();
+			for (int i = 0; i < MessageStatistics::FURTHEST && !empty; i++)
+				if (v.furthest[i].mmsi)
+				{
+					w.beginObject().kv("mmsi", (long long)v.furthest[i].mmsi).kv("distance_nm", v.furthest[i].nm);
+					if (v.furthest[i].bearing >= 0 && v.furthest[i].bearing < 360)
+						w.kv("bearing_deg", v.furthest[i].bearing);
+					else
+						w.kv_null("bearing_deg");
+					w.kv("time", isoTime((std::time_t)v.furthest[i].time)).endObject();
+				}
+			w.endArray();
+
+			w.key("channels").beginObject();
+			for (int i = 0; i < 4; i++)
+				w.kv(std::string(1, (char)('A' + i)), empty ? 0 : v.channel[i]);
+			w.endObject();
+
+			w.key("message_types").beginObject();
+			for (int i = 0; i < 28; i++)
+				if (!empty && v.msg[i])
+					w.kv(std::to_string(i + 1), v.msg[i]);
+			w.endObject();
+
+			w.key("range_nm").beginObject().kv("sector_deg", 360 / MessageStatistics::RADAR_BUCKETS);
+			w.key("class_a").beginArray();
+			for (int i = 0; i < MessageStatistics::RADAR_BUCKETS; i++)
+				w.val(empty ? 0.0f : v.radarA[i]);
+			w.endArray().key("class_b").beginArray();
+			for (int i = 0; i < MessageStatistics::RADAR_BUCKETS; i++)
+				w.val(empty ? 0.0f : v.radarB[i]);
+			w.endArray().endObject();
+		}
+
+		// a period's figures as an object of its own: a counter, or a history's last whole slot
+		template <typename C>
+		void writeTotal(JSON::Writer &w, const char *key, C &counter)
+		{
+			w.key(key).beginObject();
+			writeFigures(w, counter.values(), false, false);
+			w.endObject();
+		}
+		template <typename H>
+		void writeLast(JSON::Writer &w, const char *key, H &history)
+		{
+			w.key(key).beginObject();
+			history.withLastSlot([&](MessageStatistics &s, bool empty) { writeFigures(w, s.values(), empty, true); });
+			w.endObject();
 		}
 
 		// one history of figures, a slot an object, oldest first
@@ -392,7 +440,7 @@ namespace Services
 			w.key(key).beginArray();
 			history.forEachSlot([&](long int start, MessageStatistics &s, bool empty) {
 				w.beginObject().kv("time", isoTime((std::time_t)start));
-				s.writeFigureMembers(w, empty, true);
+				writeFigures(w, s.values(), empty, true);
 				w.endObject();
 			});
 			w.endArray();
@@ -476,19 +524,19 @@ namespace Services
 			at("/api/v1/openapi.json", [&] { return openapi(); });
 		else if (parts[0] == "stations" && parts.size() == 1)
 			at("/api/v1/stations", [&] { return stationList(); });
-		else if (parts[0] == "stations" && parts.size() == 2 && number(parts[1], n))
+		else if (parts[0] == "stations" && parts.size() == 2 && Util::Parse::Digits(parts[1], n, 10))
 			at("/api/v1/stations/{id}", [&] { return station((int)n); });
-		else if (parts[0] == "stations" && parts.size() == 3 && parts[2] == "statistics" && number(parts[1], n))
+		else if (parts[0] == "stations" && parts.size() == 3 && parts[2] == "statistics" && Util::Parse::Digits(parts[1], n, 10))
 			at("/api/v1/stations/{id}/statistics", [&] { return statistics((int)n); });
 		else if (parts[0] == "statistics" && parts.size() == 1)
 			at("/api/v1/statistics", [&] { return statistics(-1); });
 		else if (parts[0] == "vessels" && parts.size() == 1)
 			at("/api/v1/vessels", [&] { return vessels(request); });
-		else if (parts[0] == "vessels" && parts.size() == 2 && number(parts[1], n))
+		else if (parts[0] == "vessels" && parts.size() == 2 && Util::Parse::Digits(parts[1], n, 10))
 			at("/api/v1/vessels/{mmsi}", [&] { return vessel((uint32_t)n); });
-		else if (parts[0] == "vessels" && parts.size() == 3 && parts[2] == "track" && number(parts[1], n))
+		else if (parts[0] == "vessels" && parts.size() == 3 && parts[2] == "track" && Util::Parse::Digits(parts[1], n, 10))
 			at("/api/v1/vessels/{mmsi}/track", [&] { return track((uint32_t)n, request); });
-		else if (parts[0] == "vessels" && parts.size() == 3 && parts[2] == "visits" && number(parts[1], n))
+		else if (parts[0] == "vessels" && parts.size() == 3 && parts[2] == "visits" && Util::Parse::Digits(parts[1], n, 10))
 			at("/api/v1/vessels/{mmsi}/visits", [&] { return vesselVisits((uint32_t)n); });
 		else if (parts[0] == "places" && parts.size() == 1)
 			at("/api/v1/places", [&] { return places(request); });
@@ -608,22 +656,25 @@ namespace Services
 				w.endArray();
 			}
 			w.kv("time", isoTime(now)).kv("messages_per_second", f.second.getAverage());
-			w.key("total").beginObject();
-			f.total.writeFigureMembers(w);
-			w.endObject().key("session").beginObject();
-			f.session.writeFigureMembers(w);
-			w.endObject().key("last_minute").beginObject();
-			f.minute.writeLastFigureMembers(w);
-			w.endObject().key("last_hour").beginObject();
-			f.hour.writeLastFigureMembers(w);
-			w.endObject().key("last_day").beginObject();
-			f.day.writeLastFigureMembers(w);
-			w.endObject().key("history").beginObject();
+			writeTotal(w, "total", f.total);
+			writeTotal(w, "session", f.session);
+			writeLast(w, "last_minute", f.minute);
+			writeLast(w, "last_hour", f.hour);
+			writeLast(w, "last_day", f.day);
+			w.key("history").beginObject();
 			writeSlots(w, "second", f.second);
 			writeSlots(w, "minute", f.minute);
 			writeSlots(w, "hour", f.hour);
 			writeSlots(w, "day", f.day);
-			w.endObject().endObject();
+			w.endObject();
+			writeWeek(w, f);
+			w.key("levels_by_distance").beginObject().kv("band_nm", Figures::LEVEL_BAND_NM);
+			writeLevels(w, "total", f.levels_total);
+			writeLevels(w, "session", f.levels_session);
+			w.endObject().key("propagation").beginArray();
+			for (const auto &d : f.propagation())
+				w.beginObject().kv("day", isoTime(d.day)).kv("max_distance_nm", d.max_nm).kv("usual_nm", d.usual_nm).endObject();
+			w.endArray().endObject();
 		};
 		if (ids.empty())
 			tracker.withAll(write);
@@ -646,7 +697,7 @@ namespace Services
 		struct VesselQuery
 		{
 			std::string q;
-			bool box = false, near = false;
+			bool box = false, circle = false;
 			float west = 0, south = 0, east = 0, north = 0, lat = 0, lon = 0, radius_nm = 10;
 			std::vector<long long> mmsi, stations, classes, statuses, validated, repeat;
 			bool has_min_speed = false, has_max_speed = false, has_min_distance = false, has_max_distance = false;
@@ -696,7 +747,7 @@ namespace Services
 				for (const auto &part : split(v))
 				{
 					long long x = 0;
-					if (!number(part, x) || x > max)
+					if (!Util::Parse::Digits(part, x, 10) || x > max)
 						return false;
 					out.push_back(x);
 				}
@@ -721,7 +772,7 @@ namespace Services
 			{
 				std::vector<float> f;
 				if (key == "q")
-					q = lower(value);
+					q = Util::Convert::toLowerCopy(value);
 				else if (key == "bbox")
 				{
 					if (!floats(value, f, 4) || f[1] < -90 || f[3] > 90 || f[1] > f[3] || f[0] < -180 || f[2] > 180)
@@ -734,7 +785,7 @@ namespace Services
 					if (!floats(value, f, 2) || !isValidCoord(f[0], f[1]))
 						error = "near takes lat,lon in degrees.";
 					else
-						lat = f[0], lon = f[1], near = true;
+						lat = f[0], lon = f[1], circle = true;
 				}
 				else if (key == "radius_nm")
 				{
@@ -782,7 +833,7 @@ namespace Services
 				}
 				else if (key == "max_age_s")
 				{
-					if (!number(value, max_age))
+					if (!Util::Parse::Digits(value, max_age, 10))
 						error = "max_age_s takes whole seconds.";
 				}
 				else
@@ -792,7 +843,7 @@ namespace Services
 
 			static bool contains(const char *field, const std::string &needle)
 			{
-				return lower(field).find(needle) != std::string::npos;
+				return Util::Convert::toLowerCopy(field).find(needle) != std::string::npos;
 			}
 
 			static bool has(const std::vector<long long> &list, long long v)
@@ -806,11 +857,11 @@ namespace Services
 					std::to_string(s.mmsi).find(q) == std::string::npos && !(s.IMO > 0 && std::to_string(s.IMO) == q))
 					return false;
 				const bool placed = isValidCoord(s.lat, s.lon);
-				if ((box || near) && !placed)
+				if ((box || circle) && !placed)
 					return false;
 				if (box && (s.lat < south || s.lat > north || (west <= east ? (s.lon < west || s.lon > east) : (s.lon < west && s.lon > east))))
 					return false;
-				if (near)
+				if (circle)
 				{
 					float d = 0;
 					int bearing = 0;
@@ -864,7 +915,7 @@ namespace Services
 	{
 		long long limit = 0;
 		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
-			return Response::problem(400, "Bad request", "limit must be between 1 and " + std::to_string(LIST_MAX) + ".");
+			return badLimit();
 		VesselQuery query;
 		std::string carried = "&limit=" + std::to_string(limit);
 		for (const auto &p : request.params())
@@ -952,7 +1003,7 @@ namespace Services
 		db.forEachChangeOf(mmsi, [&](const StaticStore::Entry &e) { changes.push_back(e); });
 		std::vector<VisitRow> visits;
 		db.forEachVisitOf(mmsi, [&](const Ship &, const VisitTracker::Visit &v, const PlaceIndex::Entry &e) {
-			if (visitShown(v, e))
+			if (v.shown(e.metadata->requiresStop()))
 				visits.push_back(visitRow(v, e));
 		});
 		sortForReading(visits);
@@ -1055,9 +1106,9 @@ namespace Services
 			// a ship lying still is one point that lasts
 			if (p.dur)
 				w.kv("until", isoTime(p.end()));
-			kvOr(w, "speed_kn", p.sog / 10.0, p.sog != PathStore::NA);
-			kvOr(w, "course_deg", p.cog / 10.0, p.cog != PathStore::NA);
-			kvOr(w, "heading_deg", (int)p.hdg, p.hdg != PathStore::NA);
+			w.kv_or_null("speed_kn", p.sog / 10.0, p.sog != PathStore::NA);
+			w.kv_or_null("course_deg", p.cog / 10.0, p.cog != PathStore::NA);
+			w.kv_or_null("heading_deg", (int)p.hdg, p.hdg != PathStore::NA);
 			w.endObject();
 		}
 		endList(w, points.size());
@@ -1072,7 +1123,7 @@ namespace Services
 		// written under the lock into rows of their own: the place index may be replaced once it is released
 		std::vector<VisitRow> rows;
 		const bool known = tracker.ships().forEachVisitOf(mmsi, [&](const Ship &, const VisitTracker::Visit &v, const PlaceIndex::Entry &e) {
-			if (visitShown(v, e))
+			if (v.shown(e.metadata->requiresStop()))
 				rows.push_back(visitRow(v, e));
 		});
 		if (!known)
@@ -1093,13 +1144,13 @@ namespace Services
 	{
 		long long limit = 0;
 		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
-			return Response::problem(400, "Bad request", "limit must be between 1 and " + std::to_string(LIST_MAX) + ".");
+			return badLimit();
 		const std::string type = request.param("type");
 		PlaceKind kind = PlaceKind::Port;
 		if (!type.empty() && !PlaceMetadata::parseKind(type, kind))
 			return Response::problem(400, "Bad request", "type must be a place type, such as port, berth or guardzone.");
 		// a text in the name or the UN/LOCODE
-		const std::string q = lower(request.param("q"));
+		const std::string q = Util::Convert::toLowerCopy(request.param("q"));
 		const auto index = tracker.places();
 
 		typedef std::pair<std::string, const PlaceIndex::Entry *> Row;
@@ -1113,7 +1164,7 @@ namespace Services
 			const PlaceIndex::Entry *last = index ? index->resolve(from.substr(2)) : nullptr;
 			if (!last)
 				return gone("The place this cursor ends at is no longer in the catalogue.");
-			after = key(Row(lower(last->metadata->name), last));
+			after = key(Row(Util::Convert::toLowerCopy(last->metadata->name), last));
 		}
 
 		std::vector<Row> rows;
@@ -1122,8 +1173,8 @@ namespace Services
 			{
 				if (!e.live() || (!type.empty() && !e.metadata->is(kind)))
 					continue;
-				Row r(lower(e.metadata->name), &e);
-				if (!q.empty() && r.first.find(q) == std::string::npos && lower(e.metadata->code).find(q) == std::string::npos)
+				Row r(Util::Convert::toLowerCopy(e.metadata->name), &e);
+				if (!q.empty() && r.first.find(q) == std::string::npos && Util::Convert::toLowerCopy(e.metadata->code).find(q) == std::string::npos)
 					continue;
 				if (!from.empty() && !(after < key(r)))
 					continue;
@@ -1161,7 +1212,7 @@ namespace Services
 		const std::time_t now = std::time(nullptr);
 		int inside = 0;
 		tracker.ships().forEachVisit([&](const Ship &s, const VisitTracker::Visit &v, const PlaceIndex::Entry &at) {
-			if (at.id == e->id && insideNow(s, v, at, now) && view.passes(s, now))
+			if (at.id == e->id && DB::insideNow(s, v, at.metadata->requiresStop(), now) && view.passes(s, now))
 				inside++;
 		});
 
@@ -1174,7 +1225,7 @@ namespace Services
 		w.key("outline");
 		bool written = false;
 		std::string feature;
-		if (outlines && !e->polygons->empty() && e->readFeature(feature))
+		if (view.place_geometry && !e->polygons->empty() && e->readFeature(feature))
 			try
 			{
 				JSON::Parser parser(JSON_DICT_SETTING);
@@ -1204,7 +1255,7 @@ namespace Services
 	{
 		long long limit = 0;
 		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
-			return Response::problem(400, "Bad request", "limit must be between 1 and " + std::to_string(LIST_MAX) + ".");
+			return badLimit();
 		std::vector<long long> c;
 		const std::string from = request.param("cursor");
 		if (!from.empty() && !parseCursor(from, "in", 1, c))
@@ -1217,7 +1268,7 @@ namespace Services
 		const std::time_t now = std::time(nullptr);
 		std::vector<std::pair<uint32_t, std::string>> rows;
 		tracker.ships().forEachVisit([&](const Ship &s, const VisitTracker::Visit &v, const PlaceIndex::Entry &at) {
-			if (at.id != e->id || (long long)s.mmsi <= after || !insideNow(s, v, at, now) || !view.passes(s, now))
+			if (at.id != e->id || (long long)s.mmsi <= after || !DB::insideNow(s, v, at.metadata->requiresStop(), now) || !view.passes(s, now))
 				return;
 			std::string row;
 			JSON::Writer w(row);
@@ -1250,7 +1301,7 @@ namespace Services
 		if (!request.integer("hours", hours, 24, 1, 30 * 24))
 			return Response::problem(400, "Bad request", "hours must be between 1 and 720.");
 		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
-			return Response::problem(400, "Bad request", "limit must be between 1 and " + std::to_string(LIST_MAX) + ".");
+			return badLimit();
 		std::vector<long long> c;
 		const std::string from = request.param("cursor");
 		if (!from.empty() && !parseCursor(from, "vis", 2, c))
@@ -1270,7 +1321,7 @@ namespace Services
 		std::vector<Row> rows;
 		// the stays under way, and those that ended within the window
 		tracker.ships().forEachVisit([&](const Ship &s, const VisitTracker::Visit &v, const PlaceIndex::Entry &at) {
-			if (at.id != e->id || !visitShown(v, at) || !view.passes(s, now))
+			if (at.id != e->id || !v.shown(at.metadata->requiresStop()) || !view.passes(s, now))
 				return;
 			if (!v.inside() && (std::time_t)MAX(v.entered, v.exited) < since)
 				return;
@@ -1318,7 +1369,7 @@ namespace Services
 			return refusal;
 		long long limit = 0;
 		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
-			return Response::problem(400, "Bad request", "limit must be between 1 and " + std::to_string(LIST_MAX) + ".");
+			return badLimit();
 		const std::time_t now = std::time(nullptr);
 		std::time_t start = now, floor = 0;
 		Heard after{0, 0};
@@ -1401,44 +1452,10 @@ namespace Services
 	// client that got one from a webhook reads on from there.
 	Response ApiV1::events(const Request &request)
 	{
-		long long limit = 0;
-		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
-			return Response::problem(400, "Bad request", "limit must be between 1 and " + std::to_string(LIST_MAX) + ".");
-		Journal &journal = tracker.journal();
-		const uint64_t epoch = journal.epoch();
-		uint64_t after = 0;
-		const std::string from = request.param("cursor");
-		std::vector<long long> c;
-		if (from.empty())
-			after = journal.before((std::size_t)limit);
-		else if (!parseCursor(from, "evt", 2, c))
-			return badCursor();
-		else if ((uint64_t)c[0] != epoch || (uint64_t)c[1] > journal.newest())
-			return gone("The journal started again since this cursor was given.");
-		else
-			after = (uint64_t)c[1];
-		std::vector<Journal::Entry> entries;
-		if (!journal.since(after, (std::size_t)limit, entries))
-			return gone("The events after this cursor are no longer kept.");
-		std::string out;
-		JSON::Writer w(out);
-		beginList(w);
-		std::size_t count = 0;
-		for (const auto &e : entries)
-		{
-			// the installation's own events are the system's to tell; an event of a
-			// ship the server does not show is passed over but still moves the cursor
-			if (e.event.kind == Tracking::Kind::SYSTEM || !shows(e.event.from))
-				continue;
-			count++;
-			writeEvent(w, e, epoch);
-		}
-		const uint64_t last = entries.empty() ? after : entries.back().seq;
-		const std::string tail = "&limit=" + std::to_string(limit);
-		const std::string poll = "/api/v1/events?cursor=" + eventId(epoch, last) + tail;
-		beginMeta(w, count, last < journal.newest() ? poll : std::string());
-		w.kv("poll", poll).endObject().endObject();
-		w.finish();
-		return Response::json(out);
+		// the installation's own events are the system's to tell, and a ship's
+		// only when the server shows the ship
+		return pageEvents(request, tracker.journal(), "/api/v1/events", [this](const Journal::Entry &e) {
+			return e.event.kind != Tracking::Kind::SYSTEM && shows(e.event.from);
+		});
 	}
 }

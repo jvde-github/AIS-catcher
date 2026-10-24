@@ -32,12 +32,20 @@
 // has it when it has a secret. Each webhook keeps its own place in the journal
 // and starts at the newest event; one that fails is tried again later, from the
 // event that failed, waiting longer each time. Its own thread, so a slow
-// address holds up only the webhooks.
-class Webhooks
+// address holds up only the webhooks; it sleeps until the journal moves on or
+// a retry is due.
+class Webhooks : public StreamIn<uint64_t>
 {
 public:
-	explicit Webhooks(Tracker &tracker) : tracker(tracker) {}
-	~Webhooks() { stop(); }
+	explicit Webhooks(Tracker &tracker) : tracker(tracker) { tracker.journal() >> *this; }
+	~Webhooks()
+	{
+		stop();
+		tracker.journal().disconnect(*this);
+	}
+
+	// the journal moved on
+	void Receive(const uint64_t *, int, TAG &) override { wake(); }
 
 	// the webhooks as configured now: one that stays keeps its place
 	void configure(const std::vector<WebhookSpec> &specs);
@@ -55,10 +63,17 @@ private:
 
 	Tracker &tracker;
 	std::mutex mtx;
-	std::condition_variable cv;
 	std::vector<Hook> hooks;
 	bool running = false;
 	std::thread worker;
+	// what wakes the thread: taken by nothing else, so the journal may ping under the ship table's lock
+	std::mutex wake_mtx;
+	std::condition_variable woken_cv;
+	bool woken = false;
+
+	void wake();
+	// asleep until woken, or until `due` when that is set
+	void sleep(std::time_t due);
 
 	void loop();
 	// false when the address did not take it

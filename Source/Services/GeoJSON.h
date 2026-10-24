@@ -18,25 +18,21 @@
 #pragma once
 
 #include "Server.h"
-#include "Prometheus.h"
 
 namespace Services
 {
-	// The ships as GeoJSON (/geojson, their tracks at /allpath.geojson) and the
-	// message counts for Prometheus (/metrics), as other tools read them, through
-	// the server's view
-	class Feeds : public Service
+	// The ships as GeoJSON at /geojson and their tracks at /allpath.geojson, as
+	// other tools read them, through the server's view
+	class GeoJSON : public Service
 	{
 	public:
-		Feeds(Tracker &tracker, const ServerSpec &spec, PrometheusCounter *metrics, bool geojson);
+		explicit GeoJSON(const Context &context) : tracker(context.tracker), view(context.spec.view) {}
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
 
 	private:
 		Tracker &tracker;
-		ViewFilter view;
-		PrometheusCounter *metrics;
-		bool geojson;
+		const ViewFilter &view;
 	};
 }

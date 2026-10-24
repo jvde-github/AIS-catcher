@@ -18,6 +18,7 @@
 #include <cstring>
 
 #include "HTTPServer.h"
+#include "Convert.h"
 #include "Logger.h"
 
 namespace IO
@@ -85,6 +86,14 @@ namespace IO
 					if (status)
 					{
 						reject(c, status, error);
+						break;
+					}
+
+					// a server of this machine alone answers only what names it as such: a
+					// page whose own name was pointed here (DNS rebinding) is turned away
+					if (localOnly() && !addressedHere(request.host))
+					{
+						reject(c, 403, "a request for another host on a server of this machine");
 						break;
 					}
 
@@ -169,6 +178,29 @@ namespace IO
 	// Send an error response and drop the connection once it is flushed;
 	// whatever is left in the input buffer cannot be trusted after a
 	// malformed request.
+	bool HTTPServer::localOnly() const
+	{
+		return IP_BIND == "localhost" || IP_BIND == "::1" || IP_BIND.compare(0, 4, "127.") == 0;
+	}
+
+	// localhost or an address: a name no one else can point at this machine
+	bool HTTPServer::addressedHere(const std::string &host)
+	{
+		if (host.empty() || host[0] == '[')
+			return true;
+		std::string name = host.substr(0, host.rfind(':'));
+		Util::Convert::toLower(name);
+		if (name == "localhost")
+			return true;
+		int dots = 0;
+		for (char ch : name)
+			if (ch == '.')
+				dots++;
+			else if (ch < '0' || ch > '9')
+				return false;
+		return dots == 3;
+	}
+
 	void HTTPServer::reject(IO::TCPServerConnection &c, int status, const std::string &reason)
 	{
 		Error() << "Server: closing connection, " << reason;

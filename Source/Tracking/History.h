@@ -180,25 +180,23 @@ public:
 		return avg / delta_time;
 	}
 
-	void writeLastStatJSON(JSON::Writer &w) {
+	// a minute heard in, counted in the slot under way
+	void addActiveMinute() {
 		std::lock_guard<std::mutex> l{ this->mtx };
-
-		long int tm = (long int) std::time(nullptr) / (long int)INTERVAL -1;
-		if (start == end || tm > history[(end + N - 1) % N].time)
-			history[0].stat.writeJSON(w, true);
-		else
-			history[(end + N - 1) % N].stat.writeJSON(w, false);
+		history[end].stat.addActiveMinute();
 	}
 
-	// the last whole slot as writeLastStatJSON picks it, in /api/v1's names
-	void writeLastFigureMembers(JSON::Writer &w) {
+	// f(figures, whether nothing was heard in it) of the last whole slot: the
+	// one before the slot under way, when that is the one kept before it
+	template <typename F>
+	void withLastSlot(F f) {
 		std::lock_guard<std::mutex> l{ this->mtx };
 
 		long int tm = (long int) std::time(nullptr) / (long int)INTERVAL -1;
 		if (start == end || tm > history[(end + N - 1) % N].time)
-			history[0].stat.writeFigureMembers(w, true, true);
+			f(history[0].stat, true);
 		else
-			history[(end + N - 1) % N].stat.writeFigureMembers(w, false, true);
+			f(history[(end + N - 1) % N].stat, false);
 	}
 
 	// Each slot from the oldest kept to the current one, oldest first, as
@@ -220,41 +218,5 @@ public:
 		}
 		for (auto it = slots.rbegin(); it != slots.rend(); ++it)
 			f(it->first * (long int)INTERVAL, history[it->second < 0 ? end : it->second].stat, it->second < 0);
-	}
-
-	void writeJSON(JSON::Writer &w) {
-		std::lock_guard<std::mutex> l{ this->mtx };
-
-		long int tm_now = ((long int)time(nullptr)) / (long int)INTERVAL;
-
-		w.beginObject();
-
-		w.key("now").val((long int)(tm_now * (long int)INTERVAL));
-		w.key("interval").val((long int)INTERVAL);
-
-		w.key("time").beginArray();
-		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {
-			bool new_tm = history[idx].time >= tm;
-			w.val(i - N);
-			if (new_tm) {
-				if (idx == start) break;
-				idx = (idx + N - 1) % N;
-			}
-			tm--;
-		}
-		w.endArray();
-
-		w.key("stat").beginArray();
-		for (int i = N, tm = tm_now, idx = end; i > 0; i--) {
-			bool empty = history[idx].time < tm;
-			history[idx].stat.writeJSON(w, empty);
-			if (!empty) {
-				if (idx == start) break;
-				idx = (idx + N - 1) % N;
-			}
-			tm--;
-		}
-		w.endArray();
-		w.endObject();
 	}
 };

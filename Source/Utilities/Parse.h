@@ -38,6 +38,9 @@ namespace Util
 		static std::time_t DateTime(const std::string &datetime);
 		static bool Switch(std::string arg, const std::string &TrueString = "ON", const std::string &FalseString = "OFF");
 		static bool AutoInteger(std::string arg, int min, int max, int &val);
+		// whole digits and nothing else, at most `most` of them, as a path or a query
+		// gives a number: false for anything else, never a throw
+		static bool Digits(const std::string &s, long long &out, std::size_t most = 18);
 		static bool AutoFloat(std::string arg, double min, double max, double &val);
 		static bool OptionalInteger(std::string arg, int min, int max, unsigned &val, unsigned default_val = 0);
 		// Credentials and has_password are unchanged when the URL has no userinfo.

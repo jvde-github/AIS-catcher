@@ -254,6 +254,14 @@ void Engine::run(Site &on, ControlCore *control) {
 
   on.configure(site_config);
 #ifdef HASAPI
+  // a server that cannot listen stops the start, as the viewer of before did;
+  // managed mode keeps its panel up and tries again on the next apply
+  if (!control) {
+    const std::vector<int> ports = on.serverPorts();
+    for (const auto &s : site_config.servers)
+      if (std::find(ports.begin(), ports.end(), s.port) == ports.end())
+        throw std::runtime_error("cannot open port " + std::to_string(s.port) + " on " + s.bind + " for the server.");
+  }
   Tracker *tracker = on.tracker();
 #endif
 

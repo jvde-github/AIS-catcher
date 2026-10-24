@@ -328,7 +328,6 @@ set(CPP
     Source/Application/Main.cpp
     Source/Control/ManagedMain.cpp
     Source/Web/MapTiles.cpp
-    Source/Services/Prometheus.cpp
     Source/Application/Receiver.cpp
     Source/IO/HTTPServer.cpp
     Source/Device/FileRAW.cpp
@@ -418,7 +417,8 @@ if(API)
         Source/Tracking/ViewFilter.cpp
         Source/Services/Http.cpp
         Source/Services/Server.cpp
-        Source/Services/Feeds.cpp
+        Source/Services/GeoJSON.cpp
+        Source/Services/Prometheus.cpp
         Source/Services/ApiV1.cpp
         Source/Services/Mcp.cpp
         Source/Services/Routes.cpp
@@ -427,7 +427,7 @@ if(API)
         list(APPEND CPP Source/Delivery/Webhooks.cpp Source/Delivery/MqttState.cpp)
     endif()
     if(WEBVIEWER)
-        list(APPEND CPP Source/Services/Ui.cpp Source/Services/Streams.cpp)
+        list(APPEND CPP Source/Services/Ui.cpp Source/Services/UiFormat.cpp Source/Services/Streams.cpp)
     endif()
 endif()
 

@@ -30,18 +30,6 @@ namespace Services
 {
 	namespace
 	{
-		const long long LIST_MAX = 1000;
-
-		Response badCursor()
-		{
-			return Response::problem(400, "Bad request", "cursor must be what a previous page gave in meta.next or meta.poll.");
-		}
-
-		Response gone(const std::string &why)
-		{
-			return Response::problem(410, "Gone", why + " Start again without cursor.");
-		}
-
 		long long age(std::time_t now, std::time_t then) { return then && now > then ? (long long)(now - then) : 0; }
 	}
 
@@ -165,7 +153,7 @@ namespace Services
 		for (const auto &r : f.receivers)
 		{
 			const std::time_t heard = tracker.lastHeard(r.station);
-			const bool quiet = f.running && age(now, f.session) > QUIET_S && age(now, heard ? heard : f.session) > QUIET_S;
+			const bool quiet = f.running && age(now, f.session) > STATION_QUIET_S && age(now, heard ? heard : f.session) > STATION_QUIET_S;
 			const int level = r.lost || !r.streaming ? 2 : quiet ? 1 : 0;
 			worst = std::max(worst, level);
 			w.key("receiver:" + std::to_string(r.index)).beginArray().beginObject()
@@ -190,7 +178,7 @@ namespace Services
 	{
 		long long limit = 0;
 		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
-			return Response::problem(400, "Bad request", "limit must be between 1 and " + std::to_string(LIST_MAX) + ".");
+			return badLimit();
 		Logger &logger = Logger::getInstance();
 		const long long epoch = (long long)logger.epoch();
 		std::vector<LogMessage> lines = logger.getLastMessages(INT_MAX);
@@ -231,44 +219,7 @@ namespace Services
 	// reader of the journal gives them; without a cursor the newest page.
 	Response System::events(const Request &request)
 	{
-		long long limit = 0;
-		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
-			return Response::problem(400, "Bad request", "limit must be between 1 and " + std::to_string(LIST_MAX) + ".");
-		Journal &journal = tracker.journal();
-		const uint64_t epoch = journal.epoch();
-		uint64_t after = journal.beforeOldest();
-		const std::string from = request.param("cursor");
-		std::vector<long long> c;
-		if (!from.empty())
-		{
-			if (!parseCursor(from, "evt", 2, c))
-				return badCursor();
-			if ((uint64_t)c[0] != epoch || (uint64_t)c[1] > journal.newest())
-				return gone("The journal started again since this cursor was given.");
-			after = (uint64_t)c[1];
-		}
-		std::vector<Journal::Entry> entries;
-		if (!journal.since(after, std::numeric_limits<std::size_t>::max(), entries))
-			return gone("The events after this cursor are no longer kept.");
-		std::vector<const Journal::Entry *> system;
-		for (const auto &e : entries)
-			if (e.event.kind == Tracking::Kind::SYSTEM)
-				system.push_back(&e);
-		// without a cursor the newest page, with one the oldest after it
-		const std::size_t first = from.empty() && system.size() > (std::size_t)limit ? system.size() - (std::size_t)limit : 0;
-		const std::size_t end = std::min(system.size(), first + (std::size_t)limit);
-		std::string out;
-		JSON::Writer w(out);
-		beginList(w);
-		for (std::size_t i = first; i < end; i++)
-			writeEvent(w, *system[i], epoch);
-		// past the last given, or past every event read when that was all
-		const uint64_t last = end < system.size() ? system[end - 1]->seq : entries.empty() ? after : entries.back().seq;
-		const std::string tail = "&limit=" + std::to_string(limit);
-		const std::string poll = "/api/v1/system/events?cursor=" + eventId(epoch, last) + tail;
-		beginMeta(w, end - first, end < system.size() ? poll : std::string());
-		w.kv("poll", poll).endObject().endObject();
-		w.finish();
-		return Response::json(out);
+		return pageEvents(request, tracker.journal(), "/api/v1/system/events",
+						  [](const Journal::Entry &e) { return e.event.kind == Tracking::Kind::SYSTEM; });
 	}
 }

@@ -37,19 +37,18 @@ namespace Services
 	class Ui : public Service
 	{
 	public:
-		Ui(Tracker &tracker, std::function<StationRegistry()> stations, const ServerSpec &spec,
-		   EngineWriter engine = nullptr, std::function<int()> clients = nullptr);
+		Ui(const Context &context, std::function<int()> clients);
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
 
 	private:
 		Tracker &tracker;
+		const ServerSpec &spec;
 		std::function<StationRegistry()> stations;
-		bool outlines; // a place's outline is served, not only its marker
-		ViewerOptions options;
+		const ViewerOptions &options;
 		// the server's view: the page sees nothing outside it, and only its stations
-		ViewFilter view;
+		const ViewFilter &view;
 		// what the station owner adds to the page, and the map tiles it serves
 		PluginStore plugins;
 		struct Tiles

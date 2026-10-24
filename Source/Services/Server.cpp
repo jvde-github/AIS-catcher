@@ -24,7 +24,8 @@
 #include "SHA256.h"
 #include "Logger.h"
 #include "Mcp.h"
-#include "Feeds.h"
+#include "GeoJSON.h"
+#include "Prometheus.h"
 #ifdef HASWEBVIEWER
 #include "Streams.h"
 #include "Ui.h"
@@ -32,25 +33,6 @@
 
 namespace Services
 {
-	namespace
-	{
-		// the messages of some stations only, on to a stream
-		class StationGate : public StreamIn<JSON::JSON>
-		{
-		public:
-			StationGate(std::vector<int> stations, StreamIn<JSON::JSON> *next) : stations(std::move(stations)), next(next) {}
-			void Receive(const JSON::JSON *data, int len, TAG &tag) override
-			{
-				if (std::find(stations.begin(), stations.end(), tag.station_id) != stations.end())
-					next->Receive(data, len, tag);
-			}
-
-		private:
-			std::vector<int> stations;
-			StreamIn<JSON::JSON> *next;
-		};
-	}
-
 	Server::Server(const ServerSpec &spec, Tracker &tracker, std::function<StationRegistry()> stations,
 				   EngineWriter engine, std::function<SystemFacts()> system)
 		: spec_(spec), tracker(tracker), stations(std::move(stations)), engine(std::move(engine)), system(std::move(system))
@@ -80,35 +62,26 @@ namespace Services
 	{
 		// the pages that may frame this server's: any, unless the viewer's settings say
 		setFrameAncestors(spec_.viewer.frame_ancestors.empty() ? "*" : spec_.viewer.frame_ancestors);
-		PrometheusCounter *counter = nullptr;
+		const Context context = {tracker, spec_, stations, engine, system ? system : [] { return SystemFacts(); }};
 		if (spec_.metrics)
 		{
-			counter = new PrometheusCounter();
+			PrometheusCounter *counter = new PrometheusCounter();
 			metrics.reset(counter);
 			tap(counter);
+			services.push_back(std::unique_ptr<Service>(new Metrics(*counter)));
 		}
-		if (spec_.geojson || spec_.metrics)
-			services.push_back(std::unique_ptr<Service>(new Feeds(tracker, spec_, counter, spec_.geojson)));
+		if (spec_.geojson)
+			services.push_back(std::unique_ptr<Service>(new GeoJSON(context)));
 		if (spec_.api)
-			services.push_back(std::unique_ptr<Service>(new ApiV1(tracker, stations, spec_)));
+			services.push_back(std::unique_ptr<Service>(new ApiV1(context)));
 		if (spec_.mcp)
-		{
-			// the installation's tools when the server offers the system
-			std::function<SystemFacts()> facts;
-			if (spec_.system)
-				facts = system ? system : [] { return SystemFacts(); };
-			services.push_back(std::unique_ptr<Service>(new Mcp(tracker, stations, spec_, facts, engine)));
-		}
+			services.push_back(std::unique_ptr<Service>(new Mcp(context)));
 		if (spec_.system)
-			services.push_back(std::unique_ptr<Service>(new System(tracker, system ? system : [] { return SystemFacts(); }, engine)));
+			services.push_back(std::unique_ptr<Service>(new System(context)));
 #ifdef HASWEBVIEWER
 		if (spec_.ui)
 		{
-			// the page shows the GeoJSON link when the server offers it
-			ServerSpec page = spec_;
-			page.viewer.geojson = spec_.geojson;
-			page.viewer.prome = spec_.metrics;
-			services.push_back(std::unique_ptr<Service>(new Ui(tracker, stations, page, engine, [this] { return numberOfClients(); })));
+			services.push_back(std::unique_ptr<Service>(new Ui(context, [this] { return numberOfClients(); })));
 			if (spec_.viewer.realtime)
 			{
 				messages.reset(new MessageStream(*this, !spec_.viewer.decoder));
@@ -120,25 +93,21 @@ namespace Services
 #endif
 	}
 
-	// a live stream reads the tracker; on a server that names its stations, only theirs
+	// adds a listener to every message the tracker takes, such as the Prometheus
+	// counter or the viewer's live NMEA stream, and remembers it for drop()
 	void Server::tap(StreamIn<JSON::JSON> *reader)
 	{
-		if (!spec_.stations.empty())
-		{
-			gates.emplace_back(new StationGate(spec_.stations, reader));
-			reader = gates.back().get();
-		}
 		tapped.push_back(reader);
 		tracker.addTap(reader);
 	}
 
-	// the streams stop before what they write to goes
+	// undoes build(): the listeners come off the tracker first, so the decoding
+	// thread no longer calls them, then the services and streams are destroyed
 	void Server::drop()
 	{
 		for (auto *t : tapped)
 			tracker.removeTap(t);
 		tapped.clear();
-		gates.clear();
 		log.reset();
 		services.clear();
 		messages.reset();
@@ -184,54 +153,18 @@ namespace Services
 		return found;
 	}
 
-	// The strikes of an address in the current minute; null when it has none
-	// and `add` is false. A new address takes the place of the least recent.
-	Server::Strikes *Server::strikesOf(const std::string &peer, std::time_t now, bool add)
-	{
-		Strikes *found = nullptr;
-		for (auto &s : strikes)
-			if (s.peer == peer)
-				found = &s;
-		if (found && now - found->since >= STRIKE_S)
-			*found = Strikes(peer, now);
-		if (found || !add)
-			return found;
-		if (strikes.size() < PEERS)
-		{
-			strikes.push_back(Strikes(peer, now));
-			return &strikes.back();
-		}
-		Strikes *oldest = &strikes[0];
-		for (auto &s : strikes)
-			if (s.last < oldest->last)
-				oldest = &s;
-		*oldest = Strikes(peer, now);
-		return oldest;
-	}
-
 	// Whether a request to a service of `scope` may go on with `key`, the key
 	// it names; when not, the answer that says why. A server without keys is
 	// this machine's own or declared public; one with keys lets its data out to
 	// anyone only when public, and nothing else without a key that has the
 	// scope. Many wrong keys in a minute from one address close the server to
 	// that address's keys for the rest of the minute.
-	bool Server::admit(int scope, const Services::Request &request, const ApiKey *key, Services::Response &response)
+	bool Server::admit(int scope, const Services::Request &request, const ApiKey *key, Services::Response &response) const
 	{
 		if (!scope || spec_.keys.empty() || (scope == ApiKey::DATA && spec_.open))
 			return true;
-		const std::time_t now = std::time(nullptr);
-		Strikes *s = strikesOf(request.peer, now, false);
-		if (s && s->count >= STRIKES)
-		{
-			response = Services::Response::problem(429, "Too many requests", "Too many wrong keys; try again in a minute.");
-			response.header = "Retry-After: " + std::to_string((int)STRIKE_S);
-			return false;
-		}
 		if (!key)
 		{
-			s = strikesOf(request.peer, now, true);
-			s->count++;
-			s->last = now;
 			response = Services::Response::problem(401, "Unauthorized", "This needs a key: Authorization: Bearer <key>.");
 			response.header = "WWW-Authenticate: Bearer realm=\"AIS-catcher\"";
 			return false;
@@ -283,7 +216,8 @@ namespace Services
 		}
 		catch (const std::exception &e)
 		{
-			response = Services::Response::problem(500, "Internal error", e.what());
+			Error() << "Server: " << request.path << ": " << e.what();
+			response = Services::Response::problem(500, "Internal error", "The request could not be answered.");
 			handled = true;
 		}
 		if (!handled)
@@ -293,8 +227,8 @@ namespace Services
 		if (response.stream)
 			upgradeSSE(c, response.stream, response.stream_topic, response.stream_backlog);
 		else if (response.raw)
-			ResponseRaw(c, response.type, response.raw, (int)response.raw_size, response.gzipped, response.cache, false, response.status);
+			ResponseRaw(c, response.type, response.raw, (int)response.raw_size, response.gzipped, response.cache, response.cors, response.status);
 		else
-			Response(c, response.type, response.shared ? *response.shared : response.body, accept_gzip, response.cache, false, response.status);
+			Response(c, response.type, response.shared ? *response.shared : response.body, accept_gzip, response.cache, response.cors, response.status);
 	}
 }

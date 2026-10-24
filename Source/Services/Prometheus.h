@@ -22,6 +22,8 @@
 #include <string>
 
 #include "AIS-catcher.h"
+#include "Http.h"
+#include "SiteConfig.h"
 #include "JSONAIS.h"
 #include "SlotTable.h"
 
@@ -71,3 +73,19 @@ public:
 	void Receive(const JSON::JSON *json, int len, TAG &tag);
 	std::string toPrometheus();
 };
+
+namespace Services
+{
+	// The counts at /metrics, as Prometheus scrapes them
+	class Metrics : public Service
+	{
+	public:
+		explicit Metrics(PrometheusCounter &counter) : counter(counter) {}
+
+		int scope(const Request &request) const override;
+		bool handle(const Request &request, Response &response) override;
+
+	private:
+		PrometheusCounter &counter;
+	};
+}

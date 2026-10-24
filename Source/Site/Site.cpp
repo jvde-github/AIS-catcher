@@ -176,6 +176,62 @@ void Site::systemEventLocked(Tracking::Level level, const std::string &what, con
 }
 #endif
 
+#ifdef HASAPI
+// What the beat tells of the stations of this installation's receivers: one
+// that has heard nothing for STATION_QUIET_S while the engine runs, as the
+// health warns of it, and that it hears again; and, looked at once a minute and
+// told once a day, a day of exceptional range. Under site_mtx.
+void Site::watchStations(std::time_t now, bool daily)
+{
+	const SystemFacts f = systemFacts();
+	std::set<int> mine, quiet;
+	for (const auto &r : f.receivers)
+		mine.insert(r.station);
+	if (f.running && now - f.session > STATION_QUIET_S)
+		for (int id : mine)
+		{
+			const std::time_t heard = tracker_->lastHeard(id);
+			if (now - (heard ? heard : f.session) > STATION_QUIET_S)
+				quiet.insert(id);
+		}
+	const StationRegistry registry = stationsSnapshot();
+	const auto named = [&](int id) {
+		const StationRegistry::Station *s = registry.find(id);
+		if (s && s->name.compare(0, 8, "Station ") == 0)
+			return s->name;
+		return "Station " + (s && !s->name.empty() ? s->name : std::to_string(id));
+	};
+	for (int id : quiet)
+		if (!quiet_stations.count(id))
+			systemEventLocked(Tracking::Level::NOTICE, "station_quiet", named(id) + " has heard nothing for " + std::to_string(STATION_QUIET_S / 60) + " minutes", id);
+	if (f.running)
+		for (int id : quiet_stations)
+			if (!quiet.count(id) && mine.count(id))
+				systemEventLocked(Tracking::Level::ROUTINE, "station_heard", named(id) + " hears again", id);
+	quiet_stations.swap(quiet);
+
+	if (!daily)
+		return;
+	const std::time_t today = now - now % 86400;
+	for (int id : mine)
+	{
+		if (far_told[id] == today)
+			continue;
+		std::vector<Figures::Propagation> days;
+		const auto look = [&](Figures &fig) { days = fig.propagation(); };
+		if (!tracker_->withStation(id, look) && mine.size() == 1)
+			tracker_->withAll(look);
+		if (days.empty() || days.back().day != today)
+			continue;
+		far_told[id] = today;
+		systemEventLocked(Tracking::Level::NOTICE, "propagation",
+						  named(id) + " hears far today: " + std::to_string((int)(days.back().max_nm + 0.5f)) + " NM, against " +
+							  std::to_string((int)(days.back().usual_nm + 0.5f)) + " NM on a usual day",
+						  id);
+	}
+}
+#endif
+
 // each output, named by its description or by its type and place among that type: "UDP #2"
 static void writeOutputs(JSON::Writer &w, const std::vector<IO::OutputMessage *> &outputs)
 {
@@ -286,6 +342,7 @@ void Site::configure(const SiteConfig &cfg)
 	if (cfg.wantsTracker() && !tracker_)
 	{
 		tracker_.reset(new Tracker());
+		tracker_->journal() >> journal_ping;
 		tracker_->configure(tracking);
 		if (cfg.catalogue)
 			tracker_->useCatalogue(cfg.catalogue);
@@ -392,6 +449,7 @@ void Site::configure(const SiteConfig &cfg)
 			mqtt_state.reset(new MqttState(*tracker_, [this] { return systemFacts(); }, [this] { return publicStations(); }));
 		mqtt_state->configure(cfg.mqtt_state);
 	}
+	events_wanted = mqtt_state && cfg.mqtt_state.any();
 #endif
 #ifdef __GLIBC__
 	// glibc keeps what the replaced servers, trackers and places freed
@@ -558,13 +616,15 @@ void Site::backup()
 #endif
 }
 
-void Site::beat(std::time_t now)
+int Site::beat(std::time_t now)
 {
+	int wait = 5;
 #ifdef HASAPI
 	std::lock_guard<std::mutex> lock(site_mtx);
 	if (!tracker_ && own.empty())
-		return;
-	if (now - last_tick >= 60)
+		return wait;
+	const bool minute = now - last_tick >= 60;
+	if (minute)
 	{
 		if (tracker_)
 			tracker_->tick(now);
@@ -572,6 +632,8 @@ void Site::beat(std::time_t now)
 			o->tracker->tick(now);
 		last_tick = now;
 	}
+	if (tracker_)
+		watchStations(now, minute);
 	if (tracker_ && config.backup_minutes > 0 && now - last_backup >= config.backup_minutes * 60)
 	{
 		backup();
@@ -579,23 +641,42 @@ void Site::beat(std::time_t now)
 	}
 #ifdef HASDELIVERY
 	if (mqtt_state)
+	{
 		mqtt_state->poll(now);
+		// a connection under way is stepped every second
+		if (mqtt_state->busy())
+			wait = 1;
+	}
 #endif
 #else
 	(void)now;
 #endif
+	return wait;
 }
 
+// every few seconds, every second while the MQTT state connects or sends, and
+// at once when poked
 void Site::loop()
 {
 	std::unique_lock<std::mutex> lock(mtx);
+	int wait = 1;
 	while (running)
 	{
-		cv.wait_for(lock, std::chrono::seconds(1), [this] { return !running; });
+		cv.wait_for(lock, std::chrono::seconds(wait), [this] { return !running || poked; });
+		poked = false;
 		if (!running)
 			break;
 		lock.unlock();
-		beat(std::time(nullptr));
+		wait = beat(std::time(nullptr));
 		lock.lock();
 	}
+}
+
+void Site::poke()
+{
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		poked = true;
+	}
+	cv.notify_all();
 }

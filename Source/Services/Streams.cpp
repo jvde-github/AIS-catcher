@@ -23,6 +23,7 @@
 #include "NMEA.h"
 #include "Writer.h"
 
+#include <climits>
 #include <ctime>
 #include <stdexcept>
 
@@ -104,9 +105,9 @@ namespace Services
 			Logger::getInstance().removeLogListener(listener);
 	}
 
-	std::string decodeNMEA(const std::string &input, bool enhanced)
+	namespace
 	{
-		// NMEA, into messages, into JSON, into one array
+		// NMEA, into messages, into JSON: at most `left` of them
 		class Decoder : public StreamIn<JSON::JSON>
 		{
 			enum { MAX_OUTPUT_SIZE = 1024 * 1024 };
@@ -116,8 +117,9 @@ namespace Services
 			AIS::JSONAIS json;
 			JSON::Serializer *builder;
 			JSON::Writer *writer;
+			int left;
 
-			Decoder(JSON::Serializer *b, JSON::Writer *w) : builder(b), writer(w)
+			Decoder(JSON::Serializer *b, JSON::Writer *w, int limit) : builder(b), writer(w), left(limit)
 			{
 				nmea >> json;
 				json.out.Connect(this);
@@ -125,27 +127,48 @@ namespace Services
 
 			void Receive(const JSON::JSON *data, int len, TAG &) override
 			{
-				for (int i = 0; i < len; i++)
+				for (int i = 0; i < len && left > 0; i++, left--)
 				{
 					if (writer->written() > MAX_OUTPUT_SIZE)
 						throw std::runtime_error("Output size limit exceeded");
 					builder->stringify(data[i], *writer);
 				}
 			}
-		};
 
+			// `mode`: more of what a receiver's tag asks for, as 4 for the country of the MMSI
+			void decode(const std::string &input, unsigned mode = 0)
+			{
+				std::string text = input + "\n";
+				RAW raw = {Format::TXT, (void *)text.c_str(), (int)text.length()};
+				TAG tag;
+				tag.mode |= mode;
+				nmea.Receive(&raw, 1, tag);
+			}
+		};
+	}
+
+	std::string decodeNMEA(const std::string &input, bool enhanced)
+	{
 		std::string result;
 		result.reserve(4096);
 		JSON::Writer w(result);
 		w.beginArray();
 		JSON::Serializer builder(JSON_DICT_FULL);
 		builder.setStringifyEnhanced(enhanced);
-		Decoder decoder(&builder, &w);
-		std::string text = input + "\n";
-		RAW raw = {Format::TXT, (void *)text.c_str(), (int)text.length()};
-		TAG tag;
-		decoder.nmea.Receive(&raw, 1, tag);
+		Decoder decoder(&builder, &w, INT_MAX);
+		decoder.decode(input);
 		w.endArray();
+		w.finish();
+		return result;
+	}
+
+	std::string decodeMessage(const std::string &input)
+	{
+		std::string result;
+		JSON::Writer w(result);
+		JSON::Serializer builder(JSON_DICT_FULL);
+		Decoder decoder(&builder, &w, 1);
+		decoder.decode(input, 4);
 		w.finish();
 		return result;
 	}

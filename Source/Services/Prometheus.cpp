@@ -210,3 +210,27 @@ std::string PrometheusCounter::toPrometheus()
 
 	return element;
 }
+
+namespace Services
+{
+	int Metrics::scope(const Request &request) const
+	{
+		return request.path == "/metrics" ? (int)ApiKey::DATA : NOT_MINE;
+	}
+
+	bool Metrics::handle(const Request &request, Response &response)
+	{
+		if (scope(request) == NOT_MINE)
+			return false;
+		if (request.method != "GET")
+		{
+			response = Response::problem(405, "Method not allowed", "The counts are read here, not written.");
+			response.header = "Allow: GET, HEAD";
+			return true;
+		}
+		response.type = "text/plain";
+		response.body = counter.toPrometheus();
+		response.cors = true;
+		return true;
+	}
+}

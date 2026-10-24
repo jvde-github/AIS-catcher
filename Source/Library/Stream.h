@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <vector>
 #include <iostream>
 #include <mutex>
@@ -94,6 +95,10 @@ public:
 
 	void Connect(StreamIn<S>* s) {
 		connections.push_back(s);
+	}
+
+	void Disconnect(StreamIn<S>* s) {
+		connections.erase(std::remove(connections.begin(), connections.end(), s), connections.end());
 	}
 
 	void setGroupOut(uint64_t g) { groups = g; }

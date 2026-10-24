@@ -365,6 +365,8 @@ namespace IO
 		// status the request must be rejected with, with `error` set.
 		int parseHeaders(const std::string &msg, std::size_t header_end, HTTPRequest &r, std::string &error);
 		void reject(IO::TCPServerConnection &c, int status, const std::string &reason);
+		bool localOnly() const;
+		static bool addressedHere(const std::string &host);
 		bool dispatchMount(IO::TCPServerConnection &c, const HTTPRequest &r, bool accept_gzip);
 		bool owns(const IO::TCPServerConnection &c) const { return c.owner == this; }
 

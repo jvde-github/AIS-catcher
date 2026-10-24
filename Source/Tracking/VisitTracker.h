@@ -241,7 +241,7 @@ public:
             v->entered = uint32_t(now);
             emit(*v, true, v->entered);
           }
-    r.last = std::max(r.last, uint32_t(now));
+    r.last = MAX(r.last, uint32_t(now));
     r.stopped = false;
     reindex(slot);
   }
@@ -331,7 +331,7 @@ public:
         for (auto &b : r.visits)
           if (&a != &b && a.live() && b.live() && a.id == b.id &&
               (a.entered < b.entered || (a.entered == b.entered && &a < &b))) {
-            a.idle = std::max(a.idle, b.idle);
+            a.idle = MAX(a.idle, b.idle);
             b = Visit{};
           }
       reindex(slot);

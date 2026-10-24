@@ -17,6 +17,7 @@
 
 #pragma once
 #include <atomic>
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -38,11 +39,28 @@ const int LONG_RANGE_CUTOFF_DEFAULT = 2500;
 // Class to log message count stat
 
 class MessageStatistics {
+public:
+  static const int RADAR_BUCKETS = 18, FURTHEST = 3;
+  // a vessel among the farthest of a period; an empty place has mmsi 0
+  struct Far {
+    uint32_t mmsi;
+    uint32_t time;
+    float nm, bearing;
+  };
+  // the figures as they stand, copied under the lock, for whoever writes them out
+  struct Values {
+    int count, exclude, vessels, active_minutes, distance_count;
+    int msg[28], errors[4], channel[4];
+    float level_min, level_max, ppm, distance;
+    float radarA[RADAR_BUCKETS], radarB[RADAR_BUCKETS];
+    Far furthest[FURTHEST];
+  };
 
+private:
   std::mutex mtx;
 
   static const int _MAGIC = 0x4f82b;
-  static const int _VERSION = 4;
+  static const int _VERSION = 5;
   static const int _RADAR_BUCKETS = 18;
 
   int _LONG_RANGE_CUTOFF = LONG_RANGE_CUTOFF_DEFAULT;
@@ -58,6 +76,32 @@ class MessageStatistics {
   float _radarA[_RADAR_BUCKETS];
   float _radarB[_RADAR_BUCKETS];
 
+  // the minutes in which a message was heard, as the figures that hold this count them
+  int _active_minutes;
+  // the farthest vessels, each once, the farthest first
+  static const int _FURTHEST = FURTHEST;
+  Far _far[_FURTHEST];
+
+  // a vessel's position at `nm`: in the list when it is farther than one there,
+  // in its own place when it is there already
+  void noteFar(uint32_t mmsi, uint32_t time, float nm, float bearing) {
+    if (!(nm > 0))
+      return;
+    int at = _FURTHEST - 1;
+    for (int i = 0; i < _FURTHEST; i++)
+      if (_far[i].mmsi == mmsi) {
+        if (nm <= _far[i].nm)
+          return;
+        at = i;
+        break;
+      }
+    if (_far[at].mmsi && _far[at].mmsi != mmsi && nm <= _far[at].nm)
+      return;
+    _far[at] = {mmsi, time, nm, bearing};
+    for (int i = at; i > 0 && _far[i].nm > _far[i - 1].nm; i--)
+      std::swap(_far[i], _far[i - 1]);
+  }
+
 public:
   MessageStatistics() { Clear(); }
 
@@ -67,6 +111,19 @@ public:
     _LONG_RANGE_CUTOFF = cutoff;
   }
   void clearVessels() { _vessels = 0; }
+  void addActiveMinute() {
+    std::lock_guard<std::mutex> l{this->mtx};
+    _active_minutes++;
+  }
+  // the farthest validated position, -1 when there is none; the `i`th farthest vessel's, -1 when fewer
+  float maxDistance() {
+    std::lock_guard<std::mutex> l{this->mtx};
+    return _distance > 0 ? _distance : -1;
+  }
+  float farDistance(int i) {
+    std::lock_guard<std::mutex> l{this->mtx};
+    return i >= 0 && i < _FURTHEST && _far[i].mmsi ? _far[i].nm : -1;
+  }
 
   void Clear() {
     std::lock_guard<std::mutex> l{this->mtx};
@@ -77,7 +134,8 @@ public:
     std::memset(_radarA, 0, sizeof(_radarA));
     std::memset(_radarB, 0, sizeof(_radarB));
 
-    _count = _vessels = _exclude = 0;
+    _count = _vessels = _exclude = _active_minutes = 0;
+    std::memset(_far, 0, sizeof(_far));
     _distance = _ppm = 0;
     _distance_sum = 0.0;
     _distance_count = 0;
@@ -127,6 +185,7 @@ public:
     if (tag.distance > _distance) {
       _distance = tag.distance;
     }
+    noteFar(m.mmsi(), (uint32_t)m.getRxTimeUnix(), tag.distance, (float)tag.angle);
     _distance_sum += tag.distance;
     _distance_count++;
 
@@ -164,6 +223,11 @@ public:
     _level_max = MAX(_level_max, o._level_max);
     _ppm += o._ppm;
     _distance = MAX(_distance, o._distance);
+    // the minutes any one heard in, as a floor of what all of them did
+    _active_minutes = MAX(_active_minutes, o._active_minutes);
+    for (int i = 0; i < _FURTHEST; i++)
+      if (o._far[i].mmsi)
+        noteFar(o._far[i].mmsi, o._far[i].time, o._far[i].nm, o._far[i].bearing);
     _distance_sum += o._distance_sum;
     _distance_count += o._distance_count;
     for (int i = 0; i < _RADAR_BUCKETS; i++) {
@@ -172,103 +236,25 @@ public:
     }
   }
 
-  void writeJSON(JSON::Writer &w, bool empty = false) {
+  Values values() {
     std::lock_guard<std::mutex> l{this->mtx};
-
-    int c = _count - _exclude;
-    bool has_level = c > 0 && _level_min <= _level_max;
-
-    w.beginObject();
-    w.kv("count", empty ? 0 : _count);
-    w.kv("vessels", empty ? 0 : _vessels);
-    w.key("errors").beginObject();
-    const char *names[] = {"flagged", "undersized", "oversized", "checksum"};
-    for (int i = 0; i < 4; i++)
-      w.kv(names[i], empty ? 0 : _errors[i]);
-    w.endObject();
-    if (empty || !has_level) {
-      w.kv_null("level_min");
-      w.kv_null("level_max");
-      w.kv_null("ppm");
-    } else {
-      w.kv("level_min", _level_min);
-      w.kv("level_max", _level_max);
-      w.kv("ppm", _ppm / c);
-    }
-    if (empty)
-      w.kv_null("dist");
-    else
-      w.kv("dist", _distance);
-
-    w.key("channel").beginArray();
-    for (int i = 0; i < 4; i++)
-      w.val(empty ? 0 : _channel[i]);
-    w.endArray();
-
-    w.key("radar_a").beginArray();
-    for (int i = 0; i < _RADAR_BUCKETS; i++)
-      w.val(empty ? 0.0f : _radarA[i]);
-    w.endArray();
-
-    w.key("radar_b").beginArray();
-    for (int i = 0; i < _RADAR_BUCKETS; i++)
-      w.val(empty ? 0.0f : _radarB[i]);
-    w.endArray();
-
-    w.key("msg").beginArray();
-    for (int i = 0; i < 28; i++)
-      w.val(empty ? 0 : _msg[i]);
-    w.endArray();
-
-    w.endObject();
-  }
-
-  // The figures as /api/v1 names them, as members of an object the caller
-  // opened. `vessels` is counted only by the slots of a history.
-  void writeFigureMembers(JSON::Writer &w, bool empty, bool vessels) {
-    std::lock_guard<std::mutex> l{this->mtx};
-
-    const int c = _count - _exclude;
-    const bool has_level = !empty && c > 0 && _level_min <= _level_max;
-
-    w.kv("messages", empty ? 0 : _count);
-    if (vessels)
-      w.kv("vessels", empty ? 0 : _vessels);
-    else
-      w.kv_null("vessels");
-    w.key("errors").beginObject();
-    const char *names[] = {"flagged", "undersized", "oversized", "checksum"};
-    for (int i = 0; i < 4; i++)
-      w.kv(names[i], empty ? 0 : _errors[i]);
-    w.endObject();
-    if (has_level)
-      w.kv("level_min_db", _level_min).kv("level_max_db", _level_max).kv("ppm", _ppm / c);
-    else
-      w.kv_null("level_min_db").kv_null("level_max_db").kv_null("ppm");
-    if (!empty && _distance_count > 0)
-      w.kv("max_distance_nm", _distance);
-    else
-      w.kv_null("max_distance_nm");
-
-    w.key("channels").beginObject();
-    for (int i = 0; i < 4; i++)
-      w.kv(std::string(1, (char)('A' + i)), empty ? 0 : _channel[i]);
-    w.endObject();
-
-    w.key("message_types").beginObject();
-    for (int i = 0; i < 28; i++)
-      if (!empty && _msg[i])
-        w.kv(std::to_string(i + 1), _msg[i]);
-    w.endObject();
-
-    w.key("range_nm").beginObject().kv("sector_deg", 360 / _RADAR_BUCKETS);
-    w.key("class_a").beginArray();
-    for (int i = 0; i < _RADAR_BUCKETS; i++)
-      w.val(empty ? 0.0f : _radarA[i]);
-    w.endArray().key("class_b").beginArray();
-    for (int i = 0; i < _RADAR_BUCKETS; i++)
-      w.val(empty ? 0.0f : _radarB[i]);
-    w.endArray().endObject();
+    Values v;
+    v.count = _count;
+    v.exclude = _exclude;
+    v.vessels = _vessels;
+    v.active_minutes = _active_minutes;
+    v.distance_count = _distance_count;
+    std::memcpy(v.msg, _msg, sizeof(_msg));
+    std::memcpy(v.errors, _errors, sizeof(_errors));
+    std::memcpy(v.channel, _channel, sizeof(_channel));
+    v.level_min = _level_min;
+    v.level_max = _level_max;
+    v.ppm = _ppm;
+    v.distance = _distance;
+    std::memcpy(v.radarA, _radarA, sizeof(_radarA));
+    std::memcpy(v.radarB, _radarB, sizeof(_radarB));
+    std::memcpy(v.furthest, _far, sizeof(_far));
+    return v;
   }
 
   void print(std::ostream &out, const char *indent = "") {
@@ -321,19 +307,21 @@ public:
     return (bool)(W(magic) && W(version) && W(_count) && W(_vessels) &&
                   W(_msg) && W(_channel) && W(_level_min) && W(_level_max) &&
                   W(_ppm) && W(_distance) && W(_radarA) && W(_radarB) &&
-                  W(_errors));
+                  W(_errors) && W(_active_minutes) && W(_far));
   }
 
   bool Load(std::ifstream &file) {
     std::lock_guard<std::mutex> l{this->mtx};
 
     std::memset(_errors, 0, sizeof(_errors));
+    std::memset(_far, 0, sizeof(_far));
+    _active_minutes = 0;
     int magic = 0, version = 0;
     if (!(R(magic) && R(version) && R(_count)))
       return false;
     if (magic != _MAGIC)
       return false;
-    if (version != 1 && version != 2 && version != 3 && version != _VERSION)
+    if (version < 1 || version > _VERSION)
       return false;
 
     if (version >= 2 && !R(_vessels))
@@ -351,7 +339,8 @@ public:
 
     return (bool)(R(_channel) && R(_level_min) && R(_level_max) && R(_ppm) &&
                   R(_distance) && R(_radarA) && R(_radarB) &&
-                  (version < 4 || R(_errors)));
+                  (version < 4 || R(_errors)) &&
+                  (version < 5 || (R(_active_minutes) && R(_far))));
   }
 
 #undef W
@@ -373,10 +362,9 @@ public:
     stat.Add(*((AIS::Message *)msg[0].binary), tag);
   }
 
-  void writeJSON(JSON::Writer &w, bool empty = false) {
-    stat.writeJSON(w, empty);
-  }
-  void writeFigureMembers(JSON::Writer &w) { stat.writeFigureMembers(w, false, false); }
+  MessageStatistics::Values values() { return stat.values(); }
+  void addActiveMinute() { stat.addActiveMinute(); }
+  float maxDistance() { return stat.maxDistance(); }
 
   void print(std::ostream &out, const char *indent = "") {
     stat.print(out, indent);

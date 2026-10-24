@@ -422,6 +422,14 @@ namespace Util
 		return true;
 	}
 
+	bool Parse::Digits(const std::string &s, long long &out, std::size_t most)
+	{
+		if (s.empty() || s.size() > most || s.size() > 18 || s.find_first_not_of("0123456789") != std::string::npos)
+			return false;
+		out = std::atoll(s.c_str());
+		return true;
+	}
+
 	bool Parse::AutoInteger(std::string arg, int min, int max, int &val)
 	{
 		Util::Convert::toUpper(arg);

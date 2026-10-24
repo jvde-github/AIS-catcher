@@ -35,11 +35,8 @@ namespace Services
 	class System : public Service
 	{
 	public:
-		// a station quiet for this long makes the health a warning
-		enum { QUIET_S = 900 };
 
-		System(Tracker &tracker, std::function<SystemFacts()> facts, EngineWriter engine)
-			: tracker(tracker), facts(std::move(facts)), engine(std::move(engine)) {}
+		explicit System(const Context &context) : tracker(context.tracker), facts(context.facts), engine(context.engine) {}
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;

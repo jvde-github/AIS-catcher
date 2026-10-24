@@ -42,6 +42,8 @@ const api = (query) => fetch(`api/${query}&stations=${focus}`).then((r) => r.jso
 const objects = mapobjects.create({
     fetchJSON: (url) => api(url),
     objectUrl: (key) => `object.json?key=${key}`,
+    // a server that sends places as markers alone is not asked for their outlines
+    placeGeometryUrl: (id, version) => config.features?.outlines === false ? null : `place.json?id=${id}&version=${encodeURIComponent(version)}`,
     shipMessagesUrl: (mmsi) => `binmsgs.json?mmsi=${mmsi}`,
     eventsUrl: (since) => `events.json?since=${since}`,
     ship: (mmsi) => { const raw = ships[mmsi]?.raw; return raw ? { mmsi: raw.mmsi, lat: raw.lat, lon: raw.lon, name: raw.shipname, binary: raw.binary } : null; },

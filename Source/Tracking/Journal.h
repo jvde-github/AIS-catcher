@@ -38,6 +38,12 @@
 // The installation's own events are appended to it. Bounded: the oldest fall
 // off, and a reader whose place has fallen off is told so instead of silently
 // missing what went.
+//
+// Its followers, wired with >>, are told that it moved on: the newest number,
+// once for what came together, never the events themselves. They read those by
+// their cursor, so a ping that comes while they are busy folds into the next
+// and none can lose an event. The ping goes out under the ship table's lock: a
+// follower only wakes a thread of its own, taking no lock but its own last.
 class Journal : public StreamIn<Tracking::Event>
 {
 public:
@@ -53,6 +59,7 @@ public:
 	// from the ship table, under its lock: copied, and the place named by its id
 	void Receive(const Tracking::Event *data, int len, TAG &) override
 	{
+		bool added = false;
 		for (int i = 0; i < len; i++)
 		{
 			// a broadcast repeated within its wait: once is news, the rest is noise
@@ -69,8 +76,11 @@ public:
 				if (at)
 					place = at->metadata->uuid;
 			}
-			append(e, place);
+			add(e, place);
+			added = true;
 		}
+		if (added)
+			ping();
 	}
 
 	// the places the ship table judges against, to name a crossing's place
@@ -82,15 +92,19 @@ public:
 
 	void append(const EventRing::Entry &e, const std::string &place = std::string())
 	{
-		std::lock_guard<std::mutex> lock(mtx);
-		Entry entry;
-		entry.seq = ++last;
-		entry.event = e;
-		entry.event.seq = entry.seq;
-		entry.place = place;
-		entries.push_back(std::move(entry));
-		while (entries.size() > capacity)
-			entries.pop_front();
+		add(e, place);
+		ping();
+	}
+
+	void connect(StreamIn<uint64_t> &follower)
+	{
+		std::lock_guard<std::mutex> lock(out_mtx);
+		followers.Connect(&follower);
+	}
+	void disconnect(StreamIn<uint64_t> &follower)
+	{
+		std::lock_guard<std::mutex> lock(out_mtx);
+		followers.Disconnect(&follower);
 	}
 
 	uint64_t epoch() const { return epoch_; }
@@ -140,9 +154,38 @@ public:
 private:
 	std::mutex places_mtx;
 	std::shared_ptr<const PlaceIndex> places;
+	std::mutex out_mtx;
+	Connection<uint64_t> followers;
 	mutable std::mutex mtx;
 	std::deque<Entry> entries;
 	std::size_t capacity;
 	uint64_t last = 0;
 	uint64_t epoch_ = (uint64_t)std::time(nullptr);
+
+	void add(const EventRing::Entry &e, const std::string &place)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		Entry entry;
+		entry.seq = ++last;
+		entry.event = e;
+		entry.event.seq = entry.seq;
+		entry.place = place;
+		entries.push_back(std::move(entry));
+		while (entries.size() > capacity)
+			entries.pop_front();
+	}
+
+	void ping()
+	{
+		uint64_t n = newest();
+		TAG tag;
+		std::lock_guard<std::mutex> lock(out_mtx);
+		followers.Send(&n, 1, tag);
+	}
 };
+
+inline StreamIn<uint64_t> &operator>>(Journal &journal, StreamIn<uint64_t> &follower)
+{
+	journal.connect(follower);
+	return follower;
+}

@@ -116,6 +116,14 @@ export function migrateConfig(cfg) {
                     if (!e.view) e.view = e.filter;
                     delete e.filter;
                 }
+    // whether a server sends place outlines is part of what it shows
+    if (Array.isArray(cfg.services))
+        for (const s of cfg.services)
+            if (s && 'place_geometry' in s) {
+                const view = s.view && typeof s.view === 'object' ? s.view : (s.view = {});
+                if (!('place_geometry' in view)) view.place_geometry = s.place_geometry;
+                delete s.place_geometry;
+            }
     // the main server first
     if (Array.isArray(cfg.services)) {
         const i = cfg.services.findIndex(s => s && s.main === true);

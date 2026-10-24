@@ -121,10 +121,8 @@ namespace Plane
         std::time_t getRxTimeUnix() const { return rxtime; }
 
         // One positional record for /api/planes_array.json.
-        void writeCompact(JSON::Writer &w, std::time_t rx) const;
 
         // One keyed object for /api/planes.json.
-        void writeJSON(JSON::Writer &w, long int delta_time) const;
 
         void Decode();
 

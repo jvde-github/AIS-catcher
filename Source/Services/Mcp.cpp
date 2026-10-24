@@ -28,38 +28,44 @@ namespace Services
 {
 	namespace
 	{
-		// One tool: a route, the parameters of it the tool takes, what an
-		// assistant is told of it, and whether it reads the installation
+		// One tool: a route, the parameters of it the tool takes, and what an
+		// assistant is told of it
 		struct Tool
 		{
 			const char *name, *title, *description, *route;
 			std::vector<std::string> args;
-			bool system;
 		};
 
 		const std::vector<Tool> &tools()
 		{
 			static const std::vector<Tool> all = {
-				{"search_vessels", "Search vessels", "Find vessels heard lately by name, call sign, MMSI or IMO number.", "/api/v1/vessels", {"q", "limit", "cursor"}, false},
-				{"vessels_in_area", "Vessels in an area", "The vessels heard lately inside a box of west,south,east,north degrees.", "/api/v1/vessels", {"bbox", "class", "limit", "cursor"}, false},
-				{"vessels_near", "Vessels near a point", "The vessels heard lately within radius_nm nautical miles of lat,lon.", "/api/v1/vessels", {"near", "radius_nm", "class", "limit", "cursor"}, false},
-				{"get_vessel", "Vessel details", "One vessel in full: identity, position, voyage, recent changes, visits and the port it is bound for.", "/api/v1/vessels/{mmsi}", {"mmsi"}, false},
-				{"vessel_track", "Vessel track", "Where a vessel went: its positions with speed, course and heading, from a time on.", "/api/v1/vessels/{mmsi}/track", {"mmsi", "since"}, false},
-				{"vessel_visits", "Vessel visits", "The ports, terminals and berths a vessel called at or passed.", "/api/v1/vessels/{mmsi}/visits", {"mmsi"}, false},
-				{"find_places", "Find places", "Ports, terminals, berths, anchorages and zones by name or UN/LOCODE, or by type.", "/api/v1/places", {"q", "type", "limit", "cursor"}, false},
-				{"get_place", "Place details", "One place with the vessels inside it now.", "/api/v1/places/{uuid}", {"uuid"}, false},
-				{"place_visits", "Place visits", "Who came to a place, when, and how long they stayed.", "/api/v1/places/{uuid}/visits", {"uuid", "hours", "limit", "cursor"}, false},
-				{"list_stations", "Receiving stations", "The stations of this installation and when each was last heard.", "/api/v1/stations", {}, false},
-				{"data_status", "Data status", "The figures of everything heard: messages and vessels by the minute, hour and day, to judge how fresh the data is.", "/api/v1/statistics", {}, false},
-				{"recent_events", "Recent events", "Safety messages, new destinations and statuses, arrivals and departures: the newest page, or those after an event's id given as cursor.", "/api/v1/events", {"cursor", "limit"}, false},
-				{"system_status", "Installation", "The installation: version, uptime, memory, and whether the engine runs.", "/api/v1/system", {}, true},
-				{"list_receivers", "Receivers", "Each receiver (input): its station, device, whether it streams, messages in the last minute, when last heard.", "/api/v1/system/receivers", {}, true},
-				{"list_outputs", "Outputs", "Each output: what it sends where, and how it fares.", "/api/v1/system/outputs", {}, true},
-				{"health", "Health", "pass, warn or fail, with the checks behind it: the engine, the receivers, the backup.", "/api/v1/health", {}, true},
-				{"read_log", "Log", "The installation's log: the newest lines, or those after a line's id given as cursor.", "/api/v1/system/log", {"cursor", "limit"}, true},
-				{"system_events", "Installation events", "The engine started or stopped, a receiver lost or back, a backup failed: the newest page, or those after an event's id given as cursor.", "/api/v1/system/events", {"cursor", "limit"}, true},
+				{"search_vessels", "Search vessels", "Find vessels heard lately by name, call sign, MMSI or IMO number.", "/api/v1/vessels", {"q", "limit", "cursor"}},
+				{"vessels_in_area", "Vessels in an area", "The vessels heard lately inside a box of west,south,east,north degrees.", "/api/v1/vessels", {"bbox", "class", "limit", "cursor"}},
+				{"vessels_near", "Vessels near a point", "The vessels heard lately within radius_nm nautical miles of lat,lon.", "/api/v1/vessels", {"near", "radius_nm", "class", "limit", "cursor"}},
+				{"get_vessel", "Vessel details", "One vessel in full: identity, position, voyage, recent changes, visits and the port it is bound for.", "/api/v1/vessels/{mmsi}", {"mmsi"}},
+				{"vessel_track", "Vessel track", "Where a vessel went: its positions with speed, course and heading, from a time on.", "/api/v1/vessels/{mmsi}/track", {"mmsi", "since"}},
+				{"vessel_visits", "Vessel visits", "The ports, terminals and berths a vessel called at or passed.", "/api/v1/vessels/{mmsi}/visits", {"mmsi"}},
+				{"find_places", "Find places", "Ports, terminals, berths, anchorages and zones by name or UN/LOCODE, or by type.", "/api/v1/places", {"q", "type", "limit", "cursor"}},
+				{"get_place", "Place details", "One place with the vessels inside it now.", "/api/v1/places/{uuid}", {"uuid"}},
+				{"place_visits", "Place visits", "Who came to a place, when, and how long they stayed.", "/api/v1/places/{uuid}/visits", {"uuid", "hours", "limit", "cursor"}},
+				{"list_stations", "Receiving stations", "The stations of this installation and when each was last heard.", "/api/v1/stations", {}},
+				{"data_status", "Data status", "The figures of everything heard: messages and vessels by the minute, hour and day, to judge how fresh the data is.", "/api/v1/statistics", {}},
+				{"recent_events", "Recent events", "Safety messages, new destinations and statuses, arrivals and departures: the newest page, or those after an event's id given as cursor.", "/api/v1/events", {"cursor", "limit"}},
+				{"system_status", "Installation", "The installation: version, uptime, memory, and whether the engine runs.", "/api/v1/system", {}},
+				{"list_receivers", "Receivers", "Each receiver (input): its station, device, whether it streams, messages in the last minute, when last heard.", "/api/v1/system/receivers", {}},
+				{"list_outputs", "Outputs", "Each output: what it sends where, and how it fares.", "/api/v1/system/outputs", {}},
+				{"health", "Health", "pass, warn or fail, with the checks behind it: the engine, the receivers, the backup.", "/api/v1/health", {}},
+				{"read_log", "Log", "The installation's log: the newest lines, or those after a line's id given as cursor.", "/api/v1/system/log", {"cursor", "limit"}},
+				{"system_events", "Installation events", "The engine started or stopped, a receiver lost or back, a station quiet or hearing again, a day of exceptional range, a backup failed: the newest page, or those after an event's id given as cursor.", "/api/v1/system/events", {"cursor", "limit"}},
 			};
 			return all;
+		}
+
+		// a tool reads the installation when the system service answers its route
+		bool readsSystem(const Tool &t)
+		{
+			const Route *r = route(t.route);
+			return r && std::string(r->service) == "system";
 		}
 
 		const char *INSTRUCTIONS =
@@ -227,7 +233,7 @@ namespace Services
 			w.beginObject().key("tools").beginArray();
 			for (const auto &t : tools())
 			{
-				if (t.system && !system_ok)
+				if (readsSystem(t) && !system_ok)
 					continue;
 				const Route *r = route(t.route);
 				w.beginObject().kv("name", t.name).kv("title", t.title).kv("description", t.description).key("inputSchema");
@@ -246,14 +252,14 @@ namespace Services
 			const JSON::Value *args = params && params->isObject() ? member(doc, params->getObject(), "arguments") : nullptr;
 			const Tool *tool = nullptr;
 			for (const auto &t : tools())
-				if (name && name->isString() && name->getString() == t.name && (!t.system || system))
+				if (name && name->isString() && name->getString() == t.name && (!readsSystem(t) || system))
 					tool = &t;
 			if (!tool)
 			{
 				response = Response::json(error(id, -32602, "No such tool."));
 				return true;
 			}
-			if (tool->system && !(request.scopes & ApiKey::SYSTEM))
+			if (readsSystem(*tool) && !(request.scopes & ApiKey::SYSTEM))
 			{
 				response = Response::json(error(id, -32602, "The tool " + std::string(tool->name) + " needs a key that may read the system."));
 				return true;
@@ -292,7 +298,7 @@ namespace Services
 				return true;
 			}
 			Response got;
-			if (!(tool->system ? system->handle(call, got) : api.handle(call, got)))
+			if (!(readsSystem(*tool) ? system->handle(call, got) : api.handle(call, got)))
 				got = Response::problem(404, "Not found", "No such resource.");
 			const bool ok = got.status == 200;
 			w.beginObject().key("content").beginArray().beginObject().kv("type", "text").kv("text", got.body).endObject().endArray();

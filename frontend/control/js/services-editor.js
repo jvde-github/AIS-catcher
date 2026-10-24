@@ -144,8 +144,9 @@ export function renderShows(host, data, { stations = [], touched, rerender, ever
 
 // places go out with their outline, or as a marker alone
 function outlinesRow(data, touched) {
-    return switchRow('', data.place_geometry === undefined || on(data.place_geometry),
-        v => { if (v) delete data.place_geometry; else data.place_geometry = false; touched(); },
+    const view = () => (data.view && typeof data.view === 'object' ? data.view : (data.view = {}));
+    return switchRow('', data.view?.place_geometry === undefined || on(data.view.place_geometry),
+        v => { if (v) delete view().place_geometry; else view().place_geometry = false; touched(); },
         el('strong', '', { text: 'Place outlines' }), 'Off sends each place as a marker, without its shape.');
 }
 

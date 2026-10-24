@@ -25,8 +25,12 @@
 #include <utility>
 #include <vector>
 
+#include "StationRegistry.h"
 #include "SystemFacts.h"
 #include "Writer.h"
+
+class Tracker;
+struct ServerSpec;
 
 namespace Services
 {
@@ -63,6 +67,8 @@ namespace Services
 		const char *raw = nullptr;
 		std::size_t raw_size = 0;
 		bool gzipped = false, cache = false;
+		// readable by a page of any origin, as the web viewer's data always was
+		bool cors = false;
 		// instead of a body: keep the connection as a stream of these events, the backlog first
 		uint32_t stream = 0;
 		std::string stream_topic;
@@ -97,6 +103,13 @@ namespace Services
 	// the numbers of a cursor with this tag and `n` of them; false for anything else
 	bool parseCursor(const std::string &s, const std::string &tag, std::size_t n, std::vector<long long> &out);
 
+	// The longest page of a list, and what a page that cannot be given answers:
+	// a limit out of range, a cursor no page gave, one pointing at what is gone
+	const long long LIST_MAX = 1000;
+	Response badLimit();
+	Response badCursor();
+	Response gone(const std::string &why);
+
 	// a text field, null when nothing is known of it
 	void textOrNull(JSON::Writer &w, const char *key, const std::string &v);
 
@@ -107,6 +120,19 @@ namespace Services
 
 	// what writes the running engine's part of a status page
 	typedef std::function<void(JSON::Writer &, EnginePart)> EngineWriter;
+
+	// What every service of a server is made from: the tracker it reads, the
+	// server's settings, the stations as the site lists them, the engine's part
+	// of a status page and the installation's facts. The server outlives its
+	// services and rebuilds them when its settings change.
+	struct Context
+	{
+		Tracker &tracker;
+		const ServerSpec &spec;
+		std::function<StationRegistry()> stations;
+		EngineWriter engine;
+		std::function<SystemFacts()> facts;
+	};
 
 	class Service
 	{
