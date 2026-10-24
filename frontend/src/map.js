@@ -530,12 +530,14 @@ const CHART_TONES = {
     light: {
         land: [[0, [40, 52, 74]], [0.5, [107, 122, 144]], [0.86, [230, 235, 242]], [0.94, [246, 248, 251]], [1, [255, 255, 255]]],
         water: [[0, [150, 178, 214]], [0.78, [204, 219, 237]], [1, [218, 229, 242]]],
+        waterText: 'rgb(84, 106, 148)', waterHalo: 'rgba(218, 229, 242, 0.85)',
     },
     dark: {
-        land: [[0, [18, 20, 24]], [0.05, [30, 33, 38]], [0.12, [42, 46, 53]], [0.4, [132, 138, 148]], [1, [228, 230, 234]]],
-        water: [[0, [24, 32, 44]], [0.11, [38, 48, 64]], [1, [84, 98, 118]]],
+        land: [[0, [20, 20, 20]], [0.05, [32, 32, 32]], [0.12, [45, 45, 45]], [0.4, [136, 136, 136]], [1, [229, 229, 229]]],
+        water: [[0, [36, 36, 36]], [0.11, [50, 50, 50]], [1, [100, 100, 100]]],
         // roads and rails close to the land, so they guide without taking over the map
-        roads: [[0, [24, 27, 32]], [0.25, [44, 48, 55]], [1, [70, 75, 84]]],
+        roads: [[0, [26, 26, 26]], [0.25, [46, 46, 46]], [1, [74, 74, 74]]],
+        waterText: 'rgb(150, 150, 150)', waterHalo: 'rgba(50, 50, 50, 0.85)',
     },
 };
 
@@ -587,18 +589,42 @@ function toneValue(value, curve) {
 }
 
 // the names our maps keep: towns, cities, states and countries; streets, villages, shields and the rest go
-const CHART_LABELS = /^(label|place)_(town|city|state|country)/;
+const CHART_LABELS = /^(label|place)_(town|city|country)/;
 
-function toneStyle(glStyle, tones) {
+function waterLabels(tones) {
+    const name = ['coalesce', ['get', 'name_en'], ['get', 'name']];
+    const paint = { 'text-color': tones.waterText, 'text-halo-color': tones.waterHalo, 'text-halo-width': 1.2 };
+    const lines = ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false];
+    const along = (size) => ({ 'symbol-placement': 'line', 'symbol-spacing': 350, 'text-field': name, 'text-font': ['Arial Italic'], 'text-letter-spacing': 0.1, 'text-size': size });
+    return [
+        { id: 'waterway_name', type: 'symbol', source: 'openmaptiles', 'source-layer': 'waterway', minzoom: 9, filter: lines, layout: along(12), paint },
+        { id: 'water_name_line', type: 'symbol', source: 'openmaptiles', 'source-layer': 'water_name', filter: lines, layout: along(13), paint },
+        {
+            id: 'water_name_point', type: 'symbol', source: 'openmaptiles', 'source-layer': 'water_name',
+            filter: ['match', ['geometry-type'], ['MultiPoint', 'Point'], true, false],
+            layout: { 'text-field': name, 'text-font': ['Arial Italic'], 'text-letter-spacing': 0.2, 'text-max-width': 6, 'text-size': ['interpolate', ['linear'], ['zoom'], 0, 10, 8, 14] },
+            paint,
+        },
+    ];
+}
+
+function toneStyle(glStyle, tones, labels) {
     glStyle.layers = (glStyle.layers || []).filter((l) => l.type !== 'symbol' || CHART_LABELS.test(l.id));
     for (const l of glStyle.layers) {
-        // towns from zoom 8, so a wide view names only the cities
+        // a wide view names the countries and the large cities
         if (l.type === 'symbol' && /town/.test(l.id)) l.minzoom = Math.max(l.minzoom || 0, 8);
+        if (l.type === 'symbol' && /_city$|country_other/.test(l.id)) l.minzoom = Math.max(l.minzoom || 0, 6);
         const water = /^water/.test(l.id) && l.type !== 'symbol';
         const road = /^(highway|road|aeroway|railway|tunnel|bridge)/.test(l.id) && l.type !== 'symbol';
         const curve = water ? tones.water : road && tones.roads ? tones.roads : tones.land;
         for (const k in l.paint || {})
             if (/color/.test(k)) l.paint[k] = toneValue(l.paint[k], curve);
+        if (l.type === 'line' && /^boundary/.test(l.id))
+            l.paint = { ...l.paint, 'line-opacity': /state|_3/.test(l.id) ? 0.15 : 0.22 };
+    }
+    if (labels) {
+        const at = glStyle.layers.findIndex((l) => l.type === 'symbol');
+        glStyle.layers.splice(at < 0 ? glStyle.layers.length : at, 0, ...waterLabels(tones));
     }
 }
 
@@ -613,7 +639,7 @@ function addVectorBasemap(title, styleUrl, noLabels, tones) {
                 for (const l of glStyle.layers || [])
                     if (l.layout && l.layout['text-font']) l.layout['text-font'] = LOCAL_LABEL_FONT;
                 if (noLabels) glStyle.layers = (glStyle.layers || []).filter((l) => l.type !== 'symbol');
-                if (tones) toneStyle(glStyle, tones);
+                if (tones) toneStyle(glStyle, tones, !noLabels);
                 const background = (glStyle.layers || []).find((l) => l.type === 'background')?.paint?.['background-color'];
                 return applyStyle(layer, glStyle, { styleUrl }).then(() => {
                     if (background)
