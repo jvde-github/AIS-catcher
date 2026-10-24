@@ -199,7 +199,7 @@ void Site::writeEngine(JSON::Writer &w, EnginePart part)
 	case ENGINE_OUTPUT_LIST:
 		w.key("data").beginArray();
 		writeOutputs(w, engine.outputs);
-		w.endArray().key("meta").beginObject().kv("count", (long long)engine.outputs.size()).kv("complete", true).endObject();
+		w.endArray().key("meta").beginObject().kv("count", (long long)engine.outputs.size()).kv("complete", true).kv_null("next").endObject();
 		break;
 	case ENGINE_OUTPUTS:
 		w.key("outputs").beginArray();

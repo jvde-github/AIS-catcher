@@ -84,11 +84,21 @@ namespace Services
 	// a time as a query gives it: that form, or seconds since 1970; false when neither
 	bool parseTime(const std::string &s, std::time_t &out);
 
-	// The envelope of every list: the rows, then how many and whether that is all.
+	// The envelope of every list: the rows under `data`, then under `meta` how
+	// many, whether that is all, and the request for the next page, null on
+	// the last. beginMeta leaves `meta` open for a list's own; endList closes it.
 	void beginList(JSON::Writer &w);
-	void endList(JSON::Writer &w, std::size_t count, bool complete);
-	// with the request that fetches what follows, when there is more
-	void endList(JSON::Writer &w, std::size_t count, bool complete, const std::string &next);
+	void beginMeta(JSON::Writer &w, std::size_t count, const std::string &next = std::string());
+	void endList(JSON::Writer &w, std::size_t count, const std::string &next = std::string());
+
+	// A cursor as the lists hand them out: a tag and whole numbers joined by
+	// underscores, such as evt_1792762066_1532. Clients take it as it comes.
+	std::string cursor(const std::string &tag, const std::vector<long long> &parts);
+	// the numbers of a cursor with this tag and `n` of them; false for anything else
+	bool parseCursor(const std::string &s, const std::string &tag, std::size_t n, std::vector<long long> &out);
+
+	// a text field, null when nothing is known of it
+	void textOrNull(JSON::Writer &w, const char *key, const std::string &v);
 
 	// a query value, percent-encoded where it must be
 	std::string urlEncode(const std::string &v);

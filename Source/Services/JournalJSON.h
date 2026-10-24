@@ -25,17 +25,24 @@
 
 namespace Services
 {
+	// An event's id, the same in every reader and as a webhook's webhook-id: the
+	// journal's epoch and the event's number in it. A list's cursor as it stands.
+	inline std::string eventId(uint64_t epoch, uint64_t seq)
+	{
+		return cursor("evt", {(long long)epoch, (long long)seq});
+	}
+
 	// One event of the journal as every reader gets it: the API's lists, the
 	// system's, a webhook's body, the MQTT event. A ship's event names the ship;
 	// an event of the installation says what happened in `event` and `text`.
 	// `lead` writes a reader's own fields first.
-	inline void writeEvent(JSON::Writer &w, const Journal::Entry &e, const std::function<void(JSON::Writer &)> &lead = nullptr)
+	inline void writeEvent(JSON::Writer &w, const Journal::Entry &e, uint64_t epoch, const std::function<void(JSON::Writer &)> &lead = nullptr)
 	{
 		const EventRing::Entry &v = e.event;
 		w.beginObject();
 		if (lead)
 			lead(w);
-		w.kv("seq", (long long)e.seq).kv("time", isoTime(v.time)).kv("kind", Tracking::journalName(v.kind))
+		w.kv("id", eventId(epoch, e.seq)).kv("time", isoTime(v.time)).kv("kind", Tracking::journalName(v.kind))
 			.kv("level", v.level == Tracking::Level::URGENT ? "urgent" : v.level == Tracking::Level::NOTICE ? "notice" : "routine");
 		// the installation's: what happened, to which receiver and station
 		if (v.kind == Tracking::Kind::SYSTEM)
@@ -48,9 +55,14 @@ namespace Services
 			w.endObject();
 			return;
 		}
-		w.kv("mmsi", (long long)v.from).kv("name", v.from_name);
+		w.kv("mmsi", (long long)v.from);
+		textOrNull(w, "name", v.from_name);
 		if (v.to)
-			w.key("addressee").beginObject().kv("mmsi", (long long)v.to).kv("name", v.to_name).endObject();
+		{
+			w.key("addressee").beginObject().kv("mmsi", (long long)v.to);
+			textOrNull(w, "name", v.to_name);
+			w.endObject();
+		}
 		if (!e.place.empty())
 			w.kv("place", e.place);
 		if (!v.label.empty())

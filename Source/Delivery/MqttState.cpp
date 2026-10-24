@@ -331,7 +331,7 @@ void MqttState::publishEvents()
 	for (const auto &e : entries)
 	{
 		const std::string body = json([&](JSON::Writer &w) {
-			Services::writeEvent(w, e, [&](JSON::Writer &lead) { lead.kv("event_type", Tracking::journalName(e.event.kind)); });
+			Services::writeEvent(w, e, tracker.journal().epoch(), [&](JSON::Writer &lead) { lead.kv("event_type", Tracking::journalName(e.event.kind)); });
 		});
 		if (link->mqtt.send(body.data(), (int)body.size(), topic) <= 0)
 			return; // the rest when the connection is back

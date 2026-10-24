@@ -299,6 +299,7 @@ void Logger::log(LogLevel level, const std::string &message)
 
 	std::string time_str = getCurrentTime();
 	LogMessage log_msg(level, message, time_str, seq_.fetch_add(1));
+	log_msg.utc = std::time(nullptr);
 
 	storeMessage(log_msg);
 	notifyListeners(log_msg);

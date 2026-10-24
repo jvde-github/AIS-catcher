@@ -103,6 +103,12 @@ public:
 		const uint64_t oldest = entries.front().seq;
 		return last >= oldest + n ? last - n : oldest - 1;
 	}
+	// the number before the oldest kept, to read all of them
+	uint64_t beforeOldest() const
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		return entries.empty() ? last : entries.front().seq - 1;
+	}
 	uint64_t newest() const
 	{
 		std::lock_guard<std::mutex> lock(mtx);

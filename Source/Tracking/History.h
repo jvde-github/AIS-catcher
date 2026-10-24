@@ -190,6 +190,38 @@ public:
 			history[(end + N - 1) % N].stat.writeJSON(w, false);
 	}
 
+	// the last whole slot as writeLastStatJSON picks it, in /api/v1's names
+	void writeLastFigureMembers(JSON::Writer &w) {
+		std::lock_guard<std::mutex> l{ this->mtx };
+
+		long int tm = (long int) std::time(nullptr) / (long int)INTERVAL -1;
+		if (start == end || tm > history[(end + N - 1) % N].time)
+			history[0].stat.writeFigureMembers(w, true, true);
+		else
+			history[(end + N - 1) % N].stat.writeFigureMembers(w, false, true);
+	}
+
+	// Each slot from the oldest kept to the current one, oldest first, as
+	// f(its start in seconds since 1970, its figures, whether nothing was heard in it)
+	template <typename F>
+	void forEachSlot(F f) {
+		std::lock_guard<std::mutex> l{ this->mtx };
+
+		long int tm_now = ((long int)time(nullptr)) / (long int)INTERVAL;
+		std::vector<std::pair<long int, int>> slots;
+		long int tm = tm_now;
+		for (int i = N, idx = end; i > 0; i--, tm--) {
+			const bool empty = history[idx].time < tm;
+			slots.push_back(std::make_pair(tm, empty ? -1 : idx));
+			if (!empty) {
+				if (idx == start) break;
+				idx = (idx + N - 1) % N;
+			}
+		}
+		for (auto it = slots.rbegin(); it != slots.rend(); ++it)
+			f(it->first * (long int)INTERVAL, history[it->second < 0 ? end : it->second].stat, it->second < 0);
+	}
+
 	void writeJSON(JSON::Writer &w) {
 		std::lock_guard<std::mutex> l{ this->mtx };
 

@@ -24,19 +24,41 @@
 
 namespace Services
 {
-	// One parameter of a route: in the path or the query, its JSON type, what it means
+	// The names the API gives what the tracker keeps as numbers, in the order
+	// of those numbers: a vessel's class, its MMSI type, its navigational
+	// status, whether its position held. The filters of /api/v1/vessels take
+	// the same names.
+	extern const char *const VESSEL_CLASSES[];
+	extern const int N_VESSEL_CLASSES;
+	extern const char *const MMSI_TYPES[];
+	extern const int N_MMSI_TYPES;
+	extern const char *const NAV_STATUSES[];
+	extern const int N_NAV_STATUSES;
+	extern const char *const VALIDATED[];
+	extern const int N_VALIDATED;
+	extern const char *const BINARY_KINDS[];
+	extern const int N_BINARY_KINDS;
+
+	// One parameter of a route: in the path or the query, the members of its
+	// JSON Schema, what it means. A list takes several values separated by commas.
 	struct Param
 	{
-		const char *name, *in, *type, *description;
-		bool required;
+		const char *name, *in;
+		std::string schema;
+		const char *description;
+		bool required, list;
 	};
 
 	// One resource of /api/v1, as the index, the OpenAPI document and the MCP
-	// tools describe it: the one place the API is written down
+	// tools describe it: the one place the API is written down. `response` names
+	// the schema of what it answers, `geojson` the one it answers with format=geojson.
 	struct Route
 	{
-		const char *path, *service, *summary;
+		const char *path, *service, *id, *tag, *summary;
 		std::vector<Param> params;
+		const char *response, *type, *geojson;
+
+		bool takes(const std::string &name) const;
 	};
 
 	const std::vector<Route> &routes();

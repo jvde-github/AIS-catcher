@@ -40,24 +40,24 @@ namespace Services
 		const std::vector<Tool> &tools()
 		{
 			static const std::vector<Tool> all = {
-				{"search_vessels", "Search vessels", "Find vessels heard lately by name, call sign, MMSI or IMO number.", "/api/v1/vessels", {"q", "limit"}, false},
-				{"vessels_in_area", "Vessels in an area", "The vessels heard lately inside a box of west,south,east,north degrees.", "/api/v1/vessels", {"bbox", "limit"}, false},
-				{"vessels_near", "Vessels near a point", "The vessels heard lately within radius_nm nautical miles of lat,lon.", "/api/v1/vessels", {"near", "radius_nm", "limit"}, false},
+				{"search_vessels", "Search vessels", "Find vessels heard lately by name, call sign, MMSI or IMO number.", "/api/v1/vessels", {"q", "limit", "cursor"}, false},
+				{"vessels_in_area", "Vessels in an area", "The vessels heard lately inside a box of west,south,east,north degrees.", "/api/v1/vessels", {"bbox", "class", "limit", "cursor"}, false},
+				{"vessels_near", "Vessels near a point", "The vessels heard lately within radius_nm nautical miles of lat,lon.", "/api/v1/vessels", {"near", "radius_nm", "class", "limit", "cursor"}, false},
 				{"get_vessel", "Vessel details", "One vessel in full: identity, position, voyage, recent changes, visits and the port it is bound for.", "/api/v1/vessels/{mmsi}", {"mmsi"}, false},
 				{"vessel_track", "Vessel track", "Where a vessel went: its positions with speed, course and heading, from a time on.", "/api/v1/vessels/{mmsi}/track", {"mmsi", "since"}, false},
 				{"vessel_visits", "Vessel visits", "The ports, terminals and berths a vessel called at or passed.", "/api/v1/vessels/{mmsi}/visits", {"mmsi"}, false},
-				{"find_places", "Find places", "Ports, terminals, berths, anchorages and zones by name or UN/LOCODE, or by type.", "/api/v1/places", {"q", "type", "limit"}, false},
+				{"find_places", "Find places", "Ports, terminals, berths, anchorages and zones by name or UN/LOCODE, or by type.", "/api/v1/places", {"q", "type", "limit", "cursor"}, false},
 				{"get_place", "Place details", "One place with the vessels inside it now.", "/api/v1/places/{uuid}", {"uuid"}, false},
-				{"place_visits", "Place visits", "Who came to a place, when, and how long they stayed.", "/api/v1/places/{uuid}/visits", {"uuid", "hours", "limit"}, false},
+				{"place_visits", "Place visits", "Who came to a place, when, and how long they stayed.", "/api/v1/places/{uuid}/visits", {"uuid", "hours", "limit", "cursor"}, false},
 				{"list_stations", "Receiving stations", "The stations of this installation and when each was last heard.", "/api/v1/stations", {}, false},
 				{"data_status", "Data status", "The figures of everything heard: messages and vessels by the minute, hour and day, to judge how fresh the data is.", "/api/v1/statistics", {}, false},
-				{"recent_events", "Recent events", "Safety messages, new destinations and statuses, arrivals and departures, newest page first.", "/api/v1/events", {"after", "limit"}, false},
+				{"recent_events", "Recent events", "Safety messages, new destinations and statuses, arrivals and departures: the newest page, or those after an event's id given as cursor.", "/api/v1/events", {"cursor", "limit"}, false},
 				{"system_status", "Installation", "The installation: version, uptime, memory, and whether the engine runs.", "/api/v1/system", {}, true},
 				{"list_receivers", "Receivers", "Each receiver (input): its station, device, whether it streams, messages in the last minute, when last heard.", "/api/v1/system/receivers", {}, true},
 				{"list_outputs", "Outputs", "Each output: what it sends where, and how it fares.", "/api/v1/system/outputs", {}, true},
 				{"health", "Health", "pass, warn or fail, with the checks behind it: the engine, the receivers, the backup.", "/api/v1/health", {}, true},
-				{"read_log", "Log", "The installation's log, from a line number on.", "/api/v1/system/log", {"after", "limit"}, true},
-				{"system_events", "Installation events", "The engine started or stopped, a receiver lost or back, a backup failed; newest page first.", "/api/v1/system/events", {"after", "limit"}, true},
+				{"read_log", "Log", "The installation's log: the newest lines, or those after a line's id given as cursor.", "/api/v1/system/log", {"cursor", "limit"}, true},
+				{"system_events", "Installation events", "The engine started or stopped, a receiver lost or back, a backup failed: the newest page, or those after an event's id given as cursor.", "/api/v1/system/events", {"cursor", "limit"}, true},
 			};
 			return all;
 		}
@@ -91,6 +91,18 @@ namespace Services
 		{
 			if (v.isString())
 				return v.getString();
+			// a list as the query takes it: separated by commas
+			if (v.isArray() || v.isArrayString())
+			{
+				std::string out;
+				if (v.isArrayString())
+					for (const auto &item : v.getStringArray())
+						out += (out.empty() ? "" : ",") + item;
+				else
+					for (const auto &item : v.getArray())
+						out += (out.empty() ? "" : ",") + text(item);
+				return out;
+			}
 			if (v.isInt())
 				return std::to_string((long long)v.getInt());
 			if (v.isFloat())

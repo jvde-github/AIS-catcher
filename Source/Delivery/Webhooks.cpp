@@ -111,19 +111,19 @@ bool Webhooks::deliver(Hook &hook, const std::vector<Journal::Entry> &events)
 {
 	std::string body;
 	JSON::Writer w(body);
+	const uint64_t epoch = tracker.journal().epoch();
 	if (hook.spec.batch)
 	{
 		w.beginObject().key("events").beginArray();
 		for (const auto &e : events)
-			Services::writeEvent(w, e);
+			Services::writeEvent(w, e, epoch);
 		w.endArray().endObject();
 	}
 	else
-		Services::writeEvent(w, events.front());
+		Services::writeEvent(w, events.front(), epoch);
 	w.finish();
 
-	const std::string epoch = std::to_string((unsigned long long)tracker.journal().epoch());
-	const std::string id = "evt_" + epoch + "_" + std::to_string((unsigned long long)events.front().seq) +
+	const std::string id = Services::eventId(epoch, events.front().seq) +
 						   (events.size() > 1 ? "_" + std::to_string((unsigned long long)events.back().seq) : std::string());
 	const std::string timestamp = std::to_string((long long)std::time(nullptr));
 

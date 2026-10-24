@@ -19,6 +19,7 @@
 #pragma once
 
 #include <functional>
+#include <map>
 
 #include "Http.h"
 #include "StationRegistry.h"
@@ -58,7 +59,7 @@ namespace Services
 		Response vesselVisits(uint32_t mmsi);
 		Response places(const Request &request);
 		Response place(const std::string &uuid);
-		Response placeVessels(const std::string &uuid);
+		Response placeVessels(const std::string &uuid, const Request &request);
 		Response placeVisits(const std::string &uuid, const Request &request);
 		Response events(const Request &request);
 		Response aircraftList(const Request &request);
@@ -66,5 +67,7 @@ namespace Services
 		bool aircraftShown(Response &refusal);
 
 		bool shows(uint32_t mmsi);
+		// per station, the vessels it heard within Ship::STATION_WINDOW that the server shows
+		std::map<int, int> heardLately();
 	};
 }

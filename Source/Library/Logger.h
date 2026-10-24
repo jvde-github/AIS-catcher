@@ -25,6 +25,7 @@
 #include <memory>
 #include <atomic>
 #include <climits>
+#include <ctime>
 
 #include "Common.h"
 
@@ -44,6 +45,7 @@ struct LogMessage
     std::string message;
     std::string time;
     uint32_t seq = 0;
+    std::time_t utc = 0;
 
     LogMessage() : level(LogLevel::EMPTY) {}
     LogMessage(LogLevel l, std::string msg, std::string time, uint32_t seq = 0) : level(l), message(std::move(msg)), time(std::move(time)), seq(seq) {}
@@ -71,6 +73,8 @@ public:
     void removeLogListener(int id);
 
     std::vector<LogMessage> getLastMessages(int n);
+    // when this process began counting lines: a line's number holds within it
+    std::time_t epoch() const { return epoch_; }
 
     // the last `n` lines as JSON, or the first `n` after line `since`; `last`,
     // when given, takes the number of the last line handed out and stays as it is without one
@@ -122,6 +126,7 @@ private:
     std::mutex mutex_;
     std::atomic<LogLevel> min_level_{LogLevel::INFO};
     std::atomic<uint32_t> seq_{1};
+    const std::time_t epoch_ = std::time(nullptr);
 
     std::vector<LogMessage> message_buffer_;
     int buffer_position_ = 0;

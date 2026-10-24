@@ -168,14 +168,55 @@ namespace Services
 		w.beginObject().key("data").beginArray();
 	}
 
-	void endList(JSON::Writer &w, std::size_t count, bool complete, const std::string &next)
+	void beginMeta(JSON::Writer &w, std::size_t count, const std::string &next)
 	{
-		w.endArray().key("meta").beginObject().kv("count", (long long)count).kv("complete", complete);
+		w.endArray().key("meta").beginObject().kv("count", (long long)count).kv("complete", next.empty());
 		if (next.empty())
 			w.kv_null("next");
 		else
 			w.kv("next", next);
+	}
+
+	void endList(JSON::Writer &w, std::size_t count, const std::string &next)
+	{
+		beginMeta(w, count, next);
 		w.endObject().endObject();
+	}
+
+	void textOrNull(JSON::Writer &w, const char *key, const std::string &v)
+	{
+		if (v.find_first_not_of(' ') == std::string::npos)
+			w.kv_null(key);
+		else
+			w.kv(key, v);
+	}
+
+	std::string cursor(const std::string &tag, const std::vector<long long> &parts)
+	{
+		std::string out = tag;
+		for (long long p : parts)
+			out += "_" + std::to_string(p);
+		return out;
+	}
+
+	bool parseCursor(const std::string &s, const std::string &tag, std::size_t n, std::vector<long long> &out)
+	{
+		out.clear();
+		if (s.compare(0, tag.size(), tag) != 0)
+			return false;
+		std::size_t pos = tag.size();
+		while (pos < s.size() && out.size() < n)
+		{
+			if (s[pos] != '_')
+				return false;
+			const std::size_t end = s.find('_', pos + 1);
+			const std::string part = s.substr(pos + 1, end == std::string::npos ? std::string::npos : end - pos - 1);
+			if (part.empty() || part.size() > 18 || part.find_first_not_of("0123456789") != std::string::npos)
+				return false;
+			out.push_back(std::atoll(part.c_str()));
+			pos = end == std::string::npos ? s.size() : end;
+		}
+		return pos == s.size() && out.size() == n;
 	}
 
 	bool parseTime(const std::string &s, std::time_t &out)
@@ -197,10 +238,5 @@ namespace Services
 		const long days = era * 146097 + yoe * 365 + yoe / 4 - yoe / 100 + doy - 719468;
 		out = (std::time_t)days * 86400 + h * 3600 + mi * 60 + sec;
 		return true;
-	}
-
-	void endList(JSON::Writer &w, std::size_t count, bool complete)
-	{
-		w.endArray().key("meta").beginObject().kv("count", (long long)count).kv("complete", complete).kv_null("next").endObject().endObject();
 	}
 }

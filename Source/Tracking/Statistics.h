@@ -223,6 +223,54 @@ public:
     w.endObject();
   }
 
+  // The figures as /api/v1 names them, as members of an object the caller
+  // opened. `vessels` is counted only by the slots of a history.
+  void writeFigureMembers(JSON::Writer &w, bool empty, bool vessels) {
+    std::lock_guard<std::mutex> l{this->mtx};
+
+    const int c = _count - _exclude;
+    const bool has_level = !empty && c > 0 && _level_min <= _level_max;
+
+    w.kv("messages", empty ? 0 : _count);
+    if (vessels)
+      w.kv("vessels", empty ? 0 : _vessels);
+    else
+      w.kv_null("vessels");
+    w.key("errors").beginObject();
+    const char *names[] = {"flagged", "undersized", "oversized", "checksum"};
+    for (int i = 0; i < 4; i++)
+      w.kv(names[i], empty ? 0 : _errors[i]);
+    w.endObject();
+    if (has_level)
+      w.kv("level_min_db", _level_min).kv("level_max_db", _level_max).kv("ppm", _ppm / c);
+    else
+      w.kv_null("level_min_db").kv_null("level_max_db").kv_null("ppm");
+    if (!empty && _distance_count > 0)
+      w.kv("max_distance_nm", _distance);
+    else
+      w.kv_null("max_distance_nm");
+
+    w.key("channels").beginObject();
+    for (int i = 0; i < 4; i++)
+      w.kv(std::string(1, (char)('A' + i)), empty ? 0 : _channel[i]);
+    w.endObject();
+
+    w.key("message_types").beginObject();
+    for (int i = 0; i < 28; i++)
+      if (!empty && _msg[i])
+        w.kv(std::to_string(i + 1), _msg[i]);
+    w.endObject();
+
+    w.key("range_nm").beginObject().kv("sector_deg", 360 / _RADAR_BUCKETS);
+    w.key("class_a").beginArray();
+    for (int i = 0; i < _RADAR_BUCKETS; i++)
+      w.val(empty ? 0.0f : _radarA[i]);
+    w.endArray().key("class_b").beginArray();
+    for (int i = 0; i < _RADAR_BUCKETS; i++)
+      w.val(empty ? 0.0f : _radarB[i]);
+    w.endArray().endObject();
+  }
+
   void print(std::ostream &out, const char *indent = "") {
     std::lock_guard<std::mutex> l{this->mtx};
 
@@ -328,6 +376,7 @@ public:
   void writeJSON(JSON::Writer &w, bool empty = false) {
     stat.writeJSON(w, empty);
   }
+  void writeFigureMembers(JSON::Writer &w) { stat.writeFigureMembers(w, false, false); }
 
   void print(std::ostream &out, const char *indent = "") {
     stat.print(out, indent);
