@@ -19,3 +19,9 @@ __pycache__/
 /data/places/
 *.code-workspace
 build*.log
+/data/regions/
+/scripts/waters/
+/frontend/test/
+/scripts/smoke.sh
+/scripts/test-install-matrix.sh
+/scripts/test-binary-badges.cpp
