@@ -1410,9 +1410,13 @@ import { ICONS } from './icons.js';
             const activeField = this.fields.find(f => f.name === 'active');
             const descField = this.fields.find(f => f.name === 'description');
             const title = el('h2', 'st-main__title', {}, text);
+            const kind = this.config.kindOf ? this.config.kindOf(item) : '';
+            const tag = kind ? el('span', 'st-main__kind', {}, kind) : null;
+            const showKind = () => { if (tag) tag.hidden = title.textContent.startsWith(kind); };
             const routing = this.config.routing ? el('div', 'st-routing') : null;
             const head = el('div', 'st-main__head', {},
-                el('div', 'st-main__headtext', {}, title, routing),
+                el('div', 'st-main__headtext', {},
+                    el('div', 'st-main__titlerow', {}, title, tag), routing),
                 el('div', 'st-main__actions', {},
                     this.config.docs ? this.config.docs(item) : null,
                     activeField ? el('label', 'st-switch', {},
@@ -1420,6 +1424,8 @@ import { ICONS } from './icons.js';
                         el('span', 'st-switch__track'), 'Active') : null,
                     this.menu(text, index)));
             const name = descField ? this.nameField(item, descField, index, fallback, title) : null;
+            showKind();
+            name?.addEventListener('input', showKind);
             return { head, name, title, onZones: routing ? this.routingLine(routing, dir, item) : null };
         }
 

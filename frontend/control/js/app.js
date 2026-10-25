@@ -862,6 +862,7 @@ import { createMessageBar } from './message-bar.js';
             variant: 'inputs',
             essentials: INPUT_ESSENTIALS,
             describe: describeInput,
+            kindOf: item => describeInput(item, 0, [item]).kind,
             routing: inputRouting,
             problem: item => {
                 const why = item.active !== false && inputs ? live.inputs.get(inputs.data.indexOf(item)) : null;
@@ -1016,6 +1017,7 @@ import { createMessageBar } from './message-bar.js';
             schema: t.schema,
             containerId: OUTPUTS_CONTAINER,
             title: t.label,
+            kindOf: () => t.label,
             variant: 'outputs',
             routing: outputRouting,
             problem: item => pageMark(`${t.value}:${outputs ? outputs.data.indexOf(item) : -1}`, item.active !== false, outputOf(t.value, item)),

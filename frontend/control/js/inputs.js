@@ -64,6 +64,7 @@ export function describeInput(item, i, all) {
     const id = path ? serialName(path) : SDR_INPUTS.has(kind) && item.serial ? item.serial : '';
     return {
         title: name || (kind ? `${device} #${nth}` : 'New input'),
+        kind: device,
         sub: kind ? (id ? `${device} · ${id}` : device) : '',
         desc: INPUT_DESCRIPTIONS[kind] || 'Pick the device this input reads from.'
     };

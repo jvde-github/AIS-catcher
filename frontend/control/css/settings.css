@@ -209,6 +209,8 @@ a.st-node__name:hover {text-decoration:underline}
 
 /* ---- calmer input header: the title is the name field ---- */
 .st-main__headtext {flex:1;min-width:0}
+.st-main__titlerow {display:flex;align-items:center;gap:10px;min-width:0}
+.st-main__kind {flex-shrink:0;padding:2px 8px;border-radius:6px;background:var(--color-hover);color:var(--color-text-muted);font-size:12px;font-weight:600;white-space:nowrap}
 /* the title as wide as its text, so the pencil sits beside it */
 @supports (field-sizing: content) {
 }
