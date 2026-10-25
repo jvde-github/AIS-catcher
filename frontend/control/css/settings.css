@@ -351,6 +351,8 @@ a.st-node__name:hover {text-decoration:underline}
 
 /* the box may grow to 1200px; settings keep a reading width, Places, Flow and Log take it all */
 #hub-receivers-container > .st-main > *, #sys-output-body > .st-main > *, #svc-servers > .st-main > * {max-width:820px}
+/* the API tester's requests and answers want the room */
+#svc-servers > .st-main--wide > * {max-width:1120px}
 #hub-receivers-container > .st-main > [data-json-section], #sys-output-body > .st-main > [data-json-section] {margin-left:0;margin-right:0}
 
 /* ==================== SERVICES: one page at a time ==================== */
@@ -653,3 +655,23 @@ a.st-node__name:hover {text-decoration:underline}
 .st .st-pickchip {height:30px;padding:0 12px;border:1px solid var(--color-field-border);border-radius:999px;background:transparent;color:var(--color-text-muted);font-size:13px}
 .st .st-pickchip[aria-pressed="true"] {border-color:var(--color-accent);background:var(--color-accent-tint);color:var(--color-accent);font-weight:600}
 .st-main .st-shows__mmsi {height:auto;min-height:60px;padding:8px 12px;font-family:var(--font-mono);font-size:13px}
+
+/* ==================== MESSAGE BAR: one message at a time, under the Settings header or above the bottom bar */
+.msgbar {flex-shrink:0;display:flex;align-items:center;gap:12px;min-height:44px;padding:6px 12px 6px 20px;border-bottom:1px solid var(--color-border);background:var(--tint, var(--color-surface-alt));color:var(--color-text-strong);font-size:13.5px}
+.msgbar[hidden] {display:none}
+.msgbar::before {content:"";flex-shrink:0;width:8px;height:8px;border-radius:50%;background:var(--tone, var(--color-text-muted))}
+.msgbar[data-tone="error"] {--tone:var(--color-danger);--tint:color-mix(in srgb, var(--color-danger) 9%, var(--color-surface-raised))}
+.msgbar[data-tone="warning"] {--tone:var(--color-warning-ink);--tint:color-mix(in srgb, var(--color-warning-ink) 14%, var(--color-surface-raised))}
+.msgbar[data-tone="success"] {--tone:var(--color-success);--tint:color-mix(in srgb, var(--color-success) 10%, var(--color-surface-raised))}
+.msgbar[data-tone="info"] {--tone:var(--color-accent);--tint:var(--color-accent-tint)}
+.msgbar__text {flex:1;min-width:0;line-height:1.4}
+.st .msgbar__close {flex-shrink:0;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;padding:0;border:0;border-radius:8px;background:transparent;color:var(--color-text-muted)}
+.st .msgbar__close:hover {background:color-mix(in srgb, currentColor 12%, transparent);color:var(--color-text-strong)}
+.msgbar__close svg {width:16px;height:16px}
+.msgbar--page {border-bottom:0;border-top:1px solid var(--color-border)}
+
+/* the receiver's warnings and errors in its log, beside its status in the bottom bar */
+.bar-alerts {margin-left:10px;padding:2px 9px;border:0;border-radius:999px;background:color-mix(in srgb, var(--color-warning-ink) 24%, transparent);color:var(--color-warning-ink);font:inherit;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer}
+.bar-alerts[hidden] {display:none}
+.bar-alerts.is-error {background:color-mix(in srgb, var(--color-danger) 26%, transparent);color:color-mix(in srgb, var(--color-danger) 55%, white)}
+.bar-alerts:focus-visible {outline:2px solid var(--color-accent);outline-offset:2px}

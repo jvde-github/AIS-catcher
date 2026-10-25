@@ -1,19 +1,16 @@
 // The receiver's log in System › Log: the lines the event stream brings, kept in a buffer and
-// filtered by level and words, and the warnings and errors as toasts once the stream has
-// replayed what came before it.
-
-import { App } from './config-manager.js';
+// filtered by level and words. `onAlert(level)` hears of each new warning or error, once the
+// stream has replayed what came before it.
 
 const LEVELS = ['debug', 'info', 'warning', 'error', 'critical'];
 const BUFFER_MAX = 500;
 const LEVEL_KEY = 'hub-log-level';
 
-export function createLogConsole() {
+export function createLogConsole({ onAlert } = {}) {
     const buffer = [];
     let box = null;
     let replayDone = false;
     let lastTime = '', lastSeq = -1;
-    let lastToast = { message: '', showing: false };
     let levelMin = 'info', search = '';
     try {
         const stored = localStorage.getItem(LEVEL_KEY);
@@ -79,15 +76,8 @@ export function createLogConsole() {
             box.scrollTop = box.scrollHeight;
         }
         if (!replayDone) return;
-        if (m.level === 'error' || m.level === 'critical' || m.level === 'warning') {
-            // a crash-looping engine repeats the same line: suppress a repeat
-            // only while its toast is still on screen, so dismissing one lets
-            // the next occurrence through instead of muting it for a fixed window
-            if (m.message === lastToast.message && lastToast.showing) return;
-            const rec = { message: m.message, showing: true };
-            lastToast = rec;
-            App.notify(m.level === 'warning' ? 'warning' : 'error', m.message, undefined, () => { rec.showing = false; });
-        }
+        if (m.level === 'error' || m.level === 'critical' || m.level === 'warning')
+            onAlert?.(m.level === 'warning' ? 'warning' : 'error');
     }
 
     // the console's toolbar and lines, in the Log pane of a panel just built

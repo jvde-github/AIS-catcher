@@ -54,11 +54,11 @@ function showsText(view, choices, stationId) {
 }
 
 // a page of its own: its title and line, its docs and an action on the right
-function servicePage(host, title, desc, docs, action) {
+function servicePage(host, title, desc, docs, ...actions) {
     const main = el('div', 'st-main', {},
         el('div', 'st-main__head', {},
             el('div', '', {}, el('h2', 'st-main__title', { text: title }), el('p', 'st-main__desc', { text: desc })),
-            el('div', 'st-main__actions', {}, docs ? docLink(docs) : null, action)));
+            el('div', 'st-main__actions', {}, docs ? docLink(docs) : null, ...actions)));
     host.replaceChildren(main);
     return main;
 }
@@ -115,7 +115,7 @@ export function createServicesSection(pane, { select, follow, changed, stations,
                     editor.actions(box, i, { deleted: () => { page = 'main'; drawServers(); }, rerender: drawServers });
                 },
                 render: (main, title) => editor.renderDetail(main, i, { title, rerender: drawServers }) })),
-            { key: 'tester', title: 'Try the API',
+            { key: 'tester', title: 'Try the API', wide: true,
                 actions: box => box.append(docLink(DOCS.api, 'API docs'), docLink(DOCS.mcp, 'MCP docs')),
                 render: main => renderApiTester(main, { servers: testerServers(), highlight, port: tryPort }) }
         ];
@@ -126,7 +126,7 @@ export function createServicesSection(pane, { select, follow, changed, stations,
         const p = list.find(x => x.key === page);
         const title = el('h2', 'st-main__title', { text: p.title });
         const actions = el('div', 'st-main__actions');
-        const main = el('div', 'st-main', {}, el('div', 'st-main__head', {}, el('div', '', {}, title), actions));
+        const main = el('div', 'st-main' + (p.wide ? ' st-main--wide' : ''), {}, el('div', 'st-main__head', {}, el('div', '', {}, title), actions));
         p.actions(actions);
         p.render(main, title);
         serversHost.replaceChildren(main);
@@ -159,7 +159,9 @@ export function createServicesSection(pane, { select, follow, changed, stations,
     // ---- the overview: every server against every service, who may read it and what it shows
     function drawOverview() {
         ConfigStore.fetch().then(cfg => {
+            const first = loaded ? editor.state.list.map(testerPort).find(Boolean) : null;
             const main = servicePage(overviewHost, 'Services', 'Each server is one web address.', DOCS.services,
+                first ? el('button', 'st-btn st-btn--sm', { type: 'button', text: 'Try the API', onClick: () => tryOn(first) }) : null,
                 el('button', 'st-btn st-btn--sm', { type: 'button', text: '+ Add server', onClick: add }));
             const bind = editor.state.bind;
             const choices = stations();

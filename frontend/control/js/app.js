@@ -14,6 +14,7 @@ import { createFlowEditor, collectOutputs, inputRouting, outputRouting, outputOf
 import { createServicesSection, servicesRailItems } from './services-pages.js';
 import { createRail } from './rail.js';
 import { createLogConsole } from './log-console.js';
+import { createMessageBar } from './message-bar.js';
 
 (function () {
     'use strict';
@@ -27,6 +28,7 @@ import { createLogConsole } from './log-console.js';
     let engineDesired = false;
     let pendingApply = false;
     let pendingAction = null;
+    let bar = null;
 
     // shapes live in icons.css; swap the class rather than inlining SVG
     const ENGINE_ICONS = { start: 'engine_start_icon', stop: 'engine_stop_icon', restart: 'engine_restart_icon' };
@@ -64,6 +66,7 @@ import { createLogConsole } from './log-console.js';
         const icon = document.getElementById('nav-sr-icon');
         if (btn) {
             btn.classList.toggle('attention', pendingApply);
+            bar?.setRestart(pendingApply ? (engineRunning ? 'restart' : 'start') : null);
             btn.title = ENGINE_TITLES[mode];
         }
         if (icon && icon.dataset.mode !== mode) {
@@ -75,7 +78,23 @@ import { createLogConsole } from './log-console.js';
     let streamRetryTimer = null;
     let streamWatchdog = null;
     let eventSource = null;
-    const logConsole = createLogConsole();
+    // the receiver's warnings and errors since its log was last looked at, as a count beside its status
+    const alerts = { warning: 0, error: 0 };
+    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    function paintAlerts() {
+        const b = document.getElementById('log-alerts');
+        if (!b) return;
+        const parts = [alerts.error ? plural(alerts.error, 'error') : '', alerts.warning ? plural(alerts.warning, 'warning') : ''].filter(Boolean);
+        b.hidden = !parts.length;
+        b.textContent = parts.join(', ');
+        b.title = 'Open the log';
+        b.classList.toggle('is-error', alerts.error > 0);
+    }
+    function clearAlerts() {
+        alerts.warning = alerts.error = 0;
+        paintAlerts();
+    }
+    const logConsole = createLogConsole({ onAlert: level => { alerts[level]++; paintAlerts(); } });
 
     const iframe = document.getElementById('webviewer-frame');
     iframe.addEventListener('load', () => {
@@ -384,6 +403,7 @@ import { createLogConsole } from './log-console.js';
         // uptime is the signal, not a stopped state we may never observe
         const uptime = data.engine === 'running' && typeof data.uptime === 'number' ? data.uptime : Infinity;
         const fell = uptime < lastUptime;
+        if (fell) clearAlerts();
         lastUptime = uptime;
         if (reloadUntil) {
             if (data.engine === 'running' && (reloadSawDown || fell)) {
@@ -462,7 +482,6 @@ import { createLogConsole } from './log-console.js';
 
     // after a save the receiver takes the configuration at its next start: the button says so
     window.hubConfigSaved = function () {
-        App.notify('info', (engineRunning ? 'Restart' : 'Start') + ' the receiver to apply the new configuration', 8000);
         pendingApply = true;
         renderEngineButton();
     };
@@ -607,6 +626,13 @@ import { createLogConsole } from './log-console.js';
     // down again when its edits are discarded or the panel closes, so what the rail and the other
     // pages read is the file, or a page that is open with its edits.
     const systemOverlay = document.getElementById('system-overlay');
+    bar = createMessageBar({
+        settings: document.getElementById('settings-bar'),
+        page: document.getElementById('page-bar'),
+        inSettings: () => systemOverlay.classList.contains('open'),
+        onRestart: onStartRestartClick
+    });
+    App.notify = (type, message) => bar.show(type, message);
     const systemBody = document.getElementById('system-body');
     const systemModal = document.getElementById('system-modal');
 
@@ -787,6 +813,7 @@ import { createLogConsole } from './log-console.js';
 
     function switchSystemTab(tab) {
         if (!SYSTEM_TABS[tab]) return false;
+        if (tab === 'log') clearAlerts();
         if (tab === currentTab) return true;
 
         // leaving a page with unsaved edits: once confirmed, they go with the page that holds them,
@@ -1115,6 +1142,7 @@ import { createLogConsole } from './log-console.js';
         requireAuth(() => {
             buildPanel();
             systemOverlay.classList.add('open');
+            bar.render();
             document.getElementById('nav-btn-settings').classList.add('active');
             currentTab = null;
             const last = rail.last;
@@ -1129,6 +1157,7 @@ import { createLogConsole } from './log-console.js';
         App.setUnsaved(false);
         unloadAll();
         systemOverlay.classList.remove('open');
+        bar.render();
         if (currentTab) rail.remember();
         currentTab = null;
         document.getElementById('nav-btn-settings').classList.remove('active');

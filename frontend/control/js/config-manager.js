@@ -635,8 +635,10 @@ import { ICONS } from './icons.js';
     const App = {
         state: { unsaved: false },
 
-        notify(type, message, duration, onClose) {
-            return AISComponents.toast(type, message, { duration, onClose });
+        // the app shows these in its message bar once it has one
+        notify(type, message) {
+            console[type === 'error' ? 'error' : 'log'](message);
+            return () => {};
         },
 
         notifyWarnings(warnings) {
