@@ -34,11 +34,7 @@ Tracker::Tracker()
 	db >> router;
 	db.events >> events;
 	// called with the ship table locked: the figures' lock is never taken the other way round
-	db.setStationHeard([this](int id) {
-		std::lock_guard<std::mutex> lock(figures_mtx);
-		auto it = last_heard.find(id);
-		return it == last_heard.end() ? (std::time_t)0 : it->second;
-	});
+	db.setStationHeard([this](int id) { return lastHeard(id); });
 }
 
 namespace
@@ -145,7 +141,7 @@ void Tracker::usePlaces(const std::string &directory)
 	std::shared_ptr<PlaceCatalogue> next;
 	{
 		std::lock_guard<std::mutex> lock(catalogue_mtx);
-		if (directory == places_dir)
+		if (directory == places_dir && !(directory.empty() && catalogue))
 			return;
 		places_dir = directory;
 	}
@@ -229,7 +225,7 @@ void Tracker::Intake::Receive(const JSON::JSON *data, int len, TAG &tag)
 
 void Tracker::GpsIntake::Receive(const AIS::GPS *data, int len, TAG &tag)
 {
-	if (!len || !tracker->moveByGPS(tag.station_id, data[0].getLat(), data[0].getLon()))
+	if (len && !tracker->moveByGPS(tag.station_id, data[0].getLat(), data[0].getLon()))
 		tracker->db.Receive(data, len, tag);
 }
 
@@ -346,6 +342,11 @@ void Tracker::setStations(const StationRegistry &registry)
 		listed.clear();
 		for (const auto &s : registry.ordered())
 			listed.insert(s.id);
+		for (auto it = station_figures.begin(); it != station_figures.end();)
+			if (listed.count(it->first))
+				++it;
+			else
+				it = station_figures.erase(it);
 	}
 	{
 		std::lock_guard<std::mutex> lock(stations_mtx);
@@ -425,9 +426,6 @@ void Tracker::remeasure()
 			if (s.second.share_loc && isValidCoord(s.second.now.lat, s.second.now.lon))
 				at[s.first] = std::make_pair(s.second.now.lat, s.second.now.lon);
 	}
-	const bool clear = !db.getShareLatLon();
-	if (at.empty() && !clear)
-		return;
 	db.measureFrom([&](const Ship &ship, float &lat, float &lon) {
 		if (!ship.heard[0].last)
 			return false;
@@ -437,7 +435,7 @@ void Tracker::remeasure()
 		lat = it->second.first;
 		lon = it->second.second;
 		return true;
-	}, clear);
+	});
 }
 
 Tracker::Position Tracker::stationPosition(int id)
@@ -502,6 +500,9 @@ bool Tracker::save(const std::string &file)
 		if (!ok)
 			return false;
 	}
+#ifdef _WIN32
+	std::remove(file.c_str());
+#endif
 	return std::rename(tmp.c_str(), file.c_str()) == 0;
 }
 
@@ -520,8 +521,13 @@ Tracker::Restored Tracker::restore(const std::string &file)
 	}
 	{
 		std::lock_guard<std::mutex> lock(figures_mtx);
-		if (!figures.load(f) || (version >= 3 && !figures.loadProfile(f)) || !f.read((char *)&n, sizeof(n)))
+		const auto damaged = [&]() {
+			figures.clear();
+			station_figures.clear();
 			return DAMAGED;
+		};
+		if (!figures.load(f) || (version >= 3 && !figures.loadProfile(f)) || !f.read((char *)&n, sizeof(n)))
+			return damaged();
 		station_figures.clear();
 		for (uint32_t i = 0; i < n; i++)
 		{
@@ -529,7 +535,7 @@ Tracker::Restored Tracker::restore(const std::string &file)
 			std::unique_ptr<Figures> s(new Figures());
 			s->setCutoff(cutoff);
 			if (!f.read((char *)&id, sizeof(id)) || !s->load(f) || (version >= 3 && !s->loadProfile(f)))
-				return DAMAGED;
+				return damaged();
 			// -1 is no station: its figures are not kept apart
 			if (id >= 0 && station_figures.size() < MAX_STATIONS)
 				station_figures[id] = std::move(s);

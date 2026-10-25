@@ -1407,17 +1407,15 @@ void DB::updateStation(float lat, float lon) {
   full_refresh_at = time(nullptr);
 }
 
-void DB::measureFrom(const std::function<bool(const Ship &, float &, float &)> &origin, bool clear) {
+void DB::measureFrom(const std::function<bool(const Ship &, float &, float &)> &origin) {
   std::lock_guard<std::mutex> lock(mtx);
   ships.forEach([&](int ptr) {
     Ship &ship = ships[ptr];
     float lat, lon;
     if (isValidCoord(ship.lat, ship.lon) && origin(ship, lat, lon))
       Util::Geodesy::distanceBearing(lat, lon, ship.lat, ship.lon, ship.distance, ship.angle);
-    else if (clear) {
-      ship.distance = DISTANCE_UNDEFINED;
-      ship.angle = ANGLE_UNDEFINED;
-    }
+    else
+      updateDistance(ship);
     return true;
   });
 }

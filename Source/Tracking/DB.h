@@ -100,9 +100,9 @@ class DB : public StreamIn<JSON::JSON>,
 
 public:
   // Distances again from an origin per ship, for a host whose stations each
-  // have a position; `origin` false leaves a ship as it is, or without a
-  // distance when `clear`
-  void measureFrom(const std::function<bool(const Ship &, float &, float &)> &origin, bool clear);
+  // have a position; a ship `origin` gives none for is measured from the
+  // tracker's own position, when shared, else loses its distance
+  void measureFrom(const std::function<bool(const Ship &, float &, float &)> &origin);
   // A ship's track back to `since`, never past what is served, newest point
   // first, under the lock; false when the ship is not known
   bool forEachTrackPoint(uint32_t mmsi, std::time_t since,
@@ -143,6 +143,20 @@ public:
       visits.forEachVisit(ptr, [&](const VisitTracker::Visit &v) {
         if (const auto *e = index->find(v.id))
           f(ships[ptr], v, *e);
+      });
+      return true;
+    });
+  }
+  template <typename F> void forEachVisitAt(uint32_t id, F f) {
+    std::lock_guard<std::mutex> lock(mtx);
+    const auto *index = place_markers.index().get();
+    const auto *e = index ? index->find(id) : nullptr;
+    if (!e)
+      return;
+    visits.forEach(id, [&](uint32_t slot) {
+      visits.forEachVisit(slot, [&](const VisitTracker::Visit &v) {
+        if (v.id == id)
+          f(ships[(int)slot], v, *e);
       });
       return true;
     });

@@ -50,19 +50,26 @@ namespace
 void Webhooks::configure(const std::vector<WebhookSpec> &specs)
 {
 	std::unique_lock<std::mutex> lock(mtx);
+	std::vector<const Hook *> kept(specs.size(), nullptr);
+	std::vector<bool> taken(hooks.size(), false);
+	for (int pass = 0; pass < 2; pass++)
+		for (std::size_t i = 0; i < specs.size(); i++)
+			for (std::size_t j = 0; j < hooks.size() && !kept[i]; j++)
+				if (!taken[j] && (pass ? hooks[j].spec.url == specs[i].url : hooks[j].spec == specs[i]))
+				{
+					taken[j] = true;
+					kept[i] = &hooks[j];
+				}
 	std::vector<Hook> next;
-	for (const auto &spec : specs)
+	for (std::size_t i = 0; i < specs.size(); i++)
 	{
-		auto it = std::find_if(hooks.begin(), hooks.end(), [&](const Hook &h) { return h.spec == spec; });
-		if (it != hooks.end())
-		{
-			next.push_back(*it);
-			continue;
-		}
 		Hook h;
-		h.spec = spec;
-		h.key = keyOf(spec.secret);
-		h.cursor = tracker.journal().newest();
+		if (kept[i])
+			h = *kept[i];
+		else
+			h.cursor = tracker.journal().newest();
+		h.spec = specs[i];
+		h.key = keyOf(specs[i].secret);
 		next.push_back(h);
 	}
 	hooks.swap(next);

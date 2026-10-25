@@ -195,8 +195,9 @@ namespace Services
 		const JSON::Value *version = member(doc, doc.root, "jsonrpc");
 		if (!method || !method->isString() || !version || !version->isString() || version->getString() != "2.0")
 		{
-			// a response or anything else that is no request: taken and dropped
-			response = Response::json(method ? error(id, -32600, "Invalid request.") : std::string(), method ? 200 : 202);
+			// a response or a notification that is no request: taken and dropped; anything else with an id is answered
+			const bool reply = member(doc, doc.root, "result") || member(doc, doc.root, "error");
+			response = id && !reply ? Response::json(error(id, -32600, "Invalid request.")) : Response::json(std::string(), 202);
 			return true;
 		}
 		const std::string m = method->getString();
@@ -300,7 +301,7 @@ namespace Services
 			Response got;
 			if (!(readsSystem(*tool) ? system->handle(call, got) : api.handle(call, got)))
 				got = Response::problem(404, "Not found", "No such resource.");
-			const bool ok = got.status == 200;
+			const bool ok = got.status == 200 || got.type == "application/health+json";
 			w.beginObject().key("content").beginArray().beginObject().kv("type", "text").kv("text", got.body).endObject().endArray();
 			if (ok && !got.body.empty() && got.body[0] == '{')
 				w.key("structuredContent").raw_val(got.body);

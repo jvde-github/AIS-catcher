@@ -47,7 +47,7 @@ public:
 	// the journal moved on
 	void Receive(const uint64_t *, int, TAG &) override { wake(); }
 
-	// the webhooks as configured now: one that stays keeps its place
+	// the webhooks as configured now: one whose address stays keeps its place, whatever else changed
 	void configure(const std::vector<WebhookSpec> &specs);
 	void stop();
 

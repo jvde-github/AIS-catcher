@@ -24,7 +24,9 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <stdexcept>
 #include <tuple>
 
@@ -524,19 +526,19 @@ namespace Services
 			at("/api/v1/openapi.json", [&] { return openapi(); });
 		else if (parts[0] == "stations" && parts.size() == 1)
 			at("/api/v1/stations", [&] { return stationList(); });
-		else if (parts[0] == "stations" && parts.size() == 2 && Util::Parse::Digits(parts[1], n, 10))
+		else if (parts[0] == "stations" && parts.size() == 2 && Util::Parse::Digits(parts[1], n, 10) && n <= 2147483647)
 			at("/api/v1/stations/{id}", [&] { return station((int)n); });
-		else if (parts[0] == "stations" && parts.size() == 3 && parts[2] == "statistics" && Util::Parse::Digits(parts[1], n, 10))
+		else if (parts[0] == "stations" && parts.size() == 3 && parts[2] == "statistics" && Util::Parse::Digits(parts[1], n, 10) && n <= 2147483647)
 			at("/api/v1/stations/{id}/statistics", [&] { return statistics((int)n); });
 		else if (parts[0] == "statistics" && parts.size() == 1)
 			at("/api/v1/statistics", [&] { return statistics(-1); });
 		else if (parts[0] == "vessels" && parts.size() == 1)
 			at("/api/v1/vessels", [&] { return vessels(request); });
-		else if (parts[0] == "vessels" && parts.size() == 2 && Util::Parse::Digits(parts[1], n, 10))
+		else if (parts[0] == "vessels" && parts.size() == 2 && Util::Parse::Digits(parts[1], n, 10) && n <= 999999999)
 			at("/api/v1/vessels/{mmsi}", [&] { return vessel((uint32_t)n); });
-		else if (parts[0] == "vessels" && parts.size() == 3 && parts[2] == "track" && Util::Parse::Digits(parts[1], n, 10))
+		else if (parts[0] == "vessels" && parts.size() == 3 && parts[2] == "track" && Util::Parse::Digits(parts[1], n, 10) && n <= 999999999)
 			at("/api/v1/vessels/{mmsi}/track", [&] { return track((uint32_t)n, request); });
-		else if (parts[0] == "vessels" && parts.size() == 3 && parts[2] == "visits" && Util::Parse::Digits(parts[1], n, 10))
+		else if (parts[0] == "vessels" && parts.size() == 3 && parts[2] == "visits" && Util::Parse::Digits(parts[1], n, 10) && n <= 999999999)
 			at("/api/v1/vessels/{mmsi}/visits", [&] { return vesselVisits((uint32_t)n); });
 		else if (parts[0] == "places" && parts.size() == 1)
 			at("/api/v1/places", [&] { return places(request); });
@@ -843,7 +845,23 @@ namespace Services
 
 			static bool contains(const char *field, const std::string &needle)
 			{
-				return Util::Convert::toLowerCopy(field).find(needle) != std::string::npos;
+				const std::size_t n = std::strlen(field);
+				for (std::size_t i = 0; i + needle.size() <= n; i++)
+				{
+					std::size_t k = 0;
+					while (k < needle.size() && std::tolower((unsigned char)field[i + k]) == (unsigned char)needle[k])
+						k++;
+					if (k == needle.size())
+						return true;
+				}
+				return false;
+			}
+
+			static bool digits(unsigned long long v, const std::string &needle, bool whole)
+			{
+				char text[24];
+				std::snprintf(text, sizeof(text), "%llu", v);
+				return whole ? needle == text : std::strstr(text, needle.c_str()) != nullptr;
 			}
 
 			static bool has(const std::vector<long long> &list, long long v)
@@ -853,8 +871,8 @@ namespace Services
 
 			bool passes(const Ship &s, std::time_t now) const
 			{
-				if (!q.empty() && !contains(s.shipname, q) && !contains(s.callsign, q) &&
-					std::to_string(s.mmsi).find(q) == std::string::npos && !(s.IMO > 0 && std::to_string(s.IMO) == q))
+				if (!q.empty() && !contains(s.shipname, q) && !contains(s.callsign, q) && !digits(s.mmsi, q, false) &&
+					!(s.IMO > 0 && digits(s.IMO, q, true)))
 					return false;
 				const bool placed = isValidCoord(s.lat, s.lon);
 				if ((box || circle) && !placed)
@@ -995,8 +1013,12 @@ namespace Services
 	Response ApiV1::vessel(uint32_t mmsi)
 	{
 		const std::time_t now = std::time(nullptr);
-		const auto aboard = tracker.riding();
 		DB &db = tracker.ships();
+		bool shown = false;
+		db.withShip(mmsi, [&](const Ship &s, int) { shown = view.passes(s, now); });
+		if (!shown)
+			return Response::problem(404, "Not found", "No vessel " + std::to_string(mmsi) + " is known.");
+		const auto aboard = tracker.riding();
 
 		// the parts kept beside the ship's record, each read under its own lock
 		std::vector<StaticStore::Entry> changes;
@@ -1211,8 +1233,8 @@ namespace Services
 			return Response::problem(404, "Not found", "No place " + uuid + ".");
 		const std::time_t now = std::time(nullptr);
 		int inside = 0;
-		tracker.ships().forEachVisit([&](const Ship &s, const VisitTracker::Visit &v, const PlaceIndex::Entry &at) {
-			if (at.id == e->id && DB::insideNow(s, v, at.metadata->requiresStop(), now) && view.passes(s, now))
+		tracker.ships().forEachVisitAt(e->id, [&](const Ship &s, const VisitTracker::Visit &v, const PlaceIndex::Entry &at) {
+			if (DB::insideNow(s, v, at.metadata->requiresStop(), now) && view.passes(s, now))
 				inside++;
 		});
 
@@ -1267,8 +1289,8 @@ namespace Services
 			return Response::problem(404, "Not found", "No place " + uuid + ".");
 		const std::time_t now = std::time(nullptr);
 		std::vector<std::pair<uint32_t, std::string>> rows;
-		tracker.ships().forEachVisit([&](const Ship &s, const VisitTracker::Visit &v, const PlaceIndex::Entry &at) {
-			if (at.id != e->id || (long long)s.mmsi <= after || !DB::insideNow(s, v, at.metadata->requiresStop(), now) || !view.passes(s, now))
+		tracker.ships().forEachVisitAt(e->id, [&](const Ship &s, const VisitTracker::Visit &v, const PlaceIndex::Entry &at) {
+			if ((long long)s.mmsi <= after || !DB::insideNow(s, v, at.metadata->requiresStop(), now) || !view.passes(s, now))
 				return;
 			std::string row;
 			JSON::Writer w(row);
@@ -1320,8 +1342,8 @@ namespace Services
 		};
 		std::vector<Row> rows;
 		// the stays under way, and those that ended within the window
-		tracker.ships().forEachVisit([&](const Ship &s, const VisitTracker::Visit &v, const PlaceIndex::Entry &at) {
-			if (at.id != e->id || !v.shown(at.metadata->requiresStop()) || !view.passes(s, now))
+		tracker.ships().forEachVisitAt(e->id, [&](const Ship &s, const VisitTracker::Visit &v, const PlaceIndex::Entry &at) {
+			if (!v.shown(at.metadata->requiresStop()) || !view.passes(s, now))
 				return;
 			if (!v.inside() && (std::time_t)MAX(v.entered, v.exited) < since)
 				return;

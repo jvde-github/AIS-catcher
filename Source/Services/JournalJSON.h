@@ -108,11 +108,11 @@ namespace Services
 		else
 		{
 			std::vector<long long> c;
-			if (!parseCursor(from, "evt", 2, c))
+			if (!parseCursor(from, "evt", 2, c) && !parseCursor(from, "evt", 3, c))
 				return badCursor();
-			if ((uint64_t)c[0] != epoch || (uint64_t)c[1] > last)
+			if ((uint64_t)c[0] != epoch || (uint64_t)c.back() > last)
 				return gone("The journal started again since this cursor was given.");
-			last = (uint64_t)c[1];
+			last = (uint64_t)c.back();
 			while (page.size() < want)
 			{
 				if (!journal.since(last, chunk, read))
