@@ -118,6 +118,14 @@ static std::string deviceName(Type t) {
   }
 }
 
+static std::string kindLabel(const std::vector<std::unique_ptr<Receiver>> &receivers, std::size_t k) {
+  const Type type = receivers[k]->getDeviceManager().InputType();
+  int nth = 0;
+  for (std::size_t i = 0; i <= k; i++)
+    nth += receivers[i]->getDeviceManager().InputType() == type;
+  return deviceName(type) + " #" + std::to_string(nth);
+}
+
 // what a receiver is called on the status pages: its own name, else its kind of device with its
 // place among the receivers of that kind ("RTL-SDR #1", "Serial #2"), as the control panel names it
 static std::string receiverLabel(const std::vector<std::unique_ptr<Receiver>> &receivers, std::size_t k, Device::Device *device) {
@@ -126,11 +134,7 @@ static std::string receiverLabel(const std::vector<std::unique_ptr<Receiver>> &r
     return r.getDescription();
   if (device->getSerial() == ".")
     return "Console";
-  const Type type = receivers[k]->getDeviceManager().InputType();
-  int nth = 0;
-  for (std::size_t i = 0; i <= k; i++)
-    nth += receivers[i]->getDeviceManager().InputType() == type;
-  return deviceName(type) + " #" + std::to_string(nth);
+  return kindLabel(receivers, k);
 }
 
 #ifdef HASAPI
@@ -199,10 +203,8 @@ void Engine::resolveStations() {
   for (std::size_t k = 0; k < receivers.size(); k++) {
     const Receiver &r = *receivers[k];
     const StationRegistry::Station *s = stations.find(r.getStation());
-    Info() << "Receiver " << k + 1 << ": station " << r.getStation() << " \""
-           << (s ? s->name : std::string()) << "\""
-           << (r.hasPosition() ? " at " + std::to_string(r.getLat()) + ", " + std::to_string(r.getLon())
-                               : std::string(", no position"));
+    Info() << "Receiver " << k + 1 << " (" << (r.getDescription().empty() ? kindLabel(receivers, k) : r.getDescription()) << "): station "
+           << r.getStation() << " \"" << (s ? s->name : std::string()) << "\"" << (r.hasPosition() ? "" : ", no position");
   }
 }
 
@@ -320,23 +322,30 @@ void Engine::run(Site &on, ControlCore *control) {
   // A server's own tracker is routed the same way.
   bool any_zoned = false;
   const uint64_t unzoned = resolveUnzoned(receivers, any_zoned);
-  const auto route = [&](const std::vector<std::string> &zones, uint64_t groups_in, const char *what) {
+  const auto route = [&](const std::vector<std::string> &zones, uint64_t groups_in, const std::string &what) {
     uint64_t mask = groups_in;
     if (!zones.empty()) {
       mask &= resolveZones(receivers, zones);
-      if (!mask)
-        Warning() << what << " has zone filter but no matching receivers — will receive nothing";
+      if (!mask) {
+        std::string list;
+        for (const auto &z : zones)
+          list += (list.empty() ? "" : ", ") + z;
+        Warning() << what << " receives nothing: no input is in its zone" << (zones.size() > 1 ? "s " : " ") << list;
+      }
     } else if (any_zoned) {
       mask &= unzoned;
       if (!mask)
-        Warning() << what << " without zones while every receiver has one — will receive nothing";
+        Warning() << what << " receives nothing: it has no zone, and every input has one";
     }
     return mask;
   };
+  std::map<std::string, int> nth;
   for (auto &o : msg) {
+    const std::string label = o->getType() + " #" + std::to_string(++nth[o->getType()]);
     if (o->zones.empty() && !any_zoned)
       continue;
-    o->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(route(o->zones, o->StreamIn<AIS::Message>::getGroupsIn(), "Output")));
+    o->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(route(o->zones, o->StreamIn<AIS::Message>::getGroupsIn(),
+                                                               o->getDescription().empty() ? label : o->getDescription())));
   }
 
   for (int i = 0; i < (int)receivers.size(); i++) {
@@ -406,7 +415,7 @@ void Engine::run(Site &on, ControlCore *control) {
   if (tracker)
     feed(tracker, GROUPS_ALL);
   for (const auto &own : on.ownTrackers())
-    feed(own.tracker, route(own.spec.zones, own.spec.groups_in, "Web viewer"));
+    feed(own.tracker, route(own.spec.zones, own.spec.groups_in, "A server with ships of its own"));
 #endif
 
   if (control)

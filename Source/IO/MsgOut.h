@@ -168,6 +168,7 @@ namespace IO
 		virtual void Start() {}
 		virtual void Stop() {}
 		const std::string &getType() const { return type; }
+		const std::string &getDescription() const { return description; }
 
 		// from the engine's main loop: the decoding thread only ever sends
 		virtual void poll() {}
