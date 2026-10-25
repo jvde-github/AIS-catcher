@@ -73,7 +73,6 @@ export function servicesRailItems(cfg, section, { port, add }) {
         ...withMain(live.servers || listOf(cfg.services)).map((sv, i) => ({ key: sv.main ? 'main' : 'srv' + i, label: serverName(sv) + (sv.main && port ? ' · ' + port : ''),
             dot: sv.main ? undefined : sv.active !== false })),
         { key: 'add', label: '+ Add server', onClick: add },
-        { key: 'tester', label: 'Try the API' },
         { key: 'ha', label: 'Home Assistant', dot: !!(ha && ha.url) },
         { key: 'webhooks', label: 'Webhooks' + (Array.isArray(hooks) && hooks.length ? ' · ' + hooks.length : '') }];
 }
@@ -110,13 +109,15 @@ export function createServicesSection(pane, { select, follow, changed, stations,
         return [
             ...editor.state.list.map((sv, i) => ({ key: sv.main ? 'main' : 'srv' + i, title: serverName(sv),
                 actions: box => {
+                    const port = testerPort(sv);
+                    if (port) box.append(el('button', 'st-btn st-btn--sm', { type: 'button', text: 'Try the API', onClick: () => tryOn(port) }));
                     box.append(docLink(DOCS.services));
                     editor.actions(box, i, { deleted: () => { page = 'main'; drawServers(); }, rerender: drawServers });
                 },
                 render: (main, title) => editor.renderDetail(main, i, { title, rerender: drawServers }) })),
             { key: 'tester', title: 'Try the API',
                 actions: box => box.append(docLink(DOCS.api, 'API docs'), docLink(DOCS.mcp, 'MCP docs')),
-                render: main => renderApiTester(main, { servers: testerServers(), highlight }) }
+                render: main => renderApiTester(main, { servers: testerServers(), highlight, port: tryPort }) }
         ];
     }
     function drawServers() {
@@ -131,6 +132,20 @@ export function createServicesSection(pane, { select, follow, changed, stations,
         serversHost.replaceChildren(main);
         if (!serversHost.hidden) follow(page);
         changed();
+    }
+
+    let tryPort = null;
+    function tryOn(port) {
+        tryPort = port;
+        if (current === 'tester') drawServers();
+        else select('tester');
+    }
+    // the port a server can be tried on: one that serves something the tester asks for
+    const TRIED = ['api', 'mcp', 'geojson', 'kml', 'metrics'];
+    function testerPort(sv) {
+        const port = sv.main ? editor.state.viewerPort : Number(sv.port);
+        const serve = servedKeys(sv, !!sv.main);
+        return port && sv.active !== false && serve.some(k => TRIED.includes(k)) ? port : null;
     }
 
     // the servers as the API tester offers them, with what each serves
@@ -149,14 +164,15 @@ export function createServicesSection(pane, { select, follow, changed, stations,
             const bind = editor.state.bind;
             const choices = stations();
             const servers = loaded ? editor.state.list : withMain(listOf(cfg.services));
-            const rows = servers.map((sv, i) => (sv.main
+            const rows = servers.map((sv, i) => ({ ...(sv.main
                 ? { key: 'main', name: 'Main', addr: `${bind}:${port() || '–'}`, served: servedKeys(sv, true), readers: readersOf(sv, bind), view: sv.view, ids: sv.station_id }
                 : { key: 'srv' + i, name: serverName(sv), addr: `${sv.bind || '127.0.0.1'}:${sv.port ?? '–'}`,
-                    served: sv.active === false ? [] : servedKeys(sv), readers: sv.active === false ? 'Switched off' : readersOf(sv, sv.bind || '127.0.0.1'), view: sv.view, ids: sv.station_id }));
+                    served: sv.active === false ? [] : servedKeys(sv), readers: sv.active === false ? 'Switched off' : readersOf(sv, sv.bind || '127.0.0.1'), view: sv.view, ids: sv.station_id }),
+                tryPort: loaded ? testerPort(sv) : null }));
             // what each shows says something once there are stations to choose from, or a view set in the file
             const showsCol = choices.length >= 2 || rows.some(r => (r.view && Object.keys(r.view).length) || r.ids !== undefined);
             const table = el('table', 'st-svcgrid', {},
-                el('tr', '', {}, ['Server', ...SERVICE_COLUMNS.map(c => c.label), 'Who can read it', ...(showsCol ? ['Shows'] : [])].map(t => el('th', '', { text: t }))),
+                el('tr', '', {}, ['Server', ...SERVICE_COLUMNS.map(c => c.label), 'Who can read it', ...(showsCol ? ['Shows'] : []), ''].map(t => el('th', '', { text: t }))),
                 rows.map(r => el('tr', '', {},
                     el('td', '', {}, el('button', 'st-svcgrid__name', { type: 'button', onClick: () => select(r.key) },
                         el('strong', '', { text: r.name }), el('small', '', { text: r.addr }))),
@@ -165,7 +181,8 @@ export function createServicesSection(pane, { select, follow, changed, stations,
                         return el('td', 'st-svcgrid__ck' + (on ? ' is-on' : ''), { text: on ? '✓' : '·', title: c.label + (on ? ' at ' + c.path : ': off') });
                     }),
                     el('td', '', { text: r.readers }),
-                    showsCol ? el('td', '', { text: showsText(r.view, choices, r.ids) }) : null)));
+                    showsCol ? el('td', '', { text: showsText(r.view, choices, r.ids) }) : null,
+                    el('td', 'st-svcgrid__try', {}, r.tryPort ? el('button', 'st-link', { type: 'button', text: 'Try ›', title: `Try the API on ${r.name}`, onClick: () => tryOn(r.tryPort) }) : null))));
             const haCfg = (ha?.loaded ? ha.data : cfg.mqtt_state) || {};
             const hookList = (hooks?.loaded ? hooks.data : cfg.webhooks) || [];
             const more = el('div', 'st-svcmore', {},

@@ -330,7 +330,7 @@ static bool routeMatches(const char *pattern, const std::string &path) {
 // what the API tester asks for: a route of /api/v1, or one of the feeds
 static bool tryable(const std::string &target) {
   const std::string path = target.substr(0, target.find('?'));
-  static const char *FEEDS[] = {"/geojson", "/allpath.geojson", "/metrics"};
+  static const char *FEEDS[] = {"/geojson", "/allpath.geojson", "/kml", "/metrics"};
   for (const char *feed : FEEDS)
     if (path == feed)
       return true;

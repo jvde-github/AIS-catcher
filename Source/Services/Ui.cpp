@@ -198,7 +198,7 @@ namespace Services
 		}
 		if (request.path.compare(0, 7, "/tiles/") == 0)
 			return tile(request.path, response);
-		if (request.path.compare(0, 5, "/api/") == 0 || request.path == "/kml" || request.path == "/ships.json" || request.path == "/stat.json")
+		if (request.path.compare(0, 5, "/api/") == 0 || request.path == "/ships.json" || request.path == "/stat.json")
 		{
 			const bool answered = viewerData(request, response);
 			response.cors = true;
@@ -446,11 +446,6 @@ namespace Services
 			response = Response::json(valid ? UiFormat::placeShips(db, UINT32_MAX, "", code, "expected", 24, 0, 10, keep)
 								  : std::string("{\"error\":\"code must be 1-8 letters or digits\"}"));
 		}
-		else if (p == "/kml" && options.kml)
-		{
-			response = Response::json(UiFormat::kml(db, keep));
-			response.type = "application/vnd.google-earth.kml+xml";
-		}
 		else if ((p == "/api/sse" || p == "/api/signal") && options.realtime)
 			response.stream = 1u << (p == "/api/sse" ? IO::SSE::NMEA : IO::SSE::SIGNAL);
 		else if (p == "/api/log" && options.log)
@@ -647,7 +642,7 @@ namespace Services
 			.kv("context", options.context).kv("station", name).kv("webcontrol_http", options.webcontrol_http)
 			.key("features").beginObject().kv("share_location", sharing).kv("save_messages", options.msg).kv("replay", options.replay)
 			.kv("realtime", options.realtime).kv("log", options.log).kv("decoder", options.decoder).kv("managed", options.managed)
-			.kv("places", (bool)tracker.places()).kv("outlines", view.place_geometry).kv("geojson", spec.geojson).kv("kml", options.kml).kv("about_md", plugins.isAboutPresent());
+			.kv("places", (bool)tracker.places()).kv("outlines", view.place_geometry).kv("geojson", spec.geojson).kv("kml", spec.kml).kv("about_md", plugins.isAboutPresent());
 		// the community feed, as the running engine has it
 		if (engine)
 			engine(w, ENGINE_SHARING);

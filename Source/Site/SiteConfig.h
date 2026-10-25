@@ -39,7 +39,7 @@ struct ViewerOptions
 {
 	// frame_ancestors: the pages that may frame the server's, its CSP's frame-ancestors; any when empty
 	std::string station, station_link, webcontrol_http, context = "settings", frame_ancestors, about;
-	bool realtime = false, log = false, decoder = false, replay = true, msg = false, kml = false;
+	bool realtime = false, log = false, decoder = false, replay = true, msg = false;
 	bool managed = false; // the viewer of managed mode, beside its control panel
 	std::vector<std::string> mbtiles, mboverlay, fstiles, fsoverlay, plugins, styles, plugin_dirs;
 
@@ -47,7 +47,7 @@ struct ViewerOptions
 	{
 		return station == o.station && station_link == o.station_link && webcontrol_http == o.webcontrol_http && context == o.context &&
 			   frame_ancestors == o.frame_ancestors && about == o.about && realtime == o.realtime && log == o.log &&
-			   decoder == o.decoder && replay == o.replay && msg == o.msg && kml == o.kml &&
+			   decoder == o.decoder && replay == o.replay && msg == o.msg &&
 			   mbtiles == o.mbtiles && mboverlay == o.mboverlay && fstiles == o.fstiles && fsoverlay == o.fsoverlay &&
 			   plugins == o.plugins && styles == o.styles && plugin_dirs == o.plugin_dirs && managed == o.managed;
 	}
@@ -94,7 +94,7 @@ struct ServerSpec
 	int port = 0;
 	std::string bind = "127.0.0.1";
 	// what it serves: the map unless switched off, the rest when switched on
-	bool ui = true, api = false, mcp = false, system = false, geojson = false, metrics = false;
+	bool ui = true, api = false, mcp = false, system = false, geojson = false, metrics = false, kml = false;
 	TrackerSpec tracking;
 	ViewFilter view;			 // which ships it shows of what its tracker keeps
 	std::vector<int> stations;	 // the stations station_id names, which its view keeps to
@@ -115,15 +115,16 @@ struct ServerSpec
 		if (mcp) out.push_back("mcp");
 		if (system) out.push_back("system");
 		if (geojson) out.push_back("geojson");
+		if (kml) out.push_back("kml");
 		if (metrics) out.push_back("metrics");
 		return out;
 	}
-	bool serves() const { return ui || api || mcp || system || geojson || metrics; }
+	bool serves() const { return ui || api || mcp || system || geojson || metrics || kml; }
 
 	bool operator==(const ServerSpec &o) const
 	{
 		return port == o.port && bind == o.bind && ui == o.ui && api == o.api && mcp == o.mcp && system == o.system &&
-			   geojson == o.geojson && metrics == o.metrics && tracking == o.tracking && view == o.view && stations == o.stations &&
+			   geojson == o.geojson && metrics == o.metrics && kml == o.kml && tracking == o.tracking && view == o.view && stations == o.stations &&
 			   viewer == o.viewer && keys == o.keys && open == o.open && main == o.main;
 	}
 	bool operator!=(const ServerSpec &o) const { return !(*this == o); }

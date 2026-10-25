@@ -26,89 +26,6 @@
 
 namespace Services {
 
-struct SpriteRect {
-  int x, y, w, h;
-};
-
-// Offsets into icons.png. Indexed by ShippingClass; vessel rows sit at y=68 at
-// rest and SPRITE_UNDERWAY_DY lower when moving.
-static const SpriteRect SPRITES[] = {
-    {120, 68, 20, 20}, // CLASS_OTHER
-    {120, 68, 20, 20}, // CLASS_UNKNOWN
-    {0, 68, 20, 20},   // CLASS_CARGO
-    {140, 68, 20, 20}, // CLASS_B
-    {40, 68, 20, 20},  // CLASS_PASSENGER
-    {60, 68, 20, 20},  // CLASS_SPECIAL
-    {80, 68, 20, 20},  // CLASS_TANKER
-    {100, 68, 20, 20}, // CLASS_HIGHSPEED
-    {140, 68, 20, 20}, // CLASS_FISHING
-    {0, 25, 25, 25},   // CLASS_PLANE
-    {0, 0, 25, 25},    // CLASS_HELICOPTER
-    {20, 50, 20, 20},  // CLASS_STATION
-    {0, 50, 20, 20},   // CLASS_ATON
-    {40, 50, 20, 20},  // CLASS_SARTEPIRB
-};
-
-static_assert(sizeof(SPRITES) / sizeof(SPRITES[0]) == CLASS_SARTEPIRB + 1,
-              "SPRITES out of sync with ShippingClass");
-
-static const int SPRITE_UNDERWAY_DY = 20;
-
-static void appendSprite(std::string &out, const Ship &ship) {
-  if (ship.shipclass < 0 || ship.shipclass > CLASS_SARTEPIRB)
-    return;
-
-  SpriteRect s = SPRITES[ship.shipclass];
-  if (ship.shipclass <= CLASS_FISHING && ship.speed != SPEED_UNDEFINED &&
-      ship.speed > 0.5)
-    s.y += SPRITE_UNDERWAY_DY;
-
-  out += "<x>" + std::to_string(s.x) + "</x><y>" + std::to_string(s.y) +
-         "</y><w>" + std::to_string(s.w) + "</w><h>" + std::to_string(s.h) +
-         "</h>";
-}
-
-static void appendXMLEscaped(std::string &out, const std::string &s) {
-  for (char c : s)
-    switch (c) {
-    case '&':
-      out += "&amp;";
-      break;
-    case '<':
-      out += "&lt;";
-      break;
-    case '>':
-      out += "&gt;";
-      break;
-    default:
-      out += c;
-    }
-}
-
-static bool shipKML(std::string &kmlString, const Ship &ship) {
-  if (!isValidCoord(ship.lat, ship.lon))
-    return false;
-
-  std::string shipNameStr(ship.shipname);
-
-  const std::string name =
-      !shipNameStr.empty() ? shipNameStr : std::to_string(ship.mmsi);
-  const std::string styleId = "style" + std::to_string(ship.mmsi);
-  const std::string coordinates =
-      std::to_string(ship.lon) + "," + std::to_string(ship.lat) + ",0";
-
-  kmlString += "<Style id=\"" + styleId +
-               "\"><IconStyle><scale>1</scale><heading>" + std::to_string(ship.cog) +
-               "</heading><Icon><href>/icons.png</href>";
-  appendSprite(kmlString, ship);
-  kmlString += "</Icon></IconStyle></Style><Placemark><name>";
-  appendXMLEscaped(kmlString, name);
-  kmlString += "</name><styleUrl>#" + styleId +
-               "</styleUrl><Point><coordinates>" + coordinates +
-               "</coordinates></Point></Placemark>";
-  return true;
-}
-
 void UiFormat::shipBody(JSON::Writer &w, const Ship &ship, long int delta_time,
                         bool station_known) {
   w.kv("mmsi", ship.mmsi);
@@ -397,22 +314,6 @@ std::string UiFormat::changes(DB &db, int mmsi) {
 
 std::string UiFormat::ship(DB &db, int mmsi) {
   return vessel(db, (uint32_t)mmsi, [](JSON::Writer &, const Ship &, int) {});
-}
-
-std::string UiFormat::kml(DB &db, const DB::Keep &keep) {
-  std::lock_guard<std::mutex> lock(db.mtx);
-
-  db.content.assign("<?xml version=\"1.0\" encoding=\"UTF-8\"?><kml xmlns = "
-                 "\"http://www.opengis.net/kml/2.2\"><Document>");
-  std::time_t now = time(nullptr);
-
-  db.forEachRecentUnlocked(now, false, 0, [&](int, const Ship &ship, long int) {
-    if (!keep || keep(ship))
-      shipKML(db.content, ship);
-  });
-
-  db.content += "</Document></kml>";
-  return db.content;
 }
 
 std::string UiFormat::message(DB &db, uint32_t mmsi) {

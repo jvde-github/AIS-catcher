@@ -256,6 +256,7 @@ bool Config::serverKey(ServerEntry &e, int key, const std::string &value, const 
   case AIS::KEY_SETTING_MCP: spec.mcp = Util::Parse::Switch(value); return true;
   case AIS::KEY_SETTING_SYSTEM: spec.system = Util::Parse::Switch(value); return true;
   case AIS::KEY_SETTING_GEOJSON: spec.geojson = Util::Parse::Switch(value); return true;
+  case AIS::KEY_SETTING_KML: spec.kml = Util::Parse::Switch(value); return true;
   case AIS::KEY_SETTING_PROME:
   case AIS::KEY_SETTING_METRICS: spec.metrics = Util::Parse::Switch(value); return true;
   case AIS::KEY_SETTING_PUBLIC: spec.open = Util::Parse::Switch(value); return true;
@@ -872,11 +873,16 @@ void Config::setReceiverFromArray(const JSON::Member &m) {
     throw std::runtime_error("Receiver settings need to be an \"array\" of "
                              "\"objects\" in config file.");
 
+  int n = 0;
   for (const auto &v : m.Get().getArray()) {
+    n++;
     if (!isActiveObject(v))
       continue;
-
-    setReceiverfromJSON(v.getObject().getMembers(), false);
+    try {
+      setReceiverfromJSON(v.getObject().getMembers(), false);
+    } catch (const std::exception &e) {
+      throw std::runtime_error("receiver " + std::to_string(n) + ": " + e.what());
+    }
   }
 }
 
@@ -902,7 +908,7 @@ void Config::setReceiverfromJSON(const std::vector<JSON::Member> &members,
   if (!unspecAllowed) {
     if (serial.empty() && input.empty())
       throw std::runtime_error(
-          "receiver needs to have a serial or input specified in Config.");
+          "needs \"input\", its kind of device, or a \"serial\".");
   }
 
   if ((!serial.empty() || !input.empty())) {

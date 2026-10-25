@@ -38,11 +38,12 @@ export function createRail(nav, { sections, open, shown }) {
             if (!here) return g;
             items.forEach(it => {
                 if (it.onClick) return g.append(el('button', 'st-rail__add', { type: 'button', text: it.label, onClick: it.onClick }));
-                // on is the usual state and goes unmarked: only an item switched off shows it
+                // on goes unmarked: only off, or on but losing data (amber: settings, red: now)
                 const off = it.dot === false;
+                const why = off ? null : it.warn || it.bad;
                 g.append(el('button', 'st-rail__item' + (off ? ' st-rail__item--off' : ''), { type: 'button', 'aria-current': isCurrent(it) ? 'true' : null,
-                    title: off ? 'Off' : null, onClick: () => go(it.key) },
-                    off ? el('span', 'st-rail__dot') : null,
+                    title: off ? 'Off' : why, 'aria-label': why ? `${it.label}: ${why}` : null, onClick: () => go(it.key) },
+                    off ? el('span', 'st-rail__dot') : why ? el('span', 'st-rail__mark st-rail__mark--' + (it.warn ? 'warn' : 'bad')) : null,
                     el('span', 'st-rail__label', { text: it.label, title: it.label })));
             });
             if (sec.add)

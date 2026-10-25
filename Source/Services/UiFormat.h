@@ -51,7 +51,6 @@ struct UiFormat {
   static std::string ship(DB &db, int mmsi);
   static std::string changes(DB &db, int mmsi);
   static std::string message(DB &db, uint32_t mmsi);
-  static std::string kml(DB &db, const DB::Keep &keep = DB::Keep());
 
   // `oldest`: a view's cap on how far back tracks go, over the tracker's own
   static std::string path(DB &db, uint32_t mmsi, std::time_t oldest = 0);

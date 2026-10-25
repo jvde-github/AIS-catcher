@@ -13,6 +13,7 @@ const SVG = {
 const FEEDS = [
     { path: '/geojson', service: 'geojson', group: 'Feeds', summary: 'The ships as GeoJSON.', params: [] },
     { path: '/allpath.geojson', service: 'geojson', group: 'Feeds', summary: 'The ships\' tracks as GeoJSON.', params: [] },
+    { path: '/kml', service: 'kml', group: 'Feeds', summary: 'The ships as KML, for Google Earth.', params: [] },
     { path: '/metrics', service: 'metrics', group: 'Feeds', summary: 'Message counts for Prometheus.', params: [] }
 ];
 
@@ -42,7 +43,8 @@ const kept = { mode: 'api', port: null, path: '/api/v1/vessels', values: {}, key
 
 // `servers`: [{ label, port, serve, bind }], each with what it serves;
 // `highlight`: text to coloured JSON
-export function renderApiTester(main, { servers, highlight }) {
+export function renderApiTester(main, { servers, highlight, port }) {
+    if (port) kept.port = port;
     main.append(el('p', 'field-desc st-svcs__lead', { text: 'Send a request to one of this station\'s servers.' }));
     const modes = [['api', 'API'], ['mcp', 'MCP']];
     const seg = el('div', 'st-seg st-try__mode', { role: 'radiogroup', 'aria-label': 'What to try' });

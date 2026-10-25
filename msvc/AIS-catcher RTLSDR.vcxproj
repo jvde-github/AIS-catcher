@@ -90,6 +90,7 @@
     <ClCompile Include="..\Source\Services\Routes.cpp" />
     <ClCompile Include="..\Source\Services\Server.cpp" />
     <ClCompile Include="..\Source\Services\GeoJSON.cpp" />
+    <ClCompile Include="..\Source\Services\Kml.cpp" />
     <ClCompile Include="..\Source\Services\Prometheus.cpp" />
     <ClCompile Include="..\Source\Services\Streams.cpp" />
     <ClCompile Include="..\Source\Services\System.cpp" />
@@ -194,6 +195,7 @@
     <ClInclude Include="..\Source\Services\Routes.h" />
     <ClInclude Include="..\Source\Services\Server.h" />
     <ClInclude Include="..\Source\Services\GeoJSON.h" />
+    <ClInclude Include="..\Source\Services\Kml.h" />
     <ClInclude Include="..\Source\Services\Prometheus.h" />
     <ClInclude Include="..\Source\Services\Streams.h" />
     <ClInclude Include="..\Source\Services\System.h" />

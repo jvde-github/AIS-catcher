@@ -418,6 +418,7 @@ if(API)
         Source/Services/Http.cpp
         Source/Services/Server.cpp
         Source/Services/GeoJSON.cpp
+        Source/Services/Kml.cpp
         Source/Services/Prometheus.cpp
         Source/Services/ApiV1.cpp
         Source/Services/Mcp.cpp

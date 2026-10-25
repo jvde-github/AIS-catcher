@@ -1471,6 +1471,11 @@ import { ICONS } from './icons.js';
                     const what = dir === 'out' ? 'output' : 'input';
                     if (n === null || n === undefined) link.remove();
                     else link.textContent = n === 0 ? `no ${what}s` : n === 1 ? `1 ${what}` : `${n} ${what}s`;
+                    const problem = this.config.problem?.(item);
+                    if (problem) {
+                        if (n === 0) link.classList.add('st-routing__link--warn');
+                        box.append(el('p', 'st-routing__problem st-routing__problem--' + problem.tone, {}, problem.text));
+                    }
                 });
             };
         }
@@ -1838,6 +1843,11 @@ import { ICONS } from './icons.js';
         }
 
         async save() {
+            const problem = this.config.check?.(this.data);
+            if (problem) {
+                App.notify('error', problem);
+                return;
+            }
             // the rows saved are rows like any other now
             this.freshItems = new WeakSet();
             try {

@@ -65,6 +65,52 @@ function routes(o, r) {
     if (o.zones.length) return o.zones.some(z => zi.includes(z));
     return !zi.length;
 }
+// An output as the routing reads it, from its row ('sharing' the community map's settings)
+export function outputOf(type, item) {
+    if (type === 'sharing')
+        return { zones: Array.isArray(item.sharing_zone) ? item.sharing_zone : [], liveOnly: !String(item.sharing_key || '').trim() };
+    return { zones: Array.isArray(item.zone) ? item.zone : [] };
+}
+
+// Why a switched-on output receives nothing from the switched-on inputs `receivers`, in one line
+// that says what to do; null when one reaches it
+export function outputProblem(o, receivers) {
+    const on = (receivers || []).filter(r => r.active !== false);
+    if (on.some(r => routes(o, r))) return null;
+    if (!on.length) return 'No input is switched on.';
+    if (o.liveOnly && !on.some(r => LIVE_INPUTS.has(String(r.input || '').toUpperCase())))
+        return 'Without a sharing key it takes radio inputs only, and none is switched on.';
+    if (o.zones.length) {
+        const off = (receivers || []).some(r => r.active === false && routes(o, r));
+        return `No switched-on input is connected to ${o.zones.join(', ')}${off ? ', only switched-off ones' : ''}: connect one in Flow.`;
+    }
+    return 'Every switched-on input has a zone, and this output takes only inputs without one: connect it in Flow.';
+}
+
+// What the running receiver says is wrong with a switched-on output, from its statistics; null when
+// nothing is. UDP has no connection to fail.
+export function outputLiveProblem(type, s) {
+    if (!s || type === 'udp') return null;
+    if (type === 'http')
+        return s.connect_ok === 0 && s.connect_fail > 0 ? `Every upload has failed so far (${s.connect_fail}).` : null;
+    return !s.connected && s.connect_fail > 0 ? `Cannot connect: ${s.connect_fail} ${s.connect_fail === 1 ? 'attempt' : 'attempts'} failed.` : null;
+}
+
+// The statistics of each switched-on output by its key ("udp:0", "sharing"): they list the
+// switched-on outputs of each type in the configuration's order
+export function statsByKey(stat, outputs) {
+    const pools = {}, out = new Map();
+    (stat.outputs || []).forEach(o => {
+        const type = o.description === 'Community Feed' ? 'sharing' : STAT_TYPES[o.type];
+        if (type) (pools[type] = pools[type] || []).push(o);
+    });
+    outputs.forEach(o => {
+        const m = o.active && pools[o.type] && pools[o.type].shift();
+        if (m) out.set(o.key, m.stats);
+    });
+    return out;
+}
+
 // how many switched-on outputs take this input
 export function inputRouting(item) {
     return ConfigStore.fetch().then(cfg => collectOutputs(cfg).filter(o => o.active && routes(o, item)).length).catch(() => null);
@@ -74,6 +120,19 @@ export function outputRouting(item) {
     const zones = Array.isArray(item.zone) ? item.zone : Array.isArray(item.sharing_zone) ? item.sharing_zone : [];
     const o = { zones, liveOnly: item.sharing !== undefined && !String(item.sharing_key || '').trim() };
     return ConfigStore.fetch().then(cfg => (cfg.receiver || []).filter(r => r.active !== false && routes(o, r)).length).catch(() => null);
+}
+
+// an input's own zones and its engines', as Flow has edited them, onto `row`
+function setInputZones(row, edited) {
+    if (!row || !edited) return;
+    setZones(row, 'zone', edited.zone || []);
+    if (Array.isArray(row.engines) && Array.isArray(edited.engines))
+        row.engines.forEach((e, k) => { if (e && edited.engines[k]) setZones(e, 'zone', edited.engines[k].zone || []); });
+}
+// a zone off an input: its own, and its engines', which route as its own do
+function takeZone(r, z) {
+    r.zone = (r.zone || []).filter(x => x !== z);
+    (r.engines || []).forEach(e => { if (e && Array.isArray(e.zone)) e.zone = e.zone.filter(x => x !== z); });
 }
 
 function setZones(obj, key, zones) {
@@ -139,7 +198,7 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
 
     async function save() {
         const saved = await editor.write(cfg => {
-            (cfg.receiver || []).forEach((r, i) => { if (flow.inputs[i]) setZones(r, 'zone', flow.inputs[i].zone); });
+            (cfg.receiver || []).forEach((r, i) => setInputZones(r, flow.inputs[i]));
             flow.outputs.forEach(o => {
                 if (o.key === 'sharing') setZones(cfg, 'sharing_zone', o.zones);
                 else if (o.index !== undefined) {
@@ -158,7 +217,7 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
     const outputZonesOf = key => flow.outputs.find(o => o.key === key)?.zones;
     function syncZones() {
         const { inputs, outputs, outputType } = pages();
-        if (inputs) flow.inputs.forEach((r, i) => { if (inputs.data[i]) setZones(inputs.data[i], 'zone', r.zone); });
+        if (inputs) flow.inputs.forEach((r, i) => setInputZones(inputs.data[i], r));
         if (outputs && outputType === 'sharing') setZones(outputs.data, 'sharing_zone', outputZonesOf('sharing'));
         else if (outputs && outputs.config.isList)
             outputs.data.forEach((row, i) => { const z = outputZonesOf(`${outputType}:${i}`); if (z) setZones(row, 'zone', z); });
@@ -178,12 +237,12 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
         touched();
     }
     function dropFromZone(z, side, idx) {
-        if (side === 'in') flow.inputs[idx].zone = (flow.inputs[idx].zone || []).filter(x => x !== z);
+        if (side === 'in') takeZone(flow.inputs[idx], z);
         else { const o = flow.outputs.find(x => x.key === idx); o.zones = o.zones.filter(x => x !== z); }
         touched();
     }
     function dropZone(z) {
-        flow.inputs.forEach(r => { r.zone = (r.zone || []).filter(x => x !== z); });
+        flow.inputs.forEach(r => takeZone(r, z));
         flow.outputs.forEach(o => { o.zones = o.zones.filter(x => x !== z); });
         touched();
     }
@@ -197,15 +256,17 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
             n.chips.replaceChildren(...inputZones(r).map(zoneChip));
             const to = flow.outputs.filter(o => routes(o, r));
             n.card.dataset.armed = String(armed.from === i);
-            n.card.dataset.nowhere = String(!to.length);
+            n.card.dataset.nowhere = String(r.active !== false && !to.length);
             n.line.textContent = n.station + (to.length ? '' : (n.station ? ' · ' : '') + 'goes nowhere');
         });
-        const radio = flow.inputs.some(r => LIVE_INPUTS.has(String(r.input || '').toUpperCase()));
+        // what reaches an output: the inputs switched on, as when the receiver runs
+        const on = flow.inputs.filter(r => r.active !== false);
+        const radio = on.some(r => LIVE_INPUTS.has(String(r.input || '').toUpperCase()));
         nodes.outputs.forEach(n => {
             const o = flow.outputs.find(x => x.key === n.key);
             n.chips.replaceChildren(...o.zones.map(zoneChip));
-            const from = flow.inputs.filter(r => routes(o, r));
-            n.card.dataset.nothing = String(!from.length);
+            const from = on.filter(r => routes(o, r));
+            n.card.dataset.nothing = String(o.active && !from.length);
             n.line.textContent = !from.length ? (o.liveOnly && !radio ? 'Radio inputs only, until it has a sharing key' : 'Receives nothing')
                 : o.fixed ? 'Every input' : o.zones.length ? 'Its connections' : o.liveOnly ? 'Radio inputs without a zone, until it has a key' : 'Inputs without a zone';
         });
@@ -271,10 +332,12 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
         const rows = zones.map(z => {
             const member = (label, side, idx) => el('span', 'st-flow__member', {}, label,
                 el('button', 'st-flow__drop', { type: 'button', text: '×', title: `Take ${label} out of ${z}`, onClick: () => dropFromZone(z, side, idx) }));
-            const ins = flow.inputs.map((r, i) => ((r.zone || []).includes(z) ? member(r.label, 'in', i) : null)).filter(Boolean);
+            // an input's engines connect it as its own zones do
+            const ins = flow.inputs.map((r, i) => (inputZones(r).includes(z) ? member(r.label, 'in', i) : null)).filter(Boolean);
             const outs = flow.outputs.filter(o => o.zones.includes(z)).map(o => member(o.name, 'out', o.key));
+            const none = what => el('span', 'st-flow__missing', { text: `no ${what}` });
             return el('div', 'st-flow__zone', {}, zoneChip(z),
-                el('span', 'st-flow__members', {}, ...ins, el('span', 'st-flow__arrow', { text: '→' }), ...outs),
+                el('span', 'st-flow__members', {}, ...(ins.length ? ins : [none('input')]), el('span', 'st-flow__arrow', { text: '→' }), ...(outs.length ? outs : [none('output')])),
                 el('button', 'st-link', { type: 'button', text: 'Remove', onClick: () => dropZone(z) }));
         });
         list.replaceChildren(el('h3', 'st-section__title', { text: 'Connections' }), ...rows);
@@ -299,19 +362,14 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
         fetch(OUTPUT_STATS)
             .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
             .then(stat => {
-                // the statistics list the switched-on outputs of each type in the configuration's order
-                const pools = {};
-                (stat.outputs || []).forEach(o => {
-                    const type = o.description === 'Community Feed' ? 'sharing' : STAT_TYPES[o.type];
-                    if (type) (pools[type] = pools[type] || []).push(o);
-                });
+                const byKey = statsByKey(stat, outputs);
                 outputs.forEach(o => {
-                    const m = o.active && pools[o.type] && pools[o.type].shift();
+                    const m = byKey.get(o.key);
                     if (!m) return putStats(o.stats, []);
-                    putStats(o.stats, statParts(o.type, m.stats));
+                    putStats(o.stats, statParts(o.type, m));
                     // a connection type says whether it is connected; UDP and HTTP have no connection to report
                     if (o.type !== 'udp' && o.type !== 'http')
-                        setStatus(o.status, m.stats.connected ? 'ok' : 'bad', m.stats.connected ? 'Connected' : 'Not connected');
+                        setStatus(o.status, m.connected ? 'ok' : 'bad', m.connected ? 'Connected' : 'Not connected');
                 });
             })
             .catch(() => outputs.forEach(o => putStats(o.stats, [])));

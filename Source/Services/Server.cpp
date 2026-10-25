@@ -25,6 +25,7 @@
 #include "Logger.h"
 #include "Mcp.h"
 #include "GeoJSON.h"
+#include "Kml.h"
 #include "Prometheus.h"
 #ifdef HASWEBVIEWER
 #include "Streams.h"
@@ -72,6 +73,8 @@ namespace Services
 		}
 		if (spec_.geojson)
 			services.push_back(std::unique_ptr<Service>(new GeoJSON(context)));
+		if (spec_.kml)
+			services.push_back(std::unique_ptr<Service>(new Kml(context)));
 		if (spec_.api)
 			services.push_back(std::unique_ptr<Service>(new ApiV1(context)));
 		if (spec_.mcp)

@@ -58,7 +58,6 @@ namespace SiteKeys
 		case AIS::KEY_SETTING_LOG: o.log = Util::Parse::Switch(arg); break;
 		case AIS::KEY_SETTING_DECODER: o.decoder = Util::Parse::Switch(arg); break;
 		case AIS::KEY_SETTING_REPLAY: o.replay = Util::Parse::Switch(arg); break;
-		case AIS::KEY_SETTING_KML: o.kml = Util::Parse::Switch(arg); break;
 		case AIS::KEY_SETTING_MSG:
 		case AIS::KEY_SETTING_MESSAGE:
 			o.msg = Util::Parse::Switch(arg);

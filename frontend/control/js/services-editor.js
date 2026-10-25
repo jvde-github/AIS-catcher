@@ -17,10 +17,11 @@ const SERVICES = [
     { key: 'mcp', label: 'MCP', path: '/mcp', desc: 'The same, for an AI assistant.', docs: DOCS.mcp },
     { key: 'system', label: 'System', path: '/api/v1/system', desc: 'Health, receivers and the log. Never public.', docs: DOCS.system },
     { key: 'geojson', label: 'GeoJSON', path: '/geojson', desc: 'Ships for maps and GIS tools.' },
+    { key: 'kml', label: 'KML', path: '/kml', desc: 'Ships for Google Earth.' },
     { key: 'metrics', label: 'Prometheus', path: '/metrics', desc: 'Message counts for Prometheus and Grafana.', legacy: 'prome', docs: DOCS.prometheus }
 ];
 // what a key guards on a server that has keys; on the network the first three need one, or Public
-const GUARDED = ['api', 'mcp', 'system', 'geojson', 'metrics'];
+const GUARDED = ['api', 'mcp', 'system', 'geojson', 'kml', 'metrics'];
 const STRICT = ['api', 'mcp', 'system'];
 
 const OPEN_ICON = '<svg class="st-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8M18 14v5H5V6h5"/></svg>';

@@ -97,10 +97,13 @@
 .st-main .input[data-field-name="host"], .st-main .input[type="number"] {font-family:var(--font-mono);font-size:13.5px}
 
 /* ==================== FLOW ==================== */
-.sys-pane.st-flowpage {padding:4px 24px 24px}
+/* the page is the container the Flow measures itself by: a container query reaches only what is inside it */
+.sys-pane.st-flowpage {padding:4px 24px 24px;container-type:inline-size}
 
 /* inputs · routes · outputs; fixed card heights so the curves land on the card centres */
-.st-flow {display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,.45fr) minmax(0,1.1fr);align-items:start;container-type:inline-size}
+.st-flow {display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,.45fr) minmax(0,1.1fr);align-items:start}
+/* a long name ends in an ellipsis inside its column rather than running into the next */
+.st-flow > div {min-width:0}
 .st-col__title {height:20px;margin:0 0 12px;font-size:13px;font-weight:600;color:var(--color-text)}
 .st-stack {display:flex;flex-direction:column;gap:12px}
 .st-stack--out {gap:8px}
@@ -119,7 +122,8 @@ a.st-node__name:hover {text-decoration:underline}
 .st-route {fill:none;stroke-width:2.5;stroke-linecap:round;opacity:.85;transition:opacity .15s}
 
 /* ---- narrow ---- */
-@container (max-width: 640px) {
+/* the cards and the routes between them need about 700px; under that, one column without routes */
+@container (max-width: 700px) {
   .st-flow {grid-template-columns:1fr;gap:16px}
   .st-routes {display:none}
 }
@@ -551,6 +555,15 @@ a.st-node__name:hover {text-decoration:underline}
 /* an item switched off: a hollow ring and quieter text; an item that is on carries no mark */
 .st-rail__dot {position:absolute;left:21px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--color-field-border)}
 .st .st-rail__item--off:not([aria-current="true"]) {color:var(--color-text-muted)}
+/* an item that is on but loses data: amber for its settings, red for what happens now */
+.st-rail__mark {position:absolute;left:19px;top:50%;width:11px;height:10px;margin-top:-5px;clip-path:polygon(50% 0,100% 100%,0 100%)}
+.st-rail__mark--warn {background:var(--color-warning-ink)}
+.st-rail__mark--bad {background:var(--color-danger)}
+.st-routing__problem {flex-basis:100%;display:flex;align-items:flex-start;gap:7px;margin:2px 0 0;font-size:12.5px;line-height:1.45}
+.st-routing__problem::before {content:"";flex-shrink:0;width:10px;height:9px;margin-top:4px;clip-path:polygon(50% 0,100% 100%,0 100%);background:currentColor}
+.st-routing__problem--warn {color:var(--color-warning)}
+.st-routing__problem--bad {color:var(--color-danger)}
+.st .st-routing__link--warn {color:var(--color-warning)}
 /* adding is always there, so it stays quiet until pointed at */
 .st .st-rail__add {min-height:28px;padding:2px 10px 2px 37px;flex-shrink:0;border:0;border-radius:8px;background:transparent;color:var(--color-text-muted);font-size:13px;font-weight:500;text-align:left}
 .st .st-rail__add:hover {background:var(--color-accent-tint);color:var(--color-accent)}
@@ -585,6 +598,7 @@ a.st-node__name:hover {text-decoration:underline}
 .st-svcgrid tr:last-child td {border-bottom:0}
 .st-svcgrid__ck {text-align:center;color:var(--color-field-border);font-weight:700}
 .st-svcgrid__ck.is-on {color:var(--color-accent)}
+.st-svcgrid td.st-svcgrid__try {text-align:right;white-space:nowrap}
 .st .st-svcgrid__name {display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:0;border:0;background:transparent;text-align:left}
 .st-svcgrid__name strong {font-size:14px;color:var(--color-text-strong)}
 .st-svcgrid__name small {font-family:var(--font-mono);font-size:11.5px;color:var(--color-text-muted)}
@@ -630,6 +644,7 @@ a.st-node__name:hover {text-decoration:underline}
 .st .st-flow__drop {width:18px;height:18px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--color-text-muted);font-size:14px;line-height:1}
 .st .st-flow__drop:hover {background:var(--color-surface-raised);color:var(--color-danger)}
 .st-flow__arrow {color:var(--color-text-muted)}
+.st-flow__missing {color:var(--color-warning);font-weight:600}
 
 /* ---- Shows: which ships a server or a webhook shows */
 .st-shows__row {display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:6px 0}

@@ -10,7 +10,7 @@ import { SetupWizard } from './wizard.js';
 import { receiverSchema, OUTPUT_TYPES, channelTitle } from './schema.js';
 import { stationsOf, stationLabel } from './stations.js';
 import { describeInput, inputGroup, INPUT_ESSENTIALS, SDR_INPUTS } from './inputs.js';
-import { createFlowEditor, collectOutputs, inputRouting, outputRouting } from './flow-editor.js';
+import { createFlowEditor, collectOutputs, inputRouting, outputRouting, outputOf, outputProblem, outputLiveProblem, statsByKey } from './flow-editor.js';
 import { createServicesSection, servicesRailItems } from './services-pages.js';
 import { createRail } from './rail.js';
 import { createLogConsole } from './log-console.js';
@@ -371,6 +371,7 @@ import { createLogConsole } from './log-console.js';
     }
 
     function applyStatus(data) {
+        noteReceivers(data);
         if (data.auth && data.auth !== auth) {
             auth = data.auth;
             updateBarVisibility();
@@ -664,6 +665,59 @@ import { createLogConsole } from './log-console.js';
     // open a page of the rail with the item on it; false when unsaved edits keep the page
     const selectPage = (tab, key) => rail.select(tab, key);
 
+    // ---- what is wrong now, while the receiver runs: inputs by their place in the list, outputs by their rail key
+    const live = { inputs: new Map(), outputs: new Map() };
+    const sameMap = (a, b) => a.size === b.size && [...a].every(([k, v]) => b.get(k) === v);
+    function setLive(part, next) {
+        if (sameMap(next, live[part])) return;
+        live[part] = next;
+        if (systemOverlay.classList.contains('open')) rail.render();
+    }
+    // the receivers the engine reports are the switched-on inputs of the file it started with, in order
+    function noteReceivers(data) {
+        const next = new Map();
+        if (data.engine === 'running' && Array.isArray(data.receivers)) {
+            const on = listOf(ConfigStore.cached?.receiver).map((r, i) => (r.active !== false ? i : -1)).filter(i => i >= 0);
+            data.receivers.forEach(r => {
+                const i = on[r.index - 1];
+                if (i !== undefined && r.state === 'lost') next.set(i, 'The device stopped delivering: check that it is plugged in and free.');
+            });
+        }
+        setLive('inputs', next);
+    }
+    const OUTPUT_STATS = '/viewer/api/output_stats.json';
+    function pollOutputs() {
+        if (document.hidden || !systemOverlay.classList.contains('open')) return;
+        if (!engineRunning || !ConfigStore.cached) return setLive('outputs', new Map());
+        const outs = collectOutputs(ConfigStore.cached);
+        fetch(OUTPUT_STATS)
+            .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+            .then(stat => {
+                const next = new Map();
+                statsByKey(stat, outs).forEach((st, key) => {
+                    const why = outputLiveProblem(outs.find(o => o.key === key)?.type, st);
+                    if (why) next.set(key, why);
+                });
+                setLive('outputs', next);
+            })
+            .catch(() => {});
+    }
+    setInterval(pollOutputs, 10000);
+
+    function pageMark(key, active, o) {
+        const m = outputMark(key, active, o, ConfigStore.cached);
+        return m.warn ? { tone: 'warn', text: m.warn } : m.bad ? { tone: 'bad', text: m.bad } : null;
+    }
+    const receiverRows = cfg => (inputs?.loaded ? inputs.data : listOf(cfg?.receiver));
+    // what is wrong with a switched-on output: its settings first (amber), then what happens now (red)
+    function outputMark(key, active, o, cfg) {
+        if (!active) return {};
+        const warn = outputProblem(o, receiverRows(cfg));
+        if (warn) return { warn };
+        const bad = live.outputs.get(key);
+        return bad ? { bad } : {};
+    }
+
     // ---- the stations, the default one first: from the Stations page while it is loaded (its
     // edits count), else the configuration as last read. `key` is the page's, `id` what an
     // input or a filter names
@@ -680,7 +734,8 @@ import { createLogConsole } from './log-console.js';
         const rows = inputs?.loaded ? inputs.data : listOf(cfg.receiver);
         return [
             { tab: 'stations', label: 'Stations', items: stationList(), add: ['Add station', addStation] },
-            { tab: 'input', label: 'Inputs', items: rows.map((r, i) => ({ key: i, label: describeInput(r, i, rows).title, dot: r.active !== false })), add: ['Add input', addInput] },
+            { tab: 'input', label: 'Inputs', items: rows.map((r, i) => ({ key: i, label: describeInput(r, i, rows).title, dot: r.active !== false,
+                bad: r.active !== false ? live.inputs.get(i) : undefined })), add: ['Add input', addInput] },
             { tab: 'output', label: 'Outputs', items: outputItems(cfg), add: ['Add output', () => selectPage('output-add')] },
             { tab: 'flow', label: 'Flow' },
             { tab: 'services', label: 'Services', items: servicesRailItems(cfg, services, { port, add: addServer }) },
@@ -781,6 +836,10 @@ import { createLogConsole } from './log-console.js';
             essentials: INPUT_ESSENTIALS,
             describe: describeInput,
             routing: inputRouting,
+            problem: item => {
+                const why = item.active !== false && inputs ? live.inputs.get(inputs.data.indexOf(item)) : null;
+                return why ? { tone: 'bad', text: why } : null;
+            },
             excludeFor: item => ['zone', ...(SDR_INPUTS.has(item.input) ? [] : ['engines'])],
             groupOf: inputGroup,
             docs: item => docLink(inputDocs(item.input)),
@@ -791,6 +850,13 @@ import { createLogConsole } from './log-console.js';
                 onCreated: () => { unload('stations'); unload('services'); rail.render(); }, ...opts
             }),
             openFlow: () => selectPage('flow'),
+            // an input switched on without a device type fails every save, whatever else it holds
+            check: rows => {
+                const i = rows.findIndex(r => r.active !== false && !String(r.input || '').trim() && !String(r.serial || '').trim());
+                if (i < 0) return null;
+                selectPage('input', i);
+                return `${describeInput(rows[i], i, rows).title}: choose its device type, or delete it.`;
+            },
             // the rail follows: a new input, a deleted one, a name typed in
             onChange: mgr => {
                 if (Number.isInteger(mgr.selected)) rail.follow('input', mgr.selected);
@@ -838,12 +904,14 @@ import { createLogConsole } from './log-console.js';
     // the outputs one by one: the community map first, then each configured one; the open type's from its editor
     function outputItems(cfg) {
         const open = OUTPUT_TYPES.find(o => o.value === outputType);
+        const sharingRow = open?.value === 'sharing' && outputs?.loaded ? outputs.data : cfg;
         const sharing = open?.value === 'sharing' && outputs?.loaded ? Utils.toBoolean(outputs.data.sharing) : cfg.sharing === true;
-        const items = [{ key: 'sharing', label: 'Community map', dot: sharing }];
+        const items = [{ key: 'sharing', label: 'Community map', dot: sharing, ...outputMark('sharing', sharing, outputOf('sharing', sharingRow), cfg) }];
         OUTPUT_TYPES.forEach(t => {
             if (!t.configKey) return;
             const rows = open === t && outputs?.loaded ? outputs.data : listOf(cfg[t.configKey]);
-            rows.forEach((item, i) => items.push({ key: `${t.value}:${i}`, label: (item.description || '').trim() || channelTitle(t.label, item), dot: item.active !== false }));
+            rows.forEach((item, i) => items.push({ key: `${t.value}:${i}`, label: (item.description || '').trim() || channelTitle(t.label, item),
+                dot: item.active !== false, ...outputMark(`${t.value}:${i}`, item.active !== false, outputOf(t.value, item), cfg) }));
         });
         const screenOn = cfg.screen !== undefined && !['0', 'none'].includes(String(cfg.screen).toLowerCase());
         if (screenOn || (rail.tab === 'output' && rail.key === 'screen')) items.push({ key: 'screen', label: 'Screen', dot: screenOn });
@@ -910,6 +978,7 @@ import { createLogConsole } from './log-console.js';
                 variant: t.value === 'sharing' ? 'community' : 'plain',
                 excludeFor: () => ['sharing_zone'],
                 routing: outputRouting,
+                problem: t.value === 'sharing' ? item => pageMark('sharing', Utils.toBoolean(item.sharing), outputOf('sharing', item)) : null,
                 openFlow: () => selectPage('flow'),
                 onChange
             });
@@ -922,6 +991,7 @@ import { createLogConsole } from './log-console.js';
             title: t.label,
             variant: 'outputs',
             routing: outputRouting,
+            problem: item => pageMark(`${t.value}:${outputs ? outputs.data.indexOf(item) : -1}`, item.active !== false, outputOf(t.value, item)),
             // one output on a page of its own, the one the rail picks; its zones are drawn in Flow, and a
             // database's one station number for every row shows only while set once there are stations
             focus: () => outputFocus,
