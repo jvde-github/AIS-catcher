@@ -96,14 +96,41 @@ void Engine::refreshStations(const StationRegistry &configured) {
     site->publishStations(stations);
 }
 
-// what a receiver is called on the status pages: its own name, else its device's
-static std::string receiverLabel(const Receiver &r, Device::Device *device) {
+// the kind of device as the control panel writes it
+static std::string deviceName(Type t) {
+  switch (t) {
+  case Type::RTLSDR: return "RTL-SDR";
+  case Type::AIRSPY: return "Airspy";
+  case Type::AIRSPYHF: return "Airspy HF+";
+  case Type::HACKRF: return "HackRF";
+  case Type::HYDRASDR: return "HydraSDR";
+  case Type::SDRPLAY: return "SDRplay";
+  case Type::SOAPYSDR: return "SoapySDR";
+  case Type::SERIALPORT: return "Serial";
+  case Type::UDP: return "UDP";
+  case Type::RTLTCP: return "Network";
+  case Type::SPYSERVER: return "SpyServer";
+  case Type::N2K: return "NMEA 2000";
+  case Type::WAVFILE: return "WAV file";
+  case Type::RAWFILE: return "File";
+  case Type::ZMQ: return "ZMQ";
+  default: return "Input";
+  }
+}
+
+// what a receiver is called on the status pages: its own name, else its kind of device with its
+// place among the receivers of that kind ("RTL-SDR #1", "Serial #2"), as the control panel names it
+static std::string receiverLabel(const std::vector<std::unique_ptr<Receiver>> &receivers, std::size_t k, Device::Device *device) {
+  const Receiver &r = *receivers[k];
   if (!r.getDescription().empty() || !device)
     return r.getDescription();
-  const std::string &serial = device->getSerial();
-  if (serial == ".")
+  if (device->getSerial() == ".")
     return "Console";
-  return device->getProduct() + (serial.empty() ? "" : " " + serial);
+  const Type type = receivers[k]->getDeviceManager().InputType();
+  int nth = 0;
+  for (std::size_t i = 0; i <= k; i++)
+    nth += receivers[i]->getDeviceManager().InputType() == type;
+  return deviceName(type) + " #" + std::to_string(nth);
 }
 
 #ifdef HASAPI
@@ -122,7 +149,7 @@ void Engine::publishReceivers() {
       s.streaming = device->isStreaming();
       s.lost = device->isLost();
     }
-    s.label = receiverLabel(r, device);
+    s.label = receiverLabel(receivers, k, device);
     if (k < stat.size())
       for (auto &c : stat[k].statistics)
         s.messages += c->getCount();
@@ -340,7 +367,8 @@ void Engine::run(Site &on, ControlCore *control) {
   // line per device, its outputs and the community feed
   {
     Site::EngineFacts facts;
-    for (auto &r : receivers) {
+    for (std::size_t k = 0; k < receivers.size(); k++) {
+      auto &r = receivers[k];
       Device::Device *device = r->getDeviceManager().getDevice();
       if (!device)
         continue;
@@ -349,7 +377,7 @@ void Engine::run(Site &on, ControlCore *control) {
       d.vendor = device->getVendor().empty() ? "-" : device->getVendor();
       d.serial = device->getSerial().empty() ? "-" : device->getSerial();
       d.sample_rate = device->getRateDescription();
-      d.label = receiverLabel(*r, device);
+      d.label = receiverLabel(receivers, k, device);
       for (int j = 0; j < r->Count(); j++)
         d.model += (j ? "\n" : "") + r->Model(j)->getName();
       facts.devices.push_back(d);

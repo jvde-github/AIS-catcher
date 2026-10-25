@@ -39,7 +39,9 @@
 .st-status--bad {color:var(--color-danger)}
 .st-status--off {color:var(--color-text-muted)}
 .st-chip {display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
-.st-chip--zone {color:var(--z);background:color-mix(in srgb, var(--z) 13%, transparent)}
+/* a zone is told by its dot; the chip itself stays quiet */
+.st-chip--zone {color:var(--color-text);background:var(--color-hover)}
+.st-chip--zone::before {content:"";width:7px;height:7px;border-radius:50%;background:var(--z)}
 .st-chip--all {background:var(--color-hover);color:var(--color-text-muted);font-weight:500}
 .st-chip--new {background:var(--color-accent-tint);color:var(--color-accent)}
 .st-num {font-family:var(--font-mono);font-size:12.5px;color:var(--color-text)}
@@ -99,7 +101,7 @@
 
 /* inputs · routes · outputs; fixed card heights so the curves land on the card centres */
 .st-flow {display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,.45fr) minmax(0,1.1fr);align-items:start;container-type:inline-size}
-.st-col__title {height:20px;margin:0 0 12px;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.st-col__title {height:20px;margin:0 0 12px;font-size:13px;font-weight:600;color:var(--color-text)}
 .st-stack {display:flex;flex-direction:column;gap:12px}
 .st-stack--out {gap:8px}
 .st-node {position:relative;display:flex;flex-direction:column;justify-content:center;gap:6px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface-raised);transition:border-color .15s}
@@ -146,8 +148,8 @@ a.st-node__name:hover {text-decoration:underline}
 .st .st-routing__link {padding:0;border:0;background:none;color:var(--color-accent);font-size:12.5px;font-weight:600}
 .st-routing__link::after {content:" ›"}
 .st-routing__link:hover {text-decoration:underline}
-.st-zone {display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:6px;font-weight:600;white-space:nowrap;color:var(--z);background:color-mix(in srgb, var(--z) 13%, transparent)}
-.st-zone::before {content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.st-zone {display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:6px;font-weight:500;white-space:nowrap;color:var(--color-text);background:var(--color-hover)}
+.st-zone::before {content:"";width:7px;height:7px;border-radius:50%;background:var(--z)}
 /* a find button with its word, as in "Find ports" */
 .st-main .btn-labelled {width:auto;padding:0 14px;gap:8px;display:inline-flex;align-items:center;white-space:nowrap}
 .st-main__actions .st-switch {gap:8px;font-size:12.5px;color:var(--color-text-muted)}
@@ -211,7 +213,7 @@ a.st-node__name:hover {text-decoration:underline}
 /* the essentials as a flat section: no card, type and port side by side, the find action in its header */
 .st-flat {display:flex;flex-direction:column;gap:12px;padding:20px 0 4px;border-top:1px solid var(--color-border)}
 .st-flat__head {display:flex;align-items:center;justify-content:space-between}
-.st-section__title {margin:0;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.st-section__title {margin:0;font-size:14px;font-weight:650;color:var(--color-text-strong)}
 .st-flat__fields > .field.hidden {display:none}
 .st-flat__fields .row > .btn-icon {display:none}
 .st-flat__fields .row > .grow {flex:1}
@@ -277,6 +279,8 @@ a.st-node__name:hover {text-decoration:underline}
 .st-out[data-open="true"] .st-zone-dot {display:none}
 /* a field alone on its line takes the whole line; fields that share one still split it by their widths */
 .st-flat__fields > .field {flex-grow:1!important}
+/* a choice from a short list is as wide as its longest choice needs, not the line */
+.st-main .st-flat__fields select {max-width:320px}
 
 /* Community header: status and switch on the right, like an input's Active */
 .st-main__head > div:first-child .st-routing {margin-top:6px}
@@ -325,9 +329,10 @@ a.st-node__name:hover {text-decoration:underline}
 
 /* zones in a settings row: tinted pills with a quiet ×, a dashed Add */
 .st-main .st-zones {gap:6px}
-.st-main .st-zones .chip {height:24px;padding:0 4px 0 10px;display:inline-flex;align-items:center;gap:4px;border:0;border-radius:6px;font-size:12.5px;font-weight:600;color:var(--z);background:color-mix(in srgb, var(--z) 13%, transparent)}
+.st-main .st-zones .chip {height:24px;padding:0 4px 0 10px;display:inline-flex;align-items:center;gap:6px;border:0;border-radius:6px;font-size:12.5px;font-weight:500;color:var(--color-text);background:var(--color-hover)}
+.st-main .st-zones .chip:not(button)::before {content:"";width:7px;height:7px;border-radius:50%;background:var(--z, var(--color-field-border))}
 .st-main .st-zones .chip .sys-dismiss {width:18px;height:18px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:4px;background:transparent;color:inherit;opacity:.65;font-size:14px;line-height:1}
-.st-main .st-zones .chip .sys-dismiss:hover {opacity:1;background:color-mix(in srgb, var(--z) 18%, transparent)}
+.st-main .st-zones .chip .sys-dismiss:hover {opacity:1;background:var(--color-border)}
 .st-main .st-zones .st-zones__add {height:24px;padding:0 10px;gap:5px;border:1px dashed var(--color-field-border)!important;border-radius:6px;background:transparent;color:var(--color-accent);font-size:12.5px;font-weight:600}
 .st-main .st-zones .st-zones__add:hover {opacity:1;background:var(--color-accent-tint)}
 .st-main .st-zones .st-zones__add svg {width:12px;height:12px}
@@ -380,7 +385,7 @@ a.st-node__name:hover {text-decoration:underline}
 .st-community .st-adv__body > [data-json-section] {margin-top:0;border-top:1px solid var(--color-border)}
 
 /* every page header alike: title (and routing line), then a firm rule close under it */
-.st .st-main__head {padding-bottom:12px;margin-bottom:20px;border-bottom:2px solid var(--color-border-strong)}
+.st .st-main__head {padding-bottom:12px;margin-bottom:20px;border-bottom:1px solid var(--color-border)}
 .st .st-main__head .st-routing {min-height:24px}
 .st .st-main__head > div:first-child .st-routing {margin-top:4px}
 .st-main__title {margin-bottom:0}
@@ -418,6 +423,11 @@ a.st-node__name:hover {text-decoration:underline}
 .st-stations__dot.is-ok {background:var(--color-success)}
 .st-stations__share {display:flex;align-items:center;gap:14px;margin-top:18px;padding:14px 16px;border-radius:12px;background:var(--color-hover);cursor:pointer}
 .st-stations__sharetext {display:flex;flex-direction:column;gap:2px;font-size:13.5px;color:var(--color-text-strong)}
+/* the vessel a station rides, between Follow GPS and Share position: their spacing, its help close under it */
+.st-stations__vessel {margin-top:18px}
+.st-main .st-stations__vessel .st-stations__field {margin-bottom:6px}
+.st-main .st-stations__vessel > .field-desc {margin:0}
+.st-stations__gps > .st-stations__status {margin:10px 0 4px}
 .st-stations__sharetext span {font-size:12.5px;color:var(--color-text-muted)}
 /* an input's station: a button that says which, the list it opens */
 .st-stpick {max-width:520px}
@@ -530,7 +540,7 @@ a.st-node__name:hover {text-decoration:underline}
 .st-rail {display:flex;flex-direction:column;padding:10px 10px 12px;border-right:1px solid var(--color-border);overflow-y:auto;min-height:0}
 .st-rail__group {display:flex;flex-direction:column;gap:1px}
 .st-rail__group + .st-rail__group {margin-top:8px}
-.st .st-rail__sec {height:36px;padding:0 10px;display:flex;align-items:center;gap:10px;flex-shrink:0;border:0;border-radius:9px;background:transparent;color:var(--color-text-strong);font-size:14px;font-weight:600;text-align:left}
+.st .st-rail__sec {height:36px;padding:0 10px;display:flex;align-items:center;gap:10px;flex-shrink:0;border:0;border-radius:9px;background:transparent;color:var(--color-text-strong);font-size:14px;font-weight:500;text-align:left}
 .st .st-rail__item {min-height:30px;padding:4px 10px 4px 37px;display:flex;align-items:center;gap:8px;flex-shrink:0;position:relative;border:0;border-radius:8px;background:transparent;color:var(--color-text);font-size:13.5px;text-align:left}
 .st .st-rail__sec:hover, .st .st-rail__item:hover {background:var(--color-hover)}
 .st .st-rail__sec[aria-current="true"], .st .st-rail__item[aria-current="true"] {background:var(--color-accent-tint);color:var(--color-accent)}
@@ -538,11 +548,12 @@ a.st-node__name:hover {text-decoration:underline}
 .st-rail__icon {width:17px;height:17px;flex-shrink:0;color:var(--color-text-muted)}
 .st-rail__sec[aria-current="true"] .st-rail__icon {color:currentColor}
 .st-rail__label {flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.st-rail__count {font-size:11.5px;font-weight:600;color:var(--color-text-muted)}
-.st-rail__dot {position:absolute;left:21px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:var(--color-success)}
-.st-rail__dot--off {background:transparent;box-shadow:inset 0 0 0 1.5px var(--color-field-border)}
-.st .st-rail__add {min-height:28px;padding:2px 10px 2px 37px;flex-shrink:0;border:0;border-radius:8px;background:transparent;color:var(--color-accent);font-size:13px;font-weight:600;text-align:left}
-.st .st-rail__add:hover {background:var(--color-accent-tint)}
+/* an item switched off: a hollow ring and quieter text; an item that is on carries no mark */
+.st-rail__dot {position:absolute;left:21px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--color-field-border)}
+.st .st-rail__item--off:not([aria-current="true"]) {color:var(--color-text-muted)}
+/* adding is always there, so it stays quiet until pointed at */
+.st .st-rail__add {min-height:28px;padding:2px 10px 2px 37px;flex-shrink:0;border:0;border-radius:8px;background:transparent;color:var(--color-text-muted);font-size:13px;font-weight:500;text-align:left}
+.st .st-rail__add:hover {background:var(--color-accent-tint);color:var(--color-accent)}
 .st .st-rail__add[aria-current="true"] {background:var(--color-accent-tint)}
 .st-warn-note--quiet {background:var(--color-hover);color:var(--color-text-muted)}
 /* the output types to add from */
@@ -569,7 +580,7 @@ a.st-node__name:hover {text-decoration:underline}
 .st-svcpage > .st-main > * {max-width:900px}
 .st-svcgrid__wrap {overflow-x:auto;border:1px solid var(--color-border);border-radius:12px}
 .st-svcgrid {border-collapse:collapse;width:100%;min-width:680px;font-size:13.5px}
-.st-svcgrid th {text-align:left;padding:9px 12px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted);background:var(--color-surface-alt);border-bottom:1px solid var(--color-border);white-space:nowrap}
+.st-svcgrid th {text-align:left;padding:9px 12px;font-size:12.5px;font-weight:600;color:var(--color-text-muted);background:var(--color-surface-alt);border-bottom:1px solid var(--color-border);white-space:nowrap}
 .st-svcgrid td {padding:10px 12px;border-bottom:1px solid var(--color-border);color:var(--color-text);vertical-align:middle}
 .st-svcgrid tr:last-child td {border-bottom:0}
 .st-svcgrid__ck {text-align:center;color:var(--color-field-border);font-weight:700}

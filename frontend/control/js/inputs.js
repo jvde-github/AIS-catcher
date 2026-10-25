@@ -39,28 +39,32 @@ export function inputGroup(f) {
     return 'Other';
 }
 
-// An input's name: its description, or else the device with its serial ("RTL-SDR 00000001"),
-// or with its place among the inputs of that device ("Serial #1"), `all` being the inputs.
-// Underneath: the device when the description took the title, and the engines.
+// A serial port as people know it: a by-id link names the device itself
+// ("usb-Raspberry_Pi_Pico_0E451E025C5FA275-if00" is a Raspberry Pi Pico), any other port its last part
+export function serialName(path) {
+    const base = String(path || '').split(/[\\/]/).pop();
+    if (!/^(usb|pci|platform)-/.test(base) || !/[\\/]by-id[\\/]/.test(path)) return base;
+    const parts = base.replace(/^[a-z]+-/, '').replace(/-if\d+(-port\d+)?$/, '').split('_');
+    // the last part is the device's own serial when it carries a digit
+    if (parts.length > 1 && /\d/.test(parts[parts.length - 1]) && parts[parts.length - 1].length >= 4) parts.pop();
+    return parts.join(' ') || base;
+}
+
+// An input's name: its description, or else the device with its place among the inputs of that
+// device ("RTL-SDR #1", "Serial #1"), `all` being the inputs. Underneath: the device and what tells
+// it apart, the dongle's serial or the receiver on the port ("Serial · Raspberry Pi Pico").
 export function describeInput(item, i, all) {
     // the kind as the schema has it: a hand-written "udpserver" is UDPSERVER
     const kind = String(item.input || '').toUpperCase();
     const device = kind ? (DEVICE_NAMES[kind] || item.input) : '';
     const list = all || [];
     const nth = list.slice(0, i + 1).filter(r => String(r.input || '').toUpperCase() === kind).length || 1;
-    // a dongle's serial tells it apart; a serial port's or a network feed's is only a number
-    const sdr = SDR_INPUTS.has(kind);
-    // a serial receiver is told apart by the port it sits on
-    const path = kind === 'SERIALPORT' ? String(item.serialport?.port || '').trim() : '';
-    const fallback = !kind ? 'New input' : sdr && item.serial ? `${device} ${item.serial}`
-        : path ? `${device} ${path}` : `${device} #${nth}`;
     const name = (item.description || '').trim();
-    // the second line: the device and what tells it apart (the port's last part, the serial, or the place)
-    const id = path ? path.split('/').pop() : sdr && item.serial ? item.serial : `#${nth}`;
-    const sub = kind ? `${device} · ${id}` : '';
+    const path = kind === 'SERIALPORT' ? String(item.serialport?.port || '').trim() : '';
+    const id = path ? serialName(path) : SDR_INPUTS.has(kind) && item.serial ? item.serial : '';
     return {
-        title: name || fallback,
-        sub,
+        title: name || (kind ? `${device} #${nth}` : 'New input'),
+        sub: kind ? (id ? `${device} · ${id}` : device) : '',
         desc: INPUT_DESCRIPTIONS[kind] || 'Pick the device this input reads from.'
     };
 }

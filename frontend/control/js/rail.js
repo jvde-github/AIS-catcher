@@ -34,13 +34,15 @@ export function createRail(nav, { sections, open, shown }) {
                 'aria-current': here && !items.some(isCurrent) ? 'true' : null,
                 onClick: () => (sec.tabs ? select(items[0].key) : select(sec.tab, items.length ? items[0].key : undefined)) },
                 el('span', 'st-rail__label', { text: sec.label }));
-            if (items.length > 1) head.append(el('span', 'st-rail__count', { text: String(items.length) }));
             g.append(head);
             if (!here) return g;
             items.forEach(it => {
                 if (it.onClick) return g.append(el('button', 'st-rail__add', { type: 'button', text: it.label, onClick: it.onClick }));
-                g.append(el('button', 'st-rail__item', { type: 'button', 'aria-current': isCurrent(it) ? 'true' : null, onClick: () => go(it.key) },
-                    it.dot === undefined ? null : el('span', 'st-rail__dot' + (it.dot ? '' : ' st-rail__dot--off')),
+                // on is the usual state and goes unmarked: only an item switched off shows it
+                const off = it.dot === false;
+                g.append(el('button', 'st-rail__item' + (off ? ' st-rail__item--off' : ''), { type: 'button', 'aria-current': isCurrent(it) ? 'true' : null,
+                    title: off ? 'Off' : null, onClick: () => go(it.key) },
+                    off ? el('span', 'st-rail__dot') : null,
                     el('span', 'st-rail__label', { text: it.label, title: it.label })));
             });
             if (sec.add)

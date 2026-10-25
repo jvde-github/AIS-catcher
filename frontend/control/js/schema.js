@@ -950,7 +950,6 @@ export const receiverSchema = {
     },
     input: {
         name: "input",
-        tooltip: "Kind of receiver",
         label: "Device Type",
         type: "select",
         jsonpath: "input",
@@ -1453,7 +1452,6 @@ export const receiverSchema = {
     },
     serialport_port: {
         name: "serialport_port",
-        tooltip: "Where the receiver is plugged in",
         label: "Port",
         type: "text",
         jsonpath: "serialport.port",
@@ -1817,7 +1815,8 @@ export const OUTPUT_TYPES = [
 
 export function channelTitle(label, item) {
     if (item && item.host && item.port) return label + ' · ' + item.host + ':' + item.port;
-    if (item && item.url) return label + ' · ' + item.url;
+    // the label says HTTP or MQTT already: the address without its scheme
+    if (item && item.url) return label + ' · ' + String(item.url).replace(/^[a-z][a-z0-9+.-]*:\/\//i, '');
     if (item && item.host) return label + ' · ' + item.host;
     if (item && item.port) return label + ' · :' + item.port;
     return label;

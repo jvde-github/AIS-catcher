@@ -1,10 +1,10 @@
 // The Stations page: one station at a time, the rail listing them. First the
 // default station, 0: where each input stands that names no station. It is
 // always there and keeps its number.
-// A station's position comes from one source at a time: where it is put (typed
-// in or picked on the map), GPS, or the vessel it rides, by its MMSI. GPS comes
-// from the inputs that name the station, or from every input when none does;
-// a position given to a GPS station is where it stands until the first fix.
+// A station stands where it is put (typed in or picked on the map). GPS fixes move
+// it when it follows GPS, and the reports of the vessel it rides, by its MMSI,
+// move it before GPS does. GPS comes from the inputs that name the station, or
+// from every input when none does.
 // The tab's footer saves it like any other section; a renumbered station takes
 // the inputs that name it along, a deleted one leaves them at the default station.
 
@@ -26,15 +26,9 @@ import { DOCS, docLink } from './docs.js';
 import { num, validPos, isDefaultStation as isDefault, stationName } from './stations.js';
 
 const CONTAINER = 'hub-stations-container';
-const MODES = [['fixed', 'Fixed'], ['gps', 'From GPS'], ['vessel', 'On a vessel']];
 export const TAGS = { fixed: 'Fixed', gps: 'GPS', vessel: 'Vessel' };
 const OWN_NOTE = 'Where your antenna stands.';
 const DEFAULT_NOTE = 'The default station: inputs stand here unless they pick another.';
-const NOTES = {
-    fixed: 'Type it, or pick it on the map.',
-    gps: 'Moves with each GPS fix.',
-    vessel: 'Moves with the vessel.'
-};
 // a fix older than this is shown as stale
 const FRESH_S = 300;
 const LIVE_MS = 5000;
@@ -43,25 +37,22 @@ const hasPos = s => validPos(num(s.lat), num(s.lon));
 const fmt = v => Number(v).toFixed(4);
 const ago = s => (s < 60 ? `${s} s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : `${Math.round(s / 3600)} h ago`);
 
-// what a station's settings say its position comes from: the vessel its MMSI
-// names, else GPS when chosen, else where it is put
+// what moves a station: the vessel its MMSI names, else GPS when it follows it, else nothing
 export function modeOf(s) {
-    if (s._mode) return s._mode;
     if (s.mmsi) return 'vessel';
     if (s.gps === true) return 'gps';
     return 'fixed';
 }
 
-// The settings as the configuration keeps them, for the one source chosen:
-// nothing of another source lingers.
+// The settings as the configuration keeps them
+const validMMSI = v => Number.isInteger(num(v)) && num(v) >= 1 && num(v) <= 999999999;
 function clean(s) {
     const out = { id: Number(s.id) };
     if (String(s.name || '').trim()) out.name = String(s.name).trim();
-    const mode = modeOf(s);
-    if (mode !== 'vessel' && hasPos(s)) { out.lat = num(s.lat); out.lon = num(s.lon); }
+    if (hasPos(s)) { out.lat = num(s.lat); out.lon = num(s.lon); }
     if (Number.isFinite(num(s.alt))) out.alt = num(s.alt);
-    if (mode === 'vessel') out.mmsi = Number(s.mmsi);
-    if (mode === 'gps') out.gps = true;
+    if (validMMSI(s.mmsi)) out.mmsi = Number(s.mmsi);
+    if (s.gps === true) out.gps = true;
     out.share_loc = !!s.share_loc;
     return out;
 }
@@ -102,7 +93,7 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
 
     function add() {
         const id = state.stations.reduce((m, s) => Math.max(m, Number(s.id) || 0), 0) + 1;
-        state.stations.push({ id, share_loc: false, _from: null, _mode: 'fixed' });
+        state.stations.push({ id, share_loc: false, _from: null });
         state.selected = state.stations.length - 1;
         touched();
         render();
@@ -180,50 +171,54 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
         listChanged();
     }
 
-    // the position, from one source: the default station rides a vessel only while it is the only station
+    // Where it stands, then what moves it: GPS when it follows it, a vessel when it rides one, the vessel
+    // first. The default station rides a vessel only while it is the only station.
     function renderPosition(s, named) {
-        const mode = modeOf(s);
-        const segs = el('div', 'st-seg', { role: 'radiogroup', 'aria-label': 'Position' },
-            MODES.filter(([key]) => !(isDefault(s) && key === 'vessel' && several() && !s.mmsi)).map(([key, label]) => el('button', 'st-seg__opt', {
-                type: 'button', role: 'radio', 'aria-checked': String(key === mode), text: label,
-                onClick: () => setMode(s, key)
-            })));
-        main.append(el('div', 'st-stations__pos', {}, el('span', 'field-label', { text: 'Position' }), segs));
         const body = el('div', 'st-stations__source');
-        main.append(body);
-        if (mode === 'fixed') renderFixed(s, body);
-        else if (mode === 'gps') renderGps(s, body, named);
-        else renderVessel(s, body);
-        body.append(el('p', 'field-desc st-stations__note', { text: NOTES[mode] }));
+        main.append(el('div', 'st-stations__pos', {}, el('span', 'field-label', { text: 'Position' })), body);
+        renderFixed(s, body);
+        body.append(el('p', 'field-desc st-stations__note', { text: 'Where it stands until GPS or a vessel moves it.' }));
+        main.append(gpsSwitch(s, named));
+        if (!(isDefault(s) && several() && !s.mmsi)) main.append(vesselField(s));
+    }
+
+    // a setting that is on or off, with what it means under its name
+    function switchRow(title, text, checked, onChange) {
+        return el('label', 'st-stations__share', {},
+            el('span', 'st-switch', {},
+                el('input', '', { type: 'checkbox', checked: !!checked, onChange: e => onChange(e.target.checked) }),
+                el('span', 'st-switch__track')),
+            el('span', 'st-stations__sharetext', {}, el('strong', '', { text: title }), el('span', '', { text })));
     }
 
     // whether it shows
     function shareSwitch(s) {
-        return el('label', 'st-stations__share', {},
-            el('span', 'st-switch', {},
-                el('input', '', { type: 'checkbox', checked: !!s.share_loc, onChange: e => { s.share_loc = e.target.checked; touched(); listChanged(); } }),
-                el('span', 'st-switch__track')),
-            el('span', 'st-stations__sharetext', {},
-                el('strong', '', { text: 'Share position' }),
-                el('span', '', { text: 'Off keeps it on this machine.' })));
+        return switchRow('Share position', 'Off keeps it on this machine.', s.share_loc, on => { s.share_loc = on; touched(); listChanged(); });
     }
 
-    function setMode(s, key) {
-        if (modeOf(s) === key) return;
-        const live = liveOf(s);
-        s._mode = key;
-        delete s.mmsi;
-        s.gps = key === 'gps';
-        if (key === 'fixed') {
-            // start from where it was last seen, when it was seen at all
-            if (!hasPos(s) && validPos(live.lat, live.lon)) { s.lat = Number(fmt(live.lat)); s.lon = Number(fmt(live.lon)); }
-        } else if (key === 'vessel') {
-            // the vessel says where it is
-            delete s.lat;
-            delete s.lon;
-        }
-        touched();
-        render();
+    // GPS: from the inputs at this station, or every input when none names it
+    function gpsSwitch(s, named) {
+        const from = named.length ? named.join(', ') : 'every input';
+        const row = switchRow('Follow GPS', `Moves with each fix from ${from}.`, s.gps === true, on => {
+            s.gps = on;
+            touched();
+            listChanged();
+            render();
+        });
+        if (s.gps !== true) return row;
+        return el('div', 'st-stations__gps', {}, row, statusLine('gps', s),
+            el('p', 'field-desc', {}, 'A GPS, or an AIS receiver passing GPS sentences. ', docLink(DOCS.gps, 'About GPS')));
+    }
+
+    // the vessel it is on: its reports go before GPS
+    function vesselField(s) {
+        const line = statusLine('vessel', s);
+        const input = numberInput(s, 'mmsi', { step: 1, min: 1, max: 999999999 }, () => paintStatus(line, 'vessel', s));
+        input.placeholder = 'None';
+        return el('div', 'st-stations__vessel', {},
+            el('div', 'st-stations__row', {}, field('Rides a vessel (MMSI)', input, 'st-stations__short')),
+            el('p', 'field-desc', { text: 'On board a ship: its reports move the station, ahead of GPS.' }),
+            line);
     }
 
     function renderFixed(s, body) {
@@ -320,30 +315,11 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
             if (live.vessel) {
                 ok = live.vessel.report_age_s < FRESH_S;
                 text = `${live.vessel.name || 'MMSI ' + live.vessel.mmsi} · last report ${ago(live.vessel.report_age_s)}`;
-            } else text = s.mmsi ? 'Not heard yet' : 'Enter the MMSI of the vessel';
+            } else text = s.mmsi ? 'Not heard yet' : '';
         }
+        // no vessel, nothing to report
+        line.hidden = !text;
         line.replaceChildren(el('span', 'st-stations__dot' + (ok ? ' is-ok' : '')), text);
-    }
-
-    function renderGps(s, body, named) {
-        body.append(el('div', 'st-stations__from', {},
-            el('span', 't-small t-subtle', { text: 'GPS sentences from' }),
-            el('strong', '', { text: named.length ? named.join(', ') : 'every input' }),
-            named.length ? null : el('span', 't-small t-subtle', { text: 'No input uses it: any input\'s fix moves it.' })));
-        body.append(statusLine('gps', s), el('p', 'field-desc', {}, 'A GPS, or an AIS receiver passing GPS sentences. ', docLink(DOCS.gps, 'About GPS')));
-        if (hasPos(s))
-            body.append(el('p', 'field-desc st-stations__start', { text: `Starts at ${fmt(s.lat)}, ${fmt(s.lon)}.` }));
-        body.append(el('div', 'st-stations__row', {},
-            field('Antenna height (m)', numberInput(s, 'alt', { step: 1, min: -1000, max: 20000 }), 'st-stations__short')));
-    }
-
-    function renderVessel(s, body) {
-        const line = statusLine('vessel', s);
-        body.append(el('div', 'st-stations__row', {},
-            field('Vessel MMSI', numberInput(s, 'mmsi', { step: 1, min: 1, max: 999999999 }, () => paintStatus(line, 'vessel', s)), 'st-stations__grow')));
-        body.append(line);
-        body.append(el('div', 'st-stations__row', {},
-            field('Antenna height (m)', numberInput(s, 'alt', { step: 1, min: -1000, max: 20000 }), 'st-stations__short')));
     }
 
     // ---- what the stations are doing now, while the tab shows
@@ -370,11 +346,10 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
             if (!Number.isInteger(id) || id < (i ? 1 : 0) || id > 2147483647) return [i, `${name}: the number must be a whole number from 1.`];
             if (seen.has(id)) return [i, `Two stations have number ${id}.`];
             seen.add(id);
-            const mode = modeOf(s);
-            if (mode === 'fixed' && halfPlaced(s))
+            if (halfPlaced(s))
                 return [i, `${name}: give both latitude and longitude, or neither.`];
-            if (mode === 'vessel' && !(Number.isInteger(num(s.mmsi)) && num(s.mmsi) >= 1 && num(s.mmsi) <= 999999999))
-                return [i, `${name}: enter the MMSI of the vessel it is on.`];
+            if (s.mmsi !== undefined && s.mmsi !== '' && !validMMSI(s.mmsi))
+                return [i, `${name}: a vessel's MMSI is a number from 1 to 999999999.`];
         }
         return null;
     }

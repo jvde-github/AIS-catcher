@@ -1441,7 +1441,7 @@ import { ICONS } from './icons.js';
                 const { node, refresh } = this.renderSplit(item, index, { essentials: this.config.essentials || new Set(), key: 'input', onZones,
                     // settings that cannot apply to this kind of input stay out (engines decode radio only)
                     exclude: new Set(['description', ...(station ? ['station'] : []), ...(this.config.excludeFor ? this.config.excludeFor(item) : [])]),
-                    flat: { title: 'Device' }, lead: station ? [station] : [] });
+                    flat: {}, lead: station ? [station] : [] });
                 this.addFindButton(node, item, index);
                 node.dataset.receiverCard = index;
                 main.appendChild(node);

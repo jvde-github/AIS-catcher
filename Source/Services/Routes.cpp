@@ -457,7 +457,7 @@ namespace Services
 "index":{"type":"integer","description":"Its place among the inputs"},
 "station":{"type":"integer","description":"The station it belongs to"},
 "input":{"type":"string","description":"The kind of input"},
-"label":{"type":"string","description":"The device or the receiver's own name"},
+"label":{"type":"string","description":"The receiver's own name, else its kind of device and number among those, as RTL-SDR #1"},
 "state":{"enum":["starting","streaming","lost"],"description":"starting until its device delivers, lost when it stopped by itself"},
 "messages":{"type":"integer","description":"Messages since the engine started"},
 "messages_last_minute":{"type":"integer","description":"Messages in the last minute"},
