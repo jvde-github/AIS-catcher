@@ -15,14 +15,13 @@ const SERVICES = [
     { key: 'ui', label: 'Map', path: '/', desc: 'The map, and what it reads.', docs: DOCS.viewer },
     { key: 'api', label: 'API', path: '/api/v1', desc: 'Vessels, stations, places and events.', docs: DOCS.api },
     { key: 'mcp', label: 'MCP', path: '/mcp', desc: 'The same, for an AI assistant.', docs: DOCS.mcp },
-    { key: 'system', label: 'System', path: '/api/v1/system', desc: 'Health, receivers and the log. Never public.', docs: DOCS.system },
+    { key: 'system', label: 'System', path: '/api/v1/system', desc: 'Health, receivers and the log. Never open on the network.', docs: DOCS.system },
     { key: 'geojson', label: 'GeoJSON', path: '/geojson', desc: 'Ships for maps and GIS tools.' },
     { key: 'kml', label: 'KML', path: '/kml', desc: 'Ships for Google Earth.' },
     { key: 'metrics', label: 'Prometheus', path: '/metrics', desc: 'Message counts for Prometheus and Grafana.', legacy: 'prome', docs: DOCS.prometheus }
 ];
-// what a key guards on a server that has keys; on the network the first three need one, or Public
+// what a server's keys guard; a server without keys is open to whoever reaches it
 const GUARDED = ['api', 'mcp', 'system', 'geojson', 'kml', 'metrics'];
-const STRICT = ['api', 'mcp', 'system'];
 
 const OPEN_ICON = '<svg class="st-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8M18 14v5H5V6h5"/></svg>';
 
@@ -46,12 +45,32 @@ export function servedKeys(data, builtIn = false) {
 // a server as the panel names it: Main, its description, or its port
 export const serverName = s => (s.main ? 'Main' : String(s.description || '').trim() || `Server · ${s.port ?? '–'}`);
 
-// who may read a server, in a few words: the map is never guarded, the rest by keys or Public
+// who may read a server, in a few words: the map is never guarded, the rest by its keys, or
+// anyone who reaches it when it has none
 export function readersOf(data, bind) {
+    if (Array.isArray(data.keys) && data.keys.length) return 'With a key';
+    return on(data.public) || !local(bind) ? 'Anyone' : 'This machine';
+}
+
+// A server is Open or Keys. Keys when it has them, or the owner chose Keys and has none yet
+// (`wantKeys`); open when it says `public`, or on this machine. Choosing Open on a server with
+// keys puts them aside (`stashed`) so that choosing Keys again before a save brings them back.
+const wantKeys = new WeakSet();
+const stashed = new WeakMap();
+export function accessMode(data, bind) {
     const keys = Array.isArray(data.keys) && data.keys.length > 0;
-    if (on(data.public)) return 'Anyone';
-    if (local(bind)) return keys ? 'This machine, or a key' : 'This machine';
-    return keys ? 'With a key' : 'Anyone';
+    if (keys || wantKeys.has(data)) return 'keys';
+    return on(data.public) || local(bind) ? 'open' : 'keys';
+}
+
+// why a server could not be saved as it stands: Keys without a key, or System open on the network
+export function accessProblem(data, bind, builtIn = false) {
+    const served = servedKeys(data, builtIn);
+    if (!GUARDED.some(k => served.includes(k))) return null;
+    const keys = Array.isArray(data.keys) && data.keys.length > 0;
+    if (!keys && accessMode(data, bind) === 'keys') return `${serverName(data)}: make a key, or choose Open.`;
+    if (!keys && !local(bind) && served.includes('system')) return `${serverName(data)}: System is never open on the network. Choose Keys, or switch System off.`;
+    return null;
 }
 
 // a setting's words on the left, its switch on the right, as the settings beside it have them
@@ -177,18 +196,36 @@ export function renderServing(host, data, { builtIn = false, bind, touched, rere
 
     if (GUARDED.some(has)) {
         const keys = Array.isArray(data.keys) ? data.keys : [];
-        const open = on(data.public);
+        const net = !local(bind);
+        const mode = accessMode(data, bind);
+        const choose = m => {
+            if (m === 'keys') {
+                delete data.public;
+                wantKeys.add(data);
+                const kept = stashed.get(data);
+                if (kept) { data.keys = kept; stashed.delete(data); }
+            } else {
+                wantKeys.delete(data);
+                if (keys.length) stashed.set(data, keys);
+                delete data.keys;
+                if (net) data.public = true; else delete data.public;
+            }
+            touched();
+            rerender();
+        };
         const box = section('Access', DOCS.keys);
-        box.append(el('p', 'field-desc st-svcs__where', { text: local(bind)
-            ? 'This machine only: no key needed here.'
-            : 'On the network: the API, MCP and System need a key, or Public.' }));
-        box.append(switchRow('', open, v => { if (v) data.public = true; else delete data.public; touched(); rerender(); },
-            el('strong', '', { text: 'Public' }), 'Data without a key; System still needs one.'));
-        box.append(renderKeys(data, keys, { touched, rerender, system: has('system') }));
-        if (!local(bind) && !keys.length && !open && STRICT.some(has))
-            box.append(el('p', 'st-warn-note', { text: 'On the network it needs a key or Public to save.' }));
-        else if (!local(bind) && has('system') && open && !keys.length)
-            box.append(el('p', 'st-warn-note', { text: 'A public server needs a key for System.' }));
+        box.append(el('div', 'st-seg st-access', { role: 'radiogroup', 'aria-label': 'Access' },
+            [['open', 'Open'], ['keys', 'Keys']].map(([m, label]) => el('button', 'st-seg__opt', {
+                type: 'button', role: 'radio', 'aria-checked': String(mode === m), text: label,
+                onClick: () => { if (mode !== m) choose(m); }
+            }))));
+        box.append(el('p', 'field-desc st-svcs__where', { text: mode === 'keys'
+            ? 'Whoever reaches this server needs one of these keys for everything it serves.'
+            : net ? 'Anyone who can reach this server reads what it serves.'
+                  : 'This machine only: anyone on it reads what this server serves.' }));
+        if (mode === 'keys') box.append(renderKeys(data, keys, { touched, rerender, system: has('system') }));
+        const problem = accessProblem(data, bind, builtIn);
+        if (problem) box.append(el('p', 'st-warn-note', { text: problem.slice(problem.indexOf(': ') + 2) }));
         host.append(box);
     }
 }
@@ -462,13 +499,15 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         const seen = new Set();
         for (let i = 0; i < state.list.length; i++) {
             const s = state.list[i], p = Number(s.port);
-            if (s.main) continue;
+            if (s.main) { const access = accessProblem(s, s.bind, true); if (access) return [i, access]; continue; }
             if (!Number.isInteger(p) || p < 1 || p > 65535) return [i, 'A server needs a port from 1 to 65535.'];
             if (s.active === false) continue; // switched off: it claims no port
             if (p === state.viewerPort || p === state.controlPort) return [i, `Port ${p} is the ${p === state.viewerPort ? 'main server' : 'control panel'}'s.`];
             if (seen.has(p)) return [i, `Two servers on port ${p}.`];
             seen.add(p);
             if (!servedKeys(s).length) return [i, `The server on port ${p} serves nothing: switch on what it offers.`];
+            const access = accessProblem(s, s.bind);
+            if (access) return [i, access];
         }
         return null;
     }

@@ -78,6 +78,11 @@ namespace Services
 			" The installation itself is here too: its receivers (inputs), outputs, health, log and events. Ask those tools "
 			"about the station rather than its configuration file.";
 
+		// told when they are there, but not for this caller's key
+		const char *DATA_ONLY_INSTRUCTIONS =
+			" This key reads data alone. The installation's own tools, its receivers (inputs), outputs, health, log and events, "
+			"are here for a key with the system scope: ask the station's owner for one if you need them.";
+
 		// the name of a member as the document has it, known key or not
 		std::string nameOf(const JSON::Document &doc, int key)
 		{
@@ -223,7 +228,7 @@ namespace Services
 			w.beginObject().kv("protocolVersion", asked)
 				.key("capabilities").beginObject().key("tools").beginObject().kv("listChanged", false).endObject().endObject()
 				.key("serverInfo").beginObject().kv("name", "AIS-catcher").kv("version", VERSION).endObject()
-				.kv("instructions", system && (request.scopes & ApiKey::SYSTEM) ? std::string(INSTRUCTIONS) + SYSTEM_INSTRUCTIONS : std::string(INSTRUCTIONS)).endObject();
+				.kv("instructions", std::string(INSTRUCTIONS) + (!system ? "" : (request.scopes & ApiKey::SYSTEM) ? SYSTEM_INSTRUCTIONS : DATA_ONLY_INSTRUCTIONS)).endObject();
 		}
 		else if (m == "ping")
 			w.beginObject().endObject();

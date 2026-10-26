@@ -295,7 +295,7 @@ X(KEY_SETTING_BIND, "", "", "", "", "bind", "", "", "Address a server listens on
 X(KEY_SETTING_KEYS, "", "", "", "", "keys", "", "", "The keys a server accepts: a name, the SHA-256 of the key and its scopes.", nullptr)
 X(KEY_SETTING_SHA256, "", "", "", "", "sha256", "", "", "SHA-256 of a key, in hex: the key itself is never stored.", nullptr)
 X(KEY_SETTING_SCOPES, "", "", "", "", "scopes", "", "", "What a key may do: data, system.", nullptr)
-X(KEY_SETTING_PUBLIC, "", "", "", "", "public", "", "", "A server whose data anyone may read without a key.", nullptr)
+X(KEY_SETTING_PUBLIC, "", "", "", "", "public", "", "", "A server anyone who reaches it may read, without a key; never together with keys.", nullptr)
 X(KEY_SETTING_WEBHOOKS, "", "", "", "", "webhooks", "", "", "Addresses each event is posted to as it happens.", nullptr)
 X(KEY_SETTING_EVENTS, "", "", "", "", "events", "", "", "The kinds of event a webhook posts: safety, destination, status, draught, place_enter, place_exit, system.", nullptr)
 X(KEY_SETTING_SECRET, "", "", "", "", "secret", "", "", "A webhook's signing secret, as Standard Webhooks has it (whsec_...).", nullptr)

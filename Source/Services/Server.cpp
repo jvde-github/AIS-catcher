@@ -158,13 +158,13 @@ namespace Services
 
 	// Whether a request to a service of `scope` may go on with `key`, the key
 	// it names; when not, the answer that says why. A server without keys is
-	// this machine's own or declared public; one with keys lets its data out to
-	// anyone only when public, and nothing else without a key that has the
-	// scope. Many wrong keys in a minute from one address close the server to
-	// that address's keys for the rest of the minute.
+	// this machine's own or declared public, and admits everything; one with
+	// keys admits nothing guarded without a key that has the scope. Many wrong
+	// keys in a minute from one address close the server to that address's
+	// keys for the rest of the minute.
 	bool Server::admit(int scope, const Services::Request &request, const ApiKey *key, Services::Response &response) const
 	{
-		if (!scope || spec_.keys.empty() || (scope == ApiKey::DATA && spec_.open))
+		if (!scope || spec_.keys.empty())
 			return true;
 		if (!key)
 		{
@@ -201,9 +201,9 @@ namespace Services
 		try
 		{
 			// what the caller may read, for a service that serves both: everything from a
-			// server without keys, its key's scopes on one with keys, the data alone when public
+			// server without keys, this machine's own or public; its key's scopes on one with keys
 			const ApiKey *key = spec_.keys.empty() ? nullptr : keyOf(request.authorization);
-			request.scopes = spec_.keys.empty() ? ApiKey::DATA | ApiKey::SYSTEM : key ? key->scopes : spec_.open ? (int)ApiKey::DATA : 0;
+			request.scopes = spec_.keys.empty() ? ApiKey::DATA | ApiKey::SYSTEM : key ? key->scopes : 0;
 			// the first service that takes the path and answers it, each asking of the key what it serves
 			for (auto &s : services)
 			{
