@@ -1096,6 +1096,11 @@ namespace Services
 		const std::string format = request.param("format");
 		if (!format.empty() && format != "json" && format != "geojson")
 			return Response::problem(400, "Bad request", "format must be json or geojson.");
+		long long step = 0, limit = 0;
+		if (!request.integer("step", step, 0, 1, 86400))
+			return Response::problem(400, "Bad request", "step must be between 1 and 86400 seconds.");
+		if (!request.integer("limit", limit, 0, 1, 100000))
+			return Response::problem(400, "Bad request", "limit must be between 1 and 100000 points.");
 		if (!shows(mmsi))
 			return Response::problem(404, "Not found", "No vessel " + std::to_string(mmsi) + " is known.");
 
@@ -1104,6 +1109,34 @@ namespace Services
 		if (!tracker.ships().forEachTrackPoint(mmsi, since, [&](const PathStore::Point &p) { points.push_back(p); }))
 			return Response::problem(404, "Not found", "No vessel " + std::to_string(mmsi) + " is known.");
 		std::reverse(points.begin(), points.end());
+		const std::size_t total = points.size();
+
+		// one point per step: the first of each, from the first point on
+		if (step > 0 && points.size() > 1)
+		{
+			std::vector<PathStore::Point> kept;
+			long long from = 0;
+			for (const auto &p : points)
+				if (kept.empty() || (long long)p.time >= from)
+				{
+					kept.push_back(p);
+					from = (long long)p.time + step;
+				}
+			points.swap(kept);
+		}
+		// at most limit points: evenly by place in the track, the first and the last kept
+		if (limit > 0 && (long long)points.size() > limit)
+		{
+			std::vector<PathStore::Point> kept;
+			const std::size_t n = points.size(), m = (std::size_t)limit;
+			for (std::size_t k = 0; k < m; k++)
+				kept.push_back(points[m == 1 ? 0 : (k * (n - 1)) / (m - 1)]);
+			points.swap(kept);
+		}
+		// what thinning left between the points: the step, or the typical spacing after limit
+		long long spacing = step;
+		if (points.size() < total && points.size() > 1 && step == 0)
+			spacing = ((long long)points.back().time - (long long)points.front().time) / (long long)(points.size() - 1);
 
 		std::string out;
 		JSON::Writer w(out);
@@ -1133,7 +1166,10 @@ namespace Services
 			w.kv_or_null("heading_deg", (int)p.hdg, p.hdg != PathStore::NA);
 			w.endObject();
 		}
-		endList(w, points.size());
+		// a track is one answer: no next page, but how many points there were
+		w.endArray().key("meta").beginObject().kv("count", (long long)points.size()).kv("complete", points.size() == total).kv_null("next").kv("points", (long long)total);
+		w.kv_or_null("step_s", spacing, points.size() < total && spacing > 0);
+		w.endObject().endObject();
 		w.finish();
 		return Response::json(out);
 	}

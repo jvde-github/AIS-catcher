@@ -28,35 +28,41 @@ namespace Services
 {
 	namespace
 	{
-		// One tool: a route, the parameters of it the tool takes, and what an
-		// assistant is told of it
+		// One tool: a route, the parameters of it the tool takes, what an
+		// assistant is told of it, and the arguments it sends when not given
 		struct Tool
 		{
 			const char *name, *title, *description, *route;
 			std::vector<std::string> args;
+			std::vector<std::pair<std::string, std::string>> defaults;
 		};
 
 		const std::vector<Tool> &tools()
 		{
 			static const std::vector<Tool> all = {
-				{"search_vessels", "Search vessels", "Find vessels heard lately by name, call sign, MMSI or IMO number.", "/api/v1/vessels", {"q", "limit", "cursor"}},
-				{"vessels_in_area", "Vessels in an area", "The vessels heard lately inside a box of west,south,east,north degrees.", "/api/v1/vessels", {"bbox", "class", "limit", "cursor"}},
-				{"vessels_near", "Vessels near a point", "The vessels heard lately within radius_nm nautical miles of lat,lon.", "/api/v1/vessels", {"near", "radius_nm", "class", "limit", "cursor"}},
+				{"search_vessels", "Search vessels", "Find vessels heard lately by name, call sign, part of the MMSI or the IMO number; newest first, a page of 100 unless limit says otherwise, meta.next for the next page.", "/api/v1/vessels", {"q", "limit", "cursor"}},
+				{"vessels_in_area", "Vessels in an area", "The vessels heard lately inside a box of west,south,east,north degrees, any size; a page of 100 unless limit says otherwise.", "/api/v1/vessels", {"bbox", "class", "limit", "cursor"}},
+				{"vessels_near", "Vessels near a point", "The vessels heard lately within radius_nm nautical miles of lat,lon: 10 unless set, 1000 at most; a page of 100 unless limit says otherwise.", "/api/v1/vessels", {"near", "radius_nm", "class", "limit", "cursor"}},
+				{"list_vessels", "Vessels, filtered", "The vessels heard lately, newest first, by any of the filters together: text in the name or call sign, a box, a point and radius, MMSIs, the stations that heard them, class, navigational status, a validated position, the repeat indicator, speed, distance from the station and age. A page of 100 unless limit says otherwise; meta.next for the next page, meta.poll for what changes later.", "/api/v1/vessels",
+				 {"q", "bbox", "near", "radius_nm", "mmsi", "stations", "class", "nav_status", "validated", "repeat", "min_speed_kn", "max_speed_kn", "min_distance_nm", "max_distance_nm", "max_age_s", "limit", "cursor"}},
 				{"get_vessel", "Vessel details", "One vessel in full: identity, position, voyage, recent changes, visits and the port it is bound for.", "/api/v1/vessels/{mmsi}", {"mmsi"}},
-				{"vessel_track", "Vessel track", "Where a vessel went: its positions with speed, course and heading, from a time on.", "/api/v1/vessels/{mmsi}/track", {"mmsi", "since"}},
-				{"vessel_visits", "Vessel visits", "The ports, terminals and berths a vessel called at or passed.", "/api/v1/vessels/{mmsi}/visits", {"mmsi"}},
-				{"find_places", "Find places", "Ports, terminals, berths, anchorages and zones by name or UN/LOCODE, or by type.", "/api/v1/places", {"q", "type", "limit", "cursor"}},
-				{"get_place", "Place details", "One place with the vessels inside it now.", "/api/v1/places/{uuid}", {"uuid"}},
-				{"place_visits", "Place visits", "Who came to a place, when, and how long they stayed.", "/api/v1/places/{uuid}/visits", {"uuid", "hours", "limit", "cursor"}},
-				{"list_stations", "Receiving stations", "The stations of this installation and when each was last heard.", "/api/v1/stations", {}},
+				{"vessel_track", "Vessel track", "Where a vessel went: its positions with speed, course and heading, oldest first, from a UTC time on (since), the whole track kept without one. At most 300 points unless limit says otherwise, a longer track thinned evenly to fit; step keeps one point per that many seconds. meta.complete is false when points were left out, meta.points how many there were.", "/api/v1/vessels/{mmsi}/track", {"mmsi", "since", "step", "limit"}, {{"limit", "300"}}},
+				{"vessel_visits", "Vessel visits", "The ports, terminals and berths a vessel called at or passed: the stays under way first, then the newest.", "/api/v1/vessels/{mmsi}/visits", {"mmsi"}},
+				{"find_places", "Find places", "Ports, terminals, berths, anchorages and zones by name or UN/LOCODE, or by type; a page of 100 unless limit says otherwise.", "/api/v1/places", {"q", "type", "limit", "cursor"}},
+				{"get_place", "Place details", "One place with its outline and the vessels inside it now, by its uuid as find_places gives it.", "/api/v1/places/{uuid}", {"uuid"}},
+				{"place_visits", "Place visits", "Who came to a place, when, and how long they stayed: the visits under way and those that ended in the last 24 hours unless hours says otherwise, 720 at most; newest first, a page of 100.", "/api/v1/places/{uuid}/visits", {"uuid", "hours", "limit", "cursor"}},
+				{"list_stations", "Receiving stations", "The stations of this installation, where each stands unless it keeps that private, and when each was last heard.", "/api/v1/stations", {}},
+				{"station_statistics", "Station statistics", "One station's figures by its id as list_stations gives it: messages, vessels, signal and range, by the second, minute, hour and day.", "/api/v1/stations/{id}/statistics", {"id"}},
 				{"data_status", "Data status", "The figures of everything heard: messages and vessels by the minute, hour and day, to judge how fresh the data is.", "/api/v1/statistics", {}},
-				{"recent_events", "Recent events", "Safety messages, new destinations and statuses, arrivals and departures: the newest page, or those after an event's id given as cursor.", "/api/v1/events", {"cursor", "limit"}},
+				{"recent_events", "Recent events", "Safety messages, new destinations and statuses, arrivals and departures, oldest first: the newest page of 100 unless limit says otherwise, or the events after the one whose id is given as cursor; meta.poll asks for what comes next.", "/api/v1/events", {"cursor", "limit"}},
+				{"list_aircraft", "Aircraft", "The aircraft heard lately by an ADS-B receiver, newest first; a page of 100 unless limit says otherwise.", "/api/v1/aircraft", {"limit", "cursor"}},
+				{"get_aircraft", "Aircraft details", "One aircraft by its ICAO address, six hex digits.", "/api/v1/aircraft/{icao}", {"icao"}},
 				{"system_status", "Installation", "The installation: version, uptime, memory, and whether the engine runs.", "/api/v1/system", {}},
 				{"list_receivers", "Receivers", "Each receiver (input): its station, device, whether it streams, messages in the last minute, when last heard.", "/api/v1/system/receivers", {}},
 				{"list_outputs", "Outputs", "Each output: what it sends where, and how it fares.", "/api/v1/system/outputs", {}},
 				{"health", "Health", "pass, warn or fail, with the checks behind it: the engine, the receivers, the backup.", "/api/v1/health", {}},
-				{"read_log", "Log", "The installation's log: the newest lines, or those after a line's id given as cursor.", "/api/v1/system/log", {"cursor", "limit"}},
-				{"system_events", "Installation events", "The engine started or stopped, a receiver lost or back, a station quiet or hearing again, a day of exceptional range, a backup failed: the newest page, or those after an event's id given as cursor.", "/api/v1/system/events", {"cursor", "limit"}},
+				{"read_log", "Log", "The installation's log, oldest first: the newest page of 100 lines unless limit says otherwise, or the lines after the one whose id is given as cursor.", "/api/v1/system/log", {"cursor", "limit"}},
+				{"system_events", "Installation events", "The engine started or stopped, a receiver lost or back, a station quiet or hearing again, a day of exceptional range, a backup failed: the newest page of 100 unless limit says otherwise, or those after the event whose id is given as cursor.", "/api/v1/system/events", {"cursor", "limit"}},
 			};
 			return all;
 		}
@@ -297,6 +303,10 @@ namespace Services
 				response = Response::json(error(id, -32602, "The tool " + std::string(tool->name) + " takes no argument \"" + bad + "\"."));
 				return true;
 			}
+			// what the tool sends unless the caller did
+			for (const auto &d : tool->defaults)
+				if (call.query.find(d.first + "=") == std::string::npos)
+					call.query += (call.query.empty() ? "" : "&") + d.first + "=" + d.second;
 			if (call.path.find('{') != std::string::npos)
 			{
 				const std::size_t open = call.path.find('{'), close = call.path.find('}', open);
