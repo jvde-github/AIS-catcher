@@ -173,8 +173,10 @@
         }
 
         @media (max-width: 720px) {
-            #system-modal[data-view="page"] #rail-back { display: flex; }
-            #system-modal[data-view="page"] #system-title { padding-left: 4px; }
+            /* the back chevron sits inside the title's slot, its icon on the content's left edge, so
+               the band keeps its shape: the slot reaches under the button and the title follows it */
+            #system-modal[data-view="page"] #rail-back { display: flex; position: relative; z-index: 1; margin-left: 12px; }
+            #system-modal[data-view="page"] #system-title { margin-left: -44px; padding-left: 52px; }
         }
 
 

@@ -40,6 +40,14 @@ public:
 	// a station stays until withdrawn; a row's ttl only keeps a client from ageing it out
 	enum { KEEP_S = 315360000 };
 
+	// how a station is doing, as the host that runs it judges: unknown where the host cannot
+	// tell, receiving, quiet (nothing heard for a while), or down (its receivers are lost)
+	enum State { STATE_UNKNOWN = 0, STATE_RECEIVING, STATE_QUIET, STATE_DOWN };
+	static const char *stateName(int state)
+	{
+		return state == STATE_RECEIVING ? "receiving" : state == STATE_QUIET ? "quiet" : state == STATE_DOWN ? "down" : nullptr;
+	}
+
 	struct Station
 	{
 		int id = 0;
@@ -51,6 +59,7 @@ public:
 		int inputs = 0;    // how many receivers name it: with none, GPS from every input moves it
 		bool share_loc = false; // its position may leave this machine: servers, the API, the map
 		bool online = false;
+		int state = STATE_UNKNOWN; // a change is sent to the map, as one of position is
 		std::time_t last = 0;
 		float rate = 0;
 		uint64_t seq = 0;
@@ -105,7 +114,7 @@ public:
 		{
 			Station &cur = it->second;
 			// what only says the station is alive rides along without a new sequence number
-			if (cur.lat == s.lat && cur.lon == s.lon && cur.alt == s.alt && cur.name == s.name && cur.country == s.country && cur.mmsi == s.mmsi && cur.gps == s.gps && cur.share_loc == s.share_loc && cur.online == s.online)
+			if (cur.lat == s.lat && cur.lon == s.lon && cur.alt == s.alt && cur.name == s.name && cur.country == s.country && cur.mmsi == s.mmsi && cur.gps == s.gps && cur.share_loc == s.share_loc && cur.online == s.online && cur.state == s.state)
 			{
 				cur.last = s.last;
 				cur.rate = s.rate;
@@ -139,7 +148,7 @@ public:
 			w.beginObject().kv("id", id).kv("kind", 8).kv("seq", (long long)s.seq)
 				.kv("lat", s.lat).kv("lon", s.lon).kv("label", s.name).kv("count", 0)
 				.kv("t", (long long)s.last).kv("first", (long long)s.last);
-			writeFields(w, s.mmsi, s.online, s.rate, s.country, heard ? heard(s.id) : 0);
+			writeFields(w, s.mmsi, s.online, s.rate, s.country, heard ? heard(s.id) : 0, s.state);
 			w.endObject();
 		}
 	}
@@ -147,11 +156,30 @@ public:
 	// the station part of a row, after the fields every object row has
 	// heard: the station's last message, 0 when the host cannot tell; a connected station
 	// that has gone quiet is drawn apart from one that is receiving
-	static void writeFields(JSON::Writer &w, uint32_t mmsi, bool online, float rate, const std::string &country, std::time_t heard = 0)
+	static void writeFields(JSON::Writer &w, uint32_t mmsi, bool online, float rate, const std::string &country, std::time_t heard = 0, int state = STATE_UNKNOWN)
 	{
 		w.kv("ttl", KEEP_S).kv("mmsi", mmsi).kv("online", online).kv("rate", rate).kv("country", country);
 		if (heard > 0)
 			w.kv("heard", (long long)heard);
+		if (stateName(state))
+			w.kv("state", stateName(state));
+	}
+
+	// a station's state; a change gives its row a new sequence number, so the next poll of the
+	// object feed carries it, and only then: a station that keeps receiving is not sent again
+	void setState(int id, int state, uint64_t &next_seq)
+	{
+		auto it = stations.find(id);
+		if (it == stations.end() || it->second.state == state)
+			return;
+		Station s = it->second;
+		s.state = state;
+		put(s, false, next_seq);
+	}
+	int stateOf(int id) const
+	{
+		auto it = stations.find(id);
+		return it == stations.end() ? STATE_UNKNOWN : it->second.state;
 	}
 
 	void writeRemoved(JSON::Writer &w, uint64_t since) const
@@ -207,6 +235,8 @@ public:
 			.kv("mmsi", s.mmsi).kv("online", s.online).kv("last", (long long)s.last).kv("rate", s.rate).kv("country", s.country);
 		if (heard > 0)
 			w.kv("heard", (long long)heard);
+		if (stateName(s.state))
+			w.kv("state", stateName(s.state));
 		if (riding)
 			w.kv("riding", true);
 		w.endObject();

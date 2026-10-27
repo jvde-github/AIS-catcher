@@ -87,6 +87,28 @@ function section(title, docs, ...kids) {
         el('div', 'st-svcs__head', {}, el('h3', 'st-section__title', { text: title }), docs ? docLink(docs) : null), ...kids);
 }
 
+// A server page's section that folds: closed, its head reads the section's state in a few words;
+// open, its rows are there to edit. The owner's choice is kept per server and section; a section
+// with a problem opens itself unless the owner closed it, and the problem stands in its head.
+const foldOpen = new Map();
+const FOLD_CHEVRON = '<svg class="st-fold__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+function fold(title, docs, { key, state = '', warn = '', open: openByDefault = false }, ...kids) {
+    const open = foldOpen.has(key) ? foldOpen.get(key) : openByDefault || !!warn;
+    const body = el('div', 'st-fold__body', { id: 'fold-' + key.replace(/\W+/g, '-') }, ...kids);
+    const toggle = el('button', 'st-fold__toggle', { type: 'button', 'aria-expanded': String(open), 'aria-controls': body.id, html: FOLD_CHEVRON },
+        el('span', 'st-fold__title', { text: title }),
+        el('span', 'st-fold__state' + (warn ? ' st-fold__state--warn' : ''), { text: warn || state }));
+    const sec = el('section', 'st-svcs st-fold' + (open ? ' st-fold--open' : ''), {},
+        el('div', 'st-svcs__head st-fold__head', {}, el('h3', 'st-section__title st-fold__h', {}, toggle), docs ? docLink(docs) : null), body);
+    toggle.addEventListener('click', () => {
+        const now = toggle.getAttribute('aria-expanded') !== 'true';
+        foldOpen.set(key, now);
+        toggle.setAttribute('aria-expanded', String(now));
+        sec.classList.toggle('st-fold--open', now);
+    });
+    return sec;
+}
+
 // ---- what a server or a webhook shows: from which stations, once there are two or more, and
 // which MMSIs are let through or kept out, its view; on a server also whether places go out with
 // their outlines. Kinds and how lately heard are the page's own filter's. It writes `data.view`;
@@ -98,7 +120,7 @@ const EDITED = ['stations', 'mmsi_allow', 'mmsi_deny'];
 const idList = (v) => (Array.isArray(v) ? v : v === undefined || v === null || v === '' ? [] : String(v).split(','))
     .map(x => String(x).trim()).filter(Boolean);
 
-export function renderShows(host, data, { stations = [], touched, rerender, everyShip = false, outlines = false, byStation = false }) {
+export function renderShows(host, data, { stations = [], touched, rerender, everyShip = false, outlines = false, byStation = false, foldKey = null }) {
     const many = stations.length >= 2;
     const f = data.view && typeof data.view === 'object' ? { ...data.view } : {};
     const commit = (redraw = true) => {
@@ -107,10 +129,24 @@ export function renderShows(host, data, { stations = [], touched, rerender, ever
         touched();
         if (redraw) rerender();
     };
-    const box = section('Shows', DOCS.services);
+    const kids = [];
+    const box = { append: (...n) => kids.push(...n) };
+    // what it shows in a few words, for the head of the fold
+    const state = () => {
+        const parts = [];
+        if (!everyShip && byStation && many) {
+            const ids = idList(data.station_id ?? f.stations);
+            if (ids.length) parts.push(ids.map(k => stations.find(st => String(st.key) === String(k))?.label || 'station ' + k).join(', '));
+        }
+        const allow = idList(f.mmsi_allow).length, deny = idList(f.mmsi_deny).length;
+        parts.push(allow ? allow + (allow === 1 ? ' MMSI only' : ' MMSIs only') : deny ? 'all but ' + deny + (deny === 1 ? ' MMSI' : ' MMSIs') : 'every vessel');
+        if (outlines) parts.push(data.view?.place_geometry === false ? 'places as markers' : 'places with their shape');
+        return parts.join(' · ');
+    };
+    const done = () => host.append(foldKey ? fold('Shows', DOCS.services, { key: foldKey + ':shows', state: state() }, ...kids) : section('Shows', DOCS.services, ...kids));
     if (everyShip) {
         if (outlines) box.append(outlinesRow(data, touched));
-        host.append(box);
+        done();
         return;
     }
     // the stations chosen: a server's station_id (its view's stations from before), a webhook's view
@@ -159,7 +195,7 @@ export function renderShows(host, data, { stations = [], touched, rerender, ever
         if (other.length) box.append(el('p', 'field-desc', { text: 'Also set in the configuration file: ' + other.join(', ') + '.' }));
     }
     if (outlines) box.append(outlinesRow(data, touched));
-    host.append(box);
+    done();
 }
 
 // places go out with their outline, or as a marker alone
@@ -167,7 +203,7 @@ function outlinesRow(data, touched) {
     const view = () => (data.view && typeof data.view === 'object' ? data.view : (data.view = {}));
     return switchRow('', data.view?.place_geometry === undefined || on(data.view.place_geometry),
         v => { if (v) delete view().place_geometry; else view().place_geometry = false; touched(); },
-        el('strong', '', { text: 'Place outlines' }), 'Off sends each place as a marker, without its shape.');
+        el('strong', '', { text: 'Share outlines' }), 'Each place with its shape; off, a marker alone.');
 }
 
 // what serves places, so their outlines are a question
@@ -179,7 +215,7 @@ const revealed = new Map();
 // What a server serves (`builtIn`: the main server, the map always on, as the panel shows it)
 // and who may read it. `data` changes in place; `touched` says so and `rerender` draws the page
 // again.
-export function renderServing(host, data, { builtIn = false, bind, touched, rerender }) {
+export function renderServing(host, data, { builtIn = false, bind, touched, rerender, foldKey = 'srv' }) {
     const served = servedKeys(data, builtIn);
     const has = k => served.includes(k);
     const set = (k, value) => {
@@ -190,9 +226,12 @@ export function renderServing(host, data, { builtIn = false, bind, touched, rere
         touched();
         rerender();
     };
-    host.append(section('Serves', DOCS.services, ...SERVICES.map(s => switchRow('', has(s.key), v => set(s.key, v),
+    // each service on a line: its name, path and what it is for
+    const rows = SERVICES.map(s => switchRow('st-svc--line', has(s.key), v => set(s.key, v),
         el('span', 'st-svc__name', {}, el('strong', '', { text: s.label }), el('code', '', { text: s.path })),
-        builtIn && s.key === 'ui' ? 'Always on: this panel shows it.' : s.desc, builtIn && s.key === 'ui'))));
+        builtIn && s.key === 'ui' ? 'Always on: this panel shows it.' : s.desc, builtIn && s.key === 'ui'));
+    const names = SERVICES.filter(s => has(s.key)).map(s => s.label);
+    host.append(fold('Serves', DOCS.services, { key: foldKey + ':serves', open: true, state: names.join(', '), warn: names.length ? '' : 'serves nothing: switch on what it offers' }, ...rows));
 
     if (GUARDED.some(has)) {
         const keys = Array.isArray(data.keys) ? data.keys : [];
@@ -213,7 +252,8 @@ export function renderServing(host, data, { builtIn = false, bind, touched, rere
             touched();
             rerender();
         };
-        const box = section('Access', DOCS.keys);
+        const kids = [];
+        const box = { append: (...n) => kids.push(...n) };
         box.append(el('div', 'st-seg st-access', { role: 'radiogroup', 'aria-label': 'Access' },
             [['open', 'Open'], ['keys', 'Keys']].map(([m, label]) => el('button', 'st-seg__opt', {
                 type: 'button', role: 'radio', 'aria-checked': String(mode === m), text: label,
@@ -225,8 +265,11 @@ export function renderServing(host, data, { builtIn = false, bind, touched, rere
                   : 'This machine only: anyone on it reads what this server serves.' }));
         if (mode === 'keys') box.append(renderKeys(data, keys, { touched, rerender, system: has('system') }));
         const problem = accessProblem(data, bind, builtIn);
-        if (problem) box.append(el('p', 'st-warn-note', { text: problem.slice(problem.indexOf(': ') + 2) }));
-        host.append(box);
+        const why = problem ? problem.slice(problem.indexOf(': ') + 2) : '';
+        if (problem) box.append(el('p', 'st-warn-note', { text: why }));
+        const state = mode === 'keys' ? 'Keys · ' + (keys.map(k => k.name).filter(Boolean).join(', ') || 'none yet')
+            : net ? 'Open to anyone who reaches it' : 'Open on this machine';
+        host.append(fold('Access', DOCS.keys, { key: foldKey + ':access', state, warn: why }, ...kids));
     }
 }
 
@@ -293,26 +336,21 @@ function renderKeys(data, keys, { touched, rerender, system }) {
 }
 
 // the folded part of a server's map settings, open or not as the owner left it, by server
-const moreOpen = new Set();
-const CHEVRON = '<svg class="st-adv__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 
-// A server's map settings, as the main server's page has them: the map page a visitor gets in a
-// section of its own, and under More, folded, the links, tiles and plugins, with a count of those
-// set. One setting to a line. `key`: which server's More this is.
+// A server's map settings, as the main server's page has them, in one fold: the map page a
+// visitor gets, then as its tail the links, tiles and plugins. One setting to a line. `key`:
+// which server's fold this is. Closed, the head names the tabs that are on, the tiles and the plugins.
 function renderViewerFields(main, s, fields, touched, key) {
-    const sum = el('span', 'st-adv__sum');
     const rest = fields.filter(f => f.section !== 'Map page');
-    const set = () => rest.filter(({ field: f }) => {
+    const isSet = ({ field: f }) => {
         const v = s[f.jsonpath || f.name];
         return v !== undefined && v !== '' && !(Array.isArray(v) && !v.length);
-    }).length;
-    const count = () => { const n = set(); sum.textContent = n ? n + ' set' : ''; };
+    };
     const field = ({ field: f }) => {
         const name = f.jsonpath || f.name;
         const node = Renderer.renderField(f, 0, s, (fl, v) => {
             if (v === undefined || v === '' || (Array.isArray(v) && !v.length)) delete s[name]; else s[name] = v;
             touched();
-            count();
         }, () => {}, '');
         node.classList.add('st-opt');
         if (f.type === 'toggle') node.classList.add('st-opt--switch');
@@ -321,23 +359,22 @@ function renderViewerFields(main, s, fields, touched, key) {
         return node;
     };
     const page = fields.filter(f => f.section === 'Map page');
-    main.append(section('Map page', DOCS.viewer, el('div', 'st-srv__viewer st-srv__page', {}, ...page.map(field))));
-
-    const body = el('div', 'st-adv__body st-secs st-srv__viewer');
+    const tail = el('div', 'st-srv__tail st-srv__viewer');
     const groups = new Map();
     for (const f of rest) {
         if (!groups.has(f.section)) {
             const g = el('div', 'st-sec__grid fieldset');
-            body.append(el('section', 'st-sec', {}, el('h4', 'st-section__title', { text: f.section }), g));
+            tail.append(el('section', 'st-sec', {}, el('h4', 'st-section__title', { text: f.section }), g));
             groups.set(f.section, g);
         }
         groups.get(f.section).append(field(f));
     }
-    const more = el('details', 'st-adv st-srv__more', moreOpen.has(key) ? { open: '' } : {},
-        el('summary', '', { innerHTML: CHEVRON + 'Links, map tiles and plugins' }, sum), body);
-    more.addEventListener('toggle', () => { if (more.open) moreOpen.add(key); else moreOpen.delete(key); });
-    count();
-    main.append(more);
+    // the head: the tabs and cards that are on, then whether the tiles and plugins are the owner's
+    const tabs = page.filter(f => f.field.type === 'toggle' && on(s[f.field.jsonpath || f.field.name])).map(f => f.field.label.replace(/ tab$/, '').replace(/ on the ship card$/, ''));
+    const tiles = rest.some(f => f.section === 'Map tiles' && isSet(f)) ? 'own tiles' : 'default tiles';
+    const plugins = rest.some(f => f.section === 'Plugins' && isSet(f)) ? 'plugins' : 'no plugins';
+    main.append(fold('Map page', DOCS.viewer, { key: key + ':map', state: [tabs.length ? tabs.join(', ') : 'no tabs', tiles, plugins].join(' · ') },
+        el('div', 'st-srv__viewer st-srv__page', {}, ...page.map(field)), tail));
 }
 
 // The editor of the servers, for the Services pages: each server its own page, the main one first
@@ -435,8 +472,8 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         // the map beside the panel shows everything; what a server shows is the server's
         if (s.main) {
             main.append(el('p', 'field-desc st-svcs__lead', { text: `The map this panel shows, on port ${state.viewerPort || 'next to it'}. Add servers for a public map or an API.` }));
-            renderServing(main, s, { builtIn: true, bind: state.bind, touched, rerender });
-            renderShows(main, s, { everyShip: true, outlines: true, touched, rerender });
+            renderServing(main, s, { builtIn: true, bind: state.bind, touched, rerender, foldKey: 'main' });
+            renderShows(main, s, { everyShip: true, outlines: true, touched, rerender, foldKey: 'main' });
             renderViewerFields(main, s, viewerFields, touched, 'main');
             return;
         }
@@ -474,11 +511,11 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
             el('label', 'field st-stations__field st-stations__num', {}, el('span', 'field-label', { text: 'Port' }), port),
             el('div', 'field st-stations__field st-stations__grow', {}, el('span', 'field-label', { text: 'Listens on' }), seg)));
 
-        renderServing(main, s, { bind: s.bind, touched, rerender });
+        renderServing(main, s, { bind: s.bind, touched, rerender, foldKey: 'srv' + i });
         // what it sends, before how its map looks
-        renderShows(main, s, { stations: stations(), touched, rerender, outlines: sendsPlaces(servedKeys(s)), byStation: true });
+        renderShows(main, s, { stations: stations(), touched, rerender, outlines: sendsPlaces(servedKeys(s)), byStation: true, foldKey: 'srv' + i });
         if (servedKeys(s).includes('ui'))
-            renderViewerFields(main, s, viewerFields, touched, 'port ' + s.port);
+            renderViewerFields(main, s, viewerFields, touched, 'srv' + i);
     }
 
     function clean(s) {

@@ -600,8 +600,21 @@ public:
       s.id = id;
       stations.put(s, true, binary.sequence());
     }
-    for (const auto &s : list)
+    // a station listed again keeps the state its host last judged
+    for (StationRegistry::Station s : list) {
+      s.state = stations.stateOf(s.id);
       stations.define(s, binary.sequence());
+    }
+  }
+  // how each station is doing, as the host judges it; a station not named is unknown
+  void setStationStates(const std::map<int, int> &states) {
+    std::lock_guard<std::mutex> lock(mtx);
+    std::vector<int> ids;
+    stations.forEach([&](const StationRegistry::Station &s) { ids.push_back(s.id); });
+    for (int id : ids) {
+      auto it = states.find(id);
+      stations.setState(id, it == states.end() ? StationRegistry::STATE_UNKNOWN : it->second, binary.sequence());
+    }
   }
   void setStation(const StationRegistry::Station &s) {
     std::lock_guard<std::mutex> lock(mtx);

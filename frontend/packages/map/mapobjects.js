@@ -19,6 +19,7 @@ import CircleStyle from 'ol/style/Circle.js';
 import VectorLayer from 'ol/layer/Vector.js';
 import VectorSource from 'ol/source/Vector.js';
 import { fromLonLat } from 'ol/proj.js';
+import Overlay from 'ol/Overlay.js';
 
 import { hexToRgb } from '@aiscatcher/ui/color.js';
 import { hasValidCoords } from '@aiscatcher/core/geo.js';
@@ -42,12 +43,13 @@ const SECTION_ZOOM = 13; // same minimum as PlaceIndex::Entry::SECTION_ZOOM
 const placeGlyph = (o) => o.place_type === 'water' || o.place_type === 'sector' || (o.place_type === 'guardzone' && WATERWAY.test(o.category || '')) ? 'waterway' : o.place_type || 'place';
 const catOf = (o) => (o.kind === 9 || (o.kind === 10 && o.place_type === 'port')) ? 'port' : o.kind === 10 ? 'place' : KIND_CAT[o.kind] || 'data';
 // the server's clock once a feed has told it; the status of a station is judged against it
-let serverClock = () => Date.now() / 1000;
-const statusOf = (o) => stationStatus(o, serverClock());
-const STATUS_RANK = { online: 0, connected: 1, offline: 2 };
+const statusOf = (o) => stationStatus(o);
+const STATUS_RANK = { online: 0, quiet: 1, down: 2, offline: 3 };
 const bestStatus = (members) => members.map(statusOf).reduce((a, b) => (STATUS_RANK[b] < STATUS_RANK[a] ? b : a), 'offline');
+// co-located stations each get a pill up to this many; more share one pill with a chooser
+const STATION_PILLS = 4;
 const stationId = (o) => Number(String(o.id).slice(1));
-const stationInfo = (o) => ({ name: o.label, id: stationId(o), country: o.country, mmsi: o.mmsi, status: statusOf(o) });
+const stationInfo = (o) => ({ name: o.label, id: stationId(o), country: o.country, mmsi: o.mmsi, status: statusOf(o), heard: o.heard });
 const bandOf = (o) => stationBand(stationInfo(o));
 
 /* host: {
@@ -77,7 +79,6 @@ export function create(host) {
     const hydrating = new Map();   // id -> in-flight promise
     const hydratedShips = new Map(); // mmsi -> { badge, messages, promise }
     let serverTime = 0, ttl = 2700, viewZoom = 0;
-    serverClock = () => serverTime || Date.now() / 1000;
 
     const vector = new VectorSource({ features: [] });
     const layer = new VectorLayer({ source: vector, style: styleOf, opacity: LAYER_ALPHA, properties: { interactive: true } });
@@ -243,10 +244,13 @@ export function create(host) {
         for (const stack of stackObjects(standing)) {
             const anchor = stack[0];
             const slots = [];
+            // a station stands as a pill of its own: its hover shows it alone and one click opens
+            // it; only past STATION_PILLS do the stations share a pill and a chooser
+            const ownPill = stack.filter((m) => catOf(m) === 'station').length <= STATION_PILLS;
             for (const o of stack) {
                 const cat = catOf(o);
                 const glyph = o.kind === 10 ? placeGlyph(o) : cat;
-                let slot = slots.find((s) => s.cat === cat && s.glyph === glyph);
+                let slot = cat === 'station' && ownPill ? null : slots.find((s) => s.cat === cat && s.glyph === glyph);
                 if (!slot) slots.push(slot = { cat, glyph, members: [] });
                 slot.members.push(o);
             }
@@ -259,6 +263,31 @@ export function create(host) {
                 });
             });
         }
+        syncPulses(standing);
+    }
+
+    // a station that is down pulses, slowly, where the host animates it (the viewer, for its
+    // own stations): an element over the map, animated by CSS, so the map draws nothing for it
+    const pulses = new Map(); // id -> Overlay
+    function syncPulses(standing) {
+        const m = host.pulse ? host.map?.() : null;
+        const want = new Set();
+        if (m) for (const o of standing) {
+            if (catOf(o) !== 'station' || statusOf(o) !== 'down') continue;
+            want.add(o.id);
+            let ov = pulses.get(o.id);
+            if (!ov) {
+                const el = document.createElement('div');
+                el.className = 'station-pulse';
+                el.setAttribute('aria-hidden', 'true');
+                ov = new Overlay({ element: el, positioning: 'center-center', stopEvent: false });
+                m.addOverlay(ov);
+                pulses.set(o.id, ov);
+            }
+            ov.setPosition(fromLonLat([o.lon, o.lat]));
+        }
+        for (const [id, ov] of pulses)
+            if (!want.has(id)) { ov.getMap()?.removeOverlay(ov); pulses.delete(id); }
     }
 
     // two objects closer than an icon at the view's zoom draw on top of each other:

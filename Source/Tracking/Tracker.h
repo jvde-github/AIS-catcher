@@ -120,6 +120,8 @@ public:
 
 	// the stations of the registry: positions, the vessels they ride, GPS on or off
 	void setStations(const StationRegistry &registry);
+	// how each station is doing, by id: StationRegistry's states, for the map's station rows
+	void setStationStates(const std::map<int, int> &states) { db.setStationStates(states); }
 	// where a station is now, for those who serve it: nothing for a station
 	// that keeps its position home
 	Position stationPosition(int id);

@@ -7,6 +7,7 @@ import { createPicker } from '@aiscatcher/ui/picker.js';
 import * as cardTabs from '@aiscatcher/ui/stationcard-tabs.js';
 import { renderStationActivity } from '@aiscatcher/ui/station-activity.js';
 import { flagHTML } from '@aiscatcher/ui/components.js';
+import { stationStateText } from '@aiscatcher/ui/stations.js';
 import { stepChartSVG } from '@aiscatcher/core/spark.js';
 import { getCountryName, getDeltaTimeVal } from '@aiscatcher/core/text.js';
 import { paneCramped } from '@aiscatcher/map/mapui.js';
@@ -150,8 +151,8 @@ function updateFilterPicker() {
 
 // ─── a station from the map ──────────────────────────────────────────────────
 
-export const STATUS_TEXT = { online: "Receiving", connected: "Connected, nothing heard for five minutes", offline: "Offline" };
-const HEADER_CLASS = { online: "card-validated", connected: "card-warning", offline: "card-dubious" };
+export const STATUS_TEXT = { online: "Receiving", quiet: "Quiet: nothing heard for 15 minutes", down: "Receiver down", offline: "Offline" };
+const HEADER_CLASS = { online: "card-validated", quiet: "card-not-validated", down: "card-dubious", offline: "card-dubious" };
 
 const count = (n) => (Number(n) || 0).toLocaleString();
 const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
@@ -237,7 +238,7 @@ function fillRows(s) {
     header.classList.remove("card-validated", "card-warning", "card-dubious");
     header.classList.add(HEADER_CLASS[s.status] || "card-dubious");
     set("stationcard_station_id", s.id);
-    set("stationcard_status", STATUS_TEXT[s.status] || "No data yet");
+    set("stationcard_status", stationStateText(s) || STATUS_TEXT[s.status] || "No data yet");
     set("stationcard_ago", s.heard > 0 ? getDeltaTimeVal(clock - s.heard) + " ago" : "-");
     const aboard = s.mmsi ? ships[s.mmsi]?.raw?.shipname || "MMSI " + s.mmsi : null;
     set("stationcard_where_label", aboard ? "On board" : "Position");

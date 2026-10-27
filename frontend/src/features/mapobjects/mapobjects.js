@@ -62,6 +62,8 @@ const objects = mapobjects.create({
     setTableOpen: (on) => deps.setTableOpen(on),
     openStation: (id) => deps.openStation(id),
     map: () => map,
+    // this installation's own stations: one whose receivers are lost pulses
+    pulse: true,
 });
 
 export const objectLayer = objects.layer;

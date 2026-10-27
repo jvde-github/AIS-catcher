@@ -1941,6 +1941,25 @@ body.ticker-open.ticker-bottom {
 .station-activity-widget .activity-legend span { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .station-activity-widget .activity-legend i { width: 7px; height: 7px; border-radius: 1px; background: var(--color-success); }
 .station-activity-widget i.quiet { background: var(--color-warning); }
+
+/* a station whose receivers are lost: a red ring that swells and fades, slowly, over its
+   grey marker; still, for those who asked for less motion */
+.station-pulse {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid rgba(220, 38, 38, 0.85);
+    pointer-events: none;
+    animation: station-pulse 2.6s ease-out infinite;
+}
+@keyframes station-pulse {
+    0% { transform: scale(0.8); opacity: 0.9; }
+    70% { opacity: 0; }
+    100% { transform: scale(2.2); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .station-pulse { animation: none; transform: scale(1.35); opacity: 0.7; }
+}
 .station-activity-widget i.offline { background: var(--color-danger); }
 .station-activity-widget i.no-data { background: var(--color-border); }
 .station-activity-widget i.system-error { background: var(--color-info); }

@@ -208,6 +208,30 @@ void Site::watchStations(std::time_t now, bool daily)
 		for (int id : quiet_stations)
 			if (!quiet.count(id) && mine.count(id))
 				systemEventLocked(Tracking::Level::ROUTINE, "station_heard", named(id) + " hears again", id);
+
+	// the same judgement for the map: a station of this installation is down when every
+	// receiver naming it is lost, quiet as the event above or while the engine is stopped,
+	// receiving otherwise; a station heard through a feed is quiet after the same silence;
+	// one the installation cannot tell of stays unknown. A row goes out when its state changes.
+	std::map<int, int> states;
+	std::map<int, int> receivers, lost;
+	for (const auto &r : f.receivers)
+	{
+		receivers[r.station]++;
+		if (r.lost)
+			lost[r.station]++;
+	}
+	registry.forEach([&](const StationRegistry::Station &s) {
+		if (mine.count(s.id))
+			states[s.id] = lost[s.id] && lost[s.id] == receivers[s.id] ? StationRegistry::STATE_DOWN
+						   : !f.running || quiet.count(s.id)	   ? StationRegistry::STATE_QUIET
+																   : StationRegistry::STATE_RECEIVING;
+		else if (const std::time_t heard = tracker_->lastHeard(s.id))
+			states[s.id] = now - heard > STATION_QUIET_S ? StationRegistry::STATE_QUIET : StationRegistry::STATE_RECEIVING;
+	});
+	tracker_->setStationStates(states);
+	for (auto &o : own)
+		o->tracker->setStationStates(states);
 	quiet_stations.swap(quiet);
 
 	if (!daily)
