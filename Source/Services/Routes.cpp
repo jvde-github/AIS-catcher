@@ -16,6 +16,7 @@
 */
 
 #include "Routes.h"
+#include <cstring>
 #include <algorithm>
 #include <utility>
 #include "AIS-catcher.h"
@@ -637,19 +638,53 @@ namespace Services
 		w.endObject().endObject().endObject();
 	}
 
-	void writeInputSchema(JSON::Writer &w, const Route &r, const std::vector<std::string> &names)
+	// a schema without its bounds and default: the server checks those and answers what was wrong
+	static std::string unbounded(std::string schema)
+	{
+		for (const char *k : {",\"minimum\":", ",\"maximum\":", ",\"exclusiveMinimum\":", ",\"default\":"})
+			for (std::size_t at; (at = schema.find(k)) != std::string::npos;)
+			{
+				std::size_t end = at + std::strlen(k);
+				while (end < schema.size() && schema[end] != ',' && schema[end] != '}')
+					end++;
+				schema.erase(at, end - at);
+			}
+		return schema;
+	}
+
+	void writeInputSchema(JSON::Writer &w, const Route &r, const std::vector<std::string> &names,
+						  const std::map<std::string, std::string> *brief)
 	{
 		w.beginObject().kv("type", "object").key("properties").beginObject();
+		bool required = false;
 		for (const auto &p : r.params)
 			if (std::find(names.begin(), names.end(), p.name) != names.end())
 			{
+				required = required || p.required;
 				w.key(p.name);
-				writeSchemaWithDescription(w, p);
+				const auto b = brief ? brief->find(p.name) : std::map<std::string, std::string>::const_iterator();
+				if (!brief)
+					writeSchemaWithDescription(w, p);
+				else if (b == brief->end())
+					w.raw_val("{" + unbounded(p.schema) + ",\"description\":" + JSON::Writer::escape(p.description) + "}");
+				else if (b->second.empty())
+					w.raw_val("{" + unbounded(p.schema) + "}");
+				else
+					w.raw_val("{" + unbounded(p.schema) + ",\"description\":" + JSON::Writer::escape(b->second) + "}");
 			}
-		w.endObject().key("required").beginArray();
-		for (const auto &p : r.params)
-			if (p.required && std::find(names.begin(), names.end(), p.name) != names.end())
-				w.val(p.name);
-		w.endArray().kv("additionalProperties", false).endObject();
+		w.endObject();
+		// the brief form names what is required only when something is, and leaves the refusal of
+		// unknown arguments to the server, which answers it
+		if (!brief || required)
+		{
+			w.key("required").beginArray();
+			for (const auto &p : r.params)
+				if (p.required && std::find(names.begin(), names.end(), p.name) != names.end())
+					w.val(p.name);
+			w.endArray();
+		}
+		if (!brief)
+			w.kv("additionalProperties", false);
+		w.endObject();
 	}
 }

@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -71,5 +72,8 @@ namespace Services
 	// the OpenAPI 3.1 document of the routes the given services offer
 	void writeOpenAPI(JSON::Writer &w, const std::vector<std::string> &services);
 	// a JSON Schema object of the named parameters of a route, for a tool's input
-	void writeInputSchema(JSON::Writer &w, const Route &r, const std::vector<std::string> &names);
+	// `brief`: shorter descriptions by parameter name for a reader that pays for every word, the
+	// MCP tools; an empty one leaves the description out, a name not in it keeps the route's
+	void writeInputSchema(JSON::Writer &w, const Route &r, const std::vector<std::string> &names,
+						  const std::map<std::string, std::string> *brief = nullptr);
 }
