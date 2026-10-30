@@ -795,7 +795,6 @@ void ControlCore::putAuth(JSON::Document &doc) {
   }
   if (!setup_code.empty())
     control.Set(AIS::KEY_SETTING_SETUP_CODE, setup_code, doc.pool);
-  // the panel's own HTTPS is the file's alone
   if (panel_tls) {
     JSON::JSON &tls = control.object(AIS::KEY_SETTING_TLS, doc.pool);
     tls.Set(AIS::KEY_SETTING_CERT, panel_tls_cert, doc.pool);
@@ -815,10 +814,78 @@ std::string ControlCore::configFolderPath() const {
 
 bool ControlCore::panelTLS(std::string &cert, std::string &key) {
   std::lock_guard<std::mutex> lock(mtx);
+  if (!cli_tls_cert.empty()) {
+    cert = cli_tls_cert;
+    key = cli_tls_key;
+    return true;
+  }
   const std::string folder = configFolder(config_file);
   cert = panel_tls_cert.empty() ? "" : Util::Helper::resolvePath(panel_tls_cert, folder);
   key = panel_tls_key.empty() ? "" : Util::Helper::resolvePath(panel_tls_key, folder);
   return panel_tls;
+}
+
+bool ControlCore::panelTLSFields(std::string &cert, std::string &key) {
+  std::lock_guard<std::mutex> lock(mtx);
+  const bool fixed = !cli_tls_cert.empty();
+  cert = fixed ? cli_tls_cert : panel_tls_cert;
+  key = fixed ? cli_tls_key : panel_tls_key;
+  return fixed;
+}
+
+void ControlCore::setPanelTLSFromCommandLine(const std::string &cert, const std::string &key) {
+  std::lock_guard<std::mutex> lock(mtx);
+  cli_tls_cert = cert;
+  cli_tls_key = key;
+}
+
+bool ControlCore::setPanelTLS(const std::string &cert, const std::string &key, std::string &error) {
+  std::string old_cert, old_key;
+  if (panelTLSFields(old_cert, old_key)) {
+    error = "HTTPS of the panel is set on the command line.";
+    return false;
+  }
+  if (cert.empty() != key.empty()) {
+    error = "HTTPS needs both the certificate and the private key.";
+    return false;
+  }
+  if (!cert.empty()) {
+    const std::string folder = configFolder(config_file);
+    const std::string cert_path = Util::Helper::resolvePath(cert, folder);
+    const std::string key_path = Util::Helper::resolvePath(key, folder);
+    // as on a save: a path elsewhere can only be written in the file by hand, and stays if unchanged
+    for (const auto &p : {std::make_pair(&cert, &old_cert), std::make_pair(&key, &old_key)}) {
+      const std::string path = Util::Helper::resolvePath(*p.first, folder);
+      if (*p.first != *p.second && !inFolder(path, folder)) {
+        error = "\"" + *p.first + "\" is outside the configuration's folder (" + folder + "): a path elsewhere can only be written in the file by hand.";
+        return false;
+      }
+      if (isSameFile(path, config_file)) {
+        error = "\"" + *p.first + "\" is the configuration itself.";
+        return false;
+      }
+    }
+    // what does not load here would stop the next start
+    error = IO::TCPServer::checkTLS(cert_path, key_path);
+    if (!error.empty())
+      return false;
+  }
+
+  const bool old_tls = !old_cert.empty();
+  const auto keep = [&](bool on, const std::string &c, const std::string &k) {
+    std::lock_guard<std::mutex> lock(mtx);
+    panel_tls = on;
+    panel_tls_cert = c;
+    panel_tls_key = k;
+  };
+  keep(!cert.empty(), cert, key);
+  if (mutateConfig("persist panel HTTPS", [&](JSON::Document &doc) {
+        putAuth(doc);
+        return true;
+      }, &error))
+    return true;
+  keep(old_tls, old_cert, old_key);
+  return false;
 }
 
 std::string ControlCore::getDeviceListJSON() {

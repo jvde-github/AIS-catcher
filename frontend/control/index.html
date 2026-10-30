@@ -161,6 +161,22 @@
                             <button id="hub-btn-logout" type="button" class="btn sys-save" data-auth="login">Logout</button>
                             <button type="submit" form="password-form" class="btn sys-save">Reset</button>
                         </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="t-strong">HTTPS for this panel</span>
+                            </div>
+                            <div class="card-body stack">
+                                <p id="panel-tls-state" class="t-small t-muted"></p>
+                                <form id="panel-tls-form" class="stack">
+                                    <input id="panel-tls-cert" type="text" spellcheck="false" placeholder="Certificate: fullchain.pem" aria-label="Certificate" class="st-input" />
+                                    <input id="panel-tls-key" type="text" spellcheck="false" placeholder="Private key: privkey.pem" aria-label="Private key" class="st-input" />
+                                </form>
+                                <p class="t-small t-muted">Files you already have, in the configuration's folder. They are checked before saving, and this panel moves to the other address at once and asks for the password again. Empty both for plain HTTP. If the files stop loading later, the program does not start until they are fixed or removed from the configuration file.</p>
+                            </div>
+                        </div>
+                        <div class="row row-wrap row-end row-loose sys-actions">
+                            <button type="submit" form="panel-tls-form" class="btn sys-save">Apply HTTPS</button>
+                        </div>
                     </div>
                 </div>
                 <div class="sys-pane hidden" data-pane="about">

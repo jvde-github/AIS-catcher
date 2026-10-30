@@ -339,8 +339,9 @@ namespace IO
 		if (!f)
 			return strerror(errno);
 		fclose(f);
-		const char *reason = ERR_reason_error_string(ERR_peek_error());
-		return reason ? reason : "not a PEM file";
+		const unsigned long e = ERR_peek_error();
+		const char *reason = ERR_GET_LIB(e) == ERR_LIB_PEM ? nullptr : ERR_reason_error_string(e);
+		return reason ? reason : "not a PEM file, or damaged";
 	}
 
 	// a context with this certificate and key, null with the reason
@@ -437,6 +438,8 @@ namespace IO
 		tls_key_time = key_time;
 		tls_warned = false;
 		tls_until = fresh ? notAfter(fresh) : 0;
+		if (fresh && tls_until < std::time(nullptr))
+			Warning() << "Server: the certificate \"" << cert << "\" has expired, browsers will refuse it: renew it, the server takes the new one by itself";
 		return true;
 #else
 		if (cert.empty())

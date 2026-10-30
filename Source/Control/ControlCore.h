@@ -94,8 +94,14 @@ public:
   const std::string &getBindAddress() const { return bind_address; }
   // the folder of the configuration, as the panel compares a path with it
   std::string configFolderPath() const;
-  // whether the file gives the panel's own server "tls", and its files
+  // whether the panel's own server has "tls", and its files: the command line's, else the file's
   bool panelTLS(std::string &cert, std::string &key);
+  // the same as they are written, for the panel to show; true when the command line sets them
+  bool panelTLSFields(std::string &cert, std::string &key);
+  // for this run only, and not written to the file
+  void setPanelTLSFromCommandLine(const std::string &cert, const std::string &key);
+  // from the panel: a pair that loads, or two empty ones for plain HTTP; written to the file
+  bool setPanelTLS(const std::string &cert, const std::string &key, std::string &error);
 
   bool authRequired() const {
     return bind_address != "127.0.0.1" && bind_address != "localhost";
@@ -138,6 +144,7 @@ private:
   std::string password_hash;
   bool panel_tls = false;
   std::string panel_tls_cert, panel_tls_key;
+  std::string cli_tls_cert, cli_tls_key;
   std::string password_salt;
   int password_iterations = 0;
   static const int PASSWORD_ITERATIONS = 10000;

@@ -1154,7 +1154,7 @@ namespace
 			case 'A':
 				throw std::runtime_error("Option -A is obsolete. Please use -I instead.");
 			case 'E':
-				throw std::runtime_error("Option -E (managed mode) must be the only option: AIS-catcher -E [config file] [bind address:port]. To run this command line in managed mode, write it as a configuration with -J config.json, then start AIS-catcher -E config.json.");
+				throw std::runtime_error("Option -E (managed mode) must be the only option: AIS-catcher -E [config file] [bind address:port] [TLS_CERT file TLS_KEY file]. To run this command line in managed mode, write it as a configuration with -J config.json, then start AIS-catcher -E config.json.");
 			case 'I':
 #ifdef HASNMEA2000
 				output(AIS::KEY_SETTING_NMEA2000_OUTPUT, leading(count % 2, AIS::KEY_SETTING_DEVICE), args, ptr, count);

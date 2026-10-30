@@ -3,6 +3,7 @@ import { createPlaceEditor } from './places-editor.js';
 import { createStationsEditor } from './stations-editor.js';
 import { el, highlightJson, isActive } from './dom.js';
 import { api } from './api.js';
+import { wirePanelTLS } from './panel-tls.js';
 import { icon } from './icons.js';
 import { hub } from './hub.js';
 import { createHistoryEditor } from './history-editor.js';
@@ -1012,6 +1013,7 @@ import { createMessageBar } from './message-bar.js';
         currentPassword = systemBody.querySelector('#current-password');
         if (!hasPassword) currentPassword.remove();
         systemBody.querySelector('#password-form').addEventListener('submit', changePassword);
+        wirePanelTLS(systemBody);
         systemBody.querySelector('#hub-btn-wizard').addEventListener('click', () => {
             closeSystem();
             openWizard();

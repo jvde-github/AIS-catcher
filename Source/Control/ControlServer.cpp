@@ -496,6 +496,35 @@ void ControlServer::Request(IO::TCPServerConnection &c,
                      cookieAttributes());
       sendOK(c);
     }
+  } else if (path == "/api/panel-tls" && r.method == "GET") {
+    // the files as they are written, the certificate in use, and why the files would stop a start
+    std::string cert, key, cert_path, key_path, s;
+    const bool fixed = core.panelTLSFields(cert, key);
+    core.panelTLS(cert_path, key_path);
+    JSON::Writer w(s);
+    w.beginObject().kv("cert", cert).kv("key", key).kv("until", tlsUntil()).kv("fixed", fixed)
+        .kv("problem", cert.empty() ? std::string() : IO::TCPServer::checkTLS(cert_path, key_path))
+        .endObject().finish();
+    Response(c, "application/json", s, accept_gzip);
+  } else if (path == "/api/panel-tls" && r.method == "POST") {
+    // the certificate, a newline, the key; nothing for plain HTTP. What is connected stays as it
+    // is, this answer too, and the next connection is the new kind
+    const std::size_t newline = r.body.find('\n');
+    const std::string cert = r.body.substr(0, newline);
+    const std::string key = newline == std::string::npos ? "" : r.body.substr(newline + 1);
+    std::string error, cert_path, key_path;
+    if (!core.setPanelTLS(cert, key, error))
+      sendError(c, error);
+    else {
+      core.panelTLS(cert_path, key_path);
+      if (!setTLS(cert_path, key_path, error))
+        Error() << "Control: " << error;
+      Info() << "Control: control server now over " << (hasTLS() ? "HTTPS" : "plain HTTP");
+      // a session that crossed the other kind of connection does not carry over
+      destroyAllSessions();
+      closeAllSSE();
+      sendOK(c);
+    }
   } else if (path == "/api/places/settings" && r.method == "GET")
     Response(c, "application/json", core.placeSettings(), accept_gzip);
   else if (path == "/api/places/enable" && r.method == "POST") {

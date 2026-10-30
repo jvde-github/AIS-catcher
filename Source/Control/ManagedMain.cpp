@@ -249,12 +249,15 @@ static std::string stationsLive(Site &site) {
 }
 
 static int serve(const std::string &config_file, int port,
-                 const std::string &bind) {
+                 const std::string &bind, const std::string &tls_cert,
+                 const std::string &tls_key) {
   Logger::getInstance().setMinLevel(LogLevel::DEBUG);
   // the file's own folder for what it names, from the first reading on
   Config::setConfigBaseDir(config_file);
 
   ControlCore core(config_file, port, bind);
+  if (!tls_cert.empty())
+    core.setPanelTLSFromCommandLine(tls_cert, tls_key);
   // outlives every engine session, and serves the viewer between them
   Site site;
   ControlServer server(core);
@@ -296,8 +299,18 @@ static int serve(const std::string &config_file, int port,
   return 0;
 }
 
-int run(const std::vector<std::string> &args) {
-  const std::string usage = "AIS-catcher -E [config file] [bind address:port]";
+int run(const std::vector<std::string> &all) {
+  const std::string usage = "AIS-catcher -E [config file] [bind address:port] [TLS_CERT file TLS_KEY file]";
+
+  // the panel's HTTPS, for this run, ends the line
+  std::vector<std::string> args = all;
+  std::string tls_cert, tls_key;
+  while (args.size() >= 4 && (args[args.size() - 2] == "TLS_CERT" || args[args.size() - 2] == "TLS_KEY")) {
+    (args[args.size() - 2] == "TLS_CERT" ? tls_cert : tls_key) = args.back();
+    args.resize(args.size() - 2);
+  }
+  if (tls_cert.empty() != tls_key.empty())
+    throw std::runtime_error("Control: HTTPS needs both TLS_CERT and TLS_KEY: " + usage);
 
   if (args.size() < 2 || args.size() > 4 || args[1] != "-E")
     throw std::runtime_error(
@@ -333,7 +346,7 @@ int run(const std::vector<std::string> &args) {
           usage);
   }
 
-  return serve(file, port, bind);
+  return serve(file, port, bind, tls_cert, tls_key);
 }
 
 #endif
