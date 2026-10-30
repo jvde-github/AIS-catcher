@@ -17,6 +17,8 @@
 
 #include "SiteConfig.h"
 
+#include <fstream>
+#include <limits>
 #include <algorithm>
 #include <stdexcept>
 
@@ -62,6 +64,13 @@ namespace
 
 namespace SiteReader
 {
+	// a relative file was once read from the working folder: one that is only there carries on
+	std::string backupFile(const std::string &file, const std::string &base_dir)
+	{
+		const std::string path = Util::Helper::resolvePath(file, base_dir);
+		return path != file && !std::ifstream(path) && std::ifstream(file) ? file : path;
+	}
+
 	bool isPath(int key)
 	{
 		return key == AIS::KEY_SETTING_FILE || key == AIS::KEY_SETTING_PLACES;
@@ -187,7 +196,7 @@ namespace
 		case AIS::KEY_SETTING_FILE:
 			if (!site)
 				return false;
-			site->backup_file = Util::Helper::resolvePath(arg, base_dir);
+			site->backup_file = SiteReader::backupFile(arg, base_dir);
 			break;
 		case AIS::KEY_SETTING_PLACES:
 			if (!site)
@@ -463,7 +472,7 @@ namespace
 			Util::Parse::Split(value, ',', own.zones);
 			return true;
 		case AIS::KEY_SETTING_GROUPS_IN:
-			own.groups_in = (uint64_t)Util::Parse::Integer(value, 0, 0x7FFFFFFFFFFFFFFFLL);
+			own.groups_in = (uint64_t)Util::Parse::Integer(value, 0, std::numeric_limits<long>::max());
 			return true;
 		// what the web viewer of before took and this server has no use for
 		case AIS::KEY_SETTING_PORT_MIN:

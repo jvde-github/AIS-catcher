@@ -18,30 +18,65 @@
 
 #pragma once
 
+#include <cstdint>
+#include <mutex>
+
 #include "JSON/Writer.h"
 
 namespace IO
 {
+    // A count kept on an output's thread and read on a server's. One lock for all of them, used for
+    // moments: a 64-bit atomic needs libatomic on armv6.
+    class OutputCount
+    {
+        uint64_t value = 0;
+        static std::mutex &lock()
+        {
+            static std::mutex m;
+            return m;
+        }
+
+    public:
+        OutputCount &operator=(uint64_t n)
+        {
+            std::lock_guard<std::mutex> l(lock());
+            value = n;
+            return *this;
+        }
+        OutputCount &operator+=(uint64_t n)
+        {
+            std::lock_guard<std::mutex> l(lock());
+            value += n;
+            return *this;
+        }
+        void operator++(int) { *this += 1; }
+        uint64_t get() const
+        {
+            std::lock_guard<std::mutex> l(lock());
+            return value;
+        }
+    };
+
     struct OutputStats
     {
-        uint64_t bytes_out = 0;
-        uint64_t bytes_in = 0;
-        uint32_t connect_ok = 0;
-        uint32_t connect_fail = 0;
-        uint32_t reconnects = 0;
-        uint32_t connected = 0;
-        uint64_t dropped = 0;
+        OutputCount bytes_out;
+        OutputCount bytes_in;
+        OutputCount connect_ok;
+        OutputCount connect_fail;
+        OutputCount reconnects;
+        OutputCount connected;
+        OutputCount dropped;
 
         void writeJSON(JSON::Writer &w) const
         {
             w.beginObject()
-                .kv("bytes_out", bytes_out)
-                .kv("bytes_in", bytes_in)
-                .kv("connect_ok", connect_ok)
-                .kv("connect_fail", connect_fail)
-                .kv("reconnects", reconnects)
-                .kv("connected", connected)
-                .kv("dropped", dropped)
+                .kv("bytes_out", bytes_out.get())
+                .kv("bytes_in", bytes_in.get())
+                .kv("connect_ok", connect_ok.get())
+                .kv("connect_fail", connect_fail.get())
+                .kv("reconnects", reconnects.get())
+                .kv("connected", connected.get())
+                .kv("dropped", dropped.get())
                 .endObject();
         }
     };

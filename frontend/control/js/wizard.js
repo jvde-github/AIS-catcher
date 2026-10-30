@@ -132,6 +132,8 @@ import { DEVICE_BLOCKS, deviceOf, isRadio } from './inputs.js';
             });
         });
 
+        // a station that said no to sharing stays that way unless its key is ticked
+        if (cfg.sharing === false) sel.sharing_off = true;
         if (typeof cfg.sharing_key === 'string' && UUID_RE.test(cfg.sharing_key)) {
             const checked = cfg.sharing !== false;
             items.push({ kind: 'sharing', uuid: cfg.sharing_key, checked, title: 'Community station key', subtitle: cfg.sharing_key });
@@ -637,6 +639,8 @@ import { DEVICE_BLOCKS, deviceOf, isRadio } from './inputs.js';
                 if (sel.community_uid) {
                     cfg.sharing = true;
                     cfg.sharing_key = sel.community_uid;
+                } else if (sel.sharing_off) {
+                    cfg.sharing = false;
                 }
                 if (sel.aishub_port) {
                     let udp = cfg.udp || [];

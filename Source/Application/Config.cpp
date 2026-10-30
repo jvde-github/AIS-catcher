@@ -295,7 +295,7 @@ void Config::applyReceiver(Receiver &r, const std::vector<JSON::Member> &members
         // the main section's other keys are the site's and the outputs', read
         // by the caller; only a receiver object can refuse one
         if (!unspecAllowed)
-          throw std::runtime_error("Config file: field \"" + AIS::settingName(m.Key()) + "\" is not allowed in a receiver object.");
+          Warning() << "Config file: field \"" << AIS::settingName(m.Key()) << "\" is ignored in a receiver object.";
         break;
       }
       if (isActiveObject(m.Get()))
@@ -350,6 +350,11 @@ void Config::readSharing(const std::vector<JSON::Member> &members) {
     }
   }
 
+  // a key of no use with sharing off stops nothing
+  if (engine.xshare_defined && !xchange && !uuid.empty() && !Util::Helper::isUUID(uuid)) {
+    Warning() << "Config file: \"sharing_key\" is not a UUID and sharing is off: ignored.";
+    uuid.clear();
+  }
   if ((xchange || !uuid.empty()) && !engine.comm_feed)
     engine.createCommunityFeed();
 
@@ -512,5 +517,14 @@ void Config::set(const std::string &str, const Origins *from) {
 }
 
 void Config::finish() {
+  // a file without "stations" from before there were any: a receiver's number is a station of its own
+  if (engine.stations.ordered().empty())
+    for (const auto &r : engine.receivers)
+      if (r->getStation() != 0 && !engine.stations.find(r->getStation())) {
+        StationRegistry::Station s;
+        s.id = r->getStation();
+        s.name = "Station " + std::to_string(s.id);
+        engine.stations.define(s);
+      }
   Stations::validate(engine.stations, engine.receivers);
 }

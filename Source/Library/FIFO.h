@@ -98,6 +98,7 @@ public:
 
 	char *Front(int &requested)
 	{
+		std::lock_guard<std::mutex> lock(fifo_mutex);
 		int to_wrap = ((_data.size() - head) / BLOCK_SIZE);
 
 		if (requested < 0)

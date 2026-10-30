@@ -221,7 +221,7 @@ namespace
 			std::string name = m.first;
 			Util::Convert::toUpper(name);
 			if (m.second.kind == Node::STRING && AIS::lookupSettingKey(name, key) && SiteReader::isPath(key))
-				m.second.text = Util::Helper::resolvePath(m.second.text, base);
+				m.second.text = key == AIS::KEY_SETTING_FILE ? SiteReader::backupFile(m.second.text, base) : Util::Helper::resolvePath(m.second.text, base);
 			else if (m.first == keyName(AIS::KEY_SETTING_TRACKING) && m.second.kind == Node::OBJECT)
 				absolute(m.second, base);
 			else if (m.first == keyName(AIS::KEY_SETTING_TLS) && m.second.kind == Node::OBJECT)
@@ -703,6 +703,12 @@ namespace
 					else if (m.Key() == AIS::KEY_SETTING_SHARING_ZONE && m.Get().isArray())
 						for (const auto &v : m.Get().getArray())
 							zones.push_back(v.to_string());
+				// a key of no use with sharing off stops nothing
+				if (xshare_defined && !xchange && !key.empty() && !Util::Helper::isUUID(key))
+				{
+					said.push_back("Config file: \"sharing_key\" is not a UUID and sharing is off: ignored.");
+					key.clear();
+				}
 				feed = feed || xchange || !key.empty();
 				if (!key.empty())
 					uuid = key;
@@ -767,7 +773,7 @@ namespace
 					{
 						Node v = fromJSON(t.Get());
 						if (SiteReader::isPath(t.Key()) && v.kind == Node::STRING)
-							v.text = Util::Helper::resolvePath(v.text, base);
+							v.text = t.Key() == AIS::KEY_SETTING_FILE ? SiteReader::backupFile(v.text, base) : Util::Helper::resolvePath(v.text, base);
 						tracking.add(keyName(t.Key()), std::move(v));
 					}
 					has_tracking = true;

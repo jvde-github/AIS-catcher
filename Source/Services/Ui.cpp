@@ -46,6 +46,11 @@ namespace Services
 			return block > 0 && block <= (long long)(std::time(nullptr) / REPLAY_BLOCK);
 		}
 
+		long long replayLookback(long long lookback)
+		{
+			return lookback < 0 || lookback > MAX_REPLAY_LOOKBACK ? 0 : lookback;
+		}
+
 		long long toInt(const std::string &s, long long def = 0)
 		{
 			char *end = nullptr;
@@ -486,7 +491,7 @@ namespace Services
 		else if (p == "/api/replay_info.json" && options.replay)
 			response = Response::json(UiFormat::replayInfo(db, REPLAY_BLOCK, oldest));
 		else if (p == "/api/replay_ships.json" && options.replay)
-			response = Response::json(UiFormat::replayShips(db, (std::time_t)toInt(request.param("since")), (std::time_t)toInt(request.param("lookback")), keep, oldest));
+			response = Response::json(UiFormat::replayShips(db, (std::time_t)toInt(request.param("since")), (std::time_t)replayLookback(toInt(request.param("lookback"))), keep, oldest));
 		else if (p == "/api/replay.json" && options.replay)
 		{
 			const long long block = toInt(request.param("block"));
@@ -495,10 +500,7 @@ namespace Services
 			else
 			{
 				const std::time_t from = (std::time_t)(block * REPLAY_BLOCK);
-				long long lookback = toInt(request.param("lookback"));
-				if (lookback < 0 || lookback > MAX_REPLAY_LOOKBACK)
-					lookback = 0;
-				response = Response::json(UiFormat::replay(db, from, from + REPLAY_BLOCK - 1, keep, (std::time_t)lookback, oldest));
+				response = Response::json(UiFormat::replay(db, from, from + REPLAY_BLOCK - 1, keep, (std::time_t)replayLookback(toInt(request.param("lookback"))), oldest));
 				// a dwell inside the block can still grow for DWELL_GAP after it ends; past that only eviction changes it
 				response.cache = (block + 1) * REPLAY_BLOCK + (long long)PathStore::DWELL_GAP <= (long long)std::time(nullptr);
 			}

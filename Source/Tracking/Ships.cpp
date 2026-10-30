@@ -466,7 +466,12 @@ bool Ship::Load(std::ifstream &file) {
   idle_since = 0;
   rest_told = false;
   if (ok && version >= _SHIP_VERSION_RESTED)
-    ok = (bool)(R(idle_since) && R(rest_told));
+    {
+      // a byte as the file has it: anything but 0 or 1 is no bool
+      char told = 0;
+      ok = (bool)(R(idle_since) && R(told));
+      rest_told = told != 0;
+    }
   heard.fill(Heard{0, 0});
   if (ok && version == _SHIP_VERSION)
     ok = loadHeardList(file, heard);

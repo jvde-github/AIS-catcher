@@ -215,6 +215,7 @@ namespace SiteReader
 	void stations(const JSON::Value &v, StationRegistry &into);
 	// a tracking key whose value is a file or directory, resolved against the configuration's folder
 	bool isPath(int key);
+	std::string backupFile(const std::string &file, const std::string &base_dir);
 #ifdef HASAPI
 	// "tracking", "services", "server", "webhooks" and "mqtt_state" as they stand, the files they name
 	// resolved against base_dir; command_line_servers names, per "server" entry, the -N that gave it

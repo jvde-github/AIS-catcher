@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <thread>
@@ -253,6 +254,8 @@ namespace IO
 		std::string tls_cert, tls_key;
 		std::time_t tls_cert_time = 0, tls_key_time = 0, tls_checked = 0;
 		bool tls_warned = false; // said once that a renewed file does not load
-		std::atomic<long long> tls_until{0};
+		// seconds since the epoch, enough to 2106; 32 bits as a 64-bit atomic needs libatomic on armv6
+		std::atomic<uint32_t> tls_until{0};
+		std::atomic<int> clients_now{0};
 	};
 }

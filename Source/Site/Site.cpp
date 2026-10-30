@@ -16,6 +16,10 @@
 */
 
 
+#include <cerrno>
+#include <cstdio>
+#include <cstring>
+#include <sys/stat.h>
 #include "Site.h"
 #include "Helper.h"
 #include "Logger.h"
@@ -530,6 +534,24 @@ static bool keepCopy(const std::string &from, const std::string &to)
 
 // under site_mtx: the site's tracker's backup is read once, when it is made,
 // from the file the configuration named; backups go there from then on
+// why a backup that is not simply there yet cannot be read, nothing otherwise
+static std::string backupProblem(const std::string &file)
+{
+	FILE *f = fopen(file.c_str(), "rb");
+	if (f)
+	{
+		fclose(f);
+		return "";
+	}
+	if (errno != ENOENT)
+		return strerror(errno);
+	const std::size_t slash = file.find_last_of("/\\");
+	struct stat s;
+	if (slash != std::string::npos && slash > 0 && stat(file.substr(0, slash).c_str(), &s) != 0)
+		return "its folder cannot be seen: it does not exist, or the service's hardening hides it";
+	return "";
+}
+
 void Site::restoreInto()
 {
 	backing_up = !backup_file.empty();
@@ -558,7 +580,13 @@ void Site::restoreInto()
 	if (r == Tracker::RESTORED)
 		Info() << "Tracker: restored from " << backup_file;
 	else
-		Info() << "Tracker: no backup restored from " << backup_file;
+	{
+		const std::string problem = backupProblem(backup_file);
+		if (problem.empty())
+			Info() << "Tracker: no backup restored from " << backup_file;
+		else
+			Error() << "Tracker: cannot read the backup " << backup_file << ": " << problem;
+	}
 }
 
 bool Site::engineAttached()

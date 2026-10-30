@@ -382,12 +382,14 @@ namespace IO
 		return ctx;
 	}
 
-	static long long notAfter(SSL_CTX *ctx)
+	// never 0, which is no TLS, and no later than 32 bits hold
+	static uint32_t notAfter(SSL_CTX *ctx)
 	{
 		int days = 0, seconds = 0;
 		const X509 *x = SSL_CTX_get0_certificate(ctx);
 		ASN1_TIME_diff(&days, &seconds, nullptr, x ? X509_get0_notAfter(x) : nullptr);
-		return (long long)std::time(nullptr) + days * 86400LL + seconds;
+		const long long until = (long long)std::time(nullptr) + days * 86400LL + seconds;
+		return until < 1 ? 1 : until > (long long)UINT32_MAX ? UINT32_MAX : (uint32_t)until;
 	}
 
 	static std::time_t modified(const std::string &path)
@@ -438,7 +440,7 @@ namespace IO
 		tls_key_time = key_time;
 		tls_warned = false;
 		tls_until = fresh ? notAfter(fresh) : 0;
-		if (fresh && tls_until < std::time(nullptr))
+		if (fresh && (std::time_t)tls_until < std::time(nullptr))
 			Warning() << "Server: the certificate \"" << cert << "\" has expired, browsers will refuse it: renew it, the server takes the new one by itself";
 		return true;
 #else
@@ -521,13 +523,10 @@ namespace IO
 		}
 	}
 
+	// the slots are the Run() thread's: it counts them once a second, any thread may ask
 	int TCPServer::numberOfClients()
 	{
-		int n = 0;
-		for (auto &c : client)
-			if (c.isConnected())
-				n++;
-		return n;
+		return clients_now;
 	}
 
 	int TCPServer::findFreeClient()
@@ -683,8 +682,13 @@ namespace IO
 					reloadTLS(now);
 					cleanUp(now);
 
+					int n = 0;
+					for (auto &c : client)
+						if (c.isConnected())
+							n++;
+					clients_now = n;
 					if (pstats)
-						pstats->connected = numberOfClients();
+						pstats->connected = n;
 				}
 			}
 			catch (const std::exception &e)

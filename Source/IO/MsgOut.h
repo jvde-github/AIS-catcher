@@ -307,6 +307,9 @@ namespace IO
 			case AIS::KEY_SETTING_INCLUDE_SAMPLE_START:
 				include_sample_start = Util::Parse::Switch(arg);
 				return true;
+			case AIS::KEY_SETTING_PERSIST:
+				Warning() << type << " output: \"persist\" is no longer used and is ignored; it reconnects by itself";
+				return true;
 			case AIS::KEY_SETTING_GROUPS_IN:
 			{
 				uint64_t g = Util::Parse::Integer(arg);

@@ -179,22 +179,6 @@ export function migrateConfig(cfg) {
             if (v && typeof v === 'object') list.push(serverFromViewer(v, cfg));
         delete cfg.server;
     }
-    // which ships a server or a webhook shows was its `filter` object; it is its `view`
-    for (const list of [cfg.services, cfg.webhooks])
-        if (Array.isArray(list))
-            for (const e of list)
-                if (e && e.filter && typeof e.filter === 'object' && !Array.isArray(e.filter)) {
-                    if (!e.view) e.view = e.filter;
-                    delete e.filter;
-                }
-    // whether a server sends place outlines is part of what it shows
-    if (Array.isArray(cfg.services))
-        for (const s of cfg.services)
-            if (s && 'place_geometry' in s) {
-                const view = s.view && typeof s.view === 'object' ? s.view : (s.view = {});
-                if (!('place_geometry' in view)) view.place_geometry = s.place_geometry;
-                delete s.place_geometry;
-            }
     // a server's message switch is msg; msgs was briefly seeded by a defaults bug
     for (const s of Array.isArray(cfg.services) ? cfg.services : []) {
         if (!s || typeof s !== 'object') continue;

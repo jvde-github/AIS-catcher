@@ -68,10 +68,12 @@ void MqttState::open()
 		l.session = l.tcp.add(&l.tls);
 		l.session = l.tls.add(&l.mqtt);
 		break;
+	case PROTOCOL::WS:
 	case PROTOCOL::WSMQTT:
 		l.session = l.tcp.add(&l.ws);
 		l.session = l.ws.add(&l.mqtt);
 		break;
+	case PROTOCOL::WSS:
 	case PROTOCOL::WSSMQTT:
 		l.session = l.tcp.add(&l.tls);
 		l.session = l.tls.add(&l.ws);
@@ -85,7 +87,7 @@ void MqttState::open()
 		link.reset();
 		return;
 	}
-	if (protocol == PROTOCOL::WSMQTT || protocol == PROTOCOL::WSSMQTT)
+	if (protocol == PROTOCOL::WS || protocol == PROTOCOL::WSS || protocol == PROTOCOL::WSMQTT || protocol == PROTOCOL::WSSMQTT)
 	{
 		l.ws.setPath(path);
 		l.ws.setOptionKey(AIS::KEY_SETTING_PROTOCOLS, "mqtt");

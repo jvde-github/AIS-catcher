@@ -321,7 +321,7 @@ namespace AIS
 		}
 
 		int last = splitCount - 1;
-		int checksum = partLen(last) > 2 ? (hexDigitValue(partAt(last, partLen(last) - 2)) << 4) | hexDigitValue(partAt(last, partLen(last) - 1)) : -1;
+		int checksum = partLen(last) > 2 ? (hexDigitValue(partAt(last, partLen(last) - 2)) * 16) | hexDigitValue(partAt(last, partLen(last) - 1)) : -1;
 		if (checksum != splitChecksum)
 		{
 			if (shouldWarn(WARN_GPS_CHECKSUM))
@@ -394,7 +394,7 @@ namespace AIS
 			warnAIS(WARN_AIS_TAIL, "malformed tail", data, len);
 			return false;
 		}
-		int checksum = (hexDigitValue(end[-2]) << 4) | hexDigitValue(end[-1]);
+		int checksum = (hexDigitValue(end[-2]) * 16) | hexDigitValue(end[-1]);
 		char fillbits_ch = end[-4];
 		if (fillbits_ch < '0' || fillbits_ch > '5')
 		{
@@ -937,7 +937,7 @@ namespace AIS
 
 			if (star + 3 <= pEnd)
 			{
-				int expected = (hexDigitValue(star[1]) << 4) | hexDigitValue(star[2]);
+				int expected = (hexDigitValue(star[1]) * 16) | hexDigitValue(star[2]);
 				int actual = 0;
 				for (const char *q = p; q < star; q++)
 					actual ^= *q;

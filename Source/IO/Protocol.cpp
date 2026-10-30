@@ -661,7 +661,9 @@ namespace Protocol
 		if (verify_certificates)
 		{
 			X509_VERIFY_PARAM *param = SSL_get0_param(ssl);
-			X509_VERIFY_PARAM_set1_host(param, getHost().c_str(), 0);
+			// an address is compared with the certificate's IP names, a name with its DNS names
+			if (X509_VERIFY_PARAM_set1_ip_asc(param, getHost().c_str()) != 1)
+				X509_VERIFY_PARAM_set1_host(param, getHost().c_str(), 0);
 		}
 
 		// Create custom BIO that uses our TCP connection
@@ -1417,7 +1419,10 @@ namespace Protocol
 				}
 
 				int payload_len = length - header_size;
-				if (data_len < payload_len)
+				// a message is a line, whether its publisher ended it or not
+				const int payload_at = i + 2 + topic_len + (q == 0 ? 0 : 2);
+				const bool end_line = payload_len > 0 && buffer[payload_at + payload_len - 1] != '\n';
+				if (data_len < payload_len + (end_line ? 1 : 0))
 				{
 					Warning() << "MQTT: Buffer too small for incoming message. Required: " << payload_len << ", provided: " << data_len;
 					break;
@@ -1427,12 +1432,16 @@ namespace Protocol
 				{
 					data_returned = payload_len;
 					memcpy(data, buffer.data() + i + 2 + topic_len, data_returned);
+					if (end_line)
+						((char *)data)[data_returned++] = '\n';
 				}
 				else if (q == 1 || q == 2)
 				{
 					uint16_t packet_id = (buffer[i + 2 + topic_len] << 8) + buffer[i + 2 + topic_len + 1];
 					data_returned = payload_len;
 					memcpy(data, buffer.data() + i + 4 + topic_len, data_returned);
+					if (end_line)
+						((char *)data)[data_returned++] = '\n';
 
 					createPacket((q == 1) ? PacketType::PUBACK : PacketType::PUBREC, 0);
 					pushVariableLength(2);

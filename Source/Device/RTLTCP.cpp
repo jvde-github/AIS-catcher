@@ -136,9 +136,10 @@ namespace Device
 
 				if (len < 0)
 				{
-					lost = true;
-					Error() << "RTLTCP: error receiving data from remote host. Cancelling. ";
-					break;
+					Error() << "RTLTCP: error receiving data from remote host, connecting again.";
+					session->disconnect();
+					SleepSystem(1000);
+					continue;
 				}
 				else if (isStreaming() && !fifo.Push(buffer.data(), len))
 					Error() << "RTLTCP: buffer overrun.";
@@ -258,6 +259,9 @@ namespace Device
 			}
 			break;
 		}
+		case AIS::KEY_SETTING_PERSIST:
+			Warning() << "RTLTCP: \"persist\" is no longer used and is ignored; it reconnects by itself";
+			break;
 		case AIS::KEY_SETTING_LOSSLESS:
 			lossless = Util::Parse::Switch(arg);
 			fifo.setWait(lossless);

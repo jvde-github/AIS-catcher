@@ -814,12 +814,17 @@ setup_configuration() {
     # A link counts as there: this runs as root in a folder the service's user owns.
     if [[ "$MANAGED" == true && ! -f "$MANAGED_CONFIG_FILE" && ! -L "$MANAGED_CONFIG_FILE" && -f "$CONFIG_FILE" ]]; then
         log "INFO" "Existing config.json found; the setup wizard will offer to import its outputs"
+        # a station that said no to sharing stays that way
+        local seed_sharing=true
+        if grep -qsE '"sharing"[[:space:]]*:[[:space:]]*(false|"off")' "$CONFIG_FILE" || grep -qsE '(^|[[:space:]])-X[[:space:]]+off' "$CMD_FILE"; then
+            seed_sharing=false
+        fi
         cat << EOF | tee "$MANAGED_CONFIG_FILE" > /dev/null || error_exit "Failed to create aiscatcher.json"
 {
   "config": "aiscatcher",
   "version": 1,
   "engine": "off",
-  "sharing": true,
+  "sharing": ${seed_sharing},
   "control": { "wizard": true, "legacy_config": "${CONFIG_FILE}" }
 }
 EOF
@@ -869,6 +874,17 @@ SCRIPT
 }
 
 # Setup systemd service
+# A hardening line, unless a configuration names a path it would hide or freeze: that line stays off
+# with a warning, as a station that ran with such a path must not lose it on an upgrade
+hardening_line() {
+    local line=$1 pattern=$2
+    if grep -qsE "$pattern" "$CONFIG_FILE" "$CMD_FILE" "$MANAGED_CONFIG_FILE"; then
+        log "WARN" "${line} left out of the service: the configuration names a path it would hide or freeze" >&2
+    else
+        echo "$line"
+    fi
+}
+
 setup_systemd_service() {
     log "INFO" "Setting up systemd service"
 
@@ -950,14 +966,17 @@ SupplementaryGroups=plugdev dialout"
         exec_start="/usr/bin/AIS-catcher -E ${MANAGED_CONFIG_FILE} ${MANAGED_BIND}"
     fi
 
+    local hardening
+    hardening=$(hardening_line "PrivateTmp=true" "[\"' =,]/(var/)?tmp/"
+        hardening_line "ProtectHome=true" "[\"' =,]/(home|root)/"
+        hardening_line "ProtectSystem=true" "(FILE|file)[\"[:space:]:]+/(usr|boot)/")
+
     service_content+="
 ExecStart=${exec_start}
 Restart=${restart_policy}
 RestartSec=10
 NoNewPrivileges=true
-PrivateTmp=true
-ProtectHome=true
-ProtectSystem=true
+${hardening}
 
 [Install]
 WantedBy=multi-user.target"

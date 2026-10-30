@@ -958,6 +958,9 @@ void ControlCore::addMainDefaults() {
     const JSON::Value *ctrl = doc.root[AIS::KEY_SETTING_CONTROL];
     if (ctrl && ctrl->isObject() && ctrl->getObject()[AIS::KEY_SETTING_VIEWER])
       return false;
+    // a v0.70 file: its backup, position and name go with the panel's move of this section
+    if (doc.root[AIS::KEY_SETTING_SERVER])
+      return false;
     std::vector<JSON::Value> &services = doc.root.array(AIS::KEY_SETTING_SERVICES, doc.pool);
     for (const auto &entry : services) {
       const JSON::Value *main = entry.isObject() ? entry.getObject()[AIS::KEY_SETTING_MAIN] : nullptr;

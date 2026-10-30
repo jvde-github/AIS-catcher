@@ -14,7 +14,7 @@ export function addressFor(tls, { hostname, port, pathname }) {
 
 // what the page says: the files that would stop the next start come before anything else
 export function panelTLSState(tls, now) {
-    if (tls.problem) return { warn: true, text: `${tls.problem}. This panel keeps what it has loaded, but the next start stops until the files are fixed or removed from the configuration file.` };
+    if (tls.problem) return { warn: true, text: `${tls.problem}. The next start stops until this is fixed.` };
     const line = tlsLine({ tls: tls.cert ? tls : undefined }, tls.until, now);
     const text = line.warn ? `${line.warn}: browsers refuse it, renew the files` : line.state;
     return { warn: !!line.warn, text: tls.fixed ? `${text}. Set on the command line for this run.` : text };
