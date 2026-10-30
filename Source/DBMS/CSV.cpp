@@ -97,7 +97,9 @@ namespace IO
 
 		// a write is the only reliable test that the directory is usable
 		const std::string probe = dir + ".aiscatcher-csv";
-		std::ofstream t(probe.c_str());
+		std::ofstream t;
+		if (Util::Helper::createTemp(probe, probe))
+			t.open(probe.c_str());
 		if (!t.is_open())
 		{
 			stats.connect_fail++;
@@ -605,7 +607,9 @@ namespace IO
 	{
 		// before the files close: the worker calls back into this object
 		stopWorker();
-		maintain();
+		// an output that never opened has no directory to compact or prune
+		if (!dir.empty())
+			maintain();
 		closeDB();
 	}
 }

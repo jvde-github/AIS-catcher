@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <vector>
 #include <deque>
 #include <string>
@@ -147,6 +148,9 @@ namespace JSON
 		}
 	};
 
+	// a value as a setting takes it: a list as text separated by commas
+	std::string text(const Value &v);
+
 	class Member
 	{
 
@@ -238,6 +242,12 @@ namespace JSON
 					return;
 				}
 			members.emplace_back(p, v);
+		}
+
+		// every member under a key: a document may write one twice
+		void Remove(int p)
+		{
+			members.erase(std::remove_if(members.begin(), members.end(), [p](const Member &o) { return o.Key() == p; }), members.end());
 		}
 	};
 

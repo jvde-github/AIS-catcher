@@ -13,8 +13,9 @@ import { ships as shipsDB, station, counts as shipCounts, cardMmsi } from '../..
 import { getShipName } from '../../core/names.js';
 import * as stations from '@aiscatcher/ui/stations.js';
 import { map } from '../../map.js';
+import { ui } from '../../ui.js';
 import { refreshIntervalMs } from '../../data.js';
-import { saveSettings } from '../settings/settings.js';
+import { saveSettings } from '../../settings-store.js';
 import { showNotification } from '../../dialog.js';
 import { register } from '../../actions.js';
 import { hasValidCoords } from '@aiscatcher/core/geo.js';
@@ -22,15 +23,7 @@ import { fetchShips } from '../../data.js';
 import { selectMapTab } from '../../tabs/index.js';
 import * as replay from '../replay/replay.js';
 import * as mapObjects from '../mapobjects/mapobjects.js';
-import * as targetcard from '../targetcard/targetcard.js';
-import { targetcardMinIfMaxonMobile } from '../targetcard/card.js';
-
-// { ui: the entry's map UI (reveal) }
-let deps = null;
-
-export function init(d) {
-    deps = d;
-}
+import { updateFollowOption } from '../targetcard/shipcard.js';
 
 // vessel `m` on the map tab, its card open, the map zoomed in on it
 export async function openFocus(m, z) {
@@ -48,14 +41,13 @@ export async function openFocus(m, z) {
     if (z) mapResetView(z);
     else mapResetView(14);
 
-    if (ship && hasValidCoords(ship.lat, ship.lon)) deps.ui.reveal([ship.lon, ship.lat], undefined, { center: true });
+    if (ship && hasValidCoords(ship.lat, ship.lon)) ui.reveal([ship.lon, ship.lat], undefined, { center: true });
 }
 
 function mapResetView(z) {
 
     let view = map.getView();
     view.setZoom(Math.min(view.getMaxZoom(), Math.max(z, view.getZoom() + 1)));
-    targetcardMinIfMaxonMobile();
 }
 
 export function vesselPosition(m) {
@@ -79,8 +71,6 @@ export function mapResetViewZoom(z, m) {
         view.setCenter(fromLonLat([pos.lon, pos.lat]));
         view.setZoom(Math.min(view.getMaxZoom(), Math.max(z, view.getZoom() + 1)));
     }
-
-    targetcardMinIfMaxonMobile();
 }
 
 export function vesselLabel(m) {
@@ -91,22 +81,22 @@ export function vesselLabel(m) {
     return (ship && getShipName(ship)) || String(m);
 }
 
-export function pinVessel(m) {
+function pinVessel(m) {
     settings.center_point = m;
     settings.fix_center = true;
     saveSettings();
     drawStation();
     applyFixedCenter();
-    targetcard.updateFollowOption();
+    updateFollowOption();
     showNotification("Following " + vesselLabel(m));
 }
 
-export function unpinCenter() {
+function unpinCenter() {
     const was = settings.center_point;
     settings.fix_center = false;
     saveSettings();
     drawStation();
-    targetcard.updateFollowOption();
+    updateFollowOption();
     showNotification("No longer following " + vesselLabel(was));
 }
 
@@ -200,7 +190,7 @@ export function applyFixedCenter() {
         const dropped = settings.center_point;
         settings.center_point = "STATION";
         settings.fix_center = false;
-        targetcard.updateFollowOption();
+        updateFollowOption();
         showNotification("No longer following " + vesselLabel(dropped) + ": out of range");
         return;
     }

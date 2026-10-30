@@ -46,6 +46,8 @@ namespace Util
 		// Credentials and has_password are unchanged when the URL has no userinfo.
 		static void URL(const std::string &url, std::string &protocol, std::string &username, std::string &password, std::string &host, std::string &port, std::string &path, bool *has_password = nullptr);
 		static std::string URLWithoutCredentials(const std::string &url);
+		// as a log may show it: scheme, host and port, no credentials, path or query
+		static std::string URLForLog(const std::string &url);
 		static std::string PercentDecode(const std::string &s);
 		static void Split(const std::string &s, char delim, std::vector<std::string> &out);
 	};

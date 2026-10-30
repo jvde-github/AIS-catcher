@@ -104,6 +104,8 @@ namespace IO
 			tls.setVerifyCertificates(v);
 		}
 
+		void setOwnServer() { tls.setOwnServer(); }
+
 		void setURL(const std::string &url)
 		{
 			Util::Parse::URL(url, protocol, username, password, host, port, path, &basic);

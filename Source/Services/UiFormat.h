@@ -76,16 +76,16 @@ struct UiFormat {
   // the ticker: the events after `since`, and a page of those before `before`
   static std::string events(DB &db, uint64_t since, int level, const DB::Keep &keep = DB::Keep());
   static std::string eventHistory(DB &db, uint64_t before, int level, int limit, const DB::Keep &keep = DB::Keep());
-  static std::string binaryMessages(DB &db, std::time_t since = 0, uint64_t marker = 0, uint32_t owner = 0);
-  // `shown` leaves out a station the reader does not see
+  static std::string binaryMessages(DB &db, std::time_t since = 0, uint64_t marker = 0, uint32_t owner = 0, const DB::Keep &keep = DB::Keep());
+  // `shown` leaves out a station the reader does not see, `keep` a vessel's broadcasts
   static std::string mapObjects(DB &db, uint64_t since = 0, bool with_stations = true,
-                                const std::function<bool(int)> &shown = nullptr);
+                                const std::function<bool(int)> &shown = nullptr, const DB::Keep &keep = DB::Keep());
   // what stands behind an object key: a marker's members, or a station's record
-  static std::string object(DB &db, const std::string &key);
+  static std::string object(DB &db, const std::string &key, const DB::Keep &keep = DB::Keep());
 
   // the statistics page: the totals and the last whole periods, and the plots' histories
-  static void counters(JSON::Writer &w, Figures &f);
-  static void history(JSON::Writer &w, Figures &f);
+  static void counters(JSON::Writer &w, Figures &f, bool hidden);
+  static void history(JSON::Writer &w, Figures &f, bool hidden);
   // the aircraft: in full, and as the map's rows
   static std::string planes(PlaneDB &db);
   static std::string planesCompact(PlaneDB &db, std::time_t since = 0);

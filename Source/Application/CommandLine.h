@@ -25,6 +25,9 @@
 // supervises engines in a loop instead.
 namespace CommandLine
 {
+	// the banner, -h and -L, in Usage.cpp
 	void printVersion();
-	int run(const std::vector<std::string> &args, int &cb);
+	void printUsage();
+	void printBuildConfiguration();
+	int run(const std::vector<std::string> &args);
 }

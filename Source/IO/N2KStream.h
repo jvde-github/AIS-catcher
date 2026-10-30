@@ -67,7 +67,7 @@ namespace IO
 		void sendType24(const AIS::Message &ais, const JSON::JSON *data);
 
 		void Receive(const JSON::JSON *data, int ln, TAG &tag);
-		Setting &SetKey(AIS::Keys key, const std::string &arg);
+		Setting &applyKey(AIS::Keys key, const std::string &arg);
 	};
 }
 

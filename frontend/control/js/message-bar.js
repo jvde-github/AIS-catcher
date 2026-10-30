@@ -3,9 +3,9 @@
 // After a save, the bar in Settings asks for the restart that puts it to use.
 
 import { el } from './dom.js';
+import { icon } from './icons.js';
 
 const PASSING_MS = 4000;
-const CLOSE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
 // `settings` and `page` the bars, `inSettings()` whether Settings is open, `onRestart` the
 // receiver's start or restart
@@ -28,7 +28,7 @@ export function createMessageBar({ settings, page, inSettings, onRestart }) {
         node.replaceChildren(...[
             el('span', 'msgbar__text', { text: m.text }),
             m.action ? el('button', 'st-btn st-btn--sm st-btn--primary msgbar__action', { type: 'button', text: m.action, onClick: onRestart }) : null,
-            el('button', 'msgbar__close', { type: 'button', title: 'Close', 'aria-label': 'Close', html: CLOSE_SVG, onClick: close })].filter(Boolean));
+            el('button', 'msgbar__close', { type: 'button', title: 'Close', 'aria-label': 'Close', html: icon('close', ''), onClick: close })].filter(Boolean));
     }
 
     function render() {

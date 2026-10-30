@@ -12,7 +12,7 @@ Tabulator.registerModule([
     SortModule, FilterModule, PageModule, PersistenceModule,
     DownloadModule, ExportModule, FormatModule, InteractionModule,
 ]);
-import { getShipDimension, getDimVal, getDimUnit, getDraughtVal, getDistanceVal, getDistanceUnit, getLatValFormat, getLonValFormat, getSpeedVal, getSpeedUnit } from '../../core/units.js';
+import { getShipDimension, getDimUnit, getDraughtVal, getDistanceVal, getDistanceUnit, getLatValFormat, getLonValFormat, getSpeedVal, getSpeedUnit } from '../../core/units.js';
 import { getCountryName, getStatusVal, getMmsiTypeVal, getDeltaTimeVal, getEtaVal, getStringfromChannels, getStringfromMsgType, getStringfromGroup, sanitizeString } from '@aiscatcher/core/text.js';
 import { getShipName, getCallSign } from '../../core/names.js';
 import { stationNames } from '../../core/config.js';
@@ -21,7 +21,7 @@ import * as filter from '../../core/filter.js';
 import { ships, clock } from '../../core/store.js';
 import { fetchShips, fetchTableRows } from '../../data.js';
 import { getTableShiptype } from '../../map.js';
-import { saveSettings } from '../../features/settings/settings.js';
+import { saveSettings } from '../../settings-store.js';
 import { selectMapTab } from '../index.js';
 import { register } from '../../actions.js';
 import { showContextMenu } from '../../features/contextmenu/contextmenu.js';
@@ -413,7 +413,7 @@ function tableRowClick(m) {
     selectMapTab(m);
 }
 
-export function downloadCSV() {
+function downloadCSV() {
     if (table) table.download("csv", "data.csv");
 }
 

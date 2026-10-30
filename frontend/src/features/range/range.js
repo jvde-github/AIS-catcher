@@ -12,29 +12,22 @@ import { fromLonLat } from 'ol/proj';
 
 import { settings } from '../../core/state.js';
 import { calcOffset1M } from '@aiscatcher/core/geo.js';
+import { sanitizeString } from '@aiscatcher/core/text.js';
 import { rangeGeometry } from '@aiscatcher/map/markers.js';
 import { getDistanceUnit } from '../../core/units.js';
-import { redraw } from '../../map.js';
 import { focus } from '../../data.js';
 import { station } from '../../core/store.js';
 import { config } from '../../core/config.js';
-import { saveSettings } from '../settings/settings.js';
+import { saveSettings, effects } from '../../settings-store.js';
 import { showDialog } from '../../dialog.js';
 import { register } from '../../actions.js';
 import { hover_feature } from '../hover/hover.js';
+import { stationsOnMap } from '../mapobjects/mapobjects.js';
 
-
-// the stations on the map, handed in at startup: importing them here would
-// close a loop through the settings
-let stationsOnMap = () => [];
-
-export function init(stations) {
-    if (stations) stationsOnMap = stations;
-    register({
-        setRangeSwitch: (e, ds, el) => setRangeSwitch(el.checked),
-        toggleRange: () => toggleRange(),
-    });
-}
+register({
+    setRangeSwitch: (e, ds, el) => setRangeSwitch(el.checked),
+    toggleRange: () => toggleRange(),
+});
 
 const rangeVector = new VectorSource({ features: [] });
 
@@ -80,26 +73,26 @@ let rangeFeatures = [];
 
 export function resetUpdateTime() { range_update_time = null; }
 
-export function stationHasLocation() {
+function stationHasLocation() {
     return station && Object.hasOwn(station, "lat") && Object.hasOwn(station, "lon") &&
         !(station.lat == 0 && station.lon == 0);
 }
 
-export function setRangeSwitch(b) {
+function setRangeSwitch(b) {
     if (b != settings.show_range) toggleRange();
 }
 
-export function setRangeColor(v, f) {
-    settings[f] = v;
-    redraw();
-}
-
 // another timeframe: the ring is fetched again
-export function reload() {
+function reload() {
     fetchRange(true).then(() => drawRange());
 }
 
-export async function toggleRange() {
+effects({
+    distance_circle_color: () => removeDistanceCircles(),
+    range_timeframe: () => reload(),
+});
+
+async function toggleRange() {
     if (!config.features.share_location || !centres().length) {
         showDialog("Error", "Unable to show range as station location not available");
         settings.show_range = false;
@@ -188,7 +181,7 @@ export async function fetchRange(forcefetch = false) {
         try {
             const response = await fetch("api/history_full.json?stations=" + c.id);
             const h = await response.json();
-            if (h && h.day && h.day.stat && h.day.stat.length) next.push(ringsOf(h, c));
+            if (h && !h.range_hidden && h.day && h.day.stat && h.day.stat.length) next.push(ringsOf(h, c));
         } catch {
             // a station without figures yet draws no ring
         }
@@ -203,12 +196,12 @@ export function drawRange() {
     if (!settings.show_range) return;
 
     for (const o of outlines) {
-        const name = o.label ? " · " + o.label : "";
+        const name = o.label ? " · " + sanitizeString(o.label) : "";
         for (const [ring, short] of [[o.long, false], [o.short, true]]) {
             const f = new OlFeature({ geometry: new Polygon([ring]) });
             f.short = short;
             f.rangering = true;
-            f.tooltip = "Station Range " + (short ? "1h" : settings.range_timeframe) + name;
+            f.tooltip = "Station Range " + (short ? "1h" : sanitizeString(settings.range_timeframe)) + name;
             rangeVector.addFeature(f);
             rangeFeatures.push(f);
         }
@@ -266,7 +259,7 @@ export function updateDistanceCircles() {
                 geometry: rangeGeometry(c.lat, c.lon, radius * conv)
             });
 
-            distanceCircle.tooltip = radius / 1000 + " " + getDistanceUnit().toUpperCase() + (c.label ? " · " + c.label : "");
+            distanceCircle.tooltip = radius / 1000 + " " + getDistanceUnit().toUpperCase() + (c.label ? " · " + sanitizeString(c.label) : "");
             distanceCircle.distancecircle = true;
             distanceCircle.setStyle(distanceCircleStyleFunction);
             rangeVector.addFeature(distanceCircle);

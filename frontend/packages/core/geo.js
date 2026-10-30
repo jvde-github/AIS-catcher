@@ -5,11 +5,11 @@ export const hasValidCoords = function (lat, lon) {
     return lat != null && lon != null && !(lat == 0 && lon == 0) && lat >= -90 && lat < 90 && lon >= -180 && lon < 180;
 };
 
-export const toRadians = function (degrees) {
+const toRadians = function (degrees) {
     return degrees * Math.PI / 180;
 };
 
-export const toDegrees = function (radians) {
+const toDegrees = function (radians) {
     return radians * 180 / Math.PI;
 };
 

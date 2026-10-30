@@ -279,7 +279,7 @@ namespace Device {
 		return "UNKNOWN";
 	}
 
-	Setting& SDRPLAY::SetKey(AIS::Keys key, const std::string &arg) {
+	Setting& SDRPLAY::applyKey(AIS::Keys key, const std::string &arg) {
 		switch (key) {
 		case AIS::KEY_SETTING_AGC:
 			AGC = Util::Parse::Switch(arg);
@@ -311,7 +311,7 @@ namespace Device {
 			break;
 		}
 		default:
-			Device::SetKey(key, arg);
+			Device::applyKey(key, arg);
 			break;
 		}
 		return *this;

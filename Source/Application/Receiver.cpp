@@ -18,30 +18,98 @@
 #include "Receiver.h"
 #include "Convert.h"
 #include "Helper.h"
-#include "Writer.h"
-#include "Statistics.h"
 #include "Logger.h"
 
 //--------------------------------------------
+
+Setting &Receiver::applyKey(AIS::Keys key, const std::string &arg)
+{
+	switch (key)
+	{
+	case AIS::KEY_SETTING_VERBOSE:
+		verbose = Util::Parse::Switch(arg);
+		break;
+	case AIS::KEY_SETTING_SENSITIVITY_HIGH:
+		Warning() << "Receiver: \"sensitivity_high\" is deprecated and will be removed, use \"engines\": [ { \"type\": \"v1_high\" } ] instead";
+		high_sensitivity = Util::Parse::Switch(arg);
+		break;
+	case AIS::KEY_SETTING_CHANNEL:
+		setChannel(arg, "");
+		break;
+	case AIS::KEY_SETTING_NMEA_CHANNEL:
+		setChannel(channelModeString(), arg);
+		break;
+	case AIS::KEY_SETTING_META:
+		// exactly these tags, as -M has it
+		clearTags();
+		setTags(arg);
+		break;
+	case AIS::KEY_SETTING_TIMING:
+		timing_ = Util::Parse::Switch(arg);
+		break;
+	case AIS::KEY_SETTING_SERIAL:
+		deviceManager.setSerial(arg);
+		break;
+	case AIS::KEY_SETTING_INPUT:
+	{
+		Type type = Type::NONE;
+		if (!Util::Parse::DeviceType(arg, type))
+			throw std::runtime_error("unknown input type: " + arg);
+		deviceManager.setInputType(type);
+	}
+	break;
+	case AIS::KEY_SETTING_SAMPLE_RATE:
+		sample_rate = Util::Parse::Integer(arg, 12500, 12288000);
+		break;
+	case AIS::KEY_SETTING_BANDWIDTH:
+		bandwidth = Util::Parse::Integer(arg, 0, 20000000);
+		break;
+	case AIS::KEY_SETTING_FREQOFFSET:
+		ppm = Util::Parse::Integer(arg, -150, 150);
+		break;
+	case AIS::KEY_SETTING_LAT:
+		station_lat = Util::Parse::Float(arg);
+		break;
+	case AIS::KEY_SETTING_LON:
+		station_lon = Util::Parse::Float(arg);
+		break;
+	case AIS::KEY_SETTING_DESCRIPTION:
+	case AIS::KEY_SETTING_DESC:
+		description = arg;
+		break;
+	case AIS::KEY_SETTING_STATION:
+		station = Util::Parse::Integer(arg, 0, 2147483647);
+		break;
+	default:
+		throw std::runtime_error(getName() + ": unknown setting \"" + AIS::KeyMap[key][JSON_DICT_SETTING] + "\"");
+	}
+	return *this;
+}
+
+int Receiver::tagBit(char c)
+{
+	switch (toupper(c))
+	{
+	case 'M':
+		return 4;
+	case 'T':
+		return 2;
+	case 'D':
+		return 1;
+	default:
+		return 0;
+	}
+}
 
 void Receiver::setTags(const std::string &s)
 {
 	for (char c : s)
 	{
-		switch (toupper(c))
-		{
-		case 'M':
-			tag.mode |= 4;
-			break;
-		case 'T':
-			tag.mode |= 2;
-			break;
-		case 'D':
-			tag.mode |= 1;
-			break;
-		default:
+		const int bit = tagBit(c);
+		if (bit)
+			tag.mode |= bit;
+		else
 			Warning() << "Unknown tag '" + std::string(1, c) + "' defined on command line ignored [D / T / M]";
-		}
 	}
 }
 
@@ -49,21 +117,17 @@ void Receiver::removeTags(const std::string &s)
 {
 	for (char c : s)
 	{
-		switch (toupper(c))
-		{
-		case 'M':
-			tag.mode &= ~4;
-			break;
-		case 'T':
-			tag.mode &= ~2;
-			break;
-		case 'D':
-			tag.mode &= ~1;
-			break;
-		default:
+		const int bit = tagBit(c);
+		if (bit)
+			tag.mode &= ~bit;
+		else
 			throw std::runtime_error("illegal tag '" + std::string(1, c) + "' defined on command line [D / T / M]");
-		}
 	}
+}
+
+std::string Receiver::tagString() const
+{
+	return std::string(tag.mode & tagBit('D') ? "D" : "") + (tag.mode & tagBit('T') ? "T" : "") + (tag.mode & tagBit('M') ? "M" : "");
 }
 
 void Receiver::setChannel(std::string mode, std::string NMEA)
@@ -74,19 +138,19 @@ void Receiver::setChannel(std::string mode, std::string NMEA)
 
 	if (mode == "AB")
 	{
-		ChannelMode = AIS::Mode::AB;
+		channel_mode = AIS::Mode::AB;
 		if (NMEA.empty())
 			NMEA = "AB";
 	}
 	else if (mode == "CD")
 	{
-		ChannelMode = AIS::Mode::CD;
+		channel_mode = AIS::Mode::CD;
 		if (NMEA.empty())
 			NMEA = "CD";
 	}
 	else if (mode == "X")
 	{
-		ChannelMode = AIS::Mode::X;
+		channel_mode = AIS::Mode::X;
 		if (NMEA.empty())
 		{
 			NMEA = "XX";
@@ -106,13 +170,13 @@ void Receiver::setChannel(std::string mode, std::string NMEA)
 		if (!std::isalpha(NMEA[i]) && !std::isdigit(NMEA[i]) && NMEA[i] != '?')
 			throw std::runtime_error("invalid NMEA channel designation: " + std::string(1, NMEA[i]));
 
-	ChannelNMEA = NMEA;
+	channel_nmea = NMEA;
 }
 
 // Set up Device
 void Receiver::setupDevice()
 {
-	int frequency = (ChannelMode == AIS::Mode::AB) ? 162000000 : 156800000;
+	int frequency = (channel_mode == AIS::Mode::AB) ? 162000000 : 156800000;
 
 	tag.version = VERSION_NUMBER;
 	tag.station_lat = station_lat;
@@ -124,77 +188,70 @@ void Receiver::setupDevice()
 }
 
 // Set up model
-std::unique_ptr<AIS::Model> &Receiver::addModel(int m)
+int Receiver::defaultModel()
 {
-
-	// -1: the default model for the input format
-	if (m == -1)
+	switch (deviceManager.getInputFormat())
 	{
-		switch (deviceManager.getInputFormat())
-		{
-		case Format::TXT:
-			m = AIS::MODEL_NMEA;
-			break;
-		case Format::N2K:
-			m = AIS::MODEL_N2K;
-			break;
-		case Format::BASESTATION:
-			m = AIS::MODEL_BASESTATION;
-			break;
-		case Format::BEAST:
-			m = AIS::MODEL_BEAST;
-			break;
-		case Format::RAW1090:
-			m = AIS::MODEL_RAW1090;
-			break;
-		default:
-			m = high_sensitivity ? AIS::MODEL_V1_HIGH : AIS::MODEL_V1_BASE;
-			break;
-		}
+	case Format::TXT:
+		return AIS::MODEL_NMEA;
+	case Format::N2K:
+		return AIS::MODEL_N2K;
+	case Format::BASESTATION:
+		return AIS::MODEL_BASESTATION;
+	case Format::BEAST:
+		return AIS::MODEL_BEAST;
+	case Format::RAW1090:
+		return AIS::MODEL_RAW1090;
+	default:
+		return high_sensitivity ? AIS::MODEL_V1_HIGH : AIS::MODEL_V1_BASE;
 	}
+}
 
+AIS::Model *Receiver::makeModel(int m)
+{
 	switch (m)
 	{
 	case 0:
-		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelStandard()));
-		break;
+		return new AIS::ModelStandard();
 	case 1:
-		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelBase()));
-		break;
+		return new AIS::ModelBase();
 	case 2:
-		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelDefault()));
-		break;
+		return new AIS::ModelDefault();
 	case 3:
-		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelDiscriminator()));
-		break;
+		return new AIS::ModelDiscriminator();
 	case 4:
-		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelChallenger()));
-		break;
+		return new AIS::ModelChallenger();
 	case 5:
-		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelNMEA()));
-		break;
+		return new AIS::ModelNMEA();
 	case 6:
-		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelN2K()));
-		break;
+		return new AIS::ModelN2K();
 	case 7:
-		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelBaseStation()));
-		break;
+		return new AIS::ModelBaseStation();
 	case 8:
-		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelBeast()));
-		break;
+		return new AIS::ModelBeast();
 	case 9:
-		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelExport()));
-		break;
+		return new AIS::ModelExport();
 	case 10:
-		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelRAW1090()));
-		break;
+		return new AIS::ModelRAW1090();
 	case 11:
-		models.push_back(std::unique_ptr<AIS::Model>(new AIS::ModelEngineV2()));
-		break;
+		return new AIS::ModelEngineV2();
 	default:
 		throw std::runtime_error("Model not implemented in this version. Check in later.");
 	}
-	return models.back();
+}
+
+AIS::Model &Receiver::addModel(int m, const std::vector<std::string> &zones)
+{
+	// -1: the default model for the input format
+	if (m == -1)
+		m = defaultModel();
+
+	decoders.push_back(Decoder());
+	Decoder &d = decoders.back();
+	d.model.reset(makeModel(m));
+	d.id = m;
+	d.zones = zones;
+	return *d.model;
 }
 
 void Receiver::setupModel(int &group, int idx)
@@ -202,12 +259,13 @@ void Receiver::setupModel(int &group, int idx)
 	receiver_index = idx;
 	auto *device = deviceManager.getDevice();
 	// if nothing defined, create one model
-	if (!models.size())
+	if (!decoders.size())
 		addModel(-1);
 
 	// ensure some basic compatibility between model and device
-	for (const auto &m : models)
+	for (const auto &d : decoders)
 	{
+		const auto &m = d.model;
 		if ((m->getClass() == AIS::ModelClass::TXT && device->getFormat() != Format::TXT) ||
 			(m->getClass() != AIS::ModelClass::TXT && device->getFormat() == Format::TXT) ||
 			(m->getClass() == AIS::ModelClass::BASESTATION && (device->getFormat() != Format::BASESTATION && device->getFormat() != Format::BEAST && device->getFormat() != Format::RAW1090)))
@@ -215,47 +273,67 @@ void Receiver::setupModel(int &group, int idx)
 	}
 
 	// build the decoder models
-	for (auto &m : models)
+	for (auto &d : decoders)
 	{
+		auto &m = d.model;
 		// with stations configured, the station is the station_id its messages carry, unless the decoder names one
 		if (stamp_station)
 			m->setDefaultStation(station);
-		m->setDesignation(ChannelNMEA);
-		m->setMode(ChannelMode);
+		m->setDesignation(channel_nmea);
+		m->setMode(channel_mode);
 		m->setOwnMMSI(own_mmsi);
-		m->buildModel(ChannelNMEA[0], ChannelNMEA[1], device->getSampleRate(), timing, device);
+		m->buildModel(channel_nmea[0], channel_nmea[1], device->getSampleRate(), timing_, device);
 	}
 
 	// set up JSON output channels, still unconnected
-	jsonais.clear();
-	for (size_t i = 0; i < models.size(); i++)
-		jsonais.emplace_back(new AIS::JSONAIS());
+	for (auto &d : decoders)
+		d.json.reset(new AIS::JSONAIS());
 
 	// assign the output of each individual model to a separate group; bits 0-30
 	// only, as group masks pass through Parse::Integer (long, 32-bit on Windows)
 	// where bit 31 would overflow
-	if (group + (int)models.size() >= 32)
+	if (group + (int)decoders.size() >= 32)
 		throw std::runtime_error("Receiver: too many models/receivers, group bit limit exceeded.");
 
-	for (size_t i = 0; i < models.size(); i++)
+	for (auto &d : decoders)
 	{
 		uint64_t mask = 1ULL << group;
-		jsonais[i]->out.setGroupOut(mask);
-		models[i]->Output().out.setGroupOut(mask);
-		models[i]->OutputADSB().out.setGroupOut(mask);
+		d.json->out.setGroupOut(mask);
+		d.model->Output().out.setGroupOut(mask);
+		d.model->OutputADSB().out.setGroupOut(mask);
 		group++;
 	}
+}
+
+void Receiver::connectCounters()
+{
+	for (auto &d : decoders)
+		d.counter.reset(new IO::StreamCounter());
+
+	for (auto &d : decoders)
+	{
+		d.model->Output().out.Connect((StreamIn<AIS::Message> *)d.counter.get());
+		d.model->OutputADSB().out.Connect((StreamIn<Plane::ADSB> *)d.counter.get());
+	}
+}
+
+uint64_t Receiver::messages()
+{
+	uint64_t count = 0;
+	for (auto &d : decoders)
+		count += d.counter->getCount();
+	return count;
 }
 
 void Receiver::play()
 {
 
 	// connect the JSON output where and if needed
-	for (size_t i = 0; i < jsonais.size(); i++)
+	for (auto &d : decoders)
 	{
-		if (jsonais[i]->out.isConnected())
+		if (d.json->out.isConnected())
 		{
-			models[i]->Output() >> *jsonais[i];
+			d.model->Output() >> *d.json;
 		}
 	}
 
@@ -266,7 +344,7 @@ void Receiver::play()
 		logSummary();
 }
 
-void Receiver::logSummary()
+void Receiver::logSummary() const
 {
 	auto *device = deviceManager.getDevice();
 	if (!device)
@@ -274,9 +352,12 @@ void Receiver::logSummary()
 
 	Info() << "Device    : " << device->getProduct();
 	Info() << "Settings  : " << device->Get();
-	for (int i = 0; i < models.size(); i++)
-		Info() << "Model #" + std::to_string(receiver_index) + "-" + std::to_string(i) << " -> (Src: " << std::to_string(Util::Helper::lsb(models[i]->Output().out.getGroupOut()) + 1)
-			   << ", Grp: " + std::to_string(models[i]->Output().out.getGroupOut()) + "): [" + models[i]->getName() + "] channel " + ChannelNMEA + " " + models[i]->Get();
+	for (int i = 0; i < decoders.size(); i++)
+	{
+		const auto &m = decoders[i].model;
+		Info() << "Model " + modelIndex(i) << " -> (Src: " << std::to_string(Util::Helper::lsb(m->Output().out.getGroupOut()) + 1)
+			   << ", Grp: " + std::to_string(m->Output().out.getGroupOut()) + "): [" + m->getName() + "] channel " + channel_nmea + " " + m->Get();
+	}
 }
 
 void Receiver::stop()
@@ -286,49 +367,56 @@ void Receiver::stop()
 		device->Stop();
 }
 
-//-----------------------------------
-// set up screen output
-
-//-----------------------------------
-// set up screen counters
-
-void OutputStatistics::connect(Receiver &r)
+// the kind of device with its place among the receivers of that kind
+static std::string kindLabel(const std::vector<std::unique_ptr<Receiver>> &receivers, std::size_t k)
 {
-
-	statistics.clear();
-	for (int i = 0; i < r.Count(); i++)
-		statistics.emplace_back(new IO::StreamCounter());
-
-	for (int i = 0; i < r.Count(); i++)
-	{
-		r.Output(i).Connect((StreamIn<AIS::Message> *)statistics[i].get());
-		r.OutputADSB(i).Connect((StreamIn<Plane::ADSB> *)statistics[i].get());
-	}
+	const Type type = receivers[k]->inputType();
+	int nth = 0;
+	for (std::size_t i = 0; i <= k; i++)
+		nth += receivers[i]->inputType() == type;
+	return std::string(DeviceManager::label(type)) + " #" + std::to_string(nth);
 }
 
-uint64_t resolveUnzoned(const std::vector<std::unique_ptr<Receiver>> &receivers, bool &any_zoned)
+std::string receiverLabel(const std::vector<std::unique_ptr<Receiver>> &receivers, std::size_t k)
+{
+	Receiver &r = *receivers[k];
+	if (!r.getDescription().empty())
+		return r.getDescription();
+	Device::Device *device = r.device();
+	if (device && device->getSerial() == ".")
+		return "Console";
+	return kindLabel(receivers, k);
+}
+
+bool anyZoned(const std::vector<std::unique_ptr<Receiver>> &receivers)
+{
+	for (const auto &r : receivers)
+		for (int i = 0; i < r->modelCount(); i++)
+			if (r->hasZone(i))
+				return true;
+	return false;
+}
+
+// the group mask of every model output in no zone at all
+static uint64_t unzonedGroups(const std::vector<std::unique_ptr<Receiver>> &receivers)
 {
 	uint64_t mask = 0;
-	any_zoned = false;
 
 	for (const auto &r : receivers)
-		for (int i = 0; i < r->Count(); i++)
-		{
-			if (r->hasZone(i))
-				any_zoned = true;
-			else
+		for (int i = 0; i < r->modelCount(); i++)
+			if (!r->hasZone(i))
 				mask |= r->getGroupMask(i);
-		}
 
 	return mask;
 }
 
-uint64_t resolveZones(const std::vector<std::unique_ptr<Receiver>> &receivers, const std::vector<std::string> &zones)
+// the group mask of every model output that is in one of the zones
+static uint64_t zonedGroups(const std::vector<std::unique_ptr<Receiver>> &receivers, const std::vector<std::string> &zones)
 {
 	uint64_t mask = 0;
 
 	for (const auto &r : receivers)
-		for (int i = 0; i < r->Count(); i++)
+		for (int i = 0; i < r->modelCount(); i++)
 			for (const auto &z : zones)
 				if (r->inZone(i, z))
 				{
@@ -336,5 +424,28 @@ uint64_t resolveZones(const std::vector<std::unique_ptr<Receiver>> &receivers, c
 					break;
 				}
 
+	return mask;
+}
+
+uint64_t routeGroups(const std::vector<std::unique_ptr<Receiver>> &receivers, const std::vector<std::string> &zones, uint64_t groups_in, const std::string &what)
+{
+	uint64_t mask = groups_in;
+	if (!zones.empty())
+	{
+		mask &= zonedGroups(receivers, zones);
+		if (!mask)
+		{
+			std::string list;
+			for (const auto &z : zones)
+				list += (list.empty() ? "" : ", ") + z;
+			Warning() << what << " receives nothing: no input is in its zone" << (zones.size() > 1 ? "s " : " ") << list;
+		}
+	}
+	else if (anyZoned(receivers))
+	{
+		mask &= unzonedGroups(receivers);
+		if (!mask)
+			Warning() << what << " receives nothing: it has no zone, and every input has one";
+	}
 	return mask;
 }

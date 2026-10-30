@@ -34,7 +34,7 @@ export const BINARY_CATEGORIES = ['data', 'lock', 'signal', 'inland', 'text', 'a
 export const CAT_COLORS = { data: '#0891b2', text: '#7c3aed', inland: '#0f766e', aton: '#d97706', zones: '#0857b1', lock: '#4338ca', signal: '#ea580c', safety: '#dc2626', station: '#008000', ack: '#64748b' };
 // Places other than ports share the "data" hue on the map, shaded by size: the larger the
 // place, the darker its dot. Sections and anchorages, then terminals and marinas, then berths.
-export const PLACE_SHADES = { section: '#0b6a86', anchorage: '#0b6a86', guardzone: '#0b6a86', sector: '#0b6a86', water: '#0b6a86',
+const PLACE_SHADES = { section: '#0b6a86', anchorage: '#0b6a86', guardzone: '#0b6a86', sector: '#0b6a86', water: '#0b6a86',
     terminal: '#0891b2', marina: '#0891b2', mooring: '#3fb2d3', berth: '#3fb2d3' };
 export const placeColor = (type) => PLACE_SHADES[type] || CAT_COLORS.data;
 
@@ -63,7 +63,7 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const text = (v) => sanitizeString(String(v));
 
 // one row of a card; a row function returns a falsy value when its field is absent
-export const meteoRow = (label, value) =>
+const meteoRow = (label, value) =>
     `<div style="display: flex; justify-content: space-between; padding: 1px 0; white-space: nowrap;">` +
     `<span style="font-size: 11px; opacity: 0.6; margin-right: 12px;">${label}</span>` +
     `<span style="font-size: 11px; font-weight: bold;">${value}</span></div>`;
@@ -283,8 +283,7 @@ const kindOf = (msg) => (msg.message && KINDS.find((k) => k.test(msg.message, ms
 // 970, man-overboard 972, EPIRB 974) or the words used for something serious say it matters.
 const DISTRESS_DEVICE = /^97[024]/;
 const URGENT_WORDS = /\b(MAYDAY|PAN ?PAN|SECURITE|MOB|MAN ?OVER ?BOARD|OVERBOARD|SOS|DISTRESS|EMERGENCY|ACCIDENT|COLLISION|AGROUND|GROUND(ING)?|FIRE|SINKING|CAPSIZ|DANGER|WARNING|KEEP AWAY|STAY AWAY|KEEP CLEAR|NOT UNDER COMMAND|NUC)\b/i;
-export const isStation = (mmsi) => mmsi >= 2000000 && mmsi <= 9999999;
-export const isDistressDevice = (mmsi) => DISTRESS_DEVICE.test(String(mmsi));
+const isDistressDevice = (mmsi) => DISTRESS_DEVICE.test(String(mmsi));
 
 export function isUrgent(msg) {
     if (!msg.message || (msg.type != 12 && msg.type != 14)) return false;
@@ -324,7 +323,7 @@ export const cardOpen = (cat) => `<div class="meteo-tooltip" style="border-left-
 
 // which way the message went, seen from the vessel the card is about: in when
 // it was addressed to it, out when it sent it (to a station or a map point)
-export const dirIcon = (m, ctx) => {
+const dirIcon = (m, ctx) => {
     if (!ctx || !ctx.mmsi) return '';
     if (m.anchor && m.anchor === ctx.mmsi) return '<span class="msg-dir" title="addressed to this vessel">&#8601;</span>';
     if ((m.sender || (m.message && m.message.mmsi)) === ctx.mmsi) return '<span class="msg-dir" title="sent by this vessel">&#8599;</span>';
@@ -334,7 +333,7 @@ export const dirIcon = (m, ctx) => {
 // orange caption line of every card
 // the caption row: the kind's glyph at text height, the time and label, and
 // on a list card a pin to the message's place when it has one
-export const meteoHeader = (time, label, icon = '', cat = null, pin = '') =>
+const meteoHeader = (time, label, icon = '', cat = null, pin = '') =>
     `<div class="msg-head" style="color: #FFA500;">${cat ? glyphImg(cat) : ''}` +
     `<span>${icon}${time} - ${label}</span>${pin}</div>`;
 
@@ -345,7 +344,7 @@ const glyphImg = (cat) => {
 const PIN_SVG = '<svg viewBox="0 0 24 24"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>';
 
 // where a message belongs: its own point when it carries one, else its sender's marker when that is on the map
-export const messagePlace = (m, ctx) => {
+const messagePlace = (m, ctx) => {
     if (m.message_lat != null && m.message_lon != null) return [m.message_lat, m.message_lon];
     const sender = m.sender || (m.message && m.message.mmsi);
     return sender && ctx && ctx.locate ? ctx.locate(sender) : null;
@@ -353,12 +352,12 @@ export const messagePlace = (m, ctx) => {
 
 const pinHTML = (m, ctx) => {
     const at = ctx && ctx.link ? messagePlace(m, ctx) : null;
-    return at ? `<a href="javascript:void(0)" class="msg-pin" data-lat="${at[0]}" data-lon="${at[1]}" title="Show on the map">${PIN_SVG}</a>` : '';
+    return at ? `<a href="#" class="msg-pin" data-lat="${at[0]}" data-lon="${at[1]}" title="Show on the map">${PIN_SVG}</a>` : '';
 };
 
 // who sent it and, for an addressed message, to whom; a vessel's own
 // broadcast in its own card says nothing. Links when the host wants them.
-export const routeLine = (m, ctx) => {
+const routeLine = (m, ctx) => {
     const name = (mmsi) => (ctx && ctx.link ? shipLink(mmsi) : text(shipLabel(mmsi)));
     const sender = m.sender || (m.message && m.message.mmsi);
     if (!sender) return '';
@@ -416,7 +415,7 @@ export function getBinaryMessageList(messages, ctx = null) {
 }
 
 // which way a message went for the vessel a list is about
-export const isSentBy = (m, mmsi) => (m.sender || (m.message && m.message.mmsi)) === mmsi;
+const isSentBy = (m, mmsi) => (m.sender || (m.message && m.message.mmsi)) === mmsi;
 
 // the dialog every message list opens in, level with the ship card below the header
 export function messageDialog() {
@@ -698,7 +697,7 @@ const FRESH_S = 900, STALE_S = 1800;
 // the age bucket of a mark, from its timestamp and the server's clock
 export const ageBucket = (t, ref) => { const age = ref - t; return age > STALE_S ? 2 : age > FRESH_S ? 1 : 0; };
 
-export const ageText = (t, ref) => { const min = Math.max(0, Math.round((ref - t) / 60)); return min < 1 ? 'just now' : `${min} min ago`; };
+const ageText = (t, ref) => { const min = Math.max(0, Math.round((ref - t) / 60)); return min < 1 ? 'just now' : `${min} min ago`; };
 
 // notice types below 80 are cautions and warnings; -1 is no notice at all
 export const isDangerArea = (o) => o.atype != null && o.atype >= 0 && o.atype < 80;
@@ -818,7 +817,7 @@ const glyphUrls = new Map();
 
 // a kind's disc as a data URL, for a card header or a cell
 // Card-header discs use a subtle black edge in day mode and a white edge in dark mode.
-export function glyphURL(cat) {
+function glyphURL(cat) {
     const dark = document.documentElement.classList.contains('dark');
     const key = cat + (dark ? ':dark' : ':light');
     let url = glyphUrls.get(key);
@@ -834,7 +833,7 @@ export function glyphURL(cat) {
 export function glyphsHTML(cats, attrs = '') {
     if (!cats.length) return '';
     const title = cats.map((c) => KIND_LABEL[c] || (c === 'station' ? 'Receiving station' : c)).join(', ') + ' \u00b7 show';
-    return `<a href="javascript:void(0)" class="msg-count" title="${text(title)}" ${attrs}>` +
+    return `<a href="#" class="msg-count" title="${text(title)}" ${attrs}>` +
         cats.map((c) => `<img src="${glyphURL(c)}" alt="${text(KIND_LABEL[c] || c)}">`).join('') + '</a>';
 }
 

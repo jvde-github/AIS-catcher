@@ -257,7 +257,7 @@ namespace Device
 		if (airspy_set_freq(dev, getCorrectedFrequency()) != AIRSPY_SUCCESS)
 			throw std::runtime_error("AIRSPY: cannot set frequency.");
 	}
-	Setting &AIRSPY::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &AIRSPY::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -312,7 +312,7 @@ namespace Device
 			break;
 		}
 		default:
-			Device::SetKey(key, arg);
+			Device::applyKey(key, arg);
 			break;
 		}
 		return *this;

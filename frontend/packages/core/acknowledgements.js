@@ -1,7 +1,7 @@
 // Match only uniquely identifiable receptions in the available message list.
 // Two-bit sequence numbers wrap quickly; two minutes is a conservative UI
 // window, not a protocol guarantee. Aggregated repeats cannot identify one send.
-export const ACK_WINDOW_SECONDS = 120;
+const ACK_WINDOW_SECONDS = 120;
 const sender = m => m.sender || m.message?.mmsi;
 const recipient = m => m.anchor || m.message?.dest_mmsi;
 const sequence = n => Number.isInteger(n) && n >= 0 && n <= 3;

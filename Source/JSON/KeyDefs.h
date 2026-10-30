@@ -293,6 +293,11 @@ X(KEY_SETTING_METRICS, "", "", "", "", "metrics", "", "", "A server serves /metr
 X(KEY_SETTING_MAIN, "", "", "", "", "main", "", "", "Managed mode's server beside the control panel, on its port: one entry of services, the map always on.", nullptr)
 X(KEY_SETTING_BIND, "", "", "", "", "bind", "", "", "Address a server listens on; 127.0.0.1 unless set.", nullptr)
 X(KEY_SETTING_KEYS, "", "", "", "", "keys", "", "", "The keys a server accepts: a name, the SHA-256 of the key and its scopes.", nullptr)
+X(KEY_SETTING_TLS, "", "", "", "", "tls", "", "", "HTTPS on a server's port: the files of its certificate and key.", nullptr)
+X(KEY_SETTING_CERT, "", "", "", "", "cert", "", "", "The certificate's file of a server's tls, in PEM with its chain.", nullptr)
+X(KEY_SETTING_KEY, "", "", "", "", "key", "", "", "The private key's file of a server's tls, in PEM without a passphrase.", nullptr)
+X(KEY_SETTING_TLS_CERT, "", "", "", "", "tls_cert", "", "", "-N's name for the certificate of a server's tls.", nullptr)
+X(KEY_SETTING_TLS_KEY, "", "", "", "", "tls_key", "", "", "-N's name for the key of a server's tls.", nullptr)
 X(KEY_SETTING_SHA256, "", "", "", "", "sha256", "", "", "SHA-256 of a key, in hex: the key itself is never stored.", nullptr)
 X(KEY_SETTING_SCOPES, "", "", "", "", "scopes", "", "", "What a key may do: data, system.", nullptr)
 X(KEY_SETTING_PUBLIC, "", "", "", "", "public", "", "", "A server anyone who reaches it may read, without a key; never together with keys.", nullptr)
@@ -387,6 +392,9 @@ X(KEY_SETTING_SELECT_MMSI, "", "", "", "", "select_mmsi", "", "", "", nullptr)
 X(KEY_SETTING_SELECT_REPEAT, "", "", "", "", "select_repeat", "", "", "",
   nullptr)
 X(KEY_SETTING_ZONE, "", "", "", "", "zone", "", "", "", nullptr)
+X(KEY_SETTING_TIMING, "", "", "", "", "timing", "", "", "", nullptr)
+X(KEY_SETTING_FILE_OUTPUT, "", "", "", "", "file_output", "", "", "", nullptr)
+X(KEY_SETTING_NMEA2000_OUTPUT, "", "", "", "", "nmea2000_output", "", "", "", nullptr)
 X(KEY_ACCURACY, "accuracy", "", "accuracy", "", "", "", "",
   "Position accuracy (true=DGPS <10 m, false=GNSS >10 m)", nullptr)
 X(KEY_ACK_REQUIRED, "ack_required", "", "ack_required", "", "", "", "",
@@ -1207,3 +1215,5 @@ X(KEY_PLACE_COUNTRY, "", "", "", "", "country", "", "", "Place metadata", nullpt
 X(KEY_TOA_NS, "toa_ns", "", "toa_ns", "", "", "toa_ns", "ns",
   "Time of arrival as whole nanoseconds since the Unix epoch; exact where `toa` is rounded", nullptr)
 X(KEY_PLACE_RANK, "", "", "", "", "rank", "", "", "Place metadata", nullptr)
+X(KEY_SETTING_SETUP_CODE, "", "", "", "", "setup_code", "", "", "", nullptr)
+X(KEY_SETTING_ITERATIONS, "", "", "", "", "iterations", "", "", "", nullptr)

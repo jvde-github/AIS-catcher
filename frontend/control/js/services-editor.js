@@ -4,10 +4,13 @@
 // as chosen, and says who may read it: programs on this machine, holders of a key, or anyone.
 // The servers take a save at once.
 
-import { el, on, moreMenu } from './dom.js';
-import { App, ConfigStore, Renderer, registerEditor } from './config-manager.js';
+import { el, isActive, on, moreMenu } from './dom.js';
+import { api } from './api.js';
+import { hub } from './hub.js';
+import { App, ConfigStore, registerEditor } from './config-store.js';
+import { Renderer } from './config-widgets.js';
 import { DOCS, docLink } from './docs.js';
-import { ICONS } from './icons.js';
+import { icon } from './icons.js';
 
 const CONTAINER = 'services-config';
 // `legacy`: the viewer's switch that offered it before it was a service of its own
@@ -23,22 +26,22 @@ const SERVICES = [
 // what a server's keys guard; a server without keys is open to whoever reaches it
 const GUARDED = ['api', 'mcp', 'system', 'geojson', 'kml', 'metrics'];
 
-const OPEN_ICON = '<svg class="st-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8M18 14v5H5V6h5"/></svg>';
-
 const local = bind => !bind || bind === 'localhost' || bind === '::1' || String(bind).startsWith('127.');
 
 // a link that opens a server in a new tab
 export function openButton(href) {
-    return el('a', 'st-btn st-btn--sm', { href, target: '_blank', rel: 'noopener', html: OPEN_ICON + 'Open' });
+    return el('a', 'st-btn st-btn--sm', { href, target: '_blank', rel: 'noopener', html: icon('open') + 'Open' });
 }
 
 // the services, as the Services overview has them in its columns
 export const SERVICE_COLUMNS = SERVICES.map(({ key, label, path }) => ({ key, label, path }));
 
-// what a server serves: the map unless switched off, the rest when switched on, Prometheus under
-// its old name too; `builtIn`: the main server, the map always on
+const hasKeys = data => Array.isArray(data.keys) && data.keys.length > 0;
+
+// what a server serves: the map unless switched off (with keys, only when switched on), the rest
+// when switched on, Prometheus under its old name too; `builtIn`: the main server, the map always on
 export function servedKeys(data, builtIn = false) {
-    const map = builtIn || data.ui === undefined || on(data.ui);
+    const map = builtIn || (data.ui === undefined ? !hasKeys(data) : on(data.ui));
     return SERVICES.filter(s => s.key === 'ui' ? map : on(data[s.key]) || (s.legacy && on(data[s.legacy]))).map(s => s.key);
 }
 
@@ -48,7 +51,7 @@ export const serverName = s => (s.main ? 'Main' : String(s.description || '').tr
 // who may read a server, in a few words: the map is never guarded, the rest by its keys, or
 // anyone who reaches it when it has none
 export function readersOf(data, bind) {
-    if (Array.isArray(data.keys) && data.keys.length) return 'With a key';
+    if (hasKeys(data)) return 'With a key';
     return on(data.public) || !local(bind) ? 'Anyone' : 'This machine';
 }
 
@@ -58,8 +61,7 @@ export function readersOf(data, bind) {
 const wantKeys = new WeakSet();
 const stashed = new WeakMap();
 export function accessMode(data, bind) {
-    const keys = Array.isArray(data.keys) && data.keys.length > 0;
-    if (keys || wantKeys.has(data)) return 'keys';
+    if (hasKeys(data) || wantKeys.has(data)) return 'keys';
     return on(data.public) || local(bind) ? 'open' : 'keys';
 }
 
@@ -67,7 +69,7 @@ export function accessMode(data, bind) {
 export function accessProblem(data, bind, builtIn = false) {
     const served = servedKeys(data, builtIn);
     if (!GUARDED.some(k => served.includes(k))) return null;
-    const keys = Array.isArray(data.keys) && data.keys.length > 0;
+    const keys = hasKeys(data);
     if (!keys && accessMode(data, bind) === 'keys') return `${serverName(data)}: make a key, or choose Open.`;
     if (!keys && !local(bind) && served.includes('system')) return `${serverName(data)}: System is never open on the network. Choose Keys, or switch System off.`;
     return null;
@@ -91,11 +93,10 @@ function section(title, docs, ...kids) {
 // open, its rows are there to edit. The owner's choice is kept per server and section; a section
 // with a problem opens itself unless the owner closed it, and the problem stands in its head.
 const foldOpen = new Map();
-const FOLD_CHEVRON = '<svg class="st-fold__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 function fold(title, docs, { key, state = '', warn = '', open: openByDefault = false }, ...kids) {
     const open = foldOpen.has(key) ? foldOpen.get(key) : openByDefault || !!warn;
     const body = el('div', 'st-fold__body', { id: 'fold-' + key.replace(/\W+/g, '-') }, ...kids);
-    const toggle = el('button', 'st-fold__toggle', { type: 'button', 'aria-expanded': String(open), 'aria-controls': body.id, html: FOLD_CHEVRON },
+    const toggle = el('button', 'st-fold__toggle', { type: 'button', 'aria-expanded': String(open), 'aria-controls': body.id, html: icon('chevronRight', 'st-fold__chev') },
         el('span', 'st-fold__title', { text: title }),
         el('span', 'st-fold__state' + (warn ? ' st-fold__state--warn' : ''), { text: warn || state }));
     const sec = el('section', 'st-svcs st-fold' + (open ? ' st-fold--open' : ''), {},
@@ -107,6 +108,43 @@ function fold(title, docs, { key, state = '', warn = '', open: openByDefault = f
         sec.classList.toggle('st-fold--open', now);
     });
     return sec;
+}
+
+// ---- HTTPS on a server: the files of a certificate it already has. `until`, the station's word for
+// a port that serves it, is when the certificate in use expires, in seconds. A path outside the
+// configuration's folder can only be set in the file: the panel shows it and leaves it.
+const dayOf = seconds => new Date(seconds * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+export function tlsLine(data, until, now = Date.now() / 1000) {
+    if (!data.tls) return { state: 'Off: plain HTTP' };
+    if (!until) return { state: 'HTTPS once saved and read' };
+    return until < now ? { warn: `certificate expired on ${dayOf(until)}` } : { state: `HTTPS on, certificate valid until ${dayOf(until)}` };
+}
+
+export function outsideFolder(path, folder) {
+    const p = String(path || '').replace(/\\/g, '/');
+    if (!p) return false;
+    if (!/^([a-zA-Z]:)?\//.test(p)) return p.split('/').includes('..');
+    const base = String(folder || '').replace(/\\/g, '/').replace(/\/+$/, '');
+    return !base || !(p + '/').startsWith(base + '/') || p.split('/').includes('..');
+}
+
+function renderTLS(host, data, { until, folder, touched, foldKey }) {
+    const field = (key, label, placeholder) => {
+        const value = data.tls?.[key] ?? '';
+        const fixed = outsideFolder(value, folder);
+        const input = el('input', 'st-input', { type: 'text', value, placeholder, spellcheck: 'false', readOnly: fixed, title: fixed ? 'Outside the configuration\'s folder: set in the file' : '', onInput: e => {
+            const tls = { ...data.tls };
+            if (e.target.value.trim()) tls[key] = e.target.value.trim(); else delete tls[key];
+            if (Object.keys(tls).length) data.tls = tls; else delete data.tls;
+            touched();
+        } });
+        return el('label', 'st-field st-stations__field st-stations__grow', {}, el('span', 'st-label', { text: label }), input);
+    };
+    const { state, warn } = tlsLine(data, until);
+    host.append(fold('HTTPS', DOCS.services, { key: foldKey + ':https', state, warn },
+        el('div', 'st-stations__row st-srv__row', {}, field('cert', 'Certificate', 'fullchain.pem'), field('key', 'Private key', 'privkey.pem')),
+        el('p', 'st-help', { text: 'Files you already have, in the configuration\'s folder; one elsewhere is set in the configuration file. A renewed certificate is picked up within a minute.' })));
 }
 
 // ---- what a server or a webhook shows: from which stations, once there are two or more, and
@@ -170,29 +208,29 @@ export function renderShows(host, data, { stations = [], touched, rerender, ever
                     choose(key === 'all' ? [] : stations.map(st => String(st.key)));
                 }
             })));
-        box.append(el('div', 'st-shows__row', {}, el('span', 'field-label', { text: 'Stations' }), seg));
+        box.append(el('div', 'st-shows__row', {}, el('span', 'st-label', { text: 'Stations' }), seg));
         if (some) box.append(el('div', 'st-pickchips', { role: 'group', 'aria-label': 'Stations shown' },
             stations.map(st => el('button', 'st-pickchip', { type: 'button', 'aria-pressed': String(chosen.includes(String(st.key))), text: st.label,
                 onClick: () => {
                     const on = chosen.includes(String(st.key));
                     choose(on ? chosen.filter(k => k !== String(st.key)) : [...chosen, String(st.key)]);
                 } }))));
-        box.append(el('p', 'field-desc', { text: some ? 'Ships these stations heard in the last hour.' : 'The ships every station hears.' }));
+        box.append(el('p', 'st-help', { text: some ? 'Ships these stations heard in the last hour.' : 'The ships every station hears.' }));
     }
     {
         const mmsis = (key, label, hint) => {
-            const area = el('textarea', 'input st-shows__mmsi', { rows: 2, spellcheck: 'false', placeholder: hint,
+            const area = el('textarea', 'st-input st-shows__mmsi', { rows: 2, spellcheck: 'false', placeholder: hint,
                 value: (Array.isArray(f[key]) ? f[key] : []).join('\n'),
                 onChange: e => {
                     const list = e.target.value.split(/[\s,]+/).map(x => x.trim()).filter(x => /^\d{1,9}$/.test(x)).map(Number);
                     if (list.length) f[key] = list; else delete f[key];
                     commit(false);
                 } });
-            return el('label', 'field st-shows__field', {}, el('span', 'field-label', { text: label }), area);
+            return el('label', 'st-field st-shows__field', {}, el('span', 'st-label', { text: label }), area);
         };
         box.append(el('div', 'st-stations__row', {}, mmsis('mmsi_allow', 'Only these MMSIs', 'none: every vessel'), mmsis('mmsi_deny', 'Never these MMSIs', 'none')));
         const other = Object.keys(f).filter(k => !EDITED.includes(k));
-        if (other.length) box.append(el('p', 'field-desc', { text: 'Also set in the configuration file: ' + other.join(', ') + '.' }));
+        if (other.length) box.append(el('p', 'st-help', { text: 'Also set in the configuration file: ' + other.join(', ') + '.' }));
     }
     if (outlines) box.append(outlinesRow(data, touched));
     done();
@@ -219,9 +257,13 @@ export function renderServing(host, data, { builtIn = false, bind, touched, rere
     const served = servedKeys(data, builtIn);
     const has = k => served.includes(k);
     const set = (k, value) => {
-        // the switch says it now, not Prometheus's old name; the map is on unless said otherwise
+        // the switch says it now, not Prometheus's old name; the map is on unless said otherwise, with keys off
         SERVICES.forEach(s => { if (s.legacy) delete data[s.legacy]; });
-        if (k === 'ui') { if (value) delete data.ui; else data.ui = false; }
+        if (k === 'ui') {
+            if (!value) data.ui = false;
+            else if (hasKeys(data)) data.ui = true;
+            else delete data.ui;
+        }
         else if (value) data[k] = true; else delete data[k];
         touched();
         rerender();
@@ -259,7 +301,7 @@ export function renderServing(host, data, { builtIn = false, bind, touched, rere
                 type: 'button', role: 'radio', 'aria-checked': String(mode === m), text: label,
                 onClick: () => { if (mode !== m) choose(m); }
             }))));
-        box.append(el('p', 'field-desc st-svcs__where', { text: mode === 'keys'
+        box.append(el('p', 'st-help st-svcs__where', { text: mode === 'keys'
             ? 'Whoever reaches this server needs one of these keys for everything it serves.'
             : net ? 'Anyone who can reach this server reads what it serves.'
                   : 'This machine only: anyone on it reads what this server serves.' }));
@@ -294,14 +336,14 @@ function renderKeys(data, keys, { touched, rerender, system }) {
                 } })),
             shown ? el('div', 'st-key__reveal', {},
                 el('code', '', { text: shown }),
-                el('button', 'st-btn st-btn--sm', { type: 'button', html: ICONS.copy + 'Copy', onClick: e => {
+                el('button', 'st-btn st-btn--sm', { type: 'button', html: icon('copy') + 'Copy', onClick: e => {
                     navigator.clipboard?.writeText(shown).then(() => { e.currentTarget.lastChild.textContent = 'Copied'; }, () => {});
                 } }),
                 el('span', 't-small t-subtle', { text: 'Shown once. Sent as "Authorization: Bearer …"; works once saved.' })) : null));
     });
     const form = el('div', 'st-key__new');
-    const start = el('button', 'st-keys__add', { type: 'button', html: ICONS.plus + 'New key', onClick: () => {
-        const name = el('input', 'input', { type: 'text', placeholder: 'Who it is for, e.g. home-assistant', 'aria-label': 'Key name' });
+    const start = el('button', 'st-keys__add', { type: 'button', html: icon('plus') + 'New key', onClick: () => {
+        const name = el('input', 'st-input', { type: 'text', placeholder: 'Who it is for, e.g. home-assistant', 'aria-label': 'Key name' });
         const dataScope = el('input', '', { type: 'checkbox', checked: true });
         const sysScope = el('input', '', { type: 'checkbox', checked: false, disabled: !system });
         const go = el('button', 'st-btn st-btn--sm st-btn--primary', { type: 'button', text: 'Make key', onClick: async () => {
@@ -309,9 +351,7 @@ function renderKeys(data, keys, { touched, rerender, system }) {
             if (!scopes.length) return App.notify('error', 'A key needs Data, System or both');
             go.disabled = true;
             try {
-                const r = await fetch('/api/key', { method: 'POST' });
-                if (!r.ok) throw new Error(r.status);
-                const made = await r.json();
+                const made = await api('/api/key', { method: 'POST' });
                 revealed.set(made.sha256, made.key);
                 const k = { name: name.value.trim() || `key ${keys.length + 1}`, sha256: made.sha256 };
                 if (!(scopes.length === 1 && scopes[0] === 'data')) k.scopes = scopes;
@@ -348,10 +388,10 @@ function renderViewerFields(main, s, fields, touched, key) {
     };
     const field = ({ field: f }) => {
         const name = f.jsonpath || f.name;
-        const node = Renderer.renderField(f, 0, s, (fl, v) => {
+        const node = Renderer.renderField(f, s, (fl, v) => {
             if (v === undefined || v === '' || (Array.isArray(v) && !v.length)) delete s[name]; else s[name] = v;
             touched();
-        }, () => {}, '');
+        }, () => {});
         node.classList.add('st-opt');
         if (f.type === 'toggle') node.classList.add('st-opt--switch');
         else if (f.type === 'list') node.classList.add('st-opt--wide');
@@ -363,7 +403,7 @@ function renderViewerFields(main, s, fields, touched, key) {
     const groups = new Map();
     for (const f of rest) {
         if (!groups.has(f.section)) {
-            const g = el('div', 'st-sec__grid fieldset');
+            const g = el('div', 'st-sec__grid st-fieldset');
             tail.append(el('section', 'st-sec', {}, el('h4', 'st-section__title', { text: f.section }), g));
             groups.set(f.section, g);
         }
@@ -382,12 +422,12 @@ function renderViewerFields(main, s, fields, touched, key) {
 // the stations a server can show; `onEdit`: a name or a port typed; `onInvalid(i)`: the server a
 // save refused, to show; `onSaved`: after a save.
 export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields = [], stations = () => [] } = {}) {
-    const state = { list: [], viewerPort: 0, controlPort: 0, bind: '127.0.0.1', saved: new Set(), listening: null };
+    const state = { list: [], viewerPort: 0, controlPort: 0, bind: '127.0.0.1', saved: new Set(), listening: null, tls: new Map(), folder: '' };
     const editor = registerEditor(CONTAINER, { save: () => save(), data: () => state.list });
     const touched = () => editor.touched();
 
     async function load() {
-        const [cfg, status] = await Promise.all([ConfigStore.fetch(), fetch('/api/status').then(r => r.json()).catch(() => ({}))]);
+        const [cfg, status] = await Promise.all([ConfigStore.fetch(), hub.status()]);
         state.list = Array.isArray(cfg.services) ? JSON.parse(JSON.stringify(cfg.services)) : [];
         if (!state.list.some(s => s.main === true)) state.list.unshift({ main: true });
         state.saved = new Set(state.list.filter(s => !s.main).map(s => Number(s.port)));
@@ -395,17 +435,25 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         state.controlPort = Number(location.port) || 0;
         state.bind = status.bind || '127.0.0.1';
         state.listening = Array.isArray(status.listening) ? new Set(status.listening) : null;
+        state.folder = status.config_folder || '';
+        readTLS(status);
     }
 
-    // the ports that listen, as the station says
+    // the ports with HTTPS and when their certificates expire, as the station says now
+    function readTLS(status) {
+        state.tls = new Map((status.tls || []).map(t => [t.port, t.until]));
+    }
+
+    // the ports that listen, as the station says now
     async function refreshListening() {
-        const status = await fetch('/api/status').then(r => r.json()).catch(() => ({}));
+        const status = await hub.refreshStatus();
         if (Array.isArray(status.listening)) state.listening = new Set(status.listening);
+        readTLS(status);
     }
 
     // false for a saved server whose port does not listen: another program has it
     function listening(s) {
-        if (s.main || s.active === false) return true;
+        if (s.main || !isActive(s)) return true;
         const p = Number(s.port);
         return !state.listening || !state.saved.has(p) || state.listening.has(p);
     }
@@ -416,7 +464,8 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         for (let tries = 12; ; tries--) {
             await refreshListening();
             const deaf = list.filter(s => !listening(s)).map(s => s.port);
-            if (!deaf.length || tries === 1) return deaf;
+            const settling = list.some(s => isActive(s) && !!s.tls !== state.tls.has(s.main ? state.viewerPort : Number(s.port)));
+            if ((!deaf.length && !settling) || tries === 1) return deaf;
             await new Promise(r => setTimeout(r, 250));
         }
     }
@@ -439,7 +488,7 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         const host = location.hostname;
         const here = host === 'localhost' || host === '127.0.0.1' || host === '::1';
         if (local(s.bind) && !here) return null;
-        return `${location.protocol}//${host.includes(':') ? '[' + host + ']' : host}:${s.port}`;
+        return `${s.tls ? 'https' : 'http'}://${host.includes(':') ? '[' + host + ']' : host}:${s.port}`;
     }
 
     // the page's header: Active, Open, and Delete behind the menu; the main server stays, and always serves
@@ -448,15 +497,15 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         if (s.main) return box.append(openButton('/viewer/'));
         const at = address(s);
         const serve = servedKeys(s);
-        const on = s.active !== false;
+        const live = isActive(s);
         box.append(el('label', 'st-switch', {},
-            el('input', '', { type: 'checkbox', checked: on, onChange: e => {
+            el('input', '', { type: 'checkbox', checked: live, onChange: e => {
                 if (e.target.checked) delete s.active; else s.active = false;
                 touched();
                 rerender?.();
             } }),
             el('span', 'st-switch__track'), 'Active'));
-        if (on && at && (serve.includes('ui') || serve.includes('api')))
+        if (live && at && (serve.includes('ui') || serve.includes('api')))
             box.append(openButton(at + (serve.includes('ui') ? '/' : '/api/v1')));
         box.append(moreMenu('More actions', [['Delete…', () => {
             if (!confirm(`Delete the server on port ${s.port}? It stops serving when saved.`)) return;
@@ -471,14 +520,15 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         const s = state.list[i];
         // the map beside the panel shows everything; what a server shows is the server's
         if (s.main) {
-            main.append(el('p', 'field-desc st-svcs__lead', { text: `The map this panel shows, on port ${state.viewerPort || 'next to it'}. Add servers for a public map or an API.` }));
+            main.append(el('p', 'st-help st-svcs__lead', { text: `The map this panel shows, on port ${state.viewerPort || 'next to it'}. Add servers for a public map or an API.` }));
+            renderTLS(main, s, { until: state.tls.get(state.viewerPort), folder: state.folder, touched, foldKey: 'main' });
             renderServing(main, s, { builtIn: true, bind: state.bind, touched, rerender, foldKey: 'main' });
             renderShows(main, s, { everyShip: true, outlines: true, touched, rerender, foldKey: 'main' });
             renderViewerFields(main, s, viewerFields, touched, 'main');
             return;
         }
-        if (s.active === false)
-            main.append(el('p', 'field-desc st-svcs__lead', { text: 'Switched off: it keeps its settings and serves nothing until it is on again.' }));
+        if (!isActive(s))
+            main.append(el('p', 'st-help st-svcs__lead', { text: 'Switched off: it keeps its settings and serves nothing until it is on again.' }));
         else if (!listening(s))
             main.append(el('p', 'st-warn-note', { text: `Port ${s.port} is not listening: in use elsewhere? See the log.` }));
         // ---- where it listens
@@ -488,13 +538,13 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
             title.textContent = serverName(s);
             onEdit?.();
         };
-        const port = el('input', 'input', { type: 'number', min: 1, max: 65535, step: 1, value: s.port ?? '', onInput: e => {
+        const port = el('input', 'st-input', { type: 'number', min: 1, max: 65535, step: 1, value: s.port ?? '', onInput: e => {
             const v = e.target.value;
             if (v === '') delete s.port; else s.port = Number(v);
             renamed();
         } });
         // its name: what the panel calls it, for a public map or an API for automation
-        const name = el('input', 'input', { type: 'text', value: s.description || '', placeholder: 'e.g. Public map', spellcheck: 'false', onInput: e => {
+        const name = el('input', 'st-input', { type: 'text', value: s.description || '', placeholder: 'e.g. Public map', spellcheck: 'false', onInput: e => {
             const v = e.target.value;
             if (v.trim()) s.description = v; else delete s.description;
             renamed();
@@ -507,10 +557,11 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
             })),
             where === 'custom' ? el('span', 'st-seg__opt', { role: 'radio', 'aria-checked': 'true', text: s.bind }) : null);
         main.append(el('div', 'st-stations__row st-srv__row', {},
-            el('label', 'field st-stations__field st-stations__grow', {}, el('span', 'field-label', { text: 'Name' }), name),
-            el('label', 'field st-stations__field st-stations__num', {}, el('span', 'field-label', { text: 'Port' }), port),
-            el('div', 'field st-stations__field st-stations__grow', {}, el('span', 'field-label', { text: 'Listens on' }), seg)));
+            el('label', 'st-field st-stations__field st-stations__grow', {}, el('span', 'st-label', { text: 'Name' }), name),
+            el('label', 'st-field st-stations__field st-stations__num', {}, el('span', 'st-label', { text: 'Port' }), port),
+            el('div', 'st-field st-stations__field st-stations__grow', {}, el('span', 'st-label', { text: 'Listens on' }), seg)));
 
+        renderTLS(main, s, { until: state.tls.get(Number(s.port)), folder: state.folder, touched, foldKey: 'srv' + i });
         renderServing(main, s, { bind: s.bind, touched, rerender, foldKey: 'srv' + i });
         // what it sends, before how its map looks
         renderShows(main, s, { stations: stations(), touched, rerender, outlines: sendsPlaces(servedKeys(s)), byStation: true, foldKey: 'srv' + i });
@@ -526,24 +577,20 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
             if (Array.isArray(out.keys) && !out.keys.length) delete out.keys;
             return out;
         }
-        const out = { ...s, port: Number(s.port) };
+        const out = { ...s };
+        if (s.port !== undefined) out.port = Number(s.port);
         if (!out.bind || out.bind === '127.0.0.1') delete out.bind;
         if (Array.isArray(out.keys) && !out.keys.length) delete out.keys;
         return out;
     }
 
+    // What only this page knows: Keys chosen with no key yet would save as open. The ports and what
+    // a server serves the reader checks, and its answer shows as the save's.
     function validate() {
-        const seen = new Set();
         for (let i = 0; i < state.list.length; i++) {
-            const s = state.list[i], p = Number(s.port);
-            if (s.main) { const access = accessProblem(s, s.bind, true); if (access) return [i, access]; continue; }
-            if (!Number.isInteger(p) || p < 1 || p > 65535) return [i, 'A server needs a port from 1 to 65535.'];
-            if (s.active === false) continue; // switched off: it claims no port
-            if (p === state.viewerPort || p === state.controlPort) return [i, `Port ${p} is the ${p === state.viewerPort ? 'main server' : 'control panel'}'s.`];
-            if (seen.has(p)) return [i, `Two servers on port ${p}.`];
-            seen.add(p);
-            if (!servedKeys(s).length) return [i, `The server on port ${p} serves nothing: switch on what it offers.`];
-            const access = accessProblem(s, s.bind);
+            const s = state.list[i];
+            if (!s.main && !isActive(s)) continue;
+            const access = accessProblem(s, s.bind, !!s.main);
             if (access) return [i, access];
         }
         return null;

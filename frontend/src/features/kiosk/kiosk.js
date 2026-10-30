@@ -6,7 +6,7 @@ import { ships, clock, cardMmsi, hoverMmsi } from '../../core/store.js';
 import { fromLonLat } from 'ol/proj';
 import { containsCoordinate } from 'ol/extent';
 import { map } from '../../map.js';
-import { saveSettings } from '../settings/settings.js';
+import { saveSettings, effects } from '../../settings-store.js';
 import { showTargetcard } from '../targetcard/card.js';
 import { applyPanels } from '../../panels.js';
 import { register } from '../../actions.js';
@@ -14,13 +14,13 @@ import { register } from '../../actions.js';
 let kioskAnimationInterval = null;
 
 // a new rotation speed: a running rotation starts over at it
-export function rotationChanged() {
+function rotationChanged() {
     if (isKiosk() && kioskAnimationInterval) {
         startKioskAnimation();
     }
 }
 
-export function toggleKioskMode() {
+function toggleKioskMode() {
     settings.kiosk = !settings.kiosk;
     updateKiosk();
     saveSettings();
@@ -46,7 +46,7 @@ function restoreOriginalDisplay(element) {
 }
 
 // callers that only need the chrome re-hidden must not restart the rotation
-export function updateKiosk(restart = true) {
+function updateKiosk(restart = true) {
     const kiosk = isKiosk();
     if (!kiosk) stopKioskAnimation();
     else if (restart || !kioskAnimationInterval) startKioskAnimation();
@@ -146,6 +146,11 @@ function stopKioskAnimation() {
         console.log("Kiosk animation stopped");
     }
 }
+
+effects({
+    kiosk: () => { updateKiosk(); applyPanels(); },
+    kiosk_rotation_speed: () => rotationChanged(),
+});
 
 register({
     toggleKioskMode: () => { toggleKioskMode(); applyPanels(); },

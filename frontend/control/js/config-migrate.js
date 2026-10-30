@@ -6,9 +6,18 @@
 //     `control.viewer`; how ships are kept is `tracking`
 //   - a web viewer of the `server` section is an entry of `services`: on the site's ships, or on
 //     ships of its own behind its message filter, which goes under its `tracking`
+//   - a receiver's settings at the top of the file are the first receiver's; its kind of device
+//     is in capitals, its model and sensitivity are its engines
+//   - an output's json and json_full switches are its msgformat; a server's message switch is msg;
+//     replay_time is track_time
+// The wizard reads a previous installation's file through the same.
 
 import { on } from './dom.js';
 import { num, validPos } from './stations.js';
+import { DEVICE_BLOCKS } from './inputs.js';
+
+// a receiver's settings, before the receivers were a list
+const RECEIVER_KEYS = ['serial', 'input', 'verbose', 'model', 'engines', 'meta', 'own_mmsi', ...DEVICE_BLOCKS];
 
 const STATION_KEYS = ['station', 'lat', 'lon', 'alt', 'share_loc', 'use_gps', 'own_mmsi'];
 const SITE_ONLY = ['file', 'backup', 'places'];
@@ -78,8 +87,70 @@ function stationFromViewer(v) {
     return s;
 }
 
+// the settings at the top of the file go to the first receiver, where it does not say otherwise,
+// or make it; its kind in capitals, its model and sensitivity as its engines
+function migrateReceivers(cfg) {
+    const top = {};
+    for (const key of RECEIVER_KEYS)
+        if (Object.prototype.hasOwnProperty.call(cfg, key)) {
+            top[key] = cfg[key];
+            delete cfg[key];
+        }
+    if (Object.keys(top).length) {
+        if (!Array.isArray(cfg.receiver)) cfg.receiver = [];
+        const first = cfg.receiver[0];
+        if (first && typeof first === 'object') {
+            const chosen = 'input' in first || 'serial' in first;
+            for (const [k, v] of Object.entries(top))
+                if (!(chosen && (k === 'input' || k === 'serial')) && !(k in first)) first[k] = v;
+        } else {
+            if (!('input' in top) && !('serial' in top)) top.input = 'RTLSDR';
+            cfg.receiver.push(top);
+        }
+    }
+    for (const r of Array.isArray(cfg.receiver) ? cfg.receiver : []) {
+        if (!r || typeof r !== 'object') continue;
+        if (typeof r.input === 'string') r.input = r.input.toUpperCase();
+        if ('sensitivity_high' in r) {
+            if (on(r.sensitivity_high) && !('engines' in r)) r.engines = [{ type: 'v1_high' }];
+            delete r.sensitivity_high;
+        }
+        if (typeof r.model === 'string') {
+            const model = r.model.toLowerCase();
+            if (!('engines' in r)) r.engines = [model === 'auto' ? {} : { type: model }];
+            delete r.model;
+        }
+        if (r.model && typeof r.model === 'object' && !Array.isArray(r.model)) {
+            if (on(r.model.active, true)) {
+                const { active, ...settings } = r.model;
+                if (!Array.isArray(r.engines)) r.engines = [Object.keys(settings).length ? { settings } : {}];
+            }
+            delete r.model;
+        }
+    }
+}
+
+// an output's json and json_full switches as its message format
+function migrateMsgFormat(ch) {
+    if (!('json' in ch) && !('json_full' in ch)) return;
+    if (!('msgformat' in ch))
+        ch.msgformat = on(ch.json_full) ? 'JSON_FULL' : on(ch.json) ? 'JSON_NMEA' : 'NMEA';
+    delete ch.json;
+    delete ch.json_full;
+}
+
+// replay_time became track_time; the old key goes, or the server-side alias fights the new one
+function migrateTracking(t) {
+    if (!t || typeof t !== 'object' || t.replay_time === undefined) return;
+    t.track_time ??= t.replay_time;
+    delete t.replay_time;
+}
+
 export function migrateConfig(cfg) {
     if (!cfg || typeof cfg !== 'object') return cfg;
+    migrateReceivers(cfg);
+    for (const key of ['udp', 'tcp_listener', 'tcp'])
+        if (Array.isArray(cfg[key])) cfg[key].forEach(ch => { if (ch && typeof ch === 'object') migrateMsgFormat(ch); });
     const v = cfg.control?.viewer;
     if (v && typeof v === 'object') {
         // the station
@@ -124,6 +195,17 @@ export function migrateConfig(cfg) {
                 if (!('place_geometry' in view)) view.place_geometry = s.place_geometry;
                 delete s.place_geometry;
             }
+    // a server's message switch is msg; msgs was briefly seeded by a defaults bug
+    for (const s of Array.isArray(cfg.services) ? cfg.services : []) {
+        if (!s || typeof s !== 'object') continue;
+        if ('message' in s) {
+            if (!('msg' in s)) s.msg = s.message;
+            delete s.message;
+        }
+        delete s.msgs;
+        migrateTracking(s.tracking);
+    }
+    migrateTracking(cfg.tracking);
     // the main server first
     if (Array.isArray(cfg.services)) {
         const i = cfg.services.findIndex(s => s && s.main === true);

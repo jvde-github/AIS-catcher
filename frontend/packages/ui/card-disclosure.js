@@ -1,6 +1,7 @@
-// Mobile disclosure from the handle, action bar, or non-interactive content.
-// Content keeps native scrolling; collapse starts only at its scroll boundary.
-export function attach({ mount, panels, enabled, active, select, defaultTab = 'summary' }) {
+// The card's fold, pulled from the handle, the header, the action bar or
+// non-interactive content. Content keeps native scrolling; collapse starts only
+// at its scroll boundary.
+export function attach({ mount, panels, active, select, defaultTab = 'summary' }) {
     const handle = document.createElement('button');
     handle.type = 'button';
     handle.className = 'sc-drag-handle';
@@ -66,7 +67,9 @@ export function attach({ mount, panels, enabled, active, select, defaultTab = 's
     }
     function pointerDown(e) {
         // Ship and aircraft layouts share a footer; only the visible one owns it.
-        if (mount.style.display === 'none' || !enabled() || settling || drag || !e.isPrimary || e.button !== 0) return;
+        if (mount.style.display === 'none' || settling || drag || !e.isPrimary || e.button !== 0) return;
+        // the header's move handle drags the card itself
+        if (e.target?.closest?.('.draggable')) return;
         suppressClick = false;
         drag = { id: e.pointerId, x: e.clientX, y: e.clientY, source: e.currentTarget,
             original: active(), moved: false, dy: 0 };
@@ -90,14 +93,14 @@ export function attach({ mount, panels, enabled, active, select, defaultTab = 's
         panels.style.height = Math.max(0, Math.min(drag.full, start + drag.dy)) + 'px';
     }
     function click(e) {
-        if (mount.style.display === 'none' || !enabled()) return;
+        if (mount.style.display === 'none') return;
         if (suppressClick && e.detail) {
             suppressClick = false;
             e.preventDefault();
             e.stopImmediatePropagation();
             return;
         }
-        if (!enabled() || settling) return;
+        if (settling) return;
         if (e.currentTarget === handle) { select(active() == null ? defaultTab : null); return; }
         // folded: a tap on the card's figures opens it too; tabs, links and buttons keep their own job
         if (e.currentTarget === mount && active() == null &&

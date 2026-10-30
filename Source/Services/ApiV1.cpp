@@ -361,7 +361,7 @@ namespace Services
 
 		// The figures as /api/v1 names them, as members of an object the caller
 		// opened. `vessels` is counted only by the slots of a history.
-		void writeFigures(JSON::Writer &w, const MessageStatistics::Values &v, bool empty, bool vessels)
+		void writeFigures(JSON::Writer &w, const MessageStatistics::Values &v, bool empty, bool vessels, bool hidden)
 		{
 			const int c = v.count - v.exclude;
 			const bool has_level = !empty && c > 0 && v.level_min <= v.level_max;
@@ -380,13 +380,13 @@ namespace Services
 				w.kv("level_min_db", v.level_min).kv("level_max_db", v.level_max).kv("ppm", v.ppm / c);
 			else
 				w.kv_null("level_min_db").kv_null("level_max_db").kv_null("ppm");
-			if (!empty && v.distance > 0)
+			if (!hidden && !empty && v.distance > 0)
 				w.kv("max_distance_nm", v.distance);
 			else
 				w.kv_null("max_distance_nm");
 			w.kv("active_minutes", empty ? 0 : v.active_minutes);
 			w.key("furthest").beginArray();
-			for (int i = 0; i < MessageStatistics::FURTHEST && !empty; i++)
+			for (int i = 0; i < MessageStatistics::FURTHEST && !empty && !hidden; i++)
 				if (v.furthest[i].mmsi)
 				{
 					w.beginObject().kv("mmsi", (long long)v.furthest[i].mmsi).kv("distance_nm", v.furthest[i].nm);
@@ -409,6 +409,11 @@ namespace Services
 					w.kv(std::to_string(i + 1), v.msg[i]);
 			w.endObject();
 
+			if (hidden)
+			{
+				w.kv_null("range_nm");
+				return;
+			}
 			w.key("range_nm").beginObject().kv("sector_deg", 360 / MessageStatistics::RADAR_BUCKETS);
 			w.key("class_a").beginArray();
 			for (int i = 0; i < MessageStatistics::RADAR_BUCKETS; i++)
@@ -421,28 +426,28 @@ namespace Services
 
 		// a period's figures as an object of its own: a counter, or a history's last whole slot
 		template <typename C>
-		void writeTotal(JSON::Writer &w, const char *key, C &counter)
+		void writeTotal(JSON::Writer &w, const char *key, C &counter, bool hidden)
 		{
 			w.key(key).beginObject();
-			writeFigures(w, counter.values(), false, false);
+			writeFigures(w, counter.values(), false, false, hidden);
 			w.endObject();
 		}
 		template <typename H>
-		void writeLast(JSON::Writer &w, const char *key, H &history)
+		void writeLast(JSON::Writer &w, const char *key, H &history, bool hidden)
 		{
 			w.key(key).beginObject();
-			history.withLastSlot([&](MessageStatistics &s, bool empty) { writeFigures(w, s.values(), empty, true); });
+			history.withLastSlot([&](MessageStatistics &s, bool empty) { writeFigures(w, s.values(), empty, true, hidden); });
 			w.endObject();
 		}
 
 		// one history of figures, a slot an object, oldest first
 		template <typename H>
-		void writeSlots(JSON::Writer &w, const char *key, H &history)
+		void writeSlots(JSON::Writer &w, const char *key, H &history, bool hidden)
 		{
 			w.key(key).beginArray();
 			history.forEachSlot([&](long int start, MessageStatistics &s, bool empty) {
 				w.beginObject().kv("time", isoTime((std::time_t)start));
-				writeFigures(w, s.values(), empty, true);
+				writeFigures(w, s.values(), empty, true, hidden);
 				w.endObject();
 			});
 			w.endArray();
@@ -529,9 +534,9 @@ namespace Services
 		else if (parts[0] == "stations" && parts.size() == 2 && Util::Parse::Digits(parts[1], n, 10) && n <= 2147483647)
 			at("/api/v1/stations/{id}", [&] { return station((int)n); });
 		else if (parts[0] == "stations" && parts.size() == 3 && parts[2] == "statistics" && Util::Parse::Digits(parts[1], n, 10) && n <= 2147483647)
-			at("/api/v1/stations/{id}/statistics", [&] { return statistics((int)n); });
+			at("/api/v1/stations/{id}/statistics", [&] { return statistics((int)n, request.owner); });
 		else if (parts[0] == "statistics" && parts.size() == 1)
-			at("/api/v1/statistics", [&] { return statistics(-1); });
+			at("/api/v1/statistics", [&] { return statistics(-1, request.owner); });
 		else if (parts[0] == "vessels" && parts.size() == 1)
 			at("/api/v1/vessels", [&] { return vessels(request); });
 		else if (parts[0] == "vessels" && parts.size() == 2 && Util::Parse::Digits(parts[1], n, 10) && n <= 999999999)
@@ -638,7 +643,7 @@ namespace Services
 
 	// one station's figures, or with `station` -1 those of everything the
 	// server shows: all of them, or its stations' added up
-	Response ApiV1::statistics(int station)
+	Response ApiV1::statistics(int station, bool owner)
 	{
 		if (station >= 0 && !view.allowsStation(station))
 			return Response::problem(404, "Not found", "Station " + std::to_string(station) + " has heard nothing yet.");
@@ -657,24 +662,33 @@ namespace Services
 					w.val(id);
 				w.endArray();
 			}
+			const bool hidden = tracker.hidesRange(owner, ids, f);
+			if (hidden)
+				w.kv("range_hidden", true);
 			w.kv("time", isoTime(now)).kv("messages_per_second", f.second.getAverage());
-			writeTotal(w, "total", f.total);
-			writeTotal(w, "session", f.session);
-			writeLast(w, "last_minute", f.minute);
-			writeLast(w, "last_hour", f.hour);
-			writeLast(w, "last_day", f.day);
+			writeTotal(w, "total", f.total, hidden);
+			writeTotal(w, "session", f.session, hidden);
+			writeLast(w, "last_minute", f.minute, hidden);
+			writeLast(w, "last_hour", f.hour, hidden);
+			writeLast(w, "last_day", f.day, hidden);
 			w.key("history").beginObject();
-			writeSlots(w, "second", f.second);
-			writeSlots(w, "minute", f.minute);
-			writeSlots(w, "hour", f.hour);
-			writeSlots(w, "day", f.day);
+			writeSlots(w, "second", f.second, hidden);
+			writeSlots(w, "minute", f.minute, hidden);
+			writeSlots(w, "hour", f.hour, hidden);
+			writeSlots(w, "day", f.day, hidden);
 			w.endObject();
 			writeWeek(w, f);
-			w.key("levels_by_distance").beginObject().kv("band_nm", Figures::LEVEL_BAND_NM);
-			writeLevels(w, "total", f.levels_total);
-			writeLevels(w, "session", f.levels_session);
-			w.endObject().key("propagation").beginArray();
-			for (const auto &d : f.propagation())
+			if (hidden)
+				w.kv_null("levels_by_distance");
+			else
+			{
+				w.key("levels_by_distance").beginObject().kv("band_nm", Figures::LEVEL_BAND_NM);
+				writeLevels(w, "total", f.levels_total);
+				writeLevels(w, "session", f.levels_session);
+				w.endObject();
+			}
+			w.key("propagation").beginArray();
+			for (const auto &d : hidden ? std::vector<Figures::Propagation>() : f.propagation())
 				w.beginObject().kv("day", isoTime(d.day)).kv("max_distance_nm", d.max_nm).kv("usual_nm", d.usual_nm).endObject();
 			w.endArray().endObject();
 		};

@@ -818,7 +818,7 @@ namespace IO
 		}
 	}
 
-	Setting &N2KStreamer::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &N2KStreamer::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -826,7 +826,7 @@ namespace IO
 			dev = arg;
 			break;
 		default:
-			return OutputMessage::SetKey(key, arg);
+			return OutputMessage::applyKey(key, arg);
 		}
 		return *this;
 	}

@@ -16,7 +16,7 @@
 */
 
 #pragma once
-#include <atomic>
+#include <chrono>
 #include <memory>
 #include <vector>
 
@@ -25,19 +25,18 @@
 #include "Receiver.h"
 #include "StationRegistry.h"
 #include "SiteConfig.h"
-#include "Network.h"
 #include "Screen.h"
+#include "SystemFacts.h"
 
-class ControlCore;
 class Site;
-
-// stop ends the running engine, stop_process the managed-mode loop around it
-extern std::atomic<bool> stop;
-extern std::atomic<bool> stop_process;
+namespace IO {
+	class HubStreamer;
+}
 
 // One engine run: the receivers, their outputs and the servers that belong to them,
-// built up by the command line parser or the config reader and then started by run().
-// Managed mode constructs a new one for every start/stop cycle.
+// built by the configuration reader (the command line becomes a document first)
+// and then started by run(). Managed mode constructs a new one for every
+// start/stop cycle.
 struct Engine {
 	// Called by run() once the servers serve and before the receivers start:
 	// a build that adds services attaches them here.
@@ -56,8 +55,8 @@ struct Engine {
 	// The receiving stations: those the configuration defines, and the default
 	// station, 0, when a receiver names none and the file does not list it
 	StationRegistry stations;
-	// what managed mode's configuration says of the default station, for when
-	// it does not list it
+	// what the configuration says of the default station, for when it does not
+	// list it: -N and a "server" entry feed it in every mode
 	StationDefaults station_defaults;
 	// managed mode's save: the stations as the file now has them, while the engine runs
 	void refreshStations(const StationRegistry &configured);
@@ -67,30 +66,26 @@ struct Engine {
 	// called on each pass of the run loop: managed mode applies settings changes here
 	std::function<void()> loop_hook;
 
-	// Screen and statistics
-	IO::ScreenOutput screen;
-	std::vector<OutputStatistics> stat;
-	std::vector<uint64_t> msg_count;
+	// Managed mode (-E) sets these before run(): the panel's rules apply, the
+	// decoded messages feed its channel activity, and on_started tells it the
+	// engine runs
+	bool managed = false;
+	StreamIn<AIS::Message> *activity = nullptr;
+	std::function<void()> on_started;
 
-	// Configuration flags set during arg parsing / config reading
+	// Screen
+	IO::ScreenOutput screen;
+
+	// from the configuration
 	int own_mmsi = -1;
 	int timeout = 0;
 	bool timeout_nomsg = false;
 	bool xshare_defined = false;
-	bool verbose = false;
 
-	// One-shot flags
-	bool no_run = false;
-	bool show_copyright = true;
-	bool list_devices = false;
-	bool list_devices_JSON = false;
-	bool list_support = false;
-	bool list_options = false;
-
-	// Run-time state
-	int exit_code = 0;
-	int nrec = 0;
-
+	// The first receiver is there from the start, for the configuration
+	// reader to fill: refreshDevices() runs on its device manager before any
+	// configuration is read, and SoapySDR keeps its enumeration per instance,
+	// so only receiver 0's SOAPYSDR can open an enumerated handle.
 	Engine();
 
 	// The site outlives the engine, so detaching must happen even when run()
@@ -98,36 +93,48 @@ struct Engine {
 	~Engine();
 
 	// Open the devices, wire up the outputs and the site, and run until stopped.
-	void run(Site &site, ControlCore *control = nullptr);
+	// The exit code: 0, or -2 when -T stopped the run.
+	int run(Site &site);
 
 	// Stop the receivers and drop the site's references into this object.
 	// Idempotent.
 	void detach();
 
-	// Each device option on the command line / in config defines a new receiver,
-	// except the first which reuses the default-constructed one.
-	Receiver &newReceiver() {
-		if (++nrec > 1)
-			receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-		return *receivers.back();
-	}
+	// the device manager the devices are enumerated on: the first receiver's
+	DeviceManager &scanner() { return receivers.front()->devices(); }
 
-	IO::OutputMessage &createCommunityFeed() {
-		comm_feed = new IO::HubStreamer();
-		msg.push_back(std::unique_ptr<IO::OutputMessage>(comm_feed));
-		return *comm_feed;
-	}
+	void createCommunityFeed();
+
+	// what the site's status pages say of this session: its devices, a model
+	// line per device, its outputs and the community feed
+	EngineFacts facts();
 
 private:
+	typedef std::chrono::high_resolution_clock::time_point time_point;
+
 	bool detached = false;
 	// the site of the run, from its start
 	Site *site = nullptr;
+	// whether a receiver asks for the rates, and whether every device delivers
+	// by callback: a file input pumps its data from the main loop instead
+	bool oneverbose = false, iscallback = true;
 
+	// the phases of run(), in its order
 	void resolveStations();
-	void countStationInputs();
-	// the default station the configuration does not list; it rides a vessel
-	// only when it is the only station
-	StationRegistry::Station defaultStation(bool alone) const;
+	void openReceivers();
+	void configureSite();
+	void shareFeed();
+	void routeOutputs();
+	void connectSinks();
+	void feedTrackers();
+	void start();
+	int loop();
+	void printRates();
+	bool watchdogExpired(const time_point &now, time_point &since, std::vector<uint64_t> &counts, int &code);
+	void reportTotals();
+
+	// the site's tracker and servers read the decoders' tags
+	bool hasServer() const;
 #ifdef HASAPI
 	void publishReceivers();
 #endif

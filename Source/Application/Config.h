@@ -16,43 +16,28 @@
 */
 
 #pragma once
-#include <iostream>
-#include <string.h>
-#include <memory>
 
-#include "AIS-catcher.h"
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 #include "Engine.h"
-
 #include "JSON/JSON.h"
-#include "JSON/Parser.h"
-#include "JSON/Writer.h"
 
-#include "File.h"
-
-#include "Device/FileRAW.h"
-#include "Device/FileWAV.h"
-#include "Device/RTLSDR.h"
-#include "Device/AIRSPYHF.h"
-#include "Device/HACKRF.h"
-#include "Device/RTLTCP.h"
-#include "Device/AIRSPY.h"
-#include "Device/SDRPLAY.h"
-#include "Device/SpyServer.h"
-#include "Device/SoapySDR.h"
-#include "Device/ZMQ.h"
-#include "Device/HYDRASDR.h"
-
-// What a configuration says wrong, without saying where: the reader adds
-// "Config file: ", the -W switch names itself
-struct ConfigError : std::runtime_error
-{
-	using std::runtime_error::runtime_error;
-};
-
+// The configuration reader: a document in the configuration file's format,
+// applied to an engine; the site's sections go to the readers in SiteConfig.cpp
 class Config
 {
-	Engine &_engine;
+public:
+	// which "server" entries of a document made from the command line are its
+	// -N's, so a mistake in one is said as -N said it before: "-N 8100: …"
+	struct Origins
+	{
+		std::vector<std::string> servers; // per "server" entry: "-N 8100" as given, or empty for a file's
+	};
+
+private:
+	Engine &engine;
 	// where the configuration file is: its relative file names are there
 	static std::string base_dir;
 	// managed mode (-E): the control panel's port and address, and the port beside it
@@ -60,73 +45,21 @@ class Config
 	int control_port = 0, viewer_port = 0;
 	std::string bind;
 
-	bool isActiveObject(const JSON::Value &m);
-	void setModelfromJSON(const JSON::Member &m);
-	void setEnginefromJSON(const JSON::Value &v);
-	static int engineType(const std::string &s);
-
-	// Create one output of type T per active object in the array, with settings applied
+	// one output of type T per active object in the array, with its settings applied
 	template <typename T>
-	void addOutputsFromJSON(const JSON::Member &m, const std::string &label, const char *default_timeout = nullptr)
-	{
-		if (!m.Get().isArray())
-			throw std::runtime_error(label + " settings need to be an \"array\" of \"objects\" in config file.");
-
-		for (const auto &v : m.Get().getArray())
-		{
-			if (!isActiveObject(v))
-				continue;
-
-			_engine.msg.push_back(std::unique_ptr<IO::OutputMessage>(new T()));
-			IO::OutputMessage &o = *_engine.msg.back();
-			if (default_timeout)
-				o.SetKey(AIS::KEY_SETTING_TIMEOUT, default_timeout);
-			setSettingsFromJSON(v, o);
-		}
-	}
+	void readOutputs(const JSON::Member &m, const std::string &label, const char *default_timeout = nullptr);
 	// the "db" array names its backend with a "type" field
-	void addDatabaseOutputsFromJSON(const JSON::Member &m);
+	void readDatabases(const JSON::Member &m);
+	// a receiver's keys, the main section's (unspecAllowed) or an entry of the "receiver" array, applied
+	// to r unless they say it is off; whether they name an input or a serial
+	bool readReceiver(const std::vector<JSON::Member> &m, bool unspecAllowed, Receiver &r);
+	// the "receiver" array: its first active entry fills the engine's first receiver unless that is
+	// filled already, every other is a receiver of its own
+	void readReceivers(const JSON::Member &m, bool &filled);
+	void readSharing(const std::vector<JSON::Member> &members);
 
 public:
-	// one name-to-backend map for config file and -D alike; throws on unknown type
-	static IO::OutputMessage *newDatabaseOutput(const std::string &type);
-
-private:
-	void setStationsFromJSON(const JSON::Value &v);
-#ifdef HASAPI
-	// a server's or a webhook's "filter": the viewer's filter terms
-	static void viewFilterFromJSON(const JSON::Value &v, ViewFilter &filter);
-	static void trackingFromJSON(const JSON::Value &v, SiteConfig &site);
-	// `main_port` and `main_bind`: the server beside the control panel, for the entry marked "main"; none outside managed mode
-	static void servicesFromJSON(const JSON::Value &v, SiteConfig &site, StationDefaults *defaults, StationRegistry *registry, int main_port = 0, const std::string &main_bind = "");
-	// the parts of a configuration a site reads as they stand: "tracking", "services", "webhooks", "mqtt_state"
-	static void siteFromJSON(const JSON::JSON &root, SiteConfig &site, StationDefaults *defaults, StationRegistry *registry, int main_port = 0, const std::string &main_bind = "");
-	static void managedViewer(const JSON::Value &viewer, int port, const std::string &bind, SiteConfig &site, StationDefaults &defaults, StationRegistry *registry);
-	// a server as a viewer section writes it (-N, "server", the old viewer section) or an entry of "services"
-	struct ServerEntry;
-	static bool serverKey(ServerEntry &e, int key, const std::string &value, const JSON::Value *json);
-	static void serverDone(ServerEntry &e, SiteConfig &site, StationDefaults *defaults, StationRegistry *registry, const std::string &where);
-	static void serversFromJSON(const JSON::Value &v, SiteConfig &site, StationDefaults *defaults, StationRegistry *registry);
-	// the -N being read: its settings gather until the next -N port or the end
-	// the -N servers as the command line gives them, made once every argument is
-	// read: a file read after them says how the site keeps ships
-	struct PendingServer {
-		std::string port;
-		std::vector<std::pair<int, std::string>> args;
-	};
-	std::vector<PendingServer> pending_servers;
-	void flushViewer();
-#endif
-#ifdef HASDELIVERY
-	static void webhooksFromJSON(const JSON::Value &v, SiteConfig &site);
-	static void mqttStateFromJSON(const JSON::Value &v, SiteConfig &site);
-#endif
-	void setReceiverfromJSON(const std::vector<JSON::Member> &m, bool unspecAllowed);
-	void setReceiverFromArray(const JSON::Member &m);
-	void setSharing(const std::vector<JSON::Member> &members);
-
-public:
-	Config(Engine &engine) : _engine(engine) {}
+	Config(Engine &engine) : engine(engine) {}
 
 	// managed mode (-E): the site is read by its rules, its main server on viewer_port
 	void setManaged(int control, int viewer, const std::string &address)
@@ -137,29 +70,47 @@ public:
 		bind = address;
 	}
 	void read(const std::string &file_config);
-	void set(const std::string &str);
-	// what the viewer sections and the receivers' stations come to once every
-	// key is read, from the command line and the files it names
+	// a document; from a command line, with which of its servers are -N's
+	void set(const std::string &str, const Origins *from = nullptr);
+	// once every key is read: the stations the receivers name are defined
 	void finish();
-#ifdef HASAPI
-	// -N [port] [key value]...: a web server; a port starts one, the keys that follow are its settings
-	void viewerFromArgs(const std::string &port, const std::vector<std::pair<std::string, std::string>> &settings);
-#endif
-#ifdef HASDELIVERY
-	// -W url [key value]...: a webhook for an http:// or https:// address, else the station's state on an MQTT
-	// broker for Home Assistant, with the keys their sections in the file take
-	void deliveryFromArgs(const std::string &url, const std::vector<std::pair<std::string, std::string>> &settings);
-#endif
 
-	// skip: one extra key the caller already consumed, e.g. the "type" selector
-	static void setSettingsFromJSON(const JSON::Value &m, Setting &s, int skip = -1);
-#ifdef HASAPI
-	// managed mode's site: the main server beside the control panel, the other servers, the tracking and the
-	// deliveries, and what the configuration says of the default station
-	static void managedSite(const JSON::JSON &root, int control_port, int viewer_port, const std::string &bind, SiteConfig &site, StationDefaults &defaults, StationRegistry *registry);
-#endif
-	// the "stations" block of a configuration, into a registry
-	static void stationsFromJSON(const JSON::Value &v, StationRegistry &into);
+	// one name-to-backend map for config file and -D alike; throws on unknown type
+	static IO::OutputMessage *newDatabaseOutput(const std::string &type);
+	// an object's "active", true without one; throws for what is not an object
+	static bool isActiveObject(const JSON::Value &m);
+	// what a document must say of itself, and what its main section may not say, checked before anything is applied
+	static void preamble(const std::vector<JSON::Member> &members);
+	// a receiver's "serial" and "input", wherever they stand among its keys
+	static void receiverInput(const std::vector<JSON::Member> &members, std::string &serial, std::string &input);
+	// a receiver's keys, applied to r as a receiver object's are: its input, its settings, its device blocks, its
+	// channels and its engines, in the reader's order; unspecAllowed for the main section, whose other keys are the
+	// site's; own_mmsi takes the receiver's "own_mmsi", when given a place
+	static void applyReceiver(Receiver &r, const std::vector<JSON::Member> &members, bool unspecAllowed, int *own_mmsi);
+	// a key of the main section that is its receiver's: a value, a device block, the input, the models, the array
+	static bool isReceiverKey(int key);
+	// the name a model number is written with as an engine's "type"
+	static std::string modelName(int model);
+	// f's mistake, said of where: "receiver 2: …"; said as it was with no where
+	template <typename F>
+	static void prefixed(const std::string &where, F f)
+	{
+		try
+		{
+			f();
+		}
+		catch (const std::exception &e)
+		{
+			if (where.empty())
+				throw;
+			throw std::runtime_error(where + ": " + e.what());
+		}
+	}
 	// relative paths in a config file resolve against the file's directory
 	static void setConfigBaseDir(const std::string &file_config);
+	static const std::string &baseDir() { return base_dir; }
+
+	// said by the reader, and by the command line's translation for what it reads itself
+	static const char *const MODEL_DEPRECATED;
+	static const char *const RECEIVERS_NOT_ARRAY;
 };

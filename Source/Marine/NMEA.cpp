@@ -407,7 +407,7 @@ namespace AIS
 		char id_ch = 0;
 		if (*q != ',')
 			id_ch = *q++;
-		if (*q != ',')
+		if (*q != ',' || (id_ch && !isdigit((unsigned char)id_ch)))
 		{
 			warnAIS(WARN_AIS_ID, "invalid ID field", data, len);
 			return false;
@@ -415,11 +415,16 @@ namespace AIS
 		q++;
 
 		char channel_ch = '?';
+		// the sentence goes out as it came, inside JSON too: only a letter or digit stands here
 		if (*q != ',')
+		{
 			channel_ch = *q++;
-
-		if (!isalnum((unsigned char)channel_ch))
-			channel_ch = '?';
+			if (!isalnum((unsigned char)channel_ch))
+			{
+				warnAIS(WARN_AIS_CHANNEL, "invalid channel field", data, len);
+				return false;
+			}
+		}
 
 		if (*q != ',')
 		{
@@ -678,6 +683,12 @@ namespace AIS
 				}
 			}
 
+			// an out of range figure, as 1e999, adds up to NaN that -ffast-math lets past the writer
+			if (!(tag.level >= -1000 && tag.level <= 1000))
+				tag.level = LEVEL_UNDEFINED;
+			if (!(tag.ppm >= -1000 && tag.ppm <= 1000))
+				tag.ppm = PPM_UNDEFINED;
+
 			bool known_dev = (dev == DEV_AIS_CATCHER || dev == DEV_DAISY_CATCHER);
 
 			if (cls == CLS_AIS && known_dev && uuid_match && nmea_array)
@@ -694,12 +705,17 @@ namespace AIS
 			if (known_dev && message && !message->empty())
 			{
 				auto driver = Util::Parse::DeviceTypeString(tag.driver);
+				// the sender's text: one short line, nothing for a terminal to act on
+				std::string text = message->substr(0, 256);
+				for (char &ch : text)
+					if ((unsigned char)ch < 0x20 || ch == 0x7f)
+						ch = ' ';
 				if (cls == CLS_ERROR)
-					Error() << "[" << driver << "]: " << *message;
+					Error() << "[" << driver << "]: " << text;
 				else if (cls == CLS_WARNING)
-					Warning() << "[" << driver << "]: " << *message;
+					Warning() << "[" << driver << "]: " << text;
 				else
-					Info() << "[" << driver << "]: " << *message;
+					Info() << "[" << driver << "]: " << text;
 			}
 
 			if (topic && payload && uuid_match && *topic == "station")

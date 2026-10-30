@@ -68,7 +68,7 @@ namespace Device
 
 		void setFormat(Format f) {}
 
-		Setting &SetKey(AIS::Keys key, const std::string &arg);
+		Setting &applyKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 }

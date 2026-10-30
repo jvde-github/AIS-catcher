@@ -65,6 +65,7 @@ public:
   std::string placeSettings();
   bool enablePlaces(std::string &error);
   std::string getConfig();
+  std::string getPanelConfig();
   bool setConfig(const std::string &json, std::string &error);
   bool readLegacyConfig(std::string &content);
   std::string getDeviceListJSON();
@@ -91,6 +92,10 @@ public:
   std::string defaultStatsFile() const;
   const std::string &getConfigFile() const { return config_file; }
   const std::string &getBindAddress() const { return bind_address; }
+  // the folder of the configuration, as the panel compares a path with it
+  std::string configFolderPath() const;
+  // whether the file gives the panel's own server "tls", and its files
+  bool panelTLS(std::string &cert, std::string &key);
 
   bool authRequired() const {
     return bind_address != "127.0.0.1" && bind_address != "localhost";
@@ -98,6 +103,7 @@ public:
 
   bool hasPassword();
   bool verifyPassword(const std::string &password);
+  bool checkSetupCode(std::string code);
   void setPassword(const std::string &password);
   bool wizardPending();
 
@@ -130,7 +136,12 @@ private:
   std::string bind_address = "127.0.0.1";
   ChannelActivity channel_activity;
   std::string password_hash;
+  bool panel_tls = false;
+  std::string panel_tls_cert, panel_tls_key;
   std::string password_salt;
+  int password_iterations = 0;
+  static const int PASSWORD_ITERATIONS = 10000;
+  std::string setup_code;
   bool wizard_flag = false;
 
   std::mutex mtx;
@@ -173,7 +184,8 @@ private:
 
   void createDefaultConfig();
   void addMainDefaults();
-  void readManagedFields(int port_override);
+  void announceSetupCode();
+  void readManagedFields(const std::string &json);
   void applyAuthFields(const JSON::Value &control);
   void refreshAuthFields(const std::string &json);
   bool validate(const std::string &json, std::string &error);
@@ -186,5 +198,7 @@ private:
                     const std::function<bool(JSON::Document &)> &fn,
                     std::string *error = nullptr);
   void persistEngineField(bool on);
-  void persistControlAuth(const std::string &hash, const std::string &salt);
+  bool allowedPaths(const JSON::JSON &saved, std::string &error);
+  static void removeAuth(JSON::JSON &control);
+  void putAuth(JSON::Document &doc);
 };

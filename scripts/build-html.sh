@@ -3,7 +3,6 @@ set -e
 
 FRONTEND=frontend
 SRC=frontend/src
-UI_CSS=frontend/packages/ui/css
 NM=frontend/node_modules
 DIST=frontend/dist
 
@@ -30,13 +29,6 @@ if [ ! -d "$NM" ] || [ "$FRONTEND/package-lock.json" -nt "$NM/.package-lock.json
     (cd "$FRONTEND" && npm install --include=dev --prefer-offline --no-audit --no-fund)
 fi
 (cd "$SRC" && npm run build)
-
-# The viewer's stylesheets are imports, bundled into lib.css by Vite. The hub
-# takes the first sheets of the ui package concatenated in index.css order; a
-# host that needs only a prefix of it passes a count
-shared_css() {
-    grep -o '"\./[^"]*"' "$UI_CSS/index.css" | sed 's|^"\./||; s|"$||' | head -n "${1:-99}" | while read -r f; do cat "$UI_CSS/$f"; echo; done
-}
 
 mkdir -p "$DIST"
 cp "$SRC/favicon.ico" "$DIST/favicon.ico"
@@ -100,26 +92,18 @@ done
 # Control hub UI (managed mode -E) — plain static files served by the
 # control server under the control/ prefix
 rm -rf "$DIST/control"
-cp -R frontend/control "$DIST/control"
 mkdir -p "$DIST/control/css"
-# same tokens.css the viewer gets; the control server prefixes every path with
-# "control", so the hub cannot reach the viewer's copy — it needs its own
-shared_css 4 > "$DIST/control/css/shared.css"
-
-minify "$DIST/control/css/shared.css"
-minify "$DIST/control/css/locations.css"
-minify "$DIST/control/css/settings.css"
+cp frontend/control/index.html frontend/control/aishub.png "$DIST/control/"
+# one stylesheet, its imports bundled; the same tokens.css the viewer gets, as the control server
+# prefixes every path with "control" and the hub cannot reach the viewer's copy
+"$NM/.bin/esbuild" frontend/control/css/hub.css --bundle --minify --log-level=warning --charset=ascii --outfile="$DIST/control/css/hub.css"
 
 # Cache-bust hub assets (served with a 1-year cache header, like the viewer's)
-for f in css/shared.css css/locations.css css/settings.css; do
-    HASH=$(file_hash "$DIST/control/$f")
-    # full path: an unanchored "icons.css" would also match "flag-icons.css"
-    perform_sed "$DIST/control/index.html" "s|\"${f}?hash=[^\"]*|\"${f}?hash=${HASH}|g" ''
-done
+perform_sed "$DIST/control/index.html" "s|\"css/hub.css?hash=[^\"]*|\"css/hub.css?hash=$(file_hash "$DIST/control/css/hub.css")|g" ''
 
 # The hub is one bundle, control-app.js; its sources under control/js are all in it.
 HASH=$(file_hash "$DIST/control-app.js")
 perform_sed "$DIST/control/index.html" "s|control-app.js?hash=[^\"]*|control-app.js?hash=${HASH}|g" ''
-rm -rf "$DIST/control/js" "$DIST/places-editor.js"
+rm -f "$DIST/places-editor.js"
 echo "Built frontend/dist — baking into WebDB..."
 ./scripts/build-web-db.sh "$DIST"

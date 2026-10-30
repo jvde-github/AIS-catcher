@@ -1,8 +1,6 @@
 // The hub's configuration schema: what each section holds, how it is shown and checked.
 
-export const SEARCH_ICON = `<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
-        <path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/>
-    </svg>`;
+import { DEVICES, RADIOS } from './inputs.js';
 
 export const ChannelFields = {
     host: () => ({
@@ -87,15 +85,6 @@ export const ChannelFields = {
         min: 0,
         max: 3600,
         step: 1
-    }),
-    zones: () => ({
-        name: 'zone',
-        tooltip: 'Limit to inputs in these zones',
-        section: 'Zones',
-        label: 'Zones',
-        type: 'zones',
-        defaultValue: [],
-        hint: 'All inputs'
     })
 };
 
@@ -288,8 +277,7 @@ export const httpSchema = {
         tooltip: 'Format the server expects'
     },
     unique: ChannelFields.unique(),
-    position_interval: ChannelFields.position_interval(),
-    zones: ChannelFields.zones()
+    position_interval: ChannelFields.position_interval()
 };
 
 export const udpSchema = {
@@ -309,8 +297,7 @@ export const udpSchema = {
     },
     msgformat: ChannelFields.msgformat(),
     unique: ChannelFields.unique(),
-    position_interval: ChannelFields.position_interval(),
-    zones: ChannelFields.zones()
+    position_interval: ChannelFields.position_interval()
 };
 
 export const tcpSchema = {
@@ -339,8 +326,7 @@ export const tcpSchema = {
     },
     msgformat: ChannelFields.msgformat(),
     unique: ChannelFields.unique(),
-    position_interval: ChannelFields.position_interval(),
-    zones: ChannelFields.zones()
+    position_interval: ChannelFields.position_interval()
 };
 
 export const tcpServerSchema = {
@@ -358,8 +344,7 @@ export const tcpServerSchema = {
     active: ChannelFields.active(),
     msgformat: ChannelFields.msgformat(),
     unique: ChannelFields.unique(),
-    position_interval: ChannelFields.position_interval(),
-    zones: ChannelFields.zones()
+    position_interval: ChannelFields.position_interval()
 };
 
 // One channel for every backend: type picks the class, the rest is shared.
@@ -488,8 +473,7 @@ export const dbSchema = {
         advanced: true
     },
     unique: ChannelFields.unique(),
-    position_interval: ChannelFields.position_interval(),
-    zones: ChannelFields.zones()
+    position_interval: ChannelFields.position_interval()
 };
 
 export const mqttSchema = {
@@ -538,360 +522,7 @@ export const mqttSchema = {
     },
     msgformat: ChannelFields.msgformat('JSON_FULL'),
     unique: ChannelFields.unique(),
-    position_interval: ChannelFields.position_interval(),
-    zones: ChannelFields.zones()
-};
-
-export const webviewerSchema = {
-    port: {
-        name: 'port',
-        section: 'Connection',
-        label: 'Port',
-        type: 'number',
-        jsonpath: 'port',
-        defaultValue: 8100,
-        min: 1,
-        max: 65535,
-        width: 25,
-        tooltip: 'Port the viewer is served on'
-    },
-    station: {
-        name: 'station',
-        section: 'Station',
-
-        label: 'Map title',
-        type: 'text',
-        jsonpath: 'station',
-        width: 100,
-        tooltip: 'Above the map; the only station\'s name when empty'
-    },
-    station_link: {
-        name: 'station_link',
-        section: 'Station',
-
-        label: 'Station Link',
-        type: 'text',
-        width: 50,
-        jsonpath: 'station_link',
-        placeholder: 'https://...',
-        tooltip: 'Linked from the station name'
-    },
-    lat: {
-        name: 'lat',
-        section: 'Location',
-
-        label: 'Latitude',
-        type: 'number',
-        jsonpath: 'lat',
-        defaultValue: 0.0000,
-        step: 0.0001,
-        min: -90,
-        max: 90,
-        width: 50,
-        tooltip: 'Decimal degrees'
-    },
-    lon: {
-        name: 'lon',
-        section: 'Location',
-
-        label: 'Longitude',
-        type: 'number',
-        jsonpath: 'lon',
-        defaultValue: 0.0000,
-        step: 0.0001,
-        min: -180,
-        max: 180,
-        width: 50,
-        tooltip: 'Decimal degrees'
-    },
-    places: {
-        name: 'places', section: 'Storage',
-        label: 'Place Directory', type: 'text', jsonpath: 'places',
-        placeholder: '/etc/AIS-catcher/places', width: 100,
-        tooltip: 'Folder with place definitions'
-    },
-    plugin_dir: {
-        name: 'plugin_dir',
-        section: 'Storage',
-
-        label: 'Plugin Directory',
-        type: 'text',
-        jsonpath: 'plugin_dir',
-        placeholder: '/path/to/plugins',
-        width: 50,
-        tooltip: 'Folder with viewer plugins'
-    },
-    mbtiles: {
-        name: 'mbtiles',
-        section: 'MBTiles',
-
-        label: 'Map',
-        type: 'list',
-        jsonpath: 'mbtiles',
-        placeholder: '/path/to/map.mbtiles',
-        width: 50,
-        tooltip: 'Base map, one file per line'
-    },
-    mboverlay: {
-        name: 'mboverlay',
-        section: 'MBTiles',
-
-        label: 'Overlay',
-        type: 'list',
-        jsonpath: 'mboverlay',
-        placeholder: '/path/to/overlay.mbtiles',
-        width: 50,
-        tooltip: 'Overlay, one file per line'
-    },
-    fstiles: {
-        name: 'fstiles',
-        section: 'Tile directories',
-
-        label: 'Map',
-        type: 'list',
-        jsonpath: 'fstiles',
-        placeholder: '/path/to/tiles',
-        width: 50,
-        tooltip: 'Base map, one directory per line'
-    },
-    fsoverlay: {
-        name: 'fsoverlay',
-        section: 'Tile directories',
-
-        label: 'Overlay',
-        type: 'list',
-        jsonpath: 'fsoverlay',
-        placeholder: '/path/to/overlay',
-        width: 50,
-        tooltip: 'Overlay, one directory per line'
-    },
-    webcontrol_http: {
-        name: 'webcontrol_http',
-        section: 'Station',
-
-        label: 'Web Control Link',
-        type: 'text',
-        jsonpath: 'webcontrol_http',
-        defaultValue: '',
-        placeholder: 'http://127.0.0.1:8110',
-        width: 50,
-        tooltip: 'Linked from the viewer menu'
-    },
-    file: {
-        name: 'file',
-        section: 'Backup',
-
-        label: 'Backup File',
-        type: 'text',
-        jsonpath: 'file',
-        width: 75,
-        tooltip: 'Keeps statistics across restarts'
-    },
-    backup: {
-        name: 'backup',
-        section: 'Backup',
-
-        label: 'Minutes',
-        type: 'number',
-        jsonpath: 'backup',
-        defaultValue: 10,
-        min: 0,
-        max: 2880,
-        width: 25,
-        tooltip: 'Minutes between backups (0 off, else 5+)'
-    },
-    history: {
-        name: 'history',
-        section: 'Retention',
-
-        label: 'Ship Timeout (s)',
-        type: 'number',
-        jsonpath: 'history',
-        defaultValue: 1800,
-        min: 5,
-        max: 43200,
-        width: 50,
-        tooltip: 'Hide ships silent this long'
-    },
-    track_memory: {
-        name: 'track_memory',
-        section: 'Tracks',
-
-        label: 'Track Memory (KB)',
-        type: 'number',
-        jsonpath: 'track_memory',
-        defaultValue: 1024,
-        min: 16,
-        max: 262144,
-        width: 50,
-        tooltip: 'More memory, longer tracks'
-    },
-    replay: {
-        name: 'replay',
-        section: 'Service',
-
-        label: 'Replay',
-        type: 'toggle',
-        jsonpath: 'replay',
-        defaultValue: true,
-        width: 24,
-        tooltip: 'Visitors can animate tracks'
-    },
-    split: {
-        name: 'split',
-        section: 'Service',
-
-        label: 'Per-Receiver Views',
-        type: 'toggle',
-        jsonpath: 'split',
-        defaultValue: true,
-        width: 24,
-        tooltip: 'Visitors can pick one receiver'
-    },
-    track_time: {
-        name: 'track_time',
-        section: 'Tracks',
-
-        label: 'Max Track Age (s)',
-        type: 'number',
-        jsonpath: 'track_time',
-        defaultValue: 3600,
-        min: 0,
-        max: 604800,
-        width: 50,
-        tooltip: 'Track and replay length, 0 for no limit'
-    },
-    context: {
-        name: 'context',
-        section: 'Storage',
-
-        label: 'Context',
-        type: 'text',
-        jsonpath: 'context',
-        defaultValue: 'settings',
-        width: 100,
-        tooltip: 'Keeps viewers apart'
-    },
-    active: {
-        name: 'active',
-        section: 'Connection',
-        label: 'Active',
-        type: 'toggle',
-        jsonpath: 'active',
-        defaultValue: true,
-        width: 24,
-        tooltip: 'Serve the viewer on this port'
-    },
-    share_loc: {
-        name: 'share_loc',
-        section: 'Location',
-
-        label: 'Location',
-        type: 'toggle',
-        jsonpath: 'share_loc',
-        defaultValue: false,
-        width: 24,
-        tooltip: 'Station and range on the map'
-    },
-    use_gps: {
-        name: 'use_gps',
-        section: 'Location',
-
-        label: 'Use GPS',
-        type: 'toggle',
-        jsonpath: 'use_gps',
-        defaultValue: true,
-        width: 24,
-        tooltip: 'Use GPS for the location'
-    },
-    expire: {
-        name: 'expire',
-        section: 'Retention',
-
-        label: 'Expire',
-        type: 'toggle',
-        jsonpath: 'expire',
-        defaultValue: false,
-        width: 24,
-        tooltip: 'Drop data not seen again'
-    },
-    realtime: {
-        name: 'realtime',
-        section: 'Features',
-
-        label: 'Realtime',
-        type: 'toggle',
-        jsonpath: 'realtime',
-        defaultValue: false,
-        width: 24,
-        tooltip: 'Stream live NMEA to the viewer'
-    },
-    msg: {
-        name: 'msg',
-        section: 'Features',
-
-        label: 'Msgs',
-        type: 'toggle',
-        jsonpath: 'msg',
-        defaultValue: false,
-        width: 24,
-        tooltip: 'Recent NMEA on the ship card'
-    },
-    geojson: {
-        name: 'geojson',
-        section: 'Service',
-
-        label: 'GeoJSON',
-        type: 'toggle',
-        jsonpath: 'geojson',
-        defaultValue: false,
-        width: 24,
-        tooltip: 'Enable GeoJSON endpoints'
-    },
-    prome: {
-        name: 'prome',
-        section: 'Service',
-
-        label: 'Prometheus',
-        type: 'toggle',
-        jsonpath: 'prome',
-        defaultValue: false,
-        width: 24,
-        tooltip: 'Metrics served at /metrics'
-    },
-    log: {
-        name: 'log',
-        section: 'Features',
-
-        label: 'Show Log',
-        type: 'toggle',
-        jsonpath: 'log',
-        defaultValue: false,
-        width: 24,
-        tooltip: 'Show the log tab in the viewer'
-    },
-    decoder: {
-        name: 'decoder',
-        section: 'Features',
-
-        label: 'Decoder',
-        type: 'toggle',
-        jsonpath: 'decoder',
-        defaultValue: false,
-        width: 24,
-        tooltip: 'Enable the NMEA decoder tab'
-    },
-    zones: {
-        name: 'zone',
-        tooltip: 'Limit to inputs in these zones',
-        section: 'Zones',
-
-        label: 'Zones',
-        type: 'zones',
-        jsonpath: 'zone',
-        defaultValue: [],
-        hint: 'All inputs'
-    }
+    position_interval: ChannelFields.position_interval()
 };
 
 export const sharingSchema = {
@@ -908,25 +539,6 @@ export const sharingSchema = {
         type: 'text',
         placeholder: 'Enter UUID',
         tooltip: 'Leave empty to share anonymously'
-    },
-    _create_key_button: {
-        name: '_create_key_button',
-        type: 'button',
-        buttonLabel: (dataContext) => {
-            const sharingKey = dataContext.sharing_key || '';
-            return sharingKey.trim() === '' ? 'Create New Sharing Key' : 'Edit Station Details';
-        },
-        buttonIcon: '<svg xmlns="http://www.w3.org/2000/svg" class="icon-md" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8L10 14" /></svg>',
-        onClick: 'openSharingManagement',
-        skipSave: true
-    },
-    sharing_zone: {
-        name: 'sharing_zone',
-        tooltip: 'Limit to inputs in these zones',
-        label: 'Zones',
-        type: 'zones',
-        defaultValue: [],
-        hint: 'All inputs'
     }
 };
 
@@ -956,23 +568,10 @@ export const receiverSchema = {
 
         options: [
             { value: "", label: "Select a device" },
-            { value: "RTLSDR", label: "RTL-SDR" },
-            { value: "AIRSPY", label: "Airspy" },
-            { value: "AIRSPYHF", label: "Airspy HF+" },
-            { value: "HACKRF", label: "HackRF" },
-            { value: "HYDRASDR", label: "HydraSDR" },
-            { value: "SERIALPORT", label: "Serial (NMEA receiver)" },
-            { value: "UDPSERVER", label: "UDP (NMEA over the network)" },
-            { value: "RTLTCP", label: "Network client (RTL-TCP, TCP, MQTT)" },
-            { value: "SPYSERVER", label: "SpyServer" },
-            { value: "NMEA2000", label: "NMEA 2000" }
+            ...Object.entries(DEVICES).filter(([, d]) => !d.hidden).map(([value, d]) => ({ value, label: d.label || d.name }))
         ],
-        withButton: {
-            onClick: "openDeviceSelectionModal",
-            icon: SEARCH_ICON,
-            text: "Find devices"
-        },
-        onChange: "clearSerial"
+        // another device: the serial of the one before goes
+        clears: ["serial"]
     },
     channel: {
         name: "channel",
@@ -987,7 +586,7 @@ export const receiverSchema = {
         tooltip: "AB standard, CD long range",
         dependsOn: {
             field: "input",
-            value: ["RTLSDR", "AIRSPY", "AIRSPYHF", "HACKRF", "HYDRASDR"]
+            value: RADIOS
         }
     },
     nmea_channel: {
@@ -1015,7 +614,7 @@ export const receiverSchema = {
         tooltip: "Pick a device by serial number",
         dependsOn: {
             field: "input",
-            value: ["RTLSDR", "AIRSPY", "AIRSPYHF", "HYDRASDR", "HACKRF"]
+            value: RADIOS
         }
     },
     active: {
@@ -1456,11 +1055,6 @@ export const receiverSchema = {
         type: "text",
         jsonpath: "serialport.port",
         placeholder: "e.g., /dev/tty0",
-        withButton: {
-            onClick: "openSerialDeviceModal",
-            icon: SEARCH_ICON,
-            text: "Find ports"
-        },
         dependsOn: {
             field: "input",
             value: "SERIALPORT"
@@ -1582,6 +1176,137 @@ export const receiverSchema = {
             value: "HACKRF"
         }
     },
+    sdrplay_grdb: {
+        name: "sdrplay_grdb",
+        label: "Gain Reduction (dB)",
+        type: "number",
+        jsonpath: "sdrplay.grdb",
+        min: 0,
+        max: 59,
+        step: 1,
+        defaultValue: 32,
+        placeholder: "0-59",
+        tooltip: "Less reduction, more gain",
+        dependsOn: { field: "input", value: "SDRPLAY" },
+        width: 50
+    },
+    sdrplay_lnastate: {
+        name: "sdrplay_lnastate",
+        label: "LNA State",
+        type: "number",
+        jsonpath: "sdrplay.lnastate",
+        min: 0,
+        max: 9,
+        step: 1,
+        defaultValue: 0,
+        placeholder: "0-9",
+        tooltip: "0 is the most gain",
+        dependsOn: { field: "input", value: "SDRPLAY" },
+        width: 50
+    },
+    sdrplay_agc: {
+        name: "sdrplay_agc",
+        label: "AGC",
+        type: "toggle",
+        jsonpath: "sdrplay.agc",
+        defaultValue: false,
+        tooltip: "Automatic gain control",
+        dependsOn: { field: "input", value: "SDRPLAY" },
+        width: 25
+    },
+    sdrplay_antenna: {
+        name: "sdrplay_antenna",
+        label: "Antenna",
+        type: "select",
+        jsonpath: "sdrplay.antenna",
+        options: [
+            { value: "A", label: "A" },
+            { value: "B", label: "B" },
+            { value: "C", label: "C" }
+        ],
+        tooltip: "The port on an RSP2 or RSPdx",
+        dependsOn: { field: "input", value: "SDRPLAY" }
+    },
+    sdrplay_tuner: {
+        name: "sdrplay_tuner",
+        label: "Tuner",
+        type: "select",
+        jsonpath: "sdrplay.tuner",
+        options: [
+            { value: "A", label: "A" },
+            { value: "B", label: "B" }
+        ],
+        tooltip: "The tuner on an RSPduo",
+        dependsOn: { field: "input", value: "SDRPLAY" }
+    },
+    soapysdr_device: {
+        name: "soapysdr_device",
+        label: "Device",
+        type: "text",
+        jsonpath: "soapysdr.device",
+        placeholder: "e.g., driver=rtlsdr,serial=00000001",
+        tooltip: "SoapySDR's device arguments",
+        dependsOn: { field: "input", value: "SOAPYSDR" }
+    },
+    soapysdr_gain: {
+        name: "soapysdr_gain",
+        label: "Gain",
+        type: "text",
+        jsonpath: "soapysdr.gain",
+        placeholder: "e.g., TUNER=40",
+        tooltip: "Per gain element, as name=value",
+        dependsOn: { field: "input", value: "SOAPYSDR" }
+    },
+    soapysdr_agc: {
+        name: "soapysdr_agc",
+        label: "AGC",
+        type: "toggle",
+        jsonpath: "soapysdr.agc",
+        defaultValue: true,
+        tooltip: "Automatic gain control",
+        dependsOn: { field: "input", value: "SOAPYSDR" },
+        width: 25
+    },
+    soapysdr_antenna: {
+        name: "soapysdr_antenna",
+        label: "Antenna",
+        type: "text",
+        jsonpath: "soapysdr.antenna",
+        tooltip: "The device's antenna by name",
+        dependsOn: { field: "input", value: "SOAPYSDR" },
+        width: 50
+    },
+    soapysdr_ch: {
+        name: "soapysdr_ch",
+        label: "Channel",
+        type: "number",
+        jsonpath: "soapysdr.ch",
+        min: 0,
+        max: 32,
+        step: 1,
+        defaultValue: 0,
+        tooltip: "The device's receive channel",
+        dependsOn: { field: "input", value: "SOAPYSDR" },
+        width: 50
+    },
+    soapysdr_stream: {
+        name: "soapysdr_stream",
+        label: "Stream Arguments",
+        type: "text",
+        jsonpath: "soapysdr.stream",
+        placeholder: "name=value,…",
+        tooltip: "Passed to the stream as it opens",
+        dependsOn: { field: "input", value: "SOAPYSDR" }
+    },
+    soapysdr_setting: {
+        name: "soapysdr_setting",
+        label: "Device Settings",
+        type: "text",
+        jsonpath: "soapysdr.setting",
+        placeholder: "name=value,…",
+        tooltip: "Written to the device as it opens",
+        dependsOn: { field: "input", value: "SOAPYSDR" }
+    },
     spyserver_gain: {
         name: "spyserver_gain",
         tooltip: "Gain set on the server",
@@ -1645,40 +1370,6 @@ export const receiverSchema = {
         defaultValue: false,
         width: 25,
         tooltip: "Log message counts"
-    },
-    zones: {
-        name: "zone",
-        label: "Zones",
-        type: "zones",
-        jsonpath: "zone",
-        defaultValue: [],
-
-        tooltip: "Sends only to outputs in these zones"
-    }
-};
-
-export const generalSettingsSchema = {
-    timeout: {
-        name: 'timeout',
-        label: 'Timeout (seconds)',
-        type: 'off-number',
-        jsonpath: 'timeout',
-        defaultValue: false,
-        defaultNumber: 60,
-        min: 1,
-        max: 3600,
-        step: 1,
-        unit: 's',
-        tooltip: 'Stop after this many seconds'
-    },
-    timeout_only_when_idle: {
-        name: 'timeout_only_when_idle',
-        label: 'Only When Idle',
-        type: 'toggle',
-        jsonpath: 'timeout_only_when_idle',
-        defaultValue: false,
-        width: 50,
-        tooltip: 'Counts only while idle'
     }
 };
 
@@ -1710,34 +1401,6 @@ export const screenSchema = {
         max: 3600,
         advanced: true,
         tooltip: 'How often Verbose logs its counts'
-    }
-};
-
-// One entry of "stations": a place where an antenna stands, shared by every
-// receiver that names its number and by every view
-export const stationSchema = {
-    id: {
-        name: 'id', label: 'Number', type: 'number', jsonpath: 'id', min: 0, step: 1, width: 25,
-        tooltip: 'Inputs refer to it by this; 0 is the default station'
-    },
-    name: { name: 'name', label: 'Name', type: 'text', jsonpath: 'name', placeholder: 'e.g. Harbour mast', width: 75 },
-    lat: {
-        name: 'lat', label: 'Latitude', type: 'number', jsonpath: 'lat', step: 0.0001, min: -90, max: 90, width: 33,
-        tooltip: 'Decimal degrees'
-    },
-    lon: { name: 'lon', label: 'Longitude', type: 'number', jsonpath: 'lon', step: 0.0001, min: -180, max: 180, width: 33, tooltip: 'Decimal degrees' },
-    alt: { name: 'alt', label: 'Altitude', type: 'number', jsonpath: 'alt', step: 1, min: -1000, max: 20000, width: 33, tooltip: 'Height of the antenna in metres' },
-    mmsi: {
-        name: 'mmsi', label: 'Vessel MMSI', type: 'number', jsonpath: 'mmsi', step: 1, min: 1, max: 999999999, width: 50,
-        tooltip: 'The vessel it is on'
-    },
-    gps: {
-        name: 'gps', label: 'Use GPS', type: 'toggle', jsonpath: 'gps', defaultValue: true, width: 50,
-        tooltip: 'Moved by GPS on its inputs'
-    },
-    share_loc: {
-        name: 'share_loc', label: 'Show position', type: 'toggle', jsonpath: 'share_loc', defaultValue: false, width: 50,
-        tooltip: 'Off keeps it on this machine'
     }
 };
 
@@ -1790,28 +1453,30 @@ export const mqttStateSchema = {
     }
 };
 
-export const CHANNEL_REGISTRY = [
-    { key: 'receiver', label: 'Receiver', schema: receiverSchema, configKey: 'receiver' },
-    { key: 'udp', label: 'UDP', schema: udpSchema, configKey: 'udp', flowLabel: 'UDP', statType: 'UDP', essentials: ['host', 'port'] },
-    { key: 'http', label: 'HTTP', schema: httpSchema, configKey: 'http', flowLabel: 'HTTP', statType: 'HTTP', essentials: ['url'] },
-    { key: 'mqtt', label: 'MQTT', schema: mqttSchema, configKey: 'mqtt', flowLabel: 'MQTT', statType: 'MQTT', essentials: ['url'] },
-    { key: 'tcp', label: 'TCP Client', schema: tcpSchema, configKey: 'tcp', flowLabel: 'TCP', statType: 'TCP Client', essentials: ['host', 'port'] },
-    { key: 'tcp_listener', label: 'TCP Server', schema: tcpServerSchema, configKey: 'tcp_listener', flowLabel: 'TCP Server', statType: 'TCP Listener', essentials: ['port'] },
-    // one channel, three backends: each reports stats under its own type name
-    { key: 'db', label: 'Database', schema: dbSchema, configKey: 'db', flowLabel: 'Database', statTypes: ['PostgreSQL', 'SQLite', 'CSV'], essentials: ['type', 'conn_str'] }
-];
-
-// The outputs as the Outputs pages and Flow list them: the community map, the kinds kept in lists
-// (each with its value in the rail, its name in Flow and the type its statistics report), the screen
+// Every kind of output, in the order the rail, the Outputs pages and Flow list them. `value` names
+// it in the rail and Flow, and is its section of the configuration for a kind kept in a list
+// (`list`); `label` its name, `flow` its name in Flow where shorter; `stats` the types its
+// statistics report under; `essentials` what it needs to work; `add` what it is for, on Add an
+// output; `docs` its page. The community map and the screen are one setting each.
 export const OUTPUT_TYPES = [
-    { value: 'sharing', label: 'Community', schema: sharingSchema },
-    ...CHANNEL_REGISTRY.filter(c => c.key !== 'receiver').map(c => ({
-        value: c.key === 'tcp_listener' ? 'tcp-server' : c.key, label: c.label,
-        schema: c.schema, configKey: c.configKey, essentials: c.essentials,
-        flowLabel: c.flowLabel, statType: c.statType, statTypes: c.statTypes
-    })),
-    { value: 'screen', label: 'Screen', schema: screenSchema }
+    { value: 'sharing', label: 'Community', schema: sharingSchema, docs: 'configuration/output/community-feed/' },
+    { value: 'udp', list: true, label: 'UDP', schema: udpSchema, stats: ['UDP'], essentials: ['host', 'port'],
+        add: 'NMEA to another program on the network', docs: 'configuration/output/UDP/' },
+    { value: 'http', list: true, label: 'HTTP', schema: httpSchema, stats: ['HTTP'], essentials: ['url'],
+        add: 'Post batches to a web address', docs: 'configuration/output/HTTP/' },
+    { value: 'mqtt', list: true, label: 'MQTT', schema: mqttSchema, stats: ['MQTT'], essentials: ['url'],
+        add: 'Publish to a broker', docs: 'configuration/output/MQTT/' },
+    { value: 'tcp', list: true, label: 'TCP Client', flow: 'TCP', schema: tcpSchema, stats: ['TCP Client'], essentials: ['host', 'port'],
+        add: 'Connect out to a server and send', docs: 'configuration/output/TCP-client/' },
+    { value: 'tcp_listener', list: true, label: 'TCP Server', schema: tcpServerSchema, stats: ['TCP Listener'], essentials: ['port'],
+        add: 'Let programs connect in and read', docs: 'configuration/output/TCP-server/' },
+    // one kind, three backends: each reports its statistics under its own type
+    { value: 'db', list: true, label: 'Database', schema: dbSchema, stats: ['PostgreSQL', 'SQLite', 'CSV'], essentials: ['type', 'conn_str'],
+        add: 'SQLite, PostgreSQL or CSV files', docs: 'configuration/output/PSQL/' },
+    { value: 'screen', label: 'Screen', schema: screenSchema, add: 'Print the messages in the log', docs: 'configuration/output/console/' }
 ];
+export const outputType = value => OUTPUT_TYPES.find(o => o.value === value);
+export const LIST_OUTPUTS = OUTPUT_TYPES.filter(o => o.list);
 
 export function channelTitle(label, item) {
     if (item && item.host && item.port) return label + ' · ' + item.host + ':' + item.port;

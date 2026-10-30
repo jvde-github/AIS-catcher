@@ -119,13 +119,13 @@ namespace Device {
 		return true;
 	}
 
-	Setting& WAVFile::SetKey(AIS::Keys key, const std::string &arg) {
+	Setting& WAVFile::applyKey(AIS::Keys key, const std::string &arg) {
 		switch (key) {
 		case AIS::KEY_SETTING_FILE:
 			filename = arg;
 			break;
 		default:
-			Device::SetKey(key, arg);
+			Device::applyKey(key, arg);
 			break;
 		}
 		return *this;

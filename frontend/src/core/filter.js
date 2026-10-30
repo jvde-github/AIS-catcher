@@ -1,7 +1,7 @@
 import * as shared from '@aiscatcher/core/filter.js';
 import { settings } from './state.js';
 
-export { MOVING_KNOTS, BUCKETS, CLASSES, STATUSES, moving, bucketFor, bucketOf } from '@aiscatcher/core/filter.js';
+export { BUCKETS, bucketFor, bucketOf } from '@aiscatcher/core/filter.js';
 
 let clock = 0;
 export function setClock(serverTime) {

@@ -12,6 +12,10 @@
     display: none;
 }
 
+#plots.compare-mode .range-note {
+    display: none;
+}
+
 /* under the strip in compare: the words and the other station as a scope */
 .chart-sources {
     display: flex;

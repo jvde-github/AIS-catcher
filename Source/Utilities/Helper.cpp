@@ -27,6 +27,7 @@
 #else
 #include <unistd.h>
 #include <dirent.h>
+#include <sys/stat.h>
 #endif
 
 #ifdef __APPLE__
@@ -103,9 +104,33 @@ namespace Util
 #endif
 	}
 
+	bool Helper::createTemp(const std::string &tmp, const std::string &target)
+	{
+#ifdef _WIN32
+		return true;
+#else
+		struct stat st;
+		const mode_t mode = ::stat(target.c_str(), &st) == 0 ? (st.st_mode & 07777) : 0600;
+		::unlink(tmp.c_str());
+		const int fd = ::open(tmp.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, mode);
+		if (fd < 0)
+			return false;
+		// past the umask
+		const bool ok = ::fchmod(fd, mode) == 0;
+		::close(fd);
+		return ok;
+#endif
+	}
+
 	bool Helper::writeFileAtomic(const std::string &path, const std::string &content, std::string &error)
 	{
 		const std::string tmp = path + ".tmp";
+
+		if (!createTemp(tmp, path))
+		{
+			error = "cannot create \"" + tmp + "\"";
+			return false;
+		}
 
 		std::ofstream file(tmp, std::ios::binary | std::ios::trunc);
 		if (!file)

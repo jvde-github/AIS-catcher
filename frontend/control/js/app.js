@@ -1,16 +1,19 @@
 import { formatBytes } from '@aiscatcher/core/text.js';
 import { createPlaceEditor } from './places-editor.js';
 import { createStationsEditor } from './stations-editor.js';
-import { createStationPicker } from './station-picker.js';
-import { el } from './dom.js';
-import { DOCS, docLink, inputDocs, outputDocs } from './docs.js';
+import { el, highlightJson, isActive } from './dom.js';
+import { api } from './api.js';
+import { icon } from './icons.js';
+import { hub } from './hub.js';
 import { createHistoryEditor } from './history-editor.js';
-import { App, ConfigStore, Utils, createSimpleConfigManager, createChannelManager } from './config-manager.js';
+import { App, ConfigStore } from './config-store.js';
+import { createInputsPage } from './inputs-page.js';
+import { createOutputsPage, outputRailItems, renderAddOutput } from './outputs-page.js';
 import { SetupWizard } from './wizard.js';
-import { receiverSchema, OUTPUT_TYPES, channelTitle } from './schema.js';
+import { outputType as outputKind } from './schema.js';
 import { stationsOf, stationLabel } from './stations.js';
-import { describeInput, inputGroup, INPUT_ESSENTIALS, SDR_INPUTS } from './inputs.js';
-import { createFlowEditor, collectOutputs, inputRouting, outputRouting, outputOf, outputProblem, outputLiveProblem, statsByKey } from './flow-editor.js';
+import { describeInput } from './inputs.js';
+import { createFlowEditor, collectOutputs, outputProblem, outputLiveProblem, statsByKey } from './flow-editor.js';
 import { createServicesSection, servicesRailItems } from './services-pages.js';
 import { createRail } from './rail.js';
 import { createLogConsole } from './log-console.js';
@@ -45,11 +48,6 @@ import { createMessageBar } from './message-bar.js';
     }
 
     const ENGINE_LABELS = { start: 'Start receiver', stop: 'Stop receiver', restart: 'Restart receiver' };
-    const ENGINE_SVG = {
-        start: '<path d="M8 5.5v13l10-6.5z" fill="currentColor" stroke="none"/>',
-        stop: '<rect x="6.5" y="6.5" width="11" height="11" rx="1.5" fill="currentColor" stroke="none"/>',
-        restart: '<path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/>'
-    };
 
     function renderEngineButton() {
         const mode = engineButtonMode();
@@ -58,20 +56,19 @@ import { createMessageBar } from './message-bar.js';
             big.dataset.mode = mode;
             big.className = 'st-btn' + (mode === 'stop' ? '' : ' st-btn--primary');
             big.title = ENGINE_TITLES[mode];
-            big.innerHTML = '<svg class="st-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-                ENGINE_SVG[mode] + '</svg><span>' + ENGINE_LABELS[mode] + '</span>';
+            big.innerHTML = icon(mode) + '<span>' + ENGINE_LABELS[mode] + '</span>';
         }
         const btn = document.getElementById('nav-start-restart');
         const label = document.getElementById('nav-sr-label');
-        const icon = document.getElementById('nav-sr-icon');
+        const srIcon = document.getElementById('nav-sr-icon');
         if (btn) {
             btn.classList.toggle('attention', pendingApply);
             bar?.setRestart(pendingApply ? (engineRunning ? 'restart' : 'start') : null);
             btn.title = ENGINE_TITLES[mode];
         }
-        if (icon && icon.dataset.mode !== mode) {
-            icon.dataset.mode = mode;
-            icon.className = ENGINE_ICONS[mode];
+        if (srIcon && srIcon.dataset.mode !== mode) {
+            srIcon.dataset.mode = mode;
+            srIcon.className = ENGINE_ICONS[mode];
             if (label) label.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
         }
     }
@@ -107,40 +104,20 @@ import { createMessageBar } from './message-bar.js';
         } catch { /* a page of another origin keeps its title */ }
     });
 
-    function fetchStatus() {
-        return fetch('/api/status').then(r => {
-            if (!r.ok) throw new Error('Status request failed');
-            return r.json();
-        });
-    }
+    const fetchStatus = () => api('/api/status');
+    // the login's own password is checked there: its 401 is a wrong password
+    const postPassword = (endpoint, pw, headers) => api(endpoint, { body: pw, headers, login: endpoint === '/api/login' });
+    const engineAction = action => api('/api/engine', { body: action });
 
-    function postPassword(endpoint, pw) {
-        return fetch(endpoint, { method: 'POST', body: pw })
-            .catch(() => { throw new Error('Connection error. Please try again.'); })
-            .then(r => {
-                if (r.status === 401 && endpoint !== '/api/login') window.hubAuthRequired();
-                return r.json().catch(() => { throw new Error('Connection error. Please try again.'); });
-            })
-            .then(data => {
-                if (!data.status) throw new Error(data.error || 'Request failed');
-                return data;
-            });
-    }
+    // the status as last read, the stream's updates merged in, for the pages that need the
+    // receiver's port, address or listening servers; `statusRead` the read under way
+    let lastStatus = {};
+    let statusRead = Promise.resolve();
+    hub.status = () => statusRead.then(() => lastStatus);
+    hub.refreshStatus = () => refreshEngineStatus().then(() => lastStatus);
 
-    function engineAction(action) {
-        return fetch('/api/engine', { method: 'POST', body: action })
-            .then(r => r.json().then(body => {
-                if (!r.ok || !body.status) {
-                    if (r.status === 401) window.hubAuthRequired();
-                    throw new Error(body.error || 'Engine ' + action + ' failed');
-                }
-                return body;
-            }));
-    }
-
-    // Central handler for expired sessions (used by config-manager and the
-    // wizard too): ask for the password again, leaving unsaved edits intact.
-    window.hubAuthRequired = function () {
+    // An expired session: ask for the password again, leaving unsaved edits intact.
+    hub.authRequired = () => {
         if (isLoggedIn()) {
             auth = 'login';
             stopEventStream();
@@ -149,12 +126,12 @@ import { createMessageBar } from './message-bar.js';
         openLoginModal();
     };
 
-    // Called by the wizard when it is cancelled while no password is set:
-    // the modal is the backstop, so the requirement cannot be dismissed.
-    window.hubPasswordBackstop = openLoginModal;
+    // the wizard cancelled while no password is set: the modal is the backstop, so the
+    // requirement cannot be dismissed
+    hub.passwordBackstop = openLoginModal;
 
-    // Called by the wizard once its password step has authenticated us.
-    window.hubAuthGranted = function () {
+    // the wizard's password step has signed us in
+    hub.authGranted = () => {
         hasPassword = true;
         if (!isLoggedIn()) auth = 'ok';
         updateBarVisibility();
@@ -210,14 +187,15 @@ import { createMessageBar } from './message-bar.js';
             : 'Authentication required to continue.';
         document.getElementById('login-password').setAttribute('autocomplete', setup ? 'new-password' : 'current-password');
         document.getElementById('login-password2').classList.toggle('hidden', !setup);
+        document.getElementById('login-setup-code').classList.toggle('hidden', auth !== 'setup');
         document.getElementById('login-submit').textContent = setup ? 'Set Password' : 'Sign In';
         document.getElementById('login-cancel').classList.toggle('hidden', setup);
-        document.getElementById('login-overlay').classList.add('open');
+        document.getElementById('login-overlay').classList.remove('hidden');
         setTimeout(() => document.getElementById('login-password').focus(), 50);
     }
 
     function closeLoginModal() {
-        document.getElementById('login-overlay').classList.remove('open');
+        document.getElementById('login-overlay').classList.add('hidden');
         document.getElementById('login-error').classList.add('hidden');
         document.getElementById('login-form').reset();
         pendingAction = null;
@@ -243,7 +221,8 @@ import { createMessageBar } from './message-bar.js';
 
         submitBtn.disabled = true;
         const endpoint = auth === 'setup' ? '/api/setup' : setup ? '/api/password' : '/api/login';
-        postPassword(endpoint, password)
+        const headers = auth === 'setup' ? { 'X-Setup-Code': document.getElementById('login-code').value.trim() } : undefined;
+        postPassword(endpoint, password, headers)
             .then(() => {
                 submitBtn.disabled = false;
                 if (auth === 'setup') {
@@ -390,6 +369,7 @@ import { createMessageBar } from './message-bar.js';
     }
 
     function applyStatus(data) {
+        lastStatus = { ...lastStatus, ...data };
         noteReceivers(data);
         if (data.auth && data.auth !== auth) {
             auth = data.auth;
@@ -445,12 +425,14 @@ import { createMessageBar } from './message-bar.js';
     });
 
     function refreshEngineStatus() {
-        return fetchStatus()
+        const read = fetchStatus()
             .then(applyStatus)
             .catch(() => {
                 setEngineButtonDisabled(false);
                 return null;
             });
+        statusRead = read;
+        return read;
     }
 
     function scheduleStreamRetry() {
@@ -481,23 +463,30 @@ import { createMessageBar } from './message-bar.js';
     }
 
     // after a save the receiver takes the configuration at its next start: the button says so
-    window.hubConfigSaved = function () {
+    hub.configSaved = () => {
         pendingApply = true;
         renderEngineButton();
     };
 
-    function onStartRestartClick() {
+    // the receiver's start, stop or restart, as the button says. `busy` greys the button pressed;
+    // `untilReply`: only until the answer, not the status that follows it
+    function engineClick(busy, untilReply = false) {
         const action = engineButtonMode();
         requireAuth(() => {
-            setEngineButtonDisabled(true);
+            busy(true);
             engineAction(action)
-                .then(() => { pendingApply = false; renderEngineButton(); })
+                .then(() => {
+                    pendingApply = false;
+                    renderEngineButton();
+                    if (untilReply) busy(false);
+                })
                 .catch(e => {
-                    setEngineButtonDisabled(false);
+                    busy(false);
                     if (e && e.message) App.notify('error', e.message);
                 });
         });
     }
+    const onStartRestartClick = () => engineClick(setEngineButtonDisabled);
 
     const CHANNELS = ['A', 'B', 'C', 'D'];
     let channelPrev = null;
@@ -547,9 +536,7 @@ import { createMessageBar } from './message-bar.js';
     function showError(title, message, showRestart = false) {
         const div = showOverlayMessage(`
             <div class="t-center sys-splash-box stack-loose">
-                <svg class="icon-2xl t-warn center-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                </svg>
+                ${icon('alert', 'icon-2xl t-warn center-block')}
                 <h3 data-role="err-title" class="t-strong t-lg"></h3>
                 <p data-role="err-msg" class="t-muted"></p>
                 ${showRestart ? '<button data-role="err-restart" class="btn">Restart</button>' : ''}
@@ -629,7 +616,7 @@ import { createMessageBar } from './message-bar.js';
     bar = createMessageBar({
         settings: document.getElementById('settings-bar'),
         page: document.getElementById('page-bar'),
-        inSettings: () => systemOverlay.classList.contains('open'),
+        inSettings: () => !systemOverlay.classList.contains('hidden'),
         onRestart: onStartRestartClick
     });
     App.notify = (type, message) => bar.show(type, message);
@@ -656,11 +643,9 @@ import { createMessageBar } from './message-bar.js';
     const SYSTEM_GROUP = ['status', 'history', 'log', 'config', 'password', 'about'];
     // the pages the footer saves
     const EDITABLE = ['input', 'stations', 'output', 'services', 'history', 'flow'];
-    const INPUTS_CONTAINER = 'hub-receivers-container';
-    const OUTPUTS_CONTAINER = 'hub-output-container';
 
     let currentTab = null;
-    let placeReturnTab = 'services';
+    let previousTab = 'services';
     const listOf = v => (Array.isArray(v) ? v : []);
     const pane = name => systemBody.querySelector(`[data-pane="${name}"]`);
 
@@ -676,7 +661,7 @@ import { createMessageBar } from './message-bar.js';
     const unloadAll = () => [...loaded.keys()].forEach(unload);
 
     // the pages' editors while they are loaded
-    let inputs = null, stationsEditor = null, outputs = null, services = null, flowPage = null, placeEditor = null;
+    let inputs = null, stationsEditor = null, outputsPage = null, services = null, flowPage = null;
 
     const rail = createRail(document.getElementById('settings-rail'), {
         sections: railSections,
@@ -686,7 +671,7 @@ import { createMessageBar } from './message-bar.js';
             systemModal.dataset.view = 'page';
             return true;
         },
-        shown: () => systemOverlay.classList.contains('open')
+        shown: () => !systemOverlay.classList.contains('hidden')
     });
     // open a page of the rail with the item on it; false when unsaved edits keep the page
     const selectPage = (tab, key) => rail.select(tab, key);
@@ -697,13 +682,13 @@ import { createMessageBar } from './message-bar.js';
     function setLive(part, next) {
         if (sameMap(next, live[part])) return;
         live[part] = next;
-        if (systemOverlay.classList.contains('open')) rail.render();
+        if (!systemOverlay.classList.contains('hidden')) rail.render();
     }
     // the receivers the engine reports are the switched-on inputs of the file it started with, in order
     function noteReceivers(data) {
         const next = new Map();
         if (data.engine === 'running' && Array.isArray(data.receivers)) {
-            const on = listOf(ConfigStore.cached?.receiver).map((r, i) => (r.active !== false ? i : -1)).filter(i => i >= 0);
+            const on = listOf(ConfigStore.cached?.receiver).map((r, i) => (isActive(r) ? i : -1)).filter(i => i >= 0);
             data.receivers.forEach(r => {
                 const i = on[r.index - 1];
                 if (i !== undefined && r.state === 'lost') next.set(i, 'The device stopped delivering: check that it is plugged in and free.');
@@ -713,11 +698,10 @@ import { createMessageBar } from './message-bar.js';
     }
     const OUTPUT_STATS = '/viewer/api/output_stats.json';
     function pollOutputs() {
-        if (document.hidden || !systemOverlay.classList.contains('open')) return;
+        if (document.hidden || !!systemOverlay.classList.contains('hidden')) return;
         if (!engineRunning || !ConfigStore.cached) return setLive('outputs', new Map());
         const outs = collectOutputs(ConfigStore.cached);
-        fetch(OUTPUT_STATS)
-            .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        api(OUTPUT_STATS)
             .then(stat => {
                 const next = new Map();
                 statsByKey(stat, outs).forEach((st, key) => {
@@ -730,15 +714,10 @@ import { createMessageBar } from './message-bar.js';
     }
     setInterval(pollOutputs, 10000);
 
-    function pageMark(key, active, o) {
-        const m = outputMark(key, active, o, ConfigStore.cached);
-        return m.warn ? { tone: 'warn', text: m.warn } : m.bad ? { tone: 'bad', text: m.bad } : null;
-    }
-    const receiverRows = cfg => (inputs?.loaded ? inputs.data : listOf(cfg?.receiver));
     // what is wrong with a switched-on output: its settings first (amber), then what happens now (red)
-    function outputMark(key, active, o, cfg) {
+    function outputMark(key, active, o) {
         if (!active) return {};
-        const warn = outputProblem(o, receiverRows(cfg));
+        const warn = outputProblem(o, inputs?.loaded ? inputs.data : listOf(ConfigStore.cached?.receiver));
         if (warn) return { warn };
         const bad = live.outputs.get(key);
         return bad ? { bad } : {};
@@ -760,9 +739,9 @@ import { createMessageBar } from './message-bar.js';
         const rows = inputs?.loaded ? inputs.data : listOf(cfg.receiver);
         return [
             { tab: 'stations', label: 'Stations', items: stationList(), add: ['Add station', addStation] },
-            { tab: 'input', label: 'Inputs', items: rows.map((r, i) => ({ key: i, label: describeInput(r, i, rows).title, dot: r.active !== false,
-                bad: r.active !== false ? live.inputs.get(i) : undefined })), add: ['Add input', addInput] },
-            { tab: 'output', label: 'Outputs', items: outputItems(cfg), add: ['Add output', () => selectPage('output-add')] },
+            { tab: 'input', label: 'Inputs', items: rows.map((r, i) => ({ key: i, label: describeInput(r, i, rows).title, dot: isActive(r),
+                bad: isActive(r) ? live.inputs.get(i) : undefined })), add: ['Add input', addInput] },
+            { tab: 'output', label: 'Outputs', items: outputRailItems(cfg, outputsPage, { mark: outputMark, screenOpen: rail.tab === 'output' && rail.key === 'screen' }), add: ['Add output', () => selectPage('output-add')] },
             { tab: 'flow', label: 'Flow' },
             { tab: 'services', label: 'Services', items: servicesRailItems(cfg, services, { port, add: addServer }) },
             { tab: 'places', label: 'Places' },
@@ -777,7 +756,7 @@ import { createMessageBar } from './message-bar.js';
         } else if (tab === 'stations') {
             if (key !== undefined) stationsEditor?.select(key);
         } else if (tab === 'output') {
-            return showOutputTarget();
+            return outputsPage ? outputsPage.show(rail.key) : true;
         } else if (tab === 'services') {
             services.show(key);
         }
@@ -799,15 +778,11 @@ import { createMessageBar } from './message-bar.js';
         if (selectPage('services', rail.tab === 'services' ? rail.key : 'main')) services.add();
     }
 
-    function hasUnsaved() {
-        if (currentTab === 'places') return !!placeEditor?.unsaved();
-        return !!App.state.unsaved;
-    }
+    const hasUnsaved = () => !!App.state.unsaved;
     function confirmDiscardUnsaved(verb) {
         if (!hasUnsaved()) return true;
         if (!confirm(`You have unsaved changes. Are you sure you want to ${verb} without saving?`)) return false;
-        if (currentTab === 'places') placeEditor.cancel();
-        else App.setUnsaved(false);
+        App.setUnsaved(false);
         return true;
     }
 
@@ -823,7 +798,7 @@ import { createMessageBar } from './message-bar.js';
             if (currentTab === 'flow') unloadAll(); else unload(currentTab);
         }
 
-        if (tab === 'places' && currentTab && currentTab !== 'places') placeReturnTab = currentTab;
+        if (currentTab) previousTab = currentTab;
         currentTab = tab;
         const group = systemBody.querySelector('#sys-group');
         const grouped = SYSTEM_GROUP.includes(tab);
@@ -835,16 +810,14 @@ import { createMessageBar } from './message-bar.js';
         if (tab === 'input') load(tab, loadInputs);
         else if (tab === 'stations') load(tab, loadStations);
         else if (tab === 'output') load(tab, loadOutputs);
-        else if (tab === 'output-add') renderOutputAdd();
+        else if (tab === 'output-add') renderAddOutput(systemBody.querySelector('#sys-output-add-body'), addOutput);
         else if (tab === 'flow') {
             load(tab, loadFlow);
             flowPage.load();
         } else if (tab === 'services') load(tab, loadServices);
         else if (tab === 'history') load(tab, loadHistory);
-        else if (tab === 'places') {
-            load(tab, loadPlaces);
-            requestAnimationFrame(() => placeEditor?.resize());
-        } else if (tab === 'status') paintStatusCounts();
+        else if (tab === 'places') load(tab, loadPlaces);
+        else if (tab === 'status') paintStatusCounts();
         else if (tab === 'config') loadConfigJson();
         else if (tab === 'log') logConsole.scrollToEnd();
         return true;
@@ -852,39 +825,12 @@ import { createMessageBar } from './message-bar.js';
 
     // ---- the pages
     function loadInputs() {
-        const container = el('div', '', { id: INPUTS_CONTAINER });
-        systemBody.querySelector('#sys-input-body').replaceChildren(container);
-        const m = inputs = createChannelManager({
-            channelType: 'receiver',
-            schema: receiverSchema,
-            containerId: INPUTS_CONTAINER,
-            title: 'Receiver',
-            variant: 'inputs',
-            essentials: INPUT_ESSENTIALS,
-            describe: describeInput,
-            kindOf: item => describeInput(item, 0, [item]).kind,
-            routing: inputRouting,
-            problem: item => {
-                const why = item.active !== false && inputs ? live.inputs.get(inputs.data.indexOf(item)) : null;
-                return why ? { tone: 'bad', text: why } : null;
-            },
-            excludeFor: item => ['zone', ...(SDR_INPUTS.has(item.input) ? [] : ['engines'])],
-            groupOf: inputGroup,
-            docs: item => docLink(inputDocs(item.input)),
-            stationDocs: () => docLink(DOCS.stations),
+        const m = inputs = createInputsPage(systemBody.querySelector('#sys-input-body'), {
+            lost: item => live.inputs.get(m.data.indexOf(item)),
+            stations: stationRecords,
             // a station made here is new to the pages that list the stations
-            stationPicker: (value, onPick, opts = {}) => createStationPicker(value, {
-                stations: stationRecords, onPick,
-                onCreated: () => { unload('stations'); unload('services'); rail.render(); }, ...opts
-            }),
-            openFlow: () => selectPage('flow'),
-            // an input switched on without a device type fails every save, whatever else it holds
-            check: rows => {
-                const i = rows.findIndex(r => r.active !== false && !String(r.input || '').trim() && !String(r.serial || '').trim());
-                if (i < 0) return null;
-                selectPage('input', i);
-                return `${describeInput(rows[i], i, rows).title}: choose its device type, or delete it.`;
-            },
+            stationCreated: () => { unload('stations'); unload('services'); rail.render(); },
+            open: selectPage,
             // the rail follows: a new input, a deleted one, a name typed in
             onChange: mgr => {
                 if (Number.isInteger(mgr.selected)) rail.follow('input', mgr.selected);
@@ -912,7 +858,7 @@ import { createMessageBar } from './message-bar.js';
                 // the inputs and the servers read them afresh
                 unload('input');
                 unload('services');
-                if (rewired) window.hubConfigSaved();
+                if (rewired) hub.configSaved();
                 else App.notify('info', 'The map follows the stations as saved', 5000);
                 rail.render();
             }
@@ -920,161 +866,33 @@ import { createMessageBar } from './message-bar.js';
         return { destroy() { ed.destroy(); if (stationsEditor === ed) stationsEditor = null; } };
     }
 
-    // ---- Outputs: one output to a page, the one the rail picks: "sharing", "screen", or a type and
-    // its place ("udp:0"); "udp:new" while one is being added
-    let outputType = null;
-    let outputFocus = null;
-    let outputHead = null;
-    function outputKeyParts(key) {
-        const [type, idx] = String(key ?? 'sharing').split(':');
-        return { type: type || 'sharing', focus: idx === undefined || idx === 'new' ? null : Number(idx) };
-    }
-    // the outputs one by one: the community map first, then each configured one; the open type's from its editor
-    function outputItems(cfg) {
-        const open = OUTPUT_TYPES.find(o => o.value === outputType);
-        const sharingRow = open?.value === 'sharing' && outputs?.loaded ? outputs.data : cfg;
-        const sharing = open?.value === 'sharing' && outputs?.loaded ? Utils.toBoolean(outputs.data.sharing) : cfg.sharing === true;
-        const items = [{ key: 'sharing', label: 'Community map', dot: sharing, ...outputMark('sharing', sharing, outputOf('sharing', sharingRow), cfg) }];
-        OUTPUT_TYPES.forEach(t => {
-            if (!t.configKey) return;
-            const rows = open === t && outputs?.loaded ? outputs.data : listOf(cfg[t.configKey]);
-            rows.forEach((item, i) => items.push({ key: `${t.value}:${i}`, label: (item.description || '').trim() || channelTitle(t.label, item),
-                dot: item.active !== false, ...outputMark(`${t.value}:${i}`, item.active !== false, outputOf(t.value, item), cfg) }));
-        });
-        const screenOn = cfg.screen !== undefined && !['0', 'none'].includes(String(cfg.screen).toLowerCase());
-        if (screenOn || (rail.tab === 'output' && rail.key === 'screen')) items.push({ key: 'screen', label: 'Screen', dot: screenOn });
-        return items;
-    }
-    function setOutputType(value) {
-        if (value === outputType) return true;
-        if (!confirmDiscardUnsaved('switch')) return false;
-        outputType = value;
-        drawOutput();
-        return true;
-    }
-    // show the output the rail has picked; false when the switch was refused for unsaved edits
-    function showOutputTarget() {
-        const { type, focus } = outputKeyParts(rail.key);
-        outputFocus = focus;
-        if (!outputHead) return true;
-        if (outputType === type) {
-            if (outputs?.loaded) outputs.render();
-            return true;
-        }
-        return setOutputType(type);
-    }
     function loadOutputs() {
-        const host = systemBody.querySelector('#sys-output-body');
-        const title = el('h2', 'st-main__title');
-        const head = el('div', 'st-main__head', {}, el('div', '', {}, title));
-        host.className = 'st st-single';
-        host.replaceChildren(el('div', 'st-main', {}, head, el('div', '', { id: OUTPUTS_CONTAINER })));
-        outputHead = { head, title };
-        outputType = null;
-        const { type, focus } = rail.tab === 'output' ? outputKeyParts(rail.key) : { type: 'sharing', focus: null };
-        outputFocus = focus;
-        setOutputType(type);
-        return {
-            destroy() {
-                outputs?.destroy();
-                outputs = null;
-                outputHead = null;
-                outputType = null;
-            }
-        };
-    }
-    function drawOutput() {
-        const t = OUTPUT_TYPES.find(o => o.value === outputType);
-        if (!t) return;
-        const list = !!t.configKey;
-        const { head, title } = outputHead;
-        // an output of a list carries its own heading
-        head.hidden = list;
-        title.textContent = t.value === 'sharing' ? 'Community map' : t.label;
-        // what Community put in the header (its switch and routing line) leaves with it
-        head.querySelectorAll('.st-head-extra').forEach(e => e.remove());
-        head.classList.remove('st-main__head--page');
-        head.querySelector('.st-doc')?.remove();
-        head.append(docLink(outputDocs(t.value)));
-        // the rail follows the edits: a new row, a name typed in, one switched off
-        const onChange = () => rail.render();
-        outputs?.destroy();
-        if (!list) {
-            outputs = createSimpleConfigManager({
-                schema: t.schema,
-                containerId: OUTPUTS_CONTAINER,
-                variant: t.value === 'sharing' ? 'community' : 'plain',
-                excludeFor: () => ['sharing_zone'],
-                routing: outputRouting,
-                problem: t.value === 'sharing' ? item => pageMark('sharing', Utils.toBoolean(item.sharing), outputOf('sharing', item)) : null,
-                openFlow: () => selectPage('flow'),
-                onChange
-            });
-            return;
-        }
-        outputs = createChannelManager({
-            channelType: t.configKey,
-            schema: t.schema,
-            containerId: OUTPUTS_CONTAINER,
-            title: t.label,
-            kindOf: () => t.label,
-            variant: 'outputs',
-            routing: outputRouting,
-            problem: item => pageMark(`${t.value}:${outputs ? outputs.data.indexOf(item) : -1}`, item.active !== false, outputOf(t.value, item)),
-            // one output on a page of its own, the one the rail picks; its zones are drawn in Flow, and a
-            // database's one station number for every row shows only while set once there are stations
-            focus: () => outputFocus,
-            excludeFor: item => ['zone', ...(t.value === 'db' && stationList().length > 1 && !item.station_id ? ['station_id'] : [])],
-            nameOf: item => channelTitle(t.label, item),
-            docs: () => docLink(outputDocs(t.value)),
-            openFlow: () => selectPage('flow'),
-            // what an output needs to work, up front; the rest in Advanced
-            essentials: new Set(['description', ...t.essentials]),
-            onChange
+        const page = outputsPage = createOutputsPage(systemBody.querySelector('#sys-output-body'), {
+            key: rail.tab === 'output' ? rail.key : undefined,
+            mark: outputMark,
+            stationCount: () => stationList().length,
+            keepEdits: () => confirmDiscardUnsaved('switch'),
+            open: selectPage,
+            follow: key => rail.follow('output', key),
+            // the rail follows the edits: a new row, a name typed in, one switched off
+            changed: () => rail.render()
         });
-    }
-
-    // Add an output: the kinds there are, each with what it is for
-    const ADDABLE = [
-        ['udp', 'UDP', 'NMEA to another program on the network'],
-        ['tcp', 'TCP client', 'Connect out to a server and send'],
-        ['tcp-server', 'TCP server', 'Let programs connect in and read'],
-        ['http', 'HTTP', 'Post batches to a web address'],
-        ['mqtt', 'MQTT', 'Publish to a broker'],
-        ['db', 'Database', 'SQLite, PostgreSQL or CSV files'],
-        ['screen', 'Screen', 'Print the messages in the log']
-    ];
-    function renderOutputAdd() {
-        const grid = el('div', 'st-addtypes', {}, ADDABLE.map(([value, label, desc]) =>
-            el('button', 'st-addtype', { type: 'button', onClick: () => addOutput(value) }, el('strong', '', { text: label }), el('span', '', { text: desc }))));
-        systemBody.querySelector('#sys-output-add-body').replaceChildren(el('div', 'st-main', {},
-            el('div', 'st-main__head', {}, el('div', '', {},
-                el('h2', 'st-main__title', { text: 'Add an output' }),
-                el('p', 'st-main__desc', { text: 'Home Assistant and webhooks are under Services.' }))),
-            grid));
+        return { destroy() { page.destroy(); if (outputsPage === page) outputsPage = null; } };
     }
     // a new output of a kind: a row of its list, on its page, or the page of a kind there is one of
     function addOutput(value) {
-        const t = OUTPUT_TYPES.find(o => o.value === value);
-        if (!t || !t.configKey) return selectPage('output', value);
-        if (!selectPage('output', value + ':new')) return;
-        const m = outputs;
-        m.ready.then(() => {
-            if (!m.loaded || m !== outputs) return;
-            outputFocus = m.data.length;
-            rail.follow('output', `${value}:${outputFocus}`);
-            m.addItem();
-        });
+        if (!outputKind(value)?.list) return selectPage('output', value);
+        if (selectPage('output', value + ':new')) outputsPage.addRow();
     }
 
     function loadFlow() {
         const page = flowPage = createFlowEditor(pane('flow'), {
             open: selectPage,
             receivers: () => (inputs?.loaded ? inputs.data : null),
-            pages: () => ({ inputs: inputs?.loaded ? inputs : null, outputs: outputs?.loaded ? outputs : null, outputType }),
+            pages: () => ({ inputs: inputs?.loaded ? inputs : null, outputs: outputsPage?.form?.loaded ? outputsPage.form : null, outputType: outputsPage?.type }),
             running: () => !!port && engineRunning,
             shown: () => currentTab === 'flow',
-            onSaved: () => window.hubConfigSaved()
+            onSaved: () => hub.configSaved()
         });
         return { destroy() { page.destroy(); if (flowPage === page) flowPage = null; } };
     }
@@ -1100,25 +918,13 @@ import { createMessageBar } from './message-bar.js';
     }
 
     function loadPlaces() {
-        const ed = placeEditor = createPlaceEditor(systemBody.querySelector('#sys-places-body'), {
-            onCancelSetup: () => selectPage(placeReturnTab),
+        const ed = createPlaceEditor(systemBody.querySelector('#sys-places-body'), {
+            onCancelSetup: () => selectPage(previousTab),
             // places switched on: the other pages read the configuration again
             onEnabled: () => [...loaded.keys()].filter(t => t !== 'places').forEach(unload)
         });
-        return { destroy() { ed.destroy(); if (placeEditor === ed) placeEditor = null; } };
+        return ed;
     }
-
-    function highlightJson(text) {
-        const esc = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        return esc.replace(/("(?:\\.|[^"\\])*")(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g, (m, str, colon) => {
-            if (str) return colon ? `<span class="j-key">${str}</span>${colon}` : `<span class="j-str">${str}</span>`;
-            if (m === 'true' || m === 'false') return `<span class="j-bool">${m}</span>`;
-            if (m === 'null') return `<span class="j-null">${m}</span>`;
-            return `<span class="j-num">${m}</span>`;
-        });
-    }
-
-    window.highlightJson = highlightJson;
 
     function loadConfigJson() {
         const pre = systemBody.querySelector('#config-json');
@@ -1143,7 +949,7 @@ import { createMessageBar } from './message-bar.js';
     function openSystem(tab, key) {
         requireAuth(() => {
             buildPanel();
-            systemOverlay.classList.add('open');
+            systemOverlay.classList.remove('hidden');
             bar.render();
             document.getElementById('nav-btn-settings').classList.add('active');
             currentTab = null;
@@ -1158,7 +964,7 @@ import { createMessageBar } from './message-bar.js';
         if (!confirmDiscardUnsaved('close')) return;
         App.setUnsaved(false);
         unloadAll();
-        systemOverlay.classList.remove('open');
+        systemOverlay.classList.add('hidden');
         bar.render();
         if (currentTab) rail.remember();
         currentTab = null;
@@ -1169,7 +975,6 @@ import { createMessageBar } from './message-bar.js';
     function discardSettings() {
         if (hasUnsaved()) {
             if (!confirm('Discard your unsaved changes?')) return;
-            if (currentTab === 'places') placeEditor.cancel();
             App.setUnsaved(false);
         }
         closeSystem();
@@ -1204,6 +1009,8 @@ import { createMessageBar } from './message-bar.js';
         const licenseLogo = systemBody.querySelector('#license-logo');
         if (communityLogo && licenseLogo) licenseLogo.innerHTML = communityLogo.outerHTML;
 
+        currentPassword = systemBody.querySelector('#current-password');
+        if (!hasPassword) currentPassword.remove();
         systemBody.querySelector('#password-form').addEventListener('submit', changePassword);
         systemBody.querySelector('#hub-btn-wizard').addEventListener('click', () => {
             closeSystem();
@@ -1219,16 +1026,7 @@ import { createMessageBar } from './message-bar.js';
     function wireStatusPane() {
         systemBody.querySelector('[data-open-log]').addEventListener('click', () => selectPage('log'));
         const btn = systemBody.querySelector('#hub-engine-btn');
-        btn.addEventListener('click', () => {
-            const action = engineButtonMode();
-            requireAuth(() => {
-                btn.disabled = true;
-                engineAction(action)
-                    .then(() => { pendingApply = false; renderEngineButton(); })
-                    .catch(e => { if (e && e.message) App.notify('error', e.message); })
-                    .finally(() => { btn.disabled = false; });
-            });
-        });
+        btn.addEventListener('click', () => engineClick(d => { btn.disabled = d; }, true));
         systemBody.querySelector('[data-copy-sysinfo]').addEventListener('click', e => {
             const b = e.currentTarget;
             const lines = [...systemBody.querySelectorAll('#hub-sysinfo > div')]
@@ -1242,6 +1040,8 @@ import { createMessageBar } from './message-bar.js';
         paintStatusCounts();
     }
 
+    let currentPassword = null;
+
     function changePassword(e) {
         e.preventDefault();
         const p1 = document.getElementById('new-password').value;
@@ -1250,17 +1050,20 @@ import { createMessageBar } from './message-bar.js';
             App.notify('error', 'Passwords do not match');
             return;
         }
-        postPassword('/api/password', p1)
+        // a password in place is changed with the current one first; a 401 then says that one is wrong
+        const current = hasPassword ? currentPassword.value + '\n' : '';
+        api('/api/password', { body: current + p1, login: hasPassword })
             .then(() => {
                 hasPassword = true;
                 App.notify('success', 'Password changed');
                 document.getElementById('password-form').reset();
+                document.getElementById('password-form').prepend(currentPassword);
             })
             .catch(err => App.notify('error', err.message || 'Failed to change password'));
     }
 
     function logout() {
-        fetch('/api/logout', { method: 'POST' }).then(() => window.location.reload());
+        api('/api/logout', { method: 'POST' }).finally(() => window.location.reload());
     }
 
     function init() {
@@ -1274,20 +1077,13 @@ import { createMessageBar } from './message-bar.js';
         document.getElementById('bar-collapse').addEventListener('click', () => setBarCollapsed(true));
         document.getElementById('bar-restore').addEventListener('click', () => setBarCollapsed(false));
         document.getElementById('system-close').addEventListener('click', closeSystem);
-        const headerSave = document.getElementById('system-save');
-        headerSave.addEventListener('click', async () => {
-            headerSave.disabled = true;
-            try { if (currentTab === 'places') await placeEditor.save(); else await App.saveDirty(); } finally { headerSave.disabled = false; }
-        });
         systemOverlay.addEventListener('click', e => {
             if (e.target === systemOverlay) closeSystem();
         });
         document.addEventListener('keydown', e => {
             // an open list or menu on a page closes itself first, and keeps the key
-            if (e.key === 'Escape' && systemOverlay.classList.contains('open') &&
-                !document.getElementById('login-overlay').classList.contains('open') &&
-                !document.querySelector('.modal-overlay:not(.hidden)') &&
-                !document.querySelector('#wizard-overlay.open')) closeSystem();
+            if (e.key === 'Escape' && !systemOverlay.classList.contains('hidden') &&
+                !document.querySelector('.modal-overlay:not(.hidden):not(#system-overlay)')) closeSystem();
         });
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
@@ -1304,8 +1100,9 @@ import { createMessageBar } from './message-bar.js';
             if (reloadUntil && Date.now() > reloadUntil) restartTimedOut();
         }, 1000);
 
-        fetchStatus()
+        const first = fetchStatus()
             .then(data => {
+                lastStatus = data;
                 auth = data.auth;
                 hasPassword = !!data.has_password || auth === 'login';
                 port = data.viewer || 0;
@@ -1331,6 +1128,7 @@ import { createMessageBar } from './message-bar.js';
                 showError('Connection Error', 'Cannot reach the control server.');
                 scheduleStreamRetry();
             });
+        statusRead = first.catch(() => {});
     }
 
     document.addEventListener('DOMContentLoaded', init);

@@ -255,7 +255,7 @@ namespace Device
 		}
 	}
 
-	Setting &RAWFile::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &RAWFile::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -272,7 +272,7 @@ namespace Device
 			lossless = Util::Parse::Switch(arg);
 			break;
 		default:
-			Device::SetKey(key, arg);
+			Device::applyKey(key, arg);
 			break;
 		}
 		return *this;

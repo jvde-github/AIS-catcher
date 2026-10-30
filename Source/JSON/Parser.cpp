@@ -15,6 +15,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <cctype>
 #include <string>
 #include <cstring>
 #include <cmath>
@@ -50,19 +51,58 @@ namespace JSON
 
 	// Parser -- Build JSON object from String
 
-	[[noreturn]] void Parser::error(const std::string &err, int pos)
+	// Says where, as a person finds it: the line of a text with several, else the
+	// column, and the stretch of that line around the place, without indentation
+	// a line naming a secret is not repeated in a message: messages reach the log
+	static bool namesSecret(std::string line)
+	{
+		for (char &c : line)
+			c = (char)std::tolower((unsigned char)c);
+		for (const char *word : {"pass", "pwd", "salt", "secret", "key", "conn_str", "uuid", "url"})
+			if (line.find(word) != std::string::npos)
+				return true;
+		return false;
+	}
+
+	[[noreturn]] void Parser::error(const std::string &err, int pos, bool syntax)
 	{
 		const int char_limit = 40;
-		int from = MAX(pos - char_limit, 0);
-		int to = MIN(pos + char_limit, (int)(pend - p_start));
+		const int len = (int)(pend - p_start);
+		pos = MAX(0, MIN(pos, len));
 
-		std::string context(p_start + from, p_start + to);
+		int line = 1, line_start = 0;
+		for (int i = 0; i < pos; i++)
+			if (p_start[i] == '\n')
+			{
+				line++;
+				line_start = i + 1;
+			}
+		int line_end = pos;
+		while (line_end < len && p_start[line_end] != '\n' && p_start[line_end] != '\r')
+			line_end++;
+		const bool lines = line > 1 || line_end < len;
+
+		const int from = MAX(line_start, pos - char_limit);
+		const int to = MIN(line_end, pos + char_limit);
+		std::string context;
+		if (!namesSecret(std::string(p_start + line_start, p_start + line_end)))
+			context.assign(p_start + from, p_start + to);
 		for (char &c : context)
-			if (c == '\t' || c == '\r' || c == '\n')
+			if (c == '\t')
 				c = ' ';
+		const std::size_t first = context.find_first_not_of(' ');
+		context = first == std::string::npos ? "" : context.substr(first, context.find_last_not_of(' ') - first + 1);
+		if (!context.empty())
+		{
+			if (from > line_start && first == 0)
+				context = "..." + context;
+			if (to < line_end)
+				context += "...";
+		}
 
-		throw std::runtime_error("syntax error in JSON: " + err +
-								 " at offset " + std::to_string(pos) + " near [" + context + "]");
+		std::string where = lines ? "line " + std::to_string(line) : "column " + std::to_string(pos - line_start + 1);
+		throw std::runtime_error(where + ": " + (syntax ? "syntax error, " : "") + err +
+								 (context.empty() ? "" : ", near: " + context));
 	}
 
 	[[noreturn]] void Parser::error(const char *err, int pos)
@@ -381,9 +421,9 @@ namespace JSON
 
 	// Parsing functions
 
-	[[noreturn]] void Parser::error_parser(const std::string &err)
+	[[noreturn]] void Parser::error_parser(const std::string &err, bool syntax)
 	{
-		error(err, (int)(tokenStart - p_start));
+		error(err, (int)(tokenStart - p_start), syntax);
 	}
 
 	std::string Parser::tokenString() const
@@ -424,7 +464,7 @@ namespace JSON
 		case TokenType::LeftBrace:
 		{
 			if (++depth > max_depth)
-				error_parser("JSON nested deeper than " + std::to_string(max_depth) + " levels");
+				error_parser("nested deeper than " + std::to_string(max_depth) + " levels", false);
 			next();
 			while (is_match(TokenType::String))
 			{
@@ -437,14 +477,14 @@ namespace JSON
 					break;
 				next();
 			}
-			must_match(TokenType::RightBrace, "expected '}'");
+			must_match(TokenType::RightBrace, "expected ',' or '}'");
 			depth--;
 			break;
 		}
 		case TokenType::LeftBracket:
 		{
 			if (++depth > max_depth)
-				error_parser("JSON nested deeper than " + std::to_string(max_depth) + " levels");
+				error_parser("nested deeper than " + std::to_string(max_depth) + " levels", false);
 			next();
 			while (!is_match(TokenType::RightBracket))
 			{
@@ -454,7 +494,7 @@ namespace JSON
 					break;
 				next();
 			}
-			must_match(TokenType::RightBracket, "expected ']'");
+			must_match(TokenType::RightBracket, "expected ',' or ']'");
 			depth--;
 			break;
 		}
@@ -579,7 +619,7 @@ namespace JSON
 		case TokenType::LeftBrace:
 		{
 			if (++depth > max_depth)
-				error_parser("JSON nested deeper than " + std::to_string(max_depth) + " levels");
+				error_parser("nested deeper than " + std::to_string(max_depth) + " levels", false);
 			JSON *child = pool->addObject();
 			parse_into_core(child, pool);
 			v.setObject(child);
@@ -601,7 +641,7 @@ namespace JSON
 		case TokenType::LeftBracket:
 		{
 			if (++depth > max_depth)
-				error_parser("JSON nested deeper than " + std::to_string(max_depth) + " levels");
+				error_parser("nested deeper than " + std::to_string(max_depth) + " levels", false);
 			std::vector<Value> *arr = pool->addArray();
 
 			next();
@@ -617,7 +657,7 @@ namespace JSON
 					error_parser("comma cannot be followed by ']'");
 			}
 
-			must_match(TokenType::RightBracket, "expected ']'");
+			must_match(TokenType::RightBracket, "expected ',' or ']'");
 			v.setArray(arr);
 			depth--;
 		}
@@ -644,9 +684,9 @@ namespace JSON
 			if (preserveUnknownKeys && (idx < 0 || tokenString() != AIS::KeyMap[idx][dict].p))
 				idx = pool->extraKey(tokenString());
 			if (idx < 0 && !skipUnknownKeys && !preserveUnknownKeys)
-				error_parser("\"" + tokenString() + "\" is not an allowed \"key\"");
+				error_parser("unknown key \"" + tokenString() + "\"", false);
 			if (preserveUnknownKeys && (*o)[idx])
-				error_parser("duplicate object key");
+				error_parser("duplicate key \"" + tokenString() + "\"", false);
 
 			next();
 			must_match(TokenType::Colon, "expected \':\'");
@@ -666,7 +706,7 @@ namespace JSON
 				error_parser("comma needs to be followed by property");
 		}
 
-		must_match(TokenType::RightBrace, "expected '}'");
+		must_match(TokenType::RightBrace, "expected ',' or '}'");
 	}
 
 	Document Parser::parse(const std::string &j)

@@ -2,37 +2,33 @@
 // pages: the overview; the main server (beside the control panel) and the other servers; the API
 // to try; Home Assistant; webhooks.
 
-import { el } from './dom.js';
-import { ConfigStore, createSimpleConfigManager, createChannelManager } from './config-manager.js';
+import { el, isActive } from './dom.js';
+import { ConfigStore } from './config-store.js';
+import { ConfigForm, plainLayout, rowsLayout } from './config-form.js';
 import { createServicesEditor, renderShows, servedKeys, readersOf, serverName, SERVICE_COLUMNS } from './services-editor.js';
 import { renderApiTester } from './api-tester.js';
-import { DOCS, docLink, outputDocs } from './docs.js';
-import { webviewerSchema, webhookSchema, mqttStateSchema } from './schema.js';
+import { DOCS, docLink } from './docs.js';
+import { webhookSchema, mqttStateSchema } from './schema.js';
 
 // the map's settings on a server that serves it, named by what a visitor sees; the page's own
 // come first, what only an owner looks for (links, tiles, plugins) folds away under More
-const MAP_LABELS = {
-    station: ['Title', 'Above the map; the only station\'s name when empty'],
-    station_link: ['Title links to', 'A page about the station, opened from the title'],
-    realtime: ['Realtime tab', 'Messages as they arrive'],
-    replay: ['Replay', 'Scrub back through recent tracks on the map'],
-    msg: ['Last message on the ship card', 'The vessel\'s latest NMEA'],
-    decoder: ['Decoder tab', 'Decode a pasted NMEA sentence'],
-    log: ['Log tab', 'What the station is doing'],
-    webcontrol_http: ['Control panel link', 'Opened from the map\'s menu'],
-    mbtiles: ['MBTiles maps', 'Base maps from .mbtiles files, one per line'],
-    mboverlay: ['MBTiles overlays', 'Overlays from .mbtiles files, one per line'],
-    fstiles: ['Tile folder maps', 'Base maps from folders of tiles, one per line'],
-    fsoverlay: ['Tile folder overlays', 'Overlays from folders of tiles, one per line'],
-    plugin_dir: ['Plugin folder', 'Plugins the map loads'],
-    context: ['Settings name', 'Keeps a visitor\'s settings for this map apart from another map\'s']
-};
-const MAP_SECTIONS = { station: 'Map page', station_link: 'Map page', realtime: 'Map page', replay: 'Map page', msg: 'Map page', decoder: 'Map page', log: 'Map page',
-    webcontrol_http: 'Links', mbtiles: 'Map tiles', mboverlay: 'Map tiles', fstiles: 'Map tiles', fsoverlay: 'Map tiles', plugin_dir: 'Plugins', context: 'Plugins' };
-const MAP_FIELDS = Object.keys(MAP_SECTIONS).map(name => {
-    const l = MAP_LABELS[name];
-    return { field: { ...webviewerSchema[name], ...(l ? { label: l[0], tooltip: l[1] } : {}) }, section: MAP_SECTIONS[name] };
-});
+const mapField = (section, name, type, label, tooltip, more) => ({ section, field: { name, type, label, tooltip, ...more } });
+const MAP_FIELDS = [
+    mapField('Map page', 'station', 'text', 'Title', 'Above the map; the only station\'s name when empty'),
+    mapField('Map page', 'station_link', 'text', 'Title links to', 'A page about the station, opened from the title', { placeholder: 'https://...' }),
+    mapField('Map page', 'realtime', 'toggle', 'Realtime tab', 'Messages as they arrive', { defaultValue: false }),
+    mapField('Map page', 'replay', 'toggle', 'Replay', 'Scrub back through recent tracks on the map', { defaultValue: true }),
+    mapField('Map page', 'msg', 'toggle', 'Last message on the ship card', 'The vessel\'s latest NMEA', { defaultValue: false }),
+    mapField('Map page', 'decoder', 'toggle', 'Decoder tab', 'Decode a pasted NMEA sentence', { defaultValue: false }),
+    mapField('Map page', 'log', 'toggle', 'Log tab', 'What the station is doing', { defaultValue: false }),
+    mapField('Links', 'webcontrol_http', 'text', 'Control panel link', 'Opened from the map\'s menu', { defaultValue: '', placeholder: 'http://127.0.0.1:8110' }),
+    mapField('Map tiles', 'mbtiles', 'list', 'MBTiles maps', 'Base maps from .mbtiles files, one per line', { placeholder: '/path/to/map.mbtiles' }),
+    mapField('Map tiles', 'mboverlay', 'list', 'MBTiles overlays', 'Overlays from .mbtiles files, one per line', { placeholder: '/path/to/overlay.mbtiles' }),
+    mapField('Map tiles', 'fstiles', 'list', 'Tile folder maps', 'Base maps from folders of tiles, one per line', { placeholder: '/path/to/tiles' }),
+    mapField('Map tiles', 'fsoverlay', 'list', 'Tile folder overlays', 'Overlays from folders of tiles, one per line', { placeholder: '/path/to/overlay' }),
+    mapField('Plugins', 'plugin_dir', 'text', 'Plugin folder', 'Plugins the map loads', { placeholder: '/path/to/plugins' }),
+    mapField('Plugins', 'context', 'text', 'Settings name', 'Keeps a visitor\'s settings for this map apart from another map\'s', { defaultValue: 'settings' })
+];
 
 const HA_CONTAINER = 'svc-ha-container';
 const HOOKS_CONTAINER = 'svc-webhooks-container';
@@ -71,7 +67,7 @@ export function servicesRailItems(cfg, section, { port, add }) {
     const hooks = live.hooks || cfg.webhooks;
     return [{ key: 'overview', label: 'Overview' },
         ...withMain(live.servers || listOf(cfg.services)).map((sv, i) => ({ key: sv.main ? 'main' : 'srv' + i, label: serverName(sv) + (sv.main && port ? ' · ' + port : ''),
-            dot: sv.main ? undefined : sv.active !== false })),
+            dot: sv.main ? undefined : isActive(sv) })),
         { key: 'add', label: '+ Add server', onClick: add },
         { key: 'ha', label: 'Home Assistant', dot: !!(ha && ha.url) },
         { key: 'webhooks', label: 'Webhooks' + (Array.isArray(hooks) && hooks.length ? ' · ' + hooks.length : '') }];
@@ -145,15 +141,15 @@ export function createServicesSection(pane, { select, follow, changed, stations,
     function testerPort(sv) {
         const port = sv.main ? editor.state.viewerPort : Number(sv.port);
         const serve = servedKeys(sv, !!sv.main);
-        return port && sv.active !== false && serve.some(k => TRIED.includes(k)) ? port : null;
+        return port && isActive(sv) && serve.some(k => TRIED.includes(k)) ? port : null;
     }
 
     // the servers as the API tester offers them, with what each serves
     function testerServers() {
         const st = editor.state;
         return st.list.map(sv => (sv.main
-            ? { label: `Main · ${st.viewerPort}`, port: st.viewerPort, bind: st.bind, serve: servedKeys(sv, true) }
-            : { label: serverName(sv), port: Number(sv.port), bind: sv.bind, serve: servedKeys(sv) })).filter(s => s.port);
+            ? { label: `Main · ${st.viewerPort}`, port: st.viewerPort, bind: st.bind, tls: !!sv.tls, serve: servedKeys(sv, true) }
+            : { label: serverName(sv), port: Number(sv.port), bind: sv.bind, tls: !!sv.tls, serve: servedKeys(sv) })).filter(s => s.port);
     }
 
     // ---- the overview: every server against every service, who may read it and what it shows
@@ -167,9 +163,9 @@ export function createServicesSection(pane, { select, follow, changed, stations,
             const choices = stations();
             const servers = loaded ? editor.state.list : withMain(listOf(cfg.services));
             const rows = servers.map((sv, i) => ({ ...(sv.main
-                ? { key: 'main', name: 'Main', addr: `${bind}:${port() || '–'}`, served: servedKeys(sv, true), readers: readersOf(sv, bind), view: sv.view, ids: sv.station_id }
-                : { key: 'srv' + i, name: serverName(sv), addr: `${sv.bind || '127.0.0.1'}:${sv.port ?? '–'}`,
-                    served: sv.active === false ? [] : servedKeys(sv), readers: sv.active === false ? 'Switched off' : readersOf(sv, sv.bind || '127.0.0.1'), view: sv.view, ids: sv.station_id }),
+                ? { key: 'main', name: 'Main', addr: `${bind}:${port() || '–'}${sv.tls ? ' · HTTPS' : ''}`, served: servedKeys(sv, true), readers: readersOf(sv, bind), view: sv.view, ids: sv.station_id }
+                : { key: 'srv' + i, name: serverName(sv), addr: `${sv.bind || '127.0.0.1'}:${sv.port ?? '–'}${sv.tls ? ' · HTTPS' : ''}`,
+                    served: !isActive(sv) ? [] : servedKeys(sv), readers: !isActive(sv) ? 'Switched off' : readersOf(sv, sv.bind || '127.0.0.1'), view: sv.view, ids: sv.station_id }),
                 tryPort: loaded ? testerPort(sv) : null }));
             // what each shows says something once there are stations to choose from, or a view set in the file
             const showsCol = choices.length >= 2 || rows.some(r => (r.view && Object.keys(r.view).length) || r.ids !== undefined);
@@ -200,15 +196,15 @@ export function createServicesSection(pane, { select, follow, changed, stations,
 
     // ---- Home Assistant and webhooks: what publishes the tracker's state
     function loadHomeAssistant() {
-        const main = servicePage(haHost, 'Home Assistant', 'Vessels and stations as MQTT entities.', outputDocs('mqtt_state'));
+        const main = servicePage(haHost, 'Home Assistant', 'Vessels and stations as MQTT entities.', DOCS.homeAssistant);
         main.append(el('div', '', { id: HA_CONTAINER }));
-        return createSimpleConfigManager({ schema: mqttStateSchema, channelType: 'mqtt_state', containerId: HA_CONTAINER, variant: 'plain', onChange: changed });
+        return new ConfigForm({ schema: mqttStateSchema, section: 'mqtt_state', containerId: HA_CONTAINER, layout: plainLayout, onChange: changed });
     }
     function loadWebhooks() {
-        const main = servicePage(hooksHost, 'Webhooks', 'Events posted as they happen.', outputDocs('webhooks'),
+        const main = servicePage(hooksHost, 'Webhooks', 'Events posted as they happen.', DOCS.webhooks,
             el('button', 'st-btn st-btn--sm', { type: 'button', text: '+ Add webhook', onClick: () => manager.addItem() }));
         main.append(el('div', '', { id: HOOKS_CONTAINER }));
-        const manager = createChannelManager({ channelType: 'webhooks', schema: webhookSchema, containerId: HOOKS_CONTAINER, title: 'Webhook', variant: 'outputs',
+        const manager = new ConfigForm({ section: 'webhooks', list: true, schema: webhookSchema, containerId: HOOKS_CONTAINER, title: 'Webhook', layout: rowsLayout,
             essentials: new Set(['description', 'url', 'events']),
             nameOf: item => item.url || 'New webhook',
             extra: (node, item) => renderShows(node, item, { stations: stations(), touched: () => manager.markDirty(), rerender: () => manager.render() }),

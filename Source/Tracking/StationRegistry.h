@@ -39,6 +39,8 @@ class StationRegistry
 public:
 	// a station stays until withdrawn; a row's ttl only keeps a client from ageing it out
 	enum { KEEP_S = 315360000 };
+	// what the control feed may add: far above any network's count, and each record short
+	static const std::size_t MAX_FEED_STATIONS = 16384, MAX_FEED_NAME = 128, MAX_FEED_COUNTRY = 8, MAX_TOMBSTONES = 1024;
 
 	// how a station is doing, as the host that runs it judges: unknown where the host cannot
 	// tell, receiving, quiet (nothing heard for a while), or down (its receivers are lost)
@@ -75,8 +77,8 @@ public:
 			switch (p.Key())
 			{
 			case AIS::KEY_ID: s.id = (int)v.getInt(); break;
-			case AIS::KEY_NAME: s.name = v.getString(); break;
-			case AIS::KEY_COUNTRY: s.country = v.getString(); break;
+			case AIS::KEY_NAME: s.name = v.getString().substr(0, MAX_FEED_NAME); break;
+			case AIS::KEY_COUNTRY: s.country = v.getString().substr(0, MAX_FEED_COUNTRY); break;
 			case AIS::KEY_LAT: s.lat = (FLOAT32)v.getFloat(LAT_UNDEFINED); break;
 			case AIS::KEY_LON: s.lon = (FLOAT32)v.getFloat(LON_UNDEFINED); break;
 			case AIS::KEY_MMSI: s.mmsi = (uint32_t)v.getInt(); break;
@@ -87,6 +89,9 @@ public:
 			default: break;
 			}
 		}
+		// what anyone on the feed can say stays bounded; the configuration's stations do not count
+		if (!gone && stations.size() >= MAX_FEED_STATIONS && !stations.count(s.id))
+			return;
 		put(s, gone, next_seq);
 	}
 
@@ -108,6 +113,8 @@ public:
 			stations.erase(it);
 			order.erase(std::remove(order.begin(), order.end(), s.id), order.end());
 			tombstones.push_back(std::make_pair(s.id, ++next_seq));
+			if (tombstones.size() > MAX_TOMBSTONES)
+				tombstones.erase(tombstones.begin(), tombstones.begin() + MAX_TOMBSTONES / 4);
 			return;
 		}
 		if (it != stations.end())

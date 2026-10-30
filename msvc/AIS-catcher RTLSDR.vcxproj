@@ -24,7 +24,9 @@
     <ClCompile Include="..\Source\Control\ControlServer.cpp" />
     <ClCompile Include="..\Source\Application\DeviceManager.cpp" />
     <ClCompile Include="..\Source\Application\Engine.cpp" />
+    <ClCompile Include="..\Source\Application\Stations.cpp" />
     <ClCompile Include="..\Source\Application\CommandLine.cpp" />
+    <ClCompile Include="..\Source\Application\Usage.cpp" />
     <ClCompile Include="..\Source\Application\Main.cpp" />
     <ClCompile Include="..\Source\Control\ManagedMain.cpp" />
     <ClCompile Include="..\Source\Web\MapTiles.cpp" />
@@ -78,7 +80,7 @@
     <ClCompile Include="..\Source\Utilities\Helper.cpp" />
     <ClCompile Include="..\Source\Utilities\TemplateString.cpp" />
     <ClCompile Include="..\Source\Utilities\StreamHelpers.cpp" />
-    <ClCompile Include="..\Source\Application\SiteKeys.cpp" />
+    <ClCompile Include="..\Source\Site\SiteConfig.cpp" />
     <ClCompile Include="..\Source\DBMS\CSV.cpp" />
     <ClCompile Include="..\Source\DBMS\DatabaseOutput.cpp" />
     <ClCompile Include="..\Source\DBMS\SQLite.cpp" />
@@ -112,6 +114,7 @@
     <ClInclude Include="..\Source\Application\CommandLine.h" />
     <ClInclude Include="..\Source\Control\ManagedMain.h" />
     <ClInclude Include="..\Source\Application\Engine.h" />
+    <ClInclude Include="..\Source\Application\Stations.h" />
     <ClInclude Include="..\Source\Application\DeviceManager.h" />
     <ClInclude Include="..\Source\Web\WebDB.h" />
     <ClInclude Include="..\Source\Library\Logger.h" />
@@ -185,7 +188,6 @@
     <ClInclude Include="..\Source\Utilities\SHA256.h" />
     <ClInclude Include="..\Source\Library\SWAR.h" />
     <ClInclude Include="..\Source\IO\OutputStats.h" />
-    <ClInclude Include="..\Source\Application\SiteKeys.h" />
     <ClInclude Include="..\Source\Site\Site.h" />
     <ClInclude Include="..\Source\Site\SiteConfig.h" />
     <ClInclude Include="..\Source\Services\ApiV1.h" />
@@ -221,7 +223,7 @@
     <ClInclude Include="..\Source\Tracking\SlotTable.h" />
     <ClInclude Include="..\Source\Tracking\StaticStore.h" />
     <ClInclude Include="..\Source\Tracking\StationRegistry.h" />
-    <ClInclude Include="..\Source\Tracking\SystemFacts.h" />
+    <ClInclude Include="..\Source\Site\SystemFacts.h" />
     <ClInclude Include="..\Source\Tracking\Tracker.h" />
     <ClInclude Include="..\Source\Tracking\TrackingConfig.h" />
     <ClInclude Include="..\Source\Tracking\ViewFilter.h" />
@@ -282,25 +284,25 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;../Source/Site;../Source/Services;../Source/Delivery;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;../Source/Site;../Source/Services;../Source/Delivery;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;../Source/Site;../Source/Services;../Source/Delivery;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;../Source/Site;../Source/Services;../Source/Delivery;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>

@@ -1,6 +1,6 @@
 // The plugin API: window.AISCatcher, and the same names as bare globals for
 // plugins written before it. Plugins come from custom/plugins.js, which
-// defines window.loadPlugins; the entry runs it once the features are bound.
+// defines window.loadPlugins; script.js runs it once the features are bound.
 
 import { settings } from './core/state.js';
 import { config } from './core/config.js';
@@ -13,10 +13,9 @@ import {
 } from './map.js';
 import { setShipFilter, setRefreshInterval } from './data.js';
 import { showDialog, closeDialog, showNotification } from './dialog.js';
-import { showTargetcard } from './features/targetcard/card.js';
+import { showTargetcard, addItem } from './features/targetcard/card.js';
 import { showContextMenu, context_mmsi, context_type } from './features/contextmenu/contextmenu.js';
 import { openFocus } from './features/follow/follow.js';
-import * as targetcard from './features/targetcard/targetcard.js';
 
 // Plugin contract version. Bumped when the plugin-facing API changes shape.
 // Plugins guard with `if (typeof AISCatcher !== 'undefined' &&
@@ -37,10 +36,10 @@ export function installPluginApi() {
     window.AISCatcher = {
         PLUGIN_API_VERSION,
 
-        addTargetcardItem: targetcard.addItem,
+        addTargetcardItem: addItem,
         ACTIONS,
 
-        addShipcardItem: targetcard.addItem,
+        addShipcardItem: addItem,
         showShipcard: showTargetcard,
 
         showDialog,

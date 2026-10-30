@@ -429,7 +429,7 @@ namespace Device
 			dump_stream.close();
 	}
 
-	Setting &SerialPort::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &SerialPort::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -481,7 +481,7 @@ namespace Device
 			break;
 		}
 		default:
-			Device::SetKey(key, arg);
+			Device::applyKey(key, arg);
 			break;
 		}
 		return *this;

@@ -85,7 +85,7 @@ namespace Device
 		}
 
 		// Settings
-		Setting &SetKey(AIS::Keys key, const std::string &arg);
+		Setting &applyKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 
 		std::string getProduct() { return "RTLTCP"; }

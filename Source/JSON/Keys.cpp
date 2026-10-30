@@ -51,6 +51,11 @@ namespace AIS
 		return true;
 	}
 
+	std::string settingName(int key)
+	{
+		return key >= 0 && key < KEY_COUNT ? std::string(KeyMap[key][JSON_DICT_SETTING].p) : "?";
+	}
+
 	const std::vector<std::string> LookupTable_aid_types = {
 		"Default, Type of Aid to Navigation not specified",
 		"Reference point",

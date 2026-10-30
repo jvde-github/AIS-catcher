@@ -20,8 +20,10 @@ import Fill from 'ol/style/Fill.js';
 import Stroke from 'ol/style/Stroke.js';
 import {fromLonLat, toLonLat} from 'ol/proj.js';
 import { el, moreMenu } from './dom.js';
-import { App, ConfigStore, registerEditor } from './config-manager.js';
+import { App, ConfigStore, registerEditor } from './config-store.js';
+import { api } from './api.js';
 import { addBasemap } from './basemap.js';
+import { icon } from './icons.js';
 import { DOCS, docLink } from './docs.js';
 import { num, validPos, isDefaultStation as isDefault, stationName } from './stations.js';
 
@@ -45,24 +47,18 @@ export function modeOf(s) {
 }
 
 // The settings as the configuration keeps them
-const validMMSI = v => Number.isInteger(num(v)) && num(v) >= 1 && num(v) <= 999999999;
 function clean(s) {
-    const out = { id: Number(s.id) };
+    const out = {};
+    if (Number.isFinite(num(s.id))) out.id = num(s.id);
     if (String(s.name || '').trim()) out.name = String(s.name).trim();
-    if (hasPos(s)) { out.lat = num(s.lat); out.lon = num(s.lon); }
+    if (Number.isFinite(num(s.lat))) out.lat = num(s.lat);
+    if (Number.isFinite(num(s.lon))) out.lon = num(s.lon);
     if (Number.isFinite(num(s.alt))) out.alt = num(s.alt);
-    if (validMMSI(s.mmsi)) out.mmsi = Number(s.mmsi);
+    if (Number.isFinite(num(s.mmsi))) out.mmsi = num(s.mmsi);
     if (s.gps === true) out.gps = true;
     out.share_loc = !!s.share_loc;
     return out;
 }
-
-const SVG = {
-    pin: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>',
-    here: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22"/></svg>',
-    zoomIn: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 6v12M6 12h12"/></svg>',
-    zoomOut: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg>'
-};
 
 export function createStationsEditor(host, { describeInput, onSaved, onList, initial } = {}) {
     const state = { stations: [], receivers: [], selected: 0, live: {}, deleted: new Set() };
@@ -114,14 +110,14 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
 
     // ---- the chosen station
     function field(label, input, cls) {
-        return el('label', 'field st-stations__field' + (cls ? ' ' + cls : ''), {}, el('span', 'field-label', { text: label }), input);
+        return el('label', 'st-field st-stations__field' + (cls ? ' ' + cls : ''), {}, el('span', 'st-label', { text: label }), input);
     }
 
     // text that takes a comma for the point too: a number field shows the browser's own decimals,
     // 51,98 where the map and the configuration say 51.98
     function numberInput(s, key, attrs, onSet) {
         const { min, max, step } = attrs || {};
-        return el('input', 'input', {
+        return el('input', 'st-input', {
             type: 'text', inputMode: step === 1 ? 'numeric' : 'decimal', value: s[key] ?? '', spellcheck: 'false', autocomplete: 'off',
             onInput: e => {
                 const v = e.target.value.trim().replace(',', '.');
@@ -152,19 +148,19 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
             el('div', 'st-main__actions', {}, docLink(DOCS.stations), isDefault(s) ? null :
                 moreMenu('More actions', [['Delete…', () => remove(state.selected), true]]))));
 
-        const name = el('input', 'input', {
+        const name = el('input', 'st-input', {
             type: 'text', value: s.name || '', placeholder: 'e.g. Harbour mast', spellcheck: 'false',
             onInput: e => { s.name = e.target.value; title.textContent = stationName(s); touched(); listChanged(); }
         });
         // station 0 keeps its number
         if (isDefault(s))
-            main.append(el('p', 'field-desc st-stations__ownnote', { text: several() ? DEFAULT_NOTE : OWN_NOTE }),
+            main.append(el('p', 'st-help st-stations__ownnote', { text: several() ? DEFAULT_NOTE : OWN_NOTE }),
                 el('div', 'st-stations__row', {}, field('Name', name, 'st-stations__grow')));
         else
             main.append(el('div', 'st-stations__row', {},
                 field('Number', numberInput(s, 'id', { min: 1, step: 1, max: 2147483647 }, () => { title.textContent = stationName(s); }), 'st-stations__num'),
                 field('Name', name, 'st-stations__grow')),
-                el('p', 'field-desc st-stations__namenote', { text: 'Written as station_id in every output.' }));
+                el('p', 'st-help st-stations__namenote', { text: 'Written as station_id in every output.' }));
 
         renderPosition(s, named);
         main.append(shareSwitch(s));
@@ -175,9 +171,9 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
     // first. The default station rides a vessel only while it is the only station.
     function renderPosition(s, named) {
         const body = el('div', 'st-stations__source');
-        main.append(el('div', 'st-stations__pos', {}, el('span', 'field-label', { text: 'Position' })), body);
+        main.append(el('div', 'st-stations__pos', {}, el('span', 'st-label', { text: 'Position' })), body);
         renderFixed(s, body);
-        body.append(el('p', 'field-desc st-stations__note', { text: 'Where it stands until GPS or a vessel moves it.' }));
+        body.append(el('p', 'st-help st-stations__note', { text: 'Where it stands until GPS or a vessel moves it.' }));
         main.append(gpsSwitch(s, named));
         if (!(isDefault(s) && several() && !s.mmsi)) main.append(vesselField(s));
     }
@@ -207,7 +203,7 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
         });
         if (s.gps !== true) return row;
         return el('div', 'st-stations__gps', {}, row, statusLine('gps', s),
-            el('p', 'field-desc', {}, 'A GPS, or an AIS receiver passing GPS sentences. ', docLink(DOCS.gps, 'About GPS')));
+            el('p', 'st-help', {}, 'A GPS, or an AIS receiver passing GPS sentences. ', docLink(DOCS.gps, 'About GPS')));
     }
 
     // the vessel it is on: its reports go before GPS
@@ -217,7 +213,7 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
         input.placeholder = 'None';
         return el('div', 'st-stations__vessel', {},
             el('div', 'st-stations__row', {}, field('Rides a vessel (MMSI)', input, 'st-stations__short')),
-            el('p', 'field-desc', { text: 'On board a ship: its reports move the station, ahead of GPS.' }),
+            el('p', 'st-help', { text: 'On board a ship: its reports move the station, ahead of GPS.' }),
             line);
     }
 
@@ -232,7 +228,7 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
         // the map: the station where it stands; Pick on map takes the next click
         const mapEl = el('div', 'pe-map__canvas');
         const wrap = el('div', 'pe pe-map st-stations__map');
-        const pick = el('button', 'pe-tool st-stations__tool st-stations__pick', { type: 'button', 'aria-pressed': 'false', html: SVG.pin + '<span>Pick on map</span>',
+        const pick = el('button', 'pe-tool st-stations__tool st-stations__pick', { type: 'button', 'aria-pressed': 'false', html: icon('pin', 'pe-icon') + '<span>Pick on map</span>',
             onClick: () => {
                 picking = !picking;
                 pick.setAttribute('aria-pressed', String(picking));
@@ -241,7 +237,7 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
             } });
         const zoom = by => () => map.getView().animate({ zoom: map.getView().getZoom() + by, duration: 150 });
         // the browser's own position, where it may give one: on this machine, or over https
-        const here = navigator.geolocation && window.isSecureContext ? el('button', 'pe-tool st-stations__tool st-stations__here', { type: 'button', html: SVG.here + '<span>Use my location</span>',
+        const here = navigator.geolocation && window.isSecureContext ? el('button', 'pe-tool st-stations__tool st-stations__here', { type: 'button', html: icon('here', 'pe-icon') + '<span>Use my location</span>',
             onClick: () => navigator.geolocation.getCurrentPosition(p => {
                 s.lat = Number(p.coords.latitude.toFixed(5));
                 s.lon = Number(p.coords.longitude.toFixed(5));
@@ -255,8 +251,8 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
         wrap.append(mapEl,
             el('div', 'pe-toolbar pe-toolbar--tools', { role: 'toolbar', 'aria-label': 'Position' }, here, pick),
             el('div', 'pe-toolbar pe-toolbar--view', { role: 'toolbar', 'aria-label': 'Map view' },
-                el('button', 'pe-tool pe-tool--icon', { type: 'button', title: 'Zoom in', html: SVG.zoomIn, onClick: zoom(1) }),
-                el('button', 'pe-tool pe-tool--icon', { type: 'button', title: 'Zoom out', html: SVG.zoomOut, onClick: zoom(-1) })));
+                el('button', 'pe-tool pe-tool--icon', { type: 'button', title: 'Zoom in', html: icon('zoomIn', 'pe-icon'), onClick: zoom(1) }),
+                el('button', 'pe-tool pe-tool--icon', { type: 'button', title: 'Zoom out', html: icon('zoomOut', 'pe-icon'), onClick: zoom(-1) })));
         body.append(wrap);
         const marker = new Feature();
         const accent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#3b5bdb';
@@ -326,9 +322,7 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
     async function poll() {
         if (!host.isConnected || !host.offsetParent) return;
         try {
-            const r = await fetch('/api/stations/live');
-            if (!r.ok) return;
-            const body = await r.json();
+            const body = await api('/api/stations/live');
             state.live = {};
             for (const s of body.stations || []) state.live[s.id] = s;
         } catch { return; }
@@ -337,21 +331,10 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
     }
 
     // ---- saving
-    const halfPlaced = s => Number.isFinite(num(s.lat)) !== Number.isFinite(num(s.lon)) || ((Number.isFinite(num(s.lat)) || Number.isFinite(num(s.lon))) && !hasPos(s));
+    // the reader takes 1.5 for a number; the rest it checks, and its answer shows as the save's
     function validate() {
-        const seen = new Set();
-        for (let i = 0; i < state.stations.length; i++) {
-            const s = state.stations[i], name = stationName(s);
-            const id = num(s.id);
-            if (!Number.isInteger(id) || id < (i ? 1 : 0) || id > 2147483647) return [i, `${name}: the number must be a whole number from 1.`];
-            if (seen.has(id)) return [i, `Two stations have number ${id}.`];
-            seen.add(id);
-            if (halfPlaced(s))
-                return [i, `${name}: give both latitude and longitude, or neither.`];
-            if (s.mmsi !== undefined && s.mmsi !== '' && !validMMSI(s.mmsi))
-                return [i, `${name}: a vessel's MMSI is a number from 1 to 999999999.`];
-        }
-        return null;
+        const i = state.stations.findIndex(s => s.id !== undefined && s.id !== '' && !Number.isInteger(num(s.id)));
+        return i < 0 ? null : [i, `${stationName(state.stations[i])}: the number must be a whole number.`];
     }
 
     async function save() {

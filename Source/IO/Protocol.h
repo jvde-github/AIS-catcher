@@ -536,6 +536,7 @@ namespace Protocol
 		IO::OutputStats *stats = nullptr;
 
 		bool verify_certificates = true;
+		bool own_server = false;
 
 		enum TLS_STATE
 		{
@@ -576,6 +577,8 @@ namespace Protocol
 
 		void setStats(IO::OutputStats *s) { stats = s; }
 		void setVerifyCertificates(bool v) { verify_certificates = v; }
+		// this program's own server on this machine: nothing to verify and nothing to warn of
+		void setOwnServer() { verify_certificates = false; own_server = true; }
 
 		bool setOptionKey(AIS::Keys key, const std::string &value) override
 		{
@@ -608,6 +611,7 @@ namespace Protocol
 
 		void setStats(IO::OutputStats *s) {}
 		void setVerifyCertificates(bool) {}
+		void setOwnServer() {}
 	};
 #endif
 

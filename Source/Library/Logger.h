@@ -69,7 +69,11 @@ public:
     void log(LogLevel level, const std::string &message);
 
     int addLogListener(LogCallback callback);
+    // the console: one listener on stderr, kept by its id so -G can take it away
     int addConsoleListener();
+    bool hasConsoleListener() const { return console_id_ != -1; }
+    // removes it once; false when it is gone already
+    bool removeConsoleListener();
     void removeLogListener(int id);
 
     std::vector<LogMessage> getLastMessages(int n);
@@ -110,7 +114,7 @@ public:
 
     static bool parseLevel(const std::string &name, LogLevel &level);
 
-    Setting &SetKey(AIS::Keys key, const std::string &arg);
+    Setting &applyKey(AIS::Keys key, const std::string &arg);
 
 private:
     struct LogListener
@@ -131,6 +135,7 @@ private:
     std::vector<LogMessage> message_buffer_;
     int buffer_position_ = 0;
     std::vector<LogListener> log_listeners_;
+    int console_id_ = -1;
 
     void storeMessage(const LogMessage &msg);
     void notifyListeners(const LogMessage &msg);

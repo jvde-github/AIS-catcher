@@ -2,9 +2,6 @@
 // on with their styles, and the registries of base maps and overlays with
 // their rows in the settings panel. What happens on a click or a hover is the
 // entry's: it attaches its handlers to the exported `map` once create() made it.
-//
-// One seam: the picture of the fleet is drawn by a renderer the entry
-// registers once (renderer(fn)); redraw() runs it.
 
 // Named imports (instead of `import * as ...`) so Vite tree-shakes everything
 // outside this list. Plugins relying on other OL classes via window.ol will
@@ -37,9 +34,10 @@ import { containsCoordinate, getWidth, getTopLeft } from 'ol/extent';
 import * as markersLib from '@aiscatcher/map/markers.js';
 import { decodeHTMLEntities } from '@aiscatcher/ui/components.js';
 import { getICAO } from '@aiscatcher/core/text.js';
-import { settings } from './core/state.js';
 import { ships, planes, clock, cardMmsi, cardType, hoverMmsi, hoverType } from './core/store.js';
-import { saveSettings } from './features/settings/settings.js';
+import { settings, isAndroid } from './core/state.js';
+import { saveSettings, beforeWrite, afterWrite } from './settings-store.js';
+import { redraw } from './fleet.js';
 import { init as initRainRadar } from './overlays/rainradar.js';
 import { register } from './actions.js';
 
@@ -60,6 +58,26 @@ export const ol = {
 
 export let map;
 
+// the view as the settings keep it, and in the address
+beforeWrite(() => {
+    if (!map) return;
+    const center = toLonLat(map.getView().getCenter());
+    settings.lat = center[1];
+    settings.lon = center[0];
+    settings.zoom = map.getView().getZoom();
+});
+
+export function updateMapURL() {
+    if (isAndroid() || !map) return;
+
+    const view = map.getView();
+    const center = toLonLat(view.getCenter());
+    const newURL = window.location.href.split("?")[0] + "?lat=" + center[1].toFixed(4) + "&lon=" + center[0].toFixed(4) + "&zoom=" + view.getZoom().toFixed(2) + "&tab=" + settings.tab;
+    history.replaceState(null, null, newURL);
+}
+
+afterWrite(updateMapURL);
+
 // ─── styles ──────────────────────────────────────────────────────────────────
 
 function fadeOpacity(age) {
@@ -67,7 +85,7 @@ function fadeOpacity(age) {
     return markersLib.fadeCurve(age);
 }
 
-export function getShipOpacity(ship) {
+function getShipOpacity(ship) {
     return fadeOpacity(clock - ship.last_signal);
 }
 
@@ -159,25 +177,13 @@ export function syncCircleFeature(feature, raw, mmsi, styleFn) {
     return undefined;
 }
 
-// ─── drawing ─────────────────────────────────────────────────────────────────
-
-let render = () => {};
-
-export function renderer(fn) {
-    render = fn;
-}
-
-export function redraw() {
-    render();
-}
-
 // ─── base maps and overlays ──────────────────────────────────────────────────
 
 export let basemaps = {};
 export let overlapmaps = {};
-export let activeTileLayer = undefined;
+let activeTileLayer = undefined;
 
-export const BASEMAP_KEYS = { day: "map_day", night: "map_night" };
+const BASEMAP_KEYS = { day: "map_day", night: "map_night" };
 function baseMapRows() { return [...document.querySelectorAll(".basemap-row")]; }
 function baseMapSelect(kind) { return document.querySelector('.basemap-select[data-kind="' + kind + '"]'); }
 
@@ -227,7 +233,7 @@ function attributionPlain(layer) {
     return (div.textContent || '').replace(/\s+/g, ' ').trim();
 }
 
-export function updateBaseMapDimLabel(kind, v) {
+function updateBaseMapDimLabel(kind, v) {
     document.querySelector('.basemap-row[data-kind="' + kind + '"] .basemap-dim-label').textContent =
         `Dimming (${Math.round(parseFloat(v) * 100)}%)`;
 }
@@ -360,7 +366,7 @@ function setMap(kind, key) {
     saveSettings();
 }
 
-export function triggerMapLayer() {
+function triggerMapLayer() {
 
     if (activeTileLayer)
         activeTileLayer.setVisible(false);
@@ -394,11 +400,11 @@ function setLayerOpacity(title, value) {
     overlapmaps[title]?.setOpacity(Number(value));
 }
 
-export function getBaseOpacity(title) {
+function getBaseOpacity(title) {
     return opacityOf(settings.basemap_opacity, title);
 }
 
-export function setMapOpacity() {
+function setMapOpacity() {
     for (let key in basemaps)
         basemaps[key].setOpacity(getBaseOpacity(key));
 
@@ -409,7 +415,7 @@ export function setMapOpacity() {
 }
 
 // the dimming slider of the day or the night base map, released
-export function setBaseMapDim(kind, value) {
+function setBaseMapDim(kind, value) {
     if (!settings.basemap_opacity) settings.basemap_opacity = {};
     settings.basemap_opacity[baseMapSelect(kind).value] = Math.round((1 - Number(value)) * 100) / 100;
     setMapOpacity();
@@ -452,7 +458,7 @@ export function isAttributionPinned() {
 
 // the panel also flashes for 3s on a basemap change, and a menu tick must not
 // report that passing state as something the user switched on
-export function toggleAttribution() {
+function toggleAttribution() {
     attributionPinned = !attributionPinned;
     showAttribution(attributionPinned);
 }

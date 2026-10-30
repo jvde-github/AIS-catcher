@@ -249,13 +249,14 @@ namespace Services
  "time":{"type":"string","format":"date-time","description":"When it was there"}}}},
 "channels":{"type":"object","description":"Messages per AIS channel","properties":{"A":{"type":"integer"},"B":{"type":"integer"},"C":{"type":"integer"},"D":{"type":"integer"}}},
 "message_types":{"type":"object","additionalProperties":{"type":"integer"},"description":"Messages per message type, under the type's number; types not heard are left out"},
-"range_nm":{"type":"object","description":"The farthest validated position by bearing from the station, nautical miles; 0 where nothing was heard","properties":{
+"range_nm":{"type":["object","null"],"description":"The farthest validated position by bearing from the station, nautical miles; 0 where nothing was heard; null when range_hidden","properties":{
  "sector_deg":{"type":"integer","description":"The width of a sector: entry i covers bearings from i times this"},
  "class_a":{"type":"array","items":{"type":"number"},"description":"Class A transponders"},
  "class_b":{"type":"array","items":{"type":"number"},"description":"Class B transponders"}}}}})J"},
 			{"Slot", R"J({"allOf":[{"type":"object","required":["time"],"properties":{"time":{"type":"string","format":"date-time","description":"When the slot begins"}}},{"$ref":"#/components/schemas/Figures"}]})J"},
 			{"Statistics", R"J({"type":"object","required":["stations","time","messages_per_second","total","session","last_minute","last_hour","last_day","history","week","levels_by_distance","propagation"],"properties":{
 "stations":{"type":["array","null"],"items":{"type":"integer"},"description":"The stations these figures add up; null for everything the server hears"},
+"range_hidden":{"type":"boolean","description":"Present and true when a station here keeps its position home: only its owner gets the range figures, from which its position could be worked out, so the distances and furthest of every period, the levels by distance and the propagation days are left empty. The owner is a client on the machine itself or a key that may read the system"},
 "time":{"type":"string","format":"date-time","description":"When these figures were taken"},
 "messages_per_second":{"type":"number","description":"Messages a second over the last minute"},
 "total":{"$ref":"#/components/schemas/Figures","description":"Since the figures were first kept, across restarts when they are backed up"},
@@ -273,7 +274,7 @@ namespace Services
  "wednesday":{"type":"array","items":{"type":["number","null"]}},"thursday":{"type":"array","items":{"type":["number","null"]}},
  "friday":{"type":"array","items":{"type":["number","null"]}},"saturday":{"type":"array","items":{"type":["number","null"]}},
  "sunday":{"type":"array","items":{"type":["number","null"]}}}},
-"levels_by_distance":{"type":"object","description":"The mean signal level by the distance a message came from, to tune an antenna by: validated positions heard directly, no aids to navigation","properties":{
+"levels_by_distance":{"type":["object","null"],"description":"The mean signal level by the distance a message came from, to tune an antenna by: validated positions heard directly, no aids to navigation","properties":{
  "band_nm":{"type":"integer","description":"The width of a band, nautical miles"},
  "total":{"type":"array","items":{"$ref":"#/components/schemas/LevelBand"},"description":"Since the figures were first kept"},
  "session":{"type":"array","items":{"$ref":"#/components/schemas/LevelBand"},"description":"Since AIS-catcher started, to compare before and after a change"}}},

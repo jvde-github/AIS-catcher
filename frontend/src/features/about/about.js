@@ -1,13 +1,12 @@
 // The about panel that slides in from the header, the about dialog and the
-// welcome that shows it once. The about tab's text is markdown.js's, loaded
-// with the tab.
+// welcome that shows it once. The about tab is tabs/about/about.js.
 
 import { settings, isAndroid } from '../../core/state.js';
-import { saveSettings } from '../settings/settings.js';
+import { saveSettings } from '../../settings-store.js';
 import { showDialog } from '../../dialog.js';
 import { register } from '../../actions.js';
 
-export function toggleInfoPanel() {
+function toggleInfoPanel() {
     const overlay = document.getElementById('info-overlay');
     const infoPanel = document.querySelector('.info-panel');
 
@@ -15,7 +14,7 @@ export function toggleInfoPanel() {
     infoPanel.classList.toggle('active');
 }
 
-export function showAboutDialog() {
+function showAboutDialog() {
     const message = `
         <div style="display: flex; align-items: center; margin-top: 10px;">
         <span style="text-align: center; margin-right: 10px;"><i style="font-size: 40px" class="directions_aiscatcher_icon"></i></span>

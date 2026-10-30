@@ -3,7 +3,9 @@
 // server reads. Where it keeps its files is folded away under Files.
 
 import { el, on } from './dom.js';
-import { App, ConfigStore, registerEditor } from './config-manager.js';
+import { App, ConfigStore, registerEditor } from './config-store.js';
+import { api } from './api.js';
+import { hub } from './hub.js';
 
 const KEYS = ['history', 'expire', 'track_memory', 'track_time', 'backup', 'file', 'places'];
 const DEFAULTS = { history: 1800, expire: false, track_memory: 1024, track_time: 3600, backup: 10 };
@@ -31,11 +33,11 @@ export function createHistoryEditor(host) {
     const row = (label, desc, ...controls) => el('div', 'st-hrow', {},
         el('div', 'st-hrow__text', {}, el('strong', '', { text: label }), desc ? el('span', '', {}, desc) : null),
         el('div', 'st-hrow__controls', {}, ...controls));
-    const select = (options, current, onChange, label) => el('select', 'select', { 'aria-label': label, onChange: e => onChange(e.target.value) },
+    const select = (options, current, onChange, label) => el('select', 'st-input select', { 'aria-label': label, onChange: e => onChange(e.target.value) },
         options.map(([v, t]) => el('option', '', { value: v, selected: String(v) === String(current), text: t })));
     const toggle = (checked, onChange, label) => el('label', 'st-switch', { title: label },
         el('input', '', { type: 'checkbox', checked, 'aria-label': label, onChange: e => onChange(e.target.checked) }), el('span', 'st-switch__track'));
-    const number = (v, onChange, attrs) => el('input', 'input st-hrow__num', { type: 'number', value: v ?? '', ...attrs, onChange: e => onChange(e.target.value === '' ? undefined : Number(e.target.value)) });
+    const number = (v, onChange, attrs) => el('input', 'st-input st-hrow__num', { type: 'number', value: v ?? '', ...attrs, onChange: e => onChange(e.target.value === '' ? undefined : Number(e.target.value)) });
 
     function render() {
         host.replaceChildren();
@@ -86,14 +88,14 @@ export function createHistoryEditor(host) {
         host.append(el('details', 'st-hist__adv', {},
                 el('summary', '', { text: 'Files' }),
                 row('Backup file', 'Where they are kept',
-                    el('input', 'input', { type: 'text', value: state.data.file || '', placeholder: state.statsFile, onChange: e => set('file', e.target.value.trim() || undefined) })),
+                    el('input', 'st-input', { type: 'text', value: state.data.file || '', placeholder: state.statsFile, onChange: e => set('file', e.target.value.trim() || undefined) })),
                 row('Place directory', 'A folder of place files, in place of the places edited here',
-                    el('input', 'input', { type: 'text', value: state.data.places || '', onChange: e => set('places', e.target.value.trim() || undefined) }))));
+                    el('input', 'st-input', { type: 'text', value: state.data.places || '', onChange: e => set('places', e.target.value.trim() || undefined) }))));
     }
 
     async function poll() {
         if (!host.isConnected) return;
-        const live = await fetch('/api/stations/live').then(r => r.json()).catch(() => null);
+        const live = await api('/api/stations/live').catch(() => null);
         if (live && live.backup_age_s !== undefined && live.backup_age_s !== state.saved) { state.saved = live.backup_age_s; if (!editor.dirty) render(); }
     }
 
@@ -110,7 +112,7 @@ export function createHistoryEditor(host) {
     }
 
     async function load() {
-        const [cfg, status] = await Promise.all([ConfigStore.fetch(), fetch('/api/status').then(r => r.json()).catch(() => ({}))]);
+        const [cfg, status] = await Promise.all([ConfigStore.fetch(), hub.status()]);
         const t = cfg.tracking || {};
         state.data = {};
         for (const k of KEYS) if (t[k] !== undefined) state.data[k] = t[k];

@@ -1,9 +1,8 @@
 // The fleet on the map: each poll of the map tab fetches the vessels, tracks,
-// aircraft, map objects and range, and redrawMap builds the markers, hulls,
-// labels and track legs from the store; the entry hands redrawMap to map.js
-// as its renderer.
+// aircraft, map objects and range, and redraw builds the markers, hulls,
+// labels and track legs from the store.
 
-import { refreshStationcard } from './features/station/station.js';
+import { populate as populateStationcard } from './features/station/station.js';
 import { fromLonLat } from 'ol/proj';
 import OlFeature from 'ol/Feature';
 import Point from 'ol/geom/Point';
@@ -11,7 +10,7 @@ import LineString from 'ol/geom/LineString';
 import { settings } from './core/state.js';
 import * as filter from './core/filter.js';
 import {
-    ships as shipsDB, planes as planesDB, paths, station, cardType as card_type, markerTracks as marker_tracks,
+    ships as shipsDB, planes as planesDB, paths, station, markerTracks as marker_tracks,
 } from './core/store.js';
 import { hasValidCoords } from '@aiscatcher/core/geo.js';
 import { palette as validPalette, bucketColor, speedBucket } from '@aiscatcher/core/palette.js';
@@ -19,11 +18,9 @@ import * as markersLib from '@aiscatcher/map/markers.js';
 import {
     map, markerVector, planeVector, shapeVector, labelVector, trackVector, planeLayer, labelLayer,
 } from './map.js';
-import { fetchShips, fetchPlanes, fetchTracks, trackWindowStart, onRefresh } from './data.js';
-import { saveSettings } from './features/settings/settings.js';
-import { targetcardVisible, updateFocusMarker } from './features/targetcard/card.js';
-import * as targetcard from './features/targetcard/targetcard.js';
-import * as planecard from './features/planecard/planecard.js';
+import { fetchShips, fetchPlanes, fetchTracks, trackWindowStart } from './data.js';
+import { saveSettings } from './settings-store.js';
+import { refreshTargetcard, updateFocusMarker } from './features/targetcard/card.js';
 import { updateMarkerCount } from './features/counts/counts.js';
 import { updateTablecard } from './features/tablecard/tablecard.js';
 import { drawStation, applyFixedCenter } from './features/follow/follow.js';
@@ -43,7 +40,7 @@ let markerFeatures = {};
 const getSprite = markersLib.applySprite;
 const getPlaneSprite = markersLib.applyPlaneSprite;
 
-async function updateMap() {
+export async function updateMap() {
     // Opening the replay bar hands the map over: from that point the live
     // layers are on their way out and polling for ships, tracks and planes
     // fetches data the user is no longer looking at. Closing it resumes.
@@ -68,18 +65,13 @@ async function updateMap() {
         }
     }
 
-    if (targetcardVisible()) {
-        if (card_type == "ship")
-            targetcard.populate();
-        else if (card_type == "plane")
-            planecard.populate();
-    }
+    refreshTargetcard();
 
     updateMarkerCount();
-    redrawMap();
+    redraw();
 }
 
-export function redrawMap() {
+export function redraw() {
     shapeFeatures = {};
     markerFeatures = {};
 
@@ -246,7 +238,5 @@ export function redrawMap() {
     drawStation();
     applyFixedCenter();
     range.updateDistanceCircles();
-    refreshStationcard();
+    populateStationcard();
 }
-
-onRefresh("map", updateMap);

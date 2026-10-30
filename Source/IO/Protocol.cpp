@@ -638,7 +638,8 @@ namespace Protocol
 		else
 		{
 			SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
-			Warning() << "TLS: Certificate verification DISABLED for " << getHost() << ":" << getPort();
+			if (!own_server)
+				Warning() << "TLS: Certificate verification DISABLED for " << getHost() << ":" << getPort();
 		}
 
 		// Create SSL object
@@ -1495,7 +1496,7 @@ namespace Protocol
 
 	std::string MQTT::getValues()
 	{
-		return "topic " + topic + " client_id " + client_id + " username " + username + " password " + password + " qos " + std::to_string(qos);
+		return "topic " + topic + " client_id " + client_id + " username " + username + " qos " + std::to_string(qos);
 	}
 
 	///  ------WebSocket Implementation------
@@ -1518,7 +1519,8 @@ namespace Protocol
 		received_ptr = 0;
 		close_sent = false;
 
-		buffer.resize(16384);
+		// a frame at its largest, with its longest header
+		buffer.resize(MAX_PACKET_SIZE + 14);
 		received.resize(16384);
 
 		if (sendUpgrade())
@@ -1708,7 +1710,8 @@ namespace Protocol
 
 			if (lower.find("sec-websocket-accept:") != std::string::npos)
 			{
-				accept_key = line.substr(line.find(":") + 2); // Add 2 to skip ": "
+				const std::size_t value = line.find(":") + 2; // Add 2 to skip ": "
+				accept_key = value < line.size() ? line.substr(value) : std::string();
 				// Remove trailing whitespace and CR/LF
 				accept_key.resize(accept_key.find_last_not_of(" \r\n") + 1);
 				break;

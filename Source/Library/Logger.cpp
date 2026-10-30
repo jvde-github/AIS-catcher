@@ -84,6 +84,8 @@ class SyslogHandler
 public:
 	SyslogHandler(std::string ident)
 	{
+		// said here: switching to the system log took the console away
+		std::cerr << "No system logger available" << std::endl;
 		throw std::runtime_error("No system logger available");
 	}
 
@@ -149,7 +151,7 @@ bool Logger::parseLevel(const std::string &name, LogLevel &level)
 	return false;
 }
 
-Setting &Logger::SetKey(AIS::Keys key, const std::string &arg)
+Setting &Logger::applyKey(AIS::Keys key, const std::string &arg)
 {
 	switch (key)
 	{
@@ -240,15 +242,25 @@ int Logger::addConsoleListener()
 #else
 	bool journal = false;
 #endif
-	return addLogListener([journal](const LogMessage &msg)
-						  {
-							  // single insertion so concurrent writers cannot tear the line
-							  std::string line;
-							  if (journal)
-								  line = '<' + std::to_string(msg.syslogLevel()) + '>';
-							  line += msg.message;
-							  line += '\n';
-							  std::cerr << line; });
+	console_id_ = addLogListener([journal](const LogMessage &msg)
+								 {
+									 // single insertion so concurrent writers cannot tear the line
+									 std::string line;
+									 if (journal)
+										 line = '<' + std::to_string(msg.syslogLevel()) + '>';
+									 line += msg.message;
+									 line += '\n';
+									 std::cerr << line; });
+	return console_id_;
+}
+
+bool Logger::removeConsoleListener()
+{
+	if (console_id_ == -1)
+		return false;
+	removeLogListener(console_id_);
+	console_id_ = -1;
+	return true;
 }
 
 int Logger::addLogListener(LogCallback callback)

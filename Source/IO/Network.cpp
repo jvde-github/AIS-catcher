@@ -57,7 +57,7 @@ namespace IO
 
 			run_thread = std::thread(&HTTPStreamer::process, this);
 			std::string filter_str = filter.Get();
-			Debug() << "HTTP: start thread (" << url << ")" << (!filter_str.empty() ? ", " + filter_str : "");
+			Debug() << "HTTP: start thread (" << Util::Parse::URLForLog(url) << ")" << (!filter_str.empty() ? ", " + filter_str : "");
 		}
 	}
 
@@ -70,7 +70,7 @@ namespace IO
 			terminate = true;
 			run_thread.join();
 
-			Debug() << "HTTP: stop thread (" << url << ").";
+			Debug() << "HTTP: stop thread (" << Util::Parse::URLForLog(url) << ").";
 		}
 	}
 
@@ -193,7 +193,7 @@ namespace IO
 		if (drop_snap && !dropped_warned)
 		{
 			dropped_warned = true;
-			Warning() << "HTTP Client [" << url << "]: batch over " << MSG_LIST_MAX << " messages, " << drop_snap
+			Warning() << "HTTP Client [" << Util::Parse::URLForLog(url) << "]: batch over " << MSG_LIST_MAX << " messages, " << drop_snap
 					  << " dropped. Lower 'interval' (now " << INTERVAL << "s).";
 		}
 
@@ -203,9 +203,9 @@ namespace IO
 		counts += ", " + std::to_string(pos_snap) + " positions";
 
 		if (r < 200 || r > 299)
-			Error() << "HTTP Client [" << url << "]: " << IO::httpStatusString(r) << " (" << counts << ")";
+			Error() << "HTTP Client [" << Util::Parse::URLForLog(url) << "]: " << IO::httpStatusString(r) << " (" << counts << ")";
 		else if (show_response)
-			Info() << "HTTP Client [" << url << "]: return code " << r << " (" << counts << ")";
+			Info() << "HTTP Client [" << Util::Parse::URLForLog(url) << "]: return code " << r << " (" << counts << ")";
 	}
 
 	void HTTPStreamer::process()
@@ -219,7 +219,7 @@ namespace IO
 		} while (!terminate);
 	}
 
-	Setting &HTTPStreamer::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &HTTPStreamer::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -236,7 +236,7 @@ namespace IO
 			bool v = Util::Parse::Switch(arg);
 			http.setVerifyCertificates(v);
 			if (!v)
-				Warning() << "HTTP [" << url << "]: TLS certificate verification disabled (ssl_verify off)";
+				Warning() << "HTTP [" << Util::Parse::URLForLog(url) << "]: TLS certificate verification disabled (ssl_verify off)";
 			break;
 		}
 		case AIS::KEY_SETTING_ID:
@@ -324,7 +324,7 @@ namespace IO
 			break;
 		}
 		default:
-			return OutputMessage::SetKey(key, arg);
+			return OutputMessage::applyKey(key, arg);
 		}
 		return *this;
 	}
@@ -434,7 +434,7 @@ namespace IO
 		}
 	}
 
-	Setting &UDPStreamer::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &UDPStreamer::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -454,7 +454,7 @@ namespace IO
 			setUUID(arg);
 			break;
 		default:
-			return OutputMessage::SetKey(key, arg);
+			return OutputMessage::applyKey(key, arg);
 		}
 		return *this;
 	}
@@ -517,7 +517,7 @@ namespace IO
 		}
 	}
 
-	Setting &TCPClientStreamer::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &TCPClientStreamer::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -540,7 +540,7 @@ namespace IO
 			setUUID(arg);
 			break;
 		default:
-			return OutputMessage::SetKey(key, arg);
+			return OutputMessage::applyKey(key, arg);
 		}
 		return *this;
 	}
@@ -606,14 +606,14 @@ namespace IO
 		}
 	}
 
-	Setting &HubStreamer::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &HubStreamer::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		if (key == AIS::KEY_SETTING_UUID)
 		{
 			setUUID(arg);
 			return *this;
 		}
-		return OutputMessage::SetKey(key, arg);
+		return OutputMessage::applyKey(key, arg);
 	}
 
 	void TCPlistenerStreamer::Start()
@@ -628,7 +628,7 @@ namespace IO
 		}
 	}
 
-	Setting &TCPlistenerStreamer::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &TCPlistenerStreamer::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -639,7 +639,7 @@ namespace IO
 			timeout = Util::Parse::Integer(arg);
 			break;
 		default:
-			return OutputMessage::SetKey(key, arg);
+			return OutputMessage::applyKey(key, arg);
 		}
 		return *this;
 	}
@@ -709,7 +709,7 @@ namespace IO
 		Info() << info << ", status: " << (session->waitConnected(2) ? "connected" : "pending");
 	}
 
-	Setting &MQTTStreamer::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &MQTTStreamer::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -760,7 +760,7 @@ namespace IO
 			break;
 		default:
 			if (!tcp.setOptionKey(key, arg) && !mqtt.setOptionKey(key, arg) && !ws.setOptionKey(key, arg) && !tls.setOptionKey(key, arg))
-				return OutputMessage::SetKey(key, arg);
+				return OutputMessage::applyKey(key, arg);
 			break;
 		}
 		return *this;

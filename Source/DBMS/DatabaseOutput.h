@@ -209,6 +209,6 @@ namespace IO
 		void setup();
 		void Start() override { setup(); }
 
-		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 	};
 }

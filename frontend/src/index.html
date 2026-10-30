@@ -26,20 +26,7 @@
 		<div class="header-title">
 			<span data-action="headerClick">AIS-catcher</span>
 
-			<div id="menubar_mini" class="showflex">
-				<i id="map_tab_mini" title="Live map of received vessels" data-action="activateTab" data-tab="map" class="map_icon"><span class="mb-name">Map</span></i>
-				<i id="stat_tab_mini" title="System and receiver statistics" data-action="activateTab" data-tab="stat"
-					class="business_center_icon"><span class="mb-name">Statistics</span></i>
-				<i id="plots_tab_mini" title="Graphs of message and vessel counts over time" data-action="activateTab" data-tab="plots" class="leaderboard_icon"><span class="mb-name">Plots</span></i>
-				<i id="ships_tab_mini" title="Searchable table of received vessels" data-action="activateTab" data-tab="ships" class="table_icon"><span class="mb-name">Ships</span></i>
-				<i id="realtime_tab_mini" title="Live stream of received NMEA messages" data-action="activateTab" data-tab="realtime"
-					class="timer_icon"><span class="mb-name">NMEA</span></i>
-				<i id="log_tab_mini" title="Application log" data-action="activateTab" data-tab="log" class="terminal_icon"><span class="mb-name">Log</span></i>
-				<i id="decoder_tab_mini" title="Decode raw NMEA sentences" data-action="activateTab" data-tab="decoder"
-					class="comment_icon"><span class="mb-name">Decoder</span></i>
-				<i id="about_tab_mini" title="About this station" data-action="activateTab" data-tab="about" class="info_icon"><span class="mb-name">About</span></i>
-				<i id="webcontrol_tab_mini" title="Open Web Control" data-action="openWebControl" class="play_circle_icon"><span class="mb-name">Control</span></i>
-			</div>
+			<div id="menubar_mini" class="showflex"></div>
 		</div>
 
 		<button type="button" id="header-focus" class="header-focus" hidden data-action="selectStation" data-id="-1"
@@ -63,21 +50,7 @@
 		</div>
 	</div>
 	<div class="overlay" id="menubar-overlay" data-action="hideMenu"></div>
-	<nav id="menubar" class="menubar nokiosk">
-		<div data-action="activateTab" data-tab="map" id="map_tab" title="Live map of received vessels"><i class="map_icon"></i><span>Map</span></div>
-		<div data-action="activateTab" data-tab="stat" id="stat_tab" title="System and receiver statistics"><i class="business_center_icon"></i><span>Statistics</span>
-		</div>
-		<div data-action="activateTab" data-tab="plots" id="plots_tab" title="Graphs of message and vessel counts over time"><i class="leaderboard_icon"></i><span>Plots</span>
-		</div>
-		<div data-action="activateTab" data-tab="ships" id="ships_tab" title="Searchable table of received vessels"><i class="table_icon"></i><span>Ships</span></div>
-		<div data-action="activateTab" data-tab="realtime" id="realtime_tab" title="Live stream of received NMEA messages"><i class="timer_icon"></i><span>NMEA</span>
-		</div>
-		<div data-action="activateTab" data-tab="log" id="log_tab" title="Application log"><i class="terminal_icon"></i><span>Log</span></div>
-		<div data-action="activateTab" data-tab="decoder" id="decoder_tab" title="Decode raw NMEA sentences"><i class="comment_icon"></i><span>Decoder</span>
-		</div>
-		<div data-action="activateTab" data-tab="about" id="about_tab" title="About this station"><i class="info_icon"></i><span>About</span></div>
-		<div data-action="openWebControl" id="webcontrol_tab" title="Open Web Control"><i class="play_circle_icon"></i><span>Control</span></div>
-	</nav>
+	<nav id="menubar" class="menubar nokiosk"></nav>
 
 	<div class="mainspace-container">
 		<div class="toast-container" id="notification-container"></div>
@@ -124,7 +97,7 @@
 		<div data-on-contextmenu="mainspaceContextMenu" class="mainspace">
 			<!-- @include features/contextmenu/contextmenu.html -->
 
-			<!-- @include features/about/about.html -->
+			<!-- @include tabs/about/about.html -->
 
 			<!-- @include tabs/realtime/realtime.html -->
 

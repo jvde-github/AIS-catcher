@@ -57,7 +57,7 @@ namespace Device {
 
 		void getDeviceList(std::vector<Description>& DeviceList);
 
-		Setting& SetKey(AIS::Keys key, const std::string &arg);
+		Setting& applyKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 
 		std::string getProduct() { return "ZMQ"; }

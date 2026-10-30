@@ -19,6 +19,7 @@
 #include "Tracker.h"
 
 #include <cmath>
+#include "Helper.h"
 #include "Logger.h"
 
 namespace
@@ -94,6 +95,7 @@ void Tracker::configure(const TrackingConfig &next)
 		std::lock_guard<std::mutex> lock(stations_mtx);
 		fixed_at.lat = next.fixed ? next.lat : LAT_UNDEFINED;
 		fixed_at.lon = next.fixed ? next.lon : LON_UNDEFINED;
+		fixed_shared = next.latlon_share;
 	}
 	std::lock_guard<std::mutex> lock(figures_mtx);
 	cutoff = next.cutoff > 0 ? next.cutoff : LONG_RANGE_CUTOFF_DEFAULT;
@@ -233,6 +235,7 @@ void Tracker::AdsbIntake::Receive(const Plane::ADSB *data, int len, TAG &tag)
 {
 	TAG t = tag;
 	tracker->place(nullptr, t);
+	t.position_private = !tracker->sharesPosition(t.station_id);
 	tracker->plane_db.Receive(data, len, t);
 }
 
@@ -255,6 +258,34 @@ void Tracker::place(const AIS::Message *msg, TAG &tag)
 		tag.station_lat = it->second.now.lat;
 		tag.station_lon = it->second.now.lon;
 	}
+}
+
+bool Tracker::keepsPositionHome(const std::vector<int> &ids)
+{
+	std::lock_guard<std::mutex> lock(stations_mtx);
+	if (isValidCoord(fixed_at.lat, fixed_at.lon))
+		return !fixed_shared;
+	if (ids.empty())
+	{
+		for (const auto &s : stations)
+			if (!s.second.share_loc)
+				return true;
+		return stations.empty();
+	}
+	for (int id : ids)
+	{
+		auto it = stations.find(id);
+		if (it == stations.end() || !it->second.share_loc)
+			return true;
+	}
+	return false;
+}
+
+bool Tracker::sharesPosition(int id)
+{
+	std::lock_guard<std::mutex> lock(stations_mtx);
+	auto it = stations.find(id);
+	return it != stations.end() && it->second.share_loc;
 }
 
 // A fix moves the stations that follow GPS and take it: the one its input
@@ -456,6 +487,8 @@ Tracker::Position Tracker::stationPositionPrivate(int id)
 bool Tracker::save(const std::string &file)
 {
 	const std::string tmp = file + ".tmp";
+	if (!Util::Helper::createTemp(tmp, file))
+		return false;
 	{
 		std::ofstream f(tmp, std::ios::binary | std::ios::trunc);
 		if (!f)

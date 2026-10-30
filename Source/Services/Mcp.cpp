@@ -119,7 +119,7 @@ namespace Services
 		}
 
 
-		std::string text(const JSON::Value &v)
+		std::string queryText(const JSON::Value &v)
 		{
 			if (v.isString())
 				return v.getString();
@@ -132,7 +132,7 @@ namespace Services
 						out += (out.empty() ? "" : ",") + item;
 				else
 					for (const auto &item : v.getArray())
-						out += (out.empty() ? "" : ",") + text(item);
+						out += (out.empty() ? "" : ",") + queryText(item);
 				return out;
 			}
 			if (v.isInt())
@@ -200,6 +200,14 @@ namespace Services
 		{
 			response = Response::problem(405, "Method not allowed", "Send JSON-RPC messages by POST; this server opens no stream.");
 			response.header = "Allow: POST";
+			return true;
+		}
+
+		// its unknown keys are looked up one by one: a long body is refused before it is read
+		const std::size_t MAX_BODY_SIZE = 64 * 1024;
+		if (request.body.size() > MAX_BODY_SIZE)
+		{
+			response = Response::problem(413, "Too large", "A request is at most 64 KB.");
 			return true;
 		}
 
@@ -295,6 +303,7 @@ namespace Services
 			Request call;
 			call.method = "GET";
 			call.path = tool->route;
+			call.owner = request.owner;
 			std::string bad;
 			if (args && args->isObject())
 				for (const auto &a : args->getObject().getMembers())
@@ -305,7 +314,7 @@ namespace Services
 						bad = key;
 						break;
 					}
-					const std::string value = text(a.Get());
+					const std::string value = queryText(a.Get());
 					const std::string slot = "{" + key + "}";
 					const std::size_t at = call.path.find(slot);
 					if (at != std::string::npos)

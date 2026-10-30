@@ -22,6 +22,26 @@
 #include <string>
 #include <vector>
 
+namespace IO
+{
+	class OutputMessage;
+}
+
+// What the running engine is made of, told to the site at its start and
+// withdrawn at its stop, before its outputs go: what a status page says of
+// the devices, the outputs and the community feed
+struct DeviceFacts
+{
+	// model: the device's decoders, one a line; label: what a status page calls it
+	std::string product, vendor, serial, model, sample_rate, label;
+};
+struct EngineFacts
+{
+	std::vector<DeviceFacts> devices;
+	std::vector<IO::OutputMessage *> outputs;
+	bool sharing = false, sharing_uuid = false;
+};
+
 // A receiver as the running engine last told it, about once a second
 struct ReceiverState
 {

@@ -5,6 +5,7 @@ import { settings } from '../core/state.js';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { map } from '../map.js';
 import { config } from '../core/config.js';
+import { afterWrite } from '../settings-store.js';
 import { register } from '../actions.js';
 
 const COMMUNITY_NS = 'aiscatcher-mapsync';
@@ -88,7 +89,7 @@ export function isPaneOpen() {
     return !!(communityPopup && !communityPopup.closed);
 }
 
-export function toggleCommunityPane() {
+function toggleCommunityPane() {
     if (communityPopup && !communityPopup.closed) {
         communityPopup.close();
         communityPopup = null;
@@ -117,6 +118,8 @@ export function notifyCommunityPopupView() {
         lat: v.lat, lon: v.lon, zoom: v.zoom
     }, COMMUNITY_ORIGIN);
 }
+
+afterWrite(notifyCommunityPopupView);
 
 export function pushVesselsToCommunityPopup(dynamic) {
     if (!communityPopup || communityPopup.closed) return;

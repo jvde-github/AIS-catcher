@@ -93,7 +93,8 @@ namespace Device {
 		while (isStreaming()) {
 			int len = zmq_recv(subscriber, data.data(), BUFFER_SIZE, 0);
 			if (len > 0) {
-				if (!fifo.Push(data.data(), len))
+				// zmq_recv says how long the message was, also when it did not fit
+				if (!fifo.Push(data.data(), len < BUFFER_SIZE ? len : (int)BUFFER_SIZE))
 					Error() << "ZMQ: buffer overrun.";
 			}
 			else if (len < 0 && zmq_errno() != EAGAIN) {
@@ -121,13 +122,13 @@ namespace Device {
 		DeviceList.push_back(Description("ZMQ", "ZMQ", "ZMQ", (uint64_t)0, Type::ZMQ));
 	}
 
-	Setting& ZMQ::SetKey(AIS::Keys key, const std::string &arg) {
+	Setting& ZMQ::applyKey(AIS::Keys key, const std::string &arg) {
 		switch (key) {
 		case AIS::KEY_SETTING_ENDPOINT:
 			endpoint = arg;
 			break;
 		default:
-			Device::SetKey(key, arg);
+			Device::applyKey(key, arg);
 			break;
 		}
 		return *this;

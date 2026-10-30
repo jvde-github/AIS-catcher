@@ -282,7 +282,7 @@ namespace Device
 		}
 	}
 
-	Setting &RTLSDR::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &RTLSDR::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -303,7 +303,7 @@ namespace Device
 			bias_tee = Util::Parse::Switch(arg);
 			break;
 		default:
-			Device::SetKey(key, arg);
+			Device::applyKey(key, arg);
 			break;
 		}
 		return *this;

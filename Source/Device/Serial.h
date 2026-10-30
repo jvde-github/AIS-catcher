@@ -105,7 +105,7 @@ namespace Device
 		}
 		std::string getRateDescription() override { return std::to_string(baudrate) + " baud"; }
 		bool isCallback() override { return true; }
-		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 		std::string Get() override;
 		std::string getProduct() override { return "Serial Port"; }
 		std::string getVendor() override { return "Unknown"; }

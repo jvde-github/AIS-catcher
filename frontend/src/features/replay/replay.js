@@ -25,9 +25,9 @@ import { setCounts } from '../../core/store.js';
 import { renderCounts } from '../counts/counts.js';
 import { applyFixedCenter } from '../follow/follow.js';
 import { showNotification } from '../../dialog.js';
+import { setLiveLayersVisible, updateReplaycard } from './replaybar.js';
 
 // { setLiveLayers, onStateChange }
-let deps = null;
 
 const markerSource = new VectorSource({ features: [] });
 export const markerLayer = new VectorLayer({ source: markerSource });
@@ -92,8 +92,7 @@ let playing = false;
 let raf = null;
 let lastFrame = 0;
 
-export function init(d) {
-    deps = d;
+export function init() {
     markerLayer.setVisible(false);
     hullLayer.setVisible(false);
     hullLayer.setStyle(markers.hull);
@@ -117,26 +116,26 @@ export function isLoading() { return loading; }
 export function isPlaying() { return playing; }
 export function getSpeed() { return speed; }
 
-export function cycleSpeed() {
+function cycleSpeed() {
     speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
-    deps.onStateChange?.();
+    updateReplaycard();
 }
 
 export function speeds() { return SPEEDS; }
 
-export function setSpeed(s) {
+function setSpeed(s) {
     if (!SPEEDS.includes(s)) return;
     speed = s;
-    deps.onStateChange?.();
+    updateReplaycard();
 }
 
 let labels = false;
 
 export function getLabels() { return labels; }
-export function toggleLabels() {
+function toggleLabels() {
     labels = !labels;
     if (active) draw();
-    deps.onStateChange?.();
+    updateReplaycard();
 }
 export function getTimeline() {
     if (!bounds.oldest || !bounds.newest || bounds.newest <= bounds.oldest)
@@ -231,7 +230,7 @@ export async function load(at) {
     if (loading) return false;
     loading = true;
     const gen = ++generation;
-    deps.onStateChange?.();
+    updateReplaycard();
 
     try {
         if (!bounds.now) await refreshBounds();
@@ -270,7 +269,7 @@ export async function load(at) {
         buildFeatures();
         markerLayer.setVisible(true);
         hullLayer.setVisible(true);
-        deps.setLiveLayers(false);
+        setLiveLayersVisible(false);
         draw();
 
         pump();
@@ -281,7 +280,7 @@ export async function load(at) {
         return false;
     } finally {
         loading = false;
-        deps.onStateChange?.();
+        updateReplaycard();
     }
 }
 
@@ -322,7 +321,7 @@ async function pump() {
             if (gen !== generation) return;
             buildFeatures();
             if (!playing) draw();
-            deps.onStateChange?.();
+            updateReplaycard();
         }
     } catch (err) {
         console.log('Replay block fetch failed: ' + err);
@@ -355,15 +354,15 @@ export function play() {
             playing = false;
             raf = null;
             draw();
-            deps.onStateChange?.();
+            updateReplaycard();
             return;
         }
         draw();
-        deps.onStateChange?.();
+        updateReplaycard();
         raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    deps.onStateChange?.();
+    updateReplaycard();
 }
 
 export function pause() {
@@ -372,7 +371,7 @@ export function pause() {
         cancelAnimationFrame(raf);
         raf = null;
     }
-    deps.onStateChange?.();
+    updateReplaycard();
 }
 
 export function stop() {
@@ -389,8 +388,8 @@ export function stop() {
     for (const mmsi in hulls) releaseHull(mmsi);
     hullSource.clear();
     hullLayer.setVisible(false);
-    deps.setLiveLayers(true);
-    deps.onStateChange?.();
+    setLiveLayersVisible(true);
+    updateReplaycard();
 }
 
 export function seek(time) {
@@ -398,7 +397,7 @@ export function seek(time) {
     const tl = getTimeline();
     instant = Math.max(tl.start, Math.min(tl.end, time));
     draw();
-    deps.onStateChange?.();
+    updateReplaycard();
     pump();
 }
 

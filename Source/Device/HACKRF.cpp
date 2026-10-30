@@ -146,7 +146,7 @@ namespace Device
 			}
 		}
 	}
-	Setting &HACKRF::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &HACKRF::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -160,7 +160,7 @@ namespace Device
 			preamp = Util::Parse::Switch(arg);
 			break;
 		default:
-			Device::SetKey(key, arg);
+			Device::applyKey(key, arg);
 			break;
 		}
 		return *this;

@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <ctime>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -186,10 +187,12 @@ public:
 
   // ship-attached items (all, one ship's, or one marker's members)
   void writeJSON(JSON::Writer &w, std::time_t now, std::time_t since,
-                 uint64_t marker_key = 0, uint32_t owner_mmsi = 0) const;
+                 uint64_t marker_key = 0, uint32_t owner_mmsi = 0,
+                 const std::function<bool(uint32_t)> &allowed = nullptr) const;
   // markers changed after `since` (a change sequence, not a time), and the
   // removals; the caller refreshes first and writes the document around them
-  void writeMarkerRows(JSON::Writer &w, uint64_t since) const;
+  void writeMarkerRows(JSON::Writer &w, uint64_t since,
+                       const std::function<bool(uint32_t)> &allowed = nullptr) const;
   void writeRemoved(JSON::Writer &w, uint64_t since) const;
   // the change counter, shared with whatever else feeds the object feed
   uint64_t &sequence() { return next_seq; }
@@ -814,7 +817,8 @@ inline int BinaryStore::process(const JSON::JSON &data, FLOAT32 sender_lat,
 
 inline void BinaryStore::writeJSON(JSON::Writer &w, std::time_t now,
                                    std::time_t since, uint64_t marker_key,
-                                   uint32_t owner_mmsi) const {
+                                   uint32_t owner_mmsi,
+                                   const std::function<bool(uint32_t)> &allowed) const {
   w.beginObject()
       .kv("time", now)
       .kv("timeout", ttl)
@@ -822,6 +826,8 @@ inline void BinaryStore::writeJSON(JSON::Writer &w, std::time_t now,
       .beginArray();
 
   auto row = [&](const Item &b) {
+    if (allowed && !allowed(b.mmsi))
+      return;
     w.beginObject()
         .kv("key", (long long)b.key)
         .kv("seq", (long long)b.seq)
@@ -987,13 +993,15 @@ inline void BinaryStore::refresh(std::time_t now) {
   }
 }
 
-inline void BinaryStore::writeMarkerRows(JSON::Writer &w,
-                                         uint64_t since) const {
+inline void BinaryStore::writeMarkerRows(JSON::Writer &w, uint64_t since,
+                                         const std::function<bool(uint32_t)> &allowed) const {
   char id[24];
   markers.forEach([&](int mh) {
     const Marker &m = markers[mh];
     if (m.seq <= since)
       return false;
+    if (allowed && std::none_of(m.senders.begin(), m.senders.end(), [&](const std::pair<uint32_t, uint32_t> &sc) { return allowed(sc.first); }))
+      return true;
     snprintf(id, sizeof(id), "%llx", (unsigned long long)m.key);
     w.beginObject()
         .kv("id", id)

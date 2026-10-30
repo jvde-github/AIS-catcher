@@ -28,7 +28,7 @@ struct TrackingConfig {
   // keep every member resettable by assigning a default-constructed copy
   float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
   // every message is measured from lat and lon, whichever station heard it:
-  // a web viewer with ships of its own measures from where its section says
+  // a server with ships of its own measures from where its section says
   bool fixed = false;
   bool latlon_share = false;
   bool server_mode = false;

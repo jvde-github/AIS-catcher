@@ -33,6 +33,7 @@ public:
 	ControlServer(ControlCore &core) : core(core)
 	{
 		setFrameSrc("'self' http: https:");
+		setFrameAncestors("'self'");
 	}
 	~ControlServer() { close(); }
 
@@ -40,6 +41,8 @@ public:
 	void close();
 
 	void Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r, bool accept_gzip) override;
+	// the /viewer mount: whoever is logged in here is its owner
+	bool ownerOfMount(const IO::HTTPRequest &r) override { return sameOrigin(r) && checkSession(r.cookie); }
 
 	// The site's answers, set before start(): what the stations are doing now,
 	// for the Stations tab; where the API tester reaches the site's server on
@@ -47,6 +50,7 @@ public:
 	void setStationsLive(std::function<std::string()> f) { stations_live = std::move(f); }
 	void setServerAddress(std::function<bool(int, std::string &)> f) { server_address = std::move(f); }
 	void setServerPorts(std::function<std::vector<int>()> f) { server_ports = std::move(f); }
+	void setServerTLS(std::function<std::vector<std::pair<int, long long>>()> f) { server_tls = std::move(f); }
 
 protected:
 	void processClients() override;
@@ -56,6 +60,7 @@ private:
 	std::function<std::string()> stations_live;
 	std::function<bool(int, std::string &)> server_address;
 	std::function<std::vector<int>()> server_ports;
+	std::function<std::vector<std::pair<int, long long>>()> server_tls;
 
 	// The endpoints that answer without a session, method null meaning any.
 	// Everything else is private: a mistake here locks an endpoint down
@@ -71,7 +76,7 @@ private:
 
 	// serve the bundled control frontend, or 404
 	void serveStatic(IO::TCPServerConnection &c, const std::string &path);
-	static std::string cookieAttributes();
+	std::string cookieAttributes() const;
 
 
 	static const int SESSION_LIFETIME = 7 * 24 * 3600;
@@ -79,8 +84,16 @@ private:
 
 	std::mutex auth_mtx;
 	std::unordered_map<std::string, std::time_t> sessions;
-	int login_failures = 0;
-	std::time_t login_block_until = 0;
+
+	// wrong passwords and setup codes by address, so one address cannot lock out
+	// another; the entry that frees first goes when a new address needs room
+	struct LoginTries
+	{
+		int failures = 0;
+		std::time_t block_until = 0;
+	};
+	static const std::size_t MAX_LOGIN_PEERS = 16;
+	std::unordered_map<std::string, LoginTries> login_tries;
 
 	int log_listener = -1;
 
@@ -98,9 +111,9 @@ private:
 
 	static bool sameOrigin(const IO::HTTPRequest &r);
 
-	bool loginBlocked(int &seconds_left);
-	void loginFailed();
-	void loginSucceeded();
+	bool loginBlocked(const std::string &peer, int &seconds_left);
+	void loginFailed(const std::string &peer);
+	void loginSucceeded(const std::string &peer);
 
 	std::string statusJSON(const char *auth, bool authenticated);
 	void sendStatus(IO::TCPServerConnection &c, bool authenticated);

@@ -32,9 +32,14 @@
 #include "ViewFilter.h"
 
 class PlaceCatalogue;
+class StationRegistry;
+namespace JSON
+{
+	class JSON;
+	class Value;
+}
 
-// What the map on a server offers, under the names of the web viewer's own
-// settings, so the keys mean the same in both
+// What the map on a server offers, under the names the map pages use
 struct ViewerOptions
 {
 	// frame_ancestors: the pages that may frame the server's, its CSP's frame-ancestors; any when empty
@@ -70,8 +75,8 @@ struct ApiKey
 
 // A tracker of a server's own, behind a filter on the message stream: which
 // receivers feed it (zones, or the group mask), what passes (the terms of
-// AIS::Filter, as given), what it keeps and where it backs up. A server
-// without one reads the site's tracker.
+// AIS::Filter, as given) and what it keeps; it keeps no backup and reads no
+// places, those are the site's. A server without one reads the site's tracker.
 struct TrackerSpec
 {
 	bool own = false;
@@ -93,11 +98,12 @@ struct ServerSpec
 {
 	int port = 0;
 	std::string bind = "127.0.0.1";
+	// HTTPS with these files when given: never with plain HTTP on the same port
+	std::string tls_cert, tls_key;
 	// what it serves: the map unless switched off, the rest when switched on
 	bool ui = true, api = false, mcp = false, system = false, geojson = false, metrics = false, kml = false;
 	TrackerSpec tracking;
-	ViewFilter view;			 // which ships it shows of what its tracker keeps
-	std::vector<int> stations;	 // the stations station_id names, which its view keeps to
+	ViewFilter view; // which ships it shows of what its tracker keeps
 	ViewerOptions viewer;
 	// with keys, a request to the api, system or mcp service names one; a
 	// public server lets anyone read its data, never its system
@@ -119,39 +125,19 @@ struct ServerSpec
 		if (metrics) out.push_back("metrics");
 		return out;
 	}
-	bool serves() const { return ui || api || mcp || system || geojson || metrics || kml; }
 
 	bool operator==(const ServerSpec &o) const
 	{
-		return port == o.port && bind == o.bind && ui == o.ui && api == o.api && mcp == o.mcp && system == o.system &&
-			   geojson == o.geojson && metrics == o.metrics && kml == o.kml && tracking == o.tracking && view == o.view && stations == o.stations &&
+		return port == o.port && bind == o.bind && tls_cert == o.tls_cert && tls_key == o.tls_key && ui == o.ui && api == o.api && mcp == o.mcp && system == o.system &&
+			   geojson == o.geojson && metrics == o.metrics && kml == o.kml && tracking == o.tracking && view == o.view &&
 			   viewer == o.viewer && keys == o.keys && open == o.open && main == o.main;
 	}
 	bool operator!=(const ServerSpec &o) const { return !(*this == o); }
 };
 
-// an address only this machine reaches
-inline bool localBind(const std::string &bind)
-{
-	return bind == "localhost" || bind == "::1" || bind.compare(0, 4, "127.") == 0;
-}
-
-// a server is keyed or public, never both; what others could read beyond this
-// machine is guarded by its keys, or said to be public, and the installation
-// is never public there
-inline void checkServerAccess(const ServerSpec &spec, const std::string &where)
-{
-	if (spec.open && !spec.keys.empty())
-		throw std::runtime_error(where + " is both public and keyed: choose one. \"public\" is for anyone who reaches it; \"keys\" for the readers it names.");
-	if (!localBind(spec.bind) && spec.keys.empty() && !spec.open && (spec.api || spec.mcp || spec.system))
-		throw std::runtime_error(where + " listens beyond this machine: give it \"keys\", say \"public\": true for data anyone may read, or bind it to 127.0.0.1.");
-	if (spec.system && spec.open && !localBind(spec.bind))
-		throw std::runtime_error(where + " is public on the network: \"system\" is never public there; give it \"keys\" instead, or switch \"system\" off.");
-}
-
-// What managed mode's configuration says of the default station, from the
-// main server's title or a viewer section from before, for when "stations"
-// does not list it
+// What a configuration says of the default station where "stations" does not
+// list it: what -N and a "server" entry say of theirs, in every mode, and the
+// main server's title in managed mode
 struct StationDefaults
 {
 	bool share_loc = false, gps = true;
@@ -161,7 +147,7 @@ struct StationDefaults
 	float alt = ALTITUDE_UNDEFINED; // metres, of the antenna
 	// where a station without a position of its own stands; none when 0, 0 as the panel writes it
 	float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
-	bool placed() const { return isValidCoord(lat, lon) && !(lat == 0 && lon == 0); }
+	bool placed() const { return isValidCoord(lat, lon); }
 };
 
 // One webhook: where the events go, which of them, signed with what
@@ -191,7 +177,6 @@ struct MqttStateSpec
 		return url == o.url && username == o.username && password == o.password && client_id == o.client_id && topic == o.topic &&
 			   discovery == o.discovery && watch == o.watch;
 	}
-	bool operator!=(const MqttStateSpec &o) const { return !(*this == o); }
 };
 
 // What the configuration says about the site: how ships are kept and which
@@ -199,7 +184,7 @@ struct MqttStateSpec
 struct SiteConfig
 {
 	TrackingConfig tracking;
-	bool tracking_set = false; // the configuration's `tracking` says how; a viewer's settings do not then
+	bool tracking_set = false; // the configuration's `tracking` says how; a server's settings do not then
 	std::string backup_file;
 	int backup_minutes = 10;
 	std::string places; // a directory of place files
@@ -209,8 +194,8 @@ struct SiteConfig
 	std::vector<WebhookSpec> webhooks;
 	MqttStateSpec mqtt_state;
 
-	// a tracker is kept for whatever reads it: a server, a webhook, the MQTT state
-	// the site's tracker: a server reads it unless it has a tracker of its own
+	// the site's tracker is kept for whatever reads it: a server without a
+	// tracker of its own, a webhook, the MQTT state
 	bool wantsTracker() const
 	{
 		for (const auto &s : servers)
@@ -219,3 +204,29 @@ struct SiteConfig
 		return !webhooks.empty() || mqtt_state.any();
 	}
 };
+
+// The readers of what a configuration says of the site, in SiteConfig.cpp: each
+// section as the file has it, into the site, the station defaults and the
+// stations. A mistake in a file is said with "Config file: " in front; what -N
+// and -W give is said in their own words.
+namespace SiteReader
+{
+	// the "stations" block
+	void stations(const JSON::Value &v, StationRegistry &into);
+	// a tracking key whose value is a file or directory, resolved against the configuration's folder
+	bool isPath(int key);
+#ifdef HASAPI
+	// "tracking", "services", "server", "webhooks" and "mqtt_state" as they stand, the files they name
+	// resolved against base_dir; command_line_servers names, per "server" entry, the -N that gave it
+	// ("-N 8100"), empty for a file's
+	void site(const JSON::JSON &root, const std::string &base_dir, SiteConfig &site, StationDefaults &defaults, StationRegistry &stations, const std::vector<std::string> *command_line_servers = nullptr);
+	// managed mode's site: the main server beside the control panel, on viewer_port, the other servers,
+	// the tracking and the deliveries, and what the configuration says of the default station
+	void managedSite(const JSON::JSON &root, const std::string &base_dir, int control_port, int viewer_port, const std::string &bind, SiteConfig &site, StationDefaults &defaults, StationRegistry &stations);
+#endif
+#ifdef HASDELIVERY
+	// a "webhooks" array and an "mqtt_state" object, their mistakes said as they are
+	void webhooks(const JSON::Value &v, SiteConfig &site);
+	void mqttState(const JSON::Value &v, SiteConfig &site);
+#endif
+}

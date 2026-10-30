@@ -19,9 +19,7 @@ const ageToSeconds = (text) => {
     return any ? n : null;
 };
 
-export const TABS = [['summary', 'Summary'], ['vessel', 'Vessel'], ['voyage', 'Voyage'], ['ais', 'AIS'], ['history', 'History']];
-export const DEFAULT_TAB = 'summary';
-export const validTab = (t) => (TABS.some(([k]) => k === t) ? t : DEFAULT_TAB);
+const TABS = [['summary', 'Summary'], ['vessel', 'Vessel'], ['voyage', 'Voyage'], ['ais', 'AIS'], ['history', 'History']];
 
 const PIN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 21s-6-5.2-6-10a6 6 0 1 1 12 0c0 4.8-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg>';
 
@@ -59,9 +57,9 @@ function group(panel, label, id, expandable = false) {
 }
 
 /* `o.slot` is the host's AIS section (moved into the AIS tab), `o.tab` the
-   tab to open (null folds), `o.onTab(key)` hears a change (null on a fold),
-   `o.foldable()` enables the compact disclosure handle. Returns the cells
-   for shipcard.populate(), select(key), active(), update(ship, h). */
+   tab to open (null folds), `o.onTab(key)` hears a change (null on a fold).
+   Returns the cells for shipcard.populate(), select(key), active(),
+   update(ship, h). */
 export function build(mount, prefix, o) {
     o = o || {};
     const shell = buildTabs(mount, prefix, { ...o, tabs: TABS, label: 'Vessel details' });
@@ -73,7 +71,7 @@ export function build(mount, prefix, o) {
         for (const k in c) cells[k] = c[k];
     };
 
-    // Only the live metrics remain visible while the mobile card is folded.
+    // Only the live metrics remain visible while the card is folded.
     const summaryMetrics = metrics(head, [
         { key: 'class', label: 'Class' }, { key: 'speed', label: 'Speed' },
         { key: 'cog', label: 'Course' }, { key: 'heading', label: 'Heading' },

@@ -117,7 +117,7 @@ namespace Device
 
 namespace Device
 {
-	Setting &N2KSCAN::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &N2KSCAN::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -125,7 +125,7 @@ namespace Device
 			_iface = arg;
 			break;
 		default:
-			Device::SetKey(key, arg);
+			Device::applyKey(key, arg);
 			break;
 		}
 		return *this;

@@ -32,6 +32,7 @@
 #if defined(HASWEBVIEWER) && defined(HASAPI)
 #include "Server.h"
 #include "Site.h"
+#include "SiteConfig.h"
 #endif
 
 namespace Managed {
@@ -74,8 +75,8 @@ static Saved readSaved(ControlCore &core) {
   StationDefaults defaults;
   // the listed stations first: a server's station_id describes one only where the file does not
   if (const auto *v = doc.root[AIS::KEY_SETTING_STATIONS])
-    Config::stationsFromJSON(*v, saved.stations);
-  Config::managedSite(doc.root, core.getControlPort(), core.getViewerPort(), core.getBindAddress(), saved.site, defaults, &saved.stations);
+    SiteReader::stations(*v, saved.stations);
+  SiteReader::managedSite(doc.root, Config::baseDir(), core.getControlPort(), core.getViewerPort(), core.getBindAddress(), saved.site, defaults, saved.stations);
   usePanelPlaces(core, saved.site);
   return saved;
 }
@@ -141,21 +142,26 @@ static void runEngine(ControlCore &core, ControlServer &server,
   engine.screen.setScreen("0");
 
   try {
-    engine.receivers.back()->getDeviceManager().refreshDevices();
+    engine.scanner().refreshDevices();
 
     core.consumeConfigChanged();
     c.read(config_file);
     c.finish();
     for (auto &r : engine.receivers)
-      if (r->getDeviceManager().InputType() == Type::NONE &&
-          r->getDeviceManager().SerialNumber().empty())
+      if (r->inputType() == Type::NONE && r->devices().serial().empty())
         throw std::runtime_error(
             "no input device selected, configure one under Inputs");
 
     usePanelPlaces(core, engine.site_config);
     engine.loop_hook = [&] { syncSite(core, server, site, &engine); };
+    engine.managed = true;
+    engine.activity = &core.getChannelActivity();
+    engine.on_started = [&] {
+      core.reportRunning();
+      Info() << "Control: engine started";
+    };
 
-    engine.run(site, &core);
+    engine.run(site);
   } catch (std::exception const &e) {
     Error() << e.what();
 
@@ -245,6 +251,8 @@ static std::string stationsLive(Site &site) {
 static int serve(const std::string &config_file, int port,
                  const std::string &bind) {
   Logger::getInstance().setMinLevel(LogLevel::DEBUG);
+  // the file's own folder for what it names, from the first reading on
+  Config::setConfigBaseDir(config_file);
 
   ControlCore core(config_file, port, bind);
   // outlives every engine session, and serves the viewer between them
@@ -253,6 +261,7 @@ static int serve(const std::string &config_file, int port,
   server.setStationsLive([&site] { return stationsLive(site); });
   server.setServerAddress([&site](int port, std::string &host) { return site.serverAddress(port, host); });
   server.setServerPorts([&site] { return site.serverPorts(); });
+  server.setServerTLS([&site] { return site.serverTLS(); });
 
   if (core.authRequired())
     Info() << "Control: managed mode, config file \"" << config_file
@@ -262,8 +271,6 @@ static int serve(const std::string &config_file, int port,
            << "\", local access only";
 
   server.start();
-  site.start();
-  Config::setConfigBaseDir(config_file);
   applySaved(core, server, site);
 
   while (!stop_process) {

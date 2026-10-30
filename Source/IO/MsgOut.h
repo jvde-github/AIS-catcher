@@ -260,7 +260,7 @@ namespace IO
 		{
 			std::string s = "msgformat: " + Util::Convert::toString(fmt);
 			if (!uuid.empty())
-				s += ", uuid: " + uuid;
+				s += ", uuid: set";
 			const std::string f = filter.Get();
 			if (!f.empty())
 				s += ", " + f;
@@ -320,7 +320,7 @@ namespace IO
 			}
 		}
 
-		Setting &SetKey(AIS::Keys key, const std::string &arg) override
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override
 		{
 			if (!setOptionKey(key, arg))
 				throw std::runtime_error(type + " output - unknown option: " + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
@@ -343,6 +343,6 @@ namespace IO
 		{
 			throw std::runtime_error(type + " support not compiled in. Rebuild with -D" + build_flag + "=ON.");
 		}
-		Setting &SetKey(AIS::Keys, const std::string &) override { return *this; }
+		Setting &applyKey(AIS::Keys, const std::string &) override { return *this; }
 	};
 }

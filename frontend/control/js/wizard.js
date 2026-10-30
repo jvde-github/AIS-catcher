@@ -1,23 +1,18 @@
 // The setup wizard: a first configuration in a few steps, or one imported from
-// a pre-managed-mode config file. The app's auth and password hooks are read
-// from window when called.
-import { App, ConfigStore, Utils, normalizeConfig } from './config-manager.js';
-import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
+// a pre-managed-mode config file.
+import { App, ConfigStore, getNested, setNested } from './config-store.js';
+import { migrateConfig } from './config-migrate.js';
+import { api } from './api.js';
+import { icon } from './icons.js';
+import { hub } from './hub.js';
+import { isActive, on } from './dom.js';
+import { receiverSchema, LIST_OUTPUTS, channelTitle } from './schema.js';
+import { DEVICE_BLOCKS, deviceOf, isRadio } from './inputs.js';
 
 
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
     const BAUD_RATES = [4800, 9600, 38400, 115200];
-
-    const SDR_TYPES = {
-        RTLSDR: 'RTL-SDR',
-        AIRSPY: 'Airspy',
-        AIRSPYHF: 'Airspy HF+',
-        HACKRF: 'HackRF',
-        SDRPLAY: 'SDRplay',
-        HYDRASDR: 'HydraSDR',
-        SOAPYSDR: 'SoapySDR'
-    };
 
     const WIZARD_STEPS = [
         {
@@ -103,26 +98,23 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
     let pwState = { needed: false, setup: false };
 
     // Legacy sections the wizard can carry over; entries are reduced to the
-    // fields their schema declares and coerced by normalizeConfig. Other
+    // fields their schema declares. Other
     // root fields stay behind on purpose.
-    const IMPORT_CHANNELS = CHANNEL_REGISTRY.filter(c => c.essentials);
+    const IMPORT_CHANNELS = LIST_OUTPUTS;
 
     // copy only the fields the schema declares, at their jsonpath (receiver
-    // settings nest per device, e.g. rtlsdr.tuner)
+    // settings nest per device, e.g. rtlsdr.tuner), and the zones
     function sanitizeBySchema(item, schema) {
         const clean = {};
-        Object.values(schema).forEach(f => {
-            if (f.type === 'button') return;
-            const path = f.jsonpath || f.name;
-            if (!path) return;
-            const v = Utils.getNested(item, path);
+        [...Object.values(schema).map(f => f.jsonpath || f.name), 'zone'].forEach(path => {
+            const v = getNested(item, path);
             if (v === undefined) return;
-            Utils.setNested(clean, path, v);
+            setNested(clean, path, v);
         });
         return clean;
     }
 
-    // cfg comes from normalizeConfig with the channel arrays pre-wrapped in
+    // cfg comes from migrateConfig with the channel arrays pre-wrapped in
     // fetchLegacy, so every section here is an array (or absent)
     function buildLegacyOutputs(cfg) {
         const items = [];
@@ -134,8 +126,8 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
             if (clean.input) clean.input = String(clean.input).toUpperCase();
             items.push({
                 kind: 'receiver', key: 'receiver', idFields: ['input', 'serial'], item: clean,
-                checked: clean.active !== false,
-                title: 'Receiver · ' + (SDR_TYPES[clean.input] || clean.input || 'device'),
+                checked: isActive(clean),
+                title: 'Receiver · ' + (deviceOf(clean.input)?.name || clean.input || 'device'),
                 subtitle: clean.serial ? 'Serial ' + clean.serial : ((clean.serialport && clean.serialport.port) || '')
             });
         });
@@ -146,14 +138,14 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
             if (checked && !sel.community_uid) sel.community_uid = cfg.sharing_key;
         }
 
-        IMPORT_CHANNELS.forEach(({ key, label, schema, essentials }) => {
+        IMPORT_CHANNELS.forEach(({ value: key, label, schema, essentials }) => {
             (cfg[key] || []).forEach(item => {
                 if (!item || typeof item !== 'object') return;
                 const clean = sanitizeBySchema(item, schema);
                 if (!essentials.every(f => clean[f] !== undefined && clean[f] !== ''))
                     return;
                 // entries disabled in the legacy config default to unchecked
-                items.push({ kind: 'channel', key, idFields: essentials, item: clean, checked: clean.active !== false, title: channelTitle(label, clean), subtitle: clean.description || '' });
+                items.push({ kind: 'channel', key, idFields: essentials, item: clean, checked: isActive(clean), title: channelTitle(label, clean), subtitle: clean.description || '' });
             });
         });
 
@@ -162,34 +154,26 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
 
     function fetchLegacy() {
         legacyOutputs = null;
-        legacyPromise = fetch('/api/legacy_config')
-            .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+        legacyPromise = api('/api/legacy_config')
             .then(cfg => {
                 // single-object channels predate the array form; wrap them so
-                // normalizeConfig's migrations apply to them too
-                IMPORT_CHANNELS.forEach(({ key }) => {
+                // the migrations apply to them too
+                IMPORT_CHANNELS.forEach(({ value: key }) => {
                     if (cfg[key] && !Array.isArray(cfg[key])) cfg[key] = [cfg[key]];
                 });
                 if (cfg.receiver && !Array.isArray(cfg.receiver)) cfg.receiver = [cfg.receiver];
-                legacyOutputs = buildLegacyOutputs(normalizeConfig(cfg).config);
+                legacyOutputs = buildLegacyOutputs(migrateConfig(cfg));
             })
             .catch(() => { legacyOutputs = []; });
     }
 
-    const ROOT_DEVICE_KEYS = ['input', 'serial', 'serialport', 'rtlsdr', 'rtltcp', 'airspy', 'airspyhf',
-        'hydrasdr', 'sdrplay', 'hackrf', 'udpserver', 'soapysdr', 'nmea2000', 'file', 'zmq', 'spyserver', 'wavfile'];
+    const ROOT_DEVICE_KEYS = ['input', 'serial', ...DEVICE_BLOCKS];
 
     const DAISY_CATCHER = {
         baudrate: 115200,
         init_seq: 'co2,v',
         url: 'https://shop.wegmatt.com/products/daisy-catcher-high-performance-ais-receiver'
     };
-
-    const USB_ICON =
-        '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 7v4h1v2h-3V5h2l-3-4-3 4h2v8H8v-2.07c.7-.37 1.2-1.08 1.2-1.93 0-1.21-.99-2.2-2.2-2.2-1.21 0-2.2.99-2.2 2.2 0 .85.5 1.56 1.2 1.93V13c0 1.11.89 2 2 2h3v3.05c-.71.37-1.2 1.1-1.2 1.95 0 1.22.99 2.2 2.2 2.2 1.21 0 2.2-.98 2.2-2.2 0-.85-.49-1.58-1.2-1.95V15h3c1.11 0 2-.89 2-2v-2h1V7h-4z"/></svg>';
-
-    const CABLE_ICON =
-        '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20,5V4c0-0.55-0.45-1-1-1h-2c-0.55,0-1,0.45-1,1v1h-1v4c0,0.55,0.45,1,1,1h1v7c0,1.1-0.9,2-2,2s-2-0.9-2-2V7 c0-2.21-1.79-4-4-4S5,4.79,5,7v7H4c-0.55,0-1,0.45-1,1v4h1v1c0,0.55,0.45,1,1,1h2c0.55,0,1-0.45,1-1v-1h1v-4c0-0.55-0.45-1-1-1H7 V7c0-1.1,0.9-2,2-2s2,0.9,2,2v10c0,2.21,1.79,4,4,4s4-1.79,4-4v-7h1c0.55,0,1-0.45,1-1V5H20z"/></svg>';
 
     function resetState() {
         stepIndex = 0;
@@ -199,38 +183,19 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
         sel = { kind: null, device: null, dc_port: '', serial_port: '', serial_baudrate: 38400, community_uid: '', aishub_port: '' };
     }
 
-    function wizardFlagOn(cfg) {
-        const v = cfg && cfg.control && cfg.control.wizard;
-        return v === true || v === 'true' || v === 'on';
-    }
-
-    function postConfig(cfg) {
-        return fetch('/api/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(cfg, null, 2)
-        }).then(r => {
-            ConfigStore.invalidate();
-            if (r.status === 401 && window.hubAuthRequired) window.hubAuthRequired();
-            if (!r.ok) return r.json().catch(() => null).then(b => { throw new Error((b && b.error) || 'Save failed'); });
-            return r.json();
-        });
-    }
-
+    // the wizard is not offered again: written only while the file asks for it
     function clearWizardFlag() {
-        ConfigStore.fetch(true)
-            .then(cfg => {
-                if (!wizardFlagOn(cfg)) return;
-                cfg.control.wizard = false;
-                return postConfig(cfg);
-            })
+        ConfigStore.save(cfg => {
+            if (!on(cfg.control?.wizard)) return false;
+            cfg.control.wizard = false;
+        })
             .catch(e => {
                 console.error('Could not clear the wizard flag:', e);
                 App.notify('error', 'Could not save the wizard state');
             });
     }
 
-    function icon(name, cls) {
+    function serviceIcon(name, cls) {
         if (name === 'aiscatcher') {
             const logo = document.querySelector('#community-link svg');
             return '<span class="' + cls + '">' + (logo ? logo.outerHTML : '') + '</span>';
@@ -246,25 +211,25 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
         if (overlay) return;
         overlay = document.createElement('div');
         overlay.id = 'wizard-overlay';
-        overlay.className = 'hub-overlay';
+        overlay.className = 'modal-overlay hidden';
         overlay.innerHTML = '<div id="wizard-card" class="modal-card"></div>';
         document.body.appendChild(overlay);
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape' && overlay.classList.contains('open')) cancelWizard();
+            if (e.key === 'Escape' && !overlay.classList.contains('hidden')) cancelWizard();
         });
     }
 
     function close(clearFlag) {
         if (clearFlag) clearWizardFlag();
-        if (overlay) overlay.classList.remove('open');
+        if (overlay) overlay.classList.add('hidden');
     }
 
     function cancelWizard() {
         close(true);
         // cancelling must not bypass the password requirement: hand over to
         // the set-password modal
-        if (pwState.needed && window.hubPasswordBackstop) {
-            window.hubPasswordBackstop();
+        if (pwState.needed) {
+            hub.passwordBackstop();
             return;
         }
         App.notify('info', 'Setup cancelled — run the wizard anytime from the System panel');
@@ -313,7 +278,7 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
             '<div class="row row-between wz-head">' +
             '  <div class="wz-dots">' + dots + '</div>' +
             '  <button id="wz-cancel" title="Cancel setup" class="btn btn-quiet wz-x">' +
-            '    <svg class="icon-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
+            icon('close', 'icon-lg') +
             '  </button>' +
             '</div>' +
             '<div class="wz-body" id="wz-body"></div>' +
@@ -363,7 +328,7 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
     function renderWelcome(body, step) {
         body.innerHTML =
             '<div class="wz-welcome">' +
-            icon('aiscatcher', 'wz-logo') +
+            serviceIcon('aiscatcher', 'wz-logo') +
             '<h2>' + esc(step.title) + '</h2>' +
             '<p class="wz-sub">&copy; 2021-2026 jvde.github@gmail.com</p>' +
             '<p>This wizard sets up a simple receiving station in a few steps: pick an input device and choose where to share your data. ' +
@@ -377,18 +342,13 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
     function renderInput(body, step) {
         body.innerHTML = '<h3>' + esc(step.title) + '</h3><p class="wz-intro">' + esc(step.intro) + '</p><div id="wz-devices" class="col wz-options"><div class="wz-loading">Scanning devices&hellip;</div></div>';
 
-        const getJSON = url => fetch(url).then(r => {
-            if (r.status === 401 && window.hubAuthRequired) window.hubAuthRequired();
-            if (!r.ok) throw new Error();
-            return r.json();
-        });
         const fetches = [
-            devices ? Promise.resolve(devices) : getJSON('/api/devices').then(d => (devices = d)),
-            serialPorts ? Promise.resolve(serialPorts) : getJSON('/api/serial').then(d => (serialPorts = d))
+            devices ? Promise.resolve(devices) : api('/api/devices').then(d => (devices = d)),
+            serialPorts ? Promise.resolve(serialPorts) : api('/api/serial').then(d => (serialPorts = d))
         ];
 
         Promise.all(fetches).then(([dev, ports]) => {
-            const list = ((dev && dev.devices) || []).filter(d => SDR_TYPES[d.input]);
+            const list = ((dev && dev.devices) || []).filter(d => isRadio(d.input));
             const box = document.getElementById('wz-devices');
             if (!box) return;
 
@@ -397,7 +357,7 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
             let html =
                 '<label class="option wz-option' + (sel.kind === 'dc' ? ' selected' : '') + '" data-dev="dc">' +
                 '<input type="radio" name="wz-dev" ' + (sel.kind === 'dc' ? 'checked' : '') + '>' +
-                '<span class="wz-option-icon">' + CABLE_ICON + '</span>' +
+                '<span class="wz-option-icon">' + icon('cable', '') + '</span>' +
                 '<span class="wz-option-main"><span class="wz-option-title">dAISy-catcher</span>' +
                 '<span class="wz-option-sub">High-performance AIS receiver &mdash; <a class="wz-mini-link" href="' + DAISY_CATCHER.url + '" target="_blank" rel="noopener">shop.wegmatt.com</a></span>' +
                 '<span class="col wz-daisy' + (sel.kind === 'dc' ? '' : ' hidden') + '" id="wz-dc-fields">' +
@@ -413,8 +373,8 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
                 html +=
                     '<label class="option wz-option' + (active ? ' selected' : '') + '" data-dev="' + i + '">' +
                     '<input type="radio" name="wz-dev" ' + (active ? 'checked' : '') + '>' +
-                    '<span class="wz-option-icon">' + USB_ICON + '</span>' +
-                    '<span class="wz-option-main"><span class="wz-option-title">' + esc(SDR_TYPES[d.input]) + '</span>' +
+                    '<span class="wz-option-icon">' + icon('usb', '') + '</span>' +
+                    '<span class="wz-option-main"><span class="wz-option-title">' + esc(deviceOf(d.input).name) + '</span>' +
                     '<span class="wz-option-sub">Serial ' + esc(d.serial || '—') + '</span></span>' +
                     '</label>';
             });
@@ -422,7 +382,7 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
             html +=
                 '<label class="option wz-option' + (sel.kind === 'serial' ? ' selected' : '') + '" data-dev="serial">' +
                 '<input type="radio" name="wz-dev" ' + (sel.kind === 'serial' ? 'checked' : '') + '>' +
-                '<span class="wz-option-icon">' + CABLE_ICON + '</span>' +
+                '<span class="wz-option-icon">' + icon('cable', '') + '</span>' +
                 '<span class="wz-option-main"><span class="wz-option-title">Serial</span>' +
                 '<span class="wz-option-sub">NMEA receiver connected via a serial port</span>' +
                 '<span class="col wz-daisy' + (sel.kind === 'serial' ? '' : ' hidden') + '" id="wz-serial-fields">' +
@@ -470,31 +430,34 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
             '<div class="field"><label class="field-label">Password</label>' +
             '<input id="wz-pw1" class="input" type="password" autocomplete="new-password"></div>' +
             '<div class="field"><label class="field-label">Confirm password</label>' +
-            '<input id="wz-pw2" class="input" type="password" autocomplete="new-password"></div>';
+            '<input id="wz-pw2" class="input" type="password" autocomplete="new-password"></div>' +
+            (pwState.setup
+                ? '<div class="field"><label class="field-label">Setup code</label>' +
+                  '<input id="wz-setup-code" class="input" type="text" autocomplete="off" spellcheck="false">' +
+                  '<p class="wz-fineprint">The setup code is in the log, printed when the program starts.</p></div>'
+                : '');
     }
 
     function submitPassword() {
         const p1 = document.getElementById('wz-pw1').value;
         const p2 = document.getElementById('wz-pw2').value;
 
-        if (p1.length < 6) { stepError('The password needs at least 6 characters.'); return; }
         if (p1 !== p2) { stepError('Passwords do not match.'); return; }
 
         const nextBtn = document.getElementById('wz-next');
         nextBtn.disabled = true;
-        fetch(pwState.setup ? '/api/setup' : '/api/password', { method: 'POST', body: p1 })
-            .then(r => r.json())
-            .then(res => {
+        const headers = pwState.setup ? { 'X-Setup-Code': document.getElementById('wz-setup-code').value.trim() } : undefined;
+        api(pwState.setup ? '/api/setup' : '/api/password', { body: p1, headers })
+            .then(() => {
                 nextBtn.disabled = false;
-                if (!res.status) { stepError(res.error || 'Could not set the password.'); return; }
                 const wasSetup = pwState.setup;
                 pwState = { needed: false, setup: false };
-                if (window.hubAuthGranted) window.hubAuthGranted();
+                hub.authGranted();
                 // before setup the legacy config was not accessible yet
                 if (wasSetup) fetchLegacy();
                 gotoStep(1);
             })
-            .catch(() => { nextBtn.disabled = false; stepError('Connection error. Please try again.'); });
+            .catch(e => { nextBtn.disabled = false; stepError(e.message || 'Could not set the password.'); });
     }
 
     function renderImport(body, step) {
@@ -539,13 +502,13 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
         body.innerHTML =
             '<h3>' + esc(step.title) + '</h3>' +
             '<div class="row wz-service">' +
-            icon(s.icon, 'wz-service-icon') +
+            serviceIcon(s.icon, 'wz-service-icon') +
             '<div class="wz-service-main">' +
             '<p class="wz-intro">' + esc(s.blurb) + '</p>' +
             '</div>' +
             '</div>' +
             '<a class="btn wz-link" href="' + esc(s.url) + '" target="_blank" rel="noopener">' + esc(s.linkLabel) +
-            ' <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>' +
+            ' ' + icon('linkOut', '') + '</a>' +
             '<label class="field-label">' + esc(s.field.label) + '</label>' +
             '<input id="wz-service-field" class="input" placeholder="' + esc(s.field.placeholder) + '" value="' + esc(sel[s.field.key] || '') + '">' +
             '<p class="wz-fineprint">Leave empty and press Next (or Skip) if you do not want to set this up now.</p>';
@@ -557,7 +520,7 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
     function changeList() {
         const items = [];
         if (sel.kind === 'sdr' && sel.device)
-            items.push('Input device: <b>' + esc(SDR_TYPES[sel.device.input] || sel.device.input) + ' [' + esc(sel.device.serial || '') + ']</b>');
+            items.push('Input device: <b>' + esc(deviceOf(sel.device.input)?.name || sel.device.input) + ' [' + esc(sel.device.serial || '') + ']</b>');
         else if (sel.kind === 'dc' && sel.dc_port)
             items.push('Input device: <b>dAISy-catcher on ' + esc(sel.dc_port) + '</b>');
         else if (sel.kind === 'serial' && sel.serial_port)
@@ -582,6 +545,21 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
                 items.map(i => '<li>' + i + '</li>').join('') + '</ul>' +
                 '<label class="wz-check"><input type="checkbox" id="wz-start" checked> Start the receiver after saving</label>'
                 : '<p class="wz-intro">Nothing selected &mdash; no changes will be made. You can run this wizard again from the <b>System</b> panel.</p>');
+        showSharingState(body);
+    }
+
+    // sharing the wizard does not set stays as the file has it, on by default: the review says so
+    function showSharingState(body) {
+        if (sel.community_uid) return;
+        ConfigStore.fetch().then(cfg => {
+            if (!on(cfg.sharing) || !body.isConnected || WIZARD_STEPS[stepIndex].type !== 'finish') return;
+            const line = document.createElement('p');
+            line.className = 'wz-intro';
+            line.id = 'wz-sharing';
+            line.textContent = (String(cfg.sharing_key || '').trim() ? 'Community sharing: on, with your station key.' : 'Anonymous community sharing: on.') +
+                ' Switch it off under Outputs, Community map.';
+            body.append(line);
+        }).catch(() => {});
     }
 
     function onNext(step) {
@@ -625,8 +603,7 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
         nextBtn.disabled = true;
         nextBtn.textContent = 'Saving...';
 
-        ConfigStore.fetch(true)
-            .then(cfg => {
+        ConfigStore.save(cfg => {
                 const inputStep = WIZARD_STEPS.find(s => s.type === 'input');
                 const hasDevice = !stepHidden(inputStep) &&
                     ((sel.kind === 'sdr' && sel.device) ||
@@ -665,7 +642,7 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
                     let udp = cfg.udp || [];
                     if (!Array.isArray(udp)) udp = [udp];
                     const dup = udp.some(u => u && u.host === 'data.aishub.net' && String(u.port) === String(sel.aishub_port));
-                    if (!dup) udp.push({ active: true, host: 'data.aishub.net', port: +sel.aishub_port, description: 'AISHub' });
+                    if (!dup) udp.push({ active: true, host: 'data.aishub.net', port: +sel.aishub_port, description: 'AISHub', filter: true, gps: false });
                     cfg.udp = udp;
                 }
                 (legacyOutputs || []).forEach(it => {
@@ -678,21 +655,14 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
                     cfg[it.key] = arr;
                 });
                 if (cfg.control) cfg.control.wizard = false;
-                return postConfig(cfg);
             })
-            .then(data => {
-                if (!data.status) throw new Error(data.error || 'save failed');
+            .then(() => {
                 close(false);
                 App.notify('success', 'Configuration saved');
                 if (startAfter)
-                    return fetch('/api/status').then(r => { if (!r.ok) throw new Error(); return r.json(); })
-                        .then(st => fetch('/api/engine', { method: 'POST', body: st.engine === 'running' ? 'restart' : 'start' }))
-                        .then(r => r.json())
-                        .then(res => {
-                            if (!res.status)
-                                App.notify('error', 'Could not start the receiver: ' + (res.error || 'request failed'));
-                        })
-                        .catch(() => { App.notify('error', 'Could not start the receiver'); });
+                    return hub.status()
+                        .then(st => api('/api/engine', { body: st.engine === 'running' ? 'restart' : 'start' }))
+                        .catch(e => { App.notify('error', 'Could not start the receiver: ' + e.message); });
             })
             .catch(e => {
                 nextBtn.disabled = false;
@@ -708,7 +678,7 @@ import { receiverSchema, CHANNEL_REGISTRY, channelTitle } from './schema.js';
             pwState = { needed: !!(pw && pw.needed), setup: !!(pw && pw.setup) };
             fetchLegacy();
             renderStep();
-            overlay.classList.add('open');
+            overlay.classList.remove('hidden');
         }
     };
 

@@ -4,10 +4,13 @@
 // The services read the ship table, which every input feeds: what each shows is on its own page.
 
 import { formatBytes } from '@aiscatcher/core/text.js';
-import { el } from './dom.js';
-import { App, ConfigStore, ZoneColors, registerEditor } from './config-manager.js';
-import { OUTPUT_TYPES, channelTitle } from './schema.js';
-import { describeInput } from './inputs.js';
+import { el, isActive, on } from './dom.js';
+import { icon } from './icons.js';
+import { api } from './api.js';
+import { App, ConfigStore, registerEditor } from './config-store.js';
+import { ZoneColors } from './zone-modal.js';
+import { LIST_OUTPUTS, OUTPUT_TYPES, channelTitle } from './schema.js';
+import { describeInput, isRadio } from './inputs.js';
 import { stationName } from './stations.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -15,15 +18,9 @@ const CONTAINER = 'flow-zones';
 // what the outputs are doing, as the main server beside the panel reports it
 const OUTPUT_STATS = '/viewer/api/output_stats.json';
 const STATS_MS = 5000;
-// the radio inputs: without a sharing key the community map takes only these
-const LIVE_INPUTS = new Set(['RTLSDR', 'AIRSPY', 'AIRSPYHF', 'HACKRF', 'SDRPLAY', 'HYDRASDR', 'SOAPYSDR']);
-
 // the statistics' output types, each to the type of output that reports it
 const STAT_TYPES = {};
-OUTPUT_TYPES.forEach(o => {
-    if (o.statType) STAT_TYPES[o.statType] = o.value;
-    (o.statTypes || []).forEach(t => { STAT_TYPES[t] = o.value; });
-});
+OUTPUT_TYPES.forEach(o => (o.stats || []).forEach(t => { STAT_TYPES[t] = o.value; }));
 
 const safeLink = url => (url && /^https?:\/\//i.test(url) ? url : null);
 // a zone's name: letters, digits, - and _
@@ -36,16 +33,16 @@ const hostOf = url => { try { return new URL(url).hostname; } catch { return '';
 export function collectOutputs(cfg) {
     const outputs = [];
     outputs.push({ key: 'sharing', type: 'sharing', name: 'Community map', hint: 'community', zones: Array.isArray(cfg.sharing_zone) ? cfg.sharing_zone : [],
-        active: cfg.sharing === true, liveOnly: !String(cfg.sharing_key || '').trim() });
+        active: on(cfg.sharing), liveOnly: !String(cfg.sharing_key || '').trim() });
     // stdout takes every input; "0" and "none" are the silent levels
     if (cfg.screen !== undefined && !['0', 'none'].includes(String(cfg.screen).toLowerCase()))
         outputs.push({ key: 'screen', type: 'screen', name: 'Screen', zones: [], active: true, fixed: true });
-    OUTPUT_TYPES.forEach(({ value, configKey, flowLabel }) => {
-        if (!configKey) return;
-        (cfg[configKey] || []).forEach((item, index) => {
+    LIST_OUTPUTS.forEach(({ value, label, flow }) => {
+        const flowLabel = flow || label;
+        (cfg[value] || []).forEach((item, index) => {
             const name = item.description ? `${flowLabel} · ${item.description}` : channelTitle(flowLabel, item);
             outputs.push({ key: `${value}:${index}`, type: value, index, name, hint: item.description || item.host || hostOf(item.url) || flowLabel,
-                zones: item.zone || [], active: item.active !== false, link: item.link });
+                zones: item.zone || [], active: isActive(item), link: item.link });
         });
     });
     return outputs;
@@ -60,7 +57,7 @@ function inputZones(r) {
 // whether an output takes an input, as the engine routes: a zone is a route
 function routes(o, r) {
     if (o.fixed) return true;
-    if (o.liveOnly && !LIVE_INPUTS.has(String(r.input || '').toUpperCase())) return false;
+    if (o.liveOnly && !isRadio(r.input)) return false;
     const zi = inputZones(r);
     if (o.zones.length) return o.zones.some(z => zi.includes(z));
     return !zi.length;
@@ -75,13 +72,13 @@ export function outputOf(type, item) {
 // Why a switched-on output receives nothing from the switched-on inputs `receivers`, in one line
 // that says what to do; null when one reaches it
 export function outputProblem(o, receivers) {
-    const on = (receivers || []).filter(r => r.active !== false);
-    if (on.some(r => routes(o, r))) return null;
-    if (!on.length) return 'No input is switched on.';
-    if (o.liveOnly && !on.some(r => LIVE_INPUTS.has(String(r.input || '').toUpperCase())))
+    const live = (receivers || []).filter(isActive);
+    if (live.some(r => routes(o, r))) return null;
+    if (!live.length) return 'No input is switched on.';
+    if (o.liveOnly && !live.some(r => isRadio(r.input)))
         return 'Without a sharing key it takes radio inputs only, and none is switched on.';
     if (o.zones.length) {
-        const off = (receivers || []).some(r => r.active === false && routes(o, r));
+        const off = (receivers || []).some(r => !isActive(r) && routes(o, r));
         return `No switched-on input is connected to ${o.zones.join(', ')}${off ? ', only switched-off ones' : ''}: connect one in Flow.`;
     }
     return 'Every switched-on input has a zone, and this output takes only inputs without one: connect it in Flow.';
@@ -119,7 +116,7 @@ export function inputRouting(item) {
 export function outputRouting(item) {
     const zones = Array.isArray(item.zone) ? item.zone : Array.isArray(item.sharing_zone) ? item.sharing_zone : [];
     const o = { zones, liveOnly: item.sharing !== undefined && !String(item.sharing_key || '').trim() };
-    return ConfigStore.fetch().then(cfg => (cfg.receiver || []).filter(r => r.active !== false && routes(o, r)).length).catch(() => null);
+    return ConfigStore.fetch().then(cfg => (cfg.receiver || []).filter(r => isActive(r) && routes(o, r)).length).catch(() => null);
 }
 
 // an input's own zones and its engines', as Flow has edited them, onto `row`
@@ -170,7 +167,7 @@ function flowNode({ name, isInput, onClick, link, handle }) {
     const top = el('div', 'st-node__top', {},
         el('button', 'st-node__name', { type: 'button', text: name, title: 'Open its settings', onClick }),
         url ? el('a', '', { href: url, target: '_blank', rel: 'noopener', title: url,
-            html: '<svg class="st-node__link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="its page"><path d="M7 17L17 7M9 7h8v8"/></svg>' }) : null,
+            html: icon('external', 'st-node__link') }) : null,
         el('span', 'st-spacer'), status);
     const line = el('div', 'st-node__sub');
     const chips = el('span', 'st-node__zones');
@@ -202,8 +199,7 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
             flow.outputs.forEach(o => {
                 if (o.key === 'sharing') setZones(cfg, 'sharing_zone', o.zones);
                 else if (o.index !== undefined) {
-                    const t = OUTPUT_TYPES.find(x => x.value === o.type);
-                    const row = t && Array.isArray(cfg[t.configKey]) ? cfg[t.configKey][o.index] : null;
+                    const row = Array.isArray(cfg[o.type]) ? cfg[o.type][o.index] : null;
                     setZones(row, 'zone', o.zones);
                 }
             });
@@ -219,7 +215,7 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
         const { inputs, outputs, outputType } = pages();
         if (inputs) flow.inputs.forEach((r, i) => setInputZones(inputs.data[i], r));
         if (outputs && outputType === 'sharing') setZones(outputs.data, 'sharing_zone', outputZonesOf('sharing'));
-        else if (outputs && outputs.config.isList)
+        else if (outputs && outputs.config.list)
             outputs.data.forEach((row, i) => { const z = outputZonesOf(`${outputType}:${i}`); if (z) setZones(row, 'zone', z); });
     }
     function touched() {
@@ -256,16 +252,16 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
             n.chips.replaceChildren(...inputZones(r).map(zoneChip));
             const to = flow.outputs.filter(o => routes(o, r));
             n.card.dataset.armed = String(armed.from === i);
-            n.card.dataset.nowhere = String(r.active !== false && !to.length);
+            n.card.dataset.nowhere = String(isActive(r) && !to.length);
             n.line.textContent = n.station + (to.length ? '' : (n.station ? ' · ' : '') + 'goes nowhere');
         });
         // what reaches an output: the inputs switched on, as when the receiver runs
-        const on = flow.inputs.filter(r => r.active !== false);
-        const radio = on.some(r => LIVE_INPUTS.has(String(r.input || '').toUpperCase()));
+        const live = flow.inputs.filter(isActive);
+        const radio = live.some(r => isRadio(r.input));
         nodes.outputs.forEach(n => {
             const o = flow.outputs.find(x => x.key === n.key);
             n.chips.replaceChildren(...o.zones.map(zoneChip));
-            const from = on.filter(r => routes(o, r));
+            const from = live.filter(r => routes(o, r));
             n.card.dataset.nothing = String(o.active && !from.length);
             n.line.textContent = !from.length ? (o.liveOnly && !radio ? 'Radio inputs only, until it has a sharing key' : 'Receives nothing')
                 : o.fixed ? 'Every input' : o.zones.length ? 'Its connections' : o.liveOnly ? 'Radio inputs without a zone, until it has a key' : 'Inputs without a zone';
@@ -359,8 +355,7 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
             outputs.forEach(o => { putStats(o.stats, []); paintOutput(o); });
             return;
         }
-        fetch(OUTPUT_STATS)
-            .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        api(OUTPUT_STATS)
             .then(stat => {
                 const byKey = statsByKey(stat, outputs);
                 outputs.forEach(o => {
@@ -407,7 +402,7 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
                 nodes.inputs = flow.inputs.map((r, i) => {
                     const n = flowNode({ name: r.label, isInput: true, onClick: () => open('input', i),
                         handle: routable ? () => { armed = { from: armed.from === i ? null : i, pending: null }; draw(); } : null });
-                    return { ...n, station: stationOf(r), active: r.active !== false };
+                    return { ...n, station: stationOf(r), active: isActive(r) };
                 });
                 nodes.outputs = flow.outputs.map(o => {
                     const n = flowNode({ name: o.name, isInput: false, link: o.link,

@@ -4,16 +4,14 @@
 // create it: the engine does not start while an input names a station that is not there.
 
 import { el } from './dom.js';
-import { App, ConfigStore } from './config-manager.js';
-import { ICONS } from './icons.js';
+import { App, ConfigStore } from './config-store.js';
+import { icon } from './icons.js';
 import { TAGS, modeOf } from './stations-editor.js';
 import { isDefaultStation, stationLabel } from './stations.js';
 import { createPicker } from '@aiscatcher/ui/picker.js';
 
 const fmt = v => Number(v).toFixed(4);
 const placed = s => [s.lat, s.lon].every(v => v !== undefined && v !== null && v !== '' && Number.isFinite(Number(v)));
-
-const WARN = '<svg class="st-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg>';
 
 // where a station's position comes from, as the configuration says
 function where(s) {
@@ -74,7 +72,7 @@ export function createStationPicker(value, { stations, onPick, onCreated, none }
         warn.hidden = current === -1 || stations().some(s => Number(s.id) === current);
         if (warn.hidden) return warn.replaceChildren();
         const id = current;
-        warn.replaceChildren(el('span', 'st-stpick__warnicon', { html: WARN }),
+        warn.replaceChildren(el('span', 'st-stpick__warnicon', { html: icon('warningThin') }),
             el('span', 'st-stpick__warntext', { text: `Station ${id} is not under Stations: the inputs will not start.` }),
             el('button', 'st-btn st-btn--sm', { type: 'button', text: `Create station ${id}`, onClick: async () => {
                 if (await createStation(id, '') === null) return;
@@ -87,8 +85,8 @@ export function createStationPicker(value, { stations, onPick, onCreated, none }
     // "+ New station…": a name, then Create; the number is the next free one
     function newStation() {
         const row = el('div', 'st-stpick__new');
-        const start = el('button', 'st-stpick__add', { type: 'button', html: ICONS.plus + 'New station…', onClick: () => {
-            const name = el('input', 'input st-stpick__newname', { type: 'text', placeholder: 'Name (optional)', 'aria-label': 'Name of the new station',
+        const start = el('button', 'st-stpick__add', { type: 'button', html: icon('plus') + 'New station…', onClick: () => {
+            const name = el('input', 'st-input st-stpick__newname', { type: 'text', placeholder: 'Name (optional)', 'aria-label': 'Name of the new station',
                 onKeydown: e => { if (e.key === 'Enter') { e.preventDefault(); create(); } } });
             const go = el('button', 'st-btn st-btn--sm st-btn--primary', { type: 'button', text: 'Create', onClick: () => create() });
             const create = async () => {

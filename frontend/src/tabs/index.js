@@ -1,32 +1,122 @@
-// The viewer's tabs: the module behind each lazy tab, loaded once when first
-// wanted, and the one activateTab that shows a tab, starts what it runs and
-// stops what the last one ran. A lazy tab registers its own actions when it
-// loads; until then a feature asks loaded(id) and gets nothing.
+// The viewer's tabs, one table: each tab's menu entry, the server feature it
+// needs, the module behind it (loaded once, when first wanted), what shows and
+// hides it and what refreshes it. showTab is the one way to a tab. A lazy tab's
+// module registers its own actions and exports what it does: shown(), hidden(),
+// update(). Until it has loaded a feature asks loaded(id) and gets nothing.
 
 import { settings } from '../core/state.js';
 import { config } from '../core/config.js';
 import { ships } from '../core/store.js';
 import { map } from '../map.js';
-import { onRefresh, restart as restartRefresh } from '../data.js';
-import { saveSettings, closeSettings } from '../features/settings/settings.js';
+import { updateMap } from '../fleet.js';
+import { refresh, restart as restartRefresh } from '../data.js';
+import { saveSettings, effects } from '../settings-store.js';
+import { closeSettings } from '../features/settings/settings.js';
+import { closeSearch } from '../features/search/search-panel.js';
+import { hideMenu, applyPanels } from '../panels.js';
 import { showTargetcard } from '../features/targetcard/card.js';
+import { updateStatistics } from './stat/stat.js';
 import * as fireworks from '../overlays/fireworks.js';
 import { register } from '../actions.js';
 
-const LOADERS = {
-    plots: () => import('./plots/plots.js'),
-    ships: () => import('./shiptable/shiptable.js'),
-    realtime: () => import('./realtime/realtime.js'),
-    decoder: () => import('./decoder/decoder.js'),
-    log: () => import('./log/log.js'),
-    about: () => import('../features/about/markdown.js'),
-};
+const lazyUpdate = (id) => async () => (await load(id)).update();
+
+/* { id, label, title, icon: the menu entry; feature: the server's say, when it
+   has one; load: the lazy module; shown, hidden, refresh: when the tab has them
+   here rather than in its module; action: an entry that is a button, not a tab } */
+const TABS = [
+    {
+        id: 'map', label: 'Map', title: 'Live map of received vessels', icon: 'map',
+        shown: () => {
+            document.getElementById("tableside").style.display = "flex";
+            map?.updateSize();
+        },
+        hidden: () => fireworks.stop(),
+        refresh: () => updateMap(),
+    },
+    {
+        id: 'stat', label: 'Statistics', title: 'System and receiver statistics', icon: 'business_center',
+        refresh: () => updateStatistics(),
+    },
+    {
+        id: 'plots', label: 'Plots', title: 'Graphs of message and vessel counts over time', icon: 'leaderboard',
+        load: () => import('./plots/plots.js'), refresh: lazyUpdate('plots'),
+    },
+    {
+        id: 'ships', label: 'Ships', title: 'Searchable table of received vessels', icon: 'table',
+        load: () => import('./shiptable/shiptable.js'), refresh: lazyUpdate('ships'),
+    },
+    {
+        id: 'realtime', label: 'NMEA', title: 'Live stream of received NMEA messages', icon: 'timer',
+        feature: (c) => c.features.realtime, load: () => import('./realtime/realtime.js'),
+    },
+    {
+        id: 'log', label: 'Log', title: 'Application log', icon: 'terminal',
+        feature: (c) => c.features.log, load: () => import('./log/log.js'),
+    },
+    {
+        id: 'decoder', label: 'Decoder', title: 'Decode raw NMEA sentences', icon: 'comment',
+        feature: (c) => c.features.decoder, load: () => import('./decoder/decoder.js'),
+    },
+    {
+        id: 'about', label: 'About', title: 'About this station', icon: 'info',
+        feature: (c) => c.features.about_md, load: () => import('./about/about.js'),
+    },
+    {
+        id: 'webcontrol', label: 'Control', title: 'Open Web Control', icon: 'play_circle',
+        feature: (c) => c.webcontrol_http, action: 'openWebControl',
+    },
+];
+
+const tabOf = (id) => TABS.find((t) => t.id === id && !t.action);
+const enabled = (tab) => !tab.feature || !!tab.feature(config);
+
+// ─── the two menus ───────────────────────────────────────────────────────────
+
+const buttons = {};
+
+function buildMenus() {
+    const menubar = document.getElementById("menubar");
+    const mini = document.getElementById("menubar_mini");
+    for (const t of TABS) {
+        const data = t.action ? { action: t.action } : { action: 'activateTab', tab: t.id };
+
+        const item = document.createElement("div");
+        item.id = t.id + "_tab";
+        item.title = t.title;
+        Object.assign(item.dataset, data);
+        item.innerHTML = `<i class="${t.icon}_icon"></i><span>${t.label}</span>`;
+        menubar.appendChild(item);
+
+        const pill = document.createElement("i");
+        pill.id = t.id + "_tab_mini";
+        pill.title = t.title;
+        pill.className = t.icon + "_icon";
+        Object.assign(pill.dataset, data);
+        pill.innerHTML = `<span class="mb-name">${t.label}</span>`;
+        mini.appendChild(pill);
+
+        buttons[t.id] = [item, pill];
+    }
+}
+
+buildMenus();
+
+// the entries of what the server has switched off give way
+export function applyTabFeatures() {
+    for (const t of TABS) {
+        if (!t.feature) continue;
+        for (const el of buttons[t.id]) el.style.display = enabled(t) ? "" : "none";
+    }
+}
+
+// ─── the lazy modules ────────────────────────────────────────────────────────
 
 const modules = {};
 const loading = {};
 
 export function load(id) {
-    if (!loading[id]) loading[id] = LOADERS[id]().then((m) => (modules[id] = m));
+    if (!loading[id]) loading[id] = tabOf(id).load().then((m) => (modules[id] = m));
     return loading[id];
 }
 
@@ -35,112 +125,65 @@ export function loaded(id) {
     return modules[id];
 }
 
-// { leaving(): before a tab is shown, shown(): after }
-let hooks = { leaving: () => {}, shown: () => {} };
+// ─── showing one ─────────────────────────────────────────────────────────────
 
-export function init(h) {
-    hooks = h;
+let current = null;
+
+function leave(tab) {
+    tab.hidden?.();
+    if (tab.load) loaded(tab.id)?.hidden?.();
 }
 
-let logViewer = null;
+// a lazy tab may have been left, or switched off, while its module loaded
+function enterLazy(tab) {
+    load(tab.id).then((m) => {
+        if (settings.tab === tab.id && enabled(tab)) m.shown?.();
+    }).catch((err) => console.error('Failed to load ' + tab.id + ' tab module:', err));
+}
 
-export function activateTab(a) {
-    // Block decoder tab if decoder is disabled
-    if (a === "decoder" && !config.features.decoder) {
-        return;
-    }
+// the tab `id`; without one the tab the settings name, or the one to fall back on
+export function showTab(id = resolveTab()) {
+    const tab = tabOf(id);
+    if (!tab || !enabled(tab)) return;
 
-    hooks.leaving();
+    closeSearch();
+    hideMenu();
     closeSettings();
 
-    Array.from(document.getElementById("menubar").children).forEach((e) => (e.className = e.className.replace(" active", "")));
-    Array.from(document.getElementById("menubar_mini").children).forEach((e) => (e.className = e.className.replace(" active", "")));
+    for (const t of TABS)
+        for (const el of buttons[t.id]) el.classList.toggle("active", t === tab);
 
     const tabcontent = document.getElementsByClassName("tabcontent");
+    for (let i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
+    document.getElementById(id).style.display = "block";
+    tab.shown?.();
 
-    for (var i = 0; i < tabcontent.length; i++) tabcontent[i].style.display = "none";
-
-    document.getElementById(a).style.display = "block";
-    if (a === "map") {
-        document.getElementById("tableside").style.display = "flex";
-        map?.updateSize();
-    }
-
-    const tabElement = document.getElementById(a + "_tab");
-    if (tabElement) tabElement.className += " active";
-
-    const tabMiniElement = document.getElementById(a + "_tab_mini");
-    if (tabMiniElement) tabMiniElement.className += " active";
-
-    settings.tab = a;
+    settings.tab = id;
     saveSettings();
 
-    hooks.shown();
+    applyPanels();
+
+    if (current && current !== tab) leave(current);
+    current = tab;
+    if (tab.load) enterLazy(tab);
 
     restartRefresh();
-
-    if (a != "map") fireworks.stop();
-
-    if (a == "log") {
-        load('log').then(({ LogViewer }) => {
-            if (settings.tab !== 'log' || !config.features.log || logViewer) return;
-            logViewer = new LogViewer();
-            logViewer.connect();
-        }).catch((err) => console.error('Failed to load log tab module:', err));
-    }
-    if (a != 'log' && logViewer) {
-        logViewer.disconnect();
-        logViewer = null;
-    }
-
-    if (a == "realtime" && config.features.realtime) {
-        load('realtime').then((m) => {
-            if (settings.tab !== 'realtime' || !config.features.realtime) return;
-            m.activate();
-        }).catch((err) => console.error('Failed to load realtime tab module:', err));
-    } else if (a != 'realtime') {
-        loaded('realtime')?.deactivate();
-    }
-    if (a === "about") {
-        load('about').then(({ setup }) => setup())
-            .catch((err) => console.error('Failed to load about tab module:', err));
-    }
-    if (a === "decoder" && !loaded('decoder')) {
-        // Preload so Decode/Clear button clicks resolve from cache.
-        load('decoder').catch((err) => console.error('Failed to load decoder tab module:', err));
-    }
 }
 
 // the tab the settings name, or the one to fall back on when that one is off
 export function resolveTab() {
     if (settings.tab == "settings") settings.tab = "stat";
 
-    // Check if requested tab is disabled and redirect to map
-    if (settings.tab === "about" && !config.features.about_md) settings.tab = "map";
-    if (settings.tab == "realtime" && !config.features.realtime) {
-        settings.tab = "map";
-    }
-    if (settings.tab == "log" && !config.features.log) {
-        settings.tab = "map";
-    }
-    if (settings.tab == "decoder" && !config.features.decoder) {
-        settings.tab = "map";
-    }
+    const tab = tabOf(settings.tab);
+    if (!tab) settings.tab = "stat";
+    else if (!enabled(tab)) settings.tab = "map";
 
-    if (settings.tab != "realtime" && settings.tab != "about" && settings.tab != "map" && settings.tab != "plots" && settings.tab != "ships" && settings.tab != "stat" && settings.tab != "log" && settings.tab != "decoder") {
-        settings.tab = "stat";
-        alert("Invalid tab specified");
-    }
     return settings.tab;
-}
-
-export function selectTab() {
-    activateTab(resolveTab());
 }
 
 // the map, with vessel `m`'s card open when the receiver knows it
 export function selectMapTab(m) {
-    document.getElementById("map_tab").click();
+    showTab('map');
     if (m in ships) showTargetcard('ship', m);
 }
 
@@ -148,17 +191,17 @@ export async function openRealtimeForMMSI(m) {
     (await load('realtime')).openForMMSI(m);
 }
 
-onRefresh("plots", async () => {
-    const plots = loaded('plots') || await load('plots').then((m) => { m.setAbsoluteTime(settings.plot_absolute_time); return m; });
-    await plots.update();
-});
+// what the data loop calls for the tab on screen
+export function refreshTab() {
+    return tabOf(settings.tab)?.refresh?.();
+}
 
-onRefresh("ships", async () => {
-    await (await load('ships')).update();
-});
+// values on the page are written in these: what is on screen is written again
+const rewrite = () => { refresh(); loaded('ships')?.reset(); };
+effects({ coordinate_format: rewrite, table_shiptype_use_icon: rewrite, metric: rewrite });
 
 register({
-    activateTab: (e, d) => activateTab(d.tab),
+    activateTab: (e, d) => showTab(d.tab),
     decodeNMEA: async () => (await load('decoder')).decode(),
     clearDecoder: async () => (await load('decoder')).clear(),
 });

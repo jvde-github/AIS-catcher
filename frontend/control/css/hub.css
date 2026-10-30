@@ -1,0 +1,8 @@
+/* The panel's stylesheet, bundled into one file by the build: the first sheets of the ui package
+   (it draws no ship sprites), the page, the places editor, the settings. */
+@import "../../packages/ui/css/tokens.css";
+@import "../../packages/ui/css/icons.css";
+@import "../../packages/ui/css/components.css";
+@import "./page.css";
+@import "./locations.css";
+@import "./settings.css";

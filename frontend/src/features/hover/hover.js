@@ -17,21 +17,14 @@ import { toLonLat } from 'ol/proj';
 import { getWidth } from 'ol/extent';
 import { map, markers, syncCircleFeature, shapeLayer, trackLayer } from '../../map.js';
 import { shapeFeatures } from '../../fleet.js';
+import { ui } from '../../ui.js';
 import { closeSettings } from '../settings/settings.js';
-import { closeDialog } from '../../dialog.js';
 import { showTargetcard, closeTargetcard } from '../targetcard/card.js';
 import { showContextMenu } from '../contextmenu/contextmenu.js';
 import { showHoverTrack, hoverEnded } from '../../tracks.js';
 import * as mapObjects from '../mapobjects/mapobjects.js';
 import * as measure from '../measure/measure.js';
 import * as range from '../range/range.js';
-
-// { ui: the entry's map UI (chrome) }
-let deps = null;
-
-export function init(d) {
-    deps = d;
-}
 
 const hover_info = document.getElementById('hover-info');
 export let hover_feature = undefined;
@@ -59,30 +52,22 @@ export const handleClick = function (pixel, target, event) {
     }
 
     if (feature && 'link' in feature && !included) {
-        window.open(feature.link, '_blank');
+        window.open(feature.link, '_blank', 'noopener');
     } else if (feature && feature.station_mmsi && feature.station_mmsi in shipsDB) {
-        closeDialog();
-        closeSettings();
         showTargetcard('ship', feature.station_mmsi, pixel);
         return;
     } else if (feature && feature.binary === true && !feature.is_associated) {
-        closeDialog();
         closeSettings();
         mapObjects.click(feature);
         return;
     } else if (feature && 'replayMmsi' in feature) {
-        closeDialog();
         closeSettings();
-            showContextMenu(event.originalEvent, feature.replayMmsi, 'ship', ["ctx-replay-ship"]);
+        showContextMenu(event.originalEvent, feature.replayMmsi, 'ship', ["ctx-replay-ship"]);
         return;
     } else if (feature && 'ship' in feature) {
-        closeDialog();
-        closeSettings();
         showTargetcard('ship', feature.ship.mmsi, pixel);
     }
     else if (feature && 'plane' in feature) {
-        closeDialog();
-        closeSettings();
         showTargetcard('plane', feature.plane.hexident, pixel);
     }
     else {
@@ -94,7 +79,7 @@ export const handleClick = function (pixel, target, event) {
 };
 
 // the vessel's band, then a band for each kind of message it sent
-export function getTooltipContent(ship) {
+function getTooltipContent(ship) {
     return vesselBand(ship, {
         name: getShipName(ship) || ship.mmsi,
         speed: ship.speed != null ? getSpeedVal(ship.speed) + ' ' + getSpeedUnit() : null,
@@ -118,7 +103,7 @@ function getTooltipContentPlane(plane) {
 }
 
 function mapFreeBox() {
-    return deps.ui.chrome.freeBox(map.getTargetElement());
+    return ui.chrome.freeBox(map.getTargetElement());
 }
 
 const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
@@ -128,7 +113,7 @@ const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
 
     if (pixel) {
         const { offsetWidth: tw, offsetHeight: th } = tooltip;
-        const at = deps.ui.chrome.alongCourse(mapFreeBox(), tw, th, pixel, distance, angle);
+        const at = ui.chrome.alongCourse(mapFreeBox(), tw, th, pixel, distance, angle);
 
         Object.assign(tooltip.style, {
             left: `${at.left}px`,

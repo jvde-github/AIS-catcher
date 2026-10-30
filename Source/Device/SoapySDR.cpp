@@ -52,6 +52,8 @@ namespace Device {
 		}
 	}
 
+	std::vector<SoapyDevice> SOAPYSDR::dev_list;
+
 	SOAPYSDR::SOAPYSDR() : Device(Format::CF32, 0, Type::SOAPYSDR, "SoapySDR") {
 		registerLogHandler();
 	}
@@ -282,7 +284,7 @@ namespace Device {
 				  << std::endl;
 	}
 
-	Setting& SOAPYSDR::SetKey(AIS::Keys key, const std::string &arg) {
+	Setting& SOAPYSDR::applyKey(AIS::Keys key, const std::string &arg) {
 		switch (key) {
 		case AIS::KEY_SETTING_DEVICE:
 			device_args = arg;
@@ -309,7 +311,7 @@ namespace Device {
 			channel = Util::Parse::Integer(arg, 0, 32);
 			break;
 		default:
-			Device::SetKey(key, arg);
+			Device::applyKey(key, arg);
 			break;
 		}
 		return *this;

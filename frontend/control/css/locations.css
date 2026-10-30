@@ -1,7 +1,6 @@
 /* Settings › Places: the place editor. Every class is .pe-; the colours are the shared tokens.
    Only what the map draws with is kept here, as values the canvas can read. */
 #sys-places-body {container-type:inline-size;min-width:0;flex:1 1 0;min-height:0;display:flex;flex-direction:column}
-#sys-places-body [hidden] {display:none!important}
 
 .pe {
   /* the map: read by places-editor.js, re-read when the theme flips */
@@ -14,8 +13,6 @@
   --pe-context-stroke: #64748b;
   --pe-context-fill: rgba(100, 116, 139, 0.12);
   --pe-marker-fill: rgba(71, 85, 105, 0.6);
-  color: var(--color-text-strong);
-  font-variant-numeric: tabular-nums;
 }
 html.dark .pe, [data-theme="dark"] .pe {
   --pe-shape-stroke: #5b9bf0;
@@ -28,23 +25,9 @@ html.dark .pe, [data-theme="dark"] .pe {
   --pe-marker-fill: rgba(212, 212, 216, 0.55);
 }
 
-.pe, .pe * {box-sizing:border-box}
-.pe button, .pe input, .pe select, .pe textarea {font:inherit}
-.pe button {color:inherit;cursor:pointer}
 .pe button:disabled {cursor:default;opacity:.45}
-.pe :focus-visible {outline:2px solid var(--color-accent);outline-offset:2px}
 .pe .pe-icon {width:18px;height:18px;flex-shrink:0;fill:currentColor}
 .pe svg.pe-icon[fill="none"] {fill:none}
-
-/* ---- buttons ---- */
-.pe .pe-btn {height:40px;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--color-field-border);border-radius:10px;background:transparent;color:var(--color-text-strong);font-size:14px;white-space:nowrap;box-shadow:none}
-.pe .pe-btn:hover:not(:disabled) {background:var(--color-hover)}
-.pe .pe-btn--primary {border-color:transparent;background:var(--color-accent);color:var(--color-accent-ink);font-weight:600}
-.pe .pe-btn--primary:hover:not(:disabled) {background:var(--color-accent);filter:brightness(1.08)}
-.pe .pe-btn--danger {border-color:transparent;color:var(--color-danger)}
-.pe .pe-icon-btn {width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:10px;background:transparent;color:var(--color-text-muted)}
-.pe .pe-icon-btn:hover {background:var(--color-hover);color:var(--color-text-strong)}
-.pe .pe-icon-btn--outline {width:40px;height:40px;border:1px solid var(--color-field-border);color:var(--color-icon)}
 
 /* ---- layout ---- */
 .pe-body {flex:1;min-height:0;display:grid;grid-template-columns:320px minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:24px;padding-top:4px}
@@ -53,21 +36,16 @@ html.dark .pe, [data-theme="dark"] .pe {
 .pe-sidebar {display:flex;flex-direction:column;gap:12px;min-height:0;min-width:0}
 .pe-sidebar__actions {display:flex;gap:8px}
 .pe-sidebar__actions {justify-content:flex-end}
-.pe-sidebar__actions .pe-btn--primary {flex:1 1 auto;max-width:220px}
-.pe-menu {position:relative}
-.pe-menu summary {list-style:none}
-.pe-menu summary::-webkit-details-marker {display:none}
-.pe-menu__items {position:absolute;right:0;top:calc(100% + 6px);z-index:6;display:flex;flex-direction:column;gap:2px;padding:6px;min-width:180px;border-radius:12px;background:var(--color-surface-raised);box-shadow:var(--shadow-menu)}
-.pe .pe-menu__item {height:36px;padding:0 12px;display:flex;align-items:center;border:0;border-radius:8px;background:transparent;color:var(--color-text-strong);font-size:14px;text-align:left}
-.pe .pe-menu__item:hover:not(:disabled) {background:var(--color-hover)}
+.pe-sidebar__actions .st-btn--primary {flex:1 1 auto;max-width:220px}
 
 .pe-search {position:relative;display:flex;align-items:center}
 .pe-search .pe-icon {position:absolute;left:12px;width:15px;height:15px;color:var(--color-text-muted);pointer-events:none}
-.pe .pe-input, .pe .pe-select {width:100%;height:40px;margin:0;padding:0 12px;border:1px solid var(--color-field-border);border-radius:10px;background:var(--color-surface-alt);color:var(--color-text-strong);font-size:14.5px;box-shadow:none}
-.pe .pe-input::placeholder {color:var(--color-text-muted)}
-.pe .pe-input:focus, .pe .pe-select:focus {outline:none;border-color:var(--color-accent);box-shadow:0 0 0 3px var(--color-focus-ring)}
-.pe .pe-search .pe-input {padding-left:36px;font-size:14px}
-.pe .pe-input--mono {font-family:var(--font-mono);font-size:14px;letter-spacing:.04em;text-transform:uppercase}
+.st.pe .st-input {font-size:14.5px}
+.st.pe .st-input::placeholder {color:var(--color-text-muted)}
+.st.pe .st-btn:not(.st-btn--primary) {background:transparent}
+.st.pe .st-input.select {padding-right:32px}
+.st.pe .pe-search .st-input {padding-left:36px;font-size:14px}
+.st.pe .st-input--mono {font-size:14px;letter-spacing:.04em;text-transform:uppercase}
 
 .pe-list {flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:4px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface-alt)}
 .pe .pe-place {width:100%;display:flex;align-items:center;gap:12px;padding:10px 12px;border:0;border-radius:9px;background:transparent;color:var(--color-text-strong);text-align:left;flex-shrink:0}
@@ -89,15 +67,11 @@ html.dark .pe, [data-theme="dark"] .pe {
 .pe-editor {display:flex;flex-direction:column;gap:14px;min-height:0;min-width:0}
 /* a wrapping row: whichever fields the type shows share the width, so a hidden one leaves no hole */
 .pe-form {display:flex;flex-wrap:wrap;gap:12px;margin:0;padding:0;border:0;min-width:0}
-.pe-field {display:flex;flex-direction:column;gap:6px;min-width:0;flex:1 1 140px}
-.pe-field:first-child {flex:2 1 220px} /* the name */
-.pe-label {font-size:12.5px;color:var(--color-text-muted)}
+.st .pe-form .st-field {gap:6px;margin:0;flex:1 1 140px}
+.st .pe-form .st-field:first-child {flex:2 1 220px} /* the name */
+.st .pe-form .st-label {margin:0;font-size:12.5px;font-weight:400;color:var(--color-text-muted)}
 /* read-only while not editing: the values, not greyed-out controls */
-.pe-form:disabled .pe-input, .pe-form:disabled .pe-select {opacity:1;background:transparent;border-color:var(--color-border);color:var(--color-text-strong);-webkit-text-fill-color:var(--color-text-strong)}
-.pe-form:disabled .pe-select-wrap .pe-icon {display:none}
-.pe-select-wrap {position:relative;display:flex;align-items:center}
-.pe .pe-select {appearance:none;-webkit-appearance:none;padding-right:32px}
-.pe-select-wrap .pe-icon {position:absolute;right:12px;width:14px;height:14px;color:var(--color-text-muted);pointer-events:none}
+.st .pe-form:disabled .st-input {opacity:1;background-color:transparent;background-image:none;border-color:var(--color-border);color:var(--color-text-strong);-webkit-text-fill-color:var(--color-text-strong)}
 
 .pe-empty {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px;border:1px dashed var(--color-field-border);border-radius:14px;color:var(--color-text-muted);text-align:center;font-size:14px}
 .pe-empty strong {color:var(--color-text-strong);font-size:15px}
@@ -132,7 +106,7 @@ html.dark .pe, [data-theme="dark"] .pe {
 .pe-attribution a {color:inherit}
 
 .pe-paste {position:absolute;z-index:3;left:12px;right:12px;top:60px;display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:12px;background:var(--color-surface-raised);box-shadow:var(--shadow-menu)}
-.pe .pe-paste textarea {height:auto;min-height:130px;padding:10px 12px;font:12px/1.4 var(--font-mono);resize:vertical}
+.st.pe .pe-paste textarea {height:auto;min-height:130px;padding:10px 12px;font:12px/1.4 var(--font-mono);resize:vertical}
 .pe-paste__actions {display:flex;justify-content:flex-end;gap:8px}
 
 /* the map's own width decides: tool labels go first, then the hint moves above the style switch */
@@ -149,12 +123,9 @@ html.dark .pe, [data-theme="dark"] .pe {
 
 /* ---- footer ---- */
 .pe-footer {flex-shrink:0;display:flex;align-items:center;gap:10px;margin-top:16px;padding:14px 0 2px;border-top:1px solid var(--color-border)}
-.pe-footer__spacer {flex:1}
 .pe-feedback {font-size:13px;color:var(--color-text-muted);min-width:0;overflow:hidden;text-overflow:ellipsis}
 .pe-feedback:empty {display:none}
 .pe-feedback[data-error=true] {color:var(--color-danger)}
-.pe-dirty {display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--color-warning);white-space:nowrap}
-.pe-dirty::before {content:"";width:7px;height:7px;border-radius:50%;background:var(--color-warning-ink)}
 .place-busy:before {content:'';display:inline-block;width:11px;height:11px;border:2px solid var(--color-field-border);border-top-color:var(--color-accent);border-radius:50%;animation:place-spin 1s linear infinite;margin-right:7px;vertical-align:-2px}
 @keyframes place-spin {to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce) {.place-busy:before {animation:none}}
@@ -180,8 +151,8 @@ html.dark .pe, [data-theme="dark"] .pe {
   .pe-footer {flex-wrap:wrap}
 }
 @container (max-width: 560px) {
-  .pe-dirty {order:-1;width:100%}
+  .pe-footer .st-dirty {order:-1;width:100%}
   .pe-feedback {order:-1;width:100%}
-  .pe .pe-btn--danger {padding:0 10px}
-  .pe-btn--danger .pe-btn__label {display:none}
+  .pe .st-btn--danger {padding:0 10px}
+  .st-btn--danger .st-btn__label {display:none}
 }

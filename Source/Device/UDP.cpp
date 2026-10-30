@@ -163,7 +163,7 @@ namespace Device
 		DeviceList.push_back(Description("UDP", "UDP", "UDP", (uint64_t)0, Type::UDP));
 	}
 
-	Setting &UDP::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &UDP::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -177,7 +177,7 @@ namespace Device
 			throw std::runtime_error("UDP: format cannot be changed and need to be TXT.");
 			break;
 		default:
-			Device::SetKey(key, arg);
+			Device::applyKey(key, arg);
 			break;
 		}
 		return *this;

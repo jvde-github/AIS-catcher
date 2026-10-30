@@ -26,7 +26,6 @@
 .feed_icon,
 .business_center_icon,
 .cloud_download_icon,
-.view_list_icon,
 .map_icon,
 .info_icon,
 .help_icon,
@@ -57,8 +56,6 @@
 .public_icon,
 .build_icon,
 .brightness_4_icon,
-.keyboard_arrow_down_icon,
-.keyboard_arrow_up_icon,
 .more_horiz_icon,
 .timer_icon,
 .error_od_icon,
@@ -163,10 +160,6 @@
 .save_icon {
     /* Feather stroke icon, not Material: the mask keys off rendered alpha, so strokes work too */
     --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3E%3Cpath d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/%3E%3Cpolyline points="17 21 17 13 7 13 7 21"/%3E%3Cpolyline points="7 3 7 8 15 8"/%3E%3C/svg%3E');
-}
-
-.view_list_icon {
-    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M350-160h470q24.75 0 42.375-17.625T880-220v-114H350v174ZM80-626h210v-174H140q-24.75 0-42.375 17.625T80-740v114Zm0 233h210v-173H80v173Zm60 233h150v-174H80v114q0 24.75 17.625 42.375T140-160Zm210-233h530v-173H350v173Zm0-233h530v-114q0-24.75-17.625-42.375T820-800H350v174Z"/%3E%3C/svg%3E');
 }
 
 .map_icon {
@@ -283,14 +276,6 @@
 
 .brightness_4_icon {
     --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M481-29 346-160H160v-186L26-480l134-134v-186h186l135-134 133 134h186v186l134 134-134 134v186H614L481-29Zm-2-191q111 0 186-75.5T740-481q0-110-75.5-185.5T479-742q-27 0-52 5.5T373-718q69 32 111 96t42 141q0 77-42 141t-111 97q24 11 50.5 17t55.5 6Z"/%3E%3C/svg%3E');
-}
-
-.keyboard_arrow_down_icon {
-    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M480-344 240-584l43-43 197 197 197-197 43 43-240 240Z"/%3E%3C/svg%3E');
-}
-
-.keyboard_arrow_up_icon {
-    --svg: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"%3E%3Cpath d="M480-554 283-357l-43-43 240-240 240 240-43 43-197-197Z"/%3E%3C/svg%3E');
 }
 
 .more_horiz_icon {

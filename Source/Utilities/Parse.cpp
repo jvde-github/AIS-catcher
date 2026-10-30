@@ -104,6 +104,18 @@ namespace Util
 		return url.substr(0, start) + url.substr(at + 1);
 	}
 
+	std::string Parse::URLForLog(const std::string &url)
+	{
+		size_t start = url.find("://");
+		start = start == std::string::npos ? 0 : start + 3;
+		size_t end = url.find_first_of("/?#", start);
+		end = end == std::string::npos ? url.size() : end;
+		size_t at = url.rfind('@', end);
+		if (at != std::string::npos && at >= start && at < end)
+			return url.substr(0, start) + url.substr(at + 1, end - at - 1);
+		return url.substr(0, end);
+	}
+
 	void Parse::URL(const std::string &url, std::string &protocol, std::string &username, std::string &password, std::string &host, std::string &port, std::string &path, bool *has_password)
 	{
 		std::string s = url;

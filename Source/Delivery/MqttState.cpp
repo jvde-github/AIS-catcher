@@ -56,7 +56,7 @@ void MqttState::open()
 	PROTOCOL protocol = PROTOCOL::MQTT;
 	if (!prot.empty() && !Util::Parse::Protocol(prot, protocol))
 	{
-		Error() << "MQTT state: unknown protocol in " << spec.url;
+		Error() << "MQTT state: unknown protocol in " << Util::Parse::URLForLog(spec.url);
 		return;
 	}
 

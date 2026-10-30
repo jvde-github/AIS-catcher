@@ -753,7 +753,7 @@ namespace IO
 		}
 	}
 
-	Setting &DatabaseOutput::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &DatabaseOutput::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		if (const char *use = replacedBy(key))
 			throw std::runtime_error("DBMS: this setting was removed with the new schema, use \"" +
@@ -798,7 +798,7 @@ namespace IO
 			STATS = Util::Parse::Switch(arg);
 			break;
 		default:
-			return OutputMessage::SetKey(key, arg);
+			return OutputMessage::applyKey(key, arg);
 		}
 		return *this;
 	}

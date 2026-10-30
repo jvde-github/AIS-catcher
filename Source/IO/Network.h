@@ -112,7 +112,7 @@ namespace IO
 		~HTTPStreamer() { Stop(); }
 		HTTPStreamer() : OutputMessage("HTTP"), url("http://127.0.0.1") { fmt = MessageFormat::JSON_FULL; }
 
-		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 
 		void Start() override;
 		void Stop() override;
@@ -152,7 +152,7 @@ namespace IO
 			fmt = MessageFormat::NMEA;
 		}
 
-		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 
 		void Start() override;
 		void Stop() override;
@@ -184,7 +184,7 @@ namespace IO
 		TCPClientStreamer() : OutputMessage("TCP Client") { fmt = MessageFormat::NMEA; }
 		~TCPClientStreamer() { Stop(); }
 
-		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 
 		void Start() override;
 		void Stop() override;
@@ -230,7 +230,7 @@ namespace IO
 		HubStreamer();
 		~HubStreamer() { Stop(); }
 
-		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 
 		void Start() override;
 		void Stop() override;
@@ -251,7 +251,7 @@ namespace IO
 
 		virtual ~TCPlistenerStreamer() {};
 
-		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 
 		void Start() override;
 		void Stop() override {}
@@ -303,6 +303,6 @@ namespace IO
 		void Stop() override;
 		void poll() override;
 
-		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 	};
 }

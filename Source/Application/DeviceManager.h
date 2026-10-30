@@ -17,50 +17,49 @@
 
 #pragma once
 
+#include <memory>
 #include <mutex>
+#include <vector>
 
 #include "Common.h"
-
-#include "Device/FileRAW.h"
-#include "Device/FileWAV.h"
-#include "Device/RTLSDR.h"
-#include "Device/AIRSPYHF.h"
-#include "Device/HACKRF.h"
-#include "Device/RTLTCP.h"
-#include "Device/AIRSPY.h"
-#include "Device/SDRPLAY.h"
-#include "Device/SpyServer.h"
-#include "Device/SoapySDR.h"
-#include "Device/Serial.h"
-#include "Device/ZMQ.h"
-#include "Device/UDP.h"
-#include "Device/N2KsktCAN.h"
-#include "Device/HYDRASDR.h"
+#include "Device/Device.h"
 
 class DeviceManager
 {
     Type type = Type::NONE;
-    std::string serial;
+    std::string serial_;
 
-    // Device instances
-    Device::RAWFile _RAW;
-    Device::WAVFile _WAV;
-    Device::RTLSDR _RTLSDR;
-    Device::RTLTCP _RTLTCP;
-    Device::SpyServer _SpyServer;
-    Device::AIRSPYHF _AIRSPYHF;
-    Device::AIRSPY _AIRSPY;
-    Device::SDRPLAY _SDRPLAY;
-    Device::HACKRF _HACKRF;
-    Device::HYDRASDR _HYDRASDR;
-    Device::SOAPYSDR _SOAPYSDR;
-    Device::SerialPort _SerialPort;
-    Device::ZMQ _ZMQ;
-    Device::UDP _UDP;
-    Device::N2KSCAN _N2KSCAN;
+    // One row per device type: its "-g<flag>" command line switch (0 when it has
+    // none), its config file key, its Type, whether refreshDevices() asks it to
+    // enumerate hardware, whether it is a radio, its name on the status pages
+    // and how its device object is made. Network/file devices must not
+    // enumerate: they push an unconditional pseudo-entry that would pollute the
+    // device list. Rows are ordered enumerating-first; that order fixes the
+    // "-d:x" indices.
+    struct DeviceEntry
+    {
+        char flag;
+        AIS::Keys key;
+        Type type;
+        bool enumerate;
+        bool radio;
+        const char *label;
+        Device::Device *(*make)();
+    };
+    static const int ROWS = 15;
+    static const DeviceEntry device_settings[];
+    // the row of a type, a config file key or a -g letter; nullptr for none
+    static const DeviceEntry *row(Type type);
+    static const DeviceEntry *row(AIS::Keys key);
+    static const DeviceEntry *row(char flag);
+
+    // the device object of each row, made the first time a setting, the
+    // enumeration or the input asks for it: a receiver pays for the kinds it uses
+    std::unique_ptr<Device::Device> objects[ROWS];
+    Device::Device &object(const DeviceEntry &d);
 
     Device::Device *getDeviceByType(Type type);
-    void printAvailableDevices_locked();
+    static void printLocked();
 
     static std::vector<Device::Description> device_list;
     static std::mutex list_mtx;
@@ -73,39 +72,40 @@ public:
             device->Close();
     }
 
-    // Device accessors
-    Device::RAWFile &RAW() { return _RAW; }
-    Device::WAVFile &WAV() { return _WAV; }
-    Device::RTLSDR &RTLSDR() { return _RTLSDR; }
-    Device::RTLTCP &RTLTCP() { return _RTLTCP; }
-    Device::SpyServer &SpyServer() { return _SpyServer; }
-    Device::AIRSPYHF &AIRSPYHF() { return _AIRSPYHF; }
-    Device::AIRSPY &AIRSPY() { return _AIRSPY; }
-    Device::SDRPLAY &SDRPLAY() { return _SDRPLAY; }
-    Device::HACKRF &HACKRF() { return _HACKRF; }
-    Device::HYDRASDR &HYDRASDR() { return _HYDRASDR; }
-    Device::SerialPort &SerialPort() { return _SerialPort; }
-    Device::SOAPYSDR &SOAPYSDR() { return _SOAPYSDR; }
-    Device::ZMQ &ZMQ() { return _ZMQ; }
-    Device::UDP &UDP() { return _UDP; }
-    Device::N2KSCAN &N2KSCAN() { return _N2KSCAN; }
-
     // The device Setting a "-g<flag>" switch or a config file key names,
     // nullptr when it names no device.
     Setting *settingForFlag(char flag);
     Setting *settingForKey(AIS::Keys key);
+    // a device type's block in the configuration file, by its -g letter or its type: KEY_COUNT for none
+    static AIS::Keys keyForFlag(char flag);
+    static AIS::Keys keyForType(Type type);
+    // a device type's block, by its key
+    static bool isDeviceKey(AIS::Keys key);
+    // An SDR radio: the kind selected when nothing is, and the kind whose
+    // messages the community feed takes. Serial/N2K ports (e.g.
+    // /dev/cu.debug-console) still enumerate but must be selected explicitly.
+    static bool isRadio(Type type);
+    // the kind of device as the control panel writes it; "Input" for a kind without a row
+    static const char *label(Type type);
 
     void refreshDevices();
-    Format getInputFormat() { return getDeviceByType(type) ? getDeviceByType(type)->getFormat() : Format::CU8; }
-    bool isTXTformatSet() { return getDeviceByType(type) ? (getDeviceByType(type)->getFormat() == Format::TXT) : false; }
+    Format getInputFormat()
+    {
+        Device::Device *d = getDeviceByType(type);
+        return d ? d->getFormat() : Format::CU8;
+    }
 
-    Type &InputType() { return type; }
-    std::string &SerialNumber() { return serial; }
+    // the kind of input and the serial number the configuration selects, when it names them
+    Type inputType() const { return type; }
+    void setInputType(Type t) { type = t; }
+    const std::string &serial() const { return serial_; }
+    void setSerial(const std::string &s) { serial_ = s; }
 
-    Device::Device *getDevice() { return device; }
+    // the device opened for the receiver, null before openDevice()
+    Device::Device *getDevice() const { return device; }
 
     bool openDevice(int sample_rate, int bandwidth, int ppm, int frequency, TAG &tag);
-    void printAvailableDevices(bool JSON = false);
+    static void printAvailableDevices(bool JSON = false);
     static std::string getDeviceListJSON();
     void selectDeviceByIndex(int index);
 };

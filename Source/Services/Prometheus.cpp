@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "Prometheus.h"
+#include "Tracker.h"
 #include "Logger.h"
 
 const std::string ShippingClassNames[] = {
@@ -118,7 +119,7 @@ void PrometheusCounter::Receive(const JSON::JSON *json, int len, TAG &tag)
 	Add(data, tag);
 }
 
-std::string PrometheusCounter::toPrometheus()
+std::string PrometheusCounter::toPrometheus(bool hide_range)
 {
 	// copied under the lock, written outside it
 	struct Row
@@ -158,9 +159,12 @@ std::string PrometheusCounter::toPrometheus()
 	element += "# TYPE ais_stat_count counter\n";
 	element += "ais_stat_count " + std::to_string(count) + "\n";
 
-	element += "# HELP ais_stat_distance Longest distance\n";
-	element += "# TYPE ais_stat_distance gauge\n";
-	element += "ais_stat_distance " + std::to_string(distance) + "\n";
+	if (!(hide_range && distance > 0))
+	{
+		element += "# HELP ais_stat_distance Longest distance\n";
+		element += "# TYPE ais_stat_distance gauge\n";
+		element += "ais_stat_distance " + std::to_string(distance) + "\n";
+	}
 
 	for (int i = 0; i < 4; i++)
 	{
@@ -229,7 +233,7 @@ namespace Services
 			return true;
 		}
 		response.type = "text/plain";
-		response.body = counter.toPrometheus();
+		response.body = counter.toPrometheus(!request.owner && tracker.keepsPositionHome(std::vector<int>()));
 		response.cors = true;
 		return true;
 	}

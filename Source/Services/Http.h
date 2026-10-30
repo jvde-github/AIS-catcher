@@ -44,6 +44,8 @@ namespace Services
 		std::string authorization, origin, host, peer;
 		// what it may read, as the server admitted it: ApiKey's DATA and SYSTEM
 		int scopes = 0;
+		// the owner of this machine's stations, who may read the range figures of one that keeps its position home
+		bool owner = false;
 
 		std::string param(const std::string &name) const;
 		// every name and value of the query, decoded, in order

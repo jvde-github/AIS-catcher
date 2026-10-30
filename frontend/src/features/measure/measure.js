@@ -41,7 +41,7 @@ export function init() {
 }
 
 export function refreshMeasures() { measure.refresh(); }
-export function setMeasureMode() { measure.arm(); }
+function setMeasureMode() { measure.arm(); }
 export function cancel() { measure.cancel(); }
 export function isActive() { return measure.isActive(); }
 export function count() { return measure.count(); }

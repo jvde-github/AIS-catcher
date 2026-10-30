@@ -217,7 +217,15 @@ class PlaneDB : public StreamIn<Plane::ADSB>
             }
         }
 
-        if (positionUpdated && isValidCoord(tag.station_lat, tag.station_lon))
+        // a station that keeps its position home keeps the plane's distance and bearing home too
+        if (tag.position_private)
+        {
+            plane.distance = DISTANCE_UNDEFINED;
+            plane.angle = ANGLE_UNDEFINED;
+            tag.distance = DISTANCE_UNDEFINED;
+            tag.angle = ANGLE_UNDEFINED;
+        }
+        else if (positionUpdated && isValidCoord(tag.station_lat, tag.station_lon))
         {
             Util::Geodesy::distanceBearing(tag.station_lat, tag.station_lon, plane.lat, plane.lon, plane.distance, plane.angle);
             tag.distance = plane.distance;

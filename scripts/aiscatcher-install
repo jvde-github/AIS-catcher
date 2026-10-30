@@ -613,18 +613,18 @@ install_source_additional_files() {
 
     log "INFO" "Installing plugins"
     mkdir -p "$PLUGIN_DIR" || error_exit "Failed to create plugin directory"
-    cp "${TMP_DIR}/AIS-catcher/plugins/"* "$PLUGIN_DIR" || error_exit "Failed to copy plugins"
+    cp --remove-destination "${TMP_DIR}/AIS-catcher/plugins/"* "$PLUGIN_DIR" || error_exit "Failed to copy plugins"
 
     log "INFO" "Installing DBMS"
     mkdir -p "$DBMS_DIR" || error_exit "Failed to create DBMS directory"
-    cp "${TMP_DIR}/AIS-catcher/Source/DBMS/create_pg.sql" "${TMP_DIR}/AIS-catcher/Source/DBMS/create_sqlite.sql" "$DBMS_DIR" || error_exit "Failed to copy DBMS"
+    cp --remove-destination "${TMP_DIR}/AIS-catcher/Source/DBMS/create_pg.sql" "${TMP_DIR}/AIS-catcher/Source/DBMS/create_sqlite.sql" "$DBMS_DIR" || error_exit "Failed to copy DBMS"
 
     log "INFO" "Installing README"
     mkdir -p "$README_DIR" || error_exit "Failed to create README directory"
-    cp "${TMP_DIR}/AIS-catcher/README.md" "$README_DIR" || error_exit "Failed to copy README"
+    cp --remove-destination "${TMP_DIR}/AIS-catcher/README.md" "$README_DIR" || error_exit "Failed to copy README"
 
     log "INFO" "Copying LICENSE"
-    cp "${TMP_DIR}/AIS-catcher/LICENSE" /etc/AIS-catcher/LICENSE || error_exit "Failed to copy LICENSE"
+    cp --remove-destination "${TMP_DIR}/AIS-catcher/LICENSE" /etc/AIS-catcher/LICENSE || error_exit "Failed to copy LICENSE"
 }
 
 ################################################################################
@@ -811,7 +811,8 @@ setup_configuration() {
     # managed config with its path so the setup wizard can offer to import
     # the configured output channels. Must run before the legacy default
     # config is (re)created below, so a fresh install does not qualify.
-    if [[ "$MANAGED" == true && ! -f "$MANAGED_CONFIG_FILE" && -f "$CONFIG_FILE" ]]; then
+    # A link counts as there: this runs as root in a folder the service's user owns.
+    if [[ "$MANAGED" == true && ! -f "$MANAGED_CONFIG_FILE" && ! -L "$MANAGED_CONFIG_FILE" && -f "$CONFIG_FILE" ]]; then
         log "INFO" "Existing config.json found; the setup wizard will offer to import its outputs"
         cat << EOF | tee "$MANAGED_CONFIG_FILE" > /dev/null || error_exit "Failed to create aiscatcher.json"
 {
@@ -824,11 +825,11 @@ setup_configuration() {
 EOF
     fi
 
-    if [[ ! -f "$CONFIG_FILE" ]]; then
+    if [[ ! -f "$CONFIG_FILE" && ! -L "$CONFIG_FILE" ]]; then
         echo '{"config":"aiscatcher","version":1,"screen":0,"verbose":true,"verbose_time":60,"sharing":true,"udp":[],"tcp":[],"server":{"active":false,"plugin_dir":"/etc/AIS-catcher/plugins","cdn":"/etc/AIS-catcher/webassets","file":"/etc/AIS-catcher/stat.bin","realtime":false,"geojson":false,"prome":false,"port":"8100","backup":"10","context":"settings"},"rtlsdr":{"tuner":"auto","bandwidth":"192K","sample_rate":"1536K","biastee":false,"rtlagc":true},"airspyhf":{"threshold":"low","preamp":false},"rtltcp":{"protocol":"none","sample_rate":"288K","bandwidth":"0","rtlagc":false}}' | tee "$CONFIG_FILE" > /dev/null || error_exit "Failed to create config.json"
     fi
     
-    if [[ ! -f "$CMD_FILE" ]]; then
+    if [[ ! -f "$CMD_FILE" && ! -L "$CMD_FILE" ]]; then
         cat << EOF | tee "$CMD_FILE" > /dev/null || error_exit "Failed to create config.cmd"
 # AIS-catcher configuration
 
@@ -953,6 +954,10 @@ SupplementaryGroups=plugdev dialout"
 ExecStart=${exec_start}
 Restart=${restart_policy}
 RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=true
 
 [Install]
 WantedBy=multi-user.target"
@@ -1209,6 +1214,12 @@ configure_installation() {
         log "INFO" "Ensuring correct ownership of configuration directory"
         chown -R aiscatcher:aiscatcher "$CONFIG_DIR" || log "WARN" "Failed to set ownership of config directory"
     fi
+
+    # The configuration holds the password's hash and the outputs' credentials.
+    # find -type f: chmod would follow a link the service's user left here.
+    chmod 750 "$CONFIG_DIR" || log "WARN" "Failed to set permissions of config directory"
+    find "$CONFIG_DIR" -maxdepth 1 -type f \( -name config.json -o -name config.cmd -o -name aiscatcher.json \) \
+        -exec chmod 640 {} + || log "WARN" "Failed to set permissions of config files"
 }
 
 # Display installation summary with useful information
@@ -1337,7 +1348,19 @@ display_installation_summary() {
         echo -e "    ${COLOR_CYAN}http://localhost:$((ctrl_port + 1))${COLOR_RESET}"
         echo "    (or use your server's IP address)"
         echo ""
-        echo "  • Set an admin password on your first visit"
+        echo "  • Set an admin password on your first visit. The page asks for a setup code,"
+        echo "    which only the log shows:"
+        echo -e "    ${COLOR_YELLOW}journalctl -u ${SERVICE_NAME} | grep 'setup code'${COLOR_RESET}"
+        local setup_code=""
+        for _ in 1 2 3 4 5; do
+            setup_code=$(sed -n 's/.*"setup_code" *: *"\([^"]*\)".*/\1/p' "$MANAGED_CONFIG_FILE" 2>/dev/null || true)
+            [ -n "$setup_code" ] && break
+            grep -q '"password"' "$MANAGED_CONFIG_FILE" 2>/dev/null && break
+            sleep 1
+        done
+        if [ -n "$setup_code" ]; then
+            echo -e "    Setup code now: ${COLOR_YELLOW}${setup_code}${COLOR_RESET}"
+        fi
     else
         echo "  • Once running, access the web interface at:"
         echo -e "    ${COLOR_CYAN}http://localhost:8100${COLOR_RESET}"

@@ -447,7 +447,7 @@ namespace Device
 		DeviceList.push_back(Description("SPYSERVER", "SPYSERVER", "SPYSERVER", (uint64_t)0, Type::SPYSERVER));
 	}
 
-	Setting &SpyServer::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &SpyServer::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -478,7 +478,7 @@ namespace Device
 			client.setOptionKey(AIS::KEY_SETTING_PORT, arg);
 			break;
 		default:
-			Device::SetKey(key, arg);
+			Device::applyKey(key, arg);
 			break;
 		}
 		return *this;

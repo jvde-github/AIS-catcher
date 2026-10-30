@@ -6,7 +6,7 @@ import { showNotification } from '../../dialog.js';
 
 let loadedVersion = null;
 
-export async function setup() {
+export async function shown() {
     const version = config.about_version || "initial";
     if (loadedVersion === version) return;
 

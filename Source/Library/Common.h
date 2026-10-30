@@ -20,6 +20,7 @@
 #include "AIS-catcher.h"
 #include "Keys.h"
 
+#include <atomic>
 #include <chrono>
 #include <thread>
 #include <complex>
@@ -71,6 +72,9 @@
 class tN2kMsg;
 
 void StopRequest();
+// stop ends the running engine, stop_process the managed-mode loop around it
+extern std::atomic<bool> stop;
+extern std::atomic<bool> stop_process;
 
 #define GROUPS_ALL 0xFFFFFFFFFFFFFFFF
 #define GROUP_OUT_UNDEFINED (1ULL << 63)
@@ -265,6 +269,7 @@ struct TAG
 	float distance = DISTANCE_UNDEFINED;
 	float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 	bool validated = false;
+	bool position_private = false; // for the plane table: the station that heard it keeps its position home
 	std::time_t previous_signal = (std::time_t)0;
 	int shipclass = CLASS_UNKNOWN;
 	float speed = SPEED_UNDEFINED;
@@ -292,6 +297,7 @@ struct TAG
 		angle = ANGLE_UNDEFINED;
 		msg_idx_start = msg_idx_end = 0;
 		validated = false;
+		position_private = false;
 		previous_signal = (std::time_t)0;
 		shipclass = CLASS_UNKNOWN;
 		ipv4 = 0;
@@ -314,7 +320,21 @@ struct Setting
 	Setting(const std::string &name = "") : setting_name(name) {}
 	virtual ~Setting() {}
 
-	virtual Setting &SetKey(AIS::Keys key, const std::string &arg) { return *this; }
+	// every setting passes here, then the object applies it in applyKey; a test can
+	// hang a recorder on it to see what each object was told, in order
+	typedef void (*Recorder)(Setting &, AIS::Keys, const std::string &);
+	static Recorder &recorder()
+	{
+		static Recorder r = nullptr;
+		return r;
+	}
+	Setting &SetKey(AIS::Keys key, const std::string &arg)
+	{
+		if (recorder())
+			recorder()(*this, key, arg);
+		return applyKey(key, arg);
+	}
+	virtual Setting &applyKey(AIS::Keys key, const std::string &arg) { return *this; }
 	virtual std::string Get() { return ""; }
 
 	const std::string &getName() const { return setting_name; }

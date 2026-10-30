@@ -355,7 +355,7 @@ namespace AIS
 		return;
 	}
 
-	Setting &ModelFrontend::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &ModelFrontend::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -395,7 +395,7 @@ namespace AIS
 			dump = true;
 			break;
 		default:
-			Model::SetKey(key, arg);
+			Model::applyKey(key, arg);
 			break;
 		}
 		return *this;
@@ -459,7 +459,7 @@ namespace AIS
 		}
 	}
 
-	Setting &ModelEngineV2::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &ModelEngineV2::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -470,7 +470,7 @@ namespace AIS
 			dd_weight = Util::Parse::Float(arg, 0.0, 1.0);
 			break;
 		default:
-			ModelFrontend::SetKey(key, arg);
+			ModelFrontend::applyKey(key, arg);
 			break;
 		}
 		return *this;
@@ -576,7 +576,7 @@ namespace AIS
 		return;
 	}
 
-	Setting &ModelDefault::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &ModelDefault::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -587,7 +587,7 @@ namespace AIS
 			CGF_wide = Util::Parse::Switch(arg);
 			break;
 		default:
-			ModelFrontend::SetKey(key, arg);
+			ModelFrontend::applyKey(key, arg);
 			break;
 		}
 		return *this;
@@ -677,7 +677,7 @@ namespace AIS
 		return;
 	}
 
-	Setting &ModelChallenger::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &ModelChallenger::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -688,7 +688,7 @@ namespace AIS
 			CGF_wide = Util::Parse::Switch(arg);
 			break;
 		default:
-			ModelFrontend::SetKey(key, arg);
+			ModelFrontend::applyKey(key, arg);
 			break;
 		}
 		return *this;
@@ -765,7 +765,7 @@ namespace AIS
 		nmea.setOwnMMSI(own_mmsi);
 	}
 
-	Setting &ModelNMEA::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &ModelNMEA::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -791,7 +791,7 @@ namespace AIS
 			nmea.setGPS(Util::Parse::Switch(arg));
 			break;
 		default:
-			Model::SetKey(key, arg);
+			Model::applyKey(key, arg);
 			break;
 		}
 		return *this;
@@ -818,9 +818,9 @@ namespace AIS
 		physical >> n2k >> output;
 	}
 
-	Setting &ModelN2K::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &ModelN2K::applyKey(AIS::Keys key, const std::string &arg)
 	{
-		return Model::SetKey(key, arg);
+		return Model::applyKey(key, arg);
 	}
 
 	std::string ModelN2K::Get()
@@ -835,9 +835,9 @@ namespace AIS
 		physical >> model >> outputADSB;
 	}
 
-	Setting &ModelBaseStation::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &ModelBaseStation::applyKey(AIS::Keys key, const std::string &arg)
 	{
-		return Model::SetKey(key, arg);
+		return Model::applyKey(key, arg);
 	}
 
 	std::string ModelBaseStation::Get()
@@ -852,9 +852,9 @@ namespace AIS
 		physical >> model >> outputADSB;
 	}
 
-	Setting &ModelBeast::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &ModelBeast::applyKey(AIS::Keys key, const std::string &arg)
 	{
-		return Model::SetKey(key, arg);
+		return Model::applyKey(key, arg);
 	}
 
 	std::string ModelBeast::Get()
@@ -869,9 +869,9 @@ namespace AIS
 		physical >> model >> outputADSB;
 	}
 
-	Setting &ModelRAW1090::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &ModelRAW1090::applyKey(AIS::Keys key, const std::string &arg)
 	{
-		return Model::SetKey(key, arg);
+		return Model::applyKey(key, arg);
 	}
 
 	std::string ModelRAW1090::Get()
@@ -879,9 +879,9 @@ namespace AIS
 		return Model::Get();
 	}
 
-	Setting &ModelExport::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &ModelExport::applyKey(AIS::Keys key, const std::string &arg)
 	{
-		return Model::SetKey(key, arg);
+		return Model::applyKey(key, arg);
 	}
 
 	std::string ModelExport::Get()

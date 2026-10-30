@@ -54,6 +54,15 @@ namespace Services
 	{
 		std::lock_guard<std::mutex> lock(services_mtx);
 		drop();
+		// another certificate, or HTTPS on or off: what is connected spoke the old way
+		if (spec.tls_cert != spec_.tls_cert || spec.tls_key != spec_.tls_key)
+		{
+			std::string error;
+			if (setTLS(spec.tls_cert, spec.tls_key, error))
+				closeConnections();
+			else
+				Error() << "Server: port " << spec.port << " keeps how it serves: " << error;
+		}
 		spec_ = spec;
 		build();
 	}
@@ -69,7 +78,7 @@ namespace Services
 			PrometheusCounter *counter = new PrometheusCounter();
 			metrics.reset(counter);
 			tap(counter);
-			services.push_back(std::unique_ptr<Service>(new Metrics(*counter)));
+			services.push_back(std::unique_ptr<Service>(new Metrics(*counter, tracker)));
 		}
 		if (spec_.geojson)
 			services.push_back(std::unique_ptr<Service>(new GeoJSON(context)));
@@ -120,6 +129,12 @@ namespace Services
 	bool Server::open()
 	{
 		setIP(spec_.bind);
+		std::string error;
+		if (!setTLS(spec_.tls_cert, spec_.tls_key, error))
+		{
+			Error() << "Server: port " << spec_.port << ": " << error;
+			return false;
+		}
 		if (!start(spec_.port))
 		{
 			Error() << "Server: cannot listen on " << spec_.bind << ":" << spec_.port;
@@ -128,7 +143,7 @@ namespace Services
 		std::string list;
 		for (const auto &s : spec_.served())
 			list += (list.empty() ? "" : ", ") + s;
-		Info() << "Server: " << spec_.bind << ":" << spec_.port << " offers " << list;
+		Info() << "Server: " << spec_.bind << ":" << spec_.port << " offers " << list << (hasTLS() ? ", over HTTPS" : "");
 		return true;
 	}
 
@@ -159,9 +174,7 @@ namespace Services
 	// Whether a request to a service of `scope` may go on with `key`, the key
 	// it names; when not, the answer that says why. A server without keys is
 	// this machine's own or declared public, and admits everything; one with
-	// keys admits nothing guarded without a key that has the scope. Many wrong
-	// keys in a minute from one address close the server to that address's
-	// keys for the rest of the minute.
+	// keys admits nothing guarded without a key that has the scope.
 	bool Server::admit(int scope, const Services::Request &request, const ApiKey *key, Services::Response &response) const
 	{
 		if (!scope || spec_.keys.empty())
@@ -194,6 +207,7 @@ namespace Services
 		request.origin = r.origin;
 		request.host = r.host;
 		request.peer = r.peer;
+		request.owner = r.owner;
 
 		std::lock_guard<std::mutex> lock(services_mtx);
 		Services::Response response;
@@ -204,6 +218,7 @@ namespace Services
 			// server without keys, this machine's own or public; its key's scopes on one with keys
 			const ApiKey *key = spec_.keys.empty() ? nullptr : keyOf(request.authorization);
 			request.scopes = spec_.keys.empty() ? ApiKey::DATA | ApiKey::SYSTEM : key ? key->scopes : 0;
+			request.owner = request.owner || (key && (key->scopes & ApiKey::SYSTEM));
 			// the first service that takes the path and answers it, each asking of the key what it serves
 			for (auto &s : services)
 			{
@@ -227,11 +242,14 @@ namespace Services
 			response = Services::Response::problem(404, "Not found", "No such resource: " + request.path);
 		if (!response.header.empty())
 			setExtraHeader(response.header);
+		// a server of this machine alone: other sites' pages in its browser do not read it
+		const bool local = spec_.bind == "localhost" || spec_.bind == "::1" || spec_.bind.compare(0, 4, "127.") == 0;
+		const bool cors = response.cors && !local;
 		if (response.stream)
 			upgradeSSE(c, response.stream, response.stream_topic, response.stream_backlog);
 		else if (response.raw)
-			ResponseRaw(c, response.type, response.raw, (int)response.raw_size, response.gzipped, response.cache, response.cors, response.status);
+			ResponseRaw(c, response.type, response.raw, (int)response.raw_size, response.gzipped, response.cache, cors, response.status);
 		else
-			Response(c, response.type, response.shared ? *response.shared : response.body, accept_gzip, response.cache, response.cors, response.status);
+			Response(c, response.type, response.shared ? *response.shared : response.body, accept_gzip, response.cache, cors, response.status);
 	}
 }

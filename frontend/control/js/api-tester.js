@@ -4,11 +4,9 @@
 // there only is reached too.
 
 import { el } from './dom.js';
-import { ICONS } from './icons.js';
+import { icon } from './icons.js';
+import { api } from './api.js';
 
-const SVG = {
-    send: '<svg class="st-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>'
-};
 // the paths that are not in the API's own description
 const FEEDS = [
     { path: '/geojson', service: 'geojson', group: 'Feeds', summary: 'The ships as GeoJSON.', params: [] },
@@ -21,9 +19,7 @@ const FEEDS = [
 let routes = null;
 async function loadRoutes() {
     if (routes) return routes;
-    const r = await fetch('/api/openapi');
-    if (!r.ok) throw new Error('the API description is not available (' + r.status + ')');
-    const spec = await r.json();
+    const spec = await api('/api/openapi');
     routes = Object.entries(spec.paths || {}).map(([path, item]) => {
         const get = item.get || {};
         const system = path.startsWith('/api/v1/system') || path === '/api/v1/health';
@@ -45,7 +41,7 @@ const kept = { mode: 'api', port: null, path: '/api/v1/vessels', values: {}, key
 // `highlight`: text to coloured JSON
 export function renderApiTester(main, { servers, highlight, port }) {
     if (port) kept.port = port;
-    main.append(el('p', 'field-desc st-svcs__lead', { text: 'Send a request to one of this station\'s servers.' }));
+    main.append(el('p', 'st-help st-svcs__lead', { text: 'Send a request to one of this station\'s servers.' }));
     const modes = [['api', 'API'], ['mcp', 'MCP']];
     const seg = el('div', 'st-seg st-try__mode', { role: 'radiogroup', 'aria-label': 'What to try' });
     const body = el('div', 'st-try');
@@ -63,14 +59,14 @@ export function renderApiTester(main, { servers, highlight, port }) {
 // the server to send to, among those that offer the mode's services
 function serverField(list, onChange) {
     if (!list.some(s => s.port === kept.port)) kept.port = list[0].port;
-    const sel = el('select', 'select', { 'aria-label': 'Server', onChange: e => { kept.port = Number(e.target.value); onChange(); } },
+    const sel = el('select', 'st-input select', { 'aria-label': 'Server', onChange: e => { kept.port = Number(e.target.value); onChange(); } },
         list.map(s => el('option', '', { value: s.port, selected: s.port === kept.port, text: s.label })));
-    return el('label', 'field st-stations__field st-stations__grow', {}, el('span', 'field-label', { text: 'Server' }), sel);
+    return el('label', 'st-field st-stations__field st-stations__grow', {}, el('span', 'st-label', { text: 'Server' }), sel);
 }
 
 function keyField(onChange) {
-    return el('label', 'field st-stations__field', {}, el('span', 'field-label', { text: 'Key' }),
-        el('input', 'input', { type: 'password', value: kept.key, autocomplete: 'off', placeholder: 'When the server has keys',
+    return el('label', 'st-field st-stations__field', {}, el('span', 'st-label', { text: 'Key' }),
+        el('input', 'st-input', { type: 'password', value: kept.key, autocomplete: 'off', placeholder: 'When the server has keys',
             onInput: e => { kept.key = e.target.value; }, onChange }));
 }
 
@@ -78,7 +74,7 @@ function keyField(onChange) {
 function copyLine(text) {
     return el('div', 'st-try__curl', {},
         el('code', '', { text }),
-        el('button', 'st-btn st-btn--sm', { type: 'button', html: ICONS.copy + 'Copy', onClick: e => {
+        el('button', 'st-btn st-btn--sm', { type: 'button', html: icon('copy') + 'Copy', onClick: e => {
             const b = e.currentTarget;
             navigator.clipboard?.writeText(text).then(() => { b.lastChild.textContent = 'Copied'; }, () => {});
         } }));
@@ -118,17 +114,17 @@ function tryApi(body, servers, highlight) {
 
         const groups = new Map();
         offered.forEach(r => { if (!groups.has(r.group)) groups.set(r.group, []); groups.get(r.group).push(r); });
-        const routeSel = el('select', 'select', { 'aria-label': 'Endpoint', onChange: e => { kept.path = e.target.value; draw(list); } },
+        const routeSel = el('select', 'st-input select', { 'aria-label': 'Endpoint', onChange: e => { kept.path = e.target.value; draw(list); } },
             [...groups.entries()].map(([g, rs]) => el('optgroup', '', { label: g },
                 rs.map(r => el('option', '', { value: r.path, selected: r.path === kept.path, text: r.path })))));
 
         const values = kept.values[kept.path] || (kept.values[kept.path] = defaults(route));
         const url = el('code', 'st-try__url');
         const paint = () => { url.textContent = 'GET ' + target(route, values); };
-        const param = p => el('label', 'field st-try__param', {},
-            el('span', 'field-label', {}, p.name, p.required ? el('span', 'st-try__req', { text: ' required' }) : null, el('span', 'st-try__in', { text: ' · ' + p.in })),
-            el('input', 'input', { type: 'text', value: values[p.name] ?? '', placeholder: p.type, onInput: e => { values[p.name] = e.target.value; paint(); } }),
-            p.description ? el('p', 'field-desc', { text: p.description }) : null);
+        const param = p => el('label', 'st-field st-try__param', {},
+            el('span', 'st-label', {}, p.name, p.required ? el('span', 'st-try__req', { text: ' required' }) : null, el('span', 'st-try__in', { text: ' · ' + p.in })),
+            el('input', 'st-input', { type: 'text', value: values[p.name] ?? '', placeholder: p.type, onInput: e => { values[p.name] = e.target.value; paint(); } }),
+            p.description ? el('p', 'st-help', { text: p.description }) : null);
         // the required and those given up front; the other filters folded away
         const all = route?.params || [];
         const front = all.filter(p => p.required || p.name === 'limit' || String(values[p.name] ?? '').trim());
@@ -138,12 +134,12 @@ function tryApi(body, servers, highlight) {
             el('div', 'st-try__params', {}, rest.map(param))) : null;
         more?.addEventListener('toggle', () => { kept.more = more.open; });
         const result = el('div', 'st-try__result');
-        const send = el('button', 'st-btn st-btn--primary', { type: 'button', html: SVG.send + 'Send', onClick: () => go() });
+        const send = el('button', 'st-btn st-btn--primary', { type: 'button', html: icon('arrowRight') + 'Send', onClick: () => go() });
 
         body.replaceChildren(
             el('div', 'st-stations__row', {}, serverRow,
-                el('label', 'field st-stations__field st-stations__grow', {}, el('span', 'field-label', { text: 'Endpoint' }), routeSel)),
-            route?.summary ? el('p', 'field-desc st-try__summary', { text: route.summary }) : null,
+                el('label', 'st-field st-stations__field st-stations__grow', {}, el('span', 'st-label', { text: 'Endpoint' }), routeSel)),
+            route?.summary ? el('p', 'st-help st-try__summary', { text: route.summary }) : null,
             front.length ? el('div', 'st-try__params', {}, front.map(param)) : null,
             more,
             keyField(),
@@ -159,7 +155,7 @@ function tryApi(body, servers, highlight) {
             send.disabled = true;
             const start = performance.now();
             try {
-                const r = await fetch(`/api/try/${server.port}${t}`, { headers: kept.key ? { Authorization: 'Bearer ' + kept.key } : {} });
+                const r = await api(`/api/try/${server.port}${t}`, { raw: true, headers: kept.key ? { Authorization: 'Bearer ' + kept.key } : {} });
                 const text = await r.text();
                 kept.last = { port: server.port, path: kept.path, status: r.status, ms: Math.round(performance.now() - start), type: r.headers.get('Content-Type') || '', text, target: t };
                 show(kept.last);
@@ -184,7 +180,7 @@ async function rpc(port, method, params) {
     const body = JSON.stringify({ jsonrpc: '2.0', id: ++rpcId, method, ...(params ? { params } : {}) });
     const headers = { 'Content-Type': 'application/json' };
     if (kept.key) headers.Authorization = 'Bearer ' + kept.key;
-    const r = await fetch(`/api/try/${port}/mcp`, { method: 'POST', headers, body });
+    const r = await api(`/api/try/${port}/mcp`, { raw: true, method: 'POST', headers, body });
     const text = await r.text();
     let json = null;
     try { json = JSON.parse(text); } catch { /* not JSON-RPC: shown as it came */ }
@@ -206,16 +202,16 @@ function tryMcp(body, servers, highlight) {
         if (!tools || tools.error) {
             const load = el('button', 'st-btn', { type: 'button', text: 'Load tools', onClick: () => list() });
             body.replaceChildren(head, keyField(() => list()),
-                tools?.error ? el('p', 'st-warn-note', { text: tools.error }) : el('p', 'field-desc', { text: 'Reading the tools…' }),
+                tools?.error ? el('p', 'st-warn-note', { text: tools.error }) : el('p', 'st-help', { text: 'Reading the tools…' }),
                 tools?.error ? el('div', 'st-try__go', {}, load) : null);
             if (!tools) list();
             return;
         }
         if (!tools.some(t => t.name === kept.tool)) kept.tool = tools[0]?.name;
         const tool = tools.find(t => t.name === kept.tool);
-        const toolSel = el('select', 'select', { 'aria-label': 'Tool', onChange: e => { kept.tool = e.target.value; draw(); } },
+        const toolSel = el('select', 'st-input select', { 'aria-label': 'Tool', onChange: e => { kept.tool = e.target.value; draw(); } },
             tools.map(t => el('option', '', { value: t.name, selected: t.name === kept.tool, text: t.name })));
-        head.append(el('label', 'field st-stations__field st-stations__grow', {}, el('span', 'field-label', { text: 'Tool' }), toolSel));
+        head.append(el('label', 'st-field st-stations__field st-stations__grow', {}, el('span', 'st-label', { text: 'Tool' }), toolSel));
 
         const schema = tool?.inputSchema || {};
         const props = Object.entries(schema.properties || {});
@@ -223,27 +219,27 @@ function tryMcp(body, servers, highlight) {
         const values = kept.mcpValues[kept.tool] || (kept.mcpValues[kept.tool] = props.some(([n]) => n === 'limit') ? { limit: '10' } : {});
         const preview = el('pre', 'st-try__body st-try__sent');
         const paint = () => { preview.textContent = JSON.stringify(callBody(), null, 2); };
-        const arg = ([name, p]) => el('label', 'field st-try__param', {},
-            el('span', 'field-label', {}, name, required.has(name) ? el('span', 'st-try__req', { text: ' required' }) : null, el('span', 'st-try__in', { text: ' · ' + (p.type || 'string') })),
+        const arg = ([name, p]) => el('label', 'st-field st-try__param', {},
+            el('span', 'st-label', {}, name, required.has(name) ? el('span', 'st-try__req', { text: ' required' }) : null, el('span', 'st-try__in', { text: ' · ' + (p.type || 'string') })),
             p.type === 'boolean'
                 ? el('input', '', { type: 'checkbox', checked: values[name] === true, onChange: e => { values[name] = e.target.checked; paint(); } })
-                : el('input', 'input', { type: 'text', value: values[name] ?? '', placeholder: p.type || 'string', onInput: e => { values[name] = e.target.value; paint(); } }),
-            p.description ? el('p', 'field-desc', { text: p.description }) : null);
+                : el('input', 'st-input', { type: 'text', value: values[name] ?? '', placeholder: p.type || 'string', onInput: e => { values[name] = e.target.value; paint(); } }),
+            p.description ? el('p', 'st-help', { text: p.description }) : null);
         const callBody = () => ({ jsonrpc: '2.0', id: rpcId + 1, method: 'tools/call', params: { name: kept.tool, arguments: args(props, values) } });
         const result = el('div', 'st-try__result');
-        const call = el('button', 'st-btn st-btn--primary', { type: 'button', html: SVG.send + 'Call', onClick: () => go() });
+        const call = el('button', 'st-btn st-btn--primary', { type: 'button', html: icon('arrowRight') + 'Call', onClick: () => go() });
 
         body.replaceChildren(head,
-            tool?.description ? el('p', 'field-desc st-try__summary', { text: tool.description }) : null,
-            props.length ? el('div', 'st-try__params', {}, props.map(arg)) : el('p', 'field-desc', { text: 'This tool takes no arguments.' }),
+            tool?.description ? el('p', 'st-help st-try__summary', { text: tool.description }) : null,
+            props.length ? el('div', 'st-try__params', {}, props.map(arg)) : el('p', 'st-help', { text: 'This tool takes no arguments.' }),
             keyField(),
             el('details', 'st-try__more', {}, el('summary', '', { text: 'The JSON-RPC message' }), preview),
             el('div', 'st-try__go', {}, el('code', 'st-try__url', { text: `POST /mcp · tools/call ${kept.tool}` }), call),
             result,
             el('div', 'st-try__connect', {},
-                el('span', 'field-label', { text: 'Connect an assistant' }),
+                el('span', 'st-label', { text: 'Connect an assistant' }),
                 copyLine(claudeLine(server, !!kept.key)),
-                el('p', 'field-desc', { text: 'Adds it to Claude Code; other assistants take the same URL.' })));
+                el('p', 'st-help', { text: 'Adds it to Claude Code; other assistants take the same URL.' })));
         paint();
         if (kept.mcpLast && kept.mcpLast.port === server.port && kept.mcpLast.tool === kept.tool) show(kept.mcpLast);
 
@@ -327,7 +323,7 @@ function target(route, values) {
 // where a shell reaches a server: on the station when it listens there only
 function origin(server) {
     const local = !server.bind || server.bind === 'localhost' || String(server.bind).startsWith('127.');
-    return `http://${local ? '127.0.0.1' : location.hostname}:${server.port}`;
+    return `${server.tls ? 'https' : 'http'}://${local ? '127.0.0.1' : location.hostname}:${server.port}`;
 }
 
 // the same request from a shell

@@ -103,7 +103,7 @@ namespace Device {
 		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }
 		virtual void getDeviceList(std::vector<Description>& DeviceList) {}
 
-		virtual Setting& SetKey(AIS::Keys key, const std::string& arg) {
+		virtual Setting& applyKey(AIS::Keys key, const std::string& arg) {
 			switch (key) {
 			case AIS::KEY_SETTING_SAMPLE_RATE:
 				setSampleRate((Util::Parse::Integer(arg, 0, 20000000)));
@@ -186,7 +186,7 @@ namespace Device {
 		}
 		void Play() override { Open(0); }
 		void getDeviceList(std::vector<Description> &) override {}
-		Setting &SetKey(AIS::Keys, const std::string &) override { return *this; }
+		Setting &applyKey(AIS::Keys, const std::string &) override { return *this; }
 		std::string Get() override { return "(not compiled in: rebuild with -D" + build_flag + "=ON)"; }
 		std::string getProduct() override { return device_name + " [not compiled in]"; }
 	};

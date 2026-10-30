@@ -5,8 +5,9 @@ import * as filter from '../../core/filter.js';
 import { ships as shipsDB, station, counts as shipCounts } from '../../core/store.js';
 import { getDistanceConversion, getDistanceUnit, getSpeedConversion, getSpeedUnit } from '../../core/units.js';
 import * as components from '@aiscatcher/ui/components.js';
-import { redraw as redrawMap } from '../../map.js';
-import { saveSettings, settingsPanel, openSettingsTab } from '../settings/settings.js';
+import { redraw } from '../../fleet.js';
+import { saveSettings } from '../../settings-store.js';
+import { settingsPanel, openSettingsTab } from '../settings/settings.js';
 import { loaded as loadedTab } from '../../tabs/index.js';
 import * as replay from '../replay/replay.js';
 import { updateMarkerCount } from '../counts/counts.js';
@@ -16,7 +17,7 @@ import { focus } from '../../data.js';
 import { focusLabel } from '../../core/config.js';
 import { resetFocus } from '../station/station.js';
 
-export function applyFilter() {
+function applyFilter() {
     saveSettings();
     if (shipsDB != null)
         for (const key in shipsDB) shipsDB[key].show = undefined;
@@ -25,7 +26,7 @@ export function applyFilter() {
     // fleet as it redraws, and updateMarkerCount stands down while it does
     replay.refresh();
     updateMarkerCount();
-    redrawMap();
+    redraw();
     updateTablecard();
     loadedTab('ships')?.update();
     loadedTab('realtime')?.applyVesselFilter();
@@ -180,7 +181,6 @@ register({
     },
     setFilterNumber: (e, d, el) => setFilterValue(d.key, el.value === "" ? null : Number(el.value)),
     setFilterChoice: (e, d, el) => setFilterValue(d.key, el.value),
-    setFilterFlag: (e, d, el) => setFilterValue(d.key, el.checked),
     updateFilterSeenDisplay: (e, d, el) => {
         const label = document.getElementById("filter_seen_label");
         const v = Number(el.value) || 0;

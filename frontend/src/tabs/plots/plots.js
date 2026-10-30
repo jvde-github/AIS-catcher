@@ -8,6 +8,7 @@ import {
     Tooltip, Legend, Filler,
 } from 'chart.js';
 import Annotation from 'chartjs-plugin-annotation';
+import { settings } from '../../core/state.js';
 import { getDistanceConversion, getDistanceUnit } from '../../core/units.js';
 import { config, stationLabel } from '../../core/config.js';
 
@@ -423,7 +424,7 @@ function stationsListed() {
     return config.stations || [];
 }
 
-export function setMode(next) {
+function setMode(next) {
     if (next !== "compare") next = "overview";
     if (next === mode) return;
     mode = next;
@@ -499,7 +500,7 @@ function setTimeAxis(c, source) {
     c.$timeAxis = { now: source.now, interval: source.interval };
 }
 
-let absoluteTime = true;
+let absoluteTime = !!settings.plot_absolute_time;
 
 export function setAbsoluteTime(on) {
     on = !!on;
@@ -785,6 +786,8 @@ export async function update() {
     const b = await fetchHistory(focus);
     if (!b || token !== updateToken) return;
 
+    document.getElementById("plots").classList.toggle("range-hidden", !!b.range_hidden);
+
     updateChartMulti(b, "second", charts.chart_seconds);
     updateChartMulti(b, "minute", charts.chart_minutes);
     updateChartMulti(b, "hour", charts.chart_hours);
@@ -797,6 +800,8 @@ export async function update() {
     updateChartSingle(b, "minute", "vessels", charts.chart_minute_vessel);
     updateChartSingle(b, "hour", "vessels", charts.chart_hour_vessel);
     updateChartSingle(b, "day", "vessels", charts.chart_day_vessel);
+
+    if (b.range_hidden) return;
 
     updateChartDistance(b, "hour", charts.chart_distance_hour);
     updateChartDistance(b, "day", charts.chart_distance_day);

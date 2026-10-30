@@ -622,7 +622,7 @@ body.ticker-open.ticker-bottom {
 }
 
 /* Too narrow a pane to share: a card spans it edge to edge rather than leaving
-   a sliver of map beside it; maximized it takes the corner too, its content
+   a sliver of map beside it; a target card takes the corner too, its content
    height only capped by the pane. */
 @container mappane (max-width: 500px) {
     .card-width {
@@ -637,7 +637,7 @@ body.ticker-open.ticker-bottom {
         left: 0;
     }
 
-    .mapcard-target.card-max {
+    .mapcard.mapcard-target {
         top: 0;
         max-height: 100%;
         border-radius: 0;
@@ -646,7 +646,7 @@ body.ticker-open.ticker-bottom {
 
 /* Short screens: a tall card may use the full height. */
 @media only screen and (max-height: 800px) {
-    .mapcard-target.card-max {
+    .mapcard.mapcard-target {
         max-height: 100%;
     }
 }
@@ -845,7 +845,7 @@ body.ticker-open.ticker-bottom {
 
 @media (hover: hover) {
     .mapcard-content-row:hover { cursor: pointer; }
-    /* a tint, not an edge bar: the edge bar is the kept-row mark */
+    /* a row under the pointer takes a tint */
     .mapcard-target .mapcard-content-row:hover { background: var(--color-hover-overlay); }
 }
 
@@ -905,10 +905,6 @@ body.ticker-open.ticker-bottom {
     font-size: var(--fs-sm);
     padding: 8px 12px;
 }
-/* folded by the user, or empty for this vessel. Sections are a maximised-card
-   concept: a minimised card shows its pinned rows whatever section they sit in */
-.card-max .card-collapsed,
-.card-max .card-empty { display: none !important; }
 .card-popover > div {
     display: flex;
     justify-content: space-between;
@@ -930,75 +926,13 @@ body.ticker-open.ticker-bottom {
     margin-left: 12px;
 }
 
-.card-min-only {
-    display: none;
-}
-
-.card-min-only.visible {
-    display: inherit;
-}
-
-/* Marks a row as one the collapsed card keeps: an accent bar on the left, like
-   the header's, drawn inset so the label column does not shift. */
-.card-row-selected {
-    display: flex;
-    flex-direction: row;
-    box-shadow: inset 3px 0 0 var(--color-card-edge);
-}
-
 .card-row + .card-row {
     border-top: 1px dotted var(--color-rule);
 }
 
-/* Section headings inside the targetcard: a full-width band, set like the field
-   labels around it so the card reads as one type system. Max-only, so a
-   collapsed card stays a single compact block. */
 .hist-wrap {
     display: block;
     width: 100%;
-}
-
-.card-section {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 6px 10px;
-    background-color: color-mix(in srgb, var(--color-band-accent) 90%, var(--color-surface-raised));
-    color: var(--color-text-muted);
-    font-size: var(--fs-2xs);
-    font-weight: var(--fw-medium);
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    line-height: 14px;
-    cursor: pointer;
-    user-select: none;
-}
-
-@media (hover: hover) {
-    .card-section:hover { filter: brightness(0.97); }
-}
-
-.card-caret-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--color-surface);
-    color: var(--color-text);
-    flex: none;
-}
-
-@media (hover: hover) {
-    .card-section:hover .card-caret-chip { background: var(--color-surface-raised); }
-}
-
-.card-section-caret {
-    width: 13px;
-    height: 13px;
-    flex: none;
 }
 
 /* a phone or a short screen: the card takes the corner (left: 0 is the base rule) */
@@ -1323,8 +1257,7 @@ body.ticker-open.ticker-bottom {
 .settings-window > .settings-header .settings-tab:focus { outline: none; background: none; box-shadow: none; }
 .sc-host .sc-tabs .sc-tab:focus-visible,
 .settings-window > .settings-header .settings-tab:focus-visible { color: var(--color-accent); }
-/* The compact mobile card has no selected tab. Summary's triangle offers
-   expansion without giving its preview the full selected-tab underline. */
+/* the compact card of a cramped pane: a taller header, a larger flag */
 @media (max-height: 1250px) {
     @container mappane (max-width: 500px) {
         .card-tabs .mapcard-header {
@@ -1335,23 +1268,25 @@ body.ticker-open.ticker-bottom {
             padding: 6px 10px;
         }
         .card-tabs .mapcard-flag .flag-card { font-size: 22px; }
-        .sc-host .sc-tabs .sc-tab[data-tab="summary"] {
-            position: relative;
-            white-space: nowrap;
-        }
-        .sc-host.sc-folded .sc-tabs .sc-tab[data-tab="summary"]::before {
-            content: '';
-            position: absolute;
-            left: -4px;
-            /* Optical alignment with the label's visible letter shapes. */
-            top: calc(50% + 1px);
-            width: 0.65em;
-            height: 1em;
-            background: var(--color-accent);
-            clip-path: polygon(0 0, 100% 50%, 0 100%);
-            transform: translateY(-50%);
-        }
     }
+}
+/* A folded card has no selected tab. Summary's triangle offers expansion
+   without giving its preview the full selected-tab underline. */
+.sc-host .sc-tabs .sc-tab[data-tab="summary"] {
+    position: relative;
+    white-space: nowrap;
+}
+.sc-host.sc-folded .sc-tabs .sc-tab[data-tab="summary"]::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    /* Optical alignment with the label's visible letter shapes. */
+    top: calc(50% + 1px);
+    width: 0.65em;
+    height: 1em;
+    background: var(--color-accent);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+    transform: translateY(-50%);
 }
 .sc-panels {
     max-height: min(60vh, 520px);
@@ -1359,8 +1294,6 @@ body.ticker-open.ticker-bottom {
     overflow-x: hidden;
 }
 .sc-host.sc-folded .sc-panels { display: none; }
-.mapcard button.sc-drag-handle { display: none; }
-.mapcard.card-tabs button.sc-drag-handle { display: none; }
 .mapcard.card-tabs button.sc-drag-handle,
 .mapcard.card-tabs button.sc-drag-handle:is(:hover, :focus, :active) {
     background: var(--color-card-surface);
@@ -1370,44 +1303,39 @@ body.ticker-open.ticker-bottom {
     appearance: none;
     -webkit-tap-highlight-color: transparent;
 }
-@media (max-height: 1250px) {
-    @container mappane (max-width: 500px) {
-        .mapcard.card-tabs button.sc-drag-handle {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            height: 20px;
-            flex: 0 0 20px;
-            margin: 0;
-            padding: 0;
-            border: 0;
-            border-radius: 0 0 var(--radius-md) var(--radius-md);
-            background: var(--color-card-surface);
-            color: var(--color-text-muted);
-            cursor: ns-resize;
-            touch-action: none;
-            user-select: none;
-        }
-        .card-tabs .mapcard-footer {
-            border-radius: 0;
-            touch-action: pan-x;
-            user-select: none;
-        }
-        .card-tabs .sc-drag-handle::before {
-            content: '';
-            width: 32px;
-            height: 2px;
-            border-radius: 2px;
-            background: currentColor;
-            opacity: 0.55;
-        }
-        .mapcard.card-tabs button.sc-drag-handle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
-    }
+/* the fold's grab handle, under the actions; the actions take a drag too */
+.mapcard.card-tabs button.sc-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 20px;
+    flex: 0 0 20px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    background: var(--color-card-surface);
+    color: var(--color-text-muted);
+    cursor: ns-resize;
+    touch-action: none;
+    user-select: none;
 }
+.card-tabs .mapcard-footer {
+    touch-action: pan-x;
+    user-select: none;
+}
+.card-tabs .sc-drag-handle::before {
+    content: '';
+    width: 32px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    opacity: 0.55;
+}
+.mapcard.card-tabs button.sc-drag-handle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 .sc-panel { padding: 0; }
 .card-row[hidden] { display: none !important; }
-.sc-panel .card-section { display: none; }
 .sc-panel .card-row { border-bottom: none; }
 .sc-panel .mapcard-content-row, .sc-metrics {
     position: relative;
@@ -1433,7 +1361,6 @@ body.ticker-open.ticker-bottom {
 }
 .sc-group .hist-wrap { font-size: var(--fs-md); line-height: 18px; }
 .sc-group .dim-note { padding: 0; font-size: var(--fs-sm); line-height: 18px; color: var(--color-text-muted); text-align: left; }
-.card-tabs .card-row-selected { box-shadow: none; }
 .sc-sum-line {
     display: flex;
     flex-wrap: wrap;
@@ -1580,7 +1507,7 @@ body.ticker-open.ticker-bottom {
     .mapcard.card-tabs { box-shadow: var(--shadow-vc-float); }
 }
 .mapcard.card-tabs .mapcard-content { border-radius: 0; }
-.mapcard-target.card-tabs.card-max, .mapcard-target.card-tabs .mapcard-footer { border-radius: var(--vc-radius); }
+.mapcard-target.card-tabs .mapcard-footer { border-radius: var(--vc-radius); }
 .mapcard-target.card-tabs .mapcard-footer { border-top-left-radius: 0; border-top-right-radius: 0; }
 .mapcard.card-tabs button.sc-drag-handle { border-radius: 0; }
 
@@ -1786,20 +1713,20 @@ body.ticker-open.ticker-bottom {
 .mapcard.card-tabs .sc-history-preview .sc-more-pill:hover { background: var(--vc-hover); }
 .mapcard.card-tabs .sc-history-preview .sc-more-pill[hidden] { display: none; }
 
-/* ---- Phone, folded: the tabs stay (a tap opens one), with a grab handle under the actions ---- */
+/* ---- Folded: the tabs stay (a tap opens one), with a grab handle under the actions ---- */
+/* room between the expand arrow and its label */
+.mapcard.card-tabs .sc-host.sc-folded .sc-tabs .sc-tab[data-tab="summary"] { padding-left: 16px; }
+.mapcard.card-tabs .sc-host.sc-folded .sc-tabs .sc-tab[data-tab="summary"]::before { left: 2px; }
+/* the docked card of a cramped pane: a touch tighter */
 @media (max-height: 1250px) {
     @container mappane (max-width: 500px) {
-        /* room between the expand arrow and its label */
-        .mapcard.card-tabs .sc-host.sc-folded .sc-tabs .sc-tab[data-tab="summary"] { padding-left: 16px; }
-        .mapcard.card-tabs .sc-host.sc-folded .sc-tabs .sc-tab[data-tab="summary"]::before { left: 2px; }
-        /* the docked card of the mock: a touch tighter */
         .mapcard.card-tabs .sc-host.sc-folded .sc-metrics { padding-top: 10px; padding-bottom: 10px; }
         .mapcard.card-tabs .sc-host.sc-folded .sc-metrics > div > span:first-child { font-size: 10px; }
         .mapcard.card-tabs .mapcard-footer > div { min-height: 50px; }
-        .mapcard.card-tabs button.sc-drag-handle { height: 26px; flex-basis: 26px; border-top: 1px solid var(--vc-line); background: var(--vc-inset); }
-        .mapcard.card-tabs button.sc-drag-handle::before { width: 36px; height: 4px; opacity: 1; background: var(--vc-line-strong); }
     }
 }
+.mapcard.card-tabs button.sc-drag-handle { height: 26px; flex-basis: 26px; border-top: 1px solid var(--vc-line); background: var(--vc-inset); }
+.mapcard.card-tabs button.sc-drag-handle::before { width: 36px; height: 4px; opacity: 1; background: var(--vc-line-strong); }
 /* the tiles say it already */
 .mapcard.card-tabs .sc-panel[id$="_panel_ais"] div:has(> [id$="_last_signal"]),
 .mapcard.card-tabs .sc-panel[id$="_panel_ais"] div:has(> [id$="_count"]) { display: none; }
@@ -1867,11 +1794,7 @@ body.ticker-open.ticker-bottom {
 @container mappane (max-width: 500px) { .mapcard-target.card-tabs.card-width { width: 100%; } }
 
 /* the folded figures show they can be tapped */
-@media (max-height: 1250px) {
-    @container mappane (max-width: 500px) {
-        .mapcard.card-tabs .sc-host.sc-folded .sc-head { cursor: pointer; }
-    }
-}
+.mapcard.card-tabs .sc-host.sc-folded .sc-head { cursor: pointer; }
 /* card content is read and tapped, not selected: no stray highlights from a tap or a drag */
 .mapcard { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .mapcard input, .mapcard textarea, .mapcard [contenteditable] { -webkit-user-select: text; user-select: text; }

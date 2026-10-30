@@ -1,12 +1,10 @@
-<aside id="targetcard" class="mapcard mapcard-target card-width card-max"
+<aside id="targetcard" class="mapcard mapcard-target card-width card-tabs"
 	data-on-contextmenu="targetcardContextMenu">
 	<header id="targetcard_header" class="mapcard-header">
-		<span data-action="toggleTargetcardSize" id="targetcard_header_flag" class="mapcard-flag"></span>
-		<span data-action="toggleTargetcardSize" id="targetcard_header_title" class="mapcard-title"></span>
+		<span id="targetcard_header_flag" class="mapcard-flag"></span>
+		<span id="targetcard_header_title" class="mapcard-title"></span>
 		<span class=""><i id="targetcard_drag_handle"
 				class="mapcard-header-icon drag_indicator_icon draggable draggable-hide-if-not-active"></i></span>
-		<span><i data-action="toggleTargetcardSize" id="targetcard_minmax_button"
-				class="card-minmax mapcard-header-icon keyboard_arrow_up_icon"></i></span>
 		<span><i data-action="targetcardContextMenu"
 				class="mapcard-header-icon more_vert_icon"></i></span>
 		<span><i data-action="showTargetcardClose"
@@ -37,30 +35,28 @@
 		</div>
 		<div id="targetcard_plane_rows"></div>
 	<div id="targetcard_slot_ais">
-	<div id="targetcard_source_head" class="card-section card-max-only" data-action="toggleTargetcardSection"
-			data-section="source" data-context-type="ship"><span>AIS source</span><span class="card-caret-chip"><i class="card-section-caret keyboard_arrow_up_icon"></i></span></div>
-		<div id="targetcard_stations_row" data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only" hidden>
+		<div id="targetcard_stations_row" class="mapcard-content-row card-row" hidden>
 			<div><span>Stations</span><span id="targetcard_stations"></span></div>
 		</div>
-		<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only">
+		<div class="mapcard-content-row card-row">
 			<div><span>RSSI</span><span id="targetcard_level">-</span></div>
 			<div><span>Drift</span><span id="targetcard_ppm">-</span></div>
 			<div><span>Repeated</span><span id="targetcard_repeated">-</span></div>
 		</div>
 
-		<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only">
+		<div class="mapcard-content-row card-row">
 			<div><span>Last signal</span><span id="targetcard_last_signal"></span></div>
 			<div><span>Count</span><span id="targetcard_count">-</span></div>
 			<div><span>Channels</span><span id="targetcard_channels">-</span></div>
 		</div>
 
-		<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only">
+		<div class="mapcard-content-row card-row">
 			<div><span>Receiver</span><span id="targetcard_last_group"></span></div>
 			<div><span>Sources</span><span id="targetcard_sources">-</span></div>
 			<div><span>Msg type</span><span id="targetcard_msgtypes">-</span></div>
 		</div>
 
-		<div data-action="targetcardSelectSelf" data-context-type="ship" data-section="source" class="mapcard-content-row card-row card-max-only">
+		<div class="mapcard-content-row card-row">
 			<div><span>In Range</span><span id="targetcard_received_stations"></span></div>
 			<div><span>Bearing</span><span id="targetcard_bearing">-</span></div>
 			<div><span>Distance</span><span id="targetcard_distance">-</span></div>
@@ -68,7 +64,7 @@
 	</div>
 	</div>
 
-<footer id="targetcard_footer" class="mapcard-footer card-max-only">
+<footer id="targetcard_footer" class="mapcard-footer">
 		<div id="targetcard_message_option" title="View binary messages"
 			data-action="showBinaryMessageDialogCard" data-context-type="ship" class="noandroid"><i
 				class="mail_icon"></i><span>Messages</span>

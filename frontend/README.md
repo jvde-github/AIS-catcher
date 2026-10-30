@@ -31,15 +31,26 @@ dispatches them, and each module registers the ones it owns with
 `register({ name: handler })` - a lazy tab when it loads. Plugins see the
 same registry as `AISCatcher.ACTIONS`.
 
-**Tabs**: `src/tabs/index.js` names the module behind each lazy tab, loads it
-once, and holds the one `activateTab`.
+**Tabs**: one table in `src/tabs/index.js`: each tab's menu entry, the server
+feature it needs, its module, loaded once, and what shows, hides and refreshes
+it. `showTab(id)` is the one way to a tab; a lazy tab's module exports `shown()`,
+`hidden()` and `update()`.
+
+**Cards**: `src/features/targetcard/card.js` is the shell, with the one rule of
+the tab and the fold; ship, plane and station are providers of one shape
+`{ build, populate, open }`, picked by type.
+
+**Shared things have one owner, and features import it**: `src/ui.js` is the map's
+UI, `src/settings-store.js` the settings. Import cycles between features are
+fine as long as a module's top level asks nothing of them.
 
 **Settings** in the viewer: a control that holds a setting carries
 `data-setting="key"`; the panel (`packages/ui/panel.js`) keeps it and the
-setting in step, and `SETTING_EFFECTS` in `features/settings/settings.js`
-names what else the change means; the effects that need the entry it
-registers there with `effects()`. A control whose change is more than a
-setting keeps a `data-on-change` action.
+setting in step, and `SETTING_EFFECTS` in `src/settings-store.js` names what
+else the change means: each owner registers its own with `effects()`, beside
+its actions. All of them run after the settings load and after a reset to the
+defaults. A control whose change is more than a setting keeps a `data-on-change`
+action.
 
 **Working on it**
 

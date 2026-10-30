@@ -23,6 +23,7 @@
 #include "JournalJSON.h"
 #include "HTTPClient.h"
 #include "Logger.h"
+#include "Parse.h"
 #include "SHA256.h"
 
 namespace
@@ -160,7 +161,7 @@ bool Webhooks::deliver(Hook &hook, const std::vector<Journal::Entry> &events)
 	}
 	catch (const std::exception &e)
 	{
-		Error() << "Webhook " << hook.spec.url << ": " << e.what();
+		Error() << "Webhook " << Util::Parse::URLForLog(hook.spec.url) << ": " << e.what();
 		return false;
 	}
 	http.setTimeout(10);
@@ -170,7 +171,7 @@ bool Webhooks::deliver(Hook &hook, const std::vector<Journal::Entry> &events)
 	const int status = http.Post(body);
 	if (status >= 200 && status < 300)
 		return true;
-	Warning() << "Webhook " << hook.spec.url << ": " << (status > 0 ? "answered " + std::to_string(status) : IO::httpStatusString(status));
+	Warning() << "Webhook " << Util::Parse::URLForLog(hook.spec.url) << ": " << (status > 0 ? "answered " + std::to_string(status) : IO::httpStatusString(status));
 	return false;
 }
 
@@ -202,7 +203,7 @@ void Webhooks::loop()
 			std::vector<Journal::Entry> entries;
 			if (!tracker.journal().since(hooks[i].cursor, READ_MAX, entries))
 			{
-				Warning() << "Webhook " << hooks[i].spec.url << ": events were dropped before they could be sent";
+				Warning() << "Webhook " << Util::Parse::URLForLog(hooks[i].spec.url) << ": events were dropped before they could be sent";
 				hooks[i].cursor = tracker.journal().newest();
 				continue;
 			}
@@ -241,7 +242,7 @@ void Webhooks::loop()
 			{
 				hooks[i].cursor = due.back().seq;
 				if (hooks[i].failures)
-					Info() << "Webhook " << hooks[i].spec.url << ": delivering again";
+					Info() << "Webhook " << Util::Parse::URLForLog(hooks[i].spec.url) << ": delivering again";
 				hooks[i].failures = 0;
 				hooks[i].retry_at = 0;
 				more = true;

@@ -22,79 +22,115 @@
 #include "Parse.h"
 #include "Writer.h"
 
+#include "Device/FileRAW.h"
+#include "Device/FileWAV.h"
+#include "Device/RTLSDR.h"
+#include "Device/AIRSPYHF.h"
+#include "Device/HACKRF.h"
+#include "Device/RTLTCP.h"
+#include "Device/AIRSPY.h"
+#include "Device/SDRPLAY.h"
+#include "Device/SpyServer.h"
+#include "Device/SoapySDR.h"
+#include "Device/Serial.h"
+#include "Device/ZMQ.h"
+#include "Device/UDP.h"
+#include "Device/N2KsktCAN.h"
+#include "Device/HYDRASDR.h"
+
 std::vector<Device::Description> DeviceManager::device_list;
 std::mutex DeviceManager::list_mtx;
 
-namespace
+const DeviceManager::DeviceEntry DeviceManager::device_settings[] = {
+	{'r', AIS::KEY_SETTING_RTLSDR, Type::RTLSDR, true, true, "RTL-SDR", []() -> Device::Device * { return new Device::RTLSDR(); }},
+	{'h', AIS::KEY_SETTING_AIRSPYHF, Type::AIRSPYHF, true, true, "Airspy HF+", []() -> Device::Device * { return new Device::AIRSPYHF(); }},
+	{'m', AIS::KEY_SETTING_AIRSPY, Type::AIRSPY, true, true, "Airspy", []() -> Device::Device * { return new Device::AIRSPY(); }},
+	{'s', AIS::KEY_SETTING_SDRPLAY, Type::SDRPLAY, true, true, "SDRplay", []() -> Device::Device * { return new Device::SDRPLAY(); }},
+	{'f', AIS::KEY_SETTING_HACKRF, Type::HACKRF, true, true, "HackRF", []() -> Device::Device * { return new Device::HACKRF(); }},
+	{'u', AIS::KEY_SETTING_SOAPYSDR, Type::SOAPYSDR, true, true, "SoapySDR", []() -> Device::Device * { return new Device::SOAPYSDR(); }},
+	{0, AIS::KEY_SETTING_NMEA2000, Type::N2K, true, false, "NMEA 2000", []() -> Device::Device * { return new Device::N2KSCAN(); }},
+	{'e', AIS::KEY_SETTING_SERIALPORT, Type::SERIALPORT, true, false, "Serial", []() -> Device::Device * { return new Device::SerialPort(); }},
+	{'d', AIS::KEY_SETTING_HYDRASDR, Type::HYDRASDR, true, true, "HydraSDR", []() -> Device::Device * { return new Device::HYDRASDR(); }},
+	{'a', AIS::KEY_SETTING_FILE, Type::RAWFILE, false, false, "File", []() -> Device::Device * { return new Device::RAWFile(); }},
+	{'w', AIS::KEY_SETTING_WAVFILE, Type::WAVFILE, false, false, "WAV file", []() -> Device::Device * { return new Device::WAVFile(); }},
+	{'t', AIS::KEY_SETTING_RTLTCP, Type::RTLTCP, false, false, "Network", []() -> Device::Device * { return new Device::RTLTCP(); }},
+	{'y', AIS::KEY_SETTING_SPYSERVER, Type::SPYSERVER, false, false, "SpyServer", []() -> Device::Device * { return new Device::SpyServer(); }},
+	{'z', AIS::KEY_SETTING_ZMQ, Type::ZMQ, false, false, "ZMQ", []() -> Device::Device * { return new Device::ZMQ(); }},
+	{0, AIS::KEY_SETTING_UDPSERVER, Type::UDP, false, false, "UDP", []() -> Device::Device * { return new Device::UDP(); }}};
+
+Device::Device &DeviceManager::object(const DeviceEntry &d)
 {
-	// One row per device type: its "-g<flag>" command line switch (0 when it has
-	// none), its config file key, its Type, and whether refreshDevices() asks it
-	// to enumerate hardware. Network/file devices must not enumerate: they push
-	// an unconditional pseudo-entry that would pollute the device list. Rows are
-	// ordered enumerating-first; that order fixes the "-d:x" indices.
-	struct DeviceEntry
-	{
-		char flag;
-		AIS::Keys key;
-		Type type;
-		bool enumerate;
-		Device::Device &(*device)(DeviceManager &);
-	};
+	static_assert(sizeof(device_settings) / sizeof(device_settings[0]) == ROWS, "one device object per row of the table");
 
-	const DeviceEntry device_settings[] = {
-		{'r', AIS::KEY_SETTING_RTLSDR, Type::RTLSDR, true, [](DeviceManager &d) -> Device::Device & { return d.RTLSDR(); }},
-		{'h', AIS::KEY_SETTING_AIRSPYHF, Type::AIRSPYHF, true, [](DeviceManager &d) -> Device::Device & { return d.AIRSPYHF(); }},
-		{'m', AIS::KEY_SETTING_AIRSPY, Type::AIRSPY, true, [](DeviceManager &d) -> Device::Device & { return d.AIRSPY(); }},
-		{'s', AIS::KEY_SETTING_SDRPLAY, Type::SDRPLAY, true, [](DeviceManager &d) -> Device::Device & { return d.SDRPLAY(); }},
-		{'f', AIS::KEY_SETTING_HACKRF, Type::HACKRF, true, [](DeviceManager &d) -> Device::Device & { return d.HACKRF(); }},
-		{'u', AIS::KEY_SETTING_SOAPYSDR, Type::SOAPYSDR, true, [](DeviceManager &d) -> Device::Device & { return d.SOAPYSDR(); }},
-		{0, AIS::KEY_SETTING_NMEA2000, Type::N2K, true, [](DeviceManager &d) -> Device::Device & { return d.N2KSCAN(); }},
-		{'e', AIS::KEY_SETTING_SERIALPORT, Type::SERIALPORT, true, [](DeviceManager &d) -> Device::Device & { return d.SerialPort(); }},
-		{'d', AIS::KEY_SETTING_HYDRASDR, Type::HYDRASDR, true, [](DeviceManager &d) -> Device::Device & { return d.HYDRASDR(); }},
-		{'a', AIS::KEY_SETTING_FILE, Type::RAWFILE, false, [](DeviceManager &d) -> Device::Device & { return d.RAW(); }},
-		{'w', AIS::KEY_SETTING_WAVFILE, Type::WAVFILE, false, [](DeviceManager &d) -> Device::Device & { return d.WAV(); }},
-		{'t', AIS::KEY_SETTING_RTLTCP, Type::RTLTCP, false, [](DeviceManager &d) -> Device::Device & { return d.RTLTCP(); }},
-		{'y', AIS::KEY_SETTING_SPYSERVER, Type::SPYSERVER, false, [](DeviceManager &d) -> Device::Device & { return d.SpyServer(); }},
-		{'z', AIS::KEY_SETTING_ZMQ, Type::ZMQ, false, [](DeviceManager &d) -> Device::Device & { return d.ZMQ(); }},
-		{0, AIS::KEY_SETTING_UDPSERVER, Type::UDP, false, [](DeviceManager &d) -> Device::Device & { return d.UDP(); }}};
+	std::unique_ptr<Device::Device> &slot = objects[&d - device_settings];
+	if (!slot)
+		slot.reset(d.make());
+	return *slot;
+}
 
-	// Types eligible for the implicit no-arguments default. Only SDR radios are
-	// unambiguous AIS receivers; serial/N2K ports (e.g. /dev/cu.debug-console)
-	// still enumerate but must be selected explicitly.
-	bool isAutoSelectable(Type t)
-	{
-		switch (t)
-		{
-		case Type::RTLSDR:
-		case Type::AIRSPYHF:
-		case Type::AIRSPY:
-		case Type::SDRPLAY:
-		case Type::HACKRF:
-		case Type::SOAPYSDR:
-		case Type::HYDRASDR:
-			return true;
-		default:
-			return false;
-		}
-	}
+const DeviceManager::DeviceEntry *DeviceManager::row(Type type)
+{
+	for (const auto &d : device_settings)
+		if (d.type == type)
+			return &d;
+	return nullptr;
+}
+
+const DeviceManager::DeviceEntry *DeviceManager::row(AIS::Keys key)
+{
+	for (const auto &d : device_settings)
+		if (d.key == key)
+			return &d;
+	return nullptr;
+}
+
+const DeviceManager::DeviceEntry *DeviceManager::row(char flag)
+{
+	for (const auto &d : device_settings)
+		if (d.flag && d.flag == flag)
+			return &d;
+	return nullptr;
 }
 
 Setting *DeviceManager::settingForFlag(char flag)
 {
-	for (const auto &d : device_settings)
-		if (d.flag && d.flag == flag)
-			return &d.device(*this);
+	const DeviceEntry *d = row(flag);
+	return d ? &object(*d) : nullptr;
+}
 
-	return nullptr;
+AIS::Keys DeviceManager::keyForFlag(char flag)
+{
+	const DeviceEntry *d = row(flag);
+	return d ? d->key : AIS::KEY_COUNT;
+}
+
+bool DeviceManager::isDeviceKey(AIS::Keys key)
+{
+	return row(key) != nullptr;
+}
+
+AIS::Keys DeviceManager::keyForType(Type type)
+{
+	const DeviceEntry *d = row(type);
+	return d ? d->key : AIS::KEY_COUNT;
 }
 
 Setting *DeviceManager::settingForKey(AIS::Keys key)
 {
-	for (const auto &d : device_settings)
-		if (d.key == key)
-			return &d.device(*this);
+	const DeviceEntry *d = row(key);
+	return d ? &object(*d) : nullptr;
+}
 
-	return nullptr;
+bool DeviceManager::isRadio(Type type)
+{
+	const DeviceEntry *d = row(type);
+	return d && d->radio;
+}
+
+const char *DeviceManager::label(Type type)
+{
+	const DeviceEntry *d = row(type);
+	return d ? d->label : "Input";
 }
 
 void DeviceManager::refreshDevices()
@@ -105,39 +141,35 @@ void DeviceManager::refreshDevices()
 
 	for (const auto &d : device_settings)
 		if (d.enumerate)
-			d.device(*this).getDeviceList(device_list);
+			object(d).getDeviceList(device_list);
 }
 
 Device::Device *DeviceManager::getDeviceByType(Type type)
 {
-	for (const auto &d : device_settings)
-		if (d.type == type)
-			return &d.device(*this);
-
-	return nullptr;
+	const DeviceEntry *d = row(type);
+	return d ? &object(*d) : nullptr;
 }
 
 bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int frequency, TAG &tag)
 {
-	uint64_t handle;
+	uint64_t handle = 0;
 
 	{
 		std::lock_guard<std::mutex> lock(list_mtx);
 
-		int idx = device_list.empty() ? -1 : 0;
-		handle = device_list.empty() ? 0 : device_list[0].getHandle();
+		int idx = -1;
 
-		if (!serial.empty()) {
-			Info() << "Searching for device with SN " << serial << (type != Type::NONE ? " and type " + Util::Parse::DeviceTypeString(type) : "") << ".";
+		if (!serial_.empty()) {
+			Info() << "Searching for device with SN " << serial_ << (type != Type::NONE ? " and type " + Util::Parse::DeviceTypeString(type) : "") << ".";
 		}
 
-		if (!serial.empty() || type != Type::NONE)
+		if (!serial_.empty() || type != Type::NONE)
 		{
 			std::vector<int> matches;
 			for (int i = 0; i < device_list.size(); i++)
 			{
-				bool serial_match = device_list[i].getSerial() == serial && (type == Type::NONE || type == device_list[i].getType());
-				bool type_match = serial.empty() && (type == device_list[i].getType());
+				bool serial_match = device_list[i].getSerial() == serial_ && (type == Type::NONE || type == device_list[i].getType());
+				bool type_match = serial_.empty() && (type == device_list[i].getType());
 
 				if (serial_match || type_match)
 					matches.push_back(i);
@@ -158,10 +190,10 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 
 			if (idx == -1)
 			{
-				if (!serial.empty())
+				if (!serial_.empty())
 				{
-					Error() << "Device Manager: cannot find device with SN " << serial << ".";
-					printAvailableDevices_locked();
+					Error() << "Device Manager: cannot find device with SN " << serial_ << ".";
+					printLocked();
 					return false;
 				}
 
@@ -173,7 +205,7 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 				handle = device_list[idx].getHandle();
 				device_list[idx].setClaimed();
 
-				if (serial.empty() && matches.size() > 1)
+				if (serial_.empty() && matches.size() > 1)
 				{
 					Device::Description &d = device_list[idx];
 					Warning() << "Device Manager: multiple devices match type "
@@ -187,7 +219,7 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 			// Nothing specified: auto-select the first available SDR radio only.
 			idx = -1;
 			for (int i = 0; i < device_list.size(); i++)
-				if (isAutoSelectable(device_list[i].getType()) && !device_list[i].isClaimed())
+				if (isRadio(device_list[i].getType()) && !device_list[i].isClaimed())
 				{
 					idx = i;
 					handle = device_list[i].getHandle();
@@ -202,7 +234,7 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 				else
 				{
 					Error() << "Device Manager: no SDR device found, please select a device.";
-					printAvailableDevices_locked();
+					printLocked();
 				}
 				return false;
 			}
@@ -236,7 +268,7 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 	return true;
 }
 
-void DeviceManager::printAvailableDevices_locked()
+void DeviceManager::printLocked()
 {
 	Info() << "Found " << device_list.size() << " device(s):";
 
@@ -251,7 +283,7 @@ void DeviceManager::printAvailableDevices(bool JSON)
 	if (!JSON)
 	{
 		std::lock_guard<std::mutex> lock(list_mtx);
-		printAvailableDevices_locked();
+		printLocked();
 	}
 	else
 	{
@@ -287,6 +319,6 @@ void DeviceManager::selectDeviceByIndex(int index)
 	if (index < 0 || index >= device_list.size())
 		throw std::runtime_error("Device Manager: device does not exist");
 
-	serial = device_list[index].getSerial();
+	serial_ = device_list[index].getSerial();
 	type = device_list[index].getType();
 }

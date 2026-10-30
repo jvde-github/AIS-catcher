@@ -1,4 +1,3 @@
-import {placeFeature} from '@aiscatcher/core/places.js';
 // Map objects on either host: the rows a transport delivers, the viewer's
 // since-feed or the site's tiles, kept by id, aged, drawn, hovered and opened
 // through one kind table. Message markers, areas and receiving stations are
@@ -88,16 +87,8 @@ export function create(host) {
     const boundaryRequests = new Map();
     let hoverBoundary = null;
     let boundaryWatch = null;
-    const placeObjects = new Map();
     let placeVersion = '';
     const placeFormat = new GeoJSON();
-    function setPlaces(collection) {
-        // Definitions are metadata; boundaries are fetched only on hover.
-        if (collection.place_version && collection.place_version !== placeVersion) {
-            placeVersion = collection.place_version;
-            boundaries.clear();
-        }
-    }
     let receiverMarker = null;
     function setReceiverMarker(feature) {
         if (receiverMarker) vector.removeFeature(receiverMarker);
@@ -114,11 +105,10 @@ export function create(host) {
     /* ---- rows ------------------------------------------------------------- */
 
     function applyDelta(data, reset) {
-        let placesChanged = reset || (data.place_version !== undefined && data.place_version !== placeVersion);
         if (data.place_version !== undefined && data.place_version !== placeVersion) {
             placeVersion = data.place_version; boundaries.clear(); hoverBoundary = null;
         }
-        if (reset) { objectsDB.clear(); hydrated.clear(); placeObjects.clear(); }
+        if (reset) { objectsDB.clear(); hydrated.clear(); }
         if (data.time) serverTime = data.time;
         if (data.ports_complete) {
             const ports = new Set((data.objects || []).filter(o => o.kind === 9).map(o => o.id));
@@ -126,18 +116,8 @@ export function create(host) {
                 objectsDB.delete(id); hydrated.delete(id);
             }
         }
-        for (const o of data.objects || []) {
-            if (o.kind === 10) {
-                placeObjects.set(o.id, placeFeature(o));
-                placesChanged = true;
-            }
-            objectsDB.set(o.id, o);
-        }
-        for (const id of data.removed || []) { placesChanged = placeObjects.delete(id) || placesChanged; objectsDB.delete(id); hydrated.delete(id); }
-        if (placesChanged) {
-            const collection = {type:'FeatureCollection', features:[...placeObjects.values()], place_version:placeVersion};
-            setPlaces(collection); host.onPlacesChanged?.(collection);
-        }
+        for (const o of data.objects || []) objectsDB.set(o.id, o);
+        for (const id of data.removed || []) { objectsDB.delete(id); hydrated.delete(id); }
         prune();
     }
 
@@ -181,7 +161,7 @@ export function create(host) {
         }
     }
 
-    function clear() { clearInterval(boundaryWatch); clearInterval(hoverWatch); boundaries.clear(); hoverBoundary = null; objectsDB.clear(); hydrated.clear(); tileIds.clear(); listedBy.clear(); placeObjects.clear(); }
+    function clear() { clearInterval(boundaryWatch); clearInterval(hoverWatch); boundaries.clear(); hoverBoundary = null; objectsDB.clear(); hydrated.clear(); tileIds.clear(); listedBy.clear(); }
 
     /* ---- features --------------------------------------------------------- */
 
@@ -463,6 +443,7 @@ export function create(host) {
     if (typeof document !== 'undefined')
         document.addEventListener('click', (e) => {
             if (!e.target.closest) return;
+            if (e.target.closest('a[href="#"]')) e.preventDefault();
             const pick = e.target.closest('#binary-messages .object-pick .tip-band[data-station]');
             if (pick) { messageDialog().close(); openStation(Number(pick.dataset.station)); return; }
             const port = e.target.closest('#binary-messages .port-pick .tip-band[data-code]');
@@ -737,7 +718,7 @@ export function create(host) {
     }
 
     return {
-        vector, layer, setReceiverMarker, openPorts, openPlace, openNearby, setPlaces, stations, stationsAll,
+        vector, layer, setReceiverMarker, openPorts, openPlace, openNearby, stations, stationsAll,
         applyDelta, applyTile, prune, clear, redraw, restyle,
         setViewZoom: (z) => { viewZoom = Math.floor(z); },
         shipBadge, stationBadge, ridingStationStatus,

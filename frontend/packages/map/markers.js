@@ -30,14 +30,13 @@ import Text from "ol/style/Text.js";
 import Polygon from "ol/geom/Polygon.js";
 import { fromLonLat } from "ol/proj.js";
 
-import { ShippingClass } from "@aiscatcher/core/constants.js";
 import { calcOffset1M, calcMove, shipOutlineLocal } from "@aiscatcher/core/geo.js";
 import { hexToRgb, deriveLabelBackground } from "@aiscatcher/ui/color.js";
 
 /* the registry is pure and lives in core/sprites.js so a worker can import
    it without OpenLayers; re-exported here for hosts that use it via markers */
-export { SPRITES, CELLS, CLASS_COLORS, TRACK_COLORS, PLANE_PALETTES, spriteFor, applySprite, planeCell, planeColor, spriteCSS } from "@aiscatcher/core/sprites.js";
-import { applySprite, planeCell, planeColor, isAircraft, AIRCRAFT_SCALE } from "@aiscatcher/core/sprites.js";
+export { TRACK_COLORS, PLANE_PALETTES, spriteFor, applySprite, spriteCSS } from "@aiscatcher/core/sprites.js";
+import { planeCell, planeColor, isAircraft, AIRCRAFT_SCALE } from "@aiscatcher/core/sprites.js";
 
 const DEG = Math.PI / 180;
 

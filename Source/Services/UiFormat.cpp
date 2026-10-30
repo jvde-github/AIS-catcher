@@ -989,13 +989,20 @@ static void tickerList(JSON::Writer &w, const std::vector<const EventRing::Entry
   w.endArray();
 }
 
+// the broadcasts a reader may see: those of the vessels it may see; nothing to ask when it sees all
+static std::function<bool(uint32_t)> keptSender(DB &db, const DB::Keep &keep) {
+  if (!keep)
+    return nullptr;
+  return [&db, &keep](uint32_t mmsi) { return db.keepHeld(mmsi, keep); };
+}
+
 std::string UiFormat::binaryMessages(DB &db, std::time_t since, uint64_t marker,
-                                      uint32_t owner) {
+                                      uint32_t owner, const DB::Keep &keep) {
   std::lock_guard<std::mutex> lock(db.mtx);
   db.content.clear();
   {
     JSON::Writer w(db.content, 4096);
-    db.binary.writeJSON(w, time(nullptr), since, marker, owner);
+    db.binary.writeJSON(w, time(nullptr), since, marker, owner, keptSender(db, keep));
   }
   return db.content;
 }
@@ -1034,7 +1041,7 @@ std::string UiFormat::eventHistory(DB &db, uint64_t before, int level, int limit
   return db.content;
 }
 
-std::string UiFormat::object(DB &db, const std::string &key) {
+std::string UiFormat::object(DB &db, const std::string &key, const DB::Keep &keep) {
   std::lock_guard<std::mutex> lock(db.mtx);
   db.content.clear();
   {
@@ -1051,12 +1058,12 @@ std::string UiFormat::object(DB &db, const std::string &key) {
                         db.station_heard ? db.station_heard(id) : 0);
       w.endObject();
     } else
-      db.binary.writeJSON(w, now, 0, std::strtoull(key.c_str(), nullptr, 16), 0);
+      db.binary.writeJSON(w, now, 0, std::strtoull(key.c_str(), nullptr, 16), 0, keptSender(db, keep));
   }
   return db.content;
 }
 
-std::string UiFormat::mapObjects(DB &db, uint64_t since, bool with_stations, const std::function<bool(int)> &shown) {
+std::string UiFormat::mapObjects(DB &db, uint64_t since, bool with_stations, const std::function<bool(int)> &shown, const DB::Keep &keep) {
   std::lock_guard<std::mutex> lock(db.mtx);
   db.content.clear();
   {
@@ -1069,7 +1076,7 @@ std::string UiFormat::mapObjects(DB &db, uint64_t since, bool with_stations, con
         .kv("seq", (long long)db.binary.sequence())
         .key("objects")
         .beginArray();
-    db.binary.writeMarkerRows(w, since);
+    db.binary.writeMarkerRows(w, since, keptSender(db, keep));
     if (with_stations)
       db.stations.writeRows(w, since, db.station_heard, shown);
     db.place_markers.writeRows(w, since);
@@ -1083,8 +1090,8 @@ std::string UiFormat::mapObjects(DB &db, uint64_t since, bool with_stations, con
   return db.content;
 }
 
-// The figures as the statistics page reads them
-static void stat(JSON::Writer &w, const MessageStatistics::Values &v, bool empty) {
+// The figures as the statistics page reads them, `hidden` without the range
+static void stat(JSON::Writer &w, const MessageStatistics::Values &v, bool empty, bool hidden) {
   int c = v.count - v.exclude;
   bool has_level = c > 0 && v.level_min <= v.level_max;
 
@@ -1105,7 +1112,8 @@ static void stat(JSON::Writer &w, const MessageStatistics::Values &v, bool empty
     w.kv("level_max", v.level_max);
     w.kv("ppm", v.ppm / c);
   }
-  if (empty)
+  if (hidden) {
+  } else if (empty)
     w.kv_null("dist");
   else
     w.kv("dist", v.distance);
@@ -1115,15 +1123,17 @@ static void stat(JSON::Writer &w, const MessageStatistics::Values &v, bool empty
     w.val(empty ? 0 : v.channel[i]);
   w.endArray();
 
-  w.key("radar_a").beginArray();
-  for (int i = 0; i < MessageStatistics::RADAR_BUCKETS; i++)
-    w.val(empty ? 0.0f : v.radarA[i]);
-  w.endArray();
+  if (!hidden) {
+    w.key("radar_a").beginArray();
+    for (int i = 0; i < MessageStatistics::RADAR_BUCKETS; i++)
+      w.val(empty ? 0.0f : v.radarA[i]);
+    w.endArray();
 
-  w.key("radar_b").beginArray();
-  for (int i = 0; i < MessageStatistics::RADAR_BUCKETS; i++)
-    w.val(empty ? 0.0f : v.radarB[i]);
-  w.endArray();
+    w.key("radar_b").beginArray();
+    for (int i = 0; i < MessageStatistics::RADAR_BUCKETS; i++)
+      w.val(empty ? 0.0f : v.radarB[i]);
+    w.endArray();
+  }
 
   w.key("msg").beginArray();
   for (int i = 0; i < 28; i++)
@@ -1136,7 +1146,7 @@ static void stat(JSON::Writer &w, const MessageStatistics::Values &v, bool empty
 // a history as the plots read it: when its slot under way began, its
 // interval, and newest first each slot's offset from it and its figures
 template <typename H>
-static void historyJSON(JSON::Writer &w, H &history, long int interval) {
+static void historyJSON(JSON::Writer &w, H &history, long int interval, bool hidden) {
   struct Slot {
     long int start;
     MessageStatistics::Values values;
@@ -1156,17 +1166,19 @@ static void historyJSON(JSON::Writer &w, H &history, long int interval) {
   w.endArray();
   w.key("stat").beginArray();
   for (auto it = slots.rbegin(); it != slots.rend(); ++it)
-    stat(w, it->values, it->empty);
+    stat(w, it->values, it->empty, hidden);
   w.endArray();
   w.endObject();
 }
 
-void UiFormat::counters(JSON::Writer &w, Figures &f) {
-  const auto last = [&](MessageStatistics &s, bool empty) { stat(w, s.values(), empty); };
+void UiFormat::counters(JSON::Writer &w, Figures &f, bool hidden) {
+  const auto last = [&](MessageStatistics &s, bool empty) { stat(w, s.values(), empty, hidden); };
+  if (hidden)
+    w.kv("range_hidden", true);
   w.key("total");
-  stat(w, f.total.values(), false);
+  stat(w, f.total.values(), false, hidden);
   w.key("session");
-  stat(w, f.session.values(), false);
+  stat(w, f.session.values(), false, hidden);
   w.key("last_day");
   f.day.withLastSlot(last);
   w.key("last_hour");
@@ -1176,16 +1188,18 @@ void UiFormat::counters(JSON::Writer &w, Figures &f) {
   w.kv("msg_rate", f.second.getAverage());
 }
 
-void UiFormat::history(JSON::Writer &w, Figures &f) {
+void UiFormat::history(JSON::Writer &w, Figures &f, bool hidden) {
   w.beginObject();
+  if (hidden)
+    w.kv("range_hidden", true);
   w.key("second");
-  historyJSON(w, f.second, 1);
+  historyJSON(w, f.second, 1, hidden);
   w.key("minute");
-  historyJSON(w, f.minute, 60);
+  historyJSON(w, f.minute, 60, hidden);
   w.key("hour");
-  historyJSON(w, f.hour, 3600);
+  historyJSON(w, f.hour, 3600, hidden);
   w.key("day");
-  historyJSON(w, f.day, 86400);
+  historyJSON(w, f.day, 86400, hidden);
   w.endObject();
 }
 

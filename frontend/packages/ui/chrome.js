@@ -35,7 +35,7 @@ export function clamp(box, w, h, left, top) {
 
 /* Leans away from `at` along `angle` so the label clears the target's own
    track, tries the far side when that lands outside, then clamps. */
-export function alongCourse(box, w, h, at, distance, angle) {
+function alongCourse(box, w, h, at, distance, angle) {
     var a = angle || 0;
 
     function candidate(deg) {
@@ -58,7 +58,7 @@ export function alongCourse(box, w, h, at, distance, angle) {
 /* Beside `at` on whichever side has room, centred on it vertically.
    Returns null when neither side fits, which is the host's cue to fall
    back to wherever it docks panels that cannot float. */
-export function beside(view, w, h, at, opts) {
+function beside(view, w, h, at, opts) {
     opts = opts || {};
     var margin = opts.margin || 0;
     var rightSpace = view.width - (at[0] + w + margin + (opts.reserveRight || 0));

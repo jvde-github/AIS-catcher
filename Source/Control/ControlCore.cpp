@@ -19,7 +19,11 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <iostream>
 #include <random>
+#include <set>
+#include <utility>
+#include <vector>
 #ifndef _WIN32
 #include <climits>
 #include <unistd.h>
@@ -27,8 +31,11 @@
 
 #include "Common.h"
 #include "Config.h"
+#include "Convert.h"
 #include "ControlCore.h"
+#include "TCPServer.h"
 #include "DeviceManager.h"
+#include "Device/Serial.h"
 #include "Engine.h"
 #include "Helper.h"
 #include "Keys.h"
@@ -45,15 +52,83 @@
 
 ControlCore::~ControlCore() {}
 
+// The file as people read and edit it: one key to a line, so the reader's line numbers mean something
+static std::string indented(const std::string &json) {
+  std::string out;
+  out.reserve(json.size() * 2);
+  int depth = 0;
+  bool in_string = false;
+  const auto newline = [&] {
+    out += '\n';
+    out.append(depth * 2, ' ');
+  };
+  for (std::size_t i = 0; i < json.size(); i++) {
+    const char c = json[i];
+    if (in_string) {
+      out += c;
+      if (c == '\\' && i + 1 < json.size())
+        out += json[++i];
+      else if (c == '"')
+        in_string = false;
+      continue;
+    }
+    switch (c) {
+    case ' ': case '\t': case '\r': case '\n':
+      break;
+    case '"':
+      in_string = true;
+      out += c;
+      break;
+    case '{': case '[': {
+      out += c;
+      std::size_t next = json.find_first_not_of(" \t\r\n", i + 1);
+      if (next != std::string::npos && (json[next] == '}' || json[next] == ']')) {
+        out += json[next];
+        i = next;
+      } else {
+        depth++;
+        newline();
+      }
+      break;
+    }
+    case '}': case ']':
+      depth--;
+      newline();
+      out += c;
+      break;
+    case ',':
+      out += c;
+      newline();
+      break;
+    case ':':
+      out += ": ";
+      break;
+    default:
+      out += c;
+    }
+  }
+  return out;
+}
+
 ControlCore::ControlCore(const std::string &file, int port_override,
                          const std::string &bind)
     : config_file(file), bind_address(bind) {
   if (!std::ifstream(config_file).good())
     createDefaultConfig();
+  if (port_override > 0)
+    control_port = port_override;
 
-  refreshPlaces(Util::Helper::readFile(config_file));
+  // read once and checked as a save is: the panel only writes files that
+  // pass, so one that does not was edited by hand and stops the start
+  const std::string json = Util::Helper::readFile(config_file);
+  std::string error;
+  if (!validate(json, error))
+    throw std::runtime_error("Control: " + config_file + ": " + error);
+
+  readManagedFields(json);
+  refreshPlaces(json);
   addMainDefaults();
-  readManagedFields(port_override);
+  announceSetupCode();
 
   auto_retry = desired;
 }
@@ -109,31 +184,24 @@ void ControlCore::createDefaultConfig() {
   Info() << "Control: created default config file " << config_file;
 }
 
-void ControlCore::readManagedFields(int port_override) {
-  try {
-    JSON::Parser parser(JSON_DICT_SETTING);
-    JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
+// The engine switch and the panel's own section, from a file that was checked
+void ControlCore::readManagedFields(const std::string &json) {
+  JSON::Parser parser(JSON_DICT_SETTING);
+  JSON::Document doc = parser.parse(json);
 
-    for (const auto &m : doc.getMembers()) {
-      switch (m.Key()) {
-      case AIS::KEY_SETTING_ENGINE:
-        desired = Util::Parse::Switch(m.Get().to_string());
-        break;
-      case AIS::KEY_SETTING_CONTROL:
-        if (!m.Get().isObject())
-          throw std::runtime_error("control section needs to be an object");
+  for (const auto &m : doc.getMembers()) {
+    switch (m.Key()) {
+    case AIS::KEY_SETTING_ENGINE:
+      desired = Util::Parse::Switch(m.Get().to_string());
+      break;
+    case AIS::KEY_SETTING_CONTROL:
+      if (!m.Get().isObject())
+        throw std::runtime_error("Control: " + config_file + ": \"control\" needs to be an object");
 
-        applyAuthFields(m.Get());
-        break;
-      }
+      applyAuthFields(m.Get());
+      break;
     }
-  } catch (const std::exception &e) {
-    Error() << "Control: config file invalid, engine not started: " << e.what();
-    desired = false;
   }
-
-  if (port_override > 0)
-    control_port = port_override;
 }
 
 void ControlCore::startEngine() {
@@ -203,28 +271,18 @@ std::string ControlCore::getConfig() {
   return Util::Helper::readFile(config_file);
 }
 
-bool ControlCore::setConfig(const std::string &json, std::string &error) {
-  if (!validate(json, error))
-    return false;
-
+// what the panel shows: the file without what proves the password
+std::string ControlCore::getPanelConfig() {
   std::lock_guard<std::mutex> lock(file_mtx);
-
-  try {
-    std::string ignore;
-    writeFileAtomic(config_file + ".bak", Util::Helper::readFile(config_file),
-                    ignore);
-  } catch (const std::exception &) {
-  }
-
-  if (!writeFileAtomic(config_file, json, error))
-    return false;
-
-  refreshAuthFields(json);
-  refreshPlaces(json);
-
-  config_dirty = true;
-
-  return true;
+  JSON::Parser parser(JSON_DICT_SETTING);
+  JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
+  if (JSON::Value *control = doc.root[AIS::KEY_SETTING_CONTROL])
+    if (control->isObject())
+      removeAuth(control->getObject());
+  std::string out;
+  JSON::Serializer serializer(JSON_DICT_SETTING);
+  serializer.stringify(doc.root, out);
+  return out;
 }
 
 static bool isSameFile(const std::string &a, const std::string &b) {
@@ -238,6 +296,252 @@ static bool isSameFile(const std::string &a, const std::string &b) {
 #endif
 }
 
+static std::string configFolder(const std::string &config_file) {
+  const auto slash = config_file.find_last_of("/\\");
+  return slash == std::string::npos ? "." : config_file.substr(0, slash);
+}
+
+// Whether a path, as its reader would open it, is the folder or in it: links
+// and ".." resolved, and for a file not there yet, by the folder it would be in.
+static bool inFolder(const std::string &path, const std::string &folder) {
+#ifdef _WIN32
+  char full[_MAX_PATH], base[_MAX_PATH];
+  if (!_fullpath(full, path.c_str(), sizeof(full)) || !_fullpath(base, folder.c_str(), sizeof(base)))
+    return false;
+  const size_t n = strlen(base);
+  return _strnicmp(full, base, n) == 0 && (full[n] == 0 || full[n] == '\\' || full[n] == '/');
+#else
+  char full[PATH_MAX], base[PATH_MAX];
+  if (!realpath(folder.c_str(), base))
+    return false;
+  if (!realpath(path.c_str(), full)) {
+    const auto slash = path.find_last_of('/');
+    if (!realpath(slash == std::string::npos ? "." : (slash == 0 ? "/" : path.substr(0, slash).c_str()), full))
+      return false;
+  }
+  const size_t n = strlen(base);
+  return strncmp(full, base, n) == 0 && (full[n] == 0 || full[n] == '/');
+#endif
+}
+
+static bool hasExtension(const std::string &path, const char *extension) {
+  const size_t n = strlen(extension);
+  return path.size() > n && path.compare(path.size() - n, n, extension) == 0;
+}
+
+typedef std::vector<std::pair<int, std::string>> PathValues;
+
+// the values naming a file or a folder under a section, at any depth; a text
+// value is a list, as its reader takes it
+static void pathValues(const JSON::Value &v, PathValues &out) {
+  if (v.isArray()) {
+    for (const auto &e : v.getArray())
+      pathValues(e, out);
+  } else if (v.isObject()) {
+    for (const auto &m : v.getObject().getMembers())
+      switch (m.Key()) {
+      case AIS::KEY_SETTING_ABOUT:
+      case AIS::KEY_SETTING_STYLE:
+      case AIS::KEY_SETTING_PLUGIN:
+      case AIS::KEY_SETTING_PLUGIN_DIR:
+      case AIS::KEY_SETTING_MBTILES:
+      case AIS::KEY_SETTING_FSTILES:
+      case AIS::KEY_SETTING_MBOVERLAY:
+      case AIS::KEY_SETTING_FSOVERLAY:
+      case AIS::KEY_SETTING_FILE:
+      case AIS::KEY_SETTING_CERT:
+      case AIS::KEY_SETTING_KEY:
+      case AIS::KEY_SETTING_PLACES: {
+        std::vector<std::string> parts;
+        Util::Parse::Split(JSON::text(m.Get()), ',', parts);
+        for (const auto &p : parts)
+          if (!p.empty())
+            out.emplace_back(m.Key(), p);
+        break;
+      }
+      default:
+        pathValues(m.Get(), out);
+      }
+  }
+}
+
+// what a receiver writes: a serial port's dump_file and a decoding model's dump,
+// a path before "_A.wav" and "_B.wav"; a serial port's own "dump" is a switch
+static void dumpValues(const JSON::JSON &section, bool serial, PathValues &out) {
+  for (const auto &m : section.getMembers())
+    if (m.Key() == AIS::KEY_SETTING_DUMP_FILE || (m.Key() == AIS::KEY_SETTING_DUMP && !serial)) {
+      if (!JSON::text(m.Get()).empty())
+        out.emplace_back(m.Key(), JSON::text(m.Get()));
+    } else if (m.Get().isObject())
+      dumpValues(m.Get().getObject(), serial || m.Key() == AIS::KEY_SETTING_SERIALPORT, out);
+    else if (m.Get().isArray())
+      for (const auto &entry : m.Get().getArray())
+        if (entry.isObject())
+          dumpValues(entry.getObject(), serial, out);
+}
+
+// the files and folders a configuration has this program serve or write; a
+// receiver's input is only read for its samples
+static PathValues pathValues(const JSON::JSON &root) {
+  PathValues out;
+  dumpValues(root, false, out);
+  for (const auto &m : root.getMembers())
+    switch (m.Key()) {
+    case AIS::KEY_SETTING_TRACKING:
+    case AIS::KEY_SETTING_SERVICES:
+    case AIS::KEY_SETTING_SERVER:
+    case AIS::KEY_SETTING_CONTROL:
+      pathValues(m.Get(), out);
+      break;
+    case AIS::KEY_SETTING_FILE_OUTPUT:
+      if (m.Get().isArray())
+        for (const auto &entry : m.Get().getArray()) {
+          const JSON::Value *file = entry.isObject() ? entry.getObject()[AIS::KEY_SETTING_FILE] : nullptr;
+          if (file)
+            out.emplace_back(AIS::KEY_SETTING_FILE_OUTPUT, file->to_string());
+        }
+      break;
+    case AIS::KEY_SETTING_DB:
+      if (m.Get().isArray())
+        for (const auto &entry : m.Get().getArray()) {
+          if (!entry.isObject())
+            continue;
+          // no conn_str: a CSV output's folder is the working folder
+          std::string type = "postgres", conn = ".";
+          for (const auto &p : entry.getObject().getMembers())
+            if (p.Key() == AIS::KEY_SETTING_MODEL_TYPE)
+              type = Util::Convert::toLowerCopy(p.Get().to_string());
+            else if (p.Key() == AIS::KEY_SETTING_CONN_STR && !p.Get().to_string().empty())
+              conn = p.Get().to_string();
+          if (type == "csv" || type == "sqlite")
+            out.emplace_back(AIS::KEY_SETTING_CONN_STR, conn);
+        }
+      break;
+    default:
+      break;
+    }
+  return out;
+}
+
+static std::string legacyConfigOf(const JSON::JSON &root) {
+  std::string path;
+  const JSON::Value *v = root[AIS::KEY_SETTING_CONTROL];
+  if (v && v->isObject())
+    for (const auto &c : v->getObject().getMembers())
+      if (c.Key() == AIS::KEY_SETTING_LEGACY_CONFIG)
+        path = c.Get().to_string();
+  return path;
+}
+
+// What a save from the panel may name: what the file has now, or a file of the
+// configuration's folder of the kind the key reads. The panel's session should
+// not reach every file this program can. The command line and a file edited by
+// hand are not asked.
+bool ControlCore::allowedPaths(const JSON::JSON &saved, std::string &error) {
+  std::set<std::pair<int, std::string>> known;
+  std::string legacy;
+  try {
+    JSON::Parser parser(JSON_DICT_SETTING);
+    JSON::Document current = parser.parse(Util::Helper::readFile(config_file));
+    const PathValues values = pathValues(current.root);
+    known.insert(values.begin(), values.end());
+    legacy = legacyConfigOf(current.root);
+  } catch (const std::exception &) {
+  }
+
+  const std::string now = legacyConfigOf(saved);
+  if (!now.empty() && now != legacy) {
+    error = "\"legacy_config\" is set by the installer and cannot be changed here.";
+    return false;
+  }
+
+  const std::string folder = configFolder(config_file);
+  const PathValues values = pathValues(saved);
+  // a server's private key: no other setting, which might serve or write its file, may name it
+  std::vector<std::string> tls_keys;
+  for (const auto &v : values)
+    if (v.first == AIS::KEY_SETTING_KEY)
+      tls_keys.push_back(Util::Helper::resolvePath(v.second, folder));
+  for (const auto &v : known)
+    if (v.first == AIS::KEY_SETTING_KEY)
+      tls_keys.push_back(Util::Helper::resolvePath(v.second, folder));
+  for (const auto &v : values) {
+    if (known.count(v))
+      continue;
+    const std::string quoted = "\"" + AIS::settingName(v.first) + "\": \"" + v.second + "\"";
+    if (v.first == AIS::KEY_SETTING_STYLE && !hasExtension(v.second, ".css") && !hasExtension(v.second, ".pss")) {
+      error = quoted + " is not a .css or .pss file.";
+      return false;
+    }
+    if (v.first == AIS::KEY_SETTING_ABOUT && !hasExtension(v.second, ".md")) {
+      error = quoted + " is not a .md file.";
+      return false;
+    }
+    if (v.first == AIS::KEY_SETTING_PLUGIN && !hasExtension(v.second, ".js") && !hasExtension(v.second, ".pjs")) {
+      error = quoted + " is not a .js or .pjs file.";
+      return false;
+    }
+    // the site's own are read from the configuration's folder, the others from the working folder
+    const bool site_path = v.first == AIS::KEY_SETTING_FILE || v.first == AIS::KEY_SETTING_PLACES ||
+                           v.first == AIS::KEY_SETTING_CERT || v.first == AIS::KEY_SETTING_KEY;
+    const std::string path = site_path ? Util::Helper::resolvePath(v.second, folder) : v.second;
+    if (!inFolder(path, folder)) {
+      error = quoted + " is outside the configuration's folder (" + folder + "): a path elsewhere can only be written in the file by hand.";
+      return false;
+    }
+    if (isSameFile(path, config_file)) {
+      error = quoted + " is the configuration itself.";
+      return false;
+    }
+    if (v.first != AIS::KEY_SETTING_KEY)
+      for (const auto &k : tls_keys)
+        if (isSameFile(path, k)) {
+          error = quoted + " is a server's private key.";
+          return false;
+        }
+  }
+  return true;
+}
+
+bool ControlCore::setConfig(const std::string &json, std::string &error) {
+  if (!validate(json, error))
+    return false;
+
+  std::lock_guard<std::mutex> lock(file_mtx);
+
+  std::string out;
+  try {
+    JSON::Parser parser(JSON_DICT_SETTING);
+    JSON::Document doc = parser.parse(json);
+    if (!allowedPaths(doc.root, error))
+      return false;
+    // the password is changed by /api/password alone, whatever the document says
+    putAuth(doc);
+    JSON::Serializer serializer(JSON_DICT_SETTING);
+    serializer.stringify(doc.root, out);
+  } catch (const std::exception &e) {
+    error = e.what();
+    return false;
+  }
+
+  try {
+    std::string ignore;
+    writeFileAtomic(config_file + ".bak", Util::Helper::readFile(config_file),
+                    ignore);
+  } catch (const std::exception &) {
+  }
+
+  if (!writeFileAtomic(config_file, indented(out), error))
+    return false;
+
+  refreshAuthFields(out);
+  refreshPlaces(out);
+
+  config_dirty = true;
+
+  return true;
+}
+
 // Reads the pre-managed-mode config file recorded by the installer in
 // control.legacy_config; only that one path is ever served, never the
 // active config itself.
@@ -249,14 +553,7 @@ bool ControlCore::readLegacyConfig(std::string &content) {
 
     JSON::Parser parser(JSON_DICT_SETTING);
     JSON::Document doc = parser.parse(Util::Helper::readFile(config_file));
-
-    const JSON::Value *v = doc.root[AIS::KEY_SETTING_CONTROL];
-    if (!v || !v->isObject())
-      return false;
-
-    for (const auto &c : v->getObject().getMembers())
-      if (c.Key() == AIS::KEY_SETTING_LEGACY_CONFIG)
-        path = c.Get().to_string();
+    path = legacyConfigOf(doc.root);
   } catch (const std::exception &) {
     return false;
   }
@@ -287,7 +584,20 @@ void ControlCore::applyAuthFields(const JSON::Value &control) {
       password_hash = c.Get().to_string();
     else if (c.Key() == AIS::KEY_SETTING_SALT)
       password_salt = c.Get().to_string();
-    else if (c.Key() == AIS::KEY_SETTING_WIZARD)
+    else if (c.Key() == AIS::KEY_SETTING_ITERATIONS)
+      password_iterations = std::atoi(c.Get().to_string().c_str());
+    else if (c.Key() == AIS::KEY_SETTING_SETUP_CODE)
+      setup_code = c.Get().to_string();
+    else if (c.Key() == AIS::KEY_SETTING_TLS) {
+      panel_tls = true;
+      if (c.Get().isObject())
+        for (const auto &t : c.Get().getObject().getMembers()) {
+          if (t.Key() == AIS::KEY_SETTING_CERT)
+            panel_tls_cert = t.Get().to_string();
+          else if (t.Key() == AIS::KEY_SETTING_KEY)
+            panel_tls_key = t.Get().to_string();
+        }
+    } else if (c.Key() == AIS::KEY_SETTING_WIZARD)
       wizard = Util::Parse::Switch(c.Get().to_string());
     else if (c.Key() == AIS::KEY_SETTING_LEVEL) {
       if (!Logger::parseLevel(c.Get().to_string(), level)) {
@@ -329,19 +639,74 @@ bool ControlCore::hasPassword() {
   return !password_hash.empty();
 }
 
-bool ControlCore::verifyPassword(const std::string &password) {
-  std::lock_guard<std::mutex> lock(mtx);
+// no iterations in the file: a password from before, one round of SHA-256
+static std::string hashPassword(const std::string &password, const std::string &salt, int iterations) {
+  return iterations > 0 ? Util::SHA256::pbkdf2(password, salt, iterations) : Util::SHA256::hex(salt + password);
+}
 
-  if (password_hash.empty())
+bool ControlCore::verifyPassword(const std::string &password) {
+  std::string hash, salt;
+  int iterations;
+  {
+    std::lock_guard<std::mutex> lock(mtx);
+    hash = password_hash;
+    salt = password_salt;
+    iterations = password_iterations;
+  }
+
+  if (hash.empty())
     return false;
 
-  const std::string computed = Util::SHA256::hex(password_salt + password);
-  if (computed.size() != password_hash.size())
+  const std::string computed = hashPassword(password, salt, iterations);
+  if (computed.size() != hash.size())
     return false;
 
   unsigned char diff = 0;
   for (size_t i = 0; i < computed.size(); i++)
-    diff |= (unsigned char)(computed[i] ^ password_hash[i]);
+    diff |= (unsigned char)(computed[i] ^ hash[i]);
+
+  if (diff != 0)
+    return false;
+
+  // a password from before moves to the current hash now that it is at hand
+  if (iterations != PASSWORD_ITERATIONS)
+    setPassword(password);
+  return true;
+}
+
+// A panel others can reach and no password yet: the first visitor has to show
+// this code, which only who reads the machine's log has. Straight to the
+// console, the journal: the log's buffer can be read from a viewer, and a log
+// level can hide it.
+void ControlCore::announceSetupCode() {
+  if (!authRequired() || !password_hash.empty())
+    return;
+
+  if (setup_code.empty()) {
+    // no 0/O, 1/I/L
+    static const char letters[] = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    std::random_device rd;
+    std::uniform_int_distribution<int> pick(0, (int)sizeof(letters) - 2);
+    for (int i = 0; i < 8; i++)
+      setup_code += letters[pick(rd)];
+
+    mutateConfig("keep the setup code", [&](JSON::Document &doc) {
+      putAuth(doc);
+      return true;
+    });
+  }
+  std::cerr << "Control: to set the password, use setup code " << setup_code << std::endl;
+}
+
+bool ControlCore::checkSetupCode(std::string code) {
+  Util::Convert::toUpper(code);
+  std::lock_guard<std::mutex> lock(mtx);
+  if (setup_code.empty() || code.size() != setup_code.size())
+    return false;
+
+  unsigned char diff = 0;
+  for (size_t i = 0; i < code.size(); i++)
+    diff |= (unsigned char)(code[i] ^ setup_code[i]);
 
   return diff == 0;
 }
@@ -361,15 +726,20 @@ std::string ControlCore::randomHex(size_t length) {
 
 void ControlCore::setPassword(const std::string &password) {
   std::string salt = randomHex(32);
-  std::string hash = Util::SHA256::hex(salt + password);
+  std::string hash = hashPassword(password, salt, PASSWORD_ITERATIONS);
 
   {
     std::lock_guard<std::mutex> lock(mtx);
     password_salt = salt;
     password_hash = hash;
+    password_iterations = PASSWORD_ITERATIONS;
+    setup_code.clear();
   }
 
-  persistControlAuth(hash, salt);
+  mutateConfig("persist password", [&](JSON::Document &doc) {
+    putAuth(doc);
+    return true;
+  });
 }
 
 bool ControlCore::mutateConfig(const char *what, const std::function<bool(JSON::Document &)> &fn,
@@ -387,7 +757,7 @@ bool ControlCore::mutateConfig(const char *what, const std::function<bool(JSON::
     JSON::Serializer serializer(JSON_DICT_SETTING);
     serializer.stringify(doc.root, out);
 
-    if (writeFileAtomic(config_file, out, why))
+    if (writeFileAtomic(config_file, indented(out), why))
       return true;
   } catch (const std::exception &e) {
     why = e.what();
@@ -398,14 +768,57 @@ bool ControlCore::mutateConfig(const char *what, const std::function<bool(JSON::
   return false;
 }
 
-void ControlCore::persistControlAuth(const std::string &hash,
-                                     const std::string &salt) {
-  mutateConfig("persist password", [&](JSON::Document &doc) {
-    JSON::JSON &control = doc.root.object(AIS::KEY_SETTING_CONTROL, doc.pool);
-    control.Set(AIS::KEY_SETTING_PASSWORD, hash, doc.pool);
-    control.Set(AIS::KEY_SETTING_SALT, salt, doc.pool);
-    return true;
-  });
+void ControlCore::removeAuth(JSON::JSON &control) {
+  control.Remove(AIS::KEY_SETTING_PASSWORD);
+  control.Remove(AIS::KEY_SETTING_SALT);
+  control.Remove(AIS::KEY_SETTING_ITERATIONS);
+  control.Remove(AIS::KEY_SETTING_SETUP_CODE);
+  control.Remove(AIS::KEY_SETTING_TLS);
+}
+
+// the document's "control" with the password and the setup code this process holds
+void ControlCore::putAuth(JSON::Document &doc) {
+  std::lock_guard<std::mutex> lock(mtx);
+  if (password_hash.empty() && setup_code.empty() && !panel_tls && !doc.root[AIS::KEY_SETTING_CONTROL])
+    return;
+
+  JSON::JSON &control = doc.root.object(AIS::KEY_SETTING_CONTROL, doc.pool);
+  removeAuth(control);
+  if (!password_hash.empty()) {
+    control.Set(AIS::KEY_SETTING_PASSWORD, password_hash, doc.pool);
+    control.Set(AIS::KEY_SETTING_SALT, password_salt, doc.pool);
+    if (password_iterations > 0) {
+      JSON::Value iterations;
+      iterations.setInt(password_iterations);
+      control.Set(AIS::KEY_SETTING_ITERATIONS, iterations);
+    }
+  }
+  if (!setup_code.empty())
+    control.Set(AIS::KEY_SETTING_SETUP_CODE, setup_code, doc.pool);
+  // the panel's own HTTPS is the file's alone
+  if (panel_tls) {
+    JSON::JSON &tls = control.object(AIS::KEY_SETTING_TLS, doc.pool);
+    tls.Set(AIS::KEY_SETTING_CERT, panel_tls_cert, doc.pool);
+    tls.Set(AIS::KEY_SETTING_KEY, panel_tls_key, doc.pool);
+  }
+}
+
+std::string ControlCore::configFolderPath() const {
+  const std::string folder = configFolder(config_file);
+#ifndef _WIN32
+  char full[PATH_MAX];
+  if (realpath(folder.c_str(), full))
+    return full;
+#endif
+  return folder;
+}
+
+bool ControlCore::panelTLS(std::string &cert, std::string &key) {
+  std::lock_guard<std::mutex> lock(mtx);
+  const std::string folder = configFolder(config_file);
+  cert = panel_tls_cert.empty() ? "" : Util::Helper::resolvePath(panel_tls_cert, folder);
+  key = panel_tls_key.empty() ? "" : Util::Helper::resolvePath(panel_tls_key, folder);
+  return panel_tls;
 }
 
 std::string ControlCore::getDeviceListJSON() {
@@ -444,6 +857,14 @@ bool ControlCore::validate(const std::string &json, std::string &error) {
     c.setManaged(getControlPort(), getViewerPort(), getBindAddress());
     c.set(json);
     c.finish();
+#ifdef HASAPI
+    for (const auto &spec : scratch.site_config.servers)
+      if (!spec.tls_cert.empty()) {
+        const std::string problem = IO::TCPServer::checkTLS(spec.tls_cert, spec.tls_key);
+        if (!problem.empty())
+          throw std::runtime_error("the server on port " + std::to_string(spec.port) + ": " + problem);
+      }
+#endif
   } catch (const std::exception &e) {
     error = e.what();
     return false;

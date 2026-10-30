@@ -121,25 +121,33 @@ namespace Device
 		if (buffer.size() < TRANSFER_SIZE)
 			buffer.resize(TRANSFER_SIZE);
 
-		while (isStreaming())
+		try
 		{
-			session->poll();
-			if (!session->isConnected())
+			while (isStreaming())
 			{
-				SleepSystem(50);
-				continue;
-			}
+				session->poll();
+				if (!session->isConnected())
+				{
+					SleepSystem(50);
+					continue;
+				}
 
-			int len = session->read(buffer.data(), TRANSFER_SIZE, 1);
+				int len = session->read(buffer.data(), TRANSFER_SIZE, 1);
 
-			if (len < 0)
-			{
-				lost = true;
-				Error() << "RTLTCP: error receiving data from remote host. Cancelling. ";
-				break;
+				if (len < 0)
+				{
+					lost = true;
+					Error() << "RTLTCP: error receiving data from remote host. Cancelling. ";
+					break;
+				}
+				else if (isStreaming() && !fifo.Push(buffer.data(), len))
+					Error() << "RTLTCP: buffer overrun.";
 			}
-			else if (isStreaming() && !fifo.Push(buffer.data(), len))
-				Error() << "RTLTCP: buffer overrun.";
+		}
+		catch (const std::exception &e)
+		{
+			lost = true;
+			Error() << "RTLTCP: " << e.what();
 		}
 	}
 
@@ -177,7 +185,7 @@ namespace Device
 		DeviceList.push_back(Description("RTLTCP", "RTLTCP", "RTLTCP", (uint64_t)0, Type::RTLTCP));
 	}
 
-	Setting &RTLTCP::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &RTLTCP::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -256,7 +264,7 @@ namespace Device
 			break;
 		default:
 			if (!tcp.setOptionKey(key, arg) && !tls.setOptionKey(key, arg) && !mqtt.setOptionKey(key, arg) && !gpsd.setOptionKey(key, arg) && !rtltcp.setOptionKey(key, arg) && !ws.setOptionKey(key, arg))
-				Device::SetKey(key, arg);
+				Device::applyKey(key, arg);
 			break;
 		}
 		return *this;

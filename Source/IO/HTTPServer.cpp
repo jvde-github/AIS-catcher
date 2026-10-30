@@ -58,15 +58,20 @@ namespace IO
 
 		for (auto &c : client)
 		{
-			if (c.isConnected() && !c.close_after_send)
+			// a stream reads nothing after the request that opened it, nor does a response that closes
+			if (c.isConnected() && (c.close_after_send || c.no_timeout))
+				c.msg.clear();
+			else if (c.isConnected())
 			{
 				// timer runs while a request is arriving but not yet complete
-				if (c.msg.empty())
+				if (c.msg.empty() || c.hasSendBuffer())
 					c.request_start = 0;
 				else if (c.request_start == 0)
 					c.request_start = now_t;
 
-				while (true)
+				// the next request waits until the last response has gone out: a
+				// client that does not read gets no more queued for it
+				while (!c.hasSendBuffer())
 				{
 					// RFC 9112 2.2: empty lines before the request line are ignored,
 					// not mistaken for the request itself
@@ -77,6 +82,11 @@ namespace IO
 						c.msg.erase(0, skip);
 
 					std::size_t pos = c.msg.find(EOF_MSG);
+					if (pos == std::string::npos ? c.msg.size() > MAX_HEADER_SIZE : pos > MAX_HEADER_SIZE)
+					{
+						reject(c, 431, "header section too large");
+						break;
+					}
 					if (pos == std::string::npos)
 						break;
 
@@ -130,6 +140,7 @@ namespace IO
 					if (request.method == "GET" || request.method == "POST")
 					{
 						request.peer = peerOf(c.sock);
+						request.owner = isOwner(request);
 						if (!dispatchMount(c, request, request.accept_gzip))
 							Request(c, request, request.accept_gzip);
 					}
@@ -143,8 +154,8 @@ namespace IO
 					c.msg.erase(0, required_length);
 					c.continue_sent = false;
 					c.request_start = c.msg.empty() ? 0 : now_t;
-					// closing after this response; ignore any pipelined requests
-					if (c.close_after_send)
+					// closing after this response, or now a stream; ignore any pipelined requests
+					if (c.close_after_send || c.no_timeout)
 						break;
 				}
 
@@ -201,11 +212,29 @@ namespace IO
 		return dots == 3;
 	}
 
+	// Someone on this machine itself: its own address, no proxy passing someone else on,
+	// a name no one else can point here (DNS rebinding), and not a page of another origin
+	// reaching in, which the viewer's open CORS would let read the answer.
+	bool HTTPServer::isOwner(const HTTPRequest &r)
+	{
+		if ((r.peer != "::1" && r.peer.compare(0, 4, "127.") != 0) || r.forwarded || r.host.empty() || !addressedHere(r.host))
+			return false;
+		if (r.origin.empty())
+			return true;
+		const std::size_t scheme = r.origin.find("://");
+		return scheme != std::string::npos && Util::Convert::toLowerCopy(r.origin.substr(scheme + 3)) == Util::Convert::toLowerCopy(r.host);
+	}
+
 	void HTTPServer::reject(IO::TCPServerConnection &c, int status, const std::string &reason)
 	{
-		Error() << "Server: closing connection, " << reason;
+		// the reason may quote the request: short, and no control characters for the log or a terminal
+		std::string safe = reason.substr(0, MAX_REASON_SIZE);
+		for (char &ch : safe)
+			if ((unsigned char)ch < 0x20 || (unsigned char)ch >= 0x7f)
+				ch = '?';
+		Error() << "Server: closing connection, " << safe;
 		c.close_after_send = true;
-		Response(c, "text/plain", reason, false, false, false, status);
+		Response(c, "text/plain", safe, false, false, false, status);
 		c.msg.clear();
 	}
 
@@ -246,6 +275,7 @@ namespace IO
 
 		HTTPRequest sub = r;
 		sub.target = r.target.substr(prefix.size());
+		sub.owner = r.owner || ownerOfMount(r);
 		target->Request(c, sub, accept_gzip);
 		return true;
 	}
@@ -361,9 +391,15 @@ namespace IO
 			{
 				r.origin = value;
 			}
-			else if (key == "X-FORWARDED-HOST")
+			else if (key == "FORWARDED" || key == "X-REAL-IP" || key.compare(0, 12, "X-FORWARDED-") == 0)
 			{
-				r.forwarded_host = value;
+				r.forwarded = true;
+				if (key == "X-FORWARDED-HOST")
+					r.forwarded_host = value;
+			}
+			else if (key == "X-SETUP-CODE")
+			{
+				r.setup_code = value;
 			}
 			else if (key == "AUTHORIZATION")
 			{
@@ -467,6 +503,8 @@ namespace IO
 			return "Internal Server Error";
 		case 501:
 			return "Not Implemented";
+		case 503:
+			return "Service Unavailable";
 		default:
 			return "OK";
 		}
@@ -505,6 +543,7 @@ namespace IO
 				"connect-src 'self' http: https: ws: wss:; "
 				"font-src 'self' data:; "
 				"frame-src " + frame_src + "; "
+				"form-action 'self'; "
 				"frame-ancestors " + frame_ancestors + "; "
 				"base-uri 'self'";
 			common_headers += "\r\nX-Content-Type-Options: nosniff";

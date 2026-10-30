@@ -3,26 +3,23 @@
 // may be open together, and the layout they leave - the ticker, the toolbar,
 // the header's labels, the map pane's size. Features ask here what is open.
 
-import { settings, isKiosk } from './core/state.js';
+import { settings, isAndroid, isKiosk } from './core/state.js';
+import { config } from './core/config.js';
+import { decodeHTMLEntities } from '@aiscatcher/ui/components.js';
 import * as mapui from '@aiscatcher/map/mapui.js';
 import * as headerLib from '@aiscatcher/ui/header.js';
 import { createPanelSwitch } from '@aiscatcher/ui/side-table.js';
 import { map } from './map.js';
-import { saveSettings, closeSettings } from './features/settings/settings.js';
+import { ui } from './ui.js';
+import { saveSettings, effects } from './settings-store.js';
+import { closeSettings } from './features/settings/settings.js';
 import { closeTargetcard, positionAside, fitTargetcard } from './features/targetcard/card.js';
 import { updateTablecard, tableHover } from './features/tablecard/tablecard.js';
 import { updateMarkerCountTooltip } from './features/counts/counts.js';
-import { selectTab } from './tabs/index.js';
+import { showTab } from './tabs/index.js';
 import * as measure from './features/measure/measure.js';
 import * as ticker from './features/ticker/ticker.js';
 import { register } from './actions.js';
-
-// { ui: the entry's map UI (chrome, toolbar, card, dismiss) }
-let deps = null;
-
-export function init(d) {
-    deps = d;
-}
 
 // ─── map panels ──────────────────────────────────────────────────────────────
 export const panels = {
@@ -99,7 +96,7 @@ export function applyPanels(opts = {}) {
 
     applyToolbarMode();
     applyMenuLabels();
-    deps.ui.chrome.invalidate();
+    ui.chrome.invalidate();
     /* the map pane narrows for the panel — OpenLayers has to be told */
     if (map) mapui.trackResize(map);
 
@@ -107,7 +104,7 @@ export function applyPanels(opts = {}) {
     el.tableBtn?.classList.toggle("is-active", panels.table);
     updateMeasureIndicator();
 
-    if (!panels.targetcard) deps.ui.card.popover.closeAll();
+    if (!panels.targetcard) ui.card.popover.closeAll();
     if (!panels.statcard) resetCardPosition(el.statcard);
     if (!panels.measure) resetCardPosition(el.measure);
 
@@ -122,21 +119,20 @@ function resetCardPosition(el) {
     for (const prop of ["left", "top", "right", "bottom"]) el.style.removeProperty(prop);
 }
 
-export function toggleStatcard() {
+function toggleStatcard() {
     if (!panels.statcard) updateMarkerCountTooltip();
     setPanels({ statcard: !panels.statcard });
 }
 
-export function toggleTicker() {
+function toggleTicker() {
     settings.ticker = !settings.ticker;
     saveSettings();
     applyPanels();
 }
 
-export function toggleTablecard() {
+function toggleTablecard() {
     if (!panels.table && window.innerWidth < 800) {
-        settings.tab = "ships";
-        selectTab();
+        showTab('ships');
         return;
     }
 
@@ -144,7 +140,7 @@ export function toggleTablecard() {
     updateTablecard();
 }
 
-export function hideTablecard() {
+function hideTablecard() {
     tableHover.clear();
     if (panels.table) toggleTablecard();
 }
@@ -163,7 +159,7 @@ export function measurecardVisible() {
 }
 
 export function toggleMeasurecard() {
-    if (!panels.measure) deps.ui.dismiss();
+    if (!panels.measure) ui.dismiss();
     setPanels({ measure: !panels.measure });
 }
 
@@ -185,10 +181,93 @@ export function applyMenuLabels() {
 }
 
 export function applyToolbarMode() {
-    deps.ui.toolbar.apply();
+    ui.toolbar.apply();
 }
 
+// the platform: what only one of the two shows, and the menu as a floating box on a desktop
+const dynamicStyle = document.createElement("style");
+document.head.appendChild(dynamicStyle);
+const androidStyle = document.createElement("style");
+document.head.appendChild(androidStyle);
+
+function applyPlatform() {
+    dynamicStyle.innerHTML = isAndroid() ? "" : `
+        @media only screen and (min-width: 750px) {
+            #menubar {
+                position: fixed;
+                top: 70px;
+                left: 10px;
+                right: 0;
+                width: 500px;
+                border: solid;
+                border-color: var(--color-menu-border);
+                border-radius: 5px;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            }
+        }
+    `;
+    androidStyle.textContent = (isAndroid() ? ".noandroid" : ".android") + " { display: none !important; }";
+}
+
+// ─── the page's title ────────────────────────────────────────────────────────
+
+const pageTitle = { station: decodeHTMLEntities(config.station), count: null };
+
+// the station's name, the number of vessels, or both
+export function setPageTitle(parts) {
+    Object.assign(pageTitle, parts);
+    document.title = (pageTitle.count ? " (" + pageTitle.count + ") " : "") + "AIS-catcher " + pageTitle.station;
+}
+
+// ─── the side menu ───────────────────────────────────────────────────────────
+
+export function hideMenu() {
+    if (document.getElementById("menubar").classList.contains("visible") && !isAndroid()) {
+        toggleMenu();
+    }
+}
+
+export function showMenu() {
+    if (!document.getElementById("menubar").classList.contains("visible")) {
+        toggleMenu();
+    }
+}
+
+function toggleMenu() {
+    const menubar = document.getElementById("menubar");
+    menubar.classList.toggle("visible");
+    document.getElementById("menubar_mini").classList.toggle("showflex");
+    document.getElementById("menubar_mini").classList.toggle("hidden");
+
+    const menuButton = document.getElementById("header_menu_button");
+    menuButton.classList.toggle("menu_icon");
+    menuButton.classList.toggle("close_icon");
+
+    syncMenuScrim();
+}
+
+function syncMenuScrim() {
+    const menubar = document.getElementById("menubar");
+    const floats = ["absolute", "fixed"].includes(getComputedStyle(menubar).position);
+    document.getElementById("menubar-overlay").classList
+        .toggle("active", menubar.classList.contains("visible") && floats);
+}
+
+window.matchMedia("(min-width: 750px)").addEventListener("change", syncMenuScrim);
+
+const relayout = () => applyPanels();
+
+effects({
+    map_toolbar: () => applyToolbarMode(),
+    menu_labels: () => applyMenuLabels(),
+    ticker: relayout,
+    ticker_bottom: relayout,
+    android: applyPlatform,
+});
+
 register({
+    toggleMenu: () => toggleMenu(),
+    hideMenu: () => hideMenu(),
     toggleStatcard: () => toggleStatcard(),
     toggleTicker: () => toggleTicker(),
     toggleTablecard: () => toggleTablecard(),

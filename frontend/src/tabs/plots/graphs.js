@@ -2,7 +2,7 @@
 // the time axis; eager, since the settings apply them before the tab loads.
 
 import { settings } from '../../core/state.js';
-import { saveSettings } from '../../features/settings/settings.js';
+import { saveSettings, effects } from '../../settings-store.js';
 import { loaded as loadedTab } from '../index.js';
 import { register } from '../../actions.js';
 
@@ -11,7 +11,7 @@ export const GRAPH_KINDS = {
     ppm: { setting: 'show_ppm_graphs', header: 'Frequency Shift' }
 };
 
-export function setGraphVisibility(type, show, save = true) {
+function setGraphVisibility(type, show, save = true) {
     const kind = GRAPH_KINDS[type];
     if (kind) {
         settings[kind.setting] = show;
@@ -25,16 +25,16 @@ export function setGraphVisibility(type, show, save = true) {
     if (save) saveSettings();
 }
 
-export function setPlotAbsoluteTime(on, save = true) {
-    settings.plot_absolute_time = on;
-    loadedTab('plots')?.setAbsoluteTime(on);
-    if (save) saveSettings();
-}
-
 function toggleGraphVisibility(type) {
     const kind = GRAPH_KINDS[type];
     if (kind) setGraphVisibility(type, !settings[kind.setting]);
 }
+
+effects({
+    plot_absolute_time: (v) => loadedTab('plots')?.setAbsoluteTime(v),
+    show_signal_graphs: (v) => setGraphVisibility('signal', v, false),
+    show_ppm_graphs: (v) => setGraphVisibility('ppm', v, false),
+});
 
 register({
     toggleGraphVisibility: (e, d) => toggleGraphVisibility(d.graph),

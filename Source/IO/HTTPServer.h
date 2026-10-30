@@ -55,6 +55,8 @@ namespace IO
 
 	public:
 		SSEConnection(IO::TCPServerConnection *c, uint32_t m) : connection(c), gen(c->getGeneration()), mask(m) { c->setVerbosity(false); }
+		// what a subscriber may fall behind by before it is dropped
+		static const int SEND_LIMIT = 1024 * 1024;
 		~SSEConnection() { Close(); }
 
 		bool subscribed(int id)
@@ -76,6 +78,7 @@ namespace IO
 				return;
 
 			c->setNoTimeout();			 // must survive the idle-timeout sweep
+			c->setSendLimit(SEND_LIMIT);
 			c->close_after_send = false; // the stream outlives the request that opened it
 
 			std::string headers = "HTTP/1.1 200 OK\r\n";
@@ -136,7 +139,10 @@ namespace IO
 		std::string origin;
 		std::string forwarded_host;
 		std::string authorization;
+		std::string setup_code; // X-Setup-Code
 		std::string peer; // the client's numeric address, as its socket has it
+		bool forwarded = false; // names a proxy: Forwarded, X-Real-IP or an X-Forwarded-* header
+		bool owner = false;		// from whoever owns this machine's station: see isOwner
 		bool keep_alive = true;
 		bool accept_gzip = false;
 		bool expect_continue = false;
@@ -190,6 +196,7 @@ namespace IO
 	class HTTPServer : public IO::TCPServer
 	{
 	public:
+		HTTPServer() { max_per_address = 32; }
 		uint64_t bytesOut() const { return bytes_out.load(std::memory_order_relaxed); }
 		virtual void Request(IO::TCPServerConnection &c, const HTTPRequest &r, bool accept_gzip);
 		// 404 and close; the fallback for any path no subclass handles
@@ -225,6 +232,8 @@ namespace IO
 		// The sse list is touched only by the Run() thread: every path in reaches it
 		// through processClients() or drainCommands(), so it needs no lock.
 		bool hasSSEClients() const { return !sse.empty(); }
+		// how many streams at once, of the server that fronts the connections; set before it starts
+		void setMaxSSE(int n) { max_sse = n; }
 
 		void closeAllSSE()
 		{
@@ -246,6 +255,14 @@ namespace IO
 			}
 
 			cleanupSSE();
+
+			if ((int)sse.size() >= max_sse)
+			{
+				c.close_after_send = true;
+				setExtraHeader("Retry-After: 30");
+				Response(c, "text/plain", std::string("Too many live streams."), false, false, false, 503);
+				return;
+			}
 
 			sse.emplace_back(&c, mask);
 			auto &connection = sse.back();
@@ -308,6 +325,10 @@ namespace IO
 
 		void setExtraHeader(const std::string &h) { extra_header = h; }
 
+	protected:
+		// whether a request this server fronts for its mount comes from whom the mount's owner is
+		virtual bool ownerOfMount(const HTTPRequest &) { return false; }
+
 	private:
 		// Default `*` permits any embedding — AIS-catcher is typically
 		// self-hosted on a LAN and is commonly iframed by a control app on a
@@ -322,6 +343,7 @@ namespace IO
 		std::string extra_header;
 		std::string common_headers;
 		std::list<IO::SSEConnection> sse;
+		int max_sse = 64;
 		// union of the subscriber masks, read by producers on other threads
 		std::atomic<uint32_t> topics{0};
 		std::atomic<std::size_t> bytes_out{0}; // response bytes written, headers included
@@ -330,6 +352,9 @@ namespace IO
 		// below this size the gzip header/CPU overhead outweighs the savings
 		static const size_t GZIP_MIN_LENGTH = 1024;
 		static const std::size_t MAX_REQUEST_SIZE = 1024 * 1024;
+		// the request line and headers; a body counts only towards MAX_REQUEST_SIZE
+		static const std::size_t MAX_HEADER_SIZE = 16 * 1024;
+		static const std::size_t MAX_REASON_SIZE = 120;
 		// seconds a request has to finish arriving before its slot is reclaimed
 		static const int REQUEST_TIMEOUT = 15;
 
@@ -367,6 +392,7 @@ namespace IO
 		void reject(IO::TCPServerConnection &c, int status, const std::string &reason);
 		bool localOnly() const;
 		static bool addressedHere(const std::string &host);
+		static bool isOwner(const HTTPRequest &r);
 		bool dispatchMount(IO::TCPServerConnection &c, const HTTPRequest &r, bool accept_gzip);
 		bool owns(const IO::TCPServerConnection &c) const { return c.owner == this; }
 

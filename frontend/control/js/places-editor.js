@@ -3,41 +3,18 @@ import GeoJSON from 'ol/format/GeoJSON.js';
 import Draw from 'ol/interaction/Draw.js';
 import Modify from 'ol/interaction/Modify.js';
 import { shapeFromGeoJSON } from './shape.js';
+import { icon, toolIcon } from './icons.js';
 import * as tooltip from '@aiscatcher/ui/tooltip.js';
-import { ConfigStore } from './config-manager.js';
+import { ConfigStore, registerEditor } from './config-store.js';
+import { moreMenu } from './dom.js';
+import { api } from './api.js';
 import { addBasemap } from './basemap.js';
 import { DOCS, docLink } from './docs.js';
-const TOOL_ICONS = {
-    pentagon: 'M298-200h364l123-369-305-213-305 213 123 369Zm-58 80L80-600l400-280 400 280-160 480H240Zm240-371Z',
-    add_location_alt: 'M480-80Q319-217 239.5-334.5T160-552q0-150 96.5-239T480-880h20q10 0 20 2v81q-10-2-19.5-2.5T480-800q-101 0-170.5 69.5T240-552q0 71 59 162.5T480-186q122-112 181-203.5T720-552v-8h80v8q0 100-79.5 217.5T480-80Zm56.5-423.5Q560-527 560-560t-23.5-56.5Q513-640 480-640t-56.5 23.5Q400-593 400-560t23.5 56.5Q447-480 480-480t56.5-23.5ZM480-560Zm240-80h80v-120h120v-80H800v-120h-80v120H600v80h120v120Z',
-    undo: 'M280-200v-80h284q63 0 109.5-40T720-420q0-60-46.5-100T564-560H312l104 104-56 56-200-200 200-200 56 56-104 104h252q97 0 166.5 63T800-420q0 94-69.5 157T564-200H280Z',
-    redo: 'M396-200q-97 0-166.5-63T160-420q0-94 69.5-157T396-640h252L544-744l56-56 200 200-200 200-56-56 104-104H396q-63 0-109.5 40T240-420q0 60 46.5 100T396-280h284v80H396Z',
-    fit_screen: 'M800-600v-120H680v-80h120q33 0 56.5 23.5T880-720v120h-80Zm-720 0v-120q0-33 23.5-56.5T160-800h120v80H160v120H80Zm600 440v-80h120v-120h80v120q0 33-23.5 56.5T800-160H680Zm-520 0q-33 0-56.5-23.5T80-240v-120h80v120h120v80H160Zm80-160v-320h480v320H240Zm80-80h320v-160H320v160Zm0 0v-160 160Z',
-    upload: 'M440-320v-326L336-542l-56-58 200-200 200 200-56 58-104-104v326h-80ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z',
-    download: 'M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z',
-    content_paste: 'M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h167q11-35 43-57.5t70-22.5q40 0 71.5 22.5T594-840h166q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560h-80v120H280v-120h-80v560Zm308.5-571.5Q520-783 520-800t-11.5-28.5Q497-840 480-840t-28.5 11.5Q440-817 440-800t11.5 28.5Q463-760 480-760t28.5-11.5Z',
-    fullscreen: 'M120-120v-200h80v120h120v80H120Zm520 0v-80h120v-120h80v200H640ZM120-640v-200h200v80H200v120h-80Zm640 0v-120H640v-80h200v200h-80Z',
-    fullscreen_exit: 'M240-120v-120H120v-80h200v200h-80Zm400 0v-200h200v80H720v120h-80ZM120-640v-80h120v-120h80v200H120Zm520 0v-200h80v120h120v80H640Z',
-    add: 'M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z',
-    remove: 'M200-440v-80h560v80H200Z',
-    delete: 'M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z'
-};
-const toolSvg = icon => `<svg class="pe-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="${TOOL_ICONS[icon]}"/></svg>`;
 // a map tool: an icon with a tooltip, or with `text` a labelled one (the toggles)
 const tool = (name, label, icon, text) => text
-    ? `<button type="button" class="pe-tool" data-do="${name}" aria-pressed="false" aria-label="${label}">${toolSvg(icon)}<span class="pe-tool__label">${text}</span></button>`
-    : `<button type="button" class="pe-tool pe-tool--icon" data-do="${name}" title="${label}">${toolSvg(icon)}</button>`;
+    ? `<button type="button" class="pe-tool" data-do="${name}" aria-pressed="false" aria-label="${label}">${toolIcon(icon)}<span class="pe-tool__label">${text}</span></button>`
+    : `<button type="button" class="pe-tool pe-tool--icon" data-do="${name}" title="${label}">${toolIcon(icon)}</button>`;
 const sep = '<span class="pe-toolbar__sep" aria-hidden="true"></span>';
-// line icons in the style of the design: 24-unit grid, stroked
-const ICON = {
-    plus: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
-    dots: '<svg class="pe-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
-    search: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
-    chevron: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
-    trash: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
-    anchor: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="2"/><path d="M12 7v14M5 13a7 7 0 0 0 14 0M8 10h8"/></svg>',
-    area: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l7-3 9 5-3 10-11-1z"/></svg>',
-};
 const AREA_TYPES = new Set(['section', 'guardzone', 'sector', 'water']);
 let toolTips = null;
 import VectorLayer from 'ol/layer/Vector.js';
@@ -68,64 +45,64 @@ const uuid = () => {
     return `${s.slice(0, 8)}-${s.slice(8, 12)}-${s.slice(12, 16)}-${s.slice(16, 20)}-${s.slice(20)}`;
 };
 export function createPlaceEditor(host, options = {}) {
-    host.classList.add('pe');
+    host.classList.add('st', 'pe');
     host.innerHTML = `
       <div class="pe-body place-workspace">
         <aside class="pe-sidebar place-sidebar">
           <div class="pe-sidebar__actions">
-            <button class="pe-btn pe-btn--primary" type="button" data-do="new">${ICON.plus}New place</button>
-            <details class="pe-menu place-menu"><summary class="pe-icon-btn pe-icon-btn--outline" aria-label="Import, export and other place actions" title="More actions">${ICON.dots}</summary>
-              <div class="pe-menu__items place-menu-items">
-                <button class="pe-menu__item" type="button" data-do="import">Import…</button>
-                <button class="pe-menu__item" type="button" data-do="export">Export</button>
-                <button class="pe-menu__item" type="button" data-do="view-json">View GeoJSON</button>
-                <button class="pe-menu__item" type="button" data-do="reload">Reload</button>
-              </div>
-            </details>
+            <button class="st-btn st-btn--primary" type="button" data-do="new">${icon('plus', 'pe-icon')}New place</button>
           </div>
-          <div class="pe-search">${ICON.search}<input class="pe-input" type="search" data-field="search" aria-label="Search places" placeholder="Search places" autocomplete="off"></div>
+          <div class="pe-search">${icon('search', 'pe-icon')}<input class="st-input" type="search" data-field="search" aria-label="Search places" placeholder="Search places" autocomplete="off"></div>
           <div class="pe-list place-list" role="listbox" aria-label="Saved places"></div>
           <span class="pe-sidebar__count" data-count></span>
         </aside>
         <section class="pe-editor place-detail">
           <div class="pe-empty" data-empty><strong>No place selected</strong><span>Pick a place from the list or on the map, or create a new one.</span></div>
           <fieldset class="pe-form place-fields" disabled hidden>
-            <label class="pe-field" data-col="1"><span class="pe-label">Name</span><input class="pe-input" data-field="name" maxlength="120" placeholder="Place name"></label>
-            <label class="pe-field" data-col="2"><span class="pe-label">Type</span><span class="pe-select-wrap"><select class="pe-select" data-field="place_type"><option value="port">Port</option><option value="berth">Berth</option><option value="anchorage">Anchorage</option><option value="section">Section</option><option value="terminal">Terminal</option><option value="mooring">Mooring</option><option value="marina">Marina</option><option value="guardzone">Guard zone</option><option value="sector">Sector</option><option value="water">Water</option></select>${ICON.chevron}</span></label>
-            <label class="pe-field" data-col="3" data-row="unlocode"><span class="pe-label">UN/LOCODE</span><input class="pe-input pe-input--mono" data-field="unlocode" maxlength="5" placeholder="NLRTM" spellcheck="false" autocomplete="off"></label>
-            <label class="pe-field" data-col="1" data-line="2" data-row="part_of"><span class="pe-label">Parent</span><span class="pe-select-wrap"><select class="pe-select" data-field="part_of"><option value="">Unknown</option><option value="none">No parent</option></select>${ICON.chevron}</span></label>
-            <label class="pe-field" data-col="2" data-line="2" data-row="category"><span class="pe-label">Category</span><input class="pe-input" data-field="category" list="place-categories" maxlength="60"><datalist id="place-categories"></datalist></label>
-            <label class="pe-field" data-col="3" data-line="2" data-row="rank"><span class="pe-label">Marker from zoom</span><span class="pe-select-wrap"><select class="pe-select" data-field="rank"><option value="0">12 · very small</option><option value="1">11 · small</option><option value="2">9 · medium</option><option value="3">7 · large</option></select>${ICON.chevron}</span></label>
+            <label class="st-field" data-col="1"><span class="st-label">Name</span><input class="st-input" data-field="name" maxlength="120" placeholder="Place name"></label>
+            <label class="st-field" data-col="2"><span class="st-label">Type</span><select class="st-input select" data-field="place_type"><option value="port">Port</option><option value="berth">Berth</option><option value="anchorage">Anchorage</option><option value="section">Section</option><option value="terminal">Terminal</option><option value="mooring">Mooring</option><option value="marina">Marina</option><option value="guardzone">Guard zone</option><option value="sector">Sector</option><option value="water">Water</option></select></label>
+            <label class="st-field" data-col="3" data-row="unlocode"><span class="st-label">UN/LOCODE</span><input class="st-input st-input--mono" data-field="unlocode" maxlength="5" placeholder="NLRTM" spellcheck="false" autocomplete="off"></label>
+            <label class="st-field" data-col="1" data-line="2" data-row="part_of"><span class="st-label">Parent</span><select class="st-input select" data-field="part_of"><option value="">Unknown</option><option value="none">No parent</option></select></label>
+            <label class="st-field" data-col="2" data-line="2" data-row="category"><span class="st-label">Category</span><input class="st-input" data-field="category" list="place-categories" maxlength="60"><datalist id="place-categories"></datalist></label>
+            <label class="st-field" data-col="3" data-line="2" data-row="rank"><span class="st-label">Marker from zoom</span><select class="st-input select" data-field="rank"><option value="0">12 · very small</option><option value="1">11 · small</option><option value="2">9 · medium</option><option value="3">7 · large</option></select></label>
           </fieldset>
           <div class="pe-map place-map-wrap">
             <div class="pe-map__canvas place-map"></div>
             <div class="pe-toolbar pe-toolbar--tools" role="toolbar" aria-label="Shape tools">${tool('draw', 'Draw a boundary', 'pentagon', 'Draw')}${tool('point', 'Set a point', 'add_location_alt', 'Point')}${tool('delete-part', 'Delete a part', 'delete')}${sep}${tool('undo', 'Undo', 'undo')}${tool('redo', 'Redo', 'redo')}${sep}${tool('import-shape', 'Import shape', 'upload')}${tool('export-shape', 'Export shape', 'download')}${tool('paste-shape', 'Paste shape', 'content_paste')}</div>
             <div class="pe-toolbar pe-toolbar--view" role="toolbar" aria-label="Map view">${tool('fit', 'Fit to shape', 'fit_screen')}${tool('fullscreen', 'Full screen', 'fullscreen')}${sep}${tool('zoom-in', 'Zoom in', 'add')}${tool('zoom-out', 'Zoom out', 'remove')}</div>
-            <div class="pe-paste place-paste" hidden><textarea class="pe-input" data-paste rows="7" spellcheck="false" placeholder="Paste GeoJSON: a geometry, a Feature, or a collection holding one"></textarea>
-              <div class="pe-paste__actions"><button class="pe-btn" type="button" data-do="paste-close">Close</button><button class="pe-btn pe-btn--primary" type="button" data-do="paste-apply">Apply</button></div></div>
+            <div class="pe-paste place-paste" hidden><textarea class="st-input" data-paste rows="7" spellcheck="false" placeholder="Paste GeoJSON: a geometry, a Feature, or a collection holding one"></textarea>
+              <div class="pe-paste__actions"><button class="st-btn" type="button" data-do="paste-close">Close</button><button class="st-btn st-btn--primary" type="button" data-do="paste-apply">Apply</button></div></div>
             <div class="pe-map__hint" aria-live="polite" hidden><strong><span data-points>0</span> <span data-points-word>points</span></strong><span class="pe-map__hint-sep" aria-hidden="true"></span><span data-hint></span></div>
           </div>
         </section>
       </div>
       <footer class="pe-footer">
-        <button class="pe-btn pe-btn--danger" type="button" data-do="delete" hidden>${ICON.trash}<span class="pe-btn__label">Delete place</span></button>
-        <span class="pe-footer__spacer"></span>
+        <button class="st-btn st-btn--danger" type="button" data-do="delete" hidden>${icon('trash', 'pe-icon')}<span class="st-btn__label">Delete place</span></button>
+        <span class="st-spacer"></span>
         <span class="pe-feedback place-feedback" role="status" aria-live="polite"></span>
-        <span class="pe-dirty" role="status" hidden>Unsaved changes</span>
-        <button class="pe-btn" type="button" data-do="cancel" hidden>Cancel</button>
-        <button class="pe-btn pe-btn--primary" type="button" data-do="edit" hidden>Edit place</button>
-        <button class="pe-btn pe-btn--primary" type="button" data-do="save" hidden>Save place</button>
+        <span class="st-dirty" role="status" hidden>Unsaved changes</span>
+        <button class="st-btn" type="button" data-do="cancel" hidden>Cancel</button>
+        <button class="st-btn st-btn--primary" type="button" data-do="edit" hidden>Edit place</button>
+        <button class="st-btn st-btn--primary" type="button" data-do="save" hidden>Save place</button>
       </footer>
       <input type="file" data-file accept=".geojson,.json,application/geo+json,application/json" hidden>`;
     if (!toolTips)
         toolTips = tooltip.create({selector: '.pe-toolbar .pe-tool--icon', placement: 'below'});
     toolTips.prepare(host);
     const q = s => host.querySelector(s);
+    // Import, export and the rest, behind the panel's ⋯ menu; they answer to data-do as the other buttons do
+    const MENU = [['Import…', 'import'], ['Export', 'export'], ['View GeoJSON', 'view-json'], ['Reload', 'reload']];
+    const menu = moreMenu('Import, export and other place actions', MENU.map(([text, action]) => [text, () => { menu.open = false; actions[action](); }]));
+    menu.querySelector('summary').classList.add('st-icon-btn--outline');
+    menu.querySelectorAll('.st-menu__item').forEach((b, i) => { b.dataset.do = MENU[i][1]; });
+    q('.pe-sidebar__actions').append(menu);
     q('.pe-sidebar').append(docLink(DOCS.places));
     const input = name => q(`[data-field="${name}"]`);
     let placeSettings = null, catalogueVersion = '';
     let records = [], draft = null, original = null, busy = false, dead = false, draw = null, undo = [],
-        redo = [], unsaved = false, editingMode = false, deleteArmed = false, drawType = null;
+        redo = [], editingMode = false, deleteArmed = false, drawType = null;
+    // the panel's way of holding unsaved edits, and of being asked about them when the page is left
+    const editor = registerEditor('places', {save: () => save(), data: () => draft});
     const editing = new VectorSource();
     // every other place nearby, in a quiet slate, so a new outline is drawn against its neighbours
     const context = new VectorSource();
@@ -253,7 +230,8 @@ export function createPlaceEditor(host, options = {}) {
         q('.place-feedback').dataset.error = error;
     }
     function dirty(value) {
-        unsaved = value;
+        if (value) editor.touched();
+        else editor.clean();
         buttons();
     }
     function buttons() {
@@ -273,7 +251,7 @@ export function createPlaceEditor(host, options = {}) {
         tidyTools();
         if (!editingMode) q('.place-paste').hidden = true;
         q('.place-fields').disabled = !editingMode || busy;
-        q('.pe-dirty').hidden = !unsaved;
+        q('.st-dirty').hidden = !editor.dirty;
         q('[data-count]').textContent = records.length === 1 ? '1 saved place' : `${records.length.toLocaleString()} saved places`;
         q('.place-feedback').classList.toggle('place-busy', busy);
         for (const b of host.querySelectorAll('button[data-do]'))
@@ -333,7 +311,7 @@ export function createPlaceEditor(host, options = {}) {
         b.setAttribute('aria-label', label);
         b.setAttribute('aria-pressed', String(!!active));
         if (icon)
-            b.querySelector('svg').outerHTML = toolSvg(icon);
+            b.querySelector('svg').outerHTML = toolIcon(icon);
     }
     function stopDraw() {
         if (draw) {
@@ -374,7 +352,7 @@ export function createPlaceEditor(host, options = {}) {
         b.className = 'pe-place';
         b.setAttribute('aria-selected', String(selected));
         if (selected) b.setAttribute('aria-current', 'true');
-        b.innerHTML = `<span class="pe-place__icon">${AREA_TYPES.has(type) ? ICON.area : ICON.anchor}</span>` +
+        b.innerHTML = `<span class="pe-place__icon">${icon(AREA_TYPES.has(type) ? 'area' : 'anchor', 'pe-icon')}</span>` +
             '<span class="pe-place__text"><span class="pe-place__name"></span><span class="pe-place__meta"></span></span>' +
             '<span class="pe-place__code"></span>';
         b.querySelector('.pe-place__name').textContent = name;
@@ -465,7 +443,7 @@ export function createPlaceEditor(host, options = {}) {
             if (f) context.addFeature(read(f));
     }
     function discard() {
-        return !unsaved || confirm('Discard unsaved place changes?');
+        return !editor.dirty || confirm('Discard unsaved place changes?');
     }
     async function select(f, force = false) {
         if (busy || (!force && !discard()))
@@ -654,23 +632,7 @@ export function createPlaceEditor(host, options = {}) {
                 fields();
         });
     input('search').addEventListener('input', list);
-    async function request(path, body) {
-        const r = await fetch(path, {
-            cache: 'no-store',
-            ...(body ? {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(body)
-            } :
-                       {})
-        });
-        if (r.status === 401)
-            window.hubAuthRequired();
-        const data = await r.json();
-        if (!r.ok)
-            throw Error(data.error || 'Place request failed');
-        return data;
-    }
+    const request = (path, body) => api(path, {cache: 'no-store', body});
     async function load() {
         if (!discard())
             return;
@@ -975,11 +937,8 @@ export function createPlaceEditor(host, options = {}) {
         'zoom-in': () => map.getView().setZoom(map.getView().getZoom() + 1),
         'zoom-out': () => map.getView().setZoom(map.getView().getZoom() - 1)
     };
-    for (const b of host.querySelectorAll('[data-do]'))
-        b.addEventListener('click', () => {
-            q('.place-menu').open = false;
-            actions[b.dataset.do]();
-        });
+    for (const b of host.querySelectorAll('[data-do]:not(.st-menu__item)'))
+        b.addEventListener('click', () => actions[b.dataset.do]());
     // a shape from a file or the clipboard replaces the draft's geometry and nothing else
     function applyShape(next, message) {
         const before = clone(draft);
@@ -1067,7 +1026,6 @@ export function createPlaceEditor(host, options = {}) {
         }
     });
     const closeMenu = e => {
-        const menu = q('.place-menu');
         if (menu.open && !menu.contains(e.target))
             menu.open = false;
     };
@@ -1075,10 +1033,7 @@ export function createPlaceEditor(host, options = {}) {
     const key = e => {
         if (e.key !== 'Escape')
             return;
-        if (q('.place-menu').open) {
-            e.stopPropagation();
-            q('.place-menu').open = false;
-        } else if (draw) {
+        if (draw) {
             e.stopPropagation();
             stopDraw();
         } else if (deleteArmed) {
@@ -1090,12 +1045,9 @@ export function createPlaceEditor(host, options = {}) {
     host.addEventListener('keydown', key);
     load();
     return {
-        resize: () => map.updateSize(),
-        cancel,
-        save: () => save(),
-        unsaved: () => unsaved,
         destroy() {
             dead = true;
+            editor.destroy();
             document.removeEventListener('pointerdown', closeMenu);
             document.removeEventListener('fullscreenchange', onFullscreen);
             resize.disconnect();

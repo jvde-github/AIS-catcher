@@ -70,7 +70,7 @@ namespace Services
 		std::string title();
 		std::string configVersion();
 		bool viewerData(const Request &request, Response &response);
-		std::string statJSON(const std::vector<int> &focus, const DB::Keep &keep);
+		std::string statJSON(const std::vector<int> &focus, const DB::Keep &keep, bool owner);
 		// The stations the page looks through, by the `stations` it sends: their
 		// numbers, separated by commas; none, or -1, for all. Its ships are those
 		// they heard within the time a ship stays on the map.

@@ -317,3 +317,21 @@ a:focus-visible {
 .aiscatcher-logo-control.connected svg path {
     fill: var(--color-secondary) !important;
 }
+
+/* a station's range figures, kept from whoever may not read them: their rows and charts give way to one line */
+.range-note {
+    display: none;
+    grid-column: 1 / -1;
+    margin: 12px 25px 0;
+    color: var(--color-text-muted);
+    font-size: var(--fs-md);
+}
+
+.range-hidden .range-note {
+    display: block;
+}
+
+.range-hidden .range-row,
+.range-hidden .range-panel {
+    display: none;
+}

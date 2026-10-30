@@ -20,10 +20,11 @@
 #include <unistd.h>
 #endif
 
+#include <atomic>
 #include <iostream>
 #include <fstream>
 #include <memory>
-#include <cctype>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -56,9 +57,6 @@ BOOL WINAPI consoleHandler(DWORD signal)
 // only async-signal-safe calls allowed here
 static void consoleHandler(int signal)
 {
-	if (signal == SIGPIPE)
-		return;
-
 	if (signal != SIGINT)
 	{
 		static const char msg[] = "Termination request received\n";
@@ -72,63 +70,47 @@ static void consoleHandler(int signal)
 #endif
 
 // Expand @filename response-file arguments (gcc/clang convention).
-// Each line is whitespace-split; lines whose first non-whitespace
-// character is '#' are skipped, as are blank lines. CR endings are
-// stripped. Nested @file is allowed up to a small depth limit.
-static void expandResponseFiles(int argc, char *argv[],
+// Each line is whitespace-split; lines whose first word starts with '#'
+// are skipped, as are blank lines. Nested @file is allowed up to a small
+// depth limit.
+static void expandResponseFiles(const std::vector<std::string> &args,
 								std::vector<std::string> &out, int depth = 0)
 {
-	for (int i = 0; i < argc; i++)
+	for (const std::string &s : args)
 	{
-		const char *s = argv[i];
-		if (!s || s[0] == '\0') continue;
+		if (s.empty()) continue;
 		if (s[0] != '@')
 		{
-			out.emplace_back(s);
+			out.push_back(s);
 			continue;
 		}
 		if (depth >= 8)
-			throw std::runtime_error(std::string("Response file recursion too deep: ") + s);
+			throw std::runtime_error("Response file recursion too deep: " + s);
 
-		std::ifstream f(s + 1);
+		std::ifstream f(s.substr(1));
 		if (!f)
-			throw std::runtime_error(std::string("Cannot open response file: ") + (s + 1));
+			throw std::runtime_error("Cannot open response file: " + s.substr(1));
 
 		std::vector<std::string> tokens;
-		std::string line;
+		std::string line, word;
 		while (std::getline(f, line))
 		{
-			if (!line.empty() && line.back() == '\r') line.pop_back();
-
-			size_t p = 0;
-			while (p < line.size() && std::isspace((unsigned char)line[p])) p++;
-			if (p >= line.size() || line[p] == '#') continue;
-
-			while (p < line.size())
-			{
-				size_t e = p;
-				while (e < line.size() && !std::isspace((unsigned char)line[e])) e++;
-				tokens.emplace_back(line.substr(p, e - p));
-				p = e;
-				while (p < line.size() && std::isspace((unsigned char)line[p])) p++;
-			}
+			std::istringstream words(line);
+			if (!(words >> word) || word[0] == '#') continue;
+			do
+				tokens.push_back(word);
+			while (words >> word);
 		}
-
-		std::vector<char *> tok_argv;
-		tok_argv.reserve(tokens.size());
-		for (auto &t : tokens) tok_argv.push_back(&t[0]);
-		expandResponseFiles((int)tok_argv.size(), tok_argv.data(), out, depth + 1);
+		expandResponseFiles(tokens, out, depth + 1);
 	}
 }
 
 int main(int argc, char *argv[])
 {
-	int cb = -1;
-
 	try
 	{
 		Logger::getInstance().setMaxBufferSize(200);
-		cb = Logger::getInstance().addConsoleListener();
+		Logger::getInstance().addConsoleListener();
 
 #ifdef _WIN32
 		if (!SetConsoleCtrlHandler(consoleHandler, TRUE))
@@ -137,11 +119,11 @@ int main(int argc, char *argv[])
 		signal(SIGINT, consoleHandler);
 		signal(SIGTERM, consoleHandler);
 		signal(SIGHUP, consoleHandler);
-		signal(SIGPIPE, consoleHandler);
+		signal(SIGPIPE, SIG_IGN);
 #endif
 
 		std::vector<std::string> args;
-		expandResponseFiles(argc, argv, args);
+		expandResponseFiles(std::vector<std::string>(argv, argv + argc), args);
 
 		if (Managed::isInvocation(args))
 		{
@@ -149,7 +131,7 @@ int main(int argc, char *argv[])
 			return Managed::run(args);
 		}
 
-		return CommandLine::run(args, cb);
+		return CommandLine::run(args);
 	}
 	catch (std::exception const &e)
 	{

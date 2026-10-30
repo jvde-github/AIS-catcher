@@ -58,4 +58,18 @@ namespace JSON
 			break;
 		}
 	}
+
+	std::string text(const Value &v)
+	{
+		std::string joined;
+		if (v.isArray())
+			for (const auto &item : v.getArray())
+				joined += (joined.empty() ? "" : ",") + item.to_string();
+		else if (v.isArrayString())
+			for (const auto &item : v.getStringArray())
+				joined += (joined.empty() ? "" : ",") + item;
+		else
+			joined = v.to_string();
+		return joined;
+	}
 }

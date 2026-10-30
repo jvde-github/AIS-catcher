@@ -33,6 +33,14 @@ void ControlServer::start() {
   if (core.getBindAddress() != "0.0.0.0")
     setIP(core.getBindAddress());
 
+  std::string cert, key, error;
+  if (core.panelTLS(cert, key)) {
+    if (cert.empty() || key.empty())
+      throw std::runtime_error("Control: \"tls\" needs \"cert\" and \"key\", the files of the certificate and its key.");
+    if (!setTLS(cert, key, error))
+      throw std::runtime_error("Control: " + error);
+  }
+
   if (!HTTPServer::start(core.getControlPort()))
     throw std::runtime_error("Control: cannot start control server at port " +
                              std::to_string(core.getControlPort()));
@@ -42,7 +50,7 @@ void ControlServer::start() {
         sendSSE(IO::SSE::LOG, "log", m.toJSON());
       });
 
-  Info() << "Control: control server running at port " << core.getControlPort();
+  Info() << "Control: control server running at port " << core.getControlPort() << (hasTLS() ? ", over HTTPS" : "");
 }
 
 void ControlServer::processClients() {
@@ -154,29 +162,38 @@ void ControlServer::destroyAllSessions() {
   sessions.clear();
 }
 
-bool ControlServer::loginBlocked(int &seconds_left) {
+bool ControlServer::loginBlocked(const std::string &peer, int &seconds_left) {
   std::lock_guard<std::mutex> lock(auth_mtx);
 
+  auto it = login_tries.find(peer);
   std::time_t now = std::time(nullptr);
-  if (login_block_until > now) {
-    seconds_left = (int)(login_block_until - now);
+  if (it != login_tries.end() && it->second.block_until > now) {
+    seconds_left = (int)(it->second.block_until - now);
     return true;
   }
   return false;
 }
 
-void ControlServer::loginFailed() {
+void ControlServer::loginFailed(const std::string &peer) {
   std::lock_guard<std::mutex> lock(auth_mtx);
 
-  login_failures++;
-  int block = 1 << MIN(login_failures, 8);
-  login_block_until = std::time(nullptr) + MIN(block, MAX_LOGIN_BLOCK);
+  if (login_tries.size() >= MAX_LOGIN_PEERS && !login_tries.count(peer)) {
+    auto first = login_tries.begin();
+    for (auto it = login_tries.begin(); it != login_tries.end(); ++it)
+      if (it->second.block_until < first->second.block_until)
+        first = it;
+    login_tries.erase(first);
+  }
+
+  LoginTries &t = login_tries[peer];
+  t.failures++;
+  int block = 1 << MIN(t.failures, 8);
+  t.block_until = std::time(nullptr) + MIN(block, MAX_LOGIN_BLOCK);
 }
 
-void ControlServer::loginSucceeded() {
+void ControlServer::loginSucceeded(const std::string &peer) {
   std::lock_guard<std::mutex> lock(auth_mtx);
-  login_failures = 0;
-  login_block_until = 0;
+  login_tries.erase(peer);
 }
 
 std::string ControlServer::statusJSON(const char *auth, bool authenticated) {
@@ -206,7 +223,14 @@ std::string ControlServer::statusJSON(const char *auth, bool authenticated) {
         w.val(p);
       w.endArray();
     }
+    if (server_tls) {
+      w.key("tls").beginArray();
+      for (const auto &t : server_tls())
+        w.beginObject().kv("port", t.first).kv("until", t.second).endObject();
+      w.endArray();
+    }
     w.kv("has_password", core.hasPassword())
+        .kv("config_folder", core.configFolderPath())
         .kv("bind", core.getBindAddress())
         .kv("stats_file", core.defaultStatsFile())
         .kv("version", VERSION_DESCRIBE)
@@ -263,9 +287,31 @@ bool ControlServer::sameOrigin(const IO::HTTPRequest &r) {
          (!r.forwarded_host.empty() && origin == host(r.forwarded_host));
 }
 
-std::string ControlServer::cookieAttributes() {
+std::string ControlServer::cookieAttributes() const {
   return "; Path=/; Max-Age=" + std::to_string(SESSION_LIFETIME) +
-         "; HttpOnly; SameSite=Strict";
+         "; HttpOnly; SameSite=Strict" + (hasTLS() ? "; Secure" : "");
+}
+
+// A name no web page can point at this machine from public DNS: an address, a
+// name without dots, or one under .local. A rebinding page's own name is none.
+static bool setupAddress(const std::string &host) {
+  if (!host.empty() && host[0] == '[')
+    return true;
+  std::string name = host.substr(0, host.rfind(':'));
+  if (name.empty())
+    return false;
+  Util::Convert::toLower(name);
+  if (name.find('.') == std::string::npos)
+    return true;
+  if (name.size() > 6 && name.compare(name.size() - 6, 6, ".local") == 0)
+    return true;
+  int dots = 0;
+  for (char ch : name)
+    if (ch == '.')
+      dots++;
+    else if (ch < '0' || ch > '9')
+      return false;
+  return dots == 3;
 }
 
 const ControlServer::PublicEndpoint ControlServer::public_endpoints[] = {
@@ -347,6 +393,13 @@ void ControlServer::Request(IO::TCPServerConnection &c,
   const std::string path = r.path();
   const bool authenticated = !core.authRequired() || checkSession(r.cookie);
 
+  // without a password the panel is this machine's alone: through a proxy, it
+  // would be every visitor's of that proxy
+  if (!core.authRequired() && r.forwarded) {
+    sendError(c, "this panel has no password and does not answer through a proxy: bind it beyond this machine and set one", 403);
+    return;
+  }
+
   if (r.method == "POST" && !sameOrigin(r)) {
     sendError(c, "cross-origin request rejected", 403);
     return;
@@ -368,13 +421,23 @@ void ControlServer::Request(IO::TCPServerConnection &c,
   if (path == "/api/status") {
     sendStatus(c, authenticated);
   } else if (path == "/api/setup" && r.method == "POST") {
+    int wait = 0;
+
     if (!core.authRequired())
       sendError(c, "authentication disabled in local mode", 403);
     else if (core.hasPassword())
       sendError(c, "password already set", 403);
-    else if (r.body.length() < 6)
+    else if (loginBlocked(r.peer, wait))
+      sendError(c, "too many attempts, retry in " + std::to_string(wait) + "s", 429);
+    else if (!setupAddress(r.host))
+      sendError(c, "the password is set at this station's address or local name", 403);
+    else if (!core.checkSetupCode(r.setup_code)) {
+      loginFailed(r.peer);
+      sendError(c, "setup code required: see the log (journalctl -u ais-catcher)", 403);
+    } else if (r.body.length() < 6)
       sendError(c, "password needs at least 6 characters");
     else {
+      loginSucceeded(r.peer);
       core.setPassword(r.body);
       setExtraHeader("Set-Cookie: aiscontrol=" + createSession() +
                      cookieAttributes());
@@ -387,28 +450,46 @@ void ControlServer::Request(IO::TCPServerConnection &c,
       sendError(c, "authentication disabled in local mode", 403);
     else if (!core.hasPassword())
       sendError(c, "no password set", 403);
-    else if (loginBlocked(wait))
+    else if (loginBlocked(r.peer, wait))
       sendError(c, "too many attempts, retry in " + std::to_string(wait) + "s",
                 429);
     else if (core.verifyPassword(r.body)) {
-      loginSucceeded();
+      loginSucceeded(r.peer);
       setExtraHeader("Set-Cookie: aiscontrol=" + createSession() +
                      cookieAttributes());
       sendOK(c);
     } else {
-      loginFailed();
+      loginFailed(r.peer);
       sendError(c, "invalid password", 401);
     }
   } else if (path == "/api/logout" && r.method == "POST") {
     destroySession(r.cookie);
+    closeAllSSE();
     setExtraHeader("Set-Cookie: aiscontrol=; Path=/; Max-Age=0; HttpOnly; "
                    "SameSite=Strict");
     sendOK(c);
   } else if (path == "/api/password" && r.method == "POST") {
-    if (r.body.length() < 6)
+    // with a password set: the current one, a newline, the new one
+    std::string fresh = r.body;
+    if (core.hasPassword()) {
+      int wait = 0;
+      if (loginBlocked(r.peer, wait)) {
+        sendError(c, "too many attempts, retry in " + std::to_string(wait) + "s", 429);
+        return;
+      }
+      const std::size_t newline = r.body.find('\n');
+      if (newline == std::string::npos || !core.verifyPassword(r.body.substr(0, newline))) {
+        loginFailed(r.peer);
+        sendError(c, "the current password is not right", 401);
+        return;
+      }
+      loginSucceeded(r.peer);
+      fresh = r.body.substr(newline + 1);
+    }
+    if (fresh.length() < 6)
       sendError(c, "password needs at least 6 characters");
     else {
-      core.setPassword(r.body);
+      core.setPassword(fresh);
       destroyAllSessions();
       closeAllSSE();
       setExtraHeader("Set-Cookie: aiscontrol=" + createSession() +
@@ -458,7 +539,7 @@ void ControlServer::Request(IO::TCPServerConnection &c,
       sendError(c, error);
   } else if (path == "/api/config" && r.method == "GET") {
     try {
-      Response(c, "application/json", core.getConfig(), accept_gzip);
+      Response(c, "application/json", core.getPanelConfig(), accept_gzip);
     } catch (const std::exception &e) {
       sendError(c, e.what(), 500);
     }
@@ -523,9 +604,16 @@ void ControlServer::Request(IO::TCPServerConnection &c,
       sendError(c, r.method == "POST" ? "The tester posts only to /mcp" : "The tester asks only for the routes of /api/v1 and the feeds", 405);
       return;
     }
+    // HTTPS to a server with it, whose certificate says nothing here: this is talking to itself
+    bool tls = false;
+    if (server_tls)
+      for (const auto &t : server_tls())
+        tls |= t.first == port;
     IO::HTTPClient client;
     try {
-      client.setURL("http://" + host + ":" + std::to_string(port) + target);
+      client.setURL((tls ? "https://" : "http://") + host + ":" + std::to_string(port) + target);
+      if (tls)
+        client.setOwnServer();
     } catch (const std::exception &e) {
       sendError(c, e.what());
       return;

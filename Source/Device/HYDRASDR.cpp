@@ -262,7 +262,7 @@ namespace Device
 		if (hydrasdr_set_freq(dev, getCorrectedFrequency()) != HYDRASDR_SUCCESS)
 			throw std::runtime_error("HYDRASDR: cannot set frequency.");
 	}
-	Setting &HYDRASDR::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &HYDRASDR::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -317,7 +317,7 @@ namespace Device
 			break;
 		}
 		default:
-			Device::SetKey(key, arg);
+			Device::applyKey(key, arg);
 			break;
 		}
 		return *this;

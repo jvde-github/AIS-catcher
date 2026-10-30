@@ -26,20 +26,6 @@ export function initialServerConfig() {
 };
 }
 
-export function applyServerFeatures(next) {
-    for (const [enabled, tab] of [
-        [next.features.about_md, "about"], [next.features.realtime, "realtime"],
-        [next.features.log, "log"], [next.features.decoder, "decoder"],
-        [next.webcontrol_http, "webcontrol"],
-    ]) {
-        for (const suffix of ["_tab", "_tab_mini"]) {
-            const el = document.getElementById(tab + suffix);
-            if (el) el.style.display = enabled ? "" : "none";
-        }
-    }
-    document.querySelectorAll('.ctx-replay').forEach(el => { el.style.display = next.features.replay ? "" : "none"; });
-}
-
 // Transport, version comparison and config publication belong here. The host
 // supplies effects on its currently open tabs, map and selection.
 export function createViewerConfig({current, applyMaps, applyRuntime, pluginsChanged}) {
@@ -60,7 +46,6 @@ export function createViewerConfig({current, applyMaps, applyRuntime, pluginsCha
             const mapsChanged = changed(previous.maps,next.maps);
             Object.assign(current,{...next,config_version:previous.config_version});
             if (mapsChanged) applyMaps(next.maps);
-            applyServerFeatures(next);
             await applyRuntime(next,changes);
         },
         pluginsChanged,

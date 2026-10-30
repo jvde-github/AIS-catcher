@@ -71,8 +71,10 @@ class PrometheusCounter : public StreamIn<JSON::JSON> {
 
 public:
 	void Receive(const JSON::JSON *json, int len, TAG &tag);
-	std::string toPrometheus();
+	std::string toPrometheus(bool hide_range);
 };
+
+class Tracker;
 
 namespace Services
 {
@@ -80,12 +82,13 @@ namespace Services
 	class Metrics : public Service
 	{
 	public:
-		explicit Metrics(PrometheusCounter &counter) : counter(counter) {}
+		Metrics(PrometheusCounter &counter, Tracker &tracker) : counter(counter), tracker(tracker) {}
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
 
 	private:
 		PrometheusCounter &counter;
+		Tracker &tracker;
 	};
 }

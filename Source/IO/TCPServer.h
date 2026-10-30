@@ -36,6 +36,9 @@
 #include "Common.h"
 #include "OutputStats.h"
 
+struct ssl_st;
+struct ssl_ctx_st;
+
 namespace IO
 {
 
@@ -45,6 +48,7 @@ namespace IO
 	{
 	private:
 		const static int MAX_BUFFER_SIZE = 1024 * 1024 * 8;
+		int send_limit = MAX_BUFFER_SIZE;
 		// Reclaim the already-sent prefix only once it grows past this, so the
 		// memmove is amortized across many sends instead of paid on every drain.
 		const static size_t OUT_COMPACT_THRESHOLD = 64 * 1024;
@@ -79,11 +83,23 @@ namespace IO
 		}
 		// append to the out buffer, compacting first and enforcing the size cap
 		bool queue(const char *data, int length);
+		// what of data went out, 0 when the socket takes no more now, -1 when the connection is gone
+		int write(const char *data, int length);
+		// bytes that arrived, into msg
+		void take(const char *buffer, int nread);
+
+		// the TLS session of a connection to a server with a certificate
+		ssl_st *ssl = nullptr;
+		// the last handshake or read waits for the socket to take data
+		bool ssl_want_write = false;
+		void readTLS(char *buffer, int size);
+		void waitOrDropTLS(int result);
 
 	public:
 		~TCPServerConnection() { Close(); }
 
 		SOCKET sock = -1;
+		uint32_t peer_ipv4 = 0; // in network order
 
 		std::string msg;
 		std::vector<char> out;
@@ -108,10 +124,16 @@ namespace IO
 
 		void Close();
 		void Start(SOCKET s);
+		void startTLS(ssl_ctx_st *ctx);
+		bool handshaking() const;
+		// what poll() should wake this connection for
+		short pollEvents() const;
+		bool readWantsWrite() const { return ssl_want_write; }
 		int Inactive(std::time_t now) const;
 		bool isConnected() const { return sock != -1; }
 		uint32_t getGeneration() const { return generation; }
 		void setNoTimeout() { no_timeout = true; }
+		void setSendLimit(int n) { send_limit = n; }
 		bool hasSendBuffer() const { return out_pos < out.size(); }
 		void SendBuffer();
 		bool Send(const char *buffer, int length);
@@ -131,9 +153,22 @@ namespace IO
 		void stopThread();
 		void SendAll(std::string m); // by value: moved into the queued Command
 		void SendAll(const char *data, int len) { SendAll(std::string(data, len)); }
+		// drops every connection, on the thread that owns them
+		void closeConnections() { post({Command::CloseAll, 0, std::string()}); }
 
 		void setReusePort(bool b) { reuse_port = b; }
 		void setIP(const std::string &ip) { IP_BIND = ip; }
+		// how many connections one address may hold, 0 for no limit; this machine, as a proxy is, has none
+		void setMaxPerAddress(int n) { max_per_address = n; }
+
+		// HTTPS on this server's port with these files, or plain HTTP with no files: for the
+		// connections that come next; what it refuses leaves the server as it is, with the reason
+		bool setTLS(const std::string &cert, const std::string &key, std::string &error);
+		bool hasTLS() const { return tls_until != 0; }
+		// when the certificate in use expires, seconds since the epoch; 0 without TLS
+		long long tlsUntil() const { return tls_until; }
+		// what setTLS would say of these files, nothing when it would take them
+		static std::string checkTLS(const std::string &cert, const std::string &key);
 
 	protected:
 		SOCKET sock = -1;
@@ -141,6 +176,7 @@ namespace IO
 		bool reuse_port = false;
 		std::string IP_BIND;
 		int listening_port = -1;
+		int max_per_address = 0;
 
 		static std::vector<int> active_ports;
 
@@ -162,7 +198,7 @@ namespace IO
 		{
 			// Derived is opaque to the base loop: it owns neither the id space nor
 			// the payload format.
-			enum Kind { BroadcastRaw, Derived } kind;
+			enum Kind { BroadcastRaw, Derived, CloseAll } kind;
 			int id;
 			std::string data;
 		};
@@ -201,10 +237,22 @@ namespace IO
 		virtual void processClients();
 		void cleanUp(std::time_t now);
 		void SleepAndWait();
+		void reloadTLS(std::time_t now);
 
 		void setStats(IO::OutputStats *s) { pstats = s; }
 
 	private:
 		IO::OutputStats *pstats = nullptr;
+
+		// seconds a handshake has to finish; how often the files are looked at for a renewal
+		static const int HANDSHAKE_TIMEOUT = 10;
+		static const int TLS_CHECK_INTERVAL = 60;
+		// the context a new connection takes: set from any thread, read by the Run() thread
+		std::mutex tls_mtx;
+		ssl_ctx_st *tls_ctx = nullptr;
+		std::string tls_cert, tls_key;
+		std::time_t tls_cert_time = 0, tls_key_time = 0, tls_checked = 0;
+		bool tls_warned = false; // said once that a renewed file does not load
+		std::atomic<long long> tls_until{0};
 	};
 }

@@ -1,30 +1,24 @@
 /* ============================================================================
    card.js — the shell of a map card (layer 2)
 
-   A card is a header, a column of sections made of rows, and a footer of
-   actions. This owns that structure and its behaviour: sections open and
-   close, a footer with more items than fit pages through them, a popover
-   anchors to an icon and stays inside the card. What the rows say is the
-   host's: it builds them from a spec, or hands over markup it wrote itself,
-   and writes into the cells. Nothing here knows what a ship or a plane is.
+   A card is a header, its content and a footer of actions. This owns the
+   footer, whose items page through when more than fit, and the popovers,
+   which anchor to an icon and stay inside the card. The content is the
+   host's (card-tabs.js builds the tabbed layout). Nothing here knows what a
+   ship or a plane is.
 
        const card = AISCard.create({ mount: document.getElementById("targetcard") });
-
-       const cells = card.rows(container, [
-           { section: { key: "voyage", label: "Voyage", open: true },
-             fields: [{ key: "dest", label: "Destination" }, { key: "eta", label: "ETA" }] },
-       ], { group: "ship" });
-       cells.dest.textContent = "ROTTERDAM";
 
        card.footer.add({ icon: "route", label: "Track", title: "Show track",
                          action: "showTrack", group: "ship" });
        card.footer.show("ship");
 
-   Sections are addressed by key; every element carrying data-section=key
-   belongs to it, so rows written by hand in HTML take part the same way as
-   rows built here. The card reports through DOM events on `mount`:
-   "card:section" { key, open } when a section opens or closes,
-   "card:pin" { x, y } / "card:unpin" when the user pins it.
+   The card reports through DOM events on `mount`: "card:pin" { x, y } /
+   "card:unpin" when the user pins it, "card:moved" { x, y } after a drag.
+
+   The header is `.mapcard-title`, `.mapcard-flag` and a state class on
+   `.mapcard-header`: card.header.title() gives the title element,
+   card.header.flag(country, name) sets the flag, card.header.state(cls) the state.
 
    Where the card sits is the second half, `layout`: beside a point on the
    map, docked top-left, pinned where the user left it, or full-bleed on a
@@ -34,7 +28,6 @@
            chrome,                                   // a chrome instance
            fullBleed: () => mq.matches,              // phone: card takes the screen
            topInset: () => chrome.inset("top"),      // where the map's free area starts
-           dockOffset: () => 0,                      // extra top offset when docked top-left
            viewSize: () => map.getSize(),
            freeWidth: () => chrome.freeBox(mapEl).width,
            reserveRight: () => 30,                   // room to keep free beside the card
@@ -45,36 +38,18 @@
        card.fit();             // after content or window changes
    ========================================================================= */
 
-import { fieldRows, dismissOnce, draggable as componentDraggable } from "./components.js";
+import { dismissOnce, draggable as componentDraggable, flagHTML } from "./components.js";
 import { clamp } from "./chrome.js";
 
-var DEFAULT_CLASSES = {
-    section: "card-section",
-    caretChip: "card-caret-chip",
-    caret: "card-section-caret",
-    row: "mapcard-content-row card-row",
-    maxOnly: "card-max-only",
-    collapsed: "card-collapsed",
-    empty: "card-empty",
-    iconUnavailable: "card-icon-unavailable",
-    popover: "card-popover",
-    max: "card-max",
-    minOnly: "card-min-only",
-    rowSelected: "card-row-selected",
-};
-
-var CARET_OPEN = "keyboard_arrow_up_icon";
-var CARET_CLOSED = "keyboard_arrow_down_icon";
+var ICON_UNAVAILABLE = "card-icon-unavailable";
+var POPOVER = "card-popover";
+var HEADER_STATES = ["card-validated", "card-not-validated", "card-warning", "card-dubious"];
 
 export function create(opts) {
     if (!opts || !opts.mount) throw new Error("card.create needs a mount");
 
     var mount = opts.mount;
-    var cls = Object.assign({}, DEFAULT_CLASSES, opts.classes || {});
-    var keepRows = opts.keepRows || null;
     var iconMax = opts.iconMax || 3;
-    var sectionAction = opts.sectionAction || "toggleSection";
-    var open = {};          // section key -> bool
 
     function content() {
         return mount.querySelector(".mapcard-content") || mount;
@@ -84,85 +59,21 @@ export function create(opts) {
         return mount.querySelector(".mapcard-footer");
     }
 
-    /* --- sections ------------------------------------------------------- */
+    /* --- header ------------------------------------------------------------- */
 
-    function applySection(key) {
-        var on = !!open[key];
-        mount.querySelectorAll('[data-section="' + key + '"]').forEach(function (el) {
-            if (el.classList.contains(cls.section)) {
-                var caret = el.querySelector("." + cls.caret);
-                if (caret) {
-                    caret.classList.toggle(CARET_OPEN, on);
-                    caret.classList.toggle(CARET_CLOSED, !on);
-                }
-                return;
-            }
-            el.classList.toggle(cls.collapsed, !on);
-        });
-    }
-
-    function setSection(key, on) {
-        if (!key) return;
-        var was = !!open[key];
-        open[key] = !!on;
-        applySection(key);
-        if (was !== !!on) mount.dispatchEvent(new CustomEvent("card:section", { detail: { key: key, open: !!on } }));
-    }
-
-    function toggleSection(key) { setSection(key, !open[key]); }
-
-    function setSectionAvailable(key, available) {
-        mount.querySelectorAll('[data-section="' + key + '"]').forEach(function (el) {
-            if (el.classList.contains(cls.section)) el.classList.toggle(cls.empty, !available);
-            else el.classList.toggle(cls.collapsed, !available || !open[key]);
-        });
-    }
-
-    /* Sets every section at once, from defaults or a saved state; keys not
-       mentioned keep what they had. */
-    function resetSections(state) {
-        Object.keys(state || {}).forEach(function (k) { open[k] = !!state[k]; });
-        Object.keys(open).forEach(applySection);
-    }
-
-    /* --- rows --------------------------------------------------------------- */
-
-    /* Builds sections and rows from a spec into `container` (default: the
-       content column) and returns the value cells by key. Rows without a
-       section belong to the one before them. */
-    function rows(container, spec, o) {
-        o = o || {};
-        var last = null;
-        spec.forEach(function (row) {
-            if (row.section) {
-                last = row.section.key;
-                if (!(last in open)) open[last] = !!row.section.open;
-            } else if (last && !row.sectionKey) row.sectionKey = last;
-        });
-
-        var attrs = Object.assign({}, o.attrs || {});
-        if (o.group) attrs["data-context-type"] = o.group;
-
-        var cells = fieldRows(container || content(), spec, {
-            rowClass: [cls.row, o.rowClass].filter(Boolean).join(" "),
-            attrs: attrs,
-            idPrefix: o.idPrefix,
-            sectionClass: cls.section + " " + cls.maxOnly,
-            sectionAction: sectionAction,
-            caretChipClass: cls.caretChip,
-            caretClass: cls.caret,
-            headId: o.headId,
-        });
-        markRows();
-
-        spec.forEach(function (row) { if (row.section) applySection(row.section.key); });
-        return cells;
-    }
+    var header = {
+        title: function () { return mount.querySelector(".mapcard-title"); },
+        flag: function (country, name) { mount.querySelector(".mapcard-flag").innerHTML = country ? flagHTML(country, "flag-card", name) : ""; },
+        state: function (cls) {
+            var el = mount.querySelector(".mapcard-header");
+            HEADER_STATES.forEach(function (c) { el.classList.toggle(c, c === cls); });
+        },
+    };
 
     /* --- popovers ----------------------------------------------------------- */
 
     function closePopovers() {
-        mount.querySelectorAll("." + cls.popover).forEach(function (el) { el.style.display = "none"; });
+        mount.querySelectorAll("." + POPOVER).forEach(function (el) { el.style.display = "none"; });
     }
 
     /* Shows `popover` hanging off `anchor`, flipped to stay on screen and
@@ -200,7 +111,7 @@ export function create(opts) {
 
     function itemShown(el, group) {
         if (el.dataset.contextType !== group) return false;
-        if (el.classList.contains(cls.iconUnavailable)) return false;
+        if (el.classList.contains(ICON_UNAVAILABLE)) return false;
         return available(el, group);
     }
 
@@ -261,7 +172,6 @@ export function create(opts) {
     var chrome = lay.chrome || null;
     var fullBleed = lay.fullBleed || function () { return false; };
     var topInset = lay.topInset || function () { return chrome ? chrome.inset("top") : 10; };
-    var dockOffset = lay.dockOffset || function () { return 0; };
     var viewSize = lay.viewSize || function () { return [window.innerWidth, window.innerHeight]; };
     var freeWidth = lay.freeWidth || function () { return viewSize()[0]; };
     var reserveRight = lay.reserveRight || function () { return 30; };
@@ -437,82 +347,8 @@ export function create(opts) {
         });
     }
 
-    /* --- min / max ---------------------------------------------------------------
-       A maximised card shows every row; a minimised one only the rows the
-       host marked (.card-row-selected) and the .card-min-only elements. */
-
-    function isMax() { return mount.classList.contains(cls.max || "card-max"); }
-
-    function setMax(on) {
-        on = !!on;
-        if (on === isMax()) { markRows(); return; }
-        mount.classList.toggle(cls.max || "card-max", on);
-        mount.querySelectorAll("." + cls.minOnly).forEach(function (el) { el.classList.toggle("visible", !on); });
-        mount.querySelectorAll("." + cls.maxOnly).forEach(function (el) { el.classList.toggle("hidden", !on); });
-        markRows();
-        var btn = mount.querySelector(".card-minmax");
-        if (btn) {
-            btn.classList.toggle(CARET_CLOSED, !on);
-            btn.classList.toggle(CARET_OPEN, on);
-        }
-        if (placedHow && mount.offsetParent) fit();   // the card changed height: keep it on the pane
-    }
-
-    /* --- kept rows -------------------------------------------------------------
-       A minimised card keeps the rows without cls.maxOnly; while maximised those
-       carry cls.rowSelected as the mark. The rows are the host's `keepRows`
-       selector, each identified by the first id inside it, so a saved list
-       survives rows being added or moved, and unknown keys are ignored. */
-
-    function keptRows() {
-        return keepRows ? Array.prototype.slice.call(mount.querySelectorAll(keepRows)) : [];
-    }
-
-    function rowKey(row) {
-        var el = row.querySelector("[id]");
-        return el ? el.id : "";
-    }
-
-    function markRows() {
-        var max = isMax();
-        keptRows().forEach(function (row) {
-            row.classList.toggle(cls.rowSelected, max && !row.classList.contains(cls.maxOnly));
-        });
-    }
-
-    /* a click on a row: the maximised card toggles whether the row is kept and
-       answers true; the minimised one answers false so the host can maximise */
-    function keepToggle(row) {
-        if (!isMax()) return false;
-        row.classList.toggle(cls.maxOnly);
-        markRows();
-        return true;
-    }
-
-    function keepState() {
-        return keptRows()
-            .filter(function (row) { return !row.classList.contains(cls.maxOnly); })
-            .map(rowKey).filter(Boolean);
-    }
-
-    /* applies a saved list; one that names none of the current rows is
-       ignored, so a stale save cannot flip the rows the wrong way round */
-    function keepRestore(keys) {
-        if (!Array.isArray(keys)) return false;
-        var set = {};
-        keys.forEach(function (k) { if (typeof k === "string") set[k] = true; });
-        var rows = keptRows();
-        if (!rows.some(function (row) { return set[rowKey(row)]; })) { markRows(); return false; }
-        rows.forEach(function (row) {
-            var k = rowKey(row);
-            if (k) row.classList.toggle(cls.maxOnly, !set[k]);
-        });
-        markRows();
-        return true;
-    }
-
     /* places the card for a target at `pixel` and fits it to the pane;
-       returns how it was placed (`open` itself is the sections' state) */
+       returns how it was placed */
     function openCard(pixel) {
         var how = place(pixel);
         fit();
@@ -529,11 +365,9 @@ export function create(opts) {
         return r;
     }
 
-    markRows();
-
     return {
         el: mount,
-        rows: rows,
+        header: header,
         keepScroll: keepScroll,
         place: place,
         open: openCard,
@@ -542,15 +376,6 @@ export function create(opts) {
         unpin: unpin,
         markPinned: applyPinStyle,
         draggable: draggable,
-        isMax: isMax,
-        setMax: setMax,
-        keep: { toggle: keepToggle, state: keepState, restore: keepRestore, mark: markRows },
-        section: {
-            toggle: toggleSection,
-            open: function (key) { if (!open[key]) setSection(key, true); },
-            available: setSectionAvailable,
-            reset: resetSections,
-        },
         popover: { toggle: togglePopover, closeAll: closePopovers },
         footer: { add: addItem, show: showGroup, rotate: rotate, reset: resetFooter },
     };

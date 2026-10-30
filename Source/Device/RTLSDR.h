@@ -90,7 +90,7 @@ namespace Device
 
 		void setFormat(Format f) override {}
 
-		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 		std::string Get() override;
 	};
 }

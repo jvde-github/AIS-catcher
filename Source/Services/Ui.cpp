@@ -349,23 +349,23 @@ namespace Services
 			response = Response::json(since() > 0 ? UiFormat::allPathsSince(db, MAX(since(), oldest), keep) : UiFormat::allPaths(db, keep, oldest));
 		else if (p == "/api/mapobjects.json")
 		{
-			// the stations the server shows; its other objects are every vessel's broadcasts
+			// the stations the server shows, and the broadcasts of the vessels it shows
 			std::function<bool(int)> shown;
 			if (!view.stations.empty())
 				shown = [this](int id) { return view.allowsStation(id); };
-			response = Response::json(UiFormat::mapObjects(db, (uint64_t)toInt(request.param("since")), true, shown));
+			response = Response::json(UiFormat::mapObjects(db, (uint64_t)toInt(request.param("since")), true, shown, keep));
 		}
 		else if (p == "/api/object.json")
 		{
 			const std::string key = request.param("key");
 			const bool station = !key.empty() && key[0] == 's';
-			response = Response::json(station && !view.allowsStation(std::atoi(key.c_str() + 1)) ? std::string("{}") : UiFormat::object(db, key));
+			response = Response::json(station && !view.allowsStation(std::atoi(key.c_str() + 1)) ? std::string("{}") : UiFormat::object(db, key, keep));
 		}
 		else if (p == "/api/binmsgs.json")
 		{
 			const uint32_t mmsi = (uint32_t)toInt(request.param("mmsi"));
 			response = Response::json(mmsi && !shows((int)mmsi) ? std::string("{\"messages\":[]}")
-													 : UiFormat::binaryMessages(db, since(), std::strtoull(request.param("marker").c_str(), nullptr, 16), mmsi));
+													 : UiFormat::binaryMessages(db, since(), std::strtoull(request.param("marker").c_str(), nullptr, 16), mmsi, keep));
 		}
 		else if (p == "/api/events.json")
 		{
@@ -384,8 +384,8 @@ namespace Services
 		{
 			std::string out;
 			JSON::Writer w(out);
-			const auto write = [&](Figures &f) { UiFormat::history(w, f); };
 			const std::vector<int> of = figuresOf(focus);
+			const auto write = [&](Figures &f) { UiFormat::history(w, f, tracker.hidesRange(request.owner, of, f)); };
 			if (of.empty())
 				tracker.withAll(write);
 			else if (!tracker.withStations(of, write))
@@ -409,7 +409,7 @@ namespace Services
 			response = Response::json(out);
 		}
 		else if (p == "/api/stat.json" || p == "/stat.json")
-			response = Response::json(statJSON(focus, keep));
+			response = Response::json(statJSON(focus, keep, request.owner));
 		else if (p == "/api/ships.json" || p == "/ships.json" || p == "/api/ships_full.json")
 		{
 			StationRegistry::Station at;
@@ -551,7 +551,7 @@ namespace Services
 
 	// The stat page: the figures of what the page looks through, and what the
 	// site knows of itself and of the running engine.
-	std::string Ui::statJSON(const std::vector<int> &focus, const DB::Keep &keep)
+	std::string Ui::statJSON(const std::vector<int> &focus, const DB::Keep &keep, bool owner)
 	{
 		DB &db = tracker.ships();
 		int vessels = 0;
@@ -561,15 +561,15 @@ namespace Services
 		std::string out;
 		JSON::Writer w(out);
 		w.beginObject();
-		const auto write = [&](Figures &f) { UiFormat::counters(w, f); };
 		const std::vector<int> of = figuresOf(focus);
+		const auto write = [&](Figures &f) { UiFormat::counters(w, f, tracker.hidesRange(owner, of, f)); };
 		if (of.empty())
 			tracker.withAll(write);
 		else if (!tracker.withStations(of, write))
 		{
 			// stations that have heard nothing yet count nothing
 			std::unique_ptr<Figures> none(new Figures());
-			UiFormat::counters(w, *none);
+			UiFormat::counters(w, *none, false);
 		}
 		// the running engine's devices, outputs and community feed, as the site knows them
 		w.kv("tcp_clients", clients ? clients() : 0);

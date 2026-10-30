@@ -16,11 +16,21 @@
 */
 
 #include <algorithm>
+#include <cerrno>
+#include <cstdio>
 #include <cstring>
 #include <string>
 
 #include "TCPServer.h"
 #include "Logger.h"
+
+#include <sys/stat.h>
+
+#ifdef HASOPENSSL
+#include <openssl/err.h>
+#include <openssl/ssl.h>
+#include <openssl/x509.h>
+#endif
 
 #ifdef _WIN32
 #include <mstcpip.h>
@@ -40,6 +50,17 @@ namespace IO
 
 	void TCPServerConnection::Close()
 	{
+#ifdef HASOPENSSL
+		if (ssl)
+		{
+			// says goodbye if the socket takes it, and does not wait for an answer
+			ERR_clear_error();
+			if (SSL_is_init_finished(ssl))
+				SSL_shutdown(ssl);
+			SSL_free(ssl);
+			ssl = nullptr;
+		}
+#endif
 		if (sock != -1)
 		{
 			Net::closeSocket(sock);
@@ -55,11 +76,39 @@ namespace IO
 		head_request = false;
 		continue_sent = false;
 		no_timeout = false;
+		send_limit = MAX_BUFFER_SIZE;
 		verbose = true;
 		request_start = 0;
+		ssl_want_write = false;
 		stamp = std::time(nullptr);
 		++generation; // new incarnation: invalidates any handle held to the old one
 		sock = s;
+	}
+
+	void TCPServerConnection::startTLS(ssl_ctx_st *ctx)
+	{
+#ifdef HASOPENSSL
+		ssl = SSL_new(ctx);
+		if (!ssl || SSL_set_fd(ssl, (int)sock) != 1)
+			Close();
+#else
+		(void)ctx;
+#endif
+	}
+
+	bool TCPServerConnection::handshaking() const
+	{
+#ifdef HASOPENSSL
+		return ssl && !SSL_is_init_finished(ssl);
+#else
+		return false;
+#endif
+	}
+
+	// A handshake asks for the socket itself; what waits to go out waits for it
+	short TCPServerConnection::pollEvents() const
+	{
+		return ssl_want_write || (hasSendBuffer() && !handshaking()) ? POLLIN | POLLOUT : POLLIN;
 	}
 
 	int TCPServerConnection::Inactive(std::time_t now) const
@@ -67,26 +116,90 @@ namespace IO
 		return (int)std::difftime(now, stamp);
 	}
 
+	void TCPServerConnection::take(const char *buffer, int nread)
+	{
+		if (msg.size() + nread > MAX_BUFFER_SIZE)
+		{
+			Warning() << "TCPServer: input buffer overflow, closing connection";
+			Close();
+		}
+		else
+		{
+			msg.append(buffer, nread);
+			// empty lines alone do not keep a connection alive
+			if (std::find_if(buffer, buffer + nread, [](char ch) { return ch != '\r' && ch != '\n'; }) != buffer + nread)
+				stamp = std::time(nullptr);
+		}
+	}
+
+#ifdef HASOPENSSL
+	// after a handshake or read that did not finish: wait for the socket, or the connection is over
+	void TCPServerConnection::waitOrDropTLS(int result)
+	{
+		switch (SSL_get_error(ssl, result))
+		{
+		case SSL_ERROR_WANT_READ:
+			break;
+		case SSL_ERROR_WANT_WRITE:
+			ssl_want_write = true;
+			break;
+		default:
+			// no goodbye on a session that failed
+			SSL_free(ssl);
+			ssl = nullptr;
+			Close();
+		}
+	}
+
+	void TCPServerConnection::readTLS(char *buffer, int size)
+	{
+		ssl_want_write = false;
+		ERR_clear_error();
+		if (!SSL_is_init_finished(ssl))
+		{
+			const int r = SSL_accept(ssl);
+			if (r != 1)
+			{
+				waitOrDropTLS(r);
+				return;
+			}
+			stamp = std::time(nullptr);
+		}
+		// what OpenSSL holds of a record poll() cannot see, so it is taken now
+		do
+		{
+			ERR_clear_error();
+			const int nread = SSL_read(ssl, buffer, size);
+			if (nread <= 0)
+			{
+				waitOrDropTLS(nread);
+				return;
+			}
+			take(buffer, nread);
+		} while (ssl && SSL_pending(ssl) > 0);
+	}
+#else
+	void TCPServerConnection::waitOrDropTLS(int) {}
+	void TCPServerConnection::readTLS(char *, int) {}
+#endif
+
 	void TCPServerConnection::Read()
 	{
 		char buffer[16384];
 
 		if (isConnected())
 		{
+			if (ssl)
+			{
+				readTLS(buffer, sizeof(buffer));
+				return;
+			}
+
 			int nread = recv(sock, buffer, sizeof(buffer), 0);
 
 			if (nread > 0)
 			{
-				if (msg.size() + nread > MAX_BUFFER_SIZE)
-				{
-					Warning() << "TCPServer: input buffer overflow, closing connection";
-					Close();
-				}
-				else
-				{
-					msg.append(buffer, nread);
-					stamp = std::time(nullptr);
-				}
+				take(buffer, nread);
 			}
 			else if (nread == 0)
 			{
@@ -105,23 +218,58 @@ namespace IO
 			}
 		}
 	}
+
+	int TCPServerConnection::write(const char *data, int length)
+	{
+#ifdef HASOPENSSL
+		if (ssl)
+		{
+			if (!SSL_is_init_finished(ssl))
+				return 0;
+			// a record at a time, as far as the socket takes them; what it does not take is
+			// offered again from the front of out, as SSL_write needs it
+			int sent = 0;
+			while (sent < length)
+			{
+				ERR_clear_error();
+				const int n = SSL_write(ssl, data + sent, length - sent);
+				if (n <= 0)
+				{
+					// a write that waits for a read would be a renegotiation, and the context has none
+					if (SSL_get_error(ssl, n) == SSL_ERROR_WANT_WRITE)
+						return sent;
+					SSL_free(ssl);
+					ssl = nullptr;
+					return -1;
+				}
+				sent += n;
+			}
+			return sent;
+		}
+#endif
+		int bytes = ::send(sock, data, length, 0);
+
+		if (bytes < 0)
+		{
+			int e = Net::lastError();
+			if (Net::wouldBlock(e))
+				return 0;
+			if (verbose && !Net::peerGone(e))
+				Error() << "TCP Connection: error message to client: " << Net::errorString(e);
+			return -1;
+		}
+		return bytes;
+	}
+
 	void TCPServerConnection::SendBuffer()
 	{
 		if (isConnected() && hasSendBuffer())
 		{
-
-			int bytes = ::send(sock, out.data() + out_pos, pending(), 0);
+			int bytes = write(out.data() + out_pos, (int)pending());
 
 			if (bytes < 0)
 			{
-				int e = Net::lastError();
-				if (!Net::wouldBlock(e))
-				{
-					if (verbose && !Net::peerGone(e))
-						Error() << "TCP Connection: error message to client: " << Net::errorString(e);
-
-					Close();
-				}
+				Close();
 			}
 			else
 			{
@@ -139,7 +287,7 @@ namespace IO
 		if (out_pos >= OUT_COMPACT_THRESHOLD)
 			compact();
 
-		if (pending() + length > MAX_BUFFER_SIZE)
+		if (pending() + length > (size_t)send_limit)
 			return false;
 
 		out.insert(out.end(), data, data + length);
@@ -155,20 +303,12 @@ namespace IO
 
 		if (!hasSendBuffer())
 		{
-			bytes = ::send(sock, data, length, 0);
+			bytes = write(data, length);
 
 			if (bytes < 0)
 			{
-				int e = Net::lastError();
-				if (!Net::wouldBlock(e))
-				{
-					if (verbose && !Net::peerGone(e))
-						Error() << "TCP Connection: error message to client: " << Net::errorString(e);
-
-					Close();
-					return false;
-				}
-				bytes = 0;
+				Close();
+				return false;
 			}
 		}
 
@@ -184,6 +324,162 @@ namespace IO
 		}
 
 		return true;
+	}
+
+	// TLS of the server's port
+
+#ifdef HASOPENSSL
+	// a key with a passphrase fails here, rather than asking on the terminal
+	static int noPassphrase(char *, int, int, void *) { return -1; }
+
+	// why a file did not load: it does not open, or what OpenSSL made of it
+	static std::string whyNot(const std::string &path)
+	{
+		FILE *f = fopen(path.c_str(), "rb");
+		if (!f)
+			return strerror(errno);
+		fclose(f);
+		const char *reason = ERR_reason_error_string(ERR_peek_error());
+		return reason ? reason : "not a PEM file";
+	}
+
+	// a context with this certificate and key, null with the reason
+	static SSL_CTX *loadTLS(const std::string &cert, const std::string &key, std::string &error)
+	{
+		ERR_clear_error();
+		SSL_CTX *ctx = SSL_CTX_new(TLS_server_method());
+		if (!ctx)
+		{
+			error = "cannot make a TLS context";
+			return nullptr;
+		}
+		// TLS 1.2 or later, as the client has it; without renegotiation a write never waits for a read
+		long options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1;
+#ifdef SSL_OP_NO_RENEGOTIATION
+		options |= SSL_OP_NO_RENEGOTIATION;
+#endif
+		SSL_CTX_set_options(ctx, options);
+		// writes as a plain socket takes them, from a buffer that moves; an idle connection keeps no buffers
+		SSL_CTX_set_mode(ctx, SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER | SSL_MODE_RELEASE_BUFFERS);
+		// a client comes back with a ticket it holds, nothing is kept here for it
+		SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
+		SSL_CTX_set_default_passwd_cb(ctx, noPassphrase);
+
+		// the key first: then a certificate of another key fails the check, in those words
+		if (SSL_CTX_use_PrivateKey_file(ctx, key.c_str(), SSL_FILETYPE_PEM) != 1)
+			error = "cannot read the key \"" + key + "\", a PEM file without a passphrase: " + whyNot(key);
+		else if (SSL_CTX_use_certificate_chain_file(ctx, cert.c_str()) != 1)
+			error = "cannot read the certificate \"" + cert + "\": " + whyNot(cert);
+		else if (SSL_CTX_check_private_key(ctx) != 1)
+			error = "the certificate \"" + cert + "\" and the key \"" + key + "\" do not match";
+		ERR_clear_error();
+		if (!error.empty())
+		{
+			SSL_CTX_free(ctx);
+			return nullptr;
+		}
+		return ctx;
+	}
+
+	static long long notAfter(SSL_CTX *ctx)
+	{
+		int days = 0, seconds = 0;
+		const X509 *x = SSL_CTX_get0_certificate(ctx);
+		ASN1_TIME_diff(&days, &seconds, nullptr, x ? X509_get0_notAfter(x) : nullptr);
+		return (long long)std::time(nullptr) + days * 86400LL + seconds;
+	}
+
+	static std::time_t modified(const std::string &path)
+	{
+		struct stat s;
+		return stat(path.c_str(), &s) == 0 ? s.st_mtime : 0;
+	}
+#endif
+
+	std::string TCPServer::checkTLS(const std::string &cert, const std::string &key)
+	{
+#ifdef HASOPENSSL
+		std::string error;
+		SSL_CTX *ctx = loadTLS(cert, key, error);
+		if (ctx)
+			SSL_CTX_free(ctx);
+		return error;
+#else
+		(void)cert;
+		(void)key;
+		return "this build has no OpenSSL, so no HTTPS (cmake -DOPENSSL=ON).";
+#endif
+	}
+
+	bool TCPServer::setTLS(const std::string &cert, const std::string &key, std::string &error)
+	{
+#ifdef HASOPENSSL
+		SSL_CTX *fresh = nullptr;
+		const std::time_t cert_time = modified(cert), key_time = modified(key);
+		if (!cert.empty())
+		{
+			fresh = loadTLS(cert, key, error);
+			if (!fresh)
+				return false;
+#ifndef _WIN32
+			struct stat s;
+			if (stat(key.c_str(), &s) == 0 && (s.st_mode & S_IROTH))
+				Warning() << "Server: the key \"" << key << "\" can be read by every user of this machine: chmod o-r it";
+#endif
+		}
+		std::lock_guard<std::mutex> lock(tls_mtx);
+		if (tls_ctx)
+			SSL_CTX_free(tls_ctx);
+		tls_ctx = fresh;
+		tls_cert = cert;
+		tls_key = key;
+		tls_cert_time = cert_time;
+		tls_key_time = key_time;
+		tls_warned = false;
+		tls_until = fresh ? notAfter(fresh) : 0;
+		return true;
+#else
+		if (cert.empty())
+			return true;
+		error = checkTLS(cert, key);
+		return false;
+#endif
+	}
+
+	// On the Run() thread, about once a second. A renewal is taken when the files change; while
+	// they do not load the server keeps the certificate it has, and they are tried again.
+	void TCPServer::reloadTLS(std::time_t now)
+	{
+#ifdef HASOPENSSL
+		if (!tls_until || now - tls_checked < TLS_CHECK_INTERVAL)
+			return;
+		std::lock_guard<std::mutex> lock(tls_mtx);
+		if (!tls_ctx)
+			return;
+		tls_checked = now;
+		const std::time_t cert_time = modified(tls_cert), key_time = modified(tls_key);
+		if (cert_time == tls_cert_time && key_time == tls_key_time)
+			return;
+		std::string error;
+		SSL_CTX *fresh = loadTLS(tls_cert, tls_key, error);
+		if (!fresh)
+		{
+			if (!tls_warned)
+				Warning() << "Server: port " << listening_port << " keeps the certificate it has, a new one does not load: " << error;
+			tls_warned = true;
+			return;
+		}
+		// the connections that have the old context keep it until they close
+		SSL_CTX_free(tls_ctx);
+		tls_ctx = fresh;
+		tls_cert_time = cert_time;
+		tls_key_time = key_time;
+		tls_warned = false;
+		tls_until = notAfter(fresh);
+		Info() << "Server: port " << listening_port << " has a new certificate";
+#else
+		(void)now;
+#endif
 	}
 
 	// TCP Server
@@ -205,6 +501,11 @@ namespace IO
 		{
 			c.Close();
 		}
+
+#ifdef HASOPENSSL
+		if (tls_ctx)
+			SSL_CTX_free(tls_ctx);
+#endif
 
 		if (sock != -1)
 			Net::closeSocket(sock);
@@ -253,6 +554,18 @@ namespace IO
 			return;
 		}
 
+		if (max_per_address && (ntohl(peer.sin_addr.s_addr) >> 24) != 127)
+		{
+			int held = 0;
+			for (const auto &c : client)
+				held += c.isConnected() && c.peer_ipv4 == peer.sin_addr.s_addr;
+			if (held >= max_per_address)
+			{
+				Net::closeSocket(conn_socket);
+				return;
+			}
+		}
+
 		int ptr = findFreeClient();
 		if (ptr == -1)
 		{
@@ -281,11 +594,24 @@ namespace IO
 			return;
 		}
 
+		client[ptr].peer_ipv4 = peer.sin_addr.s_addr;
 		client[ptr].Start(conn_socket);
+
+		if (tls_until)
+		{
+			std::lock_guard<std::mutex> lock(tls_mtx);
+			if (tls_ctx)
+				client[ptr].startTLS(tls_ctx);
+		}
 	}
 
 	void TCPServer::cleanUp(std::time_t now)
 	{
+		if (tls_until)
+			for (auto &c : client)
+				if (c.handshaking() && c.Inactive(now) > HANDSHAKE_TIMEOUT)
+					c.Close();
+
 		if (!timeout)
 			return;
 
@@ -299,7 +625,7 @@ namespace IO
 	void TCPServer::readClients()
 	{
 		for (int i = 0; i < MAX_CONN; i++)
-			if (pfds[i + 2].revents & (POLLIN | POLLERR | POLLHUP | POLLNVAL))
+			if (pfds[i + 2].revents & (POLLIN | POLLERR | POLLHUP | POLLNVAL | (client[i].readWantsWrite() ? POLLOUT : 0)))
 				client[i].Read();
 	}
 
@@ -351,6 +677,7 @@ namespace IO
 				if (now != last_housekeeping)
 				{
 					last_housekeeping = now;
+					reloadTLS(now);
 					cleanUp(now);
 
 					if (pstats)
@@ -389,9 +716,7 @@ namespace IO
 			pollfd &p = pfds[i + 2];
 
 			p.fd = c.isConnected() ? c.sock : -1;
-			p.events = POLLIN;
-			if (c.hasSendBuffer())
-				p.events |= POLLOUT;
+			p.events = c.pollEvents();
 			p.revents = 0;
 		}
 
@@ -447,6 +772,10 @@ namespace IO
 				break;
 			case Command::Derived:
 				onCommand(c.id, c.data);
+				break;
+			case Command::CloseAll:
+				for (auto &cl : client)
+					cl.Close();
 				break;
 			}
 		}

@@ -1,111 +1,118 @@
-// The card on the map: opening it on a vessel or an aircraft and closing it,
-// where it goes and how big it is, pinning it, its two styles, and the ring
-// that marks its target on the map. What goes in it is targetcard.js's and
-// planecard.js's.
+// The card on the map, on a vessel, an aircraft or a station. This is the shell
+// they share: opening and closing it, where it goes, pinning it, the ring on its
+// target, its header's state, its footer's groups, the track option and the one
+// rule of its tab and fold. What goes in it comes from a provider picked by type,
+// each with the same shape { build, populate, open }: shipcard.js, planecard.js,
+// station.js (a card of its own beside this one).
 
 import { settings } from '../../core/state.js';
-import { ships as shipsDB, planes as planesDB, cardMmsi as card_mmsi, cardType as card_type, setCard } from '../../core/store.js';
+import {
+    ships as shipsDB, planes as planesDB, cardMmsi as card_mmsi, cardType as card_type, markerTracks, setCard,
+} from '../../core/store.js';
 import { getShipName } from '../../core/names.js';
 import { hasValidCoords } from '@aiscatcher/core/geo.js';
 import { paneCramped } from '@aiscatcher/map/mapui.js';
 import { map, markers, syncCircleFeature, trackLayer, labelLayer } from '../../map.js';
-import { saveSettings, settingsPanel } from '../settings/settings.js';
+import { saveSettings, effects } from '../../settings-store.js';
 import { showNotification } from '../../dialog.js';
+import { ui } from '../../ui.js';
 import * as tracks from '../../tracks.js';
-import * as targetcard from './targetcard.js';
-import * as planecard from '../planecard/planecard.js';
+import * as shipProvider from './shipcard.js';
+import * as planeProvider from '../planecard/planecard.js';
+import * as stationProvider from '../station/station.js';
 import * as mapObjects from '../mapobjects/mapobjects.js';
-import { register } from '../../actions.js';
+import { nameAction, register } from '../../actions.js';
 import { openExt } from '../contextmenu/contextmenu.js';
 import { openRealtimeForMMSI } from '../../tabs/index.js';
 import { cardPanel } from '../../panels.js';
 import { syncTableSelection } from '../tablecard/tablecard.js';
+import { stopHover } from '../hover/hover.js';
 
-// { ui: the entry's map UI (card, dismiss, reveal, panTo), stopHover() }
-let deps = null;
+const providerOf = (type) => ({ ship: shipProvider, plane: planeProvider, station: stationProvider })[type];
 
-export function init(d) {
-    deps = d;
-
-    register({
-        toggleTargetcardPin: () => toggleTargetcardPin(),
-        toggleShipcardStyle: () => toggleShipcardStyle(),
-        toggleTargetcardSize: () => toggleTargetcardSize(),
-        targetcardSelectSelf: (e, dataset, el) => { if (settings.shipcard_style !== "tabs") targetcardselect(el); },
-        showTargetcardClose: () => closeTargetcard(),
-        toggleTrackCard: () => tracks.toggleTrack(card_mmsi),
-        showBinaryMessageDialogCard: () => mapObjects.showBinaryMessageDialog(card_mmsi),
-        openRealtimeForMMSICard: () => openRealtimeForMMSI(card_mmsi),
-        openAISCatcherSiteCard: () => openExt('aiscatcher', card_mmsi),
-        openFlightAwareCard: () => openExt('flightaware', card_mmsi),
-        openPlaneSpottersCard: () => openExt('planespotters', card_mmsi),
-        openADSBExchangeCard: () => openExt('adsbexchange', card_mmsi),
-
-        // the card's rendered items
-        rotateTargetcardIcons: () => deps.ui.card.footer.rotate(card_type),
-        techInfo: (e) => { e.stopPropagation(); deps.ui.card.popover.toggle(document.getElementById("tech_popover"), document.getElementById("targetcard_tech_info")); },
-        shiptypeInfo: (e) => { e.stopPropagation(); deps.ui.card.popover.toggle(document.getElementById("shiptype_popover"), document.getElementById("targetcard_shiptype_info")); },
-        shipHistory: (e) => { e.stopPropagation(); deps.ui.card.section.open("changes"); },
-        toggleTargetcardSection: (e, dataset, el) => { e.stopPropagation(); deps.ui.card.section.toggle(el?.dataset.section || dataset.section); },
-    });
+// once, after the settings have loaded
+export function buildCards() {
+    ui.card.footer.reset();
+    shipProvider.build();
+    planeProvider.build();
+    stationProvider.build();
+    for (const group of ['ship', 'plane'])
+        ui.card.footer.add({ icon: 'more_horiz', label: 'More', title: 'More options', action: 'rotateTargetcardIcons', group, more: true });
+    ui.card.footer.show('ship');
 }
 
 export function targetcardVisible() {
     return cardPanel.isOpen();
 }
 
-// ─── size ────────────────────────────────────────────────────────────────────
-
-export function isTargetcardMax() {
-    return deps.ui.card.isMax();
-}
-
-export function toggleTargetcardSize() {
-    if (settings.shipcard_style === "tabs") return;   // the tabbed card stays maximised
-    deps.ui.card.setMax(!deps.ui.card.isMax());
-    fitTargetcard();
-    if (isTargetcardMax()) adjustMapForTargetcard();
-}
-
-export function targetcardMinIfMaxonMobile() {
-    if (targetcardVisible() && paneCramped() && isTargetcardMax()) toggleTargetcardSize();
-}
-
-// a classic card's row: a click keeps it open, or folds the card when it is the header
-export function targetcardselect(e) {
-    if (!deps.ui.card.keep.toggle(e)) toggleTargetcardSize();
-    saveSettings();
-}
-
-// the card's size and kept rows as the loaded settings have them
-export function restoreCardLayout() {
-    if (!isTargetcardMax()) toggleTargetcardSize();
-
-    if (deps.ui.card.keep.restore(settings.targetcard_rows)) {
-        if (settings.targetcard_max != isTargetcardMax()) toggleTargetcardSize();
-    } else {
-        settings.targetcard_rows = [];
-    }
-}
-
-// what a save keeps of the card: the tabbed card neither folds nor keeps
-// rows, so those stay as classic left them
-export function saveCardLayout() {
-    if (settings.shipcard_style !== "tabs") {
-        settings.targetcard_max = isTargetcardMax();
-        settings.targetcard_rows = deps.ui.card.keep.state();
-    }
-}
-
 export function fitTargetcard() {
     if (!targetcardVisible()) return;
-    deps.ui.card.fit();
+    ui.card.fit();
 }
 
-// ─── pin and style ───────────────────────────────────────────────────────────
+// ─── the tab and the fold ────────────────────────────────────────────────────
+
+/* The one rule, for every card as it opens on something (`fresh`: it was closed):
+   a wide pane shows the remembered tab, so a new target opens unfolded; a cramped
+   pane opens folded, and with the card already up keeps the fold as it is. */
+export function openOnTab(layout, remembered, fresh) {
+    if (!paneCramped()) layout.select(remembered, false);
+    else if (fresh) layout.select(null, false);
+    layout.scrollTop();
+}
+
+// ─── header ──────────────────────────────────────────────────────────────────
+
+const VALIDATION = { 1: "card-validated", [-1]: "card-dubious" };
+
+export function setValidation(v) {
+    ui.card.header.state(VALIDATION[v] || "card-not-validated");
+}
+
+export function showOutOfRange() {
+    document
+        .getElementById("targetcard_content")
+        .querySelectorAll("span:nth-child(2)")
+        .forEach((e) => (e.innerHTML = null));
+    ui.card.header.title().innerHTML = "<b style='color:red;'>Out of range</b>";
+    ui.card.header.flag(null);
+    document.getElementById("targetcard_mmsi").innerHTML = card_mmsi;
+
+    updateFocusMarker();
+}
+
+// ─── footer ──────────────────────────────────────────────────────────────────
+
+export function addItem(icon, txt, title, action, contextType = 'ship') {
+    const name = nameAction(action);
+    if (!name) return;
+    if (icon.startsWith("fa")) icon = "question_mark";
+    return ui.card.footer.add({ icon, label: txt, title, action: name, group: contextType });
+}
+
+export function updateTrackOption() {
+    const trackOptionElement = document.getElementById("targetcard_track_option");
+
+    if (settings.show_all_tracks || card_type == 'plane') {
+        trackOptionElement.style.opacity = "0.5";
+        trackOptionElement.style.pointerEvents = "none";
+    } else {
+        trackOptionElement.style.opacity = "1";
+        trackOptionElement.style.pointerEvents = "auto";
+    }
+
+    // the button's tint says whether the track is on the map
+    if (card_mmsi && card_type == 'ship') {
+        const shown = markerTracks.has(Number(card_mmsi));
+        trackOptionElement.classList.toggle("card-icon-active", shown);
+        trackOptionElement.title = shown ? "Hide the track" : "Show the track";
+    }
+}
+
+// ─── pin ─────────────────────────────────────────────────────────────────────
 
 function pinTargetcard() {
-    const at = deps.ui.card.pin();
+    const at = ui.card.pin();
     settings.targetcard_pinned = true;
     settings.targetcard_pinned_x = at.x;
     settings.targetcard_pinned_y = at.y;
@@ -114,7 +121,7 @@ function pinTargetcard() {
 }
 
 function unpinTargetcard() {
-    deps.ui.card.unpin();
+    ui.card.unpin();
     settings.targetcard_pinned = false;
     settings.targetcard_pinned_x = null;
     settings.targetcard_pinned_y = null;
@@ -122,49 +129,43 @@ function unpinTargetcard() {
     saveSettings();
 }
 
-export function toggleTargetcardPin() {
+function toggleTargetcardPin() {
     if (settings.targetcard_pinned) unpinTargetcard();
     else pinTargetcard();
 }
 
-export function applyTargetcardPinStyling() {
-    deps.ui.card.markPinned(settings.targetcard_pinned);
-}
+effects({
+    targetcard_pinned: () => ui.card.markPinned(settings.targetcard_pinned),
+});
 
-export function toggleShipcardStyle() {
-    settings.shipcard_style = settings.shipcard_style === "tabs" ? "classic" : "tabs";
-    setTargetcardStyle(settings.shipcard_style);
-    if (settingsPanel.sync) settingsPanel.sync();
-    saveSettings();
-}
-
-export function setTargetcardStyle(style) {
-    targetcard.setStyle(style);
-    planecard.setStyle(style);
-    document.querySelectorAll('#targetcard [data-context-type]').forEach(el => {
-        el.style.display = el.dataset.contextType === card_type ? '' : 'none';
+// `handle` drags the card; a pinned card's place follows
+export function dragTargetcardBy(handle) {
+    ui.card.draggable(handle);
+    ui.card.el.addEventListener("card:moved", (e) => {
+        if (!settings.targetcard_pinned) return;
+        settings.targetcard_pinned_x = e.detail.x;
+        settings.targetcard_pinned_y = e.detail.y;
+        saveSettings();
     });
-    deps.ui.card.footer.show(card_type);
-    fitTargetcard();
 }
 
 // ─── place ───────────────────────────────────────────────────────────────────
 
 function moveMapCenter(px) {
-    deps.stopHover();
-    deps.ui.panTo(px);
+    stopHover();
+    ui.panTo(px);
 }
 
-export function adjustMapForTargetcard(pixel) {
+function adjustMapForTargetcard(pixel) {
     const db = card_type == 'ship' ? shipsDB : card_type == 'plane' ? planesDB : null;
     const raw = db && card_mmsi in db ? db[card_mmsi].raw : null;
     if (!raw || !raw.lat || !raw.lon) return;
 
-    if (deps.ui.reveal([raw.lon, raw.lat], pixel, card_type == 'ship' ? { minZoom: 4 } : undefined) === "panned") deps.stopHover();
+    if (ui.reveal([raw.lon, raw.lat], pixel, card_type == 'ship' ? { minZoom: 4 } : undefined) === "panned") stopHover();
 }
 
 export function positionAside(pixel, aside) {
-    deps.stopHover();
+    stopHover();
     if (!aside.offsetParent) return;
 
     if (settings.kiosk && settings.kiosk_pan_map && card_type == 'ship' && card_mmsi in shipsDB) {
@@ -175,7 +176,7 @@ export function positionAside(pixel, aside) {
 
     /* beside the target the card already leaves it visible; only a docked
        card may end up covering it */
-    const how = deps.ui.card.open(pixel);
+    const how = ui.card.open(pixel);
     if (how === "dock") adjustMapForTargetcard(pixel);
     return how;
 }
@@ -192,10 +193,11 @@ export function updateFocusMarker() {
 // ─── open and close ──────────────────────────────────────────────────────────
 
 export function showTargetcard(type, m, pixel = undefined) {
-    targetcard.resetHistory();
+    if (type === 'station') return stationProvider.open(m, { fresh: !stationProvider.stationcardVisible(), pixel });
+
     if (m != null) {
-        deps.ui.dismiss();   // a card takes the stage, wherever it was opened from
-        deps.closeStationcard?.();
+        ui.dismiss();   // a card takes the stage, wherever it was opened from
+        stationProvider.closeStationcard();
     }
 
     const aside = document.getElementById("targetcard");
@@ -230,29 +232,21 @@ export function showTargetcard(type, m, pixel = undefined) {
             }
         });
 
-        deps.ui.card.footer.show(type);
+        ui.card.footer.show(type);
     }
 
     setCard(m, type);
-    if (type == 'ship' && m != null) targetcard.loadVessel(m);
+    if (m != null) providerOf(type).open(m, { fresh: !visible });
     syncTableSelection();
 
     if (targetcardVisible()) {
         if (settings.show_track_on_select && card_type == 'ship') tracks.selectionShown(m);
 
-        /* a fresh card opens at the size the setting asks for, except on a
-           cramped pane which always opens compact; a target out of range has
-           nothing to show and opens compact too; switching ship with the
-           card up keeps the size the user has */
-        const known = card_type != 'ship' || ship != null;
-        const wantMax = known && settings.targetcard_open_max && !paneCramped();
-        if (settings.shipcard_style !== "tabs" && !visible && isTargetcardMax() !== wantMax) toggleTargetcardSize();
         if (ship && (!visible || prev_mmsi !== m) && !hasValidCoords(ship.lat, ship.lon))
             showNotification("No position received for " + (getShipName(ship) || m), "error");
         positionAside(pixel, aside);
 
-        if (card_type == 'ship') targetcard.populate();
-        else if (card_type == 'plane') { planecard.open(!visible); planecard.populate(); }
+        providerOf(card_type)?.populate();
 
         // trigger reflow for iPad Safari
         aside.style.display = 'none';
@@ -270,3 +264,21 @@ export function showTargetcard(type, m, pixel = undefined) {
 export function closeTargetcard() {
     showTargetcard(null, null);
 }
+
+// with each pull of the data
+export function refreshTargetcard() {
+    if (targetcardVisible()) providerOf(card_type)?.populate();
+}
+
+register({
+    toggleTargetcardPin: () => toggleTargetcardPin(),
+    showTargetcardClose: () => closeTargetcard(),
+    toggleTrackCard: () => tracks.toggleTrack(card_mmsi),
+    showBinaryMessageDialogCard: () => mapObjects.showBinaryMessageDialog(card_mmsi),
+    openRealtimeForMMSICard: () => openRealtimeForMMSI(card_mmsi),
+    openAISCatcherSiteCard: () => openExt('aiscatcher', card_mmsi),
+    openFlightAwareCard: () => openExt('flightaware', card_mmsi),
+    openPlaneSpottersCard: () => openExt('planespotters', card_mmsi),
+    openADSBExchangeCard: () => openExt('adsbexchange', card_mmsi),
+    rotateTargetcardIcons: () => ui.card.footer.rotate(card_type),
+});

@@ -165,6 +165,16 @@ public:
 		return it == last_heard.end() ? (std::time_t)0 : it->second;
 	}
 
+	// Whether any of these stations, or with none named any station at all, keeps its position home
+	bool keepsPositionHome(const std::vector<int> &ids);
+	// The one rule for range figures: those of a position kept home go to its owner alone. Figures
+	// that add up several stations are hidden when any of them keeps it home; with no range
+	// measured, as with no position set, there is nothing to hide.
+	bool hidesRange(bool owner, const std::vector<int> &ids, Figures &f)
+	{
+		return !owner && f.total.maxDistance() > 0 && keepsPositionHome(ids);
+	}
+
 	// The figures of everything heard, of one station, or of several as one;
 	// f runs under the figures' lock. False when none of the stations has any
 	// yet. Several stations add up: their counts sum, their extremes take the
@@ -262,6 +272,7 @@ private:
 	// the tag a message is measured with: the station where it is now
 	// the station the message is counted at: the one it names when listed, else the input's; and where it was heard
 	void place(const AIS::Message *msg, TAG &tag);
+	bool sharesPosition(int id);
 	// false when the fix belongs to no station, and the tracker's own position takes it
 	bool moveByGPS(int id, FLOAT32 lat, FLOAT32 lon);
 	void follow(uint32_t mmsi, FLOAT32 lat, FLOAT32 lon);
@@ -294,6 +305,7 @@ private:
 
 	std::mutex stations_mtx;
 	Position fixed_at; // where every message is measured from, when the configuration fixes it
+	bool fixed_shared = false; // and whether that position may leave this machine
 	std::map<int, Station> stations;
 	std::map<uint32_t, int> riders;
 	bool registry_set = false;

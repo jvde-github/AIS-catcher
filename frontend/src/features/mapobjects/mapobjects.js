@@ -8,13 +8,18 @@ import { sanitizeString } from '@aiscatcher/core/text.js';
 import { BINARY_CATEGORIES } from '@aiscatcher/ui/binary.js';
 import * as mapobjects from '@aiscatcher/map/mapobjects.js';
 import { createEventHistory } from '@aiscatcher/ui/events-history.js';
-import { map, redraw } from '../../map.js';
+import { map } from '../../map.js';
+import { redraw } from '../../fleet.js';
 import { focus } from '../../data.js';
 import { ships, station } from '../../core/store.js';
 import { config } from '../../core/config.js';
-import { saveSettings, closeSettings } from '../settings/settings.js';
+import { saveSettings, effects } from '../../settings-store.js';
+import { closeSettings } from '../settings/settings.js';
 import { closeDialog } from '../../dialog.js';
+import { ui } from '../../ui.js';
+import { setPanels } from '../../panels.js';
 import { showTargetcard } from '../targetcard/card.js';
+import { openFocus } from '../follow/follow.js';
 import { register } from '../../actions.js';
 import { hoverVessel, unhoverVessel, isHovered, rehover, isHoveringShip, rehoverShip } from '../hover/hover.js';
 import { needsMapObjects, objectKindVisible } from '@aiscatcher/core/object-visibility.js';
@@ -22,8 +27,6 @@ import { stationBand } from '@aiscatcher/ui/stations.js';
 
 export { BINARY_CATEGORIES };
 
-// { navigate, setTableOpen }
-let deps = null;
 let objectsSince = 0;
 
 const shipLabel = (mmsi) => ships[mmsi]?.raw?.shipname || `MMSI ${mmsi}`;
@@ -32,13 +35,12 @@ const shipLabel = (mmsi) => ships[mmsi]?.raw?.shipname || `MMSI ${mmsi}`;
 const shipLink = (mmsi) => {
     const label = sanitizeString(String(shipLabel(mmsi)));
     if (!(mmsi in ships)) return label;
-    return `<a href="javascript:void(0)" style="color: inherit; text-decoration: underline;" onclick="closeDialog(); openFocus(${Number(mmsi)})">${label}</a>`;
+    return `<a href="#" style="color: inherit; text-decoration: underline;" data-action="focusShipLink" data-mmsi="${Number(mmsi)}">${label}</a>`;
 };
 
 const api = (query) => fetch(`api/${query}&stations=${focus}`).then((r) => r.json());
 
-// the module is built once, at load, so the layer exists before the map does; every
-// hook reaches for the host through `deps`, which init() fills in
+// the module is built once, at load, so the layer exists before the map does
 const objects = mapobjects.create({
     fetchJSON: (url) => api(url),
     objectUrl: (key) => `object.json?key=${key}`,
@@ -59,8 +61,8 @@ const objects = mapobjects.create({
     isHovered, rehover, isHoveringShip, rehoverShip,
     openVessel,
     hoverVessel, unhoverVessel,
-    setTableOpen: (on) => deps.setTableOpen(on),
-    openStation: (id) => deps.openStation(id),
+    setTableOpen,
+    openStation,
     map: () => map,
     // this installation's own stations: one whose receivers are lost pulses
     pulse: true,
@@ -74,13 +76,13 @@ export const stationsOnMap = () => objects.stations();
 export const stationsAll = () => objects.stationsAll();
 
 // the ticker's history: the same side table, a page of the rings at a time
-export const openEventHistory = createEventHistory({
+const openEventHistory = createEventHistory({
     fetchJSON: (url) => api(url),
     historyUrl: (before, level, limit) => `events.json?before=${before}&level=${level}&limit=${limit}`,
     openVessel,
-    navigate: (pos) => deps.navigate(pos),
-    setTableOpen: (on) => deps.setTableOpen(on),
-    openStation: (id) => deps.openStation(id),
+    navigate: ({ lat, lon }) => ui.reveal([lon, lat], undefined, { minZoom: 8, center: true }),
+    setTableOpen,
+    openStation,
     map: () => map,
 });
 
@@ -93,28 +95,38 @@ export async function openPlace(ref) {
 // a vessel named in a dialog or the side table opens on its card
 function openVessel(mmsi) {
     closeDialog();
-    closeSettings();
     showTargetcard('ship', mmsi);
 }
 
-export function init(d) {
-    deps = d;
+function openStation(id) {
+    showTargetcard('station', id);
+}
+
+// the side table holds a list of map objects
+function setTableOpen(on) {
+    if (on) closeSettings();
+    setPanels({ table: on, ...(on ? { replay: false } : {}) });
+}
+
+export function init() {
     register({
         setBinaryCategory: (e, ds, el) => setBinaryCategory(ds.cat, el.checked),
         openEventHistory: () => { closeSettings(); openEventHistory(); },
+        focusShipLink: (e, ds) => { closeDialog(); openFocus(Number(ds.mmsi)); },
     });
     if (map) viewChanged(map.getView().getZoom() || 0);
 }
 
 // ─── settings ────────────────────────────────────────────────────────────────
 
-export const binaryAnyShown = () => BINARY_CATEGORIES.some((c) => !settings.binary_exclude.includes(c));
+const binaryAnyShown = () => BINARY_CATEGORIES.some((c) => !settings.binary_exclude.includes(c));
 export const objectsAnyShown = () => needsMapObjects(settings, binaryAnyShown());
 
 // a display setting changed: the badges and markers take it
-export const restyle = () => objects.restyle();
+const restyle = () => objects.restyle();
+effects({ binary_messages: restyle, binary_color_class: restyle, binary_id_labels: restyle, binary_group_areas: restyle });
 
-export function setBinaryCategory(cat, on) {
+function setBinaryCategory(cat, on) {
     const excluded = settings.binary_exclude.filter((c) => c !== cat);
     if (!on) excluded.push(cat);
     settings.binary_exclude = excluded;

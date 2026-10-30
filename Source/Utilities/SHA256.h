@@ -123,20 +123,28 @@ namespace Util
 			}
 		}
 
+		// the last block: the padding and the length
+		void pad()
+		{
+			const uint64_t bits = total * 8;
+
+			buffer[buffered++] = 0x80;
+			if (buffered > 56)
+			{
+				std::memset(buffer + buffered, 0, 64 - buffered);
+				processBlock(buffer);
+				buffered = 0;
+			}
+			std::memset(buffer + buffered, 0, 56 - buffered);
+			for (int i = 0; i < 8; i++)
+				buffer[56 + i] = (uint8_t)(bits >> (56 - i * 8));
+			processBlock(buffer);
+			buffered = 0;
+		}
+
 		std::string finish()
 		{
-			uint64_t bits = total * 8;
-
-			uint8_t pad = 0x80;
-			update(&pad, 1);
-			uint8_t zero = 0;
-			while (buffered != 56)
-				update(&zero, 1);
-
-			uint8_t len_bytes[8];
-			for (int i = 0; i < 8; i++)
-				len_bytes[i] = (uint8_t)(bits >> (56 - i * 8));
-			update(len_bytes, 8);
+			pad();
 
 			static const char *digits = "0123456789abcdef";
 			std::string out;
@@ -161,6 +169,64 @@ namespace Util
 			std::string out(32, '\0');
 			for (int i = 0; i < 32; i++)
 				out[i] = (char)std::stoi(h.substr(i * 2, 2), nullptr, 16);
+			return out;
+		}
+
+		// PBKDF2-HMAC-SHA256 (RFC 8018), the first block as hex. The two keyed
+		// states are copied for each round: two compressions a round, not four.
+		static std::string pbkdf2(std::string password, const std::string &salt, int iterations)
+		{
+			if (password.size() > 64)
+				password = raw(password);
+			password.resize(64, '\0');
+
+			uint8_t ipad[64], opad[64];
+			for (int i = 0; i < 64; i++)
+			{
+				ipad[i] = (uint8_t)password[i] ^ 0x36;
+				opad[i] = (uint8_t)password[i] ^ 0x5c;
+			}
+			SHA256 inner, outer;
+			inner.update(ipad, 64);
+			outer.update(opad, 64);
+
+			const auto round = [&](SHA256 &s, uint8_t u[32]) {
+				SHA256 o = outer;
+				s.pad();
+				for (int i = 0; i < 8; i++)
+					for (int j = 0; j < 4; j++)
+						u[i * 4 + j] = (uint8_t)(s.h[i] >> (24 - j * 8));
+				o.update(u, 32);
+				o.pad();
+				for (int i = 0; i < 8; i++)
+					for (int j = 0; j < 4; j++)
+						u[i * 4 + j] = (uint8_t)(o.h[i] >> (24 - j * 8));
+			};
+
+			static const uint8_t first_block[4] = {0, 0, 0, 1};
+			uint8_t u[32], t[32];
+			SHA256 s = inner;
+			s.update(salt.data(), salt.size());
+			s.update(first_block, 4);
+			round(s, u);
+			std::memcpy(t, u, 32);
+			for (int n = 1; n < iterations; n++)
+			{
+				s = inner;
+				s.update(u, 32);
+				round(s, u);
+				for (int i = 0; i < 32; i++)
+					t[i] ^= u[i];
+			}
+
+			static const char *digits = "0123456789abcdef";
+			std::string out;
+			out.reserve(64);
+			for (int i = 0; i < 32; i++)
+			{
+				out += digits[t[i] >> 4];
+				out += digits[t[i] & 0xF];
+			}
 			return out;
 		}
 
