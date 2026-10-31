@@ -51,7 +51,7 @@ namespace Services
 		Response openapi();
 		Response stationList();
 		Response station(int id);
-		Response statistics(int station, bool owner);
+		Response statistics(int station, const Request &request);
 		Response vessels(const Request &request);
 		Response vessel(uint32_t mmsi);
 		Response track(uint32_t mmsi, const Request &request);

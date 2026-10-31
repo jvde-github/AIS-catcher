@@ -1,6 +1,6 @@
 // Vessel fields and history slots on the shared map-card tabs.
 // Compact mode shows the live metrics; the handle expands or collapses details.
-import { decodeHTMLEntities, fieldRows } from './components.js';
+import { copyToClipboard, decodeHTMLEntities, fieldRows } from './components.js';
 import { build as buildTabs, metrics } from './card-tabs.js';
 import { MATCHED_PORT_FIELDS, setPortLink } from './shipcard.js';
 import { CLASS_A, CLASS_B } from '@aiscatcher/core/constants.js';
@@ -118,7 +118,7 @@ export function build(mount, prefix, o) {
     copy.onclick = (e) => {
         e.stopPropagation();
         const txt = [...posRow.querySelectorAll(':scope > div > span:last-child')].map(x => x.textContent.trim()).join(' ');
-        navigator.clipboard?.writeText(txt).then(() => { copy.classList.add('is-done'); setTimeout(() => copy.classList.remove('is-done'), 1200); }, () => {});
+        copyToClipboard(txt).then(() => { copy.classList.add('is-done'); setTimeout(() => copy.classList.remove('is-done'), 1200); }, () => {});
     };
     posRow.appendChild(copy);
     const tiles = el('div', 'sc-tiles');

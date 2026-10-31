@@ -4,6 +4,7 @@
 // as chosen, and says who may read it: programs on this machine, holders of a key, or anyone.
 // The servers take a save at once.
 
+import { copyToClipboard } from '@aiscatcher/ui/components.js';
 import { el, isActive, on, moreMenu } from './dom.js';
 import { api } from './api.js';
 import { hub } from './hub.js';
@@ -337,7 +338,8 @@ function renderKeys(data, keys, { touched, rerender, system }) {
             shown ? el('div', 'st-key__reveal', {},
                 el('code', '', { text: shown }),
                 el('button', 'st-btn st-btn--sm', { type: 'button', html: icon('copy') + 'Copy', onClick: e => {
-                    navigator.clipboard?.writeText(shown).then(() => { e.currentTarget.lastChild.textContent = 'Copied'; }, () => {});
+                    const b = e.currentTarget;
+                    copyToClipboard(shown).then(() => { b.lastChild.textContent = 'Copied'; }, () => { b.lastChild.textContent = 'Copy failed'; });
                 } }),
                 el('span', 't-small t-subtle', { text: 'Shown once. Sent as "Authorization: Bearer …"; works once saved.' })) : null));
     });

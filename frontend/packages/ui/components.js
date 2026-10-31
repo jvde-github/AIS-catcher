@@ -507,9 +507,7 @@ export async function copyToClipboard(textToCopy) {
         textArea.select();
 
         try {
-            document.execCommand("copy");
-        } catch (error) {
-            console.error(error);
+            if (!document.execCommand("copy")) throw new Error("copy refused");
         } finally {
             textArea.remove();
         }

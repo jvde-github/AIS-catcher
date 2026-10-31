@@ -3,6 +3,7 @@
 // The control panel makes the request on the station, so a server that listens
 // there only is reached too.
 
+import { copyToClipboard } from '@aiscatcher/ui/components.js';
 import { el } from './dom.js';
 import { icon } from './icons.js';
 import { api } from './api.js';
@@ -76,7 +77,7 @@ function copyLine(text) {
         el('code', '', { text }),
         el('button', 'st-btn st-btn--sm', { type: 'button', html: icon('copy') + 'Copy', onClick: e => {
             const b = e.currentTarget;
-            navigator.clipboard?.writeText(text).then(() => { b.lastChild.textContent = 'Copied'; }, () => {});
+            copyToClipboard(text).then(() => { b.lastChild.textContent = 'Copied'; }, () => { b.lastChild.textContent = 'Copy failed'; });
         } }));
 }
 

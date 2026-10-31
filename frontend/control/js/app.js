@@ -1,4 +1,5 @@
 import { formatBytes } from '@aiscatcher/core/text.js';
+import { copyToClipboard } from '@aiscatcher/ui/components.js';
 import { createPlaceEditor } from './places-editor.js';
 import { createStationsEditor } from './stations-editor.js';
 import { el, highlightJson, isActive } from './dom.js';
@@ -1038,8 +1039,7 @@ import { createMessageBar } from './message-bar.js';
                 .filter(r => !r.hidden).map(r => r.children[0].textContent + ': ' + r.children[1].textContent);
             lines.push('Receiver: ' + ENGINE_STATES[engineStateKey].label);
             const done = ok => { b.textContent = ok ? 'Copied' : 'Copy failed'; setTimeout(() => { b.textContent = 'Copy for bug report'; }, 1600); };
-            (navigator.clipboard ? navigator.clipboard.writeText(lines.join('\n')) : Promise.reject())
-                .then(() => done(true), () => done(false));
+            copyToClipboard(lines.join('\n')).then(() => done(true), () => done(false));
         });
         renderEngineButton();
         paintStatusCounts();

@@ -183,6 +183,56 @@ namespace Services
 			w.endObject();
 		}
 
+		// a vessel as a short row, for a reader that pays for every word: what
+		// it is, where and how long ago, and only what is known of that
+		void writeVesselBrief(JSON::Writer &w, const Ship &s, std::time_t now, const std::string &bound_for, float near_nm)
+		{
+			const auto text = [&](const char *key, const char *v) {
+				if (std::string(v).find_first_not_of(' ') != std::string::npos)
+					w.kv(key, std::string(v));
+			};
+			w.beginObject().kv("mmsi", (long long)s.mmsi);
+			text("name", s.shipname);
+			w.kv("class", VESSEL_CLASSES[classOf(s)]);
+			if (s.country_code[0])
+				w.kv("country", std::string(s.country_code));
+			if (isValidCoord(s.lat, s.lon))
+			{
+				w.kv("lat", s.lat).kv("lon", s.lon);
+				if (s.distance != DISTANCE_UNDEFINED)
+					w.kv("distance_nm", s.distance);
+				if (near_nm >= 0)
+					w.kv("near_nm", near_nm);
+			}
+			if (s.speed != SPEED_UNDEFINED)
+				w.kv("speed_kn", s.speed);
+			if (s.cog != COG_UNDEFINED)
+				w.kv("course_deg", s.cog);
+			if (s.status >= 0 && s.status < N_NAV_STATUSES)
+				w.kv("nav_status", NAV_STATUSES[s.status]);
+			if (s.to_bow != DIMENSION_UNDEFINED && s.to_stern != DIMENSION_UNDEFINED)
+				w.kv("length_m", (int)s.to_bow + (int)s.to_stern);
+			text("destination", s.destination);
+			if (!bound_for.empty())
+				w.kv("bound_for", bound_for);
+			w.kv("age_s", (long long)(now > s.last_signal ? now - s.last_signal : 0)).endObject();
+		}
+
+		// what a port code is called, as the place catalogue or the port list knows it
+		std::string portName(const PlaceIndex *index, const std::string &code)
+		{
+			if (code.empty())
+				return code;
+			if (const PlaceIndex::Entry *e = index ? index->findPort(code) : nullptr)
+				return e->metadata->name;
+#ifdef HASPORTS
+			libport::Info info;
+			if (libport::lookup(code.c_str(), info))
+				return info.name;
+#endif
+			return std::string();
+		}
+
 		// a reported change, in the units and names of the vessel itself
 		void writeChange(JSON::Writer &w, const StaticStore::Entry &e)
 		{
@@ -440,6 +490,29 @@ namespace Services
 			w.endObject();
 		}
 
+		// a period's figures as data_status tells them: how much, and how far
+		void writeFiguresBrief(JSON::Writer &w, const char *key, const MessageStatistics::Values &v, bool empty, bool vessels, bool hidden)
+		{
+			w.key(key).beginObject().kv("messages", empty ? 0 : v.count);
+			if (vessels)
+				w.kv("vessels", empty ? 0 : v.vessels);
+			if (!hidden && !empty && v.distance > 0)
+				w.kv("max_distance_nm", v.distance);
+			w.endObject();
+		}
+
+		// view=brief or view=full; false when it is neither
+		bool viewBrief(const Request &request, bool &brief)
+		{
+			const std::string shape = request.param("view");
+			brief = shape == "brief";
+			return shape.empty() || brief || shape == "full";
+		}
+		Response badView()
+		{
+			return Response::problem(400, "Bad request", "view takes brief or full.");
+		}
+
 		// one history of figures, a slot an object, oldest first
 		template <typename H>
 		void writeSlots(JSON::Writer &w, const char *key, H &history, bool hidden)
@@ -534,9 +607,9 @@ namespace Services
 		else if (parts[0] == "stations" && parts.size() == 2 && Util::Parse::Digits(parts[1], n, 10) && n <= 2147483647)
 			at("/api/v1/stations/{id}", [&] { return station((int)n); });
 		else if (parts[0] == "stations" && parts.size() == 3 && parts[2] == "statistics" && Util::Parse::Digits(parts[1], n, 10) && n <= 2147483647)
-			at("/api/v1/stations/{id}/statistics", [&] { return statistics((int)n, request.owner); });
+			at("/api/v1/stations/{id}/statistics", [&] { return statistics((int)n, request); });
 		else if (parts[0] == "statistics" && parts.size() == 1)
-			at("/api/v1/statistics", [&] { return statistics(-1, request.owner); });
+			at("/api/v1/statistics", [&] { return statistics(-1, request); });
 		else if (parts[0] == "vessels" && parts.size() == 1)
 			at("/api/v1/vessels", [&] { return vessels(request); });
 		else if (parts[0] == "vessels" && parts.size() == 2 && Util::Parse::Digits(parts[1], n, 10) && n <= 999999999)
@@ -643,8 +716,20 @@ namespace Services
 
 	// one station's figures, or with `station` -1 those of everything the
 	// server shows: all of them, or its stations' added up
-	Response ApiV1::statistics(int station, bool owner)
+	Response ApiV1::statistics(int station, const Request &request)
 	{
+		bool brief = false;
+		if (!viewBrief(request, brief))
+			return badView();
+		const bool owner = request.owner;
+		// the vessels held now: a list's count, for a reader that would otherwise page through one
+		long long held = 0;
+		if (brief && station >= 0)
+			held = heardLately()[station];
+		else if (brief)
+			tracker.ships().forEachRecent(std::time(nullptr), std::time(nullptr) - tracker.ships().timeHistory(), [&](int, const Ship &s, long) {
+				held += view.passes(s, std::time(nullptr));
+			});
 		if (station >= 0 && !view.allowsStation(station))
 			return Response::problem(404, "Not found", "Station " + std::to_string(station) + " has heard nothing yet.");
 		const std::vector<int> ids = station >= 0 ? std::vector<int>(1, station) : view.stations;
@@ -666,6 +751,19 @@ namespace Services
 			if (hidden)
 				w.kv("range_hidden", true);
 			w.kv("time", isoTime(now)).kv("messages_per_second", f.second.getAverage());
+			if (brief)
+			{
+				w.kv("vessels_now", held);
+				writeFiguresBrief(w, "total", f.total.values(), false, false, hidden);
+				const auto last = [&](const char *key) {
+					return [&w, key, hidden](MessageStatistics &s, bool empty) { writeFiguresBrief(w, key, s.values(), empty, true, hidden); };
+				};
+				f.minute.withLastSlot(last("last_minute"));
+				f.hour.withLastSlot(last("last_hour"));
+				f.day.withLastSlot(last("last_day"));
+				w.kv("note", "The last whole minute, hour and day. History, signal, channels and range: view=full.").endObject();
+				return;
+			}
 			writeTotal(w, "total", f.total, hidden);
 			writeTotal(w, "session", f.session, hidden);
 			writeLast(w, "last_minute", f.minute, hidden);
@@ -712,8 +810,8 @@ namespace Services
 		// separated by commas match any of them, and min_ and max_ bound a number.
 		struct VesselQuery
 		{
-			std::string q;
-			bool box = false, circle = false;
+			std::string q, destination;
+			bool box = false, circle = false, nearest = false;
 			float west = 0, south = 0, east = 0, north = 0, lat = 0, lon = 0, radius_nm = 10;
 			std::vector<long long> mmsi, stations, classes, statuses, validated, repeat;
 			bool has_min_speed = false, has_max_speed = false, has_min_distance = false, has_max_distance = false;
@@ -789,6 +887,15 @@ namespace Services
 				std::vector<float> f;
 				if (key == "q")
 					q = Util::Convert::toLowerCopy(value);
+				else if (key == "destination")
+					destination = Util::Convert::toLowerCopy(value);
+				else if (key == "sort")
+				{
+					if (value != "distance")
+						error = "sort takes distance.";
+					else
+						nearest = true;
+				}
 				else if (key == "bbox")
 				{
 					if (!floats(value, f, 4) || f[1] < -90 || f[3] > 90 || f[1] > f[3] || f[0] < -180 || f[2] > 180)
@@ -883,24 +990,36 @@ namespace Services
 				return std::find(list.begin(), list.end(), v) != list.end();
 			}
 
+			// how far from near, nautical miles
+			float fromNear(const Ship &s) const
+			{
+				float d = 0;
+				int bearing = 0;
+				Util::Geodesy::distanceBearing(lat, lon, s.lat, s.lon, d, bearing);
+				return d;
+			}
+
+			// a row's place in the list, the highest first and fit for a cursor:
+			// when it was heard, or with sort=distance how little way from near
+			std::time_t order(const Ship &s) const
+			{
+				return nearest ? (std::time_t)(1000000000LL - (long long)(fromNear(s) * 1852)) : s.last_signal;
+			}
+
 			bool passes(const Ship &s, std::time_t now) const
 			{
 				if (!q.empty() && !contains(s.shipname, q) && !contains(s.callsign, q) && !digits(s.mmsi, q, false) &&
 					!(s.IMO > 0 && digits(s.IMO, q, true)))
+					return false;
+				if (!destination.empty() && !contains(s.destination, destination))
 					return false;
 				const bool placed = isValidCoord(s.lat, s.lon);
 				if ((box || circle) && !placed)
 					return false;
 				if (box && (s.lat < south || s.lat > north || (west <= east ? (s.lon < west || s.lon > east) : (s.lon < west && s.lon > east))))
 					return false;
-				if (circle)
-				{
-					float d = 0;
-					int bearing = 0;
-					Util::Geodesy::distanceBearing(lat, lon, s.lat, s.lon, d, bearing);
-					if (!(d <= radius_nm))
-						return false;
-				}
+				if (circle && !(fromNear(s) <= radius_nm))
+					return false;
 				if (!mmsi.empty() && !has(mmsi, s.mmsi))
 					return false;
 				if (!stations.empty())
@@ -948,12 +1067,20 @@ namespace Services
 		long long limit = 0;
 		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
 			return badLimit();
+		bool brief = false;
+		if (!viewBrief(request, brief))
+			return badView();
 		VesselQuery query;
 		std::string carried = "&limit=" + std::to_string(limit);
 		for (const auto &p : request.params())
 		{
 			if (p.first == "limit" || p.first == "cursor")
 				continue;
+			if (p.first == "view")
+			{
+				carried += "&view=" + urlEncode(p.second);
+				continue;
+			}
 			std::string error;
 			const int taken = query.set(p.first, p.second, error);
 			if (taken < 0)
@@ -962,6 +1089,8 @@ namespace Services
 				return Response::problem(400, "Bad request", "\"" + p.first + "\" is not a parameter of /api/v1/vessels.");
 			carried += "&" + p.first + "=" + urlEncode(p.second);
 		}
+		if (query.nearest && !query.circle)
+			return Response::problem(400, "Bad request", "sort=distance needs near.");
 
 		DB &db = tracker.ships();
 		const std::time_t now = std::time(nullptr), shown = now - db.timeHistory();
@@ -990,13 +1119,15 @@ namespace Services
 		// gone between the two is left out, one changed is written as it is now
 		std::vector<Heard> rows;
 		db.forEachRecent(now, floor, [&](int, const Ship &s, long) {
-			const Heard h{s.last_signal, s.mmsi};
-			if ((paging && !(after < h)) || !view.passes(s, now) || !query.passes(s, now))
+			if (!view.passes(s, now) || !query.passes(s, now))
 				return;
-			rows.push_back(h);
+			const Heard h{query.order(s), s.mmsi};
+			if (!paging || after < h)
+				rows.push_back(h);
 		});
 		std::sort(rows.begin(), rows.end());
 		const bool more = (long long)rows.size() > limit;
+		const long long left = more ? (long long)rows.size() - limit : 0;
 		if (more)
 			rows.resize((std::size_t)limit);
 		std::vector<uint32_t> mmsi;
@@ -1004,6 +1135,7 @@ namespace Services
 			mmsi.push_back(h.id);
 
 		const auto aboard = tracker.riding();
+		const auto index = tracker.places();
 		std::string out;
 		JSON::Writer w(out);
 		beginList(w);
@@ -1012,11 +1144,17 @@ namespace Services
 			if (!s || !view.passes(*s, now) || !query.passes(*s, now))
 				return;
 			auto r = aboard.find(s->mmsi);
-			writeVessel(w, *s, now, db.binaryBadgeHeld(s->mmsi, now), r == aboard.end() ? -1 : r->second);
+			if (brief)
+				writeVesselBrief(w, *s, now, portName(index.get(), db.matchedPortHeld(s->mmsi)), query.circle ? query.fromNear(*s) : -1);
+			else
+				writeVessel(w, *s, now, db.binaryBadgeHeld(s->mmsi, now), r == aboard.end() ? -1 : r->second);
 			count++;
 		});
 		const std::string next = more ? "/api/v1/vessels?cursor=" + cursor("v", {(long long)start, (long long)floor, (long long)rows.back().time, (long long)rows.back().id}) + carried : "";
 		beginMeta(w, count, next);
+		w.kv("more", left);
+		if (brief)
+			w.kv("note", std::string("Short rows, ") + (query.nearest ? "nearest" : "newest") + " first. " + (more ? std::to_string(left) + " more: pass next as cursor, or narrow the search. " : "") + (count == 0 && query.circle ? "None in this radius: widen radius_nm, up to 1000. " : "") + "Every field: view=full, or ask for the one vessel.");
 		// a second of overlap, as messages share a second
 		w.kv("poll", "/api/v1/vessels?cursor=" + cursor("v", {(long long)start - 1}) + carried)
 			.kv("full", full).kv("time", isoTime(now)).kv("expire_s", db.timeHistory()).endObject().endObject();
