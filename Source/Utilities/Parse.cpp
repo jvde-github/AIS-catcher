@@ -423,6 +423,11 @@ namespace Util
 	}
 #endif
 
+	bool Parse::Switch(const std::string &arg)
+	{
+		return Switch(arg, "ON", "OFF");
+	}
+
 	bool Parse::Switch(std::string arg, const std::string &TrueString, const std::string &FalseString)
 	{
 		Util::Convert::toUpper(arg);

@@ -265,6 +265,12 @@ static int serve(const std::string &config_file, int port,
   server.setServerAddress([&site](int port, std::string &host) { return site.serverAddress(port, host); });
   server.setServerPorts([&site] { return site.serverPorts(); });
   server.setServerTLS([&site] { return site.serverTLS(); });
+  server.setReceiverStates([&site] {
+    std::vector<std::pair<int, std::string>> states;
+    for (const auto &r : site.systemFacts().receivers)
+      states.emplace_back(r.index, r.status());
+    return states;
+  });
 
   if (core.authRequired())
     Info() << "Control: managed mode, config file \"" << config_file

@@ -36,7 +36,8 @@ namespace Util
 		static bool OutputFormat(std::string str, MessageFormat &out);
 		static std::string DeviceTypeString(Type type);
 		static std::time_t DateTime(const std::string &datetime);
-		static bool Switch(std::string arg, const std::string &TrueString = "ON", const std::string &FalseString = "OFF");
+		static bool Switch(const std::string &arg);
+		static bool Switch(std::string arg, const std::string &TrueString, const std::string &FalseString);
 		static bool AutoInteger(std::string arg, int min, int max, int &val);
 		// whole digits and nothing else, at most `most` of them, as a path or a query
 		// gives a number: false for anything else, never a throw

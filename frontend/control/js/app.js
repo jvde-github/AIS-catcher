@@ -271,6 +271,7 @@ import { createMessageBar } from './message-bar.js';
 
     const ENGINE_STATES = {
         running: { label: 'Running', dot: 'dot-ok', text: 'sys-ok', dotColor: 'var(--color-on)' },
+        connecting: { label: 'Connecting...', dot: 'dot-warn', text: 'sys-warn-ink', dotColor: 'var(--color-warning-ink)' },
         starting: { label: 'Starting...', dot: 'dot-warn', text: 'sys-warn-ink', dotColor: 'var(--color-warning-ink)' },
         retrying: { label: 'Retrying...', dot: 'dot-warn', text: 'sys-warn-ink', dotColor: 'var(--color-warning-ink)' },
         stopped: { label: 'Stopped', dot: '', text: 't-subtle', dotColor: 'var(--chrome-dot)' }
@@ -298,7 +299,8 @@ import { createMessageBar } from './message-bar.js';
         engineDesired = !!data.desired;
         renderEngineButton();
 
-        const state = running ? 'running' : (data.retrying ? 'retrying' : (data.desired ? 'starting' : 'stopped'));
+        const waiting = Array.isArray(data.receivers) && data.receivers.some(r => r.state === 'starting');
+        const state = running ? (waiting ? 'connecting' : 'running') : (data.retrying ? 'retrying' : (data.desired ? 'starting' : 'stopped'));
         const s = ENGINE_STATES[state];
         engineStateKey = state;
         if (data.uptime !== undefined) {
@@ -693,6 +695,7 @@ import { createMessageBar } from './message-bar.js';
             data.receivers.forEach(r => {
                 const i = on[r.index - 1];
                 if (i !== undefined && r.state === 'lost') next.set(i, 'The device stopped delivering: check that it is plugged in and free.');
+                if (i !== undefined && r.state === 'starting') next.set(i, 'Not connected: trying again.');
             });
         }
         setLive('inputs', next);

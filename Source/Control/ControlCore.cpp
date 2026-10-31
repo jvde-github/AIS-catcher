@@ -854,14 +854,15 @@ bool ControlCore::setPanelTLS(const std::string &cert, const std::string &key, s
     const std::string cert_path = Util::Helper::resolvePath(cert, folder);
     const std::string key_path = Util::Helper::resolvePath(key, folder);
     // as on a save: a path elsewhere can only be written in the file by hand, and stays if unchanged
-    for (const auto &p : {std::make_pair(&cert, &old_cert), std::make_pair(&key, &old_key)}) {
-      const std::string path = Util::Helper::resolvePath(*p.first, folder);
-      if (*p.first != *p.second && !inFolder(path, folder)) {
-        error = "\"" + *p.first + "\" is outside the configuration's folder (" + folder + "): a path elsewhere can only be written in the file by hand.";
+    const std::string *const fields[][2] = {{&cert, &old_cert}, {&key, &old_key}};
+    for (const auto &f : fields) {
+      const std::string path = Util::Helper::resolvePath(*f[0], folder);
+      if (*f[0] != *f[1] && !inFolder(path, folder)) {
+        error = "\"" + *f[0] + "\" is outside the configuration's folder (" + folder + "): a path elsewhere can only be written in the file by hand.";
         return false;
       }
       if (isSameFile(path, config_file)) {
-        error = "\"" + *p.first + "\" is the configuration itself.";
+        error = "\"" + *f[0] + "\" is the configuration itself.";
         return false;
       }
     }

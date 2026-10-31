@@ -58,7 +58,17 @@ void ControlServer::processClients() {
 
   if (hasSSEClients()) {
     uint32_t stamp = core.statusStamp();
-    if (stamp != status_state) {
+    bool states_changed = false;
+    const std::time_t second = std::time(nullptr);
+    if (receiver_states && second != states_time) {
+      states_time = second;
+      auto states = receiver_states();
+      if (states != states_sent) {
+        states_sent.swap(states);
+        states_changed = true;
+      }
+    }
+    if (stamp != status_state || states_changed) {
       status_state = stamp;
       sendSSE(IO::SSE::STATUS, "status", statusJSON(nullptr, false));
     }
@@ -212,6 +222,14 @@ std::string ControlServer::statusJSON(const char *auth, bool authenticated) {
       .kv("uptime", core.getUptime())
       .kv("viewer", core.reportedViewerPort())
       .kv("wizard", core.wizardPending());
+
+  // a session's, or its stream's
+  if (receiver_states && (authenticated || !auth)) {
+    w.key("receivers").beginArray();
+    for (const auto &r : receiver_states())
+      w.beginObject().kv("index", r.first).kv("state", r.second).endObject();
+    w.endArray();
+  }
 
   if (authenticated) {
     static const std::string os = Util::Helper::getOS();

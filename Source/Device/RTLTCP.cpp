@@ -142,7 +142,8 @@ namespace Device
 			while (isStreaming())
 			{
 				session->poll();
-				if (!session->isConnected())
+				connected = session->isConnected();
+				if (!connected)
 				{
 					SleepSystem(50);
 					continue;

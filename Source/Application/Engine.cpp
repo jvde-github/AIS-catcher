@@ -78,7 +78,7 @@ void Engine::publishReceivers() {
     s.station = r.getStation();
     if (device) {
       s.input = device->getProduct();
-      s.streaming = device->isStreaming();
+      s.streaming = device->isStreaming() && device->isConnected();
       s.lost = device->isLost();
     }
     s.label = receiverLabel(receivers, k);

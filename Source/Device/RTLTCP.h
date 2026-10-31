@@ -52,6 +52,7 @@ namespace Device
 		std::vector<char> buffer;
 
 		bool lossless = false;
+		std::atomic<bool> connected{false};
 
 		std::thread async_thread;
 		std::thread run_thread;
@@ -74,6 +75,7 @@ namespace Device
 		void Stop();
 
 		bool isCallback() { return true; }
+		bool isConnected() override { return connected; }
 
 		void getDeviceList(std::vector<Description> &DeviceList);
 

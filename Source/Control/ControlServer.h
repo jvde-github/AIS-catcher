@@ -51,6 +51,7 @@ public:
 	void setServerAddress(std::function<bool(int, std::string &)> f) { server_address = std::move(f); }
 	void setServerPorts(std::function<std::vector<int>()> f) { server_ports = std::move(f); }
 	void setServerTLS(std::function<std::vector<std::pair<int, long long>>()> f) { server_tls = std::move(f); }
+	void setReceiverStates(std::function<std::vector<std::pair<int, std::string>>()> f) { receiver_states = std::move(f); }
 
 protected:
 	void processClients() override;
@@ -61,6 +62,9 @@ private:
 	std::function<bool(int, std::string &)> server_address;
 	std::function<std::vector<int>()> server_ports;
 	std::function<std::vector<std::pair<int, long long>>()> server_tls;
+	std::function<std::vector<std::pair<int, std::string>>()> receiver_states;
+	std::vector<std::pair<int, std::string>> states_sent;
+	std::time_t states_time = 0;
 
 	// The endpoints that answer without a session, method null meaning any.
 	// Everything else is private: a mistake here locks an endpoint down

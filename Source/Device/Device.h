@@ -98,6 +98,7 @@ namespace Device {
 		bool isActive() { return isStreaming() && !lost; }
 		// it stopped by itself: unplugged, the connection gone
 		bool isLost() const { return lost; }
+		virtual bool isConnected() { return true; }
 		virtual bool isReplay() { return false; }
 
 		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }
