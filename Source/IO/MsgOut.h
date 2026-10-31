@@ -257,7 +257,7 @@ namespace IO
 		{
 			std::string s = "msgformat: " + Util::Convert::toString(fmt);
 			if (!uuid.empty())
-				s += ", uuid: " + uuid;
+				s += ", uuid: set";
 			const std::string f = filter.Get();
 			if (!f.empty())
 				s += ", " + f;
