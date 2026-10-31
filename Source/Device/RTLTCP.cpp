@@ -44,6 +44,14 @@ namespace Device
 			session = tcp.add(&mqtt);
 			mqtt.setOptionKey(AIS::KEY_SETTING_SUBSCRIBE, "on");
 			break;
+		case PROTOCOL::MQTTS:
+			session = tcp.add(&tls);
+			session = tls.add(&mqtt);
+			mqtt.setOptionKey(AIS::KEY_SETTING_SUBSCRIBE, "on");
+			break;
+		case PROTOCOL::TLS:
+			session = tcp.add(&tls);
+			break;
 		case PROTOCOL::GPSD:
 			session = tcp.add(&gpsd);
 			break;
@@ -60,6 +68,14 @@ namespace Device
 			break;
 		case PROTOCOL::WSMQTT:
 			session = tcp.add(&ws);
+			session = ws.add(&mqtt);
+			ws.setOptionKey(AIS::KEY_SETTING_PROTOCOLS, "mqtt");
+			ws.setOptionKey(AIS::KEY_SETTING_BINARY, "on");
+			mqtt.setOptionKey(AIS::KEY_SETTING_SUBSCRIBE, "on");
+			break;
+		case PROTOCOL::WSSMQTT:
+			session = tcp.add(&tls);
+			session = tls.add(&ws);
 			session = ws.add(&mqtt);
 			ws.setOptionKey(AIS::KEY_SETTING_PROTOCOLS, "mqtt");
 			ws.setOptionKey(AIS::KEY_SETTING_BINARY, "on");
@@ -235,13 +251,20 @@ namespace Device
 				break;
 			case PROTOCOL::WS:
 			case PROTOCOL::WSS:
+			case PROTOCOL::WSSMQTT:
 				if (tcp.getPort().empty())
-					SetKey(AIS::KEY_SETTING_PORT, Protocol == PROTOCOL::WSS ? "443" : "80");
+					SetKey(AIS::KEY_SETTING_PORT, Protocol == PROTOCOL::WS ? "80" : "443");
+				setFormat(Format::TXT);
+				break;
+			case PROTOCOL::MQTTS:
+				if (tcp.getPort().empty())
+					SetKey(AIS::KEY_SETTING_PORT, "8883");
 				setFormat(Format::TXT);
 				break;
 			case PROTOCOL::GPSD:
 			case PROTOCOL::MQTT:
 			case PROTOCOL::WSMQTT:
+			case PROTOCOL::TLS:
 			case PROTOCOL::TXT:
 				setFormat(Format::TXT);
 				break;

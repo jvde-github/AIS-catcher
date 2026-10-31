@@ -804,12 +804,15 @@ export const receiverSchema = {
         defaultValue: "rtltcp",
         options: [
             { value: "txt", label: "NMEA" },
+            { value: "tls", label: "NMEA over TLS" },
             { value: "none", label: "Raw" },
             { value: "rtltcp", label: "RTLTCP" },
             { value: "ws", label: "WS" },
             { value: "wss", label: "WSS" },
             { value: "wsmqtt", label: "WSMQTT" },
+            { value: "wssmqtt", label: "WSSMQTT" },
             { value: "mqtt", label: "MQTT" },
+            { value: "mqtts", label: "MQTTS" },
             { value: "gpsd", label: "GPSD" },
             { value: "beast", label: "BEAST" },
             { value: "basestation", label: "BASESTATION" },
@@ -830,7 +833,7 @@ export const receiverSchema = {
         placeholder: "e.g., 127.0.0.1",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: ["txt", "none", "rtltcp", "wsmqtt", "mqtt", "gpsd", "beast", "basestation", "raw1090"]
+            value: ["txt", "tls", "none", "rtltcp", "wsmqtt", "wssmqtt", "mqtt", "mqtts", "gpsd", "beast", "basestation", "raw1090"]
         },
         width: 75
     },
@@ -843,7 +846,7 @@ export const receiverSchema = {
         placeholder: "e.g., 1234",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: ["txt", "none", "rtltcp", "wsmqtt", "mqtt", "gpsd", "beast", "basestation", "raw1090"]
+            value: ["txt", "tls", "none", "rtltcp", "wsmqtt", "wssmqtt", "mqtt", "mqtts", "gpsd", "beast", "basestation", "raw1090"]
         },
         width: 25
     },
@@ -869,7 +872,7 @@ export const receiverSchema = {
         width: 25,
         dependsOn: {
             field: "rtltcp_protocol",
-            value: "wss"
+            value: ["wss", "tls", "mqtts", "wssmqtt"]
         }
     },
     rtltcp_sample_rate: {
@@ -981,7 +984,7 @@ export const receiverSchema = {
         placeholder: "Origin header for WebSocket",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: ["ws", "wss", "wsmqtt"]
+            value: ["ws", "wss", "wsmqtt", "wssmqtt"]
         }
     },
     rtltcp_topic: {
@@ -993,7 +996,7 @@ export const receiverSchema = {
         defaultValue: "ais/data",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: ["mqtt", "wsmqtt"]
+            value: ["mqtt", "mqtts", "wsmqtt", "wssmqtt"]
         }
     },
     rtltcp_client_id: {
@@ -1005,7 +1008,7 @@ export const receiverSchema = {
         placeholder: "MQTT client identifier",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: ["mqtt", "wsmqtt"]
+            value: ["mqtt", "mqtts", "wsmqtt", "wssmqtt"]
         }
     },
     rtltcp_username: {
@@ -1017,7 +1020,7 @@ export const receiverSchema = {
         placeholder: "Username (MQTT, or HTTP Basic for WebSocket)",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: ["mqtt", "wsmqtt", "ws", "wss"]
+            value: ["mqtt", "mqtts", "wsmqtt", "wssmqtt", "ws", "wss"]
         }
     },
     rtltcp_password: {
@@ -1029,7 +1032,7 @@ export const receiverSchema = {
         placeholder: "Password, or a bearer token with no username",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: ["mqtt", "wsmqtt", "ws", "wss"]
+            value: ["mqtt", "mqtts", "wsmqtt", "wssmqtt", "ws", "wss"]
         }
     },
     rtltcp_qos: {
@@ -1046,7 +1049,7 @@ export const receiverSchema = {
         defaultValue: "0",
         dependsOn: {
             field: "rtltcp_protocol",
-            value: ["mqtt", "wsmqtt"]
+            value: ["mqtt", "mqtts", "wsmqtt", "wssmqtt"]
         }
     },
     serialport_port: {
