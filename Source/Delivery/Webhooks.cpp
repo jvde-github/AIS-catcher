@@ -178,7 +178,7 @@ bool Webhooks::deliver(Hook &hook, const std::vector<Journal::Entry> &events)
 void Webhooks::loop()
 {
 	std::unique_lock<std::mutex> lock(mtx);
-	bool more = false; // a delivery went through, or a read came back full: more may be waiting, so no pause
+	bool more = false;
 	while (running)
 	{
 		if (!more)
@@ -237,7 +237,7 @@ void Webhooks::loop()
 			const bool ok = deliver(copy, due);
 			lock.lock();
 			if (i >= hooks.size() || !(hooks[i].spec == copy.spec))
-				continue; // the configuration changed meanwhile
+				continue;
 			if (ok)
 			{
 				hooks[i].cursor = due.back().seq;

@@ -135,7 +135,7 @@ private:
 	// the engine's part of a status page, as key-value pairs in an open object
 	void writeEngine(JSON::Writer &w, EnginePart part);
 	ByteCounter bytes;
-	const std::time_t born = std::time(nullptr); // the process's run time counts from here
+	const std::time_t born = std::time(nullptr);
 
 	std::mutex site_mtx;
 	// how often the tracker is backed up; 0 for never
@@ -218,8 +218,8 @@ private:
 	void configureDeliveries(const SiteConfig &cfg);
 #endif
 	std::time_t last_tick = 0, last_backup = 0;
-	std::string backup_file; // the file the configuration named when the tracker was made
-	bool backing_up = false; // backups go to it: not without one, nor when its copy of an earlier version could not be kept
+	std::string backup_file;
+	bool backing_up = false;
 	// the seconds to the next beat
 	int beat(std::time_t now);
 	void backup();

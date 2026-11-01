@@ -67,7 +67,7 @@ private:
 	static const uint32_t NIL = 0xFFFFFFFFu;
 
 	static const uint32_t HORIZON = 3600;	 // full-resolution window in seconds
-	static const uint32_t DWELL_MAX = 0xFFFFu; // ceiling of the uint16 dur field
+	static const uint32_t DWELL_MAX = 0xFFFFu;
 	static const int DEADBAND = 40;			 // meters a ship must move to count as significant
 	static const uint16_t IDLE_SOG = 5;		 // 0.1 knot units, at or below this a ship is not making way
 

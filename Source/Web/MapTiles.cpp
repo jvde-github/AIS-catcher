@@ -74,7 +74,7 @@ const TileExt *extInfo(const std::string &filename) {
       return &t;
   return nullptr;
 }
-} // namespace
+}
 
 MapTiles::MapTiles() : minZoom(0), maxZoom(18) {
   static std::atomic<int> next_layer{0};

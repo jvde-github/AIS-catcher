@@ -40,9 +40,9 @@ public:
 
   struct Accumulator {
     uint32_t reports = 0, headings = 0, seconds = 0;
-    float lat0 = LAT_UNDEFINED, lon0 = LON_UNDEFINED; // the origin of the local metres
-    double sx = 0, sy = 0, sxx = 0, syy = 0;          // sums of the local position
-    double hx = 0, hy = 0;                             // the heading unit vectors
+    float lat0 = LAT_UNDEFINED, lon0 = LON_UNDEFINED;
+    double sx = 0, sy = 0, sxx = 0, syy = 0;
+    double hx = 0, hy = 0;
     float draught_in = DRAUGHT_UNDEFINED;
     char destination_in[21] = {0};
     bool start_seen = true; // false: counting began after the rest did
@@ -151,4 +151,4 @@ private:
   std::unordered_map<int, Accumulator> store;
 };
 
-} // namespace Tracking
+}

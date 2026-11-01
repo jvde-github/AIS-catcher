@@ -80,4 +80,4 @@ const size_t PLACE_VERTICES = 2000, WATER_VERTICES = 16000;
 // outline is refused.
 Shape compile(const std::string &type, const JSON::Value &coordinates,
               bool water);
-} // namespace PlaceGeometry
+}

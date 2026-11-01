@@ -77,9 +77,9 @@ namespace IO
 			if (!c)
 				return;
 
-			c->setNoTimeout();			 // must survive the idle-timeout sweep
+			c->setNoTimeout();
 			c->setSendLimit(SEND_LIMIT);
-			c->close_after_send = false; // the stream outlives the request that opened it
+			c->close_after_send = false;
 
 			std::string headers = "HTTP/1.1 200 OK\r\n";
 			headers += "Content-Type: text/event-stream\r\n";
@@ -139,10 +139,10 @@ namespace IO
 		std::string origin;
 		std::string forwarded_host;
 		std::string authorization;
-		std::string setup_code; // X-Setup-Code
-		std::string peer; // the client's numeric address, as its socket has it
-		bool forwarded = false; // names a proxy: Forwarded, X-Real-IP or an X-Forwarded-* header
-		bool owner = false;		// from whoever owns this machine's station: see isOwner
+		std::string setup_code;
+		std::string peer;
+		bool forwarded = false;
+		bool owner = false;
 		bool keep_alive = true;
 		bool accept_gzip = false;
 		bool expect_continue = false;
@@ -346,7 +346,7 @@ namespace IO
 		int max_sse = 64;
 		// union of the subscriber masks, read by producers on other threads
 		std::atomic<uint32_t> topics{0};
-		std::atomic<std::size_t> bytes_out{0}; // response bytes written, headers included
+		std::atomic<std::size_t> bytes_out{0};
 		std::chrono::steady_clock::time_point last_sse_ping{};
 		static const int SSE_PING_INTERVAL = 20;
 		// below this size the gzip header/CPU overhead outweighs the savings

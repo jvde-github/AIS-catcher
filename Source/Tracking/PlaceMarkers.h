@@ -28,9 +28,9 @@ class PlaceMarkers {
   std::shared_ptr<const PlaceIndex> snapshot;
   std::vector<uint64_t> sequences;
   std::vector<std::pair<uint32_t, uint64_t>> removed;
-  uint64_t latest = 0; // newest row or removal; an older cursor skips the walk
+  uint64_t latest = 0;
   mutable std::vector<uint32_t>
-      hits; // reused by every lookup, read before the next
+      hits;
 
 public:
   using Bounds = std::array<double, 4>;

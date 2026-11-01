@@ -37,13 +37,13 @@ struct ViewFilter
 	// tells it; empty is any
 	std::vector<int> stations;
 	std::vector<std::string> hidden_buckets; // am as bm bs aton base sarte air
-	std::vector<int> hidden_classes;         // ship class numbers, as the viewer's
+	std::vector<int> hidden_classes;
 	std::vector<int> hidden_statuses;        // navigational status 0-15
 	bool has_speed_min = false, has_speed_max = false;
 	float speed_min = 0, speed_max = 0; // knots
 	int seen = 0;                       // minutes; 0 is any age
 	int track_time = 0;                 // seconds of track served; 0 is what the tracker keeps
-	bool place_geometry = true;         // a place's outline is served, not only its marker
+	bool place_geometry = true;
 	bool has_distance_min = false, has_distance_max = false;
 	float distance_min = 0, distance_max = 0; // nautical miles, from the station that heard the ship
 	std::string validated = "any";            // any | yes | no | pending

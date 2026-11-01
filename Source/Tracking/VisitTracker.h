@@ -79,8 +79,8 @@ public:
   };
   struct Record {
     std::array<Visit, SLOTS> visits;
-    uint32_t last = 0;    // the last fix
-    bool stopped = false; // the last fix said stopped
+    uint32_t last = 0;
+    bool stopped = false;
   };
   static_assert(sizeof(Visit) <= 20, "Visit storage must stay compact");
   static_assert(sizeof(Record) <= 208, "Ten visits must remain bounded");
@@ -94,7 +94,7 @@ private:
     return bool(in.read(reinterpret_cast<char *>(&value), sizeof(value)));
   }
   std::vector<Record> records;
-  RelationshipIndex<uint32_t, SLOTS> membership; // place -> ships with a visit
+  RelationshipIndex<uint32_t, SLOTS> membership;
   // Zero is the unknown-time sentinel; unsigned seconds end in February 2106.
   static bool validTime(std::time_t now) {
     return now > 0 && uint64_t(now) <= UINT32_MAX;
@@ -510,7 +510,7 @@ public:
             ((state & 1) && exit))
           return false;
         if (ids[offset] == UINT32_MAX)
-          continue; // the place is gone
+          continue;
         // no entry time: anchor one still inside to the last signal, drop the
         // rest
         int64_t stamp = entry;

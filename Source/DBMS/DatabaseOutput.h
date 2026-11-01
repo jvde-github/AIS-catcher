@@ -123,7 +123,7 @@ namespace IO
 			int level_count = 0, ppm_count = 0;
 			float level_min = 0, level_max = 0;
 			double ppm_sum = 0;
-			int vessel_count = 0; // vessels.size() frozen at hand-off
+			int vessel_count = 0;
 			std::set<uint32_t> vessels;
 
 			// copy without the vessels set

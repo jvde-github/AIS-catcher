@@ -64,15 +64,15 @@ public:
     uint32_t count = 0;
     time_t first = 0, last = 0;
     std::string json;
-    std::string label;  // station or lock id, the pill text
-    std::string shapes; // area notice geometry
+    std::string label;
+    std::string shapes;
     int atype = -1;
-    int marker = -1;    // marker slot when the item stands on its own position
-    int next = -1;      // next member of that marker
-    uint32_t owner = 0; // the ship this item badges on when it has no marker
-    int onext = -1;     // next item of that ship
-    uint32_t sent_by = 0; // the transmitter whose sent chain holds it
-    int snext = -1;       // next item that transmitter sent
+    int marker = -1;
+    int next = -1;
+    uint32_t owner = 0;
+    int onext = -1;
+    uint32_t sent_by = 0;
+    int snext = -1;
   };
 
   // what a ship shows: the items about it (addressed to it, or its own

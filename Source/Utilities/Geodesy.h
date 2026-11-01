@@ -53,7 +53,7 @@ namespace Util
 		inline void distanceBearing(float lat1, float lon1, float lat2, float lon2, float &distance, int &bearing)
 		{
 			const float EarthRadius = 6371.0f;			// kilometers
-			const float NauticalMilePerKm = 0.5399568f; // conversion factor
+			const float NauticalMilePerKm = 0.5399568f;
 
 			lat1 = deg2rad(lat1);
 			lon1 = deg2rad(lon1);

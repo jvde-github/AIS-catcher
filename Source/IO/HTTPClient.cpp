@@ -171,7 +171,7 @@ namespace IO
 		}
 
 		buffer.clear();
-		buffer.resize(8192); // Start with 8KB buffer
+		buffer.resize(8192);
 
 		// Send header
 		if (!connection->sendAll(header.c_str(), (int)header.length()))

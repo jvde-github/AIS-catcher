@@ -175,7 +175,7 @@ namespace IO
 		// chronological file, last row per target wins, upsert restores LRU order
 		std::vector<std::string> f;
 		std::string line;
-		std::getline(file, line); // header
+		std::getline(file, line);
 
 		int restored = 0, skipped = 0;
 		while (std::getline(file, line))
@@ -259,7 +259,7 @@ namespace IO
 
 		std::vector<std::string> f;
 		std::string line;
-		std::getline(file, line); // header
+		std::getline(file, line);
 		while (std::getline(file, line))
 		{
 			// keyed on the bucket; a corrupt line is dropped, not written back

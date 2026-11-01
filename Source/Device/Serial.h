@@ -41,9 +41,9 @@ namespace Device
 	{
 		enum class FlowControl
 		{
-			NONE,	  // Explicitly disable both hardware and software flow control
-			HARDWARE, // Enable hardware (RTS/CTS), disable software
-			SOFTWARE  // Enable software (XON/XOFF), disable hardware
+			NONE,
+			HARDWARE,
+			SOFTWARE
 		};
 
 #ifdef _WIN32
@@ -55,7 +55,7 @@ namespace Device
 			DWORD errorMessageID = ::GetLastError();
 			if (errorMessageID == 0)
 			{
-				return std::string(); // No error message has been recorded
+				return std::string();
 			}
 
 			LPSTR messageBuffer = nullptr;
@@ -76,7 +76,7 @@ namespace Device
 
 		std::string port;
 		int baudrate;
-		FlowControl flowcontrol = FlowControl::NONE; // Default
+		FlowControl flowcontrol = FlowControl::NONE;
 		
 		std::thread read_thread;
 

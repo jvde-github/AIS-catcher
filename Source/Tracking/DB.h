@@ -94,7 +94,7 @@ class DB : public StreamIn<JSON::JSON>,
   VisitTracker visits;
   DestinationIndex destinations;
   PlaceMarkers place_markers;
-  std::time_t full_refresh_at = 0; // older ship deltas require a full response
+  std::time_t full_refresh_at = 0;
 
   void updateDistance(Ship &ship);
 
@@ -357,8 +357,8 @@ public:
 
   struct SeedCount {
     int created = 0;
-    int present = 0; // already in the table, left untouched
-    int full = 0;    // refused: the table is at its seeding ceiling
+    int present = 0;
+    int full = 0;
   };
 
   // Hands out blank records during a seed; only DB makes one.
@@ -464,10 +464,10 @@ private:
 
   BinaryStore binary;
   StationRegistry stations;
-  std::function<std::time_t(int)> station_heard; // set by the host, see setStationHeard
+  std::function<std::time_t(int)> station_heard;
   // the ticker's view of the event stream, wired in the constructor
   EventRing ring;
-  uint64_t event_seq = 0; // the stream's sequence; the process start is the epoch
+  uint64_t event_seq = 0;
   TAG event_tag;
   // which positions become fix events; nothing until a host asks for fixes
   FixSampler sampler;

@@ -73,10 +73,10 @@ private:
 	};
 	std::unique_ptr<Link> link;
 
-	bool announced = false; // discovery and the first state went out on this connection
+	bool announced = false;
 	std::time_t last_state = 0;
-	uint64_t cursor = 0; // the journal's events published so far
-	std::map<std::string, std::string> sent; // retained topics and what they hold, to send only a change
+	uint64_t cursor = 0;
+	std::map<std::string, std::string> sent;
 
 	void open();
 	void close();

@@ -256,7 +256,7 @@ namespace AIS
 		for (const auto &nmea : sentences())
 		{
 			w.append('\\');
-			size_t cs_off = w.written(); // checksum starts after backslash
+			size_t cs_off = w.written();
 
 			w.append_lit("s:");
 			w.append(src, srcLen);

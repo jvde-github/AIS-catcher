@@ -318,7 +318,7 @@ std::string upgradeOlderSchema(const JSON::JSON &feature,
   w.finish();
   return out;
 }
-} // namespace
+}
 
 JSON::Document PlaceCatalogue::parse(const std::string &json) {
   if (json.size() > FEATURE_BYTES)

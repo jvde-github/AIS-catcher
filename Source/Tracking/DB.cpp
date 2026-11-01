@@ -98,7 +98,7 @@ bool DB::forEachTrackPoint(uint32_t mmsi, std::time_t since,
 // moored is fenders and GPS wander, anchored swings on the chain, otherwise
 // status is unknown (Class B carries none)
 static int idleBand(int status) {
-  const int NAV_ANCHORED = 1, NAV_MOORED = 5; // ITU-R M.1371
+  const int NAV_ANCHORED = 1, NAV_MOORED = 5;
   if (status == NAV_MOORED)
     return 50;
   if (status == NAV_ANCHORED)
@@ -274,36 +274,36 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg,
     break;
   case AIS::KEY_CS:
     ship.setCSUnit(
-        p.Get().getBool() ? 2 : 1); // 1=SOTDMA (false), 2=Carrier Sense (true)
+        p.Get().getBool() ? 2 : 1);
     break;
   case AIS::KEY_RAIM:
-    ship.setRAIM(p.Get().getBool() ? 2 : 1); // 0=unknown, 1=false, 2=true
+    ship.setRAIM(p.Get().getBool() ? 2 : 1);
     break;
   case AIS::KEY_DTE:
-    ship.setDTE(p.Get().getBool() ? 2 : 1); // 0=unknown, 1=ready, 2=not ready
+    ship.setDTE(p.Get().getBool() ? 2 : 1);
     break;
   case AIS::KEY_ASSIGNED:
     ship.setAssigned(
-        p.Get().getBool() ? 2 : 1); // 0=unknown, 1=autonomous, 2=assigned
+        p.Get().getBool() ? 2 : 1);
     break;
   case AIS::KEY_DISPLAY:
-    ship.setDisplay(p.Get().getBool() ? 2 : 1); // 0=unknown, 1=false, 2=true
+    ship.setDisplay(p.Get().getBool() ? 2 : 1);
     break;
   case AIS::KEY_DSC:
-    ship.setDSC(p.Get().getBool() ? 2 : 1); // 0=unknown, 1=false, 2=true
+    ship.setDSC(p.Get().getBool() ? 2 : 1);
     break;
   case AIS::KEY_BAND:
-    ship.setBand(p.Get().getBool() ? 2 : 1); // 0=unknown, 1=false, 2=true
+    ship.setBand(p.Get().getBool() ? 2 : 1);
     break;
   case AIS::KEY_MSG22:
-    ship.setMsg22(p.Get().getBool() ? 2 : 1); // 0=unknown, 1=false, 2=true
+    ship.setMsg22(p.Get().getBool() ? 2 : 1);
     break;
   case AIS::KEY_OFF_POSITION:
     ship.setOffPosition(
-        p.Get().getBool() ? 2 : 1); // 0=unknown, 1=on position, 2=off position
+        p.Get().getBool() ? 2 : 1);
     break;
   case AIS::KEY_MANEUVER:
-    ship.setManeuver(p.Get().getInt()); // 0=not available, 1=no special,
+    ship.setManeuver(p.Get().getInt());
                                         // 2=special (direct value)
     break;
   case AIS::KEY_NAME:
@@ -636,7 +636,7 @@ void DB::sampleFix(int ptr, std::time_t t, bool force) {
   if (force) {
     const FixSampler::Fix &k = sampler.lastKept(ptr);
     if (k.t == now.t && k.lat == now.lat && k.lon == now.lon)
-      return; // already told
+      return;
     v = FixSampler::NOW;
   }
   if (v == FixSampler::NOW) {

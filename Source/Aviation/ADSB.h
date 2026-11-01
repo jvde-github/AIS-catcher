@@ -33,11 +33,11 @@ namespace Plane
 {
     static constexpr double BEAST_CLOCK_MHZ = 12.0;
     // CPR position update related constants
-    static constexpr double CPR_MAX_TIMEDIFF = 10.0;         // Maximum time difference between even/odd messages (airborne)
-    static constexpr double CPR_MAX_TIMEDIFF_SURFACE = 50.0; // Surface positions are transmitted far less often
-    static constexpr int NZ = 15;                    // Number of geographic latitude zones
-    static constexpr double AirDlat0 = 360.0 / 60;   // Even message latitude zone size
-    static constexpr double AirDlat1 = 360.0 / 59;   // Odd message latitude zone size
+    static constexpr double CPR_MAX_TIMEDIFF = 10.0;
+    static constexpr double CPR_MAX_TIMEDIFF_SURFACE = 50.0;
+    static constexpr int NZ = 15;
+    static constexpr double AirDlat0 = 360.0 / 60;
+    static constexpr double AirDlat1 = 360.0 / 59;
 
     enum class ValueStatus
     {
@@ -77,34 +77,34 @@ namespace Plane
 
         int CPR_history_idx = 0;
 
-        static constexpr int MAX_BYTES = 14; // Mode-S long frame; covers DF 16/17/18/20/21.
+        static constexpr int MAX_BYTES = 14;
         uint8_t msg[MAX_BYTES + 4];          // +4 padding so the 5-byte read in getUint is always in-bounds.
-        int df;          // Downlink format
-        int msgtype;     // Message type
-        int len;         // Length of message
+        int df;
+        int msgtype;
+        int len;
         std::time_t rxtime;
-        uint32_t hexident; // Aircraft Mode S hex code
+        uint32_t hexident;
         int hexident_status;
-        int altitude;     // Mode C altitude
-        FLOAT32 lat, lon; // Position
+        int altitude;
+        FLOAT32 lat, lon;
         ValueStatus position_status;
         std::time_t position_timestamp;
-        FLOAT32 speed;         // Speed over ground
-        FLOAT32 heading;       // Track angle
-        FLOAT32 distance;      // Distance from station
-        int angle;             // Angle from station
-        int vertrate;          // Vertical rate
+        FLOAT32 speed;
+        FLOAT32 heading;
+        FLOAT32 distance;
+        int angle;
+        int vertrate;
         char callsign[9];      // Aircraft callsign, nul terminated
-        int squawk;            // Mode A squawk code
-        int category;          // ADS-B category
+        int squawk;
+        int category;
         int airborne;          // 0 = on ground, 1 = airborne, 2 = unknown
-        long messages;         // Number of Mode S messages received
-        struct CPR even, odd;  // CPR coordinates
-        FLOAT32 signalLevel;   // Signal level
-        std::time_t timestamp; // Timestamp
-        int crc;               // CRC checksum
-        int status;            // Status
-        char country_code[2];  // Country code
+        long messages;
+        struct CPR even, odd;
+        FLOAT32 signalLevel;
+        std::time_t timestamp;
+        int crc;
+        int status;
+        char country_code[2];
         long nMessages;
         uint32_t message_types;
         uint32_t message_subtypes;

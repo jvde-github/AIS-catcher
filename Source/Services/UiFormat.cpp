@@ -104,7 +104,7 @@ static void compactDynamic(JSON::Writer &w, const Ship &ship, std::time_t now,
       .val(ship.shipclass)
       .val(ship.country_code)
       .val(binary_badge)
-      .val_unless(riding, -1) // the station riding the vessel
+      .val_unless(riding, -1)
       .beginArray();
   for (auto id : place_ids) {
     if (id == UINT32_MAX)
@@ -219,7 +219,7 @@ std::string UiFormat::shipsCompact(DB &db, bool full, std::time_t since,
                                    db.visits.insideIds(ptr, db.place_markers.index().get()),
                                    list_stations);
         });
-    w.endArray(); // dynamic
+    w.endArray();
 
     // --- Pass 2: static array ---
     w.key("static").beginArray();
@@ -228,7 +228,7 @@ std::string UiFormat::shipsCompact(DB &db, bool full, std::time_t since,
                             if ((since == 0 || ship.last_static_signal >= since) && (!keep || keep(ship)))
                               compactStatic(w, ship);
                           });
-    w.endArray(); // static
+    w.endArray();
 
     w.endObject();
     w.raw("\n\n");
@@ -549,7 +549,7 @@ std::string UiFormat::nearby(DB &db, float lat, float lon, uint32_t skip,
   const auto now = time(nullptr);
 
   struct Near {
-    uint32_t key; // ship slot, station id, or place runtime id
+    uint32_t key;
     float range;
     int bearing;
   };
@@ -563,7 +563,7 @@ std::string UiFormat::nearby(DB &db, float lat, float lon, uint32_t skip,
     std::sort(list.begin(), list.end(), nearer);
     if (list.size() > KEEP) {
       list.pop_back();
-      reach = list.back().range; // nothing farther can join now
+      reach = list.back().range;
     }
   };
   auto off = [&](float plat, float plon, float &range, int &bearing) {
@@ -728,7 +728,7 @@ std::string UiFormat::placeShips(DB &db, uint32_t id, const std::string &version
   // destination, where passing through is the whole of what happens.
   const bool berthing = !place || place->metadata->requiresStop();
   auto vessel = [](const Ship &s) {
-    return s.shipclass < CLASS_PLANE; // planes, stations, aids, EPIRBs are not
+    return s.shipclass < CLASS_PLANE;
   };
   // closest is everyone's - a place with no outline can answer nothing else -
   // and expected is a port's, because it reads reported destinations
@@ -845,7 +845,7 @@ std::string UiFormat::placeShips(DB &db, uint32_t id, const std::string &version
       if (!(range <= HORIZON_NM))
         return;
       if (db.visits.insideOf(ptr, place->id))
-        return; // inside is its own tab
+        return;
       ++counts[4];
       if (selected != 4) return;
       nearest.push_back({(uint32_t)ptr, nullptr, ship.last_signal, range});

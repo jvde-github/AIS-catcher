@@ -140,7 +140,7 @@ struct Ship {
   bool Load(std::ifstream &file);
 
 private:
-  static const int _SHIP_MAGIC = 0x53484950; // "SHIP" in hex
+  static const int _SHIP_MAGIC = 0x53484950;
   static const int _SHIP_VERSION = 8;
   static const int _SHIP_VERSION_RESTED = 7;   // the rest, no station list
   static const int _SHIP_VERSION_PREVIOUS = 6; // before the rest on the record
@@ -194,29 +194,29 @@ public:
   int getChannels() const { return flags.get(6, 4); }
   int getCSUnit() const {
     return flags.get(10, 2);
-  } // 0=unknown, 1=SOTDMA, 2=Carrier Sense
-  int getRAIM() const { return flags.get(12, 2); } // 0=unknown, 1=false, 2=true
+  }
+  int getRAIM() const { return flags.get(12, 2); }
   int getDTE() const {
     return flags.get(14, 2);
-  } // 0=unknown, 1=ready, 2=not ready
+  }
   int getAssigned() const {
     return flags.get(16, 2);
-  } // 0=unknown, 1=autonomous, 2=assigned
+  }
   int getDisplay() const {
     return flags.get(18, 2);
-  } // 0=unknown, 1=false, 2=true
-  int getDSC() const { return flags.get(20, 2); }  // 0=unknown, 1=false, 2=true
-  int getBand() const { return flags.get(22, 2); } // 0=unknown, 1=false, 2=true
+  }
+  int getDSC() const { return flags.get(20, 2); }
+  int getBand() const { return flags.get(22, 2); }
   int getMsg22() const {
     return flags.get(24, 2);
-  } // 0=unknown, 1=false, 2=true
+  }
   int getOffPosition() const {
     return flags.get(26, 2);
-  } // 0=unknown, 1=on position, 2=off position
+  }
   int getManeuver() const {
     return flags.get(28, 2);
-  } // 0=not available, 1=no special, 2=special
+  }
   int getInlandDraught() const {
     return flags.get(30, 1);
-  } // 0=type 5, 1=DAC 200 FID 10
+  }
 };

@@ -46,11 +46,11 @@ struct EngineFacts
 struct ReceiverState
 {
 	int index = 0, station = 0;
-	std::string input, label; // the kind of input, and the device or the receiver's own name
-	bool streaming = false;	  // the device delivers
-	bool lost = false;		  // it stopped by itself
-	uint64_t messages = 0;	  // since the session started
-	uint64_t per_minute = 0;  // in the last minute
+	std::string input, label;
+	bool streaming = false;
+	bool lost = false;
+	uint64_t messages = 0;
+	uint64_t per_minute = 0;
 
 	// in one word: lost, streaming, or starting while its device has yet to deliver
 	const char *status() const { return lost ? "lost" : streaming ? "streaming" : "starting"; }
@@ -77,7 +77,7 @@ const int STATION_QUIET_S = 900;
 struct SystemFacts
 {
 	bool running = false;
-	std::time_t born = 0, session = 0; // when the process started; when the running session did
-	uint64_t received = 0;			   // bytes from every input
+	std::time_t born = 0, session = 0;
+	uint64_t received = 0;
 	std::vector<ReceiverState> receivers;
 };

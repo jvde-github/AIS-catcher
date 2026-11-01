@@ -60,8 +60,8 @@ class PlaneDB : public StreamIn<Plane::ADSB>
     static const int N = 512;
     static const int NBUCKETS = 1031;
 
-    static const int TIMEOUT_AIRBORNE = 60; // ADS-B goes quiet only when the plane is gone
-    static const int TIMEOUT_GROUND = 300;  // ground traffic reports lazily
+    static const int TIMEOUT_AIRBORNE = 60;
+    static const int TIMEOUT_GROUND = 300;
     static const int CONFIRM_WINDOW = 15 * 60;
 
     typedef SlotTable<Plane::ADSB, uint32_t> Table;

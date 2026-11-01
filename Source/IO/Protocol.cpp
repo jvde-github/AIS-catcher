@@ -467,7 +467,7 @@ namespace Protocol
 
 			int received = recv(sock, buffer + total_received, remaining_length, 0);
 
-			if (received == 0) // peer performed orderly shutdown (EOF), not an error
+			if (received == 0)
 			{
 				Debug() << "TCP (" << host << ":" << port << "): connection closed by peer.";
 				disconnect();
@@ -765,7 +765,7 @@ namespace Protocol
 		if (!isConnected())
 			return 0;
 
-		uint64_t before = BIO_number_read(SSL_get_rbio(ssl)); // fix: was SSL_get_wbio
+		uint64_t before = BIO_number_read(SSL_get_rbio(ssl));
 		int result = 0;
 
 		// do not block if we are not waiting
@@ -1719,7 +1719,7 @@ namespace Protocol
 
 			if (lower.find("sec-websocket-accept:") != std::string::npos)
 			{
-				const std::size_t value = line.find(":") + 2; // Add 2 to skip ": "
+				const std::size_t value = line.find(":") + 2;
 				accept_key = value < line.size() ? line.substr(value) : std::string();
 				// Remove trailing whitespace and CR/LF
 				accept_key.resize(accept_key.find_last_not_of(" \r\n") + 1);
@@ -1787,7 +1787,7 @@ namespace Protocol
 		uint8_t opcode = (uint8_t)(binary ? OPCODE::BINARY : OPCODE::TEXT);
 
 		frame.resize(0);
-		frame.push_back(0x80 | opcode); // FIN bit set and opcode
+		frame.push_back(0x80 | opcode);
 
 		if (length <= 125)
 		{

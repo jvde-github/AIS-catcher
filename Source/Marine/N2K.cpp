@@ -225,7 +225,7 @@ namespace AIS
 		U(msg, draught, 294, 8);
 		T(msg, destination, 302, 120);
 		U(msg, dte, 422, 1);
-		U(msg, 0, 423, 1); // spare
+		U(msg, 0, 423, 1);
 
 		finalize('A' + channel % 2, tag);
 	}
@@ -240,7 +240,7 @@ namespace AIS
 		readCogSog(N2kMsg, idx, cog, sog);
 		int radio = readRadioChannel(N2kMsg, idx, channel);
 		int alt = ROUND(N2kMsg.Get4ByteDouble(0.01, idx, ALT_UNDEFINED));
-		N2kMsg.GetByte(idx); // reserved
+		N2kMsg.GetByte(idx);
 		int dte = N2kMsg.GetByte(idx) & 1;
 
 		U(msg, alt, 38, 12);
@@ -358,7 +358,7 @@ namespace AIS
 		int dte = byte & 0x01;
 		int assigned = (byte >> 1) & 0x01;
 
-		U(msg, 0, 38, 8);			// Reserved
+		U(msg, 0, 38, 8);
 		U(msg, speed, 46, 10);
 		B(msg, p.accuracy, 56, 1);
 		S(msg, p.lon, 57, 28);
@@ -377,9 +377,9 @@ namespace AIS
 		B(msg, p.raim, 305, 1);
 		B(msg, dte, 306, 1);
 		B(msg, assigned, 307, 1);
-		U(msg, 0, 308, 4);			// Spare
+		U(msg, 0, 308, 4);
 
-		finalize('A', tag); // PGN carries no channel info
+		finalize('A', tag);
 	}
 
 	//----------------------------------------------------------------------
@@ -426,11 +426,11 @@ namespace AIS
 				}
 				else if (byte == 0)
 				{
-					break; // End of string
+					break;
 				}
 				else
 				{
-					name_buffer[nameIdx++] = '@'; // Replace invalid chars with @
+					name_buffer[nameIdx++] = '@';
 				}
 			}
 
@@ -457,7 +457,7 @@ namespace AIS
 		B(msg, p.raim, 268, 1);
 		B(msg, virtual_aid, 269, 1);
 		B(msg, assigned, 270, 1);
-		U(msg, 0, 271, 1); // Spare
+		U(msg, 0, 271, 1);
 
 		finalize('A' + (transceiver & 0x01), tag);
 	}
@@ -473,10 +473,10 @@ namespace AIS
 		startMessage(N2kMsg, idx);
 		N2kMsg.GetStr(shipname, 20, idx);
 
-		U(msg, 0, 38, 2); // part number A
+		U(msg, 0, 38, 2);
 		T(msg, shipname, 40, 120);
 
-		finalize('A', tag); // PGN carries no channel info
+		finalize('A', tag);
 	}
 
 	//----------------------------------------------------------------------
@@ -506,7 +506,7 @@ namespace AIS
 
 		int channel = N2kMsg.GetByte(idx) & 0x01;
 
-		U(msg, 1, 38, 2); // part number B
+		U(msg, 1, 38, 2);
 		U(msg, shiptype, 40, 8);
 		T(msg, vendorid, 48, 42);
 		T(msg, callsign, 90, 42);

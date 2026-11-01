@@ -368,12 +368,12 @@ namespace
 	struct ServerEntry
 	{
 		ServerSpec spec;
-		StationDefaults at; // what the section says of the station
+		StationDefaults at;
 		std::vector<std::pair<int, std::string>> tracking_terms, station_terms;
-		std::vector<int> station_ids; // the stations the server shows, and describes when the file does not list them
-		AIS::Filter filter;			  // validates the filter terms where they stand, and tracks the switch
+		std::vector<int> station_ids;
+		AIS::Filter filter;
 		std::vector<std::string> dropped;
-		bool network_default = false; // a -N or server section: every interface, unless it says otherwise
+		bool network_default = false;
 		bool bind_given = false;
 		bool ui_given = false;
 		bool tls_given = false;
@@ -402,7 +402,7 @@ namespace
 		case AIS::KEY_SETTING_PLACE_GEOMETRY:
 			throw ConfigError("\"place_geometry\" is a term of the server's \"view\".");
 		case AIS::KEY_SETTING_MAIN: spec.main = Util::Parse::Switch(value); return true;
-		case AIS::KEY_SETTING_DESCRIPTION: return true; // the panel's name for it
+		case AIS::KEY_SETTING_DESCRIPTION: return true;
 		case AIS::KEY_SETTING_TLS:
 			if (!json || !json->isObject())
 				throw ConfigError("\"tls\" must be an object: { \"cert\": file, \"key\": file }.");
@@ -641,7 +641,7 @@ namespace
 					case AIS::KEY_SETTING_SHARE_LOC: own.tracking.latlon_share = at.share_loc; break;
 					case AIS::KEY_SETTING_USE_GPS: own.tracking.use_gps = at.gps; break;
 					case AIS::KEY_SETTING_OWN_MMSI: own.tracking.own_mmsi = at.mmsi; break;
-					default: break; // its name and height are the station list's
+					default: break;
 					}
 		}
 		else
@@ -697,7 +697,7 @@ namespace
 				return;
 			}
 			ServerEntry e;
-			e.spec.bind = "0.0.0.0"; // the viewer of before listened on every interface
+			e.spec.bind = "0.0.0.0";
 			e.network_default = true;
 			bool active = true;
 			for (const auto &m : entry.getObject().getMembers())
@@ -815,7 +815,7 @@ namespace
 		e.spec.viewer.managed = true;
 		if (viewer.isObject())
 			for (const auto &m : viewer.getObject().getMembers())
-				e.read(m.Key(), JSON::text(m.Get()), &m.Get()); // what else the section holds is the panel's
+				e.read(m.Key(), JSON::text(m.Get()), &m.Get());
 		server(e, "the main server");
 	}
 
@@ -898,7 +898,7 @@ namespace SiteReader
 				switch (m.Key())
 				{
 				case AIS::KEY_SETTING_ACTIVE: active = Util::Parse::Switch(m.Get().to_string()); break;
-				case AIS::KEY_SETTING_DESCRIPTION: break; // the panel's name for it
+				case AIS::KEY_SETTING_DESCRIPTION: break;
 				case AIS::KEY_SETTING_URL: hook.url = m.Get().to_string(); break;
 				case AIS::KEY_SETTING_SECRET: hook.secret = m.Get().to_string(); break;
 				case AIS::KEY_SETTING_BATCH: hook.batch = Util::Parse::Switch(m.Get().to_string()); break;

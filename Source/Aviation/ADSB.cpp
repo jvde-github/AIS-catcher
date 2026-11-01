@@ -142,21 +142,21 @@ namespace Plane
         int val = getUint(37, 7);
 
         if (val == 1)
-            return 0.0; // Stopped (v < 0.125 kt)
+            return 0.0;
         if (val >= 2 && val <= 8)
-            return 0.125 * (val - 1); // 0.125 kt steps
+            return 0.125 * (val - 1);
         if (val >= 9 && val <= 12)
-            return 1.0 + 0.25 * (val - 8); // 0.25 kt steps
+            return 1.0 + 0.25 * (val - 8);
         if (val >= 13 && val <= 38)
-            return 2.0 + 0.5 * (val - 12); // 0.5 kt steps
+            return 2.0 + 0.5 * (val - 12);
         if (val >= 39 && val <= 93)
-            return 15.0 + 1.0 * (val - 38); // 1 kt steps
+            return 15.0 + 1.0 * (val - 38);
         if (val >= 94 && val <= 108)
-            return 70.0 + 2.0 * (val - 93); // 2 kt steps
+            return 70.0 + 2.0 * (val - 93);
         if (val >= 109 && val <= 123)
-            return 100.0 + 5.0 * (val - 108); // 5 kt steps
+            return 100.0 + 5.0 * (val - 108);
         if (val == 124)
-            return 175.0; // v ≥ 175 kt
+            return 175.0;
 
         return SPEED_UNDEFINED;
     }
@@ -290,7 +290,7 @@ namespace Plane
             }
 
             int TC = getUint(32, 5);
-            int ST = getUint(37, 3); // ME message subtype
+            int ST = getUint(37, 3);
 
             message_subtypes |= 1 << TC;
 
@@ -482,193 +482,193 @@ namespace Plane
 
     // spellchecker:off
     static const RangeInfo rangeInfo[] = {
-        {0x004000, 0x0043FF, {'Z','W'}}, // Zimbabwe
-        {0x006000, 0x006FFF, {'M','Z'}}, // Mozambique
-        {0x008000, 0x00FFFF, {'Z','A'}}, // South Africa
-        {0x010000, 0x017FFF, {'E','G'}}, // Egypt
-        {0x018000, 0x01FFFF, {'L','Y'}}, // Libya
-        {0x020000, 0x027FFF, {'M','A'}}, // Morocco
-        {0x028000, 0x02FFFF, {'T','N'}}, // Tunisia
-        {0x030000, 0x0303FF, {'B','W'}}, // Botswana
-        {0x032000, 0x032FFF, {'B','I'}}, // Burundi
-        {0x034000, 0x034FFF, {'C','M'}}, // Cameroon
-        {0x035000, 0x0353FF, {'K','M'}}, // Comoros
-        {0x036000, 0x036FFF, {'C','G'}}, // Congo
-        {0x038000, 0x038FFF, {'C','I'}}, // Cote d'Ivoire
-        {0x03E000, 0x03EFFF, {'G','A'}}, // Gabon
-        {0x040000, 0x040FFF, {'E','T'}}, // Ethiopia
-        {0x042000, 0x042FFF, {'G','Q'}}, // Equatorial Guinea
-        {0x044000, 0x044FFF, {'G','H'}}, // Ghana
-        {0x046000, 0x046FFF, {'G','N'}}, // Guinea
-        {0x048000, 0x0483FF, {'G','W'}}, // Guinea-Bissau
-        {0x04A000, 0x04A3FF, {'L','S'}}, // Lesotho
-        {0x04C000, 0x04CFFF, {'K','E'}}, // Kenya
-        {0x050000, 0x050FFF, {'L','R'}}, // Liberia
-        {0x054000, 0x054FFF, {'M','G'}}, // Madagascar
-        {0x058000, 0x058FFF, {'M','W'}}, // Malawi
-        {0x05A000, 0x05A3FF, {'M','V'}}, // Maldives
-        {0x05C000, 0x05CFFF, {'M','L'}}, // Mali
-        {0x05E000, 0x05E3FF, {'M','R'}}, // Mauritania
-        {0x060000, 0x0603FF, {'M','U'}}, // Mauritius
-        {0x062000, 0x062FFF, {'N','E'}}, // Niger
-        {0x064000, 0x064FFF, {'N','G'}}, // Nigeria
-        {0x068000, 0x068FFF, {'U','G'}}, // Uganda
-        {0x06A000, 0x06A3FF, {'Q','A'}}, // Qatar
-        {0x06C000, 0x06CFFF, {'C','F'}}, // Central African Republic
-        {0x06E000, 0x06EFFF, {'R','W'}}, // Rwanda
-        {0x070000, 0x070FFF, {'S','N'}}, // Senegal
-        {0x074000, 0x0743FF, {'S','C'}}, // Seychelles
-        {0x076000, 0x0763FF, {'S','L'}}, // Sierra Leone
-        {0x078000, 0x078FFF, {'S','O'}}, // Somalia
-        {0x07A000, 0x07A3FF, {'S','Z'}}, // Swaziland
-        {0x07C000, 0x07CFFF, {'S','D'}}, // Sudan
-        {0x080000, 0x080FFF, {'T','Z'}}, // Tanzania
-        {0x084000, 0x084FFF, {'T','D'}}, // Chad
-        {0x088000, 0x088FFF, {'T','G'}}, // Togo
-        {0x08A000, 0x08AFFF, {'Z','M'}}, // Zambia
-        {0x08C000, 0x08CFFF, {'C','D'}}, // DR Congo
-        {0x090000, 0x090FFF, {'A','O'}}, // Angola
-        {0x094000, 0x0943FF, {'B','J'}}, // Benin
-        {0x096000, 0x0963FF, {'C','V'}}, // Cape Verde
-        {0x098000, 0x0983FF, {'D','J'}}, // Djibouti
-        {0x09A000, 0x09AFFF, {'G','M'}}, // Gambia
-        {0x09C000, 0x09CFFF, {'B','F'}}, // Burkina Faso
-        {0x09E000, 0x09E3FF, {'S','T'}}, // Sao Tome
-        {0x0A0000, 0x0A7FFF, {'D','Z'}}, // Algeria
-        {0x0A8000, 0x0A8FFF, {'B','S'}}, // Bahamas
-        {0x0AA000, 0x0AA3FF, {'B','B'}}, // Barbados
-        {0x0AB000, 0x0AB3FF, {'B','Z'}}, // Belize
-        {0x0AC000, 0x0ACFFF, {'C','O'}}, // Colombia
-        {0x0AE000, 0x0AEFFF, {'C','R'}}, // Costa Rica
-        {0x0B0000, 0x0B0FFF, {'C','U'}}, // Cuba
-        {0x0B2000, 0x0B2FFF, {'S','V'}}, // El Salvador
-        {0x0B4000, 0x0B4FFF, {'G','T'}}, // Guatemala
-        {0x0B6000, 0x0B6FFF, {'G','Y'}}, // Guyana
-        {0x0B8000, 0x0B8FFF, {'H','T'}}, // Haiti
-        {0x0BA000, 0x0BAFFF, {'H','N'}}, // Honduras
-        {0x0BC000, 0x0BC3FF, {'V','C'}}, // St. Vincent & Grenadines
-        {0x0BE000, 0x0BEFFF, {'J','M'}}, // Jamaica
-        {0x0C0000, 0x0C0FFF, {'N','I'}}, // Nicaragua
-        {0x0C2000, 0x0C2FFF, {'P','A'}}, // Panama
-        {0x0C4000, 0x0C4FFF, {'D','O'}}, // Dominican Republic
-        {0x0C6000, 0x0C6FFF, {'T','T'}}, // Trinidad and Tobago
-        {0x0C8000, 0x0C8FFF, {'S','R'}}, // Suriname
-        {0x0CA000, 0x0CA3FF, {'A','G'}}, // Antigua & Barbuda
-        {0x0CC000, 0x0CC3FF, {'G','D'}}, // Grenada
-        {0x0D0000, 0x0D7FFF, {'M','X'}}, // Mexico
-        {0x0D8000, 0x0DFFFF, {'V','E'}}, // Venezuela
-        {0x100000, 0x1FFFFF, {'R','U'}}, // Russia
-        {0x201000, 0x2013FF, {'N','A'}}, // Namibia
-        {0x202000, 0x2023FF, {'E','R'}}, // Eritrea
-        {0x300000, 0x33FFFF, {'I','T'}}, // Italy
-        {0x340000, 0x37FFFF, {'E','S'}}, // Spain
-        {0x380000, 0x3BFFFF, {'F','R'}}, // France
-        {0x3C0000, 0x3FFFFF, {'D','E'}}, // Germany
-        {0x400000, 0x43FFFF, {'G','B'}}, // United Kingdom
-        {0x440000, 0x447FFF, {'A','T'}}, // Austria
-        {0x448000, 0x44FFFF, {'B','E'}}, // Belgium
-        {0x450000, 0x457FFF, {'B','G'}}, // Bulgaria
-        {0x458000, 0x45FFFF, {'D','K'}}, // Denmark
-        {0x460000, 0x467FFF, {'F','I'}}, // Finland
-        {0x468000, 0x46FFFF, {'G','R'}}, // Greece
-        {0x470000, 0x477FFF, {'H','U'}}, // Hungary
-        {0x478000, 0x47FFFF, {'N','O'}}, // Norway
-        {0x480000, 0x487FFF, {'N','L'}}, // Netherlands
-        {0x488000, 0x48FFFF, {'P','L'}}, // Poland
-        {0x490000, 0x497FFF, {'P','T'}}, // Portugal
-        {0x498000, 0x49FFFF, {'C','Z'}}, // Czech Republic
-        {0x4A0000, 0x4A7FFF, {'R','O'}}, // Romania
-        {0x4A8000, 0x4AFFFF, {'S','E'}}, // Sweden
-        {0x4B0000, 0x4B7FFF, {'C','H'}}, // Switzerland
-        {0x4B8000, 0x4BFFFF, {'T','R'}}, // Turkey
-        {0x4C0000, 0x4C7FFF, {'R','S'}}, // Serbia
-        {0x4C8000, 0x4C83FF, {'C','Y'}}, // Cyprus
-        {0x4CA000, 0x4CAFFF, {'I','E'}}, // Ireland
-        {0x4CC000, 0x4CCFFF, {'I','S'}}, // Iceland
-        {0x4D0000, 0x4D03FF, {'L','U'}}, // Luxembourg
-        {0x4D2000, 0x4D23FF, {'M','T'}}, // Malta
-        {0x4D4000, 0x4D43FF, {'M','C'}}, // Monaco
-        {0x500000, 0x5003FF, {'S','M'}}, // San Marino
-        {0x501000, 0x5013FF, {'A','L'}}, // Albania
-        {0x501C00, 0x501FFF, {'H','R'}}, // Croatia
-        {0x502C00, 0x502FFF, {'L','V'}}, // Latvia
-        {0x503C00, 0x503FFF, {'L','T'}}, // Lithuania
-        {0x504C00, 0x504FFF, {'M','D'}}, // Moldova
-        {0x505C00, 0x505FFF, {'S','K'}}, // Slovakia
-        {0x506C00, 0x506FFF, {'S','I'}}, // Slovenia
-        {0x507C00, 0x507FFF, {'U','Z'}}, // Uzbekistan
-        {0x508000, 0x50FFFF, {'U','A'}}, // Ukraine
-        {0x510000, 0x5103FF, {'B','Y'}}, // Belarus
-        {0x511000, 0x5113FF, {'E','E'}}, // Estonia
-        {0x512000, 0x5123FF, {'M','K'}}, // Macedonia
-        {0x513000, 0x5133FF, {'B','A'}}, // Bosnia & Herzegovina
-        {0x514000, 0x5143FF, {'G','E'}}, // Georgia
-        {0x515000, 0x5153FF, {'T','J'}}, // Tajikistan
-        {0x600000, 0x6003FF, {'A','M'}}, // Armenia
-        {0x600800, 0x600BFF, {'A','Z'}}, // Azerbaijan
-        {0x601000, 0x6013FF, {'K','G'}}, // Kyrgyzstan
-        {0x601800, 0x601BFF, {'T','M'}}, // Turkmenistan
-        {0x680000, 0x6803FF, {'B','T'}}, // Bhutan
-        {0x681000, 0x6813FF, {'F','M'}}, // Micronesia
-        {0x682000, 0x6823FF, {'M','N'}}, // Mongolia
-        {0x683000, 0x6833FF, {'K','Z'}}, // Kazakhstan
-        {0x684000, 0x6843FF, {'P','W'}}, // Palau
-        {0x700000, 0x700FFF, {'A','F'}}, // Afghanistan
-        {0x702000, 0x702FFF, {'B','D'}}, // Bangladesh
-        {0x704000, 0x704FFF, {'M','M'}}, // Myanmar
-        {0x706000, 0x706FFF, {'K','W'}}, // Kuwait
-        {0x708000, 0x708FFF, {'L','A'}}, // Laos
-        {0x70A000, 0x70AFFF, {'N','P'}}, // Nepal
-        {0x70C000, 0x70C3FF, {'O','M'}}, // Oman
-        {0x70E000, 0x70EFFF, {'K','H'}}, // Cambodia
-        {0x710000, 0x717FFF, {'S','A'}}, // Saudi Arabia
-        {0x718000, 0x71FFFF, {'K','R'}}, // South Korea
-        {0x720000, 0x727FFF, {'K','P'}}, // North Korea
-        {0x728000, 0x72FFFF, {'I','Q'}}, // Iraq
-        {0x730000, 0x737FFF, {'I','R'}}, // Iran
-        {0x738000, 0x73FFFF, {'I','L'}}, // Israel
-        {0x740000, 0x747FFF, {'J','O'}}, // Jordan
-        {0x748000, 0x74FFFF, {'L','B'}}, // Lebanon
-        {0x750000, 0x757FFF, {'M','Y'}}, // Malaysia
-        {0x758000, 0x75FFFF, {'P','H'}}, // Philippines
-        {0x760000, 0x767FFF, {'P','K'}}, // Pakistan
-        {0x768000, 0x76FFFF, {'S','G'}}, // Singapore
-        {0x770000, 0x777FFF, {'L','K'}}, // Sri Lanka
-        {0x778000, 0x77FFFF, {'S','Y'}}, // Syria
-        {0x780000, 0x7BFFFF, {'C','N'}}, // China
-        {0x7C0000, 0x7FFFFF, {'A','U'}}, // Australia
-        {0x800000, 0x83FFFF, {'I','N'}}, // India
-        {0x840000, 0x87FFFF, {'J','P'}}, // Japan
-        {0x880000, 0x887FFF, {'T','H'}}, // Thailand
-        {0x888000, 0x88FFFF, {'V','N'}}, // Vietnam
-        {0x890000, 0x890FFF, {'Y','E'}}, // Yemen
-        {0x894000, 0x894FFF, {'B','H'}}, // Bahrain
-        {0x895000, 0x8953FF, {'B','N'}}, // Brunei
-        {0x896000, 0x896FFF, {'A','E'}}, // United Arab Emirates
-        {0x897000, 0x8973FF, {'S','B'}}, // Solomon Islands
-        {0x898000, 0x898FFF, {'P','G'}}, // Papua New Guinea
-        {0x899000, 0x8993FF, {'T','W'}}, // Taiwan
-        {0x8A0000, 0x8A7FFF, {'I','D'}}, // Indonesia
-        {0x900000, 0x9003FF, {'M','H'}}, // Marshall Islands
-        {0x901000, 0x9013FF, {'C','K'}}, // Cook Islands
-        {0x902000, 0x9023FF, {'W','S'}}, // Samoa
-        {0xA00000, 0xAFFFFF, {'U','S'}}, // United States
-        {0xC00000, 0xC3FFFF, {'C','A'}}, // Canada
-        {0xC80000, 0xC87FFF, {'N','Z'}}, // New Zealand
-        {0xC88000, 0xC88FFF, {'F','J'}}, // Fiji
-        {0xC8A000, 0xC8A3FF, {'N','R'}}, // Nauru
-        {0xC8C000, 0xC8C3FF, {'L','C'}}, // Saint Lucia
-        {0xC8D000, 0xC8D3FF, {'T','O'}}, // Tonga
-        {0xC8E000, 0xC8E3FF, {'K','I'}}, // Kiribati
-        {0xC90000, 0xC903FF, {'V','U'}}, // Vanuatu
-        {0xE00000, 0xE3FFFF, {'A','R'}}, // Argentina
-        {0xE40000, 0xE7FFFF, {'B','R'}}, // Brazil
-        {0xE80000, 0xE80FFF, {'C','L'}}, // Chile
-        {0xE84000, 0xE84FFF, {'E','C'}}, // Ecuador
-        {0xE88000, 0xE88FFF, {'P','Y'}}, // Paraguay
-        {0xE8C000, 0xE8CFFF, {'P','E'}}, // Peru
-        {0xE90000, 0xE90FFF, {'U','Y'}}, // Uruguay
-        {0xE94000, 0xE94FFF, {'B','O'}}, // Bolivia
+        {0x004000, 0x0043FF, {'Z','W'}},
+        {0x006000, 0x006FFF, {'M','Z'}},
+        {0x008000, 0x00FFFF, {'Z','A'}},
+        {0x010000, 0x017FFF, {'E','G'}},
+        {0x018000, 0x01FFFF, {'L','Y'}},
+        {0x020000, 0x027FFF, {'M','A'}},
+        {0x028000, 0x02FFFF, {'T','N'}},
+        {0x030000, 0x0303FF, {'B','W'}},
+        {0x032000, 0x032FFF, {'B','I'}},
+        {0x034000, 0x034FFF, {'C','M'}},
+        {0x035000, 0x0353FF, {'K','M'}},
+        {0x036000, 0x036FFF, {'C','G'}},
+        {0x038000, 0x038FFF, {'C','I'}},
+        {0x03E000, 0x03EFFF, {'G','A'}},
+        {0x040000, 0x040FFF, {'E','T'}},
+        {0x042000, 0x042FFF, {'G','Q'}},
+        {0x044000, 0x044FFF, {'G','H'}},
+        {0x046000, 0x046FFF, {'G','N'}},
+        {0x048000, 0x0483FF, {'G','W'}},
+        {0x04A000, 0x04A3FF, {'L','S'}},
+        {0x04C000, 0x04CFFF, {'K','E'}},
+        {0x050000, 0x050FFF, {'L','R'}},
+        {0x054000, 0x054FFF, {'M','G'}},
+        {0x058000, 0x058FFF, {'M','W'}},
+        {0x05A000, 0x05A3FF, {'M','V'}},
+        {0x05C000, 0x05CFFF, {'M','L'}},
+        {0x05E000, 0x05E3FF, {'M','R'}},
+        {0x060000, 0x0603FF, {'M','U'}},
+        {0x062000, 0x062FFF, {'N','E'}},
+        {0x064000, 0x064FFF, {'N','G'}},
+        {0x068000, 0x068FFF, {'U','G'}},
+        {0x06A000, 0x06A3FF, {'Q','A'}},
+        {0x06C000, 0x06CFFF, {'C','F'}},
+        {0x06E000, 0x06EFFF, {'R','W'}},
+        {0x070000, 0x070FFF, {'S','N'}},
+        {0x074000, 0x0743FF, {'S','C'}},
+        {0x076000, 0x0763FF, {'S','L'}},
+        {0x078000, 0x078FFF, {'S','O'}},
+        {0x07A000, 0x07A3FF, {'S','Z'}},
+        {0x07C000, 0x07CFFF, {'S','D'}},
+        {0x080000, 0x080FFF, {'T','Z'}},
+        {0x084000, 0x084FFF, {'T','D'}},
+        {0x088000, 0x088FFF, {'T','G'}},
+        {0x08A000, 0x08AFFF, {'Z','M'}},
+        {0x08C000, 0x08CFFF, {'C','D'}},
+        {0x090000, 0x090FFF, {'A','O'}},
+        {0x094000, 0x0943FF, {'B','J'}},
+        {0x096000, 0x0963FF, {'C','V'}},
+        {0x098000, 0x0983FF, {'D','J'}},
+        {0x09A000, 0x09AFFF, {'G','M'}},
+        {0x09C000, 0x09CFFF, {'B','F'}},
+        {0x09E000, 0x09E3FF, {'S','T'}},
+        {0x0A0000, 0x0A7FFF, {'D','Z'}},
+        {0x0A8000, 0x0A8FFF, {'B','S'}},
+        {0x0AA000, 0x0AA3FF, {'B','B'}},
+        {0x0AB000, 0x0AB3FF, {'B','Z'}},
+        {0x0AC000, 0x0ACFFF, {'C','O'}},
+        {0x0AE000, 0x0AEFFF, {'C','R'}},
+        {0x0B0000, 0x0B0FFF, {'C','U'}},
+        {0x0B2000, 0x0B2FFF, {'S','V'}},
+        {0x0B4000, 0x0B4FFF, {'G','T'}},
+        {0x0B6000, 0x0B6FFF, {'G','Y'}},
+        {0x0B8000, 0x0B8FFF, {'H','T'}},
+        {0x0BA000, 0x0BAFFF, {'H','N'}},
+        {0x0BC000, 0x0BC3FF, {'V','C'}},
+        {0x0BE000, 0x0BEFFF, {'J','M'}},
+        {0x0C0000, 0x0C0FFF, {'N','I'}},
+        {0x0C2000, 0x0C2FFF, {'P','A'}},
+        {0x0C4000, 0x0C4FFF, {'D','O'}},
+        {0x0C6000, 0x0C6FFF, {'T','T'}},
+        {0x0C8000, 0x0C8FFF, {'S','R'}},
+        {0x0CA000, 0x0CA3FF, {'A','G'}},
+        {0x0CC000, 0x0CC3FF, {'G','D'}},
+        {0x0D0000, 0x0D7FFF, {'M','X'}},
+        {0x0D8000, 0x0DFFFF, {'V','E'}},
+        {0x100000, 0x1FFFFF, {'R','U'}},
+        {0x201000, 0x2013FF, {'N','A'}},
+        {0x202000, 0x2023FF, {'E','R'}},
+        {0x300000, 0x33FFFF, {'I','T'}},
+        {0x340000, 0x37FFFF, {'E','S'}},
+        {0x380000, 0x3BFFFF, {'F','R'}},
+        {0x3C0000, 0x3FFFFF, {'D','E'}},
+        {0x400000, 0x43FFFF, {'G','B'}},
+        {0x440000, 0x447FFF, {'A','T'}},
+        {0x448000, 0x44FFFF, {'B','E'}},
+        {0x450000, 0x457FFF, {'B','G'}},
+        {0x458000, 0x45FFFF, {'D','K'}},
+        {0x460000, 0x467FFF, {'F','I'}},
+        {0x468000, 0x46FFFF, {'G','R'}},
+        {0x470000, 0x477FFF, {'H','U'}},
+        {0x478000, 0x47FFFF, {'N','O'}},
+        {0x480000, 0x487FFF, {'N','L'}},
+        {0x488000, 0x48FFFF, {'P','L'}},
+        {0x490000, 0x497FFF, {'P','T'}},
+        {0x498000, 0x49FFFF, {'C','Z'}},
+        {0x4A0000, 0x4A7FFF, {'R','O'}},
+        {0x4A8000, 0x4AFFFF, {'S','E'}},
+        {0x4B0000, 0x4B7FFF, {'C','H'}},
+        {0x4B8000, 0x4BFFFF, {'T','R'}},
+        {0x4C0000, 0x4C7FFF, {'R','S'}},
+        {0x4C8000, 0x4C83FF, {'C','Y'}},
+        {0x4CA000, 0x4CAFFF, {'I','E'}},
+        {0x4CC000, 0x4CCFFF, {'I','S'}},
+        {0x4D0000, 0x4D03FF, {'L','U'}},
+        {0x4D2000, 0x4D23FF, {'M','T'}},
+        {0x4D4000, 0x4D43FF, {'M','C'}},
+        {0x500000, 0x5003FF, {'S','M'}},
+        {0x501000, 0x5013FF, {'A','L'}},
+        {0x501C00, 0x501FFF, {'H','R'}},
+        {0x502C00, 0x502FFF, {'L','V'}},
+        {0x503C00, 0x503FFF, {'L','T'}},
+        {0x504C00, 0x504FFF, {'M','D'}},
+        {0x505C00, 0x505FFF, {'S','K'}},
+        {0x506C00, 0x506FFF, {'S','I'}},
+        {0x507C00, 0x507FFF, {'U','Z'}},
+        {0x508000, 0x50FFFF, {'U','A'}},
+        {0x510000, 0x5103FF, {'B','Y'}},
+        {0x511000, 0x5113FF, {'E','E'}},
+        {0x512000, 0x5123FF, {'M','K'}},
+        {0x513000, 0x5133FF, {'B','A'}},
+        {0x514000, 0x5143FF, {'G','E'}},
+        {0x515000, 0x5153FF, {'T','J'}},
+        {0x600000, 0x6003FF, {'A','M'}},
+        {0x600800, 0x600BFF, {'A','Z'}},
+        {0x601000, 0x6013FF, {'K','G'}},
+        {0x601800, 0x601BFF, {'T','M'}},
+        {0x680000, 0x6803FF, {'B','T'}},
+        {0x681000, 0x6813FF, {'F','M'}},
+        {0x682000, 0x6823FF, {'M','N'}},
+        {0x683000, 0x6833FF, {'K','Z'}},
+        {0x684000, 0x6843FF, {'P','W'}},
+        {0x700000, 0x700FFF, {'A','F'}},
+        {0x702000, 0x702FFF, {'B','D'}},
+        {0x704000, 0x704FFF, {'M','M'}},
+        {0x706000, 0x706FFF, {'K','W'}},
+        {0x708000, 0x708FFF, {'L','A'}},
+        {0x70A000, 0x70AFFF, {'N','P'}},
+        {0x70C000, 0x70C3FF, {'O','M'}},
+        {0x70E000, 0x70EFFF, {'K','H'}},
+        {0x710000, 0x717FFF, {'S','A'}},
+        {0x718000, 0x71FFFF, {'K','R'}},
+        {0x720000, 0x727FFF, {'K','P'}},
+        {0x728000, 0x72FFFF, {'I','Q'}},
+        {0x730000, 0x737FFF, {'I','R'}},
+        {0x738000, 0x73FFFF, {'I','L'}},
+        {0x740000, 0x747FFF, {'J','O'}},
+        {0x748000, 0x74FFFF, {'L','B'}},
+        {0x750000, 0x757FFF, {'M','Y'}},
+        {0x758000, 0x75FFFF, {'P','H'}},
+        {0x760000, 0x767FFF, {'P','K'}},
+        {0x768000, 0x76FFFF, {'S','G'}},
+        {0x770000, 0x777FFF, {'L','K'}},
+        {0x778000, 0x77FFFF, {'S','Y'}},
+        {0x780000, 0x7BFFFF, {'C','N'}},
+        {0x7C0000, 0x7FFFFF, {'A','U'}},
+        {0x800000, 0x83FFFF, {'I','N'}},
+        {0x840000, 0x87FFFF, {'J','P'}},
+        {0x880000, 0x887FFF, {'T','H'}},
+        {0x888000, 0x88FFFF, {'V','N'}},
+        {0x890000, 0x890FFF, {'Y','E'}},
+        {0x894000, 0x894FFF, {'B','H'}},
+        {0x895000, 0x8953FF, {'B','N'}},
+        {0x896000, 0x896FFF, {'A','E'}},
+        {0x897000, 0x8973FF, {'S','B'}},
+        {0x898000, 0x898FFF, {'P','G'}},
+        {0x899000, 0x8993FF, {'T','W'}},
+        {0x8A0000, 0x8A7FFF, {'I','D'}},
+        {0x900000, 0x9003FF, {'M','H'}},
+        {0x901000, 0x9013FF, {'C','K'}},
+        {0x902000, 0x9023FF, {'W','S'}},
+        {0xA00000, 0xAFFFFF, {'U','S'}},
+        {0xC00000, 0xC3FFFF, {'C','A'}},
+        {0xC80000, 0xC87FFF, {'N','Z'}},
+        {0xC88000, 0xC88FFF, {'F','J'}},
+        {0xC8A000, 0xC8A3FF, {'N','R'}},
+        {0xC8C000, 0xC8C3FF, {'L','C'}},
+        {0xC8D000, 0xC8D3FF, {'T','O'}},
+        {0xC8E000, 0xC8E3FF, {'K','I'}},
+        {0xC90000, 0xC903FF, {'V','U'}},
+        {0xE00000, 0xE3FFFF, {'A','R'}},
+        {0xE40000, 0xE7FFFF, {'B','R'}},
+        {0xE80000, 0xE80FFF, {'C','L'}},
+        {0xE84000, 0xE84FFF, {'E','C'}},
+        {0xE88000, 0xE88FFF, {'P','Y'}},
+        {0xE8C000, 0xE8CFFF, {'P','E'}},
+        {0xE90000, 0xE90FFF, {'U','Y'}},
+        {0xE94000, 0xE94FFF, {'B','O'}},
     };
     // spellchecker:on
 

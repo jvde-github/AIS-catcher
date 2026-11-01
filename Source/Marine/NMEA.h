@@ -35,7 +35,7 @@ namespace AIS
 	class NMEA : public SimpleStreamInOut<RAW, Message>
 	{
 		Message msg;
-		int station = -1; // the input's station, on a message that carries none of its own
+		int station = -1;
 		std::string uuid;
 
 		enum class ParseState
@@ -84,8 +84,8 @@ namespace AIS
 		// Zero-allocation field splitter: stores delimiter positions into source string
 		const std::string *splitStr = nullptr;
 		int splitDelim[18] = {}; // delimiter positions (leading sentinel + up to 16 commas + trailing sentinel)
-		int splitCount = 0; // number of fields
-		int splitChecksum = 0; // XOR checksum accumulated during split
+		int splitCount = 0;
+		int splitChecksum = 0;
 
 		int partLen(int i) const { return splitDelim[i + 1] - splitDelim[i] - 1; }
 		char partAt(int i, int j) const { return (*splitStr)[splitDelim[i] + 1 + j]; }
@@ -99,7 +99,7 @@ namespace AIS
 
 		ParseState state = ParseState::FIND_START;
 		std::string line;
-		std::string gps_line; // reused buffer: GPS needs a std::string (split + source ref)
+		std::string gps_line;
 		int count = 0;
 
 		// Scan context — set by Receive(), used by scanners

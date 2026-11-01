@@ -24,20 +24,20 @@
 #include "Logger.h"
 
 const std::string ShippingClassNames[] = {
-	"Other",							  // CLASS_OTHER
-	"Unknown",							  // CLASS_UNKNOWN
-	"Cargo",							  // CLASS_CARGO
-	"Class B",							  // CLASS_B
-	"Passenger",						  // CLASS_PASSENGER
-	"Special",							  // CLASS_SPECIAL
-	"Tanker",							  // CLASS_TANKER
-	"High Speed",						  // CLASS_HIGHSPEED
-	"Fishing",							  // CLASS_FISHING
-	"Plane",							  // CLASS_PLANE
-	"Helicopter",						  // CLASS_HELICOPTER
-	"Station",							  // CLASS_STATION
-	"Aid-to-Navigation",				  // CLASS_ATON
-	"Search and Rescue Transponder EPIRB" // CLASS_SARTEPIRB
+	"Other",
+	"Unknown",
+	"Cargo",
+	"Class B",
+	"Passenger",
+	"Special",
+	"Tanker",
+	"High Speed",
+	"Fishing",
+	"Plane",
+	"Helicopter",
+	"Station",
+	"Aid-to-Navigation",
+	"Search and Rescue Transponder EPIRB"
 };
 
 void PrometheusCounter::Add(const AIS::Message &m, const TAG &tag)

@@ -130,7 +130,7 @@ PlacePart compiled(const std::vector<Ring> &rings) {
   }
   return part;
 }
-} // namespace
+}
 
 Shape compile(const std::string &type, const JSON::Value &coords,
               bool water) {
@@ -222,4 +222,4 @@ Shape compile(const std::string &type, const JSON::Value &coords,
   return shape;
 }
 
-} // namespace PlaceGeometry
+}

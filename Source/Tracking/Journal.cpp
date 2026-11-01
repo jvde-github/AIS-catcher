@@ -20,7 +20,7 @@
 
 namespace
 {
-	const uint32_t JOURNAL_MAGIC = 0x4a524e4c; // "JRNL"
+	const uint32_t JOURNAL_MAGIC = 0x4a524e4c;
 	// 3: an installation's event names its station and receiver, -1 for none; 2: kinds as the
 	// event stream numbers them, the station and receiver in `from` and `to`, 0 for none;
 	// 1 numbered the kinds as the ticker did

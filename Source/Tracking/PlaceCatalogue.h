@@ -33,7 +33,7 @@ class Writer;
 class JSON;
 class Pool;
 struct Document;
-} // namespace JSON
+}
 // Place types in reading order: most specific first. From the port up a
 // crossing is announced; from the guard zone up nothing stops.
 enum class PlaceKind : uint8_t {
@@ -125,7 +125,7 @@ struct PlaceIndex {
   // A cell a part covers entirely is a hit for every position in it: the grid
   // says so with this bit on the rank, and the ring is never walked.
   enum : uint32_t { GRID_FULL = 0x80000000u };
-  std::vector<uint32_t> gridStart; // a cell's first rank in gridRanks
+  std::vector<uint32_t> gridStart;
   std::vector<uint32_t> gridRanks;
   std::vector<uint32_t> gridWide;
   void buildGrid();
@@ -179,24 +179,24 @@ class PlaceCatalogue {
     bool collectionFile = false;
     uint32_t number = UINT32_MAX;
     long revision = 0;
-    std::string parentCode; // a schema 1 parent named by UN/LOCODE, until resolved
+    std::string parentCode;
     PlaceIndex::Entry compiled;
   };
   std::string directory;
   std::vector<Place> places;
   // what the places register: for the rules a place must keep with the rest
-  std::unordered_map<std::string, size_t> byUUID;       // offset in places
-  std::unordered_map<uint32_t, std::string> numbers;    // number -> uuid
-  std::unordered_map<std::string, std::string> codes;   // code -> uuid
+  std::unordered_map<std::string, size_t> byUUID;
+  std::unordered_map<uint32_t, std::string> numbers;
+  std::unordered_map<std::string, std::string> codes;
   size_t vertices = 0, bytes = 0;
   std::mutex mutex;
   std::shared_ptr<const PlaceIndex> index;
-  std::shared_ptr<const std::string> collectionJSON; // the collection as served, built once per index
+  std::shared_ptr<const std::string> collectionJSON;
   uint32_t nextNumber = 0;
   size_t skipped = 0;
-  bool drifted = false; // a file changed on disk since it was loaded, said once
+  bool drifted = false;
   std::atomic<bool> changed{
-      false}; // set by save(), consumed by the viewer that serves the store
+      false};
   void rebuild();
   void check(const Place &candidate, const Place *old) const;
   void account(const Place &p, bool add);

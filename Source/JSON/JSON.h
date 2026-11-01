@@ -257,7 +257,7 @@ namespace JSON
 		std::deque<JSON> objects;
 		std::deque<std::string> strings;
 		std::deque<std::vector<Value>> arrays;
-		std::vector<std::string> extraKeys; // unknown keys, kept by a document reader that asks
+		std::vector<std::string> extraKeys;
 
 		size_t objectCount = 0;
 		size_t stringCount = 0;

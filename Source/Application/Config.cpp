@@ -120,7 +120,7 @@ bool isReceiverValue(int key) {
     return false;
   }
 }
-} // namespace
+}
 
 IO::OutputMessage *Config::newDatabaseOutput(const std::string &type) {
   if (type == "postgres" || type == "postgresql" || type == "psql")
@@ -266,11 +266,11 @@ void Config::applyReceiver(Receiver &r, const std::vector<JSON::Member> &members
     case AIS::KEY_SETTING_ENGINES:
     case AIS::KEY_SETTING_MODEL:
     case AIS::KEY_SETTING_NMEA_CHANNEL:
-      break; // below, once the input is known
+      break;
     case AIS::KEY_SETTING_SERIAL:
     case AIS::KEY_SETTING_INPUT:
     case AIS::KEY_SETTING_ACTIVE:
-      break; // read above
+      break;
     case AIS::KEY_SETTING_ZONE:
       if (!m.Get().isArray())
         throw std::runtime_error("\"zone\" must be an array of strings");
@@ -430,7 +430,7 @@ void Config::set(const std::string &str, const Origins *from) {
     case AIS::KEY_SETTING_TCP_LISTENER:
       readOutputs<IO::TCPlistenerStreamer>(m, "TCP Listener", "0");
       break;
-    case AIS::KEY_SETTING_SERVER: // the site's, read below
+    case AIS::KEY_SETTING_SERVER:
 #ifdef HASWEBVIEWER
       break;
 #else

@@ -45,7 +45,7 @@ struct ViewerOptions
 	// frame_ancestors: the pages that may frame the server's, its CSP's frame-ancestors; any when empty
 	std::string station, station_link, webcontrol_http, context = "settings", frame_ancestors, about;
 	bool realtime = false, log = false, decoder = false, replay = true, msg = false;
-	bool managed = false; // the viewer of managed mode, beside its control panel
+	bool managed = false;
 	std::vector<std::string> mbtiles, mboverlay, fstiles, fsoverlay, plugins, styles, plugin_dirs;
 
 	bool operator==(const ViewerOptions &o) const
@@ -64,8 +64,8 @@ struct ApiKey
 {
 	enum Scope
 	{
-		DATA = 1,	// ships, places, events, stations: the api and mcp services
-		SYSTEM = 2	// receivers, outputs, health, the log: the system service
+		DATA = 1,
+		SYSTEM = 2
 	};
 	std::string name, sha256; // lower-case hex
 	int scopes = DATA;
@@ -80,7 +80,7 @@ struct ApiKey
 struct TrackerSpec
 {
 	bool own = false;
-	std::vector<std::pair<int, std::string>> filter; // (key, value) in the order given
+	std::vector<std::pair<int, std::string>> filter;
 	std::vector<std::string> zones;
 	uint64_t groups_in = GROUPS_ALL;
 	TrackingConfig tracking;
@@ -103,7 +103,7 @@ struct ServerSpec
 	// what it serves: the map unless switched off, the rest when switched on
 	bool ui = true, api = false, mcp = false, system = false, geojson = false, metrics = false, kml = false;
 	TrackerSpec tracking;
-	ViewFilter view; // which ships it shows of what its tracker keeps
+	ViewFilter view;
 	ViewerOptions viewer;
 	// with keys, a request to the api, system or mcp service names one; a
 	// public server lets anyone read its data, never its system
@@ -154,8 +154,8 @@ struct StationDefaults
 struct WebhookSpec
 {
 	std::string url, secret;
-	std::vector<std::string> events; // the kinds; every kind when empty
-	ViewFilter view;  				 // a ship's event only when the ship passes
+	std::vector<std::string> events;
+	ViewFilter view;
 	bool batch = false;
 
 	bool operator==(const WebhookSpec &o) const
@@ -169,7 +169,7 @@ struct MqttStateSpec
 {
 	std::string url, username, password, client_id, topic = "ais-catcher";
 	bool discovery = true;
-	std::vector<uint32_t> watch; // vessels whose position is published
+	std::vector<uint32_t> watch;
 
 	bool any() const { return !url.empty(); }
 	bool operator==(const MqttStateSpec &o) const
@@ -184,10 +184,10 @@ struct MqttStateSpec
 struct SiteConfig
 {
 	TrackingConfig tracking;
-	bool tracking_set = false; // the configuration's `tracking` says how; a server's settings do not then
+	bool tracking_set = false;
 	std::string backup_file;
 	int backup_minutes = 10;
-	std::string places; // a directory of place files
+	std::string places;
 	// or a catalogue kept elsewhere, as managed mode's editor keeps it
 	std::shared_ptr<PlaceCatalogue> catalogue;
 	std::vector<ServerSpec> servers;

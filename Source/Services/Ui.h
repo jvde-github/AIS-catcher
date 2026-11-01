@@ -58,7 +58,7 @@ namespace Services
 		};
 		std::vector<Tiles> maps;
 		EngineWriter engine;
-		std::function<int()> clients; // the server's own connections
+		std::function<int()> clients;
 		// the station the page draws: the one in focus, or the only one, when it shares where it is
 		bool drawnStation(const std::vector<int> &focus, StationRegistry::Station &at);
 		void openTiles(const std::vector<std::string> &lists, bool overlay, bool mbtiles);

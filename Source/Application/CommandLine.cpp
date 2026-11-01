@@ -65,7 +65,7 @@ namespace
 	{
 		enum Kind
 		{
-			RAW, // a number, switch or null, as written
+			RAW,
 			STRING,
 			OBJECT,
 			ARRAY
@@ -383,7 +383,7 @@ namespace
 		// takes, and the last word wins, as it did when each was applied in turn
 		bool channel_set = false;
 		std::string channel, nmea;
-		bool passive = false; // a file's entry that is off: carried for the reader to skip
+		bool passive = false;
 	};
 
 	// what the command line asks of the program besides configuring: the
@@ -397,16 +397,16 @@ namespace
 	// configure (-h, -l, -L, -G) are noted as actions, or act on the log as they did.
 	class Translation
 	{
-		bool verbose = false; // -v or -v*: every receiver reports
+		bool verbose = false;
 
-		Node main; // what is the engine's: the main section
+		Node main;
 		std::vector<std::unique_ptr<Rx>> receivers;
-		int nrec = 0;													  // as the reader counts: the first input fills the engine's first receiver
-		Node lists;														  // the outputs, stations and services, an array each in order of first appearance
-		std::vector<std::pair<Node, std::string>> servers;				  // with the -N that gave each, empty for a file's
+		int nrec = 0;
+		Node lists;
+		std::vector<std::pair<Node, std::string>> servers;
 		Node webhooks = Node::of(Node::ARRAY);
 		std::vector<Node> mqtt;
-		Node tracking; // the files' "tracking", read as one
+		Node tracking;
 		bool has_tracking = false;
 
 		// -N: a port starts a server, the keys that follow are its settings; the servers come once every argument is in
@@ -461,9 +461,9 @@ namespace
 		}
 
 	public:
-		std::vector<std::string> said; // warnings the reader would have given for what the document now has otherwise
+		std::vector<std::string> said;
 		Actions actions;
-		bool json = false;			   // -J: write the document
+		bool json = false;
 		std::string json_file;
 
 		Translation()
@@ -578,7 +578,7 @@ namespace
 					rx.nmea.clear();
 					break;
 				case AIS::KEY_SETTING_NMEA_CHANNEL:
-					rx.channel_set = true; // after the channel, in whichever order the file has them: below
+					rx.channel_set = true;
 					break;
 				case AIS::KEY_SETTING_OWN_MMSI:
 					main.add(name, fromJSON(m.Get()));
@@ -732,7 +732,7 @@ namespace
 				case AIS::KEY_SETTING_SHARING:
 				case AIS::KEY_SETTING_SHARING_KEY:
 				case AIS::KEY_SETTING_SHARING_ZONE:
-					break; // the document's own, and the feed's, read above
+					break;
 				case AIS::KEY_SETTING_SERVER:
 				{
 					// one server or a list of them, none the -N's
@@ -751,7 +751,7 @@ namespace
 				break;
 				case AIS::KEY_SETTING_WEBHOOKS:
 					if (!m.Get().isArray())
-						main.add(name, fromJSON(m.Get())); // for the reader to refuse
+						main.add(name, fromJSON(m.Get()));
 					else
 						for (const auto &item : m.Get().getArray())
 							webhooks.items.push_back(fromJSON(item));
@@ -765,7 +765,7 @@ namespace
 						break;
 					if (!m.Get().isObject())
 					{
-						main.add(name, fromJSON(m.Get())); // for the reader to refuse
+						main.add(name, fromJSON(m.Get()));
 						break;
 					}
 					tracked = true;
@@ -791,7 +791,7 @@ namespace
 				{
 					if (!m.Get().isArray())
 					{
-						main.add(name, fromJSON(m.Get())); // for the reader to refuse
+						main.add(name, fromJSON(m.Get()));
 						break;
 					}
 					// one list each, in order of first appearance
@@ -805,7 +805,7 @@ namespace
 				}
 				break;
 				default:
-					main.add(name, fromJSON(m.Get())); // the screen, the timeout, managed mode's sections
+					main.add(name, fromJSON(m.Get()));
 				}
 			}
 
@@ -1239,14 +1239,14 @@ namespace
 				server.add(keyName(AIS::KEY_SETTING_PORT), Node::str(p.port));
 			for (const auto &a : p.args)
 			{
-				if (a.first == AIS::KEY_SETTING_PLACE_GEOMETRY) // a term of the server's view, which -N has no object for
+				if (a.first == AIS::KEY_SETTING_PLACE_GEOMETRY)
 					server.child(keyName(AIS::KEY_SETTING_VIEW)).add(keyName(a.first), Node::str(a.second));
-				else if (a.first == AIS::KEY_SETTING_TLS_CERT) // the files of its tls, which -N has no object for either
+				else if (a.first == AIS::KEY_SETTING_TLS_CERT)
 					server.child(keyName(AIS::KEY_SETTING_TLS)).add(keyName(AIS::KEY_SETTING_CERT), Node::str(a.second));
 				else if (a.first == AIS::KEY_SETTING_TLS_KEY)
 					server.child(keyName(AIS::KEY_SETTING_TLS)).add(keyName(AIS::KEY_SETTING_KEY), Node::str(a.second));
 				else
-					server.add(keyName(a.first), Node::str(a.second)); // the reader refuses keys, view and active as -N did
+					server.add(keyName(a.first), Node::str(a.second));
 			}
 			// its files resolve against the last file's folder, as they did when the servers were made last
 			absolute(server, Config::baseDir());
@@ -1294,7 +1294,7 @@ namespace
 		{
 			const Rx &rx = *receivers[i];
 			Node entry = rx.entry;
-			if (verbose && !rx.passive) // -v reaches every receiver
+			if (verbose && !rx.passive)
 				entry.add(keyName(AIS::KEY_SETTING_VERBOSE), Node::str("on"));
 			if (rx.channel_set)
 			{

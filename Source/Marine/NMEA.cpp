@@ -173,9 +173,9 @@ namespace AIS
 	{
 		splitStr = &s;
 		splitCount = 0;
-		splitDelim[0] = (int)offset - 1; // sentinel before first field
+		splitDelim[0] = (int)offset - 1;
 
-		const char *ptr = s.data() + offset + 1; // +1 to skip leading $/!
+		const char *ptr = s.data() + offset + 1;
 		const char *end = s.data() + s.size();
 
 		// Phase 1: scan size_t words for '*' to find checksum boundary
@@ -233,7 +233,7 @@ namespace AIS
 		}
 
 		splitChecksum = cs;
-		splitDelim[++splitCount] = (int)s.size(); // sentinel after last field
+		splitDelim[++splitCount] = (int)s.size();
 	}
 
 	static bool parse_uint(const char *p, int len, int64_t &out)
@@ -806,7 +806,7 @@ namespace AIS
 		}
 
 		int src = station;
-		if (flags & 0x04) // station id carried in the frame
+		if (flags & 0x04)
 		{
 			uint32_t id = 0;
 			for (int i = 0; i < 4; i++)
@@ -1105,7 +1105,7 @@ namespace AIS
 
 		if (pos < bufsize && pos < limit)
 		{
-			pos++; // skip terminator
+			pos++;
 
 			if (state == ParseState::NMEA)
 			{
@@ -1207,7 +1207,7 @@ namespace AIS
 
 		if (pos < bufsize && pos < limit)
 		{
-			pos++; // skip \n
+			pos++;
 			processBinaryPacket(tag);
 			reset();
 			return;

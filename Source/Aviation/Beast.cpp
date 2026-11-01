@@ -74,7 +74,7 @@ void RAW1090::Receive(const RAW *data, int len, TAG &tag)
             switch (b)
             {
             case ';':
-                msg.len >>= 1; // nibbles → bytes
+                msg.len >>= 1;
                 if (msg.len > 0)
                 {
                     msg.Decode();
@@ -235,7 +235,7 @@ void Beast::Receive(const RAW *data, int len, TAG &tag)
                 state = State::ACCUMULATE;
                 frame_done(tag);
             }
-            else if (!start_frame(b)) // 0x1A <type> starts a new frame here
+            else if (!start_frame(b))
                 state = State::WAIT_START;
         }
     }

@@ -24,7 +24,7 @@
 
 namespace
 {
-	const uint32_t TRACKER_MAGIC = 0x54524b52; // "TRKR"
+	const uint32_t TRACKER_MAGIC = 0x54524b52;
 	const uint32_t TRACKER_VERSION = 3; // 2 adds the stations' last fixes, 3 each figures' week and levels
 }
 

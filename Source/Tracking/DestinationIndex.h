@@ -32,7 +32,7 @@ class DestinationIndex {
   RelationshipIndex<uint32_t, 1> membership;
   std::vector<std::string> codes{""}; // interned once; id 0 is no destination
   std::unordered_map<std::string, uint32_t> code_ids;
-  std::vector<uint8_t> waiting; // matched without a fix; retried on the first
+  std::vector<uint8_t> waiting;
   std::shared_ptr<const PlaceIndex> places;
 
   void replace(uint32_t slot, const std::string &next) {

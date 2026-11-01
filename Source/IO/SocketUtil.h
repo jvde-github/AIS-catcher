@@ -205,8 +205,8 @@ namespace Net
 	// poll timeout — never a hard failure.
 	class Wakeup
 	{
-		SOCKET rd = -1; // read end, added to the poll set
-		SOCKET wr = -1; // write end, poked by notify()
+		SOCKET rd = -1;
+		SOCKET wr = -1;
 		std::atomic<bool> pending{false};
 
 	public:

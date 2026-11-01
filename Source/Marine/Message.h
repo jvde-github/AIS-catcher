@@ -341,13 +341,13 @@ namespace AIS
 			// Bits 36-63: Data content hash (28 bits)
 			// Simple FNV-1a-like hash of message data
 
-			uint32_t data_hash = 2166136261u; // FNV offset basis
-			int bytes = (length + 7) / 8;	  // Convert bits to bytes
+			uint32_t data_hash = 2166136261u;
+			int bytes = (length + 7) / 8;
 
 			for (int i = 0; i < bytes && i < MAX_AIS_BYTES; i++)
 			{
 				data_hash ^= data[i];
-				data_hash *= 16777619u; // FNV prime
+				data_hash *= 16777619u;
 			}
 			hash |= ((uint64_t)(data_hash & 0x0FFFFFFF)) << 36;
 
@@ -365,7 +365,7 @@ namespace AIS
 		std::vector<int> ID_allowed;
 		std::vector<int> MMSI_allowed;
 		std::vector<int> MMSI_blocked;
-		std::vector<int> stations_allowed; // the receiving stations, as the tag says which heard it
+		std::vector<int> stations_allowed;
 		std::string allowed_channels;
 
 		long int last_VDO = 0;

@@ -210,7 +210,7 @@ namespace JSON
 			}
 			else
 			{
-				parse_string_escaped(); // handles '\\', control chars, EOF
+				parse_string_escaped();
 				tokenEscaped = true;
 			}
 

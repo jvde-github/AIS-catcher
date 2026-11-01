@@ -56,4 +56,4 @@ inline Verdict judge(bool known, float lat0, float lon0, bool stopped,
     return JUMP;
   return VALIDATED;
 }
-} // namespace PositionCheck
+}

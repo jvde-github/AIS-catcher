@@ -271,7 +271,7 @@ void MqttState::publishState(std::time_t now, bool always)
 	DB &db = tracker.ships();
 	const std::time_t window = now - db.timeHistory(), recent = now - Ship::STATION_WINDOW;
 	int vessels = 0;
-	std::map<int, int> heard; // per station, the vessels it heard within the station window
+	std::map<int, int> heard;
 	db.forEachRecent(now, window < recent ? window : recent, [&](int, const Ship &s, long) {
 		if (s.last_signal >= window)
 			vessels++;
@@ -360,7 +360,7 @@ void MqttState::publishEvents()
 			Services::writeEvent(w, e, tracker.journal().epoch(), [&](JSON::Writer &lead) { lead.kv("event_type", Tracking::journalName(e.event.kind)); });
 		});
 		if (link->mqtt.send(body.data(), (int)body.size(), topic) <= 0)
-			return; // the rest when the connection is back
+			return;
 		cursor = e.seq;
 	}
 }

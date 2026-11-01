@@ -55,9 +55,9 @@ private:
 	struct Hook
 	{
 		WebhookSpec spec;
-		std::string key; // the secret's bytes
+		std::string key;
 		uint64_t cursor = 0;
-		int failures = 0; // in a row, to wait longer after each
+		int failures = 0;
 		std::time_t retry_at = 0;
 	};
 

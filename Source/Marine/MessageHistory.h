@@ -132,6 +132,6 @@ namespace AIS
     };
 
     // Type aliases for specific use cases
-    using PositionHistory = MessageHistory<uint32_t>;  // For MMSI position tracking
-    using DuplicateHistory = MessageHistory<uint64_t>; // For message duplicate detection
+    using PositionHistory = MessageHistory<uint32_t>;
+    using DuplicateHistory = MessageHistory<uint64_t>;
 }

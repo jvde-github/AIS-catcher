@@ -53,15 +53,15 @@ public:
 	struct Station
 	{
 		int id = 0;
-		std::string name, country; // country as a two-letter code
+		std::string name, country;
 		FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 		float alt = ALTITUDE_UNDEFINED; // metres, of the antenna
-		uint32_t mmsi = 0; // the vessel the station rides, when it moves with one
-		bool gps = true;   // GPS fixes move it; a station on a vessel follows the vessel instead
-		int inputs = 0;    // how many receivers name it: with none, GPS from every input moves it
+		uint32_t mmsi = 0;
+		bool gps = true;
+		int inputs = 0;
 		bool share_loc = false; // its position may leave this machine: servers, the API, the map
 		bool online = false;
-		int state = STATE_UNKNOWN; // a change is sent to the map, as one of position is
+		int state = STATE_UNKNOWN;
 		std::time_t last = 0;
 		float rate = 0;
 		uint64_t seq = 0;
@@ -259,7 +259,7 @@ private:
 	}
 
 	std::map<int, Station> stations;
-	std::vector<int> order; // the ids, in the order first told
+	std::vector<int> order;
 	std::map<uint32_t, int> by_mmsi;
 	std::vector<std::pair<int, uint64_t>> tombstones;
 	uint64_t own_seq = 0;

@@ -163,15 +163,14 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
                 el('p', 'st-help st-stations__namenote', { text: 'Written as station_id in every output.' }));
 
         renderPosition(s, named);
-        main.append(shareSwitch(s));
         listChanged();
     }
 
-    // Where it stands, then what moves it: GPS when it follows it, a vessel when it rides one, the vessel
-    // first. The default station rides a vessel only while it is the only station.
+    // Whether it shows, where it stands, then what moves it: GPS when it follows it, a vessel when it rides
+    // one, the vessel first. The default station rides a vessel only while it is the only station.
     function renderPosition(s, named) {
         const body = el('div', 'st-stations__source');
-        main.append(el('div', 'st-stations__pos', {}, el('span', 'st-label', { text: 'Position' })), body);
+        main.append(el('div', 'st-stations__pos', {}, el('span', 'st-label', { text: 'Position' })), shareSwitch(s), body);
         renderFixed(s, body);
         body.append(el('p', 'st-help st-stations__note', { text: 'Where it stands until GPS or a vessel moves it.' }));
         main.append(gpsSwitch(s, named));

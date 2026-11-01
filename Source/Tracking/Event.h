@@ -39,21 +39,21 @@
 namespace Tracking {
 
 enum class Kind : uint8_t {
-  FIX = 1, // a sampled position, kept because the line would be wrong without it
-  STOP,    // the vessel has lain still for a minute, stamped with the first stopped fix
-  MOVE,    // it is under way again; carries the stay's statistics
-  ENTER,   // crossed into a place, confirmed by the next fix
-  LEAVE,   // crossed out of a place
-  STATUS,  // navigation status changed
+  FIX = 1,
+  STOP,
+  MOVE,
+  ENTER,
+  LEAVE,
+  STATUS,
   DRAUGHT,
   DESTINATION,
   NAME,
   CALLSIGN,
   ETA,
-  SAFETY, // a safety message
-  SILENT, // an hour without a fix
-  HEARD,  // the first fix after
-  SYSTEM  // the installation itself: an engine, a receiver, a backup; only the journal tells it
+  SAFETY,
+  SILENT,
+  HEARD,
+  SYSTEM
 };
 
 // A kind under its names on the wire: `line` is the event line's `event`, as
@@ -119,7 +119,7 @@ enum class Level : uint8_t { ROUTINE = 0, NOTICE = 1, URGENT = 2, LEVELS = 3 };
 // Event() clears it.
 struct Stay {
   uint32_t seconds, reports;
-  float lat, lon;             // mean position
+  float lat, lon;
   float spread_m;             // RMS distance from it
   float heading, heading_r;   // mean heading, and the length of the mean vector
   float draught_in, draught_out;
@@ -139,7 +139,7 @@ template <size_t N> inline void copyText(char (&dst)[N], const char *src) {
 }
 
 struct Event {
-  uint64_t seq = 0; // assigned when sent; the process start time is the epoch
+  uint64_t seq = 0;
 
   // the fix the event rests on
   std::time_t t = 0;
@@ -156,15 +156,15 @@ struct Event {
 
   union {
     struct {
-      uint32_t place;     // the place's runtime id
-      uint32_t number;    // the place's number, the stable one its file carries; 0 when it has none
-      long revision;      // the place's revision it was judged against
-      bool seen;          // a crossing observed, not inferred from containment
-      bool announced;     // the place asked to be told about: a guard zone, not a sector crossed all day
+      uint32_t place;
+      uint32_t number;
+      long revision;
+      bool seen;
+      bool announced;
       const char *name;   // the place's name, the catalogue's own string, for the duration of Send
     } crossing;           // ENTER LEAVE
     struct {
-      uint32_t to;        // the addressed MMSI, 0 for a broadcast
+      uint32_t to;
       const char *to_name; // its name when known, for the duration of Send
     } safety;             // SAFETY
     struct {
@@ -228,4 +228,4 @@ public:
   }
 };
 
-} // namespace Tracking
+}

@@ -261,7 +261,7 @@ private:
 	struct Station
 	{
 		Position now;
-		FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED; // configured
+		FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 		uint32_t mmsi = 0;
 		bool gps = true, share_loc = false;
 		int inputs = 0;
@@ -304,7 +304,7 @@ private:
 	std::map<int, std::time_t> last_heard;
 
 	std::mutex stations_mtx;
-	Position fixed_at; // where every message is measured from, when the configuration fixes it
+	Position fixed_at;
 	bool fixed_shared = false; // and whether that position may leave this machine
 	std::map<int, Station> stations;
 	std::map<uint32_t, int> riders;

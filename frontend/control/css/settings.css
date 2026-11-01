@@ -395,8 +395,9 @@ a.st-node__name:hover {text-decoration:underline}
 .st-stations__dot {flex-shrink:0;width:8px;height:8px;border-radius:50%;background:var(--color-field-border)}
 .st-stations__dot.is-ok {background:var(--color-success)}
 .st-stations__share {display:flex;align-items:center;gap:14px;margin-top:18px;padding:14px 16px;border-radius:12px;background:var(--color-hover);cursor:pointer}
+.st-stations__pos + .st-stations__share {margin:0 0 14px}
 .st-stations__sharetext {display:flex;flex-direction:column;gap:2px;font-size:13.5px;color:var(--color-text-strong)}
-/* the vessel a station rides, between Follow GPS and Share position: their spacing, its help close under it */
+/* the vessel a station rides, under Follow GPS: its spacing, its help close under it */
 .st-stations__vessel {margin-top:18px}
 .st-main .st-stations__vessel .st-stations__field {margin-bottom:6px}
 .st-main .st-stations__vessel > .st-help {margin:0}

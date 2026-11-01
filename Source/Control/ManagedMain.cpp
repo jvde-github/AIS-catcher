@@ -357,4 +357,4 @@ int run(const std::vector<std::string> &all) {
 
 #endif
 
-} // namespace Managed
+}

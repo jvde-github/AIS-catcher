@@ -45,7 +45,7 @@ namespace Services
 		Tracker &tracker;
 		std::function<StationRegistry()> stations;
 		const ViewFilter &view;
-		std::vector<std::string> services; // what the server offers beside this, for the index
+		std::vector<std::string> services;
 
 		Response index();
 		Response openapi();

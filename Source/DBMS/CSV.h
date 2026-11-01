@@ -61,7 +61,7 @@ namespace IO
 		std::string log_day[3];
 		long long next_id = 0;
 
-		std::time_t day_stamp = -1; // days since epoch of day_str
+		std::time_t day_stamp = -1;
 		std::string day_str;
 
 		SlotTable<StateRow, uint32_t> state;

@@ -207,9 +207,9 @@ namespace JSON
 			*ptr++ = '.';
 			// frac in [1, 999999]: emit as three 2-digit pairs via table.
 			unsigned f = (unsigned)frac;
-			unsigned a = f / 10000;        // 00..99
-			unsigned b = (f / 100) % 100;  // 00..99
-			unsigned c = f % 100;          // 00..99
+			unsigned a = f / 10000;
+			unsigned b = (f / 100) % 100;
+			unsigned c = f % 100;
 			ptr[0] = digits100()[a * 2];
 			ptr[1] = digits100()[a * 2 + 1];
 			ptr[2] = digits100()[b * 2];
@@ -833,7 +833,7 @@ namespace JSON
 	private:
 		int dict = 0;
 		bool stringify_enhanced = false;
-		const Pool *pool = nullptr; // names unknown keys; without it they are dropped
+		const Pool *pool = nullptr;
 		bool exact = false;
 
 		// Separate: folding these into write_value's chain lets GCC rebuild a jump table.

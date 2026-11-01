@@ -477,7 +477,7 @@ namespace Protocol
 		State state = DISCONNECTED;
 		Clock::time_point stamp;
 
-		long reset_interval = 0; // jittered reset deadline in seconds, measured from stamp
+		long reset_interval = 0;
 		// jittered too, so stations that lost the same server do not all come back at once
 		double reconnect_delay = RECONNECT_TIME;
 
@@ -624,22 +624,22 @@ namespace Protocol
 
 		enum class PacketType
 		{
-			RESERVED_0 = 0 << 4,   // 0
-			CONNECT = 1 << 4,	   // 16
-			CONNACK = 2 << 4,	   // 32
-			PUBLISH = 3 << 4,	   // 48
-			PUBACK = 4 << 4,	   // 64
-			PUBREC = 5 << 4,	   // 80
-			PUBREL = 6 << 4,	   // 96
-			PUBCOMP = 7 << 4,	   // 112
-			SUBSCRIBE = 8 << 4,	   // 128
-			SUBACK = 9 << 4,	   // 144
-			UNSUBSCRIBE = 10 << 4, // 160
-			UNSUBACK = 11 << 4,	   // 176
-			PINGREQ = 12 << 4,	   // 192
-			PINGRESP = 13 << 4,	   // 208
-			DISCONNECT = 14 << 4,  // 224
-			RESERVED_15 = 15 << 4  // 240
+			RESERVED_0 = 0 << 4,
+			CONNECT = 1 << 4,
+			CONNACK = 2 << 4,
+			PUBLISH = 3 << 4,
+			PUBACK = 4 << 4,
+			PUBREC = 5 << 4,
+			PUBREL = 6 << 4,
+			PUBCOMP = 7 << 4,
+			SUBSCRIBE = 8 << 4,
+			SUBACK = 9 << 4,
+			UNSUBSCRIBE = 10 << 4,
+			UNSUBACK = 11 << 4,
+			PINGREQ = 12 << 4,
+			PINGRESP = 13 << 4,
+			DISCONNECT = 14 << 4,
+			RESERVED_15 = 15 << 4
 		};
 
 		std::string username, password;

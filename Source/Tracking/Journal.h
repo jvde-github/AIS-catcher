@@ -51,7 +51,7 @@ public:
 	{
 		uint64_t seq = 0;
 		EventRing::Entry event;
-		std::string place; // the place's id, for an arrival or a departure
+		std::string place;
 	};
 
 	explicit Journal(std::size_t capacity = 2000) : capacity(capacity ? capacity : 1) {}

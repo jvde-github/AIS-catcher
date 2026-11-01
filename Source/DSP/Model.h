@@ -76,7 +76,7 @@ namespace AIS
 	class Model : public Setting
 	{
 	protected:
-		int station = -1; // what its messages carry as station_id: the ID setting, else the input's station; -1 for none
+		int station = -1;
 		int own_mmsi = -1;
 
 		Mode mode = Mode::AB;

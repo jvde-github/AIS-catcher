@@ -91,8 +91,8 @@ namespace IO
 
 		// the TLS session of a connection to a server with a certificate
 		ssl_st *ssl = nullptr;
-		// the last handshake or read waits for the socket to take data
-		bool ssl_want_write = false;
+		// the last handshake or read waits for the socket to take data; the last write waits for a read
+		bool ssl_want_write = false, ssl_write_wants_read = false;
 		void readTLS(char *buffer, int size);
 		void waitOrDropTLS(int result);
 
@@ -100,7 +100,7 @@ namespace IO
 		~TCPServerConnection() { Close(); }
 
 		SOCKET sock = -1;
-		uint32_t peer_ipv4 = 0; // in network order
+		uint32_t peer_ipv4 = 0;
 
 		std::string msg;
 		std::vector<char> out;
@@ -152,7 +152,7 @@ namespace IO
 		// request handlers touch — the base-class destructor runs too late for
 		// members of derived classes.
 		void stopThread();
-		void SendAll(std::string m); // by value: moved into the queued Command
+		void SendAll(std::string m);
 		void SendAll(const char *data, int len) { SendAll(std::string(data, len)); }
 		// drops every connection, on the thread that owns them
 		void closeConnections() { post({Command::CloseAll, 0, std::string()}); }
@@ -177,7 +177,7 @@ namespace IO
 		bool reuse_port = false;
 		std::string IP_BIND;
 		int listening_port = -1;
-		int max_per_address = 0;
+		int max_per_address = MAX_CONN / 2;
 
 		static std::vector<int> active_ports;
 
@@ -205,7 +205,7 @@ namespace IO
 		};
 		std::mutex cmd_mtx;
 		std::deque<Command> cmds;
-		std::deque<Command> cmd_scratch; // swapped with cmds so the nodes are reused
+		std::deque<Command> cmd_scratch;
 		// Poked by post() so a queued command wakes the loop immediately instead
 		// of waiting for the poll timeout; degrades to timeout-only if unavailable.
 		Net::Wakeup wakeup;
@@ -239,6 +239,8 @@ namespace IO
 		void cleanUp(std::time_t now);
 		void SleepAndWait();
 		void reloadTLS(std::time_t now);
+		// the listening socket and its port, given up
+		void release();
 
 		void setStats(IO::OutputStats *s) { pstats = s; }
 
@@ -251,9 +253,9 @@ namespace IO
 		// the context a new connection takes: set from any thread, read by the Run() thread
 		std::mutex tls_mtx;
 		ssl_ctx_st *tls_ctx = nullptr;
-		std::string tls_cert, tls_key;
-		std::time_t tls_cert_time = 0, tls_key_time = 0, tls_checked = 0;
-		bool tls_warned = false; // said once that a renewed file does not load
+		std::string tls_cert, tls_key, tls_cert_data, tls_key_data;
+		std::time_t tls_checked = 0;
+		bool tls_warned = false;
 		// seconds since the epoch, enough to 2106; 32 bits as a 64-bit atomic needs libatomic on armv6
 		std::atomic<uint32_t> tls_until{0};
 		std::atomic<int> clients_now{0};

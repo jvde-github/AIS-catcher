@@ -33,7 +33,7 @@ public:
 	// -N's, so a mistake in one is said as -N said it before: "-N 8100: …"
 	struct Origins
 	{
-		std::vector<std::string> servers; // per "server" entry: "-N 8100" as given, or empty for a file's
+		std::vector<std::string> servers;
 	};
 
 private:
