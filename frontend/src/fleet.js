@@ -15,7 +15,7 @@ import {
 import { hasValidCoords } from '@aiscatcher/core/geo.js';
 import { palette as validPalette, bucketColor, speedBucket } from '@aiscatcher/core/palette.js';
 import * as markersLib from '@aiscatcher/map/markers.js';
-import { predictorPath } from '@aiscatcher/map/predictor.js';
+import { predictorPath, turnSide } from '@aiscatcher/map/predictor.js';
 import {
     map, markerVector, planeVector, shapeVector, labelVector, trackVector, planeLayer, labelLayer,
 } from './map.js';
@@ -126,8 +126,10 @@ export function redraw() {
                 feature.mmsi = ship.mmsi;
                 feature.shipclass = ship.shipclass;
                 feature.predictedAt = fromLonLat(path.coords[path.end]);
-                feature.bearing = path.bearing;
-                feature.hard = path.hard;
+                feature.marks = path.marks.map(m => ({ at: fromLonLat(m.at), bearing: m.bearing }));
+                feature.heading = ship.heading ?? ship.cog;
+                feature.minutes = predictorMinutes;
+                feature.turning = turnSide(ship.turn);
                 trackVector.addFeature(feature);
             }
         }

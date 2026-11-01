@@ -274,19 +274,29 @@ export function create(opts) {
             c = `rgba(${r}, ${g}, ${b}, ${o})`;
         }
 
+        // an AIS target's vector, minute marks, heading line and turn flag as SN.1/Circ.243 draws them
         if (feature.predictedAt) {
-            const dark = "rgba(0, 0, 0, 0.75)", light = "rgba(255, 255, 255, 0.95)";
-            const styles = [
-                new Style({ stroke: stroke(dark, 4) }),
-                new Style({ stroke: stroke(light, 1.5, [4, 4]) }),
-                new Style({ geometry: new Point(feature.predictedAt), image: new CircleStyle({ radius: 3.5, fill: new Fill({ color: light }), stroke: new Stroke({ color: dark, width: 1.5 }) }) }),
-            ];
-            if (feature.hard) {
-                const a = (feature.bearing + (feature.hard === "starboard" ? 90 : -90)) * DEG, len = 12 * resolution;
-                const [x, y] = feature.predictedAt;
-                const tick = new LineString([[x, y], [x + len * Math.sin(a), y + len * Math.cos(a)]]);
-                styles.push(new Style({ geometry: tick, stroke: stroke(dark, 4) }), new Style({ geometry: tick, stroke: stroke(light, 1.5) }));
-            }
+            const dark = "rgba(0, 0, 0, 0.7)", light = "rgba(255, 255, 255, 0.95)";
+            const px = n => n * resolution;
+            const cased = (geometry, width, dash) => [
+                new Style({ geometry, stroke: stroke(dark, width + 2, dash) }),
+                new Style({ geometry, stroke: stroke(light, width, dash) })];
+            const from = (p, bearing, len) => new LineString([p, [p[0] + len * Math.sin(bearing * DEG), p[1] + len * Math.cos(bearing * DEG)]]);
+            const across = (p, bearing, len) => from([p[0] - len / 2 * Math.cos(bearing * DEG), p[1] + len / 2 * Math.sin(bearing * DEG)], bearing + 90, len);
+            const styles = cased(undefined, 2, [4, 4]);
+            const start = feature.getGeometry().getFirstCoordinate(), [ex, ey] = feature.predictedAt;
+            const reach = Math.hypot(ex - start[0], ey - start[1]);
+            const marks = feature.marks || [];
+            if (reach / (marks.length + 1) >= px(16))
+                for (const m of marks)
+                    styles.push(...cased(across(m.at, m.bearing, px(7)), 1.5));
+            // a minute of the ship's way rather than the standard's fixed length: in proportion at every zoom
+            const minute = reach / (feature.minutes || 6);
+            const heading = from(start, feature.heading, Math.min(Math.max(minute, px(12)), px(48 * (s.icon_scale || 1))));
+            styles.push(...cased(heading, 1.25));
+            if (feature.turning)
+                styles.push(...cased(from(heading.getLastCoordinate(), feature.heading + (feature.turning === "starboard" ? 90 : -90), px(8)), 1.25));
+            styles.push(new Style({ geometry: new Point(feature.predictedAt), image: new CircleStyle({ radius: 3.5, fill: new Fill({ color: light }), stroke: new Stroke({ color: dark, width: 1.5 }) }) }));
             return styles;
         }
         const line = new Style({ stroke: stroke(c, w, feature.isDashed ? [6, 6] : undefined) });
