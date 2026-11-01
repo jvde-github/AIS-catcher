@@ -84,6 +84,7 @@ namespace IO
 			{
 				const std::lock_guard<std::mutex> lock(msg_list_mutex);
 				count(msg);
+				stats.messages++;
 
 				if (protocol == UploadProtocol::NMEA)
 				{

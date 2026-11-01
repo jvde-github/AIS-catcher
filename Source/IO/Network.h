@@ -109,6 +109,7 @@ namespace IO
 		}
 
 	public:
+		bool hasConnection() const override { return true; }
 		~HTTPStreamer() { Stop(); }
 		HTTPStreamer() : OutputMessage("HTTP"), url("http://127.0.0.1") { fmt = MessageFormat::JSON_FULL; }
 
@@ -181,6 +182,7 @@ namespace IO
 		}
 
 	public:
+		bool hasConnection() const override { return true; }
 		TCPClientStreamer() : OutputMessage("TCP Client") { fmt = MessageFormat::NMEA; }
 		~TCPClientStreamer() { Stop(); }
 
@@ -227,6 +229,7 @@ namespace IO
 		}
 
 	public:
+		bool hasConnection() const override { return true; }
 		HubStreamer();
 		~HubStreamer() { Stop(); }
 
@@ -247,6 +250,7 @@ namespace IO
 		}
 
 	public:
+		bool hasConnection() const override { return true; }
 		TCPlistenerStreamer() : OutputMessage("TCP Listener") { fmt = MessageFormat::NMEA; }
 
 		virtual ~TCPlistenerStreamer() {};
@@ -292,6 +296,7 @@ namespace IO
 		}
 
 	public:
+		bool hasConnection() const override { return true; }
 		MQTTStreamer() : OutputMessage("MQTT"), topic_template("ais/data")
 		{
 			fmt = MessageFormat::JSON_FULL;

@@ -655,6 +655,8 @@ namespace IO
 		if (filter.include(msg, tag) != AIS::Filter::Result::Included)
 			return;
 
+		stats.messages++;
+
 		// nothing below the statistics is enabled: no entry to build or queue
 		if (!needMessageTable() && !STATE)
 		{

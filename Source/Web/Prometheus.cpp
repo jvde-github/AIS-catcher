@@ -39,6 +39,24 @@ const std::string ShippingClassNames[] = {
 	"Search and Rescue Transponder EPIRB" // CLASS_SARTEPIRB
 };
 
+std::string prometheusEscape(const std::string &s)
+{
+	std::string r;
+	for (char c : s)
+	{
+		if (c == '\\' || c == '"')
+		{
+			r += '\\';
+			r += c;
+		}
+		else if (c == '\n')
+			r += "\\n";
+		else
+			r += c;
+	}
+	return r;
+}
+
 void PrometheusCounter::Add(const AIS::Message &m, const TAG &tag)
 {
 	if (m.type() > 28 || m.type() < 1)

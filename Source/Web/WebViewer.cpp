@@ -15,6 +15,8 @@
         along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <functional>
+
 #include "WebViewer.h"
 #include "PlaceCatalogue.h"
 #include "Device/Device.h"
@@ -296,6 +298,18 @@ void WebViewer::wireAggregate(
         states[0]->connectControl(r.OutputControl(j));
         r.OutputADSB(j).Connect((StreamIn<Plane::ADSB> *)&planes);
 
+        prom_inputs.emplace_back(new PrometheusInput(
+            r.description.empty() ? namesFor(r, j, receivers.size()).label
+                                  : r.description));
+        PrometheusInput &pi = *prom_inputs.back();
+        pi.device = device;
+        pi.type = device->getName();
+        if (first_of_device)
+          *device >> pi.bytes_own;
+        else
+          pi.bytes = prom_inputs[prom_inputs.size() - 2]->bytes;
+        r.OutputJSON(j).Connect((StreamIn<JSON::JSON> *)&pi);
+
         *device >> raw_counter;
       });
 }
@@ -395,6 +409,7 @@ void WebViewer::attachEngine(
 std::vector<std::unique_ptr<ReceiverTracker>> WebViewer::beginAttach() {
   std::lock_guard<std::recursive_mutex> lock(state_mtx);
 
+  prom_inputs.clear();
   std::vector<std::unique_ptr<ReceiverTracker>> previous;
   for (std::size_t i = 1; i < states.size(); i++)
     previous.push_back(std::move(states[i]));
@@ -424,6 +439,7 @@ void WebViewer::detachEngine() {
   // attachEngine() rebuilds them on the next run.
   engine_attached = false;
   msg_channels = nullptr;
+  prom_inputs.clear();
   setCommFeed(nullptr);
 }
 
@@ -649,6 +665,125 @@ std::string WebViewer::buildOutputStatsJSON() {
 
   w.finish();
   return content;
+}
+
+std::string WebViewer::buildPrometheus() {
+  std::string out = dataPrometheus.toPrometheus();
+
+  std::lock_guard<std::recursive_mutex> lock(state_mtx);
+
+  auto inputLabels = [&](size_t i, const char *extra = "") {
+    return "{input=\"" + std::to_string(i + 1) + "\",type=\"" +
+           prometheusEscape(prom_inputs[i]->type) + "\",description=\"" +
+           prometheusEscape(prom_inputs[i]->label) + "\"" + extra + "}";
+  };
+  auto inputMetric = [&](const char *name, const char *type, const char *help,
+                         const std::function<std::string(PrometheusInput &)> &value) {
+    out += std::string("# HELP ") + name + " " + help + "\n# TYPE " + name +
+           " " + type + "\n";
+    for (size_t i = 0; i < prom_inputs.size(); i++)
+      out += std::string(name) + inputLabels(i) + " " + value(*prom_inputs[i]) +
+             "\n";
+  };
+
+  inputMetric("ais_input_count", "counter",
+              "Total number of messages decoded per input",
+              [](PrometheusInput &p) { return std::to_string(p.count.load()); });
+  inputMetric("ais_input_bytes_in", "counter",
+              "Total number of raw bytes received per input",
+              [](PrometheusInput &p) {
+                return std::to_string(p.bytes->received());
+              });
+  inputMetric("ais_input_up", "gauge",
+              "Whether the input is streaming (1) or not (0)",
+              [](PrometheusInput &p) {
+                return std::string(p.device && p.device->isUp() ? "1" : "0");
+              });
+  inputMetric("ais_input_last_message_timestamp_seconds", "gauge",
+              "Unix time of the last message decoded per input, 0 if none yet",
+              [](PrometheusInput &p) { return std::to_string(p.last.load()); });
+
+  out += "# HELP ais_input_errors Messages decoded with errors per input\n";
+  out += "# TYPE ais_input_errors counter\n";
+  static const char *error_kinds[] = {"checksum", "undersized", "oversized"};
+  for (size_t i = 0; i < prom_inputs.size(); i++)
+    for (int k = 0; k < 3; k++)
+      out += "ais_input_errors" +
+             inputLabels(i, (std::string(",error=\"") + error_kinds[k] + "\"").c_str()) +
+             " " + std::to_string(prom_inputs[i]->errors[k].load()) + "\n";
+
+  // only inputs that dial a remote have connections to count
+  struct InputConn {
+    const char *name, *type, *help;
+    uint64_t (*get)(const IO::OutputStats &);
+  };
+  static const InputConn input_conn[] = {
+      {"ais_input_connect_ok", "counter", "Successful connections per input",
+       [](const IO::OutputStats &s) { return (uint64_t)s.connect_ok; }},
+      {"ais_input_connect_fail", "counter", "Failed connections per input",
+       [](const IO::OutputStats &s) { return (uint64_t)s.connect_fail; }},
+      {"ais_input_reconnects", "counter", "Reconnects per input",
+       [](const IO::OutputStats &s) { return (uint64_t)s.reconnects; }},
+      {"ais_input_connected", "gauge",
+       "Whether the input has an established connection (1) or not (0)",
+       [](const IO::OutputStats &s) { return (uint64_t)s.connected; }},
+  };
+  for (const auto &m : input_conn) {
+    out += std::string("# HELP ") + m.name + " " + m.help + "\n# TYPE " +
+           m.name + " " + m.type + "\n";
+    for (size_t i = 0; i < prom_inputs.size(); i++) {
+      const IO::OutputStats *st =
+          prom_inputs[i]->device ? prom_inputs[i]->device->getConnectionStats()
+                                 : nullptr;
+      if (st)
+        out += std::string(m.name) + inputLabels(i) + " " +
+               std::to_string(m.get(*st)) + "\n";
+    }
+  }
+
+  struct Metric {
+    const char *name, *type, *help;
+    uint64_t (*get)(const IO::OutputStats &);
+    bool connection;
+  };
+  static const Metric metrics[] = {
+      {"ais_output_count", "counter",
+       "Total number of messages passed to the output after filtering",
+       [](const IO::OutputStats &s) { return (uint64_t)s.messages; }, false},
+      {"ais_output_bytes_out", "counter", "Bytes sent per output",
+       [](const IO::OutputStats &s) { return (uint64_t)s.bytes_out; }, false},
+      {"ais_output_bytes_in", "counter", "Bytes received per output",
+       [](const IO::OutputStats &s) { return (uint64_t)s.bytes_in; }, false},
+      {"ais_output_connect_ok", "counter",
+       "Successful connections per output",
+       [](const IO::OutputStats &s) { return (uint64_t)s.connect_ok; }, true},
+      {"ais_output_connect_fail", "counter", "Failed connections per output",
+       [](const IO::OutputStats &s) { return (uint64_t)s.connect_fail; }, true},
+      {"ais_output_reconnects", "counter", "Reconnects per output",
+       [](const IO::OutputStats &s) { return (uint64_t)s.reconnects; }, true},
+      {"ais_output_connected", "gauge",
+       "Connections currently established per output",
+       [](const IO::OutputStats &s) { return (uint64_t)s.connected; }, true},
+      {"ais_output_dropped", "counter", "Messages dropped per output",
+       [](const IO::OutputStats &s) { return (uint64_t)s.dropped; }, false},
+  };
+
+  if (msg_channels) {
+    for (const auto &m : metrics) {
+      out += std::string("# HELP ") + m.name + " " + m.help + "\n# TYPE " +
+             m.name + " " + m.type + "\n";
+      for (size_t i = 0; i < msg_channels->size(); i++) {
+        const auto &o = *(*msg_channels)[i];
+        if (m.connection && !o.hasConnection())
+          continue;
+        out += std::string(m.name) + "{output=\"" + std::to_string(i + 1) +
+               "\",type=\"" + prometheusEscape(o.getTypeName()) +
+               "\",description=\"" + prometheusEscape(o.getDescription()) +
+               "\"} " + std::to_string(m.get(o.getStats())) + "\n";
+      }
+    }
+  }
+  return out;
 }
 
 std::string WebViewer::buildMultiPathJSON(ReceiverTracker *s,
@@ -976,7 +1111,7 @@ const WebViewer::Route WebViewer::routes[] = {
     // Prometheus metrics
     {"/metrics", &WebViewer::Settings::supportPrometheus, "text/plain",
      [](WebViewer *w, ReceiverTracker *, const std::string &) {
-       return w->dataPrometheus.toPrometheus();
+       return w->buildPrometheus();
      },
      true},
 

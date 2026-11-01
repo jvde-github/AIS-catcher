@@ -134,6 +134,7 @@ private:
   SSEStreamer sse_streamer;
   WebViewerLogger logger;
   PrometheusCounter dataPrometheus;
+  std::vector<std::unique_ptr<PrometheusInput>> prom_inputs;
   ByteCounter raw_counter;
 
   std::time_t time_start = 0;
@@ -164,6 +165,7 @@ private:
   // JSON builders for complex endpoints
   std::string buildStatJSON(ReceiverTracker *s);
   std::string buildOutputStatsJSON();
+  std::string buildPrometheus();
   std::string buildSharingStateJSON();
 
   void writeOutputsJSON(JSON::Writer &w);

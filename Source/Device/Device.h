@@ -31,6 +31,7 @@
 #include "Common.h"
 #include "Parse.h"
 #include "Convert.h"
+#include "OutputStats.h"
 
 namespace Device {
 
@@ -96,7 +97,12 @@ namespace Device {
 		// Play state plus health. Virtual dispatch is deliberate: the overrides poll
 		// the hardware, and that poll is what sets `lost`.
 		bool isActive() { return isStreaming() && !lost; }
+		// The state the engine loop last left, without the polling isActive() does:
+		// for WAV input isStreaming() reads the file and feeds the decoder, so other threads must not call it
+		bool isUp() const { return streaming && !lost; }
 		virtual bool isReplay() { return false; }
+		// Connection counters of inputs that dial a remote; null when there is no connection to count
+		virtual const IO::OutputStats *getConnectionStats() const { return nullptr; }
 
 		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }
 		virtual void getDeviceList(std::vector<Description>& DeviceList) {}
