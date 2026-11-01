@@ -61,7 +61,7 @@ const uint32_t F_SIGNAL = 1 << 11;
 
 struct Ship {
   uint32_t mmsi;
-  int count, msg_type, shipclass, mmsi_type, shiptype, heading, status;
+  int count, msg_type, shipclass, mmsi_type, shiptype, heading, status, turn;
   int to_port, to_bow, to_starboard, to_stern, IMO, angle, altitude,
       received_stations;
   int unit_model, unit_serial;
@@ -141,7 +141,8 @@ struct Ship {
 
 private:
   static const int _SHIP_MAGIC = 0x53484950;
-  static const int _SHIP_VERSION = 8;
+  static const int _SHIP_VERSION = 9;
+  static const int _SHIP_VERSION_HEARD = 8;    // the station list, no rate of turn
   static const int _SHIP_VERSION_RESTED = 7;   // the rest, no station list
   static const int _SHIP_VERSION_PREVIOUS = 6; // before the rest on the record
   static const int _SHIP_VERSION_MATCHED =

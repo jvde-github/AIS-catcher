@@ -206,6 +206,7 @@ const float SPEED_UNDEFINED = -1;
 const float DRAUGHT_UNDEFINED = -1;
 
 const int HEADING_UNDEFINED = 511;
+const int TURN_UNDEFINED = -128;
 const int STATUS_UNDEFINED = 15;
 const int DIMENSION_UNDEFINED = -1;
 const int ALT_UNDEFINED = 4095;

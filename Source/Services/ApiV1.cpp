@@ -102,6 +102,9 @@ namespace Services
 			w.kv_or_null("speed_kn", s.speed, s.speed != SPEED_UNDEFINED);
 			w.kv_or_null("course_deg", s.cog, s.cog != COG_UNDEFINED);
 			w.kv_or_null("heading_deg", s.heading, s.heading != HEADING_UNDEFINED);
+			const float rate = (s.turn / 4.733f) * (s.turn / 4.733f);
+			w.kv_or_null("rate_of_turn_deg_min", s.turn < 0 ? -rate : rate, s.turn != TURN_UNDEFINED && s.turn > -127 && s.turn < 127);
+			w.kv_or_null("turning_hard", s.turn > 0 ? "starboard" : "port", s.turn == 127 || s.turn == -127);
 			w.kv_or_null("nav_status", s.status >= 0 && s.status < N_NAV_STATUSES ? NAV_STATUSES[s.status] : "", s.status >= 0 && s.status < N_NAV_STATUSES);
 
 			w.kv_or_null("to_bow_m", s.to_bow, s.to_bow != DIMENSION_UNDEFINED);

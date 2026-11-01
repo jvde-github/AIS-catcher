@@ -167,4 +167,6 @@ register({
     closeSettings: () => closeSettings(),
     applyDefaultSettings: () => applyDefaultSettings(),
     setMetrics: (e, d, el) => setMetrics(el.value),
+    redrawMap: () => redraw(),
+    togglePredictor: () => { settings.show_predictor = !settings.show_predictor; saveSettings(); redraw(); },
 });

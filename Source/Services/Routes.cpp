@@ -293,7 +293,7 @@ namespace Services
 "day":{"type":"string","format":"date-time","description":"The UTC day, at its start"},
 "max_distance_nm":{"type":"number","description":"Its farthest validated position, nautical miles"},
 "usual_nm":{"type":"number","description":"The usual range: the median of the farthest positions of the 30 days before"}}})J"},
-			{"Vessel", R"J({"type":"object","required":["mmsi","name","callsign","imo","eni","destination","class","ship_type","mmsi_type","country","lat","lon","distance_nm","bearing_deg","speed_kn","course_deg","heading_deg","nav_status","to_bow_m","to_stern_m","to_port_m","to_starboard_m","draught_m","eta","validated","repeat","approximate","virtual_aid","channels","transponder","vendor_id","model","serial","level_db","ppm","altitude_m","received_stations","messages","message_types","binary_messages","station_aboard","last_seen","age_s","stations"],"properties":{
+			{"Vessel", R"J({"type":"object","required":["mmsi","name","callsign","imo","eni","destination","class","ship_type","mmsi_type","country","lat","lon","distance_nm","bearing_deg","speed_kn","course_deg","heading_deg","rate_of_turn_deg_min","turning_hard","nav_status","to_bow_m","to_stern_m","to_port_m","to_starboard_m","draught_m","eta","validated","repeat","approximate","virtual_aid","channels","transponder","vendor_id","model","serial","level_db","ppm","altitude_m","received_stations","messages","message_types","binary_messages","station_aboard","last_seen","age_s","stations"],"properties":{
 "mmsi":{"type":"integer","description":"The vessel's MMSI"},
 "name":{"type":["string","null"],"description":"The name it broadcasts"},
 "callsign":{"type":["string","null"],"description":"Its call sign"},
@@ -311,6 +311,8 @@ namespace Services
 "speed_kn":{"type":["number","null"],"description":"Speed over ground, knots"},
 "course_deg":{"type":["number","null"],"description":"Course over ground, degrees"},
 "heading_deg":{"type":["number","null"],"description":"True heading, degrees"},
+"rate_of_turn_deg_min":{"type":["number","null"],"description":"Degrees a minute, starboard positive; null when not known, or when only turning_hard is"},
+"turning_hard":{"type":["string","null"],"enum":["port","starboard",null],"description":"Turning faster than 10 degrees a minute, as a transponder without a rate sensor reports it"},
 "nav_status":{"enum":@NAV_STATUS_OR_NULL@,"description":"Its navigational status"},
 "to_bow_m":{"type":["number","null"],"description":"From the position reference to the bow, metres"},
 "to_stern_m":{"type":["number","null"],"description":"From the position reference to the stern, metres"},

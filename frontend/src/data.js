@@ -116,7 +116,7 @@ async function fetchShipsBody() {
 
     const dynamicKeys = [
         "mmsi", "lat", "lon", "distance",
-        "heading", "cog", "speed", "status", "age", "flags",
+        "heading", "cog", "speed", "turn", "status", "age", "flags",
         "shipclass", "country", "binary", "station", "place_ids", "stations"
     ];
 

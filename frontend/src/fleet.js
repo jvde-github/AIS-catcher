@@ -15,6 +15,7 @@ import {
 import { hasValidCoords } from '@aiscatcher/core/geo.js';
 import { palette as validPalette, bucketColor, speedBucket } from '@aiscatcher/core/palette.js';
 import * as markersLib from '@aiscatcher/map/markers.js';
+import { predictorPath } from '@aiscatcher/map/predictor.js';
 import {
     map, markerVector, planeVector, shapeVector, labelVector, trackVector, planeLayer, labelLayer,
 } from './map.js';
@@ -85,6 +86,7 @@ export function redraw() {
 
     const zoom = map.getView().getZoom();
     const showShapeOutlines = zoom > 11.5;
+    const showPredictor = settings.show_predictor, predictorMinutes = Number(settings.predictor_minutes) || 6;
     const includeLabels = (settings.show_labels === "dynamic" && showShapeOutlines) || settings.show_labels === "always";
 
     for (let [mmsi, entry] of Object.entries(shipsDB)) {
@@ -116,6 +118,17 @@ export function redraw() {
                 shapeFeatures[ship.mmsi] = shapeFeature
 
                 shapeVector.addFeature(shapeFeature)
+            }
+
+            if (showPredictor && ship.cog != null && ship.speed > 0.5) {
+                const path = predictorPath(lat, lon, ship.speed, ship.cog, ship.turn, predictorMinutes);
+                const feature = new OlFeature({ geometry: new LineString(path.coords.map(c => fromLonLat(c))) });
+                feature.mmsi = ship.mmsi;
+                feature.shipclass = ship.shipclass;
+                feature.predictedAt = fromLonLat(path.coords[path.end]);
+                feature.bearing = path.bearing;
+                feature.hard = path.hard;
+                trackVector.addFeature(feature);
             }
         }
     }

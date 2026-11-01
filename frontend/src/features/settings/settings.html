@@ -612,6 +612,26 @@
 			</div>
 		</section>
 		<section>
+			<h5 class="st-title">COG Predictor</h5>
+			<div class="third">
+				<span>Show</span><span>
+					<input type="checkbox" id="settings_show_predictor" data-setting="show_predictor" data-on-change="redrawMap" />
+				</span>
+			</div>
+			<div>
+				<span>Length</span>
+				<span>
+					<select id="settings_predictor_minutes" data-setting="predictor_minutes" data-on-change="redrawMap">
+						<option value="3">3 minutes</option>
+						<option value="6">6 minutes</option>
+						<option value="10">10 minutes</option>
+						<option value="15">15 minutes</option>
+					</select>
+				</span>
+			<small class="st-desc">Where a moving ship will be at its speed and course, bent by its rate of turn; a flag when it only reports turning hard</small>
+			</div>
+		</section>
+		<section>
 			<h5 class="st-title">Line Style</h5>
 			<div>
 				<span id="track_weight_label" data-caption-for="track_weight" data-caption-format="Weight ({v})">Weight (1)</span>

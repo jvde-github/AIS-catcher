@@ -114,6 +114,8 @@ const DEFAULT_SETTINGS = {
         show_track_on_hover: false,
         show_track_on_select: false,
         show_all_tracks: false,
+        show_predictor: false,
+        predictor_minutes: 6,
         targetcard_top_left: true,
         shipcard_active_tab: "summary",
         map_toolbar: "compact",

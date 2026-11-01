@@ -64,6 +64,7 @@ void Ship::reset() {
   angle = ANGLE_UNDEFINED;
   draught = DRAUGHT_UNDEFINED;
   speed = SPEED_UNDEFINED;
+  turn = TURN_UNDEFINED;
 
   cog = COG_UNDEFINED;
   last_signal = last_direct_signal = last_static_signal = {};
@@ -156,6 +157,7 @@ void Ship::clearFields(uint32_t doomed) {
   if (doomed & F_SPEED_COG) {
     speed = SPEED_UNDEFINED;
     cog = COG_UNDEFINED;
+    turn = TURN_UNDEFINED;
   }
   if (doomed & F_HEADING)
     heading = HEADING_UNDEFINED;
@@ -435,7 +437,7 @@ bool Ship::Save(std::ofstream &file) const {
                 W(mmsi_type) && W(shipname) && W(destination) && W(callsign) &&
                 W(country_code) && W(vin) && W(vendorid) && W(unit_model) &&
                  W(unit_serial) && W(last_group) && W(idle_since) && W(rest_told) &&
-                 saveHeardList(file, heard));
+                 saveHeardList(file, heard) && W(turn));
 }
 
 bool Ship::Load(std::ifstream &file) {
@@ -444,7 +446,7 @@ bool Ship::Load(std::ifstream &file) {
   if (!R(magic) || !R(version) || magic != _SHIP_MAGIC)
     return false;
 
-  if (version != _SHIP_VERSION && version != _SHIP_VERSION_RESTED && version != _SHIP_VERSION_PREVIOUS &&
+  if (version != _SHIP_VERSION && version != _SHIP_VERSION_HEARD && version != _SHIP_VERSION_RESTED && version != _SHIP_VERSION_PREVIOUS &&
       version != _SHIP_VERSION_MATCHED && version != _SHIP_VERSION_UNMATCHED &&
       version != _SHIP_VERSION_LINKED)
     return false;
@@ -461,8 +463,8 @@ bool Ship::Load(std::ifstream &file) {
              R(callsign) && R(country_code) && R(vin) && R(vendorid) &&
              R(unit_model) && R(unit_serial) && R(last_group));
 
-  // the rest arrived with version 7, the station list with 8; a record from
-  // before is under way and heard by none
+  // the rest arrived with version 7, the station list with 8, the rate of turn
+  // with 9; a record from before is under way, heard by none and not turning
   idle_since = 0;
   rest_told = false;
   if (ok && version >= _SHIP_VERSION_RESTED)
@@ -473,8 +475,11 @@ bool Ship::Load(std::ifstream &file) {
       rest_told = told != 0;
     }
   heard.fill(Heard{0, 0});
-  if (ok && version == _SHIP_VERSION)
+  if (ok && version >= _SHIP_VERSION_HEARD)
     ok = loadHeardList(file, heard);
+  turn = TURN_UNDEFINED;
+  if (ok && version >= _SHIP_VERSION)
+    ok = (bool)R(turn);
   if (ok && version == _SHIP_VERSION_LINKED) {
     int discard[3];
     ok = (bool)R(discard);

@@ -28,6 +28,8 @@ import Icon from "ol/style/Icon.js";
 import CircleStyle from "ol/style/Circle.js";
 import Text from "ol/style/Text.js";
 import Polygon from "ol/geom/Polygon.js";
+import Point from "ol/geom/Point.js";
+import LineString from "ol/geom/LineString.js";
 import { fromLonLat } from "ol/proj.js";
 
 import { calcOffset1M, calcMove, shipOutlineLocal } from "@aiscatcher/core/geo.js";
@@ -253,7 +255,7 @@ export function create(opts) {
     }
 
     /* a track feature carries mmsi, shipclass, optional speedColor and isDashed */
-    function track(feature) {
+    function track(feature, resolution) {
         const s = settings();
         let w = Number(s.track_weight);
         let c = "#12a5ed";
@@ -272,6 +274,21 @@ export function create(opts) {
             c = `rgba(${r}, ${g}, ${b}, ${o})`;
         }
 
+        if (feature.predictedAt) {
+            const dark = "rgba(0, 0, 0, 0.75)", light = "rgba(255, 255, 255, 0.95)";
+            const styles = [
+                new Style({ stroke: stroke(dark, 4) }),
+                new Style({ stroke: stroke(light, 1.5, [4, 4]) }),
+                new Style({ geometry: new Point(feature.predictedAt), image: new CircleStyle({ radius: 3.5, fill: new Fill({ color: light }), stroke: new Stroke({ color: dark, width: 1.5 }) }) }),
+            ];
+            if (feature.hard) {
+                const a = (feature.bearing + (feature.hard === "starboard" ? 90 : -90)) * DEG, len = 12 * resolution;
+                const [x, y] = feature.predictedAt;
+                const tick = new LineString([[x, y], [x + len * Math.sin(a), y + len * Math.cos(a)]]);
+                styles.push(new Style({ geometry: tick, stroke: stroke(dark, 4) }), new Style({ geometry: tick, stroke: stroke(light, 1.5) }));
+            }
+            return styles;
+        }
         const line = new Style({ stroke: stroke(c, w, feature.isDashed ? [6, 6] : undefined) });
         if (feature.isDashed) return line;
         // a dark line under the track, a little wider than it: a thin coloured line alone is lost

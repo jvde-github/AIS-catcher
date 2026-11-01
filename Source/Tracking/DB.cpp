@@ -231,6 +231,11 @@ void DB::updateFields(const JSON::Member &p, const AIS::Message *msg,
   case AIS::KEY_COURSE:
     ship.cog = p.Get().getFloat();
     break;
+  case AIS::KEY_TURN_UNSCALED: {
+    const int t = p.Get().getInt();
+    ship.turn = t >= -127 && t <= 127 ? t : TURN_UNDEFINED;
+    break;
+  }
   case AIS::KEY_SPEED:
     if (msg->type() == 9 && p.Get().getInt() != 1023)
       ship.speed = (float)p.Get().getInt();

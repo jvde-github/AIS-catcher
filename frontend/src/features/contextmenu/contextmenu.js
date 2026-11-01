@@ -32,6 +32,7 @@ const MENU_CHECKS = {
     toggleTargetcardPin: () => settings.targetcard_pinned,
     toggleTrackCtx: () => trackIsShown(context_mmsi),
     toggleAllTracks: () => settings.show_all_tracks,
+    togglePredictor: () => settings.show_predictor,
     toggleTrackCutoff: () => trackCutoff > 0,
     toggleLabel: () => settings.show_labels != "never",
     toggleRange: () => settings.show_range,
