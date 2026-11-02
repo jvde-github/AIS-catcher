@@ -19,6 +19,7 @@
 
 #include <mutex>
 #include <condition_variable>
+#include <atomic>
 
 #include <vector>
 #include <chrono>
@@ -134,6 +135,13 @@ public:
 
 	void setWait(bool b) { default_wait = b; }
 
+	// blocks refused by any FIFO because decoding had not emptied it in time
+	static std::atomic<uint32_t> &overruns()
+	{
+		static std::atomic<uint32_t> count{0};
+		return count;
+	}
+
 	bool Push(char *data, int sz) { return Push(data, sz, default_wait); }
 
 	bool Push(char *data, int sz, bool wait)
@@ -162,6 +170,7 @@ public:
 			}
 			else
 			{
+				overruns()++;
 				return false;
 			}
 		}

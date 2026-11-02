@@ -22,12 +22,16 @@
 #include "Demod.h"
 #include "DSP.h"
 
-namespace Demod {
+namespace Demod
+{
 
-	void FM::Receive(const CFLOAT32* data, int len, TAG& tag) {
-		if (output.size() < len) output.resize(len);
+	void FM::Receive(const CFLOAT32 *data, int len, TAG &tag)
+	{
+		if (output.size() < len)
+			output.resize(len);
 
-		for (int i = 0; i < len; i++) {
+		for (int i = 0; i < len; i++)
+		{
 			auto p = data[i] * std::conj(prev);
 			output[i] = atan2f(p.imag(), p.real()) / PI;
 			prev = data[i];
@@ -36,12 +40,15 @@ namespace Demod {
 		Send(output.data(), len, tag);
 	}
 
-	void PhaseSearchEMA::Receive(const CFLOAT32* data, int len, TAG& tag) {
-		for (int i = 0; i < len; i++) {
+	void PhaseSearchEMA::Receive(const CFLOAT32 *data, int len, TAG &tag)
+	{
+		for (int i = 0; i < len; i++)
+		{
 			FLOAT32 re = 0, im = 0;
 
 			//  multiply samples with (1j) ** i, to get all points on the same line
-			switch (rot) {
+			switch (rot)
+			{
 			case 0:
 				re = data[i].real();
 				im = data[i].imag();
@@ -63,7 +70,8 @@ namespace Demod {
 			rot = (rot + 1) & 3;
 
 			// Determining the phase is approached as a linear classification problem.
-			for (int j = 0; j < nPhases / 2; j++) {
+			for (int j = 0; j < nPhases / 2; j++)
+			{
 				FLOAT32 t, a = re * phase[j].real(), b = im * phase[j].imag();
 
 				t = a + b;
@@ -80,11 +88,13 @@ namespace Demod {
 			FLOAT32 max_val = ma[idx];
 			max_idx = idx;
 
-			for (int p = 0; p < nSearch << 1; p++) {
+			for (int p = 0; p < nSearch << 1; p++)
+			{
 				idx++;
 				idx &= (nPhases - 1);
 
-				if (ma[idx] > max_val) {
+				if (ma[idx] > max_val)
+				{
 					max_val = ma[idx];
 					max_idx = idx;
 				}
@@ -100,12 +110,15 @@ namespace Demod {
 		}
 	}
 
-	void PhaseSearch::Receive(const CFLOAT32* data, int len, TAG& tag) {
-		for (int i = 0; i < len; i++) {
+	void PhaseSearch::Receive(const CFLOAT32 *data, int len, TAG &tag)
+	{
+		for (int i = 0; i < len; i++)
+		{
 			FLOAT32 re = 0, im = 0;
 
 			//  multiply samples with (1j) ** i, to get all points on the same line
-			switch (rot) {
+			switch (rot)
+			{
 			case 0:
 				re = data[i].real();
 				im = data[i].imag();
@@ -127,7 +140,8 @@ namespace Demod {
 			rot = (rot + 1) & 3;
 
 			// Determining the phase is approached as a linear classification problem.
-			for (int j = 0; j < nPhases / 2; j++) {
+			for (int j = 0; j < nPhases / 2; j++)
+			{
 				FLOAT32 a = re * phase[j].real();
 				FLOAT32 b = im * phase[j].imag();
 				FLOAT32 t;
@@ -147,13 +161,16 @@ namespace Demod {
 			int prev_max = max_idx;
 
 			// local minmax search
-			for (int p = nPhases + prev_max - nSearch; p <= nPhases + prev_max + nSearch; p++) {
+			for (int p = nPhases + prev_max - nSearch; p <= nPhases + prev_max + nSearch; p++)
+			{
 				int j = p % nPhases;
 				FLOAT32 avg = memory[j][0];
 
-				for (int l = 1; l < nHistory; l++) avg += memory[j][l];
+				for (int l = 1; l < nHistory; l++)
+					avg += memory[j][l];
 
-				if (avg > max_val) {
+				if (avg > max_val)
+				{
 					max_val = avg;
 					max_idx = j;
 				}

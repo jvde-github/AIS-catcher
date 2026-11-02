@@ -30,15 +30,15 @@
 
 class Basestation : public SimpleStreamInOut<RAW, Plane::ADSB>
 {
-    static const int MAX_BASESTATION_LINE_LEN = 8192;
+	static const int MAX_BASESTATION_LINE_LEN = 8192;
 
-    std::string line;
-    size_t line_end = 0;
-    bool dropping = false;
+	std::string line;
+	size_t line_end = 0;
+	bool dropping = false;
 
-    void processLine(const char *data, size_t size, std::time_t rxtime);
+	void processLine(const char *data, size_t size, std::time_t rxtime);
 
 public:
-    virtual ~Basestation() {}
-    void Receive(const RAW *data, int len, TAG &tag);
+	virtual ~Basestation() {}
+	void Receive(const RAW *data, int len, TAG &tag);
 };

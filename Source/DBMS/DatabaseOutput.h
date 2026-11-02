@@ -205,6 +205,7 @@ namespace IO
 		using StreamIn<AIS::GPS>::Receive;
 		using StreamIn<JSON::JSON>::Receive;
 		void Receive(const JSON::JSON *data, int len, TAG &tag) override;
+		bool hasConnection() const override { return true; }
 
 		void setup();
 		void Start() override { setup(); }

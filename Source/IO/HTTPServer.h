@@ -30,6 +30,7 @@
 #include "AIS.h"
 #include "Keys.h"
 #include "TCPServer.h"
+#include "Parse.h"
 #include "Library/ZIP.h"
 
 namespace IO
@@ -55,8 +56,6 @@ namespace IO
 
 	public:
 		SSEConnection(IO::TCPServerConnection *c, uint32_t m) : connection(c), gen(c->getGeneration()), mask(m) { c->setVerbosity(false); }
-		// what a subscriber may fall behind by before it is dropped
-		static const int SEND_LIMIT = 1024 * 1024;
 		~SSEConnection() { Close(); }
 
 		bool subscribed(int id)
@@ -78,7 +77,7 @@ namespace IO
 				return;
 
 			c->setNoTimeout();
-			c->setSendLimit(SEND_LIMIT);
+			c->setSendLimit(Limits::STREAM_SEND_LIMIT);
 			c->close_after_send = false;
 
 			std::string headers = "HTTP/1.1 200 OK\r\n";
@@ -141,6 +140,8 @@ namespace IO
 		std::string authorization;
 		std::string setup_code;
 		std::string peer;
+		// from this machine itself
+		bool local = false;
 		bool forwarded = false;
 		bool owner = false;
 		bool keep_alive = true;
@@ -160,21 +161,7 @@ namespace IO
 			return pos == std::string::npos ? "" : target.substr(pos + 1);
 		}
 
-		static std::string queryParam(const std::string &q, const std::string &name)
-		{
-			std::string::size_type pos = 0;
-			while (pos < q.size())
-			{
-				std::string::size_type amp = q.find('&', pos);
-				if (amp == std::string::npos)
-					amp = q.size();
-				std::string::size_type eq = q.find('=', pos);
-				if (eq != std::string::npos && eq < amp && q.compare(pos, eq - pos, name) == 0)
-					return q.substr(eq + 1, amp - eq - 1);
-				pos = amp + 1;
-			}
-			return "";
-		}
+		static std::string queryParam(const std::string &q, const std::string &name) { return Util::Parse::QueryParam(q, name); }
 
 		std::string queryParam(const std::string &name) const
 		{
@@ -193,18 +180,35 @@ namespace IO
 		const int VIEWER_LOG = 6;
 	}
 
+	// how a response goes out: its status, whether the body may be gzipped (Response) or
+	// is (ResponseRaw), whether it may be cached and read by any origin, and one more header line
+	struct Reply
+	{
+		int status = 200;
+		bool gzip = false, cache = false, cors = false;
+		std::string header;
+		explicit Reply(int s = 200, bool g = false) : status(s), gzip(g) {}
+		Reply &with(const std::string &h)
+		{
+			header = h;
+			return *this;
+		}
+	};
+
 	class HTTPServer : public IO::TCPServer
 	{
 	public:
-		HTTPServer() { max_per_address = 32; }
+		HTTPServer() { max_per_address = Limits::PER_ADDRESS_HTTP; }
 		uint64_t bytesOut() const { return bytes_out.load(std::memory_order_relaxed); }
 		virtual void Request(IO::TCPServerConnection &c, const HTTPRequest &r, bool accept_gzip);
+		// what a path takes: 204 with Allow; a subclass that knows its paths answers for each
+		virtual void Options(IO::TCPServerConnection &c, const HTTPRequest &r);
 		// 404 and close; the fallback for any path no subclass handles
 		void NotFound(IO::TCPServerConnection &c);
 
-		void Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip = false, bool cache = false, bool cors = false, int status = 200);
-		void Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip = false, bool cache = false, bool cors = false, int status = 200);
-		void ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip = false, bool cache = false, bool cors = false, int status = 200);
+		void Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, const Reply &reply = Reply());
+		void Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, const Reply &reply = Reply());
+		void ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, const Reply &reply = Reply());
 
 		// Serve another server's routes under a path prefix, so one listener can
 		// front both. A server can be mounted once: its subscribers are held by
@@ -259,8 +263,7 @@ namespace IO
 			if ((int)sse.size() >= max_sse)
 			{
 				c.close_after_send = true;
-				setExtraHeader("Retry-After: 30");
-				Response(c, "text/plain", std::string("Too many live streams."), false, false, false, 503);
+				Response(c, "text/plain", std::string("Too many live streams."), Reply(503).with("Retry-After: 30"));
 				return;
 			}
 
@@ -323,8 +326,6 @@ namespace IO
 			setFrameSrc("'self'");
 		}
 
-		void setExtraHeader(const std::string &h) { extra_header = h; }
-
 	protected:
 		// whether a request this server fronts for its mount comes from whom the mount's owner is
 		virtual bool ownerOfMount(const HTTPRequest &) { return false; }
@@ -340,23 +341,18 @@ namespace IO
 		// what script-src allows; a page with inline script (or onclick=) must
 		// widen this via setScriptSrc
 		std::string csp_script_src = "'self'";
-		std::string extra_header;
 		std::string common_headers;
+		// a scanner's probes would fill the log
+		LogMinute rejects;
 		std::list<IO::SSEConnection> sse;
-		int max_sse = 64;
+		int max_sse = Limits::STREAMS;
 		// union of the subscriber masks, read by producers on other threads
 		std::atomic<uint32_t> topics{0};
 		std::atomic<std::size_t> bytes_out{0};
 		std::chrono::steady_clock::time_point last_sse_ping{};
-		static const int SSE_PING_INTERVAL = 20;
 		// below this size the gzip header/CPU overhead outweighs the savings
 		static const size_t GZIP_MIN_LENGTH = 1024;
-		static const std::size_t MAX_REQUEST_SIZE = 1024 * 1024;
-		// the request line and headers; a body counts only towards MAX_REQUEST_SIZE
-		static const std::size_t MAX_HEADER_SIZE = 16 * 1024;
 		static const std::size_t MAX_REASON_SIZE = 120;
-		// seconds a request has to finish arriving before its slot is reclaimed
-		static const int REQUEST_TIMEOUT = 15;
 
 		void cleanupSSE()
 		{
@@ -389,6 +385,11 @@ namespace IO
 		// including framing validation. Returns 0 on success or the HTTP
 		// status the request must be rejected with, with `error` set.
 		int parseHeaders(const std::string &msg, std::size_t header_end, HTTPRequest &r, std::string &error);
+		// the next complete request in the connection's buffer and what it takes of the buffer:
+		// false while it has not fully arrived, or when it was rejected and the connection closes
+		bool nextRequest(IO::TCPServerConnection &c, HTTPRequest &request, std::size_t &length);
+		// one request answered: by a mount its path falls under, the subclass, or 405
+		void answer(IO::TCPServerConnection &c, HTTPRequest &request);
 		void reject(IO::TCPServerConnection &c, int status, const std::string &reason);
 		bool localOnly() const;
 		static bool addressedHere(const std::string &host);

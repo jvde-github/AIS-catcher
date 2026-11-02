@@ -25,12 +25,14 @@
 #ifdef HASZMQ
 #include <zmq.h>
 
-namespace Device {
+namespace Device
+{
 
-	class ZMQ : public Device {
+	class ZMQ : public Device
+	{
 
-		void* context = nullptr;
-		void* subscriber = nullptr;
+		void *context = nullptr;
+		void *subscriber = nullptr;
 
 		std::string endpoint;
 
@@ -55,9 +57,9 @@ namespace Device {
 
 		bool isCallback() { return true; }
 
-		void getDeviceList(std::vector<Description>& DeviceList);
+		void getDeviceList(std::vector<Description> &DeviceList);
 
-		Setting& applyKey(AIS::Keys key, const std::string &arg);
+		Setting &applyKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 
 		std::string getProduct() { return "ZMQ"; }
@@ -67,8 +69,10 @@ namespace Device {
 
 #else // HASZMQ
 
-namespace Device {
-	class ZMQ : public Unavailable {
+namespace Device
+{
+	class ZMQ : public Unavailable
+	{
 	public:
 		ZMQ() : Unavailable("ZMQ", "HASZMQ", Type::ZMQ) {}
 	};

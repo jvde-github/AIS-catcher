@@ -22,14 +22,17 @@
 #include "SoapySDR.h"
 #include "Logger.h"
 
-namespace Device {
+namespace Device
+{
 
 	//---------------------------------------
 	// Device SOAPYSDR
 
 	// route Soapy module logs into our Logger; INFO is per-device chatter -> Debug
-	static void logHandler(const SoapySDRLogLevel level, const char* message) {
-		switch (level) {
+	static void logHandler(const SoapySDRLogLevel level, const char *message)
+	{
+		switch (level)
+		{
 		case SOAPY_SDR_FATAL:
 		case SOAPY_SDR_CRITICAL:
 		case SOAPY_SDR_ERROR:
@@ -44,9 +47,11 @@ namespace Device {
 		}
 	}
 
-	static void registerLogHandler() {
+	static void registerLogHandler()
+	{
 		static bool registered = false;
-		if (!registered) {
+		if (!registered)
+		{
 			SoapySDR::registerLogHandler(&logHandler);
 			registered = true;
 		}
@@ -54,40 +59,50 @@ namespace Device {
 
 	std::vector<SoapyDevice> SOAPYSDR::dev_list;
 
-	SOAPYSDR::SOAPYSDR() : Device(Format::CF32, 0, Type::SOAPYSDR, "SoapySDR") {
+	SOAPYSDR::SOAPYSDR() : Device(Format::CF32, 0, Type::SOAPYSDR, "SoapySDR")
+	{
 		registerLogHandler();
 	}
 
-	void SOAPYSDR::Open(uint64_t h) {
+	void SOAPYSDR::Open(uint64_t h)
+	{
 		Device::Open(h);
-		if (h < dev_list.size()) {
-			if (device_args == "") {
+		if (h < dev_list.size())
+		{
+			if (device_args == "")
+			{
 				device_args = dev_list[h].getDeviceString();
 				channel = dev_list[h].getChannel();
 			}
 
-			if (sample_rate == 0) setSampleRate(dev_list[h].getDefaultSampleRate());
+			if (sample_rate == 0)
+				setSampleRate(dev_list[h].getDefaultSampleRate());
 		}
 		else
 			throw std::runtime_error("SOAPYSDR: invalid handle to open device.");
 	}
 
-	void SOAPYSDR::Close() {
+	void SOAPYSDR::Close()
+	{
 		Device::Close();
 
-		if (dev != nullptr && !skip_unmake) {
+		if (dev != nullptr && !skip_unmake)
+		{
 			SoapySDR::Device::unmake(dev);
 		}
 		dev = nullptr;
 	}
 
-	void SOAPYSDR::Play() {
+	void SOAPYSDR::Play()
+	{
 		fifo.Init(BUFFER_SIZE, 8);
 
-		try {
+		try
+		{
 			dev = SoapySDR::Device::make(device_args);
 		}
-		catch (std::exception& e) {
+		catch (std::exception &e)
+		{
 			throw std::runtime_error("SOAPYSDR: cannot open device: " + std::string(e.what()));
 		}
 
@@ -95,7 +110,8 @@ namespace Device {
 
 		Device::Play();
 
-		if (print) PrintActuals();
+		if (print)
+			PrintActuals();
 
 		async_thread = std::thread(&SOAPYSDR::RunAsync, this);
 		run_thread = std::thread(&SOAPYSDR::Run, this);
@@ -103,31 +119,39 @@ namespace Device {
 		SleepSystem(10);
 	}
 
-	void SOAPYSDR::Stop() {
-		if (Device::isStreaming()) {
+	void SOAPYSDR::Stop()
+	{
+		if (Device::isStreaming())
+		{
 			Device::Stop();
 			fifo.Halt();
 
-			if (async_thread.joinable()) async_thread.join();
-			if (run_thread.joinable()) run_thread.join();
+			if (async_thread.joinable())
+				async_thread.join();
+			if (run_thread.joinable())
+				run_thread.join();
 		}
 
-		if (dev != nullptr && !skip_unmake) {
+		if (dev != nullptr && !skip_unmake)
+		{
 			SoapySDR::Device::unmake(dev);
 			dev = nullptr;
 		}
 	}
 
-	void SOAPYSDR::RunAsync() {
+	void SOAPYSDR::RunAsync()
+	{
 		std::vector<size_t> channels;
 		channels.push_back(channel);
 
-		SoapySDR::Stream* stream;
-		try {
+		SoapySDR::Stream *stream;
+		try
+		{
 			stream = dev->setupStream(SOAPY_SDR_RX, "CF32", channels, stream_args);
 		}
-		catch (std::exception& e) {
-			Error()  << "SOAPYSDR: " << e.what();
+		catch (std::exception &e)
+		{
+			Error() << "SOAPYSDR: " << e.what();
 			lost = true;
 			return;
 		}
@@ -135,34 +159,39 @@ namespace Device {
 		const int mtu = dev->getStreamMTU(stream);
 
 		std::vector<CFLOAT32> input(mtu);
-		void* buffers[] = { input.data() };
+		void *buffers[] = {input.data()};
 		long long timeNs = 0;
 		const long timeout_us = 1000000;
 		int flags = 0;
 
 		bool activated = false;
-		try {
+		try
+		{
 			dev->activateStream(stream);
 			activated = true;
 
-			while (isStreaming()) {
+			while (isStreaming())
+			{
 				int ret = dev->readStream(stream, buffers, mtu, flags, timeNs, timeout_us);
 
-				if (ret < 0) {
-					Error()  << "SOAPYSDR: error reading stream: " << SoapySDR_errToStr(ret);
+				if (ret < 0)
+				{
+					Error() << "SOAPYSDR: error reading stream: " << SoapySDR_errToStr(ret);
 					lost = true;
 					skip_unmake = true;
 					break;
 				}
-				if (ret > 0 && isStreaming() && !fifo.Push((char*)input.data(), ret * sizeof(CFLOAT32)))
-					Error()  << "SOAPYSDR: buffer overrun.";
+				if (ret > 0 && isStreaming() && !fifo.Push((char *)input.data(), ret * sizeof(CFLOAT32)))
+					Error() << "SOAPYSDR: buffer overrun.";
 			}
 		}
-		catch (std::exception& e) {
-			Error()  << "SOAPYSDR: exception " << e.what();
+		catch (std::exception &e)
+		{
+			Error() << "SOAPYSDR: exception " << e.what();
 			lost = true;
 		}
-		if (activated) {
+		if (activated)
+		{
 			flags = 0;
 			timeNs = 0;
 			dev->deactivateStream(stream, flags, timeNs);
@@ -170,37 +199,45 @@ namespace Device {
 		dev->closeStream(stream);
 
 		// did we terminate too early?
-		if (isStreaming()) lost = true;
+		if (isStreaming())
+			lost = true;
 	}
 
-	void SOAPYSDR::Run() {
-		while (isStreaming()) {
-			if (fifo.Wait()) {
-				RAW r = { Format::CF32, fifo.Front(), fifo.BlockSize() };
+	void SOAPYSDR::Run()
+	{
+		while (isStreaming())
+		{
+			if (fifo.Wait())
+			{
+				RAW r = {Format::CF32, fifo.Front(), fifo.BlockSize()};
 				Send(&r, 1, tag);
 				fifo.Pop();
 			}
-			else {
-				if (isStreaming()) Error()  << "SOAPYSDR: timeout.";
+			else
+			{
+				if (isStreaming())
+					Error() << "SOAPYSDR: timeout.";
 			}
 		}
 	}
 
 
-	void SOAPYSDR::applySettings() {
-		try {
+	void SOAPYSDR::applySettings()
+	{
+		try
+		{
 			dev->setSampleRate(SOAPY_SDR_RX, channel, sample_rate);
 			dev->setFrequency(SOAPY_SDR_RX, channel, frequency);
 
 			if (antenna != "")
 				dev->setAntenna(SOAPY_SDR_RX, channel, antenna);
 
-			for (auto const& x : setting_args)
+			for (auto const &x : setting_args)
 				dev->writeSetting(x.first, x.second);
 
 			dev->setGainMode(SOAPY_SDR_RX, channel, AGC);
 
-			for (auto const& g : gains_args)
+			for (auto const &g : gains_args)
 				dev->setGain(SOAPY_SDR_RX, channel, g.first, (double)Util::Parse::Float(g.second));
 
 			if (freq_offset)
@@ -209,12 +246,14 @@ namespace Device {
 			if (tuner_bandwidth)
 				dev->setBandwidth(SOAPY_SDR_RX, channel, tuner_bandwidth);
 		}
-		catch (std::exception& e) {
+		catch (std::exception &e)
+		{
 			throw std::runtime_error("SOAPYSDR: cannot set parameters: " + std::string(e.what()));
 		}
 	}
 
-	void SOAPYSDR::getDeviceList(std::vector<Description>& DeviceList) {
+	void SOAPYSDR::getDeviceList(std::vector<Description> &DeviceList)
+	{
 		const auto devs = SoapySDR::Device::enumerate("");
 		dev_list.clear();
 
@@ -223,16 +262,19 @@ namespace Device {
 
 		int cnt = 1;
 
-		for (int i = 0; i < devs.size(); i++) {
+		for (int i = 0; i < devs.size(); i++)
+		{
 			auto d = devs[i];
 
 			std::string dev_str = "driver=" + d["driver"] + ",serial=" + d["serial"];
 
-			SoapySDR::Device* device = nullptr;
-			try {
+			SoapySDR::Device *device = nullptr;
+			try
+			{
 				device = SoapySDR::Device::make(dev_str);
 				int nChannels = device->getNumChannels(SOAPY_SDR_RX);
-				for (int c = 0; c < nChannels; c++) {
+				for (int c = 0; c < nChannels; c++)
+				{
 					std::string serial_str = "SCH" + std::to_string(c) + "-" + d["driver"];
 					int rate = device->getSampleRate(SOAPY_SDR_RX, c);
 					dev_list.push_back(SoapyDevice(dev_str, c, rate));
@@ -240,7 +282,8 @@ namespace Device {
 					cnt++;
 				}
 			}
-			catch (const std::exception& ex) {
+			catch (const std::exception &ex)
+			{
 				Warning() << "SOAPYSDR: skipping device: " << ex.what();
 			}
 
@@ -249,7 +292,8 @@ namespace Device {
 		}
 	}
 
-	void SOAPYSDR::PrintActuals() {
+	void SOAPYSDR::PrintActuals()
+	{
 		std::cerr << std::endl;
 		std::cerr << "Actual device settings:\n"
 				  << "======================\n"
@@ -260,32 +304,34 @@ namespace Device {
 				  << " SAMPLE RATE : " << dev->getSampleRate(SOAPY_SDR_RX, channel) << std::endl
 				  << " FREQUENCY   : ";
 
-		for (const auto& f : dev->listFrequencies(SOAPY_SDR_RX, channel))
+		for (const auto &f : dev->listFrequencies(SOAPY_SDR_RX, channel))
 			std::cerr << f << "=" << dev->getFrequency(SOAPY_SDR_RX, channel, f) << " ";
 
 		std::cerr << std::endl;
 		std::cerr << " HARDWARE    : ";
-		for (const auto& it : dev->getHardwareInfo())
+		for (const auto &it : dev->getHardwareInfo())
 			std::cerr << it.first << "=" << it.second << " ";
 
 		std::cerr << std::endl
 				  << " SETTING     : ";
-		for (const auto& s : dev->getSettingInfo())
+		for (const auto &s : dev->getSettingInfo())
 			std::cerr << s.key << "=" << dev->readSetting(s.key) << " ";
 
 		std::cerr << std::endl
 				  << " GAIN MODE   : " << (dev->getGainMode(SOAPY_SDR_RX, channel) ? "AGC" : "MANUAL") << std::endl
 				  << " GAIN LEVELS : ";
 
-		for (const auto& g : dev->listGains(SOAPY_SDR_RX, channel))
+		for (const auto &g : dev->listGains(SOAPY_SDR_RX, channel))
 			std::cerr << g << "=" << dev->getGain(SOAPY_SDR_RX, channel, g) << " ";
 
 		std::cerr << std::endl
 				  << std::endl;
 	}
 
-	Setting& SOAPYSDR::applyKey(AIS::Keys key, const std::string &arg) {
-		switch (key) {
+	Setting &SOAPYSDR::applyKey(AIS::Keys key, const std::string &arg)
+	{
+		switch (key)
+		{
 		case AIS::KEY_SETTING_DEVICE:
 			device_args = arg;
 			break;
@@ -317,7 +363,8 @@ namespace Device {
 		return *this;
 	}
 
-	std::string SOAPYSDR::Get() {
+	std::string SOAPYSDR::Get()
+	{
 		std::string str;
 
 		str += " device \"" + device_args + "\" gain \"" + SoapySDR::KwargsToString(gains_args) + "\"";

@@ -24,288 +24,288 @@
 
 namespace Services
 {
-    struct UiFormat;
+	struct UiFormat;
 }
 
 class PlaneDB : public StreamIn<Plane::ADSB>
 {
-    // the viewer's lists of the aircraft, written from the table under its lock
-    friend struct Services::UiFormat;
-    std::mutex mtx;
+	// the viewer's lists of the aircraft, written from the table under its lock
+	friend struct Services::UiFormat;
+	std::mutex mtx;
 
-    static const int CPR_CACHE_SIZE = 3;
+	static const int CPR_CACHE_SIZE = 3;
 
-    struct CPRCache
-    {
-        Plane::CPR entries[CPR_CACHE_SIZE];
-        int idx = 0;
+	struct CPRCache
+	{
+		Plane::CPR entries[CPR_CACHE_SIZE];
+		int idx = 0;
 
-        // true when an identical frame was seen in the last two seconds;
-        // otherwise the frame is remembered
-        bool isDuplicate(const Plane::CPR &cpr)
-        {
-            for (const auto &e : entries)
-                if (e.Valid() && cpr.timestamp - e.timestamp <= 2 &&
-                    e.lat == cpr.lat && e.lon == cpr.lon && e.airborne == cpr.airborne)
-                    return true;
+		// true when an identical frame was seen in the last two seconds;
+		// otherwise the frame is remembered
+		bool isDuplicate(const Plane::CPR &cpr)
+		{
+			for (const auto &e : entries)
+				if (e.Valid() && cpr.timestamp - e.timestamp <= 2 &&
+					e.lat == cpr.lat && e.lon == cpr.lon && e.airborne == cpr.airborne)
+					return true;
 
-            entries[idx] = cpr;
-            idx = (idx + 1) % CPR_CACHE_SIZE;
-            return false;
-        }
-    };
+			entries[idx] = cpr;
+			idx = (idx + 1) % CPR_CACHE_SIZE;
+			return false;
+		}
+	};
 
-    CPRCache cpr_cache[2]; // indexed by parity
+	CPRCache cpr_cache[2]; // indexed by parity
 
-    static const int N = 512;
-    static const int NBUCKETS = 1031;
+	static const int N = 512;
+	static const int NBUCKETS = 1031;
 
-    static const int TIMEOUT_AIRBORNE = 60;
-    static const int TIMEOUT_GROUND = 300;
-    static const int CONFIRM_WINDOW = 15 * 60;
+	static const int TIMEOUT_AIRBORNE = 60;
+	static const int TIMEOUT_GROUND = 300;
+	static const int CONFIRM_WINDOW = 15 * 60;
 
-    typedef SlotTable<Plane::ADSB, uint32_t> Table;
-    Table table;
+	typedef SlotTable<Plane::ADSB, uint32_t> Table;
+	Table table;
 
-    std::string content;
+	std::string content;
 
-    void calcReferencePosition(TAG &tag, int ptr, FLOAT32 &lat, FLOAT32 &lon)
-    {
-        lat = LAT_UNDEFINED;
-        lon = LON_UNDEFINED;
+	void calcReferencePosition(TAG &tag, int ptr, FLOAT32 &lat, FLOAT32 &lon)
+	{
+		lat = LAT_UNDEFINED;
+		lon = LON_UNDEFINED;
 
-        if (isValidCoord(table[ptr].lat, table[ptr].lon))
-        {
-            lat = table[ptr].lat;
-            lon = table[ptr].lon;
-        }
-        else if (isValidCoord(tag.station_lat, tag.station_lon))
-        {
-            lat = tag.station_lat;
-            lon = tag.station_lon;
-        }
-    }
+		if (isValidCoord(table[ptr].lat, table[ptr].lon))
+		{
+			lat = table[ptr].lat;
+			lon = table[ptr].lon;
+		}
+		else if (isValidCoord(tag.station_lat, tag.station_lon))
+		{
+			lat = tag.station_lat;
+			lon = tag.station_lon;
+		}
+	}
 
-    // NIL when the ICAO is only implied from CRC and the plane is not already known
-    int claimPlane(const Plane::ADSB *msg)
-    {
-        int ptr = table.find(msg->hexident);
-        if (ptr != Table::NIL)
-        {
-            table.touch(ptr);
-            return ptr;
-        }
+	// NIL when the ICAO is only implied from CRC and the plane is not already known
+	int claimPlane(const Plane::ADSB *msg)
+	{
+		int ptr = table.find(msg->hexident);
+		if (ptr != Table::NIL)
+		{
+			table.touch(ptr);
+			return ptr;
+		}
 
-        if (msg->hexident_status == HEXINDENT_IMPLIED_FROM_CRC)
-            return Table::NIL;
+		if (msg->hexident_status == HEXINDENT_IMPLIED_FROM_CRC)
+			return Table::NIL;
 
-        ptr = table.create(msg->hexident);
-        table[ptr].clear();
-        table[ptr].hexident = msg->hexident;
-        table[ptr].hexident_status = msg->hexident_status;
+		ptr = table.create(msg->hexident);
+		table[ptr].clear();
+		table[ptr].hexident = msg->hexident;
+		table[ptr].hexident_status = msg->hexident_status;
 
-        if (msg->hexident_status == HEXINDENT_DIRECT)
-            table[ptr].setCountryCode();
+		if (msg->hexident_status == HEXINDENT_DIRECT)
+			table[ptr].setCountryCode();
 
-        return ptr;
-    }
+		return ptr;
+	}
 
-    void updateCPRLeg(Plane::ADSB &plane, int ptr, const Plane::CPR &leg, bool even, TAG &tag, bool &positionUpdated, FLOAT32 &lat_new, FLOAT32 &lon_new)
-    {
-        if (!leg.Valid() || cpr_cache[even].isDuplicate(leg))
-            return;
+	void updateCPRLeg(Plane::ADSB &plane, int ptr, const Plane::CPR &leg, bool even, TAG &tag, bool &positionUpdated, FLOAT32 &lat_new, FLOAT32 &lon_new)
+	{
+		if (!leg.Valid() || cpr_cache[even].isDuplicate(leg))
+			return;
 
-        (even ? plane.even : plane.odd) = leg;
+		(even ? plane.even : plane.odd) = leg;
 
-        FLOAT32 ref_lat = LAT_UNDEFINED, ref_lon = LON_UNDEFINED;
-        if (!leg.airborne)
-            calcReferencePosition(tag, ptr, ref_lat, ref_lon);
+		FLOAT32 ref_lat = LAT_UNDEFINED, ref_lon = LON_UNDEFINED;
+		if (!leg.airborne)
+			calcReferencePosition(tag, ptr, ref_lat, ref_lon);
 
-        plane.decodeCPR(ref_lat, ref_lon, even, positionUpdated, lat_new, lon_new);
-    }
+		plane.decodeCPR(ref_lat, ref_lon, even, positionUpdated, lat_new, lon_new);
+	}
 
-    // An unvalidated fix becomes trusted when it lies within plausible travel
-    // range of the last position decoded from an independent CPR pair.
-    bool confirmedByHistory(const Plane::ADSB &plane, FLOAT32 lat, FLOAT32 lon)
-    {
-        const auto &cur = plane.CPR_history[plane.CPR_history_idx];
-        const auto &prev = plane.CPR_history[(plane.CPR_history_idx + 2) % 3];
-        const auto &independent = plane.CPR_history[(plane.CPR_history_idx + 1) % 3];
+	// An unvalidated fix becomes trusted when it lies within plausible travel
+	// range of the last position decoded from an independent CPR pair.
+	bool confirmedByHistory(const Plane::ADSB &plane, FLOAT32 lat, FLOAT32 lon)
+	{
+		const auto &cur = plane.CPR_history[plane.CPR_history_idx];
+		const auto &prev = plane.CPR_history[(plane.CPR_history_idx + 2) % 3];
+		const auto &independent = plane.CPR_history[(plane.CPR_history_idx + 1) % 3];
 
-        if (!cur.cpr.Valid() || !prev.cpr.Valid() || !independent.cpr.Valid() || cur.even == prev.even)
-            return false;
+		if (!cur.cpr.Valid() || !prev.cpr.Valid() || !independent.cpr.Valid() || cur.even == prev.even)
+			return false;
 
-        double deltat = 1 + cur.cpr.timestamp - independent.cpr.timestamp;
-        if (deltat >= CONFIRM_WINDOW)
-            return false;
+		double deltat = 1 + cur.cpr.timestamp - independent.cpr.timestamp;
+		if (deltat >= CONFIRM_WINDOW)
+			return false;
 
-        FLOAT32 distance = DISTANCE_UNDEFINED;
-        int angle = ANGLE_UNDEFINED;
-        Util::Geodesy::distanceBearing(independent.lat, independent.lon, lat, lon, distance, angle);
+		FLOAT32 distance = DISTANCE_UNDEFINED;
+		int angle = ANGLE_UNDEFINED;
+		Util::Geodesy::distanceBearing(independent.lat, independent.lon, lat, lon, distance, angle);
 
-        // unknown speed assumes fast; a known speed gets a 50% margin
-        double max_speed = plane.speed == SPEED_UNDEFINED ? 1000 : plane.speed * 1.5;
-        return distance < deltat * max_speed / 3600.0;
-    }
+		// unknown speed assumes fast; a known speed gets a 50% margin
+		double max_speed = plane.speed == SPEED_UNDEFINED ? 1000 : plane.speed * 1.5;
+		return distance < deltat * max_speed / 3600.0;
+	}
 
-    // Process a single decoded message; caller must hold mtx.
-    void updatePlane(const Plane::ADSB *msg, TAG &tag)
-    {
-        if (msg->hexident == HEXIDENT_UNDEFINED || msg->status == STATUS_ERROR)
-            return;
+	// Process a single decoded message; caller must hold mtx.
+	void updatePlane(const Plane::ADSB *msg, TAG &tag)
+	{
+		if (msg->hexident == HEXIDENT_UNDEFINED || msg->status == STATUS_ERROR)
+			return;
 
-        int ptr = claimPlane(msg);
-        if (ptr == Table::NIL)
-            return;
+		int ptr = claimPlane(msg);
+		if (ptr == Table::NIL)
+			return;
 
-        Plane::ADSB &plane = table[ptr];
+		Plane::ADSB &plane = table[ptr];
 
-        plane.rxtime = msg->rxtime;
+		plane.rxtime = msg->rxtime;
 
-        plane.nMessages++;
-        plane.group_mask |= tag.group;
-        plane.last_group = tag.group;
+		plane.nMessages++;
+		plane.group_mask |= tag.group;
+		plane.last_group = tag.group;
 
-        plane.message_types |= msg->message_types;
-        plane.message_subtypes |= msg->message_subtypes;
+		plane.message_types |= msg->message_types;
+		plane.message_subtypes |= msg->message_subtypes;
 
-        if (msg->category != CATEGORY_UNDEFINED)
-            plane.category = msg->category;
+		if (msg->category != CATEGORY_UNDEFINED)
+			plane.category = msg->category;
 
-        FLOAT32 lat_new = LAT_UNDEFINED, lon_new = LON_UNDEFINED;
-        bool positionUpdated = false;
+		FLOAT32 lat_new = LAT_UNDEFINED, lon_new = LON_UNDEFINED;
+		bool positionUpdated = false;
 
-        if (isValidCoord(msg->lat, msg->lon))
-        {
-            plane.lat = msg->lat;
-            plane.lon = msg->lon;
-            plane.position_timestamp = msg->rxtime;
+		if (isValidCoord(msg->lat, msg->lon))
+		{
+			plane.lat = msg->lat;
+			plane.lon = msg->lon;
+			plane.position_timestamp = msg->rxtime;
 
-            lat_new = msg->lat;
-            lon_new = msg->lon;
-            positionUpdated = true;
-        }
+			lat_new = msg->lat;
+			lon_new = msg->lon;
+			positionUpdated = true;
+		}
 
-        updateCPRLeg(plane, ptr, msg->even, true, tag, positionUpdated, lat_new, lon_new);
-        updateCPRLeg(plane, ptr, msg->odd, false, tag, positionUpdated, lat_new, lon_new);
+		updateCPRLeg(plane, ptr, msg->even, true, tag, positionUpdated, lat_new, lon_new);
+		updateCPRLeg(plane, ptr, msg->odd, false, tag, positionUpdated, lat_new, lon_new);
 
-        if (positionUpdated)
-        {
-            if (plane.position_status == Plane::ValueStatus::VALID)
-            {
-                // this can be improved by checking the distance to the last known position
-                if (std::fabs(plane.lat - lat_new) > 0.1 || std::fabs(plane.lon - lon_new) > 0.1)
-                {
-                    plane.position_status = Plane::ValueStatus::UNKNOWN;
-                }
-            }
+		if (positionUpdated)
+		{
+			if (plane.position_status == Plane::ValueStatus::VALID)
+			{
+				// this can be improved by checking the distance to the last known position
+				if (std::fabs(plane.lat - lat_new) > 0.1 || std::fabs(plane.lon - lon_new) > 0.1)
+				{
+					plane.position_status = Plane::ValueStatus::UNKNOWN;
+				}
+			}
 
-            // store the history of the last 3 CPR positions
-            bool even = msg->even.Valid();
-            plane.CPR_history[plane.CPR_history_idx] = {lat_new, lon_new, even ? plane.even : plane.odd, even};
+			// store the history of the last 3 CPR positions
+			bool even = msg->even.Valid();
+			plane.CPR_history[plane.CPR_history_idx] = {lat_new, lon_new, even ? plane.even : plane.odd, even};
 
-            if (plane.position_status == Plane::ValueStatus::UNKNOWN && confirmedByHistory(plane, lat_new, lon_new))
-                plane.position_status = Plane::ValueStatus::VALID;
+			if (plane.position_status == Plane::ValueStatus::UNKNOWN && confirmedByHistory(plane, lat_new, lon_new))
+				plane.position_status = Plane::ValueStatus::VALID;
 
-            plane.CPR_history_idx = (plane.CPR_history_idx + 1) % 3;
+			plane.CPR_history_idx = (plane.CPR_history_idx + 1) % 3;
 
-            if (plane.position_status == Plane::ValueStatus::VALID)
-            {
-                plane.lat = lat_new;
-                plane.lon = lon_new;
-                plane.position_timestamp = msg->rxtime;
-            }
-        }
+			if (plane.position_status == Plane::ValueStatus::VALID)
+			{
+				plane.lat = lat_new;
+				plane.lon = lon_new;
+				plane.position_timestamp = msg->rxtime;
+			}
+		}
 
-        // a station that keeps its position home keeps the plane's distance and bearing home too
-        if (tag.position_private)
-        {
-            plane.distance = DISTANCE_UNDEFINED;
-            plane.angle = ANGLE_UNDEFINED;
-            tag.distance = DISTANCE_UNDEFINED;
-            tag.angle = ANGLE_UNDEFINED;
-        }
-        else if (positionUpdated && isValidCoord(tag.station_lat, tag.station_lon))
-        {
-            Util::Geodesy::distanceBearing(tag.station_lat, tag.station_lon, plane.lat, plane.lon, plane.distance, plane.angle);
-            tag.distance = plane.distance;
-            tag.angle = plane.angle;
-        }
-        else
-        {
-            tag.distance = DISTANCE_UNDEFINED;
-            tag.angle = ANGLE_UNDEFINED;
-        }
+		// a station that keeps its position home keeps the plane's distance and bearing home too
+		if (tag.position_private)
+		{
+			plane.distance = DISTANCE_UNDEFINED;
+			plane.angle = ANGLE_UNDEFINED;
+			tag.distance = DISTANCE_UNDEFINED;
+			tag.angle = ANGLE_UNDEFINED;
+		}
+		else if (positionUpdated && isValidCoord(tag.station_lat, tag.station_lon))
+		{
+			Util::Geodesy::distanceBearing(tag.station_lat, tag.station_lon, plane.lat, plane.lon, plane.distance, plane.angle);
+			tag.distance = plane.distance;
+			tag.angle = plane.angle;
+		}
+		else
+		{
+			tag.distance = DISTANCE_UNDEFINED;
+			tag.angle = ANGLE_UNDEFINED;
+		}
 
-        if (msg->altitude != ALTITUDE_UNDEFINED)
-            plane.altitude = msg->altitude;
+		if (msg->altitude != ALTITUDE_UNDEFINED)
+			plane.altitude = msg->altitude;
 
-        if (msg->speed != SPEED_UNDEFINED)
-            plane.speed = msg->speed;
+		if (msg->speed != SPEED_UNDEFINED)
+			plane.speed = msg->speed;
 
-        if (msg->heading != HEADING_UNDEFINED)
-            plane.heading = msg->heading;
+		if (msg->heading != HEADING_UNDEFINED)
+			plane.heading = msg->heading;
 
-        if (msg->vertrate != VERT_RATE_UNDEFINED)
-            plane.vertrate = msg->vertrate;
+		if (msg->vertrate != VERT_RATE_UNDEFINED)
+			plane.vertrate = msg->vertrate;
 
-        if (msg->squawk != SQUAWK_UNDEFINED)
-            plane.squawk = msg->squawk;
+		if (msg->squawk != SQUAWK_UNDEFINED)
+			plane.squawk = msg->squawk;
 
-        if (msg->callsign[0] != '\0')
-            std::memcpy(plane.callsign, msg->callsign, sizeof(plane.callsign));
+		if (msg->callsign[0] != '\0')
+			std::memcpy(plane.callsign, msg->callsign, sizeof(plane.callsign));
 
-        if (msg->airborne != AIRBORNE_UNDEFINED)
-            plane.airborne = msg->airborne;
+		if (msg->airborne != AIRBORNE_UNDEFINED)
+			plane.airborne = msg->airborne;
 
-        if (msg->signalLevel != LEVEL_UNDEFINED)
-            plane.signalLevel = msg->signalLevel;
-    }
+		if (msg->signalLevel != LEVEL_UNDEFINED)
+			plane.signalLevel = msg->signalLevel;
+	}
 
 public:
-    PlaneDB()
-    {
-        table.setup(N, NBUCKETS);
+	PlaneDB()
+	{
+		table.setup(N, NBUCKETS);
 
-        for (auto &c : cpr_cache)
-            for (auto &e : c.entries)
-                e.clear();
-    }
+		for (auto &c : cpr_cache)
+			for (auto &e : c.entries)
+				e.clear();
+	}
 
-    void Receive(const Plane::ADSB *msg, int len, TAG &tag)
-    {
-        std::lock_guard<std::mutex> lock(mtx);
+	void Receive(const Plane::ADSB *msg, int len, TAG &tag)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
 
-        for (int i = 0; i < len; i++)
-            updatePlane(&msg[i], tag);
-    }
+		for (int i = 0; i < len; i++)
+			updatePlane(&msg[i], tag);
+	}
 
-    // Newest-first LRU order, so the first record past a cutoff ends iteration.
-    template <typename F>
-    void forEachRecent(std::time_t now, std::time_t since, F f)
-    {
-        table.forEach([&](int ptr) {
-            const Plane::ADSB &plane = table[ptr];
-            std::time_t rx = plane.getRxTimeUnix();
-            long int age = now - rx;
+	// Newest-first LRU order, so the first record past a cutoff ends iteration.
+	template <typename F>
+	void forEachRecent(std::time_t now, std::time_t since, F f)
+	{
+		table.forEach([&](int ptr) {
+			const Plane::ADSB &plane = table[ptr];
+			std::time_t rx = plane.getRxTimeUnix();
+			long int age = now - rx;
 
-            if (age > TIMEOUT_GROUND)
-                return false;
-            if (since > 0 && rx < since)
-                return false;
+			if (age > TIMEOUT_GROUND)
+				return false;
+			if (since > 0 && rx < since)
+				return false;
 
-            if (age <= TIMEOUT_AIRBORNE || plane.airborne == 0)
-                f(plane, rx);
-            return true;
-        });
-    }
+			if (age <= TIMEOUT_AIRBORNE || plane.airborne == 0)
+				f(plane, rx);
+			return true;
+		});
+	}
 
-    // every aircraft still kept, heard since `since` (0: all), under the lock;
-    // f(plane, heard) runs inside it, so keep it short
-    template <typename F>
-    void forEachAircraft(std::time_t since, F f)
-    {
-        std::lock_guard<std::mutex> lock(mtx);
-        forEachRecent(std::time(nullptr), since, f);
-    }
+	// every aircraft still kept, heard since `since` (0: all), under the lock;
+	// f(plane, heard) runs inside it, so keep it short
+	template <typename F>
+	void forEachAircraft(std::time_t since, F f)
+	{
+		std::lock_guard<std::mutex> lock(mtx);
+		forEachRecent(std::time(nullptr), since, f);
+	}
 };

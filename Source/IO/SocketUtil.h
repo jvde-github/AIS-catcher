@@ -20,6 +20,7 @@
 #include <string>
 #include <atomic>
 #include <cstring>
+#include <cstdint>
 
 // Centralized platform socket includes and compat defines. winsock2.h must
 // precede windows.h to avoid the winsock1/2 redefinition clash.
@@ -31,6 +32,7 @@
 #else
 #include <sys/socket.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <cerrno>
@@ -57,6 +59,15 @@ namespace Net
 #else
 		return errno;
 #endif
+	}
+
+	// the dotted quad of an IPv4 address in network order
+	inline std::string ipv4String(uint32_t addr)
+	{
+		char buf[INET_ADDRSTRLEN];
+		struct in_addr a;
+		a.s_addr = addr;
+		return inet_ntop(AF_INET, &a, buf, sizeof(buf)) ? std::string(buf) : std::string();
 	}
 
 	// Numeric host:port, so errors name the address actually tried.

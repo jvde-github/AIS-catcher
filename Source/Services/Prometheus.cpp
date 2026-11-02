@@ -222,6 +222,84 @@ namespace Services
 		return request.path == "/metrics" ? (int)ApiKey::DATA : NOT_MINE;
 	}
 
+	// a label value: backslash, quote and newline escaped
+	static std::string label(const std::string &s)
+	{
+		std::string r;
+		for (char c : s)
+		{
+			if (c == '\\' || c == '"')
+				r += '\\';
+			if (c == '\n')
+				r += "\\n";
+			else
+				r += c;
+		}
+		return r;
+	}
+
+	std::string Metrics::engineMetrics()
+	{
+		if (!facts)
+			return std::string();
+		const SystemFacts f = facts();
+		std::string out;
+		const auto head = [&](const char *name, const char *type, const char *help) {
+			out += std::string("# HELP ") + name + " " + help + "\n# TYPE " + name + " " + type + "\n";
+		};
+		const auto inputLabels = [](const ReceiverState &r, const std::string &extra) {
+			return "{input=\"" + std::to_string(r.index) + "\",type=\"" + label(r.input) + "\",description=\"" + label(r.label) + "\"" + extra + "}";
+		};
+		const auto inputs = [&](const char *name, const char *type, const char *help, bool connection, const std::function<uint64_t(const ReceiverState &)> &value) {
+			head(name, type, help);
+			for (const auto &r : f.receivers)
+				if (!connection || r.connection)
+					out += std::string(name) + inputLabels(r, "") + " " + std::to_string(value(r)) + "\n";
+		};
+		inputs("ais_input_count", "counter", "Total number of messages decoded per input", false, [](const ReceiverState &r) { return r.messages; });
+		inputs("ais_input_bytes_in", "counter", "Total number of raw bytes received per input", false, [](const ReceiverState &r) { return r.bytes; });
+		inputs("ais_input_up", "gauge", "Whether the input is streaming (1) or not (0)", false, [](const ReceiverState &r) { return (uint64_t)(r.streaming && !r.lost); });
+		inputs("ais_input_last_message_timestamp_seconds", "gauge", "Unix time of the last message decoded per input, 0 if none yet", false, [&](const ReceiverState &r) { return (uint64_t)tracker.lastHeard(r.station); });
+		head("ais_input_errors", "counter", "Messages decoded with errors per input");
+		static const char *const kinds[] = {"checksum", "undersized", "oversized"};
+		for (const auto &r : f.receivers)
+		{
+			uint64_t errors[3] = {0, 0, 0};
+			tracker.withStation(r.station, [&](Figures &fig) {
+				const MessageStatistics::Values v = fig.total.values();
+				errors[0] = v.errors[3];
+				errors[1] = v.errors[1];
+				errors[2] = v.errors[2];
+			});
+			for (int k = 0; k < 3; k++)
+				out += "ais_input_errors" + inputLabels(r, std::string(",error=\"") + kinds[k] + "\"") + " " + std::to_string(errors[k]) + "\n";
+		}
+		inputs("ais_input_connect_ok", "counter", "Successful connections per input", true, [](const ReceiverState &r) { return r.connect_ok; });
+		inputs("ais_input_connect_fail", "counter", "Failed connections per input", true, [](const ReceiverState &r) { return r.connect_fail; });
+		inputs("ais_input_reconnects", "counter", "Reconnects per input", true, [](const ReceiverState &r) { return r.reconnects; });
+		inputs("ais_input_connected", "gauge", "Whether the input has an established connection (1) or not (0)", true, [](const ReceiverState &r) { return r.connected; });
+
+		const auto outputs = [&](const char *name, const char *type, const char *help, bool connection, const std::function<uint64_t(const OutputFacts &)> &value) {
+			head(name, type, help);
+			int k = 0;
+			for (const auto &o : f.outputs)
+			{
+				k++;
+				if (!connection || o.connection)
+					out += std::string(name) + "{output=\"" + std::to_string(k) + "\",type=\"" + label(o.type) + "\",description=\"" + label(o.label) + "\"} " + std::to_string(value(o)) + "\n";
+			}
+		};
+		outputs("ais_output_count", "counter", "Total number of messages passed to the output after filtering", false, [](const OutputFacts &o) { return o.messages; });
+		outputs("ais_output_bytes_out", "counter", "Bytes sent per output", false, [](const OutputFacts &o) { return o.bytes_out; });
+		outputs("ais_output_bytes_in", "counter", "Bytes received per output", false, [](const OutputFacts &o) { return o.bytes_in; });
+		outputs("ais_output_connect_ok", "counter", "Successful connections per output", true, [](const OutputFacts &o) { return o.connect_ok; });
+		outputs("ais_output_connect_fail", "counter", "Failed connections per output", true, [](const OutputFacts &o) { return o.connect_fail; });
+		outputs("ais_output_reconnects", "counter", "Reconnects per output", true, [](const OutputFacts &o) { return o.reconnects; });
+		outputs("ais_output_connected", "gauge", "Connections currently established per output", true, [](const OutputFacts &o) { return o.connected; });
+		outputs("ais_output_dropped", "counter", "Messages dropped per output", false, [](const OutputFacts &o) { return o.dropped; });
+		return out;
+	}
+
 	bool Metrics::handle(const Request &request, Response &response)
 	{
 		if (scope(request) == NOT_MINE)
@@ -233,7 +311,7 @@ namespace Services
 			return true;
 		}
 		response.type = "text/plain";
-		response.body = counter.toPrometheus(!request.owner && tracker.keepsPositionHome(std::vector<int>()));
+		response.body = counter.toPrometheus(!request.owner && tracker.keepsPositionHome(std::vector<int>())) + engineMetrics();
 		response.cors = true;
 		return true;
 	}

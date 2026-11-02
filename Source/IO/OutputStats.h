@@ -25,59 +25,61 @@
 
 namespace IO
 {
-    // A count kept on an output's thread and read on a server's. One lock for all of them, used for
-    // moments: a 64-bit atomic needs libatomic on armv6.
-    class OutputCount
-    {
-        uint64_t value = 0;
-        static std::mutex &lock()
-        {
-            static std::mutex m;
-            return m;
-        }
+	// A count kept on an output's thread and read on a server's. One lock for all of them, used for
+	// moments: a 64-bit atomic needs libatomic on armv6.
+	class OutputCount
+	{
+		uint64_t value = 0;
+		static std::mutex &lock()
+		{
+			static std::mutex m;
+			return m;
+		}
 
-    public:
-        OutputCount &operator=(uint64_t n)
-        {
-            std::lock_guard<std::mutex> l(lock());
-            value = n;
-            return *this;
-        }
-        OutputCount &operator+=(uint64_t n)
-        {
-            std::lock_guard<std::mutex> l(lock());
-            value += n;
-            return *this;
-        }
-        void operator++(int) { *this += 1; }
-        uint64_t get() const
-        {
-            std::lock_guard<std::mutex> l(lock());
-            return value;
-        }
-    };
+	public:
+		OutputCount &operator=(uint64_t n)
+		{
+			std::lock_guard<std::mutex> l(lock());
+			value = n;
+			return *this;
+		}
+		OutputCount &operator+=(uint64_t n)
+		{
+			std::lock_guard<std::mutex> l(lock());
+			value += n;
+			return *this;
+		}
+		void operator++(int) { *this += 1; }
+		uint64_t get() const
+		{
+			std::lock_guard<std::mutex> l(lock());
+			return value;
+		}
+	};
 
-    struct OutputStats
-    {
-        OutputCount bytes_out;
-        OutputCount bytes_in;
-        OutputCount connect_ok;
-        OutputCount connect_fail;
-        OutputCount reconnects;
-        OutputCount connected;
-        OutputCount dropped;
+	struct OutputStats
+	{
+		OutputCount bytes_out;
+		OutputCount bytes_in;
+		OutputCount connect_ok;
+		OutputCount connect_fail;
+		OutputCount reconnects;
+		OutputCount connected;
+		OutputCount dropped;
+		OutputCount messages;
 
-        void writeJSON(JSON::Writer &w) const
-        {
-            w.beginObject()
-                .kv("bytes_out", bytes_out.get())
-                .kv("bytes_in", bytes_in.get())
-                .kv("connect_ok", connect_ok.get())
-                .kv("connect_fail", connect_fail.get())
-                .kv("reconnects", reconnects.get())
-                .kv("connected", connected.get())
-                .kv("dropped", dropped.get())
-                .endObject();
-        }
-    };
+		void writeJSON(JSON::Writer &w) const
+		{
+			w.beginObject()
+				.kv("bytes_out", bytes_out.get())
+				.kv("bytes_in", bytes_in.get())
+				.kv("connect_ok", connect_ok.get())
+				.kv("connect_fail", connect_fail.get())
+				.kv("reconnects", reconnects.get())
+				.kv("connected", connected.get())
+				.kv("dropped", dropped.get())
+				.kv("messages", messages.get())
+				.endObject();
+		}
+	};
 }

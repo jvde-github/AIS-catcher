@@ -121,6 +121,6 @@ private:
 
 	std::string statusJSON(const char *auth, bool authenticated);
 	void sendStatus(IO::TCPServerConnection &c, bool authenticated);
-	void sendOK(IO::TCPServerConnection &c);
+	void sendOK(IO::TCPServerConnection &c, const std::string &header = std::string());
 	void sendError(IO::TCPServerConnection &c, const std::string &message, int status = 400);
 };

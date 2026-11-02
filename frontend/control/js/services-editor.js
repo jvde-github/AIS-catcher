@@ -307,11 +307,17 @@ export function renderServing(host, data, { builtIn = false, bind, touched, rere
             : net ? 'Anyone who can reach this server reads what it serves.'
                   : 'This machine only: anyone on it reads what this server serves.' }));
         if (mode === 'keys') box.append(renderKeys(data, keys, { touched, rerender, system: has('system') }));
+        // the server's own minute, everyone together: over it, a 503 until the minute is out
+        const limitId = foldKey + ':limit';
+        const limit = el('input', 'st-input st-svcs__limit', { type: 'number', min: 1, step: 1, id: limitId, value: data.limit > 0 ? String(data.limit) : '', placeholder: 'No limit',
+            onChange: () => { const n = parseInt(limit.value, 10); if (n > 0) data.limit = n; else delete data.limit; touched(); } });
+        box.append(el('label', 'st-svcs__limit-row', { for: limitId, title: 'Data requests a minute from everyone together; over it, callers get a 503 until the minute is out' },
+            el('span', '', { text: 'Requests a minute, all callers' }), limit));
         const problem = accessProblem(data, bind, builtIn);
         const why = problem ? problem.slice(problem.indexOf(': ') + 2) : '';
         if (problem) box.append(el('p', 'st-warn-note', { text: why }));
-        const state = mode === 'keys' ? 'Keys · ' + (keys.map(k => k.name).filter(Boolean).join(', ') || 'none yet')
-            : net ? 'Open to anyone who reaches it' : 'Open on this machine';
+        const state = (mode === 'keys' ? 'Keys · ' + (keys.map(k => k.name).filter(Boolean).join(', ') || 'none yet')
+            : net ? 'Open to anyone who reaches it' : 'Open on this machine') + (data.limit > 0 ? ' · ' + data.limit + '/min' : '');
         host.append(fold('Access', DOCS.keys, { key: foldKey + ':access', state, warn: why }, ...kids));
     }
 }
@@ -327,6 +333,7 @@ function renderKeys(data, keys, { touched, rerender, system }) {
             el('div', 'st-key__head', {},
                 el('strong', 'st-key__name', { text: k.name || 'Key ' + (i + 1) }),
                 ...scopesOf(k).map(s => el('span', 'st-chip st-chip--all', { text: s === 'system' ? 'System' : 'Data' })),
+                k.limit > 0 ? el('span', 'st-chip st-chip--all', { text: k.limit + '/min', title: 'Requests a minute' }) : null,
                 el('span', 'st-key__id', { text: String(k.sha256 || '').slice(0, 8), title: 'The start of its SHA-256' }),
                 el('button', 'st-btn st-btn--sm st-key__remove', { type: 'button', text: 'Remove', onClick: () => {
                     if (!confirm(`Remove the key ${k.name || i + 1}? Programs using it lose access when saved.`)) return;
@@ -348,15 +355,19 @@ function renderKeys(data, keys, { touched, rerender, system }) {
         const name = el('input', 'st-input', { type: 'text', placeholder: 'Who it is for, e.g. home-assistant', 'aria-label': 'Key name' });
         const dataScope = el('input', '', { type: 'checkbox', checked: true });
         const sysScope = el('input', '', { type: 'checkbox', checked: false, disabled: !system });
+        const limit = el('input', 'st-input st-key__limit', { type: 'number', min: 1, step: 1, placeholder: 'Requests a minute', 'aria-label': 'Requests a minute, blank for no limit', title: 'Over it, the key gets a 429 once and is then closed on until the minute is out' });
         const go = el('button', 'st-btn st-btn--sm st-btn--primary', { type: 'button', text: 'Make key', onClick: async () => {
             const scopes = [dataScope.checked ? 'data' : null, sysScope.checked ? 'system' : null].filter(Boolean);
             if (!scopes.length) return App.notify('error', 'A key needs Data, System or both');
+            const perMinute = parseInt(limit.value, 10);
+            if (limit.value && !(perMinute > 0)) return App.notify('error', 'Requests a minute is a whole number above 0, or blank');
             go.disabled = true;
             try {
                 const made = await api('/api/key', { method: 'POST' });
                 revealed.set(made.sha256, made.key);
                 const k = { name: name.value.trim() || `key ${keys.length + 1}`, sha256: made.sha256 };
                 if (!(scopes.length === 1 && scopes[0] === 'data')) k.scopes = scopes;
+                if (perMinute > 0) k.limit = perMinute;
                 keys.push(k);
                 data.keys = keys;
                 touched();
@@ -369,6 +380,7 @@ function renderKeys(data, keys, { touched, rerender, system }) {
         form.replaceChildren(name,
             el('label', 'st-key__scope', {}, dataScope, 'Data'),
             el('label', 'st-key__scope', { title: system ? '' : 'Switch System on to give a key to it' }, sysScope, 'System'),
+            limit,
             go);
         name.focus();
     } });

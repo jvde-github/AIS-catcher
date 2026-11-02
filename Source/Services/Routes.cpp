@@ -234,7 +234,7 @@ namespace Services
 "alt_m":{"type":["number","null"],"description":"The antenna's altitude, metres"},
 "mmsi":{"type":["integer","null"],"description":"The vessel it rides; null on land"},
 "vessels_last_hour":{"type":"integer","description":"The vessels it heard in the last hour that this server shows"}}})J"},
-			{"Figures", R"J({"type":"object","required":["messages","vessels","errors","level_min_db","level_max_db","ppm","max_distance_nm","active_minutes","furthest","channels","message_types","range_nm"],"properties":{
+			{"Figures", R"J({"type":"object","required":["messages"],"properties":{
 "messages":{"type":"integer","description":"Messages received"},
 "vessels":{"type":["integer","null"],"description":"Vessels heard in the period, added up over stations; null for total and session, which do not count them"},
 "errors":{"type":"object","description":"Messages with each kind of fault","properties":{
@@ -259,7 +259,7 @@ namespace Services
  "class_a":{"type":"array","items":{"type":"number"},"description":"Class A transponders"},
  "class_b":{"type":"array","items":{"type":"number"},"description":"Class B transponders"}}}}})J"},
 			{"Slot", R"J({"allOf":[{"type":"object","required":["time"],"properties":{"time":{"type":"string","format":"date-time","description":"When the slot begins"}}},{"$ref":"#/components/schemas/Figures"}]})J"},
-			{"Statistics", R"J({"type":"object","required":["stations","time","messages_per_second","total","session","last_minute","last_hour","last_day","history","week","levels_by_distance","propagation"],"properties":{
+			{"Statistics", R"J({"type":"object","required":["stations","time","messages_per_second","total","last_minute","last_hour","last_day"],"properties":{
 "stations":{"type":["array","null"],"items":{"type":"integer"},"description":"The stations these figures add up; null for everything the server hears"},
 "range_hidden":{"type":"boolean","description":"Present and true when a station here keeps its position home: only its owner gets the range figures, from which its position could be worked out, so the distances and furthest of every period, the levels by distance and the propagation days are left empty. The owner is a client on the machine itself or a key that may read the system"},
 "time":{"type":"string","format":"date-time","description":"When these figures were taken"},
@@ -293,7 +293,7 @@ namespace Services
 "day":{"type":"string","format":"date-time","description":"The UTC day, at its start"},
 "max_distance_nm":{"type":"number","description":"Its farthest validated position, nautical miles"},
 "usual_nm":{"type":"number","description":"The usual range: the median of the farthest positions of the 30 days before"}}})J"},
-			{"Vessel", R"J({"type":"object","required":["mmsi","name","callsign","imo","eni","destination","class","ship_type","mmsi_type","country","lat","lon","distance_nm","bearing_deg","speed_kn","course_deg","heading_deg","rate_of_turn_deg_min","turning_hard","nav_status","to_bow_m","to_stern_m","to_port_m","to_starboard_m","draught_m","eta","validated","repeat","approximate","virtual_aid","channels","transponder","vendor_id","model","serial","level_db","ppm","altitude_m","received_stations","messages","message_types","binary_messages","station_aboard","last_seen","age_s","stations"],"properties":{
+			{"Vessel", R"J({"type":"object","required":["mmsi","class"],"properties":{
 "mmsi":{"type":"integer","description":"The vessel's MMSI"},
 "name":{"type":["string","null"],"description":"The name it broadcasts"},
 "callsign":{"type":["string","null"],"description":"Its call sign"},

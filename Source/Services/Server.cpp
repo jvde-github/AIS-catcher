@@ -64,6 +64,7 @@ namespace Services
 				Error() << "Server: port " << spec.port << " keeps how it serves: " << error;
 		}
 		spec_ = spec;
+		budgets.clear();
 		build();
 	}
 
@@ -78,7 +79,7 @@ namespace Services
 			PrometheusCounter *counter = new PrometheusCounter();
 			metrics.reset(counter);
 			tap(counter);
-			services.push_back(std::unique_ptr<Service>(new Metrics(*counter, tracker)));
+			services.push_back(std::unique_ptr<Service>(new Metrics(*counter, context)));
 		}
 		if (spec_.geojson)
 			services.push_back(std::unique_ptr<Service>(new GeoJSON(context)));
@@ -194,10 +195,36 @@ namespace Services
 		return true;
 	}
 
-	void Server::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r, bool accept_gzip)
+	// a key's minute, with what is left in `rate` for the headers: the first request over it
+	// gets a 429 that says when, the rest until the minute is out get no answer at all
+	bool Server::charge(int scope, const ApiKey *key, Services::Response &response, std::string &rate)
 	{
-		if (extra && extra(*this, c, r, accept_gzip))
-			return;
+		if (!scope || !key || !key->limit)
+			return true;
+		if (budgets.size() != spec_.keys.size())
+			budgets.assign(spec_.keys.size(), Budget());
+		Budget &b = budgets[key - spec_.keys.data()];
+		const std::time_t now = std::time(nullptr);
+		const int used = b.take(now);
+		if (used <= key->limit)
+		{
+			rate = "X-RateLimit-Limit: " + std::to_string(key->limit) + "\r\nX-RateLimit-Remaining: " + std::to_string(key->limit - used);
+			return true;
+		}
+		if (used == key->limit + 1)
+		{
+			const int wait = b.wait(now);
+			Warning() << "Server: key \"" << key->name << "\" is over its " << key->limit << " requests a minute: a 429, then nothing for " << wait << " s";
+			response = Services::Response::problem(429, "Too Many Requests", "The key \"" + key->name + "\" has made its " + std::to_string(key->limit) + " requests this minute: try again in " + std::to_string(wait) + " s. Until then, further requests are not answered.");
+			response.header = "Retry-After: " + std::to_string(wait);
+			return false;
+		}
+		response.after = Services::Response::DROP;
+		return false;
+	}
+
+	static Services::Request fromHTTP(const IO::HTTPRequest &r)
+	{
 		Services::Request request;
 		request.method = r.method;
 		request.path = r.path();
@@ -207,10 +234,58 @@ namespace Services
 		request.origin = r.origin;
 		request.host = r.host;
 		request.peer = r.peer;
+		request.local = r.local;
 		request.owner = r.owner;
+		return request;
+	}
+
+	// what the path takes, and the preflight of a page elsewhere; no key is asked, a browser sends none
+	void Server::Options(IO::TCPServerConnection &c, const IO::HTTPRequest &r)
+	{
+		const Services::Request request = fromHTTP(r);
+		std::lock_guard<std::mutex> lock(services_mtx);
+		for (auto &s : services)
+		{
+			if (s->scope(request) == Service::NOT_MINE)
+				continue;
+			const std::string methods = s->methods(request);
+			std::string header = "Allow: " + methods + ", OPTIONS";
+			if (!localBind())
+				header += "\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: " + methods +
+						  "\r\nAccess-Control-Allow-Headers: Authorization, Content-Type\r\nAccess-Control-Max-Age: 86400";
+			Response(c, "text/plain", std::string(), IO::Reply(204).with(header));
+			return;
+		}
+		Response(c, "text/plain", std::string("Not found."), IO::Reply(404));
+	}
+
+	// the server's minute, everyone together: over it a 503 that says when, and the connection closes
+	bool Server::chargeServer(const Service &service, const Services::Request &request, Services::Response &response)
+	{
+		if (!spec_.limit || !service.metered(request))
+			return true;
+		const std::time_t now = std::time(nullptr);
+		if (server_budget.take(now) <= spec_.limit)
+			return true;
+		const int wait = server_budget.wait(now);
+		std::string tail;
+		if (budget_log.due(now, tail))
+			Warning() << "Server: port " << spec_.port << " is over its " << spec_.limit << " requests a minute: 503 for " << wait << " s";
+		response = Services::Response::problem(503, "Service Unavailable", "This server has answered its " + std::to_string(spec_.limit) + " requests this minute: try again in " + std::to_string(wait) + " s.");
+		response.header = "Retry-After: " + std::to_string(wait);
+		response.after = Services::Response::CLOSE;
+		return false;
+	}
+
+	void Server::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r, bool accept_gzip)
+	{
+		if (extra && extra(*this, c, r, accept_gzip))
+			return;
+		Services::Request request = fromHTTP(r);
 
 		std::lock_guard<std::mutex> lock(services_mtx);
 		Services::Response response;
+		std::string rate;
 		bool handled = false;
 		try
 		{
@@ -225,7 +300,7 @@ namespace Services
 				const int scope = s->scope(request);
 				if (scope == Service::NOT_MINE)
 					continue;
-				if (!admit(scope, request, key, response) || s->handle(request, response))
+				if (!chargeServer(*s, request, response) || !admit(scope, request, key, response) || !charge(scope, key, response, rate) || s->handle(request, response))
 				{
 					handled = true;
 					break;
@@ -240,16 +315,27 @@ namespace Services
 		}
 		if (!handled)
 			response = Services::Response::problem(404, "Not found", "No such resource: " + request.path);
-		if (!response.header.empty())
-			setExtraHeader(response.header);
-		// a server of this machine alone: other sites' pages in its browser do not read it
-		const bool local = spec_.bind == "localhost" || spec_.bind == "::1" || spec_.bind.compare(0, 4, "127.") == 0;
-		const bool cors = response.cors && !local;
+		if (response.after != Services::Response::KEEP)
+			c.close_after_send = true;
+		if (response.after == Services::Response::DROP)
+			return;
+		if (!rate.empty())
+			response.header += (response.header.empty() ? "" : "\r\n") + rate;
+		IO::Reply reply(response.status);
+		reply.header = response.header;
+		reply.cache = response.cache;
+		reply.cors = response.cors && !localBind();
 		if (response.stream)
 			upgradeSSE(c, response.stream, response.stream_topic, response.stream_backlog);
 		else if (response.raw)
-			ResponseRaw(c, response.type, response.raw, (int)response.raw_size, response.gzipped, response.cache, cors, response.status);
+		{
+			reply.gzip = response.gzipped;
+			ResponseRaw(c, response.type, response.raw, (int)response.raw_size, reply);
+		}
 		else
-			Response(c, response.type, response.shared ? *response.shared : response.body, accept_gzip, response.cache, cors, response.status);
+		{
+			reply.gzip = accept_gzip;
+			Response(c, response.type, response.shared ? *response.shared : response.body, reply);
+		}
 	}
 }

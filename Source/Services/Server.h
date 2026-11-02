@@ -52,6 +52,7 @@ namespace Services
 		void reconfigure(const ServerSpec &spec);
 
 		void Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r, bool accept_gzip) override;
+		void Options(IO::TCPServerConnection &c, const IO::HTTPRequest &r) override;
 
 		// A program built on AIS-catcher answers requests of its own here,
 		// before the services: true when it did. Set before the server serves.
@@ -77,7 +78,33 @@ namespace Services
 
 		void build();
 		void drop();
+		// a server of this machine alone: other sites' pages in its browser do not read it
+		bool localBind() const { return spec_.bind == "localhost" || spec_.bind == "::1" || spec_.bind.compare(0, 4, "127.") == 0; }
 		const ApiKey *keyOf(const std::string &authorization) const;
 		bool admit(int scope, const Services::Request &request, const ApiKey *key, Services::Response &response) const;
+
+		// what each key with a limit has used of its minute, in the order of spec_.keys
+		struct Budget
+		{
+			std::time_t window = 0;
+			int used = 0;
+			// one more request in the minute `now` falls in: how many that makes
+			int take(std::time_t now)
+			{
+				if (now - window >= 60)
+				{
+					window = now;
+					used = 0;
+				}
+				return ++used;
+			}
+			int wait(std::time_t now) const { return (int)(60 - (now - window)); }
+		};
+		std::vector<Budget> budgets;
+		bool charge(int scope, const ApiKey *key, Services::Response &response, std::string &rate);
+		// the server's own minute, everyone together
+		Budget server_budget;
+		IO::LogMinute budget_log;
+		bool chargeServer(const Service &service, const Services::Request &request, Services::Response &response);
 	};
 }

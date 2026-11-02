@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1.0">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>AIS-catcher</title>
     <link rel="stylesheet" href="css/hub.css?hash=">
 </head>
 <body>
+    <h1 class="sr-only">AIS-catcher control panel</h1>
     <div id="hub-container">
         <iframe id="webviewer-frame" src="/viewer/?welcome=false" allow="fullscreen" allowfullscreen
             sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
@@ -56,7 +57,7 @@
                         <svg class="icon-sm" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
                     </button>
                     <h2 id="system-title" class="band-slot band-title">Settings</h2>
-                    <button id="system-close" class="btn-quiet">
+                    <button id="system-close" class="btn-quiet" aria-label="Close">
                         <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>

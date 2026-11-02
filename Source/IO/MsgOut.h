@@ -152,7 +152,7 @@ namespace IO
 			if (!warned_no_formatter)
 			{
 				warned_no_formatter = true;
-				Error() << type << ": no sendFormatted() and Receive() not overridden — dropping all output.";
+				Error() << type << ": no sendFormatted() and Receive() not overridden, dropping all output.";
 			}
 		}
 		virtual void batchDone(TAG &) {}
@@ -172,6 +172,9 @@ namespace IO
 
 		// from the engine's main loop: the decoding thread only ever sends
 		virtual void poll() {}
+		const OutputStats &getStats() const { return stats; }
+		// holds a connection: its connection counts mean something
+		virtual bool hasConnection() const { return false; }
 
 		bool hasUUID() const { return !uuid.empty(); }
 		void Connect(Receiver &r);
@@ -190,6 +193,7 @@ namespace IO
 				if (filter.include(data[i], tag) != AIS::Filter::Result::Included)
 					continue;
 
+				stats.messages++;
 				formatInto(data[i], tag);
 				sendFormatted(json.data(), (int)json.size(), &data[i], tag);
 			}
@@ -207,6 +211,7 @@ namespace IO
 				if (filter.include(msg, tag) != AIS::Filter::Result::Included)
 					continue;
 
+				stats.messages++;
 				json.clear();
 				builder.stringify(data[i], json, line_suffix);
 				sendFormatted(json.data(), (int)json.size(), &msg, tag);

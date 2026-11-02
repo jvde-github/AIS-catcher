@@ -51,6 +51,10 @@ struct ReceiverState
 	bool lost = false;
 	uint64_t messages = 0;
 	uint64_t per_minute = 0;
+	// the bytes its device delivered; and, for an input that dials a remote, its connection counts
+	uint64_t bytes = 0;
+	bool connection = false;
+	uint64_t connect_ok = 0, connect_fail = 0, reconnects = 0, connected = 0;
 
 	// in one word: lost, streaming, or starting while its device has yet to deliver
 	const char *status() const { return lost ? "lost" : streaming ? "streaming" : "starting"; }
@@ -72,6 +76,14 @@ enum EnginePart
 // quiet: the health warns, and the journal says so once
 const int STATION_QUIET_S = 900;
 
+// An output of the running engine as the system pages and the metrics show it
+struct OutputFacts
+{
+	std::string type, label;
+	bool connection = false;
+	uint64_t messages = 0, bytes_out = 0, bytes_in = 0, connect_ok = 0, connect_fail = 0, reconnects = 0, connected = 0, dropped = 0;
+};
+
 // What the site knows of itself and of the engine running against it: what
 // the system service and the MQTT state tell
 struct SystemFacts
@@ -80,4 +92,7 @@ struct SystemFacts
 	std::time_t born = 0, session = 0;
 	uint64_t received = 0;
 	std::vector<ReceiverState> receivers;
+	std::vector<OutputFacts> outputs;
+	// input blocks dropped because decoding fell behind
+	uint32_t overruns = 0;
 };

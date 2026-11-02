@@ -32,6 +32,7 @@ namespace Device
 
 		PROTOCOL Protocol = PROTOCOL::RTLTCP;
 
+		IO::OutputStats stats;
 		Protocol::TCP tcp;
 		Protocol::MQTT mqtt;
 		Protocol::GPSD gpsd;
@@ -65,7 +66,8 @@ namespace Device
 		void sendProtocol();
 
 	public:
-		RTLTCP() : Device(Format::CU8, 288000, Type::RTLTCP, "RTLTCP") {}
+		RTLTCP() : Device(Format::CU8, 288000, Type::RTLTCP, "RTLTCP") { tcp.setStats(&stats); }
+		const IO::OutputStats *getConnectionStats() const override { return &stats; }
 
 		void OpenWithFileDescriptor(int) { Open(0); }
 		// Control

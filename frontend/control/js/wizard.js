@@ -234,7 +234,7 @@ import { DEVICE_BLOCKS, deviceOf, isRadio } from './inputs.js';
             hub.passwordBackstop();
             return;
         }
-        App.notify('info', 'Setup cancelled — run the wizard anytime from the System panel');
+        App.notify('info', 'Setup cancelled: run the wizard anytime from the System panel');
     }
 
     // A step is hidden when a checked import covers it (its coveredBy matches

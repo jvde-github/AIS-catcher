@@ -19,20 +19,23 @@
 
 #include "FileWAV.h"
 
-namespace Device {
+namespace Device
+{
 
 	//---------------------------------------
 	// WAV file, FLOAT only
 	//
 	// Source: https://www.recordingblogs.com/wiki/wave-file-format
 
-	struct RIFFHeader {
-		uint32_t groupID;  // "RIFF"
+	struct RIFFHeader
+	{
+		uint32_t groupID; // "RIFF"
 		uint32_t size;
 		uint32_t RIFFtype; // "WAVE"
 	};
 
-	struct FormatChunk {
+	struct FormatChunk
+	{
 		uint16_t wFormatTag;
 		uint16_t wChannels;
 		uint32_t dwSamplesPerSec;
@@ -41,33 +44,40 @@ namespace Device {
 		uint16_t wBitsPerSample;
 	};
 
-	struct WaveChunk {
+	struct WaveChunk
+	{
 		uint32_t ID;
 		uint32_t size;
 	};
 
-	void WAVFile::Open(uint64_t h) {
+	void WAVFile::Open(uint64_t h)
+	{
 		struct RIFFHeader riff;
-		struct FormatChunk fmt = { 0, 0, 0, 0, 0, 0 };
-		struct WaveChunk chunk = { 0, 0 };
+		struct FormatChunk fmt = {0, 0, 0, 0, 0, 0};
+		struct WaveChunk chunk = {0, 0};
 		bool fmt_seen = false;
 
 		file.open(filename, std::ios::in | std::ios::binary);
-		if(!file) throw std::runtime_error("cannot open WAV file: \"" + filename + "\"");
-		file.read((char*)&riff, sizeof(struct RIFFHeader));
-		if (!file) throw std::runtime_error("cannot read header from WAV file: \"" + filename + "\"");
+		if (!file)
+			throw std::runtime_error("cannot open WAV file: \"" + filename + "\"");
+		file.read((char *)&riff, sizeof(struct RIFFHeader));
+		if (!file)
+			throw std::runtime_error("cannot read header from WAV file: \"" + filename + "\"");
 
 		if (riff.groupID != 0x46464952 || riff.RIFFtype != 0x45564157)
 			throw std::runtime_error("not a supported WAV-file.");
 
 		// Walk chunks until "data"; "fmt " is not necessarily first - recorders
 		// commonly insert LIST/JUNK/bext chunks ahead of it.
-		while (file.read((char*)&chunk, sizeof(struct WaveChunk))) {
-			if (chunk.ID == 0x20746d66) { // "fmt "
+		while (file.read((char *)&chunk, sizeof(struct WaveChunk)))
+		{
+			if (chunk.ID == 0x20746d66)
+			{ // "fmt "
 				if (chunk.size < sizeof(struct FormatChunk))
 					throw std::runtime_error("invalid fmt chunk in WAV-file.");
-				file.read((char*)&fmt, sizeof(struct FormatChunk));
-				if (!file) throw std::runtime_error("cannot read fmt chunk from WAV-file.");
+				file.read((char *)&fmt, sizeof(struct FormatChunk));
+				if (!file)
+					throw std::runtime_error("cannot read fmt chunk from WAV-file.");
 				file.ignore(chunk.size - sizeof(struct FormatChunk) + (chunk.size & 1));
 				fmt_seen = true;
 			}
@@ -95,7 +105,8 @@ namespace Device {
 		Device::setSampleRate(fmt.dwSamplesPerSec);
 	}
 
-	void WAVFile::Close() {
+	void WAVFile::Close()
+	{
 		Device::Close();
 
 		file.close();
@@ -103,24 +114,30 @@ namespace Device {
 
 	// Unlike other devices, WAVFile has no read thread (isCallback() is false):
 	// each isStreaming() poll from the main loop reads and pushes the next block.
-	bool WAVFile::isStreaming() {
-		if (file.eof() || !Device::isStreaming()) return false;
+	bool WAVFile::isStreaming()
+	{
+		if (file.eof() || !Device::isStreaming())
+			return false;
 
-		if (buffer.size() != buffer_size) buffer.resize(buffer_size);
+		if (buffer.size() != buffer_size)
+			buffer.resize(buffer_size);
 
-		file.read((char*)buffer.data(), buffer_size);
+		file.read((char *)buffer.data(), buffer_size);
 
 		int n = (int)file.gcount();
-		if (n <= 0) return false;
+		if (n <= 0)
+			return false;
 
-		RAW r = { getFormat(), buffer.data(), n };
+		RAW r = {getFormat(), buffer.data(), n};
 		Send(&r, 1, tag);
 
 		return true;
 	}
 
-	Setting& WAVFile::applyKey(AIS::Keys key, const std::string &arg) {
-		switch (key) {
+	Setting &WAVFile::applyKey(AIS::Keys key, const std::string &arg)
+	{
+		switch (key)
+		{
 		case AIS::KEY_SETTING_FILE:
 			filename = arg;
 			break;
@@ -131,7 +148,8 @@ namespace Device {
 		return *this;
 	}
 
-	std::string WAVFile::Get() {
+	std::string WAVFile::Get()
+	{
 		return Device::Get() + " file " + filename;
 	}
 }

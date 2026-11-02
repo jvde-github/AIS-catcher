@@ -469,7 +469,7 @@ namespace Services
 				try
 				{
 					// NMEA holds neither '%' nor '+': the text reads the same whether the page encoded it or not
-					const std::string result = decodeNMEA(urlDecode(text));
+					const std::string result = decodeNMEA(Util::Parse::FormDecode(text));
 					response = Response::json(result == "[]" ? std::string("{\"error\":\"No valid AIS messages decoded\"}") : result);
 				}
 				catch (const std::exception &e)

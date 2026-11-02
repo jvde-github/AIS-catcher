@@ -90,7 +90,7 @@ namespace Services
 			.key("engine").beginObject().kv("running", f.running);
 		if (f.running)
 			w.kv("uptime_s", age(now, f.session));
-		w.kv("receivers", (long long)f.receivers.size()).endObject()
+		w.kv("receivers", (long long)f.receivers.size()).kv("overruns", (long long)f.overruns).endObject()
 			.key("resources").beginArray();
 		for (const char *r : {"/api/v1/system/receivers", "/api/v1/system/outputs", "/api/v1/system/log", "/api/v1/system/events",
 							  "/api/v1/health"})

@@ -21,6 +21,7 @@
 #include <cstring>
 #include <sys/stat.h>
 #include "Site.h"
+#include "FIFO.h"
 #include "Helper.h"
 #include "Logger.h"
 
@@ -144,6 +145,26 @@ SystemFacts Site::systemFacts()
 	f.session = session_start;
 	f.received = bytes.received();
 	f.receivers = receiver_states;
+	std::map<std::string, int> nth;
+	for (const IO::OutputMessage *o : engine.outputs)
+	{
+		OutputFacts of;
+		of.type = o->getType();
+		const std::string numbered = of.type + " #" + std::to_string(++nth[of.type]);
+		of.label = o->getDescription().empty() ? numbered : o->getDescription();
+		of.connection = o->hasConnection();
+		const IO::OutputStats &s = o->getStats();
+		of.messages = s.messages.get();
+		of.bytes_out = s.bytes_out.get();
+		of.bytes_in = s.bytes_in.get();
+		of.connect_ok = s.connect_ok.get();
+		of.connect_fail = s.connect_fail.get();
+		of.reconnects = s.reconnects.get();
+		of.connected = s.connected.get();
+		of.dropped = s.dropped.get();
+		f.outputs.push_back(of);
+	}
+	f.overruns = FIFO::overruns();
 	return f;
 }
 
@@ -654,6 +675,67 @@ std::vector<std::pair<int, long long>> Site::serverTLS()
 		if (s->hasTLS())
 			on.emplace_back(s->spec().port, s->tlsUntil());
 	return on;
+}
+
+std::string Site::stationsLive()
+{
+	std::string out;
+	JSON::Writer w(out);
+	const std::time_t now = std::time(nullptr);
+	Tracker *t = tracker();
+	w.beginObject().key("stations").beginArray();
+	withStations([&](const StationRegistry &registry) {
+		registry.forEach([&](const StationRegistry::Station &s) {
+			w.beginObject().kv("id", s.id);
+			if (t)
+			{
+				const Tracker::Position at = t->stationPositionPrivate(s.id);
+				const char *source = Tracker::sourceName(at.source);
+				if (source)
+					w.kv("source", source);
+				if (isValidCoord(at.lat, at.lon))
+					w.kv("lat", at.lat).kv("lon", at.lon);
+				if (at.time)
+					w.kv("fix_age_s", (long long)(now - at.time));
+				const std::time_t heard = t->lastHeard(s.id);
+				if (heard)
+					w.kv("heard_age_s", (long long)(now - heard));
+				if (s.mmsi)
+					t->ships().withShip(s.mmsi, [&](const Ship &ship, int) {
+						w.key("vessel").beginObject().kv("mmsi", (long long)s.mmsi).kv("name", std::string(ship.shipname)).kv("report_age_s", (long long)(now - ship.last_signal)).endObject();
+					});
+			}
+			w.endObject();
+		});
+	});
+	w.endArray();
+	if (const std::time_t saved = lastBackup())
+		w.kv("backup_age_s", (long long)(now - saved));
+	const SystemFacts facts = systemFacts();
+	w.kv("running", facts.running).key("receivers").beginArray();
+	for (const auto &r : facts.receivers)
+	{
+		w.beginObject().kv("index", r.index).kv("station", r.station).kv("input", r.input).kv("label", r.label).kv("state", r.status()).kv("messages", (unsigned long long)r.messages).kv("per_minute", (unsigned long long)r.per_minute);
+		if (t)
+		{
+			const std::time_t heard = t->lastHeard(r.station);
+			if (heard)
+				w.kv("heard_age_s", (long long)(now - heard));
+		}
+		w.endObject();
+	}
+	w.endArray();
+	w.endObject();
+	w.finish();
+	return out;
+}
+
+std::vector<std::pair<int, std::string>> Site::receiverStates()
+{
+	std::vector<std::pair<int, std::string>> states;
+	for (const auto &r : systemFacts().receivers)
+		states.emplace_back(r.index, r.status());
+	return states;
 }
 
 Services::Server *Site::serverOn(int port)

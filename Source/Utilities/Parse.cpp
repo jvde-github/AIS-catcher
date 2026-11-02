@@ -93,6 +93,45 @@ namespace Util
 		return out;
 	}
 
+	std::string Parse::FormDecode(const std::string &s)
+	{
+		std::string spaced = s;
+		for (char &ch : spaced)
+			if (ch == '+')
+				ch = ' ';
+		return PercentDecode(spaced);
+	}
+
+	std::vector<std::pair<std::string, std::string>> Parse::Query(const std::string &query)
+	{
+		std::vector<std::pair<std::string, std::string>> out;
+		std::size_t pos = 0;
+		while (pos < query.size())
+		{
+			std::size_t amp = query.find('&', pos);
+			if (amp == std::string::npos)
+				amp = query.size();
+			if (amp > pos)
+			{
+				const std::size_t eq = query.find('=', pos);
+				if (eq != std::string::npos && eq < amp)
+					out.push_back(std::make_pair(FormDecode(query.substr(pos, eq - pos)), FormDecode(query.substr(eq + 1, amp - eq - 1))));
+				else
+					out.push_back(std::make_pair(FormDecode(query.substr(pos, amp - pos)), std::string()));
+			}
+			pos = amp + 1;
+		}
+		return out;
+	}
+
+	std::string Parse::QueryParam(const std::string &query, const std::string &name)
+	{
+		for (const auto &p : Query(query))
+			if (p.first == name)
+				return p.second;
+		return std::string();
+	}
+
 	std::string Parse::URLWithoutCredentials(const std::string &url)
 	{
 		size_t start = url.find("://");

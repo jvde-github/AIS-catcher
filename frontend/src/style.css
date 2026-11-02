@@ -70,7 +70,9 @@ a:focus-visible {
     --header-divider: var(--color-brand-accent);
 }
 
-.header-title span {
+.header-title h1 {
+    margin: 0;
+    font: inherit;
     padding: 15px;
     padding-top: 17px;
     line-height: 20px;

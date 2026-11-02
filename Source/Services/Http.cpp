@@ -45,61 +45,14 @@ namespace Services
 		return out;
 	}
 
-	std::string urlDecode(const std::string &in)
-	{
-		std::string out;
-		out.reserve(in.size());
-		for (std::size_t i = 0; i < in.size(); i++)
-		{
-			if (in[i] == '+')
-				out += ' ';
-			else if (in[i] == '%' && i + 2 < in.size() && Util::Convert::isHexDigit(in[i + 1]) && Util::Convert::isHexDigit(in[i + 2]))
-			{
-				out += (char)((Util::Convert::hexDigitValue(in[i + 1]) << 4) | Util::Convert::hexDigitValue(in[i + 2]));
-				i += 2;
-			}
-			else
-				out += in[i];
-		}
-		return out;
-	}
-
 	std::string Request::param(const std::string &name) const
 	{
-		std::size_t pos = 0;
-		while (pos < query.size())
-		{
-			std::size_t amp = query.find('&', pos);
-			if (amp == std::string::npos)
-				amp = query.size();
-			std::size_t eq = query.find('=', pos);
-			if (eq != std::string::npos && eq < amp && query.compare(pos, eq - pos, name) == 0)
-				return urlDecode(query.substr(eq + 1, amp - eq - 1));
-			pos = amp + 1;
-		}
-		return "";
+		return Util::Parse::QueryParam(query, name);
 	}
 
 	std::vector<std::pair<std::string, std::string>> Request::params() const
 	{
-		std::vector<std::pair<std::string, std::string>> out;
-		std::size_t pos = 0;
-		while (pos < query.size())
-		{
-			std::size_t amp = query.find('&', pos);
-			if (amp == std::string::npos)
-				amp = query.size();
-			std::size_t eq = query.find('=', pos);
-			if (amp > pos)
-			{
-				if (eq != std::string::npos && eq < amp)
-					out.push_back(std::make_pair(urlDecode(query.substr(pos, eq - pos)), urlDecode(query.substr(eq + 1, amp - eq - 1))));
-				else
-					out.push_back(std::make_pair(urlDecode(query.substr(pos, amp - pos)), std::string()));
-			}
-			pos = amp + 1;
-		}
-		return out;
+		return Util::Parse::Query(query);
 	}
 
 	bool Request::integer(const std::string &name, long long &out, long long fallback, long long min, long long max) const

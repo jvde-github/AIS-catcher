@@ -18,6 +18,7 @@
 #pragma once
 #include <cstdint>
 #include <ctime>
+#include <functional>
 #include <mutex>
 #include <string>
 
@@ -82,7 +83,7 @@ namespace Services
 	class Metrics : public Service
 	{
 	public:
-		Metrics(PrometheusCounter &counter, Tracker &tracker) : counter(counter), tracker(tracker) {}
+		Metrics(PrometheusCounter &counter, const Context &context) : counter(counter), tracker(context.tracker), facts(context.facts) {}
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
@@ -90,5 +91,8 @@ namespace Services
 	private:
 		PrometheusCounter &counter;
 		Tracker &tracker;
+		std::function<SystemFacts()> facts;
+		// each input and output of the running engine
+		std::string engineMetrics();
 	};
 }

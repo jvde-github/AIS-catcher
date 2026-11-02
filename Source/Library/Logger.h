@@ -31,147 +31,149 @@
 
 enum class LogLevel
 {
-    DEBUG,
-    INFO,
-    WARNING,
-    ERR,
-    CRITICAL,
-    EMPTY
+	DEBUG,
+	INFO,
+	WARNING,
+	ERR,
+	CRITICAL,
+	EMPTY
 };
 
 struct LogMessage
 {
-    LogLevel level;
-    std::string message;
-    std::string time;
-    uint32_t seq = 0;
-    std::time_t utc = 0;
+	LogLevel level;
+	std::string message;
+	std::string time;
+	uint32_t seq = 0;
+	std::time_t utc = 0;
 
-    LogMessage() : level(LogLevel::EMPTY) {}
-    LogMessage(LogLevel l, std::string msg, std::string time, uint32_t seq = 0) : level(l), message(std::move(msg)), time(std::move(time)), seq(seq) {}
+	LogMessage() : level(LogLevel::EMPTY) {}
+	LogMessage(LogLevel l, std::string msg, std::string time, uint32_t seq = 0) : level(l), message(std::move(msg)), time(std::move(time)), seq(seq) {}
 
-    const char *levelToString() const;
-    int syslogLevel() const;
-    std::string toJSON() const;
+	const char *levelToString() const;
+	int syslogLevel() const;
+	std::string toJSON() const;
 };
 
 
 class Logger : public Setting
 {
 public:
-    static Logger &getInstance();
+	static Logger &getInstance();
 
-    ~Logger() = default;
-    Logger(const Logger &) = delete;
-    Logger &operator=(const Logger &) = delete;
+	~Logger() = default;
+	Logger(const Logger &) = delete;
+	Logger &operator=(const Logger &) = delete;
 
-    typedef std::function<void(const LogMessage &)> LogCallback;
-    void log(LogLevel level, const std::string &message);
+	typedef std::function<void(const LogMessage &)> LogCallback;
+	void log(LogLevel level, const std::string &message);
 
-    int addLogListener(LogCallback callback);
-    // the console: one listener on stderr, kept by its id so -G can take it away
-    int addConsoleListener();
-    bool hasConsoleListener() const { return console_id_ != -1; }
-    // removes it once; false when it is gone already
-    bool removeConsoleListener();
-    void removeLogListener(int id);
+	int addLogListener(LogCallback callback);
+	// the console: one listener on stderr, kept by its id so -G can take it away
+	int addConsoleListener();
+	bool hasConsoleListener() const { return console_id_ != -1; }
+	// removes it once; false when it is gone already
+	bool removeConsoleListener();
+	void removeLogListener(int id);
 
-    std::vector<LogMessage> getLastMessages(int n);
-    // when this process began counting lines: a line's number holds within it
-    std::time_t epoch() const { return epoch_; }
+	std::vector<LogMessage> getLastMessages(int n);
+	// when this process began counting lines: a line's number holds within it
+	std::time_t epoch() const { return epoch_; }
 
-    // the last `n` lines as JSON, or the first `n` after line `since`; `last`,
-    // when given, takes the number of the last line handed out and stays as it is without one
-    std::vector<std::string> getBacklogJSON(int n, uint32_t since = 0, uint32_t *last = nullptr)
-    {
-        std::vector<std::string> backlog;
-        for (auto &m : getLastMessages(since ? INT_MAX : n))
-        {
-            uint32_t after = m.seq - since;
-            if ((int)backlog.size() >= n)
-                break;
-            if (!since || (after != 0 && after < 0x80000000u))
-            {
-                backlog.push_back(m.toJSON());
-                if (last)
-                    *last = m.seq;
-            }
-        }
-        return backlog;
-    }
-    void setMaxBufferSize(int size)
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        message_buffer_.clear();
-        message_buffer_.resize(size);
-        buffer_position_ = 0;
-    }
+	// the last `n` lines as JSON, or the first `n` after line `since`; `last`,
+	// when given, takes the number of the last line handed out and stays as it is without one
+	std::vector<std::string> getBacklogJSON(int n, uint32_t since = 0, uint32_t *last = nullptr)
+	{
+		std::vector<std::string> backlog;
+		for (auto &m : getLastMessages(since ? INT_MAX : n))
+		{
+			uint32_t after = m.seq - since;
+			if ((int)backlog.size() >= n)
+				break;
+			if (!since || (after != 0 && after < 0x80000000u))
+			{
+				backlog.push_back(m.toJSON());
+				if (last)
+					*last = m.seq;
+			}
+		}
+		return backlog;
+	}
+	void setMaxBufferSize(int size)
+	{
+		std::lock_guard<std::mutex> lock(mutex_);
+		message_buffer_.clear();
+		message_buffer_.resize(size);
+		buffer_position_ = 0;
+	}
 
-    void setLogToSystem(std::string ident = "aiscatcher");
+	void setLogToSystem(std::string ident = "aiscatcher");
 
-    void setMinLevel(LogLevel level) { min_level_ = level; }
-    LogLevel getMinLevel() const { return min_level_; }
+	void setMinLevel(LogLevel level) { min_level_ = level; }
+	LogLevel getMinLevel() const { return min_level_; }
 
-    static bool parseLevel(const std::string &name, LogLevel &level);
+	static bool parseLevel(const std::string &name, LogLevel &level);
 
-    Setting &applyKey(AIS::Keys key, const std::string &arg);
+	Setting &applyKey(AIS::Keys key, const std::string &arg);
 
 private:
-    struct LogListener
-    {
-        int id;
-        LogCallback callback;
-    };
+	struct LogListener
+	{
+		int id;
+		LogCallback callback;
+	};
 
-    Logger() : Setting("Logger") {}
+	Logger() : Setting("Logger") {}
 
-    std::string getCurrentTime();
+	std::string getCurrentTime();
 
-    std::mutex mutex_;
-    std::atomic<LogLevel> min_level_{LogLevel::INFO};
-    std::atomic<uint32_t> seq_{1};
-    const std::time_t epoch_ = std::time(nullptr);
+	std::mutex mutex_;
+	std::atomic<LogLevel> min_level_{LogLevel::INFO};
+	std::atomic<uint32_t> seq_{1};
+	const std::time_t epoch_ = std::time(nullptr);
 
-    std::vector<LogMessage> message_buffer_;
-    int buffer_position_ = 0;
-    std::vector<LogListener> log_listeners_;
-    int console_id_ = -1;
+	std::vector<LogMessage> message_buffer_;
+	int buffer_position_ = 0;
+	std::vector<LogListener> log_listeners_;
+	int console_id_ = -1;
 
-    void storeMessage(const LogMessage &msg);
-    void notifyListeners(const LogMessage &msg);
+	void storeMessage(const LogMessage &msg);
+	void notifyListeners(const LogMessage &msg);
 
-    int id = 1;
+	int id = 1;
 };
 
 class LogStream
 {
 public:
-    LogStream(LogLevel level);
-    ~LogStream();
+	LogStream(LogLevel level);
+	~LogStream();
 
-    LogStream(const LogStream &) = delete;
-    LogStream &operator=(const LogStream &) = delete;
+	LogStream(const LogStream &) = delete;
+	LogStream &operator=(const LogStream &) = delete;
 
-    LogStream(LogStream &&) = default;
-    LogStream &operator=(LogStream &&) = default;
+	LogStream(LogStream &&) = default;
+	LogStream &operator=(LogStream &&) = default;
 
-    template <typename T>
-    LogStream &operator<<(const T &msg)
-    {
-        if (stream_) (*stream_) << msg;
-        return *this;
-    }
+	template <typename T>
+	LogStream &operator<<(const T &msg)
+	{
+		if (stream_)
+			(*stream_) << msg;
+		return *this;
+	}
 
-    typedef std::ostream &(*Manipulator)(std::ostream &);
-    LogStream &operator<<(Manipulator manip)
-    {
-        if (stream_) manip(*stream_);
-        return *this;
-    }
+	typedef std::ostream &(*Manipulator)(std::ostream &);
+	LogStream &operator<<(Manipulator manip)
+	{
+		if (stream_)
+			manip(*stream_);
+		return *this;
+	}
 
 private:
-    LogLevel level_;
-    std::unique_ptr<std::ostringstream> stream_;
+	LogLevel level_;
+	std::unique_ptr<std::ostringstream> stream_;
 };
 
 LogStream Debug();

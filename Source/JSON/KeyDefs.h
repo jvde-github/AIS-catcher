@@ -300,6 +300,7 @@ X(KEY_SETTING_TLS_CERT, "", "", "", "", "tls_cert", "", "", "-N's name for the c
 X(KEY_SETTING_TLS_KEY, "", "", "", "", "tls_key", "", "", "-N's name for the key of a server's tls.", nullptr)
 X(KEY_SETTING_SHA256, "", "", "", "", "sha256", "", "", "SHA-256 of a key, in hex: the key itself is never stored.", nullptr)
 X(KEY_SETTING_SCOPES, "", "", "", "", "scopes", "", "", "What a key may do: data, system.", nullptr)
+X(KEY_SETTING_LIMIT, "", "", "", "", "limit", "", "", "Requests a minute a key, or a server as a whole, may make; absent or 0 for no limit.", nullptr)
 X(KEY_SETTING_PUBLIC, "", "", "", "", "public", "", "", "A server anyone who reaches it may read, without a key; never together with keys.", nullptr)
 X(KEY_SETTING_WEBHOOKS, "", "", "", "", "webhooks", "", "", "Addresses each event is posted to as it happens.", nullptr)
 X(KEY_SETTING_EVENTS, "", "", "", "", "events", "", "", "The kinds of event a webhook posts: safety, destination, status, draught, place_enter, place_exit, system.", nullptr)

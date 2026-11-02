@@ -46,6 +46,8 @@ namespace Services
 		int scopes = 0;
 		// the owner of this machine's stations, who may read the range figures of one that keeps its position home
 		bool owner = false;
+		// from this machine itself
+		bool local = false;
 
 		std::string param(const std::string &name) const;
 		// every name and value of the query, decoded, in order
@@ -65,6 +67,13 @@ namespace Services
 		std::shared_ptr<const std::string> shared;
 		// one more header line, such as WWW-Authenticate
 		std::string header;
+		// the connection afterwards: kept, closed after this answer, or closed with no answer at all
+		enum After
+		{
+			KEEP,
+			CLOSE,
+			DROP
+		} after = KEEP;
 		// a body that lives elsewhere, as stored: compressed or not, and whether it may be cached
 		const char *raw = nullptr;
 		std::size_t raw_size = 0;
@@ -117,8 +126,6 @@ namespace Services
 
 	// a query value, percent-encoded where it must be
 	std::string urlEncode(const std::string &v);
-	// a query or a form body as sent, percent-encoding and '+' undone
-	std::string urlDecode(const std::string &in);
 
 	// what writes the running engine's part of a status page
 	typedef std::function<void(JSON::Writer &, EnginePart)> EngineWriter;
@@ -148,5 +155,9 @@ namespace Services
 		virtual int scope(const Request &request) const = 0;
 		// false leaves the request to the next service
 		virtual bool handle(const Request &request, Response &response) = 0;
+		// the methods the path takes, as an Allow header lists them
+		virtual std::string methods(const Request &) const { return "GET, HEAD"; }
+		// counts toward the server's minute: data, never health
+		virtual bool metered(const Request &) const { return true; }
 	};
 }

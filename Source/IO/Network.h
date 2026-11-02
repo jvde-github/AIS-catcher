@@ -110,6 +110,7 @@ namespace IO
 
 	public:
 		~HTTPStreamer() { Stop(); }
+		bool hasConnection() const override { return true; }
 		HTTPStreamer() : OutputMessage("HTTP"), url("http://127.0.0.1") { fmt = MessageFormat::JSON_FULL; }
 
 		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
@@ -158,10 +159,57 @@ namespace IO
 		void Stop() override;
 	};
 
-	class TCPClientStreamer : public OutputMessage
+	// an output over one connection: sendFormatted() on the decoding thread only sends,
+	// poll() on the engine's loop keeps the connection up and only tries the lock
+	class SessionStreamer : public OutputMessage
 	{
+	protected:
 		Protocol::TCP tcp;
-		Protocol::ProtocolBase *connection = nullptr;
+		Protocol::ProtocolBase *session = nullptr;
+		std::mutex mtx;
+
+		// under the lock; what the connection does not take now is dropped, there is no queue
+		void sendLocked(const char *data, int len)
+		{
+			if (session && session->send(data, len) <= 0 && len > 0)
+				stats.dropped++;
+		}
+
+		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
+		{
+			std::lock_guard<std::mutex> lock(mtx);
+			sendLocked(data, len);
+		}
+
+		// after each step of the connection, under the lock
+		virtual void polled() {}
+
+	public:
+		SessionStreamer(const std::string &type) : OutputMessage(type) {}
+		bool hasConnection() const override { return true; }
+
+		void Stop() override
+		{
+			std::lock_guard<std::mutex> lock(mtx);
+			if (session)
+				session->disconnect();
+		}
+
+		void poll() override
+		{
+			std::unique_lock<std::mutex> lock(mtx, std::try_to_lock);
+			if (!lock.owns_lock() || !session)
+				return;
+
+			session->poll();
+			if (session->isConnected())
+				session->drain();
+			polled();
+		}
+	};
+
+	class TCPClientStreamer : public SessionStreamer
+	{
 		std::string host = "127.0.0.1";
 		std::string port = "10110";
 		bool keep_alive = false;
@@ -169,62 +217,34 @@ namespace IO
 		int reset = -1;
 		bool stop_requested = false;
 
-		// sendFormatted() on the decoding thread only sends; poll() on the engine's main
-		// loop makes and keeps the connection, and only tries the lock
-		std::mutex mtx;
 		static const int CONNECT_TIMEOUT = 10;
 
-		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
-		{
-			std::lock_guard<std::mutex> lock(mtx);
-			SendTo(data, len);
-		}
+		void polled() override;
 
 	public:
-		TCPClientStreamer() : OutputMessage("TCP Client") { fmt = MessageFormat::NMEA; }
+		TCPClientStreamer() : SessionStreamer("TCP Client") { fmt = MessageFormat::NMEA; }
 		~TCPClientStreamer() { Stop(); }
 
 		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 
 		void Start() override;
-		void Stop() override;
-		void poll() override;
-
-		int SendTo(const char *data, int len)
-		{
-			if (!connection)
-				return -1;
-
-			int r = connection->send(data, len);
-			// 0: not sent (socket full or connection down), -1: the connection failed
-			// under it; there is no queue, so it is dropped either way
-			if (r <= 0 && len > 0)
-				stats.dropped++;
-			return r;
-		}
 	};
 
-	class HubStreamer : public OutputMessage
+	class HubStreamer : public SessionStreamer
 	{
-		Protocol::TCP tcp;
 		Protocol::Hub hub;
-		Protocol::ProtocolBase *connection = nullptr;
 
 		static const int KEEPALIVE_S = 300;
-
-		// as the TCP output: sends on the decoding thread, the connection and the
-		// keep-alive from poll()
-		std::mutex mtx;
-		Protocol::Clock::time_point last_send, last_tick;
+		Protocol::Clock::time_point last_send;
 
 		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
 		{
 			std::lock_guard<std::mutex> lock(mtx);
-
 			last_send = Protocol::Clock::now();
-			if (connection && connection->send(data, len) <= 0 && len > 0)
-				stats.dropped++;
+			sendLocked(data, len);
 		}
+
+		void polled() override;
 
 	public:
 		HubStreamer();
@@ -233,8 +253,6 @@ namespace IO
 		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 
 		void Start() override;
-		void Stop() override;
-		void poll() override;
 	};
 
 	class TCPlistenerStreamer : public OutputMessage, public IO::TCPServer
@@ -248,60 +266,50 @@ namespace IO
 
 	public:
 		TCPlistenerStreamer() : OutputMessage("TCP Listener") { fmt = MessageFormat::NMEA; }
+		bool hasConnection() const override { return true; }
 
 		virtual ~TCPlistenerStreamer() {};
 
 		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 
 		void Start() override;
-		void Stop() override {}
+		void Stop() override { stopThread(); }
 	};
 
-	class MQTTStreamer : public OutputMessage
+	class MQTTStreamer : public SessionStreamer
 	{
-
-	private:
 		PROTOCOL protocol = PROTOCOL::MQTT;
-		Protocol::TCP tcp;
 		Protocol::MQTT mqtt;
 		Protocol::TLS tls;
 		Protocol::WebSocket ws;
-		Protocol::ProtocolBase *session = &tcp;
 
 		Util::TemplateString topic_template;
 		std::string topic_buf;
-
-		// as the TCP output: sends on the decoding thread, the connection from poll()
-		std::mutex mtx;
 
 		void sendFormatted(const char *data, int len, const AIS::Message *msg, TAG &tag) override
 		{
 			std::lock_guard<std::mutex> lock(mtx);
 
-			int sent;
 			if (session == &mqtt && msg)
 			{
 				topic_template.write(tag, *msg, topic_buf);
-				sent = mqtt.send(data, len, topic_buf);
+				if (mqtt.send(data, len, topic_buf) <= 0 && len > 0)
+					stats.dropped++;
 			}
 			else
-				sent = session->send(data, len);
-
-			if (sent <= 0 && len > 0)
-				stats.dropped++;
+				sendLocked(data, len);
 		}
 
 	public:
-		MQTTStreamer() : OutputMessage("MQTT"), topic_template("ais/data")
+		MQTTStreamer() : SessionStreamer("MQTT"), topic_template("ais/data")
 		{
+			session = &tcp;
 			fmt = MessageFormat::JSON_FULL;
 			forward_gps = false;
 		}
 		~MQTTStreamer() { Stop(); }
 
 		void Start() override;
-		void Stop() override;
-		void poll() override;
 
 		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 	};

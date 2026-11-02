@@ -24,6 +24,7 @@
 #include <string>
 
 #include "TCPServer.h"
+#include "Helper.h"
 #include "Logger.h"
 
 #include <sys/stat.h>
@@ -53,7 +54,6 @@ namespace IO
 	const int SEND_FLAGS = 0;
 #endif
 
-	const int TCPServer::MAX_CONN;
 	std::vector<int> TCPServer::active_ports;
 
 	void TCPServerConnection::Close()
@@ -84,7 +84,7 @@ namespace IO
 		head_request = false;
 		continue_sent = false;
 		no_timeout = false;
-		send_limit = MAX_BUFFER_SIZE;
+		send_limit = Limits::BUFFER;
 		verbose = true;
 		request_start = 0;
 		ssl_want_write = ssl_write_wants_read = false;
@@ -126,7 +126,7 @@ namespace IO
 
 	void TCPServerConnection::take(const char *buffer, int nread)
 	{
-		if (msg.size() + nread > MAX_BUFFER_SIZE)
+		if (msg.size() + nread > Limits::BUFFER)
 		{
 			Warning() << "TCPServer: input buffer overflow, closing connection";
 			Close();
@@ -375,8 +375,9 @@ namespace IO
 			error = "cannot make a TLS context";
 			return nullptr;
 		}
-		// TLS 1.2 or later, as the client has it; without renegotiation a write never waits for a read
-		long options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1;
+		// TLS 1.2 or later, as the client has it, with the ciphers in this server's order; without
+		// renegotiation a write never waits for a read
+		long options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_CIPHER_SERVER_PREFERENCE;
 #ifdef SSL_OP_NO_RENEGOTIATION
 		options |= SSL_OP_NO_RENEGOTIATION;
 #endif
@@ -387,8 +388,11 @@ namespace IO
 		SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
 		SSL_CTX_set_default_passwd_cb(ctx, noPassphrase);
 
-		// the key first: then a certificate of another key fails the check, in those words
-		if (SSL_CTX_use_PrivateKey_file(ctx, key.c_str(), SSL_FILETYPE_PEM) != 1)
+		// TLS 1.2 with AEAD ciphers under ECDHE only; TLS 1.3 has nothing else.
+		// The key first: then a certificate of another key fails the check, in those words
+		if (SSL_CTX_set_cipher_list(ctx, "ECDHE+AESGCM:ECDHE+CHACHA20") != 1)
+			error = "cannot set the cipher list";
+		else if (SSL_CTX_use_PrivateKey_file(ctx, key.c_str(), SSL_FILETYPE_PEM) != 1)
 			error = "cannot read the key \"" + key + "\", a PEM file without a passphrase: " + whyNot(key);
 		else if (SSL_CTX_use_certificate_chain_file(ctx, cert.c_str()) != 1)
 			error = "cannot read the certificate \"" + cert + "\": " + whyNot(cert);
@@ -560,7 +564,7 @@ namespace IO
 
 	int TCPServer::findFreeClient()
 	{
-		for (int i = 0; i < MAX_CONN; i++)
+		for (int i = 0; i < Limits::CONNECTIONS; i++)
 			if (!client[i].isConnected())
 				return i;
 		return -1;
@@ -585,23 +589,30 @@ namespace IO
 			return;
 		}
 
-		if (max_per_address && (ntohl(peer.sin_addr.s_addr) >> 24) != 127)
-		{
-			int held = 0;
-			for (const auto &c : client)
-				held += c.isConnected() && c.peer_ipv4 == peer.sin_addr.s_addr;
-			if (held >= max_per_address)
+		const bool local = (ntohl(peer.sin_addr.s_addr) >> 24) == 127;
+		int connected = 0, held = 0;
+		for (const auto &c : client)
+			if (c.isConnected())
 			{
-				Net::closeSocket(conn_socket);
-				return;
+				connected++;
+				held += c.peer_ipv4 == peer.sin_addr.s_addr;
 			}
+		if (!local && max_per_address && held >= max_per_address)
+		{
+			Net::closeSocket(conn_socket);
+			return;
+		}
+		// this machine always gets in; the others are turned away before any handshake
+		if (!local && connected >= Limits::CONNECTIONS - Limits::RESERVED_SLOTS)
+		{
+			refuse(conn_socket, "the slots for other machines are taken");
+			return;
 		}
 
 		int ptr = findFreeClient();
 		if (ptr == -1)
 		{
-			Error() << "TCP Server: max connections reached (" << MAX_CONN << "), closing socket.";
-			Net::closeSocket(conn_socket);
+			refuse(conn_socket, "all slots are taken");
 			return;
 		}
 
@@ -614,9 +625,8 @@ namespace IO
 		setsockopt(conn_socket, SOL_SOCKET, SO_NOSIGPIPE, (char *)&flag, sizeof(flag));
 #endif
 
-		const int idle = 60, interval = 20, count = 3;
-		Net::setTCPKeepAlive(conn_socket, idle, interval, count);
-		Net::setTCPUserTimeout(conn_socket, (idle + interval * count) * 1000);
+		Net::setTCPKeepAlive(conn_socket, Limits::KEEPALIVE_IDLE_S, Limits::KEEPALIVE_INTERVAL_S, Limits::KEEPALIVE_COUNT);
+		Net::setTCPUserTimeout(conn_socket, (Limits::KEEPALIVE_IDLE_S + Limits::KEEPALIVE_INTERVAL_S * Limits::KEEPALIVE_COUNT) * 1000);
 
 		// not optional: a blocking client socket would stall the loop
 		if (!Net::setNonBlocking(conn_socket))
@@ -629,6 +639,7 @@ namespace IO
 		}
 
 		client[ptr].peer_ipv4 = peer.sin_addr.s_addr;
+		client[ptr].peer_local = local;
 		client[ptr].Start(conn_socket);
 
 		if (tls_until)
@@ -639,10 +650,19 @@ namespace IO
 		}
 	}
 
+	// closed at the door, logged a line a minute with the count
+	void TCPServer::refuse(SOCKET s, const char *why)
+	{
+		Net::closeSocket(s);
+		std::string tail;
+		if (refusals.due(std::time(nullptr), tail))
+			Error() << "TCP Server: port " << listening_port << " refused a connection, " << why << tail << ".";
+	}
+
 	void TCPServer::cleanUp(std::time_t now)
 	{
 		for (auto &c : client)
-			if (c.handshaking() && c.Inactive(now) > HANDSHAKE_TIMEOUT)
+			if (c.handshaking() && c.Inactive(now) > Limits::HANDSHAKE_TIMEOUT)
 				c.Close();
 
 		if (!timeout)
@@ -657,7 +677,7 @@ namespace IO
 
 	void TCPServer::readClients()
 	{
-		for (int i = 0; i < MAX_CONN; i++)
+		for (int i = 0; i < Limits::CONNECTIONS; i++)
 			if (pfds[i + 2].revents & (POLLIN | POLLERR | POLLHUP | POLLNVAL | (client[i].readWantsWrite() ? POLLOUT : 0)))
 				client[i].Read();
 	}
@@ -687,6 +707,7 @@ namespace IO
 
 	void TCPServer::Run()
 	{
+		Util::Helper::lowerThreadPriority();
 		while (!stop)
 		{
 			SleepAndWait();
@@ -748,7 +769,7 @@ namespace IO
 		pfds[1].events = POLLIN;
 		pfds[1].revents = 0;
 
-		for (int i = 0; i < MAX_CONN; i++)
+		for (int i = 0; i < Limits::CONNECTIONS; i++)
 		{
 			TCPServerConnection &c = client[i];
 			pollfd &p = pfds[i + 2];

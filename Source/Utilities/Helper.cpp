@@ -28,11 +28,16 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <sys/resource.h>
+#include <pthread.h>
 #endif
 
 #ifdef __APPLE__
 #include <sys/sysctl.h>
 #include <mach/mach.h>
+#endif
+#ifdef __linux__
+#include <sys/syscall.h>
 #endif
 
 #include "Helper.h"
@@ -470,6 +475,17 @@ namespace Util
 				return false;
 		}
 		return true;
+	}
+
+	void Helper::lowerThreadPriority()
+	{
+#if defined(_WIN32)
+		SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
+#elif defined(__APPLE__)
+		pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+#elif defined(__linux__)
+		setpriority(PRIO_PROCESS, (id_t)syscall(SYS_gettid), 5);
+#endif
 	}
 
 	std::string Helper::resolvePath(const std::string &f, const std::string &base)

@@ -34,6 +34,8 @@ namespace Util
 		// it cannot be made.
 		static bool createTemp(const std::string &tmp, const std::string &target);
 		static bool syncFile(const std::string &path);
+		// below the other threads, so that under load the scheduler starves it before decoding
+		static void lowerThreadPriority();
 
 		// elapsed wall time for log lines
 		static long msSince(const std::chrono::steady_clock::time_point &t0)

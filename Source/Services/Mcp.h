@@ -45,6 +45,7 @@ namespace Services
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
+		std::string methods(const Request &) const override { return "POST"; }
 
 	private:
 		ApiV1 api;

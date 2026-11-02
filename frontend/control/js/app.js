@@ -417,8 +417,8 @@ import { createMessageBar } from './message-bar.js';
 
         const SHARING = {
             on: { title: 'Sharing with the community map' },
-            anon: { title: 'Sharing anonymously — register to claim your station' },
-            off: { title: 'Not sharing — put your station on the community map', href: 'https://aiscatcher.org/addstation_ac' },
+            anon: { title: 'Sharing anonymously: register to claim your station' },
+            off: { title: 'Not sharing: put your station on the community map', href: 'https://aiscatcher.org/addstation_ac' },
             stopped: { title: 'Receiver stopped' },
         };
         const state = e.data.state in SHARING ? e.data.state : 'off';

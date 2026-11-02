@@ -20,19 +20,28 @@
 #include "AIS-catcher.h"
 
 #include "CommandLine.h"
+#include "Convert.h"
 #include "Logger.h"
 
-// What the command line prints and goes: the banner, -h and -L
+// What the command line prints and goes: -h and -L
 
 namespace CommandLine
 {
 
-void printVersion()
+bool quiet(const std::vector<std::string> &args)
 {
-	Info() << "AIS-catcher (build " << __DATE__ << ") " << VERSION_DESCRIBE << "\n"
-		   << "(C) Copyright 2021-2026 " << COPYRIGHT << "\n"
-		   << "This is free software; see the source for copying conditions. There is NO" << "\n"
-		   << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
+	for (std::size_t i = 0; i < args.size(); i++)
+	{
+		if (args[i] == "-K")
+			return true;
+		if (args[i] == "-h" && i + 1 < args.size())
+		{
+			std::string what = args[i + 1];
+			Util::Convert::toUpper(what);
+			return what == "JSON" || what == "BUILD";
+		}
+	}
+	return false;
 }
 
 void printUsage()
@@ -58,7 +67,7 @@ void printUsage()
 	Info() << "\t[-m xx - run specific decoding model (default: 2), see README for more details]";
 	Info() << "\t[-M xxx - set additional meta data to generate: T = NMEA timestamp, D = decoder related (signal power, ppm) (default: none)]";
 	Info() << "\t[-n show NMEA messages on screen without detail (-o 1)]";
-	Info() << "\t[-N [optional: port][optional settings] - a web server at port: the map, and api, mcp, system, geojson, kml or metrics switched on; with a message filter it keeps ships of its own; TLS_CERT file TLS_KEY file for HTTPS; KEYS name:scopes:sha256,... for access by key (scopes data or data+system); see README for details]";
+	Info() << "\t[-N [optional: port][optional settings] - a web server at port: the map, and api, mcp, system, geojson, kml or metrics switched on; with a message filter it keeps ships of its own; TLS_CERT file TLS_KEY file for HTTPS; KEYS name:scopes:sha256[:limit],... for access by key (scopes data or data+system, limit requests a minute); LIMIT n requests a minute for the whole server; see README for details]";
 	Info() << "\t[-o set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON, 4 JSON Sparse, 5 JSON Full (default: 2)]";
 	Info() << "\t[-O MMSI - sets the own mmsi of the receiver]";
 	Info() << "\t[-p xxx - set frequency correction for device in PPM (default: zero)]";

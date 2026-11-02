@@ -772,6 +772,7 @@ namespace IO
 
 		if (filter.include(ais, tag) == AIS::Filter::Result::Included)
 		{
+			stats.messages++;
 
 			switch (ais.type())
 			{

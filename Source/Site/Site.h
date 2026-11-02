@@ -103,6 +103,11 @@ public:
 	std::vector<int> serverPorts();
 	// the servers with HTTPS: the port, and when its certificate expires
 	std::vector<std::pair<int, long long>> serverTLS();
+	// each station now, for its owner: position and its source, fix and heard ages, the vessel
+	// it rides; then the backup's age and the receivers. A private position shows here too.
+	std::string stationsLive();
+	// each receiver's index and state, as the system service names it
+	std::vector<std::pair<int, std::string>> receiverStates();
 #else
 	Tracker *tracker() { return nullptr; }
 #endif

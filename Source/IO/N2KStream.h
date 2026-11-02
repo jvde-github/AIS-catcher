@@ -42,6 +42,7 @@ namespace IO
 		std::string dev = "can0";
 
 	public:
+		bool hasConnection() const override { return true; }
 		N2KStreamer() : OutputMessage("NMEA2000")
 		{
 			fmt = MessageFormat::JSON_FULL;

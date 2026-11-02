@@ -1,0 +1,52 @@
+Language: Cpp
+BasedOnStyle: LLVM
+UseTab: ForContinuationAndIndentation
+IndentWidth: 4
+TabWidth: 4
+ContinuationIndentWidth: 4
+ColumnLimit: 0
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: Always
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeLambdaBody: false
+  BeforeWhile: true
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+NamespaceIndentation: All
+AccessModifierOffset: -4
+PointerAlignment: Right
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortLambdasOnASingleLine: All
+IndentCaseLabels: false
+SortIncludes: Never
+FixNamespaceComments: false
+ReflowComments: false
+AlignAfterOpenBracket: Align
+AlignOperands: Align
+AlignTrailingComments: false
+AlignConsecutiveAssignments: None
+AlignConsecutiveDeclarations: None
+SpaceAfterTemplateKeyword: true
+BreakConstructorInitializers: BeforeColon
+PackConstructorInitializers: NextLine
+AlwaysBreakTemplateDeclarations: No
+KeepEmptyLinesAtTheStartOfBlocks: true
+MaxEmptyLinesToKeep: 2
+IndentPPDirectives: None
+BreakStringLiterals: false

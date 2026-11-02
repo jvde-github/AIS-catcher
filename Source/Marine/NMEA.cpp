@@ -108,7 +108,7 @@ namespace AIS
 		static bool warned = false;
 		if (!warned)
 		{
-			Warning() << "NMEA: 'stamp' setting is deprecated and ignored — rxtime is always stamped on receive; upstream time is captured in 'toa'";
+			Warning() << "NMEA: 'stamp' setting is deprecated and ignored: rxtime is always stamped on receive; upstream time is captured in 'toa'";
 			warned = true;
 		}
 	}

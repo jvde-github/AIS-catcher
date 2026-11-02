@@ -26,51 +26,64 @@
 
 class RAW1090 : public SimpleStreamInOut<RAW, Plane::ADSB>
 {
-    static constexpr int MAX_MSG_NIBBLES = Plane::ADSB::MAX_BYTES * 2;
+	static constexpr int MAX_MSG_NIBBLES = Plane::ADSB::MAX_BYTES * 2;
 
-    enum class State { WAIT_START, ACCUMULATE };
+	enum class State
+	{
+		WAIT_START,
+		ACCUMULATE
+	};
 
-    Plane::ADSB msg;
-    State state = State::WAIT_START;
-    std::time_t rxtime_cache = 0;
-    // During ACCUMULATE, msg.len holds the nibble count (halved on dispatch).
-    // msg.len & 1 == 0 → next char is the high nibble of a new byte.
+	Plane::ADSB msg;
+	State state = State::WAIT_START;
+	std::time_t rxtime_cache = 0;
+	// During ACCUMULATE, msg.len holds the nibble count (halved on dispatch).
+	// msg.len & 1 == 0 → next char is the high nibble of a new byte.
 
-    void reset_msg()
-    {
-        msg.reset(rxtime_cache);
-        msg.len = 0;
-    }
+	void reset_msg()
+	{
+		msg.reset(rxtime_cache);
+		msg.len = 0;
+	}
 
 public:
-    virtual ~RAW1090() {}
+	virtual ~RAW1090() {}
 
-    void Receive(const RAW *data, int len, TAG &tag);
+	void Receive(const RAW *data, int len, TAG &tag);
 };
 
 class Beast : public SimpleStreamInOut<RAW, Plane::ADSB>
 {
-    enum BeastConstants { BEAST_ESCAPE = 0x1A };
+	enum BeastConstants
+	{
+		BEAST_ESCAPE = 0x1A
+	};
 
-    enum class State { WAIT_START, WAIT_TYPE, ACCUMULATE, ACCUMULATE_ESC };
+	enum class State
+	{
+		WAIT_START,
+		WAIT_TYPE,
+		ACCUMULATE,
+		ACCUMULATE_ESC
+	};
 
-    Plane::ADSB msg;
-    // frame_buf layout: [0] type, [1..6] BE timestamp, [7] sig, [8..21] payload.
-    // Sized 24 so process_frame's fixed 14-byte payload memcpy is in-bounds.
-    uint8_t frame_buf[24];
-    int frame_pos = 0;
-    int frame_total = 0;
-    State state = State::WAIT_START;
-    std::time_t rxtime_cache = 0;
+	Plane::ADSB msg;
+	// frame_buf layout: [0] type, [1..6] BE timestamp, [7] sig, [8..21] payload.
+	// Sized 24 so process_frame's fixed 14-byte payload memcpy is in-bounds.
+	uint8_t frame_buf[24];
+	int frame_pos = 0;
+	int frame_total = 0;
+	State state = State::WAIT_START;
+	std::time_t rxtime_cache = 0;
 
 public:
-    virtual ~Beast() {}
+	virtual ~Beast() {}
 
-    void Receive(const RAW *data, int len, TAG &tag);
+	void Receive(const RAW *data, int len, TAG &tag);
 
 private:
-    void process_frame(TAG &tag);
-    // Begins a frame on a valid type byte ('1'..'3'), false leaves state untouched
-    bool start_frame(uint8_t type);
-    bool frame_done(TAG &tag);
+	void process_frame(TAG &tag);
+	// Begins a frame on a valid type byte ('1'..'3'), false leaves state untouched
+	bool start_frame(uint8_t type);
+	bool frame_done(TAG &tag);
 };

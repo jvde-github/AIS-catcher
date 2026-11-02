@@ -19,6 +19,7 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 #include <time.h>
 
 #include "Stream.h"
@@ -50,6 +51,12 @@ namespace Util
 		// as a log may show it: scheme, host and port, no credentials, path or query
 		static std::string URLForLog(const std::string &url);
 		static std::string PercentDecode(const std::string &s);
+		// a query or form value: '+' a space, then percent-decoded
+		static std::string FormDecode(const std::string &s);
+		// the names and values of a query, decoded, in order
+		static std::vector<std::pair<std::string, std::string>> Query(const std::string &query);
+		// the value of `name` in a query, decoded; empty when absent
+		static std::string QueryParam(const std::string &query, const std::string &name);
 		static void Split(const std::string &s, char delim, std::vector<std::string> &out);
 	};
 }

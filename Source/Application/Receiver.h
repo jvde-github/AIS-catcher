@@ -23,6 +23,7 @@
 #include "Common.h"
 #include "Model.h"
 #include "StreamCounter.h"
+#include "Statistics.h"
 #include "AIS.h"
 #include "JSON.h"
 #include "DeviceManager.h"
@@ -39,6 +40,8 @@ class Receiver : public Setting
 	int receiver_index = -1;
 	// a name for people, shown instead of the device's own on the status pages
 	std::string description;
+	// the bytes its device delivered, for the system pages
+	ByteCounter bytes;
 	FLOAT32 station_lat = LAT_UNDEFINED;
 	FLOAT32 station_lon = LON_UNDEFINED;
 	// the station it stands at, 0 (the default station) when the configuration
@@ -92,6 +95,7 @@ public:
 
 	// Settings
 	const std::string &getDescription() const { return description; }
+	ByteCounter &bytesIn() { return bytes; }
 
 	int getStation() const { return station; }
 	bool hasPosition() const { return isValidCoord(station_lat, station_lon); }

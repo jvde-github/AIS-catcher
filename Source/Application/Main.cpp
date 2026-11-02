@@ -105,6 +105,14 @@ static void expandResponseFiles(const std::vector<std::string> &args,
 	}
 }
 
+static void banner()
+{
+	Info() << "AIS-catcher (build " << __DATE__ << ") " << VERSION_DESCRIBE << "\n"
+		   << "(C) Copyright 2021-2026 " << COPYRIGHT << "\n"
+		   << "This is free software; see the source for copying conditions. There is NO" << "\n"
+		   << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
+}
+
 int main(int argc, char *argv[])
 {
 	try
@@ -125,13 +133,9 @@ int main(int argc, char *argv[])
 		std::vector<std::string> args;
 		expandResponseFiles(std::vector<std::string>(argv, argv + argc), args);
 
-		if (Managed::isInvocation(args))
-		{
-			CommandLine::printVersion();
-			return Managed::run(args);
-		}
-
-		return CommandLine::run(args);
+		if (!CommandLine::quiet(args))
+			banner();
+		return Managed::isInvocation(args) ? Managed::run(args) : CommandLine::run(args);
 	}
 	catch (std::exception const &e)
 	{

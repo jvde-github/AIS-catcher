@@ -25,8 +25,9 @@
 // supervises engines in a loop instead.
 namespace CommandLine
 {
-	// the banner, -h and -L, in Usage.cpp
-	void printVersion();
+	// an invocation that prints one bare answer and goes: -K, -h JSON, -h BUILD
+	bool quiet(const std::vector<std::string> &args);
+	// -h and -L, in Usage.cpp
 	void printUsage();
 	void printBuildConfiguration();
 	int run(const std::vector<std::string> &args);

@@ -84,6 +84,7 @@ namespace IO
 			{
 				const std::lock_guard<std::mutex> lock(msg_list_mutex);
 				count(msg);
+				stats.messages++;
 
 				if (protocol == UploadProtocol::NMEA)
 				{
@@ -479,9 +480,9 @@ namespace IO
 		if (reset > 0)
 			tcp.setOptionKey(AIS::KEY_SETTING_RESET, std::to_string(reset));
 
-		connection = &tcp;
+		session = &tcp;
 
-		if (connection->connect() && connection->waitConnected(persistent ? 2 : 0))
+		if (session->connect() && session->waitConnected(persistent ? 2 : 0))
 			Info() << info << "connected";
 		else if (persistent)
 			Info() << info << "pending";
@@ -492,24 +493,9 @@ namespace IO
 		}
 	}
 
-	void TCPClientStreamer::Stop()
+	void TCPClientStreamer::polled()
 	{
-		std::lock_guard<std::mutex> lock(mtx);
-		if (connection)
-			connection->disconnect();
-	}
-
-	void TCPClientStreamer::poll()
-	{
-		std::unique_lock<std::mutex> lock(mtx, std::try_to_lock);
-		if (!lock.owns_lock() || !connection)
-			return;
-
-		connection->poll();
-		if (connection->isConnected())
-			connection->drain();
-
-		if (!persistent && !connection->isConnected() && !connection->isConnecting() && !stop_requested)
+		if (!persistent && !session->isConnected() && !session->isConnecting() && !stop_requested)
 		{
 			Critical() << "TCP feed: connection lost, requesting termination.";
 			stop_requested = true;
@@ -545,7 +531,7 @@ namespace IO
 		return *this;
 	}
 
-	HubStreamer::HubStreamer() : OutputMessage("Hub")
+	HubStreamer::HubStreamer() : SessionStreamer("Hub")
 	{
 		SetKey(AIS::KEY_SETTING_DESCRIPTION, "Community Feed")
 			.SetKey(AIS::KEY_SETTING_MSGFORMAT, "COMMUNITY_HUB")
@@ -566,40 +552,18 @@ namespace IO
 		tcp.setOptionKey(AIS::KEY_SETTING_RESET, "180");
 
 		hub.setUUID(uuid);
-		connection = tcp.add(&hub);
+		session = tcp.add(&hub);
 
-		connection->connect();
-		bool ready = connection->waitConnected(2);
+		session->connect();
+		bool ready = session->waitConnected(2);
 
 		last_send = Protocol::Clock::now();
 		Info() << "Hub feed: open socket for host: " << AISCATCHER_URL << ", port: " << AISCATCHER_PORT << ", " << startInfo() << ", status: " << (ready ? "connected" : "pending");
 	}
 
-	void HubStreamer::Stop()
+	void HubStreamer::polled()
 	{
-		std::lock_guard<std::mutex> lock(mtx);
-
-		if (connection)
-			connection->disconnect();
-	}
-
-	void HubStreamer::poll()
-	{
-		std::unique_lock<std::mutex> lock(mtx, std::try_to_lock);
-		if (!lock.owns_lock() || !connection)
-			return;
-
-		connection->poll();
-
-		if (Protocol::secondsSince(last_tick) < 1)
-			return;
-		last_tick = Protocol::Clock::now();
-
-		connection->drain();
-		if (!connection->isConnected())
-			return;
-
-		if (Protocol::secondsSince(last_send) >= KEEPALIVE_S)
+		if (session->isConnected() && Protocol::secondsSince(last_send) >= KEEPALIVE_S)
 		{
 			last_send = Protocol::Clock::now();
 			hub.keepAlive();
@@ -642,23 +606,6 @@ namespace IO
 			return OutputMessage::applyKey(key, arg);
 		}
 		return *this;
-	}
-
-	void MQTTStreamer::Stop()
-	{
-		std::lock_guard<std::mutex> lock(mtx);
-		session->disconnect();
-	}
-
-	void MQTTStreamer::poll()
-	{
-		std::unique_lock<std::mutex> lock(mtx, std::try_to_lock);
-		if (!lock.owns_lock())
-			return;
-
-		session->poll();
-		if (session->isConnected())
-			session->drain();
 	}
 
 	void MQTTStreamer::Start()

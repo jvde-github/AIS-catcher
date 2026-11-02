@@ -27,14 +27,17 @@
 #include <condition_variable>
 
 #include "FIFO.h"
+#include "OutputStats.h"
 
 #include "Common.h"
 #include "Parse.h"
 #include "Convert.h"
 
-namespace Device {
+namespace Device
+{
 
-	class Description {
+	class Description
+	{
 
 		std::string vendor;
 		std::string product;
@@ -55,7 +58,8 @@ namespace Device {
 		void setClaimed(bool c = true) { claimed = c; }
 	};
 
-	class Device : public SimpleStreamOut<RAW>, public Setting {
+	class Device : public SimpleStreamOut<RAW>, public Setting
+	{
 	protected:
 		std::atomic<bool> streaming{false};
 		std::atomic<bool> lost{false};
@@ -66,7 +70,8 @@ namespace Device {
 		uint32_t sample_rate = 0;
 		Type DeviceType = Type::NONE;
 
-		uint32_t getCorrectedFrequency() {
+		uint32_t getCorrectedFrequency()
+		{
 			return (uint32_t)((float)frequency * (1.0f - freq_offset / 1000000.0f));
 		}
 
@@ -80,7 +85,11 @@ namespace Device {
 		virtual void OpenWithFileDescriptor(int) { throw std::runtime_error("Not supported for this device."); }
 
 		virtual void Close() {}
-		virtual void Play() { streaming = true; lost = false; }
+		virtual void Play()
+		{
+			streaming = true;
+			lost = false;
+		}
 		virtual void Stop() { streaming = false; }
 
 		virtual void setSampleRate(uint32_t s) { sample_rate = s; }
@@ -100,12 +109,16 @@ namespace Device {
 		bool isLost() const { return lost; }
 		virtual bool isConnected() { return true; }
 		virtual bool isReplay() { return false; }
+		// the connection counts of an input that dials a remote; null for the rest
+		virtual const IO::OutputStats *getConnectionStats() const { return nullptr; }
 
 		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }
-		virtual void getDeviceList(std::vector<Description>& DeviceList) {}
+		virtual void getDeviceList(std::vector<Description> &DeviceList) {}
 
-		virtual Setting& applyKey(AIS::Keys key, const std::string& arg) {
-			switch (key) {
+		virtual Setting &applyKey(AIS::Keys key, const std::string &arg)
+		{
+			switch (key)
+			{
 			case AIS::KEY_SETTING_SAMPLE_RATE:
 				setSampleRate((Util::Parse::Integer(arg, 0, 20000000)));
 				break;
@@ -115,7 +128,8 @@ namespace Device {
 			case AIS::KEY_SETTING_FREQOFFSET:
 				freq_offset = Util::Parse::Float(arg, -150, 150);
 				break;
-			case AIS::KEY_SETTING_FORMAT: {
+			case AIS::KEY_SETTING_FORMAT:
+			{
 				Format f;
 				if (!Util::Parse::StreamFormat(arg, f))
 					throw std::runtime_error("Unknown file format specification.");
@@ -129,40 +143,51 @@ namespace Device {
 			return *this;
 		}
 
-		virtual std::string Get() {
+		virtual std::string Get()
+		{
 
 			std::string str;
 			uint32_t rate = getSampleRate();
-			if (rate != 0) {
+			if (rate != 0)
+			{
 				str = "rate " + std::to_string(rate / 1000) + "K";
 			}
-			if (tuner_bandwidth) {
-				if (!str.empty()) str += " ";
+			if (tuner_bandwidth)
+			{
+				if (!str.empty())
+					str += " ";
 				str += "bw " + std::to_string(tuner_bandwidth / 1000) + "K";
 			}
-			if (freq_offset) {
-				if (!str.empty()) str += " ";
+			if (freq_offset)
+			{
+				if (!str.empty())
+					str += " ";
 				str += "freqoffset " + std::to_string(freq_offset);
 			}
-			if (!str.empty()) str += " ";
+			if (!str.empty())
+				str += " ";
 			str += "format " + Util::Convert::toString(format);
 
 			return str;
 		}
 
-		virtual std::string getProduct() {
+		virtual std::string getProduct()
+		{
 			return "";
 		}
-		virtual std::string getVendor() {
+		virtual std::string getVendor()
+		{
 			return "";
 		}
-		virtual std::string getSerial() {
+		virtual std::string getSerial()
+		{
 			return "";
 		}
 
 		// Stable identity of this input across engine runs; network devices
 		// override it with their address.
-		virtual std::string getIdentity() {
+		virtual std::string getIdentity()
+		{
 			return getProduct() + ":" + getSerial();
 		}
 
@@ -174,7 +199,8 @@ namespace Device {
 	// Stub base for devices whose backing library is not compiled into this build.
 	// Configuration is silently accepted (so shared configs don't break across builds);
 	// any attempt to actually start the device fails fast with a build-flag hint.
-	class Unavailable : public Device {
+	class Unavailable : public Device
+	{
 		std::string device_name;
 		std::string build_flag;
 
@@ -182,7 +208,8 @@ namespace Device {
 		Unavailable(const std::string &n, const std::string &f, Type t = Type::NONE)
 			: Device(Format::UNKNOWN, 0, t, n), device_name(n), build_flag(f) {}
 
-		void Open(uint64_t) override {
+		void Open(uint64_t) override
+		{
 			throw std::runtime_error(device_name + " support not compiled in. Rebuild with -D" + build_flag + "=ON.");
 		}
 		void Play() override { Open(0); }

@@ -572,10 +572,12 @@ namespace Services
 		const std::string base = "/api/v1";
 		if (scope(request) == NOT_MINE)
 			return false;
+		// a page of any origin may read the API: the key, when one is needed, is its say
 		if (request.method != "GET")
 		{
 			response = Response::problem(405, "Method not allowed", "This part of the API only reads.");
 			response.header = "Allow: GET, HEAD";
+			response.cors = true;
 			return true;
 		}
 
@@ -640,6 +642,7 @@ namespace Services
 		if (!answer)
 		{
 			response = Response::problem(404, "Not found", "No such resource: " + request.path);
+			response.cors = true;
 			return true;
 		}
 		const Route *r = route(path);
@@ -647,9 +650,11 @@ namespace Services
 			if (!r || !r->takes(p.first))
 			{
 				response = Response::problem(400, "Bad request", "\"" + p.first + "\" is not a parameter of " + path + ".");
+				response.cors = true;
 				return true;
 			}
 		response = answer();
+		response.cors = true;
 		return true;
 	}
 
@@ -884,9 +889,12 @@ namespace Services
 				return true;
 			}
 
-			// 1 taken, 0 not a term of this list, -1 malformed with `error` saying why
+			// 1 taken, 0 not a term of this list, -1 malformed with `error` saying why;
+			// an empty value is the term left out
 			int set(const std::string &key, const std::string &value, std::string &error)
 			{
+				if (value.empty())
+					return 1;
 				std::vector<float> f;
 				if (key == "q")
 					q = Util::Convert::toLowerCopy(value);

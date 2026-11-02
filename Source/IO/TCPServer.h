@@ -18,6 +18,8 @@
 #pragma once
 
 #include <cstdint>
+#include <chrono>
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <thread>
@@ -36,6 +38,7 @@
 
 #include "Common.h"
 #include "OutputStats.h"
+#include "ServerLimits.h"
 
 struct ssl_st;
 struct ssl_ctx_st;
@@ -45,11 +48,30 @@ namespace IO
 
 	class TCPServer;
 
+	// a log line a minute: due() says whether to write one now, and `tail` what to add
+	// about the lines muted since the last
+	struct LogMinute
+	{
+		std::time_t last = 0;
+		int muted = 0;
+		bool due(std::time_t now, std::string &tail)
+		{
+			if (now - last < 60)
+			{
+				muted++;
+				return false;
+			}
+			tail = muted ? ", and " + std::to_string(muted) + " more in the last minute" : std::string();
+			muted = 0;
+			last = now;
+			return true;
+		}
+	};
+
 	class TCPServerConnection
 	{
 	private:
-		const static int MAX_BUFFER_SIZE = 1024 * 1024 * 8;
-		int send_limit = MAX_BUFFER_SIZE;
+		int send_limit = Limits::BUFFER;
 		// Reclaim the already-sent prefix only once it grows past this, so the
 		// memmove is amortized across many sends instead of paid on every drain.
 		const static size_t OUT_COMPACT_THRESHOLD = 64 * 1024;
@@ -101,6 +123,8 @@ namespace IO
 
 		SOCKET sock = -1;
 		uint32_t peer_ipv4 = 0;
+		// from this machine itself
+		bool peer_local = false;
 
 		std::string msg;
 		std::vector<char> out;
@@ -177,12 +201,11 @@ namespace IO
 		bool reuse_port = false;
 		std::string IP_BIND;
 		int listening_port = -1;
-		int max_per_address = MAX_CONN / 2;
+		int max_per_address = Limits::PER_ADDRESS;
 
 		static std::vector<int> active_ports;
 
-		const static int MAX_CONN = 128;
-		std::array<TCPServerConnection, MAX_CONN> client;
+		std::array<TCPServerConnection, Limits::CONNECTIONS> client;
 
 		std::thread run_thread;
 
@@ -217,7 +240,7 @@ namespace IO
 
 		// pfds[0] listening socket, pfds[1] the wake handle, pfds[i + 2] client[i];
 		// unused slots get fd = -1 so poll skips them.
-		std::array<pollfd, MAX_CONN + 2> pfds;
+		std::array<pollfd, Limits::CONNECTIONS + 2> pfds;
 
 		bool Send(TCPServerConnection &c, const char *data, int len)
 		{
@@ -247,8 +270,7 @@ namespace IO
 	private:
 		IO::OutputStats *pstats = nullptr;
 
-		// seconds a handshake has to finish; how often the files are looked at for a renewal
-		static const int HANDSHAKE_TIMEOUT = 10;
+		// how often the files are looked at for a renewal
 		static const int TLS_CHECK_INTERVAL = 60;
 		// the context a new connection takes: set from any thread, read by the Run() thread
 		std::mutex tls_mtx;
@@ -259,5 +281,7 @@ namespace IO
 		// seconds since the epoch, enough to 2106; 32 bits as a 64-bit atomic needs libatomic on armv6
 		std::atomic<uint32_t> tls_until{0};
 		std::atomic<int> clients_now{0};
+		LogMinute refusals;
+		void refuse(SOCKET s, const char *why);
 	};
 }

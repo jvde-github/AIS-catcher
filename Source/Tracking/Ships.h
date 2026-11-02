@@ -26,8 +26,9 @@
 #include "PackedInt.h"
 #include "VisitTracker.h"
 
-namespace JSON {
-class Writer;
+namespace JSON
+{
+	class Writer;
 }
 
 const int CLASS_A_MASK = (1 << 1) | (1 << 2) | (1 << 3);
@@ -37,7 +38,7 @@ const int CLASS_A_STATIC_MASK = 1 << 5;
 const int CLASS_B_STATIC_MASK = 1 << 24;
 
 const int BASESTATION_MASK =
-    (1 << 4) | (1 << 16) | (1 << 17) | (1 << 20) | (1 << 22) | (1 << 23);
+	(1 << 4) | (1 << 16) | (1 << 17) | (1 << 20) | (1 << 22) | (1 << 23);
 const int SAR_MASK = 1 << 9;
 const int ATON_MASK = (1 << 21) | (1 << 28);
 
@@ -59,165 +60,188 @@ const uint32_t F_STATIC = 1 << 9;
 const uint32_t F_COMM_CAP = 1 << 10;
 const uint32_t F_SIGNAL = 1 << 11;
 
-struct Ship {
-  uint32_t mmsi;
-  int count, msg_type, shipclass, mmsi_type, shiptype, heading, status, turn;
-  int to_port, to_bow, to_starboard, to_stern, IMO, angle, altitude,
-      received_stations;
-  int unit_model, unit_serial;
-  char month, day, hour, minute;
-  float lat, lon, ppm, level, speed, cog, draught, distance;
-  std::time_t last_signal, last_direct_signal, last_static_signal;
-  char shipname[21], destination[21], callsign[8], country_code[3], vin[9],
-      vendorid[4];
-  std::string msg;
-  uint64_t last_group, group_mask;
-  // The stations that heard the ship, the most recent first: numbers from the
-  // station registry, never a receiver's place in the list; a slot without a
-  // time is empty
-  struct Heard {
-    int32_t station;
-    uint32_t last;
-  };
-  static const int HEARD = 4;
-  std::array<Heard, HEARD> heard;
-  void heardBy(int station, std::time_t t);
-  // how long a station counts a ship as one it hears: a filter's stations, a
-  // station's vessels
-  static const int STATION_WINDOW = 3600;
-  // the stations a ship's map row lists: those within a minute of its last
-  // message, as the hub's tiles list them
-  static const int ROW_WINDOW = 60;
-  // Each station that heard the ship and when, the most recent first. A ship
-  // without a station on record, as a backup from before stations restores
-  // one, was heard at the default station, 0, at its last signal.
-  template <typename F> void forEachHeard(F f) const {
-    if (!heard[0].last) {
-      if (last_signal)
-        f(0, last_signal);
-      return;
-    }
-    for (const auto &h : heard) {
-      if (!h.last)
-        break;
-      f((int)h.station, (std::time_t)h.last);
-    }
-  }
-  // whether `station` heard the ship at `since` or later
-  bool heardSince(int station, std::time_t since) const {
-    bool heard_it = false;
-    forEachHeard([&](int s, std::time_t t) { heard_it |= s == station && t >= since; });
-    return heard_it;
-  }
-  // types heard since the last sweep; not persisted
-  int type_ttl;
-  // until when the vessel makes no events: a destination or status just
-  // changed, or it sent a test; not persisted
-  std::time_t quiet_until;
-  // lying still since this report, 0 under way; told once a minute passed.
-  // Saved with the record, so a restart continues a rest rather than starting one
-  std::time_t idle_since;
-  bool rest_told;
-  Util::PackedInt flags;
+struct Ship
+{
+	uint32_t mmsi;
+	int count, msg_type, shipclass, mmsi_type, shiptype, heading, status, turn;
+	int to_port, to_bow, to_starboard, to_stern, IMO, angle, altitude,
+		received_stations;
+	int unit_model, unit_serial;
+	char month, day, hour, minute;
+	float lat, lon, ppm, level, speed, cog, draught, distance;
+	std::time_t last_signal, last_direct_signal, last_static_signal;
+	char shipname[21], destination[21], callsign[8], country_code[3], vin[9],
+		vendorid[4];
+	std::string msg;
+	uint64_t last_group, group_mask;
+	// The stations that heard the ship, the most recent first: numbers from the
+	// station registry, never a receiver's place in the list; a slot without a
+	// time is empty
+	struct Heard
+	{
+		int32_t station;
+		uint32_t last;
+	};
+	static const int HEARD = 4;
+	std::array<Heard, HEARD> heard;
+	void heardBy(int station, std::time_t t);
+	// how long a station counts a ship as one it hears: a filter's stations, a
+	// station's vessels
+	static const int STATION_WINDOW = 3600;
+	// the stations a ship's map row lists: those within a minute of its last
+	// message, as the hub's tiles list them
+	static const int ROW_WINDOW = 60;
+	// Each station that heard the ship and when, the most recent first. A ship
+	// without a station on record, as a backup from before stations restores
+	// one, was heard at the default station, 0, at its last signal.
+	template <typename F> void forEachHeard(F f) const
+	{
+		if (!heard[0].last)
+		{
+			if (last_signal)
+				f(0, last_signal);
+			return;
+		}
+		for (const auto &h : heard)
+		{
+			if (!h.last)
+				break;
+			f((int)h.station, (std::time_t)h.last);
+		}
+	}
+	// whether `station` heard the ship at `since` or later
+	bool heardSince(int station, std::time_t since) const
+	{
+		bool heard_it = false;
+		forEachHeard([&](int s, std::time_t t) { heard_it |= s == station && t >= since; });
+		return heard_it;
+	}
+	// types heard since the last sweep; not persisted
+	int type_ttl;
+	// until when the vessel makes no events: a destination or status just
+	// changed, or it sent a test; not persisted
+	std::time_t quiet_until;
+	// lying still since this report, 0 under way; told once a minute passed.
+	// Saved with the record, so a restart continues a rest rather than starting one
+	std::time_t idle_since;
+	bool rest_told;
+	Util::PackedInt flags;
 
-  void reset();
-  void markType(int type) {
-    msg_type |= 1 << type;
-    type_ttl |= 1 << type;
-  }
-  void decayAndExpire();
-  void clearFields(uint32_t doomed);
-  int getMMSItype() const;
-  // the class of an ERI ship type code, -1 for a code outside the table
-  // (8000, "type unknown", included)
-  static int eriClass(int code);
-  int getShipTypeClassEri() const;
-  int getShipTypeClass() const;
-  void setType();
+	void reset();
+	void markType(int type)
+	{
+		msg_type |= 1 << type;
+		type_ttl |= 1 << type;
+	}
+	void decayAndExpire();
+	void clearFields(uint32_t doomed);
+	int getMMSItype() const;
+	// the class of an ERI ship type code, -1 for a code outside the table
+	// (8000, "type unknown", included)
+	static int eriClass(int code);
+	int getShipTypeClassEri() const;
+	int getShipTypeClass() const;
+	void setType();
 
-  // File persistence functions
-  bool Save(std::ofstream &file) const;
-  bool Load(std::ifstream &file);
+	// File persistence functions
+	bool Save(std::ofstream &file) const;
+	bool Load(std::ifstream &file);
 
 private:
-  static const int _SHIP_MAGIC = 0x53484950;
-  static const int _SHIP_VERSION = 9;
-  static const int _SHIP_VERSION_HEARD = 8;    // the station list, no rate of turn
-  static const int _SHIP_VERSION_RESTED = 7;   // the rest, no station list
-  static const int _SHIP_VERSION_PREVIOUS = 6; // before the rest on the record
-  static const int _SHIP_VERSION_MATCHED =
-      5; // trailing code, read and discarded
-  static const int _SHIP_VERSION_UNMATCHED = 4;
-  static const int _SHIP_VERSION_LINKED =
-      3; // trailing slot links, read and discarded
+	static const int _SHIP_MAGIC = 0x53484950;
+	static const int _SHIP_VERSION = 9;
+	static const int _SHIP_VERSION_HEARD = 8; // the station list, no rate of turn
+	static const int _SHIP_VERSION_RESTED = 7; // the rest, no station list
+	static const int _SHIP_VERSION_PREVIOUS = 6; // before the rest on the record
+	static const int _SHIP_VERSION_MATCHED =
+		5; // trailing code, read and discarded
+	static const int _SHIP_VERSION_UNMATCHED = 4;
+	static const int _SHIP_VERSION_LINKED =
+		3; // trailing slot links, read and discarded
 
 public:
-  // Setters for PackedInt fields
-  void setValidated(int val) { flags.set(0, 2, val); }
-  void setRepeat(int val) { flags.set(2, 2, val); }
-  void setVirtualAid(int val) { flags.set(4, 1, val); }
-  void setApproximate(int val) { flags.set(5, 1, val); }
-  void orOpChannels(int val) { flags.orOp(6, 4, val); }
-  void clearOpChannels() { flags.set(6, 4, 0); }
-  void setCSUnit(int val) {
-    flags.set(10, 2, val);
-  } // 0=unknown, 1=SOTDMA, 2=Carrier Sense
-  void setRAIM(int val) { flags.set(12, 2, val); } // 0=unknown, 1=false, 2=true
-  void setDTE(int val) {
-    flags.set(14, 2, val);
-  } // 0=unknown, 1=ready, 2=not ready
-  void setAssigned(int val) {
-    flags.set(16, 2, val);
-  } // 0=unknown, 1=autonomous, 2=assigned
-  void setDisplay(int val) {
-    flags.set(18, 2, val);
-  } // 0=unknown, 1=false, 2=true
-  void setDSC(int val) { flags.set(20, 2, val); }  // 0=unknown, 1=false, 2=true
-  void setBand(int val) { flags.set(22, 2, val); } // 0=unknown, 1=false, 2=true
-  void setMsg22(int val) {
-    flags.set(24, 2, val);
-  } // 0=unknown, 1=false, 2=true
-  void setOffPosition(int val) {
-    flags.set(26, 2, val);
-  } // 0=unknown, 1=on position, 2=off position
-  void setManeuver(int val) {
-    flags.set(28, 2, val);
-  } // 0=not available, 1=no special, 2=special
-  void setInlandDraught(int val) {
-    flags.set(30, 1, val);
-  } // 0=type 5, 1=DAC 200 FID 10
+	// Setters for PackedInt fields
+	void setValidated(int val) { flags.set(0, 2, val); }
+	void setRepeat(int val) { flags.set(2, 2, val); }
+	void setVirtualAid(int val) { flags.set(4, 1, val); }
+	void setApproximate(int val) { flags.set(5, 1, val); }
+	void orOpChannels(int val) { flags.orOp(6, 4, val); }
+	void clearOpChannels() { flags.set(6, 4, 0); }
+	void setCSUnit(int val)
+	{
+		flags.set(10, 2, val);
+	} // 0=unknown, 1=SOTDMA, 2=Carrier Sense
+	void setRAIM(int val) { flags.set(12, 2, val); } // 0=unknown, 1=false, 2=true
+	void setDTE(int val)
+	{
+		flags.set(14, 2, val);
+	} // 0=unknown, 1=ready, 2=not ready
+	void setAssigned(int val)
+	{
+		flags.set(16, 2, val);
+	} // 0=unknown, 1=autonomous, 2=assigned
+	void setDisplay(int val)
+	{
+		flags.set(18, 2, val);
+	} // 0=unknown, 1=false, 2=true
+	void setDSC(int val) { flags.set(20, 2, val); } // 0=unknown, 1=false, 2=true
+	void setBand(int val) { flags.set(22, 2, val); } // 0=unknown, 1=false, 2=true
+	void setMsg22(int val)
+	{
+		flags.set(24, 2, val);
+	} // 0=unknown, 1=false, 2=true
+	void setOffPosition(int val)
+	{
+		flags.set(26, 2, val);
+	} // 0=unknown, 1=on position, 2=off position
+	void setManeuver(int val)
+	{
+		flags.set(28, 2, val);
+	} // 0=not available, 1=no special, 2=special
+	void setInlandDraught(int val)
+	{
+		flags.set(30, 1, val);
+	} // 0=type 5, 1=DAC 200 FID 10
 
-  // Getters for PackedInt fields
-  int getValidated() const { return flags.get(0, 2); }
-  int getRepeat() const { return flags.get(2, 2); }
-  int getVirtualAid() const { return flags.get(4, 1); }
-  int getApproximate() const { return flags.get(5, 1); }
-  int getChannels() const { return flags.get(6, 4); }
-  int getCSUnit() const {
-    return flags.get(10, 2);
-  }
-  int getRAIM() const { return flags.get(12, 2); }
-  int getDTE() const {
-    return flags.get(14, 2);
-  }
-  int getAssigned() const {
-    return flags.get(16, 2);
-  }
-  int getDisplay() const {
-    return flags.get(18, 2);
-  }
-  int getDSC() const { return flags.get(20, 2); }
-  int getBand() const { return flags.get(22, 2); }
-  int getMsg22() const {
-    return flags.get(24, 2);
-  }
-  int getOffPosition() const {
-    return flags.get(26, 2);
-  }
-  int getManeuver() const {
-    return flags.get(28, 2);
-  }
-  int getInlandDraught() const {
-    return flags.get(30, 1);
-  }
+	// Getters for PackedInt fields
+	int getValidated() const { return flags.get(0, 2); }
+	int getRepeat() const { return flags.get(2, 2); }
+	int getVirtualAid() const { return flags.get(4, 1); }
+	int getApproximate() const { return flags.get(5, 1); }
+	int getChannels() const { return flags.get(6, 4); }
+	int getCSUnit() const
+	{
+		return flags.get(10, 2);
+	}
+	int getRAIM() const { return flags.get(12, 2); }
+	int getDTE() const
+	{
+		return flags.get(14, 2);
+	}
+	int getAssigned() const
+	{
+		return flags.get(16, 2);
+	}
+	int getDisplay() const
+	{
+		return flags.get(18, 2);
+	}
+	int getDSC() const { return flags.get(20, 2); }
+	int getBand() const { return flags.get(22, 2); }
+	int getMsg22() const
+	{
+		return flags.get(24, 2);
+	}
+	int getOffPosition() const
+	{
+		return flags.get(26, 2);
+	}
+	int getManeuver() const
+	{
+		return flags.get(28, 2);
+	}
+	int getInlandDraught() const
+	{
+		return flags.get(30, 1);
+	}
 };

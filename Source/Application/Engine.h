@@ -29,7 +29,8 @@
 #include "SystemFacts.h"
 
 class Site;
-namespace IO {
+namespace IO
+{
 	class HubStreamer;
 }
 
@@ -37,7 +38,8 @@ namespace IO {
 // built by the configuration reader (the command line becomes a document first)
 // and then started by run(). Managed mode constructs a new one for every
 // start/stop cycle.
-struct Engine {
+struct Engine
+{
 	// Called by run() once the servers serve and before the receivers start:
 	// a build that adds services attaches them here.
 	static std::function<void(Engine &)> before_run;

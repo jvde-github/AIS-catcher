@@ -28,40 +28,48 @@
 #include "Writer.h"
 
 template <int N, int INTERVAL>
-class History : public StreamIn<JSON::JSON> {
+class History : public StreamIn<JSON::JSON>
+{
 	std::mutex mtx;
 
-	struct {
+	struct
+	{
 		long int time = {};
 		MessageStatistics stat;
 	} history[N];
 
 	int start, end;
 
-	void create(long int t) {
+	void create(long int t)
+	{
 		history[end].time = t;
 		history[end].stat.Clear();
 	}
 
-	bool readInteger(std::ifstream& file, int& dest, int check = -1) {
-		file.read((char*)&dest, sizeof(int));
-		if (check != -1 && dest != check) return false;
+	bool readInteger(std::ifstream &file, int &dest, int check = -1)
+	{
+		file.read((char *)&dest, sizeof(int));
+		if (check != -1 && dest != check)
+			return false;
 		return true;
 	}
 
 public:
 	virtual ~History() {}
-	void setCutoff(int cutoff) {
+	void setCutoff(int cutoff)
+	{
 		for (int i = 0; i < N; i++)
 			history[i].stat.setCutoff(cutoff);
 	}
 
-	History() {
+	History()
+	{
 		Clear();
 	}
 
-	void Clear() {
-		std::lock_guard<std::mutex> l{ this->mtx };
+	void Clear()
+	{
+		std::lock_guard<std::mutex> l{this->mtx};
 
 		start = end = 0;
 		create((long int)time(nullptr) / (long int)INTERVAL);
@@ -69,56 +77,69 @@ public:
 
 	// Several histories as one, in place of this one's: the slots of one time
 	// add up, and the newest N times stay. The parts must not change meanwhile.
-	void combine(const std::vector<History*>& parts) {
-		std::lock_guard<std::mutex> l{ this->mtx };
+	void combine(const std::vector<History *> &parts)
+	{
+		std::lock_guard<std::mutex> l{this->mtx};
 
-		std::vector<std::pair<long int, MessageStatistics*>> slots;
-		for (History* h : parts)
-			for (int idx = h->start;; idx = (idx + 1) % N) {
+		std::vector<std::pair<long int, MessageStatistics *>> slots;
+		for (History *h : parts)
+			for (int idx = h->start;; idx = (idx + 1) % N)
+			{
 				slots.push_back(std::make_pair(h->history[idx].time, &h->history[idx].stat));
-				if (idx == h->end) break;
+				if (idx == h->end)
+					break;
 			}
 		std::stable_sort(slots.begin(), slots.end(),
-			[](const std::pair<long int, MessageStatistics*>& a, const std::pair<long int, MessageStatistics*>& b) { return a.first < b.first; });
+						 [](const std::pair<long int, MessageStatistics *> &a, const std::pair<long int, MessageStatistics *> &b) { return a.first < b.first; });
 
 		start = end = 0;
-		if (slots.empty()) {
+		if (slots.empty())
+		{
 			create((long int)time(nullptr) / (long int)INTERVAL);
 			return;
 		}
 		create(slots.front().first);
-		for (const auto& s : slots) {
-			if (s.first > history[end].time) {
+		for (const auto &s : slots)
+		{
+			if (s.first > history[end].time)
+			{
 				end = (end + 1) % N;
 				create(s.first);
-				if (start == end) start = (start + 1) % N;
+				if (start == end)
+					start = (start + 1) % N;
 			}
 			history[end].stat.add(*s.second);
 		}
 	}
 
-	void Receive(const JSON::JSON* j, int len, TAG& tag) {
-		std::lock_guard<std::mutex> l{ this->mtx };
+	void Receive(const JSON::JSON *j, int len, TAG &tag)
+	{
+		std::lock_guard<std::mutex> l{this->mtx};
 
-		for (int i = 0; i < len; i++) {
-			if (!j[i].binary) return;
+		for (int i = 0; i < len; i++)
+		{
+			if (!j[i].binary)
+				return;
 
-			const AIS::Message* msg = (AIS::Message*)j[i].binary;
+			const AIS::Message *msg = (AIS::Message *)j[i].binary;
 			long int tm = ((long int)msg->getRxTimeUnix()) / (long int)INTERVAL;
 			long int tp = ((long int)tag.previous_signal) / (long int)INTERVAL;
 
-			if (history[end].time < tm) {
+			if (history[end].time < tm)
+			{
 				end = (end + 1) % N;
 				create(tm);
-				if (start == end) start = (start + 1) % N;
+				if (start == end)
+					start = (start + 1) % N;
 			}
 
 			history[end].stat.Add(*msg, tag, tm != tp);
 		}
 	}
 
-	bool Save(std::ofstream& file) {
-		std::lock_guard<std::mutex> l{ this->mtx };
+	bool Save(std::ofstream &file)
+	{
+		std::lock_guard<std::mutex> l{this->mtx};
 
 		int magic = 0x4f80b;
 		int version = 1;
@@ -126,41 +147,48 @@ public:
 		int n = N;
 		int s = sizeof(history);
 
-		file.write((const char*)&magic, sizeof(int));
-		file.write((const char*)&version, sizeof(int));
-		file.write((const char*)&s, sizeof(int));
-		file.write((const char*)&i, sizeof(int));
-		file.write((const char*)&n, sizeof(int));
-		file.write((const char*)&start, sizeof(int));
-		file.write((const char*)&end, sizeof(int));
+		file.write((const char *)&magic, sizeof(int));
+		file.write((const char *)&version, sizeof(int));
+		file.write((const char *)&s, sizeof(int));
+		file.write((const char *)&i, sizeof(int));
+		file.write((const char *)&n, sizeof(int));
+		file.write((const char *)&start, sizeof(int));
+		file.write((const char *)&end, sizeof(int));
 
-		for (int i = 0; i < N; i++) {
-			file.write((const char*)&history[i].time, sizeof(history[i].time));
+		for (int i = 0; i < N; i++)
+		{
+			file.write((const char *)&history[i].time, sizeof(history[i].time));
 			history[i].stat.Save(file);
 		}
 
 		return true;
 	}
 
-	bool Load(std::ifstream& file) {
-		std::lock_guard<std::mutex> l{ this->mtx };
+	bool Load(std::ifstream &file)
+	{
+		std::lock_guard<std::mutex> l{this->mtx};
 
 		int tmp;
 
-		if (!(readInteger(file, tmp, 0x4f80b) && readInteger(file, tmp, 1) && readInteger(file, tmp, /*sizeof(history)*/ -1) && readInteger(file, tmp, INTERVAL) && readInteger(file, tmp, N))) return false;
+		if (!(readInteger(file, tmp, 0x4f80b) && readInteger(file, tmp, 1) && readInteger(file, tmp, /*sizeof(history)*/ -1) && readInteger(file, tmp, INTERVAL) && readInteger(file, tmp, N)))
+			return false;
 
 		int start_in, end_in;
 		readInteger(file, start_in, -1);
 		readInteger(file, end_in, -1);
 
-		if (start_in < 0 || start_in >= N || end_in < 0 || end_in >= N) return false;
+		if (start_in < 0 || start_in >= N || end_in < 0 || end_in >= N)
+			return false;
 
 		start = start_in;
 		end = end_in;
 
-		for (int i = 0; i < N; i++) {
-			if (!file.read((char*)&history[i].time, sizeof(history[i].time))) return false;
-			if (!history[i].stat.Load(file)) return false;
+		for (int i = 0; i < N; i++)
+		{
+			if (!file.read((char *)&history[i].time, sizeof(history[i].time)))
+				return false;
+			if (!history[i].stat.Load(file))
+				return false;
 		}
 
 		// as database is not persistent we cannot combine old and new
@@ -168,8 +196,9 @@ public:
 		return true;
 	}
 
-	float getAverage() {
-		std::lock_guard<std::mutex> l{ this->mtx };
+	float getAverage()
+	{
+		std::lock_guard<std::mutex> l{this->mtx};
 
 		float avg = 0.0f;
 
@@ -181,18 +210,20 @@ public:
 	}
 
 	// a minute heard in, counted in the slot under way
-	void addActiveMinute() {
-		std::lock_guard<std::mutex> l{ this->mtx };
+	void addActiveMinute()
+	{
+		std::lock_guard<std::mutex> l{this->mtx};
 		history[end].stat.addActiveMinute();
 	}
 
 	// f(figures, whether nothing was heard in it) of the last whole slot: the
 	// one before the slot under way, when that is the one kept before it
 	template <typename F>
-	void withLastSlot(F f) {
-		std::lock_guard<std::mutex> l{ this->mtx };
+	void withLastSlot(F f)
+	{
+		std::lock_guard<std::mutex> l{this->mtx};
 
-		long int tm = (long int) std::time(nullptr) / (long int)INTERVAL -1;
+		long int tm = (long int)std::time(nullptr) / (long int)INTERVAL - 1;
 		if (start == end || tm > history[(end + N - 1) % N].time)
 			f(history[0].stat, true);
 		else
@@ -202,17 +233,21 @@ public:
 	// Each slot from the oldest kept to the current one, oldest first, as
 	// f(its start in seconds since 1970, its figures, whether nothing was heard in it)
 	template <typename F>
-	void forEachSlot(F f) {
-		std::lock_guard<std::mutex> l{ this->mtx };
+	void forEachSlot(F f)
+	{
+		std::lock_guard<std::mutex> l{this->mtx};
 
 		long int tm_now = ((long int)time(nullptr)) / (long int)INTERVAL;
 		std::vector<std::pair<long int, int>> slots;
 		long int tm = tm_now;
-		for (int i = N, idx = end; i > 0; i--, tm--) {
+		for (int i = N, idx = end; i > 0; i--, tm--)
+		{
 			const bool empty = history[idx].time < tm;
 			slots.push_back(std::make_pair(tm, empty ? -1 : idx));
-			if (!empty) {
-				if (idx == start) break;
+			if (!empty)
+			{
+				if (idx == start)
+					break;
 				idx = (idx + N - 1) % N;
 			}
 		}
