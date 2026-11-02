@@ -428,13 +428,13 @@ namespace
 		}
 		case AIS::KEY_SETTING_KEYS:
 			if (!json)
-				throw ConfigError("\"keys\" is set in the configuration file.");
+				throw ConfigError("\"keys\" takes name:scopes:sha256 entries separated by commas on the command line, or an array of key objects in a configuration file.");
 			keysFromJSON(*json, spec.keys);
 			return true;
 		case AIS::KEY_SETTING_VIEW:
 			// which ships the server shows of what its tracker keeps
 			if (!json)
-				throw ConfigError("\"view\" is set in the configuration file.");
+				throw ConfigError("\"view\" is set in a configuration file, not on the command line: write one from this command line with -J config.json, add view to its server section, and run it with -C config.json.");
 			viewFilterFromJSON(*json, spec.view);
 			return true;
 		case AIS::KEY_SETTING_FILTER:
@@ -732,9 +732,9 @@ namespace
 			ServerEntry e;
 			e.spec.bind = "0.0.0.0";
 			e.network_default = true;
-			// a value as -N gives it, text: only the view, which -N writes for place_geometry, is an object
+			// a value as -N gives it, text, but for the view and tls objects and the keys array -N writes
 			for (const auto &m : entry.getObject().getMembers())
-				if (!e.read(m.Key(), JSON::text(m.Get()), m.Get().isObject() ? &m.Get() : nullptr))
+				if (!e.read(m.Key(), JSON::text(m.Get()), m.Get().isObject() || m.Get().isArray() ? &m.Get() : nullptr))
 					throw ConfigError("\"" + AIS::settingName(m.Key()) + "\" is not a setting of -N.");
 			if (!e.spec.port)
 				throw ConfigError("no port: give one, as -N 8100 or -N PORT 8100.");

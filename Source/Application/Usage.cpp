@@ -50,6 +50,7 @@ void printUsage()
 	Info() << "\t[-F run model optimized for speed at the cost of accuracy for slow hardware (default: off)]";
 	Info() << "\t[-G [LEVEL level] [SYSTEM on] - control logging (levels: DEBUG, INFO, WARNING, ERROR, CRITICAL) or enable system logging]";
 	Info() << "\t[-h display this message and terminate (default: false)]";
+	Info() << "\t[-K - print a new API key with its SHA-256 and how to use it, and terminate]";
 	Info() << "\t[-J [file] - write this command line as a configuration file and terminate: to the file, or the screen without one; -C reads it, -E runs it in managed mode]";
 	Info() << "\t[-H [optional: url] - send messages via HTTP, for options see documentation]";
 	Info() << "\t[-i [interface] - read NMEA2000 data from socketCAN interface - Linux only]";
@@ -57,7 +58,7 @@ void printUsage()
 	Info() << "\t[-m xx - run specific decoding model (default: 2), see README for more details]";
 	Info() << "\t[-M xxx - set additional meta data to generate: T = NMEA timestamp, D = decoder related (signal power, ppm) (default: none)]";
 	Info() << "\t[-n show NMEA messages on screen without detail (-o 1)]";
-	Info() << "\t[-N [optional: port][optional settings] - a web server at port: the map, and api, mcp, system, geojson, kml or metrics switched on; with a message filter it keeps ships of its own; TLS_CERT file TLS_KEY file for HTTPS; see README for details]";
+	Info() << "\t[-N [optional: port][optional settings] - a web server at port: the map, and api, mcp, system, geojson, kml or metrics switched on; with a message filter it keeps ships of its own; TLS_CERT file TLS_KEY file for HTTPS; KEYS name:scopes:sha256,... for access by key (scopes data or data+system); see README for details]";
 	Info() << "\t[-o set output mode (0 = quiet, 1 = NMEA only, 2 = NMEA+, 3 = NMEA+ in JSON, 4 JSON Sparse, 5 JSON Full (default: 2)]";
 	Info() << "\t[-O MMSI - sets the own mmsi of the receiver]";
 	Info() << "\t[-p xxx - set frequency correction for device in PPM (default: zero)]";

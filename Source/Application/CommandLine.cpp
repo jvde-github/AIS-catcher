@@ -41,6 +41,8 @@
 #include "JSON/Parser.h"
 #include "Helper.h"
 #include "Logger.h"
+#include "SHA256.h"
+#include "ControlCore.h"
 
 namespace CommandLine
 {
@@ -113,6 +115,32 @@ namespace
 	};
 
 	std::string keyName(int key) { return AIS::settingName(key); }
+
+	// KEYS name:scopes:sha256,... as the file's keys array; a bare hash is a data key named key
+	Node keysFromText(const std::string &text, const std::string &where)
+	{
+		Node keys = Node::of(Node::ARRAY);
+		std::vector<std::string> entries;
+		Util::Parse::Split(text, ',', entries);
+		for (const auto &entry : entries)
+		{
+			std::vector<std::string> parts;
+			Util::Parse::Split(entry, ':', parts);
+			if (parts.size() != 1 && parts.size() != 3)
+				throw std::runtime_error(where + ": KEYS takes name:scopes:sha256 entries separated by commas, scopes data or data+system.");
+			Node key;
+			key.add(keyName(AIS::KEY_SETTING_NAME), Node::str(parts.size() == 3 ? parts[0] : "key"));
+			key.add(keyName(AIS::KEY_SETTING_SHA256), Node::str(parts.back()));
+			Node scopes = Node::of(Node::ARRAY);
+			std::vector<std::string> names;
+			Util::Parse::Split(parts.size() == 3 ? parts[1] : "data", '+', names);
+			for (const auto &n : names)
+				scopes.items.push_back(Node::str(n));
+			key.add(keyName(AIS::KEY_SETTING_SCOPES), std::move(scopes));
+			keys.items.push_back(std::move(key));
+		}
+		return keys;
+	}
 
 	// a value from a file, as the reader would read it from the document again
 	Node fromJSON(const JSON::Value &v)
@@ -390,7 +418,7 @@ namespace
 	// banner, the lists, and whether the engine runs at all
 	struct Actions
 	{
-		bool show_copyright = true, list_devices = false, list_devices_json = false, list_support = false, list_options = false, no_run = false;
+		bool show_copyright = true, list_devices = false, list_devices_json = false, list_support = false, list_options = false, no_run = false, new_key = false;
 	};
 
 	// The command line, read into a document. Options that act rather than
@@ -1173,6 +1201,11 @@ namespace
 				json = true;
 				json_file = arg1;
 				break;
+			case 'K':
+				Assert(count == 0, param, "takes no parameters.");
+				actions.new_key = true;
+				actions.show_copyright = false;
+				break;
 			case 'h':
 				Assert(count == 0 || count == 1, param, "takes no parameters or one parameter [JSON/BUILD].");
 				if (count == 1)
@@ -1245,6 +1278,8 @@ namespace
 					server.child(keyName(AIS::KEY_SETTING_TLS)).add(keyName(AIS::KEY_SETTING_CERT), Node::str(a.second));
 				else if (a.first == AIS::KEY_SETTING_TLS_KEY)
 					server.child(keyName(AIS::KEY_SETTING_TLS)).add(keyName(AIS::KEY_SETTING_KEY), Node::str(a.second));
+				else if (a.first == AIS::KEY_SETTING_KEYS)
+					server.add(keyName(a.first), keysFromText(a.second, p.port.empty() ? "-N" : "-N " + p.port));
 				else
 					server.add(keyName(a.first), Node::str(a.second));
 			}
@@ -1386,6 +1421,15 @@ static bool build(const std::vector<std::string> &args, Engine &engine)
 		printBuildConfiguration();
 	if (actions.list_options)
 		printUsage();
+	if (actions.new_key)
+	{
+		// the key is the client's; a server holds its hash
+		const std::string key = ControlCore::randomHex(48), hash = Util::SHA256::hex(key);
+		std::cout << "key:     " << key << "\nsha256:  " << hash << "\n\n"
+				  << "on the command line:     -N 8100 KEYS name:data:" << hash << " API on\n"
+				  << "in a configuration file: \"keys\": [{\"name\": \"name\", \"sha256\": \"" << hash << "\", \"scopes\": [\"data\"]}]\n"
+				  << "scopes: data, or data+system for the installation's own resources; a client sends the key as Authorization: Bearer\n";
+	}
 
 	// the document's files are resolved already, each against the folder of the file it came from
 	Config::setConfigBaseDir("");
@@ -1413,7 +1457,7 @@ static bool build(const std::vector<std::string> &args, Engine &engine)
 		}
 		return false;
 	}
-	return !(actions.list_devices || actions.list_support || actions.list_options || actions.no_run);
+	return !(actions.list_devices || actions.list_support || actions.list_options || actions.no_run || actions.new_key);
 }
 
 int run(const std::vector<std::string> &args)
