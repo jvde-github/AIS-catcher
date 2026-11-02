@@ -187,6 +187,7 @@ namespace Device
 	{
 		FLOAT32 tuner_gain = 0.0;
 
+		IO::OutputStats stats;
 		Protocol::TCP client;
 
 		std::string host = "localhost";
@@ -230,7 +231,9 @@ namespace Device
 		void printDevice();
 
 	public:
-		SpyServer() : Device(Format::UNKNOWN, 288000, Type::SPYSERVER, "SpyServer") {}
+		SpyServer() : Device(Format::UNKNOWN, 288000, Type::SPYSERVER, "SpyServer") { client.setStats(&stats); }
+
+		const IO::OutputStats *getConnectionStats() const override { return &stats; }
 
 		void OpenWithFileDescriptor(int) { Open(0); }
 

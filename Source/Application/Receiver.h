@@ -71,6 +71,8 @@ public:
 	Receiver() : Setting("Receiver") {}
 
 	bool verbose = false;
+	// free text to name the input, as for an output; empty when not set
+	std::string description;
 	std::vector<std::string> zones;
 	// extra zones per engine; the receiver's zones apply to all of them
 	std::vector<std::vector<std::string>> engine_zones;
@@ -88,6 +90,10 @@ public:
 		{
 		case AIS::KEY_SETTING_VERBOSE:
 			verbose = Util::Parse::Switch(arg);
+			break;
+		case AIS::KEY_SETTING_DESCRIPTION:
+		case AIS::KEY_SETTING_DESC:
+			description = arg;
 			break;
 		case AIS::KEY_SETTING_SENSITIVITY_HIGH:
 			Warning() << "Receiver: \"sensitivity_high\" is deprecated and will be removed, use \"engines\": [ { \"type\": \"v1_high\" } ] instead";

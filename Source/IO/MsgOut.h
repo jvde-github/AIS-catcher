@@ -188,6 +188,7 @@ namespace IO
 				if (filter.include(data[i], tag) != AIS::Filter::Result::Included)
 					continue;
 
+				stats.messages++;
 				formatInto(data[i], tag);
 				sendFormatted(json.data(), (int)json.size(), &data[i], tag);
 			}
@@ -205,6 +206,7 @@ namespace IO
 				if (filter.include(msg, tag) != AIS::Filter::Result::Included)
 					continue;
 
+				stats.messages++;
 				json.clear();
 				builder.stringify(data[i], json, line_suffix);
 				sendFormatted(json.data(), (int)json.size(), &msg, tag);
@@ -226,6 +228,12 @@ namespace IO
 			}
 			batchDone(tag);
 		}
+
+		const OutputStats &getStats() const { return stats; }
+		// whether the output holds a connection, so that connect/reconnect counters mean something
+		virtual bool hasConnection() const { return false; }
+		const std::string &getTypeName() const { return type; }
+		const std::string &getDescription() const { return description; }
 
 		void writeJSON(JSON::Writer &w) const
 		{

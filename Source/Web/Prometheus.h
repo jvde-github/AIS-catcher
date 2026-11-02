@@ -16,6 +16,7 @@
 */
 
 #pragma once
+#include <atomic>
 #include <cstdint>
 #include <ctime>
 #include <mutex>
@@ -24,6 +25,36 @@
 #include "AIS-catcher.h"
 #include "JSONAIS.h"
 #include "SlotTable.h"
+#include "Statistics.h"
+#include "Device/Device.h"
+
+// Counts the messages one input (receiver/model pair) decodes. Models of one
+// receiver share its device, so they report the bytes of the first model's counter.
+struct PrometheusInput : public StreamIn<JSON::JSON> {
+	std::string label, type;
+	std::atomic<uint32_t> count{0};
+	std::atomic<uint32_t> errors[3] = {}; // checksum, undersized, oversized
+	std::atomic<int64_t> last{0};
+	ByteCounter bytes_own;
+	const ByteCounter *bytes = &bytes_own;
+	Device::Device *device = nullptr;
+
+	explicit PrometheusInput(const std::string &l) : label(l) {}
+	void Receive(const JSON::JSON *, int len, TAG &tag)
+	{
+		count.fetch_add(len, std::memory_order_relaxed);
+		last.store((int64_t)std::time(nullptr), std::memory_order_relaxed);
+		if (tag.quality & MESSAGE_QUALITY_CHECKSUM)
+			errors[0].fetch_add(1, std::memory_order_relaxed);
+		if (tag.quality & MESSAGE_QUALITY_UNDERSIZED)
+			errors[1].fetch_add(1, std::memory_order_relaxed);
+		if (tag.quality & MESSAGE_QUALITY_OVERSIZED)
+			errors[2].fetch_add(1, std::memory_order_relaxed);
+	}
+};
+
+// Escapes a value for use inside a Prometheus label
+std::string prometheusEscape(const std::string &s);
 
 class PrometheusCounter : public StreamIn<JSON::JSON> {
 	std::mutex mtx;

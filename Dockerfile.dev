@@ -1,0 +1,28 @@
+# Builds the AIS-catcher in this checkout. The main Dockerfile installs the
+# prebuilt upstream release instead, so it never contains local changes.
+FROM debian:trixie-slim AS build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake git pkg-config ca-certificates \
+    libssl-dev zlib1g-dev libusb-1.0-0-dev \
+    librtlsdr-dev libairspy-dev libhackrf-dev \
+    libsqlite3-dev libpq-dev libzmq3-dev libsoxr-dev libsamplerate0-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY . /src
+
+# -j2: compiling the larger files in parallel can exhaust memory
+RUN cmake -S /src -B /build -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build /build -j2
+
+FROM debian:trixie-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libssl3t64 zlib1g libusb-1.0-0 \
+    librtlsdr0 libairspy0 libhackrf0 \
+    libsqlite3-0 libpq5 libzmq5 libsoxr0 libsamplerate0 && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /build/AIS-catcher /usr/bin/AIS-catcher
+
+ENTRYPOINT ["/usr/bin/AIS-catcher"]

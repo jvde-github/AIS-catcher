@@ -31,6 +31,7 @@ namespace IO
         uint32_t reconnects = 0;
         uint32_t connected = 0;
         uint64_t dropped = 0;
+        uint64_t messages = 0;
 
         void writeJSON(JSON::Writer &w) const
         {
@@ -42,6 +43,7 @@ namespace IO
                 .kv("reconnects", reconnects)
                 .kv("connected", connected)
                 .kv("dropped", dropped)
+                .kv("messages", messages)
                 .endObject();
         }
     };
