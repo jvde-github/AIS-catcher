@@ -26,10 +26,14 @@
 #include "JSONAIS.h"
 #include "SlotTable.h"
 #include "Statistics.h"
-#include "Device/Device.h"
 
 // Counts the messages one input (receiver/model pair) decodes. Models of one
 // receiver share its device, so they report the bytes of the first model's counter.
+namespace Device
+{
+	class Device;
+}
+
 struct PrometheusInput : public StreamIn<JSON::JSON> {
 	std::string label, type;
 	std::atomic<uint32_t> count{0};

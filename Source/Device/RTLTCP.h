@@ -18,6 +18,7 @@
 #pragma once
 
 #include "Device.h"
+#include "OutputStats.h"
 
 #include <fstream>
 #include <iostream>
@@ -66,18 +67,18 @@ namespace Device
 
 		const IO::OutputStats *getConnectionStats() const override { return &stats; }
 
-		void OpenWithFileDescriptor(int) { Open(0); }
+		void OpenWithFileDescriptor(int) override { Open(0); }
 		// Control
 
-		void Close();
-		void Play();
-		void Stop();
+		void Close() override;
+		void Play() override;
+		void Stop() override;
 
-		bool isCallback() { return true; }
+		bool isCallback() override { return true; }
 
-		void getDeviceList(std::vector<Description> &DeviceList);
+		void getDeviceList(std::vector<Description> &DeviceList) override;
 
-		std::string getRateDescription()
+		std::string getRateDescription() override
 		{
 			if (getFormat() == Format::TXT)
 				return "N/A";
@@ -85,12 +86,12 @@ namespace Device
 		}
 
 		// Settings
-		Setting &SetKey(AIS::Keys key, const std::string &arg);
-		std::string Get();
+		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
+		std::string Get() override;
 
-		std::string getProduct() { return "RTLTCP"; }
-		std::string getSerial() { return ""; }
-		std::string getIdentity() { return "RTLTCP:" + session->getHost() + ":" + session->getPort(); }
-		std::string getVendor() { return "Network"; }
+		std::string getProduct() override { return "RTLTCP"; }
+		std::string getSerial() override { return ""; }
+		std::string getIdentity() override { return "RTLTCP:" + session->getHost() + ":" + session->getPort(); }
+		std::string getVendor() override { return "Network"; }
 	};
 }

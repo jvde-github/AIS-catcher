@@ -298,17 +298,20 @@ void WebViewer::wireAggregate(
         states[0]->connectControl(r.OutputControl(j));
         r.OutputADSB(j).Connect((StreamIn<Plane::ADSB> *)&planes);
 
-        prom_inputs.emplace_back(new PrometheusInput(
-            r.description.empty() ? namesFor(r, j, receivers.size()).label
-                                  : r.description));
-        PrometheusInput &pi = *prom_inputs.back();
-        pi.device = device;
-        pi.type = device->getName();
-        if (first_of_device)
-          *device >> pi.bytes_own;
-        else
-          pi.bytes = prom_inputs[prom_inputs.size() - 2]->bytes;
-        r.OutputJSON(j).Connect((StreamIn<JSON::JSON> *)&pi);
+        // the per-input counters cost every message a little: only with /metrics on
+        if (configuration.values.supportPrometheus) {
+          prom_inputs.emplace_back(new PrometheusInput(
+              r.description.empty() ? namesFor(r, j, receivers.size()).label
+                                    : r.description));
+          PrometheusInput &pi = *prom_inputs.back();
+          pi.device = device;
+          pi.type = device->getName();
+          if (first_of_device)
+            *device >> pi.bytes_own;
+          else
+            pi.bytes = prom_inputs[prom_inputs.size() - 2]->bytes;
+          r.OutputJSON(j).Connect((StreamIn<JSON::JSON> *)&pi);
+        }
 
         *device >> raw_counter;
       });

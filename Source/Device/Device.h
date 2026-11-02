@@ -31,7 +31,10 @@
 #include "Common.h"
 #include "Parse.h"
 #include "Convert.h"
-#include "OutputStats.h"
+
+namespace IO {
+	struct OutputStats;
+}
 
 namespace Device {
 
