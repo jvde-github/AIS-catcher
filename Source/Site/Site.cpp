@@ -21,6 +21,7 @@
 #include <cstring>
 #include <sys/stat.h>
 #include "Site.h"
+#include "PlaceCatalogue.h"
 #include "FIFO.h"
 #include "Helper.h"
 #include "Logger.h"
@@ -413,10 +414,7 @@ void Site::configureTracker(const SiteConfig &cfg)
 	if (!tracker_)
 		return;
 	tracker_->configure(tracking);
-	if (cfg.catalogue)
-		tracker_->useCatalogue(cfg.catalogue);
-	else
-		tracker_->usePlaces(cfg.places);
+	tracker_->useCatalogue(catalogueFor(cfg));
 	if (made)
 	{
 		backup_file = cfg.backup_file;
@@ -484,7 +482,7 @@ void Site::configureServers(const SiteConfig &cfg)
 		dropRetired();
 	for (const ServerSpec *spec : wanted)
 	{
-		own.push_back(makeOwn(*spec));
+		own.push_back(makeOwn(*spec, cfg));
 		if (fed)
 			own.back()->tracker->setRestartRequired("Own ships (service restart)", true);
 	}
@@ -573,41 +571,56 @@ static std::string backupProblem(const std::string &file)
 	return "";
 }
 
-void Site::restoreInto()
+bool Site::restoreFrom(Tracker &t, const std::string &file)
 {
-	backing_up = !backup_file.empty();
-	if (backup_file.empty())
-		return;
-	Tracker::Restored r = tracker_->restore(backup_file);
+	Tracker::Restored r = t.restore(file);
 	// A backup of an earlier version is copied once, beside it, for that version
 	// to be given back; then it is imported, and written over in this version's
 	// format from the next backup on. Without the copy it is left as it is.
 	if (r == Tracker::FOREIGN)
 	{
-		const std::string kept = backup_file + ".before-upgrade";
-		if (!keepCopy(backup_file, kept))
+		const std::string kept = file + ".before-upgrade";
+		if (!keepCopy(file, kept))
 		{
-			Error() << "Tracker: " << backup_file << " is a backup of an earlier version and could not be copied to " << kept
+			Error() << "Tracker: " << file << " is a backup of an earlier version and could not be copied to " << kept
 					<< "; it is left as it is and nothing is backed up until it can be";
-			backing_up = false;
-			return;
+			return false;
 		}
-		if (tracker_->importViewerBackup(backup_file))
+		if (t.importViewerBackup(file))
 		{
 			Info() << "Tracker: copied the backup of an earlier version to " << kept << ", which is not written again, and imported its statistics and ships";
 			r = Tracker::RESTORED;
 		}
 	}
 	if (r == Tracker::RESTORED)
-		Info() << "Tracker: restored from " << backup_file;
+		Info() << "Tracker: restored from " << file;
 	else
 	{
-		const std::string problem = backupProblem(backup_file);
+		const std::string problem = backupProblem(file);
 		if (problem.empty())
-			Info() << "Tracker: no backup restored from " << backup_file;
+			Info() << "Tracker: no backup restored from " << file;
 		else
-			Error() << "Tracker: cannot read the backup " << backup_file << ": " << problem;
+			Error() << "Tracker: cannot read the backup " << file << ": " << problem;
 	}
+	return true;
+}
+
+void Site::restoreInto()
+{
+	backing_up = !backup_file.empty() && restoreFrom(*tracker_, backup_file);
+}
+
+// under site_mtx
+std::shared_ptr<PlaceCatalogue> Site::catalogueFor(const SiteConfig &cfg)
+{
+	if (cfg.catalogue)
+		return cfg.catalogue;
+	if (cfg.places != places_dir)
+	{
+		places_dir = cfg.places;
+		places_catalogue = cfg.places.empty() ? nullptr : std::make_shared<PlaceCatalogue>(cfg.places);
+	}
+	return places_catalogue;
 }
 
 bool Site::engineAttached()
@@ -627,12 +640,15 @@ Site::Own *Site::ownFor(const ServerSpec &spec)
 
 void Site::dropRetired()
 {
+	for (auto &o : own)
+		if (o->retired && !o->backup_file.empty() && !o->tracker->save(o->backup_file))
+			Error() << "Server on port " << o->port << ": backup to " << o->backup_file << " failed";
 	own.erase(std::remove_if(own.begin(), own.end(), [](const std::unique_ptr<Own> &x) { return x->retired; }), own.end());
 }
 
 // under site_mtx: a server's own tracker, behind its filter; the reader gave
 // its settings what the viewer needs kept
-std::unique_ptr<Site::Own> Site::makeOwn(const ServerSpec &spec)
+std::unique_ptr<Site::Own> Site::makeOwn(const ServerSpec &spec, const SiteConfig &cfg)
 {
 	std::unique_ptr<Own> o(new Own());
 	o->port = spec.port;
@@ -643,7 +659,11 @@ std::unique_ptr<Site::Own> Site::makeOwn(const ServerSpec &spec)
 	for (const auto &term : spec.tracking.filter)
 		filter.SetOptionKey((AIS::Keys)term.first, term.second);
 	o->tracker->setFilter(filter);
-	Info() << "Server on port " << spec.port << ": ships of its own" << (filter.isOn() ? ", " + filter.Get() : std::string());
+	o->tracker->useCatalogue(catalogueFor(cfg));
+	o->backup_file = spec.tracking.backup_file;
+	if (!o->backup_file.empty() && !restoreFrom(*o->tracker, o->backup_file))
+		o->backup_file.clear();
+	Info() << "Server on port " << spec.port << ": ships of its own" << (filter.isOn() ? ", " + filter.Get() : std::string()) << (o->backup_file.empty() ? std::string() : ", kept in " + o->backup_file);
 	o->tracker->setStations(stationsSnapshot());
 	return o;
 }
@@ -775,18 +795,22 @@ void Site::refreshPlaces()
 #endif
 }
 
-// under site_mtx: the site's tracker alone; a backup that starts failing is an event, once
+// under site_mtx: the site's tracker, whose backup starting to fail is an event, once; then the servers' own
 void Site::backup()
 {
 #ifdef HASAPI
-	if (!tracker_ || !backing_up)
-		return;
-	const bool ok = tracker_->save(backup_file);
-	if (!ok)
-		Error() << "Tracker: backup to " << backup_file << " failed";
-	if (!ok && !backup_failing)
-		systemEventLocked(Tracking::Level::URGENT, "backup_failed", "The backup to " + backup_file + " failed");
-	backup_failing = !ok;
+	if (tracker_ && backing_up)
+	{
+		const bool ok = tracker_->save(backup_file);
+		if (!ok)
+			Error() << "Tracker: backup to " << backup_file << " failed";
+		if (!ok && !backup_failing)
+			systemEventLocked(Tracking::Level::URGENT, "backup_failed", "The backup to " + backup_file + " failed");
+		backup_failing = !ok;
+	}
+	for (auto &o : own)
+		if (!o->backup_file.empty() && !o->tracker->save(o->backup_file))
+			Error() << "Server on port " << o->port << ": backup to " << o->backup_file << " failed";
 #endif
 }
 
@@ -805,7 +829,7 @@ int Site::beat(std::time_t now)
 	}
 	if (tracker_)
 		watchStations(now, minute);
-	if (tracker_ && backup_minutes > 0 && now - last_backup >= backup_minutes * 60)
+	if (backup_minutes > 0 && now - last_backup >= backup_minutes * 60)
 	{
 		backup();
 		last_backup = now;

@@ -189,17 +189,21 @@ namespace
 	// how a tracker keeps ships: the tracking, and for the site's the backup file
 	// and its interval and the places, each resolved against base_dir; a server's
 	// own tracker, read without a site, has no place for those: false
-	bool trackingKey(int key, const std::string &arg, TrackingConfig &t, SiteConfig *site, const std::string &base_dir)
+	// `own_file` for a server's own tracker: its backup goes there, the places stay the site's
+	bool trackingKey(int key, const std::string &arg, TrackingConfig &t, SiteConfig *site, const std::string &base_dir, std::string *own_file = nullptr)
 	{
 		switch (key)
 		{
 		case AIS::KEY_SETTING_FILE:
-			if (!site)
+			if (own_file)
+				*own_file = SiteReader::backupFile(arg, base_dir);
+			else if (site)
+				site->backup_file = SiteReader::backupFile(arg, base_dir);
+			else
 				return false;
-			site->backup_file = SiteReader::backupFile(arg, base_dir);
 			break;
 		case AIS::KEY_SETTING_PLACES:
-			if (!site)
+			if (!site || own_file)
 				return false;
 			site->places = Util::Helper::resolvePath(arg, base_dir);
 			break;
@@ -371,7 +375,6 @@ namespace
 		ServerSpec spec;
 		StationDefaults at;
 		std::vector<std::pair<int, std::string>> tracking_terms, station_terms;
-		std::vector<int> station_ids;
 		AIS::Filter filter;
 		std::vector<std::string> dropped;
 		bool network_default = false;
@@ -420,14 +423,7 @@ namespace
 			}
 			return true;
 		case AIS::KEY_SETTING_STATION_ID:
-		{
-			std::vector<std::string> parts;
-			Util::Parse::Split(value, ',', parts);
-			for (const auto &p : parts)
-				if (!p.empty())
-					station_ids.push_back((int)Util::Parse::Integer(p, 0, 2147483647));
-			return true;
-		}
+			throw ConfigError("\"station_id\" is not a server's: a server shows the stations its \"filter\" names with \"id\".");
 		case AIS::KEY_SETTING_KEYS:
 			if (!json)
 				throw ConfigError("\"keys\" takes name:scopes:sha256 entries separated by commas on the command line, or an array of key objects in a configuration file.");
@@ -583,51 +579,51 @@ namespace
 		own.own = (e.filter.isOn() && terms) || routed;
 		if (own.own && spec.main)
 			throw ConfigError(where + " shows every ship the station hears: give the filter, zones or groups to another server.");
-		if (!e.station_ids.empty())
-		{
-			// the server shows these stations; what the section says of a station
-			// describes the first of them, where "stations" does not list it
-			for (int id : e.station_ids)
-				if (std::find(spec.view.stations.begin(), spec.view.stations.end(), id) == spec.view.stations.end())
-					spec.view.stations.push_back(id);
-			// GPS moves it only when the section says so, as a listed station has it
-			bool gps_said = false;
-			for (const auto &t : e.station_terms)
-				gps_said |= t.first == AIS::KEY_SETTING_USE_GPS;
-			const bool gps = gps_said && at.gps;
-			for (std::size_t i = 0; i < e.station_ids.size(); i++)
-			{
-				const int id = e.station_ids[i];
-				if (stations.find(id))
-					continue;
-				StationRegistry::Station s;
-				s.id = id;
-				s.name = i == 0 && !at.name.empty() ? at.name : "Station " + std::to_string(id);
-				if (i == 0)
+		// the stations the server shows: those its filter names, when it is on
+		if (e.filter.isOn())
+			for (const auto &t : own.filter)
+				if (t.first == AIS::KEY_SETTING_ID || t.first == AIS::KEY_SETTING_SELECT_ID)
 				{
-					if (at.placed())
+					std::vector<std::string> parts;
+					Util::Parse::Split(t.second, ',', parts);
+					for (const auto &p : parts)
 					{
-						s.lat = at.lat;
-						s.lon = at.lon;
+						const int id = p.empty() ? -1 : (int)Util::Parse::Integer(p, 0, 2147483647);
+						if (id >= 0 && std::find(spec.stations.begin(), spec.stations.end(), id) == spec.stations.end())
+							spec.stations.push_back(id);
 					}
-					s.alt = at.alt;
-					s.mmsi = at.mmsi;
-					s.share_loc = at.share_loc;
 				}
-				s.gps = gps;
-				stations.define(s);
-			}
+		if (!spec.stations.empty())
+		{
+			// one "stations" does not list is shown by its number
+			for (int id : spec.stations)
+				if (!stations.find(id))
+				{
+					StationRegistry::Station s;
+					s.id = id;
+					s.name = "Station " + std::to_string(id);
+					s.gps = false;
+					stations.define(s);
+					e.dropped.push_back("station " + std::to_string(id) + " is not in \"stations\": no name or position until it is");
+				}
+			// a station is described in "stations"; STATION beside it is the viewer's title
+			std::string said;
+			for (const auto &t : e.station_terms)
+				if (t.first != AIS::KEY_SETTING_STATION)
+					said += (said.empty() ? "" : ", ") + AIS::settingName(t.first);
+			if (!said.empty())
+				e.dropped.push_back(said + ": a station is described in \"stations\", not on a server");
 		}
 		if (own.own)
 		{
 			own.tracking.msg_save = spec.viewer.msg;
-			// backups and places are the site's: one file, one catalogue
+			// its backup is its own; the places are the site's: one catalogue for every tracker
 			for (const auto &t : e.tracking_terms)
-				if (!trackingKey(t.first, t.second, own.tracking, nullptr, base_dir))
-					e.dropped.push_back("\"" + AIS::settingName(t.first) + "\" is the site's: a server with ships of its own keeps no backup and reads no places");
+				if (!trackingKey(t.first, t.second, own.tracking, &site, base_dir, &own.backup_file))
+					e.dropped.push_back("\"" + AIS::settingName(t.first) + "\" is the site's: one catalogue for every tracker");
 			// what the section says of the station is this tracker's, unless it names
 			// the station: it measures from there, shares it or not, follows GPS or its own vessel
-			if (e.station_ids.empty())
+			if (spec.stations.empty())
 				for (const auto &t : e.station_terms)
 					switch (t.first)
 					{
@@ -648,7 +644,7 @@ namespace
 		}
 		else
 		{
-			if (e.station_ids.empty())
+			if (spec.stations.empty())
 				for (const auto &t : e.station_terms)
 					stationKey(t.first, t.second, defaults);
 			if (site.tracking_set)

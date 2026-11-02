@@ -190,10 +190,11 @@ private:
 		TrackerSpec spec;
 		std::unique_ptr<Tracker> tracker;
 		bool retired = false;
+		std::string backup_file;
 	};
 	std::vector<std::unique_ptr<Own>> own;
 	Own *ownFor(const ServerSpec &spec);
-	std::unique_ptr<Own> makeOwn(const ServerSpec &spec);
+	std::unique_ptr<Own> makeOwn(const ServerSpec &spec, const SiteConfig &cfg);
 	// a tracker to keep: the site's or a server's own
 	bool anyTracker() const { return tracker_ || !own.empty(); }
 	// f on every tracker: the site's, then each server's own
@@ -211,6 +212,12 @@ private:
 	void configureTracker(const SiteConfig &cfg);
 	void configureServers(const SiteConfig &cfg);
 	void restoreInto();
+	// a tracker's backup read once, when it is made; false when the file must be left as it is
+	bool restoreFrom(Tracker &t, const std::string &file);
+	// the catalogue every tracker judges against: managed mode's shared one, else the places folder read once
+	std::shared_ptr<PlaceCatalogue> catalogueFor(const SiteConfig &cfg);
+	std::shared_ptr<PlaceCatalogue> places_catalogue;
+	std::string places_dir;
 	bool engineAttached();
 	// under site_mtx: the server on a port, null when none listens there
 	Services::Server *serverOn(int port);

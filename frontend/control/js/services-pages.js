@@ -37,7 +37,7 @@ const OWN_PAGES = ['overview', 'ha', 'webhooks'];
 const withMain = list => (list.some(s => s && s.main === true) ? list : [{ main: true }, ...list]);
 const listOf = v => (Array.isArray(v) ? v : []);
 
-// what a server shows in a few words, for the Overview: its stations (station_id, else its view's), and
+// what a server shows in a few words, for the Overview: its stations (its filter's ids, else its view's), and
 // whether its view limits more
 function showsText(view, choices, stationId) {
     const v = view && typeof view === 'object' ? view : {};
@@ -163,9 +163,9 @@ export function createServicesSection(pane, { select, follow, changed, stations,
             const choices = stations();
             const servers = loaded ? editor.state.list : withMain(listOf(cfg.services));
             const rows = servers.map((sv, i) => ({ ...(sv.main
-                ? { key: 'main', name: 'Main', addr: `${bind}:${port() || '–'}${sv.tls ? ' · HTTPS' : ''}`, served: servedKeys(sv, true), readers: readersOf(sv, bind), view: sv.view, ids: sv.station_id }
+                ? { key: 'main', name: 'Main', addr: `${bind}:${port() || '–'}${sv.tls ? ' · HTTPS' : ''}`, served: servedKeys(sv, true), readers: readersOf(sv, bind), view: sv.view, ids: sv.id }
                 : { key: 'srv' + i, name: serverName(sv), addr: `${sv.bind || '127.0.0.1'}:${sv.port ?? '–'}${sv.tls ? ' · HTTPS' : ''}`,
-                    served: !isActive(sv) ? [] : servedKeys(sv), readers: !isActive(sv) ? 'Switched off' : readersOf(sv, sv.bind || '127.0.0.1'), view: sv.view, ids: sv.station_id }),
+                    served: !isActive(sv) ? [] : servedKeys(sv), readers: !isActive(sv) ? 'Switched off' : readersOf(sv, sv.bind || '127.0.0.1'), view: sv.view, ids: sv.id }),
                 tryPort: loaded ? testerPort(sv) : null }));
             // what each shows says something once there are stations to choose from, or a view set in the file
             const showsCol = choices.length >= 2 || rows.some(r => (r.view && Object.keys(r.view).length) || r.ids !== undefined);

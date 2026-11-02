@@ -153,7 +153,7 @@ function renderTLS(host, data, { until, folder, touched, foldKey }) {
 // their outlines. Kinds and how lately heard are the page's own filter's. It writes `data.view`;
 // the terms it does not edit, set in the file, stay as they are. `everyShip`: the main server,
 // whose map shows every ship; `outlines`: the server sends places; `byStation`: a server, whose
-// stations are its `station_id`, which its live streams keep to as well as its view.
+// stations are those its filter names with `id`: it keeps their ships and shows their markers, pages and figures.
 const EDITED = ['stations', 'mmsi_allow', 'mmsi_deny'];
 
 const idList = (v) => (Array.isArray(v) ? v : v === undefined || v === null || v === '' ? [] : String(v).split(','))
@@ -174,7 +174,7 @@ export function renderShows(host, data, { stations = [], touched, rerender, ever
     const state = () => {
         const parts = [];
         if (!everyShip && byStation && many) {
-            const ids = idList(data.station_id ?? f.stations);
+            const ids = idList(data.id ?? f.stations);
             if (ids.length) parts.push(ids.map(k => stations.find(st => String(st.key) === String(k))?.label || 'station ' + k).join(', '));
         }
         const allow = idList(f.mmsi_allow).length, deny = idList(f.mmsi_deny).length;
@@ -188,12 +188,12 @@ export function renderShows(host, data, { stations = [], touched, rerender, ever
         done();
         return;
     }
-    // the stations chosen: a server's station_id (its view's stations from before), a webhook's view
-    const chosenIds = () => byStation ? idList(data.station_id ?? f.stations) : idList(f.stations);
+    // the stations chosen: a server's filter (the stations it keeps and shows), a webhook's view
+    const chosenIds = () => byStation ? idList(data.id ?? f.stations) : idList(f.stations);
     const choose = (list) => {
         if (byStation) {
             delete f.stations;
-            if (list.length) data.station_id = list.map(Number); else delete data.station_id;
+            if (list.length) { data.filter = true; data.id = list.map(Number); } else { delete data.id; delete data.filter; }
         } else if (list.length) f.stations = list.map(Number);
         else delete f.stations;
         commit();

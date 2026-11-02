@@ -693,7 +693,7 @@ namespace Services
 		beginList(w);
 		std::size_t count = 0;
 		registry.forEach([&](const StationRegistry::Station &s) {
-			if (!view.allowsStation(s.id))
+			if (!spec.showsStation(s.id))
 				return;
 			w.beginObject();
 			writeStation(w, s, tracker.stationPosition(s.id), vessels[s.id]);
@@ -707,7 +707,7 @@ namespace Services
 
 	Response ApiV1::station(int id)
 	{
-		if (!view.allowsStation(id))
+		if (!spec.showsStation(id))
 			return Response::problem(404, "Not found", "No station " + std::to_string(id) + ".");
 		const StationRegistry registry = stations();
 		const StationRegistry::Station *s = registry.find(id);
@@ -738,9 +738,9 @@ namespace Services
 			tracker.ships().forEachRecent(std::time(nullptr), std::time(nullptr) - tracker.ships().timeHistory(), [&](int, const Ship &s, long) {
 				held += view.passes(s, std::time(nullptr));
 			});
-		if (station >= 0 && !view.allowsStation(station))
+		if (station >= 0 && !spec.showsStation(station))
 			return Response::problem(404, "Not found", "Station " + std::to_string(station) + " has heard nothing yet.");
-		const std::vector<int> ids = station >= 0 ? std::vector<int>(1, station) : view.stations;
+		const std::vector<int> ids = station >= 0 ? std::vector<int>(1, station) : spec.stations;
 		const std::time_t now = std::time(nullptr);
 		std::string out;
 		JSON::Writer w(out);
@@ -1576,7 +1576,7 @@ namespace Services
 	// Aircraft carry no station: a server that shows only some stations shows none
 	bool ApiV1::aircraftShown(Response &refusal)
 	{
-		if (view.stations.empty())
+		if (spec.stations.empty())
 			return true;
 		refusal = Response::problem(404, "Not found", "Aircraft are not kept by station, and this server shows only some stations.");
 		return false;

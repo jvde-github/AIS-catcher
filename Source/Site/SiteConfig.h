@@ -86,10 +86,12 @@ struct TrackerSpec
 	std::vector<std::string> zones;
 	uint64_t groups_in = GROUPS_ALL;
 	TrackingConfig tracking;
+	// the file its ships are kept in between runs; none when empty
+	std::string backup_file;
 
 	bool operator==(const TrackerSpec &o) const
 	{
-		return own == o.own && filter == o.filter && zones == o.zones && groups_in == o.groups_in && tracking == o.tracking;
+		return own == o.own && filter == o.filter && zones == o.zones && groups_in == o.groups_in && tracking == o.tracking && backup_file == o.backup_file;
 	}
 	bool operator!=(const TrackerSpec &o) const { return !(*this == o); }
 };
@@ -106,6 +108,9 @@ struct ServerSpec
 	bool ui = true, api = false, mcp = false, system = false, geojson = false, metrics = false, kml = false;
 	TrackerSpec tracking;
 	ViewFilter view;
+	// the stations it shows: their markers, pages and figures; all when empty
+	std::vector<int> stations;
+	bool showsStation(int id) const { return stations.empty() || std::find(stations.begin(), stations.end(), id) != stations.end(); }
 	ViewerOptions viewer;
 	// with keys, a request to the api, system or mcp service names one; a
 	// public server lets anyone read its data, never its system
@@ -134,7 +139,7 @@ struct ServerSpec
 	{
 		return port == o.port && bind == o.bind && tls_cert == o.tls_cert && tls_key == o.tls_key && ui == o.ui && api == o.api && mcp == o.mcp && system == o.system &&
 			   geojson == o.geojson && metrics == o.metrics && kml == o.kml && tracking == o.tracking && view == o.view &&
-			   viewer == o.viewer && keys == o.keys && open == o.open && limit == o.limit && main == o.main;
+			   stations == o.stations && viewer == o.viewer && keys == o.keys && open == o.open && limit == o.limit && main == o.main;
 	}
 	bool operator!=(const ServerSpec &o) const { return !(*this == o); }
 };

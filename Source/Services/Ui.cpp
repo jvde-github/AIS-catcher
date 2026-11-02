@@ -231,7 +231,7 @@ namespace Services
 		const StationRegistry registry = stations();
 		int only = -1, count = 0;
 		registry.forEach([&](const StationRegistry::Station &s) {
-			if (!view.allowsStation(s.id))
+			if (!spec.showsStation(s.id))
 				return;
 			only = s.id;
 			count++;
@@ -249,7 +249,7 @@ namespace Services
 
 	std::vector<int> Ui::figuresOf(const std::vector<int> &focus) const
 	{
-		return focus.empty() ? view.stations : focus;
+		return focus.empty() ? spec.stations : focus;
 	}
 
 	// the stations the page looks through, among the server's; none for all of them
@@ -265,7 +265,7 @@ namespace Services
 		for (const auto &p : parts)
 		{
 			const int id = (int)toInt(p, -1);
-			if (id >= 0 && view.allowsStation(id) && registry.find(id) && std::find(ids.begin(), ids.end(), id) == ids.end())
+			if (id >= 0 && spec.showsStation(id) && registry.find(id) && std::find(ids.begin(), ids.end(), id) == ids.end())
 				ids.push_back(id);
 		}
 		return ids;
@@ -320,7 +320,7 @@ namespace Services
 			response = Response::json(UiFormat::shipsTable(db, since(), keep));
 		else if (p == "/api/planes_array.json")
 			// aircraft are not kept by station: a server of some stations has none
-			response = Response::json(view.stations.empty() ? UiFormat::planesCompact(tracker.planes(), since()) : noPlanes("values"));
+			response = Response::json(spec.stations.empty() ? UiFormat::planesCompact(tracker.planes(), since()) : noPlanes("values"));
 		else if (p == "/api/ship.json" || p == "/api/vessel")
 		{
 			const int mmsi = toMMSI(p == "/api/vessel" ? bare(request.query) : request.param("mmsi"));
@@ -356,15 +356,15 @@ namespace Services
 		{
 			// the stations the server shows, and the broadcasts of the vessels it shows
 			std::function<bool(int)> shown;
-			if (!view.stations.empty())
-				shown = [this](int id) { return view.allowsStation(id); };
+			if (!spec.stations.empty())
+				shown = [this](int id) { return spec.showsStation(id); };
 			response = Response::json(UiFormat::mapObjects(db, (uint64_t)toInt(request.param("since")), true, shown, keep));
 		}
 		else if (p == "/api/object.json")
 		{
 			const std::string key = request.param("key");
 			const bool station = !key.empty() && key[0] == 's';
-			response = Response::json(station && !view.allowsStation(std::atoi(key.c_str() + 1)) ? std::string("{}") : UiFormat::object(db, key, keep));
+			response = Response::json(station && !spec.showsStation(std::atoi(key.c_str() + 1)) ? std::string("{}") : UiFormat::object(db, key, keep));
 		}
 		else if (p == "/api/binmsgs.json")
 		{
@@ -435,7 +435,7 @@ namespace Services
 			response = Response::json(out);
 		}
 		else if (p == "/api/planes.json")
-			response = Response::json(view.stations.empty() ? UiFormat::planes(tracker.planes()) : noPlanes("planes"));
+			response = Response::json(spec.stations.empty() ? UiFormat::planes(tracker.planes()) : noPlanes("planes"));
 		else if (p == "/api/places.json")
 			response = Response::json(tracker.placesCollection());
 		else if (p == "/api/ships_port.json")
@@ -605,7 +605,7 @@ namespace Services
 		std::string only;
 		int count = 0;
 		stations().forEach([&](const StationRegistry::Station &s) {
-			if (!view.allowsStation(s.id))
+			if (!spec.showsStation(s.id))
 				return;
 			only = s.name;
 			count++;
@@ -621,7 +621,7 @@ namespace Services
 		bool sharing = false;
 		for (const auto &s : stations().ordered())
 		{
-			if (!view.allowsStation(s.id))
+			if (!spec.showsStation(s.id))
 				continue;
 			picker.push_back(s);
 			sharing |= s.share_loc;

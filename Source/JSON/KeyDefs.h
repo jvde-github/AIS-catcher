@@ -325,7 +325,8 @@ X(KEY_SETTING_STATS_ON_CLOSE, "", "", "", "", "stats_on_close", "", "", "",
   nullptr)
 X(KEY_SETTING_STATION_LINK, "", "", "", "", "station_link", "", "", "", nullptr)
 X(KEY_SETTING_STAMP, "", "", "", "", "stamp", "", "", "", nullptr)
-X(KEY_SETTING_STATION_ID, "", "", "", "", "station_id", "", "", "", nullptr)
+X(KEY_SETTING_STATION_ID, "", "", "", "", "station_id", "", "",
+  "The station number a decoder stamps on its messages, and a database output writes on every row. A server shows the stations its filter names with id.", nullptr)
 X(KEY_SETTING_STATIONID, "", "", "", "", "stationid", "", "", "", nullptr)
 X(KEY_SETTING_STATE, "", "", "", "", "state", "", "",
   "Keep a latest-known row per MMSI in the database", nullptr)
