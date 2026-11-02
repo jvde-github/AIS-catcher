@@ -64,7 +64,7 @@ namespace Services
 				Error() << "Server: port " << spec.port << " keeps how it serves: " << error;
 		}
 		spec_ = spec;
-		budgets.clear();
+		allowances.clear();
 		build();
 	}
 
@@ -195,27 +195,39 @@ namespace Services
 		return true;
 	}
 
-	// a key's minute, with what is left in `rate` for the headers: the first request over it
-	// gets a 429 that says when, the rest until the minute is out get no answer at all
-	bool Server::charge(int scope, const ApiKey *key, Services::Response &response, std::string &rate)
+	// a public server's hour of data calls from one address, what is left of it in `rate`: over it one 429 that says when, then no answer until the hour turns
+	bool Server::allow(const Service &service, const Services::Request &request, Services::Response &response, std::string &rate)
 	{
-		if (!scope || !key || !key->limit)
+		if (!spec_.open || request.owner || !service.metered(request))
 			return true;
-		if (budgets.size() != spec_.keys.size())
-			budgets.assign(spec_.keys.size(), Budget());
-		Budget &b = budgets[key - spec_.keys.data()];
 		const std::time_t now = std::time(nullptr);
-		const int used = b.take(now);
-		if (used <= key->limit)
+		if (allowances.size() > 10000)
 		{
-			rate = "X-RateLimit-Limit: " + std::to_string(key->limit) + "\r\nX-RateLimit-Remaining: " + std::to_string(key->limit - used);
+			for (auto it = allowances.begin(); it != allowances.end();)
+			{
+				if (now - it->second.window >= 3600)
+					it = allowances.erase(it);
+				else
+					++it;
+			}
+		}
+		Allowance &a = allowances[request.peer];
+		if (now - a.window >= 3600)
+		{
+			a.window = now;
+			a.used = 0;
+		}
+		const int used = ++a.used, limit = IO::Limits::PUBLIC_CALLS_AN_HOUR;
+		if (used <= limit)
+		{
+			rate = "X-RateLimit-Limit: " + std::to_string(limit) + "\r\nX-RateLimit-Remaining: " + std::to_string(limit - used);
 			return true;
 		}
-		if (used == key->limit + 1)
+		const int wait = (int)(3600 - (now - a.window));
+		if (used == limit + 1)
 		{
-			const int wait = b.wait(now);
-			Warning() << "Server: key \"" << key->name << "\" is over its " << key->limit << " requests a minute: a 429, then nothing for " << wait << " s";
-			response = Services::Response::problem(429, "Too Many Requests", "The key \"" + key->name + "\" has made its " + std::to_string(key->limit) + " requests this minute: try again in " + std::to_string(wait) + " s. Until then, further requests are not answered.");
+			Warning() << "Server: port " << spec_.port << ": " << request.peer << " made its " << limit << " data calls this hour: a 429, then nothing for " << wait << " s";
+			response = Services::Response::problem(429, "Too Many Requests", "This address has made its " + std::to_string(limit) + " data calls this hour: try again in " + std::to_string(wait) + " s. Until then, further calls are not answered.");
 			response.header = "Retry-After: " + std::to_string(wait);
 			return false;
 		}
@@ -259,24 +271,6 @@ namespace Services
 		Response(c, "text/plain", std::string("Not found."), IO::Reply(404));
 	}
 
-	// the server's minute, everyone together: over it a 503 that says when, and the connection closes
-	bool Server::chargeServer(const Service &service, const Services::Request &request, Services::Response &response)
-	{
-		if (!spec_.limit || !service.metered(request))
-			return true;
-		const std::time_t now = std::time(nullptr);
-		if (server_budget.take(now) <= spec_.limit)
-			return true;
-		const int wait = server_budget.wait(now);
-		std::string tail;
-		if (budget_log.due(now, tail))
-			Warning() << "Server: port " << spec_.port << " is over its " << spec_.limit << " requests a minute: 503 for " << wait << " s";
-		response = Services::Response::problem(503, "Service Unavailable", "This server has answered its " + std::to_string(spec_.limit) + " requests this minute: try again in " + std::to_string(wait) + " s.");
-		response.header = "Retry-After: " + std::to_string(wait);
-		response.after = Services::Response::CLOSE;
-		return false;
-	}
-
 	void Server::Request(IO::TCPServerConnection &c, const IO::HTTPRequest &r, bool accept_gzip)
 	{
 		if (extra && extra(*this, c, r, accept_gzip))
@@ -300,7 +294,7 @@ namespace Services
 				const int scope = s->scope(request);
 				if (scope == Service::NOT_MINE)
 					continue;
-				if (!chargeServer(*s, request, response) || !admit(scope, request, key, response) || !charge(scope, key, response, rate) || s->handle(request, response))
+				if (!admit(scope, request, key, response) || !allow(*s, request, response, rate) || s->handle(request, response))
 				{
 					handled = true;
 					break;

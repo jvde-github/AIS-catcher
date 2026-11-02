@@ -1399,7 +1399,6 @@ bool DB::Load(std::ifstream &file)
 	}
 
 	full_refresh_at = time(nullptr);
-	Info() << "DB: Restored " << ship_count << " ships from backup";
 	return true;
 }
 

@@ -574,31 +574,30 @@ static std::string backupProblem(const std::string &file)
 bool Site::restoreFrom(Tracker &t, const std::string &file)
 {
 	Tracker::Restored r = t.restore(file);
-	// A backup of an earlier version is copied once, beside it, for that version
-	// to be given back; then it is imported, and written over in this version's
-	// format from the next backup on. Without the copy it is left as it is.
+	// an earlier version's backup is copied beside it once, then imported and written in this version's format
+	bool imported = false;
 	if (r == Tracker::FOREIGN)
 	{
-		const std::string kept = file + ".before-upgrade";
-		if (!keepCopy(file, kept))
+		if (!keepCopy(file, file + ".before-upgrade"))
 		{
-			Error() << "Tracker: " << file << " is a backup of an earlier version and could not be copied to " << kept
-					<< "; it is left as it is and nothing is backed up until it can be";
+			Error() << "Tracker: " << file << " is of an earlier version and could not be copied beside it: left as it is, not backed up";
 			return false;
 		}
-		if (t.importViewerBackup(file))
+		imported = t.importViewerBackup(file);
+		if (!imported)
 		{
-			Info() << "Tracker: copied the backup of an earlier version to " << kept << ", which is not written again, and imported its statistics and ships";
-			r = Tracker::RESTORED;
+			Error() << "Tracker: cannot import the earlier version's backup " << file;
+			return true;
 		}
+		r = Tracker::RESTORED;
 	}
 	if (r == Tracker::RESTORED)
-		Info() << "Tracker: restored from " << file;
+		Info() << "Tracker: " << t.ships().getCount() << " ships " << (imported ? "imported from " : "restored from ") << file << (imported ? ", of an earlier version, kept as .before-upgrade" : "");
 	else
 	{
 		const std::string problem = backupProblem(file);
 		if (problem.empty())
-			Info() << "Tracker: no backup restored from " << file;
+			Info() << "Tracker: no backup yet at " << file;
 		else
 			Error() << "Tracker: cannot read the backup " << file << ": " << problem;
 	}
@@ -663,7 +662,10 @@ std::unique_ptr<Site::Own> Site::makeOwn(const ServerSpec &spec, const SiteConfi
 	o->backup_file = spec.tracking.backup_file;
 	if (!o->backup_file.empty() && !restoreFrom(*o->tracker, o->backup_file))
 		o->backup_file.clear();
-	Info() << "Server on port " << spec.port << ": ships of its own" << (filter.isOn() ? ", " + filter.Get() : std::string()) << (o->backup_file.empty() ? std::string() : ", kept in " + o->backup_file);
+	std::string of;
+	for (int id : spec.stations)
+		of += (of.empty() ? std::string(spec.stations.size() > 1 ? ", stations " : ", station ") : ", ") + std::to_string(id);
+	Info() << "Server on port " << spec.port << ": own ships" << of << (o->backup_file.empty() ? std::string() : ", kept in " + o->backup_file);
 	o->tracker->setStations(stationsSnapshot());
 	return o;
 }

@@ -69,10 +69,8 @@ struct ApiKey
 	};
 	std::string name, sha256; // lower-case hex
 	int scopes = DATA;
-	// requests a minute, 0 for no limit
-	int limit = 0;
 
-	bool operator==(const ApiKey &o) const { return name == o.name && sha256 == o.sha256 && scopes == o.scopes && limit == o.limit; }
+	bool operator==(const ApiKey &o) const { return name == o.name && sha256 == o.sha256 && scopes == o.scopes; }
 };
 
 // A tracker of a server's own, behind a filter on the message stream: which
@@ -116,8 +114,6 @@ struct ServerSpec
 	// public server lets anyone read its data, never its system
 	std::vector<ApiKey> keys;
 	bool open = false;
-	// requests a minute for the whole server, everyone together; 0 for no limit
-	int limit = 0;
 	// managed mode's server beside the control panel: its port and address are the panel's
 	bool main = false;
 
@@ -139,7 +135,7 @@ struct ServerSpec
 	{
 		return port == o.port && bind == o.bind && tls_cert == o.tls_cert && tls_key == o.tls_key && ui == o.ui && api == o.api && mcp == o.mcp && system == o.system &&
 			   geojson == o.geojson && metrics == o.metrics && kml == o.kml && tracking == o.tracking && view == o.view &&
-			   stations == o.stations && viewer == o.viewer && keys == o.keys && open == o.open && limit == o.limit && main == o.main;
+			   stations == o.stations && viewer == o.viewer && keys == o.keys && open == o.open && main == o.main;
 	}
 	bool operator!=(const ServerSpec &o) const { return !(*this == o); }
 };

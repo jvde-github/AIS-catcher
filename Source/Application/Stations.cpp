@@ -118,7 +118,7 @@ namespace Stations
 			const Receiver &r = *receivers[k];
 			const StationRegistry::Station *s = stations.find(r.getStation());
 			Info() << "Receiver " << k + 1 << " (" << receiverLabel(receivers, k) << "): station "
-				   << r.getStation() << " \"" << (s ? s->name : std::string()) << "\"" << (r.hasPosition() ? "" : ", no position");
+				   << r.getStation() << (s && !s->name.empty() ? " \"" + s->name + "\"" : std::string()) << (r.hasPosition() ? "" : ", no position");
 		}
 	}
 

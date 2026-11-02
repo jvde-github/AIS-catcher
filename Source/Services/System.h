@@ -40,8 +40,6 @@ namespace Services
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
-		// health and the owner's own pages answer past the server's minute
-		bool metered(const Request &) const override { return false; }
 
 	private:
 		Tracker &tracker;

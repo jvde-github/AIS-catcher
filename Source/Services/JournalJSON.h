@@ -80,10 +80,10 @@ namespace Services
 	// chunk at a time until the page is full, and an event passed over still
 	// moves the cursor.
 	inline Response pageEvents(const Request &request, const Journal &journal, const std::string &path,
-							   const std::function<bool(const Journal::Entry &)> &keep)
+							   const std::function<bool(const Journal::Entry &)> &keep, long long page_max = LIST_MAX)
 	{
 		long long limit = 0;
-		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
+		if (!request.integer("limit", limit, std::min<long long>(100, page_max), 1, page_max))
 			return badLimit();
 		const uint64_t epoch = journal.epoch();
 		const std::string from = request.param("cursor");

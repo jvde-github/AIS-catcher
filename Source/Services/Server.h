@@ -20,6 +20,7 @@
 
 #include <ctime>
 #include <functional>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -83,28 +84,13 @@ namespace Services
 		const ApiKey *keyOf(const std::string &authorization) const;
 		bool admit(int scope, const Services::Request &request, const ApiKey *key, Services::Response &response) const;
 
-		// what each key with a limit has used of its minute, in the order of spec_.keys
-		struct Budget
+		// what each address has used of its hour on a public server
+		struct Allowance
 		{
 			std::time_t window = 0;
 			int used = 0;
-			// one more request in the minute `now` falls in: how many that makes
-			int take(std::time_t now)
-			{
-				if (now - window >= 60)
-				{
-					window = now;
-					used = 0;
-				}
-				return ++used;
-			}
-			int wait(std::time_t now) const { return (int)(60 - (now - window)); }
 		};
-		std::vector<Budget> budgets;
-		bool charge(int scope, const ApiKey *key, Services::Response &response, std::string &rate);
-		// the server's own minute, everyone together
-		Budget server_budget;
-		IO::LogMinute budget_log;
-		bool chargeServer(const Service &service, const Services::Request &request, Services::Response &response);
+		std::map<std::string, Allowance> allowances;
+		bool allow(const Service &service, const Services::Request &request, Services::Response &response, std::string &rate);
 	};
 }

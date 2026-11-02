@@ -116,7 +116,7 @@ namespace
 
 	std::string keyName(int key) { return AIS::settingName(key); }
 
-	// KEYS name:scopes:sha256[:limit],... as the file's keys array; a bare hash is a data key named key
+	// KEYS name:scopes:sha256,... as the file's keys array; a bare hash is a data key named key
 	Node keysFromText(const std::string &text, const std::string &where)
 	{
 		Node keys = Node::of(Node::ARRAY);
@@ -126,8 +126,8 @@ namespace
 		{
 			std::vector<std::string> parts;
 			Util::Parse::Split(entry, ':', parts);
-			if (parts.size() != 1 && parts.size() != 3 && parts.size() != 4)
-				throw std::runtime_error(where + ": KEYS takes name:scopes:sha256[:limit] entries separated by commas, scopes data or data+system, limit requests a minute.");
+			if (parts.size() != 1 && parts.size() != 3)
+				throw std::runtime_error(where + ": KEYS takes name:scopes:sha256 entries separated by commas, scopes data or data+system.");
 			const bool named = parts.size() >= 3;
 			Node key;
 			key.add(keyName(AIS::KEY_SETTING_NAME), Node::str(named ? parts[0] : "key"));
@@ -138,12 +138,6 @@ namespace
 			for (const auto &n : names)
 				scopes.items.push_back(Node::str(n));
 			key.add(keyName(AIS::KEY_SETTING_SCOPES), std::move(scopes));
-			if (parts.size() == 4)
-			{
-				if (parts[3].empty() || parts[3].find_first_not_of("0123456789") != std::string::npos || parts[3].size() > 7 || parts[3] == "0")
-					throw std::runtime_error(where + ": KEYS limit is the requests a minute, a whole number above 0: " + parts[3]);
-				key.add(keyName(AIS::KEY_SETTING_LIMIT), Node::integer(std::stoi(parts[3])));
-			}
 			keys.items.push_back(std::move(key));
 		}
 		return keys;

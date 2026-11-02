@@ -42,7 +42,6 @@ namespace Services
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
 		std::string methods(const Request &request) const override { return request.path == "/api/decode" ? "GET, HEAD, POST" : "GET, HEAD"; }
-		bool metered(const Request &request) const override { return request.path.compare(0, 5, "/api/") == 0; }
 
 	private:
 		Tracker &tracker;

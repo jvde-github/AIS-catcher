@@ -81,7 +81,7 @@ namespace Services
 		// What a vessel is now, in full, as the viewer and a client both read it.
 		// `badge` is the binary-message badge, `aboard` a station riding it, -1 for none.
 		void writeVessel(JSON::Writer &w, const Ship &s, std::time_t now, uint16_t badge = 0, int aboard = -1,
-						 const std::function<void(JSON::Writer &)> &extra = nullptr)
+						 const std::function<void(JSON::Writer &)> &extra = nullptr, bool stations_shown = true)
 		{
 			w.beginObject().kv("mmsi", (long long)s.mmsi);
 			textOrNull(w, "name", s.shipname);
@@ -170,17 +170,21 @@ namespace Services
 			}
 			else
 				w.kv_null("binary_messages");
-			w.kv_or_null("station_aboard", aboard, aboard >= 0);
+			if (stations_shown)
+				w.kv_or_null("station_aboard", aboard, aboard >= 0);
 
 			w.kv("last_seen", isoTimeText(s.last_signal).text).kv("age_s", (long long)(now > s.last_signal ? now - s.last_signal : 0));
-			w.key("stations").beginArray();
-			for (const auto &h : s.heard)
+			if (stations_shown)
 			{
-				if (!h.last)
-					break;
-				w.beginObject().kv("id", h.station).kv("last_heard", isoTimeText((std::time_t)h.last).text).endObject();
+				w.key("stations").beginArray();
+				for (const auto &h : s.heard)
+				{
+					if (!h.last)
+						break;
+					w.beginObject().kv("id", h.station).kv("last_heard", isoTimeText((std::time_t)h.last).text).endObject();
+				}
+				w.endArray();
 			}
-			w.endArray();
 			if (extra)
 				extra(w);
 			w.endObject();
@@ -188,7 +192,7 @@ namespace Services
 
 		// a vessel as a short row, for a reader that pays for every word: what
 		// it is, where and how long ago, and only what is known of that
-		void writeVesselBrief(JSON::Writer &w, const Ship &s, std::time_t now, const std::string &bound_for, float near_nm)
+		void writeVesselBrief(JSON::Writer &w, const Ship &s, std::time_t now, const std::string &bound_for, float near_nm, bool stations_shown)
 		{
 			const auto text = [&](const char *key, const char *v) {
 				if (std::string(v).find_first_not_of(' ') != std::string::npos)
@@ -211,6 +215,8 @@ namespace Services
 				w.kv("speed_kn", s.speed);
 			if (s.cog != COG_UNDEFINED)
 				w.kv("course_deg", s.cog);
+			if (s.heading != HEADING_UNDEFINED)
+				w.kv("heading_deg", s.heading);
 			if (s.status >= 0 && s.status < N_NAV_STATUSES)
 				w.kv("nav_status", NAV_STATUSES[s.status]);
 			if (s.to_bow != DIMENSION_UNDEFINED && s.to_stern != DIMENSION_UNDEFINED)
@@ -218,7 +224,9 @@ namespace Services
 			text("destination", s.destination);
 			if (!bound_for.empty())
 				w.kv("bound_for", bound_for);
-			w.kv("age_s", (long long)(now > s.last_signal ? now - s.last_signal : 0)).endObject();
+			if (stations_shown && s.heard[0].last)
+				w.kv("station_id", (long long)s.heard[0].station);
+			w.kv("last_seen", isoTimeText(s.last_signal).text).kv("age_s", (long long)(now > s.last_signal ? now - s.last_signal : 0)).endObject();
 		}
 
 		// what a port code is called, as the place catalogue or the port list knows it
@@ -1076,11 +1084,18 @@ namespace Services
 	Response ApiV1::vessels(const Request &request)
 	{
 		long long limit = 0;
-		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
+		if (!pageSize(request, limit))
 			return badLimit();
 		bool brief = false;
 		if (!viewBrief(request, brief))
 			return badView();
+		// a public server answers short rows without the station
+		if (spec.open)
+		{
+			if (!brief && !request.param("view").empty())
+				return Response::problem(403, "Forbidden", "This server is public: the list is short rows, and one vessel in full is /api/v1/vessels/{mmsi}.");
+			brief = true;
+		}
 		VesselQuery query;
 		std::string carried = "&limit=" + std::to_string(limit);
 		for (const auto &p : request.params())
@@ -1156,7 +1171,7 @@ namespace Services
 				return;
 			auto r = aboard.find(s->mmsi);
 			if (brief)
-				writeVesselBrief(w, *s, now, portName(index.get(), db.matchedPortHeld(s->mmsi)), query.circle ? query.fromNear(*s) : -1);
+				writeVesselBrief(w, *s, now, portName(index.get(), db.matchedPortHeld(s->mmsi)), query.circle ? query.fromNear(*s) : -1, !spec.open);
 			else
 				writeVessel(w, *s, now, db.binaryBadgeHeld(s->mmsi, now), r == aboard.end() ? -1 : r->second);
 			count++;
@@ -1165,7 +1180,7 @@ namespace Services
 		beginMeta(w, count, next);
 		w.kv("more", left);
 		if (brief)
-			w.kv("note", std::string("Short rows, ") + (query.nearest ? "nearest" : "newest") + " first. " + (more ? std::to_string(left) + " more: pass next as cursor, or narrow the search. " : "") + (count == 0 && query.circle ? "None in this radius: widen radius_nm, up to 1000. " : "") + "Every field: view=full, or ask for the one vessel.");
+			w.kv("note", std::string("Short rows, ") + (query.nearest ? "nearest" : "newest") + " first. " + (more ? std::to_string(left) + " more: pass next as cursor, or narrow the search. " : "") + (count == 0 && query.circle ? "None in this radius: widen radius_nm, up to 1000. " : "") + (spec.open ? "One vessel in full: /api/v1/vessels/{mmsi}." : "Every field: view=full, or ask for the one vessel."));
 		// a second of overlap, as messages share a second
 		w.kv("poll", "/api/v1/vessels?cursor=" + cursor("v", {(long long)start - 1}) + carried)
 			.kv("full", full).kv("time", isoTime(now)).kv("expire_s", db.timeHistory()).endObject().endObject();
@@ -1241,7 +1256,8 @@ namespace Services
 				return;
 			auto r = aboard.find(s.mmsi);
 			JSON::Writer w(out);
-			writeVessel(w, s, now, db.binaryBadgeHeld(s.mmsi, now), r == aboard.end() ? -1 : r->second, extra);
+			// a public server keeps the stations that heard it home
+			writeVessel(w, s, now, db.binaryBadgeHeld(s.mmsi, now), !spec.open && r != aboard.end() ? r->second : -1, extra, !spec.open);
 			w.finish();
 			found = true;
 		});
@@ -1364,7 +1380,7 @@ namespace Services
 	Response ApiV1::places(const Request &request)
 	{
 		long long limit = 0;
-		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
+		if (!pageSize(request, limit))
 			return badLimit();
 		const std::string type = request.param("type");
 		PlaceKind kind = PlaceKind::Port;
@@ -1475,7 +1491,7 @@ namespace Services
 	Response ApiV1::placeVessels(const std::string &uuid, const Request &request)
 	{
 		long long limit = 0;
-		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
+		if (!pageSize(request, limit))
 			return badLimit();
 		std::vector<long long> c;
 		const std::string from = request.param("cursor");
@@ -1521,7 +1537,7 @@ namespace Services
 		long long hours = 0, limit = 0;
 		if (!request.integer("hours", hours, 24, 1, 30 * 24))
 			return Response::problem(400, "Bad request", "hours must be between 1 and 720.");
-		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
+		if (!pageSize(request, limit))
 			return badLimit();
 		std::vector<long long> c;
 		const std::string from = request.param("cursor");
@@ -1589,7 +1605,7 @@ namespace Services
 		if (!aircraftShown(refusal))
 			return refusal;
 		long long limit = 0;
-		if (!request.integer("limit", limit, 100, 1, LIST_MAX))
+		if (!pageSize(request, limit))
 			return badLimit();
 		const std::time_t now = std::time(nullptr);
 		std::time_t start = now, floor = 0;
@@ -1677,6 +1693,6 @@ namespace Services
 		// only when the server shows the ship
 		return pageEvents(request, tracker.journal(), "/api/v1/events", [this](const Journal::Entry &e) {
 			return e.event.kind != Tracking::Kind::SYSTEM && shows(e.event.from);
-		});
+		}, pageMax());
 	}
 }

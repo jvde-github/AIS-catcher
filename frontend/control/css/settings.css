@@ -494,9 +494,6 @@ a.st-node__name:hover {text-decoration:underline}
 .st-key__reveal code {font:13px var(--font-mono);color:var(--color-text-strong);word-break:break-all;user-select:all}
 .st-key__new {display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .st .st-key__new > .st-input {flex:1 1 220px;min-width:0;height:34px}
-.st .st-key__new > .st-key__limit {flex:0 1 170px}
-.st-svcs__limit-row {display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--color-text)}
-.st .st-svcs__limit {width:120px;height:34px}
 .st-key__scope {display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--color-text)}
 .st .st-keys__add {width:100%;height:38px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px dashed var(--color-field-border);border-radius:9px;background:transparent;color:var(--color-accent);font-size:13.5px;font-weight:600}
 .st .st-keys__add:hover {background:var(--color-accent-tint)}

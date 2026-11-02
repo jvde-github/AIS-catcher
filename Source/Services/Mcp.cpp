@@ -41,7 +41,7 @@ namespace Services
 		const std::vector<Tool> &tools()
 		{
 			// a model pays for every word: lists and figures start short and say how to get more
-			const std::vector<std::pair<std::string, std::string>> PAGE = {{"limit", "30"}}, SHORT = {{"limit", "30"}, {"view", "brief"}}, NEAREST = {{"limit", "30"}, {"view", "brief"}, {"sort", "distance"}}, FIGURES = {{"view", "brief"}};
+			const std::vector<std::pair<std::string, std::string>> PAGE = {{"limit", "30"}}, SHORT = {{"limit", "25"}, {"view", "brief"}}, NEAREST = {{"limit", "25"}, {"view", "brief"}, {"sort", "distance"}}, FIGURES = {{"view", "brief"}};
 			static const std::vector<Tool> all = {
 				{"search_vessels", "Search vessels", "Find vessels heard lately by name, call sign, MMSI or IMO number.", "/api/v1/vessels", {"q", "limit", "cursor", "view"}, SHORT},
 				{"vessels_in_area", "Vessels in an area", "The vessels heard lately inside a box.", "/api/v1/vessels", {"bbox", "class", "limit", "cursor", "view"}, SHORT},

@@ -296,7 +296,6 @@ namespace
 					}
 					break;
 				}
-				case AIS::KEY_SETTING_LIMIT: k.limit = Util::Parse::Integer(m.Get().to_string(), 0, 1000000); break;
 				default:
 					throw ConfigError("field \"" + AIS::settingName(m.Key()) + "\" is not allowed in a key.");
 				}
@@ -403,7 +402,6 @@ namespace
 		case AIS::KEY_SETTING_PROME:
 		case AIS::KEY_SETTING_METRICS: spec.metrics = Util::Parse::Switch(value); return true;
 		case AIS::KEY_SETTING_PUBLIC: spec.open = Util::Parse::Switch(value); return true;
-		case AIS::KEY_SETTING_LIMIT: spec.limit = Util::Parse::Integer(value, 0, 10000000); return true;
 		case AIS::KEY_SETTING_PLACE_GEOMETRY:
 			throw ConfigError("\"place_geometry\" is a term of the server's \"view\".");
 		case AIS::KEY_SETTING_MAIN: spec.main = Util::Parse::Switch(value); return true;
