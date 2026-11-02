@@ -195,10 +195,9 @@ namespace Services
 		return true;
 	}
 
-	// a public server's hour of data calls from one address, what is left of it in `rate`: over it one 429 that says when, then no answer until the hour turns
 	bool Server::allow(const Service &service, const Services::Request &request, Services::Response &response, std::string &rate)
 	{
-		if (!spec_.open || request.owner || !service.metered(request))
+		if (!spec_.limited || !service.metered(request))
 			return true;
 		const std::time_t now = std::time(nullptr);
 		if (allowances.size() > 10000)

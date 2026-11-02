@@ -84,7 +84,6 @@ namespace Services
 		const ApiKey *keyOf(const std::string &authorization) const;
 		bool admit(int scope, const Services::Request &request, const ApiKey *key, Services::Response &response) const;
 
-		// what each address has used of its hour on a public server
 		struct Allowance
 		{
 			std::time_t window = 0;

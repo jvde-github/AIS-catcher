@@ -44,7 +44,6 @@ namespace IO
 		const int STREAM_PING_S = 20;
 		// a silent peer is probed after this idle time, this often, this many times, then cut
 		const int KEEPALIVE_IDLE_S = 60, KEEPALIVE_INTERVAL_S = 20, KEEPALIVE_COUNT = 3;
-		// data calls an hour one address may make of a public server
 		const int PUBLIC_CALLS_AN_HOUR = 25;
 	}
 }

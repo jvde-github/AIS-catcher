@@ -307,11 +307,13 @@ export function renderServing(host, data, { builtIn = false, bind, touched, rere
             : net ? 'Anyone who can reach this server reads what it serves.'
                   : 'This machine only: anyone on it reads what this server serves.' }));
         if (mode === 'keys') box.append(renderKeys(data, keys, { touched, rerender, system: has('system') }));
+        box.append(switchRow('', on(data.limited), v => { if (v) data.limited = true; else delete data.limited; touched(); rerender(); },
+            el('strong', '', { text: 'Limited' }), 'Short rows, 25 a page, 25 data calls an hour.'));
         const problem = accessProblem(data, bind, builtIn);
         const why = problem ? problem.slice(problem.indexOf(': ') + 2) : '';
         if (problem) box.append(el('p', 'st-warn-note', { text: why }));
         const state = (mode === 'keys' ? 'Keys · ' + (keys.map(k => k.name).filter(Boolean).join(', ') || 'none yet')
-            : net ? 'Open to anyone who reaches it' : 'Open on this machine');
+            : net ? 'Open to anyone who reaches it' : 'Open on this machine') + (on(data.limited) ? ' · limited' : '');
         host.append(fold('Access', DOCS.keys, { key: foldKey + ':access', state, warn: why }, ...kids));
     }
 }

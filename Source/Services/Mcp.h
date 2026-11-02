@@ -46,7 +46,6 @@ namespace Services
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
 		std::string methods(const Request &) const override { return "POST"; }
-		// on a public server a tool call is one of the hour's data calls; the handshake and the tool list are free
 		bool metered(const Request &request) const override { return request.body.find("\"tools/call\"") != std::string::npos; }
 
 	private:

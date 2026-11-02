@@ -157,7 +157,6 @@ namespace Services
 		virtual bool handle(const Request &request, Response &response) = 0;
 		// the methods the path takes, as an Allow header lists them
 		virtual std::string methods(const Request &) const { return "GET, HEAD"; }
-		// counts toward a public server's hourly allowance: the data API and MCP, never the map or health
 		virtual bool metered(const Request &) const { return false; }
 	};
 }

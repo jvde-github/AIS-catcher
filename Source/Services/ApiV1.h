@@ -40,10 +40,8 @@ namespace Services
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
-		// the data counts toward a public server's allowance; the index and the OpenAPI document are free
 		bool metered(const Request &r) const override { return r.path != "/api/v1" && r.path != "/api/v1/openapi.json"; }
-		// a page: 25 rows at most on a public server, where each page is one of the hour's calls
-		long long pageMax() const { return spec.open ? 25 : LIST_MAX; }
+		long long pageMax() const { return spec.limited ? 25 : LIST_MAX; }
 		bool pageSize(const Request &request, long long &limit) const { return request.integer("limit", limit, std::min<long long>(100, pageMax()), 1, pageMax()); }
 
 	private:

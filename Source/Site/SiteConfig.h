@@ -114,6 +114,7 @@ struct ServerSpec
 	// public server lets anyone read its data, never its system
 	std::vector<ApiKey> keys;
 	bool open = false;
+	bool limited = false;
 	// managed mode's server beside the control panel: its port and address are the panel's
 	bool main = false;
 
@@ -135,7 +136,7 @@ struct ServerSpec
 	{
 		return port == o.port && bind == o.bind && tls_cert == o.tls_cert && tls_key == o.tls_key && ui == o.ui && api == o.api && mcp == o.mcp && system == o.system &&
 			   geojson == o.geojson && metrics == o.metrics && kml == o.kml && tracking == o.tracking && view == o.view &&
-			   stations == o.stations && viewer == o.viewer && keys == o.keys && open == o.open && main == o.main;
+			   stations == o.stations && viewer == o.viewer && keys == o.keys && open == o.open && limited == o.limited && main == o.main;
 	}
 	bool operator!=(const ServerSpec &o) const { return !(*this == o); }
 };

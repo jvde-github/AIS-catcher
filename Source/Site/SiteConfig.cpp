@@ -402,6 +402,7 @@ namespace
 		case AIS::KEY_SETTING_PROME:
 		case AIS::KEY_SETTING_METRICS: spec.metrics = Util::Parse::Switch(value); return true;
 		case AIS::KEY_SETTING_PUBLIC: spec.open = Util::Parse::Switch(value); return true;
+		case AIS::KEY_SETTING_LIMITED: spec.limited = Util::Parse::Switch(value); return true;
 		case AIS::KEY_SETTING_PLACE_GEOMETRY:
 			throw ConfigError("\"place_geometry\" is a term of the server's \"view\".");
 		case AIS::KEY_SETTING_MAIN: spec.main = Util::Parse::Switch(value); return true;

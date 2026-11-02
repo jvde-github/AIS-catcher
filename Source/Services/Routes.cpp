@@ -105,9 +105,9 @@ namespace Services
 
 		std::vector<Route> make()
 		{
-			const Param LIMIT = query("limit", integer(1, 1000, 100), "Rows on a page: 25 at most on a public server");
+			const Param LIMIT = query("limit", integer(1, 1000, 100), "Rows on a page: 25 at most on a limited server");
 			const Param CURSOR = query("cursor", TEXT, "What meta.next or meta.poll gave; without one a listing starts");
-			const Param VIEW = query("view", oneOf({"brief", "full"}) + ",\"default\":\"full\"", "brief answers a short form with only the main fields, and says how to get the rest; a public server answers short rows and refuses full");
+			const Param VIEW = query("view", oneOf({"brief", "full"}) + ",\"default\":\"full\"", "brief answers a short form with only the main fields, and says how to get the rest; a limited server answers short rows and refuses full");
 			const Param EVENT_CURSOR = query("cursor", TEXT, "An event's id, or what meta.next or meta.poll gave: the events after it. Without one, the newest page");
 			const Param MMSI = path("mmsi", integer(0, 999999999), "The vessel's MMSI");
 			const Param UUID = path("uuid", TEXT, "The place's id, as /api/v1/places lists it");

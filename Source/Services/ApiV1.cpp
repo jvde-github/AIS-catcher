@@ -1089,11 +1089,10 @@ namespace Services
 		bool brief = false;
 		if (!viewBrief(request, brief))
 			return badView();
-		// a public server answers short rows without the station
-		if (spec.open)
+		if (spec.limited)
 		{
 			if (!brief && !request.param("view").empty())
-				return Response::problem(403, "Forbidden", "This server is public: the list is short rows, and one vessel in full is /api/v1/vessels/{mmsi}.");
+				return Response::problem(403, "Forbidden", "This server is limited: the list is short rows, and one vessel in full is /api/v1/vessels/{mmsi}.");
 			brief = true;
 		}
 		VesselQuery query;
@@ -1171,7 +1170,7 @@ namespace Services
 				return;
 			auto r = aboard.find(s->mmsi);
 			if (brief)
-				writeVesselBrief(w, *s, now, portName(index.get(), db.matchedPortHeld(s->mmsi)), query.circle ? query.fromNear(*s) : -1, !spec.open);
+				writeVesselBrief(w, *s, now, portName(index.get(), db.matchedPortHeld(s->mmsi)), query.circle ? query.fromNear(*s) : -1, !spec.limited);
 			else
 				writeVessel(w, *s, now, db.binaryBadgeHeld(s->mmsi, now), r == aboard.end() ? -1 : r->second);
 			count++;
@@ -1180,7 +1179,7 @@ namespace Services
 		beginMeta(w, count, next);
 		w.kv("more", left);
 		if (brief)
-			w.kv("note", std::string("Short rows, ") + (query.nearest ? "nearest" : "newest") + " first. " + (more ? std::to_string(left) + " more: pass next as cursor, or narrow the search. " : "") + (count == 0 && query.circle ? "None in this radius: widen radius_nm, up to 1000. " : "") + (spec.open ? "One vessel in full: /api/v1/vessels/{mmsi}." : "Every field: view=full, or ask for the one vessel."));
+			w.kv("note", std::string("Short rows, ") + (query.nearest ? "nearest" : "newest") + " first. " + (more ? std::to_string(left) + " more: pass next as cursor, or narrow the search. " : "") + (count == 0 && query.circle ? "None in this radius: widen radius_nm, up to 1000. " : "") + (spec.limited ? "One vessel in full: /api/v1/vessels/{mmsi}." : "Every field: view=full, or ask for the one vessel."));
 		// a second of overlap, as messages share a second
 		w.kv("poll", "/api/v1/vessels?cursor=" + cursor("v", {(long long)start - 1}) + carried)
 			.kv("full", full).kv("time", isoTime(now)).kv("expire_s", db.timeHistory()).endObject().endObject();
@@ -1256,8 +1255,7 @@ namespace Services
 				return;
 			auto r = aboard.find(s.mmsi);
 			JSON::Writer w(out);
-			// a public server keeps the stations that heard it home
-			writeVessel(w, s, now, db.binaryBadgeHeld(s.mmsi, now), !spec.open && r != aboard.end() ? r->second : -1, extra, !spec.open);
+			writeVessel(w, s, now, db.binaryBadgeHeld(s.mmsi, now), !spec.limited && r != aboard.end() ? r->second : -1, extra, !spec.limited);
 			w.finish();
 			found = true;
 		});
