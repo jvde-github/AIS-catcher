@@ -622,8 +622,7 @@ body.ticker-open.ticker-bottom {
 }
 
 /* Too narrow a pane to share: a card spans it edge to edge rather than leaving
-   a sliver of map beside it; a target card takes the corner too, its content
-   height only capped by the pane. */
+   a sliver of map beside it. */
 @container mappane (max-width: 500px) {
     .card-width {
         width: 100%;
@@ -845,7 +844,6 @@ body.ticker-open.ticker-bottom {
 
 @media (hover: hover) {
     .mapcard-content-row:hover { cursor: pointer; }
-    /* a row under the pointer takes a tint */
     .mapcard-target .mapcard-content-row:hover { background: var(--color-hover-overlay); }
 }
 
@@ -1257,7 +1255,6 @@ body.ticker-open.ticker-bottom {
 .settings-window > .settings-header .settings-tab:focus { outline: none; background: none; box-shadow: none; }
 .sc-host .sc-tabs .sc-tab:focus-visible,
 .settings-window > .settings-header .settings-tab:focus-visible { color: var(--color-accent); }
-/* the compact card of a cramped pane: a taller header, a larger flag */
 @media (max-height: 1250px) {
     @container mappane (max-width: 500px) {
         .card-tabs .mapcard-header {
@@ -1303,7 +1300,6 @@ body.ticker-open.ticker-bottom {
     appearance: none;
     -webkit-tap-highlight-color: transparent;
 }
-/* the fold's grab handle, under the actions; the actions take a drag too */
 .mapcard.card-tabs button.sc-drag-handle {
     display: flex;
     align-items: center;
@@ -1713,11 +1709,10 @@ body.ticker-open.ticker-bottom {
 .mapcard.card-tabs .sc-history-preview .sc-more-pill:hover { background: var(--vc-hover); }
 .mapcard.card-tabs .sc-history-preview .sc-more-pill[hidden] { display: none; }
 
-/* ---- Folded: the tabs stay (a tap opens one), with a grab handle under the actions ---- */
+/* ---- Folded: the tabs stay, a tap opens one ---- */
 /* room between the expand arrow and its label */
 .mapcard.card-tabs .sc-host.sc-folded .sc-tabs .sc-tab[data-tab="summary"] { padding-left: 16px; }
 .mapcard.card-tabs .sc-host.sc-folded .sc-tabs .sc-tab[data-tab="summary"]::before { left: 2px; }
-/* the docked card of a cramped pane: a touch tighter */
 @media (max-height: 1250px) {
     @container mappane (max-width: 500px) {
         .mapcard.card-tabs .sc-host.sc-folded .sc-metrics { padding-top: 10px; padding-bottom: 10px; }
@@ -1850,7 +1845,7 @@ body.ticker-open.ticker-bottom {
 .mapcard.mapcard-target.flush-right { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .mapcard.mapcard-target.flush-bottom { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 
-/* --- a station's activity strip (station-activity.js): a slot an hour or two, coloured by state --- */
+/* --- a station's activity strip (station-activity.js) --- */
 .station-activity-widget { container-type: inline-size; min-width: 0; width: 100%; color: var(--color-text-muted); }
 .station-activity-widget .station-activity { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 14px; }
 .station-activity-widget .station-activity.one-day { grid-template-columns: minmax(0, 1fr); }
@@ -1865,8 +1860,7 @@ body.ticker-open.ticker-bottom {
 .station-activity-widget .activity-legend i { width: 7px; height: 7px; border-radius: 1px; background: var(--color-success); }
 .station-activity-widget i.quiet { background: var(--color-warning); }
 
-/* a station whose receivers are lost: a red ring that swells and fades, slowly, over its
-   grey marker; still, for those who asked for less motion */
+/* the pulse over a station whose receivers are lost */
 .station-pulse {
     width: 20px;
     height: 20px;

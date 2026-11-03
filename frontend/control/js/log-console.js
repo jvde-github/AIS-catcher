@@ -1,6 +1,4 @@
-// The receiver's log in System › Log: the lines the event stream brings, kept in a buffer and
-// filtered by level and words. `onAlert(level)` hears of each new warning or error, once the
-// stream has replayed what came before it.
+// `onAlert(level)` hears of each new warning or error, once the stream has replayed what came before it.
 
 const LEVELS = ['debug', 'info', 'warning', 'error', 'critical'];
 const BUFFER_MAX = 500;
@@ -80,7 +78,6 @@ export function createLogConsole({ onAlert } = {}) {
             onAlert?.(m.level === 'warning' ? 'warning' : 'error');
     }
 
-    // the console's toolbar and lines, in the Log pane of a panel just built
     function mount(pane) {
         box = pane.querySelector('#log-box');
         const level = pane.querySelector('#log-level');
@@ -102,7 +99,6 @@ export function createLogConsole({ onAlert } = {}) {
     return {
         onEvent,
         mount,
-        // the stream to open: from where the last one left off
         streamUrl: () => '/api/stream' + (lastSeq >= 0 ? '?since=' + lastSeq : ''),
         // a stream opening replays the lines before it; the toasts start once those are through
         starting() { replayDone = false; },

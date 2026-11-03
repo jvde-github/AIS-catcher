@@ -1,8 +1,5 @@
-// A section of the configuration as a page's form: read, edited and saved through its editor. The
-// page's `layout(form)` draws it from the pieces here: the essentials and the Advanced settings
-// (renderSplit), the head of a page of one item, the routing line, the ⋯ menu. The options are the
-// layout's: `containerId` where it draws and what the editor is called, `schema`, `section` the
-// part of the file it holds (none: settings at the top of the file), `list` a list of rows.
+// `section`: the part of the file the form holds, none for the settings at the top of the file;
+// `list`: the section is a list of rows.
 import { el, fromHtml, highlightJson, isActive, moreMenu } from './dom.js';
 import { icon } from './icons.js';
 import { hub } from './hub.js';
@@ -23,7 +20,7 @@ export class ConfigForm {
         if (!this.container) return;
 
         this.editor = registerEditor(config.containerId, { save: () => this.save(), data: () => this.data });
-        // settles once the data is drawn, or the page says it could not be read
+        // settles, never rejects: once the data is drawn or the failure shown
         this.ready = this.load();
     }
 
@@ -64,7 +61,7 @@ export class ConfigForm {
             });
     }
 
-    // the page's layout draws it; the JSON view goes under what it returns, or under the whole form
+    // the JSON view goes under what the layout returns, or under the whole form
     render() {
         // the JSON pane may sit inside the container: take it out before clearing, so it keeps its
         // open state and content
@@ -87,16 +84,13 @@ export class ConfigForm {
         const v = this.fieldValue(item, f);
         return v !== undefined && norm(v) !== norm(f.defaultValue);
     }
-    // The essentials up front (`flat`: a plain section under its title, no card around them),
-    // then `lead` (the blocks the page puts before the rest), then the other settings in titled
-    // sections: in an Advanced fold, or open when the page has seven settings or fewer, as a
-    // fold would hide half of very little.
+    // `flat`: the essentials as a plain section under its title, without a card; `lead`: the blocks
+    // the page puts before the other settings.
     renderSplit(item, index, { essentials = new Set(), exclude = new Set(), key = 'main', onZones = null, flat = null, lead = [] } = {}) {
         const panel = el('div', 'st-panel');
         const card = el('div', flat ? 'st-flat__fields st-fieldset' : 'st-card st-fieldset');
         const rows = el('div', 'st-adv__body st-secs');
-        // a field's section is the schema's, else what the host says (the receiver's fields have
-        // none), else Zones or Other
+        // the receiver's fields have no section of their own: the host's groupOf gives it
         const sections = new Map();
         const sectionFor = field => {
             const name = field.section || this.config.groupOf?.(field) || 'Other';
@@ -110,7 +104,6 @@ export class ConfigForm {
         };
         const fields = this.fields.filter(f => !exclude.has(f.name) && f.name !== 'active');
         const folded = fields.filter(f => !essentials.has(f.name));
-        // how many settings apply to the item as it is; a choice that changes it draws the page again
         const applying = list => list.filter(f => this.applies(f, item)).length;
         const isFlat = () => applying(fields) + lead.length <= 7;
         const flatAll = isFlat();
@@ -155,7 +148,6 @@ export class ConfigForm {
                 if (node._reset) node._reset.hidden = !ch;
             }
         };
-        // a choice that empties another field (a new kind of device, its serial) empties its control too
         const update = (fld, val) => {
             this.updateValue(index, fld, val);
             (fld.clears || []).forEach(name => {
@@ -200,16 +192,13 @@ export class ConfigForm {
         return { node: panel, refresh };
     }
 
-    // the name, a field under the title: the title shows it, or the device's own name until one is given
     nameField(item, field, index, fallback, title) {
         const input = el('input', 'st-input', { type: 'text', value: item.description || '', placeholder: fallback(), spellcheck: 'false', autocomplete: 'off',
             onInput: e => { this.updateValue(index, field, e.target.value); title.textContent = e.target.value.trim() || fallback(); } });
         return el('div', 'st-stations__row st-name', {}, el('label', 'st-field st-stations__field st-stations__grow', {}, el('span', 'st-label', {}, 'Name'), input));
     }
 
-    // The head of a page of one item: its name as the title, the routing line (`dir`) where the
-    // host counts routes, the docs, the Active switch and the ⋯ menu; under it the field that
-    // names it. `fallback` is the title while no name is given.
+    // `dir`: the routing line, where the host counts routes; `fallback`: the title while no name is given
     focusHead(item, index, { title: text, fallback, dir }) {
         const activeField = this.fields.find(f => f.name === 'active');
         const descField = this.fields.find(f => f.name === 'description');
@@ -265,7 +254,7 @@ export class ConfigForm {
         return moreMenu(`More actions for ${name}`, [['Duplicate', () => this.duplicateItem(index)], ['Delete…', () => this.removeItem(index), true]]);
     }
 
-    // whether a row is switched on, where its kind can be
+    // a kind without an Active switch is always on
     isActive(item) {
         return !this.fields.some(x => x.name === 'active') || isActive(item);
     }
@@ -326,7 +315,7 @@ export class ConfigForm {
         const target = this.config.list ? this.data[index] : this.data;
         if (field.jsonpath) setNested(target, field.jsonpath, value);
         else target[field.name] = value;
-        // a kind of device chosen: its settings start at their defaults, as a new row's other settings do
+        // a new kind of device: its settings start at their defaults, as a new row's do
         if (this.fields.some(f => f.dependsOn && f.dependsOn.field === field.name))
             this.fields.forEach(f => {
                 if (f.defaultValue === undefined || this.fieldValue(target, f) !== undefined || !this.applies(f, target)) return;
@@ -389,7 +378,7 @@ export class ConfigForm {
         return Array.isArray(dep.value) ? dep.value.some(x => String(x).toLowerCase() === v) : String(dep.value).toLowerCase() === v;
     }
 
-    // a row as it is saved: the settings of another kind of device leave with it, and a block they leave empty
+    // the settings of another kind of device are dropped on save, and a block they leave empty
     pruneFor(item) {
         const out = JSON.parse(JSON.stringify(item));
         this.fields.forEach(f => {
@@ -440,14 +429,13 @@ export class ConfigForm {
             App.notify('error', problem);
             return;
         }
-        // the rows saved are rows like any other
+        // once saved, new rows are no longer fresh
         this.freshItems = new WeakSet();
         if (!await this.editor.write(cfg => this.applyDataTo(cfg, { forSave: true }), 'the configuration')) return;
         App.notify('success', 'Configuration saved');
         hub.configSaved();
     }
 
-    // out of the registry, as its page is gone
     destroy() {
         this.editor?.destroy();
     }
@@ -470,7 +458,6 @@ export function plainLayout(form) {
     refresh();
 }
 
-// one collapsible row per item, its form inside
 export function rowsLayout(form) {
     form.openItems = form.openItems || new WeakSet();
     form.freshItems = form.freshItems || new WeakSet();

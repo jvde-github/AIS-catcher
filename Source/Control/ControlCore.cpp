@@ -52,7 +52,7 @@
 
 ControlCore::~ControlCore() {}
 
-// The file as people read and edit it: one key to a line, so the reader's line numbers mean something
+// one key to a line, so the reader's line numbers mean something
 static std::string indented(const std::string &json)
 {
 	std::string out;
@@ -167,9 +167,8 @@ static std::string machineName()
 	return s;
 }
 
-// the statistics backup beside the configuration, as a full path so the
-// settings show where it lives (/etc/AIS-catcher for an installed service)
-// a file or folder in the configuration's own folder, as an absolute path
+// a file beside the configuration, as a full path so the settings show
+// where it lives (/etc/AIS-catcher for an installed service)
 static std::string besideConfig(const std::string &config_file, const std::string &name)
 {
 	const auto slash = config_file.find_last_of("/\\");
@@ -192,8 +191,7 @@ static std::string statsPath(const std::string &config_file)
 	return besideConfig(config_file, (slash == std::string::npos ? config_file : config_file.substr(slash + 1)) + ".stats");
 }
 
-// what a fresh configuration starts from; the main server, the tracking backup and the default station come
-// with addMainDefaults(), as for an imported one
+// the main server, the tracking backup and the default station come with addMainDefaults()
 void ControlCore::createDefaultConfig()
 {
 	const std::string content = "{ \"config\": \"aiscatcher\", \"version\": 1, \"engine\": \"off\", \"sharing\": true, "
@@ -730,7 +728,7 @@ bool ControlCore::hasPassword()
 	return !password_hash.empty();
 }
 
-// no iterations in the file: a password from before, one round of SHA-256
+// no iterations in the file: a legacy hash, one round of SHA-256
 static std::string hashPassword(const std::string &password, const std::string &salt, int iterations)
 {
 	return iterations > 0 ? Util::SHA256::pbkdf2(password, salt, iterations) : Util::SHA256::hex(salt + password);
@@ -761,7 +759,7 @@ bool ControlCore::verifyPassword(const std::string &password)
 	if (diff != 0)
 		return false;
 
-	// a password from before moves to the current hash now that it is at hand
+	// a legacy hash moves to the current one now that the password is at hand
 	if (iterations != PASSWORD_ITERATIONS)
 		setPassword(password);
 	return true;
@@ -1077,11 +1075,10 @@ bool ControlCore::writeFileAtomic(const std::string &path,
 	return Util::Helper::writeFileAtomic(path, content, error);
 }
 
-// A configuration without a main server under "services" nor a viewer
-// section (a fresh one, or the installer's seed when it imports a legacy
-// config) gets the main server with the map's defaults, the tracking backup
-// beside the configuration, and the default station named after the machine.
-// A viewer section from before stays for the panel to move.
+// A configuration with neither a main server under "services" nor a viewer section
+// gets the main server with the map's defaults, the tracking backup beside the
+// configuration, and the default station named after the machine. A legacy viewer
+// section stays for the panel to move.
 void ControlCore::addMainDefaults()
 {
 	mutateConfig("add main defaults", [&](JSON::Document &doc) {
@@ -1235,7 +1232,7 @@ void ControlCore::refreshPlaces(const std::string &json)
 		auto doc = parser.parse(json);
 		const auto *tracking = doc.root[AIS::KEY_SETTING_TRACKING];
 		const auto *path = tracking && tracking->isObject() ? tracking->getObject()[AIS::KEY_SETTING_PLACES] : nullptr;
-		// a file from before has it under the viewer section
+		// a legacy file has it under the viewer section
 		const auto *control = doc.root[AIS::KEY_SETTING_CONTROL];
 		const auto *viewer = control && control->isObject() ? control->getObject()[AIS::KEY_SETTING_VIEWER] : nullptr;
 		if (!path && viewer && viewer->isObject())

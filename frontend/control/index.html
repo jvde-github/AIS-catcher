@@ -48,8 +48,6 @@
             </div>
         </div>
 
-        <!-- Settings: the bar's Settings button opens it where it was left, the
-             status dot on the log -->
         <div id="system-overlay" class="modal-overlay hidden">
             <div id="system-modal" class="modal-card">
                 <div id="system-header" class="band">
@@ -72,7 +70,7 @@
         </div>
     </div>
 
-    <!-- the settings panel's pages, cloned into #system-body each time the panel opens -->
+    <!-- cloned into #system-body each time the panel opens -->
     <template id="system-body-template">
         <div class="sys-pane hidden" data-pane="input"><div id="sys-input-body"></div></div>
         <div class="sys-pane hidden" data-pane="stations"><div id="sys-stations-body"></div></div>
@@ -95,7 +93,6 @@
             <div id="flow-zones" class="st-flow__zones"></div>
         </div>
         <div class="sys-pane hidden" data-pane="services"></div>
-        <!-- System's pages under one heading; the rail is their list -->
         <div id="sys-group" class="st st-single sys-group hidden">
             <div class="st-main sys-group__main">
                 <div class="st-main__head"><div><h2 class="st-main__title"></h2></div></div>
@@ -138,8 +135,7 @@
                         <div id="log-box"></div>
                     </div>
                 </div>
-                <!-- what shows depends on whether the panel asks for a password: data-auth="open" only
-                     without one, data-auth="login" only with one -->
+                <!-- data-auth="open" shows only while no password is set, data-auth="login" only while one is -->
                 <div class="sys-pane hidden" data-pane="password">
                     <div class="sys-pane-inner">
                         <div class="card">

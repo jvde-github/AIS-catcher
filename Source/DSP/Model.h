@@ -112,7 +112,6 @@ namespace AIS
 		{
 			switch (key)
 			{
-			// the station this engine's messages carry, where it is not the input's
 			case AIS::KEY_SETTING_STATION:
 			case AIS::KEY_SETTING_STATION_ID:
 			case AIS::KEY_SETTING_ID:

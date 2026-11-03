@@ -1,6 +1,3 @@
-// The station card on the shared map-card tabs: the first row of figures
-// stays above the tabs, the other rows are the Summary, and the day of
-// activity and the last half hour of messages have a tab each.
 import { build as buildTabs, metrics } from './card-tabs.js';
 import { fieldRows } from './components.js';
 

@@ -1,7 +1,5 @@
-// The map's UI as one object the viewer imports: where the free map is (chrome),
-// the vessel card's shell, the toolbar, and the stack of things that can be open.
-// It is built at load, so everything it asks of other modules it asks in a
-// function, when it needs the answer.
+// The map's UI as one object the viewer imports. It is built at load, so
+// everything it asks of other modules it asks in a function, when it needs the answer.
 
 import * as mapui from '@aiscatcher/map/mapui.js';
 import { settings, isKiosk } from './core/state.js';
@@ -49,7 +47,6 @@ function freeMapWidth() {
     return mapSize && mapSize[0] > 0 ? mapSize[0] : window.innerWidth;
 }
 
-// how a card on the map sits, for the vessel card and the station card
 export const cardLayout = {
     fullBleed: () => cardFullBleed(),
     topInset: () => mapTopInset(),

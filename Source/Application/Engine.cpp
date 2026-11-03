@@ -50,7 +50,7 @@ void Engine::detach()
 	for (auto &r : receivers)
 		r->stop();
 
-	// the site lets go of the outputs before they go
+	// the site lets go of the outputs before they are destroyed
 	if (site)
 		site->detachEngine();
 }
@@ -70,8 +70,6 @@ void Engine::refreshStations(const StationRegistry &configured)
 }
 
 #ifdef HASAPI
-// what the site's system service says of each receiver: its station, its
-// input, whether it streams, and the messages its models decoded
 void Engine::publishReceivers()
 {
 	std::vector<ReceiverState> states;
@@ -119,7 +117,6 @@ bool Engine::hasServer() const
 #endif
 }
 
-// the receivers' tags, their devices and their models; group is the last output group used
 void Engine::openReceivers()
 {
 	// the trackers read the decoders' tags
@@ -146,7 +143,6 @@ void Engine::openReceivers()
 
 		r.setupDevice();
 
-		// set up the decoding model(s)
 		r.setupModel(group, i);
 	}
 
@@ -157,13 +153,12 @@ void Engine::openReceivers()
 	}
 }
 
-// the site's tracker and servers as the configuration asks for them
 void Engine::configureSite()
 {
 	site->configure(site_config);
 #ifdef HASAPI
-	// a server that cannot listen stops the start, as the status pages of before did;
-	// managed mode keeps its panel up and tries again on the next apply
+	// a server that cannot listen stops the start; managed mode keeps its panel up and tries
+	// again on the next apply
 	if (!managed)
 	{
 		const std::vector<int> ports = site->serverPorts();
@@ -174,10 +169,10 @@ void Engine::configureSite()
 #endif
 }
 
-// the community feed: a word to those not sharing, and only the radios' groups for the feed
+// the community feed takes only the radios' groups
 void Engine::shareFeed()
 {
-	// sharing is opt-in via -X or the config's "sharing": the silent get an encouraging word, not a feed
+	// sharing is opt-in, via -X or the config's "sharing"
 	if (!xshare_defined && !comm_feed && (hasServer() || !msg.empty()) && !managed)
 		Warning() << "Hint: support the aiscatcher.org community by sharing your "
 					 "feed with '-X on'. Sharing is currently OFF.";
@@ -197,7 +192,6 @@ void Engine::shareFeed()
 			   << (comm_feed ? "enabled." : "disabled.");
 }
 
-// each output takes the receivers its zones route to it
 void Engine::routeOutputs()
 {
 	const bool any_zoned = anyZoned(receivers);
@@ -212,8 +206,6 @@ void Engine::routeOutputs()
 	}
 }
 
-// the outputs, the screen, the counters and the panel's activity behind every
-// model; the site counts the bytes every device delivers
 void Engine::connectSinks()
 {
 	for (int i = 0; i < (int)receivers.size(); i++)
@@ -226,7 +218,6 @@ void Engine::connectSinks()
 
 		screen.Connect(r);
 
-		// the site's system service counts each receiver's messages too
 		r.connectCounters();
 
 		if (activity)
@@ -304,7 +295,6 @@ void Engine::feedTrackers()
 #endif
 }
 
-// the outputs start, the services attach, the receivers play
 void Engine::start()
 {
 	for (auto &o : msg)
@@ -327,7 +317,6 @@ void Engine::start()
 				r->logSummary();
 }
 
-// the rates of every receiver that asks for them
 void Engine::printRates()
 {
 	for (int i = 0; i < (int)receivers.size(); i++)
@@ -453,7 +442,6 @@ int Engine::loop()
 	return code;
 }
 
-// the totals of every receiver that asked for the rates, and the timing of every model that was timed
 void Engine::reportTotals()
 {
 	for (int i = 0; i < (int)receivers.size(); i++)

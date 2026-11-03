@@ -1,6 +1,5 @@
-// What a new revision of the server's configuration means on this page: its
-// features, its maps, the tab on screen, the plugins. server-config.js is the
-// transport, shared with bootstrap, so it knows none of this.
+// What a new revision of the server's configuration means on this page.
+// server-config.js is the transport, shared with bootstrap, so it knows none of this.
 
 import { config } from '../../core/config.js';
 import { settings } from '../../core/state.js';

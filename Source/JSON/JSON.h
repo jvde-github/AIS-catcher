@@ -77,7 +77,6 @@ namespace JSON
 			static const std::string empty;
 			return isString() ? *data.s : empty;
 		}
-		// the characters of either string type; "" otherwise
 		const char *getCString() const
 		{
 			return isString() ? data.s->c_str() : (isCString() && data.cs ? data.cs : "");

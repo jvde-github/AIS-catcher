@@ -28,8 +28,7 @@ namespace IO
 }
 
 // What the running engine is made of, told to the site at its start and
-// withdrawn at its stop, before its outputs go: what a status page says of
-// the devices, the outputs and the community feed
+// withdrawn at its stop, before its outputs go
 struct DeviceFacts
 {
 	// model: the device's decoders, one a line; label: what a status page calls it
@@ -42,7 +41,6 @@ struct EngineFacts
 	bool sharing = false, sharing_uuid = false;
 };
 
-// A receiver as the running engine last told it, about once a second
 struct ReceiverState
 {
 	int index = 0, station = 0;
@@ -51,18 +49,16 @@ struct ReceiverState
 	bool lost = false;
 	uint64_t messages = 0;
 	uint64_t per_minute = 0;
-	// the bytes its device delivered; and, for an input that dials a remote, its connection counts
 	uint64_t bytes = 0;
+	// for an input that dials a remote
 	bool connection = false;
 	uint64_t connect_ok = 0, connect_fail = 0, reconnects = 0, connected = 0;
 
-	// in one word: lost, streaming, or starting while its device has yet to deliver
 	const char *status() const { return lost ? "lost" : streaming ? "streaming" : "starting"; }
 };
 
-// The parts of the running engine a status page writes: all of it, the
-// community feed, its outputs, or whether it runs; or its outputs as a list
-// of the API, with its envelope
+// The parts of the running engine a status page writes; ENGINE_OUTPUT_LIST is
+// its outputs as a list of the API, with its envelope
 enum EnginePart
 {
 	ENGINE_ALL,
@@ -76,7 +72,6 @@ enum EnginePart
 // quiet: the health warns, and the journal says so once
 const int STATION_QUIET_S = 900;
 
-// An output of the running engine as the system pages and the metrics show it
 struct OutputFacts
 {
 	std::string type, label;
@@ -84,8 +79,6 @@ struct OutputFacts
 	uint64_t messages = 0, bytes_out = 0, bytes_in = 0, connect_ok = 0, connect_fail = 0, reconnects = 0, connected = 0, dropped = 0;
 };
 
-// What the site knows of itself and of the engine running against it: what
-// the system service and the MQTT state tell
 struct SystemFacts
 {
 	bool running = false;

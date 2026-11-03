@@ -1,6 +1,4 @@
-// Data & history: how long ships and tracks are kept, and what survives a
-// restart, in the units people think in: the tracking section, which every
-// server reads. Where it keeps its files is folded away under Files.
+// Data & history: the tracking section, which every server reads.
 
 import { el, on } from './dom.js';
 import { App, ConfigStore, registerEditor } from './config-store.js';
@@ -29,7 +27,6 @@ export function createHistoryEditor(host) {
     const value = k => (state.data[k] === undefined ? DEFAULTS[k] : state.data[k]);
     const set = (k, v) => { if (v === undefined || v === '') delete state.data[k]; else state.data[k] = v; touched(); };
 
-    // one setting to a line: its words on the left, its control on the right
     const row = (label, desc, ...controls) => el('div', 'st-hrow', {},
         el('div', 'st-hrow__text', {}, el('strong', '', { text: label }), desc ? el('span', '', {}, desc) : null),
         el('div', 'st-hrow__controls', {}, ...controls));
@@ -41,7 +38,6 @@ export function createHistoryEditor(host) {
 
     function render() {
         host.replaceChildren();
-        // ---- how long a silent ship stays
         const keep = Number(value('history'));
         const known = KEEP.some(([s]) => s === keep) && !state.customKeep;
         const keepSel = select([...KEEP, ['custom', 'Custom…']], known ? keep : 'custom', v => {
@@ -54,7 +50,6 @@ export function createHistoryEditor(host) {
         host.append(row('Forget ship details when it leaves', 'Name and destination too',
             toggle(on(value('expire')), v => set('expire', v ? true : undefined), 'Forget ship details')));
 
-        // ---- track length, with what each choice means
         const mem = Number(value('track_memory')), age = Number(value('track_time'));
         const preset = state.customTracks ? null : TRACKS.find(p => p.track_memory === mem && p.track_time === age);
         const trackSel = select([...TRACKS.map(p => [p.key, `${p.label} · ${duration(p.track_time)}`]), ['custom', 'Custom…']], preset ? preset.key : 'custom', v => {
@@ -71,7 +66,7 @@ export function createHistoryEditor(host) {
                 el('label', 'st-hrow__pair', {}, 'Memory', number(mem, v => set('track_memory', v), { min: 16, max: 262144 }), 'KB'),
                 el('label', 'st-hrow__pair', {}, 'Up to', number(Math.round(age / 60), v => set('track_time', v === undefined ? undefined : v * 60), { min: 0, max: 10080 }), 'min')));
 
-        // ---- the backup: on while there is a file to write to
+        // the backup is on while there is a file to write to
         const kept = !!String(state.data.file || '').trim();
         const every = Number(value('backup')) || 10;
         const last = !kept ? 'Off: every restart starts afresh'

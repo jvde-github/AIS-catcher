@@ -102,11 +102,10 @@ public:
 	std::string defaultStatsFile() const;
 	const std::string &getConfigFile() const { return config_file; }
 	const std::string &getBindAddress() const { return bind_address; }
-	// the folder of the configuration, as the panel compares a path with it
 	std::string configFolderPath() const;
 	// whether the panel's own server has "tls", and its files: the command line's, else the file's
 	bool panelTLS(std::string &cert, std::string &key);
-	// the same as they are written, for the panel to show; true when the command line sets them
+	// as they are written, for the panel to show; true when the command line sets them
 	bool panelTLSFields(std::string &cert, std::string &key);
 	// for this run only, and not written to the file
 	void setPanelTLSFromCommandLine(const std::string &cert, const std::string &key);

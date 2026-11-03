@@ -1,5 +1,3 @@
-// Plane card: the same shell and tabs as the ship card, different fields.
-
 import { planes, planesSince, cardMmsi, cardType } from '../../core/store.js';
 import { getDistanceUnit, getDistanceVal, getLatValFormat, getLonValFormat, getSpeedUnit, getSpeedVal } from '../../core/units.js';
 import { getCountryName, getDeltaTimeVal, getStringfromGroup, getStringfromMsgType, getICAO } from '@aiscatcher/core/text.js';
@@ -17,10 +15,8 @@ const CATEGORY = {
 
 const num = (v, digits, unit) => (v != null ? Number(v).toFixed(digits) + " " + unit : "");
 
-// The card's fields, in the order they are shown: the first row above the tabs,
-// the second on Summary, the next two on Flight, the rest on ADS-B. Each one
-// knows its own label and how to read itself off a plane, so the markup is
-// built from this list rather than repeated in index.html.
+// The card's fields in the order they are shown: the first row above the tabs,
+// the second on Summary, the next two on Flight, the rest on ADS-B.
 const ROWS = [
     {
         fields: [

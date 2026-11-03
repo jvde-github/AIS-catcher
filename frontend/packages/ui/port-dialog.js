@@ -24,8 +24,6 @@ function visitDuration(ship) {
     return durationHTML(end - start, minimum ? '> ' : '');
 }
 
-// What a place is called and where it lies, the same in the table's heading
-// and on a host's card.
 const PLACE_KINDS = {port:'Port', anchorage:'Anchorage', terminal:'Terminal', berth:'Berth', guardzone:'Guard zone',
     sector:'Sector', section:'Section', marina:'Marina', mooring:'Mooring', water:'Water'};
 export function placeIdentity(place) {
@@ -39,7 +37,6 @@ export function placeIdentity(place) {
     return { name: place.label || place.code || 'Place', kind, code, country, countryName: country ? getCountryName(country) : '' };
 }
 
-// The request both the table and a host's card make for a place.
 export function placeShipsRequest(host, place, fields) {
     const params = new URLSearchParams(fields);
     if (Number.isInteger(place.runtime_id)) { params.set('id', place.runtime_id); params.set('version', place.place_version || ''); }

@@ -1,4 +1,3 @@
-// Links from a setting to where the documentation explains it
 import { icon } from './icons.js';
 
 const BASE = 'https://docs.aiscatcher.org/';
@@ -20,7 +19,6 @@ export const DOCS = {
 
 export const docsUrl = path => BASE + path;
 
-// a "Docs" link that opens beside the panel
 export function docLink(path, label = 'Docs') {
     const a = document.createElement('a');
     a.className = 'st-doc';

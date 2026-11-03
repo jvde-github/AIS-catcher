@@ -1,4 +1,4 @@
-/* the station in focus, beside the title: a click shows all stations again */
+/* the station in focus, beside the title */
 .header-focus {
     flex: 0 1 auto;
     min-width: 0;
@@ -78,8 +78,7 @@
     opacity: 0.8;
 }
 
-/* the stations that heard a vessel, boxed as on the hub's map: the hover and
-   the ship card */
+/* the stations that heard a vessel, boxed as on the hub's map */
 .station-box {
     display: inline-block;
     white-space: nowrap;

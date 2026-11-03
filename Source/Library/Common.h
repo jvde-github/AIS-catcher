@@ -321,8 +321,7 @@ struct Setting
 	Setting(const std::string &name = "") : setting_name(name) {}
 	virtual ~Setting() {}
 
-	// every setting passes here, then the object applies it in applyKey; a test can
-	// hang a recorder on it to see what each object was told, in order
+	// a hook for tests: it sees every setting each object is told, in order, before applyKey
 	typedef void (*Recorder)(Setting &, AIS::Keys, const std::string &);
 	static Recorder &recorder()
 	{

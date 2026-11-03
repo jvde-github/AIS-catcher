@@ -224,8 +224,6 @@ export function create(host) {
         for (const stack of stackObjects(standing)) {
             const anchor = stack[0];
             const slots = [];
-            // a station stands as a pill of its own: its hover shows it alone and one click opens
-            // it; only past STATION_PILLS do the stations share a pill and a chooser
             const ownPill = stack.filter((m) => catOf(m) === 'station').length <= STATION_PILLS;
             for (const o of stack) {
                 const cat = catOf(o);
@@ -246,8 +244,8 @@ export function create(host) {
         syncPulses(standing);
     }
 
-    // a station that is down pulses, slowly, where the host animates it (the viewer, for its
-    // own stations): an element over the map, animated by CSS, so the map draws nothing for it
+    // a down station pulses where the host asks for it (the viewer, for its own stations):
+    // an overlay element animated by CSS, so the map draws nothing for it
     const pulses = new Map(); // id -> Overlay
     function syncPulses(standing) {
         const m = host.pulse ? host.map?.() : null;
@@ -701,7 +699,6 @@ export function create(host) {
             place_version: place ? placeVersion : ref.place_version}]);
     }
 
-    // every station the map lists, with how it is doing, where it is or not
     function stationsAll() {
         const out = [];
         for (const o of objectsDB.values())
@@ -709,7 +706,6 @@ export function create(host) {
         return out;
     }
 
-    // the stations on the map that say where they are: only those that share it have a row with a position
     function stations() {
         const out = [];
         for (const o of objectsDB.values())

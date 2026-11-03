@@ -118,7 +118,6 @@ public:
 		return c ? c->feature(number, version) : "{}";
 	}
 
-	// the stations of the registry: positions, the vessels they ride, GPS on or off
 	void setStations(const StationRegistry &registry);
 	// how each station is doing, by id: StationRegistry's states, for the map's station rows
 	void setStationStates(const std::map<int, int> &states) { db.setStationStates(states); }
@@ -177,8 +176,7 @@ public:
 
 	// The figures of everything heard, of one station, or of several as one;
 	// f runs under the figures' lock. False when none of the stations has any
-	// yet. Several stations add up: their counts sum, their extremes take the
-	// extreme.
+	// yet.
 	template <typename F>
 	void withAll(F f)
 	{
@@ -269,7 +267,6 @@ private:
 		bool followsGPS() const { return gps && !mmsi; }
 	};
 
-	// the tag a message is measured with: the station where it is now
 	// the station the message is counted at: the one it names when listed, else the input's; and where it was heard
 	void place(const AIS::Message *msg, TAG &tag);
 	bool sharesPosition(int id);
@@ -300,7 +297,6 @@ private:
 	// the stations as the map shows them: the registry's, where each is now
 	StationRegistry shown;
 	void publish(std::vector<int> moved);
-	// when each station last delivered a message
 	std::map<int, std::time_t> last_heard;
 
 	std::mutex stations_mtx;

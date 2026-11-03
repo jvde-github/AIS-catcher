@@ -163,7 +163,6 @@ private:
 		const float len2 = bx * bx + by * by;
 		if (len2 < 1.0f)
 			return std::sqrt(px * px + py * py);
-		// the cross product over the length is the distance to the line
 		return std::fabs(bx * py - by * px) / std::sqrt(len2);
 	}
 };

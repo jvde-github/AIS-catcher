@@ -17,11 +17,7 @@ const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const LOCODE = /^[A-Z]{2}[A-Z0-9]{3}$/;
 const plain = v => v && typeof v === 'object' && !Array.isArray(v);
 
-// The properties of a Feature from anywhere, read as a place: what is recognised
-// is carried over under its current name, older spellings included, and the rest
-// travels along untouched. `ports` gives the id of the port designating a
-// UN/LOCODE, for a file that names its port by code. Returns the properties and
-// what could not be carried over.
+// `ports` maps a UN/LOCODE to the id of its port, for a file that names its parent port by code.
 export function importPlace(properties, ports = {}) {
     const p = plain(properties) ? {...properties} : {}, notes = [];
     const old = p.schema_version === 1;

@@ -10,7 +10,7 @@ const STATES = {
     system_error: ['system-error', 'System error'],
 };
 
-// the legend names the states the strip can hold; `only` limits it to those a host reports
+// `only` limits the legend to the states a host reports
 function legendHTML(only) {
     const keys = only || Object.keys(STATES);
     return '<div class="activity-legend">' + keys.filter(k => STATES[k]).map(k => STATES[k]).map(([style, name]) =>
@@ -23,7 +23,6 @@ function slotHTML(date, hour, value, nativeTooltips) {
     return '<i class="' + style + '" aria-label="' + description + '"' + (nativeTooltips ? ' title="' + description + '"' : '') + '></i>';
 }
 
-// one strip of the last 24 hours, ending with the slot that is running now
 function renderLastDay(container, timeline, nativeTooltips, now, midnight, only) {
     const day = offset => {
         const date = new Date(midnight + offset * 86400000).toISOString().slice(0, 10);

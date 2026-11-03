@@ -36,7 +36,6 @@ const char *const Config::RECEIVERS_NOT_ARRAY = "Receiver settings need to be an
 
 namespace
 {
-	// an engine's "type": auto (-1), v1_base, v1_high, v2_base or a model number
 	int engineType(const std::string &s)
 	{
 		std::string t = s;
@@ -50,7 +49,6 @@ namespace
 			return AIS::MODEL_V1_HIGH;
 		if (t == "V2_BASE")
 			return AIS::MODEL_V2_BASE;
-		// the decoding model by number, as -m takes it
 		if (t.find_first_not_of("0123456789") == std::string::npos)
 			return Util::Parse::Integer(t, 0, AIS::MODEL_MAX);
 
@@ -110,7 +108,6 @@ namespace
 			applySettings(*settings, model);
 	}
 
-	// a key that is a receiver's plain value, as "lat" or "sample_rate"
 	bool isReceiverValue(int key)
 	{
 		switch (key)
@@ -294,7 +291,6 @@ void Config::applyReceiver(Receiver &r, const std::vector<JSON::Member> &members
 	if (!input.empty())
 		r.SetKey(AIS::KEY_SETTING_INPUT, input);
 
-	// then its values, zones and device blocks
 	for (const auto &m : members)
 	{
 		switch (m.Key())
@@ -331,8 +327,7 @@ void Config::applyReceiver(Receiver &r, const std::vector<JSON::Member> &members
 			Setting *device = r.devices().settingForKey((AIS::Keys)m.Key());
 			if (!device)
 			{
-				// the main section's other keys are the site's and the outputs', read
-				// by the caller; only a receiver object can refuse one
+				// the main section's other keys are read by the caller; only a receiver object warns
 				if (!unspecAllowed)
 					Warning() << "Config file: field \"" << AIS::settingName(m.Key()) << "\" is ignored in a receiver object.";
 				break;
@@ -401,7 +396,6 @@ void Config::readSharing(const std::vector<JSON::Member> &members)
 		}
 	}
 
-	// a key of no use with sharing off stops nothing
 	if (engine.xshare_defined && !xchange && !uuid.empty() && !Util::Helper::isUUID(uuid))
 	{
 		Warning() << "Config file: \"sharing_key\" is not a UUID and sharing is off: ignored.";
@@ -457,14 +451,13 @@ void Config::set(const std::string &str, const Origins *from)
 	bool filled = readReceiver(doc.getMembers(), true, *engine.receivers.front());
 	readSharing(doc.getMembers());
 
-	// every receiver of the array, before the outputs apply tags
+	// the receiver array, before the outputs apply tags
 	for (const auto &p : doc.getMembers())
 	{
 		if (p.Key() == AIS::KEY_SETTING_RECEIVER)
 			readReceivers(p, filled);
 	}
 
-	// the rest: the receivers' keys are applied above
 	for (const auto &m : doc.getMembers())
 	{
 		if (isReceiverKey(m.Key()))
@@ -501,7 +494,7 @@ void Config::set(const std::string &str, const Origins *from)
 		case AIS::KEY_SETTING_DB:
 			readDatabases(m);
 			break;
-		// managed mode's: its viewer section is read with the site
+		// managed mode's own sections
 		case AIS::KEY_SETTING_CONTROL:
 		case AIS::KEY_SETTING_ENGINE:
 			break;
@@ -580,7 +573,7 @@ void Config::set(const std::string &str, const Origins *from)
 
 void Config::finish()
 {
-	// a file without "stations" from before there were any: a receiver's number is a station of its own
+	// a file without "stations": a receiver's number is a station of its own
 	if (engine.stations.ordered().empty())
 		for (const auto &r : engine.receivers)
 			if (r->getStation() != 0 && !engine.stations.find(r->getStation()))

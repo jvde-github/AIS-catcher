@@ -1,7 +1,3 @@
-// The background the panel's maps share: streets, a light grey canvas or
-// satellite imagery, the seamarks over it, a switch between the three and the
-// credits each source asks for. The choice is kept per browser, for every map.
-
 import TileLayer from 'ol/layer/Tile.js';
 import OSM from 'ol/source/OSM.js';
 import XYZ from 'ol/source/XYZ.js';
@@ -19,8 +15,7 @@ const BASEMAPS = {
 };
 const KEY = 'places.basemap';
 
-// Puts the background under the map's layers, and its switch and credits in
-// `wrap`, the .pe-map the map sits in.
+// `wrap`: the .pe-map the map sits in, which takes the switch and the credits
 export function addBasemap(map, wrap) {
     const seamark = new TileLayer({
         className: 'place-seamark', // its own canvas: sharing one with the base map left it unrendered

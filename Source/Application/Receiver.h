@@ -38,19 +38,17 @@ class Receiver : public Setting
 
 	int sample_rate = 0, bandwidth = 0, ppm = 0, own_mmsi = -1;
 	int receiver_index = -1;
-	// a name for people, shown instead of the device's own on the status pages
+	// shown instead of the device's own name on the status pages
 	std::string description;
-	// the bytes its device delivered, for the system pages
 	ByteCounter bytes;
 	FLOAT32 station_lat = LAT_UNDEFINED;
 	FLOAT32 station_lon = LON_UNDEFINED;
-	// the station it stands at, 0 (the default station) when the configuration
-	// names none; whether its messages carry the number is the run's to say:
-	// they do once stations are configured
+	// 0, the default station, when the configuration names none; its messages carry the
+	// number (stamp_station) once stations are configured
 	int station = 0;
 	bool stamp_station = false;
 
-	// the zones of the receiver, which every model is in
+	// every model of the receiver is in these
 	std::vector<std::string> zones;
 
 	AIS::Mode channel_mode = AIS::Mode::AB;
@@ -60,13 +58,11 @@ class Receiver : public Setting
 
 	// the bit a tag letter stands for: M (4), T (2), D (1); 0 for a letter that is none
 	static int tagBit(char c);
-	// a new model by its number, as -m counts them
 	static AIS::Model *makeModel(int m);
 
 public:
-	// one model with what is its own: its number as addModel resolved it, the
-	// zones of its own, its JSON output and the counter of its messages; the
-	// output and the counter are made when the models are set up and wired
+	// id is the model number as addModel resolved it; json and counter are made when the
+	// models are set up and wired
 	struct Decoder
 	{
 		std::unique_ptr<AIS::Model> model;
@@ -89,7 +85,7 @@ public:
 
 public:
 	DeviceManager &devices() { return deviceManager; }
-	// the device opened for it, null before setupDevice(); and the kind of input it is configured for
+	// null before setupDevice()
 	Device::Device *device() const { return deviceManager.getDevice(); }
 	Type inputType() const { return deviceManager.inputType(); }
 
@@ -101,7 +97,7 @@ public:
 	bool hasPosition() const { return isValidCoord(station_lat, station_lon); }
 	FLOAT32 getLat() const { return station_lat; }
 	FLOAT32 getLon() const { return station_lon; }
-	// where its station puts it, and whether its messages carry the station's number
+	// stamp: its messages carry the station's number
 	void placeAtStation(FLOAT32 lat, FLOAT32 lon, bool stamp)
 	{
 		station_lat = lat;
@@ -136,7 +132,6 @@ public:
 	// the tags as -M takes them: D, T and M, those that are on
 	std::string tagString() const;
 
-	// whether its models time their decoding, for the totals at the end
 	bool timing() const { return timing_; }
 
 	// Receiver output are Messages or JSON
@@ -154,13 +149,10 @@ public:
 	AIS::Model &model(int i) { return *decoders[i].model; }
 	int modelCount() const { return decoders.size(); }
 	int modelId(int i) const { return decoders[i].id; }
-	// a model's place among all: "#receiver-model"
 	std::string modelIndex(int i) const { return "#" + std::to_string(receiver_index) + "-" + std::to_string(i); }
-	// a model's name with its place, as the rates and totals say it
 	std::string modelLabel(int i) const { return decoders[i].model->getName() + " " + modelIndex(i); }
-	// a zone of the receiver, which every model is in
 	void addZone(const std::string &zone) { zones.push_back(zone); }
-	// the group of a model's outputs, once setupModel() assigned them
+	// valid once setupModel() assigned the groups
 	uint64_t getGroupMask(int i) const { return decoders[i].json->out.getGroupOut(); }
 	bool inZone(int i, const std::string &zone) const
 	{
@@ -172,7 +164,6 @@ public:
 				return true;
 		return false;
 	}
-	// whether a model output is in any zone, its receiver's or its engine's own
 	bool hasZone(int i) const
 	{
 		return !zones.empty() || !decoders[i].zones.empty();
@@ -183,7 +174,6 @@ public:
 			mask |= d.json->out.getGroupOut();
 		return mask;
 	}
-	// the counters sit behind the models' message and ADS-B outputs, from here on
 	void connectCounters();
 	IO::StreamCounter &counter(int i) { return *decoders[i].counter; }
 	// the messages all its models decoded, once the counters are connected
@@ -197,11 +187,9 @@ public:
 	void logSummary() const;
 };
 
-// what a receiver is called on the status pages: its own name, else its kind of device with its
-// place among the receivers of that kind ("RTL-SDR #1", "Serial #2"), as the control panel names
-// it; the console is "Console"
+// its own name, else its kind of device with its place among the receivers of that kind
+// ("RTL-SDR #1"), as the control panel names it; the console is "Console"
 std::string receiverLabel(const std::vector<std::unique_ptr<Receiver>> &receivers, std::size_t k);
-// whether any model output is in a zone, its receiver's or its engine's own
 bool anyZoned(const std::vector<std::unique_ptr<Receiver>> &receivers);
 // Zones are routes. An output with zones takes the receivers that share one; once any receiver
 // is in a zone, an output without zones takes only the receivers without one. Narrowing only:

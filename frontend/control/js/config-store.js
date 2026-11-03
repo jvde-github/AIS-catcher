@@ -1,9 +1,7 @@
-// The configuration as the panel holds it: one read shared by the pages, the one way to write it,
-// and the pages' editors with their unsaved edits, which the settings footer saves.
 import { api } from './api.js';
 import { migrateConfig } from './config-migrate.js';
 
-// the pages' editors while they are loaded, by id: what the footer saves and the zones are read from
+// the loaded pages' editors, by id; the zone dialog reads them too
 export const editors = new Map();
 const anyDirty = () => [...editors.values()].some(m => m.dirty);
 
@@ -18,7 +16,6 @@ export function debounce(fn, ms) {
 }
 export const flushDebounces = () => { [...pendingDebounces].forEach(f => f()); };
 
-// a value at a dotted path ("rtlsdr.tuner"), and setting one, making the objects on the way
 export const getNested = (obj, path) => path?.split('.').reduce((a, p) => a?.[p], obj);
 export function setNested(obj, path, val) {
     const keys = path.split('.'), last = keys.pop();
@@ -29,7 +26,7 @@ export function setNested(obj, path, val) {
 // own copy to mutate. Invalidated on save and on every panel open.
 export const ConfigStore = {
     promise: null,
-    // the configuration as last read or saved: what a page draws from between fetches, never changed
+    // the configuration as last read or saved, never changed in place
     cached: null,
     fetch(fresh) {
         if (fresh || !this.promise) {
@@ -40,9 +37,7 @@ export const ConfigStore = {
         return this.promise.then(cfg => JSON.parse(JSON.stringify(cfg)));
     },
     invalidate() { this.promise = null; },
-    // One write of the file: a fresh copy, changed by `change` and posted; nothing is written when
-    // `change` returns false. Resolves to the configuration as saved; rejects with the server's
-    // reason, after asking for the password again when the session has expired.
+    // a fresh copy, changed by `change` and posted; nothing is written when `change` returns false
     async save(change) {
         flushDebounces();
         const cfg = await this.fetch(true);
@@ -56,7 +51,6 @@ export const ConfigStore = {
     }
 };
 
-// Whether a page holds unsaved edits, and what the panel tells the user
 export const App = {
     state: { unsaved: false },
 
@@ -70,7 +64,6 @@ export const App = {
         if (bool && this.state.unsaved) return;
         if (!bool) editors.forEach(m => { m.dirty = false; });
         this.state.unsaved = bool;
-        // the settings footer: the marker and the Save button follow the edits
         const footer = document.getElementById('st-footer');
         if (footer) {
             footer.querySelector('.st-dirty').hidden = !bool;
@@ -87,7 +80,6 @@ export const App = {
     }
 };
 
-// A page's editor, which the footer saves: `save` writes its edits, `data` says what it holds.
 // The page marks its edits with `touched`, writes them with `write` (or `clean` when they went some
 // other way) and leaves with `destroy`.
 export function registerEditor(id, { save, data }) {
@@ -103,7 +95,7 @@ export function registerEditor(id, { save, data }) {
             editor.dirty = false;
             App.setUnsaved(anyDirty());
         },
-        // `change` applied to the file; false, with the reason shown, when the save failed
+        // false, with the reason shown, when the save failed
         async write(change, what) {
             try {
                 await ConfigStore.save(change);

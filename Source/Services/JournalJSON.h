@@ -45,7 +45,6 @@ namespace Services
 			lead(w);
 		w.kv("id", eventId(epoch, e.seq)).kv("time", isoTime(v.time)).kv("kind", Tracking::journalName(v.kind))
 			.kv("level", v.level == Tracking::Level::URGENT ? "urgent" : v.level == Tracking::Level::NOTICE ? "notice" : "routine");
-		// the installation's: what happened, to which receiver and station
 		if (v.kind == Tracking::Kind::SYSTEM)
 		{
 			w.kv("event", v.label).kv("text", v.text);
@@ -92,7 +91,6 @@ namespace Services
 		uint64_t last = journal.newest();
 		if (from.empty())
 		{
-			// back from the newest until the page is full or nothing older is kept
 			for (uint64_t hi = last, lo = journal.beforeOldest(); page.size() < want && hi > lo;)
 			{
 				const uint64_t start = hi - lo > chunk ? hi - chunk : lo;

@@ -169,7 +169,6 @@ void Tracker::useCatalogue(std::shared_ptr<PlaceCatalogue> shared)
 	setPlaces(shared ? shared->snapshot() : nullptr);
 }
 
-// the ship table judges against these places, and the journal names a crossing's place from them
 void Tracker::setPlaces(std::shared_ptr<const PlaceIndex> index)
 {
 	events.setPlaces(index);
@@ -382,7 +381,6 @@ void Tracker::setStations(const StationRegistry &registry)
 	{
 		std::lock_guard<std::mutex> lock(stations_mtx);
 		applyStations(registry);
-		// the map shows each where it is now
 		shown = StationRegistry();
 		for (const auto &s : registry.ordered())
 		{

@@ -71,7 +71,6 @@ namespace Services
 	// under services_mtx, or before the server runs
 	void Server::build()
 	{
-		// the pages that may frame this server's: any, unless the viewer's settings say
 		setFrameAncestors(spec_.viewer.frame_ancestors.empty() ? "*" : spec_.viewer.frame_ancestors);
 		const Context context = {tracker, spec_, stations, engine, system ? system : [] { return SystemFacts(); }};
 		if (spec_.metrics)
@@ -106,8 +105,6 @@ namespace Services
 #endif
 	}
 
-	// adds a listener to every message the tracker takes, such as the Prometheus
-	// counter or the viewer's live NMEA stream, and remembers it for drop()
 	void Server::tap(StreamIn<JSON::JSON> *reader)
 	{
 		tapped.push_back(reader);
@@ -282,12 +279,9 @@ namespace Services
 		bool handled = false;
 		try
 		{
-			// what the caller may read, for a service that serves both: everything from a
-			// server without keys, this machine's own or public; its key's scopes on one with keys
 			const ApiKey *key = spec_.keys.empty() ? nullptr : keyOf(request.authorization);
 			request.scopes = spec_.keys.empty() ? ApiKey::DATA | ApiKey::SYSTEM : key ? key->scopes : 0;
 			request.owner = request.owner || (key && (key->scopes & ApiKey::SYSTEM));
-			// the first service that takes the path and answers it, each asking of the key what it serves
 			for (auto &s : services)
 			{
 				const int scope = s->scope(request);

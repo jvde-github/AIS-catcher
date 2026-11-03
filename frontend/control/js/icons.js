@@ -1,6 +1,3 @@
-// The panel's icons, as markup for an element's html: `icon(name, cls)`, the class st-icon unless
-// another is given. Line icons on the 24 grid, with their stroke; filled ones; the map tools' on the
-// 960 grid.
 const LINE = {
     plus: [2.4, '<path d="M12 5v14M5 12h14"/>'],
     copy: [2, '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>'],
@@ -69,5 +66,4 @@ export function icon(name, className = 'st-icon') {
     return `<svg${cls(className)} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${shape}</svg>`;
 }
 
-// a map tool's icon
 export const toolIcon = name => `<svg class="pe-icon" viewBox="0 -960 960 960" aria-hidden="true"><path d="${TOOLS[name]}"/></svg>`;

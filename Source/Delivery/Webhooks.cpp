@@ -28,7 +28,6 @@
 
 namespace
 {
-	// how long a failing webhook waits before the next try
 	std::time_t backoff(int failures)
 	{
 		static const int steps[] = {5, 10, 30, 60, 120, 300, 600, 1800};

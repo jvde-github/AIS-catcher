@@ -98,8 +98,7 @@ function renderDevices(stat) {
     }
 }
 
-// with several stations, the station the figures are of, picked at the end of
-// the tab's row, as on the plots
+// the station the figures are of, at the end of the tab's row as on the plots
 let scopePicker = null;
 
 function syncScope() {

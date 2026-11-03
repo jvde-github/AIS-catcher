@@ -1,4 +1,3 @@
-// The Outputs pages: the community map, and one output of a list on a page of its own.
 import { el, isActive, on } from './dom.js';
 import { docLink } from './docs.js';
 import { icon } from './icons.js';
@@ -40,7 +39,6 @@ export function communityLayout(form) {
         off.hidden = sharing;
         anon.hidden = !sharing || !!(key.value || '').trim();
     };
-    // a station without a key registers; one with a key opens its page on aiscatcher.org
     const keyBtn = el('button', 'st-btn', { type: 'button', onClick: () => window.open(key.value.trim()
         ? `https://www.aiscatcher.org/editstation/${key.value.trim()}` : 'https://aiscatcher.org/register', '_blank') },
         el('span', '', {}, keyBtnLabel()),
@@ -66,7 +64,6 @@ export function communityLayout(form) {
     refresh();
 }
 
-// ---- one output as a page: its name as the title, where it takes from, then its settings
 export function outputFocusLayout(form, index) {
     form.container.className = 'st';
     const item = form.data[index];
@@ -86,9 +83,8 @@ export function outputFocusLayout(form, index) {
     refresh();
 }
 
-// The outputs one by one for the rail: the community map first, then each configured one, the open
-// kind's from its form with its edits. `mark(key, active, o)`: what is wrong with one;
-// `screenOpen`: the screen's page shows, so it is listed while off.
+// The open kind's rows come from its form, with their edits. `screenOpen`: the screen's page
+// shows, so it is listed while off.
 export function outputRailItems(cfg, page, { mark, screenOpen }) {
     const form = page?.form?.loaded ? page.form : null;
     const openIs = value => (form && page.type === value ? form : null);
@@ -111,7 +107,6 @@ function keyParts(key) {
     return { type: type || 'sharing', focus: idx === undefined || idx === 'new' ? null : Number(idx) };
 }
 
-// Add an output: the kinds there are, each with what it is for
 export function renderAddOutput(host, add) {
     const grid = el('div', 'st-addtypes', {}, OUTPUT_TYPES.filter(t => t.add).map(t =>
         el('button', 'st-addtype', { type: 'button', onClick: () => add(t.value) }, el('strong', '', { text: t.label }), el('span', '', { text: t.add }))));
@@ -122,9 +117,8 @@ export function renderAddOutput(host, add) {
         grid));
 }
 
-// One output to a page, the one the rail picks, in `host`. `key`: the rail's to start on; `mark(key,
-// active, o)` what is wrong with one, as a `{ warn }` or `{ bad }`; `stationCount()`; `keepEdits()`
-// whether unsaved edits may go; `open(tab, key)`, `follow(key)` the rail, `changed()` after an edit.
+// `mark(key, active, o)`: what is wrong with an output, as `{ warn }` or `{ bad }`; `keepEdits()`:
+// whether unsaved edits may go.
 export function createOutputsPage(host, { key, mark, stationCount, keepEdits, open, follow, changed }) {
     const containerId = 'hub-output-container';
     const title = el('h2', 'st-main__title');
@@ -155,7 +149,7 @@ export function createOutputsPage(host, { key, mark, stationCount, keepEdits, op
             list: true,
             schema: t.schema,
             containerId,
-            // one output to a page; the rows only while one is being added
+            // the rows only while one is being added
             layout: f => (focus === null ? rowsLayout(f) : outputFocusLayout(f, focus)),
             title: t.label,
             kindOf: () => t.label,
@@ -182,7 +176,7 @@ export function createOutputsPage(host, { key, mark, stationCount, keepEdits, op
         });
     }
 
-    // show the output of this key; false when the switch was refused for unsaved edits
+    // false when the switch was refused for unsaved edits
     function show(k) {
         const parts = keyParts(k);
         focus = parts.focus;
@@ -202,7 +196,6 @@ export function createOutputsPage(host, { key, mark, stationCount, keepEdits, op
         get form() { return form; },
         get type() { return type; },
         show,
-        // a new row on the page of its kind
         addRow() {
             const m = form;
             m.ready.then(() => {

@@ -1,6 +1,3 @@
-// The vessel in the card: its tabs and rows, its details and history as fetched,
-// the title with its message kinds, the footer's follow and message items.
-
 import { ships, cardMmsi, cardType, clock } from '../../core/store.js';
 import { settings } from '../../core/state.js';
 import { getDistanceUnit, getDistanceVal, u } from '../../core/units.js';
@@ -25,7 +22,7 @@ let cells = null, layout = null;
 
 let historyCache = { mmsi: 0, pts: null, changes: null };
 
-// the vessel's tabs; the receiver's own rows ride along as the AIS tab
+// the receiver's own rows ride along as the AIS tab
 export function build() {
     layout = tabs.build(document.getElementById("targetcard_common"), "targetcard_", {
         slot: document.getElementById("targetcard_slot_ais"),
@@ -61,7 +58,6 @@ function resetHistory() {
     for (const k of ["hull", "speed", "draught", "changes"]) document.getElementById("targetcard_" + k + "_body").innerHTML = "";
 }
 
-// the antenna drawing, its block hidden when the vessel gives no dimensions
 function renderHull(ship) {
     const svg = shipcard.hull(ship, u);
     const body = document.getElementById("targetcard_hull_body");
@@ -84,8 +80,7 @@ async function fetchHistory(mmsi, kind) {
 let vessel = { mmsi: 0, data: null, inflight: false };
 let stopVesselLoading = () => {};
 
-// The vessel's details and what it has reported changing, in one fetch: on
-// opening, and again with each pull while the card stays on it.
+// The vessel's details and what it has reported changing, in one fetch.
 async function loadVessel(mmsi) {
     stopVesselLoading();
     vessel = { mmsi, data: null, inflight: false };
@@ -285,8 +280,7 @@ function populateCard() {
     document.getElementById("targetcard_last_group").innerHTML = getStringfromGroup(ship.last_group);
     document.getElementById("targetcard_sources").innerHTML = getStringfromGroup(ship.group_mask);
     document.getElementById("targetcard_channels").innerHTML = getStringfromChannels(ship.channels);
-    // the stations that heard it, where the page has several; a viewer that keeps
-    // no stations sends none
+    // a viewer that keeps no stations sends none
     const stations = ship.stations || [];
     document.getElementById("targetcard_stations_row").hidden = !severalStations() || !stations.length;
     document.getElementById("targetcard_stations").innerHTML = stationBoxes(stations, stationLabel, stations.length);

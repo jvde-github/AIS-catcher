@@ -34,13 +34,11 @@ struct ServerSpec;
 
 namespace Services
 {
-	// What a handler is asked: the method, the path below the server and the
-	// query, already split.
+	// `path` is below the server, with `query` split off
 	struct Request
 	{
 		std::string method, path, query, body;
-		// what the client said of itself: its Authorization, Origin and Host headers;
-		// and where it connects from, its numeric address
+		// the Authorization, Origin and Host headers, and the client's numeric address
 		std::string authorization, origin, host, peer;
 		// what it may read, as the server admitted it: ApiKey's DATA and SYSTEM
 		int scopes = 0;
@@ -56,7 +54,7 @@ namespace Services
 		bool integer(const std::string &name, long long &out, long long fallback, long long min, long long max) const;
 	};
 
-	// What a handler answers. The server writes it out: handlers never touch a socket.
+	// the server writes it out: handlers never touch a socket
 	struct Response
 	{
 		int status = 200;
@@ -78,7 +76,7 @@ namespace Services
 		const char *raw = nullptr;
 		std::size_t raw_size = 0;
 		bool gzipped = false, cache = false;
-		// readable by a page of any origin, as the web viewer's data always was
+		// readable by a page of any origin
 		bool cors = false;
 		// instead of a body: keep the connection as a stream of these events, the backlog first
 		uint32_t stream = 0;
@@ -121,19 +119,14 @@ namespace Services
 	Response badCursor();
 	Response gone(const std::string &why);
 
-	// a text field, null when nothing is known of it
 	void textOrNull(JSON::Writer &w, const char *key, const std::string &v);
 
-	// a query value, percent-encoded where it must be
 	std::string urlEncode(const std::string &v);
 
 	// what writes the running engine's part of a status page
 	typedef std::function<void(JSON::Writer &, EnginePart)> EngineWriter;
 
-	// What every service of a server is made from: the tracker it reads, the
-	// server's settings, the stations as the site lists them, the engine's part
-	// of a status page and the installation's facts. The server outlives its
-	// services and rebuilds them when its settings change.
+	// the server outlives its services and rebuilds them when its settings change
 	struct Context
 	{
 		Tracker &tracker;

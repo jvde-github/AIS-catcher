@@ -696,7 +696,6 @@ namespace JSON
 		{
 			return v == sentinel ? kv_null(k) : kv(k, v);
 		}
-		// Writes kv(k, v) when the value is known, kv_null(k) when it is not.
 		template <typename T>
 		Writer &kv_or_null(KeyRef k, T v, bool known)
 		{

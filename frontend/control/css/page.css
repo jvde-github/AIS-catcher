@@ -106,7 +106,6 @@ body {
     background: var(--chrome-attention-hover);
 }
 
-/* the panel's dialogs lift further off the page than the viewer's */
 .modal-card {
     box-shadow: var(--shadow-overlay);
 }
@@ -151,8 +150,7 @@ body {
 }
 
 @media (max-width: 720px) {
-    /* the back chevron sits inside the title's slot, its icon on the content's left edge, so
-       the band keeps its shape: the slot reaches under the button and the title follows it */
+    /* the title's slot reaches under the back button, so the band keeps its shape */
     #system-modal[data-view="page"] #rail-back { display: flex; position: relative; z-index: 1; margin-left: 12px; }
     #system-modal[data-view="page"] #system-title { margin-left: -44px; padding-left: 52px; }
 }

@@ -1,4 +1,3 @@
-// The Inputs page: one input to a page, the device, how to reach it, its station, its settings.
 import { icon } from './icons.js';
 import { DOCS, docLink } from './docs.js';
 import { decodes, describeInput, inputDocs, inputGroup, INPUT_ESSENTIALS } from './inputs.js';
@@ -9,8 +8,6 @@ import { inputRouting } from './flow-editor.js';
 import { receiverSchema } from './schema.js';
 import { el, isActive } from './dom.js';
 
-// the Find button beside the control it fills: Find ports on the port line, Find devices
-// on the type line, as it sets the type and the serial together
 function addFindButton(form, node, item) {
     const serialPort = item.input === 'SERIALPORT';
     const target = node.querySelector(`[data-field="${serialPort ? 'serialport_port' : 'input'}"]`);
@@ -26,7 +23,6 @@ function addFindButton(form, node, item) {
     row.append(ctrl, btn);
 }
 
-// the station the antenna is, picked from the list, under the device
 function stationSection(form, item, index) {
     const stationField = form.config.stationPicker && form.fields.find(f => f.name === 'station');
     if (!stationField) return null;
@@ -37,7 +33,6 @@ function stationSection(form, item, index) {
         picker, desc ? el('p', 'st-help', {}, desc) : null);
 }
 
-// the Inputs page: the selected input, the rail's list says which
 export function inputsLayout(form) {
     form.container.className = 'st st-single';
     form.selected = Math.min(form.selected ?? 0, Math.max(0, form.data.length - 1));
@@ -47,8 +42,6 @@ export function inputsLayout(form) {
             el('span', '', {}, 'Add an input to tell AIS-catcher where to receive from.')));
     } else {
         const index = form.selected, item = form.data[index];
-        // the title follows the name, the device's own name until one is given; the routing
-        // line says where this input's messages go
         const fallback = () => describeInput({ ...item, description: '' }, index, form.data).title;
         const { head, name, title, onZones } = form.focusHead(item, index,
             { title: describeInput(item, index, form.data).title, fallback, dir: 'out' });
@@ -69,9 +62,7 @@ export function inputsLayout(form) {
     return main;
 }
 
-// The page in `host`, a form of the configuration's receivers. `lost(item)`: why the running
-// receiver has lost an input; `stations()` the stations to pick from, `stationCreated` when one is
-// made here; `open(tab, key)` a page of the rail; `onChange(form)` after an edit.
+// `lost(item)`: why the running receiver has lost an input; `stationCreated`: a station was made here
 export function createInputsPage(host, { lost, stations, stationCreated, open, onChange }) {
     const containerId = 'hub-receivers-container';
     host.replaceChildren(el('div', '', { id: containerId }));

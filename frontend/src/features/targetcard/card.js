@@ -1,9 +1,6 @@
-// The card on the map, on a vessel, an aircraft or a station. This is the shell
-// they share: opening and closing it, where it goes, pinning it, the ring on its
-// target, its header's state, its footer's groups, the track option and the one
-// rule of its tab and fold. What goes in it comes from a provider picked by type,
-// each with the same shape { build, populate, open }: shipcard.js, planecard.js,
-// station.js (a card of its own beside this one).
+// The card shell shared by a vessel, an aircraft and a station. What goes in it
+// comes from a provider picked by type, each with the same shape { build, populate,
+// open }: shipcard.js, planecard.js, station.js (a card of its own beside this one).
 
 import { settings } from '../../core/state.js';
 import {
@@ -101,7 +98,6 @@ export function updateTrackOption() {
         trackOptionElement.style.pointerEvents = "auto";
     }
 
-    // the button's tint says whether the track is on the map
     if (card_mmsi && card_type == 'ship') {
         const shown = markerTracks.has(Number(card_mmsi));
         trackOptionElement.classList.toggle("card-icon-active", shown);
@@ -138,7 +134,6 @@ effects({
     targetcard_pinned: () => ui.card.markPinned(settings.targetcard_pinned),
 });
 
-// `handle` drags the card; a pinned card's place follows
 export function dragTargetcardBy(handle) {
     ui.card.draggable(handle);
     ui.card.el.addEventListener("card:moved", (e) => {
@@ -265,7 +260,6 @@ export function closeTargetcard() {
     showTargetcard(null, null);
 }
 
-// with each pull of the data
 export function refreshTargetcard() {
     if (targetcardVisible()) providerOf(card_type)?.populate();
 }

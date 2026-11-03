@@ -970,8 +970,6 @@ namespace Services
 		return out;
 	}
 
-	// The ticker's rows, as ticker-v1 words them: who, and what in markers
-	// the page renders, the received text escaped so it cannot add its own
 	// Escape received text before adding the three ticker formatting markers.
 	static std::string escapeText(const std::string &text)
 	{
@@ -1152,7 +1150,7 @@ namespace Services
 		return db.content;
 	}
 
-	// The figures as the statistics page reads them, `hidden` without the range
+	// `hidden` leaves out the range
 	static void stat(JSON::Writer &w, const MessageStatistics::Values &v, bool empty, bool hidden)
 	{
 		int c = v.count - v.exclude;
@@ -1276,7 +1274,6 @@ namespace Services
 		w.endObject();
 	}
 
-	// The aircraft as the map and the planes list read them
 	static void planeJSON(JSON::Writer &w, const Plane::ADSB &plane, long int delta_time)
 	{
 		w.beginObject().kv("hexident", plane.hexident);

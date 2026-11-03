@@ -76,7 +76,7 @@ void DB::setup()
 	evict_horizon = 0;
 }
 
-// the ships a reader is shown; under the lock
+// caller holds mtx
 int DB::keptCount(const Keep &keep)
 {
 	if (!keep)
@@ -1101,7 +1101,6 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 		validated = verdict == PositionCheck::VALIDATED;
 		ship.setValidated(verdict);
 	}
-	// what the report changed on the record, now that it is whole
 	if (!pending.empty())
 		flushEvents(ptr);
 	if (validated)

@@ -1,8 +1,7 @@
 // Which vessels show a track: the ones picked (markerTracks in core/store.js),
 // every vessel, the selected vessel's while the settings ask for that, the
 // hovered one's likewise, and from what time on. The points themselves are
-// fetched by data.js. Also the Tracks page of the settings panel: how far back
-// they reach and what colour they are.
+// fetched by data.js. Also the Tracks page of the settings panel.
 
 import { settings } from './core/state.js';
 import {

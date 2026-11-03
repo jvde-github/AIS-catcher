@@ -1,7 +1,3 @@
-// Services: the servers of the configuration and what is built on what the station knows. Its
-// pages: the overview; the main server (beside the control panel) and the other servers; the API
-// to try; Home Assistant; webhooks.
-
 import { el, isActive } from './dom.js';
 import { ConfigStore } from './config-store.js';
 import { ConfigForm, plainLayout, rowsLayout } from './config-form.js';
@@ -10,8 +6,6 @@ import { renderApiTester } from './api-tester.js';
 import { DOCS, docLink } from './docs.js';
 import { webhookSchema, mqttStateSchema } from './schema.js';
 
-// the map's settings on a server that serves it, named by what a visitor sees; the page's own
-// come first, what only an owner looks for (links, tiles, plugins) folds away under More
 const mapField = (section, name, type, label, tooltip, more) => ({ section, field: { name, type, label, tooltip, ...more } });
 const MAP_FIELDS = [
     mapField('Map page', 'station', 'text', 'Title', 'Above the map; the only station\'s name when empty'),
@@ -37,8 +31,6 @@ const OWN_PAGES = ['overview', 'ha', 'webhooks'];
 const withMain = list => (list.some(s => s && s.main === true) ? list : [{ main: true }, ...list]);
 const listOf = v => (Array.isArray(v) ? v : []);
 
-// what a server shows in a few words, for the Overview: its stations (its filter's ids, else its view's), and
-// whether its view limits more
 function showsText(view, choices, stationId) {
     const v = view && typeof view === 'object' ? view : {};
     const raw = stationId ?? v.stations;
@@ -49,7 +41,6 @@ function showsText(view, choices, stationId) {
     return parts.length ? parts.join(' · ') : 'Every ship';
 }
 
-// a page of its own: its title and line, its docs and an action on the right
 function servicePage(host, title, desc, docs, ...actions) {
     const main = el('div', 'st-main', {},
         el('div', 'st-main__head', {},
@@ -59,8 +50,6 @@ function servicePage(host, title, desc, docs, ...actions) {
     return main;
 }
 
-// The Services items of the rail: from the section's pages while they are open (their edits
-// count), else from the configuration. `port`: the main server's; `add`: + Add server.
 export function servicesRailItems(cfg, section, { port, add }) {
     const live = section?.live() || {};
     const ha = live.ha || cfg.mqtt_state;
@@ -73,9 +62,7 @@ export function servicesRailItems(cfg, section, { port, add }) {
         { key: 'webhooks', label: 'Webhooks' + (Array.isArray(hooks) && hooks.length ? ' · ' + hooks.length : '') }];
 }
 
-// The section in `pane`. `select(key)` opens one of its pages through the rail, `follow(key)` tells
-// the rail which page shows, `changed()` that what the rail lists changed; `stations()` the stations
-// a server can show; `port()` the main server's port; `highlight` colours JSON.
+// `select(key)` opens a page through the rail; `follow(key)` tells the rail which page shows
 export function createServicesSection(pane, { select, follow, changed, stations, port, highlight }) {
     const serversHost = el('div', 'st st-pages st-single', { id: 'svc-servers' });
     const overviewHost = el('div', 'st st-svcpage', { hidden: true });
@@ -100,7 +87,6 @@ export function createServicesSection(pane, { select, follow, changed, stations,
         changed();
     });
 
-    // ---- the servers' pages and the API's, one at a time, drawn by the servers' editor
     function serverPages() {
         return [
             ...editor.state.list.map((sv, i) => ({ key: sv.main ? 'main' : 'srv' + i, title: serverName(sv),
@@ -136,7 +122,6 @@ export function createServicesSection(pane, { select, follow, changed, stations,
         if (current === 'tester') drawServers();
         else select('tester');
     }
-    // the port a server can be tried on: one that serves something the tester asks for
     const TRIED = ['api', 'mcp', 'geojson', 'kml', 'metrics'];
     function testerPort(sv) {
         const port = sv.main ? editor.state.viewerPort : Number(sv.port);
@@ -144,7 +129,6 @@ export function createServicesSection(pane, { select, follow, changed, stations,
         return port && isActive(sv) && serve.some(k => TRIED.includes(k)) ? port : null;
     }
 
-    // the servers as the API tester offers them, with what each serves
     function testerServers() {
         const st = editor.state;
         return st.list.map(sv => (sv.main
@@ -152,7 +136,6 @@ export function createServicesSection(pane, { select, follow, changed, stations,
             : { label: serverName(sv), port: Number(sv.port), bind: sv.bind, tls: !!sv.tls, serve: servedKeys(sv) })).filter(s => s.port);
     }
 
-    // ---- the overview: every server against every service, who may read it and what it shows
     function drawOverview() {
         ConfigStore.fetch().then(cfg => {
             const first = loaded ? editor.state.list.map(testerPort).find(Boolean) : null;
@@ -167,7 +150,6 @@ export function createServicesSection(pane, { select, follow, changed, stations,
                 : { key: 'srv' + i, name: serverName(sv), addr: `${sv.bind || '127.0.0.1'}:${sv.port ?? '–'}${sv.tls ? ' · HTTPS' : ''}`,
                     served: !isActive(sv) ? [] : servedKeys(sv), readers: !isActive(sv) ? 'Switched off' : readersOf(sv, sv.bind || '127.0.0.1'), view: sv.view, ids: sv.id }),
                 tryPort: loaded ? testerPort(sv) : null }));
-            // what each shows says something once there are stations to choose from, or a view set in the file
             const showsCol = choices.length >= 2 || rows.some(r => (r.view && Object.keys(r.view).length) || r.ids !== undefined);
             const table = el('table', 'st-svcgrid', {},
                 el('tr', '', {}, ['Server', ...SERVICE_COLUMNS.map(c => c.label), 'Who can read it', ...(showsCol ? ['Shows'] : []), ''].map(t => el('th', '', { text: t }))),
@@ -194,7 +176,6 @@ export function createServicesSection(pane, { select, follow, changed, stations,
         }).catch(() => {});
     }
 
-    // ---- Home Assistant and webhooks: what publishes the tracker's state
     function loadHomeAssistant() {
         const main = servicePage(haHost, 'Home Assistant', 'Vessels and stations as MQTT entities.', DOCS.homeAssistant);
         main.append(el('div', '', { id: HA_CONTAINER }));
@@ -213,7 +194,6 @@ export function createServicesSection(pane, { select, follow, changed, stations,
         return manager;
     }
 
-    // ---- which page shows: the rail's key
     function show(key) {
         current = key || 'overview';
         serversHost.hidden = OWN_PAGES.includes(current);
@@ -227,7 +207,6 @@ export function createServicesSection(pane, { select, follow, changed, stations,
         else page = current;
     }
 
-    // a new server, on its page
     function add() {
         ready.then(() => select('srv' + editor.add()));
     }
@@ -235,7 +214,6 @@ export function createServicesSection(pane, { select, follow, changed, stations,
     return {
         show,
         add,
-        // what the pages hold with their edits, where they have loaded
         live: () => ({ servers: loaded ? editor.state.list : null, ha: ha?.loaded ? ha.data : null, hooks: hooks?.loaded ? hooks.data : null }),
         destroy() {
             editor.destroy();

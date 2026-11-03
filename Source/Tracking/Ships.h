@@ -109,7 +109,6 @@ struct Ship
 			f((int)h.station, (std::time_t)h.last);
 		}
 	}
-	// whether `station` heard the ship at `since` or later
 	bool heardSince(int station, std::time_t since) const
 	{
 		bool heard_it = false;

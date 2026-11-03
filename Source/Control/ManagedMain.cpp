@@ -57,16 +57,14 @@ namespace Managed
 
 #else
 
-	// The places are the panel's editor's, one catalogue it edits and the tracker
-	// reads, wherever the configuration keeps them
+	// one catalogue the panel's editor edits and the tracker reads, wherever the
+	// configuration keeps the places
 	static void usePanelPlaces(ControlCore &core, SiteConfig &site)
 	{
 		site.places.clear();
 		site.catalogue = core.getPlaces();
 	}
 
-	// What a save says: the site with the place editor's catalogue, and the
-	// stations.
 	struct Saved
 	{
 		SiteConfig site;
@@ -101,7 +99,6 @@ namespace Managed
 		core.setViewerServing(viewer != nullptr);
 	}
 
-	// the configuration as saved, applied: the site, and a running engine's stations
 	static void applyConfig(ControlCore &core, ControlServer &server, Site &site, Engine *engine)
 	{
 		try
@@ -117,7 +114,6 @@ namespace Managed
 		}
 	}
 
-	// what the panel changed since last asked: a place edited, or the configuration saved
 	static void syncSite(ControlCore &core, ControlServer &server, Site &site, Engine *engine = nullptr)
 	{
 		auto places = core.getPlaces();
@@ -262,7 +258,7 @@ namespace Managed
 	{
 		const std::string usage = "AIS-catcher -E [config file] [bind address:port] [TLS_CERT file TLS_KEY file]";
 
-		// the panel's HTTPS, for this run, ends the line
+		// the panel's TLS_CERT and TLS_KEY, for this run only, end the line
 		std::vector<std::string> args = all;
 		std::string tls_cert, tls_key;
 		while (args.size() >= 4 && (args[args.size() - 2] == "TLS_CERT" || args[args.size() - 2] == "TLS_KEY"))

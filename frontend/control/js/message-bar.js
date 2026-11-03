@@ -1,14 +1,8 @@
-// The panel's messages, one at a time, in a bar: under the Settings header while Settings is open,
-// else above the bottom bar. Errors and warnings stay until closed; the rest go by themselves.
-// After a save, the bar in Settings asks for the restart that puts it to use.
-
 import { el } from './dom.js';
 import { icon } from './icons.js';
 
 const PASSING_MS = 4000;
 
-// `settings` and `page` the bars, `inSettings()` whether Settings is open, `onRestart` the
-// receiver's start or restart
 export function createMessageBar({ settings, page, inSettings, onRestart }) {
     let msg = null, timer = null;
     let restart = null, restartClosed = false;

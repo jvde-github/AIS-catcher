@@ -53,8 +53,7 @@ class DeviceManager
 	static const DeviceEntry *row(AIS::Keys key);
 	static const DeviceEntry *row(char flag);
 
-	// the device object of each row, made the first time a setting, the
-	// enumeration or the input asks for it: a receiver pays for the kinds it uses
+	// made the first time a setting, the enumeration or the input asks for it
 	std::unique_ptr<Device::Device> objects[ROWS];
 	Device::Device &object(const DeviceEntry &d);
 
@@ -79,7 +78,6 @@ public:
 	// a device type's block in the configuration file, by its -g letter or its type: KEY_COUNT for none
 	static AIS::Keys keyForFlag(char flag);
 	static AIS::Keys keyForType(Type type);
-	// a device type's block, by its key
 	static bool isDeviceKey(AIS::Keys key);
 	// An SDR radio: the kind selected when nothing is, and the kind whose
 	// messages the community feed takes. Serial/N2K ports (e.g.
@@ -95,13 +93,12 @@ public:
 		return d ? d->getFormat() : Format::CU8;
 	}
 
-	// the kind of input and the serial number the configuration selects, when it names them
 	Type inputType() const { return type; }
 	void setInputType(Type t) { type = t; }
 	const std::string &serial() const { return serial_; }
 	void setSerial(const std::string &s) { serial_ = s; }
 
-	// the device opened for the receiver, null before openDevice()
+	// null before openDevice()
 	Device::Device *getDevice() const { return device; }
 
 	bool openDevice(int sample_rate, int bandwidth, int ppm, int frequency, TAG &tag);

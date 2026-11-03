@@ -23,7 +23,6 @@ namespace Services
 {
 	namespace
 	{
-		// a ship as a Point, with what the viewer's table shows of it
 		void writeShip(JSON::Writer &w, const Ship &ship, bool station_known)
 		{
 			w.beginObject()
@@ -108,7 +107,6 @@ namespace Services
 			w.endArray().endObject().endObject();
 		}
 
-		// the ships on the map, as long as the tracker keeps them there
 		std::string ships(DB &db, const DB::Keep &keep)
 		{
 			const int history = db.timeHistory();
@@ -126,7 +124,6 @@ namespace Services
 			return out;
 		}
 
-		// their tracks, back to `oldest` at most
 		std::string tracks(DB &db, const DB::Keep &keep, std::time_t oldest)
 		{
 			const int history = db.timeHistory();

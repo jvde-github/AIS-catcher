@@ -1,10 +1,7 @@
 import { icon } from './icons.js';
 
-// One element, its class, its attributes and its children. An `on…` key adds a
-// listener, `text` and `html` set the content, a property of the element is set
-// as one, anything else is an attribute (true for a bare one); a string for a
-// switch (spellcheck: 'false', open: '') is an attribute too. A child that is
-// null, undefined or false is left out.
+// A property of the element is set as one, anything else is an attribute (true for a bare one);
+// a string for a boolean property (spellcheck: 'false', open: '') is an attribute too.
 export function el(tag, cls, attrs, ...kids) {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -21,7 +18,6 @@ export function el(tag, cls, attrs, ...kids) {
     return n;
 }
 
-// the element a piece of markup makes, an icon's <svg> as it is
 export function fromHtml(markup) {
     const t = document.createElement('template');
     t.innerHTML = markup.trim();
@@ -30,10 +26,8 @@ export function fromHtml(markup) {
 
 // a switch as the receiver reads it: true, "true" or "on", in any case; `unset` when it is not there
 export const on = (v, unset = false) => (v === undefined || v === null ? unset : v === true || ['true', 'on'].includes(String(v).trim().toLowerCase()));
-// an input, an output or a server: on unless it says otherwise
 export const isActive = item => on(item?.active, true);
 
-// JSON text coloured: keys, strings, numbers and literals each in their own span
 export function highlightJson(text) {
     const esc = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return esc.replace(/("(?:\\.|[^"\\])*")(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g, (m, str, colon) => {
@@ -44,8 +38,8 @@ export function highlightJson(text) {
     });
 }
 
-// The ⋯ menu of a page: its actions behind a button, each [label, onClick, danger]. While it is
-// open, Escape closes it before anything else hears the key.
+// `actions`: [label, onClick, danger]. While the menu is open, Escape closes it before anything
+// else hears the key.
 export function moreMenu(label, actions) {
     const summary = el('summary', 'st-icon-btn', { 'aria-label': label, title: 'More actions', html: icon('more') });
     const menu = el('details', 'st-menu', {}, summary,

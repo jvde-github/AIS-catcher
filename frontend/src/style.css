@@ -320,7 +320,7 @@ a:focus-visible {
     fill: var(--color-secondary) !important;
 }
 
-/* a station's range figures, kept from whoever may not read them: their rows and charts give way to one line */
+/* shown instead of a station's range rows and charts when its position is private */
 .range-note {
     display: none;
     grid-column: 1 / -1;

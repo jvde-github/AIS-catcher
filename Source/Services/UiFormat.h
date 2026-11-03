@@ -31,12 +31,9 @@
 namespace Services
 {
 
-	// The viewer's own formats, as its pages have always read them: the ship
-	// lists, a vessel with its changes and its track, the replay, the ticker, the
-	// map's objects, what lies around a point or in a place, KML, the statistics
-	// page and the aircraft. The ship table
-	// keeps the data and these write it, under its lock, as its friend: the
-	// formats are the viewer's, the table only holds what they are made of.
+	// The viewer's own formats. The ship table keeps the data and these write it,
+	// under its lock, as its friend: the formats are the viewer's, the table only
+	// holds what they are made of.
 	struct UiFormat
 	{
 		// `at`, when given, is the station the page draws, in place of the DB's own;

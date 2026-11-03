@@ -26,9 +26,7 @@
 
 // What the ship database decided about a vessel, told once: a crossing, a
 // stop, a sampled position, a field of the record changing, a safety message.
-// The database runs the detectors on every validated fix and sends each event
-// on a stream; whoever holds a view subscribes (the ticker's ring, the visits,
-// an output, the hub's journal) and copies what it keeps while Receive runs.
+// A subscriber copies what it keeps while Receive runs.
 //
 // One shape for every kind: the sequence, the fix the event rests on in the
 // record's own units, the kind, and a union over the kind's own fields, so
@@ -158,7 +156,6 @@ namespace Tracking
 	{
 		uint64_t seq = 0;
 
-		// the fix the event rests on
 		std::time_t t = 0;
 		uint32_t mmsi = 0;
 		float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;

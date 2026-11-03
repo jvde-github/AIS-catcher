@@ -84,7 +84,6 @@ namespace Services
 				}
 		}
 
-		// a ship as a placemark with its icon, turned to its course
 		void shipKML(std::string &out, const Ship &ship)
 		{
 			if (!isValidCoord(ship.lat, ship.lon))

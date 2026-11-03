@@ -108,10 +108,9 @@ namespace IO
 		bool queue(const char *data, int length);
 		// what of data went out, 0 when the socket takes no more now, -1 when the connection is gone
 		int write(const char *data, int length);
-		// bytes that arrived, into msg
 		void take(const char *buffer, int nread);
 
-		// the TLS session of a connection to a server with a certificate
+		// null on a plain connection
 		ssl_st *ssl = nullptr;
 		// the last handshake or read waits for the socket to take data; the last write waits for a read
 		bool ssl_want_write = false, ssl_write_wants_read = false;
@@ -151,7 +150,6 @@ namespace IO
 		void Start(SOCKET s);
 		void startTLS(ssl_ctx_st *ctx);
 		bool handshaking() const;
-		// what poll() should wake this connection for
 		short pollEvents() const;
 		bool readWantsWrite() const { return ssl_want_write; }
 		int Inactive(std::time_t now) const;
@@ -262,7 +260,6 @@ namespace IO
 		void cleanUp(std::time_t now);
 		void SleepAndWait();
 		void reloadTLS(std::time_t now);
-		// the listening socket and its port, given up
 		void release();
 
 		void setStats(IO::OutputStats *s) { pstats = s; }
@@ -270,7 +267,7 @@ namespace IO
 	private:
 		IO::OutputStats *pstats = nullptr;
 
-		// how often the files are looked at for a renewal
+		// seconds between looks at the files for a renewal
 		static const int TLS_CHECK_INTERVAL = 60;
 		// the context a new connection takes: set from any thread, read by the Run() thread
 		std::mutex tls_mtx;

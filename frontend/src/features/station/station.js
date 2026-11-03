@@ -1,6 +1,4 @@
-// The station the page looks through, when the server has several: the card a
-// station on the map opens, the filter's choice of one, the header chip that goes
-// back to all of them, and what a switch resets.
+// The station the page looks through, when the server has several.
 
 import { config, severalStations, stationLabel } from '../../core/config.js';
 import { createPicker } from '@aiscatcher/ui/picker.js';
@@ -24,7 +22,6 @@ import * as mapObjects from '../mapobjects/mapobjects.js';
 import * as range from '../range/range.js';
 import { register } from '../../actions.js';
 
-// the station shown, as the header chip names it
 function focusName() {
     return stationLabel(focus);
 }
@@ -34,7 +31,6 @@ export function hasStationChoice() {
     return severalStations();
 }
 
-// a station the server lets the page look through alone
 const offered = (id) => (config.stations || []).some((s) => s.id === id);
 
 function selectStation(id) {
@@ -53,8 +49,6 @@ function onStationChange(id) {
     refresh();
 }
 
-// after the settings or the server's list of stations changed: a focus on one
-// the server no longer offers goes back to all of them
 export function syncFocus(live) {
     if (focus >= 0 && !offered(focus)) {
         if (live) onStationChange(-1);
@@ -63,12 +57,10 @@ export function syncFocus(live) {
     showFocus();
 }
 
-// back to all stations, as the filter's Reset has it
 export function resetFocus() {
     if (focus >= 0) onStationChange(-1);
 }
 
-// the station in focus, wherever the page shows it
 function showFocus() {
     updateFocusChip();
     updateFilterPicker();
@@ -77,8 +69,6 @@ function showFocus() {
 
 // ─── the header chip ─────────────────────────────────────────────────────────
 
-// while one station is in focus the header names it, or gives its number where the
-// name does not fit; a click shows all again
 function updateFocusChip() {
     const chip = document.getElementById("header-focus");
     if (!chip) return;
@@ -107,8 +97,6 @@ function placeFocusChip() {
 
 const pickers = []; // every dropdown bound to the focus: the filter's, the statistics', the plots'
 
-// all stations, then each the page offers, in the order of the configuration, with
-// what the map knows of it
 export function focusOptions() {
     const onMap = new Map(mapObjects.stationsAll().map((s) => [s.id, s]));
     const listed = (config.stations || []).filter((s) => s.id >= 0);
@@ -116,8 +104,8 @@ export function focusOptions() {
         ...listed.map((s) => ({ value: s.id, badge: s.id, name: s.name || stationLabel(s.id), sub: STATUS_TEXT[onMap.get(s.id)?.status], group: "one" }))];
 }
 
-// a dropdown bound to the focus, in `host`: a pick there is a pick everywhere;
-// `scope` draws it small, as the scope at the end of a tab's strip
+// a pick in any picker bound to the focus is a pick everywhere; `scope` draws it
+// small, as the scope at the end of a tab's strip
 export function mountFocusPicker(host, { scope = false } = {}) {
     const p = createPicker({ label: "Stations", value: focus, options: focusOptions, empty: "No station by that name",
         onPick: (id) => onStationChange(id) });
@@ -149,10 +137,8 @@ const set = (id, text) => { const el = document.getElementById(id); if (el) el.t
 const onMap = (s) => Number.isFinite(s.lat) && Number.isFinite(s.lon) && Math.abs(s.lat) <= 90 && Math.abs(s.lon) <= 180;
 const stationRow = (id) => mapObjects.stationsAll().find((x) => x.id === id);
 
-/* The card a station opens, as the website's station card: its figures, a day
-   of activity and the last half hour of messages, in the ship card's style.
-   While it is open the page looks through that station, as the website shows
-   that station's ships; the close goes back to what was in focus before. */
+/* While a station's card is open the page looks through that station; the close
+   goes back to what was in focus before. */
 let card = null, cardStation = null, focusBefore = -1, tabs = null, cardTab = "summary", figuresAt = 0, shipsEl = null;
 
 export function stationcardVisible() {
@@ -209,7 +195,6 @@ export function closeStationcard() {
     focusBefore = -1;
 }
 
-// the name and the flag over the figures the map objects carry
 function fillRows(s) {
     card.header.title().textContent = (s.name || "Station " + s.id).toUpperCase();
     card.header.flag(s.country, getCountryName(s.country));
@@ -224,7 +209,6 @@ function fillRows(s) {
 
 const json = (url) => fetch(url).then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
-// the station's own figures and histories from the server
 async function fillFigures(id) {
     figuresAt = Date.now();
     const [stat, history] = await Promise.all([json("api/stat.json?stations=" + id), json("api/history_full.json?stations=" + id)]);
@@ -286,7 +270,6 @@ function chart(name, id, src, n, unit, foot, aria) {
         : "";
 }
 
-// with the map's refresh: the rows from the map objects, the figures every half minute
 export function populate() {
     if (cardStation === null) return;
     const s = stationRow(cardStation);

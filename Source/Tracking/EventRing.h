@@ -66,7 +66,6 @@ public:
 			rings[l].reserve(capacity(l));
 	}
 
-	// the kinds the ticker shows; everything else is history
 	static bool shown(Kind k)
 	{
 		switch (k)

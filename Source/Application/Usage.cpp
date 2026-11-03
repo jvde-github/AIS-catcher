@@ -23,8 +23,6 @@
 #include "Convert.h"
 #include "Logger.h"
 
-// What the command line prints and goes: -h and -L
-
 namespace CommandLine
 {
 

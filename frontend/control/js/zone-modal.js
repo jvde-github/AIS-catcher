@@ -1,5 +1,3 @@
-// Zones: each in its colour, as a chip, and the dialog that adds an input's or an engine's zones,
-// suggesting those the configuration and the open pages already use.
 import * as AISComponents from '@aiscatcher/ui/components.js';
 import { el } from './dom.js';
 import { ConfigStore, editors } from './config-store.js';
@@ -151,5 +149,5 @@ function renderZoneModalBody() {
     setTimeout(() => input.focus(), 50);
 }
 
-// a zone's colour: its class, and the colour as CSS
+// `badge`: a zone colour's class; `css`: the colour itself
 export const ZoneColors = { badge: getZoneColor, css: getZoneCss };

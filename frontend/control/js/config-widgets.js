@@ -1,5 +1,3 @@
-// A field of a form: its label, its control by its type (switch, list, slider, the engines), and
-// whether it shows, as the other fields say.
 import { el, fromHtml, on } from './dom.js';
 import { icon } from './icons.js';
 import { debounce, getNested } from './config-store.js';
@@ -82,8 +80,7 @@ function sliderInput(field, currentValue, onUpdate, opts) {
 }
 
 export const Renderer = {
-    // dataContext: the row the field is on; host: the options of the form drawing it, for what a
-    // control needs from its page
+    // `dataContext`: the row the field is on; `host`: the options of the form drawing it
     createInput(field, currentValue, onUpdate, dataContext = null, host = null) {
         const type = field.type;
 

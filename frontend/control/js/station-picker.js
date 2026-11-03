@@ -1,6 +1,4 @@
-// An input's station: the default station, 0, where an input stands that names
-// none; one of the stations listed; or a new one made on the spot. A number the
-// configuration names but Stations does not have is shown as such, with a way to
+// A station number the configuration names but Stations does not have is shown with a way to
 // create it: the engine does not start while an input names a station that is not there.
 
 import { el } from './dom.js';
@@ -13,7 +11,6 @@ import { createPicker } from '@aiscatcher/ui/picker.js';
 const fmt = v => Number(v).toFixed(4);
 const placed = s => [s.lat, s.lon].every(v => v !== undefined && v !== null && v !== '' && Number.isFinite(Number(v)));
 
-// where a station's position comes from, as the configuration says
 function where(s) {
     const mode = modeOf(s);
     if (mode === 'vessel') return `On vessel MMSI ${s.mmsi}`;
@@ -22,8 +19,7 @@ function where(s) {
     return pos || 'No position yet';
 }
 
-// A new station under the next free number, or under the one given; saved at once, so the input
-// can name it. The number it got, or null when the save failed.
+// saved at once, so the input can name it; null when the save failed
 async function createStation(id, name) {
     try {
         await ConfigStore.save(cfg => {
@@ -38,12 +34,9 @@ async function createStation(id, name) {
     return id;
 }
 
-// The picker: which station, the default one first and the others by number, each with where its
-// position comes from. `stations()` gives the stations, the default one first. onPick(id) with a
-// number, or undefined for the default station; onCreated after a station is made, so the pages
-// that list the stations read them again.
-// `none`: the words for no station of its own, as an engine that takes the input's; the picker then
-// starts there when nothing is set, and a pick of it is onPick(undefined)
+// `onPick(id)`: a number, or undefined for the default station. `none`: the words for no station of
+// its own, as an engine that takes the input's; the picker then starts there when nothing is set,
+// and a pick of it is onPick(undefined).
 export function createStationPicker(value, { stations, onPick, onCreated, none } = {}) {
     const unset = value === undefined || value === null || value === '';
     let current = unset ? (none ? -1 : 0) : Number(value);
@@ -82,7 +75,6 @@ export function createStationPicker(value, { stations, onPick, onCreated, none }
             } }));
     }
 
-    // "+ New station…": a name, then Create; the number is the next free one
     function newStation() {
         const row = el('div', 'st-stpick__new');
         const start = el('button', 'st-stpick__add', { type: 'button', html: icon('plus') + 'New station…', onClick: () => {

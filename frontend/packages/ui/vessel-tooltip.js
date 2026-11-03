@@ -1,7 +1,5 @@
-// A vessel's band in a map hover, the part both hosts share: flag, name and
-// speed, then its type, how long ago it was heard and by which stations. The
-// band wears the vessel's validity; the host adds the band of a station on
-// board and the message cards, and styles the station boxes.
+// A vessel's band in a map hover, the part both hosts share; the host adds the band
+// of a station on board and the message cards, and styles the station boxes.
 
 import { getCountryName, getDeltaTimeVal, getShipTypeShort } from '@aiscatcher/core/text.js';
 import { flagHTML } from './components.js';

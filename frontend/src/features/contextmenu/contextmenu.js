@@ -45,7 +45,6 @@ const MENU_CHECKS = {
     ToggleFireworks: () => fireworks.isRunning(),
     toggleGraphVisibility: (el) => settings[GRAPH_KINDS[el.dataset.graph].setting],
     toggleDarkMode: () => settings.dark_mode,
-    // one station in focus rather than all of them: the item says so in the accent, as a switch that is on
     toggleScreenSize: () => !!document.fullscreenElement,
     replayToggleLabels: () => replay.getLabels(),
     replaySetSpeed: (el) => replay.getSpeed() == el.dataset.speed,

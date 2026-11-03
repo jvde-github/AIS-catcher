@@ -184,7 +184,6 @@ export function applyToolbarMode() {
     ui.toolbar.apply();
 }
 
-// the platform: what only one of the two shows, and the menu as a floating box on a desktop
 const dynamicStyle = document.createElement("style");
 document.head.appendChild(dynamicStyle);
 const androidStyle = document.createElement("style");
@@ -213,7 +212,6 @@ function applyPlatform() {
 
 const pageTitle = { station: decodeHTMLEntities(config.station), count: null };
 
-// the station's name, the number of vessels, or both
 export function setPageTitle(parts) {
     Object.assign(pageTitle, parts);
     document.title = (pageTitle.count ? " (" + pageTitle.count + ") " : "") + "AIS-catcher " + pageTitle.station;

@@ -84,7 +84,6 @@ function getTooltipContent(ship) {
         name: getShipName(ship) || ship.mmsi,
         speed: ship.speed != null ? getSpeedVal(ship.speed) + ' ' + getSpeedUnit() : null,
         age: clock - ship.last_signal,
-        // the stations that heard it, where the page has several
         label: severalStations() ? stationLabel : null,
     }) + mapObjects.shipTooltip(ship);
 }

@@ -1,8 +1,5 @@
-// Every request of the panel to the control server, read as JSON. `body`: an object goes as JSON,
-// a string as it is, and either makes it a POST. A 401 asks for the password again and leaves the
-// edits on the page, unless `login` (the login's own request, whose 401 is a wrong password). A
-// failure rejects with the server's reason. `raw`: the response as it came, a 401 included (the
-// API tester's, from the server it tries).
+// A 401 asks for the password again, unless `login`: the login's own request, whose 401 is a
+// wrong password. `raw`: the response as it came, a 401 included.
 import { hub } from './hub.js';
 
 export async function api(path, { body, method, login = false, raw = false, headers, ...init } = {}) {

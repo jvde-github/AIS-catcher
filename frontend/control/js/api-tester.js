@@ -1,7 +1,5 @@
-// Try the API and MCP: a request to one of the station's servers as a program or
-// an assistant makes it, with its answer and the curl line that makes it again.
-// The control panel makes the request on the station, so a server that listens
-// there only is reached too.
+// Try the API and MCP. The control panel makes the request on the station, so a server that
+// listens there only is reached too.
 
 import { copyToClipboard } from '@aiscatcher/ui/components.js';
 import { el } from './dom.js';
@@ -16,7 +14,6 @@ const FEEDS = [
     { path: '/metrics', service: 'metrics', group: 'Feeds', summary: 'Message counts for Prometheus.', params: [] }
 ];
 
-// the routes, by the service each belongs to, grouped by what they are about
 let routes = null;
 async function loadRoutes() {
     if (routes) return routes;
@@ -34,12 +31,10 @@ async function loadRoutes() {
     return routes;
 }
 
-// state that outlives a redraw of the page: the choices, and the key typed this visit
 const kept = { mode: 'api', port: null, path: '/api/v1/vessels', values: {}, key: '', last: null, more: false,
     tools: {}, tool: null, mcpValues: {}, mcpLast: null };
 
-// `servers`: [{ label, port, serve, bind }], each with what it serves;
-// `highlight`: text to coloured JSON
+// `servers`: [{ label, port, serve, bind }]; `highlight`: text to coloured JSON
 export function renderApiTester(main, { servers, highlight, port }) {
     if (port) kept.port = port;
     main.append(el('p', 'st-help st-svcs__lead', { text: 'Send a request to one of this station\'s servers.' }));
@@ -57,7 +52,6 @@ export function renderApiTester(main, { servers, highlight, port }) {
     paintMode();
 }
 
-// the server to send to, among those that offer the mode's services
 function serverField(list, onChange) {
     if (!list.some(s => s.port === kept.port)) kept.port = list[0].port;
     const sel = el('select', 'st-input select', { 'aria-label': 'Server', onChange: e => { kept.port = Number(e.target.value); onChange(); } },
@@ -71,7 +65,6 @@ function keyField(onChange) {
             onInput: e => { kept.key = e.target.value; }, onChange }));
 }
 
-// a line to copy: a curl command, or the line that connects an assistant
 function copyLine(text) {
     return el('div', 'st-try__curl', {},
         el('code', '', { text }),
@@ -81,7 +74,6 @@ function copyLine(text) {
         } }));
 }
 
-// a body as it came, coloured when it is JSON
 function bodyView(text, highlight) {
     let pretty = text, json = false;
     try { pretty = JSON.stringify(JSON.parse(text), null, 2); json = true; } catch { /* not JSON: as it came */ }
@@ -98,7 +90,7 @@ function meta(status, ms, text, type, note) {
         note ? el('span', 'st-try__note', { text: note }) : null);
 }
 
-// ---- the API: a GET of one of its routes
+// ---- the API
 function tryApi(body, servers, highlight) {
     const tryable = servers.filter(s => ['api', 'system', 'geojson', 'metrics'].some(k => s.serve.includes(k)));
     if (!tryable.length)
@@ -126,7 +118,6 @@ function tryApi(body, servers, highlight) {
             el('span', 'st-label', {}, p.name, p.required ? el('span', 'st-try__req', { text: ' required' }) : null, el('span', 'st-try__in', { text: ' · ' + p.in })),
             el('input', 'st-input', { type: 'text', value: values[p.name] ?? '', placeholder: p.type, onInput: e => { values[p.name] = e.target.value; paint(); } }),
             p.description ? el('p', 'st-help', { text: p.description }) : null);
-        // the required and those given up front; the other filters folded away
         const all = route?.params || [];
         const front = all.filter(p => p.required || p.name === 'limit' || String(values[p.name] ?? '').trim());
         const rest = all.filter(p => !front.includes(p));
@@ -174,7 +165,7 @@ function tryApi(body, servers, highlight) {
     }
 }
 
-// ---- MCP: the tools a server offers an assistant, and a call of one
+// ---- MCP
 let rpcId = 0;
 async function rpc(port, method, params) {
     const start = performance.now();
@@ -260,7 +251,6 @@ function tryMcp(body, servers, highlight) {
             }
         }
 
-        // the tool's answer first, as an assistant reads it; the whole reply folded below
         function show(res) {
             const reply = res.json;
             const failed = reply?.error ? `JSON-RPC error ${reply.error.code}: ${reply.error.message}` : reply?.result?.isError ? 'The tool reported an error' : '';
@@ -289,7 +279,6 @@ function tryMcp(body, servers, highlight) {
     }
 }
 
-// the arguments as the tool's schema types them: numbers as numbers, nothing for what is left empty
 function args(props, values) {
     const out = {};
     for (const [name, p] of props) {
@@ -308,7 +297,6 @@ function defaults(route) {
     return v;
 }
 
-// the path with its path parameters filled in and its query from what is given
 function target(route, values) {
     if (!route) return '';
     let path = route.path;
@@ -327,7 +315,6 @@ function origin(server) {
     return `${server.tls ? 'https' : 'http'}://${local ? '127.0.0.1' : location.hostname}:${server.port}`;
 }
 
-// the same request from a shell
 function curlLine(server, t, keyed) {
     return `curl ${keyed ? '-H "Authorization: Bearer $KEY" ' : ''}"${origin(server)}${t}"`;
 }

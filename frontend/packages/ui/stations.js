@@ -10,17 +10,15 @@ import { discCanvas, badgeCanvas } from './binary.js';
 
 const text = (v) => sanitizeString(String(v));
 
-// quiet and down are grey: a station that hears nothing has lost its colour; down has a red
-// edge as well, as it wants the owner, and where the host animates it, a slow pulse
+// quiet and down are grey: a station that hears nothing has lost its colour; down
+// has a red edge as well, as it wants the owner
 const STATION_COLORS = { online: '#008000', quiet: '#8a9099', down: '#8a9099', offline: '#ef4444' };
 const stationColor = (status) => STATION_COLORS[status] || STATION_COLORS.online;
 const DOWN_EDGE = 'rgba(220, 38, 38, 0.95)';
 
-// the status of a station record or row: offline when not connected, else the state the
-// host judged and sent with the row when it changed; a host that does not judge it shows
-// a connected station as receiving. The row's `heard` is not compared with the clock here:
-// a row is sent again only when it changes, so its `heard` stands still while the station
-// keeps receiving.
+// the state is the one the host judged and sent with the row when it changed. The
+// row's `heard` is not compared with the clock here: a row is sent again only when
+// it changes, so its `heard` stands still while the station keeps receiving.
 export function stationStatus(o) {
     if (!o || o.online === false) return 'offline';
     if (o.state === 'down') return 'down';
@@ -28,7 +26,6 @@ export function stationStatus(o) {
     return 'online';
 }
 
-// what a quiet or down station is doing, in a few words: since when it heard nothing
 const clock = (t) => new Date(t * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 export function stationStateText(s) {
     if (s.status === 'down') return 'Receiver down';

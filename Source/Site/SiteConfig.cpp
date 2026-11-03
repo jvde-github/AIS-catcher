@@ -34,9 +34,7 @@
 #include "Event.h"
 #endif
 
-// The readers of what a configuration says of the site: the stations, the
-// tracking, the servers, the webhooks and the MQTT state, each section as the
-// file has it. A value comes as text, a list as text separated by commas.
+// A value comes as text, a list as text separated by commas.
 
 namespace
 {
@@ -47,7 +45,6 @@ namespace
 		using std::runtime_error::runtime_error;
 	};
 
-	// the readers' errors, said of the file
 	template <typename F>
 	void ofFile(F f)
 	{
@@ -129,7 +126,6 @@ namespace SiteReader
 #ifdef HASAPI
 namespace
 {
-	// one value or a list of them; a text value is split at its commas
 	void addEach(const std::string &list, std::vector<std::string> &out)
 	{
 		std::vector<std::string> parts;
@@ -150,12 +146,10 @@ namespace
 		return (int)Util::Parse::Integer(arg, min, max, AIS::settingName(key));
 	}
 
-	// The keys a server section (-N, "server", managed mode's old viewer section),
-	// a server under "services" and the "tracking" section share: each read here
-	// once, with one range wherever it is written. Each returns false for a key
-	// that is not its own.
+	// The keys the server sections and the "tracking" section share, each read
+	// here once, with one range wherever it is written. Each returns false for a
+	// key that is not its own.
 
-	// the options of a server's map pages
 	bool viewerKey(int key, const std::string &arg, ViewerOptions &o)
 	{
 		switch (key)
@@ -186,10 +180,8 @@ namespace
 		return true;
 	}
 
-	// how a tracker keeps ships: the tracking, and for the site's the backup file
-	// and its interval and the places, each resolved against base_dir; a server's
-	// own tracker, read without a site, has no place for those: false
-	// `own_file` for a server's own tracker: its backup goes there, the places stay the site's
+	// files resolved against base_dir; `own_file` for a server's own tracker: its
+	// backup goes there, the places stay the site's
 	bool trackingKey(int key, const std::string &arg, TrackingConfig &t, SiteConfig *site, const std::string &base_dir, std::string *own_file = nullptr)
 	{
 		switch (key)
@@ -245,7 +237,6 @@ namespace
 		}
 	}
 
-	// what a server section says of the default station
 	bool stationKey(int key, const std::string &arg, StationDefaults &d)
 	{
 		switch (key)
@@ -339,7 +330,6 @@ namespace
 		}
 	}
 
-	// an address only this machine reaches
 	bool localBind(const std::string &bind)
 	{
 		return bind == "localhost" || bind == "::1" || bind.compare(0, 4, "127.") == 0;
@@ -430,19 +420,16 @@ namespace
 			keysFromJSON(*json, spec.keys);
 			return true;
 		case AIS::KEY_SETTING_VIEW:
-			// which ships the server shows of what its tracker keeps
 			if (!json)
 				throw ConfigError("\"view\" is set in a configuration file, not on the command line: write one from this command line with -J config.json, add view to its server section, and run it with -C config.json.");
 			viewFilterFromJSON(*json, spec.view);
 			return true;
 		case AIS::KEY_SETTING_FILTER:
-			// the message filter is a switch with its terms beside it; the ships shown are the view's
 			if (json && json->isObject())
 				throw ConfigError("the ships a server shows are its \"view\"; \"filter\" is the switch of the message filter, with its terms beside it.");
 			break;
 		case AIS::KEY_SETTING_TRACKING:
 		{
-			// a tracker of its own: its filter, zones and groups, and what it keeps
 			if (!json || !json->isObject())
 				throw ConfigError("a server's \"tracking\" must be an object.");
 			for (const auto &m : json->getObject().getMembers())
@@ -472,7 +459,7 @@ namespace
 		case AIS::KEY_SETTING_GROUPS_IN:
 			own.groups_in = (uint64_t)Util::Parse::Integer(value, 0, LONG_MAX);
 			return true;
-		// what the web viewer of before took and this server has no use for
+		// the old web viewer's settings, without effect here
 		case AIS::KEY_SETTING_PORT_MIN:
 		case AIS::KEY_SETTING_PORT_MAX:
 		case AIS::KEY_SETTING_SPLIT:
@@ -486,7 +473,7 @@ namespace
 		default:
 			break;
 		}
-		// a viewer's option, a tracking key (the position is the station's too), a station key, a filter term
+		// a tracking key can be a station key too: the position
 		bool taken = viewerKey(key, value, spec.viewer);
 		if (isTrackingKey(key))
 		{
@@ -506,11 +493,9 @@ namespace
 		return taken;
 	}
 
-	// One reading of a configuration's site: into the site, the station defaults
-	// and the stations, with the file's folder for its files. In managed mode
-	// main_port and main_bind are the server beside the control panel, for the
-	// entry marked "main"; command_line names, per "server" entry, the -N that
-	// gave it, empty for a file's.
+	// In managed mode main_port and main_bind are the server beside the control
+	// panel, for the entry marked "main"; command_line names, per "server" entry,
+	// the -N that gave it, empty for a file's.
 	struct Reader
 	{
 		SiteConfig &site;
@@ -544,8 +529,7 @@ namespace
 				throw ConfigError("field \"" + AIS::settingName(m.Key()) + "\" is not allowed in \"tracking\".");
 	}
 
-	// the entry is complete: it keeps ships of its own when its filter is on or it
-	// picks receivers, else it reads the site's tracker and configures that
+	// the entry is complete: every key of it read
 	void Reader::server(ServerEntry &e, const std::string &where)
 	{
 		ServerSpec &spec = e.spec;
@@ -579,7 +563,6 @@ namespace
 		own.own = (e.filter.isOn() && terms) || routed;
 		if (own.own && spec.main)
 			throw ConfigError(where + " shows every ship the station hears: give the filter, zones or groups to another server.");
-		// the stations the server shows: those its filter names, when it is on
 		if (e.filter.isOn())
 			for (const auto &t : own.filter)
 				if (t.first == AIS::KEY_SETTING_ID || t.first == AIS::KEY_SETTING_SELECT_ID || t.first == AIS::KEY_SETTING_STATIONS)
@@ -595,7 +578,6 @@ namespace
 				}
 		if (!spec.stations.empty())
 		{
-			// one "stations" does not list is shown by its number
 			for (int id : spec.stations)
 				if (!stations.find(id))
 				{
@@ -606,7 +588,7 @@ namespace
 					stations.define(s);
 					e.dropped.push_back("station " + std::to_string(id) + " is not in \"stations\": no name or position until it is");
 				}
-			// a station is described in "stations"; STATION beside it is the viewer's title
+			// STATION is the viewer's title, not the station's
 			std::string said;
 			for (const auto &t : e.station_terms)
 				if (t.first != AIS::KEY_SETTING_STATION)
@@ -617,12 +599,11 @@ namespace
 		if (own.own)
 		{
 			own.tracking.msg_save = spec.viewer.msg;
-			// its backup is its own; the places are the site's: one catalogue for every tracker
 			for (const auto &t : e.tracking_terms)
 				if (!trackingKey(t.first, t.second, own.tracking, &site, base_dir, &own.backup_file))
 					e.dropped.push_back("\"" + AIS::settingName(t.first) + "\" is the site's: one catalogue for every tracker");
 			// what the section says of the station is this tracker's, unless it names
-			// the station: it measures from there, shares it or not, follows GPS or its own vessel
+			// the station
 			if (spec.stations.empty())
 				for (const auto &t : e.station_terms)
 					switch (t.first)
@@ -666,7 +647,7 @@ namespace
 			Warning() << where << ": " << d;
 		if (spec.served().empty())
 			throw ConfigError(where + " serves nothing: " + (keys_hide_map ? "with \"keys\" the map needs \"ui\": true, as anyone can read it," : "the map is switched off") + " and nothing else is on.");
-		// the map of before listens on every interface; the API, MCP and System only with keys or public
+		// -N and "server" listen on every interface; the API, MCP and System only with keys or public
 		if (e.network_default && !e.bind_given && (spec.api || spec.mcp || spec.system) && spec.keys.empty() && !spec.open)
 		{
 			spec.bind = "127.0.0.1";
@@ -680,7 +661,6 @@ namespace
 	}
 
 	// "server": [ { "port": 8100, "station": "Home", "lat": 52.1, "lon": 4.3, "filter": true, "allow_type": "1,2,3" } ]
-	// the web viewer as its section wrote it: a server on the site's tracker, or on one of its own behind its filter
 	void Reader::servers(const JSON::Value &v)
 	{
 		std::size_t index = 0;
@@ -722,8 +702,7 @@ namespace
 			one(v);
 	}
 
-	// -N as the command line had it, now an entry of the document's "server": every
-	// interface unless bind says otherwise, and its mistakes in its own words
+	// -N as an entry of the document's "server", its mistakes in its own words
 	void Reader::commandLineServer(const JSON::Value &entry, std::string where)
 	{
 		try
@@ -743,7 +722,6 @@ namespace
 		}
 		catch (const std::exception &ex)
 		{
-			// a message that names the server already keeps its own words
 			const std::string what = ex.what();
 			throw std::runtime_error(what.compare(0, where.size(), where) == 0 ? what : where + ": " + what);
 		}
@@ -751,7 +729,6 @@ namespace
 
 	// "services": [ { "port": 8100, "bind": "0.0.0.0", "api": true, "view": { "stations": [3] },
 	//                 "tracking": { "allow_type": "1,2,3", "file": "class-a.bin" } } ]
-	// the map unless "ui" is false, the other services when switched on
 	void Reader::services(const JSON::Value &v)
 	{
 		if (!v.isArray())
@@ -773,13 +750,11 @@ namespace
 				if (!e.read(m.Key(), JSON::text(m.Get()), &m.Get()))
 					throw ConfigError("field \"" + AIS::settingName(m.Key()) + "\" is not allowed in a server.");
 			}
-			// switched off: its settings are kept, and read so a mistake shows, but it opens no port
-			// and makes no tracker; the main server always serves
+			// switched off: read so a mistake shows, but it opens no port and makes no tracker
 			if (spec.main && !active)
 				throw ConfigError("the main server always serves: \"active\" is for the other servers.");
 			if (!active)
 				continue;
-			// the main server is the control panel's: its port and address, the map always on
 			if (spec.main)
 			{
 				if (!main_port)
@@ -802,10 +777,9 @@ namespace
 		}
 	}
 
-	// Managed mode's viewer section, from before the main server was an entry of
-	// "services": a server with the map on the port beside the control panel, the
-	// tracking, and what the section says of the default station. The panel moves
-	// it into "services", "tracking" and "stations" when it saves.
+	// Managed mode's old viewer section: a server with the map on the port beside
+	// the control panel. The panel moves it into "services", "tracking" and
+	// "stations" when it saves.
 	void Reader::managedViewer(const JSON::Value &viewer)
 	{
 		ServerEntry e;
@@ -820,8 +794,7 @@ namespace
 		server(e, "the main server");
 	}
 
-	// the parts of a configuration a site reads as they stand, without an engine:
-	// managed mode applies them as the panel saves them
+	// read without an engine: managed mode applies them as the panel saves them
 	void Reader::read(const JSON::JSON &root)
 	{
 		// the tracking first: a server's tracking settings yield to it
@@ -852,11 +825,9 @@ namespace SiteReader
 			   { Reader(site, defaults, stations, base_dir, 0, "", command_line_servers).read(root); });
 	}
 
-	// Managed mode's site as its configuration says now: the servers, the tracking
-	// and the webhooks and MQTT state as the file has them, and, where no entry of
-	// "services" is marked main, the viewer section of a file from before as the
+	// Where no entry of "services" is marked main, the old viewer section is the
 	// server beside the control panel, read into the same site so what it says of
-	// the tracking and the station counts like any server's
+	// the tracking and the station counts like any server's.
 	void managedSite(const JSON::JSON &root, const std::string &base_dir, int control_port, int viewer_port, const std::string &bind, SiteConfig &site, StationDefaults &defaults, StationRegistry &stations)
 	{
 		ofFile([&]
@@ -961,7 +932,6 @@ namespace SiteReader
 				throw ConfigError("field \"" + AIS::settingName(m.Key()) + "\" is not allowed in \"mqtt_state\".");
 			}
 		}
-		// without a broker, or switched off, there is none
 		if (spec.url.empty() || !active)
 			return;
 		if (site.mqtt_state.any())

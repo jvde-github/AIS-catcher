@@ -1,5 +1,3 @@
-// The log tab: the server's log as a stream, while the tab is open.
-
 class LogViewer {
     constructor() {
         this.logState = document.getElementById('log_state');

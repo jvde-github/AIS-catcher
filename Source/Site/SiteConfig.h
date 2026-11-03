@@ -42,7 +42,7 @@ namespace JSON
 // What the map on a server offers, under the names the map pages use
 struct ViewerOptions
 {
-	// frame_ancestors: the pages that may frame the server's, its CSP's frame-ancestors; any when empty
+	// frame_ancestors: its CSP's frame-ancestors; any when empty
 	std::string station, station_link, webcontrol_http, context = "settings", frame_ancestors, about;
 	bool realtime = false, log = false, decoder = false, replay = true, msg = false;
 	bool managed = false;
@@ -74,9 +74,9 @@ struct ApiKey
 };
 
 // A tracker of a server's own, behind a filter on the message stream: which
-// receivers feed it (zones, or the group mask), what passes (the terms of
-// AIS::Filter, as given) and what it keeps; it keeps no backup and reads no
-// places, those are the site's. A server without one reads the site's tracker.
+// receivers feed it (zones, or the group mask) and what passes (the terms of
+// AIS::Filter, as given); its places are the site's. A server without one
+// reads the site's tracker.
 struct TrackerSpec
 {
 	bool own = false;
@@ -84,7 +84,6 @@ struct TrackerSpec
 	std::vector<std::string> zones;
 	uint64_t groups_in = GROUPS_ALL;
 	TrackingConfig tracking;
-	// the file its ships are kept in between runs; none when empty
 	std::string backup_file;
 
 	bool operator==(const TrackerSpec &o) const
@@ -94,19 +93,15 @@ struct TrackerSpec
 	bool operator!=(const TrackerSpec &o) const { return !(*this == o); }
 };
 
-// One server of the site: a port, an address, the services it offers, the
-// tracker it reads and the ships it shows of all that tracker keeps.
 struct ServerSpec
 {
 	int port = 0;
 	std::string bind = "127.0.0.1";
 	// HTTPS with these files when given: never with plain HTTP on the same port
 	std::string tls_cert, tls_key;
-	// what it serves: the map unless switched off, the rest when switched on
 	bool ui = true, api = false, mcp = false, system = false, geojson = false, metrics = false, kml = false;
 	TrackerSpec tracking;
 	ViewFilter view;
-	// the stations it shows: their markers, pages and figures; all when empty
 	std::vector<int> stations;
 	bool showsStation(int id) const { return stations.empty() || std::find(stations.begin(), stations.end(), id) != stations.end(); }
 	ViewerOptions viewer;
@@ -115,12 +110,11 @@ struct ServerSpec
 	std::vector<ApiKey> keys;
 	bool open = false;
 	bool limited = false;
-	// the map's JSON as v0.70 served it, for scripts: /ships.json, /stat.json, /api/ships.json, /api/ships_full.json
+	// the map's JSON for scripts: /ships.json, /stat.json, /api/ships.json, /api/ships_full.json
 	bool api_v0 = false;
 	// managed mode's server beside the control panel: its port and address are the panel's
 	bool main = false;
 
-	// the services by name, as the index and the log list them
 	std::vector<std::string> served() const
 	{
 		std::vector<std::string> out;
@@ -144,14 +138,12 @@ struct ServerSpec
 	bool operator!=(const ServerSpec &o) const { return !(*this == o); }
 };
 
-// What a configuration says of the default station where "stations" does not
-// list it: what -N and a "server" entry say of theirs, in every mode, and the
-// main server's title in managed mode
+// The default station where "stations" does not list it, as -N or a "server"
+// entry describes it
 struct StationDefaults
 {
 	bool share_loc = false, gps = true;
 	uint32_t mmsi = 0;
-	// the station's name, for the one station a single-station setup has
 	std::string name;
 	float alt = ALTITUDE_UNDEFINED; // metres, of the antenna
 	// where a station without a position of its own stands; none when 0, 0 as the panel writes it
@@ -159,7 +151,6 @@ struct StationDefaults
 	bool placed() const { return isValidCoord(lat, lon); }
 };
 
-// One webhook: where the events go, which of them, signed with what
 struct WebhookSpec
 {
 	std::string url, secret;
@@ -188,8 +179,6 @@ struct MqttStateSpec
 	}
 };
 
-// What the configuration says about the site: how ships are kept and which
-// servers read them. A site with no server keeps no ships.
 struct SiteConfig
 {
 	TrackingConfig tracking;
@@ -203,8 +192,6 @@ struct SiteConfig
 	std::vector<WebhookSpec> webhooks;
 	MqttStateSpec mqtt_state;
 
-	// the site's tracker is kept for whatever reads it: a server without a
-	// tracker of its own, a webhook, the MQTT state
 	bool wantsTracker() const
 	{
 		for (const auto &s : servers)
@@ -214,24 +201,19 @@ struct SiteConfig
 	}
 };
 
-// The readers of what a configuration says of the site, in SiteConfig.cpp: each
-// section as the file has it, into the site, the station defaults and the
-// stations. A mistake in a file is said with "Config file: " in front; what -N
-// and -W give is said in their own words.
+// A mistake in a file is said with "Config file: " in front; what -N and -W
+// give is said in their own words.
 namespace SiteReader
 {
-	// the "stations" block
 	void stations(const JSON::Value &v, StationRegistry &into);
 	// a tracking key whose value is a file or directory, resolved against the configuration's folder
 	bool isPath(int key);
 	std::string backupFile(const std::string &file, const std::string &base_dir);
 #ifdef HASAPI
-	// "tracking", "services", "server", "webhooks" and "mqtt_state" as they stand, the files they name
-	// resolved against base_dir; command_line_servers names, per "server" entry, the -N that gave it
-	// ("-N 8100"), empty for a file's
+	// files resolved against base_dir; command_line_servers names, per "server" entry,
+	// the -N that gave it ("-N 8100"), empty for a file's
 	void site(const JSON::JSON &root, const std::string &base_dir, SiteConfig &site, StationDefaults &defaults, StationRegistry &stations, const std::vector<std::string> *command_line_servers = nullptr);
-	// managed mode's site: the main server beside the control panel, on viewer_port, the other servers,
-	// the tracking and the deliveries, and what the configuration says of the default station
+	// managed mode's site: the main server, beside the control panel, listens on viewer_port
 	void managedSite(const JSON::JSON &root, const std::string &base_dir, int control_port, int viewer_port, const std::string &bind, SiteConfig &site, StationDefaults &defaults, StationRegistry &stations);
 #endif
 #ifdef HASDELIVERY

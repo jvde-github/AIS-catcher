@@ -1,4 +1,3 @@
-// Find ports and Find devices: what the station sees attached, to pick one from.
 import * as AISComponents from '@aiscatcher/ui/components.js';
 import { el } from './dom.js';
 import { api } from './api.js';

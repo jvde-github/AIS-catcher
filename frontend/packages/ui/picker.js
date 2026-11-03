@@ -1,7 +1,5 @@
-// A dropdown to choose one of many: a button that shows the chosen one and a
-// list that opens under it, with a search field on top once the list is long.
-// The viewer's station filter and the control panel's station of an input use
-// it; the host gives the options and says what a pick means.
+// A dropdown to choose one of many; the host gives the options and says what a
+// pick means.
 
 const SEARCH_FROM = 8;
 
@@ -14,7 +12,7 @@ function node(tag, cls, text) {
     return n;
 }
 
-// an option's face, on the button and in the list: number, name over its line, tag
+// an option as drawn on the button and in the list
 function face(opt) {
     const text = node('span', 'pick__text');
     text.append(node('strong', 'pick__name', opt.name));
@@ -83,8 +81,6 @@ export function createPicker(o) {
         if (changed && o.onPick) o.onPick(v);
     }
 
-    // the arrows walk the options from the search field and between them; Enter in
-    // the field takes the first one found
     function step(e) {
         const opts = [...list.querySelectorAll('.pick__opt')];
         const at = opts.indexOf(document.activeElement);
@@ -99,7 +95,7 @@ export function createPicker(o) {
         }
     }
 
-    // while the list is open it takes a press elsewhere and Escape, before anything else hears the key
+    // capture phase, so Escape closes the list before anything else hears the key
     const outside = (e) => { if (!root.isConnected || !root.contains(e.target)) toggle(false); };
     const escape = (e) => {
         if (!root.isConnected) return toggle(false);

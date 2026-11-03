@@ -100,7 +100,6 @@ namespace
 		}
 		return h;
 	}
-	// a place served from its file, the whole file
 	void fromFile(PlaceIndex::Entry &e, const std::string &path, const std::string &content)
 	{
 		e.path = std::make_shared<const std::string>(path);
@@ -108,7 +107,6 @@ namespace
 		e.bytes = content.size();
 		e.hash = placeHash(content.data(), content.size());
 	}
-	// a place that keeps its text, as long as the text and no longer
 	void fromText(PlaceIndex::Entry &e, const std::string &text)
 	{
 		e.text = std::make_shared<const std::string>(text.data(), text.size());
@@ -358,7 +356,6 @@ JSON::Document PlaceCatalogue::parse(const std::string &json)
 	return parser.parse(json);
 }
 
-// Validates and compiles one parsed feature.
 PlaceCatalogue::Place PlaceCatalogue::validate(JSON::JSON &root,
 											   JSON::Pool &pool, bool saving,
 											   bool keepText)
@@ -789,7 +786,6 @@ void PlaceCatalogue::check(const Place &candidate, const Place *old) const
 		throw std::runtime_error("Place polygon budget exceeded");
 }
 
-// What a place registers in the catalogue, added or taken away.
 void PlaceCatalogue::account(const Place &p, bool add)
 {
 	const auto &c = p.compiled;

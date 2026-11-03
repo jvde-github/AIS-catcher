@@ -90,7 +90,7 @@ export function createPlaceEditor(host, options = {}) {
         toolTips = tooltip.create({selector: '.pe-toolbar .pe-tool--icon', placement: 'below'});
     toolTips.prepare(host);
     const q = s => host.querySelector(s);
-    // Import, export and the rest, behind the panel's ⋯ menu; they answer to data-do as the other buttons do
+    // the menu's items run the same actions as the data-do buttons
     const MENU = [['Import…', 'import'], ['Export', 'export'], ['View GeoJSON', 'view-json'], ['Reload', 'reload']];
     const menu = moreMenu('Import, export and other place actions', MENU.map(([text, action]) => [text, () => { menu.open = false; actions[action](); }]));
     menu.querySelector('summary').classList.add('st-icon-btn--outline');
@@ -101,7 +101,6 @@ export function createPlaceEditor(host, options = {}) {
     let placeSettings = null, catalogueVersion = '';
     let records = [], draft = null, original = null, busy = false, dead = false, draw = null, undo = [],
         redo = [], editingMode = false, deleteArmed = false, drawType = null;
-    // the panel's way of holding unsaved edits, and of being asked about them when the page is left
     const editor = registerEditor('places', {save: () => save(), data: () => draft});
     const editing = new VectorSource();
     // every other place nearby, in a quiet slate, so a new outline is drawn against its neighbours
@@ -213,7 +212,6 @@ export function createPlaceEditor(host, options = {}) {
         ],
         view: new View({center: fromLonLat([4.4, 51.95]), zoom: 10})
     });
-    // the background the panel's maps share, under the shapes
     addBasemap(map, q('.place-map-wrap'));
     const modify = new Modify({source: editing, style: () => S.handle});
     map.addInteraction(modify);

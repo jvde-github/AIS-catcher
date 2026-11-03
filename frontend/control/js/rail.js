@@ -1,9 +1,6 @@
-// The settings' left rail: every section always there, the current one open with its items and
-// its add button, a count on a closed section of two or more. It holds which page shows and which
-// item on it; the pages are drawn by their own code, which `open(tab, key)` reaches, false when
-// unsaved edits keep the page. `sections(cfg)` says what the rail lists: per section its `tab`,
-// `label`, `items` ({ key, label, dot, onClick }) and `add` ([label, onClick]); a section whose
-// items are pages of their own (System's) says `tabs`.
+// `open(tab, key)` draws a page, false when unsaved edits keep the current one. `sections(cfg)`
+// says what the rail lists: per section its `tab`, `label`, `items` ({ key, label, dot, onClick })
+// and `add` ([label, onClick]); a section whose items are pages of their own (System's) says `tabs`.
 
 import { el } from './dom.js';
 import { icon } from './icons.js';
@@ -49,7 +46,7 @@ export function createRail(nav, { sections, open, shown }) {
         ConfigStore.fetch().then(cfg => paint(sections(cfg))).catch(() => {});
     }
 
-    // open a page of the rail with the item on it; false when unsaved edits keep the page shown
+    // false when unsaved edits keep the page shown
     function select(tab, key) {
         const prev = sel;
         sel = { tab, key };
@@ -64,9 +61,7 @@ export function createRail(nav, { sections, open, shown }) {
         get key() { return sel.key; },
         select,
         render,
-        // a page that changed which item it shows says so; the rail follows
         follow(tab, key) { if (sel.tab === tab) sel = { tab, key }; },
-        // where the panel was left, to open there the next time
         remember() { last = { ...sel }; },
         get last() { return last; }
     };

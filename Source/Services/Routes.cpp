@@ -85,7 +85,6 @@ namespace Services
 			return out;
 		}
 
-		// the members of a parameter's schema
 		const std::string TEXT = "\"type\":\"string\"";
 		const std::string NUMBER = "\"type\":\"number\",\"minimum\":0";
 		std::string integer(long long min, long long max) { return "\"type\":\"integer\",\"minimum\":" + std::to_string(min) + ",\"maximum\":" + std::to_string(max); }

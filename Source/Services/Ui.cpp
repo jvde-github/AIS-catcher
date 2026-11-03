@@ -181,12 +181,11 @@ namespace Services
 		if ((request.method != "GET" && !(request.method == "POST" && request.path == "/api/decode")) || request.path.empty() ||
 			request.path[0] != '/' || scope(request) == NOT_MINE)
 			return false;
-		// the ship list and statistics as v0.70 served them, for scripts; the map reads its own
+		// legacy ship list and statistics, for scripts; the map reads its own
 		const std::string &p = request.path;
 		if (!spec.api_v0 && (p == "/ships.json" || p == "/stat.json" || p == "/api/ships.json" || p == "/api/ships_full.json"))
 			return false;
 
-		// this server's settings, then the station owner's plugins
 		if (request.path == "/custom/plugins.js")
 		{
 			response.type = "application/javascript";
@@ -302,9 +301,7 @@ namespace Services
 		const auto since = [&]() { return (std::time_t)toInt(request.param("since")); };
 		const std::vector<int> focus = focusOf(request);
 		const DB::Keep keep = keepFor(focus);
-		// how far back the view lets tracks go
 		const std::time_t oldest = view.trackFloor(std::time(nullptr));
-		// one vessel, when the focus shows it
 		const auto shows = [&](int mmsi) {
 			bool ok = !keep;
 			if (keep)
@@ -465,7 +462,6 @@ namespace Services
 		}
 		else if (p == "/api/decode" && options.decoder)
 		{
-			// a POST sends the NMEA as its body, a GET as its query
 			const std::string text = request.method == "POST" && !request.body.empty() ? request.body : request.query;
 			if (text.empty() || text.size() > 1024)
 				response = Response::json("{\"error\":\"Input size limit exceeded\"}");
@@ -484,8 +480,7 @@ namespace Services
 		}
 		else if (p == "/api/message")
 		{
-			// the vessel's last message, decoded from the NMEA kept for it, as one
-			// object; none is kept without msg
+			// the vessel's last message, decoded; no NMEA is kept without msg
 			const int mmsi = toMMSI(bare(request.query));
 			const std::string msg = options.msg && mmsi > 0 && shows(mmsi) ? UiFormat::message(db, mmsi) : std::string();
 			const std::string decoded = msg.empty() ? std::string() : decodeMessage(msg);
@@ -555,8 +550,6 @@ namespace Services
 		return true;
 	}
 
-	// The stat page: the figures of what the page looks through, and what the
-	// site knows of itself and of the running engine.
 	std::string Ui::statJSON(const std::vector<int> &focus, const DB::Keep &keep, bool owner)
 	{
 		DB &db = tracker.ships();
@@ -577,7 +570,6 @@ namespace Services
 			std::unique_ptr<Figures> none(new Figures());
 			UiFormat::counters(w, *none, false);
 		}
-		// the running engine's devices, outputs and community feed, as the site knows them
 		w.kv("tcp_clients", clients ? clients() : 0);
 		if (engine)
 			engine(w, ENGINE_ALL);
@@ -649,14 +641,12 @@ namespace Services
 			.key("features").beginObject().kv("share_location", sharing).kv("save_messages", options.msg).kv("replay", options.replay)
 			.kv("realtime", options.realtime).kv("log", options.log).kv("decoder", options.decoder).kv("managed", options.managed)
 			.kv("places", (bool)tracker.places()).kv("outlines", view.place_geometry).kv("geojson", spec.geojson).kv("kml", spec.kml).kv("about_md", plugins.isAboutPresent());
-		// the community feed, as the running engine has it
 		if (engine)
 			engine(w, ENGINE_SHARING);
 		else
 			w.kv("sharing", false).kv("sharing_uuid", false);
 		w.endObject()
 			.key("stations").beginArray();
-		// the stations the page may look through, by number and name
 		for (const auto &s : picker)
 			w.beginObject().kv("id", s.id).kv("name", s.name).endObject();
 		w.endArray()

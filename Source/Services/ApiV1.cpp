@@ -78,8 +78,7 @@ namespace Services
 				w.kv_null(key);
 		}
 
-		// What a vessel is now, in full, as the viewer and a client both read it.
-		// `badge` is the binary-message badge, `aboard` a station riding it, -1 for none.
+		// `badge` is the binary-message badge, `aboard` a station riding it, -1 for none
 		void writeVessel(JSON::Writer &w, const Ship &s, std::time_t now, uint16_t badge = 0, int aboard = -1,
 						 const std::function<void(JSON::Writer &)> &extra = nullptr, bool stations_shown = true)
 		{
@@ -229,7 +228,6 @@ namespace Services
 			w.kv("last_seen", isoTimeText(s.last_signal).text).kv("age_s", (long long)(now > s.last_signal ? now - s.last_signal : 0)).endObject();
 		}
 
-		// what a port code is called, as the place catalogue or the port list knows it
 		std::string portName(const PlaceIndex *index, const std::string &code)
 		{
 			if (code.empty())
@@ -300,7 +298,7 @@ namespace Services
 			w.kv("lat", e.lat).kv("lon", e.lon).kv("has_outline", !e.polygons->empty());
 		}
 
-		// a stay as the visit tracker keeps it; a time nobody saw is a bound, and says so
+		// a time nobody saw is a bound, and says so
 		void writeVisit(JSON::Writer &w, const VisitTracker::Visit &v, const PlaceIndex::Entry &e)
 		{
 			w.kv("entered", isoTime(v.entered)).kv("entered_observed", v.entryTime() != 0);
@@ -501,7 +499,6 @@ namespace Services
 			w.endObject();
 		}
 
-		// a period's figures as data_status tells them: how much, and how far
 		void writeFiguresBrief(JSON::Writer &w, const char *key, const MessageStatistics::Values &v, bool empty, bool vessels, bool hidden)
 		{
 			w.key(key).beginObject().kv("messages", empty ? 0 : v.count);
@@ -603,7 +600,6 @@ namespace Services
 			pos = next;
 		}
 
-		// the route as the table writes it, and how it is answered
 		const char *path = nullptr;
 		std::function<Response()> answer;
 		const auto at = [&](const char *p, std::function<Response()> f) {
@@ -1068,7 +1064,6 @@ namespace Services
 			}
 		};
 
-		// a row of a list kept newest first: when it was heard, and what it is
 		struct Heard
 		{
 			std::time_t time;
@@ -1210,7 +1205,6 @@ namespace Services
 		const auto index = tracker.places();
 
 		const auto extra = [&](JSON::Writer &w) {
-			// the port the destination names, as the place catalogue or the port list knows it
 			if (port.empty())
 				w.kv_null("destination_port");
 			else

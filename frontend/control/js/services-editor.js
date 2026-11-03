@@ -1,8 +1,4 @@
-// The configuration's `services`: the servers, the web addresses this station answers on. The
-// main server, beside the control panel on its port, comes first and always serves the map. Each
-// serves the map, the API (/api/v1), MCP (/mcp), System (/api/v1/system), GeoJSON and Prometheus
-// as chosen, and says who may read it: programs on this machine, holders of a key, or anyone.
-// The servers take a save at once.
+// The main server comes first and always serves the map. The servers take a save at once.
 
 import { copyToClipboard } from '@aiscatcher/ui/components.js';
 import { el, isActive, on, moreMenu } from './dom.js';
@@ -14,7 +10,7 @@ import { DOCS, docLink } from './docs.js';
 import { icon } from './icons.js';
 
 const CONTAINER = 'services-config';
-// `legacy`: the viewer's switch that offered it before it was a service of its own
+// `legacy`: the viewer's older switch for the same service, still read
 const SERVICES = [
     { key: 'ui', label: 'Map', path: '/', desc: 'The map, and what it reads.', docs: DOCS.viewer },
     { key: 'api_v0', label: 'API v0', path: '/ships.json', desc: 'The ship list and statistics as v0.70 gave them, for scripts. Needs the map; Limited does not cap it.' },
@@ -25,33 +21,27 @@ const SERVICES = [
     { key: 'kml', label: 'KML', path: '/kml', desc: 'Ships for Google Earth.' },
     { key: 'metrics', label: 'Prometheus', path: '/metrics', desc: 'Message counts for Prometheus and Grafana.', legacy: 'prome', docs: DOCS.prometheus }
 ];
-// what a server's keys guard; a server without keys is open to whoever reaches it
 const GUARDED = ['api', 'mcp', 'system', 'geojson', 'kml', 'metrics'];
 
 const local = bind => !bind || bind === 'localhost' || bind === '::1' || String(bind).startsWith('127.');
 
-// a link that opens a server in a new tab
 export function openButton(href) {
     return el('a', 'st-btn st-btn--sm', { href, target: '_blank', rel: 'noopener', html: icon('open') + 'Open' });
 }
 
-// the services, as the Services overview has them in its columns
 export const SERVICE_COLUMNS = SERVICES.map(({ key, label, path }) => ({ key, label, path }));
 
 const hasKeys = data => Array.isArray(data.keys) && data.keys.length > 0;
 
-// what a server serves: the map unless switched off (with keys, only when switched on), the rest
-// when switched on, Prometheus under its old name too; `builtIn`: the main server, the map always on
+// the map unless switched off (with keys, only when switched on); `builtIn`: the main server, whose
+// map is always on
 export function servedKeys(data, builtIn = false) {
     const map = builtIn || (data.ui === undefined ? !hasKeys(data) : on(data.ui));
     return SERVICES.filter(s => s.key === 'ui' ? map : s.key === 'api_v0' ? map && on(data.api_v0) : on(data[s.key]) || (s.legacy && on(data[s.legacy]))).map(s => s.key);
 }
 
-// a server as the panel names it: Main, its description, or its port
 export const serverName = s => (s.main ? 'Main' : String(s.description || '').trim() || `Server · ${s.port ?? '–'}`);
 
-// who may read a server, in a few words: the map is never guarded, the rest by its keys, or
-// anyone who reaches it when it has none
 export function readersOf(data, bind) {
     if (hasKeys(data)) return 'With a key';
     return on(data.public) || !local(bind) ? 'Anyone' : 'This machine';
@@ -67,7 +57,6 @@ export function accessMode(data, bind) {
     return on(data.public) || local(bind) ? 'open' : 'keys';
 }
 
-// why a server could not be saved as it stands: Keys without a key, or System open on the network
 export function accessProblem(data, bind, builtIn = false) {
     const served = servedKeys(data, builtIn);
     if (!GUARDED.some(k => served.includes(k))) return null;
@@ -77,7 +66,6 @@ export function accessProblem(data, bind, builtIn = false) {
     return null;
 }
 
-// a setting's words on the left, its switch on the right, as the settings beside it have them
 function switchRow(cls, checked, onChange, title, desc, disabled) {
     return el('label', 'st-svc ' + (cls || ''), {},
         el('span', 'st-svc__text', {}, title, desc ? el('span', 'st-svc__desc', { text: desc }) : null),
@@ -91,9 +79,7 @@ function section(title, docs, ...kids) {
         el('div', 'st-svcs__head', {}, el('h3', 'st-section__title', { text: title }), docs ? docLink(docs) : null), ...kids);
 }
 
-// A server page's section that folds: closed, its head reads the section's state in a few words;
-// open, its rows are there to edit. The owner's choice is kept per server and section; a section
-// with a problem opens itself unless the owner closed it, and the problem stands in its head.
+// a section with a problem opens itself unless the owner closed it
 const foldOpen = new Map();
 function fold(title, docs, { key, state = '', warn = '', open: openByDefault = false }, ...kids) {
     const open = foldOpen.has(key) ? foldOpen.get(key) : openByDefault || !!warn;
@@ -112,9 +98,9 @@ function fold(title, docs, { key, state = '', warn = '', open: openByDefault = f
     return sec;
 }
 
-// ---- HTTPS on a server: the files of a certificate it already has. `until`, the station's word for
-// a port that serves it, is when the certificate in use expires, in seconds. A path outside the
-// configuration's folder can only be set in the file: the panel shows it and leaves it.
+// ---- HTTPS. `until`, from the station's status for a port that serves it, is when the
+// certificate in use expires, in seconds. A path outside the configuration's folder can only be
+// set in the file: the panel shows it and leaves it.
 const dayOf = seconds => new Date(seconds * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 export function tlsLine(data, until, now = Date.now() / 1000) {
@@ -149,12 +135,9 @@ function renderTLS(host, data, { until, folder, touched, foldKey }) {
         el('p', 'st-help', { text: 'Files you already have, in the configuration\'s folder; one elsewhere is set in the configuration file. A renewed certificate is picked up within a minute.' })));
 }
 
-// ---- what a server or a webhook shows: from which stations, once there are two or more, and
-// which MMSIs are let through or kept out, its view; on a server also whether places go out with
-// their outlines. Kinds and how lately heard are the page's own filter's. It writes `data.view`;
-// the terms it does not edit, set in the file, stay as they are. `everyShip`: the main server,
-// whose map shows every ship; `outlines`: the server sends places; `byStation`: a server, whose
-// stations are those its filter names with `id`: it keeps their ships and shows their markers, pages and figures.
+// ---- what a server or a webhook shows. It writes `data.view`; the terms it does not edit, set in
+// the file, stay as they are. `everyShip`: the main server, whose map shows every ship; `outlines`:
+// the server sends places; `byStation`: a server, whose stations are those its filter names with `id`.
 const EDITED = ['stations', 'mmsi_allow', 'mmsi_deny'];
 
 const idList = (v) => (Array.isArray(v) ? v : v === undefined || v === null || v === '' ? [] : String(v).split(','))
@@ -171,7 +154,6 @@ export function renderShows(host, data, { stations = [], touched, rerender, ever
     };
     const kids = [];
     const box = { append: (...n) => kids.push(...n) };
-    // what it shows in a few words, for the head of the fold
     const state = () => {
         const parts = [];
         if (!everyShip && byStation && many) {
@@ -238,7 +220,6 @@ export function renderShows(host, data, { stations = [], touched, rerender, ever
     done();
 }
 
-// places go out with their outline, or as a marker alone
 function outlinesRow(data, touched) {
     const view = () => (data.view && typeof data.view === 'object' ? data.view : (data.view = {}));
     return switchRow('', data.view?.place_geometry === undefined || on(data.view.place_geometry),
@@ -246,20 +227,17 @@ function outlinesRow(data, touched) {
         el('strong', '', { text: 'Share outlines' }), 'Each place with its shape; off, a marker alone.');
 }
 
-// what serves places, so their outlines are a question
 export const sendsPlaces = (served) => ['ui', 'api', 'mcp'].some(k => served.includes(k));
 
 // a key just made: shown until the tab is read again, as only its fingerprint is kept
 const revealed = new Map();
 
-// What a server serves (`builtIn`: the main server, the map always on, as the panel shows it)
-// and who may read it. `data` changes in place; `touched` says so and `rerender` draws the page
-// again.
+// `data` changes in place
 export function renderServing(host, data, { builtIn = false, bind, touched, rerender, foldKey = 'srv' }) {
     const served = servedKeys(data, builtIn);
     const has = k => served.includes(k);
     const set = (k, value) => {
-        // the switch says it now, not Prometheus's old name; the map is on unless said otherwise, with keys off
+        // the service's own switch replaces its legacy one; without keys the map is on unless said otherwise
         SERVICES.forEach(s => { if (s.legacy) delete data[s.legacy]; });
         if (k === 'ui') {
             if (!value) data.ui = false;
@@ -270,7 +248,6 @@ export function renderServing(host, data, { builtIn = false, bind, touched, rere
         touched();
         rerender();
     };
-    // each service on a line: its name, path and what it is for
     const rows = SERVICES.map(s => switchRow('st-svc--line', has(s.key), v => set(s.key, v),
         el('span', 'st-svc__name', {}, el('strong', '', { text: s.label }), el('code', '', { text: s.path })),
         builtIn && s.key === 'ui' ? 'Always on: this panel shows it.' : s.desc,
@@ -320,8 +297,7 @@ export function renderServing(host, data, { builtIn = false, bind, touched, rere
     }
 }
 
-// the keys a server accepts, each by its name and what it may read; a new one is made by the
-// control panel, shown once, and kept as its SHA-256
+// a new key is made by the control panel, shown once, and kept as its SHA-256
 function renderKeys(data, keys, { touched, rerender, system }) {
     const wrap = el('div', 'st-keys');
     const scopesOf = k => (Array.isArray(k.scopes) && k.scopes.length ? k.scopes : ['data']);
@@ -381,11 +357,6 @@ function renderKeys(data, keys, { touched, rerender, system }) {
     return wrap;
 }
 
-// the folded part of a server's map settings, open or not as the owner left it, by server
-
-// A server's map settings, as the main server's page has them, in one fold: the map page a
-// visitor gets, then as its tail the links, tiles and plugins. One setting to a line. `key`:
-// which server's fold this is. Closed, the head names the tabs that are on, the tiles and the plugins.
 function renderViewerFields(main, s, fields, touched, key) {
     const rest = fields.filter(f => f.section !== 'Map page');
     const isSet = ({ field: f }) => {
@@ -415,7 +386,6 @@ function renderViewerFields(main, s, fields, touched, key) {
         }
         groups.get(f.section).append(field(f));
     }
-    // the head: the tabs and cards that are on, then whether the tiles and plugins are the owner's
     const tabs = page.filter(f => f.field.type === 'toggle' && on(s[f.field.jsonpath || f.field.name])).map(f => f.field.label.replace(/ tab$/, '').replace(/ on the ship card$/, ''));
     const tiles = rest.some(f => f.section === 'Map tiles' && isSet(f)) ? 'own tiles' : 'default tiles';
     const plugins = rest.some(f => f.section === 'Plugins' && isSet(f)) ? 'plugins' : 'no plugins';
@@ -423,10 +393,8 @@ function renderViewerFields(main, s, fields, touched, key) {
         el('div', 'st-srv__viewer st-srv__page', {}, ...page.map(field)), tail));
 }
 
-// The editor of the servers, for the Services pages: each server its own page, the main one first
-// and always there. `viewerFields`: the map's settings, on every server that serves it; `stations`:
-// the stations a server can show; `onEdit`: a name or a port typed; `onInvalid(i)`: the server a
-// save refused, to show; `onSaved`: after a save.
+// `viewerFields`: the map's settings, on every server that serves it; `onInvalid(i)`: the server
+// a save refused, to show.
 export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields = [], stations = () => [] } = {}) {
     const state = { list: [], viewerPort: 0, controlPort: 0, bind: '127.0.0.1', saved: new Set(), listening: null, tls: new Map(), folder: '' };
     const editor = registerEditor(CONTAINER, { save: () => save(), data: () => state.list });
@@ -445,12 +413,10 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         readTLS(status);
     }
 
-    // the ports with HTTPS and when their certificates expire, as the station says now
     function readTLS(status) {
         state.tls = new Map((status.tls || []).map(t => [t.port, t.until]));
     }
 
-    // the ports that listen, as the station says now
     async function refreshListening() {
         const status = await hub.refreshStatus();
         if (Array.isArray(status.listening)) state.listening = new Set(status.listening);
@@ -464,8 +430,7 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         return !state.listening || !state.saved.has(p) || state.listening.has(p);
     }
 
-    // the saved servers whose ports do not listen once the station has opened them: asked again
-    // for a few seconds, as opening them takes a moment, until every one listens
+    // asked again for a few seconds, as opening the ports takes the station a moment
     async function deafPorts(list) {
         for (let tries = 12; ; tries--) {
             await refreshListening();
@@ -489,7 +454,6 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         return state.list.length - 1;
     }
 
-    // the address a browser here would use for a server, when it can reach it
     function address(s) {
         const host = location.hostname;
         const here = host === 'localhost' || host === '127.0.0.1' || host === '::1';
@@ -497,7 +461,6 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         return `${s.tls ? 'https' : 'http'}://${host.includes(':') ? '[' + host + ']' : host}:${s.port}`;
     }
 
-    // the page's header: Active, Open, and Delete behind the menu; the main server stays, and always serves
     function actions(box, i, { deleted, rerender }) {
         const s = state.list[i];
         if (s.main) return box.append(openButton('/viewer/'));
@@ -521,10 +484,8 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         }, true]]));
     }
 
-    // a server's page under `title`, the page's heading, which follows the name and the port as typed
     function renderDetail(main, i, { title, rerender }) {
         const s = state.list[i];
-        // the map beside the panel shows everything; what a server shows is the server's
         if (s.main) {
             main.append(el('p', 'st-help st-svcs__lead', { text: `The map this panel shows, on port ${state.viewerPort || 'next to it'}. Add servers for a public map or an API.` }));
             renderTLS(main, s, { until: state.tls.get(state.viewerPort), folder: state.folder, touched, foldKey: 'main' });
@@ -537,7 +498,6 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
             main.append(el('p', 'st-help st-svcs__lead', { text: 'Switched off: it keeps its settings and serves nothing until it is on again.' }));
         else if (!listening(s))
             main.append(el('p', 'st-warn-note', { text: `Port ${s.port} is not listening: in use elsewhere? See the log.` }));
-        // ---- where it listens
         // the list and the title follow the port in place: a redraw here would lose the click that ends the typing
         const renamed = () => {
             touched();
@@ -549,7 +509,6 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
             if (v === '') delete s.port; else s.port = Number(v);
             renamed();
         } });
-        // its name: what the panel calls it, for a public map or an API for automation
         const name = el('input', 'st-input', { type: 'text', value: s.description || '', placeholder: 'e.g. Public map', spellcheck: 'false', onInput: e => {
             const v = e.target.value;
             if (v.trim()) s.description = v; else delete s.description;
@@ -569,7 +528,6 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
 
         renderTLS(main, s, { until: state.tls.get(Number(s.port)), folder: state.folder, touched, foldKey: 'srv' + i });
         renderServing(main, s, { bind: s.bind, touched, rerender, foldKey: 'srv' + i });
-        // what it sends, before how its map looks
         renderShows(main, s, { stations: stations(), touched, rerender, outlines: sendsPlaces(servedKeys(s)), byStation: true, foldKey: 'srv' + i });
         if (servedKeys(s).includes('ui'))
             renderViewerFields(main, s, viewerFields, touched, 'srv' + i);
@@ -590,8 +548,8 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         return out;
     }
 
-    // What only this page knows: Keys chosen with no key yet would save as open. The ports and what
-    // a server serves the reader checks, and its answer shows as the save's.
+    // only what this page knows: Keys chosen with no key yet would save as open. The reader checks
+    // the ports and what a server serves, and its answer shows as the save's.
     function validate() {
         for (let i = 0; i < state.list.length; i++) {
             const s = state.list[i];

@@ -23,7 +23,7 @@ namespace Stations
 {
 	typedef std::vector<std::unique_ptr<Receiver>> Receivers;
 
-	// how many receivers name each station: one no receiver names takes GPS from every input
+	// a station no receiver names takes GPS from every input
 	static void countInputs(StationRegistry &stations, const Receivers &receivers)
 	{
 		StationRegistry counted;
@@ -38,11 +38,10 @@ namespace Stations
 	}
 
 	// The default station the configuration does not list, as a server section
-	// (-N, "server", "services") describes it (STATION, LAT, LON, SHARE_LOC,
-	// USE_GPS, OWN_MMSI): named after the one receiver standing on it when that
-	// has a name of its own, else as the section says, else not at all; placed
-	// where the first such receiver with a position of its own is, else where the
-	// section puts it. It rides a vessel only when it is the only station (alone).
+	// (-N, "server", "services") describes it: named after the one receiver standing on it
+	// when that has a name of its own, else as the section says, else not at all; placed
+	// where the first such receiver with a position of its own is, else where the section
+	// puts it. It rides a vessel only when it is the only station (alone).
 	static StationRegistry::Station defaultStation(const StationDefaults &defaults, const Receivers &receivers, bool alone)
 	{
 		StationRegistry::Station s;
@@ -106,7 +105,6 @@ namespace Stations
 				s.lon = r.getLon();
 				stations.define(s);
 			}
-			// once stations are configured, the receivers' messages say which station heard them
 			r.placeAtStation(s.lat, s.lon, configured);
 		}
 		countInputs(stations, receivers);

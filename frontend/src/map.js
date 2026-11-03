@@ -58,7 +58,6 @@ export const ol = {
 
 export let map;
 
-// the view as the settings keep it, and in the address
 beforeWrite(() => {
     if (!map) return;
     const center = toLonLat(map.getView().getCenter());
@@ -594,7 +593,6 @@ function toneValue(value, curve) {
     return value;
 }
 
-// the names our maps keep: towns, cities, states and countries; streets, villages, shields and the rest go
 const CHART_LABELS = /^(label|place)_(town|city|country)/;
 
 function waterLabels(tones) {

@@ -44,7 +44,6 @@ const api = (query) => fetch(`api/${query}&stations=${focus}`).then((r) => r.jso
 const objects = mapobjects.create({
     fetchJSON: (url) => api(url),
     objectUrl: (key) => `object.json?key=${key}`,
-    // a server that sends places as markers alone is not asked for their outlines
     placeGeometryUrl: (id, version) => config.features?.outlines === false ? null : `place.json?id=${id}&version=${encodeURIComponent(version)}`,
     shipMessagesUrl: (mmsi) => `binmsgs.json?mmsi=${mmsi}`,
     eventsUrl: (since) => `events.json?since=${since}`,
@@ -64,7 +63,6 @@ const objects = mapobjects.create({
     setTableOpen,
     openStation,
     map: () => map,
-    // this installation's own stations: one whose receivers are lost pulses
     pulse: true,
 });
 
@@ -102,7 +100,6 @@ function openStation(id) {
     showTargetcard('station', id);
 }
 
-// the side table holds a list of map objects
 function setTableOpen(on) {
     if (on) closeSettings();
     setPanels({ table: on, ...(on ? { replay: false } : {}) });

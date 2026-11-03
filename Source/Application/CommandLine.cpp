@@ -48,21 +48,16 @@ namespace CommandLine
 {
 
 // -------------------------------
-// The command line as a configuration document
-//
-// Every option writes what it says into a document in the configuration
-// file's format, and the configuration reader applies that document as it
-// applies a file: one builder for both. An option's settings are told first
-// to an object of the kind that takes them, so a mistake is still reported at
-// the option that made it, in the words it always had.
+// every option writes into a document in the configuration file's format, which the
+// configuration reader applies as it applies a file; an option's settings are tried first on
+// an object of the kind that takes them, so a mistake is reported at the option that made it
 
 namespace
 {
 	using Keys = std::vector<AIS::Keys>;
 
-	// A document as the command line writes it: the configuration file's format
-	// with its members in the order given and a key given twice kept twice, so
-	// the reader applies what was said in the order it was said
+	// the configuration file's format with its members in the order given and a key given
+	// twice kept twice, so the reader applies them in that order
 	struct Node
 	{
 		enum Kind
@@ -101,7 +96,6 @@ namespace
 					return &it->second;
 			return nullptr;
 		}
-		// the last member named key where it is of that kind, else a new one
 		Node &child(const std::string &key, Kind k = OBJECT)
 		{
 			Node *c = last(key);
@@ -143,7 +137,6 @@ namespace
 		return keys;
 	}
 
-	// a value from a file, as the reader would read it from the document again
 	Node fromJSON(const JSON::Value &v)
 	{
 		switch (v.getType())
@@ -154,7 +147,7 @@ namespace
 			return Node::integer(v.getInt64());
 		case JSON::Value::Type::FLOAT:
 		{
-			// enough digits for the same number, and a point so it stays one with a fraction
+			// %.17g gives the same double back; a point keeps it a float
 			char b[40];
 			std::snprintf(b, sizeof(b), "%.17g", v.getFloat());
 			std::string t = b;
@@ -241,7 +234,6 @@ namespace
 		return true;
 	}
 
-	// a tracking file or places directory as the reader resolves it, against base; a server's "tracking" too
 	void absolute(Node &n, const std::string &base)
 	{
 		for (auto &m : n.members)
@@ -270,7 +262,6 @@ namespace
 	}
 
 #if defined(HASWEBVIEWER) || defined(HASDELIVERY)
-	// a setting's key by its name on the command line, said of the option that gave it: -N's and -W's
 	AIS::Keys lookup(const std::string &name, const std::string &where)
 	{
 		std::string upper = name;
@@ -282,8 +273,8 @@ namespace
 	}
 #endif
 
-	// what an object that tries a setting says, the reader says again when it
-	// applies the setting: while trying, the log keeps quiet
+	// the reader logs again what a trial object logs when it applies the setting:
+	// while trying, the log keeps quiet
 	struct Quiet
 	{
 		bool on;
@@ -300,8 +291,7 @@ namespace
 		}
 	};
 
-	// the document's files are resolved already, each against the folder of the
-	// file it came from: read with no folder, and the folder back after
+	// the document's files are resolved already: read with no base folder, and restore it after
 	struct FromHere
 	{
 		std::string base;
@@ -310,7 +300,7 @@ namespace
 	};
 }
 
-// the key/value pairs after an option's positional arguments, into a node; -G's go to the log itself
+// the key/value pairs after an option's positional arguments; -G's go to the log itself
 static void parseSettings(const std::vector<std::string> &args, int ptr, Node *into, Setting *apply = nullptr)
 {
 	const int argc = (int)args.size();
@@ -388,7 +378,6 @@ static void positional(const Keys &keys, const std::vector<std::string> &args, i
 		parseSettings(args, ptr + (int)keys.size(), &into);
 }
 
-// the one positional key an option takes when it is given
 static Keys leading(bool given, AIS::Keys key)
 {
 	return given ? Keys{key} : Keys();
@@ -404,26 +393,21 @@ static void Assert(bool b, const std::string &context, const std::string &msg = 
 
 namespace
 {
-	// one receiver as the document will have it
 	struct Rx
 	{
 		Node entry;
-		// the channels it ends with: a channel key is what only a receiver object
-		// takes, and the last word wins, as it did when each was applied in turn
+		// a channel key is taken only by a receiver object; the last one given wins
 		bool channel_set = false;
 		std::string channel, nmea;
 		bool passive = false;
 	};
 
-	// what the command line asks of the program besides configuring: the
-	// the lists, and whether the engine runs at all
 	struct Actions
 	{
 		bool list_devices = false, list_devices_json = false, list_support = false, list_options = false, no_run = false, new_key = false;
 	};
 
-	// The command line, read into a document. Options that act rather than
-	// configure (-h, -l, -L, -G) are noted as actions, or act on the log as they did.
+	// the command line read into a document; -h, -l and -L are noted as actions, -G acts on the log
 	class Translation
 	{
 		bool verbose = false;
@@ -438,7 +422,6 @@ namespace
 		Node tracking;
 		bool has_tracking = false;
 
-		// -N: a port starts a server, the keys that follow are its settings; the servers come once every argument is in
 		struct PendingServer
 		{
 			std::string port;
@@ -450,8 +433,8 @@ namespace
 		std::string uuid;
 		std::vector<std::string> sharing_zone;
 
-		// the engine the reader makes of the document so far: read again after every
-		// option, so a wrong one is refused where it stands, in the reader's words
+		// the engine the reader makes of the document so far, made again after every option
+		// so a wrong one is refused where it stands
 		std::unique_ptr<Engine> state_;
 
 		void check(const std::string &where)
@@ -475,7 +458,7 @@ namespace
 			state_ = std::move(e);
 		}
 
-		// a receiver as the reader last made it: the engine's receiver its entry fills
+		// the receiver the reader made of rx's entry
 		Receiver &state(const Rx &rx)
 		{
 			std::size_t n = 0;
@@ -501,7 +484,6 @@ namespace
 			check("");
 		}
 
-		// the last engine tried goes as quietly as the others
 		~Translation()
 		{
 			Quiet quiet;
@@ -523,7 +505,6 @@ namespace
 			return current();
 		}
 
-		// the receiver's block for a device type: the last one where it is on, else a new one
 		Node &block(Rx &rx, AIS::Keys key)
 		{
 			const std::string name = keyName(key);
@@ -536,7 +517,6 @@ namespace
 			return *b;
 		}
 
-		// a device option: a receiver on that input, its positional arguments and settings in its block
 		void device(Type t, const Keys &keys, const std::vector<std::string> &args, int ptr, int count)
 		{
 			Rx &rx = newReceiver();
@@ -546,7 +526,6 @@ namespace
 			positional(keys, args, ptr, count, block(rx, DeviceManager::keyForType(t)));
 		}
 
-		// an output option: a new entry of its kind
 		void output(AIS::Keys kind, const Keys &keys, const std::vector<std::string> &args, int ptr, int count)
 		{
 			Node &list = lists.child(keyName(kind), Node::ARRAY);
@@ -554,13 +533,11 @@ namespace
 			positional(keys, args, ptr, count, list.items.back());
 		}
 
-		// a receiver's plain value
 		void value(Rx &rx, AIS::Keys key, const std::string &arg)
 		{
 			rx.entry.add(keyName(key), Node::str(arg));
 		}
 
-		// a model the command line adds, after those the receiver has
 		void addEngine(Rx &rx, int type)
 		{
 			Node item;
@@ -568,7 +545,6 @@ namespace
 			rx.entry.child(keyName(AIS::KEY_SETTING_ENGINES), Node::ARRAY).items.push_back(std::move(item));
 		}
 
-		// where the settings of the receiver's last model go
 		Node &lastModelSettings(Rx &rx)
 		{
 			Node &engines = rx.entry.child(keyName(AIS::KEY_SETTING_ENGINES), Node::ARRAY);
@@ -578,8 +554,7 @@ namespace
 			throw std::runtime_error("internal error: no model for -go");
 		}
 
-		// a receiver's keys from a file, copied to its entry with what the document says
-		// otherwise: the input first, own_mmsi the engine's, and the old "model" as an engine
+		// the input first, own_mmsi as the engine's, and a deprecated "model" as an engine
 		void receiverFromFile(Rx &rx, const std::vector<JSON::Member> &members, bool unspec)
 		{
 			std::string serial, input;
@@ -591,7 +566,7 @@ namespace
 
 			for (const auto &m : members)
 			{
-				// the main section's other keys are the site's, and its receivers their own: read by file()
+				// the main section's other keys and its "receiver" array are read by file()
 				if (unspec && (!Config::isReceiverKey(m.Key()) || m.Key() == AIS::KEY_SETTING_RECEIVER))
 					continue;
 				const std::string name = keyName(m.Key());
@@ -615,7 +590,7 @@ namespace
 				case AIS::KEY_SETTING_MODEL:
 					if (m.Get().isString() || Config::isActiveObject(m.Get()))
 					{
-						// the reader would have said it is old; as an engine, -go can give it settings
+						// the reader's deprecation warning; as an engine, -go can give it settings
 						said.push_back(Config::MODEL_DEPRECATED);
 						Node item;
 						if (m.Get().isString())
@@ -642,7 +617,6 @@ namespace
 					rx.nmea = m.Get().to_string();
 		}
 
-		// a receiver's engines that are on, in the order the reader makes a model of each
 		std::vector<Node *> activeEngines(Rx &rx)
 		{
 			std::vector<Node *> items;
@@ -654,12 +628,11 @@ namespace
 			return items;
 		}
 
-		// -C: the file, merged where it stands, as Config::set would have applied it there
+		// -C: the file, merged where it stands on the command line
 		void file(const std::string &path)
 		{
 			Config::setConfigBaseDir(path);
 			JSON::Parser parser(JSON_DICT_SETTING);
-			// a file that does not parse is named, as the reader's refusals are
 			const std::string text = Util::Helper::readFile(path);
 			JSON::Document doc = [&]() -> JSON::Document {
 				try
@@ -680,8 +653,7 @@ namespace
 			for (const auto &m : members)
 				if (m.Key() == AIS::KEY_SETTING_ACTIVE)
 					active = Util::Parse::Switch(m.Get().to_string());
-			// each receiver the file fills, with the models it had before: the engines the
-			// file adds are named below as the reader picks them, with the input known here
+			// each receiver the file fills, with the number of models it had before
 			std::vector<std::pair<Rx *, int>> filled;
 			if (active)
 			{
@@ -732,7 +704,6 @@ namespace
 					else if (m.Key() == AIS::KEY_SETTING_SHARING_ZONE && m.Get().isArray())
 						for (const auto &v : m.Get().getArray())
 							zones.push_back(v.to_string());
-				// a key of no use with sharing off stops nothing
 				if (xshare_defined && !xchange && !key.empty() && !Util::Helper::isUUID(key))
 				{
 					said.push_back("Config file: \"sharing_key\" is not a UUID and sharing is off: ignored.");
@@ -745,8 +716,7 @@ namespace
 					sharing_zone = zones;
 			}
 
-			// the rest, where the document keeps it; its files resolve against its own folder,
-			// as the reader resolved them when it read the file
+			// the rest; the file's own paths resolve against its folder
 			const std::string &base = Config::baseDir();
 			bool tracked = false;
 			for (const auto &m : members)
@@ -764,7 +734,6 @@ namespace
 					break;
 				case AIS::KEY_SETTING_SERVER:
 				{
-					// one server or a list of them, none the -N's
 					Node value = fromJSON(m.Get());
 					std::vector<Node> entries;
 					if (value.kind == Node::ARRAY)
@@ -789,7 +758,7 @@ namespace
 					mqtt.push_back(fromJSON(m.Get()));
 					break;
 				case AIS::KEY_SETTING_TRACKING:
-					// one "tracking" a file, its first: the files' are read as one
+					// only the first "tracking" of all the files counts
 					if (tracked)
 						break;
 					if (!m.Get().isObject())
@@ -823,7 +792,6 @@ namespace
 						main.add(name, fromJSON(m.Get()));
 						break;
 					}
-					// one list each, in order of first appearance
 					Node &list = lists.child(name, Node::ARRAY);
 					for (const auto &item : m.Get().getArray())
 					{
@@ -852,11 +820,9 @@ namespace
 		}
 
 		void read(const std::vector<std::string> &args);
-		// the files' servers, then each -N as a server; while reading, the -N's are
-		// not servers yet: any later -N may add to one, and they are judged at the end
+		// the files' servers, then each -N; unless settled, a later -N may still add to one
 		std::vector<std::pair<Node, std::string>> allServers(bool settled) const;
-		// the document, and which of its servers are -N's; without origins the copy -J
-		// writes, a file read from anywhere: its tracking files and places absolute
+		// without origins, the copy -J writes: tracking files and places made absolute
 		std::string document(Config::Origins *origins, bool settled = true) const;
 	};
 
@@ -1016,7 +982,6 @@ namespace
 					Node &settings = lastModelSettings(receiver);
 					settings.add(keyName(AIS::KEY_SETTING_FP_DS), Node::str("ON"));
 					settings.add(keyName(AIS::KEY_SETTING_PS_EMA), Node::str("ON"));
-					// the tags it had, without D and T
 					std::string tags;
 					for (char c : state(receiver).tagString())
 						if (c != 'D' && c != 'T')
@@ -1105,7 +1070,7 @@ namespace
 				{
 					Assert(count == 0, param, MSG_NO_PARAMETER);
 					int n = (int)Util::Parse::Integer(param.substr(3));
-					// the index is of the devices found now: the document names the device it found
+					// an index is of the devices found now: the document names the device by its serial
 					DeviceManager found;
 					found.selectDeviceByIndex(n);
 					if (!found.serial().empty())
@@ -1282,7 +1247,7 @@ namespace
 				else
 					server.add(keyName(a.first), Node::str(a.second));
 			}
-			// its files resolve against the last file's folder, as they did when the servers were made last
+			// its files resolve against the last file's folder
 			absolute(server, Config::baseDir());
 			all.emplace_back(std::move(server), p.port.empty() ? "-N" : "-N " + p.port);
 		}
@@ -1368,7 +1333,7 @@ namespace
 
 		if (!origins)
 		{
-			// a file read from anywhere: what is still relative is to this folder
+			// what is still relative is to the working folder, so the copy reads from anywhere
 			const std::string cwd = currentDirectory();
 			for (auto &m : doc.members)
 				if (m.second.kind == Node::OBJECT)
@@ -1387,9 +1352,7 @@ namespace
 	}
 }
 
-// The command line, read into a document and applied by the configuration
-// reader. Throws what the command line got wrong. Whether the engine runs:
-// not after -h, -l, -L or -J.
+// throws what the command line got wrong; whether the engine runs: not after -h, -l, -L or -J
 static bool build(const std::vector<std::string> &args, Engine &engine)
 {
 	Config c(engine);
@@ -1427,14 +1390,13 @@ static bool build(const std::vector<std::string> &args, Engine &engine)
 				  << "scopes: data, or data+system for the installation's own resources; a client sends the key as Authorization: Bearer\n";
 	}
 
-	// the document's files are resolved already, each against the folder of the file it came from
+	// the document's files are resolved already
 	Config::setConfigBaseDir("");
 	c.set(document, &origins);
 	c.finish();
 
 	if (json)
 	{
-		// -J: the document, to a file or the screen, and nothing run
 		if (json_file.empty())
 			std::cout << file;
 		else

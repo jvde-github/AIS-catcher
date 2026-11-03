@@ -30,10 +30,9 @@
 
 namespace Services
 {
-	// The viewer: the files built into the program, as they were baked, and the
-	// viewer's own endpoints in the compact shapes its page reads. Those are the
-	// viewer's, not the API: undocumented, changed with the viewer. It answers
-	// only for what it has, so /api/v1 on the same server gets everything else.
+	// The viewer's files and its own endpoints: not the API, undocumented and
+	// changed with the viewer. It answers only for what it has, so /api/v1 on the
+	// same server gets everything else.
 	class Ui : public Service
 	{
 	public:

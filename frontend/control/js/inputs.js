@@ -1,11 +1,7 @@
-// The inputs as the panel names and groups them: what each kind of device is, what an input
-// needs to work, and its name in the rail, Flow and the Stations page.
-
-// Every kind of input the receiver reads, in the order the Device Type list offers them. `name`: an
-// input's default name; `label`: its line in that list, where it differs; `docs`: its page; `hidden`:
-// not offered there; `radio`: an SDR on this computer, which Find devices lists, a serial picks and
-// the community map takes without a sharing key; `iq`: samples over the network, which the engines
-// decode as a radio's. Each kind keeps its settings under its own name in lower case (rtlsdr, serialport).
+// In the order the Device Type list offers them. `hidden`: not offered there; `radio`: an SDR on this
+// computer, which Find devices lists, a serial picks and the community map takes without a sharing
+// key; `iq`: samples over the network, which the engines decode as a radio's. Each kind keeps its
+// settings under its own name in lower case (rtlsdr, serialport).
 export const DEVICES = {
     RTLSDR: { name: 'RTL-SDR', docs: 'configuration/input/rtlsdr/', radio: true },
     AIRSPY: { name: 'Airspy', docs: 'configuration/input/airspy/', radio: true },
@@ -24,14 +20,12 @@ export const DEVICES = {
     ZMQ: { name: 'ZMQ', hidden: true }
 };
 
-// an input's kind as the table has it: a hand-written "udpserver" is UDPSERVER
+// a hand-written "udpserver" is UDPSERVER
 const kindOf = input => String(input || '').toUpperCase();
 export const deviceOf = input => DEVICES[kindOf(input)];
 export const isRadio = input => !!deviceOf(input)?.radio;
-// the inputs the engines decode, and a serial tells one apart
 export const decodes = input => !!(deviceOf(input)?.radio || deviceOf(input)?.iq);
 export const RADIOS = Object.keys(DEVICES).filter(isRadio);
-// the settings blocks of a receiver, one per kind
 export const DEVICE_BLOCKS = Object.keys(DEVICES).map(k => k.toLowerCase());
 export const inputDocs = input => deviceOf(input)?.docs || 'configuration/input/overview/';
 
@@ -54,8 +48,7 @@ export function inputGroup(f) {
     return 'Other';
 }
 
-// An input's name: its description, or else the device with its place among the inputs of that
-// device ("RTL-SDR #1", "Serial #1"), `all` being the inputs; `kind` the device
+// its description, or else the device and its place among the inputs of that device ("RTL-SDR #1")
 export function describeInput(item, i, all) {
     const kind = kindOf(item.input);
     const device = kind ? (deviceOf(kind)?.name || item.input) : '';

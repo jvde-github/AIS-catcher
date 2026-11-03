@@ -1,8 +1,6 @@
-// The viewer's tabs, one table: each tab's menu entry, the server feature it
-// needs, the module behind it (loaded once, when first wanted), what shows and
-// hides it and what refreshes it. showTab is the one way to a tab. A lazy tab's
-// module registers its own actions and exports what it does: shown(), hidden(),
-// update(). Until it has loaded a feature asks loaded(id) and gets nothing.
+// The viewer's tabs, one table. showTab is the one way to a tab. A lazy tab's
+// module is loaded once, when first wanted; it registers its own actions and
+// exports shown(), hidden(), update(). Until it has loaded, loaded(id) gives nothing.
 
 import { settings } from '../core/state.js';
 import { config } from '../core/config.js';
@@ -102,7 +100,6 @@ function buildMenus() {
 
 buildMenus();
 
-// the entries of what the server has switched off give way
 export function applyTabFeatures() {
     for (const t of TABS) {
         if (!t.feature) continue;
@@ -141,7 +138,6 @@ function enterLazy(tab) {
     }).catch((err) => console.error('Failed to load ' + tab.id + ' tab module:', err));
 }
 
-// the tab `id`; without one the tab the settings name, or the one to fall back on
 export function showTab(id = resolveTab()) {
     const tab = tabOf(id);
     if (!tab || !enabled(tab)) return;
@@ -191,7 +187,6 @@ export async function openRealtimeForMMSI(m) {
     (await load('realtime')).openForMMSI(m);
 }
 
-// what the data loop calls for the tab on screen
 export function refreshTab() {
     return tabOf(settings.tab)?.refresh?.();
 }

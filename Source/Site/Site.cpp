@@ -192,7 +192,6 @@ void Site::systemEventLocked(Tracking::Level level, const std::string &what, con
 #endif
 
 #ifdef HASAPI
-// a station as the events name it: by its name, or "Station <id>"
 static std::string stationName(const StationRegistry &registry, int id)
 {
 	const StationRegistry::Station *s = registry.find(id);
@@ -201,10 +200,8 @@ static std::string stationName(const StationRegistry &registry, int id)
 	return "Station " + (s && !s->name.empty() ? s->name : std::to_string(id));
 }
 
-// What the beat tells of the stations of this installation's receivers: one
-// that has heard nothing for STATION_QUIET_S while the engine runs, as the
-// health warns of it, and that it hears again; and, looked at once a minute and
-// told once a day, a day of exceptional range. Under site_mtx.
+// under site_mtx; a day of exceptional range is looked for once a minute and
+// told once a day
 void Site::watchStations(std::time_t now, bool daily)
 {
 	const SystemFacts f = systemFacts();
@@ -239,10 +236,7 @@ std::set<int> Site::tellQuiet(std::time_t now, const SystemFacts &f, const std::
 	return quiet;
 }
 
-// the same judgement for the map: a station of this installation is down when every
-// receiver naming it is lost, quiet as the event above or while the engine is stopped,
-// receiving otherwise; a station heard through a feed is quiet after the same silence;
-// one the installation cannot tell of stays unknown. A row goes out when its state changes.
+// a station left out of the states stays unknown on the map
 void Site::setStationStates(std::time_t now, const SystemFacts &f, const std::set<int> &mine, const std::set<int> &quiet, const StationRegistry &registry)
 {
 	std::map<int, int> states;
@@ -289,7 +283,6 @@ void Site::tellPropagation(std::time_t now, const std::set<int> &mine, const Sta
 }
 #endif
 
-// each output, named by its description or by its type and place among that type: "UDP #2"
 static void writeOutputs(JSON::Writer &w, const std::vector<IO::OutputMessage *> &outputs)
 {
 	std::map<std::string, int> nth;
@@ -300,7 +293,7 @@ static void writeOutputs(JSON::Writer &w, const std::vector<IO::OutputMessage *>
 void Site::writeEngine(JSON::Writer &w, EnginePart part)
 {
 	std::lock_guard<std::mutex> lock(engine_mtx);
-	// the engine's outputs, while they exist: the lock keeps them from going mid-sentence
+	// the lock keeps the engine's outputs from going mid-sentence
 	switch (part)
 	{
 	case ENGINE_SHARING:
@@ -321,7 +314,6 @@ void Site::writeEngine(JSON::Writer &w, EnginePart part)
 		break;
 	case ENGINE_ALL:
 	{
-		// the devices as a status page lists them: one list for each thing said of them
 		const auto each = [&](const char *key, std::string DeviceFacts::*field) {
 			w.key(key).beginArray();
 			for (const auto &d : engine.devices)
@@ -345,7 +337,7 @@ void Site::writeEngine(JSON::Writer &w, EnginePart part)
 	}
 }
 
-// under site_mtx: the heartbeat runs once there is a tracker to keep
+// under site_mtx
 void Site::launch()
 {
 	if (heartbeat.joinable() || !anyTracker())
@@ -397,7 +389,7 @@ void Site::configure(const SiteConfig &cfg)
 }
 
 #ifdef HASAPI
-// under site_mtx: the site's tracker, made when first asked for, and its settings
+// under site_mtx
 void Site::configureTracker(const SiteConfig &cfg)
 {
 	// a viewer that shows a vessel's last message needs it kept
@@ -427,15 +419,14 @@ void Site::configureTracker(const SiteConfig &cfg)
 		tracker_->setRestartRequired("Backup file (service restart)", cfg.backup_file != backup_file);
 }
 
-// under site_mtx: the servers and the trackers of their own
+// under site_mtx
 void Site::configureServers(const SiteConfig &cfg)
 {
-	// The servers' own trackers, one a port. One stays while its server keeps the
-	// same settings; while an engine feeds them, one with changed settings stays
-	// too and waits for the next engine, as a new one does, since this engine was
-	// wired at its start. A tracker that goes is destroyed once the servers
-	// reading it have closed, and before any new one is made, so two never
-	// share the memory.
+	// An own tracker stays while its server keeps the same settings; while an
+	// engine feeds them, one with changed settings stays too and waits for the
+	// next engine, as a new one does, since this engine was wired at its start.
+	// A tracker that goes is destroyed once the servers reading it have closed,
+	// and before any new one is made, so two never share the memory.
 	const bool fed = engineAttached();
 	for (auto &o : own)
 		o->retired = true;
@@ -504,7 +495,7 @@ void Site::configureServers(const SiteConfig &cfg)
 #endif
 
 #ifdef HASDELIVERY
-// under site_mtx: the webhooks and the MQTT state, made when first asked for and kept after
+// under site_mtx; once made, the webhooks and the MQTT state are kept
 void Site::configureDeliveries(const SiteConfig &cfg)
 {
 	// a webhook that goes keeps the others' places
@@ -525,8 +516,8 @@ void Site::configureDeliveries(const SiteConfig &cfg)
 #endif
 
 #ifdef HASAPI
-// `to` as a whole copy of `from`, unless `to` is there already: a copy made on an
-// earlier start is the one of before the upgrade
+// an existing `to` is kept: a copy made on an earlier start is the one of
+// before the upgrade
 static bool keepCopy(const std::string &from, const std::string &to)
 {
 	if (std::ifstream(to, std::ios::binary))
@@ -551,8 +542,6 @@ static bool keepCopy(const std::string &from, const std::string &to)
 	return true;
 }
 
-// under site_mtx: the site's tracker's backup is read once, when it is made,
-// from the file the configuration named; backups go there from then on
 // why a backup that is not simply there yet cannot be read, nothing otherwise
 static std::string backupProblem(const std::string &file)
 {
@@ -645,8 +634,7 @@ void Site::dropRetired()
 	own.erase(std::remove_if(own.begin(), own.end(), [](const std::unique_ptr<Own> &x) { return x->retired; }), own.end());
 }
 
-// under site_mtx: a server's own tracker, behind its filter; the reader gave
-// its settings what the viewer needs kept
+// under site_mtx; the config reader already gave its settings what the viewer needs kept
 std::unique_ptr<Site::Own> Site::makeOwn(const ServerSpec &spec, const SiteConfig &cfg)
 {
 	std::unique_ptr<Own> o(new Own());
@@ -679,7 +667,7 @@ std::vector<Site::OwnTracker> Site::ownTrackers()
 	return out;
 }
 
-// the ports the servers listen on: a server whose port was taken is not among them
+// a server whose port was taken is not among them
 std::vector<int> Site::serverPorts()
 {
 	std::lock_guard<std::mutex> lock(site_mtx);
@@ -768,8 +756,7 @@ Services::Server *Site::serverOn(int port)
 	return nullptr;
 }
 
-// where a request made on this machine reaches the server on a port: its own
-// address, or this machine's when it listens on every one
+// where a request made on this machine reaches the server on a port
 bool Site::serverAddress(int port, std::string &host)
 {
 	std::lock_guard<std::mutex> lock(site_mtx);
@@ -797,7 +784,7 @@ void Site::refreshPlaces()
 #endif
 }
 
-// under site_mtx: the site's tracker, whose backup starting to fail is an event, once; then the servers' own
+// under site_mtx
 void Site::backup()
 {
 #ifdef HASAPI
@@ -840,7 +827,6 @@ int Site::beat(std::time_t now)
 	if (mqtt_state)
 	{
 		mqtt_state->poll(now);
-		// a connection under way is stepped every second
 		if (mqtt_state->busy())
 			wait = 1;
 	}
@@ -851,8 +837,6 @@ int Site::beat(std::time_t now)
 	return wait;
 }
 
-// every few seconds, every second while the MQTT state connects or sends, and
-// at once when poked
 void Site::loop()
 {
 	std::unique_lock<std::mutex> lock(mtx);

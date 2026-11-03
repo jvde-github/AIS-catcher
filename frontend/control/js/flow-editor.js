@@ -1,7 +1,5 @@
-// Flow: which input's messages reach which output, and where the routes are drawn. A zone is a
-// route: an output with zones takes the inputs that share one, an output without takes the inputs
-// without. A connection is drawn from an input's dot to an output's and named; the name is the zone.
-// The services read the ship table, which every input feeds: what each shows is on its own page.
+// A zone is a route: an output with zones takes the inputs that share one, an output without takes
+// the inputs without. The services are not drawn: they read the ship table, which every input feeds.
 
 import { formatBytes } from '@aiscatcher/core/text.js';
 import { el, isActive, on } from './dom.js';
@@ -15,21 +13,16 @@ import { stationName } from './stations.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const CONTAINER = 'flow-zones';
-// what the outputs are doing, as the main server beside the panel reports it
 const OUTPUT_STATS = '/viewer/api/output_stats.json';
 const STATS_MS = 5000;
-// the statistics' output types, each to the type of output that reports it
 const STAT_TYPES = {};
 OUTPUT_TYPES.forEach(o => (o.stats || []).forEach(t => { STAT_TYPES[t] = o.value; }));
 
 const safeLink = url => (url && /^https?:\/\//i.test(url) ? url : null);
-// a zone's name: letters, digits, - and _
 const zoneName = t => String(t || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
-// the host of a web address, for a connection's first name
 const hostOf = url => { try { return new URL(url).hostname; } catch { return ''; } };
 
-// Every output an input can feed, with its zones and its key in the rail: `type` is its kind (the
-// Outputs page's value), `hint` the word a new connection to it is named after
+// `type`: the output's kind, the Outputs page's value; `hint`: the word a new connection to it is named after
 export function collectOutputs(cfg) {
     const outputs = [];
     outputs.push({ key: 'sharing', type: 'sharing', name: 'Community map', hint: 'community', zones: Array.isArray(cfg.sharing_zone) ? cfg.sharing_zone : [],
@@ -48,13 +41,12 @@ export function collectOutputs(cfg) {
     return outputs;
 }
 
-// an input's zones: its own, and those of its engines
 function inputZones(r) {
     const own = Array.isArray(r.zone) ? r.zone : [];
     const engines = Array.isArray(r.engines) ? r.engines.flatMap(e => (Array.isArray(e.zone) ? e.zone : [])) : [];
     return [...new Set([...own, ...engines])];
 }
-// whether an output takes an input, as the engine routes: a zone is a route
+// whether an output takes an input, as the engine routes
 function routes(o, r) {
     if (o.fixed) return true;
     if (o.liveOnly && !isRadio(r.input)) return false;
@@ -62,15 +54,13 @@ function routes(o, r) {
     if (o.zones.length) return o.zones.some(z => zi.includes(z));
     return !zi.length;
 }
-// An output as the routing reads it, from its row ('sharing' the community map's settings)
 export function outputOf(type, item) {
     if (type === 'sharing')
         return { zones: Array.isArray(item.sharing_zone) ? item.sharing_zone : [], liveOnly: !String(item.sharing_key || '').trim() };
     return { zones: Array.isArray(item.zone) ? item.zone : [] };
 }
 
-// Why a switched-on output receives nothing from the switched-on inputs `receivers`, in one line
-// that says what to do; null when one reaches it
+// why a switched-on output receives nothing from the switched-on `receivers`; null when one reaches it
 export function outputProblem(o, receivers) {
     const live = (receivers || []).filter(isActive);
     if (live.some(r => routes(o, r))) return null;
@@ -84,8 +74,7 @@ export function outputProblem(o, receivers) {
     return 'Every switched-on input has a zone, and this output takes only inputs without one: connect it in Flow.';
 }
 
-// What the running receiver says is wrong with a switched-on output, from its statistics; null when
-// nothing is. UDP has no connection to fail.
+// from the running receiver's statistics; UDP has no connection to fail
 export function outputLiveProblem(type, s) {
     if (!s || type === 'udp') return null;
     if (type === 'http')
@@ -108,25 +97,21 @@ export function statsByKey(stat, outputs) {
     return out;
 }
 
-// how many switched-on outputs take this input
 export function inputRouting(item) {
     return ConfigStore.fetch().then(cfg => collectOutputs(cfg).filter(o => o.active && routes(o, item)).length).catch(() => null);
 }
-// how many switched-on inputs feed this output
 export function outputRouting(item) {
     const zones = Array.isArray(item.zone) ? item.zone : Array.isArray(item.sharing_zone) ? item.sharing_zone : [];
     const o = { zones, liveOnly: item.sharing !== undefined && !String(item.sharing_key || '').trim() };
     return ConfigStore.fetch().then(cfg => (cfg.receiver || []).filter(r => isActive(r) && routes(o, r)).length).catch(() => null);
 }
 
-// an input's own zones and its engines', as Flow has edited them, onto `row`
 function setInputZones(row, edited) {
     if (!row || !edited) return;
     setZones(row, 'zone', edited.zone || []);
     if (Array.isArray(row.engines) && Array.isArray(edited.engines))
         row.engines.forEach((e, k) => { if (e && edited.engines[k]) setZones(e, 'zone', edited.engines[k].zone || []); });
 }
-// a zone off an input: its own, and its engines', which route as its own do
 function takeZone(r, z) {
     r.zone = (r.zone || []).filter(x => x !== z);
     (r.engines || []).forEach(e => { if (e && Array.isArray(e.zone)) e.zone = e.zone.filter(x => x !== z); });
@@ -159,8 +144,6 @@ function zoneChip(z) {
     return c;
 }
 
-// A card of the drawing: its name (a link to its page), its status, a second line, its zones and
-// statistics, and the dot a connection is drawn from or to
 function flowNode({ name, isInput, onClick, link, handle }) {
     const url = safeLink(link);
     const status = el('span');
@@ -179,14 +162,12 @@ function flowNode({ name, isInput, onClick, link, handle }) {
     return { card, status, stats, chips, line };
 }
 
-// The Flow page in `pane`. `open(tab, key)` shows a page of the rail; `receivers()` the Inputs
-// page's rows with their edits, while it is open; `pages()` the Inputs and Outputs pages' managers,
-// which get the zones as they are edited here, so a save of theirs writes the same; `running()`
-// whether the receiver runs; `shown()` whether this page shows; `onSaved` after a save.
+// `receivers()`: the Inputs page's rows with their edits, while it is open; `pages()`: the Inputs
+// and Outputs pages' managers, which get the zones as they are edited here, so a save of theirs
+// writes the same.
 export function createFlowEditor(pane, { open, receivers, pages, running, shown, onSaved }) {
     const $ = id => pane.querySelector('#' + id);
     const inputsEl = $('flow-inputs'), outputsEl = $('flow-outputs'), svg = $('flow-svg'), hint = $('flow-hint'), bar = $('flow-name'), list = $('flow-zones');
-    // the edits: each input's and output's zones, saved together
     let flow = null;
     let armed = { from: null, pending: null };
     const nodes = { inputs: [], outputs: [] };
@@ -209,7 +190,6 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
         onSaved?.();
     }
 
-    // the pages that hold the same rows take the zones as edited here
     const outputZonesOf = key => flow.outputs.find(o => o.key === key)?.zones;
     function syncZones() {
         const { inputs, outputs, outputType } = pages();
@@ -244,7 +224,6 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
     }
     const allZones = () => [...new Set([...flow.inputs.flatMap(x => x.zone || []), ...flow.outputs.flatMap(x => x.zones)])];
 
-    // ---- what the page shows from the edits: chips, warnings, the lines, the list, the naming bar
     function draw() {
         if (!flow) return;
         nodes.inputs.forEach((n, i) => {
@@ -255,7 +234,6 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
             n.card.dataset.nowhere = String(isActive(r) && !to.length);
             n.line.textContent = n.station + (to.length ? '' : (n.station ? ' · ' : '') + 'goes nowhere');
         });
-        // what reaches an output: the inputs switched on, as when the receiver runs
         const live = flow.inputs.filter(isActive);
         const radio = live.some(r => isRadio(r.input));
         nodes.outputs.forEach(n => {
@@ -267,7 +245,6 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
                 : o.fixed ? 'Every input' : o.zones.length ? 'Its connections' : o.liveOnly ? 'Radio inputs without a zone, until it has a key' : 'Inputs without a zone';
         });
         drawLines();
-        // the hint, and the naming bar while a connection waits for its name
         hint.textContent = armed.pending ? '' : flow.inputs.length < 2
             ? 'One input reaches every output. Connections need two inputs.'
             : armed.from !== null
@@ -328,7 +305,6 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
         const rows = zones.map(z => {
             const member = (label, side, idx) => el('span', 'st-flow__member', {}, label,
                 el('button', 'st-flow__drop', { type: 'button', text: '×', title: `Take ${label} out of ${z}`, onClick: () => dropFromZone(z, side, idx) }));
-            // an input's engines connect it as its own zones do
             const ins = flow.inputs.map((r, i) => (inputZones(r).includes(z) ? member(r.label, 'in', i) : null)).filter(Boolean);
             const outs = flow.outputs.filter(o => o.zones.includes(z)).map(o => member(o.name, 'out', o.key));
             const none = what => el('span', 'st-flow__missing', { text: `no ${what}` });
@@ -339,7 +315,6 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
         list.replaceChildren(el('h3', 'st-section__title', { text: 'Connections' }), ...rows);
     }
 
-    // ---- what the receiver says: whether it runs, and each output's traffic and connection
     function paintInput(n) {
         if (!n.active) setStatus(n.status, 'off', 'Off');
         else if (running()) setStatus(n.status, 'ok', 'Running');
@@ -377,7 +352,7 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
         statsTimer = null;
     }
 
-    // the page drawn afresh, from the edits not saved yet or else the configuration
+    // from the edits not saved yet, or else the configuration
     function load() {
         stop();
         const id = ++renderId;

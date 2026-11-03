@@ -35,9 +35,8 @@ namespace IO
 }
 
 // One engine run: the receivers, their outputs and the servers that belong to them,
-// built by the configuration reader (the command line becomes a document first)
-// and then started by run(). Managed mode constructs a new one for every
-// start/stop cycle.
+// built by the configuration reader and started by run(). Managed mode constructs a new
+// one for every start/stop cycle.
 struct Engine
 {
 	// Called by run() once the servers serve and before the receivers start:
@@ -75,10 +74,8 @@ struct Engine
 	StreamIn<AIS::Message> *activity = nullptr;
 	std::function<void()> on_started;
 
-	// Screen
 	IO::ScreenOutput screen;
 
-	// from the configuration
 	int own_mmsi = -1;
 	int timeout = 0;
 	bool timeout_nomsg = false;
@@ -94,28 +91,25 @@ struct Engine
 	// threw halfway or was never called at all.
 	~Engine();
 
-	// Open the devices, wire up the outputs and the site, and run until stopped.
-	// The exit code: 0, or -2 when -T stopped the run.
+	// returns 0, or -2 when -T stopped the run
 	int run(Site &site);
 
 	// Stop the receivers and drop the site's references into this object.
 	// Idempotent.
 	void detach();
 
-	// the device manager the devices are enumerated on: the first receiver's
 	DeviceManager &scanner() { return receivers.front()->devices(); }
 
 	void createCommunityFeed();
 
-	// what the site's status pages say of this session: its devices, a model
-	// line per device, its outputs and the community feed
+	// what the site's status pages say of this session
 	EngineFacts facts();
 
 private:
 	typedef std::chrono::high_resolution_clock::time_point time_point;
 
 	bool detached = false;
-	// the site of the run, from its start
+	// set when run() starts
 	Site *site = nullptr;
 	// whether a receiver asks for the rates, and whether every device delivers
 	// by callback: a file input pumps its data from the main loop instead
@@ -135,7 +129,6 @@ private:
 	bool watchdogExpired(const time_point &now, time_point &since, std::vector<uint64_t> &counts, int &code);
 	void reportTotals();
 
-	// the site's tracker and servers read the decoders' tags
 	bool hasServer() const;
 #ifdef HASAPI
 	void publishReceivers();

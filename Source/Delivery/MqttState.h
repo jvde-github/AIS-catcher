@@ -29,12 +29,10 @@
 #include "SystemFacts.h"
 #include "Tracker.h"
 
-// The station's state on an MQTT broker, for Home Assistant and anything
-// else that reads retained topics: whether it is up (a last will says when it
-// is not), the vessels and message rate, each station and receiver, the
-// watched vessels' positions, and each event as it happens. With discovery on,
-// Home Assistant finds the sensors by itself. Polled from the site's
-// heartbeat, which the journal wakes for an event; the connection never blocks it.
+// The station's state on an MQTT broker as retained topics, for Home Assistant
+// and anything else that reads them; with discovery on, Home Assistant finds the
+// sensors by itself. Polled from the site's heartbeat, which the journal wakes
+// for an event; the connection never blocks it.
 //
 //   <topic>/availability        online | offline                    retained
 //   <topic>/state               vessels, message rate, engine        retained
@@ -51,7 +49,6 @@ public:
 
 	// a new broker or topic connects again; the same keeps the connection
 	void configure(const MqttStateSpec &spec);
-	// on the site's heartbeat, and at once when the journal moves on
 	void poll(std::time_t now);
 	// the connection is under way and wants a step soon: connecting, or with something left to send
 	bool busy() { return link && (!link->mqtt.isConnected() || link->session->isConnecting() || !link->session->sendDone()); }
@@ -83,7 +80,6 @@ private:
 	std::string node() const;
 	void retain(const std::string &topic, const std::string &payload, bool always = false);
 	void announce();
-	// the device every entity belongs to, and a watched vessel's tracker under its name once known
 	void writeDevice(JSON::Writer &w);
 	void announceVessel(uint32_t mmsi, const std::string &name, bool always = false);
 	void publishState(std::time_t now, bool always);

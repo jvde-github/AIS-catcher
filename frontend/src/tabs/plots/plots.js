@@ -12,7 +12,6 @@ import { settings } from '../../core/state.js';
 import { getDistanceConversion, getDistanceUnit } from '../../core/units.js';
 import { config, stationLabel } from '../../core/config.js';
 
-// a station's name on a chart; the whole site when all stations are meant
 const seriesName = (id) => (id < 0 ? "All stations" : stationLabel(id));
 import { focus } from '../../data.js';
 import { createPicker } from '@aiscatcher/ui/picker.js';
@@ -429,7 +428,6 @@ function setMode(next) {
     if (next === mode) return;
     mode = next;
     if (mode === "compare" && sourceB === null) {
-        // another station to start with; all of them when the focus is on none
         const other = stationsListed().find((s) => s.id !== focus);
         sourceB = focus < 0 || !other ? -1 : other.id;
     }
@@ -467,7 +465,6 @@ function applyMode() {
     if (multi) buildSourceSelectors();
 }
 
-// the station in focus at the strip's end, as every tab has it; what it is compared with under it
 function buildSourceSelectors() {
     const hostA = document.getElementById("plots_scope");
     const hostB = document.getElementById("chart_source_b");

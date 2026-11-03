@@ -36,7 +36,6 @@ namespace Services
 	class Mcp : public Service
 	{
 	public:
-		// the installation's tools when the server offers the system
 		explicit Mcp(const Context &context) : api(context), keyed(!context.spec.keys.empty())
 		{
 			if (context.spec.system)

@@ -318,8 +318,6 @@ namespace AIS
 			own_mmsi = o;
 		}
 		int getStation() const { return station; }
-		// the station as outputs write it: a message no station is stamped on
-		// comes from the default station, 0
 		int getStationOrDefault() const { return station < 0 ? 0 : station; }
 		void setOwnMMSI(int m) { own_mmsi = m; }
 		void buildNMEA(TAG &tag, int id = -1);

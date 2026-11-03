@@ -46,10 +46,9 @@
 class Tracker;
 #endif
 
-// What lives as long as the process: the stations, and, once a configuration
-// asks for them, the tracker, the servers and the deliveries. An engine
-// session attaches to it when it starts and leaves it when it stops; in
-// managed mode it outlives them all.
+// What lives as long as the process: the stations, the tracker, the servers
+// and the deliveries. An engine session attaches to it when it starts and
+// leaves it when it stops.
 class Site
 {
 public:
@@ -64,9 +63,8 @@ public:
 		f(stations);
 	}
 
-	// What the running engine is made of, told by it at its start and
-	// withdrawn at its stop, before its outputs go: what a status page says
-	// of the devices, the outputs and the community feed.
+	// told by the running engine at its start and withdrawn at its stop,
+	// before its outputs go
 	void attachEngine(const EngineFacts &facts);
 	void detachEngine();
 	// when the tracker's backup was last written, or read when the tracker
@@ -76,35 +74,28 @@ public:
 		std::lock_guard<std::mutex> lock(site_mtx);
 		return backing_up ? last_backup : 0;
 	}
-	// the bytes every input delivers, connected to by each session's devices
 	ByteCounter &received() { return bytes; }
 
-	// The tracker and the servers the configuration asks for. A tracker, once
-	// made, lives until the process ends; servers follow every change. A build
-	// without the API has neither.
+	// a tracker, once made, lives until the process ends; servers follow every change
 	void configure(const SiteConfig &cfg);
 #ifdef HASAPI
 	// the receivers as the running engine sees them, told about once a second;
 	// a receiver that loses its device or gets it back is an event
 	void publishReceivers(const std::vector<ReceiverState> &states);
-	// what the system service reads: the process, the engine, its receivers
 	SystemFacts systemFacts();
 	Tracker *tracker() { return tracker_.get(); }
-	// the trackers of servers' own, for the engine to feed through their zones and groups
 	struct OwnTracker
 	{
 		Tracker *tracker;
 		TrackerSpec spec;
 	};
 	std::vector<OwnTracker> ownTrackers();
-	// the server on a port, to mount it elsewhere; null when none listens there
 	Services::Server *server(int port);
 	bool serverAddress(int port, std::string &host);
 	std::vector<int> serverPorts();
 	// the servers with HTTPS: the port, and when its certificate expires
 	std::vector<std::pair<int, long long>> serverTLS();
-	// each station now, for its owner: position and its source, fix and heard ages, the vessel
-	// it rides; then the backup's age and the receivers. A private position shows here too.
+	// for the station's owner: a private position shows here too
 	std::string stationsLive();
 	// each receiver's index and state, as the system service names it
 	std::vector<std::pair<int, std::string>> receiverStates();
@@ -143,14 +134,13 @@ private:
 	const std::time_t born = std::time(nullptr);
 
 	std::mutex site_mtx;
-	// how often the tracker is backed up; 0 for never
+	// 0 for never
 	int backup_minutes = 10;
 #ifdef HASAPI
 	std::vector<ReceiverState> receiver_states;
 	// per receiver, its count at moments of the last minute, oldest first
 	std::vector<std::deque<std::pair<std::time_t, uint64_t>>> receiver_counts;
-	// an event of the installation itself, into the journal, of a station and
-	// a receiver or of none (-1); not under site_mtx
+	// into the journal; not under site_mtx
 	void systemEvent(Tracking::Level level, const std::string &what, const std::string &text, int station = -1, int receiver = -1);
 	void systemEventLocked(Tracking::Level level, const std::string &what, const std::string &text, int station = -1, int receiver = -1);
 	bool backup_failing = false;
@@ -159,8 +149,6 @@ private:
 	std::set<int> quiet_stations;
 	std::map<int, std::time_t> far_told;
 	void watchStations(std::time_t now, bool daily);
-	// its parts, in its order: the quiet stations, told as they fall quiet and
-	// hear again; every station's state for the map; a day of exceptional range
 	std::set<int> tellQuiet(std::time_t now, const SystemFacts &f, const std::set<int> &mine, const StationRegistry &registry);
 	void setStationStates(std::time_t now, const SystemFacts &f, const std::set<int> &mine, const std::set<int> &quiet, const StationRegistry &registry);
 	void tellPropagation(std::time_t now, const std::set<int> &mine, const StationRegistry &registry);
@@ -180,10 +168,9 @@ private:
 	std::atomic<bool> events_wanted{false};
 	std::unique_ptr<Tracker> tracker_;
 	std::vector<std::unique_ptr<Services::Server>> servers;
-	// A server's own tracker, behind its filter; the site's tracker alone has a
-	// backup. Made with its server; changed settings wait for the next engine, as
-	// the running one feeds it, and one the configuration dropped stays until
-	// that engine detaches.
+	// A server's own tracker, made with its server. Changed settings wait for the
+	// next engine, as the running one feeds it, and one the configuration dropped
+	// stays until that engine detaches.
 	struct Own
 	{
 		int port = 0;
@@ -195,9 +182,7 @@ private:
 	std::vector<std::unique_ptr<Own>> own;
 	Own *ownFor(const ServerSpec &spec);
 	std::unique_ptr<Own> makeOwn(const ServerSpec &spec, const SiteConfig &cfg);
-	// a tracker to keep: the site's or a server's own
 	bool anyTracker() const { return tracker_ || !own.empty(); }
-	// f on every tracker: the site's, then each server's own
 	template <typename F>
 	void eachTracker(F f)
 	{
@@ -206,9 +191,8 @@ private:
 		for (auto &o : own)
 			f(*o->tracker);
 	}
-	// under site_mtx: the own trackers the configuration dropped go
+	// under site_mtx
 	void dropRetired();
-	// the parts of configure(), in its order
 	void configureTracker(const SiteConfig &cfg);
 	void configureServers(const SiteConfig &cfg);
 	void restoreInto();
@@ -219,7 +203,7 @@ private:
 	std::shared_ptr<PlaceCatalogue> places_catalogue;
 	std::string places_dir;
 	bool engineAttached();
-	// under site_mtx: the server on a port, null when none listens there
+	// under site_mtx
 	Services::Server *serverOn(int port);
 #else
 	bool anyTracker() const { return false; }
@@ -236,8 +220,8 @@ private:
 	int beat(std::time_t now);
 	void backup();
 
-	// the heartbeat: every 5 s, every second while the MQTT state connects or
-	// sends, from the moment there is a tracker to keep
+	// every 5 s, every second while the MQTT state connects or sends, from the
+	// moment there is a tracker to keep
 	std::thread heartbeat;
 	std::mutex mtx;
 	std::condition_variable cv;

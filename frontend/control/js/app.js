@@ -77,7 +77,7 @@ import { createMessageBar } from './message-bar.js';
     let streamRetryTimer = null;
     let streamWatchdog = null;
     let eventSource = null;
-    // the receiver's warnings and errors since its log was last looked at, as a count beside its status
+    // warnings and errors since the log was last opened
     const alerts = { warning: 0, error: 0 };
     const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
     function paintAlerts() {
@@ -107,18 +107,17 @@ import { createMessageBar } from './message-bar.js';
     });
 
     const fetchStatus = () => api('/api/status');
-    // the login's own password is checked there: its 401 is a wrong password
+    // a 401 from the login is a wrong password, not an expired session
     const postPassword = (endpoint, pw, headers) => api(endpoint, { body: pw, headers, login: endpoint === '/api/login' });
     const engineAction = action => api('/api/engine', { body: action });
 
-    // the status as last read, the stream's updates merged in, for the pages that need the
-    // receiver's port, address or listening servers; `statusRead` the read under way
+    // the status as last read, the stream's updates merged in
     let lastStatus = {};
     let statusRead = Promise.resolve();
     hub.status = () => statusRead.then(() => lastStatus);
     hub.refreshStatus = () => refreshEngineStatus().then(() => lastStatus);
 
-    // An expired session: ask for the password again, leaving unsaved edits intact.
+    // an expired session: unsaved edits stay on the page
     hub.authRequired = () => {
         if (isLoggedIn()) {
             auth = 'login';
@@ -128,11 +127,9 @@ import { createMessageBar } from './message-bar.js';
         openLoginModal();
     };
 
-    // the wizard cancelled while no password is set: the modal is the backstop, so the
-    // requirement cannot be dismissed
+    // the wizard cancelled while no password is set: the login modal is the backstop
     hub.passwordBackstop = openLoginModal;
 
-    // the wizard's password step has signed us in
     hub.authGranted = () => {
         hasPassword = true;
         if (!isLoggedIn()) auth = 'ok';
@@ -466,14 +463,13 @@ import { createMessageBar } from './message-bar.js';
         }, 10000);
     }
 
-    // after a save the receiver takes the configuration at its next start: the button says so
+    // a save takes effect at the receiver's next start
     hub.configSaved = () => {
         pendingApply = true;
         renderEngineButton();
     };
 
-    // the receiver's start, stop or restart, as the button says. `busy` greys the button pressed;
-    // `untilReply`: only until the answer, not the status that follows it
+    // `untilReply`: busy only until the answer, not the status that follows it
     function engineClick(busy, untilReply = false) {
         const action = engineButtonMode();
         requireAuth(() => {
@@ -613,9 +609,8 @@ import { createMessageBar } from './message-bar.js';
         }
     }
 
-    // ==== Settings: one left rail, one page at a time. A page is loaded when first shown and taken
-    // down again when its edits are discarded or the panel closes, so what the rail and the other
-    // pages read is the file, or a page that is open with its edits.
+    // ==== Settings. A page is loaded when first shown and taken down when its edits are discarded
+    // or the panel closes, so the rail and the other pages read the file, or an open page with its edits.
     const systemOverlay = document.getElementById('system-overlay');
     bar = createMessageBar({
         settings: document.getElementById('settings-bar'),
@@ -627,7 +622,6 @@ import { createMessageBar } from './message-bar.js';
     const systemBody = document.getElementById('system-body');
     const systemModal = document.getElementById('system-modal');
 
-    // tab -> its title
     const SYSTEM_TABS = {
         input: 'Inputs',
         stations: 'Stations',
@@ -645,7 +639,6 @@ import { createMessageBar } from './message-bar.js';
     };
     // System's pages, in the rail's order
     const SYSTEM_GROUP = ['status', 'history', 'log', 'config', 'password', 'about'];
-    // the pages the footer saves
     const EDITABLE = ['input', 'stations', 'output', 'services', 'history', 'flow'];
 
     let currentTab = null;
@@ -653,7 +646,6 @@ import { createMessageBar } from './message-bar.js';
     const listOf = v => (Array.isArray(v) ? v : []);
     const pane = name => systemBody.querySelector(`[data-pane="${name}"]`);
 
-    // the pages loaded since the panel opened, each with what takes it down
     const loaded = new Map();
     function load(tab, make) {
         if (!loaded.has(tab)) loaded.set(tab, make());
@@ -664,12 +656,11 @@ import { createMessageBar } from './message-bar.js';
     }
     const unloadAll = () => [...loaded.keys()].forEach(unload);
 
-    // the pages' editors while they are loaded
     let inputs = null, stationsEditor = null, outputsPage = null, services = null, flowPage = null;
 
     const rail = createRail(document.getElementById('settings-rail'), {
         sections: railSections,
-        // the page, then the item on it; on a phone the page shows in place of the list
+        // on a phone the page shows in place of the list
         open: (tab, key) => {
             if (!switchSystemTab(tab) || !showItem(tab, key)) return false;
             systemModal.dataset.view = 'page';
@@ -677,10 +668,10 @@ import { createMessageBar } from './message-bar.js';
         },
         shown: () => !systemOverlay.classList.contains('hidden')
     });
-    // open a page of the rail with the item on it; false when unsaved edits keep the page
+    // false when unsaved edits keep the page
     const selectPage = (tab, key) => rail.select(tab, key);
 
-    // ---- what is wrong now, while the receiver runs: inputs by their place in the list, outputs by their rail key
+    // ---- what is wrong while the receiver runs: inputs by their place in the list, outputs by their rail key
     const live = { inputs: new Map(), outputs: new Map() };
     const sameMap = (a, b) => a.size === b.size && [...a].every(([k, v]) => b.get(k) === v);
     function setLive(part, next) {
@@ -719,7 +710,7 @@ import { createMessageBar } from './message-bar.js';
     }
     setInterval(pollOutputs, 10000);
 
-    // what is wrong with a switched-on output: its settings first (amber), then what happens now (red)
+    // a settings problem (amber) goes before what happens now (red)
     function outputMark(key, active, o) {
         if (!active) return {};
         const warn = outputProblem(o, inputs?.loaded ? inputs.data : listOf(ConfigStore.cached?.receiver));
@@ -728,18 +719,15 @@ import { createMessageBar } from './message-bar.js';
         return bad ? { bad } : {};
     }
 
-    // ---- the stations, the default one first: from the Stations page while it is loaded (its
-    // edits count), else the configuration as last read. `key` is the page's, `id` what an
-    // input or a filter names
+    // ---- the stations, the default one first. `key` is the Stations page's, `id` what an input
+    // or a filter names
     const stationRecords = () => (stationsEditor ? stationsEditor.stations() : stationsOf(ConfigStore.cached));
     function stationList() {
         const all = stationRecords();
         return all.map((s, i) => ({ key: i, id: Number(s.id), label: stationLabel(s, all.length > 1) }));
     }
-    // the stations a server or a webhook can show, by what names them
     const stationChoices = () => stationList().map(st => ({ key: st.id, label: st.label }));
 
-    // ---- what the rail lists, from the pages' editors where they are loaded, else the file
     function railSections(cfg) {
         const rows = inputs?.loaded ? inputs.data : listOf(cfg.receiver);
         return [
@@ -754,7 +742,7 @@ import { createMessageBar } from './message-bar.js';
         ];
     }
 
-    // the page's editor shows the item the rail picked, once it has loaded; else it reads the rail itself
+    // a page not loaded yet reads the rail's item itself once it loads
     function showItem(tab, key) {
         if (tab === 'input') {
             if (inputs?.loaded && Number.isInteger(key) && inputs.selected !== key) { inputs.selected = key; inputs.render(); }
@@ -768,7 +756,6 @@ import { createMessageBar } from './message-bar.js';
         return true;
     }
 
-    // something new, on its page: once the page has loaded, as its editor says
     function addInput() {
         if (!selectPage('input', rail.tab === 'input' ? rail.key : 0)) return;
         const m = inputs;
@@ -796,8 +783,7 @@ import { createMessageBar } from './message-bar.js';
         if (tab === 'log') clearAlerts();
         if (tab === currentTab) return true;
 
-        // leaving a page with unsaved edits: once confirmed, they go with the page that holds them,
-        // Flow's with the Inputs and Outputs pages it passed them to
+        // discarded edits go with their page; Flow's with the Inputs and Outputs pages it passed them to
         if (hasUnsaved()) {
             if (!confirmDiscardUnsaved('switch')) return false;
             if (currentTab === 'flow') unloadAll(); else unload(currentTab);
@@ -828,7 +814,6 @@ import { createMessageBar } from './message-bar.js';
         return true;
     }
 
-    // ---- the pages
     function loadInputs() {
         const m = inputs = createInputsPage(systemBody.querySelector('#sys-input-body'), {
             lost: item => live.inputs.get(m.data.indexOf(item)),
@@ -836,7 +821,6 @@ import { createMessageBar } from './message-bar.js';
             // a station made here is new to the pages that list the stations
             stationCreated: () => { unload('stations'); unload('services'); rail.render(); },
             open: selectPage,
-            // the rail follows: a new input, a deleted one, a name typed in
             onChange: mgr => {
                 if (Number.isInteger(mgr.selected)) rail.follow('input', mgr.selected);
                 rail.render();
@@ -847,8 +831,7 @@ import { createMessageBar } from './message-bar.js';
         return { destroy() { m.destroy(); if (inputs === m) inputs = null; } };
     }
 
-    // Where the antennas stand: the list and the chosen one. A station saved under a new number
-    // takes its inputs along.
+    // a station saved under a new number takes its inputs along (`rewired`)
     function loadStations() {
         const container = el('div');
         systemBody.querySelector('#sys-stations-body').replaceChildren(container);
@@ -860,7 +843,6 @@ import { createMessageBar } from './message-bar.js';
                 rail.render();
             },
             onSaved: rewired => {
-                // the inputs and the servers read them afresh
                 unload('input');
                 unload('services');
                 if (rewired) hub.configSaved();
@@ -879,12 +861,10 @@ import { createMessageBar } from './message-bar.js';
             keepEdits: () => confirmDiscardUnsaved('switch'),
             open: selectPage,
             follow: key => rail.follow('output', key),
-            // the rail follows the edits: a new row, a name typed in, one switched off
             changed: () => rail.render()
         });
         return { destroy() { page.destroy(); if (outputsPage === page) outputsPage = null; } };
     }
-    // a new output of a kind: a row of its list, on its page, or the page of a kind there is one of
     function addOutput(value) {
         if (!outputKind(value)?.list) return selectPage('output', value);
         if (selectPage('output', value + ':new')) outputsPage.addRow();
@@ -914,8 +894,6 @@ import { createMessageBar } from './message-bar.js';
         return { destroy() { section.destroy(); if (services === section) services = null; } };
     }
 
-    // System › Data & history: how long ships and tracks are kept, and the backup that carries them
-    // over a restart: the tracking section, which every server reads
     function loadHistory() {
         const host = systemBody.querySelector('#sys-history-body');
         host.replaceChildren();
@@ -949,8 +927,6 @@ import { createMessageBar } from './message-bar.js';
         }).catch(() => { box.textContent = ''; });
     }
 
-    // ---- opening and closing: Settings opens where it was left, or on a page asked for (the
-    // status dot asks for the log)
     function openSystem(tab, key) {
         requireAuth(() => {
             buildPanel();
@@ -976,7 +952,6 @@ import { createMessageBar } from './message-bar.js';
         document.getElementById('nav-btn-settings').classList.remove('active');
     }
 
-    // Cancel closes the panel, as the X does, with the edits not saved once confirmed
     function discardSettings() {
         if (hasUnsaved()) {
             if (!confirm('Discard your unsaved changes?')) return;
@@ -985,13 +960,11 @@ import { createMessageBar } from './message-bar.js';
         closeSystem();
     }
 
-    // the panel's pages afresh, from the template, with one fresh read of the configuration
     function buildPanel() {
         unloadAll();
         App.setUnsaved(false);
         ConfigStore.invalidate();
         systemBody.replaceChildren(document.getElementById('system-body-template').content.cloneNode(true));
-        // the password page as the panel asks for one or not
         const kind = auth === 'open' ? 'open' : 'login';
         systemBody.querySelectorAll(`[data-auth]:not([data-auth="${kind}"])`).forEach(n => n.remove());
 
@@ -1028,7 +1001,6 @@ import { createMessageBar } from './message-bar.js';
         refreshEngineStatus();
     }
 
-    // the Status page: Open log, the receiver button and the bug-report copy
     function wireStatusPane() {
         systemBody.querySelector('[data-open-log]').addEventListener('click', () => selectPage('log'));
         const btn = systemBody.querySelector('#hub-engine-btn');

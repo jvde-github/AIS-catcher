@@ -1,6 +1,5 @@
-// The configuration as the panel reads it: a file from before is brought to
-// the layout of today here, every time it is fetched, so whatever a page saves
-// is in that layout. Nothing is written until a page saves.
+// An older file is brought to the current layout each time it is fetched, so whatever a page
+// saves is in that layout; nothing is written until a page saves.
 //   - the default station is station 0 of `stations`, not the viewer section's station keys
 //   - the main server (beside the control panel) is the entry of `services` marked main, not
 //     `control.viewer`; how ships are kept is `tracking`
@@ -10,7 +9,6 @@
 //     is in capitals, its model and sensitivity are its engines
 //   - an output's json and json_full switches are its msgformat; a server's message switch is msg;
 //     replay_time is track_time
-// The wizard reads a previous installation's file through the same.
 
 import { on } from './dom.js';
 import { num, validPos } from './stations.js';
@@ -22,9 +20,9 @@ const RECEIVER_KEYS = ['serial', 'input', 'verbose', 'model', 'engines', 'meta',
 const STATION_KEYS = ['station', 'lat', 'lon', 'alt', 'share_loc', 'use_gps', 'own_mmsi'];
 const TRACKING_KEYS = ['file', 'backup', 'history', 'track_time', 'replay_time', 'track_memory', 'max_ships', 'cutoff',
     'expire', 'server_mode', 'places'];
-// what the viewer section took that means nothing on a server of the site: its own port and
-// address (the main server's are the control panel's), its per-receiver views and the receivers
-// it showed, and switches that no longer did anything
+// what the viewer section took that means nothing on the main server: its own port and address
+// (the main server's are the control panel's), its per-receiver views and the receivers it
+// showed, and switches that did nothing
 const DROPPED_KEYS = ['port', 'port_min', 'port_max', 'ip_bind', 'split', 'zone', 'groups_in', 'cdn', 'msgs', 'zlib',
     'reuse_port', 'stats_on_close'];
 // the terms of a web viewer's message filter, and what picked its receivers: a tracker of its own
@@ -53,7 +51,7 @@ function serverFromViewer(v, cfg) {
     }
     for (const [k, value] of Object.entries(v)) {
         if (VIEWER_DROPPED.includes(k) || k === 'active') continue;
-        if (k === 'ip_bind') continue; // below: the viewer of before listened on every interface unless it said otherwise
+        if (k === 'ip_bind') continue; // below: an old viewer listened on every interface unless it said otherwise
         if (k === 'prome') { if (on(value)) entry.metrics = true; continue; }
         if (FILTER_KEYS.includes(k) || ROUTE_KEYS.includes(k)) { if (filtered && k !== 'filter') own[k] = value; continue; }
         if (TRACKING_KEYS.includes(k)) {
@@ -88,8 +86,6 @@ function stationFromViewer(v) {
     return s;
 }
 
-// the settings at the top of the file go to the first receiver, where it does not say otherwise,
-// or make it; its kind in capitals, its model and sensitivity as its engines
 function migrateReceivers(cfg) {
     const top = {};
     for (const key of RECEIVER_KEYS)
@@ -131,7 +127,6 @@ function migrateReceivers(cfg) {
     }
 }
 
-// an output's json and json_full switches as its message format
 function migrateMsgFormat(ch) {
     if (!('json' in ch) && !('json_full' in ch)) return;
     if (!('msgformat' in ch))
@@ -140,7 +135,7 @@ function migrateMsgFormat(ch) {
     delete ch.json_full;
 }
 
-// replay_time became track_time; the old key goes, or the server-side alias fights the new one
+// the old key goes, or the server-side alias fights the new one
 function migrateTracking(t) {
     if (!t || typeof t !== 'object' || t.replay_time === undefined) return;
     t.track_time ??= t.replay_time;
@@ -154,13 +149,11 @@ export function migrateConfig(cfg) {
         if (Array.isArray(cfg[key])) cfg[key].forEach(ch => { if (ch && typeof ch === 'object') migrateMsgFormat(ch); });
     const v = cfg.control?.viewer;
     if (v && typeof v === 'object') {
-        // the station
         if (STATION_KEYS.some(k => k in v)) {
             const list = Array.isArray(cfg.stations) ? cfg.stations : (cfg.stations = []);
             if (!list.some(s => Number(s.id) === 0)) list.unshift(stationFromViewer(v));
             for (const k of STATION_KEYS) delete v[k];
         }
-        // the main server and the tracking
         const list = Array.isArray(cfg.services) ? cfg.services : (cfg.services = []);
         let main = list.find(s => s && s.main === true);
         if (!main) list.unshift(main = { main: true });
@@ -174,7 +167,6 @@ export function migrateConfig(cfg) {
         delete cfg.control.viewer;
         if (!Object.keys(tracking).length) delete cfg.tracking;
     }
-    // the web viewers of the `server` section are servers of the site
     if (cfg.server) {
         const list = Array.isArray(cfg.services) ? cfg.services : (cfg.services = []);
         for (const v of Array.isArray(cfg.server) ? cfg.server : [cfg.server])
@@ -192,7 +184,6 @@ export function migrateConfig(cfg) {
         migrateTracking(s.tracking);
     }
     migrateTracking(cfg.tracking);
-    // the main server first
     if (Array.isArray(cfg.services)) {
         const i = cfg.services.findIndex(s => s && s.main === true);
         if (i > 0) cfg.services.unshift(...cfg.services.splice(i, 1));

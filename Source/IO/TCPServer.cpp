@@ -159,7 +159,6 @@ namespace IO
 		}
 	}
 
-	// a plain request on the port is told where to go
 	static void refusePlain(SOCKET sock)
 	{
 		const std::string body = "This port serves HTTPS: use https:// instead.\n";
@@ -347,13 +346,10 @@ namespace IO
 		return true;
 	}
 
-	// TLS of the server's port
-
 #ifdef HASOPENSSL
 	// a key with a passphrase fails here, rather than asking on the terminal
 	static int noPassphrase(char *, int, int, void *) { return -1; }
 
-	// why a file did not load: it does not open, or what OpenSSL made of it
 	static std::string whyNot(const std::string &path)
 	{
 		FILE *f = fopen(path.c_str(), "rb");
@@ -417,7 +413,6 @@ namespace IO
 		return until < 1 ? 1 : until > (long long)UINT32_MAX ? UINT32_MAX : (uint32_t)until;
 	}
 
-	// what the file holds, nothing when it cannot be read
 	static std::string contents(const std::string &path)
 	{
 		std::ifstream f(path, std::ios::binary);

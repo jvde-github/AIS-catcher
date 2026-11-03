@@ -1,8 +1,5 @@
-// The viewer's settings as a store: their defaults and migrations, loading them
-// from storage and the address, and writing them, with what a write takes along
-// (beforeWrite, afterWrite) and what a save tells (onSaved); what a changed
-// setting means beyond its value (effects). core/state.js holds the live object.
-// The panel is features/settings/settings.js.
+// The viewer's settings as a store; core/state.js holds the live object and the
+// panel is features/settings/settings.js.
 
 import { settings } from './core/state.js';
 import { config } from './core/config.js';
@@ -236,7 +233,6 @@ export function beforeWrite(fn) {
     before.push(fn);
 }
 
-// fn follows every write
 export function afterWrite(fn) {
     after.push(fn);
 }
@@ -276,8 +272,6 @@ export function runEffect(key, value) {
     SETTING_EFFECTS[key]?.(value);
 }
 
-// everything as the settings now say, after they load and after a reset to the
-// defaults; an effect registered for several settings runs once
 export function runAllEffects() {
     const done = new Set();
     for (const [key, fn] of Object.entries(SETTING_EFFECTS)) {

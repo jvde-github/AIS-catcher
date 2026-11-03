@@ -1,10 +1,8 @@
 /* ============================================================================
    card.js — the shell of a map card (layer 2)
 
-   A card is a header, its content and a footer of actions. This owns the
-   footer, whose items page through when more than fit, and the popovers,
-   which anchor to an icon and stay inside the card. The content is the
-   host's (card-tabs.js builds the tabbed layout). Nothing here knows what a
+   A card is a header, its content and a footer of actions. The content is the
+   host's (card-tabs.js builds the tabbed layout); nothing here knows what a
    ship or a plane is.
 
        const card = AISCard.create({ mount: document.getElementById("targetcard") });
@@ -16,9 +14,8 @@
    The card reports through DOM events on `mount`: "card:pin" { x, y } /
    "card:unpin" when the user pins it, "card:moved" { x, y } after a drag.
 
-   The header is `.mapcard-title`, `.mapcard-flag` and a state class on
-   `.mapcard-header`: card.header.title() gives the title element,
-   card.header.flag(country, name) sets the flag, card.header.state(cls) the state.
+   The header is the host's markup: `.mapcard-title`, `.mapcard-flag` and a
+   state class on `.mapcard-header`.
 
    Where the card sits is the second half, `layout`: beside a point on the
    map, docked top-left, pinned where the user left it, or full-bleed on a
@@ -347,8 +344,7 @@ export function create(opts) {
         });
     }
 
-    /* places the card for a target at `pixel` and fits it to the pane;
-       returns how it was placed */
+    /* places the card for a target at `pixel` and fits it to the pane */
     function openCard(pixel) {
         var how = place(pixel);
         fit();

@@ -1,6 +1,5 @@
-// The card's fold, pulled from the handle, the header, the action bar or
-// non-interactive content. Content keeps native scrolling; collapse starts only
-// at its scroll boundary.
+// The card's fold. Content keeps native scrolling; collapse starts only at its
+// scroll boundary.
 export function attach({ mount, panels, active, select, defaultTab = 'summary' }) {
     const handle = document.createElement('button');
     handle.type = 'button';

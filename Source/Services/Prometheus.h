@@ -92,7 +92,6 @@ namespace Services
 		PrometheusCounter &counter;
 		Tracker &tracker;
 		std::function<SystemFacts()> facts;
-		// each input and output of the running engine
 		std::string engineMetrics();
 	};
 }

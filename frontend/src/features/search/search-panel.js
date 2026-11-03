@@ -1,6 +1,3 @@
-// The search panel in the header: what opening it steps aside for, and what a
-// picked result opens.
-
 import { createSearch } from '@aiscatcher/ui/search.js';
 import { hasValidCoords } from '@aiscatcher/core/geo.js';
 import { settings } from '../../core/state.js';

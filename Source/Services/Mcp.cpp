@@ -70,7 +70,6 @@ namespace Services
 			return all;
 		}
 
-		// a tool reads the installation when the system service answers its route
 		bool readsSystem(const Tool &t)
 		{
 			const Route *r = route(t.route);
@@ -265,7 +264,6 @@ namespace Services
 			w.beginObject().endObject();
 		else if (m == "tools/list")
 		{
-			// the installation's tools only for a caller that may read it
 			const bool system_ok = system && (request.scopes & ApiKey::SYSTEM);
 			w.beginObject().key("tools").beginArray();
 			for (const auto &t : tools())
@@ -344,7 +342,6 @@ namespace Services
 			}
 			if (!asked.empty())
 				call.query = asked;
-			// what the tool sends unless the caller did
 			for (const auto &d : tool->defaults)
 				if (call.query.find(d.first + "=") == std::string::npos)
 					call.query += (call.query.empty() ? "" : "&") + d.first + "=" + d.second;

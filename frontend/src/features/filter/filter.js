@@ -58,7 +58,6 @@ export function updateFilterUI() {
 
     const summary = document.getElementById("filter_summary");
     if (summary) {
-        // the station looked through, then what the filter leaves of its vessels
         const through = focusLabel(focus);
         const shown = filter.isActive() ? shipCounts.shown + " of " + shipCounts.total + " vessels shown" : "";
         summary.textContent = through ? through + ": " + (shown || "every vessel shown") : shown || "Showing every vessel";
@@ -157,7 +156,6 @@ function setFilterValue(key, value) {
     applyFilter();
 }
 
-// every vessel again, through every station
 function resetFilter() {
     filter.reset();
     resetFocus();

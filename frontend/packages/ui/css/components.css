@@ -120,8 +120,7 @@
     border-bottom-color: var(--color-accent);
 }
 
-/* the sheets of a tab, with what they show scoped to at the strip's end; the
-   scope's list hangs below, so the strip wraps rather than scrolls */
+/* the scope's list hangs below the strip, so the strip wraps rather than scrolls */
 .sheet-tabs {
     flex-wrap: wrap;
     overflow: visible;
@@ -2071,7 +2070,7 @@
 /* the duration as a badge beside the place: shown in the vessel card's history, not elsewhere */
 .place-visit-badge { display: none; }
 
-/* --- picker: one of many, the button that shows it and the list under it (picker.js) --- */
+/* --- picker (picker.js) --- */
 .pick { position: relative; width: 100%; }
 .pick .pick__btn {
     width: 100%; min-height: 52px; padding: 8px 12px; display: flex; align-items: center; gap: 10px;
@@ -2107,7 +2106,7 @@
 .pick .pick__opt[aria-selected="true"] { background: var(--color-accent-tint); }
 .pick__opt .pick__name { font-weight: 500; }
 
-/* the picker as a scope at a strip's end: the name alone, the list under its right edge */
+/* the picker as the scope at a strip's end */
 .pick--scope { width: auto; }
 .pick--scope .pick__btn { min-height: 0; padding: 0.3rem 0.5rem; gap: 4px; border: 0; border-radius: var(--radius-md); background: transparent; }
 .pick--scope .pick__btn:hover, .pick--scope .pick__btn[aria-expanded="true"] { background: var(--color-hover); }

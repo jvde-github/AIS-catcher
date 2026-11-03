@@ -1,6 +1,5 @@
-// Station coverage overlays drawn around each station: the polar range ring
-// derived from its radar histogram (long timeframe + 1h short ring) and the
-// fixed distance circles. All live on one shared vector layer.
+// Station coverage overlays on one shared vector layer: the polar range rings
+// from each station's radar histogram and the fixed distance circles.
 
 import OlFeature from 'ol/Feature';
 import VectorLayer from 'ol/layer/Vector';
@@ -51,10 +50,8 @@ export const rangeLayer = new VectorLayer({
 
 // ─── where the overlays go ───────────────────────────────────────────────────
 
-// The stations to draw around. A server of several stations names them in its
-// picker, each by its number, and puts those that share where they are on the
-// map: all of them, or the one in focus. Otherwise the one station the ship
-// feed gives, as the legacy viewer has it.
+// The stations the server names that share where they are: all of them, or the
+// one in focus; otherwise the one station the ship feed gives.
 function centres() {
     const named = new Set((config.stations || []).map((s) => s.id).filter((id) => id >= 0));
     if (named.size) {
@@ -109,7 +106,6 @@ const REFRESH_MINUTES = 15;
 // nautical miles per km, used to scale the radar bins into degrees
 const NM_PER_KM = 0.5399568;
 
-// one station's rings from its history, around where it is
 function ringsOf(h, at) {
     const N = h.day.stat[0].radar_a.length;
 
@@ -175,7 +171,6 @@ export async function fetchRange(forcefetch = false) {
     range_update_time = now;
     range_key = key;
 
-    // each station from its own figures: its history, as the picker would look through it
     const next = [];
     for (const c of at) {
         try {
@@ -243,7 +238,6 @@ export function updateDistanceCircles() {
         return;
     }
 
-    // rebuild only when a station moved, came or went, or the unit system changed
     const key = JSON.stringify([at.map((c) => [c.lat, c.lon]), settings.metric]);
     if (distanceFeatures && distanceKey === key) return;
 

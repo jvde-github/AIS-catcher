@@ -367,7 +367,6 @@ void Receiver::stop()
 		device->Stop();
 }
 
-// the kind of device with its place among the receivers of that kind
 static std::string kindLabel(const std::vector<std::unique_ptr<Receiver>> &receivers, std::size_t k)
 {
 	const Type type = receivers[k]->inputType();
@@ -397,7 +396,6 @@ bool anyZoned(const std::vector<std::unique_ptr<Receiver>> &receivers)
 	return false;
 }
 
-// the group mask of every model output in no zone at all
 static uint64_t unzonedGroups(const std::vector<std::unique_ptr<Receiver>> &receivers)
 {
 	uint64_t mask = 0;
@@ -410,7 +408,6 @@ static uint64_t unzonedGroups(const std::vector<std::unique_ptr<Receiver>> &rece
 	return mask;
 }
 
-// the group mask of every model output that is in one of the zones
 static uint64_t zonedGroups(const std::vector<std::unique_ptr<Receiver>> &receivers, const std::vector<std::string> &zones)
 {
 	uint64_t mask = 0;

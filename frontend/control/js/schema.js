@@ -1407,7 +1407,6 @@ export const screenSchema = {
     }
 };
 
-// Events posted to an address as they happen, signed when it has a secret
 export const webhookSchema = {
     description: ChannelFields.description(),
     url: {
@@ -1456,11 +1455,10 @@ export const mqttStateSchema = {
     }
 };
 
-// Every kind of output, in the order the rail, the Outputs pages and Flow list them. `value` names
-// it in the rail and Flow, and is its section of the configuration for a kind kept in a list
-// (`list`); `label` its name, `flow` its name in Flow where shorter; `stats` the types its
-// statistics report under; `essentials` what it needs to work; `add` what it is for, on Add an
-// output; `docs` its page. The community map and the screen are one setting each.
+// In the order the rail, the Outputs pages and Flow list them. `value` is also the configuration's
+// section for a kind kept in a list (`list`); `flow`: its name in Flow where shorter; `stats`: the
+// types its statistics report under; `add`: what it is for, on Add an output. The community map
+// and the screen are one setting each.
 export const OUTPUT_TYPES = [
     { value: 'sharing', label: 'Community', schema: sharingSchema, docs: 'configuration/output/community-feed/' },
     { value: 'udp', list: true, label: 'UDP', schema: udpSchema, stats: ['UDP'], essentials: ['host', 'port'],

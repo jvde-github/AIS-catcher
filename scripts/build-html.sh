@@ -94,8 +94,8 @@ done
 rm -rf "$DIST/control"
 mkdir -p "$DIST/control/css"
 cp frontend/control/index.html frontend/control/aishub.png "$DIST/control/"
-# one stylesheet, its imports bundled; the same tokens.css the viewer gets, as the control server
-# prefixes every path with "control" and the hub cannot reach the viewer's copy
+# one stylesheet, its imports bundled: the control server prefixes every path
+# with "control" and the hub cannot reach the viewer's tokens.css
 "$NM/.bin/esbuild" frontend/control/css/hub.css --bundle --minify --log-level=warning --charset=ascii --outfile="$DIST/control/css/hub.css"
 
 # Cache-bust hub assets (served with a 1-year cache header, like the viewer's)

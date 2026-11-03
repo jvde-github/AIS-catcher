@@ -338,7 +338,6 @@ void MqttState::publishState(std::time_t now, bool always)
 		});
 		if (!payload.empty())
 			retain(t + "/vessel/" + std::to_string(mmsi), payload, always);
-		// the tracker takes the vessel's name once it is heard
 		if (!name.empty())
 			announceVessel(mmsi, name);
 	}

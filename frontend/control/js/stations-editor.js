@@ -1,12 +1,8 @@
-// The Stations page: one station at a time, the rail listing them. First the
-// default station, 0: where each input stands that names no station. It is
-// always there and keeps its number.
-// A station stands where it is put (typed in or picked on the map). GPS fixes move
-// it when it follows GPS, and the reports of the vessel it rides, by its MMSI,
-// move it before GPS does. GPS comes from the inputs that name the station, or
-// from every input when none does.
-// The tab's footer saves it like any other section; a renumbered station takes
-// the inputs that name it along, a deleted one leaves them at the default station.
+// The default station, 0, is where each input stands that names no station; it is always there
+// and keeps its number. The reports of the vessel a station rides, by its MMSI, move it before GPS
+// does; GPS comes from the inputs that name the station, or from every input when none does. A
+// renumbered station takes the inputs that name it along, a deleted one leaves them at the default
+// station.
 
 import Map from 'ol/Map.js';
 import View from 'ol/View.js';
@@ -39,7 +35,6 @@ const hasPos = s => validPos(num(s.lat), num(s.lon));
 const fmt = v => Number(v).toFixed(4);
 const ago = s => (s < 60 ? `${s} s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : `${Math.round(s / 3600)} h ago`);
 
-// what moves a station: the vessel its MMSI names, else GPS when it follows it, else nothing
 export function modeOf(s) {
     if (s.mmsi) return 'vessel';
     if (s.gps === true) return 'gps';
@@ -63,25 +58,21 @@ function clean(s) {
 export function createStationsEditor(host, { describeInput, onSaved, onList, initial } = {}) {
     const state = { stations: [], receivers: [], selected: 0, live: {}, deleted: new Set() };
     const current = () => state.stations[state.selected];
-    // stations listed besides the default one
     const several = () => state.stations.length > 1;
     let map = null, picking = false, timer = null;
 
-    // the footer saves what is dirty, this tab included
     const editor = registerEditor(CONTAINER, { save: () => save(), data: () => state.stations });
     const touched = () => editor.touched();
 
-    // ---- the inputs at a station, by the number it had when loaded; at the default station those that name none, or 0
+    // the inputs at a station, by the number it had when loaded; at the default station those that name none, or 0
     const named = r => r.station !== undefined && r.station !== null && r.station !== '' && Number(r.station) !== 0;
     const users = s => (isDefault(s) || s._from !== null) ? state.receivers
         .map((r, i) => ({ r, i }))
         .filter(({ r }) => (isDefault(s) ? !named(r) : named(r) && Number(r.station) === s._from))
         .map(({ r, i }) => (describeInput ? describeInput(r, i, state.receivers).title : `Input #${i + 1}`)) : [];
 
-    // what the live poll says of a station
     const liveOf = s => state.live[s.id] || {};
 
-    // the rail lists the stations, and is told of a name or a number typed
     const main = el('div', 'st-main st-stations__main');
     host.className = 'st st-single st-stations';
     host.replaceChildren(main);
@@ -108,7 +99,6 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
         render();
     }
 
-    // ---- the chosen station
     function field(label, input, cls) {
         return el('label', 'st-field st-stations__field' + (cls ? ' ' + cls : ''), {}, el('span', 'st-label', { text: label }), input);
     }
@@ -166,8 +156,7 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
         listChanged();
     }
 
-    // Whether it shows, where it stands, then what moves it: GPS when it follows it, a vessel when it rides
-    // one, the vessel first. The default station rides a vessel only while it is the only station.
+    // the default station rides a vessel only while it is the only station
     function renderPosition(s, named) {
         const body = el('div', 'st-stations__source');
         main.append(el('div', 'st-stations__pos', {}, el('span', 'st-label', { text: 'Position' })), shareSwitch(s), body);
@@ -177,7 +166,6 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
         if (!(isDefault(s) && several() && !s.mmsi)) main.append(vesselField(s));
     }
 
-    // a setting that is on or off, with what it means under its name
     function switchRow(title, text, checked, onChange) {
         return el('label', 'st-stations__share', {},
             el('span', 'st-switch', {},
@@ -186,12 +174,10 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
             el('span', 'st-stations__sharetext', {}, el('strong', '', { text: title }), el('span', '', { text })));
     }
 
-    // whether it shows
     function shareSwitch(s) {
         return switchRow('Share position', 'Off keeps it on this machine.', s.share_loc, on => { s.share_loc = on; touched(); listChanged(); });
     }
 
-    // GPS: from the inputs at this station, or every input when none names it
     function gpsSwitch(s, named) {
         const from = named.length ? named.join(', ') : 'every input';
         const row = switchRow('Follow GPS', `Moves with each fix from ${from}.`, s.gps === true, on => {
@@ -205,7 +191,6 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
             el('p', 'st-help', {}, 'A GPS, or an AIS receiver passing GPS sentences. ', docLink(DOCS.gps, 'About GPS')));
     }
 
-    // the vessel it is on: its reports go before GPS
     function vesselField(s) {
         const line = statusLine('vessel', s);
         const input = numberInput(s, 'mmsi', { step: 1, min: 1, max: 999999999 }, () => paintStatus(line, 'vessel', s));
@@ -224,7 +209,6 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
             field('Longitude', lon, 'st-stations__grow'),
             field('Antenna height (m)', numberInput(s, 'alt', { step: 1, min: -1000, max: 20000 }), 'st-stations__grow')));
 
-        // the map: the station where it stands; Pick on map takes the next click
         const mapEl = el('div', 'pe-map__canvas');
         const wrap = el('div', 'pe pe-map st-stations__map');
         const pick = el('button', 'pe-tool st-stations__tool st-stations__pick', { type: 'button', 'aria-pressed': 'false', html: icon('pin', 'pe-icon') + '<span>Pick on map</span>',
@@ -291,7 +275,7 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
         requestAnimationFrame(() => map && map.updateSize());
     }
 
-    // a status line: the dot, the words, kept current by the live poll
+    // kept current by the live poll
     function statusLine(kind, s) {
         const line = el('p', 'st-stations__status', { dataset: { status: kind } });
         paintStatus(line, kind, s);
@@ -312,12 +296,10 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
                 text = `${live.vessel.name || 'MMSI ' + live.vessel.mmsi} · last report ${ago(live.vessel.report_age_s)}`;
             } else text = s.mmsi ? 'Not heard yet' : '';
         }
-        // no vessel, nothing to report
         line.hidden = !text;
         line.replaceChildren(el('span', 'st-stations__dot' + (ok ? ' is-ok' : '')), text);
     }
 
-    // ---- what the stations are doing now, while the tab shows
     async function poll() {
         if (!host.isConnected || !host.offsetParent) return;
         try {
@@ -329,7 +311,6 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
         if (s) main.querySelectorAll('[data-status]').forEach(line => paintStatus(line, line.dataset.status, s));
     }
 
-    // ---- saving
     // the reader takes 1.5 for a number; the rest it checks, and its answer shows as the save's
     function validate() {
         const i = state.stations.findIndex(s => s.id !== undefined && s.id !== '' && !Number.isInteger(num(s.id)));
@@ -385,9 +366,8 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
     const ready = load().catch(e => App.notify('error', 'Could not read the stations: ' + e.message));
 
     return {
-        // settles once the stations are read
         ready,
-        // the stations with their edits, the default station first
+        // with their edits, the default station first
         stations: () => state.stations,
         selected: () => state.selected,
         select(key) {

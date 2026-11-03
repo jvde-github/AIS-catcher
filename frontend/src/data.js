@@ -24,7 +24,6 @@ import * as community from './overlays/community.js';
 // the station the page looks through; -1 is all of them
 export let focus = -1;
 
-// the station the settings kept from the last visit
 export function restoreFocus() {
     if (Number.isInteger(settings.focusStation)) focus = settings.focusStation;
 }

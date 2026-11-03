@@ -1,6 +1,5 @@
-// The settings panel: its pages, its controls bound to settings (data-setting)
-// and resetting them to the defaults. The settings themselves, with their effects,
-// are settings-store.js's.
+// The settings panel. The settings themselves, with their effects, are
+// settings-store.js's.
 
 import { settings } from '../../core/state.js';
 import { getSpeedUnit } from '../../core/units.js';

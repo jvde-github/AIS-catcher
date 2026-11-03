@@ -51,8 +51,6 @@ namespace JSON
 
 	// Parser -- Build JSON object from String
 
-	// Says where, as a person finds it: the line of a text with several, else the
-	// column, and the stretch of that line around the place, without indentation
 	// a line naming a secret is not repeated in a message: messages reach the log
 	static bool namesSecret(std::string line)
 	{

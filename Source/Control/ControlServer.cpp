@@ -248,7 +248,6 @@ std::string ControlServer::statusJSON(const char *auth, bool authenticated)
 		.kv("viewer", core.reportedViewerPort())
 		.kv("wizard", core.wizardPending());
 
-	// a session's, or its stream's
 	if (receiver_states && (authenticated || !auth))
 	{
 		w.key("receivers").beginArray();
@@ -406,7 +405,7 @@ void ControlServer::serveStatic(IO::TCPServerConnection &c,
 }
 
 #ifdef HASAPI
-// a path a route of the routes table describes, a {name} standing for one segment
+// a {name} in the pattern stands for one path segment
 static bool routeMatches(const char *pattern, const std::string &path)
 {
 	std::size_t j = 0;
@@ -579,7 +578,6 @@ void ControlServer::Request(IO::TCPServerConnection &c,
 	}
 	else if (path == "/api/panel-tls" && r.method == "GET")
 	{
-		// the files as they are written, the certificate in use, and why the files would stop a start
 		std::string cert, key, cert_path, key_path, s;
 		const bool fixed = core.panelTLSFields(cert, key);
 		core.panelTLS(cert_path, key_path);
@@ -719,7 +717,6 @@ void ControlServer::Request(IO::TCPServerConnection &c,
 	}
 	else if (path == "/api/openapi" && r.method == "GET")
 	{
-		// what the API tester lists: every route of every service, as a server describes its own
 		std::string out;
 		JSON::Writer w(out);
 		Services::writeOpenAPI(w, {"api", "system"});

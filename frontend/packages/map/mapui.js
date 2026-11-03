@@ -223,8 +223,8 @@ export function create(opts) {
 
     /* --- card ------------------------------------------------------------------- */
 
-    /* a card shell placed by this map's chrome; the host's layout options go over
-       the pane's own, so a second card (a station's) sits like the first */
+    /* exported for a host's second card (a station's); the host's layout options
+       go over the pane's own */
     function createCard(c) {
         return cardLib.create(Object.assign({}, c, {
             layout: Object.assign({

@@ -4,7 +4,6 @@
     text-align: left;
 }
 
-/* on the tooltip the station boxes are outlines in its own ink */
 #hover-info .station-box {
     background-color: transparent;
     border-color: color-mix(in srgb, currentColor 40%, transparent);

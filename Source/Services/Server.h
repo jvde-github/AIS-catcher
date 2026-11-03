@@ -40,7 +40,6 @@ namespace Services
 	class Server : public IO::HTTPServer
 	{
 	public:
-		// `engine` writes the running engine's part of a status page
 		Server(const ServerSpec &spec, Tracker &tracker, std::function<StationRegistry()> stations,
 			   EngineWriter engine = nullptr, std::function<SystemFacts()> system = nullptr);
 		~Server();

@@ -139,7 +139,7 @@ public:
 		return place_markers.index();
 	}
 	// Under the lock, each settled visit with its ship and its place: all of
-	// them, or a place's (`place` a runtime id), or a ship's
+	// them, or a place's (`id` a runtime id), or a ship's
 	template <typename F> void forEachVisit(F f)
 	{
 		std::lock_guard<std::mutex> lock(mtx);
@@ -210,25 +210,19 @@ public:
 	void setPlaces(std::shared_ptr<const PlaceIndex> next);
 
 	// What a dump needs, copied under the lock in one go so the file is written
-	// with the lock released: the ships in their recency order, their visits,
-	// the port each is bound for, and the places the visits refer to. A
-	// standalone receiver's table is a few MB; the hub's 500,000 ships are some
-	// 220 MB, kept between dumps so the copy allocates nothing under the lock.
+	// with the lock released. Kept between dumps so the copy allocates nothing
+	// under the lock: the hub's 500,000 ships are some 220 MB.
 	struct Snapshot
 	{
 		SlotTable<Ship, uint32_t> ships;
 		VisitTracker visits;
 		DestinationIndex destinations;
 		std::shared_ptr<const PlaceIndex> places;
-		// the port a ship in slot `ptr` is bound for, as the table held it
 		const std::string &matchedPort(int ptr) const { return destinations.code(ptr); }
 	};
 	// The kept copy, handed to f with the table's lock released. The first dump
 	// to arrive refreshes it under that lock; one that arrives while another is
-	// still reading shares the copy as it is, a few seconds old at most, which
-	// both the backup and an export can live with - and nobody waits for a copy
-	// that is already there. The backup uses it when told to (setSnapshotSave),
-	// an exporter whenever it likes.
+	// still reading shares the copy as it is, a few seconds old at most.
 	template <typename F> void withSnapshot(F f)
 	{
 		struct Reading
@@ -503,7 +497,7 @@ private:
 	BinaryStore binary;
 	StationRegistry stations;
 	std::function<std::time_t(int)> station_heard;
-	// the ticker's view of the event stream, wired in the constructor
+	// the ticker's view of the event stream
 	EventRing ring;
 	uint64_t event_seq = 0;
 	TAG event_tag;
@@ -520,7 +514,6 @@ private:
 	Tracking::RestStore rest;
 	std::time_t last_rest_sweep = 0;
 	static bool stillTest(const Ship &ship);
-	// a crossing the tracker confirmed or inferred, told on the stream
 	void crossing(int ptr, const VisitTracker::Visit &v, bool entering, uint32_t observed);
 	void updateRest(int ptr, std::time_t now, bool still_before, std::time_t previous);
 	void endRest(int ptr, std::time_t t, bool seen);
@@ -542,7 +535,6 @@ private:
 	void queue(const Tracking::Event &e) { pending.push_back(e); }
 	void flushEvents(int ptr);
 	void noteSafety(Ship &ship, const JSON::JSON &data);
-	// the safety texts told lately: a broadcast repeated is marked a repeat until a while has passed
 	struct SafetyTold
 	{
 		uint32_t mmsi = 0, sum = 0;
@@ -571,7 +563,6 @@ public:
 	DB() { events >> ring; }
 	// sizes the table from the settings and empties it: before the first message
 	void setup();
-	// settings changed while messages flow: `apply` runs with input held and the table locked
 	// input waits while the lock is held: the web viewer holds it across a
 	// whole reconfiguration of its tables
 	std::unique_lock<std::recursive_mutex> pauseInput() { return std::unique_lock<std::recursive_mutex>(configuration_mtx); }
@@ -733,7 +724,7 @@ public:
 		filter = f;
 	}
 
-	// a vessel the reader may see; under the lock
+	// caller holds mtx
 	bool keepHeld(uint32_t mmsi, const Keep &keep) const
 	{
 		if (!keep)

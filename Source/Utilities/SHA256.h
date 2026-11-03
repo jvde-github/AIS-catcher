@@ -123,7 +123,6 @@ namespace Util
 			}
 		}
 
-		// the last block: the padding and the length
 		void pad()
 		{
 			const uint64_t bits = total * 8;
