@@ -172,7 +172,7 @@ export function applyMenuLabels() {
     if (!header)
         header = headerLib.create({
             box: document.querySelector(".header-title"),
-            title: document.querySelector(".header-title > span"),
+            title: document.querySelector(".header-title > h1"),
             pill: document.getElementById("menubar_mini"),
             chip: document.getElementById("header-focus"),
             mode: () => settings.menu_labels,

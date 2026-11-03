@@ -195,7 +195,7 @@ namespace
 				return false;
 			break;
 		case AIS::KEY_SETTING_PLACES:
-			if (!site || own_file)
+			if (!site)
 				return false;
 			site->places = Util::Helper::resolvePath(arg, base_dir);
 			break;
@@ -600,8 +600,7 @@ namespace
 		{
 			own.tracking.msg_save = spec.viewer.msg;
 			for (const auto &t : e.tracking_terms)
-				if (!trackingKey(t.first, t.second, own.tracking, &site, base_dir, &own.backup_file))
-					e.dropped.push_back("\"" + AIS::settingName(t.first) + "\" is the site's: one catalogue for every tracker");
+				trackingKey(t.first, t.second, own.tracking, &site, base_dir, &own.backup_file);
 			// what the section says of the station is this tracker's, unless it names
 			// the station
 			if (spec.stations.empty())

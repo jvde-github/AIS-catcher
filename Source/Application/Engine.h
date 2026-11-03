@@ -41,10 +41,10 @@ struct Engine
 {
 	// Called by run() once the servers serve and before the receivers start:
 	// a build that adds services attaches them here.
-	static std::function<void(Engine &)> before_run;
+	static std::function<void(Engine &, Site &)> before_run;
 	// Called by run() when the main loop has ended, while the receivers are
 	// still alive: a build that added services saves and stops them here.
-	static std::function<void(Engine &)> after_run;
+	static std::function<void(Engine &, Site &)> after_run;
 
 	// Receivers and outputs
 	std::vector<std::unique_ptr<Receiver>> receivers;

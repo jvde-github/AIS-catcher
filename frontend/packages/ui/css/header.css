@@ -9,7 +9,7 @@
     min-width: 0;
 }
 
-.header .header-title > span:first-child {
+.header .header-title > :first-child {
     padding-right: var(--header-title-gap);
     min-width: 0;
     white-space: nowrap;
@@ -25,7 +25,7 @@
 }
 
 /* the hidden title still sets the bar's height */
-.header .header-title > span:first-child.fit-hidden {
+.header .header-title > :first-child.fit-hidden {
     display: block !important;
     visibility: hidden;
     width: 0;

@@ -55,8 +55,8 @@ void Engine::detach()
 		site->detachEngine();
 }
 
-std::function<void(Engine &)> Engine::before_run;
-std::function<void(Engine &)> Engine::after_run;
+std::function<void(Engine &, Site &)> Engine::before_run;
+std::function<void(Engine &, Site &)> Engine::after_run;
 
 void Engine::createCommunityFeed()
 {
@@ -303,7 +303,7 @@ void Engine::start()
 	// the servers serve and the tracker is wired, the receivers have not
 	// started: a build that adds services attaches them now
 	if (before_run)
-		before_run(*this);
+		before_run(*this, *site);
 
 	Debug() << "Starting receivers";
 	for (auto &r : receivers)
@@ -485,7 +485,7 @@ int Engine::run(Site &on)
 	const int code = loop();
 
 	if (after_run)
-		after_run(*this);
+		after_run(*this, *site);
 
 	detach();
 	reportTotals();

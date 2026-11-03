@@ -13,7 +13,7 @@
 
        var hdr = header.create({
            box: document.querySelector(".header-title"),
-           title: document.querySelector(".header-title > span"),
+           title: document.querySelector(".header-title > :first-child"),
            pill: document.getElementById("menubar_mini"),
            chip: document.getElementById("header-focus"),         // optional
            mode: function () { return settings.menu_labels; },   // names | icons | adaptive
