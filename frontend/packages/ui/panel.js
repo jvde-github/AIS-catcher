@@ -44,10 +44,12 @@ var TAGS = [
 ];
 
 /* The panel is written as sections/divs/spans; the component classes are put
-   on here so components.css needs no knowledge of the markup. */
+   on here so components.css needs no knowledge of the markup. A component that
+   styles itself, the picker, keeps out. */
 export function adoptClasses(root) {
     TAGS.forEach(function (t) {
         root.querySelectorAll(t[0]).forEach(function (el) {
+            if (el.closest(".pick")) return;
             t[1].split(" ").forEach(function (c) { el.classList.add(c); });
         });
     });

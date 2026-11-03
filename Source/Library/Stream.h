@@ -17,13 +17,15 @@
 
 #pragma once
 
+#include <algorithm>
 #include <vector>
 #include <iostream>
 #include <mutex>
 
 #include "Common.h"
 
-class StreamInBase {
+class StreamInBase
+{
 protected:
 	std::mutex mtx;
 	bool exclusive = false;
@@ -34,32 +36,40 @@ public:
 };
 
 template <typename T>
-class StreamIn : public virtual StreamInBase {
+class StreamIn : public virtual StreamInBase
+{
 	uint64_t groups_in = GROUPS_ALL;
 
 public:
 	virtual ~StreamIn() {}
-	virtual void Receive(const T* data, int len, TAG& tag) {}
-	virtual void Receive(T* data, int len, TAG& tag) {
-		Receive((const T*)data, len, tag);
+	virtual void Receive(const T *data, int len, TAG &tag) {}
+	virtual void Receive(T *data, int len, TAG &tag)
+	{
+		Receive((const T *)data, len, tag);
 	}
 
-	void ReceiveSafe(const T* data, int len, TAG& tag) {
-		if (exclusive) {
+	void ReceiveSafe(const T *data, int len, TAG &tag)
+	{
+		if (exclusive)
+		{
 			std::lock_guard<std::mutex> lock(mtx);
 			Receive(data, len, tag);
 		}
-		else {
+		else
+		{
 			Receive(data, len, tag);
 		}
 	}
 
-	void ReceiveSafe(T* data, int len, TAG& tag) {
-		if (exclusive) {
+	void ReceiveSafe(T *data, int len, TAG &tag)
+	{
+		if (exclusive)
+		{
 			std::lock_guard<std::mutex> lock(mtx);
 			Receive(data, len, tag);
 		}
-		else {
+		else
+		{
 			Receive(data, len, tag);
 		}
 	}
@@ -69,17 +79,22 @@ public:
 };
 
 template <typename S>
-class Connection {
-	std::vector<StreamIn<S>*> connections;
+class Connection
+{
+	std::vector<StreamIn<S> *> connections;
 	uint64_t groups = GROUP_OUT_UNDEFINED;
 
 public:
-	void Send(const S* data, int len, TAG& tag) {
-		for (auto c : connections) c->ReceiveSafe(data, len, tag);
+	void Send(const S *data, int len, TAG &tag)
+	{
+		for (auto c : connections)
+			c->ReceiveSafe(data, len, tag);
 	}
 
-	void Send(S* data, int len, TAG& tag) {
-		if (connections.size() == 0) return;
+	void Send(S *data, int len, TAG &tag)
+	{
+		if (connections.size() == 0)
+			return;
 
 		if (groups != GROUP_OUT_UNDEFINED)
 			tag.group = groups;
@@ -87,13 +102,19 @@ public:
 		int sz1 = (int)connections.size() - 1;
 
 		for (int i = 0; i < sz1; i++)
-			connections[i]->ReceiveSafe((const S*)data, len, tag);
+			connections[i]->ReceiveSafe((const S *)data, len, tag);
 
 		connections[sz1]->ReceiveSafe(data, len, tag);
 	}
 
-	void Connect(StreamIn<S>* s) {
+	void Connect(StreamIn<S> *s)
+	{
 		connections.push_back(s);
+	}
+
+	void Disconnect(StreamIn<S> *s)
+	{
+		connections.erase(std::remove(connections.begin(), connections.end(), s), connections.end());
 	}
 
 	void setGroupOut(uint64_t g) { groups = g; }
@@ -104,64 +125,75 @@ public:
 };
 
 template <typename S>
-class StreamOut {
+class StreamOut
+{
 public:
 	Connection<S> out;
 
-	void Send(const S* data, int len, TAG& tag) {
+	void Send(const S *data, int len, TAG &tag)
+	{
 		out.Send(data, len, tag);
 	}
 
-	void Send(S* data, int len, TAG& tag) {
+	void Send(S *data, int len, TAG &tag)
+	{
 		out.Send(data, len, tag);
 	}
 };
 
 template <typename T, typename S>
-class SimpleStreamInOut : public StreamOut<S>, public StreamIn<T> {
+class SimpleStreamInOut : public StreamOut<S>, public StreamIn<T>
+{
 public:
 	virtual ~SimpleStreamInOut() {}
 };
 
 template <typename S>
-class SimpleStreamOut : public StreamOut<S> {
+class SimpleStreamOut : public StreamOut<S>
+{
 protected:
 	TAG tag;
 
 public:
 	virtual ~SimpleStreamOut() {}
-	void setTag(const TAG& t) { tag = t; }
+	void setTag(const TAG &t) { tag = t; }
 };
 
 template <typename S>
-inline StreamIn<S>& operator>>(Connection<S>& a, StreamIn<S>& b) {
+inline StreamIn<S> &operator>>(Connection<S> &a, StreamIn<S> &b)
+{
 	a.Connect(&b);
 	return b;
 }
 template <typename T, typename S>
-inline SimpleStreamInOut<S, T>& operator>>(Connection<S>& a, SimpleStreamInOut<S, T>& b) {
+inline SimpleStreamInOut<S, T> &operator>>(Connection<S> &a, SimpleStreamInOut<S, T> &b)
+{
 	a.Connect(&b);
 	return b;
 }
 
 template <typename S>
-inline StreamIn<S>& operator>>(StreamOut<S>& a, StreamIn<S>& b) {
+inline StreamIn<S> &operator>>(StreamOut<S> &a, StreamIn<S> &b)
+{
 	a.out.Connect(&b);
 	return b;
 }
 template <typename S, typename U>
-inline SimpleStreamInOut<S, U>& operator>>(StreamOut<S>& a, SimpleStreamInOut<S, U>& b) {
+inline SimpleStreamInOut<S, U> &operator>>(StreamOut<S> &a, SimpleStreamInOut<S, U> &b)
+{
 	a.out.Connect(&b);
 	return b;
 }
 
 template <typename T, typename S>
-inline StreamIn<S>& operator>>(SimpleStreamInOut<T, S>& a, StreamIn<S>& b) {
+inline StreamIn<S> &operator>>(SimpleStreamInOut<T, S> &a, StreamIn<S> &b)
+{
 	a.out.Connect(&b);
 	return b;
 }
 template <typename T, typename S, typename U>
-inline SimpleStreamInOut<S, U>& operator>>(SimpleStreamInOut<T, S>& a, SimpleStreamInOut<S, U>& b) {
+inline SimpleStreamInOut<S, U> &operator>>(SimpleStreamInOut<T, S> &a, SimpleStreamInOut<S, U> &b)
+{
 	a.out.Connect(&b);
 	return b;
 }

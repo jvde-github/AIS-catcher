@@ -23,18 +23,15 @@
     <ClCompile Include="..\Source\Control\ControlCore.cpp" />
     <ClCompile Include="..\Source\Control\ControlServer.cpp" />
     <ClCompile Include="..\Source\Application\DeviceManager.cpp" />
-    <ClCompile Include="..\Source\Web\BackupManager.cpp" />
     <ClCompile Include="..\Source\Application\Engine.cpp" />
-    <ClCompile Include="..\Source\Web\FrontendConfig.cpp" />
-    <ClCompile Include="..\Source\Tracking\ReceiverTracker.cpp" />
+    <ClCompile Include="..\Source\Application\Stations.cpp" />
     <ClCompile Include="..\Source\Application\CommandLine.cpp" />
+    <ClCompile Include="..\Source\Application\Usage.cpp" />
     <ClCompile Include="..\Source\Application\Main.cpp" />
     <ClCompile Include="..\Source\Control\ManagedMain.cpp" />
     <ClCompile Include="..\Source\Web\MapTiles.cpp" />
-    <ClCompile Include="..\Source\Web\Prometheus.cpp" />
     <ClCompile Include="..\Source\Application\Receiver.cpp" />
     <ClCompile Include="..\Source\Web\WebDB.cpp" />
-    <ClCompile Include="..\Source\Web\WebViewer.cpp" />
     <ClCompile Include="..\Source\DBMS\PostgreSQL.cpp" />
     <ClCompile Include="..\Source\Device\AIRSPY.cpp" />
     <ClCompile Include="..\Source\Device\AIRSPYHF.cpp" />
@@ -78,33 +75,51 @@
     <ClCompile Include="..\Source\IO\TCPServer.cpp" />
     <ClCompile Include="..\Source\Tracking\DB.cpp" />
     <ClCompile Include="..\Source\Tracking\Ships.cpp" />
-    <ClCompile Include="..\Source\Tracking\Region.cpp" />
-    <ClCompile Include="..\Source\Tracking\RegionTree.cpp" />
     <ClCompile Include="..\Source\Utilities\Parse.cpp" />
     <ClCompile Include="..\Source\Utilities\Convert.cpp" />
     <ClCompile Include="..\Source\Utilities\Helper.cpp" />
     <ClCompile Include="..\Source\Utilities\TemplateString.cpp" />
     <ClCompile Include="..\Source\Utilities\StreamHelpers.cpp" />
+    <ClCompile Include="..\Source\Site\SiteConfig.cpp" />
+    <ClCompile Include="..\Source\DBMS\CSV.cpp" />
+    <ClCompile Include="..\Source\DBMS\DatabaseOutput.cpp" />
+    <ClCompile Include="..\Source\DBMS\SQLite.cpp" />
+    <ClCompile Include="..\Source\Delivery\MqttState.cpp" />
+    <ClCompile Include="..\Source\Delivery\Webhooks.cpp" />
+    <ClCompile Include="..\Source\Services\ApiV1.cpp" />
+    <ClCompile Include="..\Source\Services\Http.cpp" />
+    <ClCompile Include="..\Source\Services\Mcp.cpp" />
+    <ClCompile Include="..\Source\Services\Routes.cpp" />
+    <ClCompile Include="..\Source\Services\Server.cpp" />
+    <ClCompile Include="..\Source\Services\GeoJSON.cpp" />
+    <ClCompile Include="..\Source\Services\Kml.cpp" />
+    <ClCompile Include="..\Source\Services\Prometheus.cpp" />
+    <ClCompile Include="..\Source\Services\Streams.cpp" />
+    <ClCompile Include="..\Source\Services\System.cpp" />
+    <ClCompile Include="..\Source\Services\Ui.cpp" />
+    <ClCompile Include="..\Source\Services\UiFormat.cpp" />
+    <ClCompile Include="..\Source\Site\Site.cpp" />
+    <ClCompile Include="..\Source\Tracking\Journal.cpp" />
+    <ClCompile Include="..\Source\Tracking\PlaceCatalogue.cpp" />
+    <ClCompile Include="..\Source\Tracking\PlaceGeometry.cpp" />
+    <ClCompile Include="..\Source\Tracking\Tracker.cpp" />
+    <ClCompile Include="..\Source\Tracking\ViewFilter.cpp" />
+    <ClCompile Include="..\Source\Web\PluginStore.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Source\Application\AIS-catcher.h" />
-    <ClInclude Include="..\Source\Web\Prometheus.h" />
     <ClInclude Include="..\Source\Application\Config.h" />
     <ClInclude Include="..\Source\Control\ControlCore.h" />
     <ClInclude Include="..\Source\Control\ControlServer.h" />
     <ClInclude Include="..\Source\Application\CommandLine.h" />
     <ClInclude Include="..\Source\Control\ManagedMain.h" />
-    <ClInclude Include="..\Source\Web\BackupManager.h" />
     <ClInclude Include="..\Source\Application\Engine.h" />
-    <ClInclude Include="..\Source\Web\FrontendConfig.h" />
-    <ClInclude Include="..\Source\Tracking\ReceiverTracker.h" />
+    <ClInclude Include="..\Source\Application\Stations.h" />
     <ClInclude Include="..\Source\Application\DeviceManager.h" />
     <ClInclude Include="..\Source\Web\WebDB.h" />
     <ClInclude Include="..\Source\Library\Logger.h" />
-    <ClInclude Include="..\Source\Web\WebViewer.h" />
     <ClInclude Include="..\Source\Application\Receiver.h" />
     <ClInclude Include="..\Source\Tracking\Ships.h" />
-    <ClInclude Include="..\Source\Tracking\Region.h" />
     <ClInclude Include="..\Source\Tracking\DB.h" />
     <ClInclude Include="..\Source\DBMS\PostgreSQL.h" />
     <ClInclude Include="..\Source\IO\HTTPClient.h" />
@@ -171,9 +186,49 @@
     <ClInclude Include="..\Source\Utilities\PackedInt.h" />
     <ClInclude Include="..\Source\Utilities\TemplateString.h" />
     <ClInclude Include="..\Source\Utilities\SHA256.h" />
-    <ClInclude Include="..\Source\Library\TCP.h" />
     <ClInclude Include="..\Source\Library\SWAR.h" />
     <ClInclude Include="..\Source\IO\OutputStats.h" />
+    <ClInclude Include="..\Source\Site\Site.h" />
+    <ClInclude Include="..\Source\Site\SiteConfig.h" />
+    <ClInclude Include="..\Source\Services\ApiV1.h" />
+    <ClInclude Include="..\Source\Services\Http.h" />
+    <ClInclude Include="..\Source\Services\JournalJSON.h" />
+    <ClInclude Include="..\Source\Services\Mcp.h" />
+    <ClInclude Include="..\Source\Services\Routes.h" />
+    <ClInclude Include="..\Source\Services\Server.h" />
+    <ClInclude Include="..\Source\Services\GeoJSON.h" />
+    <ClInclude Include="..\Source\Services\Kml.h" />
+    <ClInclude Include="..\Source\Services\Prometheus.h" />
+    <ClInclude Include="..\Source\Services\Streams.h" />
+    <ClInclude Include="..\Source\Services\System.h" />
+    <ClInclude Include="..\Source\Services\Ui.h" />
+    <ClInclude Include="..\Source\Services\UiFormat.h" />
+    <ClInclude Include="..\Source\Delivery\MqttState.h" />
+    <ClInclude Include="..\Source\Delivery\Webhooks.h" />
+    <ClInclude Include="..\Source\Tracking\BinaryStore.h" />
+    <ClInclude Include="..\Source\Tracking\DestinationIndex.h" />
+    <ClInclude Include="..\Source\Tracking\Event.h" />
+    <ClInclude Include="..\Source\Tracking\EventJSON.h" />
+    <ClInclude Include="..\Source\Tracking\EventRing.h" />
+    <ClInclude Include="..\Source\Tracking\Figures.h" />
+    <ClInclude Include="..\Source\Tracking\FixSampler.h" />
+    <ClInclude Include="..\Source\Tracking\Journal.h" />
+    <ClInclude Include="..\Source\Tracking\PathStore.h" />
+    <ClInclude Include="..\Source\Tracking\PlaceCatalogue.h" />
+    <ClInclude Include="..\Source\Tracking\PlaceGeometry.h" />
+    <ClInclude Include="..\Source\Tracking\PlaceMarkers.h" />
+    <ClInclude Include="..\Source\Tracking\PositionCheck.h" />
+    <ClInclude Include="..\Source\Tracking\RelationshipIndex.h" />
+    <ClInclude Include="..\Source\Tracking\Rest.h" />
+    <ClInclude Include="..\Source\Tracking\SlotTable.h" />
+    <ClInclude Include="..\Source\Tracking\StaticStore.h" />
+    <ClInclude Include="..\Source\Tracking\StationRegistry.h" />
+    <ClInclude Include="..\Source\Site\SystemFacts.h" />
+    <ClInclude Include="..\Source\Tracking\Tracker.h" />
+    <ClInclude Include="..\Source\Tracking\TrackingConfig.h" />
+    <ClInclude Include="..\Source\Tracking\ViewFilter.h" />
+    <ClInclude Include="..\Source\Tracking\VisitTracker.h" />
+    <ClInclude Include="..\Source\Web\PluginStore.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -229,25 +284,25 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;../Source/Site;../Source/Services;../Source/Delivery;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;../Source/Site;../Source/Services;../Source/Delivery;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;../Source/Site;../Source/Services;../Source/Delivery;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..;../Source;../Source/Application;../Source/Web;../Source/Control;../Source/Tracking;../Source/DBMS;../Source/Library;../Source/Marine;../Source/Aviation;../Source/DSP;../Source/IO;../Source/JSON;../Source/Utilities;../Source/Device;../Source/Site;../Source/Services;../Source/Delivery;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\tmp\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>

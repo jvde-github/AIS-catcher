@@ -127,5 +127,8 @@ namespace AIS
 		KEY_COUNT
 	};
 
-	Keys lookupSettingKey(const std::string &option);
+	// the setting an upper-case name stands for; false when there is none
+	bool lookupSettingKey(const std::string &option, Keys &key);
+	// the name a setting is written with in a configuration; "?" for a key that is none
+	std::string settingName(int key);
 }

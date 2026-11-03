@@ -477,7 +477,7 @@ namespace Protocol
 		State state = DISCONNECTED;
 		Clock::time_point stamp;
 
-		long reset_interval = 0; // jittered reset deadline in seconds, measured from stamp
+		long reset_interval = 0;
 		// jittered too, so stations that lost the same server do not all come back at once
 		double reconnect_delay = RECONNECT_TIME;
 
@@ -536,6 +536,7 @@ namespace Protocol
 		IO::OutputStats *stats = nullptr;
 
 		bool verify_certificates = true;
+		bool own_server = false;
 
 		enum TLS_STATE
 		{
@@ -576,6 +577,8 @@ namespace Protocol
 
 		void setStats(IO::OutputStats *s) { stats = s; }
 		void setVerifyCertificates(bool v) { verify_certificates = v; }
+		// this program's own server on this machine: nothing to verify and nothing to warn of
+		void setOwnServer() { verify_certificates = false; own_server = true; }
 
 		bool setOptionKey(AIS::Keys key, const std::string &value) override
 		{
@@ -608,6 +611,7 @@ namespace Protocol
 
 		void setStats(IO::OutputStats *s) {}
 		void setVerifyCertificates(bool) {}
+		void setOwnServer() {}
 	};
 #endif
 
@@ -620,22 +624,22 @@ namespace Protocol
 
 		enum class PacketType
 		{
-			RESERVED_0 = 0 << 4,   // 0
-			CONNECT = 1 << 4,	   // 16
-			CONNACK = 2 << 4,	   // 32
-			PUBLISH = 3 << 4,	   // 48
-			PUBACK = 4 << 4,	   // 64
-			PUBREC = 5 << 4,	   // 80
-			PUBREL = 6 << 4,	   // 96
-			PUBCOMP = 7 << 4,	   // 112
-			SUBSCRIBE = 8 << 4,	   // 128
-			SUBACK = 9 << 4,	   // 144
-			UNSUBSCRIBE = 10 << 4, // 160
-			UNSUBACK = 11 << 4,	   // 176
-			PINGREQ = 12 << 4,	   // 192
-			PINGRESP = 13 << 4,	   // 208
-			DISCONNECT = 14 << 4,  // 224
-			RESERVED_15 = 15 << 4  // 240
+			RESERVED_0 = 0 << 4,
+			CONNECT = 1 << 4,
+			CONNACK = 2 << 4,
+			PUBLISH = 3 << 4,
+			PUBACK = 4 << 4,
+			PUBREC = 5 << 4,
+			PUBREL = 6 << 4,
+			PUBCOMP = 7 << 4,
+			SUBSCRIBE = 8 << 4,
+			SUBACK = 9 << 4,
+			UNSUBSCRIBE = 10 << 4,
+			UNSUBACK = 11 << 4,
+			PINGREQ = 12 << 4,
+			PINGRESP = 13 << 4,
+			DISCONNECT = 14 << 4,
+			RESERVED_15 = 15 << 4
 		};
 
 		std::string username, password;
@@ -644,6 +648,13 @@ namespace Protocol
 
 		int qos = 0;
 		int packet_id = 0;
+
+		// a last will, retained, and the keep-alive that lets the broker notice
+		// it is due; none unless set
+		std::string will_topic, will_message;
+		int keepalive = 0;
+		Clock::time_point last_sent;
+		int publish(const void *str, int length, const std::string &tpc, bool retain);
 
 		// never zero (MQTT 3.1.1 2.3.1)
 		int nextPacketId()
@@ -683,6 +694,15 @@ namespace Protocol
 		bool isConnecting() override { return awaiting_connack || ProtocolBase::isConnecting(); }
 		int send(const void *str, int length, const std::string &tpc);
 		int send(const void *str, int length) override;
+		// a message the broker keeps for whoever subscribes later
+		int sendRetained(const std::string &payload, const std::string &tpc) { return publish(payload.data(), (int)payload.size(), tpc, true); }
+		// what the broker publishes, retained, when this connection dies
+		void setWill(const std::string &tpc, const std::string &message, int keepalive_s = 60)
+		{
+			will_topic = tpc;
+			will_message = message;
+			keepalive = keepalive_s;
+		}
 		int read(void *data, int data_len, int t = 1, bool wait = false) override;
 
 		std::string getValues() override;

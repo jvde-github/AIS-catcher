@@ -9,6 +9,7 @@
 	<li data-tags="ship-map" data-group="focus" data-action="showTargetcardCtx" data-kind="ship"><i class="directions_boat_icon"></i>Ship card</li>
 	<li data-tags="plane-map" data-group="focus" data-action="showTargetcardCtx" data-kind="plane"><i class="directions_boat_icon"></i>Plane card</li>
 	<li data-tags="ctx-map" data-group="tracks" data-action="toggleAllTracks"><i class="timeline_icon"></i>All tracks<span class="ctx-check">✓</span></li>
+	<li data-tags="ctx-map" data-group="tracks" data-action="togglePredictor"><i class="near_me_icon"></i>COG predictor<span class="ctx-check">✓</span></li>
 	<li class="noandroid ctx-noalltracks" data-tags="ctx-map" data-group="tracks" data-action="startBoxSelect"><i class="highlight_alt_icon"></i>Show tracks in place</li>
 	<li class="ctx-selectedtracks" data-tags="ctx-map" data-group="tracks" data-action="deleteAllTracks"><i class="remove_circle_outline_icon"></i>Clear tracks</li>
 	<li class="ctx-removealltracks" data-tags="ctx-map" data-group="tracks" data-action="toggleTrackCutoff"><i class="timer_icon"></i><span id="ctx_trackcutoff">Tracks from now</span><span class="ctx-check">✓</span></li>
@@ -23,7 +24,6 @@
 	<li class="noandroid" data-tags="plane" data-group="lookup" data-action="openGoogleSearchCtx" data-icao="1"><i class="search_icon"></i>Google</li>
 	<li class="noandroid" data-tags="ship" data-group="lookup" data-action="openVesselFinderCtx"><i class="public_icon"></i>VesselFinder</li>
 	<li class="noandroid" data-tags="ship" data-group="lookup" data-action="openAISHubCtx"><i class="public_icon"></i>AISHub</li>
-	<li data-tags="ctx-targetcard" data-group="card" data-action="toggleShipcardStyle"><i class="view_list_icon"></i>Tabbed layout<span class="ctx-check">✓</span></li>
 	<li data-tags="ctx-targetcard" data-group="card" data-action="toggleTargetcardPin" id="ctx_targetcard_pin"><i class="push_pin_icon ctx-pin"></i>Pin card position<span class="ctx-check">✓</span></li>
 	<li data-tags="ctx-map" data-group="display" data-action="toggleLabel"><i class="label_icon"></i>Ship labels<span class="ctx-check">✓</span></li>
 	<li data-tags="ctx-map" data-group="display" data-action="toggleRange"><i class="signal_cellular_alt_icon"></i>Station range<span class="ctx-check">✓</span></li>
@@ -39,6 +39,5 @@
 	<li data-tags="settings" data-group="app" data-action="openSettings"><i class="build_icon"></i>Settings...</li>
 	<li class="noandroid" data-tags="settings ctx-replay-map" data-group="app" data-action="toggleDarkMode"><i class="brightness_4_icon"></i>Dark mode<span class="ctx-check">✓</span></li>
 	<li class="noandroid" data-tags="settings ctx-replay-map" data-group="app" data-action="toggleScreenSize"><i class="fullscreen_icon"></i>Full screen<span class="ctx-check">✓</span></li>
-	<li data-tags="settings" data-group="app" data-action="showReceiverDialog" id="ctx_receiver"><i class="radio_icon"></i><span id="ctx_receiver_label">Receiver…</span></li>
 	<li data-tags="settings" data-group="app" data-action="toggleInfoPanel"><i class="info_icon"></i>About AIS-catcher</li>
 </ul>

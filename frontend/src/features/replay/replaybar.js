@@ -5,7 +5,8 @@
 import { settings } from '../../core/state.js';
 import { debounce } from '@aiscatcher/ui/components.js';
 import { formatTime } from '@aiscatcher/core/text.js';
-import { markerLayer, trackLayer, labelLayer, shapeLayer, planeLayer, redraw as redrawMap } from '../../map.js';
+import { markerLayer, trackLayer, labelLayer, shapeLayer, planeLayer } from '../../map.js';
+import { redraw } from '../../fleet.js';
 import { panels, setPanels } from '../../panels.js';
 import { closeTargetcard } from '../targetcard/card.js';
 import { stopHover } from '../hover/hover.js';
@@ -14,17 +15,10 @@ import * as mapObjects from '../mapobjects/mapobjects.js';
 import * as replay from './replay.js';
 import { register } from '../../actions.js';
 
-export function init() {
-    replay.init({
-        setLiveLayers: setLiveLayersVisible,
-        onStateChange: updateReplaycard,
-    });
-}
-
 // While replay owns the map the live layers step aside, so the two never draw
 // the same vessel twice. Exiting just puts them back and lets the normal
 // refresh rebuild from shipsDB.
-function setLiveLayersVisible(on) {
+export function setLiveLayersVisible(on) {
     [markerLayer, trackLayer, labelLayer, shapeLayer, mapObjects.objectLayer]
         .forEach(l => l.setVisible(on));
     planeLayer.setVisible(on && Array.isArray(settings.map_overlay) && settings.map_overlay.includes("Aircraft"));
@@ -74,7 +68,7 @@ async function replayToggle() {
 
 function stopReplay() {
     replay.stop();
-    redrawMap();
+    redraw();
     updateReplaycard();
 }
 
@@ -143,7 +137,7 @@ function replayRemain(sec) {
 let replayEls = null;
 const replayShown = {};
 
-function updateReplaycard() {
+export function updateReplaycard() {
     const bar = document.getElementById("replaybar");
     if (!bar || !bar.classList.contains("visible")) return;
 

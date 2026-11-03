@@ -78,7 +78,7 @@ export function build(mount, prefix, o) {
         tabEls[keys[i]].focus();
     });
     select(o.tab, false);
-    disclosure = attachDisclosure({ mount, panels, enabled: () => !!(o.foldable && o.foldable()), active: () => active, select, defaultTab });
+    disclosure = attachDisclosure({ mount, panels, active: () => active, select, defaultTab });
 
     return { head, panels: panelEls, select, active: () => active, scrollTop: () => { panels.scrollTop = 0; }, destroy() {
         disclosure.destroy();

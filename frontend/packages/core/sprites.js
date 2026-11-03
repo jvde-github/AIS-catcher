@@ -8,8 +8,7 @@
    The sheet is icons-tint.png: one cell per shape, a white body with a grey
    outline, coloured where it is drawn (ol/style/Icon's `color`, or the
    .sprites-tint class in sprites.css). icons.png, the pre-coloured sheet, is
-   served as it is for KML, GeoJSON and anything outside that loads it;
-   SPRITES describes its cells.
+   served as it is for KML, GeoJSON and anything outside that loads it.
    ========================================================================= */
 
 import { ShippingClass } from "./constants.js";
@@ -83,8 +82,8 @@ export const PLANE_PALETTES = {
              [20000, "#ffbf5c"], [30000, "#ffd36b"], [Infinity, "#ffe27a"]],
     pastel: [[2000, "#fec394"], [10000, "#b9e092"], [20000, "#6ee8e1"], [30000, "#c7cdff"], [Infinity, "#fab7f3"]],
 };
-export const DEFAULT_PLANE_PALETTE = "classic";
-export const PLANE_GROUND = "#a3a8b0";
+const DEFAULT_PLANE_PALETTE = "classic";
+const PLANE_GROUND = "#a3a8b0";
 
 /* undefined leaves the cell as drawn, white: an aircraft in the air whose
    altitude is not known, in a palette that colours by altitude */
@@ -163,23 +162,3 @@ export function spriteCSS(sprite) {
         `width: ${sprite.imgSize}px; height: ${sprite.imgSize}px;` +
         (sprite.color ? ` --sprite-color: ${sprite.color};` : "");
 }
-
-/* Cell origins in icons.png, the pre-coloured sheet KML and outside pages
-   load. Row cy=20 is the "stationary" row; a moving vessel takes the same
-   column on row 0. */
-export const SPRITES = {
-    [ShippingClass.OTHER]: { cx: 120, cy: 20, hint: "Other", imgSize: 20 },
-    [ShippingClass.UNKNOWN]: { cx: 120, cy: 20, hint: "Unknown", imgSize: 20 },
-    [ShippingClass.CARGO]: { cx: 0, cy: 20, hint: "Cargo", imgSize: 20 },
-    [ShippingClass.TANKER]: { cx: 80, cy: 20, hint: "Tanker", imgSize: 20 },
-    [ShippingClass.PASSENGER]: { cx: 40, cy: 20, hint: "Passenger", imgSize: 20 },
-    [ShippingClass.HIGHSPEED]: { cx: 100, cy: 20, hint: "High Speed", imgSize: 20 },
-    [ShippingClass.SPECIAL]: { cx: 60, cy: 20, hint: "Special", imgSize: 20 },
-    [ShippingClass.FISHING]: { cx: 140, cy: 20, hint: "Fishing", imgSize: 20 },
-    [ShippingClass.ATON]: { cx: 0, cy: 40, hint: "AtoN", imgSize: 20 },
-    [ShippingClass.PLANE]: { cx: 0, cy: 60, hint: "Aircraft", imgSize: 25 },
-    [ShippingClass.HELICOPTER]: { cx: 0, cy: 85, hint: "Helicopter", imgSize: 25 },
-    [ShippingClass.B]: { cx: 20, cy: 20, hint: "Class B", imgSize: 20 },
-    [ShippingClass.STATION]: { cx: 20, cy: 40, hint: "Base Station", imgSize: 20 },
-    [ShippingClass.SARTEPIRB]: { cx: 40, cy: 40, hint: "SART/EPIRB", imgSize: 20 },
-};

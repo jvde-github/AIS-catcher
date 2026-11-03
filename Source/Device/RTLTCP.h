@@ -18,7 +18,6 @@
 #pragma once
 
 #include "Device.h"
-#include "OutputStats.h"
 
 #include <fstream>
 #include <iostream>
@@ -48,9 +47,13 @@ namespace Device
 		// bytes per FIFO block for the text formats; one byte a block overruns
 		// on a busy NMEA feed (-gt TEXT_BUFFER, 1-256)
 		int text_buffer = 1;
+		// the FIFO holds this many times its default size (-gt BUFFER_COUNT, 1-100):
+		// what arrives while the consumer is held up longer than the FIFO lasts is lost
+		int buffer_count = 1;
 		std::vector<char> buffer;
 
 		bool lossless = false;
+		std::atomic<bool> connected{false};
 
 		std::thread async_thread;
 		std::thread run_thread;
@@ -64,7 +67,6 @@ namespace Device
 
 	public:
 		RTLTCP() : Device(Format::CU8, 288000, Type::RTLTCP, "RTLTCP") { tcp.setStats(&stats); }
-
 		const IO::OutputStats *getConnectionStats() const override { return &stats; }
 
 		void OpenWithFileDescriptor(int) override { Open(0); }
@@ -75,6 +77,7 @@ namespace Device
 		void Stop() override;
 
 		bool isCallback() override { return true; }
+		bool isConnected() override { return connected; }
 
 		void getDeviceList(std::vector<Description> &DeviceList) override;
 
@@ -86,7 +89,7 @@ namespace Device
 		}
 
 		// Settings
-		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 		std::string Get() override;
 
 		std::string getProduct() override { return "RTLTCP"; }

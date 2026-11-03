@@ -44,6 +44,14 @@ namespace Device
 			session = tcp.add(&mqtt);
 			mqtt.setOptionKey(AIS::KEY_SETTING_SUBSCRIBE, "on");
 			break;
+		case PROTOCOL::MQTTS:
+			session = tcp.add(&tls);
+			session = tls.add(&mqtt);
+			mqtt.setOptionKey(AIS::KEY_SETTING_SUBSCRIBE, "on");
+			break;
+		case PROTOCOL::TLS:
+			session = tcp.add(&tls);
+			break;
 		case PROTOCOL::GPSD:
 			session = tcp.add(&gpsd);
 			break;
@@ -60,6 +68,14 @@ namespace Device
 			break;
 		case PROTOCOL::WSMQTT:
 			session = tcp.add(&ws);
+			session = ws.add(&mqtt);
+			ws.setOptionKey(AIS::KEY_SETTING_PROTOCOLS, "mqtt");
+			ws.setOptionKey(AIS::KEY_SETTING_BINARY, "on");
+			mqtt.setOptionKey(AIS::KEY_SETTING_SUBSCRIBE, "on");
+			break;
+		case PROTOCOL::WSSMQTT:
+			session = tcp.add(&tls);
+			session = tls.add(&ws);
 			session = ws.add(&mqtt);
 			ws.setOptionKey(AIS::KEY_SETTING_PROTOCOLS, "mqtt");
 			ws.setOptionKey(AIS::KEY_SETTING_BINARY, "on");
@@ -86,11 +102,11 @@ namespace Device
 
 		if (getFormat() != Format::TXT && getFormat() != Format::BASESTATION && getFormat() != Format::BEAST && getFormat() != Format::RAW1090)
 		{
-			fifo.Init(BUFFER_SIZE);
+			fifo.Init(BUFFER_SIZE, 2 * buffer_count);
 		}
 		else
 		{
-			fifo.Init(text_buffer, BUFFER_SIZE / text_buffer);
+			fifo.Init(text_buffer, buffer_count * (BUFFER_SIZE / text_buffer));
 		}
 
 
@@ -121,25 +137,35 @@ namespace Device
 		if (buffer.size() < TRANSFER_SIZE)
 			buffer.resize(TRANSFER_SIZE);
 
-		while (isStreaming())
+		try
 		{
-			session->poll();
-			if (!session->isConnected())
+			while (isStreaming())
 			{
-				SleepSystem(50);
-				continue;
-			}
+				session->poll();
+				connected = session->isConnected();
+				if (!connected)
+				{
+					SleepSystem(50);
+					continue;
+				}
 
-			int len = session->read(buffer.data(), TRANSFER_SIZE, 1);
+				int len = session->read(buffer.data(), TRANSFER_SIZE, 1);
 
-			if (len < 0)
-			{
-				lost = true;
-				Error() << "RTLTCP: error receiving data from remote host. Cancelling. ";
-				break;
+				if (len < 0)
+				{
+					Error() << "RTLTCP: error receiving data from remote host, connecting again.";
+					session->disconnect();
+					SleepSystem(1000);
+					continue;
+				}
+				else if (isStreaming() && !fifo.Push(buffer.data(), len))
+					Error() << "RTLTCP: buffer overrun.";
 			}
-			else if (isStreaming() && !fifo.Push(buffer.data(), len))
-				Error() << "RTLTCP: buffer overrun.";
+		}
+		catch (const std::exception &e)
+		{
+			lost = true;
+			Error() << "RTLTCP: " << e.what();
 		}
 	}
 
@@ -177,7 +203,7 @@ namespace Device
 		DeviceList.push_back(Description("RTLTCP", "RTLTCP", "RTLTCP", (uint64_t)0, Type::RTLTCP));
 	}
 
-	Setting &RTLTCP::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &RTLTCP::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -208,6 +234,9 @@ namespace Device
 		case AIS::KEY_SETTING_TEXT_BUFFER:
 			text_buffer = Util::Parse::Integer(arg, 1, 256, "TEXT_BUFFER");
 			break;
+		case AIS::KEY_SETTING_BUFFER_COUNT:
+			buffer_count = Util::Parse::Integer(arg, 1, 100, "BUFFER_COUNT");
+			break;
 		case AIS::KEY_SETTING_PROTOCOL:
 		{
 			if (!Util::Parse().Protocol(arg, Protocol))
@@ -223,13 +252,20 @@ namespace Device
 				break;
 			case PROTOCOL::WS:
 			case PROTOCOL::WSS:
+			case PROTOCOL::WSSMQTT:
 				if (tcp.getPort().empty())
-					SetKey(AIS::KEY_SETTING_PORT, Protocol == PROTOCOL::WSS ? "443" : "80");
+					SetKey(AIS::KEY_SETTING_PORT, Protocol == PROTOCOL::WS ? "80" : "443");
+				setFormat(Format::TXT);
+				break;
+			case PROTOCOL::MQTTS:
+				if (tcp.getPort().empty())
+					SetKey(AIS::KEY_SETTING_PORT, "8883");
 				setFormat(Format::TXT);
 				break;
 			case PROTOCOL::GPSD:
 			case PROTOCOL::MQTT:
 			case PROTOCOL::WSMQTT:
+			case PROTOCOL::TLS:
 			case PROTOCOL::TXT:
 				setFormat(Format::TXT);
 				break;
@@ -247,13 +283,16 @@ namespace Device
 			}
 			break;
 		}
+		case AIS::KEY_SETTING_PERSIST:
+			Warning() << "RTLTCP: \"persist\" is no longer used and is ignored; it reconnects by itself";
+			break;
 		case AIS::KEY_SETTING_LOSSLESS:
 			lossless = Util::Parse::Switch(arg);
 			fifo.setWait(lossless);
 			break;
 		default:
 			if (!tcp.setOptionKey(key, arg) && !tls.setOptionKey(key, arg) && !mqtt.setOptionKey(key, arg) && !gpsd.setOptionKey(key, arg) && !rtltcp.setOptionKey(key, arg) && !ws.setOptionKey(key, arg))
-				Device::SetKey(key, arg);
+				Device::applyKey(key, arg);
 			break;
 		}
 		return *this;
@@ -262,7 +301,7 @@ namespace Device
 	std::string RTLTCP::Get()
 	{
 		Protocol::ProtocolBase *p = session;
-		std::string str = "protocol " + Util::Convert::toString(Protocol) + " lossless " + Util::Convert::toString(lossless) + " " + Device::Get() + "\n";
+		std::string str = "protocol " + Util::Convert::toString(Protocol) + " lossless " + Util::Convert::toString(lossless) + " buffer_count " + std::to_string(buffer_count) + " " + Device::Get() + "\n";
 		while (p)
 		{
 			str += "  " + p->getLayer() + ": " + p->getValues() + "\n";

@@ -22,51 +22,67 @@
 #include "ZMQ.h"
 #include "Logger.h"
 
-namespace Device {
+namespace Device
+{
 
 	//---------------------------------------
 	// Device ZMQ
 
-	void ZMQ::Open(uint64_t handle) {
+	void ZMQ::Open(uint64_t handle)
+	{
 		context = zmq_ctx_new();
 		if (!context)
 			throw std::runtime_error("ZMQ: cannot create context.");
 
 		subscriber = zmq_socket(context, ZMQ_SUB);
-		if (!subscriber) {
+		if (!subscriber)
+		{
 			zmq_ctx_destroy(context);
 			context = nullptr;
 			throw std::runtime_error("ZMQ: cannot create socket.");
 		}
 
 		int rc = zmq_connect(subscriber, endpoint.c_str());
-		if (rc != 0) {
+		if (rc != 0)
+		{
 			Error() << "ZMQ: subscribing to " << endpoint;
 			Close();
 			throw std::runtime_error("ZMQ: cannot connect subscriber.");
 		}
 		rc = zmq_setsockopt(subscriber, ZMQ_SUBSCRIBE, "", 0);
-		if (rc != 0) { Close(); throw std::runtime_error("ZMQ: cannot set socket option ZMQ_SUBSCRIBE."); }
+		if (rc != 0)
+		{
+			Close();
+			throw std::runtime_error("ZMQ: cannot set socket option ZMQ_SUBSCRIBE.");
+		}
 		rc = zmq_setsockopt(subscriber, ZMQ_RCVTIMEO, &timeout, sizeof(timeout));
-		if (rc != 0) { Close(); throw std::runtime_error("ZMQ: cannot set socket option ZMQ_RCVTIMEO."); }
+		if (rc != 0)
+		{
+			Close();
+			throw std::runtime_error("ZMQ: cannot set socket option ZMQ_RCVTIMEO.");
+		}
 
 		Device::Open(handle);
 	}
 
-	void ZMQ::Close() {
+	void ZMQ::Close()
+	{
 		Device::Close();
 
-		if (subscriber) {
+		if (subscriber)
+		{
 			zmq_close(subscriber);
 			subscriber = nullptr;
 		}
-		if (context) {
+		if (context)
+		{
 			zmq_ctx_destroy(context);
 			context = nullptr;
 		}
 	}
 
-	void ZMQ::Play() {
+	void ZMQ::Play()
+	{
 		fifo.Init(BUFFER_SIZE);
 
 		Device::Play();
@@ -77,26 +93,35 @@ namespace Device {
 		SleepSystem(10);
 	}
 
-	void ZMQ::Stop() {
-		if (Device::isStreaming()) {
+	void ZMQ::Stop()
+	{
+		if (Device::isStreaming())
+		{
 			Device::Stop();
 			fifo.Halt();
 
-			if (async_thread.joinable()) async_thread.join();
-			if (run_thread.joinable()) run_thread.join();
+			if (async_thread.joinable())
+				async_thread.join();
+			if (run_thread.joinable())
+				run_thread.join();
 		}
 	}
 
-	void ZMQ::RunAsync() {
+	void ZMQ::RunAsync()
+	{
 		std::vector<char> data(BUFFER_SIZE);
 
-		while (isStreaming()) {
+		while (isStreaming())
+		{
 			int len = zmq_recv(subscriber, data.data(), BUFFER_SIZE, 0);
-			if (len > 0) {
-				if (!fifo.Push(data.data(), len))
+			if (len > 0)
+			{
+				// zmq_recv says how long the message was, also when it did not fit
+				if (!fifo.Push(data.data(), len < BUFFER_SIZE ? len : (int)BUFFER_SIZE))
 					Error() << "ZMQ: buffer overrun.";
 			}
-			else if (len < 0 && zmq_errno() != EAGAIN) {
+			else if (len < 0 && zmq_errno() != EAGAIN)
+			{
 				Error() << "ZMQ: receive error: " << zmq_strerror(zmq_errno());
 				lost = true;
 				break;
@@ -104,36 +129,44 @@ namespace Device {
 		}
 	}
 
-	void ZMQ::Run() {
-		while (isStreaming()) {
-			if (fifo.Wait()) {
-				RAW r = { getFormat(), fifo.Front(), fifo.BlockSize() };
+	void ZMQ::Run()
+	{
+		while (isStreaming())
+		{
+			if (fifo.Wait())
+			{
+				RAW r = {getFormat(), fifo.Front(), fifo.BlockSize()};
 				Send(&r, 1, tag);
 				fifo.Pop();
 			}
-			else {
+			else
+			{
 				Error() << "ZMQ: no signal.";
 			}
 		}
 	}
 
-	void ZMQ::getDeviceList(std::vector<Description>& DeviceList) {
+	void ZMQ::getDeviceList(std::vector<Description> &DeviceList)
+	{
 		DeviceList.push_back(Description("ZMQ", "ZMQ", "ZMQ", (uint64_t)0, Type::ZMQ));
 	}
 
-	Setting& ZMQ::SetKey(AIS::Keys key, const std::string &arg) {
-		switch (key) {
+	Setting &ZMQ::applyKey(AIS::Keys key, const std::string &arg)
+	{
+		switch (key)
+		{
 		case AIS::KEY_SETTING_ENDPOINT:
 			endpoint = arg;
 			break;
 		default:
-			Device::SetKey(key, arg);
+			Device::applyKey(key, arg);
 			break;
 		}
 		return *this;
 	}
 
-	std::string ZMQ::Get() {
+	std::string ZMQ::Get()
+	{
 		return Device::Get() + " endpoint " + endpoint;
 	}
 }

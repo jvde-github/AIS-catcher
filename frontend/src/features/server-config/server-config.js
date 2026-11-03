@@ -21,23 +21,9 @@ export function initialServerConfig() {
         realtime: false, log: false, decoder: false,
         managed: false, about_md: false,
     },
-    receivers: [],
+    stations: [],
     plugins: { loaded: [], errors: [] }, // loaded: [{ name, version }, ...]
 };
-}
-
-export function applyServerFeatures(next) {
-    for (const [enabled, tab] of [
-        [next.features.about_md, "about"], [next.features.realtime, "realtime"],
-        [next.features.log, "log"], [next.features.decoder, "decoder"],
-        [next.webcontrol_http, "webcontrol"],
-    ]) {
-        for (const suffix of ["_tab", "_tab_mini"]) {
-            const el = document.getElementById(tab + suffix);
-            if (el) el.style.display = enabled ? "" : "none";
-        }
-    }
-    document.querySelectorAll('.ctx-replay').forEach(el => { el.style.display = next.features.replay ? "" : "none"; });
 }
 
 // Transport, version comparison and config publication belong here. The host
@@ -53,14 +39,13 @@ export function createViewerConfig({current, applyMaps, applyRuntime, pluginsCha
         },
         apply:async (next, previous) => {
             const changes = {
-                receiversChanged:changed(previous.receivers,next.receivers),
+                stationsChanged:changed(previous.stations,next.stations),
                 restartChanged:changed(previous.restart_required,next.restart_required),
                 aboutChanged:previous.about_version !== next.about_version,
             };
             const mapsChanged = changed(previous.maps,next.maps);
             Object.assign(current,{...next,config_version:previous.config_version});
             if (mapsChanged) applyMaps(next.maps);
-            applyServerFeatures(next);
             await applyRuntime(next,changes);
         },
         pluginsChanged,

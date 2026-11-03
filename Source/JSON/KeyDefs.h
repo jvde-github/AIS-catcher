@@ -80,6 +80,8 @@ X(KEY_SETTING_ALLOW_TYPE, "", "", "", "", "allow_type", "", "", "", nullptr)
 X(KEY_SETTING_ANTENNA, "", "", "", "", "antenna", "", "", "", nullptr)
 X(KEY_SETTING_PLACES, "", "", "", "", "places", "", "",
   "Directory containing geographic place definitions.", nullptr)
+X(KEY_SETTING_PLACE_GEOMETRY, "", "", "", "", "place_geometry", "", "",
+  "Serve each place's outline to the map; off keeps the outlines private to this installation.", nullptr)
 X(KEY_SETTING_ATON, "", "", "", "", "aton", "", "", "", nullptr)
 X(KEY_SETTING_AUTHOR, "", "", "", "", "author", "", "", "", nullptr)
 X(KEY_SETTING_BACKUP, "", "", "", "", "backup", "", "", "", nullptr)
@@ -210,6 +212,7 @@ X(KEY_SETTING_MSG, "", "", "", "", "msg", "", "", "", nullptr)
 X(KEY_SETTING_MSGFORMAT, "", "", "", "", "msgformat", "", "", "", nullptr)
 X(KEY_SETTING_MSG_OUTPUT, "", "", "", "", "msg_output", "", "", "", nullptr)
 X(KEY_SETTING_MSGS, "", "", "", "", "msgs", "", "", "", nullptr)
+X(KEY_SETTING_NAME, "", "", "", "", "name", "", "", "A name: of a station, a key or a place.", nullptr)
 X(KEY_SETTING_MQTT, "", "", "", "", "mqtt", "", "", "", nullptr)
 X(KEY_SETTING_NMEA, "", "", "", "", "nmea", "", "", "", nullptr)
 X(KEY_SETTING_NMEA2000, "", "", "", "", "nmea2000", "", "", "", nullptr)
@@ -275,11 +278,56 @@ X(KEY_SETTING_SPLIT, "", "", "", "", "split", "", "",
 X(KEY_SETTING_SPYSERVER, "", "", "", "", "spyserver", "", "", "", nullptr)
 X(KEY_SETTING_SRC, "", "", "", "", "src", "", "", "", nullptr)
 X(KEY_SETTING_STATION, "", "", "", "", "station", "", "", "", nullptr)
+X(KEY_SETTING_STATIONS, "", "", "", "", "stations", "", "",
+  "The receiving stations of this installation: id, name, position and altitude; 0 is the default station, where inputs stand that name none.", nullptr)
+X(KEY_SETTING_ALT, "", "", "", "", "alt", "", "", "Altitude of a station's antenna in metres.", nullptr)
+X(KEY_SETTING_MMSI, "", "", "", "", "mmsi", "", "", "The vessel a station rides: it is where that vessel reports.", nullptr)
+X(KEY_SETTING_TRACKING, "", "", "", "", "tracking", "", "",
+  "How the site keeps ships: backup file and interval, history, track time, table size.", nullptr)
+X(KEY_SETTING_SERVICES, "", "", "", "", "services", "", "", "The site's servers: a port each and what it serves.", nullptr)
+X(KEY_SETTING_UI, "", "", "", "", "ui", "", "", "A server serves the map; on unless set off.", nullptr)
+X(KEY_SETTING_VIEW, "", "", "", "", "view", "", "", "Which ships a server, webhook or MQTT state shows of what its tracker keeps.", nullptr)
+X(KEY_SETTING_API, "", "", "", "", "api", "", "", "A server serves /api/v1.", nullptr)
+X(KEY_SETTING_MCP, "", "", "", "", "mcp", "", "", "A server serves the MCP endpoint.", nullptr)
+X(KEY_SETTING_METRICS, "", "", "", "", "metrics", "", "", "A server serves /metrics for Prometheus; prome says the same.", nullptr)
+X(KEY_SETTING_MAIN, "", "", "", "", "main", "", "", "Managed mode's server beside the control panel, on its port: one entry of services, the map always on.", nullptr)
+X(KEY_SETTING_BIND, "", "", "", "", "bind", "", "", "Address a server listens on; 127.0.0.1 unless set.", nullptr)
+X(KEY_SETTING_KEYS, "", "", "", "", "keys", "", "", "The keys a server accepts: a name, the SHA-256 of the key and its scopes.", nullptr)
+X(KEY_SETTING_TLS, "", "", "", "", "tls", "", "", "HTTPS on a server's port: the files of its certificate and key.", nullptr)
+X(KEY_SETTING_CERT, "", "", "", "", "cert", "", "", "The certificate's file of a server's tls, in PEM with its chain.", nullptr)
+X(KEY_SETTING_KEY, "", "", "", "", "key", "", "", "The private key's file of a server's tls, in PEM without a passphrase.", nullptr)
+X(KEY_SETTING_TLS_CERT, "", "", "", "", "tls_cert", "", "", "-N's name for the certificate of a server's tls.", nullptr)
+X(KEY_SETTING_TLS_KEY, "", "", "", "", "tls_key", "", "", "-N's name for the key of a server's tls.", nullptr)
+X(KEY_SETTING_SHA256, "", "", "", "", "sha256", "", "", "SHA-256 of a key, in hex: the key itself is never stored.", nullptr)
+X(KEY_SETTING_SCOPES, "", "", "", "", "scopes", "", "", "What a key may do: data, system.", nullptr)
+X(KEY_SETTING_PUBLIC, "", "", "", "", "public", "", "", "A server anyone who reaches it may read, without a key; never together with keys.", nullptr)
+X(KEY_SETTING_LIMITED, "", "", "", "", "limited", "", "", "A server that answers the short form whoever asks: lists of 25 rows at most, vessel rows without the station that heard them, one vessel in full without its stations, and 25 data calls an hour from one address. Off by default.", nullptr)
+X(KEY_SETTING_API_V0, "", "", "", "", "api_v0", "", "", "A server with the map also answers the ship list and statistics as v0.70 did, for scripts: /ships.json, /stat.json, /api/ships.json and /api/ships_full.json. On for -N and a \"server\" section, off for an entry of \"services\" unless switched on; limited does not cap them.", nullptr)
+X(KEY_SETTING_WEBHOOKS, "", "", "", "", "webhooks", "", "", "Addresses each event is posted to as it happens.", nullptr)
+X(KEY_SETTING_EVENTS, "", "", "", "", "events", "", "", "The kinds of event a webhook posts: safety, destination, status, draught, place_enter, place_exit, system.", nullptr)
+X(KEY_SETTING_SECRET, "", "", "", "", "secret", "", "", "A webhook's signing secret, as Standard Webhooks has it (whsec_...).", nullptr)
+X(KEY_SETTING_BATCH, "", "", "", "", "batch", "", "", "A webhook posts what came together in one request.", nullptr)
+X(KEY_SETTING_MQTT_STATE, "", "", "", "", "mqtt_state", "", "", "The station's state on an MQTT broker, retained, with Home Assistant discovery.", nullptr)
+X(KEY_SETTING_DISCOVERY, "", "", "", "", "discovery", "", "", "Announce the state to Home Assistant through MQTT discovery.", nullptr)
+X(KEY_SETTING_WATCH, "", "", "", "", "watch", "", "", "Vessels whose position is published, by MMSI.", nullptr)
+X(KEY_SETTING_HIDDEN_BUCKETS, "", "", "", "", "hidden_buckets", "", "", "Filter: groups left out: am, as, bm, bs, aton, base, sarte, air.", nullptr)
+X(KEY_SETTING_HIDDEN_CLASSES, "", "", "", "", "hidden_classes", "", "", "Filter: ship classes left out, by number.", nullptr)
+X(KEY_SETTING_HIDDEN_STATUSES, "", "", "", "", "hidden_statuses", "", "", "Filter: navigational statuses left out, 0 to 15.", nullptr)
+X(KEY_SETTING_SPEED_MIN, "", "", "", "", "speed_min", "", "knots", "Filter: lowest speed.", nullptr)
+X(KEY_SETTING_SPEED_MAX, "", "", "", "", "speed_max", "", "knots", "Filter: highest speed.", nullptr)
+X(KEY_SETTING_SEEN, "", "", "", "", "seen", "", "min", "Filter: heard within this many minutes; 0 is any age.", nullptr)
+X(KEY_SETTING_DISTANCE_MIN, "", "", "", "", "distance_min", "", "nmi", "Filter: nearest distance from the station.", nullptr)
+X(KEY_SETTING_DISTANCE_MAX, "", "", "", "", "distance_max", "", "nmi", "Filter: farthest distance from the station.", nullptr)
+X(KEY_SETTING_VALIDATED, "", "", "", "", "validated", "", "", "Filter: any, yes, no or pending.", nullptr)
+X(KEY_SETTING_REPEATED, "", "", "", "", "repeated", "", "", "Filter: any, only or never.", nullptr)
+X(KEY_SETTING_MMSI_ALLOW, "", "", "", "", "mmsi_allow", "", "", "Filter: only these MMSIs.", nullptr)
+X(KEY_SETTING_MMSI_DENY, "", "", "", "", "mmsi_deny", "", "", "Filter: never these MMSIs.", nullptr)
 X(KEY_SETTING_STATS_ON_CLOSE, "", "", "", "", "stats_on_close", "", "", "",
   nullptr)
 X(KEY_SETTING_STATION_LINK, "", "", "", "", "station_link", "", "", "", nullptr)
 X(KEY_SETTING_STAMP, "", "", "", "", "stamp", "", "", "", nullptr)
-X(KEY_SETTING_STATION_ID, "", "", "", "", "station_id", "", "", "", nullptr)
+X(KEY_SETTING_STATION_ID, "", "", "", "", "station_id", "", "",
+  "The station number a decoder stamps on its messages, and a database output writes on every row. A server shows the stations its filter names with id.", nullptr)
 X(KEY_SETTING_STATIONID, "", "", "", "", "stationid", "", "", "", nullptr)
 X(KEY_SETTING_STATE, "", "", "", "", "state", "", "",
   "Keep a latest-known row per MMSI in the database", nullptr)
@@ -347,6 +395,9 @@ X(KEY_SETTING_SELECT_MMSI, "", "", "", "", "select_mmsi", "", "", "", nullptr)
 X(KEY_SETTING_SELECT_REPEAT, "", "", "", "", "select_repeat", "", "", "",
   nullptr)
 X(KEY_SETTING_ZONE, "", "", "", "", "zone", "", "", "", nullptr)
+X(KEY_SETTING_TIMING, "", "", "", "", "timing", "", "", "", nullptr)
+X(KEY_SETTING_FILE_OUTPUT, "", "", "", "", "file_output", "", "", "", nullptr)
+X(KEY_SETTING_NMEA2000_OUTPUT, "", "", "", "", "nmea2000_output", "", "", "", nullptr)
 X(KEY_ACCURACY, "accuracy", "", "accuracy", "", "", "", "",
   "Position accuracy (true=DGPS <10 m, false=GNSS >10 m)", nullptr)
 X(KEY_ACK_REQUIRED, "ack_required", "", "ack_required", "", "", "", "",
@@ -1131,9 +1182,8 @@ X(KEY_PORT_SIZE, "size", "", "", "", "size", "", "",
   "Port size: 0 unknown or very small, 1 small, 2 medium, 3 large.", nullptr)
 
 // Persistent geographic place definitions (GeoJSON), read with
-// JSON_DICT_SETTING. Shared structural fields use KEY_SETTING_ID and
-// KEY_SETTING_MODEL_TYPE.
-X(KEY_PLACE_NAME, "", "", "", "", "name", "", "", "Place name", nullptr)
+// JSON_DICT_SETTING. Shared structural fields use KEY_SETTING_ID,
+// KEY_SETTING_NAME and KEY_SETTING_MODEL_TYPE.
 X(KEY_PLACE_GEOMETRY, "", "", "", "", "geometry", "", "",
   "Place definition metadata", nullptr)
 X(KEY_PLACE_COORDINATES, "", "", "", "", "coordinates", "", "",
@@ -1167,3 +1217,6 @@ X(KEY_PLACE_COUNTRY, "", "", "", "", "country", "", "", "Place metadata", nullpt
 
 X(KEY_TOA_NS, "toa_ns", "", "toa_ns", "", "", "toa_ns", "ns",
   "Time of arrival as whole nanoseconds since the Unix epoch; exact where `toa` is rounded", nullptr)
+X(KEY_PLACE_RANK, "", "", "", "", "rank", "", "", "Place metadata", nullptr)
+X(KEY_SETTING_SETUP_CODE, "", "", "", "", "setup_code", "", "", "", nullptr)
+X(KEY_SETTING_ITERATIONS, "", "", "", "", "iterations", "", "", "", nullptr)

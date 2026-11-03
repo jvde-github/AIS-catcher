@@ -1,4 +1,3 @@
-import {placeFeature} from '@aiscatcher/core/places.js';
 // Map objects on either host: the rows a transport delivers, the viewer's
 // since-feed or the site's tiles, kept by id, aged, drawn, hovered and opened
 // through one kind table. Message markers, areas and receiving stations are
@@ -19,6 +18,7 @@ import CircleStyle from 'ol/style/Circle.js';
 import VectorLayer from 'ol/layer/Vector.js';
 import VectorSource from 'ol/source/Vector.js';
 import { fromLonLat } from 'ol/proj.js';
+import Overlay from 'ol/Overlay.js';
 
 import { hexToRgb } from '@aiscatcher/ui/color.js';
 import { hasValidCoords } from '@aiscatcher/core/geo.js';
@@ -39,15 +39,16 @@ const HOVER_DWELL_MS = 500;
 // a water, or a custom place named for the water it covers, gets the waterway glyph; other custom places the generic one
 const WATERWAY = /strait|channel|passage|canal|waterway|fairway|river|sound|estuary|tss|separation/i;
 const SECTION_ZOOM = 13; // same minimum as PlaceIndex::Entry::SECTION_ZOOM
-const placeGlyph = (o) => o.place_type === 'water' || (o.place_type === 'area' && WATERWAY.test(o.category || '')) ? 'waterway' : o.place_type || 'place';
+const placeGlyph = (o) => o.place_type === 'water' || o.place_type === 'sector' || (o.place_type === 'guardzone' && WATERWAY.test(o.category || '')) ? 'waterway' : o.place_type || 'place';
 const catOf = (o) => (o.kind === 9 || (o.kind === 10 && o.place_type === 'port')) ? 'port' : o.kind === 10 ? 'place' : KIND_CAT[o.kind] || 'data';
 // the server's clock once a feed has told it; the status of a station is judged against it
-let serverClock = () => Date.now() / 1000;
-const statusOf = (o) => stationStatus(o, serverClock());
-const STATUS_RANK = { online: 0, connected: 1, offline: 2 };
+const statusOf = (o) => stationStatus(o);
+const STATUS_RANK = { online: 0, quiet: 1, down: 2, offline: 3 };
 const bestStatus = (members) => members.map(statusOf).reduce((a, b) => (STATUS_RANK[b] < STATUS_RANK[a] ? b : a), 'offline');
+// co-located stations each get a pill up to this many; more share one pill with a chooser
+const STATION_PILLS = 4;
 const stationId = (o) => Number(String(o.id).slice(1));
-const stationInfo = (o) => ({ name: o.label, id: stationId(o), country: o.country, mmsi: o.mmsi, status: statusOf(o) });
+const stationInfo = (o) => ({ name: o.label, id: stationId(o), country: o.country, mmsi: o.mmsi, status: statusOf(o), heard: o.heard });
 const bandOf = (o) => stationBand(stationInfo(o));
 
 /* host: {
@@ -77,7 +78,6 @@ export function create(host) {
     const hydrating = new Map();   // id -> in-flight promise
     const hydratedShips = new Map(); // mmsi -> { badge, messages, promise }
     let serverTime = 0, ttl = 2700, viewZoom = 0;
-    serverClock = () => serverTime || Date.now() / 1000;
 
     const vector = new VectorSource({ features: [] });
     const layer = new VectorLayer({ source: vector, style: styleOf, opacity: LAYER_ALPHA, properties: { interactive: true } });
@@ -87,16 +87,8 @@ export function create(host) {
     const boundaryRequests = new Map();
     let hoverBoundary = null;
     let boundaryWatch = null;
-    const placeObjects = new Map();
     let placeVersion = '';
     const placeFormat = new GeoJSON();
-    function setPlaces(collection) {
-        // Definitions are metadata; boundaries are fetched only on hover.
-        if (collection.place_version && collection.place_version !== placeVersion) {
-            placeVersion = collection.place_version;
-            boundaries.clear();
-        }
-    }
     let receiverMarker = null;
     function setReceiverMarker(feature) {
         if (receiverMarker) vector.removeFeature(receiverMarker);
@@ -113,11 +105,10 @@ export function create(host) {
     /* ---- rows ------------------------------------------------------------- */
 
     function applyDelta(data, reset) {
-        let placesChanged = reset || (data.place_version !== undefined && data.place_version !== placeVersion);
         if (data.place_version !== undefined && data.place_version !== placeVersion) {
             placeVersion = data.place_version; boundaries.clear(); hoverBoundary = null;
         }
-        if (reset) { objectsDB.clear(); hydrated.clear(); placeObjects.clear(); }
+        if (reset) { objectsDB.clear(); hydrated.clear(); }
         if (data.time) serverTime = data.time;
         if (data.ports_complete) {
             const ports = new Set((data.objects || []).filter(o => o.kind === 9).map(o => o.id));
@@ -125,18 +116,8 @@ export function create(host) {
                 objectsDB.delete(id); hydrated.delete(id);
             }
         }
-        for (const o of data.objects || []) {
-            if (o.kind === 10) {
-                placeObjects.set(o.id, placeFeature(o));
-                placesChanged = true;
-            }
-            objectsDB.set(o.id, o);
-        }
-        for (const id of data.removed || []) { placesChanged = placeObjects.delete(id) || placesChanged; objectsDB.delete(id); hydrated.delete(id); }
-        if (placesChanged) {
-            const collection = {type:'FeatureCollection', features:[...placeObjects.values()], place_version:placeVersion};
-            setPlaces(collection); host.onPlacesChanged?.(collection);
-        }
+        for (const o of data.objects || []) objectsDB.set(o.id, o);
+        for (const id of data.removed || []) { objectsDB.delete(id); hydrated.delete(id); }
         prune();
     }
 
@@ -180,7 +161,7 @@ export function create(host) {
         }
     }
 
-    function clear() { clearInterval(boundaryWatch); clearInterval(hoverWatch); boundaries.clear(); hoverBoundary = null; objectsDB.clear(); hydrated.clear(); tileIds.clear(); listedBy.clear(); placeObjects.clear(); }
+    function clear() { clearInterval(boundaryWatch); clearInterval(hoverWatch); boundaries.clear(); hoverBoundary = null; objectsDB.clear(); hydrated.clear(); tileIds.clear(); listedBy.clear(); }
 
     /* ---- features --------------------------------------------------------- */
 
@@ -243,10 +224,11 @@ export function create(host) {
         for (const stack of stackObjects(standing)) {
             const anchor = stack[0];
             const slots = [];
+            const ownPill = stack.filter((m) => catOf(m) === 'station').length <= STATION_PILLS;
             for (const o of stack) {
                 const cat = catOf(o);
                 const glyph = o.kind === 10 ? placeGlyph(o) : cat;
-                let slot = slots.find((s) => s.cat === cat && s.glyph === glyph);
+                let slot = cat === 'station' && ownPill ? null : slots.find((s) => s.cat === cat && s.glyph === glyph);
                 if (!slot) slots.push(slot = { cat, glyph, members: [] });
                 slot.members.push(o);
             }
@@ -259,6 +241,31 @@ export function create(host) {
                 });
             });
         }
+        syncPulses(standing);
+    }
+
+    // a down station pulses where the host asks for it (the viewer, for its own stations):
+    // an overlay element animated by CSS, so the map draws nothing for it
+    const pulses = new Map(); // id -> Overlay
+    function syncPulses(standing) {
+        const m = host.pulse ? host.map?.() : null;
+        const want = new Set();
+        if (m) for (const o of standing) {
+            if (catOf(o) !== 'station' || statusOf(o) !== 'down') continue;
+            want.add(o.id);
+            let ov = pulses.get(o.id);
+            if (!ov) {
+                const el = document.createElement('div');
+                el.className = 'station-pulse';
+                el.setAttribute('aria-hidden', 'true');
+                ov = new Overlay({ element: el, positioning: 'center-center', stopEvent: false });
+                m.addOverlay(ov);
+                pulses.set(o.id, ov);
+            }
+            ov.setPosition(fromLonLat([o.lon, o.lat]));
+        }
+        for (const [id, ov] of pulses)
+            if (!want.has(id)) { ov.getMap()?.removeOverlay(ov); pulses.delete(id); }
     }
 
     // two objects closer than an icon at the view's zoom draw on top of each other:
@@ -383,7 +390,7 @@ export function create(host) {
             icon.setOpacity(fade);
             cached = [new Style({ image: icon, zIndex: 100 })];
         } else {
-            cached = [new Style({ image: iconOf(discCanvas(glyph, kindRgb(cat), fade)), zIndex: 100 })];
+            cached = [new Style({ image: iconOf(discCanvas(glyph, isPlace && opt.colorClass !== false ? hexToRgb(render.placeColor(feature.binary_object.place_type)) : kindRgb(cat), fade)), zIndex: 100 })];
         }
         styleCache.set(key, cached);
         return cached;
@@ -434,6 +441,7 @@ export function create(host) {
     if (typeof document !== 'undefined')
         document.addEventListener('click', (e) => {
             if (!e.target.closest) return;
+            if (e.target.closest('a[href="#"]')) e.preventDefault();
             const pick = e.target.closest('#binary-messages .object-pick .tip-band[data-station]');
             if (pick) { messageDialog().close(); openStation(Number(pick.dataset.station)); return; }
             const port = e.target.closest('#binary-messages .port-pick .tip-band[data-code]');
@@ -616,7 +624,7 @@ export function create(host) {
     // when fetched, and the station the vessel carries; the attrs wire the clicks
     function titleGlyphs(ship, attrs, apply, stationAttrs = '') {
         if (!ship) return;
-        const station = ship.station ? glyphsHTML(['station'], stationAttrs) : '';
+        const station = ship.station != null ? glyphsHTML(['station'], stationAttrs) : '';
         if (!ship.binary) { if (station) apply(station); return; }
         const first = showsShipBadge(ship.binary) ? [KIND_CAT[decodeBadge(ship.binary).kind] || 'data'] : [];
         apply(glyphsHTML(first, attrs) + station);
@@ -691,10 +699,24 @@ export function create(host) {
             place_version: place ? placeVersion : ref.place_version}]);
     }
 
+    function stationsAll() {
+        const out = [];
+        for (const o of objectsDB.values())
+            if (o.kind === 8) out.push({ ...stationInfo(o), lat: o.lat, lon: o.lon, rate: o.rate, heard: o.heard });
+        return out;
+    }
+
+    function stations() {
+        const out = [];
+        for (const o of objectsDB.values())
+            if (o.kind === 8 && hasValidCoords(o.lat, o.lon)) out.push({ ...stationInfo(o), lat: o.lat, lon: o.lon, label: o.label || '' });
+        return out;
+    }
+
     return {
-        vector, layer, setReceiverMarker, openPorts, openPlace, openNearby, setPlaces,
+        vector, layer, setReceiverMarker, openPorts, openPlace, openNearby, stations, stationsAll,
         applyDelta, applyTile, prune, clear, redraw, restyle,
-        setViewZoom: (z) => { viewZoom = Math.round(z); },
+        setViewZoom: (z) => { viewZoom = Math.floor(z); },
         shipBadge, stationBadge, ridingStationStatus,
         hydrateShip, tooltip, ridingStationBand, shipTooltip, shipKinds, titleGlyphs, showVesselMessages, click,
         pollEvents: strip.pollEvents, resetEvents: strip.resetEvents, noteSeen: strip.noteSeen,

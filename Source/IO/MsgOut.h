@@ -100,7 +100,7 @@ namespace IO
 						json += ", timestamp: ";
 						json += msg.getRxTime();
 					}
-					if (msg.getStation())
+					if (msg.getStation() >= 0)
 					{
 						json += ", ID: ";
 						json += std::to_string(msg.getStation());
@@ -152,7 +152,7 @@ namespace IO
 			if (!warned_no_formatter)
 			{
 				warned_no_formatter = true;
-				Error() << type << ": no sendFormatted() and Receive() not overridden — dropping all output.";
+				Error() << type << ": no sendFormatted() and Receive() not overridden, dropping all output.";
 			}
 		}
 		virtual void batchDone(TAG &) {}
@@ -167,9 +167,14 @@ namespace IO
 
 		virtual void Start() {}
 		virtual void Stop() {}
+		const std::string &getType() const { return type; }
+		const std::string &getDescription() const { return description; }
 
 		// from the engine's main loop: the decoding thread only ever sends
 		virtual void poll() {}
+		const OutputStats &getStats() const { return stats; }
+		// holds a connection: its connection counts mean something
+		virtual bool hasConnection() const { return false; }
 
 		bool hasUUID() const { return !uuid.empty(); }
 		void Connect(Receiver &r);
@@ -229,17 +234,12 @@ namespace IO
 			batchDone(tag);
 		}
 
-		const OutputStats &getStats() const { return stats; }
-		// whether the output holds a connection, so that connect/reconnect counters mean something
-		virtual bool hasConnection() const { return false; }
-		const std::string &getTypeName() const { return type; }
-		const std::string &getDescription() const { return description; }
-
-		void writeJSON(JSON::Writer &w) const
+		// `label`: its name when it has no description, "UDP #1"; never where it sends, as a map may show it
+		void writeJSON(JSON::Writer &w, const std::string &label) const
 		{
 			w.beginObject()
 				.kv("type", type)
-				.kv("description", description);
+				.kv("description", description.empty() ? label : description);
 			if (!link.empty())
 				w.kv("link", link);
 			w.key("stats");
@@ -312,6 +312,9 @@ namespace IO
 			case AIS::KEY_SETTING_INCLUDE_SAMPLE_START:
 				include_sample_start = Util::Parse::Switch(arg);
 				return true;
+			case AIS::KEY_SETTING_PERSIST:
+				Warning() << type << " output: \"persist\" is no longer used and is ignored; it reconnects by itself";
+				return true;
 			case AIS::KEY_SETTING_GROUPS_IN:
 			{
 				uint64_t g = Util::Parse::Integer(arg);
@@ -325,7 +328,7 @@ namespace IO
 			}
 		}
 
-		Setting &SetKey(AIS::Keys key, const std::string &arg) override
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override
 		{
 			if (!setOptionKey(key, arg))
 				throw std::runtime_error(type + " output - unknown option: " + AIS::KeyMap[key][JSON_DICT_SETTING] + " " + arg);
@@ -348,6 +351,6 @@ namespace IO
 		{
 			throw std::runtime_error(type + " support not compiled in. Rebuild with -D" + build_flag + "=ON.");
 		}
-		Setting &SetKey(AIS::Keys, const std::string &) override { return *this; }
+		Setting &applyKey(AIS::Keys, const std::string &) override { return *this; }
 	};
 }

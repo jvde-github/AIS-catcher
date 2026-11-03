@@ -491,7 +491,7 @@ namespace IO
 		N2kMsg.AddByte((radio >> 8) & 0xff);
 		N2kMsg.AddByte(((ais.getChannel() == 'A' ? 0 : 1) << 3) | ((radio >> 16) & 7));
 		N2kMsg.Add2ByteUDouble(heading, 1e-04 * 360.0f / (2.0f * PI), HEADING_UNDEFINED);
-		N2kMsg.AddByte(0xff); // Regional application
+		N2kMsg.AddByte(0xff);
 		N2kMsg.AddByte(assigned << 7 | msg22 << 6 | band << 5 | DSC << 4 | display << 3 | CS << 2);
 		N2kMsg.AddByte(0xfe | (radio & 1)); // msg 18 has 20 radio bits, check whether this is correct indeed
 		N2kMsg.AddByte(0xff);
@@ -760,7 +760,7 @@ namespace IO
 			N2kMsg.Add4ByteUInt(mothership_mmsi);
 			N2kMsg.AddByte(0xff);
 			N2kMsg.AddByte((ais.getChannel() == 'A' ? 1 : 0) | 0xe0);
-			N2kMsg.AddByte(0xff); // sequence ID
+			N2kMsg.AddByte(0xff);
 		}
 
 		N2K::N2KInterface.sendMsg(N2kMsg);
@@ -819,7 +819,7 @@ namespace IO
 		}
 	}
 
-	Setting &N2KStreamer::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &N2KStreamer::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -827,7 +827,7 @@ namespace IO
 			dev = arg;
 			break;
 		default:
-			return OutputMessage::SetKey(key, arg);
+			return OutputMessage::applyKey(key, arg);
 		}
 		return *this;
 	}

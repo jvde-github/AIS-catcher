@@ -6,10 +6,11 @@
 import { settings, isAndroid, isKiosk } from '../../core/state.js';
 import { config } from '../../core/config.js';
 import { cardMmsi as card_mmsi, cardType as card_type, markerTracks as marker_tracks } from '../../core/store.js';
-import { getICAOFromHexIdent } from '@aiscatcher/core/text.js';
+import { getICAOFromHexIdent, sanitizeString } from '@aiscatcher/core/text.js';
 import { copyToClipboard } from '@aiscatcher/ui/components.js';
+import * as menuLib from '@aiscatcher/ui/menu.js';
 import { isAttributionPinned } from '../../map.js';
-import { receiver, trackCutoff } from '../../data.js';
+import { focus, trackCutoff } from '../../data.js';
 import { showDialog, showDialogPlain, showNotification, objectToTableHtml } from '../../dialog.js';
 import { trackIsShown, toggleTrack, trackCutoffLabel } from '../../tracks.js';
 import { vesselPosition, vesselLabel, isFollowing, toggleFollow, mapResetViewZoom } from '../follow/follow.js';
@@ -21,19 +22,17 @@ import * as replay from '../replay/replay.js';
 import * as community from '../../overlays/community.js';
 import * as fireworks from '../../overlays/fireworks.js';
 import { register } from '../../actions.js';
-import { receiverLabel, hasReceiverChoice } from '../receiver/receiver.js';
 
 export let context_mmsi = null;
 export let context_type = null;
 
-// { menu: the entry's menu (ui.menu), built with MENU_CHECKS }
 let menu = null;
 
-export const MENU_CHECKS = {
+const MENU_CHECKS = {
     toggleTargetcardPin: () => settings.targetcard_pinned,
-    toggleShipcardStyle: () => settings.shipcard_style === "tabs",
     toggleTrackCtx: () => trackIsShown(context_mmsi),
     toggleAllTracks: () => settings.show_all_tracks,
+    togglePredictor: () => settings.show_predictor,
     toggleTrackCutoff: () => trackCutoff > 0,
     toggleLabel: () => settings.show_labels != "never",
     toggleRange: () => settings.show_range,
@@ -56,13 +55,13 @@ async function copyClipboard(t) {
     try {
         await copyToClipboard(t);
     } catch (error) {
-        showDialog("Action", "No privilege for program to copy to the clipboard. Please select and copy (CTRL-C) the following string manually: " + t);
+        showDialog("Action", "No privilege for program to copy to the clipboard. Please select and copy (CTRL-C) the following string manually: " + sanitizeString(String(t)));
         return false;
     }
     return true;
 }
 
-export async function copyCoordinates(m) {
+async function copyCoordinates(m) {
     const pos = vesselPosition(m);
     if (!pos) {
         showNotification("Ship not found", "error");
@@ -102,9 +101,9 @@ async function showJSONTableDialog(url, m, copyContext) {
     showDialogPlain(objectToTableHtml(obj, copyContext));
 }
 
-export async function showNMEA(m) {
+async function showNMEA(m) {
     if (config.features.save_messages) {
-        await showJSONTableDialog("api/message", m + "&receiver=" + receiver, true);
+        await showJSONTableDialog("api/message", m + "&stations=" + focus, true);
     } else if (config.features.managed) {
         showDialog("Error", 'Enable the "Msgs" setting in the viewer configuration of the control panel.');
     } else {
@@ -112,11 +111,11 @@ export async function showNMEA(m) {
     }
 }
 
-export async function showVesselDetail(m) {
-    await showJSONTableDialog("api/vessel", m + "&receiver=" + receiver, false);
+async function showVesselDetail(m) {
+    await showJSONTableDialog("api/vessel", m + "&stations=" + focus, false);
 }
 
-export async function copyText(m) {
+async function copyText(m) {
     if (await copyClipboard(m)) showNotification("Content copied to clipboard", "success");
 }
 
@@ -129,7 +128,7 @@ const EXT_LINKS = {
     adsbexchange:  id => `https://globe.adsbexchange.com/?icao=${getICAOFromHexIdent(id)}`,
     flightaware:   id => `https://flightaware.com/live/modes/${getICAOFromHexIdent(id)}/redirect`,
 };
-export function openExt(key, id) { window.open(EXT_LINKS[key](id)); }
+export function openExt(key, id) { window.open(EXT_LINKS[key](id), '_blank', 'noopener'); }
 
 let replayPausedByMenu = false;
 
@@ -158,13 +157,11 @@ export function showContextMenu(event, mmsi, type, context, anchorEl) {
     const unpinContext = context.includes("ctx-map") || context.includes("ctx-replay-map");
     document.getElementById("ctx_unpin").innerText =
         isFollowing("STATION") ? "Unfollow station" : "Unfollow " + vesselLabel(settings.center_point);
-    document.getElementById("ctx_receiver_label").innerText = "Receiver: " + receiverLabel() + "\u2026";
     document.getElementById("ctx_follow").innerText = isFollowing(context_mmsi) ? "Unfollow vessel" : "Follow vessel";
     document.getElementById("ctx_follow_station").innerText = isFollowing("STATION") ? "Unfollow station" : "Follow station";
     document.getElementById("ctx_trackcutoff").innerText = trackCutoff ? "Tracks from " + trackCutoffLabel() : "Tracks from now";
 
     const hidden = (el) =>
-        (el.id === "ctx_receiver" && !hasReceiverChoice()) ||
         (el.classList.contains("ctx-realtime") && !config.features.realtime) ||
         (el.classList.contains("ctx-replay") && !config.features.replay) ||
         (el.classList.contains("noandroid") && isAndroid()) ||
@@ -199,8 +196,18 @@ export function showContextMenu(event, mmsi, type, context, anchorEl) {
     });
 }
 
-export function init(d) {
-    menu = d.menu;
+export function closeContextMenu() {
+    menu.close?.();
+}
+
+export function init() {
+    menu = menuLib.create({
+        mount: document.getElementById("context-menu"),
+        checks: MENU_CHECKS,
+        groupLabels: { focus: "Map", tracks: "Tracks", vessel: "Details", lookup: "Open on", display: "Display",
+                       tools: "Tools", card: "Card", replay: "Replay", charts: "Charts", app: "App" },
+        before: document.querySelector('#context-menu li[data-action="toggleReplaycard"]')?.nextSibling,
+    });
     menu.add([
         { action: "replayToggleLabels", label: "Ship labels", icon: "label", group: "replay", tags: ["ctx-replay-map", "ctx-replay-ship"], check: true },
         ...replay.speeds().map((sp) => ({ action: "replaySetSpeed", label: sp + "\u00d7", group: "replay", tags: ["ctx-replay-map", "ctx-replay-ship"], check: true, data: { speed: String(sp) } })),

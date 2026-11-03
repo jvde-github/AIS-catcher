@@ -1,3 +1,12 @@
+import { sanitizeString } from '@aiscatcher/core/text.js';
+
+// A map file's credit, from outside the program: all of it is text, except plain http(s) links
+export function creditHTML(credit) {
+    return sanitizeString(String(credit)).replace(
+        /&lt;a\s+href=(?:&quot;|&#039;)(https?:\/\/(?:[^\s&]|&amp;)*)(?:&quot;|&#039;).*?&gt;(.*?)&lt;\/a&gt;/gi,
+        '<a href="$1" target="_blank" rel="noopener">$2</a>');
+}
+
 // Built-in server tile sources are configuration data, not executable plugins.
 // Retain unchanged OpenLayers instances and leave user/plugin layers alone.
 export function createServerMaps({ol, basemaps, overlays, getMap, refresh}) {
@@ -17,7 +26,7 @@ export function createServerMaps({ol, basemaps, overlays, getMap, refresh}) {
         }
         for (const source of sources) {
             if (installed.has(source.id)) continue;
-            const options = {url: source.url, attributions: source.attribution,
+            const options = {url: source.url, attributions: source.attribution && creditHTML(source.attribution),
                 minZoom: source.minZoom, maxZoom: source.maxZoom};
             if (source.resolutions?.length) options.tileGrid = new ol.tilegrid.TileGrid({
                 extent: ol.proj.get('EPSG:3857').getExtent(),

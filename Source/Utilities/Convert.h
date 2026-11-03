@@ -76,6 +76,7 @@ namespace Util
 		static std::string toString(MessageFormat out);
 
 		static std::string toBase64(const std::string &s);
+		static bool fromBase64(const std::string &s, std::string &out);
 		static std::string authorizationHeader(const std::string &username, const std::string &password, bool basic);
 		static std::string IPV4toString(uint32_t ipv4)
 		{
@@ -87,6 +88,7 @@ namespace Util
 
 		static void toUpper(std::string &s);
 		static void toLower(std::string &s);
+		static std::string toLowerCopy(std::string s);
 		static void toFloat(CU8 *in, CFLOAT32 *out, int len);
 		static void toFloat(CS8 *in, CFLOAT32 *out, int len);
 		static void toFloat(CS16 *in, CFLOAT32 *out, int len);

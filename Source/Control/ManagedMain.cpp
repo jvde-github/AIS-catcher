@@ -29,225 +29,283 @@
 #include "ManagedMain.h"
 #include "JSON/Parser.h"
 
-#ifdef HASWEBVIEWER
-#include "WebViewer.h"
+#if defined(HASWEBVIEWER) && defined(HASAPI)
+#include "Server.h"
+#include "Site.h"
+#include "SiteConfig.h"
 #endif
 
-namespace Managed {
+namespace Managed
+{
 
-bool isInvocation(const std::vector<std::string> &args) {
-  for (const auto &a : args)
-    if (a == "-E")
-      return true;
-  return false;
-}
+	bool isInvocation(const std::vector<std::string> &args)
+	{
+		for (const auto &a : args)
+			if (a == "-E")
+				return true;
+		return false;
+	}
 
-#ifndef HASWEBVIEWER
+#if !defined(HASWEBVIEWER) || !defined(HASAPI)
 
-int run(const std::vector<std::string> &) {
-  throw std::runtime_error(
-      "managed mode (-E) is not available in this build: it requires the web "
-      "viewer (build with WEBVIEWER=ON)");
-}
+	int run(const std::vector<std::string> &)
+	{
+		throw std::runtime_error(
+			"managed mode (-E) is not available in this build: it requires the web "
+			"viewer and the API (build with WEBVIEWER=ON and API=ON)");
+	}
 
 #else
 
-static std::unique_ptr<WebViewer> makeViewer(ControlCore &core) {
-  std::unique_ptr<WebViewer> viewer(new WebViewer());
+	// one catalogue the panel's editor edits and the tracker reads, wherever the
+	// configuration keeps the places
+	static void usePanelPlaces(ControlCore &core, SiteConfig &site)
+	{
+		site.places.clear();
+		site.catalogue = core.getPlaces();
+	}
 
-  viewer->setManagedMode(core.getViewerPort());
-  viewer->setPlaceCatalogue(core.getPlaces());
-  if (core.getBindAddress() != "0.0.0.0")
-    viewer->setIP(core.getBindAddress());
-  viewer->setReusePort(false);
+	struct Saved
+	{
+		SiteConfig site;
+		StationRegistry stations;
+	};
 
-  return viewer;
-}
+	static Saved readSaved(ControlCore &core)
+	{
+		JSON::Parser parser(JSON_DICT_SETTING);
+		auto doc = parser.parse(core.getConfig());
+		Saved saved;
+		StationDefaults defaults;
+		// the listed stations first: a server's station_id describes one only where the file does not
+		if (const auto *v = doc.root[AIS::KEY_SETTING_STATIONS])
+			SiteReader::stations(*v, saved.stations);
+		SiteReader::managedSite(doc.root, Config::baseDir(), core.getControlPort(), core.getViewerPort(), core.getBindAddress(), saved.site, defaults, saved.stations);
+		usePanelPlaces(core, saved.site);
+		return saved;
+	}
 
-// Serves the viewer. When its port is taken the hub stays up without it, the
-// status reports no viewer so the panel says so, and every engine start tries
-// the port again: freeing it needs no restart of the hub.
-static bool startViewer(WebViewer &viewer, ControlServer &server,
-                        ControlCore &core) {
-  try {
-    viewer.startServing();
-  } catch (const std::exception &e) {
-    Error() << "Control: viewer not started: " << e.what()
-            << "; the control panel stays available";
-    core.setViewerServing(false);
-    return false;
-  }
-  // one exposed port is enough for a station reached through a VPN or proxy
-  if (!viewer.isMounted())
-    server.mount("/viewer", &viewer);
-  core.setViewerServing(true);
-  return true;
-}
+	// applies the site and mounts the viewer beside the panel once; a taken port leaves
+	// the panel up without a viewer, and the next apply tries again
+	static void applySite(ControlCore &core, ControlServer &server, Site &site, const SiteConfig &cfg)
+	{
+		site.configure(cfg);
+		Services::Server *viewer = site.server(core.getViewerPort());
+		if (!viewer)
+			Error() << "Control: viewer not started on port " << core.getViewerPort() << "; the control panel stays available";
+		// one exposed port is enough for a station reached through a VPN or proxy
+		else if (!viewer->isMounted())
+			server.mount("/viewer", viewer);
+		core.setViewerServing(viewer != nullptr);
+	}
 
-// The one valid reconfigure order: stop, read the engine's config, prepare
-// the viewer's section, start. The viewer's HTTP server, ship database and
-// statistics stay up throughout, and a config that fails to read leaves the
-// viewer's configuration untouched: the caller's restart brings it up as it was.
-template <typename F>
-static void reconfigureViewer(WebViewer &viewer, ControlServer &server,
-                              ControlCore &core, F apply) {
-  viewer.stopServing();
-  apply();
-  viewer.prepareManagedConfig(core.getConfig());
-  startViewer(viewer, server, core);
-}
+	static void applyConfig(ControlCore &core, ControlServer &server, Site &site, Engine *engine)
+	{
+		try
+		{
+			const Saved saved = readSaved(core);
+			applySite(core, server, site, saved.site);
+			if (engine)
+				engine->refreshStations(saved.stations);
+		}
+		catch (const std::exception &e)
+		{
+			Error() << "Control: configuration not applied: " << e.what();
+		}
+	}
 
-// construct before the Engine so the session covers ~Engine's device close
-struct EngineSessionGuard {
-  ControlCore &core;
-  EngineSessionGuard(ControlCore &c) : core(c) { core.beginEngineSession(); }
-  ~EngineSessionGuard() { core.endEngineSession(); }
-};
+	static void syncSite(ControlCore &core, ControlServer &server, Site &site, Engine *engine = nullptr)
+	{
+		auto places = core.getPlaces();
+		if (places && places->consumeChanged())
+			site.refreshPlaces();
+		if (core.consumeConfigChanged())
+			applyConfig(core, server, site, engine);
+	}
 
-// One engine session: read the config, start the receivers, run until stopped
-// or failed. The viewer is reconfigured with it and comes back up either way.
-static void runEngine(ControlCore &core, ControlServer &server,
-                      WebViewer &viewer, const std::string &config_file) {
-  EngineSessionGuard session(core);
-  Engine engine;
-  Config c(engine);
-  // stdout is the journal or the container log here: silent unless "screen"
-  // in the config says otherwise, where the command line prints NMEA by default
-  engine.screen.setScreen("0");
+	// construct before the Engine so the session covers ~Engine's device close
+	struct EngineSessionGuard
+	{
+		ControlCore &core;
+		EngineSessionGuard(ControlCore &c) : core(c) { core.beginEngineSession(); }
+		~EngineSessionGuard() { core.endEngineSession(); }
+	};
 
-  try {
-    engine.receivers.back()->getDeviceManager().refreshDevices();
+	// One engine session: read the config, start the receivers, run until stopped
+	// or failed. The site and its viewer serve throughout.
+	static void runEngine(ControlCore &core, ControlServer &server,
+						  const std::string &config_file, Site &site)
+	{
+		EngineSessionGuard session(core);
+		Engine engine;
+		Config c(engine);
+		c.setManaged(core.getControlPort(), core.getViewerPort(), core.getBindAddress());
+		// stdout is the journal or the container log here: silent unless "screen"
+		// in the config says otherwise, where the command line prints NMEA by default
+		engine.screen.setScreen("0");
 
-    core.consumeConfigChanged();
-    reconfigureViewer(viewer, server, core, [&] {
-      c.read(config_file);
+		try
+		{
+			engine.scanner().refreshDevices();
 
-      for (auto &r : engine.receivers)
-        if (r->getDeviceManager().InputType() == Type::NONE &&
-            r->getDeviceManager().SerialNumber().empty())
-          throw std::runtime_error(
-              "no input device selected, configure one under Input");
-    });
+			core.consumeConfigChanged();
+			c.read(config_file);
+			c.finish();
+			for (auto &r : engine.receivers)
+				if (r->inputType() == Type::NONE && r->devices().serial().empty())
+					throw std::runtime_error(
+						"no input device selected, configure one under Inputs");
 
-    engine.run(&viewer, &core);
-  } catch (std::exception const &e) {
-    Error() << e.what();
+			usePanelPlaces(core, engine.site_config);
+			engine.loop_hook = [&] { syncSite(core, server, site, &engine); };
+			engine.managed = true;
+			engine.activity = &core.getChannelActivity();
+			engine.on_started = [&] {
+				core.reportRunning();
+				Info() << "Control: engine started";
+			};
 
-    // the throw skipped run()'s own detach() and ~Engine only runs at the end
-    // of this call, after the viewer is back up
-    engine.detach();
+			engine.run(site);
+		}
+		catch (std::exception const &e)
+		{
+			Error() << e.what();
 
-    startViewer(viewer, server, core);
-    core.engineFailed();
-  }
-  core.reportStopped();
-  Info() << "Control: engine stopped";
-}
+			// the throw skipped run()'s own detach() and ~Engine only runs at the end
+			// of this call
+			engine.detach();
+			core.engineFailed();
+		}
+		core.reportStopped();
+		Info() << "Control: engine stopped";
+	}
 
-// The back-off before an automatic restart. False when a command or the
-// shutdown cut it short.
-static bool waitForRetry(ControlCore &core, WebViewer &viewer, int delay) {
-  Warning() << "Control: engine stopped unexpectedly, restarting in " << delay
-            << " seconds";
-  const int seq = core.commandSequence();
-  for (int i = 0;
-       i < delay * 4 && !stop_process && core.commandSequence() == seq; i++) {
-    // the engine is down for the whole wait, so viewer-only settings can be
-    // applied here as well as when idle
-    core.syncViewer(viewer);
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
-  }
-  return !stop_process && core.engineDesired();
-}
+	// The back-off before an automatic restart. False when a command or the
+	// shutdown cut it short.
+	static bool waitForRetry(ControlCore &core, ControlServer &server, Site &site, int delay)
+	{
+		Warning() << "Control: engine stopped unexpectedly, restarting in " << delay
+				  << " seconds";
+		const int seq = core.commandSequence();
+		for (int i = 0;
+			 i < delay * 4 && !stop_process && core.commandSequence() == seq; i++)
+		{
+			// the engine is down for the whole wait, so the panel's changes apply here
+			// as well as when idle
+			syncSite(core, server, site);
+			std::this_thread::sleep_for(std::chrono::milliseconds(250));
+		}
+		return !stop_process && core.engineDesired();
+	}
 
-static int serve(const std::string &config_file, int port,
-                 const std::string &bind) {
-  Logger::getInstance().setMinLevel(LogLevel::DEBUG);
+	static int serve(const std::string &config_file, int port,
+					 const std::string &bind, const std::string &tls_cert,
+					 const std::string &tls_key)
+	{
+		Logger::getInstance().setMinLevel(LogLevel::DEBUG);
+		// the file's own folder for what it names, from the first reading on
+		Config::setConfigBaseDir(config_file);
 
-  ControlCore core(config_file, port, bind);
-  ControlServer server(core);
+		ControlCore core(config_file, port, bind);
+		if (!tls_cert.empty())
+			core.setPanelTLSFromCommandLine(tls_cert, tls_key);
+		// outlives every engine session, and serves the viewer between them
+		Site site;
+		ControlServer server(core);
+		server.setStationsLive([&site] { return site.stationsLive(); });
+		server.setServerAddress([&site](int port, std::string &host) { return site.serverAddress(port, host); });
+		server.setServerPorts([&site] { return site.serverPorts(); });
+		server.setServerTLS([&site] { return site.serverTLS(); });
+		server.setReceiverStates([&site] { return site.receiverStates(); });
 
-  if (core.authRequired())
-    Info() << "Control: managed mode, config file \"" << config_file
-           << "\", bound to " << core.getBindAddress() << ", password required";
-  else
-    Info() << "Control: managed mode, config file \"" << config_file
-           << "\", local access only";
+		if (core.authRequired())
+			Info() << "Control: managed mode, config file \"" << config_file
+				   << "\", bound to " << core.getBindAddress() << ", password required";
+		else
+			Info() << "Control: managed mode, config file \"" << config_file
+				   << "\", local access only";
 
-  server.start();
+		server.start();
+		applyConfig(core, server, site, nullptr);
 
-  std::unique_ptr<WebViewer> viewer = makeViewer(core);
-  Config::setConfigBaseDir(config_file);
-  try {
-    viewer->prepareManagedConfig(core.getConfig());
-  } catch (const std::exception &e) {
-    Error() << "Control: viewer configuration failed: " << e.what();
-  }
-  startViewer(*viewer, server, core);
+		while (!stop_process)
+		{
+			if (!core.engineDesired())
+			{
+				// the panel's changes apply while the engine is stopped; the rest is
+				// picked up by the engine start
+				syncSite(core, server, site);
+				core.waitForCommand();
+				continue;
+			}
 
-  while (!stop_process) {
-    if (!core.engineDesired()) {
-      // viewer-only settings apply while the engine is stopped; anything
-      // else is picked up by the engine start
-      core.syncViewer(*viewer);
-      core.waitForCommand();
-      continue;
-    }
+			const int delay = core.consumeRetryDelay();
+			if (delay > 0 && !waitForRetry(core, server, site, delay))
+				continue;
 
-    const int delay = core.consumeRetryDelay();
-    if (delay > 0 && !waitForRetry(core, *viewer, delay))
-      continue;
+			// the flag the engine's run() ends on, left set by the last session's stop
+			// or its watchdog
+			stop = false;
+			runEngine(core, server, config_file, site);
+		}
 
-    stop = false;
-    if (core.engineDesired())
-      runEngine(core, server, *viewer, config_file);
-  }
+		server.close();
+		site.stop();
+		return 0;
+	}
 
-  server.close();
-  viewer->shutdown();
-  return 0;
-}
+	int run(const std::vector<std::string> &all)
+	{
+		const std::string usage = "AIS-catcher -E [config file] [bind address:port] [TLS_CERT file TLS_KEY file]";
 
-int run(const std::vector<std::string> &args) {
-  const std::string usage = "AIS-catcher -E [config file] [bind address:port]";
+		// the panel's TLS_CERT and TLS_KEY, for this run only, end the line
+		std::vector<std::string> args = all;
+		std::string tls_cert, tls_key;
+		while (args.size() >= 4 && (args[args.size() - 2] == "TLS_CERT" || args[args.size() - 2] == "TLS_KEY"))
+		{
+			(args[args.size() - 2] == "TLS_CERT" ? tls_cert : tls_key) = args.back();
+			args.resize(args.size() - 2);
+		}
+		if (tls_cert.empty() != tls_key.empty())
+			throw std::runtime_error("Control: HTTPS needs both TLS_CERT and TLS_KEY: " + usage);
 
-  if (args.size() < 2 || args.size() > 4 || args[1] != "-E")
-    throw std::runtime_error(
-        "in managed mode all settings live in the config file: " + usage);
+		if (args.size() < 2 || args.size() > 4 || args[1] != "-E")
+			throw std::runtime_error(
+				"in managed mode all settings live in the config file: " + usage);
 
-  auto allDigits = [](const std::string &s) {
-    return !s.empty() && s.find_first_not_of("0123456789") == std::string::npos;
-  };
+		auto allDigits = [](const std::string &s) {
+			return !s.empty() && s.find_first_not_of("0123456789") == std::string::npos;
+		};
 
-  std::string file = "config.json", bind = "127.0.0.1";
-  int port = 0;
+		std::string file = "config.json", bind = "127.0.0.1";
+		int port = 0;
 
-  std::string addr;
-  if (args.size() == 3)
-    addr = args[2];
-  else if (args.size() == 4) {
-    file = args[2];
-    addr = args[3];
-  }
+		std::string addr;
+		if (args.size() == 3)
+			addr = args[2];
+		else if (args.size() == 4)
+		{
+			file = args[2];
+			addr = args[3];
+		}
 
-  if (!addr.empty()) {
-    std::string protocol, user, pass, host, portstr, path;
-    Util::Parse::URL(addr, protocol, user, pass, host, portstr, path);
+		if (!addr.empty())
+		{
+			const std::size_t colon = addr.rfind(':');
+			const std::string host = colon == std::string::npos ? "" : addr.substr(0, colon);
+			const std::string portstr = colon == std::string::npos ? addr : addr.substr(colon + 1);
+			if (!allDigits(portstr) || (colon != std::string::npos && host.empty()))
+				throw std::runtime_error(
+					"Control: listen address must be [ip:]port, e.g. 127.0.0.1:8118: " +
+					usage);
+			port = Util::Parse::Integer(portstr, 1, 65535);
+			if (!host.empty())
+				bind = host;
+		}
 
-    if (allDigits(addr))
-      port = Util::Parse::Integer(addr, 1, 65535);
-    else if (!host.empty() && allDigits(portstr)) {
-      bind = host;
-      port = Util::Parse::Integer(portstr, 1, 65535);
-    } else
-      throw std::runtime_error(
-          "Control: listen address must be [ip:]port, e.g. 127.0.0.1:8118: " +
-          usage);
-  }
-
-  return serve(file, port, bind);
-}
+		return serve(file, port, bind, tls_cert, tls_key);
+	}
 
 #endif
 
-} // namespace Managed
+}

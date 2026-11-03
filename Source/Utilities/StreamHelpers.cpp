@@ -187,7 +187,7 @@ namespace Util
 			// Get current position
 			std::streampos pos = file.tellp();
 			std::streamoff data_size = pos - std::streamoff(sizeof(WAVHeader));
-			uint32_t wav_size = data_size + 36; // Total size - 8
+			uint32_t wav_size = data_size + 36;
 
 			// Update RIFF chunk size
 			file.seekp(4);

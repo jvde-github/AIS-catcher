@@ -467,7 +467,7 @@ namespace Protocol
 
 			int received = recv(sock, buffer + total_received, remaining_length, 0);
 
-			if (received == 0) // peer performed orderly shutdown (EOF), not an error
+			if (received == 0)
 			{
 				Debug() << "TCP (" << host << ":" << port << "): connection closed by peer.";
 				disconnect();
@@ -506,6 +506,8 @@ namespace Protocol
 	}
 
 #ifdef HASOPENSSL
+
+	const int TLS::HANDSHAKE_TIME;
 
 	// Initialize OpenSSL library exactly once (thread-safe)
 	// Note: OpenSSL 1.1.0+ handles initialization automatically.
@@ -636,7 +638,8 @@ namespace Protocol
 		else
 		{
 			SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
-			Warning() << "TLS: Certificate verification DISABLED for " << getHost() << ":" << getPort();
+			if (!own_server)
+				Warning() << "TLS: Certificate verification DISABLED for " << getHost() << ":" << getPort();
 		}
 
 		// Create SSL object
@@ -658,7 +661,9 @@ namespace Protocol
 		if (verify_certificates)
 		{
 			X509_VERIFY_PARAM *param = SSL_get0_param(ssl);
-			X509_VERIFY_PARAM_set1_host(param, getHost().c_str(), 0);
+			// an address is compared with the certificate's IP names, a name with its DNS names
+			if (X509_VERIFY_PARAM_set1_ip_asc(param, getHost().c_str()) != 1)
+				X509_VERIFY_PARAM_set1_host(param, getHost().c_str(), 0);
 		}
 
 		// Create custom BIO that uses our TCP connection
@@ -760,7 +765,7 @@ namespace Protocol
 		if (!isConnected())
 			return 0;
 
-		uint64_t before = BIO_number_read(SSL_get_rbio(ssl)); // fix: was SSL_get_wbio
+		uint64_t before = BIO_number_read(SSL_get_rbio(ssl));
 		int result = 0;
 
 		// do not block if we are not waiting
@@ -1072,6 +1077,13 @@ namespace Protocol
 		int length = 12 + client_id.length();
 		uint8_t flags = 0x02;
 
+		// the will, retained at QoS 0 (MQTT 3.1.1 3.1.2.5-3.1.2.7)
+		if (!will_topic.empty())
+		{
+			length += 2 + will_topic.length() + 2 + will_message.length();
+			flags |= 0x04 | 0x20;
+		}
+
 		if (!username.empty())
 		{
 			length += 2 + username.length();
@@ -1090,10 +1102,15 @@ namespace Protocol
 		pushByte(0x04); // MQTT 3.1.1
 		pushByte(flags);
 
-		// keep alive is off
-		pushInt(0);
+		// off unless a will needs the broker to notice the connection is gone
+		pushInt(keepalive);
 
 		pushString(client_id);
+		if (!will_topic.empty())
+		{
+			pushString(will_topic);
+			pushString(will_message);
+		}
 
 		if (!username.empty())
 			pushString(username);
@@ -1177,6 +1194,22 @@ namespace Protocol
 	void MQTT::poll()
 	{
 		ProtocolBase::poll();
+
+		// with a keep-alive: a ping when quiet for half of it, and what the
+		// broker says back is read and let go
+		if (connected && keepalive > 0 && !subscribe && prev && prev->isConnected())
+		{
+			if (Clock::now() - last_sent >= std::chrono::seconds(keepalive / 2))
+			{
+				createPacket(PacketType::PINGREQ, 0);
+				pushVariableLength(0);
+				if (prev->send(packet.data(), packet.size()) > 0)
+					last_sent = Clock::now();
+			}
+			char sink[64];
+			while (prev->read(sink, sizeof(sink), 0, false) > 0)
+				;
+		}
 
 		if (!awaiting_connack || !prev || !prev->isConnected())
 			return;
@@ -1267,6 +1300,11 @@ namespace Protocol
 
 	int MQTT::send(const void *str, int length, const std::string &tpc)
 	{
+		return publish(str, length, tpc, false);
+	}
+
+	int MQTT::publish(const void *str, int length, const std::string &tpc, bool retain)
+	{
 		if (!isConnected())
 			return 0;
 
@@ -1276,7 +1314,8 @@ namespace Protocol
 			return -1;
 		}
 
-		createPacket(PacketType::PUBLISH, qos << 1);
+		last_sent = Clock::now();
+		createPacket(PacketType::PUBLISH, (qos << 1) | (retain ? 1 : 0));
 
 		int packet_length = 2 + tpc.length() + length + (qos > 0 ? 2 : 0);
 
@@ -1380,7 +1419,10 @@ namespace Protocol
 				}
 
 				int payload_len = length - header_size;
-				if (data_len < payload_len)
+				// a message is a line, whether its publisher ended it or not
+				const int payload_at = i + 2 + topic_len + (q == 0 ? 0 : 2);
+				const bool end_line = payload_len > 0 && buffer[payload_at + payload_len - 1] != '\n';
+				if (data_len < payload_len + (end_line ? 1 : 0))
 				{
 					Warning() << "MQTT: Buffer too small for incoming message. Required: " << payload_len << ", provided: " << data_len;
 					break;
@@ -1390,12 +1432,16 @@ namespace Protocol
 				{
 					data_returned = payload_len;
 					memcpy(data, buffer.data() + i + 2 + topic_len, data_returned);
+					if (end_line)
+						((char *)data)[data_returned++] = '\n';
 				}
 				else if (q == 1 || q == 2)
 				{
 					uint16_t packet_id = (buffer[i + 2 + topic_len] << 8) + buffer[i + 2 + topic_len + 1];
 					data_returned = payload_len;
 					memcpy(data, buffer.data() + i + 4 + topic_len, data_returned);
+					if (end_line)
+						((char *)data)[data_returned++] = '\n';
 
 					createPacket((q == 1) ? PacketType::PUBACK : PacketType::PUBREC, 0);
 					pushVariableLength(2);
@@ -1459,7 +1505,7 @@ namespace Protocol
 
 	std::string MQTT::getValues()
 	{
-		return "topic " + topic + " client_id " + client_id + " username " + username + " password " + password + " qos " + std::to_string(qos);
+		return "topic " + topic + " client_id " + client_id + " username " + username + " qos " + std::to_string(qos);
 	}
 
 	///  ------WebSocket Implementation------
@@ -1482,7 +1528,8 @@ namespace Protocol
 		received_ptr = 0;
 		close_sent = false;
 
-		buffer.resize(16384);
+		// a frame at its largest, with its longest header
+		buffer.resize(MAX_PACKET_SIZE + 14);
 		received.resize(16384);
 
 		if (sendUpgrade())
@@ -1672,7 +1719,8 @@ namespace Protocol
 
 			if (lower.find("sec-websocket-accept:") != std::string::npos)
 			{
-				accept_key = line.substr(line.find(":") + 2); // Add 2 to skip ": "
+				const std::size_t value = line.find(":") + 2;
+				accept_key = value < line.size() ? line.substr(value) : std::string();
 				// Remove trailing whitespace and CR/LF
 				accept_key.resize(accept_key.find_last_not_of(" \r\n") + 1);
 				break;
@@ -1739,7 +1787,7 @@ namespace Protocol
 		uint8_t opcode = (uint8_t)(binary ? OPCODE::BINARY : OPCODE::TEXT);
 
 		frame.resize(0);
-		frame.push_back(0x80 | opcode); // FIN bit set and opcode
+		frame.push_back(0x80 | opcode);
 
 		if (length <= 125)
 		{

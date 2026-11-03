@@ -16,104 +16,121 @@
 */
 
 #pragma once
-#include <atomic>
+#include <chrono>
 #include <memory>
 #include <vector>
 
-#include "Receiver.h"
-#include "Network.h"
-#ifdef HASWEBVIEWER
-#include "WebViewer.h"
-
-// The viewer of managed mode (-E), null otherwise. It outlives the engine, so
-// it is not part of Engine; the config reader applies "control"."viewer" to it.
-#endif
-#include "Screen.h"
 #include <functional>
 
-class WebViewer;
-class ControlCore;
+#include "Receiver.h"
+#include "StationRegistry.h"
+#include "SiteConfig.h"
+#include "Screen.h"
+#include "SystemFacts.h"
 
-// stop ends the running engine, stop_process the managed-mode loop around it
-extern std::atomic<bool> stop;
-extern std::atomic<bool> stop_process;
+class Site;
+namespace IO
+{
+	class HubStreamer;
+}
 
 // One engine run: the receivers, their outputs and the servers that belong to them,
-// built up by the command line parser or the config reader and then started by run().
-// Managed mode constructs a new one for every start/stop cycle.
-struct Engine {
-	// Called by run() once the viewers serve and before the receivers start:
+// built by the configuration reader and started by run(). Managed mode constructs a new
+// one for every start/stop cycle.
+struct Engine
+{
+	// Called by run() once the servers serve and before the receivers start:
 	// a build that adds services attaches them here.
 	static std::function<void(Engine &)> before_run;
-	// Called by run() when the main loop has ended, while receivers and viewers are
+	// Called by run() when the main loop has ended, while the receivers are
 	// still alive: a build that added services saves and stops them here.
 	static std::function<void(Engine &)> after_run;
 
 	// Receivers and outputs
 	std::vector<std::unique_ptr<Receiver>> receivers;
-#ifdef HASWEBVIEWER
-	std::vector<std::unique_ptr<WebViewer>> servers;
-#endif
 	std::vector<std::unique_ptr<IO::OutputMessage>> msg;
 
 	// Community feed output, owned by msg; set up at most once
 	IO::HubStreamer *comm_feed = nullptr;
 
-	// Screen and statistics
-	IO::ScreenOutput screen;
-	std::vector<OutputStatistics> stat;
-	std::vector<uint64_t> msg_count;
+	// The receiving stations: those the configuration defines, and the default
+	// station, 0, when a receiver names none and the file does not list it
+	StationRegistry stations;
+	// what the configuration says of the default station, for when it does not
+	// list it: -N and a "server" entry feed it in every mode
+	StationDefaults station_defaults;
+	// managed mode's save: the stations as the file now has them, while the engine runs
+	void refreshStations(const StationRegistry &configured);
 
-	// Configuration flags set during arg parsing / config reading
+	// what the configuration says of the site, which outlives the engine
+	SiteConfig site_config;
+	// called on each pass of the run loop: managed mode applies settings changes here
+	std::function<void()> loop_hook;
+
+	// Managed mode (-E) sets these before run(): the panel's rules apply, the
+	// decoded messages feed its channel activity, and on_started tells it the
+	// engine runs
+	bool managed = false;
+	StreamIn<AIS::Message> *activity = nullptr;
+	std::function<void()> on_started;
+
+	IO::ScreenOutput screen;
+
 	int own_mmsi = -1;
 	int timeout = 0;
 	bool timeout_nomsg = false;
 	bool xshare_defined = false;
-	bool verbose = false;
 
-	// One-shot flags
-	bool no_run = false;
-	bool show_copyright = true;
-	bool list_devices = false;
-	bool list_devices_JSON = false;
-	bool list_support = false;
-	bool list_options = false;
+	// The first receiver is there from the start, for the configuration
+	// reader to fill: refreshDevices() runs on its device manager before any
+	// configuration is read, and SoapySDR keeps its enumeration per instance,
+	// so only receiver 0's SOAPYSDR can open an enumerated handle.
+	Engine();
 
-	// Run-time state
-	int exit_code = 0;
-	int nrec = 0;
-
-	Engine() {
-		receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-	}
-
-	// The viewer outlives the engine, so detaching must happen even when run()
+	// The site outlives the engine, so detaching must happen even when run()
 	// threw halfway or was never called at all.
-	~Engine() { detach(); }
+	~Engine();
 
-	// Open the devices, wire up the outputs and run until stopped.
-	void run(WebViewer *viewer = nullptr, ControlCore *control = nullptr);
+	// returns 0, or -2 when -T stopped the run
+	int run(Site &site);
 
-	// Stop the receivers, close the servers and drop the viewer's references
-	// into this object. Idempotent.
+	// Stop the receivers and drop the site's references into this object.
+	// Idempotent.
 	void detach();
 
-	// Each device option on the command line / in config defines a new receiver,
-	// except the first which reuses the default-constructed one.
-	Receiver &newReceiver() {
-		if (++nrec > 1)
-			receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
-		return *receivers.back();
-	}
+	DeviceManager &scanner() { return receivers.front()->devices(); }
 
-	IO::OutputMessage &createCommunityFeed() {
-		comm_feed = new IO::HubStreamer();
-		msg.push_back(std::unique_ptr<IO::OutputMessage>(comm_feed));
-		return *comm_feed;
-	}
+	void createCommunityFeed();
+
+	// what the site's status pages say of this session
+	EngineFacts facts();
 
 private:
-	// the viewer run() was handed, kept so detach() can reach it
-	WebViewer *attached_viewer = nullptr;
+	typedef std::chrono::high_resolution_clock::time_point time_point;
+
 	bool detached = false;
+	// set when run() starts
+	Site *site = nullptr;
+	// whether a receiver asks for the rates, and whether every device delivers
+	// by callback: a file input pumps its data from the main loop instead
+	bool oneverbose = false, iscallback = true;
+
+	// the phases of run(), in its order
+	void resolveStations();
+	void openReceivers();
+	void configureSite();
+	void shareFeed();
+	void routeOutputs();
+	void connectSinks();
+	void feedTrackers();
+	void start();
+	int loop();
+	void printRates();
+	bool watchdogExpired(const time_point &now, time_point &since, std::vector<uint64_t> &counts, int &code);
+	void reportTotals();
+
+	bool hasServer() const;
+#ifdef HASAPI
+	void publishReceivers();
+#endif
 };

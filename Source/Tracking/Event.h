@@ -1,0 +1,257 @@
+/* Copyright(c) 2021-2026 jvde.github@gmail.com
+
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+#pragma once
+
+#include <cstdint>
+#include <cstring>
+#include <ctime>
+#include <string>
+
+#include "Common.h"
+#include "JSON.h"
+
+// What the ship database decided about a vessel, told once: a crossing, a
+// stop, a sampled position, a field of the record changing, a safety message.
+// A subscriber copies what it keeps while Receive runs.
+//
+// One shape for every kind: the sequence, the fix the event rests on in the
+// record's own units, the kind, and a union over the kind's own fields, so
+// nothing is empty, only inactive. Plain data: no heap, nothing to free. The
+// strings behind `from` and `to` are the arrays here, or text the caller owns
+// for the duration of Send; the ring and the outputs copy, nothing points past
+// the call.
+namespace Tracking
+{
+
+	enum class Kind : uint8_t
+	{
+		FIX = 1,
+		STOP,
+		MOVE,
+		ENTER,
+		LEAVE,
+		STATUS,
+		DRAUGHT,
+		DESTINATION,
+		NAME,
+		CALLSIGN,
+		ETA,
+		SAFETY,
+		SILENT,
+		HEARD,
+		SYSTEM
+	};
+
+	// A kind under its names on the wire: `line` is the event line's `event`, as
+	// an output and the trace write it; `journal` is the journal's `kind`, as the
+	// API, the webhooks, MQTT and the ticker write it, null for a kind the journal
+	// never holds. The journal's kinds come first, in the order people are shown them.
+	struct KindName
+	{
+		Kind kind;
+		const char *line, *journal;
+	};
+	struct KindNames
+	{
+		const KindName *first, *last;
+		const KindName *begin() const { return first; }
+		const KindName *end() const { return last; }
+	};
+	inline KindNames kindNames()
+	{
+		static const KindName all[] = {
+			{Kind::SAFETY, "safety", "safety"},
+			{Kind::DESTINATION, "destination", "destination"},
+			{Kind::STATUS, "status", "status"},
+			{Kind::DRAUGHT, "draught", "draught"},
+			{Kind::ENTER, "enter", "place_enter"},
+			{Kind::LEAVE, "leave", "place_exit"},
+			{Kind::SYSTEM, "system", "system"},
+			{Kind::FIX, "fix", nullptr},
+			{Kind::STOP, "stop", nullptr},
+			{Kind::MOVE, "move", nullptr},
+			{Kind::NAME, "name", nullptr},
+			{Kind::CALLSIGN, "callsign", nullptr},
+			{Kind::ETA, "eta", nullptr},
+			{Kind::SILENT, "silent", nullptr},
+			{Kind::HEARD, "heard", nullptr},
+		};
+		return {all, all + sizeof(all) / sizeof(all[0])};
+	}
+	inline const char *lineName(Kind k)
+	{
+		for (const auto &n : kindNames())
+			if (n.kind == k)
+				return n.line;
+		return "fix";
+	}
+	// "unknown" for a kind the journal never holds
+	inline const char *journalName(Kind k)
+	{
+		for (const auto &n : kindNames())
+			if (n.kind == k)
+				return n.journal ? n.journal : "unknown";
+		return "unknown";
+	}
+	// whether `name` is one of the journal's kinds, as a webhook's `events` lists them
+	inline bool isJournalName(const std::string &name)
+	{
+		for (const auto &n : kindNames())
+			if (n.journal && name == n.journal)
+				return true;
+		return false;
+	}
+
+	// what the ticker shows it as: routine events never push out a distress call
+	enum class Level : uint8_t
+	{
+		ROUTINE = 0,
+		NOTICE = 1,
+		URGENT = 2,
+		LEVELS = 3
+	};
+
+	// A stay, as MOVE reports it: where the vessel lay and what it said while it
+	// lay there. The destinations are bounded by AIS itself.
+	// Plain data without initializers, so the union it sits in stays trivial;
+	// Event() clears it.
+	struct Stay
+	{
+		uint32_t seconds, reports;
+		float lat, lon;
+		float spread_m; // RMS distance from it
+		float heading, heading_r; // mean heading, and the length of the mean vector
+		float draught_in, draught_out;
+		char destination_in[21], destination_out[21];
+		char eta[12];
+		bool start_seen; // false: the stay was already under way when counting began
+		bool end_seen; // false: closed on silence, at the last report, not on a departure
+	};
+
+	// a bounded copy into one of the text arrays: what fits, always terminated
+	template <size_t N> inline void copyText(char (&dst)[N], const char *src)
+	{
+		const size_t n = src ? std::strlen(src) : 0;
+		const size_t m = n < N - 1 ? n : N - 1;
+		if (m)
+			std::memcpy(dst, src, m);
+		dst[m] = '\0';
+	}
+
+	struct Event
+	{
+		uint64_t seq = 0;
+
+		std::time_t t = 0;
+		uint32_t mmsi = 0;
+		float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
+		float speed = SPEED_UNDEFINED, cog = COG_UNDEFINED, draught = DRAUGHT_UNDEFINED;
+		int heading = HEADING_UNDEFINED;
+
+		Kind kind = Kind::FIX;
+		Level level = Level::ROUTINE;
+		// a safety text told lately, broadcast again: the ticker counts it on the
+		// earlier event, the journal (and what it feeds) leaves it out
+		bool repeat = false;
+
+		union
+		{
+			struct
+			{
+				uint32_t place;
+				uint32_t number;
+				long revision;
+				bool seen;
+				bool announced;
+				const char *name; // the place's name, the catalogue's own string, for the duration of Send
+			} crossing; // ENTER LEAVE
+			struct
+			{
+				uint32_t to;
+				const char *to_name; // its name when known, for the duration of Send
+			} safety; // SAFETY
+			struct
+			{
+				uint32_t seconds;
+			} silence; // SILENT
+			Stay stay; // MOVE
+		};
+
+		// STATUS DRAUGHT DESTINATION NAME CALLSIGN ETA: the old and the new value,
+		// an int, a float or a string in one type · SAFETY: `to` is the message
+		JSON::Value from, to;
+		char from_s[21] = {0}, to_s[21] = {0};
+
+		// the vessel's name as the record has it, for subscribers that display; the
+		// record's own array, for the duration of Send
+		const char *name = nullptr;
+
+		Event()
+		{
+			std::memset(&stay, 0, sizeof(stay));
+			from.setNull();
+			to.setNull();
+		}
+
+		// a copy carries its own arrays: a value that pointed at the source's text
+		// points at the copy's, so a queued event survives the one it was made from
+		Event(const Event &o) { assign(o); }
+		Event &operator=(const Event &o)
+		{
+			if (this != &o)
+				assign(o);
+			return *this;
+		}
+
+	private:
+		void assign(const Event &o)
+		{
+			seq = o.seq;
+			t = o.t;
+			mmsi = o.mmsi;
+			lat = o.lat;
+			lon = o.lon;
+			speed = o.speed;
+			cog = o.cog;
+			draught = o.draught;
+			heading = o.heading;
+			kind = o.kind;
+			level = o.level;
+			std::memcpy(&stay, &o.stay, sizeof(stay));
+			std::memcpy(from_s, o.from_s, sizeof(from_s));
+			std::memcpy(to_s, o.to_s, sizeof(to_s));
+			name = o.name;
+			from = o.from;
+			to = o.to;
+			if (from.isCString() && from.getCString() == o.from_s)
+				from.setCString(from_s);
+			if (to.isCString() && to.getCString() == o.to_s)
+				to.setCString(to_s);
+		}
+
+	public:
+		// the string values point at the arrays, so an event can be copied whole
+		void setText(const char *was, const char *now)
+		{
+			copyText(from_s, was);
+			copyText(to_s, now);
+			from.setCString(from_s);
+			to.setCString(to_s);
+		}
+	};
+
+}

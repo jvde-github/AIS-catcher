@@ -1,0 +1,224 @@
+import { el, isActive } from './dom.js';
+import { ConfigStore } from './config-store.js';
+import { ConfigForm, plainLayout, rowsLayout } from './config-form.js';
+import { createServicesEditor, renderShows, servedKeys, readersOf, serverName, SERVICE_COLUMNS } from './services-editor.js';
+import { renderApiTester } from './api-tester.js';
+import { DOCS, docLink } from './docs.js';
+import { webhookSchema, mqttStateSchema } from './schema.js';
+
+const mapField = (section, name, type, label, tooltip, more) => ({ section, field: { name, type, label, tooltip, ...more } });
+const MAP_FIELDS = [
+    mapField('Map page', 'station', 'text', 'Title', 'Above the map; the only station\'s name when empty'),
+    mapField('Map page', 'station_link', 'text', 'Title links to', 'A page about the station, opened from the title', { placeholder: 'https://...' }),
+    mapField('Map page', 'realtime', 'toggle', 'Realtime tab', 'Messages as they arrive', { defaultValue: false }),
+    mapField('Map page', 'replay', 'toggle', 'Replay', 'Scrub back through recent tracks on the map', { defaultValue: true }),
+    mapField('Map page', 'msg', 'toggle', 'Last message on the ship card', 'The vessel\'s latest NMEA', { defaultValue: false }),
+    mapField('Map page', 'decoder', 'toggle', 'Decoder tab', 'Decode a pasted NMEA sentence', { defaultValue: false }),
+    mapField('Map page', 'log', 'toggle', 'Log tab', 'What the station is doing', { defaultValue: false }),
+    mapField('Links', 'webcontrol_http', 'text', 'Control panel link', 'Opened from the map\'s menu', { defaultValue: '', placeholder: 'http://127.0.0.1:8110' }),
+    mapField('Map tiles', 'mbtiles', 'list', 'MBTiles maps', 'Base maps from .mbtiles files, one per line', { placeholder: '/path/to/map.mbtiles' }),
+    mapField('Map tiles', 'mboverlay', 'list', 'MBTiles overlays', 'Overlays from .mbtiles files, one per line', { placeholder: '/path/to/overlay.mbtiles' }),
+    mapField('Map tiles', 'fstiles', 'list', 'Tile folder maps', 'Base maps from folders of tiles, one per line', { placeholder: '/path/to/tiles' }),
+    mapField('Map tiles', 'fsoverlay', 'list', 'Tile folder overlays', 'Overlays from folders of tiles, one per line', { placeholder: '/path/to/overlay' }),
+    mapField('Plugins', 'plugin_dir', 'text', 'Plugin folder', 'Plugins the map loads', { placeholder: '/path/to/plugins' }),
+    mapField('Plugins', 'context', 'text', 'Settings name', 'Keeps a visitor\'s settings for this map apart from another map\'s', { defaultValue: 'settings' })
+];
+
+const HA_CONTAINER = 'svc-ha-container';
+const HOOKS_CONTAINER = 'svc-webhooks-container';
+// the pages the servers' host does not draw
+const OWN_PAGES = ['overview', 'ha', 'webhooks'];
+const withMain = list => (list.some(s => s && s.main === true) ? list : [{ main: true }, ...list]);
+const listOf = v => (Array.isArray(v) ? v : []);
+
+function showsText(view, choices, stationId) {
+    const v = view && typeof view === 'object' ? view : {};
+    const raw = stationId ?? v.stations;
+    const ids = (Array.isArray(raw) ? raw : raw === undefined || raw === null || raw === '' ? [] : String(raw).split(',')).map(x => String(x).trim()).filter(Boolean);
+    const parts = [];
+    if (ids.length) parts.push(ids.map(k => choices.find(c => String(c.key) === k)?.label || 'station ' + k).join(', '));
+    if (Object.keys(v).some(k => k !== 'stations')) parts.push('limited');
+    return parts.length ? parts.join(' · ') : 'Every ship';
+}
+
+function servicePage(host, title, desc, docs, ...actions) {
+    const main = el('div', 'st-main', {},
+        el('div', 'st-main__head', {},
+            el('div', '', {}, el('h2', 'st-main__title', { text: title }), el('p', 'st-main__desc', { text: desc })),
+            el('div', 'st-main__actions', {}, docs ? docLink(docs) : null, ...actions)));
+    host.replaceChildren(main);
+    return main;
+}
+
+export function servicesRailItems(cfg, section, { port, add }) {
+    const live = section?.live() || {};
+    const ha = live.ha || cfg.mqtt_state;
+    const hooks = live.hooks || cfg.webhooks;
+    return [{ key: 'overview', label: 'Overview' },
+        ...withMain(live.servers || listOf(cfg.services)).map((sv, i) => ({ key: sv.main ? 'main' : 'srv' + i, label: serverName(sv) + (sv.main && port ? ' · ' + port : ''),
+            dot: sv.main ? undefined : isActive(sv) })),
+        { key: 'add', label: '+ Add server', onClick: add },
+        { key: 'ha', label: 'Home Assistant', dot: !!(ha && ha.url) },
+        { key: 'webhooks', label: 'Webhooks' + (Array.isArray(hooks) && hooks.length ? ' · ' + hooks.length : '') }];
+}
+
+// `select(key)` opens a page through the rail; `follow(key)` tells the rail which page shows
+export function createServicesSection(pane, { select, follow, changed, stations, port, highlight }) {
+    const serversHost = el('div', 'st st-pages st-single', { id: 'svc-servers' });
+    const overviewHost = el('div', 'st st-svcpage', { hidden: true });
+    const haHost = el('div', 'st st-svcpage', { hidden: true });
+    const hooksHost = el('div', 'st st-svcpage', { hidden: true });
+    pane.replaceChildren(serversHost, overviewHost, haHost, hooksHost);
+
+    let page = 'main', current = 'overview';
+    let ha = null, hooks = null;
+    const editor = createServicesEditor({
+        onSaved: () => drawServers(),
+        onInvalid: i => select('srv' + i),
+        onEdit: changed,
+        stations,
+        viewerFields: MAP_FIELDS
+    });
+    const ready = editor.load().catch(() => {});
+    let loaded = false;
+    ready.then(() => {
+        loaded = true;
+        show(current);
+        changed();
+    });
+
+    function serverPages() {
+        return [
+            ...editor.state.list.map((sv, i) => ({ key: sv.main ? 'main' : 'srv' + i, title: serverName(sv),
+                actions: box => {
+                    const port = testerPort(sv);
+                    if (port) box.append(el('button', 'st-btn st-btn--sm', { type: 'button', text: 'Try the API', onClick: () => tryOn(port) }));
+                    box.append(docLink(DOCS.services));
+                    editor.actions(box, i, { deleted: () => { page = 'main'; drawServers(); }, rerender: drawServers });
+                },
+                render: (main, title) => editor.renderDetail(main, i, { title, rerender: drawServers }) })),
+            { key: 'tester', title: 'Try the API', wide: true,
+                actions: box => box.append(docLink(DOCS.api, 'API docs'), docLink(DOCS.mcp, 'MCP docs')),
+                render: main => renderApiTester(main, { servers: testerServers(), highlight, port: tryPort }) }
+        ];
+    }
+    function drawServers() {
+        const list = serverPages();
+        if (!list.some(p => p.key === page)) page = list[0].key;
+        const p = list.find(x => x.key === page);
+        const title = el('h2', 'st-main__title', { text: p.title });
+        const actions = el('div', 'st-main__actions');
+        const main = el('div', 'st-main' + (p.wide ? ' st-main--wide' : ''), {}, el('div', 'st-main__head', {}, el('div', '', {}, title), actions));
+        p.actions(actions);
+        p.render(main, title);
+        serversHost.replaceChildren(main);
+        if (!serversHost.hidden) follow(page);
+        changed();
+    }
+
+    let tryPort = null;
+    function tryOn(port) {
+        tryPort = port;
+        if (current === 'tester') drawServers();
+        else select('tester');
+    }
+    const TRIED = ['api', 'mcp', 'geojson', 'kml', 'metrics'];
+    function testerPort(sv) {
+        const port = sv.main ? editor.state.viewerPort : Number(sv.port);
+        const serve = servedKeys(sv, !!sv.main);
+        return port && isActive(sv) && serve.some(k => TRIED.includes(k)) ? port : null;
+    }
+
+    function testerServers() {
+        const st = editor.state;
+        return st.list.map(sv => (sv.main
+            ? { label: `Main · ${st.viewerPort}`, port: st.viewerPort, bind: st.bind, tls: !!sv.tls, serve: servedKeys(sv, true) }
+            : { label: serverName(sv), port: Number(sv.port), bind: sv.bind, tls: !!sv.tls, serve: servedKeys(sv) })).filter(s => s.port);
+    }
+
+    function drawOverview() {
+        ConfigStore.fetch().then(cfg => {
+            const first = loaded ? editor.state.list.map(testerPort).find(Boolean) : null;
+            const main = servicePage(overviewHost, 'Services', 'Each server is one web address.', DOCS.services,
+                first ? el('button', 'st-btn st-btn--sm', { type: 'button', text: 'Try the API', onClick: () => tryOn(first) }) : null,
+                el('button', 'st-btn st-btn--sm', { type: 'button', text: '+ Add server', onClick: add }));
+            const bind = editor.state.bind;
+            const choices = stations();
+            const servers = loaded ? editor.state.list : withMain(listOf(cfg.services));
+            const rows = servers.map((sv, i) => ({ ...(sv.main
+                ? { key: 'main', name: 'Main', addr: `${bind}:${port() || '–'}${sv.tls ? ' · HTTPS' : ''}`, served: servedKeys(sv, true), readers: readersOf(sv, bind), view: sv.view, ids: sv.id }
+                : { key: 'srv' + i, name: serverName(sv), addr: `${sv.bind || '127.0.0.1'}:${sv.port ?? '–'}${sv.tls ? ' · HTTPS' : ''}`,
+                    served: !isActive(sv) ? [] : servedKeys(sv), readers: !isActive(sv) ? 'Switched off' : readersOf(sv, sv.bind || '127.0.0.1'), view: sv.view, ids: sv.id }),
+                tryPort: loaded ? testerPort(sv) : null }));
+            const showsCol = choices.length >= 2 || rows.some(r => (r.view && Object.keys(r.view).length) || r.ids !== undefined);
+            const table = el('table', 'st-svcgrid', {},
+                el('tr', '', {}, ['Server', ...SERVICE_COLUMNS.map(c => c.label), 'Who can read it', ...(showsCol ? ['Shows'] : []), ''].map(t => el('th', '', { text: t }))),
+                rows.map(r => el('tr', '', {},
+                    el('td', '', {}, el('button', 'st-svcgrid__name', { type: 'button', onClick: () => select(r.key) },
+                        el('strong', '', { text: r.name }), el('small', '', { text: r.addr }))),
+                    SERVICE_COLUMNS.map(c => {
+                        const on = r.served.includes(c.key);
+                        return el('td', 'st-svcgrid__ck' + (on ? ' is-on' : ''), { text: on ? '✓' : '·', title: c.label + (on ? ' at ' + c.path : ': off') });
+                    }),
+                    el('td', '', { text: r.readers }),
+                    showsCol ? el('td', '', { text: showsText(r.view, choices, r.ids) }) : null,
+                    el('td', 'st-svcgrid__try', {}, r.tryPort ? el('button', 'st-link', { type: 'button', text: 'Try ›', title: `Try the API on ${r.name}`, onClick: () => tryOn(r.tryPort) }) : null))));
+            const haCfg = (ha?.loaded ? ha.data : cfg.mqtt_state) || {};
+            const hookList = (hooks?.loaded ? hooks.data : cfg.webhooks) || [];
+            const more = el('div', 'st-svcmore', {},
+                [['ha', 'Home Assistant', haCfg.url ? 'Connected to ' + haCfg.url : 'Off'],
+                    ['webhooks', 'Webhooks', hookList.length ? `${hookList.length} posting events` : 'None']].map(([key, label, sub]) =>
+                    el('button', 'st-svcmore__row', { type: 'button', onClick: () => select(key) },
+                        el('span', '', {}, el('strong', '', { text: label }), el('small', '', { text: sub })),
+                        el('span', 'st-svcmore__go', { text: 'Open ›' }))));
+            main.append(el('div', 'st-svcgrid__wrap', {}, table),
+                el('h3', 'st-section__title st-svcmore__title', { text: 'Also built on what this station knows' }), more);
+        }).catch(() => {});
+    }
+
+    function loadHomeAssistant() {
+        const main = servicePage(haHost, 'Home Assistant', 'Vessels and stations as MQTT entities.', DOCS.homeAssistant);
+        main.append(el('div', '', { id: HA_CONTAINER }));
+        return new ConfigForm({ schema: mqttStateSchema, section: 'mqtt_state', containerId: HA_CONTAINER, layout: plainLayout, onChange: changed });
+    }
+    function loadWebhooks() {
+        const main = servicePage(hooksHost, 'Webhooks', 'Events posted as they happen.', DOCS.webhooks,
+            el('button', 'st-btn st-btn--sm', { type: 'button', text: '+ Add webhook', onClick: () => manager.addItem() }));
+        main.append(el('div', '', { id: HOOKS_CONTAINER }));
+        const manager = new ConfigForm({ section: 'webhooks', list: true, schema: webhookSchema, containerId: HOOKS_CONTAINER, title: 'Webhook', layout: rowsLayout,
+            essentials: new Set(['description', 'url', 'events']),
+            nameOf: item => item.url || 'New webhook',
+            extra: (node, item) => renderShows(node, item, { stations: stations(), touched: () => manager.markDirty(), rerender: () => manager.render() }),
+            empty: ['No webhooks yet', 'For Home Assistant, Node-RED or your own service.'],
+            onChange: changed });
+        return manager;
+    }
+
+    function show(key) {
+        current = key || 'overview';
+        serversHost.hidden = OWN_PAGES.includes(current);
+        overviewHost.hidden = current !== 'overview';
+        haHost.hidden = current !== 'ha';
+        hooksHost.hidden = current !== 'webhooks';
+        if (current === 'overview') drawOverview();
+        else if (current === 'ha') ha ||= loadHomeAssistant();
+        else if (current === 'webhooks') hooks ||= loadWebhooks();
+        else if (loaded && (page !== current || !serversHost.firstChild)) { page = current; drawServers(); }
+        else page = current;
+    }
+
+    function add() {
+        ready.then(() => select('srv' + editor.add()));
+    }
+
+    return {
+        show,
+        add,
+        live: () => ({ servers: loaded ? editor.state.list : null, ha: ha?.loaded ? ha.data : null, hooks: hooks?.loaded ? hooks.data : null }),
+        destroy() {
+            editor.destroy();
+            ha?.destroy();
+            hooks?.destroy();
+        }
+    };
+}

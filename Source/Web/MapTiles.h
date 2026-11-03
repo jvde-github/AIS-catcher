@@ -28,75 +28,75 @@
 class MapTiles
 {
 protected:
-    std::string name;
-    std::string attribution;
-    std::string layerID;
-    std::string format;
+	std::string name;
+	std::string attribution;
+	std::string layerID;
+	std::string format;
 
-    std::vector<unsigned char> tileData;
+	std::vector<unsigned char> tileData;
 
-    int minZoom;
-    int maxZoom;
+	int minZoom;
+	int maxZoom;
 
-    bool isValidCoordinate(int z, int x, int y) const;
+	bool isValidCoordinate(int z, int x, int y) const;
 
 
 public:
-    MapTiles();
-    virtual ~MapTiles() = default;
+	MapTiles();
+	virtual ~MapTiles() = default;
 
-    virtual bool open(const std::string &source) = 0;
+	virtual bool open(const std::string &source) = 0;
 
-    // Empty result means no such tile.
-    virtual const std::vector<unsigned char> &getTile(int z, int x, int y, std::string &contentType) = 0;
-    std::string json(bool overlay) const;
-    virtual std::vector<double> resolutions() const { return {}; }
+	// Empty result means no such tile.
+	virtual const std::vector<unsigned char> &getTile(int z, int x, int y, std::string &contentType) = 0;
+	std::string json(bool overlay) const;
+	virtual std::vector<double> resolutions() const { return {}; }
 
-    const std::string &getName() const { return name; }
-    const std::string &getAttribution() const { return attribution; }
-    int getMinZoom() const { return minZoom; }
-    int getMaxZoom() const { return maxZoom; }
-    const std::string &getFormat() const { return format; }
-    const std::string &getLayerID() const { return layerID; }
-    void setLayerID(const std::string &id) { layerID = id; }
+	const std::string &getName() const { return name; }
+	const std::string &getAttribution() const { return attribution; }
+	int getMinZoom() const { return minZoom; }
+	int getMaxZoom() const { return maxZoom; }
+	const std::string &getFormat() const { return format; }
+	const std::string &getLayerID() const { return layerID; }
+	void setLayerID(const std::string &id) { layerID = id; }
 };
 
 #ifdef HASSQLITE
 class MBTilesSupport : public MapTiles
 {
 private:
-    sqlite3 *db;
-    std::vector<int> zoomMapping;
+	sqlite3 *db;
+	std::vector<int> zoomMapping;
 
-    void loadMetadata();
-    int getMBTilesZoom(int olZoom) const;
+	void loadMetadata();
+	int getMBTilesZoom(int olZoom) const;
 
 public:
-    std::vector<double> resolutions() const override;
-    MBTilesSupport();
-    ~MBTilesSupport() override;
+	std::vector<double> resolutions() const override;
+	MBTilesSupport();
+	~MBTilesSupport() override;
 
-    bool open(const std::string &filename) override;
-    const std::vector<unsigned char> &getTile(int z, int x, int y, std::string &contentType) override;
+	bool open(const std::string &filename) override;
+	const std::vector<unsigned char> &getTile(int z, int x, int y, std::string &contentType) override;
 };
 #endif
 
 class FileSystemTiles : public MapTiles
 {
 private:
-    std::string basePath;
-    std::vector<int> availableZooms;
+	std::string basePath;
+	std::vector<int> availableZooms;
 
-    bool isDirectory(const std::string &path) const;
-    std::vector<std::string> listDirectory(const std::string &path) const;
+	bool isDirectory(const std::string &path) const;
+	std::vector<std::string> listDirectory(const std::string &path) const;
 
-    void scanDirectory();
-    void detectFormat();
+	void scanDirectory();
+	void detectFormat();
 
 public:
-    FileSystemTiles() = default;
-    ~FileSystemTiles() override = default;
+	FileSystemTiles() = default;
+	~FileSystemTiles() override = default;
 
-    bool open(const std::string &directoryPath) override;
-    const std::vector<unsigned char> &getTile(int z, int x, int y, std::string &contentType) override;
+	bool open(const std::string &directoryPath) override;
+	const std::vector<unsigned char> &getTile(int z, int x, int y, std::string &contentType) override;
 };

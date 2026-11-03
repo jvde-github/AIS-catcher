@@ -30,6 +30,10 @@ namespace JSON
 		case Value::Type::STRING:
 			str += *data.s;
 			break;
+		case Value::Type::CSTRING:
+			if (data.cs)
+				str += data.cs;
+			break;
 		case Value::Type::BOOL:
 			str += data.b ? "true" : "false";
 			break;
@@ -53,5 +57,19 @@ namespace JSON
 			str += "error";
 			break;
 		}
+	}
+
+	std::string text(const Value &v)
+	{
+		std::string joined;
+		if (v.isArray())
+			for (const auto &item : v.getArray())
+				joined += (joined.empty() ? "" : ",") + item.to_string();
+		else if (v.isArrayString())
+			for (const auto &item : v.getStringArray())
+				joined += (joined.empty() ? "" : ",") + item;
+		else
+			joined = v.to_string();
+		return joined;
 	}
 }

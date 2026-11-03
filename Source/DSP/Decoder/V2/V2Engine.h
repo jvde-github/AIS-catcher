@@ -27,12 +27,12 @@
 
 namespace V2
 {
-	const int BLOCK_SIZE = 512; // samples per processing block at 48 kHz
+	const int BLOCK_SIZE = 512;
 
 	struct FreqOffset
 	{
 		CFLOAT32 rot = CFLOAT32(1.0f, 0.0f);
-		float last_f = 0.0f; // last applied frequency (cycles/sample)
+		float last_f = 0.0f;
 		float prominence = 0.0f;
 
 		float Estimate(const CFLOAT32 *window);
@@ -65,10 +65,10 @@ namespace V2
 	struct PhaseTracker
 	{
 		unsigned rot = 0;
-		CFLOAT32 s = CFLOAT32(0.0f, 0.0f); // decision-folded EMA
+		CFLOAT32 s = CFLOAT32(0.0f, 0.0f);
 		int prev_decision = 0;
-		float weight = 0.86f;		// tracking, after sync
-		float weight_train = 0.75f; // acquisition, while training
+		float weight = 0.86f;
+		float weight_train = 0.75f;
 
 		int Run(CFLOAT32 z, bool training);
 
@@ -117,7 +117,7 @@ namespace V2
 		float fm_filtered[BLOCK_SIZE];
 		BitPLL fm_pll;
 
-		CFLOAT32 slot_ema = CFLOAT32(0.0f, 0.0f); // slot-phase EMA; |slot_ema| -> 1 when confirmed
+		CFLOAT32 slot_ema = CFLOAT32(0.0f, 0.0f);
 		int slot_phase = 0;
 		int di = 0;
 		long long sample_idx = 0;

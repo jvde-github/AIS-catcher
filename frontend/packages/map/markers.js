@@ -28,16 +28,17 @@ import Icon from "ol/style/Icon.js";
 import CircleStyle from "ol/style/Circle.js";
 import Text from "ol/style/Text.js";
 import Polygon from "ol/geom/Polygon.js";
+import Point from "ol/geom/Point.js";
+import LineString from "ol/geom/LineString.js";
 import { fromLonLat } from "ol/proj.js";
 
-import { ShippingClass } from "@aiscatcher/core/constants.js";
 import { calcOffset1M, calcMove, shipOutlineLocal } from "@aiscatcher/core/geo.js";
 import { hexToRgb, deriveLabelBackground } from "@aiscatcher/ui/color.js";
 
 /* the registry is pure and lives in core/sprites.js so a worker can import
    it without OpenLayers; re-exported here for hosts that use it via markers */
-export { SPRITES, CELLS, CLASS_COLORS, TRACK_COLORS, PLANE_PALETTES, spriteFor, applySprite, planeCell, planeColor, spriteCSS } from "@aiscatcher/core/sprites.js";
-import { applySprite, planeCell, planeColor, isAircraft, AIRCRAFT_SCALE } from "@aiscatcher/core/sprites.js";
+export { TRACK_COLORS, PLANE_PALETTES, spriteFor, applySprite, spriteCSS } from "@aiscatcher/core/sprites.js";
+import { planeCell, planeColor, isAircraft, AIRCRAFT_SCALE } from "@aiscatcher/core/sprites.js";
 
 const DEG = Math.PI / 180;
 
@@ -254,7 +255,7 @@ export function create(opts) {
     }
 
     /* a track feature carries mmsi, shipclass, optional speedColor and isDashed */
-    function track(feature) {
+    function track(feature, resolution) {
         const s = settings();
         let w = Number(s.track_weight);
         let c = "#12a5ed";
@@ -273,6 +274,31 @@ export function create(opts) {
             c = `rgba(${r}, ${g}, ${b}, ${o})`;
         }
 
+        // an AIS target's vector, minute marks, heading line and turn flag as SN.1/Circ.243 draws them
+        if (feature.predictedAt) {
+            const dark = "rgba(0, 0, 0, 0.7)", light = "rgba(255, 255, 255, 0.95)";
+            const px = n => n * resolution;
+            const cased = (geometry, width, dash) => [
+                new Style({ geometry, stroke: stroke(dark, width + 2, dash) }),
+                new Style({ geometry, stroke: stroke(light, width, dash) })];
+            const from = (p, bearing, len) => new LineString([p, [p[0] + len * Math.sin(bearing * DEG), p[1] + len * Math.cos(bearing * DEG)]]);
+            const across = (p, bearing, len) => from([p[0] - len / 2 * Math.cos(bearing * DEG), p[1] + len / 2 * Math.sin(bearing * DEG)], bearing + 90, len);
+            const styles = cased(undefined, 2, [4, 4]);
+            const start = feature.getGeometry().getFirstCoordinate(), [ex, ey] = feature.predictedAt;
+            const reach = Math.hypot(ex - start[0], ey - start[1]);
+            const marks = feature.marks || [];
+            if (reach / (marks.length + 1) >= px(16))
+                for (const m of marks)
+                    styles.push(...cased(across(m.at, m.bearing, px(7)), 1.5));
+            // a minute of the ship's way rather than the standard's fixed length: in proportion at every zoom
+            const minute = reach / (feature.minutes || 6);
+            const heading = from(start, feature.heading, Math.min(Math.max(minute, px(12)), px(48 * (s.icon_scale || 1))));
+            styles.push(...cased(heading, 1.25));
+            if (feature.turning)
+                styles.push(...cased(from(heading.getLastCoordinate(), feature.heading + (feature.turning === "starboard" ? 90 : -90), px(8)), 1.25));
+            styles.push(new Style({ geometry: new Point(feature.predictedAt), image: new CircleStyle({ radius: 3.5, fill: new Fill({ color: light }), stroke: new Stroke({ color: dark, width: 1.5 }) }) }));
+            return styles;
+        }
         const line = new Style({ stroke: stroke(c, w, feature.isDashed ? [6, 6] : undefined) });
         if (feature.isDashed) return line;
         // a dark line under the track, a little wider than it: a thin coloured line alone is lost

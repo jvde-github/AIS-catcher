@@ -1,13 +1,16 @@
 // A context occupies the existing table panel without replacing its overview.
 // Each host owns opening the panel and updating its map layout.
 
-// Match panel.css's workspace query: when the table covers the map, opening
-// either surface dismisses the other through the host's normal close action.
-// If a resize removes room for both, keep the one the user opened last.
+// Match panel.css's workspace query: at this width the table covers the map.
+export const tableCoversMap = workspace => (workspace?.clientWidth || window.innerWidth) <= 750;
+
+// When the table covers the map, opening either surface dismisses the other
+// through the host's normal close action. If a resize removes room for both,
+// keep the one the user opened last.
 export function createPanelSwitch({ workspace, card, table }) {
     const panels = { card, table };
     let latest = 'table';
-    const fullWidth = () => (workspace?.clientWidth || window.innerWidth) <= 750;
+    const fullWidth = () => tableCoversMap(workspace);
     const dismissOther = () => {
         const other = panels[latest === 'card' ? 'table' : 'card'];
         if (fullWidth() && other.isOpen()) other.close();

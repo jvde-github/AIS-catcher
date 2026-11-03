@@ -5,15 +5,19 @@ import * as filter from '../../core/filter.js';
 import { ships as shipsDB, station, counts as shipCounts } from '../../core/store.js';
 import { getDistanceConversion, getDistanceUnit, getSpeedConversion, getSpeedUnit } from '../../core/units.js';
 import * as components from '@aiscatcher/ui/components.js';
-import { redraw as redrawMap } from '../../map.js';
-import { saveSettings, settingsPanel, openSettingsTab } from '../settings/settings.js';
+import { redraw } from '../../fleet.js';
+import { saveSettings } from '../../settings-store.js';
+import { settingsPanel, openSettingsTab } from '../settings/settings.js';
 import { loaded as loadedTab } from '../../tabs/index.js';
 import * as replay from '../replay/replay.js';
 import { updateMarkerCount } from '../counts/counts.js';
 import { updateTablecard } from '../tablecard/tablecard.js';
 import { register } from '../../actions.js';
+import { focus } from '../../data.js';
+import { focusLabel } from '../../core/config.js';
+import { resetFocus } from '../station/station.js';
 
-export function applyFilter() {
+function applyFilter() {
     saveSettings();
     if (shipsDB != null)
         for (const key in shipsDB) shipsDB[key].show = undefined;
@@ -22,7 +26,7 @@ export function applyFilter() {
     // fleet as it redraws, and updateMarkerCount stands down while it does
     replay.refresh();
     updateMarkerCount();
-    redrawMap();
+    redraw();
     updateTablecard();
     loadedTab('ships')?.update();
     loadedTab('realtime')?.applyVesselFilter();
@@ -54,10 +58,10 @@ export function updateFilterUI() {
 
     const summary = document.getElementById("filter_summary");
     if (summary) {
-        summary.textContent = filter.isActive()
-            ? shipCounts.shown + " of " + shipCounts.total + " vessels shown"
-            : "Showing every vessel";
-        summary.classList.toggle("filter-on", filter.isActive());
+        const through = focusLabel(focus);
+        const shown = filter.isActive() ? shipCounts.shown + " of " + shipCounts.total + " vessels shown" : "";
+        summary.textContent = through ? through + ": " + (shown || "every vessel shown") : shown || "Showing every vessel";
+        summary.classList.toggle("filter-on", filter.isActive() || !!through);
     }
 
     for (const [kind, box] of Object.entries(FILTER_LISTS)) {
@@ -154,6 +158,7 @@ function setFilterValue(key, value) {
 
 function resetFilter() {
     filter.reset();
+    resetFocus();
     applyFilter();
 }
 
@@ -174,7 +179,6 @@ register({
     },
     setFilterNumber: (e, d, el) => setFilterValue(d.key, el.value === "" ? null : Number(el.value)),
     setFilterChoice: (e, d, el) => setFilterValue(d.key, el.value),
-    setFilterFlag: (e, d, el) => setFilterValue(d.key, el.checked),
     updateFilterSeenDisplay: (e, d, el) => {
         const label = document.getElementById("filter_seen_label");
         const v = Number(el.value) || 0;

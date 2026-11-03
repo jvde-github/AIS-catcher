@@ -1,17 +1,16 @@
 /* ============================================================================
-   shipcard.js — what the ship card says, whichever shape it takes
+   shipcard.js — what the ship card says
    The values every host shows about a vessel and the renderers for its hull,
-   its reported changes and its draught history. A layout - the classic fold
-   of sections in shipcard-classic.js, the remembered tabs in shipcard-tabs.js -
-   builds the cells and hands them here to be filled. A cell key may map to
-   several elements when a layout shows a value more than once.
+   its reported changes and its draught history. The tabbed layout in
+   shipcard-tabs.js builds the cells and hands them here to be filled. A cell
+   key may map to several elements when the layout shows a value more than once.
    ========================================================================= */
 import { visitListHTML } from '@aiscatcher/core/visits.js';
 import { decodeHTMLEntities } from './components.js';
 import { CHANGE, getCountryName, getEtaVal, getMmsiTypeVal, getShipTypeShort, getStatusVal, sanitizeString } from '@aiscatcher/core/text.js';
 import { getChangeListHTML, getDraughtChartSVG, getShipDimensionSVG, getSpeedHistorySVG } from '@aiscatcher/core/spark.js';
 
-export const CHANGE_LIST_FIELDS = [CHANGE.DESTINATION, CHANGE.ETA, CHANGE.SHIPNAME, CHANGE.CALLSIGN, CHANGE.STATUS];
+const CHANGE_LIST_FIELDS = [CHANGE.DESTINATION, CHANGE.ETA, CHANGE.SHIPNAME, CHANGE.CALLSIGN, CHANGE.STATUS];
 export const MATCHED_PORT_FIELDS = [
     { key: 'matched_code', label: 'Code' }, { key: 'matched_country', label: 'Country' }, { key: 'matched_name', label: 'Port' },
 ];
@@ -86,13 +85,9 @@ export function populate(cells, ship, h) {
     html('lat', ship.lat != null ? u.getLatValFormat(ship) : null);
     html('lon', ship.lon != null ? u.getLonValFormat(ship) : null);
     html('visits', visitListHTML(ship.visits, ship.time));
-    each('visits').forEach(el => el.closest('.card-row')?.classList.toggle('hidden', !Array.isArray(ship.visits)));
-
 }
 
 export const hull = (ship, u) => getShipDimensionSVG(ship, u);
 export const changeList = (changes, u) => getChangeListHTML(changes, CHANGE_LIST_FIELDS, u);
 export const draughtChart = (changes, draught, u) => getDraughtChartSVG(changes, draught, u);
 export const speedChart = (pts, u) => getSpeedHistorySVG(pts, 10, u);
-export const hasChanges = (changes) => (changes || []).some((c) => CHANGE_LIST_FIELDS.indexOf(c.f) !== -1);
-export const hasDraughtChange = (changes) => (changes || []).some((c) => c.f === CHANGE.DRAUGHT && !c.i);

@@ -19,6 +19,7 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 #include <time.h>
 
 #include "Stream.h"
@@ -36,14 +37,26 @@ namespace Util
 		static bool OutputFormat(std::string str, MessageFormat &out);
 		static std::string DeviceTypeString(Type type);
 		static std::time_t DateTime(const std::string &datetime);
-		static bool Switch(std::string arg, const std::string &TrueString = "ON", const std::string &FalseString = "OFF");
+		static bool Switch(const std::string &arg);
+		static bool Switch(std::string arg, const std::string &TrueString, const std::string &FalseString);
 		static bool AutoInteger(std::string arg, int min, int max, int &val);
+		// whole digits and nothing else, at most `most` of them, as a path or a query
+		// gives a number: false for anything else, never a throw
+		static bool Digits(const std::string &s, long long &out, std::size_t most = 18);
 		static bool AutoFloat(std::string arg, double min, double max, double &val);
 		static bool OptionalInteger(std::string arg, int min, int max, unsigned &val, unsigned default_val = 0);
 		// Credentials and has_password are unchanged when the URL has no userinfo.
 		static void URL(const std::string &url, std::string &protocol, std::string &username, std::string &password, std::string &host, std::string &port, std::string &path, bool *has_password = nullptr);
 		static std::string URLWithoutCredentials(const std::string &url);
+		// as a log may show it: scheme, host and port, no credentials, path or query
+		static std::string URLForLog(const std::string &url);
 		static std::string PercentDecode(const std::string &s);
+		// a query or form value: '+' a space, then percent-decoded
+		static std::string FormDecode(const std::string &s);
+		// the names and values of a query, decoded, in order
+		static std::vector<std::pair<std::string, std::string>> Query(const std::string &query);
+		// the value of `name` in a query, decoded; empty when absent
+		static std::string QueryParam(const std::string &query, const std::string &name);
 		static void Split(const std::string &s, char delim, std::vector<std::string> &out);
 	};
 }

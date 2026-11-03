@@ -52,7 +52,8 @@ namespace Device
 		bool AGC = true;
 		bool print = false;
 
-		std::vector<SoapyDevice> dev_list;
+		// filled once by the enumerating receiver, read by every receiver's Open(h)
+		static std::vector<SoapyDevice> dev_list;
 		SoapySDR::Device *dev = nullptr;
 
 		SoapySDR::Kwargs stream_args;
@@ -91,7 +92,7 @@ namespace Device
 
 		void setFormat(Format f) {}
 
-		Setting &SetKey(AIS::Keys key, const std::string &arg);
+		Setting &applyKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 }

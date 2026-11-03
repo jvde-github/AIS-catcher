@@ -57,7 +57,7 @@ namespace IO
 
 			run_thread = std::thread(&HTTPStreamer::process, this);
 			std::string filter_str = filter.Get();
-			Debug() << "HTTP: start thread (" << url << ")" << (!filter_str.empty() ? ", " + filter_str : "");
+			Debug() << "HTTP: start thread (" << Util::Parse::URLForLog(url) << ")" << (!filter_str.empty() ? ", " + filter_str : "");
 		}
 	}
 
@@ -70,7 +70,7 @@ namespace IO
 			terminate = true;
 			run_thread.join();
 
-			Debug() << "HTTP: stop thread (" << url << ").";
+			Debug() << "HTTP: stop thread (" << Util::Parse::URLForLog(url) << ").";
 		}
 	}
 
@@ -194,7 +194,7 @@ namespace IO
 		if (drop_snap && !dropped_warned)
 		{
 			dropped_warned = true;
-			Warning() << "HTTP Client [" << url << "]: batch over " << MSG_LIST_MAX << " messages, " << drop_snap
+			Warning() << "HTTP Client [" << Util::Parse::URLForLog(url) << "]: batch over " << MSG_LIST_MAX << " messages, " << drop_snap
 					  << " dropped. Lower 'interval' (now " << INTERVAL << "s).";
 		}
 
@@ -204,9 +204,9 @@ namespace IO
 		counts += ", " + std::to_string(pos_snap) + " positions";
 
 		if (r < 200 || r > 299)
-			Error() << "HTTP Client [" << url << "]: " << IO::httpStatusString(r) << " (" << counts << ")";
+			Error() << "HTTP Client [" << Util::Parse::URLForLog(url) << "]: " << IO::httpStatusString(r) << " (" << counts << ")";
 		else if (show_response)
-			Info() << "HTTP Client [" << url << "]: return code " << r << " (" << counts << ")";
+			Info() << "HTTP Client [" << Util::Parse::URLForLog(url) << "]: return code " << r << " (" << counts << ")";
 	}
 
 	void HTTPStreamer::process()
@@ -220,7 +220,7 @@ namespace IO
 		} while (!terminate);
 	}
 
-	Setting &HTTPStreamer::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &HTTPStreamer::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -237,7 +237,7 @@ namespace IO
 			bool v = Util::Parse::Switch(arg);
 			http.setVerifyCertificates(v);
 			if (!v)
-				Warning() << "HTTP [" << url << "]: TLS certificate verification disabled (ssl_verify off)";
+				Warning() << "HTTP [" << Util::Parse::URLForLog(url) << "]: TLS certificate verification disabled (ssl_verify off)";
 			break;
 		}
 		case AIS::KEY_SETTING_ID:
@@ -325,7 +325,7 @@ namespace IO
 			break;
 		}
 		default:
-			return OutputMessage::SetKey(key, arg);
+			return OutputMessage::applyKey(key, arg);
 		}
 		return *this;
 	}
@@ -435,7 +435,7 @@ namespace IO
 		}
 	}
 
-	Setting &UDPStreamer::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &UDPStreamer::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -455,7 +455,7 @@ namespace IO
 			setUUID(arg);
 			break;
 		default:
-			return OutputMessage::SetKey(key, arg);
+			return OutputMessage::applyKey(key, arg);
 		}
 		return *this;
 	}
@@ -480,9 +480,9 @@ namespace IO
 		if (reset > 0)
 			tcp.setOptionKey(AIS::KEY_SETTING_RESET, std::to_string(reset));
 
-		connection = &tcp;
+		session = &tcp;
 
-		if (connection->connect() && connection->waitConnected(persistent ? 2 : 0))
+		if (session->connect() && session->waitConnected(persistent ? 2 : 0))
 			Info() << info << "connected";
 		else if (persistent)
 			Info() << info << "pending";
@@ -493,24 +493,9 @@ namespace IO
 		}
 	}
 
-	void TCPClientStreamer::Stop()
+	void TCPClientStreamer::polled()
 	{
-		std::lock_guard<std::mutex> lock(mtx);
-		if (connection)
-			connection->disconnect();
-	}
-
-	void TCPClientStreamer::poll()
-	{
-		std::unique_lock<std::mutex> lock(mtx, std::try_to_lock);
-		if (!lock.owns_lock() || !connection)
-			return;
-
-		connection->poll();
-		if (connection->isConnected())
-			connection->drain();
-
-		if (!persistent && !connection->isConnected() && !connection->isConnecting() && !stop_requested)
+		if (!persistent && !session->isConnected() && !session->isConnecting() && !stop_requested)
 		{
 			Critical() << "TCP feed: connection lost, requesting termination.";
 			stop_requested = true;
@@ -518,7 +503,7 @@ namespace IO
 		}
 	}
 
-	Setting &TCPClientStreamer::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &TCPClientStreamer::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -541,12 +526,12 @@ namespace IO
 			setUUID(arg);
 			break;
 		default:
-			return OutputMessage::SetKey(key, arg);
+			return OutputMessage::applyKey(key, arg);
 		}
 		return *this;
 	}
 
-	HubStreamer::HubStreamer() : OutputMessage("Hub")
+	HubStreamer::HubStreamer() : SessionStreamer("Hub")
 	{
 		SetKey(AIS::KEY_SETTING_DESCRIPTION, "Community Feed")
 			.SetKey(AIS::KEY_SETTING_MSGFORMAT, "COMMUNITY_HUB")
@@ -567,54 +552,32 @@ namespace IO
 		tcp.setOptionKey(AIS::KEY_SETTING_RESET, "180");
 
 		hub.setUUID(uuid);
-		connection = tcp.add(&hub);
+		session = tcp.add(&hub);
 
-		connection->connect();
-		bool ready = connection->waitConnected(2);
+		session->connect();
+		bool ready = session->waitConnected(2);
 
 		last_send = Protocol::Clock::now();
 		Info() << "Hub feed: open socket for host: " << AISCATCHER_URL << ", port: " << AISCATCHER_PORT << ", " << startInfo() << ", status: " << (ready ? "connected" : "pending");
 	}
 
-	void HubStreamer::Stop()
+	void HubStreamer::polled()
 	{
-		std::lock_guard<std::mutex> lock(mtx);
-
-		if (connection)
-			connection->disconnect();
-	}
-
-	void HubStreamer::poll()
-	{
-		std::unique_lock<std::mutex> lock(mtx, std::try_to_lock);
-		if (!lock.owns_lock() || !connection)
-			return;
-
-		connection->poll();
-
-		if (Protocol::secondsSince(last_tick) < 1)
-			return;
-		last_tick = Protocol::Clock::now();
-
-		connection->drain();
-		if (!connection->isConnected())
-			return;
-
-		if (Protocol::secondsSince(last_send) >= KEEPALIVE_S)
+		if (session->isConnected() && Protocol::secondsSince(last_send) >= KEEPALIVE_S)
 		{
 			last_send = Protocol::Clock::now();
 			hub.keepAlive();
 		}
 	}
 
-	Setting &HubStreamer::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &HubStreamer::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		if (key == AIS::KEY_SETTING_UUID)
 		{
 			setUUID(arg);
 			return *this;
 		}
-		return OutputMessage::SetKey(key, arg);
+		return OutputMessage::applyKey(key, arg);
 	}
 
 	void TCPlistenerStreamer::Start()
@@ -629,7 +592,7 @@ namespace IO
 		}
 	}
 
-	Setting &TCPlistenerStreamer::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &TCPlistenerStreamer::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -640,26 +603,9 @@ namespace IO
 			timeout = Util::Parse::Integer(arg);
 			break;
 		default:
-			return OutputMessage::SetKey(key, arg);
+			return OutputMessage::applyKey(key, arg);
 		}
 		return *this;
-	}
-
-	void MQTTStreamer::Stop()
-	{
-		std::lock_guard<std::mutex> lock(mtx);
-		session->disconnect();
-	}
-
-	void MQTTStreamer::poll()
-	{
-		std::unique_lock<std::mutex> lock(mtx, std::try_to_lock);
-		if (!lock.owns_lock())
-			return;
-
-		session->poll();
-		if (session->isConnected())
-			session->drain();
 	}
 
 	void MQTTStreamer::Start()
@@ -710,7 +656,7 @@ namespace IO
 		Info() << info << ", status: " << (session->waitConnected(2) ? "connected" : "pending");
 	}
 
-	Setting &MQTTStreamer::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &MQTTStreamer::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -761,7 +707,7 @@ namespace IO
 			break;
 		default:
 			if (!tcp.setOptionKey(key, arg) && !mqtt.setOptionKey(key, arg) && !ws.setOptionKey(key, arg) && !tls.setOptionKey(key, arg))
-				return OutputMessage::SetKey(key, arg);
+				return OutputMessage::applyKey(key, arg);
 			break;
 		}
 		return *this;

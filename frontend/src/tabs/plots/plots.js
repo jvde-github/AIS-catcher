@@ -8,9 +8,14 @@ import {
     Tooltip, Legend, Filler,
 } from 'chart.js';
 import Annotation from 'chartjs-plugin-annotation';
+import { settings } from '../../core/state.js';
 import { getDistanceConversion, getDistanceUnit } from '../../core/units.js';
-import { config } from '../../core/config.js';
-import { receiver } from '../../data.js';
+import { config, stationLabel } from '../../core/config.js';
+
+const seriesName = (id) => (id < 0 ? "All stations" : stationLabel(id));
+import { focus } from '../../data.js';
+import { createPicker } from '@aiscatcher/ui/picker.js';
+import { focusOptions, mountFocusPicker } from '../../features/station/station.js';
 import { register } from '../../actions.js';
 
 Chart.register(
@@ -410,76 +415,73 @@ const plot_gain = {
 };
 
 let mode = "overview";
-let sourceA = null;
-let sourceB = null;
+let sourceB = null; // what the station in focus is compared with; -1 for all stations
+let pickerA = null, pickerB = null;
 let updateToken = 0;
 
-function receivers() {
-    return config.receivers || [];
+function stationsListed() {
+    return config.stations || [];
 }
 
-function receiverLabel(idx) {
-    const r = receivers().find((x) => x.idx === idx);
-    return r ? r.label : `Receiver ${idx}`;
-}
-
-export function setMode(next) {
+function setMode(next) {
     if (next !== "compare") next = "overview";
     if (next === mode) return;
     mode = next;
-    if (mode === "compare") {
-        if (sourceA === null) sourceA = receiver;
-        if (sourceB === null) {
-            const other = receivers().find((r) => r.idx !== sourceA);
-            sourceB = other ? other.idx : sourceA;
-        }
+    if (mode === "compare" && sourceB === null) {
+        const other = stationsListed().find((s) => s.id !== focus);
+        sourceB = focus < 0 || !other ? -1 : other.id;
     }
     update();
 }
 
+// the other station is never the one in focus, and one the server no longer lists goes
+function settleSourceB() {
+    if (sourceB === null) return;
+    if (sourceB >= 0 && !stationsListed().some((s) => s.id === sourceB)) sourceB = -1;
+    if (sourceB === focus) {
+        const other = stationsListed().find((s) => s.id !== focus);
+        sourceB = focus < 0 ? (other ? other.id : -1) : -1;
+    }
+    if (pickerB) pickerB.set(sourceB);
+}
+
 function applyMode() {
-    const multi = receivers().length > 1;
+    const multi = stationsListed().length > 1;
     if (!multi) mode = "overview";
 
     const tabs = document.getElementById("plots_modes");
     if (tabs) {
         tabs.style.display = multi ? "flex" : "none";
-        for (const tab of tabs.children)
+        for (const tab of tabs.querySelectorAll(".sheet-tab"))
             tab.classList.toggle("active", tab.dataset.mode === mode);
     }
 
     const bar = document.getElementById("chart_sources");
-    if (bar) bar.style.display = mode === "compare" ? "flex" : "none";
+    if (bar) bar.style.display = multi && mode === "compare" ? "flex" : "none";
 
     const plots = document.getElementById("plots");
     if (plots) plots.classList.toggle("compare-mode", mode === "compare");
 
-    if (mode === "compare") buildSourceSelectors();
+    if (multi) buildSourceSelectors();
 }
 
 function buildSourceSelectors() {
-    const selA = document.getElementById("chart_source_a");
-    const selB = document.getElementById("chart_source_b");
-    if (!selA || !selB) return;
-
-    const list = receivers();
-    if (selA.options.length !== list.length) {
-        selA.innerHTML = "";
-        selB.innerHTML = "";
-        for (const r of list) {
-            selA.appendChild(new Option(r.label, r.idx));
-            selB.appendChild(new Option(r.label, r.idx));
-        }
-        selA.onchange = () => { sourceA = parseInt(selA.value, 10) || 0; update(); };
-        selB.onchange = () => { sourceB = parseInt(selB.value, 10) || 0; update(); };
+    const hostA = document.getElementById("plots_scope");
+    const hostB = document.getElementById("chart_source_b");
+    if (!hostA || !hostB) return;
+    if (!pickerA) pickerA = mountFocusPicker(hostA, { scope: true });
+    if (!pickerB) {
+        pickerB = createPicker({ label: "Stations", value: sourceB === null ? -1 : sourceB, options: focusOptions,
+            empty: "No station by that name", onPick: (id) => { sourceB = id; update(); } });
+        pickerB.el.classList.add("pick--scope");
+        hostB.append(pickerB.el);
     }
-    selA.value = String(sourceA);
-    selB.value = String(sourceB);
+    if (sourceB !== null) pickerB.set(sourceB);
 }
 
 async function fetchHistory(idx) {
     try {
-        const response = await fetch("api/history_full.json?receiver=" + idx);
+        const response = await fetch("api/history_full.json?stations=" + idx);
         if (!response.ok) return null;
         return await response.json();
     } catch (error) {
@@ -495,7 +497,7 @@ function setTimeAxis(c, source) {
     c.$timeAxis = { now: source.now, interval: source.interval };
 }
 
-let absoluteTime = true;
+let absoluteTime = !!settings.plot_absolute_time;
 
 export function setAbsoluteTime(on) {
     on = !!on;
@@ -580,9 +582,9 @@ function timeShift(a, b, f) {
 function updateChartCompare(a, b, f, key, c, srcA, srcB) {
     if (!c) return;
     const shift = timeShift(a, b, f);
-    c.data.datasets[0].label = receiverLabel(srcA);
+    c.data.datasets[0].label = seriesName(srcA);
     c.data.datasets[0].data = series(a, f, key);
-    c.data.datasets[1].label = receiverLabel(srcB);
+    c.data.datasets[1].label = seriesName(srcB);
     c.data.datasets[1].data = series(b, f, key).map((p) => ({ x: p.x + shift, y: p.y }));
     setTimeAxis(c, a && a[f]);
     c.update();
@@ -600,7 +602,7 @@ function updateChartGain(a, b, f, c, srcA, srcB) {
     const totalB = shared.reduce((s, p) => s + other.get(p.x), 0);
     const average = totalA > 0 ? (100 * (totalB - totalA)) / totalA : 0;
 
-    c.data.datasets[0].label = receiverLabel(srcB) + " vs " + receiverLabel(srcA);
+    c.data.datasets[0].label = seriesName(srcB) + " vs " + seriesName(srcA);
     c.data.datasets[0].data = shared.map((p) => ({ x: p.x, y: (100 * (other.get(p.x) - p.y)) / p.y }));
 
     // with nothing to compare against, an average of 0 would read as parity
@@ -764,7 +766,8 @@ export async function update() {
     });
 
     if (mode === "compare") {
-        const a = sourceA, cmpIdx = sourceB;
+        settleSourceB();
+        const a = focus, cmpIdx = sourceB === null ? -1 : sourceB;
         const [ha, hb] = await Promise.all([fetchHistory(a), fetchHistory(cmpIdx)]);
         if (!ha || !hb || token !== updateToken) return;
 
@@ -777,8 +780,10 @@ export async function update() {
         return;
     }
 
-    const b = await fetchHistory(receiver);
+    const b = await fetchHistory(focus);
     if (!b || token !== updateToken) return;
+
+    document.getElementById("plots").classList.toggle("range-hidden", !!b.range_hidden);
 
     updateChartMulti(b, "second", charts.chart_seconds);
     updateChartMulti(b, "minute", charts.chart_minutes);
@@ -792,6 +797,8 @@ export async function update() {
     updateChartSingle(b, "minute", "vessels", charts.chart_minute_vessel);
     updateChartSingle(b, "hour", "vessels", charts.chart_hour_vessel);
     updateChartSingle(b, "day", "vessels", charts.chart_day_vessel);
+
+    if (b.range_hidden) return;
 
     updateChartDistance(b, "hour", charts.chart_distance_hour);
     updateChartDistance(b, "day", charts.chart_distance_day);

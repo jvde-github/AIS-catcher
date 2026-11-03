@@ -4,21 +4,16 @@
 import { getDistanceVal, getDistanceUnit } from '../../core/units.js';
 import { getDeltaTimeVal, sanitizeString, formatBytes, isHttpUrl } from '@aiscatcher/core/text.js';
 import { decodeHTMLEntities } from '@aiscatcher/ui/components.js';
-import { receiver, onRefresh, refreshIntervalMs } from '../../data.js';
+import { focus, refreshIntervalMs } from '../../data.js';
 import { showDialogPlain, objectToTableHtml } from '../../dialog.js';
 import * as community from '../../overlays/community.js';
-
-// { onStation(name): the station's name as the statistics give it }
-let deps = { onStation: () => {} };
-
-export function init(d) {
-    deps = d;
-}
+import { hasStationChoice, mountFocusPicker } from '../../features/station/station.js';
+import { setPageTitle } from '../../panels.js';
 
 // fetches main statistics from the server
 async function fetchStatistics() {
     try {
-        const response = await fetch("api/stat.json?receiver=" + receiver);
+        const response = await fetch("api/stat.json?stations=" + focus);
         if (!response.ok) return;
         return await response.json();
     } catch (error) {
@@ -49,7 +44,7 @@ function updateStat(stat, tf) {
     [0, 1, 2, 3].forEach((e) => (document.getElementById("stat_" + tf + "_channel" + e).innerText = stat[tf].channel[e].toLocaleString()));
 
     document.getElementById("stat_" + tf + "_count").innerText = stat[tf].count.toLocaleString();
-    document.getElementById("stat_" + tf + "_dist").innerText = getDistanceVal(stat[tf].dist) + " " + getDistanceUnit();
+    if (!stat.range_hidden) document.getElementById("stat_" + tf + "_dist").innerText = getDistanceVal(stat[tf].dist) + " " + getDistanceUnit();
     document.getElementById("stat_" + tf + "_vessel_count").innerText = stat[tf].vessels.toLocaleString();
     document.getElementById("stat_" + tf + "_msg123").innerText = (stat[tf].msg[0] + stat[tf].msg[1] + stat[tf].msg[2]).toLocaleString();
     document.getElementById("stat_" + tf + "_msg5").innerText = stat[tf].msg[4].toLocaleString();
@@ -103,10 +98,24 @@ function renderDevices(stat) {
     }
 }
 
-async function updateStatistics() {
+// the station the figures are of, at the end of the tab's row as on the plots
+let scopePicker = null;
+
+function syncScope() {
+    const strip = document.getElementById("stat_modes");
+    if (!strip) return;
+    const several = hasStationChoice();
+    strip.style.display = several ? "flex" : "none";
+    if (several && !scopePicker) scopePicker = mountFocusPicker(document.getElementById("stat_scope"), { scope: true });
+}
+
+export async function updateStatistics() {
+    syncScope();
     const stat = await fetchStatistics();
 
     if (stat) {
+        document.getElementById("stat").classList.toggle("range-hidden", !!stat.range_hidden);
+
         // in bulk....
         const statText = (v) => (Array.isArray(v) ? v.join(", ") : v != null ? v : "");
         ["os", "tcp_clients", "hardware", "build_describe", "build_date", "station"].forEach(
@@ -131,7 +140,7 @@ async function updateStatistics() {
 
         document.getElementById("stat_update_time").textContent = Number(refreshIntervalMs / 1000).toFixed(1) + " s";
         let title = document.getElementById("stat_station").textContent;
-        if (title != "" && title != null) deps.onStation(title);
+        if (title != "" && title != null) setPageTitle({ station: title });
         document.getElementById("stat_memory").innerText = stat.memory ? Number(stat.memory / 1000000).toFixed(1) + " MB" : "N/A";
         if (stat.track_time != null) {
             const t = stat.track_time;
@@ -195,4 +204,3 @@ async function updateStatistics() {
     }
 }
 
-onRefresh("stat", updateStatistics);

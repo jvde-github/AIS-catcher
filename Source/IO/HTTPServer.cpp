@@ -18,6 +18,7 @@
 #include <cstring>
 
 #include "HTTPServer.h"
+#include "Convert.h"
 #include "Logger.h"
 
 namespace IO
@@ -35,111 +36,55 @@ namespace IO
 		return buf;
 	}
 
-	const int HTTPServer::SSE_PING_INTERVAL;
-
 	// HTTP Server
 	void HTTPServer::processClients()
 	{
-		static const std::string EOF_MSG = "\r\n\r\n";
-
 		const std::time_t now_t = std::time(nullptr);
 
 		for (auto &c : client)
 		{
-			if (c.isConnected() && !c.close_after_send)
+			if (!c.isConnected())
+				continue;
+			// a stream reads nothing after the request that opened it, nor does a response that closes
+			if (c.close_after_send || c.no_timeout)
 			{
-				// timer runs while a request is arriving but not yet complete
-				if (c.msg.empty())
-					c.request_start = 0;
-				else if (c.request_start == 0)
-					c.request_start = now_t;
-
-				while (true)
-				{
-					// RFC 9112 2.2: empty lines before the request line are ignored,
-					// not mistaken for the request itself
-					std::size_t skip = 0;
-					while (c.msg.compare(skip, 2, "\r\n") == 0)
-						skip += 2;
-					if (skip)
-						c.msg.erase(0, skip);
-
-					std::size_t pos = c.msg.find(EOF_MSG);
-					if (pos == std::string::npos)
-						break;
-
-					HTTPRequest request;
-					std::string error;
-					int status = parseHeaders(c.msg, pos, request, error);
-					if (status)
-					{
-						reject(c, status, error);
-						break;
-					}
-
-					// Wait for the body if it has not fully arrived yet
-					std::size_t required_length = pos + 4;
-					if (required_length > MAX_REQUEST_SIZE || request.content_length > MAX_REQUEST_SIZE - required_length)
-					{
-						reject(c, 413, "total request size too large");
-						break;
-					}
-					required_length += request.content_length;
-					if (c.msg.size() < required_length)
-					{
-						// RFC 9110 10.1.1: the body only arrives once we say so
-						if (request.expect_continue && !c.continue_sent)
-						{
-							static const char cont[] = "HTTP/1.1 100 Continue\r\n\r\n";
-							c.continue_sent = true;
-							Send(c, cont, sizeof(cont) - 1);
-						}
-						break;
-					}
-
-					if (request.method == "POST" && request.content_length > 0)
-						request.body = c.msg.substr(pos + 4, request.content_length);
-
-					c.close_after_send = !request.keep_alive;
-
-					// HEAD is GET without the body; ResponseRaw suppresses it
-					c.head_request = request.method == "HEAD";
-					if (c.head_request)
-						request.method = "GET";
-
-					if (request.method == "GET" || request.method == "POST")
-					{
-						if (!dispatchMount(c, request, request.accept_gzip))
-							Request(c, request, request.accept_gzip);
-					}
-					else
-					{
-						setExtraHeader("Allow: GET, HEAD, POST");
-						Response(c, "text/plain", std::string("Method not allowed."), false, false, false, 405);
-					}
-					c.head_request = false;
-
-					c.msg.erase(0, required_length);
-					c.continue_sent = false;
-					c.request_start = c.msg.empty() ? 0 : now_t;
-					// closing after this response; ignore any pipelined requests
-					if (c.close_after_send)
-						break;
-				}
-
-				// Limit accumulated message size to prevent memory exhaustion
-				if (c.msg.size() > MAX_REQUEST_SIZE)
-					reject(c, 431, "accumulated message too large");
-				// drop never-completing requests so slow senders can't exhaust slots (slowloris)
-				else if (!c.close_after_send && !c.msg.empty() && c.request_start != 0 &&
-						 (now_t - c.request_start) > REQUEST_TIMEOUT)
-					reject(c, 408, "request header timeout");
+				c.msg.clear();
+				continue;
 			}
+
+			// timer runs while a request is arriving but not yet complete
+			if (c.msg.empty() || c.hasSendBuffer())
+				c.request_start = 0;
+			else if (c.request_start == 0)
+				c.request_start = now_t;
+
+			// the next request waits until the last response has gone out: a
+			// client that does not read gets no more queued for it
+			while (!c.hasSendBuffer())
+			{
+				HTTPRequest request;
+				std::size_t length;
+				if (!nextRequest(c, request, length))
+					break;
+				answer(c, request);
+				c.msg.erase(0, length);
+				c.continue_sent = false;
+				c.request_start = c.msg.empty() ? 0 : now_t;
+				// closing after this response, or now a stream; ignore any pipelined requests
+				if (c.close_after_send || c.no_timeout)
+					break;
+			}
+
+			if (c.msg.size() > Limits::REQUEST_SIZE)
+				reject(c, 431, "accumulated message too large");
+			// drop never-completing requests so slow senders can't exhaust slots (slowloris)
+			else if (!c.close_after_send && !c.msg.empty() && c.request_start != 0 && now_t - c.request_start > Limits::REQUEST_TIMEOUT)
+				reject(c, 408, "request header timeout");
 		}
 
 		// reclaims dead SSE slots even when no events flow
 		auto now = std::chrono::steady_clock::now();
-		if (now - last_sse_ping >= std::chrono::seconds(SSE_PING_INTERVAL))
+		if (now - last_sse_ping >= std::chrono::seconds(Limits::STREAM_PING_S))
 		{
 			last_sse_ping = now;
 			for (auto &s : sse)
@@ -148,20 +93,146 @@ namespace IO
 		}
 	}
 
+	bool HTTPServer::nextRequest(IO::TCPServerConnection &c, HTTPRequest &request, std::size_t &length)
+	{
+		static const std::string EOF_MSG = "\r\n\r\n";
+
+		// RFC 9112 2.2: empty lines before the request line are ignored,
+		// not mistaken for the request itself
+		std::size_t skip = 0;
+		while (c.msg.compare(skip, 2, "\r\n") == 0)
+			skip += 2;
+		if (skip)
+			c.msg.erase(0, skip);
+
+		const std::size_t pos = c.msg.find(EOF_MSG);
+		if (pos == std::string::npos ? c.msg.size() > Limits::HEADER_SIZE : pos > Limits::HEADER_SIZE)
+		{
+			reject(c, 431, "header section too large");
+			return false;
+		}
+		if (pos == std::string::npos)
+			return false;
+
+		std::string error;
+		const int status = parseHeaders(c.msg, pos, request, error);
+		if (status)
+		{
+			reject(c, status, error);
+			return false;
+		}
+		// a server of this machine alone answers only what names it as such: a
+		// page whose own name was pointed here (DNS rebinding) is turned away
+		if (localOnly() && !addressedHere(request.host))
+		{
+			reject(c, 403, "a request for another host on a server of this machine");
+			return false;
+		}
+
+		length = pos + 4;
+		if (length > Limits::REQUEST_SIZE || request.content_length > Limits::REQUEST_SIZE - length)
+		{
+			reject(c, 413, "total request size too large");
+			return false;
+		}
+		length += request.content_length;
+		if (c.msg.size() < length)
+		{
+			// RFC 9110 10.1.1: the body only arrives once we say so
+			if (request.expect_continue && !c.continue_sent)
+			{
+				static const char cont[] = "HTTP/1.1 100 Continue\r\n\r\n";
+				c.continue_sent = true;
+				Send(c, cont, sizeof(cont) - 1);
+			}
+			return false;
+		}
+
+		if (request.method == "POST" && request.content_length > 0)
+			request.body = c.msg.substr(pos + 4, request.content_length);
+		request.peer = Net::ipv4String(c.peer_ipv4);
+		request.local = c.peer_local;
+		return true;
+	}
+
+	void HTTPServer::answer(IO::TCPServerConnection &c, HTTPRequest &request)
+	{
+		c.close_after_send = !request.keep_alive;
+		// HEAD is GET without the body; ResponseRaw suppresses it
+		c.head_request = request.method == "HEAD";
+		if (c.head_request)
+			request.method = "GET";
+
+		if (request.method == "OPTIONS")
+			Options(c, request);
+		else if (request.method == "GET" || request.method == "POST")
+		{
+			request.owner = isOwner(request);
+			if (!dispatchMount(c, request, request.accept_gzip))
+				Request(c, request, request.accept_gzip);
+		}
+		else
+			Response(c, "text/plain", std::string("Method not allowed."), Reply(405).with("Allow: GET, HEAD, POST, OPTIONS"));
+		c.head_request = false;
+	}
+
 	void HTTPServer::NotFound(IO::TCPServerConnection &c)
 	{
 		c.close_after_send = true;
-		Response(c, "text/html", std::string("Page not found."), false, false, false, 404);
+		Response(c, "text/html", std::string("Page not found."), Reply(404));
 	}
 
 	// Send an error response and drop the connection once it is flushed;
 	// whatever is left in the input buffer cannot be trusted after a
 	// malformed request.
+	bool HTTPServer::localOnly() const
+	{
+		return IP_BIND == "localhost" || IP_BIND == "::1" || IP_BIND.compare(0, 4, "127.") == 0;
+	}
+
+	// localhost or an address: a name no one else can point at this machine
+	bool HTTPServer::addressedHere(const std::string &host)
+	{
+		if (host.empty() || host[0] == '[')
+			return true;
+		std::string name = host.substr(0, host.rfind(':'));
+		Util::Convert::toLower(name);
+		if (name == "localhost")
+			return true;
+		int dots = 0;
+		for (char ch : name)
+			if (ch == '.')
+				dots++;
+			else if (ch < '0' || ch > '9')
+				return false;
+		return dots == 3;
+	}
+
+	// Someone on this machine itself: its own address, no proxy passing someone else on,
+	// a name no one else can point here (DNS rebinding), and not a page of another origin
+	// reaching in, which the viewer's open CORS would let read the answer.
+	bool HTTPServer::isOwner(const HTTPRequest &r)
+	{
+		if (!r.local || r.forwarded || r.host.empty() || !addressedHere(r.host))
+			return false;
+		if (r.origin.empty())
+			return true;
+		const std::size_t scheme = r.origin.find("://");
+		return scheme != std::string::npos && Util::Convert::toLowerCopy(r.origin.substr(scheme + 3)) == Util::Convert::toLowerCopy(r.host);
+	}
+
 	void HTTPServer::reject(IO::TCPServerConnection &c, int status, const std::string &reason)
 	{
-		Error() << "Server: closing connection, " << reason;
+		// the reason may quote the request: short, and no control characters for the log or a terminal
+		std::string safe = reason.substr(0, MAX_REASON_SIZE);
+		for (char &ch : safe)
+			if ((unsigned char)ch < 0x20 || (unsigned char)ch >= 0x7f)
+				ch = '?';
+		std::string tail;
+		if (rejects.due(std::time(nullptr), tail))
+			Warning() << "Server: closing connection, " << safe << tail;
 		c.close_after_send = true;
-		Response(c, "text/plain", reason, false, false, false, status);
+		Response(c, "text/plain", safe, Reply(status));
 		c.msg.clear();
 	}
 
@@ -174,30 +245,36 @@ namespace IO
 	{
 		const std::string path = r.path();
 
-		for (const auto &m : mounts)
+		// the mount is looked up under the lock and answered outside it: a mounted
+		// server is never removed, only replaced
+		std::string prefix;
+		HTTPServer *target = nullptr;
 		{
-			const std::string &prefix = m.first;
-			if (path.rfind(prefix, 0) != 0)
-				continue;
+			std::lock_guard<std::mutex> lock(mounts_mtx);
+			for (const auto &m : mounts)
+				if (path.rfind(m.first, 0) == 0 && (path.size() == m.first.size() || path[m.first.size()] == '/'))
+				{
+					prefix = m.first;
+					target = m.second;
+					break;
+				}
+		}
+		if (!target)
+			return false;
 
-			// What a mount serves is relative, so the browser must believe it is
-			// inside a directory.
-			if (path.size() == prefix.size())
-			{
-				setExtraHeader("Location: " + prefix + "/");
-				Response(c, "text/plain", std::string(), false, false, false, 301);
-				return true;
-			}
-
-			if (path[prefix.size()] != '/')
-				continue;
-
-			HTTPRequest sub = r;
-			sub.target = r.target.substr(prefix.size());
-			m.second->Request(c, sub, accept_gzip);
+		// What a mount serves is relative, so the browser must believe it is
+		// inside a directory.
+		if (path.size() == prefix.size())
+		{
+			Response(c, "text/plain", std::string(), Reply(301).with("Location: " + prefix + "/"));
 			return true;
 		}
-		return false;
+
+		HTTPRequest sub = r;
+		sub.target = r.target.substr(prefix.size());
+		sub.owner = r.owner || ownerOfMount(r);
+		target->Request(c, sub, accept_gzip);
+		return true;
 	}
 
 	int HTTPServer::parseHeaders(const std::string &msg, std::size_t header_end, HTTPRequest &r, std::string &error)
@@ -311,9 +388,19 @@ namespace IO
 			{
 				r.origin = value;
 			}
-			else if (key == "X-FORWARDED-HOST")
+			else if (key == "FORWARDED" || key == "X-REAL-IP" || key.compare(0, 12, "X-FORWARDED-") == 0)
 			{
-				r.forwarded_host = value;
+				r.forwarded = true;
+				if (key == "X-FORWARDED-HOST")
+					r.forwarded_host = value;
+			}
+			else if (key == "X-SETUP-CODE")
+			{
+				r.setup_code = value;
+			}
+			else if (key == "AUTHORIZATION")
+			{
+				r.authorization = value;
 			}
 			else if (key == "CONNECTION")
 			{
@@ -355,7 +442,7 @@ namespace IO
 					error = "invalid Content-Length: " + value;
 					return 400;
 				}
-				if (r.content_length > MAX_REQUEST_SIZE)
+				if (r.content_length > Limits::REQUEST_SIZE)
 				{
 					error = "Content-Length too large: " + value;
 					return 413;
@@ -391,6 +478,8 @@ namespace IO
 	{
 		switch (status)
 		{
+		case 204:
+			return "No Content";
 		case 400:
 			return "Bad Request";
 		case 401:
@@ -413,33 +502,42 @@ namespace IO
 			return "Internal Server Error";
 		case 501:
 			return "Not Implemented";
+		case 503:
+			return "Service Unavailable";
 		default:
 			return "OK";
 		}
 	}
 
-	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, bool gzip, bool cache, bool cors, int status)
+	void HTTPServer::Options(IO::TCPServerConnection &c, const HTTPRequest &)
 	{
-		Response(c, type, content.c_str(), (int)content.size(), gzip, cache, cors, status);
+		Response(c, "text/plain", std::string(), Reply(204).with("Allow: GET, HEAD, POST, OPTIONS"));
 	}
 
-	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache, bool cors, int status)
+	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const std::string &content, const Reply &reply)
 	{
+		Response(c, type, content.c_str(), (int)content.size(), reply);
+	}
+
+	void HTTPServer::Response(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, const Reply &reply)
+	{
+		Reply raw = reply;
 #ifdef HASZLIB
-		if (gzip && len >= (int)GZIP_MIN_LENGTH && zip.zip(data, len))
+		if (reply.gzip && len >= (int)GZIP_MIN_LENGTH && zip.zip(data, len))
 		{
-			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), true, cache, cors, status);
+			ResponseRaw(c, type, (const char *)zip.getOutputPtr(), zip.getOutputLength(), raw);
 			return;
 		}
 #endif
-
-		ResponseRaw(c, type, data, len, false, cache, cors, status);
+		raw.gzip = false;
+		ResponseRaw(c, type, data, len, raw);
 	}
 
 	// Headers identical for every response, rebuilt only when the frame_*
 	// settings change.
-	const std::string &HTTPServer::commonHeaders()
+	std::string HTTPServer::commonHeaders()
 	{
+		std::lock_guard<std::mutex> lock(headers_mtx);
 		if (common_headers.empty())
 		{
 			common_headers = "\r\nServer: AIS-catcher";
@@ -450,6 +548,7 @@ namespace IO
 				"connect-src 'self' http: https: ws: wss:; "
 				"font-src 'self' data:; "
 				"frame-src " + frame_src + "; "
+				"form-action 'self'; "
 				"frame-ancestors " + frame_ancestors + "; "
 				"base-uri 'self'";
 			common_headers += "\r\nX-Content-Type-Options: nosniff";
@@ -459,31 +558,26 @@ namespace IO
 		return common_headers;
 	}
 
-	void HTTPServer::ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, bool gzip, bool cache, bool cors, int status)
+	void HTTPServer::ResponseRaw(IO::TCPServerConnection &c, const std::string &type, const char *data, int len, const Reply &reply)
 	{
-		std::string header = "HTTP/1.1 " + std::to_string(status) + " " + statusText(status) +
+		std::string header = "HTTP/1.1 " + std::to_string(reply.status) + " " + statusText(reply.status) +
 							 "\r\nContent-Type: " + type + commonHeaders();
 		header += "\r\nDate: " + httpDate(time(nullptr));
 
-		std::string extra_header_sent;
-		if (!extra_header.empty())
-		{
-			header += "\r\n" + extra_header;
-			extra_header_sent.swap(extra_header);
-		}
+		if (!reply.header.empty())
+			header += "\r\n" + reply.header;
 
-		if (cors)
+		if (reply.cors)
 			header += "\r\nAccess-Control-Allow-Origin: *";
 
-		if (gzip)
+		if (reply.gzip)
 			header += "\r\nContent-Encoding: gzip";
 
-		// an extra header that sets Cache-Control speaks for the response
-		bool cache_set = extra_header_sent.find("Cache-Control:") != std::string::npos;
-		if (cache_set)
+		// a header line that sets Cache-Control speaks for the response
+		if (reply.header.find("Cache-Control:") != std::string::npos)
 		{
 		}
-		else if (cache)
+		else if (reply.cache)
 		{
 			header += "\r\nCache-Control: max-age=31536000, stale-while-revalidate=604800, stale-if-error=604800";
 			header += "\r\nExpires: " + httpDate(time(nullptr) + 31536000);

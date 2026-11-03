@@ -9,28 +9,22 @@ import {
 } from '../../core/store.js';
 import { getShipName } from '../../core/names.js';
 import { getSpeedVal, getSpeedUnit } from '../../core/units.js';
-import { getDeltaTimeVal, getCountryName, getShipTypeShort, sanitizeString, getICAO } from '@aiscatcher/core/text.js';
-import { debounce, flagHTML } from '@aiscatcher/ui/components.js';
-import { validityBand } from '@aiscatcher/ui/binary.js';
+import { getDeltaTimeVal, getCountryName, sanitizeString, getICAO } from '@aiscatcher/core/text.js';
+import { debounce, flagHTML, isSecondaryClick } from '@aiscatcher/ui/components.js';
+import { vesselBand } from '@aiscatcher/ui/vessel-tooltip.js';
+import { severalStations, stationLabel } from '../../core/config.js';
 import { toLonLat } from 'ol/proj';
 import { getWidth } from 'ol/extent';
 import { map, markers, syncCircleFeature, shapeLayer, trackLayer } from '../../map.js';
 import { shapeFeatures } from '../../fleet.js';
+import { ui } from '../../ui.js';
 import { closeSettings } from '../settings/settings.js';
-import { closeDialog } from '../../dialog.js';
 import { showTargetcard, closeTargetcard } from '../targetcard/card.js';
 import { showContextMenu } from '../contextmenu/contextmenu.js';
 import { showHoverTrack, hoverEnded } from '../../tracks.js';
 import * as mapObjects from '../mapobjects/mapobjects.js';
 import * as measure from '../measure/measure.js';
 import * as range from '../range/range.js';
-
-// { ui: the entry's map UI (chrome) }
-let deps = null;
-
-export function init(d) {
-    deps = d;
-}
 
 const hover_info = document.getElementById('hover-info');
 export let hover_feature = undefined;
@@ -39,6 +33,8 @@ let hoverCircleFeature = undefined;
 
 let clickTimeout = undefined;
 export const handleClick = function (pixel, target, event) {
+    // the click a Mac sends after a control-click belongs to the context menu
+    if (isSecondaryClick(event.originalEvent)) return;
     const feature = target.closest('.ol-control') ? undefined : map.forEachFeatureAtPixel(pixel,
         function (feature) { if ('ship' in feature || 'plane' in feature || 'link' in feature || 'binary' in feature || 'replayMmsi' in feature) { return feature; } }, { hitTolerance: 10 });
 
@@ -56,30 +52,22 @@ export const handleClick = function (pixel, target, event) {
     }
 
     if (feature && 'link' in feature && !included) {
-        window.open(feature.link, '_blank');
+        window.open(feature.link, '_blank', 'noopener');
     } else if (feature && feature.station_mmsi && feature.station_mmsi in shipsDB) {
-        closeDialog();
-        closeSettings();
         showTargetcard('ship', feature.station_mmsi, pixel);
         return;
     } else if (feature && feature.binary === true && !feature.is_associated) {
-        closeDialog();
         closeSettings();
         mapObjects.click(feature);
         return;
     } else if (feature && 'replayMmsi' in feature) {
-        closeDialog();
         closeSettings();
-            showContextMenu(event.originalEvent, feature.replayMmsi, 'ship', ["ctx-replay-ship"]);
+        showContextMenu(event.originalEvent, feature.replayMmsi, 'ship', ["ctx-replay-ship"]);
         return;
     } else if (feature && 'ship' in feature) {
-        closeDialog();
-        closeSettings();
         showTargetcard('ship', feature.ship.mmsi, pixel);
     }
     else if (feature && 'plane' in feature) {
-        closeDialog();
-        closeSettings();
         showTargetcard('plane', feature.plane.hexident, pixel);
     }
     else {
@@ -90,24 +78,14 @@ export const handleClick = function (pixel, target, event) {
     }
 };
 
-export function getTooltipContent(ship) {
-    const sub = (ship.shiptype ? getShipTypeShort(ship.shiptype) + ' - ' : '') +
-        'received ' + getDeltaTimeVal(clock - ship.last_signal) + ' ago';
-
-    // the vessel is one band wearing its validity, each message card below it
-    // another wearing its kind, their bars in one line
-    let content = '<div class="tip-band" style="--band: ' + validityBand(ship.validated) + '"><div class="tooltip-card">' +
-        flagHTML(ship.country, 'flag-tooltip', getCountryName(ship.country)) +
-        '<div>' +
-        (getShipName(ship) || ship.mmsi) +
-        '<span class="tooltip-dim"> at </span>' + getSpeedVal(ship.speed) + ' ' + getSpeedUnit() +
-        '<div class="tooltip-sub">' + sub + '</div>' +
-        '</div>' +
-        '</div></div>';
-
-    content += mapObjects.shipTooltip(ship);
-
-    return content;
+// the vessel's band, then a band for each kind of message it sent
+function getTooltipContent(ship) {
+    return vesselBand(ship, {
+        name: getShipName(ship) || ship.mmsi,
+        speed: ship.speed != null ? getSpeedVal(ship.speed) + ' ' + getSpeedUnit() : null,
+        age: clock - ship.last_signal,
+        label: severalStations() ? stationLabel : null,
+    }) + mapObjects.shipTooltip(ship);
 }
 
 function getTooltipContentPlane(plane) {
@@ -124,7 +102,7 @@ function getTooltipContentPlane(plane) {
 }
 
 function mapFreeBox() {
-    return deps.ui.chrome.freeBox(map.getTargetElement());
+    return ui.chrome.freeBox(map.getTargetElement());
 }
 
 const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
@@ -134,7 +112,7 @@ const showTooltipShip = (tooltip, mmsi, pixel, distance, angle = 0) => {
 
     if (pixel) {
         const { offsetWidth: tw, offsetHeight: th } = tooltip;
-        const at = deps.ui.chrome.alongCourse(mapFreeBox(), tw, th, pixel, distance, angle);
+        const at = ui.chrome.alongCourse(mapFreeBox(), tw, th, pixel, distance, angle);
 
         Object.assign(tooltip.style, {
             left: `${at.left}px`,

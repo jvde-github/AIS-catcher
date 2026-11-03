@@ -1,0 +1,7 @@
+/* bundled into one file by the build; of the ui package only the first sheets: the panel draws no ship sprites */
+@import "../../packages/ui/css/tokens.css";
+@import "../../packages/ui/css/icons.css";
+@import "../../packages/ui/css/components.css";
+@import "./page.css";
+@import "./locations.css";
+@import "./settings.css";

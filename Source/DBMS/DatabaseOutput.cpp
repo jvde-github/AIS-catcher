@@ -654,7 +654,6 @@ namespace IO
 
 		if (filter.include(msg, tag) != AIS::Filter::Result::Included)
 			return;
-
 		stats.messages++;
 
 		// nothing below the statistics is enabled: no entry to build or queue
@@ -672,7 +671,7 @@ namespace IO
 		// work below, nor the decoder on a flush in progress
 		QueuedEntry entry;
 		entry.mmsi = std::to_string(msg.mmsi());
-		entry.station_id = std::to_string(station_id ? station_id : msg.getStation());
+		entry.station_id = std::to_string(station_id ? station_id : msg.getStationOrDefault());
 		entry.msg_type = std::to_string(msg.type());
 		entry.msg_type_int = msg.type();
 		entry.timestamp = Util::Convert::toTimestampStr(msg.getRxTimeUnix());
@@ -755,7 +754,7 @@ namespace IO
 		}
 	}
 
-	Setting &DatabaseOutput::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &DatabaseOutput::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		if (const char *use = replacedBy(key))
 			throw std::runtime_error("DBMS: this setting was removed with the new schema, use \"" +
@@ -800,7 +799,7 @@ namespace IO
 			STATS = Util::Parse::Switch(arg);
 			break;
 		default:
-			return OutputMessage::SetKey(key, arg);
+			return OutputMessage::applyKey(key, arg);
 		}
 		return *this;
 	}

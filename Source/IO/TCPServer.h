@@ -17,6 +17,9 @@
 
 #pragma once
 
+#include <cstdint>
+#include <chrono>
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <thread>
@@ -35,16 +38,40 @@
 
 #include "Common.h"
 #include "OutputStats.h"
+#include "ServerLimits.h"
+
+struct ssl_st;
+struct ssl_ctx_st;
 
 namespace IO
 {
 
 	class TCPServer;
 
+	// a log line a minute: due() says whether to write one now, and `tail` what to add
+	// about the lines muted since the last
+	struct LogMinute
+	{
+		std::time_t last = 0;
+		int muted = 0;
+		bool due(std::time_t now, std::string &tail)
+		{
+			if (now - last < 60)
+			{
+				muted++;
+				return false;
+			}
+			tail = muted ? ", and " + std::to_string(muted) + " more in the last minute" : std::string();
+			muted = 0;
+			last = now;
+			return true;
+		}
+	};
+
 	class TCPServerConnection
 	{
 	private:
-		const static int MAX_BUFFER_SIZE = 1024 * 1024 * 8;
+		int send_limit = Limits::BUFFER;
 		// Reclaim the already-sent prefix only once it grows past this, so the
 		// memmove is amortized across many sends instead of paid on every drain.
 		const static size_t OUT_COMPACT_THRESHOLD = 64 * 1024;
@@ -79,11 +106,24 @@ namespace IO
 		}
 		// append to the out buffer, compacting first and enforcing the size cap
 		bool queue(const char *data, int length);
+		// what of data went out, 0 when the socket takes no more now, -1 when the connection is gone
+		int write(const char *data, int length);
+		void take(const char *buffer, int nread);
+
+		// null on a plain connection
+		ssl_st *ssl = nullptr;
+		// the last handshake or read waits for the socket to take data; the last write waits for a read
+		bool ssl_want_write = false, ssl_write_wants_read = false;
+		void readTLS(char *buffer, int size);
+		void waitOrDropTLS(int result);
 
 	public:
 		~TCPServerConnection() { Close(); }
 
 		SOCKET sock = -1;
+		uint32_t peer_ipv4 = 0;
+		// from this machine itself
+		bool peer_local = false;
 
 		std::string msg;
 		std::vector<char> out;
@@ -108,10 +148,15 @@ namespace IO
 
 		void Close();
 		void Start(SOCKET s);
+		void startTLS(ssl_ctx_st *ctx);
+		bool handshaking() const;
+		short pollEvents() const;
+		bool readWantsWrite() const { return ssl_want_write; }
 		int Inactive(std::time_t now) const;
 		bool isConnected() const { return sock != -1; }
 		uint32_t getGeneration() const { return generation; }
 		void setNoTimeout() { no_timeout = true; }
+		void setSendLimit(int n) { send_limit = n; }
 		bool hasSendBuffer() const { return out_pos < out.size(); }
 		void SendBuffer();
 		bool Send(const char *buffer, int length);
@@ -129,11 +174,24 @@ namespace IO
 		// request handlers touch — the base-class destructor runs too late for
 		// members of derived classes.
 		void stopThread();
-		void SendAll(std::string m); // by value: moved into the queued Command
+		void SendAll(std::string m);
 		void SendAll(const char *data, int len) { SendAll(std::string(data, len)); }
+		// drops every connection, on the thread that owns them
+		void closeConnections() { post({Command::CloseAll, 0, std::string()}); }
 
 		void setReusePort(bool b) { reuse_port = b; }
 		void setIP(const std::string &ip) { IP_BIND = ip; }
+		// how many connections one address may hold, 0 for no limit; this machine, as a proxy is, has none
+		void setMaxPerAddress(int n) { max_per_address = n; }
+
+		// HTTPS on this server's port with these files, or plain HTTP with no files: for the
+		// connections that come next; what it refuses leaves the server as it is, with the reason
+		bool setTLS(const std::string &cert, const std::string &key, std::string &error);
+		bool hasTLS() const { return tls_until != 0; }
+		// when the certificate in use expires, seconds since the epoch; 0 without TLS
+		long long tlsUntil() const { return tls_until; }
+		// what setTLS would say of these files, nothing when it would take them
+		static std::string checkTLS(const std::string &cert, const std::string &key);
 
 	protected:
 		SOCKET sock = -1;
@@ -141,11 +199,11 @@ namespace IO
 		bool reuse_port = false;
 		std::string IP_BIND;
 		int listening_port = -1;
+		int max_per_address = Limits::PER_ADDRESS;
 
 		static std::vector<int> active_ports;
 
-		const static int MAX_CONN = 128;
-		std::array<TCPServerConnection, MAX_CONN> client;
+		std::array<TCPServerConnection, Limits::CONNECTIONS> client;
 
 		std::thread run_thread;
 
@@ -162,13 +220,13 @@ namespace IO
 		{
 			// Derived is opaque to the base loop: it owns neither the id space nor
 			// the payload format.
-			enum Kind { BroadcastRaw, Derived } kind;
+			enum Kind { BroadcastRaw, Derived, CloseAll } kind;
 			int id;
 			std::string data;
 		};
 		std::mutex cmd_mtx;
 		std::deque<Command> cmds;
-		std::deque<Command> cmd_scratch; // swapped with cmds so the nodes are reused
+		std::deque<Command> cmd_scratch;
 		// Poked by post() so a queued command wakes the loop immediately instead
 		// of waiting for the poll timeout; degrades to timeout-only if unavailable.
 		Net::Wakeup wakeup;
@@ -180,7 +238,7 @@ namespace IO
 
 		// pfds[0] listening socket, pfds[1] the wake handle, pfds[i + 2] client[i];
 		// unused slots get fd = -1 so poll skips them.
-		std::array<pollfd, MAX_CONN + 2> pfds;
+		std::array<pollfd, Limits::CONNECTIONS + 2> pfds;
 
 		bool Send(TCPServerConnection &c, const char *data, int len)
 		{
@@ -201,10 +259,26 @@ namespace IO
 		virtual void processClients();
 		void cleanUp(std::time_t now);
 		void SleepAndWait();
+		void reloadTLS(std::time_t now);
+		void release();
 
 		void setStats(IO::OutputStats *s) { pstats = s; }
 
 	private:
 		IO::OutputStats *pstats = nullptr;
+
+		// seconds between looks at the files for a renewal
+		static const int TLS_CHECK_INTERVAL = 60;
+		// the context a new connection takes: set from any thread, read by the Run() thread
+		std::mutex tls_mtx;
+		ssl_ctx_st *tls_ctx = nullptr;
+		std::string tls_cert, tls_key, tls_cert_data, tls_key_data;
+		std::time_t tls_checked = 0;
+		bool tls_warned = false;
+		// seconds since the epoch, enough to 2106; 32 bits as a 64-bit atomic needs libatomic on armv6
+		std::atomic<uint32_t> tls_until{0};
+		std::atomic<int> clients_now{0};
+		LogMinute refusals;
+		void refuse(SOCKET s, const char *why);
 	};
 }

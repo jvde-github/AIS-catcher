@@ -2,975 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1.0">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>AIS-catcher</title>
-    <link rel="stylesheet" href="css/shared.css?hash=">
-    <style>
-        /* base reset — hub only; the viewer has its own in style.css */
-        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-        *, *::before, *::after { box-sizing: border-box; }
-
-        h1, h2, h3, h4, h5, h6, p {
-            margin: 0;
-            font-size: inherit;
-            font-weight: inherit;
-        }
-
-        ul, ol { margin: 0; padding: 0; }
-
-        button, input, select, textarea {
-            font: inherit;
-            color: inherit;
-            margin: 0;
-        }
-
-        button { background: none; border: 0; padding: 0; cursor: pointer; }
-
-        img, svg { display: block; max-width: 100%; }
-
-        a { color: inherit; text-decoration: inherit; }
-
-        body {
-            font-family: var(--font-sans);
-            font-size: var(--fs-base);
-            color: var(--color-text);
-            -webkit-font-smoothing: antialiased;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            height: 100vh;
-            height: 100dvh;
-            display: flex;
-            flex-direction: column;
-            background: var(--color-bg);
-            touch-action: pan-x pan-y;
-            overscroll-behavior: none;
-            position: fixed;
-            width: 100%;
-        }
-
-        #hub-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            position: relative;
-            min-height: 0;
-        }
-
-        #webviewer-frame {
-            position: absolute;
-            top: 0;
-            left: 0;
-            border: none;
-            width: 100%;
-            height: 100%;
-            touch-action: pan-x pan-y;
-        }
-
-        #bottom-bar {
-            position: relative;
-            flex-shrink: 0;
-            width: 100%;
-            background: var(--chrome-bg);
-            border-top: 1px solid var(--chrome-border);
-            z-index: var(--z-panel);
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-
-        .hub-button {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: var(--space-2) var(--space-3);
-            color: var(--chrome-text);
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            transition: background-color var(--dur-med);
-            border-radius: var(--radius-lg);
-            font-size: var(--fs-sm);
-            min-width: 70px;
-        }
-
-        .hub-button.active {
-            background: var(--chrome-bg-hover);
-        }
-
-        .hub-button>svg,
-        .hub-button>[class$="_icon"] {
-            width: 1.5rem;
-            height: 1.5rem;
-            margin-bottom: var(--space-1);
-        }
-
-        /* draws the eye to Start/Restart while saved settings wait to be applied */
-        .hub-button.attention {
-            background: var(--chrome-attention);
-        }
-
-        .hub-button.attention:hover {
-            background: var(--chrome-attention-hover);
-        }
-
-        /* fullscreen scrim + centred child; per-overlay rules set the layer */
-        .hub-overlay {
-            position: fixed;
-            inset: 0;
-            background: var(--color-scrim);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: var(--space-4);
-        }
-
-        .hub-overlay.open {
-            display: flex;
-        }
-
-        .modal-card {
-            background: var(--color-surface);
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-overlay);
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        #system-overlay {
-            z-index: var(--z-panel-top);
-        }
-
-        #system-modal {
-            max-width: 75rem;
-            height: 85vh;
-            max-height: 85vh;
-        }
-
-        #system-header {
-            flex-shrink: 0;
-        }
-
-        #system-modal>.tab-scroll-wrap {
-            flex-shrink: 0;
-            background: var(--color-surface);
-        }
-
-        /* keeps each sub-tab aligned under its parent tab */
-        .sys-subtabs {
-            padding: 0 var(--space-1);
-        }
-
-        .sys-pane .tab-scroll-wrap {
-            margin: 0 calc(-1 * var(--space-5));
-        }
-
-        #system-tabs {
-            border-bottom: none;
-            padding: 0 var(--space-1);
-            align-self: stretch;
-            align-items: stretch;
-            min-width: 0;
-        }
-
-        #system-slot .tab-scroll-wrap {
-            flex: 1 1 0;
-            min-width: 0;
-            align-self: stretch;
-            background: none;
-            --tab-fade: var(--color-band-accent);
-        }
-
-        #system-slot .sys-tab {
-            display: flex;
-            align-items: center;
-        }
-
-        #system-tabs .sys-tab.active.has-sub {
-            color: var(--color-text-strong);
-            border-bottom-color: var(--color-text-strong);
-        }
-
-        /* chrome from .btn-quiet; only geometry lives here */
-        #system-close,
-        #system-save {
-            align-self: center;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: var(--radius-circle);
-            margin: 0 14px 0 10px;
-            flex-shrink: 0;
-        }
-
-        #system-save {
-            margin-right: 0;
-            color: var(--color-accent);
-        }
-
-        #system-save + #system-close {
-            margin-left: 0;
-        }
-
-        /* supersedes the shared position: relative — the strip pins to the pane top */
-        .tab-scroll-wrap {
-            position: sticky;
-            top: 0;
-            z-index: var(--z-sticky);
-            background: var(--color-surface);
-            flex-shrink: 0;
-        }
-
-
-        #system-body {
-            flex: 1;
-            min-height: 0;
-            padding: var(--space-3) 0 var(--space-5);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .sys-pane {
-            flex: 1;
-            min-height: 0;
-            padding: 0 var(--space-5);
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .sys-pane.hidden {
-            display: none;
-        }
-
-        .sys-pane[data-pane="log"],
-        .sys-pane[data-pane="config"] {
-            overflow: hidden;
-        }
-
-        .sys-pb { padding-bottom: var(--space-4); }
-        .sys-pad-head { padding: var(--space-6) var(--space-5) var(--space-4); }
-        .sys-inline { display: inline-block; vertical-align: -2px; }
-        .sys-round { border-radius: var(--radius-lg); }
-        .sys-o25 { opacity: 0.25; }
-        .sys-o50 { opacity: 0.5; }
-        .sys-o75 { opacity: 0.75; }
-        .sys-ok { color: var(--color-success); }
-        .sys-warn-ink { color: var(--color-warning); }
-        .sys-chip-btn { font-family: inherit; cursor: pointer; }
-        .sys-chip-btn:not([class*="zone-"]) { border: 1px solid transparent; }
-        .sys-chip-btn:hover { opacity: 0.8; }
-        .sys-flow-node { cursor: pointer; border-right: 6px solid var(--color-danger); }
-        .sys-flow-node.sys-node-on { border-right-color: var(--color-on); }
-        .sys-flow-grid { display: grid; grid-template-columns: 1fr 100px 1fr;
-                         column-gap: var(--space-2); }
-        .hub-overlay-msg { position: absolute; inset: 0; z-index: var(--z-card);
-                           background: var(--color-bg); }
-        .sys-narrow { max-width: 28rem; margin: var(--space-4) auto 0; width: 100%; }
-        .sys-pane-inner { width: 100%; max-width: 42rem; margin: 0 auto;
-                          padding: var(--space-4) var(--space-4) 0; }
-        .sys-json-sep { margin-top: var(--space-6); padding-top: var(--space-6);
-                        border-top: 1px solid var(--color-border); }
-        .sys-scrollbox>h3,
-        .sys-scrollbox>h4 {
-            margin-top: var(--space-4);
-        }
-
-        .sys-scrollbox { margin: 0 var(--space-5) var(--space-5); height: 20rem; overflow-y: auto; }
-        /* mono-on-dark terminal surface, shared by the config/log panes */
-        .term-pane { background: var(--term-bg); color: var(--term-text);
-                     font-family: var(--font-mono); font-size: var(--fs-sm);
-                     line-height: 1.5; padding: var(--space-3);
-                     border-radius: var(--radius-lg); overflow: auto; }
-        .sys-json-pre { width: 100%; padding: var(--space-4);
-                        border: 1px solid var(--chrome-border); }
-        .sys-overlay-fill { position: absolute; inset: 0; pointer-events: none; }
-        .sys-rotates { display: inline-block; transition: transform var(--dur-med) ease; }
-        .rotate-90 { transform: rotate(90deg); }
-        @media (max-width: 640px) { .sys-wide-only { display: none; } }
-
-        .sys-minrow { min-height: 2rem; }
-        .sys-pick { cursor: pointer; border-radius: var(--radius-md); }
-        .sys-pick:hover { background: var(--color-surface-alt); }
-        .sys-empty { padding: var(--space-8) 0; }
-        .sys-dismiss { margin-left: 2px; font-weight: var(--fw-bold); line-height: 1; cursor: pointer; }
-        .sys-dismiss:hover { opacity: 0.6; }
-        .sys-login-card { max-width: 24rem; padding: var(--space-6); }
-
-        .sys-splash-box { max-width: 28rem; padding: var(--space-8); }
-        .sys-actions { margin-top: var(--space-6); }
-
-        .sys-floating-alert {
-            position: fixed;
-            right: var(--space-6);
-            bottom: var(--space-6);
-            z-index: var(--z-toast);
-            max-width: 28rem;
-            width: 100%;
-            box-shadow: var(--shadow-sm);
-        }
-
-        /* fixed to the viewport, clear of #bar-inner's 4rem bar; the shared
-           class only handles layout and gap */
-        #toast-container {
-            position: fixed;
-            bottom: 5.5rem;
-            left: var(--space-6);
-        }
-
-        .sys-status-alert {
-            align-items: flex-start;
-            margin-bottom: var(--space-4);
-        }
-
-        /* fixed width so the row does not jump between active and inactive */
-        .sys-save {
-            width: 8rem;
-        }
-
-        /* the hub stretches form controls to the field; the viewer sizes to content */
-        .input {
-            width: 100%;
-        }
-
-        @media (max-width: 640px) {
-            #system-overlay {
-                padding: 0;
-            }
-            #system-modal {
-                max-width: 100%;
-                height: 100vh;
-                height: 100dvh;
-                max-height: none;
-                border-radius: 0;
-            }
-            .sys-tab {
-                font-size: var(--fs-sm);
-                padding: var(--space-2) var(--space-3);
-            }
-        }
-
-        #login-overlay {
-            z-index: var(--z-overlay);
-            padding: 0;
-        }
-
-        #config-json {
-            flex: 1;
-            min-height: 0;
-            white-space: pre;
-            margin: 0;
-        }
-
-        .j-key { color: var(--code-key); }
-        .j-str { color: var(--code-string); }
-        .j-num { color: var(--code-number); }
-        .j-bool, .j-null { color: var(--code-literal); }
-
-        .log-console {
-            flex: 1;
-            min-height: 0;
-            display: flex;
-            flex-direction: column;
-            background: var(--term-bg);
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-        }
-
-        .log-toolbar {
-            flex: none;
-            display: flex;
-            align-items: center;
-            gap: var(--space-2);
-            padding: var(--space-2) var(--space-3);
-            border-bottom: 1px solid var(--overlay-border);
-        }
-
-        .log-prompt {
-            color: var(--term-meta);
-            font-family: var(--font-mono);
-            font-size: var(--fs-sm);
-            padding: 0 var(--space-1);
-            user-select: none;
-        }
-
-        .log-control {
-            font-family: inherit;
-            font-size: var(--fs-sm);
-            color: var(--term-text);
-            background-color: var(--overlay-bg);
-            border: 1px solid var(--overlay-border);
-            border-radius: var(--radius-md);
-            padding: 5px 10px;
-            transition: border-color var(--dur-med) ease;
-        }
-
-        .log-control:hover,
-        .log-control:focus {
-            border-color: var(--color-accent);
-        }
-
-        .log-control:focus {
-            outline: none;
-        }
-
-        select.log-control {
-            appearance: none;
-            -webkit-appearance: none;
-            padding-right: 28px;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-        }
-
-        .log-search {
-            flex: 1;
-            min-width: 4rem;
-        }
-
-        .log-search::placeholder {
-            color: var(--term-meta);
-            opacity: 1;
-        }
-
-        .log-search::-webkit-search-cancel-button {
-            filter: invert(0.6);
-            cursor: pointer;
-        }
-
-        .log-dots {
-            display: flex;
-            gap: 6px;
-            padding-left: var(--space-1);
-        }
-
-        .log-dots i {
-            display: block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-        }
-
-        .log-dots i:nth-child(1) { background: var(--term-error); }
-        .log-dots i:nth-child(2) { background: var(--term-warn); }
-        .log-dots i:nth-child(3) { background: var(--chrome-led-on); }
-
-        #log-box {
-            flex: 1;
-            min-height: 0;
-            overflow: auto;
-            padding: var(--space-3);
-            font-family: var(--font-mono);
-            font-size: var(--fs-sm);
-            line-height: 1.5;
-            color: var(--term-text);
-        }
-
-        .log-empty {
-            color: var(--term-meta);
-            padding: var(--space-2) 0;
-        }
-
-        .log-line {
-            display: flex;
-            padding: 1px 0;
-            white-space: pre;
-        }
-
-        .log-line.error {
-            color: var(--term-error);
-        }
-
-        .log-line.warning {
-            color: var(--term-warn);
-        }
-
-        .log-line.info {
-            color: var(--term-info);
-        }
-
-        .log-line.debug {
-            color: var(--term-debug);
-            opacity: 0.75;
-        }
-
-        .log-line.default {
-            color: var(--term-text);
-        }
-
-        .log-ts {
-            color: var(--term-meta);
-            margin-right: 0.5em;
-            user-select: none;
-            flex-shrink: 0;
-        }
-
-        /* the empty left spacer shrinks first, so the buttons drift left
-           before any indicator collapses */
-        #bar-inner {
-            display: flex;
-            align-items: center;
-            height: 4rem;
-            padding: 0 var(--space-3);
-            gap: var(--space-3);
-        }
-
-        #bar-left {
-            flex: 1 1 0;
-            min-width: 0;
-            display: flex;
-            align-items: center;
-            gap: var(--space-3);
-        }
-
-        #status-dot-wrap {
-            display: flex;
-            align-items: center;
-            gap: var(--space-2);
-            min-width: 0;
-            overflow: hidden;
-            cursor: pointer;
-        }
-
-        #status-dot-wrap .tooltip {
-            right: 0;
-        }
-
-        .bar-divider {
-            display: none;
-            width: 1px;
-            height: 1.75rem;
-            background: var(--chrome-border);
-        }
-
-        @media (min-width: 640px) {
-            .bar-divider.div-640 {
-                display: block;
-            }
-        }
-
-        @media (min-width: 660px) {
-            .bar-divider.div-768 {
-                display: block;
-            }
-        }
-
-        #nav-buttons {
-            flex: 0 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--space-6);
-        }
-
-        #bar-right {
-            flex: 1 1 0;
-            min-width: max-content;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: var(--space-3);
-        }
-
-        #community-link {
-            display: none;
-            text-decoration: none;
-            color: var(--chrome-text-muted);
-            transition: color var(--dur-fast);
-        }
-
-        #community-link svg {
-            width: 20px;
-            height: 20px;
-        }
-
-        #community-link { position: relative; }
-        #community-link::after { content: ""; position: absolute; left: 1px; right: 1px; bottom: -5px;
-                                 height: 2px; border-radius: 1px; background: transparent; }
-        #community-link.sharing-off::after { background: var(--color-danger); }
-        #community-link.sharing-anon::after { background: var(--color-warning); }
-        #community-link.sharing-on::after { background: var(--color-success); }
-        #community-link.sharing-stopped::after { background: var(--chrome-text-muted); }
-
-        #community-link:hover {
-            color: var(--chrome-text-hover);
-        }
-
-        @media (min-width: 660px) {
-            #community-link {
-                display: flex;
-                align-items: center;
-            }
-        }
-
-        #bar-collapse {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: var(--space-1);
-            background: transparent;
-            border: none;
-            color: var(--chrome-text-muted);
-            cursor: pointer;
-            transition: color var(--dur-fast);
-        }
-
-        #bar-collapse:hover {
-            color: var(--chrome-text-hover);
-        }
-
-        #bar-collapse svg,
-        #bar-collapse [class$="_icon"] {
-            width: 20px;
-            height: 20px;
-        }
-
-        #bar-restore,
-        #login-pill {
-            position: fixed;
-            left: 12px;
-            bottom: calc(56px + env(safe-area-inset-bottom));
-            z-index: var(--z-float);
-            display: none;
-            align-items: center;
-            gap: var(--space-2);
-            padding: var(--space-2) var(--space-3);
-            background: var(--chrome-bg);
-            border: 1px solid var(--chrome-border);
-            border-radius: var(--radius-full);
-            color: var(--chrome-text);
-            font-size: var(--fs-sm);
-            font-weight: var(--fw-medium);
-            cursor: pointer;
-            box-shadow: var(--shadow-lg);
-            transition: background-color var(--dur-med);
-        }
-
-        #bar-restore:hover,
-        #login-pill:hover {
-            background: var(--chrome-bg-hover);
-        }
-
-        #bar-restore.show,
-        #login-pill.show {
-            display: flex;
-        }
-
-        #bar-restore svg,
-        #login-pill svg,
-        #bar-restore [class$="_icon"],
-        #login-pill [class$="_icon"] {
-            width: 16px;
-            height: 16px;
-            color: var(--chrome-text-muted);
-        }
-
-        #restore-dot {
-            display: block;
-            width: 0.5rem;
-            height: 0.5rem;
-            border-radius: var(--radius-full);
-            background: var(--chrome-dot);
-        }
-
-        @media (min-width: 640px) {
-            #nav-buttons {
-                gap: 3rem;
-            }
-        }
-
-        @media (max-width: 639px) {
-            .hub-button {
-                min-width: 54px;
-                padding: var(--space-2) 6px;
-            }
-        }
-
-        #channel-leds {
-            display: none;
-        }
-
-        @media (min-width: 640px) {
-            #channel-leds {
-                display: flex;
-                align-items: center;
-                gap: var(--space-2);
-                margin-right: 6px;
-            }
-        }
-
-        .ch-led-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
-        }
-
-        .ch-led {
-            width: 7px;
-            height: 7px;
-            border-radius: var(--radius-full);
-            background: var(--chrome-border);
-            /* slower than --dur-slow on purpose: the LED afterglow */
-            transition: background-color 0.5s ease-out;
-        }
-
-        .ch-led.flash {
-            background: var(--chrome-led-on);
-            transition: none;
-        }
-
-        .ch-led-label {
-            font-size: var(--fs-2xs);
-            line-height: 1;
-            color: var(--chrome-text-muted);
-        }
-
-        #wizard-overlay {
-            z-index: var(--z-dialog);
-        }
-
-        #wizard-card {
-            max-width: 480px;
-            max-height: calc(100vh - 2rem);
-            max-height: calc(100dvh - 2rem);
-        }
-
-
-        .wz-link { text-decoration: none; margin: var(--space-1) 0; }
-        .wz-x { border-radius: var(--radius-lg); }
-        .wz-head { padding: var(--space-4) var(--space-4) 0 var(--space-6); }
-        .wz-error { margin: 0 var(--space-6); }
-        .wz-options, .wz-daisy { margin-top: var(--space-3); }
-        .wz-service { margin: var(--space-2) 0 var(--space-3); gap: var(--space-4); }
-        /* the footer's quiet buttons carry text, not icons */
-        .wz-foot .btn-quiet { padding: 8px var(--space-4); }
-
-        .wz-dots {
-            display: flex;
-            align-items: center;
-            gap: var(--space-2);
-        }
-
-        .wz-dot {
-            background: var(--color-track);
-        }
-
-        .wz-dot.active {
-            background: var(--color-accent);
-        }
-
-        .wz-dot.past {
-            background: var(--color-accent-soft);
-        }
-
-        .wz-body {
-            padding: var(--space-3) var(--space-6) var(--space-2);
-            overflow-y: auto;
-            flex: 1;
-            min-height: 0;
-        }
-
-        .wz-body h2 {
-            font-size: var(--fs-2xl);
-            font-weight: var(--fw-bold);
-            color: var(--color-text-strong);
-            margin: var(--space-3) 0 2px;
-        }
-
-        .wz-body h3 {
-            font-size: var(--fs-xl);
-            font-weight: var(--fw-semibold);
-            color: var(--color-text-strong);
-            margin: 0 0 var(--space-2);
-        }
-
-        .wz-body p {
-            font-size: var(--fs-base);
-            color: var(--color-text-muted);
-            line-height: 1.55;
-            margin: var(--space-2) 0;
-        }
-
-        .wz-welcome {
-            text-align: center;
-            padding-bottom: var(--space-1);
-        }
-
-        .wz-welcome p {
-            text-align: left;
-        }
-
-        .wz-welcome .wz-sub {
-            text-align: center;
-            font-size: var(--fs-sm);
-            color: var(--color-text-subtle);
-            margin-top: 0;
-        }
-
-        .wz-logo {
-            display: inline-block;
-            width: 64px;
-            height: 64px;
-            color: var(--color-accent);
-        }
-
-        .wz-logo svg {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* two classes so it outranks .wz-body p without !important */
-        .wz-body .wz-fineprint {
-            font-size: var(--fs-xs);
-            color: var(--color-text-subtle);
-        }
-
-        .wz-fineprint a {
-            color: var(--color-text-muted);
-            text-decoration: underline;
-        }
-
-        .wz-intro {
-            margin-top: 0;
-        }
-
-
-
-
-
-        .wz-option input[type="radio"],
-        .wz-option input[type="checkbox"] {
-            margin-top: 3px;
-            accent-color: var(--color-accent);
-        }
-
-        .wz-option-icon {
-            flex-shrink: 0;
-            width: 28px;
-            height: 28px;
-            color: var(--color-text-muted);
-        }
-
-        .option.selected .wz-option-icon {
-            color: var(--color-accent);
-        }
-
-        .wz-option-icon svg {
-            width: 100%;
-            height: 100%;
-        }
-
-        .wz-mini-link {
-            color: var(--color-accent);
-            text-decoration: underline;
-        }
-
-        .wz-option-main,
-        .wz-service-main {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            flex: 1;
-            min-width: 0;
-        }
-
-        .wz-option-title {
-            font-size: var(--fs-base);
-            font-weight: var(--fw-semibold);
-            color: var(--color-text-strong);
-        }
-
-        .wz-option-sub {
-            font-size: var(--fs-sm);
-            color: var(--color-text-muted);
-        }
-
-        .wz-body .wz-none {
-            font-size: var(--fs-md);
-            color: var(--color-text-subtle);
-        }
-
-        .wz-loading {
-            font-size: var(--fs-base);
-            color: var(--color-text-muted);
-            padding: var(--space-3) 0;
-        }
-
-
-        .wz-service-icon {
-            flex-shrink: 0;
-            width: 48px;
-            height: 48px;
-            color: var(--color-accent);
-        }
-
-        .wz-service-icon svg,
-        .wz-service-icon img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-
-        .wz-summary {
-            margin: var(--space-2) 0 var(--space-4);
-            padding-left: var(--space-5);
-            font-size: var(--fs-base);
-            color: var(--color-text-strong);
-            line-height: 1.9;
-        }
-
-        .wz-check {
-            display: flex;
-            align-items: center;
-            gap: var(--space-2);
-            font-size: var(--fs-base);
-            color: var(--color-text-strong);
-            margin: var(--space-2) 0;
-        }
-
-        .wz-check input {
-            accent-color: var(--color-accent);
-        }
-
-        .wz-foot {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: var(--space-4) var(--space-6) var(--space-5);
-        }
-
-        .wz-foot-right {
-            display: flex;
-            gap: var(--space-2);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.6;
-            cursor: default;
-        }
-
-        .wz-link svg {
-            width: 14px;
-            height: 14px;
-        }
-    </style>
-    <link rel="stylesheet" href="css/locations.css?hash=">
-    <link rel="stylesheet" href="css/settings.css?hash=">
+    <link rel="stylesheet" href="css/hub.css?hash=">
 </head>
 <body>
+    <h1 class="sr-only">AIS-catcher control panel</h1>
     <div id="hub-container">
         <iframe id="webviewer-frame" src="/viewer/?welcome=false" allow="fullscreen" allowfullscreen
             sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
 
-        <div id="login-overlay" class="hub-overlay">
+        <div id="login-overlay" class="modal-overlay hidden">
             <div class="card sys-login-card stack-loose">
                 <div class="stack-tight">
                     <h3 id="login-title" class="t-strong t-lg">Sign In</h3>
@@ -984,6 +28,12 @@
                     <input id="login-password2" name="password2" type="password" autocomplete="new-password"
                         placeholder="Confirm password"
                         class="input hidden" />
+                    <div id="login-setup-code" class="stack-tight hidden">
+                        <input id="login-code" name="setup-code" type="text" autocomplete="off" spellcheck="false"
+                            placeholder="Setup code"
+                            class="input" />
+                        <p class="t-small t-muted">The setup code is in the log, printed when the program starts.</p>
+                    </div>
                     <div class="row">
                         <button type="button" id="login-cancel"
                             class="btn grow">
@@ -998,101 +48,200 @@
             </div>
         </div>
 
-        <!-- The nav bar's Input/Output/System buttons all open this modal and
-             jump to the matching tab. -->
-        <div id="system-overlay" class="hub-overlay">
+        <div id="system-overlay" class="modal-overlay hidden">
             <div id="system-modal" class="modal-card">
                 <div id="system-header" class="band">
-                    <div id="system-slot" class="band-slot">
-                        <div id="system-tabs" class="tabs">
-                            <button class="sys-tab" data-tab="input">Input</button>
-                            <button class="sys-tab" data-tab="output">Output</button>
-                            <button class="sys-tab" data-tab="viewer">Viewer</button>
-                            <button class="sys-tab" data-tab="places">Places</button>
-                            <button class="sys-tab" data-tab="flow">Flow</button>
-                            <button class="sys-tab" data-top="system" data-tab="status">System</button>
-                        </div>
-                    </div>
-                    <button id="system-save" class="btn-quiet hidden" title="Save changes">
-                        <span class="save_icon icon-sm"></span>
+                    <button id="rail-back" type="button" class="btn-quiet" aria-label="Back to the list">
+                        <svg class="icon-sm" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
                     </button>
-                    <button id="system-close" class="btn-quiet">
+                    <h2 id="system-title" class="band-slot band-title">Settings</h2>
+                    <button id="system-close" class="btn-quiet" aria-label="Close">
                         <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
-                <div id="system-subtabs" class="sys-subtabs hidden">
-                    <button class="sys-tab" data-tab="status">Status</button>
-                    <button class="sys-tab" data-tab="log">Log</button>
-                    <button class="sys-tab" data-tab="config">Configuration</button>
-                    <button class="sys-tab" data-tab="password">Access</button>
-                    <button class="sys-tab" data-tab="wizard">Wizard</button>
-                    <button class="sys-tab" data-tab="license">License</button>
+                <div id="settings-bar" class="st msgbar" role="status" aria-live="polite" hidden></div>
+                <div id="system-layout">
+                    <nav id="settings-rail" class="st st-rail" aria-label="Settings"></nav>
+                    <div id="system-body"></div>
                 </div>
-                <div id="system-body"></div>
             </div>
         </div>
-
-        <!-- toasts sit above the bottom bar on the left; config-manager's
-             App.notify reuses this container instead of creating its own -->
-        <div id="toast-container" class="toast-container"></div>
     </div>
 
-    <!-- static content of the system panel's License tab; cloned into the
-         pane each time the panel is rebuilt -->
-    <template id="license-pane-content">
-        <div class="sys-pane-inner sys-pb">
-            <div class="alert alert-warning sys-status-alert">
-                <svg class="alert-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                </svg>
-                <div class="t-small t-warn stack-tight">
-                    <p class="t-strong">Research and educational software &mdash; not for operational use</p>
-                    <p class="t-small">Do not rely on AIS-catcher for navigation, collision avoidance or any application where safety of life or property is at stake.
-                        Receiving radio signals may be regulated or restricted in your country; you are responsible for complying with local laws before use.</p>
-                </div>
+    <!-- cloned into #system-body each time the panel opens -->
+    <template id="system-body-template">
+        <div class="sys-pane hidden" data-pane="input"><div id="sys-input-body"></div></div>
+        <div class="sys-pane hidden" data-pane="stations"><div id="sys-stations-body"></div></div>
+        <div class="sys-pane hidden" data-pane="output"><div id="sys-output-body"></div></div>
+        <div class="sys-pane hidden" data-pane="output-add"><div id="sys-output-add-body" class="st"></div></div>
+        <div class="sys-pane hidden" data-pane="places"><div id="sys-places-body"></div></div>
+        <div class="sys-pane hidden st st-flowpage" data-pane="flow">
+            <div class="st-main__head">
+                <div><h2 class="st-main__title">Flow</h2>
+                <p class="st-main__desc">Which input reaches which output. A named connection is a zone.</p></div>
             </div>
-            <div class="card">
-                <div class="col row-center sys-pad-head">
-                    <span id="license-logo" class="icon-xl center-block"></span>
-                    <h2 class="t-strong t-lg">License Agreement</h2>
-                    <p class="t-small t-muted">AIS-catcher &copy; 2021&ndash;2026 jvde.github@gmail.com</p>
+            <div class="st-flow__legend"><span><i class="st-flow__key st-flow__key--all"></i>no zone: inputs and outputs without one</span><span><i class="st-flow__key"></i>a connection, in its zone's colour</span></div>
+            <p id="flow-hint" class="st-flow__hint"></p>
+            <form id="flow-name" class="st-flow__name" hidden></form>
+            <div id="flow-patch" class="st-flow">
+                <div><h2 class="st-col__title">Inputs</h2><div id="flow-inputs" class="st-stack"></div></div>
+                <svg id="flow-svg" class="st-routes" aria-hidden="true"></svg>
+                <div><h2 class="st-col__title">Outputs</h2><div id="flow-outputs" class="st-stack st-stack--out"></div></div>
+            </div>
+            <div id="flow-zones" class="st-flow__zones"></div>
+        </div>
+        <div class="sys-pane hidden" data-pane="services"></div>
+        <div id="sys-group" class="st st-single sys-group hidden">
+            <div class="st-main sys-group__main">
+                <div class="st-main__head"><div><h2 class="st-main__title"></h2></div></div>
+                <div class="sys-pane hidden" data-pane="history"><div id="sys-history-body"></div></div>
+                <div class="sys-pane hidden" data-pane="status">
+                    <div class="st-sys">
+                        <section class="st-sc st-recv">
+                            <span class="st-recv__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 4.9a10 10 0 0 0 0 14.2M19.1 4.9a10 10 0 0 1 0 14.2M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4"/><circle cx="12" cy="12" r="1.6"/></svg></span>
+                            <div class="st-recv__body">
+                                <div class="st-recv__title"><h3>Receiver</h3><span id="hub-status" class="st-chip st-state st-state--stopped">Checking&hellip;</span></div>
+                                <div class="st-recv__line"><span id="hub-counts"></span><span id="hub-uptime"></span><button type="button" class="st-link" data-open-log>Open log</button></div>
+                            </div>
+                            <button id="hub-engine-btn" type="button" class="st-btn st-btn--primary"></button>
+                        </section>
+                        <section id="hub-sysinfo-card" class="st-sc" hidden>
+                            <div class="st-sc__head"><h3>System</h3><button type="button" class="st-btn st-btn--sm" data-copy-sysinfo>Copy for bug report</button></div>
+                            <dl id="hub-sysinfo" class="st-facts"></dl>
+                        </section>
+                    </div>
                 </div>
-                <div class="box t-small t-muted sys-scrollbox stack">
-                    <h3 class="t-strong">GNU GENERAL PUBLIC LICENSE</h3>
-                    <p class="t-small t-muted">Version 3, 29 June 2007</p>
-                    <p>Copyright &copy; 2007 Free Software Foundation, Inc. &lt;https://fsf.org/&gt;</p>
-                    <p>Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed.</p>
-                    <h4 class="t-strong">Preamble</h4>
-                    <p>The GNU General Public License is a free, copyleft license for software and other kinds of works.</p>
-                    <p>The licenses for most software and other practical works are designed to take away your freedom to share and change the works.
-                        By contrast, the GNU General Public License is intended to guarantee your freedom to share and change all versions of a program&mdash;to
-                        make sure it remains free software for all its users. We, the Free Software Foundation, use the GNU General Public License for most of
-                        our software; it applies also to any other work released this way by its authors. You can apply it to your programs, too.</p>
-                    <p>When we speak of free software, we are referring to freedom, not price. Our General Public Licenses are designed to make sure
-                        that you have the freedom to distribute copies of free software (and charge for them if you wish), that you receive source code or can
-                        get it if you want it, that you can change the software or use pieces of it in new free programs, and that you know you can do these things.</p>
-                    <p>To protect your rights, we need to prevent others from denying you these rights or asking you to surrender the rights.
-                        Therefore, you have certain responsibilities if you distribute copies of the software, or if you modify it: responsibilities to respect
-                        the freedom of others.</p>
-                    <p>For example, if you distribute copies of such a program, whether gratis or for a fee, you must pass on to the recipients the
-                        same freedoms that you received. You must make sure that they, too, receive or can get the source code. And you must show them these
-                        terms so they know their rights.</p>
-                    <p class="t-italic">This is a summary. For the full text, please visit
-                        <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener" class="t-link">gnu.org</a> or the
-                        <a href="https://github.com/jvde-github/AIS-catcher/blob/main/LICENSE" target="_blank" rel="noopener" class="t-link">LICENSE file on GitHub</a>.</p>
-                    <h4 class="t-strong">Disclaimer of Warranty</h4>
-                    <p class="t-small t-strong t-caps">There is no warranty for the program, to the extent permitted by applicable law. Except when
-                        otherwise stated in writing the copyright holders and/or other parties provide the program &ldquo;as is&rdquo; without warranty of any
-                        kind, either expressed or implied, including, but not limited to, the implied warranties of merchantability and fitness for a particular
-                        purpose. The entire risk as to the quality and performance of the program is with you. Should the program prove defective, you assume
-                        the cost of all necessary servicing, repair or correction.</p>
+                <div class="sys-pane hidden" data-pane="config">
+                    <pre id="config-json" class="term-pane">Loading...</pre>
+                </div>
+                <div class="sys-pane hidden" data-pane="log">
+                    <div class="log-console">
+                        <div class="log-toolbar">
+                            <span class="log-prompt">&gt;_</span>
+                            <select id="log-level" class="log-control"
+                                    title="Filters this console; the receiver records down to control.level (debug by default)">
+                                <option value="debug">debug</option>
+                                <option value="info">info</option>
+                                <option value="warning">warning</option>
+                                <option value="error">error</option>
+                                <option value="critical">critical</option>
+                            </select>
+                            <input id="log-search" class="log-control log-search" type="search"
+                                   placeholder="search&hellip;" autocomplete="off" spellcheck="false">
+                            <span class="log-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                        </div>
+                        <div id="log-box"></div>
+                    </div>
+                </div>
+                <!-- data-auth="open" shows only while no password is set, data-auth="login" only while one is -->
+                <div class="sys-pane hidden" data-pane="password">
+                    <div class="sys-pane-inner">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="t-strong">Reset Password</span>
+                            </div>
+                            <div class="card-body">
+                                <form id="password-form" class="stack">
+                                    <input id="current-password" type="password" autocomplete="current-password" placeholder="Current password"
+                                        class="st-input" />
+                                    <input id="new-password" type="password" autocomplete="new-password" placeholder="New password"
+                                        class="st-input" />
+                                    <input id="new-password2" type="password" autocomplete="new-password" placeholder="Confirm new password"
+                                        class="st-input" />
+                                </form>
+                                <p class="t-small t-muted" data-auth="open">Needed only when the panel listens on the network.</p>
+                            </div>
+                        </div>
+                        <div class="row row-wrap row-end row-loose sys-actions">
+                            <button id="hub-btn-logout" type="button" class="btn sys-save" data-auth="login">Logout</button>
+                            <button type="submit" form="password-form" class="btn sys-save">Reset</button>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="t-strong">HTTPS for this panel</span>
+                            </div>
+                            <div class="card-body stack">
+                                <p id="panel-tls-state" class="t-small t-muted"></p>
+                                <form id="panel-tls-form" class="stack">
+                                    <input id="panel-tls-cert" type="text" spellcheck="false" placeholder="Certificate: fullchain.pem" aria-label="Certificate" class="st-input" />
+                                    <input id="panel-tls-key" type="text" spellcheck="false" placeholder="Private key: privkey.pem" aria-label="Private key" class="st-input" />
+                                </form>
+                                <p class="t-small t-muted">Files in the configuration's folder. Leave both empty for plain HTTP.</p>
+                            </div>
+                        </div>
+                        <div class="row row-wrap row-end row-loose sys-actions">
+                            <button type="submit" form="panel-tls-form" class="btn sys-save">Apply HTTPS</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="sys-pane hidden" data-pane="about">
+                    <div class="st st-about__setup">
+                        <div><strong>Guided setup</strong><p>Walk through the receiver, the community map and the viewer again.</p></div>
+                        <button id="hub-btn-wizard" type="button" class="st-btn st-btn--sm">Run setup</button>
+                    </div>
+                    <div class="sys-pane-inner sys-pb">
+                        <div class="alert alert-warning sys-status-alert">
+                            <svg class="alert-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                            </svg>
+                            <div class="t-small t-warn stack-tight">
+                                <p class="t-strong">Research and educational software &mdash; not for operational use</p>
+                                <p class="t-small">Do not rely on AIS-catcher for navigation, collision avoidance or any application where safety of life or property is at stake.
+                                    Receiving radio signals may be regulated or restricted in your country; you are responsible for complying with local laws before use.</p>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="col row-center sys-pad-head">
+                                <span id="license-logo" class="icon-xl center-block"></span>
+                                <h2 class="t-strong t-lg">License Agreement</h2>
+                                <p class="t-small t-muted">AIS-catcher &copy; 2021&ndash;2026 jvde.github@gmail.com</p>
+                            </div>
+                            <div class="box t-small t-muted sys-scrollbox stack">
+                                <h3 class="t-strong">GNU GENERAL PUBLIC LICENSE</h3>
+                                <p class="t-small t-muted">Version 3, 29 June 2007</p>
+                                <p>Copyright &copy; 2007 Free Software Foundation, Inc. &lt;https://fsf.org/&gt;</p>
+                                <p>Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed.</p>
+                                <h4 class="t-strong">Preamble</h4>
+                                <p>The GNU General Public License is a free, copyleft license for software and other kinds of works.</p>
+                                <p>The licenses for most software and other practical works are designed to take away your freedom to share and change the works.
+                                    By contrast, the GNU General Public License is intended to guarantee your freedom to share and change all versions of a program&mdash;to
+                                    make sure it remains free software for all its users. We, the Free Software Foundation, use the GNU General Public License for most of
+                                    our software; it applies also to any other work released this way by its authors. You can apply it to your programs, too.</p>
+                                <p>When we speak of free software, we are referring to freedom, not price. Our General Public Licenses are designed to make sure
+                                    that you have the freedom to distribute copies of free software (and charge for them if you wish), that you receive source code or can
+                                    get it if you want it, that you can change the software or use pieces of it in new free programs, and that you know you can do these things.</p>
+                                <p>To protect your rights, we need to prevent others from denying you these rights or asking you to surrender the rights.
+                                    Therefore, you have certain responsibilities if you distribute copies of the software, or if you modify it: responsibilities to respect
+                                    the freedom of others.</p>
+                                <p>For example, if you distribute copies of such a program, whether gratis or for a fee, you must pass on to the recipients the
+                                    same freedoms that you received. You must make sure that they, too, receive or can get the source code. And you must show them these
+                                    terms so they know their rights.</p>
+                                <p class="t-italic">This is a summary. For the full text, please visit
+                                    <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener" class="t-link">gnu.org</a> or the
+                                    <a href="https://github.com/jvde-github/AIS-catcher/blob/main/LICENSE" target="_blank" rel="noopener" class="t-link">LICENSE file on GitHub</a>.</p>
+                                <h4 class="t-strong">Disclaimer of Warranty</h4>
+                                <p class="t-small t-strong t-caps">There is no warranty for the program, to the extent permitted by applicable law. Except when
+                                    otherwise stated in writing the copyright holders and/or other parties provide the program &ldquo;as is&rdquo; without warranty of any
+                                    kind, either expressed or implied, including, but not limited to, the implied warranties of merchantability and fitness for a particular
+                                    purpose. The entire risk as to the quality and performance of the program is with you. Should the program prove defective, you assume
+                                    the cost of all necessary servicing, repair or correction.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+        <footer id="st-footer" class="st st-footer" hidden>
+            <span class="st-spacer"></span>
+            <span class="st-dirty" role="status" hidden>Unsaved changes</span>
+            <button class="st-btn" type="button" data-st-cancel>Cancel</button>
+            <button class="st-btn st-btn--primary" type="button" data-st-save disabled>Save changes</button>
+        </footer>
     </template>
 
+    <div id="page-bar" class="st msgbar msgbar--page" role="status" aria-live="polite" hidden></div>
     <nav id="bottom-bar">
         <div id="bar-inner">
         <div id="bar-left">
@@ -1107,17 +256,9 @@
                 <span id="nav-sr-icon" class="engine_start_icon"></span>
                 <span id="nav-sr-label">Start</span>
             </button>
-            <button id="nav-btn-input" class="hub-button" data-view="input" title="Configure the receiver input source">
-                <span class="radio_icon"></span>
-                <span>Input</span>
-            </button>
-            <button id="nav-btn-output" class="hub-button" data-view="output" title="Configure outputs and data sharing">
-                <span class="share_icon"></span>
-                <span>Output</span>
-            </button>
-            <button id="nav-btn-control" class="hub-button" data-view="control-panel" title="Settings, status, logs and configuration">
-                <span class="build_icon"></span>
-                <span>System</span>
+            <button id="nav-btn-settings" class="hub-button" data-view="settings" title="Stations, inputs, outputs, services and the system">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>
+                <span>Settings</span>
             </button>
         </div>
         <div id="bar-right">
@@ -1130,6 +271,7 @@
                     </div>
                 </div>
                 <span id="status-dot-text" class="t-small t-subtle sys-wide-only"></span>
+                <button id="log-alerts" type="button" class="bar-alerts" hidden></button>
             </div>
             <div class="bar-divider div-768"></div>
             <a id="community-link" href="https://www.aiscatcher.org" target="_blank" rel="noopener"

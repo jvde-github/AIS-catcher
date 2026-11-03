@@ -3,7 +3,7 @@
 // Builders that print numbers take a units instance (core/units.js).
 
 import { shipOutlineLocal } from './geo.js';
-import { CHANGE, CHANGE_LABEL, getStatusVal, sanitizeString } from './text.js';
+import { CHANGE, CHANGE_LABEL, sanitizeString } from './text.js';
 
 let chartSeq = 0;
 

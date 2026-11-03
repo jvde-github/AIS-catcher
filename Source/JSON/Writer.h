@@ -22,6 +22,12 @@
 #include <memory>
 #include <cstring>
 #include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <iomanip>
+#include <locale>
+#include <sstream>
+#include <stdexcept>
 #include <type_traits>
 
 #include "Common.h"
@@ -201,9 +207,9 @@ namespace JSON
 			*ptr++ = '.';
 			// frac in [1, 999999]: emit as three 2-digit pairs via table.
 			unsigned f = (unsigned)frac;
-			unsigned a = f / 10000;        // 00..99
-			unsigned b = (f / 100) % 100;  // 00..99
-			unsigned c = f % 100;          // 00..99
+			unsigned a = f / 10000;
+			unsigned b = (f / 100) % 100;
+			unsigned c = f % 100;
 			ptr[0] = digits100()[a * 2];
 			ptr[1] = digits100()[a * 2 + 1];
 			ptr[2] = digits100()[b * 2];
@@ -690,6 +696,11 @@ namespace JSON
 		{
 			return v == sentinel ? kv_null(k) : kv(k, v);
 		}
+		template <typename T>
+		Writer &kv_or_null(KeyRef k, T v, bool known)
+		{
+			return known ? kv(k, v) : kv_null(k);
+		}
 
 		// Writes "key":raw  — caller-supplied raw must be valid JSON.
 		Writer &kv_raw(KeyRef k, const char *raw, size_t rawlen)
@@ -748,6 +759,45 @@ namespace JSON
 		}
 		Writer &key(unsigned k) { return key((unsigned long long)k); }
 
+		// The shortest decimal that reads back as exactly v, in the "C" locale.
+		// For data that must round-trip; telemetry uses val(double).
+		Writer &val_exact(double v)
+		{
+			if (!std::isfinite(v))
+				throw std::runtime_error("Non-finite number");
+			// snprintf and strtod follow the C library's locale, "C" unless the program
+			// sets another; a decimal comma tells one, and the streams write it then
+			char text[32];
+			int n = 0;
+			for (int digits = 15; digits <= 17; ++digits)
+			{
+				n = std::snprintf(text, sizeof(text), "%.*g", digits, v);
+				if (n > 0 && n < (int)sizeof(text) && std::strtod(text, nullptr) == v)
+					break;
+			}
+			if (n <= 0 || n >= (int)sizeof(text) || std::memchr(text, ',', (size_t)n))
+				return val_exact_classic(v);
+			return raw_val(text, (size_t)n);
+		}
+
+		Writer &val_exact_classic(double v)
+		{
+			std::string text;
+			for (int digits = 15; digits <= 17; ++digits)
+			{
+				std::ostringstream out;
+				out.imbue(std::locale::classic());
+				out << std::setprecision(digits) << v;
+				text = out.str();
+				std::istringstream in(text);
+				in.imbue(std::locale::classic());
+				double back = 0;
+				if (in >> back && back == v)
+					break;
+			}
+			return raw_val(text);
+		}
+
 		// Like val() but for already-serialised JSON fragments. Honors need_sep.
 		Writer &raw_val(const char *raw, size_t rawlen)
 		{
@@ -782,6 +832,8 @@ namespace JSON
 	private:
 		int dict = 0;
 		bool stringify_enhanced = false;
+		const Pool *pool = nullptr;
+		bool exact = false;
 
 		// Separate: folding these into write_value's chain lets GCC rebuild a jump table.
 		void write_value_container(const Value &v, Writer &w)
@@ -823,7 +875,7 @@ namespace JSON
 			else if (t == Value::Type::STRING)
 				w.val(v.getString());
 			else if (t == Value::Type::FLOAT)
-				w.val(v.getFloat());
+				exact ? w.val_exact(v.getFloat()) : w.val(v.getFloat());
 			else if (t == Value::Type::BOOL)
 				w.val(v.getBool());
 			else
@@ -858,6 +910,12 @@ namespace JSON
 			w.beginObject();
 			for (const Member &p : object.getMembers())
 			{
+				if (p.Key() < 0 && pool)
+				{
+					w.key(pool->extraName(p.Key()));
+					write_value(p.Get(), w);
+					continue;
+				}
 				if (p.Key() < 0 || p.Key() >= AIS::KEY_COUNT)
 					continue;
 				const AIS::KeyStr &key = AIS::KeyMap[p.Key()][dict];
@@ -896,7 +954,14 @@ namespace JSON
 			write_object(object, w);
 		}
 
+		void stringifyValue(const Value &v, Writer &w)
+		{
+			write_value(v, w);
+		}
+
 		void setMap(int d) { dict = d; }
+		void setPool(const Pool *p) { pool = p; }
+		void setExactFloats(bool b) { exact = b; }
 		void setStringifyEnhanced(bool enhanced) { stringify_enhanced = enhanced; }
 		bool getStringifyEnhanced() const { return stringify_enhanced; }
 	};

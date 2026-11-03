@@ -10,28 +10,32 @@ import {
     setShips, setPlanes, setPaths, setPathsFrom, setStation, setShipsSince, setPlanesSince, setClock,
 } from './core/store.js';
 import { ShippingClass } from '@aiscatcher/core/constants.js';
-import { currentPlaceIds } from '@aiscatcher/core/visits.js';
 import { sanitizeString, getICAOFromHexIdent } from '@aiscatcher/core/text.js';
-import { redraw } from './map.js';
-
-// { configVersion(version), shipsLoaded(response) }: what the entry does with a response
-let deps = { configVersion: async () => {}, shipsLoaded: () => {} };
-
-export function init(d) {
-    deps = d;
-}
+import { redraw } from './fleet.js';
+import { beforeWrite } from './settings-store.js';
+import { refreshTab } from './tabs/index.js';
+import { updateServerConfig } from './features/server-config/viewer-config.js';
+import { drawStation } from './features/follow/follow.js';
+import { setPageTitle } from './panels.js';
+import * as community from './overlays/community.js';
 
 // ─── the receiver ────────────────────────────────────────────────────────────
 
-export let receiver = 0;
+// the station the page looks through; -1 is all of them
+export let focus = -1;
 
-export function setReceiver(idx) {
-    receiver = idx;
+export function restoreFocus() {
+    if (Number.isInteger(settings.focusStation)) focus = settings.focusStation;
 }
 
-// another receiver: everything fetched so far was the old one's
-export function switchReceiver(idx) {
-    receiver = parseInt(idx, 10) || 0;
+beforeWrite(() => {
+    settings.focusStation = focus;
+});
+
+// another station: everything fetched so far was the old one's
+export function switchFocus(id) {
+    const n = parseInt(id, 10);
+    focus = Number.isInteger(n) ? n : -1;
     setShipsSince(0);
     tableSince = 0;
     lastPathFetch = 0;
@@ -74,7 +78,7 @@ let tableSince = 0;
 
 export async function fetchTableRows() {
     try {
-        const response = await fetch("api/ships_table.json?receiver=" + receiver + (tableSince > 0 ? "&since=" + tableSince : ""));
+        const response = await fetch("api/ships_table.json?stations=" + focus + (tableSince > 0 ? "&since=" + tableSince : ""));
         if (!response.ok) return;
         const data = await response.json();
         (data.rows || []).forEach((v) => {
@@ -87,11 +91,18 @@ export async function fetchTableRows() {
     }
 }
 
+// the texts a vessel sends, escaped once as they arrive; what shows them decodes or takes them as they are
+export function escapeShipText(s) {
+    for (const key of ["shipname", "callsign", "destination", "eni", "vendorid"])
+        s[key] = sanitizeString(s[key] || "");
+    return s;
+}
+
 async function fetchShipsBody() {
     let ships = {};
 
     try {
-        const response = await fetch("api/ships_array.json?receiver=" + receiver + (shipsSince > 0 ? "&since=" + shipsSince : ""));
+        const response = await fetch("api/ships_array.json?stations=" + focus + (shipsSince > 0 ? "&since=" + shipsSince : ""));
         if (!response.ok) {
             console.log("failed loading ships: HTTP " + response.status);
             return false;
@@ -104,8 +115,8 @@ async function fetchShipsBody() {
 
     const dynamicKeys = [
         "mmsi", "lat", "lon", "distance",
-        "heading", "cog", "speed", "status", "age", "flags",
-        "shipclass", "country", "binary", "station", "place_ids"
+        "heading", "cog", "speed", "turn", "status", "age", "flags",
+        "shipclass", "country", "binary", "station", "place_ids", "stations"
     ];
 
     const staticKeys = [
@@ -116,7 +127,7 @@ async function fetchShipsBody() {
         "eni", "vendorid", "model", "serial"
     ];
 
-    await deps.configVersion(ships.config_version);
+    await updateServerConfig(ships.config_version);
     const serverTime = ships.time || 0;
     const isIncremental = shipsSince > 0 && ships.full !== true;
 
@@ -129,11 +140,7 @@ async function fetchShipsBody() {
     if (ships.static) {
         ships.static.forEach((v) => {
             const s = Object.fromEntries(staticKeys.map((k, i) => [k, v[i]]));
-            s.shipname = sanitizeString(s.shipname || "");
-            s.callsign = sanitizeString(s.callsign || "");
-            s.destination = sanitizeString(s.destination || "");
-            s.eni = sanitizeString(s.eni || "");
-            s.vendorid = sanitizeString(s.vendorid || "");
+            escapeShipText(s);
             const mmsi = s.mmsi;
             if (mmsi in shipsDB) {
                 Object.assign(shipsDB[mmsi].raw, s);
@@ -148,8 +155,8 @@ async function fetchShipsBody() {
     if (ships.dynamic) {
         ships.dynamic.forEach((v) => {
             const s = Object.fromEntries(dynamicKeys.map((k, i) => [k, v[i]]));
-            s.place_visits = s.place_ids || [];
-            s.place_ids = currentPlaceIds(s.place_visits);
+            s.place_ids = s.place_ids || [];
+            s.stations = s.stations || [];
             s.place_version = ships.place_version || "";
             s.last_signal = serverTime - (s.age || 0);
             delete s.age;
@@ -206,7 +213,9 @@ async function fetchShipsBody() {
     capShipsDB();
 
     setStation(ships.station || {});
-    deps.shipsLoaded(ships);
+    drawStation();
+    setPageTitle({ count: Object.keys(shipsDB).length });
+    community.pushVesselsToCommunityPopup(ships.dynamic);
 
     return true;
 }
@@ -365,7 +374,7 @@ export async function fetchTracks() {
                 sinceParam = pathsFrom ? "&since=" + pathsFrom : "";
                 lastFullPathFetch = Date.now();
             }
-            a = await fetch("api/allpath.json?receiver=" + receiver + sinceParam);
+            a = await fetch("api/allpath.json?stations=" + focus + sinceParam);
         } else {
             // a vessel gone from the store takes its track with it
             for (const mmsi of markerTracks) {
@@ -378,7 +387,7 @@ export async function fetchTracks() {
             if (wanted.length === 0) return true;
             const mmsi_str = wanted.join(",");
             setPathsFrom(0);
-            a = await fetch("api/path.json?" + mmsi_str + "&receiver=" + receiver);
+            a = await fetch("api/path.json?" + mmsi_str + "&stations=" + focus);
         }
 
         const newPaths = await a.json();
@@ -423,13 +432,6 @@ export async function fetchTracks() {
 
 // ─── the loop ────────────────────────────────────────────────────────────────
 
-// tab id -> what refreshing it means
-const refreshers = {};
-
-export function onRefresh(tab, fn) {
-    refreshers[tab] = fn;
-}
-
 export let refreshIntervalMs = 2500;
 let interval;
 let updateInProgress = false;
@@ -440,7 +442,7 @@ export function refresh() {
 
         return (async () => {
             try {
-                await refreshers[settings.tab]?.();
+                await refreshTab();
             } catch (error) {
                 console.error("Error updating data:", error);
             } finally {

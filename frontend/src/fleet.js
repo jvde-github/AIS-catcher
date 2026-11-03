@@ -1,8 +1,8 @@
 // The fleet on the map: each poll of the map tab fetches the vessels, tracks,
-// aircraft, map objects and range, and redrawMap builds the markers, hulls,
-// labels and track legs from the store; the entry hands redrawMap to map.js
-// as its renderer.
+// aircraft, map objects and range, and redraw builds the markers, hulls,
+// labels and track legs from the store.
 
+import { populate as populateStationcard } from './features/station/station.js';
 import { fromLonLat } from 'ol/proj';
 import OlFeature from 'ol/Feature';
 import Point from 'ol/geom/Point';
@@ -10,19 +10,18 @@ import LineString from 'ol/geom/LineString';
 import { settings } from './core/state.js';
 import * as filter from './core/filter.js';
 import {
-    ships as shipsDB, planes as planesDB, paths, station, cardType as card_type, markerTracks as marker_tracks,
+    ships as shipsDB, planes as planesDB, paths, station, markerTracks as marker_tracks,
 } from './core/store.js';
 import { hasValidCoords } from '@aiscatcher/core/geo.js';
 import { palette as validPalette, bucketColor, speedBucket } from '@aiscatcher/core/palette.js';
 import * as markersLib from '@aiscatcher/map/markers.js';
+import { predictorPath, turnSide } from '@aiscatcher/map/predictor.js';
 import {
     map, markerVector, planeVector, shapeVector, labelVector, trackVector, planeLayer, labelLayer,
 } from './map.js';
-import { fetchShips, fetchPlanes, fetchTracks, trackWindowStart, onRefresh } from './data.js';
-import { saveSettings } from './features/settings/settings.js';
-import { targetcardVisible, updateFocusMarker } from './features/targetcard/card.js';
-import * as targetcard from './features/targetcard/targetcard.js';
-import * as planecard from './features/planecard/planecard.js';
+import { fetchShips, fetchPlanes, fetchTracks, trackWindowStart } from './data.js';
+import { saveSettings } from './settings-store.js';
+import { refreshTargetcard, updateFocusMarker } from './features/targetcard/card.js';
 import { updateMarkerCount } from './features/counts/counts.js';
 import { updateTablecard } from './features/tablecard/tablecard.js';
 import { drawStation, applyFixedCenter } from './features/follow/follow.js';
@@ -42,7 +41,7 @@ let markerFeatures = {};
 const getSprite = markersLib.applySprite;
 const getPlaneSprite = markersLib.applyPlaneSprite;
 
-async function updateMap() {
+export async function updateMap() {
     // Opening the replay bar hands the map over: from that point the live
     // layers are on their way out and polling for ships, tracks and planes
     // fetches data the user is no longer looking at. Closing it resumes.
@@ -67,18 +66,13 @@ async function updateMap() {
         }
     }
 
-    if (targetcardVisible()) {
-        if (card_type == "ship")
-            targetcard.populate();
-        else if (card_type == "plane")
-            planecard.populate();
-    }
+    refreshTargetcard();
 
     updateMarkerCount();
-    redrawMap();
+    redraw();
 }
 
-export function redrawMap() {
+export function redraw() {
     shapeFeatures = {};
     markerFeatures = {};
 
@@ -92,6 +86,7 @@ export function redrawMap() {
 
     const zoom = map.getView().getZoom();
     const showShapeOutlines = zoom > 11.5;
+    const showPredictor = settings.show_predictor, predictorMinutes = Number(settings.predictor_minutes) || 6;
     const includeLabels = (settings.show_labels === "dynamic" && showShapeOutlines) || settings.show_labels === "always";
 
     for (let [mmsi, entry] of Object.entries(shipsDB)) {
@@ -123,6 +118,19 @@ export function redrawMap() {
                 shapeFeatures[ship.mmsi] = shapeFeature
 
                 shapeVector.addFeature(shapeFeature)
+            }
+
+            if (showPredictor && ship.cog != null && ship.speed > 0.5) {
+                const path = predictorPath(lat, lon, ship.speed, ship.cog, ship.turn, predictorMinutes);
+                const feature = new OlFeature({ geometry: new LineString(path.coords.map(c => fromLonLat(c))) });
+                feature.mmsi = ship.mmsi;
+                feature.shipclass = ship.shipclass;
+                feature.predictedAt = fromLonLat(path.coords[path.end]);
+                feature.marks = path.marks.map(m => ({ at: fromLonLat(m.at), bearing: m.bearing }));
+                feature.heading = ship.heading ?? ship.cog;
+                feature.minutes = predictorMinutes;
+                feature.turning = turnSide(ship.turn);
+                trackVector.addFeature(feature);
             }
         }
     }
@@ -245,7 +253,5 @@ export function redrawMap() {
     drawStation();
     applyFixedCenter();
     range.updateDistanceCircles();
-
+    populateStationcard();
 }
-
-onRefresh("map", updateMap);

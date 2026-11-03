@@ -76,11 +76,16 @@ namespace IO
 		size_t getMessageLength(bool gzip) const { return gzip ? zip.getOutputLength() : message.length(); }
 		void createHeader(bool gzip, bool multipart);
 		int parseResponse();
+		int exchange(bool body, bool gzip);
 
 	public:
 		std::string protocol, host, port, path, username, password;
 		bool basic = false;
 		bool secure = false;
+		// more header lines, each ending in \r\n, sent with every request
+		std::string extra_headers;
+		// the reply's Content-Type
+		std::string content_type;
 
 		const std::string &getResponse() const { return message; }
 
@@ -98,6 +103,8 @@ namespace IO
 		{
 			tls.setVerifyCertificates(v);
 		}
+
+		void setOwnServer() { tls.setOwnServer(); }
 
 		void setURL(const std::string &url)
 		{
@@ -121,6 +128,7 @@ namespace IO
 		}
 
 		int Post(const std::string &msg, bool gzip = false, bool multipart = false, const std::string &copyname = "");
+		int Get();
 
 		void setStats(IO::OutputStats *s) { tcp.setStats(s); tls.setStats(s); }
 	};

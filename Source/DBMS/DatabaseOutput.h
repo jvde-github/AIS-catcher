@@ -123,7 +123,7 @@ namespace IO
 			int level_count = 0, ppm_count = 0;
 			float level_min = 0, level_max = 0;
 			double ppm_sum = 0;
-			int vessel_count = 0; // vessels.size() frozen at hand-off
+			int vessel_count = 0;
 			std::set<uint32_t> vessels;
 
 			// copy without the vessels set
@@ -210,6 +210,6 @@ namespace IO
 		void setup();
 		void Start() override { setup(); }
 
-		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 	};
 }

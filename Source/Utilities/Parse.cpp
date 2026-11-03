@@ -93,6 +93,45 @@ namespace Util
 		return out;
 	}
 
+	std::string Parse::FormDecode(const std::string &s)
+	{
+		std::string spaced = s;
+		for (char &ch : spaced)
+			if (ch == '+')
+				ch = ' ';
+		return PercentDecode(spaced);
+	}
+
+	std::vector<std::pair<std::string, std::string>> Parse::Query(const std::string &query)
+	{
+		std::vector<std::pair<std::string, std::string>> out;
+		std::size_t pos = 0;
+		while (pos < query.size())
+		{
+			std::size_t amp = query.find('&', pos);
+			if (amp == std::string::npos)
+				amp = query.size();
+			if (amp > pos)
+			{
+				const std::size_t eq = query.find('=', pos);
+				if (eq != std::string::npos && eq < amp)
+					out.push_back(std::make_pair(FormDecode(query.substr(pos, eq - pos)), FormDecode(query.substr(eq + 1, amp - eq - 1))));
+				else
+					out.push_back(std::make_pair(FormDecode(query.substr(pos, amp - pos)), std::string()));
+			}
+			pos = amp + 1;
+		}
+		return out;
+	}
+
+	std::string Parse::QueryParam(const std::string &query, const std::string &name)
+	{
+		for (const auto &p : Query(query))
+			if (p.first == name)
+				return p.second;
+		return std::string();
+	}
+
 	std::string Parse::URLWithoutCredentials(const std::string &url)
 	{
 		size_t start = url.find("://");
@@ -102,6 +141,18 @@ namespace Util
 		if (at == std::string::npos || at < start)
 			return url;
 		return url.substr(0, start) + url.substr(at + 1);
+	}
+
+	std::string Parse::URLForLog(const std::string &url)
+	{
+		size_t start = url.find("://");
+		start = start == std::string::npos ? 0 : start + 3;
+		size_t end = url.find_first_of("/?#", start);
+		end = end == std::string::npos ? url.size() : end;
+		size_t at = url.rfind('@', end);
+		if (at != std::string::npos && at >= start && at < end)
+			return url.substr(0, start) + url.substr(at + 1, end - at - 1);
+		return url.substr(0, end);
 	}
 
 	void Parse::URL(const std::string &url, std::string &protocol, std::string &username, std::string &password, std::string &host, std::string &port, std::string &path, bool *has_password)
@@ -411,6 +462,11 @@ namespace Util
 	}
 #endif
 
+	bool Parse::Switch(const std::string &arg)
+	{
+		return Switch(arg, "ON", "OFF");
+	}
+
 	bool Parse::Switch(std::string arg, const std::string &TrueString, const std::string &FalseString)
 	{
 		Util::Convert::toUpper(arg);
@@ -419,6 +475,14 @@ namespace Util
 		if (arg != TrueString && arg != "TRUE")
 			throw std::runtime_error("unknown switch \"" + arg + "\"");
 
+		return true;
+	}
+
+	bool Parse::Digits(const std::string &s, long long &out, std::size_t most)
+	{
+		if (s.empty() || s.size() > most || s.size() > 18 || s.find_first_not_of("0123456789") != std::string::npos)
+			return false;
+		out = std::atoll(s.c_str());
 		return true;
 	}
 

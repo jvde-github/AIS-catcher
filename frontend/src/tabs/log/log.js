@@ -1,4 +1,4 @@
-export class LogViewer {
+class LogViewer {
     constructor() {
         this.logState = document.getElementById('log_state');
         this.logScroll = document.getElementById('log_scroll');
@@ -126,4 +126,17 @@ export class LogViewer {
             this.logState.appendChild(document.createTextNode(`Status: ${status}`));
         }
     }
+}
+
+let viewer = null;
+
+export function shown() {
+    if (viewer) return;
+    viewer = new LogViewer();
+    viewer.connect();
+}
+
+export function hidden() {
+    viewer?.disconnect();
+    viewer = null;
 }

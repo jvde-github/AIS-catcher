@@ -33,11 +33,11 @@ export const SPEED_PALETTES = {
     }
 };
 
-export const DEFAULT_PALETTE = "turbo";
+const DEFAULT_PALETTE = "turbo";
 
 // colour resolution of the ramp: coarse enough that reporting jitter does not
 // split a steady track into a feature per point, fine enough to read as a ramp
-export const STEPS = 16;
+const STEPS = 16;
 
 const hex = (c) => [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)];
 
@@ -59,7 +59,7 @@ export function palette(key) {
 }
 
 // STEPS colours, bottom of the scale first
-export function ramp(key) {
+function ramp(key) {
     key = palette(key);
     if (!ramps[key]) {
         const stops = SPEED_PALETTES[key].stops;

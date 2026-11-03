@@ -18,6 +18,7 @@
 #pragma once
 
 #include <chrono>
+#include <mutex>
 
 #include "Common.h"
 #include "Stream.h"
@@ -28,6 +29,8 @@ namespace IO
 {
 	class StreamCounter : public StreamIn<AIS::Message>, public StreamIn<Plane::ADSB>
 	{
+		// counted on the decoding thread, read on another: a 64-bit value can tear on 32-bit ARM
+		std::mutex mtx;
 		uint64_t count = 0;
 		uint64_t lastcount = 0;
 		float rate = 0.0f;
@@ -48,18 +51,25 @@ namespace IO
 
 		void Receive(const AIS::Message *data, int len, TAG &tag) override
 		{
+			std::lock_guard<std::mutex> lock(mtx);
 			count += len;
 		}
 
 		void Receive(const Plane::ADSB *data, int len, TAG &tag) override
 		{
+			std::lock_guard<std::mutex> lock(mtx);
 			count += len;
 		}
 
-		uint64_t getCount() { return count; }
+		uint64_t getCount()
+		{
+			std::lock_guard<std::mutex> lock(mtx);
+			return count;
+		}
 
 		void Stamp()
 		{
+			std::lock_guard<std::mutex> lock(mtx);
 			auto timeNow = std::chrono::high_resolution_clock::now();
 			float seconds = 1e-6f * std::chrono::duration_cast<std::chrono::microseconds>(timeNow - time_lastupdate).count();
 
@@ -75,6 +85,7 @@ namespace IO
 
 		void resetStatistic()
 		{
+			std::lock_guard<std::mutex> lock(mtx);
 			count = 0;
 			time_lastupdate = std::chrono::high_resolution_clock::now();
 		}

@@ -11,13 +11,13 @@ import { getCountryName, compactCount } from '@aiscatcher/core/text.js';
 import { decodeHTMLEntities } from '@aiscatcher/ui/components.js';
 import * as tableLib from '@aiscatcher/ui/table.js';
 import { getTableShiptype } from '../../map.js';
-import { saveSettings } from '../settings/settings.js';
+import { saveSettings, effects } from '../../settings-store.js';
 import { showTargetcard } from '../targetcard/card.js';
 import { register } from '../../actions.js';
 import { showContextMenu } from '../contextmenu/contextmenu.js';
 import { startHover, stopHover } from '../hover/hover.js';
 
-export function updateTableSort(event, dataset, header) {
+function updateTableSort(event, dataset, header) {
     settings.tableside_column = header.getAttribute("data-column");
     settings.tableside_order = tableLib.nextOrder(header);
 
@@ -27,10 +27,12 @@ export function updateTableSort(event, dataset, header) {
     updateTablecard();
 }
 
-export function updateSortMarkers() {
+function updateSortMarkers() {
     tableLib.markSort(document.getElementById("tableside"),
         settings.tableside_column, settings.tableside_order);
 }
+
+effects({ tableside_column: updateSortMarkers, tableside_order: updateSortMarkers });
 
 const compareString = tableLib.compareString;
 const compareNumber = (a, b) => tableLib.compareNumber(a, b, settings.tableside_order);

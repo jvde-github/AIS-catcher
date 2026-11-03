@@ -18,7 +18,6 @@
 #pragma once
 
 #include "Device.h"
-#include "OutputStats.h"
 
 #include <fstream>
 #include <iostream>
@@ -65,17 +64,17 @@ namespace Device
 		SETTING_STREAMING_ENABLED = 1,
 		SETTING_GAIN = 2,
 
-		SETTING_IQ_FORMAT = 100,	   // 0x64
-		SETTING_IQ_FREQUENCY = 101,	   // 0x65
-		SETTING_IQ_DECIMATION = 102,   // 0x66
-		SETTING_IQ_DIGITAL_GAIN = 103, // 0x67
+		SETTING_IQ_FORMAT = 100,
+		SETTING_IQ_FREQUENCY = 101,
+		SETTING_IQ_DECIMATION = 102,
+		SETTING_IQ_DIGITAL_GAIN = 103,
 
-		SETTING_FFT_FORMAT = 200,		  // 0xc8
-		SETTING_FFT_FREQUENCY = 201,	  // 0xc9
-		SETTING_FFT_DECIMATION = 202,	  // 0xca
-		SETTING_FFT_DB_OFFSET = 203,	  // 0xcb
-		SETTING_FFT_DB_RANGE = 204,		  // 0xcc
-		SETTING_FFT_DISPLAY_PIXELS = 205, // 0xcd
+		SETTING_FFT_FORMAT = 200,
+		SETTING_FFT_FREQUENCY = 201,
+		SETTING_FFT_DECIMATION = 202,
+		SETTING_FFT_DB_OFFSET = 203,
+		SETTING_FFT_DB_RANGE = 204,
+		SETTING_FFT_DISPLAY_PIXELS = 205,
 	};
 
 	enum StreamType
@@ -88,11 +87,11 @@ namespace Device
 
 	enum StreamingMode
 	{
-		STREAM_MODE_IQ_ONLY = STREAM_TYPE_IQ,				   // 0x01
-		STREAM_MODE_AF_ONLY = STREAM_TYPE_AF,				   // 0x02
-		STREAM_MODE_FFT_ONLY = STREAM_TYPE_FFT,				   // 0x04
-		STREAM_MODE_FFT_IQ = STREAM_TYPE_FFT | STREAM_TYPE_IQ, // 0x05
-		STREAM_MODE_FFT_AF = STREAM_TYPE_FFT | STREAM_TYPE_AF, // 0x06
+		STREAM_MODE_IQ_ONLY = STREAM_TYPE_IQ,
+		STREAM_MODE_AF_ONLY = STREAM_TYPE_AF,
+		STREAM_MODE_FFT_ONLY = STREAM_TYPE_FFT,
+		STREAM_MODE_FFT_IQ = STREAM_TYPE_FFT | STREAM_TYPE_IQ,
+		STREAM_MODE_FFT_AF = STREAM_TYPE_FFT | STREAM_TYPE_AF,
 	};
 
 	enum StreamFormat
@@ -112,18 +111,18 @@ namespace Device
 		MSG_TYPE_PONG = 2,
 		MSG_TYPE_READ_SETTING = 3,
 
-		MSG_TYPE_UINT8_IQ = 100, // 0x64
-		MSG_TYPE_INT16_IQ = 101, // 0x65
-		MSG_TYPE_INT24_IQ = 102, // 0x66
-		MSG_TYPE_FLOAT_IQ = 103, // 0x67
+		MSG_TYPE_UINT8_IQ = 100,
+		MSG_TYPE_INT16_IQ = 101,
+		MSG_TYPE_INT24_IQ = 102,
+		MSG_TYPE_FLOAT_IQ = 103,
 
-		MSG_TYPE_UINT8_AF = 200, // 0xc8
-		MSG_TYPE_INT16_AF = 201, // 0xc9
-		MSG_TYPE_INT24_AF = 202, // 0xca
-		MSG_TYPE_FLOAT_AF = 203, // 0xcb
+		MSG_TYPE_UINT8_AF = 200,
+		MSG_TYPE_INT16_AF = 201,
+		MSG_TYPE_INT24_AF = 202,
+		MSG_TYPE_FLOAT_AF = 203,
 
-		MSG_TYPE_DINT4_FFT = 300, // 0x12C
-		MSG_TYPE_UINT8_FFT = 301, // 0x12D
+		MSG_TYPE_DINT4_FFT = 300,
+		MSG_TYPE_UINT8_FFT = 301,
 	};
 
 	struct ClientHandshake
@@ -233,7 +232,6 @@ namespace Device
 
 	public:
 		SpyServer() : Device(Format::UNKNOWN, 288000, Type::SPYSERVER, "SpyServer") { client.setStats(&stats); }
-
 		const IO::OutputStats *getConnectionStats() const override { return &stats; }
 
 		void OpenWithFileDescriptor(int) override { Open(0); }
@@ -249,7 +247,7 @@ namespace Device
 		void getDeviceList(std::vector<Description> &DeviceList) override;
 
 		// Settings
-		Setting &SetKey(AIS::Keys key, const std::string &arg) override;
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 		std::string Get() override;
 
 		std::string getProduct() override { return "SPYSERVER"; }

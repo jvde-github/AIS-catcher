@@ -17,322 +17,477 @@
 
 #include <chrono>
 #include <sstream>
+#include <thread>
 
 #include "AIS-catcher.h"
 
-#include "ControlCore.h"
 #include "Engine.h"
+#include "Network.h"
+#include "Site.h"
+#include "Stations.h"
+
+#include <algorithm>
 #include "Logger.h"
 
 using namespace std::chrono;
 
-static std::string alignModelName(const std::string &name) {
-  return "[" + name + "] " +
-         std::string(name.length() < 37 ? 37 - name.length() : 0, ' ');
+static std::string alignModelName(const std::string &name)
+{
+	return "[" + name + "] " +
+		   std::string(name.length() < 37 ? 37 - name.length() : 0, ' ');
 }
 
-void Engine::detach() {
-  if (detached)
-    return;
-  detached = true;
+Engine::Engine() { receivers.push_back(std::unique_ptr<Receiver>(new Receiver())); }
 
-  for (auto &r : receivers)
-    r->stop();
+Engine::~Engine() { detach(); }
 
-#ifdef HASWEBVIEWER
-  if (attached_viewer)
-    attached_viewer->detachEngine();
+void Engine::detach()
+{
+	if (detached)
+		return;
+	detached = true;
 
-  for (auto &s : servers)
-    s->shutdown();
-#endif
+	for (auto &r : receivers)
+		r->stop();
+
+	// the site lets go of the outputs before they are destroyed
+	if (site)
+		site->detachEngine();
 }
 
 std::function<void(Engine &)> Engine::before_run;
 std::function<void(Engine &)> Engine::after_run;
 
-void Engine::run(WebViewer *viewer, ControlCore *control) {
-  attached_viewer = viewer;
+void Engine::createCommunityFeed()
+{
+	comm_feed = new IO::HubStreamer();
+	msg.push_back(std::unique_ptr<IO::OutputMessage>(comm_feed));
+}
 
-  // -------------
-  // set up the receiver and open the device
+void Engine::refreshStations(const StationRegistry &configured)
+{
+	Stations::refresh(stations, configured, receivers, site);
+}
 
-  stat.resize(receivers.size());
-  msg_count.resize(receivers.size(), 0);
-
-  bool has_server = false;
-#ifdef HASWEBVIEWER
-  // every viewer this run feeds, owned or not. The managed viewer differs only
-  // in that it outlives the engine, so the caller starts and closes it.
-  std::vector<WebViewer *> viewers;
-  for (auto &s : servers)
-    viewers.push_back(s.get());
-  if (viewer)
-    viewers.push_back(viewer);
-
-  has_server = !viewers.empty();
-#endif
-  bool has_http = false;
-  for (auto &o : msg)
-    if (dynamic_cast<IO::HTTPStreamer *>(o.get())) {
-      has_http = true;
-      break;
-    }
-
-  int group = 0;
-
-  for (int i = 0; i < (int)receivers.size(); i++) {
-    Receiver &r = *receivers[i];
-    r.SetKey(AIS::KEY_SETTING_OWN_MMSI, std::to_string(own_mmsi));
-
-    if (has_server)
-      r.setTags("DTM");
-    if (has_http)
-      r.setTags("DT");
-
-    r.setupDevice();
-
-    // set up the decoding model(s), group is the last output group used
-    r.setupModel(group, i);
-  }
-
-  // sharing is opt-in via -X: the silent get an encouraging word, not a feed
-  if (!xshare_defined && !comm_feed && (has_server || !msg.empty()) && !control)
-    Warning() << "Hint: support the aiscatcher.org community by sharing your "
-                 "feed with '-X on'. Sharing is currently OFF.";
-
-  if (comm_feed && (control ? !comm_feed->hasUUID() : !xshare_defined)) {
-    uint64_t live_groups = 0;
-    for (const auto &r : receivers) {
-      Type t = r->getDeviceManager().InputType();
-      if (t == Type::RTLSDR || t == Type::AIRSPY || t == Type::AIRSPYHF ||
-          t == Type::HACKRF || t == Type::SDRPLAY || t == Type::HYDRASDR ||
-          t == Type::SOAPYSDR)
-        live_groups |= r->getGroupMask();
-    }
-
-    comm_feed->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(live_groups));
-  }
-
-  if (!control)
-    Info() << "Community feed sharing: "
-           << (comm_feed ? "enabled." : "disabled.");
-
-  // zone-based output filtering: GROUPS_IN from zone overlap. The viewers do
-  // this for themselves in attachEngine().
-  for (auto &o : msg) {
-    if (o->zones.empty())
-      continue;
-    uint64_t mask = resolveZones(receivers, o->zones);
-    if (!mask)
-      Warning() << "Output has zone filter but no matching receivers — will "
-                   "receive nothing";
-    o->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(mask));
-  }
-
-  for (int i = 0; i < (int)receivers.size(); i++) {
-    Receiver &r = *receivers[i];
-
-    // set up all the output and connect to the receiver outputs
-    for (auto &o : msg)
-      o->Connect(r);
-
-    screen.Connect(r);
-
-    if (r.verbose || timeout_nomsg)
-      stat[i].connect(r);
-  }
-
-  if (receivers.size() > 1) {
-    Debug() << "Mutex: enabling exclusive on " << msg.size()
-            << " message outputs + screen (" << receivers.size()
-            << " receivers)";
-    for (auto &o : msg)
-      o->setExclusive(true);
-    screen.setExclusive(true);
-  } else {
-    Debug() << "Mutex: single receiver, all sinks lock-free";
-  }
-
-#ifdef HASWEBVIEWER
-  // before attachEngine(), so the trackers are built with these already applied
-  for (auto *v : viewers) {
-    v->setOutputChannels(msg);
-    v->setCommFeed(comm_feed);
-    v->setOwnVessel(own_mmsi);
-  }
-
-  for (auto *v : viewers)
-    v->attachEngine(receivers);
+#ifdef HASAPI
+void Engine::publishReceivers()
+{
+	std::vector<ReceiverState> states;
+	for (std::size_t k = 0; k < receivers.size(); k++)
+	{
+		Receiver &r = *receivers[k];
+		Device::Device *device = r.device();
+		ReceiverState s;
+		s.index = (int)k + 1;
+		s.station = r.getStation();
+		if (device)
+		{
+			s.input = device->getProduct();
+			s.streaming = device->isStreaming() && device->isConnected();
+			s.lost = device->isLost();
+		}
+		s.label = receiverLabel(receivers, k);
+		s.messages = r.messages();
+		s.bytes = r.bytesIn().received();
+		if (const IO::OutputStats *link = device ? device->getConnectionStats() : nullptr)
+		{
+			s.connection = true;
+			s.connect_ok = link->connect_ok.get();
+			s.connect_fail = link->connect_fail.get();
+			s.reconnects = link->reconnects.get();
+			s.connected = link->connected.get();
+		}
+		states.push_back(s);
+	}
+	site->publishReceivers(states);
+}
 #endif
 
-  if (control)
-    for (auto &r : receivers)
-      for (int j = 0; j < r->Count(); j++)
-        r->Output(j).Connect(
-            (StreamIn<AIS::Message> *)&control->getChannelActivity());
+void Engine::resolveStations()
+{
+	Stations::resolve(stations, station_defaults, receivers, site);
+}
 
-  for (auto &o : msg)
-    o->Start();
+bool Engine::hasServer() const
+{
+#ifdef HASAPI
+	return site->tracker() || site_config.wantsTracker() || !site_config.servers.empty();
+#else
+	return false;
+#endif
+}
 
-#ifdef HASWEBVIEWER
-  // the engine owns only the servers it built; the managed viewer is already
-  // serving and is started and closed by the caller
-  for (auto &s : servers)
-    s->startServing();
+void Engine::openReceivers()
+{
+	// the trackers read the decoders' tags
+	const bool has_server = hasServer();
+	bool has_http = false;
+	for (auto &o : msg)
+		if (dynamic_cast<IO::HTTPStreamer *>(o.get()))
+		{
+			has_http = true;
+			break;
+		}
+
+	int group = 0;
+
+	for (int i = 0; i < (int)receivers.size(); i++)
+	{
+		Receiver &r = *receivers[i];
+		r.setOwnMMSI(own_mmsi);
+
+		if (has_server)
+			r.setTags("DTM");
+		if (has_http)
+			r.setTags("DT");
+
+		r.setupDevice();
+
+		r.setupModel(group, i);
+	}
+
+	for (auto &r : receivers)
+	{
+		oneverbose |= r->verbose;
+		iscallback &= r->device()->isCallback();
+	}
+}
+
+void Engine::configureSite()
+{
+	site->configure(site_config);
+#ifdef HASAPI
+	// a server that cannot listen stops the start; managed mode keeps its panel up and tries
+	// again on the next apply
+	if (!managed)
+	{
+		const std::vector<int> ports = site->serverPorts();
+		for (const auto &s : site_config.servers)
+			if (std::find(ports.begin(), ports.end(), s.port) == ports.end())
+				throw std::runtime_error("cannot open port " + std::to_string(s.port) + " on " + s.bind + " for the server.");
+	}
+#endif
+}
+
+// the community feed takes only the radios' groups
+void Engine::shareFeed()
+{
+	// sharing is opt-in, via -X or the config's "sharing"
+	if (!xshare_defined && !comm_feed && (hasServer() || !msg.empty()) && !managed)
+		Warning() << "Hint: support the aiscatcher.org community by sharing your "
+					 "feed with '-X on'. Sharing is currently OFF.";
+
+	if (comm_feed && (managed ? !comm_feed->hasUUID() : !xshare_defined))
+	{
+		uint64_t live_groups = 0;
+		for (const auto &r : receivers)
+			if (DeviceManager::isRadio(r->inputType()))
+				live_groups |= r->getGroupMask();
+
+		comm_feed->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(live_groups));
+	}
+
+	if (!managed)
+		Info() << "Community feed sharing: "
+			   << (comm_feed ? "enabled." : "disabled.");
+}
+
+void Engine::routeOutputs()
+{
+	const bool any_zoned = anyZoned(receivers);
+	std::map<std::string, int> nth;
+	for (auto &o : msg)
+	{
+		const std::string label = o->getType() + " #" + std::to_string(++nth[o->getType()]);
+		if (o->zones.empty() && !any_zoned)
+			continue;
+		o->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(routeGroups(receivers, o->zones, o->StreamIn<AIS::Message>::getGroupsIn(),
+																		 o->getDescription().empty() ? label : o->getDescription())));
+	}
+}
+
+void Engine::connectSinks()
+{
+	for (int i = 0; i < (int)receivers.size(); i++)
+	{
+		Receiver &r = *receivers[i];
+
+		// set up all the output and connect to the receiver outputs
+		for (auto &o : msg)
+			o->Connect(r);
+
+		screen.Connect(r);
+
+		r.connectCounters();
+
+		if (activity)
+			for (int j = 0; j < r.modelCount(); j++)
+				r.Output(j).Connect(activity);
+	}
+
+	if (receivers.size() > 1)
+	{
+		Debug() << "Mutex: enabling exclusive on " << msg.size()
+				<< " message outputs + screen (" << receivers.size()
+				<< " receivers)";
+		for (auto &o : msg)
+			o->setExclusive(true);
+		screen.setExclusive(true);
+	}
+	else
+	{
+		Debug() << "Mutex: single receiver, all sinks lock-free";
+	}
+
+	for (auto &r : receivers)
+	{
+		*r->device() >> site->received();
+		*r->device() >> r->bytesIn();
+	}
+}
+
+EngineFacts Engine::facts()
+{
+	EngineFacts facts;
+	for (std::size_t k = 0; k < receivers.size(); k++)
+	{
+		auto &r = receivers[k];
+		Device::Device *device = r->device();
+		if (!device)
+			continue;
+		DeviceFacts d;
+		d.product = device->getProduct();
+		d.vendor = device->getVendor().empty() ? "-" : device->getVendor();
+		d.serial = device->getSerial().empty() ? "-" : device->getSerial();
+		d.sample_rate = device->getRateDescription();
+		d.label = receiverLabel(receivers, k);
+		for (int j = 0; j < r->modelCount(); j++)
+			d.model += (j ? "\n" : "") + r->model(j).getName();
+		facts.devices.push_back(d);
+	}
+	for (auto &o : msg)
+		facts.outputs.push_back(o.get());
+	facts.sharing = comm_feed != nullptr;
+	facts.sharing_uuid = comm_feed != nullptr && comm_feed->hasUUID();
+	return facts;
+}
+
+// the site's tracker takes every receiver; a server's own takes those in its zones and groups
+void Engine::feedTrackers()
+{
+#ifdef HASAPI
+	const auto feed = [&](Tracker *t, uint64_t mask) {
+		for (auto &r : receivers)
+			for (int j = 0; j < r->modelCount(); j++)
+			{
+				if (!r->Output(j).canConnect(mask))
+					continue;
+				r->OutputJSON(j).Connect(&t->json());
+				r->OutputGPS(j).Connect(&t->gps());
+				r->OutputControl(j).Connect(&t->control());
+				r->OutputADSB(j).Connect(&t->adsb());
+			}
+	};
+	if (Tracker *tracker = site->tracker())
+		feed(tracker, GROUPS_ALL);
+	for (const auto &own : site->ownTrackers())
+		feed(own.tracker, routeGroups(receivers, own.spec.zones, own.spec.groups_in, "A server with ships of its own"));
+#endif
+}
+
+void Engine::start()
+{
+	for (auto &o : msg)
+		o->Start();
+
+	// the servers serve and the tracker is wired, the receivers have not
+	// started: a build that adds services attaches them now
+	if (before_run)
+		before_run(*this);
+
+	Debug() << "Starting receivers";
+	for (auto &r : receivers)
+		r->play();
+
+	if (on_started)
+		on_started();
+	if (managed)
+		for (auto &r : receivers)
+			if (!r->verbose)
+				r->logSummary();
+}
+
+void Engine::printRates()
+{
+	for (int i = 0; i < (int)receivers.size(); i++)
+	{
+		Receiver &r = *receivers[i];
+		if (r.verbose)
+		{
+			for (int j = 0; j < r.modelCount(); j++)
+			{
+				IO::StreamCounter &c = r.counter(j);
+				c.Stamp();
+				Info() << alignModelName(r.modelLabel(j))
+					   << "received: " << c.getDeltaCount()
+					   << " msgs, total: " << c.getCount()
+					   << " msgs, rate: " << c.getRate()
+					   << " msg/s";
+			}
+		}
+	}
+}
+
+// -T: the timeout period counts from the start or, with timeout_nomsg, from
+// the last look at which every receiver had delivered; once it has passed the
+// run stops, with a word why and exit code -2 for the plain timeout
+bool Engine::watchdogExpired(const time_point &now, time_point &since, std::vector<uint64_t> &counts, int &code)
+{
+	if (timeout_nomsg)
+	{
+		bool one_stale = false;
+
+		for (int i = 0; i < (int)receivers.size(); i++)
+		{
+			const uint64_t count = receivers[i]->messages();
+
+			if (count == counts[i])
+				one_stale = true;
+
+			counts[i] = count;
+		}
+
+		if (!one_stale)
+			since = now;
+	}
+
+	if (duration_cast<seconds>(now - since).count() < timeout)
+		return false;
+
+	if (timeout_nomsg)
+		Warning() << "Watchdog: a receiver had no messages for " << timeout
+				  << " seconds, stopping.";
+	else
+	{
+		code = -2;
+		Warning() << "Stop triggered by timeout after " << timeout
+				  << " seconds. (-T " << timeout << ")";
+	}
+	return true;
+}
+
+// the main loop, until stopped: a device that stops ends it, as does -T
+int Engine::loop()
+{
+	const int SLEEP = 50;
+	auto time_start = high_resolution_clock::now();
+	auto time_timeout_start = time_start;
+	auto time_last = time_start;
+	// steady: high_resolution_clock is the wall clock on libstdc++
+	auto next_poll = steady_clock::now();
+	std::vector<uint64_t> msg_count(receivers.size(), 0);
+	int code = 0;
+
+	Debug() << "Entering main loop";
+#ifdef HASAPI
+	auto next_status = steady_clock::now();
+#endif
+	while (!stop)
+	{
+		for (auto &r : receivers)
+			stop = stop || !(r->device()->isActive());
+
+#ifdef HASAPI
+		// the site's system pages, about once a second, and once more when a
+		// receiver stops the session, so its loss is told
+		if (stop || steady_clock::now() >= next_status)
+		{
+			next_status = steady_clock::now() + seconds(1);
+			publishReceivers();
+		}
 #endif
 
-  // the viewers serve and their streams are wired, the receivers have not
-  // started: a build that adds services attaches them now
-  if (before_run)
-    before_run(*this);
+		// for non-callback devices (WAV file), the isStreaming() poll above pumps
+		// the data, so the loop must run unthrottled
+		if (iscallback)
+			std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP));
 
-  Debug() << "Starting receivers";
-  for (auto &r : receivers)
-    r->play();
+		if (loop_hook)
+			loop_hook();
+		// outputs make and keep their connections here, off the decoding thread;
+		// paced, as the loop runs unthrottled for a file input
+		auto poll_now = steady_clock::now();
+		if (poll_now >= next_poll)
+		{
+			next_poll = poll_now + milliseconds(SLEEP);
+			for (auto &o : msg)
+				o->poll();
+		}
 
-  if (control) {
-    control->reportRunning();
-    Info() << "Control: engine started";
+		if (!oneverbose && !timeout)
+			continue;
 
-    for (auto &r : receivers)
-      if (!r->verbose)
-        r->logSummary();
-  }
+		auto time_now = high_resolution_clock::now();
 
-  const int SLEEP = 50;
-  std::time_t next_minute = 0;
-  auto time_start = high_resolution_clock::now();
-  auto time_timeout_start = time_start;
-  auto time_last = time_start;
-  // steady: high_resolution_clock is the wall clock on libstdc++
-  auto next_poll = steady_clock::now();
-  bool oneverbose = false, iscallback = true;
+		if (oneverbose && duration_cast<seconds>(time_now - time_last).count() >=
+							  screen.verboseUpdateTime)
+		{
+			time_last = time_now;
+			printRates();
+		}
 
-  for (auto &r : receivers) {
-    oneverbose |= r->verbose;
-    iscallback &= r->getDeviceManager().getDevice()->isCallback();
-  }
+		if (timeout && watchdogExpired(time_now, time_timeout_start, msg_count, code))
+			stop = true;
+	}
+	return code;
+}
 
-  Debug() << "Entering main loop";
-  while (!stop) {
-    for (auto &r : receivers)
-      stop = stop || !(r->getDeviceManager().getDevice()->isActive());
+void Engine::reportTotals()
+{
+	for (int i = 0; i < (int)receivers.size(); i++)
+	{
+		Receiver &r = *receivers[i];
 
-    // for non-callback devices (WAV file), the isStreaming() poll above pumps
-    // the data, so the loop must run unthrottled
-    if (iscallback)
-      std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP));
+		std::stringstream ss;
+		if (r.verbose)
+		{
+			ss << "----------------------\n";
+			for (int j = 0; j < r.modelCount(); j++)
+			{
+				r.counter(j).Stamp();
+				ss << alignModelName(r.modelLabel(j))
+				   << "total: " << r.counter(j).getCount() << " msgs" << "\n";
+			}
+		}
 
-#ifdef HASWEBVIEWER
-    if (control && viewer)
-      control->syncViewer(*viewer);
-#endif
-    // outputs make and keep their connections here, off the decoding thread;
-    // paced, as the loop runs unthrottled for a file input
-    auto poll_now = steady_clock::now();
-    if (poll_now >= next_poll) {
-      next_poll = poll_now + milliseconds(SLEEP);
-      for (auto &o : msg)
-        o->poll();
-    }
+		if (r.timing())
+			for (int j = 0; j < r.modelCount(); j++)
+				ss << alignModelName(r.model(j).getName())
+				   << r.model(j).getTotalTiming() << " ms" << "\n";
+		if (!ss.str().empty())
+			Info() << ss.str();
+	}
+}
 
-    // above the verbose/timeout shortcut below or it never runs by default
-    std::time_t tick_now = std::time(nullptr);
-    if (tick_now >= next_minute) {
-      next_minute = tick_now + 60;
-#ifdef HASWEBVIEWER
-      for (auto v : viewers)
-        v->tickMinute(tick_now);
-#endif
-    }
+int Engine::run(Site &on)
+{
+	site = &on;
+	resolveStations();
+	openReceivers();
+	configureSite();
+	shareFeed();
+	routeOutputs();
+	connectSinks();
+	site->attachEngine(facts());
+	feedTrackers();
+	start();
 
-    if (!oneverbose && !timeout)
-      continue;
+	const int code = loop();
 
-    auto time_now = high_resolution_clock::now();
+	if (after_run)
+		after_run(*this);
 
-    if (oneverbose && duration_cast<seconds>(time_now - time_last).count() >=
-                          screen.verboseUpdateTime) {
-      time_last = time_now;
-
-      for (int i = 0; i < (int)receivers.size(); i++) {
-        Receiver &r = *receivers[i];
-        if (r.verbose) {
-          for (int j = 0; j < r.Count(); j++) {
-            stat[i].statistics[j]->Stamp();
-            std::string name = r.Model(j)->getName() + " #" +
-                               std::to_string(i) + "-" + std::to_string(j);
-            Info() << alignModelName(name)
-                   << "received: " << stat[i].statistics[j]->getDeltaCount()
-                   << " msgs, total: " << stat[i].statistics[j]->getCount()
-                   << " msgs, rate: " << stat[i].statistics[j]->getRate()
-                   << " msg/s";
-          }
-        }
-      }
-    }
-
-    // watchdog: stop when any receiver went without messages for the timeout
-    // period
-    if (timeout && timeout_nomsg) {
-      bool one_stale = false;
-
-      for (int i = 0; i < (int)receivers.size(); i++) {
-        uint64_t count = 0;
-        for (auto &s : stat[i].statistics)
-          count += s->getCount();
-
-        if (count == msg_count[i])
-          one_stale = true;
-
-        msg_count[i] = count;
-      }
-
-      if (!one_stale)
-        time_timeout_start = time_now;
-    }
-
-    if (timeout &&
-        duration_cast<seconds>(time_now - time_timeout_start).count() >=
-            timeout) {
-      stop = true;
-      if (timeout_nomsg)
-        Warning() << "Watchdog: a receiver had no messages for " << timeout
-                  << " seconds, stopping.";
-      else {
-        exit_code = -2;
-        Warning() << "Stop triggered by timeout after " << timeout
-                  << " seconds. (-T " << timeout << ")";
-      }
-    }
-  }
-
-  if (after_run)
-    after_run(*this);
-
-  detach();
-
-  for (int i = 0; i < (int)receivers.size(); i++) {
-    Receiver &r = *receivers[i];
-
-    std::stringstream ss;
-    if (r.verbose) {
-      ss << "----------------------\n";
-      for (int j = 0; j < r.Count(); j++) {
-        std::string name = r.Model(j)->getName() + " #" + std::to_string(i) +
-                           "-" + std::to_string(j);
-        stat[i].statistics[j]->Stamp();
-        ss << alignModelName(name)
-           << "total: " << stat[i].statistics[j]->getCount() << " msgs" << "\n";
-      }
-    }
-
-    if (r.Timing())
-      for (int j = 0; j < r.Count(); j++)
-        ss << alignModelName(r.Model(j)->getName())
-           << r.Model(j)->getTotalTiming() << " ms" << "\n";
-    if (!ss.str().empty())
-      Info() << ss.str();
-  }
+	detach();
+	reportTotals();
+	return code;
 }

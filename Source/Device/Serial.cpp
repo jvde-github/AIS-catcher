@@ -242,8 +242,8 @@ namespace Device
 			dcb.fParity = TRUE;
 			dcb.fDtrControl = DTR_CONTROL_ENABLE;
 			dcb.fRtsControl = RTS_CONTROL_ENABLE;
-			dcb.fOutX = FALSE; // Disable XON/XOFF output flow control
-			dcb.fInX = FALSE;  // Disable XON/XOFF input flow control
+			dcb.fOutX = FALSE;
+			dcb.fInX = FALSE;
 		}
 		else
 			throw std::runtime_error("Serial: GetCommState failed. Error: " + GetLastErrorAsString());
@@ -255,10 +255,10 @@ namespace Device
 
 		// Set timeouts for immediate return with available data
 		COMMTIMEOUTS ct = {0};
-		ct.ReadIntervalTimeout = MAXDWORD; // Return immediately
+		ct.ReadIntervalTimeout = MAXDWORD;
 		ct.ReadTotalTimeoutMultiplier = 0;
 		ct.ReadTotalTimeoutConstant = 0;
-		ct.WriteTotalTimeoutConstant = 2000; // write timeout
+		ct.WriteTotalTimeoutConstant = 2000;
 		ct.WriteTotalTimeoutMultiplier = 0;
 
 		if (!SetCommTimeouts(serial_handle, &ct))
@@ -429,7 +429,7 @@ namespace Device
 			dump_stream.close();
 	}
 
-	Setting &SerialPort::SetKey(AIS::Keys key, const std::string &arg)
+	Setting &SerialPort::applyKey(AIS::Keys key, const std::string &arg)
 	{
 		switch (key)
 		{
@@ -481,7 +481,7 @@ namespace Device
 			break;
 		}
 		default:
-			Device::SetKey(key, arg);
+			Device::applyKey(key, arg);
 			break;
 		}
 		return *this;

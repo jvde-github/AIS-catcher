@@ -22,12 +22,12 @@ export function isRunning() {
     return active;
 }
 
-export function toggle() {
+function toggle() {
     if (!active) start();
     else stop();
 }
 
-export function start() {
+function start() {
     if (active) return;
     if (!config.features.realtime) {
         showDialog("Error", "Cannot run Firework Mode. Please ensure that AIS-catcher is running with -N REALTIME on.");

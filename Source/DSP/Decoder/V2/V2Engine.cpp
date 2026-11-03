@@ -299,7 +299,7 @@ namespace V2
 		float f;
 		if (slot_locked && e < BLOCK_SIZE)
 		{
-			ppm_split = e; // [0, e) keeps the previous block's frequency
+			ppm_split = e;
 
 			fo.Derotate(fo.last_f, input, output, e);
 			f = fo.Estimate(input + e);

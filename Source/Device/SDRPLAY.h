@@ -22,10 +22,12 @@
 #ifdef HASSDRPLAY
 #include <sdrplay_api.h>
 
-namespace Device {
+namespace Device
+{
 
 
-	class SDRPLAY : public Device {
+	class SDRPLAY : public Device
+	{
 
 		int LNAstate = 0;
 		int gRdB = 32;
@@ -42,14 +44,14 @@ namespace Device {
 		std::vector<CFLOAT32> output;
 
 		sdrplay_api_DeviceT device;
-		sdrplay_api_DeviceParamsT* deviceParams = NULL;
-		sdrplay_api_RxChannelParamsT* chParams = NULL;
+		sdrplay_api_DeviceParamsT *deviceParams = NULL;
+		sdrplay_api_RxChannelParamsT *chParams = NULL;
 
-		static void callback_static(short* xi, short* xq, sdrplay_api_StreamCbParamsT* params, unsigned int numSamples, unsigned int reset, void* cbContext);
-		static void callback_event_static(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT* params, void* cbContext);
+		static void callback_static(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params, unsigned int numSamples, unsigned int reset, void *cbContext);
+		static void callback_event_static(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT *params, void *cbContext);
 
-		void callback(short* xi, short* xq, sdrplay_api_StreamCbParamsT* params, unsigned int numSamples, unsigned int reset);
-		void callback_event(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT* params);
+		void callback(short *xi, short *xq, sdrplay_api_StreamCbParamsT *params, unsigned int numSamples, unsigned int reset);
+		void callback_event(sdrplay_api_EventT eventId, sdrplay_api_TunerSelectT tuner, sdrplay_api_EventParamsT *params);
 
 		std::string getHardwareDescription(unsigned char);
 
@@ -63,7 +65,7 @@ namespace Device {
 
 		virtual bool isCallback() { return true; }
 
-		void getDeviceList(std::vector<Description>& DeviceList);
+		void getDeviceList(std::vector<Description> &DeviceList);
 
 		std::string getProduct() { return getHardwareDescription(device.hwVer); }
 		std::string getVendor() { return "SDRPLAY"; }
@@ -71,15 +73,17 @@ namespace Device {
 
 		void setFormat(Format f) {}
 
-		Setting& SetKey(AIS::Keys key, const std::string &arg);
+		Setting &applyKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 }
 
 #else // HASSDRPLAY
 
-namespace Device {
-	class SDRPLAY : public Unavailable {
+namespace Device
+{
+	class SDRPLAY : public Unavailable
+	{
 	public:
 		SDRPLAY() : Unavailable("SDRPLAY", "HASSDRPLAY", Type::SDRPLAY) {}
 	};

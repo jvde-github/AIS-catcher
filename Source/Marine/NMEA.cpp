@@ -108,7 +108,7 @@ namespace AIS
 		static bool warned = false;
 		if (!warned)
 		{
-			Warning() << "NMEA: 'stamp' setting is deprecated and ignored — rxtime is always stamped on receive; upstream time is captured in 'toa'";
+			Warning() << "NMEA: 'stamp' setting is deprecated and ignored: rxtime is always stamped on receive; upstream time is captured in 'toa'";
 			warned = true;
 		}
 	}
@@ -173,9 +173,9 @@ namespace AIS
 	{
 		splitStr = &s;
 		splitCount = 0;
-		splitDelim[0] = (int)offset - 1; // sentinel before first field
+		splitDelim[0] = (int)offset - 1;
 
-		const char *ptr = s.data() + offset + 1; // +1 to skip leading $/!
+		const char *ptr = s.data() + offset + 1;
 		const char *end = s.data() + s.size();
 
 		// Phase 1: scan size_t words for '*' to find checksum boundary
@@ -233,7 +233,7 @@ namespace AIS
 		}
 
 		splitChecksum = cs;
-		splitDelim[++splitCount] = (int)s.size(); // sentinel after last field
+		splitDelim[++splitCount] = (int)s.size();
 	}
 
 	static bool parse_uint(const char *p, int len, int64_t &out)
@@ -321,7 +321,7 @@ namespace AIS
 		}
 
 		int last = splitCount - 1;
-		int checksum = partLen(last) > 2 ? (hexDigitValue(partAt(last, partLen(last) - 2)) << 4) | hexDigitValue(partAt(last, partLen(last) - 1)) : -1;
+		int checksum = partLen(last) > 2 ? (hexDigitValue(partAt(last, partLen(last) - 2)) * 16) | hexDigitValue(partAt(last, partLen(last) - 1)) : -1;
 		if (checksum != splitChecksum)
 		{
 			if (shouldWarn(WARN_GPS_CHECKSUM))
@@ -394,7 +394,7 @@ namespace AIS
 			warnAIS(WARN_AIS_TAIL, "malformed tail", data, len);
 			return false;
 		}
-		int checksum = (hexDigitValue(end[-2]) << 4) | hexDigitValue(end[-1]);
+		int checksum = (hexDigitValue(end[-2]) * 16) | hexDigitValue(end[-1]);
 		char fillbits_ch = end[-4];
 		if (fillbits_ch < '0' || fillbits_ch > '5')
 		{
@@ -407,7 +407,7 @@ namespace AIS
 		char id_ch = 0;
 		if (*q != ',')
 			id_ch = *q++;
-		if (*q != ',')
+		if (*q != ',' || (id_ch && !isdigit((unsigned char)id_ch)))
 		{
 			warnAIS(WARN_AIS_ID, "invalid ID field", data, len);
 			return false;
@@ -415,11 +415,16 @@ namespace AIS
 		q++;
 
 		char channel_ch = '?';
+		// the sentence goes out as it came, inside JSON too: only a letter or digit stands here
 		if (*q != ',')
+		{
 			channel_ch = *q++;
-
-		if (!isalnum((unsigned char)channel_ch))
-			channel_ch = '?';
+			if (!isalnum((unsigned char)channel_ch))
+			{
+				warnAIS(WARN_AIS_CHANNEL, "invalid channel field", data, len);
+				return false;
+			}
+		}
 
 		if (*q != ',')
 		{
@@ -678,6 +683,12 @@ namespace AIS
 				}
 			}
 
+			// an out of range figure, as 1e999, adds up to NaN that -ffast-math lets past the writer
+			if (!(tag.level >= -1000 && tag.level <= 1000))
+				tag.level = LEVEL_UNDEFINED;
+			if (!(tag.ppm >= -1000 && tag.ppm <= 1000))
+				tag.ppm = PPM_UNDEFINED;
+
 			bool known_dev = (dev == DEV_AIS_CATCHER || dev == DEV_DAISY_CATCHER);
 
 			if (cls == CLS_AIS && known_dev && uuid_match && nmea_array)
@@ -694,12 +705,17 @@ namespace AIS
 			if (known_dev && message && !message->empty())
 			{
 				auto driver = Util::Parse::DeviceTypeString(tag.driver);
+				// the sender's text: one short line, nothing for a terminal to act on
+				std::string text = message->substr(0, 256);
+				for (char &ch : text)
+					if ((unsigned char)ch < 0x20 || ch == 0x7f)
+						ch = ' ';
 				if (cls == CLS_ERROR)
-					Error() << "[" << driver << "]: " << *message;
+					Error() << "[" << driver << "]: " << text;
 				else if (cls == CLS_WARNING)
-					Warning() << "[" << driver << "]: " << *message;
+					Warning() << "[" << driver << "]: " << text;
 				else
-					Info() << "[" << driver << "]: " << *message;
+					Info() << "[" << driver << "]: " << text;
 			}
 
 			if (topic && payload && uuid_match && *topic == "station")
@@ -790,7 +806,7 @@ namespace AIS
 		}
 
 		int src = station;
-		if (flags & 0x04) // station id carried in the frame
+		if (flags & 0x04)
 		{
 			uint32_t id = 0;
 			for (int i = 0; i < 4; i++)
@@ -921,7 +937,7 @@ namespace AIS
 
 			if (star + 3 <= pEnd)
 			{
-				int expected = (hexDigitValue(star[1]) << 4) | hexDigitValue(star[2]);
+				int expected = (hexDigitValue(star[1]) * 16) | hexDigitValue(star[2]);
 				int actual = 0;
 				for (const char *q = p; q < star; q++)
 					actual ^= *q;
@@ -1089,7 +1105,7 @@ namespace AIS
 
 		if (pos < bufsize && pos < limit)
 		{
-			pos++; // skip terminator
+			pos++;
 
 			if (state == ParseState::NMEA)
 			{
@@ -1191,7 +1207,7 @@ namespace AIS
 
 		if (pos < bufsize && pos < limit)
 		{
-			pos++; // skip \n
+			pos++;
 			processBinaryPacket(tag);
 			reset();
 			return;

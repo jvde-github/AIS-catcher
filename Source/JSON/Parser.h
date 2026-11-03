@@ -61,7 +61,8 @@ namespace JSON
 		int depth = 0;
 		int max_depth = 20;
 
-		[[noreturn]] void error(const std::string &err, int pos);
+		// `syntax`: the text is not JSON; otherwise it is, but not what the reader takes
+		[[noreturn]] void error(const std::string &err, int pos, bool syntax = true);
 		[[noreturn]] AISC_COLD_NOINLINE void error(const char *err, int pos);
 
 		// tokenizer
@@ -75,7 +76,7 @@ namespace JSON
 		AISC_COLD_NOINLINE void parse_string_escaped();
 
 		// parser
-		[[noreturn]] void error_parser(const std::string &err);
+		[[noreturn]] void error_parser(const std::string &err, bool syntax = true);
 		bool is_match(TokenType t) { return currentType == t; }
 		void must_match(TokenType t, const std::string &err)
 		{

@@ -70,7 +70,9 @@ a:focus-visible {
     --header-divider: var(--color-brand-accent);
 }
 
-.header-title span {
+.header-title h1 {
+    margin: 0;
+    font: inherit;
     padding: 15px;
     padding-top: 17px;
     line-height: 20px;
@@ -316,4 +318,22 @@ a:focus-visible {
 
 .aiscatcher-logo-control.connected svg path {
     fill: var(--color-secondary) !important;
+}
+
+/* shown instead of a station's range rows and charts when its position is private */
+.range-note {
+    display: none;
+    grid-column: 1 / -1;
+    margin: 12px 25px 0;
+    color: var(--color-text-muted);
+    font-size: var(--fs-md);
+}
+
+.range-hidden .range-note {
+    display: block;
+}
+
+.range-hidden .range-row,
+.range-hidden .range-panel {
+    display: none;
 }

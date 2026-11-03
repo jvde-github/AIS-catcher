@@ -418,7 +418,7 @@ namespace AIS
 	{
 		U(msg, AIS::KEY_MESSAGE_ID, start + 2, 6);
 		unsigned message_id = msg.getUint(start + 2, 6);
-		int rpt = start + 8; // first report starts 8 bits into the payload
+		int rpt = start + 8;
 
 		// Wind speed/gust in 1/10 knot. 1023 is the spec's "not available"; stations
 		// without a gust sensor send a constant 1014 instead. Reject the top of the
@@ -1078,7 +1078,7 @@ namespace AIS
 	{
 		const int len = msg.getLength();
 		if (len - start < 56)
-			return; // no active route (header-only / cancellation)
+			return;
 
 		double lon = msg.getInt(start + 1, 28) / 600000.0;
 		double lat = msg.getInt(start + 29, 27) / 600000.0;
@@ -1296,8 +1296,8 @@ namespace AIS
 			}
 			else if (slot_timeout == 1)
 			{
-				const int utc_hour = (sub_msg >> 9) & 0x1F;	  // 5 bits (13-9)
-				const int utc_minute = (sub_msg >> 2) & 0x7F; // 7 bits (8-2)
+				const int utc_hour = (sub_msg >> 9) & 0x1F;
+				const int utc_minute = (sub_msg >> 2) & 0x7F;
 
 				if (utc_hour < 24 && utc_minute < 60)
 				{
@@ -1366,7 +1366,7 @@ namespace AIS
 			if (tag.ppm != PPM_UNDEFINED) json.Add(AIS::KEY_PPM, tag.ppm);
 		}
 
-		if (msg.getStation())
+		if (msg.getStation() >= 0)
 		{
 			json.Add(AIS::KEY_STATION_ID, msg.getStation());
 		}

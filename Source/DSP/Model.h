@@ -76,7 +76,7 @@ namespace AIS
 	class Model : public Setting
 	{
 	protected:
-		int station = 0;
+		int station = -1;
 		int own_mmsi = -1;
 
 		Mode mode = Mode::AB;
@@ -105,11 +105,14 @@ namespace AIS
 
 		void setMode(Mode m) { mode = m; }
 		void setOwnMMSI(int m) { own_mmsi = m; }
+		// the station of the input, when the decoder has no ID of its own
+		void setDefaultStation(int s) { if (station < 0) station = s; }
 		void setDesignation(const std::string &s) { designation = s; }
-		virtual Setting &SetKey(AIS::Keys key, const std::string &arg)
+		virtual Setting &applyKey(AIS::Keys key, const std::string &arg)
 		{
 			switch (key)
 			{
+			case AIS::KEY_SETTING_STATION:
 			case AIS::KEY_SETTING_STATION_ID:
 			case AIS::KEY_SETTING_ID:
 				station = Util::Parse::Integer(arg);
@@ -164,7 +167,7 @@ namespace AIS
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
 
-		Setting &SetKey(AIS::Keys key, const std::string &arg);
+		Setting &applyKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 
@@ -225,7 +228,7 @@ namespace AIS
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
-		Setting &SetKey(AIS::Keys key, const std::string &arg);
+		Setting &applyKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 
@@ -259,7 +262,7 @@ namespace AIS
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
-		Setting &SetKey(AIS::Keys key, const std::string &arg);
+		Setting &applyKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 
@@ -275,7 +278,7 @@ namespace AIS
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
-		Setting &SetKey(AIS::Keys key, const std::string &arg);
+		Setting &applyKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 	};
 
@@ -312,7 +315,7 @@ namespace AIS
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
-		Setting &SetKey(AIS::Keys key, const std::string &arg);
+		Setting &applyKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 		ModelClass getClass() { return ModelClass::TXT; }
 	};
@@ -327,7 +330,7 @@ namespace AIS
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
-		Setting &SetKey(AIS::Keys key, const std::string &arg);
+		Setting &applyKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 		ModelClass getClass() { return ModelClass::N2K; }
 	};
@@ -342,7 +345,7 @@ namespace AIS
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
-		Setting &SetKey(AIS::Keys key, const std::string &arg);
+		Setting &applyKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 		ModelClass getClass() { return ModelClass::BASESTATION; }
 	};
@@ -357,7 +360,7 @@ namespace AIS
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
-		Setting &SetKey(AIS::Keys key, const std::string &arg);
+		Setting &applyKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 		ModelClass getClass() { return ModelClass::BASESTATION; }
 	};
@@ -372,7 +375,7 @@ namespace AIS
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
-		Setting &SetKey(AIS::Keys key, const std::string &arg);
+		Setting &applyKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 		ModelClass getClass() { return ModelClass::BASESTATION; }
 	};
@@ -387,7 +390,7 @@ namespace AIS
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
-		Setting &SetKey(AIS::Keys key, const std::string &arg);
+		Setting &applyKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 		ModelClass getClass() { return ModelClass::IQ; }
 	};

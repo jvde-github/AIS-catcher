@@ -20,32 +20,38 @@
 #include <iostream>
 #include <vector>
 
-enum class DecoderSignals {
+enum class DecoderSignals
+{
 	StopTraining,
 	StartTraining,
 	Reset
 };
-enum class SystemSignal {
+enum class SystemSignal
+{
 	Stop
 };
 
 template <typename T>
-class SignalIn {
+class SignalIn
+{
 public:
-	virtual ~SignalIn(){};
-	virtual void Signal(const T& in) {}
+	virtual ~SignalIn() {};
+	virtual void Signal(const T &in) {}
 };
 
 template <typename T>
-class SignalHub {
+class SignalHub
+{
 
 public:
-	std::vector<SignalIn<T>*> destinations;
-	void Send(const T& m) {
-		for (const auto& d : destinations)
+	std::vector<SignalIn<T> *> destinations;
+	void Send(const T &m)
+	{
+		for (const auto &d : destinations)
 			d->Signal(m);
 	}
-	void Connect(SignalIn<T>& s) {
+	void Connect(SignalIn<T> &s)
+	{
 		destinations.push_back(&s);
 	}
 };

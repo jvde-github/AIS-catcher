@@ -75,7 +75,7 @@ namespace IO
 				file.close();
 		}
 
-		Setting &SetKey(AIS::Keys key, const std::string &arg) override
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override
 		{
 			switch (key)
 			{
@@ -92,7 +92,7 @@ namespace IO
 				break;
 			}
 			default:
-				return OutputMessage::SetKey(key, arg);
+				return OutputMessage::applyKey(key, arg);
 			}
 			return *this;
 		}

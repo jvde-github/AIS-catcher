@@ -27,14 +27,21 @@
 #else
 #include <unistd.h>
 #include <dirent.h>
+#include <sys/stat.h>
+#include <sys/resource.h>
+#include <pthread.h>
 #endif
 
 #ifdef __APPLE__
 #include <sys/sysctl.h>
 #include <mach/mach.h>
 #endif
+#ifdef __linux__
+#include <sys/syscall.h>
+#endif
 
 #include "Helper.h"
+#include <cstdlib>
 #include "Convert.h"
 
 namespace Util
@@ -102,9 +109,33 @@ namespace Util
 #endif
 	}
 
+	bool Helper::createTemp(const std::string &tmp, const std::string &target)
+	{
+#ifdef _WIN32
+		return true;
+#else
+		struct stat st;
+		const mode_t mode = ::stat(target.c_str(), &st) == 0 ? (st.st_mode & 07777) : 0600;
+		::unlink(tmp.c_str());
+		const int fd = ::open(tmp.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, mode);
+		if (fd < 0)
+			return false;
+		// past the umask
+		const bool ok = ::fchmod(fd, mode) == 0;
+		::close(fd);
+		return ok;
+#endif
+	}
+
 	bool Helper::writeFileAtomic(const std::string &path, const std::string &content, std::string &error)
 	{
 		const std::string tmp = path + ".tmp";
+
+		if (!createTemp(tmp, path))
+		{
+			error = "cannot create \"" + tmp + "\"";
+			return false;
+		}
 
 		std::ofstream file(tmp, std::ios::binary | std::ios::trunc);
 		if (!file)
@@ -216,7 +247,15 @@ namespace Util
 #endif
 	}
 
+	static std::string detectHardware();
+
 	std::string Helper::getHardware()
+	{
+		static const std::string hardware = detectHardware();
+		return hardware;
+	}
+
+	static std::string detectHardware()
 	{
 #ifdef _WIN32
 
@@ -419,23 +458,49 @@ namespace Util
 		return files;
 	}
 
-	bool Helper::isUUID(const std::string &s)
+	bool Helper::isUUID(const std::string &s, bool lowercase)
 	{
 		if (s.size() != 36)
 			return false;
 		for (int i = 0; i < 36; i++)
 		{
+			const char c = s[i];
 			if (i == 8 || i == 13 || i == 18 || i == 23)
 			{
-				if (s[i] != '-')
+				if (c != '-')
 					return false;
 			}
-			else
-			{
-				if (!isxdigit(s[i]))
-					return false;
-			}
+			else if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
+					   (!lowercase && c >= 'A' && c <= 'F')))
+				return false;
 		}
 		return true;
+	}
+
+	void Helper::lowerThreadPriority()
+	{
+#if defined(_WIN32)
+		SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
+#elif defined(__APPLE__)
+		pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+#elif defined(__linux__)
+		setpriority(PRIO_PROCESS, (id_t)syscall(SYS_gettid), 5);
+#endif
+	}
+
+	std::string Helper::resolvePath(const std::string &f, const std::string &base)
+	{
+		std::string path = f;
+		if (path.size() > 1 && path[0] == '~' && (path[1] == '/' || path[1] == '\\'))
+		{
+			const char *home = std::getenv("HOME");
+			if (home && *home)
+				path = std::string(home) + path.substr(1);
+		}
+		const bool absolute = (!path.empty() && (path[0] == '/' || path[0] == '\\')) ||
+							  (path.size() > 2 && path[1] == ':' && (path[2] == '/' || path[2] == '\\'));
+		if (path.empty() || absolute || base.empty())
+			return path;
+		return base + "/" + path;
 	}
 }

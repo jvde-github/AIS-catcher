@@ -1,65 +1,27 @@
-import {placeFeature} from '@aiscatcher/core/places.js';
+import {placeFeature, importPlace} from '@aiscatcher/core/places.js';
 import GeoJSON from 'ol/format/GeoJSON.js';
 import Draw from 'ol/interaction/Draw.js';
 import Modify from 'ol/interaction/Modify.js';
 import { shapeFromGeoJSON } from './shape.js';
+import { icon, toolIcon } from './icons.js';
 import * as tooltip from '@aiscatcher/ui/tooltip.js';
-import { ConfigStore } from './config-manager.js';
-const TOOL_ICONS = {
-    pentagon: 'M298-200h364l123-369-305-213-305 213 123 369Zm-58 80L80-600l400-280 400 280-160 480H240Zm240-371Z',
-    add_location_alt: 'M480-80Q319-217 239.5-334.5T160-552q0-150 96.5-239T480-880h20q10 0 20 2v81q-10-2-19.5-2.5T480-800q-101 0-170.5 69.5T240-552q0 71 59 162.5T480-186q122-112 181-203.5T720-552v-8h80v8q0 100-79.5 217.5T480-80Zm56.5-423.5Q560-527 560-560t-23.5-56.5Q513-640 480-640t-56.5 23.5Q400-593 400-560t23.5 56.5Q447-480 480-480t56.5-23.5ZM480-560Zm240-80h80v-120h120v-80H800v-120h-80v120H600v80h120v120Z',
-    undo: 'M280-200v-80h284q63 0 109.5-40T720-420q0-60-46.5-100T564-560H312l104 104-56 56-200-200 200-200 56 56-104 104h252q97 0 166.5 63T800-420q0 94-69.5 157T564-200H280Z',
-    redo: 'M396-200q-97 0-166.5-63T160-420q0-94 69.5-157T396-640h252L544-744l56-56 200 200-200 200-56-56 104-104H396q-63 0-109.5 40T240-420q0 60 46.5 100T396-280h284v80H396Z',
-    fit_screen: 'M800-600v-120H680v-80h120q33 0 56.5 23.5T880-720v120h-80Zm-720 0v-120q0-33 23.5-56.5T160-800h120v80H160v120H80Zm600 440v-80h120v-120h80v120q0 33-23.5 56.5T800-160H680Zm-520 0q-33 0-56.5-23.5T80-240v-120h80v120h120v80H160Zm80-160v-320h480v320H240Zm80-80h320v-160H320v160Zm0 0v-160 160Z',
-    upload: 'M440-320v-326L336-542l-56-58 200-200 200 200-56 58-104-104v326h-80ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z',
-    download: 'M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z',
-    content_paste: 'M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h167q11-35 43-57.5t70-22.5q40 0 71.5 22.5T594-840h166q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560h-80v120H280v-120h-80v560Zm308.5-571.5Q520-783 520-800t-11.5-28.5Q497-840 480-840t-28.5 11.5Q440-817 440-800t11.5 28.5Q463-760 480-760t28.5-11.5Z',
-    fullscreen: 'M120-120v-200h80v120h120v80H120Zm520 0v-80h120v-120h80v200H640ZM120-640v-200h200v80H200v120h-80Zm640 0v-120H640v-80h200v200h-80Z',
-    fullscreen_exit: 'M240-120v-120H120v-80h200v200h-80Zm400 0v-200h200v80H720v120h-80ZM120-640v-80h120v-120h80v200H120Zm520 0v-200h80v120h120v80H640Z',
-    add: 'M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z',
-    remove: 'M200-440v-80h560v80H200Z',
-    delete: 'M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z'
-};
-const toolSvg = icon => `<svg class="pe-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true"><path d="${TOOL_ICONS[icon]}"/></svg>`;
+import { ConfigStore, registerEditor } from './config-store.js';
+import { moreMenu } from './dom.js';
+import { api } from './api.js';
+import { addBasemap } from './basemap.js';
+import { DOCS, docLink } from './docs.js';
 // a map tool: an icon with a tooltip, or with `text` a labelled one (the toggles)
 const tool = (name, label, icon, text) => text
-    ? `<button type="button" class="pe-tool" data-do="${name}" aria-pressed="false" aria-label="${label}">${toolSvg(icon)}<span class="pe-tool__label">${text}</span></button>`
-    : `<button type="button" class="pe-tool pe-tool--icon" data-do="${name}" title="${label}">${toolSvg(icon)}</button>`;
+    ? `<button type="button" class="pe-tool" data-do="${name}" aria-pressed="false" aria-label="${label}">${toolIcon(icon)}<span class="pe-tool__label">${text}</span></button>`
+    : `<button type="button" class="pe-tool pe-tool--icon" data-do="${name}" title="${label}">${toolIcon(icon)}</button>`;
 const sep = '<span class="pe-toolbar__sep" aria-hidden="true"></span>';
-// line icons in the style of the design: 24-unit grid, stroked
-const ICON = {
-    plus: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
-    dots: '<svg class="pe-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
-    search: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
-    chevron: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
-    trash: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
-    anchor: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="2"/><path d="M12 7v14M5 13a7 7 0 0 0 14 0M8 10h8"/></svg>',
-    area: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l7-3 9 5-3 10-11-1z"/></svg>',
-    streets: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
-    light: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z" fill="currentColor" fill-opacity=".15"/></svg>',
-    satellite: '<svg class="pe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>',
-};
-// the three backgrounds, each with the credit its source asks for
-const OSM_CREDIT = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
-const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
-const BASEMAPS = {
-    streets: {label: 'Streets', dim: 0.1, credit: OSM_CREDIT},
-    light: {label: 'Light', url: ESRI + 'Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', maxZoom: 16,
-            credit: 'Tiles © Esri — Esri, HERE, Garmin, ' + OSM_CREDIT},
-    satellite: {label: 'Satellite', url: ESRI + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', maxZoom: 19,
-                credit: 'Imagery © Esri — Esri, Maxar, Earthstar Geographics and the GIS User Community'},
-};
-const BASEMAP_KEY = 'places.basemap';
-const AREA_TYPES = new Set(['area', 'section']);
+const AREA_TYPES = new Set(['section', 'guardzone', 'sector', 'water']);
 let toolTips = null;
-import TileLayer from 'ol/layer/Tile.js';
 import VectorLayer from 'ol/layer/Vector.js';
 import Map from 'ol/Map.js';
 import Point from 'ol/geom/Point.js';
 import MultiPoint from 'ol/geom/MultiPoint.js';
 import {fromLonLat, toLonLat} from 'ol/proj.js';
-import OSM from 'ol/source/OSM.js';
-import XYZ from 'ol/source/XYZ.js';
 import VectorSource from 'ol/source/Vector.js';
 import Fill from 'ol/style/Fill.js';
 import CircleStyle from 'ol/style/Circle.js';
@@ -83,67 +45,63 @@ const uuid = () => {
     return `${s.slice(0, 8)}-${s.slice(8, 12)}-${s.slice(12, 16)}-${s.slice(16, 20)}-${s.slice(20)}`;
 };
 export function createPlaceEditor(host, options = {}) {
-    host.classList.add('pe');
-    const segments = Object.entries(BASEMAPS).map(([key, b]) =>
-        `<button class="pe-segment" type="button" role="radio" aria-checked="false" data-basemap="${key}">${ICON[key]}${b.label}</button>`).join('');
+    host.classList.add('st', 'pe');
     host.innerHTML = `
       <div class="pe-body place-workspace">
         <aside class="pe-sidebar place-sidebar">
           <div class="pe-sidebar__actions">
-            <button class="pe-btn pe-btn--primary" type="button" data-do="new">${ICON.plus}New place</button>
-            <details class="pe-menu place-menu"><summary class="pe-icon-btn pe-icon-btn--outline" aria-label="Import, export and other place actions" title="More actions">${ICON.dots}</summary>
-              <div class="pe-menu__items place-menu-items">
-                <button class="pe-menu__item" type="button" data-do="import">Import…</button>
-                <button class="pe-menu__item" type="button" data-do="export">Export</button>
-                <button class="pe-menu__item" type="button" data-do="view-json">View GeoJSON</button>
-                <button class="pe-menu__item" type="button" data-do="reload">Reload</button>
-              </div>
-            </details>
+            <button class="st-btn st-btn--primary" type="button" data-do="new">${icon('plus', 'pe-icon')}New place</button>
           </div>
-          <div class="pe-search">${ICON.search}<input class="pe-input" type="search" data-field="search" aria-label="Search places" placeholder="Search places" autocomplete="off"></div>
+          <div class="pe-search">${icon('search', 'pe-icon')}<input class="st-input" type="search" data-field="search" aria-label="Search places" placeholder="Search places" autocomplete="off"></div>
           <div class="pe-list place-list" role="listbox" aria-label="Saved places"></div>
           <span class="pe-sidebar__count" data-count></span>
         </aside>
         <section class="pe-editor place-detail">
           <div class="pe-empty" data-empty><strong>No place selected</strong><span>Pick a place from the list or on the map, or create a new one.</span></div>
           <fieldset class="pe-form place-fields" disabled hidden>
-            <label class="pe-field" data-col="1"><span class="pe-label">Name</span><input class="pe-input" data-field="name" maxlength="120" placeholder="Place name"></label>
-            <label class="pe-field" data-col="2"><span class="pe-label">Type</span><span class="pe-select-wrap"><select class="pe-select" data-field="place_type"><option value="port">Port</option><option value="berth">Berth</option><option value="anchorage">Anchorage</option><option value="section">Section</option><option value="terminal">Terminal</option><option value="mooring">Mooring</option><option value="marina">Marina</option><option value="area">Area</option></select>${ICON.chevron}</span></label>
-            <label class="pe-field" data-col="3" data-row="unlocode"><span class="pe-label">UN/LOCODE</span><input class="pe-input pe-input--mono" data-field="unlocode" maxlength="5" placeholder="NLRTM" spellcheck="false" autocomplete="off"></label>
-            <label class="pe-field" data-col="1" data-line="2" data-row="part_of"><span class="pe-label">Parent</span><span class="pe-select-wrap"><select class="pe-select" data-field="part_of"><option value="">Unknown</option><option value="none">No parent</option></select>${ICON.chevron}</span></label>
-            <label class="pe-field" data-col="2" data-line="2" data-row="category"><span class="pe-label">Category</span><input class="pe-input" data-field="category" list="place-categories" maxlength="60" placeholder="VTS, restricted place…"><datalist id="place-categories"></datalist></label>
-            <label class="pe-field" data-col="3" data-line="2" data-row="size"><span class="pe-label">Marker from zoom</span><span class="pe-select-wrap"><select class="pe-select" data-field="size"><option value="0">12 · very small</option><option value="1">11 · small</option><option value="2">9 · medium</option><option value="3">7 · large</option></select>${ICON.chevron}</span></label>
+            <label class="st-field" data-col="1"><span class="st-label">Name</span><input class="st-input" data-field="name" maxlength="120" placeholder="Place name"></label>
+            <label class="st-field" data-col="2"><span class="st-label">Type</span><select class="st-input select" data-field="place_type"><option value="port">Port</option><option value="berth">Berth</option><option value="anchorage">Anchorage</option><option value="section">Section</option><option value="terminal">Terminal</option><option value="mooring">Mooring</option><option value="marina">Marina</option><option value="guardzone">Guard zone</option><option value="sector">Sector</option><option value="water">Water</option></select></label>
+            <label class="st-field" data-col="3" data-row="unlocode"><span class="st-label">UN/LOCODE</span><input class="st-input st-input--mono" data-field="unlocode" maxlength="5" placeholder="NLRTM" spellcheck="false" autocomplete="off"></label>
+            <label class="st-field" data-col="1" data-line="2" data-row="part_of"><span class="st-label">Parent</span><select class="st-input select" data-field="part_of"><option value="">Unknown</option><option value="none">No parent</option></select></label>
+            <label class="st-field" data-col="2" data-line="2" data-row="category"><span class="st-label">Category</span><input class="st-input" data-field="category" list="place-categories" maxlength="60"><datalist id="place-categories"></datalist></label>
+            <label class="st-field" data-col="3" data-line="2" data-row="rank"><span class="st-label">Marker from zoom</span><select class="st-input select" data-field="rank"><option value="0">12 · very small</option><option value="1">11 · small</option><option value="2">9 · medium</option><option value="3">7 · large</option></select></label>
           </fieldset>
           <div class="pe-map place-map-wrap">
             <div class="pe-map__canvas place-map"></div>
             <div class="pe-toolbar pe-toolbar--tools" role="toolbar" aria-label="Shape tools">${tool('draw', 'Draw a boundary', 'pentagon', 'Draw')}${tool('point', 'Set a point', 'add_location_alt', 'Point')}${tool('delete-part', 'Delete a part', 'delete')}${sep}${tool('undo', 'Undo', 'undo')}${tool('redo', 'Redo', 'redo')}${sep}${tool('import-shape', 'Import shape', 'upload')}${tool('export-shape', 'Export shape', 'download')}${tool('paste-shape', 'Paste shape', 'content_paste')}</div>
             <div class="pe-toolbar pe-toolbar--view" role="toolbar" aria-label="Map view">${tool('fit', 'Fit to shape', 'fit_screen')}${tool('fullscreen', 'Full screen', 'fullscreen')}${sep}${tool('zoom-in', 'Zoom in', 'add')}${tool('zoom-out', 'Zoom out', 'remove')}</div>
-            <div class="pe-paste place-paste" hidden><textarea class="pe-input" data-paste rows="7" spellcheck="false" placeholder="Paste GeoJSON: a geometry, a Feature, or a collection holding one"></textarea>
-              <div class="pe-paste__actions"><button class="pe-btn" type="button" data-do="paste-close">Close</button><button class="pe-btn pe-btn--primary" type="button" data-do="paste-apply">Apply</button></div></div>
+            <div class="pe-paste place-paste" hidden><textarea class="st-input" data-paste rows="7" spellcheck="false" placeholder="Paste GeoJSON: a geometry, a Feature, or a collection holding one"></textarea>
+              <div class="pe-paste__actions"><button class="st-btn" type="button" data-do="paste-close">Close</button><button class="st-btn st-btn--primary" type="button" data-do="paste-apply">Apply</button></div></div>
             <div class="pe-map__hint" aria-live="polite" hidden><strong><span data-points>0</span> <span data-points-word>points</span></strong><span class="pe-map__hint-sep" aria-hidden="true"></span><span data-hint></span></div>
-            <div class="pe-toolbar pe-toolbar--layers" role="radiogroup" aria-label="Map style">${segments}</div>
-            <div class="pe-attribution place-attribution"></div>
           </div>
         </section>
       </div>
       <footer class="pe-footer">
-        <button class="pe-btn pe-btn--danger" type="button" data-do="delete" hidden>${ICON.trash}<span class="pe-btn__label">Delete place</span></button>
-        <span class="pe-footer__spacer"></span>
+        <button class="st-btn st-btn--danger" type="button" data-do="delete" hidden>${icon('trash', 'pe-icon')}<span class="st-btn__label">Delete place</span></button>
+        <span class="st-spacer"></span>
         <span class="pe-feedback place-feedback" role="status" aria-live="polite"></span>
-        <span class="pe-dirty" role="status" hidden>Unsaved changes</span>
-        <button class="pe-btn" type="button" data-do="cancel" hidden>Cancel</button>
-        <button class="pe-btn pe-btn--primary" type="button" data-do="edit" hidden>Edit place</button>
-        <button class="pe-btn pe-btn--primary" type="button" data-do="save" hidden>Save place</button>
+        <span class="st-dirty" role="status" hidden>Unsaved changes</span>
+        <button class="st-btn" type="button" data-do="cancel" hidden>Cancel</button>
+        <button class="st-btn st-btn--primary" type="button" data-do="edit" hidden>Edit place</button>
+        <button class="st-btn st-btn--primary" type="button" data-do="save" hidden>Save place</button>
       </footer>
       <input type="file" data-file accept=".geojson,.json,application/geo+json,application/json" hidden>`;
     if (!toolTips)
         toolTips = tooltip.create({selector: '.pe-toolbar .pe-tool--icon', placement: 'below'});
     toolTips.prepare(host);
     const q = s => host.querySelector(s);
+    // the menu's items run the same actions as the data-do buttons
+    const MENU = [['Import…', 'import'], ['Export', 'export'], ['View GeoJSON', 'view-json'], ['Reload', 'reload']];
+    const menu = moreMenu('Import, export and other place actions', MENU.map(([text, action]) => [text, () => { menu.open = false; actions[action](); }]));
+    menu.querySelector('summary').classList.add('st-icon-btn--outline');
+    menu.querySelectorAll('.st-menu__item').forEach((b, i) => { b.dataset.do = MENU[i][1]; });
+    q('.pe-sidebar__actions').append(menu);
+    q('.pe-sidebar').append(docLink(DOCS.places));
     const input = name => q(`[data-field="${name}"]`);
     let placeSettings = null, catalogueVersion = '';
     let records = [], draft = null, original = null, busy = false, dead = false, draw = null, undo = [],
-        redo = [], unsaved = false, editingMode = false, deleteArmed = false, drawType = null;
+        redo = [], editingMode = false, deleteArmed = false, drawType = null;
+    const editor = registerEditor('places', {save: () => save(), data: () => draft});
     const editing = new VectorSource();
     // every other place nearby, in a quiet slate, so a new outline is drawn against its neighbours
     const context = new VectorSource();
@@ -237,21 +195,13 @@ export function createPlaceEditor(host, options = {}) {
         for (const c of corners(g.coordinates)) seen.add(c[0] + ':' + c[1]);
         return seen.size;
     }
-    // a dot per place, sized by the port's own size class - the 0..3 that decides
+    // a dot per place, sized by the port's own rank - the 0..3 that decides
     // from which zoom the viewer shows its marker - so the big ports read first
-    const markerStyle = f => S.markers[Math.min(3, Math.max(0, f.get('size') | 0))];
+    const markerStyle = f => S.markers[Math.min(3, Math.max(0, f.get('rank') | 0))];
     const map = new Map({
         target: q('.place-map'),
         controls: [],
         layers: [
-            new TileLayer({
-                className: 'place-seamark', // its own canvas: sharing one with the base map left it unrendered
-                source: new XYZ({
-                    url: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
-                    attributions: 'Map data: &copy; <a href="https://www.openseamap.org">OpenSeaMap</a>'
-                }),
-                opacity: 0.5
-            }),
             new VectorLayer({className: 'place-markers', source: markers, style: markerStyle}),
             new VectorLayer({className: 'place-context', source: context, style: () => S.context}),
             new VectorLayer({
@@ -262,35 +212,7 @@ export function createPlaceEditor(host, options = {}) {
         ],
         view: new View({center: fromLonLat([4.4, 51.95]), zoom: 10})
     });
-    // the background: streets, a light grey canvas or satellite imagery, kept per browser
-    const base = new TileLayer({className: 'place-base'});
-    let basemap = 'streets';
-    try { if (BASEMAPS[localStorage.getItem(BASEMAP_KEY)]) basemap = localStorage.getItem(BASEMAP_KEY); } catch { /* private mode */ }
-    // the street map is dimmed a little so the outlines drawn over it stand out
-    base.on('postrender', e => {
-        const dim = BASEMAPS[basemap].dim;
-        if (!dim) return;
-        e.context.save();
-        e.context.setTransform(1, 0, 0, 1, 0, 0);
-        e.context.fillStyle = `rgba(0, 0, 0, ${dim})`;
-        e.context.fillRect(0, 0, e.context.canvas.width, e.context.canvas.height);
-        e.context.restore();
-    });
-    function setBasemap(key, remember = true) {
-        if (!BASEMAPS[key]) return;
-        basemap = key;
-        const b = BASEMAPS[key];
-        base.setSource(b.url ? new XYZ({url: b.url, maxZoom: b.maxZoom, crossOrigin: 'anonymous'}) : new OSM());
-        for (const seg of host.querySelectorAll('.pe-segment')) {
-            const on = seg.dataset.basemap === key;
-            seg.setAttribute('aria-checked', String(on));
-            seg.tabIndex = on ? 0 : -1;
-        }
-        q('.pe-attribution').innerHTML = b.credit + ' · Seamarks © <a href="https://www.openseamap.org" target="_blank" rel="noopener">OpenSeaMap</a>';
-        if (remember) try { localStorage.setItem(BASEMAP_KEY, key); } catch { /* private mode */ }
-    }
-    setBasemap(basemap, false);
-    map.getLayers().insertAt(0, base);
+    addBasemap(map, q('.place-map-wrap'));
     const modify = new Modify({source: editing, style: () => S.handle});
     map.addInteraction(modify);
     const resize = new ResizeObserver(() => map.updateSize());
@@ -301,21 +223,13 @@ export function createPlaceEditor(host, options = {}) {
         for (const layer of map.getLayers().getArray()) layer.changed();
     });
     themeWatch.observe(document.documentElement, {attributes: true, attributeFilter: ['class', 'data-theme']});
-    host.querySelector('.pe-toolbar--layers').addEventListener('keydown', e => {
-        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-        e.preventDefault();
-        const keys = Object.keys(BASEMAPS), next = keys[(keys.indexOf(basemap) + (e.key === 'ArrowRight' ? 1 : keys.length - 1)) % keys.length];
-        setBasemap(next);
-        q(`.pe-segment[data-basemap="${next}"]`).focus();
-    });
-    for (const seg of host.querySelectorAll('.pe-segment'))
-        seg.addEventListener('click', () => setBasemap(seg.dataset.basemap));
     function status(message, error = false) {
         q('.place-feedback').textContent = message;
         q('.place-feedback').dataset.error = error;
     }
     function dirty(value) {
-        unsaved = value;
+        if (value) editor.touched();
+        else editor.clean();
         buttons();
     }
     function buttons() {
@@ -335,7 +249,7 @@ export function createPlaceEditor(host, options = {}) {
         tidyTools();
         if (!editingMode) q('.place-paste').hidden = true;
         q('.place-fields').disabled = !editingMode || busy;
-        q('.pe-dirty').hidden = !unsaved;
+        q('.st-dirty').hidden = !editor.dirty;
         q('[data-count]').textContent = records.length === 1 ? '1 saved place' : `${records.length.toLocaleString()} saved places`;
         q('.place-feedback').classList.toggle('place-busy', busy);
         for (const b of host.querySelectorAll('button[data-do]'))
@@ -395,7 +309,7 @@ export function createPlaceEditor(host, options = {}) {
         b.setAttribute('aria-label', label);
         b.setAttribute('aria-pressed', String(!!active));
         if (icon)
-            b.querySelector('svg').outerHTML = toolSvg(icon);
+            b.querySelector('svg').outerHTML = toolIcon(icon);
     }
     function stopDraw() {
         if (draw) {
@@ -414,15 +328,18 @@ export function createPlaceEditor(host, options = {}) {
         input('place_type').value = p.place_type || 'port';
         input('unlocode').value = (p.codes?.unlocode || []).join(', ');
         datalists(p.part_of === null ? 'none' : p.part_of || '');
-        input('category').value = p.attributes?.area_subtype || '';
-        input('size').value = String(p.size || 0);
+        input('category').value = p.category || '';
+        input('rank').value = String(p.rank || 0);
         typeFields();
         buttons();
     }
     function typeFields() {
         const type = input('place_type').value;
         q('[data-row="unlocode"]').hidden = type !== 'port';
-        q('[data-row="category"]').hidden = type !== 'area';
+        // a label shown in place of the type name, for the types that have one
+        const hints = {guardzone: 'restricted, wind farm, fairway…', sector: 'VTS, pilotage…', water: 'sea, strait, lake, river…'};
+        q('[data-row="category"]').hidden = !(type in hints);
+        input('category').placeholder = hints[type] || '';
     }
     const typeLabel = t => [...input('place_type').options].find(o => o.value === t)?.textContent || t || 'Place';
     // one row: an icon tile, the name over its type, the code at the end
@@ -433,7 +350,7 @@ export function createPlaceEditor(host, options = {}) {
         b.className = 'pe-place';
         b.setAttribute('aria-selected', String(selected));
         if (selected) b.setAttribute('aria-current', 'true');
-        b.innerHTML = `<span class="pe-place__icon">${AREA_TYPES.has(type) ? ICON.area : ICON.anchor}</span>` +
+        b.innerHTML = `<span class="pe-place__icon">${icon(AREA_TYPES.has(type) ? 'area' : 'anchor', 'pe-icon')}</span>` +
             '<span class="pe-place__text"><span class="pe-place__name"></span><span class="pe-place__meta"></span></span>' +
             '<span class="pe-place__code"></span>';
         b.querySelector('.pe-place__name').textContent = name;
@@ -475,7 +392,7 @@ export function createPlaceEditor(host, options = {}) {
         if (selected && ![...input('part_of').options].some(o => o.value === selected))
             input('part_of').add(new Option('Not in this catalogue · ' + selected.slice(0, 8), selected)); // a parent held elsewhere
         input('part_of').value = selected;
-        const subtypes = [...new Set(records.map(f => f.properties.attributes?.area_subtype).filter(Boolean))];
+        const subtypes = [...new Set(records.map(f => f.properties.category).filter(Boolean))];
         q('#place-categories').replaceChildren(...subtypes.map(v => new Option(v, v)));
     }
     function renderGeometry() {
@@ -524,7 +441,7 @@ export function createPlaceEditor(host, options = {}) {
             if (f) context.addFeature(read(f));
     }
     function discard() {
-        return !unsaved || confirm('Discard unsaved place changes?');
+        return !editor.dirty || confirm('Discard unsaved place changes?');
     }
     async function select(f, force = false) {
         if (busy || (!force && !discard()))
@@ -691,8 +608,8 @@ export function createPlaceEditor(host, options = {}) {
         if (index >= 0)
             doomed.addFeature(read({type: 'Feature', properties: {}, geometry: {type: 'Polygon', coordinates: parts()[index]}}));
     });
-    for (const key of ['name', 'place_type', 'unlocode', 'part_of', 'category', 'size'])
-        input(key).addEventListener(['place_type', 'part_of', 'size'].includes(key) ? 'change' : 'input', () => {
+    for (const key of ['name', 'place_type', 'unlocode', 'part_of', 'category', 'rank'])
+        input(key).addEventListener(['place_type', 'part_of', 'rank'].includes(key) ? 'change' : 'input', () => {
             if (!draft)
                 return;
             const before = clone(draft), p = draft.properties, value = input(key).value;
@@ -702,11 +619,10 @@ export function createPlaceEditor(host, options = {}) {
             } else if (key === 'part_of') {
                 if (value) p.part_of = value === 'none' ? null : value;
                 else delete p.part_of;
-            } else if (key === 'category') {
-                p.attributes ||= {};
-                p.attributes.area_subtype = value;
-            } else
-                p[key] = key === 'size' ? Number(value) : value;
+            } else if (key === 'category' && !value)
+                delete p.category;
+            else
+                p[key] = key === 'rank' ? Number(value) : value;
             if (key === 'place_type' && value !== 'port' && p.codes)
                 delete p.codes.unlocode;
             checkpoint(before);
@@ -714,23 +630,7 @@ export function createPlaceEditor(host, options = {}) {
                 fields();
         });
     input('search').addEventListener('input', list);
-    async function request(path, body) {
-        const r = await fetch(path, {
-            cache: 'no-store',
-            ...(body ? {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(body)
-            } :
-                       {})
-        });
-        if (r.status === 401)
-            window.hubAuthRequired();
-        const data = await r.json();
-        if (!r.ok)
-            throw Error(data.error || 'Place request failed');
-        return data;
-    }
+    const request = (path, body) => api(path, {cache: 'no-store', body});
     async function load() {
         if (!discard())
             return;
@@ -805,7 +705,7 @@ export function createPlaceEditor(host, options = {}) {
                     b.disabled = true;
                 try {
                     placeSettings = await request('/api/places/enable', {});
-                    ConfigStore?.invalidate();
+                    ConfigStore.invalidate();
                     options.onEnabled?.();
                     finish(true);
                 } catch (e) {
@@ -917,7 +817,7 @@ export function createPlaceEditor(host, options = {}) {
             draft = {
                 type: 'Feature',
                 id: uuid(),
-                properties: {schema_version: 2, revision: 0, name: '', place_type: 'port'},
+                properties: {schema_version: 3, revision: 0, name: '', place_type: 'port'},
                 geometry: null
             };
             list();
@@ -1035,11 +935,8 @@ export function createPlaceEditor(host, options = {}) {
         'zoom-in': () => map.getView().setZoom(map.getView().getZoom() + 1),
         'zoom-out': () => map.getView().setZoom(map.getView().getZoom() - 1)
     };
-    for (const b of host.querySelectorAll('[data-do]'))
-        b.addEventListener('click', () => {
-            q('.place-menu').open = false;
-            actions[b.dataset.do]();
-        });
+    for (const b of host.querySelectorAll('[data-do]:not(.st-menu__item)'))
+        b.addEventListener('click', () => actions[b.dataset.do]());
     // a shape from a file or the clipboard replaces the draft's geometry and nothing else
     function applyShape(next, message) {
         const before = clone(draft);
@@ -1081,13 +978,18 @@ export function createPlaceEditor(host, options = {}) {
         try {
             if (file.size > 131072)
                 throw Error('Place file exceeds 128 KiB');
-            const f = JSON.parse(await file.text());
+            let f = JSON.parse(await file.text());
             if (dead)
                 return;
+            if (f.type === 'FeatureCollection' && f.features?.length === 1)
+                f = f.features[0];
             if (f.type !== 'Feature' || !['Point', 'Polygon', 'MultiPolygon'].includes(f.geometry?.type))
                 throw Error('Import one place Feature.');
-            if (![1, 2].includes(f.properties?.schema_version))
-                throw Error('Import a place file of schema 1 or 2.');
+            // any Feature will do: what is recognised in it is carried over
+            const ports = Object.fromEntries(records.filter(r => r.properties.place_type === 'port')
+                .flatMap(r => (r.properties.codes?.unlocode || []).map(c => [c, r.id])));
+            const imported = importPlace(f.properties, ports);
+            f.properties = imported.properties;
             read(f);
             select(null, true);
             editingMode = true;
@@ -1107,26 +1009,21 @@ export function createPlaceEditor(host, options = {}) {
                 if (!full.geometry) throw Error('Place changed or removed elsewhere. Reload the list.');
                 original = {...full, runtime_id: existing.runtime_id};
             }
-            draft.properties = {
-                schema_version: 2,
-                name: 'Imported place',
-                place_type: 'area',
-                attributes: {area_subtype:'imported'},
-                ...draft.properties,
-                revision: original?.properties.revision || 0
-            };
+            // the catalogue keeps a place's revision and number, not the file's
+            draft.properties.revision = original?.properties.revision || 0;
+            if (original?.properties.no) draft.properties.no = original.properties.no;
+            else delete draft.properties.no;
             renderGeometry();
             list();
             fields();
             dirty(true);
             fit();
-            status('Imported for review. Save to apply.');
+            status(['Imported for review. Save to apply.', ...imported.notes].join(' '));
         } catch (e) {
             status(e.message, true);
         }
     });
     const closeMenu = e => {
-        const menu = q('.place-menu');
         if (menu.open && !menu.contains(e.target))
             menu.open = false;
     };
@@ -1134,10 +1031,7 @@ export function createPlaceEditor(host, options = {}) {
     const key = e => {
         if (e.key !== 'Escape')
             return;
-        if (q('.place-menu').open) {
-            e.stopPropagation();
-            q('.place-menu').open = false;
-        } else if (draw) {
+        if (draw) {
             e.stopPropagation();
             stopDraw();
         } else if (deleteArmed) {
@@ -1149,12 +1043,9 @@ export function createPlaceEditor(host, options = {}) {
     host.addEventListener('keydown', key);
     load();
     return {
-        resize: () => map.updateSize(),
-        cancel,
-        save: () => save(),
-        unsaved: () => unsaved,
         destroy() {
             dead = true;
+            editor.destroy();
             document.removeEventListener('pointerdown', closeMenu);
             document.removeEventListener('fullscreenchange', onFullscreen);
             resize.disconnect();

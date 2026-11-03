@@ -3,3 +3,14 @@
 #hover-info div div {
     text-align: left;
 }
+
+#hover-info .station-box {
+    background-color: transparent;
+    border-color: color-mix(in srgb, currentColor 40%, transparent);
+    color: inherit;
+}
+
+#hover-info .station-box.station-last {
+    border-color: currentColor;
+    font-weight: var(--fw-semibold);
+}

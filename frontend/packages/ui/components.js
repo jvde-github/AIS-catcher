@@ -100,46 +100,15 @@ export function tabScroller(nav, extraClass) {
     } };
 }
 
-function sectionHead(section, opts) {
-    var head = document.createElement("div");
-    head.className = opts.sectionClass || "";
-    head.dataset.section = section.key;
-    if (opts.headId) head.id = opts.headId(section.key);
-    Object.keys(opts.attrs || {}).forEach(function (a) {
-        if (a !== "data-action") head.setAttribute(a, opts.attrs[a]);
-    });
-    if (opts.sectionAction) head.dataset.action = opts.sectionAction;
-
-    var label = document.createElement("span");
-    label.textContent = section.label;
-
-    var chip = document.createElement("span");
-    chip.className = opts.caretChipClass || "";
-    var caret = document.createElement("i");
-    caret.className = (opts.caretClass || "") +
-        (section.open ? " keyboard_arrow_up_icon" : " keyboard_arrow_down_icon");
-    chip.appendChild(caret);
-
-    head.appendChild(label);
-    head.appendChild(chip);
-    return head;
-}
-
+/* Rows of label/value pairs into `mount`, each row { fields: [{ key, label } | { spacer: true }], cls };
+   opts { rowClass, idPrefix }. Returns the value cells by key. */
 export function fieldRows(mount, rows, opts) {
     opts = opts || {};
     var cells = {};
 
     rows.forEach(function (row) {
-        if (row.section) mount.appendChild(sectionHead(row.section, opts));
-
         var el = document.createElement("div");
         el.className = [opts.rowClass, row.cls].filter(Boolean).join(" ");
-        Object.keys(opts.attrs || {}).forEach(function (a) {
-            el.setAttribute(a, opts.attrs[a]);
-        });
-
-        var sec = row.section ? row.section.key : row.sectionKey;
-        if (sec) el.dataset.section = sec;
 
         row.fields.forEach(function (f) {
             var pair = document.createElement("div");
@@ -163,7 +132,7 @@ export function fieldRows(mount, rows, opts) {
 
 /* --- toast ------------------------------------------------------------ */
 
-export var TOAST_TIME = { info: 5000, success: 5000, warning: 7000, error: 9000 };
+var TOAST_TIME = { info: 5000, success: 5000, warning: 7000, error: 9000 };
 var TOAST_ICON = { info: "i", success: "✓", warning: "!", error: "\u2715" };
 var TOAST_MAX = 4;   /* a burst must not become a wall */
 
@@ -388,6 +357,13 @@ export function placeMenu(menu, opts) {
     menu.style.top = clampTop(opts.y + 5) + "px";
 }
 
+/* A Mac takes a control-click for a right-click: the context menu opens on it,
+   and some browsers then send the click as well, which is not one */
+export function isSecondaryClick(e) {
+    var nav = typeof navigator !== "undefined" ? navigator : null;
+    return !!(e && e.ctrlKey && e.button === 0 && nav && /Mac|iPhone|iPad/.test(nav.platform || nav.userAgent || ""));
+}
+
 export function dismissOnce(menu, onClose, opts) {
     opts = opts || {};
     function close(e) {
@@ -397,6 +373,7 @@ export function dismissOnce(menu, onClose, opts) {
         if (onClose) onClose(e);
     }
     function onClick(e) {
+        if (isSecondaryClick(e)) return;
         if (opts.keepInside && menu.contains(e.target)) return;
         if (opts.swallow) { e.stopPropagation(); e.preventDefault(); }
         close(e);
@@ -530,9 +507,7 @@ export async function copyToClipboard(textToCopy) {
         textArea.select();
 
         try {
-            document.execCommand("copy");
-        } catch (error) {
-            console.error(error);
+            if (!document.execCommand("copy")) throw new Error("copy refused");
         } finally {
             textArea.remove();
         }

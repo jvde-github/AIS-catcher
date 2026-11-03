@@ -9,7 +9,7 @@
 import { ShippingClass } from './constants.js';
 import { CELLS, CLASS_COLORS, spriteCSS } from './sprites.js';
 
-export const MOVING_KNOTS = 0.5;
+const MOVING_KNOTS = 0.5;
 
 /* a chip is a cell of the map's sheet in the colour of a class: a .sprites-tint
    element (sprites.css) whose cell spriteCSS() writes; chipStyle() adds the transform */
@@ -40,11 +40,11 @@ export const CLASSES = [
 /* classes without a checkbox of their own fall to OTHER, so the list
    partitions the map completely and "cargo only" means it */
 const CLASS_FILTER_IDS = new Set(CLASSES.map((c) => c.id));
-export function classFilterId(shipclass) {
+function classFilterId(shipclass) {
     return CLASS_FILTER_IDS.has(shipclass) ? shipclass : ShippingClass.OTHER;
 }
 
-export const STATUSES = [
+const STATUSES = [
     { id: 0, label: "Under way using engine" },
     { id: 1, label: "At anchor" },
     { id: 5, label: "Moored" },
@@ -76,13 +76,9 @@ const DEFAULTS = {
     repeated: "any",    // any | only | never
 };
 
-export function statusOf(ship) {
+function statusOf(ship) {
     const s = ship.status;
     return Number.isInteger(s) && s >= 0 && s <= 15 ? s : 15;
-}
-
-export function moving(ship) {
-    return ship.speed != null && ship.speed > MOVING_KNOTS;
 }
 
 export function bucketFor(shipclass, speed) {

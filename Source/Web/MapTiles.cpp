@@ -35,336 +35,377 @@
 #include <unistd.h>
 #endif
 
-namespace {
-struct TileExt {
-  const char *ext;
-  const char *format;
-  const char *mime;
-};
+namespace
+{
+	struct TileExt
+	{
+		const char *ext;
+		const char *format;
+		const char *mime;
+	};
 
-const TileExt tile_exts[] = {
-    {".png", "png", "image/png"},
-    {".jpg", "jpg", "image/jpeg"},
-    {".jpeg", "jpg", "image/jpeg"},
-    {".pbf", "pbf", "application/x-protobuf"},
-};
+	const TileExt tile_exts[] = {
+		{".png", "png", "image/png"},
+		{".jpg", "jpg", "image/jpeg"},
+		{".jpeg", "jpg", "image/jpeg"},
+		{".pbf", "pbf", "application/x-protobuf"},
+	};
 
 #ifdef HASSQLITE
-const char *mimeForFormat(const std::string &format) {
-  if (format == "png")
-    return "image/png";
-  if (format == "jpg" || format == "jpeg")
-    return "image/jpeg";
-  if (format == "pbf")
-    return "application/x-protobuf";
-  return "application/octet-stream";
-}
+	const char *mimeForFormat(const std::string &format)
+	{
+		if (format == "png")
+			return "image/png";
+		if (format == "jpg" || format == "jpeg")
+			return "image/jpeg";
+		if (format == "pbf")
+			return "application/x-protobuf";
+		return "application/octet-stream";
+	}
 #endif
 
-const TileExt *extInfo(const std::string &filename) {
-  size_t pos = filename.find_last_of('.');
-  if (pos == std::string::npos)
-    return nullptr;
+	const TileExt *extInfo(const std::string &filename)
+	{
+		size_t pos = filename.find_last_of('.');
+		if (pos == std::string::npos)
+			return nullptr;
 
-  std::string ext = filename.substr(pos);
-  std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+		std::string ext = filename.substr(pos);
+		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
-  for (const TileExt &t : tile_exts)
-    if (ext == t.ext)
-      return &t;
-  return nullptr;
-}
-} // namespace
-
-MapTiles::MapTiles() : minZoom(0), maxZoom(18) {
-  static std::atomic<int> next_layer{0};
-  layerID = std::to_string(++next_layer);
+		for (const TileExt &t : tile_exts)
+			if (ext == t.ext)
+				return &t;
+		return nullptr;
+	}
 }
 
-bool MapTiles::isValidCoordinate(int z, int x, int y) const {
-  if (z < minZoom || z > maxZoom)
-    return false;
+MapTiles::MapTiles() : minZoom(0), maxZoom(18)
+{
+	static std::atomic<int> next_layer{0};
+	layerID = std::to_string(++next_layer);
+}
 
-  int maxTile = 1 << z;
-  return x >= 0 && x < maxTile && y >= 0 && y < maxTile;
+bool MapTiles::isValidCoordinate(int z, int x, int y) const
+{
+	if (z < minZoom || z > maxZoom)
+		return false;
+
+	int maxTile = 1 << z;
+	return x >= 0 && x < maxTile && y >= 0 && y < maxTile;
 }
 
 #ifdef HASSQLITE
 MBTilesSupport::MBTilesSupport() : db(nullptr) {}
 
-MBTilesSupport::~MBTilesSupport() {
-  if (db)
-    sqlite3_close(db);
+MBTilesSupport::~MBTilesSupport()
+{
+	if (db)
+		sqlite3_close(db);
 }
 
-void MBTilesSupport::loadMetadata() {
-  sqlite3_stmt *stmt;
+void MBTilesSupport::loadMetadata()
+{
+	sqlite3_stmt *stmt;
 
-  const char *zoomQuery =
-      "SELECT DISTINCT zoom_level FROM tiles ORDER BY zoom_level";
-  if (sqlite3_prepare_v2(db, zoomQuery, -1, &stmt, nullptr) != SQLITE_OK)
-    throw std::runtime_error("MBTILES: Failed to prepare zoom query.");
+	const char *zoomQuery =
+		"SELECT DISTINCT zoom_level FROM tiles ORDER BY zoom_level";
+	if (sqlite3_prepare_v2(db, zoomQuery, -1, &stmt, nullptr) != SQLITE_OK)
+		throw std::runtime_error("MBTILES: Failed to prepare zoom query.");
 
-  while (sqlite3_step(stmt) == SQLITE_ROW)
-    zoomMapping.push_back(sqlite3_column_int(stmt, 0));
-  sqlite3_finalize(stmt);
+	while (sqlite3_step(stmt) == SQLITE_ROW)
+		zoomMapping.push_back(sqlite3_column_int(stmt, 0));
+	sqlite3_finalize(stmt);
 
-  if (zoomMapping.empty())
-    throw std::runtime_error("MBTILES: No zoom levels found in database.");
+	if (zoomMapping.empty())
+		throw std::runtime_error("MBTILES: No zoom levels found in database.");
 
-  minZoom = 0;
-  maxZoom = (int)zoomMapping.size() - 1;
+	minZoom = 0;
+	maxZoom = (int)zoomMapping.size() - 1;
 
-  const char *query = "SELECT name, value FROM metadata";
-  if (sqlite3_prepare_v2(db, query, -1, &stmt, nullptr) != SQLITE_OK)
-    throw std::runtime_error("MBTILES: Failed to prepare metadata query");
+	const char *query = "SELECT name, value FROM metadata";
+	if (sqlite3_prepare_v2(db, query, -1, &stmt, nullptr) != SQLITE_OK)
+		throw std::runtime_error("MBTILES: Failed to prepare metadata query");
 
-  while (sqlite3_step(stmt) == SQLITE_ROW) {
-    const char *key_text =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
-    const char *value_text =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+	while (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		const char *key_text =
+			reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+		const char *value_text =
+			reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
 
-    if (!key_text || !value_text)
-      continue;
+		if (!key_text || !value_text)
+			continue;
 
-    std::string key = key_text;
+		std::string key = key_text;
 
-    if (key == "name")
-      name = value_text;
-    else if (key == "attribution")
-      attribution = value_text;
-    else if (key == "format")
-      format = value_text;
-  }
+		if (key == "name")
+			name = value_text;
+		else if (key == "attribution")
+			attribution = value_text;
+		else if (key == "format")
+			format = value_text;
+	}
 
-  sqlite3_finalize(stmt);
+	sqlite3_finalize(stmt);
 }
 
-bool MBTilesSupport::open(const std::string &filename) {
-  if (sqlite3_open_v2(filename.c_str(), &db, SQLITE_OPEN_READONLY, nullptr) !=
-      SQLITE_OK)
-    return false;
+bool MBTilesSupport::open(const std::string &filename)
+{
+	if (sqlite3_open_v2(filename.c_str(), &db, SQLITE_OPEN_READONLY, nullptr) !=
+		SQLITE_OK)
+		return false;
 
-  try {
-    loadMetadata();
-    return true;
-  } catch (const std::exception &) {
-    sqlite3_close(db);
-    db = nullptr;
-    return false;
-  }
+	try
+	{
+		loadMetadata();
+		return true;
+	}
+	catch (const std::exception &)
+	{
+		sqlite3_close(db);
+		db = nullptr;
+		return false;
+	}
 }
 
-int MBTilesSupport::getMBTilesZoom(int olZoom) const {
-  if (olZoom < 0 || olZoom >= (int)zoomMapping.size())
-    return -1;
+int MBTilesSupport::getMBTilesZoom(int olZoom) const
+{
+	if (olZoom < 0 || olZoom >= (int)zoomMapping.size())
+		return -1;
 
-  return zoomMapping[olZoom];
+	return zoomMapping[olZoom];
 }
 
 const std::vector<unsigned char> &
-MBTilesSupport::getTile(int z, int x, int y, std::string &contentType) {
-  contentType.clear();
-  tileData.clear();
+MBTilesSupport::getTile(int z, int x, int y, std::string &contentType)
+{
+	contentType.clear();
+	tileData.clear();
 
-  int mbtilesZoom = getMBTilesZoom(z);
-  if (mbtilesZoom == -1)
-    return tileData;
+	int mbtilesZoom = getMBTilesZoom(z);
+	if (mbtilesZoom == -1)
+		return tileData;
 
-  int tmsY = (1 << mbtilesZoom) - 1 - y;
+	int tmsY = (1 << mbtilesZoom) - 1 - y;
 
-  sqlite3_stmt *stmt;
-  const char *query = "SELECT tile_data FROM tiles WHERE zoom_level = ? AND "
-                      "tile_column = ? AND tile_row = ?";
+	sqlite3_stmt *stmt;
+	const char *query = "SELECT tile_data FROM tiles WHERE zoom_level = ? AND "
+						"tile_column = ? AND tile_row = ?";
 
-  if (sqlite3_prepare_v2(db, query, -1, &stmt, nullptr) != SQLITE_OK) {
-    Error() << "MBTILES: Failed to prepare SQL statement: "
-            << sqlite3_errmsg(db);
-    return tileData;
-  }
+	if (sqlite3_prepare_v2(db, query, -1, &stmt, nullptr) != SQLITE_OK)
+	{
+		Error() << "MBTILES: Failed to prepare SQL statement: "
+				<< sqlite3_errmsg(db);
+		return tileData;
+	}
 
-  sqlite3_bind_int(stmt, 1, mbtilesZoom);
-  sqlite3_bind_int(stmt, 2, x);
-  sqlite3_bind_int(stmt, 3, tmsY);
+	sqlite3_bind_int(stmt, 1, mbtilesZoom);
+	sqlite3_bind_int(stmt, 2, x);
+	sqlite3_bind_int(stmt, 3, tmsY);
 
-  if (sqlite3_step(stmt) == SQLITE_ROW) {
-    const void *data = sqlite3_column_blob(stmt, 0);
-    int size = sqlite3_column_bytes(stmt, 0);
+	if (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		const void *data = sqlite3_column_blob(stmt, 0);
+		int size = sqlite3_column_bytes(stmt, 0);
 
-    tileData.resize(size);
-    std::memcpy(tileData.data(), data, size);
+		tileData.resize(size);
+		std::memcpy(tileData.data(), data, size);
 
-    contentType = mimeForFormat(format);
-  }
+		contentType = mimeForFormat(format);
+	}
 
-  sqlite3_finalize(stmt);
-  return tileData;
+	sqlite3_finalize(stmt);
+	return tileData;
 }
 
 #endif
 
-bool FileSystemTiles::isDirectory(const std::string &path) const {
+bool FileSystemTiles::isDirectory(const std::string &path) const
+{
 #ifdef _WIN32
-  DWORD attributes = GetFileAttributesA(path.c_str());
-  return attributes != INVALID_FILE_ATTRIBUTES &&
-         (attributes & FILE_ATTRIBUTE_DIRECTORY);
+	DWORD attributes = GetFileAttributesA(path.c_str());
+	return attributes != INVALID_FILE_ATTRIBUTES &&
+		   (attributes & FILE_ATTRIBUTE_DIRECTORY);
 #else
-  struct stat statbuf;
-  return stat(path.c_str(), &statbuf) == 0 && S_ISDIR(statbuf.st_mode);
+	struct stat statbuf;
+	return stat(path.c_str(), &statbuf) == 0 && S_ISDIR(statbuf.st_mode);
 #endif
 }
 
 std::vector<std::string>
-FileSystemTiles::listDirectory(const std::string &path) const {
-  std::vector<std::string> entries;
+FileSystemTiles::listDirectory(const std::string &path) const
+{
+	std::vector<std::string> entries;
 
 #ifdef _WIN32
-  WIN32_FIND_DATAA findData;
-  HANDLE hFind = FindFirstFileA((path + "\\*").c_str(), &findData);
+	WIN32_FIND_DATAA findData;
+	HANDLE hFind = FindFirstFileA((path + "\\*").c_str(), &findData);
 
-  if (hFind != INVALID_HANDLE_VALUE) {
-    do {
-      if (strcmp(findData.cFileName, ".") && strcmp(findData.cFileName, ".."))
-        entries.push_back(findData.cFileName);
-    } while (FindNextFileA(hFind, &findData));
-    FindClose(hFind);
-  }
+	if (hFind != INVALID_HANDLE_VALUE)
+	{
+		do
+		{
+			if (strcmp(findData.cFileName, ".") && strcmp(findData.cFileName, ".."))
+				entries.push_back(findData.cFileName);
+		}
+		while (FindNextFileA(hFind, &findData));
+		FindClose(hFind);
+	}
 #else
-  DIR *dir = opendir(path.c_str());
-  if (dir) {
-    struct dirent *entry;
-    while ((entry = readdir(dir)) != nullptr)
-      if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, ".."))
-        entries.push_back(entry->d_name);
-    closedir(dir);
-  }
+	DIR *dir = opendir(path.c_str());
+	if (dir)
+	{
+		struct dirent *entry;
+		while ((entry = readdir(dir)) != nullptr)
+			if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, ".."))
+				entries.push_back(entry->d_name);
+		closedir(dir);
+	}
 #endif
-  return entries;
+	return entries;
 }
 
-void FileSystemTiles::scanDirectory() {
-  availableZooms.clear();
+void FileSystemTiles::scanDirectory()
+{
+	availableZooms.clear();
 
-  if (!isDirectory(basePath))
-    throw std::runtime_error("FSTILES: Invalid directory path: " + basePath);
+	if (!isDirectory(basePath))
+		throw std::runtime_error("FSTILES: Invalid directory path: " + basePath);
 
-  for (const std::string &entry : listDirectory(basePath)) {
-    if (!isDirectory(basePath + "/" + entry))
-      continue;
+	for (const std::string &entry : listDirectory(basePath))
+	{
+		if (!isDirectory(basePath + "/" + entry))
+			continue;
 
-    try {
-      int zoom = std::stoi(entry);
-      if (zoom >= 0 && zoom <= 25)
-        availableZooms.push_back(zoom);
-    } catch (const std::exception &) {
-      // Ignore non-numeric directories
-    }
-  }
+		try
+		{
+			int zoom = std::stoi(entry);
+			if (zoom >= 0 && zoom <= 25)
+				availableZooms.push_back(zoom);
+		}
+		catch (const std::exception &)
+		{
+			// Ignore non-numeric directories
+		}
+	}
 
-  if (availableZooms.empty())
-    throw std::runtime_error("FSTILES: No valid zoom directories found");
+	if (availableZooms.empty())
+		throw std::runtime_error("FSTILES: No valid zoom directories found");
 
-  std::sort(availableZooms.begin(), availableZooms.end());
-  minZoom = availableZooms.front();
-  maxZoom = availableZooms.back();
+	std::sort(availableZooms.begin(), availableZooms.end());
+	minZoom = availableZooms.front();
+	maxZoom = availableZooms.back();
 
-  size_t pos = basePath.find_last_of("/\\");
-  name = pos != std::string::npos ? basePath.substr(pos + 1) : basePath;
-  attribution = "Local tiles from " + name;
+	size_t pos = basePath.find_last_of("/\\");
+	name = pos != std::string::npos ? basePath.substr(pos + 1) : basePath;
+	attribution = "Local tiles from " + name;
 
-  detectFormat();
+	detectFormat();
 }
 
-void FileSystemTiles::detectFormat() {
-  for (int zoom : availableZooms) {
-    std::string zoomDir = basePath + "/" + std::to_string(zoom);
+void FileSystemTiles::detectFormat()
+{
+	for (int zoom : availableZooms)
+	{
+		std::string zoomDir = basePath + "/" + std::to_string(zoom);
 
-    for (const std::string &xEntry : listDirectory(zoomDir)) {
-      std::string xDir = zoomDir + "/" + xEntry;
-      if (!isDirectory(xDir))
-        continue;
+		for (const std::string &xEntry : listDirectory(zoomDir))
+		{
+			std::string xDir = zoomDir + "/" + xEntry;
+			if (!isDirectory(xDir))
+				continue;
 
-      for (const std::string &yEntry : listDirectory(xDir)) {
-        if (isDirectory(xDir + "/" + yEntry))
-          continue;
+			for (const std::string &yEntry : listDirectory(xDir))
+			{
+				if (isDirectory(xDir + "/" + yEntry))
+					continue;
 
-        const TileExt *t = extInfo(yEntry);
-        format = t ? t->format : "unknown";
-        return;
-      }
-    }
-  }
-  format = "png";
+				const TileExt *t = extInfo(yEntry);
+				format = t ? t->format : "unknown";
+				return;
+			}
+		}
+	}
+	format = "png";
 }
 
-bool FileSystemTiles::open(const std::string &directoryPath) {
-  basePath = directoryPath;
+bool FileSystemTiles::open(const std::string &directoryPath)
+{
+	basePath = directoryPath;
 
-  try {
-    scanDirectory();
-    return true;
-  } catch (const std::exception &) {
-    return false;
-  }
+	try
+	{
+		scanDirectory();
+		return true;
+	}
+	catch (const std::exception &)
+	{
+		return false;
+	}
 }
 
 const std::vector<unsigned char> &
-FileSystemTiles::getTile(int z, int x, int y, std::string &contentType) {
-  contentType.clear();
-  tileData.clear();
+FileSystemTiles::getTile(int z, int x, int y, std::string &contentType)
+{
+	contentType.clear();
+	tileData.clear();
 
-  if (!isValidCoordinate(z, x, y))
-    return tileData;
+	if (!isValidCoordinate(z, x, y))
+		return tileData;
 
-  std::string base = basePath + "/" + std::to_string(z) + "/" +
-                     std::to_string(x) + "/" + std::to_string(y);
+	std::string base = basePath + "/" + std::to_string(z) + "/" +
+					   std::to_string(x) + "/" + std::to_string(y);
 
-  for (const TileExt &t : tile_exts) {
-    std::ifstream file((base + t.ext).c_str(),
-                       std::ios::binary | std::ios::ate);
-    if (!file.is_open())
-      continue;
+	for (const TileExt &t : tile_exts)
+	{
+		std::ifstream file((base + t.ext).c_str(),
+						   std::ios::binary | std::ios::ate);
+		if (!file.is_open())
+			continue;
 
-    std::streamsize size = file.tellg();
-    file.seekg(0, std::ios::beg);
+		std::streamsize size = file.tellg();
+		file.seekg(0, std::ios::beg);
 
-    tileData.resize((size_t)size);
-    if (file.read(reinterpret_cast<char *>(tileData.data()), size)) {
-      contentType = t.mime;
-      return tileData;
-    }
+		tileData.resize((size_t)size);
+		if (file.read(reinterpret_cast<char *>(tileData.data()), size))
+		{
+			contentType = t.mime;
+			return tileData;
+		}
 
-    tileData.clear();
-  }
+		tileData.clear();
+	}
 
-  return tileData;
+	return tileData;
 }
 
-std::string MapTiles::json(bool overlay) const {
-  std::string out;
-  JSON::Writer w(out);
-  w.beginObject()
-      .kv("id", layerID)
-      .kv("name", name)
-      .kv("attribution", attribution)
-      .kv("overlay", overlay)
-      .kv("url", "tiles/" + layerID + "/{z}/{x}/{y}")
-      .kv("minZoom", minZoom)
-      .kv("maxZoom", maxZoom)
-      .key("resolutions")
-      .beginArray();
-  for (double r : resolutions())
-    w.val(r);
-  w.endArray().endObject();
-  w.finish();
-  return out;
+std::string MapTiles::json(bool overlay) const
+{
+	std::string out;
+	JSON::Writer w(out);
+	w.beginObject()
+		.kv("id", layerID)
+		.kv("name", name)
+		.kv("attribution", attribution)
+		.kv("overlay", overlay)
+		.kv("url", "tiles/" + layerID + "/{z}/{x}/{y}")
+		.kv("minZoom", minZoom)
+		.kv("maxZoom", maxZoom)
+		.key("resolutions")
+		.beginArray();
+	for (double r : resolutions())
+		w.val(r);
+	w.endArray().endObject();
+	w.finish();
+	return out;
 }
 #ifdef HASSQLITE
-std::vector<double> MBTilesSupport::resolutions() const {
-  std::vector<double> result;
-  for (int z : zoomMapping)
-    result.push_back(156543.03392804097 / (1 << z));
-  return result;
+std::vector<double> MBTilesSupport::resolutions() const
+{
+	std::vector<double> result;
+	for (int z : zoomMapping)
+		result.push_back(156543.03392804097 / (1 << z));
+	return result;
 }
 #endif

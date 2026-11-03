@@ -1,0 +1,55 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://aiscatcher.org/schema/place-3.json",
+ "title": "AIS-catcher place, schema 3",
+ "description": "One place as a GeoJSON Feature. The loader in Source/Tracking/PlaceCatalogue.cpp enforces these rules and a few that relate places to each other: a parent and a redirect must exist, a UN/LOCODE belongs to one port only. Keys not named here travel along unchanged.",
+ "type": "object",
+ "required": ["type", "id", "properties", "geometry"],
+ "properties": {
+  "type": {"const": "Feature"},
+  "id": {"$ref": "#/$defs/uuid"},
+  "properties": {
+   "type": "object",
+   "required": ["schema_version", "revision", "name", "place_type"],
+   "properties": {
+    "schema_version": {"const": 3},
+    "revision": {"type": "integer", "minimum": 0, "maximum": 2147483646, "description": "Raised by one on every save; a save that names an older revision is refused."},
+    "name": {"type": "string", "minLength": 1, "maxLength": 120},
+    "place_type": {"enum": ["port", "section", "terminal", "berth", "anchorage", "mooring", "marina", "guardzone", "sector", "water"]},
+    "part_of": {"oneOf": [{"$ref": "#/$defs/uuid"}, {"type": "null"}], "description": "The place this one lies in; null says it has none."},
+    "redirect_to": {"oneOf": [{"$ref": "#/$defs/uuid"}, {"type": "null"}], "description": "A place replaced by another: its visits continue there."},
+    "no": {"type": "integer", "minimum": 1, "maximum": 2147483646, "description": "The place's number, given on its first save and kept."},
+    "codes": {
+     "type": "object",
+     "description": "Lists of codes by kind. unlocode is for a port only.",
+     "properties": {
+      "unlocode": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Z]{2}[A-Z0-9]{3}$"}}
+     },
+     "additionalProperties": {"$ref": "#/$defs/list32"}
+    },
+    "country": {"type": "string", "pattern": "^[A-Z]{2}$"},
+    "aliases": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 120}},
+    "category": {"type": "string", "minLength": 1, "maxLength": 60, "description": "A label shown in place of the type, such as wind farm or strait."},
+    "rank": {"type": "integer", "minimum": 0, "maximum": 3, "description": "From which zoom the marker shows: 3 from 7, 2 from 9, 1 from 11, 0 from 12."},
+    "attributes": {"type": "object"},
+    "geometry_source": {"type": "object"}
+   },
+   "not": {"anyOf": [
+    {"required": ["size"]}, {"required": ["unlocode"]}, {"required": ["port_unlocode"]},
+    {"required": ["parent_unlocode"]}, {"required": ["details"]}
+   ], "description": "Spellings of schema 1 and 2. The loader still reads such files, as schema 3, and a save writes them in this form."}
+  },
+  "geometry": {
+   "type": "object",
+   "required": ["type", "coordinates"],
+   "properties": {
+    "type": {"enum": ["Point", "Polygon", "MultiPolygon"]},
+    "coordinates": {"type": "array"}
+   }
+  }
+ },
+ "$defs": {
+  "uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"},
+  "list32": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 120}}
+ }
+}

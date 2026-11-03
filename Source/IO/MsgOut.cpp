@@ -24,7 +24,7 @@ namespace IO
 	void OutputMessage::ConnectMessage(Receiver &r)
 	{
 
-		for (int j = 0; j < r.Count(); j++)
+		for (int j = 0; j < r.modelCount(); j++)
 		{
 			StreamIn<AIS::Message> *um = (StreamIn<AIS::Message> *)&*this;
 			if (r.Output(j).canConnect(um->getGroupsIn()))
@@ -35,7 +35,7 @@ namespace IO
 	void OutputMessage::ConnectJSON(Receiver &r)
 	{
 
-		for (int j = 0; j < r.Count(); j++)
+		for (int j = 0; j < r.modelCount(); j++)
 		{
 			StreamIn<JSON::JSON> *um = (StreamIn<JSON::JSON> *)&*this;
 			if (r.Output(j).canConnect(um->getGroupsIn()))
@@ -51,7 +51,7 @@ namespace IO
 		else
 			ConnectMessage(r);
 
-		for (int j = 0; j < r.Count(); j++)
+		for (int j = 0; j < r.modelCount(); j++)
 		{
 
 			StreamIn<AIS::GPS> *ug = (StreamIn<AIS::GPS> *)&*this;

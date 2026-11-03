@@ -103,11 +103,11 @@ namespace AIS
 			switch (state)
 			{
 			case State::TRAINING:
-				if (Bit != lastBit) // 01 10
+				if (Bit != lastBit)
 				{
 					position++;
 				}
-				else // 11 or 00
+				else
 				{
 					if (position > MIN_TRAINING_BITS)
 					{

@@ -12,15 +12,16 @@ Tabulator.registerModule([
     SortModule, FilterModule, PageModule, PersistenceModule,
     DownloadModule, ExportModule, FormatModule, InteractionModule,
 ]);
-import { getShipDimension, getDimVal, getDimUnit, getDraughtVal, getDistanceVal, getDistanceUnit, getLatValFormat, getLonValFormat, getSpeedVal, getSpeedUnit } from '../../core/units.js';
-import { getCountryName, getStatusVal, getMmsiTypeVal, getDeltaTimeVal, getEtaVal, getStringfromChannels, getStringfromMsgType, getStringfromGroup } from '@aiscatcher/core/text.js';
+import { getShipDimension, getDimUnit, getDraughtVal, getDistanceVal, getDistanceUnit, getLatValFormat, getLonValFormat, getSpeedVal, getSpeedUnit } from '../../core/units.js';
+import { getCountryName, getStatusVal, getMmsiTypeVal, getDeltaTimeVal, getEtaVal, getStringfromChannels, getStringfromMsgType, getStringfromGroup, sanitizeString } from '@aiscatcher/core/text.js';
 import { getShipName, getCallSign } from '../../core/names.js';
+import { stationNames } from '../../core/config.js';
 import { flagHTML } from '@aiscatcher/ui/components.js';
 import * as filter from '../../core/filter.js';
 import { ships, clock } from '../../core/store.js';
 import { fetchShips, fetchTableRows } from '../../data.js';
 import { getTableShiptype } from '../../map.js';
-import { saveSettings } from '../../features/settings/settings.js';
+import { saveSettings } from '../../settings-store.js';
 import { selectMapTab } from '../index.js';
 import { register } from '../../actions.js';
 import { showContextMenu } from '../../features/contextmenu/contextmenu.js';
@@ -54,7 +55,8 @@ function customShipFilter(data, filterParams) {
         (data.speed != null && getSpeedVal(data.speed).toString().includes(query)) ||
         (data.validated != null && (data.validated == 1 ? "yes" : data.validated == -1 ? "no" : "pending").includes(query)) ||
         (data.channels != null && getStringfromChannels(data.channels).includes(query)) ||
-        (data.group_mask != null && getStringfromGroup(data.group_mask).includes(query));
+        (data.group_mask != null && getStringfromGroup(data.group_mask).includes(query)) ||
+        stationNames(data.stations).toLowerCase().includes(query);
 }
 
 function padEni(v) {
@@ -175,6 +177,11 @@ function buildColumns() {
                 const value = cell.getValue();
                 return value != null ? Number(value).toFixed(0) + "&deg;" : "";
             },
+        },
+        {
+            title: "Station", field: "stations",
+            sorter: (a, b) => stationNames(a).localeCompare(stationNames(b)),
+            formatter: (cell) => sanitizeString(stationNames(cell.getValue())),
         },
         {
             title: "Lat", field: "lat", sorter: "number",
@@ -406,7 +413,7 @@ function tableRowClick(m) {
     selectMapTab(m);
 }
 
-export function downloadCSV() {
+function downloadCSV() {
     if (table) table.download("csv", "data.csv");
 }
 

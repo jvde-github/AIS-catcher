@@ -97,7 +97,9 @@ namespace IO
 
 		// a write is the only reliable test that the directory is usable
 		const std::string probe = dir + ".aiscatcher-csv";
-		std::ofstream t(probe.c_str());
+		std::ofstream t;
+		if (Util::Helper::createTemp(probe, probe))
+			t.open(probe.c_str());
 		if (!t.is_open())
 		{
 			stats.connect_fail++;
@@ -173,7 +175,7 @@ namespace IO
 		// chronological file, last row per target wins, upsert restores LRU order
 		std::vector<std::string> f;
 		std::string line;
-		std::getline(file, line); // header
+		std::getline(file, line);
 
 		int restored = 0, skipped = 0;
 		while (std::getline(file, line))
@@ -257,7 +259,7 @@ namespace IO
 
 		std::vector<std::string> f;
 		std::string line;
-		std::getline(file, line); // header
+		std::getline(file, line);
 		while (std::getline(file, line))
 		{
 			// keyed on the bucket; a corrupt line is dropped, not written back
@@ -605,7 +607,9 @@ namespace IO
 	{
 		// before the files close: the worker calls back into this object
 		stopWorker();
-		maintain();
+		// an output that never opened has no directory to compact or prune
+		if (!dir.empty())
+			maintain();
 		closeDB();
 	}
 }

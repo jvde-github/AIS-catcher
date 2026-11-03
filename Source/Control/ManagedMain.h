@@ -20,9 +20,6 @@
 #include <string>
 #include <vector>
 
-#include "Engine.h"
-#include "ControlCore.h"
-
 namespace Managed
 {
 	bool isInvocation(const std::vector<std::string> &args);

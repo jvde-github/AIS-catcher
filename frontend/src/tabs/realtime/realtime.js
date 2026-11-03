@@ -1,8 +1,8 @@
 import { settings } from '../../core/state.js';
 import * as filter from '../../core/filter.js';
 import { ships } from '../../core/store.js';
-import { saveSettings, onSave } from '../../features/settings/settings.js';
-import { selectMapTab } from '../index.js';
+import { saveSettings, beforeWrite } from '../../settings-store.js';
+import { selectMapTab, showTab, load } from '../index.js';
 import { register } from '../../actions.js';
 import { showContextMenu } from '../../features/contextmenu/contextmenu.js';
 
@@ -174,9 +174,9 @@ class RealtimeViewer {
             decoderIcon.title = 'Decode NMEA';
             decoderIcon.addEventListener('click', (e) => {
                 e.stopPropagation();
-                document.getElementById('decoder_tab').click();
+                showTab('decoder');
                 document.getElementById('decoder_input').value = nmeaText;
-                window.AISCatcher.ACTIONS.decodeNMEA();
+                load('decoder').then((m) => m.decode());
             });
             nmeaCellContent.appendChild(decoderIcon);
         }
@@ -361,7 +361,7 @@ function handleKeydown(event) {
 
 
 
-export function activate(filterMMSI = null) {
+export function shown(filterMMSI = null) {
     const config = window.AISCatcher.config;
 
     if (!config.features.realtime) return;
@@ -397,7 +397,7 @@ export function activate(filterMMSI = null) {
     document.addEventListener('keydown', keydownHandler);
 }
 
-export function deactivate(force = false) {
+export function hidden(force = false) {
     if (keydownHandler) {
         document.removeEventListener('keydown', keydownHandler);
         keydownHandler = null;
@@ -431,10 +431,10 @@ export function openForMMSI(mmsi) {
     savedState = null;
 
     pendingFilters = [...existingFilters, { kind: 'mmsi', value: mmsi }];
-    document.getElementById('realtime_tab').click();
+    showTab('realtime');
 }
 
-export function togglePause(showMessage = false) {
+function togglePause(showMessage = false) {
     if (!viewer) return;
     if (viewer.isPaused) {
         viewer.resume();
@@ -446,7 +446,7 @@ export function togglePause(showMessage = false) {
     syncPauseButton(viewer.isPaused);
 }
 
-export function toggleBackgroundStreaming() {
+function toggleBackgroundStreaming() {
     const checkbox = document.getElementById('realtime_background_streaming');
     if (checkbox && viewer) {
         viewer.backgroundStreaming = checkbox.checked;
@@ -455,13 +455,13 @@ export function toggleBackgroundStreaming() {
     }
 }
 
-export function clear() {
+function clear() {
     if (viewer && viewer.nmeaContent) {
         viewer.nmeaContent.innerHTML = '';
     }
 }
 
-export function addFilter(kind, value) {
+function addFilter(kind, value) {
     if (!viewer) return;
     if (!viewer.addFilter(kind, value)) {
         window.AISCatcher.showNotification('Not a valid ' + (FILTER_KINDS[kind] ? FILTER_KINDS[kind].label : kind), 'error');
@@ -471,29 +471,29 @@ export function addFilter(kind, value) {
     saveSettings();
 }
 
-export function addFilterFromInput() {
+function addFilterFromInput() {
     addFilter(dialogKind, document.getElementById('realtime_filter_value').value);
 }
 
-export function openFilters() {
+function openFilters() {
     if (viewer) renderFilterDialog();
 }
 
-export function removeFilter(kind, value) {
+function removeFilter(kind, value) {
     if (!viewer) return;
     viewer.removeFilter(kind, value);
     updateFilterDisplay();
     saveSettings();
 }
 
-export function clearFilters() {
+function clearFilters() {
     if (!viewer) return;
     viewer.clearFilters();
     updateFilterDisplay();
     saveSettings();
 }
 
-export function filterKindChanged() {
+function filterKindChanged() {
     dialogKind = document.getElementById('realtime_filter_kind').value;
     renderFilterDialog();
 }
@@ -502,11 +502,11 @@ export function applyVesselFilter() {
     viewer?.dropHiddenRows();
 }
 
-export function getFilters() {
+function getFilters() {
     return viewer ? viewer.filters : null;
 }
 
-export function getBackgroundStreaming() {
+function getBackgroundStreaming() {
     return viewer ? viewer.backgroundStreaming : null;
 }
 
@@ -522,7 +522,7 @@ register({
 });
 
 // the filters and the background streaming are kept with the settings
-onSave(() => {
+beforeWrite(() => {
     const filters = getFilters();
     if (filters !== null && filters !== undefined) settings.realtime_filters = filters;
     const bg = getBackgroundStreaming();

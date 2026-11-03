@@ -24,11 +24,7 @@ function onKeyDown(e) {
     if (e.key === 'Escape') stop();
 }
 
-export function isActive() {
-    return box != null;
-}
-
-export function start() {
+function start() {
     if (box) {
         stop();
         return;
@@ -59,7 +55,7 @@ export function start() {
     document.addEventListener('keydown', onKeyDown);
 }
 
-export function stop() {
+function stop() {
     if (!box) return;
     map.removeInteraction(box);
     map.getInteractions().forEach((i) => {

@@ -58,7 +58,6 @@ export function create(opts) {
     const bucketsEl = bar.querySelector(".ticker-buckets");
     const feedEl = bar.querySelector(".ticker-feed");
     const selectEvent = opts.selection ? createEventSelection(opts.selection) : null;
-    const onSelect = opts.onSelect || function () {};
     const bucketHidden = opts.bucketHidden || function () { return false; };
 
     let events = [];
@@ -105,9 +104,7 @@ export function create(opts) {
             if (slot.dragged) { slot.dragged = false; return; }
             const event = slot.event;
             if (item.dataset.key) dismiss(item.dataset.key);
-            if (event && selectEvent) {
-                selectEvent(event).catch((error) => console.warn('Ticker selection failed', error));
-            } else if (event) onSelect(event.id == null ? '' : String(event.id), event);
+            if (event && selectEvent) selectEvent(event).catch((error) => console.warn('Ticker selection failed', error));
         });
         bindTouch();
         item.style.display = "none";

@@ -402,7 +402,7 @@
     margin: 0;
 }
 
-.settings-main button:not(.tab-scroll-btn) {
+.settings-main button:not(.tab-scroll-btn):not(.pick__btn):not(.pick__opt) {
     background-color: var(--color-control);
 }
 
@@ -560,7 +560,7 @@
     max-width: 100%;
 }
 
-.settings-main button:not(.tab-scroll-btn),
+.settings-main button:not(.tab-scroll-btn):not(.pick__btn):not(.pick__opt),
 .settings-main section div>span[data-action] {
     /* re-asserted after .settings-main section div span:nth-of-type(2), which
        zeroes padding/border-left for the generic control slot */
@@ -607,7 +607,7 @@
 
 @media (hover: hover) {
     .settings-main section div>span[data-action]:hover,
-    .settings-main button:not(.tab-scroll-btn):hover,
+    .settings-main button:not(.tab-scroll-btn):not(.pick__btn):not(.pick__opt):hover,
     .settings-main .color-picker:hover,
     .settings-main select:hover {
         border-color: var(--color-accent);

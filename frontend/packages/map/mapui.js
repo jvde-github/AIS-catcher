@@ -223,18 +223,21 @@ export function create(opts) {
 
     /* --- card ------------------------------------------------------------------- */
 
-    var card = null;
-    if (opts.card && opts.card.mount) {
-        card = cardLib.create(Object.assign({}, opts.card, {
+    /* exported for a host's second card (a station's); the host's layout options
+       go over the pane's own */
+    function createCard(c) {
+        return cardLib.create(Object.assign({}, c, {
             layout: Object.assign({
                 chrome: chrome,
                 fullBleed: fullBleed,
                 topInset: function () { return fullBleed() ? 0 : chrome.inset("top"); },
                 viewSize: function () { var m = getMap(); return (m && m.getSize()) || [window.innerWidth, window.innerHeight]; },
                 freeWidth: freeWidth,
-            }, opts.card.layout || {}),
+            }, c.layout || {}),
         }));
     }
+
+    var card = opts.card && opts.card.mount ? createCard(opts.card) : null;
 
     /* --- toolbar ---------------------------------------------------------------- */
 
@@ -298,6 +301,7 @@ export function create(opts) {
         chrome: chrome,
         markers: markers,
         card: card,
+        createCard: createCard,
         toolbar: toolbar,
         menu: menu,
         reveal: revealTarget,

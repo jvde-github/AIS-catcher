@@ -1,0 +1,75 @@
+import TileLayer from 'ol/layer/Tile.js';
+import OSM from 'ol/source/OSM.js';
+import XYZ from 'ol/source/XYZ.js';
+import { icon } from './icons.js';
+
+const OSM_CREDIT = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+const SEAMARK_CREDIT = 'Seamarks © <a href="https://www.openseamap.org" target="_blank" rel="noopener">OpenSeaMap</a>';
+const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
+const BASEMAPS = {
+    streets: {label: 'Streets', dim: 0.1, credit: OSM_CREDIT},
+    light: {label: 'Light', url: ESRI + 'Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', maxZoom: 16,
+            credit: 'Tiles © Esri — Esri, HERE, Garmin, ' + OSM_CREDIT},
+    satellite: {label: 'Satellite', url: ESRI + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', maxZoom: 19,
+                credit: 'Imagery © Esri — Esri, Maxar, Earthstar Geographics and the GIS User Community'},
+};
+const KEY = 'places.basemap';
+
+// `wrap`: the .pe-map the map sits in, which takes the switch and the credits
+export function addBasemap(map, wrap) {
+    const seamark = new TileLayer({
+        className: 'place-seamark', // its own canvas: sharing one with the base map left it unrendered
+        source: new XYZ({url: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png'}),
+        opacity: 0.5
+    });
+    const base = new TileLayer({className: 'place-base'});
+    let basemap = 'streets';
+    try { if (BASEMAPS[localStorage.getItem(KEY)]) basemap = localStorage.getItem(KEY); } catch { /* private mode */ }
+    // the street map is dimmed a little so what is drawn over it stands out
+    base.on('postrender', e => {
+        const dim = BASEMAPS[basemap].dim;
+        if (!dim) return;
+        e.context.save();
+        e.context.setTransform(1, 0, 0, 1, 0, 0);
+        e.context.fillStyle = `rgba(0, 0, 0, ${dim})`;
+        e.context.fillRect(0, 0, e.context.canvas.width, e.context.canvas.height);
+        e.context.restore();
+    });
+
+    const switcher = document.createElement('div');
+    switcher.className = 'pe-toolbar pe-toolbar--layers';
+    switcher.setAttribute('role', 'radiogroup');
+    switcher.setAttribute('aria-label', 'Map style');
+    switcher.innerHTML = Object.entries(BASEMAPS).map(([key, b]) =>
+        `<button class="pe-segment" type="button" role="radio" aria-checked="false" data-basemap="${key}">${icon(key, 'pe-icon')}${b.label}</button>`).join('');
+    const credit = document.createElement('div');
+    credit.className = 'pe-attribution';
+    wrap.append(switcher, credit);
+
+    function set(key, remember = true) {
+        if (!BASEMAPS[key]) return;
+        basemap = key;
+        const b = BASEMAPS[key];
+        base.setSource(b.url ? new XYZ({url: b.url, maxZoom: b.maxZoom, crossOrigin: 'anonymous'}) : new OSM());
+        for (const seg of switcher.querySelectorAll('.pe-segment')) {
+            const on = seg.dataset.basemap === key;
+            seg.setAttribute('aria-checked', String(on));
+            seg.tabIndex = on ? 0 : -1;
+        }
+        credit.innerHTML = b.credit + ' · ' + SEAMARK_CREDIT;
+        if (remember) try { localStorage.setItem(KEY, key); } catch { /* private mode */ }
+    }
+    switcher.addEventListener('keydown', e => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        const keys = Object.keys(BASEMAPS), next = keys[(keys.indexOf(basemap) + (e.key === 'ArrowRight' ? 1 : keys.length - 1)) % keys.length];
+        set(next);
+        switcher.querySelector(`[data-basemap="${next}"]`).focus();
+    });
+    for (const seg of switcher.querySelectorAll('.pe-segment'))
+        seg.addEventListener('click', () => set(seg.dataset.basemap));
+
+    set(basemap, false);
+    map.getLayers().insertAt(0, seamark);
+    map.getLayers().insertAt(0, base);
+}
