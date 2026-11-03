@@ -20,7 +20,6 @@ import { DEVICE_BLOCKS } from './inputs.js';
 const RECEIVER_KEYS = ['serial', 'input', 'verbose', 'model', 'engines', 'meta', 'own_mmsi', ...DEVICE_BLOCKS];
 
 const STATION_KEYS = ['station', 'lat', 'lon', 'alt', 'share_loc', 'use_gps', 'own_mmsi'];
-const SITE_ONLY = ['file', 'backup', 'places'];
 const TRACKING_KEYS = ['file', 'backup', 'history', 'track_time', 'replay_time', 'track_memory', 'max_ships', 'cutoff',
     'expire', 'server_mode', 'places'];
 // what the viewer section took that means nothing on a server of the site: its own port and
@@ -58,8 +57,8 @@ function serverFromViewer(v, cfg) {
         if (k === 'prome') { if (on(value)) entry.metrics = true; continue; }
         if (FILTER_KEYS.includes(k) || ROUTE_KEYS.includes(k)) { if (filtered && k !== 'filter') own[k] = value; continue; }
         if (TRACKING_KEYS.includes(k)) {
-            // the backup and the places are the site's: a tracker of a server's own has neither
-            if (filtered) { if (!SITE_ONLY.includes(k)) own[k] = value; }
+            // the places are the site's; a tracker of a server's own keeps its own backup
+            if (filtered) { if (k !== 'places') own[k] = value; }
             else if (off) entry[k] = value;
             else { const t = cfg.tracking && typeof cfg.tracking === 'object' ? cfg.tracking : (cfg.tracking = {}); if (!(k in t)) t[k] = value; }
             continue;
@@ -71,6 +70,8 @@ function serverFromViewer(v, cfg) {
     if (bind !== '127.0.0.1') entry.bind = bind;
     if (filtered) entry.tracking = own;
     if (off) entry.active = false;
+    // the ship list as v0.70 served it stays, for the scripts that read it
+    if (!('api_v0' in entry)) entry.api_v0 = true;
     return entry;
 }
 
@@ -163,6 +164,7 @@ export function migrateConfig(cfg) {
         const list = Array.isArray(cfg.services) ? cfg.services : (cfg.services = []);
         let main = list.find(s => s && s.main === true);
         if (!main) list.unshift(main = { main: true });
+        if (!('api_v0' in main)) main.api_v0 = true;
         const tracking = cfg.tracking && typeof cfg.tracking === 'object' ? cfg.tracking : (cfg.tracking = {});
         for (const [k, value] of Object.entries(v)) {
             if (DROPPED_KEYS.includes(k)) continue;

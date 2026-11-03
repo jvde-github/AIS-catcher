@@ -234,24 +234,24 @@ namespace Device
 		SpyServer() : Device(Format::UNKNOWN, 288000, Type::SPYSERVER, "SpyServer") { client.setStats(&stats); }
 		const IO::OutputStats *getConnectionStats() const override { return &stats; }
 
-		void OpenWithFileDescriptor(int) { Open(0); }
+		void OpenWithFileDescriptor(int) override { Open(0); }
 
 		// Control
-		void Open(uint64_t);
-		void Close();
-		void Play();
-		void Stop();
+		void Open(uint64_t) override;
+		void Close() override;
+		void Play() override;
+		void Stop() override;
 
-		bool isCallback() { return true; }
+		bool isCallback() override { return true; }
 
-		void getDeviceList(std::vector<Description> &DeviceList);
+		void getDeviceList(std::vector<Description> &DeviceList) override;
 
 		// Settings
-		Setting &applyKey(AIS::Keys key, const std::string &arg);
-		std::string Get();
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
+		std::string Get() override;
 
-		std::string getProduct() { return "SPYSERVER"; }
-		std::string getIdentity() { return "SPYSERVER:" + host + ":" + port; }
-		void setFormat(Format f) {}
+		std::string getProduct() override { return "SPYSERVER"; }
+		std::string getIdentity() override { return "SPYSERVER:" + host + ":" + port; }
+		void setFormat(Format f) override {}
 	};
 }

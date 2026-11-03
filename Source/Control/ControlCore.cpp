@@ -169,12 +169,11 @@ static std::string machineName()
 
 // the statistics backup beside the configuration, as a full path so the
 // settings show where it lives (/etc/AIS-catcher for an installed service)
-static std::string statsPath(const std::string &config_file)
+// a file or folder in the configuration's own folder, as an absolute path
+static std::string besideConfig(const std::string &config_file, const std::string &name)
 {
 	const auto slash = config_file.find_last_of("/\\");
 	const std::string dir = slash == std::string::npos ? "." : config_file.substr(0, slash);
-	const std::string name =
-		(slash == std::string::npos ? config_file : config_file.substr(slash + 1)) + ".stats";
 #ifdef _WIN32
 	char full[_MAX_PATH];
 	if (_fullpath(full, dir.c_str(), sizeof(full)))
@@ -185,6 +184,12 @@ static std::string statsPath(const std::string &config_file)
 		return std::string(full) + "/" + name;
 #endif
 	return name;
+}
+
+static std::string statsPath(const std::string &config_file)
+{
+	const auto slash = config_file.find_last_of("/\\");
+	return besideConfig(config_file, (slash == std::string::npos ? config_file : config_file.substr(slash + 1)) + ".stats");
 }
 
 // what a fresh configuration starts from; the main server, the tracking backup and the default station come
@@ -1107,6 +1112,8 @@ void ControlCore::addMainDefaults()
 		JSON::JSON &tracking = doc.root.object(AIS::KEY_SETTING_TRACKING, doc.pool);
 		if (!tracking[AIS::KEY_SETTING_FILE])
 			tracking.Set(AIS::KEY_SETTING_FILE, statsPath(config_file), doc.pool);
+		if (!tracking[AIS::KEY_SETTING_PLACES])
+			tracking.Set(AIS::KEY_SETTING_PLACES, defaultPlaceDirectory(), doc.pool);
 
 		if (!doc.root[AIS::KEY_SETTING_STATIONS])
 		{
@@ -1215,9 +1222,7 @@ int ControlCore::consumeRetryDelay()
 
 std::string ControlCore::defaultPlaceDirectory() const
 {
-	const auto slash = config_file.find_last_of("/\\");
-	return (slash == std::string::npos ? "." : config_file.substr(0, slash)) +
-		   "/places";
+	return besideConfig(config_file, "places");
 }
 
 void ControlCore::refreshPlaces(const std::string &json)

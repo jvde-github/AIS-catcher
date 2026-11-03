@@ -181,6 +181,10 @@ namespace Services
 		if ((request.method != "GET" && !(request.method == "POST" && request.path == "/api/decode")) || request.path.empty() ||
 			request.path[0] != '/' || scope(request) == NOT_MINE)
 			return false;
+		// the ship list and statistics as v0.70 served them, for scripts; the map reads its own
+		const std::string &p = request.path;
+		if (!spec.api_v0 && (p == "/ships.json" || p == "/stat.json" || p == "/api/ships.json" || p == "/api/ships_full.json"))
+			return false;
 
 		// this server's settings, then the station owner's plugins
 		if (request.path == "/custom/plugins.js")

@@ -302,6 +302,7 @@ X(KEY_SETTING_SHA256, "", "", "", "", "sha256", "", "", "SHA-256 of a key, in he
 X(KEY_SETTING_SCOPES, "", "", "", "", "scopes", "", "", "What a key may do: data, system.", nullptr)
 X(KEY_SETTING_PUBLIC, "", "", "", "", "public", "", "", "A server anyone who reaches it may read, without a key; never together with keys.", nullptr)
 X(KEY_SETTING_LIMITED, "", "", "", "", "limited", "", "", "A server that answers the short form whoever asks: lists of 25 rows at most, vessel rows without the station that heard them, one vessel in full without its stations, and 25 data calls an hour from one address. Off by default.", nullptr)
+X(KEY_SETTING_API_V0, "", "", "", "", "api_v0", "", "", "A server with the map also answers the ship list and statistics as v0.70 did, for scripts: /ships.json, /stat.json, /api/ships.json and /api/ships_full.json. On for -N and a \"server\" section, off for an entry of \"services\" unless switched on; limited does not cap them.", nullptr)
 X(KEY_SETTING_WEBHOOKS, "", "", "", "", "webhooks", "", "", "Addresses each event is posted to as it happens.", nullptr)
 X(KEY_SETTING_EVENTS, "", "", "", "", "events", "", "", "The kinds of event a webhook posts: safety, destination, status, draught, place_enter, place_exit, system.", nullptr)
 X(KEY_SETTING_SECRET, "", "", "", "", "secret", "", "", "A webhook's signing secret, as Standard Webhooks has it (whsec_...).", nullptr)

@@ -115,6 +115,8 @@ struct ServerSpec
 	std::vector<ApiKey> keys;
 	bool open = false;
 	bool limited = false;
+	// the map's JSON as v0.70 served it, for scripts: /ships.json, /stat.json, /api/ships.json, /api/ships_full.json
+	bool api_v0 = false;
 	// managed mode's server beside the control panel: its port and address are the panel's
 	bool main = false;
 
@@ -123,6 +125,7 @@ struct ServerSpec
 	{
 		std::vector<std::string> out;
 		if (ui) out.push_back("ui");
+		if (ui && api_v0) out.push_back("api_v0");
 		if (api) out.push_back("api");
 		if (mcp) out.push_back("mcp");
 		if (system) out.push_back("system");
@@ -136,7 +139,7 @@ struct ServerSpec
 	{
 		return port == o.port && bind == o.bind && tls_cert == o.tls_cert && tls_key == o.tls_key && ui == o.ui && api == o.api && mcp == o.mcp && system == o.system &&
 			   geojson == o.geojson && metrics == o.metrics && kml == o.kml && tracking == o.tracking && view == o.view &&
-			   stations == o.stations && viewer == o.viewer && keys == o.keys && open == o.open && limited == o.limited && main == o.main;
+			   stations == o.stations && viewer == o.viewer && keys == o.keys && open == o.open && limited == o.limited && api_v0 == o.api_v0 && main == o.main;
 	}
 	bool operator!=(const ServerSpec &o) const { return !(*this == o); }
 };

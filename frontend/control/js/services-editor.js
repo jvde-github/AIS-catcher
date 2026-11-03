@@ -17,6 +17,7 @@ const CONTAINER = 'services-config';
 // `legacy`: the viewer's switch that offered it before it was a service of its own
 const SERVICES = [
     { key: 'ui', label: 'Map', path: '/', desc: 'The map, and what it reads.', docs: DOCS.viewer },
+    { key: 'api_v0', label: 'API v0', path: '/ships.json', desc: 'The ship list and statistics as v0.70 gave them, for scripts. Needs the map; Limited does not cap it.' },
     { key: 'api', label: 'API', path: '/api/v1', desc: 'Vessels, stations, places and events.', docs: DOCS.api },
     { key: 'mcp', label: 'MCP', path: '/mcp', desc: 'The same, for an AI assistant.', docs: DOCS.mcp },
     { key: 'system', label: 'System', path: '/api/v1/system', desc: 'Health, receivers and the log. Never open on the network.', docs: DOCS.system },
@@ -43,7 +44,7 @@ const hasKeys = data => Array.isArray(data.keys) && data.keys.length > 0;
 // when switched on, Prometheus under its old name too; `builtIn`: the main server, the map always on
 export function servedKeys(data, builtIn = false) {
     const map = builtIn || (data.ui === undefined ? !hasKeys(data) : on(data.ui));
-    return SERVICES.filter(s => s.key === 'ui' ? map : on(data[s.key]) || (s.legacy && on(data[s.legacy]))).map(s => s.key);
+    return SERVICES.filter(s => s.key === 'ui' ? map : s.key === 'api_v0' ? map && on(data.api_v0) : on(data[s.key]) || (s.legacy && on(data[s.legacy]))).map(s => s.key);
 }
 
 // a server as the panel names it: Main, its description, or its port
@@ -272,7 +273,8 @@ export function renderServing(host, data, { builtIn = false, bind, touched, rere
     // each service on a line: its name, path and what it is for
     const rows = SERVICES.map(s => switchRow('st-svc--line', has(s.key), v => set(s.key, v),
         el('span', 'st-svc__name', {}, el('strong', '', { text: s.label }), el('code', '', { text: s.path })),
-        builtIn && s.key === 'ui' ? 'Always on: this panel shows it.' : s.desc, builtIn && s.key === 'ui'));
+        builtIn && s.key === 'ui' ? 'Always on: this panel shows it.' : s.desc,
+        (builtIn && s.key === 'ui') || (s.key === 'api_v0' && !has('ui'))));
     const names = SERVICES.filter(s => has(s.key)).map(s => s.label);
     host.append(fold('Serves', DOCS.services, { key: foldKey + ':serves', open: true, state: names.join(', '), warn: names.length ? '' : 'serves nothing: switch on what it offers' }, ...rows));
 

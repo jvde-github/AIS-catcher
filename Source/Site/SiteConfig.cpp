@@ -18,7 +18,7 @@
 #include "SiteConfig.h"
 
 #include <fstream>
-#include <limits>
+#include <climits>
 #include <algorithm>
 #include <stdexcept>
 
@@ -403,6 +403,7 @@ namespace
 		case AIS::KEY_SETTING_METRICS: spec.metrics = Util::Parse::Switch(value); return true;
 		case AIS::KEY_SETTING_PUBLIC: spec.open = Util::Parse::Switch(value); return true;
 		case AIS::KEY_SETTING_LIMITED: spec.limited = Util::Parse::Switch(value); return true;
+		case AIS::KEY_SETTING_API_V0: spec.api_v0 = Util::Parse::Switch(value); return true;
 		case AIS::KEY_SETTING_PLACE_GEOMETRY:
 			throw ConfigError("\"place_geometry\" is a term of the server's \"view\".");
 		case AIS::KEY_SETTING_MAIN: spec.main = Util::Parse::Switch(value); return true;
@@ -469,7 +470,7 @@ namespace
 			Util::Parse::Split(value, ',', own.zones);
 			return true;
 		case AIS::KEY_SETTING_GROUPS_IN:
-			own.groups_in = (uint64_t)Util::Parse::Integer(value, 0, std::numeric_limits<long>::max());
+			own.groups_in = (uint64_t)Util::Parse::Integer(value, 0, LONG_MAX);
 			return true;
 		// what the web viewer of before took and this server has no use for
 		case AIS::KEY_SETTING_PORT_MIN:
@@ -581,7 +582,7 @@ namespace
 		// the stations the server shows: those its filter names, when it is on
 		if (e.filter.isOn())
 			for (const auto &t : own.filter)
-				if (t.first == AIS::KEY_SETTING_ID || t.first == AIS::KEY_SETTING_SELECT_ID)
+				if (t.first == AIS::KEY_SETTING_ID || t.first == AIS::KEY_SETTING_SELECT_ID || t.first == AIS::KEY_SETTING_STATIONS)
 				{
 					std::vector<std::string> parts;
 					Util::Parse::Split(t.second, ',', parts);
@@ -695,6 +696,7 @@ namespace
 			}
 			ServerEntry e;
 			e.spec.bind = "0.0.0.0";
+			e.spec.api_v0 = true;
 			e.network_default = true;
 			bool active = true;
 			for (const auto &m : entry.getObject().getMembers())
@@ -728,6 +730,7 @@ namespace
 		{
 			ServerEntry e;
 			e.spec.bind = "0.0.0.0";
+			e.spec.api_v0 = true;
 			e.network_default = true;
 			// a value as -N gives it, text, but for the view and tls objects and the keys array -N writes
 			for (const auto &m : entry.getObject().getMembers())
@@ -810,6 +813,7 @@ namespace
 		e.spec.bind = main_bind;
 		e.spec.main = true;
 		e.spec.viewer.managed = true;
+		e.spec.api_v0 = true;
 		if (viewer.isObject())
 			for (const auto &m : viewer.getObject().getMembers())
 				e.read(m.Key(), JSON::text(m.Get()), &m.Get());
