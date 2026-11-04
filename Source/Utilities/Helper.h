@@ -28,11 +28,11 @@ namespace Util
 	{
 	public:
 		static std::string readFile(const std::string &filename);
-		static bool writeFileAtomic(const std::string &path, const std::string &content, std::string &error);
+		static bool writeFileAtomic(const std::string &path, const std::string &content, std::string &error, bool owner_only = false);
 		// Makes the temp file a save writes to, afresh, so a link left at its name
-		// is not followed: with the target's mode, 0600 for a new target. False when
-		// it cannot be made.
-		static bool createTemp(const std::string &tmp, const std::string &target);
+		// is not followed: with the target's mode; a new target as the umask leaves
+		// it, or 0600 when owner_only. False when it cannot be made.
+		static bool createTemp(const std::string &tmp, const std::string &target, bool owner_only = false);
 		static bool syncFile(const std::string &path);
 		// below the other threads, so that under load the scheduler starves it before decoding
 		static void lowerThreadPriority();

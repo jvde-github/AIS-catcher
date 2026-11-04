@@ -1086,10 +1086,11 @@ bool ControlCore::writeFileAtomic(const std::string &path,
 								  const std::string &content,
 								  std::string &error)
 {
+	// the configuration and its .bak hold the password hash and the sharing key
 	if (content.empty() || content.back() != '\n')
-		return Util::Helper::writeFileAtomic(path, content + "\n", error);
+		return Util::Helper::writeFileAtomic(path, content + "\n", error, true);
 
-	return Util::Helper::writeFileAtomic(path, content, error);
+	return Util::Helper::writeFileAtomic(path, content, error, true);
 }
 
 // A configuration with neither a main server under "services" nor a viewer section

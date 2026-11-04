@@ -109,29 +109,31 @@ namespace Util
 #endif
 	}
 
-	bool Helper::createTemp(const std::string &tmp, const std::string &target)
+	bool Helper::createTemp(const std::string &tmp, const std::string &target, bool owner_only)
 	{
 #ifdef _WIN32
+		(void)owner_only;
 		return true;
 #else
 		struct stat st;
-		const mode_t mode = ::stat(target.c_str(), &st) == 0 ? (st.st_mode & 07777) : 0600;
+		const bool exists = ::stat(target.c_str(), &st) == 0;
+		const mode_t mode = exists ? (st.st_mode & 07777) : owner_only ? 0600 : 0666;
 		::unlink(tmp.c_str());
 		const int fd = ::open(tmp.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, mode);
 		if (fd < 0)
 			return false;
-		// past the umask
-		const bool ok = ::fchmod(fd, mode) == 0;
+		// the target's own mode and 0600 past the umask; any other new file as the umask leaves it
+		const bool ok = !(exists || owner_only) || ::fchmod(fd, mode) == 0;
 		::close(fd);
 		return ok;
 #endif
 	}
 
-	bool Helper::writeFileAtomic(const std::string &path, const std::string &content, std::string &error)
+	bool Helper::writeFileAtomic(const std::string &path, const std::string &content, std::string &error, bool owner_only)
 	{
 		const std::string tmp = path + ".tmp";
 
-		if (!createTemp(tmp, path))
+		if (!createTemp(tmp, path, owner_only))
 		{
 			error = "cannot create \"" + tmp + "\"";
 			return false;
