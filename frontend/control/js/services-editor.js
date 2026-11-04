@@ -388,8 +388,8 @@ function renderViewerFields(main, s, fields, touched, key) {
     }
     const tabs = page.filter(f => f.field.type === 'toggle' && on(s[f.field.jsonpath || f.field.name])).map(f => f.field.label.replace(/ tab$/, '').replace(/ on the ship card$/, ''));
     const tiles = rest.some(f => f.section === 'Map tiles' && isSet(f)) ? 'own tiles' : 'default tiles';
-    const plugins = rest.some(f => f.section === 'Plugins' && isSet(f)) ? 'plugins' : 'no plugins';
-    main.append(fold('Map page', DOCS.viewer, { key: key + ':map', state: [tabs.length ? tabs.join(', ') : 'no tabs', tiles, plugins].join(' · ') },
+    const plugins = !rest.some(f => f.section === 'Plugins') ? null : rest.some(f => f.section === 'Plugins' && isSet(f)) ? 'plugins' : 'no plugins';
+    main.append(fold('Map page', DOCS.viewer, { key: key + ':map', state: [tabs.length ? tabs.join(', ') : 'no tabs', tiles, plugins].filter(Boolean).join(' · ') },
         el('div', 'st-srv__viewer st-srv__page', {}, ...page.map(field)), tail));
 }
 
@@ -487,11 +487,12 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
     function renderDetail(main, i, { title, rerender }) {
         const s = state.list[i];
         if (s.main) {
-            main.append(el('p', 'st-help st-svcs__lead', { text: `The map this panel shows, on port ${state.viewerPort || 'next to it'}. Add servers for a public map or an API.` }));
+            main.append(el('p', 'st-help st-svcs__lead', { text: `The map this panel shows, on port ${state.viewerPort || 'next to it'}. Add servers for a public map, an API or plugins.` }));
             renderTLS(main, s, { until: state.tls.get(state.viewerPort), folder: state.folder, touched, foldKey: 'main' });
             renderServing(main, s, { builtIn: true, bind: state.bind, touched, rerender, foldKey: 'main' });
             renderShows(main, s, { everyShip: true, outlines: true, touched, rerender, foldKey: 'main' });
-            renderViewerFields(main, s, viewerFields, touched, 'main');
+            // plugins run on the panel's own address here: they go on a server of their own; the log is the panel's
+            renderViewerFields(main, s, viewerFields.filter(f => f.section !== 'Plugins' && f.field.name !== 'log'), touched, 'main');
             return;
         }
         if (!isActive(s))

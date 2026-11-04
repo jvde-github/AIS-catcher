@@ -535,6 +535,19 @@ namespace
 		ServerSpec &spec = e.spec;
 		TrackerSpec &own = spec.tracking;
 		const StationDefaults &at = e.at;
+		// the control panel shows this map on its own address: no code but the program's runs
+		// there, and the log is the panel's
+		if (spec.main)
+		{
+			spec.viewer.log = false;
+			if (!spec.viewer.plugins.empty() || !spec.viewer.plugin_dirs.empty() || !spec.viewer.about.empty())
+			{
+				Warning() << where << ": plugins and an about page are not served beside the control panel; add a server under Services for them";
+				spec.viewer.plugins.clear();
+				spec.viewer.plugin_dirs.clear();
+				spec.viewer.about.clear();
+			}
+		}
 		if (e.tls_given)
 		{
 			if (spec.tls_cert.empty() || spec.tls_key.empty())

@@ -424,12 +424,29 @@ static void dumpValues(const JSON::JSON &section, bool serial, PathValues &out)
 					dumpValues(entry.getObject(), serial, out);
 }
 
-// the files and folders a configuration has this program serve or write; a
-// receiver's input is only read for its samples
+// what a file or WAV input reads, whole; opened from the working folder, so
+// tagged as the receiver's rather than as the site's "file"
+static void inputValues(const JSON::JSON &section, PathValues &out)
+{
+	for (const auto &m : section.getMembers())
+		if ((m.Key() == AIS::KEY_SETTING_FILE || m.Key() == AIS::KEY_SETTING_WAVFILE) && m.Get().isObject())
+		{
+			const JSON::Value *file = m.Get().getObject()[AIS::KEY_SETTING_FILE];
+			if (file && !JSON::text(*file).empty())
+				out.emplace_back(AIS::KEY_SETTING_RECEIVER, JSON::text(*file));
+		}
+		else if (m.Key() == AIS::KEY_SETTING_RECEIVER && m.Get().isArray())
+			for (const auto &entry : m.Get().getArray())
+				if (entry.isObject())
+					inputValues(entry.getObject(), out);
+}
+
+// the files and folders a configuration has this program serve, write or read whole
 static PathValues pathValues(const JSON::JSON &root)
 {
 	PathValues out;
 	dumpValues(root, false, out);
+	inputValues(root, out);
 	for (const auto &m : root.getMembers())
 		switch (m.Key())
 		{

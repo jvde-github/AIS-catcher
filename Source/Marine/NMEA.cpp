@@ -316,7 +316,7 @@ namespace AIS
 		if (splitCount < min_fields || splitCount > max_fields)
 		{
 			if (shouldWarn(WARN_GPS_FIELD_COUNT))
-				Warning() << name << ": expected " << min_fields << " fields, got " << splitCount << " [" << s << "]";
+				Warning() << name << ": expected " << min_fields << " fields, got " << splitCount;
 			return false;
 		}
 
@@ -325,7 +325,7 @@ namespace AIS
 		if (checksum != splitChecksum)
 		{
 			if (shouldWarn(WARN_GPS_CHECKSUM))
-				Warning() << name << ": checksum mismatch [" << s << "]";
+				Warning() << name << ": checksum mismatch";
 			if (cfg_crc_check)
 				return false;
 		}
@@ -355,7 +355,7 @@ namespace AIS
 		if (error)
 		{
 			if (shouldWarn(WARN_GPS_COORDS))
-				Warning() << name << ": invalid coordinates [" << s << "]";
+				Warning() << name << ": invalid coordinates";
 			return false;
 		}
 
@@ -735,7 +735,7 @@ namespace AIS
 		catch (std::exception const &e)
 		{
 			if (shouldWarn(WARN_JSON_PARSE))
-				Warning() << "JSON: " << e.what() << " [" << line << "]";
+				Warning() << "JSON: " << e.what();
 		}
 	}
 
