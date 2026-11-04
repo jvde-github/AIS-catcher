@@ -17,6 +17,10 @@ readonly BUILD_DIR="/tmp/build-armv6"
 readonly TRIPLET="arm-linux-gnueabihf"
 
 dpkg --add-architecture armhf
+
+rm -rf /var/lib/apt/lists/*
+apt-get clean
+
 apt-get update -qq
 apt-get install -y -qq crossbuild-essential-armhf cmake make pkgconf \
     libssl-dev:armhf zlib1g-dev:armhf libsqlite3-dev:armhf libpq-dev:armhf \
