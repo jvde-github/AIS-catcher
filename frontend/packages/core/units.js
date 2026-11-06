@@ -15,14 +15,14 @@ export function decimalToDMS(l, isLatitude) {
     const minutes = Math.floor((Math.abs(l) - degrees) * 60);
     const seconds = Number(((Math.abs(l) - degrees) * 60 - minutes) * 60).toFixed(1);
     const direction = isLatitude ? (l > 0 ? "N" : "S") : l > 0 ? "E" : "W";
-    return degrees + "&deg;" + minutes + "'" + seconds + '"' + direction;
+    return degrees + "\u00b0" + minutes + "'" + seconds + '"' + direction;
 }
 
 export function decimalToDDM(l, isLatitude) {
     const degrees = Math.floor(Math.abs(l));
     const minutes = ((Math.abs(l) - degrees) * 60).toFixed(2);
     const direction = isLatitude ? (l > 0 ? "N" : "S") : l > 0 ? "E" : "W";
-    return degrees + "&deg;" + minutes + "'" + direction;
+    return degrees + "\u00b0" + minutes + "'" + direction;
 }
 
 

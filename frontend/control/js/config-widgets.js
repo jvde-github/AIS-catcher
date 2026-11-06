@@ -1,7 +1,7 @@
 import { el, fromHtml, on } from './dom.js';
 import { icon } from './icons.js';
 import { debounce, getNested } from './config-store.js';
-import { openZoneModal, zoneChip } from './zone-modal.js';
+import { zoneChip } from './zone-modal.js';
 
 const parseNumberLike = (str) => {
     const s = String(str).trim();
@@ -270,8 +270,8 @@ export const Renderer = {
                             stationPicker(entry.settings?.station, picked, { none: 'Same as the input' })));
                     }
 
-                    // the receiver's zones apply to every engine, shown greyed
-                    if (list.length > 1 || (Array.isArray(entry.zone) && entry.zone.length)) {
+                    // an engine's own zones, from older files, can only be removed: engines are told apart by station
+                    if (Array.isArray(entry.zone) && entry.zone.length) {
                         const zones = Array.isArray(entry.zone) ? entry.zone : [];
                         const inherited = Array.isArray(dataContext?.zone) ? dataContext.zone : [];
                         const chips = el('div', 'row row-wrap row-tight');
@@ -289,10 +289,6 @@ export const Renderer = {
                         inherited.forEach(z => chips.appendChild(
                             el('span', 'chip',
                                 { title: 'from the receiver, applies to every engine' }, z)));
-                        chips.appendChild(el('button', 'chip sys-chip-btn', {
-                            type: 'button',
-                            onClick: () => openZoneModal(zones, commit)
-                        }, fromHtml(icon('add', 'icon-sm')), 'Add Zone'));
                         row.appendChild(chips);
                     }
 

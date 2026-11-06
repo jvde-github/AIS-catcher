@@ -2113,6 +2113,7 @@
 .pick--scope .pick__btn .pick__num, .pick--scope .pick__btn .pick__sub, .pick--scope .pick__btn .pick__tag { display: none; }
 .pick--scope .pick__btn .pick__name { font-size: var(--fs-md); font-weight: var(--fw-medium); }
 .pick--scope .pick__panel { left: auto; right: 0; width: min(320px, 90vw); }
+.pick--scope .pick__panel.pick__panel--start { left: 0; right: auto; }
 .pick__opt .pick__sub { white-space: normal; }
 .pick__sep { flex-shrink: 0; height: 1px; margin: 4px 6px; background: var(--color-border); }
 .pick__empty { padding: 8px 10px; color: var(--color-text-muted); font-size: 13px; }

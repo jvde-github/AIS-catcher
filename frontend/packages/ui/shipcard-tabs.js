@@ -174,7 +174,7 @@ export function build(mount, prefix, o) {
         summary.id.textContent = ship.imo != null ? 'IMO ' + ship.imo : ship.eni ? 'ENI ' + decodeHTMLEntities(ship.eni) : ship.mmsi != null ? 'MMSI ' + ship.mmsi : '';
         const hasPos = ship.lat != null && ship.lon != null;
         if (!hasPos) summary.pos.textContent = 'N/A';
-        // the degree formats come back as markup (&deg;), so set it as such; the values are numbers
+        // an approximate position comes back in <i>, so set it as markup; the values are numbers
         else if (u.getPositionShort) summary.pos.innerHTML = u.getPositionShort(ship);
         else summary.pos.innerHTML = u.getLatValFormat(ship) + ', ' + u.getLonValFormat(ship);
         const places = ship.visits?.filter(v => v.inside) || [];

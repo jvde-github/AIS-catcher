@@ -111,6 +111,9 @@ export function createPicker(o) {
         button.setAttribute('aria-expanded', String(open));
         panel.hidden = !open;
         if (open) {
+            // a list wider than its button opens to the side that has room
+            panel.classList.remove('pick__panel--start');
+            if (panel.getBoundingClientRect().left < 0) panel.classList.add('pick__panel--start');
             search.value = '';
             search.hidden = o.options().length < (o.searchFrom || SEARCH_FROM);
             paintList();
