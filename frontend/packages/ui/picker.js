@@ -2,6 +2,8 @@
 // pick means.
 
 const SEARCH_FROM = 8;
+// what an open list keeps clear of the screen's edge, in pixels
+const EDGE = 8;
 
 const CHEVRON = '<svg class="pick__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 
@@ -111,14 +113,22 @@ export function createPicker(o) {
         button.setAttribute('aria-expanded', String(open));
         panel.hidden = !open;
         if (open) {
-            // a list wider than its button opens to the side that has room
+            // a list wider than its button opens to the side that has room, and stays on the screen
             panel.classList.remove('pick__panel--start');
-            if (panel.getBoundingClientRect().left < 0) panel.classList.add('pick__panel--start');
+            panel.style.transform = '';
+            if (panel.getBoundingClientRect().left < EDGE) panel.classList.add('pick__panel--start');
+            const r = panel.getBoundingClientRect();
+            const shift = r.left < EDGE ? EDGE - r.left : r.right > innerWidth - EDGE ? innerWidth - EDGE - r.right : 0;
+            if (shift) panel.style.transform = 'translateX(' + Math.round(shift) + 'px)';
             search.value = '';
             search.hidden = o.options().length < (o.searchFrom || SEARCH_FROM);
             paintList();
+            // into view up and down only: a sideways scroll would slide the page behind the list
+            const across = [];
+            for (let n = root.parentElement; n; n = n.parentElement) across.push([n, n.scrollLeft]);
             panel.scrollIntoView({ block: 'nearest' });
-            (search.hidden ? list.querySelector('[aria-selected="true"]') || list.querySelector('.pick__opt') : search)?.focus();
+            across.forEach(([n, x]) => { n.scrollLeft = x; });
+            (search.hidden ? list.querySelector('[aria-selected="true"]') || list.querySelector('.pick__opt') : search)?.focus({ preventScroll: true });
             document.addEventListener('pointerdown', outside, true);
             window.addEventListener('keydown', escape, true);
         } else {
