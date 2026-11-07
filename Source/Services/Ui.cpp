@@ -315,7 +315,7 @@ namespace Services
 		{
 			StationRegistry::Station at;
 			const bool drawn = drawnStation(focus, at);
-			response = Response::json(UiFormat::shipsCompact(db, false, since(), configVersion(), keep, drawn ? &at : nullptr, true));
+			response = Response::json(UiFormat::shipsCompact(db, false, since(), configVersion(), keep, drawn ? &at : nullptr, db.timeHistory()));
 		}
 		else if (p == "/api/ships_table.json")
 			response = Response::json(UiFormat::shipsTable(db, since(), keep));

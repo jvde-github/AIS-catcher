@@ -116,7 +116,7 @@ async function fetchShipsBody() {
     const dynamicKeys = [
         "mmsi", "lat", "lon", "distance",
         "heading", "cog", "speed", "turn", "status", "age", "flags",
-        "shipclass", "country", "binary", "station", "place_ids", "stations"
+        "shipclass", "country", "binary", "station", "place_ids", "stations", "stations_ago"
     ];
 
     const staticKeys = [
@@ -157,6 +157,7 @@ async function fetchShipsBody() {
             const s = Object.fromEntries(dynamicKeys.map((k, i) => [k, v[i]]));
             s.place_ids = s.place_ids || [];
             s.stations = s.stations || [];
+            s.stations_ago = s.stations_ago || [];
             s.place_version = ships.place_version || "";
             s.last_signal = serverTime - (s.age || 0);
             delete s.age;

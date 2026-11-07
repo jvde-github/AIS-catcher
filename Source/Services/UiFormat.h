@@ -37,12 +37,12 @@ namespace Services
 	struct UiFormat
 	{
 		// `at`, when given, is the station the page draws, in place of the DB's own;
-		// `list_stations` ends each row with the stations that heard the ship
+		// `stations_window` (seconds) ends each row with the stations heard within it and their ages
 		static std::string shipsCompact(DB &db, bool full = false, std::time_t since = 0,
 										const std::string &configVersion = "",
 										const DB::Keep &keep = DB::Keep(),
 										const StationRegistry::Station *at = nullptr,
-										bool list_stations = false);
+										int stations_window = 0);
 		static std::string shipsTable(DB &db, std::time_t since = 0, const DB::Keep &keep = DB::Keep());
 		// `at`, when given, is the station the page draws, in place of the DB's own
 		static std::string ships(DB &db, bool full = false, const StationRegistry::Station *at = nullptr,

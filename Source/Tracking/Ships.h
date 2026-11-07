@@ -88,9 +88,6 @@ struct Ship
 	// how long a station counts a ship as one it hears: a filter's stations, a
 	// station's vessels
 	static const int STATION_WINDOW = 3600;
-	// the stations a ship's map row lists: those within a minute of its last
-	// message, as the hub's tiles list them
-	static const int ROW_WINDOW = 60;
 	// Each station that heard the ship and when, the most recent first. A ship
 	// without a station on record, as a backup from before stations restores
 	// one, was heard at the default station, 0, at its last signal.

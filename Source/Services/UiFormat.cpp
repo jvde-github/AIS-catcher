@@ -93,7 +93,7 @@ namespace Services
 	static void compactDynamic(JSON::Writer &w, const Ship &ship, std::time_t now,
 							   unsigned binary_badge, int riding,
 							   const std::array<uint32_t, VisitTracker::SLOTS> &place_ids,
-							   bool list_stations)
+							   int stations_window)
 	{
 		w.beginArray().val(ship.mmsi);
 		if (isValidCoord(ship.lat, ship.lon))
@@ -120,13 +120,18 @@ namespace Services
 			w.val(id);
 		}
 		w.endArray();
-		// the stations that heard it lately, the latest first
-		if (list_stations)
+		if (stations_window > 0)
 		{
 			w.beginArray();
 			ship.forEachHeard([&](int station, std::time_t t) {
-				if (t + Ship::ROW_WINDOW >= ship.last_signal)
+				if (t + stations_window >= now)
 					w.val(station);
+			});
+			w.endArray();
+			w.beginArray();
+			ship.forEachHeard([&](int, std::time_t t) {
+				if (t + stations_window >= now)
+					w.val((long long)(now > t ? now - t : 0));
 			});
 			w.endArray();
 		}
@@ -187,7 +192,7 @@ namespace Services
 	std::string UiFormat::shipsCompact(DB &db, bool full, std::time_t since,
 									   const std::string &configVersion, const DB::Keep &keep,
 									   const StationRegistry::Station *at,
-									   bool list_stations)
+									   int stations_window)
 	{
 		std::lock_guard<std::mutex> lock(db.mtx);
 
@@ -231,7 +236,7 @@ namespace Services
 					compactDynamic(w, ship, now, db.binary.badge(ship.mmsi, now),
 								   db.stations.idFor(ship.mmsi),
 								   db.visits.insideIds(ptr, db.place_markers.index().get()),
-								   list_stations);
+								   stations_window);
 				});
 			w.endArray();
 

@@ -283,7 +283,9 @@ function populateCard() {
     // a viewer that keeps no stations sends none
     const stations = ship.stations || [];
     document.getElementById("targetcard_stations_row").hidden = !severalStations() || !stations.length;
-    document.getElementById("targetcard_stations").innerHTML = stationBoxes(stations, stationLabel, stations.length);
+    const ago = new Map(stations.map((id, i) => [id, ship.stations_ago?.[i]]));
+    const heard = (id) => stationLabel(id) + (ago.get(id) == null ? "" : " · " + (ago.get(id) < 60 ? "now" : getDeltaTimeVal(ago.get(id))));
+    document.getElementById("targetcard_stations").innerHTML = stationBoxes(stations, heard, stations.length);
     const shiptype = ship.shiptype ?? null;
     document.getElementById("shiptype_code").textContent = shiptype != null ? shiptype : "-";
     document.getElementById("shiptype_desc").textContent = shiptype != null ? getShipTypeFull(shiptype) : "-";
