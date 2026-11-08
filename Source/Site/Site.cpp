@@ -490,8 +490,8 @@ void Site::configureServers(const SiteConfig &cfg)
 			servers.push_back(std::move(kept[i]));
 			continue;
 		}
-		const int share = cfg.servers[i].share_loc;
-		std::unique_ptr<Services::Server> s(new Services::Server(cfg.servers[i], *trackerOf(cfg.servers[i]), [this, share] { return stationsFor(share); },
+		std::unique_ptr<Services::Server> s(new Services::Server(cfg.servers[i], *trackerOf(cfg.servers[i]),
+																 [this](const ServerSpec &of) { return stationsFor(of.share_loc); },
 																 [this](JSON::Writer &w, EnginePart part) { writeEngine(w, part); },
 																 [this] { return systemFacts(); }));
 		if (s->open())

@@ -40,7 +40,9 @@ namespace Services
 	class Server : public IO::HTTPServer
 	{
 	public:
-		Server(const ServerSpec &spec, Tracker &tracker, std::function<StationRegistry()> stations,
+		// `stations`: the station list as a server with these settings sees it, asked again when
+		// the settings change
+		Server(const ServerSpec &spec, Tracker &tracker, std::function<StationRegistry(const ServerSpec &)> stations,
 			   EngineWriter engine = nullptr, std::function<SystemFacts()> system = nullptr);
 		~Server();
 
@@ -62,7 +64,7 @@ namespace Services
 	private:
 		ServerSpec spec_;
 		Tracker &tracker;
-		std::function<StationRegistry()> stations;
+		std::function<StationRegistry(const ServerSpec &)> stations;
 		EngineWriter engine;
 		std::function<SystemFacts()> system;
 		Extra extra;

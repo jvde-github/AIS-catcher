@@ -34,7 +34,7 @@
 
 namespace Services
 {
-	Server::Server(const ServerSpec &spec, Tracker &tracker, std::function<StationRegistry()> stations,
+	Server::Server(const ServerSpec &spec, Tracker &tracker, std::function<StationRegistry(const ServerSpec &)> stations,
 				   EngineWriter engine, std::function<SystemFacts()> system)
 		: spec_(spec), tracker(tracker), stations(std::move(stations)), engine(std::move(engine)), system(std::move(system))
 	{
@@ -72,7 +72,7 @@ namespace Services
 	void Server::build()
 	{
 		setFrameAncestors(spec_.viewer.frame_ancestors.empty() ? "*" : spec_.viewer.frame_ancestors);
-		const Context context = {tracker, spec_, stations, engine, system ? system : [] { return SystemFacts(); }};
+		const Context context = {tracker, spec_, [this] { return stations(spec_); }, engine, system ? system : [] { return SystemFacts(); }};
 		if (spec_.metrics)
 		{
 			PrometheusCounter *counter = new PrometheusCounter();
