@@ -152,7 +152,7 @@ export function createServicesSection(pane, { select, follow, changed, stations,
                 tryPort: loaded ? testerPort(sv) : null }));
             const showsCol = choices.length >= 2 || rows.some(r => (r.view && Object.keys(r.view).length) || r.ids !== undefined);
             const table = el('table', 'st-svcgrid', {},
-                el('tr', '', {}, ['Server', ...SERVICE_COLUMNS.map(c => c.label), 'Who can read it', ...(showsCol ? ['Shows'] : []), ''].map(t => el('th', '', { text: t }))),
+                el('tr', '', {}, ['Server', ...SERVICE_COLUMNS.map(c => c.label), 'Who can read it', ...(showsCol ? ['Filter'] : []), ''].map(t => el('th', '', { text: t }))),
                 rows.map(r => el('tr', '', {},
                     el('td', '', {}, el('button', 'st-svcgrid__name', { type: 'button', onClick: () => select(r.key) },
                         el('strong', '', { text: r.name }), el('small', '', { text: r.addr }))),

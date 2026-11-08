@@ -136,9 +136,11 @@ function renderTLS(host, data, { until, folder, touched, foldKey }) {
         el('p', 'st-help', { text: 'Files you already have, in the configuration\'s folder; one elsewhere is set in the configuration file. A renewed certificate is picked up within a minute.' })));
 }
 
-// ---- what a server or a webhook shows. It writes `data.view`; the terms it does not edit, set in
-// the file, stay as they are. `everyShip`: the main server, whose map shows every ship; `outlines`:
-// the server sends places; `byStation`: a server, whose stations are those its filter names with `id`.
+// ---- Shows: what a server gives of where its stations are and of the places; Filter: which of
+// its tracker's ships, by station and MMSI. The filter writes `data.view`; terms set in the file
+// that it does not edit stay. `everyShip`: the main server, whose map shows every ship; `outlines`:
+// the server sends places; `byStation`: a server, whose stations are those its filter names with
+// `id`; a webhook has neither, and a filter alone.
 const EDITED = ['stations', 'mmsi_allow', 'mmsi_deny'];
 
 const idList = (v) => (Array.isArray(v) ? v : v === undefined || v === null || v === '' ? [] : String(v).split(','))
@@ -146,7 +148,18 @@ const idList = (v) => (Array.isArray(v) ? v : v === undefined || v === null || v
 
 export function renderShows(host, data, { stations = [], touched, rerender, everyShip = false, outlines = false, byStation = false, foldKey = null }) {
     const many = stations.length >= 2;
-    const located = locations(data, stations);
+    const server = everyShip || byStation;
+    const part = (title, key, state, kids) => host.append(foldKey ? fold(title, DOCS.services, { key: foldKey + ':' + key, state }, ...kids) : section(title, DOCS.services, ...kids));
+    if (server || outlines) {
+        const located = server ? locations(data, stations) : null;
+        const kids = server ? locationsRow(data, located, touched, rerender) : [];
+        if (outlines) kids.push(outlinesRow(data, touched));
+        const state = [server ? (located === null ? 'some station locations' : located ? 'station locations' : 'no station locations') : null,
+            outlines ? (data.view?.place_geometry === false ? 'places as markers' : 'places with their shape') : null].filter(Boolean).join(' · ');
+        part('Shows', 'shows', state, kids);
+    }
+    if (everyShip) return;
+
     const f = data.view && typeof data.view === 'object' ? { ...data.view } : {};
     const commit = (redraw = true) => {
         const kept = Object.keys(f).filter(k => f[k] !== undefined && f[k] !== null && !(Array.isArray(f[k]) && !f[k].length));
@@ -155,26 +168,6 @@ export function renderShows(host, data, { stations = [], touched, rerender, ever
         if (redraw) rerender();
     };
     const kids = [];
-    const box = { append: (...n) => kids.push(...n) };
-    const state = () => {
-        const parts = [];
-        if (!everyShip && byStation && many) {
-            const ids = idList(data.id ?? f.stations);
-            if (ids.length) parts.push(ids.map(k => stations.find(st => String(st.key) === String(k))?.label || 'station ' + k).join(', '));
-        }
-        const allow = idList(f.mmsi_allow).length, deny = idList(f.mmsi_deny).length;
-        parts.push(allow ? allow + (allow === 1 ? ' MMSI only' : ' MMSIs only') : deny ? 'all but ' + deny + (deny === 1 ? ' MMSI' : ' MMSIs') : 'every vessel');
-        parts.push(located === null ? 'some station locations' : located ? 'station locations' : 'no station locations');
-        if (outlines) parts.push(data.view?.place_geometry === false ? 'places as markers' : 'places with their shape');
-        return parts.join(' · ');
-    };
-    const done = () => host.append(foldKey ? fold('Shows', DOCS.services, { key: foldKey + ':shows', state: state() }, ...kids) : section('Shows', DOCS.services, ...kids));
-    if (everyShip) {
-        box.append(...locationsRow(data, located, touched, rerender));
-        if (outlines) box.append(outlinesRow(data, touched));
-        done();
-        return;
-    }
     // the stations chosen: a server's filter (the stations it keeps and shows), a webhook's view
     const chosenIds = () => byStation ? idList(data.id ?? f.stations) : idList(f.stations);
     const choose = (list) => {
@@ -185,8 +178,8 @@ export function renderShows(host, data, { stations = [], touched, rerender, ever
         else delete f.stations;
         commit();
     };
+    const chosen = chosenIds();
     if (many) {
-        const chosen = chosenIds();
         const some = chosen.length > 0;
         const seg = el('div', 'st-seg', { role: 'radiogroup', 'aria-label': 'Stations' },
             [['all', 'All stations'], ['some', 'Chosen stations']].map(([key, label]) => el('button', 'st-seg__opt', {
@@ -196,33 +189,33 @@ export function renderShows(host, data, { stations = [], touched, rerender, ever
                     choose(key === 'all' ? [] : stations.map(st => String(st.key)));
                 }
             })));
-        box.append(el('div', 'st-shows__row', {}, el('span', 'st-label', { text: 'Stations' }), seg));
-        if (some) box.append(el('div', 'st-pickchips', { role: 'group', 'aria-label': 'Stations shown' },
+        kids.push(el('div', 'st-shows__row', {}, el('span', 'st-label', { text: 'Stations' }), seg));
+        if (some) kids.push(el('div', 'st-pickchips', { role: 'group', 'aria-label': 'Stations shown' },
             stations.map(st => el('button', 'st-pickchip', { type: 'button', 'aria-pressed': String(chosen.includes(String(st.key))), text: st.label,
                 onClick: () => {
                     const on = chosen.includes(String(st.key));
                     choose(on ? chosen.filter(k => k !== String(st.key)) : [...chosen, String(st.key)]);
                 } }))));
-        box.append(el('p', 'st-help', { text: some ? 'Ships these stations heard in the last hour.' : 'The ships every station hears.' }));
+        kids.push(el('p', 'st-help', { text: some ? 'Ships these stations heard in the last hour.' : 'The ships every station hears.' }));
     }
-    box.append(...locationsRow(data, located, touched, rerender));
-    {
-        const mmsis = (key, label, hint) => {
-            const area = el('textarea', 'st-input st-shows__mmsi', { rows: 2, spellcheck: 'false', placeholder: hint,
-                value: (Array.isArray(f[key]) ? f[key] : []).join('\n'),
-                onChange: e => {
-                    const list = e.target.value.split(/[\s,]+/).map(x => x.trim()).filter(x => /^\d{1,9}$/.test(x)).map(Number);
-                    if (list.length) f[key] = list; else delete f[key];
-                    commit(false);
-                } });
-            return el('label', 'st-field st-shows__field', {}, el('span', 'st-label', { text: label }), area);
-        };
-        box.append(el('div', 'st-stations__row', {}, mmsis('mmsi_allow', 'Only these MMSIs', 'none: every vessel'), mmsis('mmsi_deny', 'Never these MMSIs', 'none')));
-        const other = Object.keys(f).filter(k => !EDITED.includes(k));
-        if (other.length) box.append(el('p', 'st-help', { text: 'Also set in the configuration file: ' + other.join(', ') + '.' }));
-    }
-    if (outlines) box.append(outlinesRow(data, touched));
-    done();
+    const mmsis = (key, label, hint) => {
+        const area = el('textarea', 'st-input st-shows__mmsi', { rows: 2, spellcheck: 'false', placeholder: hint,
+            value: (Array.isArray(f[key]) ? f[key] : []).join('\n'),
+            onChange: e => {
+                const list = e.target.value.split(/[\s,]+/).map(x => x.trim()).filter(x => /^\d{1,9}$/.test(x)).map(Number);
+                if (list.length) f[key] = list; else delete f[key];
+                commit(false);
+            } });
+        return el('label', 'st-field st-shows__field', {}, el('span', 'st-label', { text: label }), area);
+    };
+    kids.push(el('div', 'st-stations__row', {}, mmsis('mmsi_allow', 'Only these MMSIs', 'none: every vessel'), mmsis('mmsi_deny', 'Never these MMSIs', 'none')));
+    const other = Object.keys(f).filter(k => !EDITED.includes(k));
+    if (other.length) kids.push(el('p', 'st-help', { text: 'Also set in the configuration file: ' + other.join(', ') + '.' }));
+
+    const allow = idList(f.mmsi_allow).length, deny = idList(f.mmsi_deny).length;
+    const state = [many ? (chosen.length ? chosen.map(k => stations.find(st => String(st.key) === String(k))?.label || 'station ' + k).join(', ') : 'all stations') : null,
+        allow ? allow + (allow === 1 ? ' MMSI only' : ' MMSIs only') : deny ? 'all but ' + deny + (deny === 1 ? ' MMSI' : ' MMSIs') : 'every vessel'].filter(Boolean).join(' · ');
+    part('Filter', 'filter', state, kids);
 }
 
 // whether the server shows where its stations are: its share_loc, else what its stations say
@@ -246,7 +239,7 @@ function outlinesRow(data, touched) {
     const view = () => (data.view && typeof data.view === 'object' ? data.view : (data.view = {}));
     return switchRow('', data.view?.place_geometry === undefined || on(data.view.place_geometry),
         v => { if (v) delete view().place_geometry; else view().place_geometry = false; touched(); },
-        el('strong', '', { text: 'Share outlines' }), 'Each place with its shape; off, a marker alone.');
+        el('strong', '', { text: 'Place outlines' }), 'Each place with its shape; off, a marker alone.');
 }
 
 export const sendsPlaces = (served) => ['ui', 'api', 'mcp'].some(k => served.includes(k));
