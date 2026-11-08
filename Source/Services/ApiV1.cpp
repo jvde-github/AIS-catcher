@@ -79,7 +79,7 @@ namespace Services
 		}
 
 		// `badge` is the binary-message badge, `aboard` a station riding it, -1 for none
-		void writeVessel(JSON::Writer &w, const Ship &s, std::time_t now, uint16_t badge = 0, int aboard = -1,
+		void writeVessel(JSON::Writer &w, const Ship &s, std::time_t now, uint16_t badge = 0, int aboard = -1, bool measured = true,
 						 const std::function<void(JSON::Writer &)> &extra = nullptr, bool stations_shown = true)
 		{
 			w.beginObject().kv("mmsi", (long long)s.mmsi);
@@ -96,8 +96,8 @@ namespace Services
 			const bool placed = isValidCoord(s.lat, s.lon);
 			w.kv_or_null("lat", s.lat, placed);
 			w.kv_or_null("lon", s.lon, placed);
-			w.kv_or_null("distance_nm", s.distance, placed && s.distance != DISTANCE_UNDEFINED);
-			w.kv_or_null("bearing_deg", s.angle, placed && s.distance != DISTANCE_UNDEFINED && s.angle != ANGLE_UNDEFINED);
+			w.kv_or_null("distance_nm", s.distance, measured && placed && s.distance != DISTANCE_UNDEFINED);
+			w.kv_or_null("bearing_deg", s.angle, measured && placed && s.distance != DISTANCE_UNDEFINED && s.angle != ANGLE_UNDEFINED);
 			w.kv_or_null("speed_kn", s.speed, s.speed != SPEED_UNDEFINED);
 			w.kv_or_null("course_deg", s.cog, s.cog != COG_UNDEFINED);
 			w.kv_or_null("heading_deg", s.heading, s.heading != HEADING_UNDEFINED);
@@ -191,7 +191,8 @@ namespace Services
 
 		// a vessel as a short row, for a reader that pays for every word: what
 		// it is, where and how long ago, and only what is known of that
-		void writeVesselBrief(JSON::Writer &w, const Ship &s, std::time_t now, const std::string &bound_for, float near_nm, bool stations_shown)
+		void writeVesselBrief(JSON::Writer &w, const Ship &s, std::time_t now, const std::string &bound_for, float near_nm, bool stations_shown,
+							  bool measured)
 		{
 			const auto text = [&](const char *key, const char *v) {
 				if (std::string(v).find_first_not_of(' ') != std::string::npos)
@@ -205,7 +206,7 @@ namespace Services
 			if (isValidCoord(s.lat, s.lon))
 			{
 				w.kv("lat", s.lat).kv("lon", s.lon);
-				if (s.distance != DISTANCE_UNDEFINED)
+				if (measured && s.distance != DISTANCE_UNDEFINED)
 					w.kv("distance_nm", s.distance);
 				if (near_nm >= 0)
 					w.kv("near_nm", near_nm);
@@ -311,7 +312,7 @@ namespace Services
 
 		// An aircraft as ADS-B gives it: feet, knots, feet a minute, and the
 		// standard spellings of its emitter category and squawk.
-		void writeAircraft(JSON::Writer &w, const Plane::ADSB &p, std::time_t heard, std::time_t now)
+		void writeAircraft(JSON::Writer &w, const Plane::ADSB &p, std::time_t heard, std::time_t now, bool measured)
 		{
 			char icao[8], code[8];
 			snprintf(icao, sizeof(icao), "%06X", p.hexident & 0xFFFFFF);
@@ -321,8 +322,8 @@ namespace Services
 			const bool placed = isValidCoord(p.lat, p.lon);
 			w.kv_or_null("lat", p.lat, placed);
 			w.kv_or_null("lon", p.lon, placed);
-			w.kv_or_null("distance_nm", p.distance, placed && p.distance != DISTANCE_UNDEFINED);
-			w.kv_or_null("bearing_deg", p.angle, placed && p.distance != DISTANCE_UNDEFINED && p.angle != ANGLE_UNDEFINED);
+			w.kv_or_null("distance_nm", p.distance, measured && placed && p.distance != DISTANCE_UNDEFINED);
+			w.kv_or_null("bearing_deg", p.angle, measured && placed && p.distance != DISTANCE_UNDEFINED && p.angle != ANGLE_UNDEFINED);
 			w.kv_or_null("altitude_ft", p.altitude, p.altitude != ALTITUDE_UNDEFINED);
 			w.kv_or_null("ground_speed_kn", p.speed, p.speed != SPEED_UNDEFINED);
 			w.kv_or_null("track_deg", p.heading, p.heading != HEADING_UNDEFINED);
@@ -700,7 +701,7 @@ namespace Services
 			if (!spec.showsStation(s.id))
 				return;
 			w.beginObject();
-			writeStation(w, s, tracker.stationPosition(s.id), vessels[s.id]);
+			writeStation(w, s, s.share_loc ? tracker.stationPosition(s.id) : Tracker::Position(), vessels[s.id]);
 			w.endObject();
 			count++;
 		});
@@ -720,7 +721,7 @@ namespace Services
 		std::string out;
 		JSON::Writer w(out);
 		w.beginObject();
-		writeStation(w, *s, tracker.stationPosition(s->id), heardLately()[s->id]);
+		writeStation(w, *s, s->share_loc ? tracker.stationPosition(s->id) : Tracker::Position(), heardLately()[s->id]);
 		w.endObject();
 		w.finish();
 		return Response::json(out);
@@ -733,7 +734,6 @@ namespace Services
 		bool brief = false;
 		if (!viewBrief(request, brief))
 			return badView();
-		const bool owner = request.owner;
 		// the vessels held now: a list's count, for a reader that would otherwise page through one
 		long long held = 0;
 		if (brief && station >= 0)
@@ -759,7 +759,7 @@ namespace Services
 					w.val(id);
 				w.endArray();
 			}
-			const bool hidden = tracker.hidesRange(owner, ids, f);
+			const bool hidden = located(tracker, spec, stations()).hidesRange(ids, f.total.maxDistance());
 			if (hidden)
 				w.kv("range_hidden", true);
 			w.kv("time", isoTime(now)).kv("messages_per_second", f.second.getAverage());
@@ -829,6 +829,7 @@ namespace Services
 			bool has_min_speed = false, has_max_speed = false, has_min_distance = false, has_max_distance = false;
 			float min_speed = 0, max_speed = 0, min_distance = 0, max_distance = 0;
 			long long max_age = -1;
+			Located shown;
 
 			static std::vector<std::string> split(const std::string &v)
 			{
@@ -1055,7 +1056,7 @@ namespace Services
 				const bool speed = s.speed != SPEED_UNDEFINED;
 				if ((has_min_speed && !(speed && s.speed >= min_speed)) || (has_max_speed && !(speed && s.speed <= max_speed)))
 					return false;
-				const bool distance = placed && s.distance != DISTANCE_UNDEFINED;
+				const bool distance = placed && s.distance != DISTANCE_UNDEFINED && shown.of(s);
 				if ((has_min_distance && !(distance && s.distance >= min_distance)) || (has_max_distance && !(distance && s.distance <= max_distance)))
 					return false;
 				if (max_age >= 0 && now - s.last_signal > (std::time_t)max_age)
@@ -1091,6 +1092,7 @@ namespace Services
 			brief = true;
 		}
 		VesselQuery query;
+		query.shown = located(tracker, spec, stations());
 		std::string carried = "&limit=" + std::to_string(limit);
 		for (const auto &p : request.params())
 		{
@@ -1164,10 +1166,12 @@ namespace Services
 			if (!s || !view.passes(*s, now) || !query.passes(*s, now))
 				return;
 			auto r = aboard.find(s->mmsi);
+			const int rides = r != aboard.end() && query.shown.at(r->second) ? r->second : -1;
 			if (brief)
-				writeVesselBrief(w, *s, now, portName(index.get(), db.matchedPortHeld(s->mmsi)), query.circle ? query.fromNear(*s) : -1, !spec.limited);
+				writeVesselBrief(w, *s, now, portName(index.get(), db.matchedPortHeld(s->mmsi)), query.circle ? query.fromNear(*s) : -1, !spec.limited,
+								 query.shown.of(*s));
 			else
-				writeVessel(w, *s, now, db.binaryBadgeHeld(s->mmsi, now), r == aboard.end() ? -1 : r->second);
+				writeVessel(w, *s, now, db.binaryBadgeHeld(s->mmsi, now), rides, query.shown.of(*s));
 			count++;
 		});
 		const std::string next = more ? "/api/v1/vessels?cursor=" + cursor("v", {(long long)start, (long long)floor, (long long)rows.back().time, (long long)rows.back().id}) + carried : "";
@@ -1186,11 +1190,12 @@ namespace Services
 	{
 		const std::time_t now = std::time(nullptr);
 		DB &db = tracker.ships();
-		bool shown = false;
-		db.withShip(mmsi, [&](const Ship &s, int) { shown = view.passes(s, now); });
-		if (!shown)
+		bool known = false;
+		db.withShip(mmsi, [&](const Ship &s, int) { known = view.passes(s, now); });
+		if (!known)
 			return Response::problem(404, "Not found", "No vessel " + std::to_string(mmsi) + " is known.");
 		const auto aboard = tracker.riding();
+		const Located shown = located(tracker, spec, stations());
 
 		// the parts kept beside the ship's record, each read under its own lock
 		std::vector<StaticStore::Entry> changes;
@@ -1249,7 +1254,8 @@ namespace Services
 				return;
 			auto r = aboard.find(s.mmsi);
 			JSON::Writer w(out);
-			writeVessel(w, s, now, db.binaryBadgeHeld(s.mmsi, now), !spec.limited && r != aboard.end() ? r->second : -1, extra, !spec.limited);
+			writeVessel(w, s, now, db.binaryBadgeHeld(s.mmsi, now), !spec.limited && r != aboard.end() && shown.at(r->second) ? r->second : -1, shown.of(s),
+						extra, !spec.limited);
 			w.finish();
 			found = true;
 		});
@@ -1617,6 +1623,7 @@ namespace Services
 			return badCursor();
 
 		std::vector<Heard> rows;
+		const Located shown = located(tracker, spec, stations());
 		tracker.planes().forEachAircraft(floor, [&](const Plane::ADSB &p, std::time_t heard) {
 			const Heard h{heard, (uint32_t)(p.hexident & 0xFFFFFF)};
 			if (!paging || after < h)
@@ -1635,7 +1642,7 @@ namespace Services
 			if (it == place.end())
 				return;
 			JSON::Writer w(written[it->second]);
-			writeAircraft(w, p, heard, now);
+			writeAircraft(w, p, heard, now, shown.at(p.station));
 			w.finish();
 		});
 
@@ -1663,12 +1670,13 @@ namespace Services
 		if (!aircraftShown(refusal))
 			return refusal;
 		const std::time_t now = std::time(nullptr);
+		const Located shown = located(tracker, spec, stations());
 		std::string out;
 		tracker.planes().forEachAircraft(0, [&](const Plane::ADSB &p, std::time_t heard) {
 			if (out.empty() && (p.hexident & 0xFFFFFF) == icao)
 			{
 				JSON::Writer w(out);
-				writeAircraft(w, p, heard, now);
+				writeAircraft(w, p, heard, now, shown.at(p.station));
 				w.finish();
 			}
 		});

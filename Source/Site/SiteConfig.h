@@ -103,6 +103,9 @@ struct ServerSpec
 	TrackerSpec tracking;
 	ViewFilter view;
 	std::vector<int> stations;
+	// whether it shows its stations' locations: 1 or 0, and -1 for each station's own share_loc
+	int share_loc = -1;
+	bool locates(bool station) const { return share_loc < 0 ? station : share_loc > 0; }
 	bool showsStation(int id) const { return stations.empty() || std::find(stations.begin(), stations.end(), id) != stations.end(); }
 	ViewerOptions viewer;
 	// with keys, a request to the api, system or mcp service names one; a
@@ -133,7 +136,8 @@ struct ServerSpec
 	{
 		return port == o.port && bind == o.bind && tls_cert == o.tls_cert && tls_key == o.tls_key && ui == o.ui && api == o.api && mcp == o.mcp && system == o.system &&
 			   geojson == o.geojson && metrics == o.metrics && kml == o.kml && tracking == o.tracking && view == o.view &&
-			   stations == o.stations && viewer == o.viewer && keys == o.keys && open == o.open && limited == o.limited && api_v0 == o.api_v0 && main == o.main;
+			   stations == o.stations && viewer == o.viewer && keys == o.keys && open == o.open && limited == o.limited && api_v0 == o.api_v0 && main == o.main &&
+			   share_loc == o.share_loc;
 	}
 	bool operator!=(const ServerSpec &o) const { return !(*this == o); }
 };

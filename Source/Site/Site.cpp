@@ -47,13 +47,14 @@ void Site::publishStations(const StationRegistry &resolved)
 #endif
 }
 
-StationRegistry Site::publicStations() const
+StationRegistry Site::stationsFor(int share) const
 {
 	StationRegistry out;
 	for (const auto &s : stationsSnapshot().ordered())
 	{
 		StationRegistry::Station copy = s;
-		if (!s.share_loc)
+		copy.share_loc = share < 0 ? s.share_loc : share > 0;
+		if (!copy.share_loc)
 		{
 			copy.lat = LAT_UNDEFINED;
 			copy.lon = LON_UNDEFINED;
@@ -272,10 +273,14 @@ void Site::tellPropagation(std::time_t now, const std::set<int> &mine, const Sta
 		if (days.empty() || days.back().day != today)
 			continue;
 		far_told[id] = today;
-		// the journal is anyone's to read: the distances of a position kept home stay out of it
+		// the journal is every server's to read: the distance only where none keeps the station home
 		const StationRegistry::Station *s = registry.find(id);
+		bool located = s != nullptr;
+		for (const auto &server : servers)
+			if (located && server && server->spec().showsStation(id))
+				located = server->spec().locates(s->share_loc);
 		systemEventLocked(Tracking::Level::NOTICE, "propagation",
-						  s && s->share_loc ? stationName(registry, id) + " hears far today: " + std::to_string((int)(days.back().max_nm + 0.5f)) + " NM, against " +
+						  located ? stationName(registry, id) + " hears far today: " + std::to_string((int)(days.back().max_nm + 0.5f)) + " NM, against " +
 												  std::to_string((int)(days.back().usual_nm + 0.5f)) + " NM on a usual day"
 											: stationName(registry, id) + " hears far today",
 						  id);
@@ -485,7 +490,8 @@ void Site::configureServers(const SiteConfig &cfg)
 			servers.push_back(std::move(kept[i]));
 			continue;
 		}
-		std::unique_ptr<Services::Server> s(new Services::Server(cfg.servers[i], *trackerOf(cfg.servers[i]), [this] { return publicStations(); },
+		const int share = cfg.servers[i].share_loc;
+		std::unique_ptr<Services::Server> s(new Services::Server(cfg.servers[i], *trackerOf(cfg.servers[i]), [this, share] { return stationsFor(share); },
 																 [this](JSON::Writer &w, EnginePart part) { writeEngine(w, part); },
 																 [this] { return systemFacts(); }));
 		if (s->open())

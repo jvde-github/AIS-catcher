@@ -378,6 +378,9 @@ namespace
 	bool ServerEntry::read(int key, const std::string &value, const JSON::Value *json)
 	{
 		TrackerSpec &own = spec.tracking;
+		// the server's own; it stays a station term too, for the default station -N describes
+		if (key == AIS::KEY_SETTING_SHARE_LOC)
+			spec.share_loc = Util::Parse::Switch(value) ? 1 : 0;
 		switch (key)
 		{
 		case AIS::KEY_SETTING_PORT: spec.port = Util::Parse::Integer(value, 1, 65535); return true;
@@ -505,9 +508,11 @@ namespace
 		int main_port;
 		std::string main_bind;
 		const std::vector<std::string> *command_line;
+		// whether the file lists its stations
+		const bool listed;
 
 		Reader(SiteConfig &s, StationDefaults &d, StationRegistry &st, const std::string &base, int port = 0, const std::string &bind = "", const std::vector<std::string> *servers = nullptr)
-			: site(s), defaults(d), stations(st), base_dir(base), main_port(port), main_bind(bind), command_line(servers) {}
+			: site(s), defaults(d), stations(st), base_dir(base), main_port(port), main_bind(bind), command_line(servers), listed(!st.ordered().empty()) {}
 
 		void tracking(const JSON::Value &v);
 		void server(ServerEntry &e, const std::string &where);
@@ -604,7 +609,7 @@ namespace
 			// STATION is the viewer's title, not the station's
 			std::string said;
 			for (const auto &t : e.station_terms)
-				if (t.first != AIS::KEY_SETTING_STATION)
+				if (t.first != AIS::KEY_SETTING_STATION && t.first != AIS::KEY_SETTING_SHARE_LOC)
 					said += (said.empty() ? "" : ", ") + AIS::settingName(t.first);
 			if (!said.empty())
 				e.dropped.push_back(said + ": a station is described in \"stations\", not on a server");
@@ -666,6 +671,9 @@ namespace
 			Info() << where << ": the API, MCP and System keep this server on this machine; give it keys, public on, or bind 0.0.0.0 to open it";
 		}
 		checkServerAccess(spec, where);
+		// as a v0.70 viewer: the default station's location only where the server says share_loc
+		if (spec.share_loc < 0 && !listed)
+			spec.share_loc = 0;
 		for (const auto &other : site.servers)
 			if (other.port == spec.port)
 				throw ConfigError("two servers on port " + std::to_string(spec.port) + ".");

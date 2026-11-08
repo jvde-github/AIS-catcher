@@ -107,7 +107,7 @@ namespace Services
 			w.endArray().endObject().endObject();
 		}
 
-		std::string ships(DB &db, const DB::Keep &keep)
+		std::string ships(DB &db, const DB::Keep &keep, const Located &located)
 		{
 			const int history = db.timeHistory();
 			const std::time_t now = std::time(nullptr);
@@ -117,7 +117,7 @@ namespace Services
 				w.beginObject().kv("type", "FeatureCollection").kv("time_span", history).key("features").beginArray();
 				db.forEachRecent(now, now - history, [&](int, const Ship &ship, long int) {
 					if (!keep || keep(ship))
-						writeShip(w, ship, isValidCoord(db.getLat(), db.getLon()));
+						writeShip(w, ship, isValidCoord(db.getLat(), db.getLon()) && located.of(ship));
 				});
 				w.endArray().endObject();
 			}
@@ -165,7 +165,8 @@ namespace Services
 		}
 		DB &db = tracker.ships();
 		response.type = "application/geo+json";
-		response.body = request.path == "/geojson" ? ships(db, keep) : tracks(db, keep, view.trackFloor(std::time(nullptr)));
+		response.body = request.path == "/geojson" ? ships(db, keep, located(tracker, spec, stations()))
+												   : tracks(db, keep, view.trackFloor(std::time(nullptr)));
 		response.cors = true;
 		return true;
 	}

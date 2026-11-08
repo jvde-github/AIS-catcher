@@ -298,6 +298,7 @@ namespace Services
 	{
 		const std::string &p = request.path;
 		DB &db = tracker.ships();
+		const Located shown = located(tracker, spec, stations());
 		const auto since = [&]() { return (std::time_t)toInt(request.param("since")); };
 		const std::vector<int> focus = focusOf(request);
 		const DB::Keep keep = keepFor(focus);
@@ -315,17 +316,17 @@ namespace Services
 		{
 			StationRegistry::Station at;
 			const bool drawn = drawnStation(focus, at);
-			response = Response::json(UiFormat::shipsCompact(db, false, since(), configVersion(), keep, drawn ? &at : nullptr, db.timeHistory()));
+			response = Response::json(UiFormat::shipsCompact(db, false, since(), configVersion(), keep, drawn ? &at : nullptr, db.timeHistory(), &shown));
 		}
 		else if (p == "/api/ships_table.json")
-			response = Response::json(UiFormat::shipsTable(db, since(), keep));
+			response = Response::json(UiFormat::shipsTable(db, since(), keep, &shown));
 		else if (p == "/api/planes_array.json")
 			// aircraft are not kept by station: a server of some stations has none
-			response = Response::json(spec.stations.empty() ? UiFormat::planesCompact(tracker.planes(), since()) : noPlanes("values"));
+			response = Response::json(spec.stations.empty() ? UiFormat::planesCompact(tracker.planes(), since(), &shown) : noPlanes("values"));
 		else if (p == "/api/ship.json" || p == "/api/vessel")
 		{
 			const int mmsi = toMMSI(p == "/api/vessel" ? bare(request.query) : request.param("mmsi"));
-			const std::string vessel = mmsi > 0 && shows(mmsi) ? UiFormat::ship(db, mmsi) : std::string("{}");
+			const std::string vessel = mmsi > 0 && shows(mmsi) ? UiFormat::ship(db, mmsi, &shown) : std::string("{}");
 			response = Response::json(mmsi < 0 ? "{\"error\":\"Invalid MMSI\"}" : vessel == "{}" ? "{\"error\":\"Vessel not found\"}" : vessel);
 		}
 		else if (p == "/api/changes.json")
@@ -355,17 +356,17 @@ namespace Services
 			response = Response::json(since() > 0 ? UiFormat::allPathsSince(db, MAX(since(), oldest), keep) : UiFormat::allPaths(db, keep, oldest));
 		else if (p == "/api/mapobjects.json")
 		{
-			// the stations the server shows, and the broadcasts of the vessels it shows
-			std::function<bool(int)> shown;
+			// the stations the server lists, and the broadcasts of the vessels it shows
+			std::function<bool(int)> listed;
 			if (!spec.stations.empty())
-				shown = [this](int id) { return spec.showsStation(id); };
-			response = Response::json(UiFormat::mapObjects(db, (uint64_t)toInt(request.param("since")), true, shown, keep));
+				listed = [this](int id) { return spec.showsStation(id); };
+			response = Response::json(UiFormat::mapObjects(db, (uint64_t)toInt(request.param("since")), true, listed, keep, &shown));
 		}
 		else if (p == "/api/object.json")
 		{
 			const std::string key = request.param("key");
 			const bool station = !key.empty() && key[0] == 's';
-			response = Response::json(station && !spec.showsStation(std::atoi(key.c_str() + 1)) ? std::string("{}") : UiFormat::object(db, key, keep));
+			response = Response::json(station && !spec.showsStation(std::atoi(key.c_str() + 1)) ? std::string("{}") : UiFormat::object(db, key, keep, &shown));
 		}
 		else if (p == "/api/binmsgs.json")
 		{
@@ -391,7 +392,7 @@ namespace Services
 			std::string out;
 			JSON::Writer w(out);
 			const std::vector<int> of = figuresOf(focus);
-			const auto write = [&](Figures &f) { UiFormat::history(w, f, tracker.hidesRange(request.owner, of, f)); };
+			const auto write = [&](Figures &f) { UiFormat::history(w, f, shown.hidesRange(of, f.total.maxDistance())); };
 			if (of.empty())
 				tracker.withAll(write);
 			else if (!tracker.withStations(of, write))
@@ -415,12 +416,12 @@ namespace Services
 			response = Response::json(out);
 		}
 		else if (p == "/api/stat.json" || p == "/stat.json")
-			response = Response::json(statJSON(focus, keep, request.owner));
+			response = Response::json(statJSON(focus, keep));
 		else if (p == "/api/ships.json" || p == "/ships.json" || p == "/api/ships_full.json")
 		{
 			StationRegistry::Station at;
 			const bool drawn = drawnStation(std::vector<int>(), at);
-			response = Response::json(UiFormat::ships(db, p == "/api/ships_full.json", drawn ? &at : nullptr, keep));
+			response = Response::json(UiFormat::ships(db, p == "/api/ships_full.json", drawn ? &at : nullptr, keep, &shown));
 		}
 		else if (p == "/api/output_stats.json")
 		{
@@ -436,7 +437,7 @@ namespace Services
 			response = Response::json(out);
 		}
 		else if (p == "/api/planes.json")
-			response = Response::json(spec.stations.empty() ? UiFormat::planes(tracker.planes()) : noPlanes("planes"));
+			response = Response::json(spec.stations.empty() ? UiFormat::planes(tracker.planes(), &shown) : noPlanes("planes"));
 		else if (p == "/api/places.json")
 			response = Response::json(tracker.placesCollection());
 		else if (p == "/api/ships_port.json")
@@ -543,14 +544,14 @@ namespace Services
 			const std::string lat = request.param("lat"), lon = request.param("lon");
 			response = Response::json(lat.empty() || lon.empty() ? std::string("{\"error\":\"lat and lon are required\"}")
 													   : UiFormat::nearby(db, (float)std::atof(lat.c_str()), (float)std::atof(lon.c_str()),
-																		  (uint32_t)toInt(request.param("mmsi")), (int)toInt(request.param("station"), -1), keep));
+																		  (uint32_t)toInt(request.param("mmsi")), (int)toInt(request.param("station"), -1), keep, true, &shown));
 		}
 		else
 			return false;
 		return true;
 	}
 
-	std::string Ui::statJSON(const std::vector<int> &focus, const DB::Keep &keep, bool owner)
+	std::string Ui::statJSON(const std::vector<int> &focus, const DB::Keep &keep)
 	{
 		DB &db = tracker.ships();
 		int vessels = 0;
@@ -561,7 +562,8 @@ namespace Services
 		JSON::Writer w(out);
 		w.beginObject();
 		const std::vector<int> of = figuresOf(focus);
-		const auto write = [&](Figures &f) { UiFormat::counters(w, f, tracker.hidesRange(owner, of, f)); };
+		const Located shown = located(tracker, spec, stations());
+		const auto write = [&](Figures &f) { UiFormat::counters(w, f, shown.hidesRange(of, f.total.maxDistance())); };
 		if (of.empty())
 			tracker.withAll(write);
 		else if (!tracker.withStations(of, write))

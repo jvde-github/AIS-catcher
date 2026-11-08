@@ -93,6 +93,8 @@ namespace Plane
 		FLOAT32 heading;
 		FLOAT32 distance;
 		int angle;
+		// the station its distance and bearing are measured from
+		int station;
 		int vertrate;
 		char callsign[9]; // Aircraft callsign, nul terminated
 		int squawk;
@@ -148,6 +150,7 @@ namespace Plane
 			category = CATEGORY_UNDEFINED;
 			distance = DISTANCE_UNDEFINED;
 			angle = ANGLE_UNDEFINED;
+			station = 0;
 			message_types = 0;
 			message_subtypes = 0;
 			position_status = ValueStatus::UNKNOWN;

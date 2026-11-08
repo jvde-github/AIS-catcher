@@ -724,9 +724,9 @@ import { createMessageBar } from './message-bar.js';
     const stationRecords = () => (stationsEditor ? stationsEditor.stations() : stationsOf(ConfigStore.cached));
     function stationList() {
         const all = stationRecords();
-        return all.map((s, i) => ({ key: i, id: Number(s.id), label: stationLabel(s, all.length > 1) }));
+        return all.map((s, i) => ({ key: i, id: Number(s.id), label: stationLabel(s, all.length > 1), share_loc: !!s.share_loc }));
     }
-    const stationChoices = () => stationList().map(st => ({ key: st.id, label: st.label }));
+    const stationChoices = () => stationList().map(st => ({ key: st.id, label: st.label, share_loc: st.share_loc }));
 
     function railSections(cfg) {
         const rows = inputs?.loaded ? inputs.data : listOf(cfg.receiver);

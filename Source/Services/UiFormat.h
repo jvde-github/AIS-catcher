@@ -23,6 +23,7 @@
 #include <string>
 
 #include "DB.h"
+#include "Located.h"
 #include "Figures.h"
 #include "PlaneDB.h"
 #include "StationRegistry.h"
@@ -36,18 +37,19 @@ namespace Services
 	// holds what they are made of.
 	struct UiFormat
 	{
+		// `shown`: which stations' locations this server shows; each station's own share_loc without it
 		// `at`, when given, is the station the page draws, in place of the DB's own;
 		// `stations_window` (seconds) ends each row with the stations heard within it and their ages
 		static std::string shipsCompact(DB &db, bool full = false, std::time_t since = 0,
 										const std::string &configVersion = "",
 										const DB::Keep &keep = DB::Keep(),
 										const StationRegistry::Station *at = nullptr,
-										int stations_window = 0);
-		static std::string shipsTable(DB &db, std::time_t since = 0, const DB::Keep &keep = DB::Keep());
+										int stations_window = 0, const Located *shown = nullptr);
+		static std::string shipsTable(DB &db, std::time_t since = 0, const DB::Keep &keep = DB::Keep(), const Located *shown = nullptr);
 		// `at`, when given, is the station the page draws, in place of the DB's own
 		static std::string ships(DB &db, bool full = false, const StationRegistry::Station *at = nullptr,
-								 const DB::Keep &keep = DB::Keep());
-		static std::string ship(DB &db, int mmsi);
+								 const DB::Keep &keep = DB::Keep(), const Located *shown = nullptr);
+		static std::string ship(DB &db, int mmsi, const Located *shown = nullptr);
 		static std::string changes(DB &db, int mmsi);
 		static std::string message(DB &db, uint32_t mmsi);
 
@@ -70,7 +72,7 @@ namespace Services
 		// `skip` and `skip_station` are the vessel and the station asking, 0 and -1
 		// for none; `with_stations` false keeps the stations, and so where they stand, out
 		static std::string nearby(DB &db, float lat, float lon, uint32_t skip, int skip_station,
-								  const DB::Keep &keep = DB::Keep(), bool with_stations = true);
+								  const DB::Keep &keep = DB::Keep(), bool with_stations = true, const Located *shown = nullptr);
 
 		// the ticker: the events after `since`, and a page of those before `before`
 		static std::string events(DB &db, uint64_t since, int level, const DB::Keep &keep = DB::Keep());
@@ -78,24 +80,26 @@ namespace Services
 		static std::string binaryMessages(DB &db, std::time_t since = 0, uint64_t marker = 0, uint32_t owner = 0, const DB::Keep &keep = DB::Keep());
 		// `shown` leaves out a station the reader does not see, `keep` a vessel's broadcasts
 		static std::string mapObjects(DB &db, uint64_t since = 0, bool with_stations = true,
-									  const std::function<bool(int)> &shown = nullptr, const DB::Keep &keep = DB::Keep());
+									  const std::function<bool(int)> &shown = nullptr, const DB::Keep &keep = DB::Keep(),
+									  const Located *located = nullptr);
 		// what stands behind an object key: a marker's members, or a station's record
-		static std::string object(DB &db, const std::string &key, const DB::Keep &keep = DB::Keep());
+		static std::string object(DB &db, const std::string &key, const DB::Keep &keep = DB::Keep(), const Located *shown = nullptr);
 
 		// the statistics page: the totals and the last whole periods, and the plots' histories
 		static void counters(JSON::Writer &w, Figures &f, bool hidden);
 		static void history(JSON::Writer &w, Figures &f, bool hidden);
 		// the aircraft: in full, and as the map's rows
-		static std::string planes(PlaneDB &db);
-		static std::string planesCompact(PlaneDB &db, std::time_t since = 0);
+		static std::string planes(PlaneDB &db, const Located *shown = nullptr);
+		static std::string planesCompact(PlaneDB &db, std::time_t since = 0, const Located *shown = nullptr);
 
 		// The vessel's record, the same on every host: the ship's body, its
 		// message badge and riding station, and what it has reported changing.
 		// `extra(w, ship, ptr)` writes what only the caller knows - a hub the
 		// stations that heard it, a receiver nothing - before the object closes.
-		template <typename F> static std::string vessel(DB &db, uint32_t mmsi, F extra)
+		template <typename F> static std::string vessel(DB &db, uint32_t mmsi, F extra, const Located *shown = nullptr)
 		{
 			std::lock_guard<std::mutex> lock(db.mtx);
+			const Located located = shown ? *shown : Located::from(db.stations, db.latlon_share);
 
 			int ptr = db.ships.find(mmsi);
 			if (ptr == DB::SHIP_NIL)
@@ -111,10 +115,11 @@ namespace Services
 				w.kv("time", (long long)now).kv("place_version", db.place_markers.version());
 				db.visits.writeVisits(w, ptr, db.place_markers.index().get());
 				shipBody(w, ship, (long int)now - (long int)ship.last_signal,
-						 isValidCoord(db.station_lat, db.station_lon));
+						 isValidCoord(db.station_lat, db.station_lon) && located.of(ship));
 				db.destinations.writeMatched(w, ptr);
+				const int riding = db.stations.idFor(ship.mmsi);
 				w.kv("binary", db.binary.badge(ship.mmsi, now))
-					.kv_unless("station", db.stations.idFor(ship.mmsi), -1)
+					.kv_unless("station", riding >= 0 && located.at(riding) ? riding : -1, -1)
 					.key("changes");
 				voyageChanges(db, w, ptr);
 				extra(w, ship, ptr);

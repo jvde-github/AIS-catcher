@@ -93,11 +93,11 @@ namespace Services
 	static void compactDynamic(JSON::Writer &w, const Ship &ship, std::time_t now,
 							   unsigned binary_badge, int riding,
 							   const std::array<uint32_t, VisitTracker::SLOTS> &place_ids,
-							   int stations_window)
+							   int stations_window, const Located &located)
 	{
 		w.beginArray().val(ship.mmsi);
 		if (isValidCoord(ship.lat, ship.lon))
-			w.val(ship.lat).val(ship.lon).val_unless(ship.distance, DISTANCE_UNDEFINED);
+			w.val(ship.lat).val(ship.lon).val_unless(located.of(ship) ? ship.distance : DISTANCE_UNDEFINED, DISTANCE_UNDEFINED);
 		else
 			w.val_null().val_null().val_null();
 
@@ -140,11 +140,11 @@ namespace Services
 
 	// what the ships table lists beyond the map's row: the receiver's measurements
 	// and the classification the card and the table word themselves
-	static void compactTable(JSON::Writer &w, const Ship &ship)
+	static void compactTable(JSON::Writer &w, const Ship &ship, const Located &located)
 	{
 		w.beginArray().val(ship.mmsi);
 		if (isValidCoord(ship.lat, ship.lon) && ship.distance != DISTANCE_UNDEFINED &&
-			ship.angle != ANGLE_UNDEFINED)
+			ship.angle != ANGLE_UNDEFINED && located.of(ship))
 			w.val(ship.angle);
 		else
 			w.val_null();
@@ -192,9 +192,10 @@ namespace Services
 	std::string UiFormat::shipsCompact(DB &db, bool full, std::time_t since,
 									   const std::string &configVersion, const DB::Keep &keep,
 									   const StationRegistry::Station *at,
-									   int stations_window)
+									   int stations_window, const Located *shown)
 	{
 		std::lock_guard<std::mutex> lock(db.mtx);
+		const Located located = shown ? *shown : Located::from(db.stations, db.latlon_share);
 
 		if (since <= db.full_refresh_at)
 			since = 0;
@@ -218,7 +219,8 @@ namespace Services
 				if (isValidCoord(at->lat, at->lon))
 					w.key("station").beginObject().kv("lat", at->lat).kv("lon", at->lon).kv("mmsi", at->mmsi).kv("gps", false).endObject();
 			}
-			else if (db.latlon_share && isValidCoord(db.station_lat, db.station_lon))
+			// the tracker's own position, where it shares it and the server shows it
+			else if (db.latlon_share && located.own && isValidCoord(db.station_lat, db.station_lon))
 				w.key("station")
 					.beginObject()
 					.kv("lat", db.station_lat)
@@ -233,10 +235,11 @@ namespace Services
 				now, full, since, [&](int ptr, const Ship &ship, long int) {
 					if (keep && !keep(ship))
 						return;
+					const int riding = db.stations.idFor(ship.mmsi);
 					compactDynamic(w, ship, now, db.binary.badge(ship.mmsi, now),
-								   db.stations.idFor(ship.mmsi),
+								   riding >= 0 && located.at(riding) ? riding : -1,
 								   db.visits.insideIds(ptr, db.place_markers.index().get()),
-								   stations_window);
+								   stations_window, located);
 				});
 			w.endArray();
 
@@ -255,9 +258,10 @@ namespace Services
 		return db.content;
 	}
 
-	std::string UiFormat::shipsTable(DB &db, std::time_t since, const DB::Keep &keep)
+	std::string UiFormat::shipsTable(DB &db, std::time_t since, const DB::Keep &keep, const Located *shown)
 	{
 		std::lock_guard<std::mutex> lock(db.mtx);
+		const Located located = shown ? *shown : Located::from(db.stations, db.latlon_share);
 		if (since <= db.full_refresh_at)
 			since = 0;
 		std::time_t now = time(nullptr);
@@ -274,16 +278,17 @@ namespace Services
 				now, false, since,
 				[&](int, const Ship &ship, long int) {
 					if (!keep || keep(ship))
-						compactTable(w, ship);
+						compactTable(w, ship, located);
 				});
 			w.endArray().endObject();
 		}
 		return db.content;
 	}
 
-	std::string UiFormat::ships(DB &db, bool full, const StationRegistry::Station *at, const DB::Keep &keep)
+	std::string UiFormat::ships(DB &db, bool full, const StationRegistry::Station *at, const DB::Keep &keep, const Located *shown)
 	{
 		std::lock_guard<std::mutex> lock(db.mtx);
+		const Located located = shown ? *shown : Located::from(db.stations, db.latlon_share);
 
 		const int count = db.keptCount(keep);
 
@@ -297,7 +302,7 @@ namespace Services
 				if (isValidCoord(at->lat, at->lon))
 					w.key("station").beginObject().kv("lat", at->lat).kv("lon", at->lon).kv("mmsi", at->mmsi).kv("gps", false).endObject();
 			}
-			else if (db.latlon_share)
+			else if (db.latlon_share && located.own)
 				w.key("station")
 					.beginObject()
 					.kv("lat", db.station_lat)
@@ -315,7 +320,7 @@ namespace Services
 						return;
 					w.beginObject();
 					shipBody(w, ship, delta_time,
-							 isValidCoord(db.station_lat, db.station_lon));
+							 isValidCoord(db.station_lat, db.station_lon) && located.of(ship));
 					db.destinations.writeMatched(w, ptr);
 					w.endObject();
 				});
@@ -336,9 +341,9 @@ namespace Services
 		return content;
 	}
 
-	std::string UiFormat::ship(DB &db, int mmsi)
+	std::string UiFormat::ship(DB &db, int mmsi, const Located *shown)
 	{
-		return vessel(db, (uint32_t)mmsi, [](JSON::Writer &, const Ship &, int) {});
+		return vessel(db, (uint32_t)mmsi, [](JSON::Writer &, const Ship &, int) {}, shown);
 	}
 
 	std::string UiFormat::message(DB &db, uint32_t mmsi)
@@ -572,7 +577,7 @@ namespace Services
 
 	std::string UiFormat::nearby(DB &db, float lat, float lon, uint32_t skip,
 								 int skip_station, const DB::Keep &keep,
-								 bool with_stations)
+								 bool with_stations, const Located *shown)
 	{
 		static const float HORIZON_NM = 99.0f;
 		static const size_t KEEP = 10;
@@ -629,7 +634,8 @@ namespace Services
 
 		reach = HORIZON_NM;
 		db.stations.forEach([&](const StationRegistry::Station &s) {
-			if (!with_stations || s.id == skip_station || !placedOnGlobe(s.lat, s.lon))
+			if (!with_stations || s.id == skip_station || !placedOnGlobe(s.lat, s.lon) ||
+				!(shown ? shown->at(s.id) : s.share_loc))
 				return;
 			float range;
 			int bearing;
@@ -1102,7 +1108,7 @@ namespace Services
 		return db.content;
 	}
 
-	std::string UiFormat::object(DB &db, const std::string &key, const DB::Keep &keep)
+	std::string UiFormat::object(DB &db, const std::string &key, const DB::Keep &keep, const Located *shown)
 	{
 		std::lock_guard<std::mutex> lock(db.mtx);
 		db.content.clear();
@@ -1118,7 +1124,7 @@ namespace Services
 				const bool riding = ptr != DB::SHIP_NIL && isValidCoord(db.ships[ptr].lat, db.ships[ptr].lon);
 				w.beginObject().kv("time", now);
 				db.stations.writeOne(w, id, riding, riding ? db.ships[ptr].lat : LAT_UNDEFINED, riding ? db.ships[ptr].lon : LON_UNDEFINED,
-									 db.station_heard ? db.station_heard(id) : 0);
+									 db.station_heard ? db.station_heard(id) : 0, shown ? (shown->at(id) ? 1 : 0) : -1);
 				w.endObject();
 			}
 			else
@@ -1127,7 +1133,8 @@ namespace Services
 		return db.content;
 	}
 
-	std::string UiFormat::mapObjects(DB &db, uint64_t since, bool with_stations, const std::function<bool(int)> &shown, const DB::Keep &keep)
+	std::string UiFormat::mapObjects(DB &db, uint64_t since, bool with_stations, const std::function<bool(int)> &shown, const DB::Keep &keep,
+								 const Located *located)
 	{
 		std::lock_guard<std::mutex> lock(db.mtx);
 		db.content.clear();
@@ -1143,7 +1150,8 @@ namespace Services
 				.beginArray();
 			db.binary.writeMarkerRows(w, since, keptSender(db, keep));
 			if (with_stations)
-				db.stations.writeRows(w, since, db.station_heard, shown);
+				db.stations.writeRows(w, since, db.station_heard, shown,
+									  located ? std::function<bool(int)>([located](int id) { return located->at(id); }) : nullptr);
 			db.place_markers.writeRows(w, since);
 			w.endArray().key("removed").beginArray();
 			db.binary.writeRemoved(w, since);
@@ -1279,13 +1287,13 @@ namespace Services
 		w.endObject();
 	}
 
-	static void planeJSON(JSON::Writer &w, const Plane::ADSB &plane, long int delta_time)
+	static void planeJSON(JSON::Writer &w, const Plane::ADSB &plane, long int delta_time, bool measured)
 	{
 		w.beginObject().kv("hexident", plane.hexident);
 
 		if (isValidCoord(plane.lat, plane.lon))
 		{
-			w.kv("lat", plane.lat).kv("lon", plane.lon).kv_unless("distance", plane.distance, DISTANCE_UNDEFINED).kv_unless("bearing", plane.angle, ANGLE_UNDEFINED);
+			w.kv("lat", plane.lat).kv("lon", plane.lon).kv_unless("distance", measured ? plane.distance : DISTANCE_UNDEFINED, DISTANCE_UNDEFINED).kv_unless("bearing", measured ? plane.angle : ANGLE_UNDEFINED, ANGLE_UNDEFINED);
 		}
 		else
 			w.kv_null("lat").kv_null("lon");
@@ -1313,7 +1321,7 @@ namespace Services
 		w.kv("last_signal", delta_time).endObject();
 	}
 
-	static void planeCompact(JSON::Writer &w, const Plane::ADSB &plane, std::time_t rx)
+	static void planeCompact(JSON::Writer &w, const Plane::ADSB &plane, std::time_t rx, bool measured)
 	{
 		w.beginArray().val(plane.hexident).val_unless(plane.lat, LAT_UNDEFINED).val_unless(plane.lon, LON_UNDEFINED).val_unless(plane.altitude, ALTITUDE_UNDEFINED).val_unless(plane.speed, SPEED_UNDEFINED).val_unless(plane.heading, HEADING_UNDEFINED).val_unless(plane.vertrate, VERT_RATE_UNDEFINED).val_unless(plane.squawk, SQUAWK_UNDEFINED).val(plane.callsign).val(plane.airborne).val(plane.nMessages).val((long long)rx).val_unless(plane.category, CATEGORY_UNDEFINED).val_unless(plane.signalLevel, LEVEL_UNDEFINED);
 
@@ -1322,16 +1330,16 @@ namespace Services
 		else
 			w.val_null();
 
-		w.val_unless(plane.distance, DISTANCE_UNDEFINED)
+		w.val_unless(measured ? plane.distance : DISTANCE_UNDEFINED, DISTANCE_UNDEFINED)
 			.val(plane.message_types)
 			.val(plane.message_subtypes)
 			.val(plane.group_mask)
 			.val(plane.last_group)
-			.val_unless(plane.angle, ANGLE_UNDEFINED)
+			.val_unless(measured ? plane.angle : ANGLE_UNDEFINED, ANGLE_UNDEFINED)
 			.endArray();
 	}
 
-	std::string UiFormat::planes(PlaneDB &db)
+	std::string UiFormat::planes(PlaneDB &db, const Located *shown)
 	{
 		std::lock_guard<std::mutex> lock(db.mtx);
 
@@ -1344,7 +1352,7 @@ namespace Services
 			w.beginObject().kv("count", db.table.size()).kv("time", (long long)now).key("planes").beginArray();
 
 			db.forEachRecent(now, 0, [&](const Plane::ADSB &plane, std::time_t rx) {
-				planeJSON(w, plane, (long int)(now - rx));
+				planeJSON(w, plane, (long int)(now - rx), !shown || shown->at(plane.station));
 			});
 
 			w.endArray().kv("error", false).endObject().raw("\n\n");
@@ -1352,7 +1360,7 @@ namespace Services
 		return db.content;
 	}
 
-	std::string UiFormat::planesCompact(PlaneDB &db, std::time_t since)
+	std::string UiFormat::planesCompact(PlaneDB &db, std::time_t since, const Located *shown)
 	{
 		std::lock_guard<std::mutex> lock(db.mtx);
 
@@ -1365,7 +1373,7 @@ namespace Services
 			w.beginObject().kv("count", db.table.size()).kv("time", (long long)now).key("values").beginArray();
 
 			db.forEachRecent(now, since, [&](const Plane::ADSB &plane, std::time_t rx) {
-				planeCompact(w, plane, rx);
+				planeCompact(w, plane, rx, !shown || shown->at(plane.station));
 			});
 
 			w.endArray().kv("error", false).endObject().raw("\n\n");

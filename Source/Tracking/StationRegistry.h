@@ -142,8 +142,9 @@ public:
 	// the rows that changed after `since`, in the object feed's row shape; kind 8 is a station
 	// `heard` says when a station last delivered a message, when the host counts that
 	// `shown` leaves out a station the reader does not see
+	// `located` says which stations' positions go out, each station's own share_loc without it
 	void writeRows(JSON::Writer &w, uint64_t since, const std::function<std::time_t(int)> &heard = nullptr,
-				   const std::function<bool(int)> &shown = nullptr) const
+				   const std::function<bool(int)> &shown = nullptr, const std::function<bool(int)> &located = nullptr) const
 	{
 		char id[24];
 		for (const auto &kv : stations)
@@ -151,11 +152,12 @@ public:
 			const Station &s = kv.second;
 			if (s.seq <= since || (shown && !shown(s.id)))
 				continue;
+			const bool at = located ? located(s.id) : s.share_loc;
 			snprintf(id, sizeof(id), "s%d", s.id);
 			w.beginObject().kv("id", id).kv("kind", 8).kv("seq", (long long)s.seq)
-				.kv("lat", s.lat).kv("lon", s.lon).kv("label", s.name).kv("count", 0)
+				.kv("lat", at ? s.lat : LAT_UNDEFINED).kv("lon", at ? s.lon : LON_UNDEFINED).kv("label", s.name).kv("count", 0)
 				.kv("t", (long long)s.last).kv("first", (long long)s.last);
-			writeFields(w, s.mmsi, s.online, s.rate, s.country, heard ? heard(s.id) : 0, s.state);
+			writeFields(w, at ? s.mmsi : 0, s.online, s.rate, s.country, heard ? heard(s.id) : 0, s.state);
 			w.endObject();
 		}
 	}
@@ -232,14 +234,19 @@ public:
 
 	// the record behind a station's key; one riding a vessel answers with that vessel's
 	// position, so a card or a search lands where the map draws it, and says so
-	bool writeOne(JSON::Writer &w, int id, bool riding = false, FLOAT32 at_lat = LAT_UNDEFINED, FLOAT32 at_lon = LON_UNDEFINED, std::time_t heard = 0) const
+	// `located` -1 takes the station's own share_loc
+	bool writeOne(JSON::Writer &w, int id, bool riding = false, FLOAT32 at_lat = LAT_UNDEFINED, FLOAT32 at_lon = LON_UNDEFINED, std::time_t heard = 0,
+				  int located = -1) const
 	{
 		auto it = stations.find(id);
 		if (it == stations.end())
 			return false;
 		const Station &s = it->second;
-		w.key("station").beginObject().kv("id", s.id).kv("name", s.name).kv("lat", riding ? at_lat : s.lat).kv("lon", riding ? at_lon : s.lon)
-			.kv("mmsi", s.mmsi).kv("online", s.online).kv("last", (long long)s.last).kv("rate", s.rate).kv("country", s.country);
+		const bool at = located < 0 ? s.share_loc : located > 0;
+		riding = riding && at;
+		w.key("station").beginObject().kv("id", s.id).kv("name", s.name)
+			.kv("lat", riding ? at_lat : at ? s.lat : LAT_UNDEFINED).kv("lon", riding ? at_lon : at ? s.lon : LON_UNDEFINED)
+			.kv("mmsi", at ? s.mmsi : 0).kv("online", s.online).kv("last", (long long)s.last).kv("rate", s.rate).kv("country", s.country);
 		if (heard > 0)
 			w.kv("heard", (long long)heard);
 		if (stateName(s.state))

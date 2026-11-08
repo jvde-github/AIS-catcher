@@ -1,5 +1,6 @@
 // The main server comes first and always serves the map. The servers take a save at once.
 
+import { filterStations } from './config-migrate.js';
 import { copyToClipboard } from '@aiscatcher/ui/components.js';
 import { el, isActive, on, moreMenu } from './dom.js';
 import { api } from './api.js';
@@ -145,6 +146,7 @@ const idList = (v) => (Array.isArray(v) ? v : v === undefined || v === null || v
 
 export function renderShows(host, data, { stations = [], touched, rerender, everyShip = false, outlines = false, byStation = false, foldKey = null }) {
     const many = stations.length >= 2;
+    const located = locations(data, stations);
     const f = data.view && typeof data.view === 'object' ? { ...data.view } : {};
     const commit = (redraw = true) => {
         const kept = Object.keys(f).filter(k => f[k] !== undefined && f[k] !== null && !(Array.isArray(f[k]) && !f[k].length));
@@ -162,11 +164,13 @@ export function renderShows(host, data, { stations = [], touched, rerender, ever
         }
         const allow = idList(f.mmsi_allow).length, deny = idList(f.mmsi_deny).length;
         parts.push(allow ? allow + (allow === 1 ? ' MMSI only' : ' MMSIs only') : deny ? 'all but ' + deny + (deny === 1 ? ' MMSI' : ' MMSIs') : 'every vessel');
+        parts.push(located === null ? 'some station locations' : located ? 'station locations' : 'no station locations');
         if (outlines) parts.push(data.view?.place_geometry === false ? 'places as markers' : 'places with their shape');
         return parts.join(' · ');
     };
     const done = () => host.append(foldKey ? fold('Shows', DOCS.services, { key: foldKey + ':shows', state: state() }, ...kids) : section('Shows', DOCS.services, ...kids));
     if (everyShip) {
+        box.append(...locationsRow(data, located, touched, rerender));
         if (outlines) box.append(outlinesRow(data, touched));
         done();
         return;
@@ -201,6 +205,7 @@ export function renderShows(host, data, { stations = [], touched, rerender, ever
                 } }))));
         box.append(el('p', 'st-help', { text: some ? 'Ships these stations heard in the last hour.' : 'The ships every station hears.' }));
     }
+    box.append(...locationsRow(data, located, touched, rerender));
     {
         const mmsis = (key, label, hint) => {
             const area = el('textarea', 'st-input st-shows__mmsi', { rows: 2, spellcheck: 'false', placeholder: hint,
@@ -218,6 +223,23 @@ export function renderShows(host, data, { stations = [], touched, rerender, ever
     }
     if (outlines) box.append(outlinesRow(data, touched));
     done();
+}
+
+// whether the server shows where its stations are: its share_loc, else what its stations say
+// one by one, true or false where they agree and null where they differ
+function locations(data, stations) {
+    if ('share_loc' in data) return on(data.share_loc);
+    const named = filterStations(data);
+    const seen = stations.filter(st => !named.length || named.includes(Number(st.key))).map(st => !!st.share_loc);
+    return seen.length && seen.every(Boolean) ? true : seen.some(Boolean) ? null : false;
+}
+
+function locationsRow(data, located, touched, rerender) {
+    const row = switchRow('', located === true, v => { data.share_loc = v; touched(); rerender(); },
+        el('strong', '', { text: 'Station locations' }), 'Their positions, each ship\'s distance and bearing, and the range. Off keeps them on this machine; names and ships still show.');
+    return located === null
+        ? [row, el('p', 'st-help', { text: 'Now some show and some do not, as each station was set. This switch decides for all of them.' })]
+        : [row];
 }
 
 function outlinesRow(data, touched) {
@@ -449,7 +471,7 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
     }
 
     function add() {
-        state.list.push({ port: freePort(), ui: false, api: true });
+        state.list.push({ port: freePort(), ui: false, api: true, share_loc: false });
         touched();
         return state.list.length - 1;
     }
@@ -490,7 +512,7 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
             main.append(el('p', 'st-help st-svcs__lead', { text: `The map this panel shows, on port ${state.viewerPort || 'next to it'}. Add servers for a public map, an API or plugins.` }));
             renderTLS(main, s, { until: state.tls.get(state.viewerPort), folder: state.folder, touched, foldKey: 'main' });
             renderServing(main, s, { builtIn: true, bind: state.bind, touched, rerender, foldKey: 'main' });
-            renderShows(main, s, { everyShip: true, outlines: true, touched, rerender, foldKey: 'main' });
+            renderShows(main, s, { stations: stations(), everyShip: true, outlines: true, touched, rerender, foldKey: 'main' });
             // plugins run on the panel's own address here: they go on a server of their own; the log is the panel's
             renderViewerFields(main, s, viewerFields.filter(f => f.section !== 'Plugins' && f.field.name !== 'log'), touched, 'main');
             return;

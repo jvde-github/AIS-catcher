@@ -17,6 +17,8 @@
 
 
 #include "Http.h"
+#include "SiteConfig.h"
+#include "Tracker.h"
 #include "Parse.h"
 
 #include <cctype>
@@ -209,5 +211,10 @@ namespace Services
 		const long days = era * 146097 + yoe * 365 + yoe / 4 - yoe / 100 + doy - 719468;
 		out = (std::time_t)days * 86400 + h * 3600 + mi * 60 + sec;
 		return true;
+	}
+
+	Located located(Tracker &tracker, const ServerSpec &spec, const StationRegistry &stations)
+	{
+		return Located::from(stations, spec.locates(tracker.trackingConfig().latlon_share));
 	}
 }

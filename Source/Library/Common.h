@@ -270,7 +270,6 @@ struct TAG
 	float distance = DISTANCE_UNDEFINED;
 	float lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 	bool validated = false;
-	bool position_private = false; // for the plane table: the station that heard it keeps its position home
 	std::time_t previous_signal = (std::time_t)0;
 	int shipclass = CLASS_UNKNOWN;
 	float speed = SPEED_UNDEFINED;
@@ -298,7 +297,6 @@ struct TAG
 		angle = ANGLE_UNDEFINED;
 		msg_idx_start = msg_idx_end = 0;
 		validated = false;
-		position_private = false;
 		previous_signal = (std::time_t)0;
 		shipclass = CLASS_UNKNOWN;
 		ipv4 = 0;

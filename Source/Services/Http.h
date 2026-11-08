@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include "Located.h"
 #include "StationRegistry.h"
 #include "SystemFacts.h"
 #include "Writer.h"
@@ -125,6 +126,9 @@ namespace Services
 
 	// what writes the running engine's part of a status page
 	typedef std::function<void(JSON::Writer &, EnginePart)> EngineWriter;
+
+	// which stations' locations a server shows, as its station list says; `own` by its share_loc
+	Located located(Tracker &tracker, const ServerSpec &spec, const StationRegistry &stations);
 
 	// the server outlives its services and rebuilds them when its settings change
 	struct Context

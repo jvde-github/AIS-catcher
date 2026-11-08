@@ -1143,9 +1143,7 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 		}
 
 		// measured from the station that heard it; the tracker's own position
-		// stands in for a receiver that has none. A station that keeps its position
-		// home measures the message for its own figures, but gives the vessel no
-		// distance or bearing: from a vessel's position they would tell where it is
+		// stands in for a receiver that has none. A server decides whether to show it
 		const bool own = isValidCoord(tag.station_lat, tag.station_lon);
 		const float from_lat = own ? tag.station_lat : station_lat;
 		const float from_lon = own ? tag.station_lon : station_lon;
@@ -1156,12 +1154,6 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 
 			tag.distance = ship.distance;
 			tag.angle = ship.angle;
-			const StationRegistry::Station *heard = own ? stations.find(tag.station_id) : nullptr;
-			if (!(own ? heard && heard->share_loc : latlon_share))
-			{
-				ship.distance = DISTANCE_UNDEFINED;
-				ship.angle = ANGLE_UNDEFINED;
-			}
 		}
 
 		tag.lat = ship.lat;
@@ -1510,8 +1502,7 @@ void DB::updateDistance(Ship &ship)
 {
 	ship.distance = DISTANCE_UNDEFINED;
 	ship.angle = ANGLE_UNDEFINED;
-	if (latlon_share && isValidCoord(station_lat, station_lon) &&
-		isValidCoord(ship.lat, ship.lon))
+	if (isValidCoord(station_lat, station_lon) && isValidCoord(ship.lat, ship.lon))
 		Util::Geodesy::distanceBearing(station_lat, station_lon, ship.lat, ship.lon,
 									   ship.distance, ship.angle);
 }

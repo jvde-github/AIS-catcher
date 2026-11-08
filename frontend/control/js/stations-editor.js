@@ -51,7 +51,8 @@ function clean(s) {
     if (Number.isFinite(num(s.alt))) out.alt = num(s.alt);
     if (Number.isFinite(num(s.mmsi))) out.mmsi = num(s.mmsi);
     if (s.gps === true) out.gps = true;
-    out.share_loc = !!s.share_loc;
+    // an older file's; a server without share_loc of its own goes by it
+    if ('share_loc' in s) out.share_loc = !!s.share_loc;
     return out;
 }
 
@@ -80,7 +81,7 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
 
     function add() {
         const id = state.stations.reduce((m, s) => Math.max(m, Number(s.id) || 0), 0) + 1;
-        state.stations.push({ id, share_loc: false, _from: null });
+        state.stations.push({ id, _from: null });
         state.selected = state.stations.length - 1;
         touched();
         render();
@@ -158,8 +159,10 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
 
     // the default station rides a vessel only while it is the only station
     function renderPosition(s, named) {
+        main.append(el('div', 'st-stations__pos', {}, el('span', 'st-label', { text: 'Position' })), noneSwitch(s));
+        if (s._none) return;
         const body = el('div', 'st-stations__source');
-        main.append(el('div', 'st-stations__pos', {}, el('span', 'st-label', { text: 'Position' })), shareSwitch(s), body);
+        main.append(body);
         renderFixed(s, body);
         body.append(el('p', 'st-help st-stations__note', { text: 'Where it stands until GPS or a vessel moves it.' }));
         main.append(gpsSwitch(s, named));
@@ -174,8 +177,18 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
             el('span', 'st-stations__sharetext', {}, el('strong', '', { text: title }), el('span', '', { text })));
     }
 
-    function shareSwitch(s) {
-        return switchRow('Share position', 'Off keeps it on this machine.', s.share_loc, on => { s.share_loc = on; touched(); listChanged(); });
+    // nothing is measured from it; what was set comes back when the switch goes off again
+    const WHERE = ['lat', 'lon', 'alt', 'gps', 'mmsi'];
+    function noneSwitch(s) {
+        return switchRow('No position', 'No distances, bearings or range from this station.', s._none, on => {
+            s._none = on;
+            if (on) {
+                s._kept = Object.fromEntries(WHERE.filter(k => k in s).map(k => [k, s[k]]));
+                WHERE.forEach(k => delete s[k]);
+            } else Object.assign(s, s._kept || {});
+            touched();
+            render();
+        });
     }
 
     function gpsSwitch(s, named) {
@@ -342,7 +355,7 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
         }, 'the stations');
         if (!saved) return;
         // from here on the stations are what was saved
-        state.stations = stations.map(s => ({ ...s, _from: s.id }));
+        state.stations = stations.map(s => ({ ...s, _from: s.id, _none: !hasPos(s) && s.gps !== true && !s.mmsi }));
         state.deleted.clear();
         state.receivers = receivers;
         App.notify('success', 'Stations saved');
@@ -353,10 +366,10 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
     async function load() {
         const cfg = await ConfigStore.fetch();
         state.receivers = cfg.receiver || [];
-        const listed = (cfg.stations || []).map(s => ({ ...s, _from: Number(s.id) }));
+        const listed = (cfg.stations || []).map(s => ({ ...s, _from: Number(s.id), _none: !hasPos(s) && s.gps !== true && !s.mmsi }));
         // a file written by hand without it: the default station, unsaved until the page is
         const zero = listed.find(isDefault);
-        state.stations = [zero || { id: 0, share_loc: false, _from: null }, ...listed.filter(s => !isDefault(s))];
+        state.stations = [zero || { id: 0, _from: null, _none: true }, ...listed.filter(s => !isDefault(s))];
         state.selected = Number.isInteger(initial) && initial < state.stations.length ? initial : 0;
         render();
         poll();

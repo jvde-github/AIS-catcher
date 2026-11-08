@@ -83,7 +83,8 @@ namespace Services
 	class Metrics : public Service
 	{
 	public:
-		Metrics(PrometheusCounter &counter, const Context &context) : counter(counter), tracker(context.tracker), facts(context.facts) {}
+		Metrics(PrometheusCounter &counter, const Context &context)
+			: counter(counter), tracker(context.tracker), spec(context.spec), stations(context.stations), facts(context.facts) {}
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
@@ -91,6 +92,8 @@ namespace Services
 	private:
 		PrometheusCounter &counter;
 		Tracker &tracker;
+		const ServerSpec &spec;
+		std::function<StationRegistry()> stations;
 		std::function<SystemFacts()> facts;
 		std::string engineMetrics();
 	};

@@ -16,7 +16,7 @@ function where(s) {
     if (mode === 'vessel') return `On vessel MMSI ${s.mmsi}`;
     const pos = placed(s) ? `${fmt(s.lat)}, ${fmt(s.lon)}${s.alt !== undefined && s.alt !== '' ? ` · ${s.alt} m` : ''}` : '';
     if (mode === 'gps') return pos ? `From GPS · starts at ${pos}` : 'From GPS';
-    return pos || 'No position yet';
+    return pos || 'No position';
 }
 
 // saved at once, so the input can name it; null when the save failed
@@ -25,7 +25,7 @@ async function createStation(id, name) {
         await ConfigStore.save(cfg => {
             const list = Array.isArray(cfg.stations) ? cfg.stations : (cfg.stations = []);
             if (id === null) id = list.reduce((m, s) => Math.max(m, Number(s.id) || 0), 0) + 1;
-            if (!list.some(s => Number(s.id) === id)) list.push({ id, ...(name ? { name } : {}), share_loc: false });
+            if (!list.some(s => Number(s.id) === id)) list.push({ id, ...(name ? { name } : {}) });
         });
     } catch (e) {
         App.notify('error', `Could not create ${id === null ? 'the station' : 'station ' + id}: ${e.message}`);

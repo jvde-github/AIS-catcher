@@ -26,13 +26,15 @@ namespace Services
 	class GeoJSON : public Service
 	{
 	public:
-		explicit GeoJSON(const Context &context) : tracker(context.tracker), view(context.spec.view) {}
+		explicit GeoJSON(const Context &context) : tracker(context.tracker), spec(context.spec), stations(context.stations), view(context.spec.view) {}
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
 
 	private:
 		Tracker &tracker;
+		const ServerSpec &spec;
+		std::function<StationRegistry()> stations;
 		const ViewFilter &view;
 	};
 }

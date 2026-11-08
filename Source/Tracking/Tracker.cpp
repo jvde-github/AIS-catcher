@@ -95,7 +95,6 @@ void Tracker::configure(const TrackingConfig &next)
 		std::lock_guard<std::mutex> lock(stations_mtx);
 		fixed_at.lat = next.fixed ? next.lat : LAT_UNDEFINED;
 		fixed_at.lon = next.fixed ? next.lon : LON_UNDEFINED;
-		fixed_shared = next.latlon_share;
 	}
 	std::lock_guard<std::mutex> lock(figures_mtx);
 	cutoff = next.cutoff > 0 ? next.cutoff : LONG_RANGE_CUTOFF_DEFAULT;
@@ -234,7 +233,6 @@ void Tracker::AdsbIntake::Receive(const Plane::ADSB *data, int len, TAG &tag)
 {
 	TAG t = tag;
 	tracker->place(nullptr, t);
-	t.position_private = !tracker->sharesPosition(t.station_id);
 	tracker->plane_db.Receive(data, len, t);
 }
 
@@ -257,34 +255,6 @@ void Tracker::place(const AIS::Message *msg, TAG &tag)
 		tag.station_lat = it->second.now.lat;
 		tag.station_lon = it->second.now.lon;
 	}
-}
-
-bool Tracker::keepsPositionHome(const std::vector<int> &ids)
-{
-	std::lock_guard<std::mutex> lock(stations_mtx);
-	if (isValidCoord(fixed_at.lat, fixed_at.lon))
-		return !fixed_shared;
-	if (ids.empty())
-	{
-		for (const auto &s : stations)
-			if (!s.second.share_loc)
-				return true;
-		return stations.empty();
-	}
-	for (int id : ids)
-	{
-		auto it = stations.find(id);
-		if (it == stations.end() || !it->second.share_loc)
-			return true;
-	}
-	return false;
-}
-
-bool Tracker::sharesPosition(int id)
-{
-	std::lock_guard<std::mutex> lock(stations_mtx);
-	auto it = stations.find(id);
-	return it != stations.end() && it->second.share_loc;
 }
 
 // A fix moves the stations that follow GPS and take it: the one its input
@@ -348,7 +318,7 @@ void Tracker::publish(std::vector<int> moved)
 		{
 			const StationRegistry::Station *s = shown.find(id);
 			auto it = stations.find(id);
-			if (!s || !s->share_loc || it == stations.end())
+			if (!s || it == stations.end())
 				continue;
 			const Position &p = it->second.now;
 			if (std::fabs(s->lat - p.lat) < 0.0005f && std::fabs(s->lon - p.lon) < 0.0005f)
@@ -385,23 +355,11 @@ void Tracker::setStations(const StationRegistry &registry)
 		for (const auto &s : registry.ordered())
 		{
 			StationRegistry::Station copy = s;
-			if (!s.share_loc)
+			auto it = stations.find(s.id);
+			if (it != stations.end() && isValidCoord(it->second.now.lat, it->second.now.lon))
 			{
-				// a station that keeps its position home is listed by name and how
-				// it is doing, never where it is nor which vessel it rides
-				copy.lat = LAT_UNDEFINED;
-				copy.lon = LON_UNDEFINED;
-				copy.alt = ALTITUDE_UNDEFINED;
-				copy.mmsi = 0;
-			}
-			else
-			{
-				auto it = stations.find(s.id);
-				if (it != stations.end() && isValidCoord(it->second.now.lat, it->second.now.lon))
-				{
-					copy.lat = it->second.now.lat;
-					copy.lon = it->second.now.lon;
-				}
+				copy.lat = it->second.now.lat;
+				copy.lon = it->second.now.lon;
 			}
 			copy.online = true;
 			shown.define(copy);
@@ -422,7 +380,6 @@ void Tracker::applyStations(const StationRegistry &registry)
 		n.lon = s.lon;
 		n.mmsi = s.mmsi;
 		n.gps = s.gps;
-		n.share_loc = s.share_loc;
 		n.inputs = s.inputs;
 		if (s.mmsi)
 			riders[s.mmsi] = s.id;
@@ -443,16 +400,15 @@ void Tracker::applyStations(const StationRegistry &registry)
 }
 
 // what a restored ship, or one heard before a move, is measured from: where
-// the station that last heard it is now, when it shares where that is. Any
-// other keeps a distance only from the tracker's own position, when shared,
-// so a station's share_loc going off takes its distances away at once.
+// the station that last heard it is now. Any other keeps a distance only from
+// the tracker's own position. A server decides what of it to show.
 void Tracker::remeasure()
 {
 	std::map<int, std::pair<FLOAT32, FLOAT32>> at;
 	{
 		std::lock_guard<std::mutex> lock(stations_mtx);
 		for (const auto &s : stations)
-			if (s.second.share_loc && isValidCoord(s.second.now.lat, s.second.now.lon))
+			if (isValidCoord(s.second.now.lat, s.second.now.lon))
 				at[s.first] = std::make_pair(s.second.now.lat, s.second.now.lon);
 	}
 	db.measureFrom([&](const Ship &ship, float &lat, float &lon) {
@@ -471,7 +427,7 @@ Tracker::Position Tracker::stationPosition(int id)
 {
 	std::lock_guard<std::mutex> lock(stations_mtx);
 	auto it = stations.find(id);
-	return it == stations.end() || !it->second.share_loc ? Position() : it->second.now;
+	return it == stations.end() ? Position() : it->second.now;
 }
 
 Tracker::Position Tracker::stationPositionPrivate(int id)

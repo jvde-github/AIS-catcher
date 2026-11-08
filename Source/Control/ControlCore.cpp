@@ -1119,6 +1119,7 @@ void ControlCore::addMainDefaults()
 		main->Add(AIS::KEY_SETTING_REALTIME, true);
 		main->Add(AIS::KEY_SETTING_DECODER, true);
 		main->Add(AIS::KEY_SETTING_LOG, false);
+		main->Add(AIS::KEY_SETTING_SHARE_LOC, true);
 		main->Add(AIS::KEY_SETTING_STATION_LINK, std::string("https://www.aiscatcher.org/stations"), doc.pool);
 		JSON::Value entry;
 		entry.setObject(main);
@@ -1137,7 +1138,6 @@ void ControlCore::addMainDefaults()
 			const std::string host = machineName();
 			if (!host.empty())
 				station->Add(AIS::KEY_SETTING_NAME, host, doc.pool);
-			station->Add(AIS::KEY_SETTING_SHARE_LOC, true);
 			JSON::Value one;
 			one.setObject(station);
 			doc.root.array(AIS::KEY_SETTING_STATIONS, doc.pool).push_back(one);

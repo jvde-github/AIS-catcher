@@ -9,6 +9,7 @@
 //     is in capitals, its model and sensitivity are its engines
 //   - an output's json and json_full switches are its msgformat; a server's message switch is msg;
 //     replay_time is track_time
+//   - whether a server shows where its stations are is its own share_loc, not each station's
 
 import { on } from './dom.js';
 import { num, validPos } from './stations.js';
@@ -52,6 +53,7 @@ function serverFromViewer(v, cfg) {
     for (const [k, value] of Object.entries(v)) {
         if (VIEWER_DROPPED.includes(k) || k === 'active') continue;
         if (k === 'ip_bind') continue; // below: an old viewer listened on every interface unless it said otherwise
+        if (k === 'share_loc') continue; // below: each viewer's own, off unless it said so
         if (k === 'prome') { if (on(value)) entry.metrics = true; continue; }
         if (FILTER_KEYS.includes(k) || ROUTE_KEYS.includes(k)) { if (filtered && k !== 'filter') own[k] = value; continue; }
         if (TRACKING_KEYS.includes(k)) {
@@ -66,6 +68,7 @@ function serverFromViewer(v, cfg) {
     }
     const bind = v.ip_bind ? String(v.ip_bind) : '0.0.0.0';
     if (bind !== '127.0.0.1') entry.bind = bind;
+    entry.share_loc = on(v.share_loc);
     if (filtered) entry.tracking = own;
     if (off) entry.active = false;
     // the ship list as v0.70 served it stays, for the scripts that read it
@@ -82,7 +85,6 @@ function stationFromViewer(v) {
     if (Number.isFinite(num(v.alt))) s.alt = num(v.alt);
     if (num(v.own_mmsi) > 0) s.mmsi = num(v.own_mmsi);
     if (v.use_gps === undefined || on(v.use_gps)) s.gps = true;
-    s.share_loc = on(v.share_loc);
     return s;
 }
 
@@ -142,6 +144,28 @@ function migrateTracking(t) {
     delete t.replay_time;
 }
 
+// the stations a server's filter names, beside it with `filter` on or in its `tracking`; none for all
+export function filterStations(sv) {
+    const ids = (o) => ['id', 'select_id', 'stations'].flatMap(k => (Array.isArray(o[k]) ? o[k] : o[k] === undefined || o[k] === null ? [] : String(o[k]).split(',')));
+    const t = sv.tracking && typeof sv.tracking === 'object' ? sv.tracking : {};
+    return [...(on(sv.filter) ? ids(sv) : []), ...ids(t)].map(x => String(x).trim()).filter(Boolean).map(Number);
+}
+
+// A server without share_loc of its own goes by each station's; where its stations agree it gets
+// its own, where they differ it stays until its switch is set.
+function migrateShareLoc(cfg) {
+    const stations = Array.isArray(cfg.stations) ? cfg.stations.filter(s => s && typeof s === 'object') : [];
+    const shares = id => on(stations.find(s => Number(s.id) === id)?.share_loc);
+    const every = [...new Set([0, ...stations.map(s => Number(s.id))])];
+    for (const sv of Array.isArray(cfg.services) ? cfg.services : []) {
+        if (!sv || typeof sv !== 'object' || 'share_loc' in sv) continue;
+        const named = filterStations(sv);
+        const seen = (named.length ? named : every).map(shares);
+        if (seen.every(Boolean)) sv.share_loc = true;
+        else if (!seen.some(Boolean)) sv.share_loc = false;
+    }
+}
+
 export function migrateConfig(cfg) {
     if (!cfg || typeof cfg !== 'object') return cfg;
     migrateReceivers(cfg);
@@ -149,6 +173,7 @@ export function migrateConfig(cfg) {
         if (Array.isArray(cfg[key])) cfg[key].forEach(ch => { if (ch && typeof ch === 'object') migrateMsgFormat(ch); });
     const v = cfg.control?.viewer;
     if (v && typeof v === 'object') {
+        const located = on(v.share_loc);
         if (STATION_KEYS.some(k => k in v)) {
             const list = Array.isArray(cfg.stations) ? cfg.stations : (cfg.stations = []);
             if (!list.some(s => Number(s.id) === 0)) list.unshift(stationFromViewer(v));
@@ -158,6 +183,7 @@ export function migrateConfig(cfg) {
         let main = list.find(s => s && s.main === true);
         if (!main) list.unshift(main = { main: true });
         if (!('api_v0' in main)) main.api_v0 = true;
+        if (!('share_loc' in main)) main.share_loc = located;
         const tracking = cfg.tracking && typeof cfg.tracking === 'object' ? cfg.tracking : (cfg.tracking = {});
         for (const [k, value] of Object.entries(v)) {
             if (DROPPED_KEYS.includes(k)) continue;
@@ -184,6 +210,7 @@ export function migrateConfig(cfg) {
         migrateTracking(s.tracking);
     }
     migrateTracking(cfg.tracking);
+    migrateShareLoc(cfg);
     if (Array.isArray(cfg.services)) {
         const i = cfg.services.findIndex(s => s && s.main === true);
         if (i > 0) cfg.services.unshift(...cfg.services.splice(i, 1));

@@ -117,10 +117,11 @@ private:
 		std::lock_guard<std::mutex> lock(stations_mtx);
 		return stations;
 	}
-	// The stations as anything that serves them sees them: a station that
-	// does not share where it is comes without a position, an altitude or the
-	// vessel it rides, so no service can let one out.
-	StationRegistry publicStations() const;
+	// as each station's own share_loc says: for the MQTT state, which is no server
+	StationRegistry publicStations() const { return stationsFor(-1); }
+	// as one server sees them, `share` its share_loc: a station's share_loc then says whether
+	// this server shows its location, and one kept home comes without position, altitude or vessel
+	StationRegistry stationsFor(int share) const;
 
 	std::mutex engine_mtx;
 	EngineFacts engine;

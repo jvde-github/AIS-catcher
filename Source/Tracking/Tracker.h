@@ -127,18 +127,11 @@ public:
 	// where a station is now whether it shares that or not: for its owner's
 	// control panel only, never for a service
 	Position stationPositionPrivate(int id);
-	// the vessels stations ride, of the stations that share where they are: MMSI to station id
+	// the vessels stations ride: MMSI to station id
 	std::map<uint32_t, int> riding()
 	{
 		std::lock_guard<std::mutex> lock(stations_mtx);
-		std::map<uint32_t, int> out;
-		for (const auto &r : riders)
-		{
-			const StationRegistry::Station *s = shown.find(r.second);
-			if (s && s->share_loc)
-				out.insert(r);
-		}
-		return out;
+		return riders;
 	}
 
 	// A reader of the messages the ship table kept, as they leave it: after
@@ -162,16 +155,6 @@ public:
 		std::lock_guard<std::mutex> lock(figures_mtx);
 		auto it = last_heard.find(id);
 		return it == last_heard.end() ? (std::time_t)0 : it->second;
-	}
-
-	// Whether any of these stations, or with none named any station at all, keeps its position home
-	bool keepsPositionHome(const std::vector<int> &ids);
-	// The one rule for range figures: those of a position kept home go to its owner alone. Figures
-	// that add up several stations are hidden when any of them keeps it home; with no range
-	// measured, as with no position set, there is nothing to hide.
-	bool hidesRange(bool owner, const std::vector<int> &ids, Figures &f)
-	{
-		return !owner && f.total.maxDistance() > 0 && keepsPositionHome(ids);
 	}
 
 	// The figures of everything heard, of one station, or of several as one;
@@ -261,7 +244,7 @@ private:
 		Position now;
 		FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
 		uint32_t mmsi = 0;
-		bool gps = true, share_loc = false;
+		bool gps = true;
 		int inputs = 0;
 		// one source at a time: the vessel it rides, else GPS when chosen, else where it was put
 		bool followsGPS() const { return gps && !mmsi; }
@@ -269,7 +252,6 @@ private:
 
 	// the station the message is counted at: the one it names when listed, else the input's; and where it was heard
 	void place(const AIS::Message *msg, TAG &tag);
-	bool sharesPosition(int id);
 	// false when the fix belongs to no station, and the tracker's own position takes it
 	bool moveByGPS(int id, FLOAT32 lat, FLOAT32 lon);
 	void follow(uint32_t mmsi, FLOAT32 lat, FLOAT32 lon);
@@ -301,7 +283,6 @@ private:
 
 	std::mutex stations_mtx;
 	Position fixed_at;
-	bool fixed_shared = false; // and whether that position may leave this machine
 	std::map<int, Station> stations;
 	std::map<uint32_t, int> riders;
 	bool registry_set = false;

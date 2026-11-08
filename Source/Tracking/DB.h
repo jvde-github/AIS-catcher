@@ -738,8 +738,14 @@ public:
 	{
 		return binary.badge(mmsi, now);
 	}
-	// the station riding a vessel, -1 for none, for callers already inside the locked walk
-	int stationHeld(uint32_t mmsi) const { return stations.idFor(mmsi); }
+	// the station riding a vessel, -1 for none or one whose own share_loc keeps it home: for a
+	// caller without a server (the hub's tiles), inside the locked walk
+	int stationHeld(uint32_t mmsi) const
+	{
+		const int id = stations.idFor(mmsi);
+		const StationRegistry::Station *s = id >= 0 ? stations.find(id) : nullptr;
+		return s && s->share_loc ? id : -1;
+	}
 	int getStation(uint32_t mmsi)
 	{
 		std::lock_guard<std::mutex> lock(mtx);
