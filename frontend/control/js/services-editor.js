@@ -236,7 +236,7 @@ function locations(data, stations) {
 
 function locationsRow(data, located, touched, rerender) {
     const row = switchRow('', located === true, v => { data.share_loc = v; touched(); rerender(); },
-        el('strong', '', { text: 'Station locations' }), 'Their positions, each ship\'s distance and bearing, and the range. Off keeps them on this machine; names and ships still show.');
+        el('strong', '', { text: 'Station locations' }), 'Positions, distances and range; off keeps them on this machine.');
     return located === null
         ? [row, el('p', 'st-help', { text: 'Now some show and some do not, as each station was set. This switch decides for all of them.' })]
         : [row];
