@@ -23,6 +23,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <unordered_map>
 #include <string>
 #include <vector>
 
@@ -40,8 +41,7 @@ namespace Services
 	class Server : public IO::HTTPServer
 	{
 	public:
-		// `stations`: the station list as a server with these settings sees it, asked again when
-		// the settings change
+		// `stations`: the station list, asked again when the settings change
 		Server(const ServerSpec &spec, Tracker &tracker, std::function<StationRegistry(const ServerSpec &)> stations,
 			   EngineWriter engine = nullptr, std::function<SystemFacts()> system = nullptr);
 		~Server();
@@ -60,6 +60,11 @@ namespace Services
 		// before the services: true when it did. Set before the server serves.
 		typedef std::function<bool(IO::HTTPServer &, IO::TCPServerConnection &, const IO::HTTPRequest &, bool)> Extra;
 		void setExtra(Extra e) { extra = std::move(e); }
+		// the API walks the ships through `source` instead of the ship table; the services are built again
+		void setShips(ShipSource *source);
+		// the keys the server admits, in place of its settings' own: a program built on AIS-catcher
+		// keeps them elsewhere and hands over the whole list on each change
+		void setKeys(const std::vector<ApiKey> &keys);
 
 	private:
 		ServerSpec spec_;
@@ -68,6 +73,11 @@ namespace Services
 		EngineWriter engine;
 		std::function<SystemFacts()> system;
 		Extra extra;
+		ShipSource *ships_ = nullptr;
+		// by the hash of the key; from the settings, or set from outside
+		std::unordered_map<std::string, ApiKey> keys_;
+		bool external_keys = false;
+		bool keyed() const { return !keys_.empty() || external_keys; }
 		// held through every request, answer included: an answer may point into a service
 		std::mutex services_mtx;
 		std::vector<std::unique_ptr<Service>> services;
@@ -83,14 +93,17 @@ namespace Services
 		// a server of this machine alone: other sites' pages in its browser do not read it
 		bool localBind() const { return spec_.bind == "localhost" || spec_.bind == "::1" || spec_.bind.compare(0, 4, "127.") == 0; }
 		const ApiKey *keyOf(const std::string &authorization) const;
+		void indexKeys(const std::vector<ApiKey> &keys);
 		bool admit(int scope, const Services::Request &request, const ApiKey *key, Services::Response &response) const;
 
 		struct Allowance
 		{
 			std::time_t window = 0;
-			int used = 0;
+			int used = 0;    // calls charged this hour, a large page counting for more
+			int refused = 0; // attempts past the quota, for one 429 and then silence
 		};
+		// per address on a limited server, per key for a key with a quota
 		std::map<std::string, Allowance> allowances;
-		bool allow(const Service &service, const Services::Request &request, Services::Response &response, std::string &rate);
+		bool allow(const Service &service, Services::Request &request, const ApiKey *key, Services::Response &response, std::string &rate);
 	};
 }

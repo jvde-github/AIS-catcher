@@ -152,6 +152,12 @@ namespace IO
 			request.body = c.msg.substr(pos + 4, request.content_length);
 		request.peer = Net::ipv4String(c.peer_ipv4);
 		request.local = c.peer_local;
+		// a proxy on this machine speaks for a client elsewhere: that client is the peer, and not local
+		if (c.peer_local && !request.forwarded_for.empty())
+		{
+			request.peer = request.forwarded_for;
+			request.local = false;
+		}
 		return true;
 	}
 
@@ -393,6 +399,14 @@ namespace IO
 				r.forwarded = true;
 				if (key == "X-FORWARDED-HOST")
 					r.forwarded_host = value;
+				else if (key == "X-FORWARDED-FOR" || (key == "X-REAL-IP" && r.forwarded_for.empty()))
+				{
+					std::string first = value.substr(0, value.find(','));
+					const std::size_t from = first.find_first_not_of(" \t"), to = first.find_last_not_of(" \t");
+					first = from == std::string::npos ? std::string() : first.substr(from, to - from + 1);
+					if (!first.empty() && first.size() <= 45 && first.find_first_not_of("0123456789abcdefABCDEF.:") == std::string::npos)
+						r.forwarded_for = first;
+				}
 			}
 			else if (key == "X-SETUP-CODE")
 			{

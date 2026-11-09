@@ -117,11 +117,6 @@ private:
 		std::lock_guard<std::mutex> lock(stations_mtx);
 		return stations;
 	}
-	// as each station's own share_loc says: for the MQTT state, which is no server
-	StationRegistry publicStations() const { return stationsFor(-1); }
-	// as one server sees them, `share` its share_loc: a station's share_loc then says whether
-	// this server shows its location, and one kept home comes without position, altitude or vessel
-	StationRegistry stationsFor(int share) const;
 
 	std::mutex engine_mtx;
 	EngineFacts engine;
@@ -172,15 +167,18 @@ private:
 	// A server's own tracker, made with its server. Changed settings wait for the
 	// next engine, as the running one feeds it, and one the configuration dropped
 	// stays until that engine detaches.
+	// A tracker of a server's own; servers with the same tracking settings share one
 	struct Own
 	{
-		int port = 0;
+		int port = 0; // the first server's, named in the log
+		std::set<int> ports;
 		TrackerSpec spec;
 		std::unique_ptr<Tracker> tracker;
 		bool retired = false;
 		std::string backup_file;
 	};
 	std::vector<std::unique_ptr<Own>> own;
+	// the tracker with these settings, else the one this port had
 	Own *ownFor(const ServerSpec &spec);
 	std::unique_ptr<Own> makeOwn(const ServerSpec &spec, const SiteConfig &cfg);
 	bool anyTracker() const { return tracker_ || !own.empty(); }

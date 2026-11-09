@@ -497,6 +497,10 @@ private:
 	BinaryStore binary;
 	StationRegistry stations;
 	std::function<std::time_t(int)> station_heard;
+	// a host's reader of the control lines that are not the station list's: the hub's keys
+	std::function<void(int, const JSON::JSON &)> control_hook;
+	// told where a station of the control feed is, so the tracker measures from there
+	std::function<void(int, FLOAT32, FLOAT32)> station_placed;
 	// the ticker's view of the event stream
 	EventRing ring;
 	uint64_t event_seq = 0;
@@ -664,13 +668,31 @@ public:
 		stations.define(s, binary.sequence());
 	}
 
+	// a station line changes the station list and tells the tracker where the station is; any
+	// other control line goes to the host. Both outside the lock
 	void Receive(const AIS::Control *data, int len, TAG &)
 	{
-		std::lock_guard<std::mutex> lock(mtx);
 		for (int i = 0; i < len; i++)
-			if (data[i].topic == AIS::KEY_STATION && data[i].payload)
-				stations.apply(*data[i].payload, binary.sequence());
+		{
+			if (!data[i].payload)
+				continue;
+			if (data[i].topic == AIS::KEY_STATION)
+			{
+				StationRegistry::Station s;
+				bool gone = false;
+				{
+					std::lock_guard<std::mutex> lock(mtx);
+					stations.apply(*data[i].payload, binary.sequence(), &s, &gone);
+				}
+				if (station_placed && s.id >= 0)
+					station_placed(s.id, gone ? LAT_UNDEFINED : s.lat, gone ? LON_UNDEFINED : s.lon);
+			}
+			else if (control_hook)
+				control_hook(data[i].topic, *data[i].payload);
+		}
 	}
+	void setControl(std::function<void(int, const JSON::JSON &)> f) { control_hook = std::move(f); }
+	void setStationPlaced(std::function<void(int, FLOAT32, FLOAT32)> f) { station_placed = std::move(f); }
 
 	// what the filter makes of a message: dropped, stored, or counted alone
 	enum Admission

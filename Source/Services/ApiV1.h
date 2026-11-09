@@ -22,6 +22,7 @@
 #include <map>
 
 #include "Http.h"
+#include "ShipSource.h"
 #include "StationRegistry.h"
 #include "SiteConfig.h"
 #include "Tracker.h"
@@ -36,13 +37,30 @@ namespace Services
 	{
 	public:
 		explicit ApiV1(const Context &context)
-			: tracker(context.tracker), stations(context.stations), spec(context.spec), view(context.spec.view), services(context.spec.served()) {}
+			: tracker(context.tracker), stations(context.stations), spec(context.spec), view(context.spec.view), services(context.spec.served()),
+			  table(context.tracker.ships()), ships(context.ships ? *context.ships : table) {}
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
 		bool metered(const Request &r) const override { return r.path != "/api/v1" && r.path != "/api/v1/openapi.json"; }
-		long long pageMax() const { return spec.limited ? 25 : LIST_MAX; }
-		bool pageSize(const Request &request, long long &limit) const { return request.integer("limit", limit, std::min<long long>(100, pageMax()), 1, pageMax()); }
+		// a limited server pages 25 rows unless asked for more, 250 at most; every 25 rows of a page count as one call
+		static const int ROWS_A_CALL = 25, LIMITED_PAGE_MAX = 250;
+		long long pageMax() const { return spec.limited ? LIMITED_PAGE_MAX : LIST_MAX; }
+		int cost(const Request &request) const override
+		{
+			long long limit = ROWS_A_CALL;
+			if (!spec.limited || !pageSize(request, limit))
+				return 1;
+			return (int)((limit + ROWS_A_CALL - 1) / ROWS_A_CALL);
+		}
+		void cap(Request &request, int calls) const override
+		{
+			if (spec.limited)
+				request.setParam("limit", std::to_string(calls * ROWS_A_CALL));
+		}
+		// the widest bounding box a server of an area answers, degrees a side
+		static const int AREA_MAX_DEG = 4;
+		bool pageSize(const Request &request, long long &limit) const { return request.integer("limit", limit, spec.limited ? ROWS_A_CALL : std::min<long long>(100, pageMax()), 1, pageMax()); }
 
 	private:
 		Tracker &tracker;
@@ -50,6 +68,27 @@ namespace Services
 		const ServerSpec &spec;
 		const ViewFilter &view;
 		std::vector<std::string> services;
+		// the ship table itself, under its lock: the walk when no other source is given
+		struct TableShips : ShipSource
+		{
+			DB &db;
+			explicit TableShips(DB &db) : db(db) {}
+			void forEachShip(std::time_t now, std::time_t floor, const Box *box, const std::function<void(const Ship &)> &f) override
+			{
+				db.forEachRecent(now, floor, [&](int, const Ship &s, long) {
+					if (!box || box->contains(s.lat, s.lon))
+						f(s);
+				});
+			}
+		} table;
+		ShipSource &ships;
+		// the station the request's key names, for the length of handle(); its holder sees that station
+		int owner_station = -1;
+
+		// a path as the client should call it: under public_url where one is set
+		std::string href(const std::string &path) const;
+		// whether this server offers the route: a server of an area offers two
+		bool offered(const char *path) const;
 
 		Response index();
 		Response openapi();

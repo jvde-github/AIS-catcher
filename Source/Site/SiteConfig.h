@@ -69,8 +69,17 @@ struct ApiKey
 	};
 	std::string name, sha256; // lower-case hex
 	int scopes = DATA;
+	// the station the key names, -1 for none: its holder sees that station's location
+	int station = -1;
+	// data calls an hour, 0 for no limit
+	int calls_hour = 0;
+	// a key made but not yet approved answers nothing
+	bool active = true;
 
-	bool operator==(const ApiKey &o) const { return name == o.name && sha256 == o.sha256 && scopes == o.scopes; }
+	bool operator==(const ApiKey &o) const
+	{
+		return name == o.name && sha256 == o.sha256 && scopes == o.scopes && station == o.station && calls_hour == o.calls_hour && active == o.active;
+	}
 };
 
 // A tracker of a server's own, behind a filter on the message stream: which
@@ -91,6 +100,13 @@ struct TrackerSpec
 		return own == o.own && filter == o.filter && zones == o.zones && groups_in == o.groups_in && tracking == o.tracking && backup_file == o.backup_file;
 	}
 	bool operator!=(const TrackerSpec &o) const { return !(*this == o); }
+	// whether a server with these settings reads the table of one with `first`'s: the same ships (the
+	// same filter, zones and groups), and either the same way of keeping them or no way of its own
+	bool reads(const TrackerSpec &first) const
+	{
+		return own == first.own && filter == first.filter && zones == first.zones && groups_in == first.groups_in &&
+			   (*this == first || (backup_file.empty() && tracking == TrackingConfig()));
+	}
 };
 
 struct ServerSpec
@@ -113,6 +129,10 @@ struct ServerSpec
 	std::vector<ApiKey> keys;
 	bool open = false;
 	bool limited = false;
+	// of the API only the vessels within a bounding box and one vessel: a server with many ships
+	bool area_only = false;
+	// where clients reach this server, as a reverse proxy presents it: what the API's links say
+	std::string public_url;
 	// the map's JSON for scripts: /ships.json, /stat.json, /api/ships.json, /api/ships_full.json
 	bool api_v0 = false;
 	// managed mode's server beside the control panel: its port and address are the panel's
@@ -136,7 +156,7 @@ struct ServerSpec
 	{
 		return port == o.port && bind == o.bind && tls_cert == o.tls_cert && tls_key == o.tls_key && ui == o.ui && api == o.api && mcp == o.mcp && system == o.system &&
 			   geojson == o.geojson && metrics == o.metrics && kml == o.kml && tracking == o.tracking && view == o.view &&
-			   stations == o.stations && viewer == o.viewer && keys == o.keys && open == o.open && limited == o.limited && api_v0 == o.api_v0 && main == o.main &&
+			   stations == o.stations && viewer == o.viewer && keys == o.keys && open == o.open && limited == o.limited && area_only == o.area_only && public_url == o.public_url && api_v0 == o.api_v0 && main == o.main &&
 			   share_loc == o.share_loc;
 	}
 	bool operator!=(const ServerSpec &o) const { return !(*this == o); }

@@ -67,7 +67,8 @@ public:
 		uint64_t seq = 0;
 	};
 
-	void apply(const JSON::JSON &o, uint64_t &next_seq)
+	// `placed`, when given, gets the station as the line said it, and whether it is gone
+	void apply(const JSON::JSON &o, uint64_t &next_seq, Station *placed = nullptr, bool *placed_gone = nullptr)
 	{
 		Station s;
 		bool gone = false;
@@ -93,6 +94,10 @@ public:
 		if (!gone && stations.size() >= MAX_FEED_STATIONS && !stations.count(s.id))
 			return;
 		put(s, gone, next_seq);
+		if (placed)
+			*placed = s;
+		if (placed_gone)
+			*placed_gone = gone;
 	}
 
 	// A station from the configuration, kept the same way as one the control feed tells

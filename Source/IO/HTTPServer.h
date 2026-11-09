@@ -137,6 +137,8 @@ namespace IO
 		std::string host;
 		std::string origin;
 		std::string forwarded_host;
+		// the client a proxy on this machine forwards for: X-Forwarded-For's first address, or X-Real-IP
+		std::string forwarded_for;
 		std::string authorization;
 		std::string setup_code;
 		std::string peer;

@@ -241,7 +241,7 @@ namespace Services
 		});
 		const int id = focus.size() == 1 ? focus[0] : count == 1 ? only : -1;
 		const StationRegistry::Station *s = id >= 0 ? registry.find(id) : nullptr;
-		if (!s || !s->share_loc)
+		if (!s || !located(tracker, spec, registry).at(id))
 			return false;
 		const Tracker::Position now = tracker.stationPosition(id);
 		at = *s;
@@ -298,7 +298,7 @@ namespace Services
 	{
 		const std::string &p = request.path;
 		DB &db = tracker.ships();
-		const Located shown = located(tracker, spec, stations());
+		const Located shown = located(tracker, spec, stations()).allow(request.station);
 		const auto since = [&]() { return (std::time_t)toInt(request.param("since")); };
 		const std::vector<int> focus = focusOf(request);
 		const DB::Keep keep = keepFor(focus);
@@ -617,12 +617,14 @@ namespace Services
 		// the page's stations, in the order the configuration names them
 		std::vector<StationRegistry::Station> picker;
 		bool sharing = false;
-		for (const auto &s : stations().ordered())
+		const StationRegistry registry = stations();
+		const Located shown = located(tracker, spec, registry);
+		for (const auto &s : registry.ordered())
 		{
 			if (!spec.showsStation(s.id))
 				continue;
 			picker.push_back(s);
-			sharing |= s.share_loc;
+			sharing |= shown.at(s.id);
 		}
 
 		std::string out;

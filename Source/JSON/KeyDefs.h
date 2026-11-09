@@ -298,9 +298,12 @@ X(KEY_SETTING_CERT, "", "", "", "", "cert", "", "", "The certificate's file of a
 X(KEY_SETTING_KEY, "", "", "", "", "key", "", "", "The private key's file of a server's tls, in PEM without a passphrase.", nullptr)
 X(KEY_SETTING_TLS_CERT, "", "", "", "", "tls_cert", "", "", "-N's name for the certificate of a server's tls.", nullptr)
 X(KEY_SETTING_TLS_KEY, "", "", "", "", "tls_key", "", "", "-N's name for the key of a server's tls.", nullptr)
+X(KEY_SETTING_CALLS_HOUR, "", "", "", "", "calls_hour", "", "", "Of a key: the data calls it may make an hour, 0 or absent for no limit.", nullptr)
 X(KEY_SETTING_SHA256, "", "", "", "", "sha256", "", "", "SHA-256 of a key, in hex: the key itself is never stored.", nullptr)
 X(KEY_SETTING_SCOPES, "", "", "", "", "scopes", "", "", "What a key may do: data, system.", nullptr)
 X(KEY_SETTING_PUBLIC, "", "", "", "", "public", "", "", "A server anyone who reaches it may read, without a key; never together with keys.", nullptr)
+X(KEY_SETTING_AREA_ONLY, "", "", "", "", "area_only", "", "", "A server that offers of the API only the vessels within a bounding box (bbox=west,south,east,north, at most 4 degrees a side) and one vessel by MMSI: the public form of a server with many ships. Off by default.", nullptr)
+X(KEY_SETTING_PUBLIC_URL, "", "", "", "", "public_url", "", "", "Where clients reach this server, as a reverse proxy presents it, such as https://api.example.org/v1: what the API's links and its OpenAPI document say in place of /api/v1.", nullptr)
 X(KEY_SETTING_LIMITED, "", "", "", "", "limited", "", "", "A server that answers the short form whoever asks: lists of 25 rows at most, vessel rows without the station that heard them, one vessel in full without its stations, and 25 data calls an hour from one address. Off by default.", nullptr)
 X(KEY_SETTING_API_V0, "", "", "", "", "api_v0", "", "", "A server with the map also answers the ship list and statistics as v0.70 did, for scripts: /ships.json, /stat.json, /api/ships.json and /api/ships_full.json. On for -N and a \"server\" section, off for an entry of \"services\" unless switched on; limited does not cap them.", nullptr)
 X(KEY_SETTING_WEBHOOKS, "", "", "", "", "webhooks", "", "", "Addresses each event is posted to as it happens.", nullptr)
@@ -1174,6 +1177,14 @@ X(KEY_SEQ, "seq", "", "", "", "", "seq", "",
   "Change sequence of a control record", nullptr)
 X(KEY_GONE, "gone", "", "", "", "", "gone", "", "The record is withdrawn",
   nullptr)
+X(KEY_API_KEY, "key", "", "", "", "", "key", "",
+  "Control line: a key of the API, by its hash", nullptr)
+X(KEY_SHA256, "sha256", "", "", "", "", "sha256", "",
+  "SHA-256 of a key, in hex", nullptr)
+X(KEY_CALLS_HOUR, "calls_hour", "", "", "", "", "calls_hour", "",
+  "Data calls a key may make an hour, 0 for no limit", nullptr)
+X(KEY_ACTIVE, "active", "", "", "", "", "active", "",
+  "Whether a key is approved", nullptr)
 
 X(KEY_PORT_CODE, "code", "", "", "", "", "", "", "Port identifier", nullptr)
 X(KEY_PORT_PARENT, "parent_unlocode", "", "", "", "parent_unlocode", "", "",

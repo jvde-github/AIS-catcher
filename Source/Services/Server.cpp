@@ -68,11 +68,35 @@ namespace Services
 		build();
 	}
 
+	void Server::setKeys(const std::vector<ApiKey> &keys)
+	{
+		std::lock_guard<std::mutex> lock(services_mtx);
+		external_keys = true;
+		indexKeys(keys);
+	}
+
+	void Server::indexKeys(const std::vector<ApiKey> &keys)
+	{
+		keys_.clear();
+		for (const auto &k : keys)
+			keys_[k.sha256] = k;
+	}
+
+	void Server::setShips(ShipSource *source)
+	{
+		std::lock_guard<std::mutex> lock(services_mtx);
+		ships_ = source;
+		drop();
+		build();
+	}
+
 	// under services_mtx, or before the server runs
 	void Server::build()
 	{
 		setFrameAncestors(spec_.viewer.frame_ancestors.empty() ? "*" : spec_.viewer.frame_ancestors);
-		const Context context = {tracker, spec_, [this] { return stations(spec_); }, engine, system ? system : [] { return SystemFacts(); }};
+		if (!external_keys)
+			indexKeys(spec_.keys);
+		const Context context = {tracker, spec_, [this] { return stations(spec_); }, engine, system ? system : [] { return SystemFacts(); }, ships_};
 		if (spec_.metrics)
 		{
 			PrometheusCounter *counter = new PrometheusCounter();
@@ -145,8 +169,9 @@ namespace Services
 		return true;
 	}
 
-	// The key a request names in its Authorization header, found by its hash
-	// and compared in constant time; null when it names none of this server's.
+	// The key a request names in its Authorization header, found by its hash; null when it
+	// names none of this server's. The hashes are compared, never the keys, so a lookup's
+	// timing says nothing of a key.
 	const ApiKey *Server::keyOf(const std::string &authorization) const
 	{
 		static const std::string bearer = "bearer ";
@@ -156,17 +181,8 @@ namespace Services
 		Util::Convert::toLower(scheme);
 		if (scheme != bearer)
 			return nullptr;
-		const std::string hash = Util::SHA256::hex(authorization.substr(bearer.size()));
-		const ApiKey *found = nullptr;
-		for (const auto &k : spec_.keys)
-		{
-			unsigned char diff = hash.size() != k.sha256.size();
-			for (std::size_t i = 0; i < hash.size() && i < k.sha256.size(); i++)
-				diff |= (unsigned char)(hash[i] ^ k.sha256[i]);
-			if (!diff)
-				found = &k;
-		}
-		return found;
+		const auto it = keys_.find(Util::SHA256::hex(authorization.substr(bearer.size())));
+		return it == keys_.end() ? nullptr : &it->second;
 	}
 
 	// Whether a request to a service of `scope` may go on with `key`, the key
@@ -175,12 +191,17 @@ namespace Services
 	// keys admits nothing guarded without a key that has the scope.
 	bool Server::admit(int scope, const Services::Request &request, const ApiKey *key, Services::Response &response) const
 	{
-		if (!scope || spec_.keys.empty())
+		if (!scope || !keyed())
 			return true;
 		if (!key)
 		{
 			response = Services::Response::problem(401, "Unauthorized", "This needs a key: Authorization: Bearer <key>.");
 			response.header = "WWW-Authenticate: Bearer realm=\"AIS-catcher\"";
+			return false;
+		}
+		if (!key->active)
+		{
+			response = Services::Response::problem(403, "Forbidden", "The key is not active yet.");
 			return false;
 		}
 		if (!(key->scopes & scope))
@@ -192,10 +213,13 @@ namespace Services
 		return true;
 	}
 
-	bool Server::allow(const Service &service, const Services::Request &request, Services::Response &response, std::string &rate)
+	bool Server::allow(const Service &service, Services::Request &request, const ApiKey *key, Services::Response &response, std::string &rate)
 	{
-		if (!spec_.limited || !service.metered(request))
+		// a key with a quota is counted by itself; without one, a limited server counts the address
+		const int limit = key ? key->calls_hour : spec_.limited ? IO::Limits::PUBLIC_CALLS_AN_HOUR : 0;
+		if (!limit || !service.metered(request))
 			return true;
+		const std::string who = key ? "key " + key->name : request.peer;
 		const std::time_t now = std::time(nullptr);
 		if (allowances.size() > 10000)
 		{
@@ -207,23 +231,34 @@ namespace Services
 					++it;
 			}
 		}
-		Allowance &a = allowances[request.peer];
+		Allowance &a = allowances[key ? "k:" + key->sha256 : request.peer];
 		if (now - a.window >= 3600)
 		{
 			a.window = now;
-			a.used = 0;
+			a.used = a.refused = 0;
 		}
-		const int used = ++a.used, limit = IO::Limits::PUBLIC_CALLS_AN_HOUR;
-		if (used <= limit)
+		// a large page costs more than one call; one larger than the hour has left is cut to what is left
+		int cost = service.cost(request);
+		const int left = limit - a.used;
+		if (cost > left && left > 0)
 		{
-			rate = "X-RateLimit-Limit: " + std::to_string(limit) + "\r\nX-RateLimit-Remaining: " + std::to_string(limit - used);
+			service.cap(request, left);
+			cost = left;
+		}
+		if (cost <= left)
+		{
+			a.used += cost;
+			rate = "X-RateLimit-Limit: " + std::to_string(limit) + "\r\nX-RateLimit-Remaining: " + std::to_string(limit - a.used);
 			return true;
 		}
+		// a key is answered every time, it is somebody's; an address over its limit gets one 429 and
+		// then nothing, a flood is not worth answers
 		const int wait = (int)(3600 - (now - a.window));
-		if (used == limit + 1)
+		if (++a.refused == 1 || key)
 		{
-			Warning() << "Server: port " << spec_.port << ": " << request.peer << " made its " << limit << " data calls this hour: a 429, then nothing for " << wait << " s";
-			response = Services::Response::problem(429, "Too Many Requests", "This address has made its " + std::to_string(limit) + " data calls this hour: try again in " + std::to_string(wait) + " s. Until then, further calls are not answered.");
+			if (a.refused == 1)
+				Warning() << "Server: port " << spec_.port << ": " << who << " made its " << limit << " data calls this hour: a 429" << (key ? "" : ", then nothing") << " for " << wait << " s";
+			response = Services::Response::problem(429, "Too Many Requests", std::string(key ? "This key" : "This address") + " has made its " + std::to_string(limit) + " data calls this hour: try again in " + std::to_string(wait) + " s." + (key ? "" : " Until then, further calls are not answered."));
 			response.header = "Retry-After: " + std::to_string(wait);
 			return false;
 		}
@@ -279,15 +314,16 @@ namespace Services
 		bool handled = false;
 		try
 		{
-			const ApiKey *key = spec_.keys.empty() ? nullptr : keyOf(request.authorization);
-			request.scopes = spec_.keys.empty() ? ApiKey::DATA | ApiKey::SYSTEM : key ? key->scopes : 0;
+			const ApiKey *key = keyed() ? keyOf(request.authorization) : nullptr;
+			request.scopes = !keyed() ? ApiKey::DATA | ApiKey::SYSTEM : key ? key->scopes : 0;
 			request.owner = request.owner || (key && (key->scopes & ApiKey::SYSTEM));
+			request.station = key ? key->station : -1;
 			for (auto &s : services)
 			{
 				const int scope = s->scope(request);
 				if (scope == Service::NOT_MINE)
 					continue;
-				if (!admit(scope, request, key, response) || !allow(*s, request, response, rate) || s->handle(request, response))
+				if (!admit(scope, request, key, response) || !allow(*s, request, key, response, rate) || s->handle(request, response))
 				{
 					handled = true;
 					break;

@@ -253,7 +253,7 @@ namespace
 		return true;
 	}
 
-	// "keys": [ { "name": "home-assistant", "sha256": "…", "scopes": ["data", "system"] } ]
+	// "keys": [ { "name": "home-assistant", "sha256": "…", "scopes": ["data", "system"], "station": 1, "calls_hour": 60 } ]
 	void keysFromJSON(const JSON::Value &v, std::vector<ApiKey> &out)
 	{
 		if (!v.isArray())
@@ -270,6 +270,8 @@ namespace
 				{
 				case AIS::KEY_SETTING_NAME: k.name = m.Get().to_string(); break;
 				case AIS::KEY_SETTING_SHA256: k.sha256 = m.Get().to_string(); break;
+				case AIS::KEY_SETTING_STATION: k.station = (int)Util::Parse::Integer(JSON::text(m.Get()), 0, 2147483647); break;
+				case AIS::KEY_SETTING_CALLS_HOUR: k.calls_hour = (int)Util::Parse::Integer(JSON::text(m.Get()), 0, 1000000); break;
 				case AIS::KEY_SETTING_SCOPES:
 				{
 					std::vector<std::string> names;
@@ -396,6 +398,12 @@ namespace
 		case AIS::KEY_SETTING_METRICS: spec.metrics = Util::Parse::Switch(value); return true;
 		case AIS::KEY_SETTING_PUBLIC: spec.open = Util::Parse::Switch(value); return true;
 		case AIS::KEY_SETTING_LIMITED: spec.limited = Util::Parse::Switch(value); return true;
+		case AIS::KEY_SETTING_AREA_ONLY: spec.area_only = Util::Parse::Switch(value); return true;
+		case AIS::KEY_SETTING_PUBLIC_URL:
+			spec.public_url = value;
+			while (!spec.public_url.empty() && spec.public_url.back() == '/')
+				spec.public_url.pop_back();
+			return true;
 		case AIS::KEY_SETTING_API_V0: spec.api_v0 = Util::Parse::Switch(value); return true;
 		case AIS::KEY_SETTING_PLACE_GEOMETRY:
 			throw ConfigError("\"place_geometry\" is a term of the server's \"view\".");

@@ -45,10 +45,14 @@ namespace Services
 		int scopes = 0;
 		// the owner of this machine's stations, who may read the range figures of one that keeps its position home
 		bool owner = false;
+		// the station the key names, -1 for none: its holder sees where that station is
+		int station = -1;
 		// from this machine itself
 		bool local = false;
 
 		std::string param(const std::string &name) const;
+		// sets or replaces one query parameter; the value as it should appear in the query
+		void setParam(const std::string &name, const std::string &value);
 		// every name and value of the query, decoded, in order
 		std::vector<std::pair<std::string, std::string>> params() const;
 		// a whole number from the query; `fallback` when absent, false when malformed
@@ -116,7 +120,7 @@ namespace Services
 	// The longest page of a list, and what a page that cannot be given answers:
 	// a limit out of range, a cursor no page gave, one pointing at what is gone
 	const long long LIST_MAX = 1000;
-	Response badLimit();
+	Response badLimit(long long max = LIST_MAX);
 	Response badCursor();
 	Response gone(const std::string &why);
 
@@ -127,8 +131,10 @@ namespace Services
 	// what writes the running engine's part of a status page
 	typedef std::function<void(JSON::Writer &, EnginePart)> EngineWriter;
 
-	// which stations' locations a server shows, as its station list says; `own` by its share_loc
+	// which stations' locations a server shows: its share_loc, or each station's own where it does not say
 	Located located(Tracker &tracker, const ServerSpec &spec, const StationRegistry &stations);
+
+	struct ShipSource;
 
 	// the server outlives its services and rebuilds them when its settings change
 	struct Context
@@ -138,6 +144,8 @@ namespace Services
 		std::function<StationRegistry()> stations;
 		EngineWriter engine;
 		std::function<SystemFacts()> facts;
+		// the API's walk over the ships, null for the ship table itself
+		ShipSource *ships;
 	};
 
 	class Service
@@ -155,5 +163,9 @@ namespace Services
 		// the methods the path takes, as an Allow header lists them
 		virtual std::string methods(const Request &) const { return "GET, HEAD"; }
 		virtual bool metered(const Request &) const { return false; }
+		// what a metered request counts for against a quota: one call, or more for a large page
+		virtual int cost(const Request &) const { return 1; }
+		// cuts a request down to what `calls` of the quota buy, when it asked for more
+		virtual void cap(Request &, int calls) const {}
 	};
 }

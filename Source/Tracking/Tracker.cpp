@@ -36,6 +36,22 @@ Tracker::Tracker()
 	db.events >> events;
 	// called with the ship table locked: the figures' lock is never taken the other way round
 	db.setStationHeard([this](int id) { return lastHeard(id); });
+	db.setStationPlaced([this](int id, FLOAT32 lat, FLOAT32 lon) { placeStation(id, lat, lon); });
+}
+
+void Tracker::placeStation(int id, FLOAT32 lat, FLOAT32 lon)
+{
+	std::lock_guard<std::mutex> lock(stations_mtx);
+	if (!isValidCoord(lat, lon))
+	{
+		stations.erase(id);
+		return;
+	}
+	Station &s = stations[id];
+	s.lat = s.now.lat = lat;
+	s.lon = s.now.lon = lon;
+	s.now.source = Position::CONFIGURED;
+	s.gps = false;
 }
 
 namespace

@@ -252,6 +252,9 @@ private:
 
 	// the station the message is counted at: the one it names when listed, else the input's; and where it was heard
 	void place(const AIS::Message *msg, TAG &tag);
+	// a station the control feed describes stands here, until the configuration's list is applied
+	// again; invalid coordinates take it away
+	void placeStation(int id, FLOAT32 lat, FLOAT32 lon);
 	// false when the fix belongs to no station, and the tracker's own position takes it
 	bool moveByGPS(int id, FLOAT32 lat, FLOAT32 lon);
 	void follow(uint32_t mmsi, FLOAT32 lat, FLOAT32 lon);

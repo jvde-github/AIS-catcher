@@ -18,6 +18,7 @@
 #pragma once
 
 #include <map>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -70,7 +71,9 @@ namespace Services
 	const Route *route(const std::string &path);
 
 	// the OpenAPI 3.1 document of the routes the given services offer
-	void writeOpenAPI(JSON::Writer &w, const std::vector<std::string> &services);
+	// `public_url` names the server as clients reach it; `offered` leaves out the routes a server does not serve
+	void writeOpenAPI(JSON::Writer &w, const std::vector<std::string> &services, const std::string &public_url = std::string(),
+					  const std::function<bool(const char *)> &offered_path = nullptr);
 	// a JSON Schema object of the named parameters of a route, for a tool's input
 	// `brief`: shorter descriptions by parameter name for a reader that pays for every word, the
 	// MCP tools; an empty one leaves the description out, a name not in it keeps the route's

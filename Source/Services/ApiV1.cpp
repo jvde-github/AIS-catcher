@@ -43,23 +43,24 @@ namespace Services
 	{
 		// a station and where it is now, as far as the site lets it be told:
 		// configured, by GPS on its input, or riding its vessel
-		void writeStation(JSON::Writer &w, const StationRegistry::Station &s, const Tracker::Position &at, int vessels)
+		// `located`: whether this server shows where the station is
+		void writeStation(JSON::Writer &w, const StationRegistry::Station &s, const Tracker::Position &at, int vessels, bool located)
 		{
 			w.kv("id", s.id);
 			textOrNull(w, "name", s.name);
-			if (isValidCoord(at.lat, at.lon))
+			if (located && isValidCoord(at.lat, at.lon))
 				w.kv("lat", at.lat).kv("lon", at.lon).kv("position_source", Tracker::sourceName(at.source));
 			else
 				w.kv_null("lat").kv_null("lon").kv_null("position_source");
-			if (at.time)
+			if (located && at.time)
 				w.kv("position_time", isoTime(at.time));
 			else
 				w.kv_null("position_time");
-			if (s.alt != ALTITUDE_UNDEFINED)
+			if (located && s.alt != ALTITUDE_UNDEFINED)
 				w.kv("alt_m", s.alt);
 			else
 				w.kv_null("alt_m");
-			if (s.mmsi)
+			if (located && s.mmsi)
 				w.kv("mmsi", (long long)s.mmsi);
 			else
 				w.kv_null("mmsi");
@@ -650,6 +651,14 @@ namespace Services
 			response.cors = true;
 			return true;
 		}
+		if (!offered(path))
+		{
+			response = Response::problem(404, "Not found", "Not offered here: this server lists the vessels within an area (" + href("/api/v1/vessels") +
+																	 "?bbox=west,south,east,north) and one vessel (" + href("/api/v1/vessels/{mmsi}") + ").");
+			response.cors = true;
+			return true;
+		}
+		owner_station = request.station;
 		const Route *r = route(path);
 		for (const auto &p : request.params())
 			if (!r || !r->takes(p.first))
@@ -663,16 +672,29 @@ namespace Services
 		return true;
 	}
 
+	std::string ApiV1::href(const std::string &path) const
+	{
+		return spec.public_url.empty() ? path : spec.public_url + path.substr(7);
+	}
+
+	bool ApiV1::offered(const char *path) const
+	{
+		if (!spec.area_only)
+			return true;
+		const std::string p = path;
+		return p == "/api/v1" || p == "/api/v1/openapi.json" || p == "/api/v1/vessels" || p == "/api/v1/vessels/{mmsi}";
+	}
+
 	Response ApiV1::index()
 	{
 		std::string out;
 		JSON::Writer w(out);
 		w.beginObject().kv("name", "AIS-catcher").kv("api", "v1").key("resources").beginArray();
 		for (const auto &r : routes())
-			if (std::string(r.path) != "/api/v1" &&
+			if (std::string(r.path) != "/api/v1" && offered(r.path) &&
 				(std::find(services.begin(), services.end(), r.service) != services.end() || std::string(r.service) == "api"))
-				w.val(r.path);
-		w.endArray().kv("openapi", "/api/v1/openapi.json").kv("notice", "Positions are what ships broadcast; not for navigation.").endObject();
+				w.val(href(r.path));
+		w.endArray().kv("openapi", href("/api/v1/openapi.json")).kv("notice", "Positions are what ships broadcast; not for navigation.").endObject();
 		w.finish();
 		return Response::json(out);
 	}
@@ -684,7 +706,7 @@ namespace Services
 			offered.push_back("api");
 		std::string out;
 		JSON::Writer w(out);
-		writeOpenAPI(w, offered);
+		writeOpenAPI(w, offered, spec.public_url, [this](const char *path) { return this->offered(path); });
 		w.finish();
 		return Response::json(out);
 	}
@@ -692,6 +714,7 @@ namespace Services
 	Response ApiV1::stationList()
 	{
 		const StationRegistry registry = stations();
+		const Located shown = located(tracker, spec, registry).allow(owner_station);
 		std::map<int, int> vessels = heardLately();
 		std::string out;
 		JSON::Writer w(out);
@@ -701,7 +724,7 @@ namespace Services
 			if (!spec.showsStation(s.id))
 				return;
 			w.beginObject();
-			writeStation(w, s, s.share_loc ? tracker.stationPosition(s.id) : Tracker::Position(), vessels[s.id]);
+			writeStation(w, s, tracker.stationPosition(s.id), vessels[s.id], shown.at(s.id));
 			w.endObject();
 			count++;
 		});
@@ -721,7 +744,7 @@ namespace Services
 		std::string out;
 		JSON::Writer w(out);
 		w.beginObject();
-		writeStation(w, *s, s->share_loc ? tracker.stationPosition(s->id) : Tracker::Position(), heardLately()[s->id]);
+		writeStation(w, *s, tracker.stationPosition(s->id), heardLately()[s->id], located(tracker, spec, registry).allow(owner_station).at(id));
 		w.endObject();
 		w.finish();
 		return Response::json(out);
@@ -759,7 +782,7 @@ namespace Services
 					w.val(id);
 				w.endArray();
 			}
-			const bool hidden = located(tracker, spec, stations()).hidesRange(ids, f.total.maxDistance());
+			const bool hidden = located(tracker, spec, stations()).allow(owner_station).hidesRange(ids, f.total.maxDistance());
 			if (hidden)
 				w.kv("range_hidden", true);
 			w.kv("time", isoTime(now)).kv("messages_per_second", f.second.getAverage());
@@ -1081,7 +1104,7 @@ namespace Services
 	{
 		long long limit = 0;
 		if (!pageSize(request, limit))
-			return badLimit();
+			return badLimit(pageMax());
 		bool brief = false;
 		if (!viewBrief(request, brief))
 			return badView();
@@ -1092,7 +1115,7 @@ namespace Services
 			brief = true;
 		}
 		VesselQuery query;
-		query.shown = located(tracker, spec, stations());
+		query.shown = located(tracker, spec, stations()).allow(owner_station);
 		std::string carried = "&limit=" + std::to_string(limit);
 		for (const auto &p : request.params())
 		{
@@ -1113,6 +1136,15 @@ namespace Services
 		}
 		if (query.nearest && !query.circle)
 			return Response::problem(400, "Bad request", "sort=distance needs near.");
+		if (spec.area_only)
+		{
+			const std::string side = std::to_string(AREA_MAX_DEG) + " degrees a side";
+			if (!query.box || query.circle)
+				return Response::problem(400, "Bad request", "This server lists vessels within an area: give bbox=west,south,east,north, at most " + side + ".");
+			const float span = query.west <= query.east ? query.east - query.west : 360 - (query.west - query.east);
+			if (span > AREA_MAX_DEG || query.north - query.south > AREA_MAX_DEG)
+				return Response::problem(400, "Bad request", "bbox may span at most " + side + " here.");
+		}
 
 		DB &db = tracker.ships();
 		const std::time_t now = std::time(nullptr), shown = now - db.timeHistory();
@@ -1140,7 +1172,8 @@ namespace Services
 		// the rows of this page under one lock, written under the next: a ship
 		// gone between the two is left out, one changed is written as it is now
 		std::vector<Heard> rows;
-		db.forEachRecent(now, floor, [&](int, const Ship &s, long) {
+		const ShipSource::Box area = {query.west, query.south, query.east, query.north};
+		ships.forEachShip(now, floor, query.box ? &area : nullptr, [&](const Ship &s) {
 			if (!view.passes(s, now) || !query.passes(s, now))
 				return;
 			const Heard h{query.order(s), s.mmsi};
@@ -1174,13 +1207,13 @@ namespace Services
 				writeVessel(w, *s, now, db.binaryBadgeHeld(s->mmsi, now), rides, query.shown.of(*s));
 			count++;
 		});
-		const std::string next = more ? "/api/v1/vessels?cursor=" + cursor("v", {(long long)start, (long long)floor, (long long)rows.back().time, (long long)rows.back().id}) + carried : "";
+		const std::string next = more ? href("/api/v1/vessels") + "?cursor=" + cursor("v", {(long long)start, (long long)floor, (long long)rows.back().time, (long long)rows.back().id}) + carried : "";
 		beginMeta(w, count, next);
 		w.kv("more", left);
 		if (brief)
-			w.kv("note", std::string("Short rows, ") + (query.nearest ? "nearest" : "newest") + " first. " + (more ? std::to_string(left) + " more: pass next as cursor, or narrow the search. " : "") + (count == 0 && query.circle ? "None in this radius: widen radius_nm, up to 1000. " : "") + (spec.limited ? "One vessel in full: /api/v1/vessels/{mmsi}." : "Every field: view=full, or ask for the one vessel."));
+			w.kv("note", std::string("Short rows, ") + (query.nearest ? "nearest" : "newest") + " first. " + (more ? std::to_string(left) + " more: pass next as cursor, " + (spec.limited ? "raise limit (one call per 25 rows) " : "") + "or narrow the search. " : "") + (count == 0 && query.circle ? "None in this radius: widen radius_nm, up to 1000. " : "") + (spec.limited ? "One vessel in full: " + href("/api/v1/vessels/{mmsi}") + "." : std::string("Every field: view=full, or ask for the one vessel.")));
 		// a second of overlap, as messages share a second
-		w.kv("poll", "/api/v1/vessels?cursor=" + cursor("v", {(long long)start - 1}) + carried)
+		w.kv("poll", href("/api/v1/vessels") + "?cursor=" + cursor("v", {(long long)start - 1}) + carried)
 			.kv("full", full).kv("time", isoTime(now)).kv("expire_s", db.timeHistory()).endObject().endObject();
 		w.finish();
 		return Response::json(out);
@@ -1195,7 +1228,7 @@ namespace Services
 		if (!known)
 			return Response::problem(404, "Not found", "No vessel " + std::to_string(mmsi) + " is known.");
 		const auto aboard = tracker.riding();
-		const Located shown = located(tracker, spec, stations());
+		const Located shown = located(tracker, spec, stations()).allow(owner_station);
 
 		// the parts kept beside the ship's record, each read under its own lock
 		std::vector<StaticStore::Entry> changes;
@@ -1379,7 +1412,7 @@ namespace Services
 	{
 		long long limit = 0;
 		if (!pageSize(request, limit))
-			return badLimit();
+			return badLimit(pageMax());
 		const std::string type = request.param("type");
 		PlaceKind kind = PlaceKind::Port;
 		if (!type.empty() && !PlaceMetadata::parseKind(type, kind))
@@ -1431,7 +1464,7 @@ namespace Services
 		}
 		std::string next;
 		if (more)
-			next = "/api/v1/places?cursor=p_" + rows.back().second->metadata->uuid + "&limit=" + std::to_string(limit) +
+			next = href("/api/v1/places") + "?cursor=p_" + rows.back().second->metadata->uuid + "&limit=" + std::to_string(limit) +
 				   (type.empty() ? "" : "&type=" + urlEncode(type)) + (q.empty() ? "" : "&q=" + urlEncode(q));
 		endList(w, rows.size(), next);
 		w.finish();
@@ -1490,7 +1523,7 @@ namespace Services
 	{
 		long long limit = 0;
 		if (!pageSize(request, limit))
-			return badLimit();
+			return badLimit(pageMax());
 		std::vector<long long> c;
 		const std::string from = request.param("cursor");
 		if (!from.empty() && !parseCursor(from, "in", 1, c))
@@ -1523,7 +1556,7 @@ namespace Services
 		beginList(w);
 		for (const auto &r : rows)
 			w.raw_val(r.second);
-		const std::string next = more ? "/api/v1/places/" + urlEncode(uuid) + "/vessels?cursor=" + cursor("in", {(long long)rows.back().first}) + "&limit=" + std::to_string(limit) : "";
+		const std::string next = more ? href("/api/v1/places/") + urlEncode(uuid) + "/vessels?cursor=" + cursor("in", {(long long)rows.back().first}) + "&limit=" + std::to_string(limit) : "";
 		endList(w, rows.size(), next);
 		w.finish();
 		return Response::json(out);
@@ -1536,7 +1569,7 @@ namespace Services
 		if (!request.integer("hours", hours, 24, 1, 30 * 24))
 			return Response::problem(400, "Bad request", "hours must be between 1 and 720.");
 		if (!pageSize(request, limit))
-			return badLimit();
+			return badLimit(pageMax());
 		std::vector<long long> c;
 		const std::string from = request.param("cursor");
 		if (!from.empty() && !parseCursor(from, "vis", 2, c))
@@ -1579,7 +1612,7 @@ namespace Services
 			writeVisit(w, r.v, *e);
 			w.endObject();
 		}
-		const std::string next = more ? "/api/v1/places/" + urlEncode(uuid) + "/visits?cursor=" + cursor("vis", {(long long)rows.back().key.time, (long long)rows.back().key.id}) +
+		const std::string next = more ? href("/api/v1/places/") + urlEncode(uuid) + "/visits?cursor=" + cursor("vis", {(long long)rows.back().key.time, (long long)rows.back().key.id}) +
 											"&hours=" + std::to_string(hours) + "&limit=" + std::to_string(limit)
 									  : "";
 		endList(w, rows.size(), next);
@@ -1604,7 +1637,7 @@ namespace Services
 			return refusal;
 		long long limit = 0;
 		if (!pageSize(request, limit))
-			return badLimit();
+			return badLimit(pageMax());
 		const std::time_t now = std::time(nullptr);
 		std::time_t start = now, floor = 0;
 		Heard after{0, 0};
@@ -1623,7 +1656,7 @@ namespace Services
 			return badCursor();
 
 		std::vector<Heard> rows;
-		const Located shown = located(tracker, spec, stations());
+		const Located shown = located(tracker, spec, stations()).allow(owner_station);
 		tracker.planes().forEachAircraft(floor, [&](const Plane::ADSB &p, std::time_t heard) {
 			const Heard h{heard, (uint32_t)(p.hexident & 0xFFFFFF)};
 			if (!paging || after < h)
@@ -1657,9 +1690,9 @@ namespace Services
 				count++;
 			}
 		const std::string tail = "&limit=" + std::to_string(limit);
-		const std::string next = more ? "/api/v1/aircraft?cursor=" + cursor("a", {(long long)start, (long long)floor, (long long)rows.back().time, (long long)rows.back().id}) + tail : "";
+		const std::string next = more ? href("/api/v1/aircraft") + "?cursor=" + cursor("a", {(long long)start, (long long)floor, (long long)rows.back().time, (long long)rows.back().id}) + tail : "";
 		beginMeta(w, count, next);
-		w.kv("poll", "/api/v1/aircraft?cursor=" + cursor("a", {(long long)start - 1}) + tail).kv("time", isoTime(now)).endObject().endObject();
+		w.kv("poll", href("/api/v1/aircraft") + "?cursor=" + cursor("a", {(long long)start - 1}) + tail).kv("time", isoTime(now)).endObject().endObject();
 		w.finish();
 		return Response::json(out);
 	}
@@ -1670,7 +1703,7 @@ namespace Services
 		if (!aircraftShown(refusal))
 			return refusal;
 		const std::time_t now = std::time(nullptr);
-		const Located shown = located(tracker, spec, stations());
+		const Located shown = located(tracker, spec, stations()).allow(owner_station);
 		std::string out;
 		tracker.planes().forEachAircraft(0, [&](const Plane::ADSB &p, std::time_t heard) {
 			if (out.empty() && (p.hexident & 0xFFFFFF) == icao)
@@ -1691,7 +1724,7 @@ namespace Services
 	{
 		// the installation's own events are the system's to tell, and a ship's
 		// only when the server shows the ship
-		return pageEvents(request, tracker.journal(), "/api/v1/events", [this](const Journal::Entry &e) {
+		return pageEvents(request, tracker.journal(), href("/api/v1/events"), [this](const Journal::Entry &e) {
 			return e.event.kind != Tracking::Kind::SYSTEM && shows(e.event.from);
 		}, pageMax());
 	}

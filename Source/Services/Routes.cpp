@@ -104,7 +104,7 @@ namespace Services
 
 		std::vector<Route> make()
 		{
-			const Param LIMIT = query("limit", integer(1, 1000, 100), "Rows on a page: 25 at most on a limited server");
+			const Param LIMIT = query("limit", integer(1, 1000, 100), "Rows on a page. A limited server gives 25 unless asked for more, 250 at most; every 25 rows of a page count as one call, and a page larger than the hour has left is cut to what is left");
 			const Param CURSOR = query("cursor", TEXT, "What meta.next or meta.poll gave; without one a listing starts");
 			const Param VIEW = query("view", oneOf({"brief", "full"}) + ",\"default\":\"full\"", "brief answers a short form with only the main fields, and says how to get the rest; a limited server answers short rows and refuses full");
 			const Param EVENT_CURSOR = query("cursor", TEXT, "An event's id, or what meta.next or meta.poll gave: the events after it. Without one, the newest page");
@@ -597,12 +597,15 @@ namespace Services
 		return nullptr;
 	}
 
-	void writeOpenAPI(JSON::Writer &w, const std::vector<std::string> &services)
+	void writeOpenAPI(JSON::Writer &w, const std::vector<std::string> &services, const std::string &public_url,
+					  const std::function<bool(const char *)> &offered_path)
 	{
 		const auto offered = [&](const char *s) { return std::find(services.begin(), services.end(), s) != services.end(); };
 		w.beginObject().kv("openapi", "3.1.0")
-			.key("info").beginObject().kv("title", "AIS-catcher").kv("version", VERSION).kv("description", DESCRIPTION).endObject()
-			.key("tags").beginArray();
+			.key("info").beginObject().kv("title", "AIS-catcher").kv("version", VERSION).kv("description", DESCRIPTION).endObject();
+		if (!public_url.empty())
+			w.key("servers").beginArray().beginObject().kv("url", public_url).endObject().endArray();
+		w.key("tags").beginArray();
 		for (const auto &t : TAGS)
 			w.beginObject().kv("name", t[0]).kv("description", t[1]).endObject();
 		w.endArray()
@@ -610,7 +613,7 @@ namespace Services
 			.key("paths").beginObject();
 		for (const auto &r : routes())
 		{
-			if (!offered(r.service))
+			if (!offered(r.service) || (offered_path && !offered_path(r.path)))
 				continue;
 			w.key(r.path).beginObject().key("get").beginObject().kv("operationId", r.id).key("tags").beginArray().val(r.tag).endArray().kv("summary", r.summary);
 			if (!r.params.empty())

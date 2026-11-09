@@ -39,6 +39,13 @@ namespace Services
 			return it == station.end() ? own : it->second;
 		}
 		bool of(const Ship &s) const { return at(s.heard[0].last ? s.heard[0].station : 0); }
+		// one more station shown, to its owner
+		Located &allow(int id)
+		{
+			if (id >= 0)
+				station[id] = true;
+			return *this;
+		}
 		// these stations, or every one when none is named
 		bool all(const std::vector<int> &ids) const
 		{
@@ -59,7 +66,7 @@ namespace Services
 		// whether the range figures of these stations stay home: one of them kept home, and a
 		// range measured at all
 		bool hidesRange(const std::vector<int> &ids, float max_distance) const { return max_distance > 0 && !all(ids); }
-		// as a station list says it, in each station's share_loc
+		// as each station's own share_loc says: for a reader without a server
 		static Located from(const StationRegistry &stations, bool own)
 		{
 			Located l;

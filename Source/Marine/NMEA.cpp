@@ -662,6 +662,7 @@ namespace AIS
 					topic = &p.Get().getString();
 					break;
 				case AIS::KEY_STATION:
+				case AIS::KEY_API_KEY:
 					if (p.Get().isObject())
 						payload = &p.Get().getObject();
 					break;
@@ -718,10 +719,11 @@ namespace AIS
 					Info() << "[" << driver << "]: " << text;
 			}
 
-			if (topic && payload && uuid_match && *topic == "station")
+			// a control line: the topic names the object beside it, a station or a key
+			if (topic && payload && uuid_match && (*topic == "station" || *topic == "key"))
 			{
 				Control ctl;
-				ctl.topic = AIS::KEY_STATION;
+				ctl.topic = *topic == "station" ? AIS::KEY_STATION : AIS::KEY_API_KEY;
 				ctl.payload = payload;
 				outControl.Send(&ctl, 1, tag);
 			}

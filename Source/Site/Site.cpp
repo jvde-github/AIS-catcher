@@ -47,25 +47,6 @@ void Site::publishStations(const StationRegistry &resolved)
 #endif
 }
 
-StationRegistry Site::stationsFor(int share) const
-{
-	StationRegistry out;
-	for (const auto &s : stationsSnapshot().ordered())
-	{
-		StationRegistry::Station copy = s;
-		copy.share_loc = share < 0 ? s.share_loc : share > 0;
-		if (!copy.share_loc)
-		{
-			copy.lat = LAT_UNDEFINED;
-			copy.lon = LON_UNDEFINED;
-			copy.alt = ALTITUDE_UNDEFINED;
-			copy.mmsi = 0;
-		}
-		out.define(copy);
-	}
-	return out;
-}
-
 bool Site::resetEngine(const EngineFacts &facts, bool running)
 {
 	std::lock_guard<std::mutex> lock(engine_mtx);
@@ -434,17 +415,21 @@ void Site::configureServers(const SiteConfig &cfg)
 	// and before any new one is made, so two never share the memory.
 	const bool fed = engineAttached();
 	for (auto &o : own)
+	{
 		o->retired = true;
+		o->ports.clear();
+	}
 	std::vector<const ServerSpec *> wanted;
 	for (const auto &spec : cfg.servers)
 	{
 		if (!spec.tracking.own)
 			continue;
 		Own *o = ownFor(spec);
-		if (o && (fed || o->spec == spec.tracking))
+		if (o && (fed || spec.tracking.reads(o->spec)))
 		{
 			o->retired = false;
-			o->tracker->setRestartRequired("Own ships (service restart)", o->spec != spec.tracking);
+			o->ports.insert(spec.port);
+			o->tracker->setRestartRequired("Own ships (service restart)", !spec.tracking.reads(o->spec));
 			continue;
 		}
 		wanted.push_back(&spec);
@@ -478,7 +463,16 @@ void Site::configureServers(const SiteConfig &cfg)
 		dropRetired();
 	for (const ServerSpec *spec : wanted)
 	{
+		// a server with the filter of one just made, and no way of its own to keep the ships, reads that one
+		Own *o = ownFor(*spec);
+		if (o && !o->retired && spec->tracking.reads(o->spec))
+		{
+			o->ports.insert(spec->port);
+			Info() << "Server on port " << spec->port << ": the ships of port " << o->port;
+			continue;
+		}
 		own.push_back(makeOwn(*spec, cfg));
+		own.back()->ports.insert(spec->port);
 		if (fed)
 			own.back()->tracker->setRestartRequired("Own ships (service restart)", true);
 	}
@@ -491,7 +485,7 @@ void Site::configureServers(const SiteConfig &cfg)
 			continue;
 		}
 		std::unique_ptr<Services::Server> s(new Services::Server(cfg.servers[i], *trackerOf(cfg.servers[i]),
-																 [this](const ServerSpec &of) { return stationsFor(of.share_loc); },
+																 [this](const ServerSpec &) { return stationsSnapshot(); },
 																 [this](JSON::Writer &w, EnginePart part) { writeEngine(w, part); },
 																 [this] { return systemFacts(); }));
 		if (s->open())
@@ -514,7 +508,7 @@ void Site::configureDeliveries(const SiteConfig &cfg)
 	if (tracker_ && (cfg.mqtt_state.any() || mqtt_state))
 	{
 		if (!mqtt_state)
-			mqtt_state.reset(new MqttState(*tracker_, [this] { return systemFacts(); }, [this] { return publicStations(); }));
+			mqtt_state.reset(new MqttState(*tracker_, [this] { return systemFacts(); }, [this] { return stationsSnapshot(); }));
 		mqtt_state->configure(cfg.mqtt_state);
 	}
 	events_wanted = mqtt_state && cfg.mqtt_state.any();
@@ -627,7 +621,10 @@ bool Site::engineAttached()
 Site::Own *Site::ownFor(const ServerSpec &spec)
 {
 	for (auto &o : own)
-		if (o->port == spec.port)
+		if (!o->retired && spec.tracking.reads(o->spec))
+			return o.get();
+	for (auto &o : own)
+		if (o->ports.count(spec.port) || o->port == spec.port)
 			return o.get();
 	return nullptr;
 }
