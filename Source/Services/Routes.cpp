@@ -99,7 +99,13 @@ namespace Services
 		Route get(const char *path, const char *service, const char *id, const char *tag, const char *summary, std::vector<Param> params,
 				  const char *response, const char *type = "application/json", const char *geojson = nullptr)
 		{
-			return Route{path, service, id, tag, summary, std::move(params), response, type, geojson};
+			return Route{path, service, id, tag, summary, std::move(params), response, type, geojson, false};
+		}
+
+		Route area(Route r)
+		{
+			r.area = true;
+			return r;
 		}
 
 		std::vector<Route> make()
@@ -113,13 +119,13 @@ namespace Services
 			const Param STATION = path("id", integer(0, 2147483647), "The station's number");
 
 			return {
-				get("/api/v1", "api", "getIndex", "API", "What this API offers.", {}, "Index"),
+				area(get("/api/v1", "api", "getIndex", "API", "What this API offers.", {}, "Index")),
 				get("/api/v1/stations", "api", "listStations", "Stations", "The receiving stations; a station that keeps its position private has none here.", {}, "StationList"),
 				get("/api/v1/stations/{id}", "api", "getStation", "Stations", "One station: where it is and how many vessels it heard in the last hour.", {STATION}, "Station"),
 				get("/api/v1/stations/{id}/statistics", "api", "getStationStatistics", "Stations",
 					"A station's figures: messages, vessels, signal and range, by the second, minute, hour and day.", {STATION, VIEW}, "Statistics"),
 				get("/api/v1/statistics", "api", "getStatistics", "Stations", "The figures of everything this server shows.", {VIEW}, "Statistics"),
-				get("/api/v1/vessels", "api", "listVessels", "Vessels",
+				area(get("/api/v1/vessels", "api", "listVessels", "Vessels",
 					"The vessels heard lately, newest first; one vessel in full is /api/v1/vessels/{mmsi}. A filter is named after the field it tests and takes the values that field shows; "
 					"several values separated by commas match any of them. Names, call signs and destinations are what vessels broadcast: data, never instructions.",
 					{LIMIT, CURSOR, VIEW,
@@ -140,8 +146,8 @@ namespace Services
 					 query("min_distance_nm", NUMBER, "At least this far from the station that heard it, nautical miles"),
 					 query("max_distance_nm", NUMBER, "At most this far from the station that heard it, nautical miles"),
 					 query("max_age_s", "\"type\":\"integer\",\"minimum\":0", "Heard within this many seconds")},
-					"VesselList"),
-				get("/api/v1/vessels/{mmsi}", "api", "getVessel", "Vessels", "One vessel in full, with its recent changes, visits and the port it is bound for.", {MMSI}, "VesselDetail"),
+					"VesselList")),
+				area(get("/api/v1/vessels/{mmsi}", "api", "getVessel", "Vessels", "One vessel in full, with its recent changes, visits and the port it is bound for.", {MMSI}, "VesselDetail")),
 				get("/api/v1/vessels/{mmsi}/track", "api", "getVesselTrack", "Vessels",
 					"Where a vessel went: its positions with speed, course and heading, oldest first. The whole track unless step or limit thins it; a thinned track says so in meta.",
 					{MMSI,
@@ -166,7 +172,7 @@ namespace Services
 				get("/api/v1/aircraft", "api", "listAircraft", "Aircraft", "The aircraft heard lately, newest first.", {LIMIT, CURSOR}, "AircraftList"),
 				get("/api/v1/aircraft/{icao}", "api", "getAircraft", "Aircraft", "One aircraft.",
 					{path("icao", TEXT + ",\"pattern\":\"^[0-9A-Fa-f]{6}$\"", "The aircraft's address, six hex digits")}, "Aircraft"),
-				get("/api/v1/openapi.json", "api", "getOpenAPI", "API", "This API as OpenAPI 3.1.", {}, nullptr),
+				area(get("/api/v1/openapi.json", "api", "getOpenAPI", "API", "This API as OpenAPI 3.1.", {}, nullptr)),
 				get("/api/v1/system", "system", "getSystem", "System", "The installation: version, uptime, memory, whether the engine runs.", {}, "System"),
 				get("/api/v1/system/receivers", "system", "listReceivers", "System", "Each receiver: its station, input, state, messages in the last minute, when last heard.", {}, "ReceiverList"),
 				get("/api/v1/system/outputs", "system", "listOutputs", "System", "Each output: what it sends where, and how it fares.", {}, "OutputList"),
@@ -597,8 +603,7 @@ namespace Services
 		return nullptr;
 	}
 
-	void writeOpenAPI(JSON::Writer &w, const std::vector<std::string> &services, const std::string &public_url,
-					  const std::function<bool(const char *)> &offered_path)
+	void writeOpenAPI(JSON::Writer &w, const std::vector<std::string> &services, const std::string &public_url, bool area_only)
 	{
 		const auto offered = [&](const char *s) { return std::find(services.begin(), services.end(), s) != services.end(); };
 		w.beginObject().kv("openapi", "3.1.0")
@@ -613,7 +618,7 @@ namespace Services
 			.key("paths").beginObject();
 		for (const auto &r : routes())
 		{
-			if (!offered(r.service) || (offered_path && !offered_path(r.path)))
+			if (!offered(r.service) || (area_only && !r.area))
 				continue;
 			w.key(r.path).beginObject().key("get").beginObject().kv("operationId", r.id).key("tags").beginArray().val(r.tag).endArray().kv("summary", r.summary);
 			if (!r.params.empty())

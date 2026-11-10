@@ -309,6 +309,7 @@ namespace Services
 			call.method = "GET";
 			call.path = tool->route;
 			call.owner = request.owner;
+			call.station = request.station;
 			std::string bad, asked;
 			if (args && args->isObject())
 				for (const auto &a : args->getObject().getMembers())

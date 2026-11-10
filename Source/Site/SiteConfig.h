@@ -73,12 +73,10 @@ struct ApiKey
 	int station = -1;
 	// data calls an hour, 0 for no limit
 	int calls_hour = 0;
-	// a key made but not yet approved answers nothing
-	bool active = true;
 
 	bool operator==(const ApiKey &o) const
 	{
-		return name == o.name && sha256 == o.sha256 && scopes == o.scopes && station == o.station && calls_hour == o.calls_hour && active == o.active;
+		return name == o.name && sha256 == o.sha256 && scopes == o.scopes && station == o.station && calls_hour == o.calls_hour;
 	}
 };
 

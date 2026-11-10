@@ -52,28 +52,6 @@ namespace Services
 		return Util::Parse::QueryParam(query, name);
 	}
 
-	void Request::setParam(const std::string &name, const std::string &value)
-	{
-		std::string out;
-		bool set = false;
-		std::size_t start = 0;
-		while (start <= query.size())
-		{
-			const std::size_t end = query.find('&', start);
-			std::string part = query.substr(start, end == std::string::npos ? std::string::npos : end - start);
-			if (part == name || part.compare(0, name.size() + 1, name + "=") == 0)
-				part = name + "=" + value, set = true;
-			if (!part.empty())
-				out += (out.empty() ? "" : "&") + part;
-			if (end == std::string::npos)
-				break;
-			start = end + 1;
-		}
-		if (!set)
-			out += (out.empty() ? "" : "&") + name + "=" + value;
-		query = out;
-	}
-
 	std::vector<std::pair<std::string, std::string>> Request::params() const
 	{
 		return Util::Parse::Query(query);
