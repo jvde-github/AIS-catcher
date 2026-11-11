@@ -145,6 +145,7 @@ namespace AIS
 		DSP::DownsampleMovingAverage DS_MA;
 		// fixed point downsamplers
 		DSP::Downsample16_CU8 DS16_CU8;
+		DSP::Downsample16_CU8_Exact DS16_CU8_Exact;
 
 		Util::ConvertRAW convert;
 
