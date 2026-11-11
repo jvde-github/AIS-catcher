@@ -220,21 +220,26 @@ namespace AIS
 
 				// 2^4
 			case 1536000:
-			{
 				FDC.setTaps(-1.2f);
-				if (droop_compensation)
-					FDC >> ROT;
-				StreamIn<CFLOAT32> &next = droop_compensation ? static_cast<StreamIn<CFLOAT32> &>(FDC) : ROT;
-
+				if (!droop_compensation)
+				{
+					convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> ROT;
+					DS16_CU8 >> ROT;
+					DS16_CU8_Exact >> ROT;
+				}
+				else
+				{
+					convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> FDC >> ROT;
+					DS16_CU8 >> FDC;
+					DS16_CU8_Exact >> FDC;
+				}
 				// unsigned 8-bit samples through integers: exact on 64-bit, packed on 32-bit when asked for.
-				// The converter sends such a block here alone, and any other format through the floats.
+				// The converter sends such a block there alone, and any other format through the floats.
 				if (sizeof(void *) == 8)
-					convert.outCU8 >> DS16_CU8_Exact >> next;
+					convert.outCU8 >> DS16_CU8_Exact;
 				else if (fixedpointDS)
-					convert.outCU8 >> DS16_CU8 >> next;
-				convert >> DS2_4 >> DS2_3 >> DS2_2 >> DS2_1 >> next;
+					convert.outCU8 >> DS16_CU8;
 				break;
-			}
 			case 1536000 - 1:
 				FDC.setTaps(-1.2f);
 				if (!droop_compensation)
