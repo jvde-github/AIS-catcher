@@ -18,6 +18,7 @@
 #pragma once
 
 #include <assert.h>
+#include <cstring>
 #ifdef HASSOXR
 #include <soxr.h>
 #endif
@@ -399,32 +400,7 @@ namespace DSP
 	public:
 		int Run(uint32_t *, int, int);
 		int Run(uint8_t *, uint32_t *, int, int);
-		int Run(int8_t *, uint32_t *, int, int);
 		int Run(uint32_t *, CFLOAT32 *, int, int);
-	};
-
-	class Downsample32_CU8 : public SimpleStreamInOut<CU8, CFLOAT32>
-	{
-		std::vector<CFLOAT32> output;
-		std::vector<uint32_t> buffer;
-
-		DS_UINT16 DS1, DS2, DS3, DS4, DS5;
-
-	public:
-		virtual ~Downsample32_CU8() {}
-		void Receive(const CU8 *data, int len, TAG &tag);
-	};
-
-	class Downsample32_CS8 : public SimpleStreamInOut<CS8, CFLOAT32>
-	{
-		std::vector<CFLOAT32> output;
-		std::vector<uint32_t> buffer;
-
-		DS_UINT16 DS1, DS2, DS3, DS4, DS5;
-
-	public:
-		virtual ~Downsample32_CS8() {}
-		void Receive(const CS8 *data, int len, TAG &tag);
 	};
 
 	class Downsample16_CU8 : public SimpleStreamInOut<CU8, CFLOAT32>
@@ -439,38 +415,48 @@ namespace DSP
 		void Receive(const CU8 *data, int len, TAG &tag);
 	};
 
-	class Downsample16_CS8 : public SimpleStreamInOut<CS8, CFLOAT32>
+	// Decimation by 2 with the taps 1 5 10 10 5 1 over I, Q, I, Q. An output needs six inputs and
+	// nothing of the output before it, so the compiler takes many at a time. Each stage is 5 bits
+	// wider than its input.
+	template <typename TI, typename TO>
+	class SixTap
 	{
-		std::vector<CFLOAT32> output;
-		std::vector<uint32_t> buffer;
-
-		DS_UINT16 DS1, DS2, DS3, DS4;
+		std::vector<TI> buf = std::vector<TI>(10); // the five samples before the block, then the block
 
 	public:
-		void Receive(const CS8 *data, int len, TAG &tag);
+		TI *input(int len)
+		{
+			if ((int)buf.size() < 10 + 2 * len)
+				buf.resize(10 + 2 * len);
+			return buf.data() + 10;
+		}
+		int Run(TO *__restrict out, int len)
+		{
+			const TI *__restrict in = buf.data() + 10;
+			for (int j = 0; j < len / 2; j++)
+			{
+				const TI *p = in + 4 * j;
+				out[2 * j] = (TO)((TO)p[0] + (TO)p[-10]) + (TO)5 * (TO)((TO)p[-2] + (TO)p[-8]) + (TO)10 * (TO)((TO)p[-4] + (TO)p[-6]);
+				out[2 * j + 1] = (TO)((TO)p[1] + (TO)p[-9]) + (TO)5 * (TO)((TO)p[-1] + (TO)p[-7]) + (TO)10 * (TO)((TO)p[-3] + (TO)p[-5]);
+			}
+			memmove(buf.data(), buf.data() + 2 * len, 10 * sizeof(TI));
+			return len / 2;
+		}
 	};
 
-	class Downsample8_CU8 : public SimpleStreamInOut<CU8, CFLOAT32>
+	// 8 bits in and 5 a stage: 28 bits, exact in 32, scaled once at the end
+	class Downsample16_CU8_Exact : public SimpleStreamInOut<CU8, CFLOAT32>
 	{
 		std::vector<CFLOAT32> output;
-		std::vector<uint32_t> buffer;
+		std::vector<uint32_t> sum;
 
-		DS_UINT16 DS1, DS2, DS3;
+		SixTap<uint8_t, uint16_t> DS1;
+		SixTap<uint16_t, uint32_t> DS2;
+		SixTap<uint32_t, uint32_t> DS3, DS4;
 
 	public:
-		virtual ~Downsample8_CU8() {}
+		virtual ~Downsample16_CU8_Exact() {}
 		void Receive(const CU8 *data, int len, TAG &tag);
 	};
 
-	class Downsample8_CS8 : public SimpleStreamInOut<CS8, CFLOAT32>
-	{
-		std::vector<CFLOAT32> output;
-		std::vector<uint32_t> buffer;
-
-		DS_UINT16 DS1, DS2, DS3;
-
-	public:
-		virtual ~Downsample8_CS8() {}
-		void Receive(const CS8 *data, int len, TAG &tag);
-	};
 }
