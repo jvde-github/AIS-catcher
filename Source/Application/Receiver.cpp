@@ -113,18 +113,6 @@ void Receiver::setTags(const std::string &s)
 	}
 }
 
-void Receiver::removeTags(const std::string &s)
-{
-	for (char c : s)
-	{
-		const int bit = tagBit(c);
-		if (bit)
-			tag.mode &= ~bit;
-		else
-			throw std::runtime_error("illegal tag '" + std::string(1, c) + "' defined on command line [D / T / M]");
-	}
-}
-
 std::string Receiver::tagString() const
 {
 	return std::string(tag.mode & tagBit('D') ? "D" : "") + (tag.mode & tagBit('T') ? "T" : "") + (tag.mode & tagBit('M') ? "M" : "");
@@ -249,14 +237,12 @@ AIS::Model &Receiver::addModel(int m, const std::vector<std::string> &zones)
 	decoders.push_back(Decoder());
 	Decoder &d = decoders.back();
 	d.model.reset(makeModel(m));
-	d.id = m;
 	d.zones = zones;
 	return *d.model;
 }
 
-void Receiver::setupModel(int &group, int idx)
+void Receiver::setupModel(std::mutex *delivery)
 {
-	receiver_index = idx;
 	auto *device = deviceManager.getDevice();
 	// if nothing defined, create one model
 	if (!decoders.size())
@@ -282,16 +268,22 @@ void Receiver::setupModel(int &group, int idx)
 		m->setDesignation(channel_nmea);
 		m->setMode(channel_mode);
 		m->setOwnMMSI(own_mmsi);
+		m->setDeliveryLock(delivery);
 		m->buildModel(channel_nmea[0], channel_nmea[1], device->getSampleRate(), timing_, device);
 	}
 
-	// set up JSON output channels, still unconnected
+	// the JSON output channels and the counters, still unconnected
 	for (auto &d : decoders)
+	{
 		d.json.reset(new AIS::JSONAIS());
+		d.counter.reset(new IO::StreamCounter());
+	}
+}
 
-	// assign the output of each individual model to a separate group; bits 0-30
-	// only, as group masks pass through Parse::Integer (long, 32-bit on Windows)
-	// where bit 31 would overflow
+void Receiver::number(int idx, int &group)
+{
+	receiver_index = idx;
+	// each model's output is a group of its own; bits 0-30 only, Parse::Integer is 32-bit on Windows
 	if (group + (int)decoders.size() >= 32)
 		throw std::runtime_error("Receiver: too many models/receivers, group bit limit exceeded.");
 
@@ -305,13 +297,16 @@ void Receiver::setupModel(int &group, int idx)
 	}
 }
 
-void Receiver::connectCounters()
+void Receiver::unwire()
 {
 	for (auto &d : decoders)
-		d.counter.reset(new IO::StreamCounter());
-
-	for (auto &d : decoders)
 	{
+		d.model->Output().out.clear();
+		d.model->OutputGPS().out.clear();
+		d.model->OutputControl().out.clear();
+		d.model->OutputADSB().out.clear();
+		d.json->out.clear();
+		d.json_linked = false;
 		d.model->Output().out.Connect((StreamIn<AIS::Message> *)d.counter.get());
 		d.model->OutputADSB().out.Connect((StreamIn<Plane::ADSB> *)d.counter.get());
 	}
@@ -325,17 +320,19 @@ uint64_t Receiver::messages()
 	return count;
 }
 
-void Receiver::play()
+void Receiver::linkJSON()
 {
-
-	// connect the JSON output where and if needed
 	for (auto &d : decoders)
-	{
-		if (d.json->out.isConnected())
+		if (!d.json_linked && d.json->out.isConnected())
 		{
 			d.model->Output() >> *d.json;
+			d.json_linked = true;
 		}
-	}
+}
+
+void Receiver::play()
+{
+	linkJSON();
 
 	auto *device = deviceManager.getDevice();
 	device->Play();

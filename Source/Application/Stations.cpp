@@ -75,7 +75,7 @@ namespace Stations
 		return s;
 	}
 
-	void resolve(StationRegistry &stations, const StationDefaults &defaults, const Receivers &receivers, Site *site)
+	void resolve(StationRegistry stations, const StationDefaults &defaults, const Receivers &receivers, Site &site, bool tell)
 	{
 		bool configured = false;
 		stations.forEach([&](const StationRegistry::Station &) { configured = true; });
@@ -95,7 +95,7 @@ namespace Stations
 			StationRegistry::Station s = *found;
 			if (isValidCoord(s.lat, s.lon))
 			{
-				if (r.hasPosition() && (r.getLat() != s.lat || r.getLon() != s.lon))
+				if (tell && r.hasPosition() && (r.getLat() != s.lat || r.getLon() != s.lon))
 					Warning() << "Receiver " << k + 1 << ": the position of station " << id
 							  << " is used, not the receiver's own";
 			}
@@ -108,8 +108,8 @@ namespace Stations
 			r.placeAtStation(s.lat, s.lon, configured);
 		}
 		countInputs(stations, receivers);
-		site->publishStations(stations);
-		if (receivers.size() < 2 && !configured)
+		site.publishStations(stations);
+		if (!tell || (receivers.size() < 2 && !configured))
 			return;
 		for (std::size_t k = 0; k < receivers.size(); k++)
 		{
@@ -118,35 +118,6 @@ namespace Stations
 			Info() << "Receiver " << k + 1 << " (" << receiverLabel(receivers, k) << "): station "
 				   << r.getStation() << (s && !s->name.empty() ? " \"" + s->name + "\"" : std::string()) << (r.hasPosition() ? "" : ", no position");
 		}
-	}
-
-	void refresh(StationRegistry &stations, const StationRegistry &configured, const Receivers &receivers, Site *site)
-	{
-		const auto named = [&](int id) {
-			for (const auto &r : receivers)
-				if (r->getStation() == id)
-					return true;
-			return false;
-		};
-		StationRegistry next;
-		for (auto s : configured.ordered())
-		{
-			// a configured station without a position keeps the one its receiver gave it
-			const StationRegistry::Station *had = stations.find(s.id);
-			if (!isValidCoord(s.lat, s.lon) && had)
-			{
-				s.lat = had->lat;
-				s.lon = had->lon;
-			}
-			next.define(s);
-		}
-		for (const auto &s : stations.ordered())
-			if (!configured.find(s.id) && named(s.id))
-				next.define(s);
-		stations = next;
-		countInputs(stations, receivers);
-		if (site)
-			site->publishStations(stations);
 	}
 
 	void validate(const StationRegistry &stations, const Receivers &receivers)

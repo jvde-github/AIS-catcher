@@ -18,7 +18,6 @@
 #pragma once
 
 #include <atomic>
-#include <condition_variable>
 #include <ctime>
 #include <functional>
 #include <memory>
@@ -49,25 +48,17 @@ public:
 	}
 };
 
+// The configuration file as the panel edits it, and what the panel offers beside it.
 class ControlCore
 {
 public:
-	enum class EngineState
-	{
-		Stopped,
-		Running
-	};
-
 	ControlCore(const std::string &config_file, int port_override = 0,
 				const std::string &bind = "127.0.0.1");
 	~ControlCore();
 
-	void startEngine();
-	void stopEngine();
-	void restartEngine();
-
-	EngineState getEngineState();
-	long long getUptime();
+	// the engine's switch as the file has it, and written there
+	bool engineSwitch() const { return engine_switch; }
+	void keepEngineSwitch(bool on);
 
 	std::shared_ptr<PlaceCatalogue> getPlaces();
 	std::string placeSettings();
@@ -125,17 +116,6 @@ public:
 
 	static std::string randomHex(size_t length);
 
-	bool engineDesired();
-	bool engineRetrying();
-	uint32_t statusStamp();
-	void reportRunning();
-	void reportStopped();
-	void engineFailed();
-	void waitForCommand();
-
-	int consumeRetryDelay();
-	int commandSequence() { return command_seq; }
-
 	// bracket the managed loop's engine scope: no device rescans while active
 	void beginEngineSession()
 	{
@@ -164,27 +144,7 @@ private:
 	bool wizard_flag = false;
 
 	std::mutex mtx;
-	std::condition_variable cv;
-	bool desired = false;
-	bool restart_pending = false;
-	EngineState state = EngineState::Stopped;
-	std::time_t engine_start_time = 0;
-
-	static const int RETRY_DELAY_FIRST = 5;
-	static const int RETRY_DELAY_MAX = 60;
-	static const int RETRY_HEALTHY_UPTIME = 60;
-	bool auto_retry = false;
-	bool retry_pending = false;
-	int retry_delay = 0;
-
-	void resetRetry()
-	{
-		auto_retry = false;
-		retry_pending = false;
-		retry_delay = 0;
-	}
-	std::atomic<int> command_seq{0};
-	uint32_t status_epoch = 0;
+	bool engine_switch = false;
 
 	// kept alive rather than built per request: constructing one instantiates
 	// every device type, and some of those open their vendor API
@@ -197,7 +157,7 @@ private:
 	std::mutex place_mtx;
 	std::string place_directory;
 	bool place_enabled = false;
-	void refreshPlaces(const std::string &json);
+	void refreshPlaces(const JSON::JSON &root);
 	std::string defaultPlaceDirectory() const;
 	std::atomic<bool> config_dirty{false};
 	std::atomic<bool> viewer_serving{false};
@@ -205,9 +165,9 @@ private:
 	void createDefaultConfig();
 	void addMainDefaults();
 	void announceSetupCode();
-	void readManagedFields(const std::string &json);
+	JSON::Document load();
 	void applyAuthFields(const JSON::Value &control);
-	void refreshAuthFields(const std::string &json);
+	void adopt(const JSON::JSON &root);
 	bool validate(const std::string &json, std::string &error);
 	bool writeFileAtomic(const std::string &path, const std::string &content,
 						 std::string &error);
@@ -217,7 +177,6 @@ private:
 	bool mutateConfig(const char *what,
 					  const std::function<bool(JSON::Document &)> &fn,
 					  std::string *error = nullptr);
-	void persistEngineField(bool on);
 	bool allowedPaths(const JSON::JSON &saved, std::string &error);
 	static void removeAuth(JSON::JSON &control);
 	void putAuth(JSON::Document &doc);

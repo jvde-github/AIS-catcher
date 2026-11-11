@@ -1,5 +1,5 @@
-import { el, isActive } from './dom.js';
-import { ConfigStore } from './config-store.js';
+import { el, isActive, listOf } from './dom.js';
+import { App, ConfigStore } from './config-store.js';
 import { ConfigForm, plainLayout, rowsLayout } from './config-form.js';
 import { createServicesEditor, renderShows, servedKeys, readersOf, serverName, SERVICE_COLUMNS } from './services-editor.js';
 import { renderApiTester } from './api-tester.js';
@@ -29,7 +29,6 @@ const HOOKS_CONTAINER = 'svc-webhooks-container';
 // the pages the servers' host does not draw
 const OWN_PAGES = ['overview', 'ha', 'webhooks'];
 const withMain = list => (list.some(s => s && s.main === true) ? list : [{ main: true }, ...list]);
-const listOf = v => (Array.isArray(v) ? v : []);
 
 function showsText(view, choices, stationId) {
     const v = view && typeof view === 'object' ? view : {};
@@ -79,13 +78,12 @@ export function createServicesSection(pane, { select, follow, changed, stations,
         stations,
         viewerFields: MAP_FIELDS
     });
-    const ready = editor.load().catch(() => {});
     let loaded = false;
-    ready.then(() => {
+    const ready = editor.load().then(() => {
         loaded = true;
         show(current);
         changed();
-    });
+    }, e => App.notify('error', 'Could not read the services: ' + e.message));
 
     function serverPages() {
         return [
@@ -183,7 +181,7 @@ export function createServicesSection(pane, { select, follow, changed, stations,
     }
     function loadWebhooks() {
         const main = servicePage(hooksHost, 'Webhooks', 'Events posted as they happen.', DOCS.webhooks,
-            el('button', 'st-btn st-btn--sm', { type: 'button', text: '+ Add webhook', onClick: () => manager.addItem() }));
+            el('button', 'st-btn st-btn--sm', { type: 'button', text: '+ Add webhook', onClick: () => manager.loaded && manager.addItem() }));
         main.append(el('div', '', { id: HOOKS_CONTAINER }));
         const manager = new ConfigForm({ section: 'webhooks', list: true, schema: webhookSchema, containerId: HOOKS_CONTAINER, title: 'Webhook', layout: rowsLayout,
             essentials: new Set(['description', 'url', 'events']),
@@ -208,7 +206,7 @@ export function createServicesSection(pane, { select, follow, changed, stations,
     }
 
     function add() {
-        ready.then(() => select('srv' + editor.add()));
+        ready.then(() => { if (loaded) select('srv' + editor.add()); });
     }
 
     return {

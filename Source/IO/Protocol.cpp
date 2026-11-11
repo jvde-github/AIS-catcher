@@ -55,10 +55,6 @@ namespace Protocol
 {
 	const int ProtocolBase::SEND_STALL_MS;
 
-#ifdef HASOPENSSL
-	std::once_flag TLS::ssl_init_flag;
-#endif
-
 	void TCP::disconnect()
 	{
 		// closed first: a goodbye a layer sends from onDisconnect() has nowhere to go
@@ -85,8 +81,6 @@ namespace Protocol
 			Debug() << "TCP (" << host << ":" << port << "): Disconnected.";
 
 		sock = -1;
-		bytes_sent = 0;
-		bytes_received = 0;
 	}
 
 	struct addrinfo TCP::lookupHints()
@@ -282,9 +276,6 @@ namespace Protocol
 			stats->connected = true;
 		}
 
-		bytes_sent = 0;
-		bytes_received = 0;
-
 		onConnect();
 	}
 
@@ -401,7 +392,6 @@ namespace Protocol
 				int error_code = Net::lastError();
 				if (!Net::wouldBlock(error_code))
 				{
-					bytes_sent += total;
 					if (stats)
 						stats->bytes_out += total;
 					handleNetworkError("send", error_code);
@@ -411,7 +401,6 @@ namespace Protocol
 			break;
 		}
 
-		bytes_sent += total;
 		progress = total > 0;
 
 		if (stats)
@@ -497,8 +486,6 @@ namespace Protocol
 				break;
 		}
 
-		bytes_received += total_received;
-
 		if (stats)
 			stats->bytes_in += total_received;
 
@@ -508,25 +495,6 @@ namespace Protocol
 #ifdef HASOPENSSL
 
 	const int TLS::HANDSHAKE_TIME;
-
-	// Initialize OpenSSL library exactly once (thread-safe)
-	// Note: OpenSSL 1.1.0+ handles initialization automatically.
-	// No cleanup needed - OS handles it at process exit.
-	void TLS::initializeSSL()
-	{
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-
-		std::call_once(ssl_init_flag, []()
-					   {
-						   // OpenSSL < 1.1.0 requires manual initialization
-						   SSL_load_error_strings();
-						   SSL_library_init();
-						   OpenSSL_add_all_algorithms();
-
-						   // OpenSSL 1.1.0+ initializes automatically, no action needed
-					   });
-#endif
-	}
 
 #ifdef __ANDROID__
 	// Android ships no OpenSSL trust store, and names its CA files with the pre-1.0.0

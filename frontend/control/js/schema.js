@@ -1,6 +1,6 @@
 // The hub's configuration schema: what each section holds, how it is shown and checked.
 
-import { DEVICES, RADIOS } from './inputs.js';
+import { decodes, DEVICES, RADIOS } from './inputs.js';
 
 export const ChannelFields = {
     host: () => ({
@@ -394,7 +394,6 @@ export const dbSchema = {
         min: 64,
         max: 1000000,
         defaultValue: 8192,
-        advanced: true,
         tooltip: 'CSV: targets kept in the state file',
         dependsOn: {
             field: 'type',
@@ -469,8 +468,7 @@ export const dbSchema = {
         jsonpath: 'interval',
         min: 5,
         max: 1800,
-        defaultValue: 60,
-        advanced: true
+        defaultValue: 60
     },
     unique: ChannelFields.unique(),
     position_interval: ChannelFields.position_interval()
@@ -586,7 +584,7 @@ export const receiverSchema = {
         tooltip: "AB standard, CD long range",
         dependsOn: {
             field: "input",
-            value: RADIOS
+            value: Object.keys(DEVICES).filter(decodes)
         }
     },
     nmea_channel: {
@@ -614,7 +612,7 @@ export const receiverSchema = {
         tooltip: "Pick a device by serial number",
         dependsOn: {
             field: "input",
-            value: RADIOS
+            value: ["", ...RADIOS]
         }
     },
     active: {
@@ -1100,7 +1098,6 @@ export const receiverSchema = {
         jsonpath: "serialport.dump_file",
         placeholder: "e.g., /var/log/ais-serial.log",
         tooltip: "Write raw data to this file",
-        advanced: true,
         dependsOn: {
             field: "input",
             value: "SERIALPORT"
@@ -1402,7 +1399,6 @@ export const screenSchema = {
         defaultValue: 3,
         min: 1,
         max: 3600,
-        advanced: true,
         tooltip: 'How often Verbose logs its counts'
     }
 };

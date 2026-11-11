@@ -22,12 +22,12 @@ import { ships, clock } from '../../core/store.js';
 import { fetchShips, fetchTableRows } from '../../data.js';
 import { getTableShiptype } from '../../map.js';
 import { saveSettings } from '../../settings-store.js';
+import { settings } from '../../core/state.js';
 import { selectMapTab } from '../index.js';
 import { register } from '../../actions.js';
 import { showContextMenu } from '../../features/contextmenu/contextmenu.js';
 
 let table = null;
-let tableFirstTime = true;
 let uiWired = false;
 
 function validatedClass(ship) {
@@ -80,13 +80,13 @@ function buildColumns() {
             title: "Shipname", field: "shipname", sorter: "string",
             formatter: (cell) => {
                 const ship = cell.getRow().getData();
-                return flagHTML(ship.country, 'flag-inline', getCountryName(ship.country)) + (getShipName(ship) || ship.mmsi);
+                return flagHTML(ship.country, 'flag-inline', getCountryName(ship.country)) + sanitizeString(String(getShipName(ship) || ship.mmsi));
             },
         },
         { title: "MMSI", field: "mmsi", sorter: "number" },
         { title: "IMO", field: "imo", sorter: "number", formatter: (cell) => { const v = cell.getValue(); return v != null ? v : ""; } },
-        { title: "ENI", field: "eni", sorter: (a, b) => padEni(a).localeCompare(padEni(b)), formatter: (cell) => padEni(cell.getValue()) },
-        { title: "Dest", field: "destination", sorter: "string", formatter: (cell) => { const v = cell.getValue(); return v != null ? v : ""; } },
+        { title: "ENI", field: "eni", sorter: (a, b) => padEni(a).localeCompare(padEni(b)), formatter: (cell) => sanitizeString(padEni(cell.getValue())) },
+        { title: "Dest", field: "destination", sorter: "string", formatter: (cell) => sanitizeString(cell.getValue() || "") },
         {
             title: "ETA", field: "eta",
             sorter: (a, b, aRow, bRow) => etaSortValue(aRow.getData()) - etaSortValue(bRow.getData()),
@@ -99,7 +99,7 @@ function buildColumns() {
             title: "Callsign", field: "callsign", sorter: "string",
             formatter: (cell) => {
                 const ship = cell.getRow().getData();
-                return ship != null ? getCallSign(ship) : "";
+                return ship != null ? sanitizeString(getCallSign(ship) || "") : "";
             },
         },
         {
@@ -291,7 +291,6 @@ function populateColumnVisibilityMenu() {
 }
 
 function updateColumnVisibility() {
-    const settings = window.AISCatcher.settings;
     const checkboxes = document.querySelectorAll("#shipTableColumnVisibilityMenu input[type='checkbox']");
     settings.shiptable_columns = Array.from(checkboxes)
         .filter((c) => c.checked)
@@ -300,13 +299,11 @@ function updateColumnVisibility() {
 }
 
 function resetColumns() {
-    const settings = window.AISCatcher.settings;
     settings.shiptable_columns = ["shipname", "mmsi", "imo", "callsign", "shipclass", "lat", "lon", "last_signal", "level", "distance", "bearing", "speed", "repeat", "ppm", "status"];
     setColumns();
 }
 
 function setColumns() {
-    const settings = window.AISCatcher.settings;
     saveSettings();
 
     const updatedColumns = table.getColumns().map((column) => {
@@ -392,10 +389,8 @@ export async function update() {
             tableRowClick(row.getData().mmsi);
         });
         table.on("tableBuilt", () => {
-            if (tableFirstTime) {
-                setColumns();
-                tableFirstTime = false;
-            }
+            setColumns();
+            search(document.getElementById("shipSearch").value);
         });
         wireUIEvents();
     } else {

@@ -220,7 +220,6 @@ class PlaceCatalogue
 	std::shared_ptr<const PlaceIndex> index;
 	std::shared_ptr<const std::string> collectionJSON;
 	uint32_t nextNumber = 0;
-	size_t skipped = 0;
 	bool drifted = false;
 	std::atomic<bool> changed{
 		false};
@@ -237,7 +236,6 @@ public:
 	explicit PlaceCatalogue(const std::string &directory);
 	std::shared_ptr<const std::string> collection();
 	std::string feature(uint32_t id, const std::string &version);
-	void writeStatus(JSON::Writer &writer);
 	std::shared_ptr<const PlaceIndex> snapshot();
 	bool consumeChanged() { return changed.exchange(false); }
 	bool save(const std::string &json, bool remove, std::string &error);

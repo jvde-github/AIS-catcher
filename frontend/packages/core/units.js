@@ -40,10 +40,7 @@ export function create(opts) {
 
     const getSpeedConversion = (c) =>
         units() === "DEFAULT" ? c : units() === "SI" ? c * 1.852 : c * 1.151;
-    const getSpeedVal = (c) =>
-        units() === "DEFAULT" ? Number(c).toFixed(1)
-            : units() === "SI" ? Number(c * 1.852).toFixed(1)
-            : Number(c * 1.151).toFixed(1);
+    const getSpeedVal = (c) => Number(getSpeedConversion(c)).toFixed(1);
     const getSpeedUnit = () =>
         units() === "DEFAULT" ? "kn" : units() === "SI" ? "km/h" : "mph";
 
@@ -85,17 +82,9 @@ export function create(opts) {
         return h(ship.lat, "N", "S") + ", " + h(ship.lon, "E", "W");
     };
 
-    const getLatValFormat = (ship) => {
-        const prefix = ship.approx ? "<i>" : "";
-        const suffix = ship.approx ? "</i>" : "";
-        return prefix + formatCoordinate(ship.lat, true) + suffix;
-    };
-
-    const getLonValFormat = (ship) => {
-        const prefix = ship.approx ? "<i>" : "";
-        const suffix = ship.approx ? "</i>" : "";
-        return prefix + formatCoordinate(ship.lon, false) + suffix;
-    };
+    const approx = (ship, text) => (ship.approx ? "<i>" + text + "</i>" : text);
+    const getLatValFormat = (ship) => approx(ship, formatCoordinate(ship.lat, true));
+    const getLonValFormat = (ship) => approx(ship, formatCoordinate(ship.lon, false));
 
     // change.f is a CHANGE id (text.js); draught arrives in decimetres
     function getChangeVal(change) {

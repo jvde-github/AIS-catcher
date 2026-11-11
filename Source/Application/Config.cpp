@@ -55,20 +55,67 @@ namespace
 		throw std::runtime_error("engine type must be auto, v1_base, v1_high, v2_base or a model number");
 	}
 
-	// skip: one extra key the caller already consumed, e.g. the "type" selector
-	void applySettings(const JSON::Value &m, Setting &s, int skip = -1)
+	// skip: a key the caller already consumed; told: the settings in the order given
+	void applySettings(const JSON::Value &m, Setting &s, int skip = -1, std::string *told = nullptr)
 	{
 		for (const JSON::Member &p : m.getObject().getMembers())
 			if (p.Key() != AIS::KEY_SETTING_ACTIVE && p.Key() != skip)
-				s.SetKey((AIS::Keys)p.Key(), JSON::text(p.Get()));
+			{
+				const std::string value = JSON::text(p.Get());
+				if (told)
+					*told += AIS::settingName(p.Key()) + "=" + value + ";";
+				s.SetKey((AIS::Keys)p.Key(), value);
+			}
 	}
 
-	void readModel(Receiver &r, const JSON::Value &v)
+	IO::OutputMessage &add(Outputs &into, IO::OutputMessage *o, const std::string &kind)
 	{
-		if (!Config::isActiveObject(v))
-			return;
+		into.list.push_back(std::shared_ptr<IO::OutputMessage>(o));
+		into.told.push_back(kind + ":");
+		return *o;
+	}
 
-		applySettings(v, r.addModel(-1));
+	template <typename T>
+	void readList(const JSON::Member &m, const std::string &label, Outputs &into, const char *default_timeout = nullptr)
+	{
+		if (!m.Get().isArray())
+			throw std::runtime_error(label + " settings need to be an \"array\" of \"objects\" in config file.");
+
+		for (const auto &v : m.Get().getArray())
+		{
+			if (!Config::isActiveObject(v))
+				continue;
+
+			IO::OutputMessage &o = add(into, new T(), label);
+			if (default_timeout)
+				o.SetKey(AIS::KEY_SETTING_TIMEOUT, default_timeout);
+			applySettings(v, o, -1, &into.told.back());
+		}
+	}
+
+	// the "db" array names its backend with a "type" field
+	void readDatabases(const JSON::Member &m, Outputs &into)
+	{
+		if (!m.Get().isArray())
+			throw std::runtime_error("Database settings need to be an \"array\" of \"objects\" in config file.");
+
+		for (const auto &v : m.Get().getArray())
+		{
+			if (!Config::isActiveObject(v))
+				continue;
+
+			// "type" must be read ahead of the settings pass
+			std::string type = "postgres";
+			for (const JSON::Member &p : v.getObject().getMembers())
+				if (p.Key() == AIS::KEY_SETTING_MODEL_TYPE)
+				{
+					type = p.Get().to_string();
+					Util::Convert::toLower(type);
+				}
+
+			IO::OutputMessage &o = add(into, Config::newDatabaseOutput(type), type);
+			applySettings(v, o, AIS::KEY_SETTING_MODEL_TYPE, &into.told.back());
+		}
 	}
 
 	// "engines": [ { "type": "v2_base", "settings": { "afc_wide": "off" } } ]
@@ -108,6 +155,23 @@ namespace
 			applySettings(*settings, model);
 	}
 
+	// a member as the document has it, to tell whether two documents say the same
+	std::string said(const JSON::Member &m)
+	{
+		JSON::JSON one;
+		one.Add(m.Key(), m.Get());
+		std::string text;
+		JSON::Serializer(JSON_DICT_SETTING).stringify(one, text);
+		return text;
+	}
+
+	// a main-section key the engine itself is made from: a change of it takes a new engine
+	bool isEngineValue(int key)
+	{
+		return key == AIS::KEY_SETTING_OWN_MMSI || key == AIS::KEY_SETTING_SCREEN || key == AIS::KEY_SETTING_TIMEOUT ||
+			   key == AIS::KEY_SETTING_TIMEOUT_NOMSG || key == AIS::KEY_SETTING_VERBOSE_TIME;
+	}
+
 	bool isReceiverValue(int key)
 	{
 		switch (key)
@@ -142,47 +206,44 @@ IO::OutputMessage *Config::newDatabaseOutput(const std::string &type)
 	throw std::runtime_error("Database type \"" + type + "\" is not one of postgres, sqlite, csv.");
 }
 
-template <typename T>
-void Config::readOutputs(const JSON::Member &m, const std::string &label, const char *default_timeout)
+bool Config::readOutput(const JSON::Member &m, Outputs &into)
 {
-	if (!m.Get().isArray())
-		throw std::runtime_error(label + " settings need to be an \"array\" of \"objects\" in config file.");
-
-	for (const auto &v : m.Get().getArray())
+	switch (m.Key())
 	{
-		if (!isActiveObject(v))
-			continue;
-
-		engine.msg.push_back(std::unique_ptr<IO::OutputMessage>(new T()));
-		IO::OutputMessage &o = *engine.msg.back();
-		if (default_timeout)
-			o.SetKey(AIS::KEY_SETTING_TIMEOUT, default_timeout);
-		applySettings(v, o);
+	case AIS::KEY_SETTING_UDP:
+		readList<IO::UDPStreamer>(m, "UDP", into);
+		break;
+	case AIS::KEY_SETTING_TCP:
+		readList<IO::TCPClientStreamer>(m, "TCP", into);
+		break;
+	case AIS::KEY_SETTING_MQTT:
+		readList<IO::MQTTStreamer>(m, "MQTT", into);
+		break;
+	case AIS::KEY_SETTING_TCP_LISTENER:
+		readList<IO::TCPlistenerStreamer>(m, "TCP Listener", into, "0");
+		break;
+	case AIS::KEY_SETTING_HTTP:
+		readList<IO::HTTPStreamer>(m, "HTTP", into);
+		for (const auto &o : into.list)
+			into.http |= dynamic_cast<IO::HTTPStreamer *>(o.get()) != nullptr;
+		break;
+	case AIS::KEY_SETTING_DB:
+		readDatabases(m, into);
+		break;
+	case AIS::KEY_SETTING_FILE_OUTPUT:
+		readList<IO::FileOutput>(m, "File output", into);
+		break;
+	case AIS::KEY_SETTING_NMEA2000_OUTPUT:
+#ifdef HASNMEA2000
+		readList<IO::N2KStreamer>(m, "NMEA2000 output", into);
+		break;
+#else
+		throw std::runtime_error("NMEA2000 support not compiled in.");
+#endif
+	default:
+		return false;
 	}
-}
-
-void Config::readDatabases(const JSON::Member &m)
-{
-	if (!m.Get().isArray())
-		throw std::runtime_error("Database settings need to be an \"array\" of \"objects\" in config file.");
-
-	for (const auto &v : m.Get().getArray())
-	{
-		if (!isActiveObject(v))
-			continue;
-
-		// "type" must be read ahead of the settings pass
-		std::string type = "postgres";
-		for (const JSON::Member &p : v.getObject().getMembers())
-			if (p.Key() == AIS::KEY_SETTING_MODEL_TYPE)
-			{
-				type = p.Get().to_string();
-				Util::Convert::toLower(type);
-			}
-
-		engine.msg.push_back(std::unique_ptr<IO::OutputMessage>(newDatabaseOutput(type)));
-		applySettings(v, *engine.msg.back(), AIS::KEY_SETTING_MODEL_TYPE);
-	}
+	return true;
 }
 
 bool Config::isActiveObject(const JSON::Value &m)
@@ -201,12 +262,10 @@ bool Config::isActiveObject(const JSON::Value &m)
 	return true;
 }
 
-std::string Config::base_dir;
-
-void Config::setConfigBaseDir(const std::string &file_config)
+std::string Config::folderOf(const std::string &file)
 {
-	const size_t at = file_config.find_last_of("/\\");
-	base_dir = at == std::string::npos ? "" : file_config.substr(0, at);
+	const size_t at = file.find_last_of("/\\");
+	return at == std::string::npos ? "" : file.substr(0, at);
 }
 
 std::string Config::modelName(int model)
@@ -238,7 +297,11 @@ void Config::readReceivers(const JSON::Member &m, bool &filled)
 		if (filled)
 			engine.receivers.push_back(std::unique_ptr<Receiver>(new Receiver()));
 		filled = true;
-		prefixed("receiver " + std::to_string(n), [&] { readReceiver(v.getObject().getMembers(), false, *engine.receivers.back()); });
+		Receiver &r = *engine.receivers.back();
+		prefixed("receiver " + std::to_string(n), [&] { applyReceiver(r, v.getObject().getMembers()); });
+		for (const JSON::Member &p : v.getObject().getMembers())
+			if (p.Key() != AIS::KEY_SETTING_ZONE)
+				r.told += said(p);
 	}
 }
 
@@ -266,25 +329,12 @@ bool Config::isReceiverKey(int key)
 	}
 }
 
-bool Config::readReceiver(const std::vector<JSON::Member> &members, bool unspecAllowed, Receiver &r)
-{
-	for (const auto &m : members)
-		if (m.Key() == AIS::KEY_SETTING_ACTIVE && !Util::Parse::Switch(m.Get().to_string()))
-			return false;
-
-	applyReceiver(r, members, unspecAllowed, &engine.own_mmsi);
-
-	std::string serial, input;
-	receiverInput(members, serial, input);
-	return !serial.empty() || !input.empty();
-}
-
-void Config::applyReceiver(Receiver &r, const std::vector<JSON::Member> &members, bool unspecAllowed, int *own_mmsi)
+void Config::applyReceiver(Receiver &r, const std::vector<JSON::Member> &members)
 {
 	// the input first, wherever it stands among the keys
 	std::string serial, input;
 	receiverInput(members, serial, input);
-	if (!unspecAllowed && serial.empty() && input.empty())
+	if (serial.empty() && input.empty())
 		throw std::runtime_error("needs \"input\", its kind of device, or a \"serial\".");
 	if (!serial.empty())
 		r.SetKey(AIS::KEY_SETTING_SERIAL, serial);
@@ -296,9 +346,7 @@ void Config::applyReceiver(Receiver &r, const std::vector<JSON::Member> &members
 		switch (m.Key())
 		{
 		case AIS::KEY_SETTING_ENGINES:
-		case AIS::KEY_SETTING_MODEL:
 		case AIS::KEY_SETTING_NMEA_CHANNEL:
-			break;
 		case AIS::KEY_SETTING_SERIAL:
 		case AIS::KEY_SETTING_INPUT:
 		case AIS::KEY_SETTING_ACTIVE:
@@ -313,10 +361,6 @@ void Config::applyReceiver(Receiver &r, const std::vector<JSON::Member> &members
 		case AIS::KEY_SETTING_SENSITIVITY_HIGH:
 			r.SetKey((AIS::Keys)m.Key(), m.Get().to_string());
 			break;
-		case AIS::KEY_SETTING_OWN_MMSI:
-			if (own_mmsi)
-				*own_mmsi = m.Get().getInt();
-			break;
 		default:
 		{
 			if (isReceiverValue(m.Key()))
@@ -327,9 +371,7 @@ void Config::applyReceiver(Receiver &r, const std::vector<JSON::Member> &members
 			Setting *device = r.devices().settingForKey((AIS::Keys)m.Key());
 			if (!device)
 			{
-				// the main section's other keys are read by the caller; only a receiver object warns
-				if (!unspecAllowed)
-					Warning() << "Config file: field \"" << AIS::settingName(m.Key()) << "\" is ignored in a receiver object.";
+				Warning() << "Config file: field \"" << AIS::settingName(m.Key()) << "\" is ignored in a receiver object.";
 				break;
 			}
 			if (isActiveObject(m.Get()))
@@ -354,24 +396,157 @@ void Config::applyReceiver(Receiver &r, const std::vector<JSON::Member> &members
 			for (const auto &v : m.Get().getArray())
 				readEngine(r, v);
 		}
-		else if (m.Key() == AIS::KEY_SETTING_MODEL)
-		{
-			Warning() << MODEL_DEPRECATED;
-			if (m.Get().isString())
-				r.addModel(engineType(m.Get().to_string()));
-			else
-				readModel(r, m.Get());
-		}
 	}
 }
 
-void Config::read(const std::string &file_config)
+void Config::resolveFiles(JSON::JSON &section, const std::string &folder, JSON::Pool &pool)
 {
-	setConfigBaseDir(file_config);
-	set(Util::Helper::readFile(file_config));
+	const auto resolve = [&](JSON::Value &v, bool backup) {
+		const std::string path = backup ? SiteReader::backupFile(v.getString(), folder) : Util::Helper::resolvePath(v.getString(), folder);
+		if (path != v.getString())
+			v.setString(pool.addString(path));
+	};
+	for (JSON::Member &m : section.getMembers())
+	{
+		JSON::Value &v = m.Get();
+		if (v.isString() && SiteReader::isPath(m.Key()))
+			resolve(v, m.Key() == AIS::KEY_SETTING_FILE);
+		else if (m.Key() == AIS::KEY_SETTING_TRACKING && v.isObject())
+			resolveFiles(v.getObject(), folder, pool);
+		else if (m.Key() == AIS::KEY_SETTING_TLS && v.isObject())
+			for (JSON::Member &f : v.getObject().getMembers())
+				if (f.Get().isString())
+					resolve(f.Get(), false);
+	}
 }
 
-void Config::readSharing(const std::vector<JSON::Member> &members)
+namespace
+{
+	// "model": "v1_base" or "model": { settings } as an entry of "engines"
+	JSON::Value engineOf(const JSON::Value &model, JSON::Pool &pool)
+	{
+		JSON::JSON *engine = pool.addObject();
+		if (model.isString())
+			engine->Add(AIS::KEY_SETTING_MODEL_TYPE, model);
+		else
+		{
+			JSON::JSON *settings = pool.addObject();
+			for (const JSON::Member &p : model.getObject().getMembers())
+				if (p.Key() != AIS::KEY_SETTING_ACTIVE)
+					settings->Add(p.Key(), p.Get());
+			engine->Add(AIS::KEY_SETTING_SETTINGS, settings);
+		}
+		JSON::Value engines(pool.addArray());
+		engines.getArray().push_back(JSON::Value(engine));
+		return engines;
+	}
+}
+
+bool Config::normalise(JSON::Document &doc, const std::string &folder, std::vector<std::string> &notes, bool alone)
+{
+	std::vector<JSON::Member> &root = doc.root.getMembers();
+	for (const JSON::Member &m : root)
+		if (m.Key() == AIS::KEY_SETTING_RECEIVER && !m.Get().isArray())
+			throw std::runtime_error(RECEIVERS_NOT_ARRAY);
+
+	// the main section's receiver, as an entry
+	std::vector<JSON::Member> main;
+	for (auto it = root.begin(); it != root.end();)
+		if (isReceiverKey(it->Key()) && it->Key() != AIS::KEY_SETTING_RECEIVER && it->Key() != AIS::KEY_SETTING_OWN_MMSI)
+		{
+			main.push_back(*it);
+			it = root.erase(it);
+		}
+		else
+			++it;
+	bool unplaced = false;
+	if (!main.empty())
+	{
+		std::string serial, input;
+		receiverInput(main, serial, input);
+		const bool named = !serial.empty() || !input.empty();
+		std::vector<JSON::Value> &entries = doc.root.array(AIS::KEY_SETTING_RECEIVER, doc.pool);
+		// without an input of its own it is the first receiver's, ahead of what that says itself
+		JSON::Value *first = nullptr;
+		if (!named && alone)
+			for (JSON::Value &e : entries)
+				if (e.isObject() && isActiveObject(e))
+				{
+					first = &e;
+					break;
+				}
+		if (first)
+			first->getObject().getMembers().insert(first->getObject().getMembers().begin(), main.begin(), main.end());
+		else
+		{
+			JSON::JSON *entry = doc.pool.addObject();
+			if (!named && alone)
+				entry->Add(AIS::KEY_SETTING_INPUT, "none", doc.pool);
+			for (const JSON::Member &m : main)
+				entry->Add(m.Key(), m.Get());
+			entries.insert(entries.begin(), JSON::Value(entry));
+			unplaced = !named && !alone;
+		}
+	}
+
+	std::vector<JSON::Value> own_mmsi;
+	for (JSON::Member &list : root)
+	{
+		if (list.Key() != AIS::KEY_SETTING_RECEIVER)
+			continue;
+		for (JSON::Value &e : list.Get().getArray())
+		{
+			if (!e.isObject() || !isActiveObject(e))
+				continue;
+			std::vector<JSON::Member> &members = e.getObject().getMembers();
+			for (auto it = members.begin(); it != members.end();)
+			{
+				if (it->Key() == AIS::KEY_SETTING_OWN_MMSI)
+				{
+					own_mmsi.push_back(it->Get());
+					it = members.erase(it);
+					continue;
+				}
+				if (it->Key() == AIS::KEY_SETTING_MODEL)
+				{
+					notes.push_back(MODEL_DEPRECATED);
+					if (!it->Get().isString() && !isActiveObject(it->Get()))
+					{
+						it = members.erase(it);
+						continue;
+					}
+					*it = JSON::Member(AIS::KEY_SETTING_ENGINES, engineOf(it->Get(), doc.pool));
+				}
+				++it;
+			}
+		}
+	}
+	for (const JSON::Value &v : own_mmsi)
+		doc.root.Add(AIS::KEY_SETTING_OWN_MMSI, v);
+
+	for (JSON::Member &m : root)
+	{
+		JSON::Value &v = m.Get();
+		if (m.Key() == AIS::KEY_SETTING_RECEIVER)
+			continue;
+		if (v.isObject() && (m.Key() == AIS::KEY_SETTING_TRACKING || m.Key() == AIS::KEY_SETTING_SERVER))
+			resolveFiles(v.getObject(), folder, doc.pool);
+		else if (v.isObject() && m.Key() == AIS::KEY_SETTING_CONTROL)
+		{
+			// managed mode's old viewer section
+			JSON::Value *viewer = v.getObject().getValue(AIS::KEY_SETTING_VIEWER);
+			if (viewer && viewer->isObject())
+				resolveFiles(viewer->getObject(), folder, doc.pool);
+		}
+		else if (v.isArray())
+			for (JSON::Value &item : v.getArray())
+				if (item.isObject())
+					resolveFiles(item.getObject(), folder, doc.pool);
+	}
+	return unplaced;
+}
+
+void Config::readSharing(const std::vector<JSON::Member> &members, bool managed, Outputs &into)
 {
 
 	bool xchange = false;
@@ -383,7 +558,7 @@ void Config::readSharing(const std::vector<JSON::Member> &members)
 		if (m.Key() == AIS::KEY_SETTING_SHARING)
 		{
 			xchange = Util::Parse::Switch(m.Get().to_string());
-			engine.xshare_defined = true;
+			into.sharing_defined = true;
 		}
 		else if (m.Key() == AIS::KEY_SETTING_SHARING_KEY)
 			uuid = m.Get().to_string();
@@ -396,19 +571,24 @@ void Config::readSharing(const std::vector<JSON::Member> &members)
 		}
 	}
 
-	if (engine.xshare_defined && !xchange && !uuid.empty() && !Util::Helper::isUUID(uuid))
+	if (into.sharing_defined && !xchange && !uuid.empty() && !Util::Helper::isUUID(uuid))
 	{
 		Warning() << "Config file: \"sharing_key\" is not a UUID and sharing is off: ignored.";
 		uuid.clear();
 	}
-	if ((xchange || !uuid.empty()) && !engine.comm_feed)
-		engine.createCommunityFeed();
+	if ((!xchange && (uuid.empty() || (managed && into.sharing_defined))) || into.feed)
+		return;
 
-	if (!uuid.empty() && engine.comm_feed)
-		engine.comm_feed->SetKey(AIS::KEY_SETTING_UUID, uuid);
-
-	if (!zones.empty() && engine.comm_feed)
-		engine.comm_feed->zones = zones;
+	into.feed = new IO::HubStreamer();
+	add(into, into.feed, "feed");
+	if (!uuid.empty())
+		into.feed->SetKey(AIS::KEY_SETTING_UUID, uuid);
+	into.feed->zones = zones;
+	// sharing is opt-in: a feed nobody asked for by name carries what the radios hear
+	into.radios_only = managed ? uuid.empty() : !into.sharing_defined;
+	into.told.back() += uuid + (into.radios_only ? ";radios;" : ";");
+	for (const auto &z : zones)
+		into.told.back() += z + ",";
 }
 
 void Config::preamble(const std::vector<JSON::Member> &members)
@@ -442,14 +622,19 @@ void Config::set(const std::string &str, const Origins *from)
 {
 	JSON::Parser parser(JSON_DICT_SETTING);
 	JSON::Document doc = parser.parse(str);
+	set(doc, from);
+}
 
+void Config::set(JSON::Document &doc, const Origins *from)
+{
 	preamble(doc.getMembers());
+	std::vector<std::string> notes;
+	normalise(doc, folder, notes);
+	for (const auto &n : notes)
+		Warning() << n;
 
-	// the engine's first receiver is there from the start: the main section's keys
-	// fill it, and so does the first input the "receiver" array names unless the
-	// main section named one; every input after that is a receiver of its own
-	bool filled = readReceiver(doc.getMembers(), true, *engine.receivers.front());
-	readSharing(doc.getMembers());
+	bool filled = false;
+	readSharing(doc.getMembers(), managed, engine.outputs);
 
 	// the receiver array, before the outputs apply tags
 	for (const auto &p : doc.getMembers())
@@ -460,27 +645,21 @@ void Config::set(const std::string &str, const Origins *from)
 
 	for (const auto &m : doc.getMembers())
 	{
-		if (isReceiverKey(m.Key()))
+		if (readOutput(m, engine.outputs))
 			continue;
+		if (isEngineValue(m.Key()))
+			engine.told += said(m);
 		switch (m.Key())
 		{
+		case AIS::KEY_SETTING_OWN_MMSI:
+			engine.own_mmsi = m.Get().getInt();
+			break;
+		case AIS::KEY_SETTING_RECEIVER:
 		case AIS::KEY_SETTING_CONFIG:
 		case AIS::KEY_SETTING_VERSION:
 		case AIS::KEY_SETTING_SHARING:
 		case AIS::KEY_SETTING_SHARING_KEY:
 		case AIS::KEY_SETTING_SHARING_ZONE:
-			break;
-		case AIS::KEY_SETTING_UDP:
-			readOutputs<IO::UDPStreamer>(m, "UDP");
-			break;
-		case AIS::KEY_SETTING_TCP:
-			readOutputs<IO::TCPClientStreamer>(m, "TCP");
-			break;
-		case AIS::KEY_SETTING_MQTT:
-			readOutputs<IO::MQTTStreamer>(m, "MQTT");
-			break;
-		case AIS::KEY_SETTING_TCP_LISTENER:
-			readOutputs<IO::TCPlistenerStreamer>(m, "TCP Listener", "0");
 			break;
 		case AIS::KEY_SETTING_SERVER:
 #ifdef HASWEBVIEWER
@@ -488,12 +667,6 @@ void Config::set(const std::string &str, const Origins *from)
 #else
 			throw std::runtime_error("Config file: \"server\" needs a build with the web viewer (cmake -DWEBVIEWER=ON).");
 #endif
-		case AIS::KEY_SETTING_HTTP:
-			readOutputs<IO::HTTPStreamer>(m, "HTTP");
-			break;
-		case AIS::KEY_SETTING_DB:
-			readDatabases(m);
-			break;
 		// managed mode's own sections
 		case AIS::KEY_SETTING_CONTROL:
 		case AIS::KEY_SETTING_ENGINE:
@@ -505,16 +678,6 @@ void Config::set(const std::string &str, const Origins *from)
 			else
 				engine.screen.setScreen(m.Get().to_string());
 			break;
-		case AIS::KEY_SETTING_FILE_OUTPUT:
-			readOutputs<IO::FileOutput>(m, "File output");
-			break;
-		case AIS::KEY_SETTING_NMEA2000_OUTPUT:
-#ifdef HASNMEA2000
-			readOutputs<IO::N2KStreamer>(m, "NMEA2000 output");
-			break;
-#else
-			throw std::runtime_error("NMEA2000 support not compiled in.");
-#endif
 		case AIS::KEY_SETTING_TIMEOUT:
 			if (m.Get().isBool())
 			{
@@ -532,7 +695,7 @@ void Config::set(const std::string &str, const Origins *from)
 			engine.timeout_nomsg = Util::Parse::Switch(m.Get().to_string());
 			break;
 		case AIS::KEY_SETTING_STATIONS:
-			SiteReader::stations(m.Get(), engine.stations);
+			SiteReader::stations(m.Get(), stations);
 			break;
 #ifdef HASAPI
 		// the site's, read below
@@ -562,26 +725,26 @@ void Config::set(const std::string &str, const Origins *from)
 		}
 	}
 
-	// the site's sections, with the files they name resolved against the file's folder
+	// the site's sections
 #ifdef HASAPI
 	if (managed)
-		SiteReader::managedSite(doc.root, base_dir, control_port, viewer_port, bind, engine.site_config, engine.station_defaults, engine.stations);
+		SiteReader::managedSite(doc.root, control_port, viewer_port, bind, site, station_defaults, stations);
 	else
-		SiteReader::site(doc.root, base_dir, engine.site_config, engine.station_defaults, engine.stations, from ? &from->servers : nullptr);
+		SiteReader::site(doc.root, site, station_defaults, stations, from ? &from->servers : nullptr);
 #endif
 }
 
 void Config::finish()
 {
 	// a file without "stations": a receiver's number is a station of its own
-	if (engine.stations.ordered().empty())
+	if (stations.ordered().empty())
 		for (const auto &r : engine.receivers)
-			if (r->getStation() != 0 && !engine.stations.find(r->getStation()))
+			if (r->getStation() != 0 && !stations.find(r->getStation()))
 			{
 				StationRegistry::Station s;
 				s.id = r->getStation();
 				s.name = "Station " + std::to_string(s.id);
-				engine.stations.define(s);
+				stations.define(s);
 			}
-	Stations::validate(engine.stations, engine.receivers);
+	Stations::validate(stations, engine.receivers);
 }

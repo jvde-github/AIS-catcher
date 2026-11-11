@@ -24,19 +24,8 @@
 
 #include "Common.h"
 
-class StreamInBase
-{
-protected:
-	std::mutex mtx;
-	bool exclusive = false;
-
-public:
-	virtual ~StreamInBase() {}
-	void setExclusive(bool b = true) { exclusive = b; }
-};
-
 template <typename T>
-class StreamIn : public virtual StreamInBase
+class StreamIn
 {
 	uint64_t groups_in = GROUPS_ALL;
 
@@ -46,32 +35,6 @@ public:
 	virtual void Receive(T *data, int len, TAG &tag)
 	{
 		Receive((const T *)data, len, tag);
-	}
-
-	void ReceiveSafe(const T *data, int len, TAG &tag)
-	{
-		if (exclusive)
-		{
-			std::lock_guard<std::mutex> lock(mtx);
-			Receive(data, len, tag);
-		}
-		else
-		{
-			Receive(data, len, tag);
-		}
-	}
-
-	void ReceiveSafe(T *data, int len, TAG &tag)
-	{
-		if (exclusive)
-		{
-			std::lock_guard<std::mutex> lock(mtx);
-			Receive(data, len, tag);
-		}
-		else
-		{
-			Receive(data, len, tag);
-		}
 	}
 
 	uint64_t getGroupsIn() { return groups_in; }
@@ -88,7 +51,7 @@ public:
 	void Send(const S *data, int len, TAG &tag)
 	{
 		for (auto c : connections)
-			c->ReceiveSafe(data, len, tag);
+			c->Receive(data, len, tag);
 	}
 
 	void Send(S *data, int len, TAG &tag)
@@ -102,9 +65,9 @@ public:
 		int sz1 = (int)connections.size() - 1;
 
 		for (int i = 0; i < sz1; i++)
-			connections[i]->ReceiveSafe((const S *)data, len, tag);
+			connections[i]->Receive((const S *)data, len, tag);
 
-		connections[sz1]->ReceiveSafe(data, len, tag);
+		connections[sz1]->Receive(data, len, tag);
 	}
 
 	void Connect(StreamIn<S> *s)

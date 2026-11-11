@@ -31,6 +31,7 @@ import { fromLonLat, toLonLat } from "ol/proj.js";
 import { getLength } from "ol/sphere.js";
 
 import { calculateBearing } from "@aiscatcher/core/geo.js";
+import { sanitizeString } from "@aiscatcher/core/text.js";
 import { token } from "@aiscatcher/ui/color.js";
 
 export function create(opts) {
@@ -114,7 +115,7 @@ export function create(opts) {
             var icon = measure.visible ? "visibility" : "visibility_off";
             content += '<tr data-index="' + index + '">' +
                 '<td style="padding: 2px;"><i style="padding-left:2px; font-size: 15px;" class="' + icon + '_icon visibility_icon"></i></td>' +
-                "<td>" + from.label + "</td><td>" + to.label + "</td>" +
+                "<td>" + sanitizeString(String(from.label)) + "</td><td>" + sanitizeString(String(to.label)) + "</td>" +
                 "<td>" + dist + " " + distance.unit() + "</td><td>" + bearing + "°</td>" +
                 '<td style="padding: 2px;"><i style="padding-left:2px; font-size: 15px;" class="delete_icon"></i></td></tr>';
             return true;

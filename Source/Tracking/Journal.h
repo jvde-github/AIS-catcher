@@ -108,15 +108,6 @@ public:
 	}
 
 	uint64_t epoch() const { return epoch_; }
-	// the number just before the newest `n` kept, to start a reader there
-	uint64_t before(std::size_t n) const
-	{
-		std::lock_guard<std::mutex> lock(mtx);
-		if (entries.empty())
-			return last;
-		const uint64_t oldest = entries.front().seq;
-		return last >= oldest + n ? last - n : oldest - 1;
-	}
 	// the number before the oldest kept, to read all of them
 	uint64_t beforeOldest() const
 	{

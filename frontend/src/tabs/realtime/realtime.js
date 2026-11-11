@@ -1,6 +1,8 @@
 import { settings } from '../../core/state.js';
 import * as filter from '../../core/filter.js';
 import { ships } from '../../core/store.js';
+import { config } from '../../core/config.js';
+import { showDialog, showNotification } from '../../dialog.js';
 import { saveSettings, beforeWrite } from '../../settings-store.js';
 import { selectMapTab, showTab, load } from '../index.js';
 import { register } from '../../actions.js';
@@ -32,16 +34,13 @@ function normalizeFilter(kind, value) {
 }
 
 class RealtimeViewer {
-    constructor(filterMMSI = null) {
-
+    constructor() {
         this.nmeaContent = document.getElementById('realtime_nmea_content');
         this.eventSource = null;
         this.maxLines = 100;
         this.isPaused = false;
         this.filters = [];
         this.groups = {};
-        if (filterMMSI) this.addFilter('mmsi', filterMMSI);
-        this.activeMode = 'nmea';
 
         this.backgroundStreaming = settings.realtime_background_streaming === true;
 
@@ -137,7 +136,6 @@ class RealtimeViewer {
             this.nmeaContent.removeChild(rows[rows.length - 1]);
         }
 
-        const config = window.AISCatcher.config;
         const row = document.createElement('tr');
         const time = new Date(data.timestamp * 1000).toLocaleTimeString();
 
@@ -343,7 +341,7 @@ function filterDialogHTML() {
 }
 
 function renderFilterDialog() {
-    window.AISCatcher.showDialog('NMEA filters', filterDialogHTML());
+    showDialog('NMEA filters', filterDialogHTML());
     document.querySelector('#dialog-box .modal-card').style.maxWidth = '520px';
 
     const field = document.getElementById('realtime_filter_value');
@@ -361,13 +359,12 @@ function handleKeydown(event) {
 
 
 
-export function shown(filterMMSI = null) {
-    const config = window.AISCatcher.config;
+export function shown() {
 
     if (!config.features.realtime) return;
 
     if (!viewer) {
-        viewer = new RealtimeViewer(filterMMSI);
+        viewer = new RealtimeViewer();
 
         if (Array.isArray(settings.realtime_filters) && settings.realtime_filters.length) {
             viewer.setFilters(settings.realtime_filters);
@@ -414,7 +411,6 @@ export function hidden(force = false) {
 }
 
 export function openForMMSI(mmsi) {
-    const config = window.AISCatcher.config;
     if (!config.features.realtime) return;
 
     if (viewer && document.getElementById('realtime').style.display === 'block') {
@@ -438,10 +434,10 @@ function togglePause(showMessage = false) {
     if (!viewer) return;
     if (viewer.isPaused) {
         viewer.resume();
-        if (showMessage) window.AISCatcher.showNotification("Streaming resumed");
+        if (showMessage) showNotification("Streaming resumed");
     } else {
         viewer.pause();
-        if (showMessage) window.AISCatcher.showNotification("Streaming paused");
+        if (showMessage) showNotification("Streaming paused");
     }
     syncPauseButton(viewer.isPaused);
 }
@@ -464,7 +460,7 @@ function clear() {
 function addFilter(kind, value) {
     if (!viewer) return;
     if (!viewer.addFilter(kind, value)) {
-        window.AISCatcher.showNotification('Not a valid ' + (FILTER_KINDS[kind] ? FILTER_KINDS[kind].label : kind), 'error');
+        showNotification('Not a valid ' + (FILTER_KINDS[kind] ? FILTER_KINDS[kind].label : kind), 'error');
         return;
     }
     updateFilterDisplay();
@@ -502,14 +498,6 @@ export function applyVesselFilter() {
     viewer?.dropHiddenRows();
 }
 
-function getFilters() {
-    return viewer ? viewer.filters : null;
-}
-
-function getBackgroundStreaming() {
-    return viewer ? viewer.backgroundStreaming : null;
-}
-
 register({
     openRealtimeFilters: () => openFilters(),
     addRealtimeFilter: () => addFilterFromInput(),
@@ -523,8 +511,7 @@ register({
 
 // the filters and the background streaming are kept with the settings
 beforeWrite(() => {
-    const filters = getFilters();
-    if (filters !== null && filters !== undefined) settings.realtime_filters = filters;
-    const bg = getBackgroundStreaming();
-    if (bg !== null && bg !== undefined) settings.realtime_background_streaming = bg;
+    if (!viewer) return;
+    settings.realtime_filters = viewer.filters;
+    settings.realtime_background_streaming = viewer.backgroundStreaming;
 });

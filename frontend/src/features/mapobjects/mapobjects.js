@@ -10,14 +10,15 @@ import * as mapobjects from '@aiscatcher/map/mapobjects.js';
 import { createEventHistory } from '@aiscatcher/ui/events-history.js';
 import { map } from '../../map.js';
 import { redraw } from '../../fleet.js';
-import { focus } from '../../data.js';
+import { focus, viewed } from '../../data.js';
 import { ships, station } from '../../core/store.js';
 import { config } from '../../core/config.js';
 import { saveSettings, effects } from '../../settings-store.js';
 import { closeSettings } from '../settings/settings.js';
 import { closeDialog } from '../../dialog.js';
 import { ui } from '../../ui.js';
-import { setPanels } from '../../panels.js';
+import { panels, setPanels } from '../../panels.js';
+import { toggleReplaycard } from '../replay/replaybar.js';
 import { showTargetcard } from '../targetcard/card.js';
 import { openFocus } from '../follow/follow.js';
 import { register } from '../../actions.js';
@@ -102,7 +103,8 @@ function openStation(id) {
 
 function setTableOpen(on) {
     if (on) closeSettings();
-    setPanels({ table: on, ...(on ? { replay: false } : {}) });
+    if (on && panels.replay) toggleReplaycard();
+    setPanels({ table: on });
 }
 
 export function init() {
@@ -139,7 +141,8 @@ export function resetSince() { objectsSince = 0; objects.resetEvents(); }
 // the objects that changed since the last poll; the client keeps the rest and ages them
 export async function fetchObjects() {
     try {
-        const data = await api(`mapobjects.json?since=${objectsSince}`);
+        const data = await viewed(`mapobjects.json?since=${objectsSince}`);
+        if (!data) return false;
         objects.applyDelta(data, !objectsSince);
         if (data.seq) objectsSince = data.seq;
         return true;
@@ -179,7 +182,7 @@ export function ownVessel() {
 
 // ─── hover, card and dialog ──────────────────────────────────────────────────
 
-export const { tooltip: markerTooltip, shipTooltip, shipKinds, click, pollEvents, noteSeen: eventSeen } = objects;
+export const { tooltip: markerTooltip, shipTooltip, titleGlyphs, click, pollEvents, noteSeen: eventSeen } = objects;
 export const stationTooltip = (feature, vesselHtml) => stationBand(feature.station_info) + (vesselHtml || '');
 
 // a badge feature or an MMSI opens the vessel's received and sent tabs

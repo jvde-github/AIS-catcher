@@ -51,30 +51,20 @@ namespace Services
 }
 
 class DB : public StreamIn<JSON::JSON>,
-		   public StreamIn<AIS::GPS>,
 		   public StreamIn<AIS::Control>,
 		   public StreamOut<JSON::JSON>
 {
 	// the viewer's formats, written from the table under its lock
 	friend struct Services::UiFormat;
 
-	JSON::Serializer builder{JSON_DICT_FULL};
-
 	std::string content;
-	float station_lat = LAT_UNDEFINED, station_lon = LON_UNDEFINED;
-	// the station position the cached ship distances were computed for
-	float distance_lat = LAT_UNDEFINED, distance_lon = LON_UNDEFINED;
 	int time_history = 30 * 60;
 	// oldest track and replay data served, 0 is unlimited
 	int track_time = 3600;
 	// newest last_signal among recycled ships: older scenes are missing vessels
 	std::time_t evict_horizon = 0;
-	bool latlon_share = false;
 	bool server_mode = false;
 	bool msg_save = false;
-	bool use_gps = true;
-	bool gps_position = false;
-	uint32_t own_mmsi = 0;
 
 	int nbuckets = 8209;
 	// 0 = unset, resolved at setup: the server-mode default leaves room for the
@@ -98,12 +88,8 @@ class DB : public StreamIn<JSON::JSON>,
 	PlaceMarkers place_markers;
 	std::time_t full_refresh_at = 0;
 
-	void updateDistance(Ship &ship);
-
 public:
-	// Distances again from an origin per ship, for a host whose stations each
-	// have a position; a ship `origin` gives none for is measured from the
-	// tracker's own position, when shared, else loses its distance
+	// Distances again, from where the station that heard each ship is now.
 	void measureFrom(const std::function<bool(const Ship &, float &, float &)> &origin);
 	// A ship's track back to `since`, never past what is served, newest point
 	// first, under the lock; false when the ship is not known
@@ -138,22 +124,7 @@ public:
 		std::lock_guard<std::mutex> lock(mtx);
 		return place_markers.index();
 	}
-	// Under the lock, each settled visit with its ship and its place: all of
-	// them, or a place's (`id` a runtime id), or a ship's
-	template <typename F> void forEachVisit(F f)
-	{
-		std::lock_guard<std::mutex> lock(mtx);
-		const auto *index = place_markers.index().get();
-		if (!index)
-			return;
-		ships.forEach([&](int ptr) {
-			visits.forEachVisit(ptr, [&](const VisitTracker::Visit &v) {
-				if (const auto *e = index->find(v.id))
-					f(ships[ptr], v, *e);
-			});
-			return true;
-		});
-	}
+	// Under the lock, each settled visit of a place (`id` a runtime id) or of a ship
 	template <typename F> void forEachVisitAt(uint32_t id, F f)
 	{
 		std::lock_guard<std::mutex> lock(mtx);
@@ -200,7 +171,6 @@ public:
 	}
 
 private:
-	void updateStation(float lat, float lon);
 	void locate(int ptr);
 	void install(int ptr, const Ship &s);
 	void refreshPlaceMembership(int ptr);
@@ -367,16 +337,11 @@ public:
 	// Quality bits that mark a message as a copy: delivered, but it does not
 	// move a ship, count, or add a path point. Zero (default) takes everything.
 	void setQualityMask(uint16_t m) { quality_mask = m; }
-	uint16_t getQualityMask() const { return quality_mask; }
 	// a host that counts each station's messages says when one was last heard; station
 	// records and rows carry it, so a connected but silent station can be drawn as such
 	void setStationHeard(std::function<std::time_t(int)> f) { station_heard = std::move(f); }
 	// messages the mask turned away
 	uint64_t getCopiesDropped() const { return copies_dropped; }
-	// Puts a record in the table under its MMSI, replacing what is there; for
-	// seeding from another source. The places follow from the position.
-	void putShip(const Ship &s);
-
 	struct SeedCount
 	{
 		int created = 0;
@@ -567,9 +532,6 @@ public:
 	DB() { events >> ring; }
 	// sizes the table from the settings and empties it: before the first message
 	void setup();
-	// input waits while the lock is held: the web viewer holds it across a
-	// whole reconfiguration of its tables
-	std::unique_lock<std::recursive_mutex> pauseInput() { return std::unique_lock<std::recursive_mutex>(configuration_mtx); }
 	template <typename F> void configure(F apply)
 	{
 		std::lock_guard<std::recursive_mutex> configurationLock(configuration_mtx);
@@ -591,40 +553,7 @@ public:
 			track_memory_kb = kb;
 	}
 	void setMaxShips(int n) { max_ships = n; }
-	void setShareLatLon(bool b) { latlon_share = b; }
-	bool getShareLatLon() { return latlon_share; }
-
-	void setLatLon(float lat, float lon)
-	{
-		updateStation(lat, lon);
-		gps_position = false;
-	}
-	void setConfigPosition(float lat, float lon, bool gps)
-	{
-		use_gps = gps;
-		if (gps && gps_position)
-			return;
-		updateStation(lat, lon);
-		gps_position = false;
-	}
-	void setLat(float lat)
-	{
-		updateStation(lat, station_lon);
-		gps_position = false;
-	}
-	void setLon(float lon)
-	{
-		updateStation(station_lat, lon);
-		gps_position = false;
-	}
-
-	float getLat() { return station_lat; }
-	float getLon() { return station_lon; }
-
-	void setOwnMMSI(uint32_t mmsi) { own_mmsi = mmsi; }
-
 	using StreamIn<JSON::JSON>::Receive;
-	using StreamIn<AIS::GPS>::Receive;
 	using StreamIn<AIS::Control>::Receive;
 
 	// The stations a host keeps itself, as the control feed would tell them; a
@@ -662,10 +591,17 @@ public:
 			stations.setState(id, it == states.end() ? StationRegistry::STATE_UNKNOWN : it->second, binary.sequence());
 		}
 	}
-	void setStation(const StationRegistry::Station &s)
+	// A station where it is now; one that moves is told again after some fifty metres.
+	void moveStation(int id, FLOAT32 lat, FLOAT32 lon)
 	{
 		std::lock_guard<std::mutex> lock(mtx);
-		stations.define(s, binary.sequence());
+		const StationRegistry::Station *s = stations.find(id);
+		if (!s || (std::fabs(s->lat - lat) < 0.0005f && std::fabs(s->lon - lon) < 0.0005f))
+			return;
+		StationRegistry::Station at = *s;
+		at.lat = lat;
+		at.lon = lon;
+		stations.define(at, binary.sequence());
 	}
 
 	// a station line changes the station list and tells the tracker where the station is; any
@@ -704,17 +640,6 @@ public:
 	Admission admit(const AIS::Message *msg, TAG &tag);
 	void count(const JSON::JSON *data, int len, TAG &tag);
 	void Receive(const JSON::JSON *data, int len, TAG &tag);
-	void Receive(const AIS::GPS *data, int len, TAG &tag)
-	{
-		std::lock_guard<std::recursive_mutex> configurationLock(configuration_mtx);
-		if (use_gps)
-		{
-			std::lock_guard<std::mutex> lock(mtx);
-			updateStation(data[0].getLat(), data[0].getLon());
-			gps_position = true;
-		}
-	}
-
 	// Which ships a reader sees, for a host that shows only some: a station's,
 	// or what a server's filter lets through. Empty keeps every one.
 	typedef std::function<bool(const Ship &)> Keep;

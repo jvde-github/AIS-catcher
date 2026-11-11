@@ -19,8 +19,7 @@ import { resetFocus } from '../station/station.js';
 
 function applyFilter() {
     saveSettings();
-    if (shipsDB != null)
-        for (const key in shipsDB) shipsDB[key].show = undefined;
+    for (const key in shipsDB) shipsDB[key].show = undefined;
 
     // whichever view is on screen owns the counters: replay reports its own
     // fleet as it redraws, and updateMarkerCount stands down while it does

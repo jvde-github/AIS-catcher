@@ -26,17 +26,16 @@
 namespace Services
 {
 	// Which stations' locations a server shows. A station kept home gives no position and
-	// nothing measured from there: distance and bearing, the vessel it rides, its range.
-	// `own`: the tracker's own position, which measured what no listed station did.
+	// nothing measured from there: distance and bearing, the vessel it rides, its range. So
+	// does a station that is not listed.
 	struct Located
 	{
 		std::map<int, bool> station;
-		bool own = false;
 
 		bool at(int id) const
 		{
 			auto it = station.find(id);
-			return it == station.end() ? own : it->second;
+			return it != station.end() && it->second;
 		}
 		bool of(const Ship &s) const { return at(s.heard[0].last ? s.heard[0].station : 0); }
 		// one more station shown, to its owner
@@ -51,12 +50,10 @@ namespace Services
 		{
 			if (ids.empty())
 			{
-				if (station.empty())
-					return own;
 				for (const auto &s : station)
 					if (!s.second)
 						return false;
-				return true;
+				return !station.empty();
 			}
 			for (int id : ids)
 				if (!at(id))
@@ -67,10 +64,9 @@ namespace Services
 		// range measured at all
 		bool hidesRange(const std::vector<int> &ids, float max_distance) const { return max_distance > 0 && !all(ids); }
 		// as each station's own share_loc says: for a reader without a server
-		static Located from(const StationRegistry &stations, bool own)
+		static Located from(const StationRegistry &stations)
 		{
 			Located l;
-			l.own = own;
 			stations.forEach([&](const StationRegistry::Station &s) { l.station[s.id] = s.share_loc; });
 			return l;
 		}

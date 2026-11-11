@@ -18,6 +18,8 @@
 #pragma once
 #include <fstream>
 #include <iostream>
+#include <memory>
+#include <vector>
 #include <iomanip>
 #include <cstdio>
 
@@ -234,17 +236,15 @@ namespace IO
 			batchDone(tag);
 		}
 
-		// `label`: its name when it has no description, "UDP #1"; never where it sends, as a map may show it
-		void writeJSON(JSON::Writer &w, const std::string &label) const
+		const std::string &getLink() const { return link; }
+
+		// the groups it asks for, and of those the ones it connects by: what its zones leave it
+		uint64_t groups_asked = GROUPS_ALL;
+		void takeGroups(uint64_t g)
 		{
-			w.beginObject()
-				.kv("type", type)
-				.kv("description", description.empty() ? label : description);
-			if (!link.empty())
-				w.kv("link", link);
-			w.key("stats");
-			stats.writeJSON(w);
-			w.endObject();
+			StreamIn<AIS::Message>::setGroupsIn(g);
+			StreamIn<JSON::JSON>::setGroupsIn(g);
+			StreamIn<AIS::GPS>::setGroupsIn(g);
 		}
 
 		std::string getSourcesStr()
@@ -316,13 +316,9 @@ namespace IO
 				Warning() << type << " output: \"persist\" is no longer used and is ignored; it reconnects by itself";
 				return true;
 			case AIS::KEY_SETTING_GROUPS_IN:
-			{
-				uint64_t g = Util::Parse::Integer(arg);
-				StreamIn<AIS::Message>::setGroupsIn(g);
-				StreamIn<JSON::JSON>::setGroupsIn(g);
-				StreamIn<AIS::GPS>::setGroupsIn(g);
+				groups_asked = Util::Parse::Integer(arg);
+				takeGroups(groups_asked);
 				return true;
-			}
 			default:
 				return filter.SetOptionKey(key, arg);
 			}
@@ -354,3 +350,19 @@ namespace IO
 		Setting &applyKey(AIS::Keys, const std::string &) override { return *this; }
 	};
 }
+
+// The message outputs and the sharing feed as the configuration reader made them.
+struct Outputs
+{
+	std::vector<std::shared_ptr<IO::OutputMessage>> list;
+	// what each was told, every setting in order: outputs told the same are the same
+	std::vector<std::string> told;
+	// the community feed, one of the list
+	IO::OutputMessage *feed = nullptr;
+	// whether the configuration says anything of sharing
+	bool sharing_defined = false;
+	// the feed takes only what the radios hear
+	bool radios_only = false;
+	// an HTTP output: the decoders tag signal and time for it
+	bool http = false;
+};

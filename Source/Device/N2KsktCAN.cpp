@@ -32,14 +32,7 @@
 namespace Device
 {
 
-	N2KSCAN::~N2KSCAN()
-	{
-		Close();
-	}
-
-	void N2KSCAN::Close()
-	{
-	}
+	std::vector<std::string> N2KSCAN::available_interfaces;
 
 	void N2KSCAN::Open(uint64_t h)
 	{
@@ -73,8 +66,8 @@ namespace Device
 
 	void N2KSCAN::getDeviceList(std::vector<Description> &DeviceList)
 	{
-		// 			DeviceList.push_back(Description(v, p, s, (uint64_t)i, Type::RTLSDR));
 		struct ifaddrs *ifaddr = nullptr, *ifa = nullptr;
+		available_interfaces.clear();
 
 		if (getifaddrs(&ifaddr) == -1)
 		{

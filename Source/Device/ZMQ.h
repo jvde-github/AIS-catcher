@@ -55,7 +55,6 @@ namespace Device
 		void Play();
 		void Stop();
 
-		bool isCallback() { return true; }
 
 		void getDeviceList(std::vector<Description> &DeviceList);
 

@@ -6,8 +6,6 @@ export const hub = {
     passwordBackstop() {},
     // the wizard set the password: signed in
     authGranted() {},
-    // a save the receiver takes at its next start
-    configSaved() {},
     // the status as last read, once the read under way is in
     status: () => Promise.resolve({}),
     refreshStatus: () => Promise.resolve({})

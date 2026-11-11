@@ -273,7 +273,7 @@ namespace Services
 				const Route *r = route(t.route);
 				w.beginObject().kv("name", t.name).kv("title", t.title).kv("description", t.description).key("inputSchema");
 				if (r)
-					writeInputSchema(w, *r, t.args, &BRIEF);
+					writeInputSchema(w, *r, t.args, BRIEF);
 				else
 					w.beginObject().kv("type", "object").endObject();
 				w.key("annotations").beginObject().kv("title", t.title).kv("readOnlyHint", true).kv("destructiveHint", false)
@@ -309,6 +309,7 @@ namespace Services
 			call.method = "GET";
 			call.path = tool->route;
 			call.owner = request.owner;
+			call.station = request.station;
 			std::string bad, asked;
 			if (args && args->isObject())
 				for (const auto &a : args->getObject().getMembers())

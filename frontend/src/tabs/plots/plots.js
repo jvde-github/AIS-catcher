@@ -212,7 +212,6 @@ const graph_options_count = {
     },
     elements: { point: { radius: 1 } },
     animation: false,
-    tooltips: { mode: "index", intersect: false },
     hover: { mode: "index", intersect: false },
     scales: {
         y: {
@@ -245,7 +244,6 @@ const graph_options_single = {
     },
     elements: { point: { radius: 1 } },
     animation: false,
-    tooltips: { mode: "index", intersect: false },
     hover: { mode: "index", intersect: false },
     scales: {
         y: { stacked: true, beginAtZero: true, ticks: { display: true } },
@@ -258,7 +256,6 @@ const graph_options_level = {
     plugins: { legend: { display: false } },
     elements: { point: { radius: 1 } },
     animation: false,
-    tooltips: { mode: "index", intersect: false },
     hover: { mode: "index", intersect: false },
     scales: {
         y: { beginAtZero: false, ticks: { display: true } },
@@ -271,7 +268,6 @@ const graph_options_distance = {
     plugins: { legend: { display: true } },
     elements: { point: { radius: 1 } },
     animation: false,
-    tooltips: { mode: "index", intersect: false },
     hover: { mode: "index", intersect: false },
     scales: {
         y: { type: 'logarithmic', beginAtZero: false, ticks: { display: true } },
@@ -713,30 +709,17 @@ function updateChartDistance(b, f, c) {
 
 function updateChartSingle(b, f1, f2, c) {
     if (!Object.prototype.hasOwnProperty.call(b, f1)) return;
-    const h = [];
-    const source = b[f1];
-    for (let i = 0; i < source.time.length; i++) {
-        h.push({ x: source.time[i], y: source.stat[i][f2] });
-    }
-    c.data.datasets[0].data = h;
-    setTimeAxis(c, source);
+    c.data.datasets[0].data = series(b, f1, f2);
+    setTimeAxis(c, b[f1]);
     c.update();
 }
 
-function updateChartLevel(chartData, timeframe, chart) {
-    if (!chartData?.[timeframe]) return;
-    const timeSeriesData = chartData[timeframe];
-
-    const minLevelData = [];
-    const maxLevelData = [];
-    for (let i = 0; i < timeSeriesData.time.length; i++) {
-        minLevelData.push({ x: timeSeriesData.time[i], y: timeSeriesData.stat[i].level_min });
-        maxLevelData.push({ x: timeSeriesData.time[i], y: timeSeriesData.stat[i].level_max });
-    }
-    chart.data.datasets[0].data = maxLevelData;
-    chart.data.datasets[1].data = minLevelData;
-    setTimeAxis(chart, timeSeriesData);
-    chart.update();
+function updateChartLevel(b, f, c) {
+    if (!b?.[f]) return;
+    c.data.datasets[0].data = series(b, f, "level_max");
+    c.data.datasets[1].data = series(b, f, "level_min");
+    setTimeAxis(c, b[f]);
+    c.update();
 }
 
 function updateRadar(b, f, c) {
@@ -810,41 +793,17 @@ export async function update() {
 export function updateColors() {
     if (!initialized) return;
 
-    const multi = [charts.chart_minutes, charts.chart_hours, charts.chart_days, charts.chart_seconds];
-    const level = [charts.chart_level, charts.chart_level_hour];
-    const single = [charts.chart_ppm, charts.chart_minute_vessel, charts.chart_ppm_minute,
-                    charts.chart_hour_vessel, charts.chart_day_vessel];
-    const distance = [charts.chart_distance_day, charts.chart_distance_hour];
-    const radar = [charts.chart_radar_day, charts.chart_radar_hour];
-    const compare = [charts.chart_compare_minutes, charts.chart_compare_hours,
-                     charts.chart_compare_vessels_minute, charts.chart_compare_vessels_hour];
-    const gain = [charts.chart_compare_gain_minute, charts.chart_compare_gain_hour];
-
-    multi.forEach((chart) => {
-        if (chart) { updateColorMulti(chart); chart.update(); }
-    });
-    single.forEach((chart) => {
-        if (chart) { updateColorMulti(chart); chart.update(); }
-    });
-    distance.forEach((chart) => {
-        if (chart) { updateChartColors(chart, COLORS_DISTANCE); chart.update(); }
-    });
-    level.forEach((chart) => {
-        if (chart) {
-            const colorVariables = ["--color-chart-1", "--color-chart-1", "--color-chart-1"];
-            updateChartColors(chart, colorVariables);
-            chart.update();
-        }
-    });
-    radar.forEach((chart) => {
-        if (chart) { updateColorRadar(chart); chart.update(); }
-    });
-    compare.forEach((chart) => {
-        if (chart) { updateChartColors(chart, ["--color-chart-4", "--color-chart-1"]); chart.update(); }
-    });
-    gain.forEach((chart) => {
-        if (chart) { updateChartColors(chart, ["--color-chart-1"]); chart.update(); }
-    });
+    const c = charts, colors = (...vars) => (chart) => updateChartColors(chart, vars);
+    [
+        [updateColorMulti, c.chart_minutes, c.chart_hours, c.chart_days, c.chart_seconds,
+            c.chart_ppm, c.chart_minute_vessel, c.chart_ppm_minute, c.chart_hour_vessel, c.chart_day_vessel],
+        [colors(...COLORS_DISTANCE), c.chart_distance_day, c.chart_distance_hour],
+        [colors("--color-chart-1", "--color-chart-1", "--color-chart-1"), c.chart_level, c.chart_level_hour],
+        [updateColorRadar, c.chart_radar_day, c.chart_radar_hour],
+        [colors("--color-chart-4", "--color-chart-1"), c.chart_compare_minutes, c.chart_compare_hours,
+            c.chart_compare_vessels_minute, c.chart_compare_vessels_hour],
+        [colors("--color-chart-1"), c.chart_compare_gain_minute, c.chart_compare_gain_hour],
+    ].forEach(([paint, ...list]) => list.forEach((chart) => { if (chart) { paint(chart); chart.update(); } }));
 }
 
 register({

@@ -52,28 +52,6 @@ namespace Services
 		return Util::Parse::QueryParam(query, name);
 	}
 
-	void Request::setParam(const std::string &name, const std::string &value)
-	{
-		std::string out;
-		bool set = false;
-		std::size_t start = 0;
-		while (start <= query.size())
-		{
-			const std::size_t end = query.find('&', start);
-			std::string part = query.substr(start, end == std::string::npos ? std::string::npos : end - start);
-			if (part == name || part.compare(0, name.size() + 1, name + "=") == 0)
-				part = name + "=" + value, set = true;
-			if (!part.empty())
-				out += (out.empty() ? "" : "&") + part;
-			if (end == std::string::npos)
-				break;
-			start = end + 1;
-		}
-		if (!set)
-			out += (out.empty() ? "" : "&") + name + "=" + value;
-		query = out;
-	}
-
 	std::vector<std::pair<std::string, std::string>> Request::params() const
 	{
 		return Util::Parse::Query(query);
@@ -176,6 +154,24 @@ namespace Services
 		w.endObject().endObject();
 	}
 
+	void writeSharing(JSON::Writer &w, const SystemFacts &f)
+	{
+		w.kv("sharing", f.sharing).kv("sharing_uuid", f.sharing_uuid);
+	}
+
+	void writeOutputs(JSON::Writer &w, const SystemFacts &f)
+	{
+		for (const auto &o : f.outputs)
+		{
+			w.beginObject().kv("type", o.type).kv("description", o.label);
+			if (!o.link.empty())
+				w.kv("link", o.link);
+			w.key("stats").beginObject().kv("bytes_out", o.bytes_out).kv("bytes_in", o.bytes_in).kv("connect_ok", o.connect_ok)
+				.kv("connect_fail", o.connect_fail).kv("reconnects", o.reconnects).kv("connected", o.connected)
+				.kv("dropped", o.dropped).kv("messages", o.messages).endObject().endObject();
+		}
+	}
+
 	void textOrNull(JSON::Writer &w, const char *key, const std::string &v)
 	{
 		if (v.find_first_not_of(' ') == std::string::npos)
@@ -235,10 +231,9 @@ namespace Services
 		return true;
 	}
 
-	Located located(Tracker &tracker, const ServerSpec &spec, const StationRegistry &stations)
+	Located located(const ServerSpec &spec, const StationRegistry &stations)
 	{
 		Located l;
-		l.own = spec.locates(tracker.trackingConfig().latlon_share);
 		stations.forEach([&](const StationRegistry::Station &s) { l.station[s.id] = spec.locates(s.share_loc); });
 		return l;
 	}

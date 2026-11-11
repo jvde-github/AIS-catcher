@@ -4,12 +4,11 @@ import { getDistanceUnit, getDistanceVal, u } from '../../core/units.js';
 import * as shipcard from '@aiscatcher/ui/shipcard.js';
 import { beginLoading } from '@aiscatcher/ui/loading.js';
 import * as tabs from '@aiscatcher/ui/shipcard-tabs.js';
-import { getCountryName, getDeltaTimeVal, getShipTypeFull, getStringfromChannels, getStringfromGroup, getStringfromMsgType } from '@aiscatcher/core/text.js';
+import { getCountryName, getDeltaTimeVal, getShipTypeFull, getStringfromChannels, getStringfromGroup, getStringfromMsgType, sanitizeString } from '@aiscatcher/core/text.js';
 import { getCallSign, getShipName } from '../../core/names.js';
-import { decodeHTMLEntities } from '@aiscatcher/ui/components.js';
-import { decodeBadge, glyphsHTML, KIND_CAT, showsShipBadge } from '@aiscatcher/ui/binary.js';
+import { decodeBadge } from '@aiscatcher/ui/binary.js';
 import * as mapObjects from '../mapobjects/mapobjects.js';
-import { escapeShipText, focus } from '../../data.js';
+import { focus } from '../../data.js';
 import { severalStations, stationLabel } from '../../core/config.js';
 import { stationBoxes } from '@aiscatcher/ui/stations.js';
 import { register } from '../../actions.js';
@@ -35,7 +34,7 @@ export function build() {
         const raw = ships[cardMmsi]?.raw;
         if (!raw || !Number.isFinite(raw.lat) || !Number.isFinite(raw.lon)) return;
         mapObjects.openNearby({ lat: raw.lat, lon: raw.lon, mmsi: Number(cardMmsi),
-                                title: decodeHTMLEntities(getShipName(raw)) || 'MMSI ' + cardMmsi,
+                                title: getShipName(raw) || 'MMSI ' + cardMmsi,
                                 country: raw.country, shiptype: raw.shiptype, status: raw.status });
     }, 'ship');
     document.getElementById('targetcard_track_option').after(nearby);
@@ -104,7 +103,7 @@ async function refreshVessel() {
         finishLoading();
     }
     if (cardMmsi !== mmsi || vessel !== request || !data || data.mmsi == null) return;
-    vessel.data = escapeShipText(data);
+    vessel.data = data;
 
     if (historyCache.mmsi !== mmsi) historyCache = { mmsi, pts: null, changes: null };
     historyCache.changes = Array.isArray(data.changes) ? data.changes : [];
@@ -154,16 +153,10 @@ const ICON_UNAVAILABLE = 'card-icon-unavailable';
 // newest kind at once, the rest once fetched; the glyphs open the messages
 function setTitle(ship) {
     const title = ui.card.header.title();
-    const glyphs = (cats) => glyphsHTML(cats, 'data-action="showBinaryMessageDialogCard"');
-    const name = getShipName(ship) || ship.mmsi;
-    // the station the vessel carries, after the message kinds
-    const station = ship.station != null ? glyphsHTML(['station'], '') : '';
-    title.innerHTML = name + station;
-    if (!ship.binary) return;
+    const name = sanitizeString(String(getShipName(ship) || ship.mmsi));
     const mmsi = cardMmsi;
-    const first = showsShipBadge(ship.binary) ? [KIND_CAT[decodeBadge(ship.binary).kind] || 'data'] : [];
-    title.innerHTML = name + glyphs(first) + station;
-    mapObjects.shipKinds(ship).then((cats) => { if (cardMmsi === mmsi && cats.length) title.innerHTML = name + glyphs(cats) + station; });
+    title.innerHTML = name;
+    mapObjects.titleGlyphs(ship, 'data-action="showBinaryMessageDialogCard"', (glyphs) => { if (cardMmsi === mmsi) title.innerHTML = name + glyphs; });
 }
 
 function updateMessageButton() {

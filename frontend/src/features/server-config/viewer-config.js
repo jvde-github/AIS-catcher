@@ -9,11 +9,11 @@ import { ol, map, basemaps, overlapmaps, baseMapsChanged, updateMapURL } from '.
 import { redraw } from '../../fleet.js';
 import { saveSettings } from '../../settings-store.js';
 import { showDialog, showNotification } from '../../dialog.js';
-import { setPageTitle } from '../../panels.js';
+import { setPageTitle, replaycardVisible } from '../../panels.js';
 import { load as loadTab, loaded as loadedTab, showTab, resolveTab, applyTabFeatures } from '../../tabs/index.js';
 import { updateSettingsTab } from '../settings/settings.js';
 import { syncFocus } from '../station/station.js';
-import * as replay from '../replay/replay.js';
+import { toggleReplaycard } from '../replay/replaybar.js';
 import * as community from '../../overlays/community.js';
 import { createServerMaps } from '../server-maps/server-maps.js';
 import { createViewerConfig } from './server-config.js';
@@ -41,7 +41,7 @@ export function initServerConfig() {
             community.updateSharingState(next.features.sharing, next.features.sharing_uuid);
             const oldTab = settings.tab;
             if (resolveTab() !== oldTab) showTab();
-            if (!next.features.replay && replay.isActive()) replay.stop();
+            if (!next.features.replay && replaycardVisible()) toggleReplaycard();
             if (aboutChanged && settings.tab === "about")
                 loadTab('about').then(m => m.shown()).catch(console.error);
             if (restartChanged && next.restart_required?.length)

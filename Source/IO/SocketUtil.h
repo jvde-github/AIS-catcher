@@ -273,10 +273,9 @@ namespace Net
 		// still fires.
 		void notify()
 		{
+			// before init() there is nothing to wake, and a flag raised then would never be drained
 			bool expected = false;
-			if (!pending.compare_exchange_strong(expected, true))
-				return;
-			if (wr == -1)
+			if (wr == -1 || !pending.compare_exchange_strong(expected, true))
 				return;
 			char b = 1;
 #ifdef _WIN32

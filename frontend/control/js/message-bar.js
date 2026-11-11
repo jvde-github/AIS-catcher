@@ -3,15 +3,12 @@ import { icon } from './icons.js';
 
 const PASSING_MS = 4000;
 
-export function createMessageBar({ settings, page, inSettings, onRestart }) {
+export function createMessageBar({ settings, page, inSettings }) {
     let msg = null, timer = null;
-    let restart = null, restartClosed = false;
 
     function close() {
-        if (msg) {
-            clearTimeout(timer);
-            msg = null;
-        } else restartClosed = true;
+        clearTimeout(timer);
+        msg = null;
         render();
     }
 
@@ -19,15 +16,14 @@ export function createMessageBar({ settings, page, inSettings, onRestart }) {
         node.hidden = !m;
         if (!m) return node.replaceChildren();
         node.dataset.tone = m.tone;
-        node.replaceChildren(...[
+        node.replaceChildren(
             el('span', 'msgbar__text', { text: m.text }),
-            m.action ? el('button', 'st-btn st-btn--sm st-btn--primary msgbar__action', { type: 'button', text: m.action, onClick: onRestart }) : null,
-            el('button', 'msgbar__close', { type: 'button', title: 'Close', 'aria-label': 'Close', html: icon('close', ''), onClick: close })].filter(Boolean));
+            el('button', 'msgbar__close', { type: 'button', title: 'Close', 'aria-label': 'Close', html: icon('close', ''), onClick: close }));
     }
 
     function render() {
         const here = inSettings();
-        paint(settings, here ? msg || (restart && !restartClosed ? restart : null) : null);
+        paint(settings, here ? msg : null);
         paint(page, here ? null : msg);
     }
 
@@ -40,19 +36,5 @@ export function createMessageBar({ settings, page, inSettings, onRestart }) {
         return () => { if (msg === shown) close(); };
     }
 
-    // 'restart' or 'start' while saved changes wait for the receiver, null once it has them
-    function setRestart(state) {
-        const was = restart && restart.state;
-        if (state === was) return;
-        restart = state ? { state, tone: 'info', text: `Changes saved. ${state === 'restart' ? 'Restart' : 'Start'} the receiver to use them.`,
-            action: state === 'restart' ? 'Restart receiver' : 'Start receiver' } : null;
-        restartClosed = false;
-        if (restart && msg && (msg.tone === 'success' || msg.tone === 'info')) {
-            clearTimeout(timer);
-            msg = null;
-        }
-        render();
-    }
-
-    return { show, setRestart, render };
+    return { show, render };
 }

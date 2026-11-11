@@ -771,9 +771,6 @@ namespace IO
 		case AIS::KEY_SETTING_RETENTION:
 			retention_days = Util::Parse::Integer(arg, 0, 36500);
 			break;
-		case AIS::KEY_SETTING_GROUPS_IN:
-			StreamIn<JSON::JSON>::setGroupsIn(Util::Parse::Integer(arg));
-			break;
 		case AIS::KEY_SETTING_STATION_ID:
 			station_id = Util::Parse::Integer(arg);
 			break;

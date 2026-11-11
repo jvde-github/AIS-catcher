@@ -42,7 +42,7 @@ namespace IO
 			if (file.fail())
 			{
 				Error() << "File: cannot write to file.";
-				StopRequest();
+				StopRequest(true);
 			}
 		}
 

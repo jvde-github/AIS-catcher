@@ -617,7 +617,7 @@ export function create(host) {
         const b = decodeBadge(ship.binary);
         const first = [KIND_CAT[b.kind] || 'data'];
         if (b.count < 2) return Promise.resolve(first);
-        return hydrateShip(ship.mmsi, ship.binary).then((messages) => kindsOf(messages.filter(shownBy())) || first);
+        return hydrateShip(ship.mmsi, ship.binary).then((messages) => kindsOf(messages.filter(shownBy())));
     }
 
     // the glyphs beside a card title: the message kinds, the first at once and the rest

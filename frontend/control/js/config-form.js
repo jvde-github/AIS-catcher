@@ -5,9 +5,8 @@ import { icon } from './icons.js';
 import { hub } from './hub.js';
 import { App, ConfigStore, getNested, registerEditor, setNested } from './config-store.js';
 import { Renderer } from './config-widgets.js';
-import { ZoneColors } from './zone-modal.js';
+import { zoneCss } from './zones.js';
 
-const getZoneCss = ZoneColors.css;
 
 export class ConfigForm {
     constructor(config) {
@@ -19,7 +18,7 @@ export class ConfigForm {
 
         if (!this.container) return;
 
-        this.editor = registerEditor(config.containerId, { save: () => this.save(), data: () => this.data });
+        this.editor = registerEditor(config.containerId, () => this.save());
         // settles, never rejects: once the data is drawn or the failure shown
         this.ready = this.load();
     }
@@ -136,7 +135,7 @@ export class ConfigForm {
             if (onZones) onZones(zoneList);
             else zoneList.forEach(z => {
                 const pill = el('span', 'st-chip st-chip--zone', {}, z);
-                pill.style.setProperty('--z', getZoneCss(z));
+                pill.style.setProperty('--z', zoneCss(z));
                 sum.appendChild(pill);
             });
             if (adv) adv.hidden = !shown.length;
@@ -162,7 +161,7 @@ export class ConfigForm {
             if (essentials.has(field.name)) return card.appendChild(node);
             // one setting per line: label and help on the left, the control on the right;
             // lists and the engines take the whole line under their label
-            const simple = ['text', 'number', 'select', 'toggle', 'password', 'integer-select', 'off-number', 'switch-integer'].includes(field.type);
+            const simple = ['text', 'number', 'select', 'toggle', 'password', 'integer-select', 'switch-integer'].includes(field.type);
             node.classList.add('st-opt');
             node.dataset.stField = field.name;
             if (!simple) node.classList.add('st-opt--wide');
@@ -229,7 +228,7 @@ export class ConfigForm {
         return zones => {
             const mine = ++seq;
             const parts = [el('span', 'st-routing__label', { html: icon(dir === 'out' ? 'arrowRight' : 'arrowLeft', 'st-routing__icon') + (dir === 'out' ? 'Sends to' : 'Receives from') })];
-            zones.forEach(z => { const p = el('span', 'st-zone', {}, z); p.style.setProperty('--z', getZoneCss(z)); parts.push(p); });
+            zones.forEach(z => { const p = el('span', 'st-zone', {}, z); p.style.setProperty('--z', zoneCss(z)); parts.push(p); });
             const sep = () => el('span', 'st-routing__sep', { 'aria-hidden': 'true' }, '·');
             const link = el('button', 'st-routing__link', { type: 'button', onClick: () => this.config.openFlow?.() }, '…');
             if (zones.length) parts.push(sep());
@@ -364,21 +363,20 @@ export class ConfigForm {
         }
     }
 
-    // whether a field applies to an item, as its chain of dependsOn says; with `onlyKind`, only
-    // the links on the kind of device count (an Airspy keeps its VGA while the gain mode is not free)
-    applies(field, item, onlyKind = false, depth = 0) {
+    // whether a field applies to an item, by its dependsOn chain; with `said` only the item's own choice rules it out
+    applies(field, item, said = false, depth = 0) {
         const dep = field.dependsOn;
         if (!dep || depth > 6) return true;
         const parent = this.fields.find(f => f.name === dep.field);
-        if (parent && !this.applies(parent, item, onlyKind, depth + 1)) return false;
-        if (onlyKind && dep.field !== 'input') return true;
+        if (parent && !this.applies(parent, item, said, depth + 1)) return false;
         let val = parent ? this.fieldValue(item, parent) : item[dep.field];
+        if (said && !parent?.options?.some(o => o.value && String(o.value).toLowerCase() === String(val).toLowerCase())) return true;
         if (val === undefined && parent) val = parent.defaultValue;
-        const v = String(val).toLowerCase();
+        const v = String(val ?? '').toLowerCase();
         return Array.isArray(dep.value) ? dep.value.some(x => String(x).toLowerCase() === v) : String(dep.value).toLowerCase() === v;
     }
 
-    // the settings of another kind of device are dropped on save, and a block they leave empty
+    // what an item's own choices rule out is dropped on save, and a block that leaves empty
     pruneFor(item) {
         const out = JSON.parse(JSON.stringify(item));
         this.fields.forEach(f => {
@@ -433,7 +431,7 @@ export class ConfigForm {
         this.freshItems = new WeakSet();
         if (!await this.editor.write(cfg => this.applyDataTo(cfg, { forSave: true }), 'the configuration')) return;
         App.notify('success', 'Configuration saved');
-        hub.configSaved();
+        hub.refreshStatus();
     }
 
     destroy() {
@@ -483,7 +481,7 @@ export function rowsLayout(form) {
             // pill in miniature (a bare coloured dot would read as status, as it does elsewhere)
             ...(Array.isArray(item.zone) ? item.zone : []).map(z => {
                 const d = el('span', 'st-zone-dot', { title: `Zone ${z}`, 'aria-label': `zone ${z}` });
-                d.style.setProperty('--z', getZoneCss(z));
+                d.style.setProperty('--z', zoneCss(z));
                 return d;
             }),
             form.freshItems.has(item) ? el('span', 'st-chip st-chip--new', {}, 'New') : null);

@@ -71,10 +71,12 @@
 
 class tN2kMsg;
 
-void StopRequest();
-// stop ends the running engine, stop_process the managed-mode loop around it
+// ends the running engine; a part that cannot go on says `failed`, and the run ends as an error does
+void StopRequest(bool failed = false);
+// stop ends the engine, stop_process the managed loop; stop_failed: a failure stopped it
 extern std::atomic<bool> stop;
 extern std::atomic<bool> stop_process;
+extern std::atomic<bool> stop_failed;
 
 #define GROUPS_ALL 0xFFFFFFFFFFFFFFFF
 #define GROUP_OUT_UNDEFINED (1ULL << 63)

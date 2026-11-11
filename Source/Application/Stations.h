@@ -31,13 +31,9 @@ namespace Stations
 	// Every receiver stands at a station: the one the configuration names, or the
 	// default station, 0, made from the defaults when the file does not list it. A
 	// station without a position takes its first receiver's with one; a receiver
-	// takes its station's.
-	void resolve(StationRegistry &stations, const StationDefaults &defaults, const std::vector<std::unique_ptr<Receiver>> &receivers, Site *site);
-	// Stations told again while the engine runs: the configured ones as the file
-	// now has them; one a receiver still names, or a receiver's own, as it was;
-	// then the site hears of them. Which receiver uses which station changes only
-	// with a restart.
-	void refresh(StationRegistry &stations, const StationRegistry &configured, const std::vector<std::unique_ptr<Receiver>> &receivers, Site *site);
+	// takes its station's. The site keeps the stations as resolved; tell: the log says
+	// which receiver stands where.
+	void resolve(StationRegistry stations, const StationDefaults &defaults, const std::vector<std::unique_ptr<Receiver>> &receivers, Site &site, bool tell = true);
 	// a station a receiver names is one the configuration defines; the default station, 0, is there always
 	void validate(const StationRegistry &stations, const std::vector<std::unique_ptr<Receiver>> &receivers);
 }

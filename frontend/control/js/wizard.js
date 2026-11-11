@@ -1,7 +1,7 @@
 // The setup wizard: a first configuration in a few steps, or one imported from
 // a pre-managed-mode config file.
 import { App, ConfigStore, getNested, setNested } from './config-store.js';
-import { migrateConfig } from './config-migrate.js';
+import { FILTER_KEYS, migrateConfig } from './config-migrate.js';
 import { api } from './api.js';
 import { icon } from './icons.js';
 import { hub } from './hub.js';
@@ -12,7 +12,7 @@ import { DEVICE_BLOCKS, deviceOf, isRadio } from './inputs.js';
 
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-    const BAUD_RATES = [4800, 9600, 38400, 115200];
+    const BAUD_RATES = receiverSchema.serialport_baudrate.options.map(o => +o.value);
 
     const WIZARD_STEPS = [
         {
@@ -103,10 +103,10 @@ import { DEVICE_BLOCKS, deviceOf, isRadio } from './inputs.js';
     const IMPORT_CHANNELS = LIST_OUTPUTS;
 
     // copy only the fields the schema declares, at their jsonpath (receiver
-    // settings nest per device, e.g. rtlsdr.tuner), and the zones
-    function sanitizeBySchema(item, schema) {
+    // settings nest per device, e.g. rtlsdr.tuner), the zones, and `more`: an output's message filter
+    function sanitizeBySchema(item, schema, more = []) {
         const clean = {};
-        [...Object.values(schema).map(f => f.jsonpath || f.name), 'zone'].forEach(path => {
+        [...Object.values(schema).map(f => f.jsonpath || f.name), 'zone', ...more].forEach(path => {
             const v = getNested(item, path);
             if (v === undefined) return;
             setNested(clean, path, v);
@@ -143,7 +143,7 @@ import { DEVICE_BLOCKS, deviceOf, isRadio } from './inputs.js';
         IMPORT_CHANNELS.forEach(({ value: key, label, schema, essentials }) => {
             (cfg[key] || []).forEach(item => {
                 if (!item || typeof item !== 'object') return;
-                const clean = sanitizeBySchema(item, schema);
+                const clean = sanitizeBySchema(item, schema, FILTER_KEYS);
                 if (!essentials.every(f => clean[f] !== undefined && clean[f] !== ''))
                     return;
                 // entries disabled in the legacy config default to unchecked
@@ -665,7 +665,7 @@ import { DEVICE_BLOCKS, deviceOf, isRadio } from './inputs.js';
                 App.notify('success', 'Configuration saved');
                 if (startAfter)
                     return hub.status()
-                        .then(st => api('/api/engine', { body: st.engine === 'running' ? 'restart' : 'start' }))
+                        .then(st => st.engine === 'running' ? null : api('/api/engine', { body: 'start' }))
                         .catch(e => { App.notify('error', 'Could not start the receiver: ' + e.message); });
             })
             .catch(e => {

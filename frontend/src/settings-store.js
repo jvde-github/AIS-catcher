@@ -7,9 +7,9 @@ import { ShippingClass } from '@aiscatcher/core/constants.js';
 import * as settingsStorage from '@aiscatcher/ui/settings.js';
 import { debounce } from '@aiscatcher/ui/components.js';
 import * as markersLib from '@aiscatcher/map/markers.js';
-import { showDialog, showNotification } from './dialog.js';
+import { showNotification } from './dialog.js';
 
-const urlParams = new URLSearchParams(window.location.search);
+export const urlParams = new URLSearchParams(window.location.search);
 
 // ─── defaults and migrations ─────────────────────────────────────────────────
 
@@ -147,18 +147,6 @@ export function restoreDefaultSettings() {
 }
 
 function updateForLegacySettings() {
-    if ('latlon_in_dms' in settings) {
-
-        settings.coordinate_format = settings.latlon_in_dms ? "dms" : "decimal";
-        delete settings.latlon_in_dms;
-    }
-
-    if ('realtime_filter_mmsis' in settings) {
-        if (Array.isArray(settings.realtime_filter_mmsis) && settings.realtime_filter_mmsis.length && !(settings.realtime_filters || []).length)
-            settings.realtime_filters = settings.realtime_filter_mmsis.map((m) => ({ kind: 'mmsi', value: m }));
-        delete settings.realtime_filter_mmsis;
-    }
-
     settings.basemap_opacity = { ...DEFAULT_SETTINGS.basemap_opacity, ...(settings.basemap_opacity || {}) };
     if (!markersLib.PLANE_PALETTES[settings.plane_palette]) settings.plane_palette = DEFAULT_SETTINGS.plane_palette;
 
@@ -174,20 +162,6 @@ function updateForLegacySettings() {
     if (!("showPlanesAtFirst" in settings)) {
         settings.showPlanesAtFirst = true;
         settings.map_overlay.push("Aircraft");
-    }
-
-    for (const key of ["pinned", "pinned_x", "pinned_y", "top_left"]) {
-        const was = "shipcard_" + key;
-        if (was in settings) {
-            settings["targetcard_" + key] = settings[was];
-            delete settings[was];
-        }
-    }
-
-    if (Array.isArray(settings.map_overlay) && settings.map_overlay.includes("Community Feed")) {
-        settings.map_overlay = settings.map_overlay.filter(t => t !== "Community Feed");
-        queueMicrotask(() => showDialog("Community feed has moved",
-            "The on-map Community Feed overlay has been replaced by a new <b>Community Pane</b> that opens the full aiscatcher.org map in a popup window.<br><br>Right-click the map and choose <b>Toggle Community Pane</b>, or use the network button in the map controls."));
     }
 }
 

@@ -242,7 +242,6 @@ namespace Device
 		void Play() override;
 		void Stop() override;
 
-		bool isCallback() override { return true; }
 
 		void getDeviceList(std::vector<Description> &DeviceList) override;
 

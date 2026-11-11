@@ -3,8 +3,7 @@
    What a receiver words as news about a vessel: a safety message, a change
    of destination, status or draught. Asked for after the last sequence seen,
    kept to what lies in view, and laid out the same on every host. The host
-   supplies the feed's address, the fetch and the map. A vessel label is
-   only needed for older servers without ticker-v1 formatted text.
+   supplies the feed's address, the fetch and the map.
    ========================================================================= */
 import { fromLonLat } from 'ol/proj.js';
 import { hasValidCoords } from '@aiscatcher/core/geo.js';
@@ -59,47 +58,15 @@ export function create(host) {
     }
     const isSeen = (mmsi, list) => !!mmsi && (list[mmsi] || 0) > Date.now();
 
-    const isDistressDevice = (mmsi) => /^97[024]/.test(String(mmsi));
-    const isBaseStation = (mmsi) => mmsi >= 2000000 && mmsi <= 9999999;
-
-    // a receiver too old to word its changes still says what kind they are
-    const KIND_FIELD = { 2: 'destination', 3: 'status', 4: 'draught' };
-
     // The receiver words its events; the strip only lays them out. A change
     // names its field and the value on either side, a safety message is the
     // message and who it was for. The arrow stands even where the old value is
     // unknown, so a change never reads as a first report.
     function tickerEvent(e, seen) {
-        if (e.format === 'ticker-v1') {
-            const rendered = renderEventText(e.text);
-            return { key: `ev-${eventsEpoch}-${e.seq}`, at: (e.first || e.t || 0) * 1000,
-                id: e.mmsi, lat: e.lat, lon: e.lon, fresh: true, level: e.level || 0,
-                demoted: isSeen(e.mmsi, seen), ...rendered };
-        }
-        // Older event services still supply separate fields and need host labels.
-        const label = (m) => String(host.shipLabel(m));
-        const who = isDistressDevice(e.from) ? (String(e.from).startsWith('972') ? 'MOB device' : String(e.from).startsWith('974') ? 'EPIRB' : 'AIS-SART')
-            : isBaseStation(e.from) ? `VTS ${label(e.from).replace(/^MMSI /, '')}` : label(e.from);
-        const to = e.to ? label(e.to) : '';
-        const parts = [];
-        let text;
-        const field = e.label || KIND_FIELD[e.kind] || '';
-        if (field) {
-            parts.push(`<span class="tk-name">${escapeHtml(who)}</span>`, '<span class="tk-sep">·</span>', `<span class="tk-label">${escapeHtml(field)}</span>`);
-            if (e.was) parts.push(`<span class="tk-was">${escapeHtml(e.was)}</span>`);
-            parts.push('<span class="tk-arrow">&rarr;</span>', `<span class="tk-to">${escapeHtml(e.text)}</span>`);
-            text = `${who} · ${field} ${e.was ? e.was + ' ' : ''}→ ${e.text}`;
-        } else {
-            const alert = e.level >= 1;
-            const body = e.text + (e.count > 1 ? ` (×${e.count})` : '');
-            parts.push(`<span class="${alert ? 'tk-alert' : 'tk-name'}">${alert ? '&#9888; ' : ''}${escapeHtml(who)}` +
-                (to ? '<span class="tk-arrow">&rarr;</span>' + escapeHtml(to) : '') + '</span>',
-                '<span class="tk-sep">·</span>', `<span class="tk-to">${escapeHtml(body)}</span>`);
-            text = `${alert ? '⚠ ' : ''}${who}${to ? ` → ${to}` : ''} · ${body}`;
-        }
-        return { key: `ev-${eventsEpoch}-${e.seq}`, at: (e.first || e.t || 0) * 1000, id: e.from, lat: e.lat, lon: e.lon, fresh: true, level: e.level || 0, demoted: isSeen(e.from, seen) || isSeen(e.to, seen), text, html: parts.join('') };
+        return { key: `ev-${eventsEpoch}-${e.seq}`, at: (e.first || e.t || 0) * 1000,
+            id: e.mmsi, lat: e.lat, lon: e.lon, fresh: true, level: e.level || 0,
+            demoted: isSeen(e.mmsi, seen), ...renderEventText(e.text) };
     }
-    const escapeHtml = (v) => String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
     return { pollEvents, resetEvents, noteSeen };
 }

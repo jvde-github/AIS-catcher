@@ -59,6 +59,77 @@ namespace JSON
 		}
 	}
 
+	// one key to a line, so the reader's line numbers mean something
+	std::string indented(const std::string &json)
+	{
+		std::string out;
+		out.reserve(json.size() * 2);
+		int depth = 0;
+		bool in_string = false;
+		const auto newline = [&] {
+			out += '\n';
+			out.append(depth * 2, ' ');
+		};
+		for (std::size_t i = 0; i < json.size(); i++)
+		{
+			const char c = json[i];
+			if (in_string)
+			{
+				out += c;
+				if (c == '\\' && i + 1 < json.size())
+					out += json[++i];
+				else if (c == '"')
+					in_string = false;
+				continue;
+			}
+			switch (c)
+			{
+			case ' ':
+			case '\t':
+			case '\r':
+			case '\n':
+				break;
+			case '"':
+				in_string = true;
+				out += c;
+				break;
+			case '{':
+			case '[':
+			{
+				out += c;
+				std::size_t next = json.find_first_not_of(" \t\r\n", i + 1);
+				if (next != std::string::npos && (json[next] == '}' || json[next] == ']'))
+				{
+					out += json[next];
+					i = next;
+				}
+				else
+				{
+					depth++;
+					newline();
+				}
+				break;
+			}
+			case '}':
+			case ']':
+				depth--;
+				newline();
+				out += c;
+				break;
+			case ',':
+				out += c;
+				newline();
+				break;
+			case ':':
+				out += ": ";
+				break;
+			default:
+				out += c;
+			}
+		}
+		return out;
+	}
+
 	std::string text(const Value &v)
 	{
 		std::string joined;

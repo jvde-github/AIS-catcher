@@ -92,12 +92,6 @@ const DeviceManager::DeviceEntry *DeviceManager::row(char flag)
 	return nullptr;
 }
 
-Setting *DeviceManager::settingForFlag(char flag)
-{
-	const DeviceEntry *d = row(flag);
-	return d ? &object(*d) : nullptr;
-}
-
 AIS::Keys DeviceManager::keyForFlag(char flag)
 {
 	const DeviceEntry *d = row(flag);
@@ -204,6 +198,7 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 			{
 				handle = device_list[idx].getHandle();
 				device_list[idx].setClaimed();
+				claim = idx;
 
 				if (serial_.empty() && matches.size() > 1)
 				{
@@ -224,6 +219,7 @@ bool DeviceManager::openDevice(int sample_rate, int bandwidth, int ppm, int freq
 					idx = i;
 					handle = device_list[i].getHandle();
 					device_list[i].setClaimed();
+					claim = i;
 					break;
 				}
 

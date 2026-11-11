@@ -16,10 +16,6 @@
 */
 
 
-#include <cerrno>
-#include <cstdio>
-#include <cstring>
-#include <sys/stat.h>
 #include "Site.h"
 #include "PlaceCatalogue.h"
 #include "FIFO.h"
@@ -37,10 +33,7 @@
 
 void Site::publishStations(const StationRegistry &resolved)
 {
-	{
-		std::lock_guard<std::mutex> lock(stations_mtx);
-		stations = resolved;
-	}
+	station_table->set(resolved);
 #ifdef HASAPI
 	std::lock_guard<std::mutex> lock(site_mtx);
 	eachTracker([&](Tracker &t) { t.setStations(resolved); });
@@ -53,7 +46,7 @@ bool Site::resetEngine(const EngineFacts &facts, bool running)
 	const bool was = engine_running;
 	engine = facts;
 	engine_running = running;
-	if (running)
+	if (running && !was)
 		session_start = std::time(nullptr);
 #ifdef HASAPI
 	receiver_states.clear();
@@ -62,9 +55,20 @@ bool Site::resetEngine(const EngineFacts &facts, bool running)
 	return was;
 }
 
-void Site::attachEngine(const EngineFacts &facts)
+void Site::attachEngine(const EngineFacts &facts, EngineWiring &engine_wiring, Outputs engine_outputs)
 {
 	resetEngine(facts, true);
+	const std::shared_ptr<Outputs> made = std::make_shared<Outputs>(std::move(engine_outputs));
+	{
+		std::lock_guard<std::mutex> lock(site_mtx);
+		wiring = &engine_wiring;
+		startOutputs(*made, made->list);
+		{
+			std::lock_guard<std::mutex> held(engine_mtx);
+			outputs_ = made;
+		}
+		connect();
+	}
 #ifdef HASAPI
 	systemEvent(Tracking::Level::ROUTINE, "engine_started", "The engine started");
 #endif
@@ -72,15 +76,106 @@ void Site::attachEngine(const EngineFacts &facts)
 
 void Site::detachEngine()
 {
+	// the receivers have stopped: the outputs stop here, outside the locks
+	std::shared_ptr<Outputs> gone = std::make_shared<Outputs>();
+	{
+		std::lock_guard<std::mutex> lock(site_mtx);
+		wiring = nullptr;
+		std::lock_guard<std::mutex> held(engine_mtx);
+		gone.swap(outputs_);
+	}
 #ifdef HASAPI
 	if (resetEngine(EngineFacts(), false))
 		systemEvent(Tracking::Level::NOTICE, "engine_stopped", "The engine stopped");
-	// the trackers the configuration dropped while this engine fed them
-	std::lock_guard<std::mutex> lock(site_mtx);
-	dropRetired();
 #else
 	resetEngine(EngineFacts(), false);
 #endif
+}
+
+// under site_mtx, with an engine running
+void Site::startOutputs(const Outputs &o, const OutputList &fresh)
+{
+	std::map<std::string, int> nth;
+	for (const auto &out : o.list)
+	{
+		const std::string label = out->getType() + " #" + std::to_string(++nth[out->getType()]);
+		const uint64_t asked = out.get() == o.feed && o.radios_only ? wiring->radios() : out->groups_asked;
+		out->takeGroups(wiring->route(out->zones, asked, out->getDescription().empty() ? label : out->getDescription()));
+	}
+	for (const auto &out : fresh)
+		out->Start();
+}
+
+// under site_mtx
+void Site::connect()
+{
+	if (!wiring)
+		return;
+	const std::shared_ptr<Outputs> o = outputs();
+	std::lock_guard<std::mutex> held(delivery_mtx);
+	wiring->unwire();
+	for (const auto &out : o->list)
+		wiring->wire(*out);
+#ifdef HASAPI
+	if (tracker_)
+		wiring->feed(*tracker_, nullptr);
+	for (auto &t : own)
+		wiring->feed(*t->tracker, &t->spec);
+#endif
+}
+
+void Site::rewire(const EngineFacts &facts)
+{
+	resetEngine(facts, true);
+	std::lock_guard<std::mutex> lock(site_mtx);
+	startOutputs(*outputs(), OutputList());
+	connect();
+}
+
+void Site::setOutputs(Outputs next)
+{
+	const std::shared_ptr<Outputs> made = std::make_shared<Outputs>(std::move(next));
+	// the ones no longer listed stop when this returns, outside the locks
+	std::shared_ptr<Outputs> old;
+	OutputList fresh;
+	std::lock_guard<std::mutex> lock(site_mtx);
+	if (!wiring)
+		return;
+	old = outputs();
+
+	std::vector<bool> kept(old->list.size(), false);
+	for (std::size_t i = 0; i < made->list.size(); i++)
+	{
+		std::size_t j = 0;
+		while (j < old->list.size() && (kept[j] || old->told[j] != made->told[i]))
+			j++;
+		if (j == old->list.size())
+		{
+			fresh.push_back(made->list[i]);
+			continue;
+		}
+		kept[j] = true;
+		if (made->feed == made->list[i].get())
+			made->feed = old->list[j].get();
+		made->list[i] = old->list[j];
+	}
+	const std::size_t gone = std::count(kept.begin(), kept.end(), false);
+	if (fresh.empty() && !gone)
+		return;
+
+	startOutputs(*made, fresh);
+	{
+		std::lock_guard<std::mutex> held(engine_mtx);
+		outputs_ = made;
+	}
+	connect();
+	Info() << "Outputs: " << fresh.size() << " started and " << gone << " stopped, as the configuration now has them";
+}
+
+void Site::pollOutputs()
+{
+	for (auto &o : outputs()->list)
+		o->poll();
 }
 
 #ifdef HASAPI
@@ -127,14 +222,18 @@ SystemFacts Site::systemFacts()
 	f.born = born;
 	f.session = session_start;
 	f.received = bytes.received();
+	f.devices = engine;
 	f.receivers = receiver_states;
+	f.sharing = outputs_->feed != nullptr;
+	f.sharing_uuid = f.sharing && outputs_->feed->hasUUID();
 	std::map<std::string, int> nth;
-	for (const IO::OutputMessage *o : engine.outputs)
+	for (const auto &o : outputs_->list)
 	{
 		OutputFacts of;
 		of.type = o->getType();
 		const std::string numbered = of.type + " #" + std::to_string(++nth[of.type]);
 		of.label = o->getDescription().empty() ? numbered : o->getDescription();
+		of.link = o->getLink();
 		of.connection = o->hasConnection();
 		const IO::OutputStats &s = o->getStats();
 		of.messages = s.messages.get();
@@ -190,7 +289,7 @@ void Site::watchStations(std::time_t now, bool daily)
 	std::set<int> mine;
 	for (const auto &r : f.receivers)
 		mine.insert(r.station);
-	const StationRegistry registry = stationsSnapshot();
+	const StationRegistry registry = stations();
 	std::set<int> quiet = tellQuiet(now, f, mine, registry);
 	setStationStates(now, f, mine, quiet, registry);
 	quiet_stations.swap(quiet);
@@ -269,60 +368,6 @@ void Site::tellPropagation(std::time_t now, const std::set<int> &mine, const Sta
 }
 #endif
 
-static void writeOutputs(JSON::Writer &w, const std::vector<IO::OutputMessage *> &outputs)
-{
-	std::map<std::string, int> nth;
-	for (const auto *o : outputs)
-		o->writeJSON(w, o->getType() + " #" + std::to_string(++nth[o->getType()]));
-}
-
-void Site::writeEngine(JSON::Writer &w, EnginePart part)
-{
-	std::lock_guard<std::mutex> lock(engine_mtx);
-	// the lock keeps the engine's outputs from going mid-sentence
-	switch (part)
-	{
-	case ENGINE_SHARING:
-		w.kv("sharing", engine.sharing).kv("sharing_uuid", engine.sharing_uuid);
-		break;
-	case ENGINE_RUNNING:
-		w.kv("engine_running", engine_running);
-		break;
-	case ENGINE_OUTPUT_LIST:
-		w.key("data").beginArray();
-		writeOutputs(w, engine.outputs);
-		w.endArray().key("meta").beginObject().kv("count", (long long)engine.outputs.size()).kv("complete", true).kv_null("next").endObject();
-		break;
-	case ENGINE_OUTPUTS:
-		w.key("outputs").beginArray();
-		writeOutputs(w, engine.outputs);
-		w.endArray();
-		break;
-	case ENGINE_ALL:
-	{
-		const auto each = [&](const char *key, std::string DeviceFacts::*field) {
-			w.key(key).beginArray();
-			for (const auto &d : engine.devices)
-				w.val(d.*field);
-			w.endArray();
-		};
-		w.kv("sharing", engine.sharing).kv("sharing_uuid", engine.sharing_uuid).kv("engine_running", engine_running);
-		each("product", &DeviceFacts::product);
-		each("vendor", &DeviceFacts::vendor);
-		each("serial", &DeviceFacts::serial);
-		each("model", &DeviceFacts::model);
-		each("sample_rate", &DeviceFacts::sample_rate);
-		each("device_label", &DeviceFacts::label);
-		w.kv("received", (unsigned long long)bytes.received()).kv("run_time", std::to_string((long long)(std::time(nullptr) - born)))
-			.kv("os", Util::Helper::getOS()).kv("hardware", Util::Helper::getHardware()).kv("processor", Util::Helper::getProcessor());
-		w.key("outputs").beginArray();
-		writeOutputs(w, engine.outputs);
-		w.endArray();
-		break;
-	}
-	}
-}
-
 // under site_mtx
 void Site::launch()
 {
@@ -339,6 +384,9 @@ void Site::stop()
 {
 	{
 		std::lock_guard<std::mutex> lock(mtx);
+		if (stopped)
+			return;
+		stopped = true;
 		running = false;
 	}
 	cv.notify_all();
@@ -387,6 +435,7 @@ void Site::configureTracker(const SiteConfig &cfg)
 	if (made)
 	{
 		tracker_.reset(new Tracker());
+		tracker_->useStations(station_table);
 		tracker_->journal() >> journal_ping;
 	}
 	if (!tracker_)
@@ -398,7 +447,8 @@ void Site::configureTracker(const SiteConfig &cfg)
 		backup_file = cfg.backup_file;
 		restoreInto();
 		last_backup = std::time(nullptr);
-		tracker_->setStations(stationsSnapshot());
+		tracker_->setStations(stations());
+		connect();
 	}
 	else
 		// the backup file is read when the tracker is made: another one waits for a restart
@@ -408,43 +458,21 @@ void Site::configureTracker(const SiteConfig &cfg)
 // under site_mtx
 void Site::configureServers(const SiteConfig &cfg)
 {
-	// An own tracker stays while its server keeps the same settings; while an
-	// engine feeds them, one with changed settings stays too and waits for the
-	// next engine, as a new one does, since this engine was wired at its start.
-	// A tracker that goes is destroyed once the servers reading it have closed,
-	// and before any new one is made, so two never share the memory.
-	const bool fed = engineAttached();
-	for (auto &o : own)
-	{
-		o->retired = true;
-		o->ports.clear();
-	}
-	std::vector<const ServerSpec *> wanted;
-	for (const auto &spec : cfg.servers)
-	{
-		if (!spec.tracking.own)
-			continue;
-		Own *o = ownFor(spec);
-		if (o && (fed || spec.tracking.reads(o->spec)))
-		{
-			o->retired = false;
-			o->ports.insert(spec.port);
-			o->tracker->setRestartRequired("Own ships (service restart)", !spec.tracking.reads(o->spec));
-			continue;
-		}
-		wanted.push_back(&spec);
-	}
-
-	// A server on the same port and address, reading the same tracker, takes the
-	// new settings in place, so its connections and a mount stay; the others close
-	// before the new ones open, so a server that moves to another address finds
-	// its port free and a tracker that goes has no reader left
+	// A server's own tracker is known by what it keeps; one no server names goes before a new one is made.
+	const auto reading = [&](const ServerSpec &spec) -> Own * {
+		for (auto &o : own)
+			if (spec.tracking.reads(o->spec))
+				return o.get();
+		return nullptr;
+	};
 	const auto trackerOf = [&](const ServerSpec &spec) -> Tracker * {
 		if (!spec.tracking.own)
 			return tracker_.get();
-		Own *o = ownFor(spec);
-		return o && !o->retired ? o->tracker.get() : nullptr;
+		Own *o = reading(spec);
+		return o ? o->tracker.get() : nullptr;
 	};
+
+	// A server on the same port, address and tracker takes the new settings in place; the others close first.
 	std::vector<std::unique_ptr<Services::Server>> kept(cfg.servers.size());
 	for (std::size_t i = 0; i < cfg.servers.size(); i++)
 	{
@@ -459,22 +487,37 @@ void Site::configureServers(const SiteConfig &cfg)
 		kept[i] = std::move(*it);
 	}
 	servers.clear();
-	if (!fed)
-		dropRetired();
-	for (const ServerSpec *spec : wanted)
+
+	for (auto it = own.begin(); it != own.end();)
 	{
-		// a server with the filter of one just made, and no way of its own to keep the ships, reads that one
-		Own *o = ownFor(*spec);
-		if (o && !o->retired && spec->tracking.reads(o->spec))
+		Own &o = **it;
+		if (std::any_of(cfg.servers.begin(), cfg.servers.end(), [&](const ServerSpec &spec) { return spec.tracking.own && spec.tracking.reads(o.spec); }))
 		{
-			o->ports.insert(spec->port);
-			Info() << "Server on port " << spec->port << ": the ships of port " << o->port;
+			++it;
 			continue;
 		}
-		own.push_back(makeOwn(*spec, cfg));
-		own.back()->ports.insert(spec->port);
-		if (fed)
-			own.back()->tracker->setRestartRequired("Own ships (service restart)", true);
+		// off the receivers before it is saved and goes
+		const std::unique_ptr<Own> gone = std::move(*it);
+		it = own.erase(it);
+		connect();
+		if (!gone->backup_file.empty() && !gone->tracker->save(gone->backup_file))
+			Error() << "Server on port " << gone->port << ": backup to " << gone->backup_file << " failed";
+	}
+	std::vector<Own *> made;
+	for (const auto &spec : cfg.servers)
+	{
+		if (!spec.tracking.own)
+			continue;
+		if (Own *o = reading(spec))
+		{
+			// a server with the filter of one just made, and no way of its own to keep the ships, reads that one
+			if (std::find(made.begin(), made.end(), o) != made.end())
+				Info() << "Server on port " << spec.port << ": the ships of port " << o->port;
+			continue;
+		}
+		own.push_back(makeOwn(spec, cfg));
+		made.push_back(own.back().get());
+		connect();
 	}
 	launch();
 	for (std::size_t i = 0; i < cfg.servers.size(); i++)
@@ -485,8 +528,7 @@ void Site::configureServers(const SiteConfig &cfg)
 			continue;
 		}
 		std::unique_ptr<Services::Server> s(new Services::Server(cfg.servers[i], *trackerOf(cfg.servers[i]),
-																 [this](const ServerSpec &) { return stationsSnapshot(); },
-																 [this](JSON::Writer &w, EnginePart part) { writeEngine(w, part); },
+																 [this](const ServerSpec &) { return stations(); },
 																 [this] { return systemFacts(); }));
 		if (s->open())
 			servers.push_back(std::move(s));
@@ -508,7 +550,7 @@ void Site::configureDeliveries(const SiteConfig &cfg)
 	if (tracker_ && (cfg.mqtt_state.any() || mqtt_state))
 	{
 		if (!mqtt_state)
-			mqtt_state.reset(new MqttState(*tracker_, [this] { return systemFacts(); }, [this] { return stationsSnapshot(); }));
+			mqtt_state.reset(new MqttState(*tracker_, [this] { return systemFacts(); }, [this] { return stations(); }));
 		mqtt_state->configure(cfg.mqtt_state);
 	}
 	events_wanted = mqtt_state && cfg.mqtt_state.any();
@@ -516,86 +558,9 @@ void Site::configureDeliveries(const SiteConfig &cfg)
 #endif
 
 #ifdef HASAPI
-// an existing `to` is kept: a copy made on an earlier start is the one of
-// before the upgrade
-static bool keepCopy(const std::string &from, const std::string &to)
-{
-	if (std::ifstream(to, std::ios::binary))
-		return true;
-	const std::string tmp = to + ".tmp";
-	if (!Util::Helper::createTemp(tmp, to))
-		return false;
-	{
-		std::ifstream in(from, std::ios::binary);
-		std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
-		if (!in || !out || !(out << in.rdbuf()) || !out.flush())
-		{
-			std::remove(tmp.c_str());
-			return false;
-		}
-	}
-	if (std::rename(tmp.c_str(), to.c_str()) != 0)
-	{
-		std::remove(tmp.c_str());
-		return false;
-	}
-	return true;
-}
-
-// why a backup that is not simply there yet cannot be read, nothing otherwise
-static std::string backupProblem(const std::string &file)
-{
-	FILE *f = fopen(file.c_str(), "rb");
-	if (f)
-	{
-		fclose(f);
-		return "";
-	}
-	if (errno != ENOENT)
-		return strerror(errno);
-	const std::size_t slash = file.find_last_of("/\\");
-	struct stat s;
-	if (slash != std::string::npos && slash > 0 && stat(file.substr(0, slash).c_str(), &s) != 0)
-		return "its folder cannot be seen: it does not exist, or the service's hardening hides it";
-	return "";
-}
-
-bool Site::restoreFrom(Tracker &t, const std::string &file)
-{
-	Tracker::Restored r = t.restore(file);
-	// an earlier version's backup is copied beside it once, then imported and written in this version's format
-	bool imported = false;
-	if (r == Tracker::FOREIGN)
-	{
-		if (!keepCopy(file, file + ".before-upgrade"))
-		{
-			Error() << "Tracker: " << file << " is of an earlier version and could not be copied beside it: left as it is, not backed up";
-			return false;
-		}
-		imported = t.importViewerBackup(file);
-		if (!imported)
-		{
-			Error() << "Tracker: cannot import the earlier version's backup " << file;
-			return true;
-		}
-		r = Tracker::RESTORED;
-	}
-	if (r == Tracker::RESTORED)
-		Info() << "Tracker: " << t.ships().getCount() << " ships " << (imported ? "imported from " : "restored from ") << file << (imported ? ", of an earlier version, kept as .before-upgrade" : "");
-	else
-	{
-		const std::string problem = backupProblem(file);
-		if (problem.empty())
-			Info() << "Tracker: no backup yet at " << file;
-		else
-			Error() << "Tracker: cannot read the backup " << file << ": " << problem;
-	}
-	return true;
-}
-
 void Site::restoreInto()
 {
-	backing_up = !backup_file.empty() && restoreFrom(*tracker_, backup_file);
+	backing_up = !backup_file.empty() && tracker_->open(backup_file);
 }
 
 // under site_mtx
@@ -611,32 +576,6 @@ std::shared_ptr<PlaceCatalogue> Site::catalogueFor(const SiteConfig &cfg)
 	return places_catalogue;
 }
 
-bool Site::engineAttached()
-{
-	std::lock_guard<std::mutex> lock(engine_mtx);
-	return engine_running;
-}
-
-// under site_mtx
-Site::Own *Site::ownFor(const ServerSpec &spec)
-{
-	for (auto &o : own)
-		if (!o->retired && spec.tracking.reads(o->spec))
-			return o.get();
-	for (auto &o : own)
-		if (o->ports.count(spec.port) || o->port == spec.port)
-			return o.get();
-	return nullptr;
-}
-
-void Site::dropRetired()
-{
-	for (auto &o : own)
-		if (o->retired && !o->backup_file.empty() && !o->tracker->save(o->backup_file))
-			Error() << "Server on port " << o->port << ": backup to " << o->backup_file << " failed";
-	own.erase(std::remove_if(own.begin(), own.end(), [](const std::unique_ptr<Own> &x) { return x->retired; }), own.end());
-}
-
 // under site_mtx; the config reader already gave its settings what the viewer needs kept
 std::unique_ptr<Site::Own> Site::makeOwn(const ServerSpec &spec, const SiteConfig &cfg)
 {
@@ -644,6 +583,7 @@ std::unique_ptr<Site::Own> Site::makeOwn(const ServerSpec &spec, const SiteConfi
 	o->port = spec.port;
 	o->spec = spec.tracking;
 	o->tracker.reset(new Tracker());
+	o->tracker->useStations(station_table);
 	o->tracker->configure(spec.tracking.tracking);
 	AIS::Filter filter;
 	for (const auto &term : spec.tracking.filter)
@@ -651,23 +591,14 @@ std::unique_ptr<Site::Own> Site::makeOwn(const ServerSpec &spec, const SiteConfi
 	o->tracker->setFilter(filter);
 	o->tracker->useCatalogue(catalogueFor(cfg));
 	o->backup_file = spec.tracking.backup_file;
-	if (!o->backup_file.empty() && !restoreFrom(*o->tracker, o->backup_file))
+	if (!o->backup_file.empty() && !o->tracker->open(o->backup_file))
 		o->backup_file.clear();
 	std::string of;
 	for (int id : spec.stations)
 		of += (of.empty() ? std::string(spec.stations.size() > 1 ? ", stations " : ", station ") : ", ") + std::to_string(id);
 	Info() << "Server on port " << spec.port << ": own ships" << of << (o->backup_file.empty() ? std::string() : ", kept in " + o->backup_file);
-	o->tracker->setStations(stationsSnapshot());
+	o->tracker->setStations(stations());
 	return o;
-}
-
-std::vector<Site::OwnTracker> Site::ownTrackers()
-{
-	std::lock_guard<std::mutex> lock(site_mtx);
-	std::vector<OwnTracker> out;
-	for (auto &o : own)
-		out.push_back(OwnTracker{o->tracker.get(), o->spec});
-	return out;
 }
 
 // a server whose port was taken is not among them
@@ -697,29 +628,27 @@ std::string Site::stationsLive()
 	const std::time_t now = std::time(nullptr);
 	Tracker *t = tracker();
 	w.beginObject().key("stations").beginArray();
-	withStations([&](const StationRegistry &registry) {
-		registry.forEach([&](const StationRegistry::Station &s) {
-			w.beginObject().kv("id", s.id);
-			if (t)
-			{
-				const Tracker::Position at = t->stationPositionPrivate(s.id);
-				const char *source = Tracker::sourceName(at.source);
-				if (source)
-					w.kv("source", source);
-				if (isValidCoord(at.lat, at.lon))
-					w.kv("lat", at.lat).kv("lon", at.lon);
-				if (at.time)
-					w.kv("fix_age_s", (long long)(now - at.time));
-				const std::time_t heard = t->lastHeard(s.id);
-				if (heard)
-					w.kv("heard_age_s", (long long)(now - heard));
-				if (s.mmsi)
-					t->ships().withShip(s.mmsi, [&](const Ship &ship, int) {
-						w.key("vessel").beginObject().kv("mmsi", (long long)s.mmsi).kv("name", std::string(ship.shipname)).kv("report_age_s", (long long)(now - ship.last_signal)).endObject();
-					});
-			}
-			w.endObject();
-		});
+	stations().forEach([&](const StationRegistry::Station &s) {
+		w.beginObject().kv("id", s.id);
+		if (t)
+		{
+			const Tracker::Position at = t->stationPosition(s.id);
+			const char *source = StationTable::sourceName(at.source);
+			if (source)
+				w.kv("source", source);
+			if (isValidCoord(at.lat, at.lon))
+				w.kv("lat", at.lat).kv("lon", at.lon);
+			if (at.time)
+				w.kv("fix_age_s", (long long)(now - at.time));
+			const std::time_t heard = t->lastHeard(s.id);
+			if (heard)
+				w.kv("heard_age_s", (long long)(now - heard));
+			if (s.mmsi)
+				t->ships().withShip(s.mmsi, [&](const Ship &ship, int) {
+					w.key("vessel").beginObject().kv("mmsi", (long long)s.mmsi).kv("name", std::string(ship.shipname)).kv("report_age_s", (long long)(now - ship.last_signal)).endObject();
+				});
+		}
+		w.endObject();
 	});
 	w.endArray();
 	if (const std::time_t saved = lastBackup())

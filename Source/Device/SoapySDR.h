@@ -84,7 +84,6 @@ namespace Device
 		void Stop();
 		void Close();
 
-		bool isCallback() { return true; }
 
 		void getDeviceList(std::vector<Description> &DeviceList);
 

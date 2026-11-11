@@ -311,7 +311,7 @@ namespace Services
 			return true;
 		}
 		response.type = "text/plain";
-		response.body = counter.toPrometheus(!located(tracker, spec, stations()).all({})) + engineMetrics();
+		response.body = counter.toPrometheus(!located(spec, stations()).all({})) + engineMetrics();
 		response.cors = true;
 		return true;
 	}

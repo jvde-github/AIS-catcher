@@ -36,7 +36,6 @@ import { updateHoverMarker } from './features/hover/hover.js';
 const TRACK_SPEED_UNKNOWN_COLOR = '#9aa0a6';
 
 export let shapeFeatures = {};
-let markerFeatures = {};
 
 const getSprite = markersLib.applySprite;
 const getPlaneSprite = markersLib.applyPlaneSprite;
@@ -74,7 +73,6 @@ export async function updateMap() {
 
 export function redraw() {
     shapeFeatures = {};
-    markerFeatures = {};
 
     markerVector.clear();
     planeVector.clear();
@@ -105,7 +103,6 @@ export function redraw() {
 
             feature.ship = ship;
 
-            markerFeatures[ship.mmsi] = feature
             markerVector.addFeature(feature)
 
             if (includeLabels)
@@ -155,7 +152,6 @@ export function redraw() {
 
                 feature.plane = plane;
 
-                markerFeatures[plane.hexident] = feature
                 planeVector.addFeature(feature)
 
                 if (includeLabels)

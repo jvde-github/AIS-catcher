@@ -62,7 +62,6 @@ namespace Services
 									   std::time_t oldest = 0);
 		static std::string replay(DB &db, std::time_t since, std::time_t until, const DB::Keep &keep, std::time_t lookback,
 								  std::time_t oldest = 0);
-		static std::string replay(DB &db, std::time_t since, std::time_t until, std::time_t lookback);
 
 		// a place's lists: who is inside, who left or arrived, the visits, the
 		// closest outside, and for a port the vessels bound for it
@@ -99,7 +98,7 @@ namespace Services
 		template <typename F> static std::string vessel(DB &db, uint32_t mmsi, F extra, const Located *shown = nullptr)
 		{
 			std::lock_guard<std::mutex> lock(db.mtx);
-			const Located located = shown ? *shown : Located::from(db.stations, db.latlon_share);
+			const Located located = shown ? *shown : Located::from(db.stations);
 
 			int ptr = db.ships.find(mmsi);
 			if (ptr == DB::SHIP_NIL)
@@ -114,8 +113,7 @@ namespace Services
 				w.beginObject();
 				w.kv("time", (long long)now).kv("place_version", db.place_markers.version());
 				db.visits.writeVisits(w, ptr, db.place_markers.index().get());
-				shipBody(w, ship, (long int)now - (long int)ship.last_signal,
-						 isValidCoord(db.station_lat, db.station_lon) && located.of(ship));
+				shipBody(w, ship, (long int)now - (long int)ship.last_signal, located.of(ship));
 				db.destinations.writeMatched(w, ptr);
 				const int riding = db.stations.idFor(ship.mmsi);
 				w.kv("binary", db.binary.badge(ship.mmsi, now))

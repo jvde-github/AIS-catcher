@@ -34,8 +34,7 @@ const LINE = {
     places: [1.8, '<path d="M4 7l5-2 6 2 5-2v12l-5 2-6-2-5 2z"/><path d="M9 5v12M15 7v12"/>'],
     system: [1.8, '<circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/>'],
     start: [2, '<path d="M8 5.5v13l10-6.5z" fill="currentColor" stroke="none"/>'],
-    stop: [2, '<rect x="6.5" y="6.5" width="11" height="11" rx="1.5" fill="currentColor" stroke="none"/>'],
-    restart: [2, '<path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/>']
+    stop: [2, '<rect x="6.5" y="6.5" width="11" height="11" rx="1.5" fill="currentColor" stroke="none"/>']
 };
 const FILLED = {
     more: '<circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>',

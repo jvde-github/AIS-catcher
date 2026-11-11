@@ -52,7 +52,7 @@ public:
 	// the figures as they stand, copied under the lock, for whoever writes them out
 	struct Values
 	{
-		int count, exclude, vessels, active_minutes, distance_count;
+		int count, exclude, vessels, active_minutes;
 		int msg[28], errors[4], channel[4];
 		float level_min, level_max, ppm, distance;
 		float radarA[RADAR_BUCKETS], radarB[RADAR_BUCKETS];
@@ -74,8 +74,6 @@ private:
 	int _channel[4];
 
 	float _level_min, _level_max, _ppm, _distance;
-	double _distance_sum;
-	int _distance_count;
 	float _radarA[_RADAR_BUCKETS];
 	float _radarB[_RADAR_BUCKETS];
 
@@ -147,8 +145,6 @@ public:
 		_count = _vessels = _exclude = _active_minutes = 0;
 		std::memset(_far, 0, sizeof(_far));
 		_distance = _ppm = 0;
-		_distance_sum = 0.0;
-		_distance_count = 0;
 		_level_min = 1e6;
 		_level_max = -1e6;
 	}
@@ -199,8 +195,6 @@ public:
 			_distance = tag.distance;
 		}
 		noteFar(m.mmsi(), (uint32_t)m.getRxTimeUnix(), tag.distance, (float)tag.angle);
-		_distance_sum += tag.distance;
-		_distance_count++;
 
 		if (m.type() == 18 || m.type() == 19 || m.type() == 24)
 		{
@@ -248,8 +242,6 @@ public:
 		for (int i = 0; i < _FURTHEST; i++)
 			if (o._far[i].mmsi)
 				noteFar(o._far[i].mmsi, o._far[i].time, o._far[i].nm, o._far[i].bearing);
-		_distance_sum += o._distance_sum;
-		_distance_count += o._distance_count;
 		for (int i = 0; i < _RADAR_BUCKETS; i++)
 		{
 			_radarA[i] = MAX(_radarA[i], o._radarA[i]);
@@ -265,7 +257,6 @@ public:
 		v.exclude = _exclude;
 		v.vessels = _vessels;
 		v.active_minutes = _active_minutes;
-		v.distance_count = _distance_count;
 		std::memcpy(v.msg, _msg, sizeof(_msg));
 		std::memcpy(v.errors, _errors, sizeof(_errors));
 		std::memcpy(v.channel, _channel, sizeof(_channel));
@@ -277,49 +268,6 @@ public:
 		std::memcpy(v.radarB, _radarB, sizeof(_radarB));
 		std::memcpy(v.furthest, _far, sizeof(_far));
 		return v;
-	}
-
-	void print(std::ostream &out, const char *indent = "")
-	{
-		std::lock_guard<std::mutex> l{this->mtx};
-
-		int c = _count - _exclude;
-		bool has_level = c > 0 && _level_min <= _level_max;
-
-		out << indent << "messages: " << _count << "\n";
-		if (_distance_count > 0)
-		{
-			out << indent << "distance: max=" << _distance
-				<< " avg=" << (_distance_sum / _distance_count)
-				<< " (n=" << _distance_count << ")\n";
-		}
-		if (has_level)
-		{
-			out << indent << "signal:   min=" << _level_min << " max=" << _level_max
-				<< " ppm=" << (_ppm / c) << "\n";
-		}
-		out << indent << "channel:  A=" << _channel[0] << " B=" << _channel[1];
-		if (_channel[2])
-			out << " C=" << _channel[2];
-		if (_channel[3])
-			out << " D=" << _channel[3];
-		out << "\n";
-
-		bool any_type = false;
-		for (int i = 0; i < 28; i++)
-			if (_msg[i] > 0)
-			{
-				any_type = true;
-				break;
-			}
-		if (any_type)
-		{
-			out << indent << "by type: ";
-			for (int i = 0; i < 28; i++)
-				if (_msg[i] > 0)
-					out << " " << (i + 1) << "=" << _msg[i];
-			out << "\n";
-		}
 	}
 
 #define W(x) file.write((const char *)&(x), sizeof(x))
@@ -396,11 +344,6 @@ public:
 	MessageStatistics::Values values() { return stat.values(); }
 	void addActiveMinute() { stat.addActiveMinute(); }
 	float maxDistance() { return stat.maxDistance(); }
-
-	void print(std::ostream &out, const char *indent = "")
-	{
-		stat.print(out, indent);
-	}
 };
 
 struct ByteCounter : public StreamIn<RAW>

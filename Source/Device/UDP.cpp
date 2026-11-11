@@ -98,7 +98,6 @@ namespace Device
 	{
 
 		Device::Play();
-		applySettings();
 
 		StartServer();
 		run_thread = std::thread(&UDP::Run, this);
@@ -152,10 +151,6 @@ namespace Device
 			select(sock + 1, &fds, nullptr, nullptr, &tv);
 		}
 		Debug() << "UDP: ending thread.";
-	}
-
-	void UDP::applySettings()
-	{
 	}
 
 	void UDP::getDeviceList(std::vector<Description> &DeviceList)

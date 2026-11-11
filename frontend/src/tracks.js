@@ -46,20 +46,14 @@ export async function toggleTrack(m) {
 
 }
 
-async function showTrack(m) {
-    if (!marker_tracks.has(Number(m))) {
-        ToggleTrackOnMap(m);
-    }
+function showTrack(m) {
+    if (!marker_tracks.has(Number(m))) ToggleTrackOnMap(m);
     updateTrackOption();
-
 }
 
-async function hideTrack(m) {
-    if (marker_tracks.has(Number(m))) {
-        ToggleTrackOnMap(m);
-    }
+function hideTrack(m) {
+    if (marker_tracks.has(Number(m))) ToggleTrackOnMap(m);
     updateTrackOption();
-
 }
 
 export function trackIsShown(m) {
@@ -127,7 +121,6 @@ async function showAllTracks() {
     settings.show_all_tracks = true;
     setTrackCutoff(0);
     resetTrackCursor();
-    selectTrackShown = hoverTrackShown = false;
     await fetchTracks();
     redraw();
     updateTrackOption();

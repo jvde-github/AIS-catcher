@@ -268,7 +268,8 @@ namespace IO
 		TCPlistenerStreamer() : OutputMessage("TCP Listener") { fmt = MessageFormat::NMEA; }
 		bool hasConnection() const override { return true; }
 
-		virtual ~TCPlistenerStreamer() {};
+		// the server's thread ends while this object is whole: it calls back into it
+		virtual ~TCPlistenerStreamer() { Stop(); }
 
 		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 

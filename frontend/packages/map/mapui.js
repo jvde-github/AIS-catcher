@@ -151,7 +151,8 @@ function inside(px, s) {
 export function reveal(map, lonLat, card, opts) {
     opts = opts || {};
     var size = map.getSize();
-    if (!size) return null;
+    // a position not given (91, 181) has no place on the map, and would leave the view nowhere
+    if (!size || !(Math.abs(lonLat[0]) <= 180 && Math.abs(lonLat[1]) <= 90)) return null;
     var viewport = { left: 0, top: 0, right: size[0], bottom: size[1] };
     var whole = opts.free || viewport;
     var cr = cardRect(map, card);

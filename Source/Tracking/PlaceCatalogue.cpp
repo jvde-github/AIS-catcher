@@ -558,7 +558,6 @@ PlaceCatalogue::PlaceCatalogue(const std::string &dir) : directory(dir)
 			// a file is taken whole or not at all
 			for (const auto &uuid : added)
 				erase(uuid);
-			++skipped;
 			Warning() << "Places: skipped " << file << ": " << e.what();
 		}
 	}
@@ -1065,18 +1064,6 @@ void PlaceIndex::matchAll(double lat, double lon,
 			break;
 		}
 	});
-}
-
-void PlaceCatalogue::writeStatus(JSON::Writer &writer)
-{
-	std::lock_guard<std::mutex> lock(mutex);
-	writer.key("places")
-		.beginObject()
-		.kv("loaded", (long long)places.size())
-		.kv("skipped", (long long)skipped)
-		.kv("vertices", (long long)vertices)
-		.kv("bytes", (long long)bytes)
-		.endObject();
 }
 
 void PlaceIndex::Entry::writeSummary(JSON::Writer &w, uint64_t sequence,

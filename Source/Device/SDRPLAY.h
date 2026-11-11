@@ -63,7 +63,6 @@ namespace Device
 		void Stop();
 		void Close();
 
-		virtual bool isCallback() { return true; }
 
 		void getDeviceList(std::vector<Description> &DeviceList);
 

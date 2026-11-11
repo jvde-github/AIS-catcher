@@ -81,7 +81,7 @@ export const handleClick = function (pixel, target, event) {
 // the vessel's band, then a band for each kind of message it sent
 function getTooltipContent(ship) {
     return vesselBand(ship, {
-        name: getShipName(ship) || ship.mmsi,
+        name: sanitizeString(String(getShipName(ship) || ship.mmsi)),
         speed: ship.speed != null ? getSpeedVal(ship.speed) + ' ' + getSpeedUnit() : null,
         age: clock - ship.last_signal,
         label: severalStations() ? stationLabel : null,

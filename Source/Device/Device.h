@@ -112,7 +112,6 @@ namespace Device
 		// the connection counts of an input that dials a remote; null for the rest
 		virtual const IO::OutputStats *getConnectionStats() const { return nullptr; }
 
-		virtual std::vector<uint32_t> SupportedSampleRates() { return std::vector<uint32_t>(); }
 		virtual void getDeviceList(std::vector<Description> &DeviceList) {}
 
 		virtual Setting &applyKey(AIS::Keys key, const std::string &arg)

@@ -365,7 +365,7 @@ namespace IO
 					Critical() << "UDP: cannot recreate socket (" << host << ":" << port << "). Requesting termination.";
 					Net::closeSocket(sock);
 					sock = -1;
-					StopRequest();
+					StopRequest(true);
 					return;
 				}
 				last_reconnect = now;
@@ -421,10 +421,9 @@ namespace IO
 
 	void UDPStreamer::Stop()
 	{
-		Debug() << "UDP: close socket for host: " << host << ", port: " << port;
-
 		if (sock != -1)
 		{
+			Debug() << "UDP: close socket for host: " << host << ", port: " << port;
 			Net::closeSocket(sock);
 			sock = -1;
 		}
@@ -499,7 +498,7 @@ namespace IO
 		{
 			Critical() << "TCP feed: connection lost, requesting termination.";
 			stop_requested = true;
-			StopRequest();
+			StopRequest(true);
 		}
 	}
 

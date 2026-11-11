@@ -1,6 +1,6 @@
 // Vessel fields and history slots on the shared map-card tabs.
 // Compact mode shows the live metrics; the handle expands or collapses details.
-import { copyToClipboard, decodeHTMLEntities, fieldRows } from './components.js';
+import { copyToClipboard, fieldRows } from './components.js';
 import { build as buildTabs, metrics } from './card-tabs.js';
 import { MATCHED_PORT_FIELDS, setPortLink } from './shipcard.js';
 import { CLASS_A, CLASS_B } from '@aiscatcher/core/constants.js';
@@ -171,7 +171,7 @@ export function build(mount, prefix, o) {
         // the navigational status as a pill: moving green, lying still amber, in trouble red
         summary.status.className = 'sc-sum-status sc-pill sc-pill--' + statusTone(ship.status);
         // the vessel's registry number, the MMSI when it has none
-        summary.id.textContent = ship.imo != null ? 'IMO ' + ship.imo : ship.eni ? 'ENI ' + decodeHTMLEntities(ship.eni) : ship.mmsi != null ? 'MMSI ' + ship.mmsi : '';
+        summary.id.textContent = ship.imo != null ? 'IMO ' + ship.imo : ship.eni ? 'ENI ' + ship.eni : ship.mmsi != null ? 'MMSI ' + ship.mmsi : '';
         const hasPos = ship.lat != null && ship.lon != null;
         if (!hasPos) summary.pos.textContent = 'N/A';
         // an approximate position comes back in <i>, so set it as markup; the values are numbers
@@ -188,8 +188,8 @@ export function build(mount, prefix, o) {
         const port = ship.matched_port;
         const portName = port && typeof port.name === 'string' && port.name.trim() ? port.name.trim() : null;
         summary.destLabel.textContent = portName ? 'Destination' : 'Reported destination';
-        set(summary.dest, portName || decodeHTMLEntities(dest));
-        summary.reported.textContent = portName && dest ? decodeHTMLEntities(dest) : '';
+        set(summary.dest, portName || dest);
+        summary.reported.textContent = portName && dest ? dest : '';
         summary.reported.hidden = !summary.reported.textContent;
         setPortLink(summary.dest, port, h.openPort, h.goTo);
         setPortLink(summary.pin, port, h.openPort, h.goTo);

@@ -43,7 +43,7 @@ namespace Services
 		};
 
 		virtual ~ShipSource() {}
-		// every ship heard since `floor`, within `box` when given, in no particular order
-		virtual void forEachShip(std::time_t now, std::time_t floor, const Box *box, const std::function<void(const Ship &)> &f) = 0;
+		// Every ship heard since `floor`; `box` is the area the caller keeps. Returns the time they are as of.
+		virtual std::time_t forEachShip(std::time_t now, std::time_t floor, const Box *box, const std::function<void(const Ship &)> &f) = 0;
 	};
 }

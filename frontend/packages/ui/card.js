@@ -303,7 +303,6 @@ export function create(opts) {
         } else {
             var overflow = mount.offsetTop + mount.offsetHeight - bottom;
             if (overflow > 0) setPos(null, Math.max(top, mount.offsetTop - overflow));
-            if (bleed && placedHow === "dock") setPos(0, top);
             if (pinActive()) {
                 var at = position();
                 var c = clampToFree(at.x, at.y);

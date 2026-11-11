@@ -22,7 +22,7 @@ const ago = s => (s < 90 ? 'just now' : s < 3600 ? `${Math.round(s / 60)} min ag
 
 export function createHistoryEditor(host) {
     const state = { data: {}, statsFile: '', saved: null, timer: null };
-    const editor = registerEditor(CONTAINER, { save: () => save(), data: () => state.data });
+    const editor = registerEditor(CONTAINER, () => save());
     const touched = () => { editor.touched(); render(); };
     const value = k => (state.data[k] === undefined ? DEFAULTS[k] : state.data[k]);
     const set = (k, v) => { if (v === undefined || v === '') delete state.data[k]; else state.data[k] = v; touched(); };

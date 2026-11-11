@@ -59,12 +59,6 @@ namespace Util
 			return;
 		}
 
-		if (raw->format == Format::CS8 && outCS8.isConnected())
-		{
-			outCS8.Send((CS8 *)raw->data, raw->size / 2, tag);
-			return;
-		}
-
 		if (raw->format == Format::CF32 && out.isConnected())
 		{
 			out.Send((CFLOAT32 *)raw->data, raw->size / sizeof(CFLOAT32), tag);
@@ -176,7 +170,7 @@ namespace Util
 		{
 			Error() << "WAV out: " << e.what();
 			stopping = true;
-			StopRequest();
+			StopRequest(true);
 		}
 	}
 
@@ -224,7 +218,7 @@ namespace Util
 			Error() << "WAV out: write failed (disk full?) on \"" << filename << "\"";
 			stopping = true;
 			file.close();
-			StopRequest();
+			StopRequest(true);
 		}
 	}
 

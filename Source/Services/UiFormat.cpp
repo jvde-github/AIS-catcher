@@ -195,7 +195,7 @@ namespace Services
 									   int stations_window, const Located *shown)
 	{
 		std::lock_guard<std::mutex> lock(db.mtx);
-		const Located located = shown ? *shown : Located::from(db.stations, db.latlon_share);
+		const Located located = shown ? *shown : Located::from(db.stations);
 
 		if (since <= db.full_refresh_at)
 			since = 0;
@@ -214,20 +214,8 @@ namespace Services
 				.kv("count", count)
 				.kv("time", now)
 				.kv("timeout", db.time_history);
-			if (at)
-			{
-				if (isValidCoord(at->lat, at->lon))
-					w.key("station").beginObject().kv("lat", at->lat).kv("lon", at->lon).kv("mmsi", at->mmsi).kv("gps", false).endObject();
-			}
-			// the tracker's own position, where it shares it and the server shows it
-			else if (db.latlon_share && located.own && isValidCoord(db.station_lat, db.station_lon))
-				w.key("station")
-					.beginObject()
-					.kv("lat", db.station_lat)
-					.kv("lon", db.station_lon)
-					.kv("mmsi", db.own_mmsi)
-					.kv("gps", db.gps_position)
-					.endObject();
+			if (at && isValidCoord(at->lat, at->lon))
+				w.key("station").beginObject().kv("lat", at->lat).kv("lon", at->lon).kv("mmsi", at->mmsi).kv("gps", at->gps).endObject();
 
 			// --- Pass 1: dynamic array ---
 			w.key("dynamic").beginArray();
@@ -261,7 +249,7 @@ namespace Services
 	std::string UiFormat::shipsTable(DB &db, std::time_t since, const DB::Keep &keep, const Located *shown)
 	{
 		std::lock_guard<std::mutex> lock(db.mtx);
-		const Located located = shown ? *shown : Located::from(db.stations, db.latlon_share);
+		const Located located = shown ? *shown : Located::from(db.stations);
 		if (since <= db.full_refresh_at)
 			since = 0;
 		std::time_t now = time(nullptr);
@@ -288,7 +276,7 @@ namespace Services
 	std::string UiFormat::ships(DB &db, bool full, const StationRegistry::Station *at, const DB::Keep &keep, const Located *shown)
 	{
 		std::lock_guard<std::mutex> lock(db.mtx);
-		const Located located = shown ? *shown : Located::from(db.stations, db.latlon_share);
+		const Located located = shown ? *shown : Located::from(db.stations);
 
 		const int count = db.keptCount(keep);
 
@@ -297,19 +285,8 @@ namespace Services
 			JSON::Writer w(db.content, 65536);
 			w.beginObject().kv("count", count);
 
-			if (at)
-			{
-				if (isValidCoord(at->lat, at->lon))
-					w.key("station").beginObject().kv("lat", at->lat).kv("lon", at->lon).kv("mmsi", at->mmsi).kv("gps", false).endObject();
-			}
-			else if (db.latlon_share && located.own)
-				w.key("station")
-					.beginObject()
-					.kv("lat", db.station_lat)
-					.kv("lon", db.station_lon)
-					.kv("mmsi", db.own_mmsi)
-					.kv("gps", db.gps_position)
-					.endObject();
+			if (at && isValidCoord(at->lat, at->lon))
+				w.key("station").beginObject().kv("lat", at->lat).kv("lon", at->lon).kv("mmsi", at->mmsi).kv("gps", at->gps).endObject();
 
 			w.key("ships").beginArray();
 
@@ -319,8 +296,7 @@ namespace Services
 					if (keep && !keep(ship))
 						return;
 					w.beginObject();
-					shipBody(w, ship, delta_time,
-							 isValidCoord(db.station_lat, db.station_lon) && located.of(ship));
+					shipBody(w, ship, delta_time, located.of(ship));
 					db.destinations.writeMatched(w, ptr);
 					w.endObject();
 				});
@@ -528,12 +504,6 @@ namespace Services
               .endArray();
 
         w.endObject(); }, oldest);
-	}
-
-	std::string UiFormat::replay(DB &db, std::time_t since, std::time_t until,
-								 std::time_t lookback)
-	{
-		return replay(db, since, until, DB::Keep(), lookback);
 	}
 
 	std::string UiFormat::replay(DB &db, std::time_t since, std::time_t until, const DB::Keep &keep,

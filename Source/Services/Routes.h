@@ -18,7 +18,6 @@
 #pragma once
 
 #include <map>
-#include <functional>
 #include <string>
 #include <vector>
 
@@ -57,12 +56,14 @@ namespace Services
 
 	// One resource of /api/v1, as the index, the OpenAPI document and the MCP
 	// tools describe it: the one place the API is written down. `response` names
-	// the schema of what it answers, `geojson` the one it answers with format=geojson.
+	// the schema of what it answers, `geojson` the one it answers with format=geojson;
+	// `area` marks what a server of an area (area_only) still offers.
 	struct Route
 	{
 		const char *path, *service, *id, *tag, *summary;
 		std::vector<Param> params;
 		const char *response, *type, *geojson;
+		bool area;
 
 		bool takes(const std::string &name) const;
 	};
@@ -71,12 +72,11 @@ namespace Services
 	const Route *route(const std::string &path);
 
 	// the OpenAPI 3.1 document of the routes the given services offer
-	// `public_url` names the server as clients reach it; `offered` leaves out the routes a server does not serve
 	void writeOpenAPI(JSON::Writer &w, const std::vector<std::string> &services, const std::string &public_url = std::string(),
-					  const std::function<bool(const char *)> &offered_path = nullptr);
+					  bool area_only = false);
 	// a JSON Schema object of the named parameters of a route, for a tool's input
 	// `brief`: shorter descriptions by parameter name for a reader that pays for every word, the
 	// MCP tools; an empty one leaves the description out, a name not in it keeps the route's
 	void writeInputSchema(JSON::Writer &w, const Route &r, const std::vector<std::string> &names,
-						  const std::map<std::string, std::string> *brief = nullptr);
+						  const std::map<std::string, std::string> &brief);
 }

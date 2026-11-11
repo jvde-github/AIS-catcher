@@ -36,9 +36,12 @@
 
 std::atomic<bool> stop;
 std::atomic<bool> stop_process;
+std::atomic<bool> stop_failed;
 
-void StopRequest()
+void StopRequest(bool failed)
 {
+	if (failed)
+		stop_failed = true;
 	stop = true;
 }
 #ifdef _WIN32

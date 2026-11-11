@@ -27,6 +27,7 @@ export function fromHtml(markup) {
 // a switch as the receiver reads it: true, "true" or "on", in any case; `unset` when it is not there
 export const on = (v, unset = false) => (v === undefined || v === null ? unset : v === true || ['true', 'on'].includes(String(v).trim().toLowerCase()));
 export const isActive = item => on(item?.active, true);
+export const listOf = v => (Array.isArray(v) ? v : []);
 
 export function highlightJson(text) {
     const esc = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

@@ -180,24 +180,23 @@ namespace
 		return true;
 	}
 
-	// files resolved against base_dir; `own_file` for a server's own tracker: its
-	// backup goes there, the places stay the site's
-	bool trackingKey(int key, const std::string &arg, TrackingConfig &t, SiteConfig *site, const std::string &base_dir, std::string *own_file = nullptr)
+	// `own_file` for a server's own tracker: its backup goes there, the places stay the site's
+	bool trackingKey(int key, const std::string &arg, TrackingConfig &t, SiteConfig *site, std::string *own_file = nullptr)
 	{
 		switch (key)
 		{
 		case AIS::KEY_SETTING_FILE:
 			if (own_file)
-				*own_file = SiteReader::backupFile(arg, base_dir);
+				*own_file = arg;
 			else if (site)
-				site->backup_file = SiteReader::backupFile(arg, base_dir);
+				site->backup_file = arg;
 			else
 				return false;
 			break;
 		case AIS::KEY_SETTING_PLACES:
 			if (!site)
 				return false;
-			site->places = Util::Helper::resolvePath(arg, base_dir);
+			site->places = arg;
 			break;
 		case AIS::KEY_SETTING_BACKUP:
 			if (!site)
@@ -216,8 +215,6 @@ namespace
 		case AIS::KEY_SETTING_CUTOFF: t.cutoff = integer(key, arg, 0, 10000); break;
 		case AIS::KEY_SETTING_EXPIRE: t.expire_fields = Util::Parse::Switch(arg); break;
 		case AIS::KEY_SETTING_SERVER_MODE: t.server_mode = Util::Parse::Switch(arg); break;
-		case AIS::KEY_SETTING_LAT: t.lat = (float)Util::Parse::Float(arg, -90, 90); break;
-		case AIS::KEY_SETTING_LON: t.lon = (float)Util::Parse::Float(arg, -180, 180); break;
 		default: return false;
 		}
 		return true;
@@ -230,7 +227,7 @@ namespace
 		case AIS::KEY_SETTING_FILE: case AIS::KEY_SETTING_PLACES: case AIS::KEY_SETTING_BACKUP: case AIS::KEY_SETTING_HISTORY:
 		case AIS::KEY_SETTING_TRACK_TIME: case AIS::KEY_SETTING_REPLAY_TIME: case AIS::KEY_SETTING_TRACK_MEMORY:
 		case AIS::KEY_SETTING_MAX_SHIPS: case AIS::KEY_SETTING_CUTOFF: case AIS::KEY_SETTING_EXPIRE:
-		case AIS::KEY_SETTING_SERVER_MODE: case AIS::KEY_SETTING_LAT: case AIS::KEY_SETTING_LON:
+		case AIS::KEY_SETTING_SERVER_MODE:
 			return true;
 		default:
 			return false;
@@ -512,20 +509,19 @@ namespace
 		SiteConfig &site;
 		StationDefaults &defaults;
 		StationRegistry &stations;
-		const std::string &base_dir;
 		int main_port;
 		std::string main_bind;
 		const std::vector<std::string> *command_line;
 		// whether the file lists its stations
 		const bool listed;
 
-		Reader(SiteConfig &s, StationDefaults &d, StationRegistry &st, const std::string &base, int port = 0, const std::string &bind = "", const std::vector<std::string> *servers = nullptr)
-			: site(s), defaults(d), stations(st), base_dir(base), main_port(port), main_bind(bind), command_line(servers), listed(!st.ordered().empty()) {}
+		Reader(SiteConfig &s, StationDefaults &d, StationRegistry &st, int port = 0, const std::string &bind = "", const std::vector<std::string> *servers = nullptr)
+			: site(s), defaults(d), stations(st), main_port(port), main_bind(bind), command_line(servers), listed(!st.ordered().empty()) {}
 
 		void tracking(const JSON::Value &v);
 		void server(ServerEntry &e, const std::string &where);
 		void servers(const JSON::Value &v);
-		void commandLineServer(const JSON::Value &entry, std::string where);
+		void legacyServer(const JSON::Value &entry, std::string from);
 		void services(const JSON::Value &v);
 		void managedViewer(const JSON::Value &viewer);
 		void read(const JSON::JSON &root);
@@ -538,8 +534,13 @@ namespace
 			throw ConfigError("\"tracking\" must be an object.");
 		site.tracking_set = true;
 		for (const auto &m : v.getObject().getMembers())
-			if (!trackingKey(m.Key(), JSON::text(m.Get()), site.tracking, &site, base_dir))
+		{
+			const std::string value = JSON::text(m.Get());
+			// a position here was the tracker's own: it is the default station's
+			const bool position = m.Key() == AIS::KEY_SETTING_LAT || m.Key() == AIS::KEY_SETTING_LON;
+			if (!(position ? stationKey(m.Key(), value, defaults) : trackingKey(m.Key(), value, site.tracking, &site)))
 				throw ConfigError("field \"" + AIS::settingName(m.Key()) + "\" is not allowed in \"tracking\".");
+		}
 	}
 
 	// the entry is complete: every key of it read
@@ -547,7 +548,6 @@ namespace
 	{
 		ServerSpec &spec = e.spec;
 		TrackerSpec &own = spec.tracking;
-		const StationDefaults &at = e.at;
 		// the control panel shows this map on its own address: no code but the program's runs
 		// there, and the log is the panel's
 		if (spec.main)
@@ -565,8 +565,6 @@ namespace
 		{
 			if (spec.tls_cert.empty() || spec.tls_key.empty())
 				throw ConfigError(where + ": \"tls\" needs \"cert\" and \"key\", the files of the certificate and its key.");
-			spec.tls_cert = Util::Helper::resolvePath(spec.tls_cert, base_dir);
-			spec.tls_key = Util::Helper::resolvePath(spec.tls_key, base_dir);
 			// managed mode checks a save and its start: a renewal gone bad does not stop its engine
 			const std::string error = main_port ? std::string() : IO::TCPServer::checkTLS(spec.tls_cert, spec.tls_key);
 			if (!error.empty())
@@ -622,37 +620,18 @@ namespace
 			if (!said.empty())
 				e.dropped.push_back(said + ": a station is described in \"stations\", not on a server");
 		}
+		// the section's station keys are the default station's, unless it names its stations
+		if (spec.stations.empty())
+			for (const auto &t : e.station_terms)
+				stationKey(t.first, t.second, defaults);
 		if (own.own)
 		{
 			own.tracking.msg_save = spec.viewer.msg;
 			for (const auto &t : e.tracking_terms)
-				trackingKey(t.first, t.second, own.tracking, &site, base_dir, &own.backup_file);
-			// what the section says of the station is this tracker's, unless it names
-			// the station
-			if (spec.stations.empty())
-				for (const auto &t : e.station_terms)
-					switch (t.first)
-					{
-					case AIS::KEY_SETTING_LAT:
-					case AIS::KEY_SETTING_LON:
-						own.tracking.fixed = at.placed();
-						if (at.placed())
-						{
-							own.tracking.lat = at.lat;
-							own.tracking.lon = at.lon;
-						}
-						break;
-					case AIS::KEY_SETTING_SHARE_LOC: own.tracking.latlon_share = at.share_loc; break;
-					case AIS::KEY_SETTING_USE_GPS: own.tracking.use_gps = at.gps; break;
-					case AIS::KEY_SETTING_OWN_MMSI: own.tracking.own_mmsi = at.mmsi; break;
-					default: break;
-					}
+				trackingKey(t.first, t.second, own.tracking, &site, &own.backup_file);
 		}
 		else
 		{
-			if (spec.stations.empty())
-				for (const auto &t : e.station_terms)
-					stationKey(t.first, t.second, defaults);
 			if (site.tracking_set)
 			{
 				if (!e.tracking_terms.empty())
@@ -662,7 +641,7 @@ namespace
 			{
 				const std::string file = site.backup_file;
 				for (const auto &t : e.tracking_terms)
-					trackingKey(t.first, t.second, site.tracking, &site, base_dir);
+					trackingKey(t.first, t.second, site.tracking, &site);
 				if (!file.empty() && site.backup_file != file)
 					Warning() << where << ": the backup file is now " << site.backup_file << ", not " << file << ": one tracker, one file";
 			}
@@ -697,31 +676,7 @@ namespace
 			if (!entry.isObject())
 				throw ConfigError("each entry of \"server\" must be an object.");
 			const std::size_t at = index++;
-			if (command_line && at < command_line->size() && !(*command_line)[at].empty())
-			{
-				commandLineServer(entry, (*command_line)[at]);
-				return;
-			}
-			ServerEntry e;
-			e.spec.bind = "0.0.0.0";
-			e.spec.api_v0 = true;
-			e.network_default = true;
-			bool active = true;
-			for (const auto &m : entry.getObject().getMembers())
-			{
-				if (m.Key() == AIS::KEY_SETTING_ACTIVE)
-				{
-					active = Util::Parse::Switch(m.Get().to_string());
-					continue;
-				}
-				if (!e.read(m.Key(), JSON::text(m.Get()), &m.Get()))
-					throw ConfigError("field \"" + AIS::settingName(m.Key()) + "\" is not allowed in \"server\".");
-			}
-			if (!active)
-				return;
-			if (!e.spec.port)
-				throw ConfigError("a \"server\" needs a \"port\".");
-			server(e, "the web viewer on port " + std::to_string(e.spec.port));
+			legacyServer(entry, command_line && at < command_line->size() ? (*command_line)[at] : std::string());
 		};
 		if (v.isArray())
 			for (const auto &entry : v.getArray())
@@ -730,28 +685,38 @@ namespace
 			one(v);
 	}
 
-	// -N as an entry of the document's "server", its mistakes in its own words
-	void Reader::commandLineServer(const JSON::Value &entry, std::string where)
+	// An entry of "server": the file's, or with `from` the -N that gave it, its mistakes in -N's words
+	void Reader::legacyServer(const JSON::Value &entry, std::string from)
 	{
+		const bool file = from.empty();
 		try
 		{
 			ServerEntry e;
 			e.spec.bind = "0.0.0.0";
 			e.spec.api_v0 = true;
 			e.network_default = true;
-			// a value as -N gives it, text, but for the view and tls objects and the keys array -N writes
+			bool active = true;
 			for (const auto &m : entry.getObject().getMembers())
-				if (!e.read(m.Key(), JSON::text(m.Get()), m.Get().isObject() || m.Get().isArray() ? &m.Get() : nullptr))
-					throw ConfigError("\"" + AIS::settingName(m.Key()) + "\" is not a setting of -N.");
+			{
+				if (file && m.Key() == AIS::KEY_SETTING_ACTIVE)
+					active = Util::Parse::Switch(m.Get().to_string());
+				// -N gives a value as text, but for the view and tls objects and the keys array it writes
+				else if (!e.read(m.Key(), JSON::text(m.Get()), file || m.Get().isObject() || m.Get().isArray() ? &m.Get() : nullptr))
+					throw ConfigError(file ? "field \"" + AIS::settingName(m.Key()) + "\" is not allowed in \"server\"." : "\"" + AIS::settingName(m.Key()) + "\" is not a setting of -N.");
+			}
+			if (!active)
+				return;
 			if (!e.spec.port)
-				throw ConfigError("no port: give one, as -N 8100 or -N PORT 8100.");
-			where = "-N " + std::to_string(e.spec.port);
-			server(e, where);
+				throw ConfigError(file ? "a \"server\" needs a \"port\"." : "no port: give one, as -N 8100 or -N PORT 8100.");
+			from = (file ? "the web viewer on port " : "-N ") + std::to_string(e.spec.port);
+			server(e, from);
 		}
 		catch (const std::exception &ex)
 		{
+			if (file)
+				throw;
 			const std::string what = ex.what();
-			throw std::runtime_error(what.compare(0, where.size(), where) == 0 ? what : where + ": " + what);
+			throw std::runtime_error(what.compare(0, from.size(), from) == 0 ? what : from + ": " + what);
 		}
 	}
 
@@ -847,21 +812,21 @@ namespace
 
 namespace SiteReader
 {
-	void site(const JSON::JSON &root, const std::string &base_dir, SiteConfig &site, StationDefaults &defaults, StationRegistry &stations, const std::vector<std::string> *command_line_servers)
+	void site(const JSON::JSON &root, SiteConfig &site, StationDefaults &defaults, StationRegistry &stations, const std::vector<std::string> *command_line_servers)
 	{
 		ofFile([&]
-			   { Reader(site, defaults, stations, base_dir, 0, "", command_line_servers).read(root); });
+			   { Reader(site, defaults, stations, 0, "", command_line_servers).read(root); });
 	}
 
 	// Where no entry of "services" is marked main, the old viewer section is the
 	// server beside the control panel, read into the same site so what it says of
 	// the tracking and the station counts like any server's.
-	void managedSite(const JSON::JSON &root, const std::string &base_dir, int control_port, int viewer_port, const std::string &bind, SiteConfig &site, StationDefaults &defaults, StationRegistry &stations)
+	void managedSite(const JSON::JSON &root, int control_port, int viewer_port, const std::string &bind, SiteConfig &site, StationDefaults &defaults, StationRegistry &stations)
 	{
 		ofFile([&]
 			   {
 				   SiteConfig made;
-				   Reader reader(made, defaults, stations, base_dir, viewer_port, bind);
+				   Reader reader(made, defaults, stations, viewer_port, bind);
 				   reader.read(root);
 				   for (const auto &spec : made.servers)
 					   if (!spec.main && (spec.port == control_port || spec.port == viewer_port))

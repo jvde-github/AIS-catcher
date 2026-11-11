@@ -128,11 +128,10 @@ namespace Services
 	{
 		std::string out;
 		JSON::Writer w(out);
-		w.beginObject();
-		if (engine)
-			engine(w, ENGINE_OUTPUT_LIST);
-		else
-			w.key("data").beginArray().endArray().key("meta").beginObject().kv("count", 0).kv("complete", true).kv_null("next").endObject();
+		const SystemFacts f = facts();
+		w.beginObject().key("data").beginArray();
+		writeOutputs(w, f);
+		w.endArray().key("meta").beginObject().kv("count", (long long)f.outputs.size()).kv("complete", true).kv_null("next").endObject();
 		w.endObject();
 		w.finish();
 		return Response::json(out);

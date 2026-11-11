@@ -206,16 +206,10 @@ namespace AIS
 
 				// 2^3 * 3
 			case 2304000:
-				if (!droop_compensation)
-					convert >> DS2_3 >> DS2_2 >> DS2_1 >> DSK >> ROT;
-				else
-					convert >> DS2_3 >> DS2_2 >> DS2_1 /* >> FDC */ >> DSK >> ROT;
+				convert >> DS2_3 >> DS2_2 >> DS2_1 >> DSK >> ROT;
 				break;
 			case 2304000 - 1:
-				if (!droop_compensation)
-					convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
-				else
-					convert >> DS2_3 >> DS2_2 >> DS2_1 >> US /* >> FDC */ >> DSK >> ROT;
+				convert >> DS2_3 >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
 				break;
 
 				// 2^4
@@ -250,16 +244,10 @@ namespace AIS
 
 				// 2^2 * 3
 			case 1152000:
-				if (!droop_compensation)
-					convert >> DS2_2 >> DS2_1 >> DSK >> ROT;
-				else
-					convert >> DS2_2 >> DS2_1 /* >> FDC */ >> DSK >> ROT;
+				convert >> DS2_2 >> DS2_1 >> DSK >> ROT;
 				break;
 			case 1152000 - 1:
-				if (!droop_compensation)
-					convert >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
-				else
-					convert >> DS2_2 >> DS2_1 /* >> FDC */ >> US >> DSK >> ROT;
+				convert >> DS2_2 >> DS2_1 >> US >> DSK >> ROT;
 				break;
 
 				// 2^3
@@ -280,16 +268,10 @@ namespace AIS
 
 				// 2 * 3
 			case 576000:
-				if (!droop_compensation)
-					convert >> DS2_1 >> DSK >> ROT;
-				else
-					convert >> DS2_1 /* >> FDC */ >> DSK >> ROT;
+				convert >> DS2_1 >> DSK >> ROT;
 				break;
 			case 576000 - 1:
-				if (!droop_compensation)
-					convert >> DS2_1 >> US >> DSK >> ROT;
-				else
-					convert >> DS2_1 /* >> FDC */ >> US >> DSK >> ROT;
+				convert >> DS2_1 >> US >> DSK >> ROT;
 				break;
 
 				// 2^2
@@ -822,31 +804,11 @@ namespace AIS
 		physical >> n2k >> output;
 	}
 
-	Setting &ModelN2K::applyKey(AIS::Keys key, const std::string &arg)
-	{
-		return Model::applyKey(key, arg);
-	}
-
-	std::string ModelN2K::Get()
-	{
-		return Model::Get();
-	}
-
 	void ModelBaseStation::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
 		device = dev;
 		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
 		physical >> model >> outputADSB;
-	}
-
-	Setting &ModelBaseStation::applyKey(AIS::Keys key, const std::string &arg)
-	{
-		return Model::applyKey(key, arg);
-	}
-
-	std::string ModelBaseStation::Get()
-	{
-		return Model::Get();
 	}
 
 	void ModelBeast::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
@@ -856,41 +818,11 @@ namespace AIS
 		physical >> model >> outputADSB;
 	}
 
-	Setting &ModelBeast::applyKey(AIS::Keys key, const std::string &arg)
-	{
-		return Model::applyKey(key, arg);
-	}
-
-	std::string ModelBeast::Get()
-	{
-		return Model::Get();
-	}
-
 	void ModelRAW1090::buildModel(char CH1, char CH2, int sample_rate, bool timerOn, Device::Device *dev)
 	{
 		device = dev;
 		Connection<RAW> &physical = timerOn ? (*device >> timer).out : device->out;
 		physical >> model >> outputADSB;
-	}
-
-	Setting &ModelRAW1090::applyKey(AIS::Keys key, const std::string &arg)
-	{
-		return Model::applyKey(key, arg);
-	}
-
-	std::string ModelRAW1090::Get()
-	{
-		return Model::Get();
-	}
-
-	Setting &ModelExport::applyKey(AIS::Keys key, const std::string &arg)
-	{
-		return Model::applyKey(key, arg);
-	}
-
-	std::string ModelExport::Get()
-	{
-		return Model::Get();
 	}
 
 	void ModelExport::buildModel(char, char, int sample_rate, bool timerOn, Device::Device *dev)

@@ -70,9 +70,7 @@ function beside(view, w, h, at, opts) {
     var minTop = Math.max(margin, opts.topInset || 0);
     var maxTop = view.height - h - Math.max(margin, opts.bottomInset || 0);
     var top = Math.max(minTop, Math.min(maxTop, at[1] - h / 2));
-    var left = rightSpace >= 0 ? at[0] + margin
-        : leftSpace >= 0 ? at[0] - w - margin
-            : Math.max(0, (view.width - w) / 2);
+    var left = rightSpace >= 0 ? at[0] + margin : at[0] - w - margin;
 
     return { left: left, top: top };
 }

@@ -5,13 +5,13 @@
 //     `control.viewer`; how ships are kept is `tracking`
 //   - a web viewer of the `server` section is an entry of `services`: on the site's ships, or on
 //     ships of its own behind its message filter, which goes under its `tracking`
-//   - a receiver's settings at the top of the file are the first receiver's; its kind of device
+//   - a receiver's settings at the top of the file are a receiver of the list; its kind of device
 //     is in capitals, its model and sensitivity are its engines
 //   - an output's json and json_full switches are its msgformat; a server's message switch is msg;
 //     replay_time is track_time
 //   - whether a server shows where its stations are is its own share_loc, not each station's
 
-import { on } from './dom.js';
+import { isActive, on } from './dom.js';
 import { num, validPos } from './stations.js';
 import { DEVICE_BLOCKS } from './inputs.js';
 
@@ -26,10 +26,10 @@ const TRACKING_KEYS = ['file', 'backup', 'history', 'track_time', 'replay_time',
 // showed, and switches that did nothing
 const DROPPED_KEYS = ['port', 'port_min', 'port_max', 'ip_bind', 'split', 'zone', 'groups_in', 'cdn', 'msgs', 'zlib',
     'reuse_port', 'stats_on_close'];
-// the terms of a web viewer's message filter, and what picked its receivers: a tracker of its own
-const FILTER_KEYS = ['filter', 'allow_type', 'block_type', 'allow_mmsi', 'block_mmsi', 'allow_channel', 'allow_repeat',
+// the terms of a message filter, older names too; a web viewer's, and what picked its receivers: a tracker of its own
+export const FILTER_KEYS = ['filter', 'allow_type', 'block_type', 'allow_mmsi', 'block_mmsi', 'allow_channel', 'allow_repeat',
     'block_repeat', 'remove_empty', 'unique', 'position_interval', 'own_interval', 'exclude_errors', 'exclude_quality',
-    'only_errors', 'stations', 'id', 'gps', 'ais'];
+    'only_errors', 'stations', 'id', 'gps', 'ais', 'select_mmsi', 'select_channel', 'select_repeat', 'select_id', 'downsample'];
 const ROUTE_KEYS = ['zone', 'groups_in'];
 // what the viewer of the `server` section took that a server has no use for
 const VIEWER_DROPPED = ['port_min', 'port_max', 'split', 'cdn', 'msgs', 'zlib', 'reuse_port', 'stats_on_close'];
@@ -97,15 +97,10 @@ function migrateReceivers(cfg) {
         }
     if (Object.keys(top).length) {
         if (!Array.isArray(cfg.receiver)) cfg.receiver = [];
-        const first = cfg.receiver[0];
-        if (first && typeof first === 'object') {
-            const chosen = 'input' in first || 'serial' in first;
-            for (const [k, v] of Object.entries(top))
-                if (!(chosen && (k === 'input' || k === 'serial')) && !(k in first)) first[k] = v;
-        } else {
-            if (!('input' in top) && !('serial' in top)) top.input = 'RTLSDR';
-            cfg.receiver.push(top);
-        }
+        const named = String(top.input ?? '') || String(top.serial ?? '');
+        const i = named ? -1 : cfg.receiver.findIndex(r => r && typeof r === 'object' && isActive(r));
+        if (i >= 0) cfg.receiver[i] = { ...top, ...cfg.receiver[i] };
+        else cfg.receiver.unshift(named ? top : { input: 'NONE', ...top });
     }
     for (const r of Array.isArray(cfg.receiver) ? cfg.receiver : []) {
         if (!r || typeof r !== 'object') continue;

@@ -131,21 +131,6 @@ namespace DSP
 		Send(output.data(), len / 2, tag);
 	}
 
-	void Decimate2::Receive(const CFLOAT32 *data, int len, TAG &tag)
-	{
-		assert(len % 2 == 0);
-
-		if (output.size() < len / 2)
-			output.resize(len / 2);
-
-		for (int i = 0, j = 0; i < len; i += 2, j++)
-		{
-			output[j] = data[i];
-		}
-
-		Send(output.data(), len / 2, tag);
-	}
-
 	// FilterCIC5
 	void FilterCIC5::Receive(const CFLOAT32 *data, int len, TAG &tag)
 	{

@@ -35,8 +35,8 @@
 namespace Services
 {
 	Server::Server(const ServerSpec &spec, Tracker &tracker, std::function<StationRegistry(const ServerSpec &)> stations,
-				   EngineWriter engine, std::function<SystemFacts()> system)
-		: spec_(spec), tracker(tracker), stations(std::move(stations)), engine(std::move(engine)), system(std::move(system))
+				   std::function<SystemFacts()> system)
+		: spec_(spec), tracker(tracker), stations(std::move(stations)), system(std::move(system))
 	{
 		build();
 	}
@@ -75,6 +75,16 @@ namespace Services
 		indexKeys(keys);
 	}
 
+	void Server::setKey(const ApiKey &key, bool gone)
+	{
+		std::lock_guard<std::mutex> lock(services_mtx);
+		external_keys = true;
+		if (gone)
+			keys_.erase(key.sha256);
+		else
+			keys_[key.sha256] = key;
+	}
+
 	void Server::indexKeys(const std::vector<ApiKey> &keys)
 	{
 		keys_.clear();
@@ -96,7 +106,7 @@ namespace Services
 		setFrameAncestors(spec_.viewer.frame_ancestors.empty() ? "*" : spec_.viewer.frame_ancestors);
 		if (!external_keys)
 			indexKeys(spec_.keys);
-		const Context context = {tracker, spec_, [this] { return stations(spec_); }, engine, system ? system : [] { return SystemFacts(); }, ships_};
+		const Context context = {tracker, spec_, [this] { return stations(spec_); }, system ? system : [] { return SystemFacts(); }, ships_};
 		if (spec_.metrics)
 		{
 			PrometheusCounter *counter = new PrometheusCounter();
@@ -199,11 +209,6 @@ namespace Services
 			response.header = "WWW-Authenticate: Bearer realm=\"AIS-catcher\"";
 			return false;
 		}
-		if (!key->active)
-		{
-			response = Services::Response::problem(403, "Forbidden", "The key is not active yet.");
-			return false;
-		}
 		if (!(key->scopes & scope))
 		{
 			response = Services::Response::problem(403, "Forbidden", "The key \"" + key->name + "\" may not " +
@@ -213,13 +218,19 @@ namespace Services
 		return true;
 	}
 
-	bool Server::allow(const Service &service, Services::Request &request, const ApiKey *key, Services::Response &response, std::string &rate)
+	// a key with a quota is counted by itself; a request without a key, on a limited server, by its address
+	int Server::quota(const ApiKey *key) const
 	{
-		// a key with a quota is counted by itself; without one, a limited server counts the address
-		const int limit = key ? key->calls_hour : spec_.limited ? IO::Limits::PUBLIC_CALLS_AN_HOUR : 0;
+		return key ? key->calls_hour : spec_.limited ? IO::Limits::PUBLIC_CALLS_AN_HOUR : 0;
+	}
+
+	bool Server::allow(const Service &service, Services::Request &request, const ApiKey *key, Services::Response &response, Allowance *&hour)
+	{
+		hour = nullptr;
+		const int limit = quota(key);
 		if (!limit || !service.metered(request))
 			return true;
-		const std::string who = key ? "key " + key->name : request.peer;
+		const std::string who = key ? "key " + (key->name.empty() ? key->sha256 : key->name) : request.peer;
 		const std::time_t now = std::time(nullptr);
 		if (allowances.size() > 10000)
 		{
@@ -231,24 +242,16 @@ namespace Services
 					++it;
 			}
 		}
-		Allowance &a = allowances[key ? "k:" + key->sha256 : request.peer];
+		Allowance &a = allowances[who];
 		if (now - a.window >= 3600)
 		{
 			a.window = now;
 			a.used = a.refused = 0;
 		}
-		// a large page costs more than one call; one larger than the hour has left is cut to what is left
-		int cost = service.cost(request);
-		const int left = limit - a.used;
-		if (cost > left && left > 0)
+		if (a.used < limit)
 		{
-			service.cap(request, left);
-			cost = left;
-		}
-		if (cost <= left)
-		{
-			a.used += cost;
-			rate = "X-RateLimit-Limit: " + std::to_string(limit) + "\r\nX-RateLimit-Remaining: " + std::to_string(limit - a.used);
+			request.calls_left = limit - a.used;
+			hour = &a;
 			return true;
 		}
 		// a key is answered every time, it is somebody's; an address over its limit gets one 429 and
@@ -323,8 +326,15 @@ namespace Services
 				const int scope = s->scope(request);
 				if (scope == Service::NOT_MINE)
 					continue;
-				if (!admit(scope, request, key, response) || !allow(*s, request, key, response, rate) || s->handle(request, response))
+				Allowance *hour = nullptr;
+				if (!admit(scope, request, key, response) || !allow(*s, request, key, response, hour) || s->handle(request, response))
 				{
+					// charged when the answer is known: a large page more than one call, a refusal one
+					if (hour)
+					{
+						hour->used += response.status < 400 ? s->cost(request) : 1;
+						rate = "X-RateLimit-Limit: " + std::to_string(quota(key)) + "\r\nX-RateLimit-Remaining: " + std::to_string(quota(key) - hour->used);
+					}
 					handled = true;
 					break;
 				}

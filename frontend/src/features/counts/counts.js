@@ -54,10 +54,6 @@ function countShips() {
 
 export function updateMarkerCountTooltip() {
     for (const [id, elementId] of Object.entries(BUCKET_ELEMENT)) {
-        if (shipsDB == null) {
-            document.getElementById(elementId).innerHTML = "";
-            continue;
-        }
         const v = shipCounts.buckets[id] || 0;
         setCount(elementId, v);
         const item = document.getElementById(elementId)?.closest(".stat-item");
@@ -73,10 +69,6 @@ function setCount(id, value) {
 }
 
 export function updateMarkerCount() {
-    if (shipsDB == null) {
-        setCount("markerCount", 0);
-        return;
-    }
     if (replay.isActive()) return;
 
     countShips();

@@ -33,6 +33,7 @@
 #include "PlaceCatalogue.h"
 #include "PlaneDB.h"
 #include "StationRegistry.h"
+#include "StationTable.h"
 #include "TrackingConfig.h"
 
 // The picture one process keeps of the world it hears: one ship table, in
@@ -72,15 +73,9 @@ public:
 	StreamIn<AIS::Control> &control() { return db; }
 	StreamIn<Plane::ADSB> &adsb() { return adsb_intake; }
 
-	// Where a station is: as configured, from GPS on its input, or riding a vessel
-	struct Position
-	{
-		enum Source : uint8_t { NONE, CONFIGURED, GPS, VESSEL };
-		FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
-		Source source = NONE;
-		std::time_t time = 0; // of the last fix; 0 when configured
-	};
-	static const char *sourceName(Position::Source s);
+	// The installation's one table of station positions, given when the tracker is made.
+	void useStations(std::shared_ptr<StationTable> shared) { table = std::move(shared); }
+	typedef StationTable::Position Position;
 
 	// Readers of every message as the tracker has it, after it is placed and
 	// measured: a server's live stream. Removed before the reader goes.
@@ -118,21 +113,14 @@ public:
 		return c ? c->feature(number, version) : "{}";
 	}
 
+	// the stations as the table now lists them: the map's rows, and figures for each
 	void setStations(const StationRegistry &registry);
 	// how each station is doing, by id: StationRegistry's states, for the map's station rows
 	void setStationStates(const std::map<int, int> &states) { db.setStationStates(states); }
-	// where a station is now, for those who serve it: nothing for a station
-	// that keeps its position home
-	Position stationPosition(int id);
-	// where a station is now whether it shares that or not: for its owner's
-	// control panel only, never for a service
-	Position stationPositionPrivate(int id);
+	// Where a station is now, shared or not: a server applies its own rule (Located) before it tells.
+	Position stationPosition(int id) { return table->at(id); }
 	// the vessels stations ride: MMSI to station id
-	std::map<uint32_t, int> riding()
-	{
-		std::lock_guard<std::mutex> lock(stations_mtx);
-		return riders;
-	}
+	std::map<uint32_t, int> riding() { return table->riding(); }
 
 	// A reader of the messages the ship table kept, as they leave it: after
 	// its quality gate, before the figures. Connected before messages flow.
@@ -209,6 +197,8 @@ public:
 	Restored restore(const std::string &file);
 	// a viewer backup of the version before the site's: its overall figures and its ships
 	bool importViewerBackup(const std::string &file);
+	// The backup read when the tracker is made. False when the file must be left as it is.
+	bool open(const std::string &file);
 
 	// figures of their own for at most this many stations; a station past
 	// them counts in the figures of everything only
@@ -239,27 +229,11 @@ private:
 		void Receive(const Plane::ADSB *data, int len, TAG &tag) override;
 	} adsb_intake;
 
-	struct Station
-	{
-		Position now;
-		FLOAT32 lat = LAT_UNDEFINED, lon = LON_UNDEFINED;
-		uint32_t mmsi = 0;
-		bool gps = true;
-		int inputs = 0;
-		// one source at a time: the vessel it rides, else GPS when chosen, else where it was put
-		bool followsGPS() const { return gps && !mmsi; }
-	};
-
 	// the station the message is counted at: the one it names when listed, else the input's; and where it was heard
 	void place(const AIS::Message *msg, TAG &tag);
-	// a station the control feed describes stands here, until the configuration's list is applied
-	// again; invalid coordinates take it away
-	void placeStation(int id, FLOAT32 lat, FLOAT32 lon);
-	// false when the fix belongs to no station, and the tracker's own position takes it
-	bool moveByGPS(int id, FLOAT32 lat, FLOAT32 lon);
-	void follow(uint32_t mmsi, FLOAT32 lat, FLOAT32 lon);
+	// a station moved: its row on the map follows; -1 for none
+	void moved(int id);
 	void remeasure();
-	void applyStations(const StationRegistry &registry); // under stations_mtx
 
 	std::mutex config_mtx;
 	TrackingConfig cfg;
@@ -279,16 +253,9 @@ private:
 	std::mutex taps_mtx;
 	std::vector<StreamIn<JSON::JSON> *> taps;
 
-	// the stations as the map shows them: the registry's, where each is now
-	StationRegistry shown;
-	void publish(std::vector<int> moved);
 	std::map<int, std::time_t> last_heard;
 
-	std::mutex stations_mtx;
-	Position fixed_at;
-	std::map<int, Station> stations;
-	std::map<uint32_t, int> riders;
-	bool registry_set = false;
+	std::shared_ptr<StationTable> table = std::make_shared<StationTable>();
 
 	DB db;
 	PlaneDB plane_db;

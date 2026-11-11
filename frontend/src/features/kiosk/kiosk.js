@@ -45,11 +45,10 @@ function restoreOriginalDisplay(element) {
     else element.style.removeProperty('display');
 }
 
-// callers that only need the chrome re-hidden must not restart the rotation
-function updateKiosk(restart = true) {
+function updateKiosk() {
     const kiosk = isKiosk();
     if (!kiosk) stopKioskAnimation();
-    else if (restart || !kioskAnimationInterval) startKioskAnimation();
+    else startKioskAnimation();
 
     const toHide = document.querySelectorAll(kiosk ? ".nokiosk" : ".kiosk");
     const toShow = document.querySelectorAll(kiosk ? ".kiosk" : ".nokiosk");

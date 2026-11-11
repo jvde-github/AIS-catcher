@@ -1,11 +1,10 @@
-import { el, isActive, on } from './dom.js';
+import { el, isActive, listOf, on } from './dom.js';
 import { docLink } from './docs.js';
 import { icon } from './icons.js';
 import { ConfigForm, plainLayout, rowsLayout } from './config-form.js';
 import { outputOf, outputRouting } from './flow-editor.js';
 import { LIST_OUTPUTS, OUTPUT_TYPES, channelTitle, outputType } from './schema.js';
 
-const listOf = v => (Array.isArray(v) ? v : []);
 
 // ---- Community: laid out like an input. The page header holds the switch (with its status)
 // and the routing line; below, the sharing key and Advanced.

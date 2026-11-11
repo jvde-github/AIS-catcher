@@ -26,15 +26,6 @@ namespace Device
 	//---------------------------------------
 	// Device RTLTCP
 
-	void RTLTCP::Close()
-	{
-		Device::Close();
-	}
-
-	void RTLTCP::sendProtocol()
-	{
-	}
-
 	void RTLTCP::Play()
 	{
 

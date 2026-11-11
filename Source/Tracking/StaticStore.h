@@ -115,13 +115,6 @@ public:
 	}
 
 	// newest first; the card orders what it draws itself
-	void writeJSON(JSON::Writer &w, int ptr) const
-	{
-		w.beginArray();
-		writeEntries(w, ptr);
-		w.endArray();
-	}
-
 	void writeEntries(JSON::Writer &w, int ptr) const
 	{
 		if (slot(ptr) && ref[ptr] != NIL)

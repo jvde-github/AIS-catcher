@@ -43,7 +43,7 @@ namespace Services
 	public:
 		// `stations`: the station list, asked again when the settings change
 		Server(const ServerSpec &spec, Tracker &tracker, std::function<StationRegistry(const ServerSpec &)> stations,
-			   EngineWriter engine = nullptr, std::function<SystemFacts()> system = nullptr);
+			   std::function<SystemFacts()> system = nullptr);
 		~Server();
 
 		bool open();
@@ -62,15 +62,14 @@ namespace Services
 		void setExtra(Extra e) { extra = std::move(e); }
 		// the API walks the ships through `source` instead of the ship table; the services are built again
 		void setShips(ShipSource *source);
-		// the keys the server admits, in place of its settings' own: a program built on AIS-catcher
-		// keeps them elsewhere and hands over the whole list on each change
+		// the keys the server admits, set from outside: the whole list, then each as it changes
 		void setKeys(const std::vector<ApiKey> &keys);
+		void setKey(const ApiKey &key, bool gone = false);
 
 	private:
 		ServerSpec spec_;
 		Tracker &tracker;
 		std::function<StationRegistry(const ServerSpec &)> stations;
-		EngineWriter engine;
 		std::function<SystemFacts()> system;
 		Extra extra;
 		ShipSource *ships_ = nullptr;
@@ -102,8 +101,11 @@ namespace Services
 			int used = 0;    // calls charged this hour, a large page counting for more
 			int refused = 0; // attempts past the quota, for one 429 and then silence
 		};
-		// per address on a limited server, per key for a key with a quota
+		// per address on a limited server, per key name for a key with a quota
 		std::map<std::string, Allowance> allowances;
-		bool allow(const Service &service, Services::Request &request, const ApiKey *key, Services::Response &response, std::string &rate);
+		// the calls an hour a request is held to, 0 for no limit
+		int quota(const ApiKey *key) const;
+		// false when the hour is spent; else `hour` is the count the answer is charged to
+		bool allow(const Service &service, Services::Request &request, const ApiKey *key, Services::Response &response, Allowance *&hour);
 	};
 }

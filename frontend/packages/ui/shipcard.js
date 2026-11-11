@@ -6,7 +6,6 @@
    key may map to several elements when the layout shows a value more than once.
    ========================================================================= */
 import { visitListHTML } from '@aiscatcher/core/visits.js';
-import { decodeHTMLEntities } from './components.js';
 import { CHANGE, getCountryName, getEtaVal, getMmsiTypeVal, getShipTypeShort, getStatusVal, sanitizeString } from '@aiscatcher/core/text.js';
 import { getChangeListHTML, getDraughtChartSVG, getShipDimensionSVG, getSpeedHistorySVG } from '@aiscatcher/core/spark.js';
 
@@ -48,9 +47,9 @@ export function populate(cells, ship, h) {
     const icon = (k) => (h.infoIcon ? h.infoIcon(k) : '');
 
     text('mmsi', ship.mmsi != null ? ship.mmsi : ship.ship_id);
-    text('callsign', decodeHTMLEntities(h.callsign ? h.callsign(ship) : ship.callsign));
+    text('callsign', h.callsign ? h.callsign(ship) : ship.callsign);
     each('imo').forEach((el) => { el.previousElementSibling.textContent = ship.imo != null || !ship.eni ? 'IMO' : 'ENI'; });
-    text('imo', ship.imo != null ? ship.imo : decodeHTMLEntities(ship.eni));
+    text('imo', ship.imo != null ? ship.imo : ship.eni);
     text('country', getCountryName(ship.country));
     const sender = getMmsiTypeVal(ship);
     text('class', sender === 'Unknown' ? null : sender.replace(/^Class /, ''));
@@ -71,7 +70,7 @@ export function populate(cells, ship, h) {
         '<g style="transform: rotate(' + deg + 'deg); transform-origin: 12px 12px"><path d="M12 18V6.5M8 10.5l4-4 4 4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg>';
     html('cog', ship.cog != null ? '<span class="sc-dirline">' + Number(ship.cog).toFixed(1) + '°' + arrow(Number(ship.cog)) + '</span>' : null);
     html('heading', ship.heading != null && ship.heading !== 511 ? '<span class="sc-dirline">' + Number(ship.heading).toFixed(0) + '°' + arrow(Number(ship.heading), true) + '</span>' : null);
-    text('destination', decodeHTMLEntities(ship.destination));
+    text('destination', ship.destination);
     text('eta', ship.eta_month != null && ship.eta_day != null && ship.eta_hour != null && ship.eta_minute != null ? getEtaVal(ship) : null);
     const match = ship.matched_port;
     const hasMatch = typeof match?.code === 'string' && match.code.trim() !== '';

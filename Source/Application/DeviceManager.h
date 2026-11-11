@@ -63,17 +63,22 @@ class DeviceManager
 	static std::vector<Device::Description> device_list;
 	static std::mutex list_mtx;
 	Device::Device *device = nullptr;
+	// its entry of the list, taken when the device was opened: no other receiver opens that one
+	int claim = -1;
 
 public:
+	// the entry is free again, for a receiver that opens the device anew
 	~DeviceManager()
 	{
 		if (device)
 			device->Close();
+		std::lock_guard<std::mutex> lock(list_mtx);
+		if (claim >= 0 && claim < (int)device_list.size())
+			device_list[claim].setClaimed(false);
 	}
 
 	// The device Setting a "-g<flag>" switch or a config file key names,
 	// nullptr when it names no device.
-	Setting *settingForFlag(char flag);
 	Setting *settingForKey(AIS::Keys key);
 	// a device type's block in the configuration file, by its -g letter or its type: KEY_COUNT for none
 	static AIS::Keys keyForFlag(char flag);

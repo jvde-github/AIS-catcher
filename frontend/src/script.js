@@ -17,10 +17,11 @@ import * as ticker from './features/ticker/ticker.js';
 import {
     map, create as createMap, markerLayer, shapeLayer, extraLayer, trackLayer, labelLayer, addOverlayLayer,
 } from './map.js';
+import './basemaps.js';
 import { restoreFocus } from './data.js';
 import { buildSettingsTabs } from './features/settings/settings.js';
 import {
-    saveMapView, loadSettings, loadSettingsFromURL, restoreDefaultSettings, runAllEffects,
+    saveMapView, loadSettings, loadSettingsFromURL, restoreDefaultSettings, runAllEffects, urlParams,
 } from './settings-store.js';
 import { showDialog, showNotification } from './dialog.js';
 import * as about from './features/about/about.js';
@@ -149,28 +150,14 @@ function showServerErrors() {
 }
 
 function toggleScreenSize() {
-    const doc = window.document;
-    const docEl = doc.documentElement;
-
-    const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen || docEl.webkitEnterFullscreen;
-    const cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen || doc.webkitExitFullscreen;
-
-    if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
-        requestFullScreen.call(docEl);
-    } else {
-        cancelFullScreen.call(doc);
-    }
+    const el = document.documentElement;
+    if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else (el.requestFullscreen || el.webkitRequestFullScreen).call(el);
 }
 
 function initFullScreen() {
-    document.addEventListener("fullscreenchange", handleFullScreenChange);
-    document.addEventListener("mozfullscreenchange", handleFullScreenChange);
-    document.addEventListener("webkitfullscreenchange", handleFullScreenChange);
-    document.addEventListener("msfullscreenchange", handleFullScreenChange);
-}
-
-function handleFullScreenChange() {
-    closeContextMenu();
+    document.addEventListener("fullscreenchange", closeContextMenu);
+    document.addEventListener("webkitfullscreenchange", closeContextMenu);
 }
 
 const debouncedDrawMap = debounce(redraw, 250);
@@ -198,7 +185,6 @@ function announceStickyState() {
     showNotification(notes.map((n) => n[0].toUpperCase() + n.slice(1)).join(" · "), "warning", 10000);
 }
 
-const urlParams = new URLSearchParams(window.location.search);
 buildStatcard();
 restoreDefaultSettings();
 

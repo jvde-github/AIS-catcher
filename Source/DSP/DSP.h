@@ -150,15 +150,6 @@ namespace DSP
 		void Receive(const CFLOAT32 *data, int len, TAG &tag);
 	};
 
-	class Decimate2 : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
-	{
-		std::vector<CFLOAT32> output;
-
-	public:
-		virtual ~Decimate2() {}
-		void Receive(const CFLOAT32 *data, int len, TAG &tag);
-	};
-
 	class Upsample : public SimpleStreamInOut<CFLOAT32, CFLOAT32>
 	{
 		std::vector<CFLOAT32> output;
@@ -208,8 +199,6 @@ namespace DSP
 			taps = t;
 			K = k;
 		}
-		void setTaps(const std::vector<FLOAT32> &t) { taps = t; }
-		void setK(int k) { K = k; }
 
 		// StreamIn
 		void Receive(const CFLOAT32 *data, int len, TAG &tag);

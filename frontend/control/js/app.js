@@ -2,20 +2,20 @@ import { formatBytes } from '@aiscatcher/core/text.js';
 import { copyToClipboard } from '@aiscatcher/ui/components.js';
 import { createPlaceEditor } from './places-editor.js';
 import { createStationsEditor } from './stations-editor.js';
-import { el, highlightJson, isActive } from './dom.js';
+import { el, highlightJson, isActive, listOf } from './dom.js';
 import { api } from './api.js';
 import { wirePanelTLS } from './panel-tls.js';
 import { icon } from './icons.js';
 import { hub } from './hub.js';
 import { createHistoryEditor } from './history-editor.js';
-import { App, ConfigStore } from './config-store.js';
+import { App, ConfigStore, flushDebounces } from './config-store.js';
 import { createInputsPage } from './inputs-page.js';
 import { createOutputsPage, outputRailItems, renderAddOutput } from './outputs-page.js';
 import { SetupWizard } from './wizard.js';
 import { outputType as outputKind } from './schema.js';
 import { stationsOf, stationLabel } from './stations.js';
 import { describeInput } from './inputs.js';
-import { createFlowEditor, collectOutputs, outputProblem, outputLiveProblem, statsByKey } from './flow-editor.js';
+import { createFlowEditor, collectOutputs, outputProblem, outputLiveProblem, statsByKey, OUTPUT_STATS } from './flow-editor.js';
 import { createServicesSection, servicesRailItems } from './services-pages.js';
 import { createRail } from './rail.js';
 import { createLogConsole } from './log-console.js';
@@ -31,25 +31,18 @@ import { createMessageBar } from './message-bar.js';
     let viewerLoaded = false;
     let engineRunning = false;
     let engineDesired = false;
-    let pendingApply = false;
     let pendingAction = null;
-    let bar = null;
 
     // shapes live in icons.css; swap the class rather than inlining SVG
-    const ENGINE_ICONS = { start: 'engine_start_icon', stop: 'engine_stop_icon', restart: 'engine_restart_icon' };
+    const ENGINE_ICONS = { start: 'engine_start_icon', stop: 'engine_stop_icon' };
 
-    const ENGINE_TITLES = {
-        start: 'Start AIS-catcher',
-        stop: 'Stop AIS-catcher',
-        restart: 'Restart AIS-catcher to apply configuration changes'
-    };
+    const ENGINE_TITLES = { start: 'Start AIS-catcher', stop: 'Stop AIS-catcher' };
 
     function engineButtonMode() {
-        if (!engineRunning) return engineDesired ? 'stop' : 'start';
-        return pendingApply ? 'restart' : 'stop';
+        return engineRunning || engineDesired ? 'stop' : 'start';
     }
 
-    const ENGINE_LABELS = { start: 'Start receiver', stop: 'Stop receiver', restart: 'Restart receiver' };
+    const ENGINE_LABELS = { start: 'Start receiver', stop: 'Stop receiver' };
 
     function renderEngineButton() {
         const mode = engineButtonMode();
@@ -63,11 +56,7 @@ import { createMessageBar } from './message-bar.js';
         const btn = document.getElementById('nav-start-restart');
         const label = document.getElementById('nav-sr-label');
         const srIcon = document.getElementById('nav-sr-icon');
-        if (btn) {
-            btn.classList.toggle('attention', pendingApply);
-            bar?.setRestart(pendingApply ? (engineRunning ? 'restart' : 'start') : null);
-            btn.title = ENGINE_TITLES[mode];
-        }
+        if (btn) btn.title = ENGINE_TITLES[mode];
         if (srIcon && srIcon.dataset.mode !== mode) {
             srIcon.dataset.mode = mode;
             srIcon.className = ENGINE_ICONS[mode];
@@ -357,18 +346,7 @@ import { createMessageBar } from './message-bar.js';
         }
     }
 
-    let reloadUntil = 0;
-    let reloadSawDown = false;
-    let overlayRestartBtn = null;
     let lastUptime = Infinity;
-
-    function restartTimedOut() {
-        reloadUntil = 0;
-        if (overlayRestartBtn) {
-            overlayRestartBtn.disabled = false;
-            overlayRestartBtn.textContent = 'Restart';
-        }
-    }
 
     function applyStatus(data) {
         lastStatus = { ...lastStatus, ...data };
@@ -387,16 +365,6 @@ import { createMessageBar } from './message-bar.js';
         const fell = uptime < lastUptime;
         if (fell) clearAlerts();
         lastUptime = uptime;
-        if (reloadUntil) {
-            if (data.engine === 'running' && (reloadSawDown || fell)) {
-                reloadUntil = 0;
-                window.location.reload();
-            } else if (data.desired === false || Date.now() > reloadUntil) {
-                restartTimedOut();
-            } else if (data.engine !== 'running') {
-                reloadSawDown = true;
-            }
-        }
 
         if (data.viewer && (!viewerLoaded || data.viewer !== port)) {
             port = data.viewer;
@@ -464,12 +432,6 @@ import { createMessageBar } from './message-bar.js';
         }, 10000);
     }
 
-    // a save takes effect at the receiver's next start
-    hub.configSaved = () => {
-        pendingApply = true;
-        renderEngineButton();
-    };
-
     // `untilReply`: busy only until the answer, not the status that follows it
     function engineClick(busy, untilReply = false) {
         const action = engineButtonMode();
@@ -477,8 +439,6 @@ import { createMessageBar } from './message-bar.js';
             busy(true);
             engineAction(action)
                 .then(() => {
-                    pendingApply = false;
-                    renderEngineButton();
                     if (untilReply) busy(false);
                 })
                 .catch(e => {
@@ -534,30 +494,16 @@ import { createMessageBar } from './message-bar.js';
         document.querySelectorAll('.hub-overlay-msg').forEach(el => el.remove());
     }
 
-    function showError(title, message, showRestart = false) {
+    function showError(title, message) {
         const div = showOverlayMessage(`
             <div class="t-center sys-splash-box stack-loose">
                 ${icon('alert', 'icon-2xl t-warn center-block')}
                 <h3 data-role="err-title" class="t-strong t-lg"></h3>
                 <p data-role="err-msg" class="t-muted"></p>
-                ${showRestart ? '<button data-role="err-restart" class="btn">Restart</button>' : ''}
             </div>
         `);
         div.querySelector('[data-role="err-title"]').textContent = title;
         div.querySelector('[data-role="err-msg"]').textContent = message;
-        const btn = div.querySelector('[data-role="err-restart"]');
-        if (btn)
-            btn.addEventListener('click', () => {
-                requireAuth(() => {
-                    btn.textContent = 'Restarting...';
-                    btn.disabled = true;
-                    overlayRestartBtn = btn;
-                    reloadUntil = Date.now() + 90000;
-                    reloadSawDown = false;
-                    engineAction('restart')
-                        .catch(() => { reloadUntil = 0; btn.disabled = false; btn.textContent = 'Restart'; });
-                });
-            });
     }
 
     function showNoViewer() {
@@ -613,11 +559,10 @@ import { createMessageBar } from './message-bar.js';
     // ==== Settings. A page is loaded when first shown and taken down when its edits are discarded
     // or the panel closes, so the rail and the other pages read the file, or an open page with its edits.
     const systemOverlay = document.getElementById('system-overlay');
-    bar = createMessageBar({
+    const bar = createMessageBar({
         settings: document.getElementById('settings-bar'),
         page: document.getElementById('page-bar'),
-        inSettings: () => !systemOverlay.classList.contains('hidden'),
-        onRestart: onStartRestartClick
+        inSettings: () => !systemOverlay.classList.contains('hidden')
     });
     App.notify = (type, message) => bar.show(type, message);
     const systemBody = document.getElementById('system-body');
@@ -644,7 +589,6 @@ import { createMessageBar } from './message-bar.js';
 
     let currentTab = null;
     let previousTab = 'services';
-    const listOf = v => (Array.isArray(v) ? v : []);
     const pane = name => systemBody.querySelector(`[data-pane="${name}"]`);
 
     const loaded = new Map();
@@ -680,7 +624,7 @@ import { createMessageBar } from './message-bar.js';
         live[part] = next;
         if (!systemOverlay.classList.contains('hidden')) rail.render();
     }
-    // the receivers the engine reports are the switched-on inputs of the file it started with, in order
+    // the receivers the engine reports are the switched-on inputs of the file as saved, in order
     function noteReceivers(data) {
         const next = new Map();
         if (data.engine === 'running' && Array.isArray(data.receivers)) {
@@ -693,7 +637,6 @@ import { createMessageBar } from './message-bar.js';
         }
         setLive('inputs', next);
     }
-    const OUTPUT_STATS = '/viewer/api/output_stats.json';
     function pollOutputs() {
         if (document.hidden || !!systemOverlay.classList.contains('hidden')) return;
         if (!engineRunning || !ConfigStore.cached) return setLive('outputs', new Map());
@@ -771,7 +714,7 @@ import { createMessageBar } from './message-bar.js';
         if (selectPage('services', rail.tab === 'services' ? rail.key : 'main')) services.add();
     }
 
-    const hasUnsaved = () => !!App.state.unsaved;
+    const hasUnsaved = () => { flushDebounces(); return !!App.state.unsaved; };
     function confirmDiscardUnsaved(verb) {
         if (!hasUnsaved()) return true;
         if (!confirm(`You have unsaved changes. Are you sure you want to ${verb} without saving?`)) return false;
@@ -843,11 +786,10 @@ import { createMessageBar } from './message-bar.js';
                 if (ed === stationsEditor) rail.follow('stations', ed.selected());
                 rail.render();
             },
-            onSaved: rewired => {
+            onSaved: () => {
                 unload('input');
                 unload('services');
-                if (rewired) hub.configSaved();
-                else App.notify('info', 'The map follows the stations as saved', 5000);
+                hub.refreshStatus();
                 rail.render();
             }
         });
@@ -878,7 +820,7 @@ import { createMessageBar } from './message-bar.js';
             pages: () => ({ inputs: inputs?.loaded ? inputs : null, outputs: outputsPage?.form?.loaded ? outputsPage.form : null, outputType: outputsPage?.type }),
             running: () => !!port && engineRunning,
             shown: () => currentTab === 'flow',
-            onSaved: () => hub.configSaved()
+            onSaved: hub.refreshStatus
         });
         return { destroy() { page.destroy(); if (flowPage === page) flowPage = null; } };
     }
@@ -991,7 +933,7 @@ import { createMessageBar } from './message-bar.js';
         currentPassword = systemBody.querySelector('#current-password');
         if (!hasPassword) currentPassword.remove();
         systemBody.querySelector('#password-form').addEventListener('submit', changePassword);
-        wirePanelTLS(systemBody);
+        wirePanelTLS(systemBody).catch(e => App.notify('error', 'Could not read the HTTPS settings: ' + e.message));
         systemBody.querySelector('#hub-btn-wizard').addEventListener('click', () => {
             closeSystem();
             openWizard();
@@ -1075,7 +1017,6 @@ import { createMessageBar } from './message-bar.js';
         setInterval(() => {
             if (document.hidden) return;
             updateUptimeDisplay();
-            if (reloadUntil && Date.now() > reloadUntil) restartTimedOut();
         }, 1000);
 
         const first = fetchStatus()

@@ -1183,8 +1183,6 @@ X(KEY_SHA256, "sha256", "", "", "", "", "sha256", "",
   "SHA-256 of a key, in hex", nullptr)
 X(KEY_CALLS_HOUR, "calls_hour", "", "", "", "", "calls_hour", "",
   "Data calls a key may make an hour, 0 for no limit", nullptr)
-X(KEY_ACTIVE, "active", "", "", "", "", "active", "",
-  "Whether a key is approved", nullptr)
 
 X(KEY_PORT_CODE, "code", "", "", "", "", "", "", "Port identifier", nullptr)
 X(KEY_PORT_PARENT, "parent_unlocode", "", "", "", "parent_unlocode", "", "",

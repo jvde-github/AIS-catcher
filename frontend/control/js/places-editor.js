@@ -101,7 +101,7 @@ export function createPlaceEditor(host, options = {}) {
     let placeSettings = null, catalogueVersion = '';
     let records = [], draft = null, original = null, busy = false, dead = false, draw = null, undo = [],
         redo = [], editingMode = false, deleteArmed = false, drawType = null;
-    const editor = registerEditor('places', {save: () => save(), data: () => draft});
+    const editor = registerEditor('places', () => save());
     const editing = new VectorSource();
     // every other place nearby, in a quiet slate, so a new outline is drawn against its neighbours
     const context = new VectorSource();
@@ -719,7 +719,7 @@ export function createPlaceEditor(host, options = {}) {
     async function save(remove = false) {
         if (!draft || busy)
             return;
-        if (!draft.geometry) {
+        if (!remove && !draft.geometry) {
             status('Draw a boundary before saving.', true);
             return;
         }

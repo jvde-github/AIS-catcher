@@ -61,13 +61,13 @@ void ControlServer::processClients()
 
 	if (hasSSEClients())
 	{
-		uint32_t stamp = core.statusStamp();
+		uint32_t stamp = runs.engine().stamp();
 		bool states_changed = false;
 		const std::time_t second = std::time(nullptr);
-		if (receiver_states && second != states_time)
+		if (second != states_time)
 		{
 			states_time = second;
-			auto states = receiver_states();
+			auto states = runs.receiverStates();
 			if (states != states_sent)
 			{
 				states_sent.swap(states);
@@ -232,7 +232,8 @@ void ControlServer::loginSucceeded(const std::string &peer)
 
 std::string ControlServer::statusJSON(const char *auth, bool authenticated)
 {
-	bool running = core.getEngineState() == ControlCore::EngineState::Running;
+	Supervisor &engine = runs.engine();
+	bool running = engine.state() == Supervisor::State::Running;
 
 	std::string s;
 	JSON::Writer w(s);
@@ -242,16 +243,16 @@ std::string ControlServer::statusJSON(const char *auth, bool authenticated)
 		w.kv("auth", auth);
 
 	w.kv("engine", running ? "running" : "stopped")
-		.kv("desired", core.engineDesired())
-		.kv("retrying", core.engineRetrying())
-		.kv("uptime", core.getUptime())
+		.kv("desired", engine.desired())
+		.kv("retrying", engine.retrying())
+		.kv("uptime", engine.uptime())
 		.kv("viewer", core.reportedViewerPort())
 		.kv("wizard", core.wizardPending());
 
-	if (receiver_states && (authenticated || !auth))
+	if (authenticated || !auth)
 	{
 		w.key("receivers").beginArray();
-		for (const auto &r : receiver_states())
+		for (const auto &r : runs.receiverStates())
 			w.beginObject().kv("index", r.first).kv("state", r.second).endObject();
 		w.endArray();
 	}
@@ -261,20 +262,13 @@ std::string ControlServer::statusJSON(const char *auth, bool authenticated)
 		static const std::string os = Util::Helper::getOS();
 		static const std::string hardware = Util::Helper::getHardware();
 
-		if (server_ports)
-		{
-			w.key("listening").beginArray();
-			for (int p : server_ports())
-				w.val(p);
-			w.endArray();
-		}
-		if (server_tls)
-		{
-			w.key("tls").beginArray();
-			for (const auto &t : server_tls())
-				w.beginObject().kv("port", t.first).kv("until", t.second).endObject();
-			w.endArray();
-		}
+		w.key("listening").beginArray();
+		for (int p : runs.serverPorts())
+			w.val(p);
+		w.endArray().key("tls").beginArray();
+		for (const auto &t : runs.serverTLS())
+			w.beginObject().kv("port", t.first).kv("until", t.second).endObject();
+		w.endArray();
 		w.kv("has_password", core.hasPassword())
 			.kv("config_folder", core.configFolderPath())
 			.kv("bind", core.getBindAddress())
@@ -694,11 +688,11 @@ void ControlServer::Request(IO::TCPServerConnection &c,
 		Util::Convert::toLower(action);
 
 		if (action == "start")
-			core.startEngine();
+			runs.engine().start();
 		else if (action == "stop")
-			core.stopEngine();
+			runs.engine().stop();
 		else if (action == "restart")
-			core.restartEngine();
+			runs.engine().restart();
 		else
 		{
 			sendError(c, "unknown action, use start/stop/restart");
@@ -735,7 +729,7 @@ void ControlServer::Request(IO::TCPServerConnection &c,
 		const std::size_t slash = rest.find('/');
 		const int port = slash == std::string::npos ? 0 : std::atoi(rest.substr(0, slash).c_str());
 		std::string host;
-		if (port <= 0 || !server_address || !server_address(port, host))
+		if (port <= 0 || !runs.serverAddress(port, host))
 		{
 			sendError(c, "Nothing serves on port " + std::to_string(port) + ": a server not saved yet, or one whose port another program has (see the log)", 404);
 			return;
@@ -748,9 +742,8 @@ void ControlServer::Request(IO::TCPServerConnection &c,
 		}
 		// HTTPS to a server with it, whose certificate says nothing here: this is talking to itself
 		bool tls = false;
-		if (server_tls)
-			for (const auto &t : server_tls())
-				tls |= t.first == port;
+		for (const auto &t : runs.serverTLS())
+			tls |= t.first == port;
 		IO::HTTPClient client;
 		try
 		{
@@ -776,7 +769,7 @@ void ControlServer::Request(IO::TCPServerConnection &c,
 	}
 	else if (path == "/api/stations/live" && r.method == "GET")
 	{
-		Response(c, "application/json", stations_live ? stations_live() : std::string("{\"stations\":[]}"));
+		Response(c, "application/json", runs.stationsLive());
 	}
 	else if (path == "/api/devices" && r.method == "GET")
 	{

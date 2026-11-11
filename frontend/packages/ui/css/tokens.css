@@ -267,8 +267,6 @@
     --chrome-text-muted: var(--zinc-400);
     --chrome-text-hover: var(--zinc-300);
     --chrome-text: var(--zinc-200);
-    --chrome-attention: var(--orange-800);
-    --chrome-attention-hover: var(--orange-900);
     --chrome-dot: var(--slate-500);
     --chrome-led-on: var(--emerald-400);
 

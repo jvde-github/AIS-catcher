@@ -63,7 +63,6 @@ namespace Device
 
 		FIFO fifo;
 
-		void sendProtocol();
 
 	public:
 		RTLTCP() : Device(Format::CU8, 288000, Type::RTLTCP, "RTLTCP") { tcp.setStats(&stats); }
@@ -72,11 +71,9 @@ namespace Device
 		void OpenWithFileDescriptor(int) override { Open(0); }
 		// Control
 
-		void Close() override;
 		void Play() override;
 		void Stop() override;
 
-		bool isCallback() override { return true; }
 		bool isConnected() override { return connected; }
 
 		void getDeviceList(std::vector<Description> &DeviceList) override;

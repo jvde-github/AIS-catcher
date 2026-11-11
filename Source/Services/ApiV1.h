@@ -22,6 +22,7 @@
 #include <map>
 
 #include "Http.h"
+#include "Routes.h"
 #include "ShipSource.h"
 #include "StationRegistry.h"
 #include "SiteConfig.h"
@@ -53,14 +54,17 @@ namespace Services
 				return 1;
 			return (int)((limit + ROWS_A_CALL - 1) / ROWS_A_CALL);
 		}
-		void cap(Request &request, int calls) const override
-		{
-			if (spec.limited)
-				request.setParam("limit", std::to_string(calls * ROWS_A_CALL));
-		}
 		// the widest bounding box a server of an area answers, degrees a side
 		static const int AREA_MAX_DEG = 4;
-		bool pageSize(const Request &request, long long &limit) const { return request.integer("limit", limit, spec.limited ? ROWS_A_CALL : std::min<long long>(100, pageMax()), 1, pageMax()); }
+		// on a limited server a page larger than the hour has left is cut to what is left
+		bool pageSize(const Request &request, long long &limit) const
+		{
+			if (!request.integer("limit", limit, spec.limited ? ROWS_A_CALL : std::min<long long>(100, pageMax()), 1, pageMax()))
+				return false;
+			if (spec.limited && request.calls_left > 0)
+				limit = std::min<long long>(limit, (long long)request.calls_left * ROWS_A_CALL);
+			return true;
+		}
 
 	private:
 		Tracker &tracker;
@@ -73,22 +77,22 @@ namespace Services
 		{
 			DB &db;
 			explicit TableShips(DB &db) : db(db) {}
-			void forEachShip(std::time_t now, std::time_t floor, const Box *box, const std::function<void(const Ship &)> &f) override
+			std::time_t forEachShip(std::time_t now, std::time_t floor, const Box *, const std::function<void(const Ship &)> &f) override
 			{
-				db.forEachRecent(now, floor, [&](int, const Ship &s, long) {
-					if (!box || box->contains(s.lat, s.lon))
-						f(s);
-				});
+				db.forEachRecent(now, floor, [&](int, const Ship &s, long) { f(s); });
+				return now;
 			}
 		} table;
 		ShipSource &ships;
 		// the station the request's key names, for the length of handle(); its holder sees that station
 		int owner_station = -1;
+		// which stations' locations the request sees: the server's, and the station of its key
+		Located located(const StationRegistry &registry) const { return Services::located(spec, registry).allow(owner_station); }
 
 		// a path as the client should call it: under public_url where one is set
 		std::string href(const std::string &path) const;
-		// whether this server offers the route: a server of an area offers two
-		bool offered(const char *path) const;
+		// a server of an area offers only the routes marked for it
+		bool offered(const Route *r) const { return !spec.area_only || (r && r->area); }
 
 		Response index();
 		Response openapi();

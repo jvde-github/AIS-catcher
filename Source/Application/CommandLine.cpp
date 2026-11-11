@@ -15,6 +15,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <string.h>
@@ -55,200 +56,24 @@ namespace CommandLine
 namespace
 {
 	using Keys = std::vector<AIS::Keys>;
+	typedef JSON::JSON Object;
 
-	// the configuration file's format with its members in the order given and a key given
-	// twice kept twice, so the reader applies them in that order
-	struct Node
+	// a key given twice is kept twice: this is the last one
+	JSON::Value *last(Object &o, int key)
 	{
-		enum Kind
-		{
-			RAW,
-			STRING,
-			OBJECT,
-			ARRAY
-		} kind = OBJECT;
-		std::string text;
-		std::vector<std::pair<std::string, Node>> members;
-		std::vector<Node> items;
-
-		static Node of(Kind k, const std::string &t = "")
-		{
-			Node n;
-			n.kind = k;
-			n.text = t;
-			return n;
-		}
-		static Node str(const std::string &s) { return of(STRING, s); }
-		static Node boolean(bool b) { return of(RAW, b ? "true" : "false"); }
-		static Node integer(long long v) { return of(RAW, std::to_string(v)); }
-		static Node listOf(Node item)
-		{
-			Node n = of(ARRAY);
-			n.items.push_back(std::move(item));
-			return n;
-		}
-
-		void add(std::string key, Node v) { members.emplace_back(std::move(key), std::move(v)); }
-		Node *last(const std::string &key)
-		{
-			for (auto it = members.rbegin(); it != members.rend(); ++it)
-				if (it->first == key)
-					return &it->second;
-			return nullptr;
-		}
-		Node &child(const std::string &key, Kind k = OBJECT)
-		{
-			Node *c = last(key);
-			if (!c || c->kind != k)
-			{
-				add(key, of(k));
-				c = &members.back().second;
-			}
-			return *c;
-		}
-	};
-
-	std::string keyName(int key) { return AIS::settingName(key); }
-
-	// KEYS name:scopes:sha256,... as the file's keys array; a bare hash is a data key named key
-	Node keysFromText(const std::string &text, const std::string &where)
-	{
-		Node keys = Node::of(Node::ARRAY);
-		std::vector<std::string> entries;
-		Util::Parse::Split(text, ',', entries);
-		for (const auto &entry : entries)
-		{
-			std::vector<std::string> parts;
-			Util::Parse::Split(entry, ':', parts);
-			if (parts.size() != 1 && parts.size() != 3)
-				throw std::runtime_error(where + ": KEYS takes name:scopes:sha256 entries separated by commas, scopes data or data+system.");
-			const bool named = parts.size() >= 3;
-			Node key;
-			key.add(keyName(AIS::KEY_SETTING_NAME), Node::str(named ? parts[0] : "key"));
-			key.add(keyName(AIS::KEY_SETTING_SHA256), Node::str(parts[named ? 2 : 0]));
-			Node scopes = Node::of(Node::ARRAY);
-			std::vector<std::string> names;
-			Util::Parse::Split(named ? parts[1] : "data", '+', names);
-			for (const auto &n : names)
-				scopes.items.push_back(Node::str(n));
-			key.add(keyName(AIS::KEY_SETTING_SCOPES), std::move(scopes));
-			keys.items.push_back(std::move(key));
-		}
-		return keys;
+		auto &members = o.getMembers();
+		for (auto it = members.rbegin(); it != members.rend(); ++it)
+			if (it->Key() == key)
+				return &it->Get();
+		return nullptr;
 	}
 
-	Node fromJSON(const JSON::Value &v)
+	bool isActive(const Object &o)
 	{
-		switch (v.getType())
-		{
-		case JSON::Value::Type::BOOL:
-			return Node::boolean(v.getBool());
-		case JSON::Value::Type::INT:
-			return Node::integer(v.getInt64());
-		case JSON::Value::Type::FLOAT:
-		{
-			// %.17g gives the same double back; a point keeps it a float
-			char b[40];
-			std::snprintf(b, sizeof(b), "%.17g", v.getFloat());
-			std::string t = b;
-			if (t.find_first_of(".eE") == std::string::npos)
-				t += ".0";
-			return Node::of(Node::RAW, t);
-		}
-		case JSON::Value::Type::OBJECT:
-		{
-			Node n;
-			for (const auto &m : v.getObject().getMembers())
-				n.add(keyName(m.Key()), fromJSON(m.Get()));
-			return n;
-		}
-		case JSON::Value::Type::ARRAY:
-		{
-			Node n = Node::of(Node::ARRAY);
-			for (const auto &item : v.getArray())
-				n.items.push_back(fromJSON(item));
-			return n;
-		}
-		case JSON::Value::Type::ARRAY_STRING:
-		{
-			Node n = Node::of(Node::ARRAY);
-			for (const auto &s : v.getStringArray())
-				n.items.push_back(Node::str(s));
-			return n;
-		}
-		case JSON::Value::Type::EMPTY:
-			return Node::of(Node::RAW, "null");
-		default:
-			return Node::str(v.to_string());
-		}
-	}
-
-	void write(const Node &n, std::string &out, int depth = 0)
-	{
-		const std::string pad(2 * (depth + 1), ' '), end(2 * depth, ' ');
-		switch (n.kind)
-		{
-		case Node::STRING:
-			out += JSON::Writer::escape(n.text);
-			break;
-		case Node::OBJECT:
-			if (n.members.empty())
-			{
-				out += "{}";
-				break;
-			}
-			out += "{\n";
-			for (std::size_t i = 0; i < n.members.size(); i++)
-			{
-				out += pad + JSON::Writer::escape(n.members[i].first) + ": ";
-				write(n.members[i].second, out, depth + 1);
-				out += i + 1 < n.members.size() ? ",\n" : "\n";
-			}
-			out += end + "}";
-			break;
-		case Node::ARRAY:
-			if (n.items.empty())
-			{
-				out += "[]";
-				break;
-			}
-			out += "[\n";
-			for (std::size_t i = 0; i < n.items.size(); i++)
-			{
-				out += pad;
-				write(n.items[i], out, depth + 1);
-				out += i + 1 < n.items.size() ? ",\n" : "\n";
-			}
-			out += end + "]";
-			break;
-		default:
-			out += n.text;
-		}
-	}
-
-	bool isActive(const Node &n)
-	{
-		for (const auto &m : n.members)
-			if (m.first == keyName(AIS::KEY_SETTING_ACTIVE))
-				return Util::Parse::Switch(m.second.text);
+		for (const auto &m : o.getMembers())
+			if (m.Key() == AIS::KEY_SETTING_ACTIVE)
+				return Util::Parse::Switch(m.Get().to_string());
 		return true;
-	}
-
-	void absolute(Node &n, const std::string &base)
-	{
-		for (auto &m : n.members)
-		{
-			AIS::Keys key;
-			std::string name = m.first;
-			Util::Convert::toUpper(name);
-			if (m.second.kind == Node::STRING && AIS::lookupSettingKey(name, key) && SiteReader::isPath(key))
-				m.second.text = key == AIS::KEY_SETTING_FILE ? SiteReader::backupFile(m.second.text, base) : Util::Helper::resolvePath(m.second.text, base);
-			else if (m.first == keyName(AIS::KEY_SETTING_TRACKING) && m.second.kind == Node::OBJECT)
-				absolute(m.second, base);
-			else if (m.first == keyName(AIS::KEY_SETTING_TLS) && m.second.kind == Node::OBJECT)
-				for (auto &file : m.second.members)
-					file.second.text = Util::Helper::resolvePath(file.second.text, base);
-		}
 	}
 
 	std::string currentDirectory()
@@ -291,17 +116,10 @@ namespace
 		}
 	};
 
-	// the document's files are resolved already: read with no base folder, and restore it after
-	struct FromHere
-	{
-		std::string base;
-		FromHere() : base(Config::baseDir()) { Config::setConfigBaseDir(""); }
-		~FromHere() { Config::setConfigBaseDir(base.empty() ? "" : base + "/."); }
-	};
 }
 
 // the key/value pairs after an option's positional arguments; -G's go to the log itself
-static void parseSettings(const std::vector<std::string> &args, int ptr, Node *into, Setting *apply = nullptr)
+static void parseSettings(const std::vector<std::string> &args, int ptr, Object *into, JSON::Pool &pool, Setting *apply = nullptr)
 {
 	const int argc = (int)args.size();
 	std::string flag_context;
@@ -325,7 +143,7 @@ static void parseSettings(const std::vector<std::string> &args, int ptr, Node *i
 				if (apply)
 					apply->SetKey(key, arg);
 				if (into)
-					into->add(keyName(key), Node::str(arg));
+					into->Add(key, arg, pool);
 			}
 			else
 			{
@@ -368,14 +186,14 @@ static bool isNumber(const std::string &s)
 
 // Assign the positional arguments to keys, then hand any remaining key/value
 // pairs to parseSettings. The caller has already asserted the argument count.
-static void positional(const Keys &keys, const std::vector<std::string> &args, int ptr, int count, Node &into)
+static void positional(const Keys &keys, const std::vector<std::string> &args, int ptr, int count, Object &into, JSON::Pool &pool)
 {
 	int i = 0;
 	for (AIS::Keys k : keys)
-		into.add(keyName(k), Node::str(args[ptr + 1 + i++]));
+		into.Add(k, args[ptr + 1 + i++], pool);
 
 	if (count > (int)keys.size())
-		parseSettings(args, ptr + (int)keys.size(), &into);
+		parseSettings(args, ptr + (int)keys.size(), &into, pool);
 }
 
 static Keys leading(bool given, AIS::Keys key)
@@ -393,15 +211,6 @@ static void Assert(bool b, const std::string &context, const std::string &msg = 
 
 namespace
 {
-	struct Rx
-	{
-		Node entry;
-		// a channel key is taken only by a receiver object; the last one given wins
-		bool channel_set = false;
-		std::string channel, nmea;
-		bool passive = false;
-	};
-
 	struct Actions
 	{
 		bool list_devices = false, list_devices_json = false, list_support = false, list_options = false, no_run = false, new_key = false;
@@ -410,28 +219,21 @@ namespace
 	// the command line read into a document; -h, -l and -L are noted as actions, -G acts on the log
 	class Translation
 	{
+		// every option and every -C file adds to it, in command line order
+		JSON::Document tree;
+		Object &doc = tree.root;
+		JSON::Pool &pool = tree.pool;
+		std::vector<std::unique_ptr<JSON::Document>> files;
+		// until an input is named the first receiver is the default one, on whatever device is found
+		bool named = false;
+		// -v is every receiver's, one named after it too
 		bool verbose = false;
-
-		Node main;
-		std::vector<std::unique_ptr<Rx>> receivers;
-		int nrec = 0;
-		Node lists;
-		std::vector<std::pair<Node, std::string>> servers;
-		Node webhooks = Node::of(Node::ARRAY);
-		std::vector<Node> mqtt;
-		Node tracking;
-		bool has_tracking = false;
-
-		struct PendingServer
-		{
-			std::string port;
-			std::vector<std::pair<int, std::string>> args;
-		};
-		std::vector<PendingServer> pending;
-
-		bool xshare_defined = false, feed = false;
-		std::string uuid;
-		std::vector<std::string> sharing_zone;
+		// the -N servers, joined to the document once all are read
+		std::vector<Object *> viewers;
+		bool ported = false;
+		Config::Origins origins;
+		// the last -C file's folder
+		std::string base;
 
 		// the engine the reader makes of the document so far, made again after every option
 		// so a wrong one is refused where it stands
@@ -441,14 +243,11 @@ namespace
 		{
 			Quiet quiet;
 			state_.reset();
-			Config::Origins origins;
-			const std::string doc = document(&origins, false);
-			FromHere here;
 			std::unique_ptr<Engine> e(new Engine());
 			Config c(*e);
 			try
 			{
-				c.set(doc, &origins);
+				c.set(tree);
 			}
 			catch (const std::exception &x)
 			{
@@ -458,19 +257,92 @@ namespace
 			state_ = std::move(e);
 		}
 
-		// the receiver the reader made of rx's entry
-		Receiver &state(const Rx &rx)
+		// the object or the list under a key, the last one given; made when there is none
+		Object &object(Object &in, AIS::Keys key)
+		{
+			JSON::Value *v = last(in, key);
+			if (v && v->isObject())
+				return v->getObject();
+			Object *made = pool.addObject();
+			in.Add(key, made);
+			return *made;
+		}
+		std::vector<JSON::Value> &list(Object &in, AIS::Keys key)
+		{
+			JSON::Value *v = last(in, key);
+			if (!v || !v->isArray())
+			{
+				in.Add(key, JSON::Value(pool.addArray()));
+				v = &in.getMembers().back().Get();
+			}
+			return v->getArray();
+		}
+		Object &item(std::vector<JSON::Value> &in)
+		{
+			Object *made = pool.addObject();
+			in.push_back(JSON::Value(made));
+			return *made;
+		}
+		void put(Object &into, AIS::Keys key, const std::string &text) { into.Add(key, text, pool); }
+
+		std::vector<JSON::Value> &receivers() { return list(doc, AIS::KEY_SETTING_RECEIVER); }
+
+		// the receiver the reader made of rx
+		Receiver &state(const Object &rx)
 		{
 			std::size_t n = 0;
-			for (const auto &r : receivers)
+			for (JSON::Value &r : receivers())
 			{
-				if (r.get() == &rx)
+				if (&r.getObject() == &rx)
 					break;
-				if (!r->passive)
-					n++;
+				n += isActive(r.getObject());
 			}
 			return *state_->receivers[n];
 		}
+
+		static std::string label(const Object &server)
+		{
+			const auto &m = server.getMembers();
+			return !m.empty() && m.front().Key() == AIS::KEY_SETTING_PORT ? "-N " + m.front().Get().to_string() : "-N";
+		}
+
+		// the channel given last counts, with its NMEA designation
+		static void noChannel(Object &rx)
+		{
+			rx.Remove(AIS::KEY_SETTING_CHANNEL);
+			rx.Remove(AIS::KEY_SETTING_NMEA_CHANNEL);
+		}
+
+#ifdef HASWEBVIEWER
+		// KEYS name:scopes:sha256,... as the file's keys array; a bare hash is a data key named key
+		JSON::Value keysFromText(const std::string &text, const std::string &where)
+		{
+			JSON::Value keys(pool.addArray());
+			std::vector<std::string> entries;
+			Util::Parse::Split(text, ',', entries);
+			for (const auto &entry : entries)
+			{
+				std::vector<std::string> parts;
+				Util::Parse::Split(entry, ':', parts);
+				if (parts.size() != 1 && parts.size() != 3)
+					throw std::runtime_error(where + ": KEYS takes name:scopes:sha256 entries separated by commas, scopes data or data+system.");
+				const bool with_name = parts.size() >= 3;
+				Object &key = item(keys.getArray());
+				put(key, AIS::KEY_SETTING_NAME, with_name ? parts[0] : "key");
+				put(key, AIS::KEY_SETTING_SHA256, parts[with_name ? 2 : 0]);
+				std::vector<std::string> names;
+				Util::Parse::Split(with_name ? parts[1] : "data", '+', names);
+				std::vector<JSON::Value> &scopes = list(key, AIS::KEY_SETTING_SCOPES);
+				for (const auto &n : names)
+				{
+					JSON::Value scope;
+					scope.setString(pool.addString(n));
+					scopes.push_back(scope);
+				}
+			}
+			return keys;
+		}
+#endif
 
 	public:
 		std::vector<std::string> said;
@@ -480,7 +352,9 @@ namespace
 
 		Translation()
 		{
-			receivers.push_back(std::unique_ptr<Rx>(new Rx()));
+			put(doc, AIS::KEY_SETTING_CONFIG, "aiscatcher");
+			doc.Add(AIS::KEY_SETTING_VERSION, 1);
+			put(item(receivers()), AIS::KEY_SETTING_INPUT, "none");
 			check("");
 		}
 
@@ -490,340 +364,227 @@ namespace
 			state_.reset();
 		}
 
-		Rx &current()
+		Object &current()
 		{
-			for (auto it = receivers.rbegin(); it != receivers.rend(); ++it)
-				if (!(*it)->passive)
-					return **it;
-			return *receivers.front();
+			std::vector<JSON::Value> &all = receivers();
+			for (auto it = all.rbegin(); it != all.rend(); ++it)
+				if (isActive(it->getObject()))
+					return it->getObject();
+			return all.front().getObject();
 		}
 
-		Rx &newReceiver()
+		// the first input named is the default receiver's, with what was set before it
+		Object &newReceiver()
 		{
-			if (++nrec > 1)
-				receivers.push_back(std::unique_ptr<Rx>(new Rx()));
-			return current();
+			if (named)
+				return item(receivers());
+			named = true;
+			Object &first = receivers().front().getObject();
+			first.Remove(AIS::KEY_SETTING_INPUT);
+			return first;
 		}
 
-		Node &block(Rx &rx, AIS::Keys key)
+		Object &block(Object &rx, AIS::Keys key)
 		{
-			const std::string name = keyName(key);
-			Node *b = rx.entry.last(name);
-			if (!b || b->kind != Node::OBJECT || !isActive(*b))
-			{
-				rx.entry.add(name, Node());
-				b = &rx.entry.members.back().second;
-			}
-			return *b;
+			JSON::Value *b = last(rx, key);
+			if (b && b->isObject() && isActive(b->getObject()))
+				return b->getObject();
+			Object *made = pool.addObject();
+			rx.Add(key, made);
+			return *made;
 		}
 
 		void device(Type t, const Keys &keys, const std::vector<std::string> &args, int ptr, int count)
 		{
-			Rx &rx = newReceiver();
+			Object &rx = newReceiver();
 			std::string name = Util::Parse::DeviceTypeString(t);
 			Util::Convert::toLower(name);
-			rx.entry.add(keyName(AIS::KEY_SETTING_INPUT), Node::str(name));
-			positional(keys, args, ptr, count, block(rx, DeviceManager::keyForType(t)));
+			put(rx, AIS::KEY_SETTING_INPUT, name);
+			positional(keys, args, ptr, count, block(rx, DeviceManager::keyForType(t)), pool);
 		}
 
 		void output(AIS::Keys kind, const Keys &keys, const std::vector<std::string> &args, int ptr, int count)
 		{
-			Node &list = lists.child(keyName(kind), Node::ARRAY);
-			list.items.push_back(Node());
-			positional(keys, args, ptr, count, list.items.back());
+			positional(keys, args, ptr, count, item(list(doc, kind)), pool);
 		}
 
-		void value(Rx &rx, AIS::Keys key, const std::string &arg)
+		void addEngine(Object &rx, int type)
 		{
-			rx.entry.add(keyName(key), Node::str(arg));
+			put(item(list(rx, AIS::KEY_SETTING_ENGINES)), AIS::KEY_SETTING_MODEL_TYPE, Config::modelName(type));
 		}
 
-		void addEngine(Rx &rx, int type)
+		Object &lastModelSettings(Object &rx)
 		{
-			Node item;
-			item.add(keyName(AIS::KEY_SETTING_MODEL_TYPE), Node::str(Config::modelName(type)));
-			rx.entry.child(keyName(AIS::KEY_SETTING_ENGINES), Node::ARRAY).items.push_back(std::move(item));
-		}
-
-		Node &lastModelSettings(Rx &rx)
-		{
-			Node &engines = rx.entry.child(keyName(AIS::KEY_SETTING_ENGINES), Node::ARRAY);
-			for (auto item = engines.items.rbegin(); item != engines.items.rend(); ++item)
-				if (item->kind == Node::OBJECT && isActive(*item))
-					return item->child(keyName(AIS::KEY_SETTING_SETTINGS));
+			std::vector<JSON::Value> &engines = list(rx, AIS::KEY_SETTING_ENGINES);
+			for (auto e = engines.rbegin(); e != engines.rend(); ++e)
+				if (e->isObject() && isActive(e->getObject()))
+					return object(e->getObject(), AIS::KEY_SETTING_SETTINGS);
 			throw std::runtime_error("internal error: no model for -go");
 		}
 
-		// the input first, own_mmsi as the engine's, and a deprecated "model" as an engine
-		void receiverFromFile(Rx &rx, const std::vector<JSON::Member> &members, bool unspec)
+		// the feed: -X or a file switches it on, by saying so or with a key; none switches it off
+		bool share(bool stated, bool on, const std::string &key)
 		{
-			std::string serial, input;
-			Config::receiverInput(members, serial, input);
-			if (!serial.empty())
-				rx.entry.add(keyName(AIS::KEY_SETTING_SERIAL), Node::str(serial));
-			if (!input.empty())
-				rx.entry.add(keyName(AIS::KEY_SETTING_INPUT), Node::str(input));
-
-			for (const auto &m : members)
-			{
-				// the main section's other keys and its "receiver" array are read by file()
-				if (unspec && (!Config::isReceiverKey(m.Key()) || m.Key() == AIS::KEY_SETTING_RECEIVER))
-					continue;
-				const std::string name = keyName(m.Key());
-				switch (m.Key())
-				{
-				case AIS::KEY_SETTING_SERIAL:
-				case AIS::KEY_SETTING_INPUT:
-				case AIS::KEY_SETTING_ACTIVE:
-					break;
-				case AIS::KEY_SETTING_CHANNEL:
-					rx.channel_set = true;
-					rx.channel = m.Get().to_string();
-					rx.nmea.clear();
-					break;
-				case AIS::KEY_SETTING_NMEA_CHANNEL:
-					rx.channel_set = true;
-					break;
-				case AIS::KEY_SETTING_OWN_MMSI:
-					main.add(name, fromJSON(m.Get()));
-					break;
-				case AIS::KEY_SETTING_MODEL:
-					if (m.Get().isString() || Config::isActiveObject(m.Get()))
-					{
-						// the reader's deprecation warning; as an engine, -go can give it settings
-						said.push_back(Config::MODEL_DEPRECATED);
-						Node item;
-						if (m.Get().isString())
-							item.add(keyName(AIS::KEY_SETTING_MODEL_TYPE), Node::str(m.Get().to_string()));
-						else
-						{
-							Node settings;
-							for (const auto &p : m.Get().getObject().getMembers())
-								if (p.Key() != AIS::KEY_SETTING_ACTIVE)
-									settings.add(keyName(p.Key()), fromJSON(p.Get()));
-							item.add(keyName(AIS::KEY_SETTING_SETTINGS), std::move(settings));
-						}
-						rx.entry.add(keyName(AIS::KEY_SETTING_ENGINES), Node::listOf(std::move(item)));
-					}
-					else
-						rx.entry.add(name, fromJSON(m.Get()));
-					break;
-				default:
-					rx.entry.add(name, fromJSON(m.Get()));
-				}
-			}
-			for (const auto &m : members)
-				if (m.Key() == AIS::KEY_SETTING_NMEA_CHANNEL)
-					rx.nmea = m.Get().to_string();
+			JSON::Value *sharing = last(doc, AIS::KEY_SETTING_SHARING);
+			const bool feed = on || !key.empty() || (sharing && sharing->getBool()) || last(doc, AIS::KEY_SETTING_SHARING_KEY);
+			if (sharing)
+				sharing->setBool(feed);
+			else if (stated)
+				doc.Add(AIS::KEY_SETTING_SHARING, feed);
+			if (!key.empty())
+				put(doc, AIS::KEY_SETTING_SHARING_KEY, key);
+			return feed;
 		}
 
-		std::vector<Node *> activeEngines(Rx &rx)
+		// a file's receiver onto rx
+		void receiver(Object &rx, const std::vector<JSON::Member> &members)
 		{
-			std::vector<Node *> items;
-			for (auto &m : rx.entry.members)
-				if (m.first == keyName(AIS::KEY_SETTING_ENGINES) && m.second.kind == Node::ARRAY)
-					for (Node &item : m.second.items)
-						if (item.kind == Node::OBJECT && isActive(item))
-							items.push_back(&item);
-			return items;
+			for (const auto &m : members)
+				if (m.Key() == AIS::KEY_SETTING_CHANNEL)
+					noChannel(rx);
+
+			for (const auto &m : members)
+				// an empty channel is none given
+				if ((m.Key() != AIS::KEY_SETTING_CHANNEL && m.Key() != AIS::KEY_SETTING_NMEA_CHANNEL) || !m.Get().to_string().empty())
+					rx.Add(m.Key(), m.Get());
 		}
 
-		// -C: the file, merged where it stands on the command line
+		// -C: the file's sections join the document, its files resolved against its folder
 		void file(const std::string &path)
 		{
-			Config::setConfigBaseDir(path);
 			JSON::Parser parser(JSON_DICT_SETTING);
-			const std::string text = Util::Helper::readFile(path);
-			JSON::Document doc = [&]() -> JSON::Document {
-				try
-				{
-					return parser.parse(text);
-				}
-				catch (const std::exception &e)
-				{
-					throw std::runtime_error("-C " + path + ": " + e.what());
-				}
-			}();
-			const auto &members = doc.getMembers();
-
-			Config::preamble(members);
-
-			// the main section's receiver: its own when it names an input, else the current one
-			bool active = true;
-			for (const auto &m : members)
-				if (m.Key() == AIS::KEY_SETTING_ACTIVE)
-					active = Util::Parse::Switch(m.Get().to_string());
-			// each receiver the file fills, with the number of models it had before
-			std::vector<std::pair<Rx *, int>> filled;
-			if (active)
+			const std::string content = Util::Helper::readFile(path);
+			try
 			{
-				std::string serial, input;
-				Config::receiverInput(members, serial, input);
-				const std::size_t had = receivers.size();
-				Rx &rx = !serial.empty() || !input.empty() ? newReceiver() : current();
-				filled.emplace_back(&rx, receivers.size() > had ? 0 : state(rx).modelCount());
-				receiverFromFile(rx, members, true);
+				files.push_back(std::unique_ptr<JSON::Document>(new JSON::Document(parser.parse(content))));
 			}
-
-			for (const auto &m : members)
+			catch (const std::exception &e)
 			{
-				if (m.Key() != AIS::KEY_SETTING_RECEIVER)
-					continue;
-				if (!m.Get().isArray())
-					throw std::runtime_error(Config::RECEIVERS_NOT_ARRAY);
-				for (const auto &v : m.Get().getArray())
-				{
-					if (!Config::isActiveObject(v))
-					{
-						std::unique_ptr<Rx> rx(new Rx());
-						rx->entry = fromJSON(v);
-						rx->passive = true;
-						receivers.push_back(std::move(rx));
-						continue;
-					}
-					const std::size_t had = receivers.size();
-					Rx &rx = newReceiver();
-					filled.emplace_back(&rx, receivers.size() > had ? 0 : state(rx).modelCount());
-					receiverFromFile(rx, v.getObject().getMembers(), false);
-				}
+				throw std::runtime_error("-C " + path + ": " + e.what());
 			}
+			JSON::Document &parsed = *files.back();
 
-			// sharing, as Config::readSharing: each file can switch the feed on, none switches it off
-			{
-				bool xchange = false;
-				std::string key;
-				std::vector<std::string> zones;
-				for (const auto &m : members)
-					if (m.Key() == AIS::KEY_SETTING_SHARING)
-					{
-						xchange = Util::Parse::Switch(m.Get().to_string());
-						xshare_defined = true;
-					}
-					else if (m.Key() == AIS::KEY_SETTING_SHARING_KEY)
-						key = m.Get().to_string();
-					else if (m.Key() == AIS::KEY_SETTING_SHARING_ZONE && m.Get().isArray())
-						for (const auto &v : m.Get().getArray())
-							zones.push_back(v.to_string());
-				if (xshare_defined && !xchange && !key.empty() && !Util::Helper::isUUID(key))
-				{
-					said.push_back("Config file: \"sharing_key\" is not a UUID and sharing is off: ignored.");
-					key.clear();
-				}
-				feed = feed || xchange || !key.empty();
-				if (!key.empty())
-					uuid = key;
-				if (!zones.empty() && feed)
-					sharing_zone = zones;
-			}
+			Config::preamble(parsed.getMembers());
+			base = Config::folderOf(path);
+			// a main-section receiver that names no input is the current one's, not the file's first
+			bool unplaced = Config::normalise(parsed, base, said, false);
 
-			// the rest; the file's own paths resolve against its folder
-			const std::string &base = Config::baseDir();
-			bool tracked = false;
-			for (const auto &m : members)
+			bool tracked = false, shares = false, on = false;
+			std::string key;
+			const JSON::Value *zones = nullptr;
+			for (const auto &m : parsed.getMembers())
 			{
-				if (Config::isReceiverKey(m.Key()))
-					continue;
-				const std::string name = keyName(m.Key());
-				switch (m.Key())
+				const AIS::Keys name = (AIS::Keys)m.Key();
+				const JSON::Value &v = m.Get();
+				switch (name)
 				{
 				case AIS::KEY_SETTING_CONFIG:
 				case AIS::KEY_SETTING_VERSION:
-				case AIS::KEY_SETTING_SHARING:
-				case AIS::KEY_SETTING_SHARING_KEY:
-				case AIS::KEY_SETTING_SHARING_ZONE:
 					break;
-				case AIS::KEY_SETTING_SERVER:
-				{
-					Node value = fromJSON(m.Get());
-					std::vector<Node> entries;
-					if (value.kind == Node::ARRAY)
-						entries = std::move(value.items);
-					else
-						entries.push_back(std::move(value));
-					for (auto &entry : entries)
+				case AIS::KEY_SETTING_RECEIVER:
+					for (const auto &entry : v.getArray())
 					{
-						absolute(entry, base);
-						servers.emplace_back(std::move(entry), std::string());
+						if (!Config::isActiveObject(entry))
+							receivers().push_back(entry);
+						else
+							receiver(unplaced ? current() : newReceiver(), entry.getObject().getMembers());
+						unplaced = false;
 					}
-				}
-				break;
-				case AIS::KEY_SETTING_WEBHOOKS:
-					if (!m.Get().isArray())
-						main.add(name, fromJSON(m.Get()));
-					else
-						for (const auto &item : m.Get().getArray())
-							webhooks.items.push_back(fromJSON(item));
 					break;
-				case AIS::KEY_SETTING_MQTT_STATE:
-					mqtt.push_back(fromJSON(m.Get()));
+				case AIS::KEY_SETTING_SHARING:
+					shares = true;
+					on = Util::Parse::Switch(v.to_string());
+					break;
+				case AIS::KEY_SETTING_SHARING_KEY:
+					key = v.to_string();
+					break;
+				case AIS::KEY_SETTING_SHARING_ZONE:
+					if (v.isArray() && !v.getArray().empty())
+						zones = &v;
 					break;
 				case AIS::KEY_SETTING_TRACKING:
-					// only the first "tracking" of all the files counts
-					if (tracked)
-						break;
-					if (!m.Get().isObject())
+					// one "tracking" for all: the file's first adds to it
+					if (!v.isObject())
+						doc.Add(name, v);
+					else if (!tracked)
 					{
-						main.add(name, fromJSON(m.Get()));
-						break;
+						tracked = true;
+						Object &tracking = object(doc, name);
+						for (const auto &t : v.getObject().getMembers())
+							tracking.Add(t.Key(), t.Get());
 					}
-					tracked = true;
-					for (const auto &t : m.Get().getObject().getMembers())
-					{
-						Node v = fromJSON(t.Get());
-						if (SiteReader::isPath(t.Key()) && v.kind == Node::STRING)
-							v.text = t.Key() == AIS::KEY_SETTING_FILE ? SiteReader::backupFile(v.text, base) : Util::Helper::resolvePath(v.text, base);
-						tracking.add(keyName(t.Key()), std::move(v));
-					}
-					has_tracking = true;
 					break;
-				case AIS::KEY_SETTING_UDP:
-				case AIS::KEY_SETTING_TCP:
-				case AIS::KEY_SETTING_MQTT:
-				case AIS::KEY_SETTING_TCP_LISTENER:
-				case AIS::KEY_SETTING_HTTP:
-				case AIS::KEY_SETTING_DB:
-				case AIS::KEY_SETTING_FILE_OUTPUT:
-				case AIS::KEY_SETTING_NMEA2000_OUTPUT:
-				case AIS::KEY_SETTING_STATIONS:
-				case AIS::KEY_SETTING_SERVICES:
-				{
-					if (!m.Get().isArray())
-					{
-						main.add(name, fromJSON(m.Get()));
-						break;
-					}
-					Node &list = lists.child(name, Node::ARRAY);
-					for (const auto &item : m.Get().getArray())
-					{
-						Node entry = fromJSON(item);
-						absolute(entry, base);
-						list.items.push_back(std::move(entry));
-					}
-				}
-				break;
 				default:
-					main.add(name, fromJSON(m.Get()));
+					// an array adds its entries to the document's one of that name
+					if (v.isArray())
+						for (const auto &entry : v.getArray())
+							list(doc, name).push_back(entry);
+					else if (name == AIS::KEY_SETTING_SERVER)
+						list(doc, name).push_back(v);
+					else
+						doc.Add(name, v);
 				}
+			}
+
+			// as the reader has it: a key that is no UUID counts only where sharing is on
+			if ((shares || last(doc, AIS::KEY_SETTING_SHARING)) && !on && !key.empty() && !Util::Helper::isUUID(key))
+			{
+				said.push_back("Config file: \"sharing_key\" is not a UUID and sharing is off: ignored.");
+				key.clear();
+			}
+			if (share(shares, on, key) && zones)
+			{
+				doc.Remove(AIS::KEY_SETTING_SHARING_ZONE);
+				doc.Add(AIS::KEY_SETTING_SHARING_ZONE, *zones);
 			}
 
 			check("-C " + path);
-			for (const auto &f : filled)
-			{
-				int k = 0;
-				for (Node *item : activeEngines(*f.first))
-				{
-					if (k >= f.second)
-						item->child(keyName(AIS::KEY_SETTING_MODEL_TYPE), Node::STRING) = Node::str(Config::modelName(state(*f.first).modelId(k)));
-					k++;
-				}
-			}
 		}
 
 		void read(const std::vector<std::string> &args);
-		// the files' servers, then each -N; unless settled, a later -N may still add to one
-		std::vector<std::pair<Node, std::string>> allServers(bool settled) const;
-		// without origins, the copy -J writes: tracking files and places made absolute
-		std::string document(Config::Origins *origins, bool settled = true) const;
+
+		// once every option is read: -v is every receiver's, and each -N a server after the files'
+		void settle()
+		{
+			if (verbose)
+				for (JSON::Value &rx : receivers())
+					if (isActive(rx.getObject()))
+						put(rx.getObject(), AIS::KEY_SETTING_VERBOSE, "on");
+			if (viewers.empty())
+				return;
+
+			std::vector<JSON::Value> &servers = list(doc, AIS::KEY_SETTING_SERVER);
+			origins.servers.assign(servers.size(), std::string());
+			for (Object *server : viewers)
+			{
+				// its files are in the last file's folder
+				Config::resolveFiles(*server, base, pool);
+				origins.servers.push_back(label(*server));
+				servers.push_back(JSON::Value(server));
+			}
+			viewers.clear();
+		}
+
+		// the document, with which of its servers are -N's; without, the copy -J writes
+		std::string document(Config::Origins *from) const
+		{
+			JSON::Serializer serializer(JSON_DICT_SETTING);
+			serializer.setExactFloats(true);
+			std::string text;
+			serializer.stringify(doc, text);
+			if (from)
+				*from = origins;
+			else
+			{
+				JSON::Parser parser(JSON_DICT_SETTING);
+				JSON::Document copy = parser.parse(text);
+				std::vector<std::string> notes;
+				Config::normalise(copy, currentDirectory(), notes);
+				text.clear();
+				serializer.stringify(copy.root, text);
+			}
+			return JSON::indented(text) + "\n";
+		}
 	};
 
 	void Translation::read(const std::vector<std::string> &args)
@@ -834,7 +595,7 @@ namespace
 
 		while (ptr < argc)
 		{
-			Rx &receiver = current();
+			Object &receiver = current();
 
 			const std::string &param = args[ptr];
 			Assert(param[0] == '-', param, "setting does not start with \"-\".");
@@ -869,11 +630,11 @@ namespace
 						}
 					}
 				}
-				parseSettings(args, ptr, nullptr, &Logger::getInstance());
+				parseSettings(args, ptr, nullptr, pool, &Logger::getInstance());
 				break;
 			case 's':
 				Assert(count == 1, param, "does require one parameter [sample rate].");
-				value(receiver, AIS::KEY_SETTING_SAMPLE_RATE, arg1);
+				put(receiver, AIS::KEY_SETTING_SAMPLE_RATE, arg1);
 				break;
 			case 'm':
 				Assert(count == 1, param, "requires one parameter [model number].");
@@ -881,13 +642,15 @@ namespace
 				break;
 			case 'M':
 				Assert(count <= 1, param, "requires zero or one parameter [DT].");
-				value(receiver, AIS::KEY_SETTING_META, arg1);
+				put(receiver, AIS::KEY_SETTING_META, arg1);
 				break;
 			case 'c':
 				Assert(count <= 2 && count >= 1, param, "requires one or two parameter [AB/CD]].");
-				receiver.channel_set = true;
-				receiver.channel = arg1;
-				receiver.nmea = count == 2 ? arg2 : std::string();
+				noChannel(receiver);
+				if (!arg1.empty())
+					put(receiver, AIS::KEY_SETTING_CHANNEL, arg1);
+				if (!arg2.empty())
+					put(receiver, AIS::KEY_SETTING_NMEA_CHANNEL, arg2);
 				break;
 			case 'C':
 				Assert(count == 1, param, "one parameter required: filename");
@@ -899,21 +662,36 @@ namespace
 #ifdef HASWEBVIEWER
 				Assert(count > 0, param, "requires at least one parameter");
 				{
-					// -N port starts a server; -N key value adds to the last one
+					// -N port starts a server unless the last -N has none yet; -N key value adds to the last one
 					const int port = isNumber(arg1) ? 1 : 0;
 					Assert((count - port) % 2 == 0, param, "usage: -N [port] [key value]..., with a value that has spaces in quotes, e.g. -N 8100 station \"my station\".");
-					// a port starts a server, unless the last -N has none yet: then that one takes it
+					if (viewers.empty() || (port && ported))
+					{
+						viewers.push_back(pool.addObject());
+						ported = false;
+					}
+					Object &server = *viewers.back();
 					if (port)
 					{
-						if (pending.empty() || !pending.back().port.empty())
-							pending.push_back(PendingServer{arg1, {}});
-						else
-							pending.back().port = arg1;
+						// first: a PORT among its settings counts over it
+						server.getMembers().insert(server.getMembers().begin(), JSON::Member(AIS::KEY_SETTING_PORT, pool.addString(arg1)));
+						ported = true;
 					}
-					else if (pending.empty())
-						pending.push_back(PendingServer{std::string(), {}});
 					for (int k = 1 + port; k + 1 <= count; k += 2)
-						pending.back().args.emplace_back((int)lookup(args[ptr + k], "-N " + arg1), args[ptr + k + 1]);
+					{
+						const AIS::Keys key = lookup(args[ptr + k], "-N " + arg1);
+						const std::string &value = args[ptr + k + 1];
+						if (key == AIS::KEY_SETTING_PLACE_GEOMETRY)
+							put(object(server, AIS::KEY_SETTING_VIEW), key, value);
+						else if (key == AIS::KEY_SETTING_TLS_CERT)
+							put(object(server, AIS::KEY_SETTING_TLS), AIS::KEY_SETTING_CERT, value);
+						else if (key == AIS::KEY_SETTING_TLS_KEY)
+							put(object(server, AIS::KEY_SETTING_TLS), AIS::KEY_SETTING_KEY, value);
+						else if (key == AIS::KEY_SETTING_KEYS)
+							server.Add(key, keysFromText(value, label(server)));
+						else
+							put(server, key, value);
+					}
 				}
 #else
 				throw std::runtime_error("Option -N needs a build with the web viewer (cmake -DWEBVIEWER=ON).");
@@ -932,7 +710,7 @@ namespace
 				{
 					// -v+ applies to last receiver only, no time parameter
 					Assert(count == 0, param, "no parameters allowed with -v+");
-					receiver.entry.add(keyName(AIS::KEY_SETTING_VERBOSE), Node::str("on"));
+					put(receiver, AIS::KEY_SETTING_VERBOSE, "on");
 				}
 				else
 				{
@@ -942,51 +720,51 @@ namespace
 					if (count == 1)
 					{
 						Util::Parse::Integer(arg1, 1, 3600);
-						main.add(keyName(AIS::KEY_SETTING_VERBOSE_TIME), Node::str(arg1));
+						put(doc, AIS::KEY_SETTING_VERBOSE_TIME, arg1);
 					}
 				}
 				break;
 			case 'O':
 				Assert(count == 1, param);
-				main.add(keyName(AIS::KEY_SETTING_OWN_MMSI), Node::integer(Util::Parse::Integer(arg1, 1, 999999999)));
+				doc.Add(AIS::KEY_SETTING_OWN_MMSI, (int64_t)Util::Parse::Integer(arg1, 1, 999999999));
 				break;
 			case 'T':
 				Assert(count == 1 || (count == 2 && arg2 == "nomsg_only"), param, "timeout requires one parameter with optional \"nomsg_only\".");
 				Util::Parse::Integer(arg1, 1, 3600);
-				main.add(keyName(AIS::KEY_SETTING_TIMEOUT), Node::str(arg1));
+				put(doc, AIS::KEY_SETTING_TIMEOUT, arg1);
 				if (count == 2)
-					main.add(keyName(AIS::KEY_SETTING_TIMEOUT_NOMSG), Node::boolean(true));
+					doc.Add(AIS::KEY_SETTING_TIMEOUT_NOMSG, true);
 				break;
 			case 'q':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				main.add(keyName(AIS::KEY_SETTING_SCREEN), Node::str("0"));
+				put(doc, AIS::KEY_SETTING_SCREEN, "0");
 				break;
 			case 'n':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				main.add(keyName(AIS::KEY_SETTING_SCREEN), Node::str("1"));
+				put(doc, AIS::KEY_SETTING_SCREEN, "1");
 				break;
 			case 'o':
 			{
 				if (count % 2 == 1)
-					main.add(keyName(AIS::KEY_SETTING_SCREEN), Node::str(arg1));
-				Node settings;
-				parseSettings(args, ptr + (count % 2), &settings);
-				if (!settings.members.empty())
-					main.add(keyName(AIS::KEY_SETTING_SCREEN), std::move(settings));
+					put(doc, AIS::KEY_SETTING_SCREEN, arg1);
+				Object *settings = pool.addObject();
+				parseSettings(args, ptr + (count % 2), settings, pool);
+				if (!settings->getMembers().empty())
+					doc.Add(AIS::KEY_SETTING_SCREEN, settings);
 			}
 			break;
 			case 'F':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
 				{
 					addEngine(receiver, AIS::MODEL_V1_BASE);
-					Node &settings = lastModelSettings(receiver);
-					settings.add(keyName(AIS::KEY_SETTING_FP_DS), Node::str("ON"));
-					settings.add(keyName(AIS::KEY_SETTING_PS_EMA), Node::str("ON"));
+					Object &settings = lastModelSettings(receiver);
+					put(settings, AIS::KEY_SETTING_FP_DS, "ON");
+					put(settings, AIS::KEY_SETTING_PS_EMA, "ON");
 					std::string tags;
 					for (char c : state(receiver).tagString())
 						if (c != 'D' && c != 'T')
 							tags += c;
-					receiver.entry.add(keyName(AIS::KEY_SETTING_META), Node::str(tags));
+					put(receiver, AIS::KEY_SETTING_META, tags);
 				}
 				break;
 			case 't':
@@ -1014,13 +792,12 @@ namespace
 					target = target.substr(4);
 				}
 
-				Node out;
+				Object &out = item(list(doc, AIS::KEY_SETTING_DB));
 				if (type != "postgres")
-					out.add(keyName(AIS::KEY_SETTING_MODEL_TYPE), Node::str(type));
+					put(out, AIS::KEY_SETTING_MODEL_TYPE, type);
 				if (count % 2 == 1)
-					out.add(keyName(AIS::KEY_SETTING_CONN_STR), Node::str(target));
-				parseSettings(args, ptr + (count % 2), &out);
-				lists.child(keyName(AIS::KEY_SETTING_DB), Node::ARRAY).items.push_back(std::move(out));
+					put(out, AIS::KEY_SETTING_CONN_STR, target);
+				parseSettings(args, ptr + (count % 2), &out, pool);
 			}
 			break;
 			case 'y':
@@ -1033,7 +810,7 @@ namespace
 				break;
 			case 'b':
 				Assert(count == 0, param, MSG_NO_PARAMETER);
-				receiver.entry.add(keyName(AIS::KEY_SETTING_TIMING), Node::boolean(true));
+				receiver.Add(AIS::KEY_SETTING_TIMING, true);
 				break;
 			case 'i':
 				device(Type::N2K, leading(count & 1, AIS::KEY_SETTING_INTERFACE), args, ptr, count);
@@ -1064,7 +841,7 @@ namespace
 				break;
 			case 'd':
 			{
-				Rx &rx = newReceiver();
+				Object &rx = newReceiver();
 
 				if (param.length() >= 4 && param[2] == ':')
 				{
@@ -1074,18 +851,18 @@ namespace
 					DeviceManager found;
 					found.selectDeviceByIndex(n);
 					if (!found.serial().empty())
-						rx.entry.add(keyName(AIS::KEY_SETTING_SERIAL), Node::str(found.serial()));
+						put(rx, AIS::KEY_SETTING_SERIAL, found.serial());
 					std::string name = Util::Parse::DeviceTypeString(found.inputType());
 					Util::Convert::toLower(name);
-					rx.entry.add(keyName(AIS::KEY_SETTING_INPUT), Node::str(name.empty() ? "none" : name));
+					put(rx, AIS::KEY_SETTING_INPUT, name.empty() ? "none" : name);
 				}
 				else
 				{
 					Assert(param.length() == 2, param, "syntax error in device setting");
 					Assert(count == 1, param, "device setting requires one parameter [serial number]");
-					rx.entry.add(keyName(AIS::KEY_SETTING_SERIAL), Node::str(arg1));
+					put(rx, AIS::KEY_SETTING_SERIAL, arg1);
 					if (arg1.empty())
-						rx.entry.add(keyName(AIS::KEY_SETTING_INPUT), Node::str("none"));
+						put(rx, AIS::KEY_SETTING_INPUT, "none");
 				}
 			}
 			break;
@@ -1104,18 +881,10 @@ namespace
 			case 'X':
 				Assert(count <= 1, param, "Only one optional parameter [sharing key] allowed.");
 				{
-					xshare_defined = true;
-
-					std::string xarg_upper = arg1;
-					Util::Convert::toUpper(xarg_upper);
-
-					if (count == 1 && xarg_upper == "OFF")
-						break;
-
-					feed = true;
-
-					if (count == 1 && xarg_upper != "ON")
-						uuid = arg1;
+					std::string upper = arg1;
+					Util::Convert::toUpper(upper);
+					const bool off = count == 1 && upper == "OFF";
+					share(true, !off, off || upper == "ON" ? std::string() : arg1);
 				}
 				break;
 			case 'H':
@@ -1132,15 +901,15 @@ namespace
 					const bool hook = starts("http://") || starts("https://");
 					if (!hook && !starts("mqtt://") && !starts("mqtts://") && !starts("ws://") && !starts("wss://"))
 						throw std::runtime_error(where + ": a url with http:// or https:// for a webhook, or mqtt://, mqtts://, ws:// or wss:// for the MQTT state.");
-					Node entry;
-					entry.add(keyName(AIS::KEY_SETTING_URL), Node::str(arg1));
+					Object *entry = pool.addObject();
+					put(*entry, AIS::KEY_SETTING_URL, arg1);
 					for (int k = 2; k + 1 <= count; k += 2)
-						entry.add(keyName(lookup(args[ptr + k], where)), Node::str(args[ptr + k + 1]));
+						put(*entry, lookup(args[ptr + k], where), args[ptr + k + 1]);
 
 					if (hook)
-						webhooks.items.push_back(std::move(entry));
+						list(doc, AIS::KEY_SETTING_WEBHOOKS).push_back(JSON::Value(entry));
 					else
-						mqtt.push_back(std::move(entry));
+						doc.Add(AIS::KEY_SETTING_MQTT_STATE, entry);
 				}
 #else
 				throw std::runtime_error("Option -W needs a build with webhooks and the MQTT state (cmake -DDELIVERY=ON).");
@@ -1148,8 +917,8 @@ namespace
 				break;
 			case 'Z':
 				Assert(count == 2, param, "Location Setting requires two parameters (lat/lon)");
-				value(receiver, AIS::KEY_SETTING_LAT, arg1);
-				value(receiver, AIS::KEY_SETTING_LON, arg2);
+				put(receiver, AIS::KEY_SETTING_LAT, arg1);
+				put(receiver, AIS::KEY_SETTING_LON, arg2);
 				break;
 			case 'A':
 				throw std::runtime_error("Option -A is obsolete. Please use -I instead.");
@@ -1190,11 +959,11 @@ namespace
 				break;
 			case 'p':
 				Assert(count == 1, param, "requires one parameter [frequency offset].");
-				value(receiver, AIS::KEY_SETTING_FREQOFFSET, arg1);
+				put(receiver, AIS::KEY_SETTING_FREQOFFSET, arg1);
 				break;
 			case 'a':
 				Assert(count == 1, param, "requires one parameter [bandwidth].");
-				value(receiver, AIS::KEY_SETTING_BANDWIDTH, arg1);
+				put(receiver, AIS::KEY_SETTING_BANDWIDTH, arg1);
 				break;
 			case 'g':
 				Assert(count % 2 == 0 && param.length() == 3, param);
@@ -1204,7 +973,7 @@ namespace
 					Receiver &so_far = state(receiver);
 					if (so_far.modelCount() == 0)
 						addEngine(receiver, so_far.defaultModel());
-					parseSettings(args, ptr, &lastModelSettings(receiver));
+					parseSettings(args, ptr, &lastModelSettings(receiver), pool);
 				}
 				else
 				{
@@ -1212,7 +981,7 @@ namespace
 					if (key == AIS::KEY_COUNT)
 						throw std::runtime_error("invalid -g switch on command line");
 
-					parseSettings(args, ptr, &block(receiver, key));
+					parseSettings(args, ptr, &block(receiver, key), pool);
 				}
 				break;
 			default:
@@ -1222,140 +991,13 @@ namespace
 			ptr += count + 1;
 			check(count ? param + " " + arg1 : param);
 		}
-	}
-
-	std::vector<std::pair<Node, std::string>> Translation::allServers(bool settled) const
-	{
-		std::vector<std::pair<Node, std::string>> all = servers;
-		if (!settled)
-			return all;
-		for (const auto &p : pending)
-		{
-			Node server;
-			if (!p.port.empty())
-				server.add(keyName(AIS::KEY_SETTING_PORT), Node::str(p.port));
-			for (const auto &a : p.args)
-			{
-				if (a.first == AIS::KEY_SETTING_PLACE_GEOMETRY)
-					server.child(keyName(AIS::KEY_SETTING_VIEW)).add(keyName(a.first), Node::str(a.second));
-				else if (a.first == AIS::KEY_SETTING_TLS_CERT)
-					server.child(keyName(AIS::KEY_SETTING_TLS)).add(keyName(AIS::KEY_SETTING_CERT), Node::str(a.second));
-				else if (a.first == AIS::KEY_SETTING_TLS_KEY)
-					server.child(keyName(AIS::KEY_SETTING_TLS)).add(keyName(AIS::KEY_SETTING_KEY), Node::str(a.second));
-				else if (a.first == AIS::KEY_SETTING_KEYS)
-					server.add(keyName(a.first), keysFromText(a.second, p.port.empty() ? "-N" : "-N " + p.port));
-				else
-					server.add(keyName(a.first), Node::str(a.second));
-			}
-			// its files resolve against the last file's folder
-			absolute(server, Config::baseDir());
-			all.emplace_back(std::move(server), p.port.empty() ? "-N" : "-N " + p.port);
-		}
-		return all;
-	}
-
-	std::string Translation::document(Config::Origins *origins, bool settled) const
-	{
-		Node doc;
-		doc.add(keyName(AIS::KEY_SETTING_CONFIG), Node::str("aiscatcher"));
-		doc.add(keyName(AIS::KEY_SETTING_VERSION), Node::integer(1));
-
-		// with no input named, the default receiver is the main section's, unless it
-		// has what only a receiver object takes: then it is one, on whatever device is found
-		const Rx &first = *receivers.front();
-		bool main_receiver = nrec == 0 && !first.channel_set;
-		for (const auto &m : first.entry.members)
-			main_receiver = main_receiver && m.first != keyName(AIS::KEY_SETTING_ENGINES);
-		if (main_receiver)
-		{
-			for (const auto &m : first.entry.members)
-				doc.add(m.first, m.second);
-			if (verbose)
-				doc.add(keyName(AIS::KEY_SETTING_VERBOSE), Node::str("on"));
-		}
-		for (const auto &m : main.members)
-			doc.add(m.first, m.second);
-
-		if (xshare_defined)
-			doc.add(keyName(AIS::KEY_SETTING_SHARING), Node::boolean(feed));
-		if (!uuid.empty())
-			doc.add(keyName(AIS::KEY_SETTING_SHARING_KEY), Node::str(uuid));
-		if (!sharing_zone.empty())
-		{
-			Node zones = Node::of(Node::ARRAY);
-			for (const auto &z : sharing_zone)
-				zones.items.push_back(Node::str(z));
-			doc.add(keyName(AIS::KEY_SETTING_SHARING_ZONE), std::move(zones));
-		}
-
-		Node array = Node::of(Node::ARRAY);
-		for (std::size_t i = main_receiver ? 1 : 0; i < receivers.size(); i++)
-		{
-			const Rx &rx = *receivers[i];
-			Node entry = rx.entry;
-			if (verbose && !rx.passive)
-				entry.add(keyName(AIS::KEY_SETTING_VERBOSE), Node::str("on"));
-			if (rx.channel_set)
-			{
-				if (!rx.channel.empty())
-					entry.add(keyName(AIS::KEY_SETTING_CHANNEL), Node::str(rx.channel));
-				if (!rx.nmea.empty())
-					entry.add(keyName(AIS::KEY_SETTING_NMEA_CHANNEL), Node::str(rx.nmea));
-			}
-			if (i == 0 && nrec == 0)
-				entry.members.insert(entry.members.begin(), std::make_pair(keyName(AIS::KEY_SETTING_INPUT), Node::str("none")));
-			array.items.push_back(std::move(entry));
-		}
-		if (!array.items.empty())
-			doc.add(keyName(AIS::KEY_SETTING_RECEIVER), std::move(array));
-
-		for (const auto &l : lists.members)
-			doc.add(l.first, l.second);
-		if (has_tracking)
-			doc.add(keyName(AIS::KEY_SETTING_TRACKING), tracking);
-
-		const std::vector<std::pair<Node, std::string>> all = allServers(settled);
-		if (!all.empty())
-		{
-			Node list = Node::of(Node::ARRAY);
-			for (const auto &s : all)
-			{
-				list.items.push_back(s.first);
-				if (origins)
-					origins->servers.push_back(s.second);
-			}
-			doc.add(keyName(AIS::KEY_SETTING_SERVER), std::move(list));
-		}
-		if (!webhooks.items.empty())
-			doc.add(keyName(AIS::KEY_SETTING_WEBHOOKS), webhooks);
-		for (const auto &m : mqtt)
-			doc.add(keyName(AIS::KEY_SETTING_MQTT_STATE), m);
-
-		if (!origins)
-		{
-			// what is still relative is to the working folder, so the copy reads from anywhere
-			const std::string cwd = currentDirectory();
-			for (auto &m : doc.members)
-				if (m.second.kind == Node::OBJECT)
-					absolute(m.second, cwd);
-				else if (m.second.kind == Node::ARRAY)
-				{
-					for (auto &item : m.second.items)
-						if (item.kind == Node::OBJECT)
-							absolute(item, cwd);
-				}
-		}
-
-		std::string out;
-		write(doc, out);
-		return out + "\n";
+		settle();
 	}
 }
 
 // throws what the command line got wrong; whether the engine runs: not after -h, -l, -L or -J
-static bool build(const std::vector<std::string> &args, Engine &engine)
+static bool build(const std::vector<std::string> &args, Config &c)
 {
-	Config c(engine);
 	std::string document, file;
 	Actions actions;
 	bool json = false;
@@ -1390,8 +1032,6 @@ static bool build(const std::vector<std::string> &args, Engine &engine)
 				  << "scopes: data, or data+system for the installation's own resources; a client sends the key as Authorization: Bearer\n";
 	}
 
-	// the document's files are resolved already
-	Config::setConfigBaseDir("");
 	c.set(document, &origins);
 	c.finish();
 
@@ -1422,15 +1062,25 @@ int run(const std::vector<std::string> &args)
 {
 	Site site;
 	Engine engine;
+	Config c(engine);
 
 	try
 	{
 		engine.scanner().refreshDevices();
 
-		if (!build(args, engine))
+		if (!build(args, c))
 			return 0;
 
-		return engine.run(site);
+		engine.open(site, c.stations, c.station_defaults, c.site.tracks());
+		site.configure(c.site);
+#ifdef HASAPI
+		// a server that cannot listen stops the start
+		const std::vector<int> ports = site.serverPorts();
+		for (const auto &s : c.site.servers)
+			if (std::find(ports.begin(), ports.end(), s.port) == ports.end())
+				throw std::runtime_error("cannot open port " + std::to_string(s.port) + " on " + s.bind + " for the server.");
+#endif
+		return engine.run();
 	}
 	catch (std::exception const &e)
 	{

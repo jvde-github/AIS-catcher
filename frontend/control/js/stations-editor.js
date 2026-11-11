@@ -15,7 +15,7 @@ import CircleStyle from 'ol/style/Circle.js';
 import Fill from 'ol/style/Fill.js';
 import Stroke from 'ol/style/Stroke.js';
 import {fromLonLat, toLonLat} from 'ol/proj.js';
-import { el, moreMenu } from './dom.js';
+import { el, listOf, moreMenu } from './dom.js';
 import { App, ConfigStore, registerEditor } from './config-store.js';
 import { api } from './api.js';
 import { addBasemap } from './basemap.js';
@@ -62,7 +62,7 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
     const several = () => state.stations.length > 1;
     let map = null, picking = false, timer = null;
 
-    const editor = registerEditor(CONTAINER, { save: () => save(), data: () => state.stations });
+    const editor = registerEditor(CONTAINER, () => save());
     const touched = () => editor.touched();
 
     // the inputs at a station, by the number it had when loaded; at the default station those that name none, or 0
@@ -80,6 +80,8 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
     const listChanged = () => onList?.();
 
     function add() {
+        // the default station is always there: a list without it did not load
+        if (!state.stations.length) return;
         const id = state.stations.reduce((m, s) => Math.max(m, Number(s.id) || 0), 0) + 1;
         state.stations.push({ id, _from: null });
         state.selected = state.stations.length - 1;
@@ -339,17 +341,21 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
             return;
         }
         const stations = state.stations.map(clean);
-        let rewired = false, receivers = [];
-        // the inputs follow their station to its new number, or go to the default station
+        let receivers = [];
+        // what names a station follows it to its new number; a deleted one leaves it
         const saved = await editor.write(cfg => {
             const moved = new globalThis.Map();
             for (const s of state.stations) if (s._from !== null) moved.set(s._from, Number(s.id));
-            for (const r of cfg.receiver || []) {
-                if (r.station === undefined || r.station === null || r.station === '') continue;
-                const from = Number(r.station);
-                if (moved.has(from) && moved.get(from) !== from) { r.station = moved.get(from); rewired = true; }
-                else if (!moved.has(from) && state.deleted.has(from)) { delete r.station; rewired = true; }
-            }
+            const rewire = (o, ...keys) => keys.forEach(key => {
+                const ids = String(o?.[key] ?? '').split(',').filter(x => x.trim()).map(Number);
+                const next = ids.filter(id => moved.has(id) || !state.deleted.has(id)).map(id => moved.get(id) ?? id);
+                if (String(next) === String(ids)) return;
+                if (!next.length) delete o[key];
+                else o[key] = Array.isArray(o[key]) ? next : next.length > 1 ? next.join(',') : next[0];
+            });
+            listOf(cfg.receiver).forEach(r => [r, ...listOf(r?.engines).map(e => e?.settings)].forEach(o => rewire(o, 'station')));
+            listOf(cfg.services).forEach(sv => [sv, sv?.tracking].forEach(o => rewire(o, 'id', 'select_id', 'stations')));
+            [...listOf(cfg.services), ...listOf(cfg.webhooks)].forEach(x => rewire(x?.view, 'stations'));
             cfg.stations = stations;
             receivers = cfg.receiver || [];
         }, 'the stations');
@@ -359,7 +365,7 @@ export function createStationsEditor(host, { describeInput, onSaved, onList, ini
         state.deleted.clear();
         state.receivers = receivers;
         App.notify('success', 'Stations saved');
-        onSaved?.(rewired);
+        onSaved?.();
         render();
     }
 

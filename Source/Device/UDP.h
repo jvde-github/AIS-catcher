@@ -39,7 +39,6 @@ namespace Device
 		void StartServer();
 		void StopServer();
 		void Run();
-		void applySettings();
 
 	public:
 		UDP() : Device(Format::TXT, 0, Type::UDP, "UDP") {};
@@ -50,7 +49,6 @@ namespace Device
 		void Play();
 		void Stop();
 
-		bool isCallback() { return true; }
 		void getDeviceList(std::vector<Description> &DeviceList);
 		std::string getRateDescription() { return "N/A"; }
 

@@ -15,7 +15,7 @@ import { settings } from '../../core/state.js';
 import { shipOutlineLocal } from '@aiscatcher/core/geo.js';
 import { getSpeedVal, getSpeedUnit } from '../../core/units.js';
 import { getDeltaTimeVal, getShipTypeShort, sanitizeString, getCountryName } from '@aiscatcher/core/text.js';
-import { flagHTML, decodeHTMLEntities } from '@aiscatcher/ui/components.js';
+import { flagHTML } from '@aiscatcher/ui/components.js';
 import { spriteFor, iconScale, fadeCurve } from '@aiscatcher/map/markers.js';
 import { map, markers } from '../../map.js';
 import { focus } from '../../data.js';
@@ -26,8 +26,6 @@ import { renderCounts } from '../counts/counts.js';
 import { applyFixedCenter } from '../follow/follow.js';
 import { showNotification } from '../../dialog.js';
 import { setLiveLayersVisible, updateReplaycard } from './replaybar.js';
-
-// { setLiveLayers, onStateChange }
 
 const markerSource = new VectorSource({ features: [] });
 export const markerLayer = new VectorLayer({ source: markerSource });
@@ -209,8 +207,7 @@ async function loadBlock(start) {
             s = fleet[mmsi] = {
                 pts: [],
                 cls: m.c ?? 1,
-                // escaped at ingest like the live store; tooltips render innerHTML
-                name: sanitizeString(m.n || ''),
+                name: m.n || '',
                 country: sanitizeString(m.f || ''),
                 type: m.t ?? null,
                 dim: m.d || null,
@@ -507,7 +504,6 @@ function sample(s, T) {
 
     // no next point within reach: hold rather than invent a track never sailed
     if (T <= pa[3]) {
-        const l = a > 0 ? leg(s, a - 1, a) : NO_LEG;
         return { lat: pa[0], lon: pa[1], knots: sog / sogDiv, hdg: angleOf(pa), cog: courseOf(pa) };
     }
     return holdAt(s, a, T);
@@ -518,7 +514,7 @@ function tooltipHTML(mmsi, s, fix) {
     if (!fix) return '';
     let html = '<div class="tooltip-card">'
         + flagHTML(s.country, 'flag-tooltip', getCountryName(s.country)) + '<div>'
-        + (s.name || 'MMSI ' + mmsi)
+        + sanitizeString(s.name || 'MMSI ' + mmsi)
         + '<span class="tooltip-dim"> at </span>' + getSpeedVal(fix.knots || 0) + ' ' + getSpeedUnit();
     let sub = '';
     if (s.type != null) sub += getShipTypeShort(s.type);
@@ -571,7 +567,7 @@ function place(f, s, fix) {
     }
     // the label carries the fade too, so a fading held vessel refreshes its text
     if (rebuilt || l.label !== label || (label && l.opacity !== opacity))
-        f.style.setText(label ? markers.labelText(decodeHTMLEntities(label), opacity, s.cls) : null);
+        f.style.setText(label ? markers.labelText(label, opacity, s.cls) : null);
     const img = f.style.getImage();
     img.setRotation(sp.rot);
     img.setScale(markers.sheetScale(scale));

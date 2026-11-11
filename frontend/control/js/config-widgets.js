@@ -1,7 +1,7 @@
 import { el, fromHtml, on } from './dom.js';
 import { icon } from './icons.js';
 import { debounce, getNested } from './config-store.js';
-import { zoneChip } from './zone-modal.js';
+import { zoneChip } from './zones.js';
 
 const parseNumberLike = (str) => {
     const s = String(str).trim();
@@ -178,18 +178,6 @@ export const Renderer = {
             });
         }
 
-        if (type === 'off-number') {
-            return sliderInput(field, currentValue, onUpdate, {
-                isOff: v => v === false || v === 'false',
-                offValue: false,
-                offOption: { value: 'off', label: 'Off' },
-                parse: parseFloat,
-                defaultStep: 1,
-                fallback: field.defaultNumber || field.min || 0,
-                unit: field.unit
-            });
-        }
-
         if (type === 'switch-integer') {
             return sliderInput(field, currentValue, onUpdate, {
                 isOff: v => v === false || v === 'false',
@@ -198,7 +186,7 @@ export const Renderer = {
                 parse: v => parseInt(v, 10),
                 defaultStep: 1,
                 fallback: field.defaultInteger || field.min || 0,
-                unit: field.unit || 's'
+                unit: 's'
             });
         }
 
@@ -380,8 +368,7 @@ export const Renderer = {
 
         if (field.label) container.appendChild(el('label', Styles.label, {}, field.label));
         container.appendChild(inputEl);
-        const desc = field.description || field.tooltip;
-        if (desc) container.appendChild(el('p', Styles.description, {}, desc));
+        if (field.tooltip) container.appendChild(el('p', Styles.description, {}, field.tooltip));
 
         return container;
     },

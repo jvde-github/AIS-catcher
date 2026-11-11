@@ -94,6 +94,15 @@ namespace AIS
 		virtual ~Model() {}
 		virtual void buildModel(char, char, int, bool, Device::Device *d) { device = d; }
 
+		// every output of the model delivers under this lock
+		void setDeliveryLock(std::mutex *m)
+		{
+			output.setLock(m);
+			outputADSB.setLock(m);
+			output_gps.setLock(m);
+			output_control.setLock(m);
+		}
+
 		StreamOut<Message> &Output() { return output; }
 		StreamOut<GPS> &OutputGPS() { return output_gps; }
 		StreamOut<Control> &OutputControl() { return output_control; }
@@ -331,8 +340,6 @@ namespace AIS
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
-		Setting &applyKey(AIS::Keys key, const std::string &arg);
-		std::string Get();
 		ModelClass getClass() { return ModelClass::N2K; }
 	};
 
@@ -346,8 +353,6 @@ namespace AIS
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
-		Setting &applyKey(AIS::Keys key, const std::string &arg);
-		std::string Get();
 		ModelClass getClass() { return ModelClass::BASESTATION; }
 	};
 
@@ -361,8 +366,6 @@ namespace AIS
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
-		Setting &applyKey(AIS::Keys key, const std::string &arg);
-		std::string Get();
 		ModelClass getClass() { return ModelClass::BASESTATION; }
 	};
 
@@ -376,8 +379,6 @@ namespace AIS
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
-		Setting &applyKey(AIS::Keys key, const std::string &arg);
-		std::string Get();
 		ModelClass getClass() { return ModelClass::BASESTATION; }
 	};
 
@@ -391,8 +392,5 @@ namespace AIS
 
 	public:
 		void buildModel(char, char, int, bool, Device::Device *);
-		Setting &applyKey(AIS::Keys key, const std::string &arg);
-		std::string Get();
-		ModelClass getClass() { return ModelClass::IQ; }
 	};
 }

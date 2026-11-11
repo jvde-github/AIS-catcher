@@ -143,7 +143,6 @@ namespace AIS
 
 		bool cfg_regenerate = false;
 		bool cfg_crc_check = false;
-		bool cfg_JSON_input = false;
 		bool cfg_VDO = true;
 		bool cfg_warnings = true;
 		bool cfg_GPS = true;
@@ -205,7 +204,6 @@ namespace AIS
 		void setGPS(bool b) { cfg_GPS = b; }
 		void setCRCcheck(bool b) { cfg_crc_check = b; }
 		bool getCRCcheck() { return cfg_crc_check; }
-		void setJSON(bool b) { cfg_JSON_input = b; }
 		void setStamp(bool b);
 		void setOwnMMSI(int m) { own_mmsi = m; }
 

@@ -58,7 +58,6 @@ namespace Device
 		void Close();
 
 		bool isStreaming();
-		bool isCallback() { return true; }
 
 		void getDeviceList(std::vector<Description> &DeviceList);
 

@@ -64,6 +64,11 @@ namespace JSON
 		} data;
 
 	public:
+		Value() = default;
+		// of an object or an array that a pool, or the caller, keeps
+		explicit Value(JSON *o) : type(Type::OBJECT) { data.o = o; }
+		explicit Value(std::vector<Value> *a) : type(Type::ARRAY) { data.a = a; }
+
 		double getFloat(double d = 0.0f) const { return isFloat() ? data.f : (isInt() ? (double)(data.i) : d); }
 		long int getInt(long int d = 0) const { return isInt() ? (long int)data.i : d; }
 		// the full 64 bits: a long is 32 bits on Windows, too short for e.g. nanoseconds since the epoch
@@ -149,6 +154,8 @@ namespace JSON
 
 	// a value as a setting takes it: a list as text separated by commas
 	std::string text(const Value &v);
+	// a document's text with one key to a line, so a reader's line numbers mean something
+	std::string indented(const std::string &json);
 
 	class Member
 	{
@@ -190,6 +197,7 @@ namespace JSON
 		}
 
 		const std::vector<Member> &getMembers() const { return members; }
+		std::vector<Member> &getMembers() { return members; }
 
 		const Value *getValue(int p) const
 		{

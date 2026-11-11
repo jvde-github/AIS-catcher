@@ -1,8 +1,8 @@
 import { api } from './api.js';
 import { migrateConfig } from './config-migrate.js';
 
-// the loaded pages' editors, by id; the zone dialog reads them too
-export const editors = new Map();
+// the loaded pages' editors, by id
+const editors = new Map();
 const anyDirty = () => [...editors.values()].some(m => m.dirty);
 
 // edits typed into a field go after a pause; a save sends the waiting ones first
@@ -82,10 +82,9 @@ export const App = {
 
 // The page marks its edits with `touched`, writes them with `write` (or `clean` when they went some
 // other way) and leaves with `destroy`.
-export function registerEditor(id, { save, data }) {
+export function registerEditor(id, save) {
     const editor = {
         dirty: false,
-        get data() { return data(); },
         save,
         touched() {
             editor.dirty = true;

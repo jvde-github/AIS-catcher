@@ -153,7 +153,7 @@ export function renderShows(host, data, { stations = [], touched, rerender, ever
     if (server || outlines) {
         const located = server ? locations(data, stations) : null;
         const kids = server ? locationsRow(data, located, touched, rerender) : [];
-        if (outlines) kids.push(outlinesRow(data, touched));
+        if (outlines) kids.push(outlinesRow(data, touched, rerender));
         const state = [server ? (located === null ? 'some station locations' : located ? 'station locations' : 'no station locations') : null,
             outlines ? (data.view?.place_geometry === false ? 'places as markers' : 'places with their shape') : null].filter(Boolean).join(' · ');
         part('Shows', 'shows', state, kids);
@@ -235,10 +235,10 @@ function locationsRow(data, located, touched, rerender) {
         : [row];
 }
 
-function outlinesRow(data, touched) {
+function outlinesRow(data, touched, rerender) {
     const view = () => (data.view && typeof data.view === 'object' ? data.view : (data.view = {}));
     return switchRow('', data.view?.place_geometry === undefined || on(data.view.place_geometry),
-        v => { if (v) delete view().place_geometry; else view().place_geometry = false; touched(); },
+        v => { if (v) delete view().place_geometry; else view().place_geometry = false; touched(); rerender(); },
         el('strong', '', { text: 'Place outlines' }), 'Each place with its shape; off, a marker alone.');
 }
 
@@ -253,7 +253,7 @@ export function renderServing(host, data, { builtIn = false, bind, touched, rere
     const has = k => served.includes(k);
     const set = (k, value) => {
         // the service's own switch replaces its legacy one; without keys the map is on unless said otherwise
-        SERVICES.forEach(s => { if (s.legacy) delete data[s.legacy]; });
+        delete data[SERVICES.find(s => s.key === k).legacy];
         if (k === 'ui') {
             if (!value) data.ui = false;
             else if (hasKeys(data)) data.ui = true;
@@ -412,7 +412,7 @@ function renderViewerFields(main, s, fields, touched, key) {
 // a save refused, to show.
 export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields = [], stations = () => [] } = {}) {
     const state = { list: [], viewerPort: 0, controlPort: 0, bind: '127.0.0.1', saved: new Set(), listening: null, tls: new Map(), folder: '' };
-    const editor = registerEditor(CONTAINER, { save: () => save(), data: () => state.list });
+    const editor = registerEditor(CONTAINER, () => save());
     const touched = () => editor.touched();
 
     async function load() {
@@ -588,7 +588,7 @@ export function createServicesEditor({ onSaved, onInvalid, onEdit, viewerFields 
         state.list = list.map(s => ({ ...s }));
         state.saved = new Set(list.filter(s => !s.main).map(s => s.port));
         const deaf = await deafPorts(list);
-        if (deaf.length) App.notify('error', `Saved, but nothing listens on port ${deaf.join(', ')}: another program has it`, 8000);
+        if (deaf.length) App.notify('error', `Saved, but nothing listens on port ${deaf.join(', ')}: another program has it`);
         else App.notify('success', 'Services saved: the servers serve as saved now');
         onSaved?.();
     }

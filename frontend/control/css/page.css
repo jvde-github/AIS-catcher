@@ -97,15 +97,6 @@ body {
     margin-bottom: var(--space-1);
 }
 
-/* draws the eye to Start/Restart while saved settings wait to be applied */
-.hub-button.attention {
-    background: var(--chrome-attention);
-}
-
-.hub-button.attention:hover {
-    background: var(--chrome-attention-hover);
-}
-
 .modal-card {
     box-shadow: var(--shadow-overlay);
 }
@@ -223,7 +214,6 @@ body {
 .rotate-90 { transform: rotate(90deg); }
 @media (max-width: 640px) { .sys-wide-only { display: none; } }
 
-.sys-minrow { min-height: 2rem; }
 .sys-pick { cursor: pointer; border-radius: var(--radius-md); }
 .sys-pick:hover { background: var(--color-surface-alt); }
 .sys-empty { padding: var(--space-8) 0; }

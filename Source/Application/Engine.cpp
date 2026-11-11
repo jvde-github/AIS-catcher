@@ -22,6 +22,7 @@
 #include "AIS-catcher.h"
 
 #include "Engine.h"
+#include "Host.h"
 #include "Network.h"
 #include "Site.h"
 #include "Stations.h"
@@ -50,24 +51,13 @@ void Engine::detach()
 	for (auto &r : receivers)
 		r->stop();
 
-	// the site lets go of the outputs before they are destroyed
+	// the site stops the outputs and forgets the receivers
 	if (site)
 		site->detachEngine();
 }
 
-std::function<void(Engine &, Site &)> Engine::before_run;
-std::function<void(Engine &, Site &)> Engine::after_run;
-
-void Engine::createCommunityFeed()
-{
-	comm_feed = new IO::HubStreamer();
-	msg.push_back(std::unique_ptr<IO::OutputMessage>(comm_feed));
-}
-
-void Engine::refreshStations(const StationRegistry &configured)
-{
-	Stations::refresh(stations, configured, receivers, site);
-}
+std::function<void(Site &)> Host::before_run;
+std::function<void(Site &)> Host::after_run;
 
 #ifdef HASAPI
 void Engine::publishReceivers()
@@ -103,146 +93,132 @@ void Engine::publishReceivers()
 }
 #endif
 
-void Engine::resolveStations()
+void Engine::open(Receiver &r)
 {
-	Stations::resolve(stations, station_defaults, receivers, site);
+	r.setOwnMMSI(own_mmsi);
+	r.setTags(tags);
+	r.setupDevice();
+	// a plain run with one receiver has one thread delivering and nothing rewired under it
+	r.setupModel(managed || receivers.size() > 1 ? &site->delivery() : nullptr);
+	*r.device() >> site->received();
+	*r.device() >> r.bytesIn();
 }
 
-bool Engine::hasServer() const
+// in their order, as groups_in and the status pages count them
+void Engine::number()
 {
-#ifdef HASAPI
-	return site->tracker() || site_config.wantsTracker() || !site_config.servers.empty();
-#else
-	return false;
-#endif
-}
-
-void Engine::openReceivers()
-{
-	// the trackers read the decoders' tags
-	const bool has_server = hasServer();
-	bool has_http = false;
-	for (auto &o : msg)
-		if (dynamic_cast<IO::HTTPStreamer *>(o.get()))
-		{
-			has_http = true;
-			break;
-		}
-
 	int group = 0;
-
+	oneverbose = false;
+	iscallback = true;
 	for (int i = 0; i < (int)receivers.size(); i++)
 	{
 		Receiver &r = *receivers[i];
-		r.setOwnMMSI(own_mmsi);
-
-		if (has_server)
-			r.setTags("DTM");
-		if (has_http)
-			r.setTags("DT");
-
-		r.setupDevice();
-
-		r.setupModel(group, i);
+		r.number(i, group);
+		oneverbose |= r.verbose;
+		iscallback &= r.device()->isCallback();
 	}
+}
 
+void Engine::play(Receiver &r)
+{
+	r.play();
+	if (managed && !r.verbose)
+		r.logSummary();
+}
+
+bool Engine::follow(Engine &next, const StationRegistry &configured, const StationDefaults &defaults)
+{
+	if (next.told != told)
+		return false;
+	Stations::resolve(configured, defaults, next.receivers, *site, false);
+
+	const auto same = [](const std::unique_ptr<Receiver> &a, const std::unique_ptr<Receiver> &b) { return a->told == b->told && a->zones == b->zones; };
+	if (receivers.size() == next.receivers.size() && std::equal(receivers.begin(), receivers.end(), next.receivers.begin(), same))
+		return true;
+
+	// a running receiver takes the place of the one told the same, with the zones that one has
+	for (auto &n : next.receivers)
+	{
+		auto it = std::find_if(receivers.begin(), receivers.end(), [&](const std::unique_ptr<Receiver> &r) { return r && r->told == n->told; });
+		if (it == receivers.end())
+			continue;
+		(*it)->zones = n->zones;
+		n = std::move(*it);
+	}
+	// the others stop and close before a changed one opens, as it may be the same device
+	std::size_t gone = 0;
 	for (auto &r : receivers)
+		if (r)
+		{
+			r->stop();
+			gone++;
+		}
+	receivers.clear();
+	receivers.swap(next.receivers);
+
+	std::vector<Receiver *> fresh;
+	for (auto &r : receivers)
+		if (!r->device())
+		{
+			open(*r);
+			fresh.push_back(r.get());
+		}
 	{
-		oneverbose |= r->verbose;
-		iscallback &= r->device()->isCallback();
+		std::lock_guard<std::mutex> held(site->delivery());
+		number();
 	}
+	site->rewire(facts());
+	for (Receiver *r : fresh)
+		play(*r);
+	if (gone || !fresh.empty())
+		Info() << "Receivers: " << fresh.size() << " started and " << gone << " stopped, as the configuration now has them";
+	return true;
 }
 
-void Engine::configureSite()
+// sharing is opt-in, via -X or the config's "sharing"
+void Engine::tellSharing()
 {
-	site->configure(site_config);
-#ifdef HASAPI
-	// a server that cannot listen stops the start; managed mode keeps its panel up and tries
-	// again on the next apply
-	if (!managed)
-	{
-		const std::vector<int> ports = site->serverPorts();
-		for (const auto &s : site_config.servers)
-			if (std::find(ports.begin(), ports.end(), s.port) == ports.end())
-				throw std::runtime_error("cannot open port " + std::to_string(s.port) + " on " + s.bind + " for the server.");
-	}
-#endif
-}
-
-// the community feed takes only the radios' groups
-void Engine::shareFeed()
-{
-	// sharing is opt-in, via -X or the config's "sharing"
-	if (!xshare_defined && !comm_feed && (hasServer() || !msg.empty()) && !managed)
+	if (managed)
+		return;
+	if (!outputs.sharing_defined && !outputs.feed && (tracked || !outputs.list.empty()))
 		Warning() << "Hint: support the aiscatcher.org community by sharing your "
 					 "feed with '-X on'. Sharing is currently OFF.";
-
-	if (comm_feed && (managed ? !comm_feed->hasUUID() : !xshare_defined))
-	{
-		uint64_t live_groups = 0;
-		for (const auto &r : receivers)
-			if (DeviceManager::isRadio(r->inputType()))
-				live_groups |= r->getGroupMask();
-
-		comm_feed->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(live_groups));
-	}
-
-	if (!managed)
-		Info() << "Community feed sharing: "
-			   << (comm_feed ? "enabled." : "disabled.");
+	Info() << "Community feed sharing: " << (outputs.feed ? "enabled." : "disabled.");
 }
 
-void Engine::routeOutputs()
+uint64_t Engine::radios()
 {
-	const bool any_zoned = anyZoned(receivers);
-	std::map<std::string, int> nth;
-	for (auto &o : msg)
-	{
-		const std::string label = o->getType() + " #" + std::to_string(++nth[o->getType()]);
-		if (o->zones.empty() && !any_zoned)
-			continue;
-		o->SetKey(AIS::KEY_SETTING_GROUPS_IN, std::to_string(routeGroups(receivers, o->zones, o->StreamIn<AIS::Message>::getGroupsIn(),
-																		 o->getDescription().empty() ? label : o->getDescription())));
-	}
+	uint64_t groups = 0;
+	for (const auto &r : receivers)
+		if (DeviceManager::isRadio(r->inputType()))
+			groups |= r->getGroupMask();
+	return groups;
 }
 
-void Engine::connectSinks()
+uint64_t Engine::route(const std::vector<std::string> &zones, uint64_t groups_in, const std::string &what)
 {
-	for (int i = 0; i < (int)receivers.size(); i++)
-	{
-		Receiver &r = *receivers[i];
+	return routeGroups(receivers, zones, groups_in, what);
+}
 
-		// set up all the output and connect to the receiver outputs
-		for (auto &o : msg)
-			o->Connect(r);
-
-		screen.Connect(r);
-
-		r.connectCounters();
-
-		if (activity)
-			for (int j = 0; j < r.modelCount(); j++)
-				r.Output(j).Connect(activity);
-	}
-
-	if (receivers.size() > 1)
-	{
-		Debug() << "Mutex: enabling exclusive on " << msg.size()
-				<< " message outputs + screen (" << receivers.size()
-				<< " receivers)";
-		for (auto &o : msg)
-			o->setExclusive(true);
-		screen.setExclusive(true);
-	}
-	else
-	{
-		Debug() << "Mutex: single receiver, all sinks lock-free";
-	}
-
+void Engine::wire(IO::OutputMessage &o)
+{
 	for (auto &r : receivers)
 	{
-		*r->device() >> site->received();
-		*r->device() >> r->bytesIn();
+		o.Connect(*r);
+		r->linkJSON();
+	}
+}
+
+void Engine::unwire()
+{
+	for (auto &r : receivers)
+	{
+		r->unwire();
+		screen.Connect(*r);
+		r->linkJSON();
+		if (activity)
+			for (int j = 0; j < r->modelCount(); j++)
+				r->Output(j).Connect(activity);
 	}
 }
 
@@ -263,58 +239,44 @@ EngineFacts Engine::facts()
 		d.label = receiverLabel(receivers, k);
 		for (int j = 0; j < r->modelCount(); j++)
 			d.model += (j ? "\n" : "") + r->model(j).getName();
-		facts.devices.push_back(d);
+		facts.push_back(d);
 	}
-	for (auto &o : msg)
-		facts.outputs.push_back(o.get());
-	facts.sharing = comm_feed != nullptr;
-	facts.sharing_uuid = comm_feed != nullptr && comm_feed->hasUUID();
 	return facts;
 }
 
-// the site's tracker takes every receiver; a server's own takes those in its zones and groups
-void Engine::feedTrackers()
+void Engine::feed(Tracker &t, const TrackerSpec *own)
 {
 #ifdef HASAPI
-	const auto feed = [&](Tracker *t, uint64_t mask) {
-		for (auto &r : receivers)
-			for (int j = 0; j < r->modelCount(); j++)
-			{
-				if (!r->Output(j).canConnect(mask))
-					continue;
-				r->OutputJSON(j).Connect(&t->json());
-				r->OutputGPS(j).Connect(&t->gps());
-				r->OutputControl(j).Connect(&t->control());
-				r->OutputADSB(j).Connect(&t->adsb());
-			}
-	};
-	if (Tracker *tracker = site->tracker())
-		feed(tracker, GROUPS_ALL);
-	for (const auto &own : site->ownTrackers())
-		feed(own.tracker, routeGroups(receivers, own.spec.zones, own.spec.groups_in, "A server with ships of its own"));
+	const uint64_t mask = own ? routeGroups(receivers, own->zones, own->groups_in, "A server with ships of its own") : GROUPS_ALL;
+	for (auto &r : receivers)
+	{
+		for (int j = 0; j < r->modelCount(); j++)
+		{
+			if (!r->Output(j).canConnect(mask))
+				continue;
+			r->OutputJSON(j).Connect(&t.json());
+			r->OutputGPS(j).Connect(&t.gps());
+			r->OutputControl(j).Connect(&t.control());
+			r->OutputADSB(j).Connect(&t.adsb());
+		}
+		r->linkJSON();
+	}
 #endif
 }
 
 void Engine::start()
 {
-	for (auto &o : msg)
-		o->Start();
-
-	// the servers serve and the tracker is wired, the receivers have not
+	// the servers serve and the consumers are wired, the receivers have not
 	// started: a build that adds services attaches them now
-	if (before_run)
-		before_run(*this, *site);
+	if (Host::before_run)
+		Host::before_run(*site);
 
 	Debug() << "Starting receivers";
 	for (auto &r : receivers)
-		r->play();
+		play(*r);
 
 	if (on_started)
 		on_started();
-	if (managed)
-		for (auto &r : receivers)
-			if (!r->verbose)
-				r->logSummary();
 }
 
 void Engine::printRates()
@@ -340,12 +302,13 @@ void Engine::printRates()
 
 // -T: the timeout period counts from the start or, with timeout_nomsg, from
 // the last look at which every receiver had delivered; once it has passed the
-// run stops, with a word why and exit code -2 for the plain timeout
+// run stops, with a word why: exit code -2 for the plain timeout, a failure's for a silent receiver
 bool Engine::watchdogExpired(const time_point &now, time_point &since, std::vector<uint64_t> &counts, int &code)
 {
 	if (timeout_nomsg)
 	{
 		bool one_stale = false;
+		counts.resize(receivers.size());
 
 		for (int i = 0; i < (int)receivers.size(); i++)
 		{
@@ -365,8 +328,11 @@ bool Engine::watchdogExpired(const time_point &now, time_point &since, std::vect
 		return false;
 
 	if (timeout_nomsg)
+	{
+		code = -1;
 		Warning() << "Watchdog: a receiver had no messages for " << timeout
 				  << " seconds, stopping.";
+	}
 	else
 	{
 		code = -2;
@@ -380,11 +346,11 @@ bool Engine::watchdogExpired(const time_point &now, time_point &since, std::vect
 int Engine::loop()
 {
 	const int SLEEP = 50;
-	auto time_start = high_resolution_clock::now();
+	// steady throughout: a step of the wall clock neither fires nor delays the watchdog
+	auto time_start = steady_clock::now();
 	auto time_timeout_start = time_start;
 	auto time_last = time_start;
-	// steady: high_resolution_clock is the wall clock on libstdc++
-	auto next_poll = steady_clock::now();
+	auto next_poll = time_start;
 	std::vector<uint64_t> msg_count(receivers.size(), 0);
 	int code = 0;
 
@@ -395,7 +361,13 @@ int Engine::loop()
 	while (!stop)
 	{
 		for (auto &r : receivers)
-			stop = stop || !(r->device()->isActive());
+			if (!r->device()->isActive())
+			{
+				// a file that ended stops the run; a device that went is a failure
+				if (r->device()->isLost())
+					stop_failed = true;
+				stop = true;
+			}
 
 #ifdef HASAPI
 		// the site's system pages, about once a second, and once more when a
@@ -420,14 +392,13 @@ int Engine::loop()
 		if (poll_now >= next_poll)
 		{
 			next_poll = poll_now + milliseconds(SLEEP);
-			for (auto &o : msg)
-				o->poll();
+			site->pollOutputs();
 		}
 
 		if (!oneverbose && !timeout)
 			continue;
 
-		auto time_now = high_resolution_clock::now();
+		auto time_now = steady_clock::now();
 
 		if (oneverbose && duration_cast<seconds>(time_now - time_last).count() >=
 							  screen.verboseUpdateTime)
@@ -469,25 +440,34 @@ void Engine::reportTotals()
 	}
 }
 
-int Engine::run(Site &on)
+void Engine::open(Site &on, const StationRegistry &configured, const StationDefaults &defaults, bool keeps_ships)
 {
 	site = &on;
-	resolveStations();
-	openReceivers();
-	configureSite();
-	shareFeed();
-	routeOutputs();
-	connectSinks();
-	site->attachEngine(facts());
-	feedTrackers();
+	// a tracker of an earlier session stays, and is fed; the trackers read the decoders' tags
+	tracked = keeps_ships || on.tracker() != nullptr;
+	tags = std::string(tracked ? "DTM" : "") + (outputs.http ? "DT" : "");
+	Stations::resolve(configured, defaults, receivers, *site);
+	for (auto &r : receivers)
+		open(*r);
+	number();
+	if (managed || receivers.size() > 1)
+		Debug() << "Mutex: one delivery lock for " << receivers.size() << (receivers.size() == 1 ? " receiver" : " receivers");
+	else
+		Debug() << "Mutex: single receiver, all sinks lock-free";
+}
+
+int Engine::run()
+{
+	tellSharing();
+	site->attachEngine(facts(), *this, std::move(outputs));
 	start();
 
 	const int code = loop();
 
-	if (after_run)
-		after_run(*this, *site);
+	if (Host::after_run)
+		Host::after_run(*site);
 
 	detach();
 	reportTotals();
-	return code;
+	return code ? code : stop_failed ? -1 : 0;
 }

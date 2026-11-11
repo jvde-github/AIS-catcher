@@ -27,7 +27,7 @@ function stationSection(form, item, index) {
     const stationField = form.config.stationPicker && form.fields.find(f => f.name === 'station');
     if (!stationField) return null;
     const picker = form.config.stationPicker(item.station, id => form.updateValue(index, stationField, id));
-    const desc = stationField.description || stationField.tooltip;
+    const desc = stationField.tooltip;
     return el('div', 'st-flat st-stpick__section', {},
         el('div', 'st-flat__head', {}, el('h3', 'st-section__title', {}, 'Station'), form.config.stationDocs?.()),
         picker, desc ? el('p', 'st-help', {}, desc) : null);

@@ -48,9 +48,6 @@ class Receiver : public Setting
 	int station = 0;
 	bool stamp_station = false;
 
-	// every model of the receiver is in these
-	std::vector<std::string> zones;
-
 	AIS::Mode channel_mode = AIS::Mode::AB;
 	std::string channel_nmea = "AB";
 
@@ -61,15 +58,15 @@ class Receiver : public Setting
 	static AIS::Model *makeModel(int m);
 
 public:
-	// id is the model number as addModel resolved it; json and counter are made when the
-	// models are set up and wired
+	// json and counter are made when the models are set up and wired
 	struct Decoder
 	{
 		std::unique_ptr<AIS::Model> model;
-		int id = -1;
 		std::vector<std::string> zones;
 		std::unique_ptr<AIS::JSONAIS> json;
 		std::unique_ptr<IO::StreamCounter> counter;
+		// the JSON form is made only once it has a reader
+		bool json_linked = false;
 	};
 
 private:
@@ -79,6 +76,10 @@ public:
 	Receiver() : Setting("Receiver") {}
 
 	bool verbose = false;
+	// What it is made of, as its configuration entry says it; its zones are apart, they only route.
+	std::string told;
+	// every model of the receiver is in these
+	std::vector<std::string> zones;
 
 	// Device manager
 	DeviceManager deviceManager;
@@ -113,7 +114,6 @@ public:
 	void setChannel(std::string mode, std::string NMEA);
 
 	// the mode as -c spells it, so a designation can re-apply it
-	const std::string &channelNMEA() const { return channel_nmea; }
 	std::string channelModeString() const
 	{
 		switch (channel_mode)
@@ -127,7 +127,6 @@ public:
 		}
 	}
 	void setTags(const std::string &s);
-	void removeTags(const std::string &s);
 	void clearTags() { tag.mode = 0; }
 	// the tags as -M takes them: D, T and M, those that are on
 	std::string tagString() const;
@@ -148,11 +147,10 @@ public:
 	AIS::Model &addModel(int m, const std::vector<std::string> &zones = std::vector<std::string>());
 	AIS::Model &model(int i) { return *decoders[i].model; }
 	int modelCount() const { return decoders.size(); }
-	int modelId(int i) const { return decoders[i].id; }
 	std::string modelIndex(int i) const { return "#" + std::to_string(receiver_index) + "-" + std::to_string(i); }
 	std::string modelLabel(int i) const { return decoders[i].model->getName() + " " + modelIndex(i); }
 	void addZone(const std::string &zone) { zones.push_back(zone); }
-	// valid once setupModel() assigned the groups
+	// valid once number() assigned the groups
 	uint64_t getGroupMask(int i) const { return decoders[i].json->out.getGroupOut(); }
 	bool inZone(int i, const std::string &zone) const
 	{
@@ -174,14 +172,20 @@ public:
 			mask |= d.json->out.getGroupOut();
 		return mask;
 	}
-	void connectCounters();
 	IO::StreamCounter &counter(int i) { return *decoders[i].counter; }
-	// the messages all its models decoded, once the counters are connected
+	// the messages all its models decoded
 	uint64_t messages();
 
 	void setupDevice();
-	void setupModel(int &g, int idx);
+	// delivery: the lock its models deliver under, shared by every receiver; none for lock-free
+	void setupModel(std::mutex *delivery);
+	// its place among the receivers, and a group for each model from `group` on
+	void number(int idx, int &group);
+	// no consumer on any model but its counter: whoever reads it connects again
+	void unwire();
 
+	// makes the JSON form of each model that has a reader by now; again when one comes later
+	void linkJSON();
 	void play();
 	void stop();
 	void logSummary() const;

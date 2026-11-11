@@ -73,12 +73,10 @@ struct ApiKey
 	int station = -1;
 	// data calls an hour, 0 for no limit
 	int calls_hour = 0;
-	// a key made but not yet approved answers nothing
-	bool active = true;
 
 	bool operator==(const ApiKey &o) const
 	{
-		return name == o.name && sha256 == o.sha256 && scopes == o.scopes && station == o.station && calls_hour == o.calls_hour && active == o.active;
+		return name == o.name && sha256 == o.sha256 && scopes == o.scopes && station == o.station && calls_hour == o.calls_hour;
 	}
 };
 
@@ -223,6 +221,8 @@ struct SiteConfig
 				return true;
 		return !webhooks.empty() || mqtt_state.any();
 	}
+	// whether anything of it keeps ships: the site's tracker, or a server's own
+	bool tracks() const { return wantsTracker() || !servers.empty(); }
 };
 
 // A mistake in a file is said with "Config file: " in front; what -N and -W
@@ -230,15 +230,14 @@ struct SiteConfig
 namespace SiteReader
 {
 	void stations(const JSON::Value &v, StationRegistry &into);
-	// a tracking key whose value is a file or directory, resolved against the configuration's folder
+	// a key whose value is a file or directory, resolved against the configuration's folder
 	bool isPath(int key);
 	std::string backupFile(const std::string &file, const std::string &base_dir);
 #ifdef HASAPI
-	// files resolved against base_dir; command_line_servers names, per "server" entry,
-	// the -N that gave it ("-N 8100"), empty for a file's
-	void site(const JSON::JSON &root, const std::string &base_dir, SiteConfig &site, StationDefaults &defaults, StationRegistry &stations, const std::vector<std::string> *command_line_servers = nullptr);
+	// command_line_servers: per "server" entry the -N that gave it, empty for a file's
+	void site(const JSON::JSON &root, SiteConfig &site, StationDefaults &defaults, StationRegistry &stations, const std::vector<std::string> *command_line_servers = nullptr);
 	// managed mode's site: the main server, beside the control panel, listens on viewer_port
-	void managedSite(const JSON::JSON &root, const std::string &base_dir, int control_port, int viewer_port, const std::string &bind, SiteConfig &site, StationDefaults &defaults, StationRegistry &stations);
+	void managedSite(const JSON::JSON &root, int control_port, int viewer_port, const std::string &bind, SiteConfig &site, StationDefaults &defaults, StationRegistry &stations);
 #endif
 #ifdef HASDELIVERY
 	// a "webhooks" array and an "mqtt_state" object, their mistakes said as they are

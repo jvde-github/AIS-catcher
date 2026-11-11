@@ -6,14 +6,14 @@ import { el, isActive, on } from './dom.js';
 import { icon } from './icons.js';
 import { api } from './api.js';
 import { App, ConfigStore, registerEditor } from './config-store.js';
-import { ZoneColors } from './zone-modal.js';
+import { zoneCss } from './zones.js';
 import { LIST_OUTPUTS, OUTPUT_TYPES, channelTitle } from './schema.js';
 import { describeInput, isRadio } from './inputs.js';
 import { stationName } from './stations.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const CONTAINER = 'flow-zones';
-const OUTPUT_STATS = '/viewer/api/output_stats.json';
+export const OUTPUT_STATS = '/viewer/api/output_stats.json';
 const STATS_MS = 5000;
 const STAT_TYPES = {};
 OUTPUT_TYPES.forEach(o => (o.stats || []).forEach(t => { STAT_TYPES[t] = o.value; }));
@@ -140,7 +140,7 @@ function statParts(type, s) {
 
 function zoneChip(z) {
     const c = el('span', 'st-chip st-chip--zone', { text: z });
-    c.style.setProperty('--z', ZoneColors.css(z));
+    c.style.setProperty('--z', zoneCss(z));
     return c;
 }
 
@@ -172,7 +172,7 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
     let armed = { from: null, pending: null };
     const nodes = { inputs: [], outputs: [] };
     let renderId = 0, observer = null, statsTimer = null;
-    const editor = registerEditor(CONTAINER, { save: () => save(), data: () => flow });
+    const editor = registerEditor(CONTAINER, () => save());
 
     async function save() {
         const saved = await editor.write(cfg => {
@@ -273,7 +273,7 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
                 const p = document.createElementNS(SVG_NS, 'path');
                 p.setAttribute('d', `M0 ${y1} C${w / 2} ${y1} ${w / 2} ${y2} ${w} ${y2}`);
                 p.setAttribute('class', 'st-route' + (zone ? '' : ' st-route--all'));
-                if (zone) { p.style.stroke = ZoneColors.css(zone); p.dataset.zone = zone; }
+                if (zone) { p.style.stroke = zoneCss(zone); p.dataset.zone = zone; }
                 svg.appendChild(p);
             });
         });
@@ -383,7 +383,7 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
                     const n = flowNode({ name: o.name, isInput: false, link: o.link,
                         onClick: () => open('output', o.index !== undefined ? `${o.type}:${o.index}` : o.type),
                         handle: o.fixed || !routable ? null : () => {
-                            if (armed.from === null) return App.notify('info', 'Click the dot of an input first', 3000);
+                            if (armed.from === null) return App.notify('info', 'Click the dot of an input first');
                             const r = flow.inputs[armed.from];
                             if (o.zones.some(z => (r.zone || []).includes(z))) { armed = { from: null, pending: null }; return draw(); }
                             const name = o.zones[0] || (r.zone || [])[0] || zoneName(o.hint) || 'route';
@@ -410,7 +410,6 @@ export function createFlowEditor(pane, { open, receivers, pages, running, shown,
 
     return {
         load,
-        stop,
         destroy() { stop(); editor.destroy(); }
     };
 }

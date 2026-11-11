@@ -100,7 +100,7 @@ namespace N2K
 			if (running)
 			{
 				Critical() << "NMEA2000: addOutput: cannot add input while running";
-				StopRequest();
+				StopRequest(true);
 				return;
 			}
 			input = cb;
@@ -111,7 +111,7 @@ namespace N2K
 			if (running)
 			{
 				Error() << "NMEA2000: addOutput: cannot add output while running";
-				StopRequest();
+				StopRequest(true);
 				return;
 			}
 			if (output)

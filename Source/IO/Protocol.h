@@ -453,8 +453,6 @@ namespace Protocol
 
 		enum State getState() { return state; }
 
-		unsigned long getBytesSent() { return bytes_sent; }
-		unsigned long getBytesReceived() { return bytes_received; }
 		void setStats(IO::OutputStats *s) { stats = s; }
 
 	private:
@@ -468,8 +466,6 @@ namespace Protocol
 		int timeout = 0;
 		bool keep_alive = true;
 
-		unsigned long bytes_sent = 0;
-		unsigned long bytes_received = 0;
 
 		IO::OutputStats *stats = nullptr;
 
@@ -532,7 +528,6 @@ namespace Protocol
 		SSL *ssl = nullptr;
 		bool handshake_complete = false;
 
-		static std::once_flag ssl_init_flag;
 		IO::OutputStats *stats = nullptr;
 
 		bool verify_certificates = true;
@@ -552,18 +547,13 @@ namespace Protocol
 		int sendSome(const char *data, int length, bool &progress) override;
 
 	public:
-		TLS() : ProtocolBase("TLS")
-		{
-			initializeSSL();
-		}
+		TLS() : ProtocolBase("TLS") {}
 
 		~TLS()
 		{
 			disconnect();
 			// OpenSSL cleanup handled by OS at process exit
 		}
-
-		static void initializeSSL();
 
 		void onConnect() override;
 		void onDisconnect() override;
@@ -725,17 +715,6 @@ namespace Protocol
 			}
 
 			ProtocolBase::onConnect();
-		}
-
-		void onDisconnect() override
-		{
-			ProtocolBase::onDisconnect();
-
-			if (prev)
-			{
-				const std::string str = "?WATCH={\"enable\":false}\n";
-				prev->send(str.c_str(), str.size());
-			}
 		}
 
 	public:

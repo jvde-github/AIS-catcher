@@ -40,15 +40,14 @@ namespace Device
 
 		std::string _iface = "";
 
-		std::vector<std::string> available_interfaces;
+		// as the last scan found them, whichever receiver's device ran it
+		static std::vector<std::string> available_interfaces;
 
 	public:
 		N2KSCAN() : Device(Format::N2K, 288000, Type::N2K, "N2K") {};
-		~N2KSCAN();
 
 		std::string getRateDescription() { return "N/A"; }
 
-		bool isCallback() { return true; }
 
 		std::string getProduct() { return "NMEA2000"; }
 		std::string getVendor() { return "Unknown"; }
@@ -63,7 +62,6 @@ namespace Device
 		}
 
 		void Open(uint64_t h);
-		void Close();
 		void Play();
 		void Stop();
 

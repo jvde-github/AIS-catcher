@@ -504,11 +504,6 @@ bool DB::updateShip(const JSON::JSON &data, TAG &tag, Ship &ship)
 	if (positionUpdated)
 	{
 		ship.setApproximate(type == 27);
-
-		if (ship.mmsi == own_mmsi)
-		{
-			updateStation(ship.lat, ship.lon);
-		}
 	}
 
 	if (msg_save)
@@ -607,12 +602,6 @@ Tracking::Event DB::event(const Ship &ship, Tracking::Kind kind,
 	e.name = ship.shipname;
 	e.lat = ship.lat;
 	e.lon = ship.lon;
-	if (!isValidCoord(e.lat, e.lon) && latlon_share &&
-		isValidCoord(station_lat, station_lon))
-	{
-		e.lat = station_lat;
-		e.lon = station_lon;
-	}
 	e.speed = ship.speed;
 	e.cog = ship.cog;
 	e.heading = ship.heading;
@@ -974,15 +963,6 @@ void DB::restoreOrder()
 		ships.touch(order[i]);
 }
 
-void DB::putShip(const Ship &s)
-{
-	if (s.mmsi == 0)
-		return;
-	std::lock_guard<std::mutex> lock(mtx);
-	install(claimShip(s.mmsi), s);
-	full_refresh_at = time(nullptr);
-}
-
 int DB::claimShip(uint32_t mmsi)
 {
 	int ptr = ships.find(mmsi);
@@ -1047,12 +1027,6 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 
 
 	std::unique_lock<std::mutex> lock(mtx);
-
-	if (!isValidCoord(station_lat, station_lon) &&
-		isValidCoord(tag.station_lat, tag.station_lon))
-	{
-		updateStation(tag.station_lat, tag.station_lon);
-	}
 
 	// A copy of a transmission the record already took: it must not count, move
 	// the ship, or reorder the table - find() instead of claimShip(), because a
@@ -1142,14 +1116,10 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 			sampleFix(ptr, ship.last_signal, false);
 		}
 
-		// measured from the station that heard it; the tracker's own position
-		// stands in for a receiver that has none. A server decides whether to show it
-		const bool own = isValidCoord(tag.station_lat, tag.station_lon);
-		const float from_lat = own ? tag.station_lat : station_lat;
-		const float from_lon = own ? tag.station_lon : station_lon;
-		if (isValidCoord(from_lat, from_lon))
+		// measured from the station that heard it, where that has a position
+		if (isValidCoord(tag.station_lat, tag.station_lon))
 		{
-			Util::Geodesy::distanceBearing(from_lat, from_lon, ship.lat, ship.lon,
+			Util::Geodesy::distanceBearing(tag.station_lat, tag.station_lon, ship.lat, ship.lon,
 										   ship.distance, ship.angle);
 
 			tag.distance = ship.distance;
@@ -1497,40 +1467,10 @@ void DB::crossing(int ptr, const VisitTracker::Visit &visit, bool entering,
 	emit(e, ptr);
 }
 
-// Caller holds mtx (or is configuring before input starts).
-void DB::updateDistance(Ship &ship)
+static void unmeasured(Ship &ship)
 {
 	ship.distance = DISTANCE_UNDEFINED;
 	ship.angle = ANGLE_UNDEFINED;
-	if (isValidCoord(station_lat, station_lon) && isValidCoord(ship.lat, ship.lon))
-		Util::Geodesy::distanceBearing(station_lat, station_lon, ship.lat, ship.lon,
-									   ship.distance, ship.angle);
-}
-
-// Every ship caches its distance and bearing to the station position they
-// were last computed for. They are recomputed, and clients told to refetch
-// everything, only once the station has moved further than the displayed
-// precision from that position: GPS jitter must not turn every poll into a
-// full dump.
-void DB::updateStation(float lat, float lon)
-{
-	if (station_lat == lat && station_lon == lon)
-		return;
-	station_lat = lat;
-	station_lon = lon;
-	const bool valid = isValidCoord(lat, lon),
-			   was = isValidCoord(distance_lat, distance_lon);
-	if (valid == was &&
-		(!valid || (std::fabs(lat - distance_lat) < 0.001f &&
-					std::fabs(lon - distance_lon) < 0.001f)))
-		return;
-	distance_lat = lat;
-	distance_lon = lon;
-	ships.forEach([&](int ptr) {
-		updateDistance(ships[ptr]);
-		return true;
-	});
-	full_refresh_at = time(nullptr);
 }
 
 void DB::measureFrom(const std::function<bool(const Ship &, float &, float &)> &origin)
@@ -1542,17 +1482,17 @@ void DB::measureFrom(const std::function<bool(const Ship &, float &, float &)> &
 		if (isValidCoord(ship.lat, ship.lon) && origin(ship, lat, lon))
 			Util::Geodesy::distanceBearing(lat, lon, ship.lat, ship.lon, ship.distance, ship.angle);
 		else
-			updateDistance(ship);
+			unmeasured(ship);
 		return true;
 	});
+	// every distance may have changed: a reader fetches the whole list again
+	full_refresh_at = time(nullptr);
 }
 
-// Caller holds mtx. What follows from a ship's position: distance and the
-// places it is in.
+// Caller holds mtx. A position that came from elsewhere: no station measured it.
 void DB::locate(int ptr)
 {
-	Ship &ship = ships[ptr];
-	updateDistance(ship);
+	unmeasured(ships[ptr]);
 	refreshPlaceMembership(ptr);
 }
 

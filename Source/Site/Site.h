@@ -33,6 +33,7 @@
 #include "MsgOut.h"
 #include "SiteConfig.h"
 #include "StationRegistry.h"
+#include "StationTable.h"
 #include "Statistics.h"
 #include "SystemFacts.h"
 #ifdef HASAPI
@@ -47,26 +48,26 @@ class Tracker;
 #endif
 
 // What lives as long as the process: the stations, the tracker, the servers
-// and the deliveries. An engine session attaches to it when it starts and
-// leaves it when it stops.
+// and the deliveries; and, for as long as an engine runs, its outputs. An engine
+// session attaches to it when it starts and leaves it when it stops.
 class Site
 {
 public:
 	~Site() { stop(); }
 
-	// the stations of the last session to start, kept while none runs
+	// the stations of the session that starts, kept while none runs
 	void publishStations(const StationRegistry &resolved);
-	template <typename F>
-	void withStations(F f) const
-	{
-		std::lock_guard<std::mutex> lock(stations_mtx);
-		f(stations);
-	}
+	StationRegistry stations() const { return station_table->list(); }
 
-	// told by the running engine at its start and withdrawn at its stop,
-	// before its outputs go
-	void attachEngine(const EngineFacts &facts);
+	// told by the running engine at its start and withdrawn at its stop
+	void attachEngine(const EngineFacts &facts, EngineWiring &engine, Outputs outputs);
 	void detachEngine();
+	// the running engine's receivers changed: every consumer is routed and connected again
+	void rewire(const EngineFacts &facts);
+	// The outputs as the configuration now has them: the same carry on, the others start, the unlisted stop.
+	void setOutputs(Outputs next);
+	// from the engine's main loop: the outputs make and keep their connections there
+	void pollOutputs();
 	// when the tracker's backup was last written, or read when the tracker
 	// was made; 0 without a backup file
 	std::time_t lastBackup()
@@ -75,6 +76,8 @@ public:
 		return backing_up ? last_backup : 0;
 	}
 	ByteCounter &received() { return bytes; }
+	// The lock every receiver's models deliver under: one message at a time reaches the consumers.
+	std::mutex &delivery() { return delivery_mtx; }
 
 	// a tracker, once made, lives until the process ends; servers follow every change
 	void configure(const SiteConfig &cfg);
@@ -84,12 +87,6 @@ public:
 	void publishReceivers(const std::vector<ReceiverState> &states);
 	SystemFacts systemFacts();
 	Tracker *tracker() { return tracker_.get(); }
-	struct OwnTracker
-	{
-		Tracker *tracker;
-		TrackerSpec spec;
-	};
-	std::vector<OwnTracker> ownTrackers();
 	Services::Server *server(int port);
 	bool serverAddress(int port, std::string &host);
 	std::vector<int> serverPorts();
@@ -109,24 +106,31 @@ public:
 	void stop();
 
 private:
-	mutable std::mutex stations_mtx;
-	StationRegistry stations;
-
-	StationRegistry stationsSnapshot() const
-	{
-		std::lock_guard<std::mutex> lock(stations_mtx);
-		return stations;
-	}
+	// the stations and where each is now
+	const std::shared_ptr<StationTable> station_table = std::make_shared<StationTable>();
 
 	std::mutex engine_mtx;
 	EngineFacts engine;
 	bool engine_running = false;
+	// the running engine's; replaced whole, so a reader that holds them keeps them
+	std::shared_ptr<Outputs> outputs_ = std::make_shared<Outputs>();
+	std::shared_ptr<Outputs> outputs()
+	{
+		std::lock_guard<std::mutex> lock(engine_mtx);
+		return outputs_;
+	}
+	// set while an engine runs; under site_mtx
+	EngineWiring *wiring = nullptr;
+	typedef std::vector<std::shared_ptr<IO::OutputMessage>> OutputList;
+	// o's list routed over the running engine's receivers, and those in `fresh` started
+	void startOutputs(const Outputs &o, const OutputList &fresh);
+	// Every consumer on the running engine's receivers, with no decoder delivering meanwhile.
+	void connect();
 	std::time_t session_start = 0;
 	// the engine as told, or none; whether one was running before
 	bool resetEngine(const EngineFacts &facts, bool running);
-	// the engine's part of a status page, as key-value pairs in an open object
-	void writeEngine(JSON::Writer &w, EnginePart part);
 	ByteCounter bytes;
+	std::mutex delivery_mtx;
 	const std::time_t born = std::time(nullptr);
 
 	std::mutex site_mtx;
@@ -164,22 +168,15 @@ private:
 	std::atomic<bool> events_wanted{false};
 	std::unique_ptr<Tracker> tracker_;
 	std::vector<std::unique_ptr<Services::Server>> servers;
-	// A server's own tracker, made with its server. Changed settings wait for the
-	// next engine, as the running one feeds it, and one the configuration dropped
-	// stays until that engine detaches.
-	// A tracker of a server's own; servers with the same tracking settings share one
+	// A server's own tracker, shared by the servers with the same filter, zones and groups.
 	struct Own
 	{
 		int port = 0; // the first server's, named in the log
-		std::set<int> ports;
 		TrackerSpec spec;
 		std::unique_ptr<Tracker> tracker;
-		bool retired = false;
 		std::string backup_file;
 	};
 	std::vector<std::unique_ptr<Own>> own;
-	// the tracker with these settings, else the one this port had
-	Own *ownFor(const ServerSpec &spec);
 	std::unique_ptr<Own> makeOwn(const ServerSpec &spec, const SiteConfig &cfg);
 	bool anyTracker() const { return tracker_ || !own.empty(); }
 	template <typename F>
@@ -190,18 +187,13 @@ private:
 		for (auto &o : own)
 			f(*o->tracker);
 	}
-	// under site_mtx
-	void dropRetired();
 	void configureTracker(const SiteConfig &cfg);
 	void configureServers(const SiteConfig &cfg);
 	void restoreInto();
-	// a tracker's backup read once, when it is made; false when the file must be left as it is
-	bool restoreFrom(Tracker &t, const std::string &file);
 	// the catalogue every tracker judges against: managed mode's shared one, else the places folder read once
 	std::shared_ptr<PlaceCatalogue> catalogueFor(const SiteConfig &cfg);
 	std::shared_ptr<PlaceCatalogue> places_catalogue;
 	std::string places_dir;
-	bool engineAttached();
 	// under site_mtx
 	Services::Server *serverOn(int port);
 #else
@@ -225,6 +217,8 @@ private:
 	std::mutex mtx;
 	std::condition_variable cv;
 	bool running = false, poked = false;
+	// stop() ran: the destructor does not save the tracker a second time
+	bool stopped = false;
 	void launch();
 	void loop();
 	// the next beat now; takes mtx alone

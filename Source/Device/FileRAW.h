@@ -32,8 +32,9 @@ namespace Device
 		std::thread read_thread;
 		std::thread run_thread;
 
-		bool eoi = false;
-		bool done = false;
+		// eoi is told by the reading thread to the running one, done by that one to the engine's loop
+		std::atomic<bool> eoi{false};
+		std::atomic<bool> done{false};
 		bool loop = false;
 		bool use_raw_stdin = false;
 		bool lossless = true;
@@ -55,7 +56,6 @@ namespace Device
 		void Play();
 		void Stop();
 
-		bool isCallback() { return true; }
 		bool isStreaming() { return Device::isStreaming() && !done; }
 		bool isReplay();
 

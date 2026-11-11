@@ -10,7 +10,7 @@ import {
     setShips, setPlanes, setPaths, setPathsFrom, setStation, setShipsSince, setPlanesSince, setClock,
 } from './core/store.js';
 import { ShippingClass } from '@aiscatcher/core/constants.js';
-import { sanitizeString, getICAOFromHexIdent } from '@aiscatcher/core/text.js';
+import { getICAOFromHexIdent } from '@aiscatcher/core/text.js';
 import { redraw } from './fleet.js';
 import { beforeWrite } from './settings-store.js';
 import { refreshTab } from './tabs/index.js';
@@ -43,9 +43,17 @@ export function switchFocus(id) {
     setPathsFrom(-1);
 }
 
+// What the page asks of the station in view; an answer that lands after a switch is dropped.
+export async function viewed(query) {
+    const at = focus;
+    const response = await fetch("api/" + query + (query.includes("?") ? "&" : "?") + "stations=" + focus);
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    const data = await response.json();
+    return at === focus ? data : null;
+}
+
 // ─── vessels ─────────────────────────────────────────────────────────────────
 
-const includeShip = (ship) => true;
 let shipFilterOverride = null;
 
 // a plugin's own test of which vessels the viewer keeps
@@ -78,9 +86,8 @@ let tableSince = 0;
 
 export async function fetchTableRows() {
     try {
-        const response = await fetch("api/ships_table.json?stations=" + focus + (tableSince > 0 ? "&since=" + tableSince : ""));
-        if (!response.ok) return;
-        const data = await response.json();
+        const data = await viewed("ships_table.json" + (tableSince > 0 ? "?since=" + tableSince : ""));
+        if (!data) return;
         (data.rows || []).forEach((v) => {
             const s = Object.fromEntries(tableKeys.map((k, i) => [k, v[i]]));
             if (s.mmsi in shipsDB) Object.assign(shipsDB[s.mmsi].raw, s);
@@ -91,27 +98,15 @@ export async function fetchTableRows() {
     }
 }
 
-// the texts a vessel sends, escaped once as they arrive; what shows them decodes or takes them as they are
-export function escapeShipText(s) {
-    for (const key of ["shipname", "callsign", "destination", "eni", "vendorid"])
-        s[key] = sanitizeString(s[key] || "");
-    return s;
-}
-
 async function fetchShipsBody() {
-    let ships = {};
-
+    let ships;
+    const at = focus;
     try {
-        const response = await fetch("api/ships_array.json?stations=" + focus + (shipsSince > 0 ? "&since=" + shipsSince : ""));
-        if (!response.ok) {
-            console.log("failed loading ships: HTTP " + response.status);
-            return false;
-        }
-        ships = await response.json();
+        ships = await viewed("ships_array.json" + (shipsSince > 0 ? "?since=" + shipsSince : ""));
     } catch (error) {
         console.log("failed loading ships: " + error);
-        return false;
     }
+    if (!ships) return false;
 
     const dynamicKeys = [
         "mmsi", "lat", "lon", "distance",
@@ -127,7 +122,9 @@ async function fetchShipsBody() {
         "eni", "vendorid", "model", "serial"
     ];
 
+    // the new configuration may have taken the station in view away
     await updateServerConfig(ships.config_version);
+    if (at !== focus) return false;
     const serverTime = ships.time || 0;
     const isIncremental = shipsSince > 0 && ships.full !== true;
 
@@ -140,7 +137,8 @@ async function fetchShipsBody() {
     if (ships.static) {
         ships.static.forEach((v) => {
             const s = Object.fromEntries(staticKeys.map((k, i) => [k, v[i]]));
-            escapeShipText(s);
+            // the texts a vessel sends stay as sent: what writes them as HTML escapes them
+            for (const key of ["shipname", "callsign", "destination", "eni", "vendorid"]) s[key] ||= "";
             const mmsi = s.mmsi;
             if (mmsi in shipsDB) {
                 Object.assign(shipsDB[mmsi].raw, s);
@@ -189,12 +187,9 @@ async function fetchShipsBody() {
         });
     }
 
-    // Filter ships after merge
-    for (const mmsi in shipsDB) {
-        if (!(shipFilterOverride ?? includeShip)(shipsDB[mmsi].raw)) {
-            delete shipsDB[mmsi];
-        }
-    }
+    if (shipFilterOverride)
+        for (const mmsi in shipsDB)
+            if (!shipFilterOverride(shipsDB[mmsi].raw)) delete shipsDB[mmsi];
 
     if (ships.timeout) shipsTimeout = ships.timeout;
 
@@ -363,19 +358,19 @@ function mergeTrackPoints(older, newer) {
 export async function fetchTracks() {
     if (markerTracks.size == 0 && settings.show_all_tracks == false) return true;
 
-    let a;
+    let newPaths;
     let isDelta = false;
     try {
         if (settings.show_all_tracks) {
             // deltas accumulate points the server has pruned, so resync with a full fetch every hour
             isDelta = lastPathFetch > 0 && Date.now() - lastFullPathFetch < 3600 * 1000;
-            let sinceParam = "&since=" + lastPathFetch;
+            let sinceParam = "?since=" + lastPathFetch;
             if (!isDelta) {
                 setPathsFrom(trackWindowStart());
-                sinceParam = pathsFrom ? "&since=" + pathsFrom : "";
+                sinceParam = pathsFrom ? "?since=" + pathsFrom : "";
                 lastFullPathFetch = Date.now();
             }
-            a = await fetch("api/allpath.json?stations=" + focus + sinceParam);
+            newPaths = await viewed("allpath.json" + sinceParam);
         } else {
             // a vessel gone from the store takes its track with it
             for (const mmsi of markerTracks) {
@@ -386,12 +381,10 @@ export async function fetchTracks() {
             }
             const wanted = Array.from(markerTracks).filter((m) => !shipsDB[m] || filter.visible(shipsDB[m]));
             if (wanted.length === 0) return true;
-            const mmsi_str = wanted.join(",");
             setPathsFrom(0);
-            a = await fetch("api/path.json?" + mmsi_str + "&stations=" + focus);
+            newPaths = await viewed("path.json?" + wanted.join(","));
         }
-
-        const newPaths = await a.json();
+        if (!newPaths) return false;
 
         let maxTs = lastPathFetch;
         for (const mmsi in newPaths)

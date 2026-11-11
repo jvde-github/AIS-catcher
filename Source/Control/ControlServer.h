@@ -26,11 +26,28 @@
 
 #include "HTTPServer.h"
 #include "ControlCore.h"
+#include "Supervisor.h"
+
+// What the panel asks of the installation it controls.
+struct Installation
+{
+	virtual ~Installation() {}
+	virtual Supervisor &engine() = 0;
+	// for the Stations tab; a private position shows here too
+	virtual std::string stationsLive() = 0;
+	// where the API tester reaches the site's server on a port, false when there is none
+	virtual bool serverAddress(int port, std::string &host) = 0;
+	virtual std::vector<int> serverPorts() = 0;
+	// the servers with HTTPS: the port, and when its certificate expires
+	virtual std::vector<std::pair<int, long long>> serverTLS() = 0;
+	// each receiver's index and state
+	virtual std::vector<std::pair<int, std::string>> receiverStates() = 0;
+};
 
 class ControlServer : public IO::HTTPServer
 {
 public:
-	ControlServer(ControlCore &core) : core(core)
+	ControlServer(ControlCore &core, Installation &runs) : core(core), runs(runs)
 	{
 		setFrameSrc("'self' http: https:");
 		setFrameAncestors("'self'");
@@ -44,25 +61,12 @@ public:
 	// the /viewer mount: whoever is logged in here is its owner
 	bool ownerOfMount(const IO::HTTPRequest &r) override { return sameOrigin(r) && checkSession(r.cookie); }
 
-	// The site's answers, set before start(): what the stations are doing now,
-	// for the Stations tab; where the API tester reaches the site's server on
-	// a port, false when there is none; the ports the servers listen on
-	void setStationsLive(std::function<std::string()> f) { stations_live = std::move(f); }
-	void setServerAddress(std::function<bool(int, std::string &)> f) { server_address = std::move(f); }
-	void setServerPorts(std::function<std::vector<int>()> f) { server_ports = std::move(f); }
-	void setServerTLS(std::function<std::vector<std::pair<int, long long>>()> f) { server_tls = std::move(f); }
-	void setReceiverStates(std::function<std::vector<std::pair<int, std::string>>()> f) { receiver_states = std::move(f); }
-
 protected:
 	void processClients() override;
 
 private:
 	ControlCore &core;
-	std::function<std::string()> stations_live;
-	std::function<bool(int, std::string &)> server_address;
-	std::function<std::vector<int>()> server_ports;
-	std::function<std::vector<std::pair<int, long long>>()> server_tls;
-	std::function<std::vector<std::pair<int, std::string>>()> receiver_states;
+	Installation &runs;
 	std::vector<std::pair<int, std::string>> states_sent;
 	std::time_t states_time = 0;
 

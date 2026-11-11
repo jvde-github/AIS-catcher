@@ -23,17 +23,8 @@ export async function wirePanelTLS(root) {
     const cert = root.querySelector('#panel-tls-cert');
     const key = root.querySelector('#panel-tls-key');
     const state = root.querySelector('#panel-tls-state');
-    const [status, tls] = await Promise.all([api('/api/status'), api('/api/panel-tls')]);
-    cert.value = tls.cert || '';
-    key.value = tls.key || '';
-
-    const { text, warn } = panelTLSState(tls);
-    state.textContent = text;
-    state.classList.toggle('t-warn', warn);
-    for (const input of [cert, key])
-        input.readOnly = !!tls.fixed || outsideFolder(input.value, status.config_folder);
-    root.querySelector('[form="panel-tls-form"]').disabled = !!tls.fixed;
-
+    const apply = root.querySelector('[form="panel-tls-form"]');
+    apply.disabled = true;
     form.addEventListener('submit', async e => {
         e.preventDefault();
         const c = cert.value.trim(), k = key.value.trim();
@@ -44,4 +35,15 @@ export async function wirePanelTLS(root) {
             App.notify('error', err.message || 'Failed to set HTTPS');
         }
     });
+
+    const [status, tls] = await Promise.all([api('/api/status'), api('/api/panel-tls')]);
+    cert.value = tls.cert || '';
+    key.value = tls.key || '';
+
+    const { text, warn } = panelTLSState(tls);
+    state.textContent = text;
+    state.classList.toggle('t-warn', warn);
+    for (const input of [cert, key])
+        input.readOnly = !!tls.fixed || outsideFolder(input.value, status.config_folder);
+    apply.disabled = !!tls.fixed;
 }

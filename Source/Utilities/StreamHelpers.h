@@ -48,13 +48,26 @@ namespace Util
 		void Receive(const CFLOAT32 *data, int len, TAG &tag);
 	};
 
+	// Hands on what it receives, under the delivery lock when it is given one.
 	template <typename T>
 	class PassThrough : public SimpleStreamInOut<T, T>
 	{
+		std::mutex *lock = nullptr;
+
+		template <typename D>
+		void pass(D *data, int len, TAG &tag)
+		{
+			if (!lock)
+				return SimpleStreamInOut<T, T>::Send(data, len, tag);
+			std::lock_guard<std::mutex> held(*lock);
+			SimpleStreamInOut<T, T>::Send(data, len, tag);
+		}
+
 	public:
 		virtual ~PassThrough() {}
-		virtual void Receive(const T *data, int len, TAG &tag) { SimpleStreamInOut<T, T>::Send(data, len, tag); }
-		virtual void Receive(T *data, int len, TAG &tag) { SimpleStreamInOut<T, T>::Send(data, len, tag); }
+		void setLock(std::mutex *m) { lock = m; }
+		virtual void Receive(const T *data, int len, TAG &tag) { pass(data, len, tag); }
+		virtual void Receive(T *data, int len, TAG &tag) { pass(data, len, tag); }
 	};
 
 	template <typename T>
@@ -115,7 +128,6 @@ namespace Util
 	public:
 		virtual ~ConvertRAW() {}
 		Connection<CU8> outCU8;
-		Connection<CS8> outCS8;
 
 		void Receive(const RAW *raw, int len, TAG &tag);
 	};

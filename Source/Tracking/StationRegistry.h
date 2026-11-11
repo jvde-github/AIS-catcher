@@ -71,6 +71,7 @@ public:
 	void apply(const JSON::JSON &o, uint64_t &next_seq, Station *placed = nullptr, bool *placed_gone = nullptr)
 	{
 		Station s;
+		s.share_loc = true; // whoever tells a station on a feed has let its position out
 		bool gone = false;
 		for (const auto &p : o.getMembers())
 		{

@@ -49,10 +49,10 @@ namespace Services
 		int station = -1;
 		// from this machine itself
 		bool local = false;
+		// the calls its quota has left this hour, 0 when nothing counts it: a page is cut to them
+		int calls_left = 0;
 
 		std::string param(const std::string &name) const;
-		// sets or replaces one query parameter; the value as it should appear in the query
-		void setParam(const std::string &name, const std::string &value);
 		// every name and value of the query, decoded, in order
 		std::vector<std::pair<std::string, std::string>> params() const;
 		// a whole number from the query; `fallback` when absent, false when malformed
@@ -128,11 +128,12 @@ namespace Services
 
 	std::string urlEncode(const std::string &v);
 
-	// what writes the running engine's part of a status page
-	typedef std::function<void(JSON::Writer &, EnginePart)> EngineWriter;
+	// the running engine's part of a status page: whether it shares, and its outputs
+	void writeSharing(JSON::Writer &w, const SystemFacts &f);
+	void writeOutputs(JSON::Writer &w, const SystemFacts &f);
 
 	// which stations' locations a server shows: its share_loc, or each station's own where it does not say
-	Located located(Tracker &tracker, const ServerSpec &spec, const StationRegistry &stations);
+	Located located(const ServerSpec &spec, const StationRegistry &stations);
 
 	struct ShipSource;
 
@@ -142,7 +143,6 @@ namespace Services
 		Tracker &tracker;
 		const ServerSpec &spec;
 		std::function<StationRegistry()> stations;
-		EngineWriter engine;
 		std::function<SystemFacts()> facts;
 		// the API's walk over the ships, null for the ship table itself
 		ShipSource *ships;
@@ -163,9 +163,7 @@ namespace Services
 		// the methods the path takes, as an Allow header lists them
 		virtual std::string methods(const Request &) const { return "GET, HEAD"; }
 		virtual bool metered(const Request &) const { return false; }
-		// what a metered request counts for against a quota: one call, or more for a large page
+		// what an answered metered request counts for against a quota: one call, or more for a large page
 		virtual int cost(const Request &) const { return 1; }
-		// cuts a request down to what `calls` of the quota buy, when it asked for more
-		virtual void cap(Request &, int calls) const {}
 	};
 }

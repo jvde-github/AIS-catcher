@@ -79,7 +79,7 @@ namespace Services
 
 	Ui::Ui(const Context &context, std::function<int()> clients)
 		: tracker(context.tracker), spec(context.spec), stations(context.stations), options(context.spec.viewer), view(context.spec.view),
-		  engine(context.engine), clients(std::move(clients))
+		  facts(context.facts), clients(std::move(clients))
 	{
 		for (const auto &p : options.plugins)
 			plugins.addPlugin(p);
@@ -228,9 +228,6 @@ namespace Services
 
 	bool Ui::drawnStation(const std::vector<int> &focus, StationRegistry::Station &at)
 	{
-		// a tracker that measures from a position of its own draws that: the ship table does it
-		if (tracker.trackingConfig().fixed)
-			return false;
 		const StationRegistry registry = stations();
 		int only = -1, count = 0;
 		registry.forEach([&](const StationRegistry::Station &s) {
@@ -241,12 +238,13 @@ namespace Services
 		});
 		const int id = focus.size() == 1 ? focus[0] : count == 1 ? only : -1;
 		const StationRegistry::Station *s = id >= 0 ? registry.find(id) : nullptr;
-		if (!s || !located(tracker, spec, registry).at(id))
+		if (!s || !located(spec, registry).at(id))
 			return false;
 		const Tracker::Position now = tracker.stationPosition(id);
 		at = *s;
 		at.lat = now.lat;
 		at.lon = now.lon;
+		at.gps = now.source == Tracker::Position::GPS; // drawn as placed by a fix, not as one that may follow GPS
 		return true;
 	}
 
@@ -298,7 +296,7 @@ namespace Services
 	{
 		const std::string &p = request.path;
 		DB &db = tracker.ships();
-		const Located shown = located(tracker, spec, stations()).allow(request.station);
+		const Located shown = located(spec, stations()).allow(request.station);
 		const auto since = [&]() { return (std::time_t)toInt(request.param("since")); };
 		const std::vector<int> focus = focusOf(request);
 		const DB::Keep keep = keepFor(focus);
@@ -405,13 +403,10 @@ namespace Services
 			// the community icon's poll: the engine's part of the stat page, with the settings version
 			std::string out;
 			JSON::Writer w(out);
+			const SystemFacts f = facts();
 			w.beginObject().kv("config_version", configVersion());
-			if (engine)
-			{
-				engine(w, ENGINE_SHARING);
-				engine(w, ENGINE_RUNNING);
-			}
-			w.endObject();
+			writeSharing(w, f);
+			w.kv("engine_running", f.running).endObject();
 			w.finish();
 			response = Response::json(out);
 		}
@@ -427,12 +422,9 @@ namespace Services
 		{
 			std::string out;
 			JSON::Writer w(out);
-			w.beginObject().kv("tcp_clients", clients ? clients() : 0);
-			if (engine)
-				engine(w, ENGINE_OUTPUTS);
-			else
-				w.key("outputs").beginArray().endArray();
-			w.endObject();
+			w.beginObject().kv("tcp_clients", clients ? clients() : 0).key("outputs").beginArray();
+			writeOutputs(w, facts());
+			w.endArray().endObject();
 			w.finish();
 			response = Response::json(out);
 		}
@@ -562,7 +554,7 @@ namespace Services
 		JSON::Writer w(out);
 		w.beginObject();
 		const std::vector<int> of = figuresOf(focus);
-		const Located shown = located(tracker, spec, stations());
+		const Located shown = located(spec, stations());
 		const auto write = [&](Figures &f) { UiFormat::counters(w, f, shown.hidesRange(of, f.total.maxDistance())); };
 		if (of.empty())
 			tracker.withAll(write);
@@ -573,10 +565,30 @@ namespace Services
 			UiFormat::counters(w, *none, false);
 		}
 		w.kv("tcp_clients", clients ? clients() : 0);
-		if (engine)
-			engine(w, ENGINE_ALL);
-		else
-			w.kv("sharing", false).kv("sharing_uuid", false).kv("engine_running", false).key("outputs").beginArray().endArray();
+		const SystemFacts f = facts();
+		writeSharing(w, f);
+		w.kv("engine_running", f.running);
+		// a server with no site behind it has no engine to tell of
+		if (f.born)
+		{
+			const auto each = [&](const char *key, std::string DeviceFacts::*field) {
+				w.key(key).beginArray();
+				for (const auto &d : f.devices)
+					w.val(d.*field);
+				w.endArray();
+			};
+			each("product", &DeviceFacts::product);
+			each("vendor", &DeviceFacts::vendor);
+			each("serial", &DeviceFacts::serial);
+			each("model", &DeviceFacts::model);
+			each("sample_rate", &DeviceFacts::sample_rate);
+			each("device_label", &DeviceFacts::label);
+			w.kv("received", (unsigned long long)f.received).kv("run_time", std::to_string((long long)(std::time(nullptr) - f.born)))
+				.kv("os", Util::Helper::getOS()).kv("hardware", Util::Helper::getHardware()).kv("processor", Util::Helper::getProcessor());
+		}
+		w.key("outputs").beginArray();
+		writeOutputs(w, f);
+		w.endArray();
 		w.kv("sharing_link", "https://www.aiscatcher.org/livemap").kv("station", title()).kv("station_link", options.station_link)
 			.kv("vessel_count", keep ? vessels : db.getCount()).kv("vessel_max", db.getMaxCount())
 			.kv("build_date", __DATE__).kv("build_version", VERSION).kv("build_describe", VERSION_DESCRIBE)
@@ -618,7 +630,7 @@ namespace Services
 		std::vector<StationRegistry::Station> picker;
 		bool sharing = false;
 		const StationRegistry registry = stations();
-		const Located shown = located(tracker, spec, registry);
+		const Located shown = located(spec, registry);
 		for (const auto &s : registry.ordered())
 		{
 			if (!spec.showsStation(s.id))
@@ -645,10 +657,7 @@ namespace Services
 			.key("features").beginObject().kv("share_location", sharing).kv("save_messages", options.msg).kv("replay", options.replay)
 			.kv("realtime", options.realtime).kv("log", options.log).kv("decoder", options.decoder).kv("managed", options.managed)
 			.kv("places", (bool)tracker.places()).kv("outlines", view.place_geometry).kv("geojson", spec.geojson).kv("kml", spec.kml).kv("about_md", plugins.isAboutPresent());
-		if (engine)
-			engine(w, ENGINE_SHARING);
-		else
-			w.kv("sharing", false).kv("sharing_uuid", false);
+		writeSharing(w, facts());
 		w.endObject()
 			.key("stations").beginArray();
 		for (const auto &s : picker)

@@ -8,7 +8,6 @@ import { ships as shipsDB, clock, cardMmsi as card_mmsi, cardType as card_type, 
 import { getShipName } from '../../core/names.js';
 import { getDistanceVal, getDistanceUnit, getSpeedVal, getSpeedUnit } from '../../core/units.js';
 import { getCountryName, compactCount } from '@aiscatcher/core/text.js';
-import { decodeHTMLEntities } from '@aiscatcher/ui/components.js';
 import * as tableLib from '@aiscatcher/ui/table.js';
 import { getTableShiptype } from '../../map.js';
 import { saveSettings, effects } from '../../settings-store.js';
@@ -81,7 +80,6 @@ export function updateTablecard() {
     if (document.getElementById("tableside").dataset.context) return;
 
     const tableBody = document.getElementById("tablecardBody");
-    if (shipsDB == null) return;
 
     let shipKeys = Object.keys(shipsDB);
 
@@ -112,7 +110,7 @@ export function updateTablecard() {
     const matches = (key) => {
         if (!query) return true;
         const ship = shipsDB[key].raw;
-        return String(ship.mmsi).startsWith(query) || (decodeHTMLEntities(getShipName(ship)) || '').toLowerCase().includes(query);
+        return String(ship.mmsi).startsWith(query) || (getShipName(ship) || '').toLowerCase().includes(query);
     };
     const shown = shipKeys.filter(key => key in shipsDB && filter.visible(shipsDB[key]) && matches(key));
     document.getElementById('tableside_count').textContent = compactCount(shown.length);
@@ -137,7 +135,7 @@ export function updateTablecard() {
         const ship = shipsDB[key].raw;
         const age = clock - ship.last_signal;
         return {
-            mmsi: ship.mmsi, name: decodeHTMLEntities(getShipName(ship)) || ship.mmsi,
+            mmsi: ship.mmsi, name: getShipName(ship) || ship.mmsi,
             country: ship.country, countryName: getCountryName(ship.country),
             distance: ship.distance != null ? getDistanceVal(ship.distance) : '—',
             speed: ship.speed != null ? getSpeedVal(ship.speed) : '—',

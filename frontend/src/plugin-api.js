@@ -76,7 +76,6 @@ export function installPluginApi() {
     // (addTargetcardItem, card_mmsi, ...) still resolve. Module top-level no
     // longer leaks to window since script.js is an ES module.
     for (const k of Object.keys(window.AISCatcher)) {
-        if (k in window) continue;
         const desc = Object.getOwnPropertyDescriptor(window.AISCatcher, k);
         if (desc.get) {
             Object.defineProperty(window, k, { get: desc.get, configurable: true });
@@ -87,13 +86,9 @@ export function installPluginApi() {
 }
 
 export function loadPlugins() {
-    if (typeof window.loadPlugins === 'undefined') {
-        window.loadPlugins = function () { };
-    }
-
     console.log("Starting plugin code");
 
-    window.loadPlugins && window.loadPlugins();
+    window.loadPlugins?.();
 
     console.log("Plugin loading completed");
 }

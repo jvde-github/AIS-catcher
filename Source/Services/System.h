@@ -36,7 +36,7 @@ namespace Services
 	{
 	public:
 
-		explicit System(const Context &context) : tracker(context.tracker), facts(context.facts), engine(context.engine) {}
+		explicit System(const Context &context) : tracker(context.tracker), facts(context.facts) {}
 
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
@@ -44,7 +44,6 @@ namespace Services
 	private:
 		Tracker &tracker;
 		std::function<SystemFacts()> facts;
-		EngineWriter engine;
 
 		Response overview();
 		Response receivers();

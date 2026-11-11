@@ -168,8 +168,6 @@ export function showTab(id = resolveTab()) {
 
 // the tab the settings name, or the one to fall back on when that one is off
 export function resolveTab() {
-    if (settings.tab == "settings") settings.tab = "stat";
-
     const tab = tabOf(settings.tab);
     if (!tab) settings.tab = "stat";
     else if (!enabled(tab)) settings.tab = "map";

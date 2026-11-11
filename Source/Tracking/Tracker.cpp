@@ -18,7 +18,12 @@
 
 #include "Tracker.h"
 
+#include <cerrno>
 #include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <fstream>
+#include <sys/stat.h>
 #include "Helper.h"
 #include "Logger.h"
 
@@ -36,22 +41,7 @@ Tracker::Tracker()
 	db.events >> events;
 	// called with the ship table locked: the figures' lock is never taken the other way round
 	db.setStationHeard([this](int id) { return lastHeard(id); });
-	db.setStationPlaced([this](int id, FLOAT32 lat, FLOAT32 lon) { placeStation(id, lat, lon); });
-}
-
-void Tracker::placeStation(int id, FLOAT32 lat, FLOAT32 lon)
-{
-	std::lock_guard<std::mutex> lock(stations_mtx);
-	if (!isValidCoord(lat, lon))
-	{
-		stations.erase(id);
-		return;
-	}
-	Station &s = stations[id];
-	s.lat = s.now.lat = lat;
-	s.lon = s.now.lon = lon;
-	s.now.source = Position::CONFIGURED;
-	s.gps = false;
+	db.setStationPlaced([this](int id, FLOAT32 lat, FLOAT32 lon) { table->place(id, lat, lon); });
 }
 
 namespace
@@ -87,10 +77,7 @@ void Tracker::configure(const TrackingConfig &next)
 		configured = true;
 
 		const auto live = [&] {
-			db.setConfigPosition(applied.lat, applied.lon, applied.use_gps);
-			db.setShareLatLon(applied.latlon_share);
 			db.setMsgSave(applied.msg_save);
-			db.setOwnMMSI(applied.own_mmsi);
 			db.setTimeHistory(applied.time_history);
 			db.setTrackTime(applied.track_time);
 			db.setExpireFields(applied.expire_fields);
@@ -107,11 +94,6 @@ void Tracker::configure(const TrackingConfig &next)
 			db.configure(live);
 	}
 
-	{
-		std::lock_guard<std::mutex> lock(stations_mtx);
-		fixed_at.lat = next.fixed ? next.lat : LAT_UNDEFINED;
-		fixed_at.lon = next.fixed ? next.lon : LON_UNDEFINED;
-	}
 	std::lock_guard<std::mutex> lock(figures_mtx);
 	cutoff = next.cutoff > 0 ? next.cutoff : LONG_RANGE_CUTOFF_DEFAULT;
 	figures.setCutoff(cutoff);
@@ -197,17 +179,6 @@ void Tracker::refreshPlaces()
 		setPlaces(c->snapshot());
 }
 
-const char *Tracker::sourceName(Position::Source s)
-{
-	switch (s)
-	{
-	case Position::CONFIGURED: return "configured";
-	case Position::GPS: return "gps";
-	case Position::VESSEL: return "vessel";
-	default: return nullptr;
-	}
-}
-
 void Tracker::Intake::Receive(const JSON::JSON *data, int len, TAG &tag)
 {
 	// a copy: the receiver's tag goes on to other readers as it came
@@ -235,14 +206,18 @@ void Tracker::Intake::Receive(const JSON::JSON *data, int len, TAG &tag)
 	switch (msg->type())
 	{
 	case 1: case 2: case 3: case 9: case 18: case 19: case 27:
-		tracker->follow(msg->mmsi(), t.lat, t.lon);
+		tracker->moved(tracker->table->follow(msg->mmsi(), t.lat, t.lon));
 	}
 }
 
 void Tracker::GpsIntake::Receive(const AIS::GPS *data, int len, TAG &tag)
 {
-	if (len && !tracker->moveByGPS(tag.station_id, data[0].getLat(), data[0].getLon()))
-		tracker->db.Receive(data, len, tag);
+	if (!len)
+		return;
+	std::vector<int> ids;
+	tracker->table->moveByGPS(tag.station_id, data[0].getLat(), data[0].getLon(), ids);
+	for (int id : ids)
+		tracker->moved(id);
 }
 
 void Tracker::AdsbIntake::Receive(const Plane::ADSB *data, int len, TAG &tag)
@@ -254,100 +229,22 @@ void Tracker::AdsbIntake::Receive(const Plane::ADSB *data, int len, TAG &tag)
 
 void Tracker::place(const AIS::Message *msg, TAG &tag)
 {
-	std::lock_guard<std::mutex> lock(stations_mtx);
 	// a message from a station the configuration lists, as a feed from a hub carries them, counts
 	// there; one a foreign feed names stays at its input's, so no station appears unasked
-	if (msg && msg->getStation() >= 0 && msg->getStation() != tag.station_id && stations.count(msg->getStation()))
-		tag.station_id = msg->getStation();
-	if (isValidCoord(fixed_at.lat, fixed_at.lon))
+	const Position at = table->locate(msg ? msg->getStation() : -1, tag.station_id);
+	if (isValidCoord(at.lat, at.lon))
 	{
-		tag.station_lat = fixed_at.lat;
-		tag.station_lon = fixed_at.lon;
+		tag.station_lat = at.lat;
+		tag.station_lon = at.lon;
+	}
+}
+
+void Tracker::moved(int id)
+{
+	if (id < 0)
 		return;
-	}
-	auto it = stations.find(tag.station_id);
-	if (it != stations.end() && isValidCoord(it->second.now.lat, it->second.now.lon))
-	{
-		tag.station_lat = it->second.now.lat;
-		tag.station_lon = it->second.now.lon;
-	}
-}
-
-// A fix moves the stations that follow GPS and take it: the one its input
-// names, and any that no input names, which take GPS from every input.
-bool Tracker::moveByGPS(int id, FLOAT32 lat, FLOAT32 lon)
-{
-	std::vector<int> moved;
-	bool known = false;
-	{
-		std::lock_guard<std::mutex> lock(stations_mtx);
-		known = stations.count(id) > 0;
-		if (!isValidCoord(lat, lon))
-			return known;
-		const std::time_t now = std::time(nullptr);
-		for (auto &s : stations)
-		{
-			if (!s.second.followsGPS() || (s.first != id && s.second.inputs > 0))
-				continue;
-			Position &p = s.second.now;
-			p.lat = lat;
-			p.lon = lon;
-			p.source = Position::GPS;
-			p.time = now;
-			moved.push_back(s.first);
-		}
-	}
-	if (!moved.empty())
-		publish(moved);
-	return known || !moved.empty();
-}
-
-void Tracker::follow(uint32_t mmsi, FLOAT32 lat, FLOAT32 lon)
-{
-	int id = 0;
-	{
-		std::lock_guard<std::mutex> lock(stations_mtx);
-		if (riders.empty())
-			return;
-		auto r = riders.find(mmsi);
-		if (r == riders.end())
-			return;
-		id = r->second;
-		Position &p = stations[id].now;
-		p.lat = lat;
-		p.lon = lon;
-		p.source = Position::VESSEL;
-		p.time = std::time(nullptr);
-	}
-	publish({id});
-}
-
-// The map's stations where they are now. A moving station is told again
-// only once it has moved some fifty metres, so a GPS fix a second does not
-// turn every poll of the map into a row per station.
-void Tracker::publish(std::vector<int> moved)
-{
-	std::vector<StationRegistry::Station> out;
-	{
-		std::lock_guard<std::mutex> lock(stations_mtx);
-		for (int id : moved)
-		{
-			const StationRegistry::Station *s = shown.find(id);
-			auto it = stations.find(id);
-			if (!s || it == stations.end())
-				continue;
-			const Position &p = it->second.now;
-			if (std::fabs(s->lat - p.lat) < 0.0005f && std::fabs(s->lon - p.lon) < 0.0005f)
-				continue;
-			StationRegistry::Station copy = *s;
-			copy.lat = p.lat;
-			copy.lon = p.lon;
-			shown.define(copy);
-			out.push_back(copy);
-		}
-	}
-	for (const auto &s : out)
-		db.setStation(s);
+	const Position at = table->at(id);
+	db.moveStation(id, at.lat, at.lon);
 }
 
 void Tracker::setStations(const StationRegistry &registry)
@@ -364,69 +261,28 @@ void Tracker::setStations(const StationRegistry &registry)
 			else
 				it = station_figures.erase(it);
 	}
+	// the map shows each where it is now
+	for (StationRegistry::Station s : registry.ordered())
 	{
-		std::lock_guard<std::mutex> lock(stations_mtx);
-		applyStations(registry);
-		shown = StationRegistry();
-		for (const auto &s : registry.ordered())
+		const Position at = table->at(s.id);
+		if (isValidCoord(at.lat, at.lon))
 		{
-			StationRegistry::Station copy = s;
-			auto it = stations.find(s.id);
-			if (it != stations.end() && isValidCoord(it->second.now.lat, it->second.now.lon))
-			{
-				copy.lat = it->second.now.lat;
-				copy.lon = it->second.now.lon;
-			}
-			copy.online = true;
-			shown.define(copy);
-			list.push_back(copy);
+			s.lat = at.lat;
+			s.lon = at.lon;
 		}
+		s.online = true;
+		list.push_back(s);
 	}
 	db.setStations(list);
 	remeasure();
 }
 
-void Tracker::applyStations(const StationRegistry &registry)
-{
-	std::map<int, Station> next;
-	riders.clear();
-	registry.forEach([&](const StationRegistry::Station &s) {
-		Station &n = next[s.id];
-		n.lat = s.lat;
-		n.lon = s.lon;
-		n.mmsi = s.mmsi;
-		n.gps = s.gps;
-		n.inputs = s.inputs;
-		if (s.mmsi)
-			riders[s.mmsi] = s.id;
-		// a fix outlives a new configuration while its source still applies
-		auto old = stations.find(s.id);
-		if (old != stations.end() && ((old->second.now.source == Position::GPS && n.followsGPS()) ||
-									  (old->second.now.source == Position::VESSEL && s.mmsi && s.mmsi == old->second.mmsi)))
-			n.now = old->second.now;
-		else if (isValidCoord(s.lat, s.lon))
-		{
-			n.now.lat = s.lat;
-			n.now.lon = s.lon;
-			n.now.source = Position::CONFIGURED;
-		}
-	});
-	stations.swap(next);
-	registry_set = true;
-}
-
 // what a restored ship, or one heard before a move, is measured from: where
-// the station that last heard it is now. Any other keeps a distance only from
-// the tracker's own position. A server decides what of it to show.
+// the station that last heard it is now. Any other has no distance. A server
+// decides what of it to show.
 void Tracker::remeasure()
 {
-	std::map<int, std::pair<FLOAT32, FLOAT32>> at;
-	{
-		std::lock_guard<std::mutex> lock(stations_mtx);
-		for (const auto &s : stations)
-			if (isValidCoord(s.second.now.lat, s.second.now.lon))
-				at[s.first] = std::make_pair(s.second.now.lat, s.second.now.lon);
-	}
+	const std::map<int, std::pair<FLOAT32, FLOAT32>> at = table->placed();
 	db.measureFrom([&](const Ship &ship, float &lat, float &lon) {
 		if (!ship.heard[0].last)
 			return false;
@@ -439,19 +295,6 @@ void Tracker::remeasure()
 	});
 }
 
-Tracker::Position Tracker::stationPosition(int id)
-{
-	std::lock_guard<std::mutex> lock(stations_mtx);
-	auto it = stations.find(id);
-	return it == stations.end() ? Position() : it->second.now;
-}
-
-Tracker::Position Tracker::stationPositionPrivate(int id)
-{
-	std::lock_guard<std::mutex> lock(stations_mtx);
-	auto it = stations.find(id);
-	return it == stations.end() ? Position() : it->second.now;
-}
 
 
 bool Tracker::save(const std::string &file)
@@ -478,35 +321,91 @@ bool Tracker::save(const std::string &file)
 				ok = f.write((const char *)&id, sizeof(id)) && s.second->save(f) && s.second->saveProfile(f);
 			}
 		}
-		ok = ok && db.Save(f) && events.save(f);
-		if (ok)
-		{
-			std::lock_guard<std::mutex> lock(stations_mtx);
-			uint32_t fixes = 0;
-			for (const auto &s : stations)
-				fixes += s.second.now.source == Position::GPS || s.second.now.source == Position::VESSEL;
-			ok = (bool)f.write((const char *)&fixes, sizeof(fixes));
-			for (const auto &s : stations)
-			{
-				const Position &p = s.second.now;
-				if (!ok || (p.source != Position::GPS && p.source != Position::VESSEL))
-					continue;
-				const int32_t id = s.first;
-				const uint32_t mmsi = s.second.mmsi;
-				const uint8_t source = p.source;
-				const int64_t time = p.time;
-				ok = f.write((const char *)&id, sizeof(id)) && f.write((const char *)&p.lat, sizeof(p.lat)) &&
-					 f.write((const char *)&p.lon, sizeof(p.lon)) && f.write((const char *)&source, sizeof(source)) &&
-					 f.write((const char *)&time, sizeof(time)) && f.write((const char *)&mmsi, sizeof(mmsi));
-			}
-		}
-		if (!ok)
+		// the stations' last fixes ride in the backup
+		if (!ok || !db.Save(f) || !events.save(f) || !table->save(f))
 			return false;
 	}
 #ifdef _WIN32
 	std::remove(file.c_str());
 #endif
 	return std::rename(tmp.c_str(), file.c_str()) == 0;
+}
+
+// an existing `to` is kept: a copy made on an earlier start is the one of
+// before the upgrade
+static bool keepCopy(const std::string &from, const std::string &to)
+{
+	if (std::ifstream(to, std::ios::binary))
+		return true;
+	const std::string tmp = to + ".tmp";
+	if (!Util::Helper::createTemp(tmp, to))
+		return false;
+	{
+		std::ifstream in(from, std::ios::binary);
+		std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
+		if (!in || !out || !(out << in.rdbuf()) || !out.flush())
+		{
+			std::remove(tmp.c_str());
+			return false;
+		}
+	}
+	if (std::rename(tmp.c_str(), to.c_str()) != 0)
+	{
+		std::remove(tmp.c_str());
+		return false;
+	}
+	return true;
+}
+
+// why a backup that is not simply there yet cannot be read, nothing otherwise
+static std::string backupProblem(const std::string &file)
+{
+	FILE *f = fopen(file.c_str(), "rb");
+	if (f)
+	{
+		fclose(f);
+		return "";
+	}
+	if (errno != ENOENT)
+		return strerror(errno);
+	const std::size_t slash = file.find_last_of("/\\");
+	struct stat s;
+	if (slash != std::string::npos && slash > 0 && stat(file.substr(0, slash).c_str(), &s) != 0)
+		return "its folder cannot be seen: it does not exist, or the service's hardening hides it";
+	return "";
+}
+
+bool Tracker::open(const std::string &file)
+{
+	Restored r = restore(file);
+	// an earlier version's backup is copied beside it once, then imported and written in this version's format
+	bool imported = false;
+	if (r == FOREIGN)
+	{
+		if (!keepCopy(file, file + ".before-upgrade"))
+		{
+			Error() << "Tracker: " << file << " is of an earlier version and could not be copied beside it: left as it is, not backed up";
+			return false;
+		}
+		imported = importViewerBackup(file);
+		if (!imported)
+		{
+			Error() << "Tracker: cannot import the earlier version's backup " << file;
+			return true;
+		}
+		r = RESTORED;
+	}
+	if (r == RESTORED)
+		Info() << "Tracker: " << db.getCount() << " ships " << (imported ? "imported from " : "restored from ") << file << (imported ? ", of an earlier version, kept as .before-upgrade" : "");
+	else
+	{
+		const std::string problem = backupProblem(file);
+		if (problem.empty())
+			Info() << "Tracker: no backup yet at " << file;
+		else
+			Error() << "Tracker: cannot read the backup " << file << ": " << problem;
+	}
+	return true;
 }
 
 Tracker::Restored Tracker::restore(const std::string &file)
@@ -554,37 +453,8 @@ Tracker::Restored Tracker::restore(const std::string &file)
 		Warning() << "Tracker: events could not be restored from " << file;
 		return RESTORED;
 	}
-	uint32_t fixes = 0;
-	if (version < 2 || !f.read((char *)&fixes, sizeof(fixes)))
-		return RESTORED;
-	std::lock_guard<std::mutex> lock(stations_mtx);
-	for (uint32_t i = 0; i < fixes; i++)
-	{
-		int32_t id = 0;
-		uint32_t mmsi = 0;
-		uint8_t source = 0;
-		int64_t time = 0;
-		Position p;
-		if (!f.read((char *)&id, sizeof(id)) || !f.read((char *)&p.lat, sizeof(p.lat)) || !f.read((char *)&p.lon, sizeof(p.lon)) ||
-			!f.read((char *)&source, sizeof(source)) || !f.read((char *)&time, sizeof(time)) || !f.read((char *)&mmsi, sizeof(mmsi)))
-			break;
-		if ((source != Position::GPS && source != Position::VESSEL) || !isValidCoord(p.lat, p.lon))
-			continue;
-		p.source = (Position::Source)source;
-		p.time = (std::time_t)time;
-		// before the registry is known the fix waits in its entry; after, only where it still applies
-		auto it = stations.find(id);
-		if (it == stations.end())
-		{
-			if (registry_set)
-				continue;
-			it = stations.emplace(id, Station()).first;
-			it->second.mmsi = mmsi;
-		}
-		else if (!((source == Position::GPS && it->second.followsGPS()) || (source == Position::VESSEL && it->second.mmsi == mmsi)))
-			continue;
-		it->second.now = p;
-	}
+	if (version >= 2)
+		table->load(f);
 	return RESTORED;
 }
 

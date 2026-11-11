@@ -22,6 +22,7 @@
 
 #include <functional>
 
+#include "MsgOut.h"
 #include "Receiver.h"
 #include "StationRegistry.h"
 #include "SiteConfig.h"
@@ -29,41 +30,23 @@
 #include "SystemFacts.h"
 
 class Site;
-namespace IO
-{
-	class HubStreamer;
-}
+class Tracker;
 
-// One engine run: the receivers, their outputs and the servers that belong to them,
-// built by the configuration reader and started by run(). Managed mode constructs a new
+// One engine run: the receivers, built by the configuration reader, opened and run on a site
+// that outlives it and keeps every consumer of their messages. Managed mode constructs a new
 // one for every start/stop cycle.
-struct Engine
+struct Engine : EngineWiring
 {
-	// Called by run() once the servers serve and before the receivers start:
-	// a build that adds services attaches them here.
-	static std::function<void(Engine &, Site &)> before_run;
-	// Called by run() when the main loop has ended, while the receivers are
-	// still alive: a build that added services saves and stops them here.
-	static std::function<void(Engine &, Site &)> after_run;
-
-	// Receivers and outputs
 	std::vector<std::unique_ptr<Receiver>> receivers;
-	std::vector<std::unique_ptr<IO::OutputMessage>> msg;
+	// as the reader made them; the site's from the moment the engine runs
+	Outputs outputs;
+	// what the reader told the engine itself, beside its receivers
+	std::string told;
 
-	// Community feed output, owned by msg; set up at most once
-	IO::HubStreamer *comm_feed = nullptr;
+	// Managed mode's save while running: receivers told the same carry on, the others open, the unlisted stop.
+	// False when the engine itself is told differently; throws when a receiver does not open.
+	bool follow(Engine &next, const StationRegistry &configured, const StationDefaults &defaults);
 
-	// The receiving stations: those the configuration defines, and the default
-	// station, 0, when a receiver names none and the file does not list it
-	StationRegistry stations;
-	// what the configuration says of the default station, for when it does not
-	// list it: -N and a "server" entry feed it in every mode
-	StationDefaults station_defaults;
-	// managed mode's save: the stations as the file now has them, while the engine runs
-	void refreshStations(const StationRegistry &configured);
-
-	// what the configuration says of the site, which outlives the engine
-	SiteConfig site_config;
 	// called on each pass of the run loop: managed mode applies settings changes here
 	std::function<void()> loop_hook;
 
@@ -79,20 +62,18 @@ struct Engine
 	int own_mmsi = -1;
 	int timeout = 0;
 	bool timeout_nomsg = false;
-	bool xshare_defined = false;
 
-	// The first receiver is there from the start, for the configuration
-	// reader to fill: refreshDevices() runs on its device manager before any
-	// configuration is read, and SoapySDR keeps its enumeration per instance,
-	// so only receiver 0's SOAPYSDR can open an enumerated handle.
+	// The first receiver is there from the start, for the configuration reader to fill.
 	Engine();
 
 	// The site outlives the engine, so detaching must happen even when run()
 	// threw halfway or was never called at all.
 	~Engine();
 
-	// returns 0, or -2 when -T stopped the run
-	int run(Site &site);
+	// open: the stations resolved and told to the site, the devices opened
+	void open(Site &site, const StationRegistry &configured, const StationDefaults &defaults, bool tracked);
+	// run: until stopped; returns 0, -2 when -T stopped the run, -1 when a failure did
+	int run();
 
 	// Stop the receivers and drop the site's references into this object.
 	// Idempotent.
@@ -100,36 +81,40 @@ struct Engine
 
 	DeviceManager &scanner() { return receivers.front()->devices(); }
 
-	void createCommunityFeed();
-
 	// what the site's status pages say of this session
 	EngineFacts facts();
 
+	void unwire() override;
+	void feed(Tracker &t, const TrackerSpec *own) override;
+	uint64_t route(const std::vector<std::string> &zones, uint64_t groups_in, const std::string &what) override;
+	void wire(IO::OutputMessage &o) override;
+	uint64_t radios() override;
+
 private:
-	typedef std::chrono::high_resolution_clock::time_point time_point;
+	typedef std::chrono::steady_clock::time_point time_point;
 
 	bool detached = false;
-	// set when run() starts
+	// set by open()
 	Site *site = nullptr;
+	bool tracked = false;
+	// what every receiver's decoders tag their messages with
+	std::string tags;
 	// whether a receiver asks for the rates, and whether every device delivers
 	// by callback: a file input pumps its data from the main loop instead
 	bool oneverbose = false, iscallback = true;
 
-	// the phases of run(), in its order
-	void resolveStations();
-	void openReceivers();
-	void configureSite();
-	void shareFeed();
-	void routeOutputs();
-	void connectSinks();
-	void feedTrackers();
+	// a receiver's device and models; all of them numbered; one started
+	void open(Receiver &r);
+	void number();
+	void play(Receiver &r);
+	// the phases of run(), in their order
+	void tellSharing();
 	void start();
 	int loop();
 	void printRates();
 	bool watchdogExpired(const time_point &now, time_point &since, std::vector<uint64_t> &counts, int &code);
 	void reportTotals();
 
-	bool hasServer() const;
 #ifdef HASAPI
 	void publishReceivers();
 #endif

@@ -39,7 +39,6 @@ export function createViewerConfig({current, applyMaps, applyRuntime, pluginsCha
         },
         apply:async (next, previous) => {
             const changes = {
-                stationsChanged:changed(previous.stations,next.stations),
                 restartChanged:changed(previous.restart_required,next.restart_required),
                 aboutChanged:previous.about_version !== next.about_version,
             };

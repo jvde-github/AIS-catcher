@@ -57,7 +57,7 @@ namespace Services
 			bool overlay;
 		};
 		std::vector<Tiles> maps;
-		EngineWriter engine;
+		std::function<SystemFacts()> facts;
 		std::function<int()> clients;
 		// the station the page draws: the one in focus, or the only one, when it shares where it is
 		bool drawnStation(const std::vector<int> &focus, StationRegistry::Station &at);

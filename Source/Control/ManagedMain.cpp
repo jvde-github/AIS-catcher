@@ -24,10 +24,8 @@
 #include "Config.h"
 #include "ControlServer.h"
 #include "Helper.h"
-#include "JSON.h"
 #include "Logger.h"
 #include "ManagedMain.h"
-#include "JSON/Parser.h"
 
 #if defined(HASWEBVIEWER) && defined(HASAPI)
 #include "Server.h"
@@ -57,166 +55,207 @@ namespace Managed
 
 #else
 
-	// one catalogue the panel's editor edits and the tracker reads, wherever the
-	// configuration keeps the places
-	static void usePanelPlaces(ControlCore &core, SiteConfig &site)
-	{
-		site.places.clear();
-		site.catalogue = core.getPlaces();
-	}
-
-	struct Saved
-	{
-		SiteConfig site;
-		StationRegistry stations;
-	};
-
-	static Saved readSaved(ControlCore &core)
-	{
-		JSON::Parser parser(JSON_DICT_SETTING);
-		auto doc = parser.parse(core.getConfig());
-		Saved saved;
-		StationDefaults defaults;
-		// the listed stations first: a server's station_id describes one only where the file does not
-		if (const auto *v = doc.root[AIS::KEY_SETTING_STATIONS])
-			SiteReader::stations(*v, saved.stations);
-		SiteReader::managedSite(doc.root, Config::baseDir(), core.getControlPort(), core.getViewerPort(), core.getBindAddress(), saved.site, defaults, saved.stations);
-		usePanelPlaces(core, saved.site);
-		return saved;
-	}
-
-	// applies the site and mounts the viewer beside the panel once; a taken port leaves
-	// the panel up without a viewer, and the next apply tries again
-	static void applySite(ControlCore &core, ControlServer &server, Site &site, const SiteConfig &cfg)
-	{
-		site.configure(cfg);
-		Services::Server *viewer = site.server(core.getViewerPort());
-		if (!viewer)
-			Error() << "Control: viewer not started on port " << core.getViewerPort() << "; the control panel stays available";
-		// one exposed port is enough for a station reached through a VPN or proxy
-		else if (!viewer->isMounted())
-			server.mount("/viewer", viewer);
-		core.setViewerServing(viewer != nullptr);
-	}
-
-	static void applyConfig(ControlCore &core, ControlServer &server, Site &site, Engine *engine)
-	{
-		try
-		{
-			const Saved saved = readSaved(core);
-			applySite(core, server, site, saved.site);
-			if (engine)
-				engine->refreshStations(saved.stations);
-		}
-		catch (const std::exception &e)
-		{
-			Error() << "Control: configuration not applied: " << e.what();
-		}
-	}
-
-	static void syncSite(ControlCore &core, ControlServer &server, Site &site, Engine *engine = nullptr)
-	{
-		auto places = core.getPlaces();
-		if (places && places->consumeChanged())
-			site.refreshPlaces();
-		if (core.consumeConfigChanged())
-			applyConfig(core, server, site, engine);
-	}
-
-	// construct before the Engine so the session covers ~Engine's device close
-	struct EngineSessionGuard
+	// Managed mode: the site lives as long as the program, the engine comes and goes on it.
+	class ManagedInstallation : public Installation
 	{
 		ControlCore &core;
-		EngineSessionGuard(ControlCore &c) : core(c) { core.beginEngineSession(); }
-		~EngineSessionGuard() { core.endEngineSession(); }
-	};
+		Supervisor supervisor;
+		Site site;
+		ControlServer server;
 
-	// One engine session: read the config, start the receivers, run until stopped
-	// or failed. The site and its viewer serve throughout.
-	static void runEngine(ControlCore &core, ControlServer &server,
-						  const std::string &config_file, Site &site)
-	{
-		EngineSessionGuard session(core);
-		Engine engine;
-		Config c(engine);
-		c.setManaged(core.getControlPort(), core.getViewerPort(), core.getBindAddress());
-		// stdout is the journal or the container log here: silent unless "screen"
-		// in the config says otherwise, where the command line prints NMEA by default
-		engine.screen.setScreen("0");
-
-		try
+		// one catalogue the panel's editor edits and the tracker reads, wherever the
+		// configuration keeps the places
+		void usePanelPlaces(SiteConfig &cfg)
 		{
-			engine.scanner().refreshDevices();
+			cfg.places.clear();
+			cfg.catalogue = core.getPlaces();
+		}
 
-			core.consumeConfigChanged();
-			c.read(config_file);
+		// the saved document as an engine reads it, at its start and at every save
+		void read(Engine &engine, Config &c)
+		{
+			c.setManaged(core.getControlPort(), core.getViewerPort(), core.getBindAddress());
+			c.setFolder(Config::folderOf(core.getConfigFile()));
+			// stdout is the journal or the container log here: silent unless "screen"
+			// in the config says otherwise, where the command line prints NMEA by default
+			engine.screen.setScreen("0");
+			c.set(core.getConfig());
 			c.finish();
+			usePanelPlaces(c.site);
+		}
+
+		static void requireInput(const Engine &engine)
+		{
 			for (auto &r : engine.receivers)
 				if (r->inputType() == Type::NONE && r->devices().serial().empty())
-					throw std::runtime_error(
-						"no input device selected, configure one under Inputs");
-
-			usePanelPlaces(core, engine.site_config);
-			engine.loop_hook = [&] { syncSite(core, server, site, &engine); };
-			engine.managed = true;
-			engine.activity = &core.getChannelActivity();
-			engine.on_started = [&] {
-				core.reportRunning();
-				Info() << "Control: engine started";
-			};
-
-			engine.run(site);
+					throw std::runtime_error("no input device selected, configure one under Inputs");
 		}
-		catch (std::exception const &e)
+
+		// applies the site and mounts the viewer beside the panel once; a taken port leaves
+		// the panel up without a viewer, and the next apply tries again
+		void applySite(const SiteConfig &cfg)
 		{
-			Error() << e.what();
-
-			// the throw skipped run()'s own detach() and ~Engine only runs at the end
-			// of this call
-			engine.detach();
-			core.engineFailed();
+			site.configure(cfg);
+			Services::Server *viewer = site.server(core.getViewerPort());
+			if (!viewer)
+				Error() << "Control: viewer not started on port " << core.getViewerPort() << "; the control panel stays available";
+			// one exposed port is enough for a station reached through a VPN or proxy
+			else if (!viewer->isMounted())
+				server.mount("/viewer", viewer);
+			core.setViewerServing(viewer != nullptr);
 		}
-		core.reportStopped();
-		Info() << "Control: engine stopped";
-	}
 
-	// The back-off before an automatic restart. False when a command or the
-	// shutdown cut it short.
-	static bool waitForRetry(ControlCore &core, ControlServer &server, Site &site, int delay)
-	{
-		Warning() << "Control: engine stopped unexpectedly, restarting in " << delay
-				  << " seconds";
-		const int seq = core.commandSequence();
-		for (int i = 0;
-			 i < delay * 4 && !stop_process && core.commandSequence() == seq; i++)
+		// A save: the site, the outputs and a running engine's receivers follow it.
+		void apply(Engine *engine)
 		{
-			// the engine is down for the whole wait, so the panel's changes apply here
-			// as well as when idle
-			syncSite(core, server, site);
-			std::this_thread::sleep_for(std::chrono::milliseconds(250));
+			Engine next;
+			Config c(next);
+			try
+			{
+				read(next, c);
+				applySite(c.site);
+				if (engine)
+					site.setOutputs(std::move(next.outputs));
+			}
+			catch (const std::exception &e)
+			{
+				Error() << "Control: configuration not applied: " << e.what();
+				return;
+			}
+			if (!engine)
+				return;
+			requireInput(next);
+			if (!engine->follow(next, c.stations, c.station_defaults))
+				supervisor.restart();
 		}
-		return !stop_process && core.engineDesired();
-	}
+
+		// the panel's changes, whether an engine runs or not
+		void sync(Engine *engine = nullptr)
+		{
+			auto places = core.getPlaces();
+			if (places && places->consumeChanged())
+				site.refreshPlaces();
+			if (core.consumeConfigChanged())
+				apply(engine);
+		}
+
+		// One engine session: read the config, start the receivers, run until stopped
+		// or failed. The site and its viewer serve throughout.
+		void session()
+		{
+			// before the engine, so it covers ~Engine's device close: no device rescans meanwhile
+			struct Busy
+			{
+				ControlCore &core;
+				Busy(ControlCore &c) : core(c) { core.beginEngineSession(); }
+				~Busy() { core.endEngineSession(); }
+			} busy(core);
+			Engine engine;
+			Config c(engine);
+
+			try
+			{
+				engine.scanner().refreshDevices();
+
+				core.consumeConfigChanged();
+				read(engine, c);
+				requireInput(engine);
+				engine.loop_hook = [&] { sync(&engine); };
+				engine.managed = true;
+				engine.activity = &core.getChannelActivity();
+				engine.on_started = [&] {
+					supervisor.reportRunning();
+					Info() << "Control: engine started";
+				};
+
+				engine.open(site, c.stations, c.station_defaults, c.site.tracks());
+				applySite(c.site);
+				engine.run();
+			}
+			catch (std::exception const &e)
+			{
+				Error() << e.what();
+
+				// the throw skipped run()'s own detach() and ~Engine only runs at the end
+				// of this call
+				engine.detach();
+				supervisor.failed();
+			}
+			supervisor.reportStopped();
+			Info() << "Control: engine stopped";
+		}
+
+		// The back-off before an automatic restart. False when a command or the
+		// shutdown cut it short.
+		bool waitForRetry(int delay)
+		{
+			Warning() << "Control: engine stopped unexpectedly, restarting in " << delay
+					  << " seconds";
+			const int seq = supervisor.commandSequence();
+			for (int i = 0;
+				 i < delay * 4 && !stop_process && supervisor.commandSequence() == seq; i++)
+			{
+				// the engine is down for the whole wait, so the panel's changes apply here
+				// as well as when idle
+				sync();
+				std::this_thread::sleep_for(std::chrono::milliseconds(250));
+			}
+			return !stop_process && supervisor.desired();
+		}
+
+	public:
+		explicit ManagedInstallation(ControlCore &core)
+			: core(core), supervisor(core.engineSwitch(), [&core](bool on) { core.keepEngineSwitch(on); }), server(core, *this)
+		{
+		}
+
+		Supervisor &engine() override { return supervisor; }
+		std::string stationsLive() override { return site.stationsLive(); }
+		bool serverAddress(int port, std::string &host) override { return site.serverAddress(port, host); }
+		std::vector<int> serverPorts() override { return site.serverPorts(); }
+		std::vector<std::pair<int, long long>> serverTLS() override { return site.serverTLS(); }
+		std::vector<std::pair<int, std::string>> receiverStates() override { return site.receiverStates(); }
+
+		int run()
+		{
+			server.start();
+			apply(nullptr);
+
+			while (!stop_process)
+			{
+				if (!supervisor.desired())
+				{
+					// the panel's changes apply while the engine is stopped
+					sync();
+					supervisor.waitForCommand();
+					continue;
+				}
+
+				const int delay = supervisor.consumeRetryDelay();
+				if (delay > 0 && !waitForRetry(delay))
+					continue;
+
+				// the stop flags of the last session; a signal that came meanwhile still stops this one
+				stop_failed = false;
+				stop = stop_process.load();
+				session();
+			}
+
+			server.close();
+			site.stop();
+			return 0;
+		}
+	};
 
 	static int serve(const std::string &config_file, int port,
 					 const std::string &bind, const std::string &tls_cert,
 					 const std::string &tls_key)
 	{
 		Logger::getInstance().setMinLevel(LogLevel::DEBUG);
-		// the file's own folder for what it names, from the first reading on
-		Config::setConfigBaseDir(config_file);
 
 		ControlCore core(config_file, port, bind);
 		if (!tls_cert.empty())
 			core.setPanelTLSFromCommandLine(tls_cert, tls_key);
-		// outlives every engine session, and serves the viewer between them
-		Site site;
-		ControlServer server(core);
-		server.setStationsLive([&site] { return site.stationsLive(); });
-		server.setServerAddress([&site](int port, std::string &host) { return site.serverAddress(port, host); });
-		server.setServerPorts([&site] { return site.serverPorts(); });
-		server.setServerTLS([&site] { return site.serverTLS(); });
-		server.setReceiverStates([&site] { return site.receiverStates(); });
 
 		if (core.authRequired())
 			Info() << "Control: managed mode, config file \"" << config_file
@@ -225,33 +264,7 @@ namespace Managed
 			Info() << "Control: managed mode, config file \"" << config_file
 				   << "\", local access only";
 
-		server.start();
-		applyConfig(core, server, site, nullptr);
-
-		while (!stop_process)
-		{
-			if (!core.engineDesired())
-			{
-				// the panel's changes apply while the engine is stopped; the rest is
-				// picked up by the engine start
-				syncSite(core, server, site);
-				core.waitForCommand();
-				continue;
-			}
-
-			const int delay = core.consumeRetryDelay();
-			if (delay > 0 && !waitForRetry(core, server, site, delay))
-				continue;
-
-			// the flag the engine's run() ends on, left set by the last session's stop
-			// or its watchdog
-			stop = false;
-			runEngine(core, server, config_file, site);
-		}
-
-		server.close();
-		site.stop();
-		return 0;
+		return ManagedInstallation(core).run();
 	}
 
 	int run(const std::vector<std::string> &all)

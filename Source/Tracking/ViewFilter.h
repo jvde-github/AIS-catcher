@@ -61,7 +61,6 @@ struct ViewFilter
 	bool any() const { return *this != ViewFilter(); }
 	// the oldest time a track is served from, 0 when the view does not cap it
 	std::time_t trackFloor(std::time_t now) const { return track_time > 0 && now > track_time ? now - (std::time_t)track_time : 0; }
-	bool allowsStation(int id) const { return stations.empty() || std::find(stations.begin(), stations.end(), id) != stations.end(); }
 
 	bool operator==(const ViewFilter &o) const;
 	bool operator!=(const ViewFilter &o) const { return !(*this == o); }
