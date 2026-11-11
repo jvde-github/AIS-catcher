@@ -462,6 +462,7 @@ namespace Services
 "build_date":{"type":"string"},
 "os":{"type":"string"},
 "hardware":{"type":"string"},
+"processor":{"type":"string"},
 "uptime_s":{"type":"integer","description":"Seconds since AIS-catcher started"},
 "memory_bytes":{"type":"integer","description":"Memory in use"},
 "received_bytes":{"type":"integer","description":"Bytes from every input"},

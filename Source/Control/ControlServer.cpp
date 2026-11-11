@@ -283,6 +283,7 @@ std::string ControlServer::statusJSON(const char *auth, bool authenticated)
 			.kv("build_date", __DATE__)
 			.kv("os", os)
 			.kv("hardware", hardware)
+			.kv("processor", Util::Helper::getProcessor())
 			.kv("memory", (unsigned long long)Util::Helper::getMemoryConsumption());
 	}
 

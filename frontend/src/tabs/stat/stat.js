@@ -118,7 +118,7 @@ export async function updateStatistics() {
 
         // in bulk....
         const statText = (v) => (Array.isArray(v) ? v.join(", ") : v != null ? v : "");
-        ["os", "tcp_clients", "hardware", "build_describe", "build_date", "station"].forEach(
+        ["os", "tcp_clients", "hardware", "processor", "build_describe", "build_date", "station"].forEach(
             (e) => (document.getElementById("stat_" + e).textContent = statText(e === "station" ? decodeHTMLEntities(stat[e]) : stat[e])),
         );
 

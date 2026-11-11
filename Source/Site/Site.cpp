@@ -314,7 +314,7 @@ void Site::writeEngine(JSON::Writer &w, EnginePart part)
 		each("sample_rate", &DeviceFacts::sample_rate);
 		each("device_label", &DeviceFacts::label);
 		w.kv("received", (unsigned long long)bytes.received()).kv("run_time", std::to_string((long long)(std::time(nullptr) - born)))
-			.kv("os", Util::Helper::getOS()).kv("hardware", Util::Helper::getHardware());
+			.kv("os", Util::Helper::getOS()).kv("hardware", Util::Helper::getHardware()).kv("processor", Util::Helper::getProcessor());
 		w.key("outputs").beginArray();
 		writeOutputs(w, engine.outputs);
 		w.endArray();

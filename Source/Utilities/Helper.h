@@ -48,6 +48,7 @@ namespace Util
 		static long getMemoryConsumption();
 		static std::string getOS();
 		static std::string getHardware();
+		static std::string getProcessor();
 		static uint16_t CRC16(const uint8_t *data, size_t length);
 		static bool isUUID(const std::string &s, bool lowercase = false);
 		// a file named in a configuration: ~/ is the home directory, and a

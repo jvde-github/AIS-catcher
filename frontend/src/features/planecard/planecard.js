@@ -7,7 +7,7 @@ import { ui } from '../../ui.js';
 import { fitTargetcard, openOnTab, setValidation, showOutOfRange, updateTrackOption } from '../targetcard/card.js';
 
 const CATEGORY = {
-    21: "Emergency", 23: "Service",
+    21: "Emergency vehicle", 22: "Service vehicle", 23: "Point obstacle", 24: "Cluster obstacle", 25: "Line obstacle",
     31: "Glider", 32: "LTA", 33: "Parachutist", 34: "Ultralight", 36: "UAV", 37: "Space",
     41: "< 7 MT", 42: "7 - 34 MT", 43: "34 - 136 MT", 44: "High vortex", 45: "> 136 MT",
     46: "High perf", 47: "Rotorcraft",

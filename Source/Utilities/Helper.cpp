@@ -29,6 +29,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/resource.h>
+#include <sys/utsname.h>
 #include <pthread.h>
 #endif
 
@@ -257,6 +258,58 @@ namespace Util
 		return hardware;
 	}
 
+#ifdef __linux__
+	static std::string cpuinfo(const std::string &key)
+	{
+		std::string line, value;
+		std::ifstream inFile("/proc/cpuinfo");
+		while (std::getline(inFile, line))
+			if (line.compare(0, key.size(), key) == 0 && line.find(": ") != std::string::npos)
+				value = line.substr(line.find(": ") + 2);
+		return value;
+	}
+#endif
+
+	static std::string detectProcessor()
+	{
+		std::string s;
+#ifdef _WIN32
+#if defined(_M_ARM64)
+		s = "arm64";
+#elif defined(_M_X64)
+		s = "x86_64";
+#else
+		s = "x86";
+#endif
+#else
+		struct utsname u;
+		if (uname(&u) == 0)
+			s = u.machine;
+#endif
+#ifdef __linux__
+		static const struct
+		{
+			const char *part;
+			const char *name;
+		} ARM_PARTS[] = {{"0xb76", "ARM1176"}, {"0xc07", "Cortex-A7"}, {"0xd03", "Cortex-A53"}, {"0xd08", "Cortex-A72"}, {"0xd0b", "Cortex-A76"}};
+
+		std::string cpu = cpuinfo("model name");
+		const std::string part = cpuinfo("CPU part");
+		for (const auto &p : ARM_PARTS)
+			if (part == p.part)
+				cpu = p.name;
+		if (!cpu.empty())
+			s += " " + cpu;
+#endif
+		return s + (s.empty() ? "" : ", ") + std::to_string(sizeof(void *) * 8) + "-bit build";
+	}
+
+	std::string Helper::getProcessor()
+	{
+		static const std::string processor = detectProcessor();
+		return processor;
+	}
+
 	static std::string detectHardware()
 	{
 #ifdef _WIN32
@@ -377,21 +430,9 @@ namespace Util
 		}
 
 		// cpuinfo model name as a best-effort fallback, last entry wins
-		{
-			std::string line, model_name;
-			std::ifstream inFile("/proc/cpuinfo");
-			while (std::getline(inFile, line))
-			{
-				if (line.compare(0, 10, "model name") == 0)
-				{
-					std::size_t pos = line.find(": ");
-					if (pos != std::string::npos)
-						model_name = line.substr(pos + 2);
-				}
-			}
-			if (!model_name.empty())
-				return model_name;
-		}
+		const std::string model_name = cpuinfo("model name");
+		if (!model_name.empty())
+			return model_name;
 
 		return "Linux System";
 #endif

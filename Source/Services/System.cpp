@@ -84,7 +84,7 @@ namespace Services
 		std::string out;
 		JSON::Writer w(out);
 		w.beginObject().kv("name", "AIS-catcher").kv("version", VERSION).kv("describe", VERSION_DESCRIBE).kv("build_date", __DATE__)
-			.kv("os", Util::Helper::getOS()).kv("hardware", Util::Helper::getHardware())
+			.kv("os", Util::Helper::getOS()).kv("hardware", Util::Helper::getHardware()).kv("processor", Util::Helper::getProcessor())
 			.kv("uptime_s", age(now, f.born)).kv("memory_bytes", (long long)Util::Helper::getMemoryConsumption())
 			.kv("received_bytes", (unsigned long long)f.received)
 			.key("engine").beginObject().kv("running", f.running);

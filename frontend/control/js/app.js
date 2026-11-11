@@ -331,7 +331,8 @@ import { createMessageBar } from './message-bar.js';
                     ['Version', data.version],
                     ['Build date', data.build_date],
                     ['Operating system', data.os],
-                    ['Hardware', data.hardware]
+                    ['Hardware', data.hardware],
+                    ['Processor', data.processor]
                 ].filter(r => r[1]);
                 sysinfo.textContent = '';
                 const fact = (k, v, cls) => {
