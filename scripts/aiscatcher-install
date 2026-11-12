@@ -200,16 +200,15 @@ log() {
 # Error handler
 error_exit() {
     log "ERROR" "$1"
-    # Try to restore service state before exiting
-    if [[ -n "$SERVICE_STATE" ]]; then
-        log "INFO" "Attempting to restore service state before exit"
-        restore_service_state || log "WARN" "Failed to restore service state during error exit"
-    fi
     exit 1
 }
 
-# Cleanup function
+# Runs on every exit, also after Ctrl-C: a service stopped for the installation is put back
 cleanup() {
+    if [[ -n "$SERVICE_STATE" ]]; then
+        log "WARN" "Installation did not finish; restoring the service's state"
+        restore_service_state || log "WARN" "Failed to restore service state"
+    fi
     log "INFO" "Cleaning up temporary directory ${TMP_DIR}"
     rm -rf "$TMP_DIR"
     if [[ -n "$DEB_TMP_DIR" ]]; then
@@ -1355,6 +1354,11 @@ display_installation_summary() {
         echo ""
         echo "  • After editing, restart the service:"
         echo -e "    ${COLOR_YELLOW}systemctl restart ${SERVICE_NAME}${COLOR_RESET}"
+        if grep -qsE '"sharing"[[:space:]]*:[[:space:]]*true' "$CONFIG_FILE" && ! grep -qsE '(^|[[:space:]])-X[[:space:]]+off' "$CMD_FILE"; then
+            echo ""
+            echo "  • Community sharing is on: what this station receives is sent to aiscatcher.org"
+            echo -e "    To turn it off, set ${COLOR_YELLOW}\"sharing\": false${COLOR_RESET} in ${CONFIG_FILE}"
+        fi
     fi
     echo ""
 
