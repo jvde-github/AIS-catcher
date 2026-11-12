@@ -100,10 +100,39 @@ export function rowsFitting(inner, rows) {
 }
 
 /* A stable footer: the visible range at left, page controls at right. */
-export function renderPager(pager, { page, perPage, total, shown = Math.min(perPage, total - page * perPage), loading = false }) {
+/* A scrollbar that is the pager: a drag, a click or the wheel turns pages through go(page). */
+export function pageRail(inner, go) {
+    const rail = document.createElement('div');
+    rail.className = 'table-rail';
+    rail.hidden = true;
+    rail.append(document.createElement('div'));
+    inner.append(rail);
+    const turn = at => { at = Math.max(0, Math.min(rail.pages - 1, at)); if (at !== rail.page) go(at); };
+    const under = e => Math.floor((e.clientY - rail.getBoundingClientRect().top) / rail.clientHeight * rail.pages);
+    rail.onpointerdown = e => { rail.setPointerCapture(e.pointerId); turn(under(e)); };
+    rail.onpointermove = e => { if (e.buttons) turn(under(e)); };
+    let wheel = 0;
+    inner.addEventListener('wheel', e => {
+        wheel += e.deltaY;
+        if (rail.hidden || Math.abs(wheel) < 100) return;
+        turn(rail.page + Math.sign(wheel));
+        wheel = 0;
+    }, { passive: true });
+    return rail;
+}
+
+export function renderPager(pager, { page, perPage, total, shown = Math.min(perPage, total - page * perPage), loading = false, rail }) {
     if (!pager) return;
 
     const pages = Math.max(1, Math.ceil(total / perPage));
+    if (rail) {
+        rail.page = page; rail.pages = pages;
+        rail.hidden = pages < 2;
+        rail.style.top = (rail.parentElement.querySelector('thead')?.offsetHeight || 0) + 'px';
+        const height = Math.max(24, rail.clientHeight / pages);
+        rail.firstChild.style.height = height + 'px';
+        rail.firstChild.style.top = page / Math.max(1, pages - 1) * (rail.clientHeight - height) + 'px';
+    }
     pager.hidden = false;
     const count = pager.parentElement.querySelector('.table-count');
     if (count) count.textContent = shown > 0

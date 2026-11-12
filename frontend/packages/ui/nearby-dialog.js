@@ -2,7 +2,7 @@
 // nearest ships, stations and ports; tabs and pages select from that answer.
 import { flag, flagHTML, tabScroller } from './components.js';
 import { createSideTable } from './side-table.js';
-import { pageSize, renderPager, renderVesselRows, bindVesselHover, durationHTML } from './table.js';
+import { pageSize, pageRail, renderPager, renderVesselRows, bindVesselHover, durationHTML } from './table.js';
 import { sanitizeString, compactCount, getCountryName, getShipTypeShort, getStatusVal } from '@aiscatcher/core/text.js';
 import { spriteFor, spriteCSS } from '@aiscatcher/core/sprites.js';
 
@@ -69,7 +69,8 @@ export function createNearbyDialog(host) {
         let answer = null, failed = '';
         let page = 0, perPage = 10, loading = false, selectedId = null;
         const capacity = () => pageSize(root.querySelector('.tablecard_inner'), root.querySelector('thead'), body.querySelector('tr')) || 10;
-        const pager = (total, shown = 0) => renderPager(root.querySelector('.table-pager'), {page, perPage, total, shown, loading});
+        const rail = pageRail(root.querySelector('.tablecard_inner'), at => { page = at; draw(); });
+        const pager = (total, shown = 0) => renderPager(root.querySelector('.table-pager'), {page, perPage, total, shown, loading, rail});
 
         const draw = () => {
             hover.clear();

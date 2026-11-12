@@ -59,9 +59,11 @@ function tableRowsFitting() {
         document.querySelectorAll("#tablecardBody tr"));
 }
 
+const tableRail = tableLib.pageRail(document.querySelector(".tablecard_inner"), (page) => { tablePage = page; updateTablecard(); });
+
 function renderTablePager(total, perPage) {
     const pager = document.getElementById("tablePager");
-    tableLib.renderPager(pager, { page: tablePage, perPage, total });
+    tableLib.renderPager(pager, { page: tablePage, perPage, total, rail: tableRail });
     // one page needs no paging: just how many vessels
     if (total <= perPage) {
         pager.hidden = true;

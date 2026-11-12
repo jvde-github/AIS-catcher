@@ -1,7 +1,7 @@
 // A place in the shared side table, backed by observed visits and destinations.
 import { flag, tabScroller } from './components.js';
 import { createSideTable } from './side-table.js';
-import { pageSize, renderPager, renderVesselRows, vesselNameCell, bindVesselHover, durationHTML } from './table.js';
+import { pageSize, pageRail, renderPager, renderVesselRows, vesselNameCell, bindVesselHover, durationHTML } from './table.js';
 import { sanitizeString, compactCount, getCountryName } from '@aiscatcher/core/text.js';
 import { spriteFor, spriteCSS } from '@aiscatcher/core/sprites.js';
 const text = value => sanitizeString(String(value ?? ''));
@@ -62,7 +62,7 @@ export function createPortDialog(host) {
         const root = shell.root;
         const listLimit = Number.isInteger(host.placeListLimit) ? Math.max(0, Math.min(100, host.placeListLimit)) : 0;
         root.classList.toggle('port-list-preview', listLimit > 0);
-        let page = 0, perPage = 10, total = 0, shown = 0, selectedMmsi = null, loading = false;
+        let page = 0, perPage = 10, total = 0, shown = 0, selectedMmsi = null, loading = false, sort = '';
         const { name: placeName, kind, code, country, countryName } = placeIdentity(place);
         root.setAttribute('aria-labelledby', 'port-ships-title');
         root.innerHTML = '<header class="place-panel-header">' +
@@ -108,8 +108,9 @@ export function createPortDialog(host) {
         root.querySelector('.table-footer').append(more);
         const strip = tabScroller(root.querySelector('.place-dialog-tabs'), 'place-dialog-tabs-wrap');
         const capacity = () => listLimit || Math.min(100, pageSize(root.querySelector('.tablecard_inner'), root.querySelector('thead'), body.querySelector('tr')) || 10);
+        const rail = pageRail(root.querySelector('.tablecard_inner'), at => { page = at; load(true); });
         const pager = () => {
-            if (!listLimit) return renderPager(pagination, { page, perPage, total, shown, loading });
+            if (!listLimit) return renderPager(pagination, { page, perPage, total, shown, loading, rail });
             pagination.hidden = true;
             count.textContent = loading ? '' : `${shown.toLocaleString()} shown`;
             const link = !loading ? host.placeListLink?.(place, selected) : null;
@@ -133,9 +134,13 @@ export function createPortDialog(host) {
             // is pinned narrow: say which it is so the width can follow.
             results.querySelector('table').classList.toggle('dated', selected === 'arrived' || selected === 'left');
             results.querySelector('table').classList.toggle('visits', visitRows);
-            results.querySelector('thead').innerHTML = '<tr><th scope="col" class="col-name">Name</th>' + (visitRows
-                ? '<th scope="col">Entry</th><th scope="col">Exit</th><th scope="col">Duration</th>'
-                : '<th scope="col" class="num col-spd">Spd <span class="dim">kn</span></th><th scope="col" class="col-type">Type</th><th scope="col" class="num col-last">' + ({arrived:'Arrived',left:'Left',closest:'Range'}[selected] || 'Last') + '</th>') + '</tr>';
+            const falls = key => key === 'speed' || (key === 'time' && selected !== 'closest');
+            const th = (key, cls, label) => `<th scope="col" data-sort="${key}" class="sort-icon ${cls}` +
+                ((sort || 'time').replace('-', '') === key ? (sort[0] === '-') !== falls(key) ? ' descending' : ' ascending' : '') + `">${label}</th>`;
+            results.querySelector('thead').innerHTML = '<tr>' + th('name', 'col-name', 'Name') + (visitRows
+                ? th('time', '', 'Entry') + '<th scope="col">Exit</th><th scope="col">Duration</th>'
+                : th('speed', 'num col-spd', 'Spd <span class="dim">kn</span>') + th('type', 'col-type', 'Type') +
+                  th('time', 'num col-last', {arrived:'Arrived',left:'Left',closest:'Range'}[selected] || 'Last')) + '</tr>';
             results.setAttribute('aria-busy', 'true');
             if (!refresh) {
                 hover.clear();
@@ -146,7 +151,7 @@ export function createPortDialog(host) {
                 status.innerHTML = '<span class="port-loading" role="status" aria-label="Loading ships"><span class="spinner icon-sm" aria-hidden="true"></span></span>';
             }
             try {
-                const data = await placeShipsRequest(host, place, {tab:selected,hours:'0',offset:String(page * perPage),limit:String(perPage)});
+                const data = await placeShipsRequest(host, place, {tab:selected,hours:'0',offset:String(page * perPage),limit:String(perPage),...(sort && {sort})});
                 if (root._portRequest !== request || !shell.isOpen()) return;
                 if (data?.error) throw new Error(data.error);
                 if (!Array.isArray(data?.ships)) throw new Error('Invalid ship list');
@@ -172,7 +177,7 @@ export function createPortDialog(host) {
                 }
                 const ships = listLimit ? data.ships.slice(0, listLimit) : data.ships;
                 shown = ships.length;
-                count.title = selected === 'closest' ? 'Nearest first' : 'Newest first';
+                count.title = sort ? '' : selected === 'closest' ? 'Nearest first' : 'Newest first';
                 note.textContent = selected === 'expected' && !data.has_geometry
                     ? 'No port boundary: ships already in port cannot be excluded.'
                     : '';
@@ -215,7 +220,9 @@ export function createPortDialog(host) {
         };
         root.onclick = e => {
             const tab = e.target.closest('[data-place-tab]');
-            if (tab) { selected = tab.dataset.placeTab; page = 0; load(); return; }
+            if (tab) { selected = tab.dataset.placeTab; page = 0; sort = ''; load(); return; }
+            const key = e.target.closest('th[data-sort]')?.dataset.sort;
+            if (key) { sort = (sort || 'time') === key ? '-' + key : key === 'time' ? '' : key; page = 0; load(); return; }
             if (e.target.closest('.place-overview')) { shell.overview(); return; }
             if (e.target.closest('.place-close')) { shell.close(); return; }
             if (e.target.closest('.place-prev') && !previous.disabled) { page--; load(); return; }

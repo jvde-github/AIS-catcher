@@ -528,7 +528,7 @@ namespace Services
 														  request.param("version"), code, request.param("tab").empty() ? "inside" : request.param("tab"),
 														  hours.empty() ? 24 : (unsigned)std::strtoul(hours.c_str(), nullptr, 10),
 														  offset.empty() ? 0 : (unsigned)std::strtoul(offset.c_str(), nullptr, 10),
-														  limit.empty() ? 10 : (unsigned)std::strtoul(limit.c_str(), nullptr, 10), keep));
+														  limit.empty() ? 10 : (unsigned)std::strtoul(limit.c_str(), nullptr, 10), keep, request.param("sort")));
 		}
 		else if (p == "/api/nearby.json")
 		{

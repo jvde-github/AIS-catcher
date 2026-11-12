@@ -67,7 +67,7 @@ namespace Services
 		// closest outside, and for a port the vessels bound for it
 		static std::string placeShips(DB &db, uint32_t id, const std::string &version, const std::string &code,
 									  const std::string &tab, unsigned hours, unsigned offset = 0, unsigned limit = 10,
-									  const DB::Keep &keep = DB::Keep());
+									  const DB::Keep &keep = DB::Keep(), const std::string &sort = "");
 		// `skip` and `skip_station` are the vessel and the station asking, 0 and -1
 		// for none; `with_stations` false keeps the stations, and so where they stand, out
 		static std::string nearby(DB &db, float lat, float lon, uint32_t skip, int skip_station,

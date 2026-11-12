@@ -17,6 +17,7 @@
 
 #include "UiFormat.h"
 
+#include <cstring>
 #include <algorithm>
 #include <array>
 #include <string>
@@ -727,10 +728,15 @@ namespace Services
 	std::string UiFormat::placeShips(DB &db, uint32_t id, const std::string &version,
 									 const std::string &code,
 									 const std::string &tab, unsigned hours,
-									 unsigned offset, unsigned limit, const DB::Keep &visible)
+									 unsigned offset, unsigned limit, const DB::Keep &visible, const std::string &sort)
 	{
 		if (!limit || limit > 100 || offset > 10000000)
 			return "{\"error\":\"Invalid place pagination\"}";
+		// sort: name, speed or type, else the tab's own order; a leading '-' reverses it
+		const bool reverse = !sort.empty() && sort[0] == '-';
+		const std::string by = sort.substr(reverse);
+		if (!by.empty() && by != "time" && by != "name" && by != "speed" && by != "type")
+			return "{\"error\":\"Invalid place query\"}";
 		std::lock_guard<std::mutex> lock(db.mtx);
 		const auto &index = db.place_markers.index();
 		const auto *place =
@@ -773,27 +779,39 @@ namespace Services
 		std::vector<Row> rows;
 		const size_t keep = (size_t)offset + limit;
 		rows.reserve(std::min<size_t>(keep + 1, 101));
-		const auto newer = [&](const Row &a, const Row &b) {
-			if (a.stamp != b.stamp)
+		const auto before = [&](const Row &p, const Row &q) {
+			const Row &a = reverse ? q : p, &b = reverse ? p : q;
+			const Ship &x = db.ships[a.slot], &y = db.ships[b.slot];
+			if (by == "name" && std::strcmp(x.shipname, y.shipname))
+				return !x.shipname[0] != !y.shipname[0] ? !y.shipname[0] : std::strcmp(x.shipname, y.shipname) < 0;
+			if (by == "speed" && x.speed != y.speed)
+				return x.speed > y.speed;
+			if (by == "type" && x.shipclass != y.shipclass)
+				return x.shipclass < y.shipclass;
+			if (a.range != b.range)
+				return a.range < b.range;
+			if (a.range < 0 && a.stamp != b.stamp)
 				return a.stamp > b.stamp;
-			if (db.ships[a.slot].mmsi != db.ships[b.slot].mmsi)
-				return db.ships[a.slot].mmsi < db.ships[b.slot].mmsi;
+			if (x.mmsi != y.mmsi)
+				return x.mmsi < y.mmsi;
 			// Repeat visits can share a timestamp; their retained slot breaks ties.
 			return a.visit < b.visit;
 		};
-		// Keep only the prefix needed for this page, with the oldest row on top.
+		// Keep only the prefix needed for this page, with the last row on top.
+		auto push = [&](const Row &row) {
+			rows.push_back(row);
+			std::push_heap(rows.begin(), rows.end(), before);
+			if (rows.size() > keep)
+			{
+				std::pop_heap(rows.begin(), rows.end(), before);
+				rows.pop_back();
+			}
+		};
 		auto add = [&](int kind, uint32_t slot, const VisitTracker::Visit *visit,
 					   std::time_t stamp) {
 			++counts[kind];
-			if (kind != selected)
-				return;
-			rows.push_back({slot, visit, stamp, -1.0f});
-			std::push_heap(rows.begin(), rows.end(), newer);
-			if (rows.size() > keep)
-			{
-				std::pop_heap(rows.begin(), rows.end(), newer);
-				rows.pop_back();
-			}
+			if (kind == selected)
+				push({slot, visit, stamp, -1.0f});
 		};
 		if (place)
 			db.visits.forEach(place->id, [&](uint32_t slot) {
@@ -850,12 +868,6 @@ namespace Services
 		if (place && isValidCoord((float)place->lat, (float)place->lon))
 		{
 			static const float HORIZON_NM = 99.0f;
-			std::vector<Row> nearest;
-			nearest.reserve(std::min<size_t>(keep + 1, 101));
-			const auto nearer = [&](const Row &a, const Row &b) {
-				return a.range != b.range ? a.range < b.range
-										  : db.ships[a.slot].mmsi < db.ships[b.slot].mmsi;
-			};
 			db.forEachRecentUnlocked(now, false, 0, [&](int ptr, const Ship &ship, long) {
 				if (visible && !visible(ship))
 					return;
@@ -870,24 +882,11 @@ namespace Services
 				if (db.visits.insideOf(ptr, place->id))
 					return;
 				++counts[4];
-				if (selected != 4)
-					return;
-				nearest.push_back({(uint32_t)ptr, nullptr, ship.last_signal, range});
-				std::push_heap(nearest.begin(), nearest.end(), nearer);
-				if (nearest.size() > keep)
-				{
-					std::pop_heap(nearest.begin(), nearest.end(), nearer);
-					nearest.pop_back();
-				}
+				if (selected == 4)
+					push({(uint32_t)ptr, nullptr, ship.last_signal, range});
 			});
-			if (selected == 4)
-			{
-				std::sort_heap(nearest.begin(), nearest.end(), nearer);
-				rows = std::move(nearest);
-			}
 		}
-		if (selected != 4)
-			std::sort_heap(rows.begin(), rows.end(), newer);
+		std::sort_heap(rows.begin(), rows.end(), before);
 		std::string out;
 		JSON::Writer w(out);
 		w.beginObject()

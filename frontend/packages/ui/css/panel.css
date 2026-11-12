@@ -894,11 +894,16 @@
 
 /* the table itself */
 .tablecard_inner {
+    position: relative;
     flex: 1 1 auto;
     min-height: 0;
     overflow: hidden;
     padding: 0 10px 10px;
 }
+
+.table-rail { position: absolute; right: 0; bottom: 0; width: 10px; cursor: pointer; touch-action: none; }
+.table-rail > div { position: absolute; right: 2px; width: 5px; border-radius: 3px; background: color-mix(in srgb, var(--color-text-muted) 65%, transparent); }
+.table-rail:hover > div { background: var(--color-text-muted); }
 
 .tablecard_inner table {
     width: 100%;
