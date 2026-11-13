@@ -636,7 +636,7 @@ export const receiverSchema = {
             { value: "auto", label: "Auto" },
             { value: "v1_base", label: "AIS Engine v1 Base" },
             { value: "v1_high", label: "AIS Engine v1 High" },
-            { value: "v2_base", label: "AIS Engine v2 Base (experimental)" }
+            { value: "v2_base", label: "AIS Engine v2 Base" }
         ],
         tooltip: "A second engine doubles CPU",
         settings: [

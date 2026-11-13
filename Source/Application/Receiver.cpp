@@ -30,8 +30,7 @@ Setting &Receiver::applyKey(AIS::Keys key, const std::string &arg)
 		verbose = Util::Parse::Switch(arg);
 		break;
 	case AIS::KEY_SETTING_SENSITIVITY_HIGH:
-		Warning() << "Receiver: \"sensitivity_high\" is deprecated and will be removed, use \"engines\": [ { \"type\": \"v1_high\" } ] instead";
-		high_sensitivity = Util::Parse::Switch(arg);
+		Warning() << "Receiver: \"sensitivity_high\" is deprecated and has no effect: engine v2 is the default; engine v1 high is \"engines\": [ { \"type\": \"v1_high\" } ]";
 		break;
 	case AIS::KEY_SETTING_CHANNEL:
 		setChannel(arg, "");
@@ -191,7 +190,7 @@ int Receiver::defaultModel()
 	case Format::RAW1090:
 		return AIS::MODEL_RAW1090;
 	default:
-		return high_sensitivity ? AIS::MODEL_V1_HIGH : AIS::MODEL_V1_BASE;
+		return AIS::MODEL_V2_BASE;
 	}
 }
 

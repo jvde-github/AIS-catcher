@@ -455,6 +455,11 @@ namespace AIS
 		case AIS::KEY_SETTING_DD_WEIGHT:
 			dd_weight = Util::Parse::Float(arg, 0.0, 1.0);
 			break;
+		// v1's own settings: accepted, so a command line or config written for v1 still starts
+		case AIS::KEY_SETTING_PS_EMA:
+		case AIS::KEY_SETTING_AFC_WIDE:
+			Warning() << getName() << ": setting \"" << AIS::KeyMap[key][JSON_DICT_SETTING] << "\" has no effect on this engine";
+			break;
 		default:
 			ModelFrontend::applyKey(key, arg);
 			break;

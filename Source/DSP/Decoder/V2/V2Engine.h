@@ -114,13 +114,19 @@ namespace V2
 		CFLOAT32 coh_filtered[BLOCK_SIZE];
 
 		float fm_demodulated[BLOCK_SIZE];
-		float fm_filtered[BLOCK_SIZE];
+		// The level the FM decoder slices at: a carrier offset shifts the discriminator output, so the
+		// centre between the two tones is its average over two periods of the training pattern,
+		// ending ten samples back so that the start flag is not in it, held from the start flag on.
+		// fm_filtered starts with the FM_HIST samples before the block.
+		static const int FM_WINDOW = 40, FM_HIST = FM_WINDOW + 9;
+		float fm_filtered[FM_HIST + BLOCK_SIZE] = {};
+		float fm_centre = 0.0f;
 		BitPLL fm_pll;
 
 		CFLOAT32 slot_ema = CFLOAT32(0.0f, 0.0f);
 		int slot_phase = 0;
 		int di = 0;
-		long long sample_idx = 0;
+		long long sample_idx = -BLOCK_SIZE; // of the sample being decoded, one block behind what has arrived
 		int fill = 0;
 		float ppm = 0.0f, ppm_prev = 0.0f;
 		int ppm_split = 0;

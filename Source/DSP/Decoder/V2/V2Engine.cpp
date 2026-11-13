@@ -352,7 +352,11 @@ namespace V2
 		fm_demod.Run(raw, fm_demodulated);
 
 		// Coherent Decoder
-		filter37.Run(fm_demodulated, fm_filtered);
+		filter37.Run(fm_demodulated, fm_filtered + FM_HIST);
+
+		float fm_sum = 0.0f;
+		for (int k = 0; k < FM_WINDOW; k++)
+			fm_sum += fm_filtered[k];
 
 		tag.ppm = ppm_prev;
 
@@ -375,14 +379,20 @@ namespace V2
 			}
 
 			// FM decoder
-			if (fm_pll.Run(fm_filtered[i], dec[FM_DEC].getState() == AIS::State::TRAINING))
-				if (dec[FM_DEC].Run(fm_filtered[i], tag) == AIS::State::FOUNDMESSAGE)
+			const bool fm_training = dec[FM_DEC].getState() == AIS::State::TRAINING;
+			if (fm_training)
+				fm_centre = fm_sum * (1.0f / FM_WINDOW);
+			fm_sum += fm_filtered[i + FM_WINDOW] - fm_filtered[i];
+			const float fm = fm_filtered[i + FM_HIST] - fm_centre;
+			if (fm_pll.Run(fm, fm_training))
+				if (dec[FM_DEC].Run(fm, tag) == AIS::State::FOUNDMESSAGE)
 					resetDecoders();
 
 			di = di + 1 == 5 ? 0 : di + 1;
 		}
 
 		memmove(raw, raw + BLOCK_SIZE, BLOCK_SIZE * sizeof *raw);
+		memmove(fm_filtered, fm_filtered + BLOCK_SIZE, FM_HIST * sizeof *fm_filtered);
 	}
 
 	void Engine::Receive(const CFLOAT32 *data, int len, TAG &tag)

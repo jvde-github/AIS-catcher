@@ -34,7 +34,6 @@ class Receiver : public Setting
 {
 
 	bool timing_ = false;
-	bool high_sensitivity = false;
 
 	int sample_rate = 0, bandwidth = 0, ppm = 0, own_mmsi = -1;
 	int receiver_index = -1;

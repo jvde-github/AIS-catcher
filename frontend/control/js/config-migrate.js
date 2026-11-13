@@ -6,7 +6,7 @@
 //   - a web viewer of the `server` section is an entry of `services`: on the site's ships, or on
 //     ships of its own behind its message filter, which goes under its `tracking`
 //   - a receiver's settings at the top of the file are a receiver of the list; its kind of device
-//     is in capitals, its model and sensitivity are its engines
+//     is in capitals, its model is its engines; the sensitivity switch is gone
 //   - an output's json and json_full switches are its msgformat; a server's message switch is msg;
 //     replay_time is track_time
 //   - whether a server shows where its stations are is its own share_loc, not each station's
@@ -105,10 +105,7 @@ function migrateReceivers(cfg) {
     for (const r of Array.isArray(cfg.receiver) ? cfg.receiver : []) {
         if (!r || typeof r !== 'object') continue;
         if (typeof r.input === 'string') r.input = r.input.toUpperCase();
-        if ('sensitivity_high' in r) {
-            if (on(r.sensitivity_high) && !('engines' in r)) r.engines = [{ type: 'v1_high' }];
-            delete r.sensitivity_high;
-        }
+        delete r.sensitivity_high;
         if (typeof r.model === 'string') {
             const model = r.model.toLowerCase();
             if (!('engines' in r)) r.engines = [model === 'auto' ? {} : { type: model }];
