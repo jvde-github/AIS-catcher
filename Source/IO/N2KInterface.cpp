@@ -58,36 +58,33 @@ namespace N2K
 	{
 		struct ifreq ifr = {0};
 		struct sockaddr_can addr = {0};
+		const char *failed = nullptr;
 
-		skt = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-		if (skt < 0)
-		{
-			Error() << "NMEA2000: cannot open CAN socket: " << CANinterface;
-			return false;
-		}
-
+		Close();
 		strncpy(ifr.ifr_name, iface.c_str(), IFNAMSIZ - 1);
 		ifr.ifr_name[IFNAMSIZ - 1] = '\0';
 
-		if (ioctl(skt, SIOCGIFINDEX, &ifr) < 0)
+		if ((skt = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
+			failed = "cannot open CAN socket";
+		else if (ioctl(skt, SIOCGIFINDEX, &ifr) < 0)
+			failed = "no such interface";
+		else
 		{
-			Error() << "NMEA2000: ioctl failed on " << ifr.ifr_name << endl;
-			return false;
+			addr.can_family = AF_CAN;
+			addr.can_ifindex = ifr.ifr_ifindex;
+			int r;
+			if (bind(skt, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+				failed = "cannot bind to socket";
+			else if ((r = fcntl(skt, F_GETFL, 0)) < 0 || fcntl(skt, F_SETFL, r | O_NONBLOCK) < 0)
+				failed = "cannot set the socket non-blocking";
 		}
 
-		addr.can_family = AF_CAN;
-		addr.can_ifindex = ifr.ifr_ifindex;
-		if (bind(skt, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-		{
-			Error() << "NMEA2000: cannot bind to socket." << endl;
-			return false;
-		}
-
-		int r = fcntl(skt, F_GETFL, 0);
-		if (r < 0 || fcntl(skt, F_SETFL, r | O_NONBLOCK) < 0)
-			return false;
-
-		return true;
+		if (failed && !retrying)
+			Error() << "NMEA2000: " << failed << ": " << iface << ", will keep trying";
+		retrying = failed != nullptr;
+		if (failed)
+			Close();
+		return !failed;
 	}
 
 	bool tNMEA2000_SKTCAN::CANSendFrame(unsigned long id, unsigned char len, const unsigned char *buf, bool wait_sent)
@@ -106,6 +103,9 @@ namespace N2K
 		struct can_frame frame_rd;
 		struct timeval tv = {0, 0};
 		fd_set fds;
+
+		if (skt < 0)
+			return false;
 
 		FD_ZERO(&fds);
 		FD_SET(skt, &fds);
@@ -133,7 +133,8 @@ namespace N2K
 		fd_set fds;
 
 		FD_ZERO(&fds);
-		FD_SET(skt, &fds);
+		if (skt >= 0)
+			FD_SET(skt, &fds);
 
 		select((skt + 1), &fds, NULL, NULL, &tv);
 	}
@@ -141,9 +142,11 @@ namespace N2K
 	void tNMEA2000_SKTCAN::Close()
 	{
 		if (skt != -1)
-		{
 			close(skt);
-		}
+		skt = -1;
+		// the next Open() opens the interface again
+		if (OpenState > os_OpenCAN)
+			OpenState = os_OpenCAN;
 	}
 
 	// N2KHubInterfaceHub - centralized input and output
@@ -210,12 +213,13 @@ namespace N2K
 
 	void N2KHubInterfaceHub::Stop()
 	{
-		NMEA2000.Close();
 		if (running)
 		{
 			running = false;
 			run_thread.join();
 		}
+		NMEA2000.Close();
+		connected = false;
 	}
 
 	void N2KHubInterfaceHub::sendMsg(const tN2kMsg &N2kMsg)

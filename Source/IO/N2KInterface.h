@@ -48,6 +48,7 @@ namespace N2K
 		bool CANGetFrame(unsigned long &id, unsigned char &len, unsigned char *buf);
 
 		int skt = -1;
+		bool retrying = false;
 		std::string CANinterface;
 
 		bool OpenInterface(const std::string &port);
