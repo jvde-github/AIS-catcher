@@ -45,7 +45,6 @@ function onStationChange(id) {
     mapObjects.resetSince();
     range.resetUpdateTime();
     showFocus();
-    shipsItem();
     refresh();
 }
 
@@ -139,7 +138,7 @@ const stationRow = (id) => mapObjects.stationsAll().find((x) => x.id === id);
 
 /* While a station's card is open the page looks through that station; the close
    goes back to what was in focus before. */
-let card = null, cardStation = null, focusBefore = -1, tabs = null, cardTab = "summary", figuresAt = 0, shipsEl = null;
+let card = null, cardStation = null, focusBefore = -1, tabs = null, cardTab = "summary", figuresAt = 0;
 
 export function stationcardVisible() {
     return cardStation !== null;
@@ -158,7 +157,6 @@ export function build() {
 
     card = ui.createCard({ mount: document.getElementById("stationcard"), layout: cardLayout });
     const item = (icon, label, title, action) => card.footer.add({ icon, label, title, action, group: "station" });
-    shipsEl = item("directions_boat", "Ships", "Show only the vessels this station hears", "stationcardShips");
     item("leaderboard", "Statistics", "This station's figures", "stationcardStatistics");
     item("near_me", "Nearby", "Ships, stations and ports nearest this station", "stationcardNearby");
     card.footer.show("station");
@@ -182,7 +180,6 @@ export async function open(id, { fresh, pixel }) {
     openOnTab(tabs, cardTab, fresh);
     card.open(pixel);
     if (offered(id) && hasStationChoice() && focus !== id) onStationChange(id);
-    shipsItem();
     await fillFigures(id);
 }
 
@@ -278,22 +275,9 @@ export function populate() {
     if (Date.now() - figuresAt > 30000) fillFigures(cardStation);
 }
 
-// the footer's Ships item: the station's vessels alone, or all of them again
-function shipsItem() {
-    if (!shipsEl) return;
-    const can = cardStation !== null && offered(cardStation) && hasStationChoice();
-    shipsEl.style.display = can ? "" : "none";
-    const span = shipsEl.querySelector("span");
-    if (span) span.textContent = focus === cardStation ? "All ships" : "Ships";
-}
-
 register({
     selectStation: (e, d) => selectStation(d.id),
     closeStationcard: () => closeStationcard(),
-    stationcardShips: () => {
-        if (cardStation === null) return;
-        onStationChange(focus === cardStation ? (focusBefore === cardStation ? -1 : focusBefore) : cardStation);
-    },
     stationcardStatistics: () => {
         if (cardStation !== null && focus !== cardStation && offered(cardStation)) onStationChange(cardStation);
         showTab('stat');

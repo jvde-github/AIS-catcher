@@ -20,6 +20,7 @@ import { shapeFeatures } from '../../fleet.js';
 import { ui } from '../../ui.js';
 import { closeSettings } from '../settings/settings.js';
 import { showTargetcard, closeTargetcard } from '../targetcard/card.js';
+import { closeStationcard } from '../station/station.js';
 import { showContextMenu } from '../contextmenu/contextmenu.js';
 import { showHoverTrack, hoverEnded } from '../../tracks.js';
 import * as mapObjects from '../mapobjects/mapobjects.js';
@@ -73,6 +74,7 @@ export const handleClick = function (pixel, target, event) {
     else {
         clickTimeout = setTimeout(function () {
             closeTargetcard();
+            closeStationcard();
             clickTimeout = null;
         }, 300);
     }
