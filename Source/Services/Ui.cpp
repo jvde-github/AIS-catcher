@@ -320,7 +320,8 @@ namespace Services
 			StationRegistry::Station at;
 			const bool drawn = drawnStation(focus, at);
 			response = Response::json(UiFormat::shipsCompact(db, false, since(), configVersion(), keep, drawn ? &at : nullptr, db.timeHistory(), &shown,
-															 toInt(request.param("objects"), -1), listed));
+															 toInt(request.param("objects"), -1), listed,
+															 spec.stations.empty() && tracker.planes().hasReceived()));
 		}
 		else if (p == "/api/ships_table.json")
 			response = Response::json(UiFormat::shipsTable(db, since(), keep, &shown));

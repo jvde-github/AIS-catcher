@@ -194,7 +194,7 @@ namespace Services
 									   const std::string &configVersion, const DB::Keep &keep,
 									   const StationRegistry::Station *at,
 									   int stations_window, const Located *shown,
-									   long long objects, const std::function<bool(int)> &listed)
+									   long long objects, const std::function<bool(int)> &listed, bool planes)
 	{
 		std::lock_guard<std::mutex> lock(db.mtx);
 		const Located located = shown ? *shown : Located::from(db.stations);
@@ -213,6 +213,7 @@ namespace Services
 				.kv("config_version", configVersion)
 				.kv("place_version", db.place_markers.version())
 				.kv("full", since == 0)
+				.kv("planes", planes)
 				.kv("count", count)
 				.kv("time", now)
 				.kv("timeout", db.time_history);

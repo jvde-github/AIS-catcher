@@ -41,12 +41,14 @@ namespace Services
 		// `at`, when given, is the station the page draws, in place of the DB's own;
 		// `stations_window` (seconds) ends each row with the stations heard within it and their ages
 		// `objects`, when not negative, adds the map objects changed after it, as mapObjects() gives them
+		// `planes`: whether there are aircraft to ask for
 		static std::string shipsCompact(DB &db, bool full = false, std::time_t since = 0,
 										const std::string &configVersion = "",
 										const DB::Keep &keep = DB::Keep(),
 										const StationRegistry::Station *at = nullptr,
 										int stations_window = 0, const Located *shown = nullptr,
-										long long objects = -1, const std::function<bool(int)> &listed = nullptr);
+										long long objects = -1, const std::function<bool(int)> &listed = nullptr,
+										bool planes = false);
 		static std::string shipsTable(DB &db, std::time_t since = 0, const DB::Keep &keep = DB::Keep(), const Located *shown = nullptr);
 		// `at`, when given, is the station the page draws, in place of the DB's own
 		static std::string ships(DB &db, bool full = false, const StationRegistry::Station *at = nullptr,

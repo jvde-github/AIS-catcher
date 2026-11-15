@@ -16,6 +16,7 @@
 */
 
 #pragma once
+#include <atomic>
 #include "ADSB.h"
 #include "SlotTable.h"
 #include "Geodesy.h"
@@ -32,6 +33,7 @@ class PlaneDB : public StreamIn<Plane::ADSB>
 	// the viewer's lists of the aircraft, written from the table under its lock
 	friend struct Services::UiFormat;
 	std::mutex mtx;
+	std::atomic<bool> received{false};
 
 	static const int CPR_CACHE_SIZE = 3;
 
@@ -158,6 +160,7 @@ class PlaneDB : public StreamIn<Plane::ADSB>
 		if (ptr == Table::NIL)
 			return;
 
+		received = true;
 		Plane::ADSB &plane = table[ptr];
 
 		plane.rxtime = msg->rxtime;
@@ -264,6 +267,9 @@ public:
 			for (auto &e : c.entries)
 				e.clear();
 	}
+
+	// an aircraft has been heard since the start
+	bool hasReceived() const { return received; }
 
 	void Receive(const Plane::ADSB *msg, int len, TAG &tag)
 	{

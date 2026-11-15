@@ -128,6 +128,7 @@ async function fetchShipsBody() {
     await updateServerConfig(ships.config_version);
     if (at !== focus) return false;
     if (ships.mapobjects) mapObjects.applyObjects({ time: ships.time, place_version: ships.place_version, ...ships.mapobjects });
+    planesReceived = ships.planes === true;
     const serverTime = ships.time || 0;
     const isIncremental = shipsSince > 0 && ships.full !== true;
 
@@ -236,7 +237,14 @@ function capShipsDB() {
 const planesTimeout = 300;
 let planesLastCleanup = 0;
 
+// the ships poll says whether the server has heard an aircraft
+let planesReceived = false;
+
 export async function fetchPlanes() {
+    if (!planesReceived) {
+        if (planesSince > 0) { setPlanes({}); setPlanesSince(0); }
+        return true;
+    }
 
     let planes = {};
 
