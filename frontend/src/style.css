@@ -320,19 +320,7 @@ a:focus-visible {
     fill: var(--color-secondary) !important;
 }
 
-/* shown instead of a station's range rows and charts when its position is private */
-.range-note {
-    display: none;
-    grid-column: 1 / -1;
-    margin: 12px 25px 0;
-    color: var(--color-text-muted);
-    font-size: var(--fs-md);
-}
-
-.range-hidden .range-note {
-    display: block;
-}
-
+/* a station's range rows and charts stay away when its position is private */
 .range-hidden .range-row,
 .range-hidden .range-panel {
     display: none;
