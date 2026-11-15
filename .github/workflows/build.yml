@@ -417,7 +417,7 @@ jobs:
     - name: Install vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
-        vcpkg install libpq:${{matrix.platform}}-windows fftw3:${{matrix.platform}}-windows sqlite3:${{matrix.platform}}-windows openssl:${{matrix.platform}}-windows libusb:${{matrix.platform}}-windows pthread:${{matrix.platform}}-windows zlib:${{matrix.platform}}-windows soxr:${{matrix.platform}}-windows
+        vcpkg install libpq:${{matrix.platform}}-windows sqlite3:${{matrix.platform}}-windows openssl:${{matrix.platform}}-windows libusb:${{matrix.platform}}-windows pthread:${{matrix.platform}}-windows zlib:${{matrix.platform}}-windows soxr:${{matrix.platform}}-windows
 
     - name: Setting up directories
       run: |
@@ -457,8 +457,6 @@ jobs:
         $libusb_lib = "C:\vcpkg\installed\${{matrix.platform}}-windows\lib\libusb-1.0.lib"
         $pthread_lib = "C:\vcpkg\installed\${{matrix.platform}}-windows\lib\pthreadVC3.lib"
         $pthread_inc = "C:\vcpkg\installed\${{matrix.platform}}-windows\include"
-        $fftw3_lib = "C:\vcpkg\installed\${{matrix.platform}}-windows\lib\fftw3.lib"
-        $fftw3_inc = "C:\vcpkg\installed\${{matrix.platform}}-windows\include"
 
         echo "RTLSDR"
         git clone https://github.com/jvde-github/rtl-sdr.git
@@ -495,12 +493,12 @@ jobs:
 
         echo "HACK RF"
         git clone https://github.com/greatscottgadgets/hackrf.git
-        cd hackrf; git reset --hard 34cbbe7330d1e11e7967f84da39d04a61bfdf4f1; cd host; mkdir build; cd build
-        cmake .. -A $msplatform -G $gen -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc" -DFFTW_LIBRARIES="$fftw3_lib" -DFFTW_INCLUDES="$fftw3_inc"
-        msbuild /verbosity:quiet /m /p:Configuration=$config /p:Platform=$msplatform HackRF.sln
-        cd ..; cd ..; cd ..
-        cp hackrf\host\build\libhackrf\src\Release\*.dll release
-        cp hackrf\host\build\libhackrf\src\Release\*.lib lib
+        cd hackrf; git reset --hard 34cbbe7330d1e11e7967f84da39d04a61bfdf4f1; cd host\libhackrf; mkdir build; cd build
+        cmake .. -A $msplatform -G $gen -DLIBUSB_LIBRARIES="$libusb_lib" -DLIBUSB_INCLUDE_DIR="$libusb_inc" -DTHREADS_PTHREADS_WIN32_LIBRARY="$pthread_lib" -DTHREADS_PTHREADS_INCLUDE_DIR="$pthread_inc"
+        msbuild /verbosity:quiet /m /p:Configuration=$config /p:Platform=$msplatform libhackrf.sln
+        cd ..; cd ..; cd ..; cd ..
+        cp hackrf\host\libhackrf\build\src\Release\*.dll release
+        cp hackrf\host\libhackrf\build\src\Release\*.lib lib
         cp hackrf\host\libhackrf\src\*.h include
         cp hackrf\COPYING output\Licenses\HACKRF
 
