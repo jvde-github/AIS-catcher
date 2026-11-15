@@ -46,7 +46,6 @@ readonly BUILD_DEPS=(
     airspyone_host-devel
     airspyhf-devel
     hackrf-devel
-    zeromq-devel
     openssl-devel
     zlib-devel
     sqlite-devel

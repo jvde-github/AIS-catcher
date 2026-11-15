@@ -51,7 +51,6 @@ option(HYDRASDR_STATIC "Statically link HydraSDR library" OFF)
 option(SOXR "Include SOXR support" ON)
 option(ZLIB "Include ZLIB support" ON)
 option(SAMPLERATE "Include SAMPLERATE support" ON)
-option(ZMQ "Include ZMQ support" ON)
 option(PSQL "Include PSQL support" ON)
 option(SQLITE "Include SQLITE support" ON)
 option(OPENSSL "Include OPENSSL support" ON)
@@ -277,7 +276,6 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/AIRSPY.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/AIRSPYHF.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/HACKRF.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/HYDRASDR.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/ZMQ.cmake)
 
 # --- Static build verification: every enabled dependency must resolve to a static (.a) archive ---
 if(STATIC)
@@ -292,7 +290,6 @@ if(STATIC)
         HYDRASDR "${HYDRASDR_LIBRARIES}"
         SDRPLAY "${SDRPLAY_LIBRARIES}"
         SOAPYSDR "${SOAPYSDR_LIBRARIES}"
-        ZMQ     "${ZMQ_LIBRARIES}"
         SOXR    "${SOXR_LIBRARIES}"
         SAMPLERATE "${SAMPLERATE_LIBRARIES}"
         SQLITE  "${SQLITE_LIBRARIES}"
@@ -391,9 +388,6 @@ endif()
 if(SOAPYSDR_LIBRARIES)
     list(APPEND CPP Source/Device/SoapySDR.cpp)
 endif()
-if(ZMQ_LIBRARIES)
-    list(APPEND CPP Source/Device/ZMQ.cpp)
-endif()
 if(NMEA2000_LIBRARIES)
     list(APPEND CPP
         Source/Device/N2KsktCAN.cpp
@@ -445,7 +439,7 @@ set(HEADER
     Source/Application/AIS-catcher.h Source/Services/Prometheus.h Source/Application/Config.h Source/Application/DeviceManager.h Source/Web/WebDB.h Source/Library/Logger.h Source/Application/Receiver.h Source/Tracking/Ships.h Source/Tracking/DB.h Source/Tracking/PathStore.h Source/DBMS/PostgreSQL.h Source/DBMS/DatabaseOutput.h Source/DBMS/SQLite.h Source/DBMS/CSV.h Source/IO/HTTPClient.h Source/Web/MapTiles.h Source/Aviation/Beast.h
     Source/Device/Device.h Source/Device/FileWAV.h Source/Device/RTLTCP.h Source/Device/UDP.h Source/DSP/Demod.h Source/DSP/Filters.h Source/Marine/AIS.h Source/Marine/Message.h Source/Marine/MessageHistory.h Source/Marine/NMEA.h Source/Library/ZIP.h Source/Library/Signals.h Source/Device/SoapySDR.h Source/JSON/JSONAIS.h Source/JSON/JSON.h Source/Aviation/Basestation.h Source/Aviation/ADSB.h
     Source/Device/AIRSPY.h Source/Library/FIFO.h Source/Device/N2KsktCAN.h Source/Device/HACKRF.h Source/Device/HYDRASDR.h Source/Device/SDRPLAY.h Source/DSP/DSP.h Source/DSP/Model.h Source/Tracking/History.h Source/Tracking/Statistics.h Source/Library/Common.h Source/Library/Stream.h Source/Library/SWAR.h Source/Device/SpyServer.h Source/JSON/Keys.h Source/JSON/Writer.h Source/JSON/Parser.h Source/Tracking/PlaneDB.h
-    Source/Device/Serial.h Source/IO/N2KInterface.h Source/Marine/N2K.h Source/IO/N2KStream.h Source/Device/AIRSPYHF.h Source/Device/FileRAW.h Source/Device/RTLSDR.h Source/Device/ZMQ.h Source/DSP/FFT.h Source/IO/MsgOut.h Source/IO/Screen.h Source/IO/File.h Source/IO/StreamCounter.h Source/IO/Network.h Source/IO/HTTPServer.h Source/Utilities/StreamHelpers.h Source/IO/TCPServer.h Source/IO/Protocol.h
+    Source/Device/Serial.h Source/IO/N2KInterface.h Source/Marine/N2K.h Source/IO/N2KStream.h Source/Device/AIRSPYHF.h Source/Device/FileRAW.h Source/Device/RTLSDR.h Source/DSP/FFT.h Source/IO/MsgOut.h Source/IO/Screen.h Source/IO/File.h Source/IO/StreamCounter.h Source/IO/Network.h Source/IO/HTTPServer.h Source/Utilities/StreamHelpers.h Source/IO/TCPServer.h Source/IO/Protocol.h
     Source/Utilities/Parse.h Source/Utilities/Convert.h Source/Utilities/Helper.h Source/Utilities/PackedInt.h Source/Utilities/TemplateString.h Source/IO/OutputStats.h
     Source/Application/CommandLine.h Source/Application/Engine.h Source/Application/Stations.h Source/Control/ControlCore.h Source/Control/ControlServer.h Source/Control/ManagedMain.h Source/Site/Site.h Source/Site/SiteConfig.h Source/Services/ApiV1.h Source/Services/Http.h Source/Services/JournalJSON.h Source/Services/Mcp.h Source/Services/Routes.h Source/Services/Server.h Source/Services/Streams.h Source/Services/System.h Source/Services/Ui.h Source/Delivery/MqttState.h Source/Delivery/Webhooks.h Source/Tracking/BinaryStore.h Source/Tracking/DestinationIndex.h Source/Tracking/Event.h Source/Tracking/EventJSON.h Source/Tracking/EventRing.h Source/Tracking/Figures.h Source/Tracking/FixSampler.h Source/Tracking/Journal.h Source/Tracking/PlaceCatalogue.h Source/Tracking/PlaceGeometry.h Source/Tracking/PlaceMarkers.h Source/Tracking/PositionCheck.h Source/Tracking/RelationshipIndex.h Source/Tracking/Rest.h Source/Tracking/SlotTable.h Source/Tracking/StaticStore.h Source/Tracking/StationRegistry.h Source/Site/SystemFacts.h Source/Tracking/Tracker.h Source/Tracking/TrackingConfig.h Source/Tracking/ViewFilter.h Source/Tracking/VisitTracker.h Source/Web/PluginStore.h )
 
@@ -470,10 +464,10 @@ if(PORTS)
 endif()
 
 include_directories(
-    . ${APP_INCLUDES} ${AIRSPYHF_INCLUDE_DIRS} ${NMEA2000_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${HYDRASDR_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${ZMQ_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOAPYSDR_INCLUDE_DIRS} ${PQ_INCLUDE_DIRS} ${SQLITE_INCLUDE_DIRS} ${PQXX_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS} ${SAMPLERATE_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+    . ${APP_INCLUDES} ${AIRSPYHF_INCLUDE_DIRS} ${NMEA2000_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${HYDRASDR_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOAPYSDR_INCLUDE_DIRS} ${PQ_INCLUDE_DIRS} ${SQLITE_INCLUDE_DIRS} ${PQXX_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS} ${SAMPLERATE_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
 
 target_link_libraries(AIS-catcher
-    ${DL_LIBRARY} ${AIRSPY_LIBRARIES} ${NMEA2000_LIBRARIES} ${OPENSSL_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${HYDRASDR_LIBRARIES} ${ZMQ_LIBRARIES} ${PQ_LIBRARIES} ${SQLITE_LIBRARIES} ${PQXX_LIBRARIES} ${SDRPLAY_LIBRARIES} ${SOXR_LIBRARIES} ${SOAPYSDR_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${ZLIB_LIBRARIES}
+    ${DL_LIBRARY} ${AIRSPY_LIBRARIES} ${NMEA2000_LIBRARIES} ${OPENSSL_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${HYDRASDR_LIBRARIES} ${PQ_LIBRARIES} ${SQLITE_LIBRARIES} ${PQXX_LIBRARIES} ${SDRPLAY_LIBRARIES} ${SOXR_LIBRARIES} ${SOAPYSDR_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${ZLIB_LIBRARIES}
     ${ADDITIONAL_LIBRARIES} Threads::Threads)
 
 
@@ -505,10 +499,6 @@ endif()
 
 if(COPY_HYDRASDR_DLL)
     add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${HYDRASDR_DLL} ${CMAKE_CURRENT_BINARY_DIR})
-endif()
-
-if(COPY_ZMQ_DLL)
-    add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${ZMQ_DLL} ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 if(COPY_SOXR_DLL)

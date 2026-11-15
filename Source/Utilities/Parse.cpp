@@ -335,6 +335,10 @@ namespace Util
 		{
 			protocol = PROTOCOL::TCP;
 		}
+		else if (arg == "ZMQ")
+		{
+			protocol = PROTOCOL::ZMQ;
+		}
 		else if (arg == "MQTTS")
 		{
 			protocol = PROTOCOL::MQTTS;

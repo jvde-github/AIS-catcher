@@ -1,4 +1,4 @@
-SRC = Application/Config.cpp Control/ControlCore.cpp Control/ControlServer.cpp Application/DeviceManager.cpp Application/Engine.cpp Application/Stations.cpp Web/PluginStore.cpp Application/CommandLine.cpp Application/Usage.cpp Application/Main.cpp Control/ManagedMain.cpp Web/MapTiles.cpp Services/Prometheus.cpp Services/GeoJSON.cpp Services/Kml.cpp Application/Receiver.cpp Web/WebDB.cpp DBMS/PostgreSQL.cpp DBMS/DatabaseOutput.cpp DBMS/CSV.cpp DBMS/SQLite.cpp Device/AIRSPY.cpp Device/AIRSPYHF.cpp Device/FileRAW.cpp Device/FileWAV.cpp Device/HACKRF.cpp Device/HYDRASDR.cpp Device/N2KsktCAN.cpp Device/RTLSDR.cpp Device/RTLTCP.cpp Device/SDRPLAY.cpp Device/Serial.cpp Device/SoapySDR.cpp Device/SpyServer.cpp Device/UDP.cpp Device/ZMQ.cpp DSP/Decoder/V2/V2Engine.cpp DSP/Demod.cpp DSP/DSP.cpp DSP/Model.cpp IO/HTTPClient.cpp IO/HTTPServer.cpp IO/MsgOut.cpp IO/Screen.cpp IO/N2KInterface.cpp IO/N2KStream.cpp IO/Network.cpp IO/Protocol.cpp JSON/JSON.cpp JSON/JSONAIS.cpp JSON/Keys.cpp JSON/Parser.cpp Aviation/ADSB.cpp Aviation/Basestation.cpp Aviation/Beast.cpp Marine/AIS.cpp Marine/Message.cpp Marine/N2K.cpp Marine/NMEA.cpp Library/Logger.cpp IO/TCPServer.cpp Tracking/DB.cpp Tracking/PlaceCatalogue.cpp Tracking/PlaceGeometry.cpp Site/Site.cpp Site/SiteConfig.cpp Tracking/Journal.cpp Tracking/Tracker.cpp Tracking/ViewFilter.cpp Services/Http.cpp Services/Server.cpp Services/ApiV1.cpp Services/Mcp.cpp Services/Routes.cpp Services/System.cpp Delivery/Webhooks.cpp Delivery/MqttState.cpp Services/Ui.cpp Services/UiFormat.cpp Services/Streams.cpp Tracking/Ships.cpp Utilities/Parse.cpp Utilities/Convert.cpp Utilities/Helper.cpp Utilities/TemplateString.cpp Utilities/StreamHelpers.cpp
+SRC = Application/Config.cpp Control/ControlCore.cpp Control/ControlServer.cpp Application/DeviceManager.cpp Application/Engine.cpp Application/Stations.cpp Web/PluginStore.cpp Application/CommandLine.cpp Application/Usage.cpp Application/Main.cpp Control/ManagedMain.cpp Web/MapTiles.cpp Services/Prometheus.cpp Services/GeoJSON.cpp Services/Kml.cpp Application/Receiver.cpp Web/WebDB.cpp DBMS/PostgreSQL.cpp DBMS/DatabaseOutput.cpp DBMS/CSV.cpp DBMS/SQLite.cpp Device/AIRSPY.cpp Device/AIRSPYHF.cpp Device/FileRAW.cpp Device/FileWAV.cpp Device/HACKRF.cpp Device/HYDRASDR.cpp Device/N2KsktCAN.cpp Device/RTLSDR.cpp Device/RTLTCP.cpp Device/SDRPLAY.cpp Device/Serial.cpp Device/SoapySDR.cpp Device/SpyServer.cpp Device/UDP.cpp DSP/Decoder/V2/V2Engine.cpp DSP/Demod.cpp DSP/DSP.cpp DSP/Model.cpp IO/HTTPClient.cpp IO/HTTPServer.cpp IO/MsgOut.cpp IO/Screen.cpp IO/N2KInterface.cpp IO/N2KStream.cpp IO/Network.cpp IO/Protocol.cpp JSON/JSON.cpp JSON/JSONAIS.cpp JSON/Keys.cpp JSON/Parser.cpp Aviation/ADSB.cpp Aviation/Basestation.cpp Aviation/Beast.cpp Marine/AIS.cpp Marine/Message.cpp Marine/N2K.cpp Marine/NMEA.cpp Library/Logger.cpp IO/TCPServer.cpp Tracking/DB.cpp Tracking/PlaceCatalogue.cpp Tracking/PlaceGeometry.cpp Site/Site.cpp Site/SiteConfig.cpp Tracking/Journal.cpp Tracking/Tracker.cpp Tracking/ViewFilter.cpp Services/Http.cpp Services/Server.cpp Services/ApiV1.cpp Services/Mcp.cpp Services/Routes.cpp Services/System.cpp Delivery/Webhooks.cpp Delivery/MqttState.cpp Services/Ui.cpp Services/UiFormat.cpp Services/Streams.cpp Tracking/Ships.cpp Utilities/Parse.cpp Utilities/Convert.cpp Utilities/Helper.cpp Utilities/TemplateString.cpp Utilities/StreamHelpers.cpp
 OBJ = $(addprefix obj/,$(SRC:.cpp=.o))
 INCLUDE = -I. -ISource -ISource/Site/ -ISource/Services/ -ISource/Delivery/ -ISource/JSON/ -ISource/DBMS/ -ISource/Tracking/ -ISource/Library/ -ISource/Marine/ -ISource/Aviation/ -ISource/DSP/ -ISource/Application/ -ISource/Web/ -ISource/Control/ -ISource/IO/ -ISource/Utilities/ 
 CC = clang
@@ -11,7 +11,6 @@ CFLAGS_AIRSPYHF = -DHASAIRSPYHF $(shell pkg-config --cflags libairspyhf)
 CFLAGS_AIRSPY = -DHASAIRSPY $(shell pkg-config --cflags libairspy)
 CFLAGS_SDRPLAY = -DHASSDRPLAY
 CFLAGS_HACKRF = -DHASHACKRF $(shell pkg-config --cflags libhackrf) -I /usr/include/libhackrf/
-CFLAGS_ZMQ = -DHASZMQ $(shell pkg-config --cflags libzmq)
 CFLAGS_SOXR = -DHASSOXR $(shell pkg-config --cflags soxr)
 CFLAGS_SAMPLERATE = -DHASSAMPLERATE $(shell pkg-config --cflags samplerate)
 CFLAGS_CURL = -DHASCURL $(shell pkg-config --cflags libcurl)
@@ -25,7 +24,6 @@ LFLAGS_AIRSPYHF = $(shell pkg-config --libs libairspyhf)
 LFLAGS_AIRSPY = $(shell pkg-config --libs libairspy)
 LFLAGS_SDRPLAY = -lsdrplay_api
 LFLAGS_HACKRF = $(shell pkg-config --libs libhackrf)
-LFLAGS_ZMQ = $(shell pkg-config --libs libzmq)
 LFLAGS_SOXR = $(shell pkg-config --libs soxr)
 LFLAGS_SAMPLERATE = $(shell pkg-config --libs samplerate)
 LFLAGS_SOAPYSDR = -lSoapySDR
@@ -66,11 +64,6 @@ endif
 ifneq ($(shell pkg-config --exists libairspyhf && echo 'T'),)
     CFLAGS_ALL += $(CFLAGS_AIRSPYHF)
     LFLAGS_ALL += $(LFLAGS_AIRSPYHF)
-endif
-
-ifneq ($(shell pkg-config --exists libzmq && echo 'T'),)
-    CFLAGS_ALL += $(CFLAGS_ZMQ)
-    LFLAGS_ALL += $(LFLAGS_ZMQ)
 endif
 
 ifneq ($(shell pkg-config --exists libcurl && echo 'T'),)
@@ -119,10 +112,6 @@ sdrplay-only: AIS-catcher
 hackrf-only: CFLAGS_ALL = $(CFLAGS_HACKRF)
 hackrf-only: LFLAGS_ALL = $(LFLAGS_HACKRF)
 hackrf-only: AIS-catcher
-
-zmq-only: CFLAGS_ALL = $(CFLAGS_ZMQ)
-zmq-only: LFLAGS_ALL = $(LFLAGS_ZMQ)
-zmq-only: AIS-catcher
 
 soapysdr-only: CFLAGS_ALL = $(CFLAGS_SOAPYSDR)
 soapysdr-only: LFLAGS_ALL = $(LFLAGS_SOAPYSDR)

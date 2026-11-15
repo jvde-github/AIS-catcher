@@ -37,6 +37,7 @@ namespace Device
 		Protocol::MQTT mqtt;
 		Protocol::GPSD gpsd;
 		Protocol::RTLTCP rtltcp;
+		Protocol::ZMQ zmq;
 		Protocol::WebSocket ws;
 		Protocol::TLS tls;
 		Protocol::ProtocolBase *session = &tcp;
@@ -65,7 +66,12 @@ namespace Device
 
 
 	public:
-		RTLTCP() : Device(Format::CU8, 288000, Type::RTLTCP, "RTLTCP") { tcp.setStats(&stats); }
+		RTLTCP(Type type = Type::RTLTCP) : Device(Format::CU8, 288000, type, type == Type::ZMQ ? "ZMQ" : "RTLTCP")
+		{
+			tcp.setStats(&stats);
+			if (type == Type::ZMQ)
+				applyKey(AIS::KEY_SETTING_PROTOCOL, "ZMQ");
+		}
 		const IO::OutputStats *getConnectionStats() const override { return &stats; }
 
 		void OpenWithFileDescriptor(int) override { Open(0); }
@@ -89,9 +95,9 @@ namespace Device
 		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
 		std::string Get() override;
 
-		std::string getProduct() override { return "RTLTCP"; }
+		std::string getProduct() override { return getName(); }
 		std::string getSerial() override { return ""; }
-		std::string getIdentity() override { return "RTLTCP:" + session->getHost() + ":" + session->getPort(); }
+		std::string getIdentity() override { return getProduct() + ":" + session->getHost() + ":" + session->getPort(); }
 		std::string getVendor() override { return "Network"; }
 	};
 }

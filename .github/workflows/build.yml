@@ -95,7 +95,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential cmake pkg-config \
           zlib1g-dev libssl-dev libsqlite3-dev libpq-dev \
-          librtlsdr-dev libzmq3-dev libusb-1.0-0-dev
+          librtlsdr-dev libusb-1.0-0-dev
     - name: Configure
       run: cmake -S . -B build -DWARNINGS_AS_ERRORS=ON
     - name: Build
@@ -417,7 +417,7 @@ jobs:
     - name: Install vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
-        vcpkg install libpq:${{matrix.platform}}-windows fftw3:${{matrix.platform}}-windows sqlite3:${{matrix.platform}}-windows openssl:${{matrix.platform}}-windows libusb:${{matrix.platform}}-windows pthread:${{matrix.platform}}-windows zlib:${{matrix.platform}}-windows soxr:${{matrix.platform}}-windows zeromq:${{matrix.platform}}-windows
+        vcpkg install libpq:${{matrix.platform}}-windows fftw3:${{matrix.platform}}-windows sqlite3:${{matrix.platform}}-windows openssl:${{matrix.platform}}-windows libusb:${{matrix.platform}}-windows pthread:${{matrix.platform}}-windows zlib:${{matrix.platform}}-windows soxr:${{matrix.platform}}-windows
 
     - name: Setting up directories
       run: |

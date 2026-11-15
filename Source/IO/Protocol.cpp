@@ -1159,6 +1159,87 @@ namespace Protocol
 		awaiting_connack = sendConnect();
 	}
 
+	void ZMQ::onConnect()
+	{
+		// greeting (ZMTP 3.0, NULL security) and READY as SUB
+		static const char ready[] = "\x04\x19\x05READY\x0bSocket-Type\0\0\0\x03SUB";
+		std::string hello(64, '\0');
+		hello[0] = '\xff';
+		hello[9] = '\x7f';
+		hello[10] = 3;
+		hello.replace(12, 4, "NULL");
+		hello.append(ready, sizeof(ready) - 1);
+
+		head.clear();
+		left = 0;
+		greeted = command = subscribed = false;
+
+		if (!prev || prev->send(hello.data(), (int)hello.size()) != (int)hello.size())
+		{
+			Error() << "ZMQ: cannot send the greeting to " << getHost() << ":" << getPort();
+			disconnect();
+			return;
+		}
+		ProtocolBase::onConnect();
+	}
+
+	int ZMQ::read(void *data, int length, int t, bool wait)
+	{
+		const int n = ProtocolBase::read(data, length, t, wait);
+		char *p = (char *)data;
+		int out = 0;
+
+		for (int i = 0; i < n;)
+		{
+			if (left)
+			{
+				const int k = (int)MIN(left, (uint64_t)(n - i));
+				if (!command)
+				{
+					std::memmove(p + out, p + i, k);
+					out += k;
+				}
+				i += k;
+				left -= k;
+
+				// libzmq takes a subscription only after its READY
+				if (command && !left && !subscribed)
+				{
+					static const char all[] = {0, 1, 1};
+					subscribed = true;
+					prev->send(all, sizeof(all));
+				}
+				continue;
+			}
+
+			head += p[i++];
+			if (!greeted)
+			{
+				if (head.size() < 64)
+					continue;
+				if ((unsigned char)head[0] != 0xff || head[9] != 0x7f || head[10] < 3)
+				{
+					Error() << "ZMQ (" << getHost() << ":" << getPort() << "): not a ZeroMQ publisher of version 4 or later.";
+					disconnect();
+					return 0;
+				}
+				greeted = true;
+				head.clear();
+				continue;
+			}
+
+			// frame header: flags (2 = long size, 4 = command), size in 1 or 8 bytes
+			const size_t size_bytes = head[0] & 2 ? 8 : 1;
+			if (head.size() < 1 + size_bytes)
+				continue;
+			command = head[0] & 4;
+			for (size_t j = 1; j <= size_bytes; j++)
+				left = left << 8 | (unsigned char)head[j];
+			head.clear();
+		}
+		return n < 0 ? n : out;
+	}
+
 	void MQTT::poll()
 	{
 		ProtocolBase::poll();

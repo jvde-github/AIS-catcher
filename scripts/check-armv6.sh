@@ -20,7 +20,7 @@ dpkg --add-architecture armhf
 apt-get update -qq
 apt-get install -y -qq crossbuild-essential-armhf cmake make pkgconf \
     libssl-dev:armhf zlib1g-dev:armhf libsqlite3-dev:armhf libpq-dev:armhf \
-    librtlsdr-dev:armhf libzmq3-dev:armhf libusb-1.0-0-dev:armhf >/dev/null
+    librtlsdr-dev:armhf libusb-1.0-0-dev:armhf >/dev/null
 
 # CMakeLists.txt replaces CMAKE_CXX_FLAGS, so the target flags ride on the compiler
 for tool in gcc g++; do

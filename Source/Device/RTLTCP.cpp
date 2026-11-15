@@ -50,6 +50,9 @@ namespace Device
 			session = tcp.add(&rtltcp);
 			tcp.setOptionKey(AIS::KEY_SETTING_TIMEOUT, "2");
 			break;
+		case PROTOCOL::ZMQ:
+			session = tcp.add(&zmq);
+			break;
 		case PROTOCOL::WS:
 			session = tcp.add(&ws);
 			break;
@@ -83,11 +86,11 @@ namespace Device
 
 		if (!session->connect())
 		{
-			throw std::runtime_error("RTLTCP: cannot open connection with " + tcp.getHost() + ":" + tcp.getPort());
+			throw std::runtime_error(getProduct() + ": cannot open connection with " + tcp.getHost() + ":" + tcp.getPort());
 		}
 
 		if (!session->waitConnected(2))
-			Warning() << "RTLTCP: not connected to " << tcp.getHost() << ":" << tcp.getPort() << ", retrying every 10 s.";
+			Warning() << getProduct() << ": not connected to " << tcp.getHost() << ":" << tcp.getPort() << ", retrying every 10 s.";
 
 		Device::Play();
 
@@ -144,19 +147,19 @@ namespace Device
 
 				if (len < 0)
 				{
-					Error() << "RTLTCP: error receiving data from remote host, connecting again.";
+					Error() << getProduct() << ": error receiving data from remote host, connecting again.";
 					session->disconnect();
 					SleepSystem(1000);
 					continue;
 				}
 				else if (isStreaming() && !fifo.Push(buffer.data(), len))
-					Error() << "RTLTCP: buffer overrun.";
+					Error() << getProduct() << ": buffer overrun.";
 			}
 		}
 		catch (const std::exception &e)
 		{
 			lost = true;
-			Error() << "RTLTCP: " << e.what();
+			Error() << getProduct() << ": " << e.what();
 		}
 	}
 
@@ -182,7 +185,7 @@ namespace Device
 				{
 					if(tcp.getState() == Protocol::TCP::State::READY)
 					{
-						Error() << "RTLTCP [" << tcp.getHost() <<  ":" << tcp.getPort() << "]: timeout.";
+						Error() << getProduct() << " [" << tcp.getHost() <<  ":" << tcp.getPort() << "]: timeout.";
 					}
 				}
 			}
@@ -191,7 +194,7 @@ namespace Device
 
 	void RTLTCP::getDeviceList(std::vector<Description> &DeviceList)
 	{
-		DeviceList.push_back(Description("RTLTCP", "RTLTCP", "RTLTCP", (uint64_t)0, Type::RTLTCP));
+		DeviceList.push_back(Description(getName(), getName(), getName(), (uint64_t)0, getDriver()));
 	}
 
 	Setting &RTLTCP::applyKey(AIS::Keys key, const std::string &arg)
@@ -217,6 +220,16 @@ namespace Device
 			ws.setPath(path);
 			break;
 		}
+		case AIS::KEY_SETTING_ENDPOINT:
+		{
+			std::string prot, user, pass, host, port, path;
+			Util::Parse::URL(arg, prot, user, pass, host, port, path);
+			if (prot != "tcp" || host.empty() || port.empty())
+				throw std::runtime_error("ZMQ: endpoint \"" + arg + "\" is not tcp://host:port, the only kind supported.");
+			SetKey(AIS::KEY_SETTING_HOST, host);
+			SetKey(AIS::KEY_SETTING_PORT, port);
+			break;
+		}
 		case AIS::KEY_SETTING_USERNAME:
 		case AIS::KEY_SETTING_PASSWORD:
 			mqtt.setOptionKey(key, arg);
@@ -239,6 +252,7 @@ namespace Device
 				setFormat(Format::TXT);
 				break;
 			case PROTOCOL::RTLTCP:
+			case PROTOCOL::ZMQ:
 				setFormat(Format::CU8);
 				break;
 			case PROTOCOL::WS:

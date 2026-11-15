@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake git pkg-config ca-certificates \
     libssl-dev zlib1g-dev libusb-1.0-0-dev \
     librtlsdr-dev libairspy-dev libhackrf-dev \
-    libsqlite3-dev libpq-dev libzmq3-dev libsoxr-dev libsamplerate0-dev && \
+    libsqlite3-dev libpq-dev libsoxr-dev libsamplerate0-dev && \
     rm -rf /var/lib/apt/lists/*
 
 COPY . /src
@@ -20,7 +20,7 @@ FROM debian:trixie-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl3t64 zlib1g libusb-1.0-0 \
     librtlsdr0 libairspy0 libhackrf0 \
-    libsqlite3-0 libpq5 libzmq5 libsoxr0 libsamplerate0 && \
+    libsqlite3-0 libpq5 libsoxr0 libsamplerate0 && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /build/AIS-catcher /usr/bin/AIS-catcher

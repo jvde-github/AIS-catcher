@@ -721,6 +721,20 @@ namespace Protocol
 		GPSD() : ProtocolBase("GPSD") {};
 	};
 
+	// a ZeroMQ (ZMTP 3.0) subscriber to every topic: read() returns the frames' content
+	class ZMQ : public ProtocolBase
+	{
+		std::string head;
+		uint64_t left = 0;
+		bool greeted = false, command = false, subscribed = false;
+
+	public:
+		ZMQ() : ProtocolBase("ZMQ") {}
+
+		void onConnect() override;
+		int read(void *data, int length, int t = 1, bool wait = false) override;
+	};
+
 	class Hub : public ProtocolBase
 	{
 		std::string uuid;

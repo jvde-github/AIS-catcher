@@ -182,6 +182,8 @@ namespace Util
 			return "MQTTS";
 		case PROTOCOL::WSSMQTT:
 			return "WSSMQTT";
+		case PROTOCOL::ZMQ:
+			return "ZMQ";
 		case PROTOCOL::WSS:
 			return "WSS";
 		}

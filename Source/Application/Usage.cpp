@@ -136,10 +136,7 @@ void printBuildConfiguration()
 #ifdef HASSDRPLAY
 	sdr_support << "SDRPLAY ";
 #endif
-	sdr_support << "RTLTCP SPYSERVER ";
-#ifdef HASZMQ
-	sdr_support << "ZMQ ";
-#endif
+	sdr_support << "RTLTCP SPYSERVER ZMQ ";
 #ifdef HASHACKRF
 	sdr_support << "HACKRF ";
 #endif

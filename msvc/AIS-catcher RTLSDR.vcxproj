@@ -47,7 +47,6 @@
     <ClCompile Include="..\Source\Device\SoapySDR.cpp" />
     <ClCompile Include="..\Source\Device\SpyServer.cpp" />
     <ClCompile Include="..\Source\Device\UDP.cpp" />
-    <ClCompile Include="..\Source\Device\ZMQ.cpp" />
     <ClCompile Include="..\Source\DSP\Decoder\V2\V2Engine.cpp" />
     <ClCompile Include="..\Source\DSP\Demod.cpp" />
     <ClCompile Include="..\Source\DSP\DSP.cpp" />
@@ -168,7 +167,6 @@
     <ClInclude Include="..\Source\Device\AIRSPYHF.h" />
     <ClInclude Include="..\Source\Device\FileRAW.h" />
     <ClInclude Include="..\Source\Device\RTLSDR.h" />
-    <ClInclude Include="..\Source\Device\ZMQ.h" />
     <ClInclude Include="..\Source\DSP\FFT.h" />
     <ClInclude Include="..\Source\IO\MsgOut.h" />
     <ClInclude Include="..\Source\IO\Screen.h" />

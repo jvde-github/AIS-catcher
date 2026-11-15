@@ -45,7 +45,6 @@ readonly BUILD_DEPS=(
     libairspy-dev
     libairspyhf-dev
     libhackrf-dev
-    libzmq3-dev
     libssl-dev
     zlib1g-dev
     libsqlite3-dev

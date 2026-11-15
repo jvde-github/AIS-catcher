@@ -126,7 +126,8 @@ enum class PROTOCOL
 	TCP,
 	MQTTS,
 	WSSMQTT,
-	WSS
+	WSS,
+	ZMQ
 };
 
 enum class Type
