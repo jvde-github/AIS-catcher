@@ -134,13 +134,12 @@ FEATURE_HACKRF=ON
 FEATURE_HYDRASDR=ON
 FEATURE_SDRPLAY=ON
 FEATURE_SOAPYSDR=OFF
-FEATURE_ZMQ=ON
 FEATURE_NMEA2000=ON
 FEATURE_PSQL=ON
 FEATURE_SQLITE=ON
 FEATURE_WEBVIEWER=ON
 
-readonly FEATURES=(RTLSDR AIRSPY AIRSPYHF HACKRF HYDRASDR SDRPLAY SOAPYSDR ZMQ NMEA2000 PSQL SQLITE WEBVIEWER)
+readonly FEATURES=(RTLSDR AIRSPY AIRSPYHF HACKRF HYDRASDR SDRPLAY SOAPYSDR NMEA2000 PSQL SQLITE WEBVIEWER)
 
 # Color constants (using ANSI escape codes)
 if [[ -t 1 ]]; then
@@ -257,7 +256,6 @@ interactive_feature_select() {
 
     echo
     echo -e "${COLOR_BOLD}Inputs / outputs${COLOR_RESET}"
-    FEATURE_ZMQ=$(prompt_yes_no      "  ZMQ (-z input / ZMQ output)"          "$FEATURE_ZMQ")
     FEATURE_NMEA2000=$(prompt_yes_no "  NMEA2000 socketCAN (-i / -I)"         "$FEATURE_NMEA2000")
     FEATURE_PSQL=$(prompt_yes_no     "  PostgreSQL output (-D)"               "$FEATURE_PSQL")
     FEATURE_SQLITE=$(prompt_yes_no   "  SQLite (offline map tiles and -D output)" "$FEATURE_SQLITE")
@@ -466,7 +464,6 @@ install_source_build_dependencies() {
     local required_deps optional_deps=""
     if [[ "$PKG_MANAGER" == "apt" ]]; then
         required_deps="git cmake build-essential pkg-config libssl-dev zlib1g-dev libusb-1.0-0-dev curl"
-        [[ "$FEATURE_ZMQ"      == "ON" ]] && optional_deps+=" libzmq3-dev"
         [[ "$FEATURE_PSQL"     == "ON" ]] && optional_deps+=" libpq-dev"
         [[ "$FEATURE_SQLITE"   == "ON" ]] && optional_deps+=" libsqlite3-dev"
         [[ "$FEATURE_AIRSPY"   == "ON" ]] && optional_deps+=" libairspy-dev"
@@ -475,7 +472,6 @@ install_source_build_dependencies() {
         [[ "$FEATURE_SOAPYSDR" == "ON" ]] && optional_deps+=" libsoapysdr-dev"
     else
         required_deps="git cmake gcc-c++ make pkgconf-pkg-config openssl-devel zlib-devel libusb1-devel curl"
-        [[ "$FEATURE_ZMQ"      == "ON" ]] && optional_deps+=" zeromq-devel"
         [[ "$FEATURE_PSQL"     == "ON" ]] && optional_deps+=" libpq-devel"
         [[ "$FEATURE_SQLITE"   == "ON" ]] && optional_deps+=" sqlite-devel"
         [[ "$FEATURE_AIRSPY"   == "ON" ]] && optional_deps+=" airspyone_host-devel"
