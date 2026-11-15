@@ -18,6 +18,7 @@ import { updateServerConfig } from './features/server-config/viewer-config.js';
 import { drawStation } from './features/follow/follow.js';
 import { setPageTitle } from './panels.js';
 import * as community from './overlays/community.js';
+import * as mapObjects from './features/mapobjects/mapobjects.js';
 
 // ─── the receiver ────────────────────────────────────────────────────────────
 
@@ -102,7 +103,8 @@ async function fetchShipsBody() {
     let ships;
     const at = focus;
     try {
-        ships = await viewed("ships_array.json" + (shipsSince > 0 ? "?since=" + shipsSince : ""));
+        const ask = [shipsSince > 0 && "since=" + shipsSince, mapObjects.objectsAsk()].filter(Boolean).join("&");
+        ships = await viewed("ships_array.json" + (ask && "?" + ask));
     } catch (error) {
         console.log("failed loading ships: " + error);
     }
@@ -125,6 +127,7 @@ async function fetchShipsBody() {
     // the new configuration may have taken the station in view away
     await updateServerConfig(ships.config_version);
     if (at !== focus) return false;
+    if (ships.mapobjects) mapObjects.applyObjects({ time: ships.time, place_version: ships.place_version, ...ships.mapobjects });
     const serverTime = ships.time || 0;
     const isIncremental = shipsSince > 0 && ships.full !== true;
 

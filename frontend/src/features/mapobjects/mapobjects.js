@@ -138,13 +138,20 @@ export function resetSince() { objectsSince = 0; objects.resetEvents(); }
 
 // ─── transport ───────────────────────────────────────────────────────────────
 
-// the objects that changed since the last poll; the client keeps the rest and ages them
+// the objects that changed since the last poll; the client keeps the rest and ages them.
+// They ride in the ships poll: what it asks for, and what it hands back
+export const objectsAsk = () => (objectLayer.isVisible() && objectsAnyShown() ? `objects=${objectsSince}` : '');
+
+export function applyObjects(data) {
+    objects.applyDelta(data, !objectsSince);
+    if (data.seq) objectsSince = data.seq;
+}
+
 export async function fetchObjects() {
     try {
         const data = await viewed(`mapobjects.json?since=${objectsSince}`);
         if (!data) return false;
-        objects.applyDelta(data, !objectsSince);
-        if (data.seq) objectsSince = data.seq;
+        applyObjects(data);
         return true;
     } catch (error) {
         console.log("Failed loading map objects:", error);

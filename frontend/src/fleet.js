@@ -52,7 +52,6 @@ export async function updateMap() {
     await Promise.all([
         fetchTracks(),
         planeLayer.getVisible() ? fetchPlanes() : Promise.resolve(true),
-        (mapObjects.objectLayer.isVisible() && mapObjects.objectsAnyShown()) ? mapObjects.fetchObjects() : Promise.resolve(true),
         range.fetchRange(),
     ]);
 

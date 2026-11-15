@@ -308,13 +308,19 @@ namespace Services
 			return ok;
 		};
 
+		// the stations the server lists, and the broadcasts of the vessels it shows
+		std::function<bool(int)> listed;
+		if (!spec.stations.empty())
+			listed = [this](int id) { return spec.showsStation(id); };
+
 		if (p == "/api/config.json")
 			response = Response::json(pageConfig());
 		else if (p == "/api/ships_array.json")
 		{
 			StationRegistry::Station at;
 			const bool drawn = drawnStation(focus, at);
-			response = Response::json(UiFormat::shipsCompact(db, false, since(), configVersion(), keep, drawn ? &at : nullptr, db.timeHistory(), &shown));
+			response = Response::json(UiFormat::shipsCompact(db, false, since(), configVersion(), keep, drawn ? &at : nullptr, db.timeHistory(), &shown,
+															 toInt(request.param("objects"), -1), listed));
 		}
 		else if (p == "/api/ships_table.json")
 			response = Response::json(UiFormat::shipsTable(db, since(), keep, &shown));
@@ -353,13 +359,7 @@ namespace Services
 		else if (p == "/api/allpath.json")
 			response = Response::json(since() > 0 ? UiFormat::allPathsSince(db, MAX(since(), oldest), keep) : UiFormat::allPaths(db, keep, oldest));
 		else if (p == "/api/mapobjects.json")
-		{
-			// the stations the server lists, and the broadcasts of the vessels it shows
-			std::function<bool(int)> listed;
-			if (!spec.stations.empty())
-				listed = [this](int id) { return spec.showsStation(id); };
 			response = Response::json(UiFormat::mapObjects(db, (uint64_t)toInt(request.param("since")), true, listed, keep, &shown));
-		}
 		else if (p == "/api/object.json")
 		{
 			const std::string key = request.param("key");

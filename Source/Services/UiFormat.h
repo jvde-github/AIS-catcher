@@ -40,11 +40,13 @@ namespace Services
 		// `shown`: which stations' locations this server shows; each station's own share_loc without it
 		// `at`, when given, is the station the page draws, in place of the DB's own;
 		// `stations_window` (seconds) ends each row with the stations heard within it and their ages
+		// `objects`, when not negative, adds the map objects changed after it, as mapObjects() gives them
 		static std::string shipsCompact(DB &db, bool full = false, std::time_t since = 0,
 										const std::string &configVersion = "",
 										const DB::Keep &keep = DB::Keep(),
 										const StationRegistry::Station *at = nullptr,
-										int stations_window = 0, const Located *shown = nullptr);
+										int stations_window = 0, const Located *shown = nullptr,
+										long long objects = -1, const std::function<bool(int)> &listed = nullptr);
 		static std::string shipsTable(DB &db, std::time_t since = 0, const DB::Keep &keep = DB::Keep(), const Located *shown = nullptr);
 		// `at`, when given, is the station the page draws, in place of the DB's own
 		static std::string ships(DB &db, bool full = false, const StationRegistry::Station *at = nullptr,
@@ -127,6 +129,8 @@ namespace Services
 		}
 
 	private:
+		static void writeObjects(JSON::Writer &w, DB &db, std::time_t now, uint64_t since, bool with_stations,
+								 const std::function<bool(int)> &shown, const DB::Keep &keep, const Located *located);
 		static void shipBody(JSON::Writer &w, const Ship &ship, long int delta_time, bool station_known);
 		static void voyageChanges(DB &db, JSON::Writer &w, int ptr);
 		// `carry_floor`: a windowed walk's point from before the window is left out when it ends before this

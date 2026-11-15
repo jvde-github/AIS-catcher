@@ -193,7 +193,8 @@ namespace Services
 	std::string UiFormat::shipsCompact(DB &db, bool full, std::time_t since,
 									   const std::string &configVersion, const DB::Keep &keep,
 									   const StationRegistry::Station *at,
-									   int stations_window, const Located *shown)
+									   int stations_window, const Located *shown,
+									   long long objects, const std::function<bool(int)> &listed)
 	{
 		std::lock_guard<std::mutex> lock(db.mtx);
 		const Located located = shown ? *shown : Located::from(db.stations);
@@ -240,6 +241,13 @@ namespace Services
 											 compactStatic(w, ship);
 									 });
 			w.endArray();
+
+			if (objects >= 0)
+			{
+				w.key("mapobjects").beginObject();
+				writeObjects(w, db, now, (uint64_t)objects, true, listed, keep, shown);
+				w.endObject();
+			}
 
 			w.endObject();
 			w.raw("\n\n");
@@ -1102,6 +1110,25 @@ namespace Services
 		return db.content;
 	}
 
+	// the objects changed after `since` and those gone; db.mtx is held
+	void UiFormat::writeObjects(JSON::Writer &w, DB &db, std::time_t now, uint64_t since, bool with_stations,
+								const std::function<bool(int)> &shown, const DB::Keep &keep, const Located *located)
+	{
+		db.binary.refresh(now);
+		w.kv("seq", (long long)db.binary.sequence()).key("objects").beginArray();
+		db.binary.writeMarkerRows(w, since, keptSender(db, keep));
+		if (with_stations)
+			db.stations.writeRows(w, since, db.station_heard, shown,
+								  located ? std::function<bool(int)>([located](int id) { return located->at(id); }) : nullptr);
+		db.place_markers.writeRows(w, since);
+		w.endArray().key("removed").beginArray();
+		db.binary.writeRemoved(w, since);
+		if (with_stations)
+			db.stations.writeRemoved(w, since);
+		db.place_markers.writeRemoved(w, since);
+		w.endArray();
+	}
+
 	std::string UiFormat::mapObjects(DB &db, uint64_t since, bool with_stations, const std::function<bool(int)> &shown, const DB::Keep &keep,
 								 const Located *located)
 	{
@@ -1110,24 +1137,9 @@ namespace Services
 		{
 			JSON::Writer w(db.content, 4096);
 			std::time_t now = time(nullptr);
-			db.binary.refresh(now);
-			w.beginObject()
-				.kv("place_version", db.place_markers.version())
-				.kv("time", now)
-				.kv("seq", (long long)db.binary.sequence())
-				.key("objects")
-				.beginArray();
-			db.binary.writeMarkerRows(w, since, keptSender(db, keep));
-			if (with_stations)
-				db.stations.writeRows(w, since, db.station_heard, shown,
-									  located ? std::function<bool(int)>([located](int id) { return located->at(id); }) : nullptr);
-			db.place_markers.writeRows(w, since);
-			w.endArray().key("removed").beginArray();
-			db.binary.writeRemoved(w, since);
-			if (with_stations)
-				db.stations.writeRemoved(w, since);
-			db.place_markers.writeRemoved(w, since);
-			w.endArray().endObject();
+			w.beginObject().kv("place_version", db.place_markers.version()).kv("time", now);
+			writeObjects(w, db, now, since, with_stations, shown, keep, located);
+			w.endObject();
 		}
 		return db.content;
 	}
