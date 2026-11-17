@@ -18,6 +18,13 @@
 #include <cstring>
 
 #include "RTLTCP.h"
+
+#include <algorithm>
+#include <fstream>
+
+#if defined(__linux__) && !defined(__ANDROID__)
+#include <ifaddrs.h>
+#endif
 #include "Logger.h"
 
 namespace Device
@@ -53,6 +60,11 @@ namespace Device
 		case PROTOCOL::ZMQ:
 			session = tcp.add(&zmq);
 			break;
+#if defined(__linux__) && !defined(__ANDROID__)
+		case PROTOCOL::CAN:
+			session = &can;
+			break;
+#endif
 		case PROTOCOL::WS:
 			session = tcp.add(&ws);
 			break;
@@ -86,15 +98,15 @@ namespace Device
 
 		if (!session->connect())
 		{
-			throw std::runtime_error(getProduct() + ": cannot open connection with " + tcp.getHost() + ":" + tcp.getPort());
+			throw std::runtime_error(getProduct() + ": cannot open connection with " + getIdentity());
 		}
 
 		if (!session->waitConnected(2))
-			Warning() << getProduct() << ": not connected to " << tcp.getHost() << ":" << tcp.getPort() << ", retrying.";
+			Warning() << getProduct() << ": not connected to " << session->getHost() << (session->getPort().empty() ? "" : ":" + session->getPort()) << ", retrying.";
 
 		Device::Play();
 
-		if (getFormat() != Format::TXT && getFormat() != Format::BASESTATION && getFormat() != Format::BEAST && getFormat() != Format::RAW1090)
+		if (getFormat() != Format::TXT && getFormat() != Format::BASESTATION && getFormat() != Format::BEAST && getFormat() != Format::RAW1090 && getFormat() != Format::N2K)
 		{
 			fifo.Init(BUFFER_SIZE, 2 * buffer_count);
 		}
@@ -192,9 +204,55 @@ namespace Device
 		}
 	}
 
+	// the CAN interfaces of this machine: the ones the system gives the hardware type of CAN, 280
+	static std::vector<std::string> canInterfaces()
+	{
+		std::vector<std::string> names;
+#if defined(__linux__) && !defined(__ANDROID__)
+		struct ifaddrs *list = nullptr;
+		if (getifaddrs(&list) == -1)
+			return names;
+		for (struct ifaddrs *i = list; i; i = i->ifa_next)
+		{
+			int type = 0;
+			if (i->ifa_name && std::find(names.begin(), names.end(), i->ifa_name) == names.end() &&
+				std::ifstream(std::string("/sys/class/net/") + i->ifa_name + "/type") >> type && type == 280)
+				names.push_back(i->ifa_name);
+		}
+		freeifaddrs(list);
+#endif
+		return names;
+	}
+
 	void RTLTCP::getDeviceList(std::vector<Description> &DeviceList)
 	{
-		DeviceList.push_back(Description(getName(), getName(), getName(), (uint64_t)0, getDriver()));
+		if (getDriver() != Type::N2K)
+		{
+			DeviceList.push_back(Description(getName(), getName(), getName(), (uint64_t)0, getDriver()));
+			return;
+		}
+		uint64_t n = 0;
+		for (const auto &name : canInterfaces())
+			DeviceList.push_back(Description("NMEA2000", "CANbus", name, n++, Type::N2K));
+	}
+
+	// a CAN input without an interface named takes the one the device list has at `h`
+	void RTLTCP::Open(uint64_t h)
+	{
+		if (Protocol != PROTOCOL::CAN)
+			return;
+		if (tcp.getHost().empty())
+		{
+			const std::vector<std::string> names = canInterfaces();
+			if (h >= names.size())
+				throw std::runtime_error("NMEA2000: no CAN interface #" + std::to_string(h) + " on this machine.");
+			tcp.setOptionKey(AIS::KEY_SETTING_HOST, names[h]);
+		}
+#if defined(__linux__) && !defined(__ANDROID__)
+		can.setInterface(tcp.getHost());
+#else
+		throw std::runtime_error("NMEA2000: a CAN interface is read on Linux only.");
+#endif
 	}
 
 	Setting &RTLTCP::applyKey(AIS::Keys key, const std::string &arg)
@@ -283,6 +341,10 @@ namespace Device
 			case PROTOCOL::RAW1090:
 				setFormat(Format::RAW1090);
 				break;
+			case PROTOCOL::N2K:
+			case PROTOCOL::CAN:
+				setFormat(Format::N2K);
+				break;
 			default:
 				throw std::runtime_error("RTLTCP: unsupported protocol: " + arg);
 			}
@@ -290,6 +352,9 @@ namespace Device
 		}
 		case AIS::KEY_SETTING_PERSIST:
 			Warning() << "RTLTCP: \"persist\" is no longer used and is ignored; it reconnects by itself";
+			break;
+		case AIS::KEY_SETTING_INTERFACE:
+			tcp.setOptionKey(AIS::KEY_SETTING_HOST, arg);
 			break;
 		case AIS::KEY_SETTING_LOSSLESS:
 			lossless = Util::Parse::Switch(arg);

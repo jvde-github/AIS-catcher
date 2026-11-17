@@ -1,12 +1,12 @@
 # Find libsoxr
 if(SOXR)
     if(MSVC AND NOT MSVC_VCPKG)
-        find_path(SOXR_INCLUDE_DIR soxr.h HINTS ${POTHOSSDR_INCLUDE_DIR})
-        find_library(SOXR_LIBRARY soxr.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
-        find_file(SOXR_DLL soxr.dll HINTS ${POTHOSSDR_BINARY_DIR})
+        find_path(SOXR_INCLUDE_DIR soxr.h HINTS ${WINDOWS_INCLUDE_DIR})
+        find_library(SOXR_LIBRARY soxr.lib HINTS ${WINDOWS_LIBRARY_DIR})
+        find_file(SOXR_DLL soxr.dll HINTS ${WINDOWS_BINARY_DIR})
 
         if(SOXR_INCLUDE_DIR AND SOXR_LIBRARY AND SOXR_DLL)
-            Message(STATUS "SOXR: found (PothosSDR) - " ${SOXR_INCLUDE_DIR}, ${SOXR_LIBRARY}, ${SOXR_DLL})
+            Message(STATUS "SOXR: found (Windows) - " ${SOXR_INCLUDE_DIR}, ${SOXR_LIBRARY}, ${SOXR_DLL})
             set(COPY_SOXR_DLL TRUE)
             add_definitions(-DHASSOXR)
 
@@ -14,7 +14,7 @@ if(SOXR)
             set(SOXR_LIBRARIES ${SOXR_LIBRARY})
 
         else()
-            Message(STATUS "SOXR: NOT found (PothosSDR) - " ${SOXR_INCLUDE_DIR}, ${SOXR_LIBRARY}, ${SOXR_DLL})
+            Message(STATUS "SOXR: NOT found (Windows) - " ${SOXR_INCLUDE_DIR}, ${SOXR_LIBRARY}, ${SOXR_DLL})
         endif()
     else()
         pkg_check_modules(PKG_SOXR soxr)

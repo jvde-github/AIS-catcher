@@ -34,7 +34,6 @@
 #include "Device/SoapySDR.h"
 #include "Device/Serial.h"
 #include "Device/UDP.h"
-#include "Device/N2KsktCAN.h"
 #include "Device/HYDRASDR.h"
 
 std::vector<Device::Description> DeviceManager::device_list;
@@ -47,7 +46,7 @@ const DeviceManager::DeviceEntry DeviceManager::device_settings[] = {
 	{'s', AIS::KEY_SETTING_SDRPLAY, Type::SDRPLAY, true, true, "SDRplay", []() -> Device::Device * { return new Device::SDRPLAY(); }},
 	{'f', AIS::KEY_SETTING_HACKRF, Type::HACKRF, true, true, "HackRF", []() -> Device::Device * { return new Device::HACKRF(); }},
 	{'u', AIS::KEY_SETTING_SOAPYSDR, Type::SOAPYSDR, true, true, "SoapySDR", []() -> Device::Device * { return new Device::SOAPYSDR(); }},
-	{0, AIS::KEY_SETTING_NMEA2000, Type::N2K, true, false, "NMEA 2000", []() -> Device::Device * { return new Device::N2KSCAN(); }},
+	{0, AIS::KEY_SETTING_NMEA2000, Type::N2K, true, false, "NMEA 2000", []() -> Device::Device * { return new Device::RTLTCP(Type::N2K); }},
 	{'e', AIS::KEY_SETTING_SERIALPORT, Type::SERIALPORT, true, false, "Serial", []() -> Device::Device * { return new Device::SerialPort(); }},
 	{'d', AIS::KEY_SETTING_HYDRASDR, Type::HYDRASDR, true, true, "HydraSDR", []() -> Device::Device * { return new Device::HYDRASDR(); }},
 	{'a', AIS::KEY_SETTING_FILE, Type::RAWFILE, false, false, "File", []() -> Device::Device * { return new Device::RAWFile(); }},

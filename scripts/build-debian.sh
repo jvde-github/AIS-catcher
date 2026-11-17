@@ -33,7 +33,6 @@ readonly BUILD_DIR="${PROJECT_ROOT}/build"
 # Source repositories
 readonly RTLSDR_REPO="https://gitea.osmocom.org/sdr/rtl-sdr.git"
 readonly HYDRASDR_REPO="https://github.com/hydrasdr/hydrasdr-host.git"
-readonly NMEA2000_REPO="https://github.com/ttlappalainen/NMEA2000.git"
 
 # Build dependencies (for apt-get)
 readonly BUILD_DEPS=(
@@ -110,26 +109,6 @@ build_hydrasdr() {
     cmake --install "${src_dir}/libhydrasdr/build"
 }
 
-build_nmea2000() {
-    log "Building NMEA2000 library..."
-    local src_dir="${BUILD_DIR}/NMEA2000"
-
-    git clone --depth 1 "${NMEA2000_REPO}" "${src_dir}"
-
-    pushd "${src_dir}/src" > /dev/null
-    g++ -O3 -c \
-        N2kMsg.cpp \
-        N2kStream.cpp \
-        N2kMessages.cpp \
-        N2kTimer.cpp \
-        NMEA2000.cpp \
-        N2kGroupFunctionDefaultHandlers.cpp \
-        N2kGroupFunction.cpp \
-        -I.
-    ar rcs libnmea2000.a ./*.o
-    popd > /dev/null
-}
-
 build_aiscatcher() {
     log "Building AIS-catcher..."
     local run_num="${RUN_NUMBER:-0}"
@@ -145,7 +124,6 @@ build_aiscatcher() {
 
     cmake -S "${PROJECT_ROOT}" -B "${BUILD_DIR}/aiscatcher" \
         -DCMAKE_BUILD_TYPE=Release \
-        -DNMEA2000_PATH="${BUILD_DIR}" \
         -DRPATH_LIBRARY_DIR="${LIB_INSTALL_DIR}" \
         -DRUN_NUMBER="${run_num}"
 
@@ -241,7 +219,6 @@ main() {
 
     build_rtlsdr
     build_hydrasdr
-    build_nmea2000
     build_aiscatcher
     build_package
 

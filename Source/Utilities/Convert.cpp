@@ -140,6 +140,8 @@ namespace Util
 			return "BEAST";
 		case Format::RAW1090:
 			return "RAW1090";
+		case Format::N2K:
+			return "N2K";
 		case Format::F32_FS4:
 			return "F32_FS4";
 		case Format::DC16H:
@@ -186,6 +188,10 @@ namespace Util
 			return "ZMQ";
 		case PROTOCOL::WSS:
 			return "WSS";
+		case PROTOCOL::N2K:
+			return "N2K";
+		case PROTOCOL::CAN:
+			return "CAN";
 		}
 		return "";
 	}
@@ -214,6 +220,8 @@ namespace Util
 			return "JSON_FULL";
 		case MessageFormat::JSON_ANNOTATED:
 			return "JSON_ANNOTATED";
+		case MessageFormat::N2K:
+			return "N2K";
 		default:
 			break;
 		}

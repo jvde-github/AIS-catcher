@@ -306,7 +306,7 @@ void Basestation::Receive(const RAW *data, int len, TAG &tag)
 	constexpr size_t mask_cr = SWAR::mask('\r');
 
 	if (line.size() != MAX_BASESTATION_LINE_LEN)
-		AISC_STRING_RESIZE_UNINIT(line, MAX_BASESTATION_LINE_LEN);
+		line.resize(MAX_BASESTATION_LINE_LEN);
 
 	std::time_t rxtime;
 	std::time(&rxtime);

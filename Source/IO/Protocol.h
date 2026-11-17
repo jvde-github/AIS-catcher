@@ -506,6 +506,82 @@ namespace Protocol
 	};
 #endif
 
+#if defined(__linux__) && !defined(__ANDROID__)
+	// A CAN interface of this machine, read as the lines a gateway sends: "<id> <bytes>".
+	// Frames sent from this machine, as by the NMEA 2000 output, are left out.
+	class SocketCAN : public ProtocolBase
+	{
+		std::string interface;
+		int sock = -1;
+		int failures = 0;
+		Net::Clock::time_point stamp;
+
+		bool open();
+
+	public:
+		SocketCAN() : ProtocolBase("CAN") {}
+
+		bool connect() override
+		{
+			open();
+			return true;
+		}
+		void disconnect() override;
+		void poll() override;
+		bool isConnected() override { return sock != -1; }
+		int read(void *data, int length, int t, bool wait) override;
+		int send(const void *data, int length) override;
+
+		std::string getHost() override { return interface; }
+		void setInterface(const std::string &i) { interface = i; }
+		std::string getValues() override { return "interface " + interface; }
+	};
+#endif
+
+	// What makes a sender a device on an NMEA 2000 bus, over a layer that carries frame
+	// lines. It claims an address, holds it or gives way when another claims the same,
+	// answers who and what it is, and sends a heartbeat. The frames sent through it go out
+	// under the address it holds.
+	class N2KNode : public ProtocolBase
+	{
+		enum State
+		{
+			DOWN,
+			CLAIMING,
+			UP,
+			SILENT // no address left to claim
+		} state = DOWN;
+
+		// the name of this device, by which a clash of addresses is settled: unique number 1,
+		// maker 2046, function 195 (AIS), class 70, marine, able to take another address
+		uint64_t name = 1ULL | 2046ULL << 21 | 195ULL << 40 | (70ULL << 1) << 48 | 0xc0ULL << 56;
+		int address = 23;
+		int sequence = 0, beats = 0;
+		Net::Clock::time_point stamp, beat;
+		std::string in, out;
+
+		void claim();
+		void frame(uint32_t id, const unsigned char *data, int len);
+		void request(uint32_t pgn, int from, bool addressed);
+		void message(uint32_t pgn, int priority, int destination, const std::string &data, bool fast);
+
+	public:
+		N2KNode() : ProtocolBase("NMEA2000") {}
+
+		void poll() override;
+		bool isConnected() override { return state == UP && ProtocolBase::isConnected(); }
+		bool isConnecting() override { return state == CLAIMING || ProtocolBase::isConnecting(); }
+		int send(const void *data, int length) override;
+		// what comes in is for the node itself
+		int read(void *, int, int, bool) override { return 0; }
+		void disconnect() override
+		{
+			state = DOWN;
+			ProtocolBase::disconnect();
+		}
+		std::string getValues() override { return "address " + std::to_string(address); }
+	};
+
 	// http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718023
 
 	class MQTT : public ProtocolBase
