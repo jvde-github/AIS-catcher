@@ -1,6 +1,6 @@
 // Nearby uses the same side table on either host. One answer supplies the
 // nearest ships, stations and ports; tabs and pages select from that answer.
-import { flag, flagHTML, tabScroller } from './components.js';
+import { decodeHTMLEntities, flag, flagHTML, tabScroller } from './components.js';
 import { createSideTable } from './side-table.js';
 import { pageSize, pageRail, renderPager, renderVesselRows, bindVesselHover, durationHTML } from './table.js';
 import { sanitizeString, compactCount, getCountryName, getShipTypeShort, getStatusVal } from '@aiscatcher/core/text.js';
@@ -107,7 +107,7 @@ export function createNearbyDialog(host) {
                     lastHTML: away(row)};
             })) : visible.map(row => {
                 if (selected === 'stations') {
-                    const id = Number(row.id), name = text(row.name || `Station ${id}`);
+                    const id = Number(row.id), name = text(decodeHTMLEntities(row.name) || `Station ${id}`);
                     const heard = row.last > 0 ? durationHTML(now - row.last) : '—';
                     const dot = `<span class="nearby-dot${row.online ? ' on' : ''}" title="${row.online ? 'Online' : 'Offline'}"></span>`;
                     return `<tr data-station="${id}" class="${selectedId === 'stations:' + id ? 'selected' : ''}"><td class="col-name" title="${name} · ID ${id}"><span class="table-name">${flagHTML(row.country)}<button type="button" class="vessel-link port-ship-link" translate="no">${name}</button></span></td><td>${dot}${heard}</td><td class="num col-last">${away(row)}</td></tr>`;

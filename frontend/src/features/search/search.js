@@ -1,5 +1,6 @@
 // Search received vessels and the receiver's full station/place metadata.
 // Neither the current map bounds nor its display filters restrict these results.
+import { decodeHTMLEntities } from '@aiscatcher/ui/components.js';
 
 const normalize = value => String(value ?? '').normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().trim();
 // The viewer stores escaped AIS strings; the shared result renderer takes text.
@@ -26,7 +27,7 @@ export function createLocalSearch(host) {
             }
             for (const object of data.objects || []) {
                 if ((type === 'all' || type === 'stations') && object.kind === 8) {
-                    rows.push({type: 'station', id: String(object.id).replace(/^s/, ''), name: object.label,
+                    rows.push({type: 'station', id: String(object.id).replace(/^s/, ''), name: decodeHTMLEntities(object.label),
                         country: object.country, mmsi: object.mmsi, lat: object.lat, lon: object.lon, object});
                 } else if ((type === 'all' || type === 'ports') && (object.kind === 9 || object.kind === 10)) {
                     const kind = object.place_type || 'port';

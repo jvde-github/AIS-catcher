@@ -5,6 +5,7 @@ import { createPicker } from '@aiscatcher/ui/picker.js';
 import { build as buildStationTabs } from '@aiscatcher/ui/stationcard-tabs.js';
 import { renderStationActivity } from '@aiscatcher/ui/station-activity.js';
 import { stationStateText } from '@aiscatcher/ui/stations.js';
+import { decodeHTMLEntities } from '@aiscatcher/ui/components.js';
 import { stepChartSVG } from '@aiscatcher/core/spark.js';
 import { getCountryName, getDeltaTimeVal } from '@aiscatcher/core/text.js';
 import { focus, switchFocus, refresh } from '../../data.js';
@@ -100,7 +101,7 @@ export function focusOptions() {
     const onMap = new Map(mapObjects.stationsAll().map((s) => [s.id, s]));
     const listed = (config.stations || []).filter((s) => s.id >= 0);
     return [{ value: -1, name: "All stations", sub: listed.length + " stations", group: "all" },
-        ...listed.map((s) => ({ value: s.id, badge: s.id, name: s.name || stationLabel(s.id), sub: STATUS_TEXT[onMap.get(s.id)?.status], group: "one" }))];
+        ...listed.map((s) => ({ value: s.id, badge: s.id, name: decodeHTMLEntities(s.name) || stationLabel(s.id), sub: STATUS_TEXT[onMap.get(s.id)?.status], group: "one" }))];
 }
 
 // a pick in any picker bound to the focus is a pick everywhere; `scope` draws it
@@ -193,7 +194,7 @@ export function closeStationcard() {
 }
 
 function fillRows(s) {
-    card.header.title().textContent = (s.name || "Station " + s.id).toUpperCase();
+    card.header.title().textContent = (decodeHTMLEntities(s.name) || "Station " + s.id).toUpperCase();
     card.header.flag(s.country, getCountryName(s.country));
     card.header.state(HEADER_CLASS[s.status] || "card-dubious");
     set("stationcard_station_id", s.id);
@@ -284,6 +285,6 @@ register({
     },
     stationcardNearby: () => {
         const s = cardStation !== null ? stationRow(cardStation) : null;
-        if (s && onMap(s)) mapObjects.openNearby({ lat: s.lat, lon: s.lon, title: s.name || "Station " + s.id, country: s.country });
+        if (s && onMap(s)) mapObjects.openNearby({ lat: s.lat, lon: s.lon, title: decodeHTMLEntities(s.name) || "Station " + s.id, country: s.country });
     },
 });
