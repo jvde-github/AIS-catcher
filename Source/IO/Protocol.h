@@ -375,8 +375,8 @@ namespace Protocol
 		double reconnect_delay = RECONNECT_TIME;
 		// connect attempts since the last connection that held
 		int attempts = 0;
-		// the first failure of an outage is logged, the ones after it only when debugging
-		LogStream failure() { return attempts > 1 ? Debug() : Error(); }
+		// a failure is reported and the connection is not back yet
+		bool outage = false;
 
 		// the addresses the lookup gave, tried in turn
 		Net::Resolver resolver;
@@ -388,6 +388,7 @@ namespace Protocol
 		static long jittered(long base, int percent);
 		bool checkConnecting();
 		void giveUp(const std::string &why);
+		bool connectFailed(const std::string &why);
 		void ready();
 		bool connectAddress(struct addrinfo *p);
 		bool connectResolved(std::unique_ptr<Net::AddressInfo> ai);

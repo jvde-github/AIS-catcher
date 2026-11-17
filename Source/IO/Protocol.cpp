@@ -93,13 +93,7 @@ namespace Protocol
 		stamp = Net::Clock::now();
 
 		if (!resolver.start(host, port, Net::lookupHints(SOCK_STREAM, IPPROTO_TCP)))
-		{
-			if (stats)
-				stats->connect_fail++;
-
-			failure() << "TCP (" << host << ":" << port << "): cannot start a lookup.";
-			return false;
-		}
+			return connectFailed("cannot start a lookup.");
 
 		state = RESOLVING;
 		return true;
@@ -108,13 +102,7 @@ namespace Protocol
 	bool TCP::connectResolved(std::unique_ptr<Net::AddressInfo> ai)
 	{
 		if (!ai->isSuccess())
-		{
-			if (stats)
-				stats->connect_fail++;
-
-			failure() << "TCP (" << host << ":" << port << "): getaddrinfo failed: " << ai->getErrorMessage();
-			return false;
-		}
+			return connectFailed("getaddrinfo failed: " + ai->getErrorMessage());
 
 		addresses = std::move(ai);
 		next_address = addresses->get();
@@ -133,13 +121,9 @@ namespace Protocol
 				return true;
 		}
 
-		if (stats)
-			stats->connect_fail++;
-
-		failure() << "TCP (" << host << ":" << port << "): " << last_error;
 		addresses.reset();
 		state = DISCONNECTED;
-		return false;
+		return connectFailed(last_error);
 	}
 
 	// One connect attempt against a single addrinfo entry. Returns true if this attempt
@@ -244,6 +228,16 @@ namespace Protocol
 		return true;
 	}
 
+	// a connect that failed, false: the first of an outage is an error, the ones after it only debugging
+	bool TCP::connectFailed(const std::string &why)
+	{
+		if (stats)
+			stats->connect_fail++;
+		(outage ? Debug() : Error()) << "TCP (" << host << ":" << port << "): " << why;
+		outage = true;
+		return false;
+	}
+
 	void TCP::giveUp(const std::string &why)
 	{
 		last_error = why;
@@ -257,7 +251,8 @@ namespace Protocol
 		state = READY;
 		randomizeResetInterval();
 
-		(attempts > 1 ? Info() : Debug()) << "TCP (" << host << ":" << port << "): connected.";
+		(outage ? Info() : Debug()) << "TCP (" << host << ":" << port << "): connected.";
+		outage = false;
 
 		if (stats)
 		{
@@ -342,7 +337,7 @@ namespace Protocol
 		case DISCONNECTED:
 			if (Net::secondsSince(stamp) > reconnect_delay)
 			{
-				(attempts ? Debug() : Warning()) << "TCP (" << host << ":" << port << "): not connected, reconnecting.";
+				(outage ? Debug() : Warning()) << "TCP (" << host << ":" << port << "): not connected, reconnecting.";
 				reconnect();
 			}
 			break;
