@@ -335,47 +335,36 @@ namespace IO
 		Stop();
 	}
 
-	bool UDPStreamer::applySocketOptions()
+	// under the lock. The address found and a socket to it take the place of what there was;
+	// on an error, which is returned, what there was stays
+	std::string UDPStreamer::open(std::unique_ptr<Net::AddressInfo> found)
 	{
-		if (!Net::setNonBlocking(sock))
-			return false;
-		if (broadcast)
+		if (!found->isSuccess())
+			return "address and/or port not valid: " + found->getErrorMessage();
+
+		const struct addrinfo *a = found->get();
+		SOCKET s = socket(a->ai_family, a->ai_socktype, a->ai_protocol);
+		if (s == -1)
+			return "cannot create socket";
+
+		int on = 1;
+		if (!Net::setNonBlocking(s) || (broadcast && setsockopt(s, SOL_SOCKET, SO_BROADCAST, (char *)&on, sizeof(on)) < 0))
 		{
-			int broadcastEnable = 1;
-			if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (char *)&broadcastEnable, sizeof(broadcastEnable)) < 0)
-				return false;
+			Net::closeSocket(s);
+			return "cannot configure socket";
 		}
-		return true;
-	}
 
-	void UDPStreamer::ResetIfNeeded()
-	{
-		if (reset > 0)
-		{
-			long now = (long)std::time(nullptr);
-			if ((now - last_reconnect) > 60 * reset)
-			{
-				Info() << "UDP: recreate socket (" << host << ":" << port << ")";
-
-				Net::closeSocket(sock);
-				sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
-
-				if (sock == -1 || !applySocketOptions())
-				{
-					Critical() << "UDP: cannot recreate socket (" << host << ":" << port << "). Requesting termination.";
-					Net::closeSocket(sock);
-					sock = -1;
-					StopRequest(true);
-					return;
-				}
-				last_reconnect = now;
-			}
-		}
+		if (sock != -1)
+			Net::closeSocket(sock);
+		sock = s;
+		address = std::move(found);
+		return "";
 	}
 
 	void UDPStreamer::Start()
 	{
 		std::string info = "UDP: open socket for host: " + host + ", port: " + port;
+		info += ", persist: " + Util::Convert::toString(persistent);
 		if (broadcast)
 			info += ", broadcast: true";
 		if (reset > 0)
@@ -383,55 +372,64 @@ namespace IO
 
 		Info() << info << ", " << startInfo();
 
+		std::lock_guard<std::mutex> lock(mtx);
 		if (sock != -1)
-		{
 			throw std::runtime_error("UDP: internal error, socket already defined.");
-		}
 
-		struct addrinfo h;
-		memset(&h, 0, sizeof(h));
-		h.ai_family = AF_UNSPEC;
-		h.ai_socktype = SOCK_DGRAM;
-		h.ai_protocol = IPPROTO_UDP;
-#ifndef _WIN32
-		h.ai_flags = AI_ADDRCONFIG;
-#endif
+		last_lookup = Net::Clock::now();
+		const struct addrinfo hints = Net::lookupHints(SOCK_DGRAM, IPPROTO_UDP);
+		const std::string error = open(std::unique_ptr<Net::AddressInfo>(new Net::AddressInfo(host, port, &hints)));
+		if (error.empty())
+			return;
+		if (!persistent)
+			throw std::runtime_error("UDP (" + host + ":" + port + "): " + error);
+		Warning() << "UDP (" << host << ":" << port << "): " << error << ". Nothing is sent to it; retrying.";
+	}
 
-		int code = getaddrinfo(host.c_str(), port.c_str(), &h, &address);
+	void UDPStreamer::poll()
+	{
+		std::unique_lock<std::mutex> lock(mtx, std::try_to_lock);
+		if (!lock.owns_lock())
+			return;
 
-		if (code != 0 || address == NULL)
+		if (std::unique_ptr<Net::AddressInfo> found = resolver.take())
 		{
-			std::string error = (const char *)gai_strerror(code);
-			throw std::runtime_error("UDP network address and/or port not valid: " + host + " port " + port + " code: " + error);
+			const bool was_down = sock == -1;
+			const std::string error = open(std::move(found));
+			// the pause counts from the result, not from the start of the lookup
+			last_lookup = Net::Clock::now();
+			if (error.empty())
+			{
+				failures = 0;
+				Info() << "UDP (" << host << ":" << port << "): " << (was_down ? "host found, sending" : "socket recreated");
+			}
+			else
+			{
+				failures++;
+				(was_down || failures > 1 ? Debug() : Warning()) << "UDP (" << host << ":" << port << "): " << error << (was_down ? ", retrying." : ", socket kept.");
+			}
 		}
 
-		sock = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
-
-		if (sock == -1)
+		// a lookup while there is no address, and one every `reset` minutes
+		const int wait = sock == -1 ? Protocol::backoff(failures) : 60 * reset;
+		if (wait > 0 && Net::secondsSince(last_lookup) > wait)
 		{
-			throw std::runtime_error("cannot create socket for UDP " + host + " port " + port);
+			last_lookup = Net::Clock::now();
+			resolver.start(host, port, Net::lookupHints(SOCK_DGRAM, IPPROTO_UDP));
 		}
-
-		if (!applySocketOptions())
-			throw std::runtime_error("cannot configure UDP socket for " + host + " port " + port);
-
-		if (reset > 0)
-			last_reconnect = (long)std::time(nullptr);
 	}
 
 	void UDPStreamer::Stop()
 	{
+		std::lock_guard<std::mutex> lock(mtx);
 		if (sock != -1)
 		{
 			Debug() << "UDP: close socket for host: " << host << ", port: " << port;
 			Net::closeSocket(sock);
 			sock = -1;
 		}
-		if (address != NULL)
-		{
-			freeaddrinfo(address);
-			address = NULL;
-		}
+		address.reset();
+		resolver.cancel();
 	}
 
 	Setting &UDPStreamer::applyKey(AIS::Keys key, const std::string &arg)
@@ -449,6 +447,9 @@ namespace IO
 			break;
 		case AIS::KEY_SETTING_RESET:
 			reset = Util::Parse::Integer(arg, 1, 24 * 60);
+			break;
+		case AIS::KEY_SETTING_PERSIST:
+			persistent = Util::Parse::Switch(arg);
 			break;
 		case AIS::KEY_SETTING_UUID:
 			setUUID(arg);
@@ -556,15 +557,15 @@ namespace IO
 		session->connect();
 		bool ready = session->waitConnected(2);
 
-		last_send = Protocol::Clock::now();
+		last_send = Net::Clock::now();
 		Info() << "Hub feed: open socket for host: " << AISCATCHER_URL << ", port: " << AISCATCHER_PORT << ", " << startInfo() << ", status: " << (ready ? "connected" : "pending");
 	}
 
 	void HubStreamer::polled()
 	{
-		if (session->isConnected() && Protocol::secondsSince(last_send) >= KEEPALIVE_S)
+		if (session->isConnected() && Net::secondsSince(last_send) >= KEEPALIVE_S)
 		{
-			last_send = Protocol::Clock::now();
+			last_send = Net::Clock::now();
 			hub.keepAlive();
 		}
 	}

@@ -19,6 +19,11 @@
 
 #include <string>
 #include <atomic>
+#include <chrono>
+#include <memory>
+#include <mutex>
+#include <system_error>
+#include <thread>
 #include <cstring>
 #include <cstdint>
 
@@ -133,7 +138,7 @@ namespace Net
 		std::string s = buf ? buf : "unknown error";
 		if (buf)
 			LocalFree(buf);
-		while (!s.empty() && (s.back() == '\n' || s.back() == '\r'))
+		while (!s.empty() && (s.back() == '\n' || s.back() == '\r' || s.back() == '.'))
 			s.pop_back();
 		return s;
 #else
@@ -306,6 +311,137 @@ namespace Net
 		{
 			if (rd != -1) { closeSocket(rd); rd = -1; }
 			if (wr != -1) { closeSocket(wr); wr = -1; }
+		}
+	};
+
+	// steady clock: a wall clock that steps would fire or hold every deadline at once
+	typedef std::chrono::steady_clock Clock;
+
+	inline double secondsSince(Clock::time_point t)
+	{
+		return std::chrono::duration<double>(Clock::now() - t).count();
+	}
+
+	class AddressInfo
+	{
+	public:
+		AddressInfo(const std::string &host, const std::string &service, const struct addrinfo *hints = nullptr) : address(nullptr), msg("")
+		{
+			int result = getaddrinfo(host.c_str(), service.c_str(), hints, &address);
+			if (result != 0)
+			{
+#ifdef _WIN32
+				msg = errorString(result);
+#else
+				msg = gai_strerror(result);
+#endif
+			}
+		}
+
+		AddressInfo(const AddressInfo &) = delete;
+		AddressInfo &operator=(const AddressInfo &) = delete;
+
+		~AddressInfo()
+		{
+			if (address != nullptr)
+			{
+				freeaddrinfo(address);
+			}
+		}
+
+		struct addrinfo *get() const
+		{
+			return address;
+		}
+
+		bool isSuccess() const
+		{
+			return address != nullptr;
+		}
+
+		const std::string &getErrorMessage() const
+		{
+			return msg;
+		}
+
+	private:
+		struct addrinfo *address;
+		std::string msg;
+	};
+
+	// what a lookup asks for: the addresses of a family this machine has one of
+	inline struct addrinfo lookupHints(int socktype, int protocol)
+	{
+		struct addrinfo h;
+
+		std::memset(&h, 0, sizeof(h));
+		h.ai_family = AF_UNSPEC;
+		h.ai_socktype = socktype;
+		h.ai_protocol = protocol;
+
+#ifndef _WIN32
+		h.ai_flags = AI_ADDRCONFIG;
+#endif
+		return h;
+	}
+
+	// a lookup on a thread of its own, detached: it shares only the job, so a lookup
+	// nobody collects still finishes and frees its result
+	class Resolver
+	{
+		struct Job
+		{
+			std::mutex mtx;
+			bool done = false;
+			std::unique_ptr<AddressInfo> result;
+		};
+		std::shared_ptr<Job> job;
+
+	public:
+		// a lookup still running is waited for: another thread would hang on the same
+		// nameserver, and they would pile up
+		bool start(const std::string &host, const std::string &service, const struct addrinfo &hints)
+		{
+			if (job)
+				return true;
+
+			std::shared_ptr<Job> j = std::make_shared<Job>();
+			job = j;
+
+			try
+			{
+				std::thread([j, host, service, hints]()
+							{
+					std::unique_ptr<AddressInfo> r(new AddressInfo(host, service, &hints));
+					std::lock_guard<std::mutex> lock(j->mtx);
+					j->result = std::move(r);
+					j->done = true; })
+					.detach();
+			}
+			catch (const std::system_error &)
+			{
+				job.reset();
+				return false;
+			}
+			return true;
+		}
+
+		// the lookup under way is forgotten: its thread ends by itself
+		void cancel() { job.reset(); }
+
+		std::unique_ptr<AddressInfo> take()
+		{
+			std::unique_ptr<AddressInfo> r;
+			if (!job)
+				return r;
+			{
+				std::lock_guard<std::mutex> lock(job->mtx);
+				if (!job->done)
+					return r;
+				r = std::move(job->result);
+			}
+			job.reset();
+			return r;
 		}
 	};
 }

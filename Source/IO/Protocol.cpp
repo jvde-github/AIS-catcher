@@ -60,7 +60,10 @@ namespace Protocol
 		// closed first: a goodbye a layer sends from onDisconnect() has nowhere to go
 		bool was_ready = state == READY;
 		state = DISCONNECTED;
-		reconnect_delay = jittered(RECONNECT_TIME * 1000, 20) / 1000.0;
+		// a session this short was a rejection by a layer above, not a connection
+		if (was_ready && Net::secondsSince(stamp) > 30)
+			attempts = 0;
+		reconnect_delay = jittered(backoff(attempts) * 1000L, 20) / 1000.0;
 		addresses.reset();
 		next_address = nullptr;
 
@@ -83,32 +86,18 @@ namespace Protocol
 		sock = -1;
 	}
 
-	struct addrinfo TCP::lookupHints()
-	{
-		struct addrinfo h;
-
-		std::memset(&h, 0, sizeof(h));
-		h.ai_family = AF_UNSPEC;
-		h.ai_socktype = SOCK_STREAM;
-		h.ai_protocol = IPPROTO_TCP;
-
-#ifndef _WIN32
-		h.ai_flags = AI_ADDRCONFIG;
-#endif
-		return h;
-	}
-
 	bool TCP::connect()
 	{
 		disconnect();
-		stamp = Clock::now();
+		attempts++;
+		stamp = Net::Clock::now();
 
-		if (!resolver.start(host, port, lookupHints()))
+		if (!resolver.start(host, port, Net::lookupHints(SOCK_STREAM, IPPROTO_TCP)))
 		{
 			if (stats)
 				stats->connect_fail++;
 
-			Error() << "TCP (" << host << ":" << port << "): cannot start a lookup.";
+			failure() << "TCP (" << host << ":" << port << "): cannot start a lookup.";
 			return false;
 		}
 
@@ -116,14 +105,14 @@ namespace Protocol
 		return true;
 	}
 
-	bool TCP::connectResolved(std::unique_ptr<AddressInfo> ai)
+	bool TCP::connectResolved(std::unique_ptr<Net::AddressInfo> ai)
 	{
 		if (!ai->isSuccess())
 		{
 			if (stats)
 				stats->connect_fail++;
 
-			Error() << "TCP (" << host << ":" << port << "): getaddrinfo failed: " << ai->getErrorMessage();
+			failure() << "TCP (" << host << ":" << port << "): getaddrinfo failed: " << ai->getErrorMessage();
 			return false;
 		}
 
@@ -147,7 +136,7 @@ namespace Protocol
 		if (stats)
 			stats->connect_fail++;
 
-		Error() << "TCP (" << host << ":" << port << "): " << last_error;
+		failure() << "TCP (" << host << ":" << port << "): " << last_error;
 		addresses.reset();
 		state = DISCONNECTED;
 		return false;
@@ -195,7 +184,7 @@ namespace Protocol
 		if (!Net::setNonBlocking(sock))
 			return fail("set non-blocking");
 
-		stamp = Clock::now();
+		stamp = Net::Clock::now();
 		int r = ::connect(sock, p->ai_addr, (int)p->ai_addrlen);
 
 		if (r != -1)
@@ -247,7 +236,7 @@ namespace Protocol
 
 		if (error != 0)
 		{
-			giveUp((error > 0 ? std::string(strerror(error)) : std::string("getsockopt failed")) + " (" + std::to_string(error) + ")");
+			giveUp((error > 0 ? Net::errorString(error) : std::string("getsockopt failed")) + " (" + std::to_string(error) + ")");
 			return false;
 		}
 
@@ -268,7 +257,7 @@ namespace Protocol
 		state = READY;
 		randomizeResetInterval();
 
-		Debug() << "TCP (" << host << ":" << port << "): connected.";
+		(attempts > 1 ? Info() : Debug()) << "TCP (" << host << ":" << port << "): connected.";
 
 		if (stats)
 		{
@@ -300,13 +289,13 @@ namespace Protocol
 
 	void TCP::updateState()
 	{
-		Clock::time_point now = Clock::now();
+		Net::Clock::time_point now = Net::Clock::now();
 
 		switch (state)
 		{
 		case RESOLVING:
 		{
-			std::unique_ptr<AddressInfo> ai = resolver.take();
+			std::unique_ptr<Net::AddressInfo> ai = resolver.take();
 			if (ai)
 			{
 				state = DISCONNECTED;
@@ -316,7 +305,7 @@ namespace Protocol
 				if (state == DISCONNECTED)
 					stamp = now;
 			}
-			else if (secondsSince(stamp) > LOOKUP_TIME)
+			else if (Net::secondsSince(stamp) > LOOKUP_TIME)
 			{
 				Warning() << "TCP (" << host << ":" << port << "): lookup not finished after " << LOOKUP_TIME << " s, still waiting.";
 				stamp = now;
@@ -331,7 +320,7 @@ namespace Protocol
 
 			if (sock != -1)
 			{
-				if (secondsSince(stamp) <= (timeout > 0 ? timeout : RECONNECT_TIME))
+				if (Net::secondsSince(stamp) <= (timeout > 0 ? timeout : RECONNECT_TIME))
 					break;
 
 				giveUp("connect timed out");
@@ -343,7 +332,7 @@ namespace Protocol
 		}
 
 		case READY:
-			if (reset_time > 0 && secondsSince(stamp) > reset_interval)
+			if (reset_time > 0 && Net::secondsSince(stamp) > reset_interval)
 			{
 				Debug() << "TCP (" << host << ":" << port << "): reset interval reached, refreshing connection.";
 				reconnect();
@@ -351,9 +340,9 @@ namespace Protocol
 			break;
 
 		case DISCONNECTED:
-			if (secondsSince(stamp) > reconnect_delay)
+			if (Net::secondsSince(stamp) > reconnect_delay)
 			{
-				Warning() << "TCP (" << host << ":" << port << "): not connected, reconnecting.";
+				(attempts ? Debug() : Warning()) << "TCP (" << host << ":" << port << "): not connected, reconnecting.";
 				reconnect();
 			}
 			break;
@@ -420,13 +409,13 @@ namespace Protocol
 		int remaining_length = length;
 		int remaining_time = timeout = MAX(timeout, 0);
 
-		Clock::time_point start_time = Clock::now();
+		Net::Clock::time_point start_time = Net::Clock::now();
 
 		while (remaining_length > 0)
 		{
 			if (timeout)
 			{
-				int elapsed = (int)secondsSince(start_time);
+				int elapsed = (int)Net::secondsSince(start_time);
 				remaining_time = MAX(timeout - elapsed, 0);
 				if (remaining_time <= 0)
 					break;
@@ -640,7 +629,7 @@ namespace Protocol
 		SSL_set_bio(ssl, bio, bio);
 
 		tls_state = TLS_HANDSHAKING;
-		handshake_deadline = Clock::now() + std::chrono::seconds(HANDSHAKE_TIME);
+		handshake_deadline = Net::Clock::now() + std::chrono::seconds(HANDSHAKE_TIME);
 		performHandshake();
 	}
 
@@ -688,7 +677,7 @@ namespace Protocol
 		}
 
 		updateState();
-		if (ssl && !handshake_complete && Clock::now() > handshake_deadline)
+		if (ssl && !handshake_complete && Net::Clock::now() > handshake_deadline)
 		{
 			Error() << "TLS (" << getHost() << ":" << getPort() << "): handshake not finished after " << HANDSHAKE_TIME << " s, disconnecting";
 			disconnect();
@@ -1155,7 +1144,7 @@ namespace Protocol
 		buffer_ptr = 0;
 
 		connack_len = 0;
-		connack_deadline = Clock::now() + std::chrono::seconds(5);
+		connack_deadline = Net::Clock::now() + std::chrono::seconds(5);
 		awaiting_connack = sendConnect();
 	}
 
@@ -1248,12 +1237,12 @@ namespace Protocol
 		// broker says back is read and let go
 		if (connected && keepalive > 0 && !subscribe && prev && prev->isConnected())
 		{
-			if (Clock::now() - last_sent >= std::chrono::seconds(keepalive / 2))
+			if (Net::Clock::now() - last_sent >= std::chrono::seconds(keepalive / 2))
 			{
 				createPacket(PacketType::PINGREQ, 0);
 				pushVariableLength(0);
 				if (prev->send(packet.data(), packet.size()) > 0)
-					last_sent = Clock::now();
+					last_sent = Net::Clock::now();
 			}
 			char sink[64];
 			while (prev->read(sink, sizeof(sink), 0, false) > 0)
@@ -1268,7 +1257,7 @@ namespace Protocol
 		if (len > 0)
 			connack_len += len;
 
-		if (len >= 0 && connack_len < 4 && Clock::now() < connack_deadline)
+		if (len >= 0 && connack_len < 4 && Net::Clock::now() < connack_deadline)
 			return;
 
 		awaiting_connack = false;
@@ -1363,7 +1352,7 @@ namespace Protocol
 			return -1;
 		}
 
-		last_sent = Clock::now();
+		last_sent = Net::Clock::now();
 		createPacket(PacketType::PUBLISH, (qos << 1) | (retain ? 1 : 0));
 
 		int packet_length = 2 + tpc.length() + length + (qos > 0 ? 2 : 0);
@@ -1584,7 +1573,7 @@ namespace Protocol
 		if (sendUpgrade())
 		{
 			upgrading = true;
-			upgrade_deadline = Clock::now() + std::chrono::seconds(5);
+			upgrade_deadline = Net::Clock::now() + std::chrono::seconds(5);
 			return;
 		}
 
@@ -1607,7 +1596,7 @@ namespace Protocol
 			return;
 
 		int r = readUpgrade(0);
-		if (r == 0 && Clock::now() < upgrade_deadline)
+		if (r == 0 && Net::Clock::now() < upgrade_deadline)
 			return;
 
 		upgrading = false;
@@ -1915,12 +1904,12 @@ namespace Protocol
 		}
 
 		// a waiting read underneath would hold out to fill the whole frame buffer
-		const Clock::time_point deadline = Clock::now() + std::chrono::seconds(MAX(t, 0));
+		const Net::Clock::time_point deadline = Net::Clock::now() + std::chrono::seconds(MAX(t, 0));
 		do
 		{
 			if (getFrames(data, data_len, wait ? MIN(t, 1) : t, false) < 0)
 				break;
-		} while (wait && received_ptr < data_len && Clock::now() < deadline && isConnected());
+		} while (wait && received_ptr < data_len && Net::Clock::now() < deadline && isConnected());
 
 		return populateData(data, data_len);
 	}

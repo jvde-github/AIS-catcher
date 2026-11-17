@@ -119,28 +119,29 @@ namespace IO
 		void Stop() override;
 	};
 
+	// sendFormatted() on the decoding thread only sends; poll() on the engine's loop looks
+	// the host up, again while that fails and every `reset` minutes
 	class UDPStreamer : public OutputMessage
 	{
 		SOCKET sock = -1;
-		struct addrinfo *address = NULL;
+		std::unique_ptr<Net::AddressInfo> address;
+		Net::Resolver resolver;
+		Net::Clock::time_point last_lookup;
+		std::mutex mtx;
 		std::string host = "127.0.0.1";
 		std::string port = "10110";
 		int reset = -1;
-		long last_reconnect = 0;
 		bool broadcast = false;
+		bool persistent = true;
 
-		void ResetIfNeeded();
-		bool applySocketOptions();
+		int failures = 0;
 
-		bool readyToSend() override
-		{
-			ResetIfNeeded();
-			return true;
-		}
+		std::string open(std::unique_ptr<Net::AddressInfo> found);
 
 		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
 		{
-			if (sock != -1 && sendto(sock, data, len, 0, address->ai_addr, (int)address->ai_addrlen) > 0)
+			std::lock_guard<std::mutex> lock(mtx);
+			if (sock != -1 && sendto(sock, data, len, 0, address->get()->ai_addr, (int)address->get()->ai_addrlen) > 0)
 				stats.bytes_out += len;
 			else
 				stats.dropped++;
@@ -157,6 +158,7 @@ namespace IO
 
 		void Start() override;
 		void Stop() override;
+		void poll() override;
 	};
 
 	// an output over one connection: sendFormatted() on the decoding thread only sends,
@@ -235,12 +237,12 @@ namespace IO
 		Protocol::Hub hub;
 
 		static const int KEEPALIVE_S = 300;
-		Protocol::Clock::time_point last_send;
+		Net::Clock::time_point last_send;
 
 		void sendFormatted(const char *data, int len, const AIS::Message *, TAG &) override
 		{
 			std::lock_guard<std::mutex> lock(mtx);
-			last_send = Protocol::Clock::now();
+			last_send = Net::Clock::now();
 			sendLocked(data, len);
 		}
 

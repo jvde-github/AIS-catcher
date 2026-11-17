@@ -90,7 +90,7 @@ namespace Device
 		}
 
 		if (!session->waitConnected(2))
-			Warning() << getProduct() << ": not connected to " << tcp.getHost() << ":" << tcp.getPort() << ", retrying every 10 s.";
+			Warning() << getProduct() << ": not connected to " << tcp.getHost() << ":" << tcp.getPort() << ", retrying.";
 
 		Device::Play();
 

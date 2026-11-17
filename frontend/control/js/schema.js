@@ -295,6 +295,15 @@ export const udpSchema = {
         width: 25,
         tooltip: 'Allow broadcast addresses'
     },
+    persist: {
+        name: 'persist',
+        section: 'Options',
+        label: 'Retry',
+        type: 'toggle',
+        defaultValue: true,
+        width: 25,
+        tooltip: 'Keep trying when the host is not found'
+    },
     msgformat: ChannelFields.msgformat(),
     unique: ChannelFields.unique(),
     position_interval: ChannelFields.position_interval()

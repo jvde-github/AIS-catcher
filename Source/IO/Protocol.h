@@ -45,114 +45,11 @@
 
 namespace Protocol
 {
-	// steady clock: a wall clock that steps would fire or hold every deadline at once
-	typedef std::chrono::steady_clock Clock;
-
-	inline double secondsSince(Clock::time_point t)
+	// seconds before the next attempt after `failed` in a row: 10, doubling up to a minute
+	inline int backoff(int failed)
 	{
-		return std::chrono::duration<double>(Clock::now() - t).count();
+		return MIN(60, 10 << MIN(failed, 3));
 	}
-
-	class AddressInfo
-	{
-	public:
-		AddressInfo(const std::string &host, const std::string &service, const struct addrinfo *hints = nullptr) : address(nullptr), msg("")
-		{
-			int result = getaddrinfo(host.c_str(), service.c_str(), hints, &address);
-			if (result != 0)
-			{
-#ifdef _WIN32
-				msg = std::to_string(result);
-#else
-				msg = gai_strerror(result);
-#endif
-			}
-		}
-
-		~AddressInfo()
-		{
-			if (address != nullptr)
-			{
-				freeaddrinfo(address);
-			}
-		}
-
-		struct addrinfo *get() const
-		{
-			return address;
-		}
-
-		bool isSuccess() const
-		{
-			return address != nullptr;
-		}
-
-		const std::string &getErrorMessage() const
-		{
-			return msg;
-		}
-
-	private:
-		struct addrinfo *address;
-		std::string msg;
-	};
-
-	// a lookup on a thread of its own, detached: it shares only the job, so a lookup
-	// nobody collects still finishes and frees its result
-	class Resolver
-	{
-		struct Job
-		{
-			std::mutex mtx;
-			bool done = false;
-			std::unique_ptr<AddressInfo> result;
-		};
-		std::shared_ptr<Job> job;
-
-	public:
-		// a lookup still running is waited for: another thread would hang on the same
-		// nameserver, and they would pile up
-		bool start(const std::string &host, const std::string &service, const struct addrinfo &hints)
-		{
-			if (job)
-				return true;
-
-			std::shared_ptr<Job> j = std::make_shared<Job>();
-			job = j;
-
-			try
-			{
-				std::thread([j, host, service, hints]()
-							{
-					std::unique_ptr<AddressInfo> r(new AddressInfo(host, service, &hints));
-					std::lock_guard<std::mutex> lock(j->mtx);
-					j->result = std::move(r);
-					j->done = true; })
-					.detach();
-			}
-			catch (const std::system_error &)
-			{
-				job.reset();
-				return false;
-			}
-			return true;
-		}
-
-		std::unique_ptr<AddressInfo> take()
-		{
-			std::unique_ptr<AddressInfo> r;
-			if (!job)
-				return r;
-			{
-				std::lock_guard<std::mutex> lock(job->mtx);
-				if (!job->done)
-					return r;
-				r = std::move(job->result);
-			}
-			job.reset();
-			return r;
-		}
-	};
 
 	class ProtocolBase
 	{
@@ -471,15 +368,19 @@ namespace Protocol
 
 		int sock = -1;
 		State state = DISCONNECTED;
-		Clock::time_point stamp;
+		Net::Clock::time_point stamp;
 
 		long reset_interval = 0;
 		// jittered too, so stations that lost the same server do not all come back at once
 		double reconnect_delay = RECONNECT_TIME;
+		// connect attempts since the last connection that held
+		int attempts = 0;
+		// the first failure of an outage is logged, the ones after it only when debugging
+		LogStream failure() { return attempts > 1 ? Debug() : Error(); }
 
 		// the addresses the lookup gave, tried in turn
-		Resolver resolver;
-		std::unique_ptr<AddressInfo> addresses;
+		Net::Resolver resolver;
+		std::unique_ptr<Net::AddressInfo> addresses;
 		struct addrinfo *next_address = nullptr;
 
 		void updateState();
@@ -489,9 +390,8 @@ namespace Protocol
 		void giveUp(const std::string &why);
 		void ready();
 		bool connectAddress(struct addrinfo *p);
-		bool connectResolved(std::unique_ptr<AddressInfo> ai);
+		bool connectResolved(std::unique_ptr<Net::AddressInfo> ai);
 		bool tryNextAddress();
-		static struct addrinfo lookupHints();
 
 		int sendSome(const char *data, int length, bool &progress) override;
 
@@ -542,7 +442,7 @@ namespace Protocol
 
 		// a peer that accepts the socket and then says nothing
 		static const int HANDSHAKE_TIME = 15;
-		Clock::time_point handshake_deadline;
+		Net::Clock::time_point handshake_deadline;
 
 		int sendSome(const char *data, int length, bool &progress) override;
 
@@ -643,7 +543,7 @@ namespace Protocol
 		// it is due; none unless set
 		std::string will_topic, will_message;
 		int keepalive = 0;
-		Clock::time_point last_sent;
+		Net::Clock::time_point last_sent;
 		int publish(const void *str, int length, const std::string &tpc, bool retain);
 
 		// never zero (MQTT 3.1.1 2.3.1)
@@ -658,7 +558,7 @@ namespace Protocol
 		bool subscribe = false;
 
 		bool awaiting_connack = false;
-		Clock::time_point connack_deadline;
+		Net::Clock::time_point connack_deadline;
 		uint8_t connack[4];
 		int connack_len = 0;
 
@@ -944,7 +844,7 @@ namespace Protocol
 		std::string upgrade_key, upgrade_reply;
 		bool upgrading = false;
 		bool close_sent = false;
-		Clock::time_point upgrade_deadline;
+		Net::Clock::time_point upgrade_deadline;
 
 		bool sendUpgrade();
 		int readUpgrade(int t);
