@@ -1531,6 +1531,8 @@ body.ticker-open.ticker-bottom {
 .mapcard.card-tabs .mapcard-flag { margin: 0; }
 .mapcard.card-tabs .mapcard-flag .flag-card { margin-right: 0; border-radius: 4px; box-shadow: 0 0 0 1px var(--vc-line-strong); }
 .mapcard.card-tabs .mapcard-title { font-size: 16px; font-weight: 600; letter-spacing: 0.02em; color: var(--color-vc-ink); }
+/* a station's name is its owner's choice: two lines at most, all of it in the tooltip */
+.mapcard.card-tabs .mapcard-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .mapcard.card-tabs .mapcard-header-icon { width: 20px; height: 20px; font-size: 17.5px; margin: 8px 3px; color: var(--color-vc-muted); }
 /* the header's icons sit close together: no flex gap between them */
 .mapcard.card-tabs .mapcard-header > .mapcard-title ~ span + span { margin-left: -6px; }

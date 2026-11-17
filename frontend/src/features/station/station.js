@@ -194,7 +194,9 @@ export function closeStationcard() {
 }
 
 function fillRows(s) {
-    card.header.title().textContent = (decodeHTMLEntities(s.name) || "Station " + s.id).toUpperCase();
+    const name = decodeHTMLEntities(s.name) || "Station " + s.id;
+    card.header.title().textContent = name.toUpperCase();
+    card.header.title().title = name;
     card.header.flag(s.country, getCountryName(s.country));
     card.header.state(HEADER_CLASS[s.status] || "card-dubious");
     set("stationcard_station_id", s.id);

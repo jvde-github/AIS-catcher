@@ -10,7 +10,8 @@ export function decodeHTMLEntities(text) {
     if (text == null) return '';
     const textArea = document.createElement('textarea');
     textArea.innerHTML = String(text).replace(/</g, '&lt;');
-    return textArea.value;
+    // &nbsp; stands in for a space in a name typed on a command line: a line may break there
+    return textArea.value.replace(/ /g, ' ');
 }
 
 export function debounce(fn, ms) {

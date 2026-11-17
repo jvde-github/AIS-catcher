@@ -836,6 +836,12 @@
     font-weight: var(--fw-semibold);
     margin: 0;
     overflow-wrap: anywhere;
+    /* two lines at most, all of it in the tooltip */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
 }
 
 .side-table-context .place-dialog-tabs-wrap {

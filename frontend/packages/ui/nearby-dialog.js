@@ -50,6 +50,7 @@ export function createNearbyDialog(host) {
             link.textContent = name;
             title.append(link);
         } else title.textContent = name;
+        title.title = name;
         const type = anchor.mmsi ? (anchor.shiptype ? getShipTypeShort(anchor.shiptype) : 'Vessel') : anchor.station ? 'Station' : '';
         const state = anchor.mmsi
             ? (Number.isInteger(anchor.status) && anchor.status >= 0 && anchor.status < 15 ? getStatusVal(anchor) : '')
