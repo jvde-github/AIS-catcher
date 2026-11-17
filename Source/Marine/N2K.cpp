@@ -280,6 +280,32 @@ namespace AIS
 		finalize('A' + channel % 2, tag);
 	}
 
+	// as 129802, with a sequence number, a destination and the retransmit flag before the text
+	void N2KtoMessage::onMsg129801(const N2KMsg &N2kMsg, TAG &tag)
+	{
+		int idx = 0;
+
+		startMessage(N2kMsg, idx);
+		unsigned char byte = N2kMsg.GetByte(idx);
+		int channel = (byte >> 1) & 0x1f;
+		int sequence = (byte >> 6) & 0x03;
+		int destination = N2kMsg.Get4ByteUInt(idx);
+		int retransmit = (N2kMsg.GetByte(idx) >> 6) & 0x01;
+		std::string text = readVarStr(N2kMsg, idx);
+
+		const size_t max_chars = (MAX_AIS_LENGTH - 72) / 6;
+		if (text.length() > max_chars)
+			text.resize(max_chars);
+
+		U(msg, sequence, 38, 2);
+		U(msg, destination, 40, 30);
+		B(msg, retransmit, 70, 1);
+		U(msg, 0, 71, 1);
+		T(msg, text.c_str(), 72, text.length() * 6);
+
+		finalize('A' + channel % 2, tag);
+	}
+
 	void N2KtoMessage::onMsg129802(const N2KMsg &N2kMsg, TAG &tag)
 	{
 		int idx = 0;
@@ -555,6 +581,7 @@ namespace AIS
 			{129793, &N2KtoMessage::onMsg129793},
 			{129794, &N2KtoMessage::onMsg129794},
 			{129798, &N2KtoMessage::onMsg129798},
+			{129801, &N2KtoMessage::onMsg129801},
 			{129802, &N2KtoMessage::onMsg129802},
 			{129809, &N2KtoMessage::onMsg129809},
 			{129810, &N2KtoMessage::onMsg129810},
@@ -725,6 +752,9 @@ namespace AIS
 			break;
 		case 9:
 			sendType9(ais, &data);
+			break;
+		case 12:
+			sendType12(ais, &data);
 			break;
 		case 14:
 			sendType14(ais, &data);
@@ -1079,6 +1109,45 @@ namespace AIS
 		N2kMsg.Add4ByteDouble(alt, 0.01, ALT_UNDEFINED);
 		N2kMsg.AddByte(reserved);
 		N2kMsg.AddByte(dte | 254);
+
+		emit(N2kMsg);
+	}
+
+	// PGN 129801: as 129802, with the sequence number in the top bits of the transceiver byte,
+	// then the destination, then the retransmit flag above six reserved bits
+	void MessageToN2K::sendType12(const Message &ais, const JSON::JSON *data)
+	{
+		std::string text;
+		int sequence = 0, destination = 0, retransmit = 0;
+		for (const JSON::Member &p : data[0].getMembers())
+		{
+			switch (p.Key())
+			{
+			case AIS::KEY_SEQNO:
+				sequence = p.Get().getInt();
+				break;
+			case AIS::KEY_DEST_MMSI:
+				destination = p.Get().getInt();
+				break;
+			case AIS::KEY_RETRANSMIT:
+				retransmit = p.Get().getBool();
+				break;
+			case AIS::KEY_TEXT:
+				text = p.Get().getString();
+				break;
+			}
+		}
+
+		N2KMsg N2kMsg;
+
+		N2kMsg.SetPGN(129801);
+		N2kMsg.Priority = 5;
+		N2kMsg.AddByte((ais.repeat() & 0x03) << 6 | ais.type());
+		N2kMsg.Add4ByteUInt(ais.mmsi());
+		N2kMsg.AddByte((sequence & 0x03) << 6 | (ais.getChannel() == 'A' ? 0 : 1) << 1 | 0x01);
+		N2kMsg.Add4ByteUInt(destination);
+		N2kMsg.AddByte((retransmit ? 1 : 0) << 6 | 0x3f);
+		N2kMsg.AddVarStr(text.c_str(), 156); // up to 156 six-bit characters fit a type 12
 
 		emit(N2kMsg);
 	}

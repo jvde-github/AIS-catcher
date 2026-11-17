@@ -200,6 +200,7 @@ namespace AIS
 		void onMsg129793(const N2KMsg &N2kMsg, TAG &tag); // Type 4, 11   - UTC/Date & Position Report
 		void onMsg129794(const N2KMsg &N2kMsg, TAG &tag); // Type 5       - Static and Voyage Related Data
 		void onMsg129798(const N2KMsg &N2kMsg, TAG &tag); // Type 9       - Extended Position Report
+		void onMsg129801(const N2KMsg &N2kMsg, TAG &tag); // Type 12      - Addressed Safety-Related Message
 		void onMsg129802(const N2KMsg &N2kMsg, TAG &tag); // Type 14      - Safety-Related Broadcast Message
 		void onMsg129809(const N2KMsg &N2kMsg, TAG &tag); // Type 24 A    - Static Data Report, Part A
 		void onMsg129810(const N2KMsg &N2kMsg, TAG &tag); // Type 24 B    - Static Data Report, Part B
@@ -224,6 +225,7 @@ namespace AIS
 		void sendType4(const Message &ais, const JSON::JSON *data);
 		void sendType5(const Message &ais, const JSON::JSON *data);
 		void sendType9(const Message &ais, const JSON::JSON *data);
+		void sendType12(const Message &ais, const JSON::JSON *data);
 		void sendType14(const Message &ais, const JSON::JSON *data);
 		void sendType18(const Message &ais, const JSON::JSON *data);
 		void sendType19(const Message &ais, const JSON::JSON *data);
