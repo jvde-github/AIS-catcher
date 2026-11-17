@@ -92,7 +92,7 @@ namespace JSON
 			size_t nsz = cur * 2;
 			if (nsz < need)
 				nsz = need + 64;
-			AISC_STRING_RESIZE_UNINIT(*target, nsz);
+			target->resize(nsz);
 			ptr = &(*target)[0] + used;
 			end = &(*target)[0] + nsz;
 		}
@@ -365,7 +365,7 @@ namespace JSON
 			start_off = dst.size();
 			if (dst.capacity() < start_off + headroom)
 				dst.reserve(start_off + headroom);
-			AISC_STRING_RESIZE_UNINIT(dst, start_off + headroom);
+			dst.resize(start_off + headroom);
 			ptr = &dst[0] + start_off;
 			end = &dst[0] + dst.size();
 		}

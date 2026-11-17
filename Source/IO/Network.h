@@ -285,6 +285,10 @@ namespace IO
 		Protocol::MQTT mqtt;
 		Protocol::TLS tls;
 		Protocol::WebSocket ws;
+#if defined(__linux__) && !defined(__ANDROID__)
+		Protocol::SocketCAN can;
+#endif
+		Protocol::N2KNode node;
 
 		Util::TemplateString topic_template;
 		std::string topic_buf;
@@ -304,7 +308,7 @@ namespace IO
 		}
 
 	public:
-		MQTTStreamer() : SessionStreamer("MQTT"), topic_template("ais/data")
+		MQTTStreamer(const std::string &type = "MQTT") : SessionStreamer(type), topic_template("ais/data")
 		{
 			session = &tcp;
 			fmt = MessageFormat::JSON_FULL;
@@ -315,5 +319,21 @@ namespace IO
 		void Start() override;
 
 		Setting &applyKey(AIS::Keys key, const std::string &arg) override;
+	};
+
+	// the AIS messages as NMEA 2000 on a CAN interface of this machine: -Q can://<interface>
+	class N2KStreamer : public MQTTStreamer
+	{
+	public:
+		N2KStreamer() : MQTTStreamer("NMEA2000")
+		{
+			applyKey(AIS::KEY_SETTING_HOST, "can0");
+			applyKey(AIS::KEY_SETTING_PROTOCOL, "CAN");
+		}
+
+		Setting &applyKey(AIS::Keys key, const std::string &arg) override
+		{
+			return MQTTStreamer::applyKey(key == AIS::KEY_SETTING_DEVICE ? AIS::KEY_SETTING_HOST : key, arg);
+		}
 	};
 }

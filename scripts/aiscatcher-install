@@ -125,7 +125,7 @@ DEB_TMP_DIR=""
 
 # User-facing CMake feature toggles (defaults mirror CMakeLists.txt option() lines).
 # Infrastructure libs (SOXR, SAMPLERATE, ZLIB, OPENSSL) and link-style toggles
-# (RTLSDR_STATIC, HYDRASDR_STATIC, ARMV6, RBIT) are intentionally not exposed
+# (RTLSDR_STATIC, HYDRASDR_STATIC, RBIT) are intentionally not exposed
 # interactively — they stay at their CMake defaults.
 FEATURE_RTLSDR=ON
 FEATURE_AIRSPY=ON
@@ -134,12 +134,11 @@ FEATURE_HACKRF=ON
 FEATURE_HYDRASDR=ON
 FEATURE_SDRPLAY=ON
 FEATURE_SOAPYSDR=OFF
-FEATURE_NMEA2000=ON
 FEATURE_PSQL=ON
 FEATURE_SQLITE=ON
 FEATURE_WEBVIEWER=ON
 
-readonly FEATURES=(RTLSDR AIRSPY AIRSPYHF HACKRF HYDRASDR SDRPLAY SOAPYSDR NMEA2000 PSQL SQLITE WEBVIEWER)
+readonly FEATURES=(RTLSDR AIRSPY AIRSPYHF HACKRF HYDRASDR SDRPLAY SOAPYSDR PSQL SQLITE WEBVIEWER)
 
 # Color constants (using ANSI escape codes)
 if [[ -t 1 ]]; then
@@ -256,7 +255,6 @@ interactive_feature_select() {
 
     echo
     echo -e "${COLOR_BOLD}Inputs / outputs${COLOR_RESET}"
-    FEATURE_NMEA2000=$(prompt_yes_no "  NMEA2000 socketCAN (-i / -I)"         "$FEATURE_NMEA2000")
     FEATURE_PSQL=$(prompt_yes_no     "  PostgreSQL output (-D)"               "$FEATURE_PSQL")
     FEATURE_SQLITE=$(prompt_yes_no   "  SQLite (offline map tiles and -D output)" "$FEATURE_SQLITE")
 
@@ -523,20 +521,6 @@ install_libhydrasdr_from_source() {
     cd ../../.. || error_exit "Failed to return to parent directory"
 }
 
-# Install NMEA2000 library from source
-install_nmea2000_from_source() {
-    log "INFO" "Building NMEA2000 library from source"
-    git clone https://github.com/jvde-github/NMEA2000.git --depth 1 || error_exit "Failed to clone NMEA2000 repository"
-    cd NMEA2000/src || error_exit "Failed to change directory to NMEA2000/src"
-    
-    # Build as static library
-    log "INFO" "Building NMEA2000 as static library"
-    g++ -O3 -c N2kMsg.cpp N2kStream.cpp N2kMessages.cpp N2kTimer.cpp NMEA2000.cpp N2kGroupFunctionDefaultHandlers.cpp N2kGroupFunction.cpp -I. || error_exit "Failed to compile NMEA2000"
-    ar rcs libnmea2000.a *.o || error_exit "Failed to create NMEA2000 static library"
-    
-    cd ../.. || error_exit "Failed to return to parent directory"
-}
-
 # Install SDR libraries from source (only for source build).
 # Each step is gated on its FEATURE_* flag so users disabling a feature
 # don't pay the clone+build cost or pollute ${LIB_DIR}.
@@ -547,9 +531,6 @@ install_sdr_libraries_from_source() {
     # rtlsdr and hydrasdr from source (need custom cmake flags for udev rules)
     [[ "$FEATURE_RTLSDR"   == "ON" ]] && install_librtlsdr_from_source
     [[ "$FEATURE_HYDRASDR" == "ON" ]] && install_libhydrasdr_from_source
-
-    # NMEA2000 library (built only if the feature is enabled)
-    [[ "$FEATURE_NMEA2000" == "ON" ]] && install_nmea2000_from_source
 
     # Explicit success: under `set -e`, a trailing `[[ ]] && fn` whose test is
     # false makes the whole function return 1 (the && short-circuits, leaving
@@ -577,14 +558,6 @@ build_ais_catcher_from_source() {
         -DCMAKE_INSTALL_RPATH="${LIB_DIR}/lib;${LIB_DIR}"
         -DCMAKE_BUILD_RPATH="${LIB_DIR}/lib;${LIB_DIR}"
     )
-
-    # Only point at the source-built NMEA2000 archive when that feature is enabled.
-    if [[ "$FEATURE_NMEA2000" == "ON" ]]; then
-        cmake_args+=(
-            -DNMEA2000_INCLUDE="${TMP_DIR}/NMEA2000/src"
-            -DNMEA2000_LIB="${TMP_DIR}/NMEA2000/src/libnmea2000.a"
-        )
-    fi
 
     # Per-feature toggles (mirror CMakeLists.txt option() names).
     local f vname

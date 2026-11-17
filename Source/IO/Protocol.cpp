@@ -17,6 +17,8 @@
 
 #include "Protocol.h"
 #include "Logger.h"
+#include "N2K.h"
+#include "AIS-catcher.h"
 
 #include <sys/types.h>
 
@@ -28,6 +30,13 @@
 #include <android/log.h>
 #include <dirent.h>
 #endif
+#endif
+
+#if defined(__linux__) && !defined(__ANDROID__)
+#include <sys/ioctl.h>
+#include <net/if.h>
+#include <linux/can.h>
+#include <linux/can/raw.h>
 #endif
 
 #include <errno.h>
@@ -2269,5 +2278,355 @@ namespace Protocol
 		// Return raw bytes as string
 		return std::string(reinterpret_cast<char *>(hash), 20);
 #endif
+	}
+
+#if defined(__linux__) && !defined(__ANDROID__)
+	bool SocketCAN::open()
+	{
+		struct ifreq ifr;
+		struct sockaddr_can addr;
+		const char *failed = nullptr;
+
+		disconnect();
+		std::memset(&ifr, 0, sizeof(ifr));
+		std::memset(&addr, 0, sizeof(addr));
+		std::strncpy(ifr.ifr_name, interface.c_str(), IFNAMSIZ - 1);
+
+		if ((sock = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
+			failed = "cannot open a CAN socket";
+		else if (ioctl(sock, SIOCGIFINDEX, &ifr) < 0)
+			failed = "no such interface";
+		else
+		{
+			addr.can_family = AF_CAN;
+			addr.can_ifindex = ifr.ifr_ifindex;
+			if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+				failed = "cannot bind to the interface";
+			else if (!Net::setNonBlocking(sock))
+				failed = "cannot set the socket non-blocking";
+		}
+
+		if (!failed)
+		{
+			if (failures)
+				Info() << "CAN (" << interface << "): open.";
+			failures = 0;
+			return true;
+		}
+		if (!failures++)
+			Error() << "CAN (" << interface << "): " << failed << ", will keep trying.";
+		disconnect();
+		return false;
+	}
+
+	void SocketCAN::disconnect()
+	{
+		if (sock != -1)
+			Net::closeSocket(sock);
+		sock = -1;
+		stamp = Net::Clock::now();
+	}
+
+	void SocketCAN::poll()
+	{
+		if (sock == -1 && Net::secondsSince(stamp) > backoff(failures ? failures - 1 : 0))
+			open();
+	}
+
+	// the frames that have come, each as a line, after at most `t` seconds of waiting for one
+	int SocketCAN::read(void *data, int length, int t, bool)
+	{
+		if (sock == -1)
+			return 0;
+
+		struct pollfd pfd = {sock, POLLIN, 0};
+		if (::poll(&pfd, 1, t * 1000) <= 0)
+			return 0;
+
+		char *out = (char *)data;
+		int n = 0;
+		// a line is at most 8 digits, 8 bytes of 3 characters and the line end
+		while (length - n >= 40)
+		{
+			struct can_frame frame;
+			struct iovec iov = {&frame, sizeof(frame)};
+			struct msghdr msg;
+			std::memset(&msg, 0, sizeof(msg));
+			msg.msg_iov = &iov;
+			msg.msg_iovlen = 1;
+
+			const ssize_t r = recvmsg(sock, &msg, 0);
+			if (r < 0)
+			{
+				if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+					break;
+				disconnect();
+				return -1;
+			}
+			// NMEA 2000 frames have the long identifier; MSG_DONTROUTE marks one sent from here
+			if (r != (ssize_t)sizeof(frame) || !(frame.can_id & CAN_EFF_FLAG) || (frame.can_id & (CAN_RTR_FLAG | CAN_ERR_FLAG)) ||
+				(msg.msg_flags & MSG_DONTROUTE) || frame.can_dlc < 1 || frame.can_dlc > 8)
+				continue;
+
+			n += std::snprintf(out + n, 10, "%08X", (unsigned)(frame.can_id & CAN_EFF_MASK));
+			for (int i = 0; i < frame.can_dlc; i++)
+				n += std::snprintf(out + n, 4, " %02X", frame.data[i]);
+			out[n++] = '\r';
+			out[n++] = '\n';
+		}
+		return n;
+	}
+#endif
+
+#if defined(__linux__) && !defined(__ANDROID__)
+	// frame lines, each written to the interface; false as a count of none when it takes no more
+	int SocketCAN::send(const void *data, int length)
+	{
+		if (sock == -1)
+			return 0;
+
+		const std::string text((const char *)data, length);
+		for (size_t at = 0, end; (end = text.find('\n', at)) != std::string::npos; at = end + 1)
+		{
+			std::string line = text.substr(at, end - at);
+			if (!line.empty() && line.back() == '\r')
+				line.pop_back();
+
+			uint32_t id;
+			struct can_frame frame;
+			int len;
+			std::memset(&frame, 0, sizeof(frame));
+			if (!AIS::parseFrameLine(line.c_str(), id, frame.data, len))
+				continue;
+			frame.can_id = id | CAN_EFF_FLAG;
+			frame.can_dlc = len;
+			if (::write(sock, &frame, sizeof(frame)) != (ssize_t)sizeof(frame))
+			{
+				if (errno != ENOBUFS && errno != EAGAIN && errno != EWOULDBLOCK)
+					disconnect();
+				return 0;
+			}
+		}
+		return length;
+	}
+#endif
+
+	// A message of the node's own as frame lines: one frame, or a fast packet of several
+	void N2KNode::message(uint32_t pgn, int priority, int destination, const std::string &data, bool fast)
+	{
+		const uint32_t id = (uint32_t)priority << 26 | pgn << 8 | (((pgn >> 8) & 0xff) < 240 ? (uint32_t)destination << 8 : 0) | (uint32_t)address;
+		const int order = (sequence++ & 7) << 5;
+		const int len = (int)data.size();
+		std::string lines;
+		char buf[32];
+
+		for (int n = 0, at = 0; at < len; n++)
+		{
+			std::snprintf(buf, sizeof(buf), "%08X", (unsigned)id);
+			lines += buf;
+			int room = 8;
+			if (fast)
+			{
+				std::snprintf(buf, sizeof(buf), " %02X", order | n);
+				lines += buf;
+				room--;
+				if (n == 0)
+				{
+					std::snprintf(buf, sizeof(buf), " %02X", len);
+					lines += buf;
+					room--;
+				}
+			}
+			for (; room > 0; room--, at++)
+			{
+				std::snprintf(buf, sizeof(buf), " %02X", at < len ? (unsigned char)data[at] : 0xff);
+				lines += buf;
+			}
+			lines += "\r\n";
+		}
+		ProtocolBase::send(lines.data(), (int)lines.size());
+	}
+
+	// the address claim: the name, sent to all from the address wanted
+	void N2KNode::claim()
+	{
+		std::string n(8, 0);
+		for (int i = 0; i < 8; i++)
+			n[i] = (char)(name >> (8 * i));
+		message(60928, 6, 255, n, false);
+	}
+
+	// a frame from the bus: another's claim of our address, or a request
+	void N2KNode::frame(uint32_t id, const unsigned char *data, int len)
+	{
+		const uint32_t pf = (id >> 16) & 0xff, ps = (id >> 8) & 0xff;
+		const uint32_t pgn = ((id >> 24) & 1) << 16 | pf << 8 | (pf < 240 ? 0 : ps);
+		const int from = id & 0xff, to = pf < 240 ? (int)ps : 255;
+
+		if (pgn == 60928 && from == address && len == 8 && state != SILENT)
+		{
+			uint64_t other = 0;
+			for (int i = 0; i < 8; i++)
+				other |= (uint64_t)data[i] << (8 * i);
+
+			// the lower name keeps the address; with the same name ours becomes another instance
+			if (name > other)
+				address = address < 251 ? address + 1 : 254;
+			else if (name == other)
+				name += 1ULL << 32;
+			if (address == 254)
+			{
+				state = SILENT;
+				Error() << "NMEA2000 (" << getHost() << "): no address left on the bus, nothing is sent.";
+				claim();
+				return;
+			}
+			if (name >= other)
+			{
+				state = CLAIMING;
+				stamp = Net::Clock::now();
+			}
+			claim();
+		}
+		else if (pgn == 59904 && (to == address || to == 255) && len >= 3)
+			request((uint32_t)data[0] | (uint32_t)data[1] << 8 | (uint32_t)data[2] << 16, from, to != 255);
+	}
+
+	void N2KNode::request(uint32_t pgn, int from, bool addressed)
+	{
+		// the messages this device sends, and the ones it takes
+		static const uint32_t sent[] = {59392, 60928, 126464, 126993, 126996, 126998, 129038, 129039, 129040, 129041, 129793, 129794, 129798, 129802, 129809, 129810};
+		static const uint32_t taken[] = {59904, 60928};
+
+		if (state != UP)
+			return;
+
+		auto text = [](std::string &d, const char *s, size_t len)
+		{
+			const size_t n = std::strlen(s);
+			d.append(s, MIN(n, len));
+			d.append(len - MIN(n, len), (char)0xff);
+		};
+		auto list = [](unsigned char kind, const uint32_t *p, size_t n)
+		{
+			std::string d(1, (char)kind);
+			for (size_t i = 0; i < n; i++)
+				for (int k = 0; k < 3; k++)
+					d += (char)(p[i] >> (8 * k));
+			return d;
+		};
+
+		switch (pgn)
+		{
+		case 60928:
+			claim();
+			break;
+		case 126996:
+		{
+			// product information: the standard's version 2.101, product 100, then four texts of 32
+			std::string d = {(char)0x35, (char)0x08, (char)100, (char)0};
+			text(d, "AIS-catcher", 32);
+			text(d, VERSION, 32);
+			text(d, VERSION, 32);
+			text(d, "00000002", 32);
+			d += (char)0; // not certified
+			d += (char)1; // one load unit of 50 mA
+			message(126996, 6, 255, d, true);
+			break;
+		}
+		case 126998:
+		{
+			// configuration information: two installation notes, empty, and the maker's text
+			std::string d = {2, 1, 2, 1};
+			const std::string maker = "AIS-catcher";
+			d += (char)(maker.size() + 2);
+			d += (char)1;
+			d += maker;
+			message(126998, 6, 255, d, true);
+			break;
+		}
+		case 126464:
+			message(126464, 6, from, list(0, sent, sizeof(sent) / sizeof(sent[0])), true);
+			message(126464, 6, from, list(1, taken, sizeof(taken) / sizeof(taken[0])), true);
+			break;
+		default:
+			// a request to this device alone for what it does not have: declined
+			if (addressed)
+			{
+				std::string d = {1, (char)0xff, (char)0xff, (char)0xff, (char)0xff};
+				for (int k = 0; k < 3; k++)
+					d += (char)(pgn >> (8 * k));
+				message(59392, 6, from, d, false);
+			}
+			break;
+		}
+	}
+
+	void N2KNode::poll()
+	{
+		ProtocolBase::poll();
+		if (!ProtocolBase::isConnected())
+		{
+			state = DOWN;
+			return;
+		}
+		if (state == DOWN)
+		{
+			state = CLAIMING;
+			stamp = Net::Clock::now();
+			in.clear();
+			claim();
+		}
+
+		char buf[2048];
+		int n;
+		while ((n = ProtocolBase::read(buf, sizeof(buf), 0, false)) > 0)
+			for (int i = 0; i < n; i++)
+			{
+				if (buf[i] == '\n')
+				{
+					uint32_t id;
+					unsigned char data[8];
+					int len;
+					if (AIS::parseFrameLine(in.c_str(), id, data, len))
+						frame(id, data, len);
+					in.clear();
+				}
+				else if (buf[i] != '\r' && in.size() < 64)
+					in += buf[i];
+			}
+
+		// the address is ours when nobody objected for a quarter of a second
+		if (state == CLAIMING && Net::secondsSince(stamp) > 0.25)
+		{
+			state = UP;
+			beat = Net::Clock::now() - std::chrono::seconds(60);
+			Info() << "NMEA2000 (" << getHost() << "): on the bus with address " << address << ".";
+		}
+		if (state == UP && Net::secondsSince(beat) >= 60)
+		{
+			beat = Net::Clock::now();
+			// heartbeat: its interval in ms, a count, the rest unused
+			std::string d = {(char)0x60, (char)0xea, (char)(beats++ % 253), (char)0xff, (char)0xff, (char)0xff, (char)0xff, (char)0xff};
+			message(126993, 7, 255, d, false);
+		}
+	}
+
+	// frame lines of the sender: each goes out under our address
+	int N2KNode::send(const void *data, int length)
+	{
+		if (state != UP)
+			return 0;
+
+		static const char hex[] = "0123456789ABCDEF";
+		out.assign((const char *)data, length);
+		for (size_t at = 0; at + 8 <= out.size(); at = out.find('\n', at) + 1)
+		{
+			out[at + 6] = hex[address >> 4];
+			out[at + 7] = hex[address & 15];
+			if (out.find('\n', at) == std::string::npos)
+				break;
+		}
+		return ProtocolBase::send(out.data(), (int)out.size()) > 0 ? length : 0;
 	}
 }

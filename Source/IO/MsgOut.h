@@ -35,6 +35,7 @@
 #include "JSON/JSON.h"
 #include "JSON/Writer.h"
 #include "Logger.h"
+#include "N2K.h"
 
 class Receiver;
 
@@ -46,6 +47,7 @@ namespace IO
 		std::string json;
 		AIS::Filter filter;
 		JSON::Serializer builder{JSON_DICT_FULL};
+		AIS::MessageToN2K n2k;
 
 		OutputStats stats;
 		std::string description, link, type;
@@ -129,7 +131,7 @@ namespace IO
 		bool usesJSONStream() const
 		{
 			return fmt == MessageFormat::JSON_FULL || fmt == MessageFormat::JSON_ANNOTATED ||
-				   fmt == MessageFormat::JSON_SPARSE;
+				   fmt == MessageFormat::JSON_SPARSE || fmt == MessageFormat::N2K;
 		}
 
 		bool jsonFormat() const
@@ -215,7 +217,15 @@ namespace IO
 
 				stats.messages++;
 				json.clear();
-				builder.stringify(data[i], json, line_suffix);
+				if (fmt != MessageFormat::N2K)
+					builder.stringify(data[i], json, line_suffix);
+				else
+				{
+					// frame lines; nothing for a message NMEA 2000 has no message for
+					n2k.encode(msg, data[i], json);
+					if (json.empty())
+						continue;
+				}
 				sendFormatted(json.data(), (int)json.size(), &msg, tag);
 			}
 			batchDone(tag);
@@ -223,7 +233,7 @@ namespace IO
 
 		void Receive(const AIS::GPS *data, int len, TAG &tag) override
 		{
-			if (!forward_gps || !filter.includeGPS() || !readyToSend())
+			if (!forward_gps || fmt == MessageFormat::N2K || !filter.includeGPS() || !readyToSend())
 				return;
 
 			for (int i = 0; i < len; i++)

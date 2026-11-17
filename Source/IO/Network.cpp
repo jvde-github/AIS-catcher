@@ -648,6 +648,14 @@ namespace IO
 			ws.setOptionKey(AIS::KEY_SETTING_PROTOCOLS, "mqtt");
 			ws.setOptionKey(AIS::KEY_SETTING_BINARY, "on");
 			break;
+		case PROTOCOL::CAN:
+#if defined(__linux__) && !defined(__ANDROID__)
+			can.setInterface(tcp.getHost());
+			session = can.add(&node);
+			break;
+#else
+			throw std::runtime_error("NMEA2000: a CAN interface is written on Linux only.");
+#endif
 		default:
 			break;
 		}
@@ -695,6 +703,9 @@ namespace IO
 			case PROTOCOL::TCP:
 			case PROTOCOL::WSSMQTT:
 			case PROTOCOL::MQTTS:
+				break;
+			case PROTOCOL::CAN:
+				fmt = MessageFormat::N2K;
 				break;
 			default:
 				throw std::runtime_error("MQTT output: unsupported protocol: " + arg);

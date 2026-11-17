@@ -154,9 +154,7 @@ void printBuildConfiguration()
 #ifdef HASSYSLOG
 	other_support << "SYSLOG ";
 #endif
-#ifdef HASNMEA2000
 	other_support << "NMEA2000 ";
-#endif
 #ifdef HASOPENSSL
 	other_support << "SSL ";
 #endif

@@ -925,11 +925,7 @@ namespace
 			case 'E':
 				throw std::runtime_error("Option -E (managed mode) must be the only option: AIS-catcher -E [config file] [bind address:port] [TLS_CERT file TLS_KEY file]. To run this command line in managed mode, write it as a configuration with -J config.json, then start AIS-catcher -E config.json.");
 			case 'I':
-#ifdef HASNMEA2000
 				output(AIS::KEY_SETTING_NMEA2000_OUTPUT, leading(count % 2, AIS::KEY_SETTING_DEVICE), args, ptr, count);
-#else
-				throw std::runtime_error("NMEA2000 support not compiled in.");
-#endif
 				break;
 			case 'J':
 				Assert(count <= 1, param, "takes one optional parameter [file].");

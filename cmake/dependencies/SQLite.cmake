@@ -1,18 +1,18 @@
 # Find sqlite
 if(SQLITE)
     if(MSVC AND NOT MSVC_VCPKG)
-        find_path(SQLITE_INCLUDE_DIR sqlite3.h HINTS ${POTHOSSDR_INCLUDE_DIR})
-        find_library(SQLITE_LIBRARY sqlite3.lib HINTS ${POTHOSSDR_LIBRARY_DIR})
-        find_file(SQLITE_DLL sqlite3.dll HINTS ${POTHOSSDR_BINARY_DIR})
+        find_path(SQLITE_INCLUDE_DIR sqlite3.h HINTS ${WINDOWS_INCLUDE_DIR})
+        find_library(SQLITE_LIBRARY sqlite3.lib HINTS ${WINDOWS_LIBRARY_DIR})
+        find_file(SQLITE_DLL sqlite3.dll HINTS ${WINDOWS_BINARY_DIR})
 
         if(SQLITE_INCLUDE_DIR AND SQLITE_LIBRARY AND SQLITE_DLL)
-            message(STATUS "SQLite: found (PothosSDR) - " ${SQLITE_INCLUDE_DIR}, ${SQLITE_LIBRARY}, ${SQLITE_DLL})
+            message(STATUS "SQLite: found (Windows) - " ${SQLITE_INCLUDE_DIR}, ${SQLITE_LIBRARY}, ${SQLITE_DLL})
             set(COPY_SQLITE_DLL TRUE)
             add_definitions(-DHASSQLITE)
             set(SQLITE_INCLUDE_DIRS ${SQLITE_INCLUDE_DIR})
             set(SQLITE_LIBRARIES ${SQLITE_LIBRARY})
         else()
-            message(STATUS "SQLite: Not found (PothosSDR) - " ${SQLITE_INCLUDE_DIR}, ${SQLITE_LIBRARY}, ${SQLITE_DLL})
+            message(STATUS "SQLite: Not found (Windows) - " ${SQLITE_INCLUDE_DIR}, ${SQLITE_LIBRARY}, ${SQLITE_DLL})
         endif()
     else()
         # For Unix-like systems, use pkg-config if available

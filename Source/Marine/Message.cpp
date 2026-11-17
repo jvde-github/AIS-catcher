@@ -311,7 +311,7 @@ namespace AIS
 		// literal trailing '\n' framing terminator.
 		size_t base = out.size();
 		size_t worst = (23 + (size_t)numBytes + 2) * 2 + 1;
-		AISC_STRING_RESIZE_UNINIT(out, base + worst);
+		out.resize(base + worst);
 
 		char *const p0 = &out[base];
 		char *p = p0;
@@ -521,8 +521,8 @@ namespace AIS
 		constexpr int WORD_BITS = CHARS_PER * 8;
 
 		const int nchars = (len + 5) / 6;
-		// Upper bound; `last_nonspace` trims uninitialized tail past the terminator.
-		AISC_STRING_RESIZE_UNINIT(str, nchars);
+		// Upper bound; `last_nonspace` trims the tail past the terminator.
+		str.resize(nchars);
 		char *p = &str[0];
 		int n = 0, last_nonspace = 0;
 
@@ -644,7 +644,7 @@ namespace AIS
 		{
 			std::string &out = NMEA[s];
 			// Upper bound; trimmed to `i` after writing; interior bytes fully overwritten.
-			AISC_STRING_RESIZE_UNINIT(out, 128);
+			out.resize(128);
 			char *p = &out[0];
 
 			std::memcpy(p, "!AIVDM,X,X,X,X,", 11);

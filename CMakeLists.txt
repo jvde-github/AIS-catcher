@@ -27,12 +27,7 @@ else()
     set(COMMIT_HASH "unknown")
 endif()
 
-# Build version string
-if(RUN_NUMBER GREATER 0)
-    set(VERSION_DESCRIBE "${VERSION_BASE}-${RUN_NUMBER}-g${COMMIT_HASH}")
-else()
-    set(VERSION_DESCRIBE "${VERSION_BASE}-0-g${COMMIT_HASH}")
-endif()
+set(VERSION_DESCRIBE "${VERSION_BASE}-${RUN_NUMBER}-g${COMMIT_HASH}")
 
 message(STATUS "Version: ${VERSION_DESCRIBE} (base: ${VERSION_BASE}, run: ${RUN_NUMBER}, commit: ${COMMIT_HASH})")
 
@@ -48,18 +43,24 @@ option(AIRSPYHF "Include Airspy HF+ support" ON)
 option(HACKRF "Include HackRF support" ON)
 option(HYDRASDR "Include HydraSDR support" ON)
 option(HYDRASDR_STATIC "Statically link HydraSDR library" OFF)
-option(SOXR "Include SOXR support" ON)
+# MINIMAL: for small devices, the radios, the decoder and the plain outputs; the options below
+# default to off (an explicit -D<option>=ON still counts; in a fresh build directory)
+option(MINIMAL "Small build: no web viewer, API, databases, TLS or resamplers" OFF)
+if(MINIMAL)
+    set(_full OFF)
+else()
+    set(_full ON)
+endif()
+option(SOXR "Include SOXR support" ${_full})
 option(ZLIB "Include ZLIB support" ON)
-option(SAMPLERATE "Include SAMPLERATE support" ON)
-option(PSQL "Include PSQL support" ON)
-option(SQLITE "Include SQLITE support" ON)
-option(OPENSSL "Include OPENSSL support" ON)
-option(NMEA2000 "Include NMEA2000 support" ON)
-option(WEBVIEWER "Include the embedded web UI (WebDB blob + HTTP server)" ON)
-option(API "Include the tracker, its servers and /api/v1 (config keys tracking and services)" ON)
-option(DELIVERY "Include webhooks and the MQTT state for Home Assistant (config keys webhooks and mqtt_state); needs API" ON)
+option(SAMPLERATE "Include SAMPLERATE support" ${_full})
+option(PSQL "Include PSQL support" ${_full})
+option(SQLITE "Include SQLITE support" ${_full})
+option(OPENSSL "Include OPENSSL support" ${_full})
+option(WEBVIEWER "Include the embedded web UI (WebDB blob + HTTP server)" ${_full})
+option(API "Include the tracker, its servers and /api/v1 (config keys tracking and services)" ${_full})
+option(DELIVERY "Include webhooks and the MQTT state for Home Assistant (config keys webhooks and mqtt_state); needs API" ${_full})
 option(STATIC "Fully static build: require and link static (.a) libraries for every enabled dependency" OFF)
-option(ARMV6 "Compile for Raspberry Pi Zero" OFF)
 option(RBIT "Use ARM RBIT instruction for bit reversal" OFF)
 
 # the web viewer (-N and the ui service) reads the site's tracker
@@ -68,22 +69,15 @@ if(WEBVIEWER AND NOT API)
     set(API ON)
 endif()
 
-if(WEBVIEWER)
-    add_definitions(-DHASWEBVIEWER)
-endif()
-
-if(API)
-    add_definitions(-DHASAPI)
-    if(DELIVERY)
-        add_definitions(-DHASDELIVERY)
+foreach(_feature WEBVIEWER API RBIT)
+    if(${_feature})
+        add_definitions(-DHAS${_feature})
     endif()
+endforeach()
+if(API AND DELIVERY)
+    add_definitions(-DHASDELIVERY)
 endif()
 
-if(RBIT)
-    add_definitions(-DHASRBIT)
-endif()
-
-set(NMEA2000_PATH "." CACHE PATH "Path to NMEA2000 library")
 set(PORTS "" CACHE PATH "Path to the libport directory (destination matching)")
 
 # RPATH configuration for bundled libraries
@@ -95,8 +89,6 @@ if(RPATH_LIBRARY_DIR)
     set(CMAKE_BUILD_RPATH "${RPATH_LIBRARY_DIR}")
     set(CMAKE_INSTALL_RPATH "${RPATH_LIBRARY_DIR}")
     set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
-else()
-    message(STATUS "RPATH not configured")
 endif()
 
 # Common compiler flags and options.
@@ -112,20 +104,17 @@ option(TSAN "Build with ThreadSanitizer" OFF)
 option(WARNINGS_AS_ERRORS "Treat compiler warnings as errors (CI/development only)" OFF)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # as compile options, after the Release flags, so -O1 is the one that counts
     if(SANITIZE)
-        set(OPTIMIZATION_FLAGS "-O1 -g")
-        add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+        add_compile_options(-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer)
         add_link_options(-fsanitize=address,undefined)
     elseif(TSAN)
-        set(OPTIMIZATION_FLAGS "-O1 -g")
-        add_compile_options(-fsanitize=thread -fno-omit-frame-pointer)
+        add_compile_options(-O1 -g -fsanitize=thread -fno-omit-frame-pointer)
         add_link_options(-fsanitize=thread)
     else()
         set(OPTIMIZATION_FLAGS "-O3 -ffast-math")
     endif()
-    add_compile_options("-Wall")
-    add_compile_options("-Wno-psabi")
-    add_compile_options("-Wno-sign-compare")
+    add_compile_options(-Wall -Wno-psabi -Wno-sign-compare)
     if(WARNINGS_AS_ERRORS)
         add_compile_options("-Werror")
     endif()
@@ -141,64 +130,21 @@ set(CMAKE_CXX_FLAGS "${OPTIMIZATION_FLAGS}")
 include(FindPkgConfig)
 include(CheckIncludeFile)
 include(CheckSymbolExists)
-include(CheckCXXSourceCompiles)
 
-# Detect non-zeroing std::string resize variants so JSON::Writer can avoid
-# memset-on-resize in its hot path.
-check_cxx_source_compiles("
-    #include <string>
-    int main() {
-        std::string s;
-        s.resize_and_overwrite(16, [](char*, std::size_t n){ return n; });
-        return 0;
-    }
-" HAS_STD_RESIZE_AND_OVERWRITE)
-if(HAS_STD_RESIZE_AND_OVERWRITE)
-    add_definitions(-DHAS_STD_RESIZE_AND_OVERWRITE)
-endif()
-
-check_cxx_source_compiles("
-    #include <string>
-    int main() {
-        std::string s;
-        s.__resize_default_init(16);
-        return 0;
-    }
-" HAS_LIBCXX_RESIZE_DEFAULT_INIT)
-if(HAS_LIBCXX_RESIZE_DEFAULT_INIT)
-    add_definitions(-DHAS_LIBCXX_RESIZE_DEFAULT_INIT)
-endif()
-
-check_cxx_source_compiles("
-    #include <string>
-    int main() {
-        std::string s;
-        s.__resize_and_overwrite(16, [](char*, std::size_t n){ return n; });
-        return 0;
-    }
-" HAS_LIBSTDCXX_RESIZE_AND_OVERWRITE)
-if(HAS_LIBSTDCXX_RESIZE_AND_OVERWRITE)
-    add_definitions(-DHAS_LIBSTDCXX_RESIZE_AND_OVERWRITE)
-endif()
-
-# Use pkg-config
 find_package(Threads)
 
 if(MSVC)
     add_definitions(-DHASEVENTLOG)
+    set(ADDITIONAL_LIBRARIES ws2_32.lib crypt32.lib)
 elseif(APPLE)
     check_include_file("os/log.h" HASOSLOG)
     if(HASOSLOG)
         add_definitions(-DHASOSLOG)
     endif()
 elseif(UNIX)
-    check_include_file("syslog.h" HASSYSLOG)
-    if(HASSYSLOG)
-
-        check_symbol_exists(syslog "syslog.h" CAN_USE_SYSLOG)
-        if(CAN_USE_SYSLOG)
-            add_definitions(-DHASSYSLOG)
-        endif()
+    check_symbol_exists(syslog "syslog.h" CAN_USE_SYSLOG)
+    if(CAN_USE_SYSLOG)
+        add_definitions(-DHASSYSLOG)
     endif()
 endif()
 
@@ -207,36 +153,14 @@ if(UNIX AND NOT APPLE)
     find_library(DL_LIBRARY dl REQUIRED)
 
     if(ENABLE_DEBUG)
-        add_compile_options(
-            -g3
-            -ggdb
-            -O0
-            -fno-omit-frame-pointer
-            -rdynamic
-            -no-pie
-        )
-        add_definitions(-DDEBUG)
+        add_compile_options(-g3 -ggdb -O0 -fno-omit-frame-pointer)
+        add_link_options(-rdynamic -no-pie)
         message(STATUS "Debug symbols enabled for Linux build via ENABLE_DEBUG")
     endif()
 endif()
 
-# for MSVC we link to the PothosSDR install
-if(MSVC AND NOT MSVC_VCPKG)
-    if(NOT POTHOSSDR_BINARY_DIR)
-        SET(POTHOSSDR_BINARY_DIR $ENV{PROGRAMFILES}\\PothosSDR\\bin)
-    endif()
-    if(NOT POTHOSSDR_LIBRARY_DIR)
-        SET(POTHOSSDR_LIBRARY_DIR $ENV{PROGRAMFILES}\\PothosSDR\\lib)
-    endif()
-    if(NOT POTHOSSDR_INCLUDE_DIR)
-        SET(POTHOSSDR_INCLUDE_DIR $ENV{PROGRAMFILES}\\PothosSDR\\include)
-    endif()
-endif()
-
-# Define the libraries for inclusion
-if(MSVC)
-    set(ADDITIONAL_LIBRARIES ws2_32.lib crypt32.lib)
-endif()
+# MSVC finds each library's headers, .lib and DLL in -DWINDOWS_INCLUDE_DIR, -DWINDOWS_LIBRARY_DIR
+# and -DWINDOWS_BINARY_DIR, as the Windows CI job fills them (cmake/dependencies/*.cmake)
 
 # --- Static build setup (must run before the dependency modules are included) ---
 if(STATIC)
@@ -255,27 +179,16 @@ if(STATIC)
     set(PKG_CONFIG_USE_STATIC_LIBS ON)
     # Force a fully static executable.
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_CXX_COMPILER MATCHES "musl")
+    check_symbol_exists(__GLIBC__ "features.h" STATIC_ON_GLIBC)
+    if(STATIC_ON_GLIBC)
         message(WARNING "STATIC on a glibc toolchain typically breaks NSS/DNS at runtime; build on musl (Alpine) for a clean fully-static binary.")
     endif()
     message(STATUS "STATIC: enabled - linking every enabled dependency from static archives (.a)")
 endif()
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/NMEA2000.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/LibUSB.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/OpenSSL.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/ZLIB.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/PSQL.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/SQLite.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/SOXR.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/SAMPLERATE.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/SoapySDR.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/RTLSDR.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/SDRPLAY.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/AIRSPY.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/AIRSPYHF.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/HACKRF.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/HYDRASDR.cmake)
+foreach(_dep LibUSB OpenSSL ZLIB PSQL SQLite SOXR SAMPLERATE SoapySDR RTLSDR SDRPLAY AIRSPY AIRSPYHF HACKRF HYDRASDR)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies/${_dep}.cmake)
+endforeach()
 
 # --- Static build verification: every enabled dependency must resolve to a static (.a) archive ---
 if(STATIC)
@@ -354,6 +267,9 @@ set(CPP
     Source/Marine/AIS.cpp
     Source/Marine/Message.cpp
     Source/Marine/NMEA.cpp
+    Source/Marine/N2K.cpp
+    Source/DBMS/DatabaseOutput.cpp
+    Source/DBMS/CSV.cpp
     Source/Library/Logger.cpp
     Source/IO/TCPServer.cpp
     Source/Tracking/DB.cpp
@@ -367,36 +283,12 @@ set(CPP
 
 # Optional device sources: only compile when their backing library was found.
 # Same condition that defines HAS<NAME> in cmake/dependencies/<NAME>.cmake.
-if(RTLSDR_LIBRARIES)
-    list(APPEND CPP Source/Device/RTLSDR.cpp)
-endif()
-if(AIRSPY_LIBRARIES)
-    list(APPEND CPP Source/Device/AIRSPY.cpp)
-endif()
-if(AIRSPYHF_LIBRARIES)
-    list(APPEND CPP Source/Device/AIRSPYHF.cpp)
-endif()
-if(HACKRF_LIBRARIES)
-    list(APPEND CPP Source/Device/HACKRF.cpp)
-endif()
-if(HYDRASDR_LIBRARIES)
-    list(APPEND CPP Source/Device/HYDRASDR.cpp)
-endif()
-if(SDRPLAY_LIBRARIES)
-    list(APPEND CPP Source/Device/SDRPLAY.cpp)
-endif()
-if(SOAPYSDR_LIBRARIES)
-    list(APPEND CPP Source/Device/SoapySDR.cpp)
-endif()
-if(NMEA2000_LIBRARIES)
-    list(APPEND CPP
-        Source/Device/N2KsktCAN.cpp
-        Source/IO/N2KInterface.cpp
-        Source/IO/N2KStream.cpp
-        Source/Marine/N2K.cpp)
-endif()
-# always built; must stay free of any driver type
-list(APPEND CPP Source/DBMS/DatabaseOutput.cpp Source/DBMS/CSV.cpp)
+foreach(_dev RTLSDR AIRSPY AIRSPYHF HACKRF HYDRASDR SDRPLAY SoapySDR)
+    string(TOUPPER ${_dev} _lib)
+    if(${_lib}_LIBRARIES)
+        list(APPEND CPP Source/Device/${_dev}.cpp)
+    endif()
+endforeach()
 
 if(PQ_LIBRARIES)
     list(APPEND CPP Source/DBMS/PostgreSQL.cpp)
@@ -435,17 +327,11 @@ if(WEBVIEWER)
         Source/Web/PluginStore.cpp)
 endif()
 
-set(HEADER
-    Source/Application/AIS-catcher.h Source/Services/Prometheus.h Source/Application/Config.h Source/Application/DeviceManager.h Source/Web/WebDB.h Source/Library/Logger.h Source/Application/Receiver.h Source/Tracking/Ships.h Source/Tracking/DB.h Source/Tracking/PathStore.h Source/DBMS/PostgreSQL.h Source/DBMS/DatabaseOutput.h Source/DBMS/SQLite.h Source/DBMS/CSV.h Source/IO/HTTPClient.h Source/Web/MapTiles.h Source/Aviation/Beast.h
-    Source/Device/Device.h Source/Device/FileWAV.h Source/Device/RTLTCP.h Source/Device/UDP.h Source/DSP/Demod.h Source/DSP/Filters.h Source/Marine/AIS.h Source/Marine/Message.h Source/Marine/MessageHistory.h Source/Marine/NMEA.h Source/Library/ZIP.h Source/Library/Signals.h Source/Device/SoapySDR.h Source/JSON/JSONAIS.h Source/JSON/JSON.h Source/Aviation/Basestation.h Source/Aviation/ADSB.h
-    Source/Device/AIRSPY.h Source/Library/FIFO.h Source/Device/N2KsktCAN.h Source/Device/HACKRF.h Source/Device/HYDRASDR.h Source/Device/SDRPLAY.h Source/DSP/DSP.h Source/DSP/Model.h Source/Tracking/History.h Source/Tracking/Statistics.h Source/Library/Common.h Source/Library/Stream.h Source/Library/SWAR.h Source/Device/SpyServer.h Source/JSON/Keys.h Source/JSON/Writer.h Source/JSON/Parser.h Source/Tracking/PlaneDB.h
-    Source/Device/Serial.h Source/IO/N2KInterface.h Source/Marine/N2K.h Source/IO/N2KStream.h Source/Device/AIRSPYHF.h Source/Device/FileRAW.h Source/Device/RTLSDR.h Source/DSP/FFT.h Source/IO/MsgOut.h Source/IO/Screen.h Source/IO/File.h Source/IO/StreamCounter.h Source/IO/Network.h Source/IO/HTTPServer.h Source/Utilities/StreamHelpers.h Source/IO/TCPServer.h Source/IO/Protocol.h
-    Source/Utilities/Parse.h Source/Utilities/Convert.h Source/Utilities/Helper.h Source/Utilities/PackedInt.h Source/Utilities/TemplateString.h Source/IO/OutputStats.h
-    Source/Application/CommandLine.h Source/Application/Engine.h Source/Application/Stations.h Source/Control/ControlCore.h Source/Control/ControlServer.h Source/Control/ManagedMain.h Source/Site/Site.h Source/Site/SiteConfig.h Source/Services/ApiV1.h Source/Services/Http.h Source/Services/JournalJSON.h Source/Services/Mcp.h Source/Services/Routes.h Source/Services/Server.h Source/Services/Streams.h Source/Services/System.h Source/Services/Ui.h Source/Delivery/MqttState.h Source/Delivery/Webhooks.h Source/Tracking/BinaryStore.h Source/Tracking/DestinationIndex.h Source/Tracking/Event.h Source/Tracking/EventJSON.h Source/Tracking/EventRing.h Source/Tracking/Figures.h Source/Tracking/FixSampler.h Source/Tracking/Journal.h Source/Tracking/PlaceCatalogue.h Source/Tracking/PlaceGeometry.h Source/Tracking/PlaceMarkers.h Source/Tracking/PositionCheck.h Source/Tracking/RelationshipIndex.h Source/Tracking/Rest.h Source/Tracking/SlotTable.h Source/Tracking/StaticStore.h Source/Tracking/StationRegistry.h Source/Site/SystemFacts.h Source/Tracking/Tracker.h Source/Tracking/TrackingConfig.h Source/Tracking/ViewFilter.h Source/Tracking/VisitTracker.h Source/Web/PluginStore.h )
+# headers only show in IDE projects
+file(GLOB_RECURSE HEADER ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.h)
 
 set(APP_INCLUDES . ./Source ./Source/Tracking ./Source/DBMS ./Source/Library ./Source/Marine ./Source/Aviation ./Source/DSP ./Source/Application ./Source/Web ./Source/Control ./Source/IO ./Source/JSON ./Source/Utilities ./Source/Site ./Source/Services ./Source/Delivery)
 
-# Executable
 
 # A build on top of this one (a hub, a variant) adds its sources here
 add_executable(AIS-catcher ${CPP} ${HEADER} ${EXTRA_SOURCES})
@@ -464,65 +350,23 @@ if(PORTS)
 endif()
 
 include_directories(
-    . ${APP_INCLUDES} ${AIRSPYHF_INCLUDE_DIRS} ${NMEA2000_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${HYDRASDR_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOAPYSDR_INCLUDE_DIRS} ${PQ_INCLUDE_DIRS} ${SQLITE_INCLUDE_DIRS} ${PQXX_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS} ${SAMPLERATE_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+    ${APP_INCLUDES} ${AIRSPYHF_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${AIRSPY_INCLUDE_DIRS} ${HACKRF_INCLUDE_DIRS} ${HYDRASDR_INCLUDE_DIRS} ${RTLSDR_INCLUDE_DIRS} ${SDRPLAY_INCLUDE_DIRS} ${SOAPYSDR_INCLUDE_DIRS} ${PQ_INCLUDE_DIRS} ${SQLITE_INCLUDE_DIRS} ${PQXX_INCLUDE_DIRS} ${SOXR_INCLUDE_DIRS} ${SAMPLERATE_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
 
 target_link_libraries(AIS-catcher
-    ${DL_LIBRARY} ${AIRSPY_LIBRARIES} ${NMEA2000_LIBRARIES} ${OPENSSL_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${HYDRASDR_LIBRARIES} ${PQ_LIBRARIES} ${SQLITE_LIBRARIES} ${PQXX_LIBRARIES} ${SDRPLAY_LIBRARIES} ${SOXR_LIBRARIES} ${SOAPYSDR_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${ZLIB_LIBRARIES}
+    ${DL_LIBRARY} ${AIRSPY_LIBRARIES} ${OPENSSL_LIBRARIES} ${AIRSPYHF_LIBRARIES} ${RTLSDR_LIBRARIES} ${HACKRF_LIBRARIES} ${HYDRASDR_LIBRARIES} ${PQ_LIBRARIES} ${SQLITE_LIBRARIES} ${PQXX_LIBRARIES} ${SDRPLAY_LIBRARIES} ${SOXR_LIBRARIES} ${SOAPYSDR_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${ZLIB_LIBRARIES}
     ${ADDITIONAL_LIBRARIES} Threads::Threads)
 
 
 # Copying DLLs to final location if needed
-if(COPY_SDRPLAY_DLL)
-    add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SDRPLAY_DLL} ${CMAKE_CURRENT_BINARY_DIR})
-endif()
-
-if(COPY_RTLSDR_DLL)
-    add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${RTLSDR_DLL} ${CMAKE_CURRENT_BINARY_DIR})
-endif()
-
-if(COPY_AIRSPY_DLL)
-    add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${AIRSPY_DLL} ${CMAKE_CURRENT_BINARY_DIR})
-endif()
-
-if(COPY_AIRSPYHF_DLL)
-    add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${AIRSPYHF_DLL} ${CMAKE_CURRENT_BINARY_DIR})
-endif()
+foreach(_dll SDRPLAY RTLSDR AIRSPY AIRSPYHF HACKRF HYDRASDR SOXR PQ SQLITE ZLIB SAMPLERATE SOAPYSDR)
+    if(COPY_${_dll}_DLL)
+        add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${${_dll}_DLL} ${CMAKE_CURRENT_BINARY_DIR})
+    endif()
+endforeach()
 
 if(COPY_OPENSSL_DLL)
     add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${OPENSSL_DLL} ${CMAKE_CURRENT_BINARY_DIR})
     add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CRYPTO_DLL} ${CMAKE_CURRENT_BINARY_DIR})
-endif()
-
-if(COPY_HACKRF_DLL)
-    add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${HACKRF_DLL} ${CMAKE_CURRENT_BINARY_DIR})
-endif()
-
-if(COPY_HYDRASDR_DLL)
-    add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${HYDRASDR_DLL} ${CMAKE_CURRENT_BINARY_DIR})
-endif()
-
-if(COPY_SOXR_DLL)
-    add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SOXR_DLL} ${CMAKE_CURRENT_BINARY_DIR})
-endif()
-
-if(COPY_PQ_DLL)
-    add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${PQ_DLL} ${CMAKE_CURRENT_BINARY_DIR})
-endif()
-
-if(COPY_SQLITE_DLL)
-    add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SQLITE_DLL} ${CMAKE_CURRENT_BINARY_DIR})
-endif()
-
-if(COPY_ZLIB_DLL)
-    add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${ZLIB_DLL} ${CMAKE_CURRENT_BINARY_DIR})
-endif()
-
-if(COPY_SAMPLERATE_DLL)
-    add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SAMPLERATE_DLL} ${CMAKE_CURRENT_BINARY_DIR})
-endif()
-
-if(COPY_SOAPYSDR_DLL)
-    add_custom_command(TARGET AIS-catcher POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SOAPYSDR_DLL} ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 if(COPY_PTHREAD_LIBUSB_DLL)
@@ -532,5 +376,3 @@ endif()
 
 # Installation
 install(TARGETS AIS-catcher DESTINATION bin)
-
-# End of CMakeLists.txt

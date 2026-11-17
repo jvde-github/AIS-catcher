@@ -40,6 +40,9 @@ namespace Device
 		Protocol::ZMQ zmq;
 		Protocol::WebSocket ws;
 		Protocol::TLS tls;
+#if defined(__linux__) && !defined(__ANDROID__)
+		Protocol::SocketCAN can;
+#endif
 		Protocol::ProtocolBase *session = &tcp;
 
 		const int TRANSFER_SIZE = 16384;
@@ -66,14 +69,17 @@ namespace Device
 
 
 	public:
-		RTLTCP(Type type = Type::RTLTCP) : Device(Format::CU8, 288000, type, type == Type::ZMQ ? "ZMQ" : "RTLTCP")
+		RTLTCP(Type type = Type::RTLTCP) : Device(Format::CU8, 288000, type, type == Type::ZMQ ? "ZMQ" : type == Type::N2K ? "N2K" : "RTLTCP")
 		{
 			tcp.setStats(&stats);
 			if (type == Type::ZMQ)
 				applyKey(AIS::KEY_SETTING_PROTOCOL, "ZMQ");
+			if (type == Type::N2K)
+				applyKey(AIS::KEY_SETTING_PROTOCOL, "CAN");
 		}
 		const IO::OutputStats *getConnectionStats() const override { return &stats; }
 
+		void Open(uint64_t h) override;
 		void OpenWithFileDescriptor(int) override { Open(0); }
 		// Control
 
@@ -86,7 +92,7 @@ namespace Device
 
 		std::string getRateDescription() override
 		{
-			if (getFormat() == Format::TXT)
+			if (getFormat() == Format::TXT || getFormat() == Format::N2K)
 				return "N/A";
 			return Device::getRateDescription();
 		}

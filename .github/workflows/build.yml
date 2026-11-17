@@ -113,6 +113,18 @@ jobs:
     - name: Cross-compile and link for armv6
       run: docker run --rm -v "$PWD":/src:ro debian:trixie bash /src/scripts/check-armv6.sh
 
+  static:
+    name: Alpine static (MINIMAL)
+    needs: bakeHTML
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v6
+      with:
+        ref: ${{ env.CHECKOUT_REF }}
+    - name: Build and run a minimal static binary on musl
+      run: docker run --rm -v "$PWD":/src:ro alpine:3.21 sh /src/scripts/check-static.sh
+
   build_debian:
     needs: pre_build_checks
     runs-on: ubuntu-latest
@@ -514,7 +526,7 @@ jobs:
 
         echo "AIS-catcher"
         mkdir build; cd build
-        cmake .. -A $msplatform -G $gen -DPOTHOSSDR_INCLUDE_DIR=${{github.workspace}}\include -DPOTHOSSDR_LIBRARY_DIR=${{github.workspace}}\lib -DPOTHOSSDR_BINARY_DIR=${{github.workspace}}\release -DRUN_NUMBER=$env:RUN_NUMBER
+        cmake .. -A $msplatform -G $gen -DWINDOWS_INCLUDE_DIR=${{github.workspace}}\include -DWINDOWS_LIBRARY_DIR=${{github.workspace}}\lib -DWINDOWS_BINARY_DIR=${{github.workspace}}\release -DRUN_NUMBER=$env:RUN_NUMBER
         msbuild /verbosity:quiet /m /p:Configuration=$config /p:Platform=$msplatform AIS-catcher.sln
         cd ..
         cp LICENSE output\Licenses\AIS-catcher
@@ -591,7 +603,7 @@ jobs:
   publish_manifest:
     name: Publish build manifest
     runs-on: ubuntu-22.04
-    needs: [bakeHTML, pre_build_checks, warnings, armv6, build_debian, build_ubuntu, build_fedora, test_install, Docker, Windows]
+    needs: [bakeHTML, pre_build_checks, warnings, armv6, static, build_debian, build_ubuntu, build_fedora, test_install, Docker, Windows]
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'release'
     steps:
     - name: Checkout

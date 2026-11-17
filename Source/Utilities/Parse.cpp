@@ -233,6 +233,8 @@ namespace Util
 			format = Format::BEAST;
 		else if (str == "RAW1090")
 			format = Format::RAW1090;
+		else if (str == "N2K")
+			format = Format::N2K;
 		else if (str == "F32_FS4")
 			format = Format::F32_FS4;
 		else if (str == "DC16H")
@@ -351,6 +353,14 @@ namespace Util
 		{
 			protocol = PROTOCOL::WSS;
 		}
+		else if (arg == "N2K")
+		{
+			protocol = PROTOCOL::N2K;
+		}
+		else if (arg == "CAN")
+		{
+			protocol = PROTOCOL::CAN;
+		}
 		else
 			return false;
 
@@ -383,6 +393,10 @@ namespace Util
 		else if (str == "FULL" || str == "2")
 		{
 			out = MessageFormat::FULL;
+		}
+		else if (str == "N2K")
+		{
+			out = MessageFormat::N2K;
 		}
 		else if (str == "JSON_NMEA" || str == "3")
 		{

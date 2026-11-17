@@ -27,9 +27,6 @@
 #include "SiteConfig.h"
 #include "SQLite.h"
 #include "Stations.h"
-#ifdef HASNMEA2000
-#include "N2KStream.h"
-#endif
 
 const char *const Config::MODEL_DEPRECATED = "Receiver: \"model\" is deprecated and will be removed, use \"engines\": [ { \"type\": ... } ] instead";
 const char *const Config::RECEIVERS_NOT_ARRAY = "Receiver settings need to be an \"array\" of \"objects\" in config file.";
@@ -234,12 +231,8 @@ bool Config::readOutput(const JSON::Member &m, Outputs &into)
 		readList<IO::FileOutput>(m, "File output", into);
 		break;
 	case AIS::KEY_SETTING_NMEA2000_OUTPUT:
-#ifdef HASNMEA2000
 		readList<IO::N2KStreamer>(m, "NMEA2000 output", into);
 		break;
-#else
-		throw std::runtime_error("NMEA2000 support not compiled in.");
-#endif
 	default:
 		return false;
 	}

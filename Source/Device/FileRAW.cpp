@@ -68,7 +68,7 @@ namespace Device
 				}
 
 				// the FIFO only releases whole blocks: pad the I/Q tail, never text
-				bool is_text = getFormat() == Format::TXT || getFormat() == Format::BASESTATION || getFormat() == Format::BEAST || getFormat() == Format::RAW1090;
+				bool is_text = getFormat() == Format::TXT || getFormat() == Format::BASESTATION || getFormat() == Format::BEAST || getFormat() == Format::RAW1090 || getFormat() == Format::N2K;
 				int rem = (int)(total % fifo.BlockSize());
 				if (rem > 0 && !is_text)
 				{
@@ -168,7 +168,7 @@ namespace Device
 	{
 		Device::Play();
 
-		bool is_text = getFormat() == Format::TXT || getFormat() == Format::BASESTATION || getFormat() == Format::BEAST || getFormat() == Format::RAW1090;
+		bool is_text = getFormat() == Format::TXT || getFormat() == Format::BASESTATION || getFormat() == Format::BEAST || getFormat() == Format::RAW1090 || getFormat() == Format::N2K;
 
 		if (!is_text)
 		{
