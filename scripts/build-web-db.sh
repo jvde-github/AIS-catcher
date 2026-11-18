@@ -86,8 +86,8 @@ process_file() {
     local mime_type
     mime_type=$(get_mime_type "$file")
 
-    # Compress the file content
-    gzip -9 -n < "$file" > "$TEMP_FILE"
+    # Compress the file content: zopfli writes smaller gzip than gzip -9, the same format
+    if command -v zopfli >/dev/null; then zopfli -c "$file"; else gzip -9 -n < "$file"; fi > "$TEMP_FILE"
 
     # Generate the C array data
     {
