@@ -610,12 +610,20 @@ namespace IO
 
 		if (STATS)
 		{
-			const std::time_t now = std::time(nullptr);
-			stats_current.hour = hourOf(now);
-			collectVesselsSince(Util::Convert::toTimestampStr(stats_current.hour), stats_current.vessels);
+			const std::time_t hour = hourOf(std::time(nullptr));
+			std::set<uint32_t> heard;
+			collectVesselsSince(Util::Convert::toTimestampStr(hour), heard);
 
-			if (!stats_current.vessels.empty())
-				Debug() << "DBMS: resumed hour bucket with " << stats_current.vessels.size() << " vessels already heard";
+			if (!heard.empty())
+				Debug() << "DBMS: resumed hour bucket with " << heard.size() << " vessels already heard";
+
+			// the decoder counts into the bucket while a retry connects
+			const std::lock_guard<std::mutex> lock(queue_mutex);
+			if (stats_current.hour == hour || stats_current.msgs == 0)
+			{
+				stats_current.hour = hour;
+				stats_current.vessels.insert(heard.begin(), heard.end());
+			}
 		}
 
 		maintain();

@@ -128,7 +128,9 @@ namespace Device
 		if (n <= 0)
 			return false;
 
-		RAW r = {getFormat(), buffer.data(), n};
+		// a short last block ends in silence, as a raw file's does
+		std::memset(buffer.data() + n, 0, buffer_size - n);
+		RAW r = {getFormat(), buffer.data(), buffer_size};
 		Send(&r, 1, tag);
 
 		return true;

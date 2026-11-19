@@ -143,7 +143,6 @@ public:
 				f(b.at(b.count - 1 - i));
 		}
 	}
-	static bool isNumeric(uint8_t field) { return numeric(field); }
 
 private:
 	struct Block

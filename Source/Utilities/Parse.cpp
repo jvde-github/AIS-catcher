@@ -214,271 +214,70 @@ namespace Util
 		}
 	}
 
-	bool Parse::StreamFormat(std::string str, Format &format)
+	// An enum's names: the first of a value is the one written, any of them is read as it.
+	template <typename E>
+	struct Name
 	{
-		Convert::toUpper(str);
-		if (str == "CU8")
-			format = Format::CU8;
-		else if (str == "CF32")
-			format = Format::CF32;
-		else if (str == "CS16")
-			format = Format::CS16;
-		else if (str == "CS8")
-			format = Format::CS8;
-		else if (str == "TXT")
-			format = Format::TXT;
-		else if (str == "BASESTATION")
-			format = Format::BASESTATION;
-		else if (str == "BEAST")
-			format = Format::BEAST;
-		else if (str == "RAW1090")
-			format = Format::RAW1090;
-		else if (str == "N2K")
-			format = Format::N2K;
-		else if (str == "F32_FS4")
-			format = Format::F32_FS4;
-		else if (str == "DC16H")
-			format = Format::DC16H;
-		else
-			return false;
+		const char *text;
+		E value;
+	};
 
-		return true;
+	static const Name<Format> FORMATS[] = {
+		{"CU8", Format::CU8}, {"CF32", Format::CF32}, {"CS16", Format::CS16}, {"CS8", Format::CS8}, {"TXT", Format::TXT},
+		{"BASESTATION", Format::BASESTATION}, {"BEAST", Format::BEAST}, {"RAW1090", Format::RAW1090}, {"N2K", Format::N2K},
+		{"F32_FS4", Format::F32_FS4}, {"DC16H", Format::DC16H}};
+
+	static const Name<Type> TYPES[] = {
+		{"NONE", Type::NONE}, {"RTLSDR", Type::RTLSDR}, {"AIRSPY", Type::AIRSPY}, {"AIRSPYHF", Type::AIRSPYHF}, {"SDRPLAY", Type::SDRPLAY},
+		{"WAVFILE", Type::WAVFILE}, {"RAWFILE", Type::RAWFILE}, {"FILE", Type::RAWFILE}, {"RTLTCP", Type::RTLTCP}, {"HACKRF", Type::HACKRF},
+		{"HYDRASDR", Type::HYDRASDR}, {"SOAPYSDR", Type::SOAPYSDR}, {"ZMQ", Type::ZMQ}, {"SERIALPORT", Type::SERIALPORT}, {"UDP", Type::UDP},
+		{"UDPSERVER", Type::UDP}, {"SPYSERVER", Type::SPYSERVER}, {"NMEA2000", Type::N2K}};
+
+	static const Name<PROTOCOL> PROTOCOLS[] = {
+		{"NONE", PROTOCOL::NONE}, {"RTLTCP", PROTOCOL::RTLTCP}, {"GPSD", PROTOCOL::GPSD}, {"TXT", PROTOCOL::TXT}, {"MQTT", PROTOCOL::MQTT},
+		{"WS", PROTOCOL::WS}, {"WSMQTT", PROTOCOL::WSMQTT}, {"BASESTATION", PROTOCOL::BASESTATION}, {"BEAST", PROTOCOL::BEAST},
+		{"RAW1090", PROTOCOL::RAW1090}, {"TLS", PROTOCOL::TLS}, {"TCP", PROTOCOL::TCP}, {"ZMQ", PROTOCOL::ZMQ}, {"MQTTS", PROTOCOL::MQTTS},
+		{"WSSMQTT", PROTOCOL::WSSMQTT}, {"WSS", PROTOCOL::WSS}, {"N2K", PROTOCOL::N2K}, {"CAN", PROTOCOL::CAN}};
+
+	static const Name<MessageFormat> MESSAGE_FORMATS[] = {
+		{"NONE", MessageFormat::SILENT}, {"0", MessageFormat::SILENT}, {"NMEA", MessageFormat::NMEA}, {"1", MessageFormat::NMEA},
+		{"NMEA_TAG", MessageFormat::NMEA_TAG}, {"7", MessageFormat::NMEA_TAG}, {"COMMUNITY_HUB", MessageFormat::COMMUNITY_HUB},
+		{"BINARY_NMEA", MessageFormat::BINARY_NMEA}, {"NMEA_BINARY", MessageFormat::BINARY_NMEA}, {"FULL", MessageFormat::FULL},
+		{"2", MessageFormat::FULL}, {"N2K", MessageFormat::N2K}, {"JSON_NMEA", MessageFormat::JSON_NMEA}, {"3", MessageFormat::JSON_NMEA},
+		{"JSON_SPARSE", MessageFormat::JSON_SPARSE}, {"4", MessageFormat::JSON_SPARSE}, {"JSON_FULL", MessageFormat::JSON_FULL},
+		{"5", MessageFormat::JSON_FULL}, {"JSON_ANNOTATED", MessageFormat::JSON_ANNOTATED}, {"6", MessageFormat::JSON_ANNOTATED}};
+
+	template <typename E, std::size_t N>
+	static bool read(const Name<E> (&names)[N], std::string text, E &out)
+	{
+		Convert::toUpper(text);
+		for (const auto &n : names)
+			if (text == n.text)
+			{
+				out = n.value;
+				return true;
+			}
+		return false;
 	}
 
-	bool Parse::DeviceType(std::string str, Type &type)
+	template <typename E, std::size_t N>
+	static std::string write(const Name<E> (&names)[N], E value, const char *unknown = "")
 	{
-		Convert::toUpper(str);
-		if (str == "NONE")
-			type = Type::NONE;
-		else if (str == "RTLSDR")
-			type = Type::RTLSDR;
-		else if (str == "AIRSPY")
-			type = Type::AIRSPY;
-		else if (str == "AIRSPYHF")
-			type = Type::AIRSPYHF;
-		else if (str == "SDRPLAY")
-			type = Type::SDRPLAY;
-		else if (str == "WAVFILE")
-			type = Type::WAVFILE;
-		else if (str == "RAWFILE" || str == "FILE")
-			type = Type::RAWFILE;
-		else if (str == "RTLTCP")
-			type = Type::RTLTCP;
-		else if (str == "HACKRF")
-			type = Type::HACKRF;
-		else if (str == "HYDRASDR")
-			type = Type::HYDRASDR;
-		else if (str == "SOAPYSDR")
-			type = Type::SOAPYSDR;
-		else if (str == "ZMQ")
-			type = Type::ZMQ;
-		else if (str == "SERIALPORT")
-			type = Type::SERIALPORT;
-		else if (str == "UDP" || str == "UDPSERVER")
-			type = Type::UDP;
-		else if (str == "SPYSERVER")
-			type = Type::SPYSERVER;
-		else if (str == "NMEA2000")
-			type = Type::N2K;
-		else
-			return false;
-
-		return true;
+		for (const auto &n : names)
+			if (n.value == value)
+				return n.text;
+		return unknown;
 	}
 
-	bool Parse::Protocol(std::string arg, PROTOCOL &protocol)
-	{
-		Util::Convert::toUpper(arg);
-		if (arg == "NONE")
-		{
-			protocol = PROTOCOL::NONE;
-		}
-		else if (arg == "RTLTCP")
-		{
-			protocol = PROTOCOL::RTLTCP;
-		}
-		else if (arg == "GPSD")
-		{
-			protocol = PROTOCOL::GPSD;
-		}
-		else if (arg == "TXT")
-		{
-			protocol = PROTOCOL::TXT;
-		}
-		else if (arg == "MQTT")
-		{
-			protocol = PROTOCOL::MQTT;
-		}
-		else if (arg == "WS")
-		{
-			protocol = PROTOCOL::WS;
-		}
-		else if (arg == "WSMQTT")
-		{
-			protocol = PROTOCOL::WSMQTT;
-		}
-		else if (arg == "BASESTATION")
-		{
-			protocol = PROTOCOL::BASESTATION;
-		}
-		else if (arg == "BEAST")
-		{
-			protocol = PROTOCOL::BEAST;
-		}
-		else if (arg == "RAW1090")
-		{
-			protocol = PROTOCOL::RAW1090;
-		}
-		else if (arg == "TLS")
-		{
-			protocol = PROTOCOL::TLS;
-		}
-		else if (arg == "TCP")
-		{
-			protocol = PROTOCOL::TCP;
-		}
-		else if (arg == "ZMQ")
-		{
-			protocol = PROTOCOL::ZMQ;
-		}
-		else if (arg == "MQTTS")
-		{
-			protocol = PROTOCOL::MQTTS;
-		}
-		else if (arg == "WSSMQTT")
-		{
-			protocol = PROTOCOL::WSSMQTT;
-		}
-		else if (arg == "WSS")
-		{
-			protocol = PROTOCOL::WSS;
-		}
-		else if (arg == "N2K")
-		{
-			protocol = PROTOCOL::N2K;
-		}
-		else if (arg == "CAN")
-		{
-			protocol = PROTOCOL::CAN;
-		}
-		else
-			return false;
-
-		return true;
-	}
-
-	bool Parse::OutputFormat(std::string str, MessageFormat &out)
-	{
-		Convert::toUpper(str);
-		if (str == "NONE" || str == "0")
-		{
-			out = MessageFormat::SILENT;
-		}
-		else if (str == "NMEA" || str == "1")
-		{
-			out = MessageFormat::NMEA;
-		}
-		else if (str == "NMEA_TAG" || str == "7")
-		{
-			out = MessageFormat::NMEA_TAG;
-		}
-		else if (str == "COMMUNITY_HUB")
-		{
-			out = MessageFormat::COMMUNITY_HUB;
-		}
-		else if (str == "BINARY_NMEA" || str == "NMEA_BINARY")
-		{
-			out = MessageFormat::BINARY_NMEA;
-		}
-		else if (str == "FULL" || str == "2")
-		{
-			out = MessageFormat::FULL;
-		}
-		else if (str == "N2K")
-		{
-			out = MessageFormat::N2K;
-		}
-		else if (str == "JSON_NMEA" || str == "3")
-		{
-			out = MessageFormat::JSON_NMEA;
-		}
-		else if (str == "JSON_SPARSE" || str == "4")
-		{
-			out = MessageFormat::JSON_SPARSE;
-		}
-		else if (str == "JSON_FULL" || str == "5")
-		{
-			out = MessageFormat::JSON_FULL;
-		}
-		else if (str == "JSON_ANNOTATED" || str == "6")
-		{
-			out = MessageFormat::JSON_ANNOTATED;
-		}
-		else
-			return false;
-
-		return true;
-	}
-
-	std::string Parse::DeviceTypeString(Type type)
-	{
-		switch (type)
-		{
-		case Type::NONE:
-			return "NONE";
-		case Type::RTLSDR:
-			return "RTLSDR";
-		case Type::AIRSPY:
-			return "AIRSPY";
-		case Type::AIRSPYHF:
-			return "AIRSPYHF";
-		case Type::SDRPLAY:
-			return "SDRPLAY";
-		case Type::WAVFILE:
-			return "WAVFILE";
-		case Type::RAWFILE:
-			return "RAWFILE";
-		case Type::RTLTCP:
-			return "RTLTCP";
-		case Type::HACKRF:
-			return "HACKRF";
-		case Type::HYDRASDR:
-			return "HYDRASDR";
-		case Type::SOAPYSDR:
-			return "SOAPYSDR";
-		case Type::ZMQ:
-			return "ZMQ";
-		case Type::SERIALPORT:
-			return "SERIALPORT";
-		case Type::UDP:
-			return "UDP";
-		case Type::SPYSERVER:
-			return "SPYSERVER";
-		case Type::N2K:
-			return "NMEA2000";
-		default:
-			return "";
-		}
-	}
-
-#ifdef _WIN32
-	std::time_t Parse::DateTime(const std::string &datetime)
-	{
-		std::tm tm = {};
-		std::istringstream ss(datetime);
-		ss >> std::get_time(&tm, "%Y/%m/%d %H:%M:%S");
-		if (ss.fail())
-			return 0;
-		return _mkgmtime(&tm);
-	}
-#else
-	std::time_t Parse::DateTime(const std::string &datetime)
-	{
-		std::tm tm = {};
-		strptime(datetime.c_str(), "%Y/%m/%d %H:%M:%S", &tm);
-		return timegm(&tm);
-	}
-#endif
+	bool Parse::StreamFormat(std::string str, Format &format) { return read(FORMATS, str, format); }
+	bool Parse::DeviceType(std::string str, Type &type) { return read(TYPES, str, type); }
+	bool Parse::Protocol(std::string arg, PROTOCOL &protocol) { return read(PROTOCOLS, arg, protocol); }
+	bool Parse::OutputFormat(std::string str, MessageFormat &out) { return read(MESSAGE_FORMATS, str, out); }
+	std::string Parse::DeviceTypeString(Type type) { return write(TYPES, type); }
+	// declared in Convert.h; here beside the names they share with the readers
+	std::string Convert::toString(Format format) { return write(FORMATS, format, "UNKNOWN"); }
+	std::string Convert::toString(PROTOCOL protocol) { return write(PROTOCOLS, protocol); }
+	std::string Convert::toString(MessageFormat out) { return write(MESSAGE_FORMATS, out); }
 
 	bool Parse::Switch(const std::string &arg)
 	{

@@ -86,6 +86,5 @@ namespace Demod
 
 		void Receive(const CFLOAT32 *data, int len, TAG &tag);
 		void setParams(int d) { nDelay = d; }
-		void setWeight(FLOAT32 w) { weight = w; }
 	};
 }

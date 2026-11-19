@@ -941,10 +941,9 @@ void DB::install(int ptr, const Ship &s)
 }
 
 // Every scan leans on the LRU being the recency order: readers stop at the first
-// record older than their cutoff, and Load refuses a backup that is not
-// chronological. A create puts its record at the front whatever its age, so
-// after a seed the order is rebuilt here - touching oldest first leaves the
-// newest at the front. Slot indices are stable and the caller holds mtx.
+// record older than their cutoff. A create puts its record at the front
+// whatever its age, so after a seed or a load the order is rebuilt here -
+// touching oldest first leaves the newest at the front. Slot indices are stable and the caller holds mtx.
 void DB::restoreOrder()
 {
 	std::vector<int> order;
@@ -1022,9 +1021,8 @@ void DB::Receive(const JSON::JSON *data, int len, TAG &tag)
 	const AIS::Message *msg = (AIS::Message *)data[0].binary;
 	int type = msg->type();
 
-	if (type < 1 || type > 28)
+	if (type < 1 || type > 28 || !msg->mmsi())
 		return;
-
 
 	std::unique_lock<std::mutex> lock(mtx);
 
@@ -1301,7 +1299,6 @@ bool DB::Load(std::ifstream &file)
 	// Read all ships into a temporary buffer first, validating before modifying
 	// DB state
 	std::vector<Ship> temp_ships(ship_count);
-	std::time_t previous_signal = 0;
 
 	for (int i = 0; i < ship_count; i++)
 	{
@@ -1322,14 +1319,6 @@ bool DB::Load(std::ifstream &file)
 			Error() << "DB: Ship with empty MMSI at index " << i;
 			return false;
 		}
-
-		if (i > 0 && temp_ships[i].last_signal < previous_signal)
-		{
-			Error() << "DB: Ships not in chronological order at index " << i;
-			return false;
-		}
-
-		previous_signal = temp_ships[i].last_signal;
 	}
 
 	VisitTracker restored;
@@ -1358,6 +1347,7 @@ bool DB::Load(std::ifstream &file)
 		if (ships[ptr].idle_since)
 			rest.open(ptr, ships[ptr]).start_seen = false;
 	}
+	restoreOrder();
 
 	full_refresh_at = time(nullptr);
 	return true;

@@ -35,6 +35,7 @@ namespace IO
 	void PostgreSQL::connectDB()
 	{
 		Debug() << "Connecting to PostgreSQL database";
+		closeDB();
 		con = PQconnectdb(conn_string.c_str());
 
 		if (con == nullptr || PQstatus(con) != CONNECTION_OK)

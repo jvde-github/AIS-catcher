@@ -238,8 +238,6 @@ namespace IO
 		// The sse list is touched only by the Run() thread: every path in reaches it
 		// through processClients() or drainCommands(), so it needs no lock.
 		bool hasSSEClients() const { return !sse.empty(); }
-		// how many streams at once, of the server that fronts the connections; set before it starts
-		void setMaxSSE(int n) { max_sse = n; }
 
 		void closeAllSSE()
 		{
@@ -319,13 +317,6 @@ namespace IO
 			std::lock_guard<std::mutex> lock(headers_mtx);
 			frame_src = v;
 			common_headers.clear();
-		}
-
-		// back to the defaults documented below, for a reconfigure
-		void resetFrameAncestors()
-		{
-			setFrameAncestors("*");
-			setFrameSrc("'self'");
 		}
 
 	protected:

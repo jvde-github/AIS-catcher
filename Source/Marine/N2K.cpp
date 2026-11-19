@@ -104,7 +104,8 @@ namespace AIS
 		msg.Stamp();
 		msg.setChannel(channel);
 		msg.buildNMEA(tag);
-		Send(&msg, 1, tag);
+		if (msg.validate(tag))
+			Send(&msg, 1, tag);
 	}
 
 	void N2KtoMessage::onMsg129038(const N2KMsg &N2kMsg, TAG &tag)

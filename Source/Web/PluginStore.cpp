@@ -115,7 +115,6 @@ void PluginStore::addStyle(const std::string &arg)
 
 void PluginStore::addDir(const std::string &dir)
 {
-	dir_list.push_back(dir);
 
 	const std::vector<std::string> &files_js =
 		Util::Helper::getFilesWithExtension(dir, ".pjs");

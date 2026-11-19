@@ -193,7 +193,8 @@ namespace IO
 		message.clear();
 		int totalBytes = 0;
 		int emptyReads = 0;
-		while (emptyReads < 5)
+		const Net::Clock::time_point start = Net::Clock::now();
+		while (emptyReads < 5 && Net::secondsSince(start) < timeout)
 		{
 			int bytes_read = connection->read(&buffer[0], buffer.size(), 1, true);
 			if (bytes_read > 0)

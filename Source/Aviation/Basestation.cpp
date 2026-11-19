@@ -123,7 +123,7 @@ namespace
 		if (!seen_digit || i != len)
 			return false;
 		out = neg ? -(float)v : (float)v;
-		return true;
+		return isFinite(out);
 	}
 
 	inline bool parseHex(const char *p, int len, uint32_t &out)
@@ -268,7 +268,7 @@ void Basestation::processLine(const char *base, size_t size_in, std::time_t rxti
 		const char *p14 = partPtr(base, delim, 14); int l14 = partLen(delim, 14); unquote(p14, l14);
 		const char *p15 = partPtr(base, delim, 15); int l15 = partLen(delim, 15); unquote(p15, l15);
 		float lat, lon;
-		if (parseFloat(p14, l14, lat) && parseFloat(p15, l15, lon))
+		if (parseFloat(p14, l14, lat) && parseFloat(p15, l15, lon) && isValidCoord(lat, lon))
 		{
 			msg.lat = lat;
 			msg.lon = lon;

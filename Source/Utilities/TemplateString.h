@@ -40,8 +40,6 @@ namespace Util
 
 		void write(const TAG &tag, const AIS::Message &msg, std::string &out) const;
 
-		const std::string &getTemplate() const { return tpl; }
-		bool isTemplate() const { return has_substitution; }
 
 	private:
 		struct Segment

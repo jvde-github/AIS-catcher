@@ -691,6 +691,10 @@ namespace IO
 			std::string a = arg;
 			if (!Util::Parse().Protocol(a, protocol))
 				throw std::runtime_error("MQTT output: unknown protocol: " + arg);
+#ifndef HASOPENSSL
+			if (protocol == PROTOCOL::TLS || protocol == PROTOCOL::MQTTS || protocol == PROTOCOL::WSSMQTT)
+				throw std::runtime_error("MQTT output: " + arg + " needs a build with OpenSSL.");
+#endif
 
 			switch (protocol)
 			{

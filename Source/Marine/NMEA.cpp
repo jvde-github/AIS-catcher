@@ -291,7 +291,7 @@ namespace AIS
 			v = degrees + minutes / 60.0;
 
 			float limit = (quadrant == 'N' || quadrant == 'S') ? 90.0f : 180.0f;
-			if (v < 0.0f || v > limit)
+			if (!isFinite(v) || v < 0.0f || v > limit)
 			{
 				error |= true;
 				return 0;
@@ -719,8 +719,8 @@ namespace AIS
 					Info() << "[" << driver << "]: " << text;
 			}
 
-			// a control line: the topic names the object beside it, a station or a key
-			if (topic && payload && uuid_match && (*topic == "station" || *topic == "key"))
+			// a control line, read where CONTROL is on: the topic names the object beside it, a station or a key
+			if (cfg_control && topic && payload && uuid_match && (*topic == "station" || *topic == "key"))
 			{
 				Control ctl;
 				ctl.topic = *topic == "station" ? AIS::KEY_STATION : AIS::KEY_API_KEY;
@@ -728,7 +728,7 @@ namespace AIS
 				outControl.Send(&ctl, 1, tag);
 			}
 
-			if (cls == CLS_TPV && cfg_GPS && has_tpv_coords && (tpv_lat != 0 || tpv_lon != 0))
+			if (cls == CLS_TPV && cfg_GPS && has_tpv_coords && isValidCoord(tpv_lat, tpv_lon))
 			{
 				GPS gps(tpv_lat, tpv_lon, line, true);
 				outGPS.Send(&gps, 1, tag);

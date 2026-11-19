@@ -873,11 +873,6 @@ namespace IO
 			int optval = 1;
 			setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 		}
-		if (reuse_port)
-		{
-			int optval = 1;
-			setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
-		}
 #endif
 		sockaddr_in service;
 		memset(&service, 0, sizeof(service));

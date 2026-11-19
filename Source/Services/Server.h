@@ -90,7 +90,6 @@ namespace Services
 		void build();
 		void drop();
 		// a server of this machine alone: other sites' pages in its browser do not read it
-		bool localBind() const { return spec_.bind == "localhost" || spec_.bind == "::1" || spec_.bind.compare(0, 4, "127.") == 0; }
 		const ApiKey *keyOf(const std::string &authorization) const;
 		void indexKeys(const std::vector<ApiKey> &keys);
 		bool admit(int scope, const Services::Request &request, const ApiKey *key, Services::Response &response) const;

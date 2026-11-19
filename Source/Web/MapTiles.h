@@ -53,9 +53,6 @@ public:
 	virtual std::vector<double> resolutions() const { return {}; }
 
 	const std::string &getName() const { return name; }
-	const std::string &getAttribution() const { return attribution; }
-	int getMinZoom() const { return minZoom; }
-	int getMaxZoom() const { return maxZoom; }
 	const std::string &getFormat() const { return format; }
 	const std::string &getLayerID() const { return layerID; }
 	void setLayerID(const std::string &id) { layerID = id; }

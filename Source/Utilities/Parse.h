@@ -36,7 +36,6 @@ namespace Util
 		static bool Protocol(std::string str, PROTOCOL &protocol);
 		static bool OutputFormat(std::string str, MessageFormat &out);
 		static std::string DeviceTypeString(Type type);
-		static std::time_t DateTime(const std::string &datetime);
 		static bool Switch(const std::string &arg);
 		static bool Switch(std::string arg, const std::string &TrueString, const std::string &FalseString);
 		static bool AutoInteger(std::string arg, int min, int max, int &val);

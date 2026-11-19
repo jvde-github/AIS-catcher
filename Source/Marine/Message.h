@@ -296,7 +296,6 @@ namespace AIS
 
 		char getLetter(int pos) const;
 		void setLetter(int pos, char c);
-		void appendLetter(char c) { setLetter(length / 6, c); }
 		void appendPayload(const char *src, int count);
 		void getPayload(char *dst, int pos, int count) const;
 		void reduceLength(int l) { length = MAX(length - l, 0); }
@@ -385,7 +384,6 @@ namespace AIS
 		bool SetOptionKey(AIS::Keys key, const std::string &arg);
 		std::string Get();
 		bool isOn() const { return on; }
-		bool hasIDFilter() const { return !ID_allowed.empty() || !MMSI_allowed.empty(); }
 		std::string getAllowed();
 		bool includeGPS() const { return on ? GPS : true; }
 		enum class Result { NotIncluded, Included, IncludedWithError };

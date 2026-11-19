@@ -135,32 +135,12 @@ void Tracker::Router::Receive(const JSON::JSON *data, int len, TAG &tag)
 	}
 }
 
-void Tracker::usePlaces(const std::string &directory)
-{
-	std::shared_ptr<PlaceCatalogue> next;
-	{
-		std::lock_guard<std::mutex> lock(catalogue_mtx);
-		if (directory == places_dir && !(directory.empty() && catalogue))
-			return;
-		places_dir = directory;
-	}
-	// read outside the lock: a large catalogue takes a while
-	if (!directory.empty())
-		next = std::make_shared<PlaceCatalogue>(directory);
-	{
-		std::lock_guard<std::mutex> lock(catalogue_mtx);
-		catalogue = next;
-	}
-	setPlaces(next ? next->snapshot() : nullptr);
-}
-
 void Tracker::useCatalogue(std::shared_ptr<PlaceCatalogue> shared)
 {
 	{
 		std::lock_guard<std::mutex> lock(catalogue_mtx);
-		if (shared == catalogue && places_dir.empty())
+		if (shared == catalogue)
 			return;
-		places_dir.clear();
 		catalogue = shared;
 	}
 	setPlaces(shared ? shared->snapshot() : nullptr);
@@ -323,6 +303,9 @@ bool Tracker::save(const std::string &file)
 		}
 		// the stations' last fixes ride in the backup
 		if (!ok || !db.Save(f) || !events.save(f) || !table->save(f))
+			return false;
+		f.close();
+		if (f.fail() || !Util::Helper::syncFile(tmp))
 			return false;
 	}
 #ifdef _WIN32

@@ -179,10 +179,7 @@ namespace IO
 		// drops every connection, on the thread that owns them
 		void closeConnections() { post({Command::CloseAll, 0, std::string()}); }
 
-		void setReusePort(bool b) { reuse_port = b; }
 		void setIP(const std::string &ip) { IP_BIND = ip; }
-		// how many connections one address may hold, 0 for no limit; this machine, as a proxy is, has none
-		void setMaxPerAddress(int n) { max_per_address = n; }
 
 		// HTTPS on this server's port with these files, or plain HTTP with no files: for the
 		// connections that come next; what it refuses leaves the server as it is, with the reason
@@ -196,7 +193,6 @@ namespace IO
 	protected:
 		SOCKET sock = -1;
 		int timeout = 30;
-		bool reuse_port = false;
 		std::string IP_BIND;
 		int listening_port = -1;
 		int max_per_address = Limits::PER_ADDRESS;

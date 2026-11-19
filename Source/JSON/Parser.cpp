@@ -683,7 +683,7 @@ namespace JSON
 				idx = pool->extraKey(tokenString());
 			if (idx < 0 && !skipUnknownKeys && !preserveUnknownKeys)
 				error_parser("unknown key \"" + tokenString() + "\"", false);
-			if (preserveUnknownKeys && (*o)[idx])
+			if ((preserveUnknownKeys || (dict == JSON_DICT_SETTING && !repeatedKeys)) && (*o)[idx])
 				error_parser("duplicate key \"" + tokenString() + "\"", false);
 
 			next();

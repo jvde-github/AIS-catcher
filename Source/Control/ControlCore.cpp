@@ -309,7 +309,7 @@ static PathValues pathValues(const JSON::JSON &root)
 				{
 					const JSON::Value *file = entry.isObject() ? entry.getObject()[AIS::KEY_SETTING_FILE] : nullptr;
 					if (file)
-						out.emplace_back(AIS::KEY_SETTING_FILE_OUTPUT, file->to_string());
+						out.emplace_back(AIS::KEY_SETTING_FILE_OUTPUT, JSON::text(*file));
 				}
 			break;
 		case AIS::KEY_SETTING_DB:
@@ -323,8 +323,8 @@ static PathValues pathValues(const JSON::JSON &root)
 					for (const auto &p : entry.getObject().getMembers())
 						if (p.Key() == AIS::KEY_SETTING_MODEL_TYPE)
 							type = Util::Convert::toLowerCopy(p.Get().to_string());
-						else if (p.Key() == AIS::KEY_SETTING_CONN_STR && !p.Get().to_string().empty())
-							conn = p.Get().to_string();
+						else if (p.Key() == AIS::KEY_SETTING_CONN_STR && !JSON::text(p.Get()).empty())
+							conn = JSON::text(p.Get());
 					if (type == "csv" || type == "sqlite")
 						out.emplace_back(AIS::KEY_SETTING_CONN_STR, conn);
 				}

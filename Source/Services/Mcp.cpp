@@ -192,6 +192,7 @@ namespace Services
 	{
 		if (scope(request) == NOT_MINE)
 			return false;
+		spent = 0;
 		if (!trusted(request.origin))
 		{
 			response = Response::problem(403, "Forbidden", "Requests from " + request.origin + " are not taken.");
@@ -283,6 +284,7 @@ namespace Services
 		}
 		else if (m == "tools/call")
 		{
+			spent = 1;
 			const JSON::Value *name = params && params->isObject() ? member(doc, params->getObject(), "name") : nullptr;
 			const JSON::Value *args = params && params->isObject() ? member(doc, params->getObject(), "arguments") : nullptr;
 			const Tool *tool = nullptr;
@@ -310,6 +312,7 @@ namespace Services
 			call.path = tool->route;
 			call.owner = request.owner;
 			call.station = request.station;
+			call.calls_left = request.calls_left;
 			std::string bad, asked;
 			if (args && args->isObject())
 				for (const auto &a : args->getObject().getMembers())
@@ -351,6 +354,8 @@ namespace Services
 				const std::size_t open = call.path.find('{'), close = call.path.find('}', open);
 				refuse(400, "Bad request", "The tool " + std::string(tool->name) + " needs \"" + call.path.substr(open + 1, close - open - 1) + "\".");
 			}
+			if (!readsSystem(*tool))
+				spent = api.cost(call);
 			if (!refused && !(readsSystem(*tool) ? system->handle(call, got) : api.handle(call, got)))
 				got = Response::problem(404, "Not found", "No such resource.");
 			const bool ok = got.status == 200 || got.type == "application/health+json";

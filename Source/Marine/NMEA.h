@@ -91,7 +91,6 @@ namespace AIS
 		char partAt(int i, int j) const { return (*splitStr)[splitDelim[i] + 1 + j]; }
 		const char *partPtr(int i) const { return splitStr->data() + splitDelim[i] + 1; }
 		bool partEmpty(int i) const { return partLen(i) == 0; }
-		std::string partStr(int i) const { return splitStr->substr(splitDelim[i] + 1, partLen(i)); }
 		int partInt(int i) const;
 		static const int MAX_NMEA_LINE = 1024;
 		static const int MAX_JSON_LINE = 2048;
@@ -146,6 +145,7 @@ namespace AIS
 		bool cfg_VDO = true;
 		bool cfg_warnings = true;
 		bool cfg_GPS = true;
+		bool cfg_control = false;
 
 		enum WarnBit : int {
 			WARN_INVALID_MSG, WARN_GPS_FIELD_COUNT, WARN_GPS_CHECKSUM, WARN_GPS_COORDS,
@@ -202,6 +202,7 @@ namespace AIS
 
 		void setWarnings(bool b) { cfg_warnings = b; }
 		void setGPS(bool b) { cfg_GPS = b; }
+		void setControl(bool b) { cfg_control = b; }
 		void setCRCcheck(bool b) { cfg_crc_check = b; }
 		bool getCRCcheck() { return cfg_crc_check; }
 		void setStamp(bool b);

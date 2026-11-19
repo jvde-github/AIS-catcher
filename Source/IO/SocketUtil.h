@@ -96,8 +96,6 @@ namespace Net
 #endif
 	}
 
-	inline bool waitWritable(SOCKET s, int timeout_ms) { return waitReady(s, POLLOUT, timeout_ms); }
-
 	inline bool wouldBlock(int e)
 	{
 #ifdef _WIN32

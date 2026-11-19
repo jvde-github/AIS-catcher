@@ -43,7 +43,11 @@
 
 #include "Helper.h"
 #include <cstdlib>
+#include <cmath>
 #include "Convert.h"
+#include "Common.h"
+
+bool isFinite(double v) { return std::isfinite(v); }
 
 namespace Util
 {

@@ -1041,7 +1041,7 @@ void PlaceIndex::matchAll(double lat, double lon,
 						  std::vector<uint32_t> &ids) const
 {
 	ids.clear();
-	if (!std::isfinite(lat) || !std::isfinite(lon) || lat < -90 || lat > 90 ||
+	if (!isFinite(lat) || !isFinite(lon) || lat < -90 || lat > 90 ||
 		lon < -180 || lon > 180)
 		return;
 	lat = static_cast<float>(lat);

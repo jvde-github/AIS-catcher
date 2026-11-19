@@ -90,9 +90,6 @@ public:
 		taps.erase(std::remove(taps.begin(), taps.end(), tap), taps.end());
 	}
 
-	// the place catalogue in `directory`, read now; empty drops it. Before a
-	// backup is loaded, so the visits in it find their places
-	void usePlaces(const std::string &directory);
 	std::shared_ptr<const PlaceIndex> places() { return db.placeIndex(); }
 	// a catalogue someone else edits, as managed mode's place editor does; a
 	// new edition reaches the ships with refreshPlaces()
@@ -242,7 +239,6 @@ private:
 
 	// the catalogue is replaced by the panel while servers read it
 	std::mutex catalogue_mtx;
-	std::string places_dir;
 	std::shared_ptr<PlaceCatalogue> catalogue;
 	std::shared_ptr<PlaceCatalogue> placeCatalogue()
 	{

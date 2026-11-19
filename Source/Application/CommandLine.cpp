@@ -1028,7 +1028,10 @@ static bool build(const std::vector<std::string> &args, Config &c)
 				  << "scopes: data, or data+system for the installation's own resources; a client sends the key as Authorization: Bearer\n";
 	}
 
-	c.set(document, &origins);
+	JSON::Parser parser(JSON_DICT_SETTING);
+	parser.setRepeatedKeys(true);
+	JSON::Document doc = parser.parse(document);
+	c.set(doc, &origins);
 	c.finish();
 
 	if (json)

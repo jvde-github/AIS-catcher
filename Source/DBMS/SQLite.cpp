@@ -41,6 +41,7 @@ namespace IO
 	void SQLite::connectDB()
 	{
 		Debug() << "Opening SQLite database: \"" + conn_string + "\"";
+		closeDB();
 
 		if (sqlite3_open_v2(conn_string.c_str(), &db,
 							SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr) != SQLITE_OK)

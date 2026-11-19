@@ -36,7 +36,6 @@ class PluginStore
 	// version 0 means "no declared version" (CSS plugins).
 	std::vector<std::pair<std::string, int>> loaded_list;
 	std::vector<std::string> error_list;
-	std::vector<std::string> dir_list;
 
 public:
 	PluginStore() : code("\n\nfunction loadPlugins() {\n") {}
@@ -47,9 +46,7 @@ public:
 	// generated rather than read from disk (map tile sources)
 	void setAbout(const std::string &path);
 
-	// the function loadPlugins that runs them all, without its closing brace
-	const std::string &getCode() const { return code; }
-	// the same, closed: the plugins as one script
+	// the function loadPlugins that runs them all: the plugins as one script
 	std::string script() const { return code + "}\n"; }
 	const std::string &version() const;
 	const std::string &getStylesheets() const { return stylesheets; }
@@ -61,5 +58,4 @@ public:
 		return loaded_list;
 	}
 	const std::vector<std::string> &errors() const { return error_list; }
-	const std::vector<std::string> &dirs() const { return dir_list; }
 };

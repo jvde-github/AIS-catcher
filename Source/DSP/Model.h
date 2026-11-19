@@ -160,7 +160,6 @@ namespace AIS
 
 	protected:
 		bool fixedpointDS = false;
-		bool droop_compensation = true;
 		bool SOXR_DS = false;
 		bool SAMPLERATE_DS = false;
 		bool MA_DS = false;

@@ -174,11 +174,15 @@ const float DISTANCE_UNDEFINED = -1;
 const float LAT_UNDEFINED = 91;
 const float LON_UNDEFINED = 181;
 
+// a proper number, no NaN or infinity. In Helper.cpp, the one file built without
+// -ffinite-math-only: inline here the compiler would assume the answer
+bool isFinite(double v);
+
 // (0,0) counts as unset: a zeroed position leaks in far more often than a
 // vessel sits on Null Island
 inline bool isValidCoord(float lat, float lon)
 {
-	return !(lat == 0 && lon == 0) && lat != LAT_UNDEFINED && lon != LON_UNDEFINED;
+	return isFinite(lat) && isFinite(lon) && !(lat == 0 && lon == 0) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
 }
 
 const float COG_UNDEFINED = 360;

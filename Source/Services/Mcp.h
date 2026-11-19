@@ -45,12 +45,15 @@ namespace Services
 		int scope(const Request &request) const override;
 		bool handle(const Request &request, Response &response) override;
 		std::string methods(const Request &) const override { return "POST"; }
-		bool metered(const Request &request) const override { return request.body.find("\"tools/call\"") != std::string::npos; }
+		bool metered(const Request &) const override { return true; }
+		int cost(const Request &) const override { return spent; }
 
 	private:
 		ApiV1 api;
 		std::unique_ptr<System> system;
 		bool keyed;
+		// what the request just answered counts for: a tool call as its route does, anything else nothing
+		int spent = 0;
 
 		// an Origin a browser on another site would send: refused, so a page
 		// cannot reach a local server through a name it rebinds

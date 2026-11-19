@@ -763,7 +763,7 @@ namespace JSON
 		// For data that must round-trip; telemetry uses val(double).
 		Writer &val_exact(double v)
 		{
-			if (!std::isfinite(v))
+			if (!isFinite(v))
 				throw std::runtime_error("Non-finite number");
 			// snprintf and strtod follow the C library's locale, "C" unless the program
 			// sets another; a decimal comma tells one, and the streams write it then
@@ -963,6 +963,5 @@ namespace JSON
 		void setPool(const Pool *p) { pool = p; }
 		void setExactFloats(bool b) { exact = b; }
 		void setStringifyEnhanced(bool enhanced) { stringify_enhanced = enhanced; }
-		bool getStringifyEnhanced() const { return stringify_enhanced; }
 	};
 }

@@ -1564,6 +1564,33 @@ namespace Protocol
 			key[i] = (uint8_t)dis(gen);
 	}
 
+	// a client's frame, masked: https://datatracker.ietf.org/doc/html/rfc6455#section-5.2
+	void WebSocket::buildFrame(OPCODE opcode, const uint8_t *payload, int length)
+	{
+		uint8_t key[4];
+		randomMaskingKey(key);
+
+		frame.resize(0);
+		frame.push_back(0x80 | (uint8_t)opcode);
+		if (length <= 125)
+			frame.push_back(0x80 | length);
+		else if (length <= 65535)
+		{
+			frame.push_back(0x80 | 126);
+			frame.push_back((length >> 8) & 0xFF);
+			frame.push_back(length & 0xFF);
+		}
+		else
+		{
+			frame.push_back(0x80 | 127);
+			for (int i = 7; i >= 0; --i)
+				frame.push_back(((uint64_t)length >> (8 * i)) & 0xFF);
+		}
+		frame.insert(frame.end(), key, key + 4);
+		for (int i = 0; i < length; ++i)
+			frame.push_back(payload[i] ^ key[i % 4]);
+	}
+
 	void WebSocket::onConnect()
 	{
 		buffer_ptr = 0;
@@ -1826,52 +1853,7 @@ namespace Protocol
 			return 0;
 		}
 
-		uint8_t opcode = (uint8_t)(binary ? OPCODE::BINARY : OPCODE::TEXT);
-
-		frame.resize(0);
-		frame.push_back(0x80 | opcode);
-
-		if (length <= 125)
-		{
-			frame.push_back(0x80 | length);
-		}
-		else if (length <= 65535)
-		{
-			frame.push_back(0x80 | 126);
-			frame.push_back((length >> 8) & 0xFF);
-			frame.push_back(length & 0xFF);
-		}
-		else
-		{
-			frame.push_back(0x80 | 127);
-			// Cast to uint64_t to avoid undefined behavior when shifting
-			uint64_t len64 = static_cast<uint64_t>(length);
-			for (int i = 7; i >= 0; --i)
-				frame.push_back((len64 >> (8 * i)) & 0xFF);
-		}
-		// Generate a random masking key
-		uint8_t masking_key[4];
-		bool key_ok = false;
-#ifdef HASOPENSSL
-		// Use cryptographically secure random from OpenSSL
-		key_ok = (RAND_bytes(masking_key, 4) == 1);
-#endif
-		if (!key_ok)
-		{
-			// Fallback to std::random_device (also used when OpenSSL is unavailable)
-			std::random_device rd;
-			std::mt19937 gen(rd());
-			std::uniform_int_distribution<int> dis(0, 255);
-			for (int i = 0; i < 4; ++i)
-				masking_key[i] = (uint8_t)dis(gen);
-		}
-
-		frame.insert(frame.end(), masking_key, masking_key + 4);
-
-		for (int i = 0; i < length; ++i)
-		{
-			frame.push_back(((const uint8_t *)data)[i] ^ masking_key[i % 4]);
-		}
+		buildFrame(binary ? OPCODE::BINARY : OPCODE::TEXT, (const uint8_t *)data, length);
 
 		int sent = prev->send(frame.data(), frame.size());
 		if (sent == (int)frame.size())
@@ -2013,15 +1995,7 @@ namespace Protocol
 					for (int i = 0; i < echo_len; ++i)
 						buffer[ptr + i] ^= masking_key[i % 4];
 
-				uint8_t close_key[4];
-				randomMaskingKey(close_key);
-
-				frame.resize(0);
-				frame.push_back(0x80 | (uint8_t)OPCODE::CLOSE);
-				frame.push_back(0x80 | echo_len);
-				frame.insert(frame.end(), close_key, close_key + 4);
-				for (int i = 0; i < echo_len; ++i)
-					frame.push_back(buffer[ptr + i] ^ close_key[i % 4]);
+				buildFrame(OPCODE::CLOSE, buffer.data() + ptr, echo_len);
 				prev->send(frame.data(), frame.size());
 
 				close_sent = true;
@@ -2044,16 +2018,7 @@ namespace Protocol
 						buffer[ptr + i] ^= masking_key[i % 4];
 				}
 
-				// Client-to-server frames must be masked (RFC 6455 §5.3)
-				uint8_t pong_key[4];
-				randomMaskingKey(pong_key);
-
-				frame.resize(0);
-				frame.push_back(0x80 | (uint8_t)OPCODE::PONG);
-				frame.push_back(0x80 | length);
-				frame.insert(frame.end(), pong_key, pong_key + 4);
-				for (int i = 0; i < length; ++i)
-					frame.push_back(buffer[ptr + i] ^ pong_key[i % 4]);
+				buildFrame(OPCODE::PONG, buffer.data() + ptr, (int)length);
 
 				if (prev->send(frame.data(), frame.size()) != (int)frame.size())
 				{
@@ -2088,15 +2053,8 @@ namespace Protocol
 		{
 			close_sent = true;
 
-			uint8_t key[4];
-			randomMaskingKey(key);
-
-			frame.resize(0);
-			frame.push_back(0x80 | (uint8_t)OPCODE::CLOSE);
-			frame.push_back(0x80 | 2);
-			frame.insert(frame.end(), key, key + 4);
-			frame.push_back(0x03 ^ key[0]);
-			frame.push_back(0xE8 ^ key[1]);
+			const uint8_t normal[2] = {0x03, 0xE8};
+			buildFrame(OPCODE::CLOSE, normal, 2);
 			prev->send(frame.data(), (int)frame.size());
 		}
 

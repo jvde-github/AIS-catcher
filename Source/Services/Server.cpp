@@ -296,7 +296,7 @@ namespace Services
 				continue;
 			const std::string methods = s->methods(request);
 			std::string header = "Allow: " + methods + ", OPTIONS";
-			if (!localBind())
+			if (!spec_.local())
 				header += "\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: " + methods +
 						  "\r\nAccess-Control-Allow-Headers: Authorization, Content-Type\r\nAccess-Control-Max-Age: 86400";
 			Response(c, "text/plain", std::string(), IO::Reply(204).with(header));
@@ -357,7 +357,7 @@ namespace Services
 		IO::Reply reply(response.status);
 		reply.header = response.header;
 		reply.cache = response.cache;
-		reply.cors = response.cors && !localBind();
+		reply.cors = response.cors && !spec_.local();
 		if (response.stream)
 			upgradeSSE(c, response.stream, response.stream_topic, response.stream_backlog);
 		else if (response.raw)

@@ -80,7 +80,7 @@ namespace PlaceGeometry
 							std::to_string(PLACE_VERTICES) +
 							(part ? " vertices per part" : " vertices per place"));
 					Point q{p[0].getFloat(), p[1].getFloat()};
-					if (!std::isfinite(q.x) || !std::isfinite(q.y) || std::abs(q.x) > 180 ||
+					if (!isFinite(q.x) || !isFinite(q.y) || std::abs(q.x) > 180 ||
 						std::abs(q.y) > 90)
 						throw std::runtime_error(
 							"Coordinate outside longitude/latitude bounds");
@@ -162,7 +162,7 @@ namespace PlaceGeometry
 				throw std::runtime_error("Point needs longitude and latitude");
 			shape.lon = xy[0].getFloat();
 			shape.lat = xy[1].getFloat();
-			if (!std::isfinite(shape.lon) || !std::isfinite(shape.lat) ||
+			if (!isFinite(shape.lon) || !isFinite(shape.lat) ||
 				std::abs(shape.lon) > 180 || std::abs(shape.lat) > 90)
 				throw std::runtime_error("Point outside longitude/latitude bounds");
 			shape.parts = parts;

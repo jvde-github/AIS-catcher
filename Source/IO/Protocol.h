@@ -907,6 +907,7 @@ namespace Protocol
 		std::vector<uint8_t> buffer;
 		std::vector<uint8_t> received;
 		std::vector<uint8_t> frame;
+		void buildFrame(OPCODE opcode, const uint8_t *payload, int length);
 
 		int buffer_ptr = 0;
 		int received_ptr = 0;
