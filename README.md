@@ -35,16 +35,6 @@ Prefer a traditional AIS receiver over an SDR but want the same advantages? We r
 
 To join, ensure you're on the latest version, visit [www.aiscatcher.org](https://www.aiscatcher.org), and [add](https://www.aiscatcher.org/addstation) your station. Upon registration, you'll receive a personal sharing key. Simply run AIS-catcher on the command line with "-X" followed by your sharing key to share your station's raw AIS data with the community hub. This activates a "Community Feed" in your station's web viewer, accessible under map layers and some other features.
 
-
-## Places
-
-Ports, terminals, berths, anchorages, waters (seas, lakes, rivers) and custom areas live in an editable place catalogue:
-a directory of GeoJSON files. Point the standalone viewer at one with
-`-N 8100 PLACES /path/to/places`; a managed installation keeps a `places`
-directory beside its configuration and edits it from the Places tab. Ships in
-a place, visits and port-bound traffic follow from the catalogue. See
-[the Places documentation](https://jvde-github.github.io/AIS-catcher-docs/configuration/output/places/) for the file format and rules.
-
 ## Links
 
 - Documentation: [here](https://jvde-github.github.io/AIS-catcher-docs/)
@@ -54,51 +44,3 @@ a place, visits and port-bound traffic follow from the catalogue. See
 - Forum: [here](https://github.com/jvde-github/AIS-catcher/discussions)
 - Bug Reports: [here](https://github.com/jvde-github/AIS-catcher/issues)
 
-
-### Flagged messages and filters
-
-The Statistics tab counts flagged messages and each error category, including
-messages excluded from vessel updates. Error flags are independent of filtering:
-
-```sh
-AIS-catcher -N 8100 FILTER on EXCLUDE_ERRORS undersized,checksum  # exclude undersized and bad-checksum reports
-AIS-catcher -N 8100 FILTER on EXCLUDE_ERRORS all                 # also exclude oversized
-AIS-catcher -N 8100 FILTER on EXCLUDE_ERRORS none                # include flagged messages
-AIS-catcher -N 8100 FILTER on ONLY_ERRORS on EXCLUDE_ERRORS none # only flagged messages
-```
-
-These options belong to the shared message filter and work for map, file, network
-and database outputs. They take effect only with `FILTER on`; with filtering off,
-quality flags alone do not exclude messages. The default is `EXCLUDE_ERRORS none`, so enabling
-the filter alone does not exclude flagged messages.
-
-For example, `-f errors.nmea FILTER on ONLY_ERRORS on EXCLUDE_ERRORS none` saves
-only flagged messages. The web-server JSON setting is `"exclude_errors": "undersized,checksum"`.
-Values are comma-separated, case-insensitive names: `undersized`, `oversized`,
-`checksum`, or the standalone values `all` and `none`. Exclusions prevent all
-vessel-state and track updates; diagnostic outputs and error counters remain
-available. Use `undersized,checksum` to retain oversized reports from feeds that append
-nonstandard trailers.
-
-`ONLY_ERRORS` defaults to `off`. With filtering enabled it rejects unflagged
-messages; `EXCLUDE_ERRORS` still applies. Map statistics still count messages
-rejected by `EXCLUDE_ERRORS`; messages rejected by other filters, including
-`ONLY_ERRORS`, are not counted. Other outputs forward only included messages.
-
-Exact-length checks cover fixed-length types 1–5, 9, 11, 18, 19, 23, 27 and 28.
-Messages below their per-type minimum are rejected; zero-length messages remain valid.
-Unparsable sentences,
-unknown types and payloads too short to identify a sender are still rejected.
-MMSI zero is now rejected at validation for every output, rather than only by the map.
-`CRC_CHECK on` remains an explicit ingress rejection option: messages rejected
-there cannot reach viewer statistics. Leave it off to count checksum failures
-while excluding them from the map.
-
-JSON `quality` and the binary quality word use identical flags: checksum
-`0x0200`, undersized `0x0400`, oversized `0x0800`. Reception-quality marks use
-bits 0–5; updating them must preserve the error mask `0x0E00`.
-Only `quality` carries diagnostic
-flags; the legacy JSON `error` field is no longer read or emitted. Plain NMEA
-cannot carry these flags when its checksum is regenerated.
-Statistics backups retain the counters (format v4); older v1–v3 statistics can
-still be loaded.
