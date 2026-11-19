@@ -175,7 +175,9 @@ jobs:
 
     - name: Upload to release
       if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'release'
-      run: gh release upload "${{ env.RELEASE_TARGET }}" ${{ env.filename }} --repo ${{ github.repository }} --clobber
+      run: |
+        sha256sum "${{ env.filename }}" > "${{ env.filename }}.sha256"
+        gh release upload "${{ env.RELEASE_TARGET }}" "${{ env.filename }}" "${{ env.filename }}.sha256" --repo ${{ github.repository }} --clobber
 
     - name: Upload artifact
       uses: actions/upload-artifact@v7
@@ -236,7 +238,9 @@ jobs:
 
     - name: Upload to release
       if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'release'
-      run: gh release upload "${{ env.RELEASE_TARGET }}" ${{ env.filename }} --repo ${{ github.repository }} --clobber
+      run: |
+        sha256sum "${{ env.filename }}" > "${{ env.filename }}.sha256"
+        gh release upload "${{ env.RELEASE_TARGET }}" "${{ env.filename }}" "${{ env.filename }}.sha256" --repo ${{ github.repository }} --clobber
 
     - name: Upload artifact
       uses: actions/upload-artifact@v7
@@ -293,7 +297,9 @@ jobs:
 
     - name: Upload to release
       if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'release'
-      run: gh release upload "${{ env.RELEASE_TARGET }}" ${{ env.filename }} --repo ${{ github.repository }} --clobber
+      run: |
+        sha256sum "${{ env.filename }}" > "${{ env.filename }}.sha256"
+        gh release upload "${{ env.RELEASE_TARGET }}" "${{ env.filename }}" "${{ env.filename }}.sha256" --repo ${{ github.repository }} --clobber
 
     - name: Upload artifact
       uses: actions/upload-artifact@v7

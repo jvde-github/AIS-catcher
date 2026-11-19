@@ -659,13 +659,31 @@ download_and_install_pkg() {
     DEB_TMP_DIR=$(mktemp -d)
     chmod 755 "$DEB_TMP_DIR"
 
-    # Download the package
-    log "INFO" "Downloading package..."
-    if ! curl -fsL -o "$DEB_TMP_DIR/$(basename "$download_url")" "$download_url"; then
-        rm -rf "$DEB_TMP_DIR"; DEB_TMP_DIR=""
-        log "WARN" "Failed to download package"
-        return 1
-    fi
+    # Download the package and check it against its .sha256 on the release
+    local attempt expected actual
+    for attempt in 1 2; do
+        log "INFO" "Downloading package..."
+        if ! curl -fsL -o "$DEB_TMP_DIR/$package" "$download_url"; then
+            rm -rf "$DEB_TMP_DIR"; DEB_TMP_DIR=""
+            log "WARN" "Failed to download package"
+            return 1
+        fi
+        expected=$(curl -fsL "$download_url.sha256" 2>/dev/null | awk '{print $1}') || expected=""
+        actual=$(sha256sum "$DEB_TMP_DIR/$package" | awk '{print $1}')
+        if [ -z "$expected" ]; then
+            log "WARN" "No checksum published for $package: installing it unverified"
+            break
+        elif [ "$expected" = "$actual" ]; then
+            log "INFO" "Checksum verified (sha256 $actual)"
+            break
+        elif [ "$attempt" = 2 ]; then
+            rm -rf "$DEB_TMP_DIR"; DEB_TMP_DIR=""
+            log "WARN" "Checksum mismatch for $package: not installed"
+            return 1
+        fi
+        log "WARN" "Checksum mismatch for $package, the release may be updating: trying again in 30 seconds"
+        sleep 30
+    done
 
     # Ensure the downloaded file has correct permissions
     chmod 644 "$DEB_TMP_DIR/$package"
